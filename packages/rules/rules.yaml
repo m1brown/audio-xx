@@ -1,0 +1,396 @@
+# Audio XX — Rule Engine Rules
+# Deterministic, human-editable rules for listener-first guidance.
+# Each rule has: id, label, conditions, outputs, priority.
+# Rules are evaluated in priority order (lower number = higher priority).
+# Edit this file to add or modify rules — no code changes required.
+
+rules:
+  # ── System Performing Well ────────────────────────
+  # This is a FIRST-CLASS rule, not a fallback.
+
+  - id: system-performing-well
+    label: System performing well — no purchase recommended
+    priority: 1
+    conditions:
+      symptoms_absent:
+        - brightness_harshness
+        - thinness
+        - flat_lifeless
+        - congestion_muddiness
+        - fatigue
+        - too_polite
+        - too_forward
+        - regression
+        - narrow_soundstage
+        - bass_bloom
+        - thin_at_low_volume
+      has_improvement_signals: true
+    outputs:
+      explanation: >
+        Your listening impressions suggest the system is performing well.
+        No symptoms of fatigue, regression, or imbalance were detected.
+        This is a good sign — enjoy the music.
+      suggestions: []
+      risks:
+        - Unnecessary changes risk degrading what already works.
+      next_step: >
+        Continue listening. If something changes in your impressions over time,
+        return and describe what you're hearing.
+      verdict: no_purchase_recommended
+
+  # ── Regression Detected ───────────────────────────
+
+  - id: regression-detected
+    label: Regression detected — revert advised
+    priority: 2
+    conditions:
+      symptoms_present:
+        - regression
+    outputs:
+      explanation: >
+        Your description suggests something has gotten worse since a recent change.
+        Regression is a strong signal that the change may not suit your system or preferences.
+      suggestions:
+        - Revert the most recent change and confirm the regression resolves.
+      risks:
+        - Keeping a change that caused regression often leads to chasing further changes.
+        - The original strength may not return if compensating changes are layered on top.
+      next_step: >
+        Revert to your previous configuration. Listen for at least a few sessions
+        before making any further changes.
+      verdict: revert_recommended
+
+  # ── Brightness / Fatigue ──────────────────────────
+
+  - id: fatigue-brightness
+    label: Listener fatigue / brightness — source or DAC investigation
+    priority: 10
+    conditions:
+      symptoms_present_any:
+        - brightness_harshness
+        - fatigue
+      traits:
+        fatigue_risk: up
+    outputs:
+      explanation: >
+        Your description points toward brightness or listening fatigue.
+        This is often upstream — the source or DAC may be contributing edge or glare.
+      suggestions:
+        - Investigate the source component (DAC or streamer) as a likely contributor.
+        - If using a revealing cable, consider whether it is exposing upstream brightness.
+      risks:
+        - Swapping speakers to fix brightness often trades away other strengths.
+        - Adding a "warm" component to compensate may mask detail.
+      next_step: >
+        Try a different source temporarily (phone, laptop, different input) to see
+        if the fatigue changes. This isolates whether the issue is upstream.
+
+  # ── Detail-Fatigue Tradeoff ───────────────────────
+
+  - id: detail-fatigue-tradeoff
+    label: Detail-fatigue tradeoff — wait and observe
+    priority: 11
+    conditions:
+      symptoms_present:
+        - detail_revealing
+        - fatigue
+    outputs:
+      explanation: >
+        You're hearing more detail but also experiencing fatigue. This is a common
+        tradeoff when a system becomes more resolving — it can take time to adjust,
+        or it may indicate the system is too analytical for your preferences.
+      suggestions:
+        - Wait 2–4 weeks of regular listening before making changes.
+      risks:
+        - Rushing to "fix" this may sacrifice the detail you're now hearing.
+        - If fatigue persists after adjustment, the system may genuinely be too forward.
+      next_step: >
+        Keep listening at your normal level. If fatigue persists after several weeks,
+        investigate the source or cabling.
+      verdict: wait_recommended
+
+  # ── Flat Presentation ─────────────────────────────
+
+  - id: flat-presentation
+    label: Flat presentation — amplifier engagement question
+    priority: 15
+    conditions:
+      symptoms_present_any:
+        - flat_lifeless
+        - too_polite
+      traits:
+        flow: down
+        dynamics: down
+    outputs:
+      explanation: >
+        Your system sounds flat or unengaging. This often relates to the amplifier's
+        ability to deliver dynamics and musical flow. Some amplifiers prioritize
+        composure at the expense of engagement.
+      suggestions:
+        - Consider whether your amplifier provides enough dynamic contrast and elasticity.
+        - If you have access to a different amplifier, try it briefly to compare engagement.
+      risks:
+        - A more engaging amplifier may introduce other character — listen carefully.
+        - The issue could also be upstream (DAC) if the amplifier is known to be dynamic.
+      next_step: >
+        If possible, borrow or audition a different amplifier to see if engagement improves.
+        Focus on whether music pulls you in, not just whether it sounds "better."
+
+  # ── Thinness / Bass Deficit ───────────────────────
+
+  - id: thinness-bass-deficit
+    label: Thinness / bass deficit — placement before purchase
+    priority: 20
+    conditions:
+      symptoms_present_any:
+        - thinness
+      traits:
+        tonal_density: down
+    outputs:
+      explanation: >
+        Your system sounds thin or lacking body. Before considering component changes,
+        room placement is the most impactful and reversible adjustment available.
+      suggestions:
+        - Move speakers closer to the rear wall (increases bass reinforcement).
+        - Experiment with toe-in angle and listening position.
+      risks:
+        - Excessive wall proximity can cause bass bloom — move in small increments.
+        - Adding a "warm" component to fix thinness may mask other qualities.
+      next_step: >
+        Try moving speakers 6 inches closer to the rear wall. Listen for a few days.
+        If thinness persists, consider whether the source or cabling is contributing.
+
+  # ── Congestion ────────────────────────────────────
+
+  - id: congestion-bottleneck
+    label: Congestion — isolate the bottleneck
+    priority: 25
+    conditions:
+      symptoms_present_any:
+        - congestion_muddiness
+      traits:
+        clarity: down
+    outputs:
+      explanation: >
+        Your system sounds congested or muddy. This typically indicates a bottleneck
+        somewhere in the chain — one component is limiting the system's ability to
+        separate and present musical information clearly.
+      suggestions:
+        - Isolate the bottleneck by substituting components one at a time.
+        - Start with the source — a cleaner source often resolves congestion throughout.
+      risks:
+        - Multiple components may contribute — isolate before purchasing.
+        - More detail is not always the fix; sometimes better damping control is needed.
+      next_step: >
+        If possible, temporarily simplify your chain (fewer cables, direct connection)
+        to see if congestion reduces. This helps identify the weakest link.
+
+  # ── Narrow Soundstage ─────────────────────────────
+
+  - id: narrow-soundstage
+    label: Narrow soundstage — positioning before purchase
+    priority: 30
+    conditions:
+      symptoms_present:
+        - narrow_soundstage
+      traits:
+        soundstage: down
+    outputs:
+      explanation: >
+        Your soundstage feels narrow or collapsed. Speaker positioning is by far the
+        most impactful factor for soundstage — more than any component change.
+      suggestions:
+        - Increase speaker separation (aim for an equilateral triangle with listening position).
+        - Pull speakers away from side walls to reduce early reflections.
+      risks:
+        - Too much separation can create a "hole in the middle" — adjust gradually.
+        - Some speakers are inherently more intimate in their presentation.
+      next_step: >
+        Experiment with speaker placement before considering component changes.
+        Small moves (2–3 inches) can have significant effects on staging.
+
+  # ── Bass Bloom ────────────────────────────────────
+
+  - id: bass-bloom
+    label: Bass bloom — placement or damping
+    priority: 35
+    conditions:
+      symptoms_present:
+        - bass_bloom
+      traits:
+        damping_control: down
+    outputs:
+      explanation: >
+        Your bass sounds boomy or resonant. This is almost always a room interaction
+        issue — the room is reinforcing certain bass frequencies.
+      suggestions:
+        - Move speakers away from the rear wall and corners.
+        - Consider basic room treatment (bass traps in corners) before component changes.
+      risks:
+        - Over-damping the room can make it sound dead — start conservatively.
+        - An amplifier with better damping factor can help but won't fix room modes.
+      next_step: >
+        Pull speakers at least 12 inches from the rear wall. If bass bloom persists,
+        experiment with corner absorption.
+
+  # ── Engagement Archetype: Over-refinement Warning ─
+
+  - id: engagement-over-refinement
+    label: "Engagement archetype: over-refinement warning"
+    priority: 40
+    conditions:
+      archetypes_include:
+        - engagement
+      symptoms_present_any:
+        - too_polite
+        - flat_lifeless
+    outputs:
+      explanation: >
+        You value engagement and propulsion, but your impressions suggest the system
+        has become too polite or refined. This can happen when composure-oriented
+        components are added without checking their impact on musical flow.
+      suggestions:
+        - Before changing components, check if a recent addition reduced engagement.
+        - Consider whether the DAC or amplifier is the composure source.
+      risks:
+        - Chasing "more excitement" can introduce fatigue — proceed carefully.
+        - The issue may be a single component, not the whole chain.
+      next_step: >
+        If you recently changed something, try reverting it. Listen specifically for
+        whether music makes you want to keep listening or whether you drift away.
+      archetype_note: >
+        Your profile emphasizes engagement. Changes that trade excitement for polish
+        may not serve your preferences.
+
+  # ── Composure Archetype: Unnecessary Intensity ────
+
+  - id: composure-unnecessary-intensity
+    label: "Composure archetype: unnecessary intensity warning"
+    priority: 45
+    conditions:
+      archetypes_include:
+        - composure
+      symptoms_present_any:
+        - too_forward
+        - fatigue
+    outputs:
+      explanation: >
+        You value composure and ease, but your impressions suggest the system has
+        become too intense or forward. What some listeners call "exciting" may feel
+        stressful to you — that's a valid preference, not a flaw.
+      suggestions:
+        - Investigate whether a recent change introduced unwanted intensity.
+        - Consider whether the amplifier or source is the intensity contributor.
+      risks:
+        - Over-correcting toward composure can result in a lifeless presentation.
+        - The perceived "problem" may actually be a preference shift, not a system flaw.
+      next_step: >
+        Listen at your typical volume for a few sessions. If the intensity persists
+        and feels unwelcome, investigate the most recently changed component.
+      archetype_note: >
+        Your profile emphasizes composure. A "problem" that sounds like too much
+        energy may actually be a preference mismatch, not a defect.
+
+  # ── Low-Volume: Thinness at Low SPL ───────────────
+
+  - id: low-volume-thinness
+    label: "Low-volume listener: thinness at low SPL"
+    priority: 50
+    conditions:
+      archetypes_include:
+        - low_volume
+      symptoms_present_any:
+        - thinness
+        - thin_at_low_volume
+    outputs:
+      explanation: >
+        You listen at low volumes and the system sounds thin. Many components only
+        "open up" at higher levels — this is a real issue, not a perception problem.
+        Low-volume integrity is a specific trait that some components handle better
+        than others.
+      suggestions:
+        - - Prioritize components known for low-volume completeness; check trait low_volume_integrity.
+        - Consider whether the DAC or amplifier loses weight at low levels.
+      risks:
+        - Compensating with loudness curves or EQ can introduce other issues.
+        - Some speakers are inherently volume-dependent — this may be a speaker limitation.
+      next_step: >
+        Test at slightly higher volume to confirm the thinness is volume-dependent.
+        If so, investigate which component loses tonal density first at low levels.
+      archetype_note: >
+        As a low-volume listener, tonal completeness at quiet levels is a core priority.
+        Components that only perform at higher volumes are not a good fit.
+
+  # ── Archetype Conflict ────────────────────────────
+
+  - id: archetype-conflict
+    label: Conflicting archetypes detected
+    priority: 5
+    conditions:
+      archetype_conflict: true
+    outputs:
+      explanation: >
+        Some of your preferences point toward engagement, others toward composure.
+        Improving one typically reduces the other. This is a genuine tension in
+        system design, not something that can be "solved" — only balanced.
+      suggestions:
+        - Decide which trait matters more for your primary listening context.
+        - Consider whether different sources (vinyl vs. digital) can serve different moods.
+      risks:
+        - Trying to optimize for both engagement and composure often results in neither.
+        - Frequent component swapping chasing "the best of both" leads to regression.
+      next_step: >
+        Spend a week listening intentionally. Note when you want excitement and when
+        you want calm. This will clarify which archetype should take priority.
+
+  - id: taste-sweetness-flow
+    label: Preference for sweetness, flow, and harmonic richness
+    priority: 12
+    conditions:
+      symptoms_present_any:
+        - sweetness_flow
+      traits:
+        tonal_density: up
+        flow: up
+    outputs:
+      explanation: >
+        Your description suggests you value harmonic richness, flow, and a more organic sense of musical continuity.
+        Systems that emphasize these qualities usually prioritize tonal density and harmonic continuity over sharp transient edges or analytical contrast.
+
+      suggestions:
+        - Preserve components that support tonal density and flow.
+        - Avoid changes that emphasize aggressive transient edges.
+
+      risks:
+        - Pushing too far toward analytical clarity can reduce perceived sweetness and musical continuity.
+
+      next_step: >
+        When evaluating future changes, listen for whether harmonic body and musical ease remain intact.
+
+      verdict: no_purchase_recommended
+
+  - id: friendly-advisor-fallback
+    label: Friendly advisor structured response
+    priority: 1000
+    conditions: {}
+    outputs:
+      explanation: >
+        Your description does not strongly activate a specific symptom pattern.
+        That usually means either the issue is subtle or the language is too general.
+        Rather than guessing, it is better to clarify what is changing in your listening experience.
+
+      suggestions:
+        - Describe one thing that sounds wrong.
+        - Say whether this is new or long-standing.
+        - Note whether it happens at low, normal, or high volume.
+
+      risks:
+        - Acting without a clear symptom often leads to unnecessary churn.
+        - Subtle dissatisfaction can mask system strengths.
+
+      next_step: >
+        Rephrase your description in one short paragraph:
+        “What changed”, “What sounds off”, and “When it happens.”
+
+      verdict: wait_recommended
+

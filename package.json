@@ -1,0 +1,23 @@
+{
+  "name": "audio-xx",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/web",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint . --ext .ts,.tsx",
+    "db:generate": "npm run db:generate --workspace=apps/web",
+    "db:push": "npm run db:push --workspace=apps/web",
+    "db:seed": "npm run db:seed --workspace=apps/web"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0",
+    "eslint": "^9.0.0"
+  }
+}

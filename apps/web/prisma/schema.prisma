@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  password  String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  profile   Profile?
+  systems   System[]
+
+  @@map("users")
+}
+
+model Profile {
+  id               String   @id @default(cuid())
+  userId           String   @unique @map("user_id")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roomSize         String?  @map("room_size")
+  roomType         String?  @map("room_type")
+  listeningLevel   String?  @map("listening_level")
+  sourceTypes      String   @default("[]") @map("source_types")        // JSON array
+  sensitivityFlags String   @default("[]") @map("sensitivity_flags")   // JSON array
+  preferredTraits  String   @default("[]") @map("preferred_traits")    // JSON array
+  archetypes       String   @default("[]")                              // JSON array
+  notes            String?
+
+  @@map("profiles")
+}
+
+model System {
+  id         String            @id @default(cuid())
+  userId     String            @map("user_id")
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  notes      String?
+  createdAt  DateTime          @default(now()) @map("created_at")
+  updatedAt  DateTime          @updatedAt @map("updated_at")
+  components SystemComponent[]
+  snapshots  PreferenceSnapshot[]
+
+  @@map("systems")
+}
+
+model Component {
+  id               String            @id @default(cuid())
+  seedId           String?           @unique @map("seed_id")  // matches YAML id for seed components
+  name             String
+  brand            String
+  category         String
+  confidenceLevel  String            @map("confidence_level")
+  roleConfidence   String?           @map("role_confidence")   // JSON map
+  traitTendencies  String            @default("{}") @map("trait_tendencies")  // JSON map
+  riskFlags        String            @default("[]") @map("risk_flags")        // JSON array
+  trustedRefs      String            @default("[]") @map("trusted_refs")      // JSON array
+  reviews          String            @default("[]")                            // JSON array
+  retailerLinks    String            @default("[]") @map("retailer_links")    // JSON array
+  isReference      Boolean           @default(false) @map("is_reference")
+  userSubmitted    Boolean           @default(false) @map("user_submitted")
+  systems          SystemComponent[]
+
+  @@map("components")
+}
+
+model SystemComponent {
+  id           String   @id @default(cuid())
+  systemId     String   @map("system_id")
+  system       System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  componentId  String   @map("component_id")
+  component    Component @relation(fields: [componentId], references: [id])
+  roleOverride String?  @map("role_override")
+  notes        String?
+  addedAt      DateTime @default(now()) @map("added_at")
+  actionLog    String   @default("[]") @map("action_log")  // JSON array of { action, timestamp }
+
+  @@unique([systemId, componentId])
+  @@map("system_components")
+}
+
+model PreferenceSnapshot {
+  id               String   @id @default(cuid())
+  systemId         String   @map("system_id")
+  system           System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  inputText        String   @map("input_text")
+  extractedSignals String   @default("{}") @map("extracted_signals")  // JSON
+  firedRules       String   @default("[]") @map("fired_rules")        // JSON array of rule IDs
+  output           String   @default("{}") @map("output")             // JSON
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@map("preference_snapshots")
+}
+
+model ReferenceSystem {
+  id           String  @id @default(cuid())
+  seedId       String? @unique @map("seed_id")
+  name         String
+  archetype    String
+  componentIds String  @map("component_ids")  // JSON array
+  description  String
+  isCommercial Boolean @default(false) @map("is_commercial")
+
+  @@map("reference_systems")
+}

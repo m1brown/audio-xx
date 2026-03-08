@@ -1,0 +1,400 @@
+# Audio XX — Seed Component Catalog
+# Each component entry defines trait tendencies, confidence levels, and reference metadata.
+# Trait tendencies use qualitative values: strong, moderate, slight, neutral, slight-risk, moderate-risk
+# Edit this file to add or modify components — no code changes required.
+
+components:
+  # ── DACs ──────────────────────────────────────────────
+
+  - id: chord-hugo-v1
+    name: Hugo (v1)
+    brand: Chord
+    category: dac
+    confidence_level: high
+    trait_tendencies:
+      flow: strong
+      tonal_density: moderate
+      clarity: strong
+      dynamics: moderate
+      fatigue_risk: slight          # very low fatigue
+      glare_risk: neutral
+      texture: strong
+      microdynamics: strong
+      low_volume_integrity: strong
+      composure: moderate
+      elasticity: moderate
+      bass_weight: slight            # slight thinness possible
+    risk_flags:
+      - slight thinness possible in lean systems
+    trusted_references:
+      - source: direct_experience
+        note: Long-term ownership in multiple system contexts
+        type: direct_experience
+    reviews:
+      - source: 6moons
+        excerpt: "Natural, analogue-like voicing with exceptional microdynamic retrieval"
+        role: contextual
+    is_reference: true
+    user_submitted: false
+
+  - id: eversolo-dmp-a6
+    name: DMP-A6
+    brand: Eversolo
+    category: dac
+    confidence_level: medium
+    role_confidence:
+      streamer: high
+      dac: medium
+      preamp: low
+    trait_tendencies:
+      flow: slight
+      tonal_density: slight
+      clarity: moderate
+      dynamics: slight
+      fatigue_risk: neutral
+      glare_risk: neutral
+      texture: slight
+      composure: moderate
+      elasticity: neutral
+      bass_weight: moderate
+    risk_flags:
+      - dryness possible as DAC
+      - preamp quality unknown — use with caution
+    trusted_references:
+      - source: direct_experience
+        note: Used primarily as streamer; DAC section competent but less engaging
+        type: direct_experience
+    reviews:
+      - source: The Audiophiliac
+        excerpt: "Stable streamer platform with a competent but not outstanding DAC section"
+        role: contextual
+    is_reference: false
+    user_submitted: false
+
+  - id: goldmund-srda
+    name: SRDA
+    brand: Goldmund
+    category: dac
+    confidence_level: medium-high
+    trait_tendencies:
+      flow: moderate
+      tonal_density: moderate
+      clarity: strong
+      dynamics: moderate
+      fatigue_risk: neutral
+      glare_risk: neutral
+      texture: moderate
+      composure: strong
+      elasticity: slight
+      microdynamics: moderate
+      low_volume_integrity: moderate
+    risk_flags:
+      - reduced excitement possible — may feel overly polite in engagement-oriented systems
+    trusted_references:
+      - source: direct_experience
+        note: Refined and stable; pairs well with expressive amplifiers
+        type: direct_experience
+    reviews:
+      - source: 6moons
+        excerpt: "A study in refinement — composed, stable, and free from fatigue"
+        role: contextual
+    is_reference: true
+    user_submitted: false
+
+  # ── Amplifiers ────────────────────────────────────────
+
+  - id: job-integrated-amp
+    name: JOB Integrated (amp section)
+    brand: JOB
+    category: amplifier
+    confidence_level: high
+    trait_tendencies:
+      flow: strong
+      tonal_density: moderate
+      clarity: strong
+      dynamics: strong
+      fatigue_risk: slight
+      glare_risk: neutral
+      texture: strong
+      elasticity: strong
+      bass_weight: moderate
+      microdynamics: strong
+      composure: slight
+      damping_control: slight-risk   # less damped
+    risk_flags:
+      - less damped — reveals upstream edge
+      - may expose recording flaws
+    trusted_references:
+      - source: direct_experience
+        note: Fast, elastic, exciting with a glow; non-glare but reveals upstream issues
+        type: direct_experience
+    reviews:
+      - source: 6moons
+        excerpt: "Race-car energy with an unexpected warmth — exciting without crossing into glare"
+        role: contextual
+    is_reference: true
+    user_submitted: false
+
+  - id: job-integrated-dac
+    name: JOB Integrated (internal DAC)
+    brand: JOB
+    category: dac
+    confidence_level: high
+    trait_tendencies:
+      flow: strong
+      tonal_density: slight
+      clarity: strong
+      dynamics: strong
+      fatigue_risk: slight-risk
+      glare_risk: slight-risk
+      texture: moderate
+      elasticity: strong
+      microdynamics: moderate
+    risk_flags:
+      - possible edge artifacts — intensity not glare per se
+      - may create fatigue in long sessions with sensitive listeners
+    trusted_references:
+      - source: direct_experience
+        note: Race-car fast and exciting; possible edge artifacts in sensitive systems
+        type: direct_experience
+    reviews: []
+    is_reference: true
+    user_submitted: false
+
+  - id: crayon-cia-amp
+    name: CIA Integrated (amp section)
+    brand: Crayon
+    category: amplifier
+    confidence_level: high
+    trait_tendencies:
+      flow: moderate
+      tonal_density: moderate
+      clarity: strong
+      dynamics: moderate
+      fatigue_risk: neutral
+      glare_risk: neutral
+      texture: moderate
+      elasticity: slight
+      composure: strong
+      damping_control: strong
+      microdynamics: moderate
+      bass_weight: moderate
+    risk_flags:
+      - less addictive than JOB — may feel too polite for engagement seekers
+    trusted_references:
+      - source: direct_experience
+        note: Polished, even-keeled, never stressed; strong composure traits
+        type: direct_experience
+    reviews:
+      - source: Twittering Machines
+        excerpt: "Effortlessly composed — nothing calls attention to itself"
+        role: contextual
+    is_reference: true
+    user_submitted: false
+
+  # ── Cables ────────────────────────────────────────────
+
+  - id: canare-4s11
+    name: Star Quad (4S11) Speaker Cable
+    brand: Canare
+    category: cables
+    confidence_level: high
+    trait_tendencies:
+      flow: moderate
+      tonal_density: slight-risk     # slightly reduced richness
+      clarity: strong
+      dynamics: moderate
+      fatigue_risk: slight-risk      # less forgiving
+      texture: moderate
+      composure: slight
+    risk_flags:
+      - less forgiving — tonal richness slightly reduced
+      - may expose upstream brightness
+    trusted_references:
+      - source: direct_experience
+        note: Open, fast, honest; a revealing cable that rewards clean upstream
+        type: direct_experience
+    reviews: []
+    is_reference: true
+    user_submitted: false
+
+  - id: tellurium-q-black-ii
+    name: Black II Speaker Cable
+    brand: Tellurium Q
+    category: cables
+    confidence_level: medium
+    trait_tendencies:
+      flow: moderate
+      tonal_density: moderate
+      clarity: moderate
+      dynamics: moderate
+      fatigue_risk: neutral
+      texture: moderate
+      composure: moderate
+    risk_flags:
+      - comparative note only — more forgiving/richer than Canare, slightly less open
+    trusted_references:
+      - source: direct_experience
+        note: Compared directly against Canare 4S11; richer but slightly less open
+        type: direct_experience
+    reviews: []
+    is_reference: false
+    user_submitted: false
+
+  - id: totaldac-d1-usb
+    name: D1 USB Cable
+    brand: Totaldac
+    category: cables
+    confidence_level: high
+    trait_tendencies:
+      flow: moderate
+      clarity: strong
+      texture: strong
+      microdynamics: strong
+      fatigue_risk: neutral
+      composure: moderate
+    risk_flags: []
+    trusted_references:
+      - source: direct_experience
+        note: Lowers perceived noise floor; increases nuance/detail without tonal shift
+        type: direct_experience
+    reviews: []
+    is_reference: true
+    user_submitted: false
+
+  # ── Speakers ──────────────────────────────────────────
+
+  - id: wlm-diva-monitors
+    name: Diva Monitors
+    brand: WLM
+    category: speakers
+    confidence_level: medium-high
+    trait_tendencies:
+      flow: moderate
+      tonal_density: strong
+      clarity: moderate
+      dynamics: moderate
+      fatigue_risk: neutral
+      texture: strong
+      bass_weight: moderate
+      soundstage: moderate
+      composure: moderate
+    risk_flags:
+      - benefits from open cabling to preserve detail
+      - warmth can mask upstream issues if not paired carefully
+    trusted_references:
+      - source: direct_experience
+        note: Tonally rich and warm; detail retrieval improves with open/fast cabling
+        type: direct_experience
+    reviews: []
+    is_reference: true
+    user_submitted: false
+
+  - id: xsa-vanguard
+    name: Vanguard
+    brand: XSA
+    category: speakers
+    confidence_level: medium
+    trait_tendencies:
+      flow: moderate
+      tonal_density: moderate
+      clarity: strong
+      dynamics: moderate
+      composure: strong
+      soundstage: strong
+      texture: moderate
+      microdynamics: moderate
+    risk_flags:
+      - pairing-derived confidence — excellent coherence in composed/open systems
+    trusted_references:
+      - source: direct_experience
+        note: Excellent coherence in composed, open systems
+        type: direct_experience
+    reviews: []
+    is_reference: true
+    user_submitted: false
+
+  # ── Streamers ─────────────────────────────────────────
+
+  - id: wiim-pro
+    name: WiiM Pro
+    brand: WiiM
+    category: streamer
+    confidence_level: high
+    trait_tendencies:
+      flow: neutral
+      clarity: slight
+      dynamics: neutral
+      fatigue_risk: neutral
+      composure: neutral
+    risk_flags: []
+    trusted_references:
+      - source: direct_experience
+        note: Stable streamer; neutral baseline
+        type: direct_experience
+    reviews: []
+    is_reference: false
+    user_submitted: false
+
+  # ── Vinyl ─────────────────────────────────────────────
+
+  - id: thorens-td160
+    name: TD 160
+    brand: Thorens
+    category: turntable
+    confidence_level: medium-high
+    trait_tendencies:
+      flow: strong
+      tonal_density: moderate
+      clarity: moderate
+      texture: strong
+      composure: moderate
+      dynamics: slight
+    risk_flags: []
+    trusted_references:
+      - source: direct_experience
+        note: Coherent, smooth vinyl source
+        type: direct_experience
+    reviews: []
+    is_reference: true
+    user_submitted: false
+
+  - id: at-vm96ml
+    name: VM96ML Cartridge
+    brand: Audio-Technica
+    category: cartridge
+    confidence_level: medium-high
+    trait_tendencies:
+      flow: moderate
+      clarity: strong
+      texture: moderate
+      dynamics: moderate
+      fatigue_risk: neutral
+    risk_flags: []
+    trusted_references:
+      - source: direct_experience
+        note: Clean tracking, controlled detail
+        type: direct_experience
+    reviews: []
+    is_reference: true
+    user_submitted: false
+
+  - id: rega-mm-mk3
+    name: MM Mk3 Phono Stage
+    brand: Rega
+    category: phono_stage
+    confidence_level: medium
+    trait_tendencies:
+      flow: moderate
+      clarity: moderate
+      dynamics: slight
+      composure: moderate
+      fatigue_risk: neutral
+    risk_flags: []
+    trusted_references:
+      - source: direct_experience
+        note: Competent, unfussy
+        type: direct_experience
+    reviews: []
+    is_reference: false
+    user_submitted: false

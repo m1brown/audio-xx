@@ -1,0 +1,40 @@
+# Audio XX — Reference Systems
+# Non-commercial anchors used to explain listening trade-offs.
+# These systems are NOT product recommendations.
+# Some reference components may not be purchasable.
+
+reference_systems:
+  - id: engagement-propulsion-ref
+    name: Engagement / Propulsion Reference
+    archetype: engagement
+    component_ids:
+      - job-integrated-amp
+      - chord-hugo-v1
+      - wlm-diva-monitors
+      - canare-4s11
+      - totaldac-d1-usb
+    description: >
+      Excels at low volume. Demonstrates how propulsion and flow can coexist
+      with low fatigue. The JOB amplifier provides elastic, exciting energy
+      while the Chord Hugo contributes natural voicing and strong microdynamics.
+      Canare cabling keeps the signal open and honest, and the Totaldac USB
+      lowers the noise floor to let microdynamic detail emerge.
+
+  - id: composure-correctness-ref
+    name: Composure / Correctness Reference
+    archetype: composure
+    component_ids:
+      - crayon-cia-amp
+      - goldmund-srda
+      - xsa-vanguard
+      - canare-4s11
+      - wiim-pro
+      - thorens-td160
+      - at-vm96ml
+      - rega-mm-mk3
+    description: >
+      Excels at low volume. Demonstrates how calm and correctness can coexist
+      with musical engagement. The Crayon amplifier provides polished composure,
+      the Goldmund DAC contributes refined clarity, and the XSA speakers deliver
+      coherent soundstaging. The vinyl path (Thorens + AT + Rega) adds an
+      organic, textured alternative source.

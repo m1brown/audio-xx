@@ -1,0 +1,305 @@
+# Audio XX — Signal Dictionary
+# Maps common listener phrases to trait signals and archetype hints.
+# This is the bridge between free-text input and the rule engine.
+# Edit this file to add phrases — no code changes required.
+
+signals:
+  # ── Brightness / Harshness ──────────────────────────
+
+  - phrases:
+      - bright
+      - harsh
+      - sibilant
+      - piercing
+      - edgy
+      - sharp
+      - spitty
+      - aggressive treble
+      - glare
+    signals:
+      fatigue_risk: up
+      glare_risk: up
+    symptom: brightness_harshness
+
+  # ── Warmth / Richness ──────────────────────────────
+
+  - phrases:
+      - warm
+      - rich
+      - lush
+      - full-bodied
+      - round
+      - creamy
+      - golden
+    signals:
+      tonal_density: up
+      fatigue_risk: down
+    symptom: warmth_richness
+
+  # ── Sweetness / Flow / Harmonic Preference ─────────
+
+  - phrases:
+      - sweet
+      - sweetness
+      - flow
+      - flowing
+      - elastic
+      - elasticity
+      - glow
+      - glowing
+      - harmonic
+      - harmonically rich
+      - natural decay
+      - musical
+      - breathes
+      - tube-like
+      - organic
+    signals:
+      tonal_density: up
+      flow: up
+      elasticity: up
+      fatigue_risk: down
+    symptom: sweetness_flow
+    archetype_hint: engagement
+
+  # ── Thinness ──────────────────────────────────────
+
+  - phrases:
+      - thin
+      - lean
+      - lightweight
+      - anemic
+      - no body
+      - lacks weight
+      - skeletal
+    signals:
+      tonal_density: down
+      bass_weight: down
+    symptom: thinness
+
+  # ── Flat / Lifeless ────────────────────────────────
+
+  - phrases:
+      - flat
+      - lifeless
+      - boring
+      - dead
+      - no energy
+      - dull
+      - unengaging
+      - uninvolving
+      - dry
+      - sterile
+      - clinical
+    signals:
+      flow: down
+      tonal_density: down
+      dynamics: down
+      elasticity: down
+    symptom: flat_lifeless
+
+  # ── Congestion / Muddiness ────────────────────────
+
+  - phrases:
+      - congested
+      - muddy
+      - thick
+      - cloudy
+      - smeared
+      - veiled
+    signals:
+      clarity: down
+      damping_control: down
+    symptom: congestion_muddiness
+
+  # ── Fatigue / Tiring ──────────────────────────────
+
+  - phrases:
+      - fatiguing
+      - tiring
+      - exhausting
+      - can't listen long
+      - need a break
+      - wearing
+      - grating
+    signals:
+      fatigue_risk: up
+    symptom: fatigue
+
+  # ── Detail / Revealing ────────────────────────────
+
+  - phrases:
+      - detailed
+      - revealing
+      - resolving
+      - transparent
+      - high resolution
+      - insightful
+      - analytical
+    signals:
+      clarity: up
+    symptom: detail_revealing
+
+  # ── Smooth / Relaxed ──────────────────────────────
+
+  - phrases:
+      - smooth
+      - relaxed
+      - easy
+      - gentle
+      - laid back
+      - effortless
+      - non-fatiguing
+    signals:
+      flow: up
+      composure: up
+    symptom: smooth_relaxed
+
+  # ── Dynamic / Punchy ──────────────────────────────
+
+  - phrases:
+      - dynamic
+      - punchy
+      - impactful
+      - explosive
+      - transient
+      - fast
+      - snappy
+    signals:
+      dynamics: up
+      elasticity: up
+    symptom: dynamic_punchy
+
+  # ── Too Polite / Sleepy (Engagement hint) ─────────
+
+  - phrases:
+      - too polite
+      - sleepy
+      - too safe
+      - boring but good
+      - technically fine but
+      - lacks excitement
+      - no toe tapping
+      - doesn't grab me
+    signals:
+      elasticity: down
+      dynamics: down
+    symptom: too_polite
+    archetype_hint: engagement
+
+  # ── Can't Relax / Too Forward (Composure hint) ───
+
+  - phrases:
+      - can't relax
+      - too forward
+      - in your face
+      - too intense
+      - stressful
+      - too much energy
+      - overwhelming
+    signals:
+      composure: down
+      fatigue_risk: up
+    symptom: too_forward
+    archetype_hint: composure
+
+  # ── Low Volume Listening (Low-volume hint) ────────
+
+  - phrases:
+      - listen quietly
+      - apartment
+      - at night
+      - low volume
+      - quiet listening
+      - neighbours
+      - late night
+      - low level
+    signals: {}
+    symptom: low_volume_context
+    archetype_hint: low_volume
+
+  # ── Thin at Low Volume ────────────────────────────
+
+  - phrases:
+      - sounds thin unless I turn it up
+      - only sounds good loud
+      - needs volume to open up
+      - thin at low volume
+      - loses bass when quiet
+    signals:
+      low_volume_integrity: down
+    symptom: thin_at_low_volume
+    archetype_hint: low_volume
+
+  # ── Regression Markers ────────────────────────────
+
+  - phrases:
+      - lost something
+      - worse than before
+      - used to be better
+      - miss what I had
+      - step backwards
+      - regression
+      - downgrade
+    signals:
+      flow: down
+    symptom: regression
+
+  # ── Improvement Markers ───────────────────────────
+
+  - phrases:
+      - better
+      - improved
+      - step up
+      - upgrade
+      - night and day
+      - much better
+      - significant improvement
+    signals:
+      flow: up
+    symptom: improvement
+
+  # ── Narrow Soundstage ─────────────────────────────
+
+  - phrases:
+      - narrow soundstage
+      - no width
+      - bunched together
+      - no separation
+      - everything in the middle
+      - collapsed
+    signals:
+      soundstage: down
+    symptom: narrow_soundstage
+
+  # ── Bass Bloom ────────────────────────────────────
+
+  - phrases:
+      - bass bloom
+      - bloated
+      - boomy
+      - one-note bass
+      - bass overhang
+      - room boom
+      - resonant bass
+    signals:
+      damping_control: down
+      bass_weight: up
+    symptom: bass_bloom
+
+# ── Uncertainty Markers ───────────────────────────
+# These are not signal entries — they are tracked separately.
+# The signal processor counts occurrences to set uncertainty_level (0–3).
+
+uncertainty_markers:
+  - maybe
+  - not sure
+  - I think
+  - slightly
+  - sort of
+  - kind of
+  - perhaps
+  - possibly
+  - might be
+  - hard to tell
+  - could be
