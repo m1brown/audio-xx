@@ -55,50 +55,6 @@ export default function EvaluationOutput({ signals, result }: Props) {
         </div>
       )}
 
-      <section style={{ marginBottom: '1.75rem' }}>
-        <div
-          style={{
-            marginBottom: '0.65rem',
-            fontSize: '0.8rem',
-            fontWeight: 700,
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase',
-            color: '#666',
-          }}
-        >
-          Interpretation
-        </div>
-
-        {signals.matched_phrases.length > 0 && (
-          <p style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
-            <strong>Matched:</strong>{' '}
-            {signals.matched_phrases.join(', ')}
-          </p>
-        )}
-
-        {signals.symptoms.length > 0 && (
-          <p style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
-            <strong>Symptoms:</strong>{' '}
-            {signals.symptoms.map((s) => s.replace(/_/g, ' ')).join(', ')}
-          </p>
-        )}
-
-        {Object.keys(signals.traits).length > 0 && (
-          <p style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
-            <strong>Traits:</strong>{' '}
-            {Object.entries(signals.traits)
-              .map(([trait, direction]) => `${trait.replace(/_/g, ' ')} ${direction === 'up' ? '↑' : '↓'}`)
-              .join(', ')}
-          </p>
-        )}
-
-        {signals.uncertainty_level > 0 && (
-          <p style={{ margin: 0, color: '#666', fontSize: '0.92rem' }}>
-            Uncertainty level {signals.uncertainty_level}/3
-          </p>
-        )}
-      </section>
-
       {result.fired_rules.map((rule, index) => (
         <section key={rule.id} style={{ marginBottom: '2rem' }}>
           {index > 0 && (
@@ -224,6 +180,42 @@ export default function EvaluationOutput({ signals, result }: Props) {
         <p style={{ color: '#666' }}>
           No rules matched. Try describing what you hear in more detail.
         </p>
+      )}
+
+      {/* Collapsible signal diagnostics */}
+      {(signals.matched_phrases.length > 0 ||
+        signals.symptoms.length > 0 ||
+        Object.keys(signals.traits).length > 0) && (
+        <details style={{ marginTop: '1.5rem', color: '#666', fontSize: '0.92rem' }}>
+          <summary style={{ cursor: 'pointer' }}>How this was interpreted</summary>
+          <div style={{ marginTop: '0.6rem' }}>
+            {signals.matched_phrases.length > 0 && (
+              <p style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
+                <strong>Matched:</strong>{' '}
+                {signals.matched_phrases.join(', ')}
+              </p>
+            )}
+            {signals.symptoms.length > 0 && (
+              <p style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
+                <strong>Symptoms:</strong>{' '}
+                {signals.symptoms.map((s) => s.replace(/_/g, ' ')).join(', ')}
+              </p>
+            )}
+            {Object.keys(signals.traits).length > 0 && (
+              <p style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
+                <strong>Traits:</strong>{' '}
+                {Object.entries(signals.traits)
+                  .map(([trait, direction]) => `${trait.replace(/_/g, ' ')} ${direction === 'up' ? '↑' : '↓'}`)
+                  .join(', ')}
+              </p>
+            )}
+            {signals.uncertainty_level > 0 && (
+              <p style={{ margin: 0, color: '#666', fontSize: '0.92rem' }}>
+                Uncertainty level {signals.uncertainty_level}/3
+              </p>
+            )}
+          </div>
+        </details>
       )}
     </div>
   );
