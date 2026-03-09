@@ -14,7 +14,7 @@
  * as of early 2025 and may shift. The system does not track live pricing.
  */
 
-import type { ProductTendencies } from '../sonic-tendencies';
+import type { ProductTendencies, TendencyProfile } from '../sonic-tendencies';
 
 export interface Product {
   id: string;
@@ -23,7 +23,19 @@ export interface Product {
   price: number;
   category: 'dac' | 'speaker' | 'amplifier';
   architecture: string;
+  /**
+   * Legacy numeric traits (0–1 scale). Retained during migration.
+   * Scoring and archetype inference read through resolveTraitValue(),
+   * which prefers tendencyProfile when present.
+   */
   traits: Record<string, number>;
+  /**
+   * Qualitative tendency profile — the editorial source of truth.
+   * When present, explanation code reads this directly and scoring
+   * derives numeric weights from it via resolveTraitValue().
+   * Traits not listed are treated as neutral.
+   */
+  tendencyProfile?: TendencyProfile;
   /** Fallback summary text. Demoted — tendencies take priority for reasoning. */
   description: string;
   retailer_links: { label: string; url: string }[];
@@ -56,6 +68,15 @@ export const DAC_PRODUCTS: Product[] = [
     category: 'dac',
     architecture: 'delta-sigma (AKM)',
     archetypes: { primary: 'precision_explicit' },
+    tendencyProfile: {
+      basis: 'editorial_inference',
+      tendencies: [
+        { trait: 'clarity', level: 'present' },
+        { trait: 'flow', level: 'less_emphasized' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
     traits: {
       flow: 0.4,
       tonal_density: 0.4,
@@ -81,6 +102,16 @@ export const DAC_PRODUCTS: Product[] = [
     category: 'dac',
     architecture: 'delta-sigma (ESS)',
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
+    tendencyProfile: {
+      basis: 'editorial_inference',
+      tendencies: [
+        { trait: 'clarity', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'flow', level: 'less_emphasized' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+      ],
+      riskFlags: ['glare_risk'],
+    },
     traits: {
       flow: 0.4,
       tonal_density: 0.4,
@@ -111,6 +142,17 @@ export const DAC_PRODUCTS: Product[] = [
     category: 'dac',
     architecture: 'delta-sigma (ESS)',
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
+    tendencyProfile: {
+      basis: 'listener_consensus',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'elasticity', level: 'present' },
+        { trait: 'flow', level: 'less_emphasized' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+      ],
+      riskFlags: ['glare_risk'],
+    },
     traits: {
       flow: 0.4,
       tonal_density: 0.4,
@@ -139,6 +181,17 @@ export const DAC_PRODUCTS: Product[] = [
     category: 'dac',
     architecture: 'delta-sigma (ESS)',
     archetypes: { primary: 'precision_explicit' },
+    tendencyProfile: {
+      basis: 'editorial_inference',
+      tendencies: [
+        { trait: 'clarity', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'flow', level: 'less_emphasized' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
     traits: {
       flow: 0.4,
       tonal_density: 0.4,
@@ -165,6 +218,17 @@ export const DAC_PRODUCTS: Product[] = [
     category: 'dac',
     architecture: 'R-2R',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      tendencies: [
+        { trait: 'flow', level: 'present' },
+        { trait: 'tonal_density', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'clarity', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
     traits: {
       flow: 0.7,
       tonal_density: 0.7,
@@ -206,6 +270,18 @@ export const DAC_PRODUCTS: Product[] = [
     category: 'dac',
     architecture: 'multibit',
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      tendencies: [
+        { trait: 'dynamics', level: 'emphasized' },
+        { trait: 'flow', level: 'present' },
+        { trait: 'tonal_density', level: 'present' },
+        { trait: 'clarity', level: 'present' },
+        { trait: 'elasticity', level: 'present' },
+        { trait: 'texture', level: 'present' },
+      ],
+      riskFlags: [],
+    },
     traits: {
       flow: 0.7,
       tonal_density: 0.7,
@@ -248,6 +324,17 @@ export const DAC_PRODUCTS: Product[] = [
     category: 'dac',
     architecture: 'delta-sigma (ESS)',
     archetypes: { primary: 'precision_explicit' },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'flow', level: 'less_emphasized' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+      ],
+      riskFlags: ['glare_risk'],
+    },
     traits: {
       flow: 0.4,
       tonal_density: 0.4,
@@ -293,6 +380,18 @@ export const DAC_PRODUCTS: Product[] = [
     category: 'dac',
     architecture: 'NOS tube',
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      tendencies: [
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'texture', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'clarity', level: 'less_emphasized' },
+        { trait: 'dynamics', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
     traits: {
       flow: 1.0,
       tonal_density: 0.7,
@@ -336,6 +435,17 @@ export const DAC_PRODUCTS: Product[] = [
     category: 'dac',
     architecture: 'delta-sigma (ESS)',
     archetypes: { primary: 'precision_explicit' },
+    tendencyProfile: {
+      basis: 'editorial_inference',
+      tendencies: [
+        { trait: 'clarity', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'flow', level: 'less_emphasized' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
     traits: {
       flow: 0.4,
       tonal_density: 0.4,
@@ -365,6 +475,18 @@ export const DAC_PRODUCTS: Product[] = [
     category: 'dac',
     architecture: 'delta-sigma (AKM)',
     archetypes: { primary: 'precision_explicit' },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'composure', level: 'emphasized' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'flow', level: 'less_emphasized' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
     traits: {
       flow: 0.4,
       tonal_density: 0.4,
@@ -408,6 +530,19 @@ export const DAC_PRODUCTS: Product[] = [
     category: 'dac',
     architecture: 'FPGA',
     archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'flow', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'elasticity', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
     traits: {
       flow: 0.7,
       tonal_density: 0.4,
@@ -449,6 +584,19 @@ export const DAC_PRODUCTS: Product[] = [
     category: 'dac',
     architecture: 'R-2R',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      tendencies: [
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'texture', level: 'emphasized' },
+        { trait: 'clarity', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'elasticity', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
     traits: {
       flow: 1.0,
       tonal_density: 1.0,
@@ -491,6 +639,19 @@ export const DAC_PRODUCTS: Product[] = [
     category: 'dac',
     architecture: 'R-2R',
     archetypes: { primary: 'tonal_saturated', secondary: 'precision_explicit' },
+    tendencyProfile: {
+      basis: 'listener_consensus',
+      tendencies: [
+        { trait: 'flow', level: 'present' },
+        { trait: 'tonal_density', level: 'present' },
+        { trait: 'clarity', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'elasticity', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
     traits: {
       flow: 0.7,
       tonal_density: 0.7,

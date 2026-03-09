@@ -35,6 +35,10 @@ import {
   selectCharacterTendencies,
   selectDefaultTendencies,
   findMatchingInteractions,
+  hasRisk,
+  getEmphasizedTraits,
+  getLessEmphasizedTraits,
+  resolveTraitValue,
 } from './sonic-tendencies';
 
 // ── Product lookup ───────────────────────────────────
@@ -189,33 +193,44 @@ function productCharacter(product: Product, desireQualities: string[] = []): str
 
     const parts: string[] = [`${product.architecture} design.`];
     for (const t of tendencies) {
-      // Capitalize first letter of tendency text
       const text = t.tendency.charAt(0).toUpperCase() + t.tendency.slice(1);
       parts.push(t.context ? `${text} — ${t.context}.` : `${text}.`);
     }
 
-    // Append risk traits
-    const risks: string[] = [];
-    if ((product.traits.fatigue_risk ?? 0) >= 0.4) risks.push('some listening fatigue risk in bright systems');
-    if ((product.traits.glare_risk ?? 0) >= 0.4) risks.push('a touch of upper-frequency edge');
-    if (risks.length > 0) {
-      parts.push(`Worth noting: ${risks.join('; ')}.`);
-    }
+    const risks = buildRiskNotes(product);
+    if (risks) parts.push(risks);
 
     return parts.join(' ');
   }
 
-  // ── Fallback: description + trait labels ───────────
+  // ── Qualitative profile path ──────────────────────
+  if (product.tendencyProfile) {
+    const emphasized = getEmphasizedTraits(product.tendencyProfile);
+    const lessEmphasized = getLessEmphasizedTraits(product.tendencyProfile);
+
+    const parts: string[] = [`${product.architecture} design.`];
+    if (emphasized.length > 0) {
+      const list = emphasized.join(' and ');
+      parts.push(`Its design emphasizes ${list}.`);
+    }
+    if (lessEmphasized.length > 0) {
+      const list = lessEmphasized.slice(0, 2).join(' and ');
+      parts.push(`Less of a priority: ${list}.`);
+    }
+
+    const risks = buildRiskNotes(product);
+    if (risks) parts.push(risks);
+
+    return parts.join(' ');
+  }
+
+  // ── Legacy fallback: description + trait labels ───
   const traits = product.traits;
 
   const strengths: string[] = [];
   for (const [key, label] of Object.entries(TRAIT_LABELS)) {
     if ((traits[key] ?? 0) >= 0.7) strengths.push(label);
   }
-
-  const risks: string[] = [];
-  if ((traits.fatigue_risk ?? 0) >= 0.4) risks.push('some listening fatigue risk in bright systems');
-  if ((traits.glare_risk ?? 0) >= 0.4) risks.push('a touch of upper-frequency edge');
 
   let char = `${product.description} It uses ${product.architecture}`;
   if (strengths.length > 0) {
@@ -228,11 +243,22 @@ function productCharacter(product: Product, desireQualities: string[] = []): str
     char += '.';
   }
 
-  if (risks.length > 0) {
-    char += ` Worth noting: ${risks.join('; ')}.`;
-  }
+  const risks = buildRiskNotes(product);
+  if (risks) char += ` ${risks}`;
 
   return char;
+}
+
+/** Shared risk note builder using tendencyProfile when available. */
+function buildRiskNotes(product: Product): string | undefined {
+  const risks: string[] = [];
+  if (hasRisk(product.tendencyProfile, product.traits, 'fatigue_risk')) {
+    risks.push('some listening fatigue risk in bright systems');
+  }
+  if (hasRisk(product.tendencyProfile, product.traits, 'glare_risk')) {
+    risks.push('a touch of upper-frequency edge');
+  }
+  return risks.length > 0 ? `Worth noting: ${risks.join('; ')}.` : undefined;
 }
 
 function brandCharacter(brandName: string): string {
@@ -615,11 +641,13 @@ function buildComparisonDirection(a: Product, b: Product): string {
     }
   }
 
-  // ── Fallback: trait-diff comparison ───────────────
+  // ── Fallback: trait-diff comparison (uses bridge) ─
   const diffs: string[] = [];
 
   for (const [trait, phrases] of Object.entries(COMPARISON_PHRASES)) {
-    const diff = (a.traits[trait] ?? 0) - (b.traits[trait] ?? 0);
+    const aVal = resolveTraitValue(a.tendencyProfile, a.traits, trait);
+    const bVal = resolveTraitValue(b.tendencyProfile, b.traits, trait);
+    const diff = aVal - bVal;
     if (Math.abs(diff) >= 0.3) {
       diffs.push(diff > 0
         ? `the ${a.name} ${phrases.aLeads}`
@@ -692,8 +720,26 @@ function buildInquiryDirection(product: Product, userPref?: { primary: SonicArch
       const ci = cautionInteractions[0];
       parts.push(`Worth being aware of: ${ci.condition}, ${ci.effect}.`);
     }
+  } else if (product.tendencyProfile) {
+    // ── Qualitative profile path ────────────────────
+    const emphasized = getEmphasizedTraits(product.tendencyProfile);
+    const lessEmphasized = getLessEmphasizedTraits(product.tendencyProfile);
+
+    if (emphasized.length > 0 && !userPref) {
+      parts.push(`Its design philosophy clearly prioritizes ${emphasized.join(' and ')}.`);
+    }
+    if (lessEmphasized.length > 0) {
+      parts.push(`The trade-off is ${lessEmphasized.slice(0, 2).join(' and ')} — it gives up some of that to focus on what it does best.`);
+    }
+
+    const cautions: string[] = [];
+    if (hasRisk(product.tendencyProfile, traits, 'fatigue_risk')) cautions.push('it can lean forward in the treble, which may be fatiguing in brighter systems');
+    if (hasRisk(product.tendencyProfile, traits, 'glare_risk')) cautions.push('there\'s some edge in the upper frequencies that could compound with bright amplification');
+    if (cautions.length > 0) {
+      parts.push(`Worth being aware of: ${cautions.join('; ')}.`);
+    }
   } else {
-    // ── Fallback: trait-inferred direction ───────────
+    // ── Legacy fallback: trait-inferred direction ────
     const strengths: string[] = [];
     if ((traits.rhythm ?? 0) >= 1.0 || (traits.dynamics ?? 0) >= 1.0) strengths.push('rhythmic and dynamic engagement');
     if ((traits.tonal_density ?? 0) >= 1.0) strengths.push('tonal richness');

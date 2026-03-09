@@ -17,6 +17,7 @@
 
 import type { Product } from './products/dacs';
 import type { DesireSignal } from './intent';
+import { resolveTraitValue } from './sonic-tendencies';
 
 // ── Types ────────────────────────────────────────────
 
@@ -120,11 +121,10 @@ export const ARCHETYPE_DEFINITIONS: Record<SonicArchetype, ArchetypeDefinition> 
  * Returns weights (not normalized) — higher = stronger affinity.
  */
 export function scoreProductArchetypes(product: Product): ArchetypeWeight[] {
-  const t = product.traits;
   return Object.entries(ARCHETYPE_DEFINITIONS).map(([key, def]) => {
     let weight = 0;
     for (const [trait, tw] of Object.entries(def.traitWeights)) {
-      weight += (t[trait] ?? 0) * tw;
+      weight += resolveTraitValue(product.tendencyProfile, product.traits, trait) * tw;
     }
     return { archetype: key as SonicArchetype, weight };
   });
@@ -132,9 +132,24 @@ export function scoreProductArchetypes(product: Product): ArchetypeWeight[] {
 
 /**
  * Tag a product with its primary and optional secondary archetype.
+ *
+ * When the product carries explicit `archetypes` tags, those are returned
+ * directly — no inference. This prevents misclassification of gear whose
+ * sonic character doesn't reduce cleanly to trait-weighted scoring.
+ *
+ * When explicit tags are absent, falls back to trait-based inference.
  * Secondary is included only if it reaches at least 60% of the primary's weight.
  */
 export function tagProductArchetype(product: Product): ProductArchetypeTags {
+  // Prefer explicit tags when present
+  if (product.archetypes) {
+    return {
+      primary: product.archetypes.primary,
+      secondary: product.archetypes.secondary,
+    };
+  }
+
+  // Fall back to trait-based inference
   const scores = scoreProductArchetypes(product);
   const sorted = [...scores].sort((a, b) => b.weight - a.weight);
 

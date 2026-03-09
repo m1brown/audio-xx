@@ -18,7 +18,7 @@ import type { SystemProfile, OutputType, SystemCharacter } from './system-profil
 import { DEFAULT_SYSTEM_PROFILE } from './system-profile';
 export type { SystemProfile, OutputType, SystemCharacter } from './system-profile';
 import type { SonicArchetype } from './archetype';
-import { hasTendencies, selectDefaultTendencies } from './sonic-tendencies';
+import { hasTendencies, selectDefaultTendencies, hasRisk, getEmphasizedTraits, resolveTraitValue } from './sonic-tendencies';
 
 /** Short labels for archetype context in shopping summaries. */
 const ARCHETYPE_LABELS: Record<SonicArchetype, string> = {
@@ -816,7 +816,7 @@ import { topTraits, type TasteProfile as UserTasteProfile, type ProfileTraitKey 
 function buildFitNote(product: Product, userTraits: Record<string, SignalDirection>): string {
   const arch = product.architecture;
 
-  // Tendency-driven path — prefer curated character tendencies
+  // Priority 1: curated character tendencies
   if (hasTendencies(product.tendencies)) {
     const top = selectDefaultTendencies(product.tendencies.character, 1);
     if (top.length > 0) {
@@ -824,12 +824,20 @@ function buildFitNote(product: Product, userTraits: Record<string, SignalDirecti
     }
   }
 
-  // Fallback — trait-label + description path
+  // Priority 2: qualitative tendency profile
+  if (product.tendencyProfile) {
+    const emphasized = getEmphasizedTraits(product.tendencyProfile);
+    if (emphasized.length > 0) {
+      return `${arch} design — emphasizes ${emphasized.slice(0, 2).join(' and ')}`;
+    }
+  }
+
+  // Priority 3: legacy trait-label + description path
   const strongTraits: string[] = [];
 
   for (const [trait, direction] of Object.entries(userTraits)) {
-    const val = product.traits[trait];
-    if (val !== undefined && direction === 'up' && val >= 0.7) {
+    const val = resolveTraitValue(product.tendencyProfile, product.traits, trait);
+    if (direction === 'up' && val >= 0.7) {
       strongTraits.push(trait.replace(/_/g, ' '));
     }
   }
@@ -844,16 +852,16 @@ function buildFitNote(product: Product, userTraits: Record<string, SignalDirecti
 
 /**
  * Generate an optional caution note from the product's notes field
- * and its risk trait values.
+ * and its risk flags / trait values.
  */
 function buildCaution(product: Product): string | undefined {
   if (product.notes) return product.notes;
 
-  // Check for elevated risk traits
-  if ((product.traits.glare_risk ?? 0) >= 0.4) {
+  // Check for risk flags (prefers tendencyProfile, falls back to legacy)
+  if (hasRisk(product.tendencyProfile, product.traits, 'glare_risk')) {
     return 'May introduce glare or edge in systems that are already bright.';
   }
-  if ((product.traits.fatigue_risk ?? 0) >= 0.4) {
+  if (hasRisk(product.tendencyProfile, product.traits, 'fatigue_risk')) {
     return 'May contribute to listening fatigue in long sessions.';
   }
 
@@ -898,7 +906,7 @@ function selectProductExamples(
       let bonus = 0;
       for (const pt of topProfileTraits) {
         const productTraitKey = PROFILE_TO_PRODUCT_TRAIT[pt.key];
-        const productTraitValue = entry.product.traits[productTraitKey] ?? 0;
+        const productTraitValue = resolveTraitValue(entry.product.tendencyProfile, entry.product.traits, productTraitKey);
         bonus += productTraitValue * pt.value * profileWeight;
       }
       entry.score += bonus;

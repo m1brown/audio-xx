@@ -13,6 +13,7 @@
 
 import type { Product } from './products/dacs';
 import type { SystemProfile } from './system-profile';
+import { resolveTraitValue, hasRisk } from './sonic-tendencies';
 
 // ── Types ─────────────────────────────────────────────
 
@@ -70,19 +71,21 @@ function scoreTraitAlignment(
   userTraits: Record<string, SignalDirection>,
 ): number {
   let score = 0;
+  const tp = product.tendencyProfile;
 
   for (const [trait, direction] of Object.entries(userTraits)) {
-    const productValue = product.traits[trait];
-    if (productValue === undefined) continue;
-
     if (RISK_TRAITS.has(trait)) {
       // Risk traits: user 'up' means problem present → want LOW product risk
       if (direction === 'up') {
-        if (productValue <= 0.0) score += 1;
-        else if (productValue <= 0.4) score += 0.5;
-        else if (productValue >= 0.7) score -= 0.5;
+        const productHasRisk = hasRisk(tp, product.traits, trait as 'fatigue_risk' | 'glare_risk');
+        if (productHasRisk) {
+          score -= 0.5;
+        } else {
+          score += 1;
+        }
       }
     } else {
+      const productValue = resolveTraitValue(tp, product.traits, trait);
       // Regular traits: user 'up' means want MORE of this
       if (direction === 'up') {
         if (productValue >= 0.7) score += 1;
@@ -151,27 +154,28 @@ function scoreSystemCoherence(
   systemProfile: SystemProfile,
 ): number {
   let score = 0;
+  const tp = product.tendencyProfile;
 
   // Bright system interactions
   if (systemProfile.systemCharacter === 'bright') {
-    if ((product.traits.glare_risk ?? 0) >= 0.4) score -= 1;
-    else if ((product.traits.glare_risk ?? 0) === 0) score += 0.5;
+    if (hasRisk(tp, product.traits, 'glare_risk')) score -= 1;
+    else score += 0.5;
   }
 
   // Warm system interactions
   if (systemProfile.systemCharacter === 'warm') {
-    if ((product.traits.tonal_density ?? 0) >= 0.7) score -= 0.5;
-    if ((product.traits.clarity ?? 0) >= 0.7) score += 0.5;
+    if (resolveTraitValue(tp, product.traits, 'tonal_density') >= 0.7) score -= 0.5;
+    if (resolveTraitValue(tp, product.traits, 'clarity') >= 0.7) score += 0.5;
   }
 
   // Tube amplification — already smooth, penalize products that add fatigue risk
   if (systemProfile.tubeAmplification) {
-    if ((product.traits.fatigue_risk ?? 0) >= 0.4) score -= 0.5;
+    if (hasRisk(tp, product.traits, 'fatigue_risk')) score -= 0.5;
   }
 
   // Low-power context — dynamics-limited, reward products that help
   if (systemProfile.lowPowerContext) {
-    if ((product.traits.dynamics ?? 0) >= 0.7) score += 0.5;
+    if (resolveTraitValue(tp, product.traits, 'dynamics') >= 0.7) score += 0.5;
   }
 
   return Math.max(-1, Math.min(1, score));

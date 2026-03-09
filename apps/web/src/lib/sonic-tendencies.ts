@@ -93,6 +93,127 @@ export interface ProductTendencies {
   tradeoffs: TradeOffTendency[];
 }
 
+// ── Qualitative tendency profile ─────────────────────
+
+/**
+ * Directional labels for product sonic tendencies.
+ *
+ * These are editorial assessments of recurring patterns, not measurements.
+ *   emphasized      — a defining characteristic of this product
+ *   present         — clearly there, but not a standout
+ *   less_emphasized — structurally or intentionally de-prioritized
+ *
+ * Traits not listed are treated as neutral by default.
+ */
+export type TendencyLevel = 'emphasized' | 'present' | 'less_emphasized';
+
+export interface QualitativeTendency {
+  trait: string;
+  level: TendencyLevel;
+}
+
+/**
+ * Risk conditions worth flagging.
+ * Binary — either worth mentioning or not.
+ */
+export type RiskFlag = 'fatigue_risk' | 'glare_risk';
+
+/**
+ * The qualitative tendency profile for a product.
+ * Source of truth for editorial character — replaces numeric traits
+ * for explanation, and is preferred for scoring when present.
+ */
+export interface TendencyProfile {
+  /**
+   * Where this profile's assessments come from.
+   * Internal only — not surfaced to users.
+   */
+  basis: SourceBasis;
+  tendencies: QualitativeTendency[];
+  riskFlags: RiskFlag[];
+}
+
+// ── Tendency level → numeric weight bridge ──────────
+
+/**
+ * Derived numeric weights for scoring.
+ * This mapping is the ONLY place qualitative → quantitative
+ * conversion happens. Product data stays qualitative.
+ */
+const LEVEL_WEIGHT: Record<TendencyLevel, number> = {
+  emphasized: 1.0,
+  present: 0.6,
+  less_emphasized: 0.0,
+};
+
+/** Default weight for traits not mentioned in the profile. */
+const NEUTRAL_WEIGHT = 0.3;
+
+/**
+ * Resolve a numeric trait value from a product's tendency profile.
+ * Falls back to legacy `traits` map, then to neutral.
+ *
+ * This bridge lets scoring code consume qualitative profiles
+ * without changing its comparison logic.
+ */
+export function resolveTraitValue(
+  tendencyProfile: TendencyProfile | undefined,
+  legacyTraits: Record<string, number>,
+  trait: string,
+): number {
+  // Risk traits are handled separately via riskFlags
+  if (trait === 'fatigue_risk' || trait === 'glare_risk') {
+    if (tendencyProfile) {
+      return tendencyProfile.riskFlags.includes(trait as RiskFlag) ? 0.5 : 0.0;
+    }
+    return legacyTraits[trait] ?? 0;
+  }
+
+  // Prefer tendency profile when present
+  if (tendencyProfile) {
+    const entry = tendencyProfile.tendencies.find((t) => t.trait === trait);
+    if (entry) return LEVEL_WEIGHT[entry.level];
+    return NEUTRAL_WEIGHT;
+  }
+
+  // Fall back to legacy numeric traits
+  return legacyTraits[trait] ?? 0;
+}
+
+/**
+ * Check whether a product has a risk flag.
+ * Prefers riskFlags from tendency profile, falls back to legacy threshold.
+ */
+export function hasRisk(
+  tendencyProfile: TendencyProfile | undefined,
+  legacyTraits: Record<string, number>,
+  risk: RiskFlag,
+): boolean {
+  if (tendencyProfile) {
+    return tendencyProfile.riskFlags.includes(risk);
+  }
+  return (legacyTraits[risk] ?? 0) >= 0.4;
+}
+
+/**
+ * Get the "emphasized" traits from a tendency profile as plain labels.
+ * Returns human-readable trait names for explanation text.
+ */
+export function getEmphasizedTraits(profile: TendencyProfile): string[] {
+  return profile.tendencies
+    .filter((t) => t.level === 'emphasized')
+    .map((t) => t.trait.replace(/_/g, ' '));
+}
+
+/**
+ * Get the "less_emphasized" traits from a tendency profile as plain labels.
+ */
+export function getLessEmphasizedTraits(profile: TendencyProfile): string[] {
+  return profile.tendencies
+    .filter((t) => t.level === 'less_emphasized')
+    .map((t) => t.trait.replace(/_/g, ' '));
+}
+
 // ── Helpers ──────────────────────────────────────────
 
 /** Source basis priority for selection — prefer better-sourced tendencies. */
