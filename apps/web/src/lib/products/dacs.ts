@@ -14,6 +14,8 @@
  * as of early 2025 and may shift. The system does not track live pricing.
  */
 
+import type { ProductTendencies } from '../sonic-tendencies';
+
 export interface Product {
   id: string;
   brand: string;
@@ -22,6 +24,7 @@ export interface Product {
   category: 'dac' | 'speaker' | 'amplifier';
   architecture: string;
   traits: Record<string, number>;
+  /** Fallback summary text. Demoted — tendencies take priority for reasoning. */
   description: string;
   retailer_links: { label: string; url: string }[];
   notes?: string;
@@ -34,6 +37,12 @@ export interface Product {
     primary: import('../archetype').SonicArchetype;
     secondary?: import('../archetype').SonicArchetype;
   };
+  /**
+   * Curated sonic tendencies: character, interactions, and trade-offs.
+   * When present and confidence is not 'provisional', these drive
+   * advisory explanations instead of the description field.
+   */
+  tendencies?: ProductTendencies;
 }
 
 export const DAC_PRODUCTS: Product[] = [
@@ -172,6 +181,21 @@ export const DAC_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/product/denafrips-ares-12th-1' },
     ],
+    tendencies: {
+      confidence: 'well_established',
+      character: [
+        { domain: 'tonality', tendency: 'dense harmonic texture with physical midrange weight', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'relaxed sense of timing — notes bloom rather than snap', basis: 'listener_consensus' },
+        { domain: 'texture', tendency: 'grain-free, slightly soft-focused detail retrieval', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with bright or analytical amplifiers', effect: 'tends to temper upper-frequency edge without dulling transients', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in systems already biased toward warmth', effect: 'can compound density — midrange may feel heavy or congested', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'tonal body and listening ease', cost: 'the last degree of transient precision and analytical separation', relative_to: 'delta-sigma designs at this price', basis: 'review_consensus' },
+      ],
+    },
   },
 
   {
@@ -198,6 +222,22 @@ export const DAC_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'Schiit', url: 'https://www.schiit.com/products/bifrost' },
     ],
+    tendencies: {
+      confidence: 'well_established',
+      character: [
+        { domain: 'timing', tendency: 'fast, decisive leading edges — notes start with conviction', basis: 'review_consensus' },
+        { domain: 'dynamics', tendency: 'punchy macrodynamics with good microdynamic gradation', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'more tonal weight than typical delta-sigma, less saturated than dedicated R-2R', basis: 'listener_consensus' },
+        { domain: 'texture', tendency: 'slightly grainy at high frequencies compared to smoother ESS implementations', basis: 'editorial_inference' },
+      ],
+      interactions: [
+        { condition: 'paired with tube amplification', effect: 'dynamic directness tends to survive the tube stage, gaining bloom without losing rhythmic snap', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in systems already biased toward speed and precision', effect: 'can compound the forward presentation — may feel relentless over long sessions', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'rhythmic engagement and dynamic directness', cost: 'the smoothest possible treble and the deepest harmonic saturation', relative_to: 'R-2R designs at this price', basis: 'review_consensus' },
+      ],
+    },
   },
 
   {
@@ -226,6 +266,21 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'Apos Audio', url: 'https://apos.audio/products/topping-d90se' },
     ],
     notes: 'Strengths are measured performance. Can feel clinical in systems that lack warmth upstream.',
+    tendencies: {
+      confidence: 'well_established',
+      character: [
+        { domain: 'tonality', tendency: 'lean tonal balance — prioritizes separation over body', basis: 'review_consensus' },
+        { domain: 'spatial', tendency: 'precise imaging with well-defined instrument placement', basis: 'review_consensus' },
+        { domain: 'dynamics', tendency: 'controlled dynamic delivery — composed rather than explosive', basis: 'listener_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with warm or tube-based amplification', effect: 'tends to provide a transparent, clean source that lets the amplifier add color', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in systems that are already lean or bright', effect: 'can feel clinical — the precision becomes sterility without compensating warmth', valence: 'caution', basis: 'review_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'measured transparency and composure', cost: 'tonal richness and harmonic engagement', relative_to: 'R-2R and multibit designs at this price', basis: 'review_consensus' },
+      ],
+    },
   },
 
   // ── Upper-mid tier ($700–$1000) ─────────────────────
@@ -255,6 +310,22 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'MHDT Labs', url: 'https://www.mhdtlab.com/orchid.htm' },
     ],
     notes: 'Detail retrieval is softer than delta-sigma designs. Best paired with revealing amplifiers and speakers.',
+    tendencies: {
+      confidence: 'well_established',
+      character: [
+        { domain: 'timing', tendency: 'unhurried phrasing — music flows rather than pushes', basis: 'review_consensus' },
+        { domain: 'texture', tendency: 'rich tactile quality — rosin, breath, and decay feel physical', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'warm midrange emphasis with gently rolled upper frequencies', basis: 'listener_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with revealing or analytical amplifiers', effect: 'the tube output smooths the upstream signal while the amplifier preserves detail — a complementary pairing', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in systems that already lean warm and smooth', effect: 'can push the balance too far toward softness — transient definition may suffer', valence: 'caution', basis: 'editorial_inference' },
+        { condition: 'with tube rolling', effect: 'character shifts meaningfully with different tube types — a significant tuning variable', valence: 'neutral', basis: 'listener_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'musical continuity, texture, and listening ease', cost: 'transient sharpness and micro-detail retrieval', relative_to: 'oversampling designs at this price', basis: 'review_consensus' },
+      ],
+    },
   },
 
   {
@@ -312,6 +383,21 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B07Y2GBLQR' },
     ],
     notes: 'The built-in parametric EQ is a significant advantage for system tuning. Not the most emotionally engaging, but extraordinarily capable.',
+    tendencies: {
+      confidence: 'well_established',
+      character: [
+        { domain: 'tonality', tendency: 'ruler-flat tonal balance with no editorial voice', basis: 'review_consensus' },
+        { domain: 'spatial', tendency: 'precise, stable imaging with clear center focus', basis: 'review_consensus' },
+        { domain: 'dynamics', tendency: 'composed and controlled — maintains grip without excess energy', basis: 'listener_consensus' },
+      ],
+      interactions: [
+        { condition: 'with its built-in parametric EQ', effect: 'allows targeted correction of room or headphone frequency response issues — a significant system-tuning advantage', valence: 'positive', basis: 'manufacturer_intent' },
+        { condition: 'for listeners who prioritize emotional engagement', effect: 'the neutral transparency can feel uninvolved — it reveals everything but editorializes nothing', valence: 'neutral', basis: 'listener_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'transparency, configurability, and measured performance', cost: 'the harmonic coloration and musical editorializing that some listeners find engaging', relative_to: 'R-2R and tube designs at this price', basis: 'review_consensus' },
+      ],
+    },
   },
 
   {
@@ -338,6 +424,21 @@ export const DAC_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B079C63P1V' },
     ],
+    tendencies: {
+      confidence: 'well_established',
+      character: [
+        { domain: 'timing', tendency: 'exceptional transient resolution — leading edges are fast and fully formed', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'lighter tonal weight than R-2R designs but avoids the thinness of typical delta-sigma', basis: 'listener_consensus' },
+        { domain: 'texture', tendency: 'fine-grained detail without analytical edge — reveals texture without harsh spotlighting', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with warm or tonally dense amplification', effect: 'the timing precision and clarity tend to cut through added warmth rather than being masked by it', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in systems that already emphasize speed and transparency', effect: 'can tilt the balance toward analytical — the tonal lightness may become noticeable', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'timing precision and articulate detail', cost: 'the tonal density and midrange weight of R-2R conversion', relative_to: 'Denafrips and other R-2R designs', basis: 'review_consensus' },
+      ],
+    },
   },
 
   {
@@ -364,6 +465,22 @@ export const DAC_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/product/denafrips-pontus-ii-12th-1' },
     ],
+    tendencies: {
+      confidence: 'well_established',
+      character: [
+        { domain: 'tonality', tendency: 'rich harmonic density with physical midrange presence', basis: 'review_consensus' },
+        { domain: 'texture', tendency: 'layered, dimensional texture — instruments have body and resonance', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'relaxed but coherent — phrasing breathes without losing rhythmic thread', basis: 'listener_consensus' },
+        { domain: 'spatial', tendency: 'deep, holographic staging with good layering front-to-back', basis: 'listener_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with fast or precision-oriented amplifiers', effect: 'the R-2R tonal density and the amplifier\'s speed tend to complement — body without sluggishness', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in systems that are already tonally dense or warm', effect: 'the cumulative weight can reduce clarity — bass and lower midrange may feel heavy', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'harmonic richness, texture, and tonal authority', cost: 'transient sharpness and the explicit separation of delta-sigma designs', relative_to: 'ESS-based DACs at this price', basis: 'review_consensus' },
+      ],
+    },
   },
 
   {
@@ -391,5 +508,19 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B0BL2F62LJ' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/gustard-r26' },
     ],
+    tendencies: {
+      confidence: 'directional',
+      character: [
+        { domain: 'tonality', tendency: 'balanced tonal presentation — body without excess warmth', basis: 'listener_consensus' },
+        { domain: 'texture', tendency: 'finer-grained texture than typical R-2R, closer to delta-sigma resolution', basis: 'editorial_inference' },
+        { domain: 'dynamics', tendency: 'even dynamic delivery — controlled rather than explosive', basis: 'listener_consensus' },
+      ],
+      interactions: [
+        { condition: 'for listeners moving from delta-sigma to R-2R', effect: 'a gentler architectural transition — retains clarity while adding body', valence: 'positive', basis: 'listener_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'a middle ground between R-2R warmth and delta-sigma precision', cost: 'the full tonal saturation of Denafrips or the explicit speed of ESS designs', relative_to: 'both R-2R and delta-sigma at this price', basis: 'editorial_inference' },
+      ],
+    },
   },
 ];

@@ -30,6 +30,12 @@ import {
   type UserArchetypePreference,
 } from './archetype';
 import { topTraits, type TasteProfile } from './taste-profile';
+import {
+  hasTendencies,
+  selectCharacterTendencies,
+  selectDefaultTendencies,
+  findMatchingInteractions,
+} from './sonic-tendencies';
 
 // ── Product lookup ───────────────────────────────────
 
@@ -166,16 +172,47 @@ const TRAIT_LABELS: Record<string, string> = {
 
 // ── Character builders ───────────────────────────────
 
-function productCharacter(product: Product): string {
+/**
+ * Build a sonic character description for a product.
+ *
+ * Prefers structured tendencies when available and confidence is adequate.
+ * Falls back to description + trait-label path otherwise.
+ *
+ * @param desireQualities - user's desire qualities, used to select relevant tendencies
+ */
+function productCharacter(product: Product, desireQualities: string[] = []): string {
+  // ── Tendency-driven path ──────────────────────────
+  if (hasTendencies(product.tendencies)) {
+    const tendencies = desireQualities.length > 0
+      ? selectCharacterTendencies(product.tendencies.character, desireQualities)
+      : selectDefaultTendencies(product.tendencies.character);
+
+    const parts: string[] = [`${product.architecture} design.`];
+    for (const t of tendencies) {
+      // Capitalize first letter of tendency text
+      const text = t.tendency.charAt(0).toUpperCase() + t.tendency.slice(1);
+      parts.push(t.context ? `${text} — ${t.context}.` : `${text}.`);
+    }
+
+    // Append risk traits
+    const risks: string[] = [];
+    if ((product.traits.fatigue_risk ?? 0) >= 0.4) risks.push('some listening fatigue risk in bright systems');
+    if ((product.traits.glare_risk ?? 0) >= 0.4) risks.push('a touch of upper-frequency edge');
+    if (risks.length > 0) {
+      parts.push(`Worth noting: ${risks.join('; ')}.`);
+    }
+
+    return parts.join(' ');
+  }
+
+  // ── Fallback: description + trait labels ───────────
   const traits = product.traits;
 
-  // Gather strong traits (≥ 0.7) in human-readable form
   const strengths: string[] = [];
   for (const [key, label] of Object.entries(TRAIT_LABELS)) {
     if ((traits[key] ?? 0) >= 0.7) strengths.push(label);
   }
 
-  // Gather risk traits for nuance
   const risks: string[] = [];
   if ((traits.fatigue_risk ?? 0) >= 0.4) risks.push('some listening fatigue risk in bright systems');
   if ((traits.glare_risk ?? 0) >= 0.4) risks.push('a touch of upper-frequency edge');
@@ -394,7 +431,7 @@ export function buildGearResponse(
         intent,
         subjects,
         anchor: withTendency(`The ${a.brand} ${a.name} and ${b.brand} ${b.name} come from quite different design traditions.`),
-        character: `${archetypeFrame} The ${a.name} uses ${a.architecture} — ${a.description.charAt(0).toLowerCase() + a.description.slice(1)} The ${b.name} uses ${b.architecture} — ${b.description.charAt(0).toLowerCase() + b.description.slice(1)}`,
+        character: `${archetypeFrame} ${productCharacter(a, desires.length > 0 ? [desires[0].quality] : [])} ${productCharacter(b, desires.length > 0 ? [desires[0].quality] : [])}`,
         interpretation: desires.length > 0
           ? QUALITY_PROFILES[desires[0].quality]?.interpretation
           : undefined,
@@ -461,7 +498,7 @@ export function buildGearResponse(
       subjects,
       anchor: withTendency(`The ${productName} has a well-established character, and wanting ${primary.direction} ${primary.quality} from it tells me something useful about where you want to go.${archetypeContext}`),
       character: product
-        ? productCharacter(product)
+        ? productCharacter(product, [primary.quality])
         : brandCharacter(productName),
       interpretation: profile?.interpretation
         ?? `When listeners ask for ${primary.direction} ${primary.quality}, the answer usually depends on where in the chain the limitation lives — and whether it's truly missing or being masked by something else.`,
@@ -549,6 +586,36 @@ const COMPARISON_PHRASES: Record<string, { aLeads: string; bLeads: string }> = {
 };
 
 function buildComparisonDirection(a: Product, b: Product): string {
+  // ── Tendency-driven comparison ────────────────────
+  if (hasTendencies(a.tendencies) && hasTendencies(b.tendencies)) {
+    const parts: string[] = [];
+
+    // Compare character tendencies in overlapping domains
+    const aDomains = new Set(a.tendencies.character.map((t) => t.domain));
+    const bDomains = new Set(b.tendencies.character.map((t) => t.domain));
+    const sharedDomains = [...aDomains].filter((d) => bDomains.has(d));
+
+    for (const domain of sharedDomains.slice(0, 2)) {
+      const aTend = a.tendencies.character.find((t) => t.domain === domain);
+      const bTend = b.tendencies.character.find((t) => t.domain === domain);
+      if (aTend && bTend && aTend.tendency !== bTend.tendency) {
+        parts.push(`In ${domain}, the ${a.name} tends toward ${aTend.tendency}, while the ${b.name} tends toward ${bTend.tendency}`);
+      }
+    }
+
+    // Add trade-off contrast if available
+    const aTradeoff = a.tendencies.tradeoffs[0];
+    const bTradeoff = b.tendencies.tradeoffs[0];
+    if (aTradeoff && bTradeoff) {
+      parts.push(`The ${a.name} optimizes for ${aTradeoff.gains}; the ${b.name} optimizes for ${bTradeoff.gains}`);
+    }
+
+    if (parts.length > 0) {
+      return `${parts.join('. ')}. Neither is objectively better — they represent different design philosophies, and the right choice depends on your system context and listening priorities.`;
+    }
+  }
+
+  // ── Fallback: trait-diff comparison ───────────────
   const diffs: string[] = [];
 
   for (const [trait, phrases] of Object.entries(COMPARISON_PHRASES)) {
@@ -560,7 +627,6 @@ function buildComparisonDirection(a: Product, b: Product): string {
     }
   }
 
-  // Cap at 4 most distinctive differences to keep it readable
   const topDiffs = diffs.slice(0, 4);
 
   if (topDiffs.length > 0) {
@@ -577,7 +643,6 @@ function buildComparisonDirection(a: Product, b: Product): string {
 function buildInquiryDirection(product: Product, userPref?: { primary: SonicArchetype; secondary?: SonicArchetype }): string {
   const traits = product.traits;
   const tags = tagProductArchetype(product);
-
   const parts: string[] = [];
 
   // Archetype alignment note — check against both primary and secondary
@@ -591,37 +656,71 @@ function buildInquiryDirection(product: Product, userPref?: { primary: SonicArch
     }
   }
 
-  // Identify the product's strongest trait dimension for context
-  const strengths: string[] = [];
-  if ((traits.rhythm ?? 0) >= 1.0 || (traits.dynamics ?? 0) >= 1.0) strengths.push('rhythmic and dynamic engagement');
-  if ((traits.tonal_density ?? 0) >= 1.0) strengths.push('tonal richness');
-  if ((traits.spatial_precision ?? 0) >= 1.0) strengths.push('spatial precision');
-  if ((traits.clarity ?? 0) >= 1.0) strengths.push('transparency');
-  if ((traits.flow ?? 0) >= 1.0) strengths.push('musical continuity');
-  if ((traits.texture ?? 0) >= 1.0) strengths.push('textural realism');
+  // ── Tendency-driven path ──────────────────────────
+  if (hasTendencies(product.tendencies)) {
+    // Use curated trade-off tendencies instead of inferring from weak trait scores
+    const tradeoff = product.tendencies.tradeoffs[0];
+    if (tradeoff) {
+      const rel = tradeoff.relative_to ? ` compared to ${tradeoff.relative_to}` : '';
+      parts.push(`What you tend to get is ${tradeoff.gains}${rel}. What it trades away is ${tradeoff.cost}.`);
+    }
 
-  // Identify trade-offs (weak areas)
-  const tradeoffs: string[] = [];
-  if ((traits.clarity ?? 0) <= 0.4 && strengths.length > 0) tradeoffs.push('resolution');
-  if ((traits.dynamics ?? 0) <= 0.4 && strengths.length > 0) tradeoffs.push('dynamic scale');
-  if ((traits.spatial_precision ?? 0) <= 0.4 && strengths.length > 0) tradeoffs.push('imaging specificity');
-  if ((traits.warmth ?? 0) <= 0.0 && (traits.clarity ?? 0) >= 0.7) tradeoffs.push('warmth');
+    // Include matching interaction tendencies if system context is available
+    // (use archetype preferences as proxy for system type)
+    const systemKeywords: string[] = [];
+    if (userPref) {
+      if (userPref.primary === 'flow_organic') systemKeywords.push('warm', 'smooth', 'tube');
+      if (userPref.primary === 'precision_explicit') systemKeywords.push('speed', 'precision', 'analytical');
+      if (userPref.primary === 'tonal_saturated') systemKeywords.push('warm', 'dense', 'tonal');
+      if (userPref.primary === 'rhythmic_propulsive') systemKeywords.push('speed', 'dynamic');
+    }
+    const matchedInteractions = findMatchingInteractions(product.tendencies.interactions, systemKeywords);
+    if (matchedInteractions.length > 0) {
+      const inter = matchedInteractions[0];
+      if (inter.valence === 'caution') {
+        parts.push(`Worth being aware of: ${inter.condition}, ${inter.effect}.`);
+      } else {
+        parts.push(`${inter.condition.charAt(0).toUpperCase() + inter.condition.slice(1)}, ${inter.effect}.`);
+      }
+    }
 
-  // Cautions
-  const cautions: string[] = [];
-  if ((traits.fatigue_risk ?? 0) >= 0.4) cautions.push('it can lean forward in the treble, which may be fatiguing in brighter systems');
-  if ((traits.glare_risk ?? 0) >= 0.4) cautions.push('there\'s some edge in the upper frequencies that could compound with bright amplification');
+    // Caution interactions that didn't match keywords but are important
+    const cautionInteractions = product.tendencies.interactions.filter(
+      (i) => i.valence === 'caution' && !matchedInteractions.includes(i),
+    );
+    if (cautionInteractions.length > 0 && matchedInteractions.length === 0) {
+      const ci = cautionInteractions[0];
+      parts.push(`Worth being aware of: ${ci.condition}, ${ci.effect}.`);
+    }
+  } else {
+    // ── Fallback: trait-inferred direction ───────────
+    const strengths: string[] = [];
+    if ((traits.rhythm ?? 0) >= 1.0 || (traits.dynamics ?? 0) >= 1.0) strengths.push('rhythmic and dynamic engagement');
+    if ((traits.tonal_density ?? 0) >= 1.0) strengths.push('tonal richness');
+    if ((traits.spatial_precision ?? 0) >= 1.0) strengths.push('spatial precision');
+    if ((traits.clarity ?? 0) >= 1.0) strengths.push('transparency');
+    if ((traits.flow ?? 0) >= 1.0) strengths.push('musical continuity');
+    if ((traits.texture ?? 0) >= 1.0) strengths.push('textural realism');
 
-  if (strengths.length > 0 && !userPref) {
-    parts.push(`Its design philosophy clearly prioritizes ${strengths.join(' and ')}.`);
-  }
+    const tradeoffs: string[] = [];
+    if ((traits.clarity ?? 0) <= 0.4 && strengths.length > 0) tradeoffs.push('resolution');
+    if ((traits.dynamics ?? 0) <= 0.4 && strengths.length > 0) tradeoffs.push('dynamic scale');
+    if ((traits.spatial_precision ?? 0) <= 0.4 && strengths.length > 0) tradeoffs.push('imaging specificity');
+    if ((traits.warmth ?? 0) <= 0.0 && (traits.clarity ?? 0) >= 0.7) tradeoffs.push('warmth');
 
-  if (tradeoffs.length > 0) {
-    parts.push(`The trade-off is ${tradeoffs.join(' and ')} — it gives up some of that to focus on what it does best.`);
-  }
+    const cautions: string[] = [];
+    if ((traits.fatigue_risk ?? 0) >= 0.4) cautions.push('it can lean forward in the treble, which may be fatiguing in brighter systems');
+    if ((traits.glare_risk ?? 0) >= 0.4) cautions.push('there\'s some edge in the upper frequencies that could compound with bright amplification');
 
-  if (cautions.length > 0) {
-    parts.push(`Worth being aware of: ${cautions.join('; ')}.`);
+    if (strengths.length > 0 && !userPref) {
+      parts.push(`Its design philosophy clearly prioritizes ${strengths.join(' and ')}.`);
+    }
+    if (tradeoffs.length > 0) {
+      parts.push(`The trade-off is ${tradeoffs.join(' and ')} — it gives up some of that to focus on what it does best.`);
+    }
+    if (cautions.length > 0) {
+      parts.push(`Worth being aware of: ${cautions.join('; ')}.`);
+    }
   }
 
   parts.push('How well it works depends on the rest of the chain and what you prioritize in your listening.');

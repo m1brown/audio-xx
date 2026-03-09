@@ -18,6 +18,7 @@ import type { SystemProfile, OutputType, SystemCharacter } from './system-profil
 import { DEFAULT_SYSTEM_PROFILE } from './system-profile';
 export type { SystemProfile, OutputType, SystemCharacter } from './system-profile';
 import type { SonicArchetype } from './archetype';
+import { hasTendencies, selectDefaultTendencies } from './sonic-tendencies';
 
 /** Short labels for archetype context in shopping summaries. */
 const ARCHETYPE_LABELS: Record<SonicArchetype, string> = {
@@ -814,6 +815,16 @@ import { topTraits, type TasteProfile as UserTasteProfile, type ProfileTraitKey 
  */
 function buildFitNote(product: Product, userTraits: Record<string, SignalDirection>): string {
   const arch = product.architecture;
+
+  // Tendency-driven path — prefer curated character tendencies
+  if (hasTendencies(product.tendencies)) {
+    const top = selectDefaultTendencies(product.tendencies.character, 1);
+    if (top.length > 0) {
+      return `${arch} design — ${top[0].tendency}`;
+    }
+  }
+
+  // Fallback — trait-label + description path
   const strongTraits: string[] = [];
 
   for (const [trait, direction] of Object.entries(userTraits)) {
