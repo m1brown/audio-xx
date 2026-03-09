@@ -7,7 +7,7 @@ import EvaluationOutput from '@/components/EvaluationOutput';
 import TasteRadar from '@/components/TasteRadar';
 import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
-import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification, isAnswerReady } from '@/lib/shopping-intent';
+import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
 import { checkGlossaryQuestion } from '@/lib/glossary';
 import { detectIntent } from '@/lib/intent';
 import { buildGearResponse } from '@/lib/gear-response';
@@ -257,7 +257,7 @@ export default function Home() {
           const pastClarificationCap = shoppingAnswerCount > 0 || newTurnCount > maxClarifications;
           const shoppingQuestion = pastClarificationCap
             ? null
-            : getShoppingClarification(shoppingCtx, newTurnCount);
+            : getShoppingClarification(shoppingCtx, data.signals, newTurnCount);
 
           if (shoppingQuestion) {
             // Still gathering context — ask one more question

@@ -137,7 +137,7 @@ function checkShoppingIntent(
 ): string | null {
   const ctx = detectShoppingIntent(userText, signals);
   if (!ctx.detected) return null;
-  return getShoppingClarification(ctx, turnCount);
+  return getShoppingClarification(ctx, signals, turnCount);
 }
 
 // ── Case 4: Neutral / Opinion Questions ──────────────

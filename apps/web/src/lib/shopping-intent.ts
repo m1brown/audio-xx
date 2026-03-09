@@ -419,93 +419,199 @@ export function detectShoppingIntent(
   };
 }
 
-// ── Question templates ────────────────────────────────
+// ── Context-gap evaluation ────────────────────────────
+//
+// Instead of fixed question sequences per mode, we evaluate which
+// context dimensions are missing and ask for the most useful one.
+// Questions are open-ended and adapt to what the user has already said.
 
-const TASTE_QUESTIONS: Record<ShoppingCategory, string> = {
-  dac: 'Which matters more to you:\n• music that feels smooth, rich, and easy to listen to for hours (flow / tonal density / low fatigue)\n• or music that feels precise, fast, and full of fine detail (clarity / speed / transient attack)',
-  amplifier: 'Which matters more to you:\n• a strong sense of rhythm that pulls you into the music (rhythmic drive / engagement)\n• or a calm, controlled presentation that stays composed even in complex passages (composure / refinement)',
-  speakers: 'Which matters more to you:\n• a wide, spacious sense of the room with instruments spread out (soundstage / air)\n• or a fuller, more intimate sound with more weight and body (density / tonal richness)',
-  headphones: 'Which matters more to you:\n• a warmer, more enveloping sound that wraps around you (warmth / immersion)\n• or a clearer, more separated presentation where everything is distinct (detail / separation)',
-  streamer: 'Is the streamer your main source, or a transport feeding an external DAC?',
-  general: 'What kind of listening do you tend to enjoy:\n• lively and engaging — music that grabs your attention (dynamics / energy)\n• or smooth and composed — music that feels relaxed and effortless (flow / composure)',
-};
+export type GapDimension = 'taste' | 'system' | 'budget' | 'use_case';
 
-const SYSTEM_QUESTIONS: Record<ShoppingCategory, string> = {
-  dac: 'What is the DAC feeding into right now — what amp and speakers?',
-  amplifier: 'What source and speakers is the amplifier working with?',
-  speakers: 'What amp and source are driving the speakers?',
-  headphones: 'What DAC or source will be driving the headphones?',
-  streamer: 'What DAC is the streamer connected to?',
-  general: 'What does your current system look like — source, amplification, and speakers or headphones?',
-};
-
-const PRESERVE_QUESTION =
-  'What does your current system do well that you want to keep?';
-
-const LIMITING_QUESTION =
-  'What feels most limiting or unsatisfying about what you hear right now?';
-
-const USE_CASE_QUESTION =
-  'Will this be a headphone setup, a speaker system, or both?';
-
-const NEW_USED_QUESTION =
-  'Are you open to used or ex-demo gear, or do you prefer buying new?';
-
-// ── Question sequences per mode ───────────────────────
-
-interface QuestionStep {
-  /** Context key to check — if already provided, skip this step. */
-  key: keyof ShoppingContext;
-  /** Returns the question string for this step. */
-  question: (ctx: ShoppingContext) => string;
+export interface ContextGap {
+  dimension: GapDimension;
+  question: string;
 }
 
-const SPECIFIC_COMPONENT_SEQUENCE: QuestionStep[] = [
-  {
-    key: 'tasteProvided',
-    question: (ctx) => TASTE_QUESTIONS[ctx.category],
-  },
-  {
-    key: 'systemProvided',
-    question: (ctx) => SYSTEM_QUESTIONS[ctx.category],
-  },
-];
+// ── Richer "already provided" detection ──────────────
 
-const UPGRADE_PATH_SEQUENCE: QuestionStep[] = [
-  {
-    key: 'preserveProvided',
-    question: () => PRESERVE_QUESTION,
-  },
-  {
-    key: 'limitingProvided',
-    question: () => LIMITING_QUESTION,
-  },
-  {
-    key: 'systemProvided',
-    question: (ctx) => SYSTEM_QUESTIONS[ctx.category],
-  },
-];
+/**
+ * Returns true when enough taste signal exists — either directional
+ * trait signals or multiple symptom descriptions.
+ */
+function isTasteSufficient(signals: ExtractedSignals): boolean {
+  const hasDirectionalTrait = Object.values(signals.traits).some(
+    (d) => d === 'up' || d === 'down',
+  );
+  const hasEnoughSymptoms = signals.symptoms.length >= 2;
+  return hasDirectionalTrait || hasEnoughSymptoms;
+}
 
-const BUILD_A_SYSTEM_SEQUENCE: QuestionStep[] = [
-  {
-    key: 'useCaseProvided',
-    question: () => USE_CASE_QUESTION,
-  },
-  {
-    key: 'tasteProvided',
-    question: (ctx) => TASTE_QUESTIONS[ctx.category],
-  },
-  {
-    key: 'budgetMentioned',
-    question: () => NEW_USED_QUESTION,
-  },
-];
+/**
+ * Returns true when we know enough about the user's system to
+ * contextualise a recommendation — output type plus at least
+ * one structural detail.
+ */
+function isSystemSufficient(ctx: ShoppingContext): boolean {
+  const sp = ctx.systemProfile;
+  if (sp.outputType === 'unknown') return ctx.systemProvided;
+  // Know the output type AND at least one other detail
+  return (
+    sp.systemCharacter !== 'unknown' ||
+    sp.tubeAmplification ||
+    sp.lowPowerContext ||
+    ctx.systemProvided
+  );
+}
 
-const SEQUENCES: Record<ShoppingMode, QuestionStep[]> = {
-  'specific-component': SPECIFIC_COMPONENT_SEQUENCE,
-  'upgrade-path': UPGRADE_PATH_SEQUENCE,
-  'build-a-system': BUILD_A_SYSTEM_SEQUENCE,
-};
+// ── Context-aware question phrasing ──────────────────
+
+function phraseTasteQuestion(ctx: ShoppingContext): string {
+  switch (ctx.category) {
+    case 'dac':
+      return 'What matters most to you in how a DAC presents music — the texture and feel, or the clarity and precision?';
+    case 'amplifier':
+      return 'What do you value most in amplification — rhythmic energy and engagement, or composure and control?';
+    case 'speakers':
+      return 'What are you hoping these speakers will do especially well?';
+    case 'headphones':
+      return 'What matters most to you in the sound — warmth and immersion, or detail and separation?';
+    case 'streamer':
+      return 'Is the streamer your main source, or a transport feeding an external DAC?';
+    default:
+      return 'What matters most to you in the sound?';
+  }
+}
+
+function phraseSystemQuestion(ctx: ShoppingContext): string {
+  const sp = ctx.systemProfile;
+
+  // Adapt based on what we already know
+  if (sp.tubeAmplification) {
+    return 'You mentioned tube amplification — what speakers or headphones is it driving, and what source feeds it?';
+  }
+  if (sp.outputType === 'speakers') {
+    return 'What source and amplification are upstream of those speakers?';
+  }
+  if (sp.outputType === 'headphones') {
+    return 'What source or DAC is driving the headphones?';
+  }
+
+  // Category-specific fallbacks
+  switch (ctx.category) {
+    case 'dac':
+      return 'What does the rest of your chain look like — amplification and speakers or headphones?';
+    case 'amplifier':
+      return 'What source and speakers will the amplifier be working with?';
+    case 'speakers':
+      return 'What amp and source are driving the speakers?';
+    case 'headphones':
+      return 'What DAC or source will be driving the headphones?';
+    default:
+      return 'What does the rest of your chain look like?';
+  }
+}
+
+function phraseBudgetQuestion(ctx: ShoppingContext): string {
+  const catLabel = CATEGORY_LABELS[ctx.category];
+  return `Do you have a rough budget range in mind for the ${catLabel}?`;
+}
+
+function phraseUseCaseQuestion(ctx: ShoppingContext): string {
+  if (ctx.mode === 'build-a-system') {
+    return 'Will this be a headphone setup, a speaker system, or both?';
+  }
+  return 'What kind of listening environment is this for — desktop, living room, dedicated room?';
+}
+
+// ── Gap evaluation ───────────────────────────────────
+
+/**
+ * Evaluate which context gaps remain, in priority order for the
+ * detected shopping mode. Returns the ordered list of unfilled gaps.
+ *
+ * Priority varies by mode:
+ *   specific-component: taste → system → budget
+ *   upgrade-path:       system → taste → budget
+ *   build-a-system:     use_case → taste → budget
+ */
+export function evaluateContextGaps(
+  ctx: ShoppingContext,
+  signals: ExtractedSignals,
+): ContextGap[] {
+  const gaps: ContextGap[] = [];
+
+  const checks: Record<GapDimension, { filled: boolean; question: string }> = {
+    taste: {
+      filled: isTasteSufficient(signals),
+      question: phraseTasteQuestion(ctx),
+    },
+    system: {
+      filled: isSystemSufficient(ctx),
+      question: phraseSystemQuestion(ctx),
+    },
+    budget: {
+      filled: ctx.budgetMentioned,
+      question: phraseBudgetQuestion(ctx),
+    },
+    use_case: {
+      filled: ctx.useCaseProvided,
+      question: phraseUseCaseQuestion(ctx),
+    },
+  };
+
+  // Priority order depends on mode
+  let order: GapDimension[];
+  switch (ctx.mode) {
+    case 'specific-component':
+      order = ['taste', 'system', 'budget'];
+      break;
+    case 'upgrade-path':
+      order = ['system', 'taste', 'budget'];
+      break;
+    case 'build-a-system':
+      order = ['use_case', 'taste', 'budget'];
+      break;
+  }
+
+  for (const dim of order) {
+    const check = checks[dim];
+    if (!check.filled) {
+      gaps.push({ dimension: dim, question: check.question });
+    }
+  }
+
+  return gaps;
+}
+
+// ── Conversational bridging ──────────────────────────
+
+/**
+ * Optionally prepend a single short bridging sentence to a follow-up
+ * question, reflecting what we already understand. At most one sentence,
+ * only when it improves conversational flow.
+ */
+function bridgeQuestion(
+  gap: ContextGap,
+  ctx: ShoppingContext,
+  signals: ExtractedSignals,
+): string {
+  // Only bridge when we have something meaningful to reflect
+  // and the gap is not the very first question
+  const hasTaste = isTasteSufficient(signals);
+  const hasSystem = isSystemSufficient(ctx);
+
+  let bridge = '';
+
+  if (gap.dimension === 'system' && hasTaste) {
+    bridge = 'I have a sense of what you value sonically. ';
+  } else if (gap.dimension === 'taste' && hasSystem) {
+    bridge = 'I know what you\'re working with. ';
+  } else if (gap.dimension === 'budget' && hasTaste && hasSystem) {
+    bridge = 'Good picture of what you\'re after and what you\'re working with. ';
+  }
+
+  return `${bridge}${gap.question}`;
+}
 
 // ── Turn caps per mode ────────────────────────────────
 
@@ -523,36 +629,58 @@ export function getShoppingTurnCap(mode: ShoppingMode): number {
 // ── Answer-readiness ──────────────────────────────────
 
 /**
- * Returns true when the gathered context is sufficient for a
- * non-generic recommendation in the detected shopping mode.
+ * Simple rule-based readiness. No weighted scores — just clear conditions.
+ *
+ * Full readiness:  category + taste + budget + system all present.
+ * Provisional:     category + at least one of (taste | budget) present.
+ *
+ * The turn cap provides an additional backstop that forces a provisional
+ * answer regardless of what's been gathered.
  */
-export function isAnswerReady(ctx: ShoppingContext): boolean {
+export function isAnswerReady(
+  ctx: ShoppingContext,
+  signals: ExtractedSignals,
+): boolean {
   if (!ctx.detected) return true; // not shopping — let the engine handle it
+
+  const hasTaste = isTasteSufficient(signals);
+  const hasSystem = isSystemSufficient(ctx);
+  const hasBudget = ctx.budgetMentioned;
 
   switch (ctx.mode) {
     case 'specific-component':
-      return (
-        ctx.category !== 'general' &&
-        ctx.budgetMentioned &&
-        ctx.tasteProvided &&
-        ctx.systemProvided
-      );
+      // Full: category known + taste + budget + system
+      // Also allow: category + taste + budget (system becomes a caveat)
+      return ctx.category !== 'general' && hasTaste && hasBudget;
 
     case 'upgrade-path':
-      return (
-        ctx.budgetMentioned &&
-        ctx.preserveProvided &&
-        ctx.limitingProvided &&
-        ctx.systemProvided
-      );
+      // Full: system + taste + budget
+      // Also allow: system + taste (budget becomes a caveat)
+      return hasSystem && hasTaste;
 
     case 'build-a-system':
-      return (
-        ctx.useCaseProvided &&
-        ctx.budgetMentioned &&
-        ctx.tasteProvided
-      );
+      // Full: use_case + taste + budget
+      // Also allow: taste + budget
+      return ctx.useCaseProvided && hasTaste && hasBudget;
   }
+}
+
+/**
+ * Returns the list of important gaps that remain even when we proceed
+ * to answer. These become caveats on the recommendation.
+ */
+export function getStatedGaps(
+  ctx: ShoppingContext,
+  signals: ExtractedSignals,
+): GapDimension[] {
+  const gaps: GapDimension[] = [];
+
+  if (!isTasteSufficient(signals)) gaps.push('taste');
+  if (!isSystemSufficient(ctx)) gaps.push('system');
+  if (!ctx.budgetMentioned) gaps.push('budget');
+  if (ctx.mode === 'build-a-system' && !ctx.useCaseProvided) gaps.push('use_case');
+
+  return gaps;
 }
 
 // ── Question selection ────────────────────────────────
@@ -561,41 +689,38 @@ export function isAnswerReady(ctx: ShoppingContext): boolean {
  * Returns the next follow-up question for the detected shopping mode,
  * or null if enough context has been gathered.
  *
- * Questions are asked one at a time in the mode's priority order.
- * Steps are skipped when the user has already provided that context.
+ * Uses the context-gap evaluator to find the most useful missing
+ * dimension and phrases the question contextually.
  *
  * Returns null (triggering answer mode) when:
- *   1. All required context is present (isAnswerReady), OR
- *   2. The per-mode turn cap is reached (provisional best-effort), OR
- *   3. No more questions remain in the sequence.
+ *   1. Readiness conditions are met, OR
+ *   2. The per-mode turn cap is reached, OR
+ *   3. No context gaps remain.
  *
  * @param ctx       - Shopping context derived from all user text so far
+ * @param signals   - Extracted signals from all user text
  * @param turnCount - Number of user submissions (1-indexed)
  */
 export function getShoppingClarification(
   ctx: ShoppingContext,
+  signals: ExtractedSignals,
   turnCount: number,
 ): string | null {
   if (!ctx.detected) return null;
 
   // Early exit: enough context gathered — go straight to answer
-  if (isAnswerReady(ctx)) return null;
+  if (isAnswerReady(ctx, signals)) return null;
 
   // Turn cap: provide provisional direction with what we have
   const cap = TURN_CAPS[ctx.mode];
   if (turnCount >= cap) return null;
 
-  const sequence = SEQUENCES[ctx.mode];
+  // Find the highest-priority unfilled gap
+  const gaps = evaluateContextGaps(ctx, signals);
+  if (gaps.length === 0) return null;
 
-  // Walk the priority list, return the first question whose context is missing
-  for (const step of sequence) {
-    if (!ctx[step.key]) {
-      return step.question(ctx);
-    }
-  }
-
-  // Sequence exhausted — answer with what we have
-  return null;
+  // Return the top gap with optional conversational bridging
+  return bridgeQuestion(gaps[0], ctx, signals);
 }
 
 // ── Shopping Answer (advisor-first structure) ─────────
@@ -620,6 +745,8 @@ export interface ShoppingAnswer {
   systemNote?: string;
   /** True when the recommendation is based on incomplete context — refinable. */
   provisional?: boolean;
+  /** Which context dimensions are missing — shown as caveats on provisional answers. */
+  statedGaps?: GapDimension[];
 }
 
 // ── Taste direction templates ─────────────────────────
@@ -982,7 +1109,8 @@ export function buildShoppingAnswer(
     : undefined;
 
   // Mark as provisional when the answer is based on incomplete context
-  const provisional = !isAnswerReady(ctx);
+  const gaps = getStatedGaps(ctx, signals);
+  const provisional = gaps.length > 0;
 
   return {
     category: categoryLabel,
@@ -994,6 +1122,7 @@ export function buildShoppingAnswer(
     watchFor,
     systemNote,
     provisional,
+    statedGaps: provisional ? gaps : undefined,
   };
 }
 
