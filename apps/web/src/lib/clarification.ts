@@ -140,78 +140,176 @@ function checkShoppingIntent(
   return getShoppingClarification(ctx, turnCount);
 }
 
-// ── Acknowledgement generation ────────────────────────
+// ── Case 4: Neutral / Opinion Questions ──────────────
 
 /**
- * Generate a short acknowledgement based on what signals were
- * detected in the user's message. This mirrors back what the
- * user seems to be describing or asking about.
+ * Detects neutral "what do you think?" or "opinions on X?" questions
+ * where the user hasn't stated a problem or preference direction.
+ * Instead of jumping to diagnostic questioning, ask about intent.
+ */
+const NEUTRAL_PATTERNS = [
+  /what do you think (?:of|about) /i,
+  /thoughts on /i,
+  /opinion on /i,
+  /opinions on /i,
+  /what are your thoughts/i,
+  /how (?:do you feel|would you rate) /i,
+  /is (?:the|a|an) .+ (?:good|worth|any good)/i,
+  /any experience with /i,
+  /have you heard /i,
+  /know anything about /i,
+];
+
+function checkNeutralQuestion(
+  signals: ExtractedSignals,
+  currentMessage: string,
+): string | null {
+  const lower = currentMessage.toLowerCase();
+
+  // Only trigger when the user hasn't given strong preference signals
+  if (signals.matched_phrases.length >= 2) return null;
+  if (signals.symptoms.length >= 1) return null;
+
+  const isNeutral = NEUTRAL_PATTERNS.some((p) => p.test(lower));
+  if (!isNeutral) return null;
+
+  return 'Are you thinking about using it in a system, or just curious about its character?';
+}
+
+// ── Acknowledgement generation ────────────────────────
+
+/** Category labels for conversational use (lowercase, natural). */
+const CATEGORY_NAMES: Record<string, string> = {
+  dac: 'DACs',
+  amplifier: 'amplifiers',
+  speakers: 'speakers',
+  headphones: 'headphones',
+  streamer: 'streamers',
+  general: 'gear',
+};
+
+/**
+ * Generate a short acknowledgement that reflects what the user
+ * actually said. Reads their message for specific topics, terms,
+ * and intent so the response feels like a real conversation rather
+ * than a form being filled out.
  *
- * The acknowledgement is conversational and non-diagnostic —
- * it does not assume the user has a problem unless they say so.
+ * Rules:
+ *   - Do not assume a problem unless the user stated one.
+ *   - Keep to 1–2 sentences.
+ *   - Echo specific content (category, comparisons, descriptive terms).
  */
 function generateAcknowledge(
   signals: ExtractedSignals,
   currentMessage: string,
   turnCount: number,
+  category: string,
 ): string {
-  // On follow-up turns (not the first message), keep acknowledgements brief
-  if (turnCount > 1) {
-    if (signals.matched_phrases.length > 0) {
-      return 'Got it — that helps narrow things down.';
-    }
-    return 'Thanks for the additional context.';
-  }
-
-  // First turn: acknowledge what they seem to be describing
-  const phrases = signals.matched_phrases;
   const lower = currentMessage.toLowerCase();
+  const catName = CATEGORY_NAMES[category] ?? 'gear';
+  const phrases = signals.matched_phrases;
 
-  // Shopping / recommendation-seeking
-  if (lower.includes('recommend') || lower.includes('best') || lower.includes('looking for')) {
-    return 'Good question — there are a few directions worth considering.';
+  // Follow-up turns — brief and varied
+  if (turnCount > 1) {
+    if (phrases.length >= 2) return 'That paints a clearer picture.';
+    if (phrases.length === 1) return 'Got it, that helps.';
+    if (lower.includes('budget') || lower.includes('$')) return 'Good to know the budget range.';
+    if (lower.includes('my system') || lower.includes('my setup')) return 'Helpful to know the system context.';
+    return 'Noted — thanks for that.';
   }
 
+  // First turn — reflect the user's actual topic
+
+  // Opinion or "what do you think" questions — don't assume a problem
+  if (lower.includes('what do you think') || lower.includes('thoughts on') || lower.includes('opinion on')) {
+    if (category !== 'general') {
+      return `Good question about ${catName} — the answer depends a lot on what you\'re pairing them with and what you value in listening.`;
+    }
+    return 'That depends on a few things — what matters most to you and the rest of the system.';
+  }
+
+  // Comparisons — name the comparison
+  if (lower.includes(' vs ') || lower.includes('versus') || lower.includes('compare')) {
+    return 'Those represent different design philosophies, so the better fit depends on your priorities and system.';
+  }
+
+  // Upgrade / change intent
   if (lower.includes('upgrade') || lower.includes('replace') || lower.includes('switch')) {
-    return 'That\'s a worthwhile thing to think through carefully.';
+    if (category !== 'general') {
+      return `Changing ${catName} can shift the overall character of a system, so it\'s worth thinking through.`;
+    }
+    return 'That\'s worth thinking through carefully — the right move depends on what you\'re hearing now and what you want to change.';
   }
 
-  if (lower.includes('compare') || lower.includes(' vs ') || lower.includes('versus')) {
-    return 'Those are worth comparing — they represent different design priorities.';
+  // Shopping / recommendation-seeking with category
+  if (lower.includes('recommend') || lower.includes('best') || lower.includes('looking for') || lower.includes('should i get')) {
+    if (category !== 'general') {
+      return `There are a few good directions for ${catName} — the right one depends on your system and listening preferences.`;
+    }
+    return 'There are several directions worth considering — the best fit depends on your priorities.';
   }
 
-  // Descriptions of what they hear
+  // Budget-led questions
+  if (lower.includes('under $') || lower.includes('budget')) {
+    if (category !== 'general') {
+      return `There are solid options for ${catName} at that range.`;
+    }
+    return 'That budget opens up some interesting options.';
+  }
+
+  // Describing what they hear — reflect the descriptive terms
   if (phrases.length >= 3) {
-    return 'You\'re describing a clear listening impression — that\'s useful context.';
+    const topTwo = phrases.slice(0, 2).map((p) => p.toLowerCase()).join(' and ');
+    return `You\'re noticing ${topTwo} — that\'s a useful description of what the system is doing.`;
   }
 
   if (phrases.length >= 1) {
-    return 'That gives a good starting point.';
+    const term = phrases[0].toLowerCase();
+    return `That\'s a good observation about ${term} — it helps clarify what you\'re hearing.`;
   }
 
-  // Fallback — generic but warm
-  return 'Interesting question.';
+  // System description without clear problem
+  if (lower.includes('my system') || lower.includes('my setup') || lower.includes('i have')) {
+    return 'Good to know the system context — that shapes what would make sense.';
+  }
+
+  // True fallback — still warm, not robotic
+  return 'That\'s a good starting point.';
 }
 
 /**
- * Generate an optional short context note based on the
- * type of clarification being asked. This provides a brief
- * neutral observation before the question.
+ * Generate an optional short context note. This is a brief neutral
+ * observation that bridges the acknowledgement to the question.
+ * Should feel conversational, not formulaic.
  */
 function generateContext(
-  questionSource: 'ambiguity' | 'shopping' | 'uncertainty',
+  questionSource: 'ambiguity' | 'shopping' | 'neutral' | 'uncertainty',
   signals: ExtractedSignals,
+  turnCount: number,
 ): string | undefined {
+  // Skip context on follow-up turns — the conversation is already flowing
+  if (turnCount > 1) return undefined;
+
   switch (questionSource) {
-    case 'ambiguity':
-      return 'That term can mean different things to different listeners, so it helps to be specific.';
+    case 'ambiguity': {
+      // Reference the specific ambiguous term if possible
+      const ambiguousTerms = signals.matched_phrases
+        .map((p) => p.toLowerCase())
+        .filter((p) => ['sweet', 'smooth', 'detailed', 'warm', 'open', 'musical', 'natural', 'fast'].includes(p));
+      if (ambiguousTerms.length > 0) {
+        return `"${ambiguousTerms[0]}" can mean quite different things depending on the listener.`;
+      }
+      return 'That can mean different things to different listeners.';
+    }
     case 'shopping':
       if (signals.symptoms.length >= 2) {
-        return 'A few things would help point toward the right direction.';
+        return 'You\'ve given a good sense of your preferences — just a couple more things would help.';
       }
-      return 'To give you a useful direction rather than a generic one, a bit more context would help.';
+      return undefined; // Let the acknowledgement carry the weight — no need to double up
+    case 'neutral':
+      return 'The answer depends a lot on context.';
     case 'uncertainty':
-      return 'There are a few different things that could be going on — a bit more detail would help.';
+      return undefined; // The acknowledgement already covers this naturally
     default:
       return undefined;
   }
@@ -250,12 +348,14 @@ export function getClarificationQuestion(
 
   if (turnCount >= effectiveCap) return null;
 
+  const category = shoppingCtx.category;
+
   // Check cases in priority order and track which source matched
   const ambiguityQ = checkInterpretationAmbiguity(signals, result);
   if (ambiguityQ) {
     return {
-      acknowledge: generateAcknowledge(signals, currentMessage, turnCount),
-      context: generateContext('ambiguity', signals),
+      acknowledge: generateAcknowledge(signals, currentMessage, turnCount, category),
+      context: generateContext('ambiguity', signals, turnCount),
       question: ambiguityQ,
     };
   }
@@ -263,17 +363,26 @@ export function getClarificationQuestion(
   const shoppingQ = checkShoppingIntent(signals, userText, turnCount);
   if (shoppingQ) {
     return {
-      acknowledge: generateAcknowledge(signals, currentMessage, turnCount),
-      context: generateContext('shopping', signals),
+      acknowledge: generateAcknowledge(signals, currentMessage, turnCount, category),
+      context: generateContext('shopping', signals, turnCount),
       question: shoppingQ,
+    };
+  }
+
+  const neutralQ = checkNeutralQuestion(signals, currentMessage);
+  if (neutralQ) {
+    return {
+      acknowledge: generateAcknowledge(signals, currentMessage, turnCount, category),
+      context: generateContext('neutral', signals, turnCount),
+      question: neutralQ,
     };
   }
 
   const uncertaintyQ = checkDiagnosticUncertainty(signals, result);
   if (uncertaintyQ) {
     return {
-      acknowledge: generateAcknowledge(signals, currentMessage, turnCount),
-      context: generateContext('uncertainty', signals),
+      acknowledge: generateAcknowledge(signals, currentMessage, turnCount, category),
+      context: generateContext('uncertainty', signals, turnCount),
       question: uncertaintyQ,
     };
   }
