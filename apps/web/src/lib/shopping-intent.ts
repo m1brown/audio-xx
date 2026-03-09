@@ -411,12 +411,12 @@ export function detectShoppingIntent(
 // ── Question templates ────────────────────────────────
 
 const TASTE_QUESTIONS: Record<ShoppingCategory, string> = {
-  dac: 'Do you value flow, sweetness, and low fatigue — or clarity, speed, and attack?',
-  amplifier: 'Do you prefer rhythmic drive and engagement, or composure and refinement?',
-  speakers: 'Do you prioritize soundstage scale and air, or density and intimacy?',
-  headphones: 'Do you lean toward warmth and immersion, or detail and separation?',
+  dac: 'Which matters more to you:\n• music that feels smooth, rich, and easy to listen to for hours (flow / tonal density / low fatigue)\n• or music that feels precise, fast, and full of fine detail (clarity / speed / transient attack)',
+  amplifier: 'Which matters more to you:\n• a strong sense of rhythm that pulls you into the music (rhythmic drive / engagement)\n• or a calm, controlled presentation that stays composed even in complex passages (composure / refinement)',
+  speakers: 'Which matters more to you:\n• a wide, spacious sense of the room with instruments spread out (soundstage / air)\n• or a fuller, more intimate sound with more weight and body (density / tonal richness)',
+  headphones: 'Which matters more to you:\n• a warmer, more enveloping sound that wraps around you (warmth / immersion)\n• or a clearer, more separated presentation where everything is distinct (detail / separation)',
   streamer: 'Is the streamer your main source, or a transport feeding an external DAC?',
-  general: 'What kind of presentation do you tend to enjoy — lively and engaging, or smooth and composed?',
+  general: 'What kind of listening do you tend to enjoy:\n• lively and engaging — music that grabs your attention (dynamics / energy)\n• or smooth and composed — music that feels relaxed and effortless (flow / composure)',
 };
 
 const SYSTEM_QUESTIONS: Record<ShoppingCategory, string> = {

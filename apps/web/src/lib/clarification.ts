@@ -26,42 +26,42 @@ const AMBIGUOUS_PHRASES: AmbiguousPhrase[] = [
   {
     triggers: ['sweet', 'sweetness'],
     question:
-      'When you say sweetness, do you mean a richer, golden tone — or mainly the absence of harshness and sterility?',
+      'When you say sweet, are you thinking more about:\n• a richer, golden tone with more body (harmonic warmth)\n• or mainly the absence of harshness and edge (low fatigue)',
   },
   {
     triggers: ['smooth', 'smoothness'],
     question:
-      'Does smooth mean relaxed and forgiving, or fluid and continuous?',
+      'When you say smooth, do you mean:\n• relaxed and forgiving — easy to listen to for hours (low fatigue)\n• or fluid and continuous — notes flowing into each other (musical flow)',
   },
   {
     triggers: ['detailed', 'detail', 'resolving'],
     question:
-      'When you say detailed, do you mean micro-detail retrieval, or more presence and articulation?',
+      'When you say detailed, are you thinking about:\n• hearing every tiny element in the recording (micro-detail retrieval)\n• or instruments sounding more present and clearly articulated (presence / articulation)',
   },
   {
     triggers: ['warm', 'warmth'],
     question:
-      'Does warm mean fuller and denser in the lower midrange, or just less bright and less fatiguing?',
+      'When you say warm, do you mean:\n• fuller and denser — more weight in the midrange (tonal density)\n• or mainly less bright and less tiring to listen to (reduced treble / low fatigue)',
   },
   {
     triggers: ['open', 'openness', 'airy'],
     question:
-      'When you say open, do you mean wider spatial presentation, or more treble extension and air?',
+      'When you say open, are you thinking about:\n• a wider, more spacious sense of the room and instrument placement (soundstage)\n• or more sparkle and space in the high frequencies (treble extension / air)',
   },
   {
     triggers: ['musical', 'musicality'],
     question:
-      'When you say musical, do you mean rhythmic engagement and flow, or tonal beauty and harmonic richness?',
+      'When you say musical, do you mean:\n• strong rhythm and a sense of momentum that draws you in (rhythmic engagement)\n• or beautiful tone and rich harmonics that sound pleasing (tonal beauty)',
   },
   {
     triggers: ['natural', 'organic'],
     question:
-      'Does natural mean timbral accuracy, or a relaxed non-mechanical quality?',
+      'When you say natural, do you mean:\n• instruments sound like the real thing — accurate tone color (timbral accuracy)\n• or a relaxed, non-mechanical quality — easy and uncontrived (organic ease)',
   },
   {
     triggers: ['fast', 'speed', 'quick'],
     question:
-      'When you say fast, do you mean transient attack and leading edges, or overall pace and rhythmic drive?',
+      'When you say fast, are you thinking more about:\n• sharp attacks and crisp note starts (transient attack / leading edges)\n• or a strong sense of rhythm and momentum in the music (pace / rhythmic drive)',
   },
 ];
 
@@ -103,7 +103,7 @@ function checkDiagnosticUncertainty(
   const isHighUncertainty = signals.uncertainty_level >= 2;
 
   if (isFallbackOnly || isLowInformation || isHighUncertainty) {
-    return 'Could you describe what specifically bothers or pleases you — is it a tonal quality, a spatial characteristic, or something about timing and rhythm?';
+    return 'Could you describe what specifically bothers or pleases you — is it about how things sound (tone, brightness, warmth), where instruments seem to be (space, width), or how the music moves (timing, rhythm, energy)?';
   }
 
   return null;

@@ -5,6 +5,8 @@ import Link from 'next/link';
 import EvaluationOutput from '@/components/EvaluationOutput';
 import { getClarificationQuestion } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer } from '@/lib/shopping-intent';
+import { checkGlossaryQuestion } from '@/lib/glossary';
+import type { GlossaryResult } from '@/lib/glossary';
 import type { ShoppingAnswer } from '@/lib/shopping-intent';
 import type { Message, ConversationState } from '@/lib/conversation-types';
 import type { ExtractedSignals } from '@/lib/signal-types';
@@ -30,6 +32,7 @@ type Action =
   | { type: 'ADD_ANALYSIS'; signals: ExtractedSignals; result: EvaluationResult }
   | { type: 'ADD_SHOPPING_ANSWER'; answer: ShoppingAnswer; signals: ExtractedSignals }
   | { type: 'ADD_QUESTION'; content: string }
+  | { type: 'ADD_GLOSSARY'; entry: GlossaryResult }
   | { type: 'SET_LOADING'; value: boolean }
   | { type: 'RESET' };
 
@@ -80,6 +83,15 @@ function reducer(state: ConversationState, action: Action): ConversationState {
         ],
       };
 
+    case 'ADD_GLOSSARY':
+      return {
+        ...state,
+        messages: [
+          ...state.messages,
+          { role: 'assistant', kind: 'glossary', entry: action.entry },
+        ],
+      };
+
     case 'SET_LOADING':
       return { ...state, isLoading: action.value };
 
@@ -115,11 +127,20 @@ export default function Home() {
   const handleSubmit = useCallback(async () => {
     if (!currentInput.trim() || isLoading) return;
 
+    const submittedText = currentInput;
     dispatch({ type: 'ADD_USER_MESSAGE' });
     dispatch({ type: 'SET_LOADING', value: true });
 
+    // Check for glossary questions first — no API call needed
+    const glossaryResult = checkGlossaryQuestion(submittedText);
+    if (glossaryResult) {
+      dispatch({ type: 'ADD_GLOSSARY', entry: glossaryResult });
+      dispatch({ type: 'SET_LOADING', value: false });
+      return;
+    }
+
     // Concatenate all user messages for evaluation
-    const allUserText = [...messages.filter((m) => m.role === 'user').map((m) => m.content), currentInput].join('\n');
+    const allUserText = [...messages.filter((m) => m.role === 'user').map((m) => m.content), submittedText].join('\n');
     const newTurnCount = turnCount + 1;
 
     try {
@@ -445,6 +466,52 @@ function MessageBubble({ message }: { message: Message }) {
     );
   }
 
+  if (message.kind === 'glossary') {
+    return (
+      <div
+        style={{
+          marginTop: '1.5rem',
+          marginBottom: '1.25rem',
+          padding: '1rem 1.1rem',
+          borderLeft: '3px solid #2a7a4b',
+          background: '#f6faf7',
+        }}
+      >
+        <div
+          style={{
+            marginBottom: '0.4rem',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+            color: '#2a7a4b',
+          }}
+        >
+          Audio term
+        </div>
+        <div
+          style={{
+            marginBottom: '0.35rem',
+            fontSize: '1.1rem',
+            fontWeight: 600,
+            color: '#111',
+            fontFamily: 'Georgia, "Times New Roman", serif',
+          }}
+        >
+          {message.entry.term}
+        </div>
+        <p style={{ margin: '0 0 0.3rem 0', color: '#222', fontSize: '1rem', lineHeight: 1.6 }}>
+          {message.entry.explanation}
+        </p>
+        {message.entry.example && (
+          <p style={{ margin: 0, color: '#666', fontSize: '0.92rem', lineHeight: 1.55, fontStyle: 'italic' }}>
+            {message.entry.example}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   if (message.kind === 'question') {
     return (
       <div
@@ -473,6 +540,7 @@ function MessageBubble({ message }: { message: Message }) {
             color: '#222',
             fontSize: '1.05rem',
             lineHeight: 1.6,
+            whiteSpace: 'pre-line',
           }}
         >
           {message.content}
