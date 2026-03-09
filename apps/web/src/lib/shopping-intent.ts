@@ -233,17 +233,29 @@ const BUDGET_AMOUNT_PATTERNS = [
 ];
 
 /**
- * Extract the first numeric budget amount from user text.
- * Returns null if no amount is found.
+ * Extract the most recent numeric budget amount from user text.
+ *
+ * Because all user messages are concatenated into a single string,
+ * earlier budget mentions appear first. If the user revises their
+ * budget ("best dac under $1000" → later "best dac under $500"),
+ * we need the LAST match, not the first.
  */
 export function parseBudgetAmount(text: string): number | null {
+  let lastAmount: number | null = null;
+
   for (const pattern of BUDGET_AMOUNT_PATTERNS) {
-    const match = text.match(pattern);
-    if (match?.[1]) {
-      return parseInt(match[1].replace(/,/g, ''), 10);
+    // Use a global copy to find ALL matches in the text
+    const globalPattern = new RegExp(pattern.source, pattern.flags.includes('i') ? 'gi' : 'g');
+    let match: RegExpExecArray | null;
+    while ((match = globalPattern.exec(text)) !== null) {
+      const parsed = parseInt(match[1].replace(/,/g, ''), 10);
+      if (!isNaN(parsed)) {
+        lastAmount = parsed;
+      }
     }
   }
-  return null;
+
+  return lastAmount;
 }
 
 // ── Detection ─────────────────────────────────────────
