@@ -7,9 +7,11 @@ import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer } from '@/lib/shopping-intent';
 import { checkGlossaryQuestion } from '@/lib/glossary';
+import { detectIntent } from '@/lib/intent';
+import { buildGearResponse } from '@/lib/gear-response';
 import type { GlossaryResult } from '@/lib/glossary';
 import type { ShoppingAnswer } from '@/lib/shopping-intent';
-import type { Message, ConversationState } from '@/lib/conversation-types';
+import type { Message, ConversationState, GearResponse } from '@/lib/conversation-types';
 import type { ExtractedSignals } from '@/lib/signal-types';
 import type { EvaluationResult } from '@/lib/rule-types';
 
@@ -34,6 +36,7 @@ type Action =
   | { type: 'ADD_SHOPPING_ANSWER'; answer: ShoppingAnswer; signals: ExtractedSignals }
   | { type: 'ADD_QUESTION'; clarification: ClarificationResponse }
   | { type: 'ADD_GLOSSARY'; entry: GlossaryResult }
+  | { type: 'ADD_GEAR_RESPONSE'; response: GearResponse }
   | { type: 'SET_LOADING'; value: boolean }
   | { type: 'RESET' };
 
@@ -93,6 +96,15 @@ function reducer(state: ConversationState, action: Action): ConversationState {
         ],
       };
 
+    case 'ADD_GEAR_RESPONSE':
+      return {
+        ...state,
+        messages: [
+          ...state.messages,
+          { role: 'assistant', kind: 'gear-response', response: action.response },
+        ],
+      };
+
     case 'SET_LOADING':
       return { ...state, isLoading: action.value };
 
@@ -140,7 +152,20 @@ export default function Home() {
       return;
     }
 
-    // Concatenate all user messages for evaluation
+    // Detect intent BEFORE running the evaluation engine
+    const { intent, subjects } = detectIntent(submittedText);
+
+    // Gear inquiries and comparisons — conversational path, skip diagnostic engine
+    if (intent === 'gear_inquiry' || intent === 'comparison') {
+      const gearResponse = buildGearResponse(intent, subjects, submittedText);
+      if (gearResponse) {
+        dispatch({ type: 'ADD_GEAR_RESPONSE', response: gearResponse });
+        dispatch({ type: 'SET_LOADING', value: false });
+        return;
+      }
+    }
+
+    // Shopping and diagnosis intents go through the evaluation engine
     const allUserText = [...messages.filter((m) => m.role === 'user').map((m) => m.content), submittedText].join('\n');
     const newTurnCount = turnCount + 1;
 
@@ -166,15 +191,20 @@ export default function Home() {
         if (clarification) {
           // Inquiry mode — ask the follow-up, suppress analysis
           dispatch({ type: 'ADD_QUESTION', clarification });
-        } else {
-          // Answer mode — route based on original intent
+        } else if (intent === 'shopping') {
+          // Shopping path — recommendation with product examples
           const shoppingCtx = detectShoppingIntent(allUserText, data.signals);
           if (shoppingCtx.detected) {
             const answer = buildShoppingAnswer(shoppingCtx, data.signals);
             dispatch({ type: 'ADD_SHOPPING_ANSWER', answer, signals: data.signals });
           } else {
+            // Shopping intent detected by us but not by the shopping module —
+            // fall through to analysis
             dispatch({ type: 'ADD_ANALYSIS', signals: data.signals, result: data.result });
           }
+        } else {
+          // Diagnosis path — full diagnostic output
+          dispatch({ type: 'ADD_ANALYSIS', signals: data.signals, result: data.result });
         }
       }
     } catch {
@@ -195,7 +225,8 @@ export default function Home() {
   const hasMessages = messages.length > 0;
   const lastMessage = messages[messages.length - 1];
   const hasPendingQuestion =
-    lastMessage?.role === 'assistant' && lastMessage.kind === 'question';
+    lastMessage?.role === 'assistant' &&
+    (lastMessage.kind === 'question' || lastMessage.kind === 'gear-response');
 
   return (
     <div
@@ -510,6 +541,61 @@ function MessageBubble({ message }: { message: Message }) {
             {message.entry.example}
           </p>
         )}
+      </div>
+    );
+  }
+
+  if (message.kind === 'gear-response') {
+    const { response } = message;
+    return (
+      <div
+        style={{
+          marginTop: '1.5rem',
+          marginBottom: '1.25rem',
+        }}
+      >
+        {/* Acknowledge */}
+        <p
+          style={{
+            margin: '0 0 0.75rem 0',
+            color: '#333',
+            fontSize: '1rem',
+            lineHeight: 1.6,
+          }}
+        >
+          {response.acknowledge}
+        </p>
+
+        {/* Description */}
+        <p
+          style={{
+            margin: '0 0 1rem 0',
+            color: '#222',
+            fontSize: '1.05rem',
+            lineHeight: 1.65,
+          }}
+        >
+          {response.description}
+        </p>
+
+        {/* Follow-up question */}
+        <div
+          style={{
+            padding: '0.85rem 1rem',
+            borderLeft: '3px solid #4a7a8a',
+            background: '#f7fafb',
+          }}
+        >
+          <div
+            style={{
+              color: '#222',
+              fontSize: '1.05rem',
+              lineHeight: 1.6,
+            }}
+          >
+            {response.followUp}
+          </div>
+        </div>
       </div>
     );
   }
