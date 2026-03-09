@@ -2,10 +2,12 @@ import type { ExtractedSignals } from './signal-types';
 import type { EvaluationResult } from './rule-types';
 import type { ShoppingAnswer } from './shopping-intent';
 import type { GlossaryResult } from './glossary';
+import type { ClarificationResponse } from './clarification';
 
 export type Message =
   | { role: 'user'; content: string }
-  | { role: 'assistant'; content: string; kind: 'question' | 'note' }
+  | { role: 'assistant'; content: string; kind: 'note' }
+  | { role: 'assistant'; kind: 'question'; clarification: ClarificationResponse }
   | { role: 'assistant'; kind: 'analysis'; signals: ExtractedSignals; result: EvaluationResult }
   | { role: 'assistant'; kind: 'shopping-answer'; answer: ShoppingAnswer; signals: ExtractedSignals }
   | { role: 'assistant'; kind: 'glossary'; entry: GlossaryResult };

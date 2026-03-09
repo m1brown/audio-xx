@@ -4,6 +4,7 @@ import { useReducer, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import EvaluationOutput from '@/components/EvaluationOutput';
 import { getClarificationQuestion } from '@/lib/clarification';
+import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer } from '@/lib/shopping-intent';
 import { checkGlossaryQuestion } from '@/lib/glossary';
 import type { GlossaryResult } from '@/lib/glossary';
@@ -31,7 +32,7 @@ type Action =
   | { type: 'ADD_USER_MESSAGE' }
   | { type: 'ADD_ANALYSIS'; signals: ExtractedSignals; result: EvaluationResult }
   | { type: 'ADD_SHOPPING_ANSWER'; answer: ShoppingAnswer; signals: ExtractedSignals }
-  | { type: 'ADD_QUESTION'; content: string }
+  | { type: 'ADD_QUESTION'; clarification: ClarificationResponse }
   | { type: 'ADD_GLOSSARY'; entry: GlossaryResult }
   | { type: 'SET_LOADING'; value: boolean }
   | { type: 'RESET' };
@@ -79,7 +80,7 @@ function reducer(state: ConversationState, action: Action): ConversationState {
         ...state,
         messages: [
           ...state.messages,
-          { role: 'assistant', content: action.content, kind: 'question' },
+          { role: 'assistant', kind: 'question', clarification: action.clarification },
         ],
       };
 
@@ -154,16 +155,17 @@ export default function Home() {
         const data = await res.json();
 
         // Check if more context is needed before showing results
-        const question = getClarificationQuestion(
+        const clarification = getClarificationQuestion(
           data.signals,
           data.result,
           newTurnCount,
           allUserText,
+          submittedText,
         );
 
-        if (question) {
+        if (clarification) {
           // Inquiry mode — ask the follow-up, suppress analysis
-          dispatch({ type: 'ADD_QUESTION', content: question });
+          dispatch({ type: 'ADD_QUESTION', clarification });
         } else {
           // Answer mode — route based on original intent
           const shoppingCtx = detectShoppingIntent(allUserText, data.signals);
@@ -513,37 +515,47 @@ function MessageBubble({ message }: { message: Message }) {
   }
 
   if (message.kind === 'question') {
+    const { clarification } = message;
     return (
       <div
         style={{
           marginTop: '1.5rem',
           marginBottom: '1.25rem',
-          padding: '1rem 1.1rem',
-          borderLeft: '3px solid #c4122f',
-          background: '#faf7f7',
         }}
       >
+        {/* Acknowledge + Context — conversational lead-in */}
         <div
           style={{
-            marginBottom: '0.5rem',
-            fontSize: '0.78rem',
-            fontWeight: 700,
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase',
-            color: '#c4122f',
-          }}
-        >
-          Audio XX asks
-        </div>
-        <div
-          style={{
-            color: '#222',
-            fontSize: '1.05rem',
+            marginBottom: '0.75rem',
+            color: '#333',
+            fontSize: '1rem',
             lineHeight: 1.6,
-            whiteSpace: 'pre-line',
           }}
         >
-          {message.content}
+          <span>{clarification.acknowledge}</span>
+          {clarification.context && (
+            <span> {clarification.context}</span>
+          )}
+        </div>
+
+        {/* Question — visually distinct */}
+        <div
+          style={{
+            padding: '0.85rem 1rem',
+            borderLeft: '3px solid #c4122f',
+            background: '#faf7f7',
+          }}
+        >
+          <div
+            style={{
+              color: '#222',
+              fontSize: '1.05rem',
+              lineHeight: 1.6,
+              whiteSpace: 'pre-line',
+            }}
+          >
+            {clarification.question}
+          </div>
         </div>
       </div>
     );
