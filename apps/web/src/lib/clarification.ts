@@ -7,7 +7,11 @@
  */
 import type { ExtractedSignals } from './signal-types';
 import type { EvaluationResult } from './rule-types';
-import { detectShoppingIntent, getShoppingClarification } from './shopping-intent';
+import {
+  detectShoppingIntent,
+  getShoppingClarification,
+  getShoppingTurnCap,
+} from './shopping-intent';
 
 // ── Case 1: Interpretation Ambiguity ──────────────────
 
@@ -110,22 +114,26 @@ function checkDiagnosticUncertainty(
 function checkShoppingIntent(
   signals: ExtractedSignals,
   userText: string,
+  turnCount: number,
 ): string | null {
   const ctx = detectShoppingIntent(userText, signals);
   if (!ctx.detected) return null;
-  return getShoppingClarification(ctx);
+  return getShoppingClarification(ctx, turnCount);
 }
 
 // ── Public API ────────────────────────────────────────
+
+/** Default turn cap for non-shopping clarification paths. */
+const DEFAULT_TURN_CAP = 2;
 
 /**
  * Returns a clarifying question if one would meaningfully improve
  * the next evaluation, or null if the analysis is already actionable.
  *
- * @param signals  - Extracted signals from the current evaluation
- * @param result   - Rule evaluation result
+ * @param signals   - Extracted signals from the current evaluation
+ * @param result    - Rule evaluation result
  * @param turnCount - Number of user submissions so far (1-indexed)
- * @param userText - The raw concatenated user input (for keyword checks)
+ * @param userText  - The raw concatenated user input (for keyword checks)
  */
 export function getClarificationQuestion(
   signals: ExtractedSignals,
@@ -133,18 +141,21 @@ export function getClarificationQuestion(
   turnCount: number,
   userText: string,
 ): string | null {
-  // Hard cap: never ask after the second user turn
-  if (turnCount >= 2) return null;
+  // Determine effective turn cap: shopping modes may allow more turns
+  const shoppingCtx = detectShoppingIntent(userText, signals);
+  const effectiveCap = shoppingCtx.detected
+    ? getShoppingTurnCap(shoppingCtx.mode)
+    : DEFAULT_TURN_CAP;
+
+  if (turnCount >= effectiveCap) return null;
 
   // Check cases in priority order:
   // 1. Interpretation ambiguity (specific phrase clarification)
-  // 2. Shopping intent without context (before generic uncertainty,
-  //    because low-info shopping prompts would otherwise trigger
-  //    a generic diagnostic question instead of a useful one)
+  // 2. Shopping intent (mode-aware sequenced questions)
   // 3. Diagnostic uncertainty (generic low-information fallback)
   return (
     checkInterpretationAmbiguity(signals, result) ??
-    checkShoppingIntent(signals, userText) ??
+    checkShoppingIntent(signals, userText, turnCount) ??
     checkDiagnosticUncertainty(signals, result) ??
     null
   );
