@@ -4,6 +4,8 @@ import { useReducer, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import EvaluationOutput from '@/components/EvaluationOutput';
 import { getClarificationQuestion } from '@/lib/clarification';
+import { detectShoppingIntent, buildShoppingAnswer } from '@/lib/shopping-intent';
+import type { ShoppingAnswer } from '@/lib/shopping-intent';
 import type { Message, ConversationState } from '@/lib/conversation-types';
 import type { ExtractedSignals } from '@/lib/signal-types';
 import type { EvaluationResult } from '@/lib/rule-types';
@@ -18,6 +20,7 @@ type Action =
   | { type: 'SET_INPUT'; value: string }
   | { type: 'ADD_USER_MESSAGE' }
   | { type: 'ADD_ANALYSIS'; signals: ExtractedSignals; result: EvaluationResult }
+  | { type: 'ADD_SHOPPING_ANSWER'; answer: ShoppingAnswer; signals: ExtractedSignals }
   | { type: 'ADD_QUESTION'; content: string }
   | { type: 'SET_LOADING'; value: boolean }
   | { type: 'RESET' };
@@ -48,6 +51,15 @@ function reducer(state: ConversationState, action: Action): ConversationState {
         messages: [
           ...state.messages,
           { role: 'assistant', kind: 'analysis', signals: action.signals, result: action.result },
+        ],
+      };
+
+    case 'ADD_SHOPPING_ANSWER':
+      return {
+        ...state,
+        messages: [
+          ...state.messages,
+          { role: 'assistant', kind: 'shopping-answer', answer: action.answer, signals: action.signals },
         ],
       };
 
@@ -124,8 +136,14 @@ export default function Home() {
           // Inquiry mode — ask the follow-up, suppress analysis
           dispatch({ type: 'ADD_QUESTION', content: question });
         } else {
-          // Answer mode — enough context gathered, show full result
-          dispatch({ type: 'ADD_ANALYSIS', signals: data.signals, result: data.result });
+          // Answer mode — route based on original intent
+          const shoppingCtx = detectShoppingIntent(allUserText, data.signals);
+          if (shoppingCtx.detected) {
+            const answer = buildShoppingAnswer(shoppingCtx, data.signals);
+            dispatch({ type: 'ADD_SHOPPING_ANSWER', answer, signals: data.signals });
+          } else {
+            dispatch({ type: 'ADD_ANALYSIS', signals: data.signals, result: data.result });
+          }
         }
       }
     } catch {
@@ -361,6 +379,15 @@ function MessageBubble({ message }: { message: Message }) {
     );
   }
 
+  if (message.kind === 'shopping-answer') {
+    return (
+      <div style={{ marginBottom: '1.75rem' }}>
+        <hr style={{ border: 0, borderTop: '1px solid #d9d9d9', margin: '0 0 1.5rem 0' }} />
+        <ShoppingRecommendation answer={message.answer} signals={message.signals} />
+      </div>
+    );
+  }
+
   if (message.kind === 'question') {
     return (
       <div
@@ -408,6 +435,121 @@ function MessageBubble({ message }: { message: Message }) {
       }}
     >
       {message.content}
+    </div>
+  );
+}
+
+// ── Shopping Recommendation ───────────────────────────
+
+function ShoppingRecommendation({
+  answer,
+  signals,
+}: {
+  answer: ShoppingAnswer;
+  signals: ExtractedSignals;
+}) {
+  return (
+    <div style={{ color: '#111' }}>
+      {/* Preference summary */}
+      <p
+        style={{
+          margin: '0 0 1.25rem 0',
+          fontSize: '1.18rem',
+          lineHeight: 1.65,
+          color: '#111',
+        }}
+      >
+        {answer.preferenceSummary}
+      </p>
+
+      {/* Direction */}
+      <div style={{ marginBottom: '1.25rem' }}>
+        <div
+          style={{
+            marginBottom: '0.45rem',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+            color: '#666',
+          }}
+        >
+          Direction
+        </div>
+        <p style={{ margin: 0, color: '#222', lineHeight: 1.6 }}>
+          {answer.direction}
+        </p>
+      </div>
+
+      {/* Trade-offs */}
+      {answer.tradeoffs.length > 0 && (
+        <div style={{ marginBottom: '1.25rem' }}>
+          <div
+            style={{
+              marginBottom: '0.45rem',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+              color: '#666',
+            }}
+          >
+            Trade-offs
+          </div>
+          <ul style={{ margin: 0, paddingLeft: '1.15rem', color: '#222' }}>
+            {answer.tradeoffs.map((t, i) => (
+              <li key={i} style={{ marginBottom: '0.35rem', lineHeight: 1.55 }}>
+                {t}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* System note */}
+      {answer.systemNote && (
+        <p
+          style={{
+            margin: '0 0 1rem 0',
+            color: '#666',
+            fontStyle: 'italic',
+            lineHeight: 1.55,
+          }}
+        >
+          {answer.systemNote}
+        </p>
+      )}
+
+      {/* Collapsible signal diagnostics */}
+      {(signals.matched_phrases.length > 0 ||
+        signals.symptoms.length > 0 ||
+        Object.keys(signals.traits).length > 0) && (
+        <details style={{ marginTop: '1.5rem', color: '#666', fontSize: '0.92rem' }}>
+          <summary style={{ cursor: 'pointer' }}>How this was interpreted</summary>
+          <div style={{ marginTop: '0.6rem' }}>
+            {signals.matched_phrases.length > 0 && (
+              <p style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
+                <strong>Matched:</strong>{' '}
+                {signals.matched_phrases.join(', ')}
+              </p>
+            )}
+            {signals.symptoms.length > 0 && (
+              <p style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
+                <strong>Symptoms:</strong>{' '}
+                {signals.symptoms.map((s) => s.replace(/_/g, ' ')).join(', ')}
+              </p>
+            )}
+            {Object.keys(signals.traits).length > 0 && (
+              <p style={{ margin: 0, color: '#333' }}>
+                <strong>Traits:</strong>{' '}
+                {Object.entries(signals.traits)
+                  .map(([trait, direction]) => `${trait.replace(/_/g, ' ')} ${direction === 'up' ? '↑' : '↓'}`)
+                  .join(', ')}
+              </p>
+            )}
+          </div>
+        </details>
+      )}
     </div>
   );
 }

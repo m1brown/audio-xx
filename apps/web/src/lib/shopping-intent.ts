@@ -463,3 +463,167 @@ export function getShoppingClarification(
   // Sequence exhausted — answer with what we have
   return null;
 }
+
+// ── Shopping Answer ───────────────────────────────────
+
+export interface ShoppingAnswer {
+  /** One-line summary of the inferred preference. */
+  preferenceSummary: string;
+  /** What architectural direction fits. */
+  direction: string;
+  /** 1–2 trade-offs to be aware of. */
+  tradeoffs: string[];
+  /** Optional system-coherence note. */
+  systemNote: string | null;
+}
+
+// ── Taste direction templates ─────────────────────────
+
+interface TasteProfile {
+  /** Which trait directions are present (from ExtractedSignals.traits). */
+  check: (traits: Record<string, string>) => boolean;
+  label: string;
+  directionByCategory: Partial<Record<ShoppingCategory, string>>;
+  defaultDirection: string;
+  tradeoffs: string[];
+}
+
+const TASTE_PROFILES: TasteProfile[] = [
+  {
+    check: (t) => t.dynamics === 'up' || t.elasticity === 'up',
+    label: 'speed, transient precision, and rhythmic engagement',
+    directionByCategory: {
+      dac: 'Look for DACs that prioritize timing and leading-edge definition. R-2R ladder designs (Denafrips, Holo Audio) and certain AKM-based implementations tend to emphasize rhythmic coherence over smoothness.',
+      amplifier: 'Amplifiers with high current delivery and tight damping tend to serve speed well. Class A/B designs with short signal paths often deliver better transient snap than heavily buffered topologies.',
+      speakers: 'Speakers with lightweight, fast drivers and simple crossovers tend to preserve transient information. Single-driver or two-way designs often outperform complex multi-way systems for perceived speed.',
+      headphones: 'Planar magnetic headphones typically excel at transient speed and attack. Their uniform diaphragm movement produces tighter leading edges than most dynamic drivers.',
+      streamer: 'The streamer contributes to perceived timing through clock quality and jitter performance. Look for dedicated streamers with low-jitter clocks rather than multi-purpose devices.',
+    },
+    defaultDirection: 'Prioritize components known for timing precision and transient definition over tonal smoothness.',
+    tradeoffs: [
+      'Components that excel at speed often trade some tonal density and harmonic richness.',
+      'Very fast systems can feel lean or relentless over long listening sessions.',
+    ],
+  },
+  {
+    check: (t) => t.tonal_density === 'up' && t.flow === 'up',
+    label: 'harmonic richness, flow, and tonal density',
+    directionByCategory: {
+      dac: 'DACs that emphasize tonal weight and harmonic texture tend to use R-2R or tube output stages. Designs from Denafrips, Border Patrol, and MHDT prioritize body over analytical precision.',
+      amplifier: 'Tube amplifiers and Class A solid-state designs tend to deliver greater harmonic density. Look for designs that prioritize musicality over measured specifications.',
+      speakers: 'Speakers with heavier cones and more complex crossovers can deliver greater tonal weight, though at the cost of speed. Paper and treated fiber cones often sound richer than metal diaphragms.',
+      headphones: 'Dynamic driver headphones with warm tunings tend to deliver more tonal body than planar designs. Look for headphones described as rich or full rather than analytical.',
+    },
+    defaultDirection: 'Prioritize components known for harmonic richness and tonal continuity over transient precision.',
+    tradeoffs: [
+      'Components that maximize tonal density may sacrifice some detail retrieval and transient edge.',
+      'Very rich systems can sound congested if pushed too far.',
+    ],
+  },
+  {
+    check: (t) => t.clarity === 'up',
+    label: 'detail, clarity, and resolution',
+    directionByCategory: {
+      dac: 'Delta-sigma DACs from ESS Sabre and AKM tend to excel at measured resolution. For a more natural form of detail, look at high-end R-2R implementations that resolve without etching.',
+      amplifier: 'Amplifiers with wide bandwidth and low distortion reveal the most upstream detail. Class A/B and Class D designs with short feedback loops often score well on transparency.',
+      speakers: 'Speakers with metal or beryllium tweeters and rigid cabinets tend to deliver the highest resolution. Monitor-style designs prioritize accuracy over tonal warmth.',
+      headphones: 'Electrostatic and high-end planar headphones typically offer the highest resolution. Open-back designs reveal more spatial and micro-detail than closed designs.',
+    },
+    defaultDirection: 'Prioritize components known for transparency and information retrieval.',
+    tradeoffs: [
+      'Highly resolving systems can be fatiguing if any upstream component introduces edge or glare.',
+      'Detail without sufficient tonal body can sound thin and clinical.',
+    ],
+  },
+  {
+    check: (t) => t.fatigue_risk === 'up' || t.glare_risk === 'up',
+    label: 'reduced fatigue and smoother presentation',
+    directionByCategory: {
+      dac: 'Consider DACs known for smoothness and low fatigue — tube-output designs, NOS (non-oversampling) DACs, or R-2R implementations that soften digital edges.',
+      amplifier: 'Tube amplifiers or Class A designs with gentle high-frequency rolloff can reduce perceived fatigue. Avoid very high-feedback designs if brightness is the issue.',
+      speakers: 'Speakers with soft-dome tweeters or ribbon tweeters that extend without harshness can reduce fatigue. Avoid metal tweeters if glare is a concern.',
+      headphones: 'Warm-tuned dynamic headphones with rolled-off treble tend to be less fatiguing. Avoid bright-signature planar headphones if long listening sessions matter.',
+    },
+    defaultDirection: 'Prioritize components known for smoothness and listening ease over analytical resolution.',
+    tradeoffs: [
+      'Reducing fatigue by softening the presentation can also reduce perceived detail and air.',
+      'The source of fatigue may be upstream — fixing the wrong component leaves the root cause intact.',
+    ],
+  },
+  {
+    check: (t) => t.flow === 'up' && t.composure === 'up',
+    label: 'smoothness, ease, and composure',
+    directionByCategory: {
+      dac: 'DACs with tube output stages or relaxed filter implementations tend to maximize ease. Look for designs described as musical or organic rather than analytical.',
+      amplifier: 'Low-power Class A amplifiers and single-ended tube designs often deliver the greatest composure. They prioritize texture and flow over dynamic punch.',
+      speakers: 'Speakers with gentle crossover slopes and natural-material drivers (paper, treated fiber) tend to sound more relaxed. BBC-heritage designs are a good starting point.',
+    },
+    defaultDirection: 'Prioritize components known for musical flow and composure over speed or analytical precision.',
+    tradeoffs: [
+      'Very composed systems can feel sleepy or lack dynamic contrast.',
+      'Smoothness pushed too far can obscure musical detail and reduce engagement.',
+    ],
+  },
+];
+
+/**
+ * Fallback taste profile when no specific trait pattern is detected.
+ */
+const FALLBACK_TASTE: Pick<TasteProfile, 'label' | 'defaultDirection' | 'tradeoffs'> = {
+  label: 'a balanced presentation',
+  defaultDirection: 'Look for components described as well-balanced or all-rounders. Avoid designs that strongly prioritize a single trait at the expense of others.',
+  tradeoffs: [
+    'Balanced components rarely excel at any single quality — they trade peak performance for versatility.',
+    'What feels balanced in one system may feel colored in another. System context matters.',
+  ],
+};
+
+// ── Category labels ───────────────────────────────────
+
+const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
+  dac: 'DAC',
+  amplifier: 'amplifier',
+  speakers: 'speakers',
+  headphones: 'headphones',
+  streamer: 'streamer',
+  general: 'component',
+};
+
+// ── Builder ───────────────────────────────────────────
+
+/**
+ * Builds a structured shopping recommendation from the gathered
+ * context and extracted signals. Deterministic, template-driven.
+ */
+export function buildShoppingAnswer(
+  ctx: ShoppingContext,
+  signals: ExtractedSignals,
+): ShoppingAnswer {
+  const traits = signals.traits;
+  const categoryLabel = CATEGORY_LABELS[ctx.category];
+
+  // Find the best-matching taste profile
+  const matchedProfile = TASTE_PROFILES.find((p) => p.check(traits));
+  const taste = matchedProfile ?? FALLBACK_TASTE;
+
+  // Build preference summary
+  const preferenceSummary = ctx.budgetMentioned
+    ? `You're looking for a ${categoryLabel} that prioritizes ${taste.label}.`
+    : `You're looking for a ${categoryLabel} that prioritizes ${taste.label}.`;
+
+  // Build direction
+  const direction = matchedProfile?.directionByCategory[ctx.category]
+    ?? taste.defaultDirection;
+
+  // System-coherence note (only when system context was provided)
+  const systemNote = ctx.systemProvided
+    ? `How this interacts with your existing system depends on the character of your other components. A ${categoryLabel} change will shift the overall balance — listen for whether the qualities you value are preserved.`
+    : null;
+
+  return {
+    preferenceSummary,
+    direction,
+    tradeoffs: taste.tradeoffs,
+    systemNote,
+  };
+}

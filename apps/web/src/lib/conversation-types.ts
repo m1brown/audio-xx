@@ -1,10 +1,12 @@
 import type { ExtractedSignals } from './signal-types';
 import type { EvaluationResult } from './rule-types';
+import type { ShoppingAnswer } from './shopping-intent';
 
 export type Message =
   | { role: 'user'; content: string }
   | { role: 'assistant'; content: string; kind: 'question' | 'note' }
-  | { role: 'assistant'; kind: 'analysis'; signals: ExtractedSignals; result: EvaluationResult };
+  | { role: 'assistant'; kind: 'analysis'; signals: ExtractedSignals; result: EvaluationResult }
+  | { role: 'assistant'; kind: 'shopping-answer'; answer: ShoppingAnswer; signals: ExtractedSignals };
 
 export interface ConversationState {
   messages: Message[];
