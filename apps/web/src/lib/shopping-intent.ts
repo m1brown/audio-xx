@@ -376,8 +376,8 @@ const SEQUENCES: Record<ShoppingMode, QuestionStep[]> = {
 // ── Turn caps per mode ────────────────────────────────
 
 const TURN_CAPS: Record<ShoppingMode, number> = {
-  'specific-component': 2,
-  'upgrade-path': 2,
+  'specific-component': 3,
+  'upgrade-path': 3,
   'build-a-system': 3,
 };
 
