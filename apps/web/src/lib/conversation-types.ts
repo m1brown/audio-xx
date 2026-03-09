@@ -5,6 +5,7 @@ import type { GlossaryResult } from './glossary';
 import type { ClarificationResponse } from './clarification';
 import type { UserIntent } from './intent';
 import type { SystemDirection } from './system-direction';
+import type { SonicArchetype } from './archetype';
 
 /**
  * System direction context attached to diagnostic analysis results.
@@ -43,6 +44,8 @@ export interface GearResponse {
   subjects: string[];
   /** Inferred system direction context, if available. */
   systemDirection?: SystemDirection;
+  /** Inferred user archetype preference (e.g., flow_organic, precision_explicit). */
+  userArchetype?: SonicArchetype;
 }
 
 export type Message =

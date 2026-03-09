@@ -15,6 +15,14 @@
 
 import type { DesireSignal } from './intent';
 import type { Product } from './products/dacs';
+import {
+  inferUserArchetype,
+  tagProductArchetype,
+  getArchetypeLabel,
+  getArchetypeShortLabel,
+  describeArchetypeShift,
+  type SonicArchetype,
+} from './archetype';
 
 // ── Types ────────────────────────────────────────────
 
@@ -52,6 +60,12 @@ export interface SystemDirection {
   tendencySummary: string | null;
   /** Human-readable summary of the desired direction (for use in responses). */
   directionSummary: string | null;
+  /** Inferred user archetype preference (from desires + context). */
+  inferredArchetype?: SonicArchetype;
+  /** Product archetype (if a known product was referenced). */
+  productArchetype?: SonicArchetype;
+  /** Human-readable archetype note for use in responses. */
+  archetypeNote?: string;
 }
 
 // ── Tendency inference from symptoms / descriptions ──
@@ -291,12 +305,39 @@ export function inferSystemDirection(
     }
   }
 
-  // ── 3. Build summaries ──────────────────────────────
+  // ── 3. Archetype inference ─────────────────────────
+
+  const userPref = desires.length > 0
+    ? inferUserArchetype(desires)
+    : undefined;
+
+  const productTags = knownProduct
+    ? tagProductArchetype(knownProduct)
+    : undefined;
+
+  let archetypeNote: string | undefined;
+  if (userPref && productTags) {
+    // Both user preference and product archetype are known — note alignment
+    if (userPref.primary === productTags.primary) {
+      archetypeNote = `This aligns with the product's ${getArchetypeShortLabel(productTags.primary)} character.`;
+    } else {
+      archetypeNote = `This looks like ${describeArchetypeShift(productTags.primary, userPref.primary)}.`;
+    }
+  } else if (userPref) {
+    archetypeNote = userPref.blended && userPref.secondary
+      ? `You seem to value both ${getArchetypeLabel(userPref.primary)} and ${getArchetypeLabel(userPref.secondary)}.`
+      : `Your priorities point toward ${getArchetypeLabel(userPref.primary)}.`;
+  }
+
+  // ── 4. Build summaries ──────────────────────────────
 
   return {
     currentTendencies: tendencies,
     desiredDirections,
     tendencySummary: buildTendencySummary(tendencies),
     directionSummary: buildDirectionSummary(desiredDirections),
+    inferredArchetype: userPref?.primary,
+    productArchetype: productTags?.primary,
+    archetypeNote,
   };
 }

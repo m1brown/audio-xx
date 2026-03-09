@@ -17,6 +17,16 @@ import type { ExtractedSignals, SignalDirection } from './signal-types';
 import type { SystemProfile, OutputType, SystemCharacter } from './system-profile';
 import { DEFAULT_SYSTEM_PROFILE } from './system-profile';
 export type { SystemProfile, OutputType, SystemCharacter } from './system-profile';
+import type { SonicArchetype } from './archetype';
+
+/** Short labels for archetype context in shopping summaries. */
+const ARCHETYPE_LABELS: Record<SonicArchetype, string> = {
+  flow_organic: 'flow-oriented',
+  precision_explicit: 'precision-oriented',
+  rhythmic_propulsive: 'rhythm-oriented',
+  tonal_saturated: 'tonally saturated',
+  spatial_holographic: 'spatially focused',
+};
 
 // ── Types ─────────────────────────────────────────────
 
@@ -614,6 +624,8 @@ export interface ShoppingAnswer {
 interface TasteProfile {
   check: (traits: Record<string, string>) => boolean;
   label: string;
+  /** Associated sonic archetype for this taste preference. */
+  archetype?: import('./archetype').SonicArchetype;
   directionByCategory: Partial<Record<ShoppingCategory, string>>;
   defaultDirection: string;
   whyByCategory: Partial<Record<ShoppingCategory, string[]>>;
@@ -625,6 +637,7 @@ const TASTE_PROFILES: TasteProfile[] = [
   {
     check: (t) => t.dynamics === 'up' || t.elasticity === 'up',
     label: 'speed, transient precision, and rhythmic engagement',
+    archetype: 'rhythmic_propulsive',
     directionByCategory: {
       dac: 'A DAC direction that prioritizes transient definition, rhythmic precision, and dynamic contrast over warmth-first tuning.',
       amplifier: 'An amplifier direction that prioritizes current delivery, tight damping, and transient snap over tonal smoothness.',
@@ -652,6 +665,7 @@ const TASTE_PROFILES: TasteProfile[] = [
   {
     check: (t) => t.tonal_density === 'up' && t.flow === 'up',
     label: 'harmonic richness, flow, and tonal density',
+    archetype: 'tonal_saturated',
     directionByCategory: {
       dac: 'A DAC direction that prioritizes tonal weight, harmonic texture, and musical flow over analytical precision.',
       amplifier: 'An amplifier direction that prioritizes harmonic density and musical continuity over measured specifications.',
@@ -678,6 +692,7 @@ const TASTE_PROFILES: TasteProfile[] = [
   {
     check: (t) => t.clarity === 'up',
     label: 'detail, clarity, and resolution',
+    archetype: 'precision_explicit',
     directionByCategory: {
       dac: 'A DAC direction that prioritizes transparency, information retrieval, and measured resolution.',
       amplifier: 'An amplifier direction that prioritizes wide bandwidth, low distortion, and upstream transparency.',
@@ -705,6 +720,7 @@ const TASTE_PROFILES: TasteProfile[] = [
   {
     check: (t) => t.fatigue_risk === 'up' || t.glare_risk === 'up',
     label: 'reduced fatigue and smoother presentation',
+    archetype: 'flow_organic',
     directionByCategory: {
       dac: 'A DAC direction that prioritizes smoothness, low fatigue, and listening ease over analytical resolution.',
       amplifier: 'An amplifier direction that prioritizes gentle high-frequency behavior and composure over transient edge.',
@@ -732,6 +748,7 @@ const TASTE_PROFILES: TasteProfile[] = [
   {
     check: (t) => t.flow === 'up' && t.composure === 'up',
     label: 'smoothness, ease, and composure',
+    archetype: 'flow_organic',
     directionByCategory: {
       dac: 'A DAC direction that prioritizes musical flow, composure, and organic texture over speed or analytical precision.',
       amplifier: 'An amplifier direction that prioritizes single-ended tube composure and texture over dynamic punch.',
@@ -880,8 +897,11 @@ export function buildShoppingAnswer(
   const matchedProfile = TASTE_PROFILES.find((p) => p.check(traits));
   const taste = matchedProfile ?? FALLBACK_TASTE;
 
-  // 1. Preference summary
-  const preferenceSummary = `You appear to value ${taste.label} more than ${getContrastLabel(taste.label)}.`;
+  // 1. Preference summary — enriched with archetype context if available
+  const archetypeLabel = matchedProfile?.archetype
+    ? ` — a ${ARCHETYPE_LABELS[matchedProfile.archetype]} preference`
+    : '';
+  const preferenceSummary = `You appear to value ${taste.label} more than ${getContrastLabel(taste.label)}${archetypeLabel}.`;
 
   // 2. Best-fit direction
   const bestFitDirection = matchedProfile?.directionByCategory[ctx.category]

@@ -21,6 +21,13 @@ import type { UserIntent, DesireSignal } from './intent';
 import { DAC_PRODUCTS, type Product } from './products/dacs';
 import { SPEAKER_PRODUCTS } from './products/speakers';
 import { inferSystemDirection, type SystemDirection } from './system-direction';
+import {
+  compareProductArchetypes,
+  tagProductArchetype,
+  getArchetypeLabel,
+  getArchetypeShortLabel,
+  type SonicArchetype,
+} from './archetype';
 
 // ── Product lookup ───────────────────────────────────
 
@@ -260,17 +267,19 @@ export function buildGearResponse(
     const b = products[1] ?? null;
 
     if (a && b) {
+      const archetypeFrame = compareProductArchetypes(a, b);
       return {
         intent,
         subjects,
         anchor: withTendency(`The ${a.brand} ${a.name} and ${b.brand} ${b.name} come from quite different design traditions.`),
-        character: `The ${a.name} uses ${a.architecture} — ${a.description.charAt(0).toLowerCase() + a.description.slice(1)} The ${b.name} uses ${b.architecture} — ${b.description.charAt(0).toLowerCase() + b.description.slice(1)}`,
+        character: `${archetypeFrame} The ${a.name} uses ${a.architecture} — ${a.description.charAt(0).toLowerCase() + a.description.slice(1)} The ${b.name} uses ${b.architecture} — ${b.description.charAt(0).toLowerCase() + b.description.slice(1)}`,
         interpretation: desires.length > 0
           ? QUALITY_PROFILES[desires[0].quality]?.interpretation
           : undefined,
         direction: withDirection(buildComparisonDirection(a, b)),
         clarification: pick(COMPARISON_CLARIFICATIONS, seed),
         systemDirection: sysDir,
+        userArchetype: sysDir.inferredArchetype,
       };
     }
 
@@ -286,6 +295,7 @@ export function buildGearResponse(
         direction: withDirection('The most useful way to think about it is: what do you want more of in your listening, and which design approach tends to deliver that? A comparison that holds in one system may reverse in another.'),
         clarification: pick(COMPARISON_CLARIFICATIONS, seed),
         systemDirection: sysDir,
+        userArchetype: sysDir.inferredArchetype,
       };
     }
 
@@ -297,6 +307,7 @@ export function buildGearResponse(
       direction: 'To make a useful comparison, I\'d need to know what you\'re comparing and what dimensions matter most. Two excellent components can be optimized for very different priorities.',
       clarification: 'What are you comparing, and what\'s driving the question?',
       systemDirection: sysDir,
+      userArchetype: sysDir.inferredArchetype,
     };
   }
 
@@ -309,10 +320,15 @@ export function buildGearResponse(
       ? `${product.brand} ${product.name}`
       : subjects[0].charAt(0).toUpperCase() + subjects[0].slice(1);
 
+    // Archetype context for the anchor
+    const archetypeContext = sysDir.archetypeNote
+      ? ` ${sysDir.archetypeNote}`
+      : '';
+
     return {
       intent,
       subjects,
-      anchor: withTendency(`The ${productName} has a well-established character, and wanting ${primary.direction} ${primary.quality} from it tells me something useful about where you want to go.`),
+      anchor: withTendency(`The ${productName} has a well-established character, and wanting ${primary.direction} ${primary.quality} from it tells me something useful about where you want to go.${archetypeContext}`),
       character: product
         ? productCharacter(product)
         : brandCharacter(productName),
@@ -324,6 +340,7 @@ export function buildGearResponse(
       ),
       clarification: pick(DESIRE_CLARIFICATIONS, seed),
       systemDirection: sysDir,
+      userArchetype: sysDir.inferredArchetype,
     };
   }
 
@@ -335,9 +352,10 @@ export function buildGearResponse(
       subjects,
       anchor: withTendency(`The ${product.brand} ${product.name} is a well-known piece in this space.`),
       character: productCharacter(product),
-      direction: buildInquiryDirection(product),
+      direction: buildInquiryDirection(product, sysDir.inferredArchetype),
       clarification: pick(INQUIRY_CLARIFICATIONS, seed),
       systemDirection: sysDir,
+      userArchetype: sysDir.inferredArchetype,
     };
   }
 
@@ -352,6 +370,7 @@ export function buildGearResponse(
       direction: 'The best way to evaluate any piece of gear is relative to the system it\'s going into. A component that sounds extraordinary in one system can be unremarkable in another — that\'s not a flaw, it\'s how audio works.',
       clarification: pick(GENERIC_CLARIFICATIONS, seed),
       systemDirection: sysDir,
+      userArchetype: sysDir.inferredArchetype,
     };
   }
 
@@ -364,6 +383,7 @@ export function buildGearResponse(
     direction: 'What matters is how that character interacts with your system and your listening priorities. The same piece can sound relaxed in one system and forward in another.',
     clarification: pick(GENERIC_CLARIFICATIONS, seed),
     systemDirection: sysDir,
+    userArchetype: sysDir.inferredArchetype,
   };
 }
 
@@ -411,8 +431,20 @@ function buildComparisonDirection(a: Product, b: Product): string {
   return 'They\'re closer in overall balance than you might expect given the architectural differences. The distinction is more about texture and presentation style than broad tonal character. Context — the amp, the room, the music — will determine which one feels right.';
 }
 
-function buildInquiryDirection(product: Product): string {
+function buildInquiryDirection(product: Product, userArchetype?: SonicArchetype): string {
   const traits = product.traits;
+  const tags = tagProductArchetype(product);
+
+  const parts: string[] = [];
+
+  // Archetype alignment note
+  if (userArchetype) {
+    if (tags.primary === userArchetype) {
+      parts.push(`Its design emphasizes ${getArchetypeLabel(tags.primary)}, which aligns with what you're describing.`);
+    } else {
+      parts.push(`It leans toward ${getArchetypeLabel(tags.primary)}, which is a different emphasis from the ${getArchetypeLabel(userArchetype)} you seem to be after.`);
+    }
+  }
 
   // Identify the product's strongest trait dimension for context
   const strengths: string[] = [];
@@ -435,9 +467,7 @@ function buildInquiryDirection(product: Product): string {
   if ((traits.fatigue_risk ?? 0) >= 0.4) cautions.push('it can lean forward in the treble, which may be fatiguing in brighter systems');
   if ((traits.glare_risk ?? 0) >= 0.4) cautions.push('there\'s some edge in the upper frequencies that could compound with bright amplification');
 
-  const parts: string[] = [];
-
-  if (strengths.length > 0) {
+  if (strengths.length > 0 && !userArchetype) {
     parts.push(`Its design philosophy clearly prioritizes ${strengths.join(' and ')}.`);
   }
 
