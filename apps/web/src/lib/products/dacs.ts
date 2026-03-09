@@ -25,6 +25,15 @@ export interface Product {
   description: string;
   retailer_links: { label: string; url: string }[];
   notes?: string;
+  /**
+   * Explicit archetype tags. When present, these override trait-inferred
+   * archetypes. Use this to prevent misclassification of gear whose
+   * sonic character doesn't reduce cleanly to trait-weighted scoring.
+   */
+  archetypes?: {
+    primary: import('../archetype').SonicArchetype;
+    secondary?: import('../archetype').SonicArchetype;
+  };
 }
 
 export const DAC_PRODUCTS: Product[] = [
@@ -37,6 +46,7 @@ export const DAC_PRODUCTS: Product[] = [
     price: 199,
     category: 'dac',
     architecture: 'delta-sigma (AKM)',
+    archetypes: { primary: 'precision_explicit' },
     traits: {
       flow: 0.4,
       tonal_density: 0.4,
@@ -61,6 +71,7 @@ export const DAC_PRODUCTS: Product[] = [
     price: 349,
     category: 'dac',
     architecture: 'delta-sigma (ESS)',
+    archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     traits: {
       flow: 0.4,
       tonal_density: 0.4,
@@ -90,6 +101,7 @@ export const DAC_PRODUCTS: Product[] = [
     price: 450,
     category: 'dac',
     architecture: 'delta-sigma (ESS)',
+    archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     traits: {
       flow: 0.4,
       tonal_density: 0.4,
@@ -117,6 +129,7 @@ export const DAC_PRODUCTS: Product[] = [
     price: 550,
     category: 'dac',
     architecture: 'delta-sigma (ESS)',
+    archetypes: { primary: 'precision_explicit' },
     traits: {
       flow: 0.4,
       tonal_density: 0.4,
@@ -142,6 +155,7 @@ export const DAC_PRODUCTS: Product[] = [
     price: 600,
     category: 'dac',
     architecture: 'R-2R',
+    archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     traits: {
       flow: 0.7,
       tonal_density: 0.7,
@@ -167,6 +181,7 @@ export const DAC_PRODUCTS: Product[] = [
     price: 699,
     category: 'dac',
     architecture: 'multibit',
+    archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
     traits: {
       flow: 0.7,
       tonal_density: 0.7,
@@ -192,6 +207,7 @@ export const DAC_PRODUCTS: Product[] = [
     price: 700,
     category: 'dac',
     architecture: 'delta-sigma (ESS)',
+    archetypes: { primary: 'precision_explicit' },
     traits: {
       flow: 0.4,
       tonal_density: 0.4,
@@ -221,6 +237,7 @@ export const DAC_PRODUCTS: Product[] = [
     price: 800,
     category: 'dac',
     architecture: 'NOS tube',
+    archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     traits: {
       flow: 1.0,
       tonal_density: 0.7,
@@ -247,6 +264,7 @@ export const DAC_PRODUCTS: Product[] = [
     price: 799,
     category: 'dac',
     architecture: 'delta-sigma (ESS)',
+    archetypes: { primary: 'precision_explicit' },
     traits: {
       flow: 0.4,
       tonal_density: 0.4,
@@ -275,6 +293,7 @@ export const DAC_PRODUCTS: Product[] = [
     price: 1099,
     category: 'dac',
     architecture: 'delta-sigma (AKM)',
+    archetypes: { primary: 'precision_explicit' },
     traits: {
       flow: 0.4,
       tonal_density: 0.4,
@@ -302,6 +321,7 @@ export const DAC_PRODUCTS: Product[] = [
     price: 1295,
     category: 'dac',
     architecture: 'FPGA',
+    archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
     traits: {
       flow: 0.7,
       tonal_density: 0.4,
@@ -327,6 +347,7 @@ export const DAC_PRODUCTS: Product[] = [
     price: 1499,
     category: 'dac',
     architecture: 'R-2R',
+    archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     traits: {
       flow: 1.0,
       tonal_density: 1.0,
@@ -352,6 +373,7 @@ export const DAC_PRODUCTS: Product[] = [
     price: 1499,
     category: 'dac',
     architecture: 'R-2R',
+    archetypes: { primary: 'tonal_saturated', secondary: 'precision_explicit' },
     traits: {
       flow: 0.7,
       tonal_density: 0.7,

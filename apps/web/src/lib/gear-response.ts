@@ -27,6 +27,7 @@ import {
   getArchetypeLabel,
   getArchetypeShortLabel,
   type SonicArchetype,
+  type UserArchetypePreference,
 } from './archetype';
 
 // ── Product lookup ───────────────────────────────────
@@ -279,7 +280,9 @@ export function buildGearResponse(
         direction: withDirection(buildComparisonDirection(a, b)),
         clarification: pick(COMPARISON_CLARIFICATIONS, seed),
         systemDirection: sysDir,
-        userArchetype: sysDir.inferredArchetype,
+        userArchetype: sysDir.inferredArchetype
+        ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
+        : undefined,
       };
     }
 
@@ -295,7 +298,9 @@ export function buildGearResponse(
         direction: withDirection('The most useful way to think about it is: what do you want more of in your listening, and which design approach tends to deliver that? A comparison that holds in one system may reverse in another.'),
         clarification: pick(COMPARISON_CLARIFICATIONS, seed),
         systemDirection: sysDir,
-        userArchetype: sysDir.inferredArchetype,
+        userArchetype: sysDir.inferredArchetype
+        ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
+        : undefined,
       };
     }
 
@@ -307,7 +312,9 @@ export function buildGearResponse(
       direction: 'To make a useful comparison, I\'d need to know what you\'re comparing and what dimensions matter most. Two excellent components can be optimized for very different priorities.',
       clarification: 'What are you comparing, and what\'s driving the question?',
       systemDirection: sysDir,
-      userArchetype: sysDir.inferredArchetype,
+      userArchetype: sysDir.inferredArchetype
+        ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
+        : undefined,
     };
   }
 
@@ -340,7 +347,9 @@ export function buildGearResponse(
       ),
       clarification: pick(DESIRE_CLARIFICATIONS, seed),
       systemDirection: sysDir,
-      userArchetype: sysDir.inferredArchetype,
+      userArchetype: sysDir.inferredArchetype
+        ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
+        : undefined,
     };
   }
 
@@ -352,10 +361,12 @@ export function buildGearResponse(
       subjects,
       anchor: withTendency(`The ${product.brand} ${product.name} is a well-known piece in this space.`),
       character: productCharacter(product),
-      direction: buildInquiryDirection(product, sysDir.inferredArchetype),
+      direction: buildInquiryDirection(product, sysDir.inferredArchetype ?? undefined),
       clarification: pick(INQUIRY_CLARIFICATIONS, seed),
       systemDirection: sysDir,
-      userArchetype: sysDir.inferredArchetype,
+      userArchetype: sysDir.inferredArchetype
+        ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
+        : undefined,
     };
   }
 
@@ -370,7 +381,9 @@ export function buildGearResponse(
       direction: 'The best way to evaluate any piece of gear is relative to the system it\'s going into. A component that sounds extraordinary in one system can be unremarkable in another — that\'s not a flaw, it\'s how audio works.',
       clarification: pick(GENERIC_CLARIFICATIONS, seed),
       systemDirection: sysDir,
-      userArchetype: sysDir.inferredArchetype,
+      userArchetype: sysDir.inferredArchetype
+        ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
+        : undefined,
     };
   }
 
@@ -383,7 +396,9 @@ export function buildGearResponse(
     direction: 'What matters is how that character interacts with your system and your listening priorities. The same piece can sound relaxed in one system and forward in another.',
     clarification: pick(GENERIC_CLARIFICATIONS, seed),
     systemDirection: sysDir,
-    userArchetype: sysDir.inferredArchetype,
+    userArchetype: sysDir.inferredArchetype
+      ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
+      : undefined,
   };
 }
 
@@ -431,18 +446,20 @@ function buildComparisonDirection(a: Product, b: Product): string {
   return 'They\'re closer in overall balance than you might expect given the architectural differences. The distinction is more about texture and presentation style than broad tonal character. Context — the amp, the room, the music — will determine which one feels right.';
 }
 
-function buildInquiryDirection(product: Product, userArchetype?: SonicArchetype): string {
+function buildInquiryDirection(product: Product, userPref?: { primary: SonicArchetype; secondary?: SonicArchetype }): string {
   const traits = product.traits;
   const tags = tagProductArchetype(product);
 
   const parts: string[] = [];
 
-  // Archetype alignment note
-  if (userArchetype) {
-    if (tags.primary === userArchetype) {
+  // Archetype alignment note — check against both primary and secondary
+  if (userPref) {
+    const userPrimary = userPref.primary;
+    const userSecondary = userPref.secondary;
+    if (tags.primary === userPrimary || tags.primary === userSecondary) {
       parts.push(`Its design emphasizes ${getArchetypeLabel(tags.primary)}, which aligns with what you're describing.`);
     } else {
-      parts.push(`It leans toward ${getArchetypeLabel(tags.primary)}, which is a different emphasis from the ${getArchetypeLabel(userArchetype)} you seem to be after.`);
+      parts.push(`It leans toward ${getArchetypeLabel(tags.primary)}, which is a different emphasis from the ${getArchetypeLabel(userPrimary)} you seem to be after.`);
     }
   }
 
@@ -467,7 +484,7 @@ function buildInquiryDirection(product: Product, userArchetype?: SonicArchetype)
   if ((traits.fatigue_risk ?? 0) >= 0.4) cautions.push('it can lean forward in the treble, which may be fatiguing in brighter systems');
   if ((traits.glare_risk ?? 0) >= 0.4) cautions.push('there\'s some edge in the upper frequencies that could compound with bright amplification');
 
-  if (strengths.length > 0 && !userArchetype) {
+  if (strengths.length > 0 && !userPref) {
     parts.push(`Its design philosophy clearly prioritizes ${strengths.join(' and ')}.`);
   }
 

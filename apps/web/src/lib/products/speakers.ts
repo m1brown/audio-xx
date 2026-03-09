@@ -36,6 +36,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     price: 4500,
     category: 'speaker',
     architecture: 'high-efficiency single-driver + passive radiator',
+    archetypes: { primary: 'rhythmic_propulsive', secondary: 'flow_organic' },
     traits: {
       rhythm: 1.0,
       dynamics: 1.0,
@@ -67,6 +68,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     price: 3500,
     category: 'speaker',
     architecture: 'compact sealed, wide-bandwidth single driver',
+    archetypes: { primary: 'spatial_holographic', secondary: 'precision_explicit' },
     traits: {
       rhythm: 0.7,
       dynamics: 0.4,
@@ -98,6 +100,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     price: 2495,
     category: 'speaker',
     architecture: 'BBC-tradition thin-wall sealed box',
+    archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     traits: {
       rhythm: 0.4,
       dynamics: 0.4,
@@ -127,6 +130,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     price: 5795,
     category: 'speaker',
     architecture: 'BBC-tradition thin-wall ported box',
+    archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     traits: {
       rhythm: 0.4,
       dynamics: 0.7,
@@ -157,6 +161,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     price: 12000,
     category: 'speaker',
     architecture: 'high-efficiency wide-baffle two-way',
+    archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
     traits: {
       rhythm: 1.0,
       dynamics: 1.0,
@@ -188,6 +193,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     price: 999,
     category: 'speaker',
     architecture: 'high-efficiency full-range driver + supertweeter',
+    archetypes: { primary: 'rhythmic_propulsive' },
     traits: {
       rhythm: 1.0,
       dynamics: 1.0,
@@ -219,6 +225,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     price: 3198,
     category: 'speaker',
     architecture: 'three-way horn-loaded',
+    archetypes: { primary: 'rhythmic_propulsive', secondary: 'precision_explicit' },
     traits: {
       rhythm: 0.7,
       dynamics: 1.0,
@@ -251,6 +258,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     price: 6990,
     category: 'speaker',
     architecture: 'three-way bass-reflex with beryllium tweeter',
+    archetypes: { primary: 'precision_explicit', secondary: 'tonal_saturated' },
     traits: {
       rhythm: 0.7,
       dynamics: 0.7,
@@ -280,6 +288,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     price: 999,
     category: 'speaker',
     architecture: 'two-way bass-reflex with flax driver',
+    archetypes: { primary: 'precision_explicit' },
     traits: {
       rhythm: 0.7,
       dynamics: 0.7,
