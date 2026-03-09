@@ -217,9 +217,17 @@ export default function Home() {
       {/* Conversation thread */}
       {hasMessages && (
         <div style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
-          {messages.map((msg, i) => (
-            <MessageBubble key={i} message={msg} />
-          ))}
+          {messages
+            .filter((msg) => {
+              // In inquiry mode (pending question), suppress analysis messages
+              if (hasPendingQuestion && msg.role === 'assistant' && 'kind' in msg && msg.kind === 'analysis') {
+                return false;
+              }
+              return true;
+            })
+            .map((msg, i) => (
+              <MessageBubble key={i} message={msg} />
+            ))}
           {isLoading && (
             <ThinkingIndicator />
           )}
