@@ -14,6 +14,9 @@
  * existing rule engine by ensuring taste + system context are present.
  */
 import type { ExtractedSignals, SignalDirection } from './signal-types';
+import type { SystemProfile, OutputType, SystemCharacter } from './system-profile';
+import { DEFAULT_SYSTEM_PROFILE } from './system-profile';
+export type { SystemProfile, OutputType, SystemCharacter } from './system-profile';
 
 // ── Types ─────────────────────────────────────────────
 
@@ -38,6 +41,7 @@ export interface ShoppingContext {
   budgetAmount: number | null;
   tasteProvided: boolean;
   systemProvided: boolean;
+  systemProfile: SystemProfile;
   useCaseProvided: boolean;
   preserveProvided: boolean;
   limitingProvided: boolean;
@@ -258,6 +262,79 @@ export function parseBudgetAmount(text: string): number | null {
   return lastAmount;
 }
 
+// ── System profile extraction ─────────────────────────
+
+const SPEAKER_KEYWORDS = [
+  'speakers', 'speaker', 'monitors', 'bookshelf', 'floorstanding',
+  'floor-standing', 'towers', 'standmount', 'stand-mount',
+];
+
+const HEADPHONE_KEYWORDS = [
+  'headphones', 'headphone', 'iems', 'iem', 'cans',
+  'earphones', 'earphone', 'ear buds', 'earbuds',
+];
+
+const BRIGHT_KEYWORDS = [
+  'bright', 'forward', 'analytical', 'lean', 'thin',
+  'metal tweeter', 'beryllium', 'etched', 'aggressive',
+  'sibilant', 'sibilance', 'glare', 'hard treble',
+];
+
+const WARM_KEYWORDS = [
+  'warm', 'rich', 'dark', 'lush', 'smooth',
+  'tube amp', 'tube amplifier', 'set amp', 'paper cone',
+  'relaxed', 'laid back', 'laid-back', 'soft dome',
+];
+
+const TUBE_KEYWORDS = [
+  'tube amp', 'tube amplifier', 'tube integrated',
+  'single-ended triode', 'set amp', 'set amplifier',
+  '300b', 'el34', 'kt88', 'kt120', 'kt150',
+  '2a3', '845', '6l6', '6v6', 'el84',
+  'push-pull tube', 'push pull tube',
+];
+
+const LOW_POWER_KEYWORDS = [
+  'low power', 'low-power', 'single-ended', 'set ',
+  'high sensitivity', 'high-sensitivity', 'high efficiency',
+  'high-efficiency', 'horn', 'horn loaded', 'horn-loaded',
+  'first watt', 'decware',
+];
+
+/**
+ * Extract a structured system profile from user text.
+ * Keyword-based, deterministic, no LLM.
+ */
+export function parseSystemProfile(text: string): SystemProfile {
+  const lower = text.toLowerCase();
+
+  // Output type
+  const hasSpeakers = SPEAKER_KEYWORDS.some((kw) => lower.includes(kw));
+  const hasHeadphones = HEADPHONE_KEYWORDS.some((kw) => lower.includes(kw));
+  let outputType: OutputType = 'unknown';
+  if (hasSpeakers && hasHeadphones) outputType = 'both';
+  else if (hasSpeakers) outputType = 'speakers';
+  else if (hasHeadphones) outputType = 'headphones';
+
+  // System character
+  const hasBright = BRIGHT_KEYWORDS.some((kw) => lower.includes(kw));
+  const hasWarm = WARM_KEYWORDS.some((kw) => lower.includes(kw));
+  let systemCharacter: SystemCharacter = 'unknown';
+  if (hasBright && hasWarm) systemCharacter = 'neutral'; // conflicting signals → treat as neutral
+  else if (hasBright) systemCharacter = 'bright';
+  else if (hasWarm) systemCharacter = 'warm';
+
+  // Tube amplification
+  const tubeAmplification = TUBE_KEYWORDS.some((kw) => lower.includes(kw));
+
+  // Low power context
+  const lowPowerContext = LOW_POWER_KEYWORDS.some((kw) => lower.includes(kw));
+
+  return { outputType, systemCharacter, tubeAmplification, lowPowerContext };
+}
+
+// DEFAULT_SYSTEM_PROFILE imported from ./system-profile
+
 // ── Detection ─────────────────────────────────────────
 
 export function detectShoppingIntent(
@@ -277,6 +354,7 @@ export function detectShoppingIntent(
       budgetAmount: null,
       tasteProvided: false,
       systemProvided: false,
+      systemProfile: DEFAULT_SYSTEM_PROFILE,
       useCaseProvided: false,
       preserveProvided: false,
       limitingProvided: false,
@@ -310,6 +388,7 @@ export function detectShoppingIntent(
   const budgetAmount = parseBudgetAmount(userText);
   const tasteProvided = signals.symptoms.length >= 2;
   const systemProvided = SYSTEM_KEYWORDS.some((kw) => lower.includes(kw));
+  const systemProfile = systemProvided ? parseSystemProfile(userText) : DEFAULT_SYSTEM_PROFILE;
   const useCaseProvided = USE_CASE_KEYWORDS.some((kw) => lower.includes(kw));
   const preserveProvided = PRESERVE_KEYWORDS.some((kw) => lower.includes(kw));
   const limitingProvided = LIMITING_KEYWORDS.some((kw) => lower.includes(kw));
@@ -322,6 +401,7 @@ export function detectShoppingIntent(
     budgetAmount,
     tasteProvided,
     systemProvided,
+    systemProfile,
     useCaseProvided,
     preserveProvided,
     limitingProvided,
@@ -757,12 +837,13 @@ function selectProductExamples(
   category: ShoppingCategory,
   userTraits: Record<string, SignalDirection>,
   budgetAmount: number | null,
+  systemProfile: SystemProfile,
 ): ProductExample[] {
   // Only DACs have a catalog for now
   if (category !== 'dac') return [];
   if (budgetAmount === null) return [];
 
-  const ranked = rankProducts(DAC_PRODUCTS, userTraits, budgetAmount);
+  const ranked = rankProducts(DAC_PRODUCTS, userTraits, budgetAmount, systemProfile);
   const top = ranked.slice(0, 3);
 
   return top.map(({ product }) => ({
@@ -811,7 +892,7 @@ export function buildShoppingAnswer(
     ?? taste.defaultWhy ?? matchedProfile?.defaultWhy ?? FALLBACK_TASTE.defaultWhy;
 
   // 4. Product examples (only when catalog exists + budget known)
-  const productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount);
+  const productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile);
 
   // 5. Watch for
   const watchFor = taste.watchFor;
