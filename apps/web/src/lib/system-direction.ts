@@ -147,8 +147,12 @@ function tendenciesFromProduct(product: Product): Tendency[] {
   if ((t.composure ?? 0) >= 0.7) result.push('controlled');
   if ((t.fatigue_risk ?? 0) >= 0.4 || (t.glare_risk ?? 0) >= 0.4) result.push('bright');
   if ((t.tonal_density ?? 0) >= 0.7 && (t.flow ?? 0) >= 0.4) result.push('warm');
+  if ((t.warmth ?? 0) >= 0.7) result.push('warm');
+  if ((t.openness ?? 0) >= 0.7 || (t.spatial_precision ?? 0) >= 0.7) result.push('spacious');
+  if ((t.rhythm ?? 0) >= 0.7 && (t.speed ?? 0) >= 0.7) result.push('dynamic');
 
-  return result;
+  // Deduplicate
+  return [...new Set(result)];
 }
 
 // ── Desired direction from desire signals ────────────

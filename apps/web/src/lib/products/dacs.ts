@@ -19,7 +19,7 @@ export interface Product {
   brand: string;
   name: string;
   price: number;
-  category: 'dac';
+  category: 'dac' | 'speaker' | 'amplifier';
   architecture: string;
   traits: Record<string, number>;
   description: string;

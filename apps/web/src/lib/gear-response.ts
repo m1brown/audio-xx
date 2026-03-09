@@ -19,11 +19,12 @@
 import type { GearResponse } from './conversation-types';
 import type { UserIntent, DesireSignal } from './intent';
 import { DAC_PRODUCTS, type Product } from './products/dacs';
+import { SPEAKER_PRODUCTS } from './products/speakers';
 import { inferSystemDirection, type SystemDirection } from './system-direction';
 
 // ── Product lookup ───────────────────────────────────
 
-const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS];
+const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS];
 
 function findProducts(subjects: string[]): Product[] {
   if (subjects.length === 0) return [];
@@ -137,25 +138,54 @@ const QUALITY_PROFILES: Record<string, QualityProfile> = {
   },
 };
 
+// ── Trait labels (human-readable) ────────────────────
+
+const TRAIT_LABELS: Record<string, string> = {
+  flow: 'musical flow',
+  tonal_density: 'tonal weight',
+  clarity: 'clarity',
+  dynamics: 'dynamic energy',
+  texture: 'textural detail',
+  composure: 'composure',
+  rhythm: 'rhythmic drive',
+  spatial_precision: 'spatial precision',
+  speed: 'transient speed',
+  warmth: 'warmth',
+  openness: 'openness',
+  elasticity: 'elasticity',
+};
+
 // ── Character builders ───────────────────────────────
 
 function productCharacter(product: Product): string {
   const traits = product.traits;
-  const leanings: string[] = [];
 
-  if ((traits.flow ?? 0) >= 0.7) leanings.push('musical flow');
-  if ((traits.tonal_density ?? 0) >= 0.7) leanings.push('tonal weight');
-  if ((traits.clarity ?? 0) >= 0.7) leanings.push('clarity');
-  if ((traits.dynamics ?? 0) >= 0.7) leanings.push('dynamic energy');
-  if ((traits.texture ?? 0) >= 0.7) leanings.push('textural detail');
-  if ((traits.composure ?? 0) >= 0.7) leanings.push('composure');
+  // Gather strong traits (≥ 0.7) in human-readable form
+  const strengths: string[] = [];
+  for (const [key, label] of Object.entries(TRAIT_LABELS)) {
+    if ((traits[key] ?? 0) >= 0.7) strengths.push(label);
+  }
+
+  // Gather risk traits for nuance
+  const risks: string[] = [];
+  if ((traits.fatigue_risk ?? 0) >= 0.4) risks.push('some listening fatigue risk in bright systems');
+  if ((traits.glare_risk ?? 0) >= 0.4) risks.push('a touch of upper-frequency edge');
 
   let char = `${product.description} It uses ${product.architecture}`;
-  if (leanings.length > 0) {
-    char += `, and its design leans toward ${leanings.join(' and ')}.`;
+  if (strengths.length > 0) {
+    const last = strengths.pop()!;
+    const list = strengths.length > 0
+      ? `${strengths.join(', ')} and ${last}`
+      : last;
+    char += `, and its design leans toward ${list}.`;
   } else {
     char += '.';
   }
+
+  if (risks.length > 0) {
+    char += ` Worth noting: ${risks.join('; ')}.`;
+  }
+
   return char;
 }
 
@@ -339,44 +369,87 @@ export function buildGearResponse(
 
 // ── Direction helpers ────────────────────────────────
 
+/** Trait comparison descriptors — each trait gets a pair of phrases for A>B and B>A. */
+const COMPARISON_PHRASES: Record<string, { aLeads: string; bLeads: string }> = {
+  flow:              { aLeads: 'leans more toward musical flow',       bLeads: 'leans more toward musical flow' },
+  rhythm:            { aLeads: 'has stronger rhythmic drive',          bLeads: 'has stronger rhythmic drive' },
+  dynamics:          { aLeads: 'delivers more dynamic energy',         bLeads: 'delivers more dynamic energy' },
+  tonal_density:     { aLeads: 'carries more tonal weight',            bLeads: 'carries more tonal weight' },
+  clarity:           { aLeads: 'emphasizes clarity more',              bLeads: 'emphasizes clarity more' },
+  speed:             { aLeads: 'has faster transient response',        bLeads: 'has faster transient response' },
+  warmth:            { aLeads: 'leans warmer and fuller',              bLeads: 'leans warmer and fuller' },
+  spatial_precision: { aLeads: 'images with more spatial precision',   bLeads: 'images with more spatial precision' },
+  texture:           { aLeads: 'reveals more textural detail',         bLeads: 'reveals more textural detail' },
+  composure:         { aLeads: 'stays more composed under pressure',   bLeads: 'stays more composed under pressure' },
+  openness:          { aLeads: 'sounds more open and spacious',        bLeads: 'sounds more open and spacious' },
+  elasticity:        { aLeads: 'has more rhythmic elasticity',         bLeads: 'has more rhythmic elasticity' },
+};
+
 function buildComparisonDirection(a: Product, b: Product): string {
   const diffs: string[] = [];
 
-  const flowDiff = (a.traits.flow ?? 0) - (b.traits.flow ?? 0);
-  if (Math.abs(flowDiff) >= 0.3) {
-    diffs.push(flowDiff > 0
-      ? `the ${a.name} leans more toward musical flow, while the ${b.name} is more measured`
-      : `the ${b.name} leans more toward musical flow, while the ${a.name} is more measured`);
-  }
-  const clarityDiff = (a.traits.clarity ?? 0) - (b.traits.clarity ?? 0);
-  if (Math.abs(clarityDiff) >= 0.3) {
-    diffs.push(clarityDiff > 0
-      ? `the ${a.name} emphasizes clarity more`
-      : `the ${b.name} emphasizes clarity more`);
-  }
-  const densityDiff = (a.traits.tonal_density ?? 0) - (b.traits.tonal_density ?? 0);
-  if (Math.abs(densityDiff) >= 0.3) {
-    diffs.push(densityDiff > 0
-      ? `the ${a.name} carries more tonal weight`
-      : `the ${b.name} carries more tonal weight`);
+  for (const [trait, phrases] of Object.entries(COMPARISON_PHRASES)) {
+    const diff = (a.traits[trait] ?? 0) - (b.traits[trait] ?? 0);
+    if (Math.abs(diff) >= 0.3) {
+      diffs.push(diff > 0
+        ? `the ${a.name} ${phrases.aLeads}`
+        : `the ${b.name} ${phrases.bLeads}`);
+    }
   }
 
-  if (diffs.length > 0) {
-    return `In practice, ${diffs.join('; ')}. Neither is objectively better — they optimize for different things, and the right choice depends on what your system needs.`;
+  // Cap at 4 most distinctive differences to keep it readable
+  const topDiffs = diffs.slice(0, 4);
+
+  if (topDiffs.length > 0) {
+    const last = topDiffs.pop()!;
+    const list = topDiffs.length > 0
+      ? `${topDiffs.join('; ')}, while ${last}`
+      : last;
+    return `In practice, ${list}. Neither is objectively better — they represent different design philosophies, and the right choice depends on your system context and listening priorities.`;
   }
-  return 'They\'re closer in overall balance than you might expect given the architectural differences. The distinction is more about texture and presentation style than broad tonal character.';
+
+  return 'They\'re closer in overall balance than you might expect given the architectural differences. The distinction is more about texture and presentation style than broad tonal character. Context — the amp, the room, the music — will determine which one feels right.';
 }
 
 function buildInquiryDirection(product: Product): string {
   const traits = product.traits;
-  const cautions: string[] = [];
 
+  // Identify the product's strongest trait dimension for context
+  const strengths: string[] = [];
+  if ((traits.rhythm ?? 0) >= 1.0 || (traits.dynamics ?? 0) >= 1.0) strengths.push('rhythmic and dynamic engagement');
+  if ((traits.tonal_density ?? 0) >= 1.0) strengths.push('tonal richness');
+  if ((traits.spatial_precision ?? 0) >= 1.0) strengths.push('spatial precision');
+  if ((traits.clarity ?? 0) >= 1.0) strengths.push('transparency');
+  if ((traits.flow ?? 0) >= 1.0) strengths.push('musical continuity');
+  if ((traits.texture ?? 0) >= 1.0) strengths.push('textural realism');
+
+  // Identify trade-offs (weak areas)
+  const tradeoffs: string[] = [];
+  if ((traits.clarity ?? 0) <= 0.4 && strengths.length > 0) tradeoffs.push('resolution');
+  if ((traits.dynamics ?? 0) <= 0.4 && strengths.length > 0) tradeoffs.push('dynamic scale');
+  if ((traits.spatial_precision ?? 0) <= 0.4 && strengths.length > 0) tradeoffs.push('imaging specificity');
+  if ((traits.warmth ?? 0) <= 0.0 && (traits.clarity ?? 0) >= 0.7) tradeoffs.push('warmth');
+
+  // Cautions
+  const cautions: string[] = [];
   if ((traits.fatigue_risk ?? 0) >= 0.4) cautions.push('it can lean forward in the treble, which may be fatiguing in brighter systems');
   if ((traits.glare_risk ?? 0) >= 0.4) cautions.push('there\'s some edge in the upper frequencies that could compound with bright amplification');
 
-  if (cautions.length > 0) {
-    return `Worth being aware of: ${cautions.join('; ')}. Whether that matters depends entirely on what it\'s paired with and what you prioritize.`;
+  const parts: string[] = [];
+
+  if (strengths.length > 0) {
+    parts.push(`Its design philosophy clearly prioritizes ${strengths.join(' and ')}.`);
   }
 
-  return 'It\'s generally well-mannered across different system contexts, though how well it fits always depends on the rest of the chain and what you value in your listening.';
+  if (tradeoffs.length > 0) {
+    parts.push(`The trade-off is ${tradeoffs.join(' and ')} — it gives up some of that to focus on what it does best.`);
+  }
+
+  if (cautions.length > 0) {
+    parts.push(`Worth being aware of: ${cautions.join('; ')}.`);
+  }
+
+  parts.push('How well it works depends on the rest of the chain and what you prioritize in your listening.');
+
+  return parts.join(' ');
 }
