@@ -152,13 +152,21 @@ export default function Home() {
   }, [currentInput, isLoading, messages, turnCount]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter' && e.metaKey) {
+    if (e.key === 'Enter' && !e.shiftKey && hasMessages) {
+      // In conversation mode: Enter sends, Shift+Enter for newline
+      e.preventDefault();
+      handleSubmit();
+    } else if (e.key === 'Enter' && e.metaKey) {
+      // Before conversation starts: Cmd+Enter sends (preserves multiline for initial note)
       e.preventDefault();
       handleSubmit();
     }
   }
 
   const hasMessages = messages.length > 0;
+  const lastMessage = messages[messages.length - 1];
+  const hasPendingQuestion =
+    lastMessage?.role === 'assistant' && lastMessage.kind === 'question';
 
   return (
     <div
@@ -251,9 +259,11 @@ export default function Home() {
           onChange={(e) => dispatch({ type: 'SET_INPUT', value: e.target.value })}
           onKeyDown={handleKeyDown}
           placeholder={
-            hasMessages
-              ? 'Continue describing what you hear…'
-              : PLACEHOLDERS[placeholderIndex]
+            hasPendingQuestion
+              ? 'Reply here…'
+              : hasMessages
+                ? 'Continue describing what you hear…'
+                : PLACEHOLDERS[placeholderIndex]
           }
           style={{
             width: '100%',
@@ -338,10 +348,12 @@ export default function Home() {
             opacity: isLoading || !currentInput.trim() ? 0.65 : 1,
           }}
         >
-          {isLoading ? 'Running…' : hasMessages ? 'Continue' : 'Run analysis'}
+          {isLoading ? 'Running…' : hasPendingQuestion ? 'Reply' : hasMessages ? 'Continue' : 'Run analysis'}
         </button>
 
-        <span style={{ color: '#666', fontSize: '0.9rem' }}>⌘ + Enter</span>
+        <span style={{ color: '#666', fontSize: '0.9rem' }}>
+          {hasMessages ? 'Enter to send' : '⌘ + Enter'}
+        </span>
 
         {hasMessages && (
           <button
@@ -421,17 +433,34 @@ function MessageBubble({ message }: { message: Message }) {
     return (
       <div
         style={{
+          marginTop: '1.5rem',
           marginBottom: '1.25rem',
-          padding: '0.85rem 1rem',
+          padding: '1rem 1.1rem',
           borderLeft: '3px solid #c4122f',
           background: '#faf7f7',
-          color: '#333',
-          fontSize: '1.05rem',
-          lineHeight: 1.6,
-          fontStyle: 'italic',
         }}
       >
-        {message.content}
+        <div
+          style={{
+            marginBottom: '0.5rem',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+            color: '#c4122f',
+          }}
+        >
+          Audio XX asks
+        </div>
+        <div
+          style={{
+            color: '#222',
+            fontSize: '1.05rem',
+            lineHeight: 1.6,
+          }}
+        >
+          {message.content}
+        </div>
       </div>
     );
   }
