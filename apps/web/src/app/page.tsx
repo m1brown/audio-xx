@@ -111,17 +111,21 @@ export default function Home() {
 
       if (res.ok) {
         const data = await res.json();
-        dispatch({ type: 'ADD_ANALYSIS', signals: data.signals, result: data.result });
 
-        // Check if clarification would help
+        // Check if more context is needed before showing results
         const question = getClarificationQuestion(
           data.signals,
           data.result,
           newTurnCount,
           allUserText,
         );
+
         if (question) {
+          // Inquiry mode — ask the follow-up, suppress analysis
           dispatch({ type: 'ADD_QUESTION', content: question });
+        } else {
+          // Answer mode — enough context gathered, show full result
+          dispatch({ type: 'ADD_ANALYSIS', signals: data.signals, result: data.result });
         }
       }
     } catch {
