@@ -351,9 +351,9 @@ export default function Home() {
           {isLoading ? 'Running…' : hasPendingQuestion ? 'Reply' : hasMessages ? 'Continue' : 'Run analysis'}
         </button>
 
-        <span style={{ color: '#666', fontSize: '0.9rem' }}>
-          {hasMessages ? 'Enter to send' : '⌘ + Enter'}
-        </span>
+        {!hasMessages && (
+          <span style={{ color: '#666', fontSize: '0.9rem' }}>⌘ + Enter</span>
+        )}
 
         {hasMessages && (
           <button
