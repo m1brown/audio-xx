@@ -166,11 +166,11 @@ export default function Home() {
     }
 
     // Detect intent BEFORE running the evaluation engine
-    const { intent, subjects } = detectIntent(submittedText);
+    const { intent, subjects, desires } = detectIntent(submittedText);
 
     // Gear inquiries and comparisons — conversational path, skip diagnostic engine
     if (intent === 'gear_inquiry' || intent === 'comparison') {
-      const gearResponse = buildGearResponse(intent, subjects, submittedText);
+      const gearResponse = buildGearResponse(intent, subjects, submittedText, desires);
       if (gearResponse) {
         dispatch({ type: 'ADD_GEAR_RESPONSE', response: gearResponse });
         dispatch({ type: 'SET_LOADING', value: false });
@@ -527,31 +527,32 @@ function MessageBubble({ message }: { message: Message }) {
           marginBottom: '1.25rem',
         }}
       >
-        {/* Acknowledge */}
-        <p
+        {/* Advisory body — flows as natural prose */}
+        <div
           style={{
-            margin: '0 0 0.75rem 0',
-            color: '#333',
-            fontSize: '1rem',
-            lineHeight: 1.6,
-          }}
-        >
-          {response.acknowledge}
-        </p>
-
-        {/* Description */}
-        <p
-          style={{
-            margin: '0 0 1rem 0',
+            margin: '0 0 1.1rem 0',
             color: '#222',
-            fontSize: '1.05rem',
-            lineHeight: 1.65,
+            fontSize: '1.02rem',
+            lineHeight: 1.7,
           }}
         >
-          {response.description}
-        </p>
+          <p style={{ margin: '0 0 0.7rem 0' }}>
+            {response.anchor}
+          </p>
+          <p style={{ margin: '0 0 0.7rem 0' }}>
+            {response.character}
+          </p>
+          {response.interpretation && (
+            <p style={{ margin: '0 0 0.7rem 0' }}>
+              {response.interpretation}
+            </p>
+          )}
+          <p style={{ margin: 0 }}>
+            {response.direction}
+          </p>
+        </div>
 
-        {/* Follow-up question */}
+        {/* Clarification question */}
         <div
           style={{
             padding: '0.85rem 1rem',
@@ -562,11 +563,11 @@ function MessageBubble({ message }: { message: Message }) {
           <div
             style={{
               color: '#222',
-              fontSize: '1.05rem',
+              fontSize: '1.02rem',
               lineHeight: 1.6,
             }}
           >
-            {response.followUp}
+            {response.clarification}
           </div>
         </div>
       </div>
