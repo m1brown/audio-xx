@@ -25,51 +25,6 @@ const EXAMPLES = [
   'Would Schiit or Denafrips make more sense in my system if I value flow over glare?',
 ];
 
-// ── Spinning Vinyl ────────────────────────────────────
-
-const VINYL_SIZE = 56;
-const VINYL_KEYFRAMES = `
-@keyframes vinyl-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-`;
-
-function Vinyl() {
-  return (
-    <>
-      <style>{VINYL_KEYFRAMES}</style>
-      <div
-        aria-hidden="true"
-        style={{
-          width: VINYL_SIZE,
-          height: VINYL_SIZE,
-          borderRadius: '50%',
-          background: `radial-gradient(
-            circle at center,
-            #e8e4e0 0%,
-            #e8e4e0 18%,
-            #3a3a3a 19%,
-            #2a2a2a 22%,
-            #333 26%,
-            #2a2a2a 30%,
-            #333 34%,
-            #2a2a2a 40%,
-            #333 46%,
-            #2a2a2a 54%,
-            #333 62%,
-            #2a2a2a 72%,
-            #333 84%,
-            #222 100%
-          )`,
-          animation: 'vinyl-spin 12s linear infinite',
-          flexShrink: 0,
-        }}
-      />
-    </>
-  );
-}
-
 // ── Reducer ───────────────────────────────────────────
 
 type Action =
@@ -230,27 +185,24 @@ export default function Home() {
         }}
       />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-        <h1
-          style={{
-            margin: 0,
-            fontFamily: 'Georgia, "Times New Roman", serif',
-            fontSize: '2.25rem',
-            fontWeight: 600,
-            letterSpacing: '-0.02em',
-            lineHeight: 1.1,
-          }}
-        >
-          Audio XX
-        </h1>
-        <Vinyl />
-      </div>
+      <h1
+        style={{
+          marginBottom: '0.5rem',
+          fontFamily: 'Georgia, "Times New Roman", serif',
+          fontSize: '2.25rem',
+          fontWeight: 600,
+          letterSpacing: '-0.02em',
+          lineHeight: 1.1,
+        }}
+      >
+        Audio XX
+      </h1>
 
       {/* Intro — only before conversation starts */}
       {!hasMessages && (
         <p
           style={{
-            marginTop: '0.5rem',
+            marginTop: 0,
             marginBottom: '2rem',
             maxWidth: 620,
             color: '#444',
@@ -439,30 +391,28 @@ export default function Home() {
 
 // ── Thinking Indicator ────────────────────────────────
 
+const THINKING_KEYFRAMES = `
+@keyframes thinking-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+`;
+
 function ThinkingIndicator() {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.6rem',
-        padding: '0.75rem 0',
-        color: '#888',
-        fontSize: '0.92rem',
-      }}
-    >
+    <>
+      <style>{THINKING_KEYFRAMES}</style>
       <div
         style={{
-          width: 20,
-          height: 20,
-          borderRadius: '50%',
-          background: `radial-gradient(circle at center, #d9d5d1 0%, #d9d5d1 20%, #888 22%, #777 100%)`,
-          animation: 'vinyl-spin 4s linear infinite',
-          flexShrink: 0,
+          padding: '0.75rem 0',
+          color: '#888',
+          fontSize: '0.92rem',
+          animation: 'thinking-pulse 2s ease-in-out infinite',
         }}
-      />
-      <span>Audio XX is thinking…</span>
-    </div>
+      >
+        Audio XX is thinking…
+      </div>
+    </>
   );
 }
 
