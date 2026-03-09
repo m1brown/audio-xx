@@ -159,11 +159,16 @@ export function getClarificationQuestion(
   // Hard cap: never ask after the second user turn
   if (turnCount >= 2) return null;
 
-  // Check cases in priority order
+  // Check cases in priority order:
+  // 1. Interpretation ambiguity (specific phrase clarification)
+  // 2. Shopping intent without context (before generic uncertainty,
+  //    because low-info shopping prompts would otherwise trigger
+  //    a generic diagnostic question instead of a useful one)
+  // 3. Diagnostic uncertainty (generic low-information fallback)
   return (
     checkInterpretationAmbiguity(signals, result) ??
-    checkDiagnosticUncertainty(signals, result) ??
     checkShoppingWithoutContext(signals, userText) ??
+    checkDiagnosticUncertainty(signals, result) ??
     null
   );
 }
