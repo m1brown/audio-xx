@@ -7,6 +7,7 @@
  */
 import type { ExtractedSignals } from './signal-types';
 import type { EvaluationResult } from './rule-types';
+import { detectShoppingIntent, getShoppingClarification } from './shopping-intent';
 
 // ── Case 1: Interpretation Ambiguity ──────────────────
 
@@ -104,39 +105,15 @@ function checkDiagnosticUncertainty(
   return null;
 }
 
-// ── Case 3: Shopping Intent Without Context ───────────
+// ── Case 3: Shopping Intent ──────────────────────────
 
-const SHOPPING_KEYWORDS = [
-  'buy',
-  'upgrade',
-  'budget',
-  '$',
-  'looking for',
-  'recommend',
-  'recommendation',
-  'should i get',
-  'considering',
-  'shopping',
-  'purchase',
-  'replace',
-  'switch to',
-  'worth it',
-  'best',
-];
-
-function checkShoppingWithoutContext(
+function checkShoppingIntent(
   signals: ExtractedSignals,
   userText: string,
 ): string | null {
-  const lower = userText.toLowerCase();
-  const hasShoppingIntent = SHOPPING_KEYWORDS.some((kw) => lower.includes(kw));
-
-  if (!hasShoppingIntent) return null;
-
-  // If user expressed strong taste signals alongside shopping intent, no need to ask
-  if (signals.symptoms.length >= 2) return null;
-
-  return 'Before suggesting directions — what does your current system do well that you want to preserve?';
+  const ctx = detectShoppingIntent(userText, signals);
+  if (!ctx.detected) return null;
+  return getShoppingClarification(ctx);
 }
 
 // ── Public API ────────────────────────────────────────
@@ -167,7 +144,7 @@ export function getClarificationQuestion(
   // 3. Diagnostic uncertainty (generic low-information fallback)
   return (
     checkInterpretationAmbiguity(signals, result) ??
-    checkShoppingWithoutContext(signals, userText) ??
+    checkShoppingIntent(signals, userText) ??
     checkDiagnosticUncertainty(signals, result) ??
     null
   );
