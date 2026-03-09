@@ -152,12 +152,8 @@ export default function Home() {
   }, [currentInput, isLoading, messages, turnCount]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter' && !e.shiftKey && hasMessages) {
-      // In conversation mode: Enter sends, Shift+Enter for newline
-      e.preventDefault();
-      handleSubmit();
-    } else if (e.key === 'Enter' && e.metaKey) {
-      // Before conversation starts: Cmd+Enter sends (preserves multiline for initial note)
+    if (e.key === 'Enter' && !e.shiftKey) {
+      // Enter sends, Shift+Enter for newline
       e.preventDefault();
       handleSubmit();
     }
@@ -350,10 +346,6 @@ export default function Home() {
         >
           {isLoading ? 'Running…' : hasPendingQuestion ? 'Reply' : hasMessages ? 'Continue' : 'Run analysis'}
         </button>
-
-        {!hasMessages && (
-          <span style={{ color: '#666', fontSize: '0.9rem' }}>⌘ + Enter</span>
-        )}
 
         {hasMessages && (
           <button
