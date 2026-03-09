@@ -565,6 +565,32 @@ function MessageBubble({ message }: { message: Message }) {
           marginBottom: '1.25rem',
         }}
       >
+        {/* "What I'm hearing" reflective block */}
+        {response.hearing && response.hearing.length > 0 && (
+          <div
+            style={{
+              margin: '0 0 1.1rem 0',
+              padding: '0.75rem 1rem',
+              borderLeft: '3px solid #b8a070',
+              background: '#faf8f4',
+              fontSize: '0.95rem',
+              lineHeight: 1.65,
+              color: '#444',
+            }}
+          >
+            <div style={{ fontWeight: 600, color: '#333', marginBottom: '0.4rem' }}>
+              What I&apos;m hearing:
+            </div>
+            <ul style={{ margin: 0, paddingLeft: '1.2rem', listStyleType: 'disc' }}>
+              {response.hearing.map((bullet, i) => (
+                <li key={i} style={{ marginBottom: i < response.hearing!.length - 1 ? '0.25rem' : 0 }}>
+                  {bullet}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Advisory body — flows as natural prose */}
         <div
           style={{

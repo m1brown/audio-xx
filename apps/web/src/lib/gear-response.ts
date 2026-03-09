@@ -230,6 +230,111 @@ function pick(options: string[], seed: number): string {
   return options[seed % options.length];
 }
 
+// ── "What I'm hearing" block ─────────────────────────
+
+/**
+ * Plain-language labels for archetype tendencies — avoids exposing
+ * internal identifiers like "tonal_saturated" directly.
+ */
+const ARCHETYPE_PLAIN: Record<string, string> = {
+  flow_organic: 'musical flow and natural ease',
+  precision_explicit: 'precision and explicit detail',
+  rhythmic_propulsive: 'rhythmic drive and energy',
+  tonal_saturated: 'tonal richness and harmonic weight',
+  spatial_holographic: 'spatial depth and imaging',
+};
+
+function buildHearingBlock(
+  intent: UserIntent,
+  desires: DesireSignal[],
+  products: Product[],
+  sysDir: SystemDirection,
+): string[] {
+  const bullets: string[] = [];
+
+  // 1. Desire-based bullets — what the user wants more/less of
+  if (desires.length > 0) {
+    const primary = desires[0];
+    const secondary = desires[1];
+
+    // Translate primary desire into a preference statement
+    const desireLabel = TRAIT_LABELS[primary.quality] ?? primary.quality;
+    if (primary.direction === 'more') {
+      if (secondary) {
+        const secLabel = TRAIT_LABELS[secondary.quality] ?? secondary.quality;
+        if (secondary.direction === 'more') {
+          bullets.push(`You seem to be looking for more ${desireLabel} and ${secLabel}`);
+        } else {
+          bullets.push(`You seem to prefer ${desireLabel} over ${secLabel}`);
+        }
+      } else {
+        bullets.push(`You seem to want more ${desireLabel} from your system`);
+      }
+    } else {
+      bullets.push(`You seem to want less ${desireLabel} — looking to pull back there`);
+    }
+  }
+
+  // 2. Current system tendency — what the user's system likely emphasizes
+  if (products.length > 0 && products[0]) {
+    const product = products[0];
+    const tags = tagProductArchetype(product);
+    const plainLabel = ARCHETYPE_PLAIN[tags.primary] ?? getArchetypeShortLabel(tags.primary);
+    if (desires.length > 0) {
+      // User has the product and wants a change — reflect what they already have
+      bullets.push(`Your ${product.brand} ${product.name} leans toward ${plainLabel}`);
+    }
+  }
+
+  // 3. System direction — inferred tendency of the current system
+  if (sysDir.currentTendencies.length > 0 && bullets.length < 3) {
+    const tendencyLabels = sysDir.currentTendencies
+      .slice(0, 2)
+      .map((t) => t.replace(/_/g, ' '));
+    if (tendencyLabels.length > 0) {
+      bullets.push(`Your current system may already lean toward ${tendencyLabels.join(' and ')}`);
+    }
+  }
+
+  // 4. Directional inference — what they're moving toward
+  if (sysDir.desiredDirections.length > 0 && bullets.length < 3) {
+    const dir = sysDir.desiredDirections[0];
+    const qualityLabel = TRAIT_LABELS[dir.quality] ?? dir.quality.replace(/_/g, ' ');
+    const dirPhrase = dir.direction === 'up' ? `more ${qualityLabel}` : `less ${qualityLabel}`;
+    bullets.push(`The direction you're describing points toward ${dirPhrase}`);
+  }
+
+  // 5. Nature of the change — refinement vs philosophical shift
+  if (desires.length > 0 && products.length > 0 && bullets.length < 4) {
+    const product = products[0];
+    const tags = tagProductArchetype(product);
+    const userPref = sysDir.inferredArchetype;
+    if (userPref && tags.primary !== userPref.primary && tags.primary !== userPref.secondary) {
+      bullets.push('That\'s a philosophical shift, not just a refinement — worth being deliberate about');
+    } else if (userPref && (tags.primary === userPref.primary || tags.primary === userPref.secondary)) {
+      bullets.push('That\'s a refinement within your current direction, not a philosophical change');
+    }
+  }
+
+  // 6. Comparison context — what the comparison is really about
+  if (intent === 'comparison' && products.length >= 2) {
+    const a = products[0];
+    const b = products[1];
+    const tagsA = tagProductArchetype(a);
+    const tagsB = tagProductArchetype(b);
+    if (tagsA.primary !== tagsB.primary) {
+      const labelA = ARCHETYPE_PLAIN[tagsA.primary] ?? getArchetypeShortLabel(tagsA.primary);
+      const labelB = ARCHETYPE_PLAIN[tagsB.primary] ?? getArchetypeShortLabel(tagsB.primary);
+      bullets.push(`This is a comparison between ${labelA} and ${labelB} — different design philosophies`);
+    } else {
+      bullets.push(`Both share a similar design philosophy — the differences are in degree, not direction`);
+    }
+  }
+
+  // Cap at 4 bullets
+  return bullets.slice(0, 4);
+}
+
 // ── Public API ───────────────────────────────────────
 
 export function buildGearResponse(
@@ -249,6 +354,9 @@ export function buildGearResponse(
     desires,
     products[0] ?? null,
   );
+
+  // Build reflective "What I'm hearing" block
+  const hearing = buildHearingBlock(intent, desires, products, sysDir);
 
   // Helper: append tendency context to an anchor if available
   const withTendency = (base: string): string => {
@@ -280,6 +388,7 @@ export function buildGearResponse(
         direction: withDirection(buildComparisonDirection(a, b)),
         clarification: pick(COMPARISON_CLARIFICATIONS, seed),
         systemDirection: sysDir,
+        hearing,
         userArchetype: sysDir.inferredArchetype
         ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
         : undefined,
@@ -298,6 +407,7 @@ export function buildGearResponse(
         direction: withDirection('The most useful way to think about it is: what do you want more of in your listening, and which design approach tends to deliver that? A comparison that holds in one system may reverse in another.'),
         clarification: pick(COMPARISON_CLARIFICATIONS, seed),
         systemDirection: sysDir,
+        hearing,
         userArchetype: sysDir.inferredArchetype
         ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
         : undefined,
@@ -312,6 +422,7 @@ export function buildGearResponse(
       direction: 'To make a useful comparison, I\'d need to know what you\'re comparing and what dimensions matter most. Two excellent components can be optimized for very different priorities.',
       clarification: 'What are you comparing, and what\'s driving the question?',
       systemDirection: sysDir,
+      hearing,
       userArchetype: sysDir.inferredArchetype
         ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
         : undefined,
@@ -347,6 +458,7 @@ export function buildGearResponse(
       ),
       clarification: pick(DESIRE_CLARIFICATIONS, seed),
       systemDirection: sysDir,
+      hearing,
       userArchetype: sysDir.inferredArchetype
         ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
         : undefined,
@@ -364,6 +476,7 @@ export function buildGearResponse(
       direction: buildInquiryDirection(product, sysDir.inferredArchetype ?? undefined),
       clarification: pick(INQUIRY_CLARIFICATIONS, seed),
       systemDirection: sysDir,
+      hearing,
       userArchetype: sysDir.inferredArchetype
         ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
         : undefined,
@@ -381,6 +494,7 @@ export function buildGearResponse(
       direction: 'The best way to evaluate any piece of gear is relative to the system it\'s going into. A component that sounds extraordinary in one system can be unremarkable in another — that\'s not a flaw, it\'s how audio works.',
       clarification: pick(GENERIC_CLARIFICATIONS, seed),
       systemDirection: sysDir,
+      hearing,
       userArchetype: sysDir.inferredArchetype
         ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
         : undefined,
@@ -396,6 +510,7 @@ export function buildGearResponse(
     direction: 'What matters is how that character interacts with your system and your listening priorities. The same piece can sound relaxed in one system and forward in another.',
     clarification: pick(GENERIC_CLARIFICATIONS, seed),
     systemDirection: sysDir,
+    hearing,
     userArchetype: sysDir.inferredArchetype
       ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
       : undefined,
