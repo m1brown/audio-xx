@@ -447,7 +447,7 @@ function MessageBubble({ message }: { message: Message }) {
   );
 }
 
-// ── Shopping Recommendation ───────────────────────────
+// ── Shopping Recommendation (advisor-first) ──────────
 
 function ShoppingRecommendation({
   answer,
@@ -462,52 +462,101 @@ function ShoppingRecommendation({
       <p
         style={{
           margin: '0 0 1.25rem 0',
-          fontSize: '1.18rem',
+          fontSize: '1.08rem',
           lineHeight: 1.65,
-          color: '#111',
+          color: '#444',
         }}
       >
         {answer.preferenceSummary}
       </p>
 
-      {/* Direction */}
+      {/* Best-fit direction */}
       <div style={{ marginBottom: '1.25rem' }}>
-        <div
-          style={{
-            marginBottom: '0.45rem',
-            fontSize: '0.8rem',
-            fontWeight: 700,
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase',
-            color: '#666',
-          }}
-        >
-          Direction
-        </div>
+        <SectionLabel>Best-fit direction</SectionLabel>
         <p style={{ margin: 0, color: '#222', lineHeight: 1.6 }}>
-          {answer.direction}
+          {answer.bestFitDirection}
         </p>
       </div>
 
-      {/* Trade-offs */}
-      {answer.tradeoffs.length > 0 && (
+      {/* Why this fits */}
+      {answer.whyThisFits.length > 0 && (
         <div style={{ marginBottom: '1.25rem' }}>
-          <div
-            style={{
-              marginBottom: '0.45rem',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              letterSpacing: '0.05em',
-              textTransform: 'uppercase',
-              color: '#666',
-            }}
-          >
-            Trade-offs
-          </div>
+          <SectionLabel>Why this fits</SectionLabel>
           <ul style={{ margin: 0, paddingLeft: '1.15rem', color: '#222' }}>
-            {answer.tradeoffs.map((t, i) => (
+            {answer.whyThisFits.map((reason, i) => (
               <li key={i} style={{ marginBottom: '0.35rem', lineHeight: 1.55 }}>
-                {t}
+                {reason}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Possible product examples */}
+      {answer.productExamples.length > 0 && (
+        <div style={{ marginBottom: '1.25rem' }}>
+          <SectionLabel>Possible product examples</SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {answer.productExamples.map((product, i) => (
+              <div
+                key={i}
+                style={{
+                  padding: '0.85rem 1rem',
+                  borderLeft: '3px solid #d9d9d9',
+                  background: '#fafafa',
+                }}
+              >
+                <div style={{ marginBottom: '0.3rem' }}>
+                  <strong style={{ color: '#111' }}>
+                    {product.brand} {product.name}
+                  </strong>
+                  {product.price > 0 && (
+                    <span style={{ color: '#666', marginLeft: '0.5rem', fontSize: '0.92rem' }}>
+                      ${product.price.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+                <p style={{ margin: '0 0 0.3rem 0', color: '#333', lineHeight: 1.55, fontSize: '0.95rem' }}>
+                  {product.fitNote}
+                </p>
+                {product.caution && (
+                  <p style={{ margin: '0 0 0.3rem 0', color: '#888', fontSize: '0.88rem', lineHeight: 1.5 }}>
+                    {product.caution}
+                  </p>
+                )}
+                {product.links && product.links.length > 0 && (
+                  <div style={{ fontSize: '0.88rem', color: '#666', marginTop: '0.25rem' }}>
+                    {product.links.map((link, li) => (
+                      <span key={li}>
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#555', textDecoration: 'underline', textUnderlineOffset: '2px' }}
+                        >
+                          {link.label}
+                        </a>
+                        {li < (product.links?.length ?? 0) - 1 && (
+                          <span style={{ margin: '0 0.4rem', color: '#ccc' }}>&middot;</span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* What to watch for */}
+      {answer.watchFor.length > 0 && (
+        <div style={{ marginBottom: '1.25rem' }}>
+          <SectionLabel>What to watch for</SectionLabel>
+          <ul style={{ margin: 0, paddingLeft: '1.15rem', color: '#222' }}>
+            {answer.watchFor.map((item, i) => (
+              <li key={i} style={{ marginBottom: '0.35rem', lineHeight: 1.55 }}>
+                {item}
               </li>
             ))}
           </ul>
@@ -558,6 +607,24 @@ function ShoppingRecommendation({
           </div>
         </details>
       )}
+    </div>
+  );
+}
+
+/** Consistent uppercase section label */
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        marginBottom: '0.45rem',
+        fontSize: '0.8rem',
+        fontWeight: 700,
+        letterSpacing: '0.05em',
+        textTransform: 'uppercase',
+        color: '#666',
+      }}
+    >
+      {children}
     </div>
   );
 }

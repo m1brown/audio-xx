@@ -13,7 +13,7 @@
  * This is NOT a product database. It produces better input for the
  * existing rule engine by ensuring taste + system context are present.
  */
-import type { ExtractedSignals } from './signal-types';
+import type { ExtractedSignals, SignalDirection } from './signal-types';
 
 // ── Types ─────────────────────────────────────────────
 
@@ -35,6 +35,7 @@ export interface ShoppingContext {
   mode: ShoppingMode;
   category: ShoppingCategory;
   budgetMentioned: boolean;
+  budgetAmount: number | null;
   tasteProvided: boolean;
   systemProvided: boolean;
   useCaseProvided: boolean;
@@ -218,6 +219,33 @@ const LIMITING_KEYWORDS = [
   'something is wrong',
 ];
 
+// ── Budget amount extraction ─────────────────────────
+
+const BUDGET_AMOUNT_PATTERNS = [
+  /\$\s?(\d{1,6}(?:,\d{3})*)/,                      // $1000 or $1,500
+  /(\d{1,6}(?:,\d{3})*)\s*dollars/i,                 // 1000 dollars
+  /budget\s+(?:of\s+)?(?:around\s+)?\$?(\d{1,6}(?:,\d{3})*)/i,
+  /under\s+\$?(\d{1,6}(?:,\d{3})*)/i,
+  /up\s+to\s+\$?(\d{1,6}(?:,\d{3})*)/i,
+  /around\s+\$?(\d{1,6}(?:,\d{3})*)/i,
+  /spend\s+\$?(\d{1,6}(?:,\d{3})*)/i,
+  /i\s+have\s+\$?(\d{1,6}(?:,\d{3})*)/i,
+];
+
+/**
+ * Extract the first numeric budget amount from user text.
+ * Returns null if no amount is found.
+ */
+export function parseBudgetAmount(text: string): number | null {
+  for (const pattern of BUDGET_AMOUNT_PATTERNS) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      return parseInt(match[1].replace(/,/g, ''), 10);
+    }
+  }
+  return null;
+}
+
 // ── Detection ─────────────────────────────────────────
 
 export function detectShoppingIntent(
@@ -234,6 +262,7 @@ export function detectShoppingIntent(
       mode: 'specific-component',
       category: 'general',
       budgetMentioned: false,
+      budgetAmount: null,
       tasteProvided: false,
       systemProvided: false,
       useCaseProvided: false,
@@ -266,6 +295,7 @@ export function detectShoppingIntent(
 
   // 4. Context signals
   const budgetMentioned = BUDGET_PATTERNS.some((re) => re.test(userText));
+  const budgetAmount = parseBudgetAmount(userText);
   const tasteProvided = signals.symptoms.length >= 2;
   const systemProvided = SYSTEM_KEYWORDS.some((kw) => lower.includes(kw));
   const useCaseProvided = USE_CASE_KEYWORDS.some((kw) => lower.includes(kw));
@@ -277,6 +307,7 @@ export function detectShoppingIntent(
     mode,
     category,
     budgetMentioned,
+    budgetAmount,
     tasteProvided,
     systemProvided,
     useCaseProvided,
@@ -464,28 +495,38 @@ export function getShoppingClarification(
   return null;
 }
 
-// ── Shopping Answer ───────────────────────────────────
+// ── Shopping Answer (advisor-first structure) ─────────
+
+export interface ProductExample {
+  name: string;
+  brand: string;
+  price: number;
+  fitNote: string;
+  caution?: string;
+  links?: { label: string; url: string }[];
+}
 
 export interface ShoppingAnswer {
-  /** One-line summary of the inferred preference. */
+  category: string;
+  budget: number | null;
   preferenceSummary: string;
-  /** What architectural direction fits. */
-  direction: string;
-  /** 1–2 trade-offs to be aware of. */
-  tradeoffs: string[];
-  /** Optional system-coherence note. */
-  systemNote: string | null;
+  bestFitDirection: string;
+  whyThisFits: string[];
+  productExamples: ProductExample[];
+  watchFor: string[];
+  systemNote?: string;
 }
 
 // ── Taste direction templates ─────────────────────────
 
 interface TasteProfile {
-  /** Which trait directions are present (from ExtractedSignals.traits). */
   check: (traits: Record<string, string>) => boolean;
   label: string;
   directionByCategory: Partial<Record<ShoppingCategory, string>>;
   defaultDirection: string;
-  tradeoffs: string[];
+  whyByCategory: Partial<Record<ShoppingCategory, string[]>>;
+  defaultWhy: string[];
+  watchFor: string[];
 }
 
 const TASTE_PROFILES: TasteProfile[] = [
@@ -493,86 +534,145 @@ const TASTE_PROFILES: TasteProfile[] = [
     check: (t) => t.dynamics === 'up' || t.elasticity === 'up',
     label: 'speed, transient precision, and rhythmic engagement',
     directionByCategory: {
-      dac: 'Look for DACs that prioritize timing and leading-edge definition. R-2R ladder designs (Denafrips, Holo Audio) and certain AKM-based implementations tend to emphasize rhythmic coherence over smoothness.',
-      amplifier: 'Amplifiers with high current delivery and tight damping tend to serve speed well. Class A/B designs with short signal paths often deliver better transient snap than heavily buffered topologies.',
-      speakers: 'Speakers with lightweight, fast drivers and simple crossovers tend to preserve transient information. Single-driver or two-way designs often outperform complex multi-way systems for perceived speed.',
-      headphones: 'Planar magnetic headphones typically excel at transient speed and attack. Their uniform diaphragm movement produces tighter leading edges than most dynamic drivers.',
-      streamer: 'The streamer contributes to perceived timing through clock quality and jitter performance. Look for dedicated streamers with low-jitter clocks rather than multi-purpose devices.',
+      dac: 'A DAC direction that prioritizes transient definition, rhythmic precision, and dynamic contrast over warmth-first tuning.',
+      amplifier: 'An amplifier direction that prioritizes current delivery, tight damping, and transient snap over tonal smoothness.',
+      speakers: 'A speaker direction that prioritizes fast drivers, simple crossovers, and transient preservation over tonal warmth.',
+      headphones: 'A headphone direction that prioritizes planar-magnetic speed and uniform diaphragm response over dynamic-driver warmth.',
     },
-    defaultDirection: 'Prioritize components known for timing precision and transient definition over tonal smoothness.',
-    tradeoffs: [
-      'Components that excel at speed often trade some tonal density and harmonic richness.',
+    defaultDirection: 'A component direction that prioritizes timing precision and transient definition over tonal smoothness.',
+    whyByCategory: {
+      dac: [
+        'You prioritized speed and rhythmic engagement over smoothness.',
+        'Your budget supports DACs designed for transient precision.',
+        'Multibit, R-2R, and certain FPGA architectures tend to serve this preference.',
+      ],
+    },
+    defaultWhy: [
+      'You prioritized speed and dynamic engagement.',
+      'Components with strong transient definition tend to serve this preference.',
+    ],
+    watchFor: [
+      'Pushing too far toward speed can reduce perceived tonal density and midrange body.',
       'Very fast systems can feel lean or relentless over long listening sessions.',
+      'If the rest of the system already trends toward precision, adding more speed may overcorrect.',
     ],
   },
   {
     check: (t) => t.tonal_density === 'up' && t.flow === 'up',
     label: 'harmonic richness, flow, and tonal density',
     directionByCategory: {
-      dac: 'DACs that emphasize tonal weight and harmonic texture tend to use R-2R or tube output stages. Designs from Denafrips, Border Patrol, and MHDT prioritize body over analytical precision.',
-      amplifier: 'Tube amplifiers and Class A solid-state designs tend to deliver greater harmonic density. Look for designs that prioritize musicality over measured specifications.',
-      speakers: 'Speakers with heavier cones and more complex crossovers can deliver greater tonal weight, though at the cost of speed. Paper and treated fiber cones often sound richer than metal diaphragms.',
-      headphones: 'Dynamic driver headphones with warm tunings tend to deliver more tonal body than planar designs. Look for headphones described as rich or full rather than analytical.',
+      dac: 'A DAC direction that prioritizes tonal weight, harmonic texture, and musical flow over analytical precision.',
+      amplifier: 'An amplifier direction that prioritizes harmonic density and musical continuity over measured specifications.',
+      speakers: 'A speaker direction that prioritizes tonal weight and natural-material cone texture over speed.',
     },
-    defaultDirection: 'Prioritize components known for harmonic richness and tonal continuity over transient precision.',
-    tradeoffs: [
+    defaultDirection: 'A component direction that prioritizes harmonic richness and tonal continuity over transient precision.',
+    whyByCategory: {
+      dac: [
+        'You prioritized flow, warmth, and tonal density.',
+        'R-2R and NOS tube architectures tend to deliver this kind of presentation.',
+        'Your budget supports several DACs in this design family.',
+      ],
+    },
+    defaultWhy: [
+      'You prioritized harmonic richness and musical flow.',
+      'Components with strong tonal density tend to serve this preference.',
+    ],
+    watchFor: [
       'Components that maximize tonal density may sacrifice some detail retrieval and transient edge.',
-      'Very rich systems can sound congested if pushed too far.',
+      'Very rich systems can sound congested or slow if pushed too far.',
+      'If the rest of the system is already warm, adding more density may obscure detail.',
     ],
   },
   {
     check: (t) => t.clarity === 'up',
     label: 'detail, clarity, and resolution',
     directionByCategory: {
-      dac: 'Delta-sigma DACs from ESS Sabre and AKM tend to excel at measured resolution. For a more natural form of detail, look at high-end R-2R implementations that resolve without etching.',
-      amplifier: 'Amplifiers with wide bandwidth and low distortion reveal the most upstream detail. Class A/B and Class D designs with short feedback loops often score well on transparency.',
-      speakers: 'Speakers with metal or beryllium tweeters and rigid cabinets tend to deliver the highest resolution. Monitor-style designs prioritize accuracy over tonal warmth.',
-      headphones: 'Electrostatic and high-end planar headphones typically offer the highest resolution. Open-back designs reveal more spatial and micro-detail than closed designs.',
+      dac: 'A DAC direction that prioritizes transparency, information retrieval, and measured resolution.',
+      amplifier: 'An amplifier direction that prioritizes wide bandwidth, low distortion, and upstream transparency.',
+      speakers: 'A speaker direction that prioritizes resolution, rigid cabinets, and monitor-style accuracy.',
+      headphones: 'A headphone direction that prioritizes electrostatic or high-end planar resolution and spatial detail.',
     },
-    defaultDirection: 'Prioritize components known for transparency and information retrieval.',
-    tradeoffs: [
-      'Highly resolving systems can be fatiguing if any upstream component introduces edge or glare.',
+    defaultDirection: 'A component direction that prioritizes transparency and information retrieval.',
+    whyByCategory: {
+      dac: [
+        'You prioritized clarity and resolution over warmth or density.',
+        'Delta-sigma (ESS, AKM) and FPGA architectures tend to excel at measured detail retrieval.',
+        'Your budget supports several precision-first DAC designs.',
+      ],
+    },
+    defaultWhy: [
+      'You prioritized clarity and detail retrieval.',
+      'Components known for transparency tend to serve this preference.',
+    ],
+    watchFor: [
+      'Highly resolving systems can become fatiguing if any upstream component introduces edge or glare.',
       'Detail without sufficient tonal body can sound thin and clinical.',
+      'If the rest of the system is already bright or forward, more clarity may overcorrect.',
     ],
   },
   {
     check: (t) => t.fatigue_risk === 'up' || t.glare_risk === 'up',
     label: 'reduced fatigue and smoother presentation',
     directionByCategory: {
-      dac: 'Consider DACs known for smoothness and low fatigue — tube-output designs, NOS (non-oversampling) DACs, or R-2R implementations that soften digital edges.',
-      amplifier: 'Tube amplifiers or Class A designs with gentle high-frequency rolloff can reduce perceived fatigue. Avoid very high-feedback designs if brightness is the issue.',
-      speakers: 'Speakers with soft-dome tweeters or ribbon tweeters that extend without harshness can reduce fatigue. Avoid metal tweeters if glare is a concern.',
-      headphones: 'Warm-tuned dynamic headphones with rolled-off treble tend to be less fatiguing. Avoid bright-signature planar headphones if long listening sessions matter.',
+      dac: 'A DAC direction that prioritizes smoothness, low fatigue, and listening ease over analytical resolution.',
+      amplifier: 'An amplifier direction that prioritizes gentle high-frequency behavior and composure over transient edge.',
+      speakers: 'A speaker direction that prioritizes soft-dome or ribbon tweeters and non-fatiguing extension.',
+      headphones: 'A headphone direction that prioritizes warm tuning and rolled-off treble for long sessions.',
     },
-    defaultDirection: 'Prioritize components known for smoothness and listening ease over analytical resolution.',
-    tradeoffs: [
+    defaultDirection: 'A component direction that prioritizes listening ease over analytical precision.',
+    whyByCategory: {
+      dac: [
+        'You indicated fatigue or harshness as a concern.',
+        'NOS tube, R-2R, and certain relaxed-filter architectures tend to reduce perceived digital edge.',
+        'Addressing fatigue at the DAC level can be effective when the source is the issue.',
+      ],
+    },
+    defaultWhy: [
+      'You indicated fatigue or harshness as a concern.',
+      'Components known for smoothness tend to serve this preference.',
+    ],
+    watchFor: [
       'Reducing fatigue by softening the presentation can also reduce perceived detail and air.',
       'The source of fatigue may be upstream — fixing the wrong component leaves the root cause intact.',
+      'If the system lacks energy or engagement, a smoother direction may make that worse.',
     ],
   },
   {
     check: (t) => t.flow === 'up' && t.composure === 'up',
     label: 'smoothness, ease, and composure',
     directionByCategory: {
-      dac: 'DACs with tube output stages or relaxed filter implementations tend to maximize ease. Look for designs described as musical or organic rather than analytical.',
-      amplifier: 'Low-power Class A amplifiers and single-ended tube designs often deliver the greatest composure. They prioritize texture and flow over dynamic punch.',
-      speakers: 'Speakers with gentle crossover slopes and natural-material drivers (paper, treated fiber) tend to sound more relaxed. BBC-heritage designs are a good starting point.',
+      dac: 'A DAC direction that prioritizes musical flow, composure, and organic texture over speed or analytical precision.',
+      amplifier: 'An amplifier direction that prioritizes single-ended tube composure and texture over dynamic punch.',
+      speakers: 'A speaker direction that prioritizes gentle crossover slopes and natural-material drivers.',
     },
-    defaultDirection: 'Prioritize components known for musical flow and composure over speed or analytical precision.',
-    tradeoffs: [
+    defaultDirection: 'A component direction that prioritizes musical flow and composure over speed or analytical precision.',
+    whyByCategory: {
+      dac: [
+        'You prioritized smoothness and musical ease.',
+        'Tube-output and relaxed-filter DAC architectures tend to maximize composure.',
+        'This direction works best when the rest of the system provides sufficient energy.',
+      ],
+    },
+    defaultWhy: [
+      'You prioritized smoothness and composure.',
+      'Components known for musical ease tend to serve this preference.',
+    ],
+    watchFor: [
       'Very composed systems can feel sleepy or lack dynamic contrast.',
       'Smoothness pushed too far can obscure musical detail and reduce engagement.',
+      'If the system already sounds relaxed, adding more composure may reduce liveliness.',
     ],
   },
 ];
 
-/**
- * Fallback taste profile when no specific trait pattern is detected.
- */
-const FALLBACK_TASTE: Pick<TasteProfile, 'label' | 'defaultDirection' | 'tradeoffs'> = {
+const FALLBACK_TASTE: Pick<TasteProfile, 'label' | 'defaultDirection' | 'defaultWhy' | 'watchFor'> = {
   label: 'a balanced presentation',
-  defaultDirection: 'Look for components described as well-balanced or all-rounders. Avoid designs that strongly prioritize a single trait at the expense of others.',
-  tradeoffs: [
+  defaultDirection: 'A component direction that avoids strong bias toward any single trait. Well-balanced designs that trade peak performance for versatility.',
+  defaultWhy: [
+    'No strong single-trait preference was detected.',
+    'A balanced design reduces the risk of system-level overcorrection.',
+  ],
+  watchFor: [
     'Balanced components rarely excel at any single quality — they trade peak performance for versatility.',
     'What feels balanced in one system may feel colored in another. System context matters.',
   ],
@@ -589,11 +689,92 @@ const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
   general: 'component',
 };
 
+// ── Product integration ───────────────────────────────
+
+import { DAC_PRODUCTS } from './products/dacs';
+import type { Product } from './products/dacs';
+import { rankProducts } from './product-scoring';
+
+/**
+ * Generate a one-sentence fit note for a product based on its
+ * architecture and strongest matching traits.
+ */
+function buildFitNote(product: Product, userTraits: Record<string, SignalDirection>): string {
+  const arch = product.architecture;
+  const strongTraits: string[] = [];
+
+  for (const [trait, direction] of Object.entries(userTraits)) {
+    const val = product.traits[trait];
+    if (val !== undefined && direction === 'up' && val >= 0.7) {
+      strongTraits.push(trait.replace(/_/g, ' '));
+    }
+  }
+
+  if (strongTraits.length > 0) {
+    const traitList = strongTraits.slice(0, 2).join(' and ');
+    return `${arch} design with strong ${traitList}. ${product.description.split('.')[0]}.`;
+  }
+
+  return `${arch} design. ${product.description.split('.')[0]}.`;
+}
+
+/**
+ * Generate an optional caution note from the product's notes field
+ * and its risk trait values.
+ */
+function buildCaution(product: Product): string | undefined {
+  if (product.notes) return product.notes;
+
+  // Check for elevated risk traits
+  if ((product.traits.glare_risk ?? 0) >= 0.4) {
+    return 'May introduce glare or edge in systems that are already bright.';
+  }
+  if ((product.traits.fatigue_risk ?? 0) >= 0.4) {
+    return 'May contribute to listening fatigue in long sessions.';
+  }
+
+  return undefined;
+}
+
+/**
+ * Select up to 3 product examples for the given category, scored
+ * against user traits and budget. Returns empty array if no
+ * catalog exists for the category or budget is unknown.
+ */
+function selectProductExamples(
+  category: ShoppingCategory,
+  userTraits: Record<string, SignalDirection>,
+  budgetAmount: number | null,
+): ProductExample[] {
+  // Only DACs have a catalog for now
+  if (category !== 'dac') return [];
+  if (budgetAmount === null) return [];
+
+  const ranked = rankProducts(DAC_PRODUCTS, userTraits, budgetAmount);
+  const top = ranked.slice(0, 3);
+
+  return top.map(({ product }) => ({
+    name: product.name,
+    brand: product.brand,
+    price: product.price,
+    fitNote: buildFitNote(product, userTraits),
+    caution: buildCaution(product),
+    links: product.retailer_links.length > 0 ? product.retailer_links : undefined,
+  }));
+}
+
 // ── Builder ───────────────────────────────────────────
 
 /**
- * Builds a structured shopping recommendation from the gathered
- * context and extracted signals. Deterministic, template-driven.
+ * Builds an advisor-first shopping answer from gathered context
+ * and extracted signals. Deterministic, template-driven.
+ *
+ * Structure:
+ *   1. Best-fit direction
+ *   2. Why this fits
+ *   3. Possible product examples (if catalog exists for category)
+ *   4. What to watch for
+ *   5. System note (if system context was provided)
  */
 export function buildShoppingAnswer(
   ctx: ShoppingContext,
@@ -606,24 +787,49 @@ export function buildShoppingAnswer(
   const matchedProfile = TASTE_PROFILES.find((p) => p.check(traits));
   const taste = matchedProfile ?? FALLBACK_TASTE;
 
-  // Build preference summary
-  const preferenceSummary = ctx.budgetMentioned
-    ? `You're looking for a ${categoryLabel} that prioritizes ${taste.label}.`
-    : `You're looking for a ${categoryLabel} that prioritizes ${taste.label}.`;
+  // 1. Preference summary
+  const preferenceSummary = `You appear to value ${taste.label} more than ${getContrastLabel(taste.label)}.`;
 
-  // Build direction
-  const direction = matchedProfile?.directionByCategory[ctx.category]
+  // 2. Best-fit direction
+  const bestFitDirection = matchedProfile?.directionByCategory[ctx.category]
     ?? taste.defaultDirection;
 
-  // System-coherence note (only when system context was provided)
+  // 3. Why this fits
+  const whyThisFits = matchedProfile?.whyByCategory?.[ctx.category]
+    ?? taste.defaultWhy ?? matchedProfile?.defaultWhy ?? FALLBACK_TASTE.defaultWhy;
+
+  // 4. Product examples (only when catalog exists + budget known)
+  const productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount);
+
+  // 5. Watch for
+  const watchFor = taste.watchFor;
+
+  // 6. System note
   const systemNote = ctx.systemProvided
-    ? `How this interacts with your existing system depends on the character of your other components. A ${categoryLabel} change will shift the overall balance — listen for whether the qualities you value are preserved.`
-    : null;
+    ? `This direction makes more sense if the rest of the chain is not already biased in the same way. A ${categoryLabel} change will shift the overall balance — listen for whether the qualities you value are preserved.`
+    : undefined;
 
   return {
+    category: categoryLabel,
+    budget: ctx.budgetAmount,
     preferenceSummary,
-    direction,
-    tradeoffs: taste.tradeoffs,
+    bestFitDirection,
+    whyThisFits,
+    productExamples,
+    watchFor,
     systemNote,
   };
+}
+
+/**
+ * Returns a brief contrast label for the preference summary.
+ * e.g., if label is about speed → contrast is smoothness/warmth.
+ */
+function getContrastLabel(tasteLabel: string): string {
+  if (tasteLabel.includes('speed') || tasteLabel.includes('transient')) return 'warmth or density';
+  if (tasteLabel.includes('density') || tasteLabel.includes('richness')) return 'transient precision or analytical detail';
+  if (tasteLabel.includes('clarity') || tasteLabel.includes('resolution')) return 'warmth or tonal density';
+  if (tasteLabel.includes('fatigue') || tasteLabel.includes('smooth')) return 'analytical resolution';
+  if (tasteLabel.includes('composure') || tasteLabel.includes('ease')) return 'speed or analytical precision';
+  return 'the opposite emphasis';
 }
