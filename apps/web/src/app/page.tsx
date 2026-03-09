@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useEffect, useRef, useCallback } from 'react';
+import { useReducer, useEffect, useRef, useCallback, useState } from 'react';
 import Link from 'next/link';
 import EvaluationOutput from '@/components/EvaluationOutput';
 import { getClarificationQuestion } from '@/lib/clarification';
@@ -17,15 +17,18 @@ import type { EvaluationResult } from '@/lib/rule-types';
 
 // ── Constants ─────────────────────────────────────────
 
-const PLACEHOLDER = 'Ask about your system, sound preferences, or gear you\u2019re considering\u2026';
-
-const SUGGESTION_PROMPTS = [
-  'Best DAC under $1000 for speed and dynamics',
+const CYCLING_PLACEHOLDERS = [
+  'Best DAC under $1000 for detail and naturalness',
   'How would a Denafrips Ares sound in my system?',
-  'I prefer warmth and flow. What DAC direction fits that?',
   'Compare R-2R vs delta-sigma for long listening sessions',
+  'I prefer warmth and flow. What DAC direction fits that?',
   'My system sounds thin. What might cause that?',
+  'What do you think of the Chord Qutest?',
+  'Schiit Bifrost vs Denafrips Pontus',
 ];
+
+/** Interval in ms between placeholder rotations. */
+const PLACEHOLDER_INTERVAL = 4000;
 
 // ── Reducer ───────────────────────────────────────────
 
@@ -124,6 +127,16 @@ export default function Home() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Cycling placeholder — rotates through example prompts on the landing page
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  useEffect(() => {
+    if (messages.length > 0 || currentInput.length > 0) return;
+    const timer = setInterval(() => {
+      setPlaceholderIndex((i) => (i + 1) % CYCLING_PLACEHOLDERS.length);
+    }, PLACEHOLDER_INTERVAL);
+    return () => clearInterval(timer);
+  }, [messages.length, currentInput.length]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -327,7 +340,7 @@ export default function Home() {
               ? 'Reply here…'
               : hasMessages
                 ? 'Continue describing what you hear…'
-                : PLACEHOLDER
+                : CYCLING_PLACEHOLDERS[placeholderIndex]
           }
           style={{
             width: '100%',
@@ -345,46 +358,6 @@ export default function Home() {
           }}
         />
 
-        {/* Suggestion prompts — only before conversation starts */}
-        {!hasMessages && (
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '0.5rem',
-              marginTop: '0.75rem',
-            }}
-          >
-            {SUGGESTION_PROMPTS.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                onClick={() => dispatch({ type: 'SET_INPUT', value: prompt })}
-                style={{
-                  background: '#f5f5f5',
-                  border: '1px solid #ddd',
-                  borderRadius: '1rem',
-                  padding: '0.4rem 0.85rem',
-                  fontSize: '0.85rem',
-                  color: '#444',
-                  cursor: 'pointer',
-                  lineHeight: 1.4,
-                  transition: 'background 0.15s, border-color 0.15s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#eaeaea';
-                  e.currentTarget.style.borderColor = '#bbb';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#f5f5f5';
-                  e.currentTarget.style.borderColor = '#ddd';
-                }}
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Start-over link — only during conversation */}
