@@ -42,6 +42,12 @@ import {
   resolveTraitValue,
   type TendencyConfidence,
 } from './sonic-tendencies';
+import {
+  resolveArchetype,
+  archetypeCharacter,
+  archetypeTradeoff,
+  archetypeCaution,
+} from './design-archetypes';
 
 // ── Product lookup ───────────────────────────────────
 
@@ -265,6 +271,18 @@ function productCharacter(product: Product, desireQualities: string[] = []): str
     if (risks) parts.push(risks);
 
     return parts.join(' ');
+  }
+
+  // ── Design archetype fallback ─────────────────────
+  const archetype = resolveArchetype(product.architecture);
+  if (archetype) {
+    const charSentence = archetypeCharacter(archetype);
+    if (charSentence) {
+      const parts: string[] = [`${product.architecture} design.`, charSentence];
+      const risks = buildRiskNotes(product);
+      if (risks) parts.push(risks);
+      return parts.join(' ');
+    }
   }
 
   // ── Legacy fallback: description + trait labels ───
@@ -783,6 +801,26 @@ function buildInquiryDirection(product: Product, userPref?: { primary: SonicArch
       parts.push(`Worth being aware of: ${cautions.join('; ')}.`);
     }
   } else {
+    // ── Design archetype fallback ────────────────────
+    const dirArchetype = resolveArchetype(product.architecture);
+    const tradeoffSentence = dirArchetype ? archetypeTradeoff(dirArchetype) : undefined;
+    const cautionSentence = dirArchetype ? archetypeCaution(dirArchetype) : undefined;
+
+    if (tradeoffSentence) {
+      // Archetype provides class-level direction
+      const archEmphasized = dirArchetype!.typicalTendencies
+        .filter((t) => t.direction === 'emphasized')
+        .map((t) => t.trait.replace(/_/g, ' '));
+
+      if (archEmphasized.length > 0 && !userPref) {
+        const verb = dirArchetype!.confidence === 'high' ? 'typically emphasizes' : 'tends toward';
+        parts.push(`${dirArchetype!.label} designs ${verb} ${archEmphasized.slice(0, 2).join(' and ')}.`);
+      }
+      parts.push(tradeoffSentence);
+      if (cautionSentence) {
+        parts.push(`Worth being aware of: ${cautionSentence}`);
+      }
+    } else {
     // ── Legacy fallback: trait-inferred direction ────
     const strengths: string[] = [];
     if ((traits.rhythm ?? 0) >= 1.0 || (traits.dynamics ?? 0) >= 1.0) strengths.push('rhythmic and dynamic engagement');
@@ -811,6 +849,7 @@ function buildInquiryDirection(product: Product, userPref?: { primary: SonicArch
     if (cautions.length > 0) {
       parts.push(`Worth being aware of: ${cautions.join('; ')}.`);
     }
+    } // close archetype else → legacy fallback
   }
 
   parts.push('How well it works depends on the rest of the chain and what you prioritize in your listening.');

@@ -19,6 +19,7 @@ import { DEFAULT_SYSTEM_PROFILE } from './system-profile';
 export type { SystemProfile, OutputType, SystemCharacter } from './system-profile';
 import type { SonicArchetype } from './archetype';
 import { hasTendencies, selectDefaultTendencies, hasRisk, getEmphasizedTraits, hasExplainableProfile, resolveTraitValue } from './sonic-tendencies';
+import { resolveArchetype, archetypeFitNote } from './design-archetypes';
 
 /** Short labels for archetype context in shopping summaries. */
 const ARCHETYPE_LABELS: Record<SonicArchetype, string> = {
@@ -960,7 +961,14 @@ function buildFitNote(product: Product, userTraits: Record<string, SignalDirecti
     }
   }
 
-  // Priority 3: legacy trait-label + description path
+  // Priority 3: design archetype (class-level knowledge)
+  const fitArchetype = resolveArchetype(arch);
+  const fitNote = fitArchetype ? archetypeFitNote(fitArchetype) : undefined;
+  if (fitNote) {
+    return `${arch} design — ${fitNote}`;
+  }
+
+  // Priority 4: legacy trait-label + description path
   const strongTraits: string[] = [];
 
   for (const [trait, direction] of Object.entries(userTraits)) {
