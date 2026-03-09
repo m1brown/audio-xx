@@ -18,7 +18,7 @@ import type { SystemProfile, OutputType, SystemCharacter } from './system-profil
 import { DEFAULT_SYSTEM_PROFILE } from './system-profile';
 export type { SystemProfile, OutputType, SystemCharacter } from './system-profile';
 import type { SonicArchetype } from './archetype';
-import { hasTendencies, selectDefaultTendencies, hasRisk, getEmphasizedTraits, resolveTraitValue } from './sonic-tendencies';
+import { hasTendencies, selectDefaultTendencies, hasRisk, getEmphasizedTraits, hasExplainableProfile, resolveTraitValue } from './sonic-tendencies';
 
 /** Short labels for archetype context in shopping summaries. */
 const ARCHETYPE_LABELS: Record<SonicArchetype, string> = {
@@ -824,11 +824,12 @@ function buildFitNote(product: Product, userTraits: Record<string, SignalDirecti
     }
   }
 
-  // Priority 2: qualitative tendency profile
-  if (product.tendencyProfile) {
+  // Priority 2: qualitative tendency profile (high/medium only)
+  if (hasExplainableProfile(product.tendencyProfile)) {
     const emphasized = getEmphasizedTraits(product.tendencyProfile);
     if (emphasized.length > 0) {
-      return `${arch} design — emphasizes ${emphasized.slice(0, 2).join(' and ')}`;
+      const verb = product.tendencyProfile.confidence === 'high' ? 'emphasizes' : 'leans toward';
+      return `${arch} design — ${verb} ${emphasized.slice(0, 2).join(' and ')}`;
     }
   }
 

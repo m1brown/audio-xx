@@ -39,6 +39,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'flow_organic' },
     tendencyProfile: {
       basis: 'listener_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'rhythm', level: 'emphasized' },
         { trait: 'dynamics', level: 'emphasized' },
@@ -75,7 +76,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     ],
     notes: 'Benefits from moderate-power amplification with good current delivery. Spatial precision improves significantly with careful placement.',
     tendencies: {
-      confidence: 'directional',
+      confidence: 'medium',
       character: [
         { domain: 'timing', tendency: 'insistent rhythmic drive — music pushes forward with momentum', basis: 'listener_consensus' },
         { domain: 'dynamics', tendency: 'explosive dynamic range from high efficiency — micro and macro contrasts feel visceral', basis: 'review_consensus' },
@@ -103,6 +104,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     archetypes: { primary: 'spatial_holographic', secondary: 'precision_explicit' },
     tendencyProfile: {
       basis: 'review_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'spatial_precision', level: 'emphasized' },
         { trait: 'texture', level: 'emphasized' },
@@ -139,7 +141,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     ],
     notes: 'Needs quality amplification to shine. Bass quantity limited by cabinet size — room gain or a subwoofer helps in larger rooms.',
     tendencies: {
-      confidence: 'directional',
+      confidence: 'medium',
       character: [
         { domain: 'spatial', tendency: 'holographic imaging that extends well beyond the cabinet boundaries', basis: 'review_consensus' },
         { domain: 'texture', tendency: 'exceptionally detailed and tactile — fine grain of instruments is clearly rendered', basis: 'review_consensus' },
@@ -167,6 +169,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     tendencyProfile: {
       basis: 'review_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'tonal_density', level: 'emphasized' },
         { trait: 'warmth', level: 'emphasized' },
@@ -203,7 +206,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     ],
     notes: 'Limited bass extension and dynamic scale. Best for smaller rooms, vocal and acoustic music. Not the choice for hard-driving rock or large-scale orchestral.',
     tendencies: {
-      confidence: 'well_established',
+      confidence: 'high',
       character: [
         { domain: 'tonality', tendency: 'famously rich midrange — voices sound present and physically embodied', basis: 'review_consensus' },
         { domain: 'texture', tendency: 'smooth, grain-free presentation that never fatigues', basis: 'review_consensus' },
@@ -229,6 +232,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     tendencyProfile: {
       basis: 'listener_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'tonal_density', level: 'emphasized' },
         { trait: 'dynamics', level: 'present' },
@@ -277,6 +281,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
     tendencyProfile: {
       basis: 'review_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'rhythm', level: 'emphasized' },
         { trait: 'dynamics', level: 'emphasized' },
@@ -313,7 +318,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     ],
     notes: 'Exceptional with low-power tube amplification. Sensitivity allows SET amps to drive them with authority. Room-dependent bass — needs space to breathe.',
     tendencies: {
-      confidence: 'well_established',
+      confidence: 'high',
       character: [
         { domain: 'dynamics', tendency: 'effortless dynamic expression — music feels physically present in the room', basis: 'review_consensus' },
         { domain: 'tonality', tendency: 'deep tonal density with rich harmonic overtones', basis: 'review_consensus' },
@@ -342,6 +347,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     archetypes: { primary: 'rhythmic_propulsive' },
     tendencyProfile: {
       basis: 'listener_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'rhythm', level: 'emphasized' },
         { trait: 'dynamics', level: 'emphasized' },
@@ -391,6 +397,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'precision_explicit' },
     tendencyProfile: {
       basis: 'review_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'dynamics', level: 'emphasized' },
         { trait: 'speed', level: 'emphasized' },
@@ -428,7 +435,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     ],
     notes: 'Horn coloration can be noticeable on sustained tones. Room placement matters — can be bass-shy away from walls.',
     tendencies: {
-      confidence: 'well_established',
+      confidence: 'high',
       character: [
         { domain: 'dynamics', tendency: 'explosive transient impact — horn loading delivers instantaneous dynamic response', basis: 'review_consensus' },
         { domain: 'timing', tendency: 'blazing speed on leading edges — percussion and plucked instruments snap to attention', basis: 'review_consensus' },
@@ -456,6 +463,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     archetypes: { primary: 'precision_explicit', secondary: 'tonal_saturated' },
     tendencyProfile: {
       basis: 'review_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'clarity', level: 'emphasized' },
         { trait: 'rhythm', level: 'present' },
@@ -503,6 +511,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     archetypes: { primary: 'precision_explicit' },
     tendencyProfile: {
       basis: 'editorial_inference',
+      confidence: 'medium',
       tendencies: [
         { trait: 'rhythm', level: 'present' },
         { trait: 'dynamics', level: 'present' },

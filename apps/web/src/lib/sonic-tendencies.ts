@@ -77,16 +77,20 @@ export interface TradeOffTendency {
 }
 
 /**
+ * Confidence level for tendency data.
+ *   high   — recurring patterns across multiple credible sources
+ *   medium — some recurring patterns but less consistent
+ *   low    — weak product-specific information
+ *
+ * Used on both ProductTendencies and TendencyProfile.
+ */
+export type TendencyConfidence = 'high' | 'medium' | 'low';
+
+/**
  * The complete tendency set for a product.
  */
 export interface ProductTendencies {
-  /**
-   * How well-established these tendencies are overall.
-   *   well_established — broad agreement across sources
-   *   directional      — clear pattern, fewer sources
-   *   provisional      — limited data, treat as tentative
-   */
-  confidence: 'well_established' | 'directional' | 'provisional';
+  confidence: TendencyConfidence;
 
   character: CharacterTendency[];
   interactions: InteractionTendency[];
@@ -129,6 +133,13 @@ export interface TendencyProfile {
    * Internal only — not surfaced to users.
    */
   basis: SourceBasis;
+  /**
+   * How much weight to place on these assessments.
+   *   high   — use for explanation and scoring
+   *   medium — use for explanation (with hedging) and scoring
+   *   low    — use for scoring only, not explanation
+   */
+  confidence: TendencyConfidence;
   tendencies: QualitativeTendency[];
   riskFlags: RiskFlag[];
 }
@@ -323,10 +334,20 @@ export function findMatchingInteractions(
 
 /**
  * Check whether a product's tendency set is usable for explanation
- * (exists and isn't provisional).
+ * (exists and confidence is not low).
  */
 export function hasTendencies(
   tendencies: ProductTendencies | undefined,
 ): tendencies is ProductTendencies {
-  return tendencies !== undefined && tendencies.confidence !== 'provisional';
+  return tendencies !== undefined && tendencies.confidence !== 'low';
+}
+
+/**
+ * Check whether a tendency profile is usable for user-facing explanation.
+ * Low-confidence profiles contribute to scoring but not explanation.
+ */
+export function hasExplainableProfile(
+  profile: TendencyProfile | undefined,
+): profile is TendencyProfile {
+  return profile !== undefined && profile.confidence !== 'low';
 }

@@ -32,6 +32,7 @@ import {
 import { topTraits, type TasteProfile } from './taste-profile';
 import {
   hasTendencies,
+  hasExplainableProfile,
   selectCharacterTendencies,
   selectDefaultTendencies,
   findMatchingInteractions,
@@ -39,6 +40,7 @@ import {
   getEmphasizedTraits,
   getLessEmphasizedTraits,
   resolveTraitValue,
+  type TendencyConfidence,
 } from './sonic-tendencies';
 
 // ── Product lookup ───────────────────────────────────
@@ -176,6 +178,46 @@ const TRAIT_LABELS: Record<string, string> = {
 
 // ── Character builders ───────────────────────────────
 
+// ── Confidence-aware hedging ─────────────────────────
+
+/**
+ * Frame trait emphasis with language calibrated to confidence level.
+ *
+ * high:   "Listeners consistently describe this as emphasizing X."
+ * medium: "This tends to lean toward X."
+ */
+function confidenceFrame(
+  confidence: TendencyConfidence,
+  traitList: string,
+  verb: 'emphasize' | 'lean',
+): string {
+  if (confidence === 'high') {
+    if (verb === 'emphasize') {
+      return `Listeners consistently describe this as emphasizing ${traitList}.`;
+    }
+    return `Its character clearly leans toward ${traitList}.`;
+  }
+  // medium (low is gated out before reaching here)
+  if (verb === 'emphasize') {
+    return `This tends to lean toward ${traitList}.`;
+  }
+  return `This tends to lean toward ${traitList}, though implementation details matter.`;
+}
+
+/**
+ * Frame trade-off language calibrated to confidence level.
+ */
+function confidenceTradeoffFrame(
+  confidence: TendencyConfidence,
+  gains: string,
+  cost: string,
+): string {
+  if (confidence === 'high') {
+    return `Its trade-off is well-understood: ${gains} at the cost of ${cost}.`;
+  }
+  return `The likely trade-off is ${gains} at the cost of ${cost}.`;
+}
+
 /**
  * Build a sonic character description for a product.
  *
@@ -203,15 +245,16 @@ function productCharacter(product: Product, desireQualities: string[] = []): str
     return parts.join(' ');
   }
 
-  // ── Qualitative profile path ──────────────────────
-  if (product.tendencyProfile) {
+  // ── Qualitative profile path (high/medium only) ───
+  if (hasExplainableProfile(product.tendencyProfile)) {
     const emphasized = getEmphasizedTraits(product.tendencyProfile);
     const lessEmphasized = getLessEmphasizedTraits(product.tendencyProfile);
+    const conf = product.tendencyProfile.confidence;
 
     const parts: string[] = [`${product.architecture} design.`];
     if (emphasized.length > 0) {
       const list = emphasized.join(' and ');
-      parts.push(`Its design emphasizes ${list}.`);
+      parts.push(confidenceFrame(conf, list, 'emphasize'));
     }
     if (lessEmphasized.length > 0) {
       const list = lessEmphasized.slice(0, 2).join(' and ');
@@ -720,16 +763,17 @@ function buildInquiryDirection(product: Product, userPref?: { primary: SonicArch
       const ci = cautionInteractions[0];
       parts.push(`Worth being aware of: ${ci.condition}, ${ci.effect}.`);
     }
-  } else if (product.tendencyProfile) {
-    // ── Qualitative profile path ────────────────────
+  } else if (hasExplainableProfile(product.tendencyProfile)) {
+    // ── Qualitative profile path (high/medium) ──────
     const emphasized = getEmphasizedTraits(product.tendencyProfile);
     const lessEmphasized = getLessEmphasizedTraits(product.tendencyProfile);
+    const conf = product.tendencyProfile.confidence;
 
     if (emphasized.length > 0 && !userPref) {
-      parts.push(`Its design philosophy clearly prioritizes ${emphasized.join(' and ')}.`);
+      parts.push(confidenceFrame(conf, emphasized.join(' and '), 'emphasize'));
     }
     if (lessEmphasized.length > 0) {
-      parts.push(`The trade-off is ${lessEmphasized.slice(0, 2).join(' and ')} — it gives up some of that to focus on what it does best.`);
+      parts.push(confidenceTradeoffFrame(conf, 'what it does best', lessEmphasized.slice(0, 2).join(' and ')));
     }
 
     const cautions: string[] = [];

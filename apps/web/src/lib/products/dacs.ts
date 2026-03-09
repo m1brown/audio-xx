@@ -70,6 +70,7 @@ export const DAC_PRODUCTS: Product[] = [
     archetypes: { primary: 'precision_explicit' },
     tendencyProfile: {
       basis: 'editorial_inference',
+      confidence: 'medium',
       tendencies: [
         { trait: 'clarity', level: 'present' },
         { trait: 'flow', level: 'less_emphasized' },
@@ -104,6 +105,7 @@ export const DAC_PRODUCTS: Product[] = [
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     tendencyProfile: {
       basis: 'editorial_inference',
+      confidence: 'medium',
       tendencies: [
         { trait: 'clarity', level: 'present' },
         { trait: 'dynamics', level: 'present' },
@@ -144,6 +146,7 @@ export const DAC_PRODUCTS: Product[] = [
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     tendencyProfile: {
       basis: 'listener_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'clarity', level: 'emphasized' },
         { trait: 'dynamics', level: 'present' },
@@ -183,6 +186,7 @@ export const DAC_PRODUCTS: Product[] = [
     archetypes: { primary: 'precision_explicit' },
     tendencyProfile: {
       basis: 'editorial_inference',
+      confidence: 'medium',
       tendencies: [
         { trait: 'clarity', level: 'present' },
         { trait: 'dynamics', level: 'present' },
@@ -220,6 +224,7 @@ export const DAC_PRODUCTS: Product[] = [
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     tendencyProfile: {
       basis: 'review_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'flow', level: 'present' },
         { trait: 'tonal_density', level: 'present' },
@@ -246,7 +251,7 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/product/denafrips-ares-12th-1' },
     ],
     tendencies: {
-      confidence: 'well_established',
+      confidence: 'high',
       character: [
         { domain: 'tonality', tendency: 'dense harmonic texture with physical midrange weight', basis: 'review_consensus' },
         { domain: 'timing', tendency: 'relaxed sense of timing — notes bloom rather than snap', basis: 'listener_consensus' },
@@ -272,6 +277,7 @@ export const DAC_PRODUCTS: Product[] = [
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
     tendencyProfile: {
       basis: 'review_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'dynamics', level: 'emphasized' },
         { trait: 'flow', level: 'present' },
@@ -299,7 +305,7 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'Schiit', url: 'https://www.schiit.com/products/bifrost' },
     ],
     tendencies: {
-      confidence: 'well_established',
+      confidence: 'high',
       character: [
         { domain: 'timing', tendency: 'fast, decisive leading edges — notes start with conviction', basis: 'review_consensus' },
         { domain: 'dynamics', tendency: 'punchy macrodynamics with good microdynamic gradation', basis: 'review_consensus' },
@@ -326,6 +332,7 @@ export const DAC_PRODUCTS: Product[] = [
     archetypes: { primary: 'precision_explicit' },
     tendencyProfile: {
       basis: 'review_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'clarity', level: 'emphasized' },
         { trait: 'composure', level: 'present' },
@@ -354,7 +361,7 @@ export const DAC_PRODUCTS: Product[] = [
     ],
     notes: 'Strengths are measured performance. Can feel clinical in systems that lack warmth upstream.',
     tendencies: {
-      confidence: 'well_established',
+      confidence: 'high',
       character: [
         { domain: 'tonality', tendency: 'lean tonal balance — prioritizes separation over body', basis: 'review_consensus' },
         { domain: 'spatial', tendency: 'precise imaging with well-defined instrument placement', basis: 'review_consensus' },
@@ -382,6 +389,7 @@ export const DAC_PRODUCTS: Product[] = [
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     tendencyProfile: {
       basis: 'review_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'flow', level: 'emphasized' },
         { trait: 'texture', level: 'emphasized' },
@@ -410,7 +418,7 @@ export const DAC_PRODUCTS: Product[] = [
     ],
     notes: 'Detail retrieval is softer than delta-sigma designs. Best paired with revealing amplifiers and speakers.',
     tendencies: {
-      confidence: 'well_established',
+      confidence: 'high',
       character: [
         { domain: 'timing', tendency: 'unhurried phrasing — music flows rather than pushes', basis: 'review_consensus' },
         { domain: 'texture', tendency: 'rich tactile quality — rosin, breath, and decay feel physical', basis: 'review_consensus' },
@@ -437,6 +445,7 @@ export const DAC_PRODUCTS: Product[] = [
     archetypes: { primary: 'precision_explicit' },
     tendencyProfile: {
       basis: 'editorial_inference',
+      confidence: 'medium',
       tendencies: [
         { trait: 'clarity', level: 'present' },
         { trait: 'dynamics', level: 'present' },
@@ -477,6 +486,7 @@ export const DAC_PRODUCTS: Product[] = [
     archetypes: { primary: 'precision_explicit' },
     tendencyProfile: {
       basis: 'review_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'clarity', level: 'emphasized' },
         { trait: 'composure', level: 'emphasized' },
@@ -506,7 +516,7 @@ export const DAC_PRODUCTS: Product[] = [
     ],
     notes: 'The built-in parametric EQ is a significant advantage for system tuning. Not the most emotionally engaging, but extraordinarily capable.',
     tendencies: {
-      confidence: 'well_established',
+      confidence: 'high',
       character: [
         { domain: 'tonality', tendency: 'ruler-flat tonal balance with no editorial voice', basis: 'review_consensus' },
         { domain: 'spatial', tendency: 'precise, stable imaging with clear center focus', basis: 'review_consensus' },
@@ -532,6 +542,7 @@ export const DAC_PRODUCTS: Product[] = [
     archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
     tendencyProfile: {
       basis: 'review_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'clarity', level: 'emphasized' },
         { trait: 'flow', level: 'present' },
@@ -560,7 +571,7 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B079C63P1V' },
     ],
     tendencies: {
-      confidence: 'well_established',
+      confidence: 'high',
       character: [
         { domain: 'timing', tendency: 'exceptional transient resolution — leading edges are fast and fully formed', basis: 'review_consensus' },
         { domain: 'tonality', tendency: 'lighter tonal weight than R-2R designs but avoids the thinness of typical delta-sigma', basis: 'listener_consensus' },
@@ -586,6 +597,7 @@ export const DAC_PRODUCTS: Product[] = [
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     tendencyProfile: {
       basis: 'review_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'flow', level: 'emphasized' },
         { trait: 'tonal_density', level: 'emphasized' },
@@ -614,7 +626,7 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/product/denafrips-pontus-ii-12th-1' },
     ],
     tendencies: {
-      confidence: 'well_established',
+      confidence: 'high',
       character: [
         { domain: 'tonality', tendency: 'rich harmonic density with physical midrange presence', basis: 'review_consensus' },
         { domain: 'texture', tendency: 'layered, dimensional texture — instruments have body and resonance', basis: 'review_consensus' },
@@ -641,6 +653,7 @@ export const DAC_PRODUCTS: Product[] = [
     archetypes: { primary: 'tonal_saturated', secondary: 'precision_explicit' },
     tendencyProfile: {
       basis: 'listener_consensus',
+      confidence: 'high',
       tendencies: [
         { trait: 'flow', level: 'present' },
         { trait: 'tonal_density', level: 'present' },
@@ -670,7 +683,7 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'Apos Audio', url: 'https://apos.audio/products/gustard-r26' },
     ],
     tendencies: {
-      confidence: 'directional',
+      confidence: 'medium',
       character: [
         { domain: 'tonality', tendency: 'balanced tonal presentation — body without excess warmth', basis: 'listener_consensus' },
         { domain: 'texture', tendency: 'finer-grained texture than typical R-2R, closer to delta-sigma resolution', basis: 'editorial_inference' },
