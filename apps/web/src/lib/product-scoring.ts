@@ -152,23 +152,24 @@ export function scoreProduct(
 
 /**
  * Score and rank all products, returning them sorted by fit.
- * Filters to products within budget (with 30% flexibility for
- * the candidate pool, scored by exact fit).
+ *
+ * Hard budget guard: only products where price <= budget enter the
+ * candidate pool. If no products pass, returns an empty array.
+ * No over-budget products are ever returned.
  */
 export function rankProducts(
   products: Product[],
   userTraits: Record<string, SignalDirection>,
   budgetAmount: number | null,
 ): ScoredProduct[] {
-  // Filter candidate pool by budget (with generous margin for pool selection)
+  // Hard budget filter — no exceptions
   const candidates = budgetAmount
-    ? products.filter((p) => p.price <= budgetAmount * 1.3)
+    ? products.filter((p) => p.price <= budgetAmount)
     : products;
 
-  // If budget filter is too tight, include all products
-  const pool = candidates.length >= 3 ? candidates : products;
+  if (candidates.length === 0) return [];
 
-  return pool
+  return candidates
     .map((product) => ({
       product,
       score: scoreProduct(product, userTraits, budgetAmount),
