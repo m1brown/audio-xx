@@ -617,6 +617,8 @@ export interface ShoppingAnswer {
   productExamples: ProductExample[];
   watchFor: string[];
   systemNote?: string;
+  /** True when the recommendation is based on incomplete context — refinable. */
+  provisional?: boolean;
 }
 
 // ── Taste direction templates ─────────────────────────
@@ -922,6 +924,9 @@ export function buildShoppingAnswer(
     ? `This direction makes more sense if the rest of the chain is not already biased in the same way. A ${categoryLabel} change will shift the overall balance — listen for whether the qualities you value are preserved.`
     : undefined;
 
+  // Mark as provisional when the answer is based on incomplete context
+  const provisional = !isAnswerReady(ctx);
+
   return {
     category: categoryLabel,
     budget: ctx.budgetAmount,
@@ -931,6 +936,7 @@ export function buildShoppingAnswer(
     productExamples,
     watchFor,
     systemNote,
+    provisional,
   };
 }
 

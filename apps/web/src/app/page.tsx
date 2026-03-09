@@ -5,7 +5,7 @@ import Link from 'next/link';
 import EvaluationOutput from '@/components/EvaluationOutput';
 import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
-import { detectShoppingIntent, buildShoppingAnswer } from '@/lib/shopping-intent';
+import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification, isAnswerReady } from '@/lib/shopping-intent';
 import { checkGlossaryQuestion } from '@/lib/glossary';
 import { detectIntent } from '@/lib/intent';
 import { buildGearResponse } from '@/lib/gear-response';
@@ -174,7 +174,33 @@ export default function Home() {
     }
 
     // Detect intent BEFORE running the evaluation engine
-    const { intent, subjects, desires } = detectIntent(submittedText);
+    let { intent, subjects, desires } = detectIntent(submittedText);
+
+    // ── Shopping persistence ────────────────────────────
+    // Once shopping intent has been established in any prior turn, keep
+    // the conversation in shopping mode — unless the user explicitly
+    // starts a new intent (gear inquiry, comparison, glossary).
+    // We check two sources: (1) a shopping-answer already in history,
+    // or (2) the first user message triggered shopping intent (detected
+    // via re-running detectIntent on it, since the question flow means
+    // no shopping-answer exists yet after the first clarification).
+    const hasShoppingAnswer = messages.some(
+      (m) => m.role === 'assistant' && m.kind === 'shopping-answer',
+    );
+    const firstUserMsg = messages.find((m) => m.role === 'user');
+    const firstTurnWasShopping = firstUserMsg
+      ? detectIntent(firstUserMsg.content).intent === 'shopping'
+      : false;
+    const shoppingActive = hasShoppingAnswer || firstTurnWasShopping;
+
+    if (shoppingActive && intent === 'diagnosis') {
+      intent = 'shopping';
+    }
+
+    // Count how many shopping-answer turns have already been shown.
+    const shoppingAnswerCount = messages.filter(
+      (m) => m.role === 'assistant' && m.kind === 'shopping-answer',
+    ).length;
 
     // Gear inquiries and comparisons — conversational path, skip diagnostic engine
     if (intent === 'gear_inquiry' || intent === 'comparison') {
@@ -200,35 +226,53 @@ export default function Home() {
       if (res.ok) {
         const data = await res.json();
 
-        // Check if more context is needed before showing results
-        const clarification = getClarificationQuestion(
-          data.signals,
-          data.result,
-          newTurnCount,
-          allUserText,
-          submittedText,
-        );
-
-        // Infer system direction for diagnosis-path results
-        const diagDirection = inferSystemDirection(submittedText, desires);
-
-        if (clarification) {
-          // Inquiry mode — ask the follow-up, suppress analysis
-          dispatch({ type: 'ADD_QUESTION', clarification });
-        } else if (intent === 'shopping') {
-          // Shopping path — recommendation with product examples
+        if (intent === 'shopping') {
+          // ── Shopping path ────────────────────────────
+          // All shopping logic runs here — no diagnostic fallback.
           const shoppingCtx = detectShoppingIntent(allUserText, data.signals);
-          if (shoppingCtx.detected) {
+
+          // Decide: ask a clarification question or give a recommendation?
+          // Skip clarifications if we've already given a recommendation
+          // (refinement mode) or if we've hit the 2-turn cap.
+          const maxClarifications = 2;
+          const pastClarificationCap = shoppingAnswerCount > 0 || newTurnCount > maxClarifications;
+          const shoppingQuestion = pastClarificationCap
+            ? null
+            : getShoppingClarification(shoppingCtx, newTurnCount);
+
+          if (shoppingQuestion) {
+            // Still gathering context — ask one more question
+            dispatch({
+              type: 'ADD_QUESTION',
+              clarification: {
+                acknowledge: 'Got it — that helps narrow things down.',
+                question: shoppingQuestion,
+              },
+            });
+          } else {
+            // Enough context (or cap reached) — produce recommendation
             const answer = buildShoppingAnswer(shoppingCtx, data.signals);
             dispatch({ type: 'ADD_SHOPPING_ANSWER', answer, signals: data.signals });
-          } else {
-            // Shopping intent detected by us but not by the shopping module —
-            // fall through to analysis
-            dispatch({ type: 'ADD_ANALYSIS', signals: data.signals, result: data.result, systemDirection: diagDirection });
           }
         } else {
-          // Diagnosis path — full diagnostic output with direction context
-          dispatch({ type: 'ADD_ANALYSIS', signals: data.signals, result: data.result, systemDirection: diagDirection });
+          // ── Diagnosis path ───────────────────────────
+          // Check if more context is needed before showing results
+          const clarification = getClarificationQuestion(
+            data.signals,
+            data.result,
+            newTurnCount,
+            allUserText,
+            submittedText,
+          );
+
+          // Infer system direction for diagnosis-path results
+          const diagDirection = inferSystemDirection(submittedText, desires);
+
+          if (clarification) {
+            dispatch({ type: 'ADD_QUESTION', clarification });
+          } else {
+            dispatch({ type: 'ADD_ANALYSIS', signals: data.signals, result: data.result, systemDirection: diagDirection });
+          }
         }
       }
     } catch {
@@ -711,6 +755,24 @@ function ShoppingRecommendation({
 }) {
   return (
     <div style={{ color: '#111' }}>
+      {/* Provisional marker */}
+      {answer.provisional && (
+        <div
+          style={{
+            margin: '0 0 1rem 0',
+            padding: '0.6rem 0.85rem',
+            background: '#faf8f4',
+            borderLeft: '3px solid #b8a070',
+            fontSize: '0.92rem',
+            lineHeight: 1.55,
+            color: '#666',
+          }}
+        >
+          Based on what you&apos;ve shared so far — you can keep refining this.
+          Try things like &ldquo;I want more body&rdquo; or &ldquo;what if my system is already bright?&rdquo;
+        </div>
+      )}
+
       {/* Preference summary */}
       <p
         style={{
