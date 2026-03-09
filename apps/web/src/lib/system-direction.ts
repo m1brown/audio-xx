@@ -23,6 +23,7 @@ import {
   describeArchetypeShift,
   type SonicArchetype,
 } from './archetype';
+import { profileToArchetypeHints, type TasteProfile } from './taste-profile';
 
 // ── Types ────────────────────────────────────────────
 
@@ -60,8 +61,8 @@ export interface SystemDirection {
   tendencySummary: string | null;
   /** Human-readable summary of the desired direction (for use in responses). */
   directionSummary: string | null;
-  /** Inferred user archetype preference (from desires + context). */
-  inferredArchetype?: SonicArchetype;
+  /** Inferred user archetype preference — primary + optional secondary. */
+  inferredArchetype?: { primary: SonicArchetype; secondary?: SonicArchetype };
   /** Product archetype (if a known product was referenced). */
   productArchetype?: SonicArchetype;
   /** Human-readable archetype note for use in responses. */
@@ -250,6 +251,7 @@ export function inferSystemDirection(
   userText: string,
   desires: DesireSignal[],
   knownProduct?: Product | null,
+  tasteProfile?: TasteProfile,
 ): SystemDirection {
   // ── 1. Infer current tendencies ─────────────────────
 
@@ -307,8 +309,11 @@ export function inferSystemDirection(
 
   // ── 3. Archetype inference ─────────────────────────
 
-  const userPref = desires.length > 0
-    ? inferUserArchetype(desires)
+  // Gather archetype hints from taste profile (soft prior, 0.2 weight in inferUserArchetype)
+  const profileHints = tasteProfile ? profileToArchetypeHints(tasteProfile) : [];
+
+  const userPref = desires.length > 0 || profileHints.length > 0
+    ? inferUserArchetype(desires, profileHints)
     : undefined;
 
   const productTags = knownProduct
@@ -336,7 +341,9 @@ export function inferSystemDirection(
     desiredDirections,
     tendencySummary: buildTendencySummary(tendencies),
     directionSummary: buildDirectionSummary(desiredDirections),
-    inferredArchetype: userPref?.primary,
+    inferredArchetype: userPref
+      ? { primary: userPref.primary, secondary: userPref.secondary }
+      : undefined,
     productArchetype: productTags?.primary,
     archetypeNote,
   };

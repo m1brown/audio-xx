@@ -2,7 +2,9 @@
 
 import { useReducer, useEffect, useRef, useCallback, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import EvaluationOutput from '@/components/EvaluationOutput';
+import TasteRadar from '@/components/TasteRadar';
 import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification, isAnswerReady } from '@/lib/shopping-intent';
@@ -16,6 +18,7 @@ import type { ShoppingAnswer } from '@/lib/shopping-intent';
 import type { Message, ConversationState, GearResponse } from '@/lib/conversation-types';
 import type { ExtractedSignals } from '@/lib/signal-types';
 import type { EvaluationResult } from '@/lib/rule-types';
+import { parseTasteProfile, topTraits, isProfileEmpty, type TasteProfile } from '@/lib/taste-profile';
 
 // ── Constants ─────────────────────────────────────────
 
@@ -132,9 +135,25 @@ function reducer(state: ConversationState, action: Action): ConversationState {
 export default function Home() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { messages, currentInput, turnCount, isLoading } = state;
+  const { status } = useSession();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Taste profile — loaded from API for authenticated users
+  const [tasteProfile, setTasteProfile] = useState<TasteProfile | null>(null);
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/profile')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p) => {
+        if (p?.preferredTraits) {
+          const parsed = parseTasteProfile(p.preferredTraits);
+          if (!isProfileEmpty(parsed)) setTasteProfile(parsed);
+        }
+      })
+      .catch(() => {/* ignore — widget just won't appear */});
+  }, [status]);
 
   // Cycling placeholder — rotates through example prompts on the landing page
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -204,7 +223,7 @@ export default function Home() {
 
     // Gear inquiries and comparisons — conversational path, skip diagnostic engine
     if (intent === 'gear_inquiry' || intent === 'comparison') {
-      const gearResponse = buildGearResponse(intent, subjects, submittedText, desires);
+      const gearResponse = buildGearResponse(intent, subjects, submittedText, desires, tasteProfile ?? undefined);
       if (gearResponse) {
         dispatch({ type: 'ADD_GEAR_RESPONSE', response: gearResponse });
         dispatch({ type: 'SET_LOADING', value: false });
@@ -251,7 +270,7 @@ export default function Home() {
             });
           } else {
             // Enough context (or cap reached) — produce recommendation
-            const answer = buildShoppingAnswer(shoppingCtx, data.signals);
+            const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined);
             dispatch({ type: 'ADD_SHOPPING_ANSWER', answer, signals: data.signals });
           }
         } else {
@@ -266,7 +285,7 @@ export default function Home() {
           );
 
           // Infer system direction for diagnosis-path results
-          const diagDirection = inferSystemDirection(submittedText, desires);
+          const diagDirection = inferSystemDirection(submittedText, desires, undefined, tasteProfile ?? undefined);
 
           if (clarification) {
             dispatch({ type: 'ADD_QUESTION', clarification });
@@ -280,7 +299,7 @@ export default function Home() {
     }
 
     dispatch({ type: 'SET_LOADING', value: false });
-  }, [currentInput, isLoading, messages, turnCount]);
+  }, [currentInput, isLoading, messages, turnCount, tasteProfile]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -330,18 +349,56 @@ export default function Home() {
 
       {/* Intro — only before conversation starts */}
       {!hasMessages && (
-        <p
-          style={{
-            marginTop: 0,
-            marginBottom: '2rem',
-            maxWidth: 620,
-            color: '#444',
-            fontSize: '1rem',
-          }}
-        >
-          A listening advisor that interprets what you hear, reflects underlying system traits,
-          and suggests the most sensible next step.
-        </p>
+        <>
+          <p
+            style={{
+              marginTop: 0,
+              marginBottom: '1.5rem',
+              maxWidth: 620,
+              color: '#444',
+              fontSize: '1rem',
+            }}
+          >
+            A listening advisor that interprets what you hear, reflects underlying system traits,
+            and suggests the most sensible next step.
+          </p>
+
+          {/* Compact taste widget — authenticated users with profile data */}
+          {tasteProfile && tasteProfile.confidence > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                marginBottom: '1.5rem',
+                padding: '0.6rem 0.85rem',
+                border: '1px solid #e0e0e0',
+                background: '#fafafa',
+                maxWidth: 360,
+              }}
+            >
+              <TasteRadar profile={tasteProfile} compact size={80} />
+              <div style={{ fontSize: '0.88rem', lineHeight: 1.5, color: '#555' }}>
+                <div style={{ fontWeight: 600, color: '#333', marginBottom: '0.15rem' }}>
+                  Your taste
+                </div>
+                <div>
+                  {topTraits(tasteProfile, 3).map((t) => t.label).join(' · ')}
+                </div>
+                <Link
+                  href="/profile"
+                  style={{
+                    fontSize: '0.82rem',
+                    color: '#888',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Edit →
+                </Link>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Conversation thread */}

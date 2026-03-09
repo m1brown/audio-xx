@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import TasteProfileEditor from '@/components/TasteProfileEditor';
+import { createEmptyProfile, parseTasteProfile, type TasteProfile } from '@/lib/taste-profile';
 
 const ARCHETYPES = ['engagement', 'composure', 'low_volume'] as const;
 const SENSITIVITY_FLAGS = ['fatigue_sensitive', 'glare_sensitive', 'bass_sensitive', 'volume_sensitive'] as const;
@@ -18,6 +20,7 @@ export default function ProfilePage() {
     sensitivityFlags: [] as string[],
     notes: '',
   });
+  const [tasteProfile, setTasteProfile] = useState<TasteProfile>(createEmptyProfile());
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -32,6 +35,7 @@ export default function ProfilePage() {
           sensitivityFlags: p.sensitivityFlags || [],
           notes: p.notes || '',
         });
+        setTasteProfile(parseTasteProfile(p.preferredTraits));
       });
     }
   }, [status, router]);
@@ -44,7 +48,7 @@ export default function ProfilePage() {
     await fetch('/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(profile),
+      body: JSON.stringify({ ...profile, preferredTraits: tasteProfile }),
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -89,6 +93,16 @@ export default function ProfilePage() {
             {f.replace(/_/g, ' ')}
           </button>
         ))}
+      </div>
+
+      <hr />
+
+      <h2>Taste profile</h2>
+      <p className="small muted mb-1">
+        Adjust sliders to reflect what you value in a listening experience. This shapes how the engine weighs recommendations.
+      </p>
+      <div className="mb-1">
+        <TasteProfileEditor profile={tasteProfile} onChange={setTasteProfile} />
       </div>
 
       <hr />

@@ -29,6 +29,7 @@ import {
   type SonicArchetype,
   type UserArchetypePreference,
 } from './archetype';
+import { topTraits, type TasteProfile } from './taste-profile';
 
 // ── Product lookup ───────────────────────────────────
 
@@ -249,6 +250,7 @@ function buildHearingBlock(
   desires: DesireSignal[],
   products: Product[],
   sysDir: SystemDirection,
+  tasteProfile?: TasteProfile,
 ): string[] {
   const bullets: string[] = [];
 
@@ -331,6 +333,15 @@ function buildHearingBlock(
     }
   }
 
+  // 7. Taste profile background — only if desires don't already cover it
+  if (tasteProfile && tasteProfile.confidence > 0.2 && desires.length === 0) {
+    const top = topTraits(tasteProfile, 3);
+    if (top.length > 0) {
+      const traitLabels = top.map((t) => t.label.toLowerCase());
+      bullets.push(`Your profile suggests you tend toward ${traitLabels.join(' and ')}`);
+    }
+  }
+
   // Cap at 4 bullets
   return bullets.slice(0, 4);
 }
@@ -342,6 +353,7 @@ export function buildGearResponse(
   subjects: string[],
   currentMessage: string,
   desires: DesireSignal[] = [],
+  tasteProfile?: TasteProfile,
 ): GearResponse | null {
   if (intent !== 'gear_inquiry' && intent !== 'comparison') return null;
 
@@ -353,10 +365,11 @@ export function buildGearResponse(
     currentMessage,
     desires,
     products[0] ?? null,
+    tasteProfile,
   );
 
   // Build reflective "What I'm hearing" block
-  const hearing = buildHearingBlock(intent, desires, products, sysDir);
+  const hearing = buildHearingBlock(intent, desires, products, sysDir, tasteProfile);
 
   // Helper: append tendency context to an anchor if available
   const withTendency = (base: string): string => {

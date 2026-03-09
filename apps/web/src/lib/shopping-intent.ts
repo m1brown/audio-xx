@@ -805,6 +805,8 @@ const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
 import { DAC_PRODUCTS } from './products/dacs';
 import type { Product } from './products/dacs';
 import { rankProducts } from './product-scoring';
+import { tagProductArchetype } from './archetype';
+import { topTraits, type TasteProfile as UserTasteProfile, type ProfileTraitKey } from './taste-profile';
 
 /**
  * Generate a one-sentence fit note for a product based on its
@@ -852,17 +854,48 @@ function buildCaution(product: Product): string | undefined {
  * against user traits and budget. Returns empty array if no
  * catalog exists for the category or budget is unknown.
  */
+/** Map profile trait keys to product trait keys for scoring alignment. */
+const PROFILE_TO_PRODUCT_TRAIT: Record<ProfileTraitKey, string> = {
+  flow: 'flow',
+  clarity: 'clarity',
+  rhythm: 'rhythm',
+  tonal_density: 'tonal_density',
+  spatial_depth: 'spatial_precision',
+  dynamics: 'dynamics',
+  warmth: 'warmth',
+};
+
 function selectProductExamples(
   category: ShoppingCategory,
   userTraits: Record<string, SignalDirection>,
   budgetAmount: number | null,
   systemProfile: SystemProfile,
+  tasteProfile?: UserTasteProfile,
 ): ProductExample[] {
   // Only DACs have a catalog for now
   if (category !== 'dac') return [];
   if (budgetAmount === null) return [];
 
   const ranked = rankProducts(DAC_PRODUCTS, userTraits, budgetAmount, systemProfile);
+
+  // Apply taste profile bonus — small boost for products aligned with stored taste
+  if (tasteProfile && tasteProfile.confidence > 0.2) {
+    const topProfileTraits = topTraits(tasteProfile, 2);
+    const profileWeight = tasteProfile.confidence * 0.15;
+
+    for (const entry of ranked) {
+      let bonus = 0;
+      for (const pt of topProfileTraits) {
+        const productTraitKey = PROFILE_TO_PRODUCT_TRAIT[pt.key];
+        const productTraitValue = entry.product.traits[productTraitKey] ?? 0;
+        bonus += productTraitValue * pt.value * profileWeight;
+      }
+      entry.score += bonus;
+    }
+    // Re-sort after bonus
+    ranked.sort((a, b) => b.score - a.score);
+  }
+
   const top = ranked.slice(0, 3);
 
   return top.map(({ product }) => ({
@@ -891,6 +924,7 @@ function selectProductExamples(
 export function buildShoppingAnswer(
   ctx: ShoppingContext,
   signals: ExtractedSignals,
+  tasteProfile?: UserTasteProfile,
 ): ShoppingAnswer {
   const traits = signals.traits;
   const categoryLabel = CATEGORY_LABELS[ctx.category];
@@ -903,7 +937,10 @@ export function buildShoppingAnswer(
   const archetypeLabel = matchedProfile?.archetype
     ? ` — a ${ARCHETYPE_LABELS[matchedProfile.archetype]} preference`
     : '';
-  const preferenceSummary = `You appear to value ${taste.label} more than ${getContrastLabel(taste.label)}${archetypeLabel}.`;
+  const profileNote = tasteProfile && tasteProfile.confidence > 0.3
+    ? ` Your stored taste profile reinforces this.`
+    : '';
+  const preferenceSummary = `You appear to value ${taste.label} more than ${getContrastLabel(taste.label)}${archetypeLabel}.${profileNote}`;
 
   // 2. Best-fit direction
   const bestFitDirection = matchedProfile?.directionByCategory[ctx.category]
@@ -914,7 +951,7 @@ export function buildShoppingAnswer(
     ?? taste.defaultWhy ?? matchedProfile?.defaultWhy ?? FALLBACK_TASTE.defaultWhy;
 
   // 4. Product examples (only when catalog exists + budget known)
-  const productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile);
+  const productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, tasteProfile);
 
   // 5. Watch for
   const watchFor = taste.watchFor;
