@@ -1,10 +1,9 @@
 import { Suspense } from 'react';
+import { connection } from 'next/server';
 import EvaluatePageClient from './EvaluatePageClient';
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
-
-export default function Page() {
+export default async function Page() {
+  await connection();
   return (
     <Suspense fallback={<div>Loading…</div>}>
       <EvaluatePageClient />
