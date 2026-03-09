@@ -386,6 +386,41 @@ export function getShoppingTurnCap(mode: ShoppingMode): number {
   return TURN_CAPS[mode];
 }
 
+// ── Answer-readiness ──────────────────────────────────
+
+/**
+ * Returns true when the gathered context is sufficient for a
+ * non-generic recommendation in the detected shopping mode.
+ */
+export function isAnswerReady(ctx: ShoppingContext): boolean {
+  if (!ctx.detected) return true; // not shopping — let the engine handle it
+
+  switch (ctx.mode) {
+    case 'specific-component':
+      return (
+        ctx.category !== 'general' &&
+        ctx.budgetMentioned &&
+        ctx.tasteProvided &&
+        ctx.systemProvided
+      );
+
+    case 'upgrade-path':
+      return (
+        ctx.budgetMentioned &&
+        ctx.preserveProvided &&
+        ctx.limitingProvided &&
+        ctx.systemProvided
+      );
+
+    case 'build-a-system':
+      return (
+        ctx.useCaseProvided &&
+        ctx.budgetMentioned &&
+        ctx.tasteProvided
+      );
+  }
+}
+
 // ── Question selection ────────────────────────────────
 
 /**
@@ -394,6 +429,11 @@ export function getShoppingTurnCap(mode: ShoppingMode): number {
  *
  * Questions are asked one at a time in the mode's priority order.
  * Steps are skipped when the user has already provided that context.
+ *
+ * Returns null (triggering answer mode) when:
+ *   1. All required context is present (isAnswerReady), OR
+ *   2. The per-mode turn cap is reached (provisional best-effort), OR
+ *   3. No more questions remain in the sequence.
  *
  * @param ctx       - Shopping context derived from all user text so far
  * @param turnCount - Number of user submissions (1-indexed)
@@ -404,7 +444,10 @@ export function getShoppingClarification(
 ): string | null {
   if (!ctx.detected) return null;
 
-  // Respect per-mode turn cap
+  // Early exit: enough context gathered — go straight to answer
+  if (isAnswerReady(ctx)) return null;
+
+  // Turn cap: provide provisional direction with what we have
   const cap = TURN_CAPS[ctx.mode];
   if (turnCount >= cap) return null;
 
@@ -417,6 +460,6 @@ export function getShoppingClarification(
     }
   }
 
-  // All required context is present
+  // Sequence exhausted — answer with what we have
   return null;
 }
