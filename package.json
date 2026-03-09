@@ -10,6 +10,7 @@
     "build": "npm run build --workspace=apps/web",
     "test": "vitest run",
     "test:watch": "vitest",
+    "typecheck": "npm run typecheck --workspace=apps/web && npm run typecheck --workspace=packages/rules",
     "lint": "eslint . --ext .ts,.tsx",
     "db:generate": "npm run db:generate --workspace=apps/web",
     "db:push": "npm run db:push --workspace=apps/web",

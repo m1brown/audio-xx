@@ -4,6 +4,7 @@ import { resolve } from 'path';
 import { parse } from 'yaml';
 import { loadRules, evaluate, clearCache as clearRulesCache } from '../engine';
 import type { EvaluationContext } from '../types';
+import type { ArchetypeName } from '@audio-xx/data';
 
 const RULES_PATH = resolve(__dirname, '../../rules.yaml');
 const SIGNALS_PATH = resolve(__dirname, '../../../signals/signals.yaml');
@@ -55,7 +56,7 @@ function processText(text: string) {
 
 function fullEvaluate(text: string, profileArchetypes: string[] = []) {
   const signals = processText(text);
-  const allArchetypes = [...new Set([...profileArchetypes, ...signals.archetype_hints])];
+  const allArchetypes = [...new Set([...profileArchetypes, ...signals.archetype_hints])] as ArchetypeName[];
   const ctx: EvaluationContext = {
     symptoms: signals.symptoms,
     traits: signals.traits as Record<string, 'up' | 'down'>,
