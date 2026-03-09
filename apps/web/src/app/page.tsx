@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useState, useEffect, useRef, useCallback } from 'react';
+import { useReducer, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import EvaluationOutput from '@/components/EvaluationOutput';
 import { getClarificationQuestion } from '@/lib/clarification';
@@ -10,20 +10,7 @@ import type { EvaluationResult } from '@/lib/rule-types';
 
 // ── Constants ─────────────────────────────────────────
 
-const PLACEHOLDERS = [
-  'My Eversolo sounds clean but a little clinical. What might that mean in my system?',
-  'Switching from a Topping DAC made my system sharper and more fatiguing.',
-  'My WiiM sounds good for the money but I want more flow and depth.',
-  'I like my Denafrips Ares II but I\'m curious how a Chord Hugo TT2 might change the sound in my system.',
-  'Would Schiit or Denafrips make more sense in my system if I value flow over glare?',
-  'I\'m considering a DAC upgrade and want less fatigue without losing too much detail.',
-];
-
-const EXAMPLES = [
-  'My Eversolo sounds clean but a little clinical. What might that mean in my system?',
-  'Switching from a Topping DAC made my system sharper and more fatiguing.',
-  'Would Schiit or Denafrips make more sense in my system if I value flow over glare?',
-];
+const PLACEHOLDER = 'Describe what you hear, or ask a question about your system\u2026';
 
 // ── Reducer ───────────────────────────────────────────
 
@@ -92,15 +79,6 @@ export default function Home() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Rotating placeholder
-  const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPlaceholderIndex((i) => (i + 1) % PLACEHOLDERS.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -257,7 +235,7 @@ export default function Home() {
               ? 'Reply here…'
               : hasMessages
                 ? 'Continue describing what you hear…'
-                : PLACEHOLDERS[placeholderIndex]
+                : PLACEHOLDER
           }
           style={{
             width: '100%',
@@ -276,76 +254,9 @@ export default function Home() {
         />
       </div>
 
-      {/* Examples — only before conversation starts */}
-      {!hasMessages && (
-        <div
-          style={{
-            marginBottom: '1.5rem',
-            paddingBottom: '1.25rem',
-            borderBottom: '1px solid #ddd',
-          }}
-        >
-          <div
-            style={{
-              marginBottom: '0.6rem',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              color: '#666',
-            }}
-          >
-            Try an example
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-            {EXAMPLES.map((example) => (
-              <button
-                key={example}
-                type="button"
-                onClick={() => dispatch({ type: 'SET_INPUT', value: example })}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  margin: 0,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  color: '#222',
-                  fontSize: '0.98rem',
-                  lineHeight: 1.4,
-                }}
-              >
-                <span style={{ color: '#c4122f', marginRight: 6 }}>•</span>
-                <span style={{ textDecoration: 'underline', textUnderlineOffset: '2px' }}>
-                  {example}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Action bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-        <button
-          onClick={handleSubmit}
-          disabled={isLoading || !currentInput.trim()}
-          style={{
-            background: '#4a4a4a',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 0,
-            padding: '0.75rem 1.25rem',
-            fontSize: '0.95rem',
-            cursor: isLoading || !currentInput.trim() ? 'not-allowed' : 'pointer',
-            opacity: isLoading || !currentInput.trim() ? 0.65 : 1,
-          }}
-        >
-          {isLoading ? 'Running…' : hasPendingQuestion ? 'Reply' : hasMessages ? 'Continue' : 'Run analysis'}
-        </button>
-
-        {hasMessages && (
+      {/* Start-over link — only during conversation */}
+      {hasMessages && (
+        <div style={{ marginBottom: '1.5rem' }}>
           <button
             type="button"
             onClick={() => dispatch({ type: 'RESET' })}
@@ -363,8 +274,8 @@ export default function Home() {
           >
             Start over
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div
