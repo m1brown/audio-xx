@@ -369,6 +369,37 @@ rules:
 
       verdict: no_purchase_recommended
 
+  - id: taste-speed-dynamics
+    label: Preference for speed, transient attack, and rhythmic engagement
+    priority: 13
+    conditions:
+      symptoms_present_any:
+        - speed_transient_attack
+        - dynamic_punchy
+      traits:
+        dynamics: up
+        elasticity: up
+    outputs:
+      explanation: >
+        Your description suggests you value speed, transient precision, and rhythmic engagement.
+        Systems that excel here tend to prioritize leading-edge definition, dynamic contrast,
+        and the sense that music is propulsive and alive.
+
+      suggestions:
+        - Preserve components that deliver transient snap and rhythmic coherence.
+        - Evaluate any change by whether it maintains pace and dynamic contrast.
+
+      risks:
+        - Pushing too far toward speed can reduce tonal body and harmonic richness.
+        - Some components trade transient sharpness for long-term listening ease.
+
+      next_step: >
+        When evaluating future changes, listen for whether rhythmic drive and the sense of
+        musical propulsion remain intact. If a component smooths transients too much, it may
+        not align with your priorities.
+
+      verdict: no_purchase_recommended
+
   - id: friendly-advisor-fallback
     label: Friendly advisor structured response
     priority: 1000

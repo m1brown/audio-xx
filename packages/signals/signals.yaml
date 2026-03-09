@@ -170,6 +170,28 @@ signals:
       elasticity: up
     symptom: dynamic_punchy
 
+  # ── Speed / Transient Attack ─────────────────────
+
+  - phrases:
+      - speed
+      - fast
+      - faster
+      - quick
+      - quickness
+      - attack
+      - transients
+      - transient attack
+      - snappy
+      - tight timing
+      - rhythmic drive
+      - pace
+      - prat
+    signals:
+      dynamics: up
+      elasticity: up
+    symptom: speed_transient_attack
+    archetype_hint: engagement
+
   # ── Too Polite / Sleepy (Engagement hint) ─────────
 
   - phrases:
