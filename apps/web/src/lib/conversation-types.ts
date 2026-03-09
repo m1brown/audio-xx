@@ -4,6 +4,14 @@ import type { ShoppingAnswer } from './shopping-intent';
 import type { GlossaryResult } from './glossary';
 import type { ClarificationResponse } from './clarification';
 import type { UserIntent } from './intent';
+import type { SystemDirection } from './system-direction';
+
+/**
+ * System direction context attached to diagnostic analysis results.
+ * Provides tendency and direction summaries inferred from the user's
+ * description of their listening problem.
+ */
+export type { SystemDirection };
 
 /**
  * Response for gear inquiries and comparisons — conversational, not diagnostic.
@@ -33,13 +41,15 @@ export interface GearResponse {
   clarification: string;
   /** Brand/product names mentioned. */
   subjects: string[];
+  /** Inferred system direction context, if available. */
+  systemDirection?: SystemDirection;
 }
 
 export type Message =
   | { role: 'user'; content: string }
   | { role: 'assistant'; content: string; kind: 'note' }
   | { role: 'assistant'; kind: 'question'; clarification: ClarificationResponse }
-  | { role: 'assistant'; kind: 'analysis'; signals: ExtractedSignals; result: EvaluationResult }
+  | { role: 'assistant'; kind: 'analysis'; signals: ExtractedSignals; result: EvaluationResult; systemDirection?: SystemDirection }
   | { role: 'assistant'; kind: 'shopping-answer'; answer: ShoppingAnswer; signals: ExtractedSignals }
   | { role: 'assistant'; kind: 'glossary'; entry: GlossaryResult }
   | { role: 'assistant'; kind: 'gear-response'; response: GearResponse };

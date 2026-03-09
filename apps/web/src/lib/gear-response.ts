@@ -19,6 +19,7 @@
 import type { GearResponse } from './conversation-types';
 import type { UserIntent, DesireSignal } from './intent';
 import { DAC_PRODUCTS, type Product } from './products/dacs';
+import { inferSystemDirection, type SystemDirection } from './system-direction';
 
 // ── Product lookup ───────────────────────────────────
 
@@ -204,6 +205,25 @@ export function buildGearResponse(
   const products = findProducts(subjects);
   const seed = currentMessage.length;
 
+  // Infer system direction from the user's message and known product
+  const sysDir = inferSystemDirection(
+    currentMessage,
+    desires,
+    products[0] ?? null,
+  );
+
+  // Helper: append tendency context to an anchor if available
+  const withTendency = (base: string): string => {
+    if (!sysDir.tendencySummary) return base;
+    return `${base} ${sysDir.tendencySummary}`;
+  };
+
+  // Helper: prepend direction context to a direction string if available
+  const withDirection = (base: string): string => {
+    if (!sysDir.directionSummary) return base;
+    return `${sysDir.directionSummary} ${base}`;
+  };
+
   // ── Comparison ──────────────────────────────────────
   if (intent === 'comparison') {
     const a = products[0] ?? null;
@@ -213,13 +233,14 @@ export function buildGearResponse(
       return {
         intent,
         subjects,
-        anchor: `The ${a.brand} ${a.name} and ${b.brand} ${b.name} come from quite different design traditions.`,
+        anchor: withTendency(`The ${a.brand} ${a.name} and ${b.brand} ${b.name} come from quite different design traditions.`),
         character: `The ${a.name} uses ${a.architecture} — ${a.description.charAt(0).toLowerCase() + a.description.slice(1)} The ${b.name} uses ${b.architecture} — ${b.description.charAt(0).toLowerCase() + b.description.slice(1)}`,
         interpretation: desires.length > 0
           ? QUALITY_PROFILES[desires[0].quality]?.interpretation
           : undefined,
-        direction: buildComparisonDirection(a, b),
+        direction: withDirection(buildComparisonDirection(a, b)),
         clarification: pick(COMPARISON_CLARIFICATIONS, seed),
+        systemDirection: sysDir,
       };
     }
 
@@ -227,13 +248,14 @@ export function buildGearResponse(
       return {
         intent,
         subjects,
-        anchor: 'Those come from different corners of the market.',
+        anchor: withTendency('Those come from different corners of the market.'),
         character: 'The comparison usually comes down to design philosophy — what each designer chose to prioritize. Architecture, feedback topology, and output stage all shape character differently.',
         interpretation: desires.length > 0
           ? QUALITY_PROFILES[desires[0].quality]?.interpretation
           : undefined,
-        direction: 'The most useful way to think about it is: what do you want more of in your listening, and which design approach tends to deliver that? A comparison that holds in one system may reverse in another.',
+        direction: withDirection('The most useful way to think about it is: what do you want more of in your listening, and which design approach tends to deliver that? A comparison that holds in one system may reverse in another.'),
         clarification: pick(COMPARISON_CLARIFICATIONS, seed),
+        systemDirection: sysDir,
       };
     }
 
@@ -244,6 +266,7 @@ export function buildGearResponse(
       character: products.length > 0 ? productCharacter(products[0]) : 'Every component has a character — the question is how it interacts with your system.',
       direction: 'To make a useful comparison, I\'d need to know what you\'re comparing and what dimensions matter most. Two excellent components can be optimized for very different priorities.',
       clarification: 'What are you comparing, and what\'s driving the question?',
+      systemDirection: sysDir,
     };
   }
 
@@ -259,15 +282,18 @@ export function buildGearResponse(
     return {
       intent,
       subjects,
-      anchor: `The ${productName} has a well-established character, and wanting ${primary.direction} ${primary.quality} from it tells me something useful about where you want to go.`,
+      anchor: withTendency(`The ${productName} has a well-established character, and wanting ${primary.direction} ${primary.quality} from it tells me something useful about where you want to go.`),
       character: product
         ? productCharacter(product)
         : brandCharacter(productName),
       interpretation: profile?.interpretation
         ?? `When listeners ask for ${primary.direction} ${primary.quality}, the answer usually depends on where in the chain the limitation lives — and whether it's truly missing or being masked by something else.`,
-      direction: profile?.direction
-        ?? 'The right path depends on the rest of the system and what trade-offs you\'re comfortable with. Sometimes the change you want comes from a different part of the chain than you\'d expect.',
+      direction: withDirection(
+        profile?.direction
+          ?? 'The right path depends on the rest of the system and what trade-offs you\'re comfortable with. Sometimes the change you want comes from a different part of the chain than you\'d expect.'
+      ),
       clarification: pick(DESIRE_CLARIFICATIONS, seed),
+      systemDirection: sysDir,
     };
   }
 
@@ -277,10 +303,11 @@ export function buildGearResponse(
     return {
       intent,
       subjects,
-      anchor: `The ${product.brand} ${product.name} is a well-known piece in this space.`,
+      anchor: withTendency(`The ${product.brand} ${product.name} is a well-known piece in this space.`),
       character: productCharacter(product),
       direction: buildInquiryDirection(product),
       clarification: pick(INQUIRY_CLARIFICATIONS, seed),
+      systemDirection: sysDir,
     };
   }
 
@@ -290,10 +317,11 @@ export function buildGearResponse(
     return {
       intent,
       subjects,
-      anchor: `${brandName} is a name that comes up regularly in these conversations.`,
+      anchor: withTendency(`${brandName} is a name that comes up regularly in these conversations.`),
       character: brandCharacter(brandName),
       direction: 'The best way to evaluate any piece of gear is relative to the system it\'s going into. A component that sounds extraordinary in one system can be unremarkable in another — that\'s not a flaw, it\'s how audio works.',
       clarification: pick(GENERIC_CLARIFICATIONS, seed),
+      systemDirection: sysDir,
     };
   }
 
@@ -305,6 +333,7 @@ export function buildGearResponse(
     character: 'Every component has a character — a set of things it does well and things it trades away.',
     direction: 'What matters is how that character interacts with your system and your listening priorities. The same piece can sound relaxed in one system and forward in another.',
     clarification: pick(GENERIC_CLARIFICATIONS, seed),
+    systemDirection: sysDir,
   };
 }
 

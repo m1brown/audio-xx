@@ -9,6 +9,8 @@ import { detectShoppingIntent, buildShoppingAnswer } from '@/lib/shopping-intent
 import { checkGlossaryQuestion } from '@/lib/glossary';
 import { detectIntent } from '@/lib/intent';
 import { buildGearResponse } from '@/lib/gear-response';
+import { inferSystemDirection } from '@/lib/system-direction';
+import type { SystemDirection } from '@/lib/system-direction';
 import type { GlossaryResult } from '@/lib/glossary';
 import type { ShoppingAnswer } from '@/lib/shopping-intent';
 import type { Message, ConversationState, GearResponse } from '@/lib/conversation-types';
@@ -35,7 +37,7 @@ const PLACEHOLDER_INTERVAL = 4000;
 type Action =
   | { type: 'SET_INPUT'; value: string }
   | { type: 'ADD_USER_MESSAGE' }
-  | { type: 'ADD_ANALYSIS'; signals: ExtractedSignals; result: EvaluationResult }
+  | { type: 'ADD_ANALYSIS'; signals: ExtractedSignals; result: EvaluationResult; systemDirection?: SystemDirection }
   | { type: 'ADD_SHOPPING_ANSWER'; answer: ShoppingAnswer; signals: ExtractedSignals }
   | { type: 'ADD_QUESTION'; clarification: ClarificationResponse }
   | { type: 'ADD_GLOSSARY'; entry: GlossaryResult }
@@ -68,7 +70,13 @@ function reducer(state: ConversationState, action: Action): ConversationState {
         ...state,
         messages: [
           ...state.messages,
-          { role: 'assistant', kind: 'analysis', signals: action.signals, result: action.result },
+          {
+            role: 'assistant',
+            kind: 'analysis',
+            signals: action.signals,
+            result: action.result,
+            ...(action.systemDirection ? { systemDirection: action.systemDirection } : {}),
+          },
         ],
       };
 
@@ -201,6 +209,9 @@ export default function Home() {
           submittedText,
         );
 
+        // Infer system direction for diagnosis-path results
+        const diagDirection = inferSystemDirection(submittedText, desires);
+
         if (clarification) {
           // Inquiry mode — ask the follow-up, suppress analysis
           dispatch({ type: 'ADD_QUESTION', clarification });
@@ -213,11 +224,11 @@ export default function Home() {
           } else {
             // Shopping intent detected by us but not by the shopping module —
             // fall through to analysis
-            dispatch({ type: 'ADD_ANALYSIS', signals: data.signals, result: data.result });
+            dispatch({ type: 'ADD_ANALYSIS', signals: data.signals, result: data.result, systemDirection: diagDirection });
           }
         } else {
-          // Diagnosis path — full diagnostic output
-          dispatch({ type: 'ADD_ANALYSIS', signals: data.signals, result: data.result });
+          // Diagnosis path — full diagnostic output with direction context
+          dispatch({ type: 'ADD_ANALYSIS', signals: data.signals, result: data.result, systemDirection: diagDirection });
         }
       }
     } catch {
@@ -458,6 +469,33 @@ function MessageBubble({ message }: { message: Message }) {
     return (
       <div style={{ marginBottom: '1.75rem' }}>
         <hr style={{ border: 0, borderTop: '1px solid #d9d9d9', margin: '0 0 1.5rem 0' }} />
+
+        {/* System direction context — tendency and desired direction */}
+        {message.systemDirection && (message.systemDirection.tendencySummary || message.systemDirection.directionSummary) && (
+          <div
+            style={{
+              marginBottom: '1.25rem',
+              padding: '0.85rem 1rem',
+              borderLeft: '3px solid #7a6a4a',
+              background: '#faf9f6',
+              color: '#333',
+              fontSize: '0.98rem',
+              lineHeight: 1.6,
+            }}
+          >
+            {message.systemDirection.tendencySummary && (
+              <p style={{ margin: '0 0 0.3rem 0' }}>
+                {message.systemDirection.tendencySummary}
+              </p>
+            )}
+            {message.systemDirection.directionSummary && (
+              <p style={{ margin: 0 }}>
+                {message.systemDirection.directionSummary}
+              </p>
+            )}
+          </div>
+        )}
+
         <EvaluationOutput signals={message.signals} result={message.result} />
       </div>
     );
