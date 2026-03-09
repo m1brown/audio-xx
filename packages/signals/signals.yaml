@@ -8,6 +8,7 @@ signals:
 
   - phrases:
       - bright
+      - brightness
       - harsh
       - sibilant
       - piercing
@@ -15,7 +16,13 @@ signals:
       - sharp
       - spitty
       - aggressive treble
+      - aggressive
       - glare
+      - etched
+      - hard
+      - forward
+      - clinical
+      - sterile
     signals:
       fatigue_risk: up
       glare_risk: up
@@ -25,12 +32,21 @@ signals:
 
   - phrases:
       - warm
+      - warmth
       - rich
       - lush
       - full-bodied
       - round
       - creamy
       - golden
+      - dense
+      - full
+      - fuller
+      - body
+      - bodied
+      - weight
+      - weighted
+      - saturated
     signals:
       tonal_density: up
       fatigue_risk: down
@@ -54,6 +70,13 @@ signals:
       - breathes
       - tube-like
       - organic
+      - natural
+      - liquid
+      - forgiving
+      - ease
+      - easier
+      - coherent
+      - continuous
     signals:
       tonal_density: up
       flow: up
@@ -89,8 +112,6 @@ signals:
       - unengaging
       - uninvolving
       - dry
-      - sterile
-      - clinical
     signals:
       flow: down
       tonal_density: down
@@ -116,6 +137,7 @@ signals:
 
   - phrases:
       - fatiguing
+      - fatigue
       - tiring
       - exhausting
       - can't listen long
@@ -130,12 +152,18 @@ signals:
 
   - phrases:
       - detailed
+      - detail
       - revealing
       - resolving
+      - resolution
       - transparent
       - high resolution
       - insightful
       - analytical
+      - clear
+      - clarity
+      - explicit
+      - open
     signals:
       clarity: up
     symptom: detail_revealing
@@ -163,8 +191,6 @@ signals:
       - impactful
       - explosive
       - transient
-      - fast
-      - snappy
     signals:
       dynamics: up
       elasticity: up
@@ -179,13 +205,18 @@ signals:
       - quick
       - quickness
       - attack
+      - attacking
       - transients
       - transient attack
       - snappy
       - tight timing
+      - tight
       - rhythmic drive
+      - drive
       - pace
       - prat
+      - timing
+      - leading edge
     signals:
       dynamics: up
       elasticity: up

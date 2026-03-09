@@ -8,6 +8,75 @@ import { parse } from 'yaml';
 import type { ExtractedSignals, SignalDictionary, SignalDirection, SignalEntry } from './signal-types';
 import type { Rule, EvaluationContext, EvaluationResult, FiredRule, RuleConditions } from './rule-types';
 
+// ── Text Normalization ────────────────────────────
+
+/**
+ * Explicit correction map for common misspellings, shorthand,
+ * and variant spellings. Applied before phrase matching.
+ * Keys must be lowercase.
+ */
+const CORRECTIONS: Record<string, string> = {
+  // Misspellings
+  'spded': 'speed',
+  'spd': 'speed',
+  'warmht': 'warmth',
+  'detial': 'detail',
+  'deatil': 'detail',
+  'fatiging': 'fatiguing',
+  'fatigueing': 'fatiguing',
+  'glary': 'glare',
+  'sweatness': 'sweetness',
+  'sweeetness': 'sweetness',
+  'analitical': 'analytical',
+  'analyitcal': 'analytical',
+  'liqid': 'liquid',
+  'liqud': 'liquid',
+  'resoultion': 'resolution',
+  'resoltion': 'resolution',
+  'sibilence': 'sibilant',
+  'sibillant': 'sibilant',
+  'harhs': 'harsh',
+  'smoth': 'smooth',
+  'smoooth': 'smooth',
+  'trasparent': 'transparent',
+  'transparant': 'transparent',
+  'agressive': 'aggressive',
+  'aggresive': 'aggressive',
+  'rythmic': 'rhythmic',
+  'rythm': 'rhythm',
+  'congested': 'congested',
+  'congestd': 'congested',
+  'brigth': 'bright',
+  'birght': 'bright',
+  'fatige': 'fatigue',
+  'orgainc': 'organic',
+  'organc': 'organic',
+  'coherant': 'coherent',
+  'reavealing': 'revealing',
+  'reveling': 'revealing',
+
+  // Shorthand / product variants
+  'ares 2': 'ares ii',
+  'ares2': 'ares ii',
+  'hugo tt2': 'hugo tt2',
+  'tt 2': 'tt2',
+};
+
+/**
+ * Lightweight deterministic text normalization.
+ * Lowercases, then applies explicit corrections for known
+ * misspellings and shorthand before phrase matching.
+ */
+function normalizeText(lower: string): string {
+  let result = lower;
+  for (const [from, to] of Object.entries(CORRECTIONS)) {
+    if (result.includes(from)) {
+      result = result.replaceAll(from, to);
+    }
+  }
+  return result;
+}
+
 // ── Signal Processing ──────────────────────────────
 
 const SIGNALS_PATH = resolve(process.cwd(), '../../packages/signals/signals.yaml');
@@ -20,7 +89,7 @@ function loadSignalDictionary(): SignalDictionary {
 
 export function processText(text: string): ExtractedSignals {
   const dict = loadSignalDictionary();
-  const lower = text.toLowerCase();
+  const lower = normalizeText(text.toLowerCase());
 
   const traits: Record<string, SignalDirection> = {};
   const symptoms = new Set<string>();
