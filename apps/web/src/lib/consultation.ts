@@ -269,6 +269,14 @@ function findBrandProfile(text: string): BrandProfile | undefined {
   );
 }
 
+/** Look up a brand profile by exact brand name (case-insensitive). */
+function findBrandProfileByName(brandName: string): BrandProfile | undefined {
+  const lower = brandName.toLowerCase();
+  return BRAND_PROFILES.find((bp) =>
+    bp.names.some((name) => name.toLowerCase() === lower),
+  );
+}
+
 function findProductsByBrand(text: string): Product[] {
   const lower = text.toLowerCase();
   return ALL_PRODUCTS.filter((p) =>
@@ -297,6 +305,10 @@ function findTopologyMatch(text: string): { archetype: DesignArchetype; label: s
 function buildProductConsultation(products: Product[], subject: string): ConsultationResponse {
   const primary = products[0];
 
+  // Look up brand links from brand profile (for reference links in response)
+  const brandProfile = findBrandProfileByName(primary.brand);
+  const brandLinks = brandProfile?.links;
+
   // Try curated tendencies first
   if (hasTendencies(primary.tendencies)) {
     const top = selectDefaultTendencies(primary.tendencies.character, 3);
@@ -311,6 +323,7 @@ function buildProductConsultation(products: Product[], subject: string): Consult
         ? `System context matters: ${primary.tendencies.interactions[0].condition}, ${primary.tendencies.interactions[0].effect}.`
         : undefined,
       followUp: 'Are you considering this for a specific system, or exploring what it would bring?',
+      links: brandLinks,
     };
   }
 
@@ -329,6 +342,7 @@ function buildProductConsultation(products: Product[], subject: string): Consult
       philosophy: `${primary.brand} ${primary.name} is an ${primary.architecture} design. ${primary.description.split('.')[0]}.`,
       tendencies: `${emphText}${lessText}`,
       followUp: 'Are you considering this for a specific system, or exploring what its character would bring?',
+      links: brandLinks,
     };
   }
 
@@ -338,6 +352,7 @@ function buildProductConsultation(products: Product[], subject: string): Consult
     philosophy: `${primary.brand} ${primary.name} is an ${primary.architecture} design.`,
     tendencies: primary.description,
     followUp: 'What are you pairing it with, and what do you value most in your listening?',
+    links: brandLinks,
   };
 }
 

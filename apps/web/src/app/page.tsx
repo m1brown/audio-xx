@@ -341,8 +341,12 @@ export default function Home() {
     // Knowledge / philosophy questions — answer first, no diagnostic logic.
     // Also catches brand-level comparisons ("Chord vs Denafrips") that should
     // be handled at the philosophy level, not routed to product matching.
+    // Gear inquiries with subjects also try consultation first — this ensures
+    // brand links surface and richer brand profiles are used when available.
+    // Falls through to gear-response if consultation returns null.
     const isBrandComparison = intent === 'comparison' && isBrandOnlyComparison(subjectMatches);
-    if (effectiveMode === 'consultation' || isBrandComparison) {
+    const isGearWithSubjects = intent === 'gear_inquiry' && subjectMatches.length > 0;
+    if (effectiveMode === 'consultation' || isBrandComparison || isGearWithSubjects) {
       const consultResult = buildConsultationResponse(submittedText, subjectMatches);
       if (consultResult) {
         // Store comparison context for follow-up turns

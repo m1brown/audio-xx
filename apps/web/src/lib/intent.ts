@@ -73,7 +73,7 @@ const PRODUCT_NAMES = [
   'wavelight', 'wavedream', 'la voce', 'formula',
   'pavane', 'adagio', 'pegasus', 'aquarius', 'draco', 'dac8',
   'diva', 'diva monitor',
-  'p3esr', 'super hl5', 'orangutan', 'o/96',
+  'p3esr', 'super hl5', 'orangutan', 'o/96', 'o96',
   'dirty weekend', 'heresy', 'kanta', 'aria',
   'w5', 'w8', 'w11',
 ];
