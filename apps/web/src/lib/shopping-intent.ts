@@ -38,12 +38,24 @@ export type ShoppingCategory =
   | 'speakers'
   | 'headphones'
   | 'streamer'
+  | 'turntable'
   | 'general';
 
 export type ShoppingMode =
   | 'specific-component'
   | 'upgrade-path'
   | 'build-a-system';
+
+/** A category-specific dependency that influences recommendations. */
+export interface CategoryDependency {
+  id: string;
+  label: string;
+  status: 'present' | 'absent' | 'unknown';
+  /** Caveat shown in the recommendation when status !== 'present'. */
+  caveat: string | null;
+  /** Hint that feeds into the refinement question at the end. */
+  refinementHint: string | null;
+}
 
 export interface ShoppingContext {
   detected: boolean;
@@ -57,6 +69,8 @@ export interface ShoppingContext {
   useCaseProvided: boolean;
   preserveProvided: boolean;
   limitingProvided: boolean;
+  /** Category-specific dependencies (e.g., phono stage for turntables). */
+  dependencies: CategoryDependency[];
 }
 
 // ── Intent keywords ───────────────────────────────────
@@ -119,6 +133,10 @@ const CATEGORY_PATTERNS: CategoryPattern[] = [
   {
     category: 'streamer',
     keywords: ['streamer', 'transport', 'network player', 'renderer'],
+  },
+  {
+    category: 'turntable',
+    keywords: ['turntable', 'record player', 'vinyl player', 'vinyl setup', 'vinyl playback', 'tt setup'],
   },
 ];
 
@@ -345,6 +363,103 @@ export function parseSystemProfile(text: string): SystemProfile {
   return { outputType, systemCharacter, tubeAmplification, lowPowerContext };
 }
 
+// ── Category dependency detection ────────────────────
+//
+// Detects practical chain dependencies that influence recommendations.
+// Dependencies enrich the answer (caveats, example selection, refinement
+// questions) but never block it.
+
+const PHONO_PRESENT_PATTERNS = [
+  /\bphono\s*(pre)?amp\b/i,
+  /\bphono\s*stage\b/i,
+  /\bhave\s+a\s+phono\b/i,
+  /\bbuilt[- ]?in\s+phono\b/i,
+  /\bmy\s+phono\b/i,
+];
+
+const PHONO_ABSENT_PATTERNS = [
+  /\bno\s+phono\b/i,
+  /\bdon'?t\s+have\s+a?\s*(phono|preamp)\b/i,
+  /\bno\s+preamp\b/i,
+  /\bwithout\s+a?\s*phono\b/i,
+  /\bneed\s+a?\s*phono\b/i,
+  /\bdon'?t\s+have\s+a?\s*preamp\s*(yet)?\b/i,
+];
+
+const BUDGET_SCOPE_TABLE_ONLY = [
+  /\bjust\s+the\s+(table|turntable)\b/i,
+  /\bturntable\s+only\b/i,
+  /\btable\s+itself\b/i,
+];
+
+const BUDGET_SCOPE_FULL_SETUP = [
+  /\beverything\s+i\s+need\b/i,
+  /\bfull\s+(vinyl\s+)?setup\b/i,
+  /\bincluding\s+(the\s+)?phono\b/i,
+  /\bwhole\s+vinyl\b/i,
+];
+
+/**
+ * Detect category-specific dependencies from user text.
+ * Currently supports turntable dependencies; extensible to other categories.
+ */
+export function detectCategoryDependencies(
+  category: ShoppingCategory,
+  text: string,
+): CategoryDependency[] {
+  if (category === 'turntable') return detectTurntableDependencies(text);
+  return [];
+}
+
+function detectTurntableDependencies(text: string): CategoryDependency[] {
+  const deps: CategoryDependency[] = [];
+
+  // 1. Phono stage
+  const phonoPresent = PHONO_PRESENT_PATTERNS.some((re) => re.test(text))
+    && !PHONO_ABSENT_PATTERNS.some((re) => re.test(text));
+  const phonoAbsent = PHONO_ABSENT_PATTERNS.some((re) => re.test(text));
+  const phonoStatus: CategoryDependency['status'] = phonoAbsent
+    ? 'absent'
+    : phonoPresent
+      ? 'present'
+      : 'unknown';
+
+  deps.push({
+    id: 'phono_stage',
+    label: 'phono stage',
+    status: phonoStatus,
+    caveat: phonoStatus === 'absent'
+      ? 'You mentioned you don\'t have a phono preamp. The turntable needs a phono stage before it reaches your amplifier. Some options below include one; others leave room in the budget for a separate unit.'
+      : phonoStatus === 'unknown'
+        ? 'If you don\'t already have a phono stage, you\'ll need one between the turntable and your amplifier — some turntables include one built in.'
+        : null,
+    refinementHint: phonoStatus === 'absent'
+      ? 'Is the budget for the turntable alone, or does it need to cover the phono stage as well?'
+      : null,
+  });
+
+  // 2. Budget scope
+  const scopeTableOnly = BUDGET_SCOPE_TABLE_ONLY.some((re) => re.test(text));
+  const scopeFullSetup = BUDGET_SCOPE_FULL_SETUP.some((re) => re.test(text));
+  const scopeStatus: CategoryDependency['status'] = scopeTableOnly
+    ? 'present' // "present" = we know the scope (table only)
+    : scopeFullSetup
+      ? 'present' // we know the scope (full setup)
+      : 'unknown';
+
+  if (scopeStatus === 'unknown' && phonoStatus === 'absent') {
+    deps.push({
+      id: 'budget_scope',
+      label: 'budget scope',
+      status: 'unknown',
+      caveat: null, // phono caveat covers this
+      refinementHint: 'Is the budget for the turntable alone, or does it need to cover the phono stage as well?',
+    });
+  }
+
+  return deps;
+}
+
 // DEFAULT_SYSTEM_PROFILE imported from ./system-profile
 
 // ── Detection ─────────────────────────────────────────
@@ -370,6 +485,7 @@ export function detectShoppingIntent(
       useCaseProvided: false,
       preserveProvided: false,
       limitingProvided: false,
+      dependencies: [],
     };
   }
 
@@ -405,6 +521,9 @@ export function detectShoppingIntent(
   const preserveProvided = PRESERVE_KEYWORDS.some((kw) => lower.includes(kw));
   const limitingProvided = LIMITING_KEYWORDS.some((kw) => lower.includes(kw));
 
+  // 5. Category-specific dependencies
+  const dependencies = detectCategoryDependencies(category, userText);
+
   return {
     detected,
     mode,
@@ -417,6 +536,7 @@ export function detectShoppingIntent(
     useCaseProvided,
     preserveProvided,
     limitingProvided,
+    dependencies,
   };
 }
 
@@ -478,6 +598,8 @@ function phraseTasteQuestion(ctx: ShoppingContext): string {
       return 'What matters most to you in the sound — warmth and immersion, or detail and separation?';
     case 'streamer':
       return 'Is the streamer your main source, or a transport feeding an external DAC?';
+    case 'turntable':
+      return 'What draws you to vinyl — the ritual and texture, or the fidelity and detail?';
     default:
       return 'What matters most to you in the sound?';
   }
@@ -507,6 +629,8 @@ function phraseSystemQuestion(ctx: ShoppingContext): string {
       return 'What amp and source are driving the speakers?';
     case 'headphones':
       return 'What DAC or source will be driving the headphones?';
+    case 'turntable':
+      return 'What amplification and speakers will the turntable feed into? And do you already have a phono stage?';
     default:
       return 'What does the rest of your chain look like?';
   }
@@ -652,6 +776,10 @@ export function isAnswerReady(
     case 'specific-component':
       // Full: category known + taste + budget + system
       // Also allow: category + taste + budget (system becomes a caveat)
+      // Turntable exception: budget alone is sufficient — taste signals
+      // are less critical for turntable mechanical-platform recommendations.
+      // "Recommend now, refine later."
+      if (ctx.category === 'turntable' && hasBudget) return true;
       return ctx.category !== 'general' && hasTaste && hasBudget;
 
     case 'upgrade-path':
@@ -750,6 +878,10 @@ export interface ShoppingAnswer {
   provisional?: boolean;
   /** Which context dimensions are missing — shown as caveats on provisional answers. */
   statedGaps?: GapDimension[];
+  /** Category-specific dependency caveat (e.g., phono stage for turntables). */
+  dependencyCaveat?: string;
+  /** Dependency-aware refinement question appended after the main answer. */
+  refinementQuestion?: string;
 }
 
 // ── Taste direction templates ─────────────────────────
@@ -928,6 +1060,7 @@ const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
   speakers: 'speakers',
   headphones: 'headphones',
   streamer: 'streamer',
+  turntable: 'turntable',
   general: 'component',
 };
 
@@ -935,6 +1068,7 @@ const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
 
 import { DAC_PRODUCTS } from './products/dacs';
 import type { Product } from './products/dacs';
+import { selectTurntableExamples } from './products/turntables';
 import { rankProducts } from './product-scoring';
 import { tagProductArchetype } from './archetype';
 import { topTraits, type TasteProfile as UserTasteProfile, type ProfileTraitKey } from './taste-profile';
@@ -1052,10 +1186,25 @@ function selectProductExamples(
   userTraits: Record<string, SignalDirection>,
   budgetAmount: number | null,
   systemProfile: SystemProfile,
+  dependencies: CategoryDependency[],
   tasteProfile?: UserTasteProfile,
   reasoning?: ReasoningResult,
 ): ProductExample[] {
-  // Only DACs have a catalog for now
+  // ── Turntable: illustrative examples (no trait scoring) ──
+  if (category === 'turntable') {
+    const phonoDep = dependencies.find((d) => d.id === 'phono_stage');
+    const phonoAbsent = phonoDep?.status === 'absent';
+    const selected = selectTurntableExamples(budgetAmount, phonoAbsent, 3);
+    return selected.map((t) => ({
+      name: t.name,
+      brand: t.brand,
+      price: t.price,
+      priceCurrency: t.priceCurrency,
+      fitNote: phonoAbsent ? t.phonoAbsentNote : t.fitNote,
+    }));
+  }
+
+  // ── DAC: scored catalog ──────────────────────────────
   if (category !== 'dac') return [];
   if (budgetAmount === null) return [];
 
@@ -1144,6 +1293,17 @@ export function buildShoppingAnswer(
   // Find the best-matching taste profile
   const matchedProfile = TASTE_PROFILES.find((p) => p.check(traits));
   const taste = matchedProfile ?? FALLBACK_TASTE;
+  const hasTasteSignal = matchedProfile !== undefined;
+
+  // ── Category-specific practical path (turntable, etc.) ──
+  // For categories without a scored catalog, use illustrative
+  // examples and practical framing instead of taste-profile-only
+  // messaging. Taste signals enrich but don't gate the answer.
+  if (ctx.category === 'turntable') {
+    return buildTurntableAnswer(ctx, signals, taste, matchedProfile, hasTasteSignal, tasteProfile, reasoning);
+  }
+
+  // ── Standard taste-driven path (DAC, etc.) ──────────
 
   // 1. Preference summary — use reasoning taste label when available
   const effectiveTasteLabel = reasoning?.taste.tasteLabel ?? taste.label;
@@ -1168,7 +1328,7 @@ export function buildShoppingAnswer(
 
   // 4. Product examples (only when catalog exists + budget known)
   // Pass reasoning for directional bias — existing scoring is preserved.
-  const productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, tasteProfile, reasoning);
+  const productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning);
 
   // 5. Watch for
   const watchFor = taste.watchFor;
@@ -1194,6 +1354,126 @@ export function buildShoppingAnswer(
     provisional,
     statedGaps: provisional ? gaps : undefined,
   };
+}
+
+// ── Turntable-specific answer builder ─────────────────
+//
+// Turntables don't have a scored tendency catalog, so the answer
+// prioritizes practical recommendations (mechanical platform,
+// dependency resolution) over taste-profile-driven direction.
+// Taste signals enrich the framing when available but never gate it.
+
+function buildTurntableAnswer(
+  ctx: ShoppingContext,
+  signals: ExtractedSignals,
+  taste: Pick<TasteProfile, 'label' | 'defaultDirection' | 'defaultWhy' | 'watchFor'>,
+  matchedProfile: TasteProfile | undefined,
+  hasTasteSignal: boolean,
+  userTasteProfile?: UserTasteProfile,
+  reasoning?: ReasoningResult,
+): ShoppingAnswer {
+  const budgetLabel = ctx.budgetAmount ? `$${ctx.budgetAmount.toLocaleString()}` : 'your budget';
+
+  // System context enrichment
+  const systemParts: string[] = [];
+  if (ctx.systemProvided) {
+    // Extract system mentions for the opening framing
+    const systemText = extractSystemMentions(ctx);
+    if (systemText) systemParts.push(systemText);
+  }
+
+  // 1. Preference summary — practical framing for turntables
+  let preferenceSummary: string;
+  if (hasTasteSignal) {
+    const effectiveLabel = reasoning?.taste.tasteLabel ?? taste.label;
+    preferenceSummary = `At ${budgetLabel}, the priority is a well-sorted mechanical platform with a good stock cartridge. Your preference for ${effectiveLabel} will matter more at the phono-stage and cartridge level than at the turntable level in this range.`;
+  } else {
+    preferenceSummary = systemParts.length > 0
+      ? `At ${budgetLabel} paired with ${systemParts.join(' and ')}, the priority is a solid mechanical platform with a good stock cartridge and reliable speed stability.`
+      : `At ${budgetLabel}, the priority is a solid mechanical platform with a good stock cartridge and reliable speed stability.`;
+  }
+
+  // 2. Best-fit direction — practical, not taste-driven
+  const bestFitDirection = 'A turntable with solid speed stability, a decent tonearm, and a musical stock cartridge. At this price, mechanical fundamentals matter more than exotic features.';
+
+  // 3. Why this fits
+  const whyThisFits = [
+    'Mechanical stability and tonearm quality are the primary performance drivers at this budget.',
+    'A good stock cartridge reduces the need for immediate upgrades.',
+    ...(ctx.systemProvided
+      ? ['Your existing amplification and speakers are resolving enough to reward a competent source.']
+      : []),
+  ];
+
+  // 4. Product examples — illustrative, dependency-aware
+  const productExamples = selectProductExamples(
+    ctx.category, signals.traits, ctx.budgetAmount,
+    ctx.systemProfile, ctx.dependencies, userTasteProfile, reasoning,
+  );
+
+  // 5. Watch for — practical turntable caveats
+  const watchFor = [
+    'Speed stability and low wow/flutter matter more than specifications suggest — listen for pitch waver on sustained piano notes.',
+    'The stock cartridge is usually good enough to start. Upgrading the cartridge later is one of the most cost-effective improvements.',
+    'Turntable placement matters — a solid, level surface away from speakers reduces feedback and vibration.',
+  ];
+
+  // 6. System note
+  const systemNote = ctx.systemProvided
+    ? 'Your existing chain should work well with any of these options. The turntable is the starting point — refinement comes later through cartridge and phono-stage choices.'
+    : undefined;
+
+  // 7. Dependency caveat and refinement question
+  const depCaveats = ctx.dependencies
+    .filter((d) => d.caveat !== null)
+    .map((d) => d.caveat!);
+  const dependencyCaveat = depCaveats.length > 0 ? depCaveats.join(' ') : undefined;
+
+  // Refinement question — prefer dependency-driven, fall back to general
+  const depHints = ctx.dependencies
+    .filter((d) => d.refinementHint !== null)
+    .map((d) => d.refinementHint!);
+  const refinementQuestion = depHints.length > 0
+    ? depHints[0]
+    : !hasTasteSignal
+      ? 'What kind of music do you listen to most? That can help refine the direction.'
+      : undefined;
+
+  // Mark as provisional (turntable recommendations are always provisional
+  // since we don't have a scored catalog)
+  const gaps = getStatedGaps(ctx, signals);
+
+  return {
+    category: 'turntable',
+    budget: ctx.budgetAmount,
+    preferenceSummary,
+    bestFitDirection,
+    whyThisFits,
+    productExamples,
+    watchFor,
+    systemNote,
+    provisional: true,
+    statedGaps: gaps.length > 0 ? gaps : undefined,
+    dependencyCaveat,
+    refinementQuestion,
+  };
+}
+
+/**
+ * Extract a short human-readable description of system context
+ * from the shopping context (e.g., "WLM Diva monitors and JOB integrated").
+ * Returns null if no meaningful system info was provided.
+ */
+function extractSystemMentions(ctx: ShoppingContext): string | null {
+  if (!ctx.systemProvided) return null;
+  const sp = ctx.systemProfile;
+  const parts: string[] = [];
+  if (sp.outputType === 'speakers') parts.push('speakers');
+  else if (sp.outputType === 'headphones') parts.push('headphones');
+  if (sp.tubeAmplification) parts.push('tube amplification');
+  if (sp.systemCharacter === 'warm') parts.push('a warm-leaning system');
+  else if (sp.systemCharacter === 'bright') parts.push('a bright-leaning system');
+  return parts.length > 0 ? parts.join(' and ') : 'your current system';
 }
 
 /**

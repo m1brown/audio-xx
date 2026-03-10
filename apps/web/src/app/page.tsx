@@ -1259,6 +1259,38 @@ function ShoppingRecommendation({
         </p>
       )}
 
+      {/* Dependency caveat (e.g., phono stage for turntables) */}
+      {answer.dependencyCaveat && (
+        <div
+          style={{
+            margin: '0 0 1.25rem 0',
+            padding: '0.75rem 1rem',
+            borderLeft: '3px solid #c4915e',
+            background: '#fdf8f3',
+            fontSize: '0.95rem',
+            lineHeight: 1.6,
+            color: '#555',
+          }}
+        >
+          <strong style={{ color: '#8a6530' }}>Important:</strong>{' '}
+          {answer.dependencyCaveat}
+        </div>
+      )}
+
+      {/* Dependency-aware refinement question */}
+      {answer.refinementQuestion && (
+        <p
+          style={{
+            margin: '0 0 1rem 0',
+            color: '#555',
+            fontStyle: 'italic',
+            lineHeight: 1.55,
+          }}
+        >
+          {answer.refinementQuestion}
+        </p>
+      )}
+
       {/* Collapsible signal diagnostics */}
       {(signals.matched_phrases.length > 0 ||
         signals.symptoms.length > 0 ||
