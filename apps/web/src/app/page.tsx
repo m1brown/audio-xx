@@ -3,8 +3,15 @@
 import { useReducer, useEffect, useRef, useCallback, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import EvaluationOutput from '@/components/EvaluationOutput';
 import TasteRadar from '@/components/TasteRadar';
+import AdvisoryMessage from '@/components/advisory/AdvisoryMessage';
+import {
+  consultationToAdvisory,
+  gearResponseToAdvisory,
+  shoppingToAdvisory,
+  analysisToAdvisory,
+} from '@/lib/advisory-response';
+import type { AdvisoryResponse } from '@/lib/advisory-response';
 import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
@@ -15,30 +22,12 @@ import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, buildConsultationFollowUp } from '@/lib/consultation';
-import type { ConsultationResponse } from '@/lib/consultation';
-import type { SystemDirection } from '@/lib/system-direction';
 import type { GlossaryResult } from '@/lib/glossary';
-import type { ShoppingAnswer } from '@/lib/shopping-intent';
-import type { Message, ConversationState, GearResponse } from '@/lib/conversation-types';
-import type { ExtractedSignals } from '@/lib/signal-types';
-import type { EvaluationResult } from '@/lib/rule-types';
+import type { Message, ConversationState } from '@/lib/conversation-types';
 import { parseTasteProfile, topTraits, isProfileEmpty, type TasteProfile } from '@/lib/taste-profile';
 import { detectChurnSignal } from '@/lib/churn-avoidance';
 import { reason } from '@/lib/reasoning';
 import type { ReasoningResult } from '@/lib/reasoning';
-
-// ── Helpers ──────────────────────────────────────────
-
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  USD: '$', EUR: '€', GBP: '£', JPY: '¥', AUD: 'A$', CAD: 'C$', CHF: 'CHF ',
-};
-
-/** Format a price with its currency symbol. Falls back to ISO code prefix. */
-function formatPrice(amount: number, currency?: string): string {
-  const code = currency ?? 'USD';
-  const symbol = CURRENCY_SYMBOLS[code] ?? `${code} `;
-  return `${symbol}${amount.toLocaleString()}`;
-}
 
 // ── Constants ─────────────────────────────────────────
 
@@ -61,12 +50,9 @@ const PLACEHOLDER_INTERVAL = 4000;
 type Action =
   | { type: 'SET_INPUT'; value: string }
   | { type: 'ADD_USER_MESSAGE' }
-  | { type: 'ADD_ANALYSIS'; signals: ExtractedSignals; result: EvaluationResult; systemDirection?: SystemDirection }
-  | { type: 'ADD_SHOPPING_ANSWER'; answer: ShoppingAnswer; signals: ExtractedSignals }
   | { type: 'ADD_QUESTION'; clarification: ClarificationResponse }
   | { type: 'ADD_GLOSSARY'; entry: GlossaryResult }
-  | { type: 'ADD_GEAR_RESPONSE'; response: GearResponse }
-  | { type: 'ADD_CONSULTATION'; consultation: ConsultationResponse }
+  | { type: 'ADD_ADVISORY'; advisory: AdvisoryResponse }
   | { type: 'ADD_NOTE'; content: string }
   | { type: 'SET_MODE'; mode: ConversationMode }
   | { type: 'SET_REASONING'; reasoning: ReasoningResult }
@@ -97,30 +83,6 @@ function reducer(state: ConversationState, action: Action): ConversationState {
         turnCount: state.turnCount + 1,
       };
 
-    case 'ADD_ANALYSIS':
-      return {
-        ...state,
-        messages: [
-          ...state.messages,
-          {
-            role: 'assistant',
-            kind: 'analysis',
-            signals: action.signals,
-            result: action.result,
-            ...(action.systemDirection ? { systemDirection: action.systemDirection } : {}),
-          },
-        ],
-      };
-
-    case 'ADD_SHOPPING_ANSWER':
-      return {
-        ...state,
-        messages: [
-          ...state.messages,
-          { role: 'assistant', kind: 'shopping-answer', answer: action.answer, signals: action.signals },
-        ],
-      };
-
     case 'ADD_QUESTION':
       return {
         ...state,
@@ -139,21 +101,12 @@ function reducer(state: ConversationState, action: Action): ConversationState {
         ],
       };
 
-    case 'ADD_GEAR_RESPONSE':
+    case 'ADD_ADVISORY':
       return {
         ...state,
         messages: [
           ...state.messages,
-          { role: 'assistant', kind: 'gear-response', response: action.response },
-        ],
-      };
-
-    case 'ADD_CONSULTATION':
-      return {
-        ...state,
-        messages: [
-          ...state.messages,
-          { role: 'assistant', kind: 'consultation', consultation: action.consultation },
+          { role: 'assistant', kind: 'advisory', advisory: action.advisory },
         ],
       };
 
@@ -284,7 +237,7 @@ export default function Home() {
       isComparisonFollowUp(submittedText, state.activeComparison)
     ) {
       const refinement = buildComparisonRefinement(state.activeComparison, submittedText);
-      dispatch({ type: 'ADD_CONSULTATION', consultation: refinement });
+      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(refinement) });
       dispatch({ type: 'SET_LOADING', value: false });
       return;
     }
@@ -300,7 +253,7 @@ export default function Home() {
       const contextKind = detectContextEnrichment(submittedText);
       if (contextKind) {
         const refinement = buildContextRefinement(state.activeComparison, submittedText, contextKind);
-        dispatch({ type: 'ADD_CONSULTATION', consultation: refinement });
+        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(refinement) });
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -325,7 +278,7 @@ export default function Home() {
     ) {
       const followUp = buildConsultationFollowUp(state.activeConsultation, submittedText);
       if (followUp) {
-        dispatch({ type: 'ADD_CONSULTATION', consultation: followUp });
+        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(followUp) });
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -366,7 +319,7 @@ export default function Home() {
             originalQuery: submittedText,
           });
         }
-        dispatch({ type: 'ADD_CONSULTATION', consultation: consultResult });
+        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(consultResult) });
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -386,9 +339,9 @@ export default function Home() {
       intent = 'diagnosis';
     }
 
-    // Count how many shopping-answer turns have already been shown.
+    // Count how many shopping advisory turns have already been shown.
     const shoppingAnswerCount = messages.filter(
-      (m) => m.role === 'assistant' && m.kind === 'shopping-answer',
+      (m) => m.role === 'assistant' && m.kind === 'advisory' && m.advisory.kind === 'shopping',
     ).length;
 
     // Gear inquiries and comparisons — conversational path, skip diagnostic engine
@@ -412,7 +365,7 @@ export default function Home() {
             originalQuery: submittedText,
           });
         }
-        dispatch({ type: 'ADD_GEAR_RESPONSE', response: gearResponse });
+        dispatch({ type: 'ADD_ADVISORY', advisory: gearResponseToAdvisory(gearResponse) });
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -473,7 +426,7 @@ export default function Home() {
               });
             }
             const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning);
-            dispatch({ type: 'ADD_SHOPPING_ANSWER', answer, signals: data.signals });
+            dispatch({ type: 'ADD_ADVISORY', advisory: shoppingToAdvisory(answer, data.signals) });
 
             // Subtle note when the stored taste profile influenced the direction
             if (reasoning.taste.storedProfileUsed) {
@@ -525,7 +478,7 @@ export default function Home() {
           if (clarification) {
             dispatch({ type: 'ADD_QUESTION', clarification });
           } else {
-            dispatch({ type: 'ADD_ANALYSIS', signals: data.signals, result: data.result, systemDirection: diagDirection });
+            dispatch({ type: 'ADD_ADVISORY', advisory: analysisToAdvisory(data.result, data.signals, diagDirection) });
           }
         }
       }
@@ -548,7 +501,7 @@ export default function Home() {
   const lastMessage = messages[messages.length - 1];
   const hasPendingQuestion =
     lastMessage?.role === 'assistant' &&
-    (lastMessage.kind === 'question' || lastMessage.kind === 'gear-response');
+    (lastMessage.kind === 'question' || lastMessage.kind === 'advisory');
 
   return (
     <div
@@ -645,8 +598,8 @@ export default function Home() {
         <div style={{ marginTop: '0.75rem', marginBottom: '1.5rem' }}>
           {messages
             .filter((msg) => {
-              // In inquiry mode (pending question), suppress analysis messages
-              if (hasPendingQuestion && msg.role === 'assistant' && 'kind' in msg && msg.kind === 'analysis') {
+              // In inquiry mode (pending question), suppress diagnosis advisory messages
+              if (hasPendingQuestion && msg.role === 'assistant' && 'kind' in msg && msg.kind === 'advisory' && msg.advisory.kind === 'diagnosis') {
                 return false;
               }
               return true;
@@ -832,48 +785,11 @@ function MessageBubble({ message }: { message: Message }) {
     );
   }
 
-  if (message.kind === 'analysis') {
+  if (message.kind === 'advisory') {
     return (
       <div style={{ marginBottom: '1.75rem' }}>
         <hr style={{ border: 0, borderTop: '1px solid #e5e5e3', margin: '0 0 1.5rem 0' }} />
-
-        {/* System direction context — tendency and desired direction */}
-        {message.systemDirection && (message.systemDirection.tendencySummary || message.systemDirection.directionSummary) && (
-          <div
-            style={{
-              marginBottom: '1.25rem',
-              padding: '0.85rem 1.1rem',
-              borderLeft: '3px solid #a89870',
-              background: '#faf9f6',
-              borderRadius: '0 6px 6px 0',
-              color: '#444',
-              fontSize: '0.95rem',
-              lineHeight: 1.65,
-            }}
-          >
-            {message.systemDirection.tendencySummary && (
-              <p style={{ margin: '0 0 0.3rem 0' }}>
-                {message.systemDirection.tendencySummary}
-              </p>
-            )}
-            {message.systemDirection.directionSummary && (
-              <p style={{ margin: 0 }}>
-                {message.systemDirection.directionSummary}
-              </p>
-            )}
-          </div>
-        )}
-
-        <EvaluationOutput signals={message.signals} result={message.result} />
-      </div>
-    );
-  }
-
-  if (message.kind === 'shopping-answer') {
-    return (
-      <div style={{ marginBottom: '1.75rem' }}>
-        <hr style={{ border: 0, borderTop: '1px solid #e5e5e3', margin: '0 0 1.5rem 0' }} />
-        <ShoppingRecommendation answer={message.answer} signals={message.signals} />
+        <AdvisoryMessage advisory={message.advisory} />
       </div>
     );
   }
@@ -919,205 +835,6 @@ function MessageBubble({ message }: { message: Message }) {
           <p style={{ margin: 0, color: '#888', fontSize: '0.9rem', lineHeight: 1.55, fontStyle: 'italic' }}>
             {message.entry.example}
           </p>
-        )}
-      </div>
-    );
-  }
-
-  if (message.kind === 'gear-response') {
-    const { response } = message;
-    return (
-      <div
-        style={{
-          marginTop: '1.25rem',
-          marginBottom: '1.5rem',
-        }}
-      >
-        {/* "What I'm hearing" reflective block */}
-        {response.hearing && response.hearing.length > 0 && (
-          <div
-            style={{
-              margin: '0 0 1.1rem 0',
-              padding: '0.8rem 1.1rem',
-              borderLeft: '3px solid #a89870',
-              background: '#faf9f6',
-              borderRadius: '0 6px 6px 0',
-              fontSize: '0.93rem',
-              lineHeight: 1.65,
-              color: '#555',
-            }}
-          >
-            <div style={{ fontWeight: 600, color: '#444', marginBottom: '0.35rem', fontSize: '0.82rem', letterSpacing: '0.03em', textTransform: 'uppercase' as const }}>
-              What I&apos;m hearing
-            </div>
-            <ul style={{ margin: 0, paddingLeft: '1.15rem', listStyleType: 'disc' }}>
-              {response.hearing.map((bullet, i) => (
-                <li key={i} style={{ marginBottom: i < response.hearing!.length - 1 ? '0.25rem' : 0 }}>
-                  {bullet}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Advisory body — flows as natural prose */}
-        <div
-          style={{
-            margin: '0 0 1.1rem 0',
-            color: '#333',
-            fontSize: '0.98rem',
-            lineHeight: 1.7,
-          }}
-        >
-          <p style={{ margin: '0 0 0.7rem 0' }}>
-            {response.anchor}
-          </p>
-          <p style={{ margin: '0 0 0.7rem 0' }}>
-            {response.character}
-          </p>
-          {response.interpretation && (
-            <p style={{ margin: '0 0 0.7rem 0' }}>
-              {response.interpretation}
-            </p>
-          )}
-          <p style={{ margin: 0 }}>
-            {response.direction}
-          </p>
-        </div>
-
-        {/* Clarification question */}
-        <div
-          style={{
-            padding: '0.85rem 1.1rem',
-            borderLeft: '3px solid #5a8a9a',
-            background: '#f5f9fa',
-            borderRadius: '0 6px 6px 0',
-          }}
-        >
-          <div
-            style={{
-              color: '#222',
-              fontSize: '1.02rem',
-              lineHeight: 1.6,
-            }}
-          >
-            {response.clarification}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (message.kind === 'consultation') {
-    const { consultation } = message;
-    return (
-      <div
-        style={{
-          marginTop: '1.25rem',
-          marginBottom: '1.5rem',
-        }}
-      >
-        {/* Comparison summary — renders first, answers the question */}
-        {consultation.comparisonSummary && (
-          <p
-            style={{
-              margin: '0 0 1rem 0',
-              color: '#222',
-              fontSize: '1.02rem',
-              lineHeight: 1.7,
-              fontWeight: 500,
-            }}
-          >
-            {consultation.comparisonSummary}
-          </p>
-        )}
-
-        <div
-          style={{
-            margin: '0 0 1.1rem 0',
-            color: '#333',
-            fontSize: '0.98rem',
-            lineHeight: 1.7,
-          }}
-        >
-          <p style={{ margin: '0 0 0.7rem 0' }}>
-            {consultation.philosophy}
-          </p>
-          <p style={{ margin: '0 0 0.7rem 0' }}>
-            {consultation.tendencies}
-          </p>
-          {consultation.systemContext && (
-            <p style={{ margin: '0 0 0.7rem 0' }}>
-              {consultation.systemContext}
-            </p>
-          )}
-        </div>
-
-        {/* Structured reference links — grouped by kind */}
-        {consultation.links && consultation.links.length > 0 && (() => {
-          const refLinks = consultation.links.filter((l) => !l.kind || l.kind === 'reference');
-          const dealerLinks = consultation.links.filter((l) => l.kind === 'dealer');
-          const reviewLinks = consultation.links.filter((l) => l.kind === 'review');
-          const renderLinkGroup = (links: typeof consultation.links, label?: string) => (
-            <div style={{ marginBottom: '0.3rem' }}>
-              {label && (
-                <span style={{ color: '#888', fontSize: '0.82rem', marginRight: '0.5rem' }}>{label}</span>
-              )}
-              {links!.map((link) => (
-                <span key={link.url} style={{ marginRight: '1.2rem' }}>
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: '#4a7a8a', textDecoration: 'none' }}
-                  >
-                    {link.label}
-                    {link.region && link.region !== 'global' && (
-                      <span style={{ color: '#999', fontSize: '0.8rem', marginLeft: '0.25rem' }}>
-                        ({link.region})
-                      </span>
-                    )}
-                    {' '}↗
-                  </a>
-                </span>
-              ))}
-            </div>
-          );
-          return (
-            <div
-              style={{
-                marginBottom: '0.9rem',
-                fontSize: '0.88rem',
-                color: '#666',
-                lineHeight: 1.8,
-              }}
-            >
-              {refLinks.length > 0 && renderLinkGroup(refLinks)}
-              {dealerLinks.length > 0 && renderLinkGroup(dealerLinks, 'Dealers:')}
-              {reviewLinks.length > 0 && renderLinkGroup(reviewLinks, 'Reference:')}
-            </div>
-          );
-        })()}
-
-        {/* Optional light follow-up */}
-        {consultation.followUp && (
-          <div
-            style={{
-              padding: '0.85rem 1rem',
-              borderLeft: '3px solid #4a7a8a',
-              background: '#f7fafb',
-            }}
-          >
-            <div
-              style={{
-                color: '#222',
-                fontSize: '1.02rem',
-                lineHeight: 1.6,
-              }}
-            >
-              {consultation.followUp}
-            </div>
-          </div>
         )}
       </div>
     );
@@ -1185,234 +902,3 @@ function MessageBubble({ message }: { message: Message }) {
   );
 }
 
-// ── Shopping Recommendation (advisor-first) ──────────
-
-function ShoppingRecommendation({
-  answer,
-  signals,
-}: {
-  answer: ShoppingAnswer;
-  signals: ExtractedSignals;
-}) {
-  return (
-    <div style={{ color: '#111' }}>
-      {/* Provisional marker */}
-      {answer.provisional && (
-        <div
-          style={{
-            margin: '0 0 1rem 0',
-            padding: '0.6rem 0.85rem',
-            background: '#faf8f4',
-            borderLeft: '3px solid #b8a070',
-            fontSize: '0.92rem',
-            lineHeight: 1.55,
-            color: '#666',
-          }}
-        >
-          Based on what you&apos;ve shared so far — you can keep refining this.
-          Try things like &ldquo;I want more body&rdquo; or &ldquo;what if my system is already bright?&rdquo;
-        </div>
-      )}
-
-      {/* Preference summary */}
-      <p
-        style={{
-          margin: '0 0 1.25rem 0',
-          fontSize: '1.08rem',
-          lineHeight: 1.65,
-          color: '#444',
-        }}
-      >
-        {answer.preferenceSummary}
-      </p>
-
-      {/* Best-fit direction */}
-      <div style={{ marginBottom: '1.25rem' }}>
-        <SectionLabel>Best-fit direction</SectionLabel>
-        <p style={{ margin: 0, color: '#222', lineHeight: 1.6 }}>
-          {answer.bestFitDirection}
-        </p>
-      </div>
-
-      {/* Why this fits */}
-      {answer.whyThisFits.length > 0 && (
-        <div style={{ marginBottom: '1.25rem' }}>
-          <SectionLabel>Why this fits</SectionLabel>
-          <ul style={{ margin: 0, paddingLeft: '1.15rem', color: '#222' }}>
-            {answer.whyThisFits.map((reason, i) => (
-              <li key={i} style={{ marginBottom: '0.35rem', lineHeight: 1.55 }}>
-                {reason}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Possible product examples */}
-      {answer.productExamples.length > 0 && (
-        <div style={{ marginBottom: '1.25rem' }}>
-          <SectionLabel>Possible product examples</SectionLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {answer.productExamples.map((product, i) => (
-              <div
-                key={i}
-                style={{
-                  padding: '0.85rem 1rem',
-                  borderLeft: '3px solid #d9d9d9',
-                  background: '#fafafa',
-                }}
-              >
-                <div style={{ marginBottom: '0.3rem' }}>
-                  <strong style={{ color: '#111' }}>
-                    {product.brand} {product.name}
-                  </strong>
-                  {product.price > 0 && (
-                    <span style={{ color: '#666', marginLeft: '0.5rem', fontSize: '0.92rem' }}>
-                      {formatPrice(product.price, product.priceCurrency)}
-                    </span>
-                  )}
-                </div>
-                <p style={{ margin: '0 0 0.3rem 0', color: '#333', lineHeight: 1.55, fontSize: '0.95rem' }}>
-                  {product.fitNote}
-                </p>
-                {product.caution && (
-                  <p style={{ margin: '0 0 0.3rem 0', color: '#888', fontSize: '0.88rem', lineHeight: 1.5 }}>
-                    {product.caution}
-                  </p>
-                )}
-                {product.links && product.links.length > 0 && (
-                  <div style={{ fontSize: '0.88rem', color: '#666', marginTop: '0.25rem' }}>
-                    {product.links.map((link, li) => (
-                      <span key={li}>
-                        <a
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: '#555', textDecoration: 'underline', textUnderlineOffset: '2px' }}
-                        >
-                          {link.label}
-                        </a>
-                        {li < (product.links?.length ?? 0) - 1 && (
-                          <span style={{ margin: '0 0.4rem', color: '#ccc' }}>&middot;</span>
-                        )}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* What to watch for */}
-      {answer.watchFor.length > 0 && (
-        <div style={{ marginBottom: '1.25rem' }}>
-          <SectionLabel>What to watch for</SectionLabel>
-          <ul style={{ margin: 0, paddingLeft: '1.15rem', color: '#222' }}>
-            {answer.watchFor.map((item, i) => (
-              <li key={i} style={{ marginBottom: '0.35rem', lineHeight: 1.55 }}>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* System note */}
-      {answer.systemNote && (
-        <p
-          style={{
-            margin: '0 0 1rem 0',
-            color: '#666',
-            fontStyle: 'italic',
-            lineHeight: 1.55,
-          }}
-        >
-          {answer.systemNote}
-        </p>
-      )}
-
-      {/* Dependency caveat (e.g., phono stage for turntables) */}
-      {answer.dependencyCaveat && (
-        <div
-          style={{
-            margin: '0 0 1.25rem 0',
-            padding: '0.75rem 1rem',
-            borderLeft: '3px solid #c4915e',
-            background: '#fdf8f3',
-            fontSize: '0.95rem',
-            lineHeight: 1.6,
-            color: '#555',
-          }}
-        >
-          <strong style={{ color: '#8a6530' }}>Important:</strong>{' '}
-          {answer.dependencyCaveat}
-        </div>
-      )}
-
-      {/* Dependency-aware refinement question */}
-      {answer.refinementQuestion && (
-        <p
-          style={{
-            margin: '0 0 1rem 0',
-            color: '#555',
-            fontStyle: 'italic',
-            lineHeight: 1.55,
-          }}
-        >
-          {answer.refinementQuestion}
-        </p>
-      )}
-
-      {/* Collapsible signal diagnostics */}
-      {(signals.matched_phrases.length > 0 ||
-        signals.symptoms.length > 0 ||
-        Object.keys(signals.traits).length > 0) && (
-        <details style={{ marginTop: '1.5rem', color: '#666', fontSize: '0.92rem' }}>
-          <summary style={{ cursor: 'pointer' }}>How this was interpreted</summary>
-          <div style={{ marginTop: '0.6rem' }}>
-            {signals.matched_phrases.length > 0 && (
-              <p style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
-                <strong>Matched:</strong>{' '}
-                {signals.matched_phrases.join(', ')}
-              </p>
-            )}
-            {signals.symptoms.length > 0 && (
-              <p style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
-                <strong>Symptoms:</strong>{' '}
-                {signals.symptoms.map((s) => s.replace(/_/g, ' ')).join(', ')}
-              </p>
-            )}
-            {Object.keys(signals.traits).length > 0 && (
-              <p style={{ margin: 0, color: '#333' }}>
-                <strong>Traits:</strong>{' '}
-                {Object.entries(signals.traits)
-                  .map(([trait, direction]) => `${trait.replace(/_/g, ' ')} ${direction === 'up' ? '↑' : '↓'}`)
-                  .join(', ')}
-              </p>
-            )}
-          </div>
-        </details>
-      )}
-    </div>
-  );
-}
-
-/** Consistent uppercase section label */
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        marginBottom: '0.45rem',
-        fontSize: '0.8rem',
-        fontWeight: 700,
-        letterSpacing: '0.05em',
-        textTransform: 'uppercase',
-        color: '#666',
-      }}
-    >
-      {children}
-    </div>
-  );
-}
