@@ -585,8 +585,9 @@ export function buildComparisonRefinement(
   const contextA = infoA ? buildCriterionAnswer(nameA, infoA, criterion) : `I don't have enough data about ${nameA} to assess this specifically.`;
   const contextB = infoB ? buildCriterionAnswer(nameB, infoB, criterion) : `I don't have enough data about ${nameB} to assess this specifically.`;
 
-  // Build a qualified comparison summary that answers first without absolute verdicts
-  const summary = buildCriterionSummary(nameA, nameB, infoA, infoB, criterion);
+  // Build a qualified comparison summary that answers first without absolute verdicts.
+  // Brand-level comparisons use softer contrast language; product-level can be more specific.
+  const summary = buildCriterionSummary(nameA, nameB, infoA, infoB, criterion, activeComparison.scope);
 
   // Comparison-aware follow-up that reflects the axis of comparison
   const followUp = buildCriterionFollowUp(criterion);
@@ -603,8 +604,13 @@ export function buildComparisonRefinement(
 
 /**
  * Build a qualified comparison summary for a criterion-based follow-up.
- * Uses qualified language — "tends to be a more natural fit" rather than "is better".
- * When both sides are comparable, frames as a contrast rather than a winner.
+ *
+ * Scope rules:
+ *   brand-level  → always a qualified contrast ("more often associated with",
+ *                   "tends to lean toward") — never a hard winner statement
+ *   product-level → can be more specific when the data justifies it
+ *
+ * When both sides are comparable or evidence is thin, frames as a contrast.
  */
 function buildCriterionSummary(
   nameA: string,
@@ -612,6 +618,7 @@ function buildCriterionSummary(
   infoA: BrandInfo | null,
   infoB: BrandInfo | null,
   criterion: ComparisonCriterion,
+  scope: 'brand' | 'product',
 ): string {
   // If we don't have data for both, give an honest partial answer
   if (!infoA || !infoB) {
@@ -619,36 +626,57 @@ function buildCriterionSummary(
     return `I have more information about ${knownName} in this context. The comparison is limited without fuller data on both sides.`;
   }
 
-  // For amplifier pairing criteria, use system context to identify the more natural fit
+  // ── Amplifier pairing ──────────────────────────────
   if (criterion.category === 'amplifier_pairing') {
     const ampType = criterion.label.toLowerCase();
-    // Check if either side's system context explicitly mentions the amplifier type
     const aRelevance = assessRelevance(infoA, criterion);
     const bRelevance = assessRelevance(infoB, criterion);
 
+    if (scope === 'brand') {
+      // Brand-level: qualified contrast — describe associations, not winners
+      if (aRelevance > bRelevance) {
+        return `At the brand level, ${nameA} is more often associated with ${ampType}-friendly design and a ${ampType}-oriented listening aesthetic. ${nameB} can also work well with ${ampType}, especially where sensitivity and dynamic expression matter.`;
+      }
+      if (bRelevance > aRelevance) {
+        return `At the brand level, ${nameB} is more often associated with ${ampType}-friendly design and a ${ampType}-oriented listening aesthetic. ${nameA} can also work well with ${ampType}, especially where sensitivity and dynamic expression matter.`;
+      }
+      return `Both brands can work with ${ampType}, but they bring different priorities to the pairing. ${nameA} and ${nameB} shape the interaction differently based on their design assumptions.`;
+    }
+
+    // Product-level: can be more specific
     if (aRelevance > bRelevance) {
       return `${nameA} tends to be a more natural fit with ${ampType} — its design assumptions align more closely with that topology. ${nameB} can work, but may need more careful matching.`;
     }
     if (bRelevance > aRelevance) {
       return `${nameB} tends to be a more natural fit with ${ampType} — its design assumptions align more closely with that topology. ${nameA} can work, but may need more careful matching.`;
     }
-    return `Both can work with ${ampType}, but they respond differently. ${nameA} and ${nameB} have different design assumptions that shape how they interact with that amplifier topology.`;
+    return `Both can work with ${ampType}, but they respond differently — the interaction depends on specific amplifier characteristics and the rest of the chain.`;
   }
 
-  // For trait criteria, contrast their relative emphases
+  // ── Trait criteria ─────────────────────────────────
   if (criterion.category === 'trait') {
     const traitName = criterion.label.toLowerCase();
     const charA = extractCoreCharacter(infoA.tendencies);
     const charB = extractCoreCharacter(infoB.tendencies);
+
+    if (scope === 'brand') {
+      return `At the brand level, ${nameA} tends to lean toward ${charA}, while ${nameB} tends to lean toward ${charB}. Individual models within each range may vary — the question is which general direction serves your priorities better.`;
+    }
     return `In terms of ${traitName}, ${nameA} leans toward ${charA}, while ${nameB} leans toward ${charB}. The question is which balance serves your priorities better.`;
   }
 
-  // For room criteria
+  // ── Room criteria ──────────────────────────────────
   if (criterion.category === 'room') {
+    if (scope === 'brand') {
+      return `Room interaction depends on efficiency, radiation pattern, and bass loading — both ${nameA} and ${nameB} offer models that handle this differently. The brand-level tendency gives a starting point, but specific models matter more here.`;
+    }
     return `Room interaction is shaped by efficiency, radiation pattern, and bass loading — ${nameA} and ${nameB} handle this differently based on their design priorities.`;
   }
 
-  // General fallback
+  // ── General fallback ───────────────────────────────
+  if (scope === 'brand') {
+    return `${nameA} and ${nameB} approach this from different directions. At the brand level, the contrast is more about design philosophy than a clear advantage — the fit depends on your priorities.`;
+  }
   return `${nameA} and ${nameB} approach this from different directions. The fit depends on what you want the overall balance to feel like.`;
 }
 
