@@ -3,7 +3,7 @@ import type { EvaluationResult } from './rule-types';
 import type { ShoppingAnswer } from './shopping-intent';
 import type { GlossaryResult } from './glossary';
 import type { ClarificationResponse } from './clarification';
-import type { UserIntent } from './intent';
+import type { UserIntent, SubjectMatch } from './intent';
 import type { SystemDirection } from './system-direction';
 import type { SonicArchetype, UserArchetypePreference } from './archetype';
 import type { ConsultationResponse } from './consultation';
@@ -77,6 +77,17 @@ export interface ConversationState {
    * context for comparison, not a substitute for fresh inference.
    */
   lastReasoning?: ReasoningResult;
+  /**
+   * Active comparison context — persists across follow-up turns.
+   * Set when a comparison is detected, cleared on explicit mode shift
+   * (shopping, diagnosis). Allows elliptical follow-ups like
+   * "what's better with tubes?" to resolve against the stored pair.
+   */
+  activeComparison?: {
+    left: SubjectMatch;
+    right: SubjectMatch;
+    scope: 'brand' | 'product';
+  };
   // Future hooks for persistence (unused this pass):
   systemId?: string;
   profileId?: string;

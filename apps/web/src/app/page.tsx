@@ -9,12 +9,12 @@ import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
 import { checkGlossaryQuestion } from '@/lib/glossary';
-import { detectIntent, isBrandOnlyComparison } from '@/lib/intent';
+import { detectIntent, isBrandOnlyComparison, isComparisonFollowUp, type SubjectMatch } from '@/lib/intent';
 import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
-import { buildConsultationResponse } from '@/lib/consultation';
+import { buildConsultationResponse, buildComparisonRefinement } from '@/lib/consultation';
 import type { ConsultationResponse } from '@/lib/consultation';
 import type { SystemDirection } from '@/lib/system-direction';
 import type { GlossaryResult } from '@/lib/glossary';
@@ -70,6 +70,8 @@ type Action =
   | { type: 'ADD_NOTE'; content: string }
   | { type: 'SET_MODE'; mode: ConversationMode }
   | { type: 'SET_REASONING'; reasoning: ReasoningResult }
+  | { type: 'SET_COMPARISON'; left: SubjectMatch; right: SubjectMatch; scope: 'brand' | 'product' }
+  | { type: 'CLEAR_COMPARISON' }
   | { type: 'SET_LOADING'; value: boolean }
   | { type: 'RESET' };
 
@@ -168,6 +170,15 @@ function reducer(state: ConversationState, action: Action): ConversationState {
     case 'SET_REASONING':
       return { ...state, lastReasoning: action.reasoning };
 
+    case 'SET_COMPARISON':
+      return {
+        ...state,
+        activeComparison: { left: action.left, right: action.right, scope: action.scope },
+      };
+
+    case 'CLEAR_COMPARISON':
+      return { ...state, activeComparison: undefined };
+
     case 'SET_LOADING':
       return { ...state, isLoading: action.value };
 
@@ -252,6 +263,27 @@ export default function Home() {
     // (moved above consultation so subjectMatches are available for brand comparison routing)
     let { intent, subjects, subjectMatches, desires } = detectIntent(submittedText);
 
+    // ── Comparison follow-up detection ─────────────────
+    // If an active comparison exists and the message looks like a
+    // follow-up ("what's better with tubes?", "which has more flow?"),
+    // resolve against the stored pair instead of falling through.
+    if (
+      state.activeComparison &&
+      intent !== 'comparison' &&
+      isComparisonFollowUp(submittedText, state.activeComparison)
+    ) {
+      const refinement = buildComparisonRefinement(state.activeComparison, submittedText);
+      dispatch({ type: 'ADD_CONSULTATION', consultation: refinement });
+      dispatch({ type: 'SET_LOADING', value: false });
+      return;
+    }
+
+    // ── Clear comparison on explicit mode shift ─────────
+    // Shopping and diagnosis are new topics — drop the comparison context.
+    if (state.activeComparison && (effectiveMode === 'shopping' || effectiveMode === 'diagnosis')) {
+      dispatch({ type: 'CLEAR_COMPARISON' });
+    }
+
     // ── Consultation path ───────────────────────────────
     // Knowledge / philosophy questions — answer first, no diagnostic logic.
     // Also catches brand-level comparisons ("Chord vs Denafrips") that should
@@ -260,6 +292,15 @@ export default function Home() {
     if (effectiveMode === 'consultation' || isBrandComparison) {
       const consultResult = buildConsultationResponse(submittedText, subjectMatches);
       if (consultResult) {
+        // Store comparison context for follow-up turns
+        if (isBrandComparison && subjectMatches.length >= 2) {
+          dispatch({
+            type: 'SET_COMPARISON',
+            left: subjectMatches[0],
+            right: subjectMatches[1],
+            scope: 'brand',
+          });
+        }
         dispatch({ type: 'ADD_CONSULTATION', consultation: consultResult });
         dispatch({ type: 'SET_LOADING', value: false });
         return;
@@ -289,6 +330,15 @@ export default function Home() {
     if (intent === 'gear_inquiry' || intent === 'comparison') {
       const gearResponse = buildGearResponse(intent, subjects, submittedText, desires, tasteProfile ?? undefined);
       if (gearResponse) {
+        // Store comparison context for product-level comparisons
+        if (intent === 'comparison' && subjectMatches.length >= 2) {
+          dispatch({
+            type: 'SET_COMPARISON',
+            left: subjectMatches[0],
+            right: subjectMatches[1],
+            scope: subjectMatches.every((m) => m.kind === 'product') ? 'product' : 'brand',
+          });
+        }
         dispatch({ type: 'ADD_GEAR_RESPONSE', response: gearResponse });
         dispatch({ type: 'SET_LOADING', value: false });
         return;

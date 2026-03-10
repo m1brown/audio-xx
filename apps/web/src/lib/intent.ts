@@ -284,3 +284,53 @@ export function detectIntent(currentMessage: string): IntentResult {
 export function isBrandOnlyComparison(matches: SubjectMatch[]): boolean {
   return matches.length >= 2 && matches.every((m) => m.kind === 'brand');
 }
+
+// ── Comparison follow-up detection ──────────────────
+
+/**
+ * Patterns that indicate a follow-up question about an active comparison.
+ * These are elliptical — they omit the comparison subjects and rely on
+ * the stored context to resolve "which" or "what" against.
+ */
+const COMPARISON_FOLLOWUP_PATTERNS = [
+  /\bwhich\b.*\b(?:better|worse|more|less|warmer|brighter|cooler|richer|thinner|fuller|faster|slower)\b/i,
+  /\bwhat(?:'s| is)\s+better\b/i,
+  /\bwhat\s+about\b/i,
+  /\bhow\s+(?:about|do they differ|do they compare)\b/i,
+  /\bfor\s+(?:tubes?|solid[- ]state|small\s+rooms?|large\s+rooms?|near[- ]field|low[- ]power|high[- ]power|vinyl|digital|streaming)\b/i,
+  /\bwith\s+(?:tubes?|solid[- ]state|low[- ]power|high[- ]power|a\s+\w+\s+amp)\b/i,
+  /\bwhich\s+(?:one|is|has|would|should|do)\b/i,
+  /\band\s+(?:what|how)\s+about\b/i,
+];
+
+/**
+ * Check whether a message is a follow-up to an active comparison.
+ *
+ * Returns true when:
+ *   - An active comparison exists, AND
+ *   - The message matches a follow-up pattern, OR
+ *   - The message introduces no new subjects (elliptical reference)
+ *
+ * Does NOT return true if the message contains new subjects that
+ * differ from the active comparison (indicates a topic change).
+ */
+export function isComparisonFollowUp(
+  text: string,
+  activeComparison: { left: SubjectMatch; right: SubjectMatch } | undefined,
+): boolean {
+  if (!activeComparison) return false;
+
+  // Check if message introduces new, unrelated subjects
+  const newMatches = extractSubjectMatches(text);
+  if (newMatches.length > 0) {
+    const activeNames = new Set([
+      activeComparison.left.name.toLowerCase(),
+      activeComparison.right.name.toLowerCase(),
+    ]);
+    const hasNewSubject = newMatches.some((m) => !activeNames.has(m.name.toLowerCase()));
+    if (hasNewSubject) return false; // Topic changed
+  }
+
+  // Check follow-up patterns
+  return COMPARISON_FOLLOWUP_PATTERNS.some((p) => p.test(text));
+}

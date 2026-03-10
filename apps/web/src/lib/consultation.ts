@@ -496,3 +496,135 @@ export function buildConsultationResponse(
   // 6. No match
   return null;
 }
+
+// ── Comparison refinement ────────────────────────────
+
+/**
+ * Build a follow-up comparison response that focuses on a specific criterion.
+ *
+ * Used when the user asks a follow-up like "what's better with tubes?"
+ * or "which has more flow?" against an active comparison context.
+ *
+ * @param activeComparison - stored left/right subjects and scope
+ * @param followUpMessage  - the user's follow-up question
+ */
+export function buildComparisonRefinement(
+  activeComparison: { left: SubjectMatch; right: SubjectMatch; scope: 'brand' | 'product' },
+  followUpMessage: string,
+): ConsultationResponse {
+  const nameA = capitalize(activeComparison.left.name);
+  const nameB = capitalize(activeComparison.right.name);
+
+  // Resolve profiles or catalog summaries for both sides
+  const infoA = resolveBrandInfo(activeComparison.left.name);
+  const infoB = resolveBrandInfo(activeComparison.right.name);
+
+  // Extract the criterion from the follow-up
+  const criterion = extractCriterion(followUpMessage);
+
+  // Build a criterion-focused comparison
+  const contextA = infoA ? buildCriterionAnswer(nameA, infoA, criterion) : `I don't have enough data about ${nameA} to assess this specifically.`;
+  const contextB = infoB ? buildCriterionAnswer(nameB, infoB, criterion) : `I don't have enough data about ${nameB} to assess this specifically.`;
+
+  return {
+    subject: `${nameA} vs ${nameB} — ${criterion.label}`,
+    philosophy: `${contextA}\n\n${contextB}`,
+    tendencies: `The difference here comes down to design priorities — ${criterion.label.toLowerCase()} is handled differently by each approach.`,
+    systemContext: 'Which fits better depends on the rest of your system and what you want the overall balance to feel like.',
+    followUp: 'Would you like to explore a specific pairing, or does this help narrow things down?',
+  };
+}
+
+/** Resolved brand info for comparison refinement. */
+interface BrandInfo {
+  philosophy: string;
+  tendencies: string;
+  systemContext?: string;
+}
+
+/** Resolve brand info from curated profile, catalog, or null. */
+function resolveBrandInfo(brandName: string): BrandInfo | null {
+  // Curated profile
+  const profile = findBrandProfile(brandName);
+  if (profile) {
+    return {
+      philosophy: profile.philosophy,
+      tendencies: profile.tendencies,
+      systemContext: profile.systemContext,
+    };
+  }
+  // Catalog-derived
+  const products = ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === brandName.toLowerCase());
+  if (products.length > 0) {
+    const summary = deriveBrandSummaryFromCatalog(brandName, products);
+    return { philosophy: summary.philosophy, tendencies: summary.tendencies };
+  }
+  return null;
+}
+
+/** Extracted criterion from a comparison follow-up. */
+interface ComparisonCriterion {
+  label: string;
+  category: 'amplifier_pairing' | 'room' | 'trait' | 'general';
+  raw: string;
+}
+
+/** Extract the criterion from a follow-up question. */
+function extractCriterion(text: string): ComparisonCriterion {
+  const lower = text.toLowerCase();
+
+  // Amplifier pairing
+  if (/tubes?|valve|single[- ]ended|triode|set\b/i.test(lower)) {
+    return { label: 'Tube amplification', category: 'amplifier_pairing', raw: text };
+  }
+  if (/solid[- ]state|class[- ]?[abd]|transistor/i.test(lower)) {
+    return { label: 'Solid-state amplification', category: 'amplifier_pairing', raw: text };
+  }
+  if (/low[- ]power/i.test(lower)) {
+    return { label: 'Low-power amplification', category: 'amplifier_pairing', raw: text };
+  }
+
+  // Room context
+  if (/small\s+room/i.test(lower)) {
+    return { label: 'Small rooms', category: 'room', raw: text };
+  }
+  if (/large\s+room/i.test(lower)) {
+    return { label: 'Large rooms', category: 'room', raw: text };
+  }
+  if (/near[- ]field/i.test(lower)) {
+    return { label: 'Near-field listening', category: 'room', raw: text };
+  }
+
+  // Sonic traits
+  if (/warm/i.test(lower)) return { label: 'Warmth', category: 'trait', raw: text };
+  if (/flow/i.test(lower)) return { label: 'Flow', category: 'trait', raw: text };
+  if (/clarity|detail/i.test(lower)) return { label: 'Clarity', category: 'trait', raw: text };
+  if (/rhythm|timing|pace/i.test(lower)) return { label: 'Rhythm', category: 'trait', raw: text };
+  if (/tonal|body|weight|dense|density/i.test(lower)) return { label: 'Tonal density', category: 'trait', raw: text };
+  if (/spatial|soundstage|imaging/i.test(lower)) return { label: 'Spatial depth', category: 'trait', raw: text };
+  if (/dynamic|punch/i.test(lower)) return { label: 'Dynamics', category: 'trait', raw: text };
+
+  // General fallback
+  return { label: 'This context', category: 'general', raw: text };
+}
+
+/** Build a criterion-specific answer for one side of a comparison. */
+function buildCriterionAnswer(
+  brandName: string,
+  info: BrandInfo,
+  criterion: ComparisonCriterion,
+): string {
+  if (criterion.category === 'amplifier_pairing' && info.systemContext) {
+    return `${brandName}: ${takeSentences(info.systemContext, 2)}`;
+  }
+  if (criterion.category === 'room' && info.systemContext) {
+    return `${brandName}: ${takeSentences(info.systemContext, 2)}`;
+  }
+  if (criterion.category === 'trait') {
+    return `${brandName}: ${takeSentences(info.tendencies, 2)}`;
+  }
+  // General — use tendencies + system context
+  const parts = [takeSentences(info.tendencies, 1)];
+  if (info.systemContext) parts.push(takeSentences(info.systemContext, 1));
+  return `${brandName}: ${parts.join(' ')}`;
+}
