@@ -84,6 +84,16 @@ interface BrandLink {
   region?: string;
 }
 
+/** A distinct design family within a brand's range. */
+interface DesignFamily {
+  /** Short name (e.g. "O series", "Gibbon series"). */
+  name: string;
+  /** One-line character description. */
+  character: string;
+  /** Optional amplifier-pairing note. */
+  ampPairing?: string;
+}
+
 interface BrandProfile {
   names: string[];
   philosophy: string;
@@ -91,9 +101,36 @@ interface BrandProfile {
   systemContext: string;
   /** Optional structured reference links — informational, not ranked. */
   links?: BrandLink[];
+  /**
+   * Notable design families within the brand's range.
+   * Present when a single brand-level tendency would hide important
+   * differences between product lines.
+   */
+  designFamilies?: DesignFamily[];
 }
 
 const BRAND_PROFILES: BrandProfile[] = [
+  {
+    names: ['devore', 'devore fidelity'],
+    philosophy: 'DeVore Fidelity designs speakers around musical engagement and natural tonal character. The philosophy prioritises ease and flow over analytical precision.',
+    tendencies: 'Listeners describe DeVore speakers as warm, rhythmically alive, and harmonically rich. They tend to emphasise tonal body and midrange presence at the cost of some measured linearity.',
+    systemContext: 'DeVore speakers span a range of sensitivities and amplifier requirements. The brand-level tendency is warmth and engagement, but the specific design family matters for amplifier pairing.',
+    links: [
+      { label: 'Official website', url: 'https://www.dfridelity.com/', region: 'global' },
+    ],
+    designFamilies: [
+      {
+        name: 'Orangutan (O) series',
+        character: 'High sensitivity (~96–97 dB), designed around low-power tube amplification. Warm, dense, flowing.',
+        ampPairing: 'Voiced for single-ended triodes and low-power tubes (2–30W). A natural tube partner.',
+      },
+      {
+        name: 'Gibbon series',
+        character: 'Lower sensitivity (~87–89 dB), more conventional load. Still warm-leaning, but needs more power.',
+        ampPairing: 'Requires moderate power (30W+). Works with both solid-state and higher-power tube amps.',
+      },
+    ],
+  },
   {
     names: ['shindo'],
     philosophy: 'Shindo amplifiers are hand-built, tube-based designs rooted in vintage circuit topologies. The design philosophy prioritizes harmonic richness and tonal saturation over measured neutrality.',
@@ -113,6 +150,18 @@ const BRAND_PROFILES: BrandProfile[] = [
       { label: 'Pass Labs official', url: 'https://www.passlabs.com/', region: 'global' },
       { label: 'First Watt official', url: 'https://www.firstwatt.com/', region: 'global' },
       { label: 'Dealer (Reno HiFi)', url: 'https://www.renohifi.com/', region: 'US' },
+    ],
+    designFamilies: [
+      {
+        name: 'Pass Labs (main line)',
+        character: 'Class A and Class AB designs with substantial power. Warm for solid-state, controlled, composed.',
+        ampPairing: 'Works across a wide range of speakers, including moderate-to-low-sensitivity designs.',
+      },
+      {
+        name: 'First Watt',
+        character: 'Low-power single-ended solid-state. Emphasises texture, intimacy, and midrange nuance.',
+        ampPairing: 'Pairs with high-efficiency speakers (93 dB+). Similar territory to low-power tube amps.',
+      },
     ],
   },
   {
@@ -344,14 +393,53 @@ function buildBrandComparison(
   const charB = extractCoreCharacter(profileB.tendencies);
   const summary = `${nameA} tends toward ${charA}, while ${nameB} leans toward ${charB}.`;
 
+  // Check for design families that would qualify the brand-level comparison
+  const familiesA = 'designFamilies' in profileA ? (profileA as BrandProfile).designFamilies : undefined;
+  const familiesB = 'designFamilies' in profileB ? (profileB as BrandProfile).designFamilies : undefined;
+  const familyContext = buildDesignFamilyContext(nameA, familiesA, nameB, familiesB);
+
+  // If either brand has design families, steer the follow-up toward model specifics
+  const hasAnyFamilies = (familiesA && familiesA.length > 0) || (familiesB && familiesB.length > 0);
+  const followUp = hasAnyFamilies
+    ? `Which model or series are you considering? That matters for how this comparison plays out.`
+    : `What draws you toward one of these over the other — is it a specific quality, or more of a general direction?`;
+
+  const systemContext = familyContext
+    ? `Where they diverge most shapes which fits better.\n\n${familyContext}`
+    : `Where they diverge most shapes which fits better — this depends on what you value in your listening and where your system currently sits.`;
+
   return {
     subject: `${nameA} vs ${nameB}`,
     comparisonSummary: summary,
     philosophy: `${nameA}: ${philoA}\n\n${nameB}: ${philoB}`,
     tendencies: `${nameA}: ${tendA}\n\n${nameB}: ${tendB}`,
-    systemContext: `Where they diverge most shapes which fits better — this depends on what you value in your listening and where your system currently sits.`,
-    followUp: `What draws you toward one of these over the other — is it a specific quality, or more of a general direction?`,
+    systemContext,
+    followUp,
   };
+}
+
+/**
+ * Build a design-family context note for brands that have distinct product lines.
+ * Returns null if neither brand has design families.
+ */
+function buildDesignFamilyContext(
+  nameA: string,
+  familiesA: DesignFamily[] | undefined,
+  nameB: string,
+  familiesB: DesignFamily[] | undefined,
+): string | null {
+  const parts: string[] = [];
+
+  if (familiesA && familiesA.length > 0) {
+    const familyList = familiesA.map((f) => `${f.name} (${f.character.split('.')[0].trim()})`).join('; ');
+    parts.push(`${nameA} includes distinct design families: ${familyList}.`);
+  }
+  if (familiesB && familiesB.length > 0) {
+    const familyList = familiesB.map((f) => `${f.name} (${f.character.split('.')[0].trim()})`).join('; ');
+    parts.push(`${nameB} includes distinct design families: ${familyList}.`);
+  }
+
+  return parts.length > 0 ? parts.join(' ') : null;
 }
 
 /**
@@ -592,14 +680,49 @@ export function buildComparisonRefinement(
   // Comparison-aware follow-up that reflects the axis of comparison
   const followUp = buildCriterionFollowUp(criterion);
 
+  // For brand-level amp-pairing follow-ups, surface design families if they exist
+  let systemContext = 'How much this matters in practice depends on the rest of the chain and how the room interacts.';
+  let refinedFollowUp = followUp;
+
+  if (activeComparison.scope === 'brand' && criterion.category === 'amplifier_pairing') {
+    const familyNote = buildDesignFamilyAmpNote(nameA, nameB, criterion);
+    if (familyNote) {
+      systemContext += `\n\n${familyNote}`;
+      refinedFollowUp = 'Which model or series are you considering? That shapes how this comparison plays out.';
+    }
+  }
+
   return {
     subject: `${nameA} vs ${nameB} — ${criterion.label}`,
     comparisonSummary: summary,
     philosophy: `${contextA}\n\n${contextB}`,
     tendencies: `The difference comes down to design priorities — ${criterion.label.toLowerCase()} is shaped differently by each approach.`,
-    systemContext: 'How much this matters in practice depends on the rest of the chain and how the room interacts.',
-    followUp,
+    systemContext,
+    followUp: refinedFollowUp,
   };
+}
+
+/**
+ * Build an amplifier-pairing note from design families, if relevant.
+ * Used in criterion-based follow-ups to surface important within-brand differences.
+ */
+function buildDesignFamilyAmpNote(nameA: string, nameB: string, criterion: ComparisonCriterion): string | null {
+  const profileA = findBrandProfile(nameA);
+  const profileB = findBrandProfile(nameB);
+  const parts: string[] = [];
+
+  for (const [name, profile] of [[nameA, profileA], [nameB, profileB]] as const) {
+    if (profile?.designFamilies && profile.designFamilies.length > 0) {
+      const relevant = profile.designFamilies
+        .filter((f) => f.ampPairing)
+        .map((f) => `${f.name}: ${f.ampPairing}`);
+      if (relevant.length > 0) {
+        parts.push(`${name} has distinct design families that respond differently to ${criterion.label.toLowerCase()}: ${relevant.join('. ')}.`);
+      }
+    }
+  }
+
+  return parts.length > 0 ? parts.join(' ') : null;
 }
 
 /**
