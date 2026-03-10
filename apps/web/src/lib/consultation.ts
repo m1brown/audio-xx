@@ -49,6 +49,8 @@ export interface ConsultationResponse {
   systemContext?: string;
   /** 4. Optional light follow-up question. */
   followUp?: string;
+  /** 5. Optional neutral reference links (website, importer, dealers). */
+  links?: { label: string; url: string; kind?: 'reference' }[];
 }
 
 // ── All products ────────────────────────────────────
@@ -60,11 +62,25 @@ const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS];
 // For brands not in our product catalog, provide general
 // orientation. These are brief, tendency-based, not encyclopedic.
 
+/** A neutral reference link associated with a brand. */
+interface BrandLink {
+  /** What the link points to (e.g. "Official website", "US importer"). */
+  label: string;
+  url: string;
+  /**
+   * Link kind.  'reference' = neutral informational (default).
+   * Future: 'affiliate' | 'commercial' — must be visually distinguished.
+   */
+  kind?: 'reference';
+}
+
 interface BrandProfile {
   names: string[];
   philosophy: string;
   tendencies: string;
   systemContext: string;
+  /** Optional structured reference links — informational, not ranked. */
+  links?: BrandLink[];
 }
 
 const BRAND_PROFILES: BrandProfile[] = [
@@ -73,42 +89,67 @@ const BRAND_PROFILES: BrandProfile[] = [
     philosophy: 'Shindo amplifiers are hand-built, tube-based designs rooted in vintage circuit topologies. The design philosophy prioritizes harmonic richness and tonal saturation over measured neutrality.',
     tendencies: 'Listeners consistently describe Shindo systems as dense, flowing, and harmonically alive. They tend to emphasize tonal weight and midrange texture at the cost of some transient precision.',
     systemContext: 'Commonly paired with high-efficiency speakers — horn-loaded or single-driver designs that can work with lower power output.',
+    links: [
+      { label: 'Official website', url: 'https://www.shindo-laboratory.co.jp/' },
+      { label: 'US importer (Tone Imports)', url: 'https://www.toneimports.com/' },
+    ],
   },
   {
     names: ['pass labs', 'pass', 'first watt'],
     philosophy: 'Pass Labs designs emphasise simplicity and Class A operation where practical. First Watt is the low-power offshoot, exploring single-ended solid-state and unusual topologies.',
     tendencies: 'Pass amplifiers tend toward warmth and midrange richness for solid-state. First Watt designs emphasise texture and intimacy at the cost of dynamic scale.',
     systemContext: 'Pass Labs works across a range of speakers. First Watt pairs best with high-efficiency speakers — similar territory to low-power tube amps.',
+    links: [
+      { label: 'Pass Labs official', url: 'https://www.passlabs.com/' },
+      { label: 'First Watt official', url: 'https://www.firstwatt.com/' },
+      { label: 'Dealer (Reno HiFi)', url: 'https://www.renohifi.com/' },
+    ],
   },
   {
     names: ['naim'],
     philosophy: 'Naim designs prioritise rhythmic drive and musical timing. The engineering philosophy emphasises pace and engagement over tonal density or spatial refinement.',
     tendencies: 'Listeners describe Naim systems as propulsive and engaging, with strong rhythmic coherence. They tend to de-emphasise warmth and spatial holography.',
     systemContext: 'Traditionally paired with Naim sources and Naim-friendly speakers. The timing-first approach works well with speakers that have good transient response.',
+    links: [
+      { label: 'Official website', url: 'https://www.naimaudio.com/' },
+    ],
   },
   {
     names: ['luxman'],
     philosophy: 'Luxman is a long-established Japanese manufacturer building both tube and solid-state designs with an emphasis on refinement and tonal elegance.',
     tendencies: 'Luxman amplifiers tend toward a slightly warm, composed presentation. Listeners describe good tonal density with more control and composure than most tube designs.',
     systemContext: 'Versatile pairing — works across a range of speaker types. The refined character complements both analytical and warmer speakers.',
+    links: [
+      { label: 'Official website', url: 'https://www.luxman.com/' },
+      { label: 'US distributor (On a Higher Note)', url: 'https://www.onahighernote.com/' },
+    ],
   },
   {
     names: ['accuphase'],
     philosophy: 'Accuphase is a precision-oriented Japanese manufacturer. The design philosophy centres on measured accuracy, build quality, and long-term reliability.',
     tendencies: 'Accuphase gear tends toward transparency and control with a slightly warm tonal balance. More composed than rhythmically aggressive.',
     systemContext: 'Works well with revealing speakers where control and composure matter. A good match for listeners who value refinement over raw energy.',
+    links: [
+      { label: 'Official website', url: 'https://www.accuphase.com/' },
+    ],
   },
   {
     names: ['lampizator', 'lampi'],
     philosophy: 'Lampizator builds tube-output DACs with a deliberate emphasis on harmonic richness and musical engagement over measured transparency.',
     tendencies: 'Described as tonally dense, flowing, and harmonically saturated. These DACs trade analytical precision for musical immersion and tonal weight.',
     systemContext: 'Pairs well with systems that benefit from added harmonic density. Can be too much in already warm or dense systems.',
+    links: [
+      { label: 'Official website', url: 'https://www.lampizator.eu/' },
+    ],
   },
   {
     names: ['border patrol'],
     philosophy: 'Border Patrol builds NOS (non-oversampling) tube-output DACs with minimal digital processing. The philosophy is simplicity and directness.',
     tendencies: 'Listeners describe a natural, unforced sound with strong tonal body and flow. Treble is typically rolled compared to oversampling designs.',
     systemContext: 'Works best in systems where the rest of the chain provides sufficient detail and air. Pairs naturally with tube amplification and high-efficiency speakers.',
+    links: [
+      { label: 'Official website', url: 'https://www.borderpatrol.net/' },
+    ],
   },
 ];
 
@@ -262,6 +303,7 @@ function buildBrandConsultation(profile: BrandProfile): ConsultationResponse {
     tendencies: profile.tendencies,
     systemContext: profile.systemContext,
     followUp: 'Is this something you\'re considering for your system, or more exploring the design approach?',
+    links: profile.links,
   };
 }
 

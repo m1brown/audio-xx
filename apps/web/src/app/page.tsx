@@ -851,6 +851,31 @@ function MessageBubble({ message }: { message: Message }) {
           )}
         </div>
 
+        {/* Neutral reference links */}
+        {consultation.links && consultation.links.length > 0 && (
+          <div
+            style={{
+              marginBottom: '0.9rem',
+              fontSize: '0.88rem',
+              color: '#666',
+              lineHeight: 1.6,
+            }}
+          >
+            {consultation.links.map((link) => (
+              <span key={link.url} style={{ marginRight: '1.2rem' }}>
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#4a7a8a', textDecoration: 'none' }}
+                >
+                  {link.label} ↗
+                </a>
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Optional light follow-up */}
         {consultation.followUp && (
           <div
