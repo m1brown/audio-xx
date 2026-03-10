@@ -1,0 +1,42 @@
+{
+  "id": "shindo",
+  "name": "Shindo Laboratory",
+  "aliases": ["shindo", "shindo laboratory", "shindo labs"],
+  "founder": "Ken Shindo",
+  "country": "Japan",
+  "founded": "1970s",
+  "location": "Japan",
+  "philosophy": "Shindo amplifiers are hand-built, tube-based designs rooted in vintage circuit topologies. The design philosophy prioritises harmonic richness and tonal saturation over measured neutrality. Components are selected by ear, and designs draw on classic Western Electric and Marantz-era circuits.",
+  "productFamilies": [
+    {
+      "name": "Preamplifiers (Aurieges, Monbrison, Masseto, Vosne-Romanée)",
+      "character": "Tube preamplifiers at varying price points. The house sound — harmonic density, flow, and midrange richness — is consistent across the range. Higher models add refinement and spatial depth.",
+      "priceRange": "$4,000–$20,000+"
+    },
+    {
+      "name": "Power amplifiers (Montille, Cortese, Lafon, Haut-Brion)",
+      "character": "Low-to-moderate power tube amplifiers using EL84, 6L6, KT88, and other classic tubes. Designed for high-efficiency speakers.",
+      "ampPairing": "Best with speakers above 93 dB sensitivity. The low power output is by design — it serves the tonal and harmonic priorities.",
+      "priceRange": "$6,000–$30,000+"
+    }
+  ],
+  "sonicReputation": "Listeners consistently describe Shindo systems as dense, flowing, and harmonically alive. They tend to emphasise tonal weight and midrange texture at the cost of some transient precision. The presentation is often described as musically complete — coherent and deeply engaging rather than analytically impressive.",
+  "pairingTendencies": "A natural match with DeVore Orangutan, Altec-based horns, and other high-efficiency speakers. The Shindo + DeVore combination is one of the most discussed pairings in the high-efficiency community. Upstream, Shindo's own sources and turntables are common, as are Lampizator and Border Patrol DACs.",
+  "links": [
+    { "label": "Official website", "url": "https://www.shindo-laboratory.co.jp/", "kind": "official", "region": "global" }
+  ],
+  "dealers": [
+    { "name": "Tone Imports", "region": "US", "country": "US", "url": "https://www.toneimports.com/", "role": "distributor" }
+  ],
+  "sources": [
+    { "publication": "6moons", "kind": "review", "note": "Extensive coverage of Shindo preamplifiers and amplifiers" },
+    { "publication": "Stereophile", "kind": "review", "note": "Art Dudley reviewed multiple Shindo components" },
+    { "publication": "The Absolute Sound", "kind": "review", "note": "Coverage of Shindo amplification" }
+  ],
+  "curation": {
+    "status": "draft",
+    "draftedBy": "ai",
+    "draftedAt": "2026-03-10",
+    "notes": "Initial draft. Ken Shindo passed away in 2014; the company continues under his legacy. Price ranges are approximate and should be validated. Product family names use the Burgundy wine naming convention."
+  }
+}

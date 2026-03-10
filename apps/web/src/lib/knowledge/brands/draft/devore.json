@@ -1,0 +1,43 @@
+{
+  "id": "devore",
+  "name": "DeVore Fidelity",
+  "aliases": ["devore", "devore fidelity"],
+  "founder": "John DeVore",
+  "country": "USA",
+  "founded": "2000",
+  "location": "Brooklyn, New York",
+  "philosophy": "DeVore Fidelity designs speakers around musical engagement and natural tonal character. The philosophy prioritises ease and flow over analytical precision. Speakers are voiced by ear rather than measurement target, drawing on a tradition that values the emotional response to music over technical specification.",
+  "productFamilies": [
+    {
+      "name": "Orangutan (O) series",
+      "character": "High sensitivity (~96–97 dB), designed around low-power tube amplification. Warm, dense, flowing. Wide-baffle designs that prioritise tonal density and rhythmic engagement.",
+      "ampPairing": "Voiced for single-ended triodes and low-power tubes (2–30W). A natural tube partner.",
+      "priceRange": "$4,000–$15,000"
+    },
+    {
+      "name": "Gibbon series",
+      "character": "Lower sensitivity (~87–89 dB), more conventional load. Still warm-leaning with strong rhythmic character, but needs more power.",
+      "ampPairing": "Requires moderate power (30W+). Works with both solid-state and higher-power tube amps.",
+      "priceRange": "$2,000–$8,000"
+    }
+  ],
+  "sonicReputation": "Listeners describe DeVore speakers as warm, rhythmically alive, and harmonically rich. They tend to emphasise tonal body and midrange presence at the cost of some measured linearity. Music sounds physically present in the room — engagement over analysis.",
+  "pairingTendencies": "The Orangutan series is widely paired with single-ended triode amplifiers (Shindo, Line Magnetic, Audion). The Gibbon series works with a broader range of amplifiers including solid-state. Lampizator and Border Patrol DACs are common upstream choices in the community.",
+  "links": [
+    { "label": "Official website", "url": "https://www.dfridelity.com/", "kind": "official", "region": "global" }
+  ],
+  "dealers": [
+    { "name": "Tone Imports", "region": "US", "country": "US", "url": "https://www.toneimports.com/", "role": "distributor" }
+  ],
+  "sources": [
+    { "publication": "6moons", "kind": "review", "note": "Multiple reviews of Orangutan and Gibbon series" },
+    { "publication": "Stereophile", "kind": "review", "note": "Art Dudley reviewed O/96 and other models extensively" },
+    { "publication": "The Absolute Sound", "kind": "review", "note": "Coverage of Orangutan line" }
+  ],
+  "curation": {
+    "status": "draft",
+    "draftedBy": "ai",
+    "draftedAt": "2026-03-10",
+    "notes": "Initial draft. Sonic reputation and pairing tendencies based on review consensus. Needs human validation of specific claims, especially price ranges."
+  }
+}

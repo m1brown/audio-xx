@@ -1,0 +1,29 @@
+{
+  "id": "devore-o96",
+  "brandId": "devore",
+  "name": "Orangutan O/96",
+  "category": "speaker",
+  "topology": "High-efficiency wide-baffle two-way (10\" woofer, 1\" tweeter)",
+  "sensitivity": "96 dB/W/m",
+  "impedance": "10 ohms nominal",
+  "loadNotes": "Easy load, tube-friendly. No difficult impedance dips. Designed to work with amplifiers from 2W upward.",
+  "price": { "amount": 12000, "currency": "USD" },
+  "designIntent": "Musical engagement with low-power tube amplification. Designed to make music feel physically present in the room. Voiced by ear rather than measurement target — the goal is emotional engagement across all genres.",
+  "sonicCharacter": "Deep tonal density with remarkable rhythmic drive. Harmonically rich, with tactile midrange texture and effortless dynamic expression. Instruments have weight and surface detail. The overall presentation emphasises engagement and musical flow over analytical separation.",
+  "roomBehavior": "Needs breathing room. The wide baffle and bass energy can overwhelm in rooms smaller than about 15 square meters. Benefits from placement away from rear walls. Bass is generous and room-dependent — in the right space it is deeply satisfying; in a small room it can blur.",
+  "pairingTendencies": "Voiced for single-ended triode amplification — Shindo, Line Magnetic, Audio Note are all natural partners. The 96 dB sensitivity lets SET amps deliver full dynamics. Also works well with low-powered push-pull tubes. Higher-power solid-state can work but may shift the tonal balance away from the speaker's design intent.",
+  "links": [
+    { "label": "Official product page", "url": "https://www.dfridelity.com/o96", "kind": "official", "region": "global" }
+  ],
+  "sources": [
+    { "publication": "Stereophile", "reviewer": "Art Dudley", "kind": "review", "note": "Extensive review — one of Dudley's reference speakers" },
+    { "publication": "6moons", "kind": "review", "note": "Review of O/96 in context of high-efficiency systems" },
+    { "publication": "The Absolute Sound", "kind": "review", "note": "Coverage of the Orangutan line" }
+  ],
+  "curation": {
+    "status": "draft",
+    "draftedBy": "ai",
+    "draftedAt": "2026-03-10",
+    "notes": "Initial draft. Sonic character based on review consensus. Room behavior notes from multiple listener reports. Price is approximate 2025 street price — confirm with current dealer pricing."
+  }
+}

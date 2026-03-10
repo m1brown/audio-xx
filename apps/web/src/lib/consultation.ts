@@ -36,6 +36,8 @@ import {
   type DesignArchetypeId,
 } from './design-archetypes';
 import type { SubjectMatch, ContextKind } from './intent';
+import { getApprovedBrand } from './knowledge';
+import type { BrandKnowledge } from './knowledge/schema';
 
 // ── Types ───────────────────────────────────────────
 
@@ -419,6 +421,77 @@ function buildBrandConsultation(profile: BrandProfile): ConsultationResponse {
 }
 
 /**
+ * Build a brand-level consultation from the approved knowledge layer.
+ *
+ * This is the preferred path when a BrandKnowledge entry has been
+ * reviewed and approved. It is richer than buildBrandConsultation
+ * (which reads from the hardcoded BRAND_PROFILES fallback).
+ */
+function buildKnowledgeBrandConsultation(entry: BrandKnowledge): ConsultationResponse {
+  const name = entry.name;
+
+  // Build enriched philosophy line with founder, origin, and founding date
+  const parts: string[] = [name];
+  if (entry.founder) parts.push(`founded by ${entry.founder}`);
+  if (entry.location) {
+    parts.push(`(${entry.location})`);
+  } else if (entry.country) {
+    parts.push(`(${entry.country})`);
+  }
+  if (entry.founded) parts.push(`est. ${entry.founded}`);
+  const identity = parts.length > 1 ? `${parts.join(', ')}. ` : '';
+  const philosophyLine = `${identity}${entry.philosophy}`;
+
+  // Build system context with product families and pairing notes
+  let systemContext = '';
+  if (entry.productFamilies && entry.productFamilies.length > 0) {
+    const familySummary = entry.productFamilies
+      .map((f) => {
+        let line = `${f.name}: ${f.character.split('.')[0].trim()}.`;
+        if (f.priceRange) line += ` (${f.priceRange})`;
+        return line;
+      })
+      .join(' ');
+    systemContext += `Notable product families: ${familySummary}`;
+  }
+  if (entry.pairingTendencies) {
+    systemContext += (systemContext ? '\n\n' : '') + entry.pairingTendencies;
+  }
+
+  // Convert knowledge links + dealers to ConsultationResponse link format
+  const links: ConsultationResponse['links'] = [];
+  for (const link of entry.links) {
+    links.push({
+      label: link.label,
+      url: link.url,
+      kind: link.kind === 'official' ? 'reference' : link.kind,
+      region: link.region,
+    });
+  }
+  if (entry.dealers) {
+    for (const dealer of entry.dealers) {
+      if (dealer.url) {
+        links.push({
+          label: dealer.name,
+          url: dealer.url,
+          kind: 'dealer',
+          region: dealer.region,
+        });
+      }
+    }
+  }
+
+  return {
+    subject: name,
+    philosophy: philosophyLine,
+    tendencies: entry.sonicReputation,
+    systemContext: systemContext || undefined,
+    followUp: 'Are you exploring the brand generally, or considering a specific model?',
+    links: links.length > 0 ? links : undefined,
+  };
+}
+
+/**
  * Build a brand-level comparison response.
  * Used when two brands are mentioned with comparison intent and both
  * have profiles (curated or catalog-derived). Compares at the
@@ -666,8 +739,18 @@ export function buildConsultationResponse(
   const hasProductSubject = subjectMatches && subjectMatches.some((m) => m.kind === 'product');
   const hasBrandOnlySubject = subjectMatches && subjectMatches.length > 0 && !hasProductSubject;
 
-  // 2a. Brand-only inquiry — prefer curated brand profile over product data
+  // 2a. Brand-only inquiry — check approved knowledge layer first,
+  //     then fall back to hardcoded BRAND_PROFILES
   if (hasBrandOnlySubject) {
+    // Check approved knowledge layer (highest priority)
+    const brandSubject = subjectMatches!.find((m) => m.kind === 'brand');
+    if (brandSubject) {
+      const knowledgeEntry = getApprovedBrand(brandSubject.name);
+      if (knowledgeEntry) {
+        return buildKnowledgeBrandConsultation(knowledgeEntry);
+      }
+    }
+    // Fall back to hardcoded brand profiles
     const brandProfile = findBrandProfile(currentMessage);
     if (brandProfile) {
       return buildBrandConsultation(brandProfile);
