@@ -938,6 +938,7 @@ import type { Product } from './products/dacs';
 import { rankProducts } from './product-scoring';
 import { tagProductArchetype } from './archetype';
 import { topTraits, type TasteProfile as UserTasteProfile, type ProfileTraitKey } from './taste-profile';
+import type { ReasoningResult } from './reasoning';
 
 /**
  * Generate a one-sentence fit note for a product based on its
@@ -1022,12 +1023,37 @@ const PROFILE_TO_PRODUCT_TRAIT: Record<ProfileTraitKey, string> = {
   warmth: 'warmth',
 };
 
+/**
+ * Direction-trait mapping for the directional bonus.
+ * Maps arrow quality names to product trait keys.
+ * Kept intentionally small — the bonus is a nudge, not a replacement.
+ */
+const DIRECTION_TRAIT_MAP: Record<string, string> = {
+  warmth: 'tonal_density',
+  density: 'tonal_density',
+  body: 'tonal_density',
+  flow: 'flow',
+  smoothness: 'composure',
+  composure: 'composure',
+  speed: 'speed',
+  dynamics: 'dynamics',
+  punch: 'dynamics',
+  clarity: 'clarity',
+  detail: 'clarity',
+  soundstage: 'spatial_precision',
+  air: 'openness',
+};
+
+/** Maximum directional bonus per product. Small and auditable. */
+const DIRECTION_BONUS_CAP = 0.12;
+
 function selectProductExamples(
   category: ShoppingCategory,
   userTraits: Record<string, SignalDirection>,
   budgetAmount: number | null,
   systemProfile: SystemProfile,
   tasteProfile?: UserTasteProfile,
+  reasoning?: ReasoningResult,
 ): ProductExample[] {
   // Only DACs have a catalog for now
   if (category !== 'dac') return [];
@@ -1050,6 +1076,33 @@ function selectProductExamples(
       entry.score += bonus;
     }
     // Re-sort after bonus
+    ranked.sort((a, b) => b.score - a.score);
+  }
+
+  // Directional bonus — small nudge toward products aligned with the
+  // synthesized recommendation direction. Capped at DIRECTION_BONUS_CAP.
+  // This biases existing scoring; it does not replace it.
+  if (reasoning && reasoning.direction.arrows.length > 0) {
+    const arrows = reasoning.direction.arrows;
+    const perArrow = DIRECTION_BONUS_CAP / Math.max(arrows.length, 1);
+
+    for (const entry of ranked) {
+      let bonus = 0;
+      for (const arrow of arrows) {
+        const traitKey = DIRECTION_TRAIT_MAP[arrow.quality];
+        if (!traitKey) continue;
+        const productValue = resolveTraitValue(
+          entry.product.tendencyProfile, entry.product.traits, traitKey,
+        );
+        // Only boost in the desired direction
+        if (arrow.direction === 'up' && productValue > 0.5) {
+          bonus += (productValue - 0.5) * perArrow;
+        } else if (arrow.direction === 'down' && productValue < 0.5) {
+          bonus += (0.5 - productValue) * perArrow;
+        }
+      }
+      entry.score += Math.min(bonus, DIRECTION_BONUS_CAP);
+    }
     ranked.sort((a, b) => b.score - a.score);
   }
 
@@ -1083,6 +1136,7 @@ export function buildShoppingAnswer(
   ctx: ShoppingContext,
   signals: ExtractedSignals,
   tasteProfile?: UserTasteProfile,
+  reasoning?: ReasoningResult,
 ): ShoppingAnswer {
   const traits = signals.traits;
   const categoryLabel = CATEGORY_LABELS[ctx.category];
@@ -1091,17 +1145,21 @@ export function buildShoppingAnswer(
   const matchedProfile = TASTE_PROFILES.find((p) => p.check(traits));
   const taste = matchedProfile ?? FALLBACK_TASTE;
 
-  // 1. Preference summary — enriched with archetype context if available
-  const archetypeLabel = matchedProfile?.archetype
-    ? ` — a ${ARCHETYPE_LABELS[matchedProfile.archetype]} preference`
+  // 1. Preference summary — use reasoning taste label when available
+  const effectiveTasteLabel = reasoning?.taste.tasteLabel ?? taste.label;
+  const archetypeLabel = (reasoning?.taste.archetype ?? matchedProfile?.archetype)
+    ? ` — a ${ARCHETYPE_LABELS[(reasoning?.taste.archetype ?? matchedProfile?.archetype)!]} preference`
     : '';
-  const profileNote = tasteProfile && tasteProfile.confidence > 0.3
+  const profileNote = reasoning?.taste.storedProfileUsed
     ? ` Your stored taste profile reinforces this.`
-    : '';
-  const preferenceSummary = `You appear to value ${taste.label} more than ${getContrastLabel(taste.label)}${archetypeLabel}.${profileNote}`;
+    : tasteProfile && tasteProfile.confidence > 0.3
+      ? ` Your stored taste profile reinforces this.`
+      : '';
+  const preferenceSummary = `You appear to value ${effectiveTasteLabel} more than ${getContrastLabel(effectiveTasteLabel)}${archetypeLabel}.${profileNote}`;
 
-  // 2. Best-fit direction
-  const bestFitDirection = matchedProfile?.directionByCategory[ctx.category]
+  // 2. Best-fit direction — prefer reasoning direction statement when available
+  const bestFitDirection = reasoning?.direction.statement
+    ?? matchedProfile?.directionByCategory[ctx.category]
     ?? taste.defaultDirection;
 
   // 3. Why this fits
@@ -1109,7 +1167,8 @@ export function buildShoppingAnswer(
     ?? taste.defaultWhy ?? matchedProfile?.defaultWhy ?? FALLBACK_TASTE.defaultWhy;
 
   // 4. Product examples (only when catalog exists + budget known)
-  const productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, tasteProfile);
+  // Pass reasoning for directional bias — existing scoring is preserved.
+  const productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, tasteProfile, reasoning);
 
   // 5. Watch for
   const watchFor = taste.watchFor;

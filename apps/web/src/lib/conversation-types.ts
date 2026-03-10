@@ -8,6 +8,7 @@ import type { SystemDirection } from './system-direction';
 import type { SonicArchetype, UserArchetypePreference } from './archetype';
 import type { ConsultationResponse } from './consultation';
 import type { ConversationMode } from './conversation-router';
+import type { ReasoningResult } from './reasoning';
 
 /**
  * System direction context attached to diagnostic analysis results.
@@ -69,6 +70,13 @@ export interface ConversationState {
   isLoading: boolean;
   /** Active conversation mode for persistence across turns. */
   activeMode?: ConversationMode;
+  /**
+   * Most recent reasoning result — light continuity aid.
+   * Used to carry taste/system/direction context across refinement turns.
+   * Always re-run reasoning on accumulated text; this provides previous
+   * context for comparison, not a substitute for fresh inference.
+   */
+  lastReasoning?: ReasoningResult;
   // Future hooks for persistence (unused this pass):
   systemId?: string;
   profileId?: string;

@@ -24,6 +24,8 @@ import type { ExtractedSignals } from '@/lib/signal-types';
 import type { EvaluationResult } from '@/lib/rule-types';
 import { parseTasteProfile, topTraits, isProfileEmpty, type TasteProfile } from '@/lib/taste-profile';
 import { detectChurnSignal } from '@/lib/churn-avoidance';
+import { reason } from '@/lib/reasoning';
+import type { ReasoningResult } from '@/lib/reasoning';
 
 // ── Helpers ──────────────────────────────────────────
 
@@ -67,6 +69,7 @@ type Action =
   | { type: 'ADD_CONSULTATION'; consultation: ConsultationResponse }
   | { type: 'ADD_NOTE'; content: string }
   | { type: 'SET_MODE'; mode: ConversationMode }
+  | { type: 'SET_REASONING'; reasoning: ReasoningResult }
   | { type: 'SET_LOADING'; value: boolean }
   | { type: 'RESET' };
 
@@ -161,6 +164,9 @@ function reducer(state: ConversationState, action: Action): ConversationState {
 
     case 'SET_MODE':
       return { ...state, activeMode: action.mode };
+
+    case 'SET_REASONING':
+      return { ...state, lastReasoning: action.reasoning };
 
     case 'SET_LOADING':
       return { ...state, isLoading: action.value };
@@ -323,7 +329,15 @@ export default function Home() {
               },
             });
           } else {
-            // Enough context (or cap reached) — produce recommendation.
+            // ── Three-layer reasoning ──────────────────
+            // Always run fresh reasoning on accumulated text.
+            // lastReasoning is continuity context, not a substitute.
+            const reasoning = reason(
+              allUserText, desires, data.signals,
+              tasteProfile ?? null, shoppingCtx,
+            );
+            dispatch({ type: 'SET_REASONING', reasoning });
+
             // On refinement turns, add a brief conversational bridge.
             if (shoppingAnswerCount > 0) {
               dispatch({
@@ -331,7 +345,7 @@ export default function Home() {
                 content: 'Got it — adjusting the direction based on what you\'ve added.',
               });
             }
-            const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined);
+            const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning);
             dispatch({ type: 'ADD_SHOPPING_ANSWER', answer, signals: data.signals });
           }
         } else {
@@ -363,7 +377,14 @@ export default function Home() {
             submittedText,
           );
 
-          // Infer system direction for diagnosis-path results
+          // ── Three-layer reasoning (diagnosis) ──────
+          const reasoning = reason(
+            allUserText, desires, data.signals,
+            tasteProfile ?? null, null,
+          );
+          dispatch({ type: 'SET_REASONING', reasoning });
+
+          // Use reasoning direction to frame diagnosis results
           const diagDirection = inferSystemDirection(submittedText, desires, undefined, tasteProfile ?? undefined);
 
           if (clarification) {
