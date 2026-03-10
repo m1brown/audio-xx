@@ -424,3 +424,90 @@ export function detectContextEnrichment(text: string): ContextKind | null {
   if (/\bbudget|spend/i.test(lower)) return 'budget';
   return 'general_system';
 }
+
+// ── Consultation follow-up detection ──────────────────
+//
+// Detects when the user is asking a follow-up to an active consultation
+// (gear inquiry or brand consultation). Examples:
+//   "devore o96 thoughts?" → "but aren't there smaller models?"
+//   "what is shindo known for?" → "what about their amps?"
+//   "tell me about harbeth" → "how do they compare to spendor?"
+
+/**
+ * Patterns that indicate a follow-up within an ongoing consultation.
+ * These are elliptical — they reference the prior subject implicitly.
+ */
+const CONSULTATION_FOLLOWUP_PATTERNS = [
+  // Asking about variants / models / alternatives
+  /\b(?:aren't|isn't|are)\s+there\s+(?:smaller|larger|bigger|cheaper|other|different|more\s+\w+)\s+(?:models?|versions?|options?|speakers?|dacs?|amps?)\b/i,
+  /\bwhat\s+about\s+(?:the\s+)?(?:smaller|larger|bigger|cheaper|other)\b/i,
+  /\bdo\s+they\s+(?:make|have|offer)\b/i,
+  /\bany\s+(?:smaller|larger|cheaper|other|different|similar)\s+(?:models?|versions?|options?)\b/i,
+  /\bother\s+(?:models?|versions?|products?|options?)\b/i,
+  /\bsmaller\s+(?:models?|versions?|speakers?)\b/i,
+  /\blarger\s+(?:models?|versions?|speakers?)\b/i,
+
+  // Asking for more detail about the same subject
+  /\bwhat\s+about\s+(?:the\s+)?(?:bass|treble|midrange|soundstage|imaging|dynamics|timing|warmth|detail)\b/i,
+  /\bhow\s+(?:do|does)\s+(?:it|they)\s+(?:sound|perform|handle|compare|do|pair|work)\b/i,
+  /\bhow\s+(?:is|are)\s+(?:the|its|their)\b/i,
+  /\bwhat(?:'s| is)\s+(?:the|its|their)\s+(?:sound|character|strength|weakness|tone)\b/i,
+  /\btell\s+me\s+more\b/i,
+  /\bmore\s+(?:about|detail|info)\b/i,
+
+  // Pairing / system fit questions referencing prior subject
+  /\bwhat\s+(?:amp|dac|speaker|source)\s+(?:pairs?|works?|goes?)\s+(?:well|best)\b/i,
+  /\bwhat\s+(?:pairs?|works?|goes?)\s+well\s+with\b/i,
+  /\bgood\s+(?:match|pairing|fit)\b/i,
+  /\bpair\s+(?:it|them)\s+with\b/i,
+
+  // "What about…" / "And…" / "But…" follow-up patterns
+  /^(?:and|but)\s+/i,
+  /^what\s+about\b/i,
+  /^how\s+about\b/i,
+];
+
+/**
+ * Check whether a message is a follow-up to an active consultation.
+ *
+ * Returns true when:
+ *   - An active consultation exists, AND
+ *   - The message matches a follow-up pattern, OR
+ *   - The message contains no new subjects (elliptical reference to prior)
+ *
+ * Does NOT return true if the message contains new subjects that
+ * differ from the active consultation (indicates a topic change).
+ */
+export function isConsultationFollowUp(
+  text: string,
+  activeConsultation: { subjects: SubjectMatch[]; originalQuery: string } | undefined,
+): boolean {
+  if (!activeConsultation) return false;
+  if (activeConsultation.subjects.length === 0) return false;
+
+  // Check if message introduces new, unrelated subjects
+  const newMatches = extractSubjectMatches(text);
+  if (newMatches.length > 0) {
+    const activeNames = new Set(
+      activeConsultation.subjects.map((s) => s.name.toLowerCase()),
+    );
+    const hasNewSubject = newMatches.some((m) => !activeNames.has(m.name.toLowerCase()));
+    if (hasNewSubject) return false; // Topic changed
+  }
+
+  // Check follow-up patterns
+  if (CONSULTATION_FOLLOWUP_PATTERNS.some((p) => p.test(text))) {
+    return true;
+  }
+
+  // Short messages with no subjects and no clear intent are likely follow-ups
+  // e.g., "and the bass?" or "in a small room?" — but only if truly short
+  if (text.split(/\s+/).length <= 8 && newMatches.length === 0) {
+    // Only if it doesn't look like a new topic
+    const hasQuestionMark = text.includes('?');
+    const hasFollowUpWord = /\b(?:and|but|what|how|also|too)\b/i.test(text);
+    if (hasQuestionMark && hasFollowUpWord) return true;
+  }
+
+  return false;
+}

@@ -9,12 +9,12 @@ import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
 import { checkGlossaryQuestion } from '@/lib/glossary';
-import { detectIntent, isBrandOnlyComparison, isComparisonFollowUp, detectContextEnrichment, type SubjectMatch } from '@/lib/intent';
+import { detectIntent, isBrandOnlyComparison, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, type SubjectMatch } from '@/lib/intent';
 import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
-import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement } from '@/lib/consultation';
+import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, buildConsultationFollowUp } from '@/lib/consultation';
 import type { ConsultationResponse } from '@/lib/consultation';
 import type { SystemDirection } from '@/lib/system-direction';
 import type { GlossaryResult } from '@/lib/glossary';
@@ -72,6 +72,8 @@ type Action =
   | { type: 'SET_REASONING'; reasoning: ReasoningResult }
   | { type: 'SET_COMPARISON'; left: SubjectMatch; right: SubjectMatch; scope: 'brand' | 'product' }
   | { type: 'CLEAR_COMPARISON' }
+  | { type: 'SET_CONSULTATION_CONTEXT'; subjects: SubjectMatch[]; originalQuery: string }
+  | { type: 'CLEAR_CONSULTATION_CONTEXT' }
   | { type: 'SET_LOADING'; value: boolean }
   | { type: 'RESET' };
 
@@ -178,6 +180,15 @@ function reducer(state: ConversationState, action: Action): ConversationState {
 
     case 'CLEAR_COMPARISON':
       return { ...state, activeComparison: undefined };
+
+    case 'SET_CONSULTATION_CONTEXT':
+      return {
+        ...state,
+        activeConsultation: { subjects: action.subjects, originalQuery: action.originalQuery },
+      };
+
+    case 'CLEAR_CONSULTATION_CONTEXT':
+      return { ...state, activeConsultation: undefined };
 
     case 'SET_LOADING':
       return { ...state, isLoading: action.value };
@@ -301,6 +312,31 @@ export default function Home() {
       dispatch({ type: 'CLEAR_COMPARISON' });
     }
 
+    // ── Consultation follow-up detection ────────────────
+    // If an active consultation exists (single-subject gear inquiry or
+    // brand consultation) and the message looks like a follow-up
+    // ("but aren't there smaller models?", "how is the bass?"),
+    // resolve against the stored subject instead of falling through.
+    if (
+      state.activeConsultation &&
+      intent !== 'comparison' &&
+      intent !== 'shopping' &&
+      isConsultationFollowUp(submittedText, state.activeConsultation)
+    ) {
+      const followUp = buildConsultationFollowUp(state.activeConsultation, submittedText);
+      if (followUp) {
+        dispatch({ type: 'ADD_CONSULTATION', consultation: followUp });
+        dispatch({ type: 'SET_LOADING', value: false });
+        return;
+      }
+    }
+
+    // ── Clear consultation on explicit mode shift ───────
+    // Shopping and diagnosis are new topics — drop the consultation context.
+    if (state.activeConsultation && (effectiveMode === 'shopping' || effectiveMode === 'diagnosis')) {
+      dispatch({ type: 'CLEAR_CONSULTATION_CONTEXT' });
+    }
+
     // ── Consultation path ───────────────────────────────
     // Knowledge / philosophy questions — answer first, no diagnostic logic.
     // Also catches brand-level comparisons ("Chord vs Denafrips") that should
@@ -316,6 +352,14 @@ export default function Home() {
             left: subjectMatches[0],
             right: subjectMatches[1],
             scope: 'brand',
+          });
+        }
+        // Store consultation context for single-subject follow-ups
+        if (subjectMatches.length > 0 && !isBrandComparison) {
+          dispatch({
+            type: 'SET_CONSULTATION_CONTEXT',
+            subjects: subjectMatches,
+            originalQuery: submittedText,
           });
         }
         dispatch({ type: 'ADD_CONSULTATION', consultation: consultResult });
@@ -354,6 +398,14 @@ export default function Home() {
             left: subjectMatches[0],
             right: subjectMatches[1],
             scope: subjectMatches.every((m) => m.kind === 'product') ? 'product' : 'brand',
+          });
+        }
+        // Store consultation context for single-subject follow-ups
+        if (intent === 'gear_inquiry' && subjectMatches.length > 0) {
+          dispatch({
+            type: 'SET_CONSULTATION_CONTEXT',
+            subjects: subjectMatches,
+            originalQuery: submittedText,
           });
         }
         dispatch({ type: 'ADD_GEAR_RESPONSE', response: gearResponse });
@@ -497,30 +549,30 @@ export default function Home() {
   return (
     <div
       style={{
-        maxWidth: 760,
+        maxWidth: 720,
         margin: '0 auto',
-        padding: '3.5rem 1.25rem 3rem',
-        color: '#111',
-        lineHeight: 1.55,
+        padding: '3rem 1.5rem 3rem',
+        color: '#1a1a1a',
+        lineHeight: 1.6,
       }}
     >
       {/* Header — always visible */}
       <div
         style={{
-          borderTop: '4px solid #c4122f',
-          width: 72,
-          marginBottom: '1.25rem',
+          borderTop: '3px solid #b8372e',
+          width: 48,
+          marginBottom: '1.5rem',
         }}
       />
 
       <h1
         style={{
-          marginBottom: '0.5rem',
-          fontFamily: 'Georgia, "Times New Roman", serif',
-          fontSize: '2.25rem',
-          fontWeight: 600,
-          letterSpacing: '-0.02em',
-          lineHeight: 1.1,
+          marginBottom: '0.4rem',
+          fontSize: '1.85rem',
+          fontWeight: 700,
+          letterSpacing: '-0.03em',
+          lineHeight: 1.15,
+          color: '#111',
         }}
       >
         Audio XX
@@ -532,10 +584,11 @@ export default function Home() {
           <p
             style={{
               marginTop: 0,
-              marginBottom: '1.5rem',
-              maxWidth: 620,
-              color: '#444',
-              fontSize: '1rem',
+              marginBottom: '1.75rem',
+              maxWidth: 560,
+              color: '#666',
+              fontSize: '0.98rem',
+              lineHeight: 1.65,
             }}
           >
             A listening advisor that interprets what you hear, reflects underlying system traits,
@@ -548,17 +601,18 @@ export default function Home() {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.75rem',
-                marginBottom: '1.5rem',
-                padding: '0.6rem 0.85rem',
-                border: '1px solid #e0e0e0',
-                background: '#fafafa',
+                gap: '0.85rem',
+                marginBottom: '1.75rem',
+                padding: '0.7rem 0.95rem',
+                border: '1px solid #e5e5e3',
+                borderRadius: 8,
+                background: '#fff',
                 maxWidth: 360,
               }}
             >
               <TasteRadar profile={tasteProfile} compact size={80} />
-              <div style={{ fontSize: '0.88rem', lineHeight: 1.5, color: '#555' }}>
-                <div style={{ fontWeight: 600, color: '#333', marginBottom: '0.15rem' }}>
+              <div style={{ fontSize: '0.88rem', lineHeight: 1.55, color: '#666' }}>
+                <div style={{ fontWeight: 600, color: '#333', marginBottom: '0.2rem', fontSize: '0.82rem', letterSpacing: '0.03em', textTransform: 'uppercase' as const }}>
                   Your taste
                 </div>
                 <div>
@@ -568,7 +622,7 @@ export default function Home() {
                   href="/profile"
                   style={{
                     fontSize: '0.82rem',
-                    color: '#888',
+                    color: '#999',
                     textDecoration: 'none',
                   }}
                 >
@@ -584,7 +638,7 @@ export default function Home() {
 
       {/* Conversation thread */}
       {hasMessages && (
-        <div style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
+        <div style={{ marginTop: '0.75rem', marginBottom: '1.5rem' }}>
           {messages
             .filter((msg) => {
               // In inquiry mode (pending question), suppress analysis messages
@@ -594,7 +648,15 @@ export default function Home() {
               return true;
             })
             .map((msg, i) => (
-              <MessageBubble key={i} message={msg} />
+              <div
+                key={i}
+                style={{
+                  animation: 'fadeInUp 0.3s ease-out both',
+                  animationDelay: `${Math.min(i * 0.05, 0.3)}s`,
+                }}
+              >
+                <MessageBubble key={i} message={msg} />
+              </div>
             ))}
           {isLoading && (
             <ThinkingIndicator />
@@ -611,11 +673,11 @@ export default function Home() {
             style={{
               display: 'block',
               marginBottom: '0.5rem',
-              fontSize: '0.85rem',
+              fontSize: '0.78rem',
               fontWeight: 600,
-              letterSpacing: '0.04em',
+              letterSpacing: '0.06em',
               textTransform: 'uppercase',
-              color: '#666',
+              color: '#999',
             }}
           >
             Listening note
@@ -637,17 +699,26 @@ export default function Home() {
           }
           style={{
             width: '100%',
-            minHeight: hasMessages ? 80 : 150,
-            padding: '1rem',
-            border: '1px solid #cfcfcf',
-            borderRadius: 0,
+            minHeight: hasMessages ? 72 : 130,
+            padding: '0.9rem 1rem',
+            border: '1px solid #d5d5d0',
+            borderRadius: 8,
             outline: 'none',
-            fontSize: '1rem',
-            lineHeight: 1.5,
+            fontSize: '0.98rem',
+            lineHeight: 1.6,
             resize: 'vertical',
             background: '#fff',
-            color: '#111',
+            color: '#1a1a1a',
             boxSizing: 'border-box',
+            transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = '#8a8a85';
+            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,0,0,0.04)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = '#d5d5d0';
+            e.currentTarget.style.boxShadow = 'none';
           }}
         />
 
@@ -655,9 +726,9 @@ export default function Home() {
         {!hasMessages && (
           <div
             style={{
-              marginTop: '0.4rem',
+              marginTop: '0.5rem',
               fontSize: '0.82rem',
-              color: '#999',
+              color: '#aaa',
               lineHeight: 1.5,
             }}
           >
@@ -676,14 +747,18 @@ export default function Home() {
             style={{
               background: 'none',
               border: 'none',
-              padding: 0,
+              padding: '2px 0',
               margin: 0,
               cursor: 'pointer',
-              color: '#888',
-              fontSize: '0.9rem',
-              textDecoration: 'underline',
-              textUnderlineOffset: '2px',
+              color: '#aaa',
+              fontSize: '0.85rem',
+              fontFamily: 'inherit',
+              textDecoration: 'none',
+              letterSpacing: '0.01em',
+              transition: 'color 0.15s ease',
             }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#666'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#aaa'; }}
           >
             Start over
           </button>
@@ -693,17 +768,18 @@ export default function Home() {
       {/* Footer */}
       <div
         style={{
-          marginTop: '3rem',
+          marginTop: '3.5rem',
           paddingTop: '1.25rem',
-          borderTop: '1px solid #ddd',
+          borderTop: '1px solid #e5e5e3',
         }}
       >
         <Link
           href="/about"
           style={{
-            color: '#666',
-            fontSize: '0.9rem',
+            color: '#aaa',
+            fontSize: '0.85rem',
             textDecoration: 'none',
+            letterSpacing: '0.01em',
           }}
         >
           How this works
@@ -715,28 +791,19 @@ export default function Home() {
 
 // ── Thinking Indicator ────────────────────────────────
 
-const THINKING_KEYFRAMES = `
-@keyframes thinking-pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
-}
-`;
-
 function ThinkingIndicator() {
   return (
-    <>
-      <style>{THINKING_KEYFRAMES}</style>
-      <div
-        style={{
-          padding: '0.75rem 0',
-          color: '#888',
-          fontSize: '0.92rem',
-          animation: 'thinking-pulse 2s ease-in-out infinite',
-        }}
-      >
-        Audio XX is thinking…
-      </div>
-    </>
+    <div
+      style={{
+        padding: '0.85rem 0',
+        color: '#999',
+        fontSize: '0.88rem',
+        letterSpacing: '0.01em',
+        animation: 'thinking-pulse 2.2s ease-in-out infinite',
+      }}
+    >
+      Thinking…
+    </div>
   );
 }
 
@@ -747,13 +814,13 @@ function MessageBubble({ message }: { message: Message }) {
     return (
       <div
         style={{
-          marginBottom: '1.25rem',
-          padding: '0.85rem 1rem',
-          background: '#f7f7f7',
-          borderLeft: '3px solid #d9d9d9',
-          color: '#222',
-          fontSize: '1rem',
-          lineHeight: 1.55,
+          marginBottom: '1.5rem',
+          padding: '0.85rem 1.1rem',
+          background: '#f5f5f3',
+          borderRadius: 8,
+          color: '#333',
+          fontSize: '0.98rem',
+          lineHeight: 1.6,
         }}
       >
         {message.content}
@@ -764,19 +831,20 @@ function MessageBubble({ message }: { message: Message }) {
   if (message.kind === 'analysis') {
     return (
       <div style={{ marginBottom: '1.75rem' }}>
-        <hr style={{ border: 0, borderTop: '1px solid #d9d9d9', margin: '0 0 1.5rem 0' }} />
+        <hr style={{ border: 0, borderTop: '1px solid #e5e5e3', margin: '0 0 1.5rem 0' }} />
 
         {/* System direction context — tendency and desired direction */}
         {message.systemDirection && (message.systemDirection.tendencySummary || message.systemDirection.directionSummary) && (
           <div
             style={{
               marginBottom: '1.25rem',
-              padding: '0.85rem 1rem',
-              borderLeft: '3px solid #7a6a4a',
+              padding: '0.85rem 1.1rem',
+              borderLeft: '3px solid #a89870',
               background: '#faf9f6',
-              color: '#333',
-              fontSize: '0.98rem',
-              lineHeight: 1.6,
+              borderRadius: '0 6px 6px 0',
+              color: '#444',
+              fontSize: '0.95rem',
+              lineHeight: 1.65,
             }}
           >
             {message.systemDirection.tendencySummary && (
@@ -800,7 +868,7 @@ function MessageBubble({ message }: { message: Message }) {
   if (message.kind === 'shopping-answer') {
     return (
       <div style={{ marginBottom: '1.75rem' }}>
-        <hr style={{ border: 0, borderTop: '1px solid #d9d9d9', margin: '0 0 1.5rem 0' }} />
+        <hr style={{ border: 0, borderTop: '1px solid #e5e5e3', margin: '0 0 1.5rem 0' }} />
         <ShoppingRecommendation answer={message.answer} signals={message.signals} />
       </div>
     );
@@ -810,41 +878,41 @@ function MessageBubble({ message }: { message: Message }) {
     return (
       <div
         style={{
-          marginTop: '1.5rem',
-          marginBottom: '1.25rem',
-          padding: '1rem 1.1rem',
-          borderLeft: '3px solid #2a7a4b',
-          background: '#f6faf7',
+          marginTop: '1.25rem',
+          marginBottom: '1.5rem',
+          padding: '1rem 1.15rem',
+          borderLeft: '3px solid #3d8a5a',
+          background: '#f7faf8',
+          borderRadius: '0 8px 8px 0',
         }}
       >
         <div
           style={{
-            marginBottom: '0.4rem',
-            fontSize: '0.78rem',
-            fontWeight: 700,
-            letterSpacing: '0.05em',
+            marginBottom: '0.45rem',
+            fontSize: '0.72rem',
+            fontWeight: 600,
+            letterSpacing: '0.06em',
             textTransform: 'uppercase',
-            color: '#2a7a4b',
+            color: '#3d8a5a',
           }}
         >
           Audio term
         </div>
         <div
           style={{
-            marginBottom: '0.35rem',
-            fontSize: '1.1rem',
+            marginBottom: '0.4rem',
+            fontSize: '1.05rem',
             fontWeight: 600,
-            color: '#111',
-            fontFamily: 'Georgia, "Times New Roman", serif',
+            color: '#1a1a1a',
           }}
         >
           {message.entry.term}
         </div>
-        <p style={{ margin: '0 0 0.3rem 0', color: '#222', fontSize: '1rem', lineHeight: 1.6 }}>
+        <p style={{ margin: '0 0 0.35rem 0', color: '#333', fontSize: '0.95rem', lineHeight: 1.65 }}>
           {message.entry.explanation}
         </p>
         {message.entry.example && (
-          <p style={{ margin: 0, color: '#666', fontSize: '0.92rem', lineHeight: 1.55, fontStyle: 'italic' }}>
+          <p style={{ margin: 0, color: '#888', fontSize: '0.9rem', lineHeight: 1.55, fontStyle: 'italic' }}>
             {message.entry.example}
           </p>
         )}
@@ -857,8 +925,8 @@ function MessageBubble({ message }: { message: Message }) {
     return (
       <div
         style={{
-          marginTop: '1.5rem',
-          marginBottom: '1.25rem',
+          marginTop: '1.25rem',
+          marginBottom: '1.5rem',
         }}
       >
         {/* "What I'm hearing" reflective block */}
@@ -866,18 +934,19 @@ function MessageBubble({ message }: { message: Message }) {
           <div
             style={{
               margin: '0 0 1.1rem 0',
-              padding: '0.75rem 1rem',
-              borderLeft: '3px solid #b8a070',
-              background: '#faf8f4',
-              fontSize: '0.95rem',
+              padding: '0.8rem 1.1rem',
+              borderLeft: '3px solid #a89870',
+              background: '#faf9f6',
+              borderRadius: '0 6px 6px 0',
+              fontSize: '0.93rem',
               lineHeight: 1.65,
-              color: '#444',
+              color: '#555',
             }}
           >
-            <div style={{ fontWeight: 600, color: '#333', marginBottom: '0.4rem' }}>
-              What I&apos;m hearing:
+            <div style={{ fontWeight: 600, color: '#444', marginBottom: '0.35rem', fontSize: '0.82rem', letterSpacing: '0.03em', textTransform: 'uppercase' as const }}>
+              What I&apos;m hearing
             </div>
-            <ul style={{ margin: 0, paddingLeft: '1.2rem', listStyleType: 'disc' }}>
+            <ul style={{ margin: 0, paddingLeft: '1.15rem', listStyleType: 'disc' }}>
               {response.hearing.map((bullet, i) => (
                 <li key={i} style={{ marginBottom: i < response.hearing!.length - 1 ? '0.25rem' : 0 }}>
                   {bullet}
@@ -891,8 +960,8 @@ function MessageBubble({ message }: { message: Message }) {
         <div
           style={{
             margin: '0 0 1.1rem 0',
-            color: '#222',
-            fontSize: '1.02rem',
+            color: '#333',
+            fontSize: '0.98rem',
             lineHeight: 1.7,
           }}
         >
@@ -915,9 +984,10 @@ function MessageBubble({ message }: { message: Message }) {
         {/* Clarification question */}
         <div
           style={{
-            padding: '0.85rem 1rem',
-            borderLeft: '3px solid #4a7a8a',
-            background: '#f7fafb',
+            padding: '0.85rem 1.1rem',
+            borderLeft: '3px solid #5a8a9a',
+            background: '#f5f9fa',
+            borderRadius: '0 6px 6px 0',
           }}
         >
           <div
@@ -939,8 +1009,8 @@ function MessageBubble({ message }: { message: Message }) {
     return (
       <div
         style={{
-          marginTop: '1.5rem',
-          marginBottom: '1.25rem',
+          marginTop: '1.25rem',
+          marginBottom: '1.5rem',
         }}
       >
         {/* Comparison summary — renders first, answers the question */}
@@ -949,9 +1019,9 @@ function MessageBubble({ message }: { message: Message }) {
             style={{
               margin: '0 0 1rem 0',
               color: '#222',
-              fontSize: '1.05rem',
+              fontSize: '1.02rem',
               lineHeight: 1.7,
-              fontWeight: 450,
+              fontWeight: 500,
             }}
           >
             {consultation.comparisonSummary}
@@ -961,8 +1031,8 @@ function MessageBubble({ message }: { message: Message }) {
         <div
           style={{
             margin: '0 0 1.1rem 0',
-            color: '#222',
-            fontSize: '1.02rem',
+            color: '#333',
+            fontSize: '0.98rem',
             lineHeight: 1.7,
           }}
         >

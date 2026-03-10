@@ -1242,3 +1242,168 @@ function buildCriterionAnswer(
   if (info.systemContext) parts.push(takeSentences(info.systemContext, 1));
   return `${brandName}: ${parts.join(' ')}`;
 }
+
+// ── Consultation follow-up ──────────────────────────
+//
+// Handles follow-up questions to a single-subject consultation.
+// Examples:
+//   "devore o96 thoughts?" → "but aren't there smaller models?"
+//   "tell me about harbeth" → "what about their amps?"
+
+/**
+ * Classify what the user is asking about in their follow-up.
+ */
+type FollowUpKind =
+  | 'other_models'      // "aren't there smaller models?"
+  | 'sonic_detail'      // "how is the bass?"
+  | 'pairing'           // "what pairs well with it?"
+  | 'system_fit'        // "how would it work in my system?"
+  | 'general';          // catch-all follow-up
+
+function classifyFollowUp(text: string): FollowUpKind {
+  const lower = text.toLowerCase();
+  if (/\b(?:smaller|larger|bigger|cheaper|other|different)\s+(?:models?|versions?|options?|speakers?)\b/i.test(lower)) return 'other_models';
+  if (/\bdo\s+they\s+(?:make|have|offer)\b/i.test(lower)) return 'other_models';
+  if (/\bother\s+(?:models?|versions?|products?|options?)\b/i.test(lower)) return 'other_models';
+  if (/\b(?:bass|treble|midrange|soundstage|imaging|dynamics|timing|warmth|detail|speed)\b/i.test(lower)) return 'sonic_detail';
+  if (/\bpair|match|work\s+with|goes?\s+well\b/i.test(lower)) return 'pairing';
+  if (/\bmy\s+(?:system|setup|room|amp)|in\s+(?:a\s+)?(?:small|large)\b/i.test(lower)) return 'system_fit';
+  return 'general';
+}
+
+/**
+ * Build a follow-up response for an active consultation.
+ *
+ * Uses the stored subject context to answer questions about
+ * variants, sonic details, pairings, and system fit — without
+ * falling through to diagnostic logic.
+ *
+ * @param activeConsultation - stored subjects and original query
+ * @param followUpMessage    - the user's follow-up question
+ */
+export function buildConsultationFollowUp(
+  activeConsultation: { subjects: SubjectMatch[]; originalQuery: string },
+  followUpMessage: string,
+): ConsultationResponse | null {
+  if (activeConsultation.subjects.length === 0) return null;
+
+  const primarySubject = activeConsultation.subjects[0];
+  const subjectName = capitalize(primarySubject.name);
+  const kind = classifyFollowUp(followUpMessage);
+
+  // Resolve the brand profile for the subject
+  const brandProfile = findBrandProfile(primarySubject.name);
+  const knowledgeEntry = getApprovedBrand(primarySubject.name);
+  const brandProducts = ALL_PRODUCTS.filter(
+    (p) => p.brand.toLowerCase() === primarySubject.name.toLowerCase(),
+  );
+
+  // ── Other models / variants ──────────────────────────
+  if (kind === 'other_models') {
+    // Check for design families in brand profile
+    if (brandProfile?.designFamilies && brandProfile.designFamilies.length > 0) {
+      const familyLines = brandProfile.designFamilies.map(
+        (f) => `${f.name}: ${f.character}${f.ampPairing ? ` ${f.ampPairing}` : ''}`,
+      );
+      return {
+        subject: subjectName,
+        philosophy: `${subjectName} has distinct design families that span different sizes, sensitivities, and amplifier requirements.`,
+        tendencies: familyLines.join('\n\n'),
+        systemContext: brandProfile.pairingNotes ?? undefined,
+        followUp: 'Which of these directions interests you — or is there a specific constraint like room size or amplifier power?',
+      };
+    }
+
+    // Check catalog products
+    if (brandProducts.length > 1) {
+      const productList = brandProducts.map(
+        (p) => `${p.brand} ${p.name}: ${p.description.split('.')[0]}.`,
+      );
+      return {
+        subject: subjectName,
+        philosophy: `${subjectName} has several models in the catalog with different characteristics.`,
+        tendencies: productList.join('\n\n'),
+        followUp: 'What constraints matter most — size, budget, amplifier compatibility?',
+      };
+    }
+
+    // No detailed family/product data — honest acknowledgement
+    return {
+      subject: subjectName,
+      philosophy: `${subjectName} does make other models, though I have the most detail on what we discussed.`,
+      tendencies: brandProfile
+        ? `The broader range shares the brand philosophy: ${takeSentences(brandProfile.philosophy, 1)}`
+        : `I'd suggest looking at the full lineup on their website for a complete picture of the range.`,
+      followUp: 'Is there a specific size, price range, or amplifier pairing you\'re working with?',
+      links: brandProfile?.links,
+    };
+  }
+
+  // ── Sonic detail questions ───────────────────────────
+  if (kind === 'sonic_detail') {
+    const info = resolveBrandInfo(primarySubject.name);
+    if (info) {
+      return {
+        subject: subjectName,
+        philosophy: `Continuing with ${subjectName} — ${takeSentences(info.tendencies, 2)}`,
+        tendencies: info.systemContext
+          ? `Context matters: ${takeSentences(info.systemContext, 2)}`
+          : 'Specific sonic performance depends on the rest of the chain — amplifier character, room, and source all shape the final result.',
+        followUp: 'What are you pairing this with?',
+      };
+    }
+  }
+
+  // ── Pairing questions ────────────────────────────────
+  if (kind === 'pairing') {
+    if (brandProfile?.pairingNotes) {
+      return {
+        subject: subjectName,
+        philosophy: `For ${subjectName} pairings: ${brandProfile.pairingNotes}`,
+        tendencies: brandProfile.systemContext ?? 'Pairing depends on what qualities you want to emphasise or balance.',
+        followUp: 'Do you have an amplifier already, or are you choosing both together?',
+      };
+    }
+    const info = resolveBrandInfo(primarySubject.name);
+    if (info?.systemContext) {
+      return {
+        subject: subjectName,
+        philosophy: `${subjectName}: ${takeSentences(info.systemContext, 2)}`,
+        tendencies: 'Pairing depends on the balance you want — complementary or reinforcing the existing character.',
+        followUp: 'What kind of sound do you want overall?',
+      };
+    }
+  }
+
+  // ── System fit questions ─────────────────────────────
+  if (kind === 'system_fit') {
+    const info = resolveBrandInfo(primarySubject.name);
+    if (info) {
+      return {
+        subject: subjectName,
+        philosophy: `${subjectName} in your system context: ${takeSentences(info.tendencies, 1)}`,
+        tendencies: info.systemContext
+          ? takeSentences(info.systemContext, 2)
+          : 'How well it fits depends on what the rest of the chain brings — amplifier topology, source character, and room all interact.',
+        followUp: 'What does the rest of your chain look like?',
+      };
+    }
+  }
+
+  // ── General follow-up ────────────────────────────────
+  // Re-route through the full consultation builder with the original subject
+  // context. This catches anything the specific handlers missed.
+  const result = buildConsultationResponse(
+    `${activeConsultation.originalQuery} ${followUpMessage}`,
+    activeConsultation.subjects,
+  );
+  if (result) return result;
+
+  // Last resort — honest acknowledgement
+  return {
+    subject: subjectName,
+    philosophy: `Still on ${subjectName} — that's a good question.`,
+    tendencies: "I don't have enough specific data to give a detailed answer on that aspect. The brand profile and general tendencies are the most reliable basis I have.",
+    followUp: 'What would be most useful — more about the brand philosophy, or practical pairing guidance?',
+  };
+}

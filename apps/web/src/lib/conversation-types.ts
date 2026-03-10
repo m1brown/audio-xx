@@ -88,6 +88,18 @@ export interface ConversationState {
     right: SubjectMatch;
     scope: 'brand' | 'product';
   };
+  /**
+   * Active consultation context — persists across follow-up turns.
+   * Set when a gear inquiry or consultation produces a response about
+   * a specific brand/product. Allows follow-ups like "but aren't
+   * there smaller models?" to stay in context instead of falling
+   * through to diagnostic logic.
+   */
+  activeConsultation?: {
+    subjects: SubjectMatch[];
+    /** The original user message that started the consultation. */
+    originalQuery: string;
+  };
   // Future hooks for persistence (unused this pass):
   systemId?: string;
   profileId?: string;
