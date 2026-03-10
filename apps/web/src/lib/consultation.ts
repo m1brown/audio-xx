@@ -35,6 +35,7 @@ import {
   type DesignArchetype,
   type DesignArchetypeId,
 } from './design-archetypes';
+import type { SubjectMatch } from './intent';
 
 // ── Types ───────────────────────────────────────────
 
@@ -309,39 +310,133 @@ function buildBrandConsultation(profile: BrandProfile): ConsultationResponse {
   };
 }
 
+/**
+ * Build a brand-level comparison response.
+ * Used when two brands are mentioned with comparison intent and both
+ * have profiles (curated or catalog-derived). Compares at the
+ * philosophy/tendency level — not individual products.
+ */
+function buildBrandComparison(
+  profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
+): ConsultationResponse {
+  const nameA = capitalize('names' in profileA ? profileA.names[0] : profileA.name);
+  const nameB = capitalize('names' in profileB ? profileB.names[0] : profileB.name);
+
+  return {
+    subject: `${nameA} vs ${nameB}`,
+    philosophy: `${nameA} and ${nameB} represent different design priorities. ${profileA.philosophy.split('.')[0]}. ${profileB.philosophy.split('.')[0]}.`,
+    tendencies: `${nameA}: ${profileA.tendencies.split('.')[0]}. ${nameB}: ${profileB.tendencies.split('.')[0]}.`,
+    systemContext: 'The better fit depends on what you value most in your listening and where your system currently sits.',
+    followUp: 'What matters most to you — and what is the rest of your system?',
+  };
+}
+
+/** Capitalize first letter of a string. */
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * Derive a minimal brand summary from catalog products.
+ * Used as a fallback when we have products but no curated brand profile.
+ */
+function deriveBrandSummaryFromCatalog(
+  brandName: string,
+  products: Product[],
+): { name: string; philosophy: string; tendencies: string } {
+  const primary = products[0];
+  const archLabel = products.length > 1
+    ? `${primary.architecture} and related architectures`
+    : `${primary.architecture} architecture`;
+
+  return {
+    name: brandName,
+    philosophy: `${capitalize(brandName)} builds ${archLabel}. ${primary.description.split('.')[0]}.`,
+    tendencies: hasExplainableProfile(primary.tendencyProfile)
+      ? `Tends to emphasise ${getEmphasizedTraits(primary.tendencyProfile).slice(0, 2).join(' and ')}.`
+      : primary.description.split('.').slice(0, 2).join('.') + '.',
+  };
+}
+
 // ── Public API ───────────────────────────────────────
 
 /**
  * Build a consultation response for a knowledge/philosophy question.
  *
  * Resolution order:
- *   1. Product tendencies (specific product in catalog)
- *   2. Design archetype (topology/technology question)
- *   3. Brand profile (known brand, no specific product)
- *   4. null (no match — caller should fall back to gear inquiry)
+ *   1. Brand-level comparison (two brand subjects, no specific products)
+ *   2. Product tendencies (specific product in catalog)
+ *   3. Design archetype (topology/technology question)
+ *   4. Brand profile (known brand, no specific product)
+ *   5. Best-effort fallback (brand in catalog but no curated profile)
+ *   6. null (no match — caller should fall back to gear inquiry)
+ *
+ * @param currentMessage   - the user's message text
+ * @param subjectMatches   - optional subject matches with brand/product kind tags
  */
 export function buildConsultationResponse(
   currentMessage: string,
+  subjectMatches?: SubjectMatch[],
 ): ConsultationResponse | null {
-  // 1. Check for specific products in catalog
+  // 1. Brand-level comparison — "Chord vs Denafrips" (both tagged as brands)
+  if (subjectMatches && subjectMatches.length >= 2) {
+    const brandMatches = subjectMatches.filter((m) => m.kind === 'brand');
+    if (brandMatches.length >= 2) {
+      const a = brandMatches[0];
+      const b = brandMatches[1];
+      const profileA = findBrandProfile(a.name);
+      const profileB = findBrandProfile(b.name);
+
+      // Both have curated profiles — direct comparison
+      if (profileA && profileB) {
+        return buildBrandComparison(profileA, profileB);
+      }
+
+      // One or both missing curated profiles — try catalog-derived summaries
+      const productsA = ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === a.name.toLowerCase());
+      const productsB = ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === b.name.toLowerCase());
+      const summaryA = profileA ?? (productsA.length > 0 ? deriveBrandSummaryFromCatalog(a.name, productsA) : null);
+      const summaryB = profileB ?? (productsB.length > 0 ? deriveBrandSummaryFromCatalog(b.name, productsB) : null);
+
+      if (summaryA && summaryB) {
+        return buildBrandComparison(summaryA, summaryB);
+      }
+    }
+  }
+
+  // 2. Check for specific products in catalog
   const products = findProductsByBrand(currentMessage);
   if (products.length > 0) {
     const brandName = products[0].brand;
     return buildProductConsultation(products, brandName);
   }
 
-  // 2. Check for topology/technology match
+  // 3. Check for topology/technology match
   const topoMatch = findTopologyMatch(currentMessage);
   if (topoMatch) {
     return buildArchetypeConsultation(topoMatch.archetype, topoMatch.label);
   }
 
-  // 3. Check for known brand profile
+  // 4. Check for known brand profile
   const brandProfile = findBrandProfile(currentMessage);
   if (brandProfile) {
     return buildBrandConsultation(brandProfile);
   }
 
-  // 4. No match
+  // 5. Best-effort fallback — brand recognized in catalog but no curated profile
+  if (subjectMatches && subjectMatches.length > 0) {
+    const brandSubject = subjectMatches.find((m) => m.kind === 'brand');
+    if (brandSubject) {
+      const brandProducts = ALL_PRODUCTS.filter(
+        (p) => p.brand.toLowerCase() === brandSubject.name.toLowerCase(),
+      );
+      if (brandProducts.length > 0) {
+        return buildProductConsultation(brandProducts, brandProducts[0].brand);
+      }
+    }
+  }
+
+  // 6. No match
   return null;
 }

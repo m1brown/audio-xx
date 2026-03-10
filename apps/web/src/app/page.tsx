@@ -9,7 +9,7 @@ import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
 import { checkGlossaryQuestion } from '@/lib/glossary';
-import { detectIntent } from '@/lib/intent';
+import { detectIntent, isBrandOnlyComparison } from '@/lib/intent';
 import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
@@ -248,10 +248,17 @@ export default function Home() {
     const effectiveMode = resolveMode(routedMode, state.activeMode);
     dispatch({ type: 'SET_MODE', mode: effectiveMode });
 
+    // Detect intent BEFORE running the evaluation engine
+    // (moved above consultation so subjectMatches are available for brand comparison routing)
+    let { intent, subjects, subjectMatches, desires } = detectIntent(submittedText);
+
     // ── Consultation path ───────────────────────────────
     // Knowledge / philosophy questions — answer first, no diagnostic logic.
-    if (effectiveMode === 'consultation') {
-      const consultResult = buildConsultationResponse(submittedText);
+    // Also catches brand-level comparisons ("Chord vs Denafrips") that should
+    // be handled at the philosophy level, not routed to product matching.
+    const isBrandComparison = intent === 'comparison' && isBrandOnlyComparison(subjectMatches);
+    if (effectiveMode === 'consultation' || isBrandComparison) {
+      const consultResult = buildConsultationResponse(submittedText, subjectMatches);
       if (consultResult) {
         dispatch({ type: 'ADD_CONSULTATION', consultation: consultResult });
         dispatch({ type: 'SET_LOADING', value: false });
@@ -259,9 +266,6 @@ export default function Home() {
       }
       // No match — fall through to gear inquiry path below
     }
-
-    // Detect intent BEFORE running the evaluation engine
-    let { intent, subjects, desires } = detectIntent(submittedText);
 
     // ── Mode-aware intent override ─────────────────────
     // When in shopping mode, ALL intents stay in shopping so that

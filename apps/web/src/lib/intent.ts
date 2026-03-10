@@ -26,45 +26,53 @@ export interface DesireSignal {
   raw: string;
 }
 
+/** A subject extracted from user text, tagged by kind. */
+export interface SubjectMatch {
+  name: string;
+  kind: 'brand' | 'product';
+}
+
 export interface IntentResult {
   intent: UserIntent;
   /** Gear names or brands extracted from the message, if any. */
   subjects: string[];
+  /** Structured subject matches with brand/product distinction. */
+  subjectMatches: SubjectMatch[];
   /** Desired changes the user mentioned, if any. */
   desires: DesireSignal[];
 }
 
 // ── Known brands / product names ─────────────────────
 
-const KNOWN_BRANDS = [
+/** Brand / manufacturer names — not specific models. */
+const BRAND_NAMES = [
   'denafrips', 'chord', 'schiit', 'topping', 'smsl', 'gustard',
-  'holo', 'spring', 'may', 'ares', 'pontus', 'venus', 'terminator',
-  'bifrost', 'gungnir', 'yggdrasil', 'modi', 'modius',
-  'qutest', 'hugo', 'dave', 'mojo', 'tt2',
-  'benchmark', 'dac3', 'dac4',
-  'rme', 'adi-2',
-  'mytek', 'brooklyn',
-  'weiss',
-  'mola mola', 'tambaqui',
-  'rockna', 'wavelight', 'wavedream',
-  'aqua', 'la voce', 'formula',
-  'lampizator', 'lampi',
-  'border patrol',
-  'metrum', 'pavane', 'adagio',
-  'audio-gd',
-  'soekris',
-  'musician', 'pegasus', 'aquarius', 'draco',
-  'okto', 'dac8',
-  'wlm', 'diva', 'diva monitor',
-  'harbeth', 'p3esr', 'super hl5',
-  'devore', 'orangutan', 'o/96',
-  'zu', 'dirty weekend',
-  'klipsch', 'heresy',
-  'focal', 'kanta', 'aria',
-  'boenicke', 'w5', 'w8', 'w11',
+  'holo', 'benchmark', 'rme', 'mytek', 'weiss',
+  'mola mola', 'rockna', 'aqua', 'lampizator', 'lampi',
+  'border patrol', 'metrum', 'audio-gd', 'soekris',
+  'musician', 'okto',
+  'wlm', 'harbeth', 'devore', 'zu', 'klipsch', 'focal', 'boenicke',
   'pass labs', 'first watt', 'naim', 'luxman', 'accuphase',
   'parasound', 'hegel',
+  'shindo', 'leben', 'audio note',
 ];
+
+/** Specific product / model names. */
+const PRODUCT_NAMES = [
+  'spring', 'may', 'ares', 'pontus', 'venus', 'terminator',
+  'bifrost', 'gungnir', 'yggdrasil', 'modi', 'modius',
+  'qutest', 'hugo', 'dave', 'mojo', 'tt2',
+  'dac3', 'dac4', 'adi-2', 'brooklyn', 'tambaqui',
+  'wavelight', 'wavedream', 'la voce', 'formula',
+  'pavane', 'adagio', 'pegasus', 'aquarius', 'draco', 'dac8',
+  'diva', 'diva monitor',
+  'p3esr', 'super hl5', 'orangutan', 'o/96',
+  'dirty weekend', 'heresy', 'kanta', 'aria',
+  'w5', 'w8', 'w11',
+];
+
+/** Combined list for backward-compatible subject extraction. */
+const ALL_KNOWN_NAMES = [...BRAND_NAMES, ...PRODUCT_NAMES];
 
 // ── Comparison patterns ──────────────────────────────
 
@@ -135,15 +143,26 @@ const DIAGNOSIS_PATTERNS = [
 
 // ── Subject extraction ───────────────────────────────
 
-function extractSubjects(text: string): string[] {
+function extractSubjectMatches(text: string): SubjectMatch[] {
   const lower = text.toLowerCase();
-  const found: string[] = [];
-  for (const brand of KNOWN_BRANDS) {
-    if (lower.includes(brand)) {
-      found.push(brand);
+  const found: SubjectMatch[] = [];
+  // Check product names first (more specific — "ares" is a product, not a brand)
+  for (const name of PRODUCT_NAMES) {
+    if (lower.includes(name)) {
+      found.push({ name, kind: 'product' });
+    }
+  }
+  // Then check brand names, skip if already matched as product
+  for (const name of BRAND_NAMES) {
+    if (lower.includes(name) && !found.some((f) => f.name === name)) {
+      found.push({ name, kind: 'brand' });
     }
   }
   return found;
+}
+
+function extractSubjects(text: string): string[] {
+  return extractSubjectMatches(text).map((m) => m.name);
 }
 
 // ── Desire extraction ────────────────────────────────
@@ -212,22 +231,23 @@ function extractDesires(text: string): DesireSignal[] {
  * the listening problem should drive the response.
  */
 export function detectIntent(currentMessage: string): IntentResult {
-  const subjects = extractSubjects(currentMessage);
+  const subjectMatches = extractSubjectMatches(currentMessage);
+  const subjects = subjectMatches.map((m) => m.name);
   const desires = extractDesires(currentMessage);
 
   // 1. Explicit diagnosis — user describes a listening problem
   if (DIAGNOSIS_PATTERNS.some((p) => p.test(currentMessage))) {
-    return { intent: 'diagnosis', subjects, desires };
+    return { intent: 'diagnosis', subjects, subjectMatches, desires };
   }
 
   // 2. Comparison — "X vs Y", "compare A and B"
   if (COMPARISON_PATTERNS.some((p) => p.test(currentMessage))) {
-    return { intent: 'comparison', subjects, desires };
+    return { intent: 'comparison', subjects, subjectMatches, desires };
   }
 
   // 3. Shopping — "best DAC under $1000", "recommend a DAC"
   if (SHOPPING_PATTERNS.some((p) => p.test(currentMessage))) {
-    return { intent: 'shopping', subjects, desires };
+    return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
   // 4. Gear inquiry — "what do you think of X?" or brand mention
@@ -238,14 +258,22 @@ export function detectIntent(currentMessage: string): IntentResult {
   const hasGearCategoryWord = /\b(?:dac|amp|amplifier|speaker|headphone|streamer|cable|turntable|phono|preamp|power\s*amp)\b/i.test(currentMessage);
 
   if (hasGearPattern && (subjects.length > 0 || hasGearCategoryWord)) {
-    return { intent: 'gear_inquiry', subjects, desires };
+    return { intent: 'gear_inquiry', subjects, subjectMatches, desires };
   }
 
   // 4b. Brand/product mention without any other pattern → gear inquiry
   if (subjects.length > 0) {
-    return { intent: 'gear_inquiry', subjects, desires };
+    return { intent: 'gear_inquiry', subjects, subjectMatches, desires };
   }
 
   // 5. Default — treat as diagnostic / open-ended listening discussion
-  return { intent: 'diagnosis', subjects, desires };
+  return { intent: 'diagnosis', subjects, subjectMatches, desires };
+}
+
+/**
+ * Returns true if all subject matches are brand-level (no specific products).
+ * Used to distinguish brand comparisons from product comparisons.
+ */
+export function isBrandOnlyComparison(matches: SubjectMatch[]): boolean {
+  return matches.length >= 2 && matches.every((m) => m.kind === 'brand');
 }
