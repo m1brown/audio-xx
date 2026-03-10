@@ -730,9 +730,11 @@ export interface ProductExample {
   name: string;
   brand: string;
   price: number;
+  /** ISO 4217 currency code. Defaults to 'USD' when omitted. */
+  priceCurrency?: string;
   fitNote: string;
   caution?: string;
-  links?: { label: string; url: string }[];
+  links?: { label: string; url: string; region?: string }[];
 }
 
 export interface ShoppingAnswer {
@@ -1057,6 +1059,7 @@ function selectProductExamples(
     name: product.name,
     brand: product.brand,
     price: product.price,
+    priceCurrency: product.priceCurrency,
     fitNote: buildFitNote(product, userTraits),
     caution: buildCaution(product),
     links: product.retailer_links.length > 0 ? product.retailer_links : undefined,

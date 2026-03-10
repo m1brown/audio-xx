@@ -50,7 +50,7 @@ export interface ConsultationResponse {
   /** 4. Optional light follow-up question. */
   followUp?: string;
   /** 5. Optional neutral reference links (website, importer, dealers). */
-  links?: { label: string; url: string; kind?: 'reference' }[];
+  links?: { label: string; url: string; kind?: 'reference'; region?: string }[];
 }
 
 // ── All products ────────────────────────────────────
@@ -72,6 +72,8 @@ interface BrandLink {
    * Future: 'affiliate' | 'commercial' — must be visually distinguished.
    */
   kind?: 'reference';
+  /** ISO 3166-1 region code or broad region label (e.g. 'US', 'EU', 'JP', 'global'). */
+  region?: string;
 }
 
 interface BrandProfile {
@@ -90,8 +92,8 @@ const BRAND_PROFILES: BrandProfile[] = [
     tendencies: 'Listeners consistently describe Shindo systems as dense, flowing, and harmonically alive. They tend to emphasize tonal weight and midrange texture at the cost of some transient precision.',
     systemContext: 'Commonly paired with high-efficiency speakers — horn-loaded or single-driver designs that can work with lower power output.',
     links: [
-      { label: 'Official website', url: 'https://www.shindo-laboratory.co.jp/' },
-      { label: 'US importer (Tone Imports)', url: 'https://www.toneimports.com/' },
+      { label: 'Official website', url: 'https://www.shindo-laboratory.co.jp/', region: 'global' },
+      { label: 'US importer (Tone Imports)', url: 'https://www.toneimports.com/', region: 'US' },
     ],
   },
   {
@@ -100,9 +102,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     tendencies: 'Pass amplifiers tend toward warmth and midrange richness for solid-state. First Watt designs emphasise texture and intimacy at the cost of dynamic scale.',
     systemContext: 'Pass Labs works across a range of speakers. First Watt pairs best with high-efficiency speakers — similar territory to low-power tube amps.',
     links: [
-      { label: 'Pass Labs official', url: 'https://www.passlabs.com/' },
-      { label: 'First Watt official', url: 'https://www.firstwatt.com/' },
-      { label: 'Dealer (Reno HiFi)', url: 'https://www.renohifi.com/' },
+      { label: 'Pass Labs official', url: 'https://www.passlabs.com/', region: 'global' },
+      { label: 'First Watt official', url: 'https://www.firstwatt.com/', region: 'global' },
+      { label: 'Dealer (Reno HiFi)', url: 'https://www.renohifi.com/', region: 'US' },
     ],
   },
   {
@@ -111,7 +113,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     tendencies: 'Listeners describe Naim systems as propulsive and engaging, with strong rhythmic coherence. They tend to de-emphasise warmth and spatial holography.',
     systemContext: 'Traditionally paired with Naim sources and Naim-friendly speakers. The timing-first approach works well with speakers that have good transient response.',
     links: [
-      { label: 'Official website', url: 'https://www.naimaudio.com/' },
+      { label: 'Official website', url: 'https://www.naimaudio.com/', region: 'global' },
     ],
   },
   {
@@ -120,8 +122,8 @@ const BRAND_PROFILES: BrandProfile[] = [
     tendencies: 'Luxman amplifiers tend toward a slightly warm, composed presentation. Listeners describe good tonal density with more control and composure than most tube designs.',
     systemContext: 'Versatile pairing — works across a range of speaker types. The refined character complements both analytical and warmer speakers.',
     links: [
-      { label: 'Official website', url: 'https://www.luxman.com/' },
-      { label: 'US distributor (On a Higher Note)', url: 'https://www.onahighernote.com/' },
+      { label: 'Official website', url: 'https://www.luxman.com/', region: 'global' },
+      { label: 'US distributor (On a Higher Note)', url: 'https://www.onahighernote.com/', region: 'US' },
     ],
   },
   {
@@ -130,7 +132,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     tendencies: 'Accuphase gear tends toward transparency and control with a slightly warm tonal balance. More composed than rhythmically aggressive.',
     systemContext: 'Works well with revealing speakers where control and composure matter. A good match for listeners who value refinement over raw energy.',
     links: [
-      { label: 'Official website', url: 'https://www.accuphase.com/' },
+      { label: 'Official website', url: 'https://www.accuphase.com/', region: 'global' },
     ],
   },
   {
@@ -139,7 +141,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     tendencies: 'Described as tonally dense, flowing, and harmonically saturated. These DACs trade analytical precision for musical immersion and tonal weight.',
     systemContext: 'Pairs well with systems that benefit from added harmonic density. Can be too much in already warm or dense systems.',
     links: [
-      { label: 'Official website', url: 'https://www.lampizator.eu/' },
+      { label: 'Official website', url: 'https://www.lampizator.eu/', region: 'global' },
     ],
   },
   {
@@ -148,7 +150,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     tendencies: 'Listeners describe a natural, unforced sound with strong tonal body and flow. Treble is typically rolled compared to oversampling designs.',
     systemContext: 'Works best in systems where the rest of the chain provides sufficient detail and air. Pairs naturally with tube amplification and high-efficiency speakers.',
     links: [
-      { label: 'Official website', url: 'https://www.borderpatrol.net/' },
+      { label: 'Official website', url: 'https://www.borderpatrol.net/', region: 'global' },
     ],
   },
 ];

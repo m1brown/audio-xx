@@ -25,6 +25,19 @@ import type { EvaluationResult } from '@/lib/rule-types';
 import { parseTasteProfile, topTraits, isProfileEmpty, type TasteProfile } from '@/lib/taste-profile';
 import { detectChurnSignal } from '@/lib/churn-avoidance';
 
+// ── Helpers ──────────────────────────────────────────
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$', EUR: '€', GBP: '£', JPY: '¥', AUD: 'A$', CAD: 'C$', CHF: 'CHF ',
+};
+
+/** Format a price with its currency symbol. Falls back to ISO code prefix. */
+function formatPrice(amount: number, currency?: string): string {
+  const code = currency ?? 'USD';
+  const symbol = CURRENCY_SYMBOLS[code] ?? `${code} `;
+  return `${symbol}${amount.toLocaleString()}`;
+}
+
 // ── Constants ─────────────────────────────────────────
 
 const CYCLING_PLACEHOLDERS = [
@@ -869,7 +882,13 @@ function MessageBubble({ message }: { message: Message }) {
                   rel="noopener noreferrer"
                   style={{ color: '#4a7a8a', textDecoration: 'none' }}
                 >
-                  {link.label} ↗
+                  {link.label}
+                  {link.region && link.region !== 'global' && (
+                    <span style={{ color: '#999', fontSize: '0.8rem', marginLeft: '0.25rem' }}>
+                      ({link.region})
+                    </span>
+                  )}
+                  {' '}↗
                 </a>
               </span>
             ))}
@@ -1045,7 +1064,7 @@ function ShoppingRecommendation({
                   </strong>
                   {product.price > 0 && (
                     <span style={{ color: '#666', marginLeft: '0.5rem', fontSize: '0.92rem' }}>
-                      ${product.price.toLocaleString()}
+                      {formatPrice(product.price, product.priceCurrency)}
                     </span>
                   )}
                 </div>

@@ -16,7 +16,7 @@ export interface SeedComponent {
   risk_flags: string[];
   trusted_references: Array<{ source: string; note: string; type: string }>;
   reviews: Array<{ source: string; excerpt: string; role: string }>;
-  retailer_links?: Array<{ label: string; url: string }>;
+  retailer_links?: Array<{ label: string; url: string; region?: string }>;
   is_reference: boolean;
   user_submitted: boolean;
 }

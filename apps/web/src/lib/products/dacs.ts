@@ -16,11 +16,24 @@
 
 import type { ProductTendencies, TendencyProfile } from '../sonic-tendencies';
 
+export interface RetailerLink {
+  label: string;
+  url: string;
+  /** ISO 3166-1 region code or broad label (e.g. 'US', 'EU', 'JP', 'global'). */
+  region?: string;
+}
+
 export interface Product {
   id: string;
   brand: string;
   name: string;
+  /**
+   * Representative price in the currency specified by priceCurrency.
+   * Used for approximate budget filtering, not as a definitive quote.
+   */
   price: number;
+  /** ISO 4217 currency code. Defaults to 'USD' when omitted. */
+  priceCurrency?: string;
   category: 'dac' | 'speaker' | 'amplifier';
   architecture: string;
   /**
@@ -38,7 +51,7 @@ export interface Product {
   tendencyProfile?: TendencyProfile;
   /** Fallback summary text. Demoted — tendencies take priority for reasoning. */
   description: string;
-  retailer_links: { label: string; url: string }[];
+  retailer_links: RetailerLink[];
   notes?: string;
   /**
    * Explicit archetype tags. When present, these override trait-inferred
