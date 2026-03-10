@@ -48,6 +48,7 @@ import {
   archetypeTradeoff,
   archetypeCaution,
 } from './design-archetypes';
+import { detectChurnSignal, buildChurnNote, type ChurnSignal } from './churn-avoidance';
 
 // ── Product lookup ───────────────────────────────────
 
@@ -355,6 +356,22 @@ function pick(options: string[], seed: number): string {
   return options[seed % options.length];
 }
 
+/**
+ * Pick a clarification — prefers the churn reflective question when
+ * churn is detected and no explicit desires are present.
+ */
+function pickClarification(
+  options: string[],
+  seed: number,
+  churn: ChurnSignal,
+  hasDesires: boolean,
+): string {
+  if (churn.detected && churn.reflectiveQuestion && !hasDesires) {
+    return churn.reflectiveQuestion;
+  }
+  return pick(options, seed);
+}
+
 // ── "What I'm hearing" block ─────────────────────────
 
 /**
@@ -492,8 +509,17 @@ export function buildGearResponse(
     tasteProfile,
   );
 
+  // Churn avoidance — detect vague upgrade intent without clear symptom
+  const churn = detectChurnSignal(currentMessage);
+  const churnNote = buildChurnNote(churn);
+
   // Build reflective "What I'm hearing" block
   const hearing = buildHearingBlock(intent, desires, products, sysDir, tasteProfile);
+
+  // Insert churn note into hearing block when detected
+  if (churnNote && hearing.length < 4) {
+    hearing.push(churnNote);
+  }
 
   // Helper: append tendency context to an anchor if available
   const withTendency = (base: string): string => {
@@ -611,7 +637,7 @@ export function buildGearResponse(
       anchor: withTendency(`The ${product.brand} ${product.name} is a well-known piece in this space.`),
       character: productCharacter(product),
       direction: buildInquiryDirection(product, sysDir.inferredArchetype ?? undefined),
-      clarification: pick(INQUIRY_CLARIFICATIONS, seed),
+      clarification: pickClarification(INQUIRY_CLARIFICATIONS, seed, churn, desires.length > 0),
       systemDirection: sysDir,
       hearing,
       userArchetype: sysDir.inferredArchetype
@@ -629,7 +655,7 @@ export function buildGearResponse(
       anchor: withTendency(`${brandName} is a name that comes up regularly in these conversations.`),
       character: brandCharacter(brandName),
       direction: 'The best way to evaluate any piece of gear is relative to the system it\'s going into. A component that sounds extraordinary in one system can be unremarkable in another — that\'s not a flaw, it\'s how audio works.',
-      clarification: pick(GENERIC_CLARIFICATIONS, seed),
+      clarification: pickClarification(GENERIC_CLARIFICATIONS, seed, churn, desires.length > 0),
       systemDirection: sysDir,
       hearing,
       userArchetype: sysDir.inferredArchetype
@@ -645,7 +671,7 @@ export function buildGearResponse(
     anchor: 'That\'s a good question.',
     character: 'Every component has a character — a set of things it does well and things it trades away.',
     direction: 'What matters is how that character interacts with your system and your listening priorities. The same piece can sound relaxed in one system and forward in another.',
-    clarification: pick(GENERIC_CLARIFICATIONS, seed),
+    clarification: pickClarification(GENERIC_CLARIFICATIONS, seed, churn, desires.length > 0),
     systemDirection: sysDir,
     hearing,
     userArchetype: sysDir.inferredArchetype

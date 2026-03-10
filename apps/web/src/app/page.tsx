@@ -23,21 +23,37 @@ import type { Message, ConversationState, GearResponse } from '@/lib/conversatio
 import type { ExtractedSignals } from '@/lib/signal-types';
 import type { EvaluationResult } from '@/lib/rule-types';
 import { parseTasteProfile, topTraits, isProfileEmpty, type TasteProfile } from '@/lib/taste-profile';
+import { detectChurnSignal } from '@/lib/churn-avoidance';
 
 // ── Constants ─────────────────────────────────────────
 
 const CYCLING_PLACEHOLDERS = [
-  'Best DAC under $1000 for detail and naturalness',
+  'My system sounds thin — what might cause that?',
+  'I value warmth and flow. What DAC direction fits that?',
   'How would a Denafrips Ares sound in my system?',
   'Compare R-2R vs delta-sigma for long listening sessions',
-  'I prefer warmth and flow. What DAC direction fits that?',
-  'My system sounds thin. What might cause that?',
-  'What do you think of the Chord Qutest?',
+  'Best DAC under $1000 for detail and naturalness',
+  'What is Shindo known for?',
   'Schiit Bifrost vs Denafrips Pontus',
 ];
 
 /** Interval in ms between placeholder rotations. */
 const PLACEHOLDER_INTERVAL = 4000;
+
+/** Categorized example prompts shown on the landing page. */
+interface ExamplePrompt {
+  category: string;
+  text: string;
+}
+
+const EXAMPLE_PROMPTS: ExamplePrompt[] = [
+  { category: 'Describe what you hear', text: 'My system sounds bright and fatiguing after an hour' },
+  { category: 'Describe what you hear', text: 'I want more body and warmth without losing detail' },
+  { category: 'Explore a component', text: 'What do you think of the Chord Qutest?' },
+  { category: 'Explore a component', text: 'How does the Denafrips Pontus compare to the Bifrost?' },
+  { category: 'Find a direction', text: 'Best DAC under $1000 for flow and musicality' },
+  { category: 'Understand a concept', text: 'What\'s the difference between R-2R and delta-sigma?' },
+];
 
 // ── Reducer ───────────────────────────────────────────
 
@@ -302,6 +318,24 @@ export default function Home() {
           }
         } else {
           // ── Diagnosis path ───────────────────────────
+          // Churn avoidance — on first turn, check for vague upgrade intent
+          // without clear symptoms. If detected, ask a reflective question
+          // before proceeding to diagnosis.
+          if (newTurnCount === 1) {
+            const churn = detectChurnSignal(submittedText);
+            if (churn.detected && churn.reflectiveQuestion) {
+              dispatch({
+                type: 'ADD_QUESTION',
+                clarification: {
+                  acknowledge: 'That\'s worth thinking through.',
+                  question: churn.reflectiveQuestion,
+                },
+              });
+              dispatch({ type: 'SET_LOADING', value: false });
+              return;
+            }
+          }
+
           // Check if more context is needed before showing results
           const clarification = getClarificationQuestion(
             data.signals,
@@ -425,6 +459,54 @@ export default function Home() {
               </div>
             </div>
           )}
+
+          {/* Example prompts — categorized, clickable */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            {Object.entries(
+              EXAMPLE_PROMPTS.reduce<Record<string, string[]>>((acc, p) => {
+                if (!acc[p.category]) acc[p.category] = [];
+                acc[p.category].push(p.text);
+                return acc;
+              }, {}),
+            ).map(([category, prompts]) => (
+              <div key={category} style={{ marginBottom: '0.75rem' }}>
+                <div
+                  style={{
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                    color: '#999',
+                    marginBottom: '0.3rem',
+                  }}
+                >
+                  {category}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  {prompts.map((text) => (
+                    <button
+                      key={text}
+                      type="button"
+                      onClick={() => dispatch({ type: 'SET_INPUT', value: text })}
+                      style={{
+                        background: '#f7f7f7',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '3px',
+                        padding: '0.35rem 0.65rem',
+                        fontSize: '0.88rem',
+                        color: '#444',
+                        cursor: 'pointer',
+                        lineHeight: 1.4,
+                        textAlign: 'left',
+                      }}
+                    >
+                      {text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </>
       )}
 
@@ -496,6 +578,20 @@ export default function Home() {
             boxSizing: 'border-box',
           }}
         />
+
+        {/* Input hint — landing state only */}
+        {!hasMessages && (
+          <div
+            style={{
+              marginTop: '0.4rem',
+              fontSize: '0.82rem',
+              color: '#999',
+              lineHeight: 1.5,
+            }}
+          >
+            Describe what you hear, name a component, or ask about a technology. Press Enter to send.
+          </div>
+        )}
 
       </div>
 
