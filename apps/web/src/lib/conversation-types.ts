@@ -1,12 +1,8 @@
-import type { ExtractedSignals } from './signal-types';
-import type { EvaluationResult } from './rule-types';
-import type { ShoppingAnswer } from './shopping-intent';
 import type { GlossaryResult } from './glossary';
 import type { ClarificationResponse } from './clarification';
 import type { UserIntent, SubjectMatch } from './intent';
 import type { SystemDirection } from './system-direction';
-import type { SonicArchetype, UserArchetypePreference } from './archetype';
-import type { ConsultationResponse } from './consultation';
+import type { UserArchetypePreference } from './archetype';
 import type { ConversationMode } from './conversation-router';
 import type { ReasoningResult } from './reasoning';
 import type { AdvisoryResponse } from './advisory-response';
@@ -58,11 +54,7 @@ export type Message =
   | { role: 'user'; content: string }
   | { role: 'assistant'; content: string; kind: 'note' }
   | { role: 'assistant'; kind: 'question'; clarification: ClarificationResponse }
-  | { role: 'assistant'; kind: 'analysis'; signals: ExtractedSignals; result: EvaluationResult; systemDirection?: SystemDirection }
-  | { role: 'assistant'; kind: 'shopping-answer'; answer: ShoppingAnswer; signals: ExtractedSignals }
   | { role: 'assistant'; kind: 'glossary'; entry: GlossaryResult }
-  | { role: 'assistant'; kind: 'gear-response'; response: GearResponse }
-  | { role: 'assistant'; kind: 'consultation'; consultation: ConsultationResponse }
   | { role: 'assistant'; kind: 'advisory'; advisory: AdvisoryResponse };
 
 export interface ConversationState {
