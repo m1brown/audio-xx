@@ -57,8 +57,8 @@ export interface ConsultationResponse {
   systemContext?: string;
   /** 4. Optional light follow-up question. */
   followUp?: string;
-  /** 5. Optional neutral reference links (website, importer, dealers). */
-  links?: { label: string; url: string; kind?: 'reference'; region?: string }[];
+  /** 5. Optional neutral reference links (website, importer, dealers, reviews). */
+  links?: { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[];
 }
 
 // ── All products ────────────────────────────────────
@@ -76,10 +76,12 @@ interface BrandLink {
   label: string;
   url: string;
   /**
-   * Link kind.  'reference' = neutral informational (default).
-   * Future: 'affiliate' | 'commercial' — must be visually distinguished.
+   * Link kind.
+   *   'reference' = neutral informational (default)
+   *   'dealer'    = authorized dealer or distributor
+   *   'review'    = editorial review or reference article
    */
-  kind?: 'reference';
+  kind?: 'reference' | 'dealer' | 'review';
   /** ISO 3166-1 region code or broad region label (e.g. 'US', 'EU', 'JP', 'global'). */
   region?: string;
 }
@@ -96,9 +98,15 @@ interface DesignFamily {
 
 interface BrandProfile {
   names: string[];
+  /** Founder or lead designer, if notable. */
+  founder?: string;
+  /** Country of origin or primary manufacturing. */
+  country?: string;
   philosophy: string;
   tendencies: string;
   systemContext: string;
+  /** Pairing tendencies — what amplifiers, sources, or cables are commonly used. */
+  pairingNotes?: string;
   /** Optional structured reference links — informational, not ranked. */
   links?: BrandLink[];
   /**
@@ -112,11 +120,15 @@ interface BrandProfile {
 const BRAND_PROFILES: BrandProfile[] = [
   {
     names: ['devore', 'devore fidelity'],
-    philosophy: 'DeVore Fidelity designs speakers around musical engagement and natural tonal character. The philosophy prioritises ease and flow over analytical precision.',
+    founder: 'John DeVore',
+    country: 'USA (Brooklyn, New York)',
+    philosophy: 'DeVore Fidelity designs speakers around musical engagement and natural tonal character. The philosophy prioritises ease and flow over analytical precision. Speakers are voiced by ear rather than measurement target.',
     tendencies: 'Listeners describe DeVore speakers as warm, rhythmically alive, and harmonically rich. They tend to emphasise tonal body and midrange presence at the cost of some measured linearity.',
     systemContext: 'DeVore speakers span a range of sensitivities and amplifier requirements. The brand-level tendency is warmth and engagement, but the specific design family matters for amplifier pairing.',
+    pairingNotes: 'The Orangutan series is widely paired with single-ended triode amplifiers (Shindo, Line Magnetic, Audion). The Gibbon series works with a broader range of amplifiers including solid-state.',
     links: [
       { label: 'Official website', url: 'https://www.dfridelity.com/', region: 'global' },
+      { label: 'Tone Imports (US distributor)', url: 'https://www.toneimports.com/', kind: 'dealer', region: 'US' },
     ],
     designFamilies: [
       {
@@ -133,16 +145,21 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['shindo'],
+    founder: 'Ken Shindo',
+    country: 'Japan',
     philosophy: 'Shindo amplifiers are hand-built, tube-based designs rooted in vintage circuit topologies. The design philosophy prioritizes harmonic richness and tonal saturation over measured neutrality.',
     tendencies: 'Listeners consistently describe Shindo systems as dense, flowing, and harmonically alive. They tend to emphasize tonal weight and midrange texture at the cost of some transient precision.',
     systemContext: 'Commonly paired with high-efficiency speakers — horn-loaded or single-driver designs that can work with lower power output.',
+    pairingNotes: 'A natural match with DeVore Orangutan, Altec-based horns, and other high-efficiency speakers. The Shindo + DeVore combination is one of the most discussed pairings in the high-efficiency community.',
     links: [
       { label: 'Official website', url: 'https://www.shindo-laboratory.co.jp/', region: 'global' },
-      { label: 'US importer (Tone Imports)', url: 'https://www.toneimports.com/', region: 'US' },
+      { label: 'Tone Imports (US importer)', url: 'https://www.toneimports.com/', kind: 'dealer', region: 'US' },
     ],
   },
   {
     names: ['pass labs', 'pass', 'first watt'],
+    founder: 'Nelson Pass',
+    country: 'USA',
     philosophy: 'Pass Labs designs emphasise simplicity and Class A operation where practical. First Watt is the low-power offshoot, exploring single-ended solid-state and unusual topologies.',
     tendencies: 'Pass amplifiers tend toward warmth and midrange richness for solid-state. First Watt designs emphasise texture and intimacy at the cost of dynamic scale.',
     systemContext: 'Pass Labs works across a range of speakers. First Watt pairs best with high-efficiency speakers — similar territory to low-power tube amps.',
@@ -166,6 +183,8 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['naim'],
+    founder: 'Julian Vereker',
+    country: 'UK (Salisbury)',
     philosophy: 'Naim designs prioritise rhythmic drive and musical timing. The engineering philosophy emphasises pace and engagement over tonal density or spatial refinement.',
     tendencies: 'Listeners describe Naim systems as propulsive and engaging, with strong rhythmic coherence. They tend to de-emphasise warmth and spatial holography.',
     systemContext: 'Traditionally paired with Naim sources and Naim-friendly speakers. The timing-first approach works well with speakers that have good transient response.',
@@ -175,6 +194,7 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['luxman'],
+    country: 'Japan',
     philosophy: 'Luxman is a long-established Japanese manufacturer building both tube and solid-state designs with an emphasis on refinement and tonal elegance.',
     tendencies: 'Luxman amplifiers tend toward a slightly warm, composed presentation. Listeners describe good tonal density with more control and composure than most tube designs.',
     systemContext: 'Versatile pairing — works across a range of speaker types. The refined character complements both analytical and warmer speakers.',
@@ -185,6 +205,7 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['accuphase'],
+    country: 'Japan',
     philosophy: 'Accuphase is a precision-oriented Japanese manufacturer. The design philosophy centres on measured accuracy, build quality, and long-term reliability.',
     tendencies: 'Accuphase gear tends toward transparency and control with a slightly warm tonal balance. More composed than rhythmically aggressive.',
     systemContext: 'Works well with revealing speakers where control and composure matter. A good match for listeners who value refinement over raw energy.',
@@ -194,6 +215,8 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['lampizator', 'lampi'],
+    founder: 'Łukasz Fikus',
+    country: 'Poland',
     philosophy: 'Lampizator builds tube-output DACs with a deliberate emphasis on harmonic richness and musical engagement over measured transparency.',
     tendencies: 'Described as tonally dense, flowing, and harmonically saturated. These DACs trade analytical precision for musical immersion and tonal weight.',
     systemContext: 'Pairs well with systems that benefit from added harmonic density. Can be too much in already warm or dense systems.',
@@ -203,6 +226,8 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['border patrol'],
+    founder: 'Gary Dews',
+    country: 'UK',
     philosophy: 'Border Patrol builds NOS (non-oversampling) tube-output DACs with minimal digital processing. The philosophy is simplicity and directness.',
     tendencies: 'Listeners describe a natural, unforced sound with strong tonal body and flow. Treble is typically rolled compared to oversampling designs.',
     systemContext: 'Works best in systems where the rest of the chain provides sufficient detail and air. Pairs naturally with tube amplification and high-efficiency speakers.',
@@ -352,16 +377,43 @@ function buildArchetypeConsultation(
 }
 
 /**
- * Build a consultation response from static brand profile.
- * Used for brands not in our product catalog.
+ * Build a brand-level consultation response from a curated brand profile.
+ *
+ * Includes enriched fields when available: founder, country, design families,
+ * pairing notes. This is the path for "what do you know about DeVore Fidelity?"
+ * — distinct from the product consultation used for "DeVore O/96 thoughts?"
  */
 function buildBrandConsultation(profile: BrandProfile): ConsultationResponse {
+  const name = capitalize(profile.names[0]);
+
+  // Build an enriched philosophy line that includes founder and origin
+  let philosophyLine = '';
+  if (profile.founder || profile.country) {
+    const founderPart = profile.founder ? `, founded by ${profile.founder}` : '';
+    const countryPart = profile.country ? ` (${profile.country})` : '';
+    philosophyLine = `${name}${founderPart}${countryPart}. ${profile.philosophy}`;
+  } else {
+    philosophyLine = profile.philosophy;
+  }
+
+  // Build system context that includes design families and pairing notes
+  let systemContext = profile.systemContext;
+  if (profile.designFamilies && profile.designFamilies.length > 0) {
+    const familySummary = profile.designFamilies
+      .map((f) => `${f.name}: ${f.character.split('.')[0].trim()}.`)
+      .join(' ');
+    systemContext += `\n\nNotable design families: ${familySummary}`;
+  }
+  if (profile.pairingNotes) {
+    systemContext += `\n\n${profile.pairingNotes}`;
+  }
+
   return {
-    subject: profile.names[0].charAt(0).toUpperCase() + profile.names[0].slice(1),
-    philosophy: profile.philosophy,
+    subject: name,
+    philosophy: philosophyLine,
     tendencies: profile.tendencies,
-    systemContext: profile.systemContext,
-    followUp: 'Is this something you\'re considering for your system, or more exploring the design approach?',
+    systemContext,
+    followUp: 'Are you exploring the brand generally, or considering a specific model?',
     links: profile.links,
   };
 }
@@ -603,9 +655,40 @@ export function buildConsultationResponse(
     }
   }
 
-  // 2. Check for specific products in catalog
+  // 2. Distinguish brand inquiry from model inquiry
+  //    "what do you know about devore fidelity?" → brand consultation
+  //    "devore o96 thoughts?" → product consultation
+  //
+  //    Heuristic: if subjectMatches contains only brand-kind matches (no
+  //    product name in the text), and a curated BrandProfile exists, route
+  //    to brand consultation first. If a product-kind match is present,
+  //    route to product consultation.
+  const hasProductSubject = subjectMatches && subjectMatches.some((m) => m.kind === 'product');
+  const hasBrandOnlySubject = subjectMatches && subjectMatches.length > 0 && !hasProductSubject;
+
+  // 2a. Brand-only inquiry — prefer curated brand profile over product data
+  if (hasBrandOnlySubject) {
+    const brandProfile = findBrandProfile(currentMessage);
+    if (brandProfile) {
+      return buildBrandConsultation(brandProfile);
+    }
+  }
+
+  // 2b. Product-level inquiry or no subject matches — check catalog products
   const products = findProductsByBrand(currentMessage);
   if (products.length > 0) {
+    // If user mentioned a product name, use product consultation
+    if (hasProductSubject) {
+      const brandName = products[0].brand;
+      return buildProductConsultation(products, brandName);
+    }
+    // If user mentioned only a brand name and no curated profile exists,
+    // check if a brand profile can be found before falling to product level
+    const brandProfile = findBrandProfile(currentMessage);
+    if (brandProfile) {
+      return buildBrandConsultation(brandProfile);
+    }
+    // No curated profile — fall through to product consultation as best-effort
     const brandName = products[0].brand;
     return buildProductConsultation(products, brandName);
   }
@@ -616,7 +699,7 @@ export function buildConsultationResponse(
     return buildArchetypeConsultation(topoMatch.archetype, topoMatch.label);
   }
 
-  // 4. Check for known brand profile
+  // 4. Check for known brand profile (no subject matches available)
   const brandProfile = findBrandProfile(currentMessage);
   if (brandProfile) {
     return buildBrandConsultation(brandProfile);
