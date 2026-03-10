@@ -40,20 +40,6 @@ const CYCLING_PLACEHOLDERS = [
 /** Interval in ms between placeholder rotations. */
 const PLACEHOLDER_INTERVAL = 4000;
 
-/** Categorized example prompts shown on the landing page. */
-interface ExamplePrompt {
-  category: string;
-  text: string;
-}
-
-const EXAMPLE_PROMPTS: ExamplePrompt[] = [
-  { category: 'Describe what you hear', text: 'My system sounds bright and fatiguing after an hour' },
-  { category: 'Describe what you hear', text: 'I want more body and warmth without losing detail' },
-  { category: 'Explore a component', text: 'What do you think of the Chord Qutest?' },
-  { category: 'Explore a component', text: 'How does the Denafrips Pontus compare to the Bifrost?' },
-  { category: 'Find a direction', text: 'Best DAC under $1000 for flow and musicality' },
-  { category: 'Understand a concept', text: 'What\'s the difference between R-2R and delta-sigma?' },
-];
 
 // ── Reducer ───────────────────────────────────────────
 
@@ -479,53 +465,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* Example prompts — categorized, clickable */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            {Object.entries(
-              EXAMPLE_PROMPTS.reduce<Record<string, string[]>>((acc, p) => {
-                if (!acc[p.category]) acc[p.category] = [];
-                acc[p.category].push(p.text);
-                return acc;
-              }, {}),
-            ).map(([category, prompts]) => (
-              <div key={category} style={{ marginBottom: '0.75rem' }}>
-                <div
-                  style={{
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    letterSpacing: '0.04em',
-                    textTransform: 'uppercase',
-                    color: '#999',
-                    marginBottom: '0.3rem',
-                  }}
-                >
-                  {category}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                  {prompts.map((text) => (
-                    <button
-                      key={text}
-                      type="button"
-                      onClick={() => dispatch({ type: 'SET_INPUT', value: text })}
-                      style={{
-                        background: '#f7f7f7',
-                        border: '1px solid #e0e0e0',
-                        borderRadius: '3px',
-                        padding: '0.35rem 0.65rem',
-                        fontSize: '0.88rem',
-                        color: '#444',
-                        cursor: 'pointer',
-                        lineHeight: 1.4,
-                        textAlign: 'left',
-                      }}
-                    >
-                      {text}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Example prompts removed — revisit later */}
         </>
       )}
 
