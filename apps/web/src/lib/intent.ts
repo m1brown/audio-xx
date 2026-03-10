@@ -334,3 +334,93 @@ export function isComparisonFollowUp(
   // Check follow-up patterns
   return COMPARISON_FOLLOWUP_PATTERNS.some((p) => p.test(text));
 }
+
+// ── Context enrichment detection ──────────────────────
+//
+// Detects when the user is providing system context (amplifier,
+// speakers, room, music, listening priorities) rather than asking
+// a new question or shifting topic. Used to keep the conversation
+// in its active mode (comparison, shopping, consultation-with-fit)
+// instead of falling through to diagnostic evaluation.
+
+const CONTEXT_ENRICHMENT_PATTERNS = [
+  // Amplifier / source context — "my amp is…", "I'm using…", "driven by…"
+  /\bmy\s+(?:amp(?:lifier)?|preamp|integrated|receiver|dac|source|streamer|turntable|phono)\s+is\b/i,
+  /\b(?:i(?:'m|\s+am)\s+)?(?:using|running|driving\s+(?:them|it)\s+with|pairing\s+(?:it|them)\s+with|powering)\b/i,
+  /\bdriven\s+by\b/i,
+  /\bpowered\s+by\b/i,
+  /\bfed\s+by\b/i,
+  /\bamp\s+is\s+(?:a\s+)?/i,
+
+  // Speaker context — "my speakers are…", "I have…"
+  /\bmy\s+speakers?\s+(?:are|is)\b/i,
+  /\bi\s+have\s+(?:a\s+pair\s+of|the)\s+/i,
+
+  // Room context — "small room", "nearfield", "12x14 room"
+  /\b(?:small|large|medium|big|tiny)\s+room\b/i,
+  /\bnear[- ]?field\b/i,
+  /\b\d+\s*(?:x|by)\s*\d+\s*(?:room|space|feet|ft)?\b/i,
+  /\blistening\s+(?:room|space|distance)\b/i,
+  /\bapartment\b/i,
+  /\bdesk(?:top)?\s+(?:setup|system)\b/i,
+
+  // Music preferences — "mostly jazz", "I listen to…"
+  /\b(?:mostly|mainly|primarily)\s+(?:jazz|classical|rock|electronic|vocal|acoustic|pop|metal|folk|blues|hip[- ]hop)\b/i,
+  /\bi\s+(?:listen\s+to|play|enjoy)\s+(?:a\s+lot\s+of\s+)?/i,
+  /\bmy\s+(?:music|listening)\s+is\s+(?:mostly|mainly|primarily)\b/i,
+
+  // Listening priorities — "I care about…", "most important to me…"
+  /\bi\s+(?:care|value|prioriti[sz]e)\s+/i,
+  /\bmost\s+important\s+(?:to\s+me|thing)\b/i,
+  /\bi\s+(?:want|need|prefer)\s+(?:more\s+)?(?:warmth|detail|clarity|bass|body|flow|rhythm|dynamics|soundstage|imaging)\b/i,
+
+  // Power context — "300B tubes", "8 watts", "SET amp"
+  /\b\d+\s*(?:watt|w)\b/i,
+  /\b(?:300b|2a3|el34|kt88|kt120|kt150|6550|845|211)\b/i,
+  /\b(?:set|push[- ]pull|single[- ]ended|class[- ]?a)\s+(?:amp|amplifier|design)?\b/i,
+
+  // Budget / price context added mid-conversation
+  /\bbudget\s+(?:is|around|about)\b/i,
+  /\bi(?:'d| would)\s+spend\s+/i,
+];
+
+/**
+ * Detect whether a message is providing system context rather than
+ * asking a new question or describing a problem.
+ *
+ * Returns the category of context provided, or null if not detected.
+ *
+ * Important: this should only be checked when an active conversation
+ * mode exists (comparison, shopping, consultation-with-fit). On a
+ * cold start, "my amp is X" should route normally.
+ */
+export type ContextKind = 'amplifier' | 'speaker' | 'room' | 'music' | 'listening_priority' | 'power' | 'budget' | 'general_system';
+
+export function detectContextEnrichment(text: string): ContextKind | null {
+  const lower = text.toLowerCase();
+
+  // Reject if the message also contains a clear diagnostic symptom —
+  // "my amp is bright and fatiguing" is a diagnosis, not context enrichment
+  if (/\bsounds?\s+(?:too\s+)?(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|boring|lifeless|congested|sibilant)\b/i.test(lower)) {
+    return null;
+  }
+  if (/\bsomething\s+(?:is\s+)?(?:off|wrong|missing)\b/i.test(lower)) {
+    return null;
+  }
+
+  // Check if any enrichment pattern matches
+  if (!CONTEXT_ENRICHMENT_PATTERNS.some((p) => p.test(text))) {
+    return null;
+  }
+
+  // Classify the kind of context
+  if (/\bamp(?:lifier)?|preamp|integrated|receiver|driven\s+by|powered\s+by|300b|2a3|el34|kt88|kt120|kt150|6550|845|211|set\b|push[- ]pull|single[- ]ended|class[- ]?a|\d+\s*(?:watt|w)\b/i.test(lower)) {
+    return 'amplifier';
+  }
+  if (/\bspeakers?\b/i.test(lower)) return 'speaker';
+  if (/\broom\b|near[- ]?field|apartment|desk|listening\s+(?:distance|space)|\d+\s*(?:x|by)\s*\d+/i.test(lower)) return 'room';
+  if (/\bjazz|classical|rock|electronic|vocal|acoustic|pop|metal|folk|blues|hip[- ]hop|listen\s+to|music\b/i.test(lower)) return 'music';
+  if (/\bcare|value|prioriti[sz]e|most\s+important|want\s+more|need\s+more|prefer/i.test(lower)) return 'listening_priority';
+  if (/\bbudget|spend/i.test(lower)) return 'budget';
+  return 'general_system';
+}

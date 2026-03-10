@@ -35,7 +35,7 @@ import {
   type DesignArchetype,
   type DesignArchetypeId,
 } from './design-archetypes';
-import type { SubjectMatch } from './intent';
+import type { SubjectMatch, ContextKind } from './intent';
 
 // ── Types ───────────────────────────────────────────
 
@@ -706,6 +706,149 @@ export function buildComparisonRefinement(
  * Build an amplifier-pairing note from design families, if relevant.
  * Used in criterion-based follow-ups to surface important within-brand differences.
  */
+// ── Context enrichment for active comparisons ────────
+
+/**
+ * Build a response that incorporates user-provided system context
+ * into an active comparison. Used when the user says something like
+ * "my amp is a Crayon CIA" mid-comparison.
+ *
+ * @param activeComparison - stored comparison subjects and scope
+ * @param contextMessage   - the user's message providing system context
+ * @param contextKind      - the classified kind of context
+ */
+export function buildContextRefinement(
+  activeComparison: { left: SubjectMatch; right: SubjectMatch; scope: 'brand' | 'product' },
+  contextMessage: string,
+  contextKind: ContextKind,
+): ConsultationResponse {
+  const nameA = capitalize(activeComparison.left.name);
+  const nameB = capitalize(activeComparison.right.name);
+
+  const infoA = resolveBrandInfo(activeComparison.left.name);
+  const infoB = resolveBrandInfo(activeComparison.right.name);
+
+  // Extract what the user told us for the summary
+  const contextLabel = describeContext(contextMessage, contextKind);
+
+  // Build context-aware comparison text for each side
+  const sideA = infoA
+    ? buildContextSideAnswer(nameA, infoA, contextKind, contextMessage)
+    : `I don't have enough data about ${nameA} to assess this pairing specifically.`;
+  const sideB = infoB
+    ? buildContextSideAnswer(nameB, infoB, contextKind, contextMessage)
+    : `I don't have enough data about ${nameB} to assess this pairing specifically.`;
+
+  const summary = buildContextSummary(nameA, nameB, infoA, infoB, contextKind, contextMessage, activeComparison.scope);
+  const followUp = buildContextFollowUp(contextKind);
+
+  return {
+    subject: `${nameA} vs ${nameB} — ${contextLabel}`,
+    comparisonSummary: summary,
+    philosophy: `${sideA}\n\n${sideB}`,
+    tendencies: `How this context shapes the comparison depends on what each design prioritises.`,
+    systemContext: 'The rest of the chain matters too — one variable doesn\'t determine the whole picture.',
+    followUp,
+  };
+}
+
+/** Produce a short human-readable label for the context the user provided. */
+function describeContext(text: string, kind: ContextKind): string {
+  switch (kind) {
+    case 'amplifier': {
+      // Try to extract amp name from "my amp is a X" or "using a X"
+      const ampMatch = text.match(/(?:amp(?:lifier)?\s+is\s+(?:a\s+)?|using\s+(?:a\s+)?|driven\s+by\s+(?:a\s+)?|powered\s+by\s+(?:a\s+)?|running\s+(?:a\s+)?|pairing\s+(?:it|them)\s+with\s+(?:a\s+)?)(.+)/i);
+      if (ampMatch) return `with ${ampMatch[1].trim()}`;
+      return 'amplifier context';
+    }
+    case 'speaker': return 'speaker context';
+    case 'room': return 'room context';
+    case 'music': return 'music preferences';
+    case 'listening_priority': return 'listening priorities';
+    case 'power': return 'power context';
+    case 'budget': return 'budget context';
+    default: return 'system context';
+  }
+}
+
+/** Build a context-aware answer for one side of a comparison. */
+function buildContextSideAnswer(
+  name: string,
+  info: BrandInfo,
+  contextKind: ContextKind,
+  contextMessage: string,
+): string {
+  // For amplifier/power context, use system context data if available
+  if ((contextKind === 'amplifier' || contextKind === 'power') && info.systemContext) {
+    return `${name}: ${takeSentences(info.systemContext, 2)}`;
+  }
+  // For room context, use system context
+  if (contextKind === 'room' && info.systemContext) {
+    return `${name}: ${takeSentences(info.systemContext, 2)}`;
+  }
+  // For trait/music/priority context, use tendencies
+  return `${name}: ${takeSentences(info.tendencies, 2)}`;
+}
+
+/** Build the comparison summary given the new system context. */
+function buildContextSummary(
+  nameA: string,
+  nameB: string,
+  infoA: BrandInfo | null,
+  infoB: BrandInfo | null,
+  contextKind: ContextKind,
+  contextMessage: string,
+  scope: 'brand' | 'product',
+): string {
+  const contextLabel = describeContext(contextMessage, contextKind);
+
+  if (!infoA || !infoB) {
+    return `That context helps narrow things down, though I have limited data on one side.`;
+  }
+
+  if (contextKind === 'amplifier' || contextKind === 'power') {
+    const charA = extractCoreCharacter(infoA.tendencies);
+    const charB = extractCoreCharacter(infoB.tendencies);
+    if (scope === 'brand') {
+      return `${contextLabel} — that helps frame the comparison. ${nameA} tends toward ${charA}, while ${nameB} leans toward ${charB}. How each interacts with that amplifier depends on sensitivity, impedance behaviour, and what the amp does well.`;
+    }
+    return `${contextLabel} — that helps narrow the comparison. ${nameA} and ${nameB} will interact with that amplifier differently based on their load characteristics and design priorities.`;
+  }
+
+  if (contextKind === 'room') {
+    return `That room context matters. ${nameA} and ${nameB} will behave differently depending on boundary interaction, efficiency, and radiation pattern.`;
+  }
+
+  if (contextKind === 'music' || contextKind === 'listening_priority') {
+    const charA = extractCoreCharacter(infoA.tendencies);
+    const charB = extractCoreCharacter(infoB.tendencies);
+    return `That helps clarify the direction. ${nameA} leans toward ${charA}, while ${nameB} leans toward ${charB}. The question is which emphasis serves that listening better.`;
+  }
+
+  return `That context helps frame the comparison between ${nameA} and ${nameB}.`;
+}
+
+/** Build a follow-up question appropriate to the context just provided. */
+function buildContextFollowUp(contextKind: ContextKind): string {
+  switch (contextKind) {
+    case 'amplifier':
+    case 'power':
+      return 'What speakers is that amp driving — or is that what we\'re choosing between?';
+    case 'speaker':
+      return 'What amplifier are you pairing with those speakers?';
+    case 'room':
+      return 'What kind of listening do you do most — and at what volume?';
+    case 'music':
+      return 'What do you value most in how that music is presented — body, detail, rhythm, space?';
+    case 'listening_priority':
+      return 'Is that the main priority, or one factor among several?';
+    case 'budget':
+      return 'What does the rest of your system look like?';
+    default:
+      return 'What would help most — narrowing by a specific quality, or understanding how they differ in that context?';
+  }
+}
+
 function buildDesignFamilyAmpNote(nameA: string, nameB: string, criterion: ComparisonCriterion): string | null {
   const profileA = findBrandProfile(nameA);
   const profileB = findBrandProfile(nameB);

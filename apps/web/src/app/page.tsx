@@ -9,12 +9,12 @@ import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
 import { checkGlossaryQuestion } from '@/lib/glossary';
-import { detectIntent, isBrandOnlyComparison, isComparisonFollowUp, type SubjectMatch } from '@/lib/intent';
+import { detectIntent, isBrandOnlyComparison, isComparisonFollowUp, detectContextEnrichment, type SubjectMatch } from '@/lib/intent';
 import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
-import { buildConsultationResponse, buildComparisonRefinement } from '@/lib/consultation';
+import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement } from '@/lib/consultation';
 import type { ConsultationResponse } from '@/lib/consultation';
 import type { SystemDirection } from '@/lib/system-direction';
 import type { GlossaryResult } from '@/lib/glossary';
@@ -276,6 +276,23 @@ export default function Home() {
       dispatch({ type: 'ADD_CONSULTATION', consultation: refinement });
       dispatch({ type: 'SET_LOADING', value: false });
       return;
+    }
+
+    // ── Context enrichment for active comparisons ──────
+    // If an active comparison exists and the user provides system context
+    // ("my amp is a Crayon CIA", "small room", "mostly jazz"), use it to
+    // refine the comparison instead of falling through to diagnostic evaluation.
+    if (
+      state.activeComparison &&
+      intent !== 'comparison'
+    ) {
+      const contextKind = detectContextEnrichment(submittedText);
+      if (contextKind) {
+        const refinement = buildContextRefinement(state.activeComparison, submittedText, contextKind);
+        dispatch({ type: 'ADD_CONSULTATION', consultation: refinement });
+        dispatch({ type: 'SET_LOADING', value: false });
+        return;
+      }
     }
 
     // ── Clear comparison on explicit mode shift ─────────
