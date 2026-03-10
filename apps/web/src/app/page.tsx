@@ -926,6 +926,21 @@ function MessageBubble({ message }: { message: Message }) {
           marginBottom: '1.25rem',
         }}
       >
+        {/* Comparison summary — renders first, answers the question */}
+        {consultation.comparisonSummary && (
+          <p
+            style={{
+              margin: '0 0 1rem 0',
+              color: '#222',
+              fontSize: '1.05rem',
+              lineHeight: 1.7,
+              fontWeight: 450,
+            }}
+          >
+            {consultation.comparisonSummary}
+          </p>
+        )}
+
         <div
           style={{
             margin: '0 0 1.1rem 0',

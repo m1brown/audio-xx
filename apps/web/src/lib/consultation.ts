@@ -42,6 +42,13 @@ import type { SubjectMatch } from './intent';
 export interface ConsultationResponse {
   /** The subject the user asked about (brand, topology, concept). */
   subject: string;
+  /**
+   * Comparison summary — renders first for comparison responses.
+   * A concise contrast of the two subjects, answering the question
+   * before expanding into per-brand detail. Not used for single-brand
+   * consultations.
+   */
+  comparisonSummary?: string;
   /** 1. Design philosophy — what it prioritizes. */
   philosophy: string;
   /** 2. Typical tendencies — how it tends to sound. */
@@ -331,13 +338,65 @@ function buildBrandComparison(
   const tendA = takeSentences(profileA.tendencies, 2);
   const tendB = takeSentences(profileB.tendencies, 2);
 
+  // Build a concise comparison summary — answers the question first.
+  // Extracts the core character from each side's tendencies to form a contrast.
+  const charA = extractCoreCharacter(profileA.tendencies);
+  const charB = extractCoreCharacter(profileB.tendencies);
+  const summary = `${nameA} tends toward ${charA}, while ${nameB} leans toward ${charB}.`;
+
   return {
     subject: `${nameA} vs ${nameB}`,
+    comparisonSummary: summary,
     philosophy: `${nameA}: ${philoA}\n\n${nameB}: ${philoB}`,
     tendencies: `${nameA}: ${tendA}\n\n${nameB}: ${tendB}`,
-    systemContext: 'The better fit depends on what you value most in your listening and where your system currently sits.',
-    followUp: 'What matters most to you — and what is the rest of your system?',
+    systemContext: `Where they diverge most shapes which fits better — this depends on what you value in your listening and where your system currently sits.`,
+    followUp: `What draws you toward one of these over the other — is it a specific quality, or more of a general direction?`,
   };
+}
+
+/**
+ * Extract the core character descriptors from a tendency string.
+ * Pulls out 2–4 key trait words/phrases to form a concise contrast.
+ * Falls back to the first clause of the first sentence if no traits match.
+ */
+function extractCoreCharacter(tendencies: string): string {
+  const lower = tendencies.toLowerCase();
+
+  // Look for known trait-words and cluster them
+  const traitHits: string[] = [];
+  if (/warm/i.test(lower)) traitHits.push('warmth');
+  if (/flow|flowing/i.test(lower)) traitHits.push('flow');
+  if (/rhythm|rhythmic|propulsive|pace|timing/i.test(lower)) traitHits.push('rhythmic drive');
+  if (/clarity|transparent|transparency|resolving/i.test(lower)) traitHits.push('clarity');
+  if (/dense|density|tonal weight|tonal body|body/i.test(lower)) traitHits.push('tonal density');
+  if (/spatial|soundstage|imaging|holograph/i.test(lower)) traitHits.push('spatial presence');
+  if (/dynamic|punch|slam|energy/i.test(lower)) traitHits.push('dynamic energy');
+  if (/controlled?|composure|composed|refined|refinement/i.test(lower)) traitHits.push('composure');
+  if (/intimate|intimacy/i.test(lower)) traitHits.push('intimacy');
+  if (/texture|textural/i.test(lower)) traitHits.push('texture');
+  if (/harmonic|harmonically/i.test(lower)) traitHits.push('harmonic richness');
+  if (/natural|unforced/i.test(lower)) traitHits.push('a natural presentation');
+  if (/engaging|engagement|immersive|immersion/i.test(lower)) traitHits.push('musical engagement');
+  if (/saturated|saturation/i.test(lower)) traitHits.push('tonal saturation');
+
+  if (traitHits.length >= 2) {
+    // Take up to 3 traits for a concise summary
+    const selected = traitHits.slice(0, 3);
+    return joinNatural(selected);
+  }
+
+  // Fallback: first clause of first sentence
+  const firstSentence = tendencies.split(/[.!]/)[0] || tendencies;
+  const firstClause = firstSentence.split(/[,;—–]/)[0].trim().toLowerCase();
+  return firstClause;
+}
+
+/** Join strings naturally with commas and "and". */
+function joinNatural(items: string[]): string {
+  if (items.length === 0) return '';
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
 }
 
 /** Take up to `n` sentences from a string. */
@@ -526,13 +585,108 @@ export function buildComparisonRefinement(
   const contextA = infoA ? buildCriterionAnswer(nameA, infoA, criterion) : `I don't have enough data about ${nameA} to assess this specifically.`;
   const contextB = infoB ? buildCriterionAnswer(nameB, infoB, criterion) : `I don't have enough data about ${nameB} to assess this specifically.`;
 
+  // Build a qualified comparison summary that answers first without absolute verdicts
+  const summary = buildCriterionSummary(nameA, nameB, infoA, infoB, criterion);
+
+  // Comparison-aware follow-up that reflects the axis of comparison
+  const followUp = buildCriterionFollowUp(criterion);
+
   return {
     subject: `${nameA} vs ${nameB} — ${criterion.label}`,
+    comparisonSummary: summary,
     philosophy: `${contextA}\n\n${contextB}`,
-    tendencies: `The difference here comes down to design priorities — ${criterion.label.toLowerCase()} is handled differently by each approach.`,
-    systemContext: 'Which fits better depends on the rest of your system and what you want the overall balance to feel like.',
-    followUp: 'Would you like to explore a specific pairing, or does this help narrow things down?',
+    tendencies: `The difference comes down to design priorities — ${criterion.label.toLowerCase()} is shaped differently by each approach.`,
+    systemContext: 'How much this matters in practice depends on the rest of the chain and how the room interacts.',
+    followUp,
   };
+}
+
+/**
+ * Build a qualified comparison summary for a criterion-based follow-up.
+ * Uses qualified language — "tends to be a more natural fit" rather than "is better".
+ * When both sides are comparable, frames as a contrast rather than a winner.
+ */
+function buildCriterionSummary(
+  nameA: string,
+  nameB: string,
+  infoA: BrandInfo | null,
+  infoB: BrandInfo | null,
+  criterion: ComparisonCriterion,
+): string {
+  // If we don't have data for both, give an honest partial answer
+  if (!infoA || !infoB) {
+    const knownName = infoA ? nameA : nameB;
+    return `I have more information about ${knownName} in this context. The comparison is limited without fuller data on both sides.`;
+  }
+
+  // For amplifier pairing criteria, use system context to identify the more natural fit
+  if (criterion.category === 'amplifier_pairing') {
+    const ampType = criterion.label.toLowerCase();
+    // Check if either side's system context explicitly mentions the amplifier type
+    const aRelevance = assessRelevance(infoA, criterion);
+    const bRelevance = assessRelevance(infoB, criterion);
+
+    if (aRelevance > bRelevance) {
+      return `${nameA} tends to be a more natural fit with ${ampType} — its design assumptions align more closely with that topology. ${nameB} can work, but may need more careful matching.`;
+    }
+    if (bRelevance > aRelevance) {
+      return `${nameB} tends to be a more natural fit with ${ampType} — its design assumptions align more closely with that topology. ${nameA} can work, but may need more careful matching.`;
+    }
+    return `Both can work with ${ampType}, but they respond differently. ${nameA} and ${nameB} have different design assumptions that shape how they interact with that amplifier topology.`;
+  }
+
+  // For trait criteria, contrast their relative emphases
+  if (criterion.category === 'trait') {
+    const traitName = criterion.label.toLowerCase();
+    const charA = extractCoreCharacter(infoA.tendencies);
+    const charB = extractCoreCharacter(infoB.tendencies);
+    return `In terms of ${traitName}, ${nameA} leans toward ${charA}, while ${nameB} leans toward ${charB}. The question is which balance serves your priorities better.`;
+  }
+
+  // For room criteria
+  if (criterion.category === 'room') {
+    return `Room interaction is shaped by efficiency, radiation pattern, and bass loading — ${nameA} and ${nameB} handle this differently based on their design priorities.`;
+  }
+
+  // General fallback
+  return `${nameA} and ${nameB} approach this from different directions. The fit depends on what you want the overall balance to feel like.`;
+}
+
+/**
+ * Score how relevant a brand's data is to a specific criterion.
+ * Simple keyword matching against system context and tendencies.
+ */
+function assessRelevance(info: BrandInfo, criterion: ComparisonCriterion): number {
+  let score = 0;
+  const combined = `${info.tendencies} ${info.systemContext ?? ''}`.toLowerCase();
+
+  if (criterion.category === 'amplifier_pairing') {
+    if (/tube/i.test(criterion.raw) && /tube|valve|triode|single[- ]ended|low[- ]power/i.test(combined)) score += 2;
+    if (/solid/i.test(criterion.raw) && /solid[- ]state|transistor|class[- ]?[abd]/i.test(combined)) score += 2;
+    if (/high[- ]efficiency|easy\s+impedance|sensitivity/i.test(combined)) score += 1;
+  }
+  if (criterion.category === 'room') {
+    if (/small/i.test(criterion.raw) && /small|near[- ]field|intimate/i.test(combined)) score += 2;
+    if (/large/i.test(criterion.raw) && /large|scale|dynamic/i.test(combined)) score += 2;
+  }
+  return score;
+}
+
+/**
+ * Build a follow-up question that reflects the comparison axis.
+ * More useful than a generic "what's the rest of your system?"
+ */
+function buildCriterionFollowUp(criterion: ComparisonCriterion): string {
+  switch (criterion.category) {
+    case 'amplifier_pairing':
+      return 'What amplifier are you considering — and how much power does it make?';
+    case 'room':
+      return 'How large is the space, and how far do you sit from the speakers?';
+    case 'trait':
+      return `Is ${criterion.label.toLowerCase()} the priority, or is it one factor among several?`;
+    default:
+      return 'What would help most — narrowing by a specific quality, or understanding how they differ in your system context?';
+  }
 }
 
 /** Resolved brand info for comparison refinement. */
