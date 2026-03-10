@@ -28,14 +28,6 @@ interface Props {
   };
 }
 
-function verdictLabel(verdict?: string): string | null {
-  if (!verdict) return null;
-  if (verdict === 'no_purchase_recommended') return 'No purchase recommended';
-  if (verdict === 'revert_recommended') return 'Revert recommended';
-  if (verdict === 'wait_recommended') return 'Wait recommended';
-  return verdict.replace(/_/g, ' ');
-}
-
 export default function EvaluationOutput({ signals, result }: Props) {
   return (
     <div style={{ color: '#111' }}>
@@ -59,21 +51,6 @@ export default function EvaluationOutput({ signals, result }: Props) {
         <section key={rule.id} style={{ marginBottom: '2rem' }}>
           {index > 0 && (
             <hr style={{ border: 0, borderTop: '1px solid #ddd', margin: '0 0 1.5rem 0' }} />
-          )}
-
-          {rule.outputs.verdict && (
-            <div
-              style={{
-                marginBottom: '0.85rem',
-                color: '#c4122f',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase',
-              }}
-            >
-              {verdictLabel(rule.outputs.verdict)}
-            </div>
           )}
 
           <p
