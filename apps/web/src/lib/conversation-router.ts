@@ -37,6 +37,9 @@ const CONSULTATION_PATTERNS = [
   /\bwhat\s+(?:does|do)\s+\w+\s+(?:make|build|design|specialize)\b/i,
   /\btell\s+me\s+about\s+(?:the\s+)?(?:\w+\s+)?(?:brand|company|house sound|design philosophy)\b/i,
   /\bwhat(?:'s| is)\s+(?:the\s+)?(?:\w+\s+)?house\s+sound\b/i,
+  // "describe X", "tell me about X speakers/dacs/amps"
+  /\bdescribe\s+\w+/i,
+  /\btell\s+me\s+about\s+\w+/i,
 
   // Technology / topology knowledge
   /\bwhat\s+(?:is|are)\s+(?:a\s+|an\s+)?(?:r-?2r|delta[- ]sigma|nos|fpga|multibit|horn[- ]loaded|sealed[- ]box|bass[- ]reflex|ported|open[- ]baffle)\b/i,

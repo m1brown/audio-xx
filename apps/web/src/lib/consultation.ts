@@ -392,6 +392,24 @@ function deriveBrandSummaryFromCatalog(
   };
 }
 
+/**
+ * Build a minimal honest response for a brand we recognize by name
+ * but have no curated profile or catalog data for.
+ *
+ * Better than falling through to the diagnostic engine, which would
+ * produce a "describe what you hear" prompt instead of acknowledging
+ * the brand question.
+ */
+function buildUnknownBrandResponse(brandName: string): ConsultationResponse {
+  const name = capitalize(brandName);
+  return {
+    subject: name,
+    philosophy: `${name} is a recognised brand, but I don't yet have a detailed profile for their design philosophy or sonic tendencies in my knowledge base.`,
+    tendencies: 'I can be more helpful if you tell me what you\'re pairing it with, what draws you to this brand, or what you\'re hoping it brings to your system.',
+    followUp: 'What interests you about ' + name + '?',
+  };
+}
+
 // ── Public API ───────────────────────────────────────
 
 /**
@@ -457,16 +475,21 @@ export function buildConsultationResponse(
     return buildBrandConsultation(brandProfile);
   }
 
-  // 5. Best-effort fallback — brand recognized in catalog but no curated profile
+  // 5. Best-effort fallback — brand recognized but no curated profile
   if (subjectMatches && subjectMatches.length > 0) {
     const brandSubject = subjectMatches.find((m) => m.kind === 'brand');
     if (brandSubject) {
+      // 5a. Brand has catalog products — build from product data
       const brandProducts = ALL_PRODUCTS.filter(
         (p) => p.brand.toLowerCase() === brandSubject.name.toLowerCase(),
       );
       if (brandProducts.length > 0) {
         return buildProductConsultation(brandProducts, brandProducts[0].brand);
       }
+
+      // 5b. Brand recognized in BRAND_NAMES but no catalog data at all —
+      // honest acknowledgement, not a diagnostic fallback
+      return buildUnknownBrandResponse(brandSubject.name);
     }
   }
 

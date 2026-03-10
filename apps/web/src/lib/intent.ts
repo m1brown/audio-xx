@@ -46,15 +46,22 @@ export interface IntentResult {
 
 /** Brand / manufacturer names — not specific models. */
 const BRAND_NAMES = [
+  // DAC / digital
   'denafrips', 'chord', 'schiit', 'topping', 'smsl', 'gustard',
   'holo', 'benchmark', 'rme', 'mytek', 'weiss',
   'mola mola', 'rockna', 'aqua', 'lampizator', 'lampi',
   'border patrol', 'metrum', 'audio-gd', 'soekris',
   'musician', 'okto',
+  // Speakers
   'wlm', 'harbeth', 'devore', 'zu', 'klipsch', 'focal', 'boenicke',
+  'kef', 'b&w', 'bowers', 'dynaudio', 'wilson', 'magico',
+  'sonus faber', 'proac', 'spendor', 'atc', 'tannoy',
+  'magnepan', 'martin logan', 'quad',
+  // Amplifiers
   'pass labs', 'first watt', 'naim', 'luxman', 'accuphase',
-  'parasound', 'hegel',
+  'parasound', 'hegel', 'mcintosh', 'marantz', 'yamaha',
   'shindo', 'leben', 'audio note',
+  'line magnetic', 'primaluna', 'cary', 'arc', 'audio research',
 ];
 
 /** Specific product / model names. */
