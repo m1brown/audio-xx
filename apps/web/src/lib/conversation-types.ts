@@ -6,6 +6,8 @@ import type { ClarificationResponse } from './clarification';
 import type { UserIntent } from './intent';
 import type { SystemDirection } from './system-direction';
 import type { SonicArchetype, UserArchetypePreference } from './archetype';
+import type { ConsultationResponse } from './consultation';
+import type { ConversationMode } from './conversation-router';
 
 /**
  * System direction context attached to diagnostic analysis results.
@@ -57,13 +59,16 @@ export type Message =
   | { role: 'assistant'; kind: 'analysis'; signals: ExtractedSignals; result: EvaluationResult; systemDirection?: SystemDirection }
   | { role: 'assistant'; kind: 'shopping-answer'; answer: ShoppingAnswer; signals: ExtractedSignals }
   | { role: 'assistant'; kind: 'glossary'; entry: GlossaryResult }
-  | { role: 'assistant'; kind: 'gear-response'; response: GearResponse };
+  | { role: 'assistant'; kind: 'gear-response'; response: GearResponse }
+  | { role: 'assistant'; kind: 'consultation'; consultation: ConsultationResponse };
 
 export interface ConversationState {
   messages: Message[];
   currentInput: string;
   turnCount: number;
   isLoading: boolean;
+  /** Active conversation mode for persistence across turns. */
+  activeMode?: ConversationMode;
   // Future hooks for persistence (unused this pass):
   systemId?: string;
   profileId?: string;

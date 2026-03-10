@@ -12,6 +12,10 @@ import { checkGlossaryQuestion } from '@/lib/glossary';
 import { detectIntent } from '@/lib/intent';
 import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
+import { routeConversation, resolveMode } from '@/lib/conversation-router';
+import type { ConversationMode } from '@/lib/conversation-router';
+import { buildConsultationResponse } from '@/lib/consultation';
+import type { ConsultationResponse } from '@/lib/consultation';
 import type { SystemDirection } from '@/lib/system-direction';
 import type { GlossaryResult } from '@/lib/glossary';
 import type { ShoppingAnswer } from '@/lib/shopping-intent';
@@ -45,6 +49,8 @@ type Action =
   | { type: 'ADD_QUESTION'; clarification: ClarificationResponse }
   | { type: 'ADD_GLOSSARY'; entry: GlossaryResult }
   | { type: 'ADD_GEAR_RESPONSE'; response: GearResponse }
+  | { type: 'ADD_CONSULTATION'; consultation: ConsultationResponse }
+  | { type: 'SET_MODE'; mode: ConversationMode }
   | { type: 'SET_LOADING'; value: boolean }
   | { type: 'RESET' };
 
@@ -119,6 +125,18 @@ function reducer(state: ConversationState, action: Action): ConversationState {
         ],
       };
 
+    case 'ADD_CONSULTATION':
+      return {
+        ...state,
+        messages: [
+          ...state.messages,
+          { role: 'assistant', kind: 'consultation', consultation: action.consultation },
+        ],
+      };
+
+    case 'SET_MODE':
+      return { ...state, activeMode: action.mode };
+
     case 'SET_LOADING':
       return { ...state, isLoading: action.value };
 
@@ -192,28 +210,37 @@ export default function Home() {
       return;
     }
 
+    // ── Conversation router ──────────────────────────────
+    // Classify the message into a conversation mode before detailed
+    // intent detection. Mode persistence carries across turns.
+    const routedMode = routeConversation(submittedText);
+    const effectiveMode = resolveMode(routedMode, state.activeMode);
+    dispatch({ type: 'SET_MODE', mode: effectiveMode });
+
+    // ── Consultation path ───────────────────────────────
+    // Knowledge / philosophy questions — answer first, no diagnostic logic.
+    if (effectiveMode === 'consultation') {
+      const consultResult = buildConsultationResponse(submittedText);
+      if (consultResult) {
+        dispatch({ type: 'ADD_CONSULTATION', consultation: consultResult });
+        dispatch({ type: 'SET_LOADING', value: false });
+        return;
+      }
+      // No match — fall through to gear inquiry path below
+    }
+
     // Detect intent BEFORE running the evaluation engine
     let { intent, subjects, desires } = detectIntent(submittedText);
 
-    // ── Shopping persistence ────────────────────────────
-    // Once shopping intent has been established in any prior turn, keep
-    // the conversation in shopping mode — unless the user explicitly
-    // starts a new intent (gear inquiry, comparison, glossary).
-    // We check two sources: (1) a shopping-answer already in history,
-    // or (2) the first user message triggered shopping intent (detected
-    // via re-running detectIntent on it, since the question flow means
-    // no shopping-answer exists yet after the first clarification).
-    const hasShoppingAnswer = messages.some(
-      (m) => m.role === 'assistant' && m.kind === 'shopping-answer',
-    );
-    const firstUserMsg = messages.find((m) => m.role === 'user');
-    const firstTurnWasShopping = firstUserMsg
-      ? detectIntent(firstUserMsg.content).intent === 'shopping'
-      : false;
-    const shoppingActive = hasShoppingAnswer || firstTurnWasShopping;
-
-    if (shoppingActive && intent === 'diagnosis') {
+    // ── Mode-aware intent override ─────────────────────
+    // The router's effective mode can override the intent detector.
+    // Shopping and diagnosis persistence is now handled by resolveMode()
+    // rather than the old ad-hoc shopping persistence logic.
+    if (effectiveMode === 'shopping' && intent === 'diagnosis') {
       intent = 'shopping';
+    }
+    if (effectiveMode === 'diagnosis' && intent !== 'comparison' && intent !== 'gear_inquiry') {
+      intent = 'diagnosis';
     }
 
     // Count how many shopping-answer turns have already been shown.
@@ -299,7 +326,7 @@ export default function Home() {
     }
 
     dispatch({ type: 'SET_LOADING', value: false });
-  }, [currentInput, isLoading, messages, turnCount, tasteProfile]);
+  }, [currentInput, isLoading, messages, turnCount, tasteProfile, state.activeMode]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -735,6 +762,60 @@ function MessageBubble({ message }: { message: Message }) {
             {response.clarification}
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (message.kind === 'consultation') {
+    const { consultation } = message;
+    return (
+      <div
+        style={{
+          marginTop: '1.5rem',
+          marginBottom: '1.25rem',
+        }}
+      >
+        <div
+          style={{
+            margin: '0 0 1.1rem 0',
+            color: '#222',
+            fontSize: '1.02rem',
+            lineHeight: 1.7,
+          }}
+        >
+          <p style={{ margin: '0 0 0.7rem 0' }}>
+            {consultation.philosophy}
+          </p>
+          <p style={{ margin: '0 0 0.7rem 0' }}>
+            {consultation.tendencies}
+          </p>
+          {consultation.systemContext && (
+            <p style={{ margin: '0 0 0.7rem 0' }}>
+              {consultation.systemContext}
+            </p>
+          )}
+        </div>
+
+        {/* Optional light follow-up */}
+        {consultation.followUp && (
+          <div
+            style={{
+              padding: '0.85rem 1rem',
+              borderLeft: '3px solid #4a7a8a',
+              background: '#f7fafb',
+            }}
+          >
+            <div
+              style={{
+                color: '#222',
+                fontSize: '1.02rem',
+                lineHeight: 1.6,
+              }}
+            >
+              {consultation.followUp}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
