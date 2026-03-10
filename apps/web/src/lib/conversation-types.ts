@@ -9,6 +9,7 @@ import type { SonicArchetype, UserArchetypePreference } from './archetype';
 import type { ConsultationResponse } from './consultation';
 import type { ConversationMode } from './conversation-router';
 import type { ReasoningResult } from './reasoning';
+import type { AdvisoryResponse } from './advisory-response';
 
 /**
  * System direction context attached to diagnostic analysis results.
@@ -61,7 +62,8 @@ export type Message =
   | { role: 'assistant'; kind: 'shopping-answer'; answer: ShoppingAnswer; signals: ExtractedSignals }
   | { role: 'assistant'; kind: 'glossary'; entry: GlossaryResult }
   | { role: 'assistant'; kind: 'gear-response'; response: GearResponse }
-  | { role: 'assistant'; kind: 'consultation'; consultation: ConsultationResponse };
+  | { role: 'assistant'; kind: 'consultation'; consultation: ConsultationResponse }
+  | { role: 'assistant'; kind: 'advisory'; advisory: AdvisoryResponse };
 
 export interface ConversationState {
   messages: Message[];
