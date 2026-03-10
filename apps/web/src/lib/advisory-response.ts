@@ -138,10 +138,86 @@ export interface AdvisoryResponse {
   };
 }
 
+// ── Content Enrichment ───────────────────────────────
+
+/**
+ * Generate a one-sentence restrained conclusion.
+ * Deterministic template — no LLM call.
+ */
+function generateBottomLine(
+  kind: AdvisoryResponse['kind'],
+  subject: string,
+  recommendedDirection?: string,
+  tradeOffs?: string[],
+): string | undefined {
+  if (!recommendedDirection) return undefined;
+
+  // Trim direction to first sentence for brevity
+  const dirBrief = recommendedDirection.split(/\.\s/)[0];
+
+  if (kind === 'diagnosis' && tradeOffs && tradeOffs.length > 0) {
+    return `For ${subject}: ${dirBrief.toLowerCase()} — worth exploring, with awareness that ${tradeOffs[0].toLowerCase()}.`;
+  }
+  if (kind === 'shopping') {
+    return `For ${subject}: ${dirBrief.toLowerCase()}.`;
+  }
+  // consultation — keep it light
+  return undefined;
+}
+
+/**
+ * Generate alignment rationale bridging listener priorities to system context.
+ * Only produces text when both priority and system data exist.
+ */
+function generateAlignmentRationale(
+  systemTendencies?: string,
+  listenerPriorities?: string[],
+  recommendedDirection?: string,
+): string | undefined {
+  if (!systemTendencies || !listenerPriorities || listenerPriorities.length === 0) {
+    return undefined;
+  }
+  const priorityBrief = listenerPriorities[0];
+  if (recommendedDirection) {
+    return `Your system's current tendencies — ${systemTendencies.toLowerCase()} — interact with your preference for ${priorityBrief.toLowerCase()}. The recommended direction addresses that relationship.`;
+  }
+  return `Your system's current tendencies — ${systemTendencies.toLowerCase()} — relate to your preference for ${priorityBrief.toLowerCase()}.`;
+}
+
+/**
+ * Enrich an AdvisoryResponse with generated content.
+ * Called after the base adapter mapping. Only adds fields that
+ * are not already populated.
+ */
+function enrichAdvisory(advisory: AdvisoryResponse): AdvisoryResponse {
+  const enriched = { ...advisory };
+
+  // Bottom line — only for shopping and diagnosis
+  if (!enriched.bottomLine && enriched.kind !== 'consultation') {
+    enriched.bottomLine = generateBottomLine(
+      enriched.kind,
+      enriched.subject,
+      enriched.recommendedDirection,
+      enriched.tradeOffs,
+    );
+  }
+
+  // Alignment rationale — only when not already set
+  if (!enriched.alignmentRationale) {
+    enriched.alignmentRationale = generateAlignmentRationale(
+      enriched.systemTendencies,
+      enriched.listenerPriorities,
+      enriched.recommendedDirection,
+    );
+  }
+
+  return enriched;
+}
+
 // ── Adapter: Consultation → Advisory ─────────────────
 
 export function consultationToAdvisory(c: ConsultationResponse): AdvisoryResponse {
-  return {
+  return enrichAdvisory({
     kind: 'consultation',
     subject: c.subject,
 
@@ -156,7 +232,7 @@ export function consultationToAdvisory(c: ConsultationResponse): AdvisoryRespons
       kind: l.kind,
       region: l.region,
     })),
-  };
+  });
 }
 
 // ── Adapter: GearResponse → Advisory ─────────────────
@@ -167,7 +243,7 @@ export function gearResponseToAdvisory(r: GearResponse): AdvisoryResponse {
     ? r.hearing
     : undefined;
 
-  return {
+  return enrichAdvisory({
     kind: 'consultation',
     subject: r.subjects.length > 0 ? r.subjects.join(', ') : 'your question',
 
@@ -181,7 +257,7 @@ export function gearResponseToAdvisory(r: GearResponse): AdvisoryResponse {
 
     recommendedDirection: r.direction,
     followUp: r.clarification,
-  };
+  });
 }
 
 // ── Adapter: ShoppingAnswer → Advisory ───────────────
@@ -217,7 +293,7 @@ export function shoppingToAdvisory(
 
   const statedGaps = a.statedGaps?.map((g) => GAP_LABELS[g]);
 
-  return {
+  return enrichAdvisory({
     kind: 'shopping',
     subject: a.category,
 
@@ -241,7 +317,7 @@ export function shoppingToAdvisory(
       symptoms: signals.symptoms,
       traits: signals.traits,
     } : undefined,
-  };
+  });
 }
 
 // ── Adapter: Analysis → Advisory ─────────────────────
@@ -270,7 +346,7 @@ export function analysisToAdvisory(
     listenerAvoids.push(sysDir.tendencySummary);
   }
 
-  return {
+  return enrichAdvisory({
     kind: 'diagnosis',
     subject: primary?.label ?? 'your listening situation',
 
@@ -297,5 +373,5 @@ export function analysisToAdvisory(
       symptoms: signals.symptoms,
       traits: signals.traits,
     },
-  };
+  });
 }
