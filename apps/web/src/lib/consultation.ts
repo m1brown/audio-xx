@@ -323,13 +323,28 @@ function buildBrandComparison(
   const nameA = capitalize('names' in profileA ? profileA.names[0] : profileA.name);
   const nameB = capitalize('names' in profileB ? profileB.names[0] : profileB.name);
 
+  // Use up to two sentences for philosophy and tendencies — enough to convey
+  // character without overwhelming. Truncating to a single period fragment
+  // loses too much information.
+  const philoA = takeSentences(profileA.philosophy, 2);
+  const philoB = takeSentences(profileB.philosophy, 2);
+  const tendA = takeSentences(profileA.tendencies, 2);
+  const tendB = takeSentences(profileB.tendencies, 2);
+
   return {
     subject: `${nameA} vs ${nameB}`,
-    philosophy: `${nameA} and ${nameB} represent different design priorities. ${profileA.philosophy.split('.')[0]}. ${profileB.philosophy.split('.')[0]}.`,
-    tendencies: `${nameA}: ${profileA.tendencies.split('.')[0]}. ${nameB}: ${profileB.tendencies.split('.')[0]}.`,
+    philosophy: `${nameA}: ${philoA}\n\n${nameB}: ${philoB}`,
+    tendencies: `${nameA}: ${tendA}\n\n${nameB}: ${tendB}`,
     systemContext: 'The better fit depends on what you value most in your listening and where your system currently sits.',
     followUp: 'What matters most to you — and what is the rest of your system?',
   };
+}
+
+/** Take up to `n` sentences from a string. */
+function takeSentences(text: string, n: number): string {
+  const parts = text.match(/[^.!]+[.!]+/g);
+  if (!parts) return text;
+  return parts.slice(0, n).join('').trim();
 }
 
 /** Capitalize first letter of a string. */
@@ -340,6 +355,9 @@ function capitalize(s: string): string {
 /**
  * Derive a minimal brand summary from catalog products.
  * Used as a fallback when we have products but no curated brand profile.
+ *
+ * Prefers the structured `tendencies.character` data (rich, curated)
+ * over the simpler `tendencyProfile` (which may lack emphasized traits).
  */
 function deriveBrandSummaryFromCatalog(
   brandName: string,
@@ -350,12 +368,27 @@ function deriveBrandSummaryFromCatalog(
     ? `${primary.architecture} and related architectures`
     : `${primary.architecture} architecture`;
 
+  // Build tendencies: prefer curated character descriptions, then profile, then description
+  let tendencyText: string;
+  if (hasTendencies(primary.tendencies)) {
+    const chars = selectDefaultTendencies(primary.tendencies.character, 2);
+    tendencyText = chars.map((c) => c.tendency).join('. ') + '.';
+  } else if (hasExplainableProfile(primary.tendencyProfile)) {
+    const emphasized = getEmphasizedTraits(primary.tendencyProfile);
+    if (emphasized.length > 0) {
+      tendencyText = `Tends to emphasise ${emphasized.slice(0, 2).join(' and ')}.`;
+    } else {
+      // No emphasized traits — fall back to description
+      tendencyText = primary.description.split('.').slice(0, 2).join('.') + '.';
+    }
+  } else {
+    tendencyText = primary.description.split('.').slice(0, 2).join('.') + '.';
+  }
+
   return {
     name: brandName,
     philosophy: `${capitalize(brandName)} builds ${archLabel}. ${primary.description.split('.')[0]}.`,
-    tendencies: hasExplainableProfile(primary.tendencyProfile)
-      ? `Tends to emphasise ${getEmphasizedTraits(primary.tendencyProfile).slice(0, 2).join(' and ')}.`
-      : primary.description.split('.').slice(0, 2).join('.') + '.',
+    tendencies: tendencyText,
   };
 }
 
