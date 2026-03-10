@@ -351,6 +351,14 @@ export default function Home() {
             }
             const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning);
             dispatch({ type: 'ADD_SHOPPING_ANSWER', answer, signals: data.signals });
+
+            // Subtle note when the stored taste profile influenced the direction
+            if (reasoning.taste.storedProfileUsed) {
+              dispatch({
+                type: 'ADD_NOTE',
+                content: 'Your taste profile contributed to this direction.',
+              });
+            }
           }
         } else {
           // ── Diagnosis path ───────────────────────────

@@ -49,7 +49,7 @@ export default function TasteProfileEditor({ profile, onChange }: TasteProfileEd
               >
                 <label
                   htmlFor={`taste-${trait.key}`}
-                  style={{ fontSize: '0.92rem', fontWeight: 500, color: '#333' }}
+                  style={{ fontSize: '0.92rem', fontWeight: 500, color: trait.color }}
                 >
                   {trait.label}
                 </label>
@@ -65,7 +65,7 @@ export default function TasteProfileEditor({ profile, onChange }: TasteProfileEd
                 step={5}
                 value={pct}
                 onChange={(e) => handleSliderChange(trait.key, Number(e.target.value))}
-                style={{ width: '100%', accentColor: '#c4122f' }}
+                style={{ width: '100%', accentColor: trait.color }}
               />
               <div style={{ fontSize: '0.78rem', color: '#999', marginTop: '0.1rem' }}>
                 {trait.description}

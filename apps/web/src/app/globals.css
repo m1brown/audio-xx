@@ -137,6 +137,16 @@ nav .nav-inner {
 }
 nav .nav-links { display: flex; gap: 1rem; font-size: 13px; align-items: center; }
 nav .brand { font-weight: 700; font-size: 14px; letter-spacing: 0.03em; color: #222; }
+nav .nav-radar-link {
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+}
+nav .nav-radar-link:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
 
 .item-row {
   padding: 8px 0;

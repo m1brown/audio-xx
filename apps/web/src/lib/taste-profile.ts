@@ -27,19 +27,21 @@ export interface ProfileTraitDef {
   key: ProfileTraitKey;
   label: string;
   description: string;
+  /** Distinct identity color for this trait (hex). */
+  color: string;
 }
 
 /**
  * The 7 fixed traits in display order.
  */
 export const PROFILE_TRAITS: ProfileTraitDef[] = [
-  { key: 'flow',          label: 'Flow',          description: 'Ease, continuity, and musical phrasing' },
-  { key: 'clarity',       label: 'Clarity',       description: 'Detail, separation, and resolution' },
-  { key: 'rhythm',        label: 'Rhythm',        description: 'Pace, drive, and rhythmic energy' },
-  { key: 'tonal_density', label: 'Tonal Density', description: 'Body, weight, and harmonic richness' },
-  { key: 'spatial_depth', label: 'Spatial Depth', description: 'Soundstage, air, and imaging depth' },
-  { key: 'dynamics',      label: 'Dynamics',      description: 'Punch, contrast, and dynamic life' },
-  { key: 'warmth',        label: 'Warmth',        description: 'Lower-midrange color and tonal warmth' },
+  { key: 'flow',          label: 'Flow',          description: 'Ease, continuity, and musical phrasing',   color: '#d4913a' },
+  { key: 'clarity',       label: 'Clarity',       description: 'Detail, separation, and resolution',       color: '#3a8fd4' },
+  { key: 'rhythm',        label: 'Rhythm',        description: 'Pace, drive, and rhythmic energy',         color: '#d45a3a' },
+  { key: 'tonal_density', label: 'Tonal Density', description: 'Body, weight, and harmonic richness',      color: '#8a3ab0' },
+  { key: 'spatial_depth', label: 'Spatial Depth', description: 'Soundstage, air, and imaging depth',       color: '#2a9d8f' },
+  { key: 'dynamics',      label: 'Dynamics',      description: 'Punch, contrast, and dynamic life',        color: '#e05050' },
+  { key: 'warmth',        label: 'Warmth',        description: 'Lower-midrange color and tonal warmth',    color: '#c07040' },
 ];
 
 export const PROFILE_TRAIT_LABELS: Record<ProfileTraitKey, string> = Object.fromEntries(
@@ -48,6 +50,11 @@ export const PROFILE_TRAIT_LABELS: Record<ProfileTraitKey, string> = Object.from
 
 export const PROFILE_TRAIT_DESCRIPTIONS: Record<ProfileTraitKey, string> = Object.fromEntries(
   PROFILE_TRAITS.map((t) => [t.key, t.description]),
+) as Record<ProfileTraitKey, string>;
+
+/** Per-trait identity colors for use across the app. */
+export const TRAIT_COLORS: Record<ProfileTraitKey, string> = Object.fromEntries(
+  PROFILE_TRAITS.map((t) => [t.key, t.color]),
 ) as Record<ProfileTraitKey, string>;
 
 // ── Core type ────────────────────────────────────────
@@ -59,6 +66,12 @@ export interface TasteProfile {
   confidence: number;
   /** ISO timestamp of last update. */
   lastUpdated: string;
+  /**
+   * Optional: traits inferred from conversation patterns (not manually set).
+   * Structural preparation for future conversation-based profile evolution.
+   * Merging logic deferred — present only for type compatibility.
+   */
+  inferredTraits?: Partial<Record<ProfileTraitKey, number>>;
 }
 
 // ── Helpers ──────────────────────────────────────────
