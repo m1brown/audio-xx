@@ -59,7 +59,7 @@ export const ARCHETYPE_DEFINITIONS: Record<SonicArchetype, ArchetypeDefinition> 
   flow_organic: {
     label: 'flow and organic musicality',
     shortLabel: 'flow-oriented',
-    description: 'Ease, sweetness, continuity, natural tone, low fatigue.',
+    description: 'Prioritizes musical continuity and harmonic naturalness over transient precision and analytical detail.',
     traitWeights: {
       flow: 1.0,
       composure: 0.6,
@@ -71,7 +71,7 @@ export const ARCHETYPE_DEFINITIONS: Record<SonicArchetype, ArchetypeDefinition> 
   precision_explicit: {
     label: 'precision and explicit detail',
     shortLabel: 'precision-oriented',
-    description: 'Clarity, detail, attack, separation, low blur.',
+    description: 'Prioritizes transparency and transient definition over tonal richness and harmonic warmth.',
     traitWeights: {
       clarity: 1.0,
       texture: 0.5,
@@ -82,7 +82,7 @@ export const ARCHETYPE_DEFINITIONS: Record<SonicArchetype, ArchetypeDefinition> 
   rhythmic_propulsive: {
     label: 'rhythmic drive and propulsive energy',
     shortLabel: 'rhythm-oriented',
-    description: 'Pace, drive, snap, energy, dynamic life.',
+    description: 'Prioritizes rhythmic energy and dynamic contrast over composure and tonal smoothness.',
     traitWeights: {
       rhythm: 1.0,
       dynamics: 0.7,
@@ -93,7 +93,7 @@ export const ARCHETYPE_DEFINITIONS: Record<SonicArchetype, ArchetypeDefinition> 
   tonal_saturated: {
     label: 'tonal saturation and harmonic richness',
     shortLabel: 'tonally saturated',
-    description: 'Body, density, color, harmonic richness.',
+    description: 'Prioritizes harmonic density and tonal weight over speed and explicit resolution.',
     traitWeights: {
       tonal_density: 1.0,
       warmth: 0.6,
@@ -104,7 +104,7 @@ export const ARCHETYPE_DEFINITIONS: Record<SonicArchetype, ArchetypeDefinition> 
   spatial_holographic: {
     label: 'spatial depth and holographic imaging',
     shortLabel: 'spatially focused',
-    description: 'Depth, layering, dimensionality, air, image specificity.',
+    description: 'Prioritizes spatial precision and imaging depth over tonal density and rhythmic drive.',
     traitWeights: {
       spatial_precision: 1.0,
       openness: 0.6,

@@ -66,6 +66,7 @@ type Action =
   | { type: 'ADD_GLOSSARY'; entry: GlossaryResult }
   | { type: 'ADD_GEAR_RESPONSE'; response: GearResponse }
   | { type: 'ADD_CONSULTATION'; consultation: ConsultationResponse }
+  | { type: 'ADD_NOTE'; content: string }
   | { type: 'SET_MODE'; mode: ConversationMode }
   | { type: 'SET_LOADING'; value: boolean }
   | { type: 'RESET' };
@@ -147,6 +148,15 @@ function reducer(state: ConversationState, action: Action): ConversationState {
         messages: [
           ...state.messages,
           { role: 'assistant', kind: 'consultation', consultation: action.consultation },
+        ],
+      };
+
+    case 'ADD_NOTE':
+      return {
+        ...state,
+        messages: [
+          ...state.messages,
+          { role: 'assistant', content: action.content, kind: 'note' },
         ],
       };
 
@@ -249,10 +259,12 @@ export default function Home() {
     let { intent, subjects, desires } = detectIntent(submittedText);
 
     // ── Mode-aware intent override ─────────────────────
-    // The router's effective mode can override the intent detector.
-    // Shopping and diagnosis persistence is now handled by resolveMode()
-    // rather than the old ad-hoc shopping persistence logic.
-    if (effectiveMode === 'shopping' && intent === 'diagnosis') {
+    // When in shopping mode, ALL intents stay in shopping so that
+    // follow-ups like "what about the Pontus?" or "more warmth"
+    // never fall through to the diagnostic engine.
+    // Consultation is handled upstream (before detectIntent) and
+    // returns early, so it cannot be swallowed by this override.
+    if (effectiveMode === 'shopping' && intent !== 'shopping') {
       intent = 'shopping';
     }
     if (effectiveMode === 'diagnosis' && intent !== 'comparison' && intent !== 'gear_inquiry') {
@@ -312,7 +324,14 @@ export default function Home() {
               },
             });
           } else {
-            // Enough context (or cap reached) — produce recommendation
+            // Enough context (or cap reached) — produce recommendation.
+            // On refinement turns, add a brief conversational bridge.
+            if (shoppingAnswerCount > 0) {
+              dispatch({
+                type: 'ADD_NOTE',
+                content: 'Got it — adjusting the direction based on what you\'ve added.',
+              });
+            }
             const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined);
             dispatch({ type: 'ADD_SHOPPING_ANSWER', answer, signals: data.signals });
           }

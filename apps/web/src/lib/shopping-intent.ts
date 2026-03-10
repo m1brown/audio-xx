@@ -617,9 +617,9 @@ function bridgeQuestion(
 // ── Turn caps per mode ────────────────────────────────
 
 const TURN_CAPS: Record<ShoppingMode, number> = {
-  'specific-component': 3,
-  'upgrade-path': 3,
-  'build-a-system': 3,
+  'specific-component': 2,
+  'upgrade-path': 2,
+  'build-a-system': 2,
 };
 
 /** Returns the maximum number of inquiry turns for the detected mode. */
