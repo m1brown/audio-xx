@@ -1,0 +1,261 @@
+/**
+ * Main advisory message renderer.
+ *
+ * Delegates to section sub-components. Only populated sections render.
+ * Section order follows the plan:
+ *   1. Comparison summary
+ *   2. Listener priorities (tan box)
+ *   3. System context
+ *   4. Alignment rationale
+ *   5. Core advisory body (no labels — prose center)
+ *   6. Recommended direction
+ *   7. Why this fits
+ *   8. Trade-offs
+ *   9. Options (product cards)
+ *  10. Bottom line
+ *  11. Follow-up (blue box)
+ *  12. Learn more (links)
+ *  13. Sources
+ *  14. Diagnostics (collapsible)
+ */
+
+import type { AdvisoryResponse } from '../../lib/advisory-response';
+import AdvisorySection from './AdvisorySection';
+import AdvisoryProse from './AdvisoryProse';
+import AdvisoryOptions from './AdvisoryOptions';
+import AdvisoryLinks from './AdvisoryLinks';
+import AdvisorySources from './AdvisorySources';
+import AdvisoryDiagnostics from './AdvisoryDiagnostics';
+
+interface AdvisoryMessageProps {
+  advisory: AdvisoryResponse;
+}
+
+/** Inline bullet list — reused for priorities, whyThisFits, tradeOffs. */
+function BulletList({ items, color }: { items: string[]; color?: string }) {
+  return (
+    <ul style={{ margin: 0, paddingLeft: '1.1rem', lineHeight: 1.7, color: color ?? '#333' }}>
+      {items.map((item, i) => (
+        <li key={i} style={{ marginBottom: '0.2rem', fontSize: '0.95rem' }}>{item}</li>
+      ))}
+    </ul>
+  );
+}
+
+export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
+  const a = advisory;
+
+  const hasListenerPriorities = (a.listenerPriorities && a.listenerPriorities.length > 0)
+    || (a.listenerAvoids && a.listenerAvoids.length > 0);
+
+  const hasProvisionalCaveats = a.provisional
+    && a.statedGaps
+    && a.statedGaps.length > 0;
+
+  return (
+    <div style={{ lineHeight: 1.7, color: '#333' }}>
+      {/* ── 1. Comparison summary ────────────────────── */}
+      {a.comparisonSummary && (
+        <p
+          style={{
+            margin: '0 0 1.1rem 0',
+            fontWeight: 600,
+            fontSize: '1.02rem',
+            color: '#222',
+            lineHeight: 1.65,
+          }}
+        >
+          {a.comparisonSummary}
+        </p>
+      )}
+
+      {/* ── 2. Listener priorities ────────────────────── */}
+      {hasListenerPriorities && (
+        <div
+          style={{
+            borderLeft: '3px solid #a89870',
+            paddingLeft: '1rem',
+            marginBottom: '1.25rem',
+            background: '#faf8f4',
+            padding: '0.75rem 1rem',
+          }}
+        >
+          {a.listenerPriorities && a.listenerPriorities.length > 0 && (
+            <div style={{ marginBottom: a.listenerAvoids?.length ? '0.6rem' : 0 }}>
+              <div
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase' as const,
+                  color: '#a89870',
+                  marginBottom: '0.3rem',
+                }}
+              >
+                What you seem to value
+              </div>
+              <BulletList items={a.listenerPriorities} />
+            </div>
+          )}
+          {a.listenerAvoids && a.listenerAvoids.length > 0 && (
+            <div>
+              <div
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase' as const,
+                  color: '#a89870',
+                  marginBottom: '0.3rem',
+                }}
+              >
+                What you tend to avoid
+              </div>
+              <BulletList items={a.listenerAvoids} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 3. System context ────────────────────────── */}
+      {a.systemContext && (
+        <AdvisorySection label="Your system">
+          <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
+            {a.systemContext}
+          </p>
+        </AdvisorySection>
+      )}
+
+      {/* ── 3b. System tendencies ────────────────────── */}
+      {a.systemTendencies && !a.systemContext && (
+        <AdvisorySection label="System tendencies">
+          <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
+            {a.systemTendencies}
+          </p>
+        </AdvisorySection>
+      )}
+
+      {/* ── 4. Alignment rationale ───────────────────── */}
+      {a.alignmentRationale && (
+        <AdvisorySection label="How this connects">
+          <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
+            {a.alignmentRationale}
+          </p>
+        </AdvisorySection>
+      )}
+
+      {/* ── 5. Core advisory body (no labels) ────────── */}
+      <AdvisoryProse
+        philosophy={a.philosophy}
+        tendencies={a.tendencies}
+        systemFit={a.systemFit}
+      />
+
+      {/* ── 6. Recommended direction ─────────────────── */}
+      {a.recommendedDirection && (
+        <AdvisorySection label="What this means for component choice">
+          <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
+            {a.recommendedDirection}
+          </p>
+        </AdvisorySection>
+      )}
+
+      {/* ── 7. Why this fits ─────────────────────────── */}
+      {a.whyThisFits && a.whyThisFits.length > 0 && (
+        <AdvisorySection label="Why this fits">
+          <BulletList items={a.whyThisFits} />
+        </AdvisorySection>
+      )}
+
+      {/* ── 8. Trade-offs ────────────────────────────── */}
+      {a.tradeOffs && a.tradeOffs.length > 0 && (
+        <AdvisorySection label="Trade-offs">
+          <BulletList items={a.tradeOffs} color="#666" />
+        </AdvisorySection>
+      )}
+
+      {/* ── 9. Options ───────────────────────────────── */}
+      {a.options && a.options.length > 0 && (
+        <AdvisorySection label="Worth considering">
+          <AdvisoryOptions options={a.options} />
+        </AdvisorySection>
+      )}
+
+      {/* ── 9b. Provisional caveats ──────────────────── */}
+      {hasProvisionalCaveats && (
+        <div
+          style={{
+            fontSize: '0.85rem',
+            color: '#999',
+            fontStyle: 'italic',
+            marginBottom: '1rem',
+          }}
+        >
+          Based on limited context
+          {a.statedGaps && a.statedGaps.length > 0 && (
+            <> — missing: {a.statedGaps.join(', ')}</>
+          )}
+          {a.dependencyCaveat && <>. {a.dependencyCaveat}</>}
+        </div>
+      )}
+
+      {/* ── 10. Bottom line ──────────────────────────── */}
+      {a.bottomLine && (
+        <p
+          style={{
+            margin: '0 0 1.1rem 0',
+            fontWeight: 500,
+            fontSize: '1.02rem',
+            color: '#222',
+            lineHeight: 1.65,
+          }}
+        >
+          {a.bottomLine}
+        </p>
+      )}
+
+      {/* ── 11. Follow-up (blue box) ─────────────────── */}
+      {a.followUp && (
+        <div
+          style={{
+            borderLeft: '3px solid #5a8a9a',
+            paddingLeft: '1rem',
+            padding: '0.6rem 1rem',
+            marginBottom: '1.25rem',
+            background: '#f4f8fa',
+            fontSize: '0.95rem',
+            color: '#444',
+            lineHeight: 1.65,
+          }}
+        >
+          {a.followUp}
+        </div>
+      )}
+
+      {/* ── 12. Learn more (links) ───────────────────── */}
+      {a.links && a.links.length > 0 && (
+        <AdvisorySection label="Learn more">
+          <AdvisoryLinks links={a.links} />
+        </AdvisorySection>
+      )}
+
+      {/* ── 13. Sources ──────────────────────────────── */}
+      {a.sourceReferences && a.sourceReferences.length > 0 && (
+        <AdvisorySection label="Sources">
+          <AdvisorySources sources={a.sourceReferences} />
+        </AdvisorySection>
+      )}
+
+      {/* ── 14. Diagnostics (collapsible) ────────────── */}
+      {a.diagnostics && (
+        <div style={{ marginTop: '0.75rem' }}>
+          <AdvisoryDiagnostics
+            matchedPhrases={a.diagnostics.matchedPhrases}
+            symptoms={a.diagnostics.symptoms}
+            traits={a.diagnostics.traits}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
