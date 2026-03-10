@@ -355,6 +355,8 @@ const CONTEXT_ENRICHMENT_PATTERNS = [
   // Speaker context — "my speakers are…", "I have…"
   /\bmy\s+speakers?\s+(?:are|is)\b/i,
   /\bi\s+have\s+(?:a\s+pair\s+of|the)\s+/i,
+  // "I have a tube amp", "i have an SET amp", "i have a Shindo preamp"
+  /\bi\s+have\s+(?:a|an)\s+(?:\w+\s+)*(?:amp(?:lifier)?|preamp|integrated|receiver|dac|speakers?|turntable|phono|streamer|sub(?:woofer)?)\b/i,
 
   // Room context — "small room", "nearfield", "12x14 room"
   /\b(?:small|large|medium|big|tiny)\s+room\b/i,
@@ -484,6 +486,13 @@ export function isConsultationFollowUp(
 ): boolean {
   if (!activeConsultation) return false;
   if (activeConsultation.subjects.length === 0) return false;
+
+  // Context enrichment — providing system details is a follow-up, not a new topic.
+  // Check this BEFORE the new-subject gate because system context often mentions
+  // other brands/products (e.g., "my amp is a Shindo" after asking about DeVore).
+  if (detectContextEnrichment(text) !== null) {
+    return true;
+  }
 
   // Check if message introduces new, unrelated subjects
   const newMatches = extractSubjectMatches(text);

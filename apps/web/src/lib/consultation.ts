@@ -1283,6 +1283,11 @@ function classifyFollowUp(text: string): FollowUpKind {
   if (/\b(?:bass|treble|midrange|soundstage|imaging|dynamics|timing|warmth|detail|speed)\b/i.test(lower)) return 'sonic_detail';
   if (/\bpair|match|work\s+with|goes?\s+well\b/i.test(lower)) return 'pairing';
   if (/\bmy\s+(?:system|setup|room|amp)|in\s+(?:a\s+)?(?:small|large)\b/i.test(lower)) return 'system_fit';
+  // "i have a tube amp", "i'm using a Shindo", "driven by SET"
+  if (/\bi\s+have\s+(?:a|an)\s+/i.test(lower) && /\b(?:amp|amplifier|preamp|integrated|receiver|dac|speakers?|turntable|phono|streamer|tube|set|push[- ]pull|single[- ]ended|class[- ]?a)\b/i.test(lower)) return 'system_fit';
+  if (/\b(?:i(?:'m|\s+am)\s+)?(?:using|running|pairing|powering|driving)\b/i.test(lower)) return 'system_fit';
+  if (/\b(?:driven|powered|fed)\s+by\b/i.test(lower)) return 'system_fit';
+  if (/\btube\s+amp/i.test(lower) || /\b(?:300b|2a3|el34|kt88|set|push[- ]pull)\b/i.test(lower)) return 'system_fit';
   return 'general';
 }
 
