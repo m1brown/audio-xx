@@ -13,6 +13,14 @@ import type {
   DealerEntry,
   ProductFamily,
 } from './types';
+import type {
+  ProductCategory,
+  ProductSubcategory,
+  PriceTier,
+  BrandScale,
+  GeoRegion,
+  DesignTopology,
+} from '../catalog-taxonomy';
 
 // ── Brand knowledge ──────────────────────────────────
 
@@ -39,6 +47,14 @@ export interface BrandKnowledge {
   founded?: string;
   /** More specific location (e.g. "Brooklyn, New York"). */
   location?: string;
+
+  // ── Catalog diversity metadata ─────────
+  /** Brand scale / market position. */
+  brandScale?: BrandScale;
+  /** Geographic region of brand origin / design heritage. */
+  region?: GeoRegion;
+  /** Primary product categories this brand operates in. */
+  categories?: ProductCategory[];
 
   // ── Design ───────────────────────────────
   /** Core design philosophy — what the brand prioritises. */
@@ -83,9 +99,21 @@ export interface ProductKnowledge {
 
   // ── Classification ───────────────────────
   /** Product category. */
-  category: 'speaker' | 'dac' | 'amplifier' | 'turntable' | 'phono' | 'streamer' | 'cable' | 'other';
-  /** Design topology or architecture (e.g. "R-2R", "horn-loaded"). */
-  topology?: string;
+  category: ProductCategory;
+  /** Optional subcategory for finer classification. */
+  subcategory?: ProductSubcategory;
+  /** Design topology tag — enables cross-catalog filtering. */
+  topology?: DesignTopology;
+  /** Freeform architecture description for nuance beyond the topology tag. */
+  architectureNotes?: string;
+
+  // ── Catalog diversity metadata ─────────
+  /** Price tier relative to the product's category. */
+  priceTier?: PriceTier;
+  /** Brand scale / market position (can differ from brand-level). */
+  brandScale?: BrandScale;
+  /** Geographic region of brand origin / design heritage. */
+  region?: GeoRegion;
 
   // ── Technical notes ──────────────────────
   /** Sensitivity (speakers). */

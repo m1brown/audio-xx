@@ -15,6 +15,14 @@
  */
 
 import type { ProductTendencies, TendencyProfile } from '../sonic-tendencies';
+import type {
+  ProductCategory,
+  ProductSubcategory,
+  PriceTier,
+  BrandScale,
+  GeoRegion,
+  DesignTopology,
+} from '../catalog-taxonomy';
 
 export interface RetailerLink {
   label: string;
@@ -34,8 +42,23 @@ export interface Product {
   price: number;
   /** ISO 4217 currency code. Defaults to 'USD' when omitted. */
   priceCurrency?: string;
-  category: 'dac' | 'speaker' | 'amplifier';
+  category: ProductCategory;
   architecture: string;
+
+  // ── Catalog diversity metadata (all optional) ──────
+  /** Finer classification within the category. */
+  subcategory?: ProductSubcategory;
+  /** Price tier relative to the product's category. */
+  priceTier?: PriceTier;
+  /** Brand scale / market position. */
+  brandScale?: BrandScale;
+  /** Geographic region of brand origin / design heritage. */
+  region?: GeoRegion;
+  /** Country of origin (ISO 3166-1 name or code). */
+  country?: string;
+  /** Design topology tag — enables cross-catalog filtering. */
+  topology?: DesignTopology;
+
   /**
    * Legacy numeric traits (0–1 scale). Retained during migration.
    * Scoring and archetype inference read through resolveTraitValue(),
@@ -80,6 +103,12 @@ export const DAC_PRODUCTS: Product[] = [
     price: 199,
     category: 'dac',
     architecture: 'delta-sigma (AKM)',
+    subcategory: 'standalone-dac',
+    priceTier: 'budget',
+    brandScale: 'specialist',
+    region: 'north-america',
+    country: 'US',
+    topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit' },
     tendencyProfile: {
       basis: 'editorial_inference',
@@ -115,6 +144,12 @@ export const DAC_PRODUCTS: Product[] = [
     price: 349,
     category: 'dac',
     architecture: 'delta-sigma (ESS)',
+    subcategory: 'standalone-dac',
+    priceTier: 'budget',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     tendencyProfile: {
       basis: 'editorial_inference',
@@ -156,6 +191,12 @@ export const DAC_PRODUCTS: Product[] = [
     price: 450,
     category: 'dac',
     architecture: 'delta-sigma (ESS)',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     tendencyProfile: {
       basis: 'listener_consensus',
@@ -196,6 +237,12 @@ export const DAC_PRODUCTS: Product[] = [
     price: 550,
     category: 'dac',
     architecture: 'delta-sigma (ESS)',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit' },
     tendencyProfile: {
       basis: 'editorial_inference',
@@ -234,6 +281,12 @@ export const DAC_PRODUCTS: Product[] = [
     price: 600,
     category: 'dac',
     architecture: 'R-2R',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'southeast-asia',
+    country: 'SG',
+    topology: 'r2r',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -287,6 +340,12 @@ export const DAC_PRODUCTS: Product[] = [
     price: 699,
     category: 'dac',
     architecture: 'multibit',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'north-america',
+    country: 'US',
+    topology: 'multibit',
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -342,6 +401,12 @@ export const DAC_PRODUCTS: Product[] = [
     price: 700,
     category: 'dac',
     architecture: 'delta-sigma (ESS)',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit' },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -399,6 +464,12 @@ export const DAC_PRODUCTS: Product[] = [
     price: 800,
     category: 'dac',
     architecture: 'NOS tube',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'boutique',
+    region: 'east-asia',
+    country: 'TW',
+    topology: 'nos',
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -455,6 +526,12 @@ export const DAC_PRODUCTS: Product[] = [
     price: 799,
     category: 'dac',
     architecture: 'delta-sigma (ESS)',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit' },
     tendencyProfile: {
       basis: 'editorial_inference',
@@ -496,6 +573,12 @@ export const DAC_PRODUCTS: Product[] = [
     price: 1099,
     category: 'dac',
     architecture: 'delta-sigma (AKM)',
+    subcategory: 'dac-preamp',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'europe',
+    country: 'DE',
+    topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit' },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -552,6 +635,12 @@ export const DAC_PRODUCTS: Product[] = [
     price: 1295,
     category: 'dac',
     architecture: 'FPGA',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'uk',
+    country: 'GB',
+    topology: 'fpga',
     archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -607,6 +696,12 @@ export const DAC_PRODUCTS: Product[] = [
     price: 1499,
     category: 'dac',
     architecture: 'R-2R',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'southeast-asia',
+    country: 'SG',
+    topology: 'r2r',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -663,6 +758,12 @@ export const DAC_PRODUCTS: Product[] = [
     price: 1499,
     category: 'dac',
     architecture: 'R-2R',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    topology: 'r2r',
     archetypes: { primary: 'tonal_saturated', secondary: 'precision_explicit' },
     tendencyProfile: {
       basis: 'listener_consensus',

@@ -20,6 +20,7 @@
 
 import { DAC_PRODUCTS, type Product } from './products/dacs';
 import { SPEAKER_PRODUCTS } from './products/speakers';
+import type { BrandScale, GeoRegion, ProductCategory } from './catalog-taxonomy';
 import {
   hasTendencies,
   hasExplainableProfile,
@@ -117,6 +118,14 @@ interface BrandProfile {
    * differences between product lines.
    */
   designFamilies?: DesignFamily[];
+
+  // ── Catalog diversity metadata ─────────
+  /** Brand scale / market position. */
+  brandScale?: BrandScale;
+  /** Geographic region of brand origin / design heritage. */
+  region?: GeoRegion;
+  /** Primary product categories this brand operates in. */
+  categories?: ProductCategory[];
 }
 
 const BRAND_PROFILES: BrandProfile[] = [
@@ -124,6 +133,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     names: ['devore', 'devore fidelity'],
     founder: 'John DeVore',
     country: 'USA (Brooklyn, New York)',
+    brandScale: 'boutique',
+    region: 'north-america',
+    categories: ['speaker'],
     philosophy: 'DeVore Fidelity designs speakers around musical engagement and natural tonal character. The philosophy prioritises ease and flow over analytical precision. Speakers are voiced by ear rather than measurement target.',
     tendencies: 'Listeners describe DeVore speakers as warm, rhythmically alive, and harmonically rich. They tend to emphasise tonal body and midrange presence at the cost of some measured linearity.',
     systemContext: 'DeVore speakers span a range of sensitivities and amplifier requirements. The brand-level tendency is warmth and engagement, but the specific design family matters for amplifier pairing.',
@@ -149,6 +161,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     names: ['shindo'],
     founder: 'Ken Shindo',
     country: 'Japan',
+    brandScale: 'boutique',
+    region: 'japan',
+    categories: ['amplifier'],
     philosophy: 'Shindo amplifiers are hand-built, tube-based designs rooted in vintage circuit topologies. The design philosophy prioritizes harmonic richness and tonal saturation over measured neutrality.',
     tendencies: 'Listeners consistently describe Shindo systems as dense, flowing, and harmonically alive. They tend to emphasize tonal weight and midrange texture at the cost of some transient precision.',
     systemContext: 'Commonly paired with high-efficiency speakers — horn-loaded or single-driver designs that can work with lower power output.',
@@ -162,6 +177,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     names: ['pass labs', 'pass', 'first watt'],
     founder: 'Nelson Pass',
     country: 'USA',
+    brandScale: 'specialist',
+    region: 'north-america',
+    categories: ['amplifier'],
     philosophy: 'Pass Labs designs emphasise simplicity and Class A operation where practical. First Watt is the low-power offshoot, exploring single-ended solid-state and unusual topologies.',
     tendencies: 'Pass amplifiers tend toward warmth and midrange richness for solid-state. First Watt designs emphasise texture and intimacy at the cost of dynamic scale.',
     systemContext: 'Pass Labs works across a range of speakers. First Watt pairs best with high-efficiency speakers — similar territory to low-power tube amps.',
@@ -187,6 +205,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     names: ['naim'],
     founder: 'Julian Vereker',
     country: 'UK (Salisbury)',
+    brandScale: 'specialist',
+    region: 'uk',
+    categories: ['amplifier', 'streamer', 'dac'],
     philosophy: 'Naim designs prioritise rhythmic drive and musical timing. The engineering philosophy emphasises pace and engagement over tonal density or spatial refinement.',
     tendencies: 'Listeners describe Naim systems as propulsive and engaging, with strong rhythmic coherence. They tend to de-emphasise warmth and spatial holography.',
     systemContext: 'Traditionally paired with Naim sources and Naim-friendly speakers. The timing-first approach works well with speakers that have good transient response.',
@@ -197,6 +218,9 @@ const BRAND_PROFILES: BrandProfile[] = [
   {
     names: ['luxman'],
     country: 'Japan',
+    brandScale: 'specialist',
+    region: 'japan',
+    categories: ['amplifier', 'dac'],
     philosophy: 'Luxman is a long-established Japanese manufacturer building both tube and solid-state designs with an emphasis on refinement and tonal elegance.',
     tendencies: 'Luxman amplifiers tend toward a slightly warm, composed presentation. Listeners describe good tonal density with more control and composure than most tube designs.',
     systemContext: 'Versatile pairing — works across a range of speaker types. The refined character complements both analytical and warmer speakers.',
@@ -208,6 +232,9 @@ const BRAND_PROFILES: BrandProfile[] = [
   {
     names: ['accuphase'],
     country: 'Japan',
+    brandScale: 'specialist',
+    region: 'japan',
+    categories: ['amplifier', 'dac'],
     philosophy: 'Accuphase is a precision-oriented Japanese manufacturer. The design philosophy centres on measured accuracy, build quality, and long-term reliability.',
     tendencies: 'Accuphase gear tends toward transparency and control with a slightly warm tonal balance. More composed than rhythmically aggressive.',
     systemContext: 'Works well with revealing speakers where control and composure matter. A good match for listeners who value refinement over raw energy.',
@@ -219,6 +246,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     names: ['lampizator', 'lampi'],
     founder: 'Łukasz Fikus',
     country: 'Poland',
+    brandScale: 'boutique',
+    region: 'europe',
+    categories: ['dac'],
     philosophy: 'Lampizator builds tube-output DACs with a deliberate emphasis on harmonic richness and musical engagement over measured transparency.',
     tendencies: 'Described as tonally dense, flowing, and harmonically saturated. These DACs trade analytical precision for musical immersion and tonal weight.',
     systemContext: 'Pairs well with systems that benefit from added harmonic density. Can be too much in already warm or dense systems.',
@@ -230,6 +260,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     names: ['border patrol'],
     founder: 'Gary Dews',
     country: 'UK',
+    brandScale: 'boutique',
+    region: 'uk',
+    categories: ['dac'],
     philosophy: 'Border Patrol builds NOS (non-oversampling) tube-output DACs with minimal digital processing. The philosophy is simplicity and directness.',
     tendencies: 'Listeners describe a natural, unforced sound with strong tonal body and flow. Treble is typically rolled compared to oversampling designs.',
     systemContext: 'Works best in systems where the rest of the chain provides sufficient detail and air. Pairs naturally with tube amplification and high-efficiency speakers.',
