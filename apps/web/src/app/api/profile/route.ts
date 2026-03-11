@@ -6,8 +6,12 @@ export async function GET() {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const profile = await prisma.profile.findUnique({ where: { userId } });
-  if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+  // Auto-create profile if it doesn't exist (first authenticated access).
+  const profile = await prisma.profile.upsert({
+    where: { userId },
+    create: { userId },
+    update: {},
+  });
 
   return NextResponse.json({
     ...profile,
@@ -15,6 +19,7 @@ export async function GET() {
     sensitivityFlags: JSON.parse(profile.sensitivityFlags),
     preferredTraits: JSON.parse(profile.preferredTraits),
     archetypes: JSON.parse(profile.archetypes),
+    activeSystemId: profile.activeSystemId ?? null,
   });
 }
 
@@ -34,10 +39,39 @@ export async function PATCH(req: NextRequest) {
   if (body.archetypes !== undefined) data.archetypes = JSON.stringify(body.archetypes);
   if (body.notes !== undefined) data.notes = body.notes;
 
-  const profile = await prisma.profile.update({
+  // activeSystemId: accept string | null to set or clear.
+  if (body.activeSystemId !== undefined) {
+    if (body.activeSystemId === null) {
+      data.activeSystemId = null;
+    } else if (typeof body.activeSystemId === 'string') {
+      // Validate the system exists and belongs to this user before setting.
+      const system = await prisma.system.findFirst({
+        where: { id: body.activeSystemId, userId },
+        select: { id: true },
+      });
+      if (!system) {
+        return NextResponse.json(
+          { error: 'System not found or does not belong to this user' },
+          { status: 400 },
+        );
+      }
+      data.activeSystemId = body.activeSystemId;
+    }
+  }
+
+  // Upsert so that PATCH works even if profile doesn't exist yet.
+  const profile = await prisma.profile.upsert({
     where: { userId },
-    data,
+    create: { userId, ...data },
+    update: data,
   });
 
-  return NextResponse.json(profile);
+  return NextResponse.json({
+    ...profile,
+    sourceTypes: JSON.parse(profile.sourceTypes),
+    sensitivityFlags: JSON.parse(profile.sensitivityFlags),
+    preferredTraits: JSON.parse(profile.preferredTraits),
+    archetypes: JSON.parse(profile.archetypes),
+    activeSystemId: profile.activeSystemId ?? null,
+  });
 }

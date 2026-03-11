@@ -3,25 +3,37 @@
 /**
  * AudioSessionContext — multi-system state management for Audio XX.
  *
- * Provides the active system context that advisory builders will consume
- * in Phase 3. For now, this is purely state infrastructure — no advisory
- * plumbing or API wiring.
+ * Phase 2: authenticated loading from /api/profile and /api/systems.
  *
- * Guest draft persistence: the draft system is written to sessionStorage
- * on every change and hydrated on mount. This survives refresh but not
- * tab close, matching the product rule that unsaved systems are temporary.
+ * Lifecycle:
+ *   1. On mount, synchronously hydrate guest draft from sessionStorage
+ *      (lazy initializer — no race with React 18 strict mode).
+ *   2. When NextAuth session becomes 'authenticated', fetch profile + systems
+ *      in parallel. Tracked per-user to avoid re-fetching.
+ *   3. Resolve activeSystemRef from profile.activeSystemId — validated against
+ *      fetched systems. Stale refs fall back to null (preserving draft ref
+ *      if one exists).
+ *   4. Guest draft is NEVER destroyed by auth resolution. It persists until
+ *      explicitly promoted or cleared.
+ *   5. On sign-out, saved systems are cleared but draft is preserved.
  *
- * Saved systems: will be fetched from the backend in Phase 2. For now,
- * savedSystems starts empty and loading resolves immediately.
+ * Helper functions are exposed via context for Phase 3/4 consumers:
+ *   - loadSavedSystems()
+ *   - setActiveSavedSystem(id)
+ *   - clearActiveSystem()
+ *   - refreshSavedSystems()
  */
 
 import {
   createContext,
+  useCallback,
   useContext,
-  useReducer,
   useEffect,
+  useReducer,
+  useRef,
   type ReactNode,
 } from 'react';
+import { useSession } from 'next-auth/react';
 
 import type {
   AudioSessionState,
@@ -38,13 +50,8 @@ const DRAFT_STORAGE_KEY = 'audioxx:draft-system';
 // ── Initial state ───────────────────────────────────────
 
 /**
- * Build the initial state, hydrating any guest draft from sessionStorage.
- *
- * Using a lazy initializer (passed to useReducer) avoids the hydration
- * race that would occur with a mount-time useEffect: in React 18 strict
- * mode, refs persist across the double-mount cycle, which can cause the
- * persist effect to fire before the hydration effect, wiping the stored
- * draft. Synchronous hydration eliminates this entirely.
+ * Synchronous lazy initializer for useReducer.
+ * Hydrates guest draft from sessionStorage on first render.
  */
 function buildInitialState(): AudioSessionState {
   const draft = readDraftFromStorage();
@@ -52,7 +59,7 @@ function buildInitialState(): AudioSessionState {
     activeSystemRef: draft ? { kind: 'draft' } : null,
     savedSystems: [],
     draftSystem: draft,
-    loading: false, // Phase 2 will set true while fetching
+    loading: false,
   };
 }
 
@@ -62,9 +69,10 @@ type AudioSessionAction =
   | { type: 'SET_ACTIVE_SYSTEM'; ref: ActiveSystemRef }
   | { type: 'SET_DRAFT_SYSTEM'; draft: DraftSystem | null }
   | { type: 'UPDATE_DRAFT_SYSTEM'; patch: Partial<DraftSystem> }
-  | { type: 'SET_SAVED_SYSTEMS'; systems: SavedSystem[] }
+  | { type: 'SET_SAVED_SYSTEMS'; systems: SavedSystem[]; activeSystemId: string | null }
   | { type: 'PROMOTE_DRAFT_TO_SAVED'; saved: SavedSystem }
-  | { type: 'CLEAR_SYSTEM_STATE' };
+  | { type: 'CLEAR_SYSTEM_STATE' }
+  | { type: 'SET_LOADING'; loading: boolean };
 
 // ── Reducer ─────────────────────────────────────────────
 
@@ -80,9 +88,8 @@ function audioSessionReducer(
       return {
         ...state,
         draftSystem: action.draft,
-        // If setting a draft, auto-activate it.
-        // If clearing the draft, also clear the ref — but only if it was
-        // pointing to the draft. A saved ref should survive draft clearing.
+        // Auto-activate when setting a draft.
+        // When clearing, only null the ref if it was pointing to draft.
         activeSystemRef: action.draft
           ? { kind: 'draft' }
           : state.activeSystemRef?.kind === 'draft'
@@ -98,12 +105,34 @@ function audioSessionReducer(
       };
     }
 
-    case 'SET_SAVED_SYSTEMS':
+    case 'SET_SAVED_SYSTEMS': {
+      const { systems, activeSystemId } = action;
+      let ref: ActiveSystemRef = state.activeSystemRef;
+
+      if (activeSystemId) {
+        const exists = systems.some((s) => s.id === activeSystemId);
+        if (exists) {
+          // Valid saved system — activate it. But if user currently has a
+          // draft active, the saved ref takes priority on initial load
+          // (the draft is preserved in state, just not the active ref).
+          ref = { kind: 'saved', id: activeSystemId };
+        } else {
+          // Stale activeSystemId — system was deleted.
+          // Preserve draft ref if present, otherwise null.
+          ref = state.activeSystemRef?.kind === 'draft'
+            ? state.activeSystemRef
+            : null;
+        }
+      }
+      // If no activeSystemId from backend, preserve current ref (e.g. draft).
+
       return {
         ...state,
-        savedSystems: action.systems,
+        savedSystems: systems,
         loading: false,
+        activeSystemRef: ref,
       };
+    }
 
     case 'PROMOTE_DRAFT_TO_SAVED':
       return {
@@ -121,16 +150,31 @@ function audioSessionReducer(
         loading: false,
       };
 
+    case 'SET_LOADING':
+      return { ...state, loading: action.loading };
+
     default:
       return state;
   }
 }
 
-// ── Context ─────────────────────────────────────────────
+// ── Context shape ───────────────────────────────────────
+
+interface AudioSessionHelpers {
+  /** Fetch profile + systems from backend and update state. */
+  loadSavedSystems: () => Promise<void>;
+  /** Set a saved system as active (optimistic dispatch + backend persist). */
+  setActiveSavedSystem: (id: string) => Promise<void>;
+  /** Clear active system ref (optimistic dispatch + backend persist if authed). */
+  clearActiveSystem: () => Promise<void>;
+  /** Re-fetch systems from backend (alias for loadSavedSystems). */
+  refreshSavedSystems: () => Promise<void>;
+}
 
 interface AudioSessionContextValue {
   state: AudioSessionState;
   dispatch: React.Dispatch<AudioSessionAction>;
+  helpers: AudioSessionHelpers;
 }
 
 const AudioSessionContext = createContext<AudioSessionContextValue | null>(null);
@@ -143,7 +187,6 @@ function readDraftFromStorage(): DraftSystem | null {
     const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
     if (!raw) return null;
     const snapshot: DraftSystemSnapshot = JSON.parse(raw);
-    // Validate minimum shape
     if (
       typeof snapshot.name !== 'string' ||
       !Array.isArray(snapshot.components)
@@ -182,23 +225,122 @@ function writeDraftToStorage(draft: DraftSystem | null): void {
   }
 }
 
+// ── API helpers ─────────────────────────────────────────
+
+interface ProfileResponse {
+  activeSystemId: string | null;
+  [key: string]: unknown;
+}
+
+async function fetchProfile(): Promise<ProfileResponse | null> {
+  try {
+    const res = await fetch('/api/profile');
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchSystems(): Promise<SavedSystem[]> {
+  try {
+    const res = await fetch('/api/systems');
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
+
+async function patchProfileActiveSystem(activeSystemId: string | null): Promise<boolean> {
+  try {
+    const res = await fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ activeSystemId }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 // ── Provider ────────────────────────────────────────────
 
 export function AudioSessionProvider({ children }: { children: ReactNode }) {
-  // Lazy initializer hydrates from sessionStorage synchronously on first
-  // render, avoiding any race between hydration and persistence effects.
   const [state, dispatch] = useReducer(audioSessionReducer, undefined, buildInitialState);
+  const { data: session, status } = useSession();
+
+  // Track which user we've already loaded for to avoid redundant fetches.
+  const loadedForUserRef = useRef<string | null>(null);
 
   // ── Persist draft to sessionStorage on every change ──
-  // The lazy initializer already read from storage on mount, so the first
-  // effect invocation writes back the same value (harmless idempotent write)
-  // or null (correct removal). No skip-first-render guard needed.
   useEffect(() => {
     writeDraftToStorage(state.draftSystem);
   }, [state.draftSystem]);
 
+  // ── Auth-aware loading ──
+  const loadSavedSystems = useCallback(async () => {
+    dispatch({ type: 'SET_LOADING', loading: true });
+
+    const [profile, systems] = await Promise.all([
+      fetchProfile(),
+      fetchSystems(),
+    ]);
+
+    dispatch({
+      type: 'SET_SAVED_SYSTEMS',
+      systems,
+      activeSystemId: profile?.activeSystemId ?? null,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+
+    if (status === 'authenticated') {
+      const userId = (session?.user as { id?: string })?.id ?? null;
+      if (userId && loadedForUserRef.current !== userId) {
+        loadedForUserRef.current = userId;
+        loadSavedSystems();
+      }
+    } else if (status === 'unauthenticated') {
+      // User signed out. Clear saved systems but preserve any draft.
+      if (loadedForUserRef.current) {
+        loadedForUserRef.current = null;
+        dispatch({
+          type: 'SET_SAVED_SYSTEMS',
+          systems: [],
+          activeSystemId: null,
+        });
+      }
+    }
+  }, [status, session, loadSavedSystems]);
+
+  // ── Helper functions ──
+
+  const setActiveSavedSystem = useCallback(async (id: string) => {
+    // Optimistic: update state immediately, persist in background.
+    dispatch({ type: 'SET_ACTIVE_SYSTEM', ref: { kind: 'saved', id } });
+    await patchProfileActiveSystem(id);
+  }, []);
+
+  const clearActiveSystem = useCallback(async () => {
+    dispatch({ type: 'SET_ACTIVE_SYSTEM', ref: null });
+    if (status === 'authenticated') {
+      await patchProfileActiveSystem(null);
+    }
+  }, [status]);
+
+  const helpers: AudioSessionHelpers = {
+    loadSavedSystems,
+    setActiveSavedSystem,
+    clearActiveSystem,
+    refreshSavedSystems: loadSavedSystems,
+  };
+
   return (
-    <AudioSessionContext.Provider value={{ state, dispatch }}>
+    <AudioSessionContext.Provider value={{ state, dispatch, helpers }}>
       {children}
     </AudioSessionContext.Provider>
   );
@@ -207,10 +349,9 @@ export function AudioSessionProvider({ children }: { children: ReactNode }) {
 // ── Hook ────────────────────────────────────────────────
 
 /**
- * Access the audio session state and dispatch.
+ * Access the audio session state, dispatch, and helpers.
  *
  * Must be called within AudioSessionProvider.
- * Returns { state, dispatch } — consumers read state and dispatch actions.
  */
 export function useAudioSession(): AudioSessionContextValue {
   const ctx = useContext(AudioSessionContext);
@@ -224,4 +365,4 @@ export function useAudioSession(): AudioSessionContextValue {
 
 // ── Re-exports for convenience ──────────────────────────
 
-export type { AudioSessionAction, AudioSessionContextValue };
+export type { AudioSessionAction, AudioSessionContextValue, AudioSessionHelpers };

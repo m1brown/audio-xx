@@ -80,6 +80,9 @@ export interface SavedSystem {
   components: SavedSystemComponent[];
   tendencies: string | null;
   notes: string | null;
+  location: string | null;
+  room: string | null;
+  primaryUse: string | null;
 }
 
 // ── Session state ───────────────────────────────────────

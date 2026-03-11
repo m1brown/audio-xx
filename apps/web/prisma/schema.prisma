@@ -30,6 +30,7 @@ model Profile {
   preferredTraits  String   @default("[]") @map("preferred_traits")    // JSON array
   archetypes       String   @default("[]")                              // JSON array
   notes            String?
+  activeSystemId   String?  @map("active_system_id")                   // soft ref to System.id
 
   @@map("profiles")
 }
@@ -40,6 +41,10 @@ model System {
   user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   name       String
   notes      String?
+  location   String?                                                    // e.g. "living room", "office"
+  room       String?                                                    // room description or acoustics notes
+  primaryUse String?           @map("primary_use")                     // e.g. "critical listening", "background music"
+  tendencies String?           @default("{}") @map("tendencies")       // JSON or plain-text system character summary
   createdAt  DateTime          @default(now()) @map("created_at")
   updatedAt  DateTime          @updatedAt @map("updated_at")
   components SystemComponent[]
