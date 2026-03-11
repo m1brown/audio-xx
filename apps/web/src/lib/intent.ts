@@ -62,6 +62,9 @@ const BRAND_NAMES = [
   'parasound', 'hegel', 'mcintosh', 'marantz', 'yamaha',
   'shindo', 'leben', 'audio note',
   'line magnetic', 'primaluna', 'cary', 'arc', 'audio research',
+  // Turntables
+  'rega', 'pro-ject', 'technics', 'clearaudio', 'vpi',
+  'linn', 'thorens',
 ];
 
 /** Specific product / model names. */
@@ -76,6 +79,10 @@ const PRODUCT_NAMES = [
   'p3esr', 'super hl5', 'orangutan', 'o/96', 'o96',
   'dirty weekend', 'heresy', 'kanta', 'aria',
   'w5', 'w8', 'w11',
+  // Turntables
+  'planar 3', 'planar 6', 'planar 8', 'planar 10',
+  'sl-1200', 'sl-1500c', 'sl-1210',
+  'x2 b', 'x8',
 ];
 
 /** Combined list for backward-compatible subject extraction. */
