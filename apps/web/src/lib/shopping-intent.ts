@@ -1103,6 +1103,7 @@ const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
 
 import { DAC_PRODUCTS } from './products/dacs';
 import type { Product } from './products/dacs';
+import { SPEAKER_PRODUCTS } from './products/speakers';
 import { selectTurntableExamples } from './products/turntables';
 import { rankProducts } from './product-scoring';
 import { tagProductArchetype } from './archetype';
@@ -1239,11 +1240,18 @@ function selectProductExamples(
     }));
   }
 
-  // ── DAC: scored catalog ──────────────────────────────
-  if (category !== 'dac') return [];
+  // ── Scored catalog path (DAC, speaker) ─────────────
+  // Select the product catalog for the category. Categories without
+  // a catalog return empty — the builder still provides directional guidance.
+  let catalog: Product[];
+  switch (category) {
+    case 'dac': catalog = DAC_PRODUCTS; break;
+    case 'speaker': catalog = SPEAKER_PRODUCTS; break;
+    default: return [];
+  }
   if (budgetAmount === null) return [];
 
-  const ranked = rankProducts(DAC_PRODUCTS, userTraits, budgetAmount, systemProfile);
+  const ranked = rankProducts(catalog, userTraits, budgetAmount, systemProfile);
 
   // Apply taste profile bonus — small boost for products aligned with stored taste
   if (tasteProfile && tasteProfile.confidence > 0.2) {
