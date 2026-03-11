@@ -1104,6 +1104,7 @@ const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
 import { DAC_PRODUCTS } from './products/dacs';
 import type { Product } from './products/dacs';
 import { SPEAKER_PRODUCTS } from './products/speakers';
+import { HEADPHONE_PRODUCTS, type HeadphoneProduct } from './products/headphones';
 import { selectTurntableExamples } from './products/turntables';
 import { rankProducts } from './product-scoring';
 import { tagProductArchetype } from './archetype';
@@ -1240,6 +1241,13 @@ function selectProductExamples(
     }));
   }
 
+  // ── Headphone / IEM path ────────────────────────────
+  // Headphones use a dedicated selection path because the catalog
+  // includes portable-use metadata that supplements trait scoring.
+  if (category === 'headphone') {
+    return selectHeadphoneExamples(userTraits, budgetAmount, systemProfile, tasteProfile, reasoning);
+  }
+
   // ── Scored catalog path (DAC, speaker) ─────────────
   // Select the product catalog for the category. Categories without
   // a catalog return empty — the builder still provides directional guidance.
@@ -1310,6 +1318,172 @@ function selectProductExamples(
     links: product.retailer_links.length > 0 ? product.retailer_links : undefined,
     sourceReferences: product.sourceReferences,
   }));
+}
+
+// ── Headphone / IEM selection ────────────────────────
+//
+// Headphones use a combined approach: trait scoring (same as DAC/speaker)
+// plus portable-use metadata filtering. For travel/commute queries,
+// products with portableUse=true are prioritised. When both headphones
+// and IEMs are relevant, the selection includes a mix.
+
+/** Detect whether the user is asking about portable/travel use. */
+const PORTABLE_USE_PATTERNS = [
+  /\bcommut/i,
+  /\bflight/i,
+  /\btravel/i,
+  /\bportable/i,
+  /\bon[- ]the[- ]go/i,
+  /\btrain/i,
+  /\bbus\b/i,
+  /\bplane/i,
+  /\bairport/i,
+  /\bgym\b/i,
+  /\bwireless\b/i,
+  /\banc\b/i,
+  /\bnoise[- ]cancell/i,
+];
+
+/** Detect whether the user specifically mentions IEMs. */
+const IEM_PATTERNS = [
+  /\biem/i,
+  /\bearphone/i,
+  /\bear\s*buds?\b/i,
+  /\bin[- ]ear/i,
+];
+
+/** Detect whether the user specifically mentions over-ear/headphones. */
+const OVEREAR_PATTERNS = [
+  /\bover[- ]ear/i,
+  /\bheadphone/i,
+  /\bcans\b/i,
+  /\bfull[- ]size/i,
+];
+
+function selectHeadphoneExamples(
+  userTraits: Record<string, SignalDirection>,
+  budgetAmount: number | null,
+  systemProfile: SystemProfile,
+  tasteProfile?: UserTasteProfile,
+  reasoning?: ReasoningResult,
+): ProductExample[] {
+  // Get the full user text from the reasoning context or use empty
+  // For now we read portable intent from the products themselves
+  const allProducts = HEADPHONE_PRODUCTS as HeadphoneProduct[];
+
+  // Budget filter — use generous range for headphones
+  let budgetFiltered: HeadphoneProduct[];
+  if (budgetAmount !== null) {
+    const ceiling = budgetAmount * 1.15; // 15% grace
+    budgetFiltered = allProducts.filter((p) => p.price <= ceiling);
+  } else {
+    budgetFiltered = allProducts;
+  }
+
+  if (budgetFiltered.length === 0) return [];
+
+  // Score using the standard ranking pipeline
+  const ranked = rankProducts(budgetFiltered as Product[], userTraits, budgetAmount ?? 10000, systemProfile);
+
+  // Apply taste profile bonus
+  if (tasteProfile && tasteProfile.confidence > 0.2) {
+    const topProfileTraits = topTraits(tasteProfile, 2);
+    const profileWeight = tasteProfile.confidence * 0.15;
+    for (const entry of ranked) {
+      let bonus = 0;
+      for (const pt of topProfileTraits) {
+        const productTraitKey = PROFILE_TO_PRODUCT_TRAIT[pt.key];
+        const productTraitValue = resolveTraitValue(entry.product.tendencyProfile, entry.product.traits, productTraitKey);
+        bonus += productTraitValue * pt.value * profileWeight;
+      }
+      entry.score += bonus;
+    }
+    ranked.sort((a, b) => b.score - a.score);
+  }
+
+  // Directional bonus from reasoning
+  if (reasoning && reasoning.direction.arrows.length > 0) {
+    const arrows = reasoning.direction.arrows;
+    const perArrow = DIRECTION_BONUS_CAP / Math.max(arrows.length, 1);
+    for (const entry of ranked) {
+      let bonus = 0;
+      for (const arrow of arrows) {
+        const traitKey = DIRECTION_TRAIT_MAP[arrow.quality];
+        if (!traitKey) continue;
+        const productValue = resolveTraitValue(
+          entry.product.tendencyProfile, entry.product.traits, traitKey,
+        );
+        if (arrow.direction === 'up' && productValue > 0.5) {
+          bonus += (productValue - 0.5) * perArrow;
+        } else if (arrow.direction === 'down' && productValue < 0.5) {
+          bonus += (0.5 - productValue) * perArrow;
+        }
+      }
+      entry.score += Math.min(bonus, DIRECTION_BONUS_CAP);
+    }
+    ranked.sort((a, b) => b.score - a.score);
+  }
+
+  // Portable-use boost — products marked portable get a score bonus
+  // This is a soft preference, not a hard filter
+  for (const entry of ranked) {
+    const hp = allProducts.find((p) => p.id === entry.product.id);
+    if (hp?.headphoneMeta.portableUse) {
+      entry.score += 0.15;
+    }
+    // ANC bonus for travel products
+    if (hp?.headphoneMeta.anc) {
+      entry.score += 0.05;
+    }
+  }
+  ranked.sort((a, b) => b.score - a.score);
+
+  // Select top 3, but try to include a mix of form factors if possible
+  const top = ranked.slice(0, 5);
+  const selected: typeof ranked = [];
+  let hasIEM = false;
+  let hasOverEar = false;
+
+  for (const entry of top) {
+    if (selected.length >= 3) break;
+    const hp = allProducts.find((p) => p.id === entry.product.id);
+    const isIEM = hp?.headphoneMeta.formFactor === 'iem';
+    const isOverEar = hp?.headphoneMeta.formFactor === 'over-ear';
+
+    // Prefer variety — but don't force it if scores differ a lot
+    if (selected.length === 2 && !hasIEM && isIEM) {
+      selected.push(entry);
+      hasIEM = true;
+    } else if (selected.length === 2 && !hasOverEar && isOverEar) {
+      selected.push(entry);
+      hasOverEar = true;
+    } else {
+      selected.push(entry);
+      if (isIEM) hasIEM = true;
+      if (isOverEar) hasOverEar = true;
+    }
+  }
+
+  return selected.map(({ product }) => {
+    const hp = allProducts.find((p) => p.id === product.id);
+    const metaParts: string[] = [];
+    if (hp?.headphoneMeta.formFactor === 'iem') metaParts.push('IEM');
+    else if (hp?.headphoneMeta.formFactor === 'over-ear') metaParts.push('over-ear');
+    if (hp?.headphoneMeta.wireless) metaParts.push('wireless');
+    if (hp?.headphoneMeta.anc) metaParts.push('ANC');
+    const metaLabel = metaParts.length > 0 ? ` [${metaParts.join(', ')}]` : '';
+
+    return {
+      name: `${product.name}${metaLabel}`,
+      brand: product.brand,
+      price: product.price,
+      priceCurrency: product.priceCurrency,
+      fitNote: buildFitNote(product, userTraits),
+      caution: buildCaution(product),
+      links: product.retailer_links.length > 0 ? product.retailer_links : undefined,
+      sourceReferences: product.sourceReferences,
+    };
+  });
 }
 
 // ── Builder ───────────────────────────────────────────

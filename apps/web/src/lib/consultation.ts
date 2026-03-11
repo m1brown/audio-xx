@@ -286,6 +286,19 @@ const BRAND_PROFILES: BrandProfile[] = [
     ],
   },
   {
+    names: ['job'],
+    country: 'Switzerland',
+    brandScale: 'boutique',
+    region: 'europe',
+    categories: ['amplifier'],
+    philosophy: 'JOB (a sister brand to Goldmund) designs compact, high-current solid-state amplifiers that prioritise speed, transparency, and control. The design philosophy favours minimal signal path and high damping factor.',
+    tendencies: 'JOB amplifiers are described as fast, transparent, and rhythmically precise. They tend toward a lean, articulate presentation with excellent transient definition. Tonal warmth is not a primary characteristic — the emphasis is on speed and control.',
+    systemContext: 'JOB integrated amplifiers pair well with speakers that provide their own tonal body and warmth, such as high-efficiency or paper-cone designs. In systems already biased toward leanness, the cumulative precision may thin out the presentation.',
+    links: [
+      { label: 'Goldmund (parent brand)', url: 'https://www.goldmund.com/', region: 'global' },
+    ],
+  },
+  {
     names: ['rega'],
     founder: 'Roy Gandy',
     country: 'UK (Southend-on-Sea)',
@@ -1801,4 +1814,243 @@ function inferAmplifierSpeakerFit(components: SystemComponent[]): string | null 
   }
 
   return null;
+}
+
+// ── Consultation entry builder ───────────────────────
+//
+// Handles vague system assessment requests where the user hasn't named
+// specific gear yet. Produces a structured intake response that:
+//   1. Acknowledges the request
+//   2. Extracts any already-present listener priorities
+//   3. Explains how Audio XX evaluates systems
+//   4. Asks for specific components in a structured way
+//
+// This prevents these queries from falling into generic shopping clarification.
+
+/**
+ * Build a structured consultation intake response for vague system
+ * assessment or upgrade-guidance queries.
+ *
+ * Called when the user asks for system evaluation or upgrade advice
+ * but hasn't named specific components.
+ */
+export function buildConsultationEntry(
+  currentMessage: string,
+  desires: { quality: string; direction: 'more' | 'less'; raw: string }[],
+): ConsultationResponse {
+  // Extract any listener priorities already expressed
+  const priorityParts: string[] = [];
+  if (desires.length > 0) {
+    for (const d of desires) {
+      priorityParts.push(
+        d.direction === 'more'
+          ? `more ${d.quality}`
+          : `less ${d.quality}`,
+      );
+    }
+  }
+
+  // Detect broad upgrade vs assessment intent
+  const isUpgradeFocused = /\b(?:upgrade|improve|change|next\s+step|move)\b/i.test(currentMessage);
+  const isAssessmentFocused = /\b(?:assess|evaluat|review|think\s+(?:of|about)|thoughts?\s+on)\b/i.test(currentMessage);
+
+  // Philosophy — what Audio XX does and how it approaches system evaluation
+  let philosophy: string;
+  if (isAssessmentFocused) {
+    philosophy = 'Audio XX evaluates systems by examining how components interact — whether they compound the same tendency or balance each other. A system that leans warm throughout the chain behaves very differently from one where a precise source feeds a rich amplifier. The interaction matters more than any single component\'s quality.';
+  } else if (isUpgradeFocused) {
+    philosophy = 'Before recommending an upgrade path, Audio XX needs to understand your current system\'s architectural balance — where energy accumulates, where it\'s absorbed, and what the chain emphasises as a whole. The most effective upgrade often isn\'t the most expensive component — it\'s the one that resolves the most meaningful imbalance.';
+  } else {
+    philosophy = 'Audio XX approaches system guidance by examining the interaction between components, your listening priorities, and your room context. The goal is to identify whether your current system is well-aligned with what you value — and if not, where the most effective intervention lies.';
+  }
+
+  // Tendencies — what information is needed
+  const tendencies = priorityParts.length > 0
+    ? `You've mentioned wanting ${priorityParts.join(' and ')} — that gives a starting direction. To map those priorities to specific system interactions, I need to know what you're working with.`
+    : 'To provide a meaningful assessment, I need to understand the components in your chain and how they interact. Generic advice without system context tends to be less useful than targeted guidance.';
+
+  // Follow-up — structured ask for system details
+  const followUp = 'What components make up your current system? The key pieces are:\n\n' +
+    '— Source (DAC, streamer, turntable)\n' +
+    '— Amplification (integrated, preamp + power amp, headphone amp)\n' +
+    '— Output (speakers or headphones — model names help)\n\n' +
+    'Also helpful: your room situation, the music you listen to most, and what you enjoy or find unsatisfying about the current sound.';
+
+  return {
+    subject: 'system guidance',
+    philosophy,
+    tendencies,
+    followUp,
+  };
+}
+
+// ── Cable advisory builder ───────────────────────────
+//
+// Structured cable advisory path. Cables don't have a scored catalog,
+// but they DO have meaningful system-tuning implications. This builder
+// produces a structured response covering:
+//   1. Cable strategy — how cables affect the chain
+//   2. System context — what the user's system needs
+//   3. Tuning direction — what kind of cable character to look for
+//   4. Trade-offs
+//   5. Practical guidance
+//   6. Follow-up
+
+/** Cable types mentioned in the query. */
+type CableType = 'speaker' | 'interconnect' | 'power' | 'usb' | 'digital' | 'xlr' | 'general';
+
+function detectCableTypes(text: string): CableType[] {
+  const types: CableType[] = [];
+  if (/\bspeaker\s+cables?\b/i.test(text)) types.push('speaker');
+  if (/\brca\b|\binterconnects?\b|\banalog\s+cables?\b/i.test(text)) types.push('interconnect');
+  if (/\bpower\s+(?:cord|cable)\b/i.test(text)) types.push('power');
+  if (/\busb\s+cables?\b/i.test(text)) types.push('usb');
+  if (/\bdigital\s+cables?\b/i.test(text)) types.push('digital');
+  if (/\bxlr\b/i.test(text)) types.push('xlr');
+  if (types.length === 0) types.push('general');
+  return types;
+}
+
+function cableTypeLabel(types: CableType[]): string {
+  const labels: Record<CableType, string> = {
+    speaker: 'speaker cables',
+    interconnect: 'interconnects',
+    power: 'power cables',
+    usb: 'USB cables',
+    digital: 'digital cables',
+    xlr: 'XLR cables',
+    general: 'cables',
+  };
+  return types.map((t) => labels[t]).join(' and ');
+}
+
+/**
+ * Build a structured cable advisory response.
+ *
+ * Unlike product categories with scored catalogs, cable advice is
+ * architectural — it depends on the system's existing tendencies
+ * and the listener's desired tuning direction.
+ */
+export function buildCableAdvisory(
+  currentMessage: string,
+  subjectMatches: SubjectMatch[],
+  desires: { quality: string; direction: 'more' | 'less'; raw: string }[],
+): ConsultationResponse {
+  const cableTypes = detectCableTypes(currentMessage);
+  const typeLabel = cableTypeLabel(cableTypes);
+
+  // Extract system context from named subjects
+  const systemComponents: string[] = [];
+  const systemLinks: { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[] = [];
+
+  for (const match of subjectMatches) {
+    // Look up product or brand
+    const product = ALL_PRODUCTS.find(
+      (p) => p.name.toLowerCase() === match.name.toLowerCase()
+        || p.brand.toLowerCase() === match.name.toLowerCase(),
+    );
+    if (product) {
+      systemComponents.push(`${product.brand} ${product.name}`);
+    }
+    const brandProfile = findBrandProfile(match.name);
+    if (brandProfile) {
+      const displayName = brandProfile.names[0].charAt(0).toUpperCase() + brandProfile.names[0].slice(1);
+      if (!systemComponents.some((c) => c.toLowerCase().includes(match.name.toLowerCase()))) {
+        systemComponents.push(displayName);
+      }
+      if (brandProfile.links) {
+        for (const l of brandProfile.links) {
+          if (!systemLinks.some((sl) => sl.url === l.url)) {
+            systemLinks.push({ label: l.label, url: l.url, kind: l.kind, region: l.region });
+          }
+        }
+      }
+    }
+  }
+
+  // Infer system lean from known components
+  let systemLean: 'warm' | 'precise' | 'balanced' | 'unknown' = 'unknown';
+  for (const match of subjectMatches) {
+    const bp = findBrandProfile(match.name);
+    if (bp) {
+      const tend = bp.tendencies.toLowerCase();
+      if (tend.includes('warm') || tend.includes('rich') || tend.includes('dense')) {
+        systemLean = systemLean === 'precise' ? 'balanced' : 'warm';
+      } else if (tend.includes('fast') || tend.includes('precise') || tend.includes('transparent') || tend.includes('lean')) {
+        systemLean = systemLean === 'warm' ? 'balanced' : 'precise';
+      }
+    }
+  }
+
+  // Extract listener desires into cable tuning direction
+  const desireParts: string[] = [];
+  for (const d of desires) {
+    desireParts.push(d.direction === 'more' ? d.quality : `less ${d.quality}`);
+  }
+
+  // Build the subject line
+  const systemLabel = systemComponents.length > 0
+    ? ` for ${systemComponents.join(' + ')}`
+    : '';
+  const subject = `${typeLabel}${systemLabel}`;
+
+  // Philosophy — cable strategy in audio systems
+  let philosophy: string;
+  if (cableTypes.includes('speaker') && cableTypes.includes('interconnect')) {
+    philosophy = 'Speaker cables and interconnects play different roles in the chain. Interconnects carry low-level signals between source and amplification — their character influences how detail and texture are transmitted. Speaker cables carry high-current signals to the drivers — their geometry and conductor material affect how dynamics, transient speed, and tonal weight are delivered. Both can shift the system\'s tonal balance, but speaker cables tend to have more audible impact on dynamics and bass character.';
+  } else if (cableTypes.includes('speaker')) {
+    philosophy = 'Speaker cables carry high-current signals from amplifier to drivers. Their conductor material, geometry, and dielectric influence how dynamics, transient speed, and tonal weight are delivered. They tend to have more audible impact on the system\'s macro character than interconnects.';
+  } else if (cableTypes.includes('interconnect')) {
+    philosophy = 'Interconnects carry low-level signals between components. Their character influences detail retrieval, textural nuance, and tonal shading. In a well-sorted system, interconnect changes tend to be subtle but can meaningfully shift the midrange texture and spatial presentation.';
+  } else if (cableTypes.includes('power')) {
+    philosophy = 'Power cables affect the noise floor and dynamic headroom of each component. Their impact is often described in terms of background blackness, dynamic ease, and a sense of effortlessness rather than tonal shifts. Results vary significantly by component and power supply design.';
+  } else {
+    philosophy = 'Cables are a system-tuning tool, not a standalone upgrade. Their role is to transmit signal with minimal coloration — or, in some cases, to introduce a deliberate tonal shift that compensates for tendencies elsewhere in the chain. The most effective cable choice depends on what the rest of the system is doing.';
+  }
+
+  // Tendencies — system-specific cable direction
+  let tendencies: string;
+  if (systemLean === 'precise' && desireParts.length > 0) {
+    tendencies = `Your system leans toward precision and speed (${systemComponents.join(', ')}). You've expressed wanting ${desireParts.join(' and ')}. Cable choices can either reinforce the existing transparency or introduce a degree of warmth and body. For ${desireParts.join(' and ')}, look for cables with copper conductors and relaxed geometries rather than silver or aggressive shielding.`;
+  } else if (systemLean === 'warm' && desireParts.length > 0) {
+    tendencies = `Your system already leans warm (${systemComponents.join(', ')}). You've expressed wanting ${desireParts.join(' and ')}. Cable choices should complement rather than compound the existing warmth. For detail and sparkle, silver-plated or silver-core cables can introduce some upper-frequency energy, but be cautious about glare if the system is already bright in other ways.`;
+  } else if (systemLean === 'balanced') {
+    tendencies = `Your system combines components with different tendencies (${systemComponents.join(', ')}), suggesting a deliberate balance. Cable choices should preserve this balance. Neutral, well-constructed cables that don't impose a strong character of their own are usually the safest direction here.`;
+  } else if (desireParts.length > 0) {
+    tendencies = `You've expressed wanting ${desireParts.join(' and ')} from the cable upgrade. These qualities are achievable through cable selection, but the degree of change depends on the system context. Cables shift the balance — they don't transform the architecture.`;
+  } else if (systemComponents.length > 0) {
+    tendencies = `With ${systemComponents.join(' and ')} in the chain, the cable direction depends on what you want to shift. Cables can fine-tune tonal balance, dynamic weight, and spatial presentation — but only meaningfully when the tuning goal is clear.`;
+  } else {
+    tendencies = 'Cable recommendations depend heavily on system context. Without knowing the source, amplification, and speakers, cable advice tends to be generic. The most useful starting point is understanding what the system currently does well and where you want to shift the balance.';
+  }
+
+  // System context
+  let systemContext: string | undefined;
+  if (systemComponents.length > 0 && systemLean !== 'unknown') {
+    const leanDesc = systemLean === 'precise'
+      ? 'speed and transparency'
+      : systemLean === 'warm'
+        ? 'warmth and tonal richness'
+        : 'a balanced combination of precision and warmth';
+    systemContext = `${systemComponents.join(' + ')} — a system that leans toward ${leanDesc}. Cable choices should be evaluated against this existing balance.`;
+  }
+
+  // Follow-up
+  let followUp: string;
+  if (desireParts.length === 0 && systemComponents.length > 0) {
+    followUp = `What are you hoping the cable change will do — are you looking to add warmth, extend detail, improve dynamics, or shift the tonal balance in a specific direction?`;
+  } else if (systemComponents.length === 0) {
+    followUp = 'What components make up your system? Source, amplification, and speakers all influence which cable direction makes sense.';
+  } else {
+    followUp = `What is your approximate budget for ${typeLabel}? Cable pricing varies enormously and the most effective choice depends on proportionality with the rest of the system.`;
+  }
+
+  return {
+    subject,
+    philosophy,
+    tendencies,
+    systemContext,
+    followUp,
+    links: systemLinks.length > 0 ? systemLinks : undefined,
+  };
 }

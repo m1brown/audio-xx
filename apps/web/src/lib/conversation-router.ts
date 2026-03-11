@@ -66,6 +66,23 @@ const SYSTEM_ASSESSMENT_SIGNALS = [
   /\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
   /\bthoughts\s+on\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
   /\breview\s+(?:of\s+)?my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bsuggestions?\s+(?:on|for)\s+(?:areas?\s+to\s+)?(?:upgrade|improve)\b/i,
+  /\bhelp\s+(?:me\s+)?(?:improve|upgrade)\s+(?:my\s+)?(?:system|setup)\b/i,
+  /\bwhat\s+(?:should|would|could)\s+i\s+(?:upgrade|improve|change)\b/i,
+  /\bareas?\s+to\s+(?:upgrade|improve|focus\s+on)\b/i,
+  /\bnext\s+(?:step|upgrade|move)\s+for\s+(?:my\s+)?(?:system|setup)\b/i,
+];
+
+// ── Cable signals ─────────────────────────────────────
+// Cable queries should route to consultation, not shopping.
+
+const CABLE_SIGNALS = [
+  /\bspeaker\s+cables?\b/i,
+  /\brca\s+cables?\b/i,
+  /\binterconnects?\b/i,
+  /\bpower\s+(?:cord|cable)s?\b/i,
+  /\bcabling\b/i,
+  /\bcable\s+(?:recommendation|suggestion|advice|upgrade)\b/i,
 ];
 
 // ── Diagnosis patterns (imported concept from intent.ts) ─
@@ -124,6 +141,11 @@ export function routeConversation(currentMessage: string): ConversationMode {
   // 2. Shopping — recommendation request
   if (SHOPPING_SIGNALS.some((p) => p.test(currentMessage))) {
     return 'shopping';
+  }
+
+  // 2b. Cable advisory — cable queries go to consultation, not shopping
+  if (CABLE_SIGNALS.some((p) => p.test(currentMessage))) {
+    return 'consultation';
   }
 
   // 3. Consultation — knowledge / philosophy questions

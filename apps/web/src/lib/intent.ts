@@ -14,7 +14,7 @@
 
 // ── Intent type ──────────────────────────────────────
 
-export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment';
+export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory';
 
 /** A desire the user has expressed — "want more speed", "wish it had warmth". */
 export interface DesireSignal {
@@ -62,9 +62,14 @@ const BRAND_NAMES = [
   'parasound', 'hegel', 'mcintosh', 'marantz', 'yamaha',
   'shindo', 'leben', 'audio note',
   'line magnetic', 'primaluna', 'cary', 'arc', 'audio research',
+  'job',
   // Turntables
   'rega', 'pro-ject', 'technics', 'clearaudio', 'vpi',
   'linn', 'thorens',
+  // Headphones / IEMs
+  'sennheiser', 'sony', 'audio-technica', 'beyerdynamic',
+  'hifiman', 'audeze', 'shure', 'etymotic',
+  'moondrop', 'apple',
 ];
 
 /** Specific product / model names. */
@@ -83,10 +88,37 @@ const PRODUCT_NAMES = [
   'planar 3', 'planar 6', 'planar 8', 'planar 10',
   'sl-1200', 'sl-1500c', 'sl-1210',
   'x2 b', 'x8',
+  // Headphones / IEMs
+  'hd 600', 'hd 650', 'hd 800', 'hd 800 s', 'momentum 4',
+  'wh-1000xm5', 'wh-1000xm4',
+  'airpods pro', 'airpods pro 2',
+  'aria 2', 'blessing 3', 'kato',
+  'er2xr', 'er2se', 'aonic 3',
+  'ath-m50x', 'ath-m50xbt2',
+  'sundara', 'edition xs',
 ];
 
 /** Combined list for backward-compatible subject extraction. */
 const ALL_KNOWN_NAMES = [...BRAND_NAMES, ...PRODUCT_NAMES];
+
+// ── Cable intent patterns ────────────────────────────
+// Detects cable-focused queries — speaker cables, interconnects, RCAs, etc.
+// Must be checked before shopping to route into the structured cable advisory.
+
+const CABLE_INTENT_PATTERNS = [
+  /\bspeaker\s+cables?\b/i,
+  /\brca\s+cables?\b/i,
+  /\binterconnects?\b/i,
+  /\bpower\s+(?:cord|cable)s?\b/i,
+  /\busb\s+cables?\b/i,
+  /\bdigital\s+cables?\b/i,
+  /\bxlr\s+cables?\b/i,
+  /\banalog\s+cables?\b/i,
+  /\bcabling\b/i,
+  /\bcable\s+(?:recommendation|suggestion|advice|upgrade)\b/i,
+  /\b(?:best|good|recommend)\b.*\bcables?\b/i,
+  /\bcables?\s+for\b/i,
+];
 
 // ── Comparison patterns ──────────────────────────────
 
@@ -149,6 +181,19 @@ const SYSTEM_ASSESSMENT_PATTERNS = [
   /\bhow\s+does\s+my\s+(?:system|setup|rig|chain)\s+(?:look|seem|stack\s+up)\b/i,
   /\breview\s+(?:of\s+)?my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
   /\bopinion\s+on\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+];
+
+/** Broader system guidance patterns — user wants help with their system
+ *  but may not use "assessment" or "evaluate" specifically. */
+const SYSTEM_GUIDANCE_PATTERNS = [
+  ...SYSTEM_ASSESSMENT_PATTERNS,
+  /\bsuggestions?\s+(?:on|for)\s+(?:areas?\s+to\s+)?(?:upgrade|improve|change)\b/i,
+  /\bhelp\s+(?:me\s+)?(?:improve|upgrade|optimize)\s+(?:my\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bwhat\s+(?:should|would|could)\s+i\s+(?:upgrade|improve|change)\b/i,
+  /\bwhere\s+(?:should|would|could)\s+i\s+(?:upgrade|improve|start)\b/i,
+  /\bareas?\s+to\s+(?:upgrade|improve|focus\s+on)\b/i,
+  /\bnext\s+(?:step|upgrade|move)\s+for\s+(?:my\s+)?(?:system|setup|rig)\b/i,
+  /\badvice\s+(?:on|for|about)\s+(?:my\s+)?(?:system|setup|rig|chain)\b/i,
 ];
 
 /** Ownership language — indicates user is describing components they own. */
@@ -216,6 +261,7 @@ const KNOWN_QUALITIES = [
   'texture', 'grain', 'refinement',
   'air', 'openness', 'sparkle', 'extension',
   'bass', 'treble', 'midrange',
+  'glare', 'sibilance', 'harshness', 'fatigue',
 ];
 
 /** Patterns that express wanting more or less of a quality. */
@@ -285,6 +331,22 @@ export function detectIntent(currentMessage: string): IntentResult {
   const hasOwnership = OWNERSHIP_PATTERNS.some((p) => p.test(currentMessage));
   if (hasAssessmentLanguage && hasOwnership && subjectMatches.length >= 2) {
     return { intent: 'system_assessment', subjects, subjectMatches, desires };
+  }
+
+  // 1c. Consultation entry — user asks for system assessment/upgrade guidance
+  //     but hasn't named specific gear yet. This produces a structured intake
+  //     response instead of falling through to generic shopping.
+  const hasGuidanceLanguage = SYSTEM_GUIDANCE_PATTERNS.some((p) => p.test(currentMessage));
+  if ((hasAssessmentLanguage || hasGuidanceLanguage) && hasOwnership) {
+    return { intent: 'consultation_entry', subjects, subjectMatches, desires };
+  }
+
+  // 1d. Cable advisory — user asks about cables in a system context.
+  //     Must fire before shopping to prevent cable queries from getting
+  //     generic shopping treatment. Requires cable language.
+  const hasCableLanguage = CABLE_INTENT_PATTERNS.some((p) => p.test(currentMessage));
+  if (hasCableLanguage) {
+    return { intent: 'cable_advisory', subjects, subjectMatches, desires };
   }
 
   // 2. Comparison — "X vs Y", "compare A and B"

@@ -21,7 +21,7 @@ import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
-import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, buildConsultationFollowUp, buildSystemAssessment } from '@/lib/consultation';
+import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory } from '@/lib/consultation';
 import type { GlossaryResult } from '@/lib/glossary';
 import type { Message, ConversationState } from '@/lib/conversation-types';
 import { parseTasteProfile, topTraits, isProfileEmpty, type TasteProfile } from '@/lib/taste-profile';
@@ -290,6 +290,34 @@ export default function Home() {
       dispatch({ type: 'CLEAR_CONSULTATION_CONTEXT' });
     }
 
+    // ── Consultation entry path ────────────────────────
+    // User asks for system assessment or upgrade guidance but hasn't named
+    // specific gear. Produces a structured intake response that explains
+    // the evaluation approach and asks for system details.
+    if (intent === 'consultation_entry') {
+      const entryResult = buildConsultationEntry(submittedText, desires);
+      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(entryResult) });
+      dispatch({ type: 'SET_LOADING', value: false });
+      return;
+    }
+
+    // ── Cable advisory path ────────────────────────────
+    // Cable queries get a structured advisory response covering cable
+    // strategy, system context, tuning direction, and trade-offs.
+    if (intent === 'cable_advisory') {
+      const cableResult = buildCableAdvisory(submittedText, subjectMatches, desires);
+      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(cableResult) });
+      if (subjectMatches.length > 0) {
+        dispatch({
+          type: 'SET_CONSULTATION_CONTEXT',
+          subjects: subjectMatches,
+          originalQuery: submittedText,
+        });
+      }
+      dispatch({ type: 'SET_LOADING', value: false });
+      return;
+    }
+
     // ── System assessment path ─────────────────────────
     // User describes their system and asks for evaluation — answer first with
     // per-component character descriptions and system interaction summary,
@@ -353,10 +381,10 @@ export default function Home() {
     // never fall through to the diagnostic engine.
     // Consultation is handled upstream (before detectIntent) and
     // returns early, so it cannot be swallowed by this override.
-    if (effectiveMode === 'shopping' && intent !== 'shopping') {
+    if (effectiveMode === 'shopping' && intent !== 'shopping' && intent !== 'cable_advisory') {
       intent = 'shopping';
     }
-    if (effectiveMode === 'diagnosis' && intent !== 'comparison' && intent !== 'gear_inquiry' && intent !== 'system_assessment') {
+    if (effectiveMode === 'diagnosis' && intent !== 'comparison' && intent !== 'gear_inquiry' && intent !== 'system_assessment' && intent !== 'consultation_entry' && intent !== 'cable_advisory') {
       intent = 'diagnosis';
     }
 
