@@ -941,8 +941,8 @@ const TASTE_PROFILES: TasteProfile[] = [
     directionByCategory: {
       dac: 'A DAC direction that prioritizes transient definition, rhythmic precision, and dynamic contrast over warmth-first tuning.',
       amplifier: 'An amplifier direction that prioritizes current delivery, tight damping, and transient snap over tonal smoothness.',
-      speakers: 'A speaker direction that prioritizes fast drivers, simple crossovers, and transient preservation over tonal warmth.',
-      headphones: 'A headphone direction that prioritizes planar-magnetic speed and uniform diaphragm response over dynamic-driver warmth.',
+      speaker: 'A speaker direction that prioritizes fast drivers, simple crossovers, and transient preservation over tonal warmth.',
+      headphone: 'A headphone direction that prioritizes planar-magnetic speed and uniform diaphragm response over dynamic-driver warmth.',
     },
     defaultDirection: 'A component direction that prioritizes timing precision and transient definition over tonal smoothness.',
     whyByCategory: {
@@ -969,7 +969,7 @@ const TASTE_PROFILES: TasteProfile[] = [
     directionByCategory: {
       dac: 'A DAC direction that prioritizes tonal weight, harmonic texture, and musical flow over analytical precision.',
       amplifier: 'An amplifier direction that prioritizes harmonic density and musical continuity over measured specifications.',
-      speakers: 'A speaker direction that prioritizes tonal weight and natural-material cone texture over speed.',
+      speaker: 'A speaker direction that prioritizes tonal weight and natural-material cone texture over speed.',
     },
     defaultDirection: 'A component direction that prioritizes harmonic richness and tonal continuity over transient precision.',
     whyByCategory: {
@@ -996,8 +996,8 @@ const TASTE_PROFILES: TasteProfile[] = [
     directionByCategory: {
       dac: 'A DAC direction that prioritizes transparency, information retrieval, and measured resolution.',
       amplifier: 'An amplifier direction that prioritizes wide bandwidth, low distortion, and upstream transparency.',
-      speakers: 'A speaker direction that prioritizes resolution, rigid cabinets, and monitor-style accuracy.',
-      headphones: 'A headphone direction that prioritizes electrostatic or high-end planar resolution and spatial detail.',
+      speaker: 'A speaker direction that prioritizes resolution, rigid cabinets, and monitor-style accuracy.',
+      headphone: 'A headphone direction that prioritizes electrostatic or high-end planar resolution and spatial detail.',
     },
     defaultDirection: 'A component direction that prioritizes transparency and information retrieval.',
     whyByCategory: {
@@ -1024,8 +1024,8 @@ const TASTE_PROFILES: TasteProfile[] = [
     directionByCategory: {
       dac: 'A DAC direction that prioritizes smoothness, low fatigue, and listening ease over analytical resolution.',
       amplifier: 'An amplifier direction that prioritizes gentle high-frequency behavior and composure over transient edge.',
-      speakers: 'A speaker direction that prioritizes soft-dome or ribbon tweeters and non-fatiguing extension.',
-      headphones: 'A headphone direction that prioritizes warm tuning and rolled-off treble for long sessions.',
+      speaker: 'A speaker direction that prioritizes soft-dome or ribbon tweeters and non-fatiguing extension.',
+      headphone: 'A headphone direction that prioritizes warm tuning and rolled-off treble for long sessions.',
     },
     defaultDirection: 'A component direction that prioritizes listening ease over analytical precision.',
     whyByCategory: {
@@ -1052,7 +1052,7 @@ const TASTE_PROFILES: TasteProfile[] = [
     directionByCategory: {
       dac: 'A DAC direction that prioritizes musical flow, composure, and organic texture over speed or analytical precision.',
       amplifier: 'An amplifier direction that prioritizes single-ended tube composure and texture over dynamic punch.',
-      speakers: 'A speaker direction that prioritizes gentle crossover slopes and natural-material drivers.',
+      speaker: 'A speaker direction that prioritizes gentle crossover slopes and natural-material drivers.',
     },
     defaultDirection: 'A component direction that prioritizes musical flow and composure over speed or analytical precision.',
     whyByCategory: {
