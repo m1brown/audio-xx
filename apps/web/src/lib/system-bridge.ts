@@ -20,11 +20,8 @@ import type {
 import { DEFAULT_SYSTEM_PROFILE } from './system-profile';
 import type {
   AudioSessionState,
-  DraftSystem,
   DraftSystemComponent,
-  SavedSystem,
   SavedSystemComponent,
-  SystemComponentRole,
 } from './system-types';
 
 // ── Category → output type mapping ──────────────────────
@@ -81,42 +78,46 @@ function inferOutputType(components: readonly GenericComponent[]): OutputType {
   return 'unknown';
 }
 
+/** Tube-type identifiers that can appear as substrings safely. */
+const TUBE_TYPE_SUBSTRINGS = [
+  'tube', 'valve', 'triode', '300b', 'el34', 'kt88', 'el84', '6l6', '6v6', '2a3',
+];
+
+/** Word-boundary pattern for "SET" (single-ended triode) — avoids matching "preset", "reset", "offset". */
+const SET_WORD_RE = /\bset\b/i;
+
 function inferTubeAmplification(components: readonly GenericComponent[]): boolean {
   return components.some((c) => {
     if (!AMPLIFIER_CATEGORIES.has(c.category)) return false;
-    // Check role and name for tube signals
     const nameLower = c.name.toLowerCase();
     const brandLower = c.brand.toLowerCase();
     const roleStr = c.role ?? '';
     const combined = `${nameLower} ${brandLower} ${roleStr}`;
     return (
-      combined.includes('tube') ||
-      combined.includes('valve') ||
-      combined.includes('set ') || // single-ended triode
-      combined.includes('triode') ||
-      combined.includes('300b') ||
-      combined.includes('el34') ||
-      combined.includes('kt88') ||
-      combined.includes('el84') ||
-      combined.includes('6l6') ||
-      combined.includes('6v6') ||
-      combined.includes('2a3')
+      TUBE_TYPE_SUBSTRINGS.some((s) => combined.includes(s)) ||
+      SET_WORD_RE.test(combined)
     );
   });
 }
 
+/** Known low-power amplifier brands (name or brand field). */
+const LOW_POWER_BRAND_SUBSTRINGS = ['first watt', 'decware', 'coincident'];
+
+/** Word-boundary low-power topology identifiers. */
+const LOW_POWER_NAME_RE = /\b(single[- ]ended|set)\b/i;
+
+/** Tube types that inherently imply low power. */
+const LOW_POWER_TUBE_SUBSTRINGS = ['2a3', '300b', '45 tube', '801a'];
+
 function inferLowPowerContext(components: readonly GenericComponent[]): boolean {
   return components.some((c) => {
     const nameLower = c.name.toLowerCase();
+    const brandLower = c.brand.toLowerCase();
+    const combined = `${nameLower} ${brandLower}`;
     return (
-      nameLower.includes('single-ended') ||
-      nameLower.includes('set ') ||
-      nameLower.includes('2a3') ||
-      nameLower.includes('300b') ||
-      nameLower.includes('first watt') ||
-      nameLower.includes('decware') ||
-      // Role-based: headphone_amp in the context of sensitive IEMs
-      (c.role === 'headphone_amp' && c.category === 'amplifier')
+      LOW_POWER_NAME_RE.test(combined) ||
+      LOW_POWER_TUBE_SUBSTRINGS.some((s) => combined.includes(s)) ||
+      LOW_POWER_BRAND_SUBSTRINGS.some((s) => combined.includes(s))
     );
   });
 }

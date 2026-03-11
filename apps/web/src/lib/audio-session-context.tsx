@@ -20,7 +20,6 @@ import {
   useContext,
   useReducer,
   useEffect,
-  useRef,
   type ReactNode,
 } from 'react';
 
@@ -38,12 +37,24 @@ const DRAFT_STORAGE_KEY = 'audioxx:draft-system';
 
 // ── Initial state ───────────────────────────────────────
 
-const initialState: AudioSessionState = {
-  activeSystemRef: null,
-  savedSystems: [],
-  draftSystem: null,
-  loading: false, // Phase 2 will set true while fetching
-};
+/**
+ * Build the initial state, hydrating any guest draft from sessionStorage.
+ *
+ * Using a lazy initializer (passed to useReducer) avoids the hydration
+ * race that would occur with a mount-time useEffect: in React 18 strict
+ * mode, refs persist across the double-mount cycle, which can cause the
+ * persist effect to fire before the hydration effect, wiping the stored
+ * draft. Synchronous hydration eliminates this entirely.
+ */
+function buildInitialState(): AudioSessionState {
+  const draft = readDraftFromStorage();
+  return {
+    activeSystemRef: draft ? { kind: 'draft' } : null,
+    savedSystems: [],
+    draftSystem: draft,
+    loading: false, // Phase 2 will set true while fetching
+  };
+}
 
 // ── Actions ─────────────────────────────────────────────
 
@@ -69,8 +80,14 @@ function audioSessionReducer(
       return {
         ...state,
         draftSystem: action.draft,
-        // If setting a draft, auto-activate it
-        activeSystemRef: action.draft ? { kind: 'draft' } : state.activeSystemRef,
+        // If setting a draft, auto-activate it.
+        // If clearing the draft, also clear the ref — but only if it was
+        // pointing to the draft. A saved ref should survive draft clearing.
+        activeSystemRef: action.draft
+          ? { kind: 'draft' }
+          : state.activeSystemRef?.kind === 'draft'
+            ? null
+            : state.activeSystemRef,
       };
 
     case 'UPDATE_DRAFT_SYSTEM': {
@@ -98,7 +115,10 @@ function audioSessionReducer(
 
     case 'CLEAR_SYSTEM_STATE':
       return {
-        ...initialState,
+        activeSystemRef: null,
+        savedSystems: [],
+        draftSystem: null,
+        loading: false,
       };
 
     default:
@@ -162,55 +182,19 @@ function writeDraftToStorage(draft: DraftSystem | null): void {
   }
 }
 
-function clearDraftStorage(): void {
-  if (typeof window === 'undefined') return;
-  try {
-    sessionStorage.removeItem(DRAFT_STORAGE_KEY);
-  } catch {
-    // ignore
-  }
-}
-
 // ── Provider ────────────────────────────────────────────
 
 export function AudioSessionProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(audioSessionReducer, initialState);
-  const mountedRef = useRef(false);
+  // Lazy initializer hydrates from sessionStorage synchronously on first
+  // render, avoiding any race between hydration and persistence effects.
+  const [state, dispatch] = useReducer(audioSessionReducer, undefined, buildInitialState);
 
-  // ── Hydrate draft from sessionStorage on mount ──
+  // ── Persist draft to sessionStorage on every change ──
+  // The lazy initializer already read from storage on mount, so the first
+  // effect invocation writes back the same value (harmless idempotent write)
+  // or null (correct removal). No skip-first-render guard needed.
   useEffect(() => {
-    if (mountedRef.current) return;
-    mountedRef.current = true;
-
-    const draft = readDraftFromStorage();
-    if (draft) {
-      dispatch({ type: 'SET_DRAFT_SYSTEM', draft });
-    }
-  }, []);
-
-  // ── Persist draft to sessionStorage on change ──
-  // Skip the first render to avoid writing the initial null back to storage
-  // before hydration completes.
-  const initialRenderRef = useRef(true);
-  useEffect(() => {
-    if (initialRenderRef.current) {
-      initialRenderRef.current = false;
-      return;
-    }
     writeDraftToStorage(state.draftSystem);
-  }, [state.draftSystem]);
-
-  // ── Clear draft storage when promoted ──
-  // Detect transition: if activeSystemRef just became 'saved' and draftSystem
-  // just became null in the same state, clear storage. This is handled
-  // automatically by writeDraftToStorage(null) above, but we also clear
-  // explicitly on PROMOTE for safety.
-  const prevDraftRef = useRef(state.draftSystem);
-  useEffect(() => {
-    if (prevDraftRef.current && !state.draftSystem) {
-      clearDraftStorage();
-    }
-    prevDraftRef.current = state.draftSystem;
   }, [state.draftSystem]);
 
   return (
