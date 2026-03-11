@@ -558,6 +558,65 @@ export function buildGearResponse(
       };
     }
 
+    // Half-known comparison: one product found, one not in catalog.
+    // Use the known product's full data instead of generic boilerplate.
+    if (subjects.length >= 2 && (a || b)) {
+      const known = a ?? b;
+      const knownName = `${known!.brand} ${known!.name}`;
+      const unknownSubjects = subjects.filter(
+        (s) => s.toLowerCase() !== known!.brand.toLowerCase() && s.toLowerCase() !== known!.name.toLowerCase(),
+      );
+      const unknownName = unknownSubjects.length > 0
+        ? unknownSubjects.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
+        : 'the other product';
+
+      // Full character for the known product
+      const knownCharacter = productCharacter(known!, desires.length > 0 ? [desires[0].quality] : []);
+
+      // Full directional analysis for the known product
+      const knownDirection = buildInquiryDirection(
+        known!,
+        sysDir.inferredArchetype ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary } : undefined,
+      );
+
+      // System interactions and trade-offs from the known product
+      let interactionNote = '';
+      if (hasTendencies(known!.tendencies)) {
+        const tradeoff = known!.tendencies.tradeoffs[0];
+        if (tradeoff) {
+          const rel = tradeoff.relative_to ? ` compared to ${tradeoff.relative_to}` : '';
+          interactionNote = ` What the ${known!.name} tends to deliver is ${tradeoff.gains}${rel}. What it trades away is ${tradeoff.cost}.`;
+        }
+        const cautions = known!.tendencies.interactions.filter((i) => i.valence === 'caution');
+        if (cautions.length > 0) {
+          interactionNote += ` Worth being aware of: ${cautions[0].condition}, ${cautions[0].effect}.`;
+        }
+      }
+
+      return {
+        intent,
+        subjects,
+        anchor: withTendency(
+          `The ${knownName} is well documented and widely reviewed. The ${unknownName} appears less represented in the sources I rely on. I can describe the ${known!.name}'s character in detail, which may help frame the comparison.`,
+        ),
+        character: `The ${knownName}: ${knownCharacter}${interactionNote}`,
+        interpretation: desires.length > 0
+          ? QUALITY_PROFILES[desires[0].quality]?.interpretation
+          : undefined,
+        direction: withDirection(
+          knownDirection
+            + ` For a meaningful comparison with the ${unknownName}, the key question is whether its design philosophy complements or diverges from these tendencies.`,
+        ),
+        clarification: `What draws you to the ${unknownName} — is there a specific quality you're hoping it does differently from the ${known!.name}?`,
+        systemDirection: sysDir,
+        hearing,
+        userArchetype: sysDir.inferredArchetype
+          ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
+          : undefined,
+      };
+    }
+
+    // Fully unknown comparison: neither product in catalog
     if (subjects.length >= 2) {
       return {
         intent,
