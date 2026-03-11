@@ -251,48 +251,98 @@ function extractSubjects(text: string): string[] {
 
 /** Audio qualities we recognize in desire expressions (noun/abstract forms). */
 const KNOWN_QUALITIES = [
+  // Temporal / transient
   'speed', 'pace', 'timing', 'attack', 'transients',
+  // Tonal weight
   'warmth', 'body', 'richness', 'density', 'weight',
+  // Resolution / transparency
   'detail', 'resolution', 'clarity', 'transparency',
-  'flow', 'musicality', 'engagement', 'rhythm',
+  // Musical coherence
+  'flow', 'musicality', 'engagement', 'rhythm', 'naturalness',
+  // Ease / comfort
   'smoothness', 'ease', 'relaxation',
-  'dynamics', 'punch', 'slam', 'energy',
+  // Dynamic / energy
+  'dynamics', 'punch', 'slam', 'energy', 'excitement',
+  // Spatial
   'soundstage', 'imaging', 'space', 'width', 'depth',
+  // Textural
   'texture', 'grain', 'refinement',
+  // Air / treble character
   'air', 'openness', 'sparkle', 'extension',
+  // Frequency ranges
   'bass', 'treble', 'midrange',
+  // Negative qualities (things listeners want less of)
   'glare', 'sibilance', 'harshness', 'fatigue',
   'brightness', 'edge', 'sweetness', 'thinness', 'dullness',
+  'aggression',
 ];
 
 /**
  * Map adjective and informal forms to their canonical KNOWN_QUALITIES noun.
  * Only adjective forms NOT already in KNOWN_QUALITIES need mapping.
  * This allows "warm" → "warmth", "harsh" → "harshness", etc.
+ *
+ * Mapping rules:
+ *   1. Direct adjective→noun pairs always map (warm→warmth).
+ *   2. If the adjective's meaning in hi-fi is broader than any single
+ *      canonical quality, add a new canonical quality rather than
+ *      force-mapping to the wrong bucket.
+ *   3. Inherently negative adjectives map to their negative noun
+ *      (harsh→harshness, aggressive→aggression).
  */
 const QUALITY_ALIASES: Record<string, string> = {
+  // ── Tonal weight ────────────────────────────
   warm: 'warmth',
   rich: 'richness',
   dense: 'density',
   weighty: 'weight',
   heavy: 'weight',
+
+  // ── Resolution / transparency ───────────────
   detailed: 'detail',
   clear: 'clarity',
   transparent: 'transparency',
+
+  // ── Ease / comfort ──────────────────────────
   smooth: 'smoothness',
   relaxed: 'relaxation',
   easy: 'ease',
+
+  // ── Dynamics / energy ───────────────────────
   dynamic: 'dynamics',
   punchy: 'punch',
   energetic: 'energy',
+  exciting: 'excitement',          // was: energy — excitement is its own concept
+  lively: 'energy',
+
+  // ── Temporal / transient ────────────────────
+  fast: 'speed',
+  // Note: "slow" is deliberately omitted. In hi-fi, "slow" is a complaint
+  // about transient behavior (= wanting more speed). "Not slow" should
+  // map to "more speed", but the negation framework would produce
+  // "less pace" which reads wrong. Better to let "fast" handle the
+  // positive direction and leave "slow" unresolved than to extract
+  // a misleading desire.
+
+  // ── Textural ────────────────────────────────
   textured: 'texture',
   grainy: 'grain',
   refined: 'refinement',
+
+  // ── Spatial ─────────────────────────────────
   airy: 'air',
   open: 'openness',
   spacious: 'soundstage',
   wide: 'width',
   deep: 'depth',
+
+  // ── Musical coherence ───────────────────────
+  natural: 'naturalness',          // was: flow — naturalness is its own concept
+  organic: 'naturalness',          // organic ≈ natural in hi-fi
+  musical: 'musicality',
+  engaging: 'engagement',
+
+  // ── Negative qualities ──────────────────────
   bright: 'brightness',
   harsh: 'harshness',
   thin: 'thinness',
@@ -300,13 +350,9 @@ const QUALITY_ALIASES: Record<string, string> = {
   dull: 'dullness',
   sibilant: 'sibilance',
   edgy: 'edge',
-  fast: 'speed',
-  slow: 'pace',
-  exciting: 'energy',
-  musical: 'musicality',
-  engaging: 'engagement',
-  natural: 'flow',
   fatiguing: 'fatigue',
+  aggressive: 'aggression',
+  lean: 'thinness',                // "lean" in complaint context ≈ thin
 };
 
 /** Resolve a word to a canonical quality, checking both KNOWN_QUALITIES and aliases. */
@@ -475,7 +521,7 @@ function extractImplicitDesires(
       const quality = resolveQuality(word);
       if (quality) {
         // Skip qualities that are inherently negative (wanting "more glare" is unlikely)
-        const NEGATIVE_QUALITIES = ['glare', 'sibilance', 'harshness', 'fatigue', 'brightness', 'edge', 'thinness', 'dullness', 'grain'];
+        const NEGATIVE_QUALITIES = ['glare', 'sibilance', 'harshness', 'fatigue', 'brightness', 'edge', 'thinness', 'dullness', 'grain', 'aggression'];
         if (NEGATIVE_QUALITIES.includes(quality)) continue;
         addIfNew(quality, 'more', word);
       }
