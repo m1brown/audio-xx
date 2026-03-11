@@ -28,6 +28,8 @@ import { parseTasteProfile, topTraits, isProfileEmpty, type TasteProfile } from 
 import { detectChurnSignal } from '@/lib/churn-avoidance';
 import { reason } from '@/lib/reasoning';
 import type { ReasoningResult } from '@/lib/reasoning';
+import { useAudioSession } from '@/lib/audio-session-context';
+import { resolveActiveSystemContext, activeSystemToProfile } from '@/lib/system-bridge';
 
 // ── Constants ─────────────────────────────────────────
 
@@ -160,6 +162,7 @@ export default function Home() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { messages, currentInput, turnCount, isLoading } = state;
   const { status } = useSession();
+  const { state: audioState } = useAudioSession();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -215,6 +218,14 @@ export default function Home() {
       dispatch({ type: 'SET_LOADING', value: false });
       return;
     }
+
+    // ── Resolve active system context ────────────────────
+    // Read once per submit — all builders and reasoning calls share this.
+    const activeSystem = resolveActiveSystemContext(audioState);
+    const activeProfile = activeSystemToProfile(audioState);
+    // activeProfile is DEFAULT_SYSTEM_PROFILE when no system is active,
+    // so pass null to reasoning when there's no real active system.
+    const activeProfileForReasoning = activeSystem ? activeProfile : null;
 
     // ── Conversation router ──────────────────────────────
     // Classify the message into a conversation mode before detailed
@@ -295,7 +306,7 @@ export default function Home() {
     // specific gear. Produces a structured intake response that explains
     // the evaluation approach and asks for system details.
     if (intent === 'consultation_entry') {
-      const entryResult = buildConsultationEntry(submittedText, desires);
+      const entryResult = buildConsultationEntry(submittedText, desires, activeSystem);
       dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(entryResult) });
       dispatch({ type: 'SET_LOADING', value: false });
       return;
@@ -305,7 +316,7 @@ export default function Home() {
     // Cable queries get a structured advisory response covering cable
     // strategy, system context, tuning direction, and trade-offs.
     if (intent === 'cable_advisory') {
-      const cableResult = buildCableAdvisory(submittedText, subjectMatches, desires);
+      const cableResult = buildCableAdvisory(submittedText, subjectMatches, desires, activeSystem);
       dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(cableResult) });
       if (subjectMatches.length > 0) {
         dispatch({
@@ -324,7 +335,7 @@ export default function Home() {
     // then ask what they want to explore. Must fire before consultation/comparison
     // to prevent multi-brand system descriptions from being misrouted.
     if (intent === 'system_assessment') {
-      const assessmentResult = buildSystemAssessment(submittedText, subjectMatches);
+      const assessmentResult = buildSystemAssessment(submittedText, subjectMatches, activeSystem);
       if (assessmentResult) {
         dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(assessmentResult) });
         // Store consultation context so follow-ups stay in the system context
@@ -463,7 +474,7 @@ export default function Home() {
             // lastReasoning is continuity context, not a substitute.
             const reasoning = reason(
               allUserText, desires, data.signals,
-              tasteProfile ?? null, shoppingCtx,
+              tasteProfile ?? null, shoppingCtx, activeProfileForReasoning,
             );
             dispatch({ type: 'SET_REASONING', reasoning });
 
@@ -517,7 +528,7 @@ export default function Home() {
           // ── Three-layer reasoning (diagnosis) ──────
           const reasoning = reason(
             allUserText, desires, data.signals,
-            tasteProfile ?? null, null,
+            tasteProfile ?? null, null, activeProfileForReasoning,
           );
           dispatch({ type: 'SET_REASONING', reasoning });
 
@@ -536,7 +547,7 @@ export default function Home() {
     }
 
     dispatch({ type: 'SET_LOADING', value: false });
-  }, [currentInput, isLoading, messages, turnCount, tasteProfile, state.activeMode]);
+  }, [currentInput, isLoading, messages, turnCount, tasteProfile, state.activeMode, audioState]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) {

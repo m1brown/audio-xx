@@ -19,6 +19,7 @@ import type {
 } from './system-profile';
 import { DEFAULT_SYSTEM_PROFILE } from './system-profile';
 import type {
+  ActiveSystemContext,
   AudioSessionState,
   DraftSystemComponent,
   SavedSystemComponent,
@@ -223,4 +224,52 @@ export function inferTendenciesFromComponents(
   }
 
   return traits.length > 0 ? traits.join(', ') : null;
+}
+
+/**
+ * Resolve the active system (saved or draft) into an ActiveSystemContext
+ * for advisory builders. Returns null if no system is active.
+ *
+ * This is the primary entry point for Phase 3 — page.tsx calls this once
+ * and passes the result to all builders that accept an optional system context.
+ */
+export function resolveActiveSystemContext(
+  state: AudioSessionState,
+): ActiveSystemContext | null {
+  const { activeSystemRef, savedSystems, draftSystem } = state;
+
+  if (!activeSystemRef) return null;
+
+  if (activeSystemRef.kind === 'draft') {
+    if (!draftSystem) return null;
+    return {
+      name: draftSystem.name,
+      components: draftSystem.components.map((c) => ({
+        name: c.name,
+        brand: c.brand,
+        category: c.category,
+        role: c.role,
+      })),
+      tendencies: draftSystem.tendencies,
+      location: null,
+      primaryUse: null,
+    };
+  }
+
+  // kind === 'saved'
+  const saved = savedSystems.find((s) => s.id === activeSystemRef.id);
+  if (!saved) return null;
+
+  return {
+    name: saved.name,
+    components: saved.components.map((c) => ({
+      name: c.name,
+      brand: c.brand,
+      category: c.category,
+      role: c.role,
+    })),
+    tendencies: saved.tendencies,
+    location: saved.location,
+    primaryUse: saved.primaryUse,
+  };
 }

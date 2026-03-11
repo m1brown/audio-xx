@@ -262,15 +262,21 @@ export function inferTaste(
  *
  * Uses system-direction.ts tendency inference for current tendencies.
  * Uses shopping-intent.ts system profile parsing for structural profile.
+ *
+ * When an active system profile is provided (from the multi-system model),
+ * it takes priority over the conversation-derived profile from shopping context.
+ * This allows the reasoning engine to use saved system data without requiring
+ * the user to re-describe their system each session.
  */
 export function diagnoseSystem(
   text: string,
   desires: DesireSignal[],
   signals: ExtractedSignals,
   shoppingCtx: ShoppingContext | null,
+  activeSystemProfile?: SystemProfile | null,
 ): SystemDiagnosis {
-  // Structural profile from shopping context (or default)
-  const profile = shoppingCtx?.systemProfile ?? DEFAULT_SYSTEM_PROFILE;
+  // Active system profile takes priority, then shopping context, then default.
+  const profile = activeSystemProfile ?? shoppingCtx?.systemProfile ?? DEFAULT_SYSTEM_PROFILE;
 
   // Current tendencies + summaries from existing system-direction layer
   const sysDir = inferSystemDirection(text, desires, undefined);
@@ -323,6 +329,10 @@ export function deriveDirection(
  * Full reasoning pipeline — runs all three layers in sequence.
  *
  * This is the primary entry point for shopping and diagnosis paths.
+ *
+ * When activeSystemProfile is provided (from the multi-system model's
+ * bridge utility), it is used as the structural system profile, taking
+ * priority over the conversation-derived profile from shopping context.
  */
 export function reason(
   text: string,
@@ -330,9 +340,10 @@ export function reason(
   signals: ExtractedSignals,
   storedProfile: TasteProfile | null,
   shoppingCtx: ShoppingContext | null,
+  activeSystemProfile?: SystemProfile | null,
 ): ReasoningResult {
   const taste = inferTaste(desires, signals, storedProfile);
-  const system = diagnoseSystem(text, desires, signals, shoppingCtx);
+  const system = diagnoseSystem(text, desires, signals, shoppingCtx, activeSystemProfile);
   const direction = deriveDirection(taste, system, desires, storedProfile);
 
   return { taste, system, direction };

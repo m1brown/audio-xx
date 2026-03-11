@@ -39,6 +39,7 @@ import {
 import type { SubjectMatch, ContextKind } from './intent';
 import { getApprovedBrand } from './knowledge';
 import type { BrandKnowledge } from './knowledge/schema';
+import type { ActiveSystemContext } from './system-types';
 
 // ── Types ───────────────────────────────────────────
 
@@ -1574,10 +1575,64 @@ export interface SystemComponent {
 export function buildSystemAssessment(
   currentMessage: string,
   subjectMatches: SubjectMatch[],
+  activeSystem?: ActiveSystemContext | null,
 ): ConsultationResponse | null {
   const components: SystemComponent[] = [];
   const allLinks: { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[] = [];
   const processedNames = new Set<string>();
+
+  // ── Seed from active system when available ──
+  if (activeSystem && activeSystem.components.length > 0) {
+    for (const ac of activeSystem.components) {
+      const fullName = `${ac.brand} ${ac.name}`;
+      const nameLower = ac.name.toLowerCase();
+      const brandLower = ac.brand.toLowerCase();
+      if (processedNames.has(nameLower) || processedNames.has(brandLower)) continue;
+      processedNames.add(nameLower);
+      processedNames.add(brandLower);
+
+      // Try to find rich catalog data
+      const product = ALL_PRODUCTS.find(
+        (p) => p.name.toLowerCase() === nameLower
+          || `${p.brand} ${p.name}`.toLowerCase() === fullName.toLowerCase(),
+      );
+      const brandProfile = findBrandProfileByName(ac.brand);
+      const designFamily = brandProfile?.designFamilies?.find((df) =>
+        nameLower.includes(df.name.split(' ')[0].toLowerCase())
+          || df.name.toLowerCase().includes(nameLower),
+      );
+
+      components.push({
+        displayName: fullName,
+        role: product?.category ?? ac.category ?? 'component',
+        character: product?.description
+          ?? designFamily?.character
+          ?? brandProfile?.tendencies
+          ?? `${ac.brand} ${ac.category ?? 'component'}`,
+        brandProfile: brandProfile ? {
+          philosophy: brandProfile.philosophy,
+          tendencies: brandProfile.tendencies,
+          systemContext: brandProfile.systemContext,
+          designFamily: designFamily ? { name: designFamily.name, character: designFamily.character, ampPairing: designFamily.ampPairing } : undefined,
+        } : undefined,
+        product: product ?? undefined,
+      });
+
+      // Collect links from catalog matches
+      if (product?.retailer_links) {
+        for (const l of product.retailer_links) {
+          allLinks.push({ label: `${l.label} (${product.name})`, url: l.url });
+        }
+      }
+      if (brandProfile?.links) {
+        for (const l of brandProfile.links) {
+          if (!allLinks.some((al) => al.url === l.url)) {
+            allLinks.push({ label: l.label, url: l.url, kind: l.kind, region: l.region });
+          }
+        }
+      }
+    }
+  }
 
   for (const match of subjectMatches) {
     const lower = match.name.toLowerCase();
@@ -1837,6 +1892,7 @@ function inferAmplifierSpeakerFit(components: SystemComponent[]): string | null 
 export function buildConsultationEntry(
   currentMessage: string,
   desires: { quality: string; direction: 'more' | 'less'; raw: string }[],
+  activeSystem?: ActiveSystemContext | null,
 ): ConsultationResponse {
   // Extract any listener priorities already expressed
   const priorityParts: string[] = [];
@@ -1854,7 +1910,47 @@ export function buildConsultationEntry(
   const isUpgradeFocused = /\b(?:upgrade|improve|change|next\s+step|move)\b/i.test(currentMessage);
   const isAssessmentFocused = /\b(?:assess|evaluat|review|think\s+(?:of|about)|thoughts?\s+on)\b/i.test(currentMessage);
 
-  // Philosophy — what Audio XX does and how it approaches system evaluation
+  // ── Active system present: acknowledge and contextualize ──
+  if (activeSystem && activeSystem.components.length > 0) {
+    const componentNames = activeSystem.components.map((c) => `${c.brand} ${c.name}`);
+    const componentList = componentNames.join(', ');
+    const tendenciesNote = activeSystem.tendencies
+      ? ` The system leans toward ${activeSystem.tendencies}.`
+      : '';
+    const locationNote = activeSystem.location
+      ? ` (${activeSystem.location})`
+      : '';
+
+    let philosophy: string;
+    if (isAssessmentFocused) {
+      philosophy = `I have your ${activeSystem.name}${locationNote} system on file: ${componentList}.${tendenciesNote} I can evaluate how these components interact — whether they compound the same tendency or balance each other — and identify where the chain\'s character is being shaped.`;
+    } else if (isUpgradeFocused) {
+      philosophy = `Working from your ${activeSystem.name}${locationNote} system: ${componentList}.${tendenciesNote} I can map your upgrade priorities against the current architectural balance — identifying where the most effective intervention lies rather than just the most expensive component change.`;
+    } else {
+      philosophy = `I have your ${activeSystem.name}${locationNote} system: ${componentList}.${tendenciesNote} I can evaluate alignment between these components and your listening priorities.`;
+    }
+
+    const tendencies = priorityParts.length > 0
+      ? `You've mentioned wanting ${priorityParts.join(' and ')}. With your system already on file, I can map those priorities directly to component interactions and suggest where a change would be most effective.`
+      : 'Since I already know your components, the most useful thing you can share is what you enjoy about the current sound and what you find unsatisfying — or what direction of change you\'re curious about.';
+
+    const followUp = priorityParts.length > 0
+      ? 'What do you enjoy most about the current sound? And is there anything that feels consistently unsatisfying — even on well-recorded material?'
+      : 'A few things that would help focus the assessment:\n\n' +
+        '— What do you enjoy most about the current sound?\n' +
+        '— What feels consistently unsatisfying?\n' +
+        '— What kind of music do you listen to most?\n\n' +
+        'This helps distinguish between taste alignment and system imbalance.';
+
+    return {
+      subject: `system guidance — ${activeSystem.name}`,
+      philosophy,
+      tendencies,
+      followUp,
+    };
+  }
+
+  // ── No active system: original consultation intake flow ──
   let philosophy: string;
   if (isAssessmentFocused) {
     philosophy = 'Audio XX evaluates systems by examining how components interact — whether they compound the same tendency or balance each other. A system that leans warm throughout the chain behaves very differently from one where a precise source feeds a rich amplifier. The interaction matters more than any single component\'s quality.';
@@ -1864,12 +1960,10 @@ export function buildConsultationEntry(
     philosophy = 'Audio XX approaches system guidance by examining the interaction between components, your listening priorities, and your room context. The goal is to identify whether your current system is well-aligned with what you value — and if not, where the most effective intervention lies.';
   }
 
-  // Tendencies — what information is needed
   const tendencies = priorityParts.length > 0
     ? `You've mentioned wanting ${priorityParts.join(' and ')} — that gives a starting direction. To map those priorities to specific system interactions, I need to know what you're working with.`
     : 'To provide a meaningful assessment, I need to understand the components in your chain and how they interact. Generic advice without system context tends to be less useful than targeted guidance.';
 
-  // Follow-up — structured ask for system details
   const followUp = 'What components make up your current system? The key pieces are:\n\n' +
     '— Source (DAC, streamer, turntable)\n' +
     '— Amplification (integrated, preamp + power amp, headphone amp)\n' +
@@ -1935,6 +2029,7 @@ export function buildCableAdvisory(
   currentMessage: string,
   subjectMatches: SubjectMatch[],
   desires: { quality: string; direction: 'more' | 'less'; raw: string }[],
+  activeSystem?: ActiveSystemContext | null,
 ): ConsultationResponse {
   const cableTypes = detectCableTypes(currentMessage);
   const typeLabel = cableTypeLabel(cableTypes);
@@ -1943,6 +2038,13 @@ export function buildCableAdvisory(
   const systemComponents: string[] = [];
   const systemLinks: { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[] = [];
 
+  // ── If active system exists, seed components from it ──
+  if (activeSystem && activeSystem.components.length > 0) {
+    for (const c of activeSystem.components) {
+      systemComponents.push(`${c.brand} ${c.name}`);
+    }
+  }
+
   for (const match of subjectMatches) {
     // Look up product or brand
     const product = ALL_PRODUCTS.find(
@@ -1950,7 +2052,10 @@ export function buildCableAdvisory(
         || p.brand.toLowerCase() === match.name.toLowerCase(),
     );
     if (product) {
-      systemComponents.push(`${product.brand} ${product.name}`);
+      const label = `${product.brand} ${product.name}`;
+      if (!systemComponents.some((c) => c.toLowerCase() === label.toLowerCase())) {
+        systemComponents.push(label);
+      }
     }
     const brandProfile = findBrandProfile(match.name);
     if (brandProfile) {
@@ -1968,16 +2073,29 @@ export function buildCableAdvisory(
     }
   }
 
-  // Infer system lean from known components
+  // Infer system lean — prefer active system tendencies if available
   let systemLean: 'warm' | 'precise' | 'balanced' | 'unknown' = 'unknown';
-  for (const match of subjectMatches) {
-    const bp = findBrandProfile(match.name);
-    if (bp) {
-      const tend = bp.tendencies.toLowerCase();
-      if (tend.includes('warm') || tend.includes('rich') || tend.includes('dense')) {
-        systemLean = systemLean === 'precise' ? 'balanced' : 'warm';
-      } else if (tend.includes('fast') || tend.includes('precise') || tend.includes('transparent') || tend.includes('lean')) {
-        systemLean = systemLean === 'warm' ? 'balanced' : 'precise';
+
+  if (activeSystem?.tendencies) {
+    const tend = activeSystem.tendencies.toLowerCase();
+    const hasWarm = /\b(warm|tube|lush|rich|organic|vinyl)\b/.test(tend);
+    const hasBright = /\b(bright|analytical|precise|lean|solid-state|digital)\b/.test(tend);
+    if (hasWarm && hasBright) systemLean = 'balanced';
+    else if (hasWarm) systemLean = 'warm';
+    else if (hasBright) systemLean = 'precise';
+  }
+
+  // Fall back to brand-profile inference if no active system or lean unknown
+  if (systemLean === 'unknown') {
+    for (const match of subjectMatches) {
+      const bp = findBrandProfile(match.name);
+      if (bp) {
+        const tend = bp.tendencies.toLowerCase();
+        if (tend.includes('warm') || tend.includes('rich') || tend.includes('dense')) {
+          systemLean = systemLean === 'precise' ? 'balanced' : 'warm';
+        } else if (tend.includes('fast') || tend.includes('precise') || tend.includes('transparent') || tend.includes('lean')) {
+          systemLean = systemLean === 'warm' ? 'balanced' : 'precise';
+        }
       }
     }
   }

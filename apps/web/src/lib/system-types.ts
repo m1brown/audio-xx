@@ -97,6 +97,31 @@ export interface AudioSessionState {
   loading: boolean;
 }
 
+// ── Active system context for advisory builders ─────────
+
+/**
+ * Lightweight view of the active system, passed to advisory builders.
+ *
+ * This is the bridge between the session state layer and the advisory
+ * engine. Builders receive this instead of accessing AudioSessionState
+ * directly, keeping them decoupled from React context.
+ *
+ * Null when no system is active — builders fall back to conversation
+ * extraction (existing behavior).
+ */
+export interface ActiveSystemContext {
+  name: string;
+  components: Array<{
+    name: string;
+    brand: string;
+    category: ProductCategory;
+    role: SystemComponentRole;
+  }>;
+  tendencies: string | null;
+  location: string | null;
+  primaryUse: string | null;
+}
+
 // ── sessionStorage serialization shape ──────────────────
 
 /**
