@@ -36,7 +36,7 @@ import {
   type DesignArchetype,
   type DesignArchetypeId,
 } from './design-archetypes';
-import type { SubjectMatch, ContextKind } from './intent';
+import type { SubjectMatch, ContextKind, DesireSignal } from './intent';
 import { getApprovedBrand } from './knowledge';
 import type { BrandKnowledge } from './knowledge/schema';
 import type { ActiveSystemContext } from './system-types';
@@ -280,7 +280,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     categories: ['dac', 'amplifier', 'streamer'],
     philosophy: 'Chord Electronics designs around proprietary FPGA-based pulse array DAC technology developed by Rob Watts. The design philosophy prioritises timing precision and transient definition, using custom digital processing rather than off-the-shelf DAC chips.',
     tendencies: 'Listeners consistently describe Chord DACs as fast, articulate, and detailed. Timing resolution and transient clarity are the signature strengths. Tonal weight is lighter than R-2R designs but avoids the clinical edge of typical delta-sigma implementations.',
-    systemContext: 'Chord DACs pair well with warm or tonally dense amplification, where the source-level clarity cuts through added warmth rather than being masked. In systems already biased toward speed and transparency, the tonal lightness may become noticeable.',
+    systemContext: 'Chord DACs tend to work well with warm or tonally dense amplification, where the source-level clarity cuts through added warmth rather than being masked. In systems already biased toward speed and transparency, the tonal lightness may become noticeable.',
     pairingNotes: 'Works well with tube amplification and warm solid-state designs. The Hugo and Qutest lines are widely used as headphone DAC/amps and desktop sources.',
     links: [
       { label: 'Official website', url: 'https://chordelectronics.co.uk/', region: 'global' },
@@ -294,7 +294,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     categories: ['amplifier'],
     philosophy: 'JOB (a sister brand to Goldmund) designs compact, high-current solid-state amplifiers that prioritise speed, transparency, and control. The design philosophy favours minimal signal path and high damping factor.',
     tendencies: 'JOB amplifiers are described as fast, transparent, and rhythmically precise. They tend toward a lean, articulate presentation with excellent transient definition. Tonal warmth is not a primary characteristic — the emphasis is on speed and control.',
-    systemContext: 'JOB integrated amplifiers pair well with speakers that provide their own tonal body and warmth, such as high-efficiency or paper-cone designs. In systems already biased toward leanness, the cumulative precision may thin out the presentation.',
+    systemContext: 'JOB integrated amplifiers tend to work well with speakers that provide their own tonal body and warmth, such as high-efficiency or paper-cone designs. In systems already biased toward leanness, the cumulative precision may thin out the presentation.',
     links: [
       { label: 'Goldmund (parent brand)', url: 'https://www.goldmund.com/', region: 'global' },
     ],
@@ -1098,11 +1098,11 @@ function buildContextSummary(
     if (scope === 'brand') {
       return `${contextLabel} — that helps frame the comparison. ${nameA} tends toward ${charA}, while ${nameB} leans toward ${charB}. How each interacts with that amplifier depends on sensitivity, impedance behaviour, and what the amp does well.`;
     }
-    return `${contextLabel} — that helps narrow the comparison. ${nameA} and ${nameB} will interact with that amplifier differently based on their load characteristics and design priorities.`;
+    return `${contextLabel} — that helps narrow the comparison. ${nameA} and ${nameB} would likely interact with that amplifier differently based on their load characteristics and design priorities.`;
   }
 
   if (contextKind === 'room') {
-    return `That room context matters. ${nameA} and ${nameB} will behave differently depending on boundary interaction, efficiency, and radiation pattern.`;
+    return `That room context matters. ${nameA} and ${nameB} would likely behave differently depending on boundary interaction, efficiency, and radiation pattern.`;
   }
 
   if (contextKind === 'music' || contextKind === 'listening_priority') {
@@ -1576,6 +1576,7 @@ export function buildSystemAssessment(
   currentMessage: string,
   subjectMatches: SubjectMatch[],
   activeSystem?: ActiveSystemContext | null,
+  desires?: DesireSignal[],
 ): ConsultationResponse | null {
   const components: SystemComponent[] = [];
   const allLinks: { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[] = [];
@@ -1779,11 +1780,32 @@ export function buildSystemAssessment(
 
   const philosophy = componentParagraphs.join('\n\n');
 
-  // ── Infer system interaction ────────────────────────
-  const tendencies = inferSystemInteraction(components);
+  // ── Infer system interaction (step 1: system character) ──
+  const interactionSummary = inferSystemInteraction(components);
+
+  // ── Infer trade-offs (step 3) ─────────────────────────
+  const tradeoffNote = inferSystemTradeoffs(components);
+
+  // ── Combine into tendencies field ─────────────────────
+  // Steps 1 + 2 (system character + causal explanation are in
+  // interactionSummary) plus step 3 (trade-offs).
+  const tendenciesParts = [interactionSummary];
+  if (tradeoffNote) tendenciesParts.push(tradeoffNote);
+
+  const tendencies = tendenciesParts.join('\n\n');
 
   // ── Amplifier-speaker fit note ──────────────────────
   const systemContext = inferAmplifierSpeakerFit(components);
+
+  // ── Preference alignment (step 5) ─────────────────────
+  // When the user has expressed desires, mirror them and relate
+  // to the system's character.
+  const preferenceNote = buildAssessmentPreferenceAlignment(components, desires);
+
+  // ── Follow-up — preference-aware when possible ────────
+  const followUp = preferenceNote
+    ? preferenceNote + '\n\nIf you want to explore a specific direction, name the quality or the component — that narrows the analysis.'
+    : 'What are you exploring — is there something you\'d like to change about this balance, or are you looking to understand what a specific upgrade path might shift?';
 
   // ── Subject line ────────────────────────────────────
   const subject = components.map((c) => c.displayName).join(', ');
@@ -1793,7 +1815,7 @@ export function buildSystemAssessment(
     philosophy,
     tendencies,
     systemContext: systemContext ?? undefined,
-    followUp: 'What are you exploring — is there something you\'d like to change about this balance, or are you looking to understand what a specific upgrade path might shift?',
+    followUp,
     links: allLinks.length > 0 ? allLinks : undefined,
   };
 }
@@ -1835,18 +1857,32 @@ function inferSystemInteraction(components: SystemComponent[]): string {
   const warmNames = leans.filter((l) => l.lean === 'warm').map((l) => l.name);
   const preciseNames = leans.filter((l) => l.lean === 'precise').map((l) => l.name);
 
+  // ── Build causal explanation fragments ────────────────
+  // Step 2: trace system character to component-level design traits.
+  const causalParts: string[] = [];
+  for (const c of components) {
+    if (c.product?.architecture) {
+      causalParts.push(`${c.displayName} uses a ${c.product.architecture} design`);
+    } else if (c.brandProfile?.designFamily) {
+      causalParts.push(`${c.displayName} belongs to a ${c.brandProfile.designFamily.name} lineage`);
+    }
+  }
+  const causalNote = causalParts.length > 0
+    ? ' ' + causalParts.join('; ') + '.'
+    : '';
+
   if (warmCount > 0 && preciseCount > 0) {
-    return `This is a system with complementary tendencies. ${preciseNames.join(' and ')} ${preciseCount === 1 ? 'provides' : 'provide'} articulation and clarity, while ${warmNames.join(' and ')} ${warmCount === 1 ? 'adds' : 'add'} warmth and tonal body. The source and amplification/speakers balance precision against engagement — a deliberate architectural choice that suggests a system tuned for both detail and musical involvement.`;
+    return `This is a system with complementary tendencies. ${preciseNames.join(' and ')} ${preciseCount === 1 ? 'provides' : 'provide'} articulation and clarity, while ${warmNames.join(' and ')} ${warmCount === 1 ? 'adds' : 'add'} warmth and tonal body.${causalNote} The precision upstream and warmth downstream balance each other — a deliberate architectural pairing that serves both detail and musical involvement.`;
   }
   if (warmCount >= 2) {
-    return `This system leans toward warmth and engagement throughout the chain. ${warmNames.join(', ')} all contribute tonal body and midrange presence. The overall character is likely rich and immersive, though this could compound toward density if not balanced with source-level articulation.`;
+    return `This system leans toward warmth and engagement throughout the chain. ${warmNames.join(', ')} all contribute tonal body and midrange presence.${causalNote} The overall character tends toward richness and immersion — density compounds across the chain, which may sustain engagement but could reduce transient articulation.`;
   }
   if (preciseCount >= 2) {
-    return `This system leans toward precision and clarity throughout the chain. ${preciseNames.join(', ')} all emphasise detail and transient definition. The result is likely revealing and well-defined, though the cumulative precision may reduce perceived warmth or ease.`;
+    return `This system leans toward precision and clarity throughout the chain. ${preciseNames.join(', ')} all emphasise detail and transient definition.${causalNote} The cumulative precision tends to deliver a revealing, well-defined presentation — though without a warmth source in the chain, extended sessions may feel lean.`;
   }
 
   // Mixed or unknown
-  return `The components in this system each bring distinct tendencies. The overall character depends on how they interact in practice — room acoustics, cable choices, and source material all influence the final balance.`;
+  return `The components in this system each bring distinct tendencies.${causalNote} The overall character depends on how they interact in practice — room acoustics, cable choices, and source material all influence the final balance.`;
 }
 
 /**
@@ -1869,6 +1905,119 @@ function inferAmplifierSpeakerFit(components: SystemComponent[]): string | null 
   }
 
   return null;
+}
+
+/**
+ * Infer trade-offs from the system's component balance.
+ * Step 3 of the advisory reasoning structure.
+ *
+ * Uses confident language for known component traits, analytical
+ * language for the system-level consequence.
+ */
+function inferSystemTradeoffs(components: SystemComponent[]): string | null {
+  const leans: { name: string; lean: 'warm' | 'neutral' | 'precise' | 'unknown' }[] = [];
+
+  for (const c of components) {
+    if (c.product?.traits) {
+      const t = c.product.traits;
+      if ((t.clarity ?? 0) > 0.8 && (t.tonal_density ?? 0.5) < 0.5) {
+        leans.push({ name: c.displayName, lean: 'precise' });
+      } else if ((t.tonal_density ?? 0.5) > 0.7 && (t.flow ?? 0.5) > 0.7) {
+        leans.push({ name: c.displayName, lean: 'warm' });
+      } else {
+        leans.push({ name: c.displayName, lean: 'neutral' });
+      }
+    } else if (c.brandProfile) {
+      const tendLower = c.brandProfile.tendencies.toLowerCase();
+      if (tendLower.includes('warm') || tendLower.includes('rich') || tendLower.includes('dense')) {
+        leans.push({ name: c.displayName, lean: 'warm' });
+      } else if (tendLower.includes('precise') || tendLower.includes('clarity') || tendLower.includes('analytical')) {
+        leans.push({ name: c.displayName, lean: 'precise' });
+      } else {
+        leans.push({ name: c.displayName, lean: 'neutral' });
+      }
+    } else {
+      leans.push({ name: c.displayName, lean: 'unknown' });
+    }
+  }
+
+  const warmCount = leans.filter((l) => l.lean === 'warm').length;
+  const preciseCount = leans.filter((l) => l.lean === 'precise').length;
+
+  if (warmCount > 0 && preciseCount > 0) {
+    // Complementary — the trade-off is that neither extreme is fully realised
+    return 'The trade-off in a complementary system is that neither precision nor warmth is fully maximised. The system balances the two rather than committing to either. This is often a strength — it keeps the presentation engaging without becoming fatiguing or clinical.';
+  }
+  if (warmCount >= 2) {
+    return 'The trade-off of stacking warmth is reduced transient precision and potentially compressed spatial definition. If recordings feel congested or slow, the system may be compounding density beyond what serves the music.';
+  }
+  if (preciseCount >= 2) {
+    return 'The trade-off of stacking precision is reduced tonal body and listening ease. If extended sessions become fatiguing or the presentation feels clinical, the cumulative speed may be outpacing the system\'s ability to deliver warmth and flow.';
+  }
+
+  return null;
+}
+
+/**
+ * Build preference alignment note from user desires and system character.
+ * Step 5 of the advisory reasoning structure.
+ *
+ * Returns null when no desires are present — the follow-up question
+ * takes its place.
+ */
+function buildAssessmentPreferenceAlignment(
+  components: SystemComponent[],
+  desires?: DesireSignal[],
+): string | null {
+  if (!desires || desires.length === 0) return null;
+
+  // Classify system lean for alignment check
+  let systemLean: 'warm' | 'precise' | 'balanced' | 'unknown' = 'unknown';
+  let warmCount = 0;
+  let preciseCount = 0;
+  for (const c of components) {
+    if (c.brandProfile) {
+      const t = c.brandProfile.tendencies.toLowerCase();
+      if (t.includes('warm') || t.includes('rich') || t.includes('dense')) warmCount++;
+      else if (t.includes('precise') || t.includes('clarity') || t.includes('analytical')) preciseCount++;
+    }
+  }
+  if (warmCount > 0 && preciseCount > 0) systemLean = 'balanced';
+  else if (warmCount > 0) systemLean = 'warm';
+  else if (preciseCount > 0) systemLean = 'precise';
+
+  // Mirror top desire and relate to system character
+  const topDesire = desires[0];
+  const wantMore = topDesire.direction === 'more';
+  const quality = topDesire.quality.toLowerCase();
+
+  // Warm-axis qualities
+  const warmQualities = ['warmth', 'body', 'density', 'richness', 'weight', 'fullness'];
+  // Precision-axis qualities
+  const precisionQualities = ['detail', 'clarity', 'speed', 'sparkle', 'precision', 'articulation', 'definition'];
+
+  const wantsWarmth = wantMore && warmQualities.some((q) => quality.includes(q));
+  const wantsPrecision = wantMore && precisionQualities.some((q) => quality.includes(q));
+  const wantsLessFatigue = !wantMore && ['fatigue', 'harshness', 'glare', 'brightness', 'sibilance'].some((q) => quality.includes(q));
+
+  if (wantsWarmth && systemLean === 'warm') {
+    return `You mentioned wanting more ${quality}. Your system already leans in that direction — the question is whether it has gone far enough or whether the warmth is compounding past the point of clarity.`;
+  }
+  if (wantsWarmth && systemLean === 'precise') {
+    return `You mentioned wanting more ${quality}. Your system currently leans toward precision, so there is room to shift the balance — the most effective lever depends on which component is contributing the most analytical character.`;
+  }
+  if (wantsPrecision && systemLean === 'precise') {
+    return `You mentioned wanting more ${quality}. Your system already emphasises this — adding more could push past incisive into fatiguing. Consider whether the current level is close to what you want before making changes.`;
+  }
+  if (wantsPrecision && systemLean === 'warm') {
+    return `You mentioned wanting more ${quality}. Your system leans warm, so there would likely be room to increase definition without losing the underlying tonal body — the question is which component to address first.`;
+  }
+  if (wantsLessFatigue) {
+    return `You mentioned wanting less ${quality}. This is worth investigating component by component — fatigue-related traits often trace to a specific point in the chain rather than the system as a whole.`;
+  }
+
+  // Generic fallback for other desires
+  return `You mentioned wanting ${wantMore ? 'more' : 'less'} ${quality}. Understanding how your current system handles this quality is the first step — the assessment above should help frame where the leverage points are.`;
 }
 
 // ── Consultation entry builder ───────────────────────
@@ -2129,7 +2278,7 @@ export function buildCableAdvisory(
   // Tendencies — system-specific cable direction
   let tendencies: string;
   if (systemLean === 'precise' && desireParts.length > 0) {
-    tendencies = `Your system leans toward precision and speed (${systemComponents.join(', ')}). You've expressed wanting ${desireParts.join(' and ')}. Cable choices can either reinforce the existing transparency or introduce a degree of warmth and body. For ${desireParts.join(' and ')}, look for cables with copper conductors and relaxed geometries rather than silver or aggressive shielding.`;
+    tendencies = `Your system leans toward precision and speed (${systemComponents.join(', ')}). You've expressed wanting ${desireParts.join(' and ')}. Cable choices would likely either reinforce the existing transparency or introduce a degree of warmth and body. For ${desireParts.join(' and ')}, copper conductors and relaxed geometries tend to be more effective than silver or aggressive shielding.`;
   } else if (systemLean === 'warm' && desireParts.length > 0) {
     tendencies = `Your system already leans warm (${systemComponents.join(', ')}). You've expressed wanting ${desireParts.join(' and ')}. Cable choices should complement rather than compound the existing warmth. For detail and sparkle, silver-plated or silver-core cables can introduce some upper-frequency energy, but be cautious about glare if the system is already bright in other ways.`;
   } else if (systemLean === 'balanced' && desireParts.length > 0) {
@@ -2137,7 +2286,7 @@ export function buildCableAdvisory(
   } else if (systemLean === 'balanced') {
     tendencies = `Your system combines components with different tendencies (${systemComponents.join(', ')}), suggesting a deliberate balance. Cable choices should preserve this balance. Neutral, well-constructed cables that don't impose a strong character of their own are usually the safest direction here.`;
   } else if (desireParts.length > 0) {
-    tendencies = `You've expressed wanting ${desireParts.join(' and ')} from the cable upgrade. These qualities are achievable through cable selection, but the degree of change depends on the system context. Cables shift the balance — they don't transform the architecture.`;
+    tendencies = `You've expressed wanting ${desireParts.join(' and ')} from the cable upgrade. These qualities are often achievable through cable selection, but the degree of change depends on the system context. Cables tend to shift the balance — they don't transform the architecture.`;
   } else if (systemComponents.length > 0) {
     tendencies = `With ${systemComponents.join(' and ')} in the chain, the cable direction depends on what you want to shift. Cables can fine-tune tonal balance, dynamic weight, and spatial presentation — but only meaningfully when the tuning goal is clear.`;
   } else {

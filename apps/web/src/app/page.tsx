@@ -362,7 +362,7 @@ export default function Home() {
     // then ask what they want to explore. Must fire before consultation/comparison
     // to prevent multi-brand system descriptions from being misrouted.
     if (intent === 'system_assessment') {
-      const assessmentResult = buildSystemAssessment(submittedText, subjectMatches, activeSystem);
+      const assessmentResult = buildSystemAssessment(submittedText, subjectMatches, activeSystem, desires);
       if (assessmentResult) {
         dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(assessmentResult) });
         // Store consultation context so follow-ups stay in the system context
