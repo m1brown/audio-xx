@@ -19,6 +19,8 @@ import type { GearResponse } from './conversation-types';
 import type { EvaluationResult, FiredRule } from './rule-types';
 import type { ExtractedSignals } from './signal-types';
 import type { SystemDirection } from './system-direction';
+import type { ReasoningResult } from './reasoning';
+import { getArchetypeLabel } from './archetype';
 
 // ── Types ────────────────────────────────────────────
 
@@ -166,30 +168,61 @@ function generateBottomLine(
 }
 
 /**
- * Generate alignment rationale bridging listener priorities to system context.
- * Only produces text when both priority and system data exist.
+ * Generate alignment rationale with graceful fallback chain.
+ *
+ * Fallback order:
+ *   1. systemTendencies + listenerPriorities → full bridge sentence
+ *   2. reasoning.direction.archetypeNote → already human-readable
+ *   3. reasoning.direction.statement + preserve[] → direction + preserve
+ *   4. reasoning.taste.archetype → archetype-based framing
+ *   5. nothing → section doesn't render
  */
 function generateAlignmentRationale(
   systemTendencies?: string,
   listenerPriorities?: string[],
   recommendedDirection?: string,
+  reasoning?: ReasoningResult,
 ): string | undefined {
-  if (!systemTendencies || !listenerPriorities || listenerPriorities.length === 0) {
-    return undefined;
+  // 1. Full bridge — system tendencies + listener priorities
+  if (systemTendencies && listenerPriorities && listenerPriorities.length > 0) {
+    const priorityBrief = listenerPriorities[0];
+    if (recommendedDirection) {
+      return `Your system's current tendencies — ${systemTendencies.toLowerCase()} — interact with your preference for ${priorityBrief.toLowerCase()}. The recommended direction addresses that relationship.`;
+    }
+    return `Your system's current tendencies — ${systemTendencies.toLowerCase()} — relate to your preference for ${priorityBrief.toLowerCase()}.`;
   }
-  const priorityBrief = listenerPriorities[0];
-  if (recommendedDirection) {
-    return `Your system's current tendencies — ${systemTendencies.toLowerCase()} — interact with your preference for ${priorityBrief.toLowerCase()}. The recommended direction addresses that relationship.`;
+
+  if (!reasoning) return undefined;
+
+  // 2. Archetype note from reasoning direction layer
+  if (reasoning.direction.archetypeNote) {
+    return reasoning.direction.archetypeNote;
   }
-  return `Your system's current tendencies — ${systemTendencies.toLowerCase()} — relate to your preference for ${priorityBrief.toLowerCase()}.`;
+
+  // 3. Direction statement + preserve qualities
+  if (reasoning.direction.statement && reasoning.direction.preserve.length > 0) {
+    return `${reasoning.direction.statement} Worth preserving: ${reasoning.direction.preserve.join(', ')}.`;
+  }
+
+  // 4. Taste archetype framing
+  if (reasoning.taste.archetype) {
+    const label = getArchetypeLabel(reasoning.taste.archetype);
+    if (label) {
+      return `Your preferences align with a ${label.toLowerCase()} listening approach.`;
+    }
+  }
+
+  return undefined;
 }
 
 /**
  * Enrich an AdvisoryResponse with generated content.
  * Called after the base adapter mapping. Only adds fields that
  * are not already populated.
+ *
+ * Accepts an optional ReasoningResult for richer alignment generation.
  */
-function enrichAdvisory(advisory: AdvisoryResponse): AdvisoryResponse {
+function enrichAdvisory(advisory: AdvisoryResponse, reasoning?: ReasoningResult): AdvisoryResponse {
   const enriched = { ...advisory };
 
   // Bottom line — only for shopping and diagnosis
@@ -208,7 +241,13 @@ function enrichAdvisory(advisory: AdvisoryResponse): AdvisoryResponse {
       enriched.systemTendencies,
       enriched.listenerPriorities,
       enriched.recommendedDirection,
+      reasoning,
     );
+  }
+
+  // Listener priorities from reasoning taste label — if not already populated
+  if (!enriched.listenerPriorities && reasoning?.taste.tasteLabel) {
+    enriched.listenerPriorities = [reasoning.taste.tasteLabel];
   }
 
   return enriched;
@@ -275,6 +314,7 @@ const GAP_LABELS: Record<GapDimension, string> = {
 export function shoppingToAdvisory(
   a: ShoppingAnswer,
   signals?: ExtractedSignals,
+  reasoning?: ReasoningResult,
 ): AdvisoryResponse {
   // Parse preferenceSummary into listenerPriorities if it's a meaningful sentence
   const listenerPriorities = a.preferenceSummary
@@ -317,7 +357,7 @@ export function shoppingToAdvisory(
       symptoms: signals.symptoms,
       traits: signals.traits,
     } : undefined,
-  });
+  }, reasoning);
 }
 
 // ── Adapter: Analysis → Advisory ─────────────────────
@@ -326,6 +366,7 @@ export function analysisToAdvisory(
   result: EvaluationResult,
   signals: ExtractedSignals,
   sysDir?: SystemDirection,
+  reasoning?: ReasoningResult,
 ): AdvisoryResponse {
   // Use the highest-priority fired rule for the main advisory content
   const primary: FiredRule | undefined = result.fired_rules[0];
@@ -373,5 +414,5 @@ export function analysisToAdvisory(
       symptoms: signals.symptoms,
       traits: signals.traits,
     },
-  });
+  }, reasoning);
 }

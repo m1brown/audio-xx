@@ -426,7 +426,7 @@ export default function Home() {
               });
             }
             const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning);
-            dispatch({ type: 'ADD_ADVISORY', advisory: shoppingToAdvisory(answer, data.signals) });
+            dispatch({ type: 'ADD_ADVISORY', advisory: shoppingToAdvisory(answer, data.signals, reasoning) });
 
             // Subtle note when the stored taste profile influenced the direction
             if (reasoning.taste.storedProfileUsed) {
@@ -478,7 +478,7 @@ export default function Home() {
           if (clarification) {
             dispatch({ type: 'ADD_QUESTION', clarification });
           } else {
-            dispatch({ type: 'ADD_ADVISORY', advisory: analysisToAdvisory(data.result, data.signals, diagDirection) });
+            dispatch({ type: 'ADD_ADVISORY', advisory: analysisToAdvisory(data.result, data.signals, diagDirection, reasoning) });
           }
         }
       }
