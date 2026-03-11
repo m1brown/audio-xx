@@ -14,7 +14,7 @@
 
 // ── Intent type ──────────────────────────────────────
 
-export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis';
+export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment';
 
 /** A desire the user has expressed — "want more speed", "wish it had warmth". */
 export interface DesireSignal {
@@ -128,6 +128,29 @@ const GEAR_INQUIRY_PATTERNS = [
   /\btell\s+me\s+about\b/i,
   /\bwhat\s+(?:is|are)\s+(?:the\s+)?(?:character|sound|signature|house sound)\b/i,
   /\bhow\s+(?:does|do)\s+(?:the\s+)?(?:\w+\s+)?sound\b/i,
+];
+
+// ── System assessment patterns ────────────────────────
+// These signal a system-level evaluation request, distinct from diagnosis.
+// Requires ownership language + assessment intent; no listening complaint.
+
+const SYSTEM_ASSESSMENT_PATTERNS = [
+  /\bassess(?:ment)?\s+(?:of\s+)?(?:my|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bevaluat(?:e|ion)\s+(?:of\s+)?(?:my|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bthoughts\s+on\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bhow\s+does\s+my\s+(?:system|setup|rig|chain)\s+(?:look|seem|stack\s+up)\b/i,
+  /\breview\s+(?:of\s+)?my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bopinion\s+on\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+];
+
+/** Ownership language — indicates user is describing components they own. */
+const OWNERSHIP_PATTERNS = [
+  /\bi\s+have\b/i,
+  /\bmy\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bi(?:'m|\s+am)\s+(?:running|using)\b/i,
+  /\bi\s+(?:run|use)\b/i,
+  /\bmy\s+(?:dac|amp|amplifier|speakers?|headphones?|streamer)\b/i,
 ];
 
 // ── Diagnosis patterns ───────────────────────────────
@@ -245,6 +268,16 @@ export function detectIntent(currentMessage: string): IntentResult {
   // 1. Explicit diagnosis — user describes a listening problem
   if (DIAGNOSIS_PATTERNS.some((p) => p.test(currentMessage))) {
     return { intent: 'diagnosis', subjects, subjectMatches, desires };
+  }
+
+  // 1b. System assessment — user describes their system and asks for evaluation
+  //     Requires explicit assessment language + ownership language + multiple subjects.
+  //     This must fire before comparison to prevent "I have X, Y, and Z" from
+  //     being treated as "X vs Y".
+  const hasAssessmentLanguage = SYSTEM_ASSESSMENT_PATTERNS.some((p) => p.test(currentMessage));
+  const hasOwnership = OWNERSHIP_PATTERNS.some((p) => p.test(currentMessage));
+  if (hasAssessmentLanguage && hasOwnership && subjectMatches.length >= 2) {
+    return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }
 
   // 2. Comparison — "X vs Y", "compare A and B"

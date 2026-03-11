@@ -56,6 +56,18 @@ const CONSULTATION_PATTERNS = [
   /\bwhat\s+makes\s+\w+\s+(?:different|special|unique)\b/i,
 ];
 
+// ── System assessment patterns ───────────────────────
+// These detect system-level evaluation requests. Must be checked before
+// diagnosis because "assessment of my system" contains "my system".
+
+const SYSTEM_ASSESSMENT_SIGNALS = [
+  /\bassess(?:ment)?\s+(?:of\s+)?(?:my|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bevaluat(?:e|ion)\s+(?:of\s+)?(?:my|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bthoughts\s+on\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\breview\s+(?:of\s+)?my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+];
+
 // ── Diagnosis patterns (imported concept from intent.ts) ─
 
 const DIAGNOSIS_SIGNALS = [
@@ -97,6 +109,13 @@ const SHOPPING_SIGNALS = [
  *   - "Best R-2R DAC under $1000" = shopping, not consultation about R-2R
  */
 export function routeConversation(currentMessage: string): ConversationMode {
+  // 0. System assessment — user asks for evaluation of their system.
+  //    Must fire before diagnosis because "my system" triggers DIAGNOSIS_SIGNALS.
+  //    Routes to consultation mode so the assessment builder handles it.
+  if (SYSTEM_ASSESSMENT_SIGNALS.some((p) => p.test(currentMessage))) {
+    return 'consultation';
+  }
+
   // 1. Diagnosis takes priority — listening problem overrides all
   if (DIAGNOSIS_SIGNALS.some((p) => p.test(currentMessage))) {
     return 'diagnosis';

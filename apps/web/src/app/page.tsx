@@ -21,7 +21,7 @@ import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
-import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, buildConsultationFollowUp } from '@/lib/consultation';
+import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, buildConsultationFollowUp, buildSystemAssessment } from '@/lib/consultation';
 import type { GlossaryResult } from '@/lib/glossary';
 import type { Message, ConversationState } from '@/lib/conversation-types';
 import { parseTasteProfile, topTraits, isProfileEmpty, type TasteProfile } from '@/lib/taste-profile';
@@ -290,6 +290,27 @@ export default function Home() {
       dispatch({ type: 'CLEAR_CONSULTATION_CONTEXT' });
     }
 
+    // ── System assessment path ─────────────────────────
+    // User describes their system and asks for evaluation — answer first with
+    // per-component character descriptions and system interaction summary,
+    // then ask what they want to explore. Must fire before consultation/comparison
+    // to prevent multi-brand system descriptions from being misrouted.
+    if (intent === 'system_assessment') {
+      const assessmentResult = buildSystemAssessment(submittedText, subjectMatches);
+      if (assessmentResult) {
+        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(assessmentResult) });
+        // Store consultation context so follow-ups stay in the system context
+        dispatch({
+          type: 'SET_CONSULTATION_CONTEXT',
+          subjects: subjectMatches,
+          originalQuery: submittedText,
+        });
+        dispatch({ type: 'SET_LOADING', value: false });
+        return;
+      }
+      // Falls through to consultation if assessment couldn't identify enough components
+    }
+
     // ── Consultation path ───────────────────────────────
     // Knowledge / philosophy questions — answer first, no diagnostic logic.
     // Also catches brand-level comparisons ("Chord vs Denafrips") that should
@@ -335,7 +356,7 @@ export default function Home() {
     if (effectiveMode === 'shopping' && intent !== 'shopping') {
       intent = 'shopping';
     }
-    if (effectiveMode === 'diagnosis' && intent !== 'comparison' && intent !== 'gear_inquiry') {
+    if (effectiveMode === 'diagnosis' && intent !== 'comparison' && intent !== 'gear_inquiry' && intent !== 'system_assessment') {
       intent = 'diagnosis';
     }
 

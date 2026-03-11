@@ -1460,3 +1460,287 @@ export function buildConsultationFollowUp(
     followUp: 'What would be most useful — more about the brand philosophy, or practical pairing guidance?',
   };
 }
+
+// ── System Assessment ──────────────────────────────────
+
+/**
+ * System assessment response — structured differently from ConsultationResponse.
+ *
+ * Instead of single-subject philosophy/tendencies, this maps each named
+ * component to its character and then synthesizes system-level interaction.
+ * Returned as a ConsultationResponse for adapter compatibility, using:
+ *   - philosophy → per-component character paragraphs
+ *   - tendencies → system interaction summary
+ *   - systemContext → amplifier-speaker fit assessment
+ *   - followUp → open question about what to explore
+ */
+export interface SystemComponent {
+  /** Display name (e.g. "Chord Qutest", "Pass Labs INT-25"). */
+  displayName: string;
+  /** Component role (dac, amplifier, speaker, etc). */
+  role: string;
+  /** One-line character description. */
+  character: string;
+  /** Brand profile if available. */
+  brandProfile?: {
+    philosophy: string;
+    tendencies: string;
+    systemContext: string;
+    designFamily?: { name: string; character: string; ampPairing?: string };
+  };
+  /** Product data if available. */
+  product?: Product;
+}
+
+/**
+ * Build a system assessment response for a multi-component system description.
+ *
+ * For each named subject, looks up brand profiles and product data to compose
+ * per-component descriptions, then synthesizes a system interaction summary.
+ *
+ * Returns null if fewer than 2 components can be identified.
+ */
+export function buildSystemAssessment(
+  currentMessage: string,
+  subjectMatches: SubjectMatch[],
+): ConsultationResponse | null {
+  const components: SystemComponent[] = [];
+  const allLinks: { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[] = [];
+  const processedNames = new Set<string>();
+
+  for (const match of subjectMatches) {
+    const lower = match.name.toLowerCase();
+    if (processedNames.has(lower)) continue;
+    processedNames.add(lower);
+
+    if (match.kind === 'product') {
+      // Product-level lookup
+      const product = ALL_PRODUCTS.find((p) => p.name.toLowerCase() === lower);
+      if (product) {
+        // Also check if there's a brand profile
+        const brandProfile = findBrandProfileByName(product.brand);
+        const designFamily = brandProfile?.designFamilies?.find((df) =>
+          product.name.toLowerCase().includes(df.name.split(' ')[0].toLowerCase())
+            || df.name.toLowerCase().includes(product.name.toLowerCase()),
+        );
+
+        components.push({
+          displayName: `${product.brand} ${product.name}`,
+          role: product.category,
+          character: product.description,
+          brandProfile: brandProfile ? {
+            philosophy: brandProfile.philosophy,
+            tendencies: brandProfile.tendencies,
+            systemContext: brandProfile.systemContext,
+            designFamily: designFamily ? { name: designFamily.name, character: designFamily.character, ampPairing: designFamily.ampPairing } : undefined,
+          } : undefined,
+          product,
+        });
+
+        // Collect product links
+        if (product.retailer_links) {
+          for (const l of product.retailer_links) {
+            allLinks.push({ label: `${l.label} (${product.name})`, url: l.url });
+          }
+        }
+
+        // Collect brand links
+        if (brandProfile?.links) {
+          for (const l of brandProfile.links) {
+            if (!allLinks.some((al) => al.url === l.url)) {
+              allLinks.push({ label: l.label, url: l.url, kind: l.kind, region: l.region });
+            }
+          }
+        }
+
+        // Mark brand as processed too
+        processedNames.add(product.brand.toLowerCase());
+      }
+    } else {
+      // Brand-level lookup
+      const brandProfile = findBrandProfile(match.name);
+      if (brandProfile) {
+        // Find specific design family if mentioned in the message
+        const designFamily = brandProfile.designFamilies?.find((df) => {
+          const dfWords = df.name.toLowerCase().split(/\s+/);
+          return dfWords.some((w) => w.length > 2 && currentMessage.toLowerCase().includes(w));
+        });
+
+        // Check if there's a matching product in catalog
+        const brandProducts = ALL_PRODUCTS.filter(
+          (p) => p.brand.toLowerCase() === match.name.toLowerCase()
+            || brandProfile.names.some((bn) => p.brand.toLowerCase() === bn.toLowerCase()),
+        );
+        // Find specific product mentioned in message
+        const specificProduct = brandProducts.find((p) =>
+          currentMessage.toLowerCase().includes(p.name.toLowerCase()),
+        );
+
+        const displayName = specificProduct
+          ? `${specificProduct.brand} ${specificProduct.name}`
+          : brandProfile.names[0].split(' ').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
+
+        const role = specificProduct?.category
+          ?? brandProfile.categories?.[0]
+          ?? 'component';
+
+        const character = specificProduct?.description
+          ?? (designFamily
+            ? designFamily.character
+            : brandProfile.tendencies);
+
+        components.push({
+          displayName,
+          role,
+          character,
+          brandProfile: {
+            philosophy: brandProfile.philosophy,
+            tendencies: brandProfile.tendencies,
+            systemContext: brandProfile.systemContext,
+            designFamily: designFamily ? { name: designFamily.name, character: designFamily.character, ampPairing: designFamily.ampPairing } : undefined,
+          },
+          product: specificProduct,
+        });
+
+        // Collect brand links
+        if (brandProfile.links) {
+          for (const l of brandProfile.links) {
+            if (!allLinks.some((al) => al.url === l.url)) {
+              allLinks.push({ label: l.label, url: l.url, kind: l.kind, region: l.region });
+            }
+          }
+        }
+
+        // Collect specific product links
+        if (specificProduct?.retailer_links) {
+          for (const l of specificProduct.retailer_links) {
+            allLinks.push({ label: `${l.label} (${specificProduct.name})`, url: l.url });
+          }
+        }
+      }
+    }
+  }
+
+  // Need at least 2 identified components to build a system assessment
+  if (components.length < 2) return null;
+
+  // ── Build per-component character paragraphs ──────
+  const componentParagraphs = components.map((c) => {
+    let para = `The ${c.displayName}`;
+
+    if (c.product && hasTendencies(c.product.tendencies)) {
+      // Rich product data available — use product description + design family context
+      para += ` — ${c.character}`;
+      if (c.brandProfile?.designFamily?.ampPairing) {
+        para += ` ${c.brandProfile.designFamily.ampPairing}`;
+      }
+    } else if (c.brandProfile) {
+      // Brand-level only — use brand tendencies + design family if available
+      if (c.brandProfile.designFamily) {
+        para += ` is part of the ${c.brandProfile.designFamily.name}. ${c.brandProfile.designFamily.character}`;
+        if (c.brandProfile.designFamily.ampPairing) {
+          para += ` ${c.brandProfile.designFamily.ampPairing}`;
+        }
+      } else {
+        para += ` — ${c.character}`;
+      }
+    } else {
+      para += ` — ${c.character}`;
+    }
+
+    return para;
+  });
+
+  const philosophy = componentParagraphs.join('\n\n');
+
+  // ── Infer system interaction ────────────────────────
+  const tendencies = inferSystemInteraction(components);
+
+  // ── Amplifier-speaker fit note ──────────────────────
+  const systemContext = inferAmplifierSpeakerFit(components);
+
+  // ── Subject line ────────────────────────────────────
+  const subject = components.map((c) => c.displayName).join(', ');
+
+  return {
+    subject: `Your system: ${subject}`,
+    philosophy,
+    tendencies,
+    systemContext: systemContext ?? undefined,
+    followUp: 'What are you exploring — is there something you\'d like to change about this balance, or are you looking to understand what a specific upgrade path might shift?',
+    links: allLinks.length > 0 ? allLinks : undefined,
+  };
+}
+
+/**
+ * Infer how the named components interact in a system.
+ * Deterministic — based on known brand/product tendencies.
+ */
+function inferSystemInteraction(components: SystemComponent[]): string {
+  // Classify each component's sonic lean
+  const leans: { name: string; lean: 'warm' | 'neutral' | 'precise' | 'unknown' }[] = [];
+
+  for (const c of components) {
+    if (c.product?.traits) {
+      const t = c.product.traits;
+      if ((t.clarity ?? 0) > 0.8 && (t.tonal_density ?? 0.5) < 0.5) {
+        leans.push({ name: c.displayName, lean: 'precise' });
+      } else if ((t.tonal_density ?? 0.5) > 0.7 && (t.flow ?? 0.5) > 0.7) {
+        leans.push({ name: c.displayName, lean: 'warm' });
+      } else {
+        leans.push({ name: c.displayName, lean: 'neutral' });
+      }
+    } else if (c.brandProfile) {
+      const tendLower = c.brandProfile.tendencies.toLowerCase();
+      if (tendLower.includes('warm') || tendLower.includes('rich') || tendLower.includes('dense')) {
+        leans.push({ name: c.displayName, lean: 'warm' });
+      } else if (tendLower.includes('precise') || tendLower.includes('clarity') || tendLower.includes('analytical')) {
+        leans.push({ name: c.displayName, lean: 'precise' });
+      } else {
+        leans.push({ name: c.displayName, lean: 'neutral' });
+      }
+    } else {
+      leans.push({ name: c.displayName, lean: 'unknown' });
+    }
+  }
+
+  const warmCount = leans.filter((l) => l.lean === 'warm').length;
+  const preciseCount = leans.filter((l) => l.lean === 'precise').length;
+  const warmNames = leans.filter((l) => l.lean === 'warm').map((l) => l.name);
+  const preciseNames = leans.filter((l) => l.lean === 'precise').map((l) => l.name);
+
+  if (warmCount > 0 && preciseCount > 0) {
+    return `This is a system with complementary tendencies. ${preciseNames.join(' and ')} ${preciseCount === 1 ? 'provides' : 'provide'} articulation and clarity, while ${warmNames.join(' and ')} ${warmCount === 1 ? 'adds' : 'add'} warmth and tonal body. The source and amplification/speakers balance precision against engagement — a deliberate architectural choice that suggests a system tuned for both detail and musical involvement.`;
+  }
+  if (warmCount >= 2) {
+    return `This system leans toward warmth and engagement throughout the chain. ${warmNames.join(', ')} all contribute tonal body and midrange presence. The overall character is likely rich and immersive, though this could compound toward density if not balanced with source-level articulation.`;
+  }
+  if (preciseCount >= 2) {
+    return `This system leans toward precision and clarity throughout the chain. ${preciseNames.join(', ')} all emphasise detail and transient definition. The result is likely revealing and well-defined, though the cumulative precision may reduce perceived warmth or ease.`;
+  }
+
+  // Mixed or unknown
+  return `The components in this system each bring distinct tendencies. The overall character depends on how they interact in practice — room acoustics, cable choices, and source material all influence the final balance.`;
+}
+
+/**
+ * Infer amplifier-speaker fit from known design families and product data.
+ */
+function inferAmplifierSpeakerFit(components: SystemComponent[]): string | null {
+  const amp = components.find((c) => c.role === 'amplifier');
+  const speaker = components.find((c) => c.role === 'speaker');
+
+  if (!amp || !speaker) return null;
+
+  // Check for design family pairing notes
+  if (amp.brandProfile?.designFamily?.ampPairing && speaker.brandProfile?.designFamily?.character) {
+    return `${amp.displayName} paired with ${speaker.displayName}: ${amp.brandProfile.designFamily.ampPairing} ${speaker.brandProfile.designFamily.character.includes('sensitivity') ? speaker.brandProfile.designFamily.character : ''}`.trim();
+  }
+
+  // Check brand-level pairing notes
+  if (amp.brandProfile?.systemContext) {
+    return `${amp.displayName}: ${amp.brandProfile.systemContext}`;
+  }
+
+  return null;
+}
