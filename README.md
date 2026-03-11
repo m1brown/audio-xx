@@ -172,6 +172,52 @@ Evaluations of used-market listings or user-submitted components are not monetiz
 - Reviews inform explanations; they never decide outcomes
 - Archetype conflicts are surfaced, never silently resolved
 
+### Multi-System Support
+
+Each user has one listener profile and can define multiple audio systems.
+A system represents a physical setup — a speaker rig in a living room, a
+headphone desk, an office system — and consists of named components with
+brand, category, and optional role metadata.
+
+**Data model:**
+
+- **One listener profile per user** (stored in the `Profile` table).
+  Contains listening preferences, room context, archetype signals, and a
+  reference to the currently active system.
+- **Multiple systems per user** (stored in the `System` table via
+  `User.systems`). Each system carries a name, location, primary use,
+  tendencies summary, and a component list via the `SystemComponent`
+  junction table.
+- **`active_system_id`** on the listener profile selects which system
+  the advisory engine operates against. Nullable — having no active
+  system is a valid state.
+
+**Advisory flow:**
+
+The active system is resolved once per submit using
+`resolveActiveSystemContext()` and optionally converted into a
+`SystemProfile` via `activeSystemToProfile()`. Advisory builders and the
+reasoning pipeline receive this context as an optional parameter.
+When present, the active system seeds component context, informs chain
+interaction analysis, and provides a baseline for system diagnosis.
+When absent, builders fall back to conversation-derived context.
+
+**Guest support:**
+
+Unauthenticated users work with a single draft system persisted to
+`sessionStorage`. It participates in advisory flows identically to a
+saved system. On sign-in, saved systems load from the backend; the
+draft is preserved until explicitly promoted or cleared.
+
+**Conversation extraction:**
+
+When a user describes owned gear in conversation ("I have a…", "my
+system is…"), the engine detects the description and offers to save it
+as a new system. Detection is conservative — it requires ownership
+language, rejects comparison and shopping patterns, requires at least
+two recognized components, and suppresses duplicates of the active
+system via fingerprint overlap.
+
 ---
 
 ## Testing
