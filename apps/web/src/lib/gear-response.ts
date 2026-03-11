@@ -164,6 +164,34 @@ const QUALITY_PROFILES: Record<string, QualityProfile> = {
     interpretation: '"Openness" describes a sense of spaciousness and lack of constriction — the feeling that the music isn\'t boxed in.',
     direction: 'This is shaped by speaker and room interaction as much as electronics. Open-back headphones are inherently more open-sounding. In speakers, dispersion pattern and crossover design contribute.',
   },
+  naturalness: {
+    interpretation: '"Naturalness" is about believable timbre — instruments and voices sounding like themselves, without electronic artifact or tonal editorialising. A natural-sounding system doesn\'t draw attention to its own character.',
+    direction: 'Naturalness tends to emerge from low distortion without excessive analytical lean. R-2R DACs and well-implemented tube stages are often cited, but it\'s more about the absence of artifice than a specific topology. Power quality and low-jitter clocking contribute by removing subtle grit that breaks the illusion.',
+  },
+  excitement: {
+    interpretation: '"Excitement" describes a sense of vividness and forward momentum — the feeling that music is alive, urgent, and physically engaging. It\'s a compound of dynamic contrast, rhythmic energy, and presence-range forwardness.',
+    direction: 'Exciting systems tend to have strong macro-dynamics, well-preserved transients, and a slight upper-midrange presence that brings vocalists and lead instruments forward. The risk is that excitement pushed too far becomes fatigue. The line between vivid and aggressive depends on the listener.',
+  },
+  aggression: {
+    interpretation: '"Aggression" in audio describes an overly forward, hard-edged quality — excessive push in the upper midrange or treble that turns energy into harshness. A degree of forwardness can be exciting; too much becomes wearing.',
+    direction: 'Aggression is usually a symptom rather than a design goal. It can come from bright-leaning DACs, amplifiers that harden under load, or speakers with a presence-region peak. Cables and power quality can modulate it at the margins. The fix depends on where in the chain the hardness originates.',
+  },
+  sparkle: {
+    interpretation: '"Sparkle" is the liveliness in the upper treble — shimmer on cymbals, the ring of a triangle, the sense that high-frequency content has life and definition without becoming sharp.',
+    direction: 'DACs with extended, clean treble and low phase distortion tend to produce sparkle. Silver interconnects can add a touch of upper-frequency energy. The trade-off: too much sparkle in a bright system risks tipping into glare.',
+  },
+  sweetness: {
+    interpretation: '"Sweetness" describes a quality where the upper frequencies and midrange feel rounded, liquid, and pleasant — the opposite of grain or edge. It\'s often associated with a slight second-harmonic emphasis.',
+    direction: 'Tube output stages are the classic source of sweetness. Some R-2R DACs also produce it through their harmonic profile. The trade-off is that excessive sweetness can round off transient precision and veil micro-detail.',
+  },
+  energy: {
+    interpretation: '"Energy" is about the sense of life and drive in the music — not just volume, but the feeling that the system has reserves and can deliver dynamic swings with conviction.',
+    direction: 'Amplifier headroom and current delivery are the primary contributors. Speakers with higher sensitivity tend to feel more energetic at a given volume. DACs that preserve dynamic contrast without compression help maintain the sense of scale.',
+  },
+  musicality: {
+    interpretation: '"Musicality" is the quality that makes a system feel coherent and emotionally connected — where technical performance serves the music rather than dissecting it. It\'s subjective and composite, but real.',
+    direction: 'Musical systems tend to get rhythm, tonal weight, and harmonic richness right even if they sacrifice some measurable precision. The balance point is personal. Some listeners find musicality in flow and warmth; others in dynamic truthfulness and timing.',
+  },
 };
 
 // ── Trait labels (human-readable) ────────────────────

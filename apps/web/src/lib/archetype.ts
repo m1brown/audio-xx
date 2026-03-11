@@ -210,12 +210,14 @@ const DESIRE_ARCHETYPE_MAP: Record<string, [SonicArchetype, number][]> = {
   pace:          [['rhythmic_propulsive', 0.8]],
   drive:         [['rhythmic_propulsive', 0.8]],
   energy:        [['rhythmic_propulsive', 0.8]],
+  excitement:    [['rhythmic_propulsive', 0.9], ['precision_explicit', 0.3]],
 
   // spatial_holographic
   soundstage:    [['spatial_holographic', 1.0]],
   imaging:       [['spatial_holographic', 1.0]],
   space:         [['spatial_holographic', 0.8]],
   air:           [['spatial_holographic', 0.8]],
+  sparkle:       [['precision_explicit', 0.6], ['spatial_holographic', 0.4]],
   openness:      [['spatial_holographic', 0.8]],
   depth:         [['spatial_holographic', 1.0]],
   layering:      [['spatial_holographic', 1.0]],
