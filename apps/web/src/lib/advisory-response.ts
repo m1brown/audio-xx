@@ -14,6 +14,7 @@
  */
 
 import type { ConsultationResponse } from './consultation';
+import { findBrandProfileByName } from './consultation';
 import type { ShoppingAnswer, GapDimension } from './shopping-intent';
 import type { GearResponse } from './conversation-types';
 import type { EvaluationResult, FiredRule } from './rule-types';
@@ -216,13 +217,75 @@ function generateAlignmentRationale(
 }
 
 /**
+ * Collect brand-level links from advisory options or explicit subject names.
+ *
+ * Extracts unique brand names, looks up their brand profiles, and returns
+ * deduplicated AdvisoryLink[] for the "Learn More" section. Skips brands
+ * that have no profile or no links.
+ */
+function collectBrandLinks(
+  options?: AdvisoryOption[],
+  subjectNames?: string[],
+): AdvisoryLink[] {
+  const seen = new Set<string>();
+  const links: AdvisoryLink[] = [];
+
+  // Collect brand names from options
+  const brandNames: string[] = [];
+  if (options) {
+    for (const opt of options) {
+      if (opt.brand && !seen.has(opt.brand.toLowerCase())) {
+        seen.add(opt.brand.toLowerCase());
+        brandNames.push(opt.brand);
+      }
+    }
+  }
+
+  // Collect from explicit subject names (gear-response subjects)
+  if (subjectNames) {
+    for (const name of subjectNames) {
+      const lower = name.toLowerCase();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        brandNames.push(name);
+      }
+    }
+  }
+
+  // Look up brand profiles and collect links
+  const seenUrls = new Set<string>();
+  for (const brandName of brandNames) {
+    const profile = findBrandProfileByName(brandName);
+    if (!profile?.links) continue;
+    for (const link of profile.links) {
+      if (!seenUrls.has(link.url)) {
+        seenUrls.add(link.url);
+        links.push({
+          label: link.label,
+          url: link.url,
+          kind: link.kind,
+          region: link.region,
+        });
+      }
+    }
+  }
+
+  return links;
+}
+
+/**
  * Enrich an AdvisoryResponse with generated content.
  * Called after the base adapter mapping. Only adds fields that
  * are not already populated.
  *
  * Accepts an optional ReasoningResult for richer alignment generation.
+ * Accepts optional subjectNames for brand link collection (gear-response path).
  */
-function enrichAdvisory(advisory: AdvisoryResponse, reasoning?: ReasoningResult): AdvisoryResponse {
+function enrichAdvisory(
+  advisory: AdvisoryResponse,
+  reasoning?: ReasoningResult,
+  subjectNames?: string[],
+): AdvisoryResponse {
   const enriched = { ...advisory };
 
   // Bottom line — only for shopping and diagnosis
@@ -248,6 +311,14 @@ function enrichAdvisory(advisory: AdvisoryResponse, reasoning?: ReasoningResult)
   // Listener priorities from reasoning taste label — if not already populated
   if (!enriched.listenerPriorities && reasoning?.taste.tasteLabel) {
     enriched.listenerPriorities = [reasoning.taste.tasteLabel];
+  }
+
+  // Brand links — collect from options and/or explicit subject names
+  if (!enriched.links || enriched.links.length === 0) {
+    const brandLinks = collectBrandLinks(enriched.options, subjectNames);
+    if (brandLinks.length > 0) {
+      enriched.links = brandLinks;
+    }
   }
 
   return enriched;
@@ -296,7 +367,7 @@ export function gearResponseToAdvisory(r: GearResponse): AdvisoryResponse {
 
     recommendedDirection: r.direction,
     followUp: r.clarification,
-  });
+  }, undefined, r.subjects.length > 0 ? r.subjects : undefined);
 }
 
 // ── Adapter: ShoppingAnswer → Advisory ───────────────

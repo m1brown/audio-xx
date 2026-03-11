@@ -303,7 +303,7 @@ function findBrandProfile(text: string): BrandProfile | undefined {
 }
 
 /** Look up a brand profile by exact brand name (case-insensitive). */
-function findBrandProfileByName(brandName: string): BrandProfile | undefined {
+export function findBrandProfileByName(brandName: string): BrandProfile | undefined {
   const lower = brandName.toLowerCase();
   return BRAND_PROFILES.find((bp) =>
     bp.names.some((name) => name.toLowerCase() === lower),
