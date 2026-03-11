@@ -85,6 +85,26 @@ export interface SavedSystem {
   primaryUse: string | null;
 }
 
+// ── Proposed system (conversation-extracted, Phase 5) ─────
+
+/**
+ * A system description extracted from conversation, pending user review.
+ *
+ * Not yet saved — the user must review and confirm before it becomes
+ * a DraftSystem or SavedSystem. This prevents auto-saving and ensures
+ * the user controls what gets persisted.
+ */
+export interface ProposedSystem {
+  /** Suggested system name (e.g. "Your system" or derived from components). */
+  suggestedName: string;
+  /** Extracted component candidates — best-effort from conversation. */
+  components: DraftSystemComponent[];
+  /** The user message that triggered extraction. */
+  sourceQuery: string;
+  /** Fingerprint for duplicate suppression (sorted brand+name, lowercased). */
+  fingerprint: string;
+}
+
 // ── Session state ───────────────────────────────────────
 
 export interface AudioSessionState {
@@ -95,6 +115,8 @@ export interface AudioSessionState {
   draftSystem: DraftSystem | null;
   /** True while fetching saved systems from the backend on mount. */
   loading: boolean;
+  /** Conversation-extracted system pending user review. Null when none. */
+  proposedSystem: ProposedSystem | null;
 }
 
 // ── Active system context for advisory builders ─────────

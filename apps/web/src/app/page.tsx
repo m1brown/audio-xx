@@ -33,6 +33,9 @@ import { resolveActiveSystemContext, activeSystemToProfile } from '@/lib/system-
 import SystemBadge from '@/components/system/SystemBadge';
 import SystemPanel from '@/components/system/SystemPanel';
 import SystemEditor from '@/components/system/SystemEditor';
+import SystemSavePrompt from '@/components/system/SystemSavePrompt';
+import { detectSystemDescription } from '@/lib/system-extraction';
+import type { DraftSystem } from '@/lib/system-types';
 
 // ── Constants ─────────────────────────────────────────
 
@@ -165,12 +168,16 @@ export default function Home() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { messages, currentInput, turnCount, isLoading } = state;
   const { status } = useSession();
-  const { state: audioState } = useAudioSession();
+  const { state: audioState, dispatch: audioDispatch } = useAudioSession();
 
   // ── System panel/editor UI state (local, not in context) ──
   const [systemPanelOpen, setSystemPanelOpen] = useState(false);
   const [systemEditorOpen, setSystemEditorOpen] = useState(false);
   const [editingDraft, setEditingDraft] = useState(false);
+  /** Prefill data for editor when opening from a proposed system. */
+  const [editorPrefill, setEditorPrefill] = useState<DraftSystem | null>(null);
+  /** Fingerprints of dismissed proposals — prevents re-prompting same system. */
+  const dismissedFingerprintsRef = useRef(new Set<string>());
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -245,6 +252,18 @@ export default function Home() {
     // Detect intent BEFORE running the evaluation engine
     // (moved above consultation so subjectMatches are available for brand comparison routing)
     let { intent, subjects, subjectMatches, desires } = detectIntent(submittedText);
+
+    // ── System description detection (Phase 5) ──────────
+    // Check if the user is describing an owned system. If so, store a
+    // ProposedSystem for the save prompt. This runs alongside advisory
+    // logic — it doesn't interfere with routing or builder output.
+    const proposed = detectSystemDescription(submittedText, subjectMatches, audioState);
+    if (proposed && !dismissedFingerprintsRef.current.has(proposed.fingerprint)) {
+      audioDispatch({ type: 'SET_PROPOSED_SYSTEM', proposed });
+    } else if (!proposed) {
+      // Clear any stale proposal from a previous turn
+      audioDispatch({ type: 'SET_PROPOSED_SYSTEM', proposed: null });
+    }
 
     // ── Comparison follow-up detection ─────────────────
     // If an active comparison exists and the message looks like a
@@ -633,11 +652,13 @@ export default function Home() {
             onCreateNew={() => {
               setSystemPanelOpen(false);
               setEditingDraft(false);
+              setEditorPrefill(null);
               setSystemEditorOpen(true);
             }}
             onEditDraft={() => {
               setSystemPanelOpen(false);
               setEditingDraft(true);
+              setEditorPrefill(null);
               setSystemEditorOpen(true);
             }}
           />
@@ -647,9 +668,15 @@ export default function Home() {
       {/* System editor modal */}
       {systemEditorOpen && (
         <SystemEditor
-          initial={editingDraft ? audioState.draftSystem : null}
-          onClose={() => setSystemEditorOpen(false)}
-          onSaved={() => setSystemEditorOpen(false)}
+          initial={editorPrefill ?? (editingDraft ? audioState.draftSystem : null)}
+          onClose={() => {
+            setSystemEditorOpen(false);
+            setEditorPrefill(null);
+          }}
+          onSaved={() => {
+            setSystemEditorOpen(false);
+            setEditorPrefill(null);
+          }}
         />
       )}
 
@@ -733,6 +760,32 @@ export default function Home() {
                 <MessageBubble key={i} message={msg} />
               </div>
             ))}
+          {/* System save prompt — appears when a system description was detected */}
+          {!isLoading && audioState.proposedSystem && (
+            <SystemSavePrompt
+              proposed={audioState.proposedSystem}
+              onReviewAndSave={() => {
+                const p = audioState.proposedSystem;
+                if (!p) return;
+                // Convert ProposedSystem to DraftSystem for the editor
+                const prefill: DraftSystem = {
+                  name: p.suggestedName,
+                  components: p.components,
+                  tendencies: null,
+                  notes: null,
+                };
+                setEditorPrefill(prefill);
+                setEditingDraft(false);
+                setSystemEditorOpen(true);
+                audioDispatch({ type: 'SET_PROPOSED_SYSTEM', proposed: null });
+              }}
+              onDismiss={() => {
+                const fp = audioState.proposedSystem?.fingerprint;
+                if (fp) dismissedFingerprintsRef.current.add(fp);
+                audioDispatch({ type: 'SET_PROPOSED_SYSTEM', proposed: null });
+              }}
+            />
+          )}
           {isLoading && (
             <ThinkingIndicator />
           )}

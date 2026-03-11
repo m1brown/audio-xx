@@ -40,6 +40,7 @@ import type {
   ActiveSystemRef,
   DraftSystem,
   DraftSystemSnapshot,
+  ProposedSystem,
   SavedSystem,
 } from './system-types';
 
@@ -60,6 +61,7 @@ function buildInitialState(): AudioSessionState {
     savedSystems: [],
     draftSystem: draft,
     loading: false,
+    proposedSystem: null,
   };
 }
 
@@ -72,7 +74,8 @@ type AudioSessionAction =
   | { type: 'SET_SAVED_SYSTEMS'; systems: SavedSystem[]; activeSystemId: string | null }
   | { type: 'PROMOTE_DRAFT_TO_SAVED'; saved: SavedSystem }
   | { type: 'CLEAR_SYSTEM_STATE' }
-  | { type: 'SET_LOADING'; loading: boolean };
+  | { type: 'SET_LOADING'; loading: boolean }
+  | { type: 'SET_PROPOSED_SYSTEM'; proposed: ProposedSystem | null };
 
 // ── Reducer ─────────────────────────────────────────────
 
@@ -148,10 +151,14 @@ function audioSessionReducer(
         savedSystems: [],
         draftSystem: null,
         loading: false,
+        proposedSystem: null,
       };
 
     case 'SET_LOADING':
       return { ...state, loading: action.loading };
+
+    case 'SET_PROPOSED_SYSTEM':
+      return { ...state, proposedSystem: action.proposed };
 
     default:
       return state;
