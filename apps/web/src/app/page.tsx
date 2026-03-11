@@ -30,6 +30,9 @@ import { reason } from '@/lib/reasoning';
 import type { ReasoningResult } from '@/lib/reasoning';
 import { useAudioSession } from '@/lib/audio-session-context';
 import { resolveActiveSystemContext, activeSystemToProfile } from '@/lib/system-bridge';
+import SystemBadge from '@/components/system/SystemBadge';
+import SystemPanel from '@/components/system/SystemPanel';
+import SystemEditor from '@/components/system/SystemEditor';
 
 // ── Constants ─────────────────────────────────────────
 
@@ -163,6 +166,11 @@ export default function Home() {
   const { messages, currentInput, turnCount, isLoading } = state;
   const { status } = useSession();
   const { state: audioState } = useAudioSession();
+
+  // ── System panel/editor UI state (local, not in context) ──
+  const [systemPanelOpen, setSystemPanelOpen] = useState(false);
+  const [systemEditorOpen, setSystemEditorOpen] = useState(false);
+  const [editingDraft, setEditingDraft] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -594,6 +602,35 @@ export default function Home() {
       >
         Audio XX
       </h1>
+
+      {/* System badge + panel */}
+      <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
+        <SystemBadge onClick={() => setSystemPanelOpen((v) => !v)} />
+        {systemPanelOpen && (
+          <SystemPanel
+            onClose={() => setSystemPanelOpen(false)}
+            onCreateNew={() => {
+              setSystemPanelOpen(false);
+              setEditingDraft(false);
+              setSystemEditorOpen(true);
+            }}
+            onEditDraft={() => {
+              setSystemPanelOpen(false);
+              setEditingDraft(true);
+              setSystemEditorOpen(true);
+            }}
+          />
+        )}
+      </div>
+
+      {/* System editor modal */}
+      {systemEditorOpen && (
+        <SystemEditor
+          initial={editingDraft ? audioState.draftSystem : null}
+          onClose={() => setSystemEditorOpen(false)}
+          onSaved={() => setSystemEditorOpen(false)}
+        />
+      )}
 
       {/* Intro — only before conversation starts */}
       {!hasMessages && (
