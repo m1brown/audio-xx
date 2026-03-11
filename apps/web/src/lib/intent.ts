@@ -249,7 +249,7 @@ function extractSubjects(text: string): string[] {
 
 // ── Desire extraction ────────────────────────────────
 
-/** Audio qualities we recognize in desire expressions. */
+/** Audio qualities we recognize in desire expressions (noun/abstract forms). */
 const KNOWN_QUALITIES = [
   'speed', 'pace', 'timing', 'attack', 'transients',
   'warmth', 'body', 'richness', 'density', 'weight',
@@ -262,9 +262,61 @@ const KNOWN_QUALITIES = [
   'air', 'openness', 'sparkle', 'extension',
   'bass', 'treble', 'midrange',
   'glare', 'sibilance', 'harshness', 'fatigue',
+  'brightness', 'edge', 'sweetness', 'thinness', 'dullness',
 ];
 
-/** Patterns that express wanting more or less of a quality. */
+/**
+ * Map adjective and informal forms to their canonical KNOWN_QUALITIES noun.
+ * Only adjective forms NOT already in KNOWN_QUALITIES need mapping.
+ * This allows "warm" → "warmth", "harsh" → "harshness", etc.
+ */
+const QUALITY_ALIASES: Record<string, string> = {
+  warm: 'warmth',
+  rich: 'richness',
+  dense: 'density',
+  weighty: 'weight',
+  heavy: 'weight',
+  detailed: 'detail',
+  clear: 'clarity',
+  transparent: 'transparency',
+  smooth: 'smoothness',
+  relaxed: 'relaxation',
+  easy: 'ease',
+  dynamic: 'dynamics',
+  punchy: 'punch',
+  energetic: 'energy',
+  textured: 'texture',
+  grainy: 'grain',
+  refined: 'refinement',
+  airy: 'air',
+  open: 'openness',
+  spacious: 'soundstage',
+  wide: 'width',
+  deep: 'depth',
+  bright: 'brightness',
+  harsh: 'harshness',
+  thin: 'thinness',
+  sweet: 'sweetness',
+  dull: 'dullness',
+  sibilant: 'sibilance',
+  edgy: 'edge',
+  fast: 'speed',
+  slow: 'pace',
+  exciting: 'energy',
+  musical: 'musicality',
+  engaging: 'engagement',
+  natural: 'flow',
+  fatiguing: 'fatigue',
+};
+
+/** Resolve a word to a canonical quality, checking both KNOWN_QUALITIES and aliases. */
+function resolveQuality(word: string): string | null {
+  const lower = word.toLowerCase();
+  if (KNOWN_QUALITIES.includes(lower)) return lower;
+  return QUALITY_ALIASES[lower] ?? null;
+}
+
+/** Patterns that express wanting more or less of a quality (explicit framing). */
 const DESIRE_PATTERNS: { pattern: RegExp; direction: 'more' | 'less' }[] = [
   { pattern: /\bwant(?:s|ed|ing)?\s+more\s+(\w+)/i, direction: 'more' },
   { pattern: /\bneed(?:s|ed|ing)?\s+more\s+(\w+)/i, direction: 'more' },
@@ -280,20 +332,178 @@ const DESIRE_PATTERNS: { pattern: RegExp; direction: 'more' | 'less' }[] = [
   { pattern: /\b(?:like|love)s?\s+(?:it|my|the)\b.*\bbut\b.*\bless\s+(\w+)/i, direction: 'less' },
 ];
 
+// ── Implicit desire extraction ────────────────────────
+//
+// Handles compact audio-language preference phrasing where desires
+// are expressed without explicit framing verbs. These run as a second
+// pass after DESIRE_PATTERNS, adding any new desires not already captured.
+//
+// Categories:
+//   A. Negative phrasing: "no X", "not X", "without X", "avoid X", "less X"
+//   B. Explicit "more X" without framing verb
+//   C. Positive quality words in preference context
+//
+// To stay conservative, category C only fires when the sentence contains
+// a PREFERENCE_CONTEXT signal — language suggesting the user is describing
+// what they want from a component or system.
+
+/** Signals that the sentence is expressing preference, not just describing. */
+const PREFERENCE_CONTEXT_PATTERNS = [
+  /\blooking\s+for\b/i,
+  /\bwant/i,
+  /\bneed/i,
+  /\bprefer/i,
+  /\bseeking\b/i,
+  /\bafter\b/i,                     // "I'm after warmth and detail"
+  /\bfor\s+(?:my|a|the)\b/i,       // "cables for my system"
+  /\bcables?\b/i,                   // cable queries are inherently preference-expressing
+  /\binterconnects?\b/i,
+  /\brecommend/i,
+  /\bsuggestion/i,
+  /\badvice\b/i,
+  /\bupgrade\b/i,
+  /\bbest\b/i,
+  /\bshould\b/i,
+  /\bbut\b/i,                       // contrast implies preference: "warm but detailed"
+  /\bwith\s+no\b/i,                 // "warm with no glare"
+  /\bwithout\b/i,                   // "detail without fatigue"
+  /\bstill\b/i,                     // "warm but still detailed"
+  /\bmore\b/i,                      // "more air and openness" implies preference
+  /\bless\b/i,                      // "less edge" implies preference
+  /\bnot\b/i,                       // "smooth, not dull" implies preference
+  /\bno\b/i,                        // "no glare" implies preference
+  /\bi\s+want\b/i,                  // "I want sweetness and flow"
+];
+
+/**
+ * Negative phrasing patterns — extract the quality word following negation.
+ * Each captures the quality word as group 1.
+ */
+const NEGATIVE_DESIRE_PATTERNS = [
+  /\bno\s+(\w+)/gi,                 // "no glare", "no fatigue"
+  /\bnot\s+(\w+)/gi,                // "not harsh", "not thin"
+  /\bwithout\s+(\w+)/gi,            // "without fatigue", "without glare"
+  /\bavoid\s+(\w+)/gi,              // "avoid brightness"
+  /\bless\s+(\w+)/gi,               // "less edge", "less brightness"
+  /\bnot\s+too\s+(\w+)/gi,          // "not too bright"
+  /\bnever\s+(\w+)/gi,              // "never harsh"
+];
+
+/**
+ * Explicit "more X" without a preceding framing verb.
+ * This catches "more air and openness" without "I want".
+ */
+const MORE_DESIRE_PATTERN = /\bmore\s+(\w+)/gi;
+
+/** Count how many recognized quality words appear in the text. */
+function countQualityWords(text: string): number {
+  const words = text.toLowerCase().split(/[\s,;:]+/);
+  let count = 0;
+  for (const w of words) {
+    const clean = w.replace(/[^a-z]/g, '');
+    if (clean && resolveQuality(clean)) count++;
+  }
+  return count;
+}
+
+/**
+ * Extract implicit desires from compact audio-preference phrasing.
+ * Returns desires not already present in the explicit extraction.
+ */
+function extractImplicitDesires(
+  text: string,
+  existingDesires: DesireSignal[],
+): DesireSignal[] {
+  const implicit: DesireSignal[] = [];
+
+  function addIfNew(quality: string, direction: 'more' | 'less', raw: string): void {
+    if (!existingDesires.some((d) => d.quality === quality && d.direction === direction)
+        && !implicit.some((d) => d.quality === quality && d.direction === direction)) {
+      implicit.push({ quality, direction, raw });
+    }
+  }
+
+  // Pass A: Negative phrasing — always fires (negation is unambiguous preference)
+  for (const pattern of NEGATIVE_DESIRE_PATTERNS) {
+    pattern.lastIndex = 0; // reset global regex
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(text)) !== null) {
+      const word = match[1].toLowerCase();
+      const quality = resolveQuality(word);
+      if (quality) {
+        addIfNew(quality, 'less', match[0]);
+      }
+    }
+  }
+
+  // Pass B: Explicit "more X" — always fires (direction is explicit)
+  MORE_DESIRE_PATTERN.lastIndex = 0;
+  let moreMatch: RegExpExecArray | null;
+  while ((moreMatch = MORE_DESIRE_PATTERN.exec(text)) !== null) {
+    const word = moreMatch[1].toLowerCase();
+    const quality = resolveQuality(word);
+    if (quality) {
+      addIfNew(quality, 'more', moreMatch[0]);
+    }
+  }
+
+  // Pass C: Bare positive qualities in preference context
+  // Only fires when the sentence contains preference-context signals OR
+  // when the text contains 2+ recognized quality words (a quality list
+  // like "sweetness and flow" is inherently preference language).
+  const hasPreferenceContext = PREFERENCE_CONTEXT_PATTERNS.some((p) => p.test(text))
+    || countQualityWords(text) >= 2;
+  if (hasPreferenceContext) {
+    // Tokenize into words, check each against quality vocabulary
+    const words = text.toLowerCase().split(/[\s,;:]+/);
+    // Track which words are inside a negative phrase to avoid double-counting
+    const negatedPositions = new Set<number>();
+    for (let i = 0; i < words.length; i++) {
+      if (/^(no|not|without|avoid|less|never)$/.test(words[i])) {
+        // Mark the next 1-2 words as negated
+        negatedPositions.add(i + 1);
+        if (words[i] === 'not' && words[i + 1] === 'too') {
+          negatedPositions.add(i + 2);
+        }
+      }
+    }
+
+    for (let i = 0; i < words.length; i++) {
+      if (negatedPositions.has(i)) continue; // already captured by pass A
+      const word = words[i].replace(/[^a-z]/g, ''); // strip punctuation
+      if (!word) continue;
+      const quality = resolveQuality(word);
+      if (quality) {
+        // Skip qualities that are inherently negative (wanting "more glare" is unlikely)
+        const NEGATIVE_QUALITIES = ['glare', 'sibilance', 'harshness', 'fatigue', 'brightness', 'edge', 'thinness', 'dullness', 'grain'];
+        if (NEGATIVE_QUALITIES.includes(quality)) continue;
+        addIfNew(quality, 'more', word);
+      }
+    }
+  }
+
+  return implicit;
+}
+
 function extractDesires(text: string): DesireSignal[] {
+  // Pass 1: Explicit framing patterns ("want more X", "too much X")
   const desires: DesireSignal[] = [];
   for (const { pattern, direction } of DESIRE_PATTERNS) {
     const match = text.match(pattern);
     if (match && match[1]) {
-      const quality = match[1].toLowerCase();
-      if (KNOWN_QUALITIES.includes(quality)) {
-        // Avoid duplicates
+      const quality = resolveQuality(match[1]);
+      if (quality) {
         if (!desires.some((d) => d.quality === quality && d.direction === direction)) {
           desires.push({ quality, direction, raw: match[0] });
         }
       }
     }
   }
+
+  // Pass 2: Implicit compact phrasing ("no glare", "warm but detailed")
+  const implicit = extractImplicitDesires(text, desires);
+  desires.push(...implicit);
+
   return desires;
 }
 

@@ -2014,6 +2014,8 @@ export function buildCableAdvisory(
     tendencies = `Your system leans toward precision and speed (${systemComponents.join(', ')}). You've expressed wanting ${desireParts.join(' and ')}. Cable choices can either reinforce the existing transparency or introduce a degree of warmth and body. For ${desireParts.join(' and ')}, look for cables with copper conductors and relaxed geometries rather than silver or aggressive shielding.`;
   } else if (systemLean === 'warm' && desireParts.length > 0) {
     tendencies = `Your system already leans warm (${systemComponents.join(', ')}). You've expressed wanting ${desireParts.join(' and ')}. Cable choices should complement rather than compound the existing warmth. For detail and sparkle, silver-plated or silver-core cables can introduce some upper-frequency energy, but be cautious about glare if the system is already bright in other ways.`;
+  } else if (systemLean === 'balanced' && desireParts.length > 0) {
+    tendencies = `Your system combines components with different tendencies (${systemComponents.join(', ')}), suggesting a deliberate balance. You've expressed wanting ${desireParts.join(' and ')}. Since the system is already balanced, cables can nudge the presentation in that direction without risk of overcorrection. The goal is refinement, not transformation.`;
   } else if (systemLean === 'balanced') {
     tendencies = `Your system combines components with different tendencies (${systemComponents.join(', ')}), suggesting a deliberate balance. Cable choices should preserve this balance. Neutral, well-constructed cables that don't impose a strong character of their own are usually the safest direction here.`;
   } else if (desireParts.length > 0) {
