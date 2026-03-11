@@ -433,7 +433,7 @@ export default function Home() {
 
     // Gear inquiries and comparisons — conversational path, skip diagnostic engine
     if (intent === 'gear_inquiry' || intent === 'comparison') {
-      const gearResponse = buildGearResponse(intent, subjects, submittedText, desires, tasteProfile ?? undefined);
+      const gearResponse = buildGearResponse(intent, subjects, submittedText, desires, tasteProfile ?? undefined, activeSystem);
       if (gearResponse) {
         // Store comparison context for product-level comparisons
         if (intent === 'comparison' && subjectMatches.length >= 2) {

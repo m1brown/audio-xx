@@ -65,7 +65,10 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   yggdrasil: { brand: 'Schiit', category: 'dac' },
   modi: { brand: 'Schiit', category: 'dac' },
   modius: { brand: 'Schiit', category: 'dac' },
-  // Chord
+  // Chord (compound names first so longer keys match before shorter)
+  'hugo tt2': { brand: 'Chord', category: 'dac' },
+  'hugo tt': { brand: 'Chord', category: 'dac' },
+  'hugo 2': { brand: 'Chord', category: 'dac' },
   qutest: { brand: 'Chord', category: 'dac' },
   hugo: { brand: 'Chord', category: 'dac' },
   dave: { brand: 'Chord', category: 'dac' },

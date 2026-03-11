@@ -18,6 +18,7 @@
 
 import type { GearResponse } from './conversation-types';
 import type { UserIntent, DesireSignal } from './intent';
+import type { ActiveSystemContext } from './system-types';
 import { DAC_PRODUCTS, type Product } from './products/dacs';
 import { SPEAKER_PRODUCTS } from './products/speakers';
 import { inferSystemDirection, type SystemDirection } from './system-direction';
@@ -54,25 +55,53 @@ import { detectChurnSignal, buildChurnNote, type ChurnSignal } from './churn-avo
 
 const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS];
 
+/**
+ * Resolve subject strings to catalog Product entries.
+ *
+ * Priority order (highest first):
+ *   1. Exact product name match (subject === product.name)
+ *   2. Exact full name match (subject === "brand name")
+ *   3. Product name contained in subject or vice versa
+ *   4. Brand-level fallback (subject matches brand)
+ *
+ * When an exact match exists, brand-level fallbacks are suppressed for
+ * that subject so "Hugo TT2" never resolves to Qutest.
+ */
 function findProducts(subjects: string[]): Product[] {
   if (subjects.length === 0) return [];
   const found: Product[] = [];
+
   for (const subject of subjects) {
     const lower = subject.toLowerCase();
+    let bestMatch: Product | null = null;
+    let bestScore = 0;
+
     for (const product of ALL_PRODUCTS) {
       const brandLower = product.brand.toLowerCase();
       const nameLower = product.name.toLowerCase();
-      if (
-        brandLower === lower ||
-        nameLower === lower ||
-        `${brandLower} ${nameLower}`.includes(lower) ||
-        lower.includes(brandLower) ||
-        lower.includes(nameLower)
-      ) {
-        if (!found.some((p) => p.id === product.id)) {
-          found.push(product);
-        }
+      const fullLower = `${brandLower} ${nameLower}`;
+
+      let score = 0;
+      if (nameLower === lower || fullLower === lower) {
+        score = 4; // exact match
+      } else if (lower.includes(nameLower) && lower.includes(brandLower)) {
+        score = 3; // subject contains both brand and product name
+      } else if (lower.includes(nameLower)) {
+        score = 2; // subject contains product name
+      } else if (nameLower.includes(lower)) {
+        score = 1; // product name contains subject (partial)
+      } else if (lower.includes(brandLower) || brandLower === lower) {
+        score = 0; // brand-only — do not add via this path
       }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = product;
+      }
+    }
+
+    if (bestMatch && !found.some((p) => p.id === bestMatch!.id)) {
+      found.push(bestMatch);
     }
   }
   return found;
@@ -515,6 +544,44 @@ function buildHearingBlock(
   return bullets.slice(0, 4);
 }
 
+// ── System context for comparisons ───────────────────
+
+/**
+ * Build a note about how a product comparison relates to the user's
+ * active system. Returns null when no system is selected.
+ */
+function buildSystemComparisonNote(
+  a: Product,
+  b: Product,
+  activeSystem: ActiveSystemContext | null | undefined,
+): string | null {
+  if (!activeSystem || activeSystem.components.length === 0) return null;
+
+  const componentNames = activeSystem.components
+    .map((c) => `${c.brand} ${c.name}`)
+    .join(', ');
+
+  // Identify which product is the "current" (in the system) and which is the "candidate"
+  const aInSystem = activeSystem.components.some(
+    (c) => c.name.toLowerCase() === a.name.toLowerCase()
+      || `${c.brand} ${c.name}`.toLowerCase() === `${a.brand} ${a.name}`.toLowerCase(),
+  );
+  const bInSystem = activeSystem.components.some(
+    (c) => c.name.toLowerCase() === b.name.toLowerCase()
+      || `${c.brand} ${c.name}`.toLowerCase() === `${b.brand} ${b.name}`.toLowerCase(),
+  );
+
+  if (aInSystem && !bInSystem) {
+    return `Your current system includes the ${a.brand} ${a.name} (alongside ${componentNames}). The question is what the ${b.brand} ${b.name} would change in that context — not just how the two compare in isolation.`;
+  }
+  if (bInSystem && !aInSystem) {
+    return `Your current system includes the ${b.brand} ${b.name} (alongside ${componentNames}). The question is what the ${a.brand} ${a.name} would change in that context — not just how the two compare in isolation.`;
+  }
+
+  // Neither is in system — still note the system context
+  return `Your current system (${componentNames}) provides context for this comparison. How either product interacts with the rest of the chain would likely matter more than how they compare in isolation.`;
+}
+
 // ── Public API ───────────────────────────────────────
 
 export function buildGearResponse(
@@ -523,6 +590,7 @@ export function buildGearResponse(
   currentMessage: string,
   desires: DesireSignal[] = [],
   tasteProfile?: TasteProfile,
+  activeSystem?: ActiveSystemContext | null,
 ): GearResponse | null {
   if (intent !== 'gear_inquiry' && intent !== 'comparison') return null;
 
@@ -568,16 +636,35 @@ export function buildGearResponse(
 
     if (a && b) {
       const archetypeFrame = compareProductArchetypes(a, b);
+      const systemNote = buildSystemComparisonNote(a, b, activeSystem);
+
+      // Build system-aware anchor — when a system is selected, frame the
+      // comparison in the context of what it would change in the system
+      const baseAnchor = systemNote
+        ? `${systemNote} Here is how the two compare.`
+        : `The ${a.brand} ${a.name} and ${b.brand} ${b.name} come from quite different design traditions.`;
+
+      // Build system-aware direction — add chain interaction note
+      let directionText = withDirection(buildComparisonDirection(a, b));
+      if (activeSystem && activeSystem.components.length > 0) {
+        // Check if this is an upgrade within the same brand lineage
+        if (a.brand === b.brand) {
+          directionText += ` Since both share the ${a.brand} ${a.architecture} architecture, the change would likely be one of scale and refinement rather than philosophical shift.`;
+        }
+      }
+
       return {
         intent,
         subjects,
-        anchor: withTendency(`The ${a.brand} ${a.name} and ${b.brand} ${b.name} come from quite different design traditions.`),
+        anchor: withTendency(baseAnchor),
         character: `${archetypeFrame} ${productCharacter(a, desires.length > 0 ? [desires[0].quality] : [])} ${productCharacter(b, desires.length > 0 ? [desires[0].quality] : [])}`,
         interpretation: desires.length > 0
           ? QUALITY_PROFILES[desires[0].quality]?.interpretation
           : undefined,
-        direction: withDirection(buildComparisonDirection(a, b)),
-        clarification: pick(COMPARISON_CLARIFICATIONS, seed),
+        direction: directionText,
+        clarification: systemNote
+          ? 'What specific quality are you hoping this change would improve in your system?'
+          : pick(COMPARISON_CLARIFICATIONS, seed),
         systemDirection: sysDir,
         hearing,
         userArchetype: sysDir.inferredArchetype

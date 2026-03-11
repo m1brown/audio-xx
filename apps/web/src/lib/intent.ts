@@ -72,30 +72,44 @@ const BRAND_NAMES = [
   'moondrop', 'apple',
 ];
 
-/** Specific product / model names. */
+/**
+ * Specific product / model names.
+ *
+ * IMPORTANT: Sorted longest-first so that compound names like 'hugo tt2'
+ * match before their shorter substrings ('hugo', 'tt2'). The entity
+ * resolver relies on this ordering to guarantee exact-match priority.
+ */
 const PRODUCT_NAMES = [
+  // ── Compound names first (longest match wins) ──────
+  'hugo tt2', 'hugo tt', 'hugo 2',
+  'diva monitor', 'super hl5', 'dirty weekend',
+  'hd 800 s', 'hd 800', 'hd 650', 'hd 600',
+  'airpods pro 2', 'airpods pro',
+  'wh-1000xm5', 'wh-1000xm4',
+  'ath-m50xbt2', 'ath-m50x',
+  'pontus ii', 'ares 12th-1',
+  'edition xs',
+  'planar 10', 'planar 8', 'planar 6', 'planar 3',
+  'sl-1200', 'sl-1500c', 'sl-1210',
+  'la voce', 'adi-2',
+  'x2 b',
+  'aria 2', 'blessing 3', 'aonic 3',
+  // ── Single-token names ─────────────────────────────
   'spring', 'may', 'ares', 'pontus', 'venus', 'terminator',
   'bifrost', 'gungnir', 'yggdrasil', 'modi', 'modius',
   'qutest', 'hugo', 'dave', 'mojo', 'tt2',
-  'dac3', 'dac4', 'adi-2', 'brooklyn', 'tambaqui',
-  'wavelight', 'wavedream', 'la voce', 'formula',
+  'dac3', 'dac4', 'brooklyn', 'tambaqui',
+  'wavelight', 'wavedream', 'formula',
   'pavane', 'adagio', 'pegasus', 'aquarius', 'draco', 'dac8',
-  'diva', 'diva monitor',
-  'p3esr', 'super hl5', 'orangutan', 'o/96', 'o96',
-  'dirty weekend', 'heresy', 'kanta', 'aria',
+  'diva',
+  'p3esr', 'orangutan', 'o/96', 'o96',
+  'heresy', 'kanta', 'aria',
   'w5', 'w8', 'w11',
-  // Turntables
-  'planar 3', 'planar 6', 'planar 8', 'planar 10',
-  'sl-1200', 'sl-1500c', 'sl-1210',
-  'x2 b', 'x8',
-  // Headphones / IEMs
-  'hd 600', 'hd 650', 'hd 800', 'hd 800 s', 'momentum 4',
-  'wh-1000xm5', 'wh-1000xm4',
-  'airpods pro', 'airpods pro 2',
-  'aria 2', 'blessing 3', 'kato',
-  'er2xr', 'er2se', 'aonic 3',
-  'ath-m50x', 'ath-m50xbt2',
-  'sundara', 'edition xs',
+  'x8',
+  'momentum 4',
+  'er2xr', 'er2se',
+  'kato',
+  'sundara',
 ];
 
 /** Combined list for backward-compatible subject extraction. */
@@ -131,6 +145,14 @@ const COMPARISON_PATTERNS = [
   /\bdifference[s]?\s+between\b/i,
   /\bor\b.*\bfor\b/i,          // "Bifrost or Pontus for my system"
   /\bhow\s+(?:does|do)\b.*\bcompare\b/i,
+  // ── Upgrade / replacement patterns ─────────────────
+  // "upgrade from X to Y", "replace X with Y", "swap X for Y"
+  /\bupgrade\s+(?:from|my)\b/i,
+  /\breplace\s+(?:my|the|a)\b.*\bwith\b/i,
+  /\bswap\s+(?:my|the|a)\b.*\b(?:for|with|to)\b/i,
+  /\bchange\s+(?:from|my)\b.*\bto\b/i,
+  /\bmove\s+(?:from|up\s+from)\b.*\bto\b/i,
+  /\bwhat\s+would\b.*\b(?:upgrade|change|swap|switch|move)\b/i,
 ];
 
 // ── Shopping patterns ────────────────────────────────
@@ -228,12 +250,25 @@ const DIAGNOSIS_PATTERNS = [
 function extractSubjectMatches(text: string): SubjectMatch[] {
   const lower = text.toLowerCase();
   const found: SubjectMatch[] = [];
-  // Check product names first (more specific — "ares" is a product, not a brand)
-  for (const name of PRODUCT_NAMES) {
-    if (lower.includes(name)) {
-      found.push({ name, kind: 'product' });
-    }
+
+  // Track which character spans have already been claimed by a longer match.
+  // This prevents 'hugo' from matching when 'hugo tt2' already claimed those characters.
+  const claimedRanges: Array<[number, number]> = [];
+
+  function isSpanClaimed(start: number, end: number): boolean {
+    return claimedRanges.some(([cs, ce]) => start >= cs && end <= ce);
   }
+
+  // PRODUCT_NAMES is sorted longest-first so compound names win over substrings.
+  for (const name of PRODUCT_NAMES) {
+    const idx = lower.indexOf(name);
+    if (idx === -1) continue;
+    const end = idx + name.length;
+    if (isSpanClaimed(idx, end)) continue;
+    found.push({ name, kind: 'product' });
+    claimedRanges.push([idx, end]);
+  }
+
   // Then check brand names, skip if already matched as product
   for (const name of BRAND_NAMES) {
     if (lower.includes(name) && !found.some((f) => f.name === name)) {

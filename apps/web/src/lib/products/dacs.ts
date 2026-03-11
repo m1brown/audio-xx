@@ -647,6 +647,136 @@ export const DAC_PRODUCTS: Product[] = [
   },
 
   {
+    id: 'chord-hugo',
+    brand: 'Chord',
+    name: 'Hugo',
+    price: 1600,
+    category: 'dac',
+    architecture: 'FPGA',
+    subcategory: 'portable-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'uk',
+    country: 'GB',
+    topology: 'fpga',
+    archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'flow', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 0.7,
+      tonal_density: 0.4,
+      clarity: 1.0,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 0.7,
+      elasticity: 0.4,
+      composure: 0.4,
+    },
+    description:
+      'Portable FPGA-based DAC/headphone amplifier with Chord\'s proprietary pulse array technology. Shares the Chord house sound — timing precision and transient clarity — in a compact form factor with crossfeed and headphone output.',
+    retailer_links: [
+      { label: 'Chord Electronics', url: 'https://chordelectronics.co.uk/product/hugo/' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'timing', tendency: 'fast, precise transient resolution from FPGA pulse array — the Chord signature at a portable scale', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'lighter tonal balance than desktop Chord units — speed over weight', basis: 'listener_consensus' },
+        { domain: 'spatial', tendency: 'good headphone staging for a portable device, with usable crossfeed', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'as a desktop source feeding external amplification', effect: 'the timing precision translates well but the output stage is optimised for headphones — dedicated desktop sources may have more authority', valence: 'neutral', basis: 'editorial_inference' },
+        { condition: 'paired with warm headphones or IEMs', effect: 'the Chord clarity tends to complement warmer transducers without thinning the presentation', valence: 'positive', basis: 'listener_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'portability, timing precision, and Chord FPGA character', cost: 'the scale, composure, and output authority of desktop Chord units like Qutest or Hugo TT2', relative_to: 'Chord desktop lineup', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'What Hi-Fi?', note: 'Review of original Hugo covering portability and Chord FPGA character.' },
+      { source: 'Head-Fi community', note: 'Extensive headphone pairing impressions and comparisons with Hugo 2 and Qutest.' },
+    ],
+  },
+
+  {
+    id: 'chord-hugo-tt2',
+    brand: 'Chord',
+    name: 'Hugo TT2',
+    price: 5495,
+    category: 'dac',
+    architecture: 'FPGA',
+    subcategory: 'dac-preamp',
+    priceTier: 'high-end',
+    brandScale: 'specialist',
+    region: 'uk',
+    country: 'GB',
+    topology: 'fpga',
+    archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'composure', level: 'emphasized' },
+        { trait: 'flow', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'elasticity', level: 'present' },
+        { trait: 'tonal_density', level: 'present' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 0.7,
+      tonal_density: 0.7,
+      clarity: 1.0,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 0.7,
+      elasticity: 0.7,
+      composure: 1.0,
+    },
+    description:
+      'Desktop reference FPGA DAC/preamp with significantly more taps than the Hugo or Qutest. The additional processing power delivers greater composure, fuller tonal density, and a more effortless presentation while retaining the Chord timing signature.',
+    retailer_links: [
+      { label: 'Chord Electronics', url: 'https://chordelectronics.co.uk/product/hugo-tt2/' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'timing', tendency: 'the same FPGA pulse array timing precision as the Qutest and Hugo, but with greater effortlessness — transients resolve fully without strain', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'more tonal weight and midrange authority than lower Chord models — the additional tap count fills out the harmonic picture', basis: 'listener_consensus' },
+        { domain: 'spatial', tendency: 'wide, composed staging with excellent depth layering and stable imaging', basis: 'review_consensus' },
+        { domain: 'dynamics', tendency: 'effortless dynamic scaling — handles peaks without compression or hardening', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'as a preamp driving power amplification directly', effect: 'the preamp output stage is designed for this use — tends to deliver a more composed result than running through a separate preamp', valence: 'positive', basis: 'manufacturer_intent' },
+        { condition: 'compared to Qutest or Hugo in the same system', effect: 'the primary gains are composure, tonal density, and effortlessness — the timing signature is shared but the Hugo TT2 delivers it with greater authority', valence: 'positive', basis: 'listener_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'composure, tonal density, effortless dynamics, and preamp capability', cost: 'significant price premium over Qutest for incremental rather than architectural change', relative_to: 'Chord Qutest and Hugo', basis: 'listener_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Stereophile', note: 'Review covering Hugo TT2 tap count, composure, and desktop reference performance.' },
+      { source: 'Darko.Audio', note: 'Comparison with Qutest and Hugo 2 covering upgrade path reasoning.' },
+      { source: 'Head-Fi community', note: 'Extensive impressions on Hugo TT2 as preamp/DAC and comparisons within the Chord lineup.' },
+    ],
+  },
+
+  {
     id: 'chord-qutest',
     brand: 'Chord',
     name: 'Qutest',
