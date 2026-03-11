@@ -35,8 +35,8 @@ const ARCHETYPE_LABELS: Record<SonicArchetype, string> = {
 export type ShoppingCategory =
   | 'dac'
   | 'amplifier'
-  | 'speakers'
-  | 'headphones'
+  | 'speaker'
+  | 'headphone'
   | 'streamer'
   | 'turntable'
   | 'general';
@@ -57,10 +57,15 @@ export interface CategoryDependency {
   refinementHint: string | null;
 }
 
+/** Optional subcategory for finer routing (e.g. cables within 'general'). */
+export type ShoppingSubcategory = 'cables' | undefined;
+
 export interface ShoppingContext {
   detected: boolean;
   mode: ShoppingMode;
   category: ShoppingCategory;
+  /** Finer classification within category. */
+  subcategory?: ShoppingSubcategory;
   budgetMentioned: boolean;
   budgetAmount: number | null;
   tasteProvided: boolean;
@@ -106,6 +111,24 @@ const INTENT_KEYWORDS = [
   'versus',
 ];
 
+// ── Cable modifier detection ─────────────────────────
+// Must run before category keyword matching to prevent
+// "speaker cable" from matching the 'speaker' category.
+
+const CABLE_MODIFIER_PATTERNS = [
+  /\bspeaker\s+cables?\b/i,
+  /\brca\s+cables?\b/i,
+  /\binterconnects?\b/i,
+  /\bpower\s+(?:cord|cable)s?\b/i,
+  /\busb\s+cables?\b/i,
+  /\bdigital\s+cables?\b/i,
+  /\bxlr\s+cables?\b/i,
+  /\banalog\s+cables?\b/i,
+  /\bcables?\s+(?:for|under|around|between)\b/i,
+  /\b(?:best|good|recommend)\b.*\bcables?\b/i,
+  /\bcabling\b/i,
+];
+
 // ── Category extraction ───────────────────────────────
 
 interface CategoryPattern {
@@ -123,11 +146,11 @@ const CATEGORY_PATTERNS: CategoryPattern[] = [
     keywords: ['amp', 'amplifier', 'integrated', 'power amp', 'preamp', 'pre-amp'],
   },
   {
-    category: 'speakers',
+    category: 'speaker',
     keywords: ['speaker', 'speakers', 'monitors', 'bookshelf', 'floorstanding', 'floor-standing'],
   },
   {
-    category: 'headphones',
+    category: 'headphone',
     keywords: ['headphone', 'headphones', 'iem', 'iems', 'earphone', 'earphones', 'cans'],
   },
   {
@@ -490,11 +513,20 @@ export function detectShoppingIntent(
   }
 
   // 2. Category
+  // Cable modifiers must be detected first to prevent "speaker cable"
+  // from matching the 'speaker' keyword in CATEGORY_PATTERNS.
   let category: ShoppingCategory = 'general';
-  for (const pat of CATEGORY_PATTERNS) {
-    if (pat.keywords.some((kw) => lower.includes(kw))) {
-      category = pat.category;
-      break;
+  let subcategory: ShoppingSubcategory = undefined;
+  const isCableRequest = CABLE_MODIFIER_PATTERNS.some((p) => p.test(userText));
+  if (isCableRequest) {
+    category = 'general';
+    subcategory = 'cables';
+  } else {
+    for (const pat of CATEGORY_PATTERNS) {
+      if (pat.keywords.some((kw) => lower.includes(kw))) {
+        category = pat.category;
+        break;
+      }
     }
   }
 
@@ -528,6 +560,7 @@ export function detectShoppingIntent(
     detected,
     mode,
     category,
+    subcategory,
     budgetMentioned,
     budgetAmount,
     tasteProvided,
@@ -592,9 +625,9 @@ function phraseTasteQuestion(ctx: ShoppingContext): string {
       return 'What matters most to you in how a DAC presents music — the texture and feel, or the clarity and precision?';
     case 'amplifier':
       return 'What do you value most in amplification — rhythmic energy and engagement, or composure and control?';
-    case 'speakers':
+    case 'speaker':
       return 'What are you hoping these speakers will do especially well?';
-    case 'headphones':
+    case 'headphone':
       return 'What matters most to you in the sound — warmth and immersion, or detail and separation?';
     case 'streamer':
       return 'Is the streamer your main source, or a transport feeding an external DAC?';
@@ -625,9 +658,9 @@ function phraseSystemQuestion(ctx: ShoppingContext): string {
       return 'What does the rest of your chain look like — amplification and speakers or headphones?';
     case 'amplifier':
       return 'What source and speakers will the amplifier be working with?';
-    case 'speakers':
+    case 'speaker':
       return 'What amp and source are driving the speakers?';
-    case 'headphones':
+    case 'headphone':
       return 'What DAC or source will be driving the headphones?';
     case 'turntable':
       return 'What amplification and speakers will the turntable feed into? And do you already have a phono stage?';
@@ -1059,8 +1092,8 @@ const FALLBACK_TASTE: Pick<TasteProfile, 'label' | 'defaultDirection' | 'default
 const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
   dac: 'DAC',
   amplifier: 'amplifier',
-  speakers: 'speakers',
-  headphones: 'headphones',
+  speaker: 'speakers',
+  headphone: 'headphones',
   streamer: 'streamer',
   turntable: 'turntable',
   general: 'component',
