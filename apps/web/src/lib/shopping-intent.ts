@@ -863,6 +863,8 @@ export interface ProductExample {
   fitNote: string;
   caution?: string;
   links?: { label: string; url: string; region?: string }[];
+  /** Named source references from the product catalog. */
+  sourceReferences?: Array<{ source: string; note: string }>;
 }
 
 export interface ShoppingAnswer {
@@ -1265,6 +1267,7 @@ function selectProductExamples(
     fitNote: buildFitNote(product, userTraits),
     caution: buildCaution(product),
     links: product.retailer_links.length > 0 ? product.retailer_links : undefined,
+    sourceReferences: product.sourceReferences,
   }));
 }
 

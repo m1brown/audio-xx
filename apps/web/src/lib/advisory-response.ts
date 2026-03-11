@@ -404,6 +404,20 @@ export function shoppingToAdvisory(
 
   const statedGaps = a.statedGaps?.map((g) => GAP_LABELS[g]);
 
+  // Collect source references from recommended products (deduplicated)
+  const sourceRefs: SourceReference[] = [];
+  const seenSources = new Set<string>();
+  for (const p of a.productExamples) {
+    if (p.sourceReferences) {
+      for (const ref of p.sourceReferences) {
+        if (!seenSources.has(ref.source)) {
+          seenSources.add(ref.source);
+          sourceRefs.push({ source: ref.source, note: ref.note });
+        }
+      }
+    }
+  }
+
   return enrichAdvisory({
     kind: 'shopping',
     subject: a.category,
@@ -421,6 +435,9 @@ export function shoppingToAdvisory(
     dependencyCaveat: a.dependencyCaveat,
 
     followUp: a.refinementQuestion,
+
+    // Source references from recommended products
+    sourceReferences: sourceRefs.length > 0 ? sourceRefs : undefined,
 
     // Diagnostics from signals
     diagnostics: signals ? {

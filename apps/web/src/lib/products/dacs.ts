@@ -91,6 +91,12 @@ export interface Product {
    * advisory explanations instead of the description field.
    */
   tendencies?: ProductTendencies;
+  /**
+   * Named source references — review publications, measurement resources,
+   * or trusted community references that informed the product's tendency data.
+   * Surfaced in the "Sources" section of advisory responses.
+   */
+  sourceReferences?: Array<{ source: string; note: string }>;
 }
 
 export const DAC_PRODUCTS: Product[] = [
@@ -392,6 +398,10 @@ export const DAC_PRODUCTS: Product[] = [
         { gains: 'rhythmic engagement and dynamic directness', cost: 'the smoothest possible treble and the deepest harmonic saturation', relative_to: 'R-2R designs at this price', basis: 'review_consensus' },
       ],
     },
+    sourceReferences: [
+      { source: 'Schiit Audio', note: 'Manufacturer commentary on multibit unison USB architecture.' },
+      { source: 'Darko.Audio', note: 'Video review comparing Bifrost 2 to competing R-2R and delta-sigma designs.' },
+    ],
   },
 
   {
@@ -517,6 +527,10 @@ export const DAC_PRODUCTS: Product[] = [
         { gains: 'musical continuity, texture, and listening ease', cost: 'transient sharpness and micro-detail retrieval', relative_to: 'oversampling designs at this price', basis: 'review_consensus' },
       ],
     },
+    sourceReferences: [
+      { source: '6Moons', note: 'Review covering the NOS tube output stage and its effect on musical continuity.' },
+      { source: 'Audiogon community', note: 'Tube-rolling reports and system pairing impressions.' },
+    ],
   },
 
   {
@@ -626,6 +640,10 @@ export const DAC_PRODUCTS: Product[] = [
         { gains: 'transparency, configurability, and measured performance', cost: 'the harmonic coloration and musical editorializing that some listeners find engaging', relative_to: 'R-2R and tube designs at this price', basis: 'review_consensus' },
       ],
     },
+    sourceReferences: [
+      { source: 'Audio Science Review', note: 'Comprehensive measurements confirming exceptional SINAD and parametric EQ capabilities.' },
+      { source: 'Head-Fi community', note: 'Extensive headphone pairing reports and EQ configuration sharing.' },
+    ],
   },
 
   {
@@ -687,6 +705,11 @@ export const DAC_PRODUCTS: Product[] = [
         { gains: 'timing precision and articulate detail', cost: 'the tonal density and midrange weight of R-2R conversion', relative_to: 'Denafrips and other R-2R designs', basis: 'review_consensus' },
       ],
     },
+    sourceReferences: [
+      { source: 'Darko.Audio', note: 'Review covering FPGA pulse array architecture and transient performance.' },
+      { source: 'What Hi-Fi?', note: 'Multi-award coverage noting detail retrieval and timing.' },
+      { source: 'Head-Fi community', note: 'Extensive listener impressions on tonal weight vs clarity balance.' },
+    ],
   },
 
   {
@@ -749,6 +772,11 @@ export const DAC_PRODUCTS: Product[] = [
         { gains: 'harmonic richness, texture, and tonal authority', cost: 'transient sharpness and the explicit separation of delta-sigma designs', relative_to: 'ESS-based DACs at this price', basis: 'review_consensus' },
       ],
     },
+    sourceReferences: [
+      { source: 'Audiophile Style', note: 'Detailed review of R-2R architecture and harmonic character.' },
+      { source: 'Audio Science Review', note: 'Measurement and listening coverage of the 12th anniversary revision.' },
+      { source: 'Head-Fi / Audiogon communities', note: 'Extensive comparisons with Chord, Schiit, and ESS-based alternatives.' },
+    ],
   },
 
   {
