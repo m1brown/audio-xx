@@ -117,7 +117,22 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </div>
       )}
 
-      {/* ── 2b. System assessment: component-by-component readings ── */}
+      {/* ── System Assessment Block ── */}
+      {/* When assessment fields are present, render the full structured
+          assessment: character → component readings → interaction →
+          strengths → limitations → upgrade direction.
+          This replaces the generic consultation prose for assessments. */}
+
+      {/* 2a. Overall system character (assessment opening) */}
+      {a.componentReadings && a.componentReadings.length > 0 && a.systemContext && (
+        <AdvisorySection label="System character">
+          <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
+            {a.systemContext}
+          </p>
+        </AdvisorySection>
+      )}
+
+      {/* 2b. Component-by-component readings */}
       {a.componentReadings && a.componentReadings.length > 0 && (
         <div style={{ marginBottom: '1.25rem' }}>
           {a.componentReadings.map((para, i) => (
@@ -128,7 +143,7 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </div>
       )}
 
-      {/* ── 2c. System assessment: how components interact ── */}
+      {/* 2c. How the components interact */}
       {a.systemInteraction && (
         <AdvisorySection label="How the components interact">
           <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
@@ -137,21 +152,21 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
-      {/* ── 2d. System assessment: what is working well ── */}
+      {/* 2d. What is working well (assessment) */}
       {a.assessmentStrengths && a.assessmentStrengths.length > 0 && (
         <AdvisorySection label="What is working well">
           <BulletList items={a.assessmentStrengths} />
         </AdvisorySection>
       )}
 
-      {/* ── 2e. System assessment: where limitations may appear ── */}
+      {/* 2e. Where limitations may appear (assessment) */}
       {a.assessmentLimitations && a.assessmentLimitations.length > 0 && (
         <AdvisorySection label="Where limitations may appear">
           <BulletList items={a.assessmentLimitations} color="#666" />
         </AdvisorySection>
       )}
 
-      {/* ── 2f. System assessment: likely upgrade direction ── */}
+      {/* 2f. Likely upgrade direction */}
       {a.upgradeDirection && (
         <AdvisorySection label="Likely upgrade direction">
           <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
@@ -160,8 +175,8 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
-      {/* ── 3. System context ────────────────────────── */}
-      {a.systemContext && !a.systemInteraction && (
+      {/* ── 3. System context (non-assessment consultations) ── */}
+      {a.systemContext && !a.componentReadings && (
         <AdvisorySection label="Your system">
           <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
             {a.systemContext}

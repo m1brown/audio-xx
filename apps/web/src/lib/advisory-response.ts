@@ -361,6 +361,11 @@ function enrichAdvisory(
 // ── Adapter: Consultation → Advisory ─────────────────
 
 export function consultationToAdvisory(c: ConsultationResponse): AdvisoryResponse {
+  // For system assessments, systemContext carries the character opening —
+  // map it to the dedicated systemContext field (not systemFit, which feeds
+  // into AdvisoryProse and would duplicate the content).
+  const isAssessment = !!(c.componentReadings && c.componentReadings.length > 0);
+
   return enrichAdvisory({
     kind: 'consultation',
     subject: c.subject,
@@ -368,7 +373,8 @@ export function consultationToAdvisory(c: ConsultationResponse): AdvisoryRespons
     comparisonSummary: c.comparisonSummary,
     philosophy: c.philosophy,
     tendencies: c.tendencies,
-    systemFit: c.systemContext,
+    systemFit: isAssessment ? undefined : c.systemContext,
+    systemContext: isAssessment ? c.systemContext : undefined,
     followUp: c.followUp,
     links: c.links?.map((l) => ({
       label: l.label,

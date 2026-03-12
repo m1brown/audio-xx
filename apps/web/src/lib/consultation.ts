@@ -54,9 +54,9 @@ export interface ConsultationResponse {
    */
   comparisonSummary?: string;
   /** 1. Design philosophy — what it prioritizes. */
-  philosophy: string;
+  philosophy?: string;
   /** 2. Typical tendencies — how it tends to sound. */
-  tendencies: string;
+  tendencies?: string;
   /** 3. System context — where it works well. */
   systemContext?: string;
   /** 4. Optional light follow-up question. */
@@ -1833,26 +1833,53 @@ export function buildSystemAssessment(
   // ── Subject line ────────────────────────────────────
   const subject = components.map((c) => c.displayName).join(', ');
 
-  // ── Overall system character ────────────────────────
-  // Combines interaction summary + amp/speaker fit into a concise opening
-  const systemCharacterParts = [interactionSummary];
-  if (ampSpeakerFit) systemCharacterParts.push(ampSpeakerFit);
-  const systemCharacter = systemCharacterParts.join(' ');
+  // ── System character opening (brief) ──────────────
+  // A one-two sentence overview of the system's overall lean.
+  const systemCharacterOpening = inferSystemCharacterOpening(components);
+
+  // ── Interaction detail ──────────────────────────────
+  // How the components interact — more detailed architectural reading.
+  const interactionParts = [interactionSummary];
+  if (ampSpeakerFit) interactionParts.push(ampSpeakerFit);
+  const systemInteractionDetail = interactionParts.join(' ');
 
   return {
     subject: `Your system: ${subject}`,
-    // Leave philosophy/tendencies empty — the structured assessment fields carry the content
-    philosophy: '',
-    tendencies: '',
+    // Undefined — assessment sections carry all content; suppress AdvisoryProse
+    philosophy: undefined,
+    tendencies: undefined,
     // System assessment specific fields
+    systemContext: systemCharacterOpening,
     componentReadings: componentParagraphs,
-    systemInteraction: systemCharacter,
+    systemInteraction: systemInteractionDetail,
     assessmentStrengths,
     assessmentLimitations,
     upgradeDirection,
     followUp,
     links: allLinks.length > 0 ? allLinks : undefined,
   };
+}
+
+/**
+ * Brief system character opening — one or two sentences summarising
+ * the overall architectural lean before the component-by-component detail.
+ */
+function inferSystemCharacterOpening(components: SystemComponent[]): string {
+  const leans = classifyComponentLeans(components);
+  const warmCount = leans.filter((l) => l.lean === 'warm').length;
+  const preciseCount = leans.filter((l) => l.lean === 'precise').length;
+  const names = components.map((c) => c.displayName).join(', ');
+
+  if (warmCount > 0 && preciseCount > 0) {
+    return `A system built around complementary tendencies — precision and warmth balancing each other across the chain. Components: ${names}.`;
+  }
+  if (warmCount >= 2) {
+    return `A system biased toward warmth and tonal density throughout the chain. Components: ${names}.`;
+  }
+  if (preciseCount >= 2) {
+    return `A system biased toward precision and clarity throughout the chain. Components: ${names}.`;
+  }
+  return `A system with mixed tendencies — the overall character depends on how these components interact. Components: ${names}.`;
 }
 
 /**

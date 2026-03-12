@@ -242,6 +242,11 @@ export default function Home() {
     // so pass null to reasoning when there's no real active system.
     let activeProfileForReasoning = activeSystem ? activeProfile : null;
 
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[AudioXX] activeSystem:', activeSystem?.name ?? '(none)',
+        '| components:', activeSystem?.components.map((c) => `${c.brand} ${c.name}`) ?? []);
+    }
+
     // ── Conversation router ──────────────────────────────
     // Classify the message into a conversation mode before detailed
     // intent detection. Mode persistence carries across turns.
@@ -258,6 +263,20 @@ export default function Home() {
     // ProposedSystem for the save prompt. This runs alongside advisory
     // logic — it doesn't interfere with routing or builder output.
     const proposed = detectSystemDescription(submittedText, subjectMatches, audioState);
+
+    // Diagnostic: log extraction results for debugging save prompt reliability
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[AudioXX] intent:', intent, '| subjects:', subjects);
+      console.log('[AudioXX] subjectMatches:', subjectMatches.map((m) => `${m.kind}:${m.name}`));
+      if (proposed) {
+        console.log('[AudioXX] proposed system:', proposed.suggestedName,
+          '| components:', proposed.components.map((c) => `${c.brand} ${c.name} (${c.category})`));
+        console.log('[AudioXX] fingerprint:', proposed.fingerprint);
+      } else {
+        console.log('[AudioXX] no system detected from description');
+      }
+    }
+
     if (proposed && !dismissedFingerprintsRef.current.has(proposed.fingerprint)) {
       audioDispatch({ type: 'SET_PROPOSED_SYSTEM', proposed });
     } else if (!proposed) {
