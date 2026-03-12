@@ -742,23 +742,41 @@ function buildUpgradeAnchor(
   to: Product,
   activeSystem: ActiveSystemContext | null | undefined,
 ): string {
-  // 1. Architecture lineage — confident, factual
-  const lineageNote = from.brand === to.brand
-    ? `Both the ${from.brand} ${from.name} and the ${to.brand} ${to.name} use ${from.brand}'s ${from.architecture} architecture.`
-    : `The ${from.brand} ${from.name} (${from.architecture}) and the ${to.brand} ${to.name} (${to.architecture}) come from different design lineages.`;
+  // 1. Architecture lineage — confident, factual.
+  // Use short names after the first reference to avoid repetitive full names.
+  // Vary the opening so it doesn't always start with "Both…"
 
-  // System framing when available
+  if (from.brand === to.brand) {
+    // Same-brand lineage — lead with the shared architecture, then pivot to context.
+    const sharedArch = `The ${from.name} and ${to.name} share ${from.brand}'s ${from.architecture} architecture.`;
+
+    if (activeSystem && activeSystem.components.length > 0) {
+      const otherComponents = activeSystem.components
+        .filter((c) => c.name.toLowerCase() !== from.name.toLowerCase()
+          && c.name.toLowerCase() !== to.name.toLowerCase())
+        .map((c) => `${c.brand} ${c.name}`);
+      if (otherComponents.length > 0) {
+        return `${sharedArch} Within your system — ${otherComponents.join(', ')} — the question is what that step up actually changes.`;
+      }
+    }
+
+    return `${sharedArch} This is a question of scale and refinement within that design philosophy, not a change in direction.`;
+  }
+
+  // Different-brand / different-architecture comparison
+  const crossArch = `The ${from.brand} ${from.name} is built on ${from.architecture}, while the ${to.brand} ${to.name} uses ${to.architecture} — these are different design lineages.`;
+
   if (activeSystem && activeSystem.components.length > 0) {
     const otherComponents = activeSystem.components
       .filter((c) => c.name.toLowerCase() !== from.name.toLowerCase()
         && c.name.toLowerCase() !== to.name.toLowerCase())
       .map((c) => `${c.brand} ${c.name}`);
     if (otherComponents.length > 0) {
-      return `${lineageNote} This is an upgrade question within your system (${otherComponents.join(', ')}), so the relevant question is what changes in that context.`;
+      return `${crossArch} Within your system — ${otherComponents.join(', ')} — the question is how each philosophy interacts with the rest of the chain.`;
     }
   }
 
-  return `${lineageNote} This is a question of scale and refinement within that design philosophy, not a change in direction.`;
+  return crossArch;
 }
 
 function buildUpgradeCharacter(
@@ -771,6 +789,11 @@ function buildUpgradeCharacter(
   const scrub = (t: string) => scrubThirdProductRefs(t, allowed, sameBrand);
 
   // 2. What remains similar — shared tendencies (confident language)
+  // 3. What changes — tendency shifts (analytical language)
+  //
+  // Voice rules: avoid "Both… Both…" openings, use short names after first
+  // mention, lead with insight rather than mechanical enumeration.
+
   if (hasTendencies(from.tendencies) && hasTendencies(to.tendencies)) {
     const fromDomains = new Map(from.tendencies.character.map((t) => [t.domain, t.tendency]));
     const toDomains = new Map(to.tendencies.character.map((t) => [t.domain, t.tendency]));
@@ -781,8 +804,6 @@ function buildUpgradeCharacter(
     for (const [domain, fromTend] of fromDomains) {
       const toTend = toDomains.get(domain);
       if (!toTend) continue;
-      // If both mention the same domain, check if the tendency text overlaps
-      // (shared root concept) or diverges (a real change)
       const fromWords = new Set(fromTend.toLowerCase().split(/\s+/));
       const toWords = new Set(toTend.toLowerCase().split(/\s+/));
       const overlap = [...fromWords].filter((w) => toWords.has(w) && w.length > 4).length;
@@ -793,21 +814,26 @@ function buildUpgradeCharacter(
       }
     }
 
-    // Report shared qualities — confident language (component traits)
+    // Shared qualities — confident, varied phrasing
     if (sharedQualities.length > 0) {
-      parts.push(`Both share the ${from.brand} signature in ${sharedQualities.join(' and ')} — this is the design continuity across the lineup.`);
+      const domains = sharedQualities.join(' and ');
+      if (sameBrand) {
+        parts.push(`The core ${from.brand} character carries through in ${domains} — that continuity is the design intent.`);
+      } else {
+        parts.push(`They share common ground in ${domains}, despite the different architectures.`);
+      }
     }
 
-    // 3. What changes — analytical language (system tendencies)
-    //    Scrub tendency text to remove third-product references.
+    // Changed qualities — analytical, scrubbed, using short names
+    // Use "the <shortName>" after first mention rather than repeating full product names.
     if (changedQualities.length > 0) {
       for (const cq of changedQualities.slice(0, 2)) {
-        parts.push(`In ${cq.domain}, the ${from.name} tends toward ${scrub(cq.from)}. The ${to.name} tends toward ${scrub(cq.to)}.`);
+        parts.push(`Where they diverge is ${cq.domain}: the ${from.name} leans toward ${scrub(cq.from)}, while the ${to.name} tends toward ${scrub(cq.to)}.`);
       }
     }
   }
 
-  // Trait-level deltas for qualities not covered by tendency text
+  // Trait-level deltas — confident language for measurable shifts
   const traitChanges: string[] = [];
   const keyTraits = ['composure', 'tonal_density', 'dynamics', 'clarity', 'flow', 'texture', 'elasticity'] as const;
 
@@ -827,13 +853,15 @@ function buildUpgradeCharacter(
   }
 
   if (traitChanges.length > 0 && parts.length < 3) {
-    parts.push(`The ${to.name} brings ${traitChanges.join(', ')} compared to the ${from.name}.`);
+    parts.push(`In concrete terms, the ${to.name} brings ${traitChanges.join(', ')} relative to the ${from.name}.`);
   }
 
-  // Trade-off from the target product — scrub third-product references
+  // Trade-off — split gains and costs into separate clauses for clarity
   if (hasTendencies(to.tendencies) && to.tendencies.tradeoffs.length > 0) {
     const tradeoff = to.tendencies.tradeoffs[0];
-    parts.push(`The trade-off: ${scrub(tradeoff.gains)} at the cost of ${scrub(tradeoff.cost)}.`);
+    const gains = scrub(tradeoff.gains);
+    const cost = scrub(tradeoff.cost);
+    parts.push(`What you gain is ${gains}. The cost is ${cost}.`);
   }
 
   return parts.join(' ');
@@ -849,22 +877,24 @@ function buildUpgradeDirection(
   const sameBrand = from.brand === to.brand;
   const scrub = (t: string) => scrubThirdProductRefs(t, allowed, sameBrand);
 
-  // 4. System interaction — conditional language (upgrade predictions)
+  // 4. System interaction — conditional language (upgrade predictions).
+  // Voice rules: use short names, lead with system context, avoid
+  // repeating "The Hugo TT2" as a sentence opener.
+
   if (hasTendencies(to.tendencies)) {
-    // Find the most relevant interaction for the user's system
     const systemInteractions = to.tendencies.interactions;
 
-    // Check for a same-lineup comparison interaction
+    // Same-lineup interaction — scrub and rephrase for system context
     const lineupInteraction = systemInteractions.find((i) =>
       i.condition.toLowerCase().includes(from.name.toLowerCase())
       || i.condition.toLowerCase().includes('same system')
       || i.condition.toLowerCase().includes('compared to'),
     );
     if (lineupInteraction) {
-      parts.push(`In your context: ${scrub(lineupInteraction.effect)}.`);
+      parts.push(`In your system, ${scrub(lineupInteraction.effect)}.`);
     }
 
-    // If we have an active system, look for relevant amplifier/speaker interactions
+    // Chain interaction — infer from trait deltas, use conditional language
     if (activeSystem && activeSystem.components.length > 0) {
       const ampComponent = activeSystem.components.find((c) =>
         c.category === 'amplifier' || c.category === 'integrated',
@@ -879,34 +909,36 @@ function buildUpgradeDirection(
         if (speakerComponent) chainParts.push(`${speakerComponent.brand} ${speakerComponent.name}`);
         const chainDesc = chainParts.join(' and ');
 
-        // Infer likely effect based on trait changes
         const composureGain = resolveTraitValue(to.tendencyProfile, to.traits, 'composure')
           - resolveTraitValue(from.tendencyProfile, from.traits, 'composure');
         const densityGain = resolveTraitValue(to.tendencyProfile, to.traits, 'tonal_density')
           - resolveTraitValue(from.tendencyProfile, from.traits, 'tonal_density');
 
-        if (composureGain >= 0.3) {
-          parts.push(`The additional composure would likely give the ${chainDesc} a more effortless presentation — the source would be less of a limiting factor in dynamic passages.`);
-        }
-        if (densityGain >= 0.3) {
-          parts.push(`The increase in tonal density would likely add midrange authority feeding into the ${chainDesc}, which could shift the overall tonal balance toward greater body.`);
+        // Combine composure and density into a single chain-effect sentence
+        // when both are present, rather than repeating the chain description.
+        if (composureGain >= 0.29 && densityGain >= 0.29) {
+          parts.push(`Feeding the ${chainDesc}, the added composure and tonal density would likely produce a more effortless, harmonically fuller presentation — the source becomes less of a limiting factor.`);
+        } else if (composureGain >= 0.29) {
+          parts.push(`Downstream, the ${chainDesc} would likely benefit from the added composure — less strain on dynamic peaks, a more effortless overall presentation.`);
+        } else if (densityGain >= 0.29) {
+          parts.push(`The added tonal density would likely give the ${chainDesc} more midrange authority, shifting the overall balance toward greater body.`);
         }
       }
     }
   }
 
-  // Price proportionality note — conditional
+  // Price proportionality — conditional, concise
   if (from.price > 0 && to.price > 0) {
     const ratio = to.price / from.price;
     if (ratio > 3) {
-      parts.push(`At ${ratio.toFixed(1)}x the price, this is a significant investment for what is ultimately a refinement within the same architecture — the gains are real but incremental, not transformational.`);
+      parts.push(`At ${ratio.toFixed(1)}x the price, this is a refinement within the same architecture — real gains, but incremental rather than transformational.`);
     } else if (ratio > 1.8) {
-      parts.push(`The price step is meaningful. Whether the gains in composure and density justify it depends on how close you are to the ceiling of what the ${from.name} delivers in your system.`);
+      parts.push(`The price step is meaningful. Whether the gains justify it depends on how close the ${from.name} is to its ceiling in your system.`);
     }
   }
 
   if (parts.length === 0) {
-    return `The ${to.name} would likely deliver more of what the ${from.name} already does well, with greater authority and composure. Whether the system context reveals that difference depends on the resolving power of the amplification and speakers downstream.`;
+    return `The ${to.name} would likely deliver more of what the ${from.name} already does well, with greater authority and composure. Whether your system reveals that difference depends on the resolving power downstream.`;
   }
 
   return parts.join(' ');
