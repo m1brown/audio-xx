@@ -15,6 +15,7 @@
  */
 
 import type { ProductTendencies, TendencyProfile } from '../sonic-tendencies';
+import type { PrimaryAxisLeanings, FatigueAssessment } from '../axis-types';
 import type {
   ProductCategory,
   ProductSubcategory,
@@ -85,6 +86,18 @@ export interface Product {
     primary: import('../archetype').SonicArchetype;
     secondary?: import('../archetype').SonicArchetype;
   };
+  /**
+   * Primary advisory axis leanings (v1 trait framework).
+   * When present, these are the first thing the engine reads when
+   * reasoning about the product's character. Secondary traits in
+   * tendencyProfile provide explanatory depth.
+   */
+  primaryAxes?: PrimaryAxisLeanings;
+  /**
+   * Fatigue assessment — system-outcome overlay.
+   * Describes when and why this product may contribute to fatigue.
+   */
+  fatigueAssessment?: FatigueAssessment;
   /**
    * Curated sonic tendencies: character, interactions, and trade-offs.
    * When present and confidence is not 'provisional', these drive

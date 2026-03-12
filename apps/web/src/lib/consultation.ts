@@ -40,6 +40,13 @@ import type { SubjectMatch, ContextKind, DesireSignal } from './intent';
 import { getApprovedBrand } from './knowledge';
 import type { BrandKnowledge } from './knowledge/schema';
 import type { ActiveSystemContext } from './system-types';
+import {
+  type PrimaryAxisLeanings,
+  resolveProductAxes,
+  detectCompounding,
+  synthesiseSystemAxes,
+  AXIS_LABELS,
+} from './axis-types';
 
 // ── Types ───────────────────────────────────────────
 
@@ -1780,6 +1787,13 @@ export function buildSystemAssessment(
   // Need at least 2 identified components to build a system assessment
   if (components.length < 2) return null;
 
+  // ── Step 1: Resolve axis positions for each component ──
+  // This happens BEFORE prose generation so that system-level reasoning
+  // (compounding, compensation, balance) is available to all downstream steps.
+  const componentAxisProfiles = classifyComponentAxes(components);
+  const systemAxes = synthesiseSystemAxes(componentAxisProfiles.map(p => p.axes));
+  const axisCompounding = detectCompounding(componentAxisProfiles.map(p => p.axes));
+
   // ── Build per-component character paragraphs ──────
   const componentParagraphs = components.map((c) => {
     let para = `The ${c.displayName}`;
@@ -1863,64 +1877,67 @@ export function buildSystemAssessment(
 /**
  * Brief system character opening — one or two sentences summarising
  * the overall architectural lean before the component-by-component detail.
+ *
+ * Uses the 4-axis model to describe system character with more nuance
+ * than the legacy warm/precise binary.
  */
 function inferSystemCharacterOpening(components: SystemComponent[]): string {
-  const leans = classifyComponentLeans(components);
-  const warmCount = leans.filter((l) => l.lean === 'warm').length;
-  const preciseCount = leans.filter((l) => l.lean === 'precise').length;
+  const profiles = classifyComponentAxes(components);
+  const axes = profiles.map(p => p.axes);
+  const system = synthesiseSystemAxes(axes);
+  const compounding = detectCompounding(axes);
   const names = components.map((c) => c.displayName).join(', ');
 
-  if (warmCount > 0 && preciseCount > 0) {
-    return `A system built around complementary tendencies — precision and warmth balancing each other across the chain. Components: ${names}.`;
+  // Build character descriptors from axis positions
+  const descriptors: string[] = [];
+  if (system.warm_bright === 'warm') descriptors.push('warmth');
+  if (system.warm_bright === 'bright') descriptors.push('brightness');
+  if (system.smooth_detailed === 'smooth') descriptors.push('smoothness');
+  if (system.smooth_detailed === 'detailed') descriptors.push('detail retrieval');
+  if (system.elastic_controlled === 'elastic') descriptors.push('dynamic elasticity');
+  if (system.elastic_controlled === 'controlled') descriptors.push('control');
+  if (system.airy_closed === 'airy') descriptors.push('spatial openness');
+  if (system.airy_closed === 'closed') descriptors.push('intimacy');
+
+  if (compounding.length > 0) {
+    // Compounding detected — flag it in the opening
+    const direction = descriptors.length > 0 ? descriptors.join(' and ') : 'a consistent character';
+    return `A system that compounds ${direction} across the chain — multiple components push in the same direction. Components: ${names}.`;
   }
-  if (warmCount >= 2) {
-    return `A system biased toward warmth and tonal density throughout the chain. Components: ${names}.`;
+
+  if (descriptors.length === 0) {
+    return `A system with balanced tendencies — no single axis dominates. The overall character depends on how these components interact in practice. Components: ${names}.`;
   }
-  if (preciseCount >= 2) {
-    return `A system biased toward precision and clarity throughout the chain. Components: ${names}.`;
+
+  if (descriptors.length === 1) {
+    return `A system that leans toward ${descriptors[0]}, with the remaining axes staying relatively neutral. Components: ${names}.`;
   }
-  return `A system with mixed tendencies — the overall character depends on how these components interact. Components: ${names}.`;
+
+  // Multiple non-neutral axes — check if they're complementary or aligned
+  const warmSide = system.warm_bright === 'warm' || system.smooth_detailed === 'smooth';
+  const brightSide = system.warm_bright === 'bright' || system.smooth_detailed === 'detailed';
+
+  if (warmSide && brightSide) {
+    return `A system built around complementary tendencies — ${descriptors.join(' and ')} balancing each other across the chain. Components: ${names}.`;
+  }
+
+  return `A system characterised by ${descriptors.join(' and ')}. Components: ${names}.`;
 }
 
 /**
  * Infer how the named components interact in a system.
  * Deterministic — based on known brand/product tendencies.
+ *
+ * Uses the 4-axis model to describe interaction with more nuance:
+ * compounding, compensation, and per-axis descriptions.
  */
 function inferSystemInteraction(components: SystemComponent[]): string {
-  // Classify each component's sonic lean
-  const leans: { name: string; lean: 'warm' | 'neutral' | 'precise' | 'unknown' }[] = [];
-
-  for (const c of components) {
-    if (c.product?.traits) {
-      const t = c.product.traits;
-      if ((t.clarity ?? 0) > 0.8 && (t.tonal_density ?? 0.5) < 0.5) {
-        leans.push({ name: c.displayName, lean: 'precise' });
-      } else if ((t.tonal_density ?? 0.5) > 0.7 && (t.flow ?? 0.5) > 0.7) {
-        leans.push({ name: c.displayName, lean: 'warm' });
-      } else {
-        leans.push({ name: c.displayName, lean: 'neutral' });
-      }
-    } else if (c.brandProfile) {
-      const tendLower = c.brandProfile.tendencies.toLowerCase();
-      if (tendLower.includes('warm') || tendLower.includes('rich') || tendLower.includes('dense')) {
-        leans.push({ name: c.displayName, lean: 'warm' });
-      } else if (tendLower.includes('precise') || tendLower.includes('clarity') || tendLower.includes('analytical')) {
-        leans.push({ name: c.displayName, lean: 'precise' });
-      } else {
-        leans.push({ name: c.displayName, lean: 'neutral' });
-      }
-    } else {
-      leans.push({ name: c.displayName, lean: 'unknown' });
-    }
-  }
-
-  const warmCount = leans.filter((l) => l.lean === 'warm').length;
-  const preciseCount = leans.filter((l) => l.lean === 'precise').length;
-  const warmNames = leans.filter((l) => l.lean === 'warm').map((l) => l.name);
-  const preciseNames = leans.filter((l) => l.lean === 'precise').map((l) => l.name);
+  const profiles = classifyComponentAxes(components);
+  const axes = profiles.map(p => p.axes);
+  const compounding = detectCompounding(axes);
+  const system = synthesiseSystemAxes(axes);
 
   // ── Build causal explanation fragments ────────────────
-  // Step 2: trace system character to component-level design traits.
   const causalParts: string[] = [];
   for (const c of components) {
     if (c.product?.architecture) {
@@ -1933,17 +1950,49 @@ function inferSystemInteraction(components: SystemComponent[]): string {
     ? ' ' + causalParts.join('; ') + '.'
     : '';
 
-  if (warmCount > 0 && preciseCount > 0) {
-    return `This is a system with complementary tendencies. ${preciseNames.join(' and ')} ${preciseCount === 1 ? 'provides' : 'provide'} articulation and clarity, while ${warmNames.join(' and ')} ${warmCount === 1 ? 'adds' : 'add'} warmth and tonal body.${causalNote} The precision upstream and warmth downstream balance each other — a deliberate architectural pairing that serves both detail and musical involvement.`;
-  }
-  if (warmCount >= 2) {
-    return `This system leans toward warmth and engagement throughout the chain. ${warmNames.join(', ')} all contribute tonal body and midrange presence.${causalNote} The overall character tends toward richness and immersion — density compounds across the chain, which may sustain engagement but could reduce transient articulation.`;
-  }
-  if (preciseCount >= 2) {
-    return `This system leans toward precision and clarity throughout the chain. ${preciseNames.join(', ')} all emphasise detail and transient definition.${causalNote} The cumulative precision tends to deliver a revealing, well-defined presentation — though without a warmth source in the chain, extended sessions may feel lean.`;
+  // ── Per-axis component grouping for narrative ────────
+  const warmComponents = profiles.filter(p => p.axes.warm_bright === 'warm').map(p => p.name);
+  const brightComponents = profiles.filter(p => p.axes.warm_bright === 'bright').map(p => p.name);
+  const smoothComponents = profiles.filter(p => p.axes.smooth_detailed === 'smooth').map(p => p.name);
+  const detailedComponents = profiles.filter(p => p.axes.smooth_detailed === 'detailed').map(p => p.name);
+
+  // ── Compounding — the most important system insight ──
+  if (compounding.length > 0) {
+    const compoundDesc = compounding.map(w => {
+      // Extract the axis name from the warning string
+      if (w.includes('Warm')) return 'warmth';
+      if (w.includes('Bright')) return 'brightness';
+      if (w.includes('Smooth')) return 'smoothness';
+      if (w.includes('Detailed')) return 'detail';
+      if (w.includes('Elastic')) return 'dynamic energy';
+      if (w.includes('Controlled')) return 'control';
+      if (w.includes('Airy')) return 'spatial openness';
+      if (w.includes('Closed')) return 'intimacy';
+      return 'a shared tendency';
+    });
+
+    const allNames = profiles.map(p => p.name);
+    return `This system compounds ${compoundDesc.join(' and ')} across the chain. ${allNames.join(', ')} push in similar directions.${causalNote} Compounding can be a strength when deliberate — it deepens the character the system commits to — but it also means the system has less internal correction if the listener's needs shift.`;
   }
 
-  // Mixed or unknown
+  // ── Complementary — warm/bright or smooth/detailed balance ──
+  if (warmComponents.length > 0 && brightComponents.length > 0) {
+    return `This is a system with complementary tendencies. ${brightComponents.join(' and ')} ${brightComponents.length === 1 ? 'provides' : 'provide'} articulation and clarity, while ${warmComponents.join(' and ')} ${warmComponents.length === 1 ? 'adds' : 'add'} warmth and tonal body.${causalNote} The tonal balance offsets across the chain — a deliberate architectural pairing that serves both detail and musical involvement.`;
+  }
+
+  if (smoothComponents.length > 0 && detailedComponents.length > 0) {
+    return `This system balances textural smoothness with detail retrieval. ${detailedComponents.join(' and ')} ${detailedComponents.length === 1 ? 'contributes' : 'contribute'} resolution, while ${smoothComponents.join(' and ')} ${smoothComponents.length === 1 ? 'provides' : 'provide'} musical flow.${causalNote} This complementary pairing often delivers both engagement and insight.`;
+  }
+
+  // ── Single-axis lean ──
+  if (system.warm_bright === 'warm') {
+    return `This system leans toward warmth and engagement throughout the chain.${causalNote} The overall character tends toward richness and immersion — which may sustain engagement but could reduce transient articulation.`;
+  }
+  if (system.warm_bright === 'bright') {
+    return `This system leans toward precision and clarity throughout the chain.${causalNote} The cumulative brightness tends to deliver a revealing, well-defined presentation — though without a warmth source in the chain, extended sessions may feel lean.`;
+  }
+
+  // Mixed or all-neutral
   return `The components in this system each bring distinct tendencies.${causalNote} The overall character depends on how they interact in practice — room acoustics, cable choices, and source material all influence the final balance.`;
 }
 
@@ -1973,74 +2022,96 @@ function inferAmplifierSpeakerFit(components: SystemComponent[]): string | null 
  * Infer trade-offs from the system's component balance.
  * Step 3 of the advisory reasoning structure.
  *
- * Uses confident language for known component traits, analytical
- * language for the system-level consequence.
+ * Uses the 4-axis model to identify compounding risks and
+ * complementary trade-offs.
  */
 function inferSystemTradeoffs(components: SystemComponent[]): string | null {
-  const leans: { name: string; lean: 'warm' | 'neutral' | 'precise' | 'unknown' }[] = [];
+  const profiles = classifyComponentAxes(components);
+  const axes = profiles.map(p => p.axes);
+  const compounding = detectCompounding(axes);
+  const system = synthesiseSystemAxes(axes);
 
-  for (const c of components) {
-    if (c.product?.traits) {
-      const t = c.product.traits;
-      if ((t.clarity ?? 0) > 0.8 && (t.tonal_density ?? 0.5) < 0.5) {
-        leans.push({ name: c.displayName, lean: 'precise' });
-      } else if ((t.tonal_density ?? 0.5) > 0.7 && (t.flow ?? 0.5) > 0.7) {
-        leans.push({ name: c.displayName, lean: 'warm' });
-      } else {
-        leans.push({ name: c.displayName, lean: 'neutral' });
+  // Compounding trade-offs are the most actionable
+  if (compounding.length > 0) {
+    const tradeoffs: string[] = [];
+    for (const warning of compounding) {
+      if (warning.includes('warm')) {
+        tradeoffs.push('Stacked warmth may reduce transient precision and compress spatial definition. If recordings feel congested or slow, the system may be compounding density beyond what serves the music.');
+      } else if (warning.includes('bright')) {
+        tradeoffs.push('Stacked brightness may thin tonal body and increase fatigue risk. If extended sessions feel clinical or lean, the cumulative brightness may be outpacing the system\'s ability to deliver musical warmth.');
+      } else if (warning.includes('smooth')) {
+        tradeoffs.push('Stacked smoothness may soften transient edges and reduce perceived detail. If the presentation feels too polite or lacking in clarity, the system may be trading resolution for ease.');
+      } else if (warning.includes('detailed')) {
+        tradeoffs.push('Stacked detail emphasis may foreground analytical qualities at the expense of musical flow. If listening feels like work, the system may be prioritizing information over engagement.');
+      } else if (warning.includes('controlled')) {
+        tradeoffs.push('Stacked control may dampen dynamic expression and reduce the sense of musical life. If the system sounds overdamped or mechanical, consider introducing a component with more elastic character.');
+      } else if (warning.includes('elastic')) {
+        tradeoffs.push('Stacked elasticity may reduce composure under complex passages. If the presentation feels loose or uncontrolled on dense material, consider a component with more grip.');
       }
-    } else if (c.brandProfile) {
-      const tendLower = c.brandProfile.tendencies.toLowerCase();
-      if (tendLower.includes('warm') || tendLower.includes('rich') || tendLower.includes('dense')) {
-        leans.push({ name: c.displayName, lean: 'warm' });
-      } else if (tendLower.includes('precise') || tendLower.includes('clarity') || tendLower.includes('analytical')) {
-        leans.push({ name: c.displayName, lean: 'precise' });
-      } else {
-        leans.push({ name: c.displayName, lean: 'neutral' });
-      }
-    } else {
-      leans.push({ name: c.displayName, lean: 'unknown' });
     }
+    return tradeoffs.join(' ');
   }
 
-  const warmCount = leans.filter((l) => l.lean === 'warm').length;
-  const preciseCount = leans.filter((l) => l.lean === 'precise').length;
+  // Complementary balance — the trade-off is moderation
+  const hasWarm = system.warm_bright === 'warm';
+  const hasBright = system.warm_bright === 'bright';
+  const hasSmooth = system.smooth_detailed === 'smooth';
+  const hasDetailed = system.smooth_detailed === 'detailed';
 
-  if (warmCount > 0 && preciseCount > 0) {
-    // Complementary — the trade-off is that neither extreme is fully realised
-    return 'The trade-off in a complementary system is that neither precision nor warmth is fully maximised. The system balances the two rather than committing to either. This is often a strength — it keeps the presentation engaging without becoming fatiguing or clinical.';
+  if ((hasWarm && hasBright) || (hasSmooth && hasDetailed)) {
+    return 'The trade-off in a complementary system is that neither extreme is fully maximised. The system balances opposing tendencies rather than committing to either. This is often a strength — it keeps the presentation engaging without becoming fatiguing or clinical.';
   }
-  if (warmCount >= 2) {
-    return 'The trade-off of stacking warmth is reduced transient precision and potentially compressed spatial definition. If recordings feel congested or slow, the system may be compounding density beyond what serves the music.';
-  }
-  if (preciseCount >= 2) {
-    return 'The trade-off of stacking precision is reduced tonal body and listening ease. If extended sessions become fatiguing or the presentation feels clinical, the cumulative speed may be outpacing the system\'s ability to deliver warmth and flow.';
-  }
+
+  // Single-axis lean without compounding
+  if (hasWarm) return 'A warm lean trades some transient precision for tonal body and engagement. This is usually a deliberate priority — worth monitoring only if recordings start to feel congested.';
+  if (hasBright) return 'A bright lean trades some tonal body for clarity and detail. This works well for revealing recordings but may become tiring on poorly mastered material.';
 
   return null;
 }
 
 /**
  * Infer what is working well in the system based on component character.
+ * Uses the 4-axis model to identify system strengths per axis.
  */
 function inferAssessmentStrengths(components: SystemComponent[]): string[] {
   const strengths: string[] = [];
-  const leans = classifyComponentLeans(components);
+  const profiles = classifyComponentAxes(components);
+  const axes = profiles.map(p => p.axes);
+  const system = synthesiseSystemAxes(axes);
+  const compounding = detectCompounding(axes);
 
-  const warmCount = leans.filter((l) => l.lean === 'warm').length;
-  const preciseCount = leans.filter((l) => l.lean === 'precise').length;
-
-  if (warmCount > 0 && preciseCount > 0) {
-    strengths.push('Complementary tonal balance — precision and warmth offset each other');
+  // Complementary balance is a strength
+  const warmComps = profiles.filter(p => p.axes.warm_bright === 'warm');
+  const brightComps = profiles.filter(p => p.axes.warm_bright === 'bright');
+  if (warmComps.length > 0 && brightComps.length > 0) {
+    strengths.push('Complementary tonal balance — precision and warmth offset each other across the chain');
     strengths.push('The system is likely to sustain engagement across long sessions');
   }
-  if (warmCount >= 2) {
-    strengths.push('Consistent warmth and tonal density — midrange should feel present and immersive');
-    strengths.push('Engagement and musicality are likely high priorities this system handles well');
-  }
-  if (preciseCount >= 2) {
-    strengths.push('Strong transient definition and clarity — micro-detail retrieval should be excellent');
-    strengths.push('Spatial precision and imaging likely well-defined');
+
+  // Deliberate compounding can be a strength when it matches the listener's priority
+  if (compounding.length === 0) {
+    // No compounding — balanced system
+    if (system.warm_bright === 'warm') {
+      strengths.push('Consistent warmth and tonal density — midrange should feel present and immersive');
+    }
+    if (system.warm_bright === 'bright') {
+      strengths.push('Strong transient definition and clarity — micro-detail retrieval should be excellent');
+    }
+    if (system.smooth_detailed === 'smooth') {
+      strengths.push('Musical flow and ease — the system prioritises listening pleasure over analytical scrutiny');
+    }
+    if (system.smooth_detailed === 'detailed') {
+      strengths.push('Revealing presentation — inner detail and textural nuance should be well-resolved');
+    }
+    if (system.elastic_controlled === 'elastic') {
+      strengths.push('Dynamic engagement — the system should convey energy and rhythmic involvement');
+    }
+    if (system.elastic_controlled === 'controlled') {
+      strengths.push('Composure and grip — the system should handle complex passages with authority');
+    }
+    if (system.airy_closed === 'airy') {
+      strengths.push('Spatial openness — soundstage and image separation should be well-developed');
+    }
   }
 
   // Component-specific strengths from product traits
@@ -2058,24 +2129,34 @@ function inferAssessmentStrengths(components: SystemComponent[]): string[] {
 
 /**
  * Infer where limitations may appear in the system.
+ * Uses compounding detection to flag per-axis risks.
  */
 function inferAssessmentLimitations(components: SystemComponent[]): string[] {
   const limitations: string[] = [];
-  const leans = classifyComponentLeans(components);
+  const profiles = classifyComponentAxes(components);
+  const axes = profiles.map(p => p.axes);
+  const compounding = detectCompounding(axes);
 
-  const warmCount = leans.filter((l) => l.lean === 'warm').length;
-  const preciseCount = leans.filter((l) => l.lean === 'precise').length;
-
-  if (warmCount >= 2 && preciseCount === 0) {
-    limitations.push('Stacked warmth may reduce transient precision and spatial clarity');
-    limitations.push('Complex, dense recordings could sound congested');
+  // Compounding warnings map directly to limitations
+  for (const warning of compounding) {
+    if (warning.includes('warm')) {
+      limitations.push('Stacked warmth may reduce transient precision and spatial clarity');
+      limitations.push('Complex, dense recordings could sound congested');
+    } else if (warning.includes('bright')) {
+      limitations.push('Stacked brightness may thin out tonal body over long sessions');
+      limitations.push('Extended listening could trend toward fatigue without a warmth counterbalance');
+    } else if (warning.includes('smooth')) {
+      limitations.push('Stacked smoothness may obscure transient detail and reduce perceived resolution');
+    } else if (warning.includes('detailed')) {
+      limitations.push('Stacked detail emphasis may feel analytical or fatiguing on lesser recordings');
+    } else if (warning.includes('controlled')) {
+      limitations.push('Stacked control may sound overdamped — reducing dynamic expression and musical life');
+    } else if (warning.includes('elastic')) {
+      limitations.push('Stacked elasticity may lose composure on complex orchestral or dense electronic material');
+    }
   }
-  if (preciseCount >= 2 && warmCount === 0) {
-    limitations.push('Stacked precision may thin out tonal body over long sessions');
-    limitations.push('Extended listening could trend toward fatigue without a warmth counterbalance');
-  }
 
-  // Component-specific limitations
+  // Component-specific limitations from product traits
   for (const c of components) {
     if (c.product?.traits) {
       const t = c.product.traits;
@@ -2089,56 +2170,145 @@ function inferAssessmentLimitations(components: SystemComponent[]): string[] {
 
 /**
  * Infer likely upgrade direction based on system balance.
+ * Uses axis-level analysis to suggest where the most effective
+ * intervention lies.
  */
 function inferUpgradeDirection(components: SystemComponent[]): string {
-  const leans = classifyComponentLeans(components);
-  const warmCount = leans.filter((l) => l.lean === 'warm').length;
-  const preciseCount = leans.filter((l) => l.lean === 'precise').length;
+  const profiles = classifyComponentAxes(components);
+  const axes = profiles.map(p => p.axes);
+  const compounding = detectCompounding(axes);
+  const system = synthesiseSystemAxes(axes);
 
-  if (warmCount > 0 && preciseCount > 0) {
-    return 'This system appears well-balanced. Changes would likely shift the character rather than fix a gap. If you want to explore, focus on the quality you most want to intensify — but "do nothing" is a strong option here.';
+  // Well-balanced system — no compounding
+  if (compounding.length === 0) {
+    const nonNeutralAxes = [
+      system.warm_bright !== 'neutral',
+      system.smooth_detailed !== 'neutral',
+      system.elastic_controlled !== 'neutral',
+      system.airy_closed !== 'neutral',
+    ].filter(Boolean).length;
+
+    if (nonNeutralAxes <= 1) {
+      return 'This system appears well-balanced across the primary axes. Changes would likely shift the character rather than fix a gap. If you want to explore, focus on the quality you most want to intensify — but "do nothing" is a strong option here.';
+    }
   }
-  if (warmCount >= 2) {
-    return 'If you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system\'s identity more fundamentally.';
+
+  // Compounding — suggest counter-direction
+  const suggestions: string[] = [];
+  for (const warning of compounding) {
+    if (warning.includes('warm')) {
+      suggestions.push('If you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system\'s identity more fundamentally.');
+    } else if (warning.includes('bright')) {
+      suggestions.push('If you want to add warmth and flow without sacrificing the clarity this system delivers, a DAC with richer harmonic texture or speakers with more tonal density would be the most aligned direction. Adding tubes upstream is another option — but changes character more broadly.');
+    } else if (warning.includes('smooth')) {
+      suggestions.push('If you want to introduce more detail and presence without losing the ease, a more revealing source or cables with better transient definition could add clarity without fundamentally changing the system\'s character.');
+    } else if (warning.includes('detailed')) {
+      suggestions.push('If the system feels analytically intense, consider a warmer or more fluid component in the chain — a tube stage, a smoother DAC topology, or speakers with more midrange body could restore balance.');
+    } else if (warning.includes('controlled')) {
+      suggestions.push('If the system feels overdamped, a more elastic source or amplifier could restore dynamic life. Single-ended or low-feedback topologies tend to introduce more elasticity.');
+    } else if (warning.includes('elastic')) {
+      suggestions.push('If the system feels loose or uncontrolled, a more composed amplifier or tighter-grip speaker pairing could add stability without losing all dynamic energy.');
+    }
   }
-  if (preciseCount >= 2) {
-    return 'If you want to add warmth and flow without sacrificing the clarity this system delivers, a DAC with richer harmonic texture or speakers with more tonal density would be the most aligned direction. Adding tubes upstream is another option — but changes character more broadly.';
-  }
+
+  if (suggestions.length > 0) return suggestions.join(' ');
 
   return 'Without stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.';
 }
 
+// ── Axis-based component classification ───────────────
+//
+// Replaces the legacy warm/precise binary with 4-axis positions.
+// Uses resolveProductAxes() from axis-types.ts when numeric traits
+// are available; falls back to brand-profile text inference.
+
+interface ComponentAxisProfile {
+  name: string;
+  axes: PrimaryAxisLeanings;
+  source: 'product' | 'brand' | 'inferred';
+}
+
 /**
- * Classify each component's sonic lean — reusable helper.
+ * Resolve axis leanings for each component in the system.
+ * Prefers explicit primaryAxes → numeric trait inference → brand text inference.
  */
-function classifyComponentLeans(components: SystemComponent[]): { name: string; lean: 'warm' | 'neutral' | 'precise' | 'unknown' }[] {
-  const leans: { name: string; lean: 'warm' | 'neutral' | 'precise' | 'unknown' }[] = [];
-
-  for (const c of components) {
-    if (c.product?.traits) {
-      const t = c.product.traits;
-      if ((t.clarity ?? 0) > 0.8 && (t.tonal_density ?? 0.5) < 0.5) {
-        leans.push({ name: c.displayName, lean: 'precise' });
-      } else if ((t.tonal_density ?? 0.5) > 0.7 && (t.flow ?? 0.5) > 0.7) {
-        leans.push({ name: c.displayName, lean: 'warm' });
-      } else {
-        leans.push({ name: c.displayName, lean: 'neutral' });
-      }
-    } else if (c.brandProfile) {
-      const tendLower = c.brandProfile.tendencies.toLowerCase();
-      if (tendLower.includes('warm') || tendLower.includes('rich') || tendLower.includes('dense')) {
-        leans.push({ name: c.displayName, lean: 'warm' });
-      } else if (tendLower.includes('precise') || tendLower.includes('clarity') || tendLower.includes('analytical')) {
-        leans.push({ name: c.displayName, lean: 'precise' });
-      } else {
-        leans.push({ name: c.displayName, lean: 'neutral' });
-      }
-    } else {
-      leans.push({ name: c.displayName, lean: 'unknown' });
+function classifyComponentAxes(components: SystemComponent[]): ComponentAxisProfile[] {
+  return components.map((c) => {
+    // 1. Product with primaryAxes or numeric traits — use resolveProductAxes
+    if (c.product) {
+      return {
+        name: c.displayName,
+        axes: resolveProductAxes({
+          primaryAxes: c.product.primaryAxes,
+          traits: c.product.traits,
+        }),
+        source: 'product' as const,
+      };
     }
-  }
 
-  return leans;
+    // 2. Brand-profile text inference — coarser but still useful
+    if (c.brandProfile) {
+      const t = c.brandProfile.tendencies.toLowerCase();
+      return {
+        name: c.displayName,
+        axes: {
+          warm_bright:
+            (t.includes('warm') || t.includes('rich') || t.includes('dense') || t.includes('lush'))
+              ? 'warm' as const
+              : (t.includes('bright') || t.includes('precise') || t.includes('clarity') || t.includes('analytical'))
+                ? 'bright' as const
+                : 'neutral' as const,
+          smooth_detailed:
+            (t.includes('smooth') || t.includes('liquid') || t.includes('flowing') || t.includes('musical'))
+              ? 'smooth' as const
+              : (t.includes('detailed') || t.includes('revealing') || t.includes('transparent') || t.includes('resolving'))
+                ? 'detailed' as const
+                : 'neutral' as const,
+          elastic_controlled:
+            (t.includes('elastic') || t.includes('dynamic') || t.includes('lively') || t.includes('punchy'))
+              ? 'elastic' as const
+              : (t.includes('controlled') || t.includes('composed') || t.includes('authoritative') || t.includes('grip'))
+                ? 'controlled' as const
+                : 'neutral' as const,
+          airy_closed:
+            (t.includes('open') || t.includes('airy') || t.includes('spacious') || t.includes('expansive'))
+              ? 'airy' as const
+              : (t.includes('intimate') || t.includes('closed') || t.includes('focused'))
+                ? 'closed' as const
+                : 'neutral' as const,
+        },
+        source: 'brand' as const,
+      };
+    }
+
+    // 3. Unknown — all neutral
+    return {
+      name: c.displayName,
+      axes: { warm_bright: 'neutral', smooth_detailed: 'neutral', elastic_controlled: 'neutral', airy_closed: 'neutral' },
+      source: 'inferred' as const,
+    };
+  });
+}
+
+/**
+ * Derive a legacy-compatible warm/precise/balanced/unknown lean from axis profiles.
+ * Used by preference alignment and cable advisory where the full axis model
+ * would over-complicate an already-clear decision path.
+ */
+function deriveSystemLeanFromAxes(profiles: ComponentAxisProfile[]): 'warm' | 'precise' | 'balanced' | 'unknown' {
+  const axes = profiles.map(p => p.axes);
+  if (axes.length === 0) return 'unknown';
+  const system = synthesiseSystemAxes(axes);
+
+  const warmSignals = (system.warm_bright === 'warm' ? 1 : 0)
+    + (system.smooth_detailed === 'smooth' ? 1 : 0);
+  const brightSignals = (system.warm_bright === 'bright' ? 1 : 0)
+    + (system.smooth_detailed === 'detailed' ? 1 : 0);
+
+  if (warmSignals > 0 && brightSignals > 0) return 'balanced';
+  if (warmSignals > 0) return 'warm';
+  if (brightSignals > 0) return 'precise';
+  return 'unknown';
 }
 
 /**
@@ -2154,20 +2324,9 @@ function buildAssessmentPreferenceAlignment(
 ): string | null {
   if (!desires || desires.length === 0) return null;
 
-  // Classify system lean for alignment check
-  let systemLean: 'warm' | 'precise' | 'balanced' | 'unknown' = 'unknown';
-  let warmCount = 0;
-  let preciseCount = 0;
-  for (const c of components) {
-    if (c.brandProfile) {
-      const t = c.brandProfile.tendencies.toLowerCase();
-      if (t.includes('warm') || t.includes('rich') || t.includes('dense')) warmCount++;
-      else if (t.includes('precise') || t.includes('clarity') || t.includes('analytical')) preciseCount++;
-    }
-  }
-  if (warmCount > 0 && preciseCount > 0) systemLean = 'balanced';
-  else if (warmCount > 0) systemLean = 'warm';
-  else if (preciseCount > 0) systemLean = 'precise';
+  // Classify system lean using axis model
+  const profiles = classifyComponentAxes(components);
+  const systemLean = deriveSystemLeanFromAxes(profiles);
 
   // Mirror top desire and relate to system character
   const topDesire = desires[0];
@@ -2417,18 +2576,28 @@ export function buildCableAdvisory(
     else if (hasBright) systemLean = 'precise';
   }
 
-  // Fall back to brand-profile inference if no active system or lean unknown
+  // Fall back to axis-model inference from brand/product profiles
   if (systemLean === 'unknown') {
+    const cableComponents: SystemComponent[] = [];
     for (const match of subjectMatches) {
       const bp = findBrandProfile(match.name);
-      if (bp) {
-        const tend = bp.tendencies.toLowerCase();
-        if (tend.includes('warm') || tend.includes('rich') || tend.includes('dense')) {
-          systemLean = systemLean === 'precise' ? 'balanced' : 'warm';
-        } else if (tend.includes('fast') || tend.includes('precise') || tend.includes('transparent') || tend.includes('lean')) {
-          systemLean = systemLean === 'warm' ? 'balanced' : 'precise';
-        }
+      const product = ALL_PRODUCTS.find(
+        (p) => p.name.toLowerCase() === match.name.toLowerCase()
+          || p.brand.toLowerCase() === match.name.toLowerCase(),
+      );
+      if (bp || product) {
+        cableComponents.push({
+          displayName: match.name,
+          role: product?.category ?? 'component',
+          character: product?.description ?? bp?.tendencies ?? '',
+          brandProfile: bp ? { philosophy: bp.philosophy, tendencies: bp.tendencies, systemContext: bp.systemContext } : undefined,
+          product: product ?? undefined,
+        });
       }
+    }
+    if (cableComponents.length > 0) {
+      const profiles = classifyComponentAxes(cableComponents);
+      systemLean = deriveSystemLeanFromAxes(profiles);
     }
   }
 

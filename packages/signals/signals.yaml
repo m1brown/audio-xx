@@ -2,9 +2,18 @@
 # Maps common listener phrases to trait signals and archetype hints.
 # This is the bridge between free-text input and the rule engine.
 # Edit this file to add phrases — no code changes required.
+#
+# ── v1 Axis Model ──────────────────────────────────────
+# Primary axes: Warm↔Bright, Smooth↔Detailed, Elastic↔Controlled, Airy↔Closed
+# Overlay: Relaxed↔Fatiguing
+#
+# Each signal entry maps user language to secondary trait signals.
+# The engine infers primary axis positions from these signals.
+# See: docs/audio_xx_sonic_trait_framework_v1.md
 
 signals:
   # ── Brightness / Harshness ──────────────────────────
+  # Axis: Bright side of Warm ↔ Bright + Fatiguing overlay
 
   - phrases:
       - bright
@@ -17,16 +26,40 @@ signals:
       - spitty
       - aggressive treble
       - aggressive
-      - glare
       - etched
       - hard
-      - forward
-      - clinical
-      - sterile
     signals:
       fatigue_risk: up
       glare_risk: up
     symptom: brightness_harshness
+
+  # ── Glare (distinct from general brightness) ────────
+  # Axis: Bright (extreme) + Fatiguing overlay
+
+  - phrases:
+      - glare
+      - glary
+      - too much glare
+      - upper midrange glare
+    signals:
+      glare_risk: up
+      fatigue_risk: up
+    symptom: glare
+
+  # ── Clinical / Sterile ──────────────────────────────
+  # Axis: Bright + Detailed + Controlled intersection
+
+  - phrases:
+      - clinical
+      - sterile
+      - forward
+      - antiseptic
+      - soulless
+    signals:
+      fatigue_risk: up
+      sweetness: down
+      flow: down
+    symptom: clinical_sterile
 
   # ── Warmth / Richness ──────────────────────────────
 
@@ -53,36 +86,46 @@ signals:
     symptom: warmth_richness
 
   # ── Sweetness / Flow / Harmonic Preference ─────────
+  # Axis: Warm × Smooth intersection
 
   - phrases:
       - sweet
       - sweetness
-      - flow
-      - flowing
-      - elastic
-      - elasticity
       - glow
       - glowing
+      - silky
       - harmonic
       - harmonically rich
       - natural decay
+      - tube-like
+      - forgiving
+    signals:
+      sweetness: up
+      flow: up
+      fatigue_risk: down
+    symptom: sweetness_flow
+
+  # ── Musical / Organic / Flowing ─────────────────────
+  # Axis: Smooth side of Smooth ↔ Detailed + Elastic
+
+  - phrases:
+      - flow
+      - flowing
       - musical
       - breathes
-      - tube-like
       - organic
       - natural
       - liquid
-      - forgiving
       - ease
       - easier
       - coherent
       - continuous
     signals:
-      tonal_density: up
       flow: up
+      tonal_density: up
       elasticity: up
       fatigue_risk: down
-    symptom: sweetness_flow
+    symptom: musical_organic
     archetype_hint: engagement
 
   # ── Thinness ──────────────────────────────────────
@@ -149,6 +192,7 @@ signals:
     symptom: fatigue
 
   # ── Detail / Revealing ────────────────────────────
+  # Axis: Detailed side of Smooth ↔ Detailed
 
   - phrases:
       - detailed
@@ -163,10 +207,41 @@ signals:
       - clear
       - clarity
       - explicit
-      - open
     signals:
       clarity: up
     symptom: detail_revealing
+
+  # ── Airy / Open / Spacious ─────────────────────────
+  # Axis: Airy side of Airy ↔ Closed
+
+  - phrases:
+      - airy
+      - open
+      - spacious
+      - expansive
+      - boundless
+      - room-filling
+      - holographic
+    signals:
+      openness: up
+      soundstage: up
+    symptom: airy_open
+
+  # ── Closed / Boxy / Intimate ───────────────────────
+  # Axis: Closed side of Airy ↔ Closed
+
+  - phrases:
+      - closed
+      - closed-in
+      - boxy
+      - claustrophobic
+      - small sounding
+      - boxed in
+      - intimate
+    signals:
+      openness: down
+      soundstage: down
+    symptom: closed_boxy
 
   # ── Smooth / Relaxed ──────────────────────────────
 
@@ -222,6 +297,57 @@ signals:
       elasticity: up
     symptom: speed_transient_attack
     archetype_hint: engagement
+
+  # ── Exciting / Engaging / Alive ──────────────────────
+  # Axis: Elastic side of Elastic ↔ Controlled
+
+  - phrases:
+      - exciting
+      - alive
+      - lively
+      - engaging
+      - toe-tapping
+      - visceral
+      - elastic
+      - elasticity
+    signals:
+      dynamics: up
+      elasticity: up
+    symptom: exciting_engaging
+    archetype_hint: engagement
+
+  # ── Controlled / Damped / Precise ──────────────────
+  # Axis: Controlled side of Elastic ↔ Controlled
+
+  - phrases:
+      - controlled
+      - precise
+      - iron grip
+      - vice-like
+      - authoritative
+      - composed
+      - unflappable
+    signals:
+      composure: up
+      damping_control: up
+    symptom: controlled_precise
+
+  # ── Overdamped / Lifeless Control ──────────────────
+  # Axis: Controlled (extreme) on Elastic ↔ Controlled
+
+  - phrases:
+      - overdamped
+      - too controlled
+      - too tight
+      - strangled
+      - suffocated
+      - no life
+      - mechanical
+    signals:
+      elasticity: down
+      dynamics: down
+      composure: up
+    symptom: overdamped
 
   # ── Too Polite / Sleepy (Engagement hint) ─────────
 
