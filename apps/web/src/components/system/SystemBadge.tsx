@@ -19,19 +19,24 @@ export default function SystemBadge({ onClick }: SystemBadgeProps) {
   const { state } = useAudioSession();
   const { activeSystemRef, savedSystems, draftSystem } = state;
 
-  if (!activeSystemRef) return null;
-
   let label: string;
   let isDraft = false;
 
-  if (activeSystemRef.kind === 'draft') {
-    if (!draftSystem) return null;
-    label = draftSystem.name || 'Draft System';
-    isDraft = true;
+  if (activeSystemRef) {
+    if (activeSystemRef.kind === 'draft') {
+      if (!draftSystem) return null;
+      label = draftSystem.name || 'Draft System';
+      isDraft = true;
+    } else {
+      const saved = savedSystems.find((s) => s.id === activeSystemRef.id);
+      if (!saved) return null;
+      label = saved.name;
+    }
+  } else if (savedSystems.length === 1) {
+    // Auto-activated: single saved system shown without explicit ref
+    label = savedSystems[0].name;
   } else {
-    const saved = savedSystems.find((s) => s.id === activeSystemRef.id);
-    if (!saved) return null;
-    label = saved.name;
+    return null;
   }
 
   return (

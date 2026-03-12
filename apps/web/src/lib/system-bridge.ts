@@ -146,7 +146,13 @@ function inferCharacterFromTendencies(tendencies: string | null): SystemCharacte
 export function activeSystemToProfile(state: AudioSessionState): SystemProfile {
   const { activeSystemRef, savedSystems, draftSystem } = state;
 
-  if (!activeSystemRef) return DEFAULT_SYSTEM_PROFILE;
+  if (!activeSystemRef) {
+    // Auto-activate: single saved system fallback (mirrors resolveActiveSystemContext)
+    if (savedSystems.length === 1) {
+      return systemToProfile(savedSystems[0].components, savedSystems[0].tendencies);
+    }
+    return DEFAULT_SYSTEM_PROFILE;
+  }
 
   if (activeSystemRef.kind === 'draft') {
     return draftSystem
@@ -238,7 +244,27 @@ export function resolveActiveSystemContext(
 ): ActiveSystemContext | null {
   const { activeSystemRef, savedSystems, draftSystem } = state;
 
-  if (!activeSystemRef) return null;
+  // Auto-activate: if no explicit ref is set but exactly one saved system
+  // exists, treat it as the active system. This prevents the advisor from
+  // asking "what does your system look like?" when the user already saved one.
+  if (!activeSystemRef) {
+    if (savedSystems.length === 1) {
+      const sole = savedSystems[0];
+      return {
+        name: sole.name,
+        components: sole.components.map((c) => ({
+          name: c.name,
+          brand: c.brand,
+          category: c.category,
+          role: c.role,
+        })),
+        tendencies: sole.tendencies,
+        location: sole.location,
+        primaryUse: sole.primaryUse,
+      };
+    }
+    return null;
+  }
 
   if (activeSystemRef.kind === 'draft') {
     if (!draftSystem) return null;

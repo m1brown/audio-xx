@@ -647,8 +647,8 @@ export default function Home() {
       {/* System badge + panel */}
       <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
         <SystemBadge onClick={() => setSystemPanelOpen((v) => !v)} />
-        {/* Fallback entry point when no system is active */}
-        {!audioState.activeSystemRef && !systemPanelOpen && (
+        {/* Fallback entry point when no system is active (and no auto-activated single system) */}
+        {!audioState.activeSystemRef && audioState.savedSystems.length !== 1 && !systemPanelOpen && (
           <button
             type="button"
             onClick={() => setSystemPanelOpen(true)}

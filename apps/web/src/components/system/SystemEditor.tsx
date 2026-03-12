@@ -131,10 +131,13 @@ export default function SystemEditor({ initial, onClose, onSaved }: SystemEditor
           return;
         }
 
-        // Refresh saved systems from backend and activate the new one
-        await helpers.refreshSavedSystems();
+        // Save succeeded — close editor and refresh in background.
+        // Refresh errors should not block the UI or show a false error.
         onSaved?.();
         onClose();
+        helpers.refreshSavedSystems().catch(() => {
+          // Refresh failure is non-critical — the system was already saved
+        });
       } catch {
         setError('Network error — could not save.');
         setSaving(false);
@@ -290,7 +293,7 @@ export default function SystemEditor({ initial, onClose, onSaved }: SystemEditor
               <select
                 value={comp.category}
                 onChange={(e) => updateComponent(i, { category: e.target.value as ProductCategory })}
-                style={{ ...inputStyle, flex: 0.9, padding: '0.4rem 0.3rem' }}
+                style={{ ...inputStyle, flex: 1.2, minWidth: '7.5rem', padding: '0.4rem 0.3rem' }}
               >
                 {CATEGORY_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
