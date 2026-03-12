@@ -1236,9 +1236,17 @@ function buildUpgradeAnalysis(
   const whenToWait = `Consider waiting if ${waitParts.join('; or if ')}.`;
 
   // ── 9. SYSTEM BALANCE SUMMARY ────────────────────────
-  // Diagnostic of the system's current balance across core listening traits.
-  // Uses the 'from' product traits combined with system component traits
-  // when available, otherwise just the 'from' product.
+  // Only shown when the system includes at least two major components
+  // (e.g. source + amp, or amp + speakers).  A single component does
+  // not provide enough context for meaningful system-level scoring.
+  const MAJOR_CATEGORIES = new Set(['dac', 'amplifier', 'integrated', 'speaker']);
+  const majorComponentCount = 1 /* the 'from' product itself */
+    + (activeSystem?.components.filter(
+      (c) => c.name.toLowerCase() !== from.name.toLowerCase()
+        && c.name.toLowerCase() !== to.name.toLowerCase()
+        && MAJOR_CATEGORIES.has(c.category),
+    ).length ?? 0);
+
   const BALANCE_TRAITS: Array<{ key: string; label: string }> = [
     { key: 'speed', label: 'Speed / articulation' },
     { key: 'tonal_density', label: 'Tonal density' },
@@ -1251,48 +1259,51 @@ function buildUpgradeAnalysis(
 
   const systemBalance: SystemBalanceEntry[] = [];
 
-  for (const bt of BALANCE_TRAITS) {
-    const fromVal = resolveTraitValue(from.tendencyProfile, from.traits, bt.key);
+  // Only build balance summary when we have enough system context.
+  if (majorComponentCount >= 2) {
+    for (const bt of BALANCE_TRAITS) {
+      const fromVal = resolveTraitValue(from.tendencyProfile, from.traits, bt.key);
 
-    // If we have system components, try to find a system-level aggregate
-    // by checking if other products in the system affect this trait.
-    let systemVal = fromVal;
-    let systemNote: string | undefined;
+      // If we have system components, try to find a system-level aggregate
+      // by checking if other products in the system affect this trait.
+      let systemVal = fromVal;
+      let systemNote: string | undefined;
 
-    if (activeSystem && activeSystem.components.length > 0) {
-      // Look up system components in the product catalog
-      for (const comp of activeSystem.components) {
-        if (comp.name.toLowerCase() === from.name.toLowerCase()) continue;
-        if (comp.name.toLowerCase() === to.name.toLowerCase()) continue;
-        const compProduct = ALL_PRODUCTS.find(
-          (p) => p.name.toLowerCase() === comp.name.toLowerCase()
-            || `${p.brand} ${p.name}`.toLowerCase() === `${comp.brand} ${comp.name}`.toLowerCase(),
-        );
-        if (compProduct) {
-          const compVal = resolveTraitValue(compProduct.tendencyProfile, compProduct.traits, bt.key);
-          // Component influence: downstream components can limit or enhance the source
-          if (comp.category === 'speaker' || comp.category === 'amplifier' || comp.category === 'integrated') {
-            if (compVal < systemVal - 0.2) {
-              systemVal = (systemVal + compVal) / 2;
-              systemNote = `${comp.brand} ${comp.name} may be a limiting factor`;
-            } else if (compVal > systemVal + 0.2) {
-              systemNote = `${comp.brand} ${comp.name} contributes here`;
+      if (activeSystem && activeSystem.components.length > 0) {
+        // Look up system components in the product catalog
+        for (const comp of activeSystem.components) {
+          if (comp.name.toLowerCase() === from.name.toLowerCase()) continue;
+          if (comp.name.toLowerCase() === to.name.toLowerCase()) continue;
+          const compProduct = ALL_PRODUCTS.find(
+            (p) => p.name.toLowerCase() === comp.name.toLowerCase()
+              || `${p.brand} ${p.name}`.toLowerCase() === `${comp.brand} ${comp.name}`.toLowerCase(),
+          );
+          if (compProduct) {
+            const compVal = resolveTraitValue(compProduct.tendencyProfile, compProduct.traits, bt.key);
+            // Component influence: downstream components can limit or enhance the source
+            if (comp.category === 'speaker' || comp.category === 'amplifier' || comp.category === 'integrated') {
+              if (compVal < systemVal - 0.2) {
+                systemVal = (systemVal + compVal) / 2;
+                systemNote = `${comp.brand} ${comp.name} may be a limiting factor`;
+              } else if (compVal > systemVal + 0.2) {
+                systemNote = `${comp.brand} ${comp.name} contributes here`;
+              }
             }
           }
         }
       }
-    }
 
-    let level: string;
-    if (systemVal >= 0.75) level = 'Strong';
-    else if (systemVal >= 0.55) level = 'Good';
-    else if (systemVal >= 0.4) level = 'Moderate';
-    else if (systemVal > 0) level = 'Limited';
-    else level = 'Neutral';
+      let level: string;
+      if (systemVal >= 0.75) level = 'Strong';
+      else if (systemVal >= 0.55) level = 'Good';
+      else if (systemVal >= 0.4) level = 'Moderate';
+      else if (systemVal > 0) level = 'Limited';
+      else level = 'Neutral';
 
-    // Only include traits that have meaningful signal
-    if (systemVal > 0 || fromVal > 0) {
-      systemBalance.push({ label: bt.label, level, note: systemNote });
+      // Only include traits that have meaningful signal
+      if (systemVal > 0 || fromVal > 0) {
+        systemBalance.push({ label: bt.label, level, note: systemNote });
+      }
     }
   }
 
@@ -1348,35 +1359,52 @@ function buildUpgradeAnalysis(
   }
 
   // ── 11. EXPECTED MAGNITUDE OF CHANGE ─────────────────
-  // Classify the upgrade as Minor / Moderate / Major based on:
-  //   - number and size of positive trait deltas
-  //   - price ratio (diminishing returns at high ratios)
-  //   - architectural similarity (same architecture = smaller steps)
+  // Scoring philosophy:
+  //   Minor    = small tuning or lateral changes within similar architecture
+  //   Moderate = meaningful improvements within the same architecture
+  //   Major    = architectural changes (speakers, amplification topology,
+  //              large-scale system shifts)
+  //
+  // Most DAC-to-DAC upgrades land in Minor–Moderate.  "Major" is reserved
+  // for changes that fundamentally alter how the system renders music.
 
   let magnitudeScore = 0;
 
-  // Trait delta contribution
+  // Trait delta contribution — scaled so typical DAC upgrades
+  // (2–3 deltas of ~0.3 each) land in the Moderate band, not Major.
   for (const pd of positiveDeltas) {
-    magnitudeScore += pd.diff; // each delta adds to magnitude
+    magnitudeScore += pd.diff * 0.5;
   }
   for (const nd of negativeDeltas) {
-    magnitudeScore -= Math.abs(nd.diff) * 0.3; // negative deltas reduce net impact slightly
+    magnitudeScore -= Math.abs(nd.diff) * 0.15;
   }
 
-  // Price ratio modulation
+  // Category weighting — source-only changes are inherently smaller
+  // than speaker or amplification topology changes.
+  const isSourceOnly = from.category === 'dac' || from.category === 'streamer';
+  if (isSourceOnly) {
+    magnitudeScore *= 0.7;
+  }
+
+  // Same-brand / same-architecture damping — refinement, not revolution.
+  if (sameBrand) {
+    magnitudeScore *= 0.8;
+  }
+
+  // Cross-architecture / cross-brand gets a modest boost.
+  if (!sameBrand) {
+    magnitudeScore *= 1.1;
+  }
+
+  // Price ratio modulation — very high ratios within same architecture
+  // indicate diminishing returns, not bigger gains.
   if (from.price > 0 && to.price > 0) {
     const ratio = to.price / from.price;
     if (ratio > 4) {
-      // Very high price ratio in same architecture → diminishing returns
-      magnitudeScore *= 0.8;
-    } else if (ratio > 2) {
-      magnitudeScore *= 0.9;
+      magnitudeScore *= 0.75;
+    } else if (ratio > 2.5) {
+      magnitudeScore *= 0.85;
     }
-  }
-
-  // Cross-architecture gets a slight boost (different design = more perceptible)
-  if (!sameBrand) {
-    magnitudeScore *= 1.15;
   }
 
   let changeMagnitude: ChangeMagnitude;
@@ -1385,7 +1413,8 @@ function buildUpgradeAnalysis(
     ? sharedQualities
     : unchanged.slice(0, 2).map((u) => u.split(' — ')[0]);
 
-  if (magnitudeScore >= 0.9) {
+  // Thresholds: Minor < 0.35, Moderate 0.35–0.7, Major >= 0.7
+  if (magnitudeScore >= 0.7) {
     changeMagnitude = {
       tier: 'major',
       label: 'Major',
@@ -1396,7 +1425,7 @@ function buildUpgradeAnalysis(
         ? `${remainsLabels.join(', ')} should carry through`
         : 'Core tonal character should carry through',
     };
-  } else if (magnitudeScore >= 0.45) {
+  } else if (magnitudeScore >= 0.35) {
     changeMagnitude = {
       tier: 'moderate',
       label: 'Moderate',

@@ -149,15 +149,6 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
-      {/* ── 4. Alignment rationale ───────────────────── */}
-      {a.alignmentRationale && (
-        <AdvisorySection label="How this connects">
-          <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
-            {a.alignmentRationale}
-          </p>
-        </AdvisorySection>
-      )}
-
       {/* ── 5. Core advisory body (no labels) ────────── */}
       {/* For upgrade analyses, tendencies carries "What the proposed change actually does" */}
       {(a.improvements && a.improvements.length > 0) ? (

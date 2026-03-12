@@ -176,56 +176,86 @@ export function detectSystemDescription(
   if (subjectMatches.length < 2) return null;
 
   // ── Build components from subject matches ──
+  // Process products first, then brands. This allows us to suppress
+  // brand-only matches when a product from that brand already exists,
+  // and to skip substring products that are part of a longer product
+  // name (e.g. "Hugo" when "Hugo TT2" is already matched).
   const components: DraftSystemComponent[] = [];
   const seen = new Set<string>();
+  const coveredBrands = new Set<string>();
 
-  for (const match of subjectMatches) {
+  // Pass 1: products (longer names sorted first to prevent substring dupes)
+  const productMatches = subjectMatches
+    .filter((m) => m.kind === 'product')
+    .sort((a, b) => b.name.length - a.name.length);
+
+  for (const match of productMatches) {
     const key = match.name.toLowerCase();
     if (seen.has(key)) continue;
+
+    // Skip if this product name is a substring of an already-added product
+    // from the same brand (e.g. "Hugo" when "Hugo TT2" already added).
+    const hint = PRODUCT_HINTS[key];
+    if (hint) {
+      const alreadyHasLonger = components.some(
+        (c) => c.brand.toLowerCase() === hint.brand.toLowerCase()
+          && c.name.toLowerCase().includes(key),
+      );
+      if (alreadyHasLonger) continue;
+    }
+
     seen.add(key);
 
-    if (match.kind === 'product') {
-      // Product match — look up brand and category
-      const hint = PRODUCT_HINTS[key];
-      if (hint) {
+    if (hint) {
+      components.push({
+        brand: hint.brand,
+        name: capitalize(match.name),
+        category: hint.category,
+        role: null,
+      });
+      coveredBrands.add(hint.brand.toLowerCase());
+    } else {
+      // Product without known hint — try to associate with a brand match
+      const brandMatch = subjectMatches.find(
+        (m) => m.kind === 'brand' && !seen.has(`used:${m.name.toLowerCase()}`),
+      );
+      if (brandMatch) {
+        seen.add(`used:${brandMatch.name.toLowerCase()}`);
+        coveredBrands.add(brandMatch.name.toLowerCase());
         components.push({
-          brand: hint.brand,
+          brand: capitalize(brandMatch.name),
           name: capitalize(match.name),
-          category: hint.category,
+          category: BRAND_CATEGORY_MAP[brandMatch.name.toLowerCase()] ?? 'other',
           role: null,
         });
       } else {
-        // Product without known hint — try to associate with a brand match
-        const brandMatch = subjectMatches.find(
-          (m) => m.kind === 'brand' && !seen.has(`used:${m.name.toLowerCase()}`),
-        );
-        if (brandMatch) {
-          seen.add(`used:${brandMatch.name.toLowerCase()}`);
-          components.push({
-            brand: capitalize(brandMatch.name),
-            name: capitalize(match.name),
-            category: BRAND_CATEGORY_MAP[brandMatch.name.toLowerCase()] ?? 'other',
-            role: null,
-          });
-        } else {
-          components.push({
-            brand: '',
-            name: capitalize(match.name),
-            category: 'other',
-            role: null,
-          });
-        }
+        components.push({
+          brand: '',
+          name: capitalize(match.name),
+          category: 'other',
+          role: null,
+        });
       }
-    } else {
-      // Brand match — use as a component with brand = name
-      const category = BRAND_CATEGORY_MAP[key] ?? 'other';
-      components.push({
-        brand: capitalize(match.name),
-        name: '',  // Brand-only — user can fill in model in editor
-        category,
-        role: null,
-      });
     }
+  }
+
+  // Pass 2: brands — only add if no product from this brand already exists.
+  // This prevents "Chord" from appearing as a separate component when
+  // "Hugo TT2" (brand: Chord) is already in the list.
+  for (const match of subjectMatches) {
+    if (match.kind !== 'brand') continue;
+    const key = match.name.toLowerCase();
+    if (seen.has(key)) continue;
+    if (coveredBrands.has(key)) continue; // brand already represented by a product
+
+    seen.add(key);
+    const category = BRAND_CATEGORY_MAP[key] ?? 'other';
+    components.push({
+      brand: capitalize(match.name),
+      name: '',  // Brand-only — user can fill in model in editor
+      category,
+      role: null,
+    });
   }
 
   // Also pick up generic component descriptors not in subject matches
