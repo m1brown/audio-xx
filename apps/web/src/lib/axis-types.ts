@@ -8,6 +8,24 @@
  * labels — not numeric scores. The axes use language drawn directly
  * from how listeners actually describe sound.
  *
+ * ── CALIBRATION PRINCIPLES ──────────────────────────────────────
+ *
+ * 1. Clarity ≠ Brightness.
+ *    High clarity does NOT imply a 'bright' classification. Brightness
+ *    means treble emphasis or tonal energy shift toward the upper
+ *    frequencies. Clarity can be achieved through timing accuracy,
+ *    transient precision, or transparency — none of which constitute
+ *    brightness. A product that is lean (low tonal density) but achieves
+ *    detail through timing should be classified as NEUTRAL, not bright.
+ *    Examples: Chord Qutest (neutral), RME ADI-2 (neutral).
+ *    Contrast: SMSL DO300 (bright — ESS glare risk + lean density).
+ *
+ * 2. Anchor references for the Warm ↔ Bright axis:
+ *    - Warm pole:    Denafrips Pontus (density 1.0, harmonic richness)
+ *    - Neutral:      Chord Qutest (clarity via timing, not treble)
+ *    - Neutral:      RME ADI-2 (ruler-flat transparency)
+ *    - Bright:       SMSL DO300 (ESS glare risk, lean density)
+ *
  * See: docs/audio_xx_sonic_trait_framework_v1.md
  */
 

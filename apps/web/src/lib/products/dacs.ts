@@ -728,16 +728,20 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'DE',
     topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit' },
-    // ── PRIORITY ANCHOR: RME ADI-2 DAC FS ──
+    // ── CALIBRATED ANCHOR: RME ADI-2 DAC FS ──
     // Axis reasoning: Pro-audio heritage — "ruler-flat tonal balance with no editorial
     // voice." Clarity 1.0, composure 1.0, flow 0.4, density 0.4. "Transparent,
     // composed, and deeply configurable." "Reveals everything but editorializes nothing."
     // The parametric EQ is a system-tuning tool, not a sonic character trait.
     //
-    // Warm↔Bright: BRIGHT — clarity 1.0, density 0.4, "lean" in the Topping mold
-    //   but without glare risk. "Ruler-flat" sounds neutral, but the *absence* of
-    //   harmonic editorial means it reads as bright compared to R-2R/tube designs.
-    //   The EQ can compensate, but the *native* voicing is transparency-first.
+    // CALIBRATION: High clarity does NOT imply brightness. The RME is
+    // transparency-first with no editorial voice — "ruler-flat" is genuinely
+    // neutral rather than bright. The absence of harmonic richness is leanness,
+    // not treble emphasis. Neutral per anchor calibration.
+    //
+    // Warm↔Bright: NEUTRAL — "ruler-flat tonal balance" is the definition of
+    //   neutral. High clarity comes from transparency and resolution, not from
+    //   treble emphasis or energy shift. No glare risk.
     //
     // Smooth↔Detailed: DETAILED — clarity emphasized, flow less_emphasized.
     //   "Precise, stable imaging." This is a resolving instrument, not a musical one.
@@ -749,7 +753,7 @@ export const DAC_PRODUCTS: Product[] = [
     // Airy↔Closed: NEUTRAL — "precise, stable imaging" is spatial precision, not
     //   spaciousness. No sense of open/airy in the documentation.
     primaryAxes: {
-      warm_bright: 'bright',              // Transparency reads as bright vs editorial designs
+      warm_bright: 'neutral',             // Ruler-flat transparency — genuinely neutral, not bright
       smooth_detailed: 'detailed',        // Resolving, clarity-first
       elastic_controlled: 'controlled',   // Composure 1.0, "maintains grip"
       airy_closed: 'neutral',            // Precise imaging but not spacious
@@ -824,18 +828,21 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'GB',
     topology: 'fpga',
     archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
-    // Axis reasoning: Portable Chord FPGA. Clarity 1.0, flow 0.7, density 0.4.
+    // Axis reasoning (CALIBRATED ANCHOR): Portable Chord FPGA. Clarity 1.0, flow 0.7, density 0.4.
     // "Speed over weight." "Lighter tonal balance than desktop Chord units."
     // Shares Chord timing precision but with less authority.
+    // CALIBRATION: High clarity does NOT imply brightness. Chord achieves detail
+    // through timing accuracy rather than treble emphasis → neutral, not bright.
+    // Dynamic snap and FPGA transient precision → elastic.
     primaryAxes: {
-      warm_bright: 'bright',          // Clarity 1.0, density 0.4 — "lighter tonal balance"
-      smooth_detailed: 'detailed',    // Clarity emphasized, flow present but secondary
-      elastic_controlled: 'neutral',  // No strong dynamic character — neither punchy nor damped
-      airy_closed: 'neutral',        // "Good headphone staging" but not notably airy
+      warm_bright: 'neutral',         // Clarity via timing precision, not treble emphasis — neutral per calibration
+      smooth_detailed: 'detailed',    // Clarity emphasized, timing precision — detail-forward
+      elastic_controlled: 'elastic',  // FPGA transient snap, dynamic agility — elastic character
+      airy_closed: 'neutral',        // "Good headphone staging" but not notably airy or closed
     },
     fatigueAssessment: {
       risk: 'low',
-      notes: 'Despite bright lean, no glare risk. Chord FPGA character avoids analytical edge. Fatigue unlikely.',
+      notes: 'No glare risk. Chord FPGA character avoids analytical edge — detail comes from timing, not energy. Fatigue unlikely.',
     },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -984,13 +991,18 @@ export const DAC_PRODUCTS: Product[] = [
     topology: 'fpga',
     archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
     // ── PRIORITY ANCHOR: Chord Qutest ──
-    // Axis reasoning: FPGA pulse array — the archetypal timing-precision DAC.
-    // Clarity 1.0, flow 0.7, elasticity 0.7, composure 0.7, density 0.4.
+    // Axis reasoning (CALIBRATED ANCHOR): FPGA pulse array — the archetypal
+    // timing-precision DAC. Clarity 1.0, flow 0.7, elasticity 0.7, composure 0.7,
+    // density 0.4.
     //
-    // Warm↔Bright: BRIGHT — clarity 1.0, density 0.4. "Lighter tonal weight
-    //   than R-2R designs." The FPGA character avoids delta-sigma harshness but
-    //   the tonal weight is unmistakably lean compared to warm references.
-    //   No glare risk — the brightness is precision, not edge.
+    // CALIBRATION: High clarity does NOT imply brightness. Chord achieves detail
+    // through timing accuracy rather than treble emphasis. The Qutest is slightly
+    // lean but not bright — neutral is the correct classification.
+    //
+    // Warm↔Bright: NEUTRAL — slightly lean tonal density (0.4), but clarity
+    //   comes from FPGA timing precision, not treble emphasis. No glare risk.
+    //   The leanness is noticeable vs warm references but does not constitute
+    //   brightness in the treble-energy sense. Neutral per anchor calibration.
     //
     // Smooth↔Detailed: DETAILED — "exceptional transient resolution — leading
     //   edges are fast and fully formed." "Fine-grained detail without analytical
@@ -1003,13 +1015,14 @@ export const DAC_PRODUCTS: Product[] = [
     //   Different from the Hugo TT2's controlled composure — the Qutest has
     //   more snap and less authority.
     //
-    // Airy↔Closed: NEUTRAL — no strong spatial documentation. The Qutest is
-    //   not noted for spaciousness or intimacy. Staging depends on downstream.
+    // Airy↔Closed: AIRY (slight) — subtle spatial openness in the FPGA
+    //   presentation. Less pronounced than the Pontus holographic staging,
+    //   but present enough to warrant 'airy' rather than neutral.
     primaryAxes: {
-      warm_bright: 'bright',          // Clarity 1.0, density 0.4, "lighter tonal weight"
+      warm_bright: 'neutral',         // Slightly lean but not bright — clarity via timing, not treble
       smooth_detailed: 'detailed',    // Timing precision, transient resolution
       elastic_controlled: 'elastic',  // FPGA snap, dynamics 0.7, elasticity 0.7
-      airy_closed: 'neutral',        // No strong spatial character
+      airy_closed: 'airy',           // Slight spatial openness — subtle but present
     },
     fatigueAssessment: {
       risk: 'context_dependent',
@@ -1081,13 +1094,13 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'SG',
     topology: 'r2r',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
-    // ── PRIORITY ANCHOR: Denafrips Pontus II 12th-1 ──
+    // ── CALIBRATED ANCHOR: Denafrips Pontus II 12th-1 ──
     // Axis reasoning: Full-scale R-2R — the archetypal warm, textured DAC.
     // Flow 1.0, density 1.0, texture 1.0, clarity 0.7, dynamics 0.7, composure 0.7.
     //
     // Warm↔Bright: WARM — density 1.0, "rich harmonic density with physical
     //   midrange presence." The Pontus is the warm-axis reference product in the
-    //   DAC catalog. Zero glare risk. "Prioritizes body and musical weight over
+    //   DAC catalog. Zero glare risk. "Prioritises body and musical weight over
     //   transient sharpness."
     //
     // Smooth↔Detailed: SMOOTH — flow 1.0, "relaxed but coherent — phrasing breathes."
@@ -1101,14 +1114,15 @@ export const DAC_PRODUCTS: Product[] = [
     //   Elasticity at 0.4 is the only weak signal, but "relaxed" timing suggests
     //   neither elastic snap nor controlled grip — just flow.
     //
-    // Airy↔Closed: AIRY — "deep, holographic staging with good layering
+    // Airy↔Closed: AIRY (slight) — "deep, holographic staging with good layering
     //   front-to-back." The R-2R architecture creates a sense of dimensional
-    //   space that delta-sigma designs often lack at this price.
+    //   space that delta-sigma designs often lack at this price. Present but not
+    //   the defining trait — slightly airy rather than dramatically open.
     primaryAxes: {
       warm_bright: 'warm',            // Density 1.0, "rich harmonic density" — the warm reference
       smooth_detailed: 'smooth',      // Flow 1.0, "phrasing breathes" — the smooth reference
       elastic_controlled: 'neutral',  // Dynamics and composure balanced — neither dominates
-      airy_closed: 'airy',           // "Deep, holographic staging" — spatial openness
+      airy_closed: 'airy',           // "Deep, holographic staging" — slight spatial openness
     },
     fatigueAssessment: {
       risk: 'low',
