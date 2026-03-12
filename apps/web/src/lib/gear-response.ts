@@ -582,6 +582,199 @@ function buildSystemComparisonNote(
   return `Your current system (${componentNames}) provides context for this comparison. How either product interacts with the rest of the chain would likely matter more than how they compare in isolation.`;
 }
 
+// ── Upgrade intent detection ─────────────────────────
+
+const UPGRADE_LANGUAGE_RE = [
+  /\bupgrade\b/i,
+  /\breplace\b/i,
+  /\bswap\b/i,
+  /\bchange\s+(?:from|my)\b/i,
+  /\bmove\s+(?:from|up\b)/i,
+  /\bstep\s+up\b/i,
+  /\bwhat\s+would\b.*\b(?:change|differ|shift|improve)\b/i,
+];
+
+function isUpgradeComparison(message: string, a: Product, b: Product): boolean {
+  // Upgrade if the query uses upgrade language, or if both products share
+  // the same brand AND the same architecture (lineage upgrade).
+  const hasUpgradeLanguage = UPGRADE_LANGUAGE_RE.some((p) => p.test(message));
+  const sameLineage = a.brand === b.brand && a.architecture === b.architecture;
+  return hasUpgradeLanguage || sameLineage;
+}
+
+// ── Upgrade comparison builder ───────────────────────
+//
+// Produces the four-element upgrade reasoning structure:
+//   1. Architecture lineage — what design they share
+//   2. What remains similar — shared traits (confident language)
+//   3. What changes — trait deltas and tendency shifts (analytical language)
+//   4. System interaction — how the change would affect the chain (conditional language)
+
+function buildUpgradeAnchor(
+  from: Product,
+  to: Product,
+  activeSystem: ActiveSystemContext | null | undefined,
+): string {
+  // 1. Architecture lineage — confident, factual
+  const lineageNote = from.brand === to.brand
+    ? `Both the ${from.brand} ${from.name} and the ${to.brand} ${to.name} use ${from.brand}'s ${from.architecture} architecture.`
+    : `The ${from.brand} ${from.name} (${from.architecture}) and the ${to.brand} ${to.name} (${to.architecture}) come from different design lineages.`;
+
+  // System framing when available
+  if (activeSystem && activeSystem.components.length > 0) {
+    const otherComponents = activeSystem.components
+      .filter((c) => c.name.toLowerCase() !== from.name.toLowerCase()
+        && c.name.toLowerCase() !== to.name.toLowerCase())
+      .map((c) => `${c.brand} ${c.name}`);
+    if (otherComponents.length > 0) {
+      return `${lineageNote} This is an upgrade question within your system (${otherComponents.join(', ')}), so the relevant question is what changes in that context.`;
+    }
+  }
+
+  return `${lineageNote} This is a question of scale and refinement within that design philosophy, not a change in direction.`;
+}
+
+function buildUpgradeCharacter(from: Product, to: Product): string {
+  const parts: string[] = [];
+
+  // 2. What remains similar — shared tendencies (confident language)
+  if (hasTendencies(from.tendencies) && hasTendencies(to.tendencies)) {
+    const fromDomains = new Map(from.tendencies.character.map((t) => [t.domain, t.tendency]));
+    const toDomains = new Map(to.tendencies.character.map((t) => [t.domain, t.tendency]));
+
+    const sharedQualities: string[] = [];
+    const changedQualities: { domain: string; from: string; to: string }[] = [];
+
+    for (const [domain, fromTend] of fromDomains) {
+      const toTend = toDomains.get(domain);
+      if (!toTend) continue;
+      // If both mention the same domain, check if the tendency text overlaps
+      // (shared root concept) or diverges (a real change)
+      const fromWords = new Set(fromTend.toLowerCase().split(/\s+/));
+      const toWords = new Set(toTend.toLowerCase().split(/\s+/));
+      const overlap = [...fromWords].filter((w) => toWords.has(w) && w.length > 4).length;
+      if (overlap >= 2) {
+        sharedQualities.push(domain);
+      } else {
+        changedQualities.push({ domain, from: fromTend, to: toTend });
+      }
+    }
+
+    // Report shared qualities — confident language (component traits)
+    if (sharedQualities.length > 0) {
+      parts.push(`Both share the ${from.brand} signature in ${sharedQualities.join(' and ')} — this is the design continuity across the lineup.`);
+    }
+
+    // 3. What changes — analytical language (system tendencies)
+    if (changedQualities.length > 0) {
+      for (const cq of changedQualities.slice(0, 2)) {
+        parts.push(`In ${cq.domain}, the ${from.name} tends toward ${cq.from}. The ${to.name} tends toward ${cq.to}.`);
+      }
+    }
+  }
+
+  // Trait-level deltas for qualities not covered by tendency text
+  const traitChanges: string[] = [];
+  const keyTraits = ['composure', 'tonal_density', 'dynamics', 'clarity', 'flow', 'texture', 'elasticity'] as const;
+
+  for (const trait of keyTraits) {
+    const fromVal = resolveTraitValue(from.tendencyProfile, from.traits, trait);
+    const toVal = resolveTraitValue(to.tendencyProfile, to.traits, trait);
+    const diff = toVal - fromVal;
+    // Use 0.29 threshold to account for floating-point arithmetic
+    // (e.g. 0.7 - 0.4 = 0.29999... which fails >= 0.3)
+    if (diff >= 0.29) {
+      const label = TRAIT_LABELS[trait] ?? trait.replace(/_/g, ' ');
+      traitChanges.push(`more ${label}`);
+    } else if (diff <= -0.29) {
+      const label = TRAIT_LABELS[trait] ?? trait.replace(/_/g, ' ');
+      traitChanges.push(`less ${label}`);
+    }
+  }
+
+  if (traitChanges.length > 0 && parts.length < 3) {
+    parts.push(`The ${to.name} brings ${traitChanges.join(', ')} compared to the ${from.name}.`);
+  }
+
+  // Trade-off from the target product — what it costs
+  if (hasTendencies(to.tendencies) && to.tendencies.tradeoffs.length > 0) {
+    const tradeoff = to.tendencies.tradeoffs[0];
+    parts.push(`The trade-off: ${tradeoff.gains} at the cost of ${tradeoff.cost}.`);
+  }
+
+  return parts.join(' ');
+}
+
+function buildUpgradeDirection(
+  from: Product,
+  to: Product,
+  activeSystem: ActiveSystemContext | null | undefined,
+): string {
+  const parts: string[] = [];
+
+  // 4. System interaction — conditional language (upgrade predictions)
+  if (hasTendencies(to.tendencies)) {
+    // Find the most relevant interaction for the user's system
+    const systemInteractions = to.tendencies.interactions;
+
+    // Check for a same-lineup comparison interaction
+    const lineupInteraction = systemInteractions.find((i) =>
+      i.condition.toLowerCase().includes(from.name.toLowerCase())
+      || i.condition.toLowerCase().includes('same system')
+      || i.condition.toLowerCase().includes('compared to'),
+    );
+    if (lineupInteraction) {
+      parts.push(`In your context: ${lineupInteraction.effect}.`);
+    }
+
+    // If we have an active system, look for relevant amplifier/speaker interactions
+    if (activeSystem && activeSystem.components.length > 0) {
+      const ampComponent = activeSystem.components.find((c) =>
+        c.category === 'amplifier' || c.category === 'integrated',
+      );
+      const speakerComponent = activeSystem.components.find((c) =>
+        c.category === 'speaker',
+      );
+
+      if (ampComponent || speakerComponent) {
+        const chainParts: string[] = [];
+        if (ampComponent) chainParts.push(`${ampComponent.brand} ${ampComponent.name}`);
+        if (speakerComponent) chainParts.push(`${speakerComponent.brand} ${speakerComponent.name}`);
+        const chainDesc = chainParts.join(' and ');
+
+        // Infer likely effect based on trait changes
+        const composureGain = resolveTraitValue(to.tendencyProfile, to.traits, 'composure')
+          - resolveTraitValue(from.tendencyProfile, from.traits, 'composure');
+        const densityGain = resolveTraitValue(to.tendencyProfile, to.traits, 'tonal_density')
+          - resolveTraitValue(from.tendencyProfile, from.traits, 'tonal_density');
+
+        if (composureGain >= 0.3) {
+          parts.push(`The additional composure would likely give the ${chainDesc} a more effortless presentation — the source would be less of a limiting factor in dynamic passages.`);
+        }
+        if (densityGain >= 0.3) {
+          parts.push(`The increase in tonal density would likely add midrange authority feeding into the ${chainDesc}, which could shift the overall tonal balance toward greater body.`);
+        }
+      }
+    }
+  }
+
+  // Price proportionality note — conditional
+  if (from.price > 0 && to.price > 0) {
+    const ratio = to.price / from.price;
+    if (ratio > 3) {
+      parts.push(`At ${ratio.toFixed(1)}x the price, this is a significant investment for what is ultimately a refinement within the same architecture — the gains are real but incremental, not transformational.`);
+    } else if (ratio > 1.8) {
+      parts.push(`The price step is meaningful. Whether the gains in composure and density justify it depends on how close you are to the ceiling of what the ${from.name} delivers in your system.`);
+    }
+  }
+
+  if (parts.length === 0) {
+    return `The ${to.name} would likely deliver more of what the ${from.name} already does well, with greater authority and composure. Whether the system context reveals that difference depends on the resolving power of the amplification and speakers downstream.`;
+  }
+
+  return parts.join(' ');
+}
+
 // ── Public API ───────────────────────────────────────
 
 export function buildGearResponse(
@@ -635,23 +828,59 @@ export function buildGearResponse(
     const b = products[1] ?? null;
 
     if (a && b) {
+      // ── Upgrade comparison path ──────────────────────
+      // When the query uses upgrade language or both products share a
+      // brand lineage, produce the four-element upgrade structure:
+      //   anchor → architecture lineage + system framing
+      //   character → what stays + what changes
+      //   direction → system interaction + proportionality
+      if (isUpgradeComparison(currentMessage, a, b)) {
+        // Determine "from" and "to" — cheaper product is the origin,
+        // unless active system contains one of them.
+        let from = a.price <= b.price ? a : b;
+        let to = a.price <= b.price ? b : a;
+        if (activeSystem) {
+          const aInSystem = activeSystem.components.some(
+            (c) => c.name.toLowerCase() === a.name.toLowerCase()
+              || `${c.brand} ${c.name}`.toLowerCase() === `${a.brand} ${a.name}`.toLowerCase(),
+          );
+          const bInSystem = activeSystem.components.some(
+            (c) => c.name.toLowerCase() === b.name.toLowerCase()
+              || `${c.brand} ${c.name}`.toLowerCase() === `${b.brand} ${b.name}`.toLowerCase(),
+          );
+          if (aInSystem && !bInSystem) { from = a; to = b; }
+          if (bInSystem && !aInSystem) { from = b; to = a; }
+        }
+
+        return {
+          intent,
+          subjects,
+          anchor: buildUpgradeAnchor(from, to, activeSystem),
+          character: buildUpgradeCharacter(from, to),
+          interpretation: desires.length > 0
+            ? QUALITY_PROFILES[desires[0].quality]?.interpretation
+            : undefined,
+          direction: buildUpgradeDirection(from, to, activeSystem),
+          clarification: activeSystem
+            ? 'What specific quality are you hoping this change would bring to your system?'
+            : 'What does the rest of your system look like? That would help frame what the upgrade would actually change.',
+          systemDirection: sysDir,
+          hearing,
+          userArchetype: sysDir.inferredArchetype
+            ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
+            : undefined,
+        };
+      }
+
+      // ── General comparison path (different architectures/brands) ──
       const archetypeFrame = compareProductArchetypes(a, b);
       const systemNote = buildSystemComparisonNote(a, b, activeSystem);
 
-      // Build system-aware anchor — when a system is selected, frame the
-      // comparison in the context of what it would change in the system
       const baseAnchor = systemNote
         ? `${systemNote} Here is how the two compare.`
-        : `The ${a.brand} ${a.name} and ${b.brand} ${b.name} come from quite different design traditions.`;
+        : `The ${a.brand} ${a.name} and ${b.brand} ${b.name} come from different design traditions.`;
 
-      // Build system-aware direction — add chain interaction note
-      let directionText = withDirection(buildComparisonDirection(a, b));
-      if (activeSystem && activeSystem.components.length > 0) {
-        // Check if this is an upgrade within the same brand lineage
-        if (a.brand === b.brand) {
-          directionText += ` Since both share the ${a.brand} ${a.architecture} architecture, the change would likely be one of scale and refinement rather than philosophical shift.`;
-        }
-      }
+      const directionText = withDirection(buildComparisonDirection(a, b));
 
       return {
         intent,
