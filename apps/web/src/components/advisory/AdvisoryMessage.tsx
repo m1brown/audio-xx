@@ -235,6 +235,88 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
+      {/* ── 8d. System balance summary ────────────────── */}
+      {a.systemBalance && a.systemBalance.length > 0 && (
+        <AdvisorySection label="System balance summary">
+          <div style={{ display: 'grid', gap: '0.3rem' }}>
+            {a.systemBalance.map((entry, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: '0.5rem',
+                  fontSize: '0.93rem',
+                  lineHeight: 1.6,
+                }}
+              >
+                <span style={{ fontWeight: 500, minWidth: '10rem', color: '#333' }}>
+                  {entry.label}
+                </span>
+                <span
+                  style={{
+                    fontWeight: 600,
+                    color: entry.level === 'Strong' ? '#3a7a3a'
+                      : entry.level === 'Good' ? '#5a7a3a'
+                      : entry.level === 'Moderate' ? '#8a7a3a'
+                      : entry.level === 'Limited' ? '#a06030'
+                      : '#888',
+                  }}
+                >
+                  {entry.level}
+                </span>
+                {entry.note && (
+                  <span style={{ fontSize: '0.85rem', color: '#888', fontStyle: 'italic' }}>
+                    — {entry.note}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </AdvisorySection>
+      )}
+
+      {/* ── 8e. Where upgrades would have the most impact ─ */}
+      {a.upgradeImpactAreas && a.upgradeImpactAreas.length > 0 && (
+        <AdvisorySection label="Where upgrades would have the most impact">
+          <BulletList items={a.upgradeImpactAreas} />
+        </AdvisorySection>
+      )}
+
+      {/* ── 8f. Expected magnitude of change ──────────── */}
+      {a.changeMagnitude && (
+        <AdvisorySection label="Expected magnitude of change">
+          <div style={{ fontSize: '0.95rem', lineHeight: 1.7 }}>
+            <span
+              style={{
+                display: 'inline-block',
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase' as const,
+                padding: '0.15rem 0.5rem',
+                borderRadius: '3px',
+                marginBottom: '0.4rem',
+                color: a.changeMagnitude.tier === 'major' ? '#2a6a2a'
+                  : a.changeMagnitude.tier === 'moderate' ? '#6a6a2a'
+                  : '#888',
+                background: a.changeMagnitude.tier === 'major' ? '#e8f5e8'
+                  : a.changeMagnitude.tier === 'moderate' ? '#f5f5e0'
+                  : '#f0f0f0',
+              }}
+            >
+              {a.changeMagnitude.label}
+            </span>
+            <p style={{ margin: '0.4rem 0 0.2rem 0', color: '#333' }}>
+              {a.changeMagnitude.changesmost}
+            </p>
+            <p style={{ margin: 0, color: '#666' }}>
+              {a.changeMagnitude.remainsSimilar}
+            </p>
+          </div>
+        </AdvisorySection>
+      )}
+
       {/* ── 9. Options ───────────────────────────────── */}
       {a.options && a.options.length > 0 && (
         <AdvisorySection label="Worth considering">

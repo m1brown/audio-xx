@@ -78,6 +78,34 @@ export interface UpgradeAnalysis {
   whenMakesSense: string;
   /** 8. WHEN IT MAY NOT BE THE BEST NEXT STEP — conditions where restraint is better. */
   whenToWait: string;
+  /** 9. SYSTEM BALANCE SUMMARY — diagnostic of the system across core listening traits. */
+  systemBalance: SystemBalanceEntry[];
+  /** 10. WHERE UPGRADES WOULD HAVE THE MOST IMPACT — system-level reasoning. */
+  upgradeImpactAreas: string[];
+  /** 11. EXPECTED MAGNITUDE OF CHANGE — Minor / Moderate / Major + explanation. */
+  changeMagnitude: ChangeMagnitude;
+}
+
+/** A single trait reading in the system balance summary. */
+export interface SystemBalanceEntry {
+  /** Human-readable trait label (e.g. "Speed / articulation"). */
+  label: string;
+  /** Descriptive level (e.g. "Strong", "Moderate", "Limited"). */
+  level: string;
+  /** Optional short note providing context. */
+  note?: string;
+}
+
+/** Expected magnitude of change from an upgrade. */
+export interface ChangeMagnitude {
+  /** Classification: 'minor' | 'moderate' | 'major'. */
+  tier: 'minor' | 'moderate' | 'major';
+  /** Human-readable label (e.g. "Moderate"). */
+  label: string;
+  /** What aspects of the presentation change most. */
+  changesmost: string;
+  /** What will likely remain similar. */
+  remainsSimilar: string;
 }
 
 export type Message =

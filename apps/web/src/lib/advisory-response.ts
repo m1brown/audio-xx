@@ -116,6 +116,14 @@ export interface AdvisoryResponse {
   /** "When it may not be the best next step" — conditions for restraint. */
   whenToWait?: string;
 
+  // ── 5c. System Balance & Impact ───────────────────
+  /** System balance summary — trait-level diagnostic across core listening traits. */
+  systemBalance?: import('./conversation-types').SystemBalanceEntry[];
+  /** Where upgrades would have the most impact — system-level reasoning (bullet list). */
+  upgradeImpactAreas?: string[];
+  /** Expected magnitude of change — Minor / Moderate / Major + explanation. */
+  changeMagnitude?: import('./conversation-types').ChangeMagnitude;
+
   // ── 6. Trade-offs ───────────────────────────────────
   /** What to watch for / what you trade away (bullet list). */
   tradeOffs?: string[];
@@ -399,7 +407,14 @@ export function gearResponseToAdvisory(r: GearResponse): AdvisoryResponse {
       // Section 8 → whenToWait
       whenToWait: ua.whenToWait,
 
-      // Section 9 → followUp
+      // Section 9 → systemBalance
+      systemBalance: ua.systemBalance,
+      // Section 10 → upgradeImpactAreas
+      upgradeImpactAreas: ua.upgradeImpactAreas,
+      // Section 11 → changeMagnitude
+      changeMagnitude: ua.changeMagnitude,
+
+      // Follow-up → followUp
       followUp: r.clarification,
     }, undefined, r.subjects.length > 0 ? r.subjects : undefined);
   }

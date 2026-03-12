@@ -16,7 +16,7 @@
  * Target: 4–6 sentences before the follow-up question.
  */
 
-import type { GearResponse, UpgradeAnalysis } from './conversation-types';
+import type { GearResponse, UpgradeAnalysis, SystemBalanceEntry, ChangeMagnitude } from './conversation-types';
 import type { UserIntent, DesireSignal } from './intent';
 import type { ActiveSystemContext } from './system-types';
 import { DAC_PRODUCTS, type Product } from './products/dacs';
@@ -1235,6 +1235,191 @@ function buildUpgradeAnalysis(
 
   const whenToWait = `Consider waiting if ${waitParts.join('; or if ')}.`;
 
+  // ── 9. SYSTEM BALANCE SUMMARY ────────────────────────
+  // Diagnostic of the system's current balance across core listening traits.
+  // Uses the 'from' product traits combined with system component traits
+  // when available, otherwise just the 'from' product.
+  const BALANCE_TRAITS: Array<{ key: string; label: string }> = [
+    { key: 'speed', label: 'Speed / articulation' },
+    { key: 'tonal_density', label: 'Tonal density' },
+    { key: 'dynamics', label: 'Dynamic scale' },
+    { key: 'spatial_precision', label: 'Spatial depth' },
+    { key: 'flow', label: 'Musical flow' },
+    { key: 'composure', label: 'Composure' },
+    { key: 'texture', label: 'Textural detail' },
+  ];
+
+  const systemBalance: SystemBalanceEntry[] = [];
+
+  for (const bt of BALANCE_TRAITS) {
+    const fromVal = resolveTraitValue(from.tendencyProfile, from.traits, bt.key);
+
+    // If we have system components, try to find a system-level aggregate
+    // by checking if other products in the system affect this trait.
+    let systemVal = fromVal;
+    let systemNote: string | undefined;
+
+    if (activeSystem && activeSystem.components.length > 0) {
+      // Look up system components in the product catalog
+      for (const comp of activeSystem.components) {
+        if (comp.name.toLowerCase() === from.name.toLowerCase()) continue;
+        if (comp.name.toLowerCase() === to.name.toLowerCase()) continue;
+        const compProduct = ALL_PRODUCTS.find(
+          (p) => p.name.toLowerCase() === comp.name.toLowerCase()
+            || `${p.brand} ${p.name}`.toLowerCase() === `${comp.brand} ${comp.name}`.toLowerCase(),
+        );
+        if (compProduct) {
+          const compVal = resolveTraitValue(compProduct.tendencyProfile, compProduct.traits, bt.key);
+          // Component influence: downstream components can limit or enhance the source
+          if (comp.category === 'speaker' || comp.category === 'amplifier' || comp.category === 'integrated') {
+            if (compVal < systemVal - 0.2) {
+              systemVal = (systemVal + compVal) / 2;
+              systemNote = `${comp.brand} ${comp.name} may be a limiting factor`;
+            } else if (compVal > systemVal + 0.2) {
+              systemNote = `${comp.brand} ${comp.name} contributes here`;
+            }
+          }
+        }
+      }
+    }
+
+    let level: string;
+    if (systemVal >= 0.75) level = 'Strong';
+    else if (systemVal >= 0.55) level = 'Good';
+    else if (systemVal >= 0.4) level = 'Moderate';
+    else if (systemVal > 0) level = 'Limited';
+    else level = 'Neutral';
+
+    // Only include traits that have meaningful signal
+    if (systemVal > 0 || fromVal > 0) {
+      systemBalance.push({ label: bt.label, level, note: systemNote });
+    }
+  }
+
+  // ── 10. WHERE UPGRADES WOULD HAVE THE MOST IMPACT ────
+  // System-level reasoning about where improvement is most meaningful.
+  const upgradeImpactAreas: string[] = [];
+
+  // Source / DAC — if the from product has weak traits that the to product fixes
+  if (positiveDeltas.length > 0) {
+    const labels = positiveDeltas.slice(0, 2).map((d) => d.label).join(' and ');
+    upgradeImpactAreas.push(`Source ${from.category}: ${labels} — this is where the proposed change delivers`);
+  }
+
+  // Downstream components that may limit or benefit
+  if (activeSystem && activeSystem.components.length > 0) {
+    const speakerComp = activeSystem.components.find((c) => c.category === 'speaker');
+    const ampComp = activeSystem.components.find((c) => c.category === 'amplifier' || c.category === 'integrated');
+
+    if (speakerComp) {
+      const speakerProduct = ALL_PRODUCTS.find(
+        (p) => p.name.toLowerCase() === speakerComp.name.toLowerCase()
+          || `${p.brand} ${p.name}`.toLowerCase() === `${speakerComp.brand} ${speakerComp.name}`.toLowerCase(),
+      );
+      if (speakerProduct) {
+        const spkDynamics = resolveTraitValue(speakerProduct.tendencyProfile, speakerProduct.traits, 'dynamics');
+        const spkComposure = resolveTraitValue(speakerProduct.tendencyProfile, speakerProduct.traits, 'composure');
+        if (spkDynamics < 0.5 || spkComposure < 0.5) {
+          upgradeImpactAreas.push(`Speaker dynamic headroom — the ${speakerComp.brand} ${speakerComp.name} may become the next ceiling after upgrading the source`);
+        }
+      } else {
+        // Unknown speaker — general note
+        upgradeImpactAreas.push(`Speaker interaction — how well it reveals source-level improvements will determine the perceived gain`);
+      }
+    }
+
+    if (ampComp) {
+      const ampProduct = ALL_PRODUCTS.find(
+        (p) => p.name.toLowerCase() === ampComp.name.toLowerCase()
+          || `${p.brand} ${p.name}`.toLowerCase() === `${ampComp.brand} ${ampComp.name}`.toLowerCase(),
+      );
+      if (ampProduct) {
+        const ampComposure = resolveTraitValue(ampProduct.tendencyProfile, ampProduct.traits, 'composure');
+        if (ampComposure < 0.5) {
+          upgradeImpactAreas.push(`Amplifier composure — the ${ampComp.brand} ${ampComp.name} may constrain how much of the source upgrade is audible`);
+        }
+      }
+    }
+  }
+
+  // Room interaction — always a factor
+  if (upgradeImpactAreas.length < 3) {
+    upgradeImpactAreas.push('Room interaction and placement — often the highest-leverage change, independent of electronics');
+  }
+
+  // ── 11. EXPECTED MAGNITUDE OF CHANGE ─────────────────
+  // Classify the upgrade as Minor / Moderate / Major based on:
+  //   - number and size of positive trait deltas
+  //   - price ratio (diminishing returns at high ratios)
+  //   - architectural similarity (same architecture = smaller steps)
+
+  let magnitudeScore = 0;
+
+  // Trait delta contribution
+  for (const pd of positiveDeltas) {
+    magnitudeScore += pd.diff; // each delta adds to magnitude
+  }
+  for (const nd of negativeDeltas) {
+    magnitudeScore -= Math.abs(nd.diff) * 0.3; // negative deltas reduce net impact slightly
+  }
+
+  // Price ratio modulation
+  if (from.price > 0 && to.price > 0) {
+    const ratio = to.price / from.price;
+    if (ratio > 4) {
+      // Very high price ratio in same architecture → diminishing returns
+      magnitudeScore *= 0.8;
+    } else if (ratio > 2) {
+      magnitudeScore *= 0.9;
+    }
+  }
+
+  // Cross-architecture gets a slight boost (different design = more perceptible)
+  if (!sameBrand) {
+    magnitudeScore *= 1.15;
+  }
+
+  let changeMagnitude: ChangeMagnitude;
+  const changesLabels = positiveDeltas.map((d) => d.label);
+  const remainsLabels = sharedQualities.length > 0
+    ? sharedQualities
+    : unchanged.slice(0, 2).map((u) => u.split(' — ')[0]);
+
+  if (magnitudeScore >= 0.9) {
+    changeMagnitude = {
+      tier: 'major',
+      label: 'Major',
+      changesmost: changesLabels.length > 0
+        ? `Expect a clearly audible shift in ${changesLabels.join(', ')}`
+        : 'Expect a clearly audible shift in overall presentation',
+      remainsSimilar: remainsLabels.length > 0
+        ? `${remainsLabels.join(', ')} should carry through`
+        : 'Core tonal character should carry through',
+    };
+  } else if (magnitudeScore >= 0.45) {
+    changeMagnitude = {
+      tier: 'moderate',
+      label: 'Moderate',
+      changesmost: changesLabels.length > 0
+        ? `Noticeable improvement in ${changesLabels.join(', ')}, especially on well-recorded material`
+        : 'Noticeable improvement in refinement and authority',
+      remainsSimilar: remainsLabels.length > 0
+        ? `${remainsLabels.join(', ')} remain largely unchanged`
+        : 'Overall tonal signature remains familiar',
+    };
+  } else {
+    changeMagnitude = {
+      tier: 'minor',
+      label: 'Minor',
+      changesmost: changesLabels.length > 0
+        ? `Subtle refinement in ${changesLabels.join(', ')} — audible in direct comparison, less obvious day-to-day`
+        : 'Subtle refinement rather than a transformative change',
+      remainsSimilar: remainsLabels.length > 0
+        ? `${remainsLabels.join(', ')} stay essentially the same`
+        : 'Most of the system character stays the same',
+    };
+  }
+
   return {
     systemCharacter,
     workingWell: workingWell.length > 0 ? workingWell : [`The ${from.name} is a capable starting point in its tier`],
@@ -1244,6 +1429,9 @@ function buildUpgradeAnalysis(
     unchanged: unchanged.length > 0 ? unchanged : [`Basic sonic character and design intent`],
     whenMakesSense,
     whenToWait,
+    systemBalance,
+    upgradeImpactAreas,
+    changeMagnitude,
   };
 }
 
