@@ -38,8 +38,9 @@ export interface GearResponse {
   interpretation?: string;
   /** 4. Direction — what type of change or system direction could achieve it (1–2 sentences). */
   direction: string;
-  /** 5. Clarification — follow-up question to refine the recommendation. */
-  clarification: string;
+  /** 5. Clarification — follow-up question to refine the recommendation.
+   *  May be omitted when the query is self-contained and the system context is already known. */
+  clarification?: string;
   /** Brand/product names mentioned. */
   subjects: string[];
   /** Inferred system direction context, if available. */

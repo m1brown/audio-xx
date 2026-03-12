@@ -386,27 +386,26 @@ function brandCharacter(brandName: string): string {
 
 // ── Follow-up questions ──────────────────────────────
 
-const DESIRE_CLARIFICATIONS = [
+// ── Clarification pools ──────────────────────────────
+//
+// Two pools: one for when NO active system exists (asks about system
+// context), and one for when an active system IS loaded (asks about
+// preferences and priorities only — never about system components).
+
+const CLARIFICATIONS_NO_SYSTEM = [
   'What does the rest of your system look like? That would help narrow down where the shift is most likely to come from.',
-  'Is this about a specific system? Knowing what you\'re pairing with would help me gauge direction.',
-  'Are you open to changes elsewhere in the chain, or is the source the piece you want to move on?',
-];
-
-const INQUIRY_CLARIFICATIONS = [
   'What kind of system would it be going into, and what do you value most in your listening?',
-  'Are you considering it for a specific setup, or more exploring what its character would bring?',
-  'What are you pairing it with? The rest of the chain shapes the experience more than any single component.',
-];
-
-const COMPARISON_CLARIFICATIONS = [
-  'What matters most to you — engagement and rhythm, or refinement and tonal beauty?',
   'What system would these be going into? The pairing often determines which design philosophy wins.',
-  'Is there something about your current setup you\'re hoping to shift?',
+  'What are you pairing it with? The rest of the chain shapes the experience more than any single component.',
+  'Is this about a specific system? Knowing what you\'re pairing with would help me gauge direction.',
 ];
 
-const GENERIC_CLARIFICATIONS = [
-  'What are you pairing it with, and what do you value most in your listening?',
-  'Are you exploring options, or considering this for a specific system?',
+const CLARIFICATIONS_WITH_SYSTEM = [
+  'What quality are you hoping this change would bring to your listening?',
+  'What matters most to you — engagement and rhythm, or refinement and tonal beauty?',
+  'Is there something about your current setup you\'re hoping to shift?',
+  'Are you open to changes elsewhere in the chain, or is the source the piece you want to move on?',
+  'Are you exploring options, or working toward a specific quality?',
 ];
 
 function pick(options: string[], seed: number): string {
@@ -414,19 +413,37 @@ function pick(options: string[], seed: number): string {
 }
 
 /**
- * Pick a clarification — prefers the churn reflective question when
- * churn is detected and no explicit desires are present.
+ * Unified clarification builder.
+ *
+ * Rules:
+ *   1. No active system → ask about the system.
+ *   2. Active system exists → ask about preferences, never system components.
+ *   3. If churn is detected and no desires expressed → use the churn
+ *      reflective question (which is always preference-oriented).
+ *   4. The caller may pass `omitIfClear: true` to allow returning
+ *      undefined when the query already specifies the change clearly.
  */
-function pickClarification(
-  options: string[],
-  seed: number,
-  churn: ChurnSignal,
-  hasDesires: boolean,
-): string {
-  if (churn.detected && churn.reflectiveQuestion && !hasDesires) {
-    return churn.reflectiveQuestion;
+function buildClarification(opts: {
+  activeSystem: ActiveSystemContext | null | undefined;
+  seed: number;
+  churn?: ChurnSignal;
+  hasDesires?: boolean;
+  omitIfClear?: boolean;
+}): string | undefined {
+  // Rule 4: caller signals the query is self-contained
+  if (opts.omitIfClear) return undefined;
+
+  // Rule 3: churn reflective question takes priority
+  if (opts.churn?.detected && opts.churn.reflectiveQuestion && !opts.hasDesires) {
+    return opts.churn.reflectiveQuestion;
   }
-  return pick(options, seed);
+
+  // Rule 1 vs 2: pick from the appropriate pool
+  const pool = opts.activeSystem
+    ? CLARIFICATIONS_WITH_SYSTEM
+    : CLARIFICATIONS_NO_SYSTEM;
+
+  return pick(pool, opts.seed);
 }
 
 // ── "What I'm hearing" block ─────────────────────────
@@ -1032,9 +1049,7 @@ export function buildGearResponse(
             ? QUALITY_PROFILES[desires[0].quality]?.interpretation
             : undefined,
           direction: buildUpgradeDirection(from, to, activeSystem, allowed),
-          clarification: activeSystem
-            ? 'What specific quality are you hoping this change would bring to your system?'
-            : 'What does the rest of your system look like? That would help frame what the upgrade would actually change.',
+          clarification: buildClarification({ activeSystem, seed, churn, hasDesires: desires.length > 0 }),
           systemDirection: sysDir,
           hearing,
           userArchetype: sysDir.inferredArchetype
@@ -1062,9 +1077,7 @@ export function buildGearResponse(
           ? QUALITY_PROFILES[desires[0].quality]?.interpretation
           : undefined,
         direction: directionText,
-        clarification: systemNote
-          ? 'What specific quality are you hoping this change would improve in your system?'
-          : pick(COMPARISON_CLARIFICATIONS, seed),
+        clarification: buildClarification({ activeSystem, seed, churn, hasDesires: desires.length > 0 }),
         systemDirection: sysDir,
         hearing,
         userArchetype: sysDir.inferredArchetype
@@ -1142,7 +1155,7 @@ export function buildGearResponse(
           ? QUALITY_PROFILES[desires[0].quality]?.interpretation
           : undefined,
         direction: withDirection('The most useful way to think about it is: what do you want more of in your listening, and which design approach tends to deliver that? A comparison that holds in one system may reverse in another.'),
-        clarification: pick(COMPARISON_CLARIFICATIONS, seed),
+        clarification: buildClarification({ activeSystem, seed, churn, hasDesires: desires.length > 0 }),
         systemDirection: sysDir,
         hearing,
         userArchetype: sysDir.inferredArchetype
@@ -1193,7 +1206,7 @@ export function buildGearResponse(
         profile?.direction
           ?? 'The right path depends on the rest of the system and what trade-offs you\'re comfortable with. Sometimes the change you want comes from a different part of the chain than you\'d expect.'
       ),
-      clarification: pick(DESIRE_CLARIFICATIONS, seed),
+      clarification: buildClarification({ activeSystem, seed, churn, hasDesires: desires.length > 0 }),
       systemDirection: sysDir,
       hearing,
       userArchetype: sysDir.inferredArchetype
@@ -1211,7 +1224,7 @@ export function buildGearResponse(
       anchor: withTendency(`The ${product.brand} ${product.name} is a well-known piece in this space.`),
       character: productCharacter(product),
       direction: buildInquiryDirection(product, sysDir.inferredArchetype ?? undefined),
-      clarification: pickClarification(INQUIRY_CLARIFICATIONS, seed, churn, desires.length > 0),
+      clarification: buildClarification({ activeSystem, seed, churn, hasDesires: desires.length > 0 }),
       systemDirection: sysDir,
       hearing,
       userArchetype: sysDir.inferredArchetype
@@ -1229,7 +1242,7 @@ export function buildGearResponse(
       anchor: withTendency(`${brandName} is a name that comes up regularly in these conversations.`),
       character: brandCharacter(brandName),
       direction: 'The best way to evaluate any piece of gear is relative to the system it\'s going into. A component that sounds extraordinary in one system can be unremarkable in another — that\'s not a flaw, it\'s how audio works.',
-      clarification: pickClarification(GENERIC_CLARIFICATIONS, seed, churn, desires.length > 0),
+      clarification: buildClarification({ activeSystem, seed, churn, hasDesires: desires.length > 0 }),
       systemDirection: sysDir,
       hearing,
       userArchetype: sysDir.inferredArchetype
@@ -1245,7 +1258,7 @@ export function buildGearResponse(
     anchor: 'That\'s a good question.',
     character: 'Every component has a character — a set of things it does well and things it trades away.',
     direction: 'What matters is how that character interacts with your system and your listening priorities. The same piece can sound relaxed in one system and forward in another.',
-    clarification: pickClarification(GENERIC_CLARIFICATIONS, seed, churn, desires.length > 0),
+    clarification: buildClarification({ activeSystem, seed, churn, hasDesires: desires.length > 0 }),
     systemDirection: sysDir,
     hearing,
     userArchetype: sysDir.inferredArchetype
