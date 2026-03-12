@@ -582,6 +582,133 @@ function buildSystemComparisonNote(
   return `Your current system (${componentNames}) provides context for this comparison. How either product interacts with the rest of the chain would likely matter more than how they compare in isolation.`;
 }
 
+// ── Third-product scrubbing ──────────────────────────
+//
+// Upgrade comparisons must only reference the two products involved
+// and the system context.  Product data (tendencies, interactions,
+// tradeoffs) sometimes mentions sibling products (e.g. "Qutest",
+// "Pontus").  This helper strips those references so the output
+// stays focused on A, B, and the listener's chain.
+
+/**
+ * Build a set of product-name tokens that are allowed in the output.
+ * Everything else found in ALL_PRODUCTS is a "third product".
+ */
+function buildAllowedNames(
+  from: Product,
+  to: Product,
+  activeSystem: ActiveSystemContext | null | undefined,
+): Set<string> {
+  const allowed = new Set<string>();
+  // Add both comparison products (lower-cased for matching)
+  for (const p of [from, to]) {
+    allowed.add(p.name.toLowerCase());
+    allowed.add(`${p.brand} ${p.name}`.toLowerCase());
+  }
+  // Add system components
+  if (activeSystem) {
+    for (const c of activeSystem.components) {
+      allowed.add(c.name.toLowerCase());
+      allowed.add(`${c.brand} ${c.name}`.toLowerCase());
+    }
+  }
+  return allowed;
+}
+
+/**
+ * Build regex patterns that match third-product names (brand + name, or
+ * standalone name) from the full product catalog, excluding allowed names.
+ */
+function buildThirdProductPatterns(allowed: Set<string>): RegExp[] {
+  const patterns: RegExp[] = [];
+  for (const product of ALL_PRODUCTS) {
+    const fullName = `${product.brand} ${product.name}`.toLowerCase();
+    const shortName = product.name.toLowerCase();
+
+    // Skip if this product is in the allowed set
+    if (allowed.has(fullName) || allowed.has(shortName)) continue;
+
+    // Match "Brand Name" as a unit first, then standalone "Name"
+    // Word boundaries prevent partial matches (e.g. "Hugo" inside "Hugo TT2")
+    // but we need care: short names like "W5" should still match.
+    patterns.push(new RegExp(`\\b${escapeRegex(product.brand)}\\s+${escapeRegex(product.name)}\\b`, 'gi'));
+    // Only add standalone name pattern if the name is specific enough
+    // (>= 3 chars and not a common English word)
+    if (product.name.length >= 3) {
+      patterns.push(new RegExp(`\\b${escapeRegex(product.name)}\\b`, 'gi'));
+    }
+  }
+  return patterns;
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Remove third-product references from a text string.
+ *
+ * Strategy:
+ * - Phrases like "like the Qutest" / "such as the Pontus" / "or Qutest"
+ *   are removed entirely (the connective + article + name).
+ * - Enumeration fragments like "Qutest and Hugo" where one is allowed
+ *   collapse to just the allowed name.
+ * - Bare product names that survive are replaced with "other models in
+ *   the lineup" (same-brand) or removed.
+ */
+function scrubThirdProductRefs(
+  text: string,
+  allowed: Set<string>,
+  sameBrand: boolean,
+): string {
+  const patterns = buildThirdProductPatterns(allowed);
+  let result = text;
+
+  for (const pat of patterns) {
+    // Phase 1: Remove connective phrases that introduce the third product.
+    // Patterns like:  "like the Qutest", "such as Qutest", "or Qutest",
+    //   "and Qutest", "over Qutest", "than Qutest", "the Qutest and"
+    // We also handle "compared to Qutest or Hugo" → scrub the third name only.
+    const nameSource = pat.source; // e.g. \bQutest\b
+    const flags = 'gi';
+
+    // "over <Name>" / "than <Name>" / "like <Name>" with optional article
+    result = result.replace(
+      new RegExp(`\\b(?:over|than|like|versus)\\s+(?:the\\s+)?${nameSource}`, flags),
+      sameBrand ? 'over other models in the lineup' : '',
+    );
+
+    // "such as <Name>" / "such as the <Name>"
+    result = result.replace(
+      new RegExp(`\\bsuch\\s+as\\s+(?:the\\s+)?${nameSource}`, flags),
+      '',
+    );
+
+    // "<Name> or " / "or <Name>" / "<Name> and " / "and <Name>"
+    // with optional articles — remove the conjunction + name fragment
+    result = result.replace(
+      new RegExp(`(?:,?\\s*(?:and|or)\\s+(?:the\\s+)?${nameSource})`, flags),
+      '',
+    );
+    result = result.replace(
+      new RegExp(`(?:${nameSource}\\s*(?:,\\s*)?(?:and|or)\\s+(?:the\\s+)?)`, flags),
+      '',
+    );
+
+    // Bare name — last resort
+    result = result.replace(pat, sameBrand ? 'other models in the lineup' : '');
+  }
+
+  // Clean up double spaces and orphaned punctuation
+  result = result.replace(/\s{2,}/g, ' ');
+  result = result.replace(/\(\s*\)/g, '');
+  result = result.replace(/,\s*,/g, ',');
+  result = result.replace(/\s+([.,;])/g, '$1');
+  result = result.trim();
+
+  return result;
+}
+
 // ── Upgrade intent detection ─────────────────────────
 
 const UPGRADE_LANGUAGE_RE = [
@@ -634,8 +761,14 @@ function buildUpgradeAnchor(
   return `${lineageNote} This is a question of scale and refinement within that design philosophy, not a change in direction.`;
 }
 
-function buildUpgradeCharacter(from: Product, to: Product): string {
+function buildUpgradeCharacter(
+  from: Product,
+  to: Product,
+  allowed: Set<string>,
+): string {
   const parts: string[] = [];
+  const sameBrand = from.brand === to.brand;
+  const scrub = (t: string) => scrubThirdProductRefs(t, allowed, sameBrand);
 
   // 2. What remains similar — shared tendencies (confident language)
   if (hasTendencies(from.tendencies) && hasTendencies(to.tendencies)) {
@@ -666,9 +799,10 @@ function buildUpgradeCharacter(from: Product, to: Product): string {
     }
 
     // 3. What changes — analytical language (system tendencies)
+    //    Scrub tendency text to remove third-product references.
     if (changedQualities.length > 0) {
       for (const cq of changedQualities.slice(0, 2)) {
-        parts.push(`In ${cq.domain}, the ${from.name} tends toward ${cq.from}. The ${to.name} tends toward ${cq.to}.`);
+        parts.push(`In ${cq.domain}, the ${from.name} tends toward ${scrub(cq.from)}. The ${to.name} tends toward ${scrub(cq.to)}.`);
       }
     }
   }
@@ -696,10 +830,10 @@ function buildUpgradeCharacter(from: Product, to: Product): string {
     parts.push(`The ${to.name} brings ${traitChanges.join(', ')} compared to the ${from.name}.`);
   }
 
-  // Trade-off from the target product — what it costs
+  // Trade-off from the target product — scrub third-product references
   if (hasTendencies(to.tendencies) && to.tendencies.tradeoffs.length > 0) {
     const tradeoff = to.tendencies.tradeoffs[0];
-    parts.push(`The trade-off: ${tradeoff.gains} at the cost of ${tradeoff.cost}.`);
+    parts.push(`The trade-off: ${scrub(tradeoff.gains)} at the cost of ${scrub(tradeoff.cost)}.`);
   }
 
   return parts.join(' ');
@@ -709,8 +843,11 @@ function buildUpgradeDirection(
   from: Product,
   to: Product,
   activeSystem: ActiveSystemContext | null | undefined,
+  allowed: Set<string>,
 ): string {
   const parts: string[] = [];
+  const sameBrand = from.brand === to.brand;
+  const scrub = (t: string) => scrubThirdProductRefs(t, allowed, sameBrand);
 
   // 4. System interaction — conditional language (upgrade predictions)
   if (hasTendencies(to.tendencies)) {
@@ -724,7 +861,7 @@ function buildUpgradeDirection(
       || i.condition.toLowerCase().includes('compared to'),
     );
     if (lineupInteraction) {
-      parts.push(`In your context: ${lineupInteraction.effect}.`);
+      parts.push(`In your context: ${scrub(lineupInteraction.effect)}.`);
     }
 
     // If we have an active system, look for relevant amplifier/speaker interactions
@@ -852,15 +989,17 @@ export function buildGearResponse(
           if (bInSystem && !aInSystem) { from = b; to = a; }
         }
 
+        const allowed = buildAllowedNames(from, to, activeSystem);
+
         return {
           intent,
           subjects,
           anchor: buildUpgradeAnchor(from, to, activeSystem),
-          character: buildUpgradeCharacter(from, to),
+          character: buildUpgradeCharacter(from, to, allowed),
           interpretation: desires.length > 0
             ? QUALITY_PROFILES[desires[0].quality]?.interpretation
             : undefined,
-          direction: buildUpgradeDirection(from, to, activeSystem),
+          direction: buildUpgradeDirection(from, to, activeSystem, allowed),
           clarification: activeSystem
             ? 'What specific quality are you hoping this change would bring to your system?'
             : 'What does the rest of your system look like? That would help frame what the upgrade would actually change.',
