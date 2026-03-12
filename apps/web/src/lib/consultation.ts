@@ -726,16 +726,16 @@ function buildArchitecturalExplanation(
 
   const parts: string[] = [];
   parts.push(
-    `These differences trace to architecture. ${nameA} uses ${topoA.label} conversion — ${topoA.designPrinciple.toLowerCase()}`
-    + ` The typical result is ${topoA.typicalTradeoff.toLowerCase()}`
+    `Some of this traces to architecture. ${nameA} uses ${topoA.label} conversion — ${topoA.designPrinciple.toLowerCase()}`
+    + ` This tends toward ${topoA.typicalTradeoff.toLowerCase()}`
   );
   parts.push(
     `${nameB} uses ${topoB.label} conversion — ${topoB.designPrinciple.toLowerCase()}`
-    + ` The typical result is ${topoB.typicalTradeoff.toLowerCase()}`
+    + ` This tends toward ${topoB.typicalTradeoff.toLowerCase()}`
   );
 
-  // Add a framing note — architecture is tendency, not destiny
-  parts.push('Architecture sets a starting direction, not a fixed outcome — implementation, output stage, and power supply all shape the final character.');
+  // Architecture is a starting tendency, not a deterministic outcome
+  parts.push('Architecture sets a starting tendency, not a deterministic outcome. Implementation choices — output stage topology, power supply design, filter algorithms — can shift the character significantly within the same conversion family.');
 
   return parts.join(' ');
 }
@@ -843,30 +843,52 @@ function buildDesignFamilyContext(
  * Extract the core character descriptors from a tendency string.
  * Pulls out 2–4 key trait words/phrases to form a concise contrast.
  * Falls back to the first clause of the first sentence if no traits match.
+ *
+ * IMPORTANT: trait matching must be context-aware. A phrase like
+ * "tonal weight is lighter" should NOT produce a "tonal density" hit.
+ * Negation patterns (lighter, less, without, lacks, not) near a trait
+ * word suppress the match.
  */
 function extractCoreCharacter(tendencies: string): string {
   const lower = tendencies.toLowerCase();
 
-  // Look for known trait-words and cluster them
+  /**
+   * Match a trait only if it appears in a positive/assertive context.
+   * Suppresses matches when preceded (within ~30 chars) by negation
+   * language: lighter, less, without, lacks, not, avoids, reduced, limited.
+   */
+  function positiveMatch(pattern: RegExp): boolean {
+    const match = pattern.exec(lower);
+    if (!match) return false;
+    // Check for negation in the ~40 chars before the match
+    const start = Math.max(0, match.index - 40);
+    const prefix = lower.slice(start, match.index);
+    return !/\b(?:lighter|less|without|lacks|not|avoids?|reduced|limited|absent)\b/.test(prefix);
+  }
+
+  // Look for known trait-words and cluster them — order matters for selection priority
   const traitHits: string[] = [];
-  if (/warm/i.test(lower)) traitHits.push('warmth');
-  if (/flow|flowing/i.test(lower)) traitHits.push('flow');
-  if (/rhythm|rhythmic|propulsive|pace|timing/i.test(lower)) traitHits.push('rhythmic drive');
-  if (/clarity|transparent|transparency|resolving/i.test(lower)) traitHits.push('clarity');
-  if (/dense|density|tonal weight|tonal body|body/i.test(lower)) traitHits.push('tonal density');
-  if (/spatial|soundstage|imaging|holograph/i.test(lower)) traitHits.push('spatial presence');
-  if (/dynamic|punch|slam|energy/i.test(lower)) traitHits.push('dynamic energy');
-  if (/controlled?|composure|composed|refined|refinement/i.test(lower)) traitHits.push('composure');
-  if (/intimate|intimacy/i.test(lower)) traitHits.push('intimacy');
-  if (/texture|textural/i.test(lower)) traitHits.push('texture');
-  if (/harmonic|harmonically/i.test(lower)) traitHits.push('harmonic richness');
-  if (/natural|unforced/i.test(lower)) traitHits.push('a natural presentation');
-  if (/engaging|engagement|immersive|immersion/i.test(lower)) traitHits.push('musical engagement');
-  if (/saturated|saturation/i.test(lower)) traitHits.push('tonal saturation');
+  if (positiveMatch(/\barticulate|articulation\b/i)) traitHits.push('articulation');
+  if (positiveMatch(/\btiming\s+(?:precision|resolution)\b/i)) traitHits.push('timing precision');
+  if (positiveMatch(/\bwarm\b/i)) traitHits.push('warmth');
+  if (positiveMatch(/\bflow|flowing\b/i)) traitHits.push('flow');
+  if (positiveMatch(/\brhythm|rhythmic|propulsive|pace\b/i)) traitHits.push('rhythmic drive');
+  if (positiveMatch(/\bclarity|transparent|transparency|resolving\b/i)) traitHits.push('clarity');
+  if (positiveMatch(/\bdense|density|tonal weight|tonal body\b/i)) traitHits.push('tonal density');
+  if (positiveMatch(/\bbody\b/i) && !traitHits.includes('tonal density')) traitHits.push('body');
+  if (positiveMatch(/\bspatial|soundstage|imaging|holograph\b/i)) traitHits.push('spatial presence');
+  if (positiveMatch(/\bdynamic|punch|slam|energy\b/i)) traitHits.push('dynamic energy');
+  if (positiveMatch(/\bcontrolled?\b|composure|composed|refined|refinement\b/i)) traitHits.push('composure');
+  if (positiveMatch(/\bintimate|intimacy\b/i)) traitHits.push('intimacy');
+  if (positiveMatch(/\btexture|textural\b/i)) traitHits.push('texture');
+  if (positiveMatch(/\bharmonic|harmonically\b/i)) traitHits.push('harmonic richness');
+  if (positiveMatch(/\bnatural|unforced\b/i)) traitHits.push('a natural presentation');
+  if (positiveMatch(/\bengaging|engagement|immersive|immersion\b/i)) traitHits.push('musical engagement');
+  if (positiveMatch(/\bsaturated|saturation\b/i)) traitHits.push('tonal saturation');
 
   if (traitHits.length >= 2) {
-    // Take up to 3 traits for a concise summary
-    const selected = traitHits.slice(0, 3);
+    // Take up to 4 traits for a concise summary
+    const selected = traitHits.slice(0, 4);
     return joinNatural(selected);
   }
 
