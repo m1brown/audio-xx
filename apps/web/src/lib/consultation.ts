@@ -63,6 +63,18 @@ export interface ConsultationResponse {
   followUp?: string;
   /** 5. Optional neutral reference links (website, importer, dealers, reviews). */
   links?: { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[];
+
+  // ── System assessment specific fields ──────────────
+  /** Per-component character paragraphs. */
+  componentReadings?: string[];
+  /** How the components interact as a system (prose). */
+  systemInteraction?: string;
+  /** What is working well in the current system. */
+  assessmentStrengths?: string[];
+  /** Where limitations may appear. */
+  assessmentLimitations?: string[];
+  /** Likely upgrade direction or "do nothing" guidance. */
+  upgradeDirection?: string;
 }
 
 // ── All products ────────────────────────────────────
@@ -1572,6 +1584,23 @@ export interface SystemComponent {
  *
  * Returns null if fewer than 2 components can be identified.
  */
+/**
+ * Build a clean display name from brand + product name.
+ * Prevents duplication like "JOB JOB Integrated" when the product name
+ * already contains the brand name as a prefix.
+ */
+function normalizeDisplayName(brand: string, name: string): string {
+  const b = brand.trim();
+  const n = name.trim();
+  if (!b) return n || 'Unknown';
+  if (!n) return b;
+  // If name starts with the brand (case-insensitive), don't repeat the brand
+  if (n.toLowerCase().startsWith(b.toLowerCase())) {
+    return n.charAt(0).toUpperCase() + n.slice(1);
+  }
+  return `${b} ${n}`;
+}
+
 export function buildSystemAssessment(
   currentMessage: string,
   subjectMatches: SubjectMatch[],
@@ -1585,7 +1614,7 @@ export function buildSystemAssessment(
   // ── Seed from active system when available ──
   if (activeSystem && activeSystem.components.length > 0) {
     for (const ac of activeSystem.components) {
-      const fullName = `${ac.brand} ${ac.name}`;
+      const fullName = normalizeDisplayName(ac.brand, ac.name);
       const nameLower = ac.name.toLowerCase();
       const brandLower = ac.brand.toLowerCase();
       if (processedNames.has(nameLower) || processedNames.has(brandLower)) continue;
@@ -1652,7 +1681,7 @@ export function buildSystemAssessment(
         );
 
         components.push({
-          displayName: `${product.brand} ${product.name}`,
+          displayName: normalizeDisplayName(product.brand, product.name),
           role: product.category,
           character: product.description,
           brandProfile: brandProfile ? {
@@ -1704,7 +1733,7 @@ export function buildSystemAssessment(
         );
 
         const displayName = specificProduct
-          ? `${specificProduct.brand} ${specificProduct.name}`
+          ? normalizeDisplayName(specificProduct.brand, specificProduct.name)
           : brandProfile.names[0].split(' ').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
 
         const role = specificProduct?.category
@@ -1778,28 +1807,22 @@ export function buildSystemAssessment(
     return para;
   });
 
-  const philosophy = componentParagraphs.join('\n\n');
-
   // ── Infer system interaction (step 1: system character) ──
   const interactionSummary = inferSystemInteraction(components);
 
-  // ── Infer trade-offs (step 3) ─────────────────────────
-  const tradeoffNote = inferSystemTradeoffs(components);
-
-  // ── Combine into tendencies field ─────────────────────
-  // Steps 1 + 2 (system character + causal explanation are in
-  // interactionSummary) plus step 3 (trade-offs).
-  const tendenciesParts = [interactionSummary];
-  if (tradeoffNote) tendenciesParts.push(tradeoffNote);
-
-  const tendencies = tendenciesParts.join('\n\n');
-
   // ── Amplifier-speaker fit note ──────────────────────
-  const systemContext = inferAmplifierSpeakerFit(components);
+  const ampSpeakerFit = inferAmplifierSpeakerFit(components);
+
+  // ── Build "what's working well" ──────────────────────
+  const assessmentStrengths = inferAssessmentStrengths(components);
+
+  // ── Build "where limitations may appear" ─────────────
+  const assessmentLimitations = inferAssessmentLimitations(components);
+
+  // ── Build upgrade direction ──────────────────────────
+  const upgradeDirection = inferUpgradeDirection(components);
 
   // ── Preference alignment (step 5) ─────────────────────
-  // When the user has expressed desires, mirror them and relate
-  // to the system's character.
   const preferenceNote = buildAssessmentPreferenceAlignment(components, desires);
 
   // ── Follow-up — preference-aware when possible ────────
@@ -1810,11 +1833,23 @@ export function buildSystemAssessment(
   // ── Subject line ────────────────────────────────────
   const subject = components.map((c) => c.displayName).join(', ');
 
+  // ── Overall system character ────────────────────────
+  // Combines interaction summary + amp/speaker fit into a concise opening
+  const systemCharacterParts = [interactionSummary];
+  if (ampSpeakerFit) systemCharacterParts.push(ampSpeakerFit);
+  const systemCharacter = systemCharacterParts.join(' ');
+
   return {
     subject: `Your system: ${subject}`,
-    philosophy,
-    tendencies,
-    systemContext: systemContext ?? undefined,
+    // Leave philosophy/tendencies empty — the structured assessment fields carry the content
+    philosophy: '',
+    tendencies: '',
+    // System assessment specific fields
+    componentReadings: componentParagraphs,
+    systemInteraction: systemCharacter,
+    assessmentStrengths,
+    assessmentLimitations,
+    upgradeDirection,
     followUp,
     links: allLinks.length > 0 ? allLinks : undefined,
   };
@@ -1959,6 +1994,127 @@ function inferSystemTradeoffs(components: SystemComponent[]): string | null {
 }
 
 /**
+ * Infer what is working well in the system based on component character.
+ */
+function inferAssessmentStrengths(components: SystemComponent[]): string[] {
+  const strengths: string[] = [];
+  const leans = classifyComponentLeans(components);
+
+  const warmCount = leans.filter((l) => l.lean === 'warm').length;
+  const preciseCount = leans.filter((l) => l.lean === 'precise').length;
+
+  if (warmCount > 0 && preciseCount > 0) {
+    strengths.push('Complementary tonal balance — precision and warmth offset each other');
+    strengths.push('The system is likely to sustain engagement across long sessions');
+  }
+  if (warmCount >= 2) {
+    strengths.push('Consistent warmth and tonal density — midrange should feel present and immersive');
+    strengths.push('Engagement and musicality are likely high priorities this system handles well');
+  }
+  if (preciseCount >= 2) {
+    strengths.push('Strong transient definition and clarity — micro-detail retrieval should be excellent');
+    strengths.push('Spatial precision and imaging likely well-defined');
+  }
+
+  // Component-specific strengths from product traits
+  for (const c of components) {
+    if (c.product?.traits) {
+      const t = c.product.traits;
+      if ((t.flow ?? 0) > 0.75) strengths.push(`${c.displayName} contributes musical flow and continuity`);
+      if ((t.spatial_precision ?? 0) > 0.8) strengths.push(`${c.displayName} provides strong spatial definition`);
+      if ((t.composure ?? 0) > 0.8) strengths.push(`${c.displayName} adds composure under complex passages`);
+    }
+  }
+
+  return strengths.length > 0 ? strengths : ['System character depends on how components interact in practice — further listening context would refine this'];
+}
+
+/**
+ * Infer where limitations may appear in the system.
+ */
+function inferAssessmentLimitations(components: SystemComponent[]): string[] {
+  const limitations: string[] = [];
+  const leans = classifyComponentLeans(components);
+
+  const warmCount = leans.filter((l) => l.lean === 'warm').length;
+  const preciseCount = leans.filter((l) => l.lean === 'precise').length;
+
+  if (warmCount >= 2 && preciseCount === 0) {
+    limitations.push('Stacked warmth may reduce transient precision and spatial clarity');
+    limitations.push('Complex, dense recordings could sound congested');
+  }
+  if (preciseCount >= 2 && warmCount === 0) {
+    limitations.push('Stacked precision may thin out tonal body over long sessions');
+    limitations.push('Extended listening could trend toward fatigue without a warmth counterbalance');
+  }
+
+  // Component-specific limitations
+  for (const c of components) {
+    if (c.product?.traits) {
+      const t = c.product.traits;
+      if ((t.tonal_density ?? 0.5) < 0.35) limitations.push(`${c.displayName} may lean thin in the midrange`);
+      if ((t.flow ?? 0.5) < 0.35) limitations.push(`${c.displayName} may prioritize precision over musical flow`);
+    }
+  }
+
+  return limitations;
+}
+
+/**
+ * Infer likely upgrade direction based on system balance.
+ */
+function inferUpgradeDirection(components: SystemComponent[]): string {
+  const leans = classifyComponentLeans(components);
+  const warmCount = leans.filter((l) => l.lean === 'warm').length;
+  const preciseCount = leans.filter((l) => l.lean === 'precise').length;
+
+  if (warmCount > 0 && preciseCount > 0) {
+    return 'This system appears well-balanced. Changes would likely shift the character rather than fix a gap. If you want to explore, focus on the quality you most want to intensify — but "do nothing" is a strong option here.';
+  }
+  if (warmCount >= 2) {
+    return 'If you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system\'s identity more fundamentally.';
+  }
+  if (preciseCount >= 2) {
+    return 'If you want to add warmth and flow without sacrificing the clarity this system delivers, a DAC with richer harmonic texture or speakers with more tonal density would be the most aligned direction. Adding tubes upstream is another option — but changes character more broadly.';
+  }
+
+  return 'Without stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.';
+}
+
+/**
+ * Classify each component's sonic lean — reusable helper.
+ */
+function classifyComponentLeans(components: SystemComponent[]): { name: string; lean: 'warm' | 'neutral' | 'precise' | 'unknown' }[] {
+  const leans: { name: string; lean: 'warm' | 'neutral' | 'precise' | 'unknown' }[] = [];
+
+  for (const c of components) {
+    if (c.product?.traits) {
+      const t = c.product.traits;
+      if ((t.clarity ?? 0) > 0.8 && (t.tonal_density ?? 0.5) < 0.5) {
+        leans.push({ name: c.displayName, lean: 'precise' });
+      } else if ((t.tonal_density ?? 0.5) > 0.7 && (t.flow ?? 0.5) > 0.7) {
+        leans.push({ name: c.displayName, lean: 'warm' });
+      } else {
+        leans.push({ name: c.displayName, lean: 'neutral' });
+      }
+    } else if (c.brandProfile) {
+      const tendLower = c.brandProfile.tendencies.toLowerCase();
+      if (tendLower.includes('warm') || tendLower.includes('rich') || tendLower.includes('dense')) {
+        leans.push({ name: c.displayName, lean: 'warm' });
+      } else if (tendLower.includes('precise') || tendLower.includes('clarity') || tendLower.includes('analytical')) {
+        leans.push({ name: c.displayName, lean: 'precise' });
+      } else {
+        leans.push({ name: c.displayName, lean: 'neutral' });
+      }
+    } else {
+      leans.push({ name: c.displayName, lean: 'unknown' });
+    }
+  }
+
+  return leans;
+}
+
+/**
  * Build preference alignment note from user desires and system character.
  * Step 5 of the advisory reasoning structure.
  *
@@ -2061,7 +2217,7 @@ export function buildConsultationEntry(
 
   // ── Active system present: acknowledge and contextualize ──
   if (activeSystem && activeSystem.components.length > 0) {
-    const componentNames = activeSystem.components.map((c) => `${c.brand} ${c.name}`);
+    const componentNames = activeSystem.components.map((c) => normalizeDisplayName(c.brand, c.name));
     const componentList = componentNames.join(', ');
     const tendenciesNote = activeSystem.tendencies
       ? ` The system leans toward ${activeSystem.tendencies}.`
@@ -2190,7 +2346,7 @@ export function buildCableAdvisory(
   // ── If active system exists, seed components from it ──
   if (activeSystem && activeSystem.components.length > 0) {
     for (const c of activeSystem.components) {
-      systemComponents.push(`${c.brand} ${c.name}`);
+      systemComponents.push(normalizeDisplayName(c.brand, c.name));
     }
   }
 

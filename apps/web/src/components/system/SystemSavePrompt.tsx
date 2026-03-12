@@ -19,7 +19,15 @@ interface SystemSavePromptProps {
 export default function SystemSavePrompt({ proposed, onReviewAndSave, onDismiss }: SystemSavePromptProps) {
   const componentSummary = proposed.components
     .filter((c) => c.brand || c.name)
-    .map((c) => [c.brand, c.name].filter(Boolean).join(' '))
+    .map((c) => {
+      const b = (c.brand || '').trim();
+      const n = (c.name || '').trim();
+      if (!b) return n;
+      if (!n) return b;
+      // Avoid "JOB JOB 225" — if name already starts with the brand, skip prefix
+      if (n.toLowerCase().startsWith(b.toLowerCase())) return n;
+      return `${b} ${n}`;
+    })
     .join(', ');
 
   return (

@@ -117,8 +117,51 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </div>
       )}
 
+      {/* ── 2b. System assessment: component-by-component readings ── */}
+      {a.componentReadings && a.componentReadings.length > 0 && (
+        <div style={{ marginBottom: '1.25rem' }}>
+          {a.componentReadings.map((para, i) => (
+            <p key={i} style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', lineHeight: 1.7, color: '#333' }}>
+              {para}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {/* ── 2c. System assessment: how components interact ── */}
+      {a.systemInteraction && (
+        <AdvisorySection label="How the components interact">
+          <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
+            {a.systemInteraction}
+          </p>
+        </AdvisorySection>
+      )}
+
+      {/* ── 2d. System assessment: what is working well ── */}
+      {a.assessmentStrengths && a.assessmentStrengths.length > 0 && (
+        <AdvisorySection label="What is working well">
+          <BulletList items={a.assessmentStrengths} />
+        </AdvisorySection>
+      )}
+
+      {/* ── 2e. System assessment: where limitations may appear ── */}
+      {a.assessmentLimitations && a.assessmentLimitations.length > 0 && (
+        <AdvisorySection label="Where limitations may appear">
+          <BulletList items={a.assessmentLimitations} color="#666" />
+        </AdvisorySection>
+      )}
+
+      {/* ── 2f. System assessment: likely upgrade direction ── */}
+      {a.upgradeDirection && (
+        <AdvisorySection label="Likely upgrade direction">
+          <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
+            {a.upgradeDirection}
+          </p>
+        </AdvisorySection>
+      )}
+
       {/* ── 3. System context ────────────────────────── */}
-      {a.systemContext && (
+      {a.systemContext && !a.systemInteraction && (
         <AdvisorySection label="Your system">
           <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
             {a.systemContext}
@@ -127,7 +170,7 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
       )}
 
       {/* ── 3b. System tendencies ────────────────────── */}
-      {a.systemTendencies && !a.systemContext && (
+      {a.systemTendencies && !a.systemContext && !a.systemInteraction && (
         <AdvisorySection label="System tendencies">
           <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
             {a.systemTendencies}

@@ -124,6 +124,18 @@ export interface AdvisoryResponse {
   /** Expected magnitude of change — Minor / Moderate / Major + explanation. */
   changeMagnitude?: import('./conversation-types').ChangeMagnitude;
 
+  // ── 5d. System Assessment Sections ─────────────────
+  /** Per-component character paragraphs for system assessment responses. */
+  componentReadings?: string[];
+  /** How the components interact as a system (prose). */
+  systemInteraction?: string;
+  /** What is working well in the current system (prose or bullets). */
+  assessmentStrengths?: string[];
+  /** Where limitations may appear (prose or bullets). */
+  assessmentLimitations?: string[];
+  /** Likely upgrade direction or "do nothing" guidance (prose). */
+  upgradeDirection?: string;
+
   // ── 6. Trade-offs ───────────────────────────────────
   /** What to watch for / what you trade away (bullet list). */
   tradeOffs?: string[];
@@ -364,6 +376,13 @@ export function consultationToAdvisory(c: ConsultationResponse): AdvisoryRespons
       kind: l.kind,
       region: l.region,
     })),
+
+    // System assessment specific fields (populated only for assessment responses)
+    componentReadings: c.componentReadings,
+    systemInteraction: c.systemInteraction,
+    assessmentStrengths: c.assessmentStrengths,
+    assessmentLimitations: c.assessmentLimitations,
+    upgradeDirection: c.upgradeDirection,
   });
 }
 

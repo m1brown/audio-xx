@@ -199,10 +199,12 @@ const SYSTEM_ASSESSMENT_PATTERNS = [
   /\bassess(?:ment)?\s+(?:of\s+)?(?:my|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
   /\bevaluat(?:e|ion)\s+(?:of\s+)?(?:my|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
   /\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bwhat\s+do\s+you\s+think\b/i,  // Broad — requires ownership + subjects gate in detectIntent
   /\bthoughts\s+on\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
-  /\bhow\s+does\s+my\s+(?:system|setup|rig|chain)\s+(?:look|seem|stack\s+up)\b/i,
+  /\bhow\s+does\s+(?:my|this|the)\s+(?:system|setup|rig|chain)\s+(?:look|seem|stack\s+up)\b/i,
   /\breview\s+(?:of\s+)?my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
   /\bopinion\s+on\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bhow\s+does\s+(?:this|that)\s+(?:look|sound|work)\b/i,  // "how does this look?"
 ];
 
 /** Broader system guidance patterns — user wants help with their system
@@ -635,8 +637,14 @@ export function detectIntent(currentMessage: string): IntentResult {
   // 1d. Cable advisory — user asks about cables in a system context.
   //     Must fire before shopping to prevent cable queries from getting
   //     generic shopping treatment. Requires cable language.
+  //     Guard: when the user is describing their system (ownership +
+  //     assessment/guidance language + multiple components) and merely
+  //     mentions cables as part of the description, do NOT route to
+  //     cable advisory — let the system assessment path handle it.
   const hasCableLanguage = CABLE_INTENT_PATTERNS.some((p) => p.test(currentMessage));
-  if (hasCableLanguage) {
+  const isSystemDescriptionWithCables = hasCableLanguage && hasOwnership
+    && (hasAssessmentLanguage || hasGuidanceLanguage) && subjectMatches.length >= 2;
+  if (hasCableLanguage && !isSystemDescriptionWithCables) {
     return { intent: 'cable_advisory', subjects, subjectMatches, desires };
   }
 

@@ -117,17 +117,41 @@ const STRONG_OWNERSHIP_RE = [
 const ANTI_OWNERSHIP_RE = [
   /\bconsidering\b/i,
   /\bthinking\s+(?:about|of)\s+(?:getting|buying|trying)\b/i,
-  /\bwould\s+(?:a|the)\b/i,
-  /\bhow\s+(?:does|would|do)\b/i,
   /\bcompare\b/i,
   /\bvs\.?\b/i,
   /\bversus\b/i,
-  /\bwhich\s+(?:is|would)\b/i,
+  /\bwhich\s+(?:is|would)\s+(?:be\s+)?better\b/i,
   /\bbetter\s+(?:than|for)\b/i,
   /\bshould\s+i\s+(?:get|buy|try)\b/i,
   /\brecommend\b/i,
-  /\bwhat\s+(?:dac|amp|speaker)\b/i,
   /\bbest\b.*\bunder\b/i,
+];
+
+// Secondary anti-patterns — only applied when NO assessment language is present.
+// These block casual hypothetical questions but allow system descriptions paired
+// with "what do you think?" or "how does this look?" style assessment requests.
+const SOFT_ANTI_OWNERSHIP_RE = [
+  /\bwould\s+(?:a|the)\b/i,
+  /\bhow\s+(?:does|would|do)\b/i,
+  /\bwhat\s+(?:dac|amp|speaker)\b/i,
+];
+
+// ── Assessment language ──────────────────────────────
+// Signals that the user is asking for an evaluation of something they own.
+// When these are present, soft anti-patterns (like "how does" or "what do you think")
+// are not disqualifying — they're part of the assessment request.
+const ASSESSMENT_LANGUAGE_RE = [
+  /\bwhat\s+do\s+you\s+think\b/i,
+  /\bthoughts\s+on\b/i,
+  /\bhow\s+does\s+(?:this|that|my|the)\s+(?:system|setup|look|sound|work)\b/i,
+  /\bassess/i,
+  /\bevaluat/i,
+  /\breview\b/i,
+  /\bopinion\b/i,
+  /\badvice\b/i,
+  /\bimprove\b/i,
+  /\bupgrade\b/i,
+  /\bwhat\s+(?:should|would|could)\s+i\b/i,
 ];
 
 // ── Generic component descriptors ─────────────────────
@@ -169,8 +193,16 @@ export function detectSystemDescription(
   if (!hasOwnership) return null;
 
   // ── Gate 2: anti-patterns disqualify ──
-  const hasAntiPattern = ANTI_OWNERSHIP_RE.some((re) => re.test(currentMessage));
-  if (hasAntiPattern) return null;
+  const hasHardAntiPattern = ANTI_OWNERSHIP_RE.some((re) => re.test(currentMessage));
+  if (hasHardAntiPattern) return null;
+
+  // Soft anti-patterns only block when no assessment language is present.
+  // This allows "I have X, Y, Z — what do you think?" to trigger the save prompt.
+  const hasAssessmentLanguage = ASSESSMENT_LANGUAGE_RE.some((re) => re.test(currentMessage));
+  if (!hasAssessmentLanguage) {
+    const hasSoftAntiPattern = SOFT_ANTI_OWNERSHIP_RE.some((re) => re.test(currentMessage));
+    if (hasSoftAntiPattern) return null;
+  }
 
   // ── Gate 3: need at least 2 recognized subjects ──
   if (subjectMatches.length < 2) return null;
