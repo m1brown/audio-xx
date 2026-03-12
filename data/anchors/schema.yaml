@@ -1,0 +1,84 @@
+# Audio XX — Anchor Product Schema
+# Version: v1
+#
+# This schema defines the structure for curated anchor products.
+# Anchor products are stable reference points representing recognizable
+# design philosophies. They are not a product database.
+#
+# All fields use qualitative descriptions — no numeric scoring.
+
+# ── Field Definitions ──────────────────────────────────────
+
+# brand: string (required)
+#   Manufacturer name.
+
+# model: string (required)
+#   Product model name.
+
+# category: string (required)
+#   One of: dac, amplifier, speaker, headphone
+
+# subcategory: string (optional)
+#   Finer classification within category.
+#   DAC: fpga, r2r, delta-sigma, nos, hybrid
+#   Amplifier: tube-set, tube-push-pull, solid-state-class-a,
+#              solid-state-class-ab, solid-state-class-d, integrated
+#   Speaker: bookshelf, floorstanding, horn, full-range, monitor
+
+# design_signals: list of strings (required)
+#   Key architectural and design characteristics.
+#   These describe what the product IS, not how it sounds.
+#   Examples: "FPGA architecture", "R-2R ladder", "zero-feedback",
+#             "single-ended triode", "paper cone woofer"
+
+# tendencies: list of strings (required)
+#   Sonic qualities this product tends to emphasize.
+#   Described in the trait vocabulary from the knowledge model.
+#   Examples: "fast", "incisive", "airy", "dense", "warm", "flowing"
+
+# counter_tendencies: list of strings (required)
+#   Sonic qualities this product tends to de-emphasize or trade away.
+#   Represents what listeners may find less present.
+#   Examples: "dense", "warm", "smooth", "controlled"
+
+# reference_notes: list of strings (required)
+#   Brief qualitative descriptions of the product's character.
+#   Written in advisor voice — calm, descriptive, non-promotional.
+#   1–3 sentences per note.
+
+# confidence_basis: list of strings (required)
+#   Why we believe the trait assignment is reliable.
+#   Examples: "well-known archetype", "broad community consensus",
+#             "consistent reviewer descriptions", "design-principle inference"
+
+# price_range: string (optional)
+#   Approximate price bracket for context. Not used for scoring.
+#   Examples: "under $500", "$500–$1000", "$1000–$2000", "over $5000"
+
+# ── Example Entry ──────────────────────────────────────────
+
+# - brand: Chord
+#   model: Qutest
+#   category: dac
+#   subcategory: fpga
+#   design_signals:
+#     - FPGA architecture
+#     - custom pulse-array conversion
+#     - high tap-count filter
+#   tendencies:
+#     - fast
+#     - incisive
+#     - airy
+#     - articulate
+#   counter_tendencies:
+#     - dense
+#     - warm
+#     - lush
+#   reference_notes:
+#     - Extremely articulate and precise presentation with strong
+#       transient definition and spatial clarity.
+#     - Favours timing and transparency over tonal density.
+#   confidence_basis:
+#     - well-known DAC archetype
+#     - broad community consensus
+#   price_range: "$1000–$2000"

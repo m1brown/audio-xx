@@ -1,0 +1,879 @@
+# Audio XX — v1 Anchor Candidates
+# Status: Initial scaffolding — refine during trait framework design
+#
+# These anchors represent recognizable design philosophies.
+# They are reference points for reasoning, not product recommendations.
+
+# ════════════════════════════════════════════════════════════
+# DACs (~10)
+# ════════════════════════════════════════════════════════════
+
+dacs:
+
+  - brand: Chord
+    model: Qutest
+    category: dac
+    subcategory: fpga
+    design_signals:
+      - FPGA architecture
+      - custom pulse-array conversion
+      - high tap-count filter
+    tendencies:
+      - fast
+      - incisive
+      - airy
+      - articulate
+    counter_tendencies:
+      - dense
+      - warm
+      - lush
+    reference_notes:
+      - Extremely articulate and precise presentation with strong
+        transient definition and spatial clarity.
+      - Favours timing and transparency over tonal density.
+    confidence_basis:
+      - well-known DAC archetype
+      - broad community consensus
+    price_range: "$1000–$2000"
+
+  - brand: Denafrips
+    model: Pontus II
+    category: dac
+    subcategory: r2r
+    design_signals:
+      - R-2R ladder architecture
+      - discrete resistor network
+      - NOS mode available
+    tendencies:
+      - dense
+      - flowing
+      - warm
+      - harmonically rich
+    counter_tendencies:
+      - incisive
+      - dry
+      - analytical
+    reference_notes:
+      - Tonal density and musical flow are the defining characteristics.
+      - NOS mode shifts further toward organic texture at the cost of
+        some high-frequency extension.
+    confidence_basis:
+      - well-known R-2R archetype
+      - broad community consensus
+    price_range: "$1000–$2000"
+
+  - brand: RME
+    model: ADI-2 DAC FS
+    category: dac
+    subcategory: delta-sigma
+    design_signals:
+      - AKM delta-sigma chipset
+      - parametric EQ built in
+      - measurement-grade implementation
+    tendencies:
+      - transparent
+      - neutral
+      - controlled
+      - precise
+    counter_tendencies:
+      - warm
+      - flowing
+      - euphonic
+    reference_notes:
+      - Studio-reference neutrality with exceptional measured performance.
+      - Presents recordings faithfully without editorial character.
+    confidence_basis:
+      - well-known studio-neutral archetype
+      - consistent reviewer descriptions
+    price_range: "$1000–$1500"
+
+  - brand: Schiit
+    model: Bifrost 2/64
+    category: dac
+    subcategory: r2r
+    design_signals:
+      - multibit architecture
+      - Unison USB
+      - discrete conversion
+    tendencies:
+      - grounded
+      - bodied
+      - natural
+      - rhythmic
+    counter_tendencies:
+      - airy
+      - ethereal
+      - sparkly
+    reference_notes:
+      - Midrange weight and rhythmic engagement define the presentation.
+      - More grounded than ethereal — favours musical momentum over
+        spatial finesse.
+    confidence_basis:
+      - well-known multibit archetype
+      - broad community consensus
+    price_range: "$500–$1000"
+
+  - brand: Benchmark
+    model: DAC3
+    category: dac
+    subcategory: delta-sigma
+    design_signals:
+      - ESS Sabre chipset
+      - ultra-low distortion topology
+      - high-feedback architecture
+    tendencies:
+      - precise
+      - controlled
+      - transparent
+      - quiet
+    counter_tendencies:
+      - warm
+      - dense
+      - euphonic
+    reference_notes:
+      - Among the most transparent and technically accomplished DACs available.
+      - Some listeners find the presentation clinical; others value the
+        absence of coloration.
+    confidence_basis:
+      - well-known precision archetype
+      - consistent reviewer descriptions
+    price_range: "$2000–$3000"
+
+  - brand: Holo Audio
+    model: Spring 3
+    category: dac
+    subcategory: r2r
+    design_signals:
+      - discrete R-2R ladder
+      - NOS / OS switchable
+      - dual-mono topology
+    tendencies:
+      - organic
+      - textured
+      - spatially open
+      - harmonically nuanced
+    counter_tendencies:
+      - mechanical
+      - dry
+      - aggressive
+    reference_notes:
+      - Prized for natural timbre and harmonic complexity.
+      - Presents music with an organic ease that rewards long listening.
+    confidence_basis:
+      - strong community consensus
+      - consistent with R-2R design principles
+    price_range: "$2000–$3000"
+
+  - brand: Topping
+    model: D90SE
+    category: dac
+    subcategory: delta-sigma
+    design_signals:
+      - ESS ES9038PRO
+      - fully balanced architecture
+      - measurement-optimized
+    tendencies:
+      - detailed
+      - extended
+      - clean
+      - precise
+    counter_tendencies:
+      - warm
+      - dense
+      - forgiving
+    reference_notes:
+      - Measurement-class performance at a competitive price point.
+      - Lean toward detail and extension rather than body and warmth.
+    confidence_basis:
+      - well-known measurement archetype
+      - consistent reviewer descriptions
+    price_range: "$500–$1000"
+
+  - brand: Border Patrol
+    model: DAC SE
+    category: dac
+    subcategory: nos
+    design_signals:
+      - non-oversampling
+      - tube rectified power supply
+      - single-ended output
+    tendencies:
+      - sweet
+      - flowing
+      - relaxed
+      - harmonically saturated
+    counter_tendencies:
+      - fast
+      - incisive
+      - detailed
+      - extended
+    reference_notes:
+      - Prioritises musical flow and harmonic beauty over technical precision.
+      - A deliberate trade of resolution for tonal sweetness and ease.
+    confidence_basis:
+      - well-known NOS/tube archetype
+      - design-principle inference
+    price_range: "$1000–$2000"
+
+  - brand: Mojo Audio
+    model: Mystique X SE
+    category: dac
+    subcategory: r2r
+    design_signals:
+      - R-2R ladder
+      - non-oversampling
+      - linear power supply
+    tendencies:
+      - natural
+      - dimensional
+      - tonally grounded
+      - musically coherent
+    counter_tendencies:
+      - aggressive
+      - analytical
+      - forward
+    reference_notes:
+      - Aims for natural tonal balance and dimensional presentation.
+      - Designed to disappear in the chain rather than assert a character.
+    confidence_basis:
+      - design-principle inference
+      - niche community consensus
+    price_range: "$3000–$5000"
+
+  - brand: MHDT
+    model: Orchid
+    category: dac
+    subcategory: nos
+    design_signals:
+      - non-oversampling
+      - tube output buffer
+      - TDA1541A chip
+    tendencies:
+      - warm
+      - smooth
+      - musical
+      - forgiving
+    counter_tendencies:
+      - incisive
+      - extended
+      - transparent
+    reference_notes:
+      - Classic NOS tube-buffered character — warmth and smoothness
+        at the cost of ultimate extension and detail.
+      - Popular entry point for listeners seeking analogue-like tonality.
+    confidence_basis:
+      - well-known NOS/tube archetype
+      - broad community consensus
+    price_range: "under $1000"
+
+# ════════════════════════════════════════════════════════════
+# Amplifiers (~10)
+# ════════════════════════════════════════════════════════════
+
+amplifiers:
+
+  - brand: First Watt
+    model: SIT-3
+    category: amplifier
+    subcategory: solid-state-class-a
+    design_signals:
+      - static induction transistor
+      - zero feedback
+      - single-ended topology
+    tendencies:
+      - sweet
+      - open
+      - tonally nuanced
+      - midrange-present
+    counter_tendencies:
+      - controlled
+      - powerful
+      - bass-authoritative
+    reference_notes:
+      - Tube-like midrange presence from a solid-state design.
+      - Low power limits speaker pairing, but tonal quality is exceptional
+        within its range.
+    confidence_basis:
+      - well-known zero-feedback archetype
+      - strong community consensus
+    price_range: "$4000–$5000"
+
+  - brand: Benchmark
+    model: AHB2
+    category: amplifier
+    subcategory: solid-state-class-ab
+    design_signals:
+      - feed-forward error correction
+      - THX AAA topology
+      - ultra-low noise floor
+    tendencies:
+      - transparent
+      - controlled
+      - precise
+      - neutral
+    counter_tendencies:
+      - warm
+      - euphonic
+      - elastic
+    reference_notes:
+      - Among the most transparent power amplifiers in production.
+      - Adds almost nothing of its own character — the chain upstream
+        determines the sonic result.
+    confidence_basis:
+      - well-known precision archetype
+      - consistent reviewer descriptions
+    price_range: "$3000–$4000"
+
+  - brand: Luxman
+    model: L-507Z
+    category: amplifier
+    subcategory: integrated
+    design_signals:
+      - LIFES topology
+      - class AB
+      - moderate feedback
+    tendencies:
+      - refined
+      - smooth
+      - balanced
+      - musically engaging
+    counter_tendencies:
+      - aggressive
+      - forward
+      - lean
+    reference_notes:
+      - Luxman house sound — refined, balanced, and slightly warm of neutral.
+      - A comfort-oriented presentation that rarely fatigues.
+    confidence_basis:
+      - well-known Japanese integrated archetype
+      - broad community consensus
+    price_range: "$3000–$5000"
+
+  - brand: Line Magnetic
+    model: LM-845iA
+    category: amplifier
+    subcategory: tube-set
+    design_signals:
+      - single-ended triode
+      - 845 output tube
+      - transformer-coupled output
+    tendencies:
+      - harmonically rich
+      - dimensional
+      - midrange-dense
+      - elastic
+    counter_tendencies:
+      - controlled
+      - tight
+      - precise
+      - extended
+    reference_notes:
+      - Classic SET character with scale — the 845 tube delivers more
+        power than typical triodes while preserving midrange density.
+      - Requires efficient speakers to perform optimally.
+    confidence_basis:
+      - well-known SET archetype
+      - design-principle inference
+    price_range: "$3000–$5000"
+
+  - brand: Naim
+    model: Nait XS 3
+    category: amplifier
+    subcategory: integrated
+    design_signals:
+      - Class AB
+      - Naim DR power supply regulation
+      - single-rail topology
+    tendencies:
+      - rhythmic
+      - propulsive
+      - engaging
+      - forward
+    counter_tendencies:
+      - relaxed
+      - spacious
+      - warm
+    reference_notes:
+      - Naim house sound — rhythmic drive and musical momentum take priority
+        over spatial finesse or tonal warmth.
+      - Gets the foot tapping before it gets the audiophile analyzing.
+    confidence_basis:
+      - well-known Naim archetype
+      - broad community consensus
+    price_range: "$2000–$3000"
+
+  - brand: Schiit
+    model: Aegir
+    category: amplifier
+    subcategory: solid-state-class-a
+    design_signals:
+      - continuity circuit
+      - class A output stage
+      - zero global feedback
+    tendencies:
+      - smooth
+      - natural
+      - open
+      - midrange-present
+    counter_tendencies:
+      - powerful
+      - bass-authoritative
+      - dynamic-punchy
+    reference_notes:
+      - Gentle, natural presentation from a low-power class A topology.
+      - Limited power means careful speaker matching — rewards efficient
+        designs and moderate listening levels.
+    confidence_basis:
+      - design-principle inference
+      - moderate community consensus
+    price_range: "under $1000"
+
+  - brand: Pass Labs
+    model: INT-25
+    category: amplifier
+    subcategory: solid-state-class-a
+    design_signals:
+      - class A single-ended output
+      - low feedback
+      - 25W into 8 ohms
+    tendencies:
+      - sweet
+      - dimensional
+      - liquid
+      - harmonically textured
+    counter_tendencies:
+      - powerful
+      - controlled
+      - bass-authoritative
+    reference_notes:
+      - The Pass Labs single-ended character in an integrated form.
+      - Trades power and grip for midrange beauty and tonal sweetness.
+    confidence_basis:
+      - well-known Pass single-ended archetype
+      - broad community consensus
+    price_range: "$5000–$7000"
+
+  - brand: Parasound
+    model: Halo A 21+
+    category: amplifier
+    subcategory: solid-state-class-ab
+    design_signals:
+      - high-current class AB
+      - John Curl circuit design
+      - high damping factor
+    tendencies:
+      - powerful
+      - controlled
+      - bass-authoritative
+      - neutral
+    counter_tendencies:
+      - sweet
+      - warm
+      - elastic
+    reference_notes:
+      - High-power, high-control amplification with strong grip on
+        difficult speaker loads.
+      - More about authority and neutrality than tonal colour.
+    confidence_basis:
+      - well-known high-power SS archetype
+      - consistent reviewer descriptions
+    price_range: "$3000–$4000"
+
+  - brand: Willsenton
+    model: R8
+    category: amplifier
+    subcategory: tube-push-pull
+    design_signals:
+      - push-pull tube output
+      - switchable triode/ultralinear
+      - EL34 / KT88 compatible
+    tendencies:
+      - warm
+      - musical
+      - midrange-forward
+      - forgiving
+    counter_tendencies:
+      - precise
+      - transparent
+      - tight
+    reference_notes:
+      - Accessible tube amplification with genuine tube character.
+      - Triode mode shifts toward warmth and intimacy; ultralinear
+        mode adds power and extension.
+    confidence_basis:
+      - design-principle inference
+      - moderate community consensus
+    price_range: "$500–$1500"
+
+  - brand: Hegel
+    model: H190
+    category: amplifier
+    subcategory: integrated
+    design_signals:
+      - SoundEngine topology
+      - class AB
+      - moderate-to-high power
+    tendencies:
+      - clean
+      - dynamic
+      - controlled
+      - slightly warm
+    counter_tendencies:
+      - lush
+      - euphonic
+      - elastic
+    reference_notes:
+      - Hegel house sound — clean, dynamic, and composed with a
+        slight warmth that avoids clinical sterility.
+      - Competent all-rounder that pairs widely.
+    confidence_basis:
+      - well-known Scandinavian integrated archetype
+      - broad community consensus
+    price_range: "$3000–$5000"
+
+# ════════════════════════════════════════════════════════════
+# Speakers (12–15)
+# ════════════════════════════════════════════════════════════
+
+speakers:
+
+  - brand: Harbeth
+    model: P3ESR
+    category: speaker
+    subcategory: bookshelf
+    design_signals:
+      - BBC thin-wall cabinet
+      - RADIAL cone
+      - sealed enclosure
+    tendencies:
+      - warm
+      - natural
+      - midrange-rich
+      - forgiving
+    counter_tendencies:
+      - extended
+      - dynamic
+      - bass-powerful
+    reference_notes:
+      - Classic BBC midrange beauty in a small form factor.
+      - Limited bass extension and dynamics — excels in nearfield and
+        small-room applications where midrange quality matters most.
+    confidence_basis:
+      - well-known BBC archetype
+      - broad community consensus
+    price_range: "$2000–$3000"
+
+  - brand: Klipsch
+    model: Heresy IV
+    category: speaker
+    subcategory: horn
+    design_signals:
+      - horn-loaded midrange and tweeter
+      - high sensitivity (99 dB)
+      - three-way design
+    tendencies:
+      - dynamic
+      - lively
+      - forward
+      - exciting
+    counter_tendencies:
+      - smooth
+      - relaxed
+      - refined
+    reference_notes:
+      - High sensitivity and horn loading deliver explosive dynamics
+        and presence-range energy.
+      - Can sound forward or shouty in bright systems — thrives with
+        warmer, lower-power amplification.
+    confidence_basis:
+      - well-known horn archetype
+      - broad community consensus
+    price_range: "$2000–$3000"
+
+  - brand: KEF
+    model: LS50 Meta
+    category: speaker
+    subcategory: bookshelf
+    design_signals:
+      - Uni-Q coaxial driver
+      - Metamaterial Absorption Technology
+      - bass reflex
+    tendencies:
+      - imaging-precise
+      - detailed
+      - open
+      - articulate
+    counter_tendencies:
+      - warm
+      - bodied
+      - forgiving
+    reference_notes:
+      - Point-source imaging from the coaxial driver produces
+        exceptional spatial precision.
+      - Tonally lean rather than rich — benefits from warmer upstream
+        components.
+    confidence_basis:
+      - well-known coaxial archetype
+      - broad community consensus
+    price_range: "$1000–$1500"
+
+  - brand: Boenicke
+    model: W5
+    category: speaker
+    subcategory: bookshelf
+    design_signals:
+      - full-range driver with supertweeter
+      - wooden cabinet (no MDF)
+      - minimal crossover
+    tendencies:
+      - coherent
+      - natural
+      - spatially open
+      - tonally organic
+    counter_tendencies:
+      - dynamic
+      - bass-powerful
+      - controlled
+    reference_notes:
+      - Near-single-driver coherence with a natural, organic presentation.
+      - Limited by physics in bass extension and dynamic range, but
+        midrange purity and spatial naturalness are exceptional.
+    confidence_basis:
+      - niche community consensus
+      - design-principle inference
+    price_range: "$3000–$5000"
+
+  - brand: Focal
+    model: Kanta No. 2
+    category: speaker
+    subcategory: floorstanding
+    design_signals:
+      - beryllium tweeter
+      - flax sandwich cone
+      - three-way bass reflex
+    tendencies:
+      - detailed
+      - dynamic
+      - forward
+      - energetic
+    counter_tendencies:
+      - relaxed
+      - warm
+      - forgiving
+    reference_notes:
+      - Beryllium tweeter delivers exceptional high-frequency detail
+        and air, but can push toward brightness in analytical chains.
+      - Dynamic and engaging — rewards careful amplifier matching.
+    confidence_basis:
+      - well-known Focal archetype
+      - broad community consensus
+    price_range: "$5000–$8000"
+
+  - brand: Wharfedale
+    model: Linton Heritage
+    category: speaker
+    subcategory: bookshelf
+    design_signals:
+      - large woven Kevlar cone
+      - three-way design
+      - retro cabinet styling
+    tendencies:
+      - warm
+      - bodied
+      - easygoing
+      - musically forgiving
+    counter_tendencies:
+      - precise
+      - fast
+      - analytical
+    reference_notes:
+      - Old-school British speaker warmth and midrange body.
+      - Not the last word in detail or precision, but musically
+        engaging and easy to live with.
+    confidence_basis:
+      - well-known warm-British archetype
+      - moderate community consensus
+    price_range: "$1000–$1500"
+
+  - brand: Dynaudio
+    model: Evoke 20
+    category: speaker
+    subcategory: bookshelf
+    design_signals:
+      - MSP cone
+      - Cerotar tweeter
+      - bass reflex
+    tendencies:
+      - balanced
+      - composed
+      - slightly warm
+      - smooth
+    counter_tendencies:
+      - forward
+      - exciting
+      - aggressive
+    reference_notes:
+      - Balanced and composed presentation — Dynaudio house sound
+        favouring smoothness and composure over excitement.
+      - Pairs widely and rarely offends.
+    confidence_basis:
+      - well-known Dynaudio archetype
+      - broad community consensus
+    price_range: "$1500–$2000"
+
+  - brand: JBL
+    model: L100 Classic
+    category: speaker
+    subcategory: bookshelf
+    design_signals:
+      - 12-inch woofer
+      - compression-driver tweeter
+      - high sensitivity
+    tendencies:
+      - dynamic
+      - punchy
+      - lively
+      - big-sounding
+    counter_tendencies:
+      - refined
+      - delicate
+      - precise
+    reference_notes:
+      - Big, dynamic, and physical — delivers scale and impact that
+        smaller speakers cannot replicate.
+      - Not a precision instrument, but musically exciting and engaging.
+    confidence_basis:
+      - well-known JBL archetype
+      - broad community consensus
+    price_range: "$3000–$5000"
+
+  - brand: ATC
+    model: SCM19
+    category: speaker
+    subcategory: monitor
+    design_signals:
+      - 75mm soft-dome midrange
+      - sealed enclosure
+      - studio monitor heritage
+    tendencies:
+      - accurate
+      - controlled
+      - revealing
+      - tight
+    counter_tendencies:
+      - warm
+      - forgiving
+      - easy-listening
+    reference_notes:
+      - Studio-monitor accuracy in a domestic form factor.
+      - Demands good amplification and clean sources — reveals
+        everything upstream including flaws.
+    confidence_basis:
+      - well-known studio-monitor archetype
+      - broad community consensus
+    price_range: "$3000–$4000"
+
+  - brand: Zu Audio
+    model: Dirty Weekend
+    category: speaker
+    subcategory: full-range
+    design_signals:
+      - full-range driver
+      - high sensitivity (97 dB)
+      - no crossover in midrange
+    tendencies:
+      - immediate
+      - dynamic
+      - coherent
+      - forward
+    counter_tendencies:
+      - refined
+      - smooth
+      - extended
+    reference_notes:
+      - Full-range driver coherence with high sensitivity — thrives
+        with low-power amplification including SET tubes.
+      - Raw and immediate character that some find exciting and others
+        find unrefined.
+    confidence_basis:
+      - well-known full-range archetype
+      - niche community consensus
+    price_range: "$1000–$2000"
+
+  - brand: Magnepan
+    model: LRS+
+    category: speaker
+    subcategory: planar
+    design_signals:
+      - quasi-ribbon planar magnetic
+      - dipole radiation pattern
+      - full-range panel
+    tendencies:
+      - transparent
+      - airy
+      - spatially open
+      - delicate
+    counter_tendencies:
+      - punchy
+      - dynamic
+      - bass-powerful
+    reference_notes:
+      - Planar transparency and spatial openness at an entry-level price.
+      - Requires space behind the speakers, substantial amplification,
+        and careful placement. Bass extension is limited.
+    confidence_basis:
+      - well-known planar archetype
+      - broad community consensus
+    price_range: "under $1000"
+
+  - brand: Spendor
+    model: Classic 3/1
+    category: speaker
+    subcategory: bookshelf
+    design_signals:
+      - BBC-lineage design
+      - EP77 cone
+      - ported enclosure
+    tendencies:
+      - natural
+      - refined
+      - midrange-rich
+      - smooth
+    counter_tendencies:
+      - exciting
+      - forward
+      - dynamic
+    reference_notes:
+      - Spendor house sound — midrange refinement and natural tonal
+        balance in the BBC tradition.
+      - Rewards quality amplification and good recordings.
+    confidence_basis:
+      - well-known BBC-lineage archetype
+      - moderate community consensus
+    price_range: "$2000–$3000"
+
+  - brand: Tekton Design
+    model: Moab
+    category: speaker
+    subcategory: floorstanding
+    design_signals:
+      - multi-tweeter array
+      - high sensitivity (98 dB)
+      - large cabinet
+    tendencies:
+      - dynamic
+      - big-sounding
+      - sensitive
+      - resolving
+    counter_tendencies:
+      - refined
+      - delicate
+      - compact
+    reference_notes:
+      - Extreme sensitivity and dynamic range from the multi-driver array.
+      - Divisive aesthetics and design approach, but the performance
+        envelope is unusually wide for the price.
+    confidence_basis:
+      - niche community consensus
+      - design-principle inference
+    price_range: "$3000–$5000"
