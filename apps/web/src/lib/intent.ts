@@ -249,7 +249,7 @@ const DIAGNOSIS_PATTERNS = [
 
 // ── Subject extraction ───────────────────────────────
 
-function extractSubjectMatches(text: string): SubjectMatch[] {
+export function extractSubjectMatches(text: string): SubjectMatch[] {
   const lower = text.toLowerCase();
   const found: SubjectMatch[] = [];
 
@@ -568,7 +568,7 @@ function extractImplicitDesires(
   return implicit;
 }
 
-function extractDesires(text: string): DesireSignal[] {
+export function extractDesires(text: string): DesireSignal[] {
   // Pass 1: Explicit framing patterns ("want more X", "too much X")
   const desires: DesireSignal[] = [];
   for (const { pattern, direction } of DESIRE_PATTERNS) {

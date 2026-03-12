@@ -29,12 +29,11 @@ import { detectChurnSignal } from '@/lib/churn-avoidance';
 import { reason } from '@/lib/reasoning';
 import type { ReasoningResult } from '@/lib/reasoning';
 import { useAudioSession } from '@/lib/audio-session-context';
-import { resolveActiveSystemContext, activeSystemToProfile } from '@/lib/system-bridge';
+import { buildTurnContext, type TurnContext } from '@/lib/turn-context';
 import SystemBadge from '@/components/system/SystemBadge';
 import SystemPanel from '@/components/system/SystemPanel';
 import SystemEditor from '@/components/system/SystemEditor';
 import SystemSavePrompt from '@/components/system/SystemSavePrompt';
-import { detectSystemDescription } from '@/lib/system-extraction';
 import type { DraftSystem } from '@/lib/system-types';
 
 // ── Constants ─────────────────────────────────────────
@@ -234,18 +233,11 @@ export default function Home() {
       return;
     }
 
-    // ── Resolve active system context ────────────────────
-    // Read once per submit — all builders and reasoning calls share this.
-    let activeSystem = resolveActiveSystemContext(audioState);
-    const activeProfile = activeSystemToProfile(audioState);
-    // activeProfile is DEFAULT_SYSTEM_PROFILE when no system is active,
-    // so pass null to reasoning when there's no real active system.
-    let activeProfileForReasoning = activeSystem ? activeProfile : null;
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[AudioXX] activeSystem:', activeSystem?.name ?? '(none)',
-        '| components:', activeSystem?.components.map((c) => `${c.brand} ${c.name}`) ?? []);
-    }
+    // ── Build canonical turn context ────────────────────
+    // Single extraction pass: subjects, desires, system detection,
+    // active system resolution, profile, confidence — all builders
+    // and routing decisions consume this same object.
+    const turnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current);
 
     // ── Conversation router ──────────────────────────────
     // Classify the message into a conversation mode before detailed
@@ -254,56 +246,28 @@ export default function Home() {
     const effectiveMode = resolveMode(routedMode, state.activeMode);
     dispatch({ type: 'SET_MODE', mode: effectiveMode });
 
-    // Detect intent BEFORE running the evaluation engine
-    // (moved above consultation so subjectMatches are available for brand comparison routing)
-    let { intent, subjects, subjectMatches, desires } = detectIntent(submittedText);
+    // ── Detect intent ───────────────────────────────────
+    // Intent detection runs after extraction. We only need the intent
+    // classification — subjectMatches, desires, and subjects are
+    // already canonical in turnCtx.
+    let { intent } = detectIntent(submittedText);
 
-    // ── System description detection (Phase 5) ──────────
-    // Check if the user is describing an owned system. If so, store a
-    // ProposedSystem for the save prompt. This runs alongside advisory
-    // logic — it doesn't interfere with routing or builder output.
-    const proposed = detectSystemDescription(submittedText, subjectMatches, audioState);
-
-    // Diagnostic: log extraction results for debugging save prompt reliability
+    // Diagnostic logging
     if (process.env.NODE_ENV === 'development') {
-      console.log('[AudioXX] intent:', intent, '| subjects:', subjects);
-      console.log('[AudioXX] subjectMatches:', subjectMatches.map((m) => `${m.kind}:${m.name}`));
-      if (proposed) {
-        console.log('[AudioXX] proposed system:', proposed.suggestedName,
-          '| components:', proposed.components.map((c) => `${c.brand} ${c.name} (${c.category})`));
-        console.log('[AudioXX] fingerprint:', proposed.fingerprint);
-      } else {
-        console.log('[AudioXX] no system detected from description');
+      console.log('[AudioXX] intent:', intent, '| confidence:', turnCtx.confidence, '| source:', turnCtx.systemSource);
+      console.log('[AudioXX] subjects:', turnCtx.subjects, '| desires:', turnCtx.desires.length);
+      if (turnCtx.proposedSystem) {
+        console.log('[AudioXX] proposed:', turnCtx.proposedSystem.suggestedName,
+          '| components:', turnCtx.proposedSystem.components.map((c) => `${c.brand} ${c.name} (${c.category})`));
       }
     }
 
-    if (proposed && !dismissedFingerprintsRef.current.has(proposed.fingerprint)) {
-      audioDispatch({ type: 'SET_PROPOSED_SYSTEM', proposed });
-    } else if (!proposed) {
+    // ── Dispatch proposed system ────────────────────────
+    if (turnCtx.proposedSystem && !dismissedFingerprintsRef.current.has(turnCtx.proposedSystem.fingerprint)) {
+      audioDispatch({ type: 'SET_PROPOSED_SYSTEM', proposed: turnCtx.proposedSystem });
+    } else if (!turnCtx.proposedSystem) {
       // Clear any stale proposal from a previous turn
       audioDispatch({ type: 'SET_PROPOSED_SYSTEM', proposed: null });
-    }
-
-    // ── Promote detected system to active context ────────
-    // When the user describes a system inline (>= 2 components detected)
-    // but no saved/draft system is active, treat the proposed system as
-    // active for this turn. This prevents the advisory from asking
-    // "What does the rest of your system look like?" when the parser
-    // already extracted the components.
-    if (!activeSystem && proposed && proposed.components.length >= 2) {
-      activeSystem = {
-        name: proposed.suggestedName,
-        components: proposed.components.map((c) => ({
-          name: c.name,
-          brand: c.brand,
-          category: c.category,
-          role: c.role,
-        })),
-        tendencies: null,
-        location: null,
-        primaryUse: null,
-      };
-      activeProfileForReasoning = activeProfile;
     }
 
     // ── Comparison follow-up detection ─────────────────
@@ -374,7 +338,7 @@ export default function Home() {
     // specific gear. Produces a structured intake response that explains
     // the evaluation approach and asks for system details.
     if (intent === 'consultation_entry') {
-      const entryResult = buildConsultationEntry(submittedText, desires, activeSystem);
+      const entryResult = buildConsultationEntry(submittedText, turnCtx.desires, turnCtx.activeSystem);
       dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(entryResult) });
       dispatch({ type: 'SET_LOADING', value: false });
       return;
@@ -384,12 +348,12 @@ export default function Home() {
     // Cable queries get a structured advisory response covering cable
     // strategy, system context, tuning direction, and trade-offs.
     if (intent === 'cable_advisory') {
-      const cableResult = buildCableAdvisory(submittedText, subjectMatches, desires, activeSystem);
+      const cableResult = buildCableAdvisory(submittedText, turnCtx.subjectMatches, turnCtx.desires, turnCtx.activeSystem);
       dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(cableResult) });
-      if (subjectMatches.length > 0) {
+      if (turnCtx.subjectMatches.length > 0) {
         dispatch({
           type: 'SET_CONSULTATION_CONTEXT',
-          subjects: subjectMatches,
+          subjects: turnCtx.subjectMatches,
           originalQuery: submittedText,
         });
       }
@@ -403,13 +367,13 @@ export default function Home() {
     // then ask what they want to explore. Must fire before consultation/comparison
     // to prevent multi-brand system descriptions from being misrouted.
     if (intent === 'system_assessment') {
-      const assessmentResult = buildSystemAssessment(submittedText, subjectMatches, activeSystem, desires);
+      const assessmentResult = buildSystemAssessment(submittedText, turnCtx.subjectMatches, turnCtx.activeSystem, turnCtx.desires);
       if (assessmentResult) {
         dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(assessmentResult) });
         // Store consultation context so follow-ups stay in the system context
         dispatch({
           type: 'SET_CONSULTATION_CONTEXT',
-          subjects: subjectMatches,
+          subjects: turnCtx.subjectMatches,
           originalQuery: submittedText,
         });
         dispatch({ type: 'SET_LOADING', value: false });
@@ -425,25 +389,25 @@ export default function Home() {
     // Gear inquiries with subjects also try consultation first — this ensures
     // brand links surface and richer brand profiles are used when available.
     // Falls through to gear-response if consultation returns null.
-    const isBrandComparison = intent === 'comparison' && isBrandOnlyComparison(subjectMatches);
-    const isGearWithSubjects = intent === 'gear_inquiry' && subjectMatches.length > 0;
+    const isBrandComparison = intent === 'comparison' && isBrandOnlyComparison(turnCtx.subjectMatches);
+    const isGearWithSubjects = intent === 'gear_inquiry' && turnCtx.subjectMatches.length > 0;
     if (effectiveMode === 'consultation' || isBrandComparison || isGearWithSubjects) {
-      const consultResult = buildConsultationResponse(submittedText, subjectMatches);
+      const consultResult = buildConsultationResponse(submittedText, turnCtx.subjectMatches);
       if (consultResult) {
         // Store comparison context for follow-up turns
-        if (isBrandComparison && subjectMatches.length >= 2) {
+        if (isBrandComparison && turnCtx.subjectMatches.length >= 2) {
           dispatch({
             type: 'SET_COMPARISON',
-            left: subjectMatches[0],
-            right: subjectMatches[1],
+            left: turnCtx.subjectMatches[0],
+            right: turnCtx.subjectMatches[1],
             scope: 'brand',
           });
         }
         // Store consultation context for single-subject follow-ups
-        if (subjectMatches.length > 0 && !isBrandComparison) {
+        if (turnCtx.subjectMatches.length > 0 && !isBrandComparison) {
           dispatch({
             type: 'SET_CONSULTATION_CONTEXT',
-            subjects: subjectMatches,
+            subjects: turnCtx.subjectMatches,
             originalQuery: submittedText,
           });
         }
@@ -474,22 +438,22 @@ export default function Home() {
 
     // Gear inquiries and comparisons — conversational path, skip diagnostic engine
     if (intent === 'gear_inquiry' || intent === 'comparison') {
-      const gearResponse = buildGearResponse(intent, subjects, submittedText, desires, tasteProfile ?? undefined, activeSystem);
+      const gearResponse = buildGearResponse(intent, turnCtx.subjects, submittedText, turnCtx.desires, tasteProfile ?? undefined, turnCtx.activeSystem);
       if (gearResponse) {
         // Store comparison context for product-level comparisons
-        if (intent === 'comparison' && subjectMatches.length >= 2) {
+        if (intent === 'comparison' && turnCtx.subjectMatches.length >= 2) {
           dispatch({
             type: 'SET_COMPARISON',
-            left: subjectMatches[0],
-            right: subjectMatches[1],
-            scope: subjectMatches.every((m) => m.kind === 'product') ? 'product' : 'brand',
+            left: turnCtx.subjectMatches[0],
+            right: turnCtx.subjectMatches[1],
+            scope: turnCtx.subjectMatches.every((m) => m.kind === 'product') ? 'product' : 'brand',
           });
         }
         // Store consultation context for single-subject follow-ups
-        if (intent === 'gear_inquiry' && subjectMatches.length > 0) {
+        if (intent === 'gear_inquiry' && turnCtx.subjectMatches.length > 0) {
           dispatch({
             type: 'SET_CONSULTATION_CONTEXT',
-            subjects: subjectMatches,
+            subjects: turnCtx.subjectMatches,
             originalQuery: submittedText,
           });
         }
@@ -541,8 +505,8 @@ export default function Home() {
             // Always run fresh reasoning on accumulated text.
             // lastReasoning is continuity context, not a substitute.
             const reasoning = reason(
-              allUserText, desires, data.signals,
-              tasteProfile ?? null, shoppingCtx, activeProfileForReasoning,
+              allUserText, turnCtx.desires, data.signals,
+              tasteProfile ?? null, shoppingCtx, turnCtx.activeProfile,
             );
             dispatch({ type: 'SET_REASONING', reasoning });
 
@@ -595,13 +559,13 @@ export default function Home() {
 
           // ── Three-layer reasoning (diagnosis) ──────
           const reasoning = reason(
-            allUserText, desires, data.signals,
-            tasteProfile ?? null, null, activeProfileForReasoning,
+            allUserText, turnCtx.desires, data.signals,
+            tasteProfile ?? null, null, turnCtx.activeProfile,
           );
           dispatch({ type: 'SET_REASONING', reasoning });
 
           // Use reasoning direction to frame diagnosis results
-          const diagDirection = inferSystemDirection(submittedText, desires, undefined, tasteProfile ?? undefined);
+          const diagDirection = inferSystemDirection(submittedText, turnCtx.desires, undefined, tasteProfile ?? undefined);
 
           if (clarification) {
             dispatch({ type: 'ADD_QUESTION', clarification });
