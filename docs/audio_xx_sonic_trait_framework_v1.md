@@ -1,7 +1,11 @@
 # Audio XX — Sonic Trait Framework v1
 
-**Status:** Design specification — not yet implemented
-**Purpose:** Define how Audio XX perceives, represents, and reasons about sonic character.
+**Status:** Draft for implementation
+**Purpose:** Define the internal sonic trait language used by Audio XX for advisory reasoning.
+
+This document defines the first structured sonic trait framework for Audio XX.
+It should guide future implementation of trait inference, system character modeling, upgrade reasoning, and advisory language.
+
 **Relationship:** Extends the Knowledge Model. Precedes builder refactoring and anchor population.
 
 ---
@@ -50,6 +54,8 @@ The framework uses seven trait families. Each family describes a perceptual axis
 
 **Trait key:** `flow`
 
+**In system reasoning:** When multiple components emphasise flow, the system risks sounding soft or imprecise — the trade-off is reduced articulation. When no component contributes flow, the system may sound mechanical and uninvolving despite strong technical performance. Flow is often the trait listeners miss most acutely and struggle most to name.
+
 ---
 
 ### 2.2 Tonal Density — Harmonic Weight
@@ -63,6 +69,8 @@ The framework uses seven trait families. Each family describes a perceptual axis
 **Perceptual basis:** Tonal density relates to harmonic distortion profile (particularly even-order), lower midrange energy balance, and bass-to-midrange transition behaviour. R-2R DACs, tube amplifiers, and speakers with larger drivers or resonant cabinet designs tend toward higher density. Delta-sigma DACs with aggressive filtering, high-feedback solid-state, and compact sealed monitors tend toward lower density.
 
 **Trait key:** `tonal_density`
+
+**In system reasoning:** Compounded density (warm DAC + warm amp + warm speakers) is the classic recipe for congestion and muddiness. But density is also what gives acoustic instruments their physical presence — removing it entirely makes the system sound thin and unconvincing. The advisor should distinguish between "this system has appropriate weight" and "this system is accumulating density past the point of clarity."
 
 ---
 
@@ -80,6 +88,8 @@ The framework uses seven trait families. Each family describes a perceptual axis
 
 **Relationship to existing signals:** Currently partially captured by `fatigue_risk: down` and `flow: up` in the signal dictionary. This trait separates the upper-frequency component from the broader concepts of flow and fatigue.
 
+**In system reasoning:** Sweetness often compensates for brightness elsewhere in the chain — a sweet DAC can tame a forward-sounding amplifier. But compounded sweetness (tube DAC + tube amp + soft-dome tweeters) can veil detail and reduce perceived resolution. When a listener says "I want more detail but I don't want to lose the smoothness," they are describing the sweetness-clarity tension.
+
 ---
 
 ### 2.4 Air and Openness — Spatial Breath
@@ -95,6 +105,8 @@ The framework uses seven trait families. Each family describes a perceptual axis
 **Trait keys:** `openness`, `soundstage`, `spatial_precision`
 
 **Note:** The existing codebase separates `openness` (spaciousness), `soundstage` (width/depth), and `spatial_precision` (imaging specificity). These are related but independent: a speaker can image precisely within a narrow stage, or present a vast stage with vague localisation. The framework preserves this distinction.
+
+**In system reasoning:** Air is disproportionately affected by room acoustics — a speaker with excellent air in a treated room may sound closed-in when placed in an untreated space. The advisor should flag room context as a confounding factor before attributing spatial complaints to equipment. Adding air to a system that already sparkles may tip the upper frequencies toward glare rather than openness.
 
 ---
 
@@ -117,6 +129,8 @@ The framework uses seven trait families. Each family describes a perceptual axis
 
 These often correlate but can diverge. A speaker may have strong macro-dynamics (high `dynamics`) but poor micro-dynamic responsiveness (low `elasticity`). A component may be rhythmically confident (`rhythm`) without being dynamically explosive (`dynamics`).
 
+**In system reasoning:** Drive is the trait family most directly tied to listener engagement. A system lacking drive will sound "technically correct but boring." But excessive drive produces fatigue — the listener is stimulated but cannot sustain long sessions. When a listener says "I want more excitement but I'm already getting fatigued," the advisor needs to separate the dynamics axis (which they want more of) from the fatigue axis (which they need less of). This often points to a frequency-balance issue rather than a dynamics issue.
+
 ---
 
 ### 2.6 Groundedness — Physical Weight and Density of Foundation
@@ -132,6 +146,8 @@ These often correlate but can diverge. A speaker may have strong macro-dynamics 
 **Trait keys:** `bass_weight`, `tonal_density` (lower-frequency component), `damping_control`
 
 **Note:** Groundedness overlaps with tonal density but operates lower in the frequency range. A system can be tonally dense through the midrange without having strong bass foundation, and vice versa.
+
+**In system reasoning:** Groundedness is frequently the limiting factor in compact systems — small bookshelf speakers paired with low-power amplifiers often lack physical authority regardless of how well-balanced the rest of the chain is. When a listener describes their system as "lacking scale" or "sounding small," groundedness is usually the first trait to investigate. The advisor should distinguish between "needs more bass extension" (speaker limitation) and "needs more current delivery" (amplifier limitation).
 
 ---
 
@@ -150,6 +166,8 @@ These often correlate but can diverge. A speaker may have strong macro-dynamics 
 **Risk flags:** `fatigue_risk`, `glare_risk`
 
 When composure breaks down, the result is often fatigue or glare — the system hardens tonally and the upper frequencies become aggressive. The risk flags capture this boundary condition. They are not continuous traits but threshold markers: present or absent.
+
+**In system reasoning:** Composure is the trait most likely to be exposed by musical genre. A system that sounds composed and controlled with jazz trio material may fall apart with dense orchestral passages or electronic music. When a listener reports problems only with certain genres, the advisor should investigate composure before assuming a tonal balance issue. High grip without sufficient elasticity can produce an overdamped sound — technically controlled but musically dead.
 
 ---
 
@@ -193,7 +211,24 @@ Examples: "I want more warmth" → `tonal_density: up`. "Too bright" → `fatigu
 **Symptom mode** — the listener describes a problem without necessarily knowing the cause.
 Examples: "It sounds boring" → `flow: down, dynamics: down, elasticity: down`. "Can't listen for long" → `fatigue_risk: up`.
 
-The signal dictionary should evolve to include sweetness-related phrases that currently fold into broader categories. Specifically:
+**Worked examples — how common listener words map to trait signals:**
+
+| User says | Trait interpretation | Notes |
+|---|---|---|
+| "bright" | `fatigue_risk: up`, `glare_risk: up` | Brightness is a symptom — the cause may be in any part of the chain |
+| "harsh" | `fatigue_risk: up`, `glare_risk: up`, `sweetness: down` | Stronger than bright — implies discomfort, not just tonal balance |
+| "analytical" | `sweetness: down`, `flow: down` | Often describes high clarity without musical engagement |
+| "warm" | `tonal_density: up`, `fatigue_risk: down` | Positive warmth — the listener wants more, not complaining |
+| "smooth" | `flow: up`, `composure: up` | Smoothness spans temporal (flow) and tonal (sweetness) domains |
+| "airy" | `openness: up` | Spatial quality — distinct from detail or brightness |
+| "congested" | `clarity: down`, `damping_control: down` | Often a system-level compounding symptom, not a single-component issue |
+| "dull" | `flow: down`, `dynamics: down`, `tonal_density: down` | Signals disengagement — the system lacks life across multiple axes |
+| "exciting" | `dynamics: up`, `elasticity: up`, `rhythm: up` | Desire for engagement — often the Drive family |
+| "fatiguing" | `fatigue_risk: up` | May trace to treble peak, presence energy, or compression artefacts |
+
+These mappings are qualitative starting points. A single word rarely tells the whole story — the advisor should use these as entry points for deeper conversation, not as conclusions.
+
+The signal dictionary should also evolve to include sweetness-related phrases that currently fold into broader categories. Specifically:
 
 | User language | Current mapping | Preferred mapping |
 |---|---|---|
@@ -253,6 +288,91 @@ Counter-tendencies are the flip side of tendencies. A tube amplifier that emphas
 - Counter-tendencies must be logically consistent with tendencies. A product cannot emphasise both `flow` and `clarity` at the highest level without explanation — these are often in tension.
 - Risk flags (`fatigue_risk`, `glare_risk`) are binary. A product either has a known risk pattern or it doesn't. Assign conservatively — a flag is a warning, not an accusation.
 
+**Concrete anchor examples:**
+
+**Chord Qutest** (FPGA DAC):
+```yaml
+tendencies:
+  - trait: clarity          level: emphasized
+  - trait: rhythm           level: emphasized
+  - trait: openness         level: emphasized
+  - trait: dynamics         level: present
+  - trait: composure        level: present
+counter_tendencies: [tonal_density, sweetness, flow]
+reference_notes:
+  - Extremely articulate and timing-forward. Favours transient precision
+    and spatial clarity over harmonic density.
+  - In a system that already leans analytical, the Qutest can push past the
+    comfort boundary. Pairs well with warmer amplification.
+confidence_basis: review_consensus
+```
+
+**Denafrips Pontus II** (R-2R ladder DAC):
+```yaml
+tendencies:
+  - trait: tonal_density    level: emphasized
+  - trait: flow             level: emphasized
+  - trait: sweetness        level: present
+  - trait: dynamics         level: present
+counter_tendencies: [clarity, rhythm, spatial_precision]
+reference_notes:
+  - Dense, flowing, and harmonically rich. Music feels physically present
+    rather than etched or analytical.
+  - Can sound slow or veiled in systems that already lean warm.
+    Benefits from a transparent or fast amplifier downstream.
+confidence_basis: review_consensus
+```
+
+**RME ADI-2 DAC FS** (delta-sigma, studio-neutral):
+```yaml
+tendencies:
+  - trait: clarity          level: emphasized
+  - trait: composure        level: emphasized
+  - trait: spatial_precision level: present
+  - trait: dynamics         level: present
+counter_tendencies: [tonal_density, sweetness, flow]
+reference_notes:
+  - Reference-neutral and extremely controlled. Built for accuracy rather
+    than tonal colour. The lack of editorial voice is the point.
+  - Some listeners find it clinical or uninvolving. Others find it
+    refreshingly honest. System context determines the experience.
+confidence_basis: review_consensus
+```
+
+**Tube amplifier archetype** (e.g., Line Magnetic LM-845iA, SET):
+```yaml
+tendencies:
+  - trait: flow             level: emphasized
+  - trait: sweetness        level: emphasized
+  - trait: tonal_density    level: emphasized
+  - trait: elasticity       level: present
+counter_tendencies: [composure, damping_control, clarity]
+reference_notes:
+  - Single-ended triode topology prioritises midrange purity, harmonic
+    richness, and micro-dynamic responsiveness over power and control.
+  - Limited headroom means composure degrades with demanding speakers
+    or complex passages. Best paired with high-efficiency speakers.
+confidence_basis: listener_consensus
+risk_flags: []
+```
+
+**High-efficiency speaker archetype** (e.g., Klipsch Heresy IV, horn-loaded):
+```yaml
+tendencies:
+  - trait: dynamics         level: emphasized
+  - trait: rhythm           level: emphasized
+  - trait: elasticity       level: present
+  - trait: openness         level: present
+counter_tendencies: [sweetness, tonal_density, spatial_precision]
+reference_notes:
+  - Horn-loaded designs excel at dynamic immediacy and rhythmic drive.
+    Music feels live and present at any volume.
+  - Can sound forward or shouty in the presence region. Upper midrange
+    energy may produce fatigue with bright upstream components.
+confidence_basis: listener_consensus
+risk_flags: [fatigue_risk]
+```
+
 ### 3.3 System-Level Trait Reasoning
 
 This is where the framework does its most important work. Individual component traits are inputs; system-level reasoning is the output.
@@ -264,6 +384,23 @@ This is where the framework does its most important work. Individual component t
 **Masking:** A strong trait in one component can mask a weaker trait in another. A speaker with extreme tonal density may hide the fact that the DAC is lean. This is not the same as compensation — the lean quality is still present in the signal, just overwhelmed perceptually.
 
 **Conflict:** Some trait combinations produce incoherent results. A component that pushes both extreme drive and extreme sweetness simultaneously is rare because the underlying mechanisms (fast transients vs. gentle treble) are in tension. When the framework detects such combinations, it should flag them as unusual rather than impossible.
+
+**System character patterns:**
+
+These are recognisable trait combinations that produce predictable system-level experiences. The advisor should learn to identify these patterns and name them:
+
+| Trait combination | Likely system character | Advisory implication |
+|---|---|---|
+| fast + light + revealing | Glare or fatigue risk | System resolves detail but lacks density to anchor it. Upper frequencies may feel exposed. Check for sweetness deficit. |
+| dense + smooth + relaxed | Possible dullness or reduced sparkle | System prioritises comfort but may lack engagement and air. Listener may describe it as "nice but boring." |
+| flow + sweetness + air | Natural, musically engaging | Often a well-balanced system for long-session listening. Check that dynamics and rhythm are sufficient for the listener's music. |
+| high grip + low elasticity | Overdamping risk | Amplifier controls the speaker tightly but squeezes out micro-dynamic life. Music sounds controlled but lifeless. Common with high-damping-factor solid-state into compliant speakers. |
+| high drive + low sweetness | Forward and potentially aggressive | System pushes music at the listener without tonal cushion. Exciting in short bursts, fatiguing over time. |
+| high density + high dynamics | Powerful and physically involving | When balanced, this is the "front row" experience. When compounded, it becomes overwhelming and exhausting. |
+| high flow + low dynamics | Beautiful but uninvolving | Music sounds lovely but lacks urgency. The listener may describe it as "too polite" or "not grabbing me." |
+| high clarity + high composure + low warmth | Studio-monitor presentation | Technically excellent, emotionally neutral. Some listeners love this; others find it sterile. |
+
+These patterns are heuristic — they describe likelihoods, not certainties. The advisor should use them as starting points for investigation, not as diagnostic conclusions.
 
 **System reasoning rules:**
 
@@ -443,18 +580,70 @@ Cross-cutting and descriptive keys (not primary family members — see section 2
 Additional signal-only keys (used for symptom detection, not as product traits):
 - `low_volume_integrity` — captures "thin at low volume" symptom
 
-### 6.4 Migration path
+### 6.4 Trait Assignment Rules for Anchors
+
+When populating tendency profiles for anchor products:
+
+1. **Start from architecture.** Identify the product's design topology (R-2R, delta-sigma, FPGA, SET, push-pull, horn-loaded, etc.) and predict likely tendencies from established design-principle associations.
+2. **Validate against consensus.** Cross-reference with independent reviews, listener community reports, and manufacturer design statements. Require at least two independent sources agreeing before assigning `emphasized`.
+3. **Apply the 4-trait ceiling.** No product should have more than 4 traits at `emphasized`. If the evidence suggests more, revisit which traits are truly defining vs. merely present.
+4. **Assign counter-tendencies from trade-off logic.** If a product emphasises flow and tonal density, it structurally trades away clarity and spatial precision. Make these trade-offs explicit.
+5. **Set confidence basis.** Every anchor must declare: `review_consensus`, `listener_consensus`, `manufacturer_intent`, or `editorial_inference`. Prefer the first two.
+6. **Write reference notes in advisor voice.** 1–3 sentences, calm and descriptive. Never promotional. Should read like something the advisor would say to a listener asking "what's this product actually like?"
+
+### 6.5 Trait Inference Rules for Non-Anchor Products
+
+For products outside the anchor catalog, the engine reasons by analogy:
+
+1. **Match by design family.** If a listener asks about a product the engine doesn't have anchored, identify the closest design family (e.g., "this is an R-2R DAC with NOS mode" → reason from the R-2R/NOS anchor tendency pattern).
+2. **Apply brand tendency.** Some brands have consistent house sounds that are well-documented. A Naim amplifier and a Pass Labs amplifier are both solid-state but represent different design philosophies. Brand profiles can inform inference when product-specific data is unavailable.
+3. **Hedge appropriately.** Non-anchor reasoning should always carry moderate or exploratory confidence. The advisor should say "products in this design family tend to..." rather than "this product emphasises..."
+4. **Never invent specifics.** If the engine cannot reason about a specific product with confidence, it should say so and offer to reason at the design-family level instead.
+
+### 6.6 User Language → Trait Signal Mapping (Implementation)
+
+The signal dictionary (`packages/signals/signals.yaml`) is the implementation artifact for section 3.1. Changes needed:
+
+1. **Add `sweetness` signals.** New signal entries for "sweet," "silky," "glow," "dry," "sterile," "clinical" that map to `sweetness: up/down` rather than (or in addition to) existing flow/fatigue mappings.
+2. **Add `openness` signals.** Refine spatial phrases ("airy," "open," "spacious") to map to `openness: up` rather than the current `clarity: up`.
+3. **Preserve backward compatibility.** Existing symptom categories should not break. New mappings should extend, not replace, existing signal entries where the existing mapping is also valid.
+4. **Test with worked examples.** After updating, verify that the 10 user phrases from section 3.1's worked-example table produce the expected trait signals.
+
+### 6.7 System-Level Combination Rules (Implementation)
+
+The system character logic from section 3.3 should be implemented as pattern-matching rules:
+
+1. **Compounding detection.** When two or more components in the chain share the same `emphasized` trait, flag it as a compounding zone. Use the system character patterns table as the initial rule set.
+2. **Compensation detection.** When one component's `emphasized` trait matches another's `counter_tendency`, note the compensating relationship and flag it as partnership-dependent.
+3. **Overall lean synthesis.** Aggregate component tendencies into a system-level summary: dominant traits, secondary traits, and absent traits. Express this as a natural-language characterisation.
+4. **Pattern matching.** Compare the system's trait profile against the character patterns table. When a known pattern is detected, surface it with the associated advisory implication.
+
+### 6.8 Builder Integration Plan
+
+The advisory builders should consume the trait framework in this order (matching the Advisory Reasoning Order from the Knowledge Model):
+
+1. **System context** — identify what components are present, resolve their tendency profiles (from anchor data or design-family inference).
+2. **Trait inference** — extract listener priorities from signal dictionary, resolve to trait signals.
+3. **System balance reasoning** — run compounding/compensation detection, synthesise overall lean, compare to listener priorities.
+4. **Anchor comparison** (optional) — when the listener asks about a specific product, compare its tendency profile against the system's current lean and the listener's priorities.
+5. **Upgrade direction** — if the listener seeks change, identify which trait axis to shift and whether the shift requires refinement, compensation, or architectural change.
+6. **Product suggestions** (optional) — only with sufficient confidence, frame products as illustrative examples of the recommended direction.
+
+Builders that currently perform product lookup before system reasoning (`buildSystemAssessment`, `buildGearResponse`) should be refactored to defer product lookup until after steps 1–3 are complete. This is the next implementation task after the trait framework is accepted.
+
+### 6.9 Migration Path
 
 1. Add `sweetness` to trait key types and signal dictionary.
-2. Populate anchor product tendency profiles using the framework's assignment methodology.
-3. Refactor advisory builders to follow system context → trait inference → system balance → anchor comparison → upgrade direction → product suggestion order.
-4. Update signal dictionary phrase-to-trait mappings per section 3.1 table.
+2. Populate anchor product tendency profiles using the assignment rules in section 6.4.
+3. Refactor advisory builders to follow the integration plan in section 6.8.
+4. Update signal dictionary phrase-to-trait mappings per section 6.6.
 5. Extend taste profile to include `sweetness` as an eighth profile trait.
+6. Implement system-level combination rules per section 6.7.
 
-### 6.5 What this document does not cover
+### 6.10 What This Document Does Not Cover
 
 - Specific anchor product trait assignments (deferred to anchor population step)
-- Builder implementation details (deferred to builder refactor step)
-- Non-anchor product trait inference rules (deferred to future iteration)
+- Builder implementation code (deferred to builder refactor step)
 - Room acoustics as a trait modifier (acknowledged as important, deferred)
 - Headphone-specific trait behaviour (optional for v1)
+- Cable-specific trait reasoning (partially addressed by existing `buildCableAdvisory`, full integration deferred)
