@@ -10,7 +10,7 @@ interface System {
   name: string;
   notes: string | null;
   updatedAt: string;
-  components: Array<{ component: { name: string; brand: string; category: string } }>;
+  components: Array<{ name: string; brand: string; category: string }>;
 }
 
 export default function SystemsPage() {
@@ -46,7 +46,7 @@ export default function SystemsPage() {
             {sys.notes && <p className="small muted">{sys.notes}</p>}
             {sys.components.length > 0 && (
               <p className="small muted mt-1">
-                {sys.components.map((sc) => `${sc.component.brand} ${sc.component.name}`).join(' · ')}
+                {sys.components.filter((sc) => sc.brand && sc.name).map((sc) => `${sc.brand} ${sc.name}`).join(' · ')}
               </p>
             )}
           </div>
