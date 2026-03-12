@@ -102,6 +102,20 @@ export interface AdvisoryResponse {
   /** Why this direction fits the listener's priorities (bullet list). */
   whyThisFits?: string[];
 
+  // ── 5b. Upgrade Analysis Sections ─────────────────
+  /** "What is working well" — bullet list of current system strengths. */
+  strengths?: string[];
+  /** "Where limitations may appear" — bullet list of current limitations. */
+  limitations?: string[];
+  /** "What improves" — bullet list of concrete improvements from the proposed change. */
+  improvements?: string[];
+  /** "What probably stays the same" — bullet list of continuities. */
+  unchanged?: string[];
+  /** "When this upgrade makes sense" — conditions where the move is appropriate. */
+  whenToAct?: string;
+  /** "When it may not be the best next step" — conditions for restraint. */
+  whenToWait?: string;
+
   // ── 6. Trade-offs ───────────────────────────────────
   /** What to watch for / what you trade away (bullet list). */
   tradeOffs?: string[];
@@ -352,6 +366,43 @@ export function gearResponseToAdvisory(r: GearResponse): AdvisoryResponse {
   const listenerPriorities = r.hearing && r.hearing.length > 0
     ? r.hearing
     : undefined;
+
+  // When a structured upgrade analysis is present, map it into
+  // the dedicated advisory sections. The old anchor/character/direction
+  // fields remain populated as fallbacks but the structured fields
+  // take rendering priority in AdvisoryMessage.
+  if (r.upgradeAnalysis) {
+    const ua = r.upgradeAnalysis;
+    return enrichAdvisory({
+      kind: 'consultation',
+      subject: r.subjects.length > 0 ? r.subjects.join(', ') : 'your question',
+
+      listenerPriorities,
+      systemTendencies: r.systemDirection?.tendencySummary ?? undefined,
+
+      // Section 1 → systemContext (renders under "Your system" label)
+      systemContext: ua.systemCharacter,
+
+      // Section 4 → tendencies (core prose body)
+      tendencies: ua.whatChanges,
+
+      // Section 2 → strengths
+      strengths: ua.workingWell,
+      // Section 3 → limitations
+      limitations: ua.limitations,
+      // Section 5 → improvements
+      improvements: ua.improvements,
+      // Section 6 → unchanged
+      unchanged: ua.unchanged,
+      // Section 7 → whenToAct
+      whenToAct: ua.whenMakesSense,
+      // Section 8 → whenToWait
+      whenToWait: ua.whenToWait,
+
+      // Section 9 → followUp
+      followUp: r.clarification,
+    }, undefined, r.subjects.length > 0 ? r.subjects : undefined);
+  }
 
   return enrichAdvisory({
     kind: 'consultation',

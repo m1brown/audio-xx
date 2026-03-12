@@ -16,7 +16,7 @@
  * Target: 4–6 sentences before the follow-up question.
  */
 
-import type { GearResponse } from './conversation-types';
+import type { GearResponse, UpgradeAnalysis } from './conversation-types';
 import type { UserIntent, DesireSignal } from './intent';
 import type { ActiveSystemContext } from './system-types';
 import { DAC_PRODUCTS, type Product } from './products/dacs';
@@ -961,6 +961,292 @@ function buildUpgradeDirection(
   return parts.join(' ');
 }
 
+// ── Structured upgrade analysis (9-section consulting format) ──
+
+/**
+ * Build the structured 9-section upgrade analysis.
+ *
+ * This extracts the same underlying data as buildUpgradeAnchor/Character/Direction
+ * but organises it into discrete, labelled sections for the advisory renderer.
+ * The reasoning pipeline is unchanged — only how the output is arranged.
+ */
+function buildUpgradeAnalysis(
+  from: Product,
+  to: Product,
+  activeSystem: ActiveSystemContext | null | undefined,
+  allowed: Set<string>,
+): UpgradeAnalysis {
+  const sameBrand = from.brand === to.brand;
+  const scrub = (t: string) => scrubThirdProductRefs(t, allowed, sameBrand);
+
+  // ── 1. SYSTEM CHARACTER ──────────────────────────────
+  let systemCharacter: string;
+  if (sameBrand) {
+    systemCharacter = `The ${from.name} and ${to.name} share ${from.brand}'s ${from.architecture} architecture.`;
+    if (activeSystem && activeSystem.components.length > 0) {
+      const others = activeSystem.components
+        .filter((c) => c.name.toLowerCase() !== from.name.toLowerCase()
+          && c.name.toLowerCase() !== to.name.toLowerCase())
+        .map((c) => `${c.brand} ${c.name}`);
+      if (others.length > 0) {
+        systemCharacter += ` Within your system — ${others.join(', ')} — this is a question of scale and refinement within that design philosophy.`;
+      } else {
+        systemCharacter += ` This is a question of scale and refinement within that design philosophy, not a change in direction.`;
+      }
+    } else {
+      systemCharacter += ` This is a question of scale and refinement within that design philosophy, not a change in direction.`;
+    }
+  } else {
+    systemCharacter = `The ${from.brand} ${from.name} is built on ${from.architecture}, while the ${to.brand} ${to.name} uses ${to.architecture} — these are different design lineages.`;
+    if (activeSystem && activeSystem.components.length > 0) {
+      const others = activeSystem.components
+        .filter((c) => c.name.toLowerCase() !== from.name.toLowerCase()
+          && c.name.toLowerCase() !== to.name.toLowerCase())
+        .map((c) => `${c.brand} ${c.name}`);
+      if (others.length > 0) {
+        systemCharacter += ` Within your system — ${others.join(', ')} — the question is how each philosophy interacts with the rest of the chain.`;
+      }
+    }
+  }
+
+  // ── Shared data extraction ───────────────────────────
+  const sharedQualities: string[] = [];
+  const changedQualities: { domain: string; from: string; to: string }[] = [];
+
+  if (hasTendencies(from.tendencies) && hasTendencies(to.tendencies)) {
+    const fromDomains = new Map(from.tendencies.character.map((t) => [t.domain, t.tendency]));
+    const toDomains = new Map(to.tendencies.character.map((t) => [t.domain, t.tendency]));
+
+    for (const [domain, fromTend] of fromDomains) {
+      const toTend = toDomains.get(domain);
+      if (!toTend) continue;
+      const fromWords = new Set(fromTend.toLowerCase().split(/\s+/));
+      const toWords = new Set(toTend.toLowerCase().split(/\s+/));
+      const overlap = [...fromWords].filter((w) => toWords.has(w) && w.length > 4).length;
+      if (overlap >= 2) {
+        sharedQualities.push(domain);
+      } else {
+        changedQualities.push({ domain, from: fromTend, to: toTend });
+      }
+    }
+  }
+
+  // ── Trait-level deltas ───────────────────────────────
+  const keyTraits = ['composure', 'tonal_density', 'dynamics', 'clarity', 'flow', 'texture', 'elasticity'] as const;
+  const positiveDeltas: { trait: string; label: string; diff: number }[] = [];
+  const negativeDeltas: { trait: string; label: string; diff: number }[] = [];
+
+  for (const trait of keyTraits) {
+    const fromVal = resolveTraitValue(from.tendencyProfile, from.traits, trait);
+    const toVal = resolveTraitValue(to.tendencyProfile, to.traits, trait);
+    const diff = toVal - fromVal;
+    const label = TRAIT_LABELS[trait] ?? trait.replace(/_/g, ' ');
+    if (diff >= 0.29) {
+      positiveDeltas.push({ trait, label, diff });
+    } else if (diff <= -0.29) {
+      negativeDeltas.push({ trait, label, diff });
+    }
+  }
+
+  // ── From product strengths (traits >= 0.65) ──────────
+  const fromStrengths: { trait: string; label: string; value: number }[] = [];
+  for (const trait of keyTraits) {
+    const val = resolveTraitValue(from.tendencyProfile, from.traits, trait);
+    const label = TRAIT_LABELS[trait] ?? trait.replace(/_/g, ' ');
+    if (val >= 0.65) {
+      fromStrengths.push({ trait, label, value: val });
+    }
+  }
+
+  // ── 2. WHAT IS WORKING WELL ──────────────────────────
+  const workingWell: string[] = [];
+
+  if (sharedQualities.length > 0 && sameBrand) {
+    workingWell.push(`Core ${from.brand} character in ${sharedQualities.join(' and ')} — that continuity is the design intent`);
+  } else if (sharedQualities.length > 0) {
+    workingWell.push(`Common ground in ${sharedQualities.join(' and ')}, despite different architectures`);
+  }
+  for (const s of fromStrengths.slice(0, 3)) {
+    workingWell.push(`Strong ${s.label} from the ${from.name}`);
+  }
+  if (hasTendencies(from.tendencies) && from.tendencies.tradeoffs.length > 0) {
+    const gains = scrub(from.tendencies.tradeoffs[0].gains);
+    if (gains) workingWell.push(gains);
+  }
+
+  // ── 3. WHERE LIMITATIONS MAY APPEAR ──────────────────
+  const limitations: string[] = [];
+
+  for (const nd of negativeDeltas) {
+    // If the 'to' product has less of something, the 'from' already has it — skip
+    // Focus on traits where 'from' is weaker (positive deltas mean 'to' gains)
+  }
+  // Traits where 'from' is below 0.45 (noticeably weak)
+  for (const trait of keyTraits) {
+    const val = resolveTraitValue(from.tendencyProfile, from.traits, trait);
+    const label = TRAIT_LABELS[trait] ?? trait.replace(/_/g, ' ');
+    if (val < 0.45 && val > 0) {
+      limitations.push(`The ${from.name} has limited ${label} — this may show up in demanding material`);
+    }
+  }
+  if (hasTendencies(from.tendencies) && from.tendencies.tradeoffs.length > 0) {
+    const cost = scrub(from.tendencies.tradeoffs[0].cost);
+    if (cost) limitations.push(cost);
+  }
+  // Changed qualities as limitation framing
+  for (const cq of changedQualities.slice(0, 2)) {
+    if (limitations.length < 3) {
+      limitations.push(`In ${cq.domain}, the ${from.name} leans toward ${scrub(cq.from)} — the ${to.name} takes a different approach`);
+    }
+  }
+
+  // ── 4. WHAT THE PROPOSED CHANGE ACTUALLY DOES ────────
+  const whatChangesParts: string[] = [];
+
+  for (const cq of changedQualities.slice(0, 2)) {
+    whatChangesParts.push(`In ${cq.domain}, the ${to.name} shifts from ${scrub(cq.from)} toward ${scrub(cq.to)}.`);
+  }
+  if (positiveDeltas.length > 0) {
+    const changes = positiveDeltas.map((d) => `more ${d.label}`).join(', ');
+    whatChangesParts.push(`In concrete terms, the ${to.name} brings ${changes} relative to the ${from.name}.`);
+  }
+  if (negativeDeltas.length > 0) {
+    const changes = negativeDeltas.map((d) => `less ${d.label}`).join(', ');
+    whatChangesParts.push(`It also means ${changes}.`);
+  }
+  if (hasTendencies(to.tendencies) && to.tendencies.tradeoffs.length > 0) {
+    const tradeoff = to.tendencies.tradeoffs[0];
+    whatChangesParts.push(`What you gain is ${scrub(tradeoff.gains)}. The cost is ${scrub(tradeoff.cost)}.`);
+  }
+
+  const whatChanges = whatChangesParts.length > 0
+    ? whatChangesParts.join(' ')
+    : `The ${to.name} extends what the ${from.name} does well, with greater authority and composure.`;
+
+  // ── 5. WHAT IMPROVES ─────────────────────────────────
+  const improvements: string[] = [];
+
+  for (const pd of positiveDeltas) {
+    improvements.push(`More ${pd.label}`);
+  }
+  // Chain interaction improvements
+  if (activeSystem && activeSystem.components.length > 0 && hasTendencies(to.tendencies)) {
+    const ampComponent = activeSystem.components.find((c) =>
+      c.category === 'amplifier' || c.category === 'integrated',
+    );
+    const speakerComponent = activeSystem.components.find((c) =>
+      c.category === 'speaker',
+    );
+    if (ampComponent || speakerComponent) {
+      const chainParts: string[] = [];
+      if (ampComponent) chainParts.push(`${ampComponent.brand} ${ampComponent.name}`);
+      if (speakerComponent) chainParts.push(`${speakerComponent.brand} ${speakerComponent.name}`);
+      const chainDesc = chainParts.join(' and ');
+
+      const composureGain = resolveTraitValue(to.tendencyProfile, to.traits, 'composure')
+        - resolveTraitValue(from.tendencyProfile, from.traits, 'composure');
+      const densityGain = resolveTraitValue(to.tendencyProfile, to.traits, 'tonal_density')
+        - resolveTraitValue(from.tendencyProfile, from.traits, 'tonal_density');
+
+      if (composureGain >= 0.29 && densityGain >= 0.29) {
+        improvements.push(`Feeding the ${chainDesc}, expect a more effortless, harmonically fuller presentation`);
+      } else if (composureGain >= 0.29) {
+        improvements.push(`Less strain on dynamic peaks through the ${chainDesc} — a more effortless overall delivery`);
+      } else if (densityGain >= 0.29) {
+        improvements.push(`More midrange authority through the ${chainDesc}, shifting the overall balance toward greater body`);
+      }
+    }
+  }
+  // Lineup interaction
+  if (hasTendencies(to.tendencies)) {
+    const lineupInteraction = to.tendencies.interactions.find((i) =>
+      i.condition.toLowerCase().includes(from.name.toLowerCase())
+      || i.condition.toLowerCase().includes('same system')
+      || i.condition.toLowerCase().includes('compared to'),
+    );
+    if (lineupInteraction && lineupInteraction.valence === 'positive') {
+      improvements.push(scrub(lineupInteraction.effect));
+    }
+  }
+
+  // ── 6. WHAT PROBABLY STAYS THE SAME ──────────────────
+  const unchanged: string[] = [];
+
+  if (sameBrand) {
+    unchanged.push(`Core ${from.brand} voicing and design philosophy`);
+  }
+  for (const sq of sharedQualities) {
+    unchanged.push(`${sq.charAt(0).toUpperCase() + sq.slice(1)} character — shared across both models`);
+  }
+  // Traits that are very similar between from and to
+  for (const trait of keyTraits) {
+    const fromVal = resolveTraitValue(from.tendencyProfile, from.traits, trait);
+    const toVal = resolveTraitValue(to.tendencyProfile, to.traits, trait);
+    const diff = Math.abs(toVal - fromVal);
+    const label = TRAIT_LABELS[trait] ?? trait.replace(/_/g, ' ');
+    if (diff < 0.15 && fromVal >= 0.5 && unchanged.length < 4) {
+      unchanged.push(`${label.charAt(0).toUpperCase() + label.slice(1)} — similar level in both`);
+    }
+  }
+
+  // ── 7. WHEN THIS UPGRADE MAKES SENSE ─────────────────
+  const senseParts: string[] = [];
+
+  if (positiveDeltas.length > 0) {
+    const qualities = positiveDeltas.map((d) => d.label).join(', ');
+    senseParts.push(`you value ${qualities} and your system is resolving enough to reveal the difference`);
+  }
+  if (activeSystem && activeSystem.components.length > 0) {
+    senseParts.push(`your downstream chain has the transparency to show what a better source delivers`);
+  }
+  if (from.price > 0 && to.price > 0 && to.price / from.price <= 2.5) {
+    senseParts.push(`the price step feels proportionate to the improvement you're seeking`);
+  }
+
+  const whenMakesSense = senseParts.length > 0
+    ? `This upgrade makes sense when ${senseParts.join(', and ')}.`
+    : `This makes sense when the rest of the chain is resolving enough to reveal what a better source contributes.`;
+
+  // ── 8. WHEN IT MAY NOT BE THE BEST NEXT STEP ────────
+  const waitParts: string[] = [];
+
+  if (from.price > 0 && to.price > 0) {
+    const ratio = to.price / from.price;
+    if (ratio > 3) {
+      waitParts.push(`at ${ratio.toFixed(1)}x the price, the gains are real but incremental within the same architecture — the money may deliver more impact elsewhere in the chain`);
+    } else if (ratio > 1.8) {
+      waitParts.push(`the price step is meaningful — whether the gains justify it depends on how close the ${from.name} is to its ceiling in your system`);
+    }
+  }
+  if (negativeDeltas.length > 0) {
+    const traded = negativeDeltas.map((d) => d.label).join(', ');
+    waitParts.push(`you value ${traded} — the ${to.name} trades some of this away`);
+  }
+  // Caution interactions
+  if (hasTendencies(to.tendencies)) {
+    const cautions = to.tendencies.interactions.filter((i) => i.valence === 'caution');
+    if (cautions.length > 0) {
+      waitParts.push(scrub(`${cautions[0].condition}: ${cautions[0].effect}`));
+    }
+  }
+  if (waitParts.length === 0) {
+    waitParts.push(`the rest of the chain isn't resolving enough to reveal the difference — in that case, the upgrade would be inaudible relative to its cost`);
+  }
+
+  const whenToWait = `Consider waiting if ${waitParts.join('; or if ')}.`;
+
+  return {
+    systemCharacter,
+    workingWell: workingWell.length > 0 ? workingWell : [`The ${from.name} is a capable starting point in its tier`],
+    limitations: limitations.length > 0 ? limitations : [`At this price point, there may be a ceiling on resolution and composure`],
+    whatChanges,
+    improvements: improvements.length > 0 ? improvements : [`Greater overall authority and refinement`],
+    unchanged: unchanged.length > 0 ? unchanged : [`Basic sonic character and design intent`],
+    whenMakesSense,
+    whenToWait,
+  };
+}
+
 // ── Public API ───────────────────────────────────────
 
 export function buildGearResponse(
@@ -1055,6 +1341,7 @@ export function buildGearResponse(
           userArchetype: sysDir.inferredArchetype
             ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
             : undefined,
+          upgradeAnalysis: buildUpgradeAnalysis(from, to, activeSystem, allowed),
         };
       }
 

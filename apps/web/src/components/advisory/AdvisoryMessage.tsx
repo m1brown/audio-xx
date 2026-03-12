@@ -135,6 +135,20 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
+      {/* ── 3c. What is working well (upgrade) ───────── */}
+      {a.strengths && a.strengths.length > 0 && (
+        <AdvisorySection label="What is working well">
+          <BulletList items={a.strengths} />
+        </AdvisorySection>
+      )}
+
+      {/* ── 3d. Where limitations may appear (upgrade) ── */}
+      {a.limitations && a.limitations.length > 0 && (
+        <AdvisorySection label="Where limitations may appear">
+          <BulletList items={a.limitations} color="#666" />
+        </AdvisorySection>
+      )}
+
       {/* ── 4. Alignment rationale ───────────────────── */}
       {a.alignmentRationale && (
         <AdvisorySection label="How this connects">
@@ -145,11 +159,40 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
       )}
 
       {/* ── 5. Core advisory body (no labels) ────────── */}
-      <AdvisoryProse
-        philosophy={a.philosophy}
-        tendencies={a.tendencies}
-        systemFit={a.systemFit}
-      />
+      {/* For upgrade analyses, tendencies carries "What the proposed change actually does" */}
+      {(a.improvements && a.improvements.length > 0) ? (
+        /* Upgrade path: render tendencies under a labelled section */
+        <>
+          {a.tendencies && (
+            <AdvisorySection label="What the proposed change actually does">
+              <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
+                {a.tendencies}
+              </p>
+            </AdvisorySection>
+          )}
+        </>
+      ) : (
+        /* Standard path: unlabelled prose body */
+        <AdvisoryProse
+          philosophy={a.philosophy}
+          tendencies={a.tendencies}
+          systemFit={a.systemFit}
+        />
+      )}
+
+      {/* ── 5b. What improves (upgrade) ────────────────── */}
+      {a.improvements && a.improvements.length > 0 && (
+        <AdvisorySection label="What improves">
+          <BulletList items={a.improvements} />
+        </AdvisorySection>
+      )}
+
+      {/* ── 5c. What probably stays the same (upgrade) ─── */}
+      {a.unchanged && a.unchanged.length > 0 && (
+        <AdvisorySection label="What probably stays the same">
+          <BulletList items={a.unchanged} color="#666" />
+        </AdvisorySection>
+      )}
 
       {/* ── 6. Recommended direction ─────────────────── */}
       {a.recommendedDirection && (
@@ -171,6 +214,24 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
       {a.tradeOffs && a.tradeOffs.length > 0 && (
         <AdvisorySection label="Trade-offs">
           <BulletList items={a.tradeOffs} color="#666" />
+        </AdvisorySection>
+      )}
+
+      {/* ── 8b. When this upgrade makes sense ─────────── */}
+      {a.whenToAct && (
+        <AdvisorySection label="When this upgrade makes sense">
+          <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
+            {a.whenToAct}
+          </p>
+        </AdvisorySection>
+      )}
+
+      {/* ── 8c. When it may not be the best next step ─── */}
+      {a.whenToWait && (
+        <AdvisorySection label="When it may not be the best next step">
+          <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7, color: '#666' }}>
+            {a.whenToWait}
+          </p>
         </AdvisorySection>
       )}
 

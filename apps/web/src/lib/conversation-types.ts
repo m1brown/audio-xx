@@ -49,6 +49,35 @@ export interface GearResponse {
   userArchetype?: UserArchetypePreference;
   /** "What I'm hearing" — short reflective summary bullets shown before advice. */
   hearing?: string[];
+  /** Structured upgrade analysis — populated for upgrade comparisons. */
+  upgradeAnalysis?: UpgradeAnalysis;
+}
+
+/**
+ * Structured upgrade analysis — 9-section consulting structure.
+ *
+ * Populated by the upgrade comparison builder when two products from
+ * the same lineage (or explicit upgrade language) are compared.
+ * The gearToAdvisory() adapter maps these into AdvisoryResponse fields
+ * for the unified renderer.
+ */
+export interface UpgradeAnalysis {
+  /** 1. SYSTEM CHARACTER — architecture lineage + system framing. */
+  systemCharacter: string;
+  /** 2. WHAT IS WORKING WELL — bullets about what the current setup does well. */
+  workingWell: string[];
+  /** 3. WHERE LIMITATIONS MAY APPEAR — bullets about where the current product may fall short. */
+  limitations: string[];
+  /** 4. WHAT THE PROPOSED CHANGE ACTUALLY DOES — prose describing the sonic shift. */
+  whatChanges: string;
+  /** 5. WHAT IMPROVES — bullet list of concrete improvements. */
+  improvements: string[];
+  /** 6. WHAT PROBABLY STAYS THE SAME — bullet list of continuities. */
+  unchanged: string[];
+  /** 7. WHEN THIS UPGRADE MAKES SENSE — conditions where the move is appropriate. */
+  whenMakesSense: string;
+  /** 8. WHEN IT MAY NOT BE THE BEST NEXT STEP — conditions where restraint is better. */
+  whenToWait: string;
 }
 
 export type Message =
