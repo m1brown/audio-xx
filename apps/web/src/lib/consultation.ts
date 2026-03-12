@@ -657,6 +657,15 @@ function buildBrandComparison(
   const charB = extractCoreCharacter(profileB.tendencies);
   const summary = `${nameA} tends toward ${charA}, while ${nameB} leans toward ${charB}.`;
 
+  // ── Architectural explanation ──────────────────────────
+  // When both brands have products with known topologies, explain WHY
+  // the architectures produce different sonic results. Educational, not prescriptive.
+  const archNote = buildArchitecturalExplanation(nameA, profileA, nameB, profileB);
+
+  // ── System consequence ─────────────────────────────────
+  // What happens when each brand's character enters warm vs precise systems.
+  const systemConsequence = buildSystemConsequence(nameA, profileA, nameB, profileB);
+
   // Check for design families that would qualify the brand-level comparison
   const familiesA = 'designFamilies' in profileA ? (profileA as BrandProfile).designFamilies : undefined;
   const familiesB = 'designFamilies' in profileB ? (profileB as BrandProfile).designFamilies : undefined;
@@ -668,18 +677,142 @@ function buildBrandComparison(
     ? `Which model or series are you considering? That matters for how this comparison plays out.`
     : `What draws you toward one of these over the other — is it a specific quality, or more of a general direction?`;
 
-  const systemContext = familyContext
-    ? `Where they diverge most shapes which fits better.\n\n${familyContext}`
-    : `Where they diverge most shapes which fits better — this depends on what you value in your listening and where your system currently sits.`;
+  // Assemble system context — family context + system consequence
+  let systemContext: string;
+  if (familyContext && systemConsequence) {
+    systemContext = `${systemConsequence}\n\n${familyContext}`;
+  } else if (systemConsequence) {
+    systemContext = systemConsequence;
+  } else if (familyContext) {
+    systemContext = `Where they diverge most shapes which fits better.\n\n${familyContext}`;
+  } else {
+    systemContext = `Where they diverge most shapes which fits better — this depends on what you value in your listening and where your system currently sits.`;
+  }
+
+  // Assemble tendencies — core tendencies + architectural note
+  const tendenciesText = archNote
+    ? `${nameA}: ${tendA}\n\n${nameB}: ${tendB}\n\n${archNote}`
+    : `${nameA}: ${tendA}\n\n${nameB}: ${tendB}`;
 
   return {
     subject: `${nameA} vs ${nameB}`,
     comparisonSummary: summary,
     philosophy: `${nameA}: ${philoA}\n\n${nameB}: ${philoB}`,
-    tendencies: `${nameA}: ${tendA}\n\n${nameB}: ${tendB}`,
+    tendencies: tendenciesText,
     systemContext,
     followUp,
   };
+}
+
+/**
+ * Build an architectural explanation for a brand comparison.
+ * Connects design topology to sonic character — the "why" behind the "what."
+ *
+ * Returns null when topology data is unavailable for either brand.
+ */
+function buildArchitecturalExplanation(
+  nameA: string,
+  profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  nameB: string,
+  profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
+): string | null {
+  // Resolve the dominant topology for each brand from the product catalog
+  const topoA = resolveBrandTopology(profileA);
+  const topoB = resolveBrandTopology(profileB);
+
+  if (!topoA || !topoB) return null;
+  // Don't explain if both use the same topology — the difference is implementation, not architecture
+  if (topoA.id === topoB.id) return null;
+
+  const parts: string[] = [];
+  parts.push(
+    `These differences trace to architecture. ${nameA} uses ${topoA.label} conversion — ${topoA.designPrinciple.toLowerCase()}`
+    + ` The typical result is ${topoA.typicalTradeoff.toLowerCase()}`
+  );
+  parts.push(
+    `${nameB} uses ${topoB.label} conversion — ${topoB.designPrinciple.toLowerCase()}`
+    + ` The typical result is ${topoB.typicalTradeoff.toLowerCase()}`
+  );
+
+  // Add a framing note — architecture is tendency, not destiny
+  parts.push('Architecture sets a starting direction, not a fixed outcome — implementation, output stage, and power supply all shape the final character.');
+
+  return parts.join(' ');
+}
+
+/**
+ * Build a system consequence note for a brand comparison.
+ * Explains what happens when each brand enters different system contexts.
+ *
+ * Uses brand systemContext if curated, or infers from axis positions.
+ */
+function buildSystemConsequence(
+  nameA: string,
+  profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  nameB: string,
+  profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
+): string | null {
+  const sysA = 'systemContext' in profileA ? profileA.systemContext : null;
+  const sysB = 'systemContext' in profileB ? profileB.systemContext : null;
+
+  // Need at least one side to have system context
+  if (!sysA && !sysB) return null;
+
+  const parts: string[] = [];
+  parts.push('How each fits your system depends on what surrounds it.');
+
+  if (sysA) {
+    parts.push(`${nameA}: ${takeSentences(sysA, 2)}`);
+  } else {
+    // Infer system context from tendency text
+    const tendLower = profileA.tendencies.toLowerCase();
+    if (tendLower.includes('warm') || tendLower.includes('dense') || tendLower.includes('rich')) {
+      parts.push(`${nameA} tends to add warmth and body — in systems that are already warm, this can compound into congestion. In precise or lean systems, it provides a welcome counterbalance.`);
+    } else if (tendLower.includes('fast') || tendLower.includes('clarity') || tendLower.includes('precise') || tendLower.includes('transparent')) {
+      parts.push(`${nameA} tends to add clarity and speed — in systems that are already bright, this can push toward fatigue. In warm or dense systems, it provides articulation without changing the fundamental character.`);
+    }
+  }
+
+  if (sysB) {
+    parts.push(`${nameB}: ${takeSentences(sysB, 2)}`);
+  } else {
+    const tendLower = profileB.tendencies.toLowerCase();
+    if (tendLower.includes('warm') || tendLower.includes('dense') || tendLower.includes('rich')) {
+      parts.push(`${nameB} tends to add warmth and body — in systems that are already warm, this can compound into congestion. In precise or lean systems, it provides a welcome counterbalance.`);
+    } else if (tendLower.includes('fast') || tendLower.includes('clarity') || tendLower.includes('precise') || tendLower.includes('transparent')) {
+      parts.push(`${nameB} tends to add clarity and speed — in systems that are already bright, this can push toward fatigue. In warm or dense systems, it provides articulation without changing the fundamental character.`);
+    }
+  }
+
+  return parts.length > 1 ? parts.join('\n\n') : null;
+}
+
+/**
+ * Resolve the dominant design topology for a brand by examining its products.
+ * Returns the most common archetype across the brand's catalog entries.
+ */
+function resolveBrandTopology(
+  profile: BrandProfile | { name: string; philosophy: string; tendencies: string },
+): import('./design-archetypes').DesignArchetype | null {
+  const brandName = 'names' in profile ? profile.names[0] : profile.name;
+  const brandProducts = ALL_PRODUCTS.filter(
+    (p) => p.brand.toLowerCase() === brandName.toLowerCase(),
+  );
+
+  if (brandProducts.length === 0) return null;
+
+  // Find the most common architecture string
+  const archCounts = new Map<string, number>();
+  for (const p of brandProducts) {
+    archCounts.set(p.architecture, (archCounts.get(p.architecture) ?? 0) + 1);
+  }
+  let dominantArch = '';
+  let maxCount = 0;
+  for (const [arch, count] of archCounts) {
+    if (count > maxCount) { dominantArch = arch; maxCount = count; }
+  }
+
+  return resolveArchetype(dominantArch) ?? null;
 }
 
 /**
