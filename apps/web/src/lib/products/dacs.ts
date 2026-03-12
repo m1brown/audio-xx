@@ -129,6 +129,19 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'US',
     topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit' },
+    // Axis reasoning: AKM delta-sigma, clean but uninflected. Clarity present
+    // but not emphasized — sits near neutral on most axes. Slightly bright of
+    // center due to lean tonal density; not detailed enough to be 'detailed'.
+    primaryAxes: {
+      warm_bright: 'neutral',       // Lean tonal density but no glare — not warm, not bright
+      smooth_detailed: 'neutral',    // Moderate clarity, moderate flow — neither smooth nor revealing
+      elastic_controlled: 'neutral', // No strong dynamic character in either direction
+      airy_closed: 'neutral',       // No spatial data to distinguish
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Neutral, unimposing character — unlikely to fatigue. May bore rather than tire.',
+    },
     tendencyProfile: {
       basis: 'editorial_inference',
       confidence: 'medium',
@@ -170,6 +183,19 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'CN',
     topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
+    // Axis reasoning: ESS Sabre with clarity and dynamics present, flow/density
+    // less emphasized. Glare risk flag. Leans bright (lean tonal density + glare risk),
+    // detailed (clarity-forward), neutral on dynamics, neutral on staging.
+    primaryAxes: {
+      warm_bright: 'bright',         // Lean density + glare risk → bright of neutral
+      smooth_detailed: 'detailed',   // Clarity present, flow less_emphasized → detail-forward
+      elastic_controlled: 'neutral', // Dynamics present but not dominant
+      airy_closed: 'neutral',       // No strong spatial signature
+    },
+    fatigueAssessment: {
+      risk: 'context_dependent',
+      notes: 'Glare risk in bright systems. Pairs well with warmer amplifiers where the brightness is offset.',
+    },
     tendencyProfile: {
       basis: 'editorial_inference',
       confidence: 'medium',
@@ -217,6 +243,19 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'CN',
     topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
+    // Axis reasoning: Dual ES9038Pro — clarity emphasized, flow/density less_emphasized,
+    // glare risk. "Speed-first design." Very explicit presentation. Clearly bright,
+    // clearly detailed. Elasticity present → elastic lean. No spatial data.
+    primaryAxes: {
+      warm_bright: 'bright',              // Clarity 1.0, density 0.4, glare risk
+      smooth_detailed: 'detailed',        // Clarity emphasized, flow less_emphasized
+      elastic_controlled: 'elastic',      // Elasticity present, dynamics present — speed-first
+      airy_closed: 'neutral',            // No strong spatial signature
+    },
+    fatigueAssessment: {
+      risk: 'context_dependent',
+      notes: 'Relentless in systems already biased toward speed. Glare risk with bright speakers or cables.',
+    },
     tendencyProfile: {
       basis: 'listener_consensus',
       confidence: 'high',
@@ -263,6 +302,20 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'CN',
     topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit' },
+    // Axis reasoning: ESS-based with clarity and texture both present, no glare risk.
+    // "Less aggressive than the Topping, more neutral than the Denafrips."
+    // Described as well-rounded — sits near neutral on warm/bright but leans
+    // slightly detailed due to clarity present + flow less_emphasized.
+    primaryAxes: {
+      warm_bright: 'neutral',         // No glare, no warmth emphasis — true neutral
+      smooth_detailed: 'detailed',    // Clarity+texture present, flow less_emphasized
+      elastic_controlled: 'neutral',  // Dynamics present but not defining
+      airy_closed: 'neutral',        // No spatial data
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Well-rounded, no glare risk. Unlikely to fatigue in most systems.',
+    },
     tendencyProfile: {
       basis: 'editorial_inference',
       confidence: 'medium',
@@ -307,6 +360,19 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'SG',
     topology: 'r2r',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
+    // Axis reasoning: Entry R-2R — "body and engagement over analytical precision."
+    // Flow+density present, clarity less_emphasized. Dense harmonic texture, relaxed
+    // timing. Warm, smooth, neutral dynamics, neutral staging.
+    primaryAxes: {
+      warm_bright: 'warm',            // Tonal density 0.7, flow 0.7, clarity 0.4 — clearly warm
+      smooth_detailed: 'smooth',      // Flow present, clarity less_emphasized, "relaxed timing"
+      elastic_controlled: 'neutral',  // Dynamics present but neither elastic nor controlled
+      airy_closed: 'neutral',        // No strong spatial data
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Warmth and ease make fatigue unlikely. Risk is congestion rather than fatigue in already-warm systems.',
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -366,6 +432,20 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'US',
     topology: 'multibit',
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
+    // Axis reasoning: "Exceptional dynamic snap and rhythmic drive." Dynamics 1.0,
+    // elasticity 0.7, flow 0.7, density 0.7, clarity 0.7. This is an engagement-first
+    // design that carries tonal weight AND transient precision. Warm due to density,
+    // neutral on smooth/detailed (has both flow and clarity), strongly elastic.
+    primaryAxes: {
+      warm_bright: 'warm',            // Tonal density 0.7, flow 0.7 — warm with body
+      smooth_detailed: 'neutral',     // Both flow 0.7 and clarity 0.7 — neither dominates
+      elastic_controlled: 'elastic',  // Dynamics 1.0, elasticity 0.7 — the defining trait
+      airy_closed: 'neutral',        // No spatial emphasis
+    },
+    fatigueAssessment: {
+      risk: 'context_dependent',
+      notes: 'Dynamic energy is high — can feel relentless in speed-biased systems. Low fatigue in warm or controlled pairings.',
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -431,6 +511,19 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'CN',
     topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit' },
+    // Axis reasoning: "Reference-grade ESS Sabre. Precision and composure over musicality."
+    // Clarity 1.0, composure 0.7, flow 0.4, density 0.4, glare risk. "Lean tonal balance."
+    // "Composed rather than explosive." "Can feel clinical."
+    primaryAxes: {
+      warm_bright: 'bright',              // Clarity 1.0, density 0.4, "lean" — clearly bright
+      smooth_detailed: 'detailed',        // Clarity emphasized, flow less_emphasized
+      elastic_controlled: 'controlled',   // Composure 0.7, "composed rather than explosive"
+      airy_closed: 'neutral',            // "Precise imaging" but not described as airy
+    },
+    fatigueAssessment: {
+      risk: 'context_dependent',
+      notes: 'Can feel clinical in lean systems — sterility rather than glare. Low fatigue when paired with warm or tube amplification.',
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -494,6 +587,20 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'TW',
     topology: 'nos',
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
+    // Axis reasoning: NOS tube output — "musical flow and texture." Flow 1.0,
+    // texture 1.0, density 0.7, clarity 0.4, dynamics 0.4. "Unhurried phrasing."
+    // "Warm midrange emphasis with gently rolled upper frequencies."
+    // The quintessential warm+smooth product. Controlled by default (composure 0.7).
+    primaryAxes: {
+      warm_bright: 'warm',            // Density 0.7, "warm midrange emphasis" — definitively warm
+      smooth_detailed: 'smooth',      // Flow 1.0, clarity 0.4 — definitively smooth
+      elastic_controlled: 'controlled', // Composure 0.7, dynamics 0.4 — composed, not explosive
+      airy_closed: 'neutral',        // No strong spatial emphasis documented
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'NOS tube output inherently eases fatigue. Risk is over-softness in already-warm chains, not listening discomfort.',
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -560,6 +667,20 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'CN',
     topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit' },
+    // Axis reasoning: ESS-based, "versatile and well-rounded." Clarity, dynamics,
+    // composure all present; flow and density less_emphasized. No glare risk.
+    // Similar profile to Gustard X16 but with more composure. Slightly bright
+    // due to density deficit, slightly detailed, slightly controlled.
+    primaryAxes: {
+      warm_bright: 'neutral',             // No glare, but density is low — borderline; call neutral
+      smooth_detailed: 'detailed',        // Clarity present, flow less_emphasized
+      elastic_controlled: 'controlled',   // Composure 0.7, "well-rounded" — measured, not explosive
+      airy_closed: 'neutral',            // No spatial emphasis
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'No glare risk, good composure. Versatile and unlikely to fatigue.',
+    },
     tendencyProfile: {
       basis: 'editorial_inference',
       confidence: 'medium',
@@ -607,6 +728,36 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'DE',
     topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit' },
+    // ── PRIORITY ANCHOR: RME ADI-2 DAC FS ──
+    // Axis reasoning: Pro-audio heritage — "ruler-flat tonal balance with no editorial
+    // voice." Clarity 1.0, composure 1.0, flow 0.4, density 0.4. "Transparent,
+    // composed, and deeply configurable." "Reveals everything but editorializes nothing."
+    // The parametric EQ is a system-tuning tool, not a sonic character trait.
+    //
+    // Warm↔Bright: BRIGHT — clarity 1.0, density 0.4, "lean" in the Topping mold
+    //   but without glare risk. "Ruler-flat" sounds neutral, but the *absence* of
+    //   harmonic editorial means it reads as bright compared to R-2R/tube designs.
+    //   The EQ can compensate, but the *native* voicing is transparency-first.
+    //
+    // Smooth↔Detailed: DETAILED — clarity emphasized, flow less_emphasized.
+    //   "Precise, stable imaging." This is a resolving instrument, not a musical one.
+    //
+    // Elastic↔Controlled: CONTROLLED — composure 1.0, the highest in the catalog.
+    //   "Composed and controlled — maintains grip without excess energy." No dynamic
+    //   excitement — authority through restraint.
+    //
+    // Airy↔Closed: NEUTRAL — "precise, stable imaging" is spatial precision, not
+    //   spaciousness. No sense of open/airy in the documentation.
+    primaryAxes: {
+      warm_bright: 'bright',              // Transparency reads as bright vs editorial designs
+      smooth_detailed: 'detailed',        // Resolving, clarity-first
+      elastic_controlled: 'controlled',   // Composure 1.0, "maintains grip"
+      airy_closed: 'neutral',            // Precise imaging but not spacious
+    },
+    fatigueAssessment: {
+      risk: 'context_dependent',
+      notes: 'The precision is clinical rather than sharp — fatigue manifests as disengagement rather than glare. The parametric EQ can correct room or system brightness, which is a unique mitigating factor.',
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -673,6 +824,19 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'GB',
     topology: 'fpga',
     archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
+    // Axis reasoning: Portable Chord FPGA. Clarity 1.0, flow 0.7, density 0.4.
+    // "Speed over weight." "Lighter tonal balance than desktop Chord units."
+    // Shares Chord timing precision but with less authority.
+    primaryAxes: {
+      warm_bright: 'bright',          // Clarity 1.0, density 0.4 — "lighter tonal balance"
+      smooth_detailed: 'detailed',    // Clarity emphasized, flow present but secondary
+      elastic_controlled: 'neutral',  // No strong dynamic character — neither punchy nor damped
+      airy_closed: 'neutral',        // "Good headphone staging" but not notably airy
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Despite bright lean, no glare risk. Chord FPGA character avoids analytical edge. Fatigue unlikely.',
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -736,6 +900,22 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'GB',
     topology: 'fpga',
     archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
+    // Axis reasoning: Desktop reference FPGA. Clarity 1.0, composure 1.0, but
+    // ALSO flow 0.7, density 0.7, elasticity 0.7. "More tonal weight and midrange
+    // authority than lower Chord models." The additional tap count fills out the
+    // harmonic picture. This is the rare product that has both high clarity AND
+    // tonal weight — it doesn't read as bright because the density compensates.
+    // "Wide, composed staging with excellent depth layering."
+    primaryAxes: {
+      warm_bright: 'neutral',             // Clarity 1.0 BUT density 0.7 — they balance
+      smooth_detailed: 'detailed',        // Clarity emphasized, flow present — detail leads
+      elastic_controlled: 'controlled',   // Composure 1.0, "effortless" — authority through grip
+      airy_closed: 'airy',              // "Wide, composed staging with excellent depth layering"
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Effortless presentation with tonal weight. The composure and density prevent the bright-lean fatigue pattern. One of the lowest fatigue risks in the catalog.',
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -803,6 +983,38 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'GB',
     topology: 'fpga',
     archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
+    // ── PRIORITY ANCHOR: Chord Qutest ──
+    // Axis reasoning: FPGA pulse array — the archetypal timing-precision DAC.
+    // Clarity 1.0, flow 0.7, elasticity 0.7, composure 0.7, density 0.4.
+    //
+    // Warm↔Bright: BRIGHT — clarity 1.0, density 0.4. "Lighter tonal weight
+    //   than R-2R designs." The FPGA character avoids delta-sigma harshness but
+    //   the tonal weight is unmistakably lean compared to warm references.
+    //   No glare risk — the brightness is precision, not edge.
+    //
+    // Smooth↔Detailed: DETAILED — "exceptional transient resolution — leading
+    //   edges are fast and fully formed." "Fine-grained detail without analytical
+    //   edge." The flow at 0.7 prevents it from being purely analytical, but
+    //   the defining character is detail retrieval, not smoothness.
+    //
+    // Elastic↔Controlled: ELASTIC — elasticity 0.7, dynamics 0.7. The Chord
+    //   FPGA timing gives transients a live, immediate quality. "Fast and fully
+    //   formed" leading edges suggest elastic energy rather than damped control.
+    //   Different from the Hugo TT2's controlled composure — the Qutest has
+    //   more snap and less authority.
+    //
+    // Airy↔Closed: NEUTRAL — no strong spatial documentation. The Qutest is
+    //   not noted for spaciousness or intimacy. Staging depends on downstream.
+    primaryAxes: {
+      warm_bright: 'bright',          // Clarity 1.0, density 0.4, "lighter tonal weight"
+      smooth_detailed: 'detailed',    // Timing precision, transient resolution
+      elastic_controlled: 'elastic',  // FPGA snap, dynamics 0.7, elasticity 0.7
+      airy_closed: 'neutral',        // No strong spatial character
+    },
+    fatigueAssessment: {
+      risk: 'context_dependent',
+      notes: 'No glare risk — the FPGA avoids harsh edges. But the tonal leanness can tilt toward analytical in systems already biased toward speed. Pairs well with warm amplification where the clarity cuts through without thinning.',
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -869,6 +1081,39 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'SG',
     topology: 'r2r',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
+    // ── PRIORITY ANCHOR: Denafrips Pontus II 12th-1 ──
+    // Axis reasoning: Full-scale R-2R — the archetypal warm, textured DAC.
+    // Flow 1.0, density 1.0, texture 1.0, clarity 0.7, dynamics 0.7, composure 0.7.
+    //
+    // Warm↔Bright: WARM — density 1.0, "rich harmonic density with physical
+    //   midrange presence." The Pontus is the warm-axis reference product in the
+    //   DAC catalog. Zero glare risk. "Prioritizes body and musical weight over
+    //   transient sharpness."
+    //
+    // Smooth↔Detailed: SMOOTH — flow 1.0, "relaxed but coherent — phrasing breathes."
+    //   Clarity at 0.7 means it's not soft or veiled — but the perceptual emphasis
+    //   is on musical continuity and texture, not on analytical resolution.
+    //   "Instruments have body and resonance" → smooth, not detailed.
+    //
+    // Elastic↔Controlled: NEUTRAL — dynamics 0.7 and composure 0.7. Neither
+    //   explosive nor overdamped. The R-2R conversion style has a natural ease
+    //   that doesn't push dynamics forward but doesn't suppress them either.
+    //   Elasticity at 0.4 is the only weak signal, but "relaxed" timing suggests
+    //   neither elastic snap nor controlled grip — just flow.
+    //
+    // Airy↔Closed: AIRY — "deep, holographic staging with good layering
+    //   front-to-back." The R-2R architecture creates a sense of dimensional
+    //   space that delta-sigma designs often lack at this price.
+    primaryAxes: {
+      warm_bright: 'warm',            // Density 1.0, "rich harmonic density" — the warm reference
+      smooth_detailed: 'smooth',      // Flow 1.0, "phrasing breathes" — the smooth reference
+      elastic_controlled: 'neutral',  // Dynamics and composure balanced — neither dominates
+      airy_closed: 'airy',           // "Deep, holographic staging" — spatial openness
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'The R-2R warmth and flow are inherently fatigue-resistant. The risk with the Pontus is never fatigue — it is congestion when paired with other warm components.',
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -936,6 +1181,20 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'CN',
     topology: 'r2r',
     archetypes: { primary: 'tonal_saturated', secondary: 'precision_explicit' },
+    // Axis reasoning: Discrete R-2R but "less warm than the Denafrips, more textured
+    // than delta-sigma." All core traits at 0.7 — balanced across the board.
+    // "Body without excess warmth." "Controlled rather than explosive."
+    // "A middle ground between R-2R warmth and delta-sigma precision."
+    primaryAxes: {
+      warm_bright: 'warm',            // R-2R architecture with density 0.7 — warm, but mild
+      smooth_detailed: 'neutral',     // Flow 0.7 and clarity 0.7 — balanced between smooth and detailed
+      elastic_controlled: 'controlled', // "Controlled rather than explosive," composure 0.7
+      airy_closed: 'neutral',        // No strong spatial signature documented
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Balanced, gentle character. No fatigue risk. A safe system component in nearly any chain.',
+    },
     tendencyProfile: {
       basis: 'listener_consensus',
       confidence: 'high',
