@@ -1,6 +1,6 @@
 # Audio XX — Sonic Trait Framework v1
 
-**Status:** Draft for implementation
+**Status:** Locked for v1
 **Purpose:** Define the internal sonic trait language used by Audio XX for advisory reasoning.
 
 This document defines the first structured sonic trait framework for Audio XX.
