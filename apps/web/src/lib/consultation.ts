@@ -306,6 +306,20 @@ const BRAND_PROFILES: BrandProfile[] = [
     ],
   },
   {
+    names: ['denafrips'],
+    country: 'Singapore (designed), China (manufactured)',
+    brandScale: 'specialist',
+    region: 'southeast-asia',
+    categories: ['dac'],
+    philosophy: 'Denafrips designs around discrete R-2R ladder conversion — resistor networks that convert digital audio directly to analog voltage. The philosophy prioritises tonal density, harmonic texture, and musical flow over measured precision. Products range from the entry-level Ares to the flagship Terminator, sharing a consistent R-2R voice at different levels of refinement and scale.',
+    tendencies: 'Listeners consistently describe Denafrips DACs as warm, dense, and harmonically rich. Tonal body, midrange texture, and a relaxed sense of timing are the signature strengths. Detail retrieval is present but softer-focused than delta-sigma designs — the emphasis is on musical weight rather than analytical separation.',
+    systemContext: 'Denafrips DACs tend to add warmth and body to the chain. In systems that are already warm or tonally dense, this can compound into congestion — bass and lower midrange may feel heavy. In precise or lean systems, a Denafrips source provides a welcome counterbalance, adding tonal substance without changing the downstream character.',
+    pairingNotes: 'Pairs well with fast or transparent amplifiers where the R-2R density is balanced by downstream speed. Widely used with solid-state amplification from brands like Benchmark, Topping, and Pass Labs. Can compound warmth with tube amplifiers — works best when the tube stage is on the transparent side.',
+    links: [
+      { label: 'Vinshine Audio (official distributor)', url: 'https://www.vinshineaudio.com/', kind: 'dealer', region: 'global' },
+    ],
+  },
+  {
     names: ['job'],
     country: 'Switzerland',
     brandScale: 'boutique',
@@ -854,16 +868,22 @@ function extractCoreCharacter(tendencies: string): string {
 
   /**
    * Match a trait only if it appears in a positive/assertive context.
-   * Suppresses matches when preceded (within ~30 chars) by negation
-   * language: lighter, less, without, lacks, not, avoids, reduced, limited.
+   * Suppresses matches when negation language appears nearby — either
+   * before ("without warmth") or after ("tonal weight is lighter").
    */
   function positiveMatch(pattern: RegExp): boolean {
     const match = pattern.exec(lower);
     if (!match) return false;
-    // Check for negation in the ~40 chars before the match
-    const start = Math.max(0, match.index - 40);
-    const prefix = lower.slice(start, match.index);
-    return !/\b(?:lighter|less|without|lacks|not|avoids?|reduced|limited|absent)\b/.test(prefix);
+    const negationRe = /\b(?:lighter|less|without|lacks|not|avoids?|reduced|limited|absent|thin|lean)\b/;
+    // Check ~40 chars before the match
+    const prefixStart = Math.max(0, match.index - 40);
+    const prefix = lower.slice(prefixStart, match.index);
+    if (negationRe.test(prefix)) return false;
+    // Check ~30 chars after the match end — catches "tonal weight is lighter"
+    const suffixEnd = Math.min(lower.length, match.index + match[0].length + 30);
+    const suffix = lower.slice(match.index + match[0].length, suffixEnd);
+    if (negationRe.test(suffix)) return false;
+    return true;
   }
 
   // Look for known trait-words and cluster them — order matters for selection priority
