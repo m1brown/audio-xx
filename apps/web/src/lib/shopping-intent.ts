@@ -18,7 +18,7 @@ import type { SystemProfile, OutputType, SystemCharacter } from './system-profil
 import { DEFAULT_SYSTEM_PROFILE } from './system-profile';
 export type { SystemProfile, OutputType, SystemCharacter } from './system-profile';
 import type { SonicArchetype } from './archetype';
-import { hasTendencies, selectDefaultTendencies, hasRisk, getEmphasizedTraits, hasExplainableProfile, resolveTraitValue } from './sonic-tendencies';
+import { hasTendencies, selectDefaultTendencies, hasRisk, getEmphasizedTraits, getLessEmphasizedTraits, hasExplainableProfile, resolveTraitValue } from './sonic-tendencies';
 import { resolveArchetype, archetypeFitNote } from './design-archetypes';
 
 /** Short labels for archetype context in shopping summaries. */
@@ -600,6 +600,56 @@ function isTasteSufficient(signals: ExtractedSignals): boolean {
   return hasDirectionalTrait || hasEnoughSymptoms;
 }
 
+// ── Preference signal counting ───────────────────────
+//
+// Counts independent preference signals from all available sources.
+// Each type contributes at most once, except symptoms which contribute
+// individually. This prevents "want warmth and flow" from counting
+// as a single signal just because it's one sentence.
+
+/**
+ * Categories that require system context before product recommendations.
+ * These components interact strongly with the rest of the chain —
+ * a recommendation without chain context risks compounding or
+ * compensating in the wrong direction.
+ */
+const SYSTEM_REQUIRED_CATEGORIES: ShoppingCategory[] = [
+  'dac', 'amplifier', 'speaker', 'general', // 'general' covers cable queries
+];
+
+/**
+ * Count distinct preference signals from extracted data.
+ *
+ * Signal sources:
+ *   - Directional traits (flow: 'up', clarity: 'down', etc.) — each counts as 1
+ *   - Symptoms ("thin", "harsh", "congested") — each counts as 1
+ *   - Preserve keywords ("I like the warmth") — counts as 1 if present
+ *   - Limiting keywords ("lacking detail") — counts as 1 if present
+ *
+ * This is used for confidence gating: product recommendations
+ * require at least 3 preference signals before triggering.
+ */
+export function countPreferenceSignals(
+  ctx: ShoppingContext,
+  signals: ExtractedSignals,
+): number {
+  let count = 0;
+
+  // Directional traits
+  for (const d of Object.values(signals.traits)) {
+    if (d === 'up' || d === 'down') count += 1;
+  }
+
+  // Symptoms
+  count += signals.symptoms.length;
+
+  // Preserve / limiting context (max 1 each)
+  if (ctx.preserveProvided) count += 1;
+  if (ctx.limitingProvided) count += 1;
+
+  return count;
+}
+
 /**
  * Returns true when we know enough about the user's system to
  * contextualise a recommendation — output type plus at least
@@ -687,8 +737,11 @@ function phraseUseCaseQuestion(ctx: ShoppingContext): string {
  * Evaluate which context gaps remain, in priority order for the
  * detected shopping mode. Returns the ordered list of unfilled gaps.
  *
+ * For chain-sensitive categories (DAC, amplifier, speaker, cable),
+ * system context is promoted to highest priority regardless of mode.
+ *
  * Priority varies by mode:
- *   specific-component: taste → system → budget
+ *   specific-component: system (if chain-sensitive) → taste → budget
  *   upgrade-path:       system → taste → budget
  *   build-a-system:     use_case → taste → budget
  */
@@ -717,11 +770,17 @@ export function evaluateContextGaps(
     },
   };
 
+  // For chain-sensitive categories, system always comes first
+  const systemFirst = SYSTEM_REQUIRED_CATEGORIES.includes(ctx.category)
+    && ctx.mode !== 'build-a-system';
+
   // Priority order depends on mode
   let order: GapDimension[];
   switch (ctx.mode) {
     case 'specific-component':
-      order = ['taste', 'system', 'budget'];
+      order = systemFirst
+        ? ['system', 'taste', 'budget']
+        : ['taste', 'system', 'budget'];
       break;
     case 'upgrade-path':
       order = ['system', 'taste', 'budget'];
@@ -787,43 +846,55 @@ export function getShoppingTurnCap(mode: ShoppingMode): number {
 // ── Answer-readiness ──────────────────────────────────
 
 /**
- * Simple rule-based readiness. No weighted scores — just clear conditions.
+ * Confidence-gated answer readiness.
  *
- * Full readiness:  category + taste + budget + system all present.
- * Provisional:     category + at least one of (taste | budget) present.
+ * Product recommendations require EITHER:
+ *   A) High confidence — at least 3 preference signals AND
+ *      (system context known OR system explicitly irrelevant)
+ *   B) User explicitly requests quick suggestions (skipToSuggestions flag)
  *
- * The turn cap provides an additional backstop that forces a provisional
- * answer regardless of what's been gathered.
+ * For DAC, amplifier, speaker, and cable categories, system context is
+ * always required unless explicitly irrelevant (e.g. first system).
+ *
+ * The turn cap provides a backstop that forces a provisional answer
+ * regardless of what's been gathered.
  */
 export function isAnswerReady(
   ctx: ShoppingContext,
   signals: ExtractedSignals,
+  skipToSuggestions = false,
 ): boolean {
   if (!ctx.detected) return true; // not shopping — let the engine handle it
 
-  const hasTaste = isTasteSufficient(signals);
+  // Skip-to-suggestions bypasses all gating
+  if (skipToSuggestions) return true;
+
   const hasSystem = isSystemSufficient(ctx);
-  const hasBudget = ctx.budgetMentioned;
+  const signalCount = countPreferenceSignals(ctx, signals);
+  const hasEnoughSignals = signalCount >= 3;
+
+  // System context is required for chain-sensitive categories unless
+  // the user is building from scratch (system is inherently absent)
+  const systemRequired = SYSTEM_REQUIRED_CATEGORIES.includes(ctx.category)
+    && ctx.mode !== 'build-a-system';
+
+  if (systemRequired && !hasSystem) return false;
 
   switch (ctx.mode) {
     case 'specific-component':
-      // Full: category known + taste + budget + system
-      // Also allow: category + taste + budget (system becomes a caveat)
       // Turntable exception: budget alone is sufficient — taste signals
       // are less critical for turntable mechanical-platform recommendations.
-      // "Recommend now, refine later."
-      if (ctx.category === 'turntable' && hasBudget) return true;
-      return ctx.category !== 'general' && hasTaste && hasBudget;
+      if (ctx.category === 'turntable' && ctx.budgetMentioned) return true;
+      // Standard: 3+ preference signals AND system context (or not required)
+      return hasEnoughSignals;
 
     case 'upgrade-path':
-      // Full: system + taste + budget
-      // Also allow: system + taste (budget becomes a caveat)
-      return hasSystem && hasTaste;
+      // System + 3+ preference signals
+      return hasSystem && hasEnoughSignals;
 
     case 'build-a-system':
-      // Full: use_case + taste + budget
-      // Also allow: taste + budget
-      return ctx.useCaseProvided && hasTaste && hasBudget;
+      // Use case + 3+ preference signals
+      return ctx.useCaseProvided && hasEnoughSignals;
   }
 }
 
@@ -856,19 +927,25 @@ export function getStatedGaps(
  *
  * Returns null (triggering answer mode) when:
  *   1. Readiness conditions are met, OR
- *   2. The per-mode turn cap is reached, OR
- *   3. No context gaps remain.
+ *   2. The user requested quick suggestions (skipToSuggestions), OR
+ *   3. The per-mode turn cap is reached, OR
+ *   4. No context gaps remain.
  *
- * @param ctx       - Shopping context derived from all user text so far
- * @param signals   - Extracted signals from all user text
- * @param turnCount - Number of user submissions (1-indexed)
+ * @param ctx                - Shopping context derived from all user text so far
+ * @param signals            - Extracted signals from all user text
+ * @param turnCount          - Number of user submissions (1-indexed)
+ * @param skipToSuggestions  - User requested quick exploratory suggestions
  */
 export function getShoppingClarification(
   ctx: ShoppingContext,
   signals: ExtractedSignals,
   turnCount: number,
+  skipToSuggestions = false,
 ): string | null {
   if (!ctx.detected) return null;
+
+  // Quick suggestions bypass — go straight to exploratory answer
+  if (skipToSuggestions) return null;
 
   // Early exit: enough context gathered — go straight to answer
   if (isAnswerReady(ctx, signals)) return null;
@@ -893,6 +970,8 @@ export interface ProductExample {
   price: number;
   /** ISO 4217 currency code. Defaults to 'USD' when omitted. */
   priceCurrency?: string;
+  /** Brief sonic character — what this component fundamentally sounds like. */
+  character?: string;
   fitNote: string;
   caution?: string;
   links?: { label: string; url: string; region?: string }[];
@@ -1161,6 +1240,46 @@ function buildFitNote(product: Product, userTraits: Record<string, SignalDirecti
 }
 
 /**
+ * Build a brief sonic character description for a product.
+ *
+ * Follows the advisory assessment structure: what this component
+ * fundamentally sounds like, independent of listener preference.
+ *
+ * Priority: curated character tendencies → qualitative profile →
+ * archetype → description fallback.
+ */
+function buildProductCharacter(product: Product): string {
+  // Priority 1: curated character tendencies — the most authoritative source
+  if (hasTendencies(product.tendencies)) {
+    const top = selectDefaultTendencies(product.tendencies.character, 2);
+    if (top.length > 0) {
+      return top.map((t) => t.tendency).join('. ');
+    }
+  }
+
+  // Priority 2: qualitative tendency profile
+  if (hasExplainableProfile(product.tendencyProfile)) {
+    const emphasized = getEmphasizedTraits(product.tendencyProfile);
+    const lessEmph = getLessEmphasizedTraits(product.tendencyProfile);
+    if (emphasized.length > 0) {
+      const emph = emphasized.slice(0, 2).join(' and ');
+      const less = lessEmph.length > 0 ? ` Less emphasis on ${lessEmph[0]}.` : '';
+      return `Leans toward ${emph}.${less}`;
+    }
+  }
+
+  // Priority 3: design archetype
+  const arch = resolveArchetype(product.architecture);
+  if (arch) {
+    const charDesc = archetypeFitNote(arch);
+    if (charDesc) return `${product.architecture} design — ${charDesc}`;
+  }
+
+  // Priority 4: first sentence of description
+  return product.description.split('.')[0] + '.';
+}
+
+/**
  * Generate an optional caution note from the product's notes field
  * and its risk flags / trait values.
  */
@@ -1313,6 +1432,7 @@ function selectProductExamples(
     brand: product.brand,
     price: product.price,
     priceCurrency: product.priceCurrency,
+    character: buildProductCharacter(product),
     fitNote: buildFitNote(product, userTraits),
     caution: buildCaution(product),
     links: product.retailer_links.length > 0 ? product.retailer_links : undefined,

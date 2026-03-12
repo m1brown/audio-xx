@@ -30,6 +30,8 @@ export interface AdvisoryOption {
   brand?: string;
   price?: number;
   priceCurrency?: string;
+  /** Brief sonic character description — what this component sounds like. */
+  character?: string;
   /** Why this option fits the listener's priorities. */
   fitNote: string;
   /** Any caution or trade-off note. */
@@ -488,6 +490,7 @@ export function shoppingToAdvisory(
     brand: p.brand,
     price: p.price,
     priceCurrency: p.priceCurrency,
+    character: p.character,
     fitNote: p.fitNote,
     caution: p.caution,
     links: p.links?.map((l) => ({ label: l.label, url: l.url })),

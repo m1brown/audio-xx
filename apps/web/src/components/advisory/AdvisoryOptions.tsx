@@ -1,5 +1,9 @@
 /**
- * Product option cards — each with name, price, fit note, caution, and links.
+ * Product option cards — advisory-style structure:
+ *   1. Product (name + price)
+ *   2. Character — what it sounds like
+ *   3. Why it might suit the listener
+ *   4. Potential downside
  */
 
 import type { AdvisoryOption } from '../../lib/advisory-response';
@@ -20,7 +24,7 @@ interface AdvisoryOptionsProps {
 
 export default function AdvisoryOptions({ options }: AdvisoryOptionsProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
       {options.map((opt, i) => (
         <div
           key={i}
@@ -30,7 +34,8 @@ export default function AdvisoryOptions({ options }: AdvisoryOptionsProps) {
             background: '#fafafa',
           }}
         >
-          <div style={{ marginBottom: '0.3rem' }}>
+          {/* 1. Product — name + price */}
+          <div style={{ marginBottom: '0.35rem' }}>
             <strong style={{ color: '#111' }}>
               {opt.brand ? `${opt.brand} ` : ''}{opt.name}
             </strong>
@@ -40,14 +45,32 @@ export default function AdvisoryOptions({ options }: AdvisoryOptionsProps) {
               </span>
             )}
           </div>
+
+          {/* 2. Character — what it sounds like */}
+          {opt.character && (
+            <p style={{
+              margin: '0 0 0.3rem 0',
+              color: '#555',
+              lineHeight: 1.55,
+              fontSize: '0.92rem',
+              fontStyle: 'italic',
+            }}>
+              {opt.character}
+            </p>
+          )}
+
+          {/* 3. Why it might suit the listener */}
           <p style={{ margin: '0 0 0.3rem 0', color: '#333', lineHeight: 1.55, fontSize: '0.95rem' }}>
             {opt.fitNote}
           </p>
+
+          {/* 4. Potential downside */}
           {opt.caution && (
             <p style={{ margin: '0 0 0.3rem 0', color: '#888', fontSize: '0.88rem', lineHeight: 1.5 }}>
               {opt.caution}
             </p>
           )}
+
           {opt.links && opt.links.length > 0 && (
             <div style={{ fontSize: '0.88rem', color: '#666', marginTop: '0.25rem' }}>
               {opt.links.map((link, li) => (

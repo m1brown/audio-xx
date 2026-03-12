@@ -177,6 +177,8 @@ export default function Home() {
   const [editorPrefill, setEditorPrefill] = useState<DraftSystem | null>(null);
   /** Fingerprints of dismissed proposals — prevents re-prompting same system. */
   const dismissedFingerprintsRef = useRef(new Set<string>());
+  /** When true, bypasses consultation confidence gating and produces exploratory suggestions. */
+  const skipToSuggestionsRef = useRef(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -218,10 +220,16 @@ export default function Home() {
     }
   }, [isLoading, messages.length]);
 
-  const handleSubmit = useCallback(async () => {
-    if (!currentInput.trim() || isLoading) return;
+  const handleSubmit = useCallback(async (overrideText?: string) => {
+    const inputText = overrideText ?? currentInput;
+    if (!inputText.trim() || isLoading) return;
 
-    const submittedText = currentInput;
+    // If override was provided, set the input first so ADD_USER_MESSAGE captures it
+    if (overrideText) {
+      dispatch({ type: 'SET_INPUT', value: overrideText });
+    }
+
+    const submittedText = inputText;
     dispatch({ type: 'ADD_USER_MESSAGE' });
     dispatch({ type: 'SET_LOADING', value: true });
 
@@ -484,12 +492,15 @@ export default function Home() {
 
           // Decide: ask a clarification question or give a recommendation?
           // Skip clarifications if we've already given a recommendation
-          // (refinement mode) or if we've hit the 2-turn cap.
+          // (refinement mode), hit the turn cap, or user requested quick suggestions.
           const maxClarifications = 2;
+          const wantsQuickSuggestions = skipToSuggestionsRef.current;
           const pastClarificationCap = shoppingAnswerCount > 0 || newTurnCount > maxClarifications;
           const shoppingQuestion = pastClarificationCap
             ? null
-            : getShoppingClarification(shoppingCtx, data.signals, newTurnCount);
+            : getShoppingClarification(shoppingCtx, data.signals, newTurnCount, wantsQuickSuggestions);
+          // Reset skip flag after use
+          if (wantsQuickSuggestions) skipToSuggestionsRef.current = false;
 
           if (shoppingQuestion) {
             // Still gathering context — ask one more question
@@ -515,6 +526,13 @@ export default function Home() {
               dispatch({
                 type: 'ADD_NOTE',
                 content: 'Got it — adjusting the direction based on what you\'ve added.',
+              });
+            }
+            // Add exploratory note when skipping to quick suggestions
+            if (wantsQuickSuggestions) {
+              dispatch({
+                type: 'ADD_NOTE',
+                content: 'These are exploratory starting points based on limited context. Refining your preferences would sharpen the direction.',
               });
             }
             const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning);
@@ -580,6 +598,16 @@ export default function Home() {
 
     dispatch({ type: 'SET_LOADING', value: false });
   }, [currentInput, isLoading, messages, turnCount, tasteProfile, state.activeMode, audioState]);
+
+  /**
+   * Skip clarification questions and go straight to exploratory suggestions.
+   * Sets the skip ref and triggers submit with a synthetic message.
+   */
+  const handleSkipToSuggestions = useCallback(() => {
+    if (isLoading) return;
+    skipToSuggestionsRef.current = true;
+    handleSubmit('Just give me some suggestions to explore.');
+  }, [isLoading, handleSubmit]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -765,6 +793,38 @@ export default function Home() {
                 <MessageBubble key={i} message={msg} />
               </div>
             ))}
+          {/* Skip-to-suggestions button — visible when asking clarifying questions in shopping mode */}
+          {!isLoading && lastMessage?.role === 'assistant' && lastMessage.kind === 'question' && state.activeMode === 'shopping' && (
+            <button
+              type="button"
+              onClick={handleSkipToSuggestions}
+              style={{
+                display: 'block',
+                margin: '0.5rem 0 1rem 0',
+                padding: '0.45rem 0.85rem',
+                background: 'none',
+                border: '1px solid #d5d5d0',
+                borderRadius: 6,
+                cursor: 'pointer',
+                color: '#888',
+                fontSize: '0.85rem',
+                fontFamily: 'inherit',
+                letterSpacing: '0.01em',
+                transition: 'color 0.15s ease, border-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#555';
+                e.currentTarget.style.borderColor = '#aaa';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#888';
+                e.currentTarget.style.borderColor = '#d5d5d0';
+              }}
+            >
+              Skip questions → quick suggestions
+            </button>
+          )}
+
           {/* System save prompt — appears when a system description was detected */}
           {!isLoading && audioState.proposedSystem && (
             <SystemSavePrompt
