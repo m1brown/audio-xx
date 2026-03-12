@@ -83,6 +83,14 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   diva: { brand: 'WLM', category: 'speaker' },
   'diva monitor': { brand: 'WLM', category: 'speaker' },
   heresy: { brand: 'Klipsch', category: 'speaker' },
+  // Boenicke
+  w5: { brand: 'Boenicke', category: 'speaker' },
+  w8: { brand: 'Boenicke', category: 'speaker' },
+  w11: { brand: 'Boenicke', category: 'speaker' },
+  // Focal
+  'kanta no. 2': { brand: 'Focal', category: 'speaker' },
+  kanta: { brand: 'Focal', category: 'speaker' },
+  'aria 906': { brand: 'Focal', category: 'speaker' },
   // Headphones
   'hd 600': { brand: 'Sennheiser', category: 'headphone' },
   'hd 650': { brand: 'Sennheiser', category: 'headphone' },

@@ -236,11 +236,11 @@ export default function Home() {
 
     // ── Resolve active system context ────────────────────
     // Read once per submit — all builders and reasoning calls share this.
-    const activeSystem = resolveActiveSystemContext(audioState);
+    let activeSystem = resolveActiveSystemContext(audioState);
     const activeProfile = activeSystemToProfile(audioState);
     // activeProfile is DEFAULT_SYSTEM_PROFILE when no system is active,
     // so pass null to reasoning when there's no real active system.
-    const activeProfileForReasoning = activeSystem ? activeProfile : null;
+    let activeProfileForReasoning = activeSystem ? activeProfile : null;
 
     // ── Conversation router ──────────────────────────────
     // Classify the message into a conversation mode before detailed
@@ -263,6 +263,28 @@ export default function Home() {
     } else if (!proposed) {
       // Clear any stale proposal from a previous turn
       audioDispatch({ type: 'SET_PROPOSED_SYSTEM', proposed: null });
+    }
+
+    // ── Promote detected system to active context ────────
+    // When the user describes a system inline (>= 2 components detected)
+    // but no saved/draft system is active, treat the proposed system as
+    // active for this turn. This prevents the advisory from asking
+    // "What does the rest of your system look like?" when the parser
+    // already extracted the components.
+    if (!activeSystem && proposed && proposed.components.length >= 2) {
+      activeSystem = {
+        name: proposed.suggestedName,
+        components: proposed.components.map((c) => ({
+          name: c.name,
+          brand: c.brand,
+          category: c.category,
+          role: c.role,
+        })),
+        tendencies: null,
+        location: null,
+        primaryUse: null,
+      };
+      activeProfileForReasoning = activeProfile;
     }
 
     // ── Comparison follow-up detection ─────────────────
