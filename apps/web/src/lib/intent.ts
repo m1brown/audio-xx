@@ -63,7 +63,7 @@ const BRAND_NAMES = [
   'parasound', 'hegel', 'mcintosh', 'marantz', 'yamaha',
   'shindo', 'leben', 'audio note',
   'line magnetic', 'primaluna', 'cary', 'arc', 'audio research',
-  'job',
+  'job', 'goldmund', 'crayon', 'xsa',
   // Turntables
   'rega', 'pro-ject', 'technics', 'clearaudio', 'vpi',
   'linn', 'thorens',
@@ -90,6 +90,8 @@ const PRODUCT_NAMES = [
   'x26 pro', 'su-9', 'd90',
   'k9 pro', 'ef400',
   'dr70',
+  'srda', 'cia-1', 'cia-1t',
+  'vanguard',
   'diva monitor', 'super hl5', 'dirty weekend',
   'hd 800 s', 'hd 800', 'hd 650', 'hd 600',
   'airpods pro 2', 'airpods pro',
@@ -627,9 +629,17 @@ export function detectIntent(currentMessage: string): IntentResult {
   //     Requires explicit assessment language + ownership language + multiple subjects.
   //     This must fire before comparison to prevent "I have X, Y, and Z" from
   //     being treated as "X vs Y".
+  //
+  //     Special case: an arrow-separated chain with 3+ recognized components is
+  //     treated as an implicit system assessment even without ownership or
+  //     assessment language — the chain notation itself signals intent.
   const hasAssessmentLanguage = SYSTEM_ASSESSMENT_PATTERNS.some((p) => p.test(currentMessage));
   const hasOwnership = OWNERSHIP_PATTERNS.some((p) => p.test(currentMessage));
+  const hasArrowChain = /(?:→|-{1,3}>|={1,2}>|>{2,3})/.test(currentMessage);
   if (hasAssessmentLanguage && hasOwnership && subjectMatches.length >= 2) {
+    return { intent: 'system_assessment', subjects, subjectMatches, desires };
+  }
+  if (hasArrowChain && subjectMatches.length >= 3) {
     return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }
 

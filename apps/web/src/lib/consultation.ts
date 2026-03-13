@@ -514,6 +514,42 @@ const BRAND_PROFILES: BrandProfile[] = [
       { label: 'Official website', url: 'https://www.audalytic.com/', region: 'global' },
     ],
   },
+  {
+    names: ['goldmund'],
+    country: 'Switzerland',
+    brandScale: 'specialist',
+    region: 'europe',
+    categories: ['dac', 'amplifier'],
+    philosophy: 'Goldmund designs around speed, transparency, and mechanical precision. The engineering philosophy prioritises low distortion, fast transient response, and tightly controlled signal paths. JOB is the accessible sister brand.',
+    tendencies: 'Goldmund electronics are described as fast, transparent, precise, and controlled. Tonal character is lean and articulate — speed and clarity dominate over warmth or harmonic density. The SRDA DAC follows this pattern with a clean, analytical presentation.',
+    systemContext: 'Goldmund sources and amplifiers work well with speakers that provide their own tonal body. In systems already biased toward precision, the cumulative leanness may thin out the presentation.',
+    links: [
+      { label: 'Official website', url: 'https://www.goldmund.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['crayon'],
+    country: 'Germany',
+    brandScale: 'boutique',
+    region: 'europe',
+    categories: ['amplifier'],
+    philosophy: 'Crayon Audio designs compact, high-current integrated amplifiers. The CIA series uses a minimalist circuit topology with high damping factor and fast slew rate, prioritising speed and dynamic grip.',
+    tendencies: 'Crayon amplifiers are described as fast, transparent, and dynamically precise. They tend toward a controlled, articulate presentation with strong transient definition and excellent speaker control. Tonal character is neutral-to-lean.',
+    systemContext: 'Crayon integrateds work well with speakers that benefit from tight amplifier control — sealed-box designs, transmission lines, and low-sensitivity monitors. In systems with warm or dense sources, the Crayon provides balancing speed and grip.',
+    links: [
+      { label: 'Official website', url: 'https://www.crayonaudio.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['xsa'],
+    country: 'Unknown',
+    brandScale: 'boutique',
+    region: 'other',
+    categories: ['speaker'],
+    philosophy: 'XSA designs speakers with an emphasis on dynamic engagement and clarity. Limited public information is available — characterisation is based on the Vanguard bookshelf model.',
+    tendencies: 'The XSA Vanguard is described as lively, detailed, and dynamically engaging. A compact bookshelf design with good transient response and vocal clarity.',
+    systemContext: 'Bookshelf speakers in this class benefit from quality amplification with good damping and current delivery. Room placement matters for bass reinforcement.',
+  },
 ];
 
 // ── Topology keywords for archetype matching ────────
@@ -2841,10 +2877,12 @@ function roleSort(role: string): number {
 function extractFullChain(
   rawMessage: string,
 ): { segments: string[]; confidence: 'high' | 'medium' } | undefined {
-  // ── Style 1: arrow-separated (→ or ->) ──
-  if (rawMessage.includes('→') || rawMessage.includes('->')) {
+  // ── Style 1: arrow-separated ──
+  // Matches: → , -> , --> , ---> , ==> , >> and similar arrow-like separators.
+  const ARROW_RE = /\s*(?:→|—>|-{1,3}>|={1,2}>|>{2,3})\s*/;
+  if (ARROW_RE.test(rawMessage)) {
     const segments = rawMessage
-      .split(/\s*(?:→|->)\s*/)
+      .split(ARROW_RE)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
     if (segments.length >= 2) {

@@ -42,6 +42,7 @@ const BRAND_CATEGORY_MAP: Record<string, ProductCategory> = {
   shindo: 'amplifier', leben: 'amplifier', 'audio note': 'amplifier',
   'line magnetic': 'amplifier', primaluna: 'amplifier', cary: 'amplifier',
   'audio research': 'amplifier', arc: 'amplifier', job: 'integrated',
+  goldmund: 'dac', crayon: 'integrated', xsa: 'speaker',
   // Turntables
   rega: 'turntable', 'pro-ject': 'turntable', technics: 'turntable',
   clearaudio: 'turntable', vpi: 'turntable', linn: 'turntable', thorens: 'turntable',
@@ -114,6 +115,13 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   'k9 pro': { brand: 'FiiO', category: 'dac' },
   // HiFiMAN
   ef400: { brand: 'HiFiMAN', category: 'dac' },
+  // Goldmund
+  srda: { brand: 'Goldmund', category: 'dac' },
+  // Crayon
+  'cia-1': { brand: 'Crayon', category: 'integrated' },
+  'cia-1t': { brand: 'Crayon', category: 'integrated' },
+  // XSA
+  vanguard: { brand: 'XSA', category: 'speaker' },
   // Denafrips aliases
   'ares ii': { brand: 'Denafrips', category: 'dac' },
   'pontus 12th-1': { brand: 'Denafrips', category: 'dac' },
