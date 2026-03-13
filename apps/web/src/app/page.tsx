@@ -51,6 +51,13 @@ const CYCLING_PLACEHOLDERS = [
 /** Interval in ms between placeholder rotations. */
 const PLACEHOLDER_INTERVAL = 4000;
 
+/** Generate a stable message ID for advisory messages. */
+function advisoryId(): string {
+  return typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `adv-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
 
 // ── Reducer ───────────────────────────────────────────
 
@@ -59,7 +66,8 @@ type Action =
   | { type: 'ADD_USER_MESSAGE' }
   | { type: 'ADD_QUESTION'; clarification: ClarificationResponse }
   | { type: 'ADD_GLOSSARY'; entry: GlossaryResult }
-  | { type: 'ADD_ADVISORY'; advisory: AdvisoryResponse }
+  | { type: 'ADD_ADVISORY'; advisory: AdvisoryResponse; id?: string }
+  | { type: 'UPDATE_ADVISORY'; id: string; advisory: AdvisoryResponse }
   | { type: 'ADD_NOTE'; content: string }
   | { type: 'SET_MODE'; mode: ConversationMode }
   | { type: 'SET_REASONING'; reasoning: ReasoningResult }
@@ -113,8 +121,18 @@ function reducer(state: ConversationState, action: Action): ConversationState {
         ...state,
         messages: [
           ...state.messages,
-          { role: 'assistant', kind: 'advisory', advisory: action.advisory },
+          { role: 'assistant', kind: 'advisory', advisory: action.advisory, ...(action.id ? { id: action.id } : {}) },
         ],
+      };
+
+    case 'UPDATE_ADVISORY':
+      return {
+        ...state,
+        messages: state.messages.map((m) =>
+          m.role === 'assistant' && m.kind === 'advisory' && 'id' in m && m.id === action.id
+            ? { ...m, advisory: action.advisory }
+            : m,
+        ),
       };
 
     case 'ADD_NOTE':
@@ -288,7 +306,7 @@ export default function Home() {
       isComparisonFollowUp(submittedText, state.activeComparison)
     ) {
       const refinement = buildComparisonRefinement(state.activeComparison, submittedText);
-      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(refinement) });
+      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(refinement), id: advisoryId() });
       dispatch({ type: 'SET_LOADING', value: false });
       return;
     }
@@ -304,7 +322,7 @@ export default function Home() {
       const contextKind = detectContextEnrichment(submittedText);
       if (contextKind) {
         const refinement = buildContextRefinement(state.activeComparison, submittedText, contextKind);
-        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(refinement) });
+        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(refinement), id: advisoryId() });
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -329,7 +347,7 @@ export default function Home() {
     ) {
       const followUp = buildConsultationFollowUp(state.activeConsultation, submittedText);
       if (followUp) {
-        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(followUp) });
+        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(followUp), id: advisoryId() });
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -347,7 +365,7 @@ export default function Home() {
     // the evaluation approach and asks for system details.
     if (intent === 'consultation_entry') {
       const entryResult = buildConsultationEntry(submittedText, turnCtx.desires, turnCtx.activeSystem);
-      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(entryResult) });
+      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(entryResult), id: advisoryId() });
       dispatch({ type: 'SET_LOADING', value: false });
       return;
     }
@@ -357,7 +375,7 @@ export default function Home() {
     // strategy, system context, tuning direction, and trade-offs.
     if (intent === 'cable_advisory') {
       const cableResult = buildCableAdvisory(submittedText, turnCtx.subjectMatches, turnCtx.desires, turnCtx.activeSystem);
-      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(cableResult) });
+      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(cableResult), id: advisoryId() });
       if (turnCtx.subjectMatches.length > 0) {
         dispatch({
           type: 'SET_CONSULTATION_CONTEXT',
@@ -383,7 +401,8 @@ export default function Home() {
           dispatch({ type: 'SET_LOADING', value: false });
           return;
         }
-        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(assessmentResult.response) });
+        const assessmentMsgId = advisoryId();
+        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(assessmentResult.response), id: assessmentMsgId });
         // Store consultation context so follow-ups stay in the system context
         dispatch({
           type: 'SET_CONSULTATION_CONTEXT',
@@ -425,7 +444,7 @@ export default function Home() {
             originalQuery: submittedText,
           });
         }
-        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(consultResult) });
+        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(consultResult), id: advisoryId() });
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -471,7 +490,7 @@ export default function Home() {
             originalQuery: submittedText,
           });
         }
-        dispatch({ type: 'ADD_ADVISORY', advisory: gearResponseToAdvisory(gearResponse) });
+        dispatch({ type: 'ADD_ADVISORY', advisory: gearResponseToAdvisory(gearResponse), id: advisoryId() });
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -542,7 +561,7 @@ export default function Home() {
               });
             }
             const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning);
-            dispatch({ type: 'ADD_ADVISORY', advisory: shoppingToAdvisory(answer, data.signals, reasoning) });
+            dispatch({ type: 'ADD_ADVISORY', advisory: shoppingToAdvisory(answer, data.signals, reasoning), id: advisoryId() });
 
             // Subtle note when the stored taste profile influenced the direction
             if (reasoning.taste.storedProfileUsed) {
@@ -594,7 +613,7 @@ export default function Home() {
           if (clarification) {
             dispatch({ type: 'ADD_QUESTION', clarification });
           } else {
-            dispatch({ type: 'ADD_ADVISORY', advisory: analysisToAdvisory(data.result, data.signals, diagDirection, reasoning) });
+            dispatch({ type: 'ADD_ADVISORY', advisory: analysisToAdvisory(data.result, data.signals, diagDirection, reasoning), id: advisoryId() });
           }
         }
       }

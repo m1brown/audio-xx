@@ -113,7 +113,7 @@ export type Message =
   | { role: 'assistant'; content: string; kind: 'note' }
   | { role: 'assistant'; kind: 'question'; clarification: ClarificationResponse }
   | { role: 'assistant'; kind: 'glossary'; entry: GlossaryResult }
-  | { role: 'assistant'; kind: 'advisory'; advisory: AdvisoryResponse };
+  | { role: 'assistant'; kind: 'advisory'; advisory: AdvisoryResponse; id?: string };
 
 export interface ConversationState {
   messages: Message[];
