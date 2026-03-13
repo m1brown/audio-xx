@@ -1,9 +1,22 @@
 /**
- * Per-component structured analysis — audiophile review style.
+ * Audio XX — Advisory Presentation Layer
  *
- * Each component: bold name heading, summary sentence, contribution
- * and trade-off bullet lists, verdict sentence. HR dividers between
- * components.
+ * These files format deterministic reasoning output into the structured
+ * system review shown to the user.
+ *
+ * Important:
+ *   The reasoning engine remains the source of truth.
+ *   This layer should only:
+ *     - format advisory structure
+ *     - apply narrative tone
+ *     - render UI components
+ *   Do NOT add reasoning logic here.
+ *
+ * ── Per-component structured analysis ────────────────
+ *
+ * Each component: bold name heading, summary sentence, sonic
+ * contribution and tendency bullet lists, verdict sentence.
+ * HR dividers between components.
  */
 
 import type { ComponentAssessment } from '../../lib/advisory-response';

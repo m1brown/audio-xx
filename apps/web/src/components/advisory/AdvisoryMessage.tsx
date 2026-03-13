@@ -1,7 +1,18 @@
 /**
- * Main advisory message renderer.
+ * Audio XX — Advisory Presentation Layer
  *
- * Two rendering modes:
+ * These files format deterministic reasoning output into the structured
+ * system review shown to the user.
+ *
+ * Important:
+ *   The reasoning engine remains the source of truth.
+ *   This layer should only:
+ *     - format advisory structure
+ *     - apply narrative tone
+ *     - render UI components
+ *   Do NOT add reasoning logic here.
+ *
+ * ── Rendering modes ──────────────────────────────────
  *
  *   A. Memo format — when structured assessment fields are present
  *      (componentAssessments, upgradePaths, etc.). Renders as a

@@ -156,6 +156,20 @@ Evaluations of used-market listings or user-submitted components are not monetiz
 /packages/signals       ← Signal dictionary YAML + phrase-to-trait mapping
 ```
 
+### Three-Layer Pipeline
+
+System assessments flow through three layers with strict separation of concerns.
+
+**Reasoning Engine** — The deterministic analysis pipeline. Parses system chains, infers component traits from product catalog and brand profiles, synthesises system-level axes via role-weighted voting, detects bottlenecks, stacked biases, and synergies, and ranks upgrade paths. This layer is the source of truth. All analytical conclusions originate here. Key files: `consultation.ts`, `axis-types.ts`, `intent.ts`, product catalogs under `products/`.
+
+**Memo Generation** — Translates reasoning output into a structured `MemoFindings` contract and then into a `ConsultationResponse`. Assembles structured data (system chain, component verdicts, upgrade paths, keep recommendations) and pre-computed prose fields into a unified response object. An optional LLM overlay (`memo-llm-overlay.ts`) can refine prose asynchronously while the deterministic output is shown immediately. Key files: `memo-findings.ts`, `memo-deterministic-renderer.ts`, `advisory-response.ts`.
+
+**Presentation Layer** — Formats the memo response into a 9-section system review. Controls section ordering, narrative tone, and visual rendering. Does not contain reasoning logic. Key files: `AdvisoryMessage.tsx`, `AdvisoryComponentAssessments.tsx`, `AdvisoryUpgradePaths.tsx`.
+
+The 9-section review structure: (1) System Overview, (2) Current System Chain, (3) What the System Does Especially Well, (4) Trade-offs in the System, (5) Strength of Each Component, (6) Upgrade Paths, (7) Components I Would Keep, (8) Recommended Upgrade Path, (9) System Philosophy Insight.
+
+Each layer has a clear boundary. The reasoning engine never touches presentation. The presentation layer never performs analysis. The memo generation layer assembles but does not reason. When making changes, identify which layer owns the concern and modify only that layer.
+
 ### Data Flow
 
 1. User enters free text describing listening impressions
