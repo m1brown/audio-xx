@@ -189,6 +189,14 @@ export interface StackedTraitInsight {
   contributors: string[];
   /** Explanatory prose for the assessment. */
   explanation: string;
+  /**
+   * Classification of the stacked trait:
+   * - 'system_character': Intentional or desirable alignment — defines the system's
+   *   sonic identity. Not treated as a weakness.
+   * - 'system_imbalance': Stacking that pushes the system beyond reasonable thresholds,
+   *   conflicts with common listening goals, or lacks opposing counterbalance.
+   */
+  classification: 'system_character' | 'system_imbalance';
 }
 
 /**
@@ -206,6 +214,8 @@ export interface StackedTraitInsight {
 export interface AdvisoryResponse {
   /** Determines framing voice. */
   kind: 'consultation' | 'shopping' | 'diagnosis';
+  /** Display title for the assessment (e.g. "Living Room System"). */
+  title?: string;
   /** The subject being advised about (brand, product, symptom, category). */
   subject: string;
 
@@ -527,6 +537,7 @@ export function consultationToAdvisory(c: ConsultationResponse): AdvisoryRespons
 
   return enrichAdvisory({
     kind: 'consultation',
+    title: c.title,
     subject: c.subject,
 
     comparisonSummary: c.comparisonSummary,

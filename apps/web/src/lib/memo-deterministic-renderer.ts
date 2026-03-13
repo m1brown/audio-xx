@@ -156,8 +156,11 @@ function mapStackedTraitInsights(findings: MemoFindings): StackedTraitInsight[] 
   return findings.stackedTraits.map((s) => ({
     label: s.property,
     contributors: s.contributors,
-    // Generate a concise explanation from the structured data
-    explanation: `${s.contributors.join(' and ')} both push toward ${s.property.replace(/_/g, ' ')}.`,
+    classification: s.classification,
+    // Generate a concise explanation — tone depends on classification
+    explanation: s.classification === 'system_character'
+      ? `${s.contributors.join(' and ')} share ${s.property.replace(/_/g, ' ')} — a defining feature of this system's sonic identity.`
+      : `${s.contributors.join(' and ')} both push toward ${s.property.replace(/_/g, ' ')}.`,
   }));
 }
 

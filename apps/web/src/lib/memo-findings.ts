@@ -127,6 +127,8 @@ export interface StackedTraitFinding {
   property: string;
   /** Which components contribute. */
   contributors: string[];
+  /** Whether this stacking is system identity or a problematic imbalance. */
+  classification: 'system_character' | 'system_imbalance';
 }
 
 /**

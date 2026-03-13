@@ -71,6 +71,8 @@ import type { LegacyProseInputs, StructuredMemoInputs } from './memo-determinist
 // ── Types ───────────────────────────────────────────
 
 export interface ConsultationResponse {
+  /** Display title for the assessment (e.g. "Living Room System"). */
+  title?: string;
   /** The subject the user asked about (brand, topology, concept). */
   subject: string;
   /**
@@ -2297,6 +2299,22 @@ export function validateSystemComponents(
  * Prevents duplication like "JOB JOB Integrated" when the product name
  * already contains the brand name as a prefix.
  */
+/**
+ * Substring match with word-boundary awareness for short terms.
+ * For terms ≤4 characters, requires a word boundary on both sides
+ * to prevent false positives (e.g. "W5" matching inside "W500" or prose).
+ * For longer terms, uses simple includes() — false positives are unlikely.
+ */
+function wordAwareIncludes(haystack: string, needle: string): boolean {
+  if (!needle || needle.length === 0) return false;
+  if (needle.length <= 4) {
+    // Word-boundary match for short names
+    const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(?:^|\\b|[\\s(])${escaped}(?:\\b|[\\s).,!?]|$)`, 'i').test(haystack);
+  }
+  return haystack.includes(needle);
+}
+
 function normalizeDisplayName(brand: string, name: string): string {
   const b = brand.trim();
   const n = name.trim();
@@ -2337,10 +2355,12 @@ export function buildSystemAssessment(
       const brandLower = ac.brand.toLowerCase();
       if (processedNames.has(nameLower) || processedNames.has(brandLower)) continue;
 
-      // Only seed if the component's brand or model name appears in the message
-      const mentionedInMessage = msgLowerForSeed.includes(nameLower)
-        || msgLowerForSeed.includes(brandLower)
-        || msgLowerForSeed.includes(fullName.toLowerCase());
+      // Only seed if the component's brand or model name appears in the message.
+      // Use word-boundary matching for short names (≤4 chars) to prevent
+      // false positives like "W5" matching inside unrelated words.
+      const mentionedInMessage = wordAwareIncludes(msgLowerForSeed, fullName.toLowerCase())
+        || wordAwareIncludes(msgLowerForSeed, nameLower)
+        || wordAwareIncludes(msgLowerForSeed, brandLower);
       if (!mentionedInMessage) continue;
 
       processedNames.add(nameLower);
@@ -2695,7 +2715,10 @@ export function buildSystemAssessment(
   // This happens BEFORE prose generation so that system-level reasoning
   // (compounding, compensation, balance) is available to all downstream steps.
   const componentAxisProfiles = classifyComponentAxes(components);
-  const systemAxes = synthesiseSystemAxes(componentAxisProfiles.map(p => p.axes));
+  const systemAxes = synthesiseSystemAxes(
+    componentAxisProfiles.map(p => p.axes),
+    components.map(c => c.role),
+  );
   const axisCompounding = detectCompounding(componentAxisProfiles.map(p => p.axes));
 
   // ── Build per-component character paragraphs ──────
@@ -2820,7 +2843,15 @@ export function buildSystemAssessment(
   // Assemble prose and structured inputs, then delegate to the
   // renderer. This is the same output as before — just routed
   // through the renderer for structural separation.
+  // ── Build title ──
+  // Use the active system's name (e.g. "Living Room") if available,
+  // otherwise generate from the component names.
+  const assessmentTitle = activeSystem?.name
+    ? `${activeSystem.name} System`
+    : `System Assessment`;
+
   const prose: LegacyProseInputs = {
+    title: assessmentTitle,
     subject,
     systemCharacterOpening,
     componentParagraphs,
@@ -2864,7 +2895,7 @@ export function buildSystemAssessment(
 function inferSystemCharacterOpening(components: SystemComponent[]): string {
   const profiles = classifyComponentAxes(components);
   const axes = profiles.map(p => p.axes);
-  const system = synthesiseSystemAxes(axes);
+  const system = synthesiseSystemAxes(axes, components.map(c => c.role));
   const compounding = detectCompounding(axes);
   const names = components.map((c) => c.displayName).join(', ');
 
@@ -2882,7 +2913,7 @@ function inferSystemCharacterOpening(components: SystemComponent[]): string {
   if (compounding.length > 0) {
     // Compounding detected — flag it in the opening
     const direction = descriptors.length > 0 ? descriptors.join(' and ') : 'a consistent character';
-    return `A system that compounds ${direction} across the chain — multiple components push in the same direction. Components: ${names}.`;
+    return `A system that leans toward ${direction} across the chain — multiple components push in the same direction. Components: ${names}.`;
   }
 
   if (descriptors.length === 0) {
@@ -2915,7 +2946,7 @@ function inferSystemInteraction(components: SystemComponent[]): string {
   const profiles = classifyComponentAxes(components);
   const axes = profiles.map(p => p.axes);
   const compounding = detectCompounding(axes);
-  const system = synthesiseSystemAxes(axes);
+  const system = synthesiseSystemAxes(axes, components.map(c => c.role));
 
   // ── Build causal explanation fragments ────────────────
   const causalParts: string[] = [];
@@ -2936,10 +2967,22 @@ function inferSystemInteraction(components: SystemComponent[]): string {
   const smoothComponents = profiles.filter(p => p.axes.smooth_detailed === 'smooth').map(p => p.name);
   const detailedComponents = profiles.filter(p => p.axes.smooth_detailed === 'detailed').map(p => p.name);
 
-  // ── Compounding — the most important system insight ──
+  // ── Synergy recognition — shared design philosophy ──
+  // When DAC and amplifier (or multiple non-speaker components) share
+  // axis leanings, recognize the coherence positively before noting trade-offs.
+  const nonSpeakerProfiles = profiles.filter((_, i) => {
+    const r = components[i].role.toLowerCase();
+    return !r.includes('speak') && !r.includes('headphone');
+  });
+  const sharedTraits: string[] = [];
+  if (nonSpeakerProfiles.filter(p => p.axes.smooth_detailed === 'detailed').length >= 2) sharedTraits.push('detail and transparency');
+  if (nonSpeakerProfiles.filter(p => p.axes.elastic_controlled === 'elastic').length >= 2) sharedTraits.push('speed and rhythmic energy');
+  if (nonSpeakerProfiles.filter(p => p.axes.elastic_controlled === 'controlled').length >= 2) sharedTraits.push('control and composure');
+  if (nonSpeakerProfiles.filter(p => p.axes.warm_bright === 'warm').length >= 2) sharedTraits.push('tonal warmth and harmonic richness');
+
+  // ── Compounding / alignment ──
   if (compounding.length > 0) {
     const compoundDesc = compounding.map(w => {
-      // Extract the axis name from the warning string
       if (w.includes('Warm')) return 'warmth';
       if (w.includes('Bright')) return 'brightness';
       if (w.includes('Smooth')) return 'smoothness';
@@ -2952,7 +2995,18 @@ function inferSystemInteraction(components: SystemComponent[]): string {
     });
 
     const allNames = profiles.map(p => p.name);
-    return `This system compounds ${compoundDesc.join(' and ')} across the chain. ${allNames.join(', ')} push in similar directions.${causalNote} Compounding can be a strength when deliberate — it deepens the character the system commits to — but it also means the system has less internal correction if the listener's needs shift.`;
+    // If synergy traits are detected, lead with the positive framing
+    if (sharedTraits.length > 0) {
+      return `This is a coherent system — the components share a design philosophy prioritising ${sharedTraits.join(' and ')}. ${allNames.join(', ')} reinforce each other's strengths.${causalNote} The trade-off is that the system commits to this character: ${compoundDesc.join(' and ')} deepens across the chain, which rewards aligned recordings but offers less internal correction if listening priorities shift.`;
+    }
+
+    return `This system leans toward ${compoundDesc.join(' and ')} across the chain. ${allNames.join(', ')} push in similar directions.${causalNote} This can be a strength when deliberate — it deepens the character the system commits to — but it also means the system has less internal correction if the listener's needs shift.`;
+  }
+
+  // If synergy detected but no formal compounding
+  if (sharedTraits.length > 0) {
+    const allNames = profiles.map(p => p.name);
+    return `This system shows design coherence — ${allNames.join(', ')} share an emphasis on ${sharedTraits.join(' and ')}.${causalNote} The components reinforce each other's tendencies, which creates a clear and intentional system character.`;
   }
 
   // ── Complementary — warm/bright or smooth/detailed balance ──
@@ -3016,7 +3070,7 @@ function inferSystemTradeoffs(components: SystemComponent[]): string | null {
     const tradeoffs: string[] = [];
     for (const warning of compounding) {
       if (warning.includes('warm')) {
-        tradeoffs.push('Stacked warmth may reduce transient precision and compress spatial definition. If recordings feel congested or slow, the system may be compounding density beyond what serves the music.');
+        tradeoffs.push('Stacked warmth may reduce transient precision and compress spatial definition. If recordings feel congested or slow, the system may be leaning too far into density.');
       } else if (warning.includes('bright')) {
         tradeoffs.push('Stacked brightness may thin tonal body and increase fatigue risk. If extended sessions feel clinical or lean, the cumulative brightness may be outpacing the system\'s ability to deliver musical warmth.');
       } else if (warning.includes('smooth')) {
@@ -3229,31 +3283,51 @@ function classifyComponentAxes(components: SystemComponent[]): ComponentAxisProf
     // 2. Brand-profile text inference — coarser but still useful
     if (c.brandProfile) {
       const t = c.brandProfile.tendencies.toLowerCase();
+      // Context-aware keyword match: reject hits that are negated
+      // e.g. "tonal warmth is not a primary characteristic" should NOT match 'warm'
+      const NEGATION_RE = /\b(?:not|no|isn'?t|aren'?t|without|lack(?:s|ing)?|never)\b/;
+      function hasAffirmative(text: string, keywords: string[]): boolean {
+        for (const kw of keywords) {
+          const idx = text.indexOf(kw);
+          if (idx < 0) continue;
+          // Check ~40 chars before the keyword for negation
+          const before = text.slice(Math.max(0, idx - 40), idx);
+          if (NEGATION_RE.test(before)) continue;
+          // Check ~30 chars after the keyword for "is not", "are not" patterns
+          const after = text.slice(idx, idx + kw.length + 30);
+          if (/\b(?:is|are|was|were)\s+(?:not|never)\b/.test(after)) continue;
+          return true;
+        }
+        return false;
+      }
       return {
         name: c.displayName,
         axes: {
           warm_bright:
-            (t.includes('warm') || t.includes('rich') || t.includes('dense') || t.includes('lush'))
+            hasAffirmative(t, ['warm', 'rich', 'dense', 'lush'])
               ? 'warm' as const
-              : (t.includes('bright') || t.includes('precise') || t.includes('clarity') || t.includes('analytical'))
+              // "lean" removed — it describes tonal density, not treble emphasis.
+              // Speed/transient keywords belong on the elastic_controlled axis.
+              : hasAffirmative(t, ['bright', 'analytical', 'tilted'])
+                || (hasAffirmative(t, ['precise', 'clarity']) && hasAffirmative(t, ['articulate']))
                 ? 'bright' as const
                 : 'neutral' as const,
           smooth_detailed:
-            (t.includes('smooth') || t.includes('liquid') || t.includes('flowing') || t.includes('musical'))
+            hasAffirmative(t, ['smooth', 'liquid', 'flowing'])
               ? 'smooth' as const
-              : (t.includes('detailed') || t.includes('revealing') || t.includes('transparent') || t.includes('resolving'))
+              : hasAffirmative(t, ['detailed', 'revealing', 'transparent', 'resolving'])
                 ? 'detailed' as const
                 : 'neutral' as const,
           elastic_controlled:
-            (t.includes('elastic') || t.includes('dynamic') || t.includes('lively') || t.includes('punchy'))
+            hasAffirmative(t, ['elastic', 'dynamic', 'lively', 'punchy', 'fast', 'transient', 'speed', 'agile'])
               ? 'elastic' as const
-              : (t.includes('controlled') || t.includes('composed') || t.includes('authoritative') || t.includes('grip'))
+              : hasAffirmative(t, ['controlled', 'composed', 'authoritative', 'grip', 'damping'])
                 ? 'controlled' as const
                 : 'neutral' as const,
           airy_closed:
-            (t.includes('open') || t.includes('airy') || t.includes('spacious') || t.includes('expansive'))
+            hasAffirmative(t, ['open', 'airy', 'spacious', 'expansive'])
               ? 'airy' as const
-              : (t.includes('intimate') || t.includes('closed') || t.includes('focused'))
+              : hasAffirmative(t, ['intimate', 'closed', 'focused'])
                 ? 'closed' as const
                 : 'neutral' as const,
         },
@@ -3344,6 +3418,21 @@ function roleSort(role: string): number {
 }
 
 /**
+ * Upgrade influence weight — how much sonic impact upgrading this role has.
+ * Speakers define system character, DAC refines it, amp adjusts,
+ * source/streamer is secondary. Used as tiebreaker in upgrade path ranking.
+ */
+function upgradeInfluence(role: string): number {
+  const r = role.toLowerCase();
+  if (r.includes('speak') || r.includes('headphone') || r.includes('monitor')) return 3;
+  if (r.includes('dac')) return 2;
+  if (r.includes('amp') || r.includes('integrated') || r.includes('preamp')) return 1.5;
+  if (r.includes('stream') || r.includes('source') || r.includes('transport')) return 0.5;
+  if (r.includes('cable') || r.includes('accessory') || r.includes('power')) return 0.25;
+  return 1;
+}
+
+/**
  * Extract the user's full chain from their raw message.
  *
  * Supports three input styles (checked in priority order):
@@ -3387,10 +3476,27 @@ function extractFullChain(
     }
   }
 
+  // ── Style 2b: natural-language connectors ──
+  // Handles mixed connectors like "X feeding into Y, then to Z, connected to W".
+  // Split on: "feeding into", "then to", "then into", "connected to", "going to/into",
+  // "running to/into", "and then", "and". Must find at least 2 such connectors.
+  const NL_CONNECTOR_RE = /\s*(?:,\s*)?(?:feeding\s+into|then\s+(?:to|into)|connected\s+to|going\s+(?:in)?to|running\s+(?:in)?to|and\s+then\s+(?:to\s+)?(?:the\s+)?)\s+(?:the\s+)?/gi;
+  const nlConnectorCount = (rawMessage.match(NL_CONNECTOR_RE) ?? []).length;
+  if (nlConnectorCount >= 2) {
+    const segments = rawMessage
+      .split(NL_CONNECTOR_RE)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    if (segments.length >= 3) {
+      return { segments, confidence: 'high' };
+    }
+  }
+
   // ── Style 3: comma-separated component list ──
   // Strip common framing phrases first, then split on commas.
   // Only activate when the message looks like a component list rather than prose.
   const framingStripped = rawMessage
+    .replace(/^(?:evaluate|assess|review|analyze|analyse|check|rate)\s+(?:my\s+)?(?:system|setup|chain|rig)\s*:?\s*/i, '')
     .replace(/^(?:my\s+(?:system|setup|chain|rig)\s*(?:is|:)?\s*)/i, '')
     .replace(/^(?:i(?:'m|\s+am)\s+(?:running|using)\s*:?\s*)/i, '')
     .replace(/^(?:here(?:'s|\s+is)\s+(?:my\s+)?(?:system|setup|chain)\s*:?\s*)/i, '')
@@ -3405,7 +3511,7 @@ function extractFullChain(
       .map((s) => s.trim())
       // Filter out conversational noise — keep segments that look like product/brand names
       // (short, not full sentences)
-      .filter((s) => s.length > 0 && s.length < 80 && !s.includes('.'));
+      .filter((s) => s.length > 0 && s.length < 120 && !s.includes('.'));
     if (segments.length >= 2) {
       return { segments, confidence: 'medium' };
     }
@@ -3516,6 +3622,22 @@ function buildSystemChain(components: SystemComponent[], rawMessage: string): Me
       // Comma-separated — try canonical ordering, fall back to user order
       fullChain = tryCanonicalOrder(extracted.segments) ?? extracted.segments;
     }
+    // Strip leading natural-language connectors from each segment.
+    // Comma-split and "into" split can leave fragments like
+    // "then to the Job integrated amp" or "connected to the WLM Diva".
+    fullChain = fullChain.map((s) =>
+      s.replace(/^(?:then\s+(?:to|into)\s+(?:the\s+)?|and\s+(?:then\s+)?(?:to\s+(?:the\s+)?)?|connected\s+to\s+(?:the\s+)?|feeding\s+into\s+(?:the\s+)?|going\s+(?:in)?to\s+(?:the\s+)?|running\s+(?:in)?to\s+(?:the\s+)?)/i, '')
+    ).filter((s) => s.length > 0);
+
+    // Deduplicate chain segments — same component mentioned twice
+    // (e.g. from parsing artifacts) collapses to one entry.
+    const seenSegments = new Set<string>();
+    fullChain = fullChain.filter((s) => {
+      const key = s.toLowerCase().replace(/\s+/g, ' ').trim();
+      if (seenSegments.has(key)) return false;
+      seenSegments.add(key);
+      return true;
+    });
   }
 
   return {
@@ -3566,7 +3688,16 @@ function buildIntroSummary(
   const intentNote = listenerIntent ? ` ${listenerIntent}` : '';
 
   if (stacked.length > 0) {
-    return `A system ${traitPhrase}.${deliberateNote} The chain compounds ${stacked[0].label} across multiple stages — this shapes both its strengths and its primary limitation.${intentNote}`;
+    // Differentiate system character from system imbalance in the intro
+    const imbalances = stacked.filter((s) => s.classification === 'system_imbalance');
+    const characters = stacked.filter((s) => s.classification === 'system_character');
+
+    if (imbalances.length > 0) {
+      return `A system ${traitPhrase}.${deliberateNote} The chain leans toward ${imbalances[0].label} across multiple stages — this shapes both its strengths and its primary limitation.${intentNote}`;
+    }
+    if (characters.length > 0) {
+      return `A system ${traitPhrase}.${deliberateNote} The chain shares a consistent lean toward ${characters[0].label} — this defines the system's sonic identity rather than limiting it.${intentNote}`;
+    }
   }
 
   return `A system ${traitPhrase}.${deliberateNote} The overall character emerges from how these components interact rather than any single piece dominating.${intentNote}`;
@@ -3714,7 +3845,7 @@ function deriveSonicProperties(axes: PrimaryAxisLeanings, traits?: Record<string
 }
 
 const STACKED_LABELS: Record<SonicProperty, string> = {
-  high_speed: 'high transient bias',
+  high_speed: 'transient speed',
   low_stored_energy: 'low stored energy',
   high_density: 'harmonic density',
   high_damping: 'high damping / analytical control',
@@ -3725,15 +3856,127 @@ const STACKED_LABELS: Record<SonicProperty, string> = {
   high_control: 'control emphasis',
 };
 
-const STACKED_EXPLANATIONS: Record<SonicProperty, string> = {
-  high_speed: 'The system compounds transient speed across multiple components. Excellent elasticity and microdetail, but tonal density may be reduced.',
+// ── System character vs system imbalance ─────────────
+//
+// Not all trait stacking is a weakness. When multiple components share a
+// direction that represents a coherent sonic philosophy, it's system
+// identity — not a problem. Only classify as imbalance when:
+//   1. The stacking conflicts with common listening goals (e.g., extreme
+//      brightness/leanness increases fatigue risk).
+//   2. The opposing axis is completely absent AND the stacking is extreme
+//      (3+ contributors).
+//   3. The property itself is inherently subtractive (e.g., low_density
+//      removes tonal body rather than adding a positive quality).
+
+/** Properties that represent coherent sonic philosophies when stacked. */
+const CHARACTER_PROPERTIES = new Set<SonicProperty>([
+  'high_speed',
+  'high_elasticity',
+  'high_density',
+  'high_detail',
+  'high_smoothness',
+]);
+
+/**
+ * Properties that are inherently problematic when stacked — they
+ * subtract sonic qualities rather than defining a positive identity.
+ */
+const IMBALANCE_PROPERTIES = new Set<SonicProperty>([
+  'low_density',
+  'low_stored_energy',
+]);
+
+/**
+ * Properties that are neutral — they can be character or imbalance
+ * depending on how extreme the stacking is and what else is present.
+ */
+// high_damping, high_control — default to imbalance (overdamping risk)
+
+/**
+ * Opposing-axis pairs. When a character property is stacked but its
+ * opposite is completely absent across all components AND 3+ components
+ * contribute, reclassify as imbalance (no counterbalance).
+ */
+const OPPOSING_PROPERTY: Partial<Record<SonicProperty, SonicProperty[]>> = {
+  high_speed: ['high_density', 'high_smoothness'],
+  high_density: ['high_speed', 'high_detail'],
+  high_detail: ['high_smoothness', 'high_density'],
+  high_smoothness: ['high_detail', 'high_speed'],
+  high_elasticity: ['high_control', 'high_damping'],
+};
+
+/**
+ * Classify a stacked trait as system character or system imbalance.
+ *
+ * @param prop           The sonic property being stacked
+ * @param contributorCount  How many components share this property
+ * @param allProps       ALL properties present in ANY component (not just stacked)
+ * @param componentCount Total number of components in the system
+ */
+function classifyStackedTrait(
+  prop: SonicProperty,
+  contributorCount: number,
+  allProps: Set<SonicProperty>,
+  componentCount: number,
+): 'system_character' | 'system_imbalance' {
+  // Inherently subtractive properties → always imbalance
+  if (IMBALANCE_PROPERTIES.has(prop)) return 'system_imbalance';
+
+  // Damping/control properties → default to imbalance (overdamping risk)
+  if (prop === 'high_damping' || prop === 'high_control') return 'system_imbalance';
+
+  // Character properties → system identity in most cases.
+  // Only reclassify as imbalance when ALL of:
+  //   1. Every non-source component contributes (near-total stacking)
+  //   2. Not a single component carries the opposing trait
+  //   3. The stacking exceeds the component count threshold (>75% of chain)
+  if (CHARACTER_PROPERTIES.has(prop)) {
+    const opposites = OPPOSING_PROPERTY[prop];
+    const hasAnyOpposition = opposites ? opposites.some((opp) => allProps.has(opp)) : true;
+
+    // If any component carries an opposing trait, system has counterbalance
+    if (hasAnyOpposition) return 'system_character';
+
+    // No opposing trait at all — only flag as imbalance if stacking is
+    // near-total (>75% of the chain) AND the property is one that
+    // degrades with extreme concentration
+    const stackRatio = contributorCount / componentCount;
+    if (stackRatio > 0.75) {
+      return 'system_imbalance';
+    }
+
+    return 'system_character';
+  }
+
+  // Fallback: treat as imbalance (conservative)
+  return 'system_imbalance';
+}
+
+/**
+ * Two sets of explanations: one for system character (framed positively),
+ * one for system imbalance (notes the trade-off risk).
+ */
+const CHARACTER_EXPLANATIONS: Record<SonicProperty, string> = {
+  high_speed: 'The system is built around transient speed and articulation. This is a defining identity — fast, elastic, rhythmically engaging.',
   low_stored_energy: 'Multiple low-stored-energy components produce fast, articulate sound. Extended listening may feel lean on harmonically dense material.',
-  high_density: 'The chain stacks tonal density — rich, immersive midrange, but transient precision and spatial separation may be constrained.',
+  high_density: 'The chain prioritizes tonal richness and midrange body. This is a defining identity — immersive, harmonically saturated, physically present.',
   high_damping: 'Stacked control and damping. Composure under load is excellent, but dynamic expression and elasticity may feel suppressed.',
   low_density: 'Multiple components contribute thin midrange character. The system may lack tonal body and weight on acoustic material.',
-  high_detail: 'Detail emphasis compounds across the chain. Microdetail retrieval is strong, but lesser recordings may sound unforgiving.',
-  high_smoothness: 'Smoothness stacks across components. Musical flow is excellent, but transient edges and fine detail may be softened.',
-  high_elasticity: 'Dynamic energy compounds across the chain. Rhythmic engagement is strong, but composure on complex passages may be limited.',
+  high_detail: 'The system is built around resolution and transparency. This is a defining identity — revealing, micro-detailed, honest with recordings.',
+  high_smoothness: 'The chain prioritizes musical flow and liquidity. This is a defining identity — effortless, non-fatiguing, easy to listen to for hours.',
+  high_elasticity: 'The system is built around rhythmic energy and dynamic expression. This is a defining identity — alive, punchy, musically engaging.',
+  high_control: 'Control emphasis stacks in the chain. Stability and grip are excellent, but the presentation may feel overdamped or mechanical.',
+};
+
+const IMBALANCE_EXPLANATIONS: Record<SonicProperty, string> = {
+  high_speed: 'Transient speed stacks beyond typical balance. Excellent articulation, but tonal density and midrange body may be noticeably reduced.',
+  low_stored_energy: 'Multiple low-stored-energy components produce fast, articulate sound. Extended listening may feel lean on harmonically dense material.',
+  high_density: 'The chain stacks tonal density beyond typical balance — rich midrange, but transient precision and spatial separation may be constrained.',
+  high_damping: 'Stacked control and damping. Composure under load is excellent, but dynamic expression and elasticity may feel suppressed.',
+  low_density: 'Multiple components contribute thin midrange character. The system may lack tonal body and weight on acoustic material.',
+  high_detail: 'Detail emphasis stacks beyond typical balance. Microdetail retrieval is strong, but lesser recordings may sound unforgiving.',
+  high_smoothness: 'Smoothness stacks beyond typical balance. Musical flow is excellent, but transient edges and fine detail may be softened.',
+  high_elasticity: 'Dynamic energy stacks beyond typical balance. Rhythmic engagement is strong, but composure on complex passages may be limited.',
   high_control: 'Control emphasis stacks in the chain. Stability and grip are excellent, but the presentation may feel overdamped or mechanical.',
 };
 
@@ -3751,14 +3994,22 @@ function detectStackedTraits(
     }
   }
 
-  // Properties shared by 2+ components = stacked
+  // Collect ALL properties present across any component (for opposing-axis checks)
+  const allProps = new Set<SonicProperty>(propMap.keys());
+
+  // Properties shared by 2+ components = stacked; classify each
   const insights: MemoStackedTraitInsight[] = [];
   for (const [prop, contributors] of propMap) {
     if (contributors.length >= 2) {
+      const classification = classifyStackedTrait(prop, contributors.length, allProps, components.length);
+      const explanation = classification === 'system_character'
+        ? CHARACTER_EXPLANATIONS[prop]
+        : IMBALANCE_EXPLANATIONS[prop];
       insights.push({
         label: STACKED_LABELS[prop],
         contributors,
-        explanation: STACKED_EXPLANATIONS[prop],
+        explanation,
+        classification,
       });
     }
   }
@@ -3790,27 +4041,41 @@ function detectPrimaryConstraint(
   const candidates: ConstraintCandidate[] = [];
 
   // ── Stacked bias constraint (system-level, not per-component) ──
-  if (stacked.length > 0) {
-    const dominant = stacked[0];
-    // Find which component contributes most to the stack
-    // (prefer the component that appears in the most stacked traits)
+  // Only system_imbalance traits count as constraints. system_character
+  // traits define the system's sonic identity and are not penalized.
+  // Speakers/headphones define system character — stacking with them is
+  // intentional alignment, not a constraint. Blame non-speaker components.
+  const imbalanceTraits = stacked.filter((s) => s.classification === 'system_imbalance');
+  if (imbalanceTraits.length > 0) {
+    const dominant = imbalanceTraits[0];
+    // Find which NON-SPEAKER component contributes most to the imbalance
+    const speakerNames = new Set(
+      components
+        .filter((sc) => sc.role.includes('speak') || sc.role.includes('headphone'))
+        .map((sc) => sc.displayName),
+    );
     const frequency = new Map<string, number>();
-    for (const s of stacked) {
+    for (const s of imbalanceTraits) {
       for (const name of s.contributors) {
-        frequency.set(name, (frequency.get(name) ?? 0) + 1);
+        if (!speakerNames.has(name)) {
+          frequency.set(name, (frequency.get(name) ?? 0) + 1);
+        }
       }
     }
-    let topContributor = dominant.contributors[0];
-    let topCount = 0;
-    for (const [name, count] of frequency) {
-      if (count > topCount) { topContributor = name; topCount = count; }
+    // If only speakers contribute to stacking, this isn't a constraint
+    if (frequency.size > 0) {
+      let topContributor = '';
+      let topCount = 0;
+      for (const [name, count] of frequency) {
+        if (count > topCount) { topContributor = name; topCount = count; }
+      }
+      candidates.push({
+        componentName: topContributor,
+        category: 'stacked_bias',
+        explanation: `The chain leans toward ${dominant.label}. ${topContributor} is the strongest contributor to this bias.`,
+        severity: imbalanceTraits.length * 2 + 1,
+      });
     }
-    candidates.push({
-      componentName: topContributor,
-      category: 'stacked_bias',
-      explanation: `${dominant.label} compounds across the chain. ${topContributor} is the strongest contributor to this bias.`,
-      severity: stacked.length * 2 + 3,
-    });
   }
 
   // ── Per-component constraints ──
@@ -3820,27 +4085,40 @@ function detectPrimaryConstraint(
     const traits = c.product?.traits;
     const role = c.role.toLowerCase();
 
-    // DAC limitations — low tonal density, low flow, delta-sigma glare risk
+    // DAC limitations — low tonal density, low flow, limited scale/authority,
+    // portable-in-desktop context, delta-sigma glare risk
     if (role === 'dac' || role.includes('dac')) {
       let severity = 0;
       const issues: string[] = [];
-      if (traits && (traits.tonal_density ?? 0.5) < 0.4) {
+      if (traits && (traits.tonal_density ?? 0.5) <= 0.4) {
         severity += 3;
-        issues.push('low tonal density');
+        issues.push('limited tonal density');
       }
       if (traits && (traits.flow ?? 0.5) < 0.4) {
         severity += 2;
         issues.push('limited musical flow');
       }
+      if (traits && (traits.composure ?? 0.5) <= 0.4) {
+        severity += 2;
+        issues.push('limited composure and authority');
+      }
       if (axes.warm_bright === 'bright' && system.warm_bright === 'bright') {
         severity += 2;
         issues.push('brightness compounding with system lean');
+      }
+      // Portable DAC used in a desktop/speaker system — scale mismatch
+      const subcat = c.product?.subcategory ?? '';
+      const isPortable = subcat.includes('portable') || subcat.includes('headphone');
+      const hasSpeakers = components.some((sc) => sc.role.includes('speak'));
+      if (isPortable && hasSpeakers) {
+        severity += 4;
+        issues.push('portable DAC in a speaker system — output authority and scale may limit the chain');
       }
       if (severity > 0) {
         candidates.push({
           componentName: c.displayName,
           category: 'dac_limitation',
-          explanation: `DAC limitation: ${issues.join(', ')}. This is the most upstream constraint and affects everything downstream.`,
+          explanation: `DAC limitation: ${issues.join(', ')}. The DAC sets the analog quality ceiling for everything downstream.`,
           severity,
         });
       }
@@ -4102,10 +4380,19 @@ function buildUpgradePaths(
   }
 
   // ── Paths 2–3: remaining components by weakness severity ──
+  // Sort by weakness count first, then by role influence hierarchy
+  // (speakers > DAC > amp > streamer) as tiebreaker — higher-influence
+  // components are more impactful upgrade targets.
   const remaining = assessments
     .map((a, i) => ({ assessment: a, component: components[i], profile: profiles[i] }))
     .filter((r) => r.component.displayName !== constraint?.componentName && r.assessment.weaknesses.length >= 1)
-    .sort((a, b) => b.assessment.weaknesses.length - a.assessment.weaknesses.length);
+    .sort((a, b) => {
+      const weakDiff = b.assessment.weaknesses.length - a.assessment.weaknesses.length;
+      if (weakDiff !== 0) return weakDiff;
+      // Tiebreaker: role influence hierarchy — speakers have the largest
+      // sonic impact, followed by DAC, amplifier, then source/streamer.
+      return upgradeInfluence(b.component.role) - upgradeInfluence(a.component.role);
+    });
 
   for (const r of remaining.slice(0, 2)) {
     const rank = paths.length + 1;
@@ -4286,6 +4573,7 @@ function extractMemoFindings(
   const stackedTraits: StackedTraitFinding[] = stacked.map((s) => ({
     property: s.label, // inherits from STACKED_LABELS — already a short tag
     contributors: s.contributors,
+    classification: s.classification,
   }));
 
   // ── Bottleneck → structured finding ──
@@ -4541,16 +4829,28 @@ function buildKeyObservation(
   // ── Philosophy-driven observation ──
   if (philosophyTraits.length > 0) {
     const philo = philosophyTraits.join(' and ');
-    const stackedNote = stacked.length > 0
-      ? ` The chain compounds ${stacked[0].label}, which deepens this character but narrows the system's range.`
-      : '';
+    const imbalances = stacked.filter((s) => s.classification === 'system_imbalance');
+    const characters = stacked.filter((s) => s.classification === 'system_character');
+    let stackedNote = '';
+    if (imbalances.length > 0) {
+      stackedNote = ` The chain leans toward ${imbalances[0].label}, which deepens this character but narrows the system's range.`;
+    } else if (characters.length > 0) {
+      stackedNote = ` The chain shares a consistent ${characters[0].label} emphasis — this reinforces the system's identity.`;
+    }
 
     return `Your component choices suggest a preference for equipment emphasising **${philo}**. ${brandNames.join(', ')} share this design philosophy.${stackedNote} Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.`;
   }
 
   // ── Balanced fallback ──
   if (stacked.length > 0) {
-    return `Despite broadly balanced axis positions, the system stacks ${stacked[0].label} across the chain. This is worth monitoring — it can be a deliberate strength or an emerging limitation depending on listening priorities. Targeted component changes can adjust this without rebuilding the system.`;
+    const imbalances = stacked.filter((s) => s.classification === 'system_imbalance');
+    const characters = stacked.filter((s) => s.classification === 'system_character');
+    if (imbalances.length > 0) {
+      return `Despite broadly balanced axis positions, the system stacks ${imbalances[0].label} across the chain. This is worth monitoring — it can be a deliberate strength or an emerging limitation depending on listening priorities. Targeted component changes can adjust this without rebuilding the system.`;
+    }
+    if (characters.length > 0) {
+      return `The system shares a consistent ${characters[0].label} emphasis across components. This is a defining feature of the system's sonic identity — not a limitation. Future upgrades should preserve this character.`;
+    }
   }
 
   return `This system is architecturally balanced. No single design philosophy dominates. Upgrades from here are about refinement — choosing which quality to intensify. The risk is low; the system tolerates experimentation in any direction.`;
@@ -4581,7 +4881,7 @@ function buildAssessmentPreferenceAlignment(
   const wantsLessFatigue = !wantMore && ['fatigue', 'harshness', 'glare', 'brightness', 'sibilance'].some((q) => quality.includes(q));
 
   if (wantsWarmth && systemLean === 'warm') {
-    return `You mentioned wanting more ${quality}. Your system already leans in that direction — the question is whether it has gone far enough or whether the warmth is compounding past the point of clarity.`;
+    return `You mentioned wanting more ${quality}. Your system already leans in that direction — the question is whether it has gone far enough or whether the warmth has pushed past the point of clarity.`;
   }
   if (wantsWarmth && systemLean === 'precise') {
     return `You mentioned wanting more ${quality}. Your system currently leans toward precision, so there is room to shift the balance — the most effective lever depends on which component is contributing the most analytical character.`;
