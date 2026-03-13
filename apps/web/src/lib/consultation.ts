@@ -2709,17 +2709,128 @@ function roleSort(role: string): number {
 
 /**
  * Extract the user's full chain from their raw message.
- * Looks for arrow-separated segments (→ or ->).
- * Returns the segments trimmed, or undefined if no chain found.
+ *
+ * Supports three input styles (checked in priority order):
+ *   1. Arrow-separated chains (→ or ->)
+ *   2. "into" phrasing ("streamer into DAC into amp into speakers")
+ *   3. Comma-separated or labeled component lists when at least 2 segments exist
+ *
+ * Returns an object with:
+ *   - segments: the extracted segment strings
+ *   - confidence: 'high' when explicit ordering markers are present (arrows, "into"),
+ *                 'medium' when commas provide a plausible list but order is ambiguous,
+ *                 undefined when no chain could be extracted.
  */
-function extractFullChain(rawMessage: string): string[] | undefined {
-  // Match arrow-separated chains (→ or ->)
-  if (!rawMessage.includes('→') && !rawMessage.includes('->')) return undefined;
-  const segments = rawMessage
-    .split(/\s*(?:→|->)\s*/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  return segments.length >= 2 ? segments : undefined;
+function extractFullChain(
+  rawMessage: string,
+): { segments: string[]; confidence: 'high' | 'medium' } | undefined {
+  // ── Style 1: arrow-separated (→ or ->) ──
+  if (rawMessage.includes('→') || rawMessage.includes('->')) {
+    const segments = rawMessage
+      .split(/\s*(?:→|->)\s*/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    if (segments.length >= 2) {
+      return { segments, confidence: 'high' };
+    }
+  }
+
+  // ── Style 2: "into" phrasing ──
+  // e.g. "Eversolo DMP-A6 into Chord Hugo into JOB Integrated into WLM Diva"
+  // Only use when "into" appears at least twice (otherwise it's likely just prose).
+  const intoCount = (rawMessage.match(/\binto\b/gi) ?? []).length;
+  if (intoCount >= 2) {
+    const segments = rawMessage
+      .split(/\s+into\s+/i)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    if (segments.length >= 2) {
+      return { segments, confidence: 'high' };
+    }
+  }
+
+  // ── Style 3: comma-separated component list ──
+  // Strip common framing phrases first, then split on commas.
+  // Only activate when the message looks like a component list rather than prose.
+  const framingStripped = rawMessage
+    .replace(/^(?:my\s+(?:system|setup|chain|rig)\s*(?:is|:)?\s*)/i, '')
+    .replace(/^(?:i(?:'m|\s+am)\s+(?:running|using)\s*:?\s*)/i, '')
+    .replace(/^(?:here(?:'s|\s+is)\s+(?:my\s+)?(?:system|setup|chain)\s*:?\s*)/i, '')
+    .replace(/^(?:current\s+(?:system|setup|chain)\s*:?\s*)/i, '')
+    .trim();
+
+  // Need at least one comma and the segments should look like component names
+  // (not long prose sentences)
+  if (framingStripped.includes(',')) {
+    const segments = framingStripped
+      .split(/\s*,\s*/)
+      .map((s) => s.trim())
+      // Filter out conversational noise — keep segments that look like product/brand names
+      // (short, not full sentences)
+      .filter((s) => s.length > 0 && s.length < 80 && !s.includes('.'));
+    if (segments.length >= 2) {
+      return { segments, confidence: 'medium' };
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Attempt to reorder chain segments into canonical signal-flow order.
+ *
+ * For each segment, tries to infer a role from known brand/product names
+ * and role keywords, then sorts by ROLE_ORDER.
+ *
+ * Returns the reordered segments if ALL segments can be role-classified
+ * (high confidence). Otherwise returns undefined — the caller should
+ * fall back to the user's original order.
+ */
+function tryCanonicalOrder(segments: string[]): string[] | undefined {
+  const classified: { segment: string; order: number; originalIdx: number }[] = [];
+
+  for (let i = 0; i < segments.length; i++) {
+    const s = segments[i].toLowerCase();
+    let bestOrder: number | undefined;
+
+    // Try ROLE_ORDER keywords
+    for (const [key, order] of Object.entries(ROLE_ORDER)) {
+      if (s.includes(key)) {
+        bestOrder = order;
+        break;
+      }
+    }
+
+    // Try well-known role keywords in the segment text
+    if (bestOrder === undefined) {
+      if (/\b(?:stream|transport|source|roon|tidal|server)\b/i.test(s)) bestOrder = 0;
+      else if (/\b(?:dac|converter)\b/i.test(s)) bestOrder = 1;
+      else if (/\b(?:pre[- ]?amp|preamplifier)\b/i.test(s)) bestOrder = 2;
+      else if (/\b(?:amp|amplifier|integrated|receiver)\b/i.test(s)) bestOrder = 3;
+      else if (/\b(?:speaker|monitor|headphone)\b/i.test(s)) bestOrder = 4;
+      else if (/\b(?:sub|subwoofer)\b/i.test(s)) bestOrder = 5;
+    }
+
+    // Try known brands/products as proxies for role
+    if (bestOrder === undefined) {
+      // Cable / interconnect / power segments are accessories — place at end
+      if (/\b(?:cable|interconnect|power\s*cord|usb|coax|optical|spdif|xlr|rca)\b/i.test(s)) {
+        // Cables don't have a fixed position — preserve original ordering
+        bestOrder = 90 + i; // keeps relative order among cables
+      }
+    }
+
+    if (bestOrder === undefined) {
+      // Can't confidently classify this segment — bail out
+      return undefined;
+    }
+
+    classified.push({ segment: segments[i], order: bestOrder, originalIdx: i });
+  }
+
+  // Sort by inferred role order, breaking ties by original position
+  classified.sort((a, b) => a.order - b.order || a.originalIdx - b.originalIdx);
+  return classified.map((c) => c.segment);
 }
 
 /**
@@ -2727,11 +2838,29 @@ function extractFullChain(rawMessage: string): string[] | undefined {
  *
  * Two layers:
  *   1. fullChain — preserves every segment from the user's input (cables, accessories included).
+ *      When the user provides explicit ordering (arrows, "into"), their order is preserved.
+ *      When the input is comma-separated (ambiguous order), the system attempts to infer
+ *      canonical signal-flow order. If inference fails, uses the user's entered order.
  *   2. roles / names — major signal-path components only, sorted by canonical order.
+ *
+ * If the full chain cannot be reconstructed confidently from any input style,
+ * fullChain is left undefined — the renderer falls back to the major signal path.
  */
 function buildSystemChain(components: SystemComponent[], rawMessage: string): MemoSystemChain {
   const sorted = [...components].sort((a, b) => roleSort(a.role) - roleSort(b.role));
-  const fullChain = extractFullChain(rawMessage);
+  const extracted = extractFullChain(rawMessage);
+
+  let fullChain: string[] | undefined;
+  if (extracted) {
+    if (extracted.confidence === 'high') {
+      // User provided explicit ordering — trust it
+      fullChain = extracted.segments;
+    } else {
+      // Comma-separated — try canonical ordering, fall back to user order
+      fullChain = tryCanonicalOrder(extracted.segments) ?? extracted.segments;
+    }
+  }
+
   return {
     fullChain,
     roles: sorted.map((c) => canonicalRole(c.role)),
