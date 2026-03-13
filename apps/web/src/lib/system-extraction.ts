@@ -26,7 +26,8 @@ const BRAND_CATEGORY_MAP: Record<string, ProductCategory> = {
   weiss: 'dac', 'mola mola': 'dac', rockna: 'dac', aqua: 'dac',
   lampizator: 'dac', lampi: 'dac', 'border patrol': 'dac', metrum: 'dac',
   'audio-gd': 'dac', soekris: 'dac', musician: 'dac', okto: 'dac',
-  eversolo: 'streamer',
+  laiv: 'dac', audalytic: 'dac',
+  eversolo: 'streamer', wiim: 'streamer', fiio: 'dac',
   // Speakers
   harbeth: 'speaker', devore: 'speaker', zu: 'speaker', klipsch: 'speaker',
   focal: 'speaker', boenicke: 'speaker', kef: 'speaker', 'b&w': 'speaker',
@@ -96,6 +97,26 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   'dmp-a6': { brand: 'Eversolo', category: 'streamer' },
   'dmp-a8': { brand: 'Eversolo', category: 'streamer' },
   'dac-z8': { brand: 'Eversolo', category: 'dac' },
+  // WiiM
+  'wiim pro': { brand: 'WiiM', category: 'streamer' },
+  'wiim ultra': { brand: 'WiiM', category: 'streamer' },
+  // Topping
+  'd90': { brand: 'Topping', category: 'dac' },
+  // SMSL
+  'su-9': { brand: 'SMSL', category: 'dac' },
+  // Gustard
+  'x26 pro': { brand: 'Gustard', category: 'dac' },
+  // LAiV
+  'harmony dac': { brand: 'LAiV', category: 'dac' },
+  // Audalytic
+  'dr70': { brand: 'Audalytic', category: 'dac' },
+  // FiiO
+  'k9 pro': { brand: 'FiiO', category: 'dac' },
+  // HiFiMAN
+  ef400: { brand: 'HiFiMAN', category: 'dac' },
+  // Denafrips aliases
+  'ares ii': { brand: 'Denafrips', category: 'dac' },
+  'pontus 12th-1': { brand: 'Denafrips', category: 'dac' },
   // Headphones
   'hd 600': { brand: 'Sennheiser', category: 'headphone' },
   'hd 650': { brand: 'Sennheiser', category: 'headphone' },

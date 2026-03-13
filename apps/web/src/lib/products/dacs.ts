@@ -1255,4 +1255,355 @@ export const DAC_PRODUCTS: Product[] = [
       ],
     },
   },
+
+  // ── Lightweight product anchors ────────────────────
+  // Conservative entries: enough data for axis inference and system
+  // assessment. Brand-level profiles provide the primary fallback
+  // when these products appear uncataloged.
+
+  {
+    id: 'eversolo-dmp-a6',
+    brand: 'Eversolo',
+    name: 'DMP-A6',
+    price: 450,
+    category: 'streamer',
+    architecture: 'ESS ES9038Q2M (internal DAC)',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    primaryAxes: {
+      warm_bright: 'neutral',
+      smooth_detailed: 'neutral',
+      elastic_controlled: 'neutral',
+      airy_closed: 'neutral',
+    },
+    traits: {
+      clarity: 0.7,
+      flow: 0.4,
+      tonal_density: 0.4,
+      dynamics: 0.4,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+    },
+    description:
+      'Network streamer with a capable internal DAC stage. Clean, neutral digital front-end designed for streaming service integration and network transport. Most commonly used feeding an external DAC via USB or coaxial output.',
+    retailer_links: [
+      { label: 'Apos Audio', url: 'https://apos.audio/products/eversolo-dmp-a6' },
+    ],
+  },
+
+  {
+    id: 'wiim-pro',
+    brand: 'WiiM',
+    name: 'Pro',
+    price: 150,
+    category: 'streamer',
+    architecture: 'AKM AK4493SEQ',
+    priceTier: 'budget',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    primaryAxes: {
+      warm_bright: 'neutral',
+      smooth_detailed: 'neutral',
+      elastic_controlled: 'neutral',
+      airy_closed: 'neutral',
+    },
+    traits: {
+      clarity: 0.4,
+      flow: 0.4,
+      tonal_density: 0.4,
+      dynamics: 0.4,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+    },
+    description:
+      'Affordable network streamer with broad streaming service support and a polished control app. The internal DAC is functional but the primary value is as a digital transport feeding better external conversion.',
+    retailer_links: [
+      { label: 'WiiM official', url: 'https://www.wiimhome.com/wiimpro' },
+    ],
+  },
+
+  {
+    id: 'wiim-ultra',
+    brand: 'WiiM',
+    name: 'Ultra',
+    price: 330,
+    category: 'streamer',
+    architecture: 'ESS ES9038Q2M',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    primaryAxes: {
+      warm_bright: 'neutral',
+      smooth_detailed: 'neutral',
+      elastic_controlled: 'neutral',
+      airy_closed: 'neutral',
+    },
+    traits: {
+      clarity: 0.7,
+      flow: 0.4,
+      tonal_density: 0.4,
+      dynamics: 0.4,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+    },
+    description:
+      'Mid-tier network streamer with improved DAC stage and analogue output over the WiiM Pro. Supports room correction and multiroom. Still best used as a transport, but the internal DAC is competent for its price.',
+    retailer_links: [
+      { label: 'WiiM official', url: 'https://www.wiimhome.com/wiimultra' },
+    ],
+  },
+
+  {
+    id: 'topping-d90',
+    brand: 'Topping',
+    name: 'D90',
+    price: 700,
+    category: 'dac',
+    architecture: 'AKM AK4499',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    primaryAxes: {
+      warm_bright: 'bright',           // AKM flagship chip, precision-oriented
+      smooth_detailed: 'detailed',     // Measurement-focused, revealing
+      elastic_controlled: 'controlled', // Composed, not elastic
+      airy_closed: 'neutral',
+    },
+    traits: {
+      clarity: 1.0,
+      flow: 0.4,
+      tonal_density: 0.4,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.4,
+      composure: 0.7,
+    },
+    description:
+      'Flagship desktop DAC using the AKM AK4499 chipset. Measurement performance is exceptional. The sonic character is precise and transparent — detail retrieval and separation are the primary strengths.',
+    retailer_links: [
+      { label: 'Apos Audio', url: 'https://apos.audio/products/topping-d90' },
+    ],
+    sourceReferences: [
+      { source: 'Audio Science Review', note: 'Detailed measurements and listening impressions of the AKM-based D90.' },
+    ],
+  },
+
+  {
+    id: 'smsl-su-9',
+    brand: 'SMSL',
+    name: 'SU-9',
+    price: 430,
+    category: 'dac',
+    architecture: 'ESS ES9038PRO',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    primaryAxes: {
+      warm_bright: 'bright',
+      smooth_detailed: 'detailed',
+      elastic_controlled: 'controlled',
+      airy_closed: 'neutral',
+    },
+    traits: {
+      clarity: 1.0,
+      flow: 0.4,
+      tonal_density: 0.4,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.4,
+      composure: 0.7,
+    },
+    description:
+      'ESS Sabre-based desktop DAC with strong measured performance. Precise, analytical character with good separation and low-level detail. Tonal weight is lighter than R-2R alternatives.',
+    retailer_links: [
+      { label: 'Apos Audio', url: 'https://apos.audio/products/smsl-su-9' },
+    ],
+  },
+
+  {
+    id: 'gustard-x26-pro',
+    brand: 'Gustard',
+    name: 'X26 Pro',
+    price: 1200,
+    category: 'dac',
+    architecture: 'ESS ES9038PRO (dual mono)',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    primaryAxes: {
+      warm_bright: 'neutral',          // Dual-mono ESS, slightly less lean than typical
+      smooth_detailed: 'detailed',
+      elastic_controlled: 'controlled',
+      airy_closed: 'neutral',
+    },
+    traits: {
+      clarity: 1.0,
+      flow: 0.4,
+      tonal_density: 0.7,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      composure: 0.7,
+    },
+    description:
+      'Dual-mono ESS Sabre implementation with more analogue output stage investment than typical Chi-Fi. More tonal body than the Topping/SMSL tier while retaining measurement-class resolution.',
+    retailer_links: [
+      { label: 'Apos Audio', url: 'https://apos.audio/products/gustard-x26-pro' },
+    ],
+  },
+
+  {
+    id: 'laiv-harmony-dac',
+    brand: 'LAiV',
+    name: 'Harmony DAC',
+    price: 2000,
+    category: 'dac',
+    architecture: 'Discrete R-2R',
+    subcategory: 'standalone-dac',
+    priceTier: 'upper-mid',
+    brandScale: 'boutique',
+    region: 'east-asia',
+    country: 'CN',
+    topology: 'r2r',
+    primaryAxes: {
+      warm_bright: 'warm',
+      smooth_detailed: 'smooth',
+      elastic_controlled: 'neutral',
+      airy_closed: 'airy',
+    },
+    traits: {
+      flow: 1.0,
+      tonal_density: 1.0,
+      clarity: 0.7,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 1.0,
+      composure: 0.7,
+    },
+    description:
+      'Discrete R-2R DAC with strong harmonic density and tonal richness. Shares sonic territory with the Denafrips Pontus/Venus tier — warm, textured, and spatially open. Emphasises musical engagement over analytical precision.',
+    retailer_links: [
+      { label: 'LAiV Audio', url: 'https://www.laiv.audio/' },
+    ],
+    sourceReferences: [
+      { source: 'Head-Fi community', note: 'Listening comparisons with Denafrips Pontus II and Holo Spring.' },
+    ],
+  },
+
+  {
+    id: 'audalytic-dr70',
+    brand: 'Audalytic',
+    name: 'DR70',
+    price: 800,
+    category: 'dac',
+    architecture: 'AKM AK4497 (dual mono)',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'boutique',
+    region: 'europe',
+    country: 'DE',
+    primaryAxes: {
+      warm_bright: 'neutral',
+      smooth_detailed: 'detailed',
+      elastic_controlled: 'neutral',
+      airy_closed: 'airy',
+    },
+    traits: {
+      clarity: 1.0,
+      flow: 0.7,
+      tonal_density: 0.7,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      composure: 0.7,
+    },
+    description:
+      'Dual-mono AKM-based DAC from a German boutique manufacturer. Aims for transparency and staging precision with more tonal body than typical measurement-focused designs. The emphasis is on resolution without analytical hardness.',
+    retailer_links: [
+      { label: 'Audalytic', url: 'https://www.audalytic.com/' },
+    ],
+  },
+
+  {
+    id: 'fiio-k9-pro',
+    brand: 'FiiO',
+    name: 'K9 Pro',
+    price: 550,
+    category: 'dac',
+    architecture: 'AKM AK4499EQ',
+    subcategory: 'dac-amp',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    primaryAxes: {
+      warm_bright: 'neutral',
+      smooth_detailed: 'neutral',
+      elastic_controlled: 'neutral',
+      airy_closed: 'neutral',
+    },
+    traits: {
+      clarity: 0.7,
+      flow: 0.7,
+      tonal_density: 0.7,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+    },
+    description:
+      'Desktop DAC/headphone amplifier combining an AKM DAC with balanced headphone output. A capable all-rounder — clean, slightly warm, and non-fatiguing. Serves as a solid desktop hub for headphone systems.',
+    retailer_links: [
+      { label: 'FiiO official', url: 'https://www.fiio.com/k9pro' },
+    ],
+  },
+
+  {
+    id: 'hifiman-ef400',
+    brand: 'HiFiMAN',
+    name: 'EF400',
+    price: 570,
+    category: 'dac',
+    architecture: 'R-2R (Hymalaya module)',
+    subcategory: 'dac-amp',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    topology: 'r2r',
+    primaryAxes: {
+      warm_bright: 'warm',             // R-2R module adds density
+      smooth_detailed: 'smooth',       // Voiced for musical flow
+      elastic_controlled: 'neutral',
+      airy_closed: 'neutral',
+    },
+    traits: {
+      flow: 0.7,
+      tonal_density: 0.7,
+      clarity: 0.7,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      composure: 0.4,
+    },
+    description:
+      'Desktop DAC/headphone amplifier built around HiFiMAN\'s proprietary R-2R "Hymalaya" DAC module. Smooth, slightly warm presentation with good tonal density. Designed as a one-box headphone system paired with HiFiMAN planar headphones.',
+    retailer_links: [
+      { label: 'HiFiMAN official', url: 'https://hifiman.com/products/detail/327' },
+    ],
+    sourceReferences: [
+      { source: 'Head-Fi community', note: 'Impressions and comparisons with Schiit Bifrost and dedicated R-2R DACs.' },
+    ],
+  },
 ];
