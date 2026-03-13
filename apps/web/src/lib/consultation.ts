@@ -48,6 +48,20 @@ import {
   synthesiseSystemAxes,
   AXIS_LABELS,
 } from './axis-types';
+import type {
+  MemoFindings,
+  ComponentFindings,
+  StackedTraitFinding,
+  BottleneckFinding,
+  UpgradePathFinding,
+  KeepFinding,
+  RecommendedStepFinding,
+  SourceReferenceFinding,
+  ListenerPriority,
+  DeliberatenessSignal,
+  CatalogSource,
+  ComponentVerdict,
+} from './memo-findings';
 
 // ── Types ───────────────────────────────────────────
 
@@ -2257,7 +2271,7 @@ function normalizeDisplayName(brand: string, name: string): string {
 
 /** Result of buildSystemAssessment — either a full assessment or a clarification request. */
 export type SystemAssessmentResult =
-  | { kind: 'assessment'; response: ConsultationResponse }
+  | { kind: 'assessment'; response: ConsultationResponse; findings: MemoFindings }
   | { kind: 'clarification'; clarification: ClarificationResponse }
   | null;
 
@@ -2644,6 +2658,24 @@ export function buildSystemAssessment(
     }
   }
 
+  // ── Extract MemoFindings contract ──────────────────
+  // The structured contract between the deterministic pipeline and
+  // all downstream renderers. Produced BEFORE any prose rendering.
+  const findings: MemoFindings = extractMemoFindings(
+    components,
+    componentAxisProfiles,
+    memoChain,
+    systemAxes,
+    memoStacked,
+    memoConstraint,
+    memoAssessments,
+    memoUpgradePaths,
+    memoKeeps,
+    memoSequence,
+    memoSourceRefs,
+    desires,
+  );
+
   // ── System character opening (brief) ──────────────
   // A one-two sentence overview of the system's overall lean.
   const systemCharacterOpening = inferSystemCharacterOpening(components);
@@ -2654,7 +2686,7 @@ export function buildSystemAssessment(
   if (ampSpeakerFit) interactionParts.push(ampSpeakerFit);
   const systemInteractionDetail = interactionParts.join(' ');
 
-  return { kind: 'assessment', response: {
+  return { kind: 'assessment', findings, response: {
     subject: `Your system: ${subject}`,
     // Undefined — assessment sections carry all content; suppress AdvisoryProse
     philosophy: undefined,
@@ -4036,6 +4068,259 @@ function reconcileAssessmentOutputs(
   const sequence = buildRecommendedSequence(upgradePaths, reconciledKeeps);
 
   return { keeps: reconciledKeeps, sequence };
+}
+
+// ── MemoFindings extraction ─────────────────────────
+//
+// Maps pipeline outputs to the structured MemoFindings contract.
+// This is the bridge between the internal builder types and the
+// renderer-agnostic contract.
+
+function extractMemoFindings(
+  components: SystemComponent[],
+  profiles: ComponentAxisProfile[],
+  chain: MemoSystemChain,
+  systemAxes: PrimaryAxisLeanings,
+  stacked: MemoStackedTraitInsight[],
+  constraint: MemoPrimaryConstraint | undefined,
+  assessments: MemoComponentAssessment[],
+  upgradePaths: MemoUpgradePath[],
+  keeps: MemoKeepRecommendation[],
+  sequence: MemoRecommendedStep[],
+  sourceRefs: import('./advisory-response').SourceReference[],
+  desires?: DesireSignal[],
+): MemoFindings {
+  // ── Per-component findings ──
+  const componentVerdicts: ComponentFindings[] = components.map((c, i) => {
+    const assessment = assessments.find((a) => a.name === c.displayName);
+    const profile = profiles[i];
+
+    // Determine verdict
+    let verdict: ComponentVerdict = 'neutral';
+    if (constraint?.componentName === c.displayName) {
+      verdict = 'bottleneck';
+    } else if (keeps.some((k) => k.name === c.displayName)) {
+      verdict = 'keep';
+    } else if (assessment && assessment.weaknesses.length > assessment.strengths.length) {
+      verdict = 'upgrade';
+    }
+
+    return {
+      name: c.displayName,
+      role: c.role,
+      catalogSource: profile.source as CatalogSource,
+      axisPosition: profile.axes,
+      strengths: assessment?.strengths ?? [],
+      weaknesses: assessment?.weaknesses ?? [],
+      verdict,
+      architecture: c.product?.architecture,
+    };
+  });
+
+  // ── Stacked traits → structured tags ──
+  const stackedTraits: StackedTraitFinding[] = stacked.map((s) => ({
+    property: s.label, // inherits from STACKED_LABELS — already a short tag
+    contributors: s.contributors,
+  }));
+
+  // ── Bottleneck → structured finding ──
+  let bottleneck: BottleneckFinding | null = null;
+  if (constraint) {
+    const idx = components.findIndex((c) => c.displayName === constraint.componentName);
+    const axes = idx >= 0 ? profiles[idx].axes : undefined;
+    const constrainedAxes: string[] = [];
+    if (axes) {
+      if (axes.warm_bright !== 'neutral') constrainedAxes.push('warm_bright');
+      if (axes.smooth_detailed !== 'neutral') constrainedAxes.push('smooth_detailed');
+      if (axes.elastic_controlled !== 'neutral') constrainedAxes.push('elastic_controlled');
+      if (axes.airy_closed !== 'neutral') constrainedAxes.push('airy_closed');
+    }
+
+    bottleneck = {
+      component: constraint.componentName,
+      role: idx >= 0 ? components[idx].role : 'component',
+      category: constraint.category,
+      constrainedAxes,
+      severity: 0, // severity not preserved through PrimaryConstraint — default
+    };
+  }
+
+  // ── Upgrade paths → structured findings ──
+  const upgradePathFindings: UpgradePathFinding[] = upgradePaths.map((p) => {
+    const impactTag: UpgradePathFinding['impact'] =
+      p.impact === 'Highest Impact' ? 'highest'
+      : p.impact === 'Moderate Impact' ? 'moderate'
+      : 'refinement';
+
+    // Extract target axes from the rationale keywords
+    const targetAxes: string[] = [];
+    const r = (p.rationale ?? '').toLowerCase();
+    if (r.includes('tonal density') || r.includes('warmth')) targetAxes.push('warm_bright');
+    if (r.includes('detail') || r.includes('microdetail') || r.includes('flow')) targetAxes.push('smooth_detailed');
+    if (r.includes('elasticity') || r.includes('stability') || r.includes('grip')) targetAxes.push('elastic_controlled');
+    if (r.includes('spatial') || r.includes('scale')) targetAxes.push('airy_closed');
+
+    return {
+      rank: p.rank,
+      targetRole: p.label.replace(/\s+Upgrade$/i, ''),
+      impact: impactTag,
+      targetAxes,
+      options: (p.options ?? []).map((o) => ({
+        name: o.name,
+        brand: o.brand ?? '',
+        priceRange: o.priceNote ?? '',
+        axisProfile: { warm_bright: 'neutral', smooth_detailed: 'neutral', elastic_controlled: 'neutral', airy_closed: 'neutral' } as PrimaryAxisLeanings,
+      })),
+    };
+  });
+
+  // ── Keep findings ──
+  const keepFindings: KeepFinding[] = keeps.map((k) => {
+    const idx = components.findIndex((c) => c.displayName === k.name);
+    const axes = idx >= 0 ? profiles[idx].axes : undefined;
+    const alignedAxes: string[] = [];
+    if (axes) {
+      if (axes.warm_bright !== 'neutral') alignedAxes.push('warm_bright');
+      if (axes.smooth_detailed !== 'neutral') alignedAxes.push('smooth_detailed');
+      if (axes.elastic_controlled !== 'neutral') alignedAxes.push('elastic_controlled');
+      if (axes.airy_closed !== 'neutral') alignedAxes.push('airy_closed');
+    }
+    return {
+      name: k.name,
+      role: idx >= 0 ? components[idx].role : 'component',
+      alignedAxes,
+    };
+  });
+
+  // ── Recommended sequence → structured steps ──
+  const recommendedSteps: RecommendedStepFinding[] = sequence.map((s) => {
+    // Parse action to extract target role
+    const actionMatch = s.action.match(/\*\*(.+?)\*\*/);
+    const label = actionMatch ? actionMatch[1] : s.action;
+    const targetRole = label.replace(/\s+Upgrade$/i, '').replace(/^Keep\s+/i, '');
+    return {
+      step: s.step,
+      action: label,
+      targetRole,
+    };
+  });
+
+  // ── Deliberateness signals ──
+  const deliberateness = assessSystemDeliberateness(components, systemAxes);
+  const deliberatenessSignals: DeliberatenessSignal[] = [];
+  if (deliberateness.isDeliberate) {
+    // Infer which signals contributed
+    const brands = new Set(components.map((c) => c.displayName.split(' ')[0].toLowerCase()));
+    if (brands.size >= 2) deliberatenessSignals.push('multi_brand_coherence');
+    const hasSpecialist = components.some((c) => c.product?.brandScale === 'boutique' || c.product?.brandScale === 'specialist');
+    if (hasSpecialist) deliberatenessSignals.push('specialist_brands_present');
+    // Check axis consistency
+    const nonNeutralAxes = [
+      systemAxes.warm_bright !== 'neutral',
+      systemAxes.smooth_detailed !== 'neutral',
+      systemAxes.elastic_controlled !== 'neutral',
+      systemAxes.airy_closed !== 'neutral',
+    ].filter(Boolean).length;
+    if (nonNeutralAxes >= 1) deliberatenessSignals.push('consistent_axis_alignment');
+    if (deliberateness.note.includes('punches above')) deliberatenessSignals.push('punches_above_tier');
+  }
+
+  // ── Listener priorities (controlled tags) ──
+  const listenerPriorities: ListenerPriority[] = inferListenerPriorityTags(systemAxes, desires);
+
+  // ── Source references ──
+  const sourceReferences: SourceReferenceFinding[] = sourceRefs.map((r) => ({
+    source: r.source,
+    note: r.note,
+  }));
+
+  return {
+    componentNames: components.map((c) => c.displayName),
+    systemChain: {
+      roles: chain.roles,
+      names: chain.names,
+      fullChain: chain.fullChain,
+    },
+    systemAxes,
+    perComponentAxes: profiles.map((p) => ({
+      name: p.name,
+      axes: p.axes,
+      source: p.source as CatalogSource,
+    })),
+    stackedTraits,
+    bottleneck,
+    componentVerdicts,
+    upgradePaths: upgradePathFindings,
+    keeps: keepFindings,
+    recommendedSequence: recommendedSteps,
+    isDeliberate: deliberateness.isDeliberate,
+    deliberatenessSignals,
+    listenerPriorities,
+    sourceReferences,
+  };
+}
+
+/**
+ * Infer listener priority tags from system axes and desire signals.
+ * Returns controlled ListenerPriority tags — no prose, no freeform strings.
+ */
+function inferListenerPriorityTags(
+  system: PrimaryAxisLeanings,
+  desires?: DesireSignal[],
+): ListenerPriority[] {
+  const priorities: ListenerPriority[] = [];
+
+  // Axis-derived priorities
+  if (system.elastic_controlled === 'elastic') {
+    priorities.push('rhythmic_articulation');
+    if (system.smooth_detailed === 'detailed' || system.warm_bright === 'bright') {
+      priorities.push('timing_accuracy', 'low_stored_energy');
+    }
+  }
+  if (system.warm_bright === 'warm') {
+    priorities.push('tonal_warmth');
+    if (system.smooth_detailed === 'smooth') {
+      priorities.push('fatigue_resistance', 'harmonic_richness');
+    } else {
+      priorities.push('tonal_density');
+    }
+  }
+  if (system.warm_bright === 'bright') {
+    priorities.push('transient_speed');
+  }
+  if (system.smooth_detailed === 'detailed') {
+    priorities.push('transparency');
+  }
+  if (system.smooth_detailed === 'smooth') {
+    priorities.push('musical_flow');
+  }
+  if (system.elastic_controlled === 'controlled') {
+    priorities.push('control_precision');
+    if (system.smooth_detailed === 'detailed') {
+      priorities.push('dynamic_contrast');
+    }
+  }
+  if (system.airy_closed === 'airy') {
+    priorities.push('spatial_openness');
+  }
+
+  // Desire-informed additions
+  if (desires && desires.length > 0) {
+    for (const d of desires) {
+      const q = d.quality.toLowerCase();
+      if (d.direction === 'more') {
+        if (q.includes('detail') || q.includes('clarity')) priorities.push('transparency');
+        if (q.includes('warm') || q.includes('body') || q.includes('rich')) priorities.push('tonal_warmth');
+        if (q.includes('spatial') || q.includes('stage') || q.includes('air')) priorities.push('spatial_openness');
+        if (q.includes('dynamics') || q.includes('punch')) priorities.push('dynamic_contrast');
+        if (q.includes('timing') || q.includes('rhythm')) priorities.push('rhythmic_articulation');
+        if (q.includes('flow') || q.includes('smooth')) priorities.push('musical_flow');
+      }
+    }
+  }
+
+  // Deduplicate
+  return [...new Set(priorities)];
 }
 
 // ── Key observation (design philosophy inference) ───
