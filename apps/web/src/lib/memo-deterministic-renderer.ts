@@ -5,15 +5,35 @@
  * fields. This is the rendering layer — it does not contain reasoning
  * logic. All analysis happens in the deterministic pipeline upstream.
  *
- * Design:
- *   - Takes MemoFindings as the structured contract
- *   - Takes pre-computed prose fields for behavioral stability
- *     (legacy prose builders still read SystemComponent[] directly)
- *   - Produces the same ConsultationResponse as before the refactor
- *   - Structured fields (systemChain, constraint, assessments, etc.)
- *     are derived from MemoFindings via mapping functions
- *   - Future: prose builders will be rewritten to consume MemoFindings
- *     directly, eliminating the need for the legacy prose inputs
+ * ── Rendering paths (transition state) ─────────────────────────
+ *
+ * CANONICAL path (MemoFindings-only):
+ *   renderDeterministicMemo(findings, prose)
+ *   Structured fields (systemChain, constraint, assessments, etc.)
+ *   are derived from MemoFindings via the map*() functions below.
+ *   This is the path all new code should use.
+ *
+ * DEPRECATED path (StructuredMemoInputs):
+ *   renderDeterministicMemo(findings, prose, structured)
+ *   When the third argument is provided, its fields take precedence
+ *   over the MemoFindings-derived values. This exists solely for
+ *   behavioral parity during transition — the call site in
+ *   consultation.ts still passes StructuredMemoInputs to avoid
+ *   changing rendered output in a single step.
+ *
+ * REMOVAL plan:
+ *   Once the MemoFindings-only path is validated in production,
+ *   remove the `structured` parameter and StructuredMemoInputs,
+ *   and update the call site in consultation.ts to use the
+ *   two-argument form. The parity tests in integration-assessment
+ *   confirm the two paths produce equivalent output.
+ *
+ * ── Prose inputs ───────────────────────────────────────────────
+ *
+ * LegacyProseInputs are pre-computed prose fields from the existing
+ * builders (inferSystemCharacterOpening, inferSystemInteraction, etc.).
+ * These are passed through as-is. Future: rewrite prose builders to
+ * consume MemoFindings directly, eliminating this indirection.
  *
  * This function is the deterministic fallback for the LLM overlay.
  * If the LLM layer is unavailable or produces invalid output,
@@ -69,10 +89,14 @@ export interface LegacyProseInputs {
   keyObservation: string;
 }
 
-// ── Structured memo inputs (DEPRECATED) ──────────────────
+// ── Structured memo inputs (DEPRECATED — transitional only) ──────
 //
-// Retained for backward compatibility during the transition period.
-// New code should use renderDeterministicMemo(findings, prose) directly.
+// @deprecated Use renderDeterministicMemo(findings, prose) without this
+// parameter. The MemoFindings-only path derives all structured fields
+// from findings via map*() functions, and parity tests confirm equivalent
+// output. This interface exists only so the consultation.ts call site
+// can transition without changing rendered output in a single step.
+// Remove once the two-argument call is validated in production.
 
 export interface StructuredMemoInputs {
   systemChain: SystemChain;
@@ -221,14 +245,17 @@ function mapSourceReferences(findings: MemoFindings): SourceReference[] {
  * This function performs NO analysis — it only assembles. All reasoning
  * has already happened in buildSystemAssessment().
  *
- * The structured memo fields (systemChain, constraint, assessments, etc.)
- * are derived from MemoFindings via the mapping functions above.
- * Legacy prose fields are passed through as-is for behavioral stability.
+ * CANONICAL call (new code):
+ *   renderDeterministicMemo(findings, prose)
+ *   → structured fields derived from MemoFindings via map*() functions
  *
- * Overload 1 (preferred): MemoFindings + prose only.
- * Overload 2 (deprecated): MemoFindings + prose + StructuredMemoInputs.
- *   When StructuredMemoInputs is provided, those fields take precedence
- *   (this preserves exact behavioral parity during the transition).
+ * DEPRECATED call (transitional — remove when validated):
+ *   renderDeterministicMemo(findings, prose, structured)
+ *   → StructuredMemoInputs fields take precedence over MemoFindings derivation
+ *
+ * @param findings  Structured contract from the deterministic pipeline.
+ * @param prose     Pre-computed prose fields (passed through as-is).
+ * @param structured  @deprecated Transitional override. Omit for canonical path.
  */
 export function renderDeterministicMemo(
   findings: MemoFindings,

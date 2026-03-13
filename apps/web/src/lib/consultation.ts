@@ -63,6 +63,9 @@ import type {
   ComponentVerdict,
 } from './memo-findings';
 import { renderDeterministicMemo } from './memo-deterministic-renderer';
+// StructuredMemoInputs is transitional — the canonical rendering path is
+// renderDeterministicMemo(findings, prose) without the third argument.
+// See memo-deterministic-renderer.ts header for the removal plan.
 import type { LegacyProseInputs, StructuredMemoInputs } from './memo-deterministic-renderer';
 
 // ── Types ───────────────────────────────────────────
@@ -2831,6 +2834,10 @@ export function buildSystemAssessment(
     keyObservation: memoKeyObservation,
   };
 
+  // TRANSITIONAL: passing StructuredMemoInputs for behavioral parity.
+  // The canonical path is renderDeterministicMemo(findings, prose) — parity
+  // tests confirm equivalent output. Remove this block and switch to the
+  // two-argument call once validated in production.
   const structured: StructuredMemoInputs = {
     systemChain: memoChain,
     primaryConstraint: memoConstraint,
