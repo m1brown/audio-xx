@@ -139,10 +139,15 @@ export interface RecommendedStep {
 
 /**
  * System signal chain — ordered component listing for display.
- * Rendered as: Role₁ → Role₂ → Role₃  /  Name₁ → Name₂ → Name₃
+ *
+ * Two layers:
+ *   1. fullChain — the user's entered chain preserved as-is (includes cables, accessories).
+ *   2. roles / names — major signal-path components only (streamer, DAC, amp, speakers).
  */
 export interface SystemChain {
-  /** Ordered role labels (e.g. ["Streamer", "DAC", "Amplifier", "Speakers"]). */
+  /** Full chain as entered by the user, arrow-separated segments preserved. */
+  fullChain?: string[];
+  /** Ordered role labels for major components (e.g. ["Streamer", "DAC", "Amplifier", "Speakers"]). */
   roles: string[];
   /** Ordered component names matching the role positions. */
   names: string[];

@@ -2132,15 +2132,26 @@ export function buildSystemAssessment(
 
   // ── Structured memo-format fields ───────────────────
   // Pipeline: chain → stacked traits → bottleneck → assessments → paths → sequence → observation
-  const memoChain = buildSystemChain(components);
+  const memoChain = buildSystemChain(components, currentMessage);
   const memoStacked = detectStackedTraits(components, componentAxisProfiles);
   const memoConstraint = detectPrimaryConstraint(components, componentAxisProfiles, memoStacked, systemAxes);
   const memoAssessments = buildComponentAssessments(components, componentAxisProfiles, memoConstraint);
   const memoUpgradePaths = buildUpgradePaths(components, componentAxisProfiles, memoAssessments, memoConstraint, memoStacked);
-  const memoKeeps = buildKeepRecommendations(memoAssessments, memoUpgradePaths, memoConstraint);
-  const memoSequence = buildRecommendedSequence(memoUpgradePaths, memoKeeps);
+  const memoKeepsRaw = buildKeepRecommendations(memoAssessments, memoUpgradePaths, memoConstraint);
   const memoIntro = buildIntroSummary(components, systemAxes, memoStacked);
   const memoKeyObservation = buildKeyObservation(components, componentAxisProfiles, memoStacked, systemAxes, desires);
+
+  // ── Final reconciliation pass ─────────────────────
+  // Ensures no component appears in conflicting statuses:
+  //   keeper ↔ upgrade target ↔ bottleneck
+  // Also reconciles the "What I Would Personally Do" sequence.
+  const { keeps: memoKeeps, sequence: memoSequence } = reconcileAssessmentOutputs(
+    components,
+    memoAssessments,
+    memoUpgradePaths,
+    memoKeepsRaw,
+    memoConstraint,
+  );
 
   // ── System character opening (brief) ──────────────
   // A one-two sentence overview of the system's overall lean.
@@ -2669,12 +2680,32 @@ function roleSort(role: string): number {
 }
 
 /**
- * Build ordered system chain for display.
- * Sorts by canonical signal-path order: source → DAC → preamp → amp → speaker.
+ * Extract the user's full chain from their raw message.
+ * Looks for arrow-separated segments (→ or ->).
+ * Returns the segments trimmed, or undefined if no chain found.
  */
-function buildSystemChain(components: SystemComponent[]): MemoSystemChain {
+function extractFullChain(rawMessage: string): string[] | undefined {
+  // Match arrow-separated chains (→ or ->)
+  if (!rawMessage.includes('→') && !rawMessage.includes('->')) return undefined;
+  const segments = rawMessage
+    .split(/\s*(?:→|->)\s*/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  return segments.length >= 2 ? segments : undefined;
+}
+
+/**
+ * Build ordered system chain for display.
+ *
+ * Two layers:
+ *   1. fullChain — preserves every segment from the user's input (cables, accessories included).
+ *   2. roles / names — major signal-path components only, sorted by canonical order.
+ */
+function buildSystemChain(components: SystemComponent[], rawMessage: string): MemoSystemChain {
   const sorted = [...components].sort((a, b) => roleSort(a.role) - roleSort(b.role));
+  const fullChain = extractFullChain(rawMessage);
   return {
+    fullChain,
     roles: sorted.map((c) => canonicalRole(c.role)),
     names: sorted.map((c) => c.displayName),
   };
@@ -3198,6 +3229,66 @@ function buildRecommendedSequence(
   }
 
   return steps;
+}
+
+// ── Final reconciliation ────────────────────────────
+//
+// Cross-checks all assessment outputs to ensure internal consistency.
+// Each component ends up in exactly one status:
+//   1. bottleneck — the primary constraint (appears in Path 1)
+//   2. upgrade target — secondary or refinement (appears in Paths 2–3)
+//   3. keeper — "Components I Would NOT Change"
+//   4. unclassified — components not in any bucket (neutral streamers, etc.)
+//
+// Also rebuilds the recommended sequence to match the reconciled state.
+
+interface ReconciliationResult {
+  keeps: MemoKeepRecommendation[];
+  sequence: MemoRecommendedStep[];
+}
+
+function reconcileAssessmentOutputs(
+  components: SystemComponent[],
+  assessments: MemoComponentAssessment[],
+  upgradePaths: MemoUpgradePath[],
+  rawKeeps: MemoKeepRecommendation[],
+  constraint?: MemoPrimaryConstraint,
+): ReconciliationResult {
+  // ── Build role → status map ──
+  // Upgrade path labels follow the pattern "DAC Upgrade", "Speakers Upgrade", etc.
+  const upgradeRoles = new Set(
+    upgradePaths.map((p) => p.label.replace(/\s+Upgrade$/i, '').toLowerCase()),
+  );
+  const bottleneckName = constraint?.componentName?.toLowerCase() ?? '';
+
+  // ── Reconcile keeps ──
+  // A component must not appear in keeps if:
+  //   (a) it is the bottleneck, or
+  //   (b) its canonical role matches an upgrade path target
+  const reconciledKeeps = rawKeeps.filter((k) => {
+    const nameLower = k.name.toLowerCase();
+    // Direct bottleneck match
+    if (nameLower === bottleneckName) return false;
+    // Role-based upgrade target match
+    const assessment = assessments.find((a) => a.name === k.name);
+    if (assessment?.role) {
+      const role = canonicalRole(assessment.role).toLowerCase();
+      if (upgradeRoles.has(role)) return false;
+    }
+    // Name-based upgrade target match (fuzzy — check if any path label contains the component name)
+    for (const p of upgradePaths) {
+      const pathLower = p.label.toLowerCase();
+      if (pathLower.includes(nameLower) || nameLower.includes(pathLower.replace(/\s+upgrade$/i, ''))) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  // ── Rebuild sequence from reconciled data ──
+  const sequence = buildRecommendedSequence(upgradePaths, reconciledKeeps);
+
+  return { keeps: reconciledKeeps, sequence };
 }
 
 // ── Key observation (design philosophy inference) ───

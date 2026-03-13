@@ -81,11 +81,23 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
 
       {/* ── 1. System Character ──────────────────── */}
       <AdvisorySection number={next()} label="System Character">
-        {/* Chain display */}
+        {/* Chain display — full chain + major signal path */}
         {a.systemChain && a.systemChain.roles.length > 0 && (
           <div style={{ marginBottom: '0.8rem' }}>
+            {/* Full chain as entered (includes cables, accessories) */}
+            {a.systemChain.fullChain && a.systemChain.fullChain.length > 0 && (
+              <>
+                <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#222', marginBottom: '0.25rem' }}>
+                  Full chain
+                </div>
+                <div style={{ fontSize: '0.95rem', color: '#222', marginBottom: '0.5rem' }}>
+                  {a.systemChain.fullChain.join(' → ')}
+                </div>
+              </>
+            )}
+            {/* Major signal path (major components only) */}
             <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#222', marginBottom: '0.25rem' }}>
-              Current chain
+              {a.systemChain.fullChain ? 'Major signal path' : 'Current chain'}
             </div>
             <div style={{ fontSize: '0.95rem', color: '#444' }}>
               {a.systemChain.roles.join(' → ')}
