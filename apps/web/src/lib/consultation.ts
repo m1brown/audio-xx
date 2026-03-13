@@ -2098,30 +2098,30 @@ export function validateSystemComponents(
       const expectedDisplay = ROLE_DISPLAY[expectedCategory] ?? expectedCategory;
       const brand = displayBrand ?? c.displayName;
 
-      // Generate a specific clarification based on the conflict type
+      // Generate a specific, direct clarification based on the conflict type
       if (expectedCategory === 'streamer' && userAppliedRole === 'dac') {
         issues.push({
           kind: 'role-label-conflict',
           subject: c.displayName,
-          detail: `You described the ${c.displayName} as a DAC — our data has it cataloged as a streamer. Are you using its internal DAC as your primary conversion stage, or is it feeding an external DAC?`,
+          detail: `You described the ${c.displayName} as a DAC, but our data has it cataloged as a streamer. Are you using its internal DAC as your main conversion stage, or is it feeding an external DAC?`,
         });
       } else if (expectedCategory === 'dac' && userAppliedRole === 'streamer') {
         issues.push({
           kind: 'role-label-conflict',
           subject: c.displayName,
-          detail: `You described the ${c.displayName} as a streamer — our data has it cataloged as a DAC. Is it receiving a digital stream from a separate transport, or are you using its built-in streaming capability?`,
+          detail: `You described the ${c.displayName} as a streamer, but our data has it as a DAC. Is it receiving a digital stream from a separate transport, or are you using a built-in streaming function?`,
         });
       } else if (expectedCategory === 'integrated' && (userAppliedRole === 'amplifier' || userAppliedRole === 'preamplifier')) {
         issues.push({
           kind: 'role-label-conflict',
           subject: c.displayName,
-          detail: `You described the ${c.displayName} as ${userRoleDisplay} — it's an integrated amplifier. Are you using it as a full integrated, or only its power section with an external preamp?`,
+          detail: `The ${c.displayName} is an integrated amplifier. Are you using it as a full integrated, or only its power section with an external preamp?`,
         });
       } else {
         issues.push({
           kind: 'role-label-conflict',
           subject: c.displayName,
-          detail: `You described the ${c.displayName} as ${userRoleDisplay}, but our data has it as ${expectedDisplay}. Could you clarify what role it plays in your chain?`,
+          detail: `You described the ${c.displayName} as ${userRoleDisplay}, but our data has it as ${expectedDisplay}. What role does it play in your chain?`,
         });
       }
     }
@@ -2130,6 +2130,8 @@ export function validateSystemComponents(
   // ── 2. Duplicate-role conflicts ──
   // Detect when two or more components share the same functional role
   // without a clear indication of dual-use (bi-amping, multiple sources, etc.).
+  // Conservative: only flag when the ambiguity is material — if the chain
+  // order clearly implies which component is doing the main work, trust it.
   const roleCounts = new Map<string, SystemComponent[]>();
   for (const c of components) {
     const role = c.role.toLowerCase();
@@ -2143,6 +2145,10 @@ export function validateSystemComponents(
   // Only flag core signal-path roles, not accessories
   const FLAGGABLE_ROLES = new Set(['dac', 'amplification', 'preamplification', 'speaker', 'headphone', 'streamer']);
 
+  // Check if the user provided an explicit chain order (arrows / "into")
+  const chainExtracted = extractFullChain(rawMessage);
+  const hasExplicitOrder = chainExtracted != null && chainExtracted.confidence === 'high';
+
   for (const [role, comps] of roleCounts) {
     if (comps.length < 2) continue;
     if (!FLAGGABLE_ROLES.has(role)) continue;
@@ -2150,6 +2156,21 @@ export function validateSystemComponents(
     // Don't flag if the user's message explicitly indicates dual-use
     const dualUseSignals = /\b(?:bi[- ]?amp|dual|both|pair(?:ed)?|stack(?:ed)?|two\b)/i;
     if (dualUseSignals.test(rawMessage)) continue;
+
+    // If the user gave an explicit chain order (arrows / "into"), the sequence
+    // itself resolves the ambiguity — e.g. "Streamer → DAC1 → DAC2 → Amp"
+    // clearly shows DAC1 feeding DAC2. Don't force a clarification.
+    if (hasExplicitOrder) continue;
+
+    // For comma-separated or unordered input, check whether the components
+    // occupy distinct positions in a canonical ordering attempt. If they do,
+    // the order is still recoverable — e.g. a streamer-DAC and a standalone
+    // DAC at different points in the chain. Only flag when truly ambiguous.
+    if (chainExtracted && chainExtracted.confidence === 'medium') {
+      // If canonical ordering succeeded, positions are recoverable — skip
+      const canonical = tryCanonicalOrder(chainExtracted.segments);
+      if (canonical) continue;
+    }
 
     const names = comps.map((c) => c.displayName);
     const roleLabel = role === 'amplification' ? 'amplifier'
@@ -2160,13 +2181,13 @@ export function validateSystemComponents(
       issues.push({
         kind: 'duplicate-role',
         subject: names.join(' and '),
-        detail: `Your chain includes two components in the ${roleLabel} role: ${names[0]} and ${names[1]}. Are both active in your current signal path, or has one replaced the other?`,
+        detail: `${names[0]} and ${names[1]} both appear as ${roleLabel}s. Are both active in the signal path, or has one replaced the other?`,
       });
     } else {
       issues.push({
         kind: 'duplicate-role',
         subject: names.join(', '),
-        detail: `Your chain includes ${comps.length} components in the ${roleLabel} role: ${names.join(', ')}. Could you clarify which are currently active in your signal path?`,
+        detail: `${names.join(', ')} all appear in the ${roleLabel} role. Which are currently active in your signal path?`,
       });
     }
   }
@@ -2174,16 +2195,15 @@ export function validateSystemComponents(
   // ── 3. Chain-order ambiguity ──
   // Only flag when the full chain extraction returned medium confidence
   // AND the canonical ordering failed (couldn't classify all segments).
-  const extracted = extractFullChain(rawMessage);
-  if (extracted && extracted.confidence === 'medium') {
-    const canonicalAttempt = tryCanonicalOrder(extracted.segments);
+  // Reuse chainExtracted from duplicate-role check if available.
+  const ambiguityExtracted = chainExtracted ?? extractFullChain(rawMessage);
+  if (ambiguityExtracted && ambiguityExtracted.confidence === 'medium') {
+    const canonicalAttempt = tryCanonicalOrder(ambiguityExtracted.segments);
     if (!canonicalAttempt) {
-      // Can't determine order — ask the user
-      const segmentList = extracted.segments.join(', ');
       issues.push({
         kind: 'chain-order-ambiguity',
         subject: 'signal path order',
-        detail: `I can see the components in your system (${segmentList}), but I'm not confident about the signal-flow order. Could you describe the chain from source to output — which component feeds which?`,
+        detail: 'I\'m not confident about the signal-flow order here. Could you describe the chain from source to output?',
       });
     }
   }
@@ -2204,19 +2224,8 @@ export function validateSystemComponents(
 
   const primary = prioritised[0];
 
-  // Build acknowledge line from the components mentioned
-  const componentNames = components.map((c) => c.displayName);
-  const acknowledge = componentNames.length <= 3
-    ? `I can see you're describing a chain with ${componentNames.join(', ')}.`
-    : `I can see a ${componentNames.length}-component chain here.`;
-
   return {
-    acknowledge,
-    context: primary.kind === 'role-label-conflict'
-      ? 'Before running the full assessment, I want to make sure I understand the role of each component correctly.'
-      : primary.kind === 'duplicate-role'
-      ? 'Before running the full assessment, I want to confirm which components are active in your current signal path.'
-      : 'Before running the full assessment, I want to confirm the signal-flow order.',
+    acknowledge: 'Quick clarification before I run the assessment.',
     question: primary.detail,
   };
 }
