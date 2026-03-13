@@ -868,7 +868,7 @@ export const DAC_PRODUCTS: Product[] = [
       composure: 0.4,
     },
     description:
-      'Portable FPGA-based DAC/headphone amplifier with Chord\'s proprietary pulse array technology. Shares the Chord house sound — timing precision and transient clarity — in a compact form factor with crossfeed and headphone output.',
+      'Introduced in 2014, the original Hugo was the first portable application of Rob Watts\' FPGA pulse array architecture. It runs a 26,368-tap filter on a Xilinx Spartan-6 FPGA — far beyond what off-the-shelf DAC chips implement — to achieve timing precision at the microsecond level. The design prioritises transient clarity and dynamic agility over tonal weight. As a combined DAC/headphone amplifier it shares the Chord house sound in a compact form factor, with crossfeed and line-level output for use as a source component in desktop systems.',
     retailer_links: [
       { label: 'Chord Electronics', url: 'https://chordelectronics.co.uk/product/hugo/' },
     ],

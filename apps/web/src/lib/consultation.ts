@@ -102,6 +102,8 @@ export interface ConsultationResponse {
   recommendedSequence?: import('./advisory-response').RecommendedStep[];
   /** Key observation about the listener's taste pattern. */
   keyObservation?: string;
+  /** Source references from catalogued components. */
+  sourceReferences?: import('./advisory-response').SourceReference[];
 }
 
 // ── All products ────────────────────────────────────
@@ -1915,25 +1917,36 @@ export function buildSystemAssessment(
         processedNames.add(product.brand.toLowerCase());
       } else {
         // Product name recognized but not in catalog — infer from message context.
-        // Look for a brand match that precedes the product name, and infer the
-        // role from category keywords in the surrounding text.
-        const brandMatch = subjectMatches.find(
-          (m) => m.kind === 'brand' && !processedNames.has(m.name.toLowerCase()),
-        );
+        // Find the brand NEAREST to this product in the raw text (not just the first
+        // unprocessed brand). This prevents "DMP-A6" being paired with "Chord" when
+        // "Eversolo" is the adjacent brand.
+        const msgLower = currentMessage.toLowerCase();
+        const prodIdx = msgLower.indexOf(lower);
+
+        // Score brand matches by proximity to the product name
+        const candidateBrands = subjectMatches
+          .filter((m) => m.kind === 'brand' && !processedNames.has(m.name.toLowerCase()))
+          .map((m) => {
+            const brandIdx = msgLower.indexOf(m.name.toLowerCase());
+            return { match: m, distance: brandIdx >= 0 ? Math.abs(brandIdx - prodIdx) : Infinity };
+          })
+          .sort((a, b) => a.distance - b.distance);
+
+        const brandMatch = candidateBrands.length > 0 ? candidateBrands[0].match : undefined;
         const brandName = brandMatch
           ? brandMatch.name.charAt(0).toUpperCase() + brandMatch.name.slice(1)
           : '';
         if (brandMatch) {
           processedNames.add(brandMatch.name.toLowerCase());
         }
-        const productName = match.name.toUpperCase().includes('-')
+
+        // Preserve original casing for model names with hyphens (DMP-A6, DAC-Z8)
+        const productName = match.name.includes('-')
           ? match.name.toUpperCase()
           : match.name.charAt(0).toUpperCase() + match.name.slice(1);
         const displayName = brandName ? `${brandName} ${productName}` : productName;
 
         // Infer role from nearby text (within ~40 chars of the product name)
-        const msgLower = currentMessage.toLowerCase();
-        const prodIdx = msgLower.indexOf(lower);
         const nearbyText = msgLower.substring(
           Math.max(0, prodIdx - 10),
           Math.min(msgLower.length, prodIdx + lower.length + 40),
@@ -2153,6 +2166,20 @@ export function buildSystemAssessment(
     memoConstraint,
   );
 
+  // ── Collect source references from catalogued products ──
+  const memoSourceRefs: import('./advisory-response').SourceReference[] = [];
+  const seenSources = new Set<string>();
+  for (const c of components) {
+    if (c.product?.sourceReferences) {
+      for (const ref of c.product.sourceReferences) {
+        if (!seenSources.has(ref.source)) {
+          seenSources.add(ref.source);
+          memoSourceRefs.push({ source: ref.source, note: ref.note });
+        }
+      }
+    }
+  }
+
   // ── System character opening (brief) ──────────────
   // A one-two sentence overview of the system's overall lean.
   const systemCharacterOpening = inferSystemCharacterOpening(components);
@@ -2187,6 +2214,7 @@ export function buildSystemAssessment(
     keepRecommendations: memoKeeps.length > 0 ? memoKeeps : undefined,
     recommendedSequence: memoSequence.length > 0 ? memoSequence : undefined,
     keyObservation: memoKeyObservation,
+    sourceReferences: memoSourceRefs.length > 0 ? memoSourceRefs : undefined,
   };
 }
 
@@ -2737,11 +2765,139 @@ function buildIntroSummary(
     ? `prioritising ${traits.join(' and ')}`
     : 'with balanced tendencies across the primary axes';
 
+  // ── Detect system deliberateness ──
+  // A system is "deliberate" when components from different brands and
+  // price tiers share a consistent design philosophy axis — the owner
+  // assembled this intentionally rather than accumulating randomly.
+  const deliberateness = assessSystemDeliberateness(components, system);
+  const deliberateNote = deliberateness.isDeliberate
+    ? ` ${deliberateness.note}`
+    : '';
+
+  // ── Infer listener intent ──
+  // What kind of listening experience is this system optimised for?
+  const listenerIntent = inferListenerIntent(components, system);
+  const intentNote = listenerIntent ? ` ${listenerIntent}` : '';
+
   if (stacked.length > 0) {
-    return `A ${count}-component chain ${traitPhrase}. The system compounds ${stacked[0].label} across multiple stages — this shapes both its strengths and its primary limitation.`;
+    return `A ${count}-component chain ${traitPhrase}.${deliberateNote} The system compounds ${stacked[0].label} across multiple stages — this shapes both its strengths and its primary limitation.${intentNote}`;
   }
 
-  return `A ${count}-component chain ${traitPhrase}. The overall character emerges from how these components interact rather than any single piece dominating.`;
+  return `A ${count}-component chain ${traitPhrase}.${deliberateNote} The overall character emerges from how these components interact rather than any single piece dominating.${intentNote}`;
+}
+
+/**
+ * Assess whether a system shows signs of deliberate, coherent assembly.
+ *
+ * Signals: components from different brands sharing axis alignment,
+ * mix of specialist/boutique brands (not all one brand), presence of
+ * uncommon or second-hand-market components, and philosophical consistency.
+ */
+function assessSystemDeliberateness(
+  components: SystemComponent[],
+  system: PrimaryAxisLeanings,
+): { isDeliberate: boolean; note: string } {
+  // Count distinct brands
+  const brands = new Set(
+    components.map((c) => {
+      const parts = c.displayName.split(' ');
+      return parts[0].toLowerCase();
+    }),
+  );
+  const multiBrand = brands.size >= 2;
+
+  // Count how many non-neutral axes exist
+  const activeAxes = [
+    system.warm_bright !== 'neutral',
+    system.smooth_detailed !== 'neutral',
+    system.elastic_controlled !== 'neutral',
+    system.airy_closed !== 'neutral',
+  ].filter(Boolean).length;
+
+  // Count how many components have identifiable brand profiles or catalog products
+  const identified = components.filter((c) => c.brandProfile || c.product).length;
+  const hasSpecialistBrands = components.some(
+    (c) => c.product?.brandScale === 'boutique' || c.product?.brandScale === 'specialist',
+  );
+
+  // A system is deliberate when: multi-brand, most components identified,
+  // at least 1 active axis direction, and specialist brands present.
+  const isDeliberate = multiBrand && identified >= components.length - 1
+    && activeAxes >= 1 && hasSpecialistBrands;
+
+  if (!isDeliberate) {
+    return { isDeliberate: false, note: '' };
+  }
+
+  // Assess whether the system likely punches above its weight
+  // (specialist/boutique components at mid-fi price points)
+  const midFiCount = components.filter(
+    (c) => c.product?.priceTier === 'mid-fi' || c.product?.priceTier === 'budget',
+  ).length;
+  const punchesAbove = midFiCount >= 1 && hasSpecialistBrands;
+
+  const parts: string[] = ['This is a coherent, deliberately assembled system'];
+  if (punchesAbove) {
+    parts[0] += ' that likely punches above its price tier';
+  }
+  parts[0] += '.';
+
+  return { isDeliberate: true, note: parts.join(' ') };
+}
+
+/**
+ * Infer what kind of listening experience a system is optimised for
+ * based on its sonic character and component choices.
+ *
+ * Maps system axes to likely listening preferences and music genres.
+ * Returns null when the system is too balanced to make a clear inference.
+ */
+function inferListenerIntent(
+  components: SystemComponent[],
+  system: PrimaryAxisLeanings,
+): string | null {
+  const hasElasticity = system.elastic_controlled === 'elastic';
+  const hasDetail = system.smooth_detailed === 'detailed';
+  const hasWarmth = system.warm_bright === 'warm';
+  const hasBrightness = system.warm_bright === 'bright';
+  const hasControl = system.elastic_controlled === 'controlled';
+  const hasSmoothness = system.smooth_detailed === 'smooth';
+
+  // Check for high-efficiency or paper-cone speakers (suggest intimate/vocal listening)
+  const hasIntimateTransducer = components.some((c) => {
+    if (!c.product) return false;
+    const desc = c.product.description.toLowerCase();
+    return desc.includes('paper cone') || desc.includes('high-efficiency')
+      || desc.includes('single driver') || desc.includes('full-range')
+      || (c.product.traits?.rhythm ?? 0) >= 0.8;
+  });
+
+  // Elastic + detail + intimate transducer → vocal/acoustic/singer-songwriter
+  if (hasElasticity && hasDetail && hasIntimateTransducer) {
+    return 'The component choices suggest a listener drawn to rhythmic engagement, vocal texture, and acoustic intimacy — the kind of system optimised for singer-songwriters, small-ensemble recordings, and music where timing and presence matter more than scale.';
+  }
+
+  // Elastic + detail without intimate transducer → rhythmically engaged but broader
+  if (hasElasticity && hasDetail) {
+    return 'The axis profile suggests a listener who values rhythmic engagement and articulation — music that breathes and moves, with enough detail to stay interesting over long sessions.';
+  }
+
+  // Warmth + smoothness → immersive/analogue
+  if (hasWarmth && hasSmoothness) {
+    return 'The system is voiced for immersive, long-session listening — prioritising musical flow and tonal richness over analytical precision.';
+  }
+
+  // Control + detail → analytical/reference
+  if (hasControl && hasDetail) {
+    return 'The system is voiced for precision and analytical transparency — a listener who wants to hear everything the recording contains.';
+  }
+
+  // Bright + elastic → energetic
+  if (hasBrightness && hasElasticity) {
+    return 'The system is voiced for energy and excitement — transient speed and dynamic punch are the clear priorities.';
+  }
+
+  return null;
 }
 
 // ── Stacked trait detection ─────────────────────────

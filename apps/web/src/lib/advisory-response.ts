@@ -547,6 +547,7 @@ export function consultationToAdvisory(c: ConsultationResponse): AdvisoryRespons
     keepRecommendations: c.keepRecommendations,
     recommendedSequence: c.recommendedSequence,
     keyObservation: c.keyObservation,
+    sourceReferences: c.sourceReferences,
   });
 }
 
