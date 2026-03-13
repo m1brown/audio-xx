@@ -1,22 +1,17 @@
 /**
  * Main advisory message renderer.
  *
- * Delegates to section sub-components. Only populated sections render.
- * Section order follows the plan:
- *   1. Comparison summary
- *   2. Listener priorities (tan box)
- *   3. System context
- *   4. Alignment rationale
- *   5. Core advisory body (no labels — prose center)
- *   6. Recommended direction
- *   7. Why this fits
- *   8. Trade-offs
- *   9. Options (product cards)
- *  10. Bottom line
- *  11. Follow-up (blue box)
- *  12. Learn more (links)
- *  13. Sources
- *  14. Diagnostics (collapsible)
+ * Two rendering modes:
+ *
+ *   A. Memo format — when structured assessment fields are present
+ *      (componentAssessments, upgradePaths, etc.). Uses numbered headings
+ *      matching the reference advisory memo style.
+ *
+ *   B. Standard format — existing conditional section rendering with
+ *      uppercase labels. Used for consultations, shopping, diagnosis,
+ *      and any response that doesn't populate memo-specific fields.
+ *
+ * Only populated sections render in both modes.
  */
 
 import type { AdvisoryResponse } from '../../lib/advisory-response';
@@ -26,25 +21,203 @@ import AdvisoryOptions from './AdvisoryOptions';
 import AdvisoryLinks from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
 import AdvisoryDiagnostics from './AdvisoryDiagnostics';
+import AdvisoryComponentAssessments from './AdvisoryComponentAssessments';
+import AdvisoryUpgradePaths from './AdvisoryUpgradePaths';
+import { renderText } from './render-text';
 
 interface AdvisoryMessageProps {
   advisory: AdvisoryResponse;
 }
 
-/** Inline bullet list — reused for priorities, whyThisFits, tradeOffs. */
+/** Inline bullet list — reused across both modes. */
 function BulletList({ items, color }: { items: string[]; color?: string }) {
   return (
     <ul style={{ margin: 0, paddingLeft: '1.1rem', lineHeight: 1.7, color: color ?? '#333' }}>
       {items.map((item, i) => (
-        <li key={i} style={{ marginBottom: '0.2rem', fontSize: '0.95rem' }}>{item}</li>
+        <li key={i} style={{ marginBottom: '0.2rem', fontSize: '0.95rem' }}>{renderText(item)}</li>
       ))}
     </ul>
   );
 }
 
-export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
-  const a = advisory;
+/** Detect whether the response has memo-format structured fields. */
+function isMemoFormat(a: AdvisoryResponse): boolean {
+  return !!(
+    (a.componentAssessments && a.componentAssessments.length > 0)
+    || (a.upgradePaths && a.upgradePaths.length > 0)
+  );
+}
 
+// ── Memo Format Renderer ──────────────────────────────
+
+function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
+  let sectionNum = 0;
+  const next = () => ++sectionNum;
+
+  return (
+    <div style={{ lineHeight: 1.7, color: '#333' }}>
+      {/* ── 1. System Character ──────────────────── */}
+      {a.systemContext && (
+        <AdvisorySection number={next()} label="System Character">
+          <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.95rem', lineHeight: 1.7 }}>
+            {renderText(a.systemContext)}
+          </p>
+          {/* Chain listing — if component readings exist, render them as prose */}
+          {a.componentReadings && a.componentReadings.length > 0 && (
+            <div>
+              {a.componentReadings.map((para, i) => (
+                <p key={i} style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', lineHeight: 1.7, color: '#333' }}>
+                  {renderText(para)}
+                </p>
+              ))}
+            </div>
+          )}
+          {/* System interaction */}
+          {a.systemInteraction && (
+            <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', lineHeight: 1.7 }}>
+              {renderText(a.systemInteraction)}
+            </p>
+          )}
+          {/* What this combination does well */}
+          {a.assessmentStrengths && a.assessmentStrengths.length > 0 && (
+            <div style={{ marginTop: '0.6rem' }}>
+              <div
+                style={{
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  color: '#555',
+                  marginBottom: '0.3rem',
+                }}
+              >
+                What this combination does well:
+              </div>
+              <BulletList items={a.assessmentStrengths} />
+            </div>
+          )}
+        </AdvisorySection>
+      )}
+
+      {/* ── 2. Weak Points in the System ─────────── */}
+      {a.assessmentLimitations && a.assessmentLimitations.length > 0 && (
+        <AdvisorySection number={next()} label="Weak Points in the System">
+          <BulletList items={a.assessmentLimitations} color="#555" />
+        </AdvisorySection>
+      )}
+
+      {/* ── 3. Strength of Each Component ────────── */}
+      {a.componentAssessments && a.componentAssessments.length > 0 && (
+        <AdvisorySection number={next()} label="Strength of Each Component">
+          <AdvisoryComponentAssessments assessments={a.componentAssessments} />
+        </AdvisorySection>
+      )}
+
+      {/* ── 4. The Best Upgrade Path ─────────────── */}
+      {a.upgradePaths && a.upgradePaths.length > 0 && (
+        <AdvisorySection number={next()} label="The Best Upgrade Path">
+          <AdvisoryUpgradePaths paths={a.upgradePaths} />
+        </AdvisorySection>
+      )}
+
+      {/* ── 5. Components I Would NOT Change ─────── */}
+      {a.keepRecommendations && a.keepRecommendations.length > 0 && (
+        <AdvisorySection number={next()} label="Components I Would NOT Change">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            {a.keepRecommendations.map((k, i) => (
+              <div key={i} style={{ fontSize: '0.95rem', lineHeight: 1.6 }}>
+                <strong style={{ color: '#222' }}>{k.name}</strong>
+                <span style={{ color: '#555', marginLeft: '0.4rem' }}>— {k.reason}</span>
+              </div>
+            ))}
+          </div>
+        </AdvisorySection>
+      )}
+
+      {/* ── 6. What I Would Personally Do ────────── */}
+      {a.recommendedSequence && a.recommendedSequence.length > 0 && (
+        <AdvisorySection number={next()} label="What I Would Personally Do">
+          <ol style={{ margin: 0, paddingLeft: '1.3rem', lineHeight: 1.7 }}>
+            {a.recommendedSequence.map((step) => (
+              <li key={step.step} style={{ fontSize: '0.95rem', marginBottom: '0.25rem', color: '#333' }}>
+                {renderText(step.action)}
+              </li>
+            ))}
+          </ol>
+        </AdvisorySection>
+      )}
+
+      {/* ── 7. A Key Observation ─────────────────── */}
+      {a.keyObservation && (
+        <AdvisorySection number={next()} label="A Key Observation">
+          <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7, color: '#333' }}>
+            {renderText(a.keyObservation)}
+          </p>
+        </AdvisorySection>
+      )}
+
+      {/* ── Bottom line (unnumbered) ─────────────── */}
+      {a.bottomLine && (
+        <p
+          style={{
+            margin: '0 0 1.1rem 0',
+            fontWeight: 500,
+            fontSize: '1.02rem',
+            color: '#222',
+            lineHeight: 1.65,
+          }}
+        >
+          {renderText(a.bottomLine)}
+        </p>
+      )}
+
+      {/* ── Follow-up (blue box) ─────────────────── */}
+      {a.followUp && (
+        <div
+          style={{
+            borderLeft: '3px solid #5a8a9a',
+            paddingLeft: '1rem',
+            padding: '0.6rem 1rem',
+            marginBottom: '1.25rem',
+            background: '#f4f8fa',
+            fontSize: '0.95rem',
+            color: '#444',
+            lineHeight: 1.65,
+          }}
+        >
+          {a.followUp}
+        </div>
+      )}
+
+      {/* ── Learn more (links) ───────────────────── */}
+      {a.links && a.links.length > 0 && (
+        <AdvisorySection label="Learn more">
+          <AdvisoryLinks links={a.links} />
+        </AdvisorySection>
+      )}
+
+      {/* ── Sources ──────────────────────────────── */}
+      {a.sourceReferences && a.sourceReferences.length > 0 && (
+        <AdvisorySection label="Sources">
+          <AdvisorySources sources={a.sourceReferences} />
+        </AdvisorySection>
+      )}
+
+      {/* ── Diagnostics (collapsible) ────────────── */}
+      {a.diagnostics && (
+        <div style={{ marginTop: '0.75rem' }}>
+          <AdvisoryDiagnostics
+            matchedPhrases={a.diagnostics.matchedPhrases}
+            symptoms={a.diagnostics.symptoms}
+            traits={a.diagnostics.traits}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Standard Format Renderer ──────────────────────────
+
+function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
   const hasListenerPriorities = (a.listenerPriorities && a.listenerPriorities.length > 0)
     || (a.listenerAvoids && a.listenerAvoids.length > 0);
 
@@ -118,12 +291,6 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
       )}
 
       {/* ── System Assessment Block ── */}
-      {/* When assessment fields are present, render the full structured
-          assessment: character → component readings → interaction →
-          strengths → limitations → upgrade direction.
-          This replaces the generic consultation prose for assessments. */}
-
-      {/* 2a. Overall system character (assessment opening) */}
       {a.componentReadings && a.componentReadings.length > 0 && a.systemContext && (
         <AdvisorySection label="System character">
           <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
@@ -132,7 +299,6 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
-      {/* 2b. Component-by-component readings */}
       {a.componentReadings && a.componentReadings.length > 0 && (
         <div style={{ marginBottom: '1.25rem' }}>
           {a.componentReadings.map((para, i) => (
@@ -143,7 +309,6 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </div>
       )}
 
-      {/* 2c. How the components interact */}
       {a.systemInteraction && (
         <AdvisorySection label="How the components interact">
           <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
@@ -152,21 +317,18 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
-      {/* 2d. What is working well (assessment) */}
       {a.assessmentStrengths && a.assessmentStrengths.length > 0 && (
         <AdvisorySection label="What is working well">
           <BulletList items={a.assessmentStrengths} />
         </AdvisorySection>
       )}
 
-      {/* 2e. Where limitations may appear (assessment) */}
       {a.assessmentLimitations && a.assessmentLimitations.length > 0 && (
         <AdvisorySection label="Where limitations may appear">
           <BulletList items={a.assessmentLimitations} color="#666" />
         </AdvisorySection>
       )}
 
-      {/* 2f. Likely upgrade direction */}
       {a.upgradeDirection && (
         <AdvisorySection label="Likely upgrade direction">
           <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
@@ -175,7 +337,7 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
-      {/* ── 3. System context (non-assessment consultations) ── */}
+      {/* ── 3. System context (non-assessment) ── */}
       {a.systemContext && !a.componentReadings && (
         <AdvisorySection label="Your system">
           <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
@@ -184,7 +346,6 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
-      {/* ── 3b. System tendencies ────────────────────── */}
       {a.systemTendencies && !a.systemContext && !a.systemInteraction && (
         <AdvisorySection label="System tendencies">
           <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
@@ -193,24 +354,20 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
-      {/* ── 3c. What is working well (upgrade) ───────── */}
       {a.strengths && a.strengths.length > 0 && (
         <AdvisorySection label="What is working well">
           <BulletList items={a.strengths} />
         </AdvisorySection>
       )}
 
-      {/* ── 3d. Where limitations may appear (upgrade) ── */}
       {a.limitations && a.limitations.length > 0 && (
         <AdvisorySection label="Where limitations may appear">
           <BulletList items={a.limitations} color="#666" />
         </AdvisorySection>
       )}
 
-      {/* ── 5. Core advisory body (no labels) ────────── */}
-      {/* For upgrade analyses, tendencies carries "What the proposed change actually does" */}
+      {/* ── 5. Core advisory body ────────────────── */}
       {(a.improvements && a.improvements.length > 0) ? (
-        /* Upgrade path: render tendencies under a labelled section */
         <>
           {a.tendencies && (
             <AdvisorySection label="What the proposed change actually does">
@@ -221,7 +378,6 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
           )}
         </>
       ) : (
-        /* Standard path: unlabelled prose body */
         <AdvisoryProse
           philosophy={a.philosophy}
           tendencies={a.tendencies}
@@ -229,21 +385,19 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         />
       )}
 
-      {/* ── 5b. What improves (upgrade) ────────────────── */}
       {a.improvements && a.improvements.length > 0 && (
         <AdvisorySection label="What improves">
           <BulletList items={a.improvements} />
         </AdvisorySection>
       )}
 
-      {/* ── 5c. What probably stays the same (upgrade) ─── */}
       {a.unchanged && a.unchanged.length > 0 && (
         <AdvisorySection label="What probably stays the same">
           <BulletList items={a.unchanged} color="#666" />
         </AdvisorySection>
       )}
 
-      {/* ── 6. Recommended direction ─────────────────── */}
+      {/* ── 6. Recommended direction ─────────────── */}
       {a.recommendedDirection && (
         <AdvisorySection label="What this means for component choice">
           <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
@@ -252,21 +406,18 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
-      {/* ── 7. Why this fits ─────────────────────────── */}
       {a.whyThisFits && a.whyThisFits.length > 0 && (
         <AdvisorySection label="Why this fits">
           <BulletList items={a.whyThisFits} />
         </AdvisorySection>
       )}
 
-      {/* ── 8. Trade-offs ────────────────────────────── */}
       {a.tradeOffs && a.tradeOffs.length > 0 && (
         <AdvisorySection label="Trade-offs">
           <BulletList items={a.tradeOffs} color="#666" />
         </AdvisorySection>
       )}
 
-      {/* ── 8b. When this upgrade makes sense ─────────── */}
       {a.whenToAct && (
         <AdvisorySection label="When this upgrade makes sense">
           <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7 }}>
@@ -275,7 +426,6 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
-      {/* ── 8c. When it may not be the best next step ─── */}
       {a.whenToWait && (
         <AdvisorySection label="When it may not be the best next step">
           <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7, color: '#666' }}>
@@ -284,7 +434,6 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
-      {/* ── 8d. System balance summary ────────────────── */}
       {a.systemBalance && a.systemBalance.length > 0 && (
         <AdvisorySection label="System balance summary">
           <div style={{ display: 'grid', gap: '0.3rem' }}>
@@ -325,14 +474,12 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
-      {/* ── 8e. Where upgrades would have the most impact ─ */}
       {a.upgradeImpactAreas && a.upgradeImpactAreas.length > 0 && (
         <AdvisorySection label="Where upgrades would have the most impact">
           <BulletList items={a.upgradeImpactAreas} />
         </AdvisorySection>
       )}
 
-      {/* ── 8f. Expected magnitude of change ──────────── */}
       {a.changeMagnitude && (
         <AdvisorySection label="Expected magnitude of change">
           <div style={{ fontSize: '0.95rem', lineHeight: 1.7 }}>
@@ -366,14 +513,13 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
-      {/* ── 9. Options ───────────────────────────────── */}
+      {/* ── 9. Options ───────────────────────────── */}
       {a.options && a.options.length > 0 && (
         <AdvisorySection label="Worth considering">
           <AdvisoryOptions options={a.options} />
         </AdvisorySection>
       )}
 
-      {/* ── 9b. Provisional caveats ──────────────────── */}
       {hasProvisionalCaveats && (
         <div
           style={{
@@ -391,7 +537,7 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </div>
       )}
 
-      {/* ── 10. Bottom line ──────────────────────────── */}
+      {/* ── 10. Bottom line ──────────────────────── */}
       {a.bottomLine && (
         <p
           style={{
@@ -406,7 +552,7 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </p>
       )}
 
-      {/* ── 11. Follow-up (blue box) ─────────────────── */}
+      {/* ── 11. Follow-up (blue box) ─────────────── */}
       {a.followUp && (
         <div
           style={{
@@ -424,21 +570,21 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
         </div>
       )}
 
-      {/* ── 12. Learn more (links) ───────────────────── */}
+      {/* ── 12. Learn more (links) ───────────────── */}
       {a.links && a.links.length > 0 && (
         <AdvisorySection label="Learn more">
           <AdvisoryLinks links={a.links} />
         </AdvisorySection>
       )}
 
-      {/* ── 13. Sources ──────────────────────────────── */}
+      {/* ── 13. Sources ──────────────────────────── */}
       {a.sourceReferences && a.sourceReferences.length > 0 && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>
       )}
 
-      {/* ── 14. Diagnostics (collapsible) ────────────── */}
+      {/* ── 14. Diagnostics (collapsible) ────────── */}
       {a.diagnostics && (
         <div style={{ marginTop: '0.75rem' }}>
           <AdvisoryDiagnostics
@@ -450,4 +596,13 @@ export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
       )}
     </div>
   );
+}
+
+// ── Main Export ────────────────────────────────────────
+
+export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
+  if (isMemoFormat(advisory)) {
+    return <MemoFormat advisory={advisory} />;
+  }
+  return <StandardFormat advisory={advisory} />;
 }

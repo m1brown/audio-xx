@@ -54,6 +54,89 @@ export interface SourceReference {
   note: string;
 }
 
+// ── Structured assessment types (memo format) ─────────
+
+/**
+ * Per-component structured assessment.
+ * Replaces prose componentReadings with a Strengths/Weakness
+ * format matching the reference advisory memo style.
+ */
+export interface ComponentAssessment {
+  /** Component display name (e.g. "JOB Integrated", "Chord Hugo v1"). */
+  name: string;
+  /** Role in the system (e.g. "anchor", "source", "transducer"). */
+  role?: string;
+  /** One-line framing sentence. */
+  summary: string;
+  /** What this component does well (short bullet items). */
+  strengths: string[];
+  /** Where this component is limited (short bullet items). */
+  weaknesses: string[];
+  /** Bold verdict — "Keep this." or "This is the weak link." */
+  verdict: string;
+}
+
+/**
+ * Ranked upgrade path — one axis of improvement.
+ * Each path may contain multiple product options.
+ */
+export interface UpgradePath {
+  /** Display rank (1 = highest impact). */
+  rank: number;
+  /** Path label (e.g. "DAC", "Speaker Upgrade", "Add Subwoofer"). */
+  label: string;
+  /** Impact framing (e.g. "Highest Impact"). */
+  impact?: string;
+  /** Why this path matters (1–2 sentences). */
+  rationale: string;
+  /** Ranked product options within this path. */
+  options: UpgradePathOption[];
+}
+
+/**
+ * A single product option within an upgrade path.
+ */
+export interface UpgradePathOption {
+  /** Display rank within the path. */
+  rank: number;
+  /** Product name. */
+  name: string;
+  brand?: string;
+  /** Approximate price (used market or new). */
+  price?: number;
+  priceCurrency?: string;
+  /** Price context (e.g. "~$900–1200 used"). */
+  priceNote?: string;
+  /** One-line summary. */
+  summary: string;
+  /** What improves (short bullet items). */
+  pros: string[];
+  /** What to watch for (short bullet items). */
+  cons?: string[];
+  /** Bold verdict (e.g. "best match with the JOB"). */
+  verdict?: string;
+}
+
+/**
+ * Component the advisor recommends keeping unchanged.
+ */
+export interface KeepRecommendation {
+  /** Component name. */
+  name: string;
+  /** Why to keep it (1 sentence). */
+  reason: string;
+}
+
+/**
+ * Sequenced upgrade step — "What I Would Do" format.
+ */
+export interface RecommendedStep {
+  /** Step number (1-based). */
+  step: number;
+  /** Action description (e.g. "Upgrade DAC → Chord Qutest or TT2"). */
+  action: string;
+}
+
 /**
  * Unified advisory response.
  *
@@ -137,6 +220,18 @@ export interface AdvisoryResponse {
   assessmentLimitations?: string[];
   /** Likely upgrade direction or "do nothing" guidance (prose). */
   upgradeDirection?: string;
+
+  // ── 5e. Structured Assessment (memo format) ────────
+  /** Per-component structured analysis (Strengths/Weaknesses/Verdict). */
+  componentAssessments?: ComponentAssessment[];
+  /** Ranked upgrade paths with product options. */
+  upgradePaths?: UpgradePath[];
+  /** Components the advisor recommends keeping unchanged. */
+  keepRecommendations?: KeepRecommendation[];
+  /** Sequenced upgrade steps ("What I Would Do"). */
+  recommendedSequence?: RecommendedStep[];
+  /** Key observation about the listener's taste pattern. */
+  keyObservation?: string;
 
   // ── 6. Trade-offs ───────────────────────────────────
   /** What to watch for / what you trade away (bullet list). */
@@ -391,6 +486,13 @@ export function consultationToAdvisory(c: ConsultationResponse): AdvisoryRespons
     assessmentStrengths: c.assessmentStrengths,
     assessmentLimitations: c.assessmentLimitations,
     upgradeDirection: c.upgradeDirection,
+
+    // Structured memo-format fields
+    componentAssessments: c.componentAssessments,
+    upgradePaths: c.upgradePaths,
+    keepRecommendations: c.keepRecommendations,
+    recommendedSequence: c.recommendedSequence,
+    keyObservation: c.keyObservation,
   });
 }
 

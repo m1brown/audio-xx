@@ -82,6 +82,18 @@ export interface ConsultationResponse {
   assessmentLimitations?: string[];
   /** Likely upgrade direction or "do nothing" guidance. */
   upgradeDirection?: string;
+
+  // ── Structured assessment (memo format) ──────────
+  /** Per-component structured analysis (Strengths/Weaknesses/Verdict). */
+  componentAssessments?: import('./advisory-response').ComponentAssessment[];
+  /** Ranked upgrade paths with product options. */
+  upgradePaths?: import('./advisory-response').UpgradePath[];
+  /** Components the advisor recommends keeping unchanged. */
+  keepRecommendations?: import('./advisory-response').KeepRecommendation[];
+  /** Sequenced upgrade steps ("What I Would Do"). */
+  recommendedSequence?: import('./advisory-response').RecommendedStep[];
+  /** Key observation about the listener's taste pattern. */
+  keyObservation?: string;
 }
 
 // ── All products ────────────────────────────────────
@@ -2022,6 +2034,13 @@ export function buildSystemAssessment(
   // ── Subject line ────────────────────────────────────
   const subject = components.map((c) => c.displayName).join(', ');
 
+  // ── Structured memo-format fields ───────────────────
+  const memoAssessments = buildComponentAssessments(components, componentAxisProfiles);
+  const memoKeeps = buildKeepRecommendations(memoAssessments);
+  const memoUpgradePaths = buildUpgradePaths(components, componentAxisProfiles, memoAssessments, axisCompounding);
+  const memoSequence = buildRecommendedSequence(memoUpgradePaths, memoKeeps);
+  const memoKeyObservation = buildKeyObservation(components, componentAxisProfiles, axisCompounding, desires);
+
   // ── System character opening (brief) ──────────────
   // A one-two sentence overview of the system's overall lean.
   const systemCharacterOpening = inferSystemCharacterOpening(components);
@@ -2046,6 +2065,12 @@ export function buildSystemAssessment(
     upgradeDirection,
     followUp,
     links: allLinks.length > 0 ? allLinks : undefined,
+    // Structured memo-format fields
+    componentAssessments: memoAssessments.length > 0 ? memoAssessments : undefined,
+    upgradePaths: memoUpgradePaths.length > 0 ? memoUpgradePaths : undefined,
+    keepRecommendations: memoKeeps.length > 0 ? memoKeeps : undefined,
+    recommendedSequence: memoSequence.length > 0 ? memoSequence : undefined,
+    keyObservation: memoKeyObservation,
   };
 }
 
@@ -2493,6 +2518,240 @@ function deriveSystemLeanFromAxes(profiles: ComponentAxisProfile[]): 'warm' | 'p
  * Returns null when no desires are present — the follow-up question
  * takes its place.
  */
+// ── Structured memo-format builders ──────────────────
+//
+// Generate per-component assessments, ranked upgrade paths, keep lists,
+// and recommended sequences for the numbered-section advisory format.
+// All deterministic — no LLM calls.
+
+type MemoComponentAssessment = import('./advisory-response').ComponentAssessment;
+type MemoUpgradePath = import('./advisory-response').UpgradePath;
+type MemoKeepRecommendation = import('./advisory-response').KeepRecommendation;
+type MemoRecommendedStep = import('./advisory-response').RecommendedStep;
+
+/**
+ * Build per-component structured assessments from axis analysis
+ * and product/brand data.
+ */
+function buildComponentAssessments(
+  components: SystemComponent[],
+  profiles: ComponentAxisProfile[],
+): MemoComponentAssessment[] {
+  return components.map((c, i) => {
+    const axes = profiles[i].axes;
+    const strengths: string[] = [];
+    const weaknesses: string[] = [];
+
+    // ── Derive from axis positions ──
+    if (axes.warm_bright === 'warm') strengths.push('Tonal density and midrange presence');
+    if (axes.warm_bright === 'bright') strengths.push('Transient articulation and clarity');
+    if (axes.smooth_detailed === 'smooth') strengths.push('Musical flow and ease');
+    if (axes.smooth_detailed === 'detailed') strengths.push('Micro-detail retrieval and textural transparency');
+    if (axes.elastic_controlled === 'elastic') strengths.push('Dynamic expression and rhythmic engagement');
+    if (axes.elastic_controlled === 'controlled') strengths.push('Composure and grip under complex material');
+    if (axes.airy_closed === 'airy') strengths.push('Spatial openness and soundstage depth');
+
+    // Weaknesses — opposite of strengths
+    if (axes.warm_bright === 'warm') weaknesses.push('May soften transient edges');
+    if (axes.warm_bright === 'bright') weaknesses.push('May lean thin in the midrange');
+    if (axes.smooth_detailed === 'smooth') weaknesses.push('May trade some resolution for ease');
+    if (axes.smooth_detailed === 'detailed') weaknesses.push('May foreground analytical qualities on lesser recordings');
+    if (axes.elastic_controlled === 'controlled') weaknesses.push('May dampen dynamic expression');
+    if (axes.elastic_controlled === 'elastic') weaknesses.push('May lose composure on dense passages');
+    if (axes.airy_closed === 'closed') weaknesses.push('Soundstage may feel constrained');
+
+    // ── Enrich from product traits ──
+    if (c.product?.traits) {
+      const t = c.product.traits;
+      if ((t.flow ?? 0.5) > 0.75) strengths.push('Strong musical flow and continuity');
+      if ((t.spatial_precision ?? 0.5) > 0.8) strengths.push('Excellent spatial definition');
+      if ((t.composure ?? 0.5) > 0.8) strengths.push('High composure under load');
+      if ((t.tonal_density ?? 0.5) < 0.35) weaknesses.push('Tonal body is thin — may lack weight');
+      if ((t.flow ?? 0.5) < 0.35) weaknesses.push('May prioritize precision over musical involvement');
+    }
+
+    // ── Enrich from product architecture ──
+    if (c.product?.architecture) {
+      strengths.push(`${c.product.architecture} design`);
+    }
+
+    // ── Verdict ──
+    const hasMoreStrengths = strengths.length > weaknesses.length;
+    const weaknessCount = weaknesses.length;
+    let verdict: string;
+    if (weaknessCount === 0) {
+      verdict = `**${c.displayName}** — a strong performer in this chain. Keep this.`;
+    } else if (hasMoreStrengths && weaknessCount <= 1) {
+      verdict = `**${c.displayName}** holds its weight well. No urgent reason to change.`;
+    } else if (weaknessCount >= 2) {
+      verdict = `**${c.displayName}** — the most likely upgrade lever in this chain.`;
+    } else {
+      verdict = `**${c.displayName}** — solid but leaves room for improvement at this price tier.`;
+    }
+
+    // ── Summary ──
+    const summary = c.product?.description
+      ?? c.brandProfile?.tendencies
+      ?? c.character;
+
+    return {
+      name: c.displayName,
+      role: c.role !== 'component' ? c.role : undefined,
+      summary,
+      strengths: strengths.slice(0, 5),
+      weaknesses: weaknesses.slice(0, 4),
+      verdict,
+    };
+  });
+}
+
+/**
+ * Identify which components to keep unchanged.
+ * Components with more strengths than weaknesses and no compounding risk
+ * are flagged as keep recommendations.
+ */
+function buildKeepRecommendations(
+  assessments: MemoComponentAssessment[],
+): MemoKeepRecommendation[] {
+  const keeps: MemoKeepRecommendation[] = [];
+  for (const a of assessments) {
+    if (a.strengths.length > a.weaknesses.length && a.weaknesses.length <= 1) {
+      keeps.push({
+        name: a.name,
+        reason: a.strengths[0] ?? 'performing well in this system',
+      });
+    }
+  }
+  return keeps;
+}
+
+/**
+ * Build ranked upgrade paths from axis analysis.
+ * Finds the weakest link(s) and suggests architectural directions.
+ */
+function buildUpgradePaths(
+  components: SystemComponent[],
+  profiles: ComponentAxisProfile[],
+  assessments: MemoComponentAssessment[],
+  compounding: string[],
+): MemoUpgradePath[] {
+  const paths: MemoUpgradePath[] = [];
+
+  // ── Rank components by weakness count (most weaknesses = most upgrade need) ──
+  const ranked = assessments
+    .map((a, i) => ({ assessment: a, component: components[i], profile: profiles[i], index: i }))
+    .filter((r) => r.assessment.weaknesses.length >= 1)
+    .sort((a, b) => b.assessment.weaknesses.length - a.assessment.weaknesses.length);
+
+  let pathRank = 0;
+  for (const r of ranked.slice(0, 3)) {
+    pathRank++;
+    const role = r.component.role;
+    const axes = r.profile.axes;
+
+    // Determine what the upgrade should optimise
+    const optimises: string[] = [];
+    if (axes.warm_bright === 'bright') optimises.push('tonal density');
+    if (axes.warm_bright === 'warm') optimises.push('transient precision');
+    if (axes.smooth_detailed === 'smooth') optimises.push('detail retrieval');
+    if (axes.smooth_detailed === 'detailed') optimises.push('musical flow');
+    if (axes.elastic_controlled === 'controlled') optimises.push('dynamic expression');
+    if (axes.elastic_controlled === 'elastic') optimises.push('composure');
+
+    const impact = pathRank === 1 ? 'Highest Impact'
+      : pathRank === 2 ? 'Moderate Impact'
+      : 'Refinement';
+
+    const improvementTarget = optimises.length > 0
+      ? optimises.join(' and ')
+      : 'overall system balance';
+
+    const rationale = compounding.length > 0
+      ? `The ${r.component.displayName} contributes to compounding in this chain. Replacing it with a component that provides ${improvementTarget} would rebalance the system's character.`
+      : `The ${r.component.displayName} is the most likely upgrade lever for ${improvementTarget} based on the system's current axis balance.`;
+
+    paths.push({
+      rank: pathRank,
+      label: `${role.charAt(0).toUpperCase() + role.slice(1)} Upgrade`,
+      impact,
+      rationale,
+      options: [], // Populated by shopping/product catalog — empty for now as a structural placeholder
+    });
+  }
+
+  return paths;
+}
+
+/**
+ * Build recommended upgrade sequence.
+ * Based on the upgrade paths ranking + keep list.
+ */
+function buildRecommendedSequence(
+  paths: MemoUpgradePath[],
+  keeps: MemoKeepRecommendation[],
+): MemoRecommendedStep[] {
+  const steps: MemoRecommendedStep[] = [];
+  let stepNum = 0;
+
+  for (const p of paths.slice(0, 3)) {
+    stepNum++;
+    steps.push({
+      step: stepNum,
+      action: `**${p.label}** — ${p.rationale.split('.')[0]}.`,
+    });
+  }
+
+  if (keeps.length > 0) {
+    stepNum++;
+    const keepNames = keeps.map((k) => k.name).join(', ');
+    steps.push({
+      step: stepNum,
+      action: `Keep ${keepNames} — these are performing well and don't warrant change at this stage.`,
+    });
+  }
+
+  return steps;
+}
+
+/**
+ * Build a key observation about the system's overall character.
+ * Focuses on the dominant trait pattern and what it implies about
+ * the listener's likely preferences.
+ */
+function buildKeyObservation(
+  components: SystemComponent[],
+  profiles: ComponentAxisProfile[],
+  compounding: string[],
+  desires?: DesireSignal[],
+): string {
+  const axes = profiles.map((p) => p.axes);
+  const system = synthesiseSystemAxes(axes);
+
+  // ── Desire-informed observation ──
+  if (desires && desires.length > 0) {
+    const topDesire = desires[0];
+    const quality = topDesire.quality.toLowerCase();
+    const direction = topDesire.direction === 'more' ? 'prioritises' : 'is sensitive to';
+    return `Your system suggests a listener who ${direction} ${quality}. The current chain ${compounding.length > 0 ? 'compounds this tendency — further investment in that direction risks diminishing returns' : 'has room to move in that direction without overcommitting'}. Any upgrade should be evaluated against whether it deepens what you already value or introduces balance you don't yet have.`;
+  }
+
+  // ── Character-informed observation ──
+  if (compounding.length > 0) {
+    return `This system commits to a direction — multiple components push the same way. That can be a deliberate strength (depth of character) or an emerging limitation (diminishing returns). Before upgrading, decide whether you want to **deepen** the existing character or **rebalance** toward something the system doesn't currently provide.`;
+  }
+
+  if (system.warm_bright === 'neutral' && system.smooth_detailed === 'neutral') {
+    return `This system is broadly balanced — no single axis dominates. Upgrades from here are about refinement rather than correction. Focus on the quality you most want to intensify, and choose components that commit to that direction without destabilising what already works.`;
+  }
+
+  const descriptors: string[] = [];
+  if (system.warm_bright !== 'neutral') descriptors.push(system.warm_bright === 'warm' ? 'warmth' : 'clarity');
+  if (system.smooth_detailed !== 'neutral') descriptors.push(system.smooth_detailed === 'smooth' ? 'ease' : 'detail');
+  if (system.elastic_controlled !== 'neutral') descriptors.push(system.elastic_controlled === 'elastic' ? 'dynamic energy' : 'composure');
+
+  return `This system leans toward ${descriptors.join(' and ')}. That's a valid architectural choice — not a problem to fix. Upgrades should either deepen that character or introduce complementary balance, depending on what you want more of.`;
+}
+
 function buildAssessmentPreferenceAlignment(
   components: SystemComponent[],
   desires?: DesireSignal[],
