@@ -26,6 +26,7 @@ const BRAND_CATEGORY_MAP: Record<string, ProductCategory> = {
   weiss: 'dac', 'mola mola': 'dac', rockna: 'dac', aqua: 'dac',
   lampizator: 'dac', lampi: 'dac', 'border patrol': 'dac', metrum: 'dac',
   'audio-gd': 'dac', soekris: 'dac', musician: 'dac', okto: 'dac',
+  eversolo: 'streamer',
   // Speakers
   harbeth: 'speaker', devore: 'speaker', zu: 'speaker', klipsch: 'speaker',
   focal: 'speaker', boenicke: 'speaker', kef: 'speaker', 'b&w': 'speaker',
@@ -91,6 +92,10 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   'kanta no. 2': { brand: 'Focal', category: 'speaker' },
   kanta: { brand: 'Focal', category: 'speaker' },
   'aria 906': { brand: 'Focal', category: 'speaker' },
+  // Eversolo
+  'dmp-a6': { brand: 'Eversolo', category: 'streamer' },
+  'dmp-a8': { brand: 'Eversolo', category: 'streamer' },
+  'dac-z8': { brand: 'Eversolo', category: 'dac' },
   // Headphones
   'hd 600': { brand: 'Sennheiser', category: 'headphone' },
   'hd 650': { brand: 'Sennheiser', category: 'headphone' },

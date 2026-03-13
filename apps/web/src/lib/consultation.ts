@@ -1913,6 +1913,51 @@ export function buildSystemAssessment(
 
         // Mark brand as processed too
         processedNames.add(product.brand.toLowerCase());
+      } else {
+        // Product name recognized but not in catalog — infer from message context.
+        // Look for a brand match that precedes the product name, and infer the
+        // role from category keywords in the surrounding text.
+        const brandMatch = subjectMatches.find(
+          (m) => m.kind === 'brand' && !processedNames.has(m.name.toLowerCase()),
+        );
+        const brandName = brandMatch
+          ? brandMatch.name.charAt(0).toUpperCase() + brandMatch.name.slice(1)
+          : '';
+        if (brandMatch) {
+          processedNames.add(brandMatch.name.toLowerCase());
+        }
+        const productName = match.name.toUpperCase().includes('-')
+          ? match.name.toUpperCase()
+          : match.name.charAt(0).toUpperCase() + match.name.slice(1);
+        const displayName = brandName ? `${brandName} ${productName}` : productName;
+
+        // Infer role from nearby text (within ~40 chars of the product name)
+        const msgLower = currentMessage.toLowerCase();
+        const prodIdx = msgLower.indexOf(lower);
+        const nearbyText = msgLower.substring(
+          Math.max(0, prodIdx - 10),
+          Math.min(msgLower.length, prodIdx + lower.length + 40),
+        );
+        let role: string = 'component';
+        if (/stream/i.test(nearbyText)) role = 'streamer';
+        else if (/\bdac\b/i.test(nearbyText)) role = 'dac';
+        else if (/\bamp/i.test(nearbyText) || /\bintegrated\b/i.test(nearbyText)) role = 'amplifier';
+        else if (/\bspeak/i.test(nearbyText)) role = 'speaker';
+
+        // Try brand profile for character info
+        const bp = brandName ? findBrandProfile(brandName) : undefined;
+
+        components.push({
+          displayName,
+          role,
+          character: bp?.tendencies ?? `${displayName} ${role}`,
+          brandProfile: bp ? {
+            philosophy: bp.philosophy,
+            tendencies: bp.tendencies,
+            systemContext: bp.systemContext,
+          } : undefined,
+          product: undefined,
+        });
       }
     } else {
       // Brand-level lookup
@@ -1970,6 +2015,49 @@ export function buildSystemAssessment(
         }
 
         // Collect specific product links
+        if (specificProduct?.retailer_links) {
+          for (const l of specificProduct.retailer_links) {
+            allLinks.push({ label: `${l.label} (${specificProduct.name})`, url: l.url });
+          }
+        }
+      } else {
+        // Brand recognized but no profile — still include as a component
+        // so it appears in the chain. Infer role from message context.
+        const capitalized = match.name.charAt(0).toUpperCase() + match.name.slice(1);
+        const surroundingText = currentMessage.toLowerCase();
+        let role: string = 'component';
+
+        // Check for role keywords near the brand name
+        const brandIdx = surroundingText.indexOf(match.name.toLowerCase());
+        const nearbyText = surroundingText.substring(
+          Math.max(0, brandIdx - 10),
+          Math.min(surroundingText.length, brandIdx + match.name.length + 40),
+        );
+        if (/stream/i.test(nearbyText)) role = 'streamer';
+        else if (/\bdac\b/i.test(nearbyText)) role = 'dac';
+        else if (/\bamp/i.test(nearbyText)) role = 'amplifier';
+        else if (/\bspeak/i.test(nearbyText)) role = 'speaker';
+        else if (/\bintegrated\b/i.test(nearbyText)) role = 'integrated';
+
+        // Find any product from this brand mentioned in the message
+        const brandProducts = ALL_PRODUCTS.filter(
+          (p) => p.brand.toLowerCase() === match.name.toLowerCase(),
+        );
+        const specificProduct = brandProducts.find((p) =>
+          currentMessage.toLowerCase().includes(p.name.toLowerCase()),
+        );
+
+        const displayName = specificProduct
+          ? normalizeDisplayName(specificProduct.brand, specificProduct.name)
+          : capitalized;
+
+        components.push({
+          displayName,
+          role: specificProduct?.category ?? role,
+          character: specificProduct?.description ?? `${capitalized} ${role}`,
+          product: specificProduct,
+        });
+
         if (specificProduct?.retailer_links) {
           for (const l of specificProduct.retailer_links) {
             allLinks.push({ label: `${l.label} (${specificProduct.name})`, url: l.url });
@@ -2048,8 +2136,8 @@ export function buildSystemAssessment(
   const memoStacked = detectStackedTraits(components, componentAxisProfiles);
   const memoConstraint = detectPrimaryConstraint(components, componentAxisProfiles, memoStacked, systemAxes);
   const memoAssessments = buildComponentAssessments(components, componentAxisProfiles, memoConstraint);
-  const memoKeeps = buildKeepRecommendations(memoAssessments, memoConstraint);
   const memoUpgradePaths = buildUpgradePaths(components, componentAxisProfiles, memoAssessments, memoConstraint, memoStacked);
+  const memoKeeps = buildKeepRecommendations(memoAssessments, memoUpgradePaths, memoConstraint);
   const memoSequence = buildRecommendedSequence(memoUpgradePaths, memoKeeps);
   const memoIntro = buildIntroSummary(components, systemAxes, memoStacked);
   const memoKeyObservation = buildKeyObservation(components, componentAxisProfiles, memoStacked, systemAxes, desires);
@@ -2966,12 +3054,26 @@ function buildComponentAssessments(
 
 function buildKeepRecommendations(
   assessments: MemoComponentAssessment[],
+  upgradePaths: MemoUpgradePath[],
   constraint?: MemoPrimaryConstraint,
 ): MemoKeepRecommendation[] {
+  // Collect all component names targeted by upgrade paths.
+  // A component that has an upgrade path should NOT also appear in keeps.
+  const upgradeTargetRoles = new Set(
+    upgradePaths.map((p) => p.label.replace(/\s+Upgrade$/i, '').toLowerCase()),
+  );
+
   const keeps: MemoKeepRecommendation[] = [];
   for (const a of assessments) {
     const isBottleneck = constraint?.componentName === a.name;
-    if (!isBottleneck && a.strengths.length > a.weaknesses.length) {
+    if (isBottleneck) continue;
+
+    // Check whether this component's role matches an upgrade path target
+    const role = a.role ? canonicalRole(a.role).toLowerCase() : '';
+    const isUpgradeTarget = upgradeTargetRoles.has(role);
+    if (isUpgradeTarget) continue;
+
+    if (a.strengths.length > a.weaknesses.length) {
       keeps.push({
         name: a.name,
         reason: a.strengths.slice(0, 2).join('; '),

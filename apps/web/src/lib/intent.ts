@@ -46,12 +46,12 @@ export interface IntentResult {
 
 /** Brand / manufacturer names — not specific models. */
 const BRAND_NAMES = [
-  // DAC / digital
+  // DAC / digital / streamers
   'denafrips', 'chord', 'schiit', 'topping', 'smsl', 'gustard',
   'holo', 'benchmark', 'rme', 'mytek', 'weiss',
   'mola mola', 'rockna', 'aqua', 'lampizator', 'lampi',
   'border patrol', 'metrum', 'audio-gd', 'soekris',
-  'musician', 'okto',
+  'musician', 'okto', 'eversolo',
   // Speakers
   'wlm', 'harbeth', 'devore', 'zu', 'klipsch', 'focal', 'boenicke',
   'kef', 'b&w', 'bowers', 'dynaudio', 'wilson', 'magico',
@@ -82,6 +82,7 @@ const BRAND_NAMES = [
 const PRODUCT_NAMES = [
   // ── Compound names first (longest match wins) ──────
   'hugo tt2', 'hugo tt', 'hugo 2',
+  'dmp-a6', 'dmp-a8', 'dac-z8',
   'diva monitor', 'super hl5', 'dirty weekend',
   'hd 800 s', 'hd 800', 'hd 650', 'hd 600',
   'airpods pro 2', 'airpods pro',
