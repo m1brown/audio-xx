@@ -3092,14 +3092,19 @@ function assessSystemDeliberateness(
 }
 
 /**
- * Infer what kind of listening experience a system is optimised for
- * based on its sonic character and component choices.
+ * Infer listener sonic priorities from system axis positions and component choices.
  *
- * Maps system axes to likely listening preferences and music genres.
+ * CONSTRAINT: Stay at the level of sonic priorities and system philosophy.
+ * Do NOT infer specific music genres, artists, or lifestyle claims unless
+ * the user has explicitly provided that information. It is fine to infer
+ * timing-first priorities, preference for elasticity/flow/low stored energy,
+ * or likely dislike of overdamping — but not to jump from system traits to
+ * "singer-songwriter" or "folk" claims.
+ *
  * Returns null when the system is too balanced to make a clear inference.
  */
 function inferListenerIntent(
-  components: SystemComponent[],
+  _components: SystemComponent[],
   system: PrimaryAxisLeanings,
 ): string | null {
   const hasElasticity = system.elastic_controlled === 'elastic';
@@ -3109,38 +3114,29 @@ function inferListenerIntent(
   const hasControl = system.elastic_controlled === 'controlled';
   const hasSmoothness = system.smooth_detailed === 'smooth';
 
-  // Check for high-efficiency or paper-cone speakers (suggest intimate/vocal listening)
-  const hasIntimateTransducer = components.some((c) => {
-    if (!c.product) return false;
-    const desc = c.product.description.toLowerCase();
-    return desc.includes('paper cone') || desc.includes('high-efficiency')
-      || desc.includes('single driver') || desc.includes('full-range')
-      || (c.product.traits?.rhythm ?? 0) >= 0.8;
-  });
-
-  // Elastic + detail + intimate transducer → vocal/acoustic/singer-songwriter
-  if (hasElasticity && hasDetail && hasIntimateTransducer) {
-    return 'The component choices suggest a listener drawn to rhythmic engagement, vocal texture, and acoustic intimacy — the kind of system optimised for singer-songwriters, small-ensemble recordings, and music where timing and presence matter more than scale.';
-  }
-
-  // Elastic + detail without intimate transducer → rhythmically engaged but broader
+  // Elastic + detail → timing-first, low stored energy
   if (hasElasticity && hasDetail) {
-    return 'The axis profile suggests a listener who values rhythmic engagement and articulation — music that breathes and moves, with enough detail to stay interesting over long sessions.';
+    return 'The axis profile points toward a listener who prioritises timing accuracy, low stored energy, and rhythmic articulation. This system rewards recordings with good transient information and tends to expose compression or overdamping elsewhere in the chain.';
   }
 
-  // Warmth + smoothness → immersive/analogue
+  // Warmth + smoothness → tonal immersion, fatigue resistance
   if (hasWarmth && hasSmoothness) {
-    return 'The system is voiced for immersive, long-session listening — prioritising musical flow and tonal richness over analytical precision.';
+    return 'The system prioritises tonal richness, harmonic density, and sustained musical flow. This profile favours long-session engagement and fatigue resistance over analytical separation.';
   }
 
-  // Control + detail → analytical/reference
+  // Control + detail → precision, transparency
   if (hasControl && hasDetail) {
-    return 'The system is voiced for precision and analytical transparency — a listener who wants to hear everything the recording contains.';
+    return 'The system prioritises resolution, composure, and analytical transparency. This profile rewards well-recorded material and tends to expose source quality differences clearly.';
   }
 
-  // Bright + elastic → energetic
+  // Bright + elastic → transient energy, dynamic impact
   if (hasBrightness && hasElasticity) {
-    return 'The system is voiced for energy and excitement — transient speed and dynamic punch are the clear priorities.';
+    return 'The system prioritises transient speed, dynamic impact, and energy. This profile favours low stored energy and fast recovery — overdamping or tonal heaviness would work against its strengths.';
+  }
+
+  // Warmth + elasticity → musical engagement with body
+  if (hasWarmth && hasElasticity) {
+    return 'The system combines tonal density with dynamic elasticity — body and rhythmic life together. This profile suggests a preference for musical engagement with substance rather than either analytical precision or relaxed immersion.';
   }
 
   return null;
