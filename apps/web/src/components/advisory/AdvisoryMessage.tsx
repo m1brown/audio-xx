@@ -4,8 +4,8 @@
  * Two rendering modes:
  *
  *   A. Memo format — when structured assessment fields are present
- *      (componentAssessments, upgradePaths, etc.). Uses numbered headings
- *      matching the reference advisory memo style.
+ *      (componentAssessments, upgradePaths, etc.). Renders as a
+ *      structured hi-fi system review written by an experienced audiophile.
  *
  *   B. Standard format — existing conditional section rendering with
  *      uppercase labels. Used for consultations, shopping, diagnosis,
@@ -48,16 +48,23 @@ function isMemoFormat(a: AdvisoryResponse): boolean {
   );
 }
 
-/** Horizontal rule — matches the reference PDF section dividers. */
+/** Horizontal rule — subtle section divider. */
 function SectionDivider() {
-  return <hr style={{ border: 'none', borderTop: '1px solid #ddd', margin: '1.5rem 0' }} />;
+  return <hr style={{ border: 'none', borderTop: '1px solid #e8e4dc', margin: '1.5rem 0' }} />;
 }
 
 // ── Memo Format Renderer ──────────────────────────────
 //
-// Matches the reference advisory PDF structure:
-//   Intro paragraph → Chain display → 7 numbered sections → follow-up.
-// Only populated sections render. Section numbers are sequential.
+// Structured hi-fi system review format:
+//   1. System Overview
+//   2. Current System Chain
+//   3. What the System Does Especially Well
+//   4. Trade-offs in the System
+//   5. Strength of Each Component
+//   6. Upgrade Paths
+//   7. Components I Would Keep
+//   8. Recommended Upgrade Path
+//   9. System Philosophy Insight
 
 function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
   let sectionNum = 0;
@@ -65,107 +72,122 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
 
   return (
     <div style={{ lineHeight: 1.7, color: '#333' }}>
-      {/* ── Intro paragraph ──────────────────────── */}
-      {a.introSummary && (
-        <div style={{ marginBottom: '1rem' }}>
-          <p style={{ margin: 0, fontSize: '0.98rem', lineHeight: 1.7 }}>
-            {renderText(a.introSummary)}
-          </p>
-          <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.95rem', color: '#555' }}>
-            Below is a structured assessment.
-          </p>
-        </div>
+      {/* ── Title ──────────────────────────────────── */}
+      {a.title && (
+        <h2 style={{ margin: '0 0 0.8rem 0', fontSize: '1.15rem', fontWeight: 700, color: '#111', letterSpacing: '0.01em' }}>
+          {a.title}
+        </h2>
       )}
 
-      <SectionDivider />
-
-      {/* ── 1. System Character ──────────────────── */}
-      <AdvisorySection number={next()} label="System Character">
-        {/* Chain display — full chain + major signal path */}
-        {a.systemChain && a.systemChain.roles.length > 0 && (
-          <div style={{ marginBottom: '0.8rem' }}>
-            {/* Full chain as entered (includes cables, accessories) */}
-            {a.systemChain.fullChain && a.systemChain.fullChain.length > 0 && (
-              <>
-                <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#222', marginBottom: '0.25rem' }}>
-                  Full chain
-                </div>
-                <div style={{ fontSize: '0.95rem', color: '#222', marginBottom: '0.5rem' }}>
-                  {a.systemChain.fullChain.join(' → ')}
-                </div>
-              </>
-            )}
-            {/* Major signal path (major components only) */}
-            <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#222', marginBottom: '0.25rem' }}>
-              {a.systemChain.fullChain ? 'Major signal path' : 'Current chain'}
-            </div>
-            <div style={{ fontSize: '0.95rem', color: '#444' }}>
-              {a.systemChain.roles.join(' → ')}
-            </div>
-            <div style={{ fontSize: '0.95rem', color: '#222' }}>
-              {a.systemChain.names.join(' → ')}
-            </div>
-          </div>
+      {/* ── 1. System Overview ─────────────────────── */}
+      <AdvisorySection number={next()} label="System Overview">
+        {/* Intro summary — system philosophy framing */}
+        {a.introSummary && (
+          <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.98rem', lineHeight: 1.75 }}>
+            {renderText(a.introSummary)}
+          </p>
         )}
-
         {/* System character prose */}
         {a.systemContext && (
           <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.95rem', lineHeight: 1.7 }}>
             {renderText(a.systemContext)}
           </p>
         )}
+        {/* System interaction / synergy description */}
         {a.systemInteraction && (
-          <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.95rem', lineHeight: 1.7 }}>
+          <p style={{ margin: '0 0 0.3rem 0', fontSize: '0.95rem', lineHeight: 1.7 }}>
             {renderText(a.systemInteraction)}
           </p>
-        )}
-
-        {/* What this combination does well */}
-        {a.assessmentStrengths && a.assessmentStrengths.length > 0 && (
-          <div style={{ marginTop: '0.5rem' }}>
-            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#222', marginBottom: '0.3rem' }}>
-              What this combination does well
-            </div>
-            <BulletList items={a.assessmentStrengths} />
-          </div>
-        )}
-
-        {/* Stacked trait insight */}
-        {a.stackedTraitInsights && a.stackedTraitInsights.length > 0 && (
-          <div style={{ marginTop: '0.6rem' }}>
-            {a.stackedTraitInsights.map((insight, i) => (
-              <p key={i} style={{ margin: '0 0 0.4rem 0', fontSize: '0.95rem', lineHeight: 1.7, color: '#555' }}>
-                {renderText(insight.explanation)}
-              </p>
-            ))}
-          </div>
         )}
       </AdvisorySection>
 
       <SectionDivider />
 
-      {/* ── 2. Weak Points in the System ─────────── */}
-      {a.assessmentLimitations && a.assessmentLimitations.length > 0 && (
+      {/* ── 2. Current System Chain ────────────────── */}
+      {a.systemChain && a.systemChain.roles.length > 0 && (
         <>
-          <AdvisorySection number={next()} label="Weak Points in the System">
-            {a.primaryConstraint && (
-              <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.95rem', lineHeight: 1.7 }}>
-                {renderText(a.primaryConstraint.explanation)}
-              </p>
-            )}
-            {a.assessmentLimitations.map((item, i) => (
-              <div key={i} style={{ marginBottom: '0.6rem' }}>
-                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#222' }}>
-                  {String.fromCharCode(65 + i)}. {renderText(item)}
+          <AdvisorySection number={next()} label="Current System Chain">
+            {/* Full chain as entered (includes cables, accessories) */}
+            {a.systemChain.fullChain && a.systemChain.fullChain.length > 0 && (
+              <div style={{ marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '0.95rem', color: '#222', marginBottom: '0.5rem' }}>
+                  {a.systemChain.fullChain.join(' → ')}
                 </div>
               </div>
-            ))}
+            )}
+            {/* Major signal path */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              flexWrap: 'wrap',
+              fontSize: '0.92rem',
+              color: '#666',
+              marginBottom: '0.3rem',
+            }}>
+              {a.systemChain.roles.map((role, i) => (
+                <span key={i}>
+                  {i > 0 && <span style={{ margin: '0 0.15rem', color: '#bbb' }}> → </span>}
+                  {role}
+                </span>
+              ))}
+            </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              flexWrap: 'wrap',
+              fontSize: '0.95rem',
+              color: '#222',
+            }}>
+              {a.systemChain.names.map((name, i) => (
+                <span key={i}>
+                  {i > 0 && <span style={{ margin: '0 0.15rem', color: '#bbb' }}> → </span>}
+                  {name}
+                </span>
+              ))}
+            </div>
           </AdvisorySection>
           <SectionDivider />
         </>
       )}
 
-      {/* ── 3. Strength of Each Component ────────── */}
+      {/* ── 3. What the System Does Especially Well ── */}
+      {a.assessmentStrengths && a.assessmentStrengths.length > 0 && (
+        <>
+          <AdvisorySection number={next()} label="What the System Does Especially Well">
+            <BulletList items={a.assessmentStrengths} />
+            {/* Stacked trait synergy insight */}
+            {a.stackedTraitInsights && a.stackedTraitInsights.length > 0 && (
+              <div style={{ marginTop: '0.6rem' }}>
+                {a.stackedTraitInsights.map((insight, i) => (
+                  <p key={i} style={{ margin: '0 0 0.4rem 0', fontSize: '0.95rem', lineHeight: 1.7, color: '#555' }}>
+                    {renderText(insight.explanation)}
+                  </p>
+                ))}
+              </div>
+            )}
+          </AdvisorySection>
+          <SectionDivider />
+        </>
+      )}
+
+      {/* ── 4. Trade-offs in the System ───────────── */}
+      {a.assessmentLimitations && a.assessmentLimitations.length > 0 && (
+        <>
+          <AdvisorySection number={next()} label="Trade-offs in the System">
+            {a.primaryConstraint && (
+              <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.95rem', lineHeight: 1.7, color: '#555' }}>
+                {renderText(a.primaryConstraint.explanation)}
+              </p>
+            )}
+            <BulletList items={a.assessmentLimitations} color="#555" />
+          </AdvisorySection>
+          <SectionDivider />
+        </>
+      )}
+
+      {/* ── 5. Strength of Each Component ────────── */}
       {a.componentAssessments && a.componentAssessments.length > 0 && (
         <>
           <AdvisorySection number={next()} label="Strength of Each Component">
@@ -175,23 +197,23 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
         </>
       )}
 
-      {/* ── 4. The Best Upgrade Path ─────────────── */}
+      {/* ── 6. Upgrade Paths ─────────────────────── */}
       {a.upgradePaths && a.upgradePaths.length > 0 && (
         <>
-          <AdvisorySection number={next()} label="The Best Upgrade Path">
+          <AdvisorySection number={next()} label="Upgrade Paths">
             <AdvisoryUpgradePaths paths={a.upgradePaths} />
           </AdvisorySection>
           <SectionDivider />
         </>
       )}
 
-      {/* ── 5. Components I Would NOT Change ─────── */}
+      {/* ── 7. Components I Would Keep ────────────── */}
       {a.keepRecommendations && a.keepRecommendations.length > 0 && (
         <>
-          <AdvisorySection number={next()} label="Components I Would NOT Change">
+          <AdvisorySection number={next()} label="Components I Would Keep">
             {a.keepRecommendations.map((k, i) => (
               <div key={i}>
-                {i > 0 && <SectionDivider />}
+                {i > 0 && <hr style={{ border: 'none', borderTop: '1px solid #e8e4dc', margin: '0.8rem 0' }} />}
                 <div style={{ marginBottom: '0.3rem' }}>
                   <strong style={{ fontSize: '0.98rem', color: '#111' }}>{k.name}</strong>
                 </div>
@@ -205,18 +227,14 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
         </>
       )}
 
-      {/* ── 6. What I Would Personally Do ────────── */}
+      {/* ── 8. Recommended Upgrade Path ──────────── */}
       {a.recommendedSequence && a.recommendedSequence.length > 0 && (
         <>
-          <AdvisorySection number={next()} label="What I Would Personally Do">
-            <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.95rem', color: '#444' }}>
-              If this were my system:
-            </p>
+          <AdvisorySection number={next()} label="Recommended Upgrade Path">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {a.recommendedSequence.map((step) => (
                 <div key={step.step} style={{ fontSize: '0.95rem', lineHeight: 1.6 }}>
-                  <span style={{ fontWeight: 600, color: '#333' }}>Step {step.step}</span>
-                  <br />
+                  <span style={{ fontWeight: 600, color: '#333' }}>Step {step.step}.</span>{' '}
                   {renderText(step.action)}
                 </div>
               ))}
@@ -226,11 +244,11 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
         </>
       )}
 
-      {/* ── 7. A Key Observation ─────────────────── */}
+      {/* ── 9. System Philosophy Insight ──────────── */}
       {a.keyObservation && (
         <>
-          <AdvisorySection number={next()} label="A Key Observation">
-            <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7, color: '#333' }}>
+          <AdvisorySection number={next()} label="System Philosophy Insight">
+            <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.75, color: '#333' }}>
               {renderText(a.keyObservation)}
             </p>
           </AdvisorySection>
@@ -240,9 +258,20 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
 
       {/* ── Follow-up ────────────────────────────── */}
       {a.followUp && (
-        <p style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', lineHeight: 1.7, color: '#444' }}>
+        <div
+          style={{
+            borderLeft: '3px solid #d9d0c0',
+            paddingLeft: '1rem',
+            padding: '0.6rem 1rem',
+            marginBottom: '1.25rem',
+            background: '#faf8f4',
+            fontSize: '0.95rem',
+            color: '#444',
+            lineHeight: 1.65,
+          }}
+        >
           {renderText(a.followUp)}
-        </p>
+        </div>
       )}
 
       {/* ── Learn more (links) ───────────────────── */}

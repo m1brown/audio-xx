@@ -65,6 +65,8 @@ import type {
 // Future: these will be derived from MemoFindings directly.
 
 export interface LegacyProseInputs {
+  /** Display title for the assessment (e.g. "Living Room System"). */
+  title?: string;
   /** Subject line (component names joined). */
   subject: string;
   /** System character opening (1-2 sentences). */
@@ -133,7 +135,7 @@ function mapPrimaryConstraint(findings: MemoFindings): PrimaryConstraint | undef
   return {
     componentName: b.component,
     category: b.category,
-    explanation: `${b.component} is the primary constraint in the chain (${b.category.replace(/_/g, ' ')}).${axisNote}`,
+    explanation: `The ${b.component} is where the system has the most room to grow (${b.category.replace(/_/g, ' ')}).${axisNote}`,
   };
 }
 
@@ -158,26 +160,26 @@ function mapVerdictKind(verdict: ComponentFindings['verdict']): VerdictKind {
 
 function mapComponentAssessments(findings: MemoFindings): ComponentAssessment[] {
   return findings.componentVerdicts.map((cv) => {
-    // Map from MemoFindings verdict to prose verdict
+    // Map from MemoFindings verdict to constructive reviewer-style prose
     let verdict: string;
     let verdictKind: VerdictKind;
     switch (cv.verdict) {
       case 'bottleneck':
-        verdict = '**This is the primary constraint in the chain.** Upgrading here yields the highest system-level impact.';
+        verdict = `The ${cv.role || 'component'} is where the system has the most room to grow. Upgrading here would have the largest impact on overall performance.`;
         verdictKind = 'bottleneck';
         break;
       case 'keep':
         verdict = cv.weaknesses.length === 0
-          ? 'Performing well. No immediate upgrade rationale.'
-          : 'Strong contributor to the system\'s character. Worth keeping.';
+          ? 'Well matched to the rest of the chain. No strong reason to change.'
+          : 'A meaningful contributor to the system\'s character. Well placed in this chain.';
         verdictKind = 'keeper';
         break;
       case 'upgrade':
-        verdict = 'Room for improvement. This component may be limiting the system\'s potential.';
+        verdict = 'Could be refined, though it\'s not the first priority in this system.';
         verdictKind = 'upgrade_candidate';
         break;
       default:
-        verdict = 'Solid at its tier. Room for refinement, not the priority.';
+        verdict = 'Solid at its tier. Doing its job within the chain.';
         verdictKind = 'balanced';
     }
     return {
@@ -195,11 +197,11 @@ function mapComponentAssessments(findings: MemoFindings): ComponentAssessment[] 
 function mapUpgradePaths(findings: MemoFindings): UpgradePath[] {
   return findings.upgradePaths.map((p) => ({
     rank: p.rank,
-    label: `${p.targetRole} Upgrade`,
-    impact: p.impact === 'highest' ? 'Highest Impact'
-      : p.impact === 'moderate' ? 'Moderate Impact'
+    label: `${p.targetRole} refinement`,
+    impact: p.impact === 'highest' ? 'Highest impact'
+      : p.impact === 'moderate' ? 'Moderate impact'
       : 'Refinement',
-    rationale: `Upgrading the ${p.targetRole.toLowerCase()} addresses ${p.targetAxes.join(' and ').replace(/_/g, '↔')}.`,
+    rationale: `A ${p.targetRole.toLowerCase()} change would shift ${p.targetAxes.join(' and ').replace(/_/g, '↔')}.`,
     options: p.options.map((o, i) => ({
       rank: i + 1,
       name: o.name,
@@ -274,6 +276,7 @@ export function renderDeterministicMemo(
   const sourceReferences = structured?.sourceReferences ?? mapSourceReferences(findings);
 
   return {
+    title: prose.title,
     subject: `Your system: ${prose.subject}`,
     // Undefined — assessment sections carry all content; suppress AdvisoryProse
     philosophy: undefined,
