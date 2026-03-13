@@ -31,6 +31,7 @@ import type { ReasoningResult } from '@/lib/reasoning';
 import { useAudioSession } from '@/lib/audio-session-context';
 import { buildTurnContext, type TurnContext } from '@/lib/turn-context';
 import { requestLlmOverlay } from '@/lib/memo-llm-overlay';
+import { logOverlayAttempt, logOverlayFailure } from '@/lib/memo-render-log';
 import SystemBadge from '@/components/system/SystemBadge';
 import SystemPanel from '@/components/system/SystemPanel';
 import SystemEditor from '@/components/system/SystemEditor';
@@ -416,14 +417,28 @@ export default function Home() {
         // Fire-and-forget: request LLM overlay for prose refinement.
         // On success, merge validated fields into the advisory and update in place.
         // On failure (timeout, validation rejection), the deterministic memo stands.
+        const overlayStart = Date.now();
+        const overlayComponentCount = assessmentResult.findings.componentNames.length;
         requestLlmOverlay(assessmentResult.findings).then((result) => {
-          if (!result || Object.keys(result.fields).length === 0) return;
+          const latency = Date.now() - overlayStart;
+          if (!result) {
+            logOverlayFailure(assessmentMsgId, overlayComponentCount, latency);
+            return;
+          }
+          // Log the attempt (even if no fields accepted)
+          logOverlayAttempt(
+            assessmentMsgId, overlayComponentCount,
+            result.fields, result.fields, result.rejections, latency,
+          );
+          if (Object.keys(result.fields).length === 0) return;
           const merged = { ...deterministicAdvisory };
           if (result.fields.introSummary) merged.introSummary = result.fields.introSummary;
           if (result.fields.keyObservation) merged.keyObservation = result.fields.keyObservation;
           if (result.fields.recommendedSequence) merged.recommendedSequence = result.fields.recommendedSequence;
           dispatch({ type: 'UPDATE_ADVISORY', id: assessmentMsgId, advisory: merged });
-        }).catch(() => { /* silent fallback */ });
+        }).catch(() => {
+          logOverlayFailure(assessmentMsgId, overlayComponentCount, Date.now() - overlayStart);
+        });
 
         return;
       }
