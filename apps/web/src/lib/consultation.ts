@@ -1983,6 +1983,14 @@ const KNOWN_PRODUCT_ROLES: Record<string, { expectedCategory: string; displayBra
   'cia-1': { expectedCategory: 'integrated', displayBrand: 'Crayon' },
   'cia-1t': { expectedCategory: 'integrated', displayBrand: 'Crayon' },
   vanguard: { expectedCategory: 'speaker', displayBrand: 'XSA' },
+  diva: { expectedCategory: 'speaker', displayBrand: 'WLM' },
+  'diva monitor': { expectedCategory: 'speaker', displayBrand: 'WLM' },
+  leben: { expectedCategory: 'amplifier', displayBrand: 'Leben' },
+  cs300: { expectedCategory: 'amplifier', displayBrand: 'Leben' },
+  harbeth: { expectedCategory: 'speaker', displayBrand: 'Harbeth' },
+  p3esr: { expectedCategory: 'speaker', displayBrand: 'Harbeth' },
+  'super hl5': { expectedCategory: 'speaker', displayBrand: 'Harbeth' },
+  job: { expectedCategory: 'integrated', displayBrand: 'JOB' },
 };
 
 /** Canonical role labels for human-readable display. */
@@ -2028,19 +2036,45 @@ const ROLE_EQUIVALENCES: Record<string, string> = {
 function detectUserAppliedRole(
   rawMessage: string,
   productName: string,
+  otherComponentNames?: string[],
 ): string | undefined {
   const msgLower = rawMessage.toLowerCase();
   const prodLower = productName.toLowerCase();
   const prodIdx = msgLower.indexOf(prodLower);
   if (prodIdx < 0) return undefined;
 
-  // Look in a window ~15 chars before and ~40 chars after the product name
-  const windowStart = Math.max(0, prodIdx - 15);
-  const windowEnd = Math.min(msgLower.length, prodIdx + prodLower.length + 40);
-  const window = msgLower.substring(windowStart, windowEnd);
+  // Extract the text segment between the previous and next chain separators
+  // (arrows, "into", commas) around the product name. This prevents role
+  // keywords attached to other products from being picked up.
+  const SEP = /(?:\s*(?:→|—>|-{1,3}>|={1,2}>|>{2,3})\s*|\s+into\s+|\s*,\s*)/g;
+  const separators: { start: number; end: number }[] = [];
+  let m;
+  while ((m = SEP.exec(msgLower)) !== null) {
+    separators.push({ start: m.index, end: m.index + m[0].length });
+  }
+
+  // Find the segment boundaries that contain the product name
+  let segStart = 0;
+  let segEnd = msgLower.length;
+  for (const sep of separators) {
+    if (sep.end <= prodIdx) segStart = sep.end;
+    if (sep.start >= prodIdx + prodLower.length && sep.start < segEnd) {
+      segEnd = sep.start;
+    }
+  }
+
+  let segment = msgLower.substring(segStart, segEnd);
+
+  // Mask out the product name itself and other component names
+  segment = segment.replace(prodLower, ' '.repeat(prodLower.length));
+  if (otherComponentNames) {
+    for (const other of otherComponentNames) {
+      segment = segment.replace(other.toLowerCase(), ' '.repeat(other.length));
+    }
+  }
 
   for (const { pattern, role } of USER_ROLE_KEYWORDS) {
-    if (pattern.test(window)) return role;
+    if (pattern.test(segment)) return role;
   }
   return undefined;
 }
@@ -2106,7 +2140,8 @@ export function validateSystemComponents(
     if (!expectedCategory) continue;
 
     // Detect what role the user applied in their text
-    const userAppliedRole = detectUserAppliedRole(rawMessage, c.displayName);
+    const otherNames = components.filter((o) => o !== c).map((o) => o.displayName);
+    const userAppliedRole = detectUserAppliedRole(rawMessage, c.displayName, otherNames);
     if (!userAppliedRole) continue;
 
     if (rolesConflict(userAppliedRole, expectedCategory)) {
@@ -2288,12 +2323,23 @@ export function buildSystemAssessment(
   const processedNames = new Set<string>();
 
   // ── Seed from active system when available ──
+  // Only include components that are mentioned (by brand or model name) in the
+  // current message. This prevents cross-contamination from saved systems that
+  // include components not part of the chain being evaluated.
+  const msgLowerForSeed = currentMessage.toLowerCase();
   if (activeSystem && activeSystem.components.length > 0) {
     for (const ac of activeSystem.components) {
       const fullName = normalizeDisplayName(ac.brand, ac.name);
       const nameLower = ac.name.toLowerCase();
       const brandLower = ac.brand.toLowerCase();
       if (processedNames.has(nameLower) || processedNames.has(brandLower)) continue;
+
+      // Only seed if the component's brand or model name appears in the message
+      const mentionedInMessage = msgLowerForSeed.includes(nameLower)
+        || msgLowerForSeed.includes(brandLower)
+        || msgLowerForSeed.includes(fullName.toLowerCase());
+      if (!mentionedInMessage) continue;
+
       processedNames.add(nameLower);
       processedNames.add(brandLower);
 
@@ -2302,6 +2348,14 @@ export function buildSystemAssessment(
         (p) => p.name.toLowerCase() === nameLower
           || `${p.brand} ${p.name}`.toLowerCase() === fullName.toLowerCase(),
       );
+      // Also mark partial product name forms as processed (e.g. "diva" for "Diva Monitor")
+      // to prevent subject-match duplication
+      if (product) {
+        const prodNameWords = product.name.toLowerCase().split(/\s+/);
+        for (const word of prodNameWords) {
+          if (word.length >= 3) processedNames.add(word);
+        }
+      }
       const brandProfile = findBrandProfileByName(ac.brand);
       const designFamily = brandProfile?.designFamilies?.find((df) =>
         nameLower.includes(df.name.split(' ')[0].toLowerCase())
@@ -2343,11 +2397,21 @@ export function buildSystemAssessment(
   for (const match of subjectMatches) {
     const lower = match.name.toLowerCase();
     if (processedNames.has(lower)) continue;
+    // Skip parenthetical brand clarifications — e.g. "Job (Goldmund)"
+    // where Goldmund is a manufacturer note, not a separate component
+    if (match.parenthetical) {
+      processedNames.add(lower);
+      continue;
+    }
     processedNames.add(lower);
 
     if (match.kind === 'product') {
-      // Product-level lookup
-      const product = ALL_PRODUCTS.find((p) => p.name.toLowerCase() === lower);
+      // Product-level lookup — try exact name, brand+name compound, then partial name match
+      const product = ALL_PRODUCTS.find(
+        (p) => p.name.toLowerCase() === lower
+          || `${p.brand} ${p.name}`.toLowerCase() === lower
+          || (lower.length >= 3 && p.name.toLowerCase().startsWith(lower)),
+      );
       if (product) {
         // Also check if there's a brand profile
         const brandProfile = findBrandProfileByName(product.brand);
@@ -2385,8 +2449,11 @@ export function buildSystemAssessment(
           }
         }
 
-        // Mark brand as processed too
+        // Mark brand and full product name as processed too
+        // (prevents duplication when active system uses full name like "Diva Monitor"
+        // and subject match uses shorter form like "diva")
         processedNames.add(product.brand.toLowerCase());
+        processedNames.add(product.name.toLowerCase());
       } else {
         // Product name recognized but not in catalog — infer from message context.
         // Find the brand NEAREST to this product in the raw text (not just the first
@@ -2405,17 +2472,26 @@ export function buildSystemAssessment(
           .sort((a, b) => a.distance - b.distance);
 
         const brandMatch = candidateBrands.length > 0 ? candidateBrands[0].match : undefined;
-        const brandName = brandMatch
-          ? brandMatch.name.charAt(0).toUpperCase() + brandMatch.name.slice(1)
-          : '';
+        let brandName = '';
         if (brandMatch) {
+          // Use KNOWN_PRODUCT_ROLES displayBrand for proper casing (e.g. "XSA" not "Xsa")
+          const knownBrandInfo = Object.values(KNOWN_PRODUCT_ROLES).find(
+            (info) => info.displayBrand.toLowerCase() === brandMatch.name.toLowerCase(),
+          );
+          brandName = knownBrandInfo?.displayBrand
+            ?? brandMatch.name.charAt(0).toUpperCase() + brandMatch.name.slice(1);
           processedNames.add(brandMatch.name.toLowerCase());
         }
 
         // Preserve original casing for model names with hyphens (DMP-A6, DAC-Z8)
-        const productName = match.name.includes('-')
+        let productName = match.name.includes('-')
           ? match.name.toUpperCase()
           : match.name.charAt(0).toUpperCase() + match.name.slice(1);
+        // Strip brand prefix from product name if already present (e.g. "leben cs300" → "CS300")
+        if (brandName && productName.toLowerCase().startsWith(brandName.toLowerCase() + ' ')) {
+          const modelPart = productName.substring(brandName.length + 1).trim();
+          productName = modelPart.toUpperCase();
+        }
         const displayName = brandName ? `${brandName} ${productName}` : productName;
 
         // Infer role from nearby text (within ~40 chars of the product name)
@@ -2429,8 +2505,27 @@ export function buildSystemAssessment(
         else if (/\bamp/i.test(nearbyText) || /\bintegrated\b/i.test(nearbyText)) role = 'amplifier';
         else if (/\bspeak/i.test(nearbyText)) role = 'speaker';
 
+        // Fallback: check KNOWN_PRODUCT_ROLES if nearby-text inference produced 'component'
+        if (role === 'component') {
+          for (const [key, info] of Object.entries(KNOWN_PRODUCT_ROLES)) {
+            if (lower.includes(key) || key.includes(lower)) {
+              role = info.expectedCategory;
+              if (!brandName) {
+                brandName = info.displayBrand;
+                processedNames.add(info.displayBrand.toLowerCase());
+              }
+              break;
+            }
+          }
+        }
+
         // Try brand profile for character info
         const bp = brandName ? findBrandProfile(brandName) : undefined;
+
+        // Fallback: check brand category from brand profile
+        if (role === 'component' && bp?.categories?.[0]) {
+          role = bp.categories[0];
+        }
 
         components.push({
           displayName,
@@ -2524,6 +2619,24 @@ export function buildSystemAssessment(
         else if (/\bspeak/i.test(nearbyText)) role = 'speaker';
         else if (/\bintegrated\b/i.test(nearbyText)) role = 'integrated';
 
+        // Fallback: check KNOWN_PRODUCT_ROLES for the brand name or nearby model names
+        if (role === 'component') {
+          // Try the brand name itself
+          const brandLower = match.name.toLowerCase();
+          const knownBrand = KNOWN_PRODUCT_ROLES[brandLower];
+          if (knownBrand) {
+            role = knownBrand.expectedCategory;
+          } else {
+            // Try model names near the brand in the message text
+            for (const [key, info] of Object.entries(KNOWN_PRODUCT_ROLES)) {
+              if (info.displayBrand.toLowerCase() === brandLower && nearbyText.includes(key)) {
+                role = info.expectedCategory;
+                break;
+              }
+            }
+          }
+        }
+
         // Find any product from this brand mentioned in the message
         const brandProducts = ALL_PRODUCTS.filter(
           (p) => p.brand.toLowerCase() === match.name.toLowerCase(),
@@ -2532,9 +2645,21 @@ export function buildSystemAssessment(
           currentMessage.toLowerCase().includes(p.name.toLowerCase()),
         );
 
-        const displayName = specificProduct
+        // Try to find a model name near the brand for better display name
+        let displayName = specificProduct
           ? normalizeDisplayName(specificProduct.brand, specificProduct.name)
           : capitalized;
+        if (!specificProduct) {
+          // Check KNOWN_PRODUCT_ROLES for model names from this brand in the message
+          for (const [key, info] of Object.entries(KNOWN_PRODUCT_ROLES)) {
+            if (info.displayBrand.toLowerCase() === match.name.toLowerCase()
+                && key !== match.name.toLowerCase()
+                && currentMessage.toLowerCase().includes(key)) {
+              displayName = `${capitalized} ${key.toUpperCase()}`;
+              break;
+            }
+          }
+        }
 
         components.push({
           displayName,
@@ -3299,11 +3424,19 @@ function tryCanonicalOrder(segments: string[]): string[] | undefined {
     const s = segments[i].toLowerCase();
     let bestOrder: number | undefined;
 
-    // Try ROLE_ORDER keywords
-    for (const [key, order] of Object.entries(ROLE_ORDER)) {
-      if (s.includes(key)) {
-        bestOrder = order;
-        break;
+    // Cable / interconnect / power segments checked FIRST — "speaker cable"
+    // should be classified as a cable, not as a speaker.
+    if (/\b(?:cable|interconnect|power\s*cord)\b/i.test(s)) {
+      bestOrder = 90 + i; // keeps relative order among cables
+    }
+
+    // Try ROLE_ORDER keywords (only if not already classified as cable)
+    if (bestOrder === undefined) {
+      for (const [key, order] of Object.entries(ROLE_ORDER)) {
+        if (s.includes(key)) {
+          bestOrder = order;
+          break;
+        }
       }
     }
 
@@ -3317,12 +3450,23 @@ function tryCanonicalOrder(segments: string[]): string[] | undefined {
       else if (/\b(?:sub|subwoofer)\b/i.test(s)) bestOrder = 5;
     }
 
-    // Try known brands/products as proxies for role
+    // Try connection-type keywords as cables (usb, coax, etc.) — these
+    // may not contain "cable" explicitly but are still accessories
     if (bestOrder === undefined) {
-      // Cable / interconnect / power segments are accessories — place at end
-      if (/\b(?:cable|interconnect|power\s*cord|usb|coax|optical|spdif|xlr|rca)\b/i.test(s)) {
-        // Cables don't have a fixed position — preserve original ordering
-        bestOrder = 90 + i; // keeps relative order among cables
+      if (/\b(?:usb|coax|optical|spdif|xlr|rca)\b/i.test(s)) {
+        bestOrder = 90 + i;
+      }
+    }
+
+    // Try KNOWN_PRODUCT_ROLES and BRAND_CATEGORY_MAP for products/brands
+    // that don't contain role keywords in their name (e.g. "WiiM Pro" → streamer)
+    if (bestOrder === undefined) {
+      for (const [key, info] of Object.entries(KNOWN_PRODUCT_ROLES)) {
+        if (s.includes(key)) {
+          const cat = info.expectedCategory;
+          bestOrder = ROLE_ORDER[cat] ?? undefined;
+          break;
+        }
       }
     }
 
@@ -3415,10 +3559,10 @@ function buildIntroSummary(
   const intentNote = listenerIntent ? ` ${listenerIntent}` : '';
 
   if (stacked.length > 0) {
-    return `A ${count}-component chain ${traitPhrase}.${deliberateNote} The system compounds ${stacked[0].label} across multiple stages — this shapes both its strengths and its primary limitation.${intentNote}`;
+    return `A system ${traitPhrase}.${deliberateNote} The chain compounds ${stacked[0].label} across multiple stages — this shapes both its strengths and its primary limitation.${intentNote}`;
   }
 
-  return `A ${count}-component chain ${traitPhrase}.${deliberateNote} The overall character emerges from how these components interact rather than any single piece dominating.${intentNote}`;
+  return `A system ${traitPhrase}.${deliberateNote} The overall character emerges from how these components interact rather than any single piece dominating.${intentNote}`;
 }
 
 /**
@@ -3842,14 +3986,19 @@ function buildComponentAssessments(
     // ── Verdict — aware of bottleneck status ──
     const isBottleneck = constraint?.componentName === c.displayName;
     let verdict: string;
+    let verdictKind: import('./advisory-response').VerdictKind;
     if (isBottleneck) {
       verdict = `**This is the primary constraint in the chain.** Upgrading here yields the highest system-level impact.`;
+      verdictKind = 'bottleneck';
     } else if (weaknesses.length === 0) {
       verdict = `Performing well. No immediate upgrade rationale.`;
+      verdictKind = 'keeper';
     } else if (strengths.length > weaknesses.length + 1) {
       verdict = `Strong contributor to the system's character. Worth keeping.`;
+      verdictKind = 'keeper';
     } else {
       verdict = `Solid at its tier. Room for refinement, not the priority.`;
+      verdictKind = 'balanced';
     }
 
     // ── Summary — one line, technical ──
@@ -3864,6 +4013,7 @@ function buildComponentAssessments(
       strengths: strengths.slice(0, 5),
       weaknesses: weaknesses.slice(0, 4),
       verdict,
+      verdictKind,
     };
   });
 }
@@ -4756,3 +4906,28 @@ export function buildCableAdvisory(
     links: systemLinks.length > 0 ? systemLinks : undefined,
   };
 }
+
+// ── Test exports ─────────────────────────────────────
+// Internal functions exposed for deterministic pipeline testing.
+// Not part of the public API — import only from test files.
+
+export const _test = {
+  extractFullChain,
+  tryCanonicalOrder,
+  buildSystemChain,
+  classifyComponentAxes,
+  detectStackedTraits,
+  detectPrimaryConstraint,
+  buildComponentAssessments,
+  buildUpgradePaths,
+  buildKeepRecommendations,
+  reconcileAssessmentOutputs,
+  extractMemoFindings,
+  detectUserAppliedRole,
+  rolesConflict,
+  inferListenerPriorityTags,
+  canonicalRole,
+  roleSort,
+  KNOWN_PRODUCT_ROLES,
+  ROLE_EQUIVALENCES,
+};

@@ -12,6 +12,7 @@ export default defineConfig({
       '@audio-xx/rules': path.resolve(__dirname, 'packages/rules/src'),
       '@audio-xx/data': path.resolve(__dirname, 'packages/data/src'),
       '@audio-xx/signals': path.resolve(__dirname, 'packages/signals/src'),
+      '@/': path.resolve(__dirname, 'apps/web/src') + '/',
     },
   },
 });

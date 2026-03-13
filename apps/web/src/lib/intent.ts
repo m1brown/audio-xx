@@ -30,6 +30,9 @@ export interface DesireSignal {
 export interface SubjectMatch {
   name: string;
   kind: 'brand' | 'product';
+  /** True when the brand appears inside parentheses as a clarification,
+   *  e.g. "Job (Goldmund)" — Goldmund is a manufacturer note, not a component. */
+  parenthetical?: boolean;
 }
 
 export interface IntentResult {
@@ -90,8 +93,9 @@ const PRODUCT_NAMES = [
   'x26 pro', 'su-9', 'd90',
   'k9 pro', 'ef400',
   'dr70',
+  'leben cs300', 'leben cs-300',
   'srda', 'cia-1', 'cia-1t',
-  'vanguard',
+  'vanguard', 'cs300',
   'diva monitor', 'super hl5', 'dirty weekend',
   'hd 800 s', 'hd 800', 'hd 650', 'hd 600',
   'airpods pro 2', 'airpods pro',
@@ -280,11 +284,30 @@ export function extractSubjectMatches(text: string): SubjectMatch[] {
     claimedRanges.push([idx, end]);
   }
 
-  // Then check brand names, skip if already matched as product
+  // Then check brand names, skip if already matched as product.
+  // Also detect parenthetical clarifications like "Job (Goldmund)" —
+  // the parenthesized brand is a manufacturer note, not a separate component.
   for (const name of BRAND_NAMES) {
-    if (lower.includes(name) && !found.some((f) => f.name === name)) {
-      found.push({ name, kind: 'brand' });
+    const idx = lower.indexOf(name);
+    if (idx === -1) continue;
+    if (found.some((f) => f.name === name)) continue;
+
+    // Skip brands whose span is already claimed by a product match
+    const end = idx + name.length;
+    if (isSpanClaimed(idx, end)) continue;
+
+    // Detect parenthetical context: "(goldmund)" after another brand/product
+    const beforeParen = lower.lastIndexOf('(', idx);
+    const afterParen = lower.indexOf(')', idx + name.length);
+    if (beforeParen >= 0 && afterParen >= 0 && (idx - beforeParen) <= 2 && (afterParen - end) <= 2) {
+      // This brand is inside parentheses — treat as clarification, not component
+      found.push({ name, kind: 'brand', parenthetical: true });
+      claimedRanges.push([beforeParen, afterParen + 1]);
+      continue;
     }
+
+    found.push({ name, kind: 'brand' });
+    claimedRanges.push([idx, end]);
   }
   return found;
 }

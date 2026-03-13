@@ -35,7 +35,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     name: 'Diva Monitor',
     price: 4500,
     category: 'speaker',
-    architecture: 'high-efficiency single-driver + passive radiator',
+    architecture: 'high-efficiency single full-range driver',
     subcategory: 'standmount',
     priceTier: 'upper-mid',
     brandScale: 'boutique',

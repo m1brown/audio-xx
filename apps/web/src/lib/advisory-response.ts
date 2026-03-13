@@ -57,6 +57,16 @@ export interface SourceReference {
 // ── Structured assessment types (memo format) ─────────
 
 /**
+ * Machine-readable verdict classification for deterministic logic and downstream consumers.
+ * Complements the prose `verdict` field on ComponentAssessment.
+ */
+export type VerdictKind =
+  | 'bottleneck'
+  | 'upgrade_candidate'
+  | 'keeper'
+  | 'balanced';
+
+/**
  * Per-component structured assessment.
  * Replaces prose componentReadings with a Strengths/Weakness
  * format matching the reference advisory memo style.
@@ -74,6 +84,8 @@ export interface ComponentAssessment {
   weaknesses: string[];
   /** Bold verdict — "Keep this." or "This is the weak link." */
   verdict: string;
+  /** Machine-readable verdict classification for deterministic consumers. */
+  verdictKind: VerdictKind;
 }
 
 /**
