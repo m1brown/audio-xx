@@ -48,7 +48,16 @@ function isMemoFormat(a: AdvisoryResponse): boolean {
   );
 }
 
+/** Horizontal rule — matches the reference PDF section dividers. */
+function SectionDivider() {
+  return <hr style={{ border: 'none', borderTop: '1px solid #ddd', margin: '1.5rem 0' }} />;
+}
+
 // ── Memo Format Renderer ──────────────────────────────
+//
+// Matches the reference advisory PDF structure:
+//   Intro paragraph → Chain display → 7 numbered sections → follow-up.
+// Only populated sections render. Section numbers are sequential.
 
 function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
   let sectionNum = 0;
@@ -56,135 +65,172 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
 
   return (
     <div style={{ lineHeight: 1.7, color: '#333' }}>
+      {/* ── Intro paragraph ──────────────────────── */}
+      {a.introSummary && (
+        <div style={{ marginBottom: '1rem' }}>
+          <p style={{ margin: 0, fontSize: '0.98rem', lineHeight: 1.7 }}>
+            {renderText(a.introSummary)}
+          </p>
+          <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.95rem', color: '#555' }}>
+            Below is a structured assessment.
+          </p>
+        </div>
+      )}
+
+      <SectionDivider />
+
       {/* ── 1. System Character ──────────────────── */}
-      {a.systemContext && (
-        <AdvisorySection number={next()} label="System Character">
+      <AdvisorySection number={next()} label="System Character">
+        {/* Chain display */}
+        {a.systemChain && a.systemChain.roles.length > 0 && (
+          <div style={{ marginBottom: '0.8rem' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#222', marginBottom: '0.25rem' }}>
+              Current chain
+            </div>
+            <div style={{ fontSize: '0.95rem', color: '#444' }}>
+              {a.systemChain.roles.join(' → ')}
+            </div>
+            <div style={{ fontSize: '0.95rem', color: '#222' }}>
+              {a.systemChain.names.join(' → ')}
+            </div>
+          </div>
+        )}
+
+        {/* System character prose */}
+        {a.systemContext && (
           <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.95rem', lineHeight: 1.7 }}>
             {renderText(a.systemContext)}
           </p>
-          {/* Chain listing — if component readings exist, render them as prose */}
-          {a.componentReadings && a.componentReadings.length > 0 && (
-            <div>
-              {a.componentReadings.map((para, i) => (
-                <p key={i} style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', lineHeight: 1.7, color: '#333' }}>
-                  {renderText(para)}
-                </p>
-              ))}
+        )}
+        {a.systemInteraction && (
+          <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.95rem', lineHeight: 1.7 }}>
+            {renderText(a.systemInteraction)}
+          </p>
+        )}
+
+        {/* What this combination does well */}
+        {a.assessmentStrengths && a.assessmentStrengths.length > 0 && (
+          <div style={{ marginTop: '0.5rem' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#222', marginBottom: '0.3rem' }}>
+              What this combination does well
             </div>
-          )}
-          {/* System interaction */}
-          {a.systemInteraction && (
-            <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', lineHeight: 1.7 }}>
-              {renderText(a.systemInteraction)}
-            </p>
-          )}
-          {/* What this combination does well */}
-          {a.assessmentStrengths && a.assessmentStrengths.length > 0 && (
-            <div style={{ marginTop: '0.6rem' }}>
-              <div
-                style={{
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  color: '#555',
-                  marginBottom: '0.3rem',
-                }}
-              >
-                What this combination does well:
-              </div>
-              <BulletList items={a.assessmentStrengths} />
-            </div>
-          )}
-        </AdvisorySection>
-      )}
+            <BulletList items={a.assessmentStrengths} />
+          </div>
+        )}
+
+        {/* Stacked trait insight */}
+        {a.stackedTraitInsights && a.stackedTraitInsights.length > 0 && (
+          <div style={{ marginTop: '0.6rem' }}>
+            {a.stackedTraitInsights.map((insight, i) => (
+              <p key={i} style={{ margin: '0 0 0.4rem 0', fontSize: '0.95rem', lineHeight: 1.7, color: '#555' }}>
+                {renderText(insight.explanation)}
+              </p>
+            ))}
+          </div>
+        )}
+      </AdvisorySection>
+
+      <SectionDivider />
 
       {/* ── 2. Weak Points in the System ─────────── */}
       {a.assessmentLimitations && a.assessmentLimitations.length > 0 && (
-        <AdvisorySection number={next()} label="Weak Points in the System">
-          <BulletList items={a.assessmentLimitations} color="#555" />
-        </AdvisorySection>
+        <>
+          <AdvisorySection number={next()} label="Weak Points in the System">
+            {a.primaryConstraint && (
+              <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.95rem', lineHeight: 1.7 }}>
+                {renderText(a.primaryConstraint.explanation)}
+              </p>
+            )}
+            {a.assessmentLimitations.map((item, i) => (
+              <div key={i} style={{ marginBottom: '0.6rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#222' }}>
+                  {String.fromCharCode(65 + i)}. {renderText(item)}
+                </div>
+              </div>
+            ))}
+          </AdvisorySection>
+          <SectionDivider />
+        </>
       )}
 
       {/* ── 3. Strength of Each Component ────────── */}
       {a.componentAssessments && a.componentAssessments.length > 0 && (
-        <AdvisorySection number={next()} label="Strength of Each Component">
-          <AdvisoryComponentAssessments assessments={a.componentAssessments} />
-        </AdvisorySection>
+        <>
+          <AdvisorySection number={next()} label="Strength of Each Component">
+            <AdvisoryComponentAssessments assessments={a.componentAssessments} />
+          </AdvisorySection>
+          <SectionDivider />
+        </>
       )}
 
       {/* ── 4. The Best Upgrade Path ─────────────── */}
       {a.upgradePaths && a.upgradePaths.length > 0 && (
-        <AdvisorySection number={next()} label="The Best Upgrade Path">
-          <AdvisoryUpgradePaths paths={a.upgradePaths} />
-        </AdvisorySection>
+        <>
+          <AdvisorySection number={next()} label="The Best Upgrade Path">
+            <AdvisoryUpgradePaths paths={a.upgradePaths} />
+          </AdvisorySection>
+          <SectionDivider />
+        </>
       )}
 
       {/* ── 5. Components I Would NOT Change ─────── */}
       {a.keepRecommendations && a.keepRecommendations.length > 0 && (
-        <AdvisorySection number={next()} label="Components I Would NOT Change">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <>
+          <AdvisorySection number={next()} label="Components I Would NOT Change">
             {a.keepRecommendations.map((k, i) => (
-              <div key={i} style={{ fontSize: '0.95rem', lineHeight: 1.6 }}>
-                <strong style={{ color: '#222' }}>{k.name}</strong>
-                <span style={{ color: '#555', marginLeft: '0.4rem' }}>— {k.reason}</span>
+              <div key={i}>
+                {i > 0 && <SectionDivider />}
+                <div style={{ marginBottom: '0.3rem' }}>
+                  <strong style={{ fontSize: '0.98rem', color: '#111' }}>{k.name}</strong>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.6, color: '#444' }}>
+                  {renderText(k.reason)}
+                </p>
               </div>
             ))}
-          </div>
-        </AdvisorySection>
+          </AdvisorySection>
+          <SectionDivider />
+        </>
       )}
 
       {/* ── 6. What I Would Personally Do ────────── */}
       {a.recommendedSequence && a.recommendedSequence.length > 0 && (
-        <AdvisorySection number={next()} label="What I Would Personally Do">
-          <ol style={{ margin: 0, paddingLeft: '1.3rem', lineHeight: 1.7 }}>
-            {a.recommendedSequence.map((step) => (
-              <li key={step.step} style={{ fontSize: '0.95rem', marginBottom: '0.25rem', color: '#333' }}>
-                {renderText(step.action)}
-              </li>
-            ))}
-          </ol>
-        </AdvisorySection>
+        <>
+          <AdvisorySection number={next()} label="What I Would Personally Do">
+            <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.95rem', color: '#444' }}>
+              If this were my system:
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {a.recommendedSequence.map((step) => (
+                <div key={step.step} style={{ fontSize: '0.95rem', lineHeight: 1.6 }}>
+                  <span style={{ fontWeight: 600, color: '#333' }}>Step {step.step}</span>
+                  <br />
+                  {renderText(step.action)}
+                </div>
+              ))}
+            </div>
+          </AdvisorySection>
+          <SectionDivider />
+        </>
       )}
 
       {/* ── 7. A Key Observation ─────────────────── */}
       {a.keyObservation && (
-        <AdvisorySection number={next()} label="A Key Observation">
-          <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7, color: '#333' }}>
-            {renderText(a.keyObservation)}
-          </p>
-        </AdvisorySection>
+        <>
+          <AdvisorySection number={next()} label="A Key Observation">
+            <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.7, color: '#333' }}>
+              {renderText(a.keyObservation)}
+            </p>
+          </AdvisorySection>
+          <SectionDivider />
+        </>
       )}
 
-      {/* ── Bottom line (unnumbered) ─────────────── */}
-      {a.bottomLine && (
-        <p
-          style={{
-            margin: '0 0 1.1rem 0',
-            fontWeight: 500,
-            fontSize: '1.02rem',
-            color: '#222',
-            lineHeight: 1.65,
-          }}
-        >
-          {renderText(a.bottomLine)}
-        </p>
-      )}
-
-      {/* ── Follow-up (blue box) ─────────────────── */}
+      {/* ── Follow-up ────────────────────────────── */}
       {a.followUp && (
-        <div
-          style={{
-            borderLeft: '3px solid #5a8a9a',
-            paddingLeft: '1rem',
-            padding: '0.6rem 1rem',
-            marginBottom: '1.25rem',
-            background: '#f4f8fa',
-            fontSize: '0.95rem',
-            color: '#444',
-            lineHeight: 1.65,
-          }}
-        >
-          {a.followUp}
-        </div>
+        <p style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', lineHeight: 1.7, color: '#444' }}>
+          {renderText(a.followUp)}
+        </p>
       )}
 
       {/* ── Learn more (links) ───────────────────── */}

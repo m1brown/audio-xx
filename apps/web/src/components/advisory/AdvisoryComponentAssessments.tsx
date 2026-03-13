@@ -1,8 +1,8 @@
 /**
- * Per-component structured analysis cards.
+ * Per-component structured analysis — reference PDF style.
  *
- * Each component gets: summary, strengths, weaknesses, verdict.
- * Memo format — clean, dense, information-first.
+ * Each component: bold name heading, summary sentence, Strengths/Weakness
+ * bullet lists, bold verdict sentence. HR dividers between components.
  */
 
 import type { ComponentAssessment } from '../../lib/advisory-response';
@@ -14,46 +14,36 @@ interface Props {
 
 export default function AdvisoryComponentAssessments({ assessments }: Props) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+    <div>
       {assessments.map((comp, i) => (
-        <div
-          key={i}
-          style={{
-            padding: '0.85rem 1rem',
-            borderLeft: '3px solid #d0cec8',
-            background: '#fafaf8',
-          }}
-        >
-          {/* Component name + role */}
-          <div style={{ marginBottom: '0.35rem' }}>
-            <strong style={{ color: '#111', fontSize: '0.98rem' }}>{comp.name}</strong>
+        <div key={i}>
+          {/* HR divider between components (not before first) */}
+          {i > 0 && (
+            <hr style={{ border: 'none', borderTop: '1px solid #ddd', margin: '1.2rem 0' }} />
+          )}
+
+          {/* Component name — bold heading */}
+          <div style={{ marginBottom: '0.3rem' }}>
+            <strong style={{ fontSize: '0.98rem', color: '#111' }}>{comp.name}</strong>
             {comp.role && (
-              <span style={{ color: '#888', fontSize: '0.85rem', marginLeft: '0.5rem' }}>
+              <span style={{ color: '#888', fontSize: '0.88rem', marginLeft: '0.5rem' }}>
                 ({comp.role})
               </span>
             )}
           </div>
 
-          {/* Summary */}
-          <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', lineHeight: 1.6, color: '#333' }}>
+          {/* Summary sentence */}
+          <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', lineHeight: 1.65, color: '#333' }}>
             {renderText(comp.summary)}
           </p>
 
           {/* Strengths */}
           {comp.strengths.length > 0 && (
             <div style={{ marginBottom: '0.4rem' }}>
-              <span
-                style={{
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  color: '#4a7a4a',
-                  letterSpacing: '0.03em',
-                  textTransform: 'uppercase' as const,
-                }}
-              >
-                Strengths
-              </span>
-              <ul style={{ margin: '0.2rem 0 0 0', paddingLeft: '1.1rem', lineHeight: 1.6 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.93rem', color: '#333', marginBottom: '0.2rem' }}>
+                Strengths:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '1.1rem', lineHeight: 1.6 }}>
                 {comp.strengths.map((s, j) => (
                   <li key={j} style={{ fontSize: '0.92rem', color: '#333', marginBottom: '0.15rem' }}>
                     {renderText(s)}
@@ -63,21 +53,13 @@ export default function AdvisoryComponentAssessments({ assessments }: Props) {
             </div>
           )}
 
-          {/* Weaknesses */}
+          {/* Weakness */}
           {comp.weaknesses.length > 0 && (
             <div style={{ marginBottom: '0.4rem' }}>
-              <span
-                style={{
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  color: '#8a5a3a',
-                  letterSpacing: '0.03em',
-                  textTransform: 'uppercase' as const,
-                }}
-              >
-                Weaknesses
-              </span>
-              <ul style={{ margin: '0.2rem 0 0 0', paddingLeft: '1.1rem', lineHeight: 1.6 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.93rem', color: '#333', marginBottom: '0.2rem' }}>
+                Weakness:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '1.1rem', lineHeight: 1.6 }}>
                 {comp.weaknesses.map((w, j) => (
                   <li key={j} style={{ fontSize: '0.92rem', color: '#555', marginBottom: '0.15rem' }}>
                     {renderText(w)}
@@ -87,9 +69,9 @@ export default function AdvisoryComponentAssessments({ assessments }: Props) {
             </div>
           )}
 
-          {/* Verdict */}
-          <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.93rem', fontWeight: 600, color: '#222' }}>
-            {renderText(comp.verdict)}
+          {/* Verdict — bold concluding sentence */}
+          <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.95rem', lineHeight: 1.6 }}>
+            <strong style={{ color: '#222' }}>{renderText(comp.verdict)}</strong>
           </p>
         </div>
       ))}

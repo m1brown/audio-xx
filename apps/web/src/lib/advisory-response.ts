@@ -138,6 +138,43 @@ export interface RecommendedStep {
 }
 
 /**
+ * System signal chain — ordered component listing for display.
+ * Rendered as: Role₁ → Role₂ → Role₃  /  Name₁ → Name₂ → Name₃
+ */
+export interface SystemChain {
+  /** Ordered role labels (e.g. ["Streamer", "DAC", "Amplifier", "Speakers"]). */
+  roles: string[];
+  /** Ordered component names matching the role positions. */
+  names: string[];
+}
+
+/**
+ * Primary system constraint identified by bottleneck detection.
+ * Drives upgrade path ranking — Path 1 always addresses this.
+ */
+export interface PrimaryConstraint {
+  /** Which component (by display name) is the bottleneck. */
+  componentName: string;
+  /** Constraint category. */
+  category: 'dac_limitation' | 'speaker_scale' | 'amplifier_control' | 'tonal_imbalance' | 'stacked_bias' | 'source_limitation';
+  /** One-line explanation of the constraint. */
+  explanation: string;
+}
+
+/**
+ * Stacked trait detection result.
+ * When multiple components push in the same sonic direction.
+ */
+export interface StackedTraitInsight {
+  /** Label for the stacked tendency (e.g. "high transient bias"). */
+  label: string;
+  /** Which components contribute. */
+  contributors: string[];
+  /** Explanatory prose for the assessment. */
+  explanation: string;
+}
+
+/**
  * Unified advisory response.
  *
  * All substantive advisory output — whether from consultation, shopping,
@@ -222,6 +259,14 @@ export interface AdvisoryResponse {
   upgradeDirection?: string;
 
   // ── 5e. Structured Assessment (memo format) ────────
+  /** Ordered system chain for display (Role → Role / Name → Name). */
+  systemChain?: SystemChain;
+  /** Intro paragraph — 1–2 sentence system overview before numbered sections. */
+  introSummary?: string;
+  /** Primary system constraint (bottleneck). Drives upgrade path ranking. */
+  primaryConstraint?: PrimaryConstraint;
+  /** Stacked trait insights — when multiple components push the same direction. */
+  stackedTraitInsights?: StackedTraitInsight[];
   /** Per-component structured analysis (Strengths/Weaknesses/Verdict). */
   componentAssessments?: ComponentAssessment[];
   /** Ranked upgrade paths with product options. */
@@ -488,6 +533,10 @@ export function consultationToAdvisory(c: ConsultationResponse): AdvisoryRespons
     upgradeDirection: c.upgradeDirection,
 
     // Structured memo-format fields
+    systemChain: c.systemChain,
+    introSummary: c.introSummary,
+    primaryConstraint: c.primaryConstraint,
+    stackedTraitInsights: c.stackedTraitInsights,
     componentAssessments: c.componentAssessments,
     upgradePaths: c.upgradePaths,
     keepRecommendations: c.keepRecommendations,

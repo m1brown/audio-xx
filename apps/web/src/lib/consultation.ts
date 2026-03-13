@@ -84,6 +84,14 @@ export interface ConsultationResponse {
   upgradeDirection?: string;
 
   // ── Structured assessment (memo format) ──────────
+  /** Ordered system chain for display. */
+  systemChain?: import('./advisory-response').SystemChain;
+  /** Intro paragraph — 1–2 sentence overview. */
+  introSummary?: string;
+  /** Primary system constraint (bottleneck). */
+  primaryConstraint?: import('./advisory-response').PrimaryConstraint;
+  /** Stacked trait insights. */
+  stackedTraitInsights?: import('./advisory-response').StackedTraitInsight[];
   /** Per-component structured analysis (Strengths/Weaknesses/Verdict). */
   componentAssessments?: import('./advisory-response').ComponentAssessment[];
   /** Ranked upgrade paths with product options. */
@@ -2035,11 +2043,16 @@ export function buildSystemAssessment(
   const subject = components.map((c) => c.displayName).join(', ');
 
   // ── Structured memo-format fields ───────────────────
-  const memoAssessments = buildComponentAssessments(components, componentAxisProfiles);
-  const memoKeeps = buildKeepRecommendations(memoAssessments);
-  const memoUpgradePaths = buildUpgradePaths(components, componentAxisProfiles, memoAssessments, axisCompounding);
+  // Pipeline: chain → stacked traits → bottleneck → assessments → paths → sequence → observation
+  const memoChain = buildSystemChain(components);
+  const memoStacked = detectStackedTraits(components, componentAxisProfiles);
+  const memoConstraint = detectPrimaryConstraint(components, componentAxisProfiles, memoStacked, systemAxes);
+  const memoAssessments = buildComponentAssessments(components, componentAxisProfiles, memoConstraint);
+  const memoKeeps = buildKeepRecommendations(memoAssessments, memoConstraint);
+  const memoUpgradePaths = buildUpgradePaths(components, componentAxisProfiles, memoAssessments, memoConstraint, memoStacked);
   const memoSequence = buildRecommendedSequence(memoUpgradePaths, memoKeeps);
-  const memoKeyObservation = buildKeyObservation(components, componentAxisProfiles, axisCompounding, desires);
+  const memoIntro = buildIntroSummary(components, systemAxes, memoStacked);
+  const memoKeyObservation = buildKeyObservation(components, componentAxisProfiles, memoStacked, systemAxes, desires);
 
   // ── System character opening (brief) ──────────────
   // A one-two sentence overview of the system's overall lean.
@@ -2066,6 +2079,10 @@ export function buildSystemAssessment(
     followUp,
     links: allLinks.length > 0 ? allLinks : undefined,
     // Structured memo-format fields
+    systemChain: memoChain,
+    introSummary: memoIntro,
+    primaryConstraint: memoConstraint,
+    stackedTraitInsights: memoStacked.length > 0 ? memoStacked : undefined,
     componentAssessments: memoAssessments.length > 0 ? memoAssessments : undefined,
     upgradePaths: memoUpgradePaths.length > 0 ? memoUpgradePaths : undefined,
     keepRecommendations: memoKeeps.length > 0 ? memoKeeps : undefined,
@@ -2520,76 +2537,416 @@ function deriveSystemLeanFromAxes(profiles: ComponentAxisProfile[]): 'warm' | 'p
  */
 // ── Structured memo-format builders ──────────────────
 //
-// Generate per-component assessments, ranked upgrade paths, keep lists,
-// and recommended sequences for the numbered-section advisory format.
+// Pipeline: chain → stacked traits → bottleneck → component assessments
+//         → ranked upgrade paths → keep list → sequence → key observation.
+//
 // All deterministic — no LLM calls.
 
 type MemoComponentAssessment = import('./advisory-response').ComponentAssessment;
 type MemoUpgradePath = import('./advisory-response').UpgradePath;
 type MemoKeepRecommendation = import('./advisory-response').KeepRecommendation;
 type MemoRecommendedStep = import('./advisory-response').RecommendedStep;
+type MemoSystemChain = import('./advisory-response').SystemChain;
+type MemoPrimaryConstraint = import('./advisory-response').PrimaryConstraint;
+type MemoStackedTraitInsight = import('./advisory-response').StackedTraitInsight;
+
+// ── Canonical role ordering for chain display ──
+const ROLE_ORDER: Record<string, number> = {
+  streamer: 0, source: 0, transport: 0,
+  dac: 1,
+  preamplifier: 2, preamp: 2,
+  amplifier: 3, integrated: 3, 'integrated-amplifier': 3,
+  speaker: 4, headphone: 4,
+  subwoofer: 5,
+};
+
+function canonicalRole(role: string): string {
+  const r = role.toLowerCase();
+  if (r.includes('stream') || r === 'source' || r === 'transport') return 'Streamer';
+  if (r === 'dac' || r.includes('dac')) return 'DAC';
+  if (r.includes('preamp') || r === 'preamplifier') return 'Preamplifier';
+  if (r.includes('amp') || r.includes('integrated')) return 'Amplifier';
+  if (r.includes('speak')) return 'Speakers';
+  if (r.includes('headphone')) return 'Headphones';
+  if (r.includes('sub')) return 'Subwoofer';
+  return role.charAt(0).toUpperCase() + role.slice(1);
+}
+
+function roleSort(role: string): number {
+  const r = role.toLowerCase();
+  for (const [key, order] of Object.entries(ROLE_ORDER)) {
+    if (r.includes(key)) return order;
+  }
+  return 99;
+}
 
 /**
- * Build per-component structured assessments from axis analysis
- * and product/brand data.
+ * Build ordered system chain for display.
+ * Sorts by canonical signal-path order: source → DAC → preamp → amp → speaker.
+ */
+function buildSystemChain(components: SystemComponent[]): MemoSystemChain {
+  const sorted = [...components].sort((a, b) => roleSort(a.role) - roleSort(b.role));
+  return {
+    roles: sorted.map((c) => canonicalRole(c.role)),
+    names: sorted.map((c) => c.displayName),
+  };
+}
+
+/**
+ * Build intro summary — 1–2 sentence system-level opening.
+ * Technical, concise, no conversational filler.
+ */
+function buildIntroSummary(
+  components: SystemComponent[],
+  system: PrimaryAxisLeanings,
+  stacked: MemoStackedTraitInsight[],
+): string {
+  const names = components.map((c) => c.displayName);
+  const count = names.length;
+
+  // Build character phrase from system axes
+  const traits: string[] = [];
+  if (system.warm_bright === 'warm') traits.push('tonal density');
+  if (system.warm_bright === 'bright') traits.push('transient speed');
+  if (system.smooth_detailed === 'detailed') traits.push('microdetail');
+  if (system.smooth_detailed === 'smooth') traits.push('musical flow');
+  if (system.elastic_controlled === 'elastic') traits.push('elasticity');
+  if (system.elastic_controlled === 'controlled') traits.push('stability');
+  if (system.airy_closed === 'airy') traits.push('spatial scale');
+
+  const traitPhrase = traits.length > 0
+    ? `prioritising ${traits.join(' and ')}`
+    : 'with balanced tendencies across the primary axes';
+
+  if (stacked.length > 0) {
+    return `A ${count}-component chain ${traitPhrase}. The system compounds ${stacked[0].label} across multiple stages — this shapes both its strengths and its primary limitation.`;
+  }
+
+  return `A ${count}-component chain ${traitPhrase}. The overall character emerges from how these components interact rather than any single piece dominating.`;
+}
+
+// ── Stacked trait detection ─────────────────────────
+//
+// Detects when 2+ components push the system in the same sonic direction.
+// More granular than axis-level compounding — operates on specific
+// sonic properties (speed, density, damping) rather than binary axis poles.
+
+/** Sonic property tags derived from axis + trait data. */
+type SonicProperty = 'high_speed' | 'low_stored_energy' | 'high_density' | 'high_damping'
+  | 'low_density' | 'high_detail' | 'high_smoothness' | 'high_elasticity' | 'high_control';
+
+function deriveSonicProperties(axes: PrimaryAxisLeanings, traits?: Record<string, number>): SonicProperty[] {
+  const props: SonicProperty[] = [];
+
+  // Axis-derived
+  if (axes.warm_bright === 'bright') { props.push('high_speed', 'low_stored_energy'); }
+  if (axes.warm_bright === 'warm') { props.push('high_density'); }
+  if (axes.smooth_detailed === 'detailed') { props.push('high_detail'); }
+  if (axes.smooth_detailed === 'smooth') { props.push('high_smoothness'); }
+  if (axes.elastic_controlled === 'controlled') { props.push('high_damping', 'high_control'); }
+  if (axes.elastic_controlled === 'elastic') { props.push('high_elasticity'); }
+
+  // Trait-enriched
+  if (traits) {
+    if ((traits.tonal_density ?? 0.5) < 0.35) props.push('low_density');
+    if ((traits.tonal_density ?? 0.5) > 0.75) props.push('high_density');
+    if ((traits.composure ?? 0.5) > 0.8) props.push('high_control');
+  }
+
+  return props;
+}
+
+const STACKED_LABELS: Record<SonicProperty, string> = {
+  high_speed: 'high transient bias',
+  low_stored_energy: 'low stored energy',
+  high_density: 'harmonic density',
+  high_damping: 'high damping / analytical control',
+  low_density: 'lean tonal body',
+  high_detail: 'detail emphasis',
+  high_smoothness: 'smoothness emphasis',
+  high_elasticity: 'dynamic elasticity',
+  high_control: 'control emphasis',
+};
+
+const STACKED_EXPLANATIONS: Record<SonicProperty, string> = {
+  high_speed: 'The system compounds transient speed across multiple components. Excellent elasticity and microdetail, but tonal density may be reduced.',
+  low_stored_energy: 'Multiple low-stored-energy components produce fast, articulate sound. Extended listening may feel lean on harmonically dense material.',
+  high_density: 'The chain stacks tonal density — rich, immersive midrange, but transient precision and spatial separation may be constrained.',
+  high_damping: 'Stacked control and damping. Composure under load is excellent, but dynamic expression and elasticity may feel suppressed.',
+  low_density: 'Multiple components contribute thin midrange character. The system may lack tonal body and weight on acoustic material.',
+  high_detail: 'Detail emphasis compounds across the chain. Microdetail retrieval is strong, but lesser recordings may sound unforgiving.',
+  high_smoothness: 'Smoothness stacks across components. Musical flow is excellent, but transient edges and fine detail may be softened.',
+  high_elasticity: 'Dynamic energy compounds across the chain. Rhythmic engagement is strong, but composure on complex passages may be limited.',
+  high_control: 'Control emphasis stacks in the chain. Stability and grip are excellent, but the presentation may feel overdamped or mechanical.',
+};
+
+function detectStackedTraits(
+  components: SystemComponent[],
+  profiles: ComponentAxisProfile[],
+): MemoStackedTraitInsight[] {
+  // Collect sonic properties per component
+  const propMap = new Map<SonicProperty, string[]>();
+  for (let i = 0; i < components.length; i++) {
+    const props = deriveSonicProperties(profiles[i].axes, components[i].product?.traits);
+    for (const p of props) {
+      if (!propMap.has(p)) propMap.set(p, []);
+      propMap.get(p)!.push(components[i].displayName);
+    }
+  }
+
+  // Properties shared by 2+ components = stacked
+  const insights: MemoStackedTraitInsight[] = [];
+  for (const [prop, contributors] of propMap) {
+    if (contributors.length >= 2) {
+      insights.push({
+        label: STACKED_LABELS[prop],
+        contributors,
+        explanation: STACKED_EXPLANATIONS[prop],
+      });
+    }
+  }
+
+  return insights;
+}
+
+// ── Bottleneck detection ────────────────────────────
+//
+// Identifies the primary system constraint — the factor that most
+// limits the system relative to its architectural potential.
+// Pipeline: axis analysis + trait data + stacked traits → constraint ranking.
+
+type ConstraintCategory = MemoPrimaryConstraint['category'];
+
+interface ConstraintCandidate {
+  componentName: string;
+  category: ConstraintCategory;
+  explanation: string;
+  severity: number; // higher = more constraining
+}
+
+function detectPrimaryConstraint(
+  components: SystemComponent[],
+  profiles: ComponentAxisProfile[],
+  stacked: MemoStackedTraitInsight[],
+  system: PrimaryAxisLeanings,
+): MemoPrimaryConstraint | undefined {
+  const candidates: ConstraintCandidate[] = [];
+
+  // ── Stacked bias constraint (system-level, not per-component) ──
+  if (stacked.length > 0) {
+    const dominant = stacked[0];
+    // Find which component contributes most to the stack
+    // (prefer the component that appears in the most stacked traits)
+    const frequency = new Map<string, number>();
+    for (const s of stacked) {
+      for (const name of s.contributors) {
+        frequency.set(name, (frequency.get(name) ?? 0) + 1);
+      }
+    }
+    let topContributor = dominant.contributors[0];
+    let topCount = 0;
+    for (const [name, count] of frequency) {
+      if (count > topCount) { topContributor = name; topCount = count; }
+    }
+    candidates.push({
+      componentName: topContributor,
+      category: 'stacked_bias',
+      explanation: `${dominant.label} compounds across the chain. ${topContributor} is the strongest contributor to this bias.`,
+      severity: stacked.length * 2 + 3,
+    });
+  }
+
+  // ── Per-component constraints ──
+  for (let i = 0; i < components.length; i++) {
+    const c = components[i];
+    const axes = profiles[i].axes;
+    const traits = c.product?.traits;
+    const role = c.role.toLowerCase();
+
+    // DAC limitations — low tonal density, low flow, delta-sigma glare risk
+    if (role === 'dac' || role.includes('dac')) {
+      let severity = 0;
+      const issues: string[] = [];
+      if (traits && (traits.tonal_density ?? 0.5) < 0.4) {
+        severity += 3;
+        issues.push('low tonal density');
+      }
+      if (traits && (traits.flow ?? 0.5) < 0.4) {
+        severity += 2;
+        issues.push('limited musical flow');
+      }
+      if (axes.warm_bright === 'bright' && system.warm_bright === 'bright') {
+        severity += 2;
+        issues.push('brightness compounding with system lean');
+      }
+      if (severity > 0) {
+        candidates.push({
+          componentName: c.displayName,
+          category: 'dac_limitation',
+          explanation: `DAC limitation: ${issues.join(', ')}. This is the most upstream constraint and affects everything downstream.`,
+          severity,
+        });
+      }
+    }
+
+    // Amplifier control — check for mismatches with speaker demands
+    if (role.includes('amp') || role.includes('integrated')) {
+      let severity = 0;
+      const issues: string[] = [];
+      if (axes.elastic_controlled === 'elastic') {
+        // Elastic amps can struggle with demanding speakers
+        const hasDemandingSpeaker = components.some(
+          (sc) => sc.role.includes('speak') && sc.product?.traits && (sc.product.traits.composure ?? 0.5) > 0.7,
+        );
+        if (hasDemandingSpeaker) {
+          severity += 3;
+          issues.push('dynamic grip may be insufficient for demanding speakers');
+        }
+      }
+      if (axes.elastic_controlled === 'controlled' && system.elastic_controlled === 'controlled') {
+        severity += 2;
+        issues.push('overdamping risk — may suppress dynamic expression');
+      }
+      if (severity > 0) {
+        candidates.push({
+          componentName: c.displayName,
+          category: 'amplifier_control',
+          explanation: `Amplifier constraint: ${issues.join(', ')}.`,
+          severity,
+        });
+      }
+    }
+
+    // Speaker scale — speakers often set the ceiling
+    if (role.includes('speak')) {
+      let severity = 0;
+      const issues: string[] = [];
+      if (traits && (traits.spatial_precision ?? 0.5) < 0.4) {
+        severity += 2;
+        issues.push('limited spatial precision');
+      }
+      if (axes.airy_closed === 'closed') {
+        severity += 2;
+        issues.push('constrained spatial scale');
+      }
+      if (traits && (traits.composure ?? 0.5) < 0.4) {
+        severity += 2;
+        issues.push('limited composure under complex material');
+      }
+      if (severity > 0) {
+        candidates.push({
+          componentName: c.displayName,
+          category: 'speaker_scale',
+          explanation: `Speaker constraint: ${issues.join(', ')}. Speakers set the output ceiling for the entire chain.`,
+          severity,
+        });
+      }
+    }
+  }
+
+  // ── Tonal imbalance (system-level) ──
+  const warmCount = profiles.filter((p) => p.axes.warm_bright === 'warm').length;
+  const brightCount = profiles.filter((p) => p.axes.warm_bright === 'bright').length;
+  if (warmCount >= 2 && brightCount === 0) {
+    const warmContributors = profiles.filter((p) => p.axes.warm_bright === 'warm').map((p) => p.name);
+    candidates.push({
+      componentName: warmContributors[0],
+      category: 'tonal_imbalance',
+      explanation: `System-wide warmth bias without counterbalance. ${warmContributors.join(' and ')} compound tonal density, potentially reducing transient precision.`,
+      severity: warmCount * 2,
+    });
+  }
+  if (brightCount >= 2 && warmCount === 0) {
+    const brightContributors = profiles.filter((p) => p.axes.warm_bright === 'bright').map((p) => p.name);
+    candidates.push({
+      componentName: brightContributors[0],
+      category: 'tonal_imbalance',
+      explanation: `System-wide brightness bias. ${brightContributors.join(' and ')} compound analytical character, potentially thinning tonal body and increasing fatigue risk.`,
+      severity: brightCount * 2,
+    });
+  }
+
+  // Return highest severity
+  candidates.sort((a, b) => b.severity - a.severity);
+  if (candidates.length === 0) return undefined;
+
+  const top = candidates[0];
+  return {
+    componentName: top.componentName,
+    category: top.category,
+    explanation: top.explanation,
+  };
+}
+
+// ── Component assessments (reviewer style) ──────────
+
+/**
+ * Build per-component structured assessments.
+ * Uses concise technical vocabulary: timing, elasticity, tonal density,
+ * stored energy, microdetail, stability, scale.
  */
 function buildComponentAssessments(
   components: SystemComponent[],
   profiles: ComponentAxisProfile[],
+  constraint?: MemoPrimaryConstraint,
 ): MemoComponentAssessment[] {
   return components.map((c, i) => {
     const axes = profiles[i].axes;
+    const traits = c.product?.traits;
     const strengths: string[] = [];
     const weaknesses: string[] = [];
 
-    // ── Derive from axis positions ──
-    if (axes.warm_bright === 'warm') strengths.push('Tonal density and midrange presence');
-    if (axes.warm_bright === 'bright') strengths.push('Transient articulation and clarity');
+    // ── Axis-derived strengths (technical vocabulary) ──
+    if (axes.warm_bright === 'warm') strengths.push('Tonal density and harmonic richness');
+    if (axes.warm_bright === 'bright') strengths.push('Transient speed and low stored energy');
+    if (axes.warm_bright === 'neutral') strengths.push('Neutral tonal balance');
     if (axes.smooth_detailed === 'smooth') strengths.push('Musical flow and ease');
-    if (axes.smooth_detailed === 'detailed') strengths.push('Micro-detail retrieval and textural transparency');
-    if (axes.elastic_controlled === 'elastic') strengths.push('Dynamic expression and rhythmic engagement');
-    if (axes.elastic_controlled === 'controlled') strengths.push('Composure and grip under complex material');
-    if (axes.airy_closed === 'airy') strengths.push('Spatial openness and soundstage depth');
+    if (axes.smooth_detailed === 'detailed') strengths.push('Microdetail retrieval and transparency');
+    if (axes.elastic_controlled === 'elastic') strengths.push('Elasticity and dynamic expression');
+    if (axes.elastic_controlled === 'controlled') strengths.push('Stability and grip under load');
+    if (axes.airy_closed === 'airy') strengths.push('Spatial scale and image separation');
 
-    // Weaknesses — opposite of strengths
-    if (axes.warm_bright === 'warm') weaknesses.push('May soften transient edges');
-    if (axes.warm_bright === 'bright') weaknesses.push('May lean thin in the midrange');
-    if (axes.smooth_detailed === 'smooth') weaknesses.push('May trade some resolution for ease');
-    if (axes.smooth_detailed === 'detailed') weaknesses.push('May foreground analytical qualities on lesser recordings');
-    if (axes.elastic_controlled === 'controlled') weaknesses.push('May dampen dynamic expression');
-    if (axes.elastic_controlled === 'elastic') weaknesses.push('May lose composure on dense passages');
-    if (axes.airy_closed === 'closed') weaknesses.push('Soundstage may feel constrained');
-
-    // ── Enrich from product traits ──
-    if (c.product?.traits) {
-      const t = c.product.traits;
-      if ((t.flow ?? 0.5) > 0.75) strengths.push('Strong musical flow and continuity');
-      if ((t.spatial_precision ?? 0.5) > 0.8) strengths.push('Excellent spatial definition');
-      if ((t.composure ?? 0.5) > 0.8) strengths.push('High composure under load');
-      if ((t.tonal_density ?? 0.5) < 0.35) weaknesses.push('Tonal body is thin — may lack weight');
-      if ((t.flow ?? 0.5) < 0.35) weaknesses.push('May prioritize precision over musical involvement');
+    // ── Trait-enriched strengths ──
+    if (traits) {
+      if ((traits.flow ?? 0.5) > 0.7) strengths.push('Strong continuity and musical timing');
+      if ((traits.spatial_precision ?? 0.5) > 0.75) strengths.push('Precise spatial imaging');
+      if ((traits.composure ?? 0.5) > 0.75) strengths.push('Composure on complex passages');
     }
 
-    // ── Enrich from product architecture ──
+    // ── Architecture note ──
     if (c.product?.architecture) {
-      strengths.push(`${c.product.architecture} design`);
+      strengths.push(`${c.product.architecture} topology`);
     }
 
-    // ── Verdict ──
-    const hasMoreStrengths = strengths.length > weaknesses.length;
-    const weaknessCount = weaknesses.length;
+    // ── Axis-derived weaknesses (technical vocabulary) ──
+    if (axes.warm_bright === 'warm') weaknesses.push('Transient edges may soften');
+    if (axes.warm_bright === 'bright') weaknesses.push('Tonal density may lean thin');
+    if (axes.smooth_detailed === 'smooth') weaknesses.push('Fine detail may be smoothed over');
+    if (axes.smooth_detailed === 'detailed') weaknesses.push('Lesser recordings may sound unforgiving');
+    if (axes.elastic_controlled === 'controlled') weaknesses.push('Dynamic elasticity may be suppressed');
+    if (axes.elastic_controlled === 'elastic') weaknesses.push('May lose grip on dense orchestral material');
+    if (axes.airy_closed === 'closed') weaknesses.push('Spatial scale is constrained');
+
+    // ── Trait-enriched weaknesses ──
+    if (traits) {
+      if ((traits.tonal_density ?? 0.5) < 0.35) weaknesses.push('Low tonal body — midrange may lack weight');
+      if ((traits.flow ?? 0.5) < 0.35) weaknesses.push('Musical involvement is limited');
+    }
+
+    // ── Verdict — aware of bottleneck status ──
+    const isBottleneck = constraint?.componentName === c.displayName;
     let verdict: string;
-    if (weaknessCount === 0) {
-      verdict = `**${c.displayName}** — a strong performer in this chain. Keep this.`;
-    } else if (hasMoreStrengths && weaknessCount <= 1) {
-      verdict = `**${c.displayName}** holds its weight well. No urgent reason to change.`;
-    } else if (weaknessCount >= 2) {
-      verdict = `**${c.displayName}** — the most likely upgrade lever in this chain.`;
+    if (isBottleneck) {
+      verdict = `**This is the primary constraint in the chain.** Upgrading here yields the highest system-level impact.`;
+    } else if (weaknesses.length === 0) {
+      verdict = `Performing well. No immediate upgrade rationale.`;
+    } else if (strengths.length > weaknesses.length + 1) {
+      verdict = `Strong contributor to the system's character. Worth keeping.`;
     } else {
-      verdict = `**${c.displayName}** — solid but leaves room for improvement at this price tier.`;
+      verdict = `Solid at its tier. Room for refinement, not the priority.`;
     }
 
-    // ── Summary ──
+    // ── Summary — one line, technical ──
     const summary = c.product?.description
       ?? c.brandProfile?.tendencies
       ?? c.character;
@@ -2605,87 +2962,105 @@ function buildComponentAssessments(
   });
 }
 
-/**
- * Identify which components to keep unchanged.
- * Components with more strengths than weaknesses and no compounding risk
- * are flagged as keep recommendations.
- */
+// ── Keep recommendations ────────────────────────────
+
 function buildKeepRecommendations(
   assessments: MemoComponentAssessment[],
+  constraint?: MemoPrimaryConstraint,
 ): MemoKeepRecommendation[] {
   const keeps: MemoKeepRecommendation[] = [];
   for (const a of assessments) {
-    if (a.strengths.length > a.weaknesses.length && a.weaknesses.length <= 1) {
+    const isBottleneck = constraint?.componentName === a.name;
+    if (!isBottleneck && a.strengths.length > a.weaknesses.length) {
       keeps.push({
         name: a.name,
-        reason: a.strengths[0] ?? 'performing well in this system',
+        reason: a.strengths.slice(0, 2).join('; '),
       });
     }
   }
   return keeps;
 }
 
-/**
- * Build ranked upgrade paths from axis analysis.
- * Finds the weakest link(s) and suggests architectural directions.
- */
+// ── Upgrade paths (bottleneck-driven) ───────────────
+//
+// Pipeline: constraint → Path 1 (bottleneck) → Path 2 (secondary) → Path 3 (refinement).
+// The primary constraint always drives Path 1.
+
 function buildUpgradePaths(
   components: SystemComponent[],
   profiles: ComponentAxisProfile[],
   assessments: MemoComponentAssessment[],
-  compounding: string[],
+  constraint?: MemoPrimaryConstraint,
+  stacked?: MemoStackedTraitInsight[],
 ): MemoUpgradePath[] {
   const paths: MemoUpgradePath[] = [];
 
-  // ── Rank components by weakness count (most weaknesses = most upgrade need) ──
-  const ranked = assessments
-    .map((a, i) => ({ assessment: a, component: components[i], profile: profiles[i], index: i }))
-    .filter((r) => r.assessment.weaknesses.length >= 1)
-    .sort((a, b) => b.assessment.weaknesses.length - a.assessment.weaknesses.length);
+  // ── Path 1: Bottleneck (Highest Impact) ──
+  if (constraint) {
+    const bottleneckIdx = components.findIndex((c) => c.displayName === constraint.componentName);
+    const role = bottleneckIdx >= 0 ? canonicalRole(components[bottleneckIdx].role) : constraint.componentName;
+    const axes = bottleneckIdx >= 0 ? profiles[bottleneckIdx].axes : undefined;
 
-  let pathRank = 0;
-  for (const r of ranked.slice(0, 3)) {
-    pathRank++;
-    const role = r.component.role;
-    const axes = r.profile.axes;
-
-    // Determine what the upgrade should optimise
-    const optimises: string[] = [];
-    if (axes.warm_bright === 'bright') optimises.push('tonal density');
-    if (axes.warm_bright === 'warm') optimises.push('transient precision');
-    if (axes.smooth_detailed === 'smooth') optimises.push('detail retrieval');
-    if (axes.smooth_detailed === 'detailed') optimises.push('musical flow');
-    if (axes.elastic_controlled === 'controlled') optimises.push('dynamic expression');
-    if (axes.elastic_controlled === 'elastic') optimises.push('composure');
-
-    const impact = pathRank === 1 ? 'Highest Impact'
-      : pathRank === 2 ? 'Moderate Impact'
-      : 'Refinement';
-
-    const improvementTarget = optimises.length > 0
-      ? optimises.join(' and ')
-      : 'overall system balance';
-
-    const rationale = compounding.length > 0
-      ? `The ${r.component.displayName} contributes to compounding in this chain. Replacing it with a component that provides ${improvementTarget} would rebalance the system's character.`
-      : `The ${r.component.displayName} is the most likely upgrade lever for ${improvementTarget} based on the system's current axis balance.`;
+    // What the upgrade should introduce
+    const targets: string[] = [];
+    if (axes) {
+      if (axes.warm_bright === 'bright') targets.push('tonal density');
+      if (axes.warm_bright === 'warm') targets.push('transient speed');
+      if (axes.smooth_detailed === 'smooth') targets.push('microdetail');
+      if (axes.smooth_detailed === 'detailed') targets.push('musical flow');
+      if (axes.elastic_controlled === 'controlled') targets.push('elasticity');
+      if (axes.elastic_controlled === 'elastic') targets.push('stability');
+    }
+    const targetPhrase = targets.length > 0
+      ? `Look for components offering ${targets.join(' and ')}.`
+      : 'A change here shifts the system\'s fundamental character.';
 
     paths.push({
-      rank: pathRank,
-      label: `${role.charAt(0).toUpperCase() + role.slice(1)} Upgrade`,
-      impact,
-      rationale,
-      options: [], // Populated by shopping/product catalog — empty for now as a structural placeholder
+      rank: 1,
+      label: `${role} Upgrade`,
+      impact: 'Highest Impact',
+      rationale: `${constraint.explanation} ${targetPhrase}`,
+      options: [],
+    });
+  }
+
+  // ── Paths 2–3: remaining components by weakness severity ──
+  const remaining = assessments
+    .map((a, i) => ({ assessment: a, component: components[i], profile: profiles[i] }))
+    .filter((r) => r.component.displayName !== constraint?.componentName && r.assessment.weaknesses.length >= 1)
+    .sort((a, b) => b.assessment.weaknesses.length - a.assessment.weaknesses.length);
+
+  for (const r of remaining.slice(0, 2)) {
+    const rank = paths.length + 1;
+    const role = canonicalRole(r.component.role);
+    const weakSummary = r.assessment.weaknesses.slice(0, 2).join('; ').toLowerCase();
+
+    paths.push({
+      rank,
+      label: `${role} Upgrade`,
+      impact: rank === 2 ? 'Moderate Impact' : 'Refinement',
+      rationale: `Current limitation: ${weakSummary}. Addressing this refines the system's balance without changing its core identity.`,
+      options: [],
+    });
+  }
+
+  // ── If stacked and no component-level paths remain, add a rebalancing path ──
+  if (paths.length < 2 && stacked && stacked.length > 0) {
+    const insight = stacked[0];
+    paths.push({
+      rank: paths.length + 1,
+      label: 'System Rebalancing',
+      impact: paths.length === 0 ? 'Highest Impact' : 'Moderate Impact',
+      rationale: `The chain stacks ${insight.label}. Introducing a component with contrasting character would broaden the system's range. ${insight.explanation}`,
+      options: [],
     });
   }
 
   return paths;
 }
 
-/**
- * Build recommended upgrade sequence.
- * Based on the upgrade paths ranking + keep list.
- */
+// ── Recommended sequence ────────────────────────────
+
 function buildRecommendedSequence(
   paths: MemoUpgradePath[],
   keeps: MemoKeepRecommendation[],
@@ -2695,61 +3070,100 @@ function buildRecommendedSequence(
 
   for (const p of paths.slice(0, 3)) {
     stepNum++;
+    // Extract first sentence of rationale
+    const brief = p.rationale.split('.')[0];
     steps.push({
       step: stepNum,
-      action: `**${p.label}** — ${p.rationale.split('.')[0]}.`,
+      action: `**${p.label}** — ${brief}.`,
     });
   }
 
   if (keeps.length > 0) {
     stepNum++;
-    const keepNames = keeps.map((k) => k.name).join(', ');
+    const keepNames = keeps.map((k) => `**${k.name}**`).join(', ');
     steps.push({
       step: stepNum,
-      action: `Keep ${keepNames} — these are performing well and don't warrant change at this stage.`,
+      action: `Keep ${keepNames} — performing well, no change warranted.`,
+    });
+  }
+
+  if (stepNum > 0) {
+    stepNum++;
+    steps.push({
+      step: stepNum,
+      action: 'Audition before committing. System synergy matters more than component reputation.',
     });
   }
 
   return steps;
 }
 
-/**
- * Build a key observation about the system's overall character.
- * Focuses on the dominant trait pattern and what it implies about
- * the listener's likely preferences.
- */
+// ── Key observation (design philosophy inference) ───
+//
+// Infers the listener's underlying design philosophy from component
+// choices: timing-first, harmonic-density, studio-neutral, etc.
+// Reads like a reviewer's closing note, not a chatbot summary.
+
 function buildKeyObservation(
   components: SystemComponent[],
   profiles: ComponentAxisProfile[],
-  compounding: string[],
+  stacked: MemoStackedTraitInsight[],
+  system: PrimaryAxisLeanings,
   desires?: DesireSignal[],
 ): string {
-  const axes = profiles.map((p) => p.axes);
-  const system = synthesiseSystemAxes(axes);
+  // ── Infer design philosophy from component patterns ──
+  const brandNames = components.map((c) => c.displayName);
+  const philosophyTraits: string[] = [];
 
-  // ── Desire-informed observation ──
+  // Timing-first: bright or detailed + elastic
+  const timingFirst = (system.warm_bright === 'bright' || system.smooth_detailed === 'detailed')
+    && system.elastic_controlled !== 'controlled';
+  // Harmonic-density: warm + smooth
+  const harmonicDensity = system.warm_bright === 'warm'
+    && (system.smooth_detailed === 'smooth' || system.smooth_detailed === 'neutral');
+  // Studio-neutral: all neutral or near-neutral
+  const studioNeutral = system.warm_bright === 'neutral'
+    && system.smooth_detailed === 'neutral'
+    && system.elastic_controlled === 'neutral';
+  // Control-first: controlled + detailed
+  const controlFirst = system.elastic_controlled === 'controlled'
+    && system.smooth_detailed === 'detailed';
+
+  if (timingFirst) philosophyTraits.push('timing accuracy', 'low stored energy');
+  if (harmonicDensity) philosophyTraits.push('harmonic richness', 'tonal density');
+  if (studioNeutral) philosophyTraits.push('neutrality', 'transparency');
+  if (controlFirst) philosophyTraits.push('precision', 'analytical control');
+  if (system.elastic_controlled === 'elastic') philosophyTraits.push('dynamic elasticity');
+
+  // ── Desire-informed layer ──
   if (desires && desires.length > 0) {
     const topDesire = desires[0];
     const quality = topDesire.quality.toLowerCase();
-    const direction = topDesire.direction === 'more' ? 'prioritises' : 'is sensitive to';
-    return `Your system suggests a listener who ${direction} ${quality}. The current chain ${compounding.length > 0 ? 'compounds this tendency — further investment in that direction risks diminishing returns' : 'has room to move in that direction without overcommitting'}. Any upgrade should be evaluated against whether it deepens what you already value or introduces balance you don't yet have.`;
+    const verb = topDesire.direction === 'more' ? 'values' : 'wants to reduce';
+
+    if (philosophyTraits.length > 0) {
+      return `Your taste pattern points toward equipment emphasising **${philosophyTraits.join(' and ')}**. Components in this chain (${brandNames.join(', ')}) share this design approach. You also ${verb} ${quality} — future upgrades should preserve the underlying philosophy while addressing that specific axis.`;
+    }
+
+    return `You ${verb} ${quality}. The current chain is broadly balanced, so targeted component changes can address this without destabilising the overall character.`;
   }
 
-  // ── Character-informed observation ──
-  if (compounding.length > 0) {
-    return `This system commits to a direction — multiple components push the same way. That can be a deliberate strength (depth of character) or an emerging limitation (diminishing returns). Before upgrading, decide whether you want to **deepen** the existing character or **rebalance** toward something the system doesn't currently provide.`;
+  // ── Philosophy-driven observation ──
+  if (philosophyTraits.length > 0) {
+    const philo = philosophyTraits.join(' and ');
+    const stackedNote = stacked.length > 0
+      ? ` The chain compounds ${stacked[0].label}, which deepens this character but narrows the system's range.`
+      : '';
+
+    return `Your component choices suggest a preference for equipment emphasising **${philo}**. ${brandNames.join(', ')} share this design philosophy.${stackedNote} Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.`;
   }
 
-  if (system.warm_bright === 'neutral' && system.smooth_detailed === 'neutral') {
-    return `This system is broadly balanced — no single axis dominates. Upgrades from here are about refinement rather than correction. Focus on the quality you most want to intensify, and choose components that commit to that direction without destabilising what already works.`;
+  // ── Balanced fallback ──
+  if (stacked.length > 0) {
+    return `Despite broadly balanced axis positions, the system stacks ${stacked[0].label} across the chain. This is worth monitoring — it can be a deliberate strength or an emerging limitation depending on listening priorities. Targeted component changes can adjust this without rebuilding the system.`;
   }
 
-  const descriptors: string[] = [];
-  if (system.warm_bright !== 'neutral') descriptors.push(system.warm_bright === 'warm' ? 'warmth' : 'clarity');
-  if (system.smooth_detailed !== 'neutral') descriptors.push(system.smooth_detailed === 'smooth' ? 'ease' : 'detail');
-  if (system.elastic_controlled !== 'neutral') descriptors.push(system.elastic_controlled === 'elastic' ? 'dynamic energy' : 'composure');
-
-  return `This system leans toward ${descriptors.join(' and ')}. That's a valid architectural choice — not a problem to fix. Upgrades should either deepen that character or introduce complementary balance, depending on what you want more of.`;
+  return `This system is architecturally balanced. No single design philosophy dominates. Upgrades from here are about refinement — choosing which quality to intensify. The risk is low; the system tolerates experimentation in any direction.`;
 }
 
 function buildAssessmentPreferenceAlignment(
