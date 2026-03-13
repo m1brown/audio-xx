@@ -30,6 +30,7 @@ import { reason } from '@/lib/reasoning';
 import type { ReasoningResult } from '@/lib/reasoning';
 import { useAudioSession } from '@/lib/audio-session-context';
 import { buildTurnContext, type TurnContext } from '@/lib/turn-context';
+import { requestLlmOverlay } from '@/lib/memo-llm-overlay';
 import SystemBadge from '@/components/system/SystemBadge';
 import SystemPanel from '@/components/system/SystemPanel';
 import SystemEditor from '@/components/system/SystemEditor';
@@ -402,7 +403,8 @@ export default function Home() {
           return;
         }
         const assessmentMsgId = advisoryId();
-        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(assessmentResult.response), id: assessmentMsgId });
+        const deterministicAdvisory = consultationToAdvisory(assessmentResult.response);
+        dispatch({ type: 'ADD_ADVISORY', advisory: deterministicAdvisory, id: assessmentMsgId });
         // Store consultation context so follow-ups stay in the system context
         dispatch({
           type: 'SET_CONSULTATION_CONTEXT',
@@ -410,6 +412,19 @@ export default function Home() {
           originalQuery: submittedText,
         });
         dispatch({ type: 'SET_LOADING', value: false });
+
+        // Fire-and-forget: request LLM overlay for prose refinement.
+        // On success, merge validated fields into the advisory and update in place.
+        // On failure (timeout, validation rejection), the deterministic memo stands.
+        requestLlmOverlay(assessmentResult.findings).then((result) => {
+          if (!result || Object.keys(result.fields).length === 0) return;
+          const merged = { ...deterministicAdvisory };
+          if (result.fields.introSummary) merged.introSummary = result.fields.introSummary;
+          if (result.fields.keyObservation) merged.keyObservation = result.fields.keyObservation;
+          if (result.fields.recommendedSequence) merged.recommendedSequence = result.fields.recommendedSequence;
+          dispatch({ type: 'UPDATE_ADVISORY', id: assessmentMsgId, advisory: merged });
+        }).catch(() => { /* silent fallback */ });
+
         return;
       }
       // Falls through to consultation if assessment couldn't identify enough components
