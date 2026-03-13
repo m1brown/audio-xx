@@ -62,6 +62,8 @@ import type {
   CatalogSource,
   ComponentVerdict,
 } from './memo-findings';
+import { renderDeterministicMemo } from './memo-deterministic-renderer';
+import type { LegacyProseInputs, StructuredMemoInputs } from './memo-deterministic-renderer';
 
 // ── Types ───────────────────────────────────────────
 
@@ -2686,32 +2688,38 @@ export function buildSystemAssessment(
   if (ampSpeakerFit) interactionParts.push(ampSpeakerFit);
   const systemInteractionDetail = interactionParts.join(' ');
 
-  return { kind: 'assessment', findings, response: {
-    subject: `Your system: ${subject}`,
-    // Undefined — assessment sections carry all content; suppress AdvisoryProse
-    philosophy: undefined,
-    tendencies: undefined,
-    // System assessment specific fields
-    systemContext: systemCharacterOpening,
-    componentReadings: componentParagraphs,
+  // ── Render via deterministic renderer ─────────────
+  // Assemble prose and structured inputs, then delegate to the
+  // renderer. This is the same output as before — just routed
+  // through the renderer for structural separation.
+  const prose: LegacyProseInputs = {
+    subject,
+    systemCharacterOpening,
+    componentParagraphs,
     systemInteraction: systemInteractionDetail,
     assessmentStrengths,
     assessmentLimitations,
     upgradeDirection,
     followUp,
-    links: allLinks.length > 0 ? allLinks : undefined,
-    // Structured memo-format fields
-    systemChain: memoChain,
+    links: allLinks,
     introSummary: memoIntro,
-    primaryConstraint: memoConstraint,
-    stackedTraitInsights: memoStacked.length > 0 ? memoStacked : undefined,
-    componentAssessments: memoAssessments.length > 0 ? memoAssessments : undefined,
-    upgradePaths: memoUpgradePaths.length > 0 ? memoUpgradePaths : undefined,
-    keepRecommendations: memoKeeps.length > 0 ? memoKeeps : undefined,
-    recommendedSequence: memoSequence.length > 0 ? memoSequence : undefined,
     keyObservation: memoKeyObservation,
-    sourceReferences: memoSourceRefs.length > 0 ? memoSourceRefs : undefined,
-  }};
+  };
+
+  const structured: StructuredMemoInputs = {
+    systemChain: memoChain,
+    primaryConstraint: memoConstraint,
+    stackedTraitInsights: memoStacked,
+    componentAssessments: memoAssessments,
+    upgradePaths: memoUpgradePaths,
+    keepRecommendations: memoKeeps,
+    recommendedSequence: memoSequence,
+    sourceReferences: memoSourceRefs,
+  };
+
+  const response = renderDeterministicMemo(findings, prose, structured);
+
+  return { kind: 'assessment', findings, response };
 }
 
 /**
