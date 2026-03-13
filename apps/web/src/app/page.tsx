@@ -377,7 +377,13 @@ export default function Home() {
     if (intent === 'system_assessment') {
       const assessmentResult = buildSystemAssessment(submittedText, turnCtx.subjectMatches, turnCtx.activeSystem, turnCtx.desires);
       if (assessmentResult) {
-        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(assessmentResult) });
+        if (assessmentResult.kind === 'clarification') {
+          // Validation detected a conflict — ask the user before proceeding
+          dispatch({ type: 'ADD_QUESTION', clarification: assessmentResult.clarification });
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(assessmentResult.response) });
         // Store consultation context so follow-ups stay in the system context
         dispatch({
           type: 'SET_CONSULTATION_CONTEXT',

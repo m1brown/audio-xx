@@ -40,6 +40,7 @@ import type { SubjectMatch, ContextKind, DesireSignal } from './intent';
 import { getApprovedBrand } from './knowledge';
 import type { BrandKnowledge } from './knowledge/schema';
 import type { ActiveSystemContext } from './system-types';
+import type { ClarificationResponse } from './clarification';
 import {
   type PrimaryAxisLeanings,
   resolveProductAxes,
@@ -1933,6 +1934,293 @@ export interface SystemComponent {
   product?: Product;
 }
 
+// ── Pre-assessment validation ────────────────────────
+//
+// Lightweight validation pass that runs before the system assessment pipeline.
+// Detects three classes of issues:
+//   1. Role-label conflicts — user labels a component differently than catalog data
+//   2. Chain-order ambiguity — system can't reconstruct signal flow confidently
+//   3. Duplicate-role conflicts — two DACs, two amps, etc. without clear indication
+//
+// Returns a ClarificationResponse when a conflict requires user input,
+// or null when the system is clear to proceed.
+
+/** Known product → expected category mappings for role-label conflict detection. */
+const KNOWN_PRODUCT_ROLES: Record<string, { expectedCategory: string; displayBrand: string }> = {
+  'wiim pro': { expectedCategory: 'streamer', displayBrand: 'WiiM' },
+  'wiim ultra': { expectedCategory: 'streamer', displayBrand: 'WiiM' },
+  'dmp-a6': { expectedCategory: 'streamer', displayBrand: 'Eversolo' },
+  'dmp-a8': { expectedCategory: 'streamer', displayBrand: 'Eversolo' },
+  'dac-z8': { expectedCategory: 'dac', displayBrand: 'Eversolo' },
+  'eversolo dmp-a6': { expectedCategory: 'streamer', displayBrand: 'Eversolo' },
+  'eversolo dmp-a8': { expectedCategory: 'streamer', displayBrand: 'Eversolo' },
+  'eversolo dac-z8': { expectedCategory: 'dac', displayBrand: 'Eversolo' },
+  'k9 pro': { expectedCategory: 'dac', displayBrand: 'FiiO' },
+  ef400: { expectedCategory: 'dac', displayBrand: 'HiFiMAN' },
+  'hugo tt2': { expectedCategory: 'dac', displayBrand: 'Chord' },
+  qutest: { expectedCategory: 'dac', displayBrand: 'Chord' },
+  hugo: { expectedCategory: 'dac', displayBrand: 'Chord' },
+  dave: { expectedCategory: 'dac', displayBrand: 'Chord' },
+  mojo: { expectedCategory: 'dac', displayBrand: 'Chord' },
+  bifrost: { expectedCategory: 'dac', displayBrand: 'Schiit' },
+  yggdrasil: { expectedCategory: 'dac', displayBrand: 'Schiit' },
+  'cia-1': { expectedCategory: 'integrated', displayBrand: 'Crayon' },
+  'cia-1t': { expectedCategory: 'integrated', displayBrand: 'Crayon' },
+  vanguard: { expectedCategory: 'speaker', displayBrand: 'XSA' },
+};
+
+/** Canonical role labels for human-readable display. */
+const ROLE_DISPLAY: Record<string, string> = {
+  streamer: 'a streamer',
+  dac: 'a DAC',
+  amplifier: 'an amplifier',
+  integrated: 'an integrated amplifier',
+  preamplifier: 'a preamplifier',
+  speaker: 'a speaker',
+  headphone: 'a headphone',
+  turntable: 'a turntable',
+  component: 'a component',
+};
+
+/** Role keywords that can appear in user text near a product name. */
+const USER_ROLE_KEYWORDS: { pattern: RegExp; role: string }[] = [
+  { pattern: /\bstream(?:er|ing)?\b/i, role: 'streamer' },
+  { pattern: /\bdac\b/i, role: 'dac' },
+  { pattern: /\bamp(?:lifier)?\b/i, role: 'amplifier' },
+  { pattern: /\bintegrated\b/i, role: 'integrated' },
+  { pattern: /\bpre[- ]?amp/i, role: 'preamplifier' },
+  { pattern: /\bspeak(?:er)?s?\b/i, role: 'speaker' },
+  { pattern: /\bheadphone/i, role: 'headphone' },
+  { pattern: /\bturntable\b/i, role: 'turntable' },
+];
+
+/** Roles that are functionally equivalent for duplicate detection. */
+const ROLE_EQUIVALENCES: Record<string, string> = {
+  amplifier: 'amplification',
+  integrated: 'amplification',
+  'integrated-amplifier': 'amplification',
+  preamplifier: 'preamplification',
+  preamp: 'preamplification',
+};
+
+/**
+ * Detect the role keyword the user applied to a product in the raw message.
+ *
+ * Scans a window of text around the product name for role keywords.
+ * Returns the detected role or undefined if no role keyword is nearby.
+ */
+function detectUserAppliedRole(
+  rawMessage: string,
+  productName: string,
+): string | undefined {
+  const msgLower = rawMessage.toLowerCase();
+  const prodLower = productName.toLowerCase();
+  const prodIdx = msgLower.indexOf(prodLower);
+  if (prodIdx < 0) return undefined;
+
+  // Look in a window ~15 chars before and ~40 chars after the product name
+  const windowStart = Math.max(0, prodIdx - 15);
+  const windowEnd = Math.min(msgLower.length, prodIdx + prodLower.length + 40);
+  const window = msgLower.substring(windowStart, windowEnd);
+
+  for (const { pattern, role } of USER_ROLE_KEYWORDS) {
+    if (pattern.test(window)) return role;
+  }
+  return undefined;
+}
+
+/**
+ * Check whether two role strings conflict (are different functional roles)
+ * or are compatible (same or equivalent).
+ */
+function rolesConflict(userRole: string, expectedRole: string): boolean {
+  if (userRole === expectedRole) return false;
+  // Check equivalences: amplifier ≈ integrated
+  const userNorm = ROLE_EQUIVALENCES[userRole] ?? userRole;
+  const expectedNorm = ROLE_EQUIVALENCES[expectedRole] ?? expectedRole;
+  return userNorm !== expectedNorm;
+}
+
+interface ValidationIssue {
+  kind: 'role-label-conflict' | 'chain-order-ambiguity' | 'duplicate-role';
+  /** The product or component involved. */
+  subject: string;
+  /** Human-readable detail for the clarification prompt. */
+  detail: string;
+}
+
+/**
+ * Pre-assessment validation pass.
+ *
+ * Runs after component identification but before the assessment pipeline.
+ * Detects conflicts that would produce misleading results if left unresolved.
+ *
+ * Returns a ClarificationResponse if a conflict needs user input,
+ * or null if the system is clear to proceed.
+ */
+export function validateSystemComponents(
+  rawMessage: string,
+  components: SystemComponent[],
+): ClarificationResponse | null {
+  const issues: ValidationIssue[] = [];
+
+  // ── 1. Role-label conflicts ──
+  // Check whether the user labeled a product with a different role than
+  // our catalog expects. E.g. "WiiM Pro DAC" when it's cataloged as a streamer.
+  for (const c of components) {
+    const nameLower = c.displayName.toLowerCase();
+
+    // Find the best matching known product role
+    let expectedCategory: string | undefined;
+    let displayBrand: string | undefined;
+    for (const [key, info] of Object.entries(KNOWN_PRODUCT_ROLES)) {
+      if (nameLower.includes(key)) {
+        expectedCategory = info.expectedCategory;
+        displayBrand = info.displayBrand;
+        break;
+      }
+    }
+
+    // Also check catalog products
+    if (!expectedCategory && c.product) {
+      expectedCategory = c.product.category;
+      displayBrand = c.product.brand;
+    }
+
+    if (!expectedCategory) continue;
+
+    // Detect what role the user applied in their text
+    const userAppliedRole = detectUserAppliedRole(rawMessage, c.displayName);
+    if (!userAppliedRole) continue;
+
+    if (rolesConflict(userAppliedRole, expectedCategory)) {
+      const userRoleDisplay = ROLE_DISPLAY[userAppliedRole] ?? userAppliedRole;
+      const expectedDisplay = ROLE_DISPLAY[expectedCategory] ?? expectedCategory;
+      const brand = displayBrand ?? c.displayName;
+
+      // Generate a specific clarification based on the conflict type
+      if (expectedCategory === 'streamer' && userAppliedRole === 'dac') {
+        issues.push({
+          kind: 'role-label-conflict',
+          subject: c.displayName,
+          detail: `You described the ${c.displayName} as a DAC — our data has it cataloged as a streamer. Are you using its internal DAC as your primary conversion stage, or is it feeding an external DAC?`,
+        });
+      } else if (expectedCategory === 'dac' && userAppliedRole === 'streamer') {
+        issues.push({
+          kind: 'role-label-conflict',
+          subject: c.displayName,
+          detail: `You described the ${c.displayName} as a streamer — our data has it cataloged as a DAC. Is it receiving a digital stream from a separate transport, or are you using its built-in streaming capability?`,
+        });
+      } else if (expectedCategory === 'integrated' && (userAppliedRole === 'amplifier' || userAppliedRole === 'preamplifier')) {
+        issues.push({
+          kind: 'role-label-conflict',
+          subject: c.displayName,
+          detail: `You described the ${c.displayName} as ${userRoleDisplay} — it's an integrated amplifier. Are you using it as a full integrated, or only its power section with an external preamp?`,
+        });
+      } else {
+        issues.push({
+          kind: 'role-label-conflict',
+          subject: c.displayName,
+          detail: `You described the ${c.displayName} as ${userRoleDisplay}, but our data has it as ${expectedDisplay}. Could you clarify what role it plays in your chain?`,
+        });
+      }
+    }
+  }
+
+  // ── 2. Duplicate-role conflicts ──
+  // Detect when two or more components share the same functional role
+  // without a clear indication of dual-use (bi-amping, multiple sources, etc.).
+  const roleCounts = new Map<string, SystemComponent[]>();
+  for (const c of components) {
+    const role = c.role.toLowerCase();
+    // Normalize amplifier variants to a single bucket
+    const normalizedRole = ROLE_EQUIVALENCES[role] ?? role;
+    const bucket = roleCounts.get(normalizedRole) ?? [];
+    bucket.push(c);
+    roleCounts.set(normalizedRole, bucket);
+  }
+
+  // Only flag core signal-path roles, not accessories
+  const FLAGGABLE_ROLES = new Set(['dac', 'amplification', 'preamplification', 'speaker', 'headphone', 'streamer']);
+
+  for (const [role, comps] of roleCounts) {
+    if (comps.length < 2) continue;
+    if (!FLAGGABLE_ROLES.has(role)) continue;
+
+    // Don't flag if the user's message explicitly indicates dual-use
+    const dualUseSignals = /\b(?:bi[- ]?amp|dual|both|pair(?:ed)?|stack(?:ed)?|two\b)/i;
+    if (dualUseSignals.test(rawMessage)) continue;
+
+    const names = comps.map((c) => c.displayName);
+    const roleLabel = role === 'amplification' ? 'amplifier'
+      : role === 'preamplification' ? 'preamplifier'
+      : role;
+
+    if (comps.length === 2) {
+      issues.push({
+        kind: 'duplicate-role',
+        subject: names.join(' and '),
+        detail: `Your chain includes two components in the ${roleLabel} role: ${names[0]} and ${names[1]}. Are both active in your current signal path, or has one replaced the other?`,
+      });
+    } else {
+      issues.push({
+        kind: 'duplicate-role',
+        subject: names.join(', '),
+        detail: `Your chain includes ${comps.length} components in the ${roleLabel} role: ${names.join(', ')}. Could you clarify which are currently active in your signal path?`,
+      });
+    }
+  }
+
+  // ── 3. Chain-order ambiguity ──
+  // Only flag when the full chain extraction returned medium confidence
+  // AND the canonical ordering failed (couldn't classify all segments).
+  const extracted = extractFullChain(rawMessage);
+  if (extracted && extracted.confidence === 'medium') {
+    const canonicalAttempt = tryCanonicalOrder(extracted.segments);
+    if (!canonicalAttempt) {
+      // Can't determine order — ask the user
+      const segmentList = extracted.segments.join(', ');
+      issues.push({
+        kind: 'chain-order-ambiguity',
+        subject: 'signal path order',
+        detail: `I can see the components in your system (${segmentList}), but I'm not confident about the signal-flow order. Could you describe the chain from source to output — which component feeds which?`,
+      });
+    }
+  }
+
+  // ── Build clarification response ──
+  if (issues.length === 0) return null;
+
+  // Prioritise: role-label > duplicate-role > chain-order
+  // Only surface the first issue to keep the prompt focused.
+  const prioritised = issues.sort((a, b) => {
+    const order: Record<string, number> = {
+      'role-label-conflict': 0,
+      'duplicate-role': 1,
+      'chain-order-ambiguity': 2,
+    };
+    return (order[a.kind] ?? 99) - (order[b.kind] ?? 99);
+  });
+
+  const primary = prioritised[0];
+
+  // Build acknowledge line from the components mentioned
+  const componentNames = components.map((c) => c.displayName);
+  const acknowledge = componentNames.length <= 3
+    ? `I can see you're describing a chain with ${componentNames.join(', ')}.`
+    : `I can see a ${componentNames.length}-component chain here.`;
+
+  return {
+    acknowledge,
+    context: primary.kind === 'role-label-conflict'
+      ? 'Before running the full assessment, I want to make sure I understand the role of each component correctly.'
+      : primary.kind === 'duplicate-role'
+      ? 'Before running the full assessment, I want to confirm which components are active in your current signal path.'
+      : 'Before running the full assessment, I want to confirm the signal-flow order.',
+    question: primary.detail,
+  };
+}
+
 /**
  * Build a system assessment response for a multi-component system description.
  *
@@ -1958,12 +2246,18 @@ function normalizeDisplayName(brand: string, name: string): string {
   return `${b} ${n}`;
 }
 
+/** Result of buildSystemAssessment — either a full assessment or a clarification request. */
+export type SystemAssessmentResult =
+  | { kind: 'assessment'; response: ConsultationResponse }
+  | { kind: 'clarification'; clarification: ClarificationResponse }
+  | null;
+
 export function buildSystemAssessment(
   currentMessage: string,
   subjectMatches: SubjectMatch[],
   activeSystem?: ActiveSystemContext | null,
   desires?: DesireSignal[],
-): ConsultationResponse | null {
+): SystemAssessmentResult {
   const components: SystemComponent[] = [];
   const allLinks: { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[] = [];
   const processedNames = new Set<string>();
@@ -2236,6 +2530,14 @@ export function buildSystemAssessment(
   // Need at least 2 identified components to build a system assessment
   if (components.length < 2) return null;
 
+  // ── Pre-assessment validation pass ──
+  // Check for role-label conflicts, duplicate roles, and chain-order ambiguity
+  // before running the full assessment pipeline.
+  const validationClarification = validateSystemComponents(currentMessage, components);
+  if (validationClarification) {
+    return { kind: 'clarification', clarification: validationClarification };
+  }
+
   // ── Step 1: Resolve axis positions for each component ──
   // This happens BEFORE prose generation so that system-level reasoning
   // (compounding, compensation, balance) is available to all downstream steps.
@@ -2343,7 +2645,7 @@ export function buildSystemAssessment(
   if (ampSpeakerFit) interactionParts.push(ampSpeakerFit);
   const systemInteractionDetail = interactionParts.join(' ');
 
-  return {
+  return { kind: 'assessment', response: {
     subject: `Your system: ${subject}`,
     // Undefined — assessment sections carry all content; suppress AdvisoryProse
     philosophy: undefined,
@@ -2368,7 +2670,7 @@ export function buildSystemAssessment(
     recommendedSequence: memoSequence.length > 0 ? memoSequence : undefined,
     keyObservation: memoKeyObservation,
     sourceReferences: memoSourceRefs.length > 0 ? memoSourceRefs : undefined,
-  };
+  }};
 }
 
 /**
