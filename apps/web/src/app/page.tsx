@@ -41,13 +41,11 @@ import type { DraftSystem } from '@/lib/system-types';
 // ── Constants ─────────────────────────────────────────
 
 const CYCLING_PLACEHOLDERS = [
-  'My system sounds thin — what might cause that?',
-  'I value warmth and flow. What DAC direction fits that?',
-  'How would a Denafrips Ares sound in my system?',
-  'Compare R-2R vs delta-sigma for long listening sessions',
-  'Best DAC under $1000 for detail and naturalness',
-  'What is Shindo known for?',
-  'Schiit Bifrost vs Denafrips Pontus',
+  'Assess my system: Eversolo → Hugo → JOB → WLM Diva',
+  'Best DAC under $2000',
+  'Best integrated amplifier under $3000',
+  'How\u2019s the Laiv Harmony uDAC?',
+  'Compare Klipsch Heresy to DeVore O/96',
 ];
 
 /** Interval in ms between placeholder rotations. */
