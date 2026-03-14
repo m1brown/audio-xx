@@ -485,10 +485,10 @@ export default function Home() {
     // never fall through to the diagnostic engine.
     // Consultation is handled upstream (before detectIntent) and
     // returns early, so it cannot be swallowed by this override.
-    if (effectiveMode === 'shopping' && intent !== 'shopping' && intent !== 'cable_advisory') {
+    if (effectiveMode === 'shopping' && intent !== 'shopping') {
       intent = 'shopping';
     }
-    if (effectiveMode === 'diagnosis' && intent !== 'comparison' && intent !== 'gear_inquiry' && intent !== 'system_assessment' && intent !== 'consultation_entry' && intent !== 'cable_advisory') {
+    if (effectiveMode === 'diagnosis' && intent !== 'comparison' && intent !== 'gear_inquiry' && intent !== 'system_assessment') {
       intent = 'diagnosis';
     }
 

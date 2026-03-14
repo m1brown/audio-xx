@@ -2267,15 +2267,15 @@ function buildWhyThisFitsYou(
   // 2. System interaction — how these fit the existing chain
   if (ctx.systemProvided && ctx.systemProfile) {
     const outputType = ctx.systemProfile.outputType;
-    const character = ctx.systemProfile.character;
+    const character = ctx.systemProfile.systemCharacter;
     if (character === 'warm') {
       bullets.push('Your system leans warm — the shortlist includes options that complement rather than compound that tendency.');
     } else if (character === 'neutral') {
       bullets.push('Your system reads as fairly neutral, so these options can shift the balance in whatever direction appeals to you.');
-    } else if (character === 'bright' || character === 'lean') {
-      bullets.push('Your system leans lean or bright — options here include designs that can add body and tonal density.');
+    } else if (character === 'bright') {
+      bullets.push('Your system leans bright — options here include designs that can add body and tonal density.');
     }
-    if (outputType === 'headphone' && ctx.category === 'dac') {
+    if (outputType === 'headphones' && ctx.category === 'dac') {
       bullets.push('As a headphone listener, upstream resolution from the DAC will be more directly audible.');
     }
   }

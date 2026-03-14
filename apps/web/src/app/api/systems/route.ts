@@ -93,8 +93,8 @@ export async function POST(req: NextRequest) {
     // Find or create the component record (user-submitted)
     let component = await prisma.component.findFirst({
       where: {
-        name: { equals: comp.name, mode: 'insensitive' },
-        brand: { equals: comp.brand, mode: 'insensitive' },
+        name: comp.name,
+        brand: comp.brand,
       },
     });
 

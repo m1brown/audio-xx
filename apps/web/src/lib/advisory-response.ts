@@ -677,7 +677,7 @@ function buildGearWhyFitsYou(r: GearResponse): string[] | undefined {
       tonal_saturated: 'tonally saturated',
       spatial_holographic: 'spatially focused',
     };
-    const label = archetypeLabels[r.userArchetype];
+    const label = archetypeLabels[r.userArchetype.primary];
     if (label) {
       bullets.push(`Your ${label} listening style is relevant to how this component will present music in your system.`);
     }

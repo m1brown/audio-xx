@@ -485,7 +485,7 @@ function deriveSystemSignature(
   // Add engagement style from priorities
   const prioritySet = new Set(priorities);
   let engagementNote = '';
-  if (prioritySet.has('musical_engagement')) engagementNote = ' emphasizing musical engagement';
+  if (prioritySet.has('musical_flow')) engagementNote = ' emphasizing musical engagement';
   else if (prioritySet.has('timing_accuracy')) engagementNote = ' emphasizing transient clarity';
   else if (prioritySet.has('tonal_density')) engagementNote = ' emphasizing tonal density';
 
