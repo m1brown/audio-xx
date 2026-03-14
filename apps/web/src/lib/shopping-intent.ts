@@ -977,6 +977,10 @@ export interface ProductExample {
   priceCurrency?: string;
   /** Brief sonic character — what this component fundamentally sounds like. */
   character?: string;
+  /** Design/architecture highlights — "Why it stands out" bullets. */
+  standoutFeatures?: string[];
+  /** Sonic character bullets — "Sound profile" (distinct from fitNote verdict). */
+  soundProfile?: string[];
   fitNote: string;
   caution?: string;
   links?: { label: string; url: string; region?: string }[];
@@ -999,6 +1003,16 @@ export interface ProductExample {
   usedMarketSources?: UsedMarketSource[];
   /** Predicted sonic delta — what this product would change in the system. */
   systemDelta?: { whyFitsSystem?: string; likelyImprovements?: string[]; tradeOffs?: string[] };
+
+  // ── Catalog facts (not rendered — used for LLM validation) ──
+  /** Raw architecture string from catalog (e.g. "delta-sigma (ESS)"). */
+  catalogArchitecture?: string;
+  /** Design topology (e.g. "r2r", "fpga", "delta-sigma"). */
+  catalogTopology?: string;
+  /** Country of origin (ISO code, e.g. "CN", "US", "JP"). */
+  catalogCountry?: string;
+  /** Brand scale (e.g. "specialist", "boutique", "major"). */
+  catalogBrandScale?: string;
 }
 
 // ── Synthesis Brief ───────────────────────────────────
@@ -1699,6 +1713,124 @@ function buildCaution(product: Product): string | undefined {
   return undefined;
 }
 
+// ── "Why it stands out" — architecture & design highlights ──────
+
+/** Human-readable architecture descriptions. */
+const ARCHITECTURE_LABELS: Record<string, string> = {
+  'r2r':                  'Discrete R-2R ladder DAC',
+  'delta-sigma':          'Delta-sigma chip implementation',
+  'delta-sigma (ESS)':    'ESS Sabre chip implementation',
+  'delta-sigma (AKM)':    'AKM-based conversion',
+  'fpga':                 'Custom FPGA DAC architecture',
+  'multibit':             'Multibit conversion design',
+  'nos':                  'Non-oversampling (NOS) DAC',
+  'class-a-solid-state':  'Pure Class A solid-state design',
+  'class-ab-solid-state': 'Class AB solid-state design',
+  'set':                  'Single-ended triode design',
+  'push-pull-tube':       'Push-pull tube design',
+  'class-d':              'Class D amplifier',
+  'hybrid':               'Hybrid tube/solid-state design',
+};
+
+/**
+ * Build "Why it stands out" feature bullets (2–3 items).
+ *
+ * Draws from architecture, topology philosophy, tendency profile,
+ * primary axes, and fatigue assessment to explain the design's
+ * distinguishing characteristics.
+ */
+function buildStandoutFeatures(product: Product): string[] {
+  const features: string[] = [];
+
+  // Bullet 1: Architecture identity
+  const archLabel = ARCHITECTURE_LABELS[product.topology ?? '']
+    ?? ARCHITECTURE_LABELS[product.architecture]
+    ?? `${product.architecture} design`;
+  features.push(archLabel);
+
+  // Bullet 2: Key design emphasis from topology philosophy
+  const topo = product.topology;
+  if (topo && TOPOLOGY_PHILOSOPHY[topo]) {
+    features.push(capitalizeFirst(TOPOLOGY_PHILOSOPHY[topo].emphasis));
+  }
+
+  // Bullet 3: Notable quality from tendency profile or fatigue assessment
+  if (product.fatigueAssessment?.notes) {
+    features.push(product.fatigueAssessment.notes);
+  } else if (product.notes) {
+    features.push(product.notes);
+  }
+
+  return features.slice(0, 3);
+}
+
+/**
+ * Build "Sound profile" bullets (2–3 items).
+ *
+ * Uses curated character tendencies when available (richest source),
+ * falling back to qualitative tendency profile, then primary axes.
+ * Each bullet is a distinct sonic trait — not a verdict or fit note.
+ */
+function buildSoundProfile(product: Product): string[] {
+  // Priority 1: curated character tendencies — the most authoritative source
+  if (hasTendencies(product.tendencies)) {
+    const selected = selectDefaultTendencies(product.tendencies.character, 3);
+    if (selected.length > 0) {
+      return selected.map((t) => capitalizeFirst(t.tendency));
+    }
+  }
+
+  // Priority 2: qualitative tendency profile → readable bullets
+  if (hasExplainableProfile(product.tendencyProfile)) {
+    const bullets: string[] = [];
+    const emphasized = getEmphasizedTraits(product.tendencyProfile);
+    const present = product.tendencyProfile.tendencies
+      .filter((t) => t.level === 'present')
+      .map((t) => t.trait.replace(/_/g, ' '));
+    const lessEmph = getLessEmphasizedTraits(product.tendencyProfile);
+
+    for (const trait of emphasized) {
+      bullets.push(`Strong ${trait}`);
+    }
+    for (const trait of present.slice(0, 2)) {
+      bullets.push(`Good ${trait}`);
+    }
+    if (lessEmph.length > 0) {
+      bullets.push(`Less emphasis on ${lessEmph.slice(0, 2).join(' and ')}`);
+    }
+    if (bullets.length > 0) return bullets.slice(0, 3);
+  }
+
+  // Priority 3: primary axis leanings
+  if (product.primaryAxes) {
+    const bullets: string[] = [];
+    const AXIS_LABELS: Record<string, Record<string, string>> = {
+      warm_bright:       { warm: 'Warm-leaning tonality', bright: 'Bright, energetic presentation', neutral: 'Tonally neutral' },
+      smooth_detailed:   { smooth: 'Smooth, easy-going', detailed: 'Detail-forward and resolving', neutral: 'Balanced detail retrieval' },
+      elastic_controlled:{ elastic: 'Dynamic and expressive', controlled: 'Controlled and composed', neutral: 'Even-handed dynamics' },
+      airy_closed:       { airy: 'Open, airy staging', closed: 'Intimate staging', neutral: 'Moderate staging' },
+    };
+    for (const [axis, leaning] of Object.entries(product.primaryAxes)) {
+      const label = AXIS_LABELS[axis]?.[leaning];
+      if (label && leaning !== 'neutral') bullets.push(label);
+    }
+    if (bullets.length > 0) return bullets.slice(0, 3);
+  }
+
+  // Fallback: split description
+  const desc = product.description;
+  if (desc) {
+    return desc.split('.').map((s) => s.trim()).filter(Boolean).slice(0, 2);
+  }
+
+  return [];
+}
+
+/** Capitalize the first letter of a string. */
+function capitalizeFirst(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 /**
  * Select up to 3 product examples for the given category, scored
  * against user traits and budget. Returns empty array if no
@@ -1848,6 +1980,8 @@ function selectProductExamples(
     price: product.price,
     priceCurrency: product.priceCurrency,
     character: buildProductCharacter(product),
+    standoutFeatures: buildStandoutFeatures(product),
+    soundProfile: buildSoundProfile(product),
     fitNote: buildFitNote(product, userTraits),
     caution: buildCaution(product),
     links: product.retailer_links.length > 0 ? product.retailer_links : undefined,
@@ -1861,6 +1995,11 @@ function selectProductExamples(
     usedPriceRange: product.usedPriceRange,
     usedMarketSources: buildUsedMarketSources(product),
     systemDelta: buildSystemDelta(product, systemProfile, userTraits),
+    // Catalog facts for LLM validation
+    catalogArchitecture: product.architecture,
+    catalogTopology: product.topology,
+    catalogCountry: product.country,
+    catalogBrandScale: product.brandScale,
   }));
 }
 

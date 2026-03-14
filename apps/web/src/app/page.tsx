@@ -11,7 +11,7 @@ import {
   shoppingToAdvisory,
   analysisToAdvisory,
 } from '@/lib/advisory-response';
-import type { AdvisoryResponse } from '@/lib/advisory-response';
+import type { AdvisoryResponse, ShoppingAdvisoryContext } from '@/lib/advisory-response';
 import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
@@ -31,6 +31,8 @@ import type { ReasoningResult } from '@/lib/reasoning';
 import { useAudioSession } from '@/lib/audio-session-context';
 import { buildTurnContext, type TurnContext } from '@/lib/turn-context';
 import { requestLlmOverlay } from '@/lib/memo-llm-overlay';
+import { requestShoppingEditorial, mergeEditorialIntoOptions } from '@/lib/shopping-llm-overlay';
+import type { ShoppingEditorialContext } from '@/lib/shopping-llm-overlay';
 import { logOverlayAttempt, logOverlayFailure } from '@/lib/memo-render-log';
 import SystemBadge from '@/components/system/SystemBadge';
 import SystemPanel from '@/components/system/SystemPanel';
@@ -265,6 +267,18 @@ export default function Home() {
     // and routing decisions consume this same object.
     const turnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current);
 
+    // ── Build AudioProfile context (shared across all advisory paths) ──
+    const advisoryCtx: ShoppingAdvisoryContext = {
+      systemComponents: turnCtx.activeSystem
+        ? turnCtx.activeSystem.components.map((c) => `${c.brand} ${c.name}`)
+        : undefined,
+      systemLocation: turnCtx.activeSystem?.location ?? undefined,
+      systemPrimaryUse: turnCtx.activeSystem?.primaryUse ?? undefined,
+      storedDesires: tasteProfile
+        ? topTraits(tasteProfile, 5).map((t) => t.label)
+        : undefined,
+    };
+
     // ── Conversation router ──────────────────────────────
     // Classify the message into a conversation mode before detailed
     // intent detection. Mode persistence carries across turns.
@@ -306,7 +320,7 @@ export default function Home() {
       isComparisonFollowUp(submittedText, state.activeComparison)
     ) {
       const refinement = buildComparisonRefinement(state.activeComparison, submittedText);
-      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(refinement), id: advisoryId() });
+      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(refinement, undefined, advisoryCtx), id: advisoryId() });
       dispatch({ type: 'SET_LOADING', value: false });
       return;
     }
@@ -322,7 +336,7 @@ export default function Home() {
       const contextKind = detectContextEnrichment(submittedText);
       if (contextKind) {
         const refinement = buildContextRefinement(state.activeComparison, submittedText, contextKind);
-        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(refinement), id: advisoryId() });
+        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(refinement, undefined, advisoryCtx), id: advisoryId() });
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -347,7 +361,7 @@ export default function Home() {
     ) {
       const followUp = buildConsultationFollowUp(state.activeConsultation, submittedText);
       if (followUp) {
-        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(followUp), id: advisoryId() });
+        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(followUp, undefined, advisoryCtx), id: advisoryId() });
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -365,7 +379,7 @@ export default function Home() {
     // the evaluation approach and asks for system details.
     if (intent === 'consultation_entry') {
       const entryResult = buildConsultationEntry(submittedText, turnCtx.desires, turnCtx.activeSystem);
-      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(entryResult), id: advisoryId() });
+      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(entryResult, undefined, advisoryCtx), id: advisoryId() });
       dispatch({ type: 'SET_LOADING', value: false });
       return;
     }
@@ -375,7 +389,7 @@ export default function Home() {
     // strategy, system context, tuning direction, and trade-offs.
     if (intent === 'cable_advisory') {
       const cableResult = buildCableAdvisory(submittedText, turnCtx.subjectMatches, turnCtx.desires, turnCtx.activeSystem);
-      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(cableResult), id: advisoryId() });
+      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(cableResult, undefined, advisoryCtx), id: advisoryId() });
       if (turnCtx.subjectMatches.length > 0) {
         dispatch({
           type: 'SET_CONSULTATION_CONTEXT',
@@ -402,7 +416,7 @@ export default function Home() {
           return;
         }
         const assessmentMsgId = advisoryId();
-        const deterministicAdvisory = consultationToAdvisory(assessmentResult.response);
+        const deterministicAdvisory = consultationToAdvisory(assessmentResult.response, undefined, advisoryCtx);
         dispatch({ type: 'ADD_ADVISORY', advisory: deterministicAdvisory, id: assessmentMsgId });
         // Store consultation context so follow-ups stay in the system context
         dispatch({
@@ -472,7 +486,7 @@ export default function Home() {
             originalQuery: submittedText,
           });
         }
-        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(consultResult), id: advisoryId() });
+        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(consultResult, undefined, advisoryCtx), id: advisoryId() });
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -518,7 +532,7 @@ export default function Home() {
             originalQuery: submittedText,
           });
         }
-        dispatch({ type: 'ADD_ADVISORY', advisory: gearResponseToAdvisory(gearResponse), id: advisoryId() });
+        dispatch({ type: 'ADD_ADVISORY', advisory: gearResponseToAdvisory(gearResponse, undefined, advisoryCtx), id: advisoryId() });
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -585,11 +599,64 @@ export default function Home() {
             if (wantsQuickSuggestions) {
               dispatch({
                 type: 'ADD_NOTE',
-                content: 'These are exploratory starting points based on limited context. Refining your preferences would sharpen the direction.',
+                content: 'Showing a range of design philosophies since I don\'t have your full listening profile yet. Tell me more about your system and preferences anytime to sharpen the direction.',
               });
             }
             const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning);
-            dispatch({ type: 'ADD_ADVISORY', advisory: shoppingToAdvisory(answer, data.signals, reasoning), id: advisoryId() });
+
+            const deterministicShoppingAdvisory = shoppingToAdvisory(answer, data.signals, reasoning, advisoryCtx);
+            const shoppingMsgId = advisoryId();
+            dispatch({ type: 'ADD_ADVISORY', advisory: deterministicShoppingAdvisory, id: shoppingMsgId });
+
+            // Fire-and-forget: request LLM editorial overlay for richer product descriptions.
+            // On success, merge enriched fields into the advisory and update in place.
+            // On failure (timeout, validation rejection), the deterministic descriptions stand.
+            if (deterministicShoppingAdvisory.options && deterministicShoppingAdvisory.options.length > 0) {
+              const editorialContext: ShoppingEditorialContext = {
+                // System
+                systemComponents: turnCtx.activeSystem
+                  ? turnCtx.activeSystem.components.map((c) => `${c.brand} ${c.name}`)
+                  : undefined,
+                systemCharacter: turnCtx.activeSystem?.tendencies ?? undefined,
+                // Taste & preferences
+                tasteLabel: reasoning.taste.tasteLabel || undefined,
+                archetype: reasoning.taste.archetype ?? undefined,
+                desires: reasoning.taste.desires.map((d) => ({
+                  quality: d.quality,
+                  direction: d.direction,
+                })),
+                preserve: reasoning.direction.preserve.length > 0
+                  ? reasoning.direction.preserve
+                  : undefined,
+                traitSignals: Object.keys(reasoning.taste.traitSignals).length > 0
+                  ? reasoning.taste.traitSignals
+                  : undefined,
+                archetypeHints: data.signals.archetype_hints?.length > 0
+                  ? data.signals.archetype_hints
+                  : undefined,
+                // Shopping context
+                category: shoppingCtx.category,
+                budget: shoppingCtx.budgetAmount ? `$${shoppingCtx.budgetAmount}` : undefined,
+                userQuery: submittedText,
+                // Directional recommendation
+                directionStatement: reasoning.direction.statement || undefined,
+                archetypeNote: reasoning.direction.archetypeNote ?? undefined,
+              };
+              requestShoppingEditorial(deterministicShoppingAdvisory.options, editorialContext)
+                .then((editorial) => {
+                  if (!editorial || editorial.length === 0) return;
+                  const enrichedOptions = mergeEditorialIntoOptions(
+                    deterministicShoppingAdvisory.options!,
+                    editorial,
+                  );
+                  dispatch({
+                    type: 'UPDATE_ADVISORY',
+                    id: shoppingMsgId,
+                    advisory: { ...deterministicShoppingAdvisory, options: enrichedOptions },
+                  });
+                })
+                .catch(() => { /* deterministic descriptions stand */ });
+            }
 
             // Subtle note when the stored taste profile influenced the direction
             if (reasoning.taste.storedProfileUsed) {
@@ -641,7 +708,7 @@ export default function Home() {
           if (clarification) {
             dispatch({ type: 'ADD_QUESTION', clarification });
           } else {
-            dispatch({ type: 'ADD_ADVISORY', advisory: analysisToAdvisory(data.result, data.signals, diagDirection, reasoning), id: advisoryId() });
+            dispatch({ type: 'ADD_ADVISORY', advisory: analysisToAdvisory(data.result, data.signals, diagDirection, reasoning, advisoryCtx), id: advisoryId() });
           }
         }
       }
@@ -659,7 +726,7 @@ export default function Home() {
   const handleSkipToSuggestions = useCallback(() => {
     if (isLoading) return;
     skipToSuggestionsRef.current = true;
-    handleSubmit('Just give me some suggestions to explore.');
+    handleSubmit('Show me options from different design approaches.');
   }, [isLoading, handleSubmit]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -874,7 +941,7 @@ export default function Home() {
                 e.currentTarget.style.borderColor = '#d5d5d0';
               }}
             >
-              Skip questions → quick suggestions
+              Skip → show me options from different design approaches
             </button>
           )}
 

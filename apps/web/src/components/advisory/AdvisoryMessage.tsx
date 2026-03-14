@@ -25,7 +25,7 @@
  * Only populated sections render in both modes.
  */
 
-import type { AdvisoryResponse, AdvisoryMode } from '../../lib/advisory-response';
+import type { AdvisoryResponse, AdvisoryMode, AudioProfile } from '../../lib/advisory-response';
 import AdvisorySection from './AdvisorySection';
 import AdvisoryProse from './AdvisoryProse';
 import AdvisoryProductCards from './AdvisoryProductCard';
@@ -100,13 +100,15 @@ const MODE_LABELS: Record<AdvisoryMode, string> = {
   system_review: 'System Review',
   gear_advice: 'Gear Advice',
   gear_comparison: 'Gear Comparison',
-  upgrade_suggestions: 'Upgrade Suggestions',
+  upgrade_suggestions: '',  // No label — the Audio Preferences block provides context
   general: 'Advisory',
 };
 
 /** Mode awareness indicator — subtle label at the top of the response. */
 function ModeIndicator({ mode }: { mode?: AdvisoryMode }) {
   if (!mode || mode === 'general') return null;
+  const label = MODE_LABELS[mode];
+  if (!label) return null; // No label for this mode (e.g. upgrade_suggestions)
   return (
     <div style={{
       fontSize: '0.72rem',
@@ -116,7 +118,7 @@ function ModeIndicator({ mode }: { mode?: AdvisoryMode }) {
       color: COLORS.accentLight,
       marginBottom: '0.6rem',
     }}>
-      {MODE_LABELS[mode]}
+      {label}
     </div>
   );
 }
@@ -440,22 +442,238 @@ function isEditorialFormat(a: AdvisoryResponse): boolean {
   return !!(a.options && a.options.length > 0);
 }
 
+// ── Audio Preferences Block ──────────────────────────
+//
+// Replaces the old "What you seem to value" section with a richer
+// profile display showing system chain, sonic priorities, listening
+// context, and archetype. When profile is incomplete, shows a
+// transparent note about what's missing.
+
+function AudioPreferencesBlock({ profile }: { profile: AudioProfile }) {
+  const hasSystem = profile.systemChain && profile.systemChain.length > 0;
+  const hasPriorities = profile.sonicPriorities && profile.sonicPriorities.length > 0;
+  const hasAvoids = profile.sonicAvoids && profile.sonicAvoids.length > 0;
+  const hasContext = profile.listeningContext && profile.listeningContext.length > 0;
+  const hasAnything = hasSystem || hasPriorities || hasContext;
+
+  if (!hasAnything) {
+    // No profile at all — show exploratory note
+    return (
+      <div
+        style={{
+          borderLeft: `3px solid ${COLORS.border}`,
+          paddingLeft: '1rem',
+          marginBottom: '1.25rem',
+          background: '#f9f9f7',
+          padding: '0.8rem 1rem',
+          borderRadius: '0 6px 6px 0',
+        }}
+      >
+        <div style={{
+          fontSize: FONTS.labelSize,
+          fontWeight: 600,
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase' as const,
+          color: COLORS.textMuted,
+          marginBottom: '0.4rem',
+        }}>
+          Exploratory recommendations
+        </div>
+        <p style={{
+          margin: 0,
+          fontSize: '0.91rem',
+          lineHeight: 1.7,
+          color: COLORS.textSecondary,
+        }}>
+          These suggestions represent different design philosophies. Tell me about your system, sonic preferences, and listening habits for more personalized direction.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        borderLeft: `3px solid ${COLORS.accent}`,
+        paddingLeft: '1rem',
+        marginBottom: '1.25rem',
+        background: COLORS.accentBg,
+        padding: '0.8rem 1rem',
+        borderRadius: '0 6px 6px 0',
+      }}
+    >
+      {/* Section heading */}
+      <div style={{
+        fontSize: FONTS.labelSize,
+        fontWeight: 600,
+        letterSpacing: '0.05em',
+        textTransform: 'uppercase' as const,
+        color: COLORS.accent,
+        marginBottom: '0.55rem',
+      }}>
+        Audio Preferences
+      </div>
+
+      {/* System chain */}
+      {hasSystem && (
+        <div style={{ marginBottom: '0.55rem' }}>
+          <div style={{
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            color: COLORS.textSecondary,
+            marginBottom: '0.2rem',
+          }}>
+            Your chain
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            flexWrap: 'wrap',
+            fontSize: '0.91rem',
+            color: COLORS.text,
+          }}>
+            {profile.systemChain!.map((comp, i) => (
+              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                {i > 0 && (
+                  <span style={{ color: COLORS.accentLight, fontSize: '0.82rem' }}>→</span>
+                )}
+                <span>{comp}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sonic priorities */}
+      {hasPriorities && (
+        <div style={{ marginBottom: hasAvoids || hasContext ? '0.45rem' : 0 }}>
+          <div style={{
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            color: COLORS.textSecondary,
+            marginBottom: '0.2rem',
+          }}>
+            You prefer
+          </div>
+          <div style={{
+            fontSize: '0.91rem',
+            color: COLORS.text,
+            lineHeight: 1.65,
+          }}>
+            {profile.sonicPriorities!.join(' · ')}
+          </div>
+        </div>
+      )}
+
+      {/* Sonic avoids */}
+      {hasAvoids && (
+        <div style={{ marginBottom: hasContext ? '0.45rem' : 0 }}>
+          <div style={{
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            color: COLORS.textSecondary,
+            marginBottom: '0.2rem',
+          }}>
+            You avoid
+          </div>
+          <div style={{
+            fontSize: '0.91rem',
+            color: COLORS.textMuted,
+            lineHeight: 1.65,
+          }}>
+            {profile.sonicAvoids!.join(' · ')}
+          </div>
+        </div>
+      )}
+
+      {/* Listening context */}
+      {hasContext && (
+        <div>
+          <div style={{
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            color: COLORS.textSecondary,
+            marginBottom: '0.2rem',
+          }}>
+            Context
+          </div>
+          <div style={{
+            fontSize: '0.91rem',
+            color: COLORS.text,
+            lineHeight: 1.65,
+          }}>
+            {profile.listeningContext!.join(' · ')}
+          </div>
+        </div>
+      )}
+
+      {/* Archetype badge + budget — inline */}
+      {(profile.archetype || profile.budget) && (
+        <div style={{
+          marginTop: '0.55rem',
+          display: 'flex',
+          gap: '0.6rem',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+        }}>
+          {profile.archetype && (
+            <span style={{
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              padding: '0.15rem 0.5rem',
+              borderRadius: '4px',
+              color: COLORS.accent,
+              background: '#f0ece3',
+              letterSpacing: '0.02em',
+            }}>
+              {profile.archetype}
+            </span>
+          )}
+          {profile.budget && (
+            <span style={{
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              padding: '0.15rem 0.5rem',
+              borderRadius: '4px',
+              color: COLORS.textMuted,
+              background: '#f2f2f0',
+              letterSpacing: '0.02em',
+            }}>
+              Budget: {profile.budget}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Missing dimensions note */}
+      {!profile.profileComplete && profile.missingDimensions && profile.missingDimensions.length > 0 && (
+        <p style={{
+          margin: '0.5rem 0 0 0',
+          fontSize: '0.82rem',
+          color: COLORS.textMuted,
+          fontStyle: 'italic',
+          lineHeight: 1.6,
+        }}>
+          For sharper recommendations, tell me about your {profile.missingDimensions.join(' and ')}.
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ── Editorial Format (Shopping / Gear Results) ────────
 //
 // Page structure:
 //   1. Title (e.g. "Best DACs Under $2,000")
-//   2. Editorial intro paragraph
-//   3. Divider
-//   4. Product sections (primary content)
-//   5. System match summary
-//   6. Reasoning sections (collapsible)
-//   7. Refinement prompts
-//   8. Sources
+//   2. Audio Preferences profile
+//   3. Editorial intro paragraph
+//   4. Divider
+//   5. Product sections (primary content)
+//   6. Refinement prompts
+//   7. Sources
 
 function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
-  const hasListenerPriorities = (a.listenerPriorities && a.listenerPriorities.length > 0)
-    || (a.listenerAvoids && a.listenerAvoids.length > 0);
-
   return (
     <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
       {/* ── Mode indicator ──────────────────────────── */}
@@ -475,49 +693,9 @@ function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
         </h2>
       )}
 
-      {/* ── 2. Listener priorities (at top) ──────────── */}
-      {hasListenerPriorities && (
-        <div
-          style={{
-            borderLeft: `3px solid ${COLORS.accent}`,
-            paddingLeft: '1rem',
-            marginBottom: '1.25rem',
-            background: COLORS.accentBg,
-            padding: '0.8rem 1rem',
-            borderRadius: '0 6px 6px 0',
-          }}
-        >
-          {a.listenerPriorities && a.listenerPriorities.length > 0 && (
-            <div style={{ marginBottom: a.listenerAvoids?.length ? '0.7rem' : 0 }}>
-              <div style={{
-                fontSize: FONTS.labelSize,
-                fontWeight: 600,
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase' as const,
-                color: COLORS.accent,
-                marginBottom: '0.35rem',
-              }}>
-                What you seem to value
-              </div>
-              <BulletList items={a.listenerPriorities} />
-            </div>
-          )}
-          {a.listenerAvoids && a.listenerAvoids.length > 0 && (
-            <div>
-              <div style={{
-                fontSize: FONTS.labelSize,
-                fontWeight: 600,
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase' as const,
-                color: COLORS.accent,
-                marginBottom: '0.35rem',
-              }}>
-                What you tend to avoid
-              </div>
-              <BulletList items={a.listenerAvoids} />
-            </div>
-          )}
-        </div>
+      {/* ── 2. Audio Preferences (replaces listener priorities) ── */}
+      {a.audioProfile && (
+        <AudioPreferencesBlock profile={a.audioProfile} />
       )}
 
       {/* ── 3. Editorial introduction ────────────────── */}
@@ -690,54 +868,8 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
         </p>
       )}
 
-      {/* ── 2. Listener priorities ────────────────────── */}
-      {hasListenerPriorities && (
-        <div
-          style={{
-            borderLeft: `3px solid ${COLORS.accent}`,
-            paddingLeft: '1rem',
-            marginBottom: '1.5rem',
-            background: COLORS.accentBg,
-            padding: '0.8rem 1rem',
-            borderRadius: '0 6px 6px 0',
-          }}
-        >
-          {a.listenerPriorities && a.listenerPriorities.length > 0 && (
-            <div style={{ marginBottom: a.listenerAvoids?.length ? '0.7rem' : 0 }}>
-              <div
-                style={{
-                  fontSize: FONTS.labelSize,
-                  fontWeight: 600,
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase' as const,
-                  color: COLORS.accent,
-                  marginBottom: '0.35rem',
-                }}
-              >
-                What you seem to value
-              </div>
-              <BulletList items={a.listenerPriorities} />
-            </div>
-          )}
-          {a.listenerAvoids && a.listenerAvoids.length > 0 && (
-            <div>
-              <div
-                style={{
-                  fontSize: FONTS.labelSize,
-                  fontWeight: 600,
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase' as const,
-                  color: COLORS.accent,
-                  marginBottom: '0.35rem',
-                }}
-              >
-                What you tend to avoid
-              </div>
-              <BulletList items={a.listenerAvoids} />
-            </div>
-          )}
-        </div>
-      )}
+      {/* ── 2. Audio Preferences ────────────────────── */}
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} />}
 
       {/* ── System Assessment Block ── */}
       {a.componentReadings && a.componentReadings.length > 0 && a.systemContext && (

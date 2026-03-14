@@ -1532,9 +1532,9 @@ export const DAC_PRODUCTS: Product[] = [
     architecture: 'AKM AK4497 (dual mono)',
     subcategory: 'standalone-dac',
     priceTier: 'mid-fi',
-    brandScale: 'boutique',
-    region: 'europe',
-    country: 'DE',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
     primaryAxes: {
       warm_bright: 'neutral',
       smooth_detailed: 'detailed',
@@ -1551,7 +1551,7 @@ export const DAC_PRODUCTS: Product[] = [
       composure: 0.7,
     },
     description:
-      'Dual-mono AKM-based DAC from a German boutique manufacturer. Aims for transparency and staging precision with more tonal body than typical measurement-focused designs. The emphasis is on resolution without analytical hardness.',
+      'Dual-mono AKM-based DAC from Audalytic (a Gustard sub-brand). Aims for transparency and staging precision with more tonal body than typical measurement-focused designs. The emphasis is on resolution without analytical hardness.',
     retailer_links: [
       { label: 'Audalytic', url: 'https://www.audalytic.com/' },
     ],

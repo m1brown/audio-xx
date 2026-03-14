@@ -26,6 +26,36 @@ import { getArchetypeLabel } from './archetype';
 // ── Types ────────────────────────────────────────────
 
 /**
+ * Structured audio listener profile — rendered as the "Audio Preferences"
+ * block at the top of shopping/editorial responses.
+ *
+ * Built from reasoning layers + system context. When the profile is
+ * incomplete, `profileComplete` is false and `missingDimensions` lists
+ * what we don't know — the UI can then offer to gather more context
+ * or proceed with diverse/exploratory recommendations.
+ */
+export interface AudioProfile {
+  /** User's signal chain components (e.g. ["Eversolo DMP-A6", "Chord Hugo v1", "JOB Integrated", "WLM Diva monitors"]). */
+  systemChain?: string[];
+  /** What the user values sonically (e.g. ["flow", "elasticity", "air and sparkle", "no glare"]). */
+  sonicPriorities?: string[];
+  /** What the user tends to avoid (e.g. ["harshness", "digital glare", "fatigue"]). */
+  sonicAvoids?: string[];
+  /** Listening context clues (e.g. ["apartment listening", "low volume", "jazz and classical", "tube-friendly"]). */
+  listeningContext?: string[];
+  /** Sonic archetype label (e.g. "flow-oriented", "precision-focused"). */
+  archetype?: string;
+  /** Budget context if stated. */
+  budget?: string;
+  /** One-line direction statement (e.g. "Move toward more warmth without sacrificing detail"). */
+  directionStatement?: string;
+  /** Whether the profile has enough data for personalized recommendations. */
+  profileComplete: boolean;
+  /** Which dimensions are missing when profile is incomplete. */
+  missingDimensions?: string[];
+}
+
+/**
  * Predicted sonic impact of adding a product to the user's system.
  * Generated deterministically from product tendency profiles and
  * system character. Explains *what changes*, not just *what it is*.
@@ -46,6 +76,10 @@ export interface AdvisoryOption {
   priceCurrency?: string;
   /** Brief sonic character description — what this component sounds like. */
   character?: string;
+  /** Design/architecture highlights — "Why it stands out" bullets. */
+  standoutFeatures?: string[];
+  /** Sonic character bullets — "Sound profile" (distinct from fitNote verdict). */
+  soundProfile?: string[];
   /** Why this option fits the listener's priorities. */
   fitNote: string;
   /** Any caution or trade-off note. */
@@ -72,6 +106,16 @@ export interface AdvisoryOption {
   usedMarketSources?: Array<{ name: string; url: string; region: string }>;
   /** Predicted sonic impact of this product in the user's system. */
   systemDelta?: SystemDelta;
+
+  // ── Catalog facts (not rendered — used for LLM validation) ──
+  /** Raw architecture string from catalog (e.g. "delta-sigma (ESS)"). */
+  catalogArchitecture?: string;
+  /** Design topology (e.g. "r2r", "fpga", "delta-sigma"). */
+  catalogTopology?: string;
+  /** Country of origin (ISO code, e.g. "CN", "US", "JP"). */
+  catalogCountry?: string;
+  /** Brand scale from catalog (e.g. "specialist", "boutique", "major"). */
+  catalogBrandScale?: string;
 }
 
 export interface AdvisoryLink {
@@ -271,6 +315,10 @@ export interface AdvisoryResponse {
   advisoryMode?: AdvisoryMode;
   /** System signature — one-sentence characterization of the system's sonic identity. */
   systemSignature?: string;
+
+  // ── 0. Audio Profile ──────────────────────────────────
+  /** Structured listener profile — system, sonic priorities, context. */
+  audioProfile?: AudioProfile;
 
   // ── 1. Listener Priorities ──────────────────────────
   /** "What you seem to value" — bullet list of preferences. */
@@ -609,7 +657,11 @@ function enrichAdvisory(
 
 // ── Adapter: Consultation → Advisory ─────────────────
 
-export function consultationToAdvisory(c: ConsultationResponse): AdvisoryResponse {
+export function consultationToAdvisory(
+  c: ConsultationResponse,
+  reasoning?: ReasoningResult,
+  ctx?: ShoppingAdvisoryContext,
+): AdvisoryResponse {
   // For system assessments, systemContext carries the character opening —
   // map it to the dedicated systemContext field (not systemFit, which feeds
   // into AdvisoryProse and would duplicate the content).
@@ -620,6 +672,7 @@ export function consultationToAdvisory(c: ConsultationResponse): AdvisoryRespons
     title: c.title,
     subject: c.subject,
 
+    audioProfile: reasoning || ctx ? buildAudioProfile(reasoning, ctx) : undefined,
     comparisonSummary: c.comparisonSummary,
     philosophy: c.philosophy,
     tendencies: c.tendencies,
@@ -699,7 +752,11 @@ function buildGearWhyFitsYou(r: GearResponse): string[] | undefined {
 
 // ── Adapter: GearResponse → Advisory ─────────────────
 
-export function gearResponseToAdvisory(r: GearResponse): AdvisoryResponse {
+export function gearResponseToAdvisory(
+  r: GearResponse,
+  reasoning?: ReasoningResult,
+  ctx?: ShoppingAdvisoryContext,
+): AdvisoryResponse {
   // "What I'm hearing" bullets become listener priorities
   const listenerPriorities = r.hearing && r.hearing.length > 0
     ? r.hearing
@@ -716,6 +773,7 @@ export function gearResponseToAdvisory(r: GearResponse): AdvisoryResponse {
       advisoryMode: 'upgrade_suggestions',
       subject: r.subjects.length > 0 ? r.subjects.join(', ') : 'your question',
 
+      audioProfile: reasoning || ctx ? buildAudioProfile(reasoning, ctx) : undefined,
       listenerPriorities,
       systemTendencies: r.systemDirection?.tendencySummary ?? undefined,
 
@@ -755,6 +813,7 @@ export function gearResponseToAdvisory(r: GearResponse): AdvisoryResponse {
     advisoryMode: 'gear_advice',
     subject: r.subjects.length > 0 ? r.subjects.join(', ') : 'your question',
 
+    audioProfile: reasoning || ctx ? buildAudioProfile(reasoning, ctx) : undefined,
     listenerPriorities,
     whyFitsYou: buildGearWhyFitsYou(r),
     systemTendencies: r.systemDirection?.tendencySummary ?? undefined,
@@ -781,15 +840,145 @@ const GAP_LABELS: Record<GapDimension, string> = {
   use_case: 'listening context',
 };
 
+// ── Audio Profile Builder ─────────────────────────────
+
+/** Archetype labels for display. */
+const ARCHETYPE_DISPLAY: Record<string, string> = {
+  flow_organic: 'Flow-oriented',
+  precision_explicit: 'Precision-focused',
+  rhythmic_propulsive: 'Rhythm-driven',
+  tonal_saturated: 'Tonally rich',
+  spatial_holographic: 'Spatially focused',
+};
+
+/**
+ * Build a structured AudioProfile from reasoning layers and context.
+ * This powers the "Audio Preferences" section at the top of ALL advisory responses.
+ *
+ * Works with or without a ShoppingAnswer — can be called from any adapter.
+ */
+function buildAudioProfile(
+  reasoning?: ReasoningResult,
+  ctx?: ShoppingAdvisoryContext,
+  budgetAmount?: number | null,
+): AudioProfile {
+  // ── System chain ────────────────────────────────────
+  const systemChain = ctx?.systemComponents && ctx.systemComponents.length > 0
+    ? ctx.systemComponents
+    : undefined;
+
+  // ── Sonic priorities ────────────────────────────────
+  // Build from multiple sources, prefer richest
+  const sonicPriorities: string[] = [];
+
+  // From reasoning desires (most specific)
+  if (reasoning?.taste.desires && reasoning.taste.desires.length > 0) {
+    for (const d of reasoning.taste.desires) {
+      const label = d.direction === 'more'
+        ? d.quality
+        : `less ${d.quality}`;
+      if (!sonicPriorities.includes(label)) {
+        sonicPriorities.push(label);
+      }
+    }
+  }
+
+  // From stored desires (if provided and we need more)
+  if (sonicPriorities.length < 2 && ctx?.storedDesires) {
+    for (const d of ctx.storedDesires) {
+      if (!sonicPriorities.includes(d)) {
+        sonicPriorities.push(d);
+      }
+    }
+  }
+
+  // Fallback: from tasteLabel
+  if (sonicPriorities.length === 0 && reasoning?.taste.tasteLabel) {
+    sonicPriorities.push(reasoning.taste.tasteLabel);
+  }
+
+  // ── Sonic avoids ────────────────────────────────────
+  const sonicAvoids: string[] = [];
+  if (reasoning?.taste.desires) {
+    for (const d of reasoning.taste.desires) {
+      if (d.direction === 'less') {
+        sonicAvoids.push(d.quality);
+      }
+    }
+  }
+
+  // ── Listening context ───────────────────────────────
+  const listeningContext: string[] = [];
+  if (ctx?.systemLocation) listeningContext.push(ctx.systemLocation);
+  if (ctx?.systemPrimaryUse) listeningContext.push(ctx.systemPrimaryUse);
+  // Infer from system profile
+  if (reasoning?.system.profile.tubeAmplification) listeningContext.push('tube amplification');
+  if (reasoning?.system.profile.lowPowerContext) listeningContext.push('low-power / near-field');
+  if (reasoning?.system.profile.outputType === 'headphones') listeningContext.push('headphone listening');
+
+  // ── Archetype ───────────────────────────────────────
+  const archetype = reasoning?.taste.archetype
+    ? ARCHETYPE_DISPLAY[reasoning.taste.archetype] ?? null
+    : null;
+
+  // ── Budget ──────────────────────────────────────────
+  const budget = budgetAmount != null
+    ? `$${budgetAmount.toLocaleString()}`
+    : undefined;
+
+  // ── Direction ───────────────────────────────────────
+  const directionStatement = reasoning?.direction.statement || undefined;
+
+  // ── Profile completeness ────────────────────────────
+  const missingDimensions: string[] = [];
+  if (!systemChain || systemChain.length === 0) missingDimensions.push('system');
+  if (sonicPriorities.length === 0) missingDimensions.push('sonic preferences');
+  if (!budget) missingDimensions.push('budget');
+
+  const profileComplete = missingDimensions.length === 0
+    || (systemChain && systemChain.length > 0 && sonicPriorities.length > 0);
+
+  return {
+    systemChain,
+    sonicPriorities: sonicPriorities.length > 0 ? sonicPriorities : undefined,
+    sonicAvoids: sonicAvoids.length > 0 ? sonicAvoids : undefined,
+    listeningContext: listeningContext.length > 0 ? listeningContext : undefined,
+    archetype: archetype ?? undefined,
+    budget,
+    directionStatement,
+    profileComplete: !!profileComplete,
+    missingDimensions: missingDimensions.length > 0 ? missingDimensions : undefined,
+  };
+}
+
+/**
+ * Additional context for building the AudioProfile.
+ * Passed from page.tsx where system/turn context is available.
+ */
+export interface ShoppingAdvisoryContext {
+  /** Component names from the user's saved/active system. */
+  systemComponents?: string[];
+  /** System location (e.g. "Living Room"). */
+  systemLocation?: string;
+  /** Primary use (e.g. "critical listening", "background music"). */
+  systemPrimaryUse?: string;
+  /** User's taste profile trait labels (e.g. ["warmth", "dynamics", "detail"]). */
+  storedDesires?: string[];
+}
+
 export function shoppingToAdvisory(
   a: ShoppingAnswer,
   signals?: ExtractedSignals,
   reasoning?: ReasoningResult,
+  ctx?: ShoppingAdvisoryContext,
 ): AdvisoryResponse {
   // Parse preferenceSummary into listenerPriorities if it's a meaningful sentence
   const listenerPriorities = a.preferenceSummary
     ? [a.preferenceSummary]
     : undefined;
+
+  // ── Build Audio Profile ─────────────────────────────
+  const audioProfile = buildAudioProfile(reasoning, ctx, a.budget);
 
   const options: AdvisoryOption[] = a.productExamples.map((p) => ({
     name: p.name,
@@ -797,6 +986,8 @@ export function shoppingToAdvisory(
     price: p.price,
     priceCurrency: p.priceCurrency,
     character: p.character,
+    standoutFeatures: p.standoutFeatures,
+    soundProfile: p.soundProfile,
     fitNote: p.fitNote,
     caution: p.caution,
     links: p.links?.map((l) => ({ label: l.label, url: l.url })),
@@ -809,6 +1000,11 @@ export function shoppingToAdvisory(
     usedPriceRange: p.usedPriceRange,
     usedMarketSources: p.usedMarketSources,
     systemDelta: p.systemDelta,
+    // Catalog facts for LLM validation
+    catalogArchitecture: p.catalogArchitecture,
+    catalogTopology: p.catalogTopology,
+    catalogCountry: p.catalogCountry,
+    catalogBrandScale: p.catalogBrandScale,
   }));
 
   const statedGaps = a.statedGaps?.map((g) => GAP_LABELS[g]);
@@ -839,6 +1035,7 @@ export function shoppingToAdvisory(
     advisoryMode: 'upgrade_suggestions',
     subject: a.category,
 
+    audioProfile,
     listenerPriorities,
     whyFitsYou: a.whyFitsYou,
     systemContext: a.systemNote,
@@ -875,6 +1072,7 @@ export function analysisToAdvisory(
   signals: ExtractedSignals,
   sysDir?: SystemDirection,
   reasoning?: ReasoningResult,
+  ctx?: ShoppingAdvisoryContext,
 ): AdvisoryResponse {
   // Use the highest-priority fired rule for the main advisory content
   const primary: FiredRule | undefined = result.fired_rules[0];
@@ -899,6 +1097,7 @@ export function analysisToAdvisory(
     kind: 'diagnosis',
     subject: primary?.label ?? 'your listening situation',
 
+    audioProfile: reasoning || ctx ? buildAudioProfile(reasoning, ctx) : undefined,
     listenerPriorities: listenerPriorities.length > 0 ? listenerPriorities : undefined,
     listenerAvoids: listenerAvoids.length > 0 ? listenerAvoids : undefined,
     systemTendencies: sysDir?.tendencySummary ?? undefined,
