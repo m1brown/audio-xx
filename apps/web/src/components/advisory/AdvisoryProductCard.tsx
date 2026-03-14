@@ -69,74 +69,6 @@ const AVAILABILITY_LABELS: Record<string, { text: string; color: string; bg: str
   vintage: { text: 'Vintage — used only', color: '#6a5a35', bg: '#f5f0e2', border: '#e0d8c0' },
 };
 
-// ── Image gallery placeholder ─────────────────────────
-
-function ImageGallery({ brand, name, imageUrl }: { brand?: string; name: string; imageUrl?: string }) {
-  const alt = `${brand ?? ''} ${name}`.trim();
-
-  // If we have a real image, show it full-width
-  if (imageUrl) {
-    return (
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr',
-        gap: '0.5rem',
-        marginBottom: '1.25rem',
-      }}>
-        <div style={{
-          background: '#f8f6f2',
-          borderRadius: '6px',
-          overflow: 'hidden',
-          border: '1px solid #f0eee8',
-        }}>
-          <img
-            src={imageUrl}
-            alt={alt}
-            style={{
-              width: '100%',
-              aspectRatio: '16 / 9',
-              objectFit: 'cover',
-              display: 'block',
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // No image — show a subtle 3-slot placeholder row
-  return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr 1fr',
-      gap: '0.5rem',
-      marginBottom: '1.25rem',
-    }}>
-      {['Front', 'Rear', 'Internal'].map((label) => (
-        <div
-          key={label}
-          style={{
-            background: '#f8f6f2',
-            borderRadius: '6px',
-            aspectRatio: '4 / 3',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '1px solid #f0eee8',
-          }}
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d0ccc0" strokeWidth="1.5">
-            <rect x="3" y="6" width="18" height="12" rx="2" />
-            <circle cx="8.5" cy="12" r="2" />
-            <circle cx="15.5" cy="12" r="2" />
-            <path d="M8.5 14v1M15.5 14v1" />
-          </svg>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ── Purchase buttons ──────────────────────────────────
 
 function PurchaseButtons({ opt }: { opt: AdvisoryOption }) {
@@ -300,9 +232,6 @@ function EditorialProductSection({ opt, index }: { opt: AdvisoryOption; index: n
           {opt.sonicDirectionLabel}
         </div>
       )}
-
-      {/* ── Image gallery ────────────────────────────── */}
-      <ImageGallery brand={opt.brand} name={opt.name} imageUrl={opt.imageUrl} />
 
       {/* ── Approx price ─────────────────────────────── */}
       <SubHeading>Approx price</SubHeading>

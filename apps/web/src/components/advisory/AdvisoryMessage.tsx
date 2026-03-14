@@ -453,14 +453,8 @@ function isEditorialFormat(a: AdvisoryResponse): boolean {
 //   8. Sources
 
 function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
-  const hasReasoningSections = !!(
-    (a.listenerPriorities && a.listenerPriorities.length > 0)
-    || (a.whyFitsYou && a.whyFitsYou.length > 0)
-    || a.recommendedDirection
-    || (a.whyThisFits && a.whyThisFits.length > 0)
-    || (a.tradeOffs && a.tradeOffs.length > 0)
-    || a.sonicLandscape
-  );
+  const hasListenerPriorities = (a.listenerPriorities && a.listenerPriorities.length > 0)
+    || (a.listenerAvoids && a.listenerAvoids.length > 0);
 
   return (
     <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
@@ -481,140 +475,7 @@ function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
         </h2>
       )}
 
-      {/* ── 2. Editorial introduction ────────────────── */}
-      {a.bottomLine && (
-        <p style={{
-          margin: '0 0 0.5rem 0',
-          fontSize: '0.97rem',
-          lineHeight: 1.75,
-          color: COLORS.text,
-        }}>
-          {renderText(a.bottomLine)}
-        </p>
-      )}
-
-      {/* System context note — brief reference to known system */}
-      {a.systemContext && (
-        <p style={{
-          margin: '0 0 0.5rem 0',
-          fontSize: '0.93rem',
-          lineHeight: 1.7,
-          color: COLORS.textSecondary,
-        }}>
-          {renderText(a.systemContext)}
-        </p>
-      )}
-
-      {/* ── Divider ──────────────────────────────────── */}
-      <SectionDivider />
-
-      {/* ── 3. Product sections (PRIMARY CONTENT) ────── */}
-      {a.options && a.options.length > 0 && (
-        <AdvisoryProductCards options={a.options} />
-      )}
-
-      {/* ── Divider before supplementary sections ────── */}
-      <SectionDivider />
-
-      {/* ── 4. Provisional caveats ───────────────────── */}
-      {a.provisional && a.statedGaps && a.statedGaps.length > 0 && (
-        <div style={{
-          fontSize: '0.88rem',
-          color: COLORS.textLight,
-          fontStyle: 'italic',
-          marginBottom: '1.25rem',
-        }}>
-          Based on limited context — missing: {a.statedGaps.join(', ')}
-          {a.dependencyCaveat && <>. {a.dependencyCaveat}</>}
-        </div>
-      )}
-
-      {/* ── 5. Reasoning sections (below products) ──── */}
-      {hasReasoningSections && (
-        <ReasoningSections advisory={a} />
-      )}
-
-      {/* ── 6. Refinement prompts ────────────────────── */}
-      {a.refinementPrompts && a.refinementPrompts.length > 0 && (
-        <div
-          style={{
-            borderLeft: '3px solid #7a9aaa',
-            paddingLeft: '1rem',
-            padding: '0.8rem 1rem',
-            marginBottom: '1.5rem',
-            background: '#f6f9fa',
-            borderRadius: '0 6px 6px 0',
-          }}
-        >
-          <div
-            style={{
-              fontSize: FONTS.labelSize,
-              fontWeight: 600,
-              letterSpacing: '0.05em',
-              textTransform: 'uppercase' as const,
-              color: '#7a9aaa',
-              marginBottom: '0.45rem',
-            }}
-          >
-            To refine this shortlist
-          </div>
-          <ul style={{ margin: 0, paddingLeft: '1.1rem', lineHeight: FONTS.lineHeight }}>
-            {a.refinementPrompts.map((prompt, i) => (
-              <li key={i} style={{ fontSize: '0.93rem', color: COLORS.textSecondary, marginBottom: '0.15rem' }}>
-                {prompt}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* ── 7. Learn more (links) ────────────────────── */}
-      {a.links && a.links.length > 0 && (
-        <AdvisorySection label="Learn more">
-          <AdvisoryLinks links={a.links} />
-        </AdvisorySection>
-      )}
-
-      {/* ── 8. Sources ───────────────────────────────── */}
-      {a.sourceReferences && a.sourceReferences.length > 0 && (
-        <AdvisorySection label="Sources">
-          <AdvisorySources sources={a.sourceReferences} />
-        </AdvisorySection>
-      )}
-
-      {/* ── 9. Diagnostics (collapsible) ─────────────── */}
-      {a.diagnostics && (
-        <div style={{ marginTop: '0.75rem' }}>
-          <AdvisoryDiagnostics
-            matchedPhrases={a.diagnostics.matchedPhrases}
-            symptoms={a.diagnostics.symptoms}
-            traits={a.diagnostics.traits}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** Reasoning sections — rendered below product list in editorial mode. */
-function ReasoningSections({ advisory: a }: { advisory: AdvisoryResponse }) {
-  const hasListenerPriorities = (a.listenerPriorities && a.listenerPriorities.length > 0)
-    || (a.listenerAvoids && a.listenerAvoids.length > 0);
-
-  return (
-    <div style={{ marginBottom: '1.5rem' }}>
-      {/* ── Why these recommendations ──────────────── */}
-      <h3 style={{
-        margin: '0 0 1rem 0',
-        fontSize: '1.15rem',
-        fontWeight: 600,
-        color: COLORS.text,
-        letterSpacing: '-0.01em',
-      }}>
-        Why these recommendations
-      </h3>
-
-      {/* Listener priorities */}
+      {/* ── 2. Listener priorities (at top) ──────────── */}
       {hasListenerPriorities && (
         <div
           style={{
@@ -659,61 +520,55 @@ function ReasoningSections({ advisory: a }: { advisory: AdvisoryResponse }) {
         </div>
       )}
 
-      {/* Why this fits you */}
-      {a.whyFitsYou && a.whyFitsYou.length > 0 && (
-        <div
-          style={{
-            borderLeft: `3px solid ${COLORS.accentLight}`,
-            paddingLeft: '1rem',
-            marginBottom: '1.25rem',
-            background: COLORS.accentBg,
-            padding: '0.8rem 1rem',
-            borderRadius: '0 6px 6px 0',
-          }}
-        >
-          <div style={{
-            fontSize: FONTS.labelSize,
-            fontWeight: 600,
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase' as const,
-            color: COLORS.accentLight,
-            marginBottom: '0.45rem',
-          }}>
-            Why this fits you
-          </div>
-          <ul style={{ margin: 0, paddingLeft: '1.1rem', lineHeight: FONTS.lineHeight }}>
-            {a.whyFitsYou.map((bullet, i) => (
-              <li key={i} style={{ fontSize: '0.93rem', color: COLORS.textSecondary, marginBottom: '0.2rem' }}>
-                {bullet}
-              </li>
-            ))}
-          </ul>
+      {/* ── 3. Editorial introduction ────────────────── */}
+      {a.bottomLine && (
+        <p style={{
+          margin: '0 0 0.5rem 0',
+          fontSize: '0.97rem',
+          lineHeight: 1.75,
+          color: COLORS.text,
+        }}>
+          {renderText(a.bottomLine)}
+        </p>
+      )}
+
+      {/* System context note — brief reference to known system */}
+      {a.systemContext && (
+        <p style={{
+          margin: '0 0 0.5rem 0',
+          fontSize: '0.93rem',
+          lineHeight: 1.7,
+          color: COLORS.textSecondary,
+        }}>
+          {renderText(a.systemContext)}
+        </p>
+      )}
+
+      {/* ── Divider ──────────────────────────────────── */}
+      <SectionDivider />
+
+      {/* ── 4. Product sections (PRIMARY CONTENT) ────── */}
+      {a.options && a.options.length > 0 && (
+        <AdvisoryProductCards options={a.options} />
+      )}
+
+      {/* ── Divider before supplementary sections ────── */}
+      <SectionDivider />
+
+      {/* ── 5. Provisional caveats ───────────────────── */}
+      {a.provisional && a.statedGaps && a.statedGaps.length > 0 && (
+        <div style={{
+          fontSize: '0.88rem',
+          color: COLORS.textLight,
+          fontStyle: 'italic',
+          marginBottom: '1.25rem',
+        }}>
+          Based on limited context — missing: {a.statedGaps.join(', ')}
+          {a.dependencyCaveat && <>. {a.dependencyCaveat}</>}
         </div>
       )}
 
-      {/* Recommended direction */}
-      {a.recommendedDirection && (
-        <AdvisorySection label="What this means for component choice">
-          <p style={{ margin: 0, fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight }}>
-            {a.recommendedDirection}
-          </p>
-        </AdvisorySection>
-      )}
-
-      {/* Why this fits + trade-offs */}
-      {a.whyThisFits && a.whyThisFits.length > 0 && (
-        <AdvisorySection label="Why this fits">
-          <BulletList items={a.whyThisFits} />
-        </AdvisorySection>
-      )}
-
-      {a.tradeOffs && a.tradeOffs.length > 0 && (
-        <AdvisorySection label="Trade-offs">
-          <BulletList items={a.tradeOffs} color={COLORS.textMuted} />
-        </AdvisorySection>
-      )}
-
-      {/* Sonic landscape */}
+      {/* ── 6. Sonic landscape (kept — unique content) ── */}
       {a.sonicLandscape && (
         <AdvisorySection label="Sonic directions represented">
           <div style={{ fontSize: FONTS.bodySize, lineHeight: 1.8, color: COLORS.text }}>
@@ -736,6 +591,65 @@ function ReasoningSections({ advisory: a }: { advisory: AdvisoryResponse }) {
             })}
           </div>
         </AdvisorySection>
+      )}
+
+      {/* ── 7. Refinement prompts ────────────────────── */}
+      {a.refinementPrompts && a.refinementPrompts.length > 0 && (
+        <div
+          style={{
+            borderLeft: '3px solid #7a9aaa',
+            paddingLeft: '1rem',
+            padding: '0.8rem 1rem',
+            marginBottom: '1.5rem',
+            background: '#f6f9fa',
+            borderRadius: '0 6px 6px 0',
+          }}
+        >
+          <div
+            style={{
+              fontSize: FONTS.labelSize,
+              fontWeight: 600,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase' as const,
+              color: '#7a9aaa',
+              marginBottom: '0.45rem',
+            }}
+          >
+            To refine this shortlist
+          </div>
+          <ul style={{ margin: 0, paddingLeft: '1.1rem', lineHeight: FONTS.lineHeight }}>
+            {a.refinementPrompts.map((prompt, i) => (
+              <li key={i} style={{ fontSize: '0.93rem', color: COLORS.textSecondary, marginBottom: '0.15rem' }}>
+                {prompt}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* ── 8. Learn more (links) ────────────────────── */}
+      {a.links && a.links.length > 0 && (
+        <AdvisorySection label="Learn more">
+          <AdvisoryLinks links={a.links} />
+        </AdvisorySection>
+      )}
+
+      {/* ── 9. Sources ───────────────────────────────── */}
+      {a.sourceReferences && a.sourceReferences.length > 0 && (
+        <AdvisorySection label="Sources">
+          <AdvisorySources sources={a.sourceReferences} />
+        </AdvisorySection>
+      )}
+
+      {/* ── 10. Diagnostics (collapsible) ────────────── */}
+      {a.diagnostics && (
+        <div style={{ marginTop: '0.75rem' }}>
+          <AdvisoryDiagnostics
+            matchedPhrases={a.diagnostics.matchedPhrases}
+            symptoms={a.diagnostics.symptoms}
+            traits={a.diagnostics.traits}
+          />
+        </div>
       )}
     </div>
   );
