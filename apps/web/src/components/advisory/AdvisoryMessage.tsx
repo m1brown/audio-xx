@@ -25,7 +25,7 @@
  * Only populated sections render in both modes.
  */
 
-import type { AdvisoryResponse, AdvisoryMode, AudioProfile } from '../../lib/advisory-response';
+import type { AdvisoryResponse, AdvisoryMode, AudioProfile, ProductAssessment, KnowledgeResponse, AssistantResponse } from '../../lib/advisory-response';
 import AdvisorySection from './AdvisorySection';
 import AdvisoryProse from './AdvisoryProse';
 import AdvisoryProductCards from './AdvisoryProductCard';
@@ -101,6 +101,9 @@ const MODE_LABELS: Record<AdvisoryMode, string> = {
   gear_advice: 'Gear Advice',
   gear_comparison: 'Gear Comparison',
   upgrade_suggestions: '',  // No label — the Audio Preferences block provides context
+  product_assessment: '',   // No label — the assessment format provides its own structure
+  audio_knowledge: 'Audio Knowledge',
+  audio_assistant: 'Audio Assistant',
   general: 'Advisory',
 };
 
@@ -662,6 +665,175 @@ function AudioPreferencesBlock({ profile }: { profile: AudioProfile }) {
   );
 }
 
+// ── Assessment Format (Practical Product Assessment) ──
+//
+// Assessment-first response for "I'm considering X" queries.
+// Leads with a short answer, then structured sections.
+// No product lists — this evaluates a single component.
+
+function isAssessmentFormat(a: AdvisoryResponse): boolean {
+  return !!(a.productAssessment);
+}
+
+function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
+  const pa = a.productAssessment!;
+
+  return (
+    <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
+      {/* ── Audio Preferences ────────────────────────── */}
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} />}
+
+      {/* ── Product name heading ─────────────────────── */}
+      <h2 style={{
+        margin: '0 0 0.8rem 0',
+        fontSize: '1.3rem',
+        fontWeight: 600,
+        color: COLORS.text,
+        letterSpacing: '-0.01em',
+        lineHeight: 1.3,
+      }}>
+        {pa.candidateName}
+        {pa.candidateArchitecture && (
+          <span style={{
+            fontSize: '0.85rem',
+            fontWeight: 400,
+            color: COLORS.textMuted,
+            marginLeft: '0.6rem',
+          }}>
+            {pa.candidateArchitecture}
+            {pa.candidatePrice ? ` · ~$${pa.candidatePrice.toLocaleString()}` : ''}
+          </span>
+        )}
+      </h2>
+
+      {/* ── Short answer (the lead) ──────────────────── */}
+      <div style={{
+        borderLeft: `3px solid ${COLORS.accent}`,
+        paddingLeft: '1rem',
+        marginBottom: '1.5rem',
+        background: COLORS.accentBg,
+        padding: '0.85rem 1rem',
+        borderRadius: '0 6px 6px 0',
+      }}>
+        <p style={{
+          margin: 0,
+          fontSize: '1.02rem',
+          lineHeight: 1.75,
+          color: COLORS.text,
+          fontWeight: 500,
+        }}>
+          {pa.shortAnswer}
+        </p>
+      </div>
+
+      {!pa.catalogMatch && (
+        <div style={{
+          padding: '0.6rem 0.85rem',
+          marginBottom: '1.25rem',
+          background: '#f9f7f2',
+          borderRadius: '6px',
+          fontSize: '0.88rem',
+          color: COLORS.textMuted,
+          fontStyle: 'italic',
+        }}>
+          This product is not in the Audio XX catalog. Assessment is based on brand-level knowledge and may be less precise.
+        </div>
+      )}
+
+      {/* ── 1. What actually changes ─────────────────── */}
+      {pa.whatChanges.length > 0 && (
+        <AdvisorySection label={pa.currentComponentName ? `What changes vs ${pa.currentComponentName}` : 'What this component brings'}>
+          {pa.whatChanges.map((item, i) => (
+            <p key={i} style={{
+              margin: '0 0 0.45rem 0',
+              fontSize: FONTS.bodySize,
+              lineHeight: FONTS.lineHeight,
+              color: COLORS.text,
+              paddingLeft: '0.8rem',
+              borderLeft: `2px solid ${COLORS.borderLight}`,
+            }}>
+              {item}
+            </p>
+          ))}
+        </AdvisorySection>
+      )}
+
+      {/* ── 2. How it behaves in this system ──────────── */}
+      {pa.systemBehavior.length > 0 && (
+        <AdvisorySection label="In your system">
+          {pa.systemBehavior.map((item, i) => (
+            <p key={i} style={{
+              margin: '0 0 0.45rem 0',
+              fontSize: FONTS.bodySize,
+              lineHeight: FONTS.lineHeight,
+              color: COLORS.text,
+            }}>
+              {item}
+            </p>
+          ))}
+        </AdvisorySection>
+      )}
+
+      {/* ── 3. Does this solve the real goal? ─────────── */}
+      <AdvisorySection label="Alignment with your priorities">
+        <p style={{
+          margin: 0,
+          fontSize: FONTS.bodySize,
+          lineHeight: FONTS.lineHeight,
+          color: COLORS.text,
+        }}>
+          {pa.goalAlignment}
+        </p>
+      </AdvisorySection>
+
+      {/* ── 4. Honest recommendation ─────────────────── */}
+      <div style={{
+        borderLeft: `3px solid ${COLORS.accent}`,
+        paddingLeft: '1rem',
+        marginTop: '1.25rem',
+        marginBottom: '1rem',
+        padding: '0.75rem 1rem',
+        borderRadius: '0 6px 6px 0',
+        background: COLORS.accentBg,
+      }}>
+        <div style={{
+          fontSize: FONTS.labelSize,
+          fontWeight: 600,
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase' as const,
+          color: COLORS.accent,
+          marginBottom: '0.35rem',
+        }}>
+          Recommendation
+        </div>
+        <p style={{
+          margin: 0,
+          fontSize: FONTS.bodySize,
+          lineHeight: FONTS.lineHeight,
+          color: COLORS.text,
+        }}>
+          {pa.recommendation}
+        </p>
+      </div>
+
+      {/* ── Follow-up ────────────────────────────────── */}
+      {a.followUp && (
+        <div style={{
+          marginTop: '1rem',
+          padding: '0.65rem 0.85rem',
+          background: '#f9f9f7',
+          borderRadius: '6px',
+          fontSize: '0.91rem',
+          color: COLORS.textSecondary,
+          fontStyle: 'italic',
+        }}>
+          {a.followUp}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Editorial Format (Shopping / Gear Results) ────────
 //
 // Page structure:
@@ -828,6 +1000,125 @@ function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
             traits={a.diagnostics.traits}
           />
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── Lane Detection ──────────────────────────────────────
+
+function isKnowledgeFormat(a: AdvisoryResponse): boolean {
+  return !!(a.knowledgeResponse);
+}
+
+function isAssistantFormat(a: AdvisoryResponse): boolean {
+  return !!(a.assistantResponse);
+}
+
+// ── Knowledge Format (Lane 2) ──────────────────────────
+
+const ASSISTANT_TASK_LABELS: Record<string, string> = {
+  negotiation: 'Negotiation Advice',
+  translation: 'Translation',
+  message: 'Message Draft',
+  logistics: 'Dealer & Audition Info',
+  listing_evaluation: 'Listing Evaluation',
+  general: 'Practical Help',
+};
+
+function KnowledgeFormat({ advisory: a }: AdvisoryMessageProps) {
+  const kr = a.knowledgeResponse!;
+
+  return (
+    <div style={{ fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight, color: COLORS.text }}>
+      <ModeIndicator mode={a.advisoryMode} />
+
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} />}
+
+      <AdvisorySection label={kr.topic}>
+        <p style={{ margin: '0 0 0.8rem 0', color: COLORS.text, lineHeight: FONTS.lineHeight }}>
+          {kr.explanation}
+        </p>
+      </AdvisorySection>
+
+      {kr.keyPoints && kr.keyPoints.length > 0 && (
+        <AdvisorySection label="Key points">
+          <BulletList items={kr.keyPoints} />
+        </AdvisorySection>
+      )}
+
+      {kr.systemNote && (
+        <div
+          style={{
+            borderLeft: `3px solid ${COLORS.accent}`,
+            paddingLeft: '1rem',
+            padding: '0.8rem 1rem',
+            marginBottom: '1.5rem',
+            background: '#f6f9fa',
+            borderRadius: '0 6px 6px 0',
+          }}
+        >
+          <div style={{
+            fontSize: '0.78rem',
+            fontWeight: 600,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase' as const,
+            color: COLORS.accentLight,
+            marginBottom: '0.4rem',
+          }}>
+            In your system
+          </div>
+          <p style={{ margin: 0, color: COLORS.text, lineHeight: FONTS.lineHeight }}>
+            {kr.systemNote}
+          </p>
+        </div>
+      )}
+
+      {a.followUp && (
+        <p style={{
+          margin: '0 0 0.5rem 0',
+          fontStyle: 'italic',
+          color: COLORS.textMuted,
+          fontSize: '0.92rem',
+        }}>
+          {a.followUp}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── Assistant Format (Lane 3) ──────────────────────────
+
+function AssistantFormat({ advisory: a }: AdvisoryMessageProps) {
+  const ar = a.assistantResponse!;
+  const taskLabel = ASSISTANT_TASK_LABELS[ar.taskType] || 'Audio Assistant';
+
+  return (
+    <div style={{ fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight, color: COLORS.text }}>
+      <ModeIndicator mode={a.advisoryMode} />
+
+      <AdvisorySection label={taskLabel}>
+        <p style={{ margin: '0 0 0.8rem 0', color: COLORS.text, lineHeight: FONTS.lineHeight, whiteSpace: 'pre-wrap' }}>
+          {ar.body}
+        </p>
+      </AdvisorySection>
+
+      {ar.sourceLanguage && ar.targetLanguage && (
+        <div style={{
+          fontSize: '0.82rem',
+          color: COLORS.textMuted,
+          marginBottom: '0.8rem',
+          fontStyle: 'italic',
+        }}>
+          {ar.sourceLanguage} → {ar.targetLanguage}
+        </div>
+      )}
+
+      {ar.tips && ar.tips.length > 0 && (
+        <AdvisorySection label="Things to keep in mind">
+          <BulletList items={ar.tips} />
+        </AdvisorySection>
       )}
     </div>
   );
@@ -1271,6 +1562,15 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
 export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
   if (isMemoFormat(advisory)) {
     return <MemoFormat advisory={advisory} />;
+  }
+  if (isAssessmentFormat(advisory)) {
+    return <AssessmentFormat advisory={advisory} />;
+  }
+  if (isKnowledgeFormat(advisory)) {
+    return <KnowledgeFormat advisory={advisory} />;
+  }
+  if (isAssistantFormat(advisory)) {
+    return <AssistantFormat advisory={advisory} />;
   }
   return <StandardFormat advisory={advisory} />;
 }

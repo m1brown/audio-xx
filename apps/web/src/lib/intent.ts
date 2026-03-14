@@ -14,7 +14,7 @@
 
 // ── Intent type ──────────────────────────────────────
 
-export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory';
+export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory' | 'product_assessment' | 'audio_knowledge' | 'audio_assistant';
 
 /** A desire the user has expressed — "want more speed", "wish it had warmth". */
 export interface DesireSignal {
@@ -88,7 +88,7 @@ const PRODUCT_NAMES = [
   'hugo tt2', 'hugo tt', 'hugo 2',
   'dmp-a6', 'dmp-a8', 'dac-z8',
   'wiim ultra', 'wiim pro',
-  'harmony dac',
+  'harmony dac', 'udac',
   'ares 12th-1', 'ares ii', 'pontus ii', 'pontus 12th-1',
   'x26 pro', 'su-9', 'd90',
   'k9 pro', 'ef400',
@@ -108,7 +108,7 @@ const PRODUCT_NAMES = [
   'x2 b',
   'aria 2', 'blessing 3', 'aonic 3',
   // ── Single-token names ─────────────────────────────
-  'spring', 'may', 'ares', 'pontus', 'venus', 'terminator',
+  'spring', 'may', 'cyan', 'ares', 'pontus', 'venus', 'terminator',
   'bifrost', 'gungnir', 'yggdrasil', 'modi', 'modius',
   'qutest', 'hugo', 'dave', 'mojo', 'tt2',
   'dac3', 'dac4', 'brooklyn', 'tambaqui',
@@ -204,6 +204,26 @@ const GEAR_INQUIRY_PATTERNS = [
   /\btell\s+me\s+about\b/i,
   /\bwhat\s+(?:is|are)\s+(?:the\s+)?(?:character|sound|signature|house sound)\b/i,
   /\bhow\s+(?:does|do)\s+(?:the\s+)?(?:\w+\s+)?sound\b/i,
+];
+
+// ── Product assessment patterns ──────────────────────
+// Detect when a user is asking about a specific product's fit in their
+// system — "I'm considering the X", "would X work", "is X a good fit",
+// "what about the X" (in a shopping/system context).
+// These take priority over shopping when a specific product is named.
+
+const PRODUCT_ASSESSMENT_PATTERNS = [
+  /\bi(?:'m| am)\s+considering\b/i,
+  /\bi(?:'m| am)\s+(?:looking at|eyeing|interested in)\s+(?:the\s+|a\s+)?/i,
+  /\bwould\s+(?:the\s+|a\s+)?.+\s+(?:work|fit|match|pair|improve|help)\b/i,
+  /\bis\s+(?:the\s+|a\s+)?.+\s+(?:a\s+good\s+fit|worth\s+it|worthwhile|a\s+worthwhile)\b/i,
+  /\bis\s+(?:the\s+|a\s+)?.+\s+(?:an?\s+)?(?:upgrade|improvement|step\s+up|downgrade)\b/i,
+  /\bwhat\s+about\s+(?:the\s+|a\s+)?/i,
+  /\bhow\s+would\s+(?:the\s+|a\s+)?.+\s+(?:work|fit|pair|sound|behave|perform)\b/i,
+  /\bshould\s+i\s+(?:go\s+(?:for|with)|try|consider|get|switch\s+to)\s+(?:the\s+|a\s+)?/i,
+  /\bshould\s+i\s+switch\s+(?:from\b|to\b)/i,
+  /\bthinking\s+(?:about|of)\s+(?:getting|trying|picking up|going with|switching\s+to)\b/i,
+  /\bcurious\s+about\s+(?:the\s+|a\s+)?/i,
 ];
 
 // ── System assessment patterns ────────────────────────
@@ -624,6 +644,51 @@ export function extractDesires(text: string): DesireSignal[] {
   return desires;
 }
 
+// ── Audio Knowledge patterns ─────────────────────────
+// General audio questions not tied to a system decision.
+// Technology explanations, product opinions, sound signatures,
+// general brand discussion. Only fires when no upstream intent claims
+// the query. If the user has a system, the response adds a short
+// system-aware note — but routing stays in knowledge lane.
+
+const AUDIO_KNOWLEDGE_PATTERNS = [
+  /\bwhat\s+is\s+(?:r2r|r-2r|delta[- ]sigma|nos|class[- ]?[abd]|push[- ]?pull|single[- ]?ended|balanced|xlr|rca|tube\s+rolling)\b/i,
+  /\bexplain\s+(?:the\s+)?(?:difference|distinction)\s+between\b/i,
+  /\bhow\s+(?:does|do)\s+(?:r2r|r-2r|delta[- ]sigma|nos|tubes?|solid[- ]?state|class[- ]?[abd]|push[- ]?pull|single[- ]?ended|balanced)\s+(?:work|sound|compare|differ)\b/i,
+  /\bwhat(?:'s| is)\s+the\s+(?:difference|distinction)\s+between\b/i,
+  /\btell\s+me\s+about\s+(?:r2r|r-2r|delta[- ]sigma|nos|tubes?|solid[- ]?state|class[- ]?[abd])\b/i,
+  /\bhow\s+(?:does|do)\s+.+\s+(?:speakers?|amps?|dacs?|headphones?)\s+sound\b/i,
+  /\bwhat\s+(?:are|is)\s+(?:the\s+)?(?:pros?\s+and\s+cons?|advantages?|disadvantages?|benefits?|drawbacks?)\s+of\b/i,
+  /\bwhat\s+(?:makes?|gives?)\s+.+\s+(?:its?\s+)?(?:sound|character|signature|tone)\b/i,
+  /\b(?:sovtek|mullard|telefunken|amperex|ge|rca|sylvania|jj|eh|tung[- ]?sol)\b.*\b(?:vs\.?|versus|compared?\s+to|or)\b/i,
+  /\b(?:vs\.?|versus|compared?\s+to|or)\b.*\b(?:sovtek|mullard|telefunken|amperex|ge|rca|sylvania|jj|eh|tung[- ]?sol)\b/i,
+];
+
+// ── Audio Assistant patterns ─────────────────────────
+// Practical hobby tasks: negotiation, translation, message writing,
+// travel/audition logistics, buying help. Open LLM generation
+// with tone guardrails.
+
+const AUDIO_ASSISTANT_PATTERNS = [
+  /\bnegotiat(?:e|ing|ion)\b/i,
+  /\bhaggl(?:e|ing)\b/i,
+  /\bmake\s+an?\s+offer\b/i,
+  /\blow[- ]?ball\b/i,
+  /\bwrite\s+(?:a\s+)?(?:message|email|reply|response|note)\b/i,
+  /\bdraft\s+(?:a\s+)?(?:message|email|reply|response)\b/i,
+  /\btranslat(?:e|ion|ing)\b/i,
+  /\bin\s+(?:french|german|italian|spanish|polish|japanese|chinese|dutch|portuguese|swedish|norwegian|danish)\b/i,
+  /\bwhere\s+can\s+i\s+(?:hear|audition|demo|try|listen\s+to|find)\b/i,
+  /\bwhere\s+(?:to|should\s+i)\s+(?:hear|audition|demo|try|listen\s+to|find|buy)\b/i,
+  /\b(?:dealer|retailer|showroom|shop|store)\s+(?:in|near|around|for)\b/i,
+  /\ble\s+bon\s+coin\b/i,
+  /\b(?:ebay|audiogon|usaudiomart|canuck\s*audio\s*mart|hifishark|head[- ]?fi)\s+(?:listing|ad|post|seller)\b/i,
+  /\b(?:shipping|customs|import\s+duty|vat)\s+(?:for|on|from|to)\b/i,
+  /\bhow\s+(?:much|should)\s+(?:i|to)\s+(?:offer|pay|spend)\s+(?:for|on)\b/i,
+  /\bis\s+(?:this|that)\s+(?:a\s+)?(?:good|fair|reasonable)\s+(?:price|deal)\b/i,
+  /\bevaluat(?:e|ing)\s+(?:this|that|the)\s+(?:listing|ad|post|description)\b/i,
+];
+
 // ── Public API ───────────────────────────────────────
 
 /**
@@ -695,6 +760,17 @@ export function detectIntent(currentMessage: string): IntentResult {
     return { intent: 'comparison', subjects, subjectMatches, desires };
   }
 
+  // 2b. Product assessment — "I'm considering the X", "would X work in my system"
+  //     Requires: (a) a product assessment pattern, AND (b) at least one
+  //     product-level subject match. This fires BEFORE shopping so that
+  //     "I'm considering the Qutest" produces an assessment, not a category list.
+  const hasProductAssessmentPattern = PRODUCT_ASSESSMENT_PATTERNS.some((p) => p.test(currentMessage));
+  const hasProductSubject = subjectMatches.some((m) => m.kind === 'product');
+  const hasBrandSubject = subjectMatches.some((m) => m.kind === 'brand' && !m.parenthetical);
+  if (hasProductAssessmentPattern && (hasProductSubject || hasBrandSubject)) {
+    return { intent: 'product_assessment', subjects, subjectMatches, desires };
+  }
+
   // 3. Shopping — "best DAC under $1000", "recommend a DAC"
   if (SHOPPING_PATTERNS.some((p) => p.test(currentMessage))) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
@@ -716,7 +792,21 @@ export function detectIntent(currentMessage: string): IntentResult {
     return { intent: 'gear_inquiry', subjects, subjectMatches, desires };
   }
 
-  // 5. Default — treat as diagnostic / open-ended listening discussion
+  // 5. Audio assistant — negotiation, translation, message writing,
+  //    travel/audition logistics, buying help.
+  //    Checked BEFORE audio_knowledge because assistant patterns are
+  //    more specific (action verbs vs. question verbs).
+  if (AUDIO_ASSISTANT_PATTERNS.some((p) => p.test(currentMessage))) {
+    return { intent: 'audio_assistant', subjects, subjectMatches, desires };
+  }
+
+  // 6. Audio knowledge — general audio questions not tied to system decisions.
+  //    Technology explanations, product opinions, sound signatures.
+  if (AUDIO_KNOWLEDGE_PATTERNS.some((p) => p.test(currentMessage))) {
+    return { intent: 'audio_knowledge', subjects, subjectMatches, desires };
+  }
+
+  // 7. Default — treat as diagnostic / open-ended listening discussion
   return { intent: 'diagnosis', subjects, subjectMatches, desires };
 }
 

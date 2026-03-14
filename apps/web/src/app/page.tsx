@@ -10,8 +10,15 @@ import {
   gearResponseToAdvisory,
   shoppingToAdvisory,
   analysisToAdvisory,
+  assessmentToAdvisory,
+  knowledgeToAdvisory,
+  assistantToAdvisory,
 } from '@/lib/advisory-response';
 import type { AdvisoryResponse, ShoppingAdvisoryContext } from '@/lib/advisory-response';
+import { buildProductAssessment } from '@/lib/product-assessment';
+import type { AssessmentContext } from '@/lib/product-assessment';
+import { buildKnowledgeResponse, buildAssistantResponse } from '@/lib/audio-lanes';
+import type { KnowledgeContext, AssistantContext as AudioAssistantContext } from '@/lib/audio-lanes';
 import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
@@ -499,11 +506,35 @@ export default function Home() {
     // never fall through to the diagnostic engine.
     // Consultation is handled upstream (before detectIntent) and
     // returns early, so it cannot be swallowed by this override.
-    if (effectiveMode === 'shopping' && intent !== 'shopping') {
+    // product_assessment is exempt — "I'm considering the X" should
+    // always produce a direct assessment, even mid-shopping flow.
+    if (effectiveMode === 'shopping' && intent !== 'shopping' && intent !== 'product_assessment') {
       intent = 'shopping';
     }
     if (effectiveMode === 'diagnosis' && intent !== 'comparison' && intent !== 'gear_inquiry' && intent !== 'system_assessment') {
       intent = 'diagnosis';
+    }
+
+    // ── Product assessment — "I'm considering the X" ───
+    // Fires when user asks about a specific product with assessment
+    // language. Produces a structured evaluation, not a shopping list.
+    if (intent === 'product_assessment') {
+      const assessmentCtx: AssessmentContext = {
+        subjectMatches: turnCtx.subjectMatches,
+        activeSystem: turnCtx.activeSystem,
+        tasteProfile: tasteProfile ?? undefined,
+        advisoryCtx,
+        currentMessage: submittedText,
+      };
+      const assessment = buildProductAssessment(assessmentCtx);
+      if (assessment) {
+        const advisory = assessmentToAdvisory(assessment, advisoryCtx);
+        dispatch({ type: 'ADD_ADVISORY', advisory });
+        dispatch({ type: 'SET_LOADING', value: false });
+        return;
+      }
+      // If assessment builder returns null (can't identify product),
+      // fall through to gear inquiry path
     }
 
     // Count how many shopping advisory turns have already been shown.
@@ -536,6 +567,38 @@ export default function Home() {
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
+    }
+
+    // ── Lane 2: Audio Knowledge ────────────────────────
+    // General audio questions not tied to a system decision.
+    // LLM generates prose; structured context is passed as input.
+    if (intent === 'audio_knowledge') {
+      const knowledgeCtx: KnowledgeContext = {
+        currentMessage: submittedText,
+        subjectMatches: turnCtx.subjectMatches,
+        activeSystem: turnCtx.activeSystem,
+        tasteProfile: tasteProfile ?? undefined,
+        advisoryCtx,
+      };
+      const knowledge = buildKnowledgeResponse(knowledgeCtx);
+      dispatch({ type: 'ADD_ADVISORY', advisory: knowledgeToAdvisory(knowledge, advisoryCtx) });
+      dispatch({ type: 'SET_LOADING', value: false });
+      return;
+    }
+
+    // ── Lane 3: Audio Assistant ──────────────────────────
+    // Practical hobby tasks — negotiation, translation, message writing,
+    // travel/audition logistics. Open LLM with tone guardrails.
+    if (intent === 'audio_assistant') {
+      const assistCtx: AudioAssistantContext = {
+        currentMessage: submittedText,
+        subjectMatches: turnCtx.subjectMatches,
+        activeSystem: turnCtx.activeSystem,
+      };
+      const assistant = buildAssistantResponse(assistCtx);
+      dispatch({ type: 'ADD_ADVISORY', advisory: assistantToAdvisory(assistant) });
+      dispatch({ type: 'SET_LOADING', value: false });
+      return;
     }
 
     // Shopping and diagnosis intents go through the evaluation engine

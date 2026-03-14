@@ -302,11 +302,95 @@ export type AdvisoryMode =
   | 'gear_advice'
   | 'gear_comparison'
   | 'upgrade_suggestions'
+  | 'product_assessment'
+  | 'audio_knowledge'
+  | 'audio_assistant'
   | 'general';
+
+/**
+ * Structured product assessment — evaluates a single component
+ * in the context of the user's system and preferences.
+ *
+ * This is the structured input object that the LLM synthesizes
+ * into advisory prose. All fields are deterministic; the LLM
+ * translates, it does not invent.
+ */
+export interface ProductAssessment {
+  /** The product being evaluated. */
+  candidateName: string;
+  candidateBrand: string;
+  candidateArchitecture?: string;
+  candidateDescription?: string;
+  candidateTraits?: Record<string, number>;
+  candidatePrice?: number;
+  candidateTopology?: string;
+
+  /** The current component being replaced (if identifiable). */
+  currentComponentName?: string;
+  currentComponentArchitecture?: string;
+
+  /** Short answer — 1-2 sentence practical conclusion. */
+  shortAnswer: string;
+
+  /** What actually changes — architecture, tonal, transient differences. */
+  whatChanges: string[];
+
+  /** How it behaves in this system — interaction with the user's chain. */
+  systemBehavior: string[];
+
+  /** Does this solve the user's real goal? */
+  goalAlignment: string;
+
+  /** Honest recommendation — keep, upgrade, wait, or change philosophy. */
+  recommendation: string;
+
+  /** Whether the product was found in the catalog (affects confidence). */
+  catalogMatch: boolean;
+}
+
+/**
+ * Audio Knowledge response — general audio questions not tied to
+ * a system decision. Technology explanations, product opinions,
+ * sound signatures, brand discussion.
+ *
+ * The LLM generates the prose body, but receives structured context
+ * (system chain, taste profile, catalog data) as input. System-aware
+ * commentary is deterministically composed from the profile.
+ */
+export interface KnowledgeResponse {
+  /** The topic being explained or discussed. */
+  topic: string;
+  /** Main explanation body — LLM-generated prose. */
+  explanation: string;
+  /** Optional system-aware note — deterministically derived from user context. */
+  systemNote?: string;
+  /** Key takeaways or summary points. */
+  keyPoints?: string[];
+}
+
+/**
+ * Audio Assistant response — practical hobby tasks: negotiation,
+ * translation, message writing, travel/audition logistics.
+ *
+ * Open LLM generation with Audio XX tone guardrails
+ * (calm, non-promotional, no urgency).
+ */
+export interface AssistantResponse {
+  /** The task type (negotiation, translation, message, logistics). */
+  taskType: 'negotiation' | 'translation' | 'message' | 'logistics' | 'listing_evaluation' | 'general';
+  /** Main response body — LLM-generated prose or the drafted message. */
+  body: string;
+  /** For translations — the original language detected. */
+  sourceLanguage?: string;
+  /** For translations — the target language. */
+  targetLanguage?: string;
+  /** Practical tips or considerations. */
+  tips?: string[];
+}
 
 export interface AdvisoryResponse {
   /** Determines framing voice. */
-  kind: 'consultation' | 'shopping' | 'diagnosis';
+  kind: 'consultation' | 'shopping' | 'diagnosis' | 'assessment' | 'knowledge' | 'assistant';
   /** Display title for the assessment (e.g. "Living Room System"). */
   title?: string;
   /** The subject being advised about (brand, product, symptom, category). */
@@ -463,7 +547,17 @@ export interface AdvisoryResponse {
   /** Primary reviews or trusted source references. */
   sourceReferences?: SourceReference[];
 
-  // ── 12. Diagnostics (collapsible) ───────────────────
+  // ── 11b. Product Assessment ─────────────────────────
+  /** Structured product assessment — populated for product_assessment advisory mode. */
+  productAssessment?: ProductAssessment;
+
+  // ── 12. Knowledge & Assistant Lanes ────────────────
+  /** Structured knowledge response — populated for audio_knowledge intent. */
+  knowledgeResponse?: KnowledgeResponse;
+  /** Structured assistant response — populated for audio_assistant intent. */
+  assistantResponse?: AssistantResponse;
+
+  // ── 13. Diagnostics (collapsible) ───────────────────
   /** Signal interpretation transparency. */
   diagnostics?: {
     matchedPhrases: string[];
@@ -1122,4 +1216,67 @@ export function analysisToAdvisory(
       traits: signals.traits,
     },
   }, reasoning);
+}
+
+// ── Product Assessment Adapter ──────────────────────
+
+export function assessmentToAdvisory(
+  assessment: ProductAssessment,
+  ctx?: ShoppingAdvisoryContext,
+): AdvisoryResponse {
+  return {
+    kind: 'assessment',
+    subject: assessment.candidateName,
+    advisoryMode: 'product_assessment',
+    audioProfile: ctx ? buildAudioProfile(undefined, ctx) : undefined,
+    productAssessment: assessment,
+
+    // Map assessment fields into standard advisory fields for fallback rendering
+    bottomLine: assessment.shortAnswer,
+    recommendedDirection: assessment.recommendation,
+    followUp: assessment.catalogMatch
+      ? undefined
+      : 'If you can share the specific model, I may be able to offer a more detailed assessment.',
+
+    // Links from the candidate product (if catalog match)
+    links: undefined, // Will be populated by the routing layer if needed
+  };
+}
+
+// ── Lane 2: Audio Knowledge adapter ──────────────────
+
+/**
+ * Wraps a KnowledgeResponse into a unified AdvisoryResponse.
+ * The LLM generates the explanation prose; structured context
+ * (system, taste profile) is passed as input, not invented.
+ */
+export function knowledgeToAdvisory(
+  knowledge: KnowledgeResponse,
+  ctx?: ShoppingAdvisoryContext,
+): AdvisoryResponse {
+  return {
+    kind: 'knowledge',
+    subject: knowledge.topic,
+    advisoryMode: 'audio_knowledge',
+    audioProfile: ctx ? buildAudioProfile(undefined, ctx) : undefined,
+    knowledgeResponse: knowledge,
+    bottomLine: knowledge.systemNote ?? undefined,
+  };
+}
+
+// ── Lane 3: Audio Assistant adapter ──────────────────
+
+/**
+ * Wraps an AssistantResponse into a unified AdvisoryResponse.
+ * Open LLM generation with tone guardrails.
+ */
+export function assistantToAdvisory(
+  assistant: AssistantResponse,
+): AdvisoryResponse {
+  return {
+    kind: 'assistant',
+    subject: assistant.taskType,
+    advisoryMode: 'audio_assistant',
+    assistantResponse: assistant,
+  };
 }
