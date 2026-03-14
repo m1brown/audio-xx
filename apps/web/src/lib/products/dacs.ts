@@ -221,6 +221,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'ESS Sabre-based design with strong measured performance. Prioritizes clarity and dynamic range over tonal warmth.',
     retailer_links: [
+      { label: 'SMSL', url: 'https://www.smsl-audio.com/portal/product/detail/id/879.html' },
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B0BPRL3GYX' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/smsl-do300' },
     ],
@@ -282,6 +283,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Dual ES9038Pro implementation emphasizing transient precision and wide dynamic range. A speed-first design.',
     retailer_links: [
+      { label: 'Topping', url: 'https://www.toppingaudio.com/product-item/d70-pro-sabre' },
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B0CL5FCRPQ' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/topping-d70-pro-sabre' },
     ],
@@ -341,6 +343,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Well-rounded ESS implementation with good texture and detail retrieval. Less aggressive than the Topping, more neutral than the Denafrips.',
     retailer_links: [
+      { label: 'Gustard', url: 'https://www.gustard.cn/productinfo/3758918.html' },
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B09RFDMZPJ' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/gustard-x16' },
     ],
@@ -550,6 +553,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Reference-grade ESS Sabre implementation with very low distortion and wide bandwidth. Precision and composure over musicality.',
     retailer_links: [
+      { label: 'Topping', url: 'https://www.toppingaudio.com/product-item/d90se' },
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B09DVCCQGP' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/topping-d90se' },
     ],
@@ -707,6 +711,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Feature-rich ESS-based DAC with balanced output, MQA decoding, and built-in headphone amplifier. Versatile and well-rounded.',
     retailer_links: [
+      { label: 'Eversolo', url: 'https://eversolo.com/products/dac-z8' },
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B0DJCCBSMZ' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/eversolo-dac-z8' },
     ],
@@ -789,6 +794,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Pro-audio heritage with parametric EQ, crossfeed, and exceptional measured performance. A precision instrument — transparent, composed, and deeply configurable.',
     retailer_links: [
+      { label: 'RME', url: 'https://www.rme-audio.de/adi-2-dac.html' },
       { label: 'B&H Photo', url: 'https://www.bhphotovideo.com/c/product/1543585-REG/' },
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B07Y2GBLQR' },
     ],
@@ -1056,6 +1062,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'FPGA-based pulse array design with exceptional timing resolution and transient definition. Detail without analytical edge — fast, articulate, and composed.',
     retailer_links: [
+      { label: 'Chord Electronics', url: 'https://chordelectronics.co.uk/product/qutest/' },
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B079C63P1V' },
     ],
     tendencies: {
@@ -1237,6 +1244,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Discrete R-2R implementation offering a balance of clarity and tonal body. Less warm than the Denafrips, more textured than delta-sigma alternatives.',
     retailer_links: [
+      { label: 'Gustard', url: 'https://www.gustard.cn/productinfo/3758922.html' },
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B0BL2F62LJ' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/gustard-r26' },
     ],
@@ -1389,6 +1397,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Flagship desktop DAC using the AKM AK4499 chipset. Measurement performance is exceptional. The sonic character is precise and transparent — detail retrieval and separation are the primary strengths.',
     retailer_links: [
+      { label: 'Topping', url: 'https://www.toppingaudio.com/product-item/d90' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/topping-d90' },
     ],
     sourceReferences: [
@@ -1426,6 +1435,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'ESS Sabre-based desktop DAC with strong measured performance. Precise, analytical character with good separation and low-level detail. Tonal weight is lighter than R-2R alternatives.',
     retailer_links: [
+      { label: 'SMSL', url: 'https://www.smsl-audio.com/portal/product/detail/id/792.html' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/smsl-su-9' },
     ],
   },
@@ -1460,6 +1470,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Dual-mono ESS Sabre implementation with more analogue output stage investment than typical Chi-Fi. More tonal body than the Topping/SMSL tier while retaining measurement-class resolution.',
     retailer_links: [
+      { label: 'Gustard', url: 'https://www.gustard.cn/productinfo/3758920.html' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/gustard-x26-pro' },
     ],
   },
@@ -1605,6 +1616,192 @@ export const DAC_PRODUCTS: Product[] = [
     ],
     sourceReferences: [
       { source: 'Head-Fi community', note: 'Impressions and comparisons with Schiit Bifrost and dedicated R-2R DACs.' },
+    ],
+  },
+
+  {
+    id: 'merason-frerot',
+    brand: 'Merason',
+    name: 'Frérot',
+    price: 1250,
+    category: 'dac',
+    architecture: 'delta-sigma (TI PCM1794A)',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'boutique',
+    region: 'europe',
+    country: 'CH',
+    topology: 'delta-sigma',
+    archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
+    // ── ANCHOR: Merason Frérot ──
+    // Axis reasoning: Swiss boutique — uses a well-known delta-sigma chip
+    // (TI PCM1794A) but voices it with unusual warmth and musicality.
+    // The analogue output stage does the heavy lifting — this is not a
+    // chip-sound DAC. Closer in presentation to an R-2R design than
+    // to typical delta-sigma implementations.
+    //
+    // Warm↔Bright: WARM — voiced for density and body, not brightness.
+    //   The analogue stage adds midrange weight uncommon for delta-sigma.
+    //
+    // Smooth↔Detailed: SMOOTH-NEUTRAL — good detail retrieval but
+    //   presented with a relaxed quality. No analytical edge.
+    //
+    // Elastic↔Controlled: NEUTRAL — neither snappy nor overdamped.
+    //   Musical pacing is natural.
+    //
+    // Airy↔Closed: NEUTRAL — unremarkable spatial presentation,
+    //   neither closed-in nor holographic.
+    primaryAxes: {
+      warm_bright: 'warm',
+      smooth_detailed: 'neutral',
+      elastic_controlled: 'neutral',
+      airy_closed: 'neutral',
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Voiced for long-session listening. The warmth and relaxed detail presentation minimise fatigue. No glare risk.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'clarity', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'elasticity', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 1.0,
+      tonal_density: 1.0,
+      clarity: 0.7,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 0.7,
+      composure: 0.7,
+      elasticity: 0.4,
+    },
+    description:
+      'Swiss-designed desktop DAC built around the TI PCM1794A chip, voiced with unusual warmth and tonal density for a delta-sigma design. The analogue output stage is the defining element — rich midrange weight, musical flow, and a relaxed presentation that invites long listening sessions.',
+    retailer_links: [
+      { label: 'Merason', url: 'https://merason.ch/frerot/' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'tonality', tendency: 'unusual warmth and tonal density for a delta-sigma design — the analogue stage adds midrange body more typical of R-2R conversion', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'musical flow and natural pacing — notes connect rather than dissect', basis: 'listener_consensus' },
+        { domain: 'texture', tendency: 'rich harmonic texture without grain — surfaces detail without spotlighting it', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with revealing or brighter amplification', effect: 'the warmth provides a complementary foundation — detail emerges naturally without edge', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in systems already voiced warm', effect: 'can compound warmth — may reduce clarity and transient definition', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'musicality, midrange body, and long-session comfort', cost: 'transient speed and leading-edge definition vs FPGA or ESS designs', relative_to: 'Chord Qutest, Topping D70 Pro', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Darko.Audio', note: 'Review covering the Frérot\'s analogue voicing and Swiss design philosophy.' },
+      { source: 'Part-Time Audiophile', note: 'Impressions emphasising warmth and musicality uncommon at the price.' },
+    ],
+  },
+
+  {
+    id: 'holo-cyan-2',
+    brand: 'Holo Audio',
+    name: 'Cyan 2',
+    price: 799,
+    category: 'dac',
+    architecture: 'Discrete R-2R (Holo proprietary)',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    topology: 'r2r',
+    archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
+    // ── ANCHOR: Holo Audio Cyan 2 ──
+    // Axis reasoning: Entry-level discrete R-2R from Holo Audio, which builds
+    // the well-regarded Spring and May DACs. The Cyan 2 shares the house sound
+    // — natural tonal density, good resolution, and a relaxed-but-present
+    // approach to detail. More resolving than the Denafrips Ares, less dense
+    // than the Pontus.
+    //
+    // Warm↔Bright: WARM (slight) — R-2R density present but restrained.
+    //   Less warm than Denafrips Ares, more body than delta-sigma.
+    //
+    // Smooth↔Detailed: NEUTRAL — resolving without being smooth or analytical.
+    //   Good texture retrieval with natural edges.
+    //
+    // Elastic↔Controlled: NEUTRAL — balanced dynamics, neither snappy
+    //   nor overdamped.
+    //
+    // Airy↔Closed: NEUTRAL — clean spatial presentation without
+    //   the holographic staging of higher-tier Holo models.
+    primaryAxes: {
+      warm_bright: 'warm',
+      smooth_detailed: 'neutral',
+      elastic_controlled: 'neutral',
+      airy_closed: 'neutral',
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'No fatigue risk. The natural tonal balance and R-2R smoothness make it suitable for extended listening.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'flow', level: 'present' },
+        { trait: 'tonal_density', level: 'present' },
+        { trait: 'clarity', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'composure', level: 'present' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 0.7,
+      tonal_density: 0.7,
+      clarity: 0.7,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 0.7,
+      composure: 0.7,
+      elasticity: 0.4,
+    },
+    description:
+      'Entry-level discrete R-2R DAC from the makers of the acclaimed Spring and May series. Natural tonal density, clean texture, and balanced resolution without analytical edge. A resolving alternative to both budget delta-sigma and the warmer Denafrips Ares.',
+    retailer_links: [
+      { label: 'Holo Audio', url: 'https://www.holoaudio.com/' },
+      { label: 'Kitsune HiFi', url: 'https://kitsunehifi.com/product/holo-audio-cyan-2/' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'tonality', tendency: 'natural tonal density — slightly warm but not coloured, with good midrange presence', basis: 'review_consensus' },
+        { domain: 'texture', tendency: 'clean texture retrieval — detail emerges naturally without grain or spotlighting', basis: 'listener_consensus' },
+        { domain: 'timing', tendency: 'balanced dynamics and pacing — neither sluggish nor snappy, musically engaging', basis: 'listener_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with transparent or analytical amplification', effect: 'the natural density provides a complementary tonal foundation without softening transients', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'compared to higher-tier Holo models (Spring, May)', effect: 'shares the house sound but with less spatial depth and composure — the core tonal character scales up rather than changing direction', valence: 'neutral', basis: 'review_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'natural tonality, balanced resolution, and musical engagement', cost: 'the transient speed and spatial precision of FPGA or flagship ESS designs', relative_to: 'Chord Qutest, Topping D90SE', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Head-Fi community', note: 'Extensive impressions comparing with Denafrips Ares and Schiit Bifrost.' },
+      { source: 'Audio Science Review', note: 'Measurements and listening impressions of the Cyan 2 R-2R implementation.' },
     ],
   },
 ];

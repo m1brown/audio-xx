@@ -1190,7 +1190,7 @@ import type { Product } from './products/dacs';
 import { SPEAKER_PRODUCTS } from './products/speakers';
 import { HEADPHONE_PRODUCTS, type HeadphoneProduct } from './products/headphones';
 import { selectTurntableExamples } from './products/turntables';
-import { rankProducts } from './product-scoring';
+import { rankProducts, type ScoredProduct } from './product-scoring';
 import { tagProductArchetype } from './archetype';
 import { topTraits, type TasteProfile as UserTasteProfile, type ProfileTraitKey } from './taste-profile';
 import type { ReasoningResult } from './reasoning';
@@ -1430,7 +1430,19 @@ function selectProductExamples(
     ranked.sort((a, b) => b.score - a.score);
   }
 
-  const top = ranked.slice(0, 3);
+  // ── Architecture diversity selection ────────────────
+  // When taste signals are sparse (direct shortlist queries like "best DAC
+  // under $2000"), enforce topology diversity so the shortlist represents
+  // different design philosophies rather than returning multiple products
+  // with the same conversion approach.
+  //
+  // Shortlist sizing: min 4, target 4–5, max 6.
+  // Sparse signals → diversity-aware selection (target 5).
+  // Rich signals  → score-ranked selection (target 4).
+  const hasSparseSignals = Object.keys(userTraits).length < 2;
+  const top = hasSparseSignals
+    ? selectDiverseByTopology(ranked, 5)
+    : ranked.slice(0, 4);
 
   return top.map(({ product }) => ({
     name: product.name,
@@ -1443,6 +1455,86 @@ function selectProductExamples(
     links: product.retailer_links.length > 0 ? product.retailer_links : undefined,
     sourceReferences: product.sourceReferences,
   }));
+}
+
+/**
+ * Select products with topology diversity — no two picks share the same
+ * topology unless the candidate pool is too small.
+ *
+ * When scores are tied (common with sparse signals), prefer the highest-priced
+ * representative of each topology to surface more refined designs across the
+ * budget range rather than clustering at the low end.
+ *
+ * Pass 1: one product per topology (highest-priced among top-scoring).
+ * Pass 2: fill remaining slots with different brands.
+ * Pass 3: last resort — fill from ranked list.
+ */
+/** Shortlist bounds — applied after diversity selection. */
+const MIN_SHORTLIST = 4;
+const MAX_SHORTLIST = 6;
+
+function selectDiverseByTopology(
+  ranked: ScoredProduct[],
+  target: number,
+): ScoredProduct[] {
+  if (ranked.length === 0) return [];
+
+  // Clamp target within bounds
+  const count = Math.max(MIN_SHORTLIST, Math.min(target, MAX_SHORTLIST));
+
+  // Group by topology, keeping only top-scoring entries per topology.
+  // Within each topology group, prefer higher price (more refined design).
+  const byTopology = new Map<string, ScoredProduct>();
+  const topScore = ranked[0].score;
+  const scoreTolerance = 0.5; // entries within 0.5 of the top are considered competitive
+
+  for (const entry of ranked) {
+    if (entry.score < topScore - scoreTolerance) continue;
+    const topo = entry.product.topology
+      ?? entry.product.architecture?.split(/\s/)[0]?.toLowerCase()
+      ?? 'unknown';
+    const existing = byTopology.get(topo);
+    // Prefer higher price within the same topology (better representative)
+    if (!existing || entry.product.price > existing.product.price) {
+      byTopology.set(topo, entry);
+    }
+  }
+
+  // Sort topology representatives by score descending, then price descending
+  const representatives = [...byTopology.values()].sort((a, b) =>
+    b.score - a.score || b.product.price - a.product.price,
+  );
+
+  const selected: ScoredProduct[] = [];
+  for (const entry of representatives) {
+    if (selected.length >= count) break;
+    selected.push(entry);
+  }
+
+  // Pass 2: fill remaining (allow topology repeats, prefer different brands)
+  if (selected.length < count) {
+    const usedBrands = new Set(selected.map((s) => s.product.brand.toLowerCase()));
+    for (const entry of ranked) {
+      if (selected.length >= count) break;
+      if (selected.includes(entry)) continue;
+      if (!usedBrands.has(entry.product.brand.toLowerCase())) {
+        selected.push(entry);
+        usedBrands.add(entry.product.brand.toLowerCase());
+      }
+    }
+  }
+
+  // Pass 3: last resort — fill from ranked list
+  if (selected.length < count) {
+    for (const entry of ranked) {
+      if (selected.length >= count) break;
+      if (!selected.includes(entry)) {
+        selected.push(entry);
+      }
+    }
+  }
+
+  return selected;
 }
 
 // ── Headphone / IEM selection ────────────────────────
