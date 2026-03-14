@@ -1,16 +1,17 @@
 /**
  * Enhanced product card for advisory shortlists and comparisons.
  *
- * Extends the existing AdvisoryOptions layout with:
- *   - Sonic direction label
- *   - Product type badge
- *   - Structured link bar (manufacturer → retailer → used market)
- *   - Availability / used-price indicators
- *   - Optional product image (with fallback)
+ * Design: Clean white cards with light borders, minimal shadows.
+ * Reasoning explanations (system delta) are prioritized over chrome.
  *
- * Backwards compatible — renders identically to AdvisoryOptions when
- * enhanced fields are absent. Controlled by the presence of
- * sonicDirectionLabel, productType, manufacturerUrl, etc.
+ * Each card includes:
+ *   - Product image (with neutral placeholder)
+ *   - Product name, brand, type, sonic direction
+ *   - Price / availability / used price range
+ *   - Character description
+ *   - Fit note + caution
+ *   - System delta reasoning (why fits / improvements / trade-offs)
+ *   - Used market exploration links (max 2)
  */
 
 import type { AdvisoryOption } from '../../lib/advisory-response';
@@ -26,10 +27,33 @@ function formatPrice(amount: number, currency?: string): string {
   return `${symbol}${amount.toLocaleString()}`;
 }
 
-const AVAILABILITY_LABELS: Record<string, { text: string; color: string; bg: string }> = {
-  discontinued: { text: 'Discontinued', color: '#8a6030', bg: '#faf0e6' },
-  vintage: { text: 'Vintage', color: '#6a5a30', bg: '#f5f0e0' },
+const AVAILABILITY_LABELS: Record<string, { text: string; color: string; bg: string; border: string }> = {
+  discontinued: { text: 'Discontinued', color: '#8a6a40', bg: '#faf4ea', border: '#e8dcc8' },
+  vintage: { text: 'Vintage', color: '#6a5a35', bg: '#f5f0e2', border: '#e0d8c0' },
 };
+
+/** Neutral placeholder for products without images. */
+function ProductImagePlaceholder() {
+  return (
+    <div style={{
+      width: '100%',
+      aspectRatio: '4 / 3',
+      background: '#f8f6f2',
+      borderRadius: '4px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: '0.6rem',
+    }}>
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d0ccc0" strokeWidth="1.5">
+        <rect x="3" y="6" width="18" height="12" rx="2" />
+        <circle cx="8.5" cy="12" r="2" />
+        <circle cx="15.5" cy="12" r="2" />
+        <path d="M8.5 14v1M15.5 14v1" />
+      </svg>
+    </div>
+  );
+}
 
 interface AdvisoryProductCardProps {
   options: AdvisoryOption[];
@@ -37,7 +61,7 @@ interface AdvisoryProductCardProps {
 
 export default function AdvisoryProductCards({ options }: AdvisoryProductCardProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {options.map((opt, i) => (
         <ProductCard key={i} opt={opt} />
       ))}
@@ -48,22 +72,41 @@ export default function AdvisoryProductCards({ options }: AdvisoryProductCardPro
 function ProductCard({ opt }: { opt: AdvisoryOption }) {
   const hasEnhancedFields = !!(opt.sonicDirectionLabel || opt.productType || opt.availability);
   const availBadge = opt.availability ? AVAILABILITY_LABELS[opt.availability] : undefined;
+  const hasImage = !!opt.imageUrl;
 
   return (
     <div
       style={{
-        padding: '0.85rem 1rem',
-        borderLeft: '3px solid #d9d9d9',
-        background: '#fafafa',
+        padding: '1rem 1.1rem',
+        border: '1px solid #eae8e4',
+        borderRadius: '8px',
+        background: '#ffffff',
       }}
     >
+      {/* ── Product image ──────────────────────────── */}
+      {hasImage ? (
+        <div style={{ marginBottom: '0.6rem' }}>
+          <img
+            src={opt.imageUrl}
+            alt={`${opt.brand ?? ''} ${opt.name}`}
+            style={{
+              width: '100%',
+              aspectRatio: '4 / 3',
+              objectFit: 'cover',
+              borderRadius: '4px',
+              background: '#f8f6f2',
+            }}
+          />
+        </div>
+      ) : null}
+
       {/* ── Header: name, price, badges ──────────── */}
       <div style={{ marginBottom: '0.35rem' }}>
-        <strong style={{ color: '#111' }}>
+        <strong style={{ color: '#111', fontSize: '1rem' }}>
           {opt.brand ? `${opt.brand} ` : ''}{opt.name}
         </strong>
         {opt.price != null && opt.price > 0 && (
-          <span style={{ color: '#666', marginLeft: '0.5rem', fontSize: '0.92rem' }}>
+          <span style={{ color: '#777', marginLeft: '0.5rem', fontSize: '0.92rem' }}>
             {formatPrice(opt.price, opt.priceCurrency)}
           </span>
         )}
@@ -72,13 +115,14 @@ function ProductCard({ opt }: { opt: AdvisoryOption }) {
           <span
             style={{
               marginLeft: '0.5rem',
-              fontSize: '0.75rem',
+              fontSize: '0.73rem',
               fontWeight: 600,
               letterSpacing: '0.03em',
-              padding: '0.1rem 0.4rem',
-              borderRadius: '3px',
+              padding: '0.12rem 0.45rem',
+              borderRadius: '4px',
               color: availBadge.color,
               background: availBadge.bg,
+              border: `1px solid ${availBadge.border}`,
             }}
           >
             {availBadge.text}
@@ -91,20 +135,20 @@ function ProductCard({ opt }: { opt: AdvisoryOption }) {
         <div
           style={{
             display: 'flex',
-            gap: '0.6rem',
+            gap: '0.5rem',
             flexWrap: 'wrap',
             alignItems: 'center',
-            marginBottom: '0.35rem',
+            marginBottom: '0.4rem',
             fontSize: '0.83rem',
-            color: '#888',
+            color: '#999',
           }}
         >
           {opt.productType && <span>{opt.productType}</span>}
           {opt.productType && opt.sonicDirectionLabel && (
-            <span style={{ color: '#ccc' }}>&middot;</span>
+            <span style={{ color: '#ddd' }}>&middot;</span>
           )}
           {opt.sonicDirectionLabel && (
-            <span style={{ fontStyle: 'italic', color: '#7a7a6a' }}>
+            <span style={{ fontStyle: 'italic', color: '#a89870' }}>
               {opt.sonicDirectionLabel}
             </span>
           )}
@@ -113,7 +157,7 @@ function ProductCard({ opt }: { opt: AdvisoryOption }) {
 
       {/* ── Used price range ─────────────────────── */}
       {opt.usedPriceRange && (
-        <div style={{ fontSize: '0.83rem', color: '#888', marginBottom: '0.3rem' }}>
+        <div style={{ fontSize: '0.83rem', color: '#999', marginBottom: '0.35rem' }}>
           Typical used: {formatPrice(opt.usedPriceRange.low)}–{formatPrice(opt.usedPriceRange.high)}
         </div>
       )}
@@ -121,10 +165,10 @@ function ProductCard({ opt }: { opt: AdvisoryOption }) {
       {/* ── Character ────────────────────────────── */}
       {opt.character && (
         <p style={{
-          margin: '0 0 0.3rem 0',
-          color: '#555',
-          lineHeight: 1.55,
-          fontSize: '0.92rem',
+          margin: '0 0 0.4rem 0',
+          color: '#666',
+          lineHeight: 1.6,
+          fontSize: '0.93rem',
           fontStyle: 'italic',
         }}>
           {opt.character}
@@ -132,36 +176,40 @@ function ProductCard({ opt }: { opt: AdvisoryOption }) {
       )}
 
       {/* ── Fit note ─────────────────────────────── */}
-      <p style={{ margin: '0 0 0.3rem 0', color: '#333', lineHeight: 1.55, fontSize: '0.95rem' }}>
+      <p style={{ margin: '0 0 0.35rem 0', color: '#333', lineHeight: 1.6, fontSize: '0.95rem' }}>
         {renderText(opt.fitNote)}
       </p>
 
       {/* ── Caution ──────────────────────────────── */}
       {opt.caution && (
-        <p style={{ margin: '0 0 0.3rem 0', color: '#888', fontSize: '0.88rem', lineHeight: 1.5 }}>
+        <p style={{ margin: '0 0 0.35rem 0', color: '#999', fontSize: '0.88rem', lineHeight: 1.55 }}>
           {opt.caution}
         </p>
       )}
 
-      {/* ── Link bar ─────────────────────────────── */}
-      <LinkBar opt={opt} />
-
-      {/* ── System delta ──────────────────────────── */}
+      {/* ── System delta — reasoning block ─────────── */}
       {opt.systemDelta && (
-        <div style={{ marginTop: '0.45rem', padding: '0.55rem 0.7rem', background: '#f8f6f0', borderRadius: '4px', fontSize: '0.88rem', lineHeight: 1.55 }}>
+        <div style={{
+          marginTop: '0.5rem',
+          padding: '0.6rem 0.8rem',
+          background: '#f8f6f0',
+          borderRadius: '6px',
+          fontSize: '0.88rem',
+          lineHeight: 1.6,
+        }}>
           {opt.systemDelta.whyFitsSystem && (
-            <p style={{ margin: '0 0 0.3rem 0', color: '#444' }}>
-              {opt.systemDelta.whyFitsSystem}
+            <p style={{ margin: '0 0 0.3rem 0', color: '#555' }}>
+              {renderText(opt.systemDelta.whyFitsSystem)}
             </p>
           )}
           {opt.systemDelta.likelyImprovements && opt.systemDelta.likelyImprovements.length > 0 && (
-            <div style={{ margin: '0 0 0.25rem 0', color: '#555' }}>
+            <div style={{ margin: '0 0 0.25rem 0', color: '#666' }}>
               <span style={{ fontWeight: 500, color: '#5a7050' }}>Likely improvements: </span>
               {opt.systemDelta.likelyImprovements.join(' · ')}
             </div>
           )}
           {opt.systemDelta.tradeOffs && opt.systemDelta.tradeOffs.length > 0 && (
-            <div style={{ color: '#888' }}>
+            <div style={{ color: '#999' }}>
               <span style={{ fontWeight: 500 }}>Trade-offs: </span>
               {opt.systemDelta.tradeOffs.join(' · ')}
             </div>
@@ -169,22 +217,25 @@ function ProductCard({ opt }: { opt: AdvisoryOption }) {
         </div>
       )}
 
-      {/* ── Find used ─────────────────────────────── */}
+      {/* ── Link bar ─────────────────────────────── */}
+      <LinkBar opt={opt} />
+
+      {/* ── Explore used market ─────────────────── */}
       {opt.usedMarketSources && opt.usedMarketSources.length > 0 && (
-        <div style={{ marginTop: '0.35rem', fontSize: '0.82rem', color: '#7a7050' }}>
-          <span style={{ fontWeight: 500 }}>Find used: </span>
+        <div style={{ marginTop: '0.4rem', fontSize: '0.82rem', color: '#a89870' }}>
+          <span style={{ fontWeight: 500 }}>Explore used market: </span>
           {opt.usedMarketSources.map((src, si) => (
             <span key={si}>
               <a
                 href={src.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: '#7a7050', textDecoration: 'underline', textUnderlineOffset: '2px' }}
+                style={{ color: '#a89870', textDecoration: 'underline', textUnderlineOffset: '2px' }}
               >
                 {src.name}
               </a>
               {si < (opt.usedMarketSources?.length ?? 0) - 1 && (
-                <span style={{ margin: '0 0.3rem', color: '#ccc' }}>&middot;</span>
+                <span style={{ margin: '0 0.3rem', color: '#ddd' }}>&middot;</span>
               )}
             </span>
           ))}
@@ -199,15 +250,12 @@ function ProductCard({ opt }: { opt: AdvisoryOption }) {
  * Falls back to flat link list when enhanced fields are absent.
  */
 function LinkBar({ opt }: { opt: AdvisoryOption }) {
-  // Build ordered link list: manufacturer first, then retailers, then used market
   const links: Array<{ label: string; url: string; kind: 'manufacturer' | 'retailer' | 'used' }> = [];
 
-  // Manufacturer link (deduplicate from links array)
   if (opt.manufacturerUrl) {
     links.push({ label: opt.brand ?? 'Manufacturer', url: opt.manufacturerUrl, kind: 'manufacturer' });
   }
 
-  // Retailer links (from the links array, excluding manufacturer and used-market URLs)
   if (opt.links) {
     for (const link of opt.links) {
       if (link.url === opt.manufacturerUrl) continue;
@@ -216,30 +264,27 @@ function LinkBar({ opt }: { opt: AdvisoryOption }) {
     }
   }
 
-  // Used-market link
   if (opt.usedMarketUrl) {
-    // Don't duplicate if it was already in the retailer links
     if (!links.some((l) => l.url === opt.usedMarketUrl)) {
-      links.push({ label: 'Search used', url: opt.usedMarketUrl, kind: 'used' });
+      links.push({ label: 'Explore used market', url: opt.usedMarketUrl, kind: 'used' });
     }
   }
 
-  // Fallback: if no enhanced fields, use original link rendering
   if (links.length === 0 && opt.links && opt.links.length > 0) {
     return (
-      <div style={{ fontSize: '0.88rem', color: '#666', marginTop: '0.25rem' }}>
+      <div style={{ fontSize: '0.88rem', color: '#777', marginTop: '0.35rem' }}>
         {opt.links.map((link, li) => (
           <span key={li}>
             <a
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: '#555', textDecoration: 'underline', textUnderlineOffset: '2px' }}
+              style={{ color: '#666', textDecoration: 'underline', textUnderlineOffset: '2px' }}
             >
               {link.label}
             </a>
             {li < (opt.links?.length ?? 0) - 1 && (
-              <span style={{ margin: '0 0.4rem', color: '#ccc' }}>&middot;</span>
+              <span style={{ margin: '0 0.4rem', color: '#ddd' }}>&middot;</span>
             )}
           </span>
         ))}
@@ -250,7 +295,15 @@ function LinkBar({ opt }: { opt: AdvisoryOption }) {
   if (links.length === 0) return null;
 
   return (
-    <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.3rem', display: 'flex', flexWrap: 'wrap', gap: '0.15rem', alignItems: 'center' }}>
+    <div style={{
+      fontSize: '0.85rem',
+      color: '#777',
+      marginTop: '0.4rem',
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: '0.15rem',
+      alignItems: 'center',
+    }}>
       {links.map((link, li) => (
         <span key={li}>
           <a
@@ -258,7 +311,7 @@ function LinkBar({ opt }: { opt: AdvisoryOption }) {
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              color: link.kind === 'manufacturer' ? '#444' : link.kind === 'used' ? '#7a7050' : '#555',
+              color: link.kind === 'manufacturer' ? '#555' : link.kind === 'used' ? '#a89870' : '#666',
               textDecoration: 'underline',
               textUnderlineOffset: '2px',
               fontWeight: link.kind === 'manufacturer' ? 500 : 400,
@@ -267,7 +320,7 @@ function LinkBar({ opt }: { opt: AdvisoryOption }) {
             {link.label}
           </a>
           {li < links.length - 1 && (
-            <span style={{ margin: '0 0.35rem', color: '#ccc' }}>&middot;</span>
+            <span style={{ margin: '0 0.35rem', color: '#ddd' }}>&middot;</span>
           )}
         </span>
       ))}

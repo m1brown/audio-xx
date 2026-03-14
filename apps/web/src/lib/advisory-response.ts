@@ -163,6 +163,8 @@ export interface UpgradePathOption {
   cons?: string[];
   /** Bold verdict (e.g. "best match with the JOB"). */
   verdict?: string;
+  /** System-level reasoning — how this option interacts with the current system. */
+  systemDelta?: SystemDelta;
 }
 
 /**
@@ -247,6 +249,17 @@ export interface StackedTraitInsight {
  *   shopping     — directional, recommendation-oriented
  *   diagnosis    — corrective, symptom-oriented
  */
+/**
+ * Advisory mode — determines the response rendering path.
+ * Shown as a subtle indicator near the top of the response.
+ */
+export type AdvisoryMode =
+  | 'system_review'
+  | 'gear_advice'
+  | 'gear_comparison'
+  | 'upgrade_suggestions'
+  | 'general';
+
 export interface AdvisoryResponse {
   /** Determines framing voice. */
   kind: 'consultation' | 'shopping' | 'diagnosis';
@@ -254,6 +267,10 @@ export interface AdvisoryResponse {
   title?: string;
   /** The subject being advised about (brand, product, symptom, category). */
   subject: string;
+  /** Advisory mode label — shown as a subtle indicator in the response header. */
+  advisoryMode?: AdvisoryMode;
+  /** System signature — one-sentence characterization of the system's sonic identity. */
+  systemSignature?: string;
 
   // ── 1. Listener Priorities ──────────────────────────
   /** "What you seem to value" — bullet list of preferences. */
@@ -344,6 +361,21 @@ export interface AdvisoryResponse {
   recommendedSequence?: RecommendedStep[];
   /** Key observation about the listener's taste pattern. */
   keyObservation?: string;
+  /** System synergy summary — why the system works well together. */
+  systemSynergy?: string;
+  /** Listener taste profile — structured sonic preferences for the profile section. */
+  listenerTasteProfile?: {
+    /** Primary sonic traits the listener values. */
+    primaryTraits: string[];
+    /** Secondary traits — present but less dominant. */
+    secondaryTraits?: string[];
+    /** Traits the listener typically avoids or de-emphasizes. */
+    avoided?: string[];
+    /** Prose summary of the listener's design philosophy. */
+    philosophy?: string;
+  };
+  /** Spider chart data — numeric trait values for radar visualization. */
+  spiderChartData?: Array<{ trait: string; value: number; fullMark: number }>;
 
   // ── 6. Trade-offs ───────────────────────────────────
   /** What to watch for / what you trade away (bullet list). */
@@ -618,7 +650,12 @@ export function consultationToAdvisory(c: ConsultationResponse): AdvisoryRespons
     keepRecommendations: c.keepRecommendations,
     recommendedSequence: c.recommendedSequence,
     keyObservation: c.keyObservation,
+    systemSynergy: c.systemSynergy,
+    listenerTasteProfile: c.listenerTasteProfile,
+    spiderChartData: c.spiderChartData,
     sourceReferences: c.sourceReferences,
+    advisoryMode: c.advisoryMode,
+    systemSignature: c.systemSignature,
   });
 }
 
@@ -676,6 +713,7 @@ export function gearResponseToAdvisory(r: GearResponse): AdvisoryResponse {
     const ua = r.upgradeAnalysis;
     return enrichAdvisory({
       kind: 'consultation',
+      advisoryMode: 'upgrade_suggestions',
       subject: r.subjects.length > 0 ? r.subjects.join(', ') : 'your question',
 
       listenerPriorities,
@@ -714,6 +752,7 @@ export function gearResponseToAdvisory(r: GearResponse): AdvisoryResponse {
 
   return enrichAdvisory({
     kind: 'consultation',
+    advisoryMode: 'gear_advice',
     subject: r.subjects.length > 0 ? r.subjects.join(', ') : 'your question',
 
     listenerPriorities,
@@ -797,6 +836,7 @@ export function shoppingToAdvisory(
 
   return enrichAdvisory({
     kind: 'shopping',
+    advisoryMode: 'upgrade_suggestions',
     subject: a.category,
 
     listenerPriorities,

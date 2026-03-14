@@ -58,6 +58,7 @@ import type {
   MemoFindings,
   ComponentFindings,
 } from './memo-findings';
+import { LISTENER_PRIORITY_LABELS, type ListenerPriority } from './memo-findings';
 import type {
   SystemChain,
   PrimaryConstraint,
@@ -212,6 +213,8 @@ function mapComponentAssessments(findings: MemoFindings): ComponentAssessment[] 
 }
 
 function mapUpgradePaths(findings: MemoFindings): UpgradePath[] {
+  const systemAxes = findings.systemAxes;
+
   return findings.upgradePaths.map((p) => ({
     rank: p.rank,
     label: `${p.targetRole} refinement`,
@@ -219,17 +222,60 @@ function mapUpgradePaths(findings: MemoFindings): UpgradePath[] {
       : p.impact === 'moderate' ? 'Moderate impact'
       : 'Refinement',
     rationale: `A ${p.targetRole.toLowerCase()} change would shift ${p.targetAxes.join(' and ').replace(/_/g, '↔')}.`,
-    options: p.options.map((o, i) => ({
-      rank: i + 1,
-      name: o.name,
-      brand: o.brand,
-      priceNote: o.priceRange,
-      summary: `${o.brand} ${o.name} — ${o.priceRange}.`,
-      pros: Object.entries(o.axisProfile)
-        .filter(([_, v]) => v !== null && v !== 'neutral')
-        .map(([axis, direction]) => `${axis.replace(/_/g, '↔')}: ${direction}`),
-      cons: [],
-    })),
+    options: p.options.map((o, i) => {
+      // Derive system delta by comparing product axis profile to system axes
+      const improvements: string[] = [];
+      const tradeOffs: string[] = [];
+
+      for (const [axis, productVal] of Object.entries(o.axisProfile)) {
+        if (productVal === null || productVal === 'neutral') continue;
+        const sysKey = axis as keyof typeof systemAxes;
+        const sysVal = systemAxes[sysKey];
+        if (!sysVal) continue;
+
+        const productNumeric = axisToNumeric(productVal);
+        const systemNumeric = axisToNumeric(sysVal);
+        const delta = productNumeric - systemNumeric;
+
+        const readableAxis = axis.replace(/_/g, '↔');
+        if (Math.abs(delta) >= 0.3) {
+          if (delta > 0) {
+            improvements.push(`shifts ${readableAxis} toward ${productVal}`);
+          } else {
+            improvements.push(`shifts ${readableAxis} toward ${productVal}`);
+          }
+        } else if (Math.abs(delta) < 0.15 && productVal !== 'neutral') {
+          // Same direction as system — reinforces
+          tradeOffs.push(`reinforces existing ${readableAxis} tendency`);
+        }
+      }
+
+      // Build "why fits" from target axes
+      const whyFits = p.targetAxes.length > 0
+        ? `Addresses the system's ${p.targetAxes.map((a) => a.replace(/_/g, ' ')).join(' and ')} balance.`
+        : undefined;
+
+      const systemDelta = (whyFits || improvements.length > 0 || tradeOffs.length > 0)
+        ? {
+            whyFitsSystem: whyFits,
+            likelyImprovements: improvements.length > 0 ? improvements : undefined,
+            tradeOffs: tradeOffs.length > 0 ? tradeOffs : undefined,
+          }
+        : undefined;
+
+      return {
+        rank: i + 1,
+        name: o.name,
+        brand: o.brand,
+        priceNote: o.priceRange,
+        summary: `${o.brand} ${o.name} — ${o.priceRange}.`,
+        pros: Object.entries(o.axisProfile)
+          .filter(([_, v]) => v !== null && v !== 'neutral')
+          .map(([axis, direction]) => `${axis.replace(/_/g, '↔')}: ${direction}`),
+        cons: [],
+        systemDelta,
+      };
+    }),
   }));
 }
 
@@ -254,6 +300,197 @@ function mapSourceReferences(findings: MemoFindings): SourceReference[] {
     source: r.source,
     note: r.note,
   }));
+}
+
+// ── System synergy derivation ────────────────────────────
+
+/**
+ * Derive a system synergy summary from MemoFindings.
+ * Describes why the system works well together — based on
+ * stacked traits classified as system_character and deliberateness signals.
+ */
+function deriveSystemSynergy(findings: MemoFindings): string | undefined {
+  const characterTraits = findings.stackedTraits
+    .filter((t) => t.classification === 'system_character');
+
+  if (characterTraits.length === 0 && !findings.isDeliberate) return undefined;
+
+  const parts: string[] = [];
+
+  // Describe the system's shared direction
+  if (characterTraits.length > 0) {
+    const traitLabels = characterTraits.map((t) => {
+      const label = t.property
+        .replace(/^high_/, '')
+        .replace(/_/g, ' ');
+      return label;
+    });
+    const joined = traitLabels.length <= 2
+      ? traitLabels.join(' and ')
+      : traitLabels.slice(0, -1).join(', ') + ', and ' + traitLabels[traitLabels.length - 1];
+    parts.push(`This system emphasizes ${joined}`);
+
+    // Add contributor context
+    const allContributors = new Set(characterTraits.flatMap((t) => t.contributors));
+    if (allContributors.size >= 2) {
+      parts[0] += ` — ${allContributors.size} components reinforce this direction`;
+    }
+    parts[0] += '.';
+  }
+
+  if (findings.isDeliberate) {
+    parts.push('The component choices suggest an intentional, coherent build.');
+  }
+
+  return parts.join(' ');
+}
+
+/**
+ * Convert a string axis leaning to a numeric value (0–1).
+ * Maps the categorical axis positions to a continuous scale.
+ */
+function axisToNumeric(value: string): number {
+  // Each axis has a "low" pole, "neutral" center, and "high" pole.
+  // Map: first pole → 0.2, neutral → 0.5, second pole → 0.8
+  switch (value) {
+    // warm_bright axis: warm=low, bright=high
+    case 'warm': return 0.2;
+    case 'bright': return 0.8;
+    // smooth_detailed axis: smooth=low, detailed=high
+    case 'smooth': return 0.2;
+    case 'detailed': return 0.8;
+    // elastic_controlled axis: elastic=low, controlled=high
+    case 'elastic': return 0.2;
+    case 'controlled': return 0.8;
+    // airy_closed axis: airy=high (open), closed=low
+    case 'airy': return 0.8;
+    case 'closed': return 0.2;
+    default: return 0.5; // neutral
+  }
+}
+
+/**
+ * Derive a listener taste profile from MemoFindings.
+ * Maps listener priority tags to readable trait names.
+ */
+function deriveListenerTasteProfile(
+  findings: MemoFindings,
+  axes: MemoFindings['systemAxes'],
+): {
+  primaryTraits: string[];
+  secondaryTraits?: string[];
+  avoided?: string[];
+  philosophy?: string;
+} | undefined {
+  if (findings.listenerPriorities.length === 0) return undefined;
+
+  const all = findings.listenerPriorities.map(
+    (p) => LISTENER_PRIORITY_LABELS[p] ?? p.replace(/_/g, ' '),
+  );
+
+  // Primary: top 3, secondary: remainder
+  const primaryTraits = all.slice(0, 3);
+  const secondaryTraits = all.length > 3 ? all.slice(3) : undefined;
+
+  // Derive avoided traits from axis positions (using numeric conversion)
+  const wb = axisToNumeric(axes.warm_bright);
+  const sd = axisToNumeric(axes.smooth_detailed);
+  const ec = axisToNumeric(axes.elastic_controlled);
+
+  const avoided: string[] = [];
+  if (wb > 0.65) avoided.push('tonal warmth');
+  if (wb < 0.35) avoided.push('analytical brightness');
+  if (sd > 0.65) avoided.push('smoothed-over detail');
+  if (sd < 0.35) avoided.push('excessive detail emphasis');
+  if (ec > 0.65) avoided.push('rigid control');
+  if (ec < 0.35) avoided.push('loose dynamics');
+
+  // Philosophy sentence
+  let philosophy: string | undefined;
+  if (findings.isDeliberate && primaryTraits.length >= 2) {
+    philosophy = `The listener values ${primaryTraits[0]} and ${primaryTraits[1]}, suggesting a preference for a system that prioritizes musical engagement through these qualities.`;
+  }
+
+  return {
+    primaryTraits,
+    secondaryTraits,
+    avoided: avoided.length > 0 ? avoided : undefined,
+    philosophy,
+  };
+}
+
+/**
+ * Derive spider chart data from system axes and listener priorities.
+ * Maps the 4-axis model to 7 radar dimensions for visualization.
+ */
+function deriveSpiderChartData(
+  axes: MemoFindings['systemAxes'],
+  priorities: MemoFindings['listenerPriorities'],
+): Array<{ trait: string; value: number; fullMark: number }> {
+  const wb = axisToNumeric(axes.warm_bright);
+  const sd = axisToNumeric(axes.smooth_detailed);
+  const ec = axisToNumeric(axes.elastic_controlled);
+  const ac = axisToNumeric(axes.airy_closed);
+
+  const prioritySet = new Set(priorities);
+
+  const boost = (base: number, tag: ListenerPriority) =>
+    prioritySet.has(tag) ? Math.min(100, base + 15) : base;
+
+  return [
+    { trait: 'Tonal Density', value: boost(Math.round((1 - wb) * 80 + 10), 'tonal_density'), fullMark: 100 },
+    { trait: 'Transient Speed', value: boost(Math.round(sd * 80 + 10), 'transient_speed'), fullMark: 100 },
+    { trait: 'Harmonic Richness', value: boost(Math.round((1 - wb) * 60 + 20), 'harmonic_richness'), fullMark: 100 },
+    { trait: 'Micro-detail', value: boost(Math.round(sd * 70 + 15), 'transparency'), fullMark: 100 },
+    { trait: 'Rhythmic Drive', value: boost(Math.round(ec * 75 + 15), 'rhythmic_articulation'), fullMark: 100 },
+    { trait: 'Composure', value: boost(Math.round((1 - ec) * 70 + 15), 'control_precision'), fullMark: 100 },
+    { trait: 'Spatial Scale', value: boost(Math.round(ac * 70 + 20), 'spatial_openness'), fullMark: 100 },
+  ];
+}
+
+/**
+ * Derive a system signature — a one-sentence characterization of the
+ * system's sonic identity based on axis positions and listener priorities.
+ */
+function deriveSystemSignature(
+  axes: MemoFindings['systemAxes'],
+  priorities: MemoFindings['listenerPriorities'],
+): string | undefined {
+  const traits: string[] = [];
+
+  const wb = axisToNumeric(axes.warm_bright);
+  const sd = axisToNumeric(axes.smooth_detailed);
+  const ec = axisToNumeric(axes.elastic_controlled);
+  const ac = axisToNumeric(axes.airy_closed);
+
+  // Tonal character
+  if (wb < 0.35) traits.push('tonally warm');
+  else if (wb > 0.65) traits.push('bright');
+  else traits.push('tonally balanced');
+
+  // Speed / detail
+  if (sd > 0.65) traits.push('detail-forward');
+  else if (sd < 0.35) traits.push('smooth');
+
+  // Timing character
+  if (ec > 0.65) traits.push('rhythmically articulate');
+  else if (ec < 0.35) traits.push('elastically flowing');
+
+  // Spatial character
+  if (ac > 0.65) traits.push('spatially open');
+  else if (ac < 0.35) traits.push('intimate');
+
+  if (traits.length === 0) return undefined;
+
+  // Add engagement style from priorities
+  const prioritySet = new Set(priorities);
+  let engagementNote = '';
+  if (prioritySet.has('musical_engagement')) engagementNote = ' emphasizing musical engagement';
+  else if (prioritySet.has('timing_accuracy')) engagementNote = ' emphasizing transient clarity';
+  else if (prioritySet.has('tonal_density')) engagementNote = ' emphasizing tonal density';
+
+  const traitStr = traits.join(', ');
+  return traitStr.charAt(0).toUpperCase() + traitStr.slice(1) + ' system' + engagementNote + '.';
 }
 
 // ── Main renderer ───────────────────────────────────────
@@ -317,6 +554,11 @@ export function renderDeterministicMemo(
     keepRecommendations: keepRecommendations.length > 0 ? keepRecommendations : undefined,
     recommendedSequence: recommendedSequence.length > 0 ? recommendedSequence : undefined,
     keyObservation: prose.keyObservation,
+    systemSynergy: deriveSystemSynergy(findings),
+    listenerTasteProfile: deriveListenerTasteProfile(findings, findings.systemAxes),
+    spiderChartData: deriveSpiderChartData(findings.systemAxes, findings.listenerPriorities),
     sourceReferences: sourceReferences.length > 0 ? sourceReferences : undefined,
+    advisoryMode: 'system_review' as const,
+    systemSignature: deriveSystemSignature(findings.systemAxes, findings.listenerPriorities),
   };
 }

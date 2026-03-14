@@ -4,7 +4,7 @@
  *   1. Default (uppercase label) — small, subdued, all-caps label.
  *      Used for standard advisory sections.
  *
- *   2. Numbered heading — bold section number + title in sentence case.
+ *   2. Numbered heading — editorial section number + title in sentence case.
  *      Used for memo-format system assessments.
  *
  * Usage:
@@ -23,17 +23,19 @@ export default function AdvisorySection({ number, label, children }: AdvisorySec
   if (number != null) {
     // ── Numbered heading (memo format) ──
     return (
-      <div style={{ marginBottom: '1.4rem' }}>
+      <div style={{ marginBottom: '1.5rem' }}>
         <h3
           style={{
-            margin: '0 0 0.55rem 0',
-            fontSize: '1.05rem',
-            fontWeight: 700,
-            color: '#222',
+            margin: '0 0 0.65rem 0',
+            fontSize: '1.08rem',
+            fontWeight: 600,
+            color: '#111',
             lineHeight: 1.4,
+            letterSpacing: '-0.01em',
           }}
         >
-          {number}. {label}
+          <span style={{ color: '#c8c0a8', marginRight: '0.35rem', fontWeight: 500 }}>{number}.</span>
+          {label}
         </h3>
         {children}
       </div>
@@ -42,15 +44,15 @@ export default function AdvisorySection({ number, label, children }: AdvisorySec
 
   // ── Default uppercase label ──
   return (
-    <div style={{ marginBottom: '1.4rem' }}>
+    <div style={{ marginBottom: '1.5rem' }}>
       <div
         style={{
-          marginBottom: '0.5rem',
-          fontSize: '0.78rem',
-          fontWeight: 700,
-          letterSpacing: '0.05em',
+          marginBottom: '0.55rem',
+          fontSize: '0.75rem',
+          fontWeight: 600,
+          letterSpacing: '0.06em',
           textTransform: 'uppercase' as const,
-          color: '#888',
+          color: '#999',
         }}
       >
         {label}

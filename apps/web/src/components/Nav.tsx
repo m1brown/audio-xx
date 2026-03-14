@@ -30,7 +30,9 @@ export default function Nav() {
   return (
     <nav>
       <div className="nav-inner">
-        <Link href="/" className="brand">Audio XX</Link>
+        <Link href="/" className="brand">
+          Audio<span className="brand-accent">&thinsp;XX</span>
+        </Link>
         <div className="nav-links">
           <Link href="/">Home</Link>
           {session && (

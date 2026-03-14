@@ -75,6 +75,10 @@ export interface ConsultationResponse {
   title?: string;
   /** The subject the user asked about (brand, topology, concept). */
   subject: string;
+  /** Advisory mode label — determines response rendering. */
+  advisoryMode?: import('./advisory-response').AdvisoryMode;
+  /** System signature — one-sentence sonic identity characterization. */
+  systemSignature?: string;
   /**
    * Comparison summary — renders first for comparison responses.
    * A concise contrast of the two subjects, answering the question
@@ -124,6 +128,17 @@ export interface ConsultationResponse {
   recommendedSequence?: import('./advisory-response').RecommendedStep[];
   /** Key observation about the listener's taste pattern. */
   keyObservation?: string;
+  /** System synergy summary — why the system works well together. */
+  systemSynergy?: string;
+  /** Listener taste profile — structured sonic preferences. */
+  listenerTasteProfile?: {
+    primaryTraits: string[];
+    secondaryTraits?: string[];
+    avoided?: string[];
+    philosophy?: string;
+  };
+  /** Spider chart data — numeric trait values for radar visualization. */
+  spiderChartData?: Array<{ trait: string; value: number; fullMark: number }>;
   /** Source references from catalogued components. */
   sourceReferences?: import('./advisory-response').SourceReference[];
 }

@@ -1439,6 +1439,7 @@ const USED_MARKET_SITES: Array<{ name: string; baseUrl: string; region: 'global'
 /**
  * Build used-market discovery links for a product.
  * Returns sources when the product is discontinued, vintage, or typically found used.
+ * Limited to 2 sources: one global aggregator + one regional marketplace.
  */
 export function buildUsedMarketSources(product: Product): UsedMarketSource[] | undefined {
   const showUsed = product.availability === 'discontinued'
@@ -1449,11 +1450,17 @@ export function buildUsedMarketSources(product: Product): UsedMarketSource[] | u
   if (!showUsed) return undefined;
 
   const searchQuery = `${product.brand} ${product.name}`;
-  return USED_MARKET_SITES.map((site) => ({
+  const allSources = USED_MARKET_SITES.map((site) => ({
     name: site.name,
     url: site.buildSearch(searchQuery),
     region: site.region,
   }));
+
+  // Limit to 2: prefer one global aggregator + one regional marketplace
+  const global = allSources.find((s) => s.region === 'global');
+  const regional = allSources.find((s) => s.region !== 'global');
+  const selected = [global, regional].filter(Boolean) as UsedMarketSource[];
+  return selected.length > 0 ? selected.slice(0, 2) : undefined;
 }
 
 // ── System delta reasoning ───────────────────────────────
