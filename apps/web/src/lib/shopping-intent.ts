@@ -982,6 +982,23 @@ export interface ProductExample {
   links?: { label: string; url: string; region?: string }[];
   /** Named source references from the product catalog. */
   sourceReferences?: Array<{ source: string; note: string }>;
+  // ── Enhanced card fields ─────────────────────────────
+  /** Sonic direction label (e.g. "flow-oriented", "precision-focused"). */
+  sonicDirectionLabel?: string;
+  /** Product type for display (e.g. "Integrated Amplifier"). */
+  productType?: string;
+  /** Manufacturer URL. */
+  manufacturerUrl?: string;
+  /** Used-market exploration link. */
+  usedMarketUrl?: string;
+  /** Market availability. */
+  availability?: 'current' | 'discontinued' | 'vintage';
+  /** Used price range for discontinued/vintage products. */
+  usedPriceRange?: { low: number; high: number };
+  /** Used-market discovery links (HiFi Shark, Audiogon, etc.). */
+  usedMarketSources?: UsedMarketSource[];
+  /** Predicted sonic delta — what this product would change in the system. */
+  systemDelta?: { whyFitsSystem?: string; likelyImprovements?: string[]; tradeOffs?: string[] };
 }
 
 // ── Synthesis Brief ───────────────────────────────────
@@ -1098,6 +1115,8 @@ export interface ShoppingAnswer {
   sonicLandscape?: string;
   /** Refinement prompts — questions to deepen personalization. */
   refinementPrompts?: string[];
+  /** Compact personalization bullets — "why this fits you" layer. */
+  whyFitsYou?: string[];
 }
 
 // ── Taste direction templates ─────────────────────────
@@ -1285,9 +1304,10 @@ const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
 import { DAC_PRODUCTS } from './products/dacs';
 import type { Product } from './products/dacs';
 import { SPEAKER_PRODUCTS } from './products/speakers';
+import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
 import { HEADPHONE_PRODUCTS, type HeadphoneProduct } from './products/headphones';
 import { selectTurntableExamples } from './products/turntables';
-import { rankProducts, type ScoredProduct } from './product-scoring';
+import { rankProducts, type ScoredProduct, AMPLIFIER_ARCHITECTURE_TENDENCIES, type ArchitectureTendency } from './product-scoring';
 import { tagProductArchetype } from './archetype';
 import { topTraits, type TasteProfile as UserTasteProfile, type ProfileTraitKey } from './taste-profile';
 import type { ReasoningResult } from './reasoning';
@@ -1339,6 +1359,279 @@ function buildFitNote(product: Product, userTraits: Record<string, SignalDirecti
   }
 
   return `${arch} design. ${product.description.split('.')[0]}.`;
+}
+
+// ── Enhanced card field builders ────────────────────────
+
+/** Archetype → sonic direction label mapping. */
+const SONIC_DIRECTION_LABELS: Record<string, string> = {
+  flow_organic: 'flow-oriented',
+  precision_explicit: 'precision-focused',
+  rhythmic_propulsive: 'rhythm-driven',
+  tonal_saturated: 'tonally rich',
+  spatial_holographic: 'spatially precise',
+};
+
+/** Build a short sonic direction label from the product's primary archetype. */
+function buildSonicDirectionLabel(product: Product): string | undefined {
+  const primary = product.archetypes?.primary;
+  if (primary) return SONIC_DIRECTION_LABELS[primary];
+  // Fallback: infer from topology
+  const topo = product.topology;
+  if (!topo) return undefined;
+  const philo = TOPOLOGY_PHILOSOPHY[topo];
+  return philo ? philo.emphasis.split(',')[0].trim() : undefined;
+}
+
+/** Build a human-readable product type label. */
+function buildProductTypeLabel(product: Product): string | undefined {
+  const SUBCAT_LABELS: Record<string, string> = {
+    'integrated-amp': 'Integrated Amplifier',
+    'power-amp': 'Power Amplifier',
+    'preamp': 'Preamplifier',
+    'headphone-amp': 'Headphone Amplifier',
+    'standalone-dac': 'DAC',
+    'dac-preamp': 'DAC / Preamp',
+    'dac-amp': 'DAC / Headphone Amp',
+    'floorstanding': 'Floorstanding Speaker',
+    'standmount': 'Standmount Speaker',
+    'full-range': 'Full-Range Speaker',
+  };
+  if (product.subcategory) return SUBCAT_LABELS[product.subcategory];
+  const CAT_LABELS: Record<string, string> = {
+    dac: 'DAC', amplifier: 'Amplifier', speaker: 'Speaker',
+    headphone: 'Headphone', streamer: 'Streamer', turntable: 'Turntable',
+  };
+  return CAT_LABELS[product.category];
+}
+
+/** Extract used-market URL from retailer links (HiFi Shark, Audiogon, US Audio Mart, eBay). */
+function extractUsedMarketUrl(product: Product): string | undefined {
+  const usedPatterns = ['hifishark', 'audiogon', 'usaudiomart', 'ebay', 'reverb'];
+  for (const link of product.retailer_links) {
+    if (usedPatterns.some((p) => link.url.toLowerCase().includes(p))) {
+      return link.url;
+    }
+  }
+  return undefined;
+}
+
+// ── Used-market discovery sources ────────────────────────
+//
+// Generates search URLs for common enthusiast marketplaces.
+// Shown on discontinued, vintage, and used-market products
+// to help listeners find gear in the secondary market.
+
+export interface UsedMarketSource {
+  name: string;
+  url: string;
+  /** Geographic focus. */
+  region: 'global' | 'north-america' | 'europe';
+}
+
+const USED_MARKET_SITES: Array<{ name: string; baseUrl: string; region: 'global' | 'north-america' | 'europe'; buildSearch: (query: string) => string }> = [
+  { name: 'HiFi Shark', baseUrl: 'https://www.hifishark.com', region: 'global', buildSearch: (q) => `https://www.hifishark.com/search?q=${encodeURIComponent(q)}` },
+  { name: 'Audiogon', baseUrl: 'https://www.audiogon.com', region: 'north-america', buildSearch: (q) => `https://www.audiogon.com/listings?query=${encodeURIComponent(q)}` },
+  { name: 'US Audio Mart', baseUrl: 'https://www.usaudiomart.com', region: 'north-america', buildSearch: (q) => `https://www.usaudiomart.com/classifieds?query=${encodeURIComponent(q)}` },
+  { name: 'eBay', baseUrl: 'https://www.ebay.com', region: 'global', buildSearch: (q) => `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(q)}` },
+];
+
+/**
+ * Build used-market discovery links for a product.
+ * Returns sources when the product is discontinued, vintage, or typically found used.
+ */
+export function buildUsedMarketSources(product: Product): UsedMarketSource[] | undefined {
+  const showUsed = product.availability === 'discontinued'
+    || product.availability === 'vintage'
+    || product.typicalMarket === 'used'
+    || product.typicalMarket === 'both';
+
+  if (!showUsed) return undefined;
+
+  const searchQuery = `${product.brand} ${product.name}`;
+  return USED_MARKET_SITES.map((site) => ({
+    name: site.name,
+    url: site.buildSearch(searchQuery),
+    region: site.region,
+  }));
+}
+
+// ── System delta reasoning ───────────────────────────────
+//
+// Predicts what sonic change a product would produce in the user's
+// current system. Uses product tendency profiles + system character.
+//
+//   system tendencies × product tendencies = predicted sonic delta
+//
+// Does NOT change ranking. Only generates clearer explanations.
+
+/** Trait labels for human-readable delta output. */
+const TRAIT_LABELS: Record<string, string> = {
+  flow: 'musical flow',
+  tonal_density: 'tonal density',
+  clarity: 'transparency',
+  dynamics: 'dynamic range',
+  composure: 'composure',
+  texture: 'textural detail',
+  warmth: 'warmth',
+  speed: 'transient speed',
+  elasticity: 'rhythmic elasticity',
+  spatial_precision: 'spatial precision',
+};
+
+/** System character → traits it already has plenty of. */
+const SYSTEM_CHARACTER_TRAITS: Record<string, { saturated: string[]; deficient: string[] }> = {
+  bright: { saturated: ['clarity', 'speed'], deficient: ['warmth', 'tonal_density', 'flow'] },
+  warm: { saturated: ['warmth', 'tonal_density'], deficient: ['clarity', 'speed', 'dynamics'] },
+  neutral: { saturated: [], deficient: [] },
+  unknown: { saturated: [], deficient: [] },
+};
+
+interface SystemDeltaResult {
+  whyFitsSystem?: string;
+  likelyImprovements?: string[];
+  tradeOffs?: string[];
+}
+
+/**
+ * Build a system delta explanation for a product within the current system.
+ *
+ * Deterministic. Uses:
+ *   - Product tendency profile (emphasized / less_emphasized traits)
+ *   - System character (bright / warm / neutral)
+ *   - Architecture tendency map (for amplifier-specific reasoning)
+ *   - User trait directions (what the listener wants more/less of)
+ */
+function buildSystemDelta(
+  product: Product,
+  systemProfile: SystemProfile,
+  userTraits: Record<string, SignalDirection>,
+): SystemDeltaResult | undefined {
+  // Need at least a product tendency profile or system character to reason about delta
+  const profile = product.tendencyProfile;
+  if (!profile && systemProfile.systemCharacter === 'unknown' && Object.keys(userTraits).length === 0) {
+    return undefined;
+  }
+
+  const systemChar = SYSTEM_CHARACTER_TRAITS[systemProfile.systemCharacter] ?? SYSTEM_CHARACTER_TRAITS['unknown'];
+  const improvements: string[] = [];
+  const tradeoffs: string[] = [];
+
+  // Collect product's emphasized and de-emphasized traits
+  const productStrengths = new Set<string>();
+  const productWeaknesses = new Set<string>();
+
+  if (profile) {
+    for (const t of profile.tendencies) {
+      if (t.level === 'emphasized') productStrengths.add(t.trait);
+      else if (t.level === 'less_emphasized') productWeaknesses.add(t.trait);
+    }
+  }
+
+  // Supplement with architecture tendency map for amplifiers
+  const archTendency = findArchitectureTendency(product);
+  if (archTendency) {
+    for (const s of archTendency.strengths) productStrengths.add(s);
+    for (const w of archTendency.weaknesses) productWeaknesses.add(w);
+  }
+
+  if (productStrengths.size === 0 && productWeaknesses.size === 0) return undefined;
+
+  // ── Compute improvements: product strengths that address system deficiencies
+  // or align with user desires ─────────────────────────────────────────────
+
+  for (const trait of productStrengths) {
+    const label = TRAIT_LABELS[trait];
+    if (!label) continue;
+
+    // Product strength fills a system gap
+    if (systemChar.deficient.includes(trait)) {
+      improvements.push(`greater ${label}`);
+      continue;
+    }
+
+    // Product strength matches user desire
+    if (userTraits[trait] === 'up') {
+      improvements.push(`enhanced ${label}`);
+      continue;
+    }
+
+    // Product strength doesn't conflict with system saturation
+    if (!systemChar.saturated.includes(trait)) {
+      // Only include if we don't already have enough
+      if (improvements.length < 3) {
+        improvements.push(`added ${label}`);
+      }
+    }
+  }
+
+  // ── Compute trade-offs: product weaknesses, or product strengths that
+  // compound system saturation ─────────────────────────────────────────
+
+  for (const trait of productWeaknesses) {
+    const label = TRAIT_LABELS[trait];
+    if (!label) continue;
+
+    // Product weakness in an area the user wants more of
+    if (userTraits[trait] === 'up') {
+      tradeoffs.push(`may not improve ${label}`);
+      continue;
+    }
+
+    // Product weakness in an area the system already lacks
+    if (systemChar.deficient.includes(trait)) {
+      tradeoffs.push(`doesn't address ${label} deficit`);
+      continue;
+    }
+
+    // General weakness
+    if (tradeoffs.length < 2) {
+      tradeoffs.push(`less ${label}`);
+    }
+  }
+
+  // Check for compounding — product emphasizes what system already saturates
+  for (const trait of productStrengths) {
+    const label = TRAIT_LABELS[trait];
+    if (!label) continue;
+    if (systemChar.saturated.includes(trait) && tradeoffs.length < 2) {
+      tradeoffs.push(`may compound existing ${label}`);
+    }
+  }
+
+  if (improvements.length === 0 && tradeoffs.length === 0) return undefined;
+
+  // ── Build system fit sentence ────────────────────────────────────────
+  let whyFitsSystem: string | undefined;
+  const sysLabel = systemProfile.systemCharacter !== 'unknown'
+    ? systemProfile.systemCharacter
+    : undefined;
+
+  if (sysLabel && improvements.length > 0) {
+    const topImprovement = improvements[0].replace(/^(greater|enhanced|added) /, '');
+    whyFitsSystem = `Your current system leans ${sysLabel}. This component would likely introduce ${topImprovement} while preserving what the system already does well.`;
+  } else if (improvements.length > 0) {
+    const topImprovement = improvements[0].replace(/^(greater|enhanced|added) /, '');
+    whyFitsSystem = `Based on this product's design tendencies, it would likely bring ${topImprovement} to your system.`;
+  }
+
+  return {
+    whyFitsSystem,
+    likelyImprovements: improvements.length > 0 ? improvements.slice(0, 4) : undefined,
+    tradeOffs: tradeoffs.length > 0 ? tradeoffs.slice(0, 3) : undefined,
+  };
+}
+
+/**
+ * Find the architecture tendency entry for a product by matching
+ * its architecture string against known patterns.
+ */
+function findArchitectureTendency(product: Product): ArchitectureTendency | undefined {
+  const arch = product.architecture.toLowerCase();
+  for (const [key, tendency] of Object.entries(AMPLIFIER_ARCHITECTURE_TENDENCIES)) {
+    if (arch.includes(key.toLowerCase())) return tendency;
+  }
+  return undefined;
 }
 
 /**
@@ -1476,6 +1769,7 @@ function selectProductExamples(
   switch (category) {
     case 'dac': catalog = DAC_PRODUCTS; break;
     case 'speaker': catalog = SPEAKER_PRODUCTS; break;
+    case 'amplifier': catalog = AMPLIFIER_PRODUCTS; break;
     default: return [];
   }
   if (budgetAmount === null) return [];
@@ -1551,6 +1845,15 @@ function selectProductExamples(
     caution: buildCaution(product),
     links: product.retailer_links.length > 0 ? product.retailer_links : undefined,
     sourceReferences: product.sourceReferences,
+    // Enhanced card fields
+    sonicDirectionLabel: buildSonicDirectionLabel(product),
+    productType: buildProductTypeLabel(product),
+    manufacturerUrl: product.retailer_links[0]?.url,
+    usedMarketUrl: extractUsedMarketUrl(product),
+    availability: product.availability,
+    usedPriceRange: product.usedPriceRange,
+    usedMarketSources: buildUsedMarketSources(product),
+    systemDelta: buildSystemDelta(product, systemProfile, userTraits),
   }));
 }
 
@@ -1930,6 +2233,84 @@ function buildRefinementPrompts(
 }
 
 /**
+ * Build compact "Why this fits you" personalization bullets.
+ *
+ * Deterministic, template-driven — uses only data already extracted
+ * by the reasoning engine. Max 4 bullets. Returns undefined when
+ * insufficient context exists.
+ *
+ * Inputs: taste profile, system profile, signal traits, product topologies.
+ */
+function buildWhyThisFitsYou(
+  matchedProfile: TasteProfile | undefined,
+  ctx: ShoppingContext,
+  signals: ExtractedSignals,
+  products: ProductExample[],
+  allProducts: Product[],
+  reasoning?: ReasoningResult,
+): string[] | undefined {
+  const bullets: string[] = [];
+
+  // 1. Taste alignment — connect recommendations to listener preferences
+  const tasteLabel = reasoning?.taste.tasteLabel ?? matchedProfile?.label;
+  if (tasteLabel) {
+    bullets.push(`Your preference for ${tasteLabel} shaped the selection toward designs that prioritize those qualities.`);
+  }
+
+  // 2. System interaction — how these fit the existing chain
+  if (ctx.systemProvided && ctx.systemProfile) {
+    const outputType = ctx.systemProfile.outputType;
+    const character = ctx.systemProfile.character;
+    if (character === 'warm') {
+      bullets.push('Your system leans warm — the shortlist includes options that complement rather than compound that tendency.');
+    } else if (character === 'neutral') {
+      bullets.push('Your system reads as fairly neutral, so these options can shift the balance in whatever direction appeals to you.');
+    } else if (character === 'bright' || character === 'lean') {
+      bullets.push('Your system leans lean or bright — options here include designs that can add body and tonal density.');
+    }
+    if (outputType === 'headphone' && ctx.category === 'dac') {
+      bullets.push('As a headphone listener, upstream resolution from the DAC will be more directly audible.');
+    }
+  }
+
+  // 3. Archetype fit — broader sonic identity
+  const archetype = reasoning?.taste.archetype ?? matchedProfile?.archetype;
+  if (archetype && !tasteLabel) {
+    // Only add this if we didn't already use tasteLabel (avoids redundancy)
+    const archetypePhrase = ARCHETYPE_LABELS[archetype];
+    if (archetypePhrase) {
+      bullets.push(`Your ${archetypePhrase} listening style informed the range of design approaches included here.`);
+    }
+  }
+
+  // 4. Topology diversity — explain why different approaches are present
+  const topoSet = new Set<string>();
+  for (const ex of products) {
+    const full = allProducts.find((p) => p.name === ex.name && p.brand === ex.brand);
+    const topo = full?.topology ?? 'unknown';
+    if (topo !== 'unknown') topoSet.add(topo);
+  }
+  if (topoSet.size >= 2 && bullets.length < 3) {
+    bullets.push('The shortlist spans different design philosophies so you can compare how each approach interacts with your priorities.');
+  }
+
+  // 5. Budget alignment
+  if (ctx.budgetAmount && products.length > 0) {
+    const prices = products.filter((p) => p.price > 0).map((p) => p.price);
+    if (prices.length >= 2) {
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      if (max <= ctx.budgetAmount && min < ctx.budgetAmount * 0.7) {
+        bullets.push(`Options range from $${min.toLocaleString()} to $${max.toLocaleString()}, giving room to allocate budget elsewhere in the chain if needed.`);
+      }
+    }
+  }
+
+  if (bullets.length === 0) return undefined;
+  return bullets.slice(0, 4); // cap at 4
+}
+
+/**
  * Build a user context reference for the shortlist framing.
  * References system, taste, and listening preferences when available.
  */
@@ -2035,13 +2416,17 @@ export function buildShoppingAnswer(
   // 7. Sonic landscape — explains the design philosophies represented
   const fullCatalog = ctx.category === 'dac' ? DAC_PRODUCTS
     : ctx.category === 'speaker' ? SPEAKER_PRODUCTS
+    : ctx.category === 'amplifier' ? AMPLIFIER_PRODUCTS
     : [];
   const sonicLandscape = buildSonicLandscape(productExamples, fullCatalog, categoryLabel);
 
   // 8. Refinement prompts — questions to deepen personalization
   const refinementPrompts = provisional ? buildRefinementPrompts(gaps, ctx.category) : [];
 
-  // 9. Synthesis brief — structured reasoning for the rendering layer
+  // 9. Why this fits you — compact personalization bullets
+  const whyFitsYou = buildWhyThisFitsYou(matchedProfile, ctx, signals, productExamples, fullCatalog, reasoning);
+
+  // 10. Synthesis brief — structured reasoning for the rendering layer
   const synthesisBrief: ShoppingShortlistBrief = {
     kind: 'shopping_shortlist',
     queryCategory: categoryLabel,
@@ -2074,6 +2459,7 @@ export function buildShoppingAnswer(
     synthesisBrief,
     sonicLandscape,
     refinementPrompts: refinementPrompts.length > 0 ? refinementPrompts : undefined,
+    whyFitsYou,
   };
 }
 

@@ -35,18 +35,24 @@ const RISK_TRAITS = new Set(['fatigue_risk', 'glare_risk']);
 // affinity bonus.
 
 const ARCHITECTURE_AFFINITY: Record<string, string[]> = {
+  // ── DAC architectures ───────────────────────────────
   // User wants dynamics/speed → multibit, R-2R, FPGA tend to deliver
-  'dynamics:up': ['multibit', 'R-2R', 'FPGA'],
-  'elasticity:up': ['multibit', 'R-2R', 'FPGA'],
-  // User wants clarity → delta-sigma (ESS), FPGA tend to deliver
-  'clarity:up': ['delta-sigma (ESS)', 'delta-sigma (AKM)', 'FPGA'],
-  // User wants flow/density → R-2R, NOS tube tend to deliver
-  'flow:up': ['R-2R', 'NOS tube', 'multibit'],
-  'tonal_density:up': ['R-2R', 'NOS tube'],
-  // User has fatigue concern → NOS tube, R-2R tend to be gentler
-  'fatigue_risk:up': ['NOS tube', 'R-2R'],
-  // User wants composure → delta-sigma (AKM), FPGA, R-2R
-  'composure:up': ['delta-sigma (AKM)', 'FPGA', 'R-2R'],
+  'dynamics:up': ['multibit', 'R-2R', 'FPGA', 'Class AB', 'SoundEngine', 'Goldmund', 'Current-feedback', 'High-feedback'],
+  'elasticity:up': ['multibit', 'R-2R', 'FPGA', 'Current-feedback', 'Goldmund', 'ZOTL', 'Low-feedback'],
+  // User wants clarity → delta-sigma (ESS), FPGA, high-feedback SS tend to deliver
+  'clarity:up': ['delta-sigma (ESS)', 'delta-sigma (AKM)', 'FPGA', 'Goldmund', 'SoundEngine', 'Current-feedback', 'Continuity', 'High-feedback', 'Class A'],
+  // User wants flow/density → R-2R, NOS tube, SET, low-feedback tend to deliver
+  'flow:up': ['R-2R', 'NOS tube', 'multibit', 'Single-ended triode', 'Push-pull tube', 'ZOTL', 'SIT', 'Low-feedback'],
+  'tonal_density:up': ['R-2R', 'NOS tube', 'Single-ended triode', 'Push-pull tube', 'SIT', 'Hybrid'],
+  // User has fatigue concern → NOS tube, R-2R, SET, low-feedback tend to be gentler
+  'fatigue_risk:up': ['NOS tube', 'R-2R', 'Single-ended triode', 'ZOTL', 'SIT', 'Low-feedback'],
+  // User wants composure → delta-sigma (AKM), FPGA, R-2R, Class A, high-feedback SS
+  'composure:up': ['delta-sigma (AKM)', 'FPGA', 'R-2R', 'Continuity', 'Class A', 'SoundEngine', 'High-feedback'],
+  // ── Amplifier-centric affinities ───────────────────
+  'warmth:up': ['Single-ended triode', 'Push-pull tube', 'SIT', 'Hybrid', 'Low-feedback'],
+  'texture:up': ['Single-ended triode', 'ZOTL', 'SIT', 'R-2R', 'NOS tube', 'Low-feedback'],
+  'speed:up': ['Goldmund', 'Current-feedback', 'SoundEngine', 'FPGA', 'High-feedback', 'Class AB'],
+  'spatial_precision:up': ['ZOTL', 'SIT', 'Continuity', 'FPGA', 'Class A', 'Low-feedback'],
 };
 
 // ── Scoring functions ─────────────────────────────────
@@ -233,3 +239,98 @@ export function rankProducts(
     }))
     .sort((a, b) => b.score - a.score);
 }
+
+// ── Amplifier Architecture Sonic Tendencies ──────────
+//
+// Maps amplifier architecture labels to their typical sonic
+// tendencies. Each entry lists traits the architecture tends
+// to emphasize (+) and de-emphasize (−). Used by the system
+// delta reasoning layer to predict sonic impact.
+//
+// These are editorial observations grounded in design physics
+// and listener consensus — not measurements.
+
+export interface ArchitectureTendency {
+  label: string;
+  /** Traits this architecture typically emphasizes. */
+  strengths: string[];
+  /** Traits this architecture typically de-emphasizes or sacrifices. */
+  weaknesses: string[];
+  /** Short design-physics explanation. */
+  rationale: string;
+}
+
+export const AMPLIFIER_ARCHITECTURE_TENDENCIES: Record<string, ArchitectureTendency> = {
+  'Single-ended triode': {
+    label: 'SET tube',
+    strengths: ['tonal_density', 'flow', 'texture', 'warmth'],
+    weaknesses: ['dynamics', 'composure', 'speed'],
+    rationale: 'Even-order harmonic distortion enriches midrange; low power limits bass control and dynamic headroom.',
+  },
+  'Push-pull tube': {
+    label: 'Push-pull tube',
+    strengths: ['tonal_density', 'warmth', 'dynamics', 'flow'],
+    weaknesses: ['speed', 'clarity'],
+    rationale: 'Cancels even-order distortion for more power and dynamics while retaining tube-family tonal character.',
+  },
+  'SIT': {
+    label: 'SIT / single-ended transistor',
+    strengths: ['texture', 'spatial_precision', 'flow', 'tonal_density'],
+    weaknesses: ['dynamics', 'composure'],
+    rationale: 'Static induction transistors produce tube-like harmonic structure with solid-state linearity. Very low power.',
+  },
+  'Class A': {
+    label: 'Class A solid-state',
+    strengths: ['composure', 'clarity', 'spatial_precision', 'warmth'],
+    weaknesses: ['speed', 'dynamics'],
+    rationale: 'Constant bias eliminates crossover distortion; lower efficiency trades power for refinement.',
+  },
+  'Class AB': {
+    label: 'Class AB solid-state',
+    strengths: ['dynamics', 'speed', 'composure', 'clarity'],
+    weaknesses: ['tonal_density', 'warmth'],
+    rationale: 'High current delivery and wide bandwidth. Crossover distortion minimized but present.',
+  },
+  'Low-feedback': {
+    label: 'Low-feedback solid-state',
+    strengths: ['flow', 'texture', 'elasticity', 'warmth'],
+    weaknesses: ['composure', 'clarity'],
+    rationale: 'Minimal negative feedback preserves musical elasticity at the cost of measured precision.',
+  },
+  'High-feedback': {
+    label: 'High-feedback solid-state',
+    strengths: ['clarity', 'composure', 'speed', 'dynamics'],
+    weaknesses: ['flow', 'warmth', 'texture'],
+    rationale: 'Deep feedback loop lowers distortion and output impedance for precise, controlled sound.',
+  },
+  'Hybrid': {
+    label: 'Hybrid (tube input / SS output)',
+    strengths: ['tonal_density', 'warmth', 'dynamics'],
+    weaknesses: ['texture', 'spatial_precision'],
+    rationale: 'Tube input stage shapes harmonic character; solid-state output provides current and control.',
+  },
+  'ZOTL': {
+    label: 'ZOTL (zero-hysteresis OTL)',
+    strengths: ['spatial_precision', 'texture', 'flow', 'clarity'],
+    weaknesses: ['warmth', 'tonal_density'],
+    rationale: 'Transformer-less output with impedance conversion via RF carrier. Unusually linear for a tube topology.',
+  },
+  'Goldmund': {
+    label: 'Goldmund / JOB minimalist',
+    strengths: ['speed', 'dynamics', 'elasticity', 'clarity'],
+    weaknesses: ['tonal_density', 'warmth'],
+    rationale: 'Ultra-short signal path, minimal gain stages. Maximizes transient speed and rhythmic articulation.',
+  },
+  'Current-feedback': {
+    label: 'Current-feedback',
+    strengths: ['speed', 'elasticity', 'dynamics', 'clarity'],
+    weaknesses: ['warmth', 'tonal_density'],
+    rationale: 'Current-mode feedback topology provides bandwidth independence from gain, yielding exceptional transient speed.',
+  },
+  'Continuity': {
+    label: 'Continuity (Schiit)',
+    strengths: ['composure', 'clarity', 'spatial_precision'],
+    weaknesses: ['warmth', 'texture'],
+    rationale: 'Proprietary Class A topology eliminates crossover distortion with higher efficiency than traditional Class A.',
+  },
+};

@@ -110,6 +110,15 @@ export interface Product {
    * Surfaced in the "Sources" section of advisory responses.
    */
   sourceReferences?: Array<{ source: string; note: string }>;
+
+  // ── Availability metadata ─────────────────────────────
+
+  /** Market availability status. Defaults to 'current' when omitted. */
+  availability?: 'current' | 'discontinued' | 'vintage';
+  /** Where this product is typically found. Defaults to 'new' when omitted. */
+  typicalMarket?: 'new' | 'used' | 'both';
+  /** Approximate used-market price range (USD), for discontinued/vintage products. */
+  usedPriceRange?: { low: number; high: number };
 }
 
 export const DAC_PRODUCTS: Product[] = [
@@ -1802,6 +1811,248 @@ export const DAC_PRODUCTS: Product[] = [
     sourceReferences: [
       { source: 'Head-Fi community', note: 'Extensive impressions comparing with Denafrips Ares and Schiit Bifrost.' },
       { source: 'Audio Science Review', note: 'Measurements and listening impressions of the Cyan 2 R-2R implementation.' },
+    ],
+  },
+
+  // ── Boutique expansion ────────────────────────────────
+
+  {
+    id: 'weiss-dac204',
+    brand: 'Weiss',
+    name: 'DAC204',
+    price: 2695,
+    category: 'dac',
+    architecture: 'delta-sigma (ESS ES9038Pro), Weiss DSP processing',
+    subcategory: 'standalone-dac',
+    priceTier: 'upper-mid',
+    brandScale: 'boutique',
+    region: 'europe',
+    country: 'CH',
+    topology: 'delta-sigma',
+    archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
+    primaryAxes: {
+      warm_bright: 'neutral',
+      smooth_detailed: 'detailed',
+      elastic_controlled: 'controlled',
+      airy_closed: 'airy',
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Weiss applies DSP processing that smooths ESS edge — more refined than typical ESS implementations. Low fatigue despite the precision.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'spatial_precision', level: 'emphasized' },
+        { trait: 'composure', level: 'emphasized' },
+        { trait: 'speed', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'flow', level: 'present' },
+        { trait: 'warmth', level: 'less_emphasized' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 0.7,
+      tonal_density: 0.4,
+      clarity: 1.0,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 0.7,
+      composure: 1.0,
+      speed: 0.7,
+      spatial_precision: 1.0,
+      elasticity: 0.4,
+    },
+    description:
+      'Swiss pro-audio pedigree applied to consumer hi-fi. The DAC204 uses ESS conversion with Weiss\'s proprietary DSP processing — achieving studio-grade precision without the clinical edge typical of ESS implementations. Exceptionally composed and spatially precise.',
+    retailer_links: [
+      { label: 'Weiss Engineering', url: 'https://weiss.ch/products/dac204/' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'spatial', tendency: 'holographic staging with precise image placement — the pro-audio heritage shows in the spatial resolution', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'neutral and transparent — the Weiss DSP removes ESS edge without adding warmth', basis: 'listener_consensus' },
+        { domain: 'dynamics', tendency: 'composed and proportional — dynamic contrasts are rendered accurately without exaggeration', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with warm speakers or tube amplification', effect: 'the precision and spatial qualities shine while upstream warmth provides tonal body', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in analytical or lean systems', effect: 'may feel too precise — the DAC204 doesn\'t compensate for upstream thinness', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'studio-grade precision, spatial holography, and composure', cost: 'tonal density and harmonic richness of R-2R or NOS designs', relative_to: 'Denafrips Pontus, Holo Spring', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Darko.Audio', note: 'Review covering the DAC204\'s pro-audio heritage and DSP refinement.' },
+      { source: 'Headphone.Guru', note: 'Review noting the spatial precision and low-fatigue presentation.' },
+    ],
+  },
+
+  {
+    id: 'holo-spring-3',
+    brand: 'Holo Audio',
+    name: 'Spring 3',
+    price: 2698,
+    category: 'dac',
+    architecture: 'Discrete R-2R (Holo proprietary, dual-mono)',
+    subcategory: 'standalone-dac',
+    priceTier: 'upper-mid',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    topology: 'r2r',
+    archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
+    primaryAxes: {
+      warm_bright: 'warm',
+      smooth_detailed: 'neutral',
+      elastic_controlled: 'neutral',
+      airy_closed: 'neutral',
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Dual-mono R-2R with natural tonal density. Inherently relaxed and fatigue-free.',
+    },
+    tendencyProfile: {
+      basis: 'listener_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'texture', level: 'emphasized' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'clarity', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'spatial_precision', level: 'present' },
+        { trait: 'warmth', level: 'present' },
+        { trait: 'speed', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 1.0,
+      tonal_density: 1.0,
+      clarity: 0.7,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 1.0,
+      composure: 0.7,
+      warmth: 0.7,
+      speed: 0.4,
+      spatial_precision: 0.7,
+      elasticity: 0.4,
+    },
+    description:
+      'Holo Audio\'s flagship-class dual-mono R-2R DAC — the Spring 3 is the sweet spot of the Holo range. Rich tonal density, natural texture, and musical flow. Upgradeable to the Kitsune-tuned "Level 3" variant for enhanced resolution.',
+    retailer_links: [
+      { label: 'Holo Audio', url: 'https://www.holoaudio.com/' },
+      { label: 'Kitsune HiFi', url: 'https://kitsunehifi.com/product/holo-audio-spring-3/' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'tonality', tendency: 'rich, harmonically dense presentation — instruments have body and weight that delta-sigma designs struggle to match', basis: 'listener_consensus' },
+        { domain: 'texture', tendency: 'tactile and dimensional — textures are rendered with physical presence', basis: 'listener_consensus' },
+        { domain: 'timing', tendency: 'natural musical flow with good dynamic authority — not as fast as FPGA but more engaging than NOS', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with transparent or precise amplification', effect: 'the R-2R density provides tonal body while the amp provides control and resolution', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in already warm or dense systems', effect: 'may compound density — clarity and transient speed could suffer', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'tonal richness, harmonic density, and natural musical engagement', cost: 'transient speed and the surgical precision of FPGA or ESS designs', relative_to: 'Chord Qutest, Weiss DAC204', basis: 'listener_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Head-Fi community', note: 'Extensive owner impressions comparing Spring 3 to May and competing R-2R designs.' },
+      { source: '6moons', note: 'Review praising the Spring\'s tonal authority and musical engagement.' },
+    ],
+  },
+
+  {
+    id: 'sonnet-morpheus',
+    brand: 'Sonnet Digital Audio',
+    name: 'Morpheus',
+    price: 2750,
+    category: 'dac',
+    architecture: 'Discrete sign-magnitude R-2R, non-oversampling capable',
+    subcategory: 'standalone-dac',
+    priceTier: 'upper-mid',
+    brandScale: 'boutique',
+    region: 'europe',
+    country: 'NL',
+    topology: 'r2r',
+    archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
+    primaryAxes: {
+      warm_bright: 'neutral',
+      smooth_detailed: 'neutral',
+      elastic_controlled: 'elastic',
+      airy_closed: 'neutral',
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'R-2R naturalness with dynamic authority. No fatigue risk — the presentation is energetic but not aggressive.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'dynamics', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'speed', level: 'present' },
+        { trait: 'flow', level: 'present' },
+        { trait: 'clarity', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'elasticity', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'warmth', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 0.7,
+      tonal_density: 1.0,
+      clarity: 0.7,
+      dynamics: 1.0,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 0.7,
+      composure: 0.7,
+      warmth: 0.4,
+      speed: 0.7,
+      spatial_precision: 0.7,
+      elasticity: 0.7,
+    },
+    description:
+      'Dutch R-2R DAC from audio veteran Cees Ruijtenberg (also behind Metrum). Sign-magnitude discrete conversion with a lively, dynamic presentation. More energetic than typical R-2R — trades some smoothness for rhythmic drive and authority.',
+    retailer_links: [
+      { label: 'Sonnet Digital Audio', url: 'https://www.sonnet-audio.com/morpheus.html' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'dynamics', tendency: 'authoritative and lively — macro dynamics have weight and impact uncommon in R-2R designs', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'dense and energetic rather than warm — tonal weight without sluggishness', basis: 'listener_consensus' },
+        { domain: 'timing', tendency: 'rhythmically engaging with good transient speed for an R-2R — sign-magnitude conversion keeps the leading edge crisp', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with composed or controlled amplification', effect: 'the dynamic energy is harnessed without becoming aggressive — the amp provides grip', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'with high-efficiency speakers', effect: 'the dynamic authority can become overwhelming — the Morpheus likes speakers that need driving', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'dynamic authority, rhythmic drive, and tonal density', cost: 'the smoothness and ease of NOS or warmer R-2R designs', relative_to: 'Holo Spring 3, Denafrips Pontus', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: '6moons', note: 'Review covering the Morpheus\'s sign-magnitude R-2R design and dynamic presentation.' },
+      { source: 'Darko.Audio', note: 'Impressions noting the lively, energetic character compared to typical R-2R.' },
     ],
   },
 ];

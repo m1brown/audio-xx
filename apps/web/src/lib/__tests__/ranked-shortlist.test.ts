@@ -237,7 +237,7 @@ describe('Amplifier shopping flow', () => {
     expect(isAnswerReady(ctx, EMPTY_SIGNALS)).toBe(true);
   });
 
-  it('produces a shopping answer (without scored catalog)', () => {
+  it('produces a shopping answer with amplifier catalog', () => {
     const ctx = detectShoppingIntent('best integrated amp under $3000', EMPTY_SIGNALS);
     const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
     expect(answer.category).toBe('amplifier');
@@ -300,5 +300,115 @@ describe('Synthesis brief and sonic landscape', () => {
     // Should have multiple distinct philosophies
     const unique = new Set(labels);
     expect(unique.size).toBeGreaterThan(1);
+  });
+});
+
+// ── Why This Fits You ─────────────────────────────────
+
+describe('Why this fits you layer', () => {
+  it('includes whyFitsYou when taste signals are present', () => {
+    const signals = {
+      matched_phrases: ['warmth'],
+      symptoms: [],
+      traits: { tonality: 'up' as const, elasticity: 'up' as const },
+    };
+    const ctx = detectShoppingIntent('best DAC under $2000', signals);
+    const answer = buildShoppingAnswer(ctx, signals);
+
+    expect(answer.whyFitsYou).toBeDefined();
+    expect(answer.whyFitsYou!.length).toBeGreaterThan(0);
+    expect(answer.whyFitsYou!.length).toBeLessThan(5); // max 4
+  });
+
+  it('passes whyFitsYou through to AdvisoryResponse', () => {
+    const signals = {
+      matched_phrases: ['warmth'],
+      symptoms: [],
+      traits: { tonality: 'up' as const, elasticity: 'up' as const },
+    };
+    const ctx = detectShoppingIntent('best DAC under $2000', signals);
+    const answer = buildShoppingAnswer(ctx, signals);
+    const advisory = shoppingToAdvisory(answer, signals);
+
+    expect(advisory.whyFitsYou).toBeDefined();
+    expect(advisory.whyFitsYou!.length).toBeGreaterThan(0);
+  });
+
+  it('includes topology diversity bullet when multiple topologies present', () => {
+    const ctx = detectShoppingIntent('best DAC under $2000', EMPTY_SIGNALS);
+    const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
+
+    // Sparse signals → diverse topologies → should mention different philosophies
+    if (answer.whyFitsYou) {
+      const hasDiversityBullet = answer.whyFitsYou.some((b) => b.includes('design philosophies'));
+      // When topology diversity exists, this bullet should be present
+      expect(hasDiversityBullet || answer.whyFitsYou.length === 0).toBe(true);
+    }
+  });
+
+  it('returns undefined whyFitsYou when no context and no products', () => {
+    // Streamer category has no scored catalog — products will be empty
+    const ctx = detectShoppingIntent('best streamer under $1000', EMPTY_SIGNALS);
+    const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
+
+    // With no taste, no system, no products → should be undefined
+    expect(answer.whyFitsYou).toBeUndefined();
+  });
+});
+
+// ── Amplifier Shortlist with Real Catalog ─────────────
+
+describe('Amplifier shortlist with catalog', () => {
+  it('produces product examples for "best integrated amp under $3000"', () => {
+    const ctx = detectShoppingIntent('best integrated amp under $3000', EMPTY_SIGNALS);
+    const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
+
+    expect(answer.productExamples.length).toBeGreaterThan(0);
+    expect(answer.category).toBe('amplifier');
+  });
+
+  it('produces diverse topologies in amplifier shortlist', () => {
+    const ctx = detectShoppingIntent('best amp under $3000', EMPTY_SIGNALS);
+    const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
+
+    // With sparse signals and diverse catalog, should have multiple products
+    expect(answer.productExamples.length).toBeGreaterThan(2);
+  });
+
+  it('generates sonic landscape for amplifier shortlist', () => {
+    const ctx = detectShoppingIntent('best amplifier under $3000', EMPTY_SIGNALS);
+    const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
+
+    expect(answer.sonicLandscape).toBeDefined();
+    expect(answer.sonicLandscape!).toContain('sonic directions');
+  });
+
+  it('generates synthesis brief for amplifier shortlist', () => {
+    const ctx = detectShoppingIntent('best integrated amp under $3000', EMPTY_SIGNALS);
+    const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
+
+    expect(answer.synthesisBrief).toBeDefined();
+    expect(answer.synthesisBrief!.kind).toBe('shopping_shortlist');
+    expect(answer.synthesisBrief!.queryCategory).toBe('amplifier');
+  });
+
+  it('produces AdvisoryResponse with amplifier product options', () => {
+    const ctx = detectShoppingIntent('best amp under $3000', EMPTY_SIGNALS);
+    const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
+    const advisory = shoppingToAdvisory(answer, EMPTY_SIGNALS);
+
+    expect(advisory.options).toBeDefined();
+    expect(advisory.options!.length).toBeGreaterThan(0);
+    expect(advisory.kind).toBe('shopping');
+    expect(advisory.subject).toBe('amplifier');
+  });
+
+  it('respects budget ceiling for amplifier products', () => {
+    const ctx = detectShoppingIntent('best amp under $1000', EMPTY_SIGNALS);
+    const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
+
+    for (const p of answer.productExamples) {
+      expect(p.price).toBeLessThan(1001);
+    }
   });
 });

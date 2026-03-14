@@ -28,7 +28,7 @@
 import type { AdvisoryResponse } from '../../lib/advisory-response';
 import AdvisorySection from './AdvisorySection';
 import AdvisoryProse from './AdvisoryProse';
-import AdvisoryOptions from './AdvisoryOptions';
+import AdvisoryProductCards from './AdvisoryProductCard';
 import AdvisoryLinks from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
 import AdvisoryDiagnostics from './AdvisoryDiagnostics';
@@ -452,6 +452,39 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
+      {/* ── Why this fits you ──────────────────────── */}
+      {a.whyFitsYou && a.whyFitsYou.length > 0 && (
+        <div
+          style={{
+            borderLeft: '3px solid #b8a880',
+            paddingLeft: '1rem',
+            marginBottom: '1.25rem',
+            background: '#faf9f5',
+            padding: '0.75rem 1rem',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase' as const,
+              color: '#b8a880',
+              marginBottom: '0.4rem',
+            }}
+          >
+            Why this fits you
+          </div>
+          <ul style={{ margin: 0, paddingLeft: '1.1rem', lineHeight: 1.7 }}>
+            {a.whyFitsYou.map((bullet, i) => (
+              <li key={i} style={{ fontSize: '0.93rem', color: '#444', marginBottom: '0.2rem' }}>
+                {bullet}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {a.strengths && a.strengths.length > 0 && (
         <AdvisorySection label="What is working well">
           <BulletList items={a.strengths} />
@@ -640,7 +673,7 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
       {/* ── 10. Options ───────────────────────────── */}
       {a.options && a.options.length > 0 && (
         <AdvisorySection label="Worth considering">
-          <AdvisoryOptions options={a.options} />
+          <AdvisoryProductCards options={a.options} />
         </AdvisorySection>
       )}
 

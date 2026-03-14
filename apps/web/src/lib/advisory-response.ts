@@ -25,6 +25,20 @@ import { getArchetypeLabel } from './archetype';
 
 // ── Types ────────────────────────────────────────────
 
+/**
+ * Predicted sonic impact of adding a product to the user's system.
+ * Generated deterministically from product tendency profiles and
+ * system character. Explains *what changes*, not just *what it is*.
+ */
+export interface SystemDelta {
+  /** One-sentence explanation of why this product fits the system context. */
+  whyFitsSystem?: string;
+  /** Traits the product is likely to improve or add to the system. */
+  likelyImprovements?: string[];
+  /** Traits the product may reduce or trade away. */
+  tradeOffs?: string[];
+}
+
 export interface AdvisoryOption {
   name: string;
   brand?: string;
@@ -38,6 +52,26 @@ export interface AdvisoryOption {
   caution?: string;
   /** Links to official site, reviews, retailers. */
   links?: Array<{ label: string; url: string }>;
+
+  // ── Enhanced card fields ─────────────────────────────
+  /** Product image URL — falls back to placeholder when absent. */
+  imageUrl?: string;
+  /** Sonic direction label (e.g. "flow-oriented", "precision-focused"). */
+  sonicDirectionLabel?: string;
+  /** Product category or type for display (e.g. "Integrated Amplifier"). */
+  productType?: string;
+  /** Manufacturer URL — prioritized in link display. */
+  manufacturerUrl?: string;
+  /** Used-market exploration link (HiFi Shark, Audiogon, etc.). */
+  usedMarketUrl?: string;
+  /** Market availability. */
+  availability?: 'current' | 'discontinued' | 'vintage';
+  /** Used price range for discontinued/vintage products. */
+  usedPriceRange?: { low: number; high: number };
+  /** Used-market discovery links (HiFi Shark, Audiogon, etc.). */
+  usedMarketSources?: Array<{ name: string; url: string; region: string }>;
+  /** Predicted sonic impact of this product in the user's system. */
+  systemDelta?: SystemDelta;
 }
 
 export interface AdvisoryLink {
@@ -232,6 +266,10 @@ export interface AdvisoryResponse {
   systemContext?: string;
   /** Inferred system tendencies (prose summary). */
   systemTendencies?: string;
+
+  // ── 2b. Why This Fits You ───────────────────────────
+  /** Compact personalization bullets connecting recommendation to user context. */
+  whyFitsYou?: string[];
 
   // ── 3. Alignment ────────────────────────────────────
   /** How listener priorities relate to the recommendation. */
@@ -584,6 +622,44 @@ export function consultationToAdvisory(c: ConsultationResponse): AdvisoryRespons
   });
 }
 
+// ── "Why this fits you" for gear responses ────────────
+
+/**
+ * Build compact personalization bullets from gear response data.
+ * Deterministic — uses only hearing, systemDirection, and archetype.
+ */
+function buildGearWhyFitsYou(r: GearResponse): string[] | undefined {
+  const bullets: string[] = [];
+
+  // Archetype context
+  if (r.userArchetype) {
+    const archetypeLabels: Record<string, string> = {
+      flow_organic: 'flow-oriented',
+      precision_explicit: 'precision-oriented',
+      rhythmic_propulsive: 'rhythm-oriented',
+      tonal_saturated: 'tonally saturated',
+      spatial_holographic: 'spatially focused',
+    };
+    const label = archetypeLabels[r.userArchetype];
+    if (label) {
+      bullets.push(`Your ${label} listening style is relevant to how this component will present music in your system.`);
+    }
+  }
+
+  // System tendency interaction
+  if (r.systemDirection?.tendencySummary) {
+    bullets.push(`Given your system's current character — ${r.systemDirection.tendencySummary.toLowerCase()} — this component's behavior may shift or reinforce the balance.`);
+  }
+
+  // Hearing-derived context (summarize if present)
+  if (r.hearing && r.hearing.length > 0 && bullets.length < 3) {
+    bullets.push('Your stated priorities are reflected in the evaluation above — the fit assessment considers what you told us you value.');
+  }
+
+  if (bullets.length === 0) return undefined;
+  return bullets.slice(0, 4);
+}
+
 // ── Adapter: GearResponse → Advisory ─────────────────
 
 export function gearResponseToAdvisory(r: GearResponse): AdvisoryResponse {
@@ -641,6 +717,7 @@ export function gearResponseToAdvisory(r: GearResponse): AdvisoryResponse {
     subject: r.subjects.length > 0 ? r.subjects.join(', ') : 'your question',
 
     listenerPriorities,
+    whyFitsYou: buildGearWhyFitsYou(r),
     systemTendencies: r.systemDirection?.tendencySummary ?? undefined,
 
     // anchor + character become the prose body
@@ -684,6 +761,15 @@ export function shoppingToAdvisory(
     fitNote: p.fitNote,
     caution: p.caution,
     links: p.links?.map((l) => ({ label: l.label, url: l.url })),
+    // Enhanced card fields
+    sonicDirectionLabel: p.sonicDirectionLabel,
+    productType: p.productType,
+    manufacturerUrl: p.manufacturerUrl,
+    usedMarketUrl: p.usedMarketUrl,
+    availability: p.availability,
+    usedPriceRange: p.usedPriceRange,
+    usedMarketSources: p.usedMarketSources,
+    systemDelta: p.systemDelta,
   }));
 
   const statedGaps = a.statedGaps?.map((g) => GAP_LABELS[g]);
@@ -714,6 +800,7 @@ export function shoppingToAdvisory(
     subject: a.category,
 
     listenerPriorities,
+    whyFitsYou: a.whyFitsYou,
     systemContext: a.systemNote,
 
     recommendedDirection: a.bestFitDirection,
