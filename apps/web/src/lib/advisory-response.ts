@@ -321,6 +321,14 @@ export interface AdvisoryResponse {
   /** Category-specific dependency caveat. */
   dependencyCaveat?: string;
 
+  // ── 7b. Sonic Landscape ────────────────────────────
+  /** Explains the design philosophies represented in the shortlist. */
+  sonicLandscape?: string;
+
+  // ── 7c. Refinement Prompts ────────────────────────
+  /** Questions that would deepen personalization in the next turn. */
+  refinementPrompts?: string[];
+
   // ── 8. Bottom Line ──────────────────────────────────
   /** One-sentence restrained conclusion. */
   bottomLine?: string;
@@ -694,6 +702,13 @@ export function shoppingToAdvisory(
     }
   }
 
+  // Build follow-up: prefer explicit refinement question, then
+  // synthesize from refinement prompts
+  const followUp = a.refinementQuestion
+    ?? (a.refinementPrompts && a.refinementPrompts.length > 0
+      ? a.refinementPrompts.join(' ')
+      : undefined);
+
   return enrichAdvisory({
     kind: 'shopping',
     subject: a.category,
@@ -710,7 +725,9 @@ export function shoppingToAdvisory(
     statedGaps: statedGaps && statedGaps.length > 0 ? statedGaps : undefined,
     dependencyCaveat: a.dependencyCaveat,
 
-    followUp: a.refinementQuestion,
+    sonicLandscape: a.sonicLandscape,
+    refinementPrompts: a.refinementPrompts,
+    followUp,
 
     // Source references from recommended products
     sourceReferences: sourceRefs.length > 0 ? sourceRefs : undefined,

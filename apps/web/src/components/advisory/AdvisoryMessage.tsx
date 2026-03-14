@@ -611,7 +611,33 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
-      {/* ── 9. Options ───────────────────────────── */}
+      {/* ── 9. Sonic Landscape ──────────────────── */}
+      {a.sonicLandscape && (
+        <AdvisorySection label="Sonic directions represented">
+          <div style={{ fontSize: '0.95rem', lineHeight: 1.75, color: '#333' }}>
+            {a.sonicLandscape.split('\n').map((line, i) => {
+              // Lines starting with ** are philosophy labels
+              const boldMatch = line.match(/^\*\*(.+?)\*\*\s*(.+)/);
+              if (boldMatch) {
+                return (
+                  <div key={i} style={{ marginBottom: '0.5rem', paddingLeft: '0.25rem' }}>
+                    <span style={{ fontWeight: 600, color: '#222' }}>{boldMatch[1]}</span>
+                    <span style={{ color: '#555' }}> {boldMatch[2]}</span>
+                  </div>
+                );
+              }
+              if (line.trim() === '') return null;
+              return (
+                <p key={i} style={{ margin: '0 0 0.5rem 0', color: i === 0 ? '#333' : '#555' }}>
+                  {line}
+                </p>
+              );
+            })}
+          </div>
+        </AdvisorySection>
+      )}
+
+      {/* ── 10. Options ───────────────────────────── */}
       {a.options && a.options.length > 0 && (
         <AdvisorySection label="Worth considering">
           <AdvisoryOptions options={a.options} />
@@ -635,7 +661,7 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
         </div>
       )}
 
-      {/* ── 10. Bottom line ──────────────────────── */}
+      {/* ── 11. Bottom line ──────────────────────── */}
       {a.bottomLine && (
         <p
           style={{
@@ -650,8 +676,41 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
         </p>
       )}
 
-      {/* ── 11. Follow-up (blue box) ─────────────── */}
-      {a.followUp && (
+      {/* ── 12. Refinement prompts ────────────────── */}
+      {a.refinementPrompts && a.refinementPrompts.length > 0 && (
+        <div
+          style={{
+            borderLeft: '3px solid #5a8a9a',
+            paddingLeft: '1rem',
+            padding: '0.75rem 1rem',
+            marginBottom: '1.25rem',
+            background: '#f4f8fa',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase' as const,
+              color: '#5a8a9a',
+              marginBottom: '0.4rem',
+            }}
+          >
+            To refine this shortlist
+          </div>
+          <ul style={{ margin: 0, paddingLeft: '1.1rem', lineHeight: 1.7 }}>
+            {a.refinementPrompts.map((prompt, i) => (
+              <li key={i} style={{ fontSize: '0.93rem', color: '#444', marginBottom: '0.15rem' }}>
+                {prompt}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* ── 13. Follow-up (blue box) ─────────────── */}
+      {a.followUp && !a.refinementPrompts?.length && (
         <div
           style={{
             borderLeft: '3px solid #5a8a9a',

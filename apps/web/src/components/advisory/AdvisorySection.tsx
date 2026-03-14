@@ -42,10 +42,10 @@ export default function AdvisorySection({ number, label, children }: AdvisorySec
 
   // ── Default uppercase label ──
   return (
-    <div style={{ marginBottom: '1.25rem' }}>
+    <div style={{ marginBottom: '1.4rem' }}>
       <div
         style={{
-          marginBottom: '0.45rem',
+          marginBottom: '0.5rem',
           fontSize: '0.78rem',
           fontWeight: 700,
           letterSpacing: '0.05em',

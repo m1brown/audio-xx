@@ -14,7 +14,7 @@
 
 // @ts-nocheck — globals provided by test-runner.ts
 
-import { detectIntent, extractShortlistCategory, extractShortlistBudget } from '../intent';
+import { detectIntent, extractShortlistCategory, extractShortlistBudget, extractAmplifierSubtype } from '../intent';
 import { detectShoppingIntent, isAnswerReady, buildShoppingAnswer } from '../shopping-intent';
 import { shoppingToAdvisory } from '../advisory-response';
 
@@ -207,5 +207,98 @@ describe('Shopping answer for direct shortlist', () => {
     for (const p of answer.productExamples) {
       expect(p.price).toBeLessThan(5001);
     }
+  });
+});
+
+// ── Amplifier Shopping Flow ──────────────────────────
+
+describe('Amplifier shopping flow', () => {
+  it('detects "best integrated amp under $3000" as shopping', () => {
+    const result = detectIntent('best integrated amp under $3000');
+    expect(result.intent).toBe('shopping');
+  });
+
+  it('extracts amplifier category', () => {
+    expect(extractShortlistCategory('best integrated amp under $3000')).toBe('amplifier');
+  });
+
+  it('extracts amplifier subtype as integrated', () => {
+    expect(extractAmplifierSubtype('best integrated amp under $3000')).toBe('integrated');
+  });
+
+  it('extracts budget as 3000', () => {
+    expect(extractShortlistBudget('best integrated amp under $3000')).toBe(3000);
+  });
+
+  it('skips clarification when category + budget present', () => {
+    const ctx = detectShoppingIntent('best integrated amp under $3000', EMPTY_SIGNALS);
+    expect(ctx.category).toBe('amplifier');
+    expect(ctx.budgetMentioned).toBe(true);
+    expect(isAnswerReady(ctx, EMPTY_SIGNALS)).toBe(true);
+  });
+
+  it('produces a shopping answer (without scored catalog)', () => {
+    const ctx = detectShoppingIntent('best integrated amp under $3000', EMPTY_SIGNALS);
+    const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
+    expect(answer.category).toBe('amplifier');
+    // Amplifiers don't have a product catalog yet
+    expect(answer.bestFitDirection.length).toBeGreaterThan(0);
+  });
+});
+
+// ── Synthesis Brief & Sonic Landscape ────────────────
+
+describe('Synthesis brief and sonic landscape', () => {
+  it('includes synthesis brief for DAC shortlist', () => {
+    const ctx = detectShoppingIntent('best DAC under $2000', EMPTY_SIGNALS);
+    const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
+
+    expect(answer.synthesisBrief).toBeDefined();
+    expect(answer.synthesisBrief!.kind).toBe('shopping_shortlist');
+    expect(answer.synthesisBrief!.queryCategory).toBe('DAC');
+    expect(answer.synthesisBrief!.budget).toBe(2000);
+  });
+
+  it('includes sonic landscape for sparse-signal DAC query', () => {
+    const ctx = detectShoppingIntent('best DAC under $2000', EMPTY_SIGNALS);
+    const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
+
+    expect(answer.sonicLandscape).toBeDefined();
+    expect(answer.sonicLandscape!.length).toBeGreaterThan(0);
+  });
+
+  it('includes refinement prompts when context is missing', () => {
+    const ctx = detectShoppingIntent('best DAC under $2000', EMPTY_SIGNALS);
+    const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
+
+    expect(answer.refinementPrompts).toBeDefined();
+    expect(answer.refinementPrompts!.length).toBeGreaterThan(0);
+  });
+
+  it('passes sonic landscape through to AdvisoryResponse', () => {
+    const ctx = detectShoppingIntent('best DAC under $2000', EMPTY_SIGNALS);
+    const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
+    const advisory = shoppingToAdvisory(answer, EMPTY_SIGNALS);
+
+    expect(advisory.sonicLandscape).toBeDefined();
+  });
+
+  it('passes refinement prompts through to AdvisoryResponse', () => {
+    const ctx = detectShoppingIntent('best DAC under $2000', EMPTY_SIGNALS);
+    const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
+    const advisory = shoppingToAdvisory(answer, EMPTY_SIGNALS);
+
+    expect(advisory.refinementPrompts).toBeDefined();
+    expect(advisory.refinementPrompts!.length).toBeGreaterThan(0);
+  });
+
+  it('candidate philosophies reflect different topologies', () => {
+    const ctx = detectShoppingIntent('best DAC under $2000', EMPTY_SIGNALS);
+    const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
+
+    const labels = answer.synthesisBrief!.candidatePhilosophies.map((p) => p.label);
+    // Should have multiple distinct philosophies
+    const unique = new Set(labels);
+    expect(unique.size).toBeGreaterThan(1);
   });
 });

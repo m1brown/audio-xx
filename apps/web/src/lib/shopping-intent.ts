@@ -984,6 +984,97 @@ export interface ProductExample {
   sourceReferences?: Array<{ source: string; note: string }>;
 }
 
+// ── Synthesis Brief ───────────────────────────────────
+//
+// Structured reasoning summary that the rendering layer uses to
+// generate the final narrative. The deterministic reasoning layer
+// remains the source of truth — the brief makes reasoning visible
+// and transportable to the presentation layer.
+
+export interface ShoppingShortlistBrief {
+  kind: 'shopping_shortlist';
+  /** Canonical category (DAC, amplifier, speakers, etc.) */
+  queryCategory: string;
+  /** Amplifier subtype when applicable (integrated, power, preamp). */
+  amplifierSubtype?: string;
+  /** Budget ceiling. */
+  budget: number | null;
+  /** One-line user taste summary or "No taste signals detected." */
+  userTasteSummary: string;
+  /** Active system summary or "No system context provided." */
+  activeSystemSummary: string;
+  /** Which context dimensions are still missing. */
+  missingContext: GapDimension[];
+  /** Sonic philosophies represented by the selected candidates. */
+  candidatePhilosophies: CandidatePhilosophy[];
+  /** Narrative goal — what the shortlist should communicate. */
+  narrativeGoal: string;
+  /** Refinement prompts — questions that would deepen personalization. */
+  refinementPrompts: string[];
+}
+
+/** A sonic direction represented by one or more shortlist candidates. */
+export interface CandidatePhilosophy {
+  /** Design topology or philosophy label (e.g., "FPGA pulse-array", "Discrete R-2R"). */
+  label: string;
+  /** What this direction prioritizes. */
+  emphasis: string;
+  /** Product names that represent this direction. */
+  representatives: string[];
+}
+
+export interface ProductInquiryBrief {
+  kind: 'product_inquiry';
+  /** Product name and brand. */
+  productIdentity: string;
+  /** Architecture / design family. */
+  architecture: string;
+  /** Likely sonic direction (one sentence). */
+  sonicDirection: string;
+  /** System context summary if available. */
+  systemContext: string;
+  /** What the narrative should explain. */
+  narrativeGoal: string;
+}
+
+export interface ComparisonBrief {
+  kind: 'comparison';
+  /** Product A philosophy (one sentence). */
+  productAPhilosophy: string;
+  /** Product B philosophy (one sentence). */
+  productBPhilosophy: string;
+  /** Shared traits. */
+  sharedTraits: string[];
+  /** Key differences. */
+  keyDifferences: string[];
+  /** System relevance (if system context present). */
+  systemRelevance: string;
+  /** What the narrative should explain. */
+  narrativeGoal: string;
+}
+
+export interface SystemAssessmentBrief {
+  kind: 'system_assessment';
+  /** System identity (component chain). */
+  systemIdentity: string;
+  /** Shared design philosophy. */
+  sharedPhilosophy: string;
+  /** Defining strengths. */
+  definingStrengths: string[];
+  /** Main trade-offs. */
+  mainTradeoffs: string[];
+  /** Refinement path. */
+  refinementPath: string;
+  /** Listener philosophy insight. */
+  listenerInsight: string;
+}
+
+export type SynthesisBrief =
+  | ShoppingShortlistBrief
+  | ProductInquiryBrief
+  | ComparisonBrief
+  | SystemAssessmentBrief;
+
 export interface ShoppingAnswer {
   category: string;
   budget: number | null;
@@ -1001,6 +1092,12 @@ export interface ShoppingAnswer {
   dependencyCaveat?: string;
   /** Dependency-aware refinement question appended after the main answer. */
   refinementQuestion?: string;
+  /** Structured reasoning brief for the rendering layer. */
+  synthesisBrief?: ShoppingShortlistBrief;
+  /** Sonic landscape guide — explains what the shortlist candidates represent. */
+  sonicLandscape?: string;
+  /** Refinement prompts — questions to deepen personalization. */
+  refinementPrompts?: string[];
 }
 
 // ── Taste direction templates ─────────────────────────
@@ -1703,6 +1800,162 @@ function selectHeadphoneExamples(
   });
 }
 
+// ── Sonic philosophy labels ──────────────────────────
+//
+// Maps topology tags and architecture keywords to human-readable
+// philosophy labels for the sonic landscape guide.
+
+const TOPOLOGY_PHILOSOPHY: Record<string, { label: string; emphasis: string }> = {
+  'r2r':                  { label: 'Discrete R-2R ladder',        emphasis: 'tonal density, harmonic richness, and analog-like naturalness' },
+  'delta-sigma':          { label: 'Delta-sigma conversion',      emphasis: 'measured precision, low noise floor, and studio-grade neutrality' },
+  'fpga':                 { label: 'FPGA pulse-array',            emphasis: 'timing precision, transient speed, and spatial definition' },
+  'multibit':             { label: 'Multibit conversion',         emphasis: 'tonal weight and dynamic authority with vintage-inflected character' },
+  'nos':                  { label: 'Non-oversampling (NOS)',       emphasis: 'organic flow, tube-like ease, and zero-filter naturalness' },
+  // Amplifier topologies
+  'set':                  { label: 'Single-ended triode (SET)',    emphasis: 'midrange purity, harmonic richness, and intimacy' },
+  'push-pull-tube':       { label: 'Push-pull tube',              emphasis: 'tonal warmth with more power and dynamic range than SET' },
+  'class-a-solid-state':  { label: 'Class A solid-state',         emphasis: 'warmth and refinement without tube maintenance' },
+  'class-ab-solid-state': { label: 'Class AB solid-state',        emphasis: 'wide bandwidth, current delivery, and dynamic authority' },
+  'class-d':              { label: 'Class D',                     emphasis: 'efficiency, compact form factor, and modern low-noise design' },
+  'hybrid':               { label: 'Hybrid (tube + solid-state)', emphasis: 'tube tonality with solid-state current delivery' },
+  // Speaker topologies
+  'horn-loaded':          { label: 'Horn-loaded',                 emphasis: 'dynamic impact, efficiency, and immediacy' },
+  'bass-reflex':          { label: 'Bass-reflex',                 emphasis: 'extended bass, wide dynamic range, and versatility' },
+  'sealed':               { label: 'Sealed cabinet',              emphasis: 'tight bass control, midrange clarity, and placement flexibility' },
+  'open-baffle':          { label: 'Open baffle',                 emphasis: 'spatial openness and naturalness with minimal cabinet coloration' },
+  'transmission-line':    { label: 'Transmission line',           emphasis: 'deep controlled bass with open midrange character' },
+};
+
+/**
+ * Build a sonic landscape paragraph from the selected product examples.
+ * Explains the design philosophies represented in the shortlist.
+ */
+function buildSonicLandscape(
+  products: ProductExample[],
+  allProducts: Product[],
+  category: string,
+): string | undefined {
+  if (products.length === 0) return undefined;
+
+  // Find the full Product objects to access topology
+  const philosophies: Map<string, string[]> = new Map();
+  for (const ex of products) {
+    const full = allProducts.find((p) => p.name === ex.name && p.brand === ex.brand);
+    const topo = full?.topology
+      ?? full?.architecture?.split(/\s/)[0]?.toLowerCase()
+      ?? 'unknown';
+    const philosophy = TOPOLOGY_PHILOSOPHY[topo];
+    if (philosophy) {
+      const existing = philosophies.get(philosophy.label) ?? [];
+      existing.push(`${ex.brand} ${ex.name}`);
+      philosophies.set(philosophy.label, existing);
+    }
+  }
+
+  if (philosophies.size <= 1) return undefined;
+
+  const lines: string[] = [
+    `These ${category} options represent different sonic directions:`,
+  ];
+  for (const [label, reps] of philosophies) {
+    const philo = Object.values(TOPOLOGY_PHILOSOPHY).find((p) => p.label === label);
+    if (philo) {
+      lines.push(`**${label}** (${reps.join(', ')}) — prioritizes ${philo.emphasis}.`);
+    }
+  }
+  lines.push(
+    'Each approach has trade-offs. The right choice depends on your listening priorities and how the component interacts with the rest of your system.',
+  );
+  return lines.join('\n');
+}
+
+/**
+ * Build the candidate philosophy list for the synthesis brief.
+ */
+function buildCandidatePhilosophies(
+  products: ProductExample[],
+  allProducts: Product[],
+): CandidatePhilosophy[] {
+  const byTopo = new Map<string, CandidatePhilosophy>();
+  for (const ex of products) {
+    const full = allProducts.find((p) => p.name === ex.name && p.brand === ex.brand);
+    const topo = full?.topology
+      ?? full?.architecture?.split(/\s/)[0]?.toLowerCase()
+      ?? 'unknown';
+    const philosophy = TOPOLOGY_PHILOSOPHY[topo];
+    if (!philosophy) continue;
+    const existing = byTopo.get(topo);
+    if (existing) {
+      existing.representatives.push(`${ex.brand} ${ex.name}`);
+    } else {
+      byTopo.set(topo, {
+        label: philosophy.label,
+        emphasis: philosophy.emphasis,
+        representatives: [`${ex.brand} ${ex.name}`],
+      });
+    }
+  }
+  return [...byTopo.values()];
+}
+
+/**
+ * Build refinement prompts based on what context is missing.
+ * These help the user deepen personalization in subsequent turns.
+ */
+function buildRefinementPrompts(
+  gaps: GapDimension[],
+  category: ShoppingCategory,
+): string[] {
+  const prompts: string[] = [];
+  if (gaps.includes('taste')) {
+    prompts.push('Do you prefer more tonal density and warmth, or more precision and transient speed?');
+  }
+  if (gaps.includes('system')) {
+    const catParts = category === 'dac'
+      ? 'amplifier and speakers'
+      : category === 'amplifier'
+        ? 'DAC and speakers'
+        : category === 'speaker'
+          ? 'amplifier and source'
+          : 'other components';
+    prompts.push(`What ${catParts} are in your system?`);
+  }
+  if (!gaps.includes('system') && !gaps.includes('taste')) {
+    prompts.push('What room size and typical listening level do you have?');
+  }
+  if (gaps.includes('use_case')) {
+    prompts.push('What kind of music do you listen to most?');
+  }
+  return prompts.slice(0, 3); // max 3 prompts
+}
+
+/**
+ * Build a user context reference for the shortlist framing.
+ * References system, taste, and listening preferences when available.
+ */
+function buildUserContextNote(
+  ctx: ShoppingContext,
+  signals: ExtractedSignals,
+  matchedProfile: TasteProfile | undefined,
+  reasoning?: ReasoningResult,
+): string | undefined {
+  const parts: string[] = [];
+
+  // Taste context
+  if (matchedProfile) {
+    parts.push(`your preference for ${matchedProfile.label}`);
+  }
+
+  // System context
+  if (ctx.systemProvided) {
+    parts.push('your current system');
+  }
+
+  if (parts.length === 0) return undefined;
+
+  return `These options represent different sonic directions that could work well given ${parts.join(' and ')}.`;
+}
+
 // ── Builder ───────────────────────────────────────────
 
 /**
@@ -1768,14 +2021,44 @@ export function buildShoppingAnswer(
   // 5. Watch for
   const watchFor = taste.watchFor;
 
-  // 6. System note
-  const systemNote = ctx.systemProvided
-    ? `This direction makes more sense if the rest of the chain is not already biased in the same way. A ${categoryLabel} change will shift the overall balance — listen for whether the qualities you value are preserved.`
-    : undefined;
+  // 6. System note — references user context when available
+  const userContextNote = buildUserContextNote(ctx, signals, matchedProfile, reasoning);
+  const systemNote = userContextNote
+    ?? (ctx.systemProvided
+      ? `This direction makes more sense if the rest of the chain is not already biased in the same way. A ${categoryLabel} change will shift the overall balance — listen for whether the qualities you value are preserved.`
+      : undefined);
 
   // Mark as provisional when the answer is based on incomplete context
   const gaps = getStatedGaps(ctx, signals);
   const provisional = gaps.length > 0;
+
+  // 7. Sonic landscape — explains the design philosophies represented
+  const fullCatalog = ctx.category === 'dac' ? DAC_PRODUCTS
+    : ctx.category === 'speaker' ? SPEAKER_PRODUCTS
+    : [];
+  const sonicLandscape = buildSonicLandscape(productExamples, fullCatalog, categoryLabel);
+
+  // 8. Refinement prompts — questions to deepen personalization
+  const refinementPrompts = provisional ? buildRefinementPrompts(gaps, ctx.category) : [];
+
+  // 9. Synthesis brief — structured reasoning for the rendering layer
+  const synthesisBrief: ShoppingShortlistBrief = {
+    kind: 'shopping_shortlist',
+    queryCategory: categoryLabel,
+    budget: ctx.budgetAmount,
+    userTasteSummary: hasTasteSignal
+      ? `Prefers ${effectiveTasteLabel}.`
+      : 'No taste signals detected.',
+    activeSystemSummary: ctx.systemProvided
+      ? 'System context provided.'
+      : 'No system context provided.',
+    missingContext: gaps,
+    candidatePhilosophies: buildCandidatePhilosophies(productExamples, fullCatalog),
+    narrativeGoal: hasTasteSignal
+      ? `Explain which ${categoryLabel} designs align with the listener's taste and why.`
+      : `Guide the listener through the sonic landscape of ${categoryLabel} design philosophies within their budget.`,
+    refinementPrompts,
+  };
 
   return {
     category: categoryLabel,
@@ -1788,6 +2071,9 @@ export function buildShoppingAnswer(
     systemNote,
     provisional,
     statedGaps: provisional ? gaps : undefined,
+    synthesisBrief,
+    sonicLandscape,
+    refinementPrompts: refinementPrompts.length > 0 ? refinementPrompts : undefined,
   };
 }
 

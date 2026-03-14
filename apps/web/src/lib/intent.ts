@@ -184,7 +184,9 @@ const SHOPPING_PATTERNS = [
   /\bany\s+suggestions\b/i,
   /\bwhat\s+should\s+i\b/i,
   /\bgood\s+(?:dac|amp|amplifier|speaker|headphone|streamer)\b/i,
-  /\b(?:dac|amp|amplifier|speaker|headphone|streamer)\s+(?:for|that)\b/i,
+  /\b(?:dac|amp|amplifier|integrated|speaker|headphone|streamer)\s+(?:for|that)\b/i,
+  /\bgood\s+integrated\b/i,
+  /\bbest\s+integrated\b/i,
 ];
 
 // ── Gear inquiry patterns ────────────────────────────
@@ -994,7 +996,24 @@ export function extractShortlistCategory(text: string): ShortlistCategory | null
   for (const { re, category } of SHORTLIST_CATEGORY_MAP) {
     if (re.test(text)) return category;
   }
+  // Standalone "integrated" without "amp" — treat as amplifier
+  if (/\bintegrated\b/i.test(text)) return 'amplifier';
   return null;
+}
+
+/** Amplifier subtype — integrated, power, preamp, etc. */
+export type AmplifierSubtype = 'integrated' | 'power' | 'preamp' | 'headphone_amp' | undefined;
+
+/**
+ * Extract amplifier subtype from a shopping query.
+ * Returns undefined if no specific subtype is detected.
+ */
+export function extractAmplifierSubtype(text: string): AmplifierSubtype {
+  if (/\bintegrated\b/i.test(text)) return 'integrated';
+  if (/\bpower\s*amp/i.test(text)) return 'power';
+  if (/\bpre-?amp\b/i.test(text)) return 'preamp';
+  if (/\bheadphone\s*amp/i.test(text)) return 'headphone_amp';
+  return undefined;
 }
 
 /**

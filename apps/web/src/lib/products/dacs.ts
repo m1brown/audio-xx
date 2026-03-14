@@ -1485,8 +1485,8 @@ export const DAC_PRODUCTS: Product[] = [
     subcategory: 'standalone-dac',
     priceTier: 'upper-mid',
     brandScale: 'boutique',
-    region: 'east-asia',
-    country: 'CN',
+    region: 'southeast-asia',
+    country: 'SG',
     topology: 'r2r',
     primaryAxes: {
       warm_bright: 'warm',
@@ -1505,7 +1505,7 @@ export const DAC_PRODUCTS: Product[] = [
       composure: 0.7,
     },
     description:
-      'Discrete R-2R DAC with strong harmonic density and tonal richness. Shares sonic territory with the Denafrips Pontus/Venus tier — warm, textured, and spatially open. Emphasises musical engagement over analytical precision.',
+      'Singapore-designed discrete R-2R DAC with strong harmonic density and tonal richness. Shares sonic territory with the Denafrips Pontus/Venus tier — warm, textured, and spatially open. Emphasises musical engagement over analytical precision.',
     retailer_links: [
       { label: 'LAiV Audio', url: 'https://www.laiv.audio/' },
     ],
