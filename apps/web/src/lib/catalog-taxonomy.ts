@@ -52,6 +52,9 @@ export type ProductSubcategory =
   | 'standalone-dac'
   | 'dac-preamp'
   | 'dac-amp'            // combined DAC + headphone amp
+  | 'portable-dac'       // portable DAC/amp combo
+  // Streamers
+  | 'streamer'
   // Turntables
   | 'manual'
   | 'semi-automatic'

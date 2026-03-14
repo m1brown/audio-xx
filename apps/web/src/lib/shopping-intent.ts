@@ -869,6 +869,11 @@ export function isAnswerReady(
   // Skip-to-suggestions bypasses all gating
   if (skipToSuggestions) return true;
 
+  // Direct shortlist — category + budget in a single query (e.g. "best DAC
+  // under $2000"). Enough context to produce a useful recommendation
+  // immediately; taste and system signals enrich but don't gate.
+  if (ctx.category !== 'general' && ctx.budgetMentioned) return true;
+
   const hasSystem = isSystemSufficient(ctx);
   const signalCount = countPreferenceSignals(ctx, signals);
   const hasEnoughSignals = signalCount >= 3;
@@ -1826,3 +1831,4 @@ function getContrastLabel(tasteLabel: string): string {
   if (tasteLabel.includes('composure') || tasteLabel.includes('ease')) return 'speed or analytical precision';
   return 'the opposite emphasis';
 }
+

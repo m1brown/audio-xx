@@ -2315,9 +2315,26 @@ function wordAwareIncludes(haystack: string, needle: string): boolean {
   return haystack.includes(needle);
 }
 
+/**
+ * Strip parenthetical version / section tags from a component name.
+ *
+ * Examples:
+ *   "Hugo (v1)"         → "Hugo"
+ *   "Hugo (v2)"         → "Hugo"
+ *   "Integrated (amp section)" → "Integrated"
+ *   "Diva Monitor"      → "Diva Monitor"  (no parenthetical — unchanged)
+ *
+ * The stripped tag is informational only — callers that need it can
+ * capture it separately.
+ */
+function stripVersionTag(name: string): string {
+  // Match trailing parenthetical like (v1), (v2), (amp section), (mk2), (gen 3)
+  return name.replace(/\s*\((?:v\d+|mk\s*\d+|gen\s*\d+|rev\s*\w+|amp\s+section|dac\s+section|pre\s*amp?\s+section)\)\s*$/i, '').trim();
+}
+
 function normalizeDisplayName(brand: string, name: string): string {
   const b = brand.trim();
-  const n = name.trim();
+  const n = stripVersionTag(name.trim());
   if (!b) return n || 'Unknown';
   if (!n) return b;
   // If name starts with the brand (case-insensitive), don't repeat the brand
@@ -2341,7 +2358,26 @@ export function buildSystemAssessment(
 ): SystemAssessmentResult {
   const components: SystemComponent[] = [];
   const allLinks: { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[] = [];
+  /** Per-component links keyed by displayName. */
+  const componentLinks = new Map<string, { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[]>();
   const processedNames = new Set<string>();
+
+  /** Track a link for both the global list and a specific component. */
+  function trackLink(
+    link: { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string },
+    forComponent?: string,
+  ) {
+    if (!allLinks.some((al) => al.url === link.url)) {
+      allLinks.push(link);
+    }
+    if (forComponent) {
+      const existing = componentLinks.get(forComponent) ?? [];
+      if (!existing.some((l) => l.url === link.url)) {
+        existing.push(link);
+        componentLinks.set(forComponent, existing);
+      }
+    }
+  }
 
   // ── Seed from active system when available ──
   // Only include components that are mentioned (by brand or model name) in the
@@ -2352,23 +2388,27 @@ export function buildSystemAssessment(
     for (const ac of activeSystem.components) {
       const fullName = normalizeDisplayName(ac.brand, ac.name);
       const nameLower = ac.name.toLowerCase();
+      const strippedNameLower = stripVersionTag(ac.name).toLowerCase();
       const brandLower = ac.brand.toLowerCase();
-      if (processedNames.has(nameLower) || processedNames.has(brandLower)) continue;
+      if (processedNames.has(nameLower) || processedNames.has(strippedNameLower) || processedNames.has(brandLower)) continue;
 
       // Only seed if the component's brand or model name appears in the message.
       // Use word-boundary matching for short names (≤4 chars) to prevent
       // false positives like "W5" matching inside unrelated words.
       const mentionedInMessage = wordAwareIncludes(msgLowerForSeed, fullName.toLowerCase())
         || wordAwareIncludes(msgLowerForSeed, nameLower)
+        || wordAwareIncludes(msgLowerForSeed, strippedNameLower)
         || wordAwareIncludes(msgLowerForSeed, brandLower);
       if (!mentionedInMessage) continue;
 
       processedNames.add(nameLower);
+      processedNames.add(strippedNameLower);
       processedNames.add(brandLower);
 
-      // Try to find rich catalog data
+      // Try to find rich catalog data (use stripped name for matching too)
       const product = ALL_PRODUCTS.find(
         (p) => p.name.toLowerCase() === nameLower
+          || p.name.toLowerCase() === strippedNameLower
           || `${p.brand} ${p.name}`.toLowerCase() === fullName.toLowerCase(),
       );
       // Also mark partial product name forms as processed (e.g. "diva" for "Diva Monitor")
@@ -2401,17 +2441,15 @@ export function buildSystemAssessment(
         product: product ?? undefined,
       });
 
-      // Collect links from catalog matches
+      // Collect links from catalog matches — track per-component
       if (product?.retailer_links) {
         for (const l of product.retailer_links) {
-          allLinks.push({ label: `${l.label} (${product.name})`, url: l.url });
+          trackLink({ label: l.label, url: l.url }, fullName);
         }
       }
       if (brandProfile?.links) {
         for (const l of brandProfile.links) {
-          if (!allLinks.some((al) => al.url === l.url)) {
-            allLinks.push({ label: l.label, url: l.url, kind: l.kind, region: l.region });
-          }
+          trackLink({ label: l.label, url: l.url, kind: l.kind, region: l.region }, fullName);
         }
       }
     }
@@ -2456,19 +2494,18 @@ export function buildSystemAssessment(
           product,
         });
 
-        // Collect product links
+        // Collect product links — track per-component
+        const prodDisplayName = normalizeDisplayName(product.brand, product.name);
         if (product.retailer_links) {
           for (const l of product.retailer_links) {
-            allLinks.push({ label: `${l.label} (${product.name})`, url: l.url });
+            trackLink({ label: l.label, url: l.url }, prodDisplayName);
           }
         }
 
         // Collect brand links
         if (brandProfile?.links) {
           for (const l of brandProfile.links) {
-            if (!allLinks.some((al) => al.url === l.url)) {
-              allLinks.push({ label: l.label, url: l.url, kind: l.kind, region: l.region });
-            }
+            trackLink({ label: l.label, url: l.url, kind: l.kind, region: l.region }, prodDisplayName);
           }
         }
 
@@ -2608,19 +2645,17 @@ export function buildSystemAssessment(
           product: specificProduct,
         });
 
-        // Collect brand links
+        // Collect brand links — track per-component
         if (brandProfile.links) {
           for (const l of brandProfile.links) {
-            if (!allLinks.some((al) => al.url === l.url)) {
-              allLinks.push({ label: l.label, url: l.url, kind: l.kind, region: l.region });
-            }
+            trackLink({ label: l.label, url: l.url, kind: l.kind, region: l.region }, displayName);
           }
         }
 
         // Collect specific product links
         if (specificProduct?.retailer_links) {
           for (const l of specificProduct.retailer_links) {
-            allLinks.push({ label: `${l.label} (${specificProduct.name})`, url: l.url });
+            trackLink({ label: l.label, url: l.url }, displayName);
           }
         }
       } else {
@@ -2693,7 +2728,7 @@ export function buildSystemAssessment(
 
         if (specificProduct?.retailer_links) {
           for (const l of specificProduct.retailer_links) {
-            allLinks.push({ label: `${l.label} (${specificProduct.name})`, url: l.url });
+            trackLink({ label: l.label, url: l.url }, displayName);
           }
         }
       }
@@ -2827,6 +2862,7 @@ export function buildSystemAssessment(
     memoSequence,
     memoSourceRefs,
     desires,
+    componentLinks,
   );
 
   // ── System character opening (brief) ──────────────
@@ -2897,7 +2933,6 @@ function inferSystemCharacterOpening(components: SystemComponent[]): string {
   const axes = profiles.map(p => p.axes);
   const system = synthesiseSystemAxes(axes, components.map(c => c.role));
   const compounding = detectCompounding(axes);
-  const names = components.map((c) => c.displayName).join(', ');
 
   // Build character descriptors from axis positions
   const descriptors: string[] = [];
@@ -2910,29 +2945,30 @@ function inferSystemCharacterOpening(components: SystemComponent[]): string {
   if (system.airy_closed === 'airy') descriptors.push('spatial openness');
   if (system.airy_closed === 'closed') descriptors.push('intimacy');
 
+  // NOTE: Component names are omitted here — the chain section lists them.
+  // Keep this paragraph short to fit within the ~120-150 word overview target.
+
   if (compounding.length > 0) {
-    // Compounding detected — flag it in the opening
     const direction = descriptors.length > 0 ? descriptors.join(' and ') : 'a consistent character';
-    return `A system that leans toward ${direction} across the chain — multiple components push in the same direction. Components: ${names}.`;
+    return `The chain leans toward ${direction} across multiple stages — several components push in the same direction.`;
   }
 
   if (descriptors.length === 0) {
-    return `A system with balanced tendencies — no single axis dominates. The overall character depends on how these components interact in practice. Components: ${names}.`;
+    return `The chain has balanced tendencies — no single axis dominates. The overall character depends on how these components interact in practice.`;
   }
 
   if (descriptors.length === 1) {
-    return `A system that leans toward ${descriptors[0]}, with the remaining axes staying relatively neutral. Components: ${names}.`;
+    return `The chain leans toward ${descriptors[0]}, with the remaining axes staying relatively neutral.`;
   }
 
-  // Multiple non-neutral axes — check if they're complementary or aligned
   const warmSide = system.warm_bright === 'warm' || system.smooth_detailed === 'smooth';
   const brightSide = system.warm_bright === 'bright' || system.smooth_detailed === 'detailed';
 
   if (warmSide && brightSide) {
-    return `A system built around complementary tendencies — ${descriptors.join(' and ')} balancing each other across the chain. Components: ${names}.`;
+    return `The chain balances complementary tendencies — ${descriptors.join(' and ')} offset each other.`;
   }
 
-  return `A system characterised by ${descriptors.join(' and ')}. Components: ${names}.`;
+  return `The chain is characterised by ${descriptors.join(' and ')}.`;
 }
 
 /**
@@ -2948,18 +2984,8 @@ function inferSystemInteraction(components: SystemComponent[]): string {
   const compounding = detectCompounding(axes);
   const system = synthesiseSystemAxes(axes, components.map(c => c.role));
 
-  // ── Build causal explanation fragments ────────────────
-  const causalParts: string[] = [];
-  for (const c of components) {
-    if (c.product?.architecture) {
-      causalParts.push(`${c.displayName} uses a ${c.product.architecture} design`);
-    } else if (c.brandProfile?.designFamily) {
-      causalParts.push(`${c.displayName} belongs to a ${c.brandProfile.designFamily.name} lineage`);
-    }
-  }
-  const causalNote = causalParts.length > 0
-    ? ' ' + causalParts.join('; ') + '.'
-    : '';
+  // NOTE: Architecture/design notes (causalNote) removed from this function.
+  // They belong in per-component assessment sections, not the overview.
 
   // ── Per-axis component grouping for narrative ────────
   const warmComponents = profiles.filter(p => p.axes.warm_bright === 'warm').map(p => p.name);
@@ -2968,8 +2994,6 @@ function inferSystemInteraction(components: SystemComponent[]): string {
   const detailedComponents = profiles.filter(p => p.axes.smooth_detailed === 'detailed').map(p => p.name);
 
   // ── Synergy recognition — shared design philosophy ──
-  // When DAC and amplifier (or multiple non-speaker components) share
-  // axis leanings, recognize the coherence positively before noting trade-offs.
   const nonSpeakerProfiles = profiles.filter((_, i) => {
     const r = components[i].role.toLowerCase();
     return !r.includes('speak') && !r.includes('headphone');
@@ -2994,40 +3018,37 @@ function inferSystemInteraction(components: SystemComponent[]): string {
       return 'a shared tendency';
     });
 
-    const allNames = profiles.map(p => p.name);
-    // If synergy traits are detected, lead with the positive framing
     if (sharedTraits.length > 0) {
-      return `This is a coherent system — the components share a design philosophy prioritising ${sharedTraits.join(' and ')}. ${allNames.join(', ')} reinforce each other's strengths.${causalNote} The trade-off is that the system commits to this character: ${compoundDesc.join(' and ')} deepens across the chain, which rewards aligned recordings but offers less internal correction if listening priorities shift.`;
+      return `The components share a design philosophy prioritising ${sharedTraits.join(' and ')}. The trade-off: ${compoundDesc.join(' and ')} deepens across the chain, rewarding aligned recordings but offering less correction if priorities shift.`;
     }
 
-    return `This system leans toward ${compoundDesc.join(' and ')} across the chain. ${allNames.join(', ')} push in similar directions.${causalNote} This can be a strength when deliberate — it deepens the character the system commits to — but it also means the system has less internal correction if the listener's needs shift.`;
+    return `The system leans toward ${compoundDesc.join(' and ')} across the chain — a strength when deliberate, but it means less internal correction if listening needs shift.`;
   }
 
   // If synergy detected but no formal compounding
   if (sharedTraits.length > 0) {
-    const allNames = profiles.map(p => p.name);
-    return `This system shows design coherence — ${allNames.join(', ')} share an emphasis on ${sharedTraits.join(' and ')}.${causalNote} The components reinforce each other's tendencies, which creates a clear and intentional system character.`;
+    return `The components share an emphasis on ${sharedTraits.join(' and ')}, reinforcing each other's tendencies into a clear and intentional system character.`;
   }
 
   // ── Complementary — warm/bright or smooth/detailed balance ──
   if (warmComponents.length > 0 && brightComponents.length > 0) {
-    return `This is a system with complementary tendencies. ${brightComponents.join(' and ')} ${brightComponents.length === 1 ? 'provides' : 'provide'} articulation and clarity, while ${warmComponents.join(' and ')} ${warmComponents.length === 1 ? 'adds' : 'add'} warmth and tonal body.${causalNote} The tonal balance offsets across the chain — a deliberate architectural pairing that serves both detail and musical involvement.`;
+    return `Complementary tendencies: ${brightComponents.join(' and ')} ${brightComponents.length === 1 ? 'provides' : 'provide'} articulation, while ${warmComponents.join(' and ')} ${warmComponents.length === 1 ? 'adds' : 'add'} tonal body. The balance offsets across the chain.`;
   }
 
   if (smoothComponents.length > 0 && detailedComponents.length > 0) {
-    return `This system balances textural smoothness with detail retrieval. ${detailedComponents.join(' and ')} ${detailedComponents.length === 1 ? 'contributes' : 'contribute'} resolution, while ${smoothComponents.join(' and ')} ${smoothComponents.length === 1 ? 'provides' : 'provide'} musical flow.${causalNote} This complementary pairing often delivers both engagement and insight.`;
+    return `The system balances smoothness with detail retrieval — ${detailedComponents.join(' and ')} ${detailedComponents.length === 1 ? 'contributes' : 'contribute'} resolution, while ${smoothComponents.join(' and ')} ${smoothComponents.length === 1 ? 'provides' : 'provide'} musical flow.`;
   }
 
   // ── Single-axis lean ──
   if (system.warm_bright === 'warm') {
-    return `This system leans toward warmth and engagement throughout the chain.${causalNote} The overall character tends toward richness and immersion — which may sustain engagement but could reduce transient articulation.`;
+    return `The chain leans toward warmth and engagement — richness and immersion at the potential cost of transient articulation.`;
   }
   if (system.warm_bright === 'bright') {
-    return `This system leans toward precision and clarity throughout the chain.${causalNote} The cumulative brightness tends to deliver a revealing, well-defined presentation — though without a warmth source in the chain, extended sessions may feel lean.`;
+    return `The chain leans toward precision and clarity — a revealing presentation, though extended sessions may feel lean without a warmth source.`;
   }
 
   // Mixed or all-neutral
-  return `The components in this system each bring distinct tendencies.${causalNote} The overall character depends on how they interact in practice — room acoustics, cable choices, and source material all influence the final balance.`;
+  return `Each component brings distinct tendencies. The overall character depends on their interaction in practice.`;
 }
 
 /**
@@ -4394,18 +4415,29 @@ function buildUpgradePaths(
       return upgradeInfluence(b.component.role) - upgradeInfluence(a.component.role);
     });
 
-  for (const r of remaining.slice(0, 2)) {
-    const rank = paths.length + 1;
+  // Track which roles already have an upgrade path (prevents duplicate categories)
+  const usedRoles = new Set(paths.map((p) => p.label));
+
+  let added = 0;
+  for (const r of remaining) {
+    if (added >= 2) break;
     const role = canonicalRole(r.component.role);
+    const label = `${role} Upgrade`;
+    // Skip if this role already has an upgrade path (e.g. bottleneck is also a DAC)
+    if (usedRoles.has(label)) continue;
+    usedRoles.add(label);
+
+    const rank = paths.length + 1;
     const weakSummary = r.assessment.weaknesses.slice(0, 2).join('; ').toLowerCase();
 
     paths.push({
       rank,
-      label: `${role} Upgrade`,
+      label,
       impact: rank === 2 ? 'Moderate Impact' : 'Refinement',
       rationale: `Current limitation: ${weakSummary}. Addressing this refines the system's balance without changing its core identity.`,
       options: [],
     });
+    added++;
   }
 
   // ── If stacked and no component-level paths remain, add a rebalancing path ──
@@ -4541,6 +4573,7 @@ function extractMemoFindings(
   sequence: MemoRecommendedStep[],
   sourceRefs: import('./advisory-response').SourceReference[],
   desires?: DesireSignal[],
+  perComponentLinks?: Map<string, { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[]>,
 ): MemoFindings {
   // ── Per-component findings ──
   const componentVerdicts: ComponentFindings[] = components.map((c, i) => {
@@ -4566,6 +4599,7 @@ function extractMemoFindings(
       weaknesses: assessment?.weaknesses ?? [],
       verdict,
       architecture: c.product?.architecture,
+      links: perComponentLinks?.get(c.displayName),
     };
   });
 

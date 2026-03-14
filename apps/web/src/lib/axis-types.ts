@@ -179,10 +179,90 @@ export function detectCompounding(
 }
 
 /**
+ * Role-based influence weight for system axis synthesis.
+ *
+ * Hierarchy:
+ *   speaker/headphones  → 3  (primary — defines system character)
+ *   dac                 → 2  (strong — refines tonal balance)
+ *   amplifier           → 1.5 (moderate — adjusts control and drive)
+ *   source/streamer     → 0.5 (secondary — transport, minimal sonic influence)
+ *   cable/accessory     → 0.25 (minor — negligible)
+ */
+function roleWeight(role: string): number {
+  const r = role.toLowerCase();
+  if (r.includes('speak') || r.includes('headphone') || r.includes('monitor')) return 3;
+  if (r.includes('dac')) return 2;
+  if (r.includes('amp') || r.includes('integrated') || r.includes('preamp')) return 1.5;
+  if (r.includes('stream') || r.includes('source') || r.includes('transport')) return 0.5;
+  if (r.includes('cable') || r.includes('accessory') || r.includes('power')) return 0.25;
+  return 1; // default for unknown roles
+}
+
+/**
  * Synthesise system-level axis leanings from component leanings.
- * Simple majority-vote with compounding detection.
+ *
+ * When roles are provided, uses hierarchical influence weighting:
+ * speakers define character, DAC refines, amp adjusts, source is secondary.
+ *
+ * When roles are omitted, uses simple majority-vote (backward compatible).
  */
 export function synthesiseSystemAxes(
+  componentAxes: PrimaryAxisLeanings[],
+  roles?: string[],
+): PrimaryAxisLeanings {
+  if (!roles || roles.length !== componentAxes.length) {
+    // Backward-compatible majority vote
+    return synthesiseMajorityVote(componentAxes);
+  }
+
+  // Weighted synthesis — role hierarchy determines influence
+  function weightedResolve<T extends string>(
+    values: { value: T; weight: number }[],
+    neutralValue: T,
+  ): T {
+    const scores = new Map<T, number>();
+    for (const { value, weight } of values) {
+      scores.set(value, (scores.get(value) ?? 0) + weight);
+    }
+    // Remove neutral from competition unless it's the only option
+    const nonNeutral = [...scores.entries()].filter(([v]) => v !== neutralValue);
+    if (nonNeutral.length === 0) return neutralValue;
+
+    // The highest-weighted non-neutral leaning wins, but only if it
+    // exceeds the neutral weight — prevents a minor cable from overriding
+    const neutralScore = scores.get(neutralValue) ?? 0;
+    let bestValue = neutralValue;
+    let bestScore = neutralScore;
+    for (const [v, s] of nonNeutral) {
+      if (s > bestScore) { bestValue = v; bestScore = s; }
+    }
+    return bestValue;
+  }
+
+  const weights = roles.map(roleWeight);
+
+  return {
+    warm_bright: weightedResolve(
+      componentAxes.map((c, i) => ({ value: c.warm_bright, weight: weights[i] })),
+      'neutral' as WarmBrightLeaning,
+    ),
+    smooth_detailed: weightedResolve(
+      componentAxes.map((c, i) => ({ value: c.smooth_detailed, weight: weights[i] })),
+      'neutral' as SmoothDetailedLeaning,
+    ),
+    elastic_controlled: weightedResolve(
+      componentAxes.map((c, i) => ({ value: c.elastic_controlled, weight: weights[i] })),
+      'neutral' as ElasticControlledLeaning,
+    ),
+    airy_closed: weightedResolve(
+      componentAxes.map((c, i) => ({ value: c.airy_closed, weight: weights[i] })),
+      'neutral' as AiryClosedLeaning,
+    ),
+  };
+}
+
+/** Simple majority-vote synthesis (original algorithm, used as fallback). */
+function synthesiseMajorityVote(
   componentAxes: PrimaryAxisLeanings[],
 ): PrimaryAxisLeanings {
   function majority<T extends string>(values: T[], neutralValue: T): T {

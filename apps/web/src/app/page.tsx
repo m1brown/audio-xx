@@ -970,6 +970,28 @@ export default function Home() {
           }}
         />
 
+        {/* Send button */}
+        <button
+          type="button"
+          onClick={() => handleSubmit()}
+          disabled={isLoading || !currentInput.trim()}
+          style={{
+            marginTop: '0.5rem',
+            padding: '0.5rem 1.4rem',
+            background: isLoading || !currentInput.trim() ? '#ccc' : '#333',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 6,
+            fontSize: '0.88rem',
+            fontWeight: 600,
+            letterSpacing: '0.04em',
+            cursor: isLoading || !currentInput.trim() ? 'default' : 'pointer',
+            transition: 'background 0.15s ease',
+          }}
+        >
+          {isLoading ? 'Thinking…' : 'Send'}
+        </button>
+
         {/* Input hint — landing state only */}
         {!hasMessages && (
           <div

@@ -86,6 +86,8 @@ export interface ComponentAssessment {
   verdict: string;
   /** Machine-readable verdict classification for deterministic consumers. */
   verdictKind: VerdictKind;
+  /** Product/brand links associated with this component. */
+  links?: Array<{ label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }>;
 }
 
 /**

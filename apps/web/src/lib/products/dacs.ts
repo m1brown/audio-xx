@@ -1290,7 +1290,8 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Network streamer with a capable internal DAC stage. Clean, neutral digital front-end designed for streaming service integration and network transport. Most commonly used feeding an external DAC via USB or coaxial output.',
     retailer_links: [
-      { label: 'Apos Audio', url: 'https://apos.audio/products/eversolo-dmp-a6' },
+      { label: 'Eversolo', url: 'https://eversolo.com/products/dmp-a6' },
+      { label: 'Apos Audio (retailer)', url: 'https://apos.audio/products/eversolo-dmp-a6' },
     ],
   },
 

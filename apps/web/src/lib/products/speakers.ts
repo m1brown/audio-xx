@@ -35,7 +35,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     name: 'Diva Monitor',
     price: 4500,
     category: 'speaker',
-    architecture: 'high-efficiency single full-range driver',
+    architecture: 'high-efficiency coaxial wideband driver',
     subcategory: 'standmount',
     priceTier: 'upper-mid',
     brandScale: 'boutique',
@@ -76,7 +76,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       openness: 0.7,
     },
     description:
-      'High-efficiency design built around rhythmic drive and dynamic life. Prioritizes musical engagement and tonal weight over last-degree resolution. The kind of speaker that makes you tap your foot before you start analyzing.',
+      'High-efficiency coaxial wideband monitor designed for dynamic expression and tonal color. Prioritizes rhythmic engagement, musical flow, and harmonic richness over last-degree analytical precision. The kind of speaker that makes you tap your foot before you start analyzing.',
     retailer_links: [
       { label: 'WLM', url: 'https://www.wlm-loudspeakers.com/' },
     ],

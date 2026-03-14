@@ -206,6 +206,7 @@ function mapComponentAssessments(findings: MemoFindings): ComponentAssessment[] 
       weaknesses: cv.weaknesses,
       verdict,
       verdictKind,
+      links: cv.links,
     };
   });
 }

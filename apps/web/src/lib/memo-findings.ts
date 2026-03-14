@@ -117,6 +117,8 @@ export interface ComponentFindings {
   verdict: ComponentVerdict;
   /** Architecture topology if known (e.g. "FPGA pulse array", "R-2R"). */
   architecture?: string;
+  /** Product/brand links associated with this component. */
+  links?: Array<{ label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }>;
 }
 
 /**

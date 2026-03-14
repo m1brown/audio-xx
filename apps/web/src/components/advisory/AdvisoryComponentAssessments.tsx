@@ -87,6 +87,26 @@ export default function AdvisoryComponentAssessments({ assessments }: Props) {
           <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.95rem', lineHeight: 1.6, color: '#444' }}>
             {renderText(comp.verdict)}
           </p>
+
+          {/* Component links — learn more */}
+          {comp.links && comp.links.length > 0 && (
+            <div style={{ marginTop: '0.5rem' }}>
+              <span style={{ fontSize: '0.85rem', color: '#888' }}>Learn more: </span>
+              {comp.links.map((link, k) => (
+                <span key={k}>
+                  {k > 0 && <span style={{ color: '#ccc', margin: '0 0.3rem' }}>&middot;</span>}
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: '0.85rem', color: '#5a8a9a', textDecoration: 'none' }}
+                  >
+                    {link.label}
+                  </a>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       ))}
     </div>

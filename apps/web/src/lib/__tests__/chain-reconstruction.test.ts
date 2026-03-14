@@ -119,6 +119,32 @@ describe('extractFullChain — "into" phrasing', () => {
 });
 
 // ──────────────────────────────────────────────────────
+// 2b. Natural language connectors
+// ──────────────────────────────────────────────────────
+
+describe('extractFullChain — natural language connectors', () => {
+  it('parses "feeding into...then to...connected to" chain', () => {
+    const result = extractFullChain(
+      'Eversolo DMP-A6 streamer feeding into the Chord Hugo DAC, then to the Job integrated amp, connected to the WLM Diva Monitors',
+    );
+    expect(result).not.toBeUndefined();
+    expect(result!.confidence).toBe('high');
+    expect(result!.segments.length).toBeGreaterThanOrEqual(3);
+    // First segment should not start with a connector
+    expect(result!.segments[0]).toMatch(/^[A-Z]/);
+  });
+
+  it('parses "evaluate my system:" prefix with mixed connectors', () => {
+    const result = extractFullChain(
+      'Evaluate my system: Eversolo DMP-A6 streamer feeding into the Chord Hugo (v1) DAC via the TotalDac D1 USB cable, then to the Job (Goldmund) integrated amp, connected to the WLM Diva Monitors with Tellurium Q Black II speaker cables',
+    );
+    expect(result).not.toBeUndefined();
+    expect(result!.confidence).toBe('high');
+    expect(result!.segments.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+// ──────────────────────────────────────────────────────
 // 3. Comma-separated chains
 // ──────────────────────────────────────────────────────
 
@@ -149,12 +175,12 @@ describe('extractFullChain — comma-separated', () => {
     expect(result).toBeUndefined();
   });
 
-  it('filters out long segments (>80 chars)', () => {
-    const longSegment = 'A'.repeat(81);
+  it('filters out long segments (>120 chars)', () => {
+    const longSegment = 'A'.repeat(121);
     const result = extractFullChain(`WiiM Pro, ${longSegment}, Chord Hugo`);
     // The long segment gets filtered — may result in 2 valid segments
     if (result) {
-      expect(result.segments.every((s) => s.length < 80)).toBe(true);
+      expect(result.segments.every((s) => s.length < 120)).toBe(true);
     }
   });
 });

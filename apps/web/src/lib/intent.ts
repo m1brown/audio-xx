@@ -961,3 +961,65 @@ export function isConsultationFollowUp(
 
   return false;
 }
+
+// ── Ranked shortlist helpers ────────────────────────
+
+export type ShortlistCategory =
+  | 'dac'
+  | 'amplifier'
+  | 'speaker'
+  | 'headphone'
+  | 'iem'
+  | 'streamer'
+  | 'turntable'
+  | 'phono_preamp';
+
+/** Map from regex match to canonical category. */
+const SHORTLIST_CATEGORY_MAP: Array<{ re: RegExp; category: ShortlistCategory }> = [
+  { re: /\b(?:phono\s*(?:pre)?amps?)\b/i, category: 'phono_preamp' },
+  { re: /\biems?\b/i, category: 'iem' },
+  { re: /\bheadphones?\b/i, category: 'headphone' },
+  { re: /\bdacs?\b/i, category: 'dac' },
+  { re: /\bamp(?:lifier)?s?\b/i, category: 'amplifier' },
+  { re: /\bspeakers?\b/i, category: 'speaker' },
+  { re: /\bstreamers?\b/i, category: 'streamer' },
+  { re: /\bturntables?\b/i, category: 'turntable' },
+];
+
+/**
+ * Extract the product category from a shopping query.
+ * Returns null if no recognized category is found.
+ */
+export function extractShortlistCategory(text: string): ShortlistCategory | null {
+  for (const { re, category } of SHORTLIST_CATEGORY_MAP) {
+    if (re.test(text)) return category;
+  }
+  return null;
+}
+
+/**
+ * Extract budget ceiling from text.
+ * Parses "under $2000", "under 2000", "<$2000", "<2000",
+ * "around $1500", "for $1000".
+ */
+export function extractShortlistBudget(text: string): number | null {
+  // Try "under/below/< $X" patterns first
+  const underMatch = text.match(/(?:under|below|<)\s*\$?\s*([\d,]+)/i);
+  if (underMatch) {
+    const parsed = parseInt(underMatch[1].replace(/,/g, ''), 10);
+    if (!isNaN(parsed)) return parsed;
+  }
+  // "around $X", "for $X", "at $X"
+  const aroundMatch = text.match(/(?:around|for|at)\s+\$?\s*([\d,]+)/i);
+  if (aroundMatch) {
+    const parsed = parseInt(aroundMatch[1].replace(/,/g, ''), 10);
+    if (!isNaN(parsed)) return parsed;
+  }
+  // Bare "$X" as fallback
+  const bareMatch = text.match(/\$\s*([\d,]+)/);
+  if (bareMatch) {
+    const parsed = parseInt(bareMatch[1].replace(/,/g, ''), 10);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return null;
+}
