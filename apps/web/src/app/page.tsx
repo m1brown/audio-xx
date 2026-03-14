@@ -682,7 +682,7 @@ export default function Home() {
         maxWidth: 720,
         margin: '0 auto',
         padding: '3rem 1.5rem 3rem',
-        color: '#1a1a1a',
+        color: '#2a2a2a',
         lineHeight: 1.6,
       }}
     >
@@ -702,7 +702,7 @@ export default function Home() {
           fontWeight: 700,
           letterSpacing: '-0.03em',
           lineHeight: 1.15,
-          color: '#111',
+          color: '#2a2a2a',
         }}
       >
         Audio XX
@@ -954,7 +954,7 @@ export default function Home() {
             lineHeight: 1.6,
             resize: 'vertical',
             background: '#fff',
-            color: '#1a1a1a',
+            color: '#2a2a2a',
             boxSizing: 'border-box',
             transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
           }}
@@ -1134,7 +1134,7 @@ function MessageBubble({ message }: { message: Message }) {
             marginBottom: '0.4rem',
             fontSize: '1.05rem',
             fontWeight: 600,
-            color: '#1a1a1a',
+            color: '#2a2a2a',
           }}
         >
           {message.entry.term}
@@ -1185,7 +1185,7 @@ function MessageBubble({ message }: { message: Message }) {
         >
           <div
             style={{
-              color: '#222',
+              color: '#333',
               fontSize: '1.05rem',
               lineHeight: 1.6,
               whiteSpace: 'pre-line',

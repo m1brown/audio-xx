@@ -29,7 +29,7 @@ export default function AdvisoryUpgradePaths({ paths }: Props) {
         <div key={path.rank}>
           {/* Path header — rank + label + impact tag */}
           <div style={{ marginBottom: '0.45rem', display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-            <span style={{ fontWeight: 600, fontSize: '0.98rem', color: '#222' }}>
+            <span style={{ fontWeight: 600, fontSize: '0.98rem', color: '#333' }}>
               Path {path.rank}: {path.label}
             </span>
             {path.impact && (
@@ -72,7 +72,7 @@ export default function AdvisoryUpgradePaths({ paths }: Props) {
                   <span style={{ fontWeight: 500, color: '#999', fontSize: '0.85rem', marginRight: '0.4rem' }}>
                     {opt.rank}.
                   </span>
-                  <strong style={{ color: '#111' }}>
+                  <strong style={{ color: '#2a2a2a' }}>
                     {opt.brand ? `${opt.brand} ` : ''}{opt.name}
                   </strong>
                   {opt.price != null && opt.price > 0 && (
@@ -146,7 +146,7 @@ export default function AdvisoryUpgradePaths({ paths }: Props) {
 
                 {/* Verdict */}
                 {opt.verdict && (
-                  <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.9rem', fontWeight: 600, color: '#222' }}>
+                  <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.9rem', fontWeight: 600, color: '#333' }}>
                     {renderText(opt.verdict)}
                   </p>
                 )}

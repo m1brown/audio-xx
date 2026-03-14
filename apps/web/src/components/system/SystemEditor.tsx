@@ -207,7 +207,7 @@ export default function SystemEditor({ initial, onClose, onSaved }: SystemEditor
       >
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#222' }}>
+          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#333' }}>
             {initial ? 'Edit System' : 'New System'}
           </h2>
           <button

@@ -47,20 +47,20 @@ interface AdvisoryMessageProps {
 // Centralized here for consistency across both rendering modes.
 
 const COLORS = {
-  text: '#1a1a1a',
-  textSecondary: '#555',
-  textMuted: '#888',
+  text: '#2a2a2a',
+  textSecondary: '#5a5a5a',
+  textMuted: '#8a8a8a',
   textLight: '#aaa',
   accent: '#a89870',
   accentLight: '#c8c0a8',
-  accentBg: '#f8f6f0',
-  border: '#eae8e4',
-  borderLight: '#f0eee8',
-  sectionLabel: '#999',
+  accentBg: '#faf8f3',
+  border: '#eeece8',
+  borderLight: '#f4f2ee',
+  sectionLabel: '#aaa',
   green: '#5a7050',
   amber: '#8a6a50',
-  white: '#ffffff',
-  bg: '#ffffff',
+  white: '#fff',
+  bg: '#fff',
 };
 
 const FONTS = {
@@ -150,7 +150,7 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
           margin: '0 0 1rem 0',
           fontSize: '1.2rem',
           fontWeight: 600,
-          color: '#111',
+          color: '#2a2a2a',
           letterSpacing: '-0.01em',
         }}>
           {a.title}
@@ -347,7 +347,7 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
               <div key={i}>
                 {i > 0 && <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.borderLight}`, margin: '0.8rem 0' }} />}
                 <div style={{ marginBottom: '0.3rem' }}>
-                  <strong style={{ fontSize: '0.98rem', color: '#111' }}>{k.name}</strong>
+                  <strong style={{ fontSize: '0.98rem', color: '#2a2a2a' }}>{k.name}</strong>
                 </div>
                 <p style={{ margin: 0, fontSize: FONTS.bodySize, lineHeight: 1.65, color: COLORS.textSecondary }}>
                   {renderText(k.reason)}
@@ -450,7 +450,7 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
             margin: '0 0 1.25rem 0',
             fontWeight: 500,
             fontSize: '1.02rem',
-            color: '#222',
+            color: '#333',
             lineHeight: 1.7,
           }}
         >
@@ -774,7 +774,7 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
               if (boldMatch) {
                 return (
                   <div key={i} style={{ marginBottom: '0.55rem', paddingLeft: '0.25rem' }}>
-                    <span style={{ fontWeight: 600, color: '#222' }}>{boldMatch[1]}</span>
+                    <span style={{ fontWeight: 600, color: '#333' }}>{boldMatch[1]}</span>
                     <span style={{ color: COLORS.textSecondary }}> {boldMatch[2]}</span>
                   </div>
                 );
@@ -821,7 +821,7 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
             margin: '0 0 1.25rem 0',
             fontWeight: 500,
             fontSize: '1.02rem',
-            color: '#222',
+            color: '#333',
             lineHeight: 1.7,
           }}
         >

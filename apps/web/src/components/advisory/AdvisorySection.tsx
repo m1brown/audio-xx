@@ -29,7 +29,7 @@ export default function AdvisorySection({ number, label, children }: AdvisorySec
             margin: '0 0 0.65rem 0',
             fontSize: '1.08rem',
             fontWeight: 600,
-            color: '#111',
+            color: '#2a2a2a',
             lineHeight: 1.4,
             letterSpacing: '-0.01em',
           }}

@@ -30,7 +30,7 @@ interface Props {
 
 export default function EvaluationOutput({ signals, result }: Props) {
   return (
-    <div style={{ color: '#111' }}>
+    <div style={{ color: '#2a2a2a' }}>
       {result.archetype_conflict_detected && (
         <div
           style={{
@@ -58,7 +58,7 @@ export default function EvaluationOutput({ signals, result }: Props) {
               margin: '0 0 1rem 0',
               fontSize: '1.18rem',
               lineHeight: 1.65,
-              color: '#111',
+              color: '#2a2a2a',
             }}
           >
             {rule.outputs.explanation.trim()}
@@ -78,7 +78,7 @@ export default function EvaluationOutput({ signals, result }: Props) {
               >
                 Advice
               </div>
-              <ul style={{ margin: 0, paddingLeft: '1.15rem', color: '#222' }}>
+              <ul style={{ margin: 0, paddingLeft: '1.15rem', color: '#333' }}>
                 {rule.outputs.suggestions.map((s, i) => (
                   <li key={i} style={{ marginBottom: '0.35rem' }}>
                     {s.trim()}
@@ -102,7 +102,7 @@ export default function EvaluationOutput({ signals, result }: Props) {
               >
                 Trade-offs
               </div>
-              <ul style={{ margin: 0, paddingLeft: '1.15rem', color: '#222' }}>
+              <ul style={{ margin: 0, paddingLeft: '1.15rem', color: '#333' }}>
                 {rule.outputs.risks.map((r, i) => (
                   <li key={i} style={{ marginBottom: '0.35rem' }}>
                     {r.trim()}
@@ -125,7 +125,7 @@ export default function EvaluationOutput({ signals, result }: Props) {
             >
               Next step
             </div>
-            <p style={{ margin: 0, color: '#222' }}>{rule.outputs.next_step.trim()}</p>
+            <p style={{ margin: 0, color: '#333' }}>{rule.outputs.next_step.trim()}</p>
           </div>
 
           {rule.outputs.archetype_note && (

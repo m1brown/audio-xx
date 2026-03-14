@@ -36,7 +36,7 @@ export default function AdvisoryOptions({ options }: AdvisoryOptionsProps) {
         >
           {/* 1. Product — name + price */}
           <div style={{ marginBottom: '0.35rem' }}>
-            <strong style={{ color: '#111' }}>
+            <strong style={{ color: '#2a2a2a' }}>
               {opt.brand ? `${opt.brand} ` : ''}{opt.name}
             </strong>
             {opt.price != null && opt.price > 0 && (

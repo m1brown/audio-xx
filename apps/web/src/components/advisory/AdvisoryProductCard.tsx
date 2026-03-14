@@ -102,7 +102,7 @@ function ProductCard({ opt }: { opt: AdvisoryOption }) {
 
       {/* ── Header: name, price, badges ──────────── */}
       <div style={{ marginBottom: '0.35rem' }}>
-        <strong style={{ color: '#111', fontSize: '1rem' }}>
+        <strong style={{ color: '#2a2a2a', fontSize: '1rem' }}>
           {opt.brand ? `${opt.brand} ` : ''}{opt.name}
         </strong>
         {opt.price != null && opt.price > 0 && (

@@ -25,7 +25,7 @@ export default function AdvisoryComponentAssessments({ assessments }: Props) {
 
           {/* Component name — bold heading with role */}
           <div style={{ marginBottom: '0.35rem' }}>
-            <strong style={{ fontSize: '0.98rem', color: '#111' }}>{comp.name}</strong>
+            <strong style={{ fontSize: '0.98rem', color: '#2a2a2a' }}>{comp.name}</strong>
             {comp.role && (
               <span style={{ color: '#aaa', fontSize: '0.88rem', marginLeft: '0.5rem' }}>
                 {comp.role}
