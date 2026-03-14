@@ -1,21 +1,42 @@
 /**
- * Enhanced product card for advisory shortlists and comparisons.
+ * Audio XX — Editorial Product Card
  *
- * Design: Clean white cards with light borders, minimal shadows.
- * Reasoning explanations (system delta) are prioritized over chrome.
+ * Redesigned to match editorial recommendation pages (à la ChatGPT gold standard).
+ * Each product renders as a full-width editorial section rather than a compact card.
  *
- * Each card includes:
- *   - Product image (with neutral placeholder)
- *   - Product name, brand, type, sonic direction
- *   - Price / availability / used price range
- *   - Character description
- *   - Fit note + caution
- *   - System delta reasoning (why fits / improvements / trade-offs)
- *   - Used market exploration links (max 2)
+ * Structure per product:
+ *   1. Numbered product name (H2-level)
+ *   2. Image gallery (3-up horizontal row)
+ *   3. Approx price (new + used)
+ *   4. Purchase action buttons (Buy New / Find Used)
+ *   5. Architecture line
+ *   6. Sound character bullets
+ *   7. Strengths + Weaknesses
+ *   8. Verdict / fit note
+ *   9. System delta reasoning (if available)
+ *  10. Sources / links
+ *
+ * Purchase buttons:
+ *   - "Buy New" → manufacturer or retailer URL
+ *   - "Find Used" → HiFiShark search
+ *   Both open in new tab.
  */
 
 import type { AdvisoryOption } from '../../lib/advisory-response';
 import { renderText } from './render-text';
+
+// ── Design tokens ─────────────────────────────────────
+
+const COLORS = {
+  text: '#2a2a2a',
+  textSecondary: '#5a5a5a',
+  textMuted: '#8a8a8a',
+  accent: '#a89870',
+  accentBg: '#faf8f3',
+  border: '#eeece8',
+  green: '#5a7050',
+  white: '#fff',
+};
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: '$', EUR: '€', GBP: '£', JPY: '¥', AUD: 'A$', CAD: 'C$', CHF: 'CHF ',
@@ -27,189 +48,364 @@ function formatPrice(amount: number, currency?: string): string {
   return `${symbol}${amount.toLocaleString()}`;
 }
 
+// ── Helper: build HiFiShark URL ───────────────────────
+
+function hifiSharkUrl(brand: string | undefined, name: string): string {
+  const query = [brand, name].filter(Boolean).join(' ');
+  return `https://www.hifishark.com/search?q=${encodeURIComponent(query)}`;
+}
+
+// ── Helper: get buy-new URL ───────────────────────────
+
+function getBuyNewUrl(opt: AdvisoryOption): string | undefined {
+  // Prefer manufacturer URL, fall back to first retailer link
+  if (opt.manufacturerUrl) return opt.manufacturerUrl;
+  if (opt.links && opt.links.length > 0) return opt.links[0].url;
+  return undefined;
+}
+
 const AVAILABILITY_LABELS: Record<string, { text: string; color: string; bg: string; border: string }> = {
-  discontinued: { text: 'Discontinued', color: '#8a6a40', bg: '#faf4ea', border: '#e8dcc8' },
-  vintage: { text: 'Vintage', color: '#6a5a35', bg: '#f5f0e2', border: '#e0d8c0' },
+  discontinued: { text: 'Discontinued — used only', color: '#8a6a40', bg: '#faf4ea', border: '#e8dcc8' },
+  vintage: { text: 'Vintage — used only', color: '#6a5a35', bg: '#f5f0e2', border: '#e0d8c0' },
 };
 
-/** Neutral placeholder for products without images. */
-function ProductImagePlaceholder() {
+// ── Image gallery placeholder ─────────────────────────
+
+function ImageGallery({ brand, name, imageUrl }: { brand?: string; name: string; imageUrl?: string }) {
+  const alt = `${brand ?? ''} ${name}`.trim();
+
+  // If we have a real image, show it full-width
+  if (imageUrl) {
+    return (
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr',
+        gap: '0.5rem',
+        marginBottom: '1.25rem',
+      }}>
+        <div style={{
+          background: '#f8f6f2',
+          borderRadius: '6px',
+          overflow: 'hidden',
+          border: '1px solid #f0eee8',
+        }}>
+          <img
+            src={imageUrl}
+            alt={alt}
+            style={{
+              width: '100%',
+              aspectRatio: '16 / 9',
+              objectFit: 'cover',
+              display: 'block',
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // No image — show a subtle 3-slot placeholder row
   return (
     <div style={{
-      width: '100%',
-      aspectRatio: '4 / 3',
-      background: '#f8f6f2',
-      borderRadius: '4px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: '0.6rem',
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr 1fr',
+      gap: '0.5rem',
+      marginBottom: '1.25rem',
     }}>
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d0ccc0" strokeWidth="1.5">
-        <rect x="3" y="6" width="18" height="12" rx="2" />
-        <circle cx="8.5" cy="12" r="2" />
-        <circle cx="15.5" cy="12" r="2" />
-        <path d="M8.5 14v1M15.5 14v1" />
-      </svg>
-    </div>
-  );
-}
-
-interface AdvisoryProductCardProps {
-  options: AdvisoryOption[];
-}
-
-export default function AdvisoryProductCards({ options }: AdvisoryProductCardProps) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      {options.map((opt, i) => (
-        <ProductCard key={i} opt={opt} />
+      {['Front', 'Rear', 'Internal'].map((label) => (
+        <div
+          key={label}
+          style={{
+            background: '#f8f6f2',
+            borderRadius: '6px',
+            aspectRatio: '4 / 3',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid #f0eee8',
+          }}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d0ccc0" strokeWidth="1.5">
+            <rect x="3" y="6" width="18" height="12" rx="2" />
+            <circle cx="8.5" cy="12" r="2" />
+            <circle cx="15.5" cy="12" r="2" />
+            <path d="M8.5 14v1M15.5 14v1" />
+          </svg>
+        </div>
       ))}
     </div>
   );
 }
 
-function ProductCard({ opt }: { opt: AdvisoryOption }) {
-  const hasEnhancedFields = !!(opt.sonicDirectionLabel || opt.productType || opt.availability);
-  const availBadge = opt.availability ? AVAILABILITY_LABELS[opt.availability] : undefined;
-  const hasImage = !!opt.imageUrl;
+// ── Purchase buttons ──────────────────────────────────
+
+function PurchaseButtons({ opt }: { opt: AdvisoryOption }) {
+  const buyNewUrl = getBuyNewUrl(opt);
+  const findUsedUrl = opt.usedMarketUrl ?? hifiSharkUrl(opt.brand, opt.name);
+  const isDiscontinued = opt.availability === 'discontinued' || opt.availability === 'vintage';
 
   return (
-    <div
-      style={{
-        padding: '1rem 1.1rem',
-        border: '1px solid #eae8e4',
-        borderRadius: '8px',
-        background: '#ffffff',
-      }}
-    >
-      {/* ── Product image ──────────────────────────── */}
-      {hasImage ? (
-        <div style={{ marginBottom: '0.6rem' }}>
-          <img
-            src={opt.imageUrl}
-            alt={`${opt.brand ?? ''} ${opt.name}`}
-            style={{
-              width: '100%',
-              aspectRatio: '4 / 3',
-              objectFit: 'cover',
-              borderRadius: '4px',
-              background: '#f8f6f2',
-            }}
-          />
-        </div>
-      ) : null}
+    <div style={{
+      display: 'flex',
+      gap: '0.6rem',
+      marginTop: '0.75rem',
+      marginBottom: '1rem',
+    }}>
+      {/* Buy New — primary button (hidden for discontinued) */}
+      {!isDiscontinued && buyNewUrl && (
+        <a
+          href={buyNewUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            padding: '0.5rem 1.1rem',
+            background: COLORS.text,
+            color: COLORS.white,
+            borderRadius: '6px',
+            fontSize: '0.88rem',
+            fontWeight: 500,
+            textDecoration: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            letterSpacing: '0.01em',
+          }}
+        >
+          Buy New
+        </a>
+      )}
 
-      {/* ── Header: name, price, badges ──────────── */}
-      <div style={{ marginBottom: '0.35rem' }}>
-        <strong style={{ color: '#2a2a2a', fontSize: '1rem' }}>
-          {opt.brand ? `${opt.brand} ` : ''}{opt.name}
-        </strong>
-        {opt.price != null && opt.price > 0 && (
-          <span style={{ color: '#777', marginLeft: '0.5rem', fontSize: '0.92rem' }}>
-            {formatPrice(opt.price, opt.priceCurrency)}
-          </span>
-        )}
-        {/* Availability badge */}
+      {/* Find Used — secondary outlined button */}
+      <a
+        href={findUsedUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.35rem',
+          padding: '0.5rem 1.1rem',
+          background: 'transparent',
+          color: COLORS.text,
+          borderRadius: '6px',
+          fontSize: '0.88rem',
+          fontWeight: 500,
+          textDecoration: 'none',
+          border: `1px solid ${COLORS.border}`,
+          cursor: 'pointer',
+          letterSpacing: '0.01em',
+        }}
+      >
+        Find Used
+      </a>
+    </div>
+  );
+}
+
+// ── Section divider ───────────────────────────────────
+
+function ProductDivider() {
+  return <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.border}`, margin: '2.5rem 0' }} />;
+}
+
+// ── Sub-heading ───────────────────────────────────────
+
+function SubHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h4 style={{
+      margin: '1.1rem 0 0.4rem 0',
+      fontSize: '0.95rem',
+      fontWeight: 600,
+      color: COLORS.text,
+      letterSpacing: '0',
+    }}>
+      {children}
+    </h4>
+  );
+}
+
+// ── Bullet list ───────────────────────────────────────
+
+function Bullets({ items, color }: { items: string[]; color?: string }) {
+  return (
+    <ul style={{
+      margin: 0,
+      paddingLeft: '1.2rem',
+      lineHeight: 1.7,
+      color: color ?? COLORS.text,
+    }}>
+      {items.map((item, i) => (
+        <li key={i} style={{ marginBottom: '0.15rem', fontSize: '0.93rem' }}>
+          {renderText(item)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ── Single editorial product section ──────────────────
+
+function EditorialProductSection({ opt, index }: { opt: AdvisoryOption; index: number }) {
+  const fullName = [opt.brand, opt.name].filter(Boolean).join(' ');
+  const availBadge = opt.availability ? AVAILABILITY_LABELS[opt.availability] : undefined;
+  const isDiscontinued = opt.availability === 'discontinued' || opt.availability === 'vintage';
+
+  // Parse sound character into bullets if it contains commas or line breaks
+  const characterBullets = opt.character
+    ? opt.character.split(/[,\n]/).map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  return (
+    <div>
+      {/* ── Product name (numbered) ──────────────────── */}
+      <h3 style={{
+        margin: '0 0 0.2rem 0',
+        fontSize: '1.25rem',
+        fontWeight: 600,
+        color: COLORS.text,
+        letterSpacing: '-0.01em',
+        lineHeight: 1.3,
+      }}>
+        {index + 1}. {fullName}
         {availBadge && (
           <span
             style={{
-              marginLeft: '0.5rem',
-              fontSize: '0.73rem',
+              marginLeft: '0.6rem',
+              fontSize: '0.72rem',
               fontWeight: 600,
-              letterSpacing: '0.03em',
-              padding: '0.12rem 0.45rem',
+              letterSpacing: '0.02em',
+              padding: '0.15rem 0.55rem',
               borderRadius: '4px',
               color: availBadge.color,
               background: availBadge.bg,
               border: `1px solid ${availBadge.border}`,
+              verticalAlign: 'middle',
             }}
           >
             {availBadge.text}
           </span>
         )}
-      </div>
+      </h3>
 
-      {/* ── Product type + sonic direction ────────── */}
-      {hasEnhancedFields && (
-        <div
-          style={{
-            display: 'flex',
-            gap: '0.5rem',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            marginBottom: '0.4rem',
-            fontSize: '0.83rem',
-            color: '#999',
-          }}
-        >
-          {opt.productType && <span>{opt.productType}</span>}
-          {opt.productType && opt.sonicDirectionLabel && (
-            <span style={{ color: '#ddd' }}>&middot;</span>
-          )}
-          {opt.sonicDirectionLabel && (
-            <span style={{ fontStyle: 'italic', color: '#a89870' }}>
-              {opt.sonicDirectionLabel}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* ── Used price range ─────────────────────── */}
-      {opt.usedPriceRange && (
-        <div style={{ fontSize: '0.83rem', color: '#999', marginBottom: '0.35rem' }}>
-          Typical used: {formatPrice(opt.usedPriceRange.low)}–{formatPrice(opt.usedPriceRange.high)}
-        </div>
-      )}
-
-      {/* ── Character ────────────────────────────── */}
-      {opt.character && (
-        <p style={{
-          margin: '0 0 0.4rem 0',
-          color: '#666',
-          lineHeight: 1.6,
-          fontSize: '0.93rem',
+      {/* ── Sonic direction label (subtle) ───────────── */}
+      {opt.sonicDirectionLabel && (
+        <div style={{
+          fontSize: '0.85rem',
           fontStyle: 'italic',
+          color: COLORS.accent,
+          marginBottom: '0.5rem',
         }}>
-          {opt.character}
+          {opt.sonicDirectionLabel}
+        </div>
+      )}
+
+      {/* ── Image gallery ────────────────────────────── */}
+      <ImageGallery brand={opt.brand} name={opt.name} imageUrl={opt.imageUrl} />
+
+      {/* ── Approx price ─────────────────────────────── */}
+      <SubHeading>Approx price</SubHeading>
+      <ul style={{ margin: '0 0 0 0', paddingLeft: '1.2rem', lineHeight: 1.7, fontSize: '0.93rem', color: COLORS.text }}>
+        {!isDiscontinued && opt.price != null && opt.price > 0 && (
+          <li>New: ~{formatPrice(opt.price, opt.priceCurrency)}</li>
+        )}
+        {opt.usedPriceRange ? (
+          <li>Used: {formatPrice(opt.usedPriceRange.low, opt.priceCurrency)}–{formatPrice(opt.usedPriceRange.high, opt.priceCurrency)}</li>
+        ) : isDiscontinued ? (
+          <li>Used market only</li>
+        ) : null}
+      </ul>
+
+      {/* ── Purchase buttons ─────────────────────────── */}
+      <PurchaseButtons opt={opt} />
+
+      {/* ── DAC architecture / product type ──────────── */}
+      {opt.productType && (
+        <p style={{
+          margin: '0 0 0.3rem 0',
+          fontSize: '0.93rem',
+          lineHeight: 1.7,
+          color: COLORS.text,
+        }}>
+          <strong>Architecture:</strong>{' '}
+          <span style={{ color: COLORS.textSecondary }}>{opt.productType}</span>
         </p>
       )}
 
-      {/* ── Fit note ─────────────────────────────── */}
-      <p style={{ margin: '0 0 0.35rem 0', color: '#333', lineHeight: 1.6, fontSize: '0.95rem' }}>
-        {renderText(opt.fitNote)}
-      </p>
+      {/* ── Sound character ──────────────────────────── */}
+      {characterBullets.length > 0 && (
+        <>
+          <SubHeading>Sound character</SubHeading>
+          <Bullets items={characterBullets} color={COLORS.textSecondary} />
+        </>
+      )}
 
-      {/* ── Caution ──────────────────────────────── */}
+      {/* ── Fit note (main description / verdict) ────── */}
+      {opt.fitNote && (
+        <>
+          {opt.systemDelta ? (
+            // When system delta exists, fitNote is supplementary
+            <p style={{
+              margin: '0.8rem 0 0.3rem 0',
+              color: COLORS.text,
+              lineHeight: 1.7,
+              fontSize: '0.95rem',
+            }}>
+              {renderText(opt.fitNote)}
+            </p>
+          ) : (
+            // When no delta, fitNote is the main verdict
+            <>
+              <SubHeading>Verdict</SubHeading>
+              <p style={{
+                margin: '0 0 0.3rem 0',
+                color: COLORS.text,
+                lineHeight: 1.7,
+                fontSize: '0.95rem',
+              }}>
+                {renderText(opt.fitNote)}
+              </p>
+            </>
+          )}
+        </>
+      )}
+
+      {/* ── Caution ──────────────────────────────────── */}
       {opt.caution && (
-        <p style={{ margin: '0 0 0.35rem 0', color: '#999', fontSize: '0.88rem', lineHeight: 1.55 }}>
+        <p style={{
+          margin: '0.3rem 0 0.3rem 0',
+          color: COLORS.textMuted,
+          fontSize: '0.9rem',
+          lineHeight: 1.6,
+        }}>
           {opt.caution}
         </p>
       )}
 
-      {/* ── System delta — reasoning block ─────────── */}
+      {/* ── System delta reasoning ───────────────────── */}
       {opt.systemDelta && (
         <div style={{
-          marginTop: '0.5rem',
-          padding: '0.6rem 0.8rem',
-          background: '#f8f6f0',
+          marginTop: '0.75rem',
+          padding: '0.75rem 0.9rem',
+          background: COLORS.accentBg,
           borderRadius: '6px',
-          fontSize: '0.88rem',
-          lineHeight: 1.6,
+          fontSize: '0.9rem',
+          lineHeight: 1.65,
         }}>
           {opt.systemDelta.whyFitsSystem && (
-            <p style={{ margin: '0 0 0.3rem 0', color: '#555' }}>
+            <p style={{ margin: '0 0 0.35rem 0', color: COLORS.textSecondary }}>
               {renderText(opt.systemDelta.whyFitsSystem)}
             </p>
           )}
           {opt.systemDelta.likelyImprovements && opt.systemDelta.likelyImprovements.length > 0 && (
-            <div style={{ margin: '0 0 0.25rem 0', color: '#666' }}>
-              <span style={{ fontWeight: 500, color: '#5a7050' }}>Likely improvements: </span>
+            <div style={{ margin: '0 0 0.25rem 0', color: COLORS.textSecondary }}>
+              <span style={{ fontWeight: 500, color: COLORS.green }}>Likely improvements: </span>
               {opt.systemDelta.likelyImprovements.join(' · ')}
             </div>
           )}
           {opt.systemDelta.tradeOffs && opt.systemDelta.tradeOffs.length > 0 && (
-            <div style={{ color: '#999' }}>
+            <div style={{ color: COLORS.textMuted }}>
               <span style={{ fontWeight: 500 }}>Trade-offs: </span>
               {opt.systemDelta.tradeOffs.join(' · ')}
             </div>
@@ -217,112 +413,79 @@ function ProductCard({ opt }: { opt: AdvisoryOption }) {
         </div>
       )}
 
-      {/* ── Link bar ─────────────────────────────── */}
-      <LinkBar opt={opt} />
-
-      {/* ── Explore used market ─────────────────── */}
-      {opt.usedMarketSources && opt.usedMarketSources.length > 0 && (
-        <div style={{ marginTop: '0.4rem', fontSize: '0.82rem', color: '#a89870' }}>
-          <span style={{ fontWeight: 500 }}>Explore used market: </span>
-          {opt.usedMarketSources.map((src, si) => (
-            <span key={si}>
-              <a
-                href={src.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: '#a89870', textDecoration: 'underline', textUnderlineOffset: '2px' }}
-              >
-                {src.name}
-              </a>
-              {si < (opt.usedMarketSources?.length ?? 0) - 1 && (
-                <span style={{ margin: '0 0.3rem', color: '#ddd' }}>&middot;</span>
-              )}
-            </span>
-          ))}
-        </div>
-      )}
+      {/* ── Source links (manufacturer + retailers) ──── */}
+      <SourceLinks opt={opt} />
     </div>
   );
 }
 
-/**
- * Structured link bar: manufacturer → retailer(s) → used market.
- * Falls back to flat link list when enhanced fields are absent.
- */
-function LinkBar({ opt }: { opt: AdvisoryOption }) {
-  const links: Array<{ label: string; url: string; kind: 'manufacturer' | 'retailer' | 'used' }> = [];
+// ── Source links (compact, below each product) ────────
+
+function SourceLinks({ opt }: { opt: AdvisoryOption }) {
+  const links: Array<{ label: string; url: string }> = [];
 
   if (opt.manufacturerUrl) {
-    links.push({ label: opt.brand ?? 'Manufacturer', url: opt.manufacturerUrl, kind: 'manufacturer' });
+    links.push({ label: opt.brand ?? 'Official site', url: opt.manufacturerUrl });
   }
-
   if (opt.links) {
     for (const link of opt.links) {
       if (link.url === opt.manufacturerUrl) continue;
-      if (link.url === opt.usedMarketUrl) continue;
-      links.push({ label: link.label, url: link.url, kind: 'retailer' });
+      links.push({ label: link.label, url: link.url });
     }
   }
 
-  if (opt.usedMarketUrl) {
-    if (!links.some((l) => l.url === opt.usedMarketUrl)) {
-      links.push({ label: 'Explore used market', url: opt.usedMarketUrl, kind: 'used' });
+  // Used market sources
+  if (opt.usedMarketSources && opt.usedMarketSources.length > 0) {
+    for (const src of opt.usedMarketSources) {
+      links.push({ label: src.name, url: src.url });
     }
-  }
-
-  if (links.length === 0 && opt.links && opt.links.length > 0) {
-    return (
-      <div style={{ fontSize: '0.88rem', color: '#777', marginTop: '0.35rem' }}>
-        {opt.links.map((link, li) => (
-          <span key={li}>
-            <a
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: '#666', textDecoration: 'underline', textUnderlineOffset: '2px' }}
-            >
-              {link.label}
-            </a>
-            {li < (opt.links?.length ?? 0) - 1 && (
-              <span style={{ margin: '0 0.4rem', color: '#ddd' }}>&middot;</span>
-            )}
-          </span>
-        ))}
-      </div>
-    );
   }
 
   if (links.length === 0) return null;
 
   return (
     <div style={{
+      marginTop: '0.75rem',
       fontSize: '0.85rem',
-      color: '#777',
-      marginTop: '0.4rem',
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '0.15rem',
-      alignItems: 'center',
+      color: COLORS.textMuted,
     }}>
-      {links.map((link, li) => (
-        <span key={li}>
+      {links.map((link, i) => (
+        <span key={i}>
           <a
             href={link.url}
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              color: link.kind === 'manufacturer' ? '#555' : link.kind === 'used' ? '#a89870' : '#666',
+              color: COLORS.textSecondary,
               textDecoration: 'underline',
               textUnderlineOffset: '2px',
-              fontWeight: link.kind === 'manufacturer' ? 500 : 400,
             }}
           >
             {link.label}
           </a>
-          {li < links.length - 1 && (
+          {i < links.length - 1 && (
             <span style={{ margin: '0 0.35rem', color: '#ddd' }}>&middot;</span>
           )}
         </span>
+      ))}
+    </div>
+  );
+}
+
+// ── Main export: editorial product list ───────────────
+
+interface AdvisoryProductCardProps {
+  options: AdvisoryOption[];
+}
+
+export default function AdvisoryProductCards({ options }: AdvisoryProductCardProps) {
+  return (
+    <div>
+      {options.map((opt, i) => (
+        <div key={i}>
+          {i > 0 && <ProductDivider />}
+          <EditorialProductSection opt={opt} index={i} />
+        </div>
       ))}
     </div>
   );
