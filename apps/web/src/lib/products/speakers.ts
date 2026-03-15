@@ -1560,4 +1560,89 @@ export const SPEAKER_PRODUCTS: Product[] = [
     },
     notes: 'Discontinued but legendary. Available used for $1,200-1,800. Needs quality amplification and good stands. The sealed box means clean, fast bass rather than deep bass.',
   },
+
+  // ── XSA ─────────────────────────────────────────────
+
+  {
+    id: 'xsa-vanguard',
+    brand: 'XSA',
+    name: 'Vanguard',
+    price: 1800,
+    category: 'speaker',
+    architecture: 'compact two-way sealed monitor',
+    subcategory: 'standmount',
+    priceTier: 'mid-fi',
+    brandScale: 'boutique',
+    region: 'north-america',
+    country: 'US',
+    topology: 'sealed',
+    archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
+    primaryAxes: {
+      warm_bright: 'bright',            // Articulation and clarity forward — slightly lean tonal balance
+      smooth_detailed: 'detailed',      // Detail and speed over smoothness
+      elastic_controlled: 'elastic',    // Quick, lively transients — not overdamped
+      airy_closed: 'airy',             // Open, spacious presentation
+      // Founder reference calibration
+      warm_bright_n: 1,           // Lean of neutral — articulation over mass
+      smooth_detailed_n: 1,       // Detail-forward — speed and clarity
+      elastic_controlled_n: -1,   // Elastic — quick, not overdamped
+      airy_closed_n: 1,           // Open and spacious
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Lean but not aggressive. Clarity comes from speed and openness rather than treble energy.',
+    },
+    tendencyProfile: {
+      basis: 'founder_reference',
+      confidence: 'founder_reference',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'speed', level: 'emphasized' },
+        { trait: 'openness', level: 'emphasized' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'spatial_precision', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+        { trait: 'warmth', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 1.0,
+      speed: 1.0,
+      openness: 1.0,
+      dynamics: 0.7,
+      spatial_precision: 0.7,
+      texture: 0.7,
+      rhythm: 0.7,
+      flow: 0.4,
+      tonal_density: 0.4,
+      warmth: 0.4,
+      composure: 0.4,
+      fatigue_risk: 0.0,
+    },
+    description:
+      'Compact modern monitor emphasizing articulation, speed, and openness rather than tonal mass or saturation. Small-scale presentation that prioritises clarity and transient definition. Rewards systems that already have tonal body or warmth upstream.',
+    retailer_links: [],
+    tendencies: {
+      confidence: 'medium',
+      character: [
+        { domain: 'tonality', tendency: 'lean and articulate — clarity and definition over tonal density', basis: 'founder_reference' },
+        { domain: 'timing', tendency: 'quick and lively — transient speed is a defining trait', basis: 'founder_reference' },
+        { domain: 'spatial', tendency: 'open and airy staging for a compact monitor', basis: 'founder_reference' },
+      ],
+      interactions: [
+        { condition: 'paired with warm or tonally dense amplification', effect: 'excellent balance — the amp provides body that the speaker does not add on its own', valence: 'positive', basis: 'founder_reference' },
+        { condition: 'in systems already lean or bright', effect: 'lean-on-lean risk — the articulation can tip into thinness without upstream warmth', valence: 'caution', basis: 'founder_reference' },
+        { condition: 'paired with tube amplification', effect: 'harmonic richness from tubes complements the speaker\'s speed and openness', valence: 'positive', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'articulation, openness, and transient speed', cost: 'tonal mass, saturation, and the scale of larger designs', relative_to: 'full-range or high-efficiency speakers', basis: 'founder_reference' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Founder listening notes', note: 'Calibrated from extended in-system use. Compact, quick, slightly lean, open.' },
+    ],
+    notes: 'Founder reference speaker. Best understood as a speed-and-clarity optimised monitor — works well when the system provides tonal body from other components.',
+  },
 ];

@@ -1044,4 +1044,94 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     ],
     notes: 'Discontinued. The TA-10 is a founder reference amplifier — used to calibrate what extreme elasticity and low stored energy sound like. 15W limits speaker pairing to high-efficiency designs.',
   },
+
+  // ── Hegel ───────────────────────────────────────────
+
+  {
+    id: 'hegel-rost',
+    brand: 'Hegel',
+    name: 'Rost',
+    price: 2000,
+    category: 'amplifier',
+    architecture: 'Class AB solid-state with SoundEngine, integrated DAC',
+    subcategory: 'integrated-amp',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'europe',
+    country: 'NO',
+    topology: 'class-ab-solid-state',
+    archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
+    primaryAxes: {
+      warm_bright: 'bright',             // Slightly bright of neutral — clarity and grip prioritised
+      smooth_detailed: 'detailed',       // Detail-forward — composure over bloom
+      elastic_controlled: 'controlled',  // Strong grip — controlled, not elastic
+      airy_closed: 'neutral',           // Neither notably airy nor closed
+      // Founder reference calibration
+      warm_bright_n: 1,           // Cool-neutral lean
+      smooth_detailed_n: 1,       // Detail and composure over smoothness
+      elastic_controlled_n: 2,    // Strongly controlled — grip and discipline
+      airy_closed_n: 0,           // Neutral spatiality
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Composed and disciplined. No glare or harshness. Control may read as slightly cool but not fatiguing.',
+    },
+    tendencyProfile: {
+      basis: 'founder_reference',
+      confidence: 'founder_reference',
+      tendencies: [
+        { trait: 'composure', level: 'emphasized' },
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'speed', level: 'present' },
+        { trait: 'spatial_precision', level: 'present' },
+        { trait: 'flow', level: 'present' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+        { trait: 'warmth', level: 'less_emphasized' },
+        { trait: 'elasticity', level: 'less_emphasized' },
+        { trait: 'texture', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      composure: 1.0,
+      clarity: 1.0,
+      dynamics: 0.7,
+      speed: 0.7,
+      spatial_precision: 0.7,
+      flow: 0.7,
+      tonal_density: 0.4,
+      warmth: 0.4,
+      texture: 0.4,
+      elasticity: 0.0,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+    },
+    description:
+      'Norwegian integrated with 75W into 8Ω, built-in DAC, and Hegel\'s SoundEngine topology. Controlled, composed, and grippy — emphasises bass control, stability, and discipline over elasticity or tonal bloom. Smaller sibling of the H190 with the same house voicing at a lower price and power output.',
+    retailer_links: [
+      { label: 'Hegel', url: 'https://www.hegel.com/products/integrated-amplifiers/rost' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'dynamics', tendency: 'controlled and composed — grip and order rather than explosive dynamics', basis: 'founder_reference' },
+        { domain: 'tonality', tendency: 'cool-neutral — discipline over warmth, composure over bloom', basis: 'founder_reference' },
+        { domain: 'timing', tendency: 'tight and disciplined — transient control is the priority', basis: 'founder_reference' },
+      ],
+      interactions: [
+        { condition: 'paired with speakers that need control', effect: 'excellent grip — the Rost disciplines bass and keeps things orderly', valence: 'positive', basis: 'founder_reference' },
+        { condition: 'in already controlled or lean systems', effect: 'risk of overdamping — the system may feel too tight and lack organic flow', valence: 'caution', basis: 'founder_reference' },
+        { condition: 'paired with warm or elastic speakers', effect: 'good complementary balance — the amp provides control, the speaker provides life', valence: 'positive', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'control, composure, grip, and all-in-one convenience', cost: 'elasticity, organic flow, and the harmonic richness of tube or Class A designs', relative_to: 'tube or single-ended triode amplifiers', basis: 'founder_reference' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Founder listening notes', note: 'Calibrated from extended in-system use. Controlled, grippy, composed, cool-neutral.' },
+      { source: 'What Hi-Fi?', note: 'Review praising the Rost\'s composure and value relative to the H190.' },
+    ],
+    notes: 'Founder reference amplifier. The Rost is the Hegel entry point — same design philosophy as the H190 (control, grip, transparency) at lower power. Good when speakers need discipline; risk of overdamping in already controlled chains.',
+  },
 ];

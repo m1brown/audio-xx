@@ -52,6 +52,8 @@ const BRAND_CATEGORY_MAP: Record<string, ProductCategory> = {
   michell: 'turntable', 'michell engineering': 'turntable', sorane: 'turntable',
   // Cartridges
   ortofon: 'cartridge', emt: 'cartridge',
+  // DAC brands
+  auralic: 'dac',
   // Phono stages
   aurorasound: 'phono',
   // Headphones
@@ -136,6 +138,12 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   'cia-1t': { brand: 'Crayon', category: 'integrated' },
   // XSA
   vanguard: { brand: 'XSA', category: 'speaker' },
+  // Hegel
+  rost: { brand: 'Hegel', category: 'amplifier' },
+  'hegel rost': { brand: 'Hegel', category: 'amplifier' },
+  // Auralic
+  vega: { brand: 'Auralic', category: 'dac' },
+  'auralic vega': { brand: 'Auralic', category: 'dac' },
   // Denafrips aliases
   'ares ii': { brand: 'Denafrips', category: 'dac' },
   'pontus 12th-1': { brand: 'Denafrips', category: 'dac' },

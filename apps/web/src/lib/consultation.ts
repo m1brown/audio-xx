@@ -711,6 +711,19 @@ const BRAND_PROFILES: BrandProfile[] = [
       { label: 'Kitsune HiFi (US distributor)', url: 'https://krantenaudio.com/', kind: 'dealer', region: 'US' },
     ],
   },
+  {
+    names: ['auralic'],
+    country: 'China',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    categories: ['dac', 'streamer'],
+    philosophy: 'Auralic builds streaming DACs and digital sources with a focus on polished, refined sound quality. The Vega flagship DAC uses an ESS Sabre implementation with proprietary Sanctuary audio processing and femto-precision clocking. The brand prioritises composure, tonal body, and long-session listening comfort.',
+    tendencies: 'Auralic DACs are described as grounded, tonally full, and composed. Polished presentation that emphasises stability and refinement over transient excitement. The Vega sits on the warm, dense side of the delta-sigma spectrum.',
+    systemContext: 'Auralic DACs work well in lean or bright systems that need tonal grounding. In systems already dense or controlled, the combined composure may reduce dynamic excitement.',
+    links: [
+      { label: 'Official website', url: 'https://auralic.com/', region: 'global' },
+    ],
+  },
 ];
 
 // ── Topology keywords for archetype matching ────────
@@ -2183,6 +2196,10 @@ const KNOWN_PRODUCT_ROLES: Record<string, { expectedCategory: string; displayBra
   'cia-1': { expectedCategory: 'integrated', displayBrand: 'Crayon' },
   'cia-1t': { expectedCategory: 'integrated', displayBrand: 'Crayon' },
   vanguard: { expectedCategory: 'speaker', displayBrand: 'XSA' },
+  rost: { expectedCategory: 'amplifier', displayBrand: 'Hegel' },
+  'hegel rost': { expectedCategory: 'amplifier', displayBrand: 'Hegel' },
+  vega: { expectedCategory: 'dac', displayBrand: 'Auralic' },
+  'auralic vega': { expectedCategory: 'dac', displayBrand: 'Auralic' },
   diva: { expectedCategory: 'speaker', displayBrand: 'WLM' },
   'diva monitor': { expectedCategory: 'speaker', displayBrand: 'WLM' },
   leben: { expectedCategory: 'amplifier', displayBrand: 'Leben' },

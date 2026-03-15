@@ -72,6 +72,8 @@ const BRAND_NAMES = [
   'rega', 'pro-ject', 'technics', 'clearaudio', 'vpi',
   'linn', 'thorens', 'michell', 'michell engineering',
   'sorane', 'ortofon', 'emt',
+  // DAC brands
+  'auralic',
   // Phono stages
   'aurorasound',
   // Headphones / IEMs
@@ -98,11 +100,12 @@ const PRODUCT_NAMES = [
   'x26 pro', 'su-9', 'd90',
   'k9 pro', 'ef400',
   'dr70',
+  'auralic vega', 'hegel rost',
   'job integrated', 'job int',
   'leben cs600x', 'leben cs600', 'leben cs300x', 'leben cs300', 'leben cs-300',
   'may kte', 'holo may',
   'srda', 'cia-1', 'cia-1t', 'ta-10', 'trends ta-10',
-  'vanguard', 'cs600x', 'cs600', 'cs300x', 'cs300',
+  'vanguard', 'rost', 'vega', 'cs600x', 'cs600', 'cs300x', 'cs300',
   'diva monitor', 'super hl5', 'dirty weekend',
   // Turntable / tonearm / cartridge / phono products
   'gyro se', 'gyrodec', 'sa1.2',

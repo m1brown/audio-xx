@@ -946,66 +946,73 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'GB',
     topology: 'fpga',
     archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
-    // Axis reasoning (CALIBRATED ANCHOR): Portable Chord FPGA. Clarity 1.0, flow 0.7, density 0.4.
-    // "Speed over weight." "Lighter tonal balance than desktop Chord units."
-    // Shares Chord timing precision but with less authority.
-    // CALIBRATION: High clarity does NOT imply brightness. Chord achieves detail
-    // through timing accuracy rather than treble emphasis → neutral, not bright.
-    // Dynamic snap and FPGA transient precision → elastic.
+    // Founder calibration: Hugo v1 is fast, lively, engaging — NOT sterile or purely analytical.
+    // Founder experience: fast, alive, electric, open, engaging, slightly light.
+    // Clarity comes from FPGA timing precision, not treble energy.
+    // Strong air and spatial aliveness. Slightly lean tonal balance.
     primaryAxes: {
-      warm_bright: 'neutral',         // Clarity via timing precision, not treble emphasis — neutral per calibration
-      smooth_detailed: 'detailed',    // Clarity emphasized, timing precision — detail-forward
-      elastic_controlled: 'elastic',  // FPGA transient snap, dynamic agility — elastic character
-      airy_closed: 'neutral',        // "Good headphone staging" but not notably airy or closed
+      warm_bright: 'bright',          // Slightly bright of neutral — speed and energy over tonal mass
+      smooth_detailed: 'detailed',    // Strongly detail-forward — timing precision and transient speed
+      elastic_controlled: 'elastic',  // FPGA transient snap, dynamic agility — elastic and alive
+      airy_closed: 'airy',           // Very open and spatially alive — air is a defining trait
+      // Founder reference calibration
+      warm_bright_n: 1,         // Slightly lean — speed and energy over tonal density
+      smooth_detailed_n: 2,     // Strongly detailed — timing precision is the primary character
+      elastic_controlled_n: -1, // Elastic — lively and dynamically agile
+      airy_closed_n: 2,         // Very airy — spatially alive and open
     },
     fatigueAssessment: {
       risk: 'low',
-      notes: 'No glare risk. Chord FPGA character avoids analytical edge — detail comes from timing, not energy. Fatigue unlikely.',
+      notes: 'No glare risk. Detail comes from timing precision, not treble energy. The liveliness is engaging, not aggressive.',
     },
     tendencyProfile: {
-      basis: 'review_consensus',
-      confidence: 'high',
+      basis: 'founder_reference',
+      confidence: 'founder_reference',
       tendencies: [
         { trait: 'clarity', level: 'emphasized' },
-        { trait: 'flow', level: 'present' },
+        { trait: 'speed', level: 'emphasized' },
         { trait: 'dynamics', level: 'present' },
+        { trait: 'flow', level: 'present' },
         { trait: 'texture', level: 'present' },
         { trait: 'tonal_density', level: 'less_emphasized' },
       ],
       riskFlags: [],
     },
     traits: {
-      flow: 0.7,
-      tonal_density: 0.4,
       clarity: 1.0,
+      speed: 1.0,
+      flow: 0.7,
       dynamics: 0.7,
+      texture: 0.7,
+      elasticity: 0.7,
+      tonal_density: 0.4,
+      composure: 0.4,
       fatigue_risk: 0.0,
       glare_risk: 0.0,
-      texture: 0.7,
-      elasticity: 0.4,
-      composure: 0.4,
     },
     description:
-      'Introduced in 2014, the original Hugo was the first portable application of Rob Watts\' FPGA pulse array architecture. It runs a 26,368-tap filter on a Xilinx Spartan-6 FPGA — far beyond what off-the-shelf DAC chips implement — to achieve timing precision at the microsecond level. The design prioritises transient clarity and dynamic agility over tonal weight. As a combined DAC/headphone amplifier it shares the Chord house sound in a compact form factor, with crossfeed and line-level output for use as a source component in desktop systems.',
+      'Introduced in 2014, the original Hugo was the first portable application of Rob Watts\' FPGA pulse array architecture. It runs a 26,368-tap filter on a Xilinx Spartan-6 FPGA — far beyond what off-the-shelf DAC chips implement — to achieve timing precision at the microsecond level. Fast, lively, and highly engaging: prioritises transient speed, air, and excitement over tonal density. Slightly tonally light but never sterile — the liveliness is its defining quality.',
     retailer_links: [
       { label: 'Chord Electronics', url: 'https://chordelectronics.co.uk/product/hugo/' },
     ],
     tendencies: {
       confidence: 'high',
       character: [
-        { domain: 'timing', tendency: 'fast, precise transient resolution from FPGA pulse array — the Chord signature at a portable scale', basis: 'review_consensus' },
-        { domain: 'tonality', tendency: 'lighter tonal balance than desktop Chord units — speed over weight', basis: 'listener_consensus' },
-        { domain: 'spatial', tendency: 'good headphone staging for a portable device, with usable crossfeed', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'fast, precise, alive — FPGA pulse array delivers transient speed and electric engagement', basis: 'founder_reference' },
+        { domain: 'tonality', tendency: 'slightly light tonal balance — speed and energy over density, but never sterile', basis: 'founder_reference' },
+        { domain: 'spatial', tendency: 'very open and spatially alive — air and openness are defining traits', basis: 'founder_reference' },
       ],
       interactions: [
-        { condition: 'as a desktop source feeding external amplification', effect: 'the timing precision translates well but the output stage is optimised for headphones — dedicated desktop sources may have more authority', valence: 'neutral', basis: 'editorial_inference' },
-        { condition: 'paired with warm headphones or IEMs', effect: 'the Chord clarity tends to complement warmer transducers without thinning the presentation', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in systems that benefit from energy and openness', effect: 'the Hugo adds life, speed, and spatial excitement — works as an energising source', valence: 'positive', basis: 'founder_reference' },
+        { condition: 'paired with warm headphones or speakers', effect: 'the Chord speed and air complement warmer transducers without thinning the presentation', valence: 'positive', basis: 'founder_reference' },
+        { condition: 'in already lean or bright systems', effect: 'the slight tonal lightness may compound — needs upstream or downstream body', valence: 'caution', basis: 'founder_reference' },
       ],
       tradeoffs: [
-        { gains: 'portability, timing precision, and Chord FPGA character', cost: 'the scale, composure, and output authority of desktop Chord units like Qutest or Hugo TT2', relative_to: 'Chord desktop lineup', basis: 'review_consensus' },
+        { gains: 'speed, air, spatial aliveness, and electric engagement', cost: 'tonal grounding and the composure of denser, weightier DACs', relative_to: 'R2R or tube DACs', basis: 'founder_reference' },
       ],
     },
     sourceReferences: [
+      { source: 'Founder listening notes', note: 'Calibrated from extended in-system use. Fast, alive, electric, open, engaging, slightly light.' },
       { source: 'What Hi-Fi?', note: 'Review of original Hugo covering portability and Chord FPGA character.' },
       { source: 'Head-Fi community', note: 'Extensive headphone pairing impressions and comparisons with Hugo 2 and Qutest.' },
     ],
@@ -2679,5 +2686,92 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Darko.Audio', note: 'Coverage of the dCS Ring DAC technology and Bartók value proposition.' },
       { source: 'Head-Fi community', note: 'Used market consensus — occasionally found near $5k.' },
     ],
+  },
+
+  // ── Auralic ─────────────────────────────────────────
+
+  {
+    id: 'auralic-vega',
+    brand: 'Auralic',
+    name: 'Vega',
+    price: 3500,
+    category: 'dac',
+    architecture: 'ESS Sabre ES9018 with Auralic Sanctuary audio processor',
+    subcategory: 'standalone-dac',
+    priceTier: 'upper-mid',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    topology: 'delta-sigma',
+    archetypes: { primary: 'flow_organic', secondary: 'precision_explicit' },
+    primaryAxes: {
+      warm_bright: 'warm',            // Warmer than neutral — tonal body and grounding
+      smooth_detailed: 'detailed',    // Polished detail — smooth surface but resolving
+      elastic_controlled: 'controlled', // Composed and stable — not elastic
+      airy_closed: 'closed',          // More grounded and intimate than airy
+      // Founder reference calibration
+      warm_bright_n: -1,        // Warm of neutral — body and grounding
+      smooth_detailed_n: 1,     // Detailed — polished resolution
+      elastic_controlled_n: 1,  // Controlled — composure and stability
+      airy_closed_n: -1,        // More closed/grounded — less spatial excitement
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Polished and composed. Zero fatigue risk. The grounded presentation is inherently easy to listen to for extended sessions.',
+    },
+    tendencyProfile: {
+      basis: 'founder_reference',
+      confidence: 'founder_reference',
+      tendencies: [
+        { trait: 'composure', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'clarity', level: 'present' },
+        { trait: 'flow', level: 'present' },
+        { trait: 'warmth', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'speed', level: 'less_emphasized' },
+        { trait: 'dynamics', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      composure: 1.0,
+      tonal_density: 1.0,
+      clarity: 0.7,
+      flow: 0.7,
+      warmth: 0.7,
+      texture: 0.7,
+      spatial_precision: 0.4,
+      speed: 0.4,
+      dynamics: 0.4,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+    },
+    description:
+      'Auralic\'s flagship DAC featuring the ESS Sabre ES9018 implementation with their proprietary Sanctuary audio processor and femto-precision clocking. More grounded and tonally substantial than Hugo-style FPGA DACs, prioritising composure and stability over sparkle. Polished and refined — a DAC that grounds the system rather than energising it.',
+    retailer_links: [
+      { label: 'Auralic', url: 'https://auralic.com/' },
+    ],
+    tendencies: {
+      confidence: 'medium',
+      character: [
+        { domain: 'tonality', tendency: 'grounded and tonally full — body and refinement over excitement', basis: 'founder_reference' },
+        { domain: 'timing', tendency: 'composed and stable — prioritises control over transient snap', basis: 'founder_reference' },
+        { domain: 'spatial', tendency: 'more intimate and grounded than airy — not a staging DAC', basis: 'founder_reference' },
+      ],
+      interactions: [
+        { condition: 'in lean or bright systems', effect: 'excellent tonal grounding — adds body and stability where it\'s needed', valence: 'positive', basis: 'founder_reference' },
+        { condition: 'paired with controlled or dense amplification', effect: 'the combined composure may reduce dynamic excitement — system can feel overdamped', valence: 'caution', basis: 'founder_reference' },
+        { condition: 'as a counterweight to fast or elastic speakers', effect: 'the stability provides anchor — the speakers provide the life', valence: 'positive', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'tonal body, stability, and long-session composure', cost: 'transient excitement, spatial openness, and the electric energy of FPGA designs', relative_to: 'Chord Hugo, FPGA-based DACs', basis: 'founder_reference' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Founder listening notes', note: 'Calibrated from direct comparison with Hugo v1. Polished, grounded, tonally fuller, composed.' },
+      { source: 'Stereophile', note: 'Review of original Vega praising the refinement and tonal sophistication of the implementation.' },
+    ],
+    notes: 'Founder reference DAC. The Vega sits opposite to the Hugo v1 on the tonal axis — where Hugo is fast and airy, the Vega is grounded and composed. Good for lean systems that need body; less suited when the system already has density.',
   },
 ];

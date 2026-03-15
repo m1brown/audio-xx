@@ -261,6 +261,10 @@ const NAME_ALIASES: Record<string, string[]> = {
   'ta-10': ['ta-10'],
   'ta10': ['ta-10'],
   'trends ta-10': ['ta-10'],
+  'rost': ['rost'],
+  'hegel rost': ['rost'],
+  'vega': ['vega'],
+  'auralic vega': ['vega'],
   'trends ta10': ['ta-10'],
 };
 
