@@ -638,8 +638,13 @@ function buildEditorialIntro(
   };
   const catLabel = CATEGORY_LABELS[category] ?? category;
 
-  // Build the budget clause
-  const budgetClause = budget ? ` under ${budget}` : '';
+  // Build the budget clause — include used-market note
+  const budgetClause = budget
+    ? ` under ~${budget} (new price or typical used price)`
+    : '';
+
+  // Selection philosophy sentence
+  const selectionNote = ` I selected models that are widely regarded for sound quality and musical engagement, not simply "good for the money."`;
 
   // Build the preference anchor
   let preferenceClause = '';
@@ -652,9 +657,9 @@ function buildEditorialIntro(
       : traitList.length === 2
         ? `${traitList[0].toLowerCase()} and ${traitList[1].toLowerCase()}`
         : `${traitList.slice(0, -1).map(t => t.toLowerCase()).join(', ')}, and ${traitList[traitList.length - 1].toLowerCase()}`;
-    preferenceClause = `, focusing on units known for ${formatted}`;
+    preferenceClause = ` The list considers your listening priorities: ${formatted}`;
   } else if (tasteLabel) {
-    preferenceClause = `, focusing on units aligned with ${tasteLabel.toLowerCase()}`;
+    preferenceClause = ` The list is aligned with your preference for ${tasteLabel.toLowerCase()}`;
   }
 
   // Build the archetype bridge
@@ -668,17 +673,29 @@ function buildEditorialIntro(
 
   let alignmentClause = '';
   if (archetype && ARCHETYPE_BRIDGES[archetype]) {
-    alignmentClause = `. I prioritised ${catLabel.toLowerCase()} known for ${ARCHETYPE_BRIDGES[archetype]} rather than purely measurement-driven designs`;
-  } else if (storedDesires && storedDesires.length > 0) {
-    alignmentClause = `, which aligns with your listening preferences`;
+    alignmentClause = `, prioritising ${ARCHETYPE_BRIDGES[archetype]} rather than purely measurement-driven designs`;
   }
 
-  // System note if available
-  const systemNote = systemComponents && systemComponents.length > 0
-    ? ` These are evaluated in the context of your system.`
-    : '';
+  // System compatibility note — extract amplifier name if present
+  let systemClause = '';
+  if (systemComponents && systemComponents.length > 0) {
+    const AMP_KEYWORDS = ['integrated', 'amplifier', 'amp', 'receiver', 'preamp', 'power amp'];
+    const ampComponent = systemComponents.find(c =>
+      AMP_KEYWORDS.some(kw => c.toLowerCase().includes(kw)),
+    );
+    if (ampComponent) {
+      systemClause = `, and compatibility with your ${ampComponent}`;
+    } else {
+      systemClause = `, and compatibility with your current system`;
+    }
+  }
 
-  return `Below is a curated shortlist of ${catLabel}${budgetClause}${preferenceClause}${alignmentClause}.${systemNote}`;
+  // Combine: "Below are … under ~$2,000 (new price or typical used price). I selected …
+  //           The list considers … prioritising …, and compatibility with …."
+  const opening = `Below are the most consistently respected ${catLabel}${budgetClause}.`;
+  const body = `${selectionNote}${preferenceClause}${alignmentClause}${systemClause}.`;
+
+  return `${opening}${body}`;
 }
 
 /**

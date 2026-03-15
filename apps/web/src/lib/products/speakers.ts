@@ -81,6 +81,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'WLM', url: 'https://www.wlm-loudspeakers.com/' },
     ],
     notes: 'Benefits from moderate-power amplification with good current delivery. Spatial precision improves significantly with careful placement.',
+    sourceReferences: [
+      { source: '6moons', note: 'Srajan Ebaen review covering the coaxial wideband design and rhythmic engagement.' },
+      { source: 'Twittering Machines', note: 'Review praising dynamic expression and musical involvement.' },
+    ],
     tendencies: {
       confidence: 'medium',
       character: [
@@ -152,6 +156,11 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'Boenicke Audio', url: 'https://www.boenicke-audio.ch/' },
     ],
     notes: 'Needs quality amplification to shine. Bass quantity limited by cabinet size — room gain or a subwoofer helps in larger rooms.',
+    sourceReferences: [
+      { source: '6moons', note: 'Srajan Ebaen review covering spatial performance and Swiss craftsmanship.' },
+      { source: 'Darko.Audio', note: 'John Darko video feature on Boenicke W5 as a holographic small speaker.' },
+      { source: 'HiFi Huff', note: 'Review praising textural detail and imaging from a compact enclosure.' },
+    ],
     tendencies: {
       confidence: 'medium',
       character: [
@@ -176,6 +185,9 @@ export const SPEAKER_PRODUCTS: Product[] = [
     brand: 'Harbeth',
     name: 'P3ESR',
     price: 2495,
+    usedPriceRange: { low: 1200, high: 1800 },
+    availability: 'current',
+    typicalMarket: 'both',
     category: 'speaker',
     architecture: 'BBC-tradition thin-wall sealed box',
     subcategory: 'standmount',
@@ -223,6 +235,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'Music Direct', url: 'https://www.musicdirect.com/speakers/harbeth-p3esr/' },
     ],
     notes: 'Limited bass extension and dynamic scale. Best for smaller rooms, vocal and acoustic music. Not the choice for hard-driving rock or large-scale orchestral.',
+    sourceReferences: [
+      { source: 'Stereophile', note: 'Herb Reichert and Art Dudley reviews praising midrange beauty and BBC heritage.' },
+      { source: 'The Audiophiliac', note: 'Steve Guttenberg review calling the P3ESR one of the most satisfying small speakers ever made.' },
+      { source: '6moons', note: 'Review covering the BBC thin-wall design and vocal naturalness.' },
+      { source: 'What Hi-Fi?', note: 'Multi-award coverage noting refinement and musicality.' },
+    ],
     tendencies: {
       confidence: 'high',
       character: [
@@ -291,6 +309,11 @@ export const SPEAKER_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'Music Direct', url: 'https://www.musicdirect.com/speakers/harbeth-super-hl5-plus/' },
     ],
+    sourceReferences: [
+      { source: 'Stereophile', note: 'Herb Reichert review praising the SHL5+ as the complete Harbeth — midrange beauty with dynamic authority.' },
+      { source: 'The Audiophiliac', note: 'Steve Guttenberg coverage of the SHL5+ as a do-everything monitor.' },
+      { source: '6moons', note: 'Review covering the BBC thin-wall design evolution and full-range balance.' },
+    ],
   },
 
   // ── DeVore ────────────────────────────────────────────
@@ -347,6 +370,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'DeVore Fidelity', url: 'https://www.dfridelity.com/o96' },
     ],
     notes: 'Exceptional with low-power tube amplification. Sensitivity allows SET amps to drive them with authority. Room-dependent bass — needs space to breathe.',
+    sourceReferences: [
+      { source: 'Stereophile', note: 'Art Dudley review establishing the O/96 as a modern classic for tube systems.' },
+      { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising engagement and musicality.' },
+      { source: '6moons', note: 'Srajan Ebaen review covering the high-efficiency design philosophy.' },
+      { source: 'Darko.Audio', note: 'John Darko coverage of the DeVore house sound and O/96 appeal.' },
+    ],
     tendencies: {
       confidence: 'high',
       character: [
@@ -419,6 +448,11 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'Zu Audio', url: 'https://www.zuaudio.com/dirty-weekend' },
     ],
     notes: 'Can be forward and lively in the upper midrange. Benefits from warmer, smoother amplification. Not the choice for critical classical listening.',
+    sourceReferences: [
+      { source: 'The Audiophiliac', note: 'Steve Guttenberg review calling the Dirty Weekend a gateway to high-efficiency listening.' },
+      { source: 'Darko.Audio', note: 'John Darko coverage of Zu Audio and the full-range high-efficiency philosophy.' },
+      { source: 'Twittering Machines', note: 'Review covering the raw energy and musical immediacy of the Dirty Weekend.' },
+    ],
   },
 
   // ── Klipsch ───────────────────────────────────────────
@@ -428,6 +462,9 @@ export const SPEAKER_PRODUCTS: Product[] = [
     brand: 'Klipsch',
     name: 'Heresy IV',
     price: 3198,
+    usedPriceRange: { low: 1600, high: 2200 },
+    availability: 'current',
+    typicalMarket: 'both',
     category: 'speaker',
     architecture: 'three-way horn-loaded',
     subcategory: 'floorstanding',
@@ -476,6 +513,11 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'Crutchfield', url: 'https://www.crutchfield.com/p_714HRESYIV/' },
     ],
     notes: 'Horn coloration can be noticeable on sustained tones. Room placement matters — can be bass-shy away from walls.',
+    sourceReferences: [
+      { source: 'Stereophile', note: 'Herb Reichert review praising the Heresy IV as a modern update to a heritage design.' },
+      { source: 'The Audiophiliac', note: 'Steve Guttenberg review covering the dynamic impact and horn character.' },
+      { source: 'Darko.Audio', note: 'Video review on the Heresy IV as an accessible horn speaker.' },
+    ],
     tendencies: {
       confidence: 'high',
       character: [
@@ -547,6 +589,11 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'Focal', url: 'https://www.focal.com/en/home-audio/high-fidelity-speakers/kanta/kanta-n2' },
     ],
     notes: 'Beryllium tweeter can lean bright in untreated rooms or with forward-sounding electronics. Benefits from careful amplifier matching.',
+    sourceReferences: [
+      { source: 'Stereophile', note: 'Review covering the beryllium tweeter precision and bass authority.' },
+      { source: 'Darko.Audio', note: 'John Darko video review on the Kanta No.2 as a resolving all-rounder.' },
+      { source: 'What Hi-Fi?', note: 'Award coverage praising detail and build quality.' },
+    ],
   },
 
   {
@@ -600,6 +647,11 @@ export const SPEAKER_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'Focal', url: 'https://www.focal.com/en/home-audio/high-fidelity-speakers/aria-evo-x/aria-906' },
       { label: 'Crutchfield', url: 'https://www.crutchfield.com/p_091AR906/' },
+    ],
+    sourceReferences: [
+      { source: 'What Hi-Fi?', note: 'Multi-award review praising the Aria 906 as one of the best bookshelf speakers at its price.' },
+      { source: 'The Audiophiliac', note: 'Steve Guttenberg review noting the flax driver naturalness and open sound.' },
+      { source: 'Stereophile', note: 'Review covering the Aria line as Focal\'s best value proposition.' },
     ],
   },
 
@@ -673,6 +725,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
     },
     sourceReferences: [
       { source: 'Stereophile', note: 'Art Dudley review praising the O/93 as a modern classic for tube-based systems.' },
+      { source: '6moons', note: 'Srajan Ebaen review covering the 10-inch wideband driver and musical engagement.' },
+      { source: 'The Audiophiliac', note: 'Steve Guttenberg feature on the O/93 and DeVore Fidelity philosophy.' },
     ],
   },
 
@@ -741,6 +795,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
       ],
     },
     notes: 'Ultra-high efficiency (96dB). Designed for SET amps. Requires careful room placement and ideally acoustic treatment.',
+    sourceReferences: [
+      { source: '6moons', note: 'Srajan Ebaen review covering the full-range widebander coherence and spatial performance.' },
+      { source: 'Twittering Machines', note: 'Review praising the Nenuphar family for holographic imaging and musical flow.' },
+    ],
   },
 
   {
@@ -792,6 +850,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
       'Precision-focused sealed standmount with planar-magnetic tweeter and carbon-fiber woofer. Designed for spatial accuracy, transparency, and composure. The sealed cabinet provides tight bass control and placement flexibility.',
     retailer_links: [
       { label: 'Qualio Audio', url: 'https://www.qualioaudio.com/' },
+    ],
+    sourceReferences: [
+      { source: 'Stereophile', note: 'Herb Reichert review praising the planar-magnetic tweeter and sealed-box coherence.' },
+      { source: '6moons', note: 'Review covering the Qualio IQ as a precision reference monitor.' },
     ],
     tendencies: {
       confidence: 'high',
@@ -877,6 +939,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
       ],
     },
     notes: 'Very high efficiency (97dB+). Designed for SET amps. Build quality is artisanal — expect handmade rather than factory-finish.',
+    sourceReferences: [
+      { source: 'Twittering Machines', note: 'Review covering the back-loaded horn design and SET synergy.' },
+      { source: 'Audiogon community', note: 'Listener consensus on dynamic immediacy and musical engagement.' },
+    ],
   },
 
   {
@@ -946,5 +1012,391 @@ export const SPEAKER_PRODUCTS: Product[] = [
       ],
     },
     notes: 'French artisanal build. PHY-HP drivers are hand-made and define the sound. High efficiency (94dB) — designed for tube amps.',
+    sourceReferences: [
+      { source: '6moons', note: 'Srajan Ebaen review covering the PHY-HP driver and French artisanal build.' },
+      { source: 'Twittering Machines', note: 'Review praising tonal richness and midrange density.' },
+    ],
+  },
+
+  // ── DeVore Fidelity Gibbon 3XL ─────────────────────────
+
+  {
+    id: 'devore-gibbon-3xl',
+    brand: 'DeVore Fidelity',
+    name: 'Gibbon 3XL',
+    price: 3990,
+    usedPriceRange: { low: 1400, high: 2000 },
+    availability: 'discontinued',
+    typicalMarket: 'used',
+    category: 'speaker',
+    architecture: 'two-way bass-reflex with paper cone driver',
+    subcategory: 'standmount',
+    priceTier: 'upper-mid',
+    brandScale: 'boutique',
+    region: 'north-america',
+    country: 'US',
+    topology: 'bass-reflex',
+    archetypes: { primary: 'flow_organic', secondary: 'rhythmic_propulsive' },
+    tendencyProfile: {
+      basis: 'listener_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'rhythm', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'warmth', level: 'present' },
+        { trait: 'openness', level: 'present' },
+        { trait: 'speed', level: 'less_emphasized' },
+        { trait: 'spatial_precision', level: 'less_emphasized' },
+        { trait: 'clarity', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      rhythm: 0.7,
+      dynamics: 0.7,
+      tonal_density: 1.0,
+      spatial_precision: 0.4,
+      speed: 0.4,
+      warmth: 0.7,
+      texture: 0.7,
+      composure: 0.4,
+      flow: 1.0,
+      clarity: 0.4,
+      fatigue_risk: 0.0,
+      openness: 0.7,
+    },
+    description:
+      'Expressive standmount with natural tone and midrange presence. High sensitivity (~90dB) makes it friendly with moderate-power amps. The precursor to the O/96 — shares the musical, lively DeVore house sound.',
+    retailer_links: [],
+    sourceReferences: [
+      { source: 'Stereophile', note: 'Art Dudley review praising the Gibbon 3XL for expressive musicality and tonal naturalness.' },
+      { source: '6moons', note: 'Review covering the paper cone driver and lively, organic presentation.' },
+      { source: 'The Audiophiliac', note: 'Steve Guttenberg feature on DeVore Fidelity and the Gibbon lineage.' },
+      { source: 'Head-Fi community', note: 'Used market consensus as one of the most musical standmounts under $2k.' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'tonality', tendency: 'natural tone and midrange presence — voices sound embodied and real', basis: 'listener_consensus' },
+        { domain: 'timing', tendency: 'lively and expressive — excellent timing and musicality', basis: 'review_consensus' },
+        { domain: 'spatial', tendency: 'spacious, organic soundstage — less pinpoint than studio monitors but more immersive', basis: 'listener_consensus' },
+      ],
+      interactions: [
+        { condition: 'driven by clean solid-state amps with moderate power (25-100W)', effect: 'high sensitivity means easy drive — the amp controls while the speaker adds musicality', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'driven by tube amplifiers', effect: 'paper cone and high efficiency reward tube warmth beautifully', valence: 'positive', basis: 'listener_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'musicality, tonal naturalness, and engagement', cost: 'the last degree of analytical precision and spatial specificity', relative_to: 'KEF or Focal precision monitors', basis: 'review_consensus' },
+      ],
+    },
+    notes: 'Discontinued but available used in the $1,400-2,000 range. Predecessor to the Orangutan line. Shares the DeVore musical DNA at a fraction of the O/96 price.',
+  },
+
+  // ── KEF R3 ──────────────────────────────────────────────
+
+  {
+    id: 'kef-r3',
+    brand: 'KEF',
+    name: 'R3',
+    price: 2200,
+    usedPriceRange: { low: 1200, high: 1600 },
+    availability: 'current',
+    typicalMarket: 'both',
+    category: 'speaker',
+    architecture: 'three-way with coaxial Uni-Q driver',
+    subcategory: 'standmount',
+    priceTier: 'mid-fi',
+    brandScale: 'mainstream',
+    region: 'uk',
+    country: 'GB',
+    topology: 'bass-reflex',
+    archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'spatial_precision', level: 'emphasized' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'openness', level: 'present' },
+        { trait: 'speed', level: 'present' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+        { trait: 'warmth', level: 'less_emphasized' },
+        { trait: 'flow', level: 'less_emphasized' },
+        { trait: 'texture', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      rhythm: 0.7,
+      dynamics: 0.7,
+      tonal_density: 0.4,
+      spatial_precision: 1.0,
+      speed: 0.7,
+      warmth: 0.4,
+      texture: 0.4,
+      composure: 0.7,
+      flow: 0.4,
+      clarity: 1.0,
+      fatigue_risk: 0.0,
+      openness: 0.7,
+    },
+    description:
+      'One of the most technically advanced speakers under $2k. Coaxial Uni-Q driver provides exceptional imaging and neutrality. Precision-focused presentation.',
+    retailer_links: [
+      { label: 'KEF', url: 'https://www.kef.com/products/r3' },
+    ],
+    sourceReferences: [
+      { source: 'Stereophile', note: 'Herb Reichert review praising the Uni-Q imaging and neutrality.' },
+      { source: 'Darko.Audio', note: 'Video review covering the R3 as a precision standmount.' },
+      { source: 'What Hi-Fi?', note: 'Multi-award coverage for imaging and build quality.' },
+      { source: 'The Audiophiliac', note: 'Steve Guttenberg review noting resolution and soundstage width.' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'tonality', tendency: 'clean and neutral — slightly lean but never harsh', basis: 'review_consensus' },
+        { domain: 'spatial', tendency: 'exceptional imaging from the Uni-Q coaxial — point-source coherence', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'precise and controlled — more analytical than organic', basis: 'listener_consensus' },
+      ],
+      interactions: [
+        { condition: 'driven by clean, detailed solid-state amplification', effect: 'the precision compounds — excellent for detail retrieval but may lean clinical', valence: 'caution', basis: 'listener_consensus' },
+        { condition: 'driven by warmer amplification or tube gear', effect: 'the amplifier warmth fills out the lean tonal balance — often an ideal pairing', valence: 'positive', basis: 'listener_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'imaging precision, neutrality, and spatial coherence', cost: 'the organic warmth and flow of less analytical designs', relative_to: 'DeVore, Harbeth, or BBC-heritage speakers', basis: 'review_consensus' },
+      ],
+    },
+    notes: 'Sensitive to placement. Benefits from quality stands and room treatment. The analytical presentation is a feature, not a bug — it reveals everything.',
+  },
+
+  // ── Spendor A1 ──────────────────────────────────────────
+
+  {
+    id: 'spendor-a1',
+    brand: 'Spendor',
+    name: 'A1',
+    price: 1900,
+    availability: 'current',
+    typicalMarket: 'new',
+    category: 'speaker',
+    architecture: 'two-way sealed box with EP77 polymer cone',
+    subcategory: 'standmount',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'uk',
+    country: 'GB',
+    topology: 'sealed',
+    archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'present' },
+        { trait: 'warmth', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'spatial_precision', level: 'present' },
+        { trait: 'clarity', level: 'present' },
+        { trait: 'rhythm', level: 'less_emphasized' },
+        { trait: 'dynamics', level: 'less_emphasized' },
+        { trait: 'speed', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      rhythm: 0.4,
+      dynamics: 0.4,
+      tonal_density: 0.7,
+      spatial_precision: 0.7,
+      speed: 0.4,
+      warmth: 0.7,
+      texture: 0.7,
+      composure: 0.7,
+      flow: 1.0,
+      clarity: 0.7,
+      fatigue_risk: 0.0,
+      openness: 0.7,
+    },
+    description:
+      'Modern BBC-heritage monitor. Very coherent and natural with smooth, balanced vocals. Excellent long-term listening speaker. Slightly warm but never sluggish.',
+    retailer_links: [
+      { label: 'Spendor', url: 'https://www.spendoraudio.com/a1/' },
+    ],
+    sourceReferences: [
+      { source: 'Stereophile', note: 'Herb Reichert review praising coherence and vocal naturalness.' },
+      { source: '6moons', note: 'Review covering the A1 as a modern BBC-heritage reference.' },
+      { source: 'What Hi-Fi?', note: 'Award-winning coverage noting build quality and musical balance.' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'tonality', tendency: 'smooth and balanced — excellent vocal reproduction', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'coherent and natural — phrasing breathes rather than attacks', basis: 'review_consensus' },
+        { domain: 'texture', tendency: 'refined, slightly warm — never grainy or harsh', basis: 'listener_consensus' },
+      ],
+      interactions: [
+        { condition: 'driven by clean solid-state amplification', effect: 'the amplifier provides grip and dynamics while the speaker adds coherence', valence: 'positive', basis: 'listener_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'coherence, vocal naturalness, and long-term listening comfort', cost: 'dynamic impact and macro-scale excitement', relative_to: 'Zu or high-efficiency designs', basis: 'review_consensus' },
+      ],
+    },
+    notes: 'At $1,900 new, fits under a $2k budget. BBC heritage with modern engineering. Excellent for acoustic, jazz, and vocal-forward music.',
+  },
+
+  // ── Wharfedale Linton Heritage ──────────────────────────
+
+  {
+    id: 'wharfedale-linton',
+    brand: 'Wharfedale',
+    name: 'Linton Heritage',
+    price: 1499,
+    availability: 'current',
+    typicalMarket: 'new',
+    category: 'speaker',
+    architecture: 'three-way bass-reflex with Kevlar cone',
+    subcategory: 'standmount',
+    priceTier: 'mid-fi',
+    brandScale: 'mainstream',
+    region: 'uk',
+    country: 'GB',
+    topology: 'bass-reflex',
+    archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'warmth', level: 'emphasized' },
+        { trait: 'flow', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'rhythm', level: 'present' },
+        { trait: 'openness', level: 'present' },
+        { trait: 'clarity', level: 'less_emphasized' },
+        { trait: 'speed', level: 'less_emphasized' },
+        { trait: 'spatial_precision', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      rhythm: 0.7,
+      dynamics: 0.7,
+      tonal_density: 1.0,
+      spatial_precision: 0.4,
+      speed: 0.4,
+      warmth: 1.0,
+      texture: 0.7,
+      composure: 0.7,
+      flow: 0.7,
+      clarity: 0.4,
+      fatigue_risk: 0.0,
+      openness: 0.7,
+    },
+    description:
+      'Retro-styled three-way with rich, full-bodied sound. Exceptional value — punches well above its price in tonal richness and scale. Includes dedicated stands.',
+    retailer_links: [
+      { label: 'Wharfedale', url: 'https://www.wharfedale.co.uk/linton/' },
+    ],
+    sourceReferences: [
+      { source: 'Darko.Audio', note: 'Video review praising the Linton as exceptional value with old-school warmth.' },
+      { source: 'The Audiophiliac', note: 'Steve Guttenberg review calling it one of the best values in hi-fi.' },
+      { source: 'What Hi-Fi?', note: 'Award-winning review noting rich, full-bodied sound.' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'tonality', tendency: 'rich and full-bodied — substantial midrange weight with classic British warmth', basis: 'review_consensus' },
+        { domain: 'spatial', tendency: 'big, spacious presentation — larger than its physical size suggests', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'relaxed but musical — better for acoustic and vocal than hard-driving electronica', basis: 'listener_consensus' },
+      ],
+      interactions: [
+        { condition: 'driven by fast, clean solid-state amplification', effect: 'the amplifier speed counterbalances the warm, relaxed speaker character', valence: 'positive', basis: 'listener_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'tonal richness, warmth, and scale at an exceptional price', cost: 'speed, transient definition, and analytical precision', relative_to: 'KEF, Focal, or modern precision monitors', basis: 'review_consensus' },
+      ],
+    },
+    notes: 'Includes dedicated stands at $1,499 (speaker + stand bundle). Exceptional value proposition in the under-$2k category.',
+  },
+
+  // ── Totem Acoustic Model 1 Signature ────────────────────
+
+  {
+    id: 'totem-model-1-signature',
+    brand: 'Totem Acoustic',
+    name: 'Model 1 Signature',
+    price: 3000,
+    usedPriceRange: { low: 1200, high: 1800 },
+    availability: 'discontinued',
+    typicalMarket: 'used',
+    category: 'speaker',
+    architecture: 'two-way sealed box with proprietary drivers',
+    subcategory: 'standmount',
+    priceTier: 'upper-mid',
+    brandScale: 'specialist',
+    region: 'north-america',
+    country: 'CA',
+    topology: 'sealed',
+    archetypes: { primary: 'flow_organic', secondary: 'spatial_holographic' },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'spatial_precision', level: 'emphasized' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'clarity', level: 'present' },
+        { trait: 'openness', level: 'present' },
+        { trait: 'tonal_density', level: 'present' },
+        { trait: 'dynamics', level: 'less_emphasized' },
+        { trait: 'warmth', level: 'less_emphasized' },
+        { trait: 'rhythm', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      rhythm: 0.4,
+      dynamics: 0.4,
+      tonal_density: 0.7,
+      spatial_precision: 1.0,
+      speed: 0.7,
+      warmth: 0.4,
+      texture: 0.7,
+      composure: 0.7,
+      flow: 1.0,
+      clarity: 0.7,
+      fatigue_risk: 0.0,
+      openness: 1.0,
+    },
+    description:
+      'Legendary sealed-box standmount with holographic imaging and natural musicality. Exceptional for its size — produces a disappearing soundstage that belies its compact dimensions.',
+    retailer_links: [],
+    sourceReferences: [
+      { source: 'Stereophile', note: 'Multiple reviews over decades praising holographic imaging and musical engagement.' },
+      { source: '6moons', note: 'Review covering the Model 1 as a reference small speaker.' },
+      { source: 'The Audiophiliac', note: 'Steve Guttenberg feature on Totem and the Model 1 legacy.' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'spatial', tendency: 'holographic staging that seems impossible from such a small box', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'natural, slightly lean but never thin — reveals texture beautifully', basis: 'listener_consensus' },
+        { domain: 'timing', tendency: 'musical and coherent — more flow-oriented than analytical', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'driven by quality solid-state amplification (50W+)', effect: 'needs current to open up — rewards good amplification disproportionately', valence: 'positive', basis: 'listener_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'imaging precision, disappearing act, and musical engagement', cost: 'bass extension and macro-dynamic scale', relative_to: 'larger floorstanders or high-efficiency designs', basis: 'review_consensus' },
+      ],
+    },
+    notes: 'Discontinued but legendary. Available used for $1,200-1,800. Needs quality amplification and good stands. The sealed box means clean, fast bass rather than deep bass.',
   },
 ];
