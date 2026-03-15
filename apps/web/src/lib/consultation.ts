@@ -587,6 +587,85 @@ const BRAND_PROFILES: BrandProfile[] = [
     tendencies: 'The XSA Vanguard is described as lively, detailed, and dynamically engaging. A compact bookshelf design with good transient response and vocal clarity.',
     systemContext: 'Bookshelf speakers in this class benefit from quality amplification with good damping and current delivery. Room placement matters for bass reinforcement.',
   },
+  {
+    names: ['leben'],
+    founder: 'Hyodo-san',
+    country: 'Japan',
+    brandScale: 'boutique',
+    region: 'japan',
+    categories: ['amplifier'],
+    philosophy: 'Leben builds hand-wired tube amplifiers in the Japanese tradition — small-scale, obsessively crafted, voiced by ear. The CS600X and CS300X prioritise tonal density, rhythmic drive, and harmonic richness over measured neutrality. Very low negative feedback.',
+    tendencies: 'Listeners describe Leben amplifiers as warm, tonally dense, rhythmically alive, and harmonically rich. Strong midrange presence and natural instrument tone. Excellent dynamics for their power rating. The KT77/KT88 push-pull topology delivers surprising bass grip for a tube amp.',
+    systemContext: 'Leben amplifiers are a natural match for high-efficiency speakers — DeVore, Zu, Klipsch Heritage. The CS600X (~32W) drives speakers in the 90–96dB range with authority. A staple of the Japanese high-end community and widely regarded as one of the best tube integrateds under $10k.',
+    pairingNotes: 'The Leben CS600X + DeVore O/96 is one of the most celebrated pairings in modern high-efficiency audio. Tube rolling is a significant part of the Leben experience — KT77, KT88, and EL34 all produce meaningfully different voicing.',
+    links: [
+      { label: 'Leben (Japan)', url: 'https://www.leben-hifi.com/', region: 'global' },
+      { label: 'Tone Imports (US distributor)', url: 'https://www.toneimports.com/', kind: 'dealer', region: 'US' },
+    ],
+  },
+  {
+    names: ['totaldac', 'total dac'],
+    founder: 'Vincent Brient',
+    country: 'France',
+    brandScale: 'boutique',
+    region: 'europe',
+    categories: ['dac'],
+    philosophy: 'TotalDAC builds discrete R2R ladder DACs using hand-matched resistor arrays. The design philosophy prioritises time-domain accuracy, natural decay, and tonal density over measured linearity. No off-the-shelf DAC chips — every conversion stage is built from discrete components.',
+    tendencies: 'Listeners describe TotalDAC as fluid, dense, and natural-sounding with exceptional transient decay and depth. Very low digital glare. The R2R topology delivers strong tonal weight and harmonic richness. Time-domain coherence is a defining characteristic — instruments start and stop naturally.',
+    systemContext: 'TotalDAC pairs exceptionally well with tube amplification and high-efficiency speakers. The lack of digital glare means revealing speakers and simple amplifier topologies can be used without harshness. The d1-unity with live clocking option represents serious digital front-end investment.',
+    pairingNotes: 'A natural partner for Leben, Shindo, and other tube amplifiers. The time-domain focus aligns with the priorities of high-efficiency speaker systems.',
+    links: [
+      { label: 'TotalDAC', url: 'https://www.totaldac.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['aurorasound'],
+    founder: 'Shinobu Karaki',
+    country: 'Japan',
+    brandScale: 'boutique',
+    region: 'japan',
+    categories: ['amplifier'],
+    philosophy: 'Aurorasound designs phono stages and headphone amplifiers with exceptional technical sophistication. The VIDA series is widely considered a reference phono stage — designed for extremely low noise, flexible loading, and excellent transient response.',
+    tendencies: 'The VIDA MKII is described as transparent, dynamic, and exceptionally quiet. It reveals cartridge character with minimal editorialising. Transient speed and decay are reference-calibre. The EQ-100 variable equalisation mono phono amplifier is a rare speciality piece for correct playback of pre-RIAA recordings.',
+    systemContext: 'Aurorasound phono stages are found in reference-level analogue front ends. The VIDA is one of the most respected phono stages for cartridge rolling — its flexible loading options make it ideal for listeners with multiple cartridges spanning different design philosophies.',
+    links: [
+      { label: 'Aurorasound', url: 'https://aurorasound.jp/', region: 'global' },
+    ],
+  },
+  {
+    names: ['michell', 'michell engineering'],
+    founder: 'John Michell',
+    country: 'UK',
+    brandScale: 'specialist',
+    region: 'uk',
+    categories: ['turntable'],
+    philosophy: 'Michell Engineering builds precision turntables using suspended subchassis designs. The Gyro SE is a long-standing reference — excellent speed stability, very low noise floor, and strong rhythmic articulation. British engineering with a focus on mechanical integrity.',
+    tendencies: 'Michell turntables are described as detailed, rhythmically articulate, and dynamically open. The suspended design provides excellent isolation. The Gyro SE is one of the most respected mid-price turntables — a genuine reference that competes well above its price class.',
+    systemContext: 'The Gyro SE is a strong platform for a range of tonearms and cartridges. It has an excellent upgrade ecosystem (power supply, clamp, armboard options). A serious analogue front end that rewards cartridge investment.',
+    links: [
+      { label: 'Michell Engineering', url: 'https://www.michell-engineering.co.uk/', region: 'global' },
+    ],
+  },
+  {
+    names: ['ortofon'],
+    country: 'Denmark',
+    brandScale: 'specialist',
+    region: 'europe',
+    categories: ['turntable'],
+    philosophy: 'Ortofon is the world\'s largest cartridge manufacturer, producing designs across every price point and philosophy. The SPU series represents the classic moving-coil tradition — warm, dense, and rhythmically powerful. The 2M series covers high-resolution moving-magnet designs.',
+    tendencies: 'Ortofon cartridges span from warm and dense (SPU, Cadenza) to precise and revealing (2M Black, MC Windfeld). The brand covers a wider sonic range than most — cartridge selection matters more than brand character.',
+    systemContext: 'Ortofon cartridges are compatible with virtually any tonearm and phono stage. The SPU series requires medium-mass arms and MC-capable phono stages. The 2M series works with standard MM inputs.',
+  },
+  {
+    names: ['emt'],
+    country: 'Germany',
+    brandScale: 'specialist',
+    region: 'europe',
+    categories: ['turntable'],
+    philosophy: 'EMT designs broadcast-heritage cartridges known for dynamic power, tracking ability, and tonal authority. Originally built for professional broadcast use, EMT cartridges prioritise reliability and dynamic impact.',
+    tendencies: 'EMT cartridges are described as dynamic, powerful, and authoritative. Strong tracking ability and excellent transient definition. The HSD 006 is a modern design that retains the EMT house sound — bold, direct, and rhythmically commanding.',
+    systemContext: 'EMT cartridges pair well with medium-to-high mass tonearms. They reward phono stages with good dynamic headroom and MC gain.',
+  },
 ];
 
 // ── Topology keywords for archetype matching ────────
@@ -2007,6 +2086,26 @@ const KNOWN_PRODUCT_ROLES: Record<string, { expectedCategory: string; displayBra
   'diva monitor': { expectedCategory: 'speaker', displayBrand: 'WLM' },
   leben: { expectedCategory: 'amplifier', displayBrand: 'Leben' },
   cs300: { expectedCategory: 'amplifier', displayBrand: 'Leben' },
+  cs600: { expectedCategory: 'amplifier', displayBrand: 'Leben' },
+  'cs600x': { expectedCategory: 'amplifier', displayBrand: 'Leben' },
+  'cs300x': { expectedCategory: 'amplifier', displayBrand: 'Leben' },
+  totaldac: { expectedCategory: 'dac', displayBrand: 'TotalDAC' },
+  'd1-unity': { expectedCategory: 'dac', displayBrand: 'TotalDAC' },
+  'd1-tube': { expectedCategory: 'dac', displayBrand: 'TotalDAC' },
+  aurorasound: { expectedCategory: 'phono', displayBrand: 'Aurorasound' },
+  vida: { expectedCategory: 'phono', displayBrand: 'Aurorasound' },
+  'vida mk': { expectedCategory: 'phono', displayBrand: 'Aurorasound' },
+  'eq-100': { expectedCategory: 'phono', displayBrand: 'Aurorasound' },
+  michell: { expectedCategory: 'turntable', displayBrand: 'Michell' },
+  'gyro se': { expectedCategory: 'turntable', displayBrand: 'Michell' },
+  gyrodec: { expectedCategory: 'turntable', displayBrand: 'Michell' },
+  ortofon: { expectedCategory: 'cartridge', displayBrand: 'Ortofon' },
+  'spu mono': { expectedCategory: 'cartridge', displayBrand: 'Ortofon' },
+  '2m black': { expectedCategory: 'cartridge', displayBrand: 'Ortofon' },
+  emt: { expectedCategory: 'cartridge', displayBrand: 'EMT' },
+  'hsd 006': { expectedCategory: 'cartridge', displayBrand: 'EMT' },
+  sorane: { expectedCategory: 'tonearm', displayBrand: 'Sorane' },
+  'sa1.2': { expectedCategory: 'tonearm', displayBrand: 'Sorane' },
   harbeth: { expectedCategory: 'speaker', displayBrand: 'Harbeth' },
   p3esr: { expectedCategory: 'speaker', displayBrand: 'Harbeth' },
   'super hl5': { expectedCategory: 'speaker', displayBrand: 'Harbeth' },
@@ -2824,15 +2923,25 @@ export function buildSystemAssessment(
   // ── Subject line ────────────────────────────────────
   const subject = components.map((c) => c.displayName).join(', ');
 
+  // ── System tier estimation ──────────────────────────
+  // Determines whether this is a reference-level system where bottleneck
+  // analysis should be suppressed or softened. Based on brand reputation,
+  // component prices, and system complexity.
+  const systemTier = estimateSystemTier(components);
+
   // ── Structured memo-format fields ───────────────────
   // Pipeline: chain → stacked traits → bottleneck → assessments → paths → sequence → observation
   const memoChain = buildSystemChain(components, currentMessage);
   const memoStacked = detectStackedTraits(components, componentAxisProfiles);
-  const memoConstraint = detectPrimaryConstraint(components, componentAxisProfiles, memoStacked, systemAxes);
+  const memoConstraint = systemTier === 'reference'
+    ? undefined  // Reference-level systems don't have meaningful bottlenecks
+    : detectPrimaryConstraint(components, componentAxisProfiles, memoStacked, systemAxes);
   const memoAssessments = buildComponentAssessments(components, componentAxisProfiles, memoConstraint);
-  const memoUpgradePaths = buildUpgradePaths(components, componentAxisProfiles, memoAssessments, memoConstraint, memoStacked);
+  const memoUpgradePaths = systemTier === 'reference'
+    ? []  // Suppress upgrade paths for reference-tier systems
+    : buildUpgradePaths(components, componentAxisProfiles, memoAssessments, memoConstraint, memoStacked);
   const memoKeepsRaw = buildKeepRecommendations(memoAssessments, memoUpgradePaths, memoConstraint);
-  const memoIntro = buildIntroSummary(components, systemAxes, memoStacked);
+  const memoIntro = buildIntroSummary(components, systemAxes, memoStacked, systemTier);
   const memoKeyObservation = buildKeyObservation(components, componentAxisProfiles, memoStacked, systemAxes, desires);
 
   // ── Final reconciliation pass ─────────────────────
@@ -3691,6 +3800,7 @@ function buildIntroSummary(
   components: SystemComponent[],
   system: PrimaryAxisLeanings,
   stacked: MemoStackedTraitInsight[],
+  tier?: SystemTier,
 ): string {
   const names = components.map((c) => c.displayName);
   const count = names.length;
@@ -3708,6 +3818,11 @@ function buildIntroSummary(
   const traitPhrase = traits.length > 0
     ? `prioritising ${traits.join(' and ')}`
     : 'with balanced tendencies across the primary axes';
+
+  // Reference-tier systems get an elevated opening
+  const tierPrefix = tier === 'reference'
+    ? 'A reference-level system '
+    : 'A system ';
 
   // ── Detect system deliberateness ──
   // A system is "deliberate" when components from different brands and
@@ -3729,14 +3844,14 @@ function buildIntroSummary(
     const characters = stacked.filter((s) => s.classification === 'system_character');
 
     if (imbalances.length > 0) {
-      return `A system ${traitPhrase}.${deliberateNote} The chain leans toward ${imbalances[0].label} across multiple stages — this shapes both its strengths and its primary limitation.${intentNote}`;
+      return `${tierPrefix}${traitPhrase}.${deliberateNote} The chain leans toward ${imbalances[0].label} across multiple stages — this shapes both its strengths and its primary limitation.${intentNote}`;
     }
     if (characters.length > 0) {
-      return `A system ${traitPhrase}.${deliberateNote} The chain shares a consistent lean toward ${characters[0].label} — this defines the system's sonic identity rather than limiting it.${intentNote}`;
+      return `${tierPrefix}${traitPhrase}.${deliberateNote} The chain shares a consistent lean toward ${characters[0].label} — this defines the system's sonic identity rather than limiting it.${intentNote}`;
     }
   }
 
-  return `A system ${traitPhrase}.${deliberateNote} The overall character emerges from how these components interact rather than any single piece dominating.${intentNote}`;
+  return `${tierPrefix}${traitPhrase}.${deliberateNote} The overall character emerges from how these components interact rather than any single piece dominating.${intentNote}`;
 }
 
 /**
@@ -4370,6 +4485,74 @@ function buildKeepRecommendations(
     }
   }
   return keeps;
+}
+
+// ── System tier estimation ──────────────────────────
+//
+// Estimates the overall quality tier of a system from brand reputation,
+// product prices, and system complexity. Used to suppress bottleneck
+// analysis for reference-level systems where there are no meaningful
+// weaknesses — only intentional trade-offs.
+//
+// Tiers:
+//   'reference'  — high-end, deliberately curated system (suppress bottlenecks)
+//   'enthusiast' — serious system with clear investment (normal analysis)
+//   'entry'      — starter or budget system (normal analysis)
+
+type SystemTier = 'reference' | 'enthusiast' | 'entry';
+
+function estimateSystemTier(components: SystemComponent[]): SystemTier {
+  let score = 0;
+
+  for (const c of components) {
+    // Brand reputation signals
+    const scale = c.brandProfile
+      ? (BRAND_PROFILES.find((bp) =>
+          bp.names.some((n) => n.toLowerCase() === (c.brandProfile as any)?._matchedName?.toLowerCase()),
+        )?.brandScale ?? inferBrandScale(c))
+      : inferBrandScale(c);
+
+    if (scale === 'boutique') score += 3;
+    else if (scale === 'specialist') score += 2;
+    else if (scale === 'mainstream') score += 1;
+
+    // Price signals from catalogued products
+    if (c.product) {
+      const price = c.product.price;
+      if (price >= 5000) score += 3;
+      else if (price >= 2000) score += 2;
+      else if (price >= 800) score += 1;
+    }
+
+    // Brand profile presence indicates a recognised, established brand
+    if (c.brandProfile) score += 1;
+  }
+
+  // Normalise by component count to avoid penalising simpler systems
+  const componentCount = Math.max(components.length, 1);
+  const normalised = score / componentCount;
+
+  // Reference threshold: average score ≥ 3.5 per component
+  // (e.g. boutique brand + $5k+ product = 7 per component)
+  if (normalised >= 3.5 && componentCount >= 3) return 'reference';
+  if (normalised >= 2.0) return 'enthusiast';
+  return 'entry';
+}
+
+/** Infer brand scale from component display name when no brand profile exists. */
+function inferBrandScale(c: SystemComponent): string {
+  // Check if the brand profile has brandScale
+  // Since we may not have matched via BRAND_PROFILES array directly,
+  // check the brandProfile object on the component
+  if (c.brandProfile) {
+    // The brandProfile on SystemComponent is a subset — check for scale
+    // via the BRAND_PROFILES lookup
+    const bp = BRAND_PROFILES.find((p) =>
+      p.names.some((n) => c.displayName.toLowerCase().includes(n.toLowerCase())),
+    );
+    if (bp?.brandScale) return bp.brandScale;
+  }
+  return 'unknown';
 }
 
 // ── Upgrade paths (bottleneck-driven) ───────────────

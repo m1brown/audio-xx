@@ -135,8 +135,8 @@ function ModeIndicator({ mode }: { mode?: AdvisoryMode }) {
 //   3. System Synergy
 //   4. What the System Does Well
 //   5. Trade-offs in the System
-//   6. System Bottlenecks
-//   7. Component Contributions
+//   6. Component Contributions
+//   7. System Bottlenecks (moved below components; suppressed for reference-tier systems)
 //   8. Upgrade Strategy
 //   9. Components Worth Keeping
 //  10. Listener Taste Profile
@@ -308,21 +308,21 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
         </>
       )}
 
-      {/* ── 6. System Bottlenecks ─────────────────── */}
-      {a.upgradePaths && a.upgradePaths.length > 0 && (
+      {/* ── 6. Component Contributions ────────────── */}
+      {a.componentAssessments && a.componentAssessments.length > 0 && (
         <>
-          <AdvisorySection number={next()} label="System Bottlenecks">
-            <AdvisoryUpgradePaths paths={a.upgradePaths.slice(0, 2)} />
+          <AdvisorySection number={next()} label="Component Contributions">
+            <AdvisoryComponentAssessments assessments={a.componentAssessments} />
           </AdvisorySection>
           <SectionDivider />
         </>
       )}
 
-      {/* ── 7. Component Contributions ────────────── */}
-      {a.componentAssessments && a.componentAssessments.length > 0 && (
+      {/* ── 7. System Bottlenecks ─────────────────── */}
+      {a.upgradePaths && a.upgradePaths.length > 0 && (
         <>
-          <AdvisorySection number={next()} label="Component Contributions">
-            <AdvisoryComponentAssessments assessments={a.componentAssessments} />
+          <AdvisorySection number={next()} label="System Bottlenecks">
+            <AdvisoryUpgradePaths paths={a.upgradePaths.slice(0, 2)} />
           </AdvisorySection>
           <SectionDivider />
         </>
