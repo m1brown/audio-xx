@@ -108,8 +108,8 @@ const KNOWN_PRODUCT_NOTES: Record<string, KnownProductNote> = {
     brand: 'LAiV',
     siblingId: 'laiv-harmony-dac',
     relationship: 'budget sibling',
-    architecture: 'Discrete R-2R',
-    notes: 'Uses the same R-2R module as the Harmony DAC but with a less refined power supply. Smaller form factor, lower price point. Stellar reviews suggest it carries much of the Harmony\'s sonic character.',
+    architecture: 'Discrete R2R',
+    notes: 'Uses the same R2R module as the Harmony DAC but with a less refined power supply. Smaller form factor, lower price point. Stellar reviews suggest it carries much of the Harmony\'s sonic character.',
   },
 };
 

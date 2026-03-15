@@ -20,6 +20,7 @@
 
 import { DAC_PRODUCTS, type Product } from './products/dacs';
 import { SPEAKER_PRODUCTS } from './products/speakers';
+import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
 import type { BrandScale, GeoRegion, ProductCategory } from './catalog-taxonomy';
 import {
   hasTendencies,
@@ -145,7 +146,7 @@ export interface ConsultationResponse {
 
 // ── All products ────────────────────────────────────
 
-const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS];
+const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIFIER_PRODUCTS];
 
 // ── Brand knowledge ─────────────────────────────────
 //
@@ -357,7 +358,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     region: 'uk',
     categories: ['dac', 'amplifier', 'streamer'],
     philosophy: 'Chord Electronics designs around proprietary FPGA-based pulse array DAC technology developed by Rob Watts. The design philosophy prioritises timing precision and transient definition, using custom digital processing rather than off-the-shelf DAC chips.',
-    tendencies: 'Listeners consistently describe Chord DACs as fast, articulate, and detailed. Timing resolution and transient clarity are the signature strengths. Tonal weight is lighter than R-2R designs but avoids the clinical edge of typical delta-sigma implementations.',
+    tendencies: 'Listeners consistently describe Chord DACs as fast, articulate, and detailed. Timing resolution and transient clarity are the signature strengths. Tonal weight is lighter than R2R designs but avoids the clinical edge of typical delta-sigma implementations.',
     systemContext: 'Chord DACs tend to work well with warm or tonally dense amplification, where the source-level clarity cuts through added warmth rather than being masked. In systems already biased toward speed and transparency, the tonal lightness may become noticeable.',
     pairingNotes: 'Works well with tube amplification and warm solid-state designs. The Hugo and Qutest lines are widely used as headphone DAC/amps and desktop sources.',
     links: [
@@ -370,10 +371,10 @@ const BRAND_PROFILES: BrandProfile[] = [
     brandScale: 'specialist',
     region: 'southeast-asia',
     categories: ['dac'],
-    philosophy: 'Denafrips designs around discrete R-2R ladder conversion — resistor networks that convert digital audio directly to analog voltage. The philosophy prioritises tonal density, harmonic texture, and musical flow over measured precision. Products range from the entry-level Ares to the flagship Terminator, sharing a consistent R-2R voice at different levels of refinement and scale.',
+    philosophy: 'Denafrips designs around discrete R2R ladder conversion — resistor networks that convert digital audio directly to analog voltage. The philosophy prioritises tonal density, harmonic texture, and musical flow over measured precision. Products range from the entry-level Ares to the flagship Terminator, sharing a consistent R2R voice at different levels of refinement and scale.',
     tendencies: 'Listeners consistently describe Denafrips DACs as warm, dense, and harmonically rich. Tonal body, midrange texture, and a relaxed sense of timing are the signature strengths. Detail retrieval is present but softer-focused than delta-sigma designs — the emphasis is on musical weight rather than analytical separation.',
     systemContext: 'Denafrips DACs tend to add warmth and body to the chain. In systems that are already warm or tonally dense, this can compound into congestion — bass and lower midrange may feel heavy. In precise or lean systems, a Denafrips source provides a welcome counterbalance, adding tonal substance without changing the downstream character.',
-    pairingNotes: 'Pairs well with fast or transparent amplifiers where the R-2R density is balanced by downstream speed. Widely used with solid-state amplification from brands like Benchmark, Topping, and Pass Labs. Can compound warmth with tube amplifiers — works best when the tube stage is on the transparent side.',
+    pairingNotes: 'Pairs well with fast or transparent amplifiers where the R2R density is balanced by downstream speed. Widely used with solid-state amplification from brands like Benchmark, Topping, and Pass Labs. Can compound warmth with tube amplifiers — works best when the tube stage is on the transparent side.',
     links: [
       { label: 'Vinshine Audio (official distributor)', url: 'https://www.vinshineaudio.com/', kind: 'dealer', region: 'global' },
     ],
@@ -479,9 +480,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     brandScale: 'specialist',
     region: 'east-asia',
     categories: ['dac'],
-    philosophy: 'Gustard builds DACs across both delta-sigma and R-2R architectures, targeting measured performance at competitive prices. The design philosophy balances technical ambition with value positioning.',
-    tendencies: 'Gustard DACs vary by architecture — the ESS-based models (X16, X26 Pro) lean toward precision and clarity, while the R-2R models (R26) offer more tonal body. Generally described as capable and transparent without strong colouration.',
-    systemContext: 'Versatile system partners. The ESS-based models suit systems needing analytical precision; the R-2R models offer a warmer alternative without the full density of Denafrips.',
+    philosophy: 'Gustard builds DACs across both delta-sigma and R2R architectures, targeting measured performance at competitive prices. The design philosophy balances technical ambition with value positioning.',
+    tendencies: 'Gustard DACs vary by architecture — the ESS-based models (X16, X26 Pro) lean toward precision and clarity, while the R2R models (R26) offer more tonal body. Generally described as capable and transparent without strong colouration.',
+    systemContext: 'Versatile system partners. The ESS-based models suit systems needing analytical precision; the R2R models offer a warmer alternative without the full density of Denafrips.',
     links: [
       { label: 'Apos Audio', url: 'https://apos.audio/collections/gustard', kind: 'dealer', region: 'global' },
     ],
@@ -493,7 +494,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     region: 'east-asia',
     categories: ['dac', 'amplifier'],
     philosophy: 'SMSL designs compact, measurement-oriented DACs and amplifiers. Similar design philosophy to Topping — ESS and AKM chip implementations optimised for measured performance at accessible prices.',
-    tendencies: 'SMSL DACs are described as clean, precise, and detailed. The sonic character is neutral-to-analytical. Tonal weight is lighter than R-2R alternatives but separation and transient clarity are strong for the price.',
+    tendencies: 'SMSL DACs are described as clean, precise, and detailed. The sonic character is neutral-to-analytical. Tonal weight is lighter than R2R alternatives but separation and transient clarity are strong for the price.',
     systemContext: 'Similar system context to Topping — a precise source that benefits from downstream warmth. The SU-9 and D300 are popular mid-fi choices for measurement-conscious listeners.',
     links: [
       { label: 'Apos Audio', url: 'https://apos.audio/collections/smsl', kind: 'dealer', region: 'global' },
@@ -505,9 +506,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     brandScale: 'boutique',
     region: 'east-asia',
     categories: ['dac'],
-    philosophy: 'LAiV designs discrete R-2R DACs emphasising harmonic texture and tonal density. The Harmony DAC uses a proprietary discrete ladder implementation with an emphasis on musical engagement over measured specification.',
-    tendencies: 'The LAiV Harmony is described as warm, dense, and harmonically rich — closer to the Denafrips/Holo end of the R-2R spectrum than the precision-R-2R camp. Listeners note strong tonal body and natural timbre.',
-    systemContext: 'Suits systems that benefit from a harmonically rich source. Like other warm R-2R designs, care is needed in systems already biased toward density.',
+    philosophy: 'LAiV designs discrete R2R DACs emphasising harmonic texture and tonal density. The Harmony DAC uses a proprietary discrete ladder implementation with an emphasis on musical engagement over measured specification.',
+    tendencies: 'The LAiV Harmony is described as warm, dense, and harmonically rich — closer to the Denafrips/Holo end of the R2R spectrum than the precision-R2R camp. Listeners note strong tonal body and natural timbre.',
+    systemContext: 'Suits systems that benefit from a harmonically rich source. Like other warm R2R designs, care is needed in systems already biased toward density.',
     links: [
       { label: 'Official website', url: 'https://www.laiv.audio/', region: 'global' },
     ],
@@ -532,7 +533,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     region: 'east-asia',
     categories: ['headphone', 'dac', 'amplifier'],
     philosophy: 'HiFiMAN designs planar magnetic headphones and related electronics. The headphone philosophy emphasises open, extended frequency response with planar driver technology. The EF400 desktop unit pairs a DAC with a headphone amplifier voiced for HiFiMAN headphones.',
-    tendencies: 'HiFiMAN electronics (EF400, EF600) tend toward a smooth, slightly warm presentation with good staging. The R-2R DAC module in the EF400 adds tonal density compared to typical delta-sigma implementations. The emphasis is on musical engagement for headphone listening.',
+    tendencies: 'HiFiMAN electronics (EF400, EF600) tend toward a smooth, slightly warm presentation with good staging. The R2R DAC module in the EF400 adds tonal density compared to typical delta-sigma implementations. The emphasis is on musical engagement for headphone listening.',
     systemContext: 'The EF400 is designed as a headphone system hub — DAC + amplifier in one unit. Widely paired with HiFiMAN planar headphones (Sundara, Edition XS, Ananda) where the smooth character complements planar transparency.',
     links: [
       { label: 'Official website', url: 'https://hifiman.com/', region: 'global' },
@@ -672,9 +673,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     brandScale: 'boutique',
     region: 'europe',
     categories: ['dac'],
-    philosophy: 'Rockna designs discrete R-2R DACs with FPGA-based digital processing. The approach combines the tonal density of resistor-ladder conversion with precise digital filtering and reclocking. The Wavelight represents the brand\'s accessible reference — sharing the core architecture of the flagship Wavedream at a lower price point.',
-    tendencies: 'Rockna DACs are described as transparent, resolving, and tonally balanced. Unlike many R-2R designs that lean warm or dense, Rockna maintains a neutral center with excellent spatial resolution and dynamic composure. Detail retrieval is high without analytical edge.',
-    systemContext: 'Rockna DACs suit systems where the listener wants R-2R tonal texture without the warmth bias of brands like Denafrips or Holo. They pair well with both tube and solid-state amplification, providing a balanced source that doesn\'t impose a strong tonal character.',
+    philosophy: 'Rockna designs discrete R2R DACs with FPGA-based digital processing. The approach combines the tonal density of resistor-ladder conversion with precise digital filtering and reclocking. The Wavelight represents the brand\'s accessible reference — sharing the core architecture of the flagship Wavedream at a lower price point.',
+    tendencies: 'Rockna DACs are described as transparent, resolving, and tonally balanced. Unlike many R2R designs that lean warm or dense, Rockna maintains a neutral center with excellent spatial resolution and dynamic composure. Detail retrieval is high without analytical edge.',
+    systemContext: 'Rockna DACs suit systems where the listener wants R2R tonal texture without the warmth bias of brands like Denafrips or Holo. They pair well with both tube and solid-state amplification, providing a balanced source that doesn\'t impose a strong tonal character.',
     links: [
       { label: 'Official website', url: 'https://www.rockna.com/', region: 'global' },
     ],
@@ -698,9 +699,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     brandScale: 'boutique',
     region: 'east-asia',
     categories: ['dac'],
-    philosophy: 'Holo Audio designs discrete R-2R DACs with dual-mono architecture and proprietary resistor-ladder networks. Designer Jeff Zhu\'s approach combines the harmonic richness of R-2R conversion with careful attention to power supply isolation and analogue output stage quality. The May is the flagship; the Spring is the accessible entry.',
-    tendencies: 'Holo Audio DACs are described as warm, harmonically rich, and dynamically engaging. The May KTE (Kitsune Tuned Edition) is considered one of the strongest R-2R DACs at its price — delivering dense tonal body with better transient definition than many warm-leaning competitors. Spatial presentation is wide and natural.',
-    systemContext: 'Holo DACs add warmth and harmonic texture to the chain. They pair naturally with transparent or fast amplification where the R-2R density provides a welcome counterbalance. In already warm or dense systems, care is needed to avoid congestion. The May KTE is widely used in high-end headphone and speaker systems.',
+    philosophy: 'Holo Audio designs discrete R2R DACs with dual-mono architecture and proprietary resistor-ladder networks. Designer Jeff Zhu\'s approach combines the harmonic richness of R2R conversion with careful attention to power supply isolation and analogue output stage quality. The May is the flagship; the Spring is the accessible entry.',
+    tendencies: 'Holo Audio DACs are described as warm, harmonically rich, and dynamically engaging. The May KTE (Kitsune Tuned Edition) is considered one of the strongest R2R DACs at its price — delivering dense tonal body with better transient definition than many warm-leaning competitors. Spatial presentation is wide and natural.',
+    systemContext: 'Holo DACs add warmth and harmonic texture to the chain. They pair naturally with transparent or fast amplification where the R2R density provides a welcome counterbalance. In already warm or dense systems, care is needed to avoid congestion. The May KTE is widely used in high-end headphone and speaker systems.',
     links: [
       { label: 'Kitsune HiFi (US distributor)', url: 'https://krantenaudio.com/', kind: 'dealer', region: 'US' },
     ],
@@ -717,7 +718,7 @@ interface TopologyKeyword {
 }
 
 const TOPOLOGY_KEYWORDS: TopologyKeyword[] = [
-  { patterns: [/\br-?2r\b/i, /\bladder\s+dac\b/i], archetypeId: 'r2r', label: 'R-2R DACs' },
+  { patterns: [/\br-?2r\b/i, /\bladder\s+dac\b/i], archetypeId: 'r2r', label: 'R2R DACs' },
   { patterns: [/\bdelta[- ]sigma\b/i, /\bds\s+dac\b/i], archetypeId: 'delta_sigma', label: 'delta-sigma DACs' },
   { patterns: [/\bnos\b/i, /\bnon[- ]oversampling\b/i], archetypeId: 'nos_tube', label: 'NOS DACs' },
   { patterns: [/\bfpga\b/i], archetypeId: 'fpga', label: 'FPGA DACs' },
@@ -777,50 +778,104 @@ function buildProductConsultation(products: Product[], subject: string): Consult
   const brandProfile = findBrandProfileByName(primary.brand);
   const brandLinks = brandProfile?.links;
 
-  // Try curated tendencies first
-  if (hasTendencies(primary.tendencies)) {
-    const top = selectDefaultTendencies(primary.tendencies.character, 3);
-    const tendencyText = top.map((t) => t.tendency).join('. ');
-    const tradeoff = primary.tendencies.tradeoffs[0];
+  // Collect all available links (product-level first, then brand-level)
+  const links = [
+    ...(primary.retailer_links ?? []).map((rl) => ({
+      label: rl.label,
+      url: rl.url,
+      kind: 'reference' as const,
+    })),
+    ...(brandLinks ?? []),
+  ];
 
-    return {
-      subject,
-      philosophy: `${primary.brand} ${primary.name} uses ${primary.architecture} architecture. The design prioritises a particular sonic character over measured neutrality.`,
-      tendencies: tendencyText + (tradeoff ? `. The characteristic trade-off: ${tradeoff.gains} at the cost of ${tradeoff.cost}.` : '.'),
-      systemContext: primary.tendencies.interactions[0]
-        ? `System context matters: ${primary.tendencies.interactions[0].condition}, ${primary.tendencies.interactions[0].effect}.`
-        : undefined,
-      followUp: 'Are you considering this for a specific system, or exploring what it would bring?',
-      links: brandLinks,
-    };
+  // ── Build rich philosophy section ──
+  // Overall assessment: what it is, its design lineage, and description.
+  const philosophyParts: string[] = [];
+
+  // Opening line: architecture and description
+  philosophyParts.push(primary.description);
+
+  // Architecture and design identity
+  if (primary.architecture) {
+    philosophyParts.push(`The design is built on ${primary.architecture} architecture.`);
   }
 
-  // Try qualitative profile
-  if (hasExplainableProfile(primary.tendencyProfile)) {
+  // Availability note for discontinued products
+  if (primary.availability === 'discontinued' && primary.usedPriceRange) {
+    const { low, high } = primary.usedPriceRange;
+    philosophyParts.push(
+      `Discontinued — available on the used market, typically $${low}–$${high}.`,
+    );
+  } else if (primary.price) {
+    philosophyParts.push(`Retail price: approximately $${primary.price.toLocaleString()}.`);
+  }
+
+  // ── Build rich tendencies section ──
+  // Sonic character: strengths, limitations, and tradeoffs.
+  const tendencyParts: string[] = [];
+
+  if (hasTendencies(primary.tendencies)) {
+    // Character domains — all of them, not just top 3
+    for (const char of primary.tendencies.character) {
+      tendencyParts.push(`**${capitalize(char.domain)}**: ${char.tendency}.`);
+    }
+
+    // Tradeoffs
+    for (const tradeoff of primary.tendencies.tradeoffs) {
+      tendencyParts.push(
+        `The characteristic trade-off: ${tradeoff.gains} — at the cost of ${tradeoff.cost}` +
+        (tradeoff.relative_to ? ` (relative to ${tradeoff.relative_to})` : '') + '.',
+      );
+    }
+  } else if (hasExplainableProfile(primary.tendencyProfile)) {
     const emphasized = getEmphasizedTraits(primary.tendencyProfile);
     const lessEmphasized = getLessEmphasizedTraits(primary.tendencyProfile);
     const conf = primary.tendencyProfile.confidence;
-
-    const emphVerb = conf === 'high' ? 'Listeners consistently describe it as emphasising' : 'It tends to lean toward';
-    const emphText = emphasized.length > 0 ? `${emphVerb} ${emphasized.join(' and ')}.` : '';
-    const lessText = lessEmphasized.length > 0 ? ` Less of a priority: ${lessEmphasized.slice(0, 2).join(' and ')}.` : '';
-
-    return {
-      subject,
-      philosophy: `${primary.brand} ${primary.name} is an ${primary.architecture} design. ${primary.description.split('.')[0]}.`,
-      tendencies: `${emphText}${lessText}`,
-      followUp: 'Are you considering this for a specific system, or exploring what its character would bring?',
-      links: brandLinks,
-    };
+    const emphVerb = (conf === 'high' || conf === 'founder_reference')
+      ? 'Listeners consistently describe it as emphasising' : 'It tends to lean toward';
+    if (emphasized.length > 0) {
+      tendencyParts.push(`${emphVerb} ${emphasized.join(', ')}.`);
+    }
+    if (lessEmphasized.length > 0) {
+      tendencyParts.push(`Less of a priority: ${lessEmphasized.join(', ')}.`);
+    }
   }
 
-  // Fallback to description
+  // Fatigue assessment
+  if (primary.fatigueAssessment) {
+    tendencyParts.push(`Fatigue risk: ${primary.fatigueAssessment.risk}. ${primary.fatigueAssessment.notes}`);
+  }
+
+  // ── Build system context section ──
+  // Interactions, pairing advice, and source references.
+  const contextParts: string[] = [];
+
+  if (hasTendencies(primary.tendencies)) {
+    // All interactions — not just the first one
+    for (const interaction of primary.tendencies.interactions) {
+      const prefix = interaction.valence === 'positive' ? 'Works well' : 'Worth noting';
+      contextParts.push(`${prefix}: ${interaction.condition} — ${interaction.effect}.`);
+    }
+  }
+
+  // Brand-level pairing notes if available
+  if (brandProfile?.pairingNotes) {
+    contextParts.push(brandProfile.pairingNotes);
+  }
+
+  // Source references
+  if (primary.sourceReferences && primary.sourceReferences.length > 0) {
+    const sourceLines = primary.sourceReferences.map((sr) => `${sr.source}: ${sr.note}`);
+    contextParts.push(`Reference sources: ${sourceLines.join(' ')}`);
+  }
+
   return {
     subject,
-    philosophy: `${primary.brand} ${primary.name} is an ${primary.architecture} design.`,
-    tendencies: primary.description,
-    followUp: 'What are you pairing it with, and what do you value most in your listening?',
-    links: brandLinks,
+    philosophy: philosophyParts.join('\n\n'),
+    tendencies: tendencyParts.join('\n\n'),
+    systemContext: contextParts.length > 0 ? contextParts.join('\n\n') : undefined,
+    followUp: 'Are you considering this for a specific system, or exploring what it would bring?',
+    links: links.length > 0 ? links : undefined,
   };
 }
 
@@ -2183,7 +2238,6 @@ const ROLE_DISPLAY: Record<string, string> = {
   tonearm: 'a tonearm',
   cartridge: 'a cartridge',
   phono: 'a phono stage',
-  turntable: 'a turntable',
   component: 'a component',
 };
 
@@ -3071,8 +3125,10 @@ export function buildSystemAssessment(
   // ── Build title ──
   // Use the active system's name (e.g. "Living Room") if available,
   // otherwise generate from the component names.
-  const assessmentTitle = activeSystem?.name
-    ? `${activeSystem.name} System`
+  // Use the active system's name if available, but avoid "X System System" duplication.
+  const rawName = activeSystem?.name ?? '';
+  const assessmentTitle = rawName
+    ? (rawName.toLowerCase().endsWith('system') ? rawName : `${rawName} System`)
     : `System Assessment`;
 
   const prose: LegacyProseInputs = {
@@ -3143,7 +3199,7 @@ function inferSystemCharacterOpening(components: SystemComponent[]): string {
   }
 
   if (descriptors.length === 0) {
-    return `The chain has balanced tendencies — no single axis dominates. The overall character depends on how these components interact in practice.`;
+    return `The chain has balanced tendencies — no single tonal or textural direction dominates. The overall character depends on how these components interact in practice.`;
   }
 
   if (descriptors.length === 1) {
@@ -3240,8 +3296,43 @@ function inferSystemInteraction(components: SystemComponent[]): string {
   return `Each component brings distinct tendencies. The overall character depends on their interaction in practice.`;
 }
 
+// ── Amplifier power classification (from topology) ──
+
+type PowerTier = 'very-low' | 'low' | 'moderate' | 'high';
+
+function classifyAmpPower(amp: SystemComponent): PowerTier {
+  const topology = amp.product?.topology;
+  if (topology === 'set') return 'very-low';                // 2–10W typical
+  if (topology === 'class-a-solid-state') return 'low';     // 10–30W typical
+  if (topology === 'push-pull-tube') return 'low';          // 15–50W typical
+  if (topology === 'hybrid') return 'moderate';              // 25–100W typical
+  if (topology === 'class-ab-solid-state') return 'high';   // 50–200W typical
+  if (topology === 'class-d') return 'high';                 // 50–300W+ typical
+  return 'moderate'; // unknown topology — conservative default
+}
+
+// ── Speaker efficiency classification (from topology) ──
+
+type EfficiencyTier = 'very-high' | 'high' | 'moderate' | 'low';
+
+function classifySpeakerEfficiency(speaker: SystemComponent): EfficiencyTier {
+  const topology = speaker.product?.topology;
+  if (topology === 'horn-loaded') return 'very-high';       // 95dB+ typical
+  if (topology === 'high-efficiency') return 'high';        // 92–96dB typical
+  if (topology === 'open-baffle') return 'moderate';        // 88–93dB typical
+  if (topology === 'bass-reflex') return 'moderate';        // 85–92dB typical
+  if (topology === 'sealed') return 'low';                  // 83–88dB typical
+  return 'moderate'; // unknown topology — conservative default
+}
+
 /**
- * Infer amplifier-speaker fit from known design families and product data.
+ * Infer amplifier-speaker fit from topology, design families, and product data.
+ *
+ * Checks for:
+ * 1. Power/efficiency mismatch (SET into sealed standmounts)
+ * 2. Over-damping risk (high-power SS into high-efficiency)
+ * 3. Design family pairing notes
+ * 4. Brand-level system context
  */
 function inferAmplifierSpeakerFit(components: SystemComponent[]): string | null {
   const amp = components.find((c) => c.role === 'amplifier');
@@ -3249,17 +3340,48 @@ function inferAmplifierSpeakerFit(components: SystemComponent[]): string | null 
 
   if (!amp || !speaker) return null;
 
-  // Check for design family pairing notes
+  const ampPower = classifyAmpPower(amp);
+  const speakerEff = classifySpeakerEfficiency(speaker);
+  const notes: string[] = [];
+
+  // ── Critical mismatch: very-low power + low-efficiency speaker ──
+  if (ampPower === 'very-low' && (speakerEff === 'low' || speakerEff === 'moderate')) {
+    notes.push(
+      `${amp.displayName} is a low-power design (likely under 10W) paired with ${speaker.displayName}, ` +
+      `which has ${speakerEff} efficiency. This pairing risks dynamic compression and limited bass ` +
+      `control — the amplifier may not have enough power headroom for full musical expression. ` +
+      `Single-ended triode amps typically need speakers above 92dB sensitivity to perform at their best.`,
+    );
+  }
+  // ── Moderate concern: low power + low-efficiency speaker ──
+  else if (ampPower === 'low' && speakerEff === 'low') {
+    notes.push(
+      `${amp.displayName} offers modest power paired with ${speaker.displayName}, which has relatively ` +
+      `low efficiency. This may work well at moderate volumes but could compress on dynamic peaks ` +
+      `in larger rooms. Worth monitoring — if the presentation feels constrained, power headroom is the likely cause.`,
+    );
+  }
+  // ── Over-damping concern: high-power SS + very-high-efficiency speaker ──
+  else if (ampPower === 'high' && (speakerEff === 'very-high' || speakerEff === 'high')) {
+    notes.push(
+      `${amp.displayName} provides substantial power into ${speaker.displayName}, which is a ` +
+      `high-efficiency design. The amplifier will have considerable damping authority — this delivers ` +
+      `tight control but may reduce the elastic, breathing quality that high-efficiency speakers ` +
+      `are often valued for. Lower-power amplification typically lets these speakers express their dynamic character more fully.`,
+    );
+  }
+
+  // ── Design family pairing notes (existing logic) ──
   if (amp.brandProfile?.designFamily?.ampPairing && speaker.brandProfile?.designFamily?.character) {
-    return `${amp.displayName} paired with ${speaker.displayName}: ${amp.brandProfile.designFamily.ampPairing} ${speaker.brandProfile.designFamily.character.includes('sensitivity') ? speaker.brandProfile.designFamily.character : ''}`.trim();
+    const designNote = `${amp.displayName} paired with ${speaker.displayName}: ${amp.brandProfile.designFamily.ampPairing} ${speaker.brandProfile.designFamily.character.includes('sensitivity') ? speaker.brandProfile.designFamily.character : ''}`.trim();
+    notes.push(designNote);
+  }
+  // ── Brand-level system context (fallback) ──
+  else if (notes.length === 0 && amp.brandProfile?.systemContext) {
+    notes.push(`${amp.displayName}: ${amp.brandProfile.systemContext}`);
   }
 
-  // Check brand-level pairing notes
-  if (amp.brandProfile?.systemContext) {
-    return `${amp.displayName}: ${amp.brandProfile.systemContext}`;
-  }
-
-  return null;
+  return notes.length > 0 ? notes.join(' ') : null;
 }
 
 /**
@@ -3407,6 +3529,16 @@ function inferAssessmentLimitations(components: SystemComponent[]): string[] {
       if ((t.tonal_density ?? 0.5) < 0.35) limitations.push(`${c.displayName} may lean thin in the midrange`);
       if ((t.flow ?? 0.5) < 0.35) limitations.push(`${c.displayName} may prioritize precision over musical flow`);
     }
+
+    // Placement dependency warning for speakers
+    if (c.product?.placementSensitivity && c.product.placementSensitivity.level !== 'low') {
+      const ps = c.product.placementSensitivity;
+      if (ps.level === 'high') {
+        limitations.push(`${c.displayName} has high placement sensitivity — ${ps.notes}`);
+      } else if (ps.level === 'moderate') {
+        limitations.push(`${c.displayName} has moderate placement sensitivity — ${ps.notes}`);
+      }
+    }
   }
 
   return limitations;
@@ -3433,7 +3565,7 @@ function inferUpgradeDirection(components: SystemComponent[]): string {
     ].filter(Boolean).length;
 
     if (nonNeutralAxes <= 1) {
-      return 'This system appears well-balanced across the primary axes. Changes would likely shift the character rather than fix a gap. If you want to explore, focus on the quality you most want to intensify — but "do nothing" is a strong option here.';
+      return 'This system appears well-balanced — no single tonal or textural direction dominates. Changes would likely shift the character rather than fix a gap. If you want to explore, focus on the quality you most want to intensify — but "do nothing" is a strong option here.';
     }
   }
 
@@ -3943,7 +4075,7 @@ function buildIntroSummary(
 
   const traitPhrase = traits.length > 0
     ? `prioritising ${traits.join(' and ')}`
-    : 'with balanced tendencies across the primary axes';
+    : 'with no strong lean in any single direction';
 
   // Reference-tier systems get an elevated opening
   const tierPrefix = tier === 'reference'

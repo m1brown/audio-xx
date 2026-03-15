@@ -45,7 +45,7 @@ const BRAND_CATEGORY_MAP: Record<string, ProductCategory> = {
   shindo: 'amplifier', leben: 'amplifier', 'audio note': 'amplifier',
   'line magnetic': 'amplifier', primaluna: 'amplifier', cary: 'amplifier',
   'audio research': 'amplifier', arc: 'amplifier', job: 'integrated',
-  goldmund: 'dac', crayon: 'integrated', xsa: 'speaker',
+  goldmund: 'dac', crayon: 'integrated', xsa: 'speaker', 'trends': 'integrated', 'trends audio': 'integrated',
   // Turntables / tonearms
   rega: 'turntable', 'pro-ject': 'turntable', technics: 'turntable',
   clearaudio: 'turntable', vpi: 'turntable', linn: 'turntable', thorens: 'turntable',
@@ -125,6 +125,12 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   ef400: { brand: 'HiFiMAN', category: 'dac' },
   // Goldmund
   srda: { brand: 'Goldmund', category: 'dac' },
+  // JOB
+  'job integrated': { brand: 'JOB', category: 'integrated' },
+  'job int': { brand: 'JOB', category: 'integrated' },
+  // Trends Audio
+  'ta-10': { brand: 'Trends Audio', category: 'integrated' },
+  'trends ta-10': { brand: 'Trends Audio', category: 'integrated' },
   // Crayon
   'cia-1': { brand: 'Crayon', category: 'integrated' },
   'cia-1t': { brand: 'Crayon', category: 'integrated' },
@@ -364,6 +370,13 @@ export function detectSystemDescription(
     const key = match.name.toLowerCase();
     if (seen.has(key)) continue;
     if (coveredBrands.has(key)) continue; // brand already represented by a product
+
+    // Also suppress when a variant of the same brand is already covered.
+    // e.g. "zu" should be suppressed when "zu audio" is covered, and vice versa.
+    const isBrandVariantCovered = [...coveredBrands].some(
+      (cb) => cb.startsWith(key) || key.startsWith(cb),
+    );
+    if (isBrandVariantCovered) continue;
 
     seen.add(key);
     const category = BRAND_CATEGORY_MAP[key] ?? 'other';

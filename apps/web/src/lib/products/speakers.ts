@@ -48,10 +48,15 @@ export const SPEAKER_PRODUCTS: Product[] = [
       smooth_detailed: 'smooth',       // High flow, musical continuity over analytical detail
       elastic_controlled: 'elastic',   // Explosive dynamics from high efficiency
       airy_closed: 'airy',            // Open, spacious presentation
+      // Founder reference calibration
+      warm_bright_n: -1,         // Natural tonal density — warm but not heavy
+      smooth_detailed_n: -1,     // Musical flow and ease over analytical detail
+      elastic_controlled_n: -1,  // Dynamically alive — elastic, not overdamped
+      airy_closed_n: -1,         // Open, spacious presentation
     },
     tendencyProfile: {
-      basis: 'listener_consensus',
-      confidence: 'high',
+      basis: 'founder_reference',
+      confidence: 'founder_reference',
       tendencies: [
         { trait: 'rhythm', level: 'emphasized' },
         { trait: 'dynamics', level: 'emphasized' },
@@ -87,6 +92,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'WLM', url: 'https://www.wlm-loudspeakers.com/' },
     ],
     notes: 'Benefits from moderate-power amplification with good current delivery. Spatial precision improves significantly with careful placement.',
+    placementSensitivity: {
+      level: 'moderate',
+      notes: 'Spatial precision improves significantly with careful positioning. Bass energy from the passive radiator can overwhelm small or untreated rooms.',
+    },
     sourceReferences: [
       { source: '6moons', note: 'Srajan Ebaen review covering the coaxial wideband design and rhythmic engagement.' },
       { source: 'Twittering Machines', note: 'Review praising dynamic expression and musical involvement.' },
@@ -127,12 +136,17 @@ export const SPEAKER_PRODUCTS: Product[] = [
     primaryAxes: {
       warm_bright: 'neutral',            // Neutral with body — neither warm nor bright
       smooth_detailed: 'detailed',       // Texture and spatial precision dominate over flow
-      elastic_controlled: 'controlled',  // Composed, precise — not dynamically explosive
+      elastic_controlled: 'elastic',     // Fast and articulate with low stored energy
       airy_closed: 'airy',             // Holographic spatial presentation
+      // Founder reference calibration
+      warm_bright_n: 0,           // Neutral — neither warm nor bright
+      smooth_detailed_n: 1,       // Detailed and articulate
+      elastic_controlled_n: -1,   // Fast, low stored energy — elastic
+      airy_closed_n: -1,          // Holographic, airy presentation
     },
     tendencyProfile: {
-      basis: 'review_consensus',
-      confidence: 'high',
+      basis: 'founder_reference',
+      confidence: 'founder_reference',
       tendencies: [
         { trait: 'spatial_precision', level: 'emphasized' },
         { trait: 'texture', level: 'emphasized' },
@@ -168,6 +182,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'Boenicke Audio', url: 'https://www.boenicke-audio.ch/' },
     ],
     notes: 'Needs quality amplification to shine. Bass quantity limited by cabinet size — room gain or a subwoofer helps in larger rooms.',
+    placementSensitivity: {
+      level: 'high',
+      notes: 'Compact cabinet means bass thins significantly in larger rooms without boundary reinforcement or subwoofer support. Imaging precision depends heavily on positioning — benefits from precise toe-in and symmetrical placement away from side walls.',
+    },
     sourceReferences: [
       { source: '6moons', note: 'Srajan Ebaen review covering spatial performance and Swiss craftsmanship.' },
       { source: 'Darko.Audio', note: 'John Darko video feature on Boenicke W5 as a holographic small speaker.' },
@@ -253,6 +271,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'Music Direct', url: 'https://www.musicdirect.com/speakers/harbeth-p3esr/' },
     ],
     notes: 'Limited bass extension and dynamic scale. Best for smaller rooms, vocal and acoustic music. Not the choice for hard-driving rock or large-scale orchestral.',
+    placementSensitivity: {
+      level: 'moderate',
+      notes: 'Compact sealed design works well near boundaries but bass extension is limited. Best in smaller rooms where the speaker-listener distance allows the sound to coalesce. In larger spaces, the presentation can feel small-scale.',
+    },
     sourceReferences: [
       { source: 'Stereophile', note: 'Herb Reichert and Art Dudley reviews praising midrange beauty and BBC heritage.' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review calling the P3ESR one of the most satisfying small speakers ever made.' },
@@ -400,6 +422,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'DeVore Fidelity', url: 'https://www.dfridelity.com/o96' },
     ],
     notes: 'Exceptional with low-power tube amplification. Sensitivity allows SET amps to drive them with authority. Room-dependent bass — needs space to breathe.',
+    placementSensitivity: {
+      level: 'moderate',
+      notes: 'Wide-baffle design produces substantial bass energy that can overwhelm rooms smaller than 15 square metres. Needs breathing room — pull away from rear walls to let the presentation open up.',
+    },
     sourceReferences: [
       { source: 'Stereophile', note: 'Art Dudley review establishing the O/96 as a modern classic for tube systems.' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising engagement and musicality.' },
@@ -555,6 +581,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'Crutchfield', url: 'https://www.crutchfield.com/p_714HRESYIV/' },
     ],
     notes: 'Horn coloration can be noticeable on sustained tones. Room placement matters — can be bass-shy away from walls.',
+    placementSensitivity: {
+      level: 'high',
+      notes: 'Horn-loaded design is highly placement-dependent. Bass becomes thin away from walls — benefits from corner or near-wall positioning. Room reflections significantly affect the tonal balance and imaging.',
+    },
     sourceReferences: [
       { source: 'Stereophile', note: 'Herb Reichert review praising the Heresy IV as a modern update to a heritage design.' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review covering the dynamic impact and horn character.' },
@@ -637,6 +667,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'Focal', url: 'https://www.focal.com/en/home-audio/high-fidelity-speakers/kanta/kanta-n2' },
     ],
     notes: 'Beryllium tweeter can lean bright in untreated rooms or with forward-sounding electronics. Benefits from careful amplifier matching.',
+    placementSensitivity: {
+      level: 'moderate',
+      notes: 'Beryllium tweeter can interact strongly with reflective rooms — first reflections from side walls and hard floors can push the treble toward brightness. Acoustic treatment or toe-in adjustment helps manage this.',
+    },
     sourceReferences: [
       { source: 'Stereophile', note: 'Review covering the beryllium tweeter precision and bass authority.' },
       { source: 'Darko.Audio', note: 'John Darko video review on the Kanta No.2 as a resolving all-rounder.' },
@@ -861,6 +895,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
       ],
     },
     notes: 'Ultra-high efficiency (96dB). Designed for SET amps. Requires careful room placement and ideally acoustic treatment.',
+    placementSensitivity: {
+      level: 'high',
+      notes: 'Open-back cabinet design radiates sound in multiple directions. Requires significant distance from rear walls and ideally acoustic treatment. Room interaction is a defining part of the sound — placement determines whether the holographic imaging magic appears or collapses.',
+    },
     sourceReferences: [
       { source: '6moons', note: 'Srajan Ebaen review covering the full-range widebander coherence and spatial performance.' },
       { source: 'Twittering Machines', note: 'Review praising the Nenuphar family for holographic imaging and musical flow.' },
@@ -945,28 +983,33 @@ export const SPEAKER_PRODUCTS: Product[] = [
   },
 
   {
-    id: 'hornshoppe-great-horns',
+    id: 'hornshoppe-horns',
     brand: 'Hornshoppe',
-    name: 'Great Horns',
-    price: 2200,
+    name: 'Horns',
+    price: 900,
     category: 'speaker',
-    architecture: 'Single-driver horn-loaded, back-loaded horn',
+    architecture: 'Single-driver, rear-ported, horn-loaded',
     subcategory: 'floorstanding',
-    priceTier: 'mid-fi',
+    priceTier: 'budget',
     brandScale: 'boutique',
     region: 'north-america',
     country: 'US',
     topology: 'horn-loaded',
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'flow_organic' },
     primaryAxes: {
-      warm_bright: 'warm',             // Rich, warm midrange from horn loading
-      smooth_detailed: 'neutral',      // Neither smooth nor detailed — raw and direct
-      elastic_controlled: 'elastic',   // Ultra-high efficiency horn dynamics
-      airy_closed: 'airy',            // Open, forward presentation
+      warm_bright: 'bright',            // Immediate, lively — sparkle and presence
+      smooth_detailed: 'detailed',      // Strong sense of detail and articulation
+      elastic_controlled: 'elastic',    // Ultra-high efficiency horn dynamics — very elastic
+      airy_closed: 'airy',             // Very open, forward presentation
+      // Founder reference calibration
+      warm_bright_n: 1,           // Lively and bright — sparkle and presence
+      smooth_detailed_n: 1,       // Detailed and articulate
+      elastic_controlled_n: -2,   // Extremely elastic — explosive dynamics
+      airy_closed_n: -2,          // Very airy — open, holographic
     },
     tendencyProfile: {
-      basis: 'listener_consensus',
-      confidence: 'medium',
+      basis: 'founder_reference',
+      confidence: 'founder_reference',
       tendencies: [
         { trait: 'dynamics', level: 'emphasized' },
         { trait: 'rhythm', level: 'emphasized' },
@@ -997,7 +1040,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       openness: 0.7,
     },
     description:
-      'Hand-built back-loaded horn from Ed Schilling. Ultra-high efficiency, raw dynamic energy, and rhythmic immediacy. The kind of speaker that makes you feel the music physically. Designed for SET amps and the listeners who love them.',
+      'Handmade single-driver rear-ported horn-loaded speaker by Ed Schilling in South Carolina. Sub-$1k, ultra-high efficiency, raw dynamic energy, and rhythmic immediacy. May benefit from a subwoofer for deep bass extension. Designed for SET amps and the listeners who love them.',
     retailer_links: [
       { label: 'Hornshoppe', url: 'http://www.thehornshoppe.com/' },
     ],
@@ -1268,6 +1311,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
       ],
     },
     notes: 'Sensitive to placement. Benefits from quality stands and room treatment. The analytical presentation is a feature, not a bug — it reveals everything.',
+    placementSensitivity: {
+      level: 'high',
+      notes: 'Highly sensitive to positioning and room acoustics. Quality stands are essential. Benefits from acoustic treatment — the analytical presentation reveals room anomalies as readily as source quality.',
+    },
   },
 
   // ── Spendor A1 ──────────────────────────────────────────

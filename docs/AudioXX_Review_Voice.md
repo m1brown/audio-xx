@@ -187,7 +187,7 @@ Prefer:
 Factual context is welcome when it explains audible behavior.
 
 Appropriate:
-- Architecture (e.g., "FPGA pulse-array," "R-2R ladder," "delta-sigma")
+- Architecture (e.g., "FPGA pulse-array," "R2R ladder," "delta-sigma")
 - Designer lineage (e.g., "Rob Watts' tap-length philosophy")
 - Topology (e.g., "zero-feedback," "high-feedback with error correction")
 - Country of manufacture when it signals a design tradition

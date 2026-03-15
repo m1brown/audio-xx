@@ -82,12 +82,23 @@ export interface DeficiencyRisk {
   consequence: string;
 }
 
+/** A cross-trait stacking observation — two correlated traits reinforce each other. */
+export interface CrossTraitRisk {
+  traits: [string, string];
+  label: string;
+  contributors: string[];
+  consequence: string;
+  characterNote: string;
+}
+
 /** Full system interaction analysis result. */
 export interface SystemInteraction {
   /** Descriptive chain character — what the system sounds like now. */
   chainCharacter: string;
   /** Traits the chain emphasises (descriptive, not judgmental). */
   stackingRisks: StackingRisk[];
+  /** Cross-trait interactions — emergent effects from correlated stacking. */
+  crossTraitRisks: CrossTraitRisk[];
   /** Traits the chain underserves. */
   deficiencyRisks: DeficiencyRisk[];
   /** How a candidate product would interact with the chain. */
@@ -133,6 +144,33 @@ const STACKING_CONSEQUENCES: Record<string, string> = {
   texture: 'Further texture emphasis may mask micro-detail and air.',
   composure: 'More composure risks flattening dynamics — may feel restrained.',
 };
+
+// ── Cross-trait interaction rules ────────────────────
+//
+// Some trait combinations produce emergent effects that single-trait
+// stacking doesn't capture. These fire when BOTH traits in a pair
+// exceed the stacking threshold across 2+ components.
+
+interface CrossTraitRule {
+  traits: [string, string];
+  label: string;
+  /** Consequence when both traits stack together. */
+  consequence: string;
+  /** Character description (for chain-level, not candidate). */
+  characterNote: string;
+}
+
+const CROSS_TRAIT_RULES: CrossTraitRule[] = [
+  {
+    traits: ['warmth', 'tonal_density'],
+    label: 'tonal density stacking',
+    consequence:
+      'When warmth and tonal density stack together, clarity and transient articulation suffer disproportionately. ' +
+      'The presentation may feel congested or slow — individual instruments lose separation, and transient edges soften beyond what either trait alone would produce.',
+    characterNote:
+      'The chain stacks both warmth and tonal density — rich and immersive, but clarity and articulation may be constrained.',
+  },
+];
 
 /**
  * Deficiency consequences — used when flagging gaps.
@@ -211,6 +249,19 @@ const NAME_ALIASES: Record<string, string[]> = {
   'orchid': ['orchid'],
   'calliope': ['calliope .21'],
   'morpheus': ['morpheus'],
+  'srda': ['srda dac'],
+  'goldmund srda': ['srda dac'],
+  'goldmund dac': ['srda dac'],
+  'great horns': ['horns'],
+  'hornshoppe horns': ['horns'],
+  'cs600x': ['cs600x'],
+  'cs600': ['cs600x', 'cs300'],
+  'cs300': ['cs300'],
+  'cs300x': ['cs300'],
+  'ta-10': ['ta-10'],
+  'ta10': ['ta-10'],
+  'trends ta-10': ['ta-10'],
+  'trends ta10': ['ta-10'],
 };
 
 /**
@@ -381,6 +432,9 @@ export function analyzeSystemInteraction(
     }
   }
 
+  // ── Cross-trait interactions ─────────────────────────
+  const crossTraitRisks = detectCrossTraitInteractions(resolved);
+
   // ── Chain character ────────────────────────────────
   const chainCharacter = inferChainCharacter(resolved);
 
@@ -388,20 +442,63 @@ export function analyzeSystemInteraction(
   let candidateInteraction: CandidateInteraction | undefined;
   if (candidate) {
     candidateInteraction = analyzeCandidateInteraction(
-      resolved, candidate, stackingRisks, deficiencyRisks,
+      resolved, candidate, stackingRisks, deficiencyRisks, crossTraitRisks,
     );
   }
 
   // ── Summary — character only, max 1 sentence ──────
-  const summary = buildSummary(chainCharacter, stackingRisks, deficiencyRisks);
+  const summary = buildSummary(chainCharacter, stackingRisks, deficiencyRisks, crossTraitRisks);
 
   return {
     chainCharacter,
     stackingRisks,
+    crossTraitRisks,
     deficiencyRisks,
     candidateInteraction,
     summary,
   };
+}
+
+// ── Cross-trait interaction detection ─────────────────
+
+function detectCrossTraitInteractions(
+  components: Array<{ name: string; product: Product; traits: Record<string, number> }>,
+): CrossTraitRisk[] {
+  const results: CrossTraitRisk[] = [];
+
+  for (const rule of CROSS_TRAIT_RULES) {
+    const [traitA, traitB] = rule.traits;
+    // Components that push BOTH traits above stacking threshold
+    const bothPushers = components.filter(
+      (c) => c.traits[traitA] >= STACKING_THRESHOLD && c.traits[traitB] >= STACKING_THRESHOLD,
+    );
+    // Also count components that push either trait strongly (individual contribution)
+    const aPushers = components.filter((c) => c.traits[traitA] >= STACKING_THRESHOLD);
+    const bPushers = components.filter((c) => c.traits[traitB] >= STACKING_THRESHOLD);
+
+    // Fire when: at least 1 component pushes both, AND the chain has 2+ pushers
+    // for each individual trait — indicating genuine cross-trait reinforcement
+    if (
+      bothPushers.length >= 1 &&
+      aPushers.length >= STACKING_MIN_COMPONENTS &&
+      bPushers.length >= STACKING_MIN_COMPONENTS
+    ) {
+      // Collect all contributors (union of both trait pushers)
+      const contributorNames = new Set<string>();
+      for (const c of aPushers) contributorNames.add(`${c.product.brand} ${c.product.name}`);
+      for (const c of bPushers) contributorNames.add(`${c.product.brand} ${c.product.name}`);
+
+      results.push({
+        traits: rule.traits,
+        label: rule.label,
+        contributors: [...contributorNames],
+        consequence: rule.consequence,
+        characterNote: rule.characterNote,
+      });
+    }
+  }
+
+  return results;
 }
 
 // ── Chain character inference ────────────────────────
@@ -442,6 +539,7 @@ function analyzeCandidateInteraction(
   candidate: Product,
   existingStacking: StackingRisk[],
   existingDeficiencies: DeficiencyRisk[],
+  existingCrossTrait: CrossTraitRisk[] = [],
 ): CandidateInteraction {
   const candidateTraits = getProductTraits(candidate);
   const compounds: CandidateInteraction['compounds'] = [];
@@ -488,6 +586,27 @@ function analyzeCandidateInteraction(
     }
   }
 
+  // Candidate compounds existing cross-trait interactions
+  for (const crossRisk of existingCrossTrait) {
+    const [traitA, traitB] = crossRisk.traits;
+    if (
+      candidateTraits[traitA] >= STACKING_THRESHOLD ||
+      candidateTraits[traitB] >= STACKING_THRESHOLD
+    ) {
+      // Only add if we haven't already flagged these individual traits
+      const alreadyFlagged = compounds.some(
+        (c) => c.trait === traitA || c.trait === traitB,
+      );
+      if (!alreadyFlagged) {
+        compounds.push({
+          trait: `${traitA}+${traitB}`,
+          label: crossRisk.label,
+          note: crossRisk.consequence,
+        });
+      }
+    }
+  }
+
   let verdict: CandidateInteraction['verdict'] = 'neutral';
   if (compounds.length > compensates.length + 1) verdict = 'reinforces';
   else if (compensates.length > compounds.length) verdict = 'balances';
@@ -505,12 +624,16 @@ function buildSummary(
   chainCharacter: string,
   stackingRisks: StackingRisk[],
   deficiencyRisks: DeficiencyRisk[],
+  crossTraitRisks: CrossTraitRisk[] = [],
 ): string {
   // Character sentence — always present
   let summary = `Your system reads as ${chainCharacter}.`;
 
   // At most ONE additional note — pick the most significant
-  if (stackingRisks.length > 0) {
+  // Cross-trait interactions take priority over single-trait stacking
+  if (crossTraitRisks.length > 0) {
+    summary += ` ${crossTraitRisks[0].characterNote}`;
+  } else if (stackingRisks.length > 0) {
     const top = stackingRisks.sort((a, b) =>
       a.severity === 'significant' && b.severity !== 'significant' ? -1 : 0,
     )[0];

@@ -28,7 +28,7 @@
 # design_signals: list of strings (required)
 #   Key architectural and design characteristics.
 #   These describe what the product IS, not how it sounds.
-#   Examples: "FPGA architecture", "R-2R ladder", "zero-feedback",
+#   Examples: "FPGA architecture", "R2R ladder", "zero-feedback",
 #             "single-ended triode", "paper cone woofer"
 
 # tendencies: list of strings (required)

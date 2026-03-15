@@ -26,6 +26,7 @@
  * Internal only — never surfaced to users.
  */
 export type SourceBasis =
+  | 'founder_reference'      // calibrated from founder's direct listening experience — highest confidence
   | 'review_consensus'       // consistent across multiple independent reviews
   | 'manufacturer_intent'    // stated design goal from the manufacturer
   | 'listener_consensus'     // recurring listener reports (forums, communities)
@@ -84,7 +85,7 @@ export interface TradeOffTendency {
  *
  * Used on both ProductTendencies and TendencyProfile.
  */
-export type TendencyConfidence = 'high' | 'medium' | 'low';
+export type TendencyConfidence = 'founder_reference' | 'high' | 'medium' | 'low';
 
 /**
  * The complete tendency set for a product.
@@ -229,6 +230,7 @@ export function getLessEmphasizedTraits(profile: TendencyProfile): string[] {
 
 /** Source basis priority for selection — prefer better-sourced tendencies. */
 const BASIS_PRIORITY: Record<SourceBasis, number> = {
+  founder_reference: 4,
   review_consensus: 3,
   listener_consensus: 2,
   manufacturer_intent: 1,

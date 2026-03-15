@@ -46,12 +46,32 @@ export type AiryClosedLeaning = 'airy' | 'closed' | 'neutral';
 /**
  * Primary axis leanings for a product or system.
  * The first thing the engine reads when reasoning about character.
+ *
+ * Numeric intensity (`_n` fields) use a -2 to +2 ordinal scale:
+ *   -2 = strong first pole (warm, smooth, elastic, airy)
+ *   -1 = moderate first pole
+ *    0 = neutral
+ *   +1 = moderate second pole (bright, detailed, controlled, closed)
+ *   +2 = strong second pole
+ *
+ * When `_n` values are present they are the source of truth —
+ * the categorical label can be derived. When absent, the categorical
+ * label remains the primary data (backward compatible).
  */
 export interface PrimaryAxisLeanings {
   warm_bright: WarmBrightLeaning;
   smooth_detailed: SmoothDetailedLeaning;
   elastic_controlled: ElasticControlledLeaning;
   airy_closed: AiryClosedLeaning;
+
+  /** Numeric intensity: -2 (very warm) → +2 (very bright). */
+  warm_bright_n?: number;
+  /** Numeric intensity: -2 (very smooth) → +2 (very detailed). */
+  smooth_detailed_n?: number;
+  /** Numeric intensity: -2 (very elastic) → +2 (very controlled). */
+  elastic_controlled_n?: number;
+  /** Numeric intensity: -2 (very airy) → +2 (very closed). */
+  airy_closed_n?: number;
 }
 
 // ── Fatigue overlay ──────────────────────────────────────
@@ -132,7 +152,9 @@ export function inferAxesFromTraits(
 /**
  * Labels for human-readable axis descriptions.
  */
-export const AXIS_LABELS: Record<keyof PrimaryAxisLeanings, { low: string; high: string; name: string }> = {
+export type CategoricalAxis = 'warm_bright' | 'smooth_detailed' | 'elastic_controlled' | 'airy_closed';
+
+export const AXIS_LABELS: Record<CategoricalAxis, { low: string; high: string; name: string }> = {
   warm_bright: { low: 'warm', high: 'bright', name: 'Warm ↔ Bright' },
   smooth_detailed: { low: 'smooth', high: 'detailed', name: 'Smooth ↔ Detailed' },
   elastic_controlled: { low: 'elastic', high: 'controlled', name: 'Elastic ↔ Controlled' },
@@ -151,13 +173,43 @@ export function resolveProductAxes(product: {
 }
 
 /**
+ * Resolve the numeric intensity for an axis.
+ * Prefers explicit `_n` value; derives from categorical label if absent.
+ *
+ *   categorical → numeric fallback:
+ *     first pole (warm/smooth/elastic/airy) → -1
+ *     neutral → 0
+ *     second pole (bright/detailed/controlled/closed) → +1
+ */
+export function resolveAxisIntensity(
+  axes: PrimaryAxisLeanings,
+  axis: keyof Pick<PrimaryAxisLeanings, 'warm_bright' | 'smooth_detailed' | 'elastic_controlled' | 'airy_closed'>,
+): number {
+  const numericKey = `${axis}_n` as keyof PrimaryAxisLeanings;
+  const numericValue = axes[numericKey];
+  if (typeof numericValue === 'number') return numericValue;
+
+  // Derive from categorical
+  const categorical = axes[axis] as string;
+  const FIRST_POLES: Record<string, string> = {
+    warm_bright: 'warm',
+    smooth_detailed: 'smooth',
+    elastic_controlled: 'elastic',
+    airy_closed: 'airy',
+  };
+  if (categorical === 'neutral') return 0;
+  if (categorical === FIRST_POLES[axis]) return -1;
+  return 1; // second pole
+}
+
+/**
  * Detect compounding on an axis — when multiple components lean the same direction.
  */
 export function detectCompounding(
   componentAxes: PrimaryAxisLeanings[],
 ): string[] {
   const warnings: string[] = [];
-  const axes: (keyof PrimaryAxisLeanings)[] = [
+  const axes: CategoricalAxis[] = [
     'warm_bright', 'smooth_detailed', 'elastic_controlled', 'airy_closed',
   ];
 

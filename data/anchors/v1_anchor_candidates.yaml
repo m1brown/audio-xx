@@ -41,7 +41,7 @@ dacs:
     category: dac
     subcategory: r2r
     design_signals:
-      - R-2R ladder architecture
+      - R2R ladder architecture
       - discrete resistor network
       - NOS mode available
     tendencies:
@@ -58,7 +58,7 @@ dacs:
       - NOS mode shifts further toward organic texture at the cost of
         some high-frequency extension.
     confidence_basis:
-      - well-known R-2R archetype
+      - well-known R2R archetype
       - broad community consensus
     price_range: "$1000–$2000"
 
@@ -144,7 +144,7 @@ dacs:
     category: dac
     subcategory: r2r
     design_signals:
-      - discrete R-2R ladder
+      - discrete R2R ladder
       - NOS / OS switchable
       - dual-mono topology
     tendencies:
@@ -161,7 +161,7 @@ dacs:
       - Presents music with an organic ease that rewards long listening.
     confidence_basis:
       - strong community consensus
-      - consistent with R-2R design principles
+      - consistent with R2R design principles
     price_range: "$2000–$3000"
 
   - brand: Topping
@@ -220,7 +220,7 @@ dacs:
     category: dac
     subcategory: r2r
     design_signals:
-      - R-2R ladder
+      - R2R ladder
       - non-oversampling
       - linear power supply
     tendencies:

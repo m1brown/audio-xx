@@ -55,7 +55,7 @@ Describe what the system currently does.
 
 Connect the character to specific design traits.
 
-- "This comes from the R-2R DAC topology combined with a low-feedback
+- "This comes from the R2R DAC topology combined with a low-feedback
   tube amplifier."
 - "This behaviour is driven by the high damping factor of the
   amplifier interacting with the speaker's impedance curve."
@@ -202,7 +202,7 @@ transient precision and spatial explicitness.
 
 **Causal explanation:**
 
-This comes from the R-2R DAC topology — which naturally favours
+This comes from the R2R DAC topology — which naturally favours
 harmonic richness over measured linearity — combined with a
 low-feedback tube amplifier that adds its own harmonic texture.
 The high-efficiency speakers are sensitive to upstream character

@@ -97,7 +97,7 @@ describe('Shortlist category extraction', () => {
   });
 
   it('returns null for non-category text', () => {
-    expect(extractShortlistCategory('what is R-2R?')).toBeNull();
+    expect(extractShortlistCategory('what is R2R?')).toBeNull();
   });
 });
 

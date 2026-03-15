@@ -72,7 +72,7 @@ const ARCHETYPES: Record<DesignArchetypeId, DesignArchetype> = {
 
   r2r: {
     id: 'r2r',
-    label: 'R-2R ladder',
+    label: 'R2R ladder',
     designPrinciple: 'Resistor-ladder conversion using matched resistor networks for direct voltage output.',
     confidence: 'high',
     basis: 'review_consensus',
@@ -83,7 +83,7 @@ const ARCHETYPES: Record<DesignArchetypeId, DesignArchetype> = {
       { trait: 'clarity', direction: 'less_emphasized' },
     ],
     typicalTradeoff: 'Tonal density and texture at the cost of measured precision and ultimate transparency.',
-    caution: 'Implementation quality varies significantly — not all R-2R designs sound the same.',
+    caution: 'Implementation quality varies significantly — not all R2R designs sound the same.',
   },
 
   delta_sigma: {
@@ -145,7 +145,7 @@ const ARCHETYPES: Record<DesignArchetypeId, DesignArchetype> = {
       { trait: 'flow', direction: 'emphasized' },
     ],
     typicalTradeoff: 'Dynamic weight and tonal density at the cost of ultimate resolution.',
-    caution: 'Overlaps significantly with R-2R — the distinction is more about implementation family than topology.',
+    caution: 'Overlaps significantly with R2R — the distinction is more about implementation family than topology.',
   },
 
   // ── Speaker topologies ─────────────────────────────
@@ -278,7 +278,7 @@ export function getArchetypeById(id: DesignArchetypeId): DesignArchetype {
  * Returns undefined if archetype confidence is low.
  *
  * Uses confidence-aware language:
- *   high:   "R-2R designs typically emphasize ..."
+ *   high:   "R2R designs typically emphasize ..."
  *   medium: "This type of design tends to lean toward ..."
  */
 export function archetypeCharacter(archetype: DesignArchetype): string | undefined {

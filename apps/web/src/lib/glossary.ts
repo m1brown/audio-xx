@@ -154,7 +154,7 @@ const GLOSSARY: GlossaryEntry[] = [
 
   // Architecture / design terms
   {
-    term: 'R-2R',
+    term: 'R2R',
     aliases: ['r2r', 'resistor ladder', 'multibit'],
     explanation: 'A DAC design using a ladder of precision resistors. Often sounds more organic and tonally dense.',
   },

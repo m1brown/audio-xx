@@ -99,6 +99,15 @@ export interface Product {
    */
   fatigueAssessment?: FatigueAssessment;
   /**
+   * Placement sensitivity for speakers — flags designs whose performance
+   * depends significantly on room positioning. Compact standmounts, open-
+   * baffle, and horn-loaded designs often have strong placement dependencies.
+   */
+  placementSensitivity?: {
+    level: 'low' | 'moderate' | 'high';
+    notes: string;
+  };
+  /**
    * Curated sonic tendencies: character, interactions, and trade-offs.
    * When present and confidence is not 'provisional', these drive
    * advisory explanations instead of the description field.
@@ -364,7 +373,7 @@ export const DAC_PRODUCTS: Product[] = [
     name: 'Ares 12th-1',
     price: 600,
     category: 'dac',
-    architecture: 'R-2R',
+    architecture: 'R2R',
     subcategory: 'standalone-dac',
     priceTier: 'mid-fi',
     brandScale: 'specialist',
@@ -372,7 +381,7 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'SG',
     topology: 'r2r',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
-    // Axis reasoning: Entry R-2R — "body and engagement over analytical precision."
+    // Axis reasoning: Entry R2R — "body and engagement over analytical precision."
     // Flow+density present, clarity less_emphasized. Dense harmonic texture, relaxed
     // timing. Warm, smooth, neutral dynamics, neutral staging.
     primaryAxes: {
@@ -409,7 +418,7 @@ export const DAC_PRODUCTS: Product[] = [
       elasticity: 0.4,
     },
     description:
-      'Entry-level R-2R with strong tonal density and natural rhythmic flow. Favors body and engagement over analytical precision.',
+      'Entry-level R2R with strong tonal density and natural rhythmic flow. Favors body and engagement over analytical precision.',
     retailer_links: [
       { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/product/denafrips-ares-12th-1' },
     ],
@@ -429,9 +438,9 @@ export const DAC_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
-      { source: 'Darko.Audio', note: 'Review covering Denafrips R-2R house sound and the Ares as entry point to the lineup.' },
+      { source: 'Darko.Audio', note: 'Review covering Denafrips R2R house sound and the Ares as entry point to the lineup.' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising the Ares II for musicality and engagement at its price.' },
-      { source: 'Twittering Machines', note: 'Positive coverage of the R-2R tonal character and listening ease.' },
+      { source: 'Twittering Machines', note: 'Positive coverage of the R2R tonal character and listening ease.' },
       { source: 'Head-Fi community', note: 'Extensive owner comparisons with Bifrost 2, SMSL, and Topping alternatives.' },
     ],
   },
@@ -498,7 +507,7 @@ export const DAC_PRODUCTS: Product[] = [
       character: [
         { domain: 'timing', tendency: 'fast, decisive leading edges — notes start with conviction', basis: 'review_consensus' },
         { domain: 'dynamics', tendency: 'punchy macrodynamics with good microdynamic gradation', basis: 'review_consensus' },
-        { domain: 'tonality', tendency: 'more tonal weight than typical delta-sigma, less saturated than dedicated R-2R', basis: 'listener_consensus' },
+        { domain: 'tonality', tendency: 'more tonal weight than typical delta-sigma, less saturated than dedicated R2R', basis: 'listener_consensus' },
         { domain: 'texture', tendency: 'slightly grainy at high frequencies compared to smoother ESS implementations', basis: 'editorial_inference' },
       ],
       interactions: [
@@ -506,12 +515,12 @@ export const DAC_PRODUCTS: Product[] = [
         { condition: 'in systems already biased toward speed and precision', effect: 'can compound the forward presentation — may feel relentless over long sessions', valence: 'caution', basis: 'editorial_inference' },
       ],
       tradeoffs: [
-        { gains: 'rhythmic engagement and dynamic directness', cost: 'the smoothest possible treble and the deepest harmonic saturation', relative_to: 'R-2R designs at this price', basis: 'review_consensus' },
+        { gains: 'rhythmic engagement and dynamic directness', cost: 'the smoothest possible treble and the deepest harmonic saturation', relative_to: 'R2R designs at this price', basis: 'review_consensus' },
       ],
     },
     sourceReferences: [
       { source: 'Schiit Audio', note: 'Manufacturer commentary on multibit unison USB architecture.' },
-      { source: 'Darko.Audio', note: 'Video review comparing Bifrost 2 to competing R-2R and delta-sigma designs.' },
+      { source: 'Darko.Audio', note: 'Video review comparing Bifrost 2 to competing R2R and delta-sigma designs.' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising the Bifrost as a musical, engaging multibit alternative.' },
       { source: 'Stereophile', note: 'Herb Reichert review covering tonal weight and dynamic character.' },
     ],
@@ -587,7 +596,7 @@ export const DAC_PRODUCTS: Product[] = [
         { condition: 'in systems that are already lean or bright', effect: 'can feel clinical — the precision becomes sterility without compensating warmth', valence: 'caution', basis: 'review_consensus' },
       ],
       tradeoffs: [
-        { gains: 'measured transparency and composure', cost: 'tonal richness and harmonic engagement', relative_to: 'R-2R and multibit designs at this price', basis: 'review_consensus' },
+        { gains: 'measured transparency and composure', cost: 'tonal richness and harmonic engagement', relative_to: 'R2R and multibit designs at this price', basis: 'review_consensus' },
       ],
     },
   },
@@ -674,6 +683,90 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising the Orchid for organic musicality.' },
       { source: 'Audiogon community', note: 'Tube-rolling reports and system pairing impressions.' },
     ],
+  },
+
+  // ── Goldmund / JOB ──────────────────────────────────────
+
+  {
+    id: 'goldmund-srda',
+    brand: 'Goldmund',
+    name: 'SRDA DAC',
+    price: 3500,
+    usedPriceRange: { low: 1200, high: 2500 },
+    availability: 'discontinued',
+    typicalMarket: 'used',
+    category: 'dac',
+    architecture: 'Goldmund proprietary DAC module (internal to Goldmund amplifiers and available standalone)',
+    subcategory: 'standalone-dac',
+    priceTier: 'upper-mid',
+    brandScale: 'specialist',
+    region: 'europe',
+    country: 'CH',
+    topology: 'delta-sigma',
+    archetypes: { primary: 'precision_explicit' },
+    primaryAxes: {
+      warm_bright: 'neutral',
+      smooth_detailed: 'detailed',
+      elastic_controlled: 'controlled',
+      airy_closed: 'neutral',
+      warm_bright_n: 0,
+      smooth_detailed_n: 1,
+      elastic_controlled_n: 1,
+      airy_closed_n: 0,
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Extremely neutral and composed. No grain, no edge. May lack excitement rather than cause fatigue.',
+    },
+    tendencyProfile: {
+      basis: 'founder_reference',
+      confidence: 'founder_reference',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'composure', level: 'emphasized' },
+        { trait: 'spatial_precision', level: 'present' },
+        { trait: 'speed', level: 'present' },
+        { trait: 'dynamics', level: 'less_emphasized' },
+        { trait: 'warmth', level: 'less_emphasized' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+        { trait: 'flow', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 1.0,
+      composure: 1.0,
+      spatial_precision: 0.7,
+      speed: 0.7,
+      dynamics: 0.4,
+      warmth: 0.4,
+      tonal_density: 0.4,
+      flow: 0.4,
+      texture: 0.4,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+    },
+    description:
+      'Goldmund\'s proprietary DAC module — designed for extreme neutrality and composure. Less sparkle and excitement than the JOB internal DAC section, but exceptionally stable and transparent. A reference point for measured precision over musical engagement.',
+    retailer_links: [
+      { label: 'HiFi Shark (used)', url: 'https://www.hifishark.com/search?q=goldmund+dac' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'tonality', tendency: 'extremely neutral and transparent — no added warmth or coloration', basis: 'founder_reference' },
+        { domain: 'spatial', tendency: 'composed and precise — imaging is stable and well-defined', basis: 'founder_reference' },
+        { domain: 'timing', tendency: 'controlled and deliberate — prioritises stability over rhythmic excitement', basis: 'founder_reference' },
+      ],
+      interactions: [
+        { condition: 'paired with lively, dynamic amplification', effect: 'the neutrality lets upstream character through while adding composure', valence: 'positive', basis: 'founder_reference' },
+        { condition: 'in systems already neutral or controlled', effect: 'may feel too restrained — lacks the sparkle to animate a reserved system', valence: 'caution', basis: 'founder_reference' },
+      ],
+      tradeoffs: [
+        { gains: 'neutrality, composure, and transparency', cost: 'musical excitement, dynamic spark, and the engaging quality of more characterful DACs', relative_to: 'TotalDAC, Denafrips, or Holo Audio R2R designs', basis: 'founder_reference' },
+      ],
+    },
+    notes: 'Discontinued. The Goldmund DAC module appears in various Goldmund components. Standalone units available on the used market.',
   },
 
   {
@@ -830,7 +923,7 @@ export const DAC_PRODUCTS: Product[] = [
         { condition: 'for listeners who prioritize emotional engagement', effect: 'the neutral transparency can feel uninvolved — it reveals everything but editorializes nothing', valence: 'neutral', basis: 'listener_consensus' },
       ],
       tradeoffs: [
-        { gains: 'transparency, configurability, and measured performance', cost: 'the harmonic coloration and musical editorializing that some listeners find engaging', relative_to: 'R-2R and tube designs at this price', basis: 'review_consensus' },
+        { gains: 'transparency, configurability, and measured performance', cost: 'the harmonic coloration and musical editorializing that some listeners find engaging', relative_to: 'R2R and tube designs at this price', basis: 'review_consensus' },
       ],
     },
     sourceReferences: [
@@ -1091,7 +1184,7 @@ export const DAC_PRODUCTS: Product[] = [
       confidence: 'high',
       character: [
         { domain: 'timing', tendency: 'exceptional transient resolution — leading edges are fast and fully formed', basis: 'review_consensus' },
-        { domain: 'tonality', tendency: 'lighter tonal weight than R-2R designs but avoids the thinness of typical delta-sigma', basis: 'listener_consensus' },
+        { domain: 'tonality', tendency: 'lighter tonal weight than R2R designs but avoids the thinness of typical delta-sigma', basis: 'listener_consensus' },
         { domain: 'texture', tendency: 'fine-grained detail without analytical edge — reveals texture without harsh spotlighting', basis: 'review_consensus' },
       ],
       interactions: [
@@ -1099,7 +1192,7 @@ export const DAC_PRODUCTS: Product[] = [
         { condition: 'in systems that already emphasize speed and transparency', effect: 'can tilt the balance toward analytical — the tonal lightness may become noticeable', valence: 'caution', basis: 'editorial_inference' },
       ],
       tradeoffs: [
-        { gains: 'timing precision and articulate detail', cost: 'the tonal density and midrange weight of R-2R conversion', relative_to: 'Denafrips and other R-2R designs', basis: 'review_consensus' },
+        { gains: 'timing precision and articulate detail', cost: 'the tonal density and midrange weight of R2R conversion', relative_to: 'Denafrips and other R2R designs', basis: 'review_consensus' },
       ],
     },
     sourceReferences: [
@@ -1115,7 +1208,7 @@ export const DAC_PRODUCTS: Product[] = [
     name: 'Pontus II 12th-1',
     price: 1499,
     category: 'dac',
-    architecture: 'R-2R',
+    architecture: 'R2R',
     subcategory: 'standalone-dac',
     priceTier: 'mid-fi',
     brandScale: 'specialist',
@@ -1124,7 +1217,7 @@ export const DAC_PRODUCTS: Product[] = [
     topology: 'r2r',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     // ── CALIBRATED ANCHOR: Denafrips Pontus II 12th-1 ──
-    // Axis reasoning: Full-scale R-2R — the archetypal warm, textured DAC.
+    // Axis reasoning: Full-scale R2R — the archetypal warm, textured DAC.
     // Flow 1.0, density 1.0, texture 1.0, clarity 0.7, dynamics 0.7, composure 0.7.
     //
     // Warm↔Bright: WARM — density 1.0, "rich harmonic density with physical
@@ -1138,13 +1231,13 @@ export const DAC_PRODUCTS: Product[] = [
     //   "Instruments have body and resonance" → smooth, not detailed.
     //
     // Elastic↔Controlled: NEUTRAL — dynamics 0.7 and composure 0.7. Neither
-    //   explosive nor overdamped. The R-2R conversion style has a natural ease
+    //   explosive nor overdamped. The R2R conversion style has a natural ease
     //   that doesn't push dynamics forward but doesn't suppress them either.
     //   Elasticity at 0.4 is the only weak signal, but "relaxed" timing suggests
     //   neither elastic snap nor controlled grip — just flow.
     //
     // Airy↔Closed: AIRY (slight) — "deep, holographic staging with good layering
-    //   front-to-back." The R-2R architecture creates a sense of dimensional
+    //   front-to-back." The R2R architecture creates a sense of dimensional
     //   space that delta-sigma designs often lack at this price. Present but not
     //   the defining trait — slightly airy rather than dramatically open.
     primaryAxes: {
@@ -1155,7 +1248,7 @@ export const DAC_PRODUCTS: Product[] = [
     },
     fatigueAssessment: {
       risk: 'low',
-      notes: 'The R-2R warmth and flow are inherently fatigue-resistant. The risk with the Pontus is never fatigue — it is congestion when paired with other warm components.',
+      notes: 'The R2R warmth and flow are inherently fatigue-resistant. The risk with the Pontus is never fatigue — it is congestion when paired with other warm components.',
     },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -1183,7 +1276,7 @@ export const DAC_PRODUCTS: Product[] = [
       elasticity: 0.4,
     },
     description:
-      'Full-scale R-2R with rich tonal density, strong harmonic texture, and refined composure. Prioritizes body and musical weight over transient sharpness.',
+      'Full-scale R2R with rich tonal density, strong harmonic texture, and refined composure. Prioritizes body and musical weight over transient sharpness.',
     retailer_links: [
       { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/product/denafrips-pontus-ii-12th-1' },
     ],
@@ -1196,7 +1289,7 @@ export const DAC_PRODUCTS: Product[] = [
         { domain: 'spatial', tendency: 'deep, holographic staging with good layering front-to-back', basis: 'listener_consensus' },
       ],
       interactions: [
-        { condition: 'paired with fast or precision-oriented amplifiers', effect: 'the R-2R tonal density and the amplifier\'s speed tend to complement — body without sluggishness', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'paired with fast or precision-oriented amplifiers', effect: 'the R2R tonal density and the amplifier\'s speed tend to complement — body without sluggishness', valence: 'positive', basis: 'listener_consensus' },
         { condition: 'in systems that are already tonally dense or warm', effect: 'the cumulative weight can reduce clarity — bass and lower midrange may feel heavy', valence: 'caution', basis: 'editorial_inference' },
       ],
       tradeoffs: [
@@ -1204,10 +1297,10 @@ export const DAC_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
-      { source: 'Audiophile Style', note: 'Detailed review of R-2R architecture and harmonic character.' },
+      { source: 'Audiophile Style', note: 'Detailed review of R2R architecture and harmonic character.' },
       { source: 'Audio Science Review', note: 'Measurement and listening coverage of the 12th anniversary revision.' },
-      { source: '6moons', note: 'Review covering the Pontus II tonal authority and R-2R staging.' },
-      { source: 'Darko.Audio', note: 'Comparison placing Pontus in the Denafrips lineup and R-2R landscape.' },
+      { source: '6moons', note: 'Review covering the Pontus II tonal authority and R2R staging.' },
+      { source: 'Darko.Audio', note: 'Comparison placing Pontus in the Denafrips lineup and R2R landscape.' },
       { source: 'Head-Fi / Audiogon communities', note: 'Extensive comparisons with Chord, Schiit, and ESS-based alternatives.' },
     ],
   },
@@ -1218,7 +1311,7 @@ export const DAC_PRODUCTS: Product[] = [
     name: 'R26',
     price: 1499,
     category: 'dac',
-    architecture: 'R-2R',
+    architecture: 'R2R',
     subcategory: 'standalone-dac',
     priceTier: 'mid-fi',
     brandScale: 'specialist',
@@ -1226,12 +1319,12 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'CN',
     topology: 'r2r',
     archetypes: { primary: 'tonal_saturated', secondary: 'precision_explicit' },
-    // Axis reasoning: Discrete R-2R but "less warm than the Denafrips, more textured
+    // Axis reasoning: Discrete R2R but "less warm than the Denafrips, more textured
     // than delta-sigma." All core traits at 0.7 — balanced across the board.
     // "Body without excess warmth." "Controlled rather than explosive."
-    // "A middle ground between R-2R warmth and delta-sigma precision."
+    // "A middle ground between R2R warmth and delta-sigma precision."
     primaryAxes: {
-      warm_bright: 'warm',            // R-2R architecture with density 0.7 — warm, but mild
+      warm_bright: 'warm',            // R2R architecture with density 0.7 — warm, but mild
       smooth_detailed: 'neutral',     // Flow 0.7 and clarity 0.7 — balanced between smooth and detailed
       elastic_controlled: 'controlled', // "Controlled rather than explosive," composure 0.7
       airy_closed: 'neutral',        // No strong spatial signature documented
@@ -1266,7 +1359,7 @@ export const DAC_PRODUCTS: Product[] = [
       elasticity: 0.4,
     },
     description:
-      'Discrete R-2R implementation offering a balance of clarity and tonal body. Less warm than the Denafrips, more textured than delta-sigma alternatives.',
+      'Discrete R2R implementation offering a balance of clarity and tonal body. Less warm than the Denafrips, more textured than delta-sigma alternatives.',
     retailer_links: [
       { label: 'Gustard', url: 'https://www.gustard.cn/productinfo/3758922.html' },
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B0BL2F62LJ' },
@@ -1276,14 +1369,14 @@ export const DAC_PRODUCTS: Product[] = [
       confidence: 'medium',
       character: [
         { domain: 'tonality', tendency: 'balanced tonal presentation — body without excess warmth', basis: 'listener_consensus' },
-        { domain: 'texture', tendency: 'finer-grained texture than typical R-2R, closer to delta-sigma resolution', basis: 'editorial_inference' },
+        { domain: 'texture', tendency: 'finer-grained texture than typical R2R, closer to delta-sigma resolution', basis: 'editorial_inference' },
         { domain: 'dynamics', tendency: 'even dynamic delivery — controlled rather than explosive', basis: 'listener_consensus' },
       ],
       interactions: [
-        { condition: 'for listeners moving from delta-sigma to R-2R', effect: 'a gentler architectural transition — retains clarity while adding body', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'for listeners moving from delta-sigma to R2R', effect: 'a gentler architectural transition — retains clarity while adding body', valence: 'positive', basis: 'listener_consensus' },
       ],
       tradeoffs: [
-        { gains: 'a middle ground between R-2R warmth and delta-sigma precision', cost: 'the full tonal saturation of Denafrips or the explicit speed of ESS designs', relative_to: 'both R-2R and delta-sigma at this price', basis: 'editorial_inference' },
+        { gains: 'a middle ground between R2R warmth and delta-sigma precision', cost: 'the full tonal saturation of Denafrips or the explicit speed of ESS designs', relative_to: 'both R2R and delta-sigma at this price', basis: 'editorial_inference' },
       ],
     },
   },
@@ -1307,9 +1400,27 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'CN',
     primaryAxes: {
       warm_bright: 'neutral',
-      smooth_detailed: 'neutral',
-      elastic_controlled: 'neutral',
+      smooth_detailed: 'detailed',
+      elastic_controlled: 'controlled',
       airy_closed: 'neutral',
+      // Founder reference calibration
+      warm_bright_n: 0,           // Neutral — technically strong, no tonal bias
+      smooth_detailed_n: 1,       // Technically detailed — stable and resolving
+      elastic_controlled_n: 1,    // Controlled and stable — digital filter dependent
+      airy_closed_n: 0,           // Neutral staging
+    },
+    tendencyProfile: {
+      basis: 'founder_reference',
+      confidence: 'founder_reference',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'speed', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'flow', level: 'less_emphasized' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+        { trait: 'warmth', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
     },
     traits: {
       clarity: 0.7,
@@ -1457,7 +1568,7 @@ export const DAC_PRODUCTS: Product[] = [
       composure: 0.7,
     },
     description:
-      'ESS Sabre-based desktop DAC with strong measured performance. Precise, analytical character with good separation and low-level detail. Tonal weight is lighter than R-2R alternatives.',
+      'ESS Sabre-based desktop DAC with strong measured performance. Precise, analytical character with good separation and low-level detail. Tonal weight is lighter than R2R alternatives.',
     retailer_links: [
       { label: 'SMSL', url: 'https://www.smsl-audio.com/portal/product/detail/id/792.html' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/smsl-su-9' },
@@ -1505,7 +1616,7 @@ export const DAC_PRODUCTS: Product[] = [
     name: 'Harmony DAC',
     price: 2000,
     category: 'dac',
-    architecture: 'Discrete R-2R',
+    architecture: 'Discrete R2R',
     subcategory: 'standalone-dac',
     priceTier: 'upper-mid',
     brandScale: 'boutique',
@@ -1529,7 +1640,7 @@ export const DAC_PRODUCTS: Product[] = [
       composure: 0.7,
     },
     description:
-      'Singapore-designed discrete R-2R DAC with strong harmonic density and tonal richness. Shares sonic territory with the Denafrips Pontus/Venus tier — warm, textured, and spatially open. Emphasises musical engagement over analytical precision.',
+      'Singapore-designed discrete R2R DAC with strong harmonic density and tonal richness. Shares sonic territory with the Denafrips Pontus/Venus tier — warm, textured, and spatially open. Emphasises musical engagement over analytical precision.',
     retailer_links: [
       { label: 'LAiV Audio', url: 'https://www.laiv.audio/' },
     ],
@@ -1611,7 +1722,7 @@ export const DAC_PRODUCTS: Product[] = [
     name: 'EF400',
     price: 570,
     category: 'dac',
-    architecture: 'R-2R (Hymalaya module)',
+    architecture: 'R2R (Hymalaya module)',
     subcategory: 'dac-amp',
     priceTier: 'mid-fi',
     brandScale: 'specialist',
@@ -1619,7 +1730,7 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'CN',
     topology: 'r2r',
     primaryAxes: {
-      warm_bright: 'warm',             // R-2R module adds density
+      warm_bright: 'warm',             // R2R module adds density
       smooth_detailed: 'smooth',       // Voiced for musical flow
       elastic_controlled: 'neutral',
       airy_closed: 'neutral',
@@ -1634,12 +1745,12 @@ export const DAC_PRODUCTS: Product[] = [
       composure: 0.4,
     },
     description:
-      'Desktop DAC/headphone amplifier built around HiFiMAN\'s proprietary R-2R "Hymalaya" DAC module. Smooth, slightly warm presentation with good tonal density. Designed as a one-box headphone system paired with HiFiMAN planar headphones.',
+      'Desktop DAC/headphone amplifier built around HiFiMAN\'s proprietary R2R "Hymalaya" DAC module. Smooth, slightly warm presentation with good tonal density. Designed as a one-box headphone system paired with HiFiMAN planar headphones.',
     retailer_links: [
       { label: 'HiFiMAN official', url: 'https://hifiman.com/products/detail/327' },
     ],
     sourceReferences: [
-      { source: 'Head-Fi community', note: 'Impressions and comparisons with Schiit Bifrost and dedicated R-2R DACs.' },
+      { source: 'Head-Fi community', note: 'Impressions and comparisons with Schiit Bifrost and dedicated R2R DACs.' },
     ],
   },
 
@@ -1661,7 +1772,7 @@ export const DAC_PRODUCTS: Product[] = [
     // Axis reasoning: Swiss boutique — uses a well-known delta-sigma chip
     // (TI PCM1794A) but voices it with unusual warmth and musicality.
     // The analogue output stage does the heavy lifting — this is not a
-    // chip-sound DAC. Closer in presentation to an R-2R design than
+    // chip-sound DAC. Closer in presentation to an R2R design than
     // to typical delta-sigma implementations.
     //
     // Warm↔Bright: WARM — voiced for density and body, not brightness.
@@ -1718,7 +1829,7 @@ export const DAC_PRODUCTS: Product[] = [
     tendencies: {
       confidence: 'high',
       character: [
-        { domain: 'tonality', tendency: 'unusual warmth and tonal density for a delta-sigma design — the analogue stage adds midrange body more typical of R-2R conversion', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'unusual warmth and tonal density for a delta-sigma design — the analogue stage adds midrange body more typical of R2R conversion', basis: 'review_consensus' },
         { domain: 'timing', tendency: 'musical flow and natural pacing — notes connect rather than dissect', basis: 'listener_consensus' },
         { domain: 'texture', tendency: 'rich harmonic texture without grain — surfaces detail without spotlighting it', basis: 'review_consensus' },
       ],
@@ -1742,7 +1853,7 @@ export const DAC_PRODUCTS: Product[] = [
     name: 'Cyan 2',
     price: 799,
     category: 'dac',
-    architecture: 'Discrete R-2R (Holo proprietary)',
+    architecture: 'Discrete R2R (Holo proprietary)',
     subcategory: 'standalone-dac',
     priceTier: 'mid-fi',
     brandScale: 'specialist',
@@ -1751,13 +1862,13 @@ export const DAC_PRODUCTS: Product[] = [
     topology: 'r2r',
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     // ── ANCHOR: Holo Audio Cyan 2 ──
-    // Axis reasoning: Entry-level discrete R-2R from Holo Audio, which builds
+    // Axis reasoning: Entry-level discrete R2R from Holo Audio, which builds
     // the well-regarded Spring and May DACs. The Cyan 2 shares the house sound
     // — natural tonal density, good resolution, and a relaxed-but-present
     // approach to detail. More resolving than the Denafrips Ares, less dense
     // than the Pontus.
     //
-    // Warm↔Bright: WARM (slight) — R-2R density present but restrained.
+    // Warm↔Bright: WARM (slight) — R2R density present but restrained.
     //   Less warm than Denafrips Ares, more body than delta-sigma.
     //
     // Smooth↔Detailed: NEUTRAL — resolving without being smooth or analytical.
@@ -1776,7 +1887,7 @@ export const DAC_PRODUCTS: Product[] = [
     },
     fatigueAssessment: {
       risk: 'low',
-      notes: 'No fatigue risk. The natural tonal balance and R-2R smoothness make it suitable for extended listening.',
+      notes: 'No fatigue risk. The natural tonal balance and R2R smoothness make it suitable for extended listening.',
     },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -1803,7 +1914,7 @@ export const DAC_PRODUCTS: Product[] = [
       elasticity: 0.4,
     },
     description:
-      'Entry-level discrete R-2R DAC from the makers of the acclaimed Spring and May series. Natural tonal density, clean texture, and balanced resolution without analytical edge. A resolving alternative to both budget delta-sigma and the warmer Denafrips Ares.',
+      'Entry-level discrete R2R DAC from the makers of the acclaimed Spring and May series. Natural tonal density, clean texture, and balanced resolution without analytical edge. A resolving alternative to both budget delta-sigma and the warmer Denafrips Ares.',
     retailer_links: [
       { label: 'Holo Audio', url: 'https://www.holoaudio.com/' },
       { label: 'Kitsune HiFi', url: 'https://kitsunehifi.com/product/holo-audio-cyan-2/' },
@@ -1825,8 +1936,8 @@ export const DAC_PRODUCTS: Product[] = [
     },
     sourceReferences: [
       { source: 'Head-Fi community', note: 'Extensive impressions comparing with Denafrips Ares and Schiit Bifrost.' },
-      { source: 'Audio Science Review', note: 'Measurements and listening impressions of the Cyan 2 R-2R implementation.' },
-      { source: '6moons', note: 'Review covering the discrete R-2R implementation and Holo Audio design philosophy.' },
+      { source: 'Audio Science Review', note: 'Measurements and listening impressions of the Cyan 2 R2R implementation.' },
+      { source: '6moons', note: 'Review covering the discrete R2R implementation and Holo Audio design philosophy.' },
     ],
   },
 
@@ -1902,7 +2013,7 @@ export const DAC_PRODUCTS: Product[] = [
         { condition: 'in analytical or lean systems', effect: 'may feel too precise — the DAC204 doesn\'t compensate for upstream thinness', valence: 'caution', basis: 'editorial_inference' },
       ],
       tradeoffs: [
-        { gains: 'studio-grade precision, spatial holography, and composure', cost: 'tonal density and harmonic richness of R-2R or NOS designs', relative_to: 'Denafrips Pontus, Holo Spring', basis: 'review_consensus' },
+        { gains: 'studio-grade precision, spatial holography, and composure', cost: 'tonal density and harmonic richness of R2R or NOS designs', relative_to: 'Denafrips Pontus, Holo Spring', basis: 'review_consensus' },
       ],
     },
     sourceReferences: [
@@ -1917,7 +2028,7 @@ export const DAC_PRODUCTS: Product[] = [
     name: 'Spring 3',
     price: 2698,
     category: 'dac',
-    architecture: 'Discrete R-2R (Holo proprietary, dual-mono)',
+    architecture: 'Discrete R2R (Holo proprietary, dual-mono)',
     subcategory: 'standalone-dac',
     priceTier: 'upper-mid',
     brandScale: 'specialist',
@@ -1933,7 +2044,7 @@ export const DAC_PRODUCTS: Product[] = [
     },
     fatigueAssessment: {
       risk: 'low',
-      notes: 'Dual-mono R-2R with natural tonal density. Inherently relaxed and fatigue-free.',
+      notes: 'Dual-mono R2R with natural tonal density. Inherently relaxed and fatigue-free.',
     },
     tendencyProfile: {
       basis: 'listener_consensus',
@@ -1966,7 +2077,7 @@ export const DAC_PRODUCTS: Product[] = [
       elasticity: 0.4,
     },
     description:
-      'Holo Audio\'s flagship-class dual-mono R-2R DAC — the Spring 3 is the sweet spot of the Holo range. Rich tonal density, natural texture, and musical flow. Upgradeable to the Kitsune-tuned "Level 3" variant for enhanced resolution.',
+      'Holo Audio\'s flagship-class dual-mono R2R DAC — the Spring 3 is the sweet spot of the Holo range. Rich tonal density, natural texture, and musical flow. Upgradeable to the Kitsune-tuned "Level 3" variant for enhanced resolution.',
     retailer_links: [
       { label: 'Holo Audio', url: 'https://www.holoaudio.com/' },
       { label: 'Kitsune HiFi', url: 'https://kitsunehifi.com/product/holo-audio-spring-3/' },
@@ -1979,7 +2090,7 @@ export const DAC_PRODUCTS: Product[] = [
         { domain: 'timing', tendency: 'natural musical flow with good dynamic authority — not as fast as FPGA but more engaging than NOS', basis: 'review_consensus' },
       ],
       interactions: [
-        { condition: 'paired with transparent or precise amplification', effect: 'the R-2R density provides tonal body while the amp provides control and resolution', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'paired with transparent or precise amplification', effect: 'the R2R density provides tonal body while the amp provides control and resolution', valence: 'positive', basis: 'listener_consensus' },
         { condition: 'in already warm or dense systems', effect: 'may compound density — clarity and transient speed could suffer', valence: 'caution', basis: 'editorial_inference' },
       ],
       tradeoffs: [
@@ -1987,7 +2098,7 @@ export const DAC_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
-      { source: 'Head-Fi community', note: 'Extensive owner impressions comparing Spring 3 to May and competing R-2R designs.' },
+      { source: 'Head-Fi community', note: 'Extensive owner impressions comparing Spring 3 to May and competing R2R designs.' },
       { source: '6moons', note: 'Review praising the Spring\'s tonal authority and musical engagement.' },
     ],
   },
@@ -1998,7 +2109,7 @@ export const DAC_PRODUCTS: Product[] = [
     name: 'Morpheus',
     price: 2750,
     category: 'dac',
-    architecture: 'Discrete sign-magnitude R-2R, non-oversampling capable',
+    architecture: 'Discrete sign-magnitude R2R, non-oversampling capable',
     subcategory: 'standalone-dac',
     priceTier: 'upper-mid',
     brandScale: 'boutique',
@@ -2014,7 +2125,7 @@ export const DAC_PRODUCTS: Product[] = [
     },
     fatigueAssessment: {
       risk: 'low',
-      notes: 'R-2R naturalness with dynamic authority. No fatigue risk — the presentation is energetic but not aggressive.',
+      notes: 'R2R naturalness with dynamic authority. No fatigue risk — the presentation is energetic but not aggressive.',
     },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -2047,28 +2158,28 @@ export const DAC_PRODUCTS: Product[] = [
       elasticity: 0.7,
     },
     description:
-      'Dutch R-2R DAC from audio veteran Cees Ruijtenberg (also behind Metrum). Sign-magnitude discrete conversion with a lively, dynamic presentation. More energetic than typical R-2R — trades some smoothness for rhythmic drive and authority.',
+      'Dutch R2R DAC from audio veteran Cees Ruijtenberg (also behind Metrum). Sign-magnitude discrete conversion with a lively, dynamic presentation. More energetic than typical R2R — trades some smoothness for rhythmic drive and authority.',
     retailer_links: [
       { label: 'Sonnet Digital Audio', url: 'https://www.sonnet-audio.com/morpheus.html' },
     ],
     tendencies: {
       confidence: 'high',
       character: [
-        { domain: 'dynamics', tendency: 'authoritative and lively — macro dynamics have weight and impact uncommon in R-2R designs', basis: 'review_consensus' },
+        { domain: 'dynamics', tendency: 'authoritative and lively — macro dynamics have weight and impact uncommon in R2R designs', basis: 'review_consensus' },
         { domain: 'tonality', tendency: 'dense and energetic rather than warm — tonal weight without sluggishness', basis: 'listener_consensus' },
-        { domain: 'timing', tendency: 'rhythmically engaging with good transient speed for an R-2R — sign-magnitude conversion keeps the leading edge crisp', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'rhythmically engaging with good transient speed for an R2R — sign-magnitude conversion keeps the leading edge crisp', basis: 'review_consensus' },
       ],
       interactions: [
         { condition: 'paired with composed or controlled amplification', effect: 'the dynamic energy is harnessed without becoming aggressive — the amp provides grip', valence: 'positive', basis: 'listener_consensus' },
         { condition: 'with high-efficiency speakers', effect: 'the dynamic authority can become overwhelming — the Morpheus likes speakers that need driving', valence: 'caution', basis: 'editorial_inference' },
       ],
       tradeoffs: [
-        { gains: 'dynamic authority, rhythmic drive, and tonal density', cost: 'the smoothness and ease of NOS or warmer R-2R designs', relative_to: 'Holo Spring 3, Denafrips Pontus', basis: 'review_consensus' },
+        { gains: 'dynamic authority, rhythmic drive, and tonal density', cost: 'the smoothness and ease of NOS or warmer R2R designs', relative_to: 'Holo Spring 3, Denafrips Pontus', basis: 'review_consensus' },
       ],
     },
     sourceReferences: [
-      { source: '6moons', note: 'Review covering the Morpheus\'s sign-magnitude R-2R design and dynamic presentation.' },
-      { source: 'Darko.Audio', note: 'Impressions noting the lively, energetic character compared to typical R-2R.' },
+      { source: '6moons', note: 'Review covering the Morpheus\'s sign-magnitude R2R design and dynamic presentation.' },
+      { source: 'Darko.Audio', note: 'Impressions noting the lively, energetic character compared to typical R2R.' },
     ],
   },
 
@@ -2080,7 +2191,7 @@ export const DAC_PRODUCTS: Product[] = [
     name: 'Terminator II',
     price: 4500,
     category: 'dac',
-    architecture: 'Discrete R-2R ladder, true balanced, 26-bit',
+    architecture: 'Discrete R2R ladder, true balanced, 26-bit',
     subcategory: 'standalone-dac',
     priceTier: 'high-end',
     brandScale: 'specialist',
@@ -2096,7 +2207,7 @@ export const DAC_PRODUCTS: Product[] = [
     },
     fatigueAssessment: {
       risk: 'low',
-      notes: 'Dense R-2R presentation with zero digital glare. Extremely non-fatiguing. One of the most relaxed high-end DACs available.',
+      notes: 'Dense R2R presentation with zero digital glare. Extremely non-fatiguing. One of the most relaxed high-end DACs available.',
     },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -2129,7 +2240,7 @@ export const DAC_PRODUCTS: Product[] = [
       elasticity: 0.4,
     },
     description:
-      'Denafrips\' flagship R-2R DAC — dense, analog-sounding, with extraordinary tonal weight and a large soundstage. The Terminator II is widely considered one of the best R-2R DACs under $5,000 and a reference for vinyl-like digital playback.',
+      'Denafrips\' flagship R2R DAC — dense, analog-sounding, with extraordinary tonal weight and a large soundstage. The Terminator II is widely considered one of the best R2R DACs under $5,000 and a reference for vinyl-like digital playback.',
     retailer_links: [
       { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/product/denafrips-terminator-ii' },
     ],
@@ -2149,7 +2260,7 @@ export const DAC_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
-      { source: '6moons', note: 'Srajan Ebaen review establishing the Terminator II as a reference R-2R.' },
+      { source: '6moons', note: 'Srajan Ebaen review establishing the Terminator II as a reference R2R.' },
       { source: 'Headphone.Guru', note: 'Review praising tonal density and soundstage scale.' },
       { source: 'Head-Fi community', note: 'Extensive owner consensus on analog-like presentation.' },
     ],
@@ -2161,7 +2272,7 @@ export const DAC_PRODUCTS: Product[] = [
     name: 'Wavelight',
     price: 4200,
     category: 'dac',
-    architecture: 'Discrete R-2R ladder with FPGA control',
+    architecture: 'Discrete R2R ladder with FPGA control',
     subcategory: 'standalone-dac',
     priceTier: 'high-end',
     brandScale: 'boutique',
@@ -2177,7 +2288,7 @@ export const DAC_PRODUCTS: Product[] = [
     },
     fatigueAssessment: {
       risk: 'low',
-      notes: 'FPGA-controlled R-2R achieves high resolution without digital edge. Very refined treble.',
+      notes: 'FPGA-controlled R2R achieves high resolution without digital edge. Very refined treble.',
     },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -2210,7 +2321,7 @@ export const DAC_PRODUCTS: Product[] = [
       elasticity: 0.7,
     },
     description:
-      'Romanian FPGA-controlled R-2R that bridges the gap between analog warmth and digital precision. Extremely holographic with refined treble and excellent depth layering. Widely regarded as a reference-class DAC that balances R-2R tone with digital precision.',
+      'Romanian FPGA-controlled R2R that bridges the gap between analog warmth and digital precision. Extremely holographic with refined treble and excellent depth layering. Widely regarded as a reference-class DAC that balances R2R tone with digital precision.',
     retailer_links: [
       { label: 'Rockna', url: 'https://www.rockna.com/wavelight-dac' },
     ],
@@ -2218,7 +2329,7 @@ export const DAC_PRODUCTS: Product[] = [
       confidence: 'high',
       character: [
         { domain: 'spatial', tendency: 'best imaging in the price class — holographic staging with precise depth layering and image specificity', basis: 'review_consensus' },
-        { domain: 'tonality', tendency: 'balanced and refined — not warm, not lean. R-2R body with FPGA precision', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'balanced and refined — not warm, not lean. R2R body with FPGA precision', basis: 'review_consensus' },
         { domain: 'texture', tendency: 'very refined treble with natural decay — high resolution without digital artifacts', basis: 'listener_consensus' },
       ],
       interactions: [
@@ -2226,12 +2337,12 @@ export const DAC_PRODUCTS: Product[] = [
         { condition: 'in analytical systems', effect: 'may feel slightly lean — it doesn\'t add warmth, so tonal body must come from elsewhere', valence: 'caution', basis: 'editorial_inference' },
       ],
       tradeoffs: [
-        { gains: 'imaging precision, depth layering, and tonal balance', cost: 'the warm, dense tonal weight of pure R-2R designs like Denafrips or Totaldac', relative_to: 'Denafrips Terminator II, Totaldac d1-twelve', basis: 'review_consensus' },
+        { gains: 'imaging precision, depth layering, and tonal balance', cost: 'the warm, dense tonal weight of pure R2R designs like Denafrips or Totaldac', relative_to: 'Denafrips Terminator II, Totaldac d1-twelve', basis: 'review_consensus' },
       ],
     },
     sourceReferences: [
       { source: 'Darko.Audio', note: 'John Darko review praising the Wavelight\'s imaging and refinement.' },
-      { source: '6moons', note: 'Review covering the FPGA+R-2R hybrid approach.' },
+      { source: '6moons', note: 'Review covering the FPGA+R2R hybrid approach.' },
       { source: 'Head-Fi community', note: 'Extensive comparisons positioning Wavelight as best imaging under $5k.' },
     ],
   },
@@ -2245,7 +2356,7 @@ export const DAC_PRODUCTS: Product[] = [
     availability: 'current',
     typicalMarket: 'both',
     category: 'dac',
-    architecture: 'Discrete R-2R (12 parallel DAC modules per channel)',
+    architecture: 'Discrete R2R (12 parallel DAC modules per channel)',
     subcategory: 'standalone-dac',
     priceTier: 'high-end',
     brandScale: 'boutique',
@@ -2256,16 +2367,21 @@ export const DAC_PRODUCTS: Product[] = [
     primaryAxes: {
       warm_bright: 'warm',             // Organic, fluid tonal density
       smooth_detailed: 'smooth',       // Musical flow and natural timbre over detail
-      elastic_controlled: 'neutral',   // Excellent micro-dynamics, not explosive
-      airy_closed: 'neutral',          // Natural staging, not artificially wide
+      elastic_controlled: 'elastic',   // Natural, relaxed presentation — not rigid
+      airy_closed: 'airy',            // Open, natural staging
+      // Founder reference calibration
+      warm_bright_n: -1,         // Warm — natural, non-digital tone
+      smooth_detailed_n: -1,     // Smooth — highly relaxed presentation
+      elastic_controlled_n: -1,  // Elastic — naturally flowing, not controlled
+      airy_closed_n: -1,         // Airy — natural, open staging
     },
     fatigueAssessment: {
       risk: 'low',
       notes: 'One of the most natural-sounding DACs available. Zero digital character. Exceptionally low fatigue.',
     },
     tendencyProfile: {
-      basis: 'review_consensus',
-      confidence: 'high',
+      basis: 'founder_reference',
+      confidence: 'founder_reference',
       tendencies: [
         { trait: 'flow', level: 'emphasized' },
         { trait: 'tonal_density', level: 'emphasized' },
@@ -2294,7 +2410,7 @@ export const DAC_PRODUCTS: Product[] = [
       elasticity: 0.4,
     },
     description:
-      'Vincent Brient\'s entry into the TotalDAC range — 12 parallel R-2R modules per channel for extraordinary tonal realism. Organic, fluid, and deeply natural. One of the most natural-sounding DACs available, especially strong in emotionally engaging systems.',
+      'Vincent Brient\'s entry into the TotalDAC range — 12 parallel R2R modules per channel for extraordinary tonal realism. Organic, fluid, and deeply natural. One of the most natural-sounding DACs available, especially strong in emotionally engaging systems.',
     retailer_links: [
       { label: 'TotalDAC', url: 'https://www.totaldac.com/en/d1-twelve-mk2-eng' },
     ],
@@ -2326,7 +2442,7 @@ export const DAC_PRODUCTS: Product[] = [
     name: 'May (KTE)',
     price: 4598,
     category: 'dac',
-    architecture: 'Discrete R-2R (Holo proprietary, dual-mono, fully balanced)',
+    architecture: 'Discrete R2R (Holo proprietary, dual-mono, fully balanced)',
     subcategory: 'standalone-dac',
     priceTier: 'high-end',
     brandScale: 'specialist',
@@ -2384,7 +2500,7 @@ export const DAC_PRODUCTS: Product[] = [
       confidence: 'high',
       character: [
         { domain: 'tonality', tendency: 'extremely smooth and natural — dense tonal body with very natural decay and no digital artifacts', basis: 'review_consensus' },
-        { domain: 'dynamics', tendency: 'excellent macro and micro dynamics — rare for an R-2R to combine density with dynamic authority this well', basis: 'listener_consensus' },
+        { domain: 'dynamics', tendency: 'excellent macro and micro dynamics — rare for an R2R to combine density with dynamic authority this well', basis: 'listener_consensus' },
         { domain: 'spatial', tendency: 'deep soundstage with natural layering — not the widest, but very convincing depth', basis: 'review_consensus' },
       ],
       interactions: [
@@ -2396,9 +2512,9 @@ export const DAC_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
-      { source: 'Head-Fi community', note: 'Extensive owner consensus as one of the best R-2R DACs under $5k.' },
+      { source: 'Head-Fi community', note: 'Extensive owner consensus as one of the best R2R DACs under $5k.' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising the May\'s natural, analog-like quality.' },
-      { source: '6moons', note: 'Review comparing the May to competing R-2R and FPGA DACs.' },
+      { source: '6moons', note: 'Review comparing the May to competing R2R and FPGA DACs.' },
     ],
   },
 
@@ -2408,7 +2524,7 @@ export const DAC_PRODUCTS: Product[] = [
     name: 'Harmony',
     price: 3500,
     category: 'dac',
-    architecture: 'Discrete R-2R with FPGA-controlled digital processing',
+    architecture: 'Discrete R2R with FPGA-controlled digital processing',
     subcategory: 'standalone-dac',
     priceTier: 'high-end',
     brandScale: 'specialist',
@@ -2424,7 +2540,7 @@ export const DAC_PRODUCTS: Product[] = [
     },
     fatigueAssessment: {
       risk: 'low',
-      notes: 'R-2R smoothness with FPGA precision. Natural and non-fatiguing.',
+      notes: 'R2R smoothness with FPGA precision. Natural and non-fatiguing.',
     },
     tendencyProfile: {
       basis: 'listener_consensus',
@@ -2457,7 +2573,7 @@ export const DAC_PRODUCTS: Product[] = [
       elasticity: 0.7,
     },
     description:
-      'Emerging high-value R-2R ladder DAC with FPGA control. Balances organic R-2R tone with strong spatial precision and good transient speed. Rapidly gaining reputation as a giant-killer in the $3-4k range.',
+      'Emerging high-value R2R ladder DAC with FPGA control. Balances organic R2R tone with strong spatial precision and good transient speed. Rapidly gaining reputation as a giant-killer in the $3-4k range.',
     retailer_links: [
       { label: 'Laiv', url: 'https://www.laiv.net/product/harmony-dac/' },
     ],
@@ -2466,18 +2582,18 @@ export const DAC_PRODUCTS: Product[] = [
       character: [
         { domain: 'spatial', tendency: 'open, spacious staging with good image specificity — punches above its price on spatial performance', basis: 'listener_consensus' },
         { domain: 'tonality', tendency: 'balanced and natural — not as dense as Denafrips but more tonally full than FPGA-only designs', basis: 'listener_consensus' },
-        { domain: 'timing', tendency: 'good transient speed for an R-2R — the FPGA control adds definition without losing naturalness', basis: 'listener_consensus' },
+        { domain: 'timing', tendency: 'good transient speed for an R2R — the FPGA control adds definition without losing naturalness', basis: 'listener_consensus' },
       ],
       interactions: [
         { condition: 'paired with warm or dense amplification', effect: 'the balanced tonality accepts upstream colour without compounding', valence: 'positive', basis: 'listener_consensus' },
       ],
       tradeoffs: [
-        { gains: 'spatial precision, balanced tonality, and value at its price', cost: 'the ultimate tonal density of higher-end R-2R like Terminator or May', relative_to: 'Denafrips Terminator II, Holo May', basis: 'listener_consensus' },
+        { gains: 'spatial precision, balanced tonality, and value at its price', cost: 'the ultimate tonal density of higher-end R2R like Terminator or May', relative_to: 'Denafrips Terminator II, Holo May', basis: 'listener_consensus' },
       ],
     },
     sourceReferences: [
       { source: 'Head-Fi community', note: 'Growing owner consensus as a high-value competitor to Rockna and Denafrips.' },
-      { source: 'Audiophile Style', note: 'Discussion threads covering the Harmony vs established R-2R competitors.' },
+      { source: 'Audiophile Style', note: 'Discussion threads covering the Harmony vs established R2R competitors.' },
     ],
   },
 
@@ -2555,7 +2671,7 @@ export const DAC_PRODUCTS: Product[] = [
         { condition: 'in already analytical systems', effect: 'the resolution may expose upstream shortcomings rather than mask them', valence: 'caution', basis: 'editorial_inference' },
       ],
       tradeoffs: [
-        { gains: 'resolution, staging, and composed authority', cost: 'the tonal density and harmonic richness of pure R-2R designs', relative_to: 'Denafrips Terminator II, Totaldac d1-twelve', basis: 'review_consensus' },
+        { gains: 'resolution, staging, and composed authority', cost: 'the tonal density and harmonic richness of pure R2R designs', relative_to: 'Denafrips Terminator II, Totaldac d1-twelve', basis: 'review_consensus' },
       ],
     },
     sourceReferences: [

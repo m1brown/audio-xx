@@ -56,7 +56,7 @@ The four axes use language drawn directly from how listeners actually describe s
 
 **Bright side:** The upper frequencies are prominent and energetic. Detail is vivid and forward. Cymbals cut through. Transient edges are sharp. The overall impression is clear, open, and immediate. At the extreme, this becomes harsh, sibilant, or fatiguing.
 
-**What shapes it:** Harmonic distortion profile (even-order adds warmth), frequency balance through the presence region (2–6 kHz), treble energy and roll-off behaviour. R-2R DACs, tube amplifiers, and speakers with larger drivers tend warm. Delta-sigma DACs with aggressive filtering, high-feedback solid-state, and metal-dome tweeters tend bright.
+**What shapes it:** Harmonic distortion profile (even-order adds warmth), frequency balance through the presence region (2–6 kHz), treble energy and roll-off behaviour. R2R DACs, tube amplifiers, and speakers with larger drivers tend warm. Delta-sigma DACs with aggressive filtering, high-feedback solid-state, and metal-dome tweeters tend bright.
 
 **In system reasoning:** This is the axis listeners identify most naturally. Compounded warmth (warm DAC + warm amp + warm speakers) produces congestion and muddiness — not "warmth." Compounded brightness produces fatigue and glare. Most well-balanced systems sit somewhere in the middle, with individual components contributing slight leans that offset each other.
 
@@ -134,7 +134,7 @@ Secondary traits appear in product tendency profiles, in advisory explanations, 
 
 **`sweetness`** — Upper-frequency smoothness with harmonic richness. Treble that shimmers rather than sizzles. Operates at the intersection of Warm ↔ Bright (warm side) and Smooth ↔ Detailed (smooth side), specifically in the upper frequencies. Tube output stages and ribbon tweeters tend toward sweetness. Distinct from warmth, which operates lower in frequency.
 
-**`tonal_density`** — Harmonic weight and body. The physical substance of instruments. Primarily expresses the warm side of Warm ↔ Bright, with emphasis on the lower midrange. R-2R DACs and tube amplifiers tend toward density. Extreme density without counterbalancing clarity produces congestion.
+**`tonal_density`** — Harmonic weight and body. The physical substance of instruments. Primarily expresses the warm side of Warm ↔ Bright, with emphasis on the lower midrange. R2R DACs and tube amplifiers tend toward density. Extreme density without counterbalancing clarity produces congestion.
 
 **`clarity`** — Transparency, separation, and resolution. The ability to hear into the mix. Expresses the detailed side of Smooth ↔ Detailed and the bright side of Warm ↔ Bright. High-feedback solid-state and studio monitors tend toward clarity. Not the same as brightness — a component can be clear without being bright.
 
@@ -351,7 +351,7 @@ reference_notes:
 confidence_basis: review_consensus
 ```
 
-**Denafrips Pontus II** (R-2R ladder DAC):
+**Denafrips Pontus II** (R2R ladder DAC):
 ```yaml
 primary_leanings:
   warm_bright: warm

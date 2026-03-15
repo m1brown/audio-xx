@@ -1050,7 +1050,7 @@ export interface ShoppingShortlistBrief {
 
 /** A sonic direction represented by one or more shortlist candidates. */
 export interface CandidatePhilosophy {
-  /** Design topology or philosophy label (e.g., "FPGA pulse-array", "Discrete R-2R"). */
+  /** Design topology or philosophy label (e.g., "FPGA pulse-array", "Discrete R2R"). */
   label: string;
   /** What this direction prioritizes. */
   emphasis: string;
@@ -1167,7 +1167,7 @@ const TASTE_PROFILES: TasteProfile[] = [
       dac: [
         'You prioritized speed and rhythmic engagement over smoothness.',
         'Your budget supports DACs designed for transient precision.',
-        'Multibit, R-2R, and certain FPGA architectures tend to serve this preference.',
+        'Multibit, R2R, and certain FPGA architectures tend to serve this preference.',
       ],
     },
     defaultWhy: [
@@ -1193,7 +1193,7 @@ const TASTE_PROFILES: TasteProfile[] = [
     whyByCategory: {
       dac: [
         'You prioritized flow, warmth, and tonal density.',
-        'R-2R and NOS tube architectures tend to deliver this kind of presentation.',
+        'R2R and NOS tube architectures tend to deliver this kind of presentation.',
         'Your budget supports several DACs in this design family.',
       ],
     },
@@ -1249,7 +1249,7 @@ const TASTE_PROFILES: TasteProfile[] = [
     whyByCategory: {
       dac: [
         'You indicated fatigue or harshness as a concern.',
-        'NOS tube, R-2R, and certain relaxed-filter architectures tend to reduce perceived digital edge.',
+        'NOS tube, R2R, and certain relaxed-filter architectures tend to reduce perceived digital edge.',
         'Addressing fatigue at the DAC level can be effective when the source is the issue.',
       ],
     },
@@ -1349,7 +1349,8 @@ function buildFitNote(product: Product, userTraits: Record<string, SignalDirecti
   if (hasExplainableProfile(product.tendencyProfile)) {
     const emphasized = getEmphasizedTraits(product.tendencyProfile);
     if (emphasized.length > 0) {
-      const verb = product.tendencyProfile.confidence === 'high' ? 'emphasizes' : 'leans toward';
+      const conf = product.tendencyProfile.confidence;
+      const verb = (conf === 'high' || conf === 'founder_reference') ? 'emphasizes' : 'leans toward';
       return `${arch} design — ${verb} ${emphasized.slice(0, 2).join(' and ')}`;
     }
   }
@@ -1704,24 +1705,36 @@ function buildProductCharacter(product: Product): string {
  * and its risk flags / trait values.
  */
 function buildCaution(product: Product): string | undefined {
-  if (product.notes) return product.notes;
+  const parts: string[] = [];
+
+  if (product.notes) parts.push(product.notes);
 
   // Check for risk flags (prefers tendencyProfile, falls back to legacy)
   if (hasRisk(product.tendencyProfile, product.traits, 'glare_risk')) {
-    return 'May introduce glare or edge in systems that are already bright.';
+    parts.push('May introduce glare or edge in systems that are already bright.');
   }
   if (hasRisk(product.tendencyProfile, product.traits, 'fatigue_risk')) {
-    return 'May contribute to listening fatigue in long sessions.';
+    parts.push('May contribute to listening fatigue in long sessions.');
   }
 
-  return undefined;
+  // Placement sensitivity warning for speakers
+  if (product.placementSensitivity && product.placementSensitivity.level !== 'low') {
+    const ps = product.placementSensitivity;
+    if (ps.level === 'high') {
+      parts.push(`Placement-sensitive: ${ps.notes}`);
+    } else {
+      parts.push(`Moderately placement-sensitive: ${ps.notes}`);
+    }
+  }
+
+  return parts.length > 0 ? parts.join(' ') : undefined;
 }
 
 // ── "Why it stands out" — architecture & design highlights ──────
 
 /** Human-readable architecture descriptions. */
 const ARCHITECTURE_LABELS: Record<string, string> = {
-  'r2r':                  'Discrete R-2R ladder DAC',
+  'r2r':                  'Discrete R2R ladder DAC',
   'delta-sigma':          'Delta-sigma chip implementation',
   'delta-sigma (ESS)':    'ESS Sabre chip implementation',
   'delta-sigma (AKM)':    'AKM-based conversion',
@@ -2260,7 +2273,7 @@ function selectHeadphoneExamples(
 // philosophy labels for the sonic landscape guide.
 
 const TOPOLOGY_PHILOSOPHY: Record<string, { label: string; emphasis: string }> = {
-  'r2r':                  { label: 'Discrete R-2R ladder',        emphasis: 'tonal density, harmonic richness, and analog-like naturalness' },
+  'r2r':                  { label: 'Discrete R2R ladder',        emphasis: 'tonal density, harmonic richness, and analog-like naturalness' },
   'delta-sigma':          { label: 'Delta-sigma conversion',      emphasis: 'measured precision, low noise floor, and studio-grade neutrality' },
   'fpga':                 { label: 'FPGA pulse-array',            emphasis: 'timing precision, transient speed, and spatial definition' },
   'multibit':             { label: 'Multibit conversion',         emphasis: 'tonal weight and dynamic authority with vintage-inflected character' },

@@ -123,7 +123,7 @@ const SHOPPING_SIGNALS = [
  *
  * Consultation is checked after diagnosis and shopping because:
  *   - "My system sounds thin" + brand mention = diagnosis, not consultation
- *   - "Best R-2R DAC under $1000" = shopping, not consultation about R-2R
+ *   - "Best R2R DAC under $1000" = shopping, not consultation about R2R
  */
 export function routeConversation(currentMessage: string): ConversationMode {
   // 0. System assessment — user asks for evaluation of their system.

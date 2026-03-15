@@ -21,6 +21,7 @@ import type { UserIntent, DesireSignal } from './intent';
 import type { ActiveSystemContext } from './system-types';
 import { DAC_PRODUCTS, type Product } from './products/dacs';
 import { SPEAKER_PRODUCTS } from './products/speakers';
+import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
 import { inferSystemDirection, type SystemDirection } from './system-direction';
 import {
   compareProductArchetypes,
@@ -53,7 +54,7 @@ import { detectChurnSignal, buildChurnNote, type ChurnSignal } from './churn-avo
 
 // ── Product lookup ───────────────────────────────────
 
-const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS];
+const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIFIER_PRODUCTS];
 
 /**
  * Resolve subject strings to catalog Product entries.
@@ -131,7 +132,7 @@ const QUALITY_PROFILES: Record<string, QualityProfile> = {
   },
   warmth: {
     interpretation: '"Warmth" typically means more energy in the lower midrange and upper bass — a fuller, richer tonal quality. Some listeners also use it to mean the absence of brightness.',
-    direction: 'R-2R DAC architectures and tube amplification both tend toward a denser harmonic presentation. Speaker placement also contributes — closer to walls adds bass warmth, further away reduces it.',
+    direction: 'R2R DAC architectures and tube amplification both tend toward a denser harmonic presentation. Speaker placement also contributes — closer to walls adds bass warmth, further away reduces it.',
   },
   body: {
     interpretation: '"Body" is about the weight and substance of instruments — the sense that a cello has physical presence and a piano has mass behind each note.',
@@ -139,11 +140,11 @@ const QUALITY_PROFILES: Record<string, QualityProfile> = {
   },
   richness: {
     interpretation: '"Richness" describes harmonic density — how many overtones and how much tonal color instruments seem to carry. A rich system makes a violin sound wooden and resonant, not just pitched.',
-    direction: 'R-2R conversion and tube output stages tend to present more harmonic information. The trade-off is that very rich-sounding systems can feel slower or less transparent.',
+    direction: 'R2R conversion and tube output stages tend to present more harmonic information. The trade-off is that very rich-sounding systems can feel slower or less transparent.',
   },
   density: {
     interpretation: '"Density" is closely related to body and richness — it\'s the feeling that the sound has substance and mass, rather than feeling thin or lightweight.',
-    direction: 'DAC architecture has a large influence here. R-2R designs tend toward a denser presentation, while some delta-sigma implementations lean lighter. Amplifier topology matters too.',
+    direction: 'DAC architecture has a large influence here. R2R designs tend toward a denser presentation, while some delta-sigma implementations lean lighter. Amplifier topology matters too.',
   },
   detail: {
     interpretation: '"Detail" can mean two things: micro-detail retrieval (hearing every tiny element) or presence and articulation (instruments sounding clearly defined). The direction depends on which.',
@@ -167,7 +168,7 @@ const QUALITY_PROFILES: Record<string, QualityProfile> = {
   },
   flow: {
     interpretation: '"Flow" is about musical continuity — notes connecting naturally, phrases breathing, music feeling like a coherent whole rather than a series of events.',
-    direction: 'R-2R and NOS DAC designs are often described as more flowing. Tube amplification tends to enhance continuity through its harmonic behavior. Reducing jitter can also help — timing irregularities break the sense of flow.',
+    direction: 'R2R and NOS DAC designs are often described as more flowing. Tube amplification tends to enhance continuity through its harmonic behavior. Reducing jitter can also help — timing irregularities break the sense of flow.',
   },
   smoothness: {
     interpretation: '"Smoothness" usually means the absence of grain, edge, or harshness — a relaxed quality where nothing sticks out uncomfortably.',
@@ -183,7 +184,7 @@ const QUALITY_PROFILES: Record<string, QualityProfile> = {
   },
   texture: {
     interpretation: '"Texture" is the tactile quality of instruments — rosin on a bow, the buzz of a string against a fret, breathiness in a voice. It\'s a form of micro-detail that contributes to realism.',
-    direction: 'High-resolution, low-noise DACs tend to reveal more texture. R-2R designs are sometimes praised for textural richness. Amplifier linearity at low levels matters — subtle cues can be masked by noise or crossover distortion.',
+    direction: 'High-resolution, low-noise DACs tend to reveal more texture. R2R designs are sometimes praised for textural richness. Amplifier linearity at low levels matters — subtle cues can be masked by noise or crossover distortion.',
   },
   air: {
     interpretation: '"Air" is the sense of space and openness in the upper frequencies — the feeling that instruments exist in a real room with atmosphere around them.',
@@ -195,7 +196,7 @@ const QUALITY_PROFILES: Record<string, QualityProfile> = {
   },
   naturalness: {
     interpretation: '"Naturalness" is about believable timbre — instruments and voices sounding like themselves, without electronic artifact or tonal editorialising. A natural-sounding system doesn\'t draw attention to its own character.',
-    direction: 'Naturalness tends to emerge from low distortion without excessive analytical lean. R-2R DACs and well-implemented tube stages are often cited, but it\'s more about the absence of artifice than a specific topology. Power quality and low-jitter clocking contribute by removing subtle grit that breaks the illusion.',
+    direction: 'Naturalness tends to emerge from low distortion without excessive analytical lean. R2R DACs and well-implemented tube stages are often cited, but it\'s more about the absence of artifice than a specific topology. Power quality and low-jitter clocking contribute by removing subtle grit that breaks the illusion.',
   },
   excitement: {
     interpretation: '"Excitement" describes a sense of vividness and forward momentum — the feeling that music is alive, urgent, and physically engaging. It\'s a compound of dynamic contrast, rhythmic energy, and presence-range forwardness.',
@@ -211,7 +212,7 @@ const QUALITY_PROFILES: Record<string, QualityProfile> = {
   },
   sweetness: {
     interpretation: '"Sweetness" describes a quality where the upper frequencies and midrange feel rounded, liquid, and pleasant — the opposite of grain or edge. It\'s often associated with a slight second-harmonic emphasis.',
-    direction: 'Tube output stages are the classic source of sweetness. Some R-2R DACs also produce it through their harmonic profile. The trade-off is that excessive sweetness can round off transient precision and veil micro-detail.',
+    direction: 'Tube output stages are the classic source of sweetness. Some R2R DACs also produce it through their harmonic profile. The trade-off is that excessive sweetness can round off transient precision and veil micro-detail.',
   },
   energy: {
     interpretation: '"Energy" is about the sense of life and drive in the music — not just volume, but the feeling that the system has reserves and can deliver dynamic swings with conviction.',

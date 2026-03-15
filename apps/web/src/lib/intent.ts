@@ -67,7 +67,7 @@ const BRAND_NAMES = [
   'parasound', 'hegel', 'mcintosh', 'marantz', 'yamaha',
   'shindo', 'leben', 'audio note',
   'line magnetic', 'primaluna', 'cary', 'arc', 'audio research',
-  'job', 'goldmund', 'crayon', 'xsa',
+  'job', 'goldmund', 'crayon', 'xsa', 'trends', 'trends audio',
   // Turntables / tonearms / cartridges
   'rega', 'pro-ject', 'technics', 'clearaudio', 'vpi',
   'linn', 'thorens', 'michell', 'michell engineering',
@@ -98,9 +98,10 @@ const PRODUCT_NAMES = [
   'x26 pro', 'su-9', 'd90',
   'k9 pro', 'ef400',
   'dr70',
+  'job integrated', 'job int',
   'leben cs600x', 'leben cs600', 'leben cs300x', 'leben cs300', 'leben cs-300',
   'may kte', 'holo may',
-  'srda', 'cia-1', 'cia-1t',
+  'srda', 'cia-1', 'cia-1t', 'ta-10', 'trends ta-10',
   'vanguard', 'cs600x', 'cs600', 'cs300x', 'cs300',
   'diva monitor', 'super hl5', 'dirty weekend',
   // Turntable / tonearm / cartridge / phono products
@@ -310,12 +311,28 @@ export function extractSubjectMatches(text: string): SubjectMatch[] {
     return claimedRanges.some(([cs, ce]) => start >= cs && end <= ce);
   }
 
+  // Word-boundary check: ensure a match isn't embedded inside a longer word.
+  // e.g. "aria" inside "Variable" or "dave" inside "saved".
+  // Allow boundaries at: start/end of string, whitespace, punctuation, digits.
+  function isWordBoundary(idx: number, end: number): boolean {
+    if (idx > 0) {
+      const before = lower[idx - 1];
+      if (/[a-z]/.test(before)) return false; // letter immediately before
+    }
+    if (end < lower.length) {
+      const after = lower[end];
+      if (/[a-z]/.test(after)) return false; // letter immediately after
+    }
+    return true;
+  }
+
   // PRODUCT_NAMES is sorted longest-first so compound names win over substrings.
   for (const name of PRODUCT_NAMES) {
     const idx = lower.indexOf(name);
     if (idx === -1) continue;
     const end = idx + name.length;
     if (isSpanClaimed(idx, end)) continue;
+    if (!isWordBoundary(idx, end)) continue;
     found.push({ name, kind: 'product' });
     claimedRanges.push([idx, end]);
   }
@@ -331,6 +348,7 @@ export function extractSubjectMatches(text: string): SubjectMatch[] {
     // Skip brands whose span is already claimed by a product match
     const end = idx + name.length;
     if (isSpanClaimed(idx, end)) continue;
+    if (!isWordBoundary(idx, end)) continue;
 
     // Detect parenthetical context: "(goldmund)" after another brand/product
     const beforeParen = lower.lastIndexOf('(', idx);

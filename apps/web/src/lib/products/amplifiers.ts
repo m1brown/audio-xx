@@ -264,6 +264,97 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
   },
 
   {
+    id: 'leben-cs600x',
+    brand: 'Leben',
+    name: 'CS600X',
+    price: 6200,
+    category: 'amplifier',
+    architecture: 'Push-pull tube, KT77/KT88/EL34 output (user-swappable)',
+    subcategory: 'integrated-amp',
+    priceTier: 'upper-mid',
+    brandScale: 'specialist',
+    region: 'japan',
+    country: 'JP',
+    topology: 'push-pull-tube',
+    archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
+    primaryAxes: {
+      warm_bright: 'warm',
+      smooth_detailed: 'neutral',
+      elastic_controlled: 'elastic',
+      airy_closed: 'neutral',
+      // Tube-dependent: KT77 shifts toward speed and control,
+      // EL34 toward warmth and density, KT88 toward power and extension.
+      warm_bright_n: -1,
+      smooth_detailed_n: 0,
+      elastic_controlled_n: -1,
+      airy_closed_n: 0,
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Musical and warm — designed for long-term engagement. Tube rolling significantly alters voicing but fatigue risk remains low across all compatible tubes.',
+    },
+    tendencyProfile: {
+      basis: 'listener_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'dynamics', level: 'emphasized' },
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'rhythm', level: 'emphasized' },
+        { trait: 'warmth', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'speed', level: 'present' },
+        { trait: 'clarity', level: 'present' },
+        { trait: 'composure', level: 'less_emphasized' },
+        { trait: 'spatial_precision', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 1.0,
+      tonal_density: 1.0,
+      clarity: 0.7,
+      dynamics: 1.0,
+      rhythm: 1.0,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 0.7,
+      composure: 0.4,
+      warmth: 0.7,
+      speed: 0.7,
+      spatial_precision: 0.4,
+      openness: 0.7,
+    },
+    description:
+      'Leben\'s flagship push-pull tube integrated. ~32W with switchable output tube compatibility (KT77, KT88, EL34) that meaningfully changes voicing. Extraordinary rhythmic drive, tonal density, and midrange authority. One of the most celebrated pairings in modern audio with the DeVore O/96. Tube rolling is central to the experience.',
+    retailer_links: [
+      { label: 'Leben', url: 'https://www.leben-hifi.com/cs600x.html' },
+      { label: 'Tone Imports (US)', url: 'https://toneimports.com/leben/' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'timing', tendency: 'insistent rhythmic drive with more power and authority than the CS300 — music has forward momentum and physical energy', basis: 'listener_consensus' },
+        { domain: 'tonality', tendency: 'rich, warm midrange with harmonic density — vocals and acoustic instruments glow with body and presence', basis: 'listener_consensus' },
+        { domain: 'dynamics', tendency: 'punchy and powerful — the ~32W output delivers convincing macro dynamics with high-efficiency speakers', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with DeVore O/96', effect: 'one of the most celebrated pairings in modern high-efficiency audio — strong musical flow, natural tonality, and non-fatiguing presentation', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'with KT77 output tubes', effect: 'tighter bass, faster transients, and a slightly more modern voicing than EL34 — shifts the balance toward speed without losing warmth', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'with EL34 output tubes', effect: 'classic tube sweetness with more midrange bloom and harmonic richness — the warmest voicing option', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in systems already warm or dense', effect: 'can compound warmth and density — may reduce clarity and transient articulation', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'rhythmic engagement, midrange density, dynamic authority, and tube-rolling versatility', cost: 'ultimate composure, absolute bass control, and analytical transparency', relative_to: 'solid-state integrated designs in the same price range', basis: 'listener_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: '6moons', note: 'Review covering the CS600X\'s musical authority and tube-rolling potential.' },
+      { source: 'Tone Publications', note: 'Detailed coverage of the Leben + DeVore pairing and tube rolling options.' },
+    ],
+  },
+
+  {
     id: 'scott-222b',
     brand: 'Scott',
     name: '222B / 222C',
@@ -283,16 +374,21 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     primaryAxes: {
       warm_bright: 'warm',
       smooth_detailed: 'smooth',
-      elastic_controlled: 'neutral',
+      elastic_controlled: 'elastic',
       airy_closed: 'neutral',
+      // Founder reference calibration
+      warm_bright_n: -2,         // Strong tonal density and harmonic richness
+      smooth_detailed_n: -1,     // Smooth, flowing — detail is present but not foregrounded
+      elastic_controlled_n: -1,  // Musical and elastic — not rigid or overdamped
+      airy_closed_n: 0,          // Neutral staging
     },
     fatigueAssessment: {
       risk: 'low',
       notes: 'Classic American tube warmth. Inherently relaxed and easy on the ear.',
     },
     tendencyProfile: {
-      basis: 'listener_consensus',
-      confidence: 'medium',
+      basis: 'founder_reference',
+      confidence: 'founder_reference',
       tendencies: [
         { trait: 'flow', level: 'emphasized' },
         { trait: 'warmth', level: 'emphasized' },
@@ -412,7 +508,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
         { domain: 'texture', tendency: 'smooth grain structure with good micro-detail — Class A refinement without Class A coloration', basis: 'review_consensus' },
       ],
       interactions: [
-        { condition: 'paired with warm or dense sources', effect: 'the transparency lets upstream character pass through intact — a good complement to R-2R DACs', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'paired with warm or dense sources', effect: 'the transparency lets upstream character pass through intact — a good complement to R2R DACs', valence: 'positive', basis: 'listener_consensus' },
         { condition: 'paired with inefficient speakers', effect: '20W limits macro dynamics in larger rooms — consider bridged pair for demanding loads', valence: 'caution', basis: 'editorial_inference' },
       ],
       tradeoffs: [
@@ -610,18 +706,23 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     usedPriceRange: { low: 800, high: 1500 },
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
-      warm_bright: 'neutral',
+      warm_bright: 'bright',
       smooth_detailed: 'detailed',
       elastic_controlled: 'elastic',
-      airy_closed: 'neutral',
+      airy_closed: 'airy',
+      // Founder reference calibration
+      warm_bright_n: 1,         // Fast, vivid — bright side of neutral
+      smooth_detailed_n: 2,     // Highly articulate and detailed — defining trait
+      elastic_controlled_n: -1, // Elastic, lively — not overdamped
+      airy_closed_n: -1,        // Open, spacious presentation
     },
     fatigueAssessment: {
       risk: 'low',
       notes: 'Extremely clean circuit — no grain, no edge. The minimalist topology strips away coloration.',
     },
     tendencyProfile: {
-      basis: 'listener_consensus',
-      confidence: 'high',
+      basis: 'founder_reference',
+      confidence: 'founder_reference',
       tendencies: [
         { trait: 'clarity', level: 'emphasized' },
         { trait: 'speed', level: 'emphasized' },
@@ -694,14 +795,19 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       smooth_detailed: 'detailed',
       elastic_controlled: 'elastic',
       airy_closed: 'neutral',
+      // Founder reference calibration
+      warm_bright_n: 0,            // Transparent, neither warm nor bright
+      smooth_detailed_n: 1,        // Revealing and explicit
+      elastic_controlled_n: -1,    // Fast and elastic — minimal damping philosophy
+      airy_closed_n: 0,            // Neutral staging openness
     },
     fatigueAssessment: {
       risk: 'low',
       notes: 'The Goldmund circuit at its purest — ultra-clean, ultra-fast. No fatigue mechanism.',
     },
     tendencyProfile: {
-      basis: 'listener_consensus',
-      confidence: 'high',
+      basis: 'founder_reference',
+      confidence: 'founder_reference',
       tendencies: [
         { trait: 'clarity', level: 'emphasized' },
         { trait: 'speed', level: 'emphasized' },
@@ -736,11 +842,11 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { label: 'US Audio Mart', url: 'https://www.usaudiomart.com/' },
     ],
     tendencies: {
-      confidence: 'high',
+      confidence: 'founder_reference',
       character: [
-        { domain: 'dynamics', tendency: 'explosive dynamic authority from a tiny chassis — 225W of clean, fast power', basis: 'listener_consensus' },
-        { domain: 'timing', tendency: 'lightning-fast transients — the shortest signal path design philosophy at work', basis: 'listener_consensus' },
-        { domain: 'tonality', tendency: 'lean, transparent, and honest — no warmth added, no density embellished', basis: 'listener_consensus' },
+        { domain: 'dynamics', tendency: 'explosive dynamic authority from a tiny chassis — 225W of clean, fast power', basis: 'founder_reference' },
+        { domain: 'timing', tendency: 'lightning-fast transients — the shortest signal path design philosophy at work', basis: 'founder_reference' },
+        { domain: 'tonality', tendency: 'lean, transparent, and honest — no warmth added, no density embellished', basis: 'founder_reference' },
       ],
       interactions: [
         { condition: 'paired with warm DAC and speakers', effect: 'the speed and transparency create an exciting combination — dynamics from the amp, body from the source', valence: 'positive', basis: 'listener_consensus' },
@@ -776,16 +882,21 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     primaryAxes: {
       warm_bright: 'neutral',
       smooth_detailed: 'detailed',
-      elastic_controlled: 'elastic',
+      elastic_controlled: 'neutral',
       airy_closed: 'airy',
+      // Founder reference calibration
+      warm_bright_n: 0,          // Highly balanced — neither warm nor bright
+      smooth_detailed_n: 1,      // Strong resolution and detail retrieval
+      elastic_controlled_n: 0,   // Balanced — composed but not overdamped
+      airy_closed_n: -1,         // Open, airy staging
     },
     fatigueAssessment: {
       risk: 'low',
       notes: 'Current-feedback design with no global feedback — fast and transparent without grain. Low fatigue risk.',
     },
     tendencyProfile: {
-      basis: 'review_consensus',
-      confidence: 'high',
+      basis: 'founder_reference',
+      confidence: 'founder_reference',
       tendencies: [
         { trait: 'speed', level: 'emphasized' },
         { trait: 'elasticity', level: 'emphasized' },
@@ -839,5 +950,98 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'HiFi+', note: 'Review praising the transparency and spatial presentation.' },
     ],
     notes: 'CIA-1T discontinued but the Crayon CFA-1.2 continues the lineage. Used CIA-1T represents excellent value.',
+  },
+
+  {
+    id: 'trends-ta-10',
+    brand: 'Trends Audio',
+    name: 'TA-10',
+    price: 99,
+    category: 'amplifier',
+    architecture: 'Tripath Class-T (TA2024 chip), minimal signal path',
+    subcategory: 'integrated-amp',
+    priceTier: 'budget',
+    brandScale: 'boutique',
+    region: 'east-asia',
+    country: 'HK',
+    topology: 'class-d',
+    availability: 'discontinued',
+    typicalMarket: 'used',
+    usedPriceRange: { low: 50, high: 150 },
+    archetypes: { primary: 'rhythmic_propulsive', secondary: 'precision_explicit' },
+    primaryAxes: {
+      warm_bright: 'bright',
+      smooth_detailed: 'detailed',
+      elastic_controlled: 'elastic',
+      airy_closed: 'airy',
+      // Founder reference calibration
+      warm_bright_n: 1,            // Lean tonal balance — light but not harsh
+      smooth_detailed_n: 1,        // Revealing, explicit micro-detail
+      elastic_controlled_n: -2,    // Extremely elastic — very low stored energy
+      airy_closed_n: -1,           // Open and lively staging
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'The lean tonal balance might cause restlessness in long sessions for warmth-seekers, but the Tripath circuit itself introduces no glare or grain. Fatigue-free within its design intent.',
+    },
+    tendencyProfile: {
+      basis: 'founder_reference',
+      confidence: 'founder_reference',
+      tendencies: [
+        { trait: 'speed', level: 'emphasized' },
+        { trait: 'elasticity', level: 'emphasized' },
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'spatial_precision', level: 'present' },
+        { trait: 'flow', level: 'present' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+        { trait: 'warmth', level: 'less_emphasized' },
+        { trait: 'texture', level: 'less_emphasized' },
+        { trait: 'composure', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 0.7,
+      tonal_density: 0.2,
+      clarity: 0.9,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.1,
+      texture: 0.3,
+      composure: 0.4,
+      warmth: 0.2,
+      speed: 1.0,
+      spatial_precision: 0.6,
+      elasticity: 1.0,
+    },
+    description:
+      'Minimalist Tripath Class-T integrated amplifier built around the TA2024 chip. 15W into 4Ω from a palm-sized chassis. Legendary for its speed, transient precision, and elastic rhythmic quality — a genuine reference for what low stored energy sounds like. The TA-10 strips away everything except the signal and became a cult favourite among listeners who value timing over tonal weight.',
+    retailer_links: [
+      { label: 'HiFi Shark (used)', url: 'https://www.hifishark.com/search?q=trends+ta-10' },
+    ],
+    tendencies: {
+      confidence: 'founder_reference',
+      character: [
+        { domain: 'timing', tendency: 'extremely fast transient response — among the quickest amplifiers at any price due to the Tripath chip\'s minimal stored energy', basis: 'founder_reference' },
+        { domain: 'dynamics', tendency: 'lively and elastic — micro-dynamics are vivid, macro-dynamics limited by low power', basis: 'founder_reference' },
+        { domain: 'tonality', tendency: 'lean and transparent — no warmth, no density, no editorial voice. What goes in comes out, lighter', basis: 'founder_reference' },
+        { domain: 'spatial', tendency: 'open and airy staging with good image specificity for the price', basis: 'founder_reference' },
+      ],
+      interactions: [
+        { condition: 'paired with high-efficiency speakers (>93dB)', effect: 'the TA-10 comes alive — speed and dynamics are fully expressed without strain', valence: 'positive', basis: 'founder_reference' },
+        { condition: 'paired with warm or dense DACs', effect: 'excellent complement — the DAC provides the body the TA-10 doesn\'t add', valence: 'positive', basis: 'founder_reference' },
+        { condition: 'with low-sensitivity speakers (<87dB)', effect: 'runs out of headroom quickly — dynamic compression and loss of composure at moderate volumes', valence: 'caution', basis: 'founder_reference' },
+        { condition: 'with bright or lean speakers', effect: 'the lean-on-lean combination can feel thin and fatiguing — the TA-10 needs upstream warmth or speaker body to balance', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'speed, transient precision, and elastic rhythmic quality at a near-zero price', cost: 'tonal density, bass authority, power reserves, and the harmonic richness of tube or Class A designs', relative_to: 'conventional integrated amplifiers', basis: 'founder_reference' },
+      ],
+    },
+    sourceReferences: [
+      { source: '6moons', note: 'Review establishing the TA-10 as a reference for Tripath/Class-T sonic character.' },
+      { source: 'TNT Audio', note: 'Review praising the speed and rhythmic engagement at its price point.' },
+    ],
+    notes: 'Discontinued. The TA-10 is a founder reference amplifier — used to calibrate what extreme elasticity and low stored energy sound like. 15W limits speaker pairing to high-efficiency designs.',
   },
 ];

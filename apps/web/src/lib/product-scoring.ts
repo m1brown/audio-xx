@@ -36,21 +36,21 @@ const RISK_TRAITS = new Set(['fatigue_risk', 'glare_risk']);
 
 const ARCHITECTURE_AFFINITY: Record<string, string[]> = {
   // ── DAC architectures ───────────────────────────────
-  // User wants dynamics/speed → multibit, R-2R, FPGA tend to deliver
-  'dynamics:up': ['multibit', 'R-2R', 'FPGA', 'Class AB', 'SoundEngine', 'Goldmund', 'Current-feedback', 'High-feedback'],
-  'elasticity:up': ['multibit', 'R-2R', 'FPGA', 'Current-feedback', 'Goldmund', 'ZOTL', 'Low-feedback'],
+  // User wants dynamics/speed → multibit, R2R, FPGA tend to deliver
+  'dynamics:up': ['multibit', 'R2R', 'FPGA', 'Class AB', 'SoundEngine', 'Goldmund', 'Current-feedback', 'High-feedback'],
+  'elasticity:up': ['multibit', 'R2R', 'FPGA', 'Current-feedback', 'Goldmund', 'ZOTL', 'Low-feedback'],
   // User wants clarity → delta-sigma (ESS), FPGA, high-feedback SS tend to deliver
   'clarity:up': ['delta-sigma (ESS)', 'delta-sigma (AKM)', 'FPGA', 'Goldmund', 'SoundEngine', 'Current-feedback', 'Continuity', 'High-feedback', 'Class A'],
-  // User wants flow/density → R-2R, NOS tube, SET, low-feedback tend to deliver
-  'flow:up': ['R-2R', 'NOS tube', 'multibit', 'Single-ended triode', 'Push-pull tube', 'ZOTL', 'SIT', 'Low-feedback'],
-  'tonal_density:up': ['R-2R', 'NOS tube', 'Single-ended triode', 'Push-pull tube', 'SIT', 'Hybrid'],
-  // User has fatigue concern → NOS tube, R-2R, SET, low-feedback tend to be gentler
-  'fatigue_risk:up': ['NOS tube', 'R-2R', 'Single-ended triode', 'ZOTL', 'SIT', 'Low-feedback'],
-  // User wants composure → delta-sigma (AKM), FPGA, R-2R, Class A, high-feedback SS
-  'composure:up': ['delta-sigma (AKM)', 'FPGA', 'R-2R', 'Continuity', 'Class A', 'SoundEngine', 'High-feedback'],
+  // User wants flow/density → R2R, NOS tube, SET, low-feedback tend to deliver
+  'flow:up': ['R2R', 'NOS tube', 'multibit', 'Single-ended triode', 'Push-pull tube', 'ZOTL', 'SIT', 'Low-feedback'],
+  'tonal_density:up': ['R2R', 'NOS tube', 'Single-ended triode', 'Push-pull tube', 'SIT', 'Hybrid'],
+  // User has fatigue concern → NOS tube, R2R, SET, low-feedback tend to be gentler
+  'fatigue_risk:up': ['NOS tube', 'R2R', 'Single-ended triode', 'ZOTL', 'SIT', 'Low-feedback'],
+  // User wants composure → delta-sigma (AKM), FPGA, R2R, Class A, high-feedback SS
+  'composure:up': ['delta-sigma (AKM)', 'FPGA', 'R2R', 'Continuity', 'Class A', 'SoundEngine', 'High-feedback'],
   // ── Amplifier-centric affinities ───────────────────
   'warmth:up': ['Single-ended triode', 'Push-pull tube', 'SIT', 'Hybrid', 'Low-feedback'],
-  'texture:up': ['Single-ended triode', 'ZOTL', 'SIT', 'R-2R', 'NOS tube', 'Low-feedback'],
+  'texture:up': ['Single-ended triode', 'ZOTL', 'SIT', 'R2R', 'NOS tube', 'Low-feedback'],
   'speed:up': ['Goldmund', 'Current-feedback', 'SoundEngine', 'FPGA', 'High-feedback', 'Class AB'],
   'spatial_precision:up': ['ZOTL', 'SIT', 'Continuity', 'FPGA', 'Class A', 'Low-feedback'],
 };

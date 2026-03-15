@@ -90,7 +90,7 @@ weight and body. Vocals feel present and full.
 **Low end:** Lean, spare, harmonically thin. The presentation
 emphasises clarity over density. Instruments may feel lightweight.
 
-**Typical contributors:** DAC topology (R-2R and multibit designs tend
+**Typical contributors:** DAC topology (R2R and multibit designs tend
 toward richness; delta-sigma designs tend toward leanness), amplifier
 class (Class A and tube circuits tend toward harmonic density),
 speaker driver materials, cabinet resonance behaviour.
@@ -155,7 +155,7 @@ When describing known design characteristics of a specific component,
 the engine speaks with confidence. These are established facts about
 the component's architecture and typical behaviour.
 
-Example: "The Denafrips Pontus uses an R-2R ladder DAC topology. This
+Example: "The Denafrips Pontus uses an R2R ladder DAC topology. This
 architecture typically emphasises tonal density and harmonic richness."
 
 ### System tendencies — analytical statements
@@ -166,7 +166,7 @@ emerges from component interaction and is less predictable than
 individual component traits.
 
 Example: "Your system currently leans warm and harmonically rich. This
-comes from the combination of an R-2R DAC and a low-feedback tube
+comes from the combination of an R2R DAC and a low-feedback tube
 amplifier — both contribute tonal density."
 
 ### Upgrade predictions — conditional statements
@@ -189,7 +189,7 @@ influence sonic behaviour.
 
 Key trait dimensions include:
 
-**DAC architecture** — R-2R / multibit vs delta-sigma vs FPGA-based.
+**DAC architecture** — R2R / multibit vs delta-sigma vs FPGA-based.
 Each topology has characteristic strengths in timing, harmonic
 structure, and resolution.
 

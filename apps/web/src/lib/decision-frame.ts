@@ -86,7 +86,7 @@ const DAC_PHILOSOPHIES: PhilosophyGroup[] = [
     withWarmSystems: 'Adds definition and speed without warmth. Balances well with tube or warm-voiced amplification',
   },
   {
-    label: 'Discrete R-2R / ladder',
+    label: 'Discrete R2R / ladder',
     topologies: ['r2r'],
     optimises: 'Tonal density, harmonic richness, textural engagement',
     character: 'Dense, textured, organic — prioritises musical involvement over analytical precision',
@@ -106,7 +106,7 @@ const DAC_PHILOSOPHIES: PhilosophyGroup[] = [
     topologies: ['multibit', 'hybrid'],
     optimises: 'Balance between precision and musicality',
     character: 'Blends chip and discrete approaches — aims for the middle ground',
-    withFastSS: 'Generally integrates well. Less dramatic than a full R-2R shift but adds some body',
+    withFastSS: 'Generally integrates well. Less dramatic than a full R2R shift but adds some body',
     withWarmSystems: 'Neutral enough to avoid stacking. Adds moderate definition',
   },
 ];
@@ -415,7 +415,7 @@ function rankAlternativesByTaste(
 const PHILOSOPHY_STACKING_TRAITS: Record<string, string[]> = {
   // DAC philosophies
   'FPGA / Chord approach': ['clarity', 'speed'],
-  'Discrete R-2R / ladder': ['warmth', 'tonal_density', 'texture'],
+  'Discrete R2R / ladder': ['warmth', 'tonal_density', 'texture'],
   'Delta-sigma (chip-based)': ['clarity', 'speed'],
   'Multibit / hybrid': [],
   // Amplifier philosophies
@@ -456,6 +456,14 @@ function enrichWithStackingRisks(
   // Character observation (descriptive)
   const labels = matchedEmphasis.map((r) => r.label).join(' and ');
   const characterNote = `Your chain already leans toward ${labels}.`;
+
+  // Cross-trait interaction note — takes priority over single-trait risk
+  const crossTraitMatch = analysis.crossTraitRisks.find((cr) =>
+    cr.traits.some((t) => relevantTraits.includes(t)),
+  );
+  if (crossTraitMatch) {
+    return `${baseNote}. ${characterNote} ${crossTraitMatch.characterNote}`;
+  }
 
   // Risk note (predictive — only for significant emphasis)
   const hasSignificant = matchedEmphasis.some((r) => r.severity === 'significant');
