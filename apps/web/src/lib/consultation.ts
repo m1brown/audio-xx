@@ -3224,44 +3224,81 @@ export function buildSystemAssessment(
 function inferSystemCharacterOpening(components: SystemComponent[]): string {
   const profiles = classifyComponentAxes(components);
   const axes = profiles.map(p => p.axes);
-  const system = synthesiseSystemAxes(axes, components.map(c => c.role));
-  const compounding = detectCompounding(axes);
+  const roles = components.map(c => c.role);
+  const system = synthesiseSystemAxes(axes, roles);
 
-  // Build character descriptors from axis positions
-  const descriptors: string[] = [];
-  if (system.warm_bright === 'warm') descriptors.push('warmth');
-  if (system.warm_bright === 'bright') descriptors.push('brightness');
-  if (system.smooth_detailed === 'smooth') descriptors.push('smoothness');
-  if (system.smooth_detailed === 'detailed') descriptors.push('detail retrieval');
-  if (system.elastic_controlled === 'elastic') descriptors.push('dynamic elasticity');
-  if (system.elastic_controlled === 'controlled') descriptors.push('control');
-  if (system.airy_closed === 'airy') descriptors.push('spatial openness');
-  if (system.airy_closed === 'closed') descriptors.push('intimacy');
+  // Use numeric intensities for nuance detection
+  const weights = roles.map(r => {
+    const rl = r.toLowerCase();
+    if (rl.includes('speak') || rl.includes('headphone') || rl.includes('monitor')) return 3;
+    if (rl.includes('dac')) return 2;
+    if (rl.includes('amp') || rl.includes('integrated') || rl.includes('preamp')) return 1.5;
+    if (rl.includes('stream') || rl.includes('source') || rl.includes('transport')) return 0.5;
+    return 1;
+  });
+  const totalWeight = weights.reduce((s, w) => s + w, 0);
+
+  function numericAvg(axis: 'warm_bright_n' | 'smooth_detailed_n' | 'elastic_controlled_n' | 'airy_closed_n'): number {
+    let sum = 0;
+    for (let i = 0; i < axes.length; i++) {
+      const val = (axes[i] as unknown as Record<string, unknown>)[axis];
+      sum += (typeof val === 'number' ? val : 0) * weights[i];
+    }
+    return sum / totalWeight;
+  }
+
+  const wb = numericAvg('warm_bright_n');
+  const sd = numericAvg('smooth_detailed_n');
+  const ec = numericAvg('elastic_controlled_n');
+  const ac = numericAvg('airy_closed_n');
+
+  // Classify each axis as strong (>0.7), moderate (>0.3), contested (<=0.3), or neutral (~0)
+  const CONTESTED_THRESHOLD = 0.35;
+
+  // Build descriptors only for axes with clear direction
+  const strongTraits: string[] = [];
+  const contestedAxes: string[] = [];
+
+  if (Math.abs(wb) > CONTESTED_THRESHOLD) {
+    strongTraits.push(wb < 0 ? 'warmth' : 'brightness');
+  } else if (Math.abs(wb) > 0.1) {
+    contestedAxes.push('tonality');
+  }
+
+  if (Math.abs(sd) > CONTESTED_THRESHOLD) {
+    strongTraits.push(sd < 0 ? 'smoothness' : 'detail retrieval');
+  } else if (Math.abs(sd) > 0.1) {
+    contestedAxes.push('texture');
+  }
+
+  if (Math.abs(ec) > CONTESTED_THRESHOLD) {
+    strongTraits.push(ec < 0 ? 'dynamic elasticity' : 'control');
+  }
+
+  if (Math.abs(ac) > CONTESTED_THRESHOLD) {
+    strongTraits.push(ac < 0 ? 'spatial openness' : 'intimacy');
+  }
 
   // NOTE: Component names are omitted here — the chain section lists them.
   // Keep this paragraph short to fit within the ~120-150 word overview target.
 
-  if (compounding.length > 0) {
-    const direction = descriptors.length > 0 ? descriptors.join(' and ') : 'a consistent character';
-    return `The chain leans toward ${direction} across multiple stages — several components push in the same direction.`;
+  if (contestedAxes.length > 0 && strongTraits.length > 0) {
+    return `The system's clear strengths are ${strongTraits.join(' and ')}. On ${contestedAxes.join(' and ')}, components pull in different directions — the source and amplifier lean one way, the speakers another — creating complementary tension rather than uniform agreement.`;
   }
 
-  if (descriptors.length === 0) {
+  if (strongTraits.length === 0 && contestedAxes.length > 0) {
+    return `The components pull in different directions across ${contestedAxes.join(' and ')}, creating a balanced system where opposing tendencies offset each other. The overall character emerges from this tension rather than from shared emphasis.`;
+  }
+
+  if (strongTraits.length === 0) {
     return `The chain has balanced tendencies — no single tonal or textural direction dominates. The overall character depends on how these components interact in practice.`;
   }
 
-  if (descriptors.length === 1) {
-    return `The chain leans toward ${descriptors[0]}, with the remaining axes staying relatively neutral.`;
+  if (strongTraits.length === 1) {
+    return `The chain leans toward ${strongTraits[0]}, with the remaining axes staying relatively neutral.`;
   }
 
-  const warmSide = system.warm_bright === 'warm' || system.smooth_detailed === 'smooth';
-  const brightSide = system.warm_bright === 'bright' || system.smooth_detailed === 'detailed';
-
-  if (warmSide && brightSide) {
-    return `The chain balances complementary tendencies — ${descriptors.join(' and ')} offset each other.`;
-  }
-
-  return `The chain is characterised by ${descriptors.join(' and ')}.`;
+  return `The system is characterised by ${strongTraits.join(' and ')}.`;
 }
 
 /**
@@ -3286,18 +3323,38 @@ function inferSystemInteraction(components: SystemComponent[]): string {
   const smoothComponents = profiles.filter(p => p.axes.smooth_detailed === 'smooth').map(p => p.name);
   const detailedComponents = profiles.filter(p => p.axes.smooth_detailed === 'detailed').map(p => p.name);
 
-  // ── Synergy recognition — shared design philosophy ──
-  const nonSpeakerProfiles = profiles.filter((_, i) => {
-    const r = components[i].role.toLowerCase();
-    return !r.includes('speak') && !r.includes('headphone');
-  });
-  const sharedTraits: string[] = [];
-  if (nonSpeakerProfiles.filter(p => p.axes.smooth_detailed === 'detailed').length >= 2) sharedTraits.push('detail and transparency');
-  if (nonSpeakerProfiles.filter(p => p.axes.elastic_controlled === 'elastic').length >= 2) sharedTraits.push('speed and rhythmic energy');
-  if (nonSpeakerProfiles.filter(p => p.axes.elastic_controlled === 'controlled').length >= 2) sharedTraits.push('control and composure');
-  if (nonSpeakerProfiles.filter(p => p.axes.warm_bright === 'warm').length >= 2) sharedTraits.push('tonal warmth and harmonic richness');
+  // ── Detect complementary tension FIRST ──
+  // When warm and bright components coexist, or smooth and detailed coexist,
+  // this is complementary balance — not uniform agreement.
+  const hasWarmBrightTension = warmComponents.length > 0 && brightComponents.length > 0;
+  const hasSmoothDetailedTension = smoothComponents.length > 0 && detailedComponents.length > 0;
 
-  // ── Compounding / alignment ──
+  if (hasWarmBrightTension || hasSmoothDetailedTension) {
+    const parts: string[] = [];
+    if (hasWarmBrightTension) {
+      parts.push(`${warmComponents.join(' and ')} ${warmComponents.length === 1 ? 'provides' : 'provide'} warmth and body, while ${brightComponents.join(' and ')} ${brightComponents.length === 1 ? 'adds' : 'add'} speed and articulation`);
+    }
+    if (hasSmoothDetailedTension) {
+      parts.push(`${smoothComponents.join(' and ')} ${smoothComponents.length === 1 ? 'provides' : 'provide'} musical flow, while ${detailedComponents.join(' and ')} ${detailedComponents.length === 1 ? 'adds' : 'add'} resolution and transparency`);
+    }
+
+    // Note any compounding axes alongside the tension
+    const compoundDesc = compounding.map(w => {
+      if (w.includes('Elastic')) return 'dynamic elasticity';
+      if (w.includes('Controlled')) return 'control';
+      if (w.includes('Airy')) return 'spatial openness';
+      if (w.includes('Closed')) return 'intimacy';
+      return null;
+    }).filter(Boolean);
+
+    let result = `Complementary balance: ${parts.join('; ')}.`;
+    if (compoundDesc.length > 0) {
+      result += ` Where the components do agree is ${compoundDesc.join(' and ')} — multiple stages reinforce this direction.`;
+    }
+    return result;
+  }
+
+  // ── Compounding / alignment (only when no complementary tension) ──
   if (compounding.length > 0) {
     const compoundDesc = compounding.map(w => {
       if (w.includes('Warm')) return 'warmth';
@@ -3310,26 +3367,7 @@ function inferSystemInteraction(components: SystemComponent[]): string {
       if (w.includes('Closed')) return 'intimacy';
       return 'a shared tendency';
     });
-
-    if (sharedTraits.length > 0) {
-      return `The components share a design philosophy prioritising ${sharedTraits.join(' and ')}. Multiple stages reinforce ${compoundDesc.join(' and ')}, which strengthens this character but means the system has less internal balance if tastes change.`;
-    }
-
     return `The system leans toward ${compoundDesc.join(' and ')} across the chain — multiple components push in the same direction, creating a strong and coherent character.`;
-  }
-
-  // If synergy detected but no formal compounding
-  if (sharedTraits.length > 0) {
-    return `The components share an emphasis on ${sharedTraits.join(' and ')}, reinforcing each other's tendencies into a clear and intentional system character.`;
-  }
-
-  // ── Complementary — warm/bright or smooth/detailed balance ──
-  if (warmComponents.length > 0 && brightComponents.length > 0) {
-    return `Complementary tendencies: ${brightComponents.join(' and ')} ${brightComponents.length === 1 ? 'provides' : 'provide'} articulation, while ${warmComponents.join(' and ')} ${warmComponents.length === 1 ? 'adds' : 'add'} tonal body. The balance offsets across the chain.`;
-  }
-
-  if (smoothComponents.length > 0 && detailedComponents.length > 0) {
-    return `The system balances smoothness with detail retrieval — ${detailedComponents.join(' and ')} ${detailedComponents.length === 1 ? 'contributes' : 'contribute'} resolution, while ${smoothComponents.join(' and ')} ${smoothComponents.length === 1 ? 'provides' : 'provide'} musical flow.`;
   }
 
   // ── Single-axis lean ──
@@ -4639,8 +4677,24 @@ function detectPrimaryConstraint(
         issues.push('constrained spatial scale');
       }
       if (traits && (traits.composure ?? 0.5) < 0.4) {
-        severity += 2;
-        issues.push('limited composure under complex material');
+        // For single-driver, horn-loaded, or high-efficiency designs,
+        // low composure is a known design trade-off (coherence + speed
+        // over composure), not a deficiency. Reduce severity and reframe.
+        const arch = (c.product?.architecture ?? '').toLowerCase();
+        const topo = (c.product?.topology ?? '').toLowerCase();
+        const isByDesign =
+          arch.includes('single-driver') ||
+          arch.includes('crossoverless') ||
+          arch.includes('fullrange') ||
+          topo.includes('horn') ||
+          topo.includes('single-driver');
+        if (isByDesign) {
+          severity += 1; // reduced from 2 — design trade-off, not deficiency
+          issues.push('composure limited by design (single-driver trade-off for coherence and speed)');
+        } else {
+          severity += 2;
+          issues.push('limited composure under complex material');
+        }
       }
       if (severity > 0) {
         candidates.push({
@@ -4675,9 +4729,10 @@ function detectPrimaryConstraint(
     });
   }
 
-  // Return highest severity
+  // Return highest severity — minimum threshold of 2 prevents
+  // minor design trade-offs from being elevated to "primary constraint"
   candidates.sort((a, b) => b.severity - a.severity);
-  if (candidates.length === 0) return undefined;
+  if (candidates.length === 0 || candidates[0].severity < 2) return undefined;
 
   const top = candidates[0];
   return {

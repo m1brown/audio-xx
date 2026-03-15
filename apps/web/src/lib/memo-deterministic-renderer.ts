@@ -231,7 +231,7 @@ function mapUpgradePaths(findings: MemoFindings): UpgradePath[] {
         if (productVal === null || productVal === 'neutral') continue;
         const sysKey = axis as keyof typeof systemAxes;
         const sysVal = systemAxes[sysKey];
-        if (!sysVal) continue;
+        if (!sysVal || typeof sysVal === 'number') continue;
 
         const productNumeric = axisToNumeric(productVal);
         const systemNumeric = axisToNumeric(sysVal);
@@ -328,14 +328,22 @@ function deriveSystemSynergy(findings: MemoFindings): string | undefined {
     const joined = traitLabels.length <= 2
       ? traitLabels.join(' and ')
       : traitLabels.slice(0, -1).join(', ') + ', and ' + traitLabels[traitLabels.length - 1];
-    parts.push(`This system emphasizes ${joined}`);
 
-    // Add contributor context
-    const allContributors = new Set(characterTraits.flatMap((t) => t.contributors));
-    if (allContributors.size >= 2) {
-      parts[0] += ` — ${allContributors.size} components reinforce this direction`;
+    // Count how many components contribute to each trait, and report per-trait
+    const traitDetails = characterTraits.map((t) => {
+      const label = t.property.replace(/^high_/, '').replace(/_/g, ' ');
+      return { label, count: t.contributors.length };
+    });
+
+    // Only say "N components reinforce" if the SAME set reinforces the SAME direction
+    const allSameCount = traitDetails.every(td => td.count === traitDetails[0].count);
+    const minContributors = Math.min(...traitDetails.map(td => td.count));
+
+    if (minContributors >= 2 && allSameCount) {
+      parts.push(`This system emphasizes ${joined} — ${minContributors} components reinforce this direction.`);
+    } else {
+      parts.push(`This system emphasizes ${joined}.`);
     }
-    parts[0] += '.';
   }
 
   if (findings.isDeliberate) {
@@ -451,34 +459,82 @@ function deriveSpiderChartData(
 /**
  * Derive a system signature — a one-sentence characterization of the
  * system's sonic identity based on axis positions and listener priorities.
+ *
+ * Uses per-component numeric weighted averages (when available) to detect
+ * contested axes — where components pull in opposite directions — rather
+ * than declaring a pole from a narrow categorical majority.
  */
 function deriveSystemSignature(
-  axes: MemoFindings['systemAxes'],
-  priorities: MemoFindings['listenerPriorities'],
+  findings: MemoFindings,
 ): string | undefined {
+  const axes = findings.systemAxes;
+  const priorities = findings.listenerPriorities;
   const traits: string[] = [];
 
-  const wb = axisToNumeric(axes.warm_bright);
-  const sd = axisToNumeric(axes.smooth_detailed);
-  const ec = axisToNumeric(axes.elastic_controlled);
-  const ac = axisToNumeric(axes.airy_closed);
+  // ── Compute numeric weighted averages from per-component data ──
+  // Role weights: speaker=3, dac=2, amp=1.5, source=0.5, cable=0.25
+  const components = findings.perComponentAxes;
+  const roles = findings.systemChain.roles;
+  const hasComponentData = components.length > 0 && roles.length === components.length;
+
+  function roleWt(role: string): number {
+    const r = role.toLowerCase();
+    if (r.includes('speak') || r.includes('headphone') || r.includes('monitor')) return 3;
+    if (r.includes('dac')) return 2;
+    if (r.includes('amp') || r.includes('integrated') || r.includes('preamp')) return 1.5;
+    if (r.includes('stream') || r.includes('source') || r.includes('transport')) return 0.5;
+    if (r.includes('cable') || r.includes('accessory') || r.includes('power')) return 0.25;
+    return 1;
+  }
+
+  function catToNum(cat: string): number {
+    switch (cat) {
+      case 'warm': case 'smooth': case 'elastic': case 'airy': return -1;
+      case 'bright': case 'detailed': case 'controlled': case 'closed': return 1;
+      default: return 0;
+    }
+  }
+
+  function weightedAvg(axisKey: 'warm_bright' | 'smooth_detailed' | 'elastic_controlled' | 'airy_closed'): number {
+    if (!hasComponentData) {
+      // Fallback: convert categorical to numeric
+      return catToNum(axes[axisKey]);
+    }
+    let sumWV = 0, sumW = 0;
+    for (let i = 0; i < components.length; i++) {
+      const w = roleWt(roles[i]);
+      const nKey = `${axisKey}_n` as keyof typeof components[0]['axes'];
+      const numVal = components[i].axes[nKey];
+      const v = typeof numVal === 'number' ? numVal : catToNum(components[i].axes[axisKey] as string);
+      sumWV += v * w;
+      sumW += w;
+    }
+    return sumW > 0 ? sumWV / sumW : 0;
+  }
+
+  const CONTESTED = 0.35; // Numeric average within ±CONTESTED is "balanced"
+
+  const wbAvg = weightedAvg('warm_bright');
+  const sdAvg = weightedAvg('smooth_detailed');
+  const ecAvg = weightedAvg('elastic_controlled');
+  const acAvg = weightedAvg('airy_closed');
 
   // Tonal character
-  if (wb < 0.35) traits.push('tonally warm');
-  else if (wb > 0.65) traits.push('bright');
+  if (wbAvg < -CONTESTED) traits.push('tonally warm');
+  else if (wbAvg > CONTESTED) traits.push('bright');
   else traits.push('tonally balanced');
 
   // Speed / detail
-  if (sd > 0.65) traits.push('detail-forward');
-  else if (sd < 0.35) traits.push('smooth');
+  if (sdAvg > CONTESTED) traits.push('detail-forward');
+  else if (sdAvg < -CONTESTED) traits.push('smooth');
 
   // Timing character
-  if (ec > 0.65) traits.push('rhythmically articulate');
-  else if (ec < 0.35) traits.push('elastically flowing');
+  if (ecAvg < -CONTESTED) traits.push('elastically flowing');
+  else if (ecAvg > CONTESTED) traits.push('rhythmically articulate');
 
   // Spatial character
-  if (ac > 0.65) traits.push('spatially open');
-  else if (ac < 0.35) traits.push('intimate');
+  if (acAvg < -CONTESTED) traits.push('spatially open');
+  else if (acAvg > CONTESTED) traits.push('intimate');
 
   if (traits.length === 0) return undefined;
 
@@ -559,6 +615,6 @@ export function renderDeterministicMemo(
     spiderChartData: deriveSpiderChartData(findings.systemAxes, findings.listenerPriorities),
     sourceReferences: sourceReferences.length > 0 ? sourceReferences : undefined,
     advisoryMode: 'system_review' as const,
-    systemSignature: deriveSystemSignature(findings.systemAxes, findings.listenerPriorities),
+    systemSignature: deriveSystemSignature(findings),
   };
 }
