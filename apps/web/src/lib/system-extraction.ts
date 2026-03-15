@@ -26,15 +26,18 @@ const BRAND_CATEGORY_MAP: Record<string, ProductCategory> = {
   weiss: 'dac', 'mola mola': 'dac', rockna: 'dac', aqua: 'dac',
   lampizator: 'dac', lampi: 'dac', 'border patrol': 'dac', metrum: 'dac',
   'audio-gd': 'dac', soekris: 'dac', musician: 'dac', okto: 'dac',
-  laiv: 'dac', audalytic: 'dac',
+  laiv: 'dac', audalytic: 'dac', totaldac: 'dac', 'total dac': 'dac',
+  dcs: 'dac', 'holo audio': 'dac',
   eversolo: 'streamer', wiim: 'streamer', fiio: 'dac',
   // Speakers
-  harbeth: 'speaker', devore: 'speaker', zu: 'speaker', klipsch: 'speaker',
+  harbeth: 'speaker', devore: 'speaker', zu: 'speaker', 'zu audio': 'speaker',
+  klipsch: 'speaker',
   focal: 'speaker', boenicke: 'speaker', kef: 'speaker', 'b&w': 'speaker',
   bowers: 'speaker', dynaudio: 'speaker', wilson: 'speaker', magico: 'speaker',
   'sonus faber': 'speaker', proac: 'speaker', spendor: 'speaker', atc: 'speaker',
   tannoy: 'speaker', magnepan: 'speaker', 'martin logan': 'speaker', quad: 'speaker',
-  wlm: 'speaker',
+  wlm: 'speaker', 'cube audio': 'speaker', hornshoppe: 'speaker',
+  qualio: 'speaker', totem: 'speaker',
   // Amplifiers
   'pass labs': 'amplifier', 'first watt': 'amplifier', naim: 'amplifier',
   luxman: 'amplifier', accuphase: 'amplifier', parasound: 'amplifier',
@@ -43,9 +46,14 @@ const BRAND_CATEGORY_MAP: Record<string, ProductCategory> = {
   'line magnetic': 'amplifier', primaluna: 'amplifier', cary: 'amplifier',
   'audio research': 'amplifier', arc: 'amplifier', job: 'integrated',
   goldmund: 'dac', crayon: 'integrated', xsa: 'speaker',
-  // Turntables
+  // Turntables / tonearms
   rega: 'turntable', 'pro-ject': 'turntable', technics: 'turntable',
   clearaudio: 'turntable', vpi: 'turntable', linn: 'turntable', thorens: 'turntable',
+  michell: 'turntable', 'michell engineering': 'turntable', sorane: 'turntable',
+  // Cartridges
+  ortofon: 'cartridge', emt: 'cartridge',
+  // Phono stages
+  aurorasound: 'phono',
   // Headphones
   sennheiser: 'headphone', 'audio-technica': 'headphone', beyerdynamic: 'headphone',
   hifiman: 'headphone', audeze: 'headphone',
@@ -125,6 +133,49 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   // Denafrips aliases
   'ares ii': { brand: 'Denafrips', category: 'dac' },
   'pontus 12th-1': { brand: 'Denafrips', category: 'dac' },
+  // TotalDAC
+  'd1-unity': { brand: 'TotalDAC', category: 'dac' },
+  'd1-tube': { brand: 'TotalDAC', category: 'dac' },
+  'd1-twelve': { brand: 'TotalDAC', category: 'dac' },
+  // Denafrips extended
+  'terminator ii': { brand: 'Denafrips', category: 'dac' },
+  // Rockna
+  wavelight: { brand: 'Rockna', category: 'dac' },
+  wavedream: { brand: 'Rockna', category: 'dac' },
+  // Holo Audio
+  'may kte': { brand: 'Holo Audio', category: 'dac' },
+  'holo may': { brand: 'Holo Audio', category: 'dac' },
+  may: { brand: 'Holo Audio', category: 'dac' },
+  spring: { brand: 'Holo Audio', category: 'dac' },
+  // dCS
+  'bartók': { brand: 'dCS', category: 'dac' },
+  bartok: { brand: 'dCS', category: 'dac' },
+  // Leben
+  'leben cs600x': { brand: 'Leben', category: 'amplifier' },
+  'leben cs600': { brand: 'Leben', category: 'amplifier' },
+  'leben cs300x': { brand: 'Leben', category: 'amplifier' },
+  'leben cs300': { brand: 'Leben', category: 'amplifier' },
+  cs600x: { brand: 'Leben', category: 'amplifier' },
+  cs600: { brand: 'Leben', category: 'amplifier' },
+  cs300x: { brand: 'Leben', category: 'amplifier' },
+  // Turntables
+  'gyro se': { brand: 'Michell', category: 'turntable' },
+  gyrodec: { brand: 'Michell', category: 'turntable' },
+  // Tonearms (using 'turntable' category — no dedicated tonearm type)
+  'sa1.2': { brand: 'Sorane', category: 'turntable' },
+  // Cartridges
+  'hsd 006': { brand: 'EMT', category: 'cartridge' },
+  'zu/dl-103': { brand: 'Zu Audio', category: 'cartridge' },
+  'spu mono': { brand: 'Ortofon', category: 'cartridge' },
+  'spu classic': { brand: 'Ortofon', category: 'cartridge' },
+  '2m black': { brand: 'Ortofon', category: 'cartridge' },
+  '2m bronze': { brand: 'Ortofon', category: 'cartridge' },
+  // Phono stages
+  'vida mk.ii': { brand: 'Aurorasound', category: 'phono' },
+  'vida mk.2': { brand: 'Aurorasound', category: 'phono' },
+  'vida mkii': { brand: 'Aurorasound', category: 'phono' },
+  vida: { brand: 'Aurorasound', category: 'phono' },
+  'eq-100': { brand: 'Aurorasound', category: 'phono' },
   // Headphones
   'hd 600': { brand: 'Sennheiser', category: 'headphone' },
   'hd 650': { brand: 'Sennheiser', category: 'headphone' },

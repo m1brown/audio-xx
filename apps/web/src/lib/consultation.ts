@@ -2180,6 +2180,10 @@ const ROLE_DISPLAY: Record<string, string> = {
   speaker: 'a speaker',
   headphone: 'a headphone',
   turntable: 'a turntable',
+  tonearm: 'a tonearm',
+  cartridge: 'a cartridge',
+  phono: 'a phono stage',
+  turntable: 'a turntable',
   component: 'a component',
 };
 
@@ -2193,6 +2197,9 @@ const USER_ROLE_KEYWORDS: { pattern: RegExp; role: string }[] = [
   { pattern: /\bspeak(?:er)?s?\b/i, role: 'speaker' },
   { pattern: /\bheadphone/i, role: 'headphone' },
   { pattern: /\bturntable\b/i, role: 'turntable' },
+  { pattern: /\btone\s*arm\b/i, role: 'tonearm' },
+  { pattern: /\bcartridge\b/i, role: 'cartridge' },
+  { pattern: /\bphono\b/i, role: 'phono' },
 ];
 
 /** Roles that are functionally equivalent for duplicate detection. */
@@ -3593,6 +3600,9 @@ type MemoStackedTraitInsight = import('./advisory-response').StackedTraitInsight
 // ── Canonical role ordering for chain display ──
 const ROLE_ORDER: Record<string, number> = {
   streamer: 0, source: 0, transport: 0,
+  turntable: 0, tonearm: 0,
+  cartridge: 0.1,
+  phono: 0.2,
   dac: 1,
   preamplifier: 2, preamp: 2,
   amplifier: 3, integrated: 3, 'integrated-amplifier': 3,
@@ -3603,6 +3613,9 @@ const ROLE_ORDER: Record<string, number> = {
 function canonicalRole(role: string): string {
   const r = role.toLowerCase();
   if (r.includes('stream') || r === 'source' || r === 'transport') return 'Streamer';
+  if (r === 'turntable' || r === 'tonearm') return 'Turntable';
+  if (r === 'cartridge') return 'Cartridge';
+  if (r === 'phono') return 'Phono Stage';
   if (r === 'dac' || r.includes('dac')) return 'DAC';
   if (r.includes('preamp') || r === 'preamplifier') return 'Preamplifier';
   if (r.includes('amp') || r.includes('integrated')) return 'Amplifier';
@@ -3649,6 +3662,54 @@ function upgradeInfluence(role: string): number {
  *                 'medium' when commas provide a plausible list but order is ambiguous,
  *                 undefined when no chain could be extracted.
  */
+/**
+ * Split a segment containing section labels ("Turntable:", "Cartridges:", "Phono Stage:", etc.)
+ * into individual sub-segments. Handles complex user input like:
+ *   "DeVore O/96 speakers. Analogue: Turntable: Michell Gyro SE ... Cartridges: EMT HSD 006, ... Phono Stage: Aurorasound VIDA"
+ *
+ * Returns the expanded sub-segments, or the original segment in an array if no labels found.
+ */
+function expandSectionLabels(segment: string): string[] {
+  // Match known section labels — case-insensitive, with optional period or colon before
+  const SECTION_LABEL_RE = /(?:^|[.;]\s*|\s+)(?:Analogue|Analog|Digital|Turntable|Tonearm|Cartridge[s]?|Phono\s*Stage|Phono|DAC|Amp(?:lifier)?|Speaker[s]?|Streamer|Source)\s*:/gi;
+
+  const labels: { index: number; label: string }[] = [];
+  let m;
+  while ((m = SECTION_LABEL_RE.exec(segment)) !== null) {
+    // Find the start of the actual label (skip leading punctuation/whitespace)
+    const fullMatch = m[0];
+    const labelStart = m.index + fullMatch.indexOf(fullMatch.replace(/^[.\s;]+/, ''));
+    labels.push({ index: labelStart, label: fullMatch.trim().replace(/^[.;]\s*/, '') });
+  }
+
+  if (labels.length === 0) return [segment];
+
+  const results: string[] = [];
+
+  // Content before the first label (e.g. "DeVore O/96 speakers")
+  const beforeFirst = segment.substring(0, labels[0].index).replace(/[.;]\s*$/, '').trim();
+  if (beforeFirst.length > 0) results.push(beforeFirst);
+
+  // Extract content for each labeled section
+  for (let i = 0; i < labels.length; i++) {
+    const labelEnd = labels[i].index + labels[i].label.length;
+    const contentEnd = i + 1 < labels.length ? labels[i + 1].index : segment.length;
+    const content = segment.substring(labelEnd, contentEnd).replace(/^[.;,\s]+/, '').replace(/[.;,\s]+$/, '').trim();
+
+    if (content.length === 0) continue;
+
+    // Skip meta-labels like "Analogue:" that just group other sections
+    const labelName = labels[i].label.replace(/:$/, '').trim().toLowerCase();
+    if (labelName === 'analogue' || labelName === 'analog' || labelName === 'digital') continue;
+
+    // Further split comma-separated items within a section (e.g. "EMT HSD 006, Ortofon SPU Mono, ...")
+    const items = content.split(/\s*,\s*/).map((s) => s.trim()).filter((s) => s.length > 0);
+    results.push(...items);
+  }
+
+  return results.length > 0 ? results : [segment];
+}
+
 function extractFullChain(
   rawMessage: string,
 ): { segments: string[]; confidence: 'high' | 'medium' } | undefined {
@@ -3656,10 +3717,12 @@ function extractFullChain(
   // Matches: → , -> , --> , ---> , ==> , >> and similar arrow-like separators.
   const ARROW_RE = /\s*(?:→|—>|-{1,3}>|={1,2}>|>{2,3})\s*/;
   if (ARROW_RE.test(rawMessage)) {
-    const segments = rawMessage
+    const rawSegments = rawMessage
       .split(ARROW_RE)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
+    // Expand any segments that contain section labels (e.g. "Analogue: Turntable: ...")
+    const segments = rawSegments.flatMap(expandSectionLabels);
     if (segments.length >= 2) {
       return { segments, confidence: 'high' };
     }
@@ -3709,8 +3772,10 @@ function extractFullChain(
   // Need at least one comma and the segments should look like component names
   // (not long prose sentences)
   if (framingStripped.includes(',')) {
-    const segments = framingStripped
-      .split(/\s*,\s*/)
+    // First expand any section labels, then split on commas
+    const expanded = expandSectionLabels(framingStripped);
+    const segments = expanded
+      .flatMap((s) => s.includes(',') ? s.split(/\s*,\s*/) : [s])
       .map((s) => s.trim())
       // Filter out conversational noise — keep segments that look like product/brand names
       // (short, not full sentences)
@@ -3759,6 +3824,9 @@ function tryCanonicalOrder(segments: string[]): string[] | undefined {
     // Try well-known role keywords in the segment text
     if (bestOrder === undefined) {
       if (/\b(?:stream|transport|source|roon|tidal|server)\b/i.test(s)) bestOrder = 0;
+      else if (/\b(?:turntable|tonearm|tone\s*arm)\b/i.test(s)) bestOrder = 0;
+      else if (/\b(?:cartridge|stylus)\b/i.test(s)) bestOrder = 0.1;
+      else if (/\b(?:phono)\b/i.test(s)) bestOrder = 0.2;
       else if (/\b(?:dac|converter)\b/i.test(s)) bestOrder = 1;
       else if (/\b(?:pre[- ]?amp|preamplifier)\b/i.test(s)) bestOrder = 2;
       else if (/\b(?:amp|amplifier|integrated|receiver)\b/i.test(s)) bestOrder = 3;

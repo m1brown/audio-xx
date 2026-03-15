@@ -49,7 +49,7 @@ You receive a structured MemoFindings object describing a user's audio system as
 3. recommendedSequence — Rephrase each upgrade step for natural reading. You MUST preserve the exact number of steps and their order. Each step max 200 characters.
 
 STRICT CONSTRAINTS:
-- Use ONLY product and brand names present in the MemoFindings. Do not introduce any new products, brands, or models.
+- Use ONLY product and brand names present in the SYSTEM COMPONENTS list. Do not introduce ANY new products, brands, or models — not even well-known ones. If a component is not in SYSTEM COMPONENTS, it does not exist for this assessment.
 - Do not change the bottleneck identification, upgrade ranking order, or component verdicts.
 - Do not add scoring, ratings, urgency language, or superlatives (best, worst, perfect, ideal, ultimate).
 - Do not add affiliate language or purchase pressure.
