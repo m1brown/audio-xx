@@ -108,13 +108,16 @@ function scoreTraitAlignment(
 
 /**
  * Score budget alignment.
- *   - Within budget: +1
+ *   - Within budget (new price): +1
+ *   - Within budget (used price): +0.75 (slight penalty for used-market dependency)
  *   - Within 15% overshoot: +0.5
  *   - Over budget: 0
  */
-function scoreBudgetFit(price: number, budgetAmount: number): number {
-  if (price <= budgetAmount) return 1;
-  if (price <= budgetAmount * 1.15) return 0.5;
+function scoreBudgetFit(product: Product, budgetAmount: number): number {
+  if (product.price <= budgetAmount) return 1;
+  // Used-market pricing: if the high end of used range is within budget
+  if (product.usedPriceRange && product.usedPriceRange.high <= budgetAmount) return 0.75;
+  if (product.price <= budgetAmount * 1.15) return 0.5;
   return 0;
 }
 
@@ -187,6 +190,48 @@ function scoreSystemCoherence(
   return Math.max(-1, Math.min(1, score));
 }
 
+// ── Reviewer acclaim ─────────────────────────────────
+//
+// Products reviewed by trusted, independent audio publications
+// receive a small scoring bonus. This surfaces community-loved
+// gear over spec-sheet winners.
+//
+// Trusted sources are independent reviewers/publications known
+// for subjective, listening-first evaluation:
+
+const TRUSTED_REVIEWERS = new Set([
+  'darko.audio',
+  '6moons',
+  'twittering machines',
+  'the audiophiliac',
+  'stereophile',
+  'british audiophile',
+  'hifi huff',
+  'srajan ebaen',        // 6moons editor
+  'john darko',
+  'steve guttenberg',    // Audiophiliac
+  'herb reichert',       // Stereophile
+]);
+
+/** Small bonus per trusted reviewer, capped at 0.5. */
+function scoreReviewerAcclaim(product: Product): number {
+  if (!product.sourceReferences || product.sourceReferences.length === 0) return 0;
+
+  let count = 0;
+  for (const ref of product.sourceReferences) {
+    const srcLower = ref.source.toLowerCase();
+    for (const reviewer of TRUSTED_REVIEWERS) {
+      if (srcLower.includes(reviewer)) {
+        count++;
+        break;
+      }
+    }
+  }
+
+  // 0.15 per trusted source, capped at 0.5
+  return Math.min(count * 0.15, 0.5);
+}
+
 // ── Public API ────────────────────────────────────────
 
 /**
@@ -203,11 +248,12 @@ export function scoreProduct(
   score += scoreTraitAlignment(product, userTraits);
 
   if (budgetAmount !== null) {
-    score += scoreBudgetFit(product.price, budgetAmount);
+    score += scoreBudgetFit(product, budgetAmount);
   }
 
   score += scoreArchitectureAffinity(product, userTraits);
   score += scoreSystemCoherence(product, systemProfile);
+  score += scoreReviewerAcclaim(product);
 
   return score;
 }
@@ -215,9 +261,10 @@ export function scoreProduct(
 /**
  * Score and rank all products, returning them sorted by fit.
  *
- * Hard budget guard: only products where price <= budget enter the
- * candidate pool. If no products pass, returns an empty array.
- * No over-budget products are ever returned.
+ * Budget guard: products pass if their retail price is within budget,
+ * OR if they have a usedPriceRange whose high end is within budget.
+ * This allows community favorites like the Chord Qutest ($1,295 new,
+ * ~$800-1000 used) to appear in "under $1000" queries.
  */
 export function rankProducts(
   products: Product[],
@@ -225,9 +272,12 @@ export function rankProducts(
   budgetAmount: number | null,
   systemProfile: SystemProfile,
 ): ScoredProduct[] {
-  // Hard budget filter — no exceptions
+  // Budget filter — allows used-market pricing
   const candidates = budgetAmount
-    ? products.filter((p) => p.price <= budgetAmount)
+    ? products.filter((p) =>
+        p.price <= budgetAmount ||
+        (p.usedPriceRange && p.usedPriceRange.high <= budgetAmount),
+      )
     : products;
 
   if (candidates.length === 0) return [];

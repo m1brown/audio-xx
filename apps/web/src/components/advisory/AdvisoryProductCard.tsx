@@ -121,7 +121,7 @@ function ProductLinks({ opt }: { opt: AdvisoryOption }) {
 // ── Section divider ───────────────────────────────────
 
 function ProductDivider() {
-  return <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.border}`, margin: '2.5rem 0' }} />;
+  return <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.border}`, margin: '3rem 0' }} />;
 }
 
 // ── Sub-heading ───────────────────────────────────────
@@ -129,7 +129,7 @@ function ProductDivider() {
 function SubHeading({ children }: { children: React.ReactNode }) {
   return (
     <h4 style={{
-      margin: '1.1rem 0 0.4rem 0',
+      margin: '1.25rem 0 0.45rem 0',
       fontSize: '0.95rem',
       fontWeight: 600,
       color: COLORS.text,
@@ -147,11 +147,11 @@ function Bullets({ items, color }: { items: string[]; color?: string }) {
     <ul style={{
       margin: 0,
       paddingLeft: '1.2rem',
-      lineHeight: 1.7,
+      lineHeight: 1.75,
       color: color ?? COLORS.text,
     }}>
       {items.map((item, i) => (
-        <li key={i} style={{ marginBottom: '0.15rem', fontSize: '0.93rem' }}>
+        <li key={i} style={{ marginBottom: '0.35rem', fontSize: '0.93rem' }}>
           {renderText(item)}
         </li>
       ))}
@@ -171,10 +171,10 @@ function EditorialProductSection({ opt, index }: { opt: AdvisoryOption; index: n
       {/* ── Product name (numbered) ──────────────────── */}
       <h3 style={{
         margin: '0 0 0.2rem 0',
-        fontSize: '1.25rem',
+        fontSize: '1.35rem',
         fontWeight: 600,
         color: COLORS.text,
-        letterSpacing: '-0.01em',
+        letterSpacing: '-0.015em',
         lineHeight: 1.3,
       }}>
         {index + 1}. {fullName}
@@ -271,12 +271,12 @@ function EditorialProductSection({ opt, index }: { opt: AdvisoryOption; index: n
       {/* ── Verdict ───────────────────────────────────── */}
       {opt.fitNote && (
         <p style={{
-          margin: '0.8rem 0 0.3rem 0',
+          margin: '1.1rem 0 0.3rem 0',
           fontSize: '0.95rem',
-          lineHeight: 1.7,
+          lineHeight: 1.75,
           color: COLORS.text,
         }}>
-          <strong>Verdict:</strong>{' '}
+          <strong style={{ fontWeight: 600 }}>Verdict:</strong>{' '}
           {renderText(opt.fitNote)}
         </p>
       )}

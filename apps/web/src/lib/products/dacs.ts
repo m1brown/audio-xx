@@ -428,6 +428,12 @@ export const DAC_PRODUCTS: Product[] = [
         { gains: 'tonal body and listening ease', cost: 'the last degree of transient precision and analytical separation', relative_to: 'delta-sigma designs at this price', basis: 'review_consensus' },
       ],
     },
+    sourceReferences: [
+      { source: 'Darko.Audio', note: 'Review covering Denafrips R-2R house sound and the Ares as entry point to the lineup.' },
+      { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising the Ares II for musicality and engagement at its price.' },
+      { source: 'Twittering Machines', note: 'Positive coverage of the R-2R tonal character and listening ease.' },
+      { source: 'Head-Fi community', note: 'Extensive owner comparisons with Bifrost 2, SMSL, and Topping alternatives.' },
+    ],
   },
 
   {
@@ -506,6 +512,8 @@ export const DAC_PRODUCTS: Product[] = [
     sourceReferences: [
       { source: 'Schiit Audio', note: 'Manufacturer commentary on multibit unison USB architecture.' },
       { source: 'Darko.Audio', note: 'Video review comparing Bifrost 2 to competing R-2R and delta-sigma designs.' },
+      { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising the Bifrost as a musical, engaging multibit alternative.' },
+      { source: 'Stereophile', note: 'Herb Reichert review covering tonal weight and dynamic character.' },
     ],
   },
 
@@ -662,6 +670,8 @@ export const DAC_PRODUCTS: Product[] = [
     },
     sourceReferences: [
       { source: '6Moons', note: 'Review covering the NOS tube output stage and its effect on musical continuity.' },
+      { source: 'Twittering Machines', note: 'Coverage of the Orchid as a musically engaging NOS alternative.' },
+      { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising the Orchid for organic musicality.' },
       { source: 'Audiogon community', note: 'Tube-rolling reports and system pairing impressions.' },
     ],
   },
@@ -996,6 +1006,9 @@ export const DAC_PRODUCTS: Product[] = [
     brand: 'Chord',
     name: 'Qutest',
     price: 1295,
+    usedPriceRange: { low: 800, high: 1000 },
+    availability: 'current',
+    typicalMarket: 'both',
     category: 'dac',
     architecture: 'FPGA',
     subcategory: 'standalone-dac',
@@ -1193,6 +1206,8 @@ export const DAC_PRODUCTS: Product[] = [
     sourceReferences: [
       { source: 'Audiophile Style', note: 'Detailed review of R-2R architecture and harmonic character.' },
       { source: 'Audio Science Review', note: 'Measurement and listening coverage of the 12th anniversary revision.' },
+      { source: '6moons', note: 'Review covering the Pontus II tonal authority and R-2R staging.' },
+      { source: 'Darko.Audio', note: 'Comparison placing Pontus in the Denafrips lineup and R-2R landscape.' },
       { source: 'Head-Fi / Audiogon communities', note: 'Extensive comparisons with Chord, Schiit, and ESS-based alternatives.' },
     ],
   },
@@ -1811,6 +1826,7 @@ export const DAC_PRODUCTS: Product[] = [
     sourceReferences: [
       { source: 'Head-Fi community', note: 'Extensive impressions comparing with Denafrips Ares and Schiit Bifrost.' },
       { source: 'Audio Science Review', note: 'Measurements and listening impressions of the Cyan 2 R-2R implementation.' },
+      { source: '6moons', note: 'Review covering the discrete R-2R implementation and Holo Audio design philosophy.' },
     ],
   },
 
