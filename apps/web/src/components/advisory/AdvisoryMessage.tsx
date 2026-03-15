@@ -1102,6 +1102,32 @@ function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
         <DecisionFrameBlock frame={a.decisionFrame} />
       )}
 
+      {/* ── 2c. System Context Preamble ─────────────── */}
+      {a.systemContextPreamble && (
+        <div style={{
+          margin: '0.5rem 0 1.25rem 0',
+          padding: '0.75rem 1rem',
+          background: COLORS.accentBg,
+          borderRadius: '6px',
+          borderLeft: `3px solid ${COLORS.accent}`,
+          fontSize: '0.95rem',
+          lineHeight: 1.75,
+          color: COLORS.text,
+        }}>
+          <div style={{
+            fontSize: '0.78rem',
+            fontWeight: 600,
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.05em',
+            color: COLORS.muted,
+            marginBottom: '0.35rem',
+          }}>
+            System Context
+          </div>
+          {renderText(a.systemContextPreamble)}
+        </div>
+      )}
+
       {/* ── 3. Editorial intro — taste-anchored framing ── */}
       {a.editorialIntro && (
         <p style={{

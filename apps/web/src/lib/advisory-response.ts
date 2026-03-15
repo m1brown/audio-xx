@@ -568,7 +568,13 @@ export interface AdvisoryResponse {
   /** Questions that would deepen personalization in the next turn. */
   refinementPrompts?: string[];
 
-  // ── 7e. Editorial Intro ─────────────────────────────
+  // ── 7e. System Context Preamble ─────────────────────
+  /** Compact system diagnosis before product recommendations (2–3 sentences).
+   *  Covers: current tendency, main interaction risk, sensible upgrade direction.
+   *  Only populated when an active system is available during shopping. */
+  systemContextPreamble?: string;
+
+  // ── 7f. Editorial Intro ─────────────────────────────
   /** Taste-anchored intro paragraph — frames the shortlist in terms of user preferences. */
   editorialIntro?: string;
 
@@ -702,6 +708,73 @@ function buildEditorialIntro(
   const body = `${selectionNote}${preferenceClause}${alignmentClause}${systemClause}.`;
 
   return `${opening}${body}`;
+}
+
+/**
+ * Build a compact system context preamble for shopping responses.
+ *
+ * When an active system is available, this produces 2–3 sentences covering:
+ *   1. Current system tendency (from axis model or tendency summary)
+ *   2. Main interaction risk or constraint
+ *   3. Sensible upgrade direction
+ *
+ * Uses the existing deterministic reasoning engine — no LLM call.
+ * Returns undefined when no active system or reasoning data is available.
+ */
+function buildSystemContextPreamble(
+  systemComponents?: string[],
+  reasoning?: ReasoningResult,
+  systemTendencies?: string | null,
+): string | undefined {
+  // Gate: need a system and some reasoning data
+  if (!systemComponents || systemComponents.length === 0) return undefined;
+  if (!reasoning) return undefined;
+
+  const parts: string[] = [];
+
+  // ── Sentence 1: Current system tendency ──
+  // Prefer the reasoning engine's tendency summary; fall back to stored tendencies.
+  const tendencySummary = reasoning.system.tendencySummary ?? systemTendencies;
+  if (tendencySummary) {
+    parts.push(`Your current system leans toward ${tendencySummary.toLowerCase().replace(/\.$/, '')}.`);
+  } else {
+    // Derive from current tendencies if no summary
+    const tendencyLabels = reasoning.system.currentTendencies;
+    if (tendencyLabels.length > 0) {
+      const tendencyStr = tendencyLabels.length <= 2
+        ? tendencyLabels.join(' and ')
+        : `${tendencyLabels.slice(0, -1).join(', ')}, and ${tendencyLabels[tendencyLabels.length - 1]}`;
+      parts.push(`Your current system leans toward a ${tendencyStr} presentation.`);
+    }
+  }
+
+  // ── Sentence 2: Interaction risk / constraint ──
+  // Build from preserve + arrows to describe what to watch for.
+  const preserve = reasoning.direction.preserve;
+  const arrows = reasoning.direction.arrows;
+  const downArrows = arrows.filter((a) => a.direction === 'down');
+
+  if (preserve.length > 0 && downArrows.length > 0) {
+    const preserveStr = preserve.slice(0, 2).join(' and ');
+    const riskStr = downArrows.slice(0, 1).map((a) => a.quality).join('');
+    parts.push(`A change here should preserve the system's ${preserveStr} — adding too much ${riskStr} could shift the balance.`);
+  } else if (preserve.length > 0) {
+    const preserveStr = preserve.slice(0, 2).join(' and ');
+    parts.push(`The main constraint is preserving the system's ${preserveStr} while making any change.`);
+  } else if (downArrows.length > 0) {
+    const riskStr = downArrows.slice(0, 2).map((a) => a.quality).join(' or ');
+    parts.push(`Watch for components that push toward ${riskStr} — that would compound a current tendency.`);
+  }
+
+  // ── Sentence 3: Upgrade direction ──
+  const direction = reasoning.direction.statement;
+  if (direction) {
+    parts.push(direction.endsWith('.') ? direction : `${direction}.`);
+  }
+
+  if (parts.length === 0) return undefined;
+
+  return parts.join(' ');
 }
 
 /**
@@ -1194,6 +1267,8 @@ export interface ShoppingAdvisoryContext {
   systemPrimaryUse?: string;
   /** User's taste profile trait labels (e.g. ["warmth", "dynamics", "detail"]). */
   storedDesires?: string[];
+  /** Stored system tendencies string (e.g. "warm, tube-driven, vinyl-focused"). */
+  systemTendencies?: string;
 }
 
 export function shoppingToAdvisory(
@@ -1276,6 +1351,13 @@ export function shoppingToAdvisory(
       ? a.refinementPrompts.join(' ')
       : undefined);
 
+  // Build system context preamble (when active system available)
+  const systemContextPreamble = buildSystemContextPreamble(
+    ctx?.systemComponents,
+    reasoning,
+    ctx?.systemTendencies,
+  );
+
   // Build editorial intro
   const editorialIntro = buildEditorialIntro(
     a.category,
@@ -1292,6 +1374,7 @@ export function shoppingToAdvisory(
     subject: a.category,
 
     audioProfile,
+    systemContextPreamble,
     editorialIntro,
     listenerPriorities,
     whyFitsYou: a.whyFitsYou,

@@ -289,6 +289,7 @@ export default function Home() {
       storedDesires: tasteProfile
         ? topTraits(tasteProfile, 5).map((t) => t.label)
         : undefined,
+      systemTendencies: turnCtx.activeSystem?.tendencies ?? undefined,
     };
 
     // ── Conversation router ──────────────────────────────
