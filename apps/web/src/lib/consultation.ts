@@ -5029,6 +5029,17 @@ function buildUpgradePaths(
       // Skip elite products — their trade-offs are intentional, not limitations
       const prod = r.component.product;
       if (prod && (prod.price >= 8000 || (prod.brandScale === 'boutique' && prod.priceTier === 'high-end'))) return false;
+      // Skip single-driver / horn-loaded / crossoverless speakers — their
+      // weaknesses (lean tonal density, limited composure) are inherent design
+      // trade-offs for coherence, speed, and transient immediacy, not upgrade targets.
+      if (prod && r.component.role.includes('speak')) {
+        const arch = (prod.architecture ?? '').toLowerCase();
+        const topo = (prod.topology ?? '').toLowerCase();
+        const isByDesign =
+          arch.includes('single-driver') || arch.includes('crossoverless')
+          || arch.includes('fullrange') || topo.includes('horn') || topo.includes('single-driver');
+        if (isByDesign) return false;
+      }
       return true;
     })
     .sort((a, b) => {
