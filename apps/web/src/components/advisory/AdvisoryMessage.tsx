@@ -25,7 +25,7 @@
  * Only populated sections render in both modes.
  */
 
-import type { AdvisoryResponse, AdvisoryMode, AudioProfile, ProductAssessment, KnowledgeResponse, AssistantResponse, EditorialClosing, EditorialPick } from '../../lib/advisory-response';
+import type { AdvisoryResponse, AdvisoryMode, AdvisorySource, AudioProfile, ProductAssessment, KnowledgeResponse, AssistantResponse, EditorialClosing, EditorialPick } from '../../lib/advisory-response';
 import type { DecisionFrame, DecisionDirection, SystemInteraction } from '../../lib/decision-frame';
 import AdvisorySection from './AdvisorySection';
 import AdvisoryProse from './AdvisoryProse';
@@ -123,6 +123,26 @@ function ModeIndicator({ mode }: { mode?: AdvisoryMode }) {
       marginBottom: '0.6rem',
     }}>
       {label}
+    </div>
+  );
+}
+
+/** Provenance label — shows when response data comes from LLM inference rather than verified catalog. */
+function ProvenanceLabel({ source }: { source?: AdvisorySource }) {
+  if (!source || source === 'catalog' || source === 'brand_profile') return null;
+  return (
+    <div style={{
+      fontSize: '0.75rem',
+      lineHeight: 1.4,
+      color: '#96722e',
+      backgroundColor: '#fef9ec',
+      border: '1px solid #f0e4c4',
+      borderRadius: '4px',
+      padding: '0.45rem 0.65rem',
+      marginBottom: '0.85rem',
+    }}>
+      <span style={{ fontWeight: 600 }}>Not from verified catalog.</span>
+      {' '}This response is based on general knowledge and may contain inaccuracies. Treat as directional guidance, not confirmed data.
     </div>
   );
 }
@@ -1397,6 +1417,9 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
     <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
       {/* ── Mode indicator ──────────────────────────── */}
       <ModeIndicator mode={a.advisoryMode} />
+
+      {/* ── Provenance label (LLM-inferred responses) ── */}
+      <ProvenanceLabel source={a.source} />
 
       {/* ── 1. Comparison summary ────────────────────── */}
       {a.comparisonSummary && (

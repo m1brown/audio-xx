@@ -421,6 +421,9 @@ export interface AssistantResponse {
   tips?: string[];
 }
 
+/** Where the response data originated — used for provenance labeling. */
+export type AdvisorySource = 'catalog' | 'brand_profile' | 'llm_inferred';
+
 export interface AdvisoryResponse {
   /** Determines framing voice. */
   kind: 'consultation' | 'shopping' | 'diagnosis' | 'assessment' | 'knowledge' | 'assistant';
@@ -430,6 +433,8 @@ export interface AdvisoryResponse {
   subject: string;
   /** Advisory mode label — shown as a subtle indicator in the response header. */
   advisoryMode?: AdvisoryMode;
+  /** Data provenance — determines whether a confidence label appears. */
+  source?: AdvisorySource;
   /** System signature — one-sentence characterization of the system's sonic identity. */
   systemSignature?: string;
 
@@ -974,6 +979,7 @@ export function consultationToAdvisory(
     kind: 'consultation',
     title: c.title,
     subject: c.subject,
+    source: c.source,
 
     audioProfile: reasoning || ctx ? buildAudioProfile(reasoning, ctx) : undefined,
     comparisonSummary: c.comparisonSummary,

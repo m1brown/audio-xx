@@ -71,6 +71,9 @@ import type { LegacyProseInputs, StructuredMemoInputs } from './memo-determinist
 
 // ── Types ───────────────────────────────────────────
 
+/** Where the response data originated — used for provenance labeling in the UI. */
+export type ConsultationSource = 'catalog' | 'brand_profile' | 'llm_inferred';
+
 export interface ConsultationResponse {
   /** Display title for the assessment (e.g. "Living Room System"). */
   title?: string;
@@ -78,6 +81,8 @@ export interface ConsultationResponse {
   subject: string;
   /** Advisory mode label — determines response rendering. */
   advisoryMode?: import('./advisory-response').AdvisoryMode;
+  /** Data provenance — 'catalog' (verified), 'brand_profile' (curated), or 'llm_inferred' (unverified). */
+  source?: ConsultationSource;
   /** System signature — one-sentence sonic identity characterization. */
   systemSignature?: string;
   /**
@@ -870,6 +875,7 @@ function buildProductConsultation(products: Product[], subject: string): Consult
   }
 
   return {
+    source: 'catalog' as const,
     subject,
     philosophy: philosophyParts.join('\n\n'),
     tendencies: tendencyParts.join('\n\n'),
@@ -949,6 +955,7 @@ function buildBrandConsultation(profile: BrandProfile): ConsultationResponse {
   }
 
   return {
+    source: 'brand_profile' as const,
     subject: name,
     philosophy: philosophyLine,
     tendencies: profile.tendencies,
@@ -1500,8 +1507,8 @@ export function buildConsultationResponse(
       }
 
       // 5b. Brand recognized in BRAND_NAMES but no catalog data at all —
-      // honest acknowledgement, not a diagnostic fallback
-      return buildUnknownBrandResponse(brandSubject.name);
+      // return null so the caller can attempt LLM inference
+      return null;
     }
   }
 

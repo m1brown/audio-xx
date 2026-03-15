@@ -30,6 +30,7 @@ import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory } from '@/lib/consultation';
+import { inferUnknownProduct } from '@/lib/llm-product-inference';
 import type { GlossaryResult } from '@/lib/glossary';
 import type { Message, ConversationState } from '@/lib/conversation-types';
 import { parseTasteProfile, topTraits, isProfileEmpty, type TasteProfile } from '@/lib/taste-profile';
@@ -305,15 +306,7 @@ export default function Home() {
     // already canonical in turnCtx.
     let { intent } = detectIntent(submittedText);
 
-    // Diagnostic logging
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[AudioXX] intent:', intent, '| confidence:', turnCtx.confidence, '| source:', turnCtx.systemSource);
-      console.log('[AudioXX] subjects:', turnCtx.subjects, '| desires:', turnCtx.desires.length);
-      if (turnCtx.proposedSystem) {
-        console.log('[AudioXX] proposed:', turnCtx.proposedSystem.suggestedName,
-          '| components:', turnCtx.proposedSystem.components.map((c) => `${c.brand} ${c.name} (${c.category})`));
-      }
-    }
+
 
     // ── Dispatch proposed system ────────────────────────
     if (turnCtx.proposedSystem && !dismissedFingerprintsRef.current.has(turnCtx.proposedSystem.fingerprint)) {
@@ -503,7 +496,19 @@ export default function Home() {
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
-      // No match — fall through to gear inquiry path below
+      // No catalog match — try LLM inference for unknown products/brands
+      {
+        const subjectName = turnCtx.subjectMatches.length > 0
+          ? turnCtx.subjectMatches.map((m) => m.name).join(' ')
+          : undefined;
+        const inferred = await inferUnknownProduct(submittedText, subjectName);
+        if (inferred) {
+          dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(inferred, undefined, advisoryCtx), id: advisoryId() });
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+      }
+      // LLM inference also failed — fall through to gear inquiry path below
     }
 
     // ── Mode-aware intent override ─────────────────────
