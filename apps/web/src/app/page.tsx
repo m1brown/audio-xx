@@ -623,7 +623,7 @@ export default function Home() {
         if (intent === 'shopping') {
           // ── Shopping path ────────────────────────────
           // All shopping logic runs here — no diagnostic fallback.
-          const shoppingCtx = detectShoppingIntent(allUserText, data.signals);
+          const shoppingCtx = detectShoppingIntent(allUserText, data.signals, advisoryCtx.systemComponents);
 
           // Decide: ask a clarification question or give a recommendation?
           // Skip clarifications if we've already given a recommendation

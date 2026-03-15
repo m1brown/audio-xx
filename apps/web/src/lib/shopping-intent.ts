@@ -490,6 +490,7 @@ function detectTurntableDependencies(text: string): CategoryDependency[] {
 export function detectShoppingIntent(
   userText: string,
   signals: ExtractedSignals,
+  activeSystemComponents?: string[],
 ): ShoppingContext {
   const lower = userText.toLowerCase();
 
@@ -547,8 +548,11 @@ export function detectShoppingIntent(
   const budgetMentioned = BUDGET_PATTERNS.some((re) => re.test(userText));
   const budgetAmount = parseBudgetAmount(userText);
   const tasteProvided = signals.symptoms.length >= 2;
-  const systemProvided = SYSTEM_KEYWORDS.some((kw) => lower.includes(kw));
-  const systemProfile = systemProvided ? parseSystemProfile(userText) : DEFAULT_SYSTEM_PROFILE;
+  const hasActiveSystem = Array.isArray(activeSystemComponents) && activeSystemComponents.length > 0;
+  const systemProvided = hasActiveSystem || SYSTEM_KEYWORDS.some((kw) => lower.includes(kw));
+  const systemProfile = systemProvided
+    ? parseSystemProfile(hasActiveSystem ? `${userText}\n${activeSystemComponents.join(' ')}` : userText)
+    : DEFAULT_SYSTEM_PROFILE;
   const useCaseProvided = USE_CASE_KEYWORDS.some((kw) => lower.includes(kw));
   const preserveProvided = PRESERVE_KEYWORDS.some((kw) => lower.includes(kw));
   const limitingProvided = LIMITING_KEYWORDS.some((kw) => lower.includes(kw));
