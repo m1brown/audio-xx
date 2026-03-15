@@ -2205,6 +2205,8 @@ const KNOWN_PRODUCT_ROLES: Record<string, { expectedCategory: string; displayBra
   'marantz 2220b': { expectedCategory: 'amplifier', displayBrand: 'Marantz' },
   opdv971h: { expectedCategory: 'dac', displayBrand: 'Oppo' },
   'oppo opdv971h': { expectedCategory: 'dac', displayBrand: 'Oppo' },
+  'hornshoppe horn': { expectedCategory: 'speaker', displayBrand: 'Hornshoppe' },
+  'hornshoppe horns': { expectedCategory: 'speaker', displayBrand: 'Hornshoppe' },
   diva: { expectedCategory: 'speaker', displayBrand: 'WLM' },
   'diva monitor': { expectedCategory: 'speaker', displayBrand: 'WLM' },
   leben: { expectedCategory: 'amplifier', displayBrand: 'Leben' },

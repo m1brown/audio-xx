@@ -151,6 +151,9 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   // Oppo (disc players)
   opdv971h: { brand: 'Oppo', category: 'dac' },
   'oppo opdv971h': { brand: 'Oppo', category: 'dac' },
+  // Hornshoppe
+  'hornshoppe horn': { brand: 'Hornshoppe', category: 'speaker' },
+  'hornshoppe horns': { brand: 'Hornshoppe', category: 'speaker' },
   // Denafrips aliases
   'ares ii': { brand: 'Denafrips', category: 'dac' },
   'pontus 12th-1': { brand: 'Denafrips', category: 'dac' },

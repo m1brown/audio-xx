@@ -254,6 +254,8 @@ const NAME_ALIASES: Record<string, string[]> = {
   'goldmund dac': ['srda dac'],
   'great horns': ['horns'],
   'hornshoppe horns': ['horns'],
+  'hornshoppe horn': ['horns'],
+  'horn': ['horns'],
   'cs600x': ['cs600x'],
   'cs600': ['cs600x', 'cs300'],
   'cs300': ['cs300'],

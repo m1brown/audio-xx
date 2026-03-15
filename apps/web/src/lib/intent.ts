@@ -106,7 +106,7 @@ const PRODUCT_NAMES = [
   'may kte', 'holo may',
   'srda', 'cia-1', 'cia-1t', 'ta-10', 'trends ta-10',
   'vanguard', 'rost', 'vega', '2220b', 'opdv971h', 'cs600x', 'cs600', 'cs300x', 'cs300',
-  'diva monitor', 'super hl5', 'dirty weekend',
+  'diva monitor', 'super hl5', 'dirty weekend', 'hornshoppe horn', 'hornshoppe horns',
   // Turntable / tonearm / cartridge / phono products
   'gyro se', 'gyrodec', 'sa1.2',
   'spu mono', 'spu classic', '2m black', '2m bronze',
