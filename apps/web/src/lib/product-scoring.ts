@@ -108,17 +108,46 @@ function scoreTraitAlignment(
 
 /**
  * Score budget alignment.
- *   - Within budget (new price): +1
- *   - Within budget (used price): +0.75 (slight penalty for used-market dependency)
- *   - Within 15% overshoot: +0.5
- *   - Over budget: 0
+ *
+ * Two components:
+ *   1. Gate score — is this product within budget? (0–1)
+ *   2. Utilization bonus — does it USE the budget? (0–1)
+ *
+ * When someone says "best DAC under $5,000" they expect products that
+ * explore the upper reaches of that range, not $699 options with $4,300
+ * left over. The utilization bonus rewards products that use 40%+ of
+ * the stated budget, peaking at 70–100% utilization.
+ *
+ * Total range: 0–2 (was 0–1).
  */
 function scoreBudgetFit(product: Product, budgetAmount: number): number {
-  if (product.price <= budgetAmount) return 1;
-  // Used-market pricing: if the high end of used range is within budget
-  if (product.usedPriceRange && product.usedPriceRange.high <= budgetAmount) return 0.75;
-  if (product.price <= budgetAmount * 1.15) return 0.5;
-  return 0;
+  // ── Gate: is this product affordable? ──
+  let gate = 0;
+  let effectivePrice = product.price;
+  if (product.price <= budgetAmount) {
+    gate = 1;
+  } else if (product.usedPriceRange && product.usedPriceRange.high <= budgetAmount) {
+    gate = 0.75;
+    effectivePrice = product.usedPriceRange.high;
+  } else if (product.price <= budgetAmount * 1.15) {
+    gate = 0.5;
+  } else {
+    return 0;
+  }
+
+  // ── Utilization: reward products that use the budget ──
+  // ratio = price / budget → 0.0 to 1.0+
+  // Bonus curve: 0 below 40%, ramps to 1.0 at 70%, stays at 1.0 through 100%
+  const ratio = effectivePrice / budgetAmount;
+  let utilization = 0;
+  if (ratio >= 0.7) {
+    utilization = 1.0;
+  } else if (ratio >= 0.4) {
+    // Linear ramp from 0 at 40% to 1.0 at 70%
+    utilization = (ratio - 0.4) / 0.3;
+  }
+
+  return gate + utilization;
 }
 
 /**

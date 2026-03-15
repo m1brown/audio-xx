@@ -666,6 +666,45 @@ const BRAND_PROFILES: BrandProfile[] = [
     tendencies: 'EMT cartridges are described as dynamic, powerful, and authoritative. Strong tracking ability and excellent transient definition. The HSD 006 is a modern design that retains the EMT house sound — bold, direct, and rhythmically commanding.',
     systemContext: 'EMT cartridges pair well with medium-to-high mass tonearms. They reward phono stages with good dynamic headroom and MC gain.',
   },
+  {
+    names: ['rockna'],
+    country: 'Romania',
+    brandScale: 'boutique',
+    region: 'europe',
+    categories: ['dac'],
+    philosophy: 'Rockna designs discrete R-2R DACs with FPGA-based digital processing. The approach combines the tonal density of resistor-ladder conversion with precise digital filtering and reclocking. The Wavelight represents the brand\'s accessible reference — sharing the core architecture of the flagship Wavedream at a lower price point.',
+    tendencies: 'Rockna DACs are described as transparent, resolving, and tonally balanced. Unlike many R-2R designs that lean warm or dense, Rockna maintains a neutral center with excellent spatial resolution and dynamic composure. Detail retrieval is high without analytical edge.',
+    systemContext: 'Rockna DACs suit systems where the listener wants R-2R tonal texture without the warmth bias of brands like Denafrips or Holo. They pair well with both tube and solid-state amplification, providing a balanced source that doesn\'t impose a strong tonal character.',
+    links: [
+      { label: 'Official website', url: 'https://www.rockna.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['dcs', 'dcs audio'],
+    country: 'UK (Cambridge)',
+    brandScale: 'boutique',
+    region: 'uk',
+    categories: ['dac', 'streamer'],
+    philosophy: 'dCS (Data Conversion Systems) designs digital audio components around a proprietary Ring DAC architecture — an FPGA-based conversion topology that uses multiple signal paths and noise shaping to achieve high linearity. The engineering philosophy prioritises measured precision, dynamic range, and long-term upgradability through firmware.',
+    tendencies: 'dCS components are described as transparent, controlled, and spatially precise. The Ring DAC delivers exceptional dynamic resolution and staging accuracy. Tonal character is neutral-to-cool — the emphasis is on clarity and separation rather than harmonic warmth or density.',
+    systemContext: 'dCS sources work well with amplification that provides its own tonal richness — tube amplifiers or warm solid-state designs. In systems already biased toward analytical precision, the cumulative transparency may feel lean. The Bartók is the single-box entry point; the Rossini and Vivaldi are multi-box references.',
+    links: [
+      { label: 'Official website', url: 'https://www.dcsaudio.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['holo', 'holo audio'],
+    country: 'China',
+    brandScale: 'boutique',
+    region: 'east-asia',
+    categories: ['dac'],
+    philosophy: 'Holo Audio designs discrete R-2R DACs with dual-mono architecture and proprietary resistor-ladder networks. Designer Jeff Zhu\'s approach combines the harmonic richness of R-2R conversion with careful attention to power supply isolation and analogue output stage quality. The May is the flagship; the Spring is the accessible entry.',
+    tendencies: 'Holo Audio DACs are described as warm, harmonically rich, and dynamically engaging. The May KTE (Kitsune Tuned Edition) is considered one of the strongest R-2R DACs at its price — delivering dense tonal body with better transient definition than many warm-leaning competitors. Spatial presentation is wide and natural.',
+    systemContext: 'Holo DACs add warmth and harmonic texture to the chain. They pair naturally with transparent or fast amplification where the R-2R density provides a welcome counterbalance. In already warm or dense systems, care is needed to avoid congestion. The May KTE is widely used in high-end headphone and speaker systems.',
+    links: [
+      { label: 'Kitsune HiFi (US distributor)', url: 'https://krantenaudio.com/', kind: 'dealer', region: 'US' },
+    ],
+  },
 ];
 
 // ── Topology keywords for archetype matching ────────
@@ -2092,6 +2131,7 @@ const KNOWN_PRODUCT_ROLES: Record<string, { expectedCategory: string; displayBra
   totaldac: { expectedCategory: 'dac', displayBrand: 'TotalDAC' },
   'd1-unity': { expectedCategory: 'dac', displayBrand: 'TotalDAC' },
   'd1-tube': { expectedCategory: 'dac', displayBrand: 'TotalDAC' },
+  'd1-twelve': { expectedCategory: 'dac', displayBrand: 'TotalDAC' },
   aurorasound: { expectedCategory: 'phono', displayBrand: 'Aurorasound' },
   vida: { expectedCategory: 'phono', displayBrand: 'Aurorasound' },
   'vida mk': { expectedCategory: 'phono', displayBrand: 'Aurorasound' },
@@ -2110,6 +2150,24 @@ const KNOWN_PRODUCT_ROLES: Record<string, { expectedCategory: string; displayBra
   p3esr: { expectedCategory: 'speaker', displayBrand: 'Harbeth' },
   'super hl5': { expectedCategory: 'speaker', displayBrand: 'Harbeth' },
   job: { expectedCategory: 'integrated', displayBrand: 'JOB' },
+  'terminator ii': { expectedCategory: 'dac', displayBrand: 'Denafrips' },
+  'terminator': { expectedCategory: 'dac', displayBrand: 'Denafrips' },
+  'pontus': { expectedCategory: 'dac', displayBrand: 'Denafrips' },
+  'venus': { expectedCategory: 'dac', displayBrand: 'Denafrips' },
+  'ares': { expectedCategory: 'dac', displayBrand: 'Denafrips' },
+  'laiv harmony': { expectedCategory: 'dac', displayBrand: 'LAiV' },
+  rockna: { expectedCategory: 'dac', displayBrand: 'Rockna' },
+  wavelight: { expectedCategory: 'dac', displayBrand: 'Rockna' },
+  wavedream: { expectedCategory: 'dac', displayBrand: 'Rockna' },
+  dcs: { expectedCategory: 'dac', displayBrand: 'dCS' },
+  bartók: { expectedCategory: 'dac', displayBrand: 'dCS' },
+  bartok: { expectedCategory: 'dac', displayBrand: 'dCS' },
+  rossini: { expectedCategory: 'dac', displayBrand: 'dCS' },
+  vivaldi: { expectedCategory: 'dac', displayBrand: 'dCS' },
+  'holo audio': { expectedCategory: 'dac', displayBrand: 'Holo Audio' },
+  'may kte': { expectedCategory: 'dac', displayBrand: 'Holo Audio' },
+  'holo may': { expectedCategory: 'dac', displayBrand: 'Holo Audio' },
+  spring: { expectedCategory: 'dac', displayBrand: 'Holo Audio' },
 };
 
 /** Canonical role labels for human-readable display. */

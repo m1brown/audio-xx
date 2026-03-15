@@ -2071,4 +2071,497 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Darko.Audio', note: 'Impressions noting the lively, energetic character compared to typical R-2R.' },
     ],
   },
+
+  // ── Reference-tier DACs ($3,000–$5,000) ─────────────
+
+  {
+    id: 'denafrips-terminator-ii',
+    brand: 'Denafrips',
+    name: 'Terminator II',
+    price: 4500,
+    category: 'dac',
+    architecture: 'Discrete R-2R ladder, true balanced, 26-bit',
+    subcategory: 'standalone-dac',
+    priceTier: 'high-end',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    topology: 'r2r',
+    archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
+    primaryAxes: {
+      warm_bright: 'warm',             // Dense, analog-like tonal weight
+      smooth_detailed: 'smooth',       // Organic flow, not analytical
+      elastic_controlled: 'neutral',   // Good dynamics but not explosive
+      airy_closed: 'airy',            // Large, spacious soundstage
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Dense R-2R presentation with zero digital glare. Extremely non-fatiguing. One of the most relaxed high-end DACs available.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'warmth', level: 'emphasized' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'spatial_precision', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'speed', level: 'less_emphasized' },
+        { trait: 'clarity', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 1.0,
+      tonal_density: 1.0,
+      clarity: 0.4,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 0.7,
+      composure: 0.7,
+      warmth: 1.0,
+      speed: 0.4,
+      spatial_precision: 0.7,
+      elasticity: 0.4,
+    },
+    description:
+      'Denafrips\' flagship R-2R DAC — dense, analog-sounding, with extraordinary tonal weight and a large soundstage. The Terminator II is widely considered one of the best R-2R DACs under $5,000 and a reference for vinyl-like digital playback.',
+    retailer_links: [
+      { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/product/denafrips-terminator-ii' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'tonality', tendency: 'dense and analog — big tonal weight with powerful bass authority and harmonic richness', basis: 'review_consensus' },
+        { domain: 'spatial', tendency: 'large, spacious soundstage with natural depth — instruments are placed with scale rather than surgical precision', basis: 'listener_consensus' },
+        { domain: 'timing', tendency: 'organic flow with strong macro-dynamics — not the fastest transients, but musically convincing', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with transparent or fast amplification', effect: 'the amp provides speed and grip while the DAC supplies tonal body and ease', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in already warm or slow systems', effect: 'may compound density — transient definition and clarity could soften excessively', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'tonal density, analog-like flow, and bass authority', cost: 'transient speed and the incisive detail of FPGA or delta-sigma designs', relative_to: 'Chord Hugo TT2, Weiss DAC204', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: '6moons', note: 'Srajan Ebaen review establishing the Terminator II as a reference R-2R.' },
+      { source: 'Headphone.Guru', note: 'Review praising tonal density and soundstage scale.' },
+      { source: 'Head-Fi community', note: 'Extensive owner consensus on analog-like presentation.' },
+    ],
+  },
+
+  {
+    id: 'rockna-wavelight',
+    brand: 'Rockna',
+    name: 'Wavelight',
+    price: 4200,
+    category: 'dac',
+    architecture: 'Discrete R-2R ladder with FPGA control',
+    subcategory: 'standalone-dac',
+    priceTier: 'high-end',
+    brandScale: 'boutique',
+    region: 'europe',
+    country: 'RO',
+    topology: 'r2r',
+    archetypes: { primary: 'spatial_holographic', secondary: 'precision_explicit' },
+    primaryAxes: {
+      warm_bright: 'neutral',          // Neither warm nor bright — balanced and refined
+      smooth_detailed: 'detailed',     // Highly resolving with excellent depth layering
+      elastic_controlled: 'neutral',   // Well-balanced dynamics
+      airy_closed: 'airy',            // Exceptionally holographic imaging
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'FPGA-controlled R-2R achieves high resolution without digital edge. Very refined treble.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'spatial_precision', level: 'emphasized' },
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'texture', level: 'emphasized' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'flow', level: 'present' },
+        { trait: 'tonal_density', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'speed', level: 'present' },
+        { trait: 'warmth', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 0.7,
+      tonal_density: 0.7,
+      clarity: 1.0,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 1.0,
+      composure: 0.7,
+      warmth: 0.4,
+      speed: 0.7,
+      spatial_precision: 1.0,
+      elasticity: 0.7,
+    },
+    description:
+      'Romanian FPGA-controlled R-2R that bridges the gap between analog warmth and digital precision. Extremely holographic with refined treble and excellent depth layering. Widely regarded as a reference-class DAC that balances R-2R tone with digital precision.',
+    retailer_links: [
+      { label: 'Rockna', url: 'https://www.rockna.com/wavelight-dac' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'spatial', tendency: 'best imaging in the price class — holographic staging with precise depth layering and image specificity', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'balanced and refined — not warm, not lean. R-2R body with FPGA precision', basis: 'review_consensus' },
+        { domain: 'texture', tendency: 'very refined treble with natural decay — high resolution without digital artifacts', basis: 'listener_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with warm or tube amplification', effect: 'the precision and spatial qualities shine while upstream warmth adds body', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in analytical systems', effect: 'may feel slightly lean — it doesn\'t add warmth, so tonal body must come from elsewhere', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'imaging precision, depth layering, and tonal balance', cost: 'the warm, dense tonal weight of pure R-2R designs like Denafrips or Totaldac', relative_to: 'Denafrips Terminator II, Totaldac d1-twelve', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Darko.Audio', note: 'John Darko review praising the Wavelight\'s imaging and refinement.' },
+      { source: '6moons', note: 'Review covering the FPGA+R-2R hybrid approach.' },
+      { source: 'Head-Fi community', note: 'Extensive comparisons positioning Wavelight as best imaging under $5k.' },
+    ],
+  },
+
+  {
+    id: 'totaldac-d1-twelve-mk2',
+    brand: 'TotalDAC',
+    name: 'd1-twelve MK2',
+    price: 4800,
+    usedPriceRange: { low: 3200, high: 4200 },
+    availability: 'current',
+    typicalMarket: 'both',
+    category: 'dac',
+    architecture: 'Discrete R-2R (12 parallel DAC modules per channel)',
+    subcategory: 'standalone-dac',
+    priceTier: 'high-end',
+    brandScale: 'boutique',
+    region: 'europe',
+    country: 'FR',
+    topology: 'r2r',
+    archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
+    primaryAxes: {
+      warm_bright: 'warm',             // Organic, fluid tonal density
+      smooth_detailed: 'smooth',       // Musical flow and natural timbre over detail
+      elastic_controlled: 'neutral',   // Excellent micro-dynamics, not explosive
+      airy_closed: 'neutral',          // Natural staging, not artificially wide
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'One of the most natural-sounding DACs available. Zero digital character. Exceptionally low fatigue.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'texture', level: 'emphasized' },
+        { trait: 'warmth', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'spatial_precision', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'speed', level: 'less_emphasized' },
+        { trait: 'clarity', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 1.0,
+      tonal_density: 1.0,
+      clarity: 0.4,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 1.0,
+      composure: 0.7,
+      warmth: 0.7,
+      speed: 0.4,
+      spatial_precision: 0.7,
+      elasticity: 0.4,
+    },
+    description:
+      'Vincent Brient\'s entry into the TotalDAC range — 12 parallel R-2R modules per channel for extraordinary tonal realism. Organic, fluid, and deeply natural. One of the most natural-sounding DACs available, especially strong in emotionally engaging systems.',
+    retailer_links: [
+      { label: 'TotalDAC', url: 'https://www.totaldac.com/en/d1-twelve-mk2-eng' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'tonality', tendency: 'incredible tonal realism — instruments sound like the real thing in the room. Very natural timbre.', basis: 'review_consensus' },
+        { domain: 'texture', tendency: 'organic and fluid — textures flow naturally with excellent micro-dynamics and decay', basis: 'listener_consensus' },
+        { domain: 'timing', tendency: 'unhurried musical flow — phrasing breathes with natural ease', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with transparent amplification', effect: 'the natural density and flow are preserved while the amp provides control and staging', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in systems prioritising speed and explosive dynamics', effect: 'may feel too relaxed — the TotalDAC prioritises tone and flow over transient attack', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'tonal realism, natural timbre, and emotional engagement', cost: 'transient speed and the explosive dynamics of FPGA designs', relative_to: 'Chord Hugo TT2, Rockna Wavelight', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: '6moons', note: 'Srajan Ebaen review covering the d1-twelve as TotalDAC\'s entry-level masterpiece.' },
+      { source: 'Twittering Machines', note: 'Michael Lavorgna coverage of TotalDAC house sound and d1 range.' },
+      { source: 'Head-Fi community', note: 'Owner impressions praising tonal realism and natural timbre.' },
+    ],
+  },
+
+  {
+    id: 'holo-may-kte',
+    brand: 'Holo Audio',
+    name: 'May (KTE)',
+    price: 4598,
+    category: 'dac',
+    architecture: 'Discrete R-2R (Holo proprietary, dual-mono, fully balanced)',
+    subcategory: 'standalone-dac',
+    priceTier: 'high-end',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    topology: 'r2r',
+    archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
+    primaryAxes: {
+      warm_bright: 'warm',             // Smooth, dense, zero digital character
+      smooth_detailed: 'smooth',       // Extremely smooth with deep soundstage
+      elastic_controlled: 'elastic',   // Excellent macro and micro dynamics
+      airy_closed: 'airy',            // Deep, expansive soundstage
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Very low digital glare. Smooth, natural presentation with excellent dynamics. Often described as analog without losing resolution.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'dynamics', level: 'emphasized' },
+        { trait: 'spatial_precision', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'warmth', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'speed', level: 'less_emphasized' },
+        { trait: 'clarity', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 1.0,
+      tonal_density: 1.0,
+      clarity: 0.4,
+      dynamics: 1.0,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 0.7,
+      composure: 0.7,
+      warmth: 0.7,
+      speed: 0.4,
+      spatial_precision: 0.7,
+      elasticity: 0.7,
+    },
+    description:
+      'Holo Audio\'s flagship — the May KTE is the Kitsune-tuned edition with premium components throughout. Extremely smooth with a deep soundstage, excellent macro and micro dynamics, and very low digital glare. Often described as "analog without losing resolution."',
+    retailer_links: [
+      { label: 'Kitsune HiFi', url: 'https://kitsunehifi.com/product/holo-audio-may-kte/' },
+      { label: 'Holo Audio', url: 'https://www.holoaudio.com/' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'tonality', tendency: 'extremely smooth and natural — dense tonal body with very natural decay and no digital artifacts', basis: 'review_consensus' },
+        { domain: 'dynamics', tendency: 'excellent macro and micro dynamics — rare for an R-2R to combine density with dynamic authority this well', basis: 'listener_consensus' },
+        { domain: 'spatial', tendency: 'deep soundstage with natural layering — not the widest, but very convincing depth', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with fast, transparent amplification', effect: 'the amp adds speed and precision while the May provides body and flow', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in warm, slow systems', effect: 'may compound smoothness — the May already rounds transients slightly', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'smoothness, dynamic authority, and analog-like presentation', cost: 'the incisive transient response and speed of FPGA designs', relative_to: 'Chord Hugo TT2, Rockna Wavelight', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Head-Fi community', note: 'Extensive owner consensus as one of the best R-2R DACs under $5k.' },
+      { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising the May\'s natural, analog-like quality.' },
+      { source: '6moons', note: 'Review comparing the May to competing R-2R and FPGA DACs.' },
+    ],
+  },
+
+  {
+    id: 'laiv-harmony',
+    brand: 'Laiv',
+    name: 'Harmony',
+    price: 3500,
+    category: 'dac',
+    architecture: 'Discrete R-2R with FPGA-controlled digital processing',
+    subcategory: 'standalone-dac',
+    priceTier: 'high-end',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    topology: 'r2r',
+    archetypes: { primary: 'flow_organic', secondary: 'spatial_holographic' },
+    primaryAxes: {
+      warm_bright: 'neutral',          // Balanced — not warm, not lean
+      smooth_detailed: 'smooth',       // Organic and flowing
+      elastic_controlled: 'neutral',   // Well-balanced dynamics
+      airy_closed: 'airy',            // Open, spacious staging
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'R-2R smoothness with FPGA precision. Natural and non-fatiguing.',
+    },
+    tendencyProfile: {
+      basis: 'listener_consensus',
+      confidence: 'medium',
+      tendencies: [
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'spatial_precision', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'clarity', level: 'present' },
+        { trait: 'speed', level: 'present' },
+        { trait: 'warmth', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 1.0,
+      tonal_density: 0.7,
+      clarity: 0.7,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 0.7,
+      composure: 0.7,
+      warmth: 0.4,
+      speed: 0.7,
+      spatial_precision: 1.0,
+      elasticity: 0.7,
+    },
+    description:
+      'Emerging high-value R-2R ladder DAC with FPGA control. Balances organic R-2R tone with strong spatial precision and good transient speed. Rapidly gaining reputation as a giant-killer in the $3-4k range.',
+    retailer_links: [
+      { label: 'Laiv', url: 'https://www.laiv.net/product/harmony-dac/' },
+    ],
+    tendencies: {
+      confidence: 'medium',
+      character: [
+        { domain: 'spatial', tendency: 'open, spacious staging with good image specificity — punches above its price on spatial performance', basis: 'listener_consensus' },
+        { domain: 'tonality', tendency: 'balanced and natural — not as dense as Denafrips but more tonally full than FPGA-only designs', basis: 'listener_consensus' },
+        { domain: 'timing', tendency: 'good transient speed for an R-2R — the FPGA control adds definition without losing naturalness', basis: 'listener_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with warm or dense amplification', effect: 'the balanced tonality accepts upstream colour without compounding', valence: 'positive', basis: 'listener_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'spatial precision, balanced tonality, and value at its price', cost: 'the ultimate tonal density of higher-end R-2R like Terminator or May', relative_to: 'Denafrips Terminator II, Holo May', basis: 'listener_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Head-Fi community', note: 'Growing owner consensus as a high-value competitor to Rockna and Denafrips.' },
+      { source: 'Audiophile Style', note: 'Discussion threads covering the Harmony vs established R-2R competitors.' },
+    ],
+  },
+
+  {
+    id: 'dcs-bartok',
+    brand: 'dCS',
+    name: 'Bartók',
+    price: 14500,
+    usedPriceRange: { low: 5000, high: 7500 },
+    availability: 'current',
+    typicalMarket: 'both',
+    category: 'dac',
+    architecture: 'Ring DAC (proprietary FPGA-based discrete conversion)',
+    subcategory: 'standalone-dac',
+    priceTier: 'high-end',
+    brandScale: 'boutique',
+    region: 'uk',
+    country: 'GB',
+    topology: 'fpga',
+    archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
+    primaryAxes: {
+      warm_bright: 'neutral',          // Neither warm nor bright — transparent and refined
+      smooth_detailed: 'detailed',     // Exceptionally resolving
+      elastic_controlled: 'controlled', // Composed and authoritative
+      airy_closed: 'airy',            // Expansive, layered staging
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Ring DAC achieves very high resolution without ESS-style glare. Refined and composed at all times.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'spatial_precision', level: 'emphasized' },
+        { trait: 'composure', level: 'emphasized' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'flow', level: 'present' },
+        { trait: 'speed', level: 'present' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+        { trait: 'warmth', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 0.7,
+      tonal_density: 0.4,
+      clarity: 1.0,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 0.7,
+      composure: 1.0,
+      warmth: 0.4,
+      speed: 0.7,
+      spatial_precision: 1.0,
+      elasticity: 0.4,
+    },
+    description:
+      'dCS\'s "entry-level" Ring DAC — £14,500 new but occasionally available near $5k used. The Bartók delivers dCS\'s proprietary Ring DAC technology with exceptional resolution, staging, and composure. A reference point for digital conversion.',
+    retailer_links: [
+      { label: 'dCS', url: 'https://www.dcsaudio.com/bartok' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'spatial', tendency: 'expansive and layered — the Ring DAC creates a deep, precisely defined soundstage', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'transparent and refined — neither warm nor lean, just extremely resolved', basis: 'review_consensus' },
+        { domain: 'dynamics', tendency: 'authoritative and composed — handles dynamic swings with complete control', basis: 'listener_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with warm amplification or speakers', effect: 'the precision and transparency allow upstream warmth to colour naturally', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in already analytical systems', effect: 'the resolution may expose upstream shortcomings rather than mask them', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'resolution, staging, and composed authority', cost: 'the tonal density and harmonic richness of pure R-2R designs', relative_to: 'Denafrips Terminator II, Totaldac d1-twelve', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Stereophile', note: 'Review establishing the Bartók as a reference DAC/headphone amp.' },
+      { source: 'Darko.Audio', note: 'Coverage of the dCS Ring DAC technology and Bartók value proposition.' },
+      { source: 'Head-Fi community', note: 'Used market consensus — occasionally found near $5k.' },
+    ],
+  },
 ];
