@@ -2672,9 +2672,17 @@ export function buildSystemAssessment(
 
       // Try to find rich catalog data (use stripped name for matching too)
       const product = ALL_PRODUCTS.find(
-        (p) => p.name.toLowerCase() === nameLower
-          || p.name.toLowerCase() === strippedNameLower
-          || `${p.brand} ${p.name}`.toLowerCase() === fullName.toLowerCase(),
+        (p) => {
+          const pName = p.name.toLowerCase();
+          const pFull = `${p.brand} ${p.name}`.toLowerCase();
+          const pBrand = p.brand.toLowerCase();
+          return pName === nameLower
+            || pName === strippedNameLower
+            || pFull === fullName.toLowerCase()
+            // Brand+partial-name: "horn" matches inside "horns" when brand matches
+            || (pBrand === brandLower && nameLower.length >= 2 && pName.includes(nameLower))
+            || (pBrand === brandLower && strippedNameLower.length >= 2 && pName.includes(strippedNameLower));
+        },
       );
       // Also mark partial product name forms as processed (e.g. "diva" for "Diva Monitor")
       // to prevent subject-match duplication
@@ -2732,11 +2740,23 @@ export function buildSystemAssessment(
     processedNames.add(lower);
 
     if (match.kind === 'product') {
-      // Product-level lookup — try exact name, brand+name compound, then partial name match
+      // Product-level lookup — try exact name, brand+name compound, partial name,
+      // and brand+partial-name (handles singular/plural: "hornshoppe horn" → "Hornshoppe Horns")
       const product = ALL_PRODUCTS.find(
-        (p) => p.name.toLowerCase() === lower
-          || `${p.brand} ${p.name}`.toLowerCase() === lower
-          || (lower.length >= 3 && p.name.toLowerCase().startsWith(lower)),
+        (p) => {
+          const pName = p.name.toLowerCase();
+          const pFull = `${p.brand} ${p.name}`.toLowerCase();
+          const pBrand = p.brand.toLowerCase();
+          return pName === lower
+            || pFull === lower
+            || (lower.length >= 3 && pName.startsWith(lower))
+            // Brand+partial-name: input contains brand AND product name contains the remainder
+            // e.g. "hornshoppe horn" → brand "hornshoppe" matches, name "horns" includes "horn"
+            || (lower.includes(pBrand) && pBrand.length >= 3 && (() => {
+              const remainder = lower.replace(pBrand, '').trim();
+              return remainder.length >= 2 && pName.includes(remainder);
+            })());
+        },
       );
       if (product) {
         // Also check if there's a brand profile
