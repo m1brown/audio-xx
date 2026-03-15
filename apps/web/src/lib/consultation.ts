@@ -5035,7 +5035,7 @@ function buildUpgradePaths(
     paths.push({
       rank,
       label,
-      impact: rank === 2 ? 'Moderate Impact' : 'Refinement',
+      impact: added === 0 ? 'Moderate Impact' : 'Refinement',
       rationale: `Current limitation: ${weakSummary}. Addressing this refines the system's balance without changing its core identity.`,
       options: [],
     });
