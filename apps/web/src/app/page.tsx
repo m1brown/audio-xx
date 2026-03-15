@@ -278,7 +278,11 @@ export default function Home() {
     // ── Build AudioProfile context (shared across all advisory paths) ──
     const advisoryCtx: ShoppingAdvisoryContext = {
       systemComponents: turnCtx.activeSystem
-        ? turnCtx.activeSystem.components.map((c) => `${c.brand} ${c.name}`)
+        ? turnCtx.activeSystem.components.map((c) =>
+            c.name.toLowerCase().startsWith(c.brand.toLowerCase())
+              ? c.name
+              : `${c.brand} ${c.name}`,
+          )
         : undefined,
       systemLocation: turnCtx.activeSystem?.location ?? undefined,
       systemPrimaryUse: turnCtx.activeSystem?.primaryUse ?? undefined,
@@ -682,7 +686,11 @@ export default function Home() {
               const editorialContext: ShoppingEditorialContext = {
                 // System
                 systemComponents: turnCtx.activeSystem
-                  ? turnCtx.activeSystem.components.map((c) => `${c.brand} ${c.name}`)
+                  ? turnCtx.activeSystem.components.map((c) =>
+                      c.name.toLowerCase().startsWith(c.brand.toLowerCase())
+                        ? c.name
+                        : `${c.brand} ${c.name}`,
+                    )
                   : undefined,
                 systemCharacter: turnCtx.activeSystem?.tendencies ?? undefined,
                 // Taste & preferences
