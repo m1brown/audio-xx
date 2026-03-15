@@ -137,6 +137,28 @@ export interface SourceReference {
   note: string;
 }
 
+// ── Editorial closing types ──────────────────────────
+
+/** A single pick in the editorial closing section. */
+export interface EditorialPick {
+  /** Product name. */
+  name: string;
+  /** One-line reason (e.g. "Best resolution and timing under $1k."). */
+  reason: string;
+}
+
+/** LLM-generated editorial closing — system-specific synthesis. */
+export interface EditorialClosing {
+  /** "Top picks on sound quality alone" — context-free ranking. */
+  topPicks?: EditorialPick[];
+  /** "What I'd recommend for YOUR system" — system-aware picks. */
+  systemPicks?: EditorialPick[];
+  /** System context summary (e.g. "Given your JOB Integrated + Boenicke W5…"). */
+  systemSummary?: string;
+  /** Avoidance note (e.g. "I would avoid overly analytical ESS DACs in your system…"). */
+  avoidanceNote?: string;
+}
+
 // ── Structured assessment types (memo format) ─────────
 
 /**
@@ -540,6 +562,14 @@ export interface AdvisoryResponse {
   /** Questions that would deepen personalization in the next turn. */
   refinementPrompts?: string[];
 
+  // ── 7e. Editorial Intro ─────────────────────────────
+  /** Taste-anchored intro paragraph — frames the shortlist in terms of user preferences. */
+  editorialIntro?: string;
+
+  // ── 7f. Editorial Closing ─────────────────────────
+  /** LLM-generated closing: system-specific top picks + avoidance notes. */
+  editorialClosing?: EditorialClosing;
+
   // ── 8. Bottom Line ──────────────────────────────────
   /** One-sentence restrained conclusion. */
   bottomLine?: string;
@@ -576,6 +606,80 @@ export interface AdvisoryResponse {
 }
 
 // ── Content Enrichment ───────────────────────────────
+
+/**
+ * Build a taste-anchored intro paragraph that frames the shortlist
+ * in terms of the user's preferences and priorities.
+ *
+ * Example output:
+ * "Below is a curated shortlist of DACs under $1,000, focusing on units
+ *  known for clarity, dynamics, and spatial depth — which aligns with
+ *  your preference for precision and rhythmic engagement."
+ */
+function buildEditorialIntro(
+  category: string,
+  budget?: string,
+  storedDesires?: string[],
+  tasteLabel?: string,
+  systemComponents?: string[],
+  archetype?: string,
+): string | undefined {
+  // Need at least a category
+  if (!category || category === 'general') return undefined;
+
+  // Category label
+  const CATEGORY_LABELS: Record<string, string> = {
+    dac: 'DACs',
+    amplifier: 'amplifiers',
+    speaker: 'speakers',
+    headphone: 'headphones',
+    streamer: 'streamers',
+    turntable: 'turntables',
+  };
+  const catLabel = CATEGORY_LABELS[category] ?? category;
+
+  // Build the budget clause
+  const budgetClause = budget ? ` under ${budget}` : '';
+
+  // Build the preference anchor
+  let preferenceClause = '';
+
+  if (storedDesires && storedDesires.length >= 2) {
+    // Use stored taste profile traits
+    const traitList = storedDesires.slice(0, 3);
+    const formatted = traitList.length === 1
+      ? traitList[0].toLowerCase()
+      : traitList.length === 2
+        ? `${traitList[0].toLowerCase()} and ${traitList[1].toLowerCase()}`
+        : `${traitList.slice(0, -1).map(t => t.toLowerCase()).join(', ')}, and ${traitList[traitList.length - 1].toLowerCase()}`;
+    preferenceClause = `, focusing on units known for ${formatted}`;
+  } else if (tasteLabel) {
+    preferenceClause = `, focusing on units aligned with ${tasteLabel.toLowerCase()}`;
+  }
+
+  // Build the archetype bridge
+  const ARCHETYPE_BRIDGES: Record<string, string> = {
+    flow_organic: 'musical flow and organic presentation',
+    precision_explicit: 'precision and detail retrieval',
+    rhythmic_propulsive: 'rhythmic energy and dynamic engagement',
+    tonal_saturated: 'tonal richness and harmonic density',
+    spatial_holographic: 'spatial precision and holographic staging',
+  };
+
+  let alignmentClause = '';
+  if (archetype && ARCHETYPE_BRIDGES[archetype]) {
+    alignmentClause = `. I prioritised ${catLabel.toLowerCase()} known for ${ARCHETYPE_BRIDGES[archetype]} rather than purely measurement-driven designs`;
+  } else if (storedDesires && storedDesires.length > 0) {
+    alignmentClause = `, which aligns with your listening preferences`;
+  }
+
+  // System note if available
+  const systemNote = systemComponents && systemComponents.length > 0
+    ? ` These are evaluated in the context of your system.`
+    : '';
+
+  return `Below is a curated shortlist of ${catLabel}${budgetClause}${preferenceClause}${alignmentClause}.${systemNote}`;
+}
 
 /**
  * Generate a one-sentence restrained conclusion.
@@ -1149,12 +1253,23 @@ export function shoppingToAdvisory(
       ? a.refinementPrompts.join(' ')
       : undefined);
 
+  // Build editorial intro
+  const editorialIntro = buildEditorialIntro(
+    a.category,
+    a.budget ? `$${a.budget}` : undefined,
+    ctx?.storedDesires,
+    reasoning?.taste.tasteLabel,
+    ctx?.systemComponents,
+    reasoning?.taste.archetype ?? undefined,
+  );
+
   return enrichAdvisory({
     kind: 'shopping',
     advisoryMode: 'upgrade_suggestions',
     subject: a.category,
 
     audioProfile,
+    editorialIntro,
     listenerPriorities,
     whyFitsYou: a.whyFitsYou,
     systemContext: a.systemNote,

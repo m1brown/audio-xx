@@ -29,7 +29,7 @@
  *   - Reorder or remove products
  */
 
-import type { AdvisoryOption } from './advisory-response';
+import type { AdvisoryOption, EditorialClosing, EditorialPick } from './advisory-response';
 
 // ── Configuration ────────────────────────────────────
 
@@ -553,6 +553,182 @@ export async function requestShoppingEditorial(
 
     const validated = validateEditorial(editorial, shortlistNames, catalogFactsMap);
     return validated.length > 0 ? validated : null;
+  } catch {
+    clearTimeout(timeout);
+    return null;
+  }
+}
+
+// ── Editorial Closing ────────────────────────────────
+
+function buildClosingSystemPrompt(): string {
+  return `You are a private audio advisor writing a brief editorial closing for a product shortlist.
+
+You receive the shortlist and the user's system/taste context. Write two sections:
+
+1. topPicks — Your top 3 picks purely on sound quality, each with a one-line reason (max 12 words). These are context-free — the best-sounding units regardless of system.
+
+2. systemPicks — Your top 3 picks FOR THIS USER'S SPECIFIC SYSTEM, each with a one-line reason explaining WHY it works with their components. Reference their actual gear by name.
+
+3. systemSummary — One line listing their system components as context (e.g. "Given your JOB Integrated + Boenicke W5 + Eversolo DMP-A6").
+
+4. avoidanceNote — One sentence about what to be cautious of in this system. Be specific about design tendencies, not brands. Example: "I would be cautious about very analytical delta-sigma designs in this system — they may lean too bright with the JOB's forward character." If nothing applies, omit this field.
+
+CRITICAL RULES:
+- Use ONLY products from the provided shortlist. Do NOT mention any other products.
+- No scores, urgency, or affiliate language.
+- No superlatives ("perfect", "ultimate", "best ever"). Use "strongest" or "most aligned" if needed.
+- Calm, confident advisor tone.
+- Reasons should be vivid but brief — one short sentence each.
+
+Respond with a JSON object: { topPicks: [{name, reason}], systemPicks: [{name, reason}], systemSummary: string, avoidanceNote?: string }
+No markdown fences.`;
+}
+
+function buildClosingUserPrompt(
+  products: AdvisoryOption[],
+  ctx: ShoppingEditorialContext,
+): string {
+  const parts: string[] = [];
+
+  parts.push('=== LISTENER CONTEXT ===');
+  if (ctx.systemComponents?.length) {
+    parts.push(`System: ${ctx.systemComponents.join(' → ')}`);
+  }
+  if (ctx.systemCharacter) parts.push(`System character: ${ctx.systemCharacter}`);
+  if (ctx.tasteLabel) parts.push(`Values: ${ctx.tasteLabel}`);
+  if (ctx.archetype) parts.push(`Archetype: ${ctx.archetype}`);
+  if (ctx.budget) parts.push(`Budget: ${ctx.budget}`);
+
+  parts.push('');
+  parts.push('=== SHORTLIST ===');
+  for (const p of products) {
+    const name = [p.brand, p.name].filter(Boolean).join(' ');
+    const details: string[] = [];
+    if (p.productType) details.push(p.productType);
+    if (p.price) details.push(`~$${p.price}`);
+    if (p.character) details.push(p.character);
+    parts.push(`- ${name}${details.length > 0 ? ` (${details.join(', ')})` : ''}`);
+  }
+
+  parts.push('');
+  parts.push('Write a brief editorial closing. Return JSON: { topPicks: [{name, reason}], systemPicks: [{name, reason}], systemSummary: string, avoidanceNote?: string }');
+
+  return parts.join('\n');
+}
+
+function parseClosingResponse(raw: string): EditorialClosing | null {
+  try {
+    let cleaned = raw.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
+    }
+    const parsed = JSON.parse(cleaned);
+
+    const topPicks: EditorialPick[] = [];
+    const systemPicks: EditorialPick[] = [];
+
+    if (Array.isArray(parsed.topPicks)) {
+      for (const p of parsed.topPicks.slice(0, 3)) {
+        if (typeof p.name === 'string' && typeof p.reason === 'string') {
+          const reason = validateField(p.reason);
+          if (reason) topPicks.push({ name: p.name, reason: reason.slice(0, 150) });
+        }
+      }
+    }
+
+    if (Array.isArray(parsed.systemPicks)) {
+      for (const p of parsed.systemPicks.slice(0, 3)) {
+        if (typeof p.name === 'string' && typeof p.reason === 'string') {
+          const reason = validateField(p.reason);
+          if (reason) systemPicks.push({ name: p.name, reason: reason.slice(0, 150) });
+        }
+      }
+    }
+
+    const systemSummary = typeof parsed.systemSummary === 'string'
+      ? validateField(parsed.systemSummary.slice(0, 200))
+      : undefined;
+
+    const avoidanceNote = typeof parsed.avoidanceNote === 'string'
+      ? validateField(parsed.avoidanceNote.slice(0, 250))
+      : undefined;
+
+    if (topPicks.length === 0 && systemPicks.length === 0) return null;
+
+    return {
+      topPicks: topPicks.length > 0 ? topPicks : undefined,
+      systemPicks: systemPicks.length > 0 ? systemPicks : undefined,
+      systemSummary: systemSummary ?? undefined,
+      avoidanceNote: avoidanceNote ?? undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Request LLM editorial closing — system-specific top picks + avoidance notes.
+ * Returns EditorialClosing, or null on any failure.
+ */
+export async function requestEditorialClosing(
+  products: AdvisoryOption[],
+  context: ShoppingEditorialContext,
+): Promise<EditorialClosing | null> {
+  if (products.length === 0) return null;
+  // Need system context for the closing to be useful
+  if (!context.systemComponents?.length) return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
+
+  try {
+    const response = await fetch('/api/memo-overlay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemPrompt: buildClosingSystemPrompt(),
+        userPrompt: buildClosingUserPrompt(products, context),
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (typeof data.content !== 'string') return null;
+
+    // Validate product names against shortlist
+    const closing = parseClosingResponse(data.content);
+    if (!closing) return null;
+
+    const shortlistNames = new Set(
+      products.map((p) => [p.brand, p.name].filter(Boolean).join(' ').toLowerCase()),
+    );
+
+    const validatePicks = (picks?: EditorialPick[]) =>
+      picks?.filter((pick) => {
+        const nameNorm = pick.name.trim().toLowerCase();
+        return [...shortlistNames].some(
+          (n) => n === nameNorm || nameNorm.includes(n) || n.includes(nameNorm),
+        );
+      });
+
+    const validTopPicks = validatePicks(closing.topPicks);
+    const validSystemPicks = validatePicks(closing.systemPicks);
+
+    if ((!validTopPicks || validTopPicks.length === 0) &&
+        (!validSystemPicks || validSystemPicks.length === 0)) {
+      return null;
+    }
+
+    return {
+      topPicks: validTopPicks && validTopPicks.length > 0 ? validTopPicks : undefined,
+      systemPicks: validSystemPicks && validSystemPicks.length > 0 ? validSystemPicks : undefined,
+      systemSummary: closing.systemSummary,
+      avoidanceNote: closing.avoidanceNote,
+    };
   } catch {
     clearTimeout(timeout);
     return null;

@@ -25,7 +25,7 @@
  * Only populated sections render in both modes.
  */
 
-import type { AdvisoryResponse, AdvisoryMode, AudioProfile, ProductAssessment, KnowledgeResponse, AssistantResponse } from '../../lib/advisory-response';
+import type { AdvisoryResponse, AdvisoryMode, AudioProfile, ProductAssessment, KnowledgeResponse, AssistantResponse, EditorialClosing, EditorialPick } from '../../lib/advisory-response';
 import type { DecisionFrame, DecisionDirection, SystemInteraction } from '../../lib/decision-frame';
 import AdvisorySection from './AdvisorySection';
 import AdvisoryProse from './AdvisoryProse';
@@ -955,6 +955,110 @@ function DirectionCard({ direction: d }: { direction: DecisionDirection }) {
   );
 }
 
+// ── Editorial Closing Block ──────────────────────────
+
+function EditorialClosingBlock({ closing }: { closing: EditorialClosing }) {
+  return (
+    <div style={{ marginTop: '0.5rem' }}>
+      {/* Top picks on sound quality */}
+      {closing.topPicks && closing.topPicks.length > 0 && (
+        <div style={{ marginBottom: '2rem' }}>
+          <h3 style={{
+            margin: '0 0 0.75rem 0',
+            fontSize: '1.15rem',
+            fontWeight: 600,
+            color: COLORS.text,
+            letterSpacing: '-0.01em',
+          }}>
+            Top Recommendations (Value + Sound)
+          </h3>
+          <p style={{
+            margin: '0 0 0.75rem 0',
+            fontSize: '0.93rem',
+            color: COLORS.textSecondary,
+          }}>
+            If choosing purely on sound quality:
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            {closing.topPicks.map((pick, i) => (
+              <EditorialPickLine key={i} pick={pick} index={i + 1} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* System-specific picks */}
+      {closing.systemPicks && closing.systemPicks.length > 0 && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{
+            margin: '0 0 0.5rem 0',
+            fontSize: '1.15rem',
+            fontWeight: 600,
+            color: COLORS.text,
+            letterSpacing: '-0.01em',
+          }}>
+            What I&rsquo;d Recommend For <em>Your</em> System
+          </h3>
+          {closing.systemSummary && (
+            <p style={{
+              margin: '0 0 0.75rem 0',
+              fontSize: '0.93rem',
+              color: COLORS.textSecondary,
+            }}>
+              {closing.systemSummary}
+            </p>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            {closing.systemPicks.map((pick, i) => (
+              <EditorialPickLine key={i} pick={pick} index={i + 1} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Avoidance note */}
+      {closing.avoidanceNote && (
+        <p style={{
+          margin: '0.5rem 0 0 0',
+          fontSize: '0.91rem',
+          lineHeight: 1.7,
+          color: COLORS.textSecondary,
+          fontStyle: 'italic',
+        }}>
+          {closing.avoidanceNote}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function EditorialPickLine({ pick, index }: { pick: EditorialPick; index: number }) {
+  const ORDINAL_EMOJI = ['', '\u0031\uFE0F\u20E3', '\u0032\uFE0F\u20E3', '\u0033\uFE0F\u20E3'];
+  const emoji = ORDINAL_EMOJI[index] ?? `${index}.`;
+
+  return (
+    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'baseline' }}>
+      <span style={{ fontSize: '0.95rem', flexShrink: 0 }}>{emoji}</span>
+      <div>
+        <span style={{
+          fontWeight: 600,
+          fontSize: '0.95rem',
+          color: COLORS.text,
+        }}>
+          {pick.name}
+        </span>
+        <span style={{
+          fontSize: '0.91rem',
+          color: COLORS.textSecondary,
+          marginLeft: '0.4rem',
+        }}>
+          {pick.reason}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ── Editorial Format (Shopping Recommendations) ──────
 //
 // Page structure:
@@ -964,8 +1068,9 @@ function DirectionCard({ direction: d }: { direction: DecisionDirection }) {
 //   4. Editorial intro paragraph
 //   5. Divider
 //   6. Product sections (primary content — supporting evidence)
-//   7. Refinement prompts
-//   8. Sources
+//   7. Editorial closing (LLM: system-specific picks + avoidance)
+//   8. Refinement prompts
+//   9. Sources
 
 function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
   return (
@@ -997,27 +1102,15 @@ function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
         <DecisionFrameBlock frame={a.decisionFrame} />
       )}
 
-      {/* ── 3. Editorial introduction ────────────────── */}
-      {a.bottomLine && (
+      {/* ── 3. Editorial intro — taste-anchored framing ── */}
+      {a.editorialIntro && (
         <p style={{
-          margin: '0 0 0.5rem 0',
+          margin: '0 0 1.25rem 0',
           fontSize: '0.97rem',
           lineHeight: 1.75,
           color: COLORS.text,
         }}>
-          {renderText(a.bottomLine)}
-        </p>
-      )}
-
-      {/* System context note — brief reference to known system */}
-      {a.systemContext && (
-        <p style={{
-          margin: '0 0 0.5rem 0',
-          fontSize: '0.93rem',
-          lineHeight: 1.7,
-          color: COLORS.textSecondary,
-        }}>
-          {renderText(a.systemContext)}
+          {renderText(a.editorialIntro)}
         </p>
       )}
 
@@ -1029,10 +1122,18 @@ function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
         <AdvisoryProductCards options={a.options} />
       )}
 
+      {/* ── 5. Editorial closing (LLM: system picks + avoidance) ── */}
+      {a.editorialClosing && (
+        <>
+          <SectionDivider />
+          <EditorialClosingBlock closing={a.editorialClosing} />
+        </>
+      )}
+
       {/* ── Divider before supplementary sections ────── */}
       <SectionDivider />
 
-      {/* ── 5. Provisional caveats ───────────────────── */}
+      {/* ── 5b. Provisional caveats ──────────────────── */}
       {a.provisional && a.statedGaps && a.statedGaps.length > 0 && (
         <div style={{
           fontSize: '0.88rem',

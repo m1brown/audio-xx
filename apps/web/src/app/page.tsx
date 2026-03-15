@@ -39,7 +39,7 @@ import type { ReasoningResult } from '@/lib/reasoning';
 import { useAudioSession } from '@/lib/audio-session-context';
 import { buildTurnContext, type TurnContext } from '@/lib/turn-context';
 import { requestLlmOverlay } from '@/lib/memo-llm-overlay';
-import { requestShoppingEditorial, mergeEditorialIntoOptions } from '@/lib/shopping-llm-overlay';
+import { requestShoppingEditorial, mergeEditorialIntoOptions, requestEditorialClosing } from '@/lib/shopping-llm-overlay';
 import type { ShoppingEditorialContext } from '@/lib/shopping-llm-overlay';
 import { logOverlayAttempt, logOverlayFailure } from '@/lib/memo-render-log';
 import SystemBadge from '@/components/system/SystemBadge';
@@ -717,17 +717,33 @@ export default function Home() {
                 directionStatement: reasoning.direction.statement || undefined,
                 archetypeNote: reasoning.direction.archetypeNote ?? undefined,
               };
-              requestShoppingEditorial(deterministicShoppingAdvisory.options, editorialContext)
-                .then((editorial) => {
-                  if (!editorial || editorial.length === 0) return;
-                  const enrichedOptions = mergeEditorialIntoOptions(
-                    deterministicShoppingAdvisory.options!,
-                    editorial,
-                  );
+              // Fire both LLM requests in parallel
+              const editorialPromise = requestShoppingEditorial(
+                deterministicShoppingAdvisory.options, editorialContext,
+              );
+              const closingPromise = requestEditorialClosing(
+                deterministicShoppingAdvisory.options, editorialContext,
+              );
+
+              Promise.allSettled([editorialPromise, closingPromise])
+                .then(([editorialResult, closingResult]) => {
+                  const editorial = editorialResult.status === 'fulfilled' ? editorialResult.value : null;
+                  const closing = closingResult.status === 'fulfilled' ? closingResult.value : null;
+
+                  if (!editorial && !closing) return;
+
+                  const enrichedOptions = editorial && editorial.length > 0
+                    ? mergeEditorialIntoOptions(deterministicShoppingAdvisory.options!, editorial)
+                    : deterministicShoppingAdvisory.options;
+
                   dispatch({
                     type: 'UPDATE_ADVISORY',
                     id: shoppingMsgId,
-                    advisory: { ...deterministicShoppingAdvisory, options: enrichedOptions },
+                    advisory: {
+                      ...deterministicShoppingAdvisory,
+                      options: enrichedOptions,
+                      editorialClosing: closing ?? undefined,
+                    },
                   });
                 })
                 .catch(() => { /* deterministic descriptions stand */ });
