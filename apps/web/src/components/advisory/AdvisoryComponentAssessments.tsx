@@ -60,6 +60,28 @@ export default function AdvisoryComponentAssessments({ assessments }: Props) {
             </div>
           )}
 
+          {/* Design trade-offs — for elite products, framed as intentional philosophy */}
+          {comp.designTradeoffs && comp.designTradeoffs.length > 0 && (
+            <div style={{ marginBottom: '0.45rem' }}>
+              <div style={{
+                fontWeight: 500,
+                fontSize: '0.88rem',
+                color: '#999',
+                marginBottom: '0.2rem',
+                letterSpacing: '0.01em',
+              }}>
+                Design character
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '1.1rem', lineHeight: 1.65 }}>
+                {comp.designTradeoffs.map((t, j) => (
+                  <li key={j} style={{ fontSize: '0.92rem', color: '#888', marginBottom: '0.15rem' }}>
+                    {renderText(t)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Tendencies / trade-offs */}
           {comp.weaknesses.length > 0 && (
             <div style={{ marginBottom: '0.45rem' }}>

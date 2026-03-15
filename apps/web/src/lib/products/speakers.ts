@@ -43,6 +43,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'AT',
     topology: 'bass-reflex',
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'flow_organic' },
+    primaryAxes: {
+      warm_bright: 'warm',             // Tonal density present, zero fatigue — warm of neutral
+      smooth_detailed: 'smooth',       // High flow, musical continuity over analytical detail
+      elastic_controlled: 'elastic',   // Explosive dynamics from high efficiency
+      airy_closed: 'airy',            // Open, spacious presentation
+    },
     tendencyProfile: {
       basis: 'listener_consensus',
       confidence: 'high',
@@ -118,6 +124,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'CH',
     topology: 'bass-reflex',
     archetypes: { primary: 'spatial_holographic', secondary: 'precision_explicit' },
+    primaryAxes: {
+      warm_bright: 'neutral',            // Neutral with body — neither warm nor bright
+      smooth_detailed: 'detailed',       // Texture and spatial precision dominate over flow
+      elastic_controlled: 'controlled',  // Composed, precise — not dynamically explosive
+      airy_closed: 'airy',             // Holographic spatial presentation
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -197,6 +209,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'GB',
     topology: 'sealed',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
+    primaryAxes: {
+      warm_bright: 'warm',             // Rich, dense midrange — quintessentially warm
+      smooth_detailed: 'smooth',       // Musical flow over analytical detail
+      elastic_controlled: 'controlled', // Composed, not dynamically explosive
+      airy_closed: 'neutral',          // Intimate staging — neither expansive nor closed
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -272,6 +290,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'GB',
     topology: 'bass-reflex',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
+    primaryAxes: {
+      warm_bright: 'warm',             // Harbeth family warmth with midrange density
+      smooth_detailed: 'smooth',       // Musical flow with gentle detail retrieval
+      elastic_controlled: 'controlled', // Composed under pressure, not dynamically wild
+      airy_closed: 'airy',            // More spacious than the P3ESR
+    },
     tendencyProfile: {
       basis: 'listener_consensus',
       confidence: 'high',
@@ -332,6 +356,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'US',
     topology: 'high-efficiency',
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
+    primaryAxes: {
+      warm_bright: 'warm',             // Deep tonal density, zero fatigue — rich and warm
+      smooth_detailed: 'smooth',       // Musical flow and coherence over analytical retrieval
+      elastic_controlled: 'elastic',   // Dynamically alive — one of its defining strengths
+      airy_closed: 'airy',            // Open, spacious presentation with room-filling scale
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -410,6 +440,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'US',
     topology: 'high-efficiency',
     archetypes: { primary: 'rhythmic_propulsive' },
+    primaryAxes: {
+      warm_bright: 'neutral',            // Not warm, not bright — raw and direct
+      smooth_detailed: 'neutral',        // Neither smooth nor detailed — rough and energetic
+      elastic_controlled: 'elastic',     // Explosive dynamics, zero restraint
+      airy_closed: 'airy',             // Open, forward presentation
+    },
     tendencyProfile: {
       basis: 'listener_consensus',
       confidence: 'high',
@@ -474,6 +510,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'US',
     topology: 'horn-loaded',
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'precision_explicit' },
+    primaryAxes: {
+      warm_bright: 'neutral',            // Direct and present, not warm or bright
+      smooth_detailed: 'detailed',       // Horn speed and transient clarity, not smooth at all
+      elastic_controlled: 'elastic',     // Explosive horn dynamics
+      airy_closed: 'neutral',           // Forward projection, not spacious or closed
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -551,6 +593,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'FR',
     topology: 'bass-reflex',
     archetypes: { primary: 'precision_explicit', secondary: 'tonal_saturated' },
+    primaryAxes: {
+      warm_bright: 'neutral',            // Resolving but not harsh — neutral with beryllium precision
+      smooth_detailed: 'detailed',       // Clarity is the primary character
+      elastic_controlled: 'controlled',  // Composed and precise, not dynamically wild
+      airy_closed: 'airy',             // Spacious presentation with depth
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -610,6 +658,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'FR',
     topology: 'bass-reflex',
     archetypes: { primary: 'precision_explicit' },
+    primaryAxes: {
+      warm_bright: 'neutral',            // Balanced — neither warm nor bright
+      smooth_detailed: 'detailed',       // Clarity-oriented at its price point
+      elastic_controlled: 'neutral',     // Neither explosive nor controlled
+      airy_closed: 'airy',             // Open, spacious for a budget bookshelf
+    },
     tendencyProfile: {
       basis: 'editorial_inference',
       confidence: 'medium',
@@ -671,6 +725,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'US',
     topology: 'bass-reflex',
     archetypes: { primary: 'flow_organic', secondary: 'rhythmic_propulsive' },
+    primaryAxes: {
+      warm_bright: 'warm',             // Rich tonal density and harmonic weight
+      smooth_detailed: 'smooth',       // Musical flow dominates over analytical detail
+      elastic_controlled: 'elastic',   // Dynamic, alive — shares the DeVore house character
+      airy_closed: 'airy',            // Open, spacious presentation
+    },
     tendencyProfile: {
       basis: 'listener_consensus',
       confidence: 'high',
@@ -744,6 +804,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'PL',
     topology: 'open-baffle',
     archetypes: { primary: 'spatial_holographic', secondary: 'flow_organic' },
+    primaryAxes: {
+      warm_bright: 'warm',             // Tonal density present, zero fatigue
+      smooth_detailed: 'smooth',       // Single-driver coherence and flow
+      elastic_controlled: 'elastic',   // Full-range widebander — instant, dynamic response
+      airy_closed: 'airy',            // Open-back cabinet — boundless spatial presentation
+    },
     tendencyProfile: {
       basis: 'listener_consensus',
       confidence: 'high',
@@ -815,6 +881,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'US',
     topology: 'sealed',
     archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
+    primaryAxes: {
+      warm_bright: 'neutral',            // Transparent, not bright — lean but not glaring
+      smooth_detailed: 'detailed',       // Clarity and precision are defining traits
+      elastic_controlled: 'controlled',  // Sealed box composure — stable and poised
+      airy_closed: 'airy',             // Wide dispersion from planar tweeter
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -886,6 +958,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'US',
     topology: 'horn-loaded',
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'flow_organic' },
+    primaryAxes: {
+      warm_bright: 'warm',             // Rich, warm midrange from horn loading
+      smooth_detailed: 'neutral',      // Neither smooth nor detailed — raw and direct
+      elastic_controlled: 'elastic',   // Ultra-high efficiency horn dynamics
+      airy_closed: 'airy',            // Open, forward presentation
+    },
     tendencyProfile: {
       basis: 'listener_consensus',
       confidence: 'medium',
@@ -959,6 +1037,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'FR',
     topology: 'bass-reflex',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
+    primaryAxes: {
+      warm_bright: 'warm',             // Deeply warm — PHY-HP drivers are renowned for tonal richness
+      smooth_detailed: 'smooth',       // Musical flow and harmonic truth over analytical detail
+      elastic_controlled: 'neutral',   // Dynamic but not explosive — organic energy
+      airy_closed: 'airy',            // Open, spacious with natural decay
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'medium',
@@ -1037,6 +1121,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'US',
     topology: 'bass-reflex',
     archetypes: { primary: 'flow_organic', secondary: 'rhythmic_propulsive' },
+    primaryAxes: {
+      warm_bright: 'warm',             // Rich tonal density, DeVore family warmth
+      smooth_detailed: 'smooth',       // Musical flow over analytical detail
+      elastic_controlled: 'neutral',   // Dynamic but not explosively so — organic
+      airy_closed: 'airy',            // Spacious, organic soundstage
+    },
     tendencyProfile: {
       basis: 'listener_consensus',
       confidence: 'high',
@@ -1114,6 +1204,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'GB',
     topology: 'bass-reflex',
     archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
+    primaryAxes: {
+      warm_bright: 'neutral',            // Lean but not bright — clean and neutral
+      smooth_detailed: 'detailed',       // Clarity and precision from Uni-Q driver
+      elastic_controlled: 'controlled',  // Composed and precise
+      airy_closed: 'airy',             // Wide, coherent Uni-Q dispersion
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -1192,6 +1288,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'GB',
     topology: 'sealed',
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
+    primaryAxes: {
+      warm_bright: 'warm',             // Slightly warm BBC-heritage balance
+      smooth_detailed: 'smooth',       // Coherent musical flow over analytical detail
+      elastic_controlled: 'controlled', // Composed and refined, not dynamically explosive
+      airy_closed: 'airy',            // Open presentation for a sealed box
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -1268,6 +1370,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'GB',
     topology: 'bass-reflex',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
+    primaryAxes: {
+      warm_bright: 'warm',             // Rich, full-bodied — classic British warmth
+      smooth_detailed: 'smooth',       // Musical flow, not analytical
+      elastic_controlled: 'neutral',   // Relaxed but not sluggish — neither elastic nor controlled
+      airy_closed: 'airy',            // Spacious, bigger than its size suggests
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',
@@ -1345,6 +1453,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
     country: 'CA',
     topology: 'sealed',
     archetypes: { primary: 'flow_organic', secondary: 'spatial_holographic' },
+    primaryAxes: {
+      warm_bright: 'neutral',            // Slightly lean but never thin — neutral balance
+      smooth_detailed: 'smooth',        // Flow-oriented, musical and coherent
+      elastic_controlled: 'controlled', // Sealed box composure and precision
+      airy_closed: 'airy',            // Holographic staging, disappearing act
+    },
     tendencyProfile: {
       basis: 'review_consensus',
       confidence: 'high',

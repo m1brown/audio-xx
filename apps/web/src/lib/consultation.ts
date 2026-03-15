@@ -4381,6 +4381,16 @@ function buildComponentAssessments(
     const traits = c.product?.traits;
     const strengths: string[] = [];
     const weaknesses: string[] = [];
+    const designTradeoffs: string[] = [];
+
+    // ── Elite product detection ──
+    // Products at this tier represent intentional design philosophy — their
+    // axis-derived trade-offs are deliberate choices, not limitations.
+    // Criteria: price >= $8000 OR (boutique brand at upper-mid/high-end tier).
+    const isElite = c.product && (
+      c.product.price >= 8000
+      || (c.product.brandScale === 'boutique' && c.product.priceTier === 'high-end')
+    );
 
     // ── Axis-derived strengths (technical vocabulary) ──
     if (axes.warm_bright === 'warm') strengths.push('Tonal density and harmonic richness');
@@ -4404,28 +4414,34 @@ function buildComponentAssessments(
       strengths.push(`${c.product.architecture} topology`);
     }
 
-    // ── Axis-derived weaknesses (technical vocabulary) ──
-    if (axes.warm_bright === 'warm') weaknesses.push('Transient edges may soften');
-    if (axes.warm_bright === 'bright') weaknesses.push('Tonal density may lean thin');
-    if (axes.smooth_detailed === 'smooth') weaknesses.push('Fine detail may be smoothed over');
-    if (axes.smooth_detailed === 'detailed') weaknesses.push('Lesser recordings may sound unforgiving');
-    if (axes.elastic_controlled === 'controlled') weaknesses.push('Dynamic elasticity may be suppressed');
-    if (axes.elastic_controlled === 'elastic') weaknesses.push('May lose grip on dense orchestral material');
-    if (axes.airy_closed === 'closed') weaknesses.push('Spatial scale is constrained');
+    // ── Axis-derived observations ──
+    // For elite products, these are design trade-offs (intentional philosophy).
+    // For other products, they are weaknesses (potential limitations).
+    const axisTarget = isElite ? designTradeoffs : weaknesses;
+    if (axes.warm_bright === 'warm') axisTarget.push('Transient edges may soften');
+    if (axes.warm_bright === 'bright') axisTarget.push('Tonal density may lean thin');
+    if (axes.smooth_detailed === 'smooth') axisTarget.push('Fine detail may be smoothed over');
+    if (axes.smooth_detailed === 'detailed') axisTarget.push('Lesser recordings may sound unforgiving');
+    if (axes.elastic_controlled === 'controlled') axisTarget.push('Dynamic elasticity may be suppressed');
+    if (axes.elastic_controlled === 'elastic') axisTarget.push('May lose grip on dense orchestral material');
+    if (axes.airy_closed === 'closed') axisTarget.push('Spatial scale is constrained');
 
-    // ── Trait-enriched weaknesses ──
+    // ── Trait-enriched weaknesses (genuine deficiencies — always weaknesses) ──
     if (traits) {
       if ((traits.tonal_density ?? 0.5) < 0.35) weaknesses.push('Low tonal body — midrange may lack weight');
       if ((traits.flow ?? 0.5) < 0.35) weaknesses.push('Musical involvement is limited');
     }
 
-    // ── Verdict — aware of bottleneck status ──
+    // ── Verdict — aware of bottleneck status and elite tier ──
     const isBottleneck = constraint?.componentName === c.displayName;
     let verdict: string;
     let verdictKind: import('./advisory-response').VerdictKind;
     if (isBottleneck) {
       verdict = `**This is the primary constraint in the chain.** Upgrading here yields the highest system-level impact.`;
       verdictKind = 'bottleneck';
+    } else if (isElite) {
+      verdict = `World-class component. Any different behavior is a matter of upstream matching and taste, not limitation.`;
+      verdictKind = 'keeper';
     } else if (weaknesses.length === 0) {
       verdict = `Performing well. No immediate upgrade rationale.`;
       verdictKind = 'keeper';
@@ -4448,6 +4464,7 @@ function buildComponentAssessments(
       summary,
       strengths: strengths.slice(0, 5),
       weaknesses: weaknesses.slice(0, 4),
+      designTradeoffs: designTradeoffs.length > 0 ? designTradeoffs.slice(0, 4) : undefined,
       verdict,
       verdictKind,
     };
@@ -4602,9 +4619,18 @@ function buildUpgradePaths(
   // Sort by weakness count first, then by role influence hierarchy
   // (speakers > DAC > amp > streamer) as tiebreaker — higher-influence
   // components are more impactful upgrade targets.
+  // Elite products (high-end boutique, $8k+) are excluded — their
+  // axis-derived trade-offs are design philosophy, not upgrade targets.
   const remaining = assessments
     .map((a, i) => ({ assessment: a, component: components[i], profile: profiles[i] }))
-    .filter((r) => r.component.displayName !== constraint?.componentName && r.assessment.weaknesses.length >= 1)
+    .filter((r) => {
+      if (r.component.displayName === constraint?.componentName) return false;
+      if (r.assessment.weaknesses.length < 1) return false;
+      // Skip elite products — their trade-offs are intentional, not limitations
+      const prod = r.component.product;
+      if (prod && (prod.price >= 8000 || (prod.brandScale === 'boutique' && prod.priceTier === 'high-end'))) return false;
+      return true;
+    })
     .sort((a, b) => {
       const weakDiff = b.assessment.weaknesses.length - a.assessment.weaknesses.length;
       if (weakDiff !== 0) return weakDiff;

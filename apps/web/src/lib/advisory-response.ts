@@ -187,6 +187,12 @@ export interface ComponentAssessment {
   strengths: string[];
   /** Where this component is limited (short bullet items). */
   weaknesses: string[];
+  /**
+   * Design trade-offs for elite products — axis-derived observations that
+   * represent intentional design philosophy rather than actual limitations.
+   * Not counted toward upgrade path ranking. Rendered with distinct framing.
+   */
+  designTradeoffs?: string[];
   /** Bold verdict — "Keep this." or "This is the weak link." */
   verdict: string;
   /** Machine-readable verdict classification for deterministic consumers. */
