@@ -435,6 +435,8 @@ export interface AdvisoryResponse {
   advisoryMode?: AdvisoryMode;
   /** Data provenance — determines whether a confidence label appears. */
   source?: AdvisorySource;
+  /** Names of components not in the validated catalog (provisional assessments only). */
+  unknownComponents?: string[];
   /** System signature — one-sentence characterization of the system's sonic identity. */
   systemSignature?: string;
 

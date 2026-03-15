@@ -128,10 +128,13 @@ function ModeIndicator({ mode }: { mode?: AdvisoryMode }) {
 }
 
 /** Provenance label — shows when response data comes from LLM inference rather than verified catalog. */
-function ProvenanceLabel({ source }: { source?: AdvisorySource }) {
+function ProvenanceLabel({ source, unknownComponents }: { source?: AdvisorySource; unknownComponents?: string[] }) {
   if (!source || source === 'catalog' || source === 'brand_profile') return null;
 
   if (source === 'provisional_system') {
+    const unknownList = unknownComponents && unknownComponents.length > 0
+      ? `: ${unknownComponents.join(', ')}`
+      : '';
     return (
       <div style={{
         fontSize: '0.75rem',
@@ -144,7 +147,7 @@ function ProvenanceLabel({ source }: { source?: AdvisorySource }) {
         marginBottom: '0.85rem',
       }}>
         <span style={{ fontWeight: 600 }}>Provisional System Assessment.</span>
-        {' '}This system includes components not yet fully mapped in the Audio XX catalog. The analysis below is based on general knowledge of these components and their likely interaction. Treat as directional guidance.
+        {' '}This system includes components not yet fully mapped in the Audio XX validated catalog{unknownList}. The analysis below is based on general knowledge and their likely interaction. Treat as directional guidance.
       </div>
     );
   }
@@ -1438,7 +1441,7 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
       <ModeIndicator mode={a.advisoryMode} />
 
       {/* ── Provenance label (LLM-inferred responses) ── */}
-      <ProvenanceLabel source={a.source} />
+      <ProvenanceLabel source={a.source} unknownComponents={a.unknownComponents} />
 
       {/* ── 1. Comparison summary ────────────────────── */}
       {a.comparisonSummary && (

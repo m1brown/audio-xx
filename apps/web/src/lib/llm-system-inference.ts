@@ -134,14 +134,23 @@ export async function inferProvisionalSystemAssessment(
   componentNames: string[],
   knownDescriptions: { name: string; character: string; source: 'product' | 'brand' }[],
 ): Promise<ConsultationResponse | null> {
+  const knownNames = new Set(knownDescriptions.map(d => d.name));
   const knownContext = knownDescriptions.length > 0
-    ? `\n\nThe following components ARE in the Audio XX catalog with verified data:\n${knownDescriptions.map(d => `- ${d.name}: ${d.character}`).join('\n')}\n\nUse this verified data as anchor points. For unknown components, use your general knowledge.`
+    ? `\n\nThe following components ARE in the Audio XX catalog with verified data:\n${knownDescriptions.map(d => `- ${d.name} [catalog-verified]: ${d.character}`).join('\n')}`
+    : '';
+  const unknownNames = componentNames.filter(n => !knownNames.has(n));
+  const unknownContext = unknownNames.length > 0
+    ? `\n\nThe following components are NOT in the catalog — use general knowledge:\n${unknownNames.map(n => `- ${n} [general-knowledge]`).join('\n')}`
     : '';
 
   const userPrompt = `The user asked: "${query}"
 
 The system chain includes: ${componentNames.join(' → ')}
-${knownContext}
+${knownContext}${unknownContext}
+
+When describing each component in the philosophy section, note its evidence basis:
+- For catalog-verified components, you may reference the verified data above.
+- For general-knowledge components, briefly note that the characterization is based on general knowledge of that product's design heritage and community consensus.
 
 Produce a full Audio XX provisional system assessment. Assess each component's likely character, then the chain interaction, strengths, limitations, and directional paths.`;
 

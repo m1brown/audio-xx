@@ -444,9 +444,11 @@ export default function Home() {
           if (provisional) {
             // Override source to provisional_system for distinct UI labeling
             provisional.source = 'provisional_system';
+            const provisionalAdvisory = consultationToAdvisory(provisional, undefined, advisoryCtx);
+            provisionalAdvisory.unknownComponents = assessmentResult.unknownComponents;
             dispatch({
               type: 'ADD_ADVISORY',
-              advisory: consultationToAdvisory(provisional, undefined, advisoryCtx),
+              advisory: provisionalAdvisory,
               id: advisoryId(),
             });
             dispatch({ type: 'SET_LOADING', value: false });
