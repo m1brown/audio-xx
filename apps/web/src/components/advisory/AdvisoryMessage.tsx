@@ -1157,7 +1157,7 @@ function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
             fontWeight: 600,
             textTransform: 'uppercase' as const,
             letterSpacing: '0.05em',
-            color: COLORS.muted,
+            color: COLORS.textMuted,
             marginBottom: '0.35rem',
           }}>
             System Context
