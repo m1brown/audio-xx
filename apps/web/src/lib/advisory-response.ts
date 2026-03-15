@@ -22,6 +22,7 @@ import type { ExtractedSignals } from './signal-types';
 import type { SystemDirection } from './system-direction';
 import type { ReasoningResult } from './reasoning';
 import { getArchetypeLabel } from './archetype';
+import type { DecisionFrame } from './decision-frame';
 
 // ── Types ────────────────────────────────────────────
 
@@ -116,6 +117,10 @@ export interface AdvisoryOption {
   catalogCountry?: string;
   /** Brand scale from catalog (e.g. "specialist", "boutique", "major"). */
   catalogBrandScale?: string;
+
+  // ── Decision frame mapping ──────────────────────────
+  /** Which decision direction this product supports (label from DecisionFrame). */
+  directionLabel?: string;
 }
 
 export interface AdvisoryLink {
@@ -526,6 +531,10 @@ export interface AdvisoryResponse {
   // ── 7b. Sonic Landscape ────────────────────────────
   /** Explains the design philosophies represented in the shortlist. */
   sonicLandscape?: string;
+
+  // ── 7d. Decision Frame ────────────────────────────
+  /** Strategic decision frame — presented before product options. */
+  decisionFrame?: DecisionFrame;
 
   // ── 7c. Refinement Prompts ────────────────────────
   /** Questions that would deepen personalization in the next turn. */
@@ -1065,6 +1074,7 @@ export function shoppingToAdvisory(
   signals?: ExtractedSignals,
   reasoning?: ReasoningResult,
   ctx?: ShoppingAdvisoryContext,
+  decisionFrame?: DecisionFrame | null,
 ): AdvisoryResponse {
   // Parse preferenceSummary into listenerPriorities if it's a meaningful sentence
   const listenerPriorities = a.preferenceSummary
@@ -1100,6 +1110,21 @@ export function shoppingToAdvisory(
     catalogCountry: p.catalogCountry,
     catalogBrandScale: p.catalogBrandScale,
   }));
+
+  // Tag each product with its decision frame direction (if frame is available)
+  if (decisionFrame) {
+    for (const opt of options) {
+      const topo = opt.catalogTopology?.toLowerCase();
+      if (!topo) continue;
+      for (const dir of decisionFrame.directions) {
+        if (dir.isDoNothing) continue;
+        if (dir.topologyFilter?.some((t) => topo.includes(t) || t.includes(topo))) {
+          opt.directionLabel = dir.label;
+          break;
+        }
+      }
+    }
+  }
 
   const statedGaps = a.statedGaps?.map((g) => GAP_LABELS[g]);
 
@@ -1144,6 +1169,7 @@ export function shoppingToAdvisory(
     dependencyCaveat: a.dependencyCaveat,
 
     sonicLandscape: a.sonicLandscape,
+    decisionFrame: decisionFrame ?? undefined,
     refinementPrompts: a.refinementPrompts,
     followUp,
 

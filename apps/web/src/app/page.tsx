@@ -19,6 +19,7 @@ import { buildProductAssessment } from '@/lib/product-assessment';
 import type { AssessmentContext } from '@/lib/product-assessment';
 import { buildKnowledgeResponse, buildAssistantResponse } from '@/lib/audio-lanes';
 import type { KnowledgeContext, AssistantContext as AudioAssistantContext } from '@/lib/audio-lanes';
+import { buildDecisionFrame } from '@/lib/decision-frame';
 import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
@@ -667,7 +668,10 @@ export default function Home() {
             }
             const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning);
 
-            const deterministicShoppingAdvisory = shoppingToAdvisory(answer, data.signals, reasoning, advisoryCtx);
+            // Build decision frame — strategic framing before product shortlist
+            const decisionFrame = buildDecisionFrame(shoppingCtx.category, advisoryCtx, tasteProfile);
+
+            const deterministicShoppingAdvisory = shoppingToAdvisory(answer, data.signals, reasoning, advisoryCtx, decisionFrame);
             const shoppingMsgId = advisoryId();
             dispatch({ type: 'ADD_ADVISORY', advisory: deterministicShoppingAdvisory, id: shoppingMsgId });
 

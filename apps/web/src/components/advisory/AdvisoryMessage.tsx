@@ -26,6 +26,7 @@
  */
 
 import type { AdvisoryResponse, AdvisoryMode, AudioProfile, ProductAssessment, KnowledgeResponse, AssistantResponse } from '../../lib/advisory-response';
+import type { DecisionFrame, DecisionDirection, SystemInteraction } from '../../lib/decision-frame';
 import AdvisorySection from './AdvisorySection';
 import AdvisoryProse from './AdvisoryProse';
 import AdvisoryProductCards from './AdvisoryProductCard';
@@ -836,14 +837,135 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
 
 // ── Editorial Format (Shopping / Gear Results) ────────
 //
+// ── Decision Frame Block ─────────────────────────────
+//
+// Renders the strategic decision frame before product shortlists.
+// Shows the core question and 2-3 directions with trade-offs.
+
+function DecisionFrameBlock({ frame }: { frame: DecisionFrame }) {
+  return (
+    <div
+      style={{
+        marginBottom: '1.5rem',
+        padding: '1rem 1.1rem',
+        background: '#f8f7f4',
+        borderRadius: '8px',
+        border: `1px solid ${COLORS.border}`,
+      }}
+    >
+      {/* Current component note */}
+      {frame.currentComponent && (
+        <div style={{
+          fontSize: '0.88rem',
+          color: COLORS.textSecondary,
+          marginBottom: '0.75rem',
+          lineHeight: 1.65,
+        }}>
+          <span style={{ fontWeight: 600, color: COLORS.text }}>
+            Current {frame.category}:
+          </span>{' '}
+          {frame.currentComponent.name}
+          {frame.currentComponent.characterSummary && (
+            <span> — {frame.currentComponent.characterSummary}</span>
+          )}
+        </div>
+      )}
+
+      {/* System reading — compact: 1 sentence character + max 1 note */}
+      {frame.systemAnalysis && (
+        <div style={{
+          fontSize: '0.86rem',
+          color: COLORS.textSecondary,
+          marginBottom: '0.75rem',
+          lineHeight: 1.65,
+        }}>
+          {frame.systemAnalysis.summary}
+        </div>
+      )}
+
+      {/* Core question */}
+      <p style={{
+        margin: '0 0 1rem 0',
+        fontSize: '0.95rem',
+        lineHeight: 1.7,
+        color: COLORS.text,
+        fontWeight: 500,
+      }}>
+        {frame.coreQuestion}
+      </p>
+
+      {/* Directions */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {frame.directions.map((dir, i) => (
+          <DirectionCard key={i} direction={dir} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DirectionCard({ direction: d }: { direction: DecisionDirection }) {
+  const isDoNothing = d.isDoNothing;
+  const borderColor = isDoNothing ? COLORS.accentLight : COLORS.accent;
+
+  return (
+    <div
+      style={{
+        borderLeft: `3px solid ${borderColor}`,
+        paddingLeft: '0.9rem',
+        padding: '0.6rem 0.9rem',
+        background: isDoNothing ? '#faf9f6' : COLORS.white,
+        borderRadius: '0 5px 5px 0',
+      }}
+    >
+      <div style={{
+        fontSize: '0.91rem',
+        fontWeight: 600,
+        color: COLORS.text,
+        marginBottom: '0.3rem',
+      }}>
+        {isDoNothing ? '→ ' : ''}{d.label}
+      </div>
+      <div style={{
+        fontSize: '0.86rem',
+        lineHeight: 1.65,
+        color: COLORS.textSecondary,
+      }}>
+        <span style={{ fontWeight: 500 }}>Optimises:</span> {d.optimises}
+      </div>
+      <div style={{
+        fontSize: '0.86rem',
+        lineHeight: 1.65,
+        color: COLORS.textSecondary,
+      }}>
+        <span style={{ fontWeight: 500 }}>Trade-off:</span> {d.tradeOff}
+      </div>
+      {d.systemInteraction && (
+        <div style={{
+          fontSize: '0.84rem',
+          lineHeight: 1.6,
+          color: COLORS.textMuted,
+          marginTop: '0.2rem',
+          fontStyle: 'italic',
+        }}>
+          {d.systemInteraction}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Editorial Format (Shopping Recommendations) ──────
+//
 // Page structure:
 //   1. Title (e.g. "Best DACs Under $2,000")
 //   2. Audio Preferences profile
-//   3. Editorial intro paragraph
-//   4. Divider
-//   5. Product sections (primary content)
-//   6. Refinement prompts
-//   7. Sources
+//   3. Decision frame (strategic directions)
+//   4. Editorial intro paragraph
+//   5. Divider
+//   6. Product sections (primary content — supporting evidence)
+//   7. Refinement prompts
+//   8. Sources
 
 function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
   return (
@@ -868,6 +990,11 @@ function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
       {/* ── 2. Audio Preferences (replaces listener priorities) ── */}
       {a.audioProfile && (
         <AudioPreferencesBlock profile={a.audioProfile} />
+      )}
+
+      {/* ── 2b. Decision Frame ───────────────────────── */}
+      {a.decisionFrame && (
+        <DecisionFrameBlock frame={a.decisionFrame} />
       )}
 
       {/* ── 3. Editorial introduction ────────────────── */}

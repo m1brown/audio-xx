@@ -1966,13 +1966,14 @@ function selectProductExamples(
   // different design philosophies rather than returning multiple products
   // with the same conversion approach.
   //
-  // Shortlist sizing: min 4, target 4–5, max 6.
-  // Sparse signals → diversity-aware selection (target 5).
-  // Rich signals  → score-ranked selection (target 4).
+  // Shortlist sizing: 2–3 products. Products serve as supporting evidence
+  // for strategic directions, not an exhaustive catalog.
+  // Sparse signals → diversity-aware selection (target 3).
+  // Rich signals  → score-ranked selection (target 3).
   const hasSparseSignals = Object.keys(userTraits).length < 2;
   const top = hasSparseSignals
-    ? selectDiverseByTopology(ranked, 5)
-    : ranked.slice(0, 4);
+    ? selectDiverseByTopology(ranked, 3)
+    : ranked.slice(0, 3);
 
   return top.map(({ product }) => ({
     name: product.name,
