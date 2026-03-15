@@ -3312,10 +3312,10 @@ function inferSystemInteraction(components: SystemComponent[]): string {
     });
 
     if (sharedTraits.length > 0) {
-      return `The components share a design philosophy prioritising ${sharedTraits.join(' and ')}. The trade-off: ${compoundDesc.join(' and ')} deepens across the chain, rewarding aligned recordings but offering less correction if priorities shift.`;
+      return `The components share a design philosophy prioritising ${sharedTraits.join(' and ')}. Multiple stages reinforce ${compoundDesc.join(' and ')}, which strengthens this character but means the system has less internal balance if tastes change.`;
     }
 
-    return `The system leans toward ${compoundDesc.join(' and ')} across the chain — a strength when deliberate, but it means less internal correction if listening needs shift.`;
+    return `The system leans toward ${compoundDesc.join(' and ')} across the chain — multiple components push in the same direction, creating a strong and coherent character.`;
   }
 
   // If synergy detected but no formal compounding
@@ -3350,6 +3350,23 @@ type PowerTier = 'very-low' | 'low' | 'moderate' | 'high';
 
 function classifyAmpPower(amp: SystemComponent): PowerTier {
   const topology = amp.product?.topology;
+
+  // Check architecture string for explicit low wattage (e.g. "20W/ch")
+  const archStr = (amp.product?.architecture ?? '').toLowerCase();
+  const wattMatch = archStr.match(/(\d+)\s*w(?:\/ch|att|pc)?/);
+  if (wattMatch) {
+    const watts = parseInt(wattMatch[1], 10);
+    if (watts <= 10) return 'very-low';
+    if (watts <= 30) return 'low';
+    if (watts <= 80) return 'moderate';
+    return 'high';
+  }
+
+  // Vintage receivers are typically low-to-moderate power regardless of topology
+  if (amp.product?.availability === 'vintage' || amp.product?.availability === 'discontinued') {
+    if (topology === 'class-ab-solid-state') return 'low'; // vintage SS is usually 15–50W
+  }
+
   if (topology === 'set') return 'very-low';                // 2–10W typical
   if (topology === 'class-a-solid-state') return 'low';     // 10–30W typical
   if (topology === 'push-pull-tube') return 'low';          // 15–50W typical

@@ -225,8 +225,22 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
             {renderText(a.systemInteraction)}
           </p>
         )}
-        {/* System chain — clean inline display */}
-        {a.systemChain && a.systemChain.fullChain && a.systemChain.fullChain.length > 0 && (
+        {/* System synergy — folded into System Character instead of separate section */}
+        {a.systemSynergy && (
+          <p style={{
+            margin: '0.6rem 0 0.4rem 0',
+            fontSize: FONTS.bodySize,
+            lineHeight: 1.8,
+            color: COLORS.textSecondary,
+            fontStyle: 'italic',
+            borderLeft: `3px solid ${COLORS.accentLight}`,
+            paddingLeft: '0.9rem',
+          }}>
+            {renderText(a.systemSynergy)}
+          </p>
+        )}
+        {/* System chain — compact signal-path display using clean names + roles */}
+        {a.systemChain && a.systemChain.names && a.systemChain.names.length > 0 && (
           <div style={{
             marginTop: '0.8rem',
             padding: '0.65rem 0.85rem',
@@ -242,7 +256,7 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
               color: COLORS.text,
               fontWeight: 500,
             }}>
-              {a.systemChain.fullChain.map((name, ci) => (
+              {a.systemChain.names.map((name, ci) => (
                 <span key={ci} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                   {ci > 0 && (
                     <span style={{ color: COLORS.accentLight, fontSize: '0.85rem' }}>→</span>
@@ -295,25 +309,7 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
         </>
       )}
 
-      {/* ── 3. System Synergy Summary ─────────────── */}
-      {a.systemSynergy && (
-        <>
-          <AdvisorySection number={next()} label="System Synergy">
-            <p style={{
-              margin: 0,
-              fontSize: FONTS.bodySize,
-              lineHeight: 1.8,
-              color: COLORS.textSecondary,
-              fontStyle: 'italic',
-              borderLeft: `3px solid ${COLORS.accentLight}`,
-              paddingLeft: '0.9rem',
-            }}>
-              {renderText(a.systemSynergy)}
-            </p>
-          </AdvisorySection>
-          <SectionDivider />
-        </>
-      )}
+      {/* System Synergy is now folded into System Character above */}
 
       {/* ── 4. What the System Does Well ─────────── */}
       {a.assessmentStrengths && a.assessmentStrengths.length > 0 && (
@@ -370,8 +366,8 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
         </>
       )}
 
-      {/* ── 8. Upgrade Strategy ──────────────────── */}
-      {a.recommendedSequence && a.recommendedSequence.length > 0 && (
+      {/* ── 8. Upgrade Strategy (only for upgrade queries) ── */}
+      {a.advisoryMode !== 'system_review' && a.recommendedSequence && a.recommendedSequence.length > 0 && (
         <>
           <AdvisorySection number={next()} label="Upgrade Strategy">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
@@ -387,8 +383,8 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
         </>
       )}
 
-      {/* ── 9. Components Worth Keeping ───────────── */}
-      {a.keepRecommendations && a.keepRecommendations.length > 0 && (
+      {/* ── 9. Components Worth Keeping (only for upgrade queries) ── */}
+      {a.advisoryMode !== 'system_review' && a.keepRecommendations && a.keepRecommendations.length > 0 && (
         <>
           <AdvisorySection number={next()} label="Components Worth Keeping">
             {a.keepRecommendations.map((k, i) => (
