@@ -2431,6 +2431,12 @@ export const DAC_PRODUCTS: Product[] = [
       interactions: [
         { condition: 'paired with transparent amplification', effect: 'the natural density and flow are preserved while the amp provides control and staging', valence: 'positive', basis: 'listener_consensus' },
         { condition: 'in systems prioritising speed and explosive dynamics', effect: 'may feel too relaxed — the TotalDAC prioritises tone and flow over transient attack', valence: 'caution', basis: 'editorial_inference' },
+        {
+          condition: 'in system: TotalDAC d1 → TotalDAC Amp-1 → TotalDAC d100%wood',
+          effect: 'Complete TotalDAC chain heard as effortless and supremely refined — no internal friction between components. The shared voicing philosophy produces a seamless, coherent presentation where nothing fights anything else.',
+          valence: 'positive',
+          basis: 'founder_reference',
+        },
       ],
       tradeoffs: [
         { gains: 'tonal realism, natural timbre, and emotional engagement', cost: 'transient speed and the explosive dynamics of FPGA designs', relative_to: 'Chord Hugo TT2, Rockna Wavelight', basis: 'review_consensus' },
@@ -2440,6 +2446,7 @@ export const DAC_PRODUCTS: Product[] = [
       { source: '6moons', note: 'Srajan Ebaen review covering the d1-twelve as TotalDAC\'s entry-level masterpiece.' },
       { source: 'Twittering Machines', note: 'Michael Lavorgna coverage of TotalDAC house sound and d1 range.' },
       { source: 'Head-Fi community', note: 'Owner impressions praising tonal realism and natural timbre.' },
+      { source: 'Founder listening notes', note: 'Full TotalDAC chain (d1 → Amp-1 → d100%wood) at TotalDAC Fun Day 2022, Paris. Effortless and supremely refined.' },
     ],
   },
 
