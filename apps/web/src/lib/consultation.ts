@@ -68,11 +68,12 @@ import { renderDeterministicMemo } from './memo-deterministic-renderer';
 // renderDeterministicMemo(findings, prose) without the third argument.
 // See memo-deterministic-renderer.ts header for the removal plan.
 import type { LegacyProseInputs, StructuredMemoInputs } from './memo-deterministic-renderer';
+import { computeSystemConfidence } from './llm-system-inference';
 
 // ── Types ───────────────────────────────────────────
 
 /** Where the response data originated — used for provenance labeling in the UI. */
-export type ConsultationSource = 'catalog' | 'brand_profile' | 'llm_inferred';
+export type ConsultationSource = 'catalog' | 'brand_profile' | 'llm_inferred' | 'provisional_system';
 
 export interface ConsultationResponse {
   /** Display title for the assessment (e.g. "Living Room System"). */
@@ -2601,10 +2602,11 @@ function normalizeDisplayName(brand: string, name: string): string {
   return `${b} ${n}`;
 }
 
-/** Result of buildSystemAssessment — either a full assessment or a clarification request. */
+/** Result of buildSystemAssessment — either a full assessment, a clarification, or a low-confidence signal. */
 export type SystemAssessmentResult =
   | { kind: 'assessment'; response: ConsultationResponse; findings: MemoFindings }
   | { kind: 'clarification'; clarification: ClarificationResponse }
+  | { kind: 'low_confidence'; components: SystemComponent[]; unknownComponents: string[]; query: string }
   | null;
 
 export function buildSystemAssessment(
@@ -3003,10 +3005,28 @@ export function buildSystemAssessment(
     return { kind: 'clarification', clarification: validationClarification };
   }
 
+  // ── Step 0: Confidence check — do we have enough catalog coverage? ──
+  // If too many components are unknown, the deterministic model will produce
+  // misleading results (unknown components default to neutral, so the one
+  // known component dominates the signature). In that case, signal the caller
+  // to use the provisional LLM-assisted assessment instead.
+  const componentAxisProfiles = classifyComponentAxes(components);
+  const confidence = computeSystemConfidence(
+    componentAxisProfiles.map(p => ({ name: p.name, source: p.source })),
+    components.map(c => c.role),
+  );
+  if (confidence.level === 'low') {
+    return {
+      kind: 'low_confidence',
+      components,
+      unknownComponents: confidence.unknownComponents,
+      query: currentMessage,
+    };
+  }
+
   // ── Step 1: Resolve axis positions for each component ──
   // This happens BEFORE prose generation so that system-level reasoning
   // (compounding, compensation, balance) is available to all downstream steps.
-  const componentAxisProfiles = classifyComponentAxes(components);
   const systemAxes = synthesiseSystemAxes(
     componentAxisProfiles.map(p => p.axes),
     components.map(c => c.role),

@@ -130,6 +130,25 @@ function ModeIndicator({ mode }: { mode?: AdvisoryMode }) {
 /** Provenance label — shows when response data comes from LLM inference rather than verified catalog. */
 function ProvenanceLabel({ source }: { source?: AdvisorySource }) {
   if (!source || source === 'catalog' || source === 'brand_profile') return null;
+
+  if (source === 'provisional_system') {
+    return (
+      <div style={{
+        fontSize: '0.75rem',
+        lineHeight: 1.4,
+        color: '#7c5e2a',
+        backgroundColor: '#fef6e0',
+        border: '1px solid #e8d5a8',
+        borderRadius: '4px',
+        padding: '0.55rem 0.75rem',
+        marginBottom: '0.85rem',
+      }}>
+        <span style={{ fontWeight: 600 }}>Provisional System Assessment.</span>
+        {' '}This system includes components not yet fully mapped in the Audio XX catalog. The analysis below is based on general knowledge of these components and their likely interaction. Treat as directional guidance.
+      </div>
+    );
+  }
+
   return (
     <div style={{
       fontSize: '0.75rem',

@@ -422,7 +422,7 @@ export interface AssistantResponse {
 }
 
 /** Where the response data originated — used for provenance labeling. */
-export type AdvisorySource = 'catalog' | 'brand_profile' | 'llm_inferred';
+export type AdvisorySource = 'catalog' | 'brand_profile' | 'llm_inferred' | 'provisional_system';
 
 export interface AdvisoryResponse {
   /** Determines framing voice. */

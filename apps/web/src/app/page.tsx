@@ -31,6 +31,7 @@ import { routeConversation, resolveMode } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory } from '@/lib/consultation';
 import { inferUnknownProduct } from '@/lib/llm-product-inference';
+import { inferProvisionalSystemAssessment } from '@/lib/llm-system-inference';
 import type { GlossaryResult } from '@/lib/glossary';
 import type { Message, ConversationState } from '@/lib/conversation-types';
 import { parseTasteProfile, topTraits, isProfileEmpty, type TasteProfile } from '@/lib/taste-profile';
@@ -421,6 +422,41 @@ export default function Home() {
           dispatch({ type: 'SET_LOADING', value: false });
           return;
         }
+
+        // ── Provisional System Assessment Mode ──────────────
+        // When too many components are unknown, the deterministic model
+        // can't produce a reliable system reading. Fall back to LLM-assisted
+        // whole-system assessment with clear provenance labeling.
+        if (assessmentResult.kind === 'low_confidence') {
+          const knownDescriptions = assessmentResult.components
+            .filter(c => c.product || c.brandProfile)
+            .map(c => ({
+              name: c.displayName,
+              character: c.character,
+              source: (c.product ? 'product' : 'brand') as 'product' | 'brand',
+            }));
+          const componentNames = assessmentResult.components.map(c => c.displayName);
+          const provisional = await inferProvisionalSystemAssessment(
+            assessmentResult.query,
+            componentNames,
+            knownDescriptions,
+          );
+          if (provisional) {
+            // Override source to provisional_system for distinct UI labeling
+            provisional.source = 'provisional_system';
+            dispatch({
+              type: 'ADD_ADVISORY',
+              advisory: consultationToAdvisory(provisional, undefined, advisoryCtx),
+              id: advisoryId(),
+            });
+            dispatch({ type: 'SET_LOADING', value: false });
+            return;
+          }
+          // LLM call failed — fall through to consultation path
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+
         const assessmentMsgId = advisoryId();
         const deterministicAdvisory = consultationToAdvisory(assessmentResult.response, undefined, advisoryCtx);
         dispatch({ type: 'ADD_ADVISORY', advisory: deterministicAdvisory, id: assessmentMsgId });
