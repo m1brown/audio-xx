@@ -46,6 +46,7 @@ const BRAND_CATEGORY_MAP: Record<string, ProductCategory> = {
   'line magnetic': 'amplifier', primaluna: 'amplifier', cary: 'amplifier',
   'audio research': 'amplifier', arc: 'amplifier', job: 'integrated',
   goldmund: 'dac', crayon: 'integrated', xsa: 'speaker', 'trends': 'integrated', 'trends audio': 'integrated',
+  oppo: 'dac',
   // Turntables / tonearms
   rega: 'turntable', 'pro-ject': 'turntable', technics: 'turntable',
   clearaudio: 'turntable', vpi: 'turntable', linn: 'turntable', thorens: 'turntable',
@@ -144,6 +145,12 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   // Auralic
   vega: { brand: 'Auralic', category: 'dac' },
   'auralic vega': { brand: 'Auralic', category: 'dac' },
+  // Marantz (vintage receivers)
+  '2220b': { brand: 'Marantz', category: 'amplifier' },
+  'marantz 2220b': { brand: 'Marantz', category: 'amplifier' },
+  // Oppo (disc players)
+  opdv971h: { brand: 'Oppo', category: 'dac' },
+  'oppo opdv971h': { brand: 'Oppo', category: 'dac' },
   // Denafrips aliases
   'ares ii': { brand: 'Denafrips', category: 'dac' },
   'pontus 12th-1': { brand: 'Denafrips', category: 'dac' },

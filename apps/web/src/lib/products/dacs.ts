@@ -2774,4 +2774,78 @@ export const DAC_PRODUCTS: Product[] = [
     ],
     notes: 'Founder reference DAC. The Vega sits opposite to the Hugo v1 on the tonal axis — where Hugo is fast and airy, the Vega is grounded and composed. Good for lean systems that need body; less suited when the system already has density.',
   },
+
+  // ── Vintage / disc players ────────────────────────────
+
+  {
+    id: 'oppo-opdv971h',
+    brand: 'Oppo',
+    name: 'OPDV971H',
+    price: 120,
+    priceCurrency: 'USD',
+    category: 'dac',
+    subcategory: 'standalone-dac',
+    priceTier: 'budget',
+    brandScale: 'mainstream',
+    region: 'east-asia',
+    country: 'China',
+    architecture: 'DVD/CD universal disc player with integrated DAC — early Oppo design that prioritised clean, uncolored playback over tonal editorialising',
+    availability: 'discontinued',
+    typicalMarket: 'used',
+    usedPriceRange: { low: 40, high: 150 },
+    primaryAxes: {
+      warm_bright: 'warm',
+      smooth_detailed: 'smooth',
+      elastic_controlled: 'neutral',
+      airy_closed: 'neutral',
+      warm_bright_n: -1,
+      smooth_detailed_n: -1,
+      elastic_controlled_n: 0,
+      airy_closed_n: 0,
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Slightly warm and smooth character reduces fatigue risk. Undemanding source that stays out of the way.',
+    },
+    traits: {
+      clarity: 0.4,
+      flow: 0.4,
+      warmth: 0.4,
+      texture: 0.0,
+      spatial_precision: 0.0,
+      speed: 0.0,
+      dynamics: 0.0,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+    },
+    description:
+      'Early Oppo universal disc player known for clean, slightly warm playback. Not a resolution champion — prioritises inoffensive, musical delivery over analytical transparency. A modest source that contributes gentle warmth without strong editorial character.',
+    retailer_links: [],
+    tendencies: {
+      confidence: 'medium',
+      character: [
+        { domain: 'tonality', tendency: 'slightly warm and smooth — leans toward body over brightness', basis: 'review_consensus' },
+        { domain: 'texture', tendency: 'modest resolution — clean but not revealing; smooths over fine detail', basis: 'review_consensus' },
+        { domain: 'dynamics', tendency: 'neutral dynamic character — neither elastic nor controlled, simply unobtrusive', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'feeding a warm amplifier', effect: 'warmth may compound slightly — system could lean toward soft if both amp and source are warm', valence: 'caution', basis: 'editorial_inference' },
+        { condition: 'feeding a bright or lean amplifier', effect: 'the gentle warmth provides a useful counterbalance — keeps the chain musical', valence: 'positive', basis: 'editorial_inference' },
+        {
+          condition: 'in system: Oppo OPDV971H → Marantz 2220B → Hornshoppe Horn',
+          effect: 'The source warmth compounds with the Marantz\'s midrange richness, but the Hornshoppe\'s efficiency and transient speed prevent the chain from becoming sluggish. Ravi Shankar recording produced extremely realistic tabla — strong transient realism and physical presence.',
+          valence: 'positive',
+          basis: 'founder_reference',
+        },
+      ],
+      tradeoffs: [
+        { gains: 'inoffensive musicality, gentle warmth, no fatigue', cost: 'resolution, transparency, and top-end extension', relative_to: 'modern dedicated DACs', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Founder listening notes', note: 'Used as disc source in Oppo → Marantz 2220B → Hornshoppe Horn system. Contributes gentle warmth without editorial colour.' },
+      { source: 'Community consensus', note: 'Early Oppo players regarded as clean, slightly warm, musically inoffensive disc players.' },
+    ],
+    notes: 'Review-synthesis entry. Vintage universal disc player — modest source that contributes gentle warmth. In the founder\'s Oppo → Marantz → Hornshoppe chain, it serves as a clean, unobtrusive front end that lets the amp and speaker character dominate.',
+  },
 ];

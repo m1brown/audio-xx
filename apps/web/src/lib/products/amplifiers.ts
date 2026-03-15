@@ -1134,4 +1134,98 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     ],
     notes: 'Founder reference amplifier. The Rost is the Hegel entry point — same design philosophy as the H190 (control, grip, transparency) at lower power. Good when speakers need discipline; risk of overdamping in already controlled chains.',
   },
+
+  // ── Marantz (vintage) ───────────────────────────────
+
+  {
+    id: 'marantz-2220b',
+    brand: 'Marantz',
+    name: '2220B',
+    price: 400,
+    category: 'amplifier',
+    architecture: 'Class AB solid-state stereo receiver, 20W/ch, vintage 1974–1977',
+    subcategory: 'integrated-amp',
+    priceTier: 'budget',
+    brandScale: 'mainstream',
+    region: 'japan',
+    country: 'JP',
+    topology: 'class-ab-solid-state',
+    archetypes: { primary: 'flow_organic', secondary: 'rhythmic_propulsive' },
+    primaryAxes: {
+      warm_bright: 'warm',            // Classic warm Marantz house sound
+      smooth_detailed: 'smooth',      // Relaxed treble, smooth presentation
+      elastic_controlled: 'elastic',  // Fluid, musical — not overdamped
+      airy_closed: 'closed',          // Intimate, closed-in staging typical of vintage receivers
+      // Review-derived calibration
+      warm_bright_n: -2,        // Strongly warm — tonal density and midrange body
+      smooth_detailed_n: -1,    // Smooth — relaxed treble, not analytical
+      elastic_controlled_n: -1, // Elastic — fluid musical presentation
+      airy_closed_n: -1,        // Slightly closed — intimate staging
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Very low fatigue risk. The warm, smooth presentation is inherently easy on the ears for extended listening.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'medium',
+      tendencies: [
+        { trait: 'warmth', level: 'emphasized' },
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'rhythm', level: 'present' },
+        { trait: 'clarity', level: 'less_emphasized' },
+        { trait: 'speed', level: 'less_emphasized' },
+        { trait: 'spatial_precision', level: 'less_emphasized' },
+        { trait: 'composure', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      warmth: 1.0,
+      flow: 1.0,
+      tonal_density: 1.0,
+      texture: 0.7,
+      rhythm: 0.7,
+      dynamics: 0.4,
+      clarity: 0.4,
+      speed: 0.4,
+      spatial_precision: 0.4,
+      composure: 0.4,
+      elasticity: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+    },
+    description:
+      'Classic 1970s Marantz stereo receiver with 20W per channel. Warm, smooth, and musically fluid — the archetypal vintage Marantz house sound. Strong midrange tone and excellent tonal density. Limited power and bass control compared to modern designs, but a natural match for high-efficiency speakers where its warmth and flow qualities shine.',
+    retailer_links: [],
+    tendencies: {
+      confidence: 'medium',
+      character: [
+        { domain: 'tonality', tendency: 'warm, rich midrange — the Marantz vintage house sound prioritises tonal density and body', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'fluid and musical — relaxed rather than incisive, organic rather than precise', basis: 'review_consensus' },
+        { domain: 'dynamics', tendency: 'moderate dynamics limited by 20W power — microdynamics are good but macro headroom is constrained', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with high-efficiency horn speakers', effect: 'excellent synergy — 20W is more than enough, and the warmth and smoothness temper horn brightness and forwardness', valence: 'positive', basis: 'review_consensus' },
+        { condition: 'paired with low-sensitivity speakers', effect: 'runs out of headroom quickly — dynamic compression at moderate volumes', valence: 'caution', basis: 'review_consensus' },
+        { condition: 'with a neutral or slightly lean digital source', effect: 'the warmth provides natural complementary balance — prevents the system from sounding clinical', valence: 'positive', basis: 'review_consensus' },
+        {
+          condition: 'in system: Oppo OPDV971H → Marantz 2220B → Hornshoppe Horn',
+          effect: 'Ravi Shankar recording produced extremely realistic tabla — strong transient realism, microdynamic expression, and a physical sense of the instrument being present in the room. The horn efficiency unlocks the Marantz\'s midrange qualities without stressing its power limits.',
+          valence: 'positive',
+          basis: 'founder_reference',
+        },
+      ],
+      tradeoffs: [
+        { gains: 'warmth, midrange body, tonal richness, and long-session listening comfort', cost: 'resolution, transient precision, bass control, and the transparency of modern solid-state designs', relative_to: 'modern integrated amplifiers', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Audiokarma community', note: 'Extensive discussion of the 2220B as an entry-level vintage Marantz with the classic warm house sound.' },
+      { source: 'Founder system observation', note: 'Oppo → 2220B → Hornshoppe Horn: tabla realism, microdynamic expression, instrument presence.' },
+    ],
+    notes: 'Vintage receiver (1974–1977). Price reflects typical used market value. May need recapping if original capacitors are still in place — recap can significantly improve clarity without losing the warm character. 20W is sufficient for speakers above 93dB sensitivity.',
+  },
 ];

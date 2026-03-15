@@ -265,6 +265,10 @@ const NAME_ALIASES: Record<string, string[]> = {
   'hegel rost': ['rost'],
   'vega': ['vega'],
   'auralic vega': ['vega'],
+  '2220b': ['2220b'],
+  'marantz 2220b': ['2220b'],
+  'opdv971h': ['opdv971h'],
+  'oppo opdv971h': ['opdv971h'],
   'trends ta10': ['ta-10'],
 };
 

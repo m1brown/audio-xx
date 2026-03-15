@@ -55,7 +55,7 @@ const BRAND_NAMES = [
   'mola mola', 'rockna', 'aqua', 'lampizator', 'lampi',
   'border patrol', 'metrum', 'audio-gd', 'soekris',
   'musician', 'okto', 'eversolo', 'wiim', 'laiv', 'fiio',
-  'audalytic', 'totaldac', 'total dac', 'dcs',
+  'audalytic', 'totaldac', 'total dac', 'dcs', 'oppo',
   // Speakers
   'wlm', 'harbeth', 'devore', 'zu', 'zu audio', 'klipsch', 'focal', 'boenicke',
   'kef', 'b&w', 'bowers', 'dynaudio', 'wilson', 'magico',
@@ -100,12 +100,12 @@ const PRODUCT_NAMES = [
   'x26 pro', 'su-9', 'd90',
   'k9 pro', 'ef400',
   'dr70',
-  'auralic vega', 'hegel rost',
+  'auralic vega', 'hegel rost', 'marantz 2220b', 'oppo opdv971h',
   'job integrated', 'job int',
   'leben cs600x', 'leben cs600', 'leben cs300x', 'leben cs300', 'leben cs-300',
   'may kte', 'holo may',
   'srda', 'cia-1', 'cia-1t', 'ta-10', 'trends ta-10',
-  'vanguard', 'rost', 'vega', 'cs600x', 'cs600', 'cs300x', 'cs300',
+  'vanguard', 'rost', 'vega', '2220b', 'opdv971h', 'cs600x', 'cs600', 'cs300x', 'cs300',
   'diva monitor', 'super hl5', 'dirty weekend',
   // Turntable / tonearm / cartridge / phono products
   'gyro se', 'gyrodec', 'sa1.2',

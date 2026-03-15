@@ -1054,6 +1054,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
       interactions: [
         { condition: 'driven by SET amps', effect: 'the ultra-high efficiency means even 2W amps deliver full dynamic range — the classic horn + SET pairing', valence: 'positive', basis: 'listener_consensus' },
         { condition: 'in small rooms', effect: 'horn energy can overwhelm — these speakers need space to breathe', valence: 'caution', basis: 'editorial_inference' },
+        {
+          condition: 'in system: Oppo OPDV971H → Marantz 2220B → Hornshoppe Horn',
+          effect: 'The horn efficiency unlocks the Marantz\'s midrange qualities without stressing its power limits. Ravi Shankar recording produced extremely realistic tabla — strong transient realism, microdynamic expression, and physical presence.',
+          valence: 'positive',
+          basis: 'founder_reference',
+        },
       ],
       tradeoffs: [
         { gains: 'dynamic immediacy, rhythmic drive, and SET-compatible efficiency', cost: 'refinement, imaging precision, and the composure of conventional designs', relative_to: 'sealed or ported precision monitors', basis: 'listener_consensus' },
