@@ -45,10 +45,10 @@ export default function AdvisoryProse({ philosophy, tendencies, systemFit }: Adv
   return (
     <div
       style={{
-        margin: '0 0 1.1rem 0',
-        color: '#333',
-        fontSize: '0.98rem',
-        lineHeight: 1.7,
+        margin: '0 0 1.4rem 0',
+        color: '#2a2a2a',
+        fontSize: '1rem',
+        lineHeight: 1.75,
       }}
     >
       {philosophy && renderParagraphs(philosophy, lastField === 'philosophy')}

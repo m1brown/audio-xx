@@ -57,7 +57,7 @@ const COLORS = {
   accentBg: '#faf8f3',
   border: '#eeece8',
   borderLight: '#f4f2ee',
-  sectionLabel: '#aaa',
+  sectionLabel: '#a89870',
   green: '#5a7050',
   amber: '#8a6a50',
   white: '#fff',
@@ -65,19 +65,19 @@ const COLORS = {
 };
 
 const FONTS = {
-  bodySize: '0.95rem',
-  smallSize: '0.88rem',
+  bodySize: '0.98rem',
+  smallSize: '0.9rem',
   labelSize: '0.78rem',
-  sectionHeading: '1.08rem',
-  lineHeight: 1.7,
+  sectionHeading: '1.3rem',
+  lineHeight: 1.75,
 };
 
 /** Inline bullet list — reused across both modes. */
 function BulletList({ items, color }: { items: string[]; color?: string }) {
   return (
-    <ul style={{ margin: 0, paddingLeft: '1.1rem', lineHeight: FONTS.lineHeight, color: color ?? COLORS.text }}>
+    <ul style={{ margin: 0, paddingLeft: '1.2rem', lineHeight: FONTS.lineHeight, color: color ?? COLORS.text }}>
       {items.map((item, i) => (
-        <li key={i} style={{ marginBottom: '0.25rem', fontSize: FONTS.bodySize }}>{renderText(item)}</li>
+        <li key={i} style={{ marginBottom: '0.4rem', fontSize: FONTS.bodySize }}>{renderText(item)}</li>
       ))}
     </ul>
   );
@@ -93,7 +93,7 @@ function isMemoFormat(a: AdvisoryResponse): boolean {
 
 /** Subtle section divider. */
 function SectionDivider() {
-  return <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.border}`, margin: '1.75rem 0' }} />;
+  return <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.border}`, margin: '2.25rem 0' }} />;
 }
 
 /** Mode label display names. */
@@ -195,11 +195,11 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
       {/* ── Title ──────────────────────────────────── */}
       {a.title && (
         <h2 style={{
-          margin: '0 0 1rem 0',
-          fontSize: '1.2rem',
-          fontWeight: 600,
+          margin: '0 0 1.25rem 0',
+          fontSize: '1.5rem',
+          fontWeight: 700,
           color: '#2a2a2a',
-          letterSpacing: '-0.01em',
+          letterSpacing: '-0.02em',
         }}>
           {a.title}
         </h2>
@@ -724,11 +724,11 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
 
       {/* ── Product name heading ─────────────────────── */}
       <h2 style={{
-        margin: '0 0 0.8rem 0',
-        fontSize: '1.3rem',
-        fontWeight: 600,
+        margin: '0 0 1rem 0',
+        fontSize: '1.5rem',
+        fontWeight: 700,
         color: COLORS.text,
-        letterSpacing: '-0.01em',
+        letterSpacing: '-0.02em',
         lineHeight: 1.3,
       }}>
         {pa.candidateName}
@@ -1002,11 +1002,11 @@ function EditorialClosingBlock({ closing }: { closing: EditorialClosing }) {
       {closing.topPicks && closing.topPicks.length > 0 && (
         <div style={{ marginBottom: '2rem' }}>
           <h3 style={{
-            margin: '0 0 0.75rem 0',
-            fontSize: '1.15rem',
-            fontWeight: 600,
+            margin: '0 0 0.85rem 0',
+            fontSize: '1.3rem',
+            fontWeight: 700,
             color: COLORS.text,
-            letterSpacing: '-0.01em',
+            letterSpacing: '-0.015em',
           }}>
             Top Recommendations (Value + Sound)
           </h3>
@@ -1029,11 +1029,11 @@ function EditorialClosingBlock({ closing }: { closing: EditorialClosing }) {
       {closing.systemPicks && closing.systemPicks.length > 0 && (
         <div style={{ marginBottom: '1.5rem' }}>
           <h3 style={{
-            margin: '0 0 0.5rem 0',
-            fontSize: '1.15rem',
-            fontWeight: 600,
+            margin: '0 0 0.65rem 0',
+            fontSize: '1.3rem',
+            fontWeight: 700,
             color: COLORS.text,
-            letterSpacing: '-0.01em',
+            letterSpacing: '-0.015em',
           }}>
             What I&rsquo;d Recommend For <em>Your</em> System
           </h3>
@@ -1119,11 +1119,11 @@ function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
       {/* ── 1. Page title ────────────────────────────── */}
       {a.subject && (
         <h2 style={{
-          margin: '0 0 1rem 0',
-          fontSize: '1.45rem',
-          fontWeight: 600,
+          margin: '0 0 1.25rem 0',
+          fontSize: '1.6rem',
+          fontWeight: 700,
           color: COLORS.text,
-          letterSpacing: '-0.02em',
+          letterSpacing: '-0.025em',
           lineHeight: 1.25,
         }}>
           {a.subject}

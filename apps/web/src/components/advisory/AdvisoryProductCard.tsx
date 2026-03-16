@@ -121,7 +121,7 @@ function ProductLinks({ opt }: { opt: AdvisoryOption }) {
 // ── Section divider ───────────────────────────────────
 
 function ProductDivider() {
-  return <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.border}`, margin: '3rem 0' }} />;
+  return <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.border}`, margin: '3.5rem 0' }} />;
 }
 
 // ── Sub-heading ───────────────────────────────────────
@@ -129,11 +129,11 @@ function ProductDivider() {
 function SubHeading({ children }: { children: React.ReactNode }) {
   return (
     <h4 style={{
-      margin: '1.25rem 0 0.45rem 0',
-      fontSize: '0.95rem',
-      fontWeight: 600,
+      margin: '1.5rem 0 0.55rem 0',
+      fontSize: '1rem',
+      fontWeight: 700,
       color: COLORS.text,
-      letterSpacing: '0',
+      letterSpacing: '-0.005em',
     }}>
       {children}
     </h4>
@@ -147,11 +147,11 @@ function Bullets({ items, color }: { items: string[]; color?: string }) {
     <ul style={{
       margin: 0,
       paddingLeft: '1.2rem',
-      lineHeight: 1.75,
+      lineHeight: 1.8,
       color: color ?? COLORS.text,
     }}>
       {items.map((item, i) => (
-        <li key={i} style={{ marginBottom: '0.35rem', fontSize: '0.93rem' }}>
+        <li key={i} style={{ marginBottom: '0.45rem', fontSize: '0.95rem' }}>
           {renderText(item)}
         </li>
       ))}
@@ -170,11 +170,11 @@ function EditorialProductSection({ opt, index }: { opt: AdvisoryOption; index: n
     <div>
       {/* ── Product name (numbered) ──────────────────── */}
       <h3 style={{
-        margin: '0 0 0.2rem 0',
-        fontSize: '1.35rem',
-        fontWeight: 600,
+        margin: '0 0 0.3rem 0',
+        fontSize: '1.5rem',
+        fontWeight: 700,
         color: COLORS.text,
-        letterSpacing: '-0.015em',
+        letterSpacing: '-0.02em',
         lineHeight: 1.3,
       }}>
         {index + 1}. {fullName}
@@ -219,10 +219,11 @@ function EditorialProductSection({ opt, index }: { opt: AdvisoryOption; index: n
       {/* ── Sonic direction label (subtle) ───────────── */}
       {opt.sonicDirectionLabel && (
         <div style={{
-          fontSize: '0.85rem',
+          fontSize: '0.9rem',
           fontStyle: 'italic',
           color: COLORS.accent,
-          marginBottom: '0.5rem',
+          marginBottom: '0.65rem',
+          lineHeight: 1.5,
         }}>
           {opt.sonicDirectionLabel}
         </div>

@@ -22,19 +22,21 @@ interface AdvisorySectionProps {
 export default function AdvisorySection({ number, label, children }: AdvisorySectionProps) {
   if (number != null) {
     // ── Numbered heading (memo format) ──
+    // Modeled on ChatGPT system evaluation: large, bold numbered sections
+    // with generous vertical breathing room.
     return (
-      <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '2rem' }}>
         <h3
           style={{
-            margin: '0 0 0.65rem 0',
-            fontSize: '1.08rem',
-            fontWeight: 600,
+            margin: '0 0 0.85rem 0',
+            fontSize: '1.3rem',
+            fontWeight: 700,
             color: '#2a2a2a',
-            lineHeight: 1.4,
-            letterSpacing: '-0.01em',
+            lineHeight: 1.35,
+            letterSpacing: '-0.015em',
           }}
         >
-          <span style={{ color: '#c8c0a8', marginRight: '0.35rem', fontWeight: 500 }}>{number}.</span>
+          <span style={{ color: '#a89870', marginRight: '0.4rem', fontWeight: 600 }}>{number}.</span>
           {label}
         </h3>
         {children}
@@ -44,15 +46,15 @@ export default function AdvisorySection({ number, label, children }: AdvisorySec
 
   // ── Default uppercase label ──
   return (
-    <div style={{ marginBottom: '1.5rem' }}>
+    <div style={{ marginBottom: '1.75rem' }}>
       <div
         style={{
-          marginBottom: '0.55rem',
-          fontSize: '0.75rem',
+          marginBottom: '0.65rem',
+          fontSize: '0.78rem',
           fontWeight: 600,
           letterSpacing: '0.06em',
           textTransform: 'uppercase' as const,
-          color: '#999',
+          color: '#a89870',
         }}
       >
         {label}
