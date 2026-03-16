@@ -10,6 +10,8 @@
  * for visual clarity.
  */
 
+import { renderText } from './render-text';
+
 interface AdvisoryProseProps {
   philosophy?: string;
   tendencies?: string;
@@ -29,7 +31,7 @@ function renderParagraphs(text: string, isLast: boolean) {
         margin: isLast && i === segments.length - 1 ? 0 : '0 0 0.7rem 0',
       }}
     >
-      {segment.trim()}
+      {renderText(segment.trim())}
     </p>
   ));
 }

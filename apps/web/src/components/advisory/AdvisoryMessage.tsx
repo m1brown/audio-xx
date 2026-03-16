@@ -1573,7 +1573,7 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
           {a.tendencies && (
             <AdvisorySection label="What the proposed change actually does">
               <p style={{ margin: 0, fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight }}>
-                {a.tendencies}
+                {renderText(a.tendencies)}
               </p>
             </AdvisorySection>
           )}

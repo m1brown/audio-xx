@@ -178,6 +178,24 @@ function EditorialProductSection({ opt, index }: { opt: AdvisoryOption; index: n
         lineHeight: 1.3,
       }}>
         {index + 1}. {fullName}
+        {opt.isCurrentComponent && (
+          <span
+            style={{
+              marginLeft: '0.6rem',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              letterSpacing: '0.02em',
+              padding: '0.15rem 0.55rem',
+              borderRadius: '4px',
+              color: '#5a7a3a',
+              background: '#f0f5e8',
+              border: '1px solid #c5d8a8',
+              verticalAlign: 'middle',
+            }}
+          >
+            YOUR CURRENT
+          </span>
+        )}
         {availBadge && (
           <span
             style={{

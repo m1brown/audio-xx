@@ -1630,11 +1630,30 @@ export const DAC_PRODUCTS: Product[] = [
     region: 'southeast-asia',
     country: 'SG',
     topology: 'r2r',
+    archetypes: { primary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'warm',
       smooth_detailed: 'smooth',
       elastic_controlled: 'neutral',
       airy_closed: 'airy',
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Warm R2R character with no glare — easy to listen to for extended sessions.',
+    },
+    tendencyProfile: {
+      basis: 'listener_consensus',
+      confidence: 'medium',
+      tendencies: [
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'texture', level: 'emphasized' },
+        { trait: 'clarity', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'speed', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
     },
     traits: {
       flow: 1.0,
@@ -1651,8 +1670,24 @@ export const DAC_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'LAiV Audio', url: 'https://www.laiv.audio/' },
     ],
+    tendencies: {
+      confidence: 'medium',
+      character: [
+        { domain: 'tonality', tendency: 'warm and harmonically dense — tonal richness is the defining characteristic, with strong midrange body and natural timbre', basis: 'listener_consensus' },
+        { domain: 'texture', tendency: 'textured and organic — the discrete R2R topology contributes a tactile, layered quality to instruments and voices', basis: 'listener_consensus' },
+        { domain: 'spatial', tendency: 'open and airy staging with good depth — not pinpoint precise, but natural and immersive', basis: 'listener_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with neutral or slightly bright amplification', effect: 'the warmth and density carry through without muddying, adding body to the presentation', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'paired with already-warm or very dense tube amplification', effect: 'tonality may become too thick — loses some clarity and articulation', valence: 'caution', basis: 'listener_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'tonal richness, textural density, and fatigue-free musicality', cost: 'the last degree of transient speed and analytical resolution', relative_to: 'Chord Qutest, Topping D90', basis: 'listener_consensus' },
+      ],
+    },
     sourceReferences: [
       { source: 'Head-Fi community', note: 'Listening comparisons with Denafrips Pontus II and Holo Spring.' },
+      { source: 'Audio Science Review', note: 'Discussion thread covering R2R implementation and sound character.' },
     ],
   },
 
@@ -2534,7 +2569,7 @@ export const DAC_PRODUCTS: Product[] = [
 
   {
     id: 'laiv-harmony',
-    brand: 'Laiv',
+    brand: 'LAiV',
     name: 'Harmony',
     price: 3500,
     category: 'dac',
@@ -2589,7 +2624,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Emerging high-value R2R ladder DAC with FPGA control. Balances organic R2R tone with strong spatial precision and good transient speed. Rapidly gaining reputation as a giant-killer in the $3-4k range.',
     retailer_links: [
-      { label: 'Laiv', url: 'https://www.laiv.net/product/harmony-dac/' },
+      { label: 'LAiV', url: 'https://www.laiv.net/product/harmony-dac/' },
     ],
     tendencies: {
       confidence: 'medium',

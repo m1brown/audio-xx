@@ -691,7 +691,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
   {
     id: 'job-integrated',
     brand: 'JOB',
-    name: 'INTegrated',
+    name: 'Integrated',
     price: 1699,
     category: 'amplifier',
     architecture: 'Goldmund-derived minimalist Class AB solid-state',

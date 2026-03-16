@@ -1017,6 +1017,8 @@ export interface ProductExample {
   catalogCountry?: string;
   /** Brand scale (e.g. "specialist", "boutique", "major"). */
   catalogBrandScale?: string;
+  /** True when this product is already in the user's current system. */
+  isCurrentComponent?: boolean;
 }
 
 // ── Synthesis Brief ───────────────────────────────────
@@ -1337,21 +1339,28 @@ import type { ReasoningResult } from './reasoning';
 function buildFitNote(product: Product, userTraits: Record<string, SignalDirection>): string {
   const arch = product.architecture;
 
-  // Priority 1: curated character tendencies
+  // Priority 1: curated character tendencies — synthesize a verdict
+  // rather than copying the first sound profile bullet
   if (hasTendencies(product.tendencies)) {
-    const top = selectDefaultTendencies(product.tendencies.character, 1);
-    if (top.length > 0) {
-      return `${arch} design — ${top[0].tendency}`;
+    const top = selectDefaultTendencies(product.tendencies.character, 3);
+    if (top.length >= 2) {
+      // Synthesize: combine the top two traits into a directional verdict
+      return `${arch} design — strong choice if you value ${top[0].tendency.toLowerCase()} and ${top[1].tendency.toLowerCase()}`;
+    }
+    if (top.length === 1) {
+      return `${arch} design — best suits listeners drawn to ${top[0].tendency.toLowerCase()}`;
     }
   }
 
   // Priority 2: qualitative tendency profile (high/medium only)
   if (hasExplainableProfile(product.tendencyProfile)) {
     const emphasized = getEmphasizedTraits(product.tendencyProfile);
+    const lessEmph = getLessEmphasizedTraits(product.tendencyProfile);
     if (emphasized.length > 0) {
       const conf = product.tendencyProfile.confidence;
       const verb = (conf === 'high' || conf === 'founder_reference') ? 'emphasizes' : 'leans toward';
-      return `${arch} design — ${verb} ${emphasized.slice(0, 2).join(' and ')}`;
+      const tradeOff = lessEmph.length > 0 ? `. Less ideal if you prioritize ${lessEmph[0]}` : '';
+      return `${arch} design — ${verb} ${emphasized.slice(0, 2).join(' and ')}${tradeOff}`;
     }
   }
 
@@ -1896,6 +1905,7 @@ function selectProductExamples(
   dependencies: CategoryDependency[],
   tasteProfile?: UserTasteProfile,
   reasoning?: ReasoningResult,
+  currentComponentNames?: string[],
 ): ProductExample[] {
   // ── Turntable: illustrative examples (no trait scoring) ──
   if (category === 'turntable') {
@@ -1992,33 +2002,48 @@ function selectProductExamples(
     ? selectDiverseByTopology(ranked, 3)
     : ranked.slice(0, 3);
 
-  return top.map(({ product }) => ({
-    name: product.name,
-    brand: product.brand,
-    price: product.price,
-    priceCurrency: product.priceCurrency,
-    character: buildProductCharacter(product),
-    standoutFeatures: buildStandoutFeatures(product),
-    soundProfile: buildSoundProfile(product),
-    fitNote: buildFitNote(product, userTraits),
-    caution: buildCaution(product),
-    links: product.retailer_links.length > 0 ? product.retailer_links : undefined,
-    sourceReferences: product.sourceReferences,
-    // Enhanced card fields
-    sonicDirectionLabel: buildSonicDirectionLabel(product),
-    productType: buildProductTypeLabel(product),
-    manufacturerUrl: product.retailer_links[0]?.url,
-    usedMarketUrl: extractUsedMarketUrl(product),
-    availability: product.availability,
-    usedPriceRange: product.usedPriceRange,
-    usedMarketSources: buildUsedMarketSources(product),
-    systemDelta: buildSystemDelta(product, systemProfile, userTraits),
-    // Catalog facts for LLM validation
-    catalogArchitecture: product.architecture,
-    catalogTopology: product.topology,
-    catalogCountry: product.country,
-    catalogBrandScale: product.brandScale,
-  }));
+  // Build lowercase set of current component names for matching
+  const currentNames = new Set(
+    (currentComponentNames ?? []).map((n) => n.toLowerCase()),
+  );
+
+  return top.map(({ product }) => {
+    // Check if this product matches a current system component
+    const fullName = `${product.brand} ${product.name}`.toLowerCase();
+    const isCurrent = currentNames.has(fullName)
+      || currentNames.has(product.name.toLowerCase())
+      || [...currentNames].some((cn) => cn.includes(product.name.toLowerCase()) || fullName.includes(cn));
+
+    return {
+      name: product.name,
+      brand: product.brand,
+      price: product.price,
+      priceCurrency: product.priceCurrency,
+      character: buildProductCharacter(product),
+      standoutFeatures: buildStandoutFeatures(product),
+      soundProfile: buildSoundProfile(product),
+      fitNote: buildFitNote(product, userTraits),
+      caution: buildCaution(product),
+      links: product.retailer_links.length > 0 ? product.retailer_links : undefined,
+      sourceReferences: product.sourceReferences,
+      // Enhanced card fields
+      sonicDirectionLabel: buildSonicDirectionLabel(product),
+      productType: buildProductTypeLabel(product),
+      manufacturerUrl: product.retailer_links[0]?.url,
+      usedMarketUrl: extractUsedMarketUrl(product),
+      availability: product.availability,
+      usedPriceRange: product.usedPriceRange,
+      usedMarketSources: buildUsedMarketSources(product),
+      systemDelta: buildSystemDelta(product, systemProfile, userTraits),
+      // Catalog facts for LLM validation
+      catalogArchitecture: product.architecture,
+      catalogTopology: product.topology,
+      catalogCountry: product.country,
+      catalogBrandScale: product.brandScale,
+      // Flag when this is the user's current component
+      isCurrentComponent: isCurrent || undefined,
+    };
+  });
 }
 
 /**
@@ -2519,6 +2544,7 @@ export function buildShoppingAnswer(
   signals: ExtractedSignals,
   tasteProfile?: UserTasteProfile,
   reasoning?: ReasoningResult,
+  activeSystemComponents?: string[],
 ): ShoppingAnswer {
   const traits = signals.traits;
   const categoryLabel = CATEGORY_LABELS[ctx.category];
@@ -2533,7 +2559,7 @@ export function buildShoppingAnswer(
   // examples and practical framing instead of taste-profile-only
   // messaging. Taste signals enrich but don't gate the answer.
   if (ctx.category === 'turntable') {
-    return buildTurntableAnswer(ctx, signals, taste, matchedProfile, hasTasteSignal, tasteProfile, reasoning);
+    return buildTurntableAnswer(ctx, signals, taste, matchedProfile, hasTasteSignal, tasteProfile, reasoning, activeSystemComponents);
   }
 
   // ── Standard taste-driven path (DAC, etc.) ──────────
@@ -2561,7 +2587,7 @@ export function buildShoppingAnswer(
 
   // 4. Product examples (only when catalog exists + budget known)
   // Pass reasoning for directional bias — existing scoring is preserved.
-  const productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning);
+  const productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents);
 
   // 5. Watch for
   const watchFor = taste.watchFor;
@@ -2642,6 +2668,7 @@ function buildTurntableAnswer(
   hasTasteSignal: boolean,
   userTasteProfile?: UserTasteProfile,
   reasoning?: ReasoningResult,
+  activeSystemComponents?: string[],
 ): ShoppingAnswer {
   const budgetLabel = ctx.budgetAmount ? `$${ctx.budgetAmount.toLocaleString()}` : 'your budget';
 
@@ -2679,7 +2706,7 @@ function buildTurntableAnswer(
   // 4. Product examples — illustrative, dependency-aware
   const productExamples = selectProductExamples(
     ctx.category, signals.traits, ctx.budgetAmount,
-    ctx.systemProfile, ctx.dependencies, userTasteProfile, reasoning,
+    ctx.systemProfile, ctx.dependencies, userTasteProfile, reasoning, activeSystemComponents,
   );
 
   // 5. Watch for — practical turntable caveats

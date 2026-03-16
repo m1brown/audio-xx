@@ -121,6 +121,8 @@ export interface AdvisoryOption {
   // ── Decision frame mapping ──────────────────────────
   /** Which decision direction this product supports (label from DecisionFrame). */
   directionLabel?: string;
+  /** True when this product is already in the user's current system. */
+  isCurrentComponent?: boolean;
 }
 
 export interface AdvisoryLink {
@@ -1319,6 +1321,7 @@ export function shoppingToAdvisory(
     catalogTopology: p.catalogTopology,
     catalogCountry: p.catalogCountry,
     catalogBrandScale: p.catalogBrandScale,
+    isCurrentComponent: p.isCurrentComponent,
   }));
 
   // Tag each product with its decision frame direction (if frame is available)
