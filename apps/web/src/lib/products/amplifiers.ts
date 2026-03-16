@@ -776,7 +776,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
   {
     id: 'goldmund-job-225',
     brand: 'Goldmund / JOB',
-    name: 'JOB 225',
+    name: '225',
     price: 1500,
     category: 'amplifier',
     architecture: 'Goldmund minimalist Class AB solid-state',

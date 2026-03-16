@@ -28,6 +28,14 @@ type SignalDirection = 'up' | 'down';
 
 const RISK_TRAITS = new Set(['fatigue_risk', 'glare_risk']);
 
+// ── Cross-risk map ──────────────────────────────────
+// Glare causes fatigue. A user signalling fatigue concern should also
+// be protected from glare-flagged products (and vice versa).
+const CROSS_RISK: Record<string, string[]> = {
+  fatigue_risk: ['glare_risk'],
+  glare_risk: ['fatigue_risk'],
+};
+
 // ── Architecture affinity map ─────────────────────────
 //
 // Maps user trait directions to architectures that tend
@@ -84,8 +92,15 @@ function scoreTraitAlignment(
       // Risk traits: user 'up' means problem present → want LOW product risk
       if (direction === 'up') {
         const productHasRisk = hasRisk(tp, product.traits, trait as 'fatigue_risk' | 'glare_risk');
+        // Cross-risk: glare causes fatigue, so check related risks too
+        const crossRisks = CROSS_RISK[trait] ?? [];
+        const productHasCrossRisk = crossRisks.some(
+          (cr) => hasRisk(tp, product.traits, cr as 'fatigue_risk' | 'glare_risk'),
+        );
         if (productHasRisk) {
-          score -= 0.5;
+          score -= 1.0; // Strong penalty for direct risk match
+        } else if (productHasCrossRisk) {
+          score -= 0.5; // Moderate penalty for related risk
         } else {
           score += 1;
         }
@@ -148,14 +163,14 @@ function scoreBudgetFit(product: Product, budgetAmount: number): number {
   }
 
   // ── Proportionality penalty ──
-  // Products dramatically below budget get penalised — a $99 amp
-  // in a $15K search is not a credible recommendation. The penalty
-  // ramps from 0 (at 20% of budget) to −2 (at 1% of budget).
-  // Products above 20% of budget are unaffected.
+  // Products well below budget get penalised — a $3K amp in a $10K
+  // search shouldn't outrank $8K+ gear on trait alignment alone.
+  // The penalty ramps from 0 (at 30% of budget) to −2 (at 1%).
+  // Products above 30% of budget are unaffected.
   let proportionalityPenalty = 0;
-  if (ratio < 0.2) {
-    // Linear ramp: −2 at 0%, 0 at 20%
-    proportionalityPenalty = -2 * (1 - ratio / 0.2);
+  if (ratio < 0.3) {
+    // Linear ramp: −2 at 0%, 0 at 30%
+    proportionalityPenalty = -2 * (1 - ratio / 0.3);
   }
 
   return gate + utilization + proportionalityPenalty;
