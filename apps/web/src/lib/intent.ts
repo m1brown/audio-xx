@@ -58,6 +58,7 @@ const BRAND_NAMES = [
   'border patrol', 'metrum', 'audio-gd', 'soekris',
   'musician', 'okto', 'eversolo', 'wiim', 'laiv', 'fiio',
   'audalytic', 'totaldac', 'total dac', 'dcs', 'oppo',
+  'bluesound', 'innuos', 'sonnet',
   // Speakers
   'wlm', 'harbeth', 'devore', 'zu', 'zu audio', 'klipsch', 'focal', 'boenicke',
   'kef', 'b&w', 'bowers', 'dynaudio', 'wilson', 'wilson audio', 'magico',
@@ -87,6 +88,8 @@ const BRAND_NAMES = [
   'sennheiser', 'sony', 'audio-technica', 'beyerdynamic',
   'hifiman', 'audeze', 'shure', 'etymotic',
   'moondrop', 'apple', 'grado',
+  'zmf', 'focal', 'meze', 'dan clark audio', 'dan clark',
+  'campfire audio', 'campfire',
 ];
 
 /**
@@ -134,7 +137,13 @@ const PRODUCT_NAMES = [
   // New headphone products
   'sr80x', 'sr80', 'rs2x', 'rs2', 'sr325x', 'sr60x', 'gs3000',
   // New DAC products
-  'venus ii', 'venus',
+  'venus ii', 'venus', 'tambaqui', 'baltic 5', 'baltic 4', 'pasithea',
+  'd1-unity', 'bluesound node', 'node', 'zen mk3', 'pulse mini',
+  // New headphone products
+  'hd 800 s', 'hd800s', 'lcd-x', 'lcd x', 'arya organic', 'arya',
+  'verite closed', 'verite', 'clear mg', 'empyrean ii', 'empyrean',
+  'andromeda', 'solaris', 'honeydew',
+  'stealth', 'susvara',
   'vanguard', 'rost', 'vega', '2220b', 'opdv971h', 'cs600x', 'cs600', 'cs300x', 'cs300',
   'diva monitor', 'super hl5', 'dirty weekend', 'hornshoppe horn', 'hornshoppe horns',
   // Turntable / tonearm / cartridge / phono products

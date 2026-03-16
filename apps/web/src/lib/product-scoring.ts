@@ -147,7 +147,18 @@ function scoreBudgetFit(product: Product, budgetAmount: number): number {
     utilization = (ratio - 0.4) / 0.3;
   }
 
-  return gate + utilization;
+  // ── Proportionality penalty ──
+  // Products dramatically below budget get penalised — a $99 amp
+  // in a $15K search is not a credible recommendation. The penalty
+  // ramps from 0 (at 20% of budget) to −2 (at 1% of budget).
+  // Products above 20% of budget are unaffected.
+  let proportionalityPenalty = 0;
+  if (ratio < 0.2) {
+    // Linear ramp: −2 at 0%, 0 at 20%
+    proportionalityPenalty = -2 * (1 - ratio / 0.2);
+  }
+
+  return gate + utilization + proportionalityPenalty;
 }
 
 /**
