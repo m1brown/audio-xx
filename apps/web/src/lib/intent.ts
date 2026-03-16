@@ -60,10 +60,11 @@ const BRAND_NAMES = [
   'audalytic', 'totaldac', 'total dac', 'dcs', 'oppo',
   // Speakers
   'wlm', 'harbeth', 'devore', 'zu', 'zu audio', 'klipsch', 'focal', 'boenicke',
-  'kef', 'b&w', 'bowers', 'dynaudio', 'wilson', 'magico',
+  'kef', 'b&w', 'bowers', 'dynaudio', 'wilson', 'wilson audio', 'magico',
   'sonus faber', 'proac', 'spendor', 'atc', 'tannoy',
   'magnepan', 'martin logan', 'quad',
   'cube audio', 'hornshoppe', 'qualio', 'totem',
+  'falcon', 'falcon acoustics', 'mission', 'amphion', 'jbl', 'altec', 'altec lansing',
   // Amplifiers
   'pass labs', 'first watt', 'naim', 'luxman', 'accuphase',
   'parasound', 'hegel', 'mcintosh', 'marantz', 'yamaha',
@@ -72,6 +73,8 @@ const BRAND_NAMES = [
   'job', 'goldmund', 'crayon', 'xsa', 'trends', 'trends audio',
   'kinki studio', 'kinki', 'enleum', 'bakoon', 'grandinote',
   'soulution', 'dartzeel', 'decware', 'linear tube audio', 'lta',
+  'vinnie rossi', 'ayre', 'boulder', 'primare', 'electrocompaniet',
+  'rotel', 'cambridge audio', 'audiolab', 'nad', 'bottlehead', 'yamamoto',
   // Turntables / tonearms / cartridges
   'rega', 'pro-ject', 'technics', 'clearaudio', 'vpi',
   'linn', 'thorens', 'michell', 'michell engineering',
@@ -83,7 +86,7 @@ const BRAND_NAMES = [
   // Headphones / IEMs
   'sennheiser', 'sony', 'audio-technica', 'beyerdynamic',
   'hifiman', 'audeze', 'shure', 'etymotic',
-  'moondrop', 'apple',
+  'moondrop', 'apple', 'grado',
 ];
 
 /**
@@ -116,6 +119,22 @@ const PRODUCT_NAMES = [
   'soulution 330', 'soulution 530', 'soulution 711',
   'cth-8550', 'nhb-108', 'nhb-18',
   'se84ufo', 'z10',
+  // New amplifier products
+  'l2i-se', 'l2i se', 'cortese', 'masseto', 'vx-5 twenty', 'vx-5', 'boulder 866',
+  'primare i35', 'i35', 'eci 6', 'eci6', 'nait xs 3', 'nait xs', 'supernait 3', 'supernait',
+  'va-one+', 'va-one', 'a11 tribute', 'a11',
+  'ma252', 'ma12000', 'ma7200', 'mc275', 'mc462',
+  'cxa81', 'cxa61', '6000a', 'c 316bee', 'c316bee', 'c 3050', 'c3050',
+  'bottlehead crack', 'crack', 'a-08s', 'a08s',
+  // New speaker products
+  'ls3/5a', 'ls3-5a', 'mission 770', '770', 'ms 50 8vet', 'ms 50',
+  'argon3s', 'argon 3s', 'l100 classic', 'l100',
+  'altec 19', 'model 19', 'sabrina x', 'sabrina',
+  'magico a3', 'a3', '1.7i',
+  // New headphone products
+  'sr80x', 'sr80', 'rs2x', 'rs2', 'sr325x', 'sr60x', 'gs3000',
+  // New DAC products
+  'venus ii', 'venus',
   'vanguard', 'rost', 'vega', '2220b', 'opdv971h', 'cs600x', 'cs600', 'cs300x', 'cs300',
   'diva monitor', 'super hl5', 'dirty weekend', 'hornshoppe horn', 'hornshoppe horns',
   // Turntable / tonearm / cartridge / phono products
@@ -144,9 +163,10 @@ const PRODUCT_NAMES = [
   'wavelight', 'wavedream', 'formula', 'bartók', 'bartok',
   'pavane', 'adagio', 'pegasus', 'aquarius', 'draco', 'dac8',
   'diva',
-  'p3esr', 'orangutan', 'o/96', 'o96',
+  'p3esr', 'orangutan', 'o/96', 'o96', 'o/92', 'o92', 'o/baby', 'obaby',
   'heresy', 'kanta', 'aria',
   'w5', 'w8', 'w11',
+  'cortese', 'nendo',
   'x8',
   'momentum 4',
   'er2xr', 'er2se',
