@@ -14,6 +14,8 @@
 import type { SubjectMatch } from './intent';
 import type { ProductCategory } from './catalog-taxonomy';
 import type { ProposedSystem, DraftSystemComponent, AudioSessionState } from './system-types';
+import { findKnownSystemMatch, suggestKnownSystemName } from './known-systems';
+import type { KnownSystemMatch } from './known-systems';
 
 // ── Brand → category mapping ──────────────────────────
 // Best-effort category assignment for known brands.
@@ -28,7 +30,8 @@ const BRAND_CATEGORY_MAP: Record<string, ProductCategory> = {
   'audio-gd': 'dac', soekris: 'dac', musician: 'dac', okto: 'dac',
   laiv: 'dac', audalytic: 'dac', totaldac: 'dac', 'total dac': 'dac',
   dcs: 'dac', 'holo audio': 'dac',
-  eversolo: 'streamer', wiim: 'streamer', fiio: 'dac',
+  eversolo: 'streamer', wiim: 'streamer', fiio: 'dac', singxer: 'dac',
+  'cen.grand': 'dac', soundaware: 'streamer',
   // Speakers
   harbeth: 'speaker', devore: 'speaker', zu: 'speaker', 'zu audio': 'speaker',
   klipsch: 'speaker',
@@ -37,7 +40,7 @@ const BRAND_CATEGORY_MAP: Record<string, ProductCategory> = {
   'sonus faber': 'speaker', proac: 'speaker', spendor: 'speaker', atc: 'speaker',
   tannoy: 'speaker', magnepan: 'speaker', 'martin logan': 'speaker', quad: 'speaker',
   wlm: 'speaker', 'cube audio': 'speaker', hornshoppe: 'speaker',
-  qualio: 'speaker', totem: 'speaker',
+  qualio: 'speaker', totem: 'speaker', modalakustik: 'speaker',
   // Amplifiers
   'pass labs': 'amplifier', 'first watt': 'amplifier', naim: 'amplifier',
   luxman: 'amplifier', accuphase: 'amplifier', parasound: 'amplifier',
@@ -46,6 +49,7 @@ const BRAND_CATEGORY_MAP: Record<string, ProductCategory> = {
   'line magnetic': 'amplifier', primaluna: 'amplifier', cary: 'amplifier',
   'audio research': 'amplifier', arc: 'amplifier', job: 'integrated',
   goldmund: 'dac', crayon: 'integrated', xsa: 'speaker', 'trends': 'integrated', 'trends audio': 'integrated',
+  'kinki studio': 'amplifier', 'kinki': 'amplifier', hattor: 'amplifier', 'gold note': 'integrated',
   oppo: 'dac',
   // Turntables / tonearms
   rega: 'turntable', 'pro-ject': 'turntable', technics: 'turntable',
@@ -436,14 +440,27 @@ export function detectSystemDescription(
   // ── Gate 6: check for duplicate against previously dismissed proposal ──
   // (handled externally via dismissedFingerprints in page.tsx)
 
-  // ── Build suggested name ──
+  // ── Build suggested name (checks known systems registry) ──
   const suggestedName = suggestSystemName(components);
+
+  // ── Check for known system match ──
+  const knownMatch = findKnownSystemMatch(components);
+  const knownSystemMatch = knownMatch
+    ? {
+        id: knownMatch.system.id,
+        label: knownMatch.system.label,
+        attribution: knownMatch.system.attribution,
+        philosophy: knownMatch.system.philosophy,
+        coreOverlap: knownMatch.coreOverlap,
+      }
+    : null;
 
   return {
     suggestedName,
     components,
     sourceQuery: currentMessage,
     fingerprint,
+    ...(knownSystemMatch ? { knownSystemMatch } : {}),
   };
 }
 
@@ -506,9 +523,20 @@ function isDuplicateOfActiveSystem(
 }
 
 /**
- * Suggest a system name from component categories.
+ * Suggest a system name from component list.
+ *
+ * Priority:
+ *   1. Known system match (e.g., "Michael Lavorgna's reference system")
+ *   2. Generic category-based name (e.g., "Speaker System")
  */
 function suggestSystemName(components: DraftSystemComponent[]): string {
+  // Check known systems registry
+  const knownMatch = findKnownSystemMatch(components);
+  if (knownMatch) {
+    const knownName = suggestKnownSystemName(knownMatch);
+    if (knownName) return knownName;
+  }
+
   const categories = new Set(components.map((c) => c.category));
   if (categories.has('headphone') || categories.has('iem')) {
     return 'Headphone System';

@@ -24,7 +24,7 @@ import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
 import { checkGlossaryQuestion } from '@/lib/glossary';
-import { detectIntent, isBrandOnlyComparison, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, type SubjectMatch } from '@/lib/intent';
+import { detectIntent, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, type SubjectMatch } from '@/lib/intent';
 import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
@@ -509,10 +509,14 @@ export default function Home() {
     // Knowledge / philosophy questions — answer first, no diagnostic logic.
     // Also catches brand-level comparisons ("Chord vs Denafrips") that should
     // be handled at the philosophy level, not routed to product matching.
+    // Includes product-level comparisons with brand context ("compare klipsch
+    // heresy to devore o/96") — these have both brand and product subject
+    // matches but should still route through the structured comparison builder.
     // Gear inquiries with subjects also try consultation first — this ensures
     // brand links surface and richer brand profiles are used when available.
     // Falls through to gear-response if consultation returns null.
-    const isBrandComparison = intent === 'comparison' && isBrandOnlyComparison(turnCtx.subjectMatches);
+    const brandMatches = turnCtx.subjectMatches.filter((m) => m.kind === 'brand');
+    const isBrandComparison = intent === 'comparison' && brandMatches.length >= 2;
     const isGearWithSubjects = intent === 'gear_inquiry' && turnCtx.subjectMatches.length > 0;
     if (effectiveMode === 'consultation' || isBrandComparison || isGearWithSubjects) {
       const consultResult = buildConsultationResponse(submittedText, turnCtx.subjectMatches);

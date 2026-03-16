@@ -153,3 +153,55 @@ export interface EvidenceRecord {
   /** When this evidence record was last modified. */
   updatedAt: string;
 }
+
+// ── Reviewer profile ──────────────────────────────────
+
+/**
+ * Perceptual bias of a known reviewer.
+ *
+ * Models the reviewer's listening tendencies so the synthesis pipeline
+ * can calibrate evidence interpretation. For example, if a speed-biased
+ * reviewer calls something "warm," that carries more weight than the
+ * same claim from a warmth-biased reviewer.
+ *
+ * Bias values use the same 'high' | 'medium' | 'low' scale as the
+ * axis model — they describe how much the reviewer gravitates toward
+ * each quality, not an absolute measurement.
+ *
+ * This is internal calibration data — never surfaced to users.
+ */
+export interface ReviewerProfile {
+  /** Unique identifier (kebab-case). */
+  id: string;
+  /** Display name. */
+  name: string;
+  /** Primary publication(s). */
+  publications: string[];
+  /** URL to the reviewer's primary publication. */
+  url?: string;
+
+  /**
+   * The reviewer's known perceptual tendencies — what they
+   * gravitate toward and weight most heavily in evaluations.
+   *
+   * Maps Audio XX observation domains to bias strength.
+   * A 'high' value means the reviewer is particularly sensitive
+   * to and tends to prioritize this quality.
+   */
+  listeningBias: {
+    openness: 'high' | 'medium' | 'low';
+    transientSpeed: 'high' | 'medium' | 'low';
+    tonalDensity: 'high' | 'medium' | 'low';
+    warmth: 'high' | 'medium' | 'low';
+    spatialProjection: 'high' | 'medium' | 'low';
+    microdetail: 'high' | 'medium' | 'low';
+    elasticity: 'high' | 'medium' | 'low';
+    damping: 'high' | 'medium' | 'low';
+  };
+
+  /**
+   * Free-text notes about how to interpret this reviewer's language.
+   * Helps the synthesis prompt adjust for known biases.
+   */
+  calibrationNotes: string;
+}

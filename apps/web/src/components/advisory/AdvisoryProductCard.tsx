@@ -193,7 +193,7 @@ function EditorialProductSection({ opt, index }: { opt: AdvisoryOption; index: n
               verticalAlign: 'middle',
             }}
           >
-            YOUR CURRENT
+            CURRENT
           </span>
         )}
         {availBadge && (

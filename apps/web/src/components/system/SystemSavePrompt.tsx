@@ -43,8 +43,31 @@ export default function SystemSavePrompt({ proposed, onReviewAndSave, onDismiss 
         lineHeight: 1.55,
       }}
     >
+      {proposed.knownSystemMatch && (
+        <div
+          style={{
+            marginBottom: '0.5rem',
+            padding: '0.35rem 0.6rem',
+            background: '#f4f1e8',
+            borderRadius: 4,
+            fontSize: '0.82rem',
+            color: '#6b5c3e',
+            lineHeight: 1.5,
+          }}
+        >
+          <span style={{ fontWeight: 600 }}>{proposed.knownSystemMatch.label}</span>
+          {proposed.knownSystemMatch.coreOverlap < 1.0 && (
+            <span style={{ fontStyle: 'italic', marginLeft: '0.4rem', opacity: 0.8 }}>
+              (partial match)
+            </span>
+          )}
+        </div>
+      )}
       <div style={{ color: '#555', marginBottom: '0.4rem' }}>
-        You described a system: <span style={{ fontWeight: 500, color: '#333' }}>{componentSummary}</span>
+        {proposed.knownSystemMatch
+          ? <>This matches a known system: <span style={{ fontWeight: 500, color: '#333' }}>{componentSummary}</span></>
+          : <>You described a system: <span style={{ fontWeight: 500, color: '#333' }}>{componentSummary}</span></>
+        }
       </div>
       <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
         <button

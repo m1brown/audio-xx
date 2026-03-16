@@ -1333,6 +1333,28 @@ import { topTraits, type TasteProfile as UserTasteProfile, type ProfileTraitKey 
 import type { ReasoningResult } from './reasoning';
 
 /**
+ * Extract the key opening phrase from a tendency description.
+ *
+ * Tendency strings follow the pattern:
+ *   "key phrase — elaboration with more detail"
+ *
+ * This function extracts just the key phrase for concise use in
+ * verdict lines and summaries. Falls back to first 8 words if
+ * no em-dash separator is found.
+ */
+function extractKeyPhrase(text: string): string {
+  // Split on em-dash (—) and take the first part
+  const emDashIndex = text.indexOf('—');
+  if (emDashIndex > 0) {
+    return text.slice(0, emDashIndex).trim().toLowerCase();
+  }
+  // Fallback: take first ~10 words
+  const words = text.split(/\s+/);
+  if (words.length <= 10) return text.toLowerCase();
+  return words.slice(0, 10).join(' ').toLowerCase();
+}
+
+/**
  * Generate a one-sentence fit note for a product based on its
  * architecture and strongest matching traits.
  */
@@ -1340,15 +1362,20 @@ function buildFitNote(product: Product, userTraits: Record<string, SignalDirecti
   const arch = product.architecture;
 
   // Priority 1: curated character tendencies — synthesize a verdict
-  // rather than copying the first sound profile bullet
+  // Extract the key phrase from each tendency (before the em-dash elaboration)
+  // to keep the verdict concise rather than copying full sound profile text.
   if (hasTendencies(product.tendencies)) {
     const top = selectDefaultTendencies(product.tendencies.character, 3);
     if (top.length >= 2) {
-      // Synthesize: combine the top two traits into a directional verdict
-      return `${arch} design — strong choice if you value ${top[0].tendency.toLowerCase()} and ${top[1].tendency.toLowerCase()}`;
+      const phrase1 = extractKeyPhrase(top[0].tendency);
+      const phrase2 = extractKeyPhrase(top[1].tendency);
+      // Build directional verdict with trade-off awareness
+      const tradeoff = product.tendencies.tradeoffs?.[0];
+      const tradeoffNote = tradeoff ? `. Less ideal if you prioritize ${extractKeyPhrase(tradeoff.cost)}` : '';
+      return `${arch} design — strong choice if you value ${phrase1} and ${phrase2}${tradeoffNote}`;
     }
     if (top.length === 1) {
-      return `${arch} design — best suits listeners drawn to ${top[0].tendency.toLowerCase()}`;
+      return `${arch} design — best suits listeners drawn to ${extractKeyPhrase(top[0].tendency)}`;
     }
   }
 

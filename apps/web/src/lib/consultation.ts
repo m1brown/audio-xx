@@ -1195,6 +1195,7 @@ function buildKnowledgeBrandConsultation(entry: BrandKnowledge): ConsultationRes
 function buildBrandComparison(
   profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
   profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  queryText?: string,
 ): ConsultationResponse {
   const nameA = capitalize('names' in profileA ? profileA.names[0] : profileA.name);
   const nameB = capitalize('names' in profileB ? profileB.names[0] : profileB.name);
@@ -1212,30 +1213,59 @@ function buildBrandComparison(
   const charA = extractCoreCharacter(profileA.tendencies);
   const charB = extractCoreCharacter(profileB.tendencies);
 
-  // Add price context when both brands have representative products
+  // Add price context when both sides have price data.
+  // Strategy: try to match specific products mentioned in the query first.
+  // Fall back to single-product brand or median brand price.
+  const brandNameA = ('names' in profileA ? profileA.names[0] : profileA.name).toLowerCase();
+  const brandNameB = ('names' in profileB ? profileB.names[0] : profileB.name).toLowerCase();
   const productsA = ALL_PRODUCTS.filter(
-    (p) => p.brand.toLowerCase() === ('names' in profileA ? profileA.names[0] : profileA.name).toLowerCase(),
+    (p) => p.brand.toLowerCase() === brandNameA,
   );
   const productsB = ALL_PRODUCTS.filter(
-    (p) => p.brand.toLowerCase() === ('names' in profileB ? profileB.names[0] : profileB.name).toLowerCase(),
+    (p) => p.brand.toLowerCase() === brandNameB,
   );
-  // Use median price as representative
-  const medianPrice = (products: Product[]): number | null => {
-    if (products.length === 0) return null;
-    const prices = products.map((p) => p.price).sort((a, b) => a - b);
-    return prices[Math.floor(prices.length / 2)];
+
+  // Try to identify the specific products referenced in the user's query.
+  // Matches full name, or any significant word from the product name (3+ chars).
+  const findQueryProduct = (products: Product[], query: string | undefined): Product | null => {
+    if (!query || products.length <= 1) return products[0] ?? null;
+    const q = query.toLowerCase();
+    // Try full name match first
+    const fullMatch = products.find((p) => q.includes(p.name.toLowerCase()));
+    if (fullMatch) return fullMatch;
+    // Try matching significant name tokens — handles cases like
+    // "heresy" matching "Heresy IV" or "o/96" matching "Orangutan O/96"
+    return products.find((p) => {
+      const words = p.name.toLowerCase().split(/[\s]+/);
+      return words.some((w) => {
+        // Match words 3+ chars, or shorter words containing non-alpha (like "o/96")
+        return (w.length >= 3 || /[^a-z]/.test(w)) && w.length >= 2 && q.includes(w);
+      });
+    }) ?? null;
   };
-  const priceA = medianPrice(productsA);
-  const priceB = medianPrice(productsB);
+  const specificA = findQueryProduct(productsA, queryText);
+  const specificB = findQueryProduct(productsB, queryText);
+
+  const priceA = specificA?.price ?? (productsA.length === 1 ? productsA[0].price : null);
+  const priceB = specificB?.price ?? (productsB.length === 1 ? productsB[0].price : null);
+
+  // Use specific product names for price labels when available
+  const priceLabelA = specificA ? `${specificA.brand} ${specificA.name}` : nameA;
+  const priceLabelB = specificB ? `${specificB.brand} ${specificB.name}` : nameB;
+
   let priceContext = '';
   if (priceA && priceB) {
     const ratio = Math.max(priceA, priceB) / Math.min(priceA, priceB);
+    const cheaperLabel = priceA < priceB ? priceLabelA : priceLabelB;
+    const pricierLabel = priceA < priceB ? priceLabelB : priceLabelA;
+    const cheaperPrice = Math.min(priceA, priceB);
+    const pricierPrice = Math.max(priceA, priceB);
     if (ratio >= 2) {
-      const cheaperName = priceA < priceB ? nameA : nameB;
-      const pricierName = priceA < priceB ? nameB : nameA;
-      const cheaperPrice = Math.min(priceA, priceB);
-      const pricierPrice = Math.max(priceA, priceB);
-      priceContext = ` These occupy different price tiers — ${cheaperName} around ~$${cheaperPrice.toLocaleString()} vs ${pricierName} around ~$${pricierPrice.toLocaleString()}.`;
+      // Large gap — frame as different tiers with editorial note
+      priceContext = ` These occupy different price tiers — ${cheaperLabel} around ~$${cheaperPrice.toLocaleString()} vs ${pricierLabel} around ~$${pricierPrice.toLocaleString()}. The comparison is less about which is "better" and more about different design philosophies at different investment levels.`;
+    } else if (ratio >= 1.3) {
+      // Moderate gap — note the difference without editorializing
+      priceContext = ` Price context: ${cheaperLabel} ~$${cheaperPrice.toLocaleString()}, ${pricierLabel} ~$${pricierPrice.toLocaleString()}.`;
     }
   }
 
@@ -1273,15 +1303,16 @@ function buildBrandComparison(
     systemContext = `Where they diverge most shapes which fits better — this depends on what you value in your listening and where your system currently sits.`;
   }
 
-  // Assemble tendencies — core tendencies + architectural note
+  // Assemble tendencies — core tendencies + architectural note.
+  // Use **bold** brand labels for visual attribution in rendered prose.
   const tendenciesText = archNote
-    ? `${nameA}: ${tendA}\n\n${nameB}: ${tendB}\n\n${archNote}`
-    : `${nameA}: ${tendA}\n\n${nameB}: ${tendB}`;
+    ? `**${nameA}:** ${tendA}\n\n**${nameB}:** ${tendB}\n\n${archNote}`
+    : `**${nameA}:** ${tendA}\n\n**${nameB}:** ${tendB}`;
 
   return {
     subject: `${nameA} vs ${nameB}`,
     comparisonSummary: summary,
-    philosophy: `${nameA}: ${philoA}\n\n${nameB}: ${philoB}`,
+    philosophy: `**${nameA}:** ${philoA}\n\n**${nameB}:** ${philoB}`,
     tendencies: tendenciesText,
     systemContext,
     followUp,
@@ -1597,7 +1628,7 @@ export function buildConsultationResponse(
 
       // Both have curated profiles — direct comparison
       if (profileA && profileB) {
-        return buildBrandComparison(profileA, profileB);
+        return buildBrandComparison(profileA, profileB, currentMessage);
       }
 
       // One or both missing curated profiles — try catalog-derived summaries
@@ -1607,7 +1638,7 @@ export function buildConsultationResponse(
       const summaryB = profileB ?? (productsB.length > 0 ? deriveBrandSummaryFromCatalog(b.name, productsB) : null);
 
       if (summaryA && summaryB) {
-        return buildBrandComparison(summaryA, summaryB);
+        return buildBrandComparison(summaryA, summaryB, currentMessage);
       }
     }
   }

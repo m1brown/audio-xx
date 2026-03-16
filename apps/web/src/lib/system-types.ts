@@ -103,6 +103,17 @@ export interface ProposedSystem {
   sourceQuery: string;
   /** Fingerprint for duplicate suppression (sorted brand+name, lowercased). */
   fingerprint: string;
+  /**
+   * If the proposed system matches a known reference system (reviewer, founder, etc.),
+   * this holds the match details. Null when no match is found.
+   */
+  knownSystemMatch?: {
+    id: string;
+    label: string;
+    attribution: string;
+    philosophy: string;
+    coreOverlap: number;
+  } | null;
 }
 
 // ── Session state ───────────────────────────────────────
