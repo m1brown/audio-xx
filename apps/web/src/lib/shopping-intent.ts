@@ -2128,11 +2128,16 @@ function selectDiverseByTopology(
   }
 
   // Pass 2: fill remaining (allow topology repeats, prefer different brands)
+  // Enforce a score floor — only products within 1.5 of the top score qualify.
+  // This prevents dramatically under-budget products from sneaking in via
+  // brand diversity alone (e.g. $3K amp in a $10K search).
   if (selected.length < count) {
+    const pass2Floor = topScore - 1.5;
     const usedBrands = new Set(selected.map((s) => s.product.brand.toLowerCase()));
     for (const entry of ranked) {
       if (selected.length >= count) break;
       if (selected.includes(entry)) continue;
+      if (entry.score < pass2Floor) break; // ranked is sorted; stop early
       if (!usedBrands.has(entry.product.brand.toLowerCase())) {
         selected.push(entry);
         usedBrands.add(entry.product.brand.toLowerCase());
