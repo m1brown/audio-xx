@@ -429,7 +429,7 @@ export type AdvisorySource = 'catalog' | 'brand_profile' | 'llm_inferred' | 'pro
 
 export interface AdvisoryResponse {
   /** Determines framing voice. */
-  kind: 'consultation' | 'shopping' | 'diagnosis' | 'assessment' | 'knowledge' | 'assistant';
+  kind: 'consultation' | 'shopping' | 'diagnosis' | 'assessment' | 'knowledge' | 'assistant' | 'intake';
   /** Display title for the assessment (e.g. "Living Room System"). */
   title?: string;
   /** The subject being advised about (brand, product, symptom, category). */
@@ -617,6 +617,10 @@ export interface AdvisoryResponse {
   knowledgeResponse?: KnowledgeResponse;
   /** Structured assistant response — populated for audio_assistant intent. */
   assistantResponse?: AssistantResponse;
+
+  // ── 12b. Intake Questions ───────────────────────────
+  /** Structured intake questions for new/vague user queries. */
+  intakeQuestions?: import('./intake').IntakeQuestion[];
 
   // ── 13. Diagnostics (collapsible) ───────────────────
   /** Signal interpretation transparency. */

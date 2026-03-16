@@ -32,6 +32,7 @@ import { routeConversation, resolveMode } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory } from '@/lib/consultation';
 import { findReferenceProduct, buildExplorationResponse, explorationToConsultation } from '@/lib/exploration';
+import { buildIntakeResponse, intakeToAdvisory } from '@/lib/intake';
 import { inferUnknownProduct } from '@/lib/llm-product-inference';
 import { inferProvisionalSystemAssessment } from '@/lib/llm-system-inference';
 import type { GlossaryResult } from '@/lib/glossary';
@@ -404,6 +405,16 @@ export default function Home() {
     if (intent === 'consultation_entry') {
       const entryResult = buildConsultationEntry(submittedText, turnCtx.desires, turnCtx.activeSystem);
       dispatchAdvisory(consultationToAdvisory(entryResult, undefined, advisoryCtx), advisoryId());
+      dispatch({ type: 'SET_LOADING', value: false });
+      return;
+    }
+
+    // ── Guided intake path ──────────────────────────────
+    // Vague entry queries ("I want a new stereo", "I need speakers")
+    // get structured intake questions before routing to shopping.
+    if (intent === 'intake') {
+      const intakeResult = buildIntakeResponse(submittedText);
+      dispatchAdvisory(intakeToAdvisory(intakeResult), advisoryId());
       dispatch({ type: 'SET_LOADING', value: false });
       return;
     }

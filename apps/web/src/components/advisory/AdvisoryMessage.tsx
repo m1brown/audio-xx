@@ -37,6 +37,7 @@ import AdvisoryComponentAssessments from './AdvisoryComponentAssessments';
 import AdvisoryUpgradePaths from './AdvisoryUpgradePaths';
 import AdvisorySpiderChart from './AdvisorySpiderChart';
 import AdvisoryListenerProfile from './AdvisoryListenerProfile';
+import AdvisoryIntake from './AdvisoryIntake';
 import { renderText } from './render-text';
 
 interface AdvisoryMessageProps {
@@ -1299,6 +1300,10 @@ function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
 
 // ── Lane Detection ──────────────────────────────────────
 
+function isIntakeFormat(a: AdvisoryResponse): boolean {
+  return !!(a.intakeQuestions && a.intakeQuestions.length > 0);
+}
+
 function isKnowledgeFormat(a: AdvisoryResponse): boolean {
   return !!(a.knowledgeResponse);
 }
@@ -1855,6 +1860,9 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
 // ── Main Export ────────────────────────────────────────
 
 export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
+  if (isIntakeFormat(advisory)) {
+    return <AdvisoryIntake advisory={advisory} />;
+  }
   if (isMemoFormat(advisory)) {
     return <MemoFormat advisory={advisory} />;
   }

@@ -12,9 +12,11 @@
  *   4. diagnosis      — "My system sounds bright" (default)
  */
 
+import { isIntakeQuery } from './intake';
+
 // ── Intent type ──────────────────────────────────────
 
-export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory' | 'product_assessment' | 'audio_knowledge' | 'audio_assistant' | 'exploration';
+export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory' | 'product_assessment' | 'audio_knowledge' | 'audio_assistant' | 'exploration' | 'intake';
 
 /** A desire the user has expressed — "want more speed", "wish it had warmth". */
 export interface DesireSignal {
@@ -829,6 +831,15 @@ export function detectIntent(currentMessage: string): IntentResult {
   const hasBrandSubject = subjectMatches.some((m) => m.kind === 'brand' && !m.parenthetical);
   if (hasProductAssessmentPattern && (hasProductSubject || hasBrandSubject)) {
     return { intent: 'product_assessment', subjects, subjectMatches, desires };
+  }
+
+  // 2c. Intake — vague entry queries like "I want a new stereo" or "I need speakers".
+  //     These need structured intake questions before routing to shopping.
+  //     Must fire before shopping so "I want new speakers" gets intake, not
+  //     a generic shopping response. Has built-in guards: if the user provides
+  //     enough specificity (budget + room + listening habits), skips to shopping.
+  if (isIntakeQuery(currentMessage, subjectMatches.length)) {
+    return { intent: 'intake', subjects, subjectMatches, desires };
   }
 
   // 3. Shopping — "best DAC under $1000", "recommend a DAC"
