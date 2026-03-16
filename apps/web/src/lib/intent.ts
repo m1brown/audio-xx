@@ -70,6 +70,8 @@ const BRAND_NAMES = [
   'shindo', 'leben', 'audio note',
   'line magnetic', 'primaluna', 'cary', 'arc', 'audio research',
   'job', 'goldmund', 'crayon', 'xsa', 'trends', 'trends audio',
+  'kinki studio', 'kinki', 'enleum', 'bakoon', 'grandinote',
+  'soulution', 'dartzeel', 'decware', 'linear tube audio', 'lta',
   // Turntables / tonearms / cartridges
   'rega', 'pro-ject', 'technics', 'clearaudio', 'vpi',
   'linn', 'thorens', 'michell', 'michell engineering',
@@ -107,6 +109,13 @@ const PRODUCT_NAMES = [
   'leben cs600x', 'leben cs600', 'leben cs300x', 'leben cs300', 'leben cs-300',
   'may kte', 'holo may',
   'srda', 'cia-1', 'cia-1t', 'ta-10', 'trends ta-10',
+  'ex-m1+', 'ex-m1 plus', 'ex-m1', 'dazzle',
+  'amp-23r', 'amp-23', 'hpa-23r',
+  'shinai', 'genesi', 'supremo',
+  'telos 590', 'telos 690', 'telos 390',
+  'soulution 330', 'soulution 530', 'soulution 711',
+  'cth-8550', 'nhb-108', 'nhb-18',
+  'se84ufo', 'z10',
   'vanguard', 'rost', 'vega', '2220b', 'opdv971h', 'cs600x', 'cs600', 'cs300x', 'cs300',
   'diva monitor', 'super hl5', 'dirty weekend', 'hornshoppe horn', 'hornshoppe horns',
   // Turntable / tonearm / cartridge / phono products

@@ -42,6 +42,8 @@ import { renderText } from './render-text';
 
 interface AdvisoryMessageProps {
   advisory: AdvisoryResponse;
+  /** Callback for intake form submission — threaded to AdvisoryIntake. */
+  onIntakeSubmit?: (text: string) => void;
 }
 
 // ── Design tokens ─────────────────────────────────────
@@ -1859,9 +1861,9 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
 
 // ── Main Export ────────────────────────────────────────
 
-export default function AdvisoryMessage({ advisory }: AdvisoryMessageProps) {
+export default function AdvisoryMessage({ advisory, onIntakeSubmit }: AdvisoryMessageProps) {
   if (isIntakeFormat(advisory)) {
-    return <AdvisoryIntake advisory={advisory} />;
+    return <AdvisoryIntake advisory={advisory} onSubmit={onIntakeSubmit} />;
   }
   if (isMemoFormat(advisory)) {
     return <MemoFormat advisory={advisory} />;

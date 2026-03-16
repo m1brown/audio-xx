@@ -106,6 +106,8 @@ export interface IntakeQuestion {
   options?: string[];
   /** Whether this is a free-form question (no options). */
   freeForm?: boolean;
+  /** Whether multiple options can be selected (checkbox vs radio). */
+  multiSelect?: boolean;
 }
 
 export interface IntakeResponse {
@@ -232,7 +234,8 @@ export function buildIntakeResponse(text: string): IntakeResponse {
   // 4. How they listen
   questions.push({
     label: 'HOW YOU LISTEN',
-    question: 'How do you typically listen to music? (Pick all that apply, or describe in your own words.)',
+    question: 'How do you typically listen to music?',
+    multiSelect: true,
     options: [
       'Focused / critical listening — sitting down, paying attention',
       'Background listening — music while working, cooking, socializing',
@@ -246,7 +249,7 @@ export function buildIntakeResponse(text: string): IntakeResponse {
   questions.push({
     label: 'MUSIC',
     question: 'What kind of music do you listen to most?',
-    freeForm: true,
+    multiSelect: true,
     options: [
       'Jazz, acoustic, vocal — intimate recordings',
       'Classical, orchestral — dynamic range and scale',

@@ -1396,7 +1396,10 @@ function MessageBubble({ message }: { message: Message }) {
     return (
       <div style={{ marginBottom: '1.75rem' }}>
         <hr style={{ border: 0, borderTop: '1px solid #e5e5e3', margin: '0 0 1.5rem 0' }} />
-        <AdvisoryMessage advisory={message.advisory} />
+        <AdvisoryMessage
+          advisory={message.advisory}
+          onIntakeSubmit={message.advisory.kind === 'intake' ? handleSubmit : undefined}
+        />
       </div>
     );
   }
