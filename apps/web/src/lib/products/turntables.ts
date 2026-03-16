@@ -111,7 +111,7 @@ export const TURNTABLE_PRODUCTS: TurntableProduct[] = [
         { domain: 'tonality', tendency: 'Slightly lean tonal balance — speed and openness rather than warmth or density', basis: 'review_consensus' },
         { domain: 'spatial', tendency: 'Open and airy but not the last word in image specificity — timing coherence creates a sense of musical space', basis: 'listener_consensus' },
       ],
-      pairings: [
+      interactions: [
         { condition: 'with warm cartridges (Nagaoka MP-110, Goldring)', effect: 'adds tonal body that complements the Rega speed', valence: 'positive', basis: 'listener_consensus' },
         { condition: 'with bright or lean cartridges', effect: 'can sound thin — the plinth doesn\'t add warmth', valence: 'caution', basis: 'listener_consensus' },
       ],
@@ -187,7 +187,7 @@ export const TURNTABLE_PRODUCTS: TurntableProduct[] = [
         { domain: 'tonality', tendency: 'Neutral tonal balance — neither warm nor bright, the motor and plinth don\'t impose character', basis: 'review_consensus' },
         { domain: 'spatial', tendency: 'Stable, well-defined imaging with good separation — the quiet motor helps resolve spatial cues', basis: 'listener_consensus' },
       ],
-      pairings: [
+      interactions: [
         { condition: 'with warm speakers or tube amplification', effect: 'the neutral platform lets upstream warmth come through without damping it', valence: 'positive', basis: 'listener_consensus' },
         { condition: 'in systems already leaning clinical', effect: 'the controlled presentation can compound — may lack life', valence: 'caution', basis: 'listener_consensus' },
       ],
@@ -262,7 +262,7 @@ export const TURNTABLE_PRODUCTS: TurntableProduct[] = [
         { domain: 'texture', tendency: 'Good surface texture and organic quality — instruments feel tactile rather than etched', basis: 'listener_consensus' },
         { domain: 'timing', tendency: 'Relaxed timing compared to Rega — musical flow over rhythmic drive', basis: 'review_consensus' },
       ],
-      pairings: [
+      interactions: [
         { condition: 'with detailed or bright cartridges', effect: 'the warm plinth balances brighter cartridges well', valence: 'positive', basis: 'listener_consensus' },
         { condition: 'in already warm/slow systems', effect: 'can compound — may lack energy and speed', valence: 'caution', basis: 'listener_consensus' },
       ],
@@ -336,7 +336,7 @@ export const TURNTABLE_PRODUCTS: TurntableProduct[] = [
         { domain: 'flow', tendency: 'Musical flow and organic phrasing — notes breathe and connect rather than etching detail', basis: 'listener_consensus' },
         { domain: 'dynamics', tendency: 'Good macro dynamics — VPI turntables tend toward scale and authority over micro-detail', basis: 'review_consensus' },
       ],
-      pairings: [
+      interactions: [
         { condition: 'with detailed or speed-oriented electronics', effect: 'adds welcome body and musical weight to lean systems', valence: 'positive', basis: 'listener_consensus' },
         { condition: 'in already warm/dense systems', effect: 'can sound thick — needs a cartridge with some top-end energy', valence: 'caution', basis: 'listener_consensus' },
       ],
@@ -410,7 +410,7 @@ export const TURNTABLE_PRODUCTS: TurntableProduct[] = [
         { domain: 'tonality', tendency: 'Warm and tonally rich without being sluggish — the LP12 combines body with pace', basis: 'review_consensus' },
         { domain: 'engagement', tendency: 'Long-term musical engagement — the LP12 is famously addictive. Listeners describe a quality of involvement that technical specs don\'t capture', basis: 'listener_consensus' },
       ],
-      pairings: [
+      interactions: [
         { condition: 'with Naim, Leben, or other timing-oriented amplification', effect: 'the LP12\'s rhythmic strengths are amplified — a classic pairing for musicality', valence: 'positive', basis: 'listener_consensus' },
         { condition: 'with ultra-revealing, speed-first systems', effect: 'the suspended subchassis may introduce a subtle softening of transient attack that precision listeners notice', valence: 'caution', basis: 'listener_consensus' },
       ],
@@ -486,7 +486,7 @@ export const TURNTABLE_PRODUCTS: TurntableProduct[] = [
         { domain: 'spatial', tendency: 'Spacious and immersive staging — good depth and a sense of being "in" the music rather than observing it', basis: 'listener_consensus' },
         { domain: 'timing', tendency: 'Relaxed pacing — musical but not rhythmically assertive. Notes flow rather than drive', basis: 'review_consensus' },
       ],
-      pairings: [
+      interactions: [
         { condition: 'with detailed or lean electronics', effect: 'the Thorens warmth and body complement speed-first systems beautifully', valence: 'positive', basis: 'listener_consensus' },
         { condition: 'in already warm, slow systems', effect: 'can become too relaxed — needs a cartridge or phono stage with some leading-edge definition', valence: 'caution', basis: 'listener_consensus' },
       ],
