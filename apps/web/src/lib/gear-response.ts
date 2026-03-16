@@ -22,6 +22,7 @@ import type { ActiveSystemContext } from './system-types';
 import { DAC_PRODUCTS, type Product } from './products/dacs';
 import { SPEAKER_PRODUCTS } from './products/speakers';
 import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
+import { TURNTABLE_PRODUCTS } from './products/turntables';
 import { inferSystemDirection, type SystemDirection } from './system-direction';
 import {
   compareProductArchetypes,
@@ -54,7 +55,7 @@ import { detectChurnSignal, buildChurnNote, type ChurnSignal } from './churn-avo
 
 // ── Product lookup ───────────────────────────────────
 
-const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIFIER_PRODUCTS];
+const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIFIER_PRODUCTS, ...TURNTABLE_PRODUCTS];
 
 /**
  * Resolve subject strings to catalog Product entries.

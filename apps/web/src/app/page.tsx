@@ -13,6 +13,7 @@ import {
   assessmentToAdvisory,
   knowledgeToAdvisory,
   assistantToAdvisory,
+  withPhonoCaveat,
 } from '@/lib/advisory-response';
 import type { AdvisoryResponse, ShoppingAdvisoryContext } from '@/lib/advisory-response';
 import { buildProductAssessment } from '@/lib/product-assessment';
@@ -30,6 +31,7 @@ import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory } from '@/lib/consultation';
+import { findReferenceProduct, buildExplorationResponse, explorationToConsultation } from '@/lib/exploration';
 import { inferUnknownProduct } from '@/lib/llm-product-inference';
 import { inferProvisionalSystemAssessment } from '@/lib/llm-system-inference';
 import type { GlossaryResult } from '@/lib/glossary';
@@ -298,6 +300,17 @@ export default function Home() {
       systemTendencies: turnCtx.activeSystem?.tendencies ?? undefined,
     };
 
+    // ── Phono caveat helper ────────────────────────────────
+    // Wraps any advisory with phono stage awareness before dispatch.
+    // No-op when the advisory subject doesn't involve turntables.
+    const phonoWrap = (a: AdvisoryResponse): AdvisoryResponse =>
+      withPhonoCaveat(a, turnCtx.activeSystem);
+
+    // Dispatch wrapper that applies phono caveat to all advisory messages.
+    const dispatchAdvisory = (advisory: AdvisoryResponse, id?: string) => {
+      dispatch({ type: 'ADD_ADVISORY', advisory: phonoWrap(advisory), ...(id ? { id } : {}) });
+    };
+
     // ── Conversation router ──────────────────────────────
     // Classify the message into a conversation mode before detailed
     // intent detection. Mode persistence carries across turns.
@@ -331,7 +344,7 @@ export default function Home() {
       isComparisonFollowUp(submittedText, state.activeComparison)
     ) {
       const refinement = buildComparisonRefinement(state.activeComparison, submittedText);
-      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(refinement, undefined, advisoryCtx), id: advisoryId() });
+      dispatchAdvisory(consultationToAdvisory(refinement, undefined, advisoryCtx), advisoryId());
       dispatch({ type: 'SET_LOADING', value: false });
       return;
     }
@@ -347,7 +360,7 @@ export default function Home() {
       const contextKind = detectContextEnrichment(submittedText);
       if (contextKind) {
         const refinement = buildContextRefinement(state.activeComparison, submittedText, contextKind);
-        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(refinement, undefined, advisoryCtx), id: advisoryId() });
+        dispatchAdvisory(consultationToAdvisory(refinement, undefined, advisoryCtx), advisoryId());
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -372,7 +385,7 @@ export default function Home() {
     ) {
       const followUp = buildConsultationFollowUp(state.activeConsultation, submittedText);
       if (followUp) {
-        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(followUp, undefined, advisoryCtx), id: advisoryId() });
+        dispatchAdvisory(consultationToAdvisory(followUp, undefined, advisoryCtx), advisoryId());
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -390,7 +403,7 @@ export default function Home() {
     // the evaluation approach and asks for system details.
     if (intent === 'consultation_entry') {
       const entryResult = buildConsultationEntry(submittedText, turnCtx.desires, turnCtx.activeSystem);
-      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(entryResult, undefined, advisoryCtx), id: advisoryId() });
+      dispatchAdvisory(consultationToAdvisory(entryResult, undefined, advisoryCtx), advisoryId());
       dispatch({ type: 'SET_LOADING', value: false });
       return;
     }
@@ -400,7 +413,7 @@ export default function Home() {
     // strategy, system context, tuning direction, and trade-offs.
     if (intent === 'cable_advisory') {
       const cableResult = buildCableAdvisory(submittedText, turnCtx.subjectMatches, turnCtx.desires, turnCtx.activeSystem);
-      dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(cableResult, undefined, advisoryCtx), id: advisoryId() });
+      dispatchAdvisory(consultationToAdvisory(cableResult, undefined, advisoryCtx), advisoryId());
       if (turnCtx.subjectMatches.length > 0) {
         dispatch({
           type: 'SET_CONSULTATION_CONTEXT',
@@ -450,11 +463,7 @@ export default function Home() {
             provisional.source = 'provisional_system';
             const provisionalAdvisory = consultationToAdvisory(provisional, undefined, advisoryCtx);
             provisionalAdvisory.unknownComponents = assessmentResult.unknownComponents;
-            dispatch({
-              type: 'ADD_ADVISORY',
-              advisory: provisionalAdvisory,
-              id: advisoryId(),
-            });
+            dispatchAdvisory(provisionalAdvisory, advisoryId());
             dispatch({ type: 'SET_LOADING', value: false });
             return;
           }
@@ -465,7 +474,7 @@ export default function Home() {
 
         const assessmentMsgId = advisoryId();
         const deterministicAdvisory = consultationToAdvisory(assessmentResult.response, undefined, advisoryCtx);
-        dispatch({ type: 'ADD_ADVISORY', advisory: deterministicAdvisory, id: assessmentMsgId });
+        dispatchAdvisory(deterministicAdvisory, assessmentMsgId);
         // Store consultation context so follow-ups stay in the system context
         dispatch({
           type: 'SET_CONSULTATION_CONTEXT',
@@ -538,7 +547,7 @@ export default function Home() {
             originalQuery: submittedText,
           });
         }
-        dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(consultResult, undefined, advisoryCtx), id: advisoryId() });
+        dispatchAdvisory(consultationToAdvisory(consultResult, undefined, advisoryCtx), advisoryId());
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -549,7 +558,7 @@ export default function Home() {
           : undefined;
         const inferred = await inferUnknownProduct(submittedText, subjectName);
         if (inferred) {
-          dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(inferred, undefined, advisoryCtx), id: advisoryId() });
+          dispatchAdvisory(consultationToAdvisory(inferred, undefined, advisoryCtx), advisoryId());
           dispatch({ type: 'SET_LOADING', value: false });
           return;
         }
@@ -562,7 +571,7 @@ export default function Home() {
             tendencies: `If you can tell me more about this product — what type it is, its approximate price range, or what you've heard about it — I can offer general directional guidance based on the design approach. Alternatively, I can suggest products in a similar category that I do have detailed data on.`,
             followUp: `What category is ${subjectName} — is it a DAC, amplifier, speaker, or something else?`,
           };
-          dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(fallbackResponse, undefined, advisoryCtx), id: advisoryId() });
+          dispatchAdvisory(consultationToAdvisory(fallbackResponse, undefined, advisoryCtx), advisoryId());
           dispatch({ type: 'SET_LOADING', value: false });
           return;
         }
@@ -599,12 +608,33 @@ export default function Home() {
       const assessment = buildProductAssessment(assessmentCtx);
       if (assessment) {
         const advisory = assessmentToAdvisory(assessment, advisoryCtx);
-        dispatch({ type: 'ADD_ADVISORY', advisory });
+        dispatchAdvisory(advisory);
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
       // If assessment builder returns null (can't identify product),
       // fall through to gear inquiry path
+    }
+
+    // ── Exploration — "what else is like X?" ───────────
+    // Maps a philosophical neighborhood around a reference product.
+    if (intent === 'exploration') {
+      const refProduct = findReferenceProduct(turnCtx.subjectMatches, submittedText);
+      if (refProduct) {
+        const exploration = buildExplorationResponse(refProduct, turnCtx.activeSystem, submittedText);
+        const consultResult = explorationToConsultation(exploration);
+        dispatchAdvisory(consultationToAdvisory(consultResult, undefined, advisoryCtx), advisoryId());
+        if (turnCtx.subjectMatches.length > 0) {
+          dispatch({
+            type: 'SET_CONSULTATION_CONTEXT',
+            subjects: turnCtx.subjectMatches,
+            originalQuery: submittedText,
+          });
+        }
+        dispatch({ type: 'SET_LOADING', value: false });
+        return;
+      }
+      // If no reference product found, fall through to gear inquiry
     }
 
     // Count how many shopping advisory turns have already been shown.
@@ -633,7 +663,7 @@ export default function Home() {
             originalQuery: submittedText,
           });
         }
-        dispatch({ type: 'ADD_ADVISORY', advisory: gearResponseToAdvisory(gearResponse, undefined, advisoryCtx), id: advisoryId() });
+        dispatchAdvisory(gearResponseToAdvisory(gearResponse, undefined, advisoryCtx), advisoryId());
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -652,7 +682,7 @@ export default function Home() {
       };
       const knowledge = buildKnowledgeResponse(knowledgeCtx);
       const knowledgeMsgId = advisoryId();
-      dispatch({ type: 'ADD_ADVISORY', advisory: knowledgeToAdvisory(knowledge, advisoryCtx), id: knowledgeMsgId });
+      dispatchAdvisory(knowledgeToAdvisory(knowledge, advisoryCtx), knowledgeMsgId);
 
       // Fire LLM call to replace placeholder explanation with real content.
       // Keep loading indicator until LLM responds or times out.
@@ -684,7 +714,7 @@ export default function Home() {
       };
       const assistant = buildAssistantResponse(assistCtx);
       const assistMsgId = advisoryId();
-      dispatch({ type: 'ADD_ADVISORY', advisory: assistantToAdvisory(assistant), id: assistMsgId });
+      dispatchAdvisory(assistantToAdvisory(assistant), assistMsgId);
 
       // Fire LLM call to generate the actual task output.
       requestAssistantLlm(assistCtx).then((result) => {
@@ -774,7 +804,7 @@ export default function Home() {
 
             const deterministicShoppingAdvisory = shoppingToAdvisory(answer, data.signals, reasoning, advisoryCtx, decisionFrame);
             const shoppingMsgId = advisoryId();
-            dispatch({ type: 'ADD_ADVISORY', advisory: deterministicShoppingAdvisory, id: shoppingMsgId });
+            dispatchAdvisory(deterministicShoppingAdvisory, shoppingMsgId);
 
             // Fire-and-forget: request LLM editorial overlay for richer product descriptions.
             // On success, merge enriched fields into the advisory and update in place.
@@ -896,7 +926,7 @@ export default function Home() {
           if (clarification) {
             dispatch({ type: 'ADD_QUESTION', clarification });
           } else {
-            dispatch({ type: 'ADD_ADVISORY', advisory: analysisToAdvisory(data.result, data.signals, diagDirection, reasoning, advisoryCtx), id: advisoryId() });
+            dispatchAdvisory(analysisToAdvisory(data.result, data.signals, diagDirection, reasoning, advisoryCtx), advisoryId());
           }
         }
       }

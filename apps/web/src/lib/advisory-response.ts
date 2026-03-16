@@ -23,6 +23,7 @@ import type { SystemDirection } from './system-direction';
 import type { ReasoningResult } from './reasoning';
 import { getArchetypeLabel } from './archetype';
 import type { DecisionFrame } from './decision-frame';
+import { detectSystemPhono, buildPhonoCaveat } from './products/turntables';
 
 // ── Types ────────────────────────────────────────────
 
@@ -965,6 +966,37 @@ function enrichAdvisory(
   }
 
   return enriched;
+}
+
+// ── Phono stage caveat injection ─────────────────────
+
+/**
+ * Post-process an advisory to inject a phono stage caveat when:
+ *   1. The advisory subject involves a turntable product
+ *   2. The user's active system doesn't have a phono stage
+ *   3. The advisory doesn't already have a dependencyCaveat
+ *
+ * Call this in page.tsx after building any advisory, before dispatch.
+ */
+export function withPhonoCaveat(
+  advisory: AdvisoryResponse,
+  activeSystem: { components: Array<{ name: string; category: string; role: string | null }> } | null | undefined,
+): AdvisoryResponse {
+  // Already has a dependency caveat — don't overwrite
+  if (advisory.dependencyCaveat) return advisory;
+
+  // Check if the subject involves a turntable
+  const subjectLower = (advisory.subject || '').toLowerCase();
+  const turntableKeywords = ['turntable', 'rega', 'planar', 'technics sl-1', 'pro-ject', 'debut', 'vpi', 'cliffwood', 'linn lp12', 'lp12', 'thorens', 'td 1600'];
+  const involvesTurntable = turntableKeywords.some((kw) => subjectLower.includes(kw));
+  if (!involvesTurntable) return advisory;
+
+  // Detect system phono status
+  const phonoStatus = detectSystemPhono(activeSystem);
+  const caveat = buildPhonoCaveat(null, phonoStatus);
+
+  if (!caveat) return advisory;
+  return { ...advisory, dependencyCaveat: caveat };
 }
 
 // ── Adapter: Consultation → Advisory ─────────────────

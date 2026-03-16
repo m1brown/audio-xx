@@ -14,7 +14,7 @@
 
 // ── Intent type ──────────────────────────────────────
 
-export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory' | 'product_assessment' | 'audio_knowledge' | 'audio_assistant';
+export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory' | 'product_assessment' | 'audio_knowledge' | 'audio_assistant' | 'exploration';
 
 /** A desire the user has expressed — "want more speed", "wish it had warmth". */
 export interface DesireSignal {
@@ -163,6 +163,23 @@ const CABLE_INTENT_PATTERNS = [
   /\bcable\s+(?:recommendation|suggestion|advice|upgrade)\b/i,
   /\b(?:best|good|recommend)\b.*\bcables?\b/i,
   /\bcables?\s+for\b/i,
+];
+
+// ── Exploration patterns ─────────────────────────────
+// "What else is like X?", "similar to X", "alternatives to X"
+
+const EXPLORATION_PATTERNS = [
+  /\bwhat\s+(?:else\s+)?(?:is|sounds?)\s+like\b/i,
+  /\bsimilar\s+to\b/i,
+  /\balternatives?\s+to\b/i,
+  /\bwhat\s+(?:else\s+)?(?:is\s+)?(?:out\s+)?there\s+(?:like|that(?:'s|\s+is)\s+like)\b/i,
+  /\bwhat(?:'s|\s+is)\s+(?:out\s+there\s+)?(?:like|similar)\b/i,
+  /\banything\s+(?:else\s+)?like\b/i,
+  /\bother\s+(?:options?|choices?|products?)\s+(?:like|similar)\b/i,
+  /\bneighborhood\s+(?:of|around|near)\b/i,
+  /\bwhat\s+(?:else\s+)?(?:lives?|sits?)\s+(?:in\s+)?(?:that|this|the\s+same)\s+(?:world|space|territory)\b/i,
+  /\bwhat\s+(?:else\s+)?(?:should\s+I|could\s+I)\s+(?:look\s+at|consider|explore)\b/i,
+  /\bwhat\s+(?:else\s+)?is\s+(?:out\s+there)\b/i,
 ];
 
 // ── Comparison patterns ──────────────────────────────
@@ -793,6 +810,14 @@ export function detectIntent(currentMessage: string): IntentResult {
   // 2. Comparison — "X vs Y", "compare A and B"
   if (COMPARISON_PATTERNS.some((p) => p.test(currentMessage))) {
     return { intent: 'comparison', subjects, subjectMatches, desires };
+  }
+
+  // 2a. Exploration — "what else is like X?", "similar to the JOB"
+  //     Requires at least one subject to anchor the neighborhood.
+  //     Must fire before shopping so "what else is like the Hugo" doesn't
+  //     become a generic DAC recommendation.
+  if (EXPLORATION_PATTERNS.some((p) => p.test(currentMessage)) && subjectMatches.length >= 1) {
+    return { intent: 'exploration', subjects, subjectMatches, desires };
   }
 
   // 2b. Product assessment — "I'm considering the X", "would X work in my system"

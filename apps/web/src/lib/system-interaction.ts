@@ -22,6 +22,7 @@ import type { Product } from './products/dacs';
 import { DAC_PRODUCTS } from './products/dacs';
 import { SPEAKER_PRODUCTS } from './products/speakers';
 import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
+import { TURNTABLE_PRODUCTS } from './products/turntables';
 import { resolveTraitValue } from './sonic-tendencies';
 import type { TasteProfile } from './taste-profile';
 import { topTraits } from './taste-profile';
@@ -32,6 +33,7 @@ const ALL_CATALOG: Product[] = [
   ...DAC_PRODUCTS,
   ...SPEAKER_PRODUCTS,
   ...AMPLIFIER_PRODUCTS,
+  ...TURNTABLE_PRODUCTS,
 ];
 
 // ── Tuning Constants ────────────────────────────────

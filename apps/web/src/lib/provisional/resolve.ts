@@ -23,6 +23,7 @@ import type { ProvenanceSourceType, ValidationStatus } from './types';
 import { DAC_PRODUCTS } from '../products/dacs';
 import { SPEAKER_PRODUCTS } from '../products/speakers';
 import { AMPLIFIER_PRODUCTS } from '../products/amplifiers';
+import { TURNTABLE_PRODUCTS } from '../products/turntables';
 import { findProvisionalProductByName, getUsableProvisionalProducts } from './store';
 
 // ── Resolved product ─────────────────────────────────
@@ -61,6 +62,7 @@ const ALL_CATALOG_PRODUCTS: Product[] = [
   ...DAC_PRODUCTS,
   ...SPEAKER_PRODUCTS,
   ...AMPLIFIER_PRODUCTS,
+  ...TURNTABLE_PRODUCTS,
 ];
 
 // ── Resolution functions ─────────────────────────────
