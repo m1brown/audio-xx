@@ -21,6 +21,9 @@
 import { DAC_PRODUCTS, type Product } from './products/dacs';
 import { SPEAKER_PRODUCTS } from './products/speakers';
 import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
+import { getUsableProvisionalProducts } from './provisional/store';
+import type { ProvisionalProduct } from './provisional/types';
+import { getProvenanceLabel } from './provisional/resolve';
 import type { BrandScale, GeoRegion, ProductCategory } from './catalog-taxonomy';
 import {
   hasTendencies,
@@ -772,6 +775,74 @@ function findProductsByBrand(text: string): Product[] {
   );
 }
 
+/**
+ * Search the provisional product store for products matching the text.
+ * Only returns review_synthesis and review_validated records.
+ */
+function findProvisionalProductsByBrand(text: string): ProvisionalProduct[] {
+  const lower = text.toLowerCase();
+  return getUsableProvisionalProducts().filter((p) =>
+    lower.includes(p.brand.toLowerCase()) || lower.includes(p.name.toLowerCase()),
+  );
+}
+
+/**
+ * Adapt a ProvisionalProduct to the Product interface so it can be
+ * used by buildProductConsultation(). Fills in required fields that
+ * may be absent on provisional records.
+ */
+function provisionalToProduct(pp: ProvisionalProduct): Product {
+  return {
+    id: pp.id,
+    brand: pp.brand,
+    name: pp.name,
+    price: pp.price ?? 0,
+    priceCurrency: pp.priceCurrency,
+    category: pp.category,
+    architecture: pp.architecture ?? 'Unknown architecture',
+    subcategory: pp.subcategory,
+    priceTier: pp.priceTier,
+    brandScale: pp.brandScale,
+    region: pp.region,
+    country: pp.country,
+    topology: pp.topology,
+    traits: pp.traits ?? {},
+    tendencyProfile: pp.tendencyProfile,
+    description: pp.description,
+    retailer_links: [],
+    primaryAxes: pp.primaryAxes,
+    fatigueAssessment: pp.fatigueAssessment,
+    tendencies: pp.tendencies,
+    sourceReferences: pp.sourceReferences,
+  };
+}
+
+/**
+ * Look up a single product by name/id across both validated catalog
+ * and provisional store (tiers 1 and 2 of the resolution chain).
+ */
+function findAnyProduct(name: string): Product | undefined {
+  const lower = name.toLowerCase().trim();
+
+  // Tier 1: Validated catalog
+  const catalogMatch = ALL_PRODUCTS.find(
+    (p) =>
+      p.name.toLowerCase() === lower ||
+      `${p.brand} ${p.name}`.toLowerCase() === lower ||
+      p.id.toLowerCase() === lower,
+  );
+  if (catalogMatch) return catalogMatch;
+
+  // Tier 2: Provisional store
+  const provisionalMatch = getUsableProvisionalProducts().find((p) => {
+    const full = `${p.brand} ${p.name}`.toLowerCase();
+    return p.name.toLowerCase() === lower || full === lower || p.id.toLowerCase() === lower;
+  });
+  if (provisionalMatch) return provisionalToProduct(provisionalMatch);
+
+  return undefined;
+}
+
 function findTopologyMatch(text: string): { archetype: DesignArchetype; label: string } | undefined {
   for (const tk of TOPOLOGY_KEYWORDS) {
     if (tk.patterns.some((p) => p.test(text))) {
@@ -858,6 +929,56 @@ function buildProductConsultation(products: Product[], subject: string): Consult
     if (lessEmphasized.length > 0) {
       tendencyParts.push(`Less of a priority: ${lessEmphasized.join(', ')}.`);
     }
+  } else if (primary.traits || primary.primaryAxes) {
+    // Fallback: synthesize tendencies from traits and primaryAxes for sparse catalog entries.
+    // This ensures every product gets a sonic character section, not just a 3-sentence description.
+    const axisDescriptions: string[] = [];
+    if (primary.primaryAxes) {
+      const ax = primary.primaryAxes;
+      const AXIS_LABELS: Record<string, Record<string, string>> = {
+        warm_bright: { warm: 'warm and tonally rich', bright: 'bright and articulate', neutral: 'tonally balanced' },
+        smooth_detailed: { smooth: 'smooth and flowing', detailed: 'detailed and resolving', neutral: 'balanced between smoothness and detail' },
+        elastic_controlled: { elastic: 'dynamically expressive', controlled: 'composed and controlled', neutral: 'balanced in dynamics' },
+        airy_closed: { airy: 'open and spacious in staging', closed: 'focused and intimate', neutral: 'moderate in spatial presentation' },
+      };
+      for (const [axis, value] of Object.entries(ax)) {
+        const desc = AXIS_LABELS[axis]?.[value];
+        if (desc) axisDescriptions.push(desc);
+      }
+    }
+    if (axisDescriptions.length > 0) {
+      tendencyParts.push(`**Sonic character**: ${axisDescriptions.join(', ')}.`);
+    }
+
+    // Extract notable strengths from traits (values >= 0.9)
+    if (primary.traits) {
+      const TRAIT_LABELS: Record<string, string> = {
+        flow: 'musical flow', tonal_density: 'tonal density', clarity: 'clarity and resolution',
+        dynamics: 'dynamic expression', texture: 'textural richness', composure: 'composure under complexity',
+        warmth: 'warmth', speed: 'transient speed', spatial_precision: 'spatial precision',
+        elasticity: 'rhythmic elasticity',
+      };
+      const strong = Object.entries(primary.traits)
+        .filter(([key, val]) => val >= 0.9 && key !== 'fatigue_risk' && key !== 'glare_risk')
+        .map(([key]) => TRAIT_LABELS[key] ?? key.replace(/_/g, ' '))
+        .filter(Boolean);
+      const moderate = Object.entries(primary.traits)
+        .filter(([key, val]) => val >= 0.6 && val < 0.9 && key !== 'fatigue_risk' && key !== 'glare_risk')
+        .map(([key]) => TRAIT_LABELS[key] ?? key.replace(/_/g, ' '))
+        .filter(Boolean);
+      if (strong.length > 0) {
+        tendencyParts.push(`**Strengths**: ${strong.join(', ')}.`);
+      }
+      if (moderate.length > 0) {
+        tendencyParts.push(`Also competent in ${moderate.join(', ')}.`);
+      }
+
+      // Note low fatigue risk as a positive
+      const fatigueRisk = primary.traits.fatigue_risk;
+      if (fatigueRisk !== undefined && fatigueRisk <= 0.1) {
+        tendencyParts.push('Low fatigue risk — well-suited for extended listening sessions.');
+      }
+    }
   }
 
   // Fatigue assessment
@@ -874,6 +995,21 @@ function buildProductConsultation(products: Product[], subject: string): Consult
     for (const interaction of primary.tendencies.interactions) {
       const prefix = interaction.valence === 'positive' ? 'Works well' : 'Worth noting';
       contextParts.push(`${prefix}: ${interaction.condition} — ${interaction.effect}.`);
+    }
+  } else if (primary.primaryAxes) {
+    // Fallback: generate basic pairing guidance from axis positions
+    const ax = primary.primaryAxes;
+    if (ax.warm_bright === 'warm') {
+      contextParts.push('Works well: pairs naturally with neutral or slightly lean amplification — the warmth carries through without compounding.');
+      contextParts.push('Worth noting: pairing with very warm or dense downstream components may push tonality past natural.');
+    } else if (ax.warm_bright === 'bright') {
+      contextParts.push('Works well: pairs naturally with warmer or denser amplification — the brightness adds articulation without harshness.');
+      contextParts.push('Worth noting: pairing with other lean or bright components may push the presentation toward fatigue at high volume.');
+    }
+    if (ax.smooth_detailed === 'smooth') {
+      contextParts.push('The smooth character makes it forgiving with aggressive recordings and poorly mastered sources.');
+    } else if (ax.smooth_detailed === 'detailed') {
+      contextParts.push('The resolving character rewards high-quality recordings and transparent upstream components.');
     }
   }
 
@@ -1075,7 +1211,35 @@ function buildBrandComparison(
   // Extracts the core character from each side's tendencies to form a contrast.
   const charA = extractCoreCharacter(profileA.tendencies);
   const charB = extractCoreCharacter(profileB.tendencies);
-  const summary = `${nameA} tends toward ${charA}, while ${nameB} leans toward ${charB}.`;
+
+  // Add price context when both brands have representative products
+  const productsA = ALL_PRODUCTS.filter(
+    (p) => p.brand.toLowerCase() === ('names' in profileA ? profileA.names[0] : profileA.name).toLowerCase(),
+  );
+  const productsB = ALL_PRODUCTS.filter(
+    (p) => p.brand.toLowerCase() === ('names' in profileB ? profileB.names[0] : profileB.name).toLowerCase(),
+  );
+  // Use median price as representative
+  const medianPrice = (products: Product[]): number | null => {
+    if (products.length === 0) return null;
+    const prices = products.map((p) => p.price).sort((a, b) => a - b);
+    return prices[Math.floor(prices.length / 2)];
+  };
+  const priceA = medianPrice(productsA);
+  const priceB = medianPrice(productsB);
+  let priceContext = '';
+  if (priceA && priceB) {
+    const ratio = Math.max(priceA, priceB) / Math.min(priceA, priceB);
+    if (ratio >= 2) {
+      const cheaperName = priceA < priceB ? nameA : nameB;
+      const pricierName = priceA < priceB ? nameB : nameA;
+      const cheaperPrice = Math.min(priceA, priceB);
+      const pricierPrice = Math.max(priceA, priceB);
+      priceContext = ` These occupy different price tiers — ${cheaperName} around ~$${cheaperPrice.toLocaleString()} vs ${pricierName} around ~$${pricierPrice.toLocaleString()}.`;
+    }
+  }
+
+  const summary = `${nameA} tends toward ${charA}, while ${nameB} leans toward ${charB}.${priceContext}`;
 
   // ── Architectural explanation ──────────────────────────
   // When both brands have products with known topologies, explain WHY
@@ -1494,6 +1658,24 @@ export function buildConsultationResponse(
     // No curated profile — fall through to product consultation as best-effort
     const brandName = products[0].brand;
     return buildProductConsultation(products, brandName);
+  }
+
+  // 2c. Check provisional product store (review_synthesis / review_validated)
+  //     This is tier 2 of the resolution chain — products with structured
+  //     trait data derived from curated review evidence.
+  const provisionalProducts = findProvisionalProductsByBrand(currentMessage);
+  if (provisionalProducts.length > 0) {
+    const primary = provisionalProducts[0];
+    const adapted = provisionalProducts.map(provisionalToProduct);
+    const response = buildProductConsultation(adapted, primary.brand);
+
+    // Add provenance label so the advisory response frames trust level correctly
+    const label = getProvenanceLabel(primary.provenance.sourceType);
+    if (label && response.philosophy) {
+      response.philosophy = `${label}.\n\n${response.philosophy}`;
+    }
+
+    return response;
   }
 
   // 3. Check for topology/technology match
@@ -2103,14 +2285,48 @@ export function buildConsultationFollowUp(
   // ── System fit questions ─────────────────────────────
   if (kind === 'system_fit') {
     const info = resolveBrandInfo(primarySubject.name);
-    if (info) {
+    // Try to resolve the product from validated catalog + provisional store
+    const product = findAnyProduct(primarySubject.name);
+
+    if (info || product) {
+      // Build a contextual response that incorporates what the user told us
+      const pairingNotes = brandProfile?.pairingNotes ?? info?.systemContext ?? '';
+      const productTendencies = product?.description
+        ? takeSentences(product.description, 2)
+        : info?.tendencies
+          ? takeSentences(info.tendencies, 2)
+          : '';
+
+      // Check if the user mentioned tube amplification — a very common pairing question
+      const mentionsTubes = /\btube|valve|set\b|single[- ]?ended|300b|2a3|el34|kt88|push[- ]?pull/i.test(followUpMessage);
+      // Extract sensitivity from product description/notes (e.g. "93dB sensitivity" or "96dB")
+      const sensitivityText = product ? `${product.description} ${product.notes ?? ''}` : '';
+      const sensitivityMatch = sensitivityText.match(/(\d{2,3})\s*dB\b/i);
+      const productEfficiency = sensitivityMatch ? parseInt(sensitivityMatch[1], 10) : undefined;
+      const isHighEfficiency = productEfficiency && productEfficiency >= 90;
+
+      let contextualNote: string;
+      if (mentionsTubes && product) {
+        if (isHighEfficiency) {
+          contextualNote = `${subjectName} with tube amplification is a natural pairing. At ${productEfficiency}dB sensitivity, even modest tube power (8–15W) will drive these comfortably. This is one of the design's intended use cases — the combination tends to emphasise warmth, harmonic richness, and spatial depth.`;
+        } else if (productEfficiency && productEfficiency >= 86) {
+          contextualNote = `${subjectName} can work with tube amplification, though at ${productEfficiency}dB sensitivity you'll want reasonable power — push-pull designs (20W+) rather than single-ended triodes. The tube character adds warmth and harmonic texture to the presentation.`;
+        } else {
+          contextualNote = `${subjectName} with tube amplification is possible but depends on the amp's power and the room. ${productTendencies}`;
+        }
+      } else {
+        contextualNote = `${subjectName} in that context: ${productTendencies}${pairingNotes ? ` ${pairingNotes}` : ''}`;
+      }
+
       return {
         subject: subjectName,
-        philosophy: `${subjectName} in your system context: ${takeSentences(info.tendencies, 1)}`,
-        tendencies: info.systemContext
-          ? takeSentences(info.systemContext, 2)
+        philosophy: contextualNote,
+        tendencies: pairingNotes && !mentionsTubes
+          ? takeSentences(pairingNotes, 2)
           : 'How well it fits depends on what the rest of the chain brings — amplifier topology, source character, and room all interact.',
-        followUp: 'What does the rest of your chain look like?',
+        followUp: mentionsTubes
+          ? 'Which tube amp are you using — or are you choosing one?'
+          : 'What else is in the chain?',
       };
     }
   }
@@ -4491,14 +4707,14 @@ function classifyStackedTrait(
  * one for system imbalance (notes the trade-off risk).
  */
 const CHARACTER_EXPLANATIONS: Record<SonicProperty, string> = {
-  high_speed: 'The system is built around transient speed and articulation. This is a defining identity — fast, elastic, rhythmically engaging.',
+  high_speed: 'Transient speed and articulation are the dominant sonic trait here — the system prioritises fast, rhythmically engaging presentation.',
   low_stored_energy: 'Multiple low-stored-energy components produce fast, articulate sound. Extended listening may feel lean on harmonically dense material.',
-  high_density: 'The chain prioritizes tonal richness and midrange body. This is a defining identity — immersive, harmonically saturated, physically present.',
+  high_density: 'The chain leans into tonal richness and midrange body — immersive, harmonically saturated, physically present.',
   high_damping: 'Stacked control and damping. Composure under load is excellent, but dynamic expression and elasticity may feel suppressed.',
   low_density: 'Multiple components contribute thin midrange character. The system may lack tonal body and weight on acoustic material.',
-  high_detail: 'The system is built around resolution and transparency. This is a defining identity — revealing, micro-detailed, honest with recordings.',
-  high_smoothness: 'The chain prioritizes musical flow and liquidity. This is a defining identity — effortless, non-fatiguing, easy to listen to for hours.',
-  high_elasticity: 'The system is built around rhythmic energy and dynamic expression. This is a defining identity — alive, punchy, musically engaging.',
+  high_detail: 'Resolution and transparency run through the chain — revealing, micro-detailed, honest with recordings.',
+  high_smoothness: 'Musical flow and liquidity are the prevailing character — effortless, non-fatiguing, easy to listen to for hours.',
+  high_elasticity: 'Rhythmic energy and dynamic expression are a shared emphasis — alive, punchy, musically engaging.',
   high_control: 'Control emphasis stacks in the chain. Stability and grip are excellent, but the presentation may feel overdamped or mechanical.',
 };
 
@@ -4792,15 +5008,36 @@ function buildComponentAssessments(
       || (c.product.brandScale === 'boutique' && c.product.priceTier === 'high-end')
     );
 
-    // ── Axis-derived strengths (technical vocabulary) ──
-    if (axes.warm_bright === 'warm') strengths.push('Tonal density and harmonic richness');
-    if (axes.warm_bright === 'bright') strengths.push('Transient speed and low stored energy');
+    // ── Axis-derived strengths (differentiated by component role) ──
+    // Same axis position on different component types reflects different
+    // engineering causes — use role-specific language to avoid identical
+    // descriptions for components that share axis leanings.
+    const isDac = c.role === 'dac' || c.role === 'streamer';
+    const isAmp = c.role === 'amplifier' || c.role === 'integrated';
+    const isSpeaker = c.role === 'speaker';
+
+    if (axes.warm_bright === 'warm') {
+      strengths.push(isDac ? 'Rich harmonic rendering' : isAmp ? 'Warm current delivery and tonal body' : isSpeaker ? 'Full-bodied tonal presentation' : 'Tonal density and harmonic richness');
+    }
+    if (axes.warm_bright === 'bright') {
+      strengths.push(isDac ? 'FPGA/conversion timing precision and low stored energy' : isAmp ? 'Fast signal path with minimal coloring' : isSpeaker ? 'Lively treble energy and articulation' : 'Transient speed and low stored energy');
+    }
     if (axes.warm_bright === 'neutral') strengths.push('Neutral tonal balance');
-    if (axes.smooth_detailed === 'smooth') strengths.push('Musical flow and ease');
-    if (axes.smooth_detailed === 'detailed') strengths.push('Microdetail retrieval and transparency');
-    if (axes.elastic_controlled === 'elastic') strengths.push('Elasticity and dynamic expression');
-    if (axes.elastic_controlled === 'controlled') strengths.push('Stability and grip under load');
-    if (axes.airy_closed === 'airy') strengths.push('Spatial scale and image separation');
+    if (axes.smooth_detailed === 'smooth') {
+      strengths.push(isDac ? 'Organic conversion character' : isAmp ? 'Easy, unforced musical delivery' : 'Musical flow and ease');
+    }
+    if (axes.smooth_detailed === 'detailed') {
+      strengths.push(isDac ? 'Conversion-stage microdetail and transparency' : isAmp ? 'Circuit transparency — reveals source differences' : isSpeaker ? 'Driver resolution and crossover transparency' : 'Microdetail retrieval and transparency');
+    }
+    if (axes.elastic_controlled === 'elastic') {
+      strengths.push(isDac ? 'Dynamic timing agility in the conversion stage' : isAmp ? 'Current delivery responds to musical dynamics' : isSpeaker ? 'Driver excursion and dynamic expression' : 'Elasticity and dynamic expression');
+    }
+    if (axes.elastic_controlled === 'controlled') {
+      strengths.push(isDac ? 'Clock stability and conversion composure' : isAmp ? 'Damping factor and load control' : isSpeaker ? 'Cone control and transient discipline' : 'Stability and grip under load');
+    }
+    if (axes.airy_closed === 'airy') {
+      strengths.push(isDac ? 'Spatial reconstruction from the conversion stage' : isAmp ? 'Amplifier-stage spatial openness' : isSpeaker ? 'Cabinet design and driver dispersion create open staging' : 'Spatial scale and image separation');
+    }
 
     // ── Trait-enriched strengths ──
     if (traits) {
@@ -4814,14 +5051,20 @@ function buildComponentAssessments(
       strengths.push(`${c.product.architecture} topology`);
     }
 
-    // ── Axis-derived observations ──
+    // ── Axis-derived observations (differentiated by component role) ──
     // For elite products, these are design trade-offs (intentional philosophy).
     // For other products, they are weaknesses (potential limitations).
     const axisTarget = isElite ? designTradeoffs : weaknesses;
-    if (axes.warm_bright === 'warm') axisTarget.push('Transient edges may soften');
-    if (axes.warm_bright === 'bright') axisTarget.push('Tonal density may lean thin');
+    if (axes.warm_bright === 'warm') {
+      axisTarget.push(isDac ? 'Conversion warmth may mask upstream detail' : isAmp ? 'Amplifier coloration may soften transient edges' : 'Transient edges may soften');
+    }
+    if (axes.warm_bright === 'bright') {
+      axisTarget.push(isDac ? 'Light tonal weight from the source stage' : isAmp ? 'Lean amplifier voicing — tonal density may be thin' : 'Tonal density may lean thin');
+    }
     if (axes.smooth_detailed === 'smooth') axisTarget.push('Fine detail may be smoothed over');
-    if (axes.smooth_detailed === 'detailed') axisTarget.push('Lesser recordings may sound unforgiving');
+    if (axes.smooth_detailed === 'detailed') {
+      axisTarget.push(isDac ? 'Source-level transparency may expose recording flaws' : isAmp ? 'Amplifier resolving power may sound unforgiving' : 'Lesser recordings may sound unforgiving');
+    }
     if (axes.elastic_controlled === 'controlled') axisTarget.push('Dynamic elasticity may be suppressed');
     if (axes.elastic_controlled === 'elastic') axisTarget.push('May lose grip on dense orchestral material');
     if (axes.airy_closed === 'closed') axisTarget.push('Spatial scale is constrained');

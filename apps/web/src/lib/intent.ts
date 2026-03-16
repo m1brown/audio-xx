@@ -811,7 +811,24 @@ export function detectIntent(currentMessage: string): IntentResult {
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
-  // 4. Gear inquiry — "what do you think of X?" or brand mention
+  // 4. Audio assistant — negotiation, translation, message writing,
+  //    travel/audition logistics, buying help.
+  //    Checked BEFORE gear inquiry because assistant patterns are
+  //    action-oriented (write, translate, negotiate) and should take
+  //    priority even when the message mentions product/brand names.
+  if (AUDIO_ASSISTANT_PATTERNS.some((p) => p.test(currentMessage))) {
+    return { intent: 'audio_assistant', subjects, subjectMatches, desires };
+  }
+
+  // 4b. Audio knowledge — general audio questions not tied to system decisions.
+  //     Technology explanations, tube comparisons, design philosophy.
+  //     Checked before gear inquiry so "Sovtek vs Mullard EL84" routes here
+  //     instead of being caught by the subjects catch-all.
+  if (AUDIO_KNOWLEDGE_PATTERNS.some((p) => p.test(currentMessage))) {
+    return { intent: 'audio_knowledge', subjects, subjectMatches, desires };
+  }
+
+  // 5. Gear inquiry — "what do you think of X?" or brand mention
   //    without a listening problem.
   //    Requires a concrete subject (brand name) OR a gear-category word
   //    to avoid misclassifying vague follow-ups like "what do you think about that?"
@@ -822,23 +839,9 @@ export function detectIntent(currentMessage: string): IntentResult {
     return { intent: 'gear_inquiry', subjects, subjectMatches, desires };
   }
 
-  // 4b. Brand/product mention without any other pattern → gear inquiry
+  // 5b. Brand/product mention without any other pattern → gear inquiry
   if (subjects.length > 0) {
     return { intent: 'gear_inquiry', subjects, subjectMatches, desires };
-  }
-
-  // 5. Audio assistant — negotiation, translation, message writing,
-  //    travel/audition logistics, buying help.
-  //    Checked BEFORE audio_knowledge because assistant patterns are
-  //    more specific (action verbs vs. question verbs).
-  if (AUDIO_ASSISTANT_PATTERNS.some((p) => p.test(currentMessage))) {
-    return { intent: 'audio_assistant', subjects, subjectMatches, desires };
-  }
-
-  // 6. Audio knowledge — general audio questions not tied to system decisions.
-  //    Technology explanations, product opinions, sound signatures.
-  if (AUDIO_KNOWLEDGE_PATTERNS.some((p) => p.test(currentMessage))) {
-    return { intent: 'audio_knowledge', subjects, subjectMatches, desires };
   }
 
   // 7. Default — treat as diagnostic / open-ended listening discussion

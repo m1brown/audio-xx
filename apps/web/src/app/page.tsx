@@ -17,7 +17,7 @@ import {
 import type { AdvisoryResponse, ShoppingAdvisoryContext } from '@/lib/advisory-response';
 import { buildProductAssessment } from '@/lib/product-assessment';
 import type { AssessmentContext } from '@/lib/product-assessment';
-import { buildKnowledgeResponse, buildAssistantResponse } from '@/lib/audio-lanes';
+import { buildKnowledgeResponse, buildAssistantResponse, requestKnowledgeLlm, requestAssistantLlm } from '@/lib/audio-lanes';
 import type { KnowledgeContext, AssistantContext as AudioAssistantContext } from '@/lib/audio-lanes';
 import { buildDecisionFrame } from '@/lib/decision-frame';
 import { getClarificationQuestion } from '@/lib/clarification';
@@ -280,11 +280,15 @@ export default function Home() {
     // ── Build AudioProfile context (shared across all advisory paths) ──
     const advisoryCtx: ShoppingAdvisoryContext = {
       systemComponents: turnCtx.activeSystem
-        ? turnCtx.activeSystem.components.map((c) =>
-            c.name.toLowerCase().startsWith(c.brand.toLowerCase())
-              ? c.name
-              : `${c.brand} ${c.name}`,
-          )
+        ? turnCtx.activeSystem.components.map((c) => {
+            const b = (c.brand || '').trim();
+            const n = (c.name || '').trim();
+            if (!b) return n || 'Unknown';
+            if (!n) return b;
+            // Avoid "JOB JOB Integrated" — if name already starts with the brand, skip prefix
+            if (n.toLowerCase().startsWith(b.toLowerCase())) return n;
+            return `${b} ${n}`;
+          })
         : undefined,
       systemLocation: turnCtx.activeSystem?.location ?? undefined,
       systemPrimaryUse: turnCtx.activeSystem?.primaryUse ?? undefined,
@@ -545,8 +549,21 @@ export default function Home() {
           dispatch({ type: 'SET_LOADING', value: false });
           return;
         }
+        // LLM inference also failed — show a transparent fallback message
+        // instead of silently falling through to an empty response.
+        if (subjectName) {
+          const fallbackResponse: import('@/lib/consultation').ConsultationResponse = {
+            subject: subjectName,
+            philosophy: `I don't have calibrated data on ${subjectName} in my product database. This means I can't provide the kind of detailed, review-sourced assessment I'd normally offer.`,
+            tendencies: `If you can tell me more about this product — what type it is, its approximate price range, or what you've heard about it — I can offer general directional guidance based on the design approach. Alternatively, I can suggest products in a similar category that I do have detailed data on.`,
+            followUp: `What category is ${subjectName} — is it a DAC, amplifier, speaker, or something else?`,
+          };
+          dispatch({ type: 'ADD_ADVISORY', advisory: consultationToAdvisory(fallbackResponse, undefined, advisoryCtx), id: advisoryId() });
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
       }
-      // LLM inference also failed — fall through to gear inquiry path below
+      // No subjects identified — fall through to gear inquiry path below
     }
 
     // ── Mode-aware intent override ─────────────────────
@@ -630,8 +647,25 @@ export default function Home() {
         advisoryCtx,
       };
       const knowledge = buildKnowledgeResponse(knowledgeCtx);
-      dispatch({ type: 'ADD_ADVISORY', advisory: knowledgeToAdvisory(knowledge, advisoryCtx) });
-      dispatch({ type: 'SET_LOADING', value: false });
+      const knowledgeMsgId = advisoryId();
+      dispatch({ type: 'ADD_ADVISORY', advisory: knowledgeToAdvisory(knowledge, advisoryCtx), id: knowledgeMsgId });
+
+      // Fire LLM call to replace placeholder explanation with real content.
+      // Keep loading indicator until LLM responds or times out.
+      requestKnowledgeLlm(knowledgeCtx).then((result) => {
+        if (result) {
+          const updated = { ...knowledge, explanation: result.explanation };
+          if (result.keyPoints) updated.keyPoints = result.keyPoints;
+          dispatch({ type: 'UPDATE_ADVISORY', id: knowledgeMsgId, advisory: knowledgeToAdvisory(updated, advisoryCtx) });
+        } else {
+          // LLM failed — update with a more helpful fallback
+          const fallback = { ...knowledge, explanation: `I don't have enough structured data to answer this question thoroughly. This topic — ${knowledge.topic} — falls outside my calibrated product database. In a future update, I'll be able to provide deeper coverage here.` };
+          dispatch({ type: 'UPDATE_ADVISORY', id: knowledgeMsgId, advisory: knowledgeToAdvisory(fallback, advisoryCtx) });
+        }
+        dispatch({ type: 'SET_LOADING', value: false });
+      }).catch(() => {
+        dispatch({ type: 'SET_LOADING', value: false });
+      });
       return;
     }
 
@@ -645,8 +679,23 @@ export default function Home() {
         activeSystem: turnCtx.activeSystem,
       };
       const assistant = buildAssistantResponse(assistCtx);
-      dispatch({ type: 'ADD_ADVISORY', advisory: assistantToAdvisory(assistant) });
-      dispatch({ type: 'SET_LOADING', value: false });
+      const assistMsgId = advisoryId();
+      dispatch({ type: 'ADD_ADVISORY', advisory: assistantToAdvisory(assistant), id: assistMsgId });
+
+      // Fire LLM call to generate the actual task output.
+      requestAssistantLlm(assistCtx).then((result) => {
+        if (result) {
+          const updated = { ...assistant, body: result.body };
+          if (result.tips) updated.tips = result.tips;
+          dispatch({ type: 'UPDATE_ADVISORY', id: assistMsgId, advisory: assistantToAdvisory(updated) });
+        } else {
+          const fallback = { ...assistant, body: `I wasn't able to complete this task right now. The language model service didn't respond in time. Please try again.` };
+          dispatch({ type: 'UPDATE_ADVISORY', id: assistMsgId, advisory: assistantToAdvisory(fallback) });
+        }
+        dispatch({ type: 'SET_LOADING', value: false });
+      }).catch(() => {
+        dispatch({ type: 'SET_LOADING', value: false });
+      });
       return;
     }
 
@@ -714,7 +763,7 @@ export default function Home() {
                 content: 'Showing a range of design philosophies since I don\'t have your full listening profile yet. Tell me more about your system and preferences anytime to sharpen the direction.',
               });
             }
-            const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning);
+            const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning, advisoryCtx.systemComponents);
 
             // Build decision frame — strategic framing before product shortlist
             const decisionFrame = buildDecisionFrame(shoppingCtx.category, advisoryCtx, tasteProfile);

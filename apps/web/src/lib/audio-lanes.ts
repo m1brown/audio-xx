@@ -38,9 +38,8 @@ export interface KnowledgeContext {
 /**
  * Builds a KnowledgeResponse from structured context.
  *
- * The explanation field is a placeholder prompt that the LLM will
- * expand into prose. The systemNote is deterministically derived
- * from the user's system and taste profile.
+ * Returns a deterministic shell immediately. Call `requestKnowledgeLlm()`
+ * to populate the explanation with LLM-generated prose.
  */
 export function buildKnowledgeResponse(ctx: KnowledgeContext): KnowledgeResponse {
   const topic = extractTopic(ctx.currentMessage, ctx.subjectMatches);
@@ -50,14 +49,163 @@ export function buildKnowledgeResponse(ctx: KnowledgeContext): KnowledgeResponse
 
   return {
     topic,
-    // The explanation is a structured prompt for the LLM.
-    // In the initial implementation this is a pass-through of the
-    // user's question. When the LLM integration layer is added,
-    // this will be replaced with generated prose.
-    explanation: ctx.currentMessage,
+    // Placeholder — will be replaced by LLM-generated prose
+    explanation: `Thinking about ${topic}…`,
     systemNote: systemNote ?? undefined,
     keyPoints: undefined,
   };
+}
+
+// ── LLM timeout ─────────────────────────────────────
+const LANE_LLM_TIMEOUT_MS = 12000;
+
+/**
+ * Request the LLM to generate a knowledge explanation.
+ *
+ * Returns the generated text, or null on failure (timeout, API error).
+ * The caller should replace the placeholder explanation with this text.
+ */
+export async function requestKnowledgeLlm(
+  ctx: KnowledgeContext,
+): Promise<{ explanation: string; keyPoints?: string[] } | null> {
+  const topic = extractTopic(ctx.currentMessage, ctx.subjectMatches);
+  const systemNote = buildSystemNote(topic, ctx.activeSystem, ctx.tasteProfile);
+
+  const systemPrompt = `You are a knowledgeable audio advisor answering general audio questions.
+
+TONE: Calm, confident, educational. No hype, no brand worship, no urgency.
+Write as a well-read friend who happens to know a lot about audio equipment.
+
+CONSTRAINTS:
+- Answer the question directly and thoroughly.
+- When comparing items (e.g., tube brands, topologies, design philosophies), explain the sonic character of each and the practical trade-offs.
+- Use concrete sonic descriptions (warm, bright, airy, dense, fast, slow) rather than vague praise.
+- If the topic relates to the user's system context, note how it connects — but keep the focus on the general question.
+- Keep the total response to 200–400 words. No bullet points unless the question specifically asks to list things.
+- Do not use markdown formatting (no **bold**, no # headers, no bullet lists). Write in natural prose.
+- If you are uncertain about something, say so rather than guessing.
+
+FORMAT:
+Return a JSON object with two fields:
+{
+  "explanation": "Your prose explanation here (200–400 words, plain text, no markdown)",
+  "keyPoints": ["Optional array of 2–4 key takeaway phrases"]
+}`;
+
+  const userPrompt = `Question: ${ctx.currentMessage}${systemNote ? `\n\nUser's system context: ${systemNote}` : ''}`;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), LANE_LLM_TIMEOUT_MS);
+
+    const response = await fetch('/api/memo-overlay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ systemPrompt, userPrompt }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      console.warn('[knowledge-lane] LLM call failed:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const raw = data.content ?? '';
+
+    // Try to parse JSON response
+    try {
+      const parsed = JSON.parse(raw);
+      return {
+        explanation: typeof parsed.explanation === 'string' ? parsed.explanation : raw,
+        keyPoints: Array.isArray(parsed.keyPoints) ? parsed.keyPoints : undefined,
+      };
+    } catch {
+      // If not valid JSON, use the raw text as explanation
+      return { explanation: raw };
+    }
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      console.warn('[knowledge-lane] Timed out after', LANE_LLM_TIMEOUT_MS, 'ms');
+    } else {
+      console.warn('[knowledge-lane] Failed:', err);
+    }
+    return null;
+  }
+}
+
+/**
+ * Request the LLM to generate an assistant response (translations,
+ * messages, negotiation help, etc.).
+ *
+ * Returns the generated body text, or null on failure.
+ */
+export async function requestAssistantLlm(
+  ctx: AssistantContext,
+): Promise<{ body: string; tips?: string[] } | null> {
+  const taskType = classifyAssistantTask(ctx.currentMessage);
+
+  const systemPrompt = `You are a practical audio hobby assistant. You help with tasks like writing messages to sellers, translating audio-related correspondence, helping with negotiations, and providing logistics advice for equipment purchases.
+
+TONE: Friendly, helpful, professional. You are a knowledgeable audiophile helping a fellow enthusiast.
+
+TASK TYPE: ${taskType}
+
+CONSTRAINTS:
+- Complete the requested task directly. If asked to write a message, write the message. If asked to translate, translate.
+- When writing messages to sellers, be polite and specific. Ask the right questions about condition, history, and shipping.
+- For translations, produce natural-sounding text in the target language.
+- For negotiations, be fair and realistic about pricing.
+- Keep Audio XX advisory tone — no hype, no desperation, calm and informed.
+- If the task involves a specific product, you may reference known characteristics to make the message more informed.
+
+FORMAT:
+Return a JSON object:
+{
+  "body": "The completed task output (the message, translation, or advice)",
+  "tips": ["Optional array of 1–3 practical tips related to the task"]
+}`;
+
+  const userPrompt = ctx.currentMessage;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), LANE_LLM_TIMEOUT_MS);
+
+    const response = await fetch('/api/memo-overlay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ systemPrompt, userPrompt }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      console.warn('[assistant-lane] LLM call failed:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const raw = data.content ?? '';
+
+    try {
+      const parsed = JSON.parse(raw);
+      return {
+        body: typeof parsed.body === 'string' ? parsed.body : raw,
+        tips: Array.isArray(parsed.tips) ? parsed.tips : undefined,
+      };
+    } catch {
+      return { body: raw };
+    }
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      console.warn('[assistant-lane] Timed out after', LANE_LLM_TIMEOUT_MS, 'ms');
+    } else {
+      console.warn('[assistant-lane] Failed:', err);
+    }
+    return null;
+  }
 }
 
 /**
