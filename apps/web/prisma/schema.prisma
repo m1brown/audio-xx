@@ -32,6 +32,14 @@ model Profile {
   notes            String?
   activeSystemId   String?  @map("active_system_id")                   // soft ref to System.id
 
+  // ── Onboarding fields ──────────────────────────────────────────────
+  experienceLevel  String?  @map("experience_level")                   // "beginner" | "intermediate" | "experienced"
+  intent           String?                                              // "understand" | "improve" | "choose" | "explore"
+  musicGenres      String   @default("[]") @map("music_genres")        // JSON array
+  listeningStyle   String?  @map("listening_style")                    // "focused" | "background" | "both"
+  locale           String?                                              // e.g. "en-US", "fr-EU"
+  onboardedAt      DateTime? @map("onboarded_at")                      // null = not yet onboarded
+
   @@map("profiles")
 }
 

@@ -14,8 +14,21 @@ export default function SignIn() {
     e.preventDefault();
     setError('');
     const res = await signIn('credentials', { email, password, redirect: false });
-    if (res?.error) setError('Invalid credentials');
-    else router.push('/systems');
+    if (res?.error) {
+      setError('Invalid credentials');
+      return;
+    }
+    // Check if user has completed onboarding
+    try {
+      const profile = await fetch('/api/profile').then((r) => r.ok ? r.json() : null);
+      if (profile?.onboardedAt) {
+        router.push('/');
+      } else {
+        router.push('/onboarding');
+      }
+    } catch {
+      router.push('/onboarding');
+    }
   }
 
   return (

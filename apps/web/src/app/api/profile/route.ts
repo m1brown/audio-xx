@@ -19,6 +19,7 @@ export async function GET() {
     sensitivityFlags: JSON.parse(profile.sensitivityFlags),
     preferredTraits: JSON.parse(profile.preferredTraits),
     archetypes: JSON.parse(profile.archetypes),
+    musicGenres: JSON.parse(profile.musicGenres),
     activeSystemId: profile.activeSystemId ?? null,
   });
 }
@@ -72,6 +73,7 @@ export async function PATCH(req: NextRequest) {
     sensitivityFlags: JSON.parse(profile.sensitivityFlags),
     preferredTraits: JSON.parse(profile.preferredTraits),
     archetypes: JSON.parse(profile.archetypes),
+    musicGenres: JSON.parse(profile.musicGenres),
     activeSystemId: profile.activeSystemId ?? null,
   });
 }
