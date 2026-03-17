@@ -1605,6 +1605,19 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
         </AdvisorySection>
       )}
 
+      {/* ── 5b. Product detail (origin, interactions) */}
+      {a.productOrigin && (
+        <p style={{ margin: '0.5rem 0', fontSize: FONTS.smallSize, color: COLORS.textMuted, lineHeight: FONTS.lineHeight }}>
+          {a.productOrigin}
+        </p>
+      )}
+
+      {a.interactionNotes && a.interactionNotes.length > 0 && (
+        <AdvisorySection label="System interactions">
+          <BulletList items={a.interactionNotes} color={COLORS.textSecondary} />
+        </AdvisorySection>
+      )}
+
       {/* ── 6. Recommended direction ─────────────── */}
       {a.recommendedDirection && (
         <AdvisorySection label="What this means for component choice">

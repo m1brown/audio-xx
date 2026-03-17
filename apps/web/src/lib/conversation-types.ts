@@ -6,6 +6,7 @@ import type { UserArchetypePreference } from './archetype';
 import type { ConversationMode } from './conversation-router';
 import type { ReasoningResult } from './reasoning';
 import type { AdvisoryResponse } from './advisory-response';
+import type { Product } from './products/dacs';
 
 /**
  * System direction context attached to diagnostic analysis results.
@@ -51,6 +52,8 @@ export interface GearResponse {
   hearing?: string[];
   /** Structured upgrade analysis — populated for upgrade comparisons. */
   upgradeAnalysis?: UpgradeAnalysis;
+  /** Matched product catalog entries — carries full Product for rich advisory rendering. */
+  matchedProducts?: Product[];
 }
 
 /**

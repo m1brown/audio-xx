@@ -3394,6 +3394,7 @@ export function buildSystemAssessment(
   );
 
   // ── Collect source references from catalogued products ──
+  // Cross-reference with retailer_links to find review URLs
   const memoSourceRefs: import('./advisory-response').SourceReference[] = [];
   const seenSources = new Set<string>();
   for (const c of components) {
@@ -3401,7 +3402,11 @@ export function buildSystemAssessment(
       for (const ref of c.product.sourceReferences) {
         if (!seenSources.has(ref.source)) {
           seenSources.add(ref.source);
-          memoSourceRefs.push({ source: ref.source, note: ref.note });
+          const matchingLink = c.product.retailer_links?.find(
+            (l: { label: string; url: string }) =>
+              l.label.toLowerCase().includes(ref.source.toLowerCase()) && l.label.toLowerCase().includes('review'),
+          );
+          memoSourceRefs.push({ source: ref.source, note: ref.note, url: matchingLink?.url });
         }
       }
     }

@@ -25,6 +25,25 @@ import { getArchetypeLabel } from './archetype';
 import type { DecisionFrame } from './decision-frame';
 import { detectSystemPhono, buildPhonoCaveat } from './products/turntables';
 
+// ── Country code to name ──────────────────────────────
+
+const COUNTRY_NAMES: Record<string, string> = {
+  AT: 'Austria', AU: 'Australia', BE: 'Belgium', CA: 'Canada',
+  CH: 'Switzerland', CN: 'China', CZ: 'Czech Republic', DE: 'Germany',
+  DK: 'Denmark', ES: 'Spain', FI: 'Finland', FR: 'France',
+  GB: 'United Kingdom', HK: 'Hong Kong', HU: 'Hungary', IE: 'Ireland',
+  IL: 'Israel', IN: 'India', IT: 'Italy', JP: 'Japan',
+  KR: 'South Korea', MY: 'Malaysia', NL: 'Netherlands', NO: 'Norway',
+  NZ: 'New Zealand', PL: 'Poland', PT: 'Portugal', RO: 'Romania',
+  SE: 'Sweden', SG: 'Singapore', TW: 'Taiwan', UA: 'Ukraine',
+  US: 'United States', VN: 'Vietnam',
+};
+
+function countryName(code?: string): string | undefined {
+  if (!code) return undefined;
+  return COUNTRY_NAMES[code.toUpperCase()] ?? code;
+}
+
 // ── Types ────────────────────────────────────────────
 
 /**
@@ -138,6 +157,8 @@ export interface SourceReference {
   source: string;
   /** What the source says or covers. */
   note: string;
+  /** Direct URL to the review or source, if available. */
+  url?: string;
 }
 
 // ── Editorial closing types ──────────────────────────
@@ -476,6 +497,12 @@ export interface AdvisoryResponse {
   systemFit?: string;
   /** Comparison summary — renders first for comparison responses. */
   comparisonSummary?: string;
+
+  // ── 4b. Product Detail ────────────────────────────────
+  /** Country of manufacture (human-readable, e.g. "Austria", "Japan"). */
+  productOrigin?: string;
+  /** System interaction notes — how this product behaves with specific system pairings. */
+  interactionNotes?: string[];
 
   // ── 5. Component Guidance ───────────────────────────
   /** Recommended direction or best-fit approach. */
@@ -1157,6 +1184,69 @@ export function gearResponseToAdvisory(
     }, undefined, r.subjects.length > 0 ? r.subjects : undefined);
   }
 
+  // ── Extract rich data from matched products ──────────
+  const products = r.matchedProducts ?? [];
+  const primaryProduct = products[0];
+
+  // Links from product catalog
+  const gearLinks: AdvisoryLink[] = [];
+  for (const p of products) {
+    for (const l of (p.retailer_links ?? [])) {
+      gearLinks.push({
+        label: l.label,
+        url: l.url,
+        kind: l.label.toLowerCase().includes('review') ? 'review' : 'reference',
+        region: (l as any).region,
+      });
+    }
+  }
+
+  // Source references with review URLs
+  const gearSourceRefs: SourceReference[] = [];
+  const seenGearSources = new Set<string>();
+  for (const p of products) {
+    if (p.sourceReferences) {
+      for (const ref of p.sourceReferences) {
+        if (!seenGearSources.has(ref.source)) {
+          seenGearSources.add(ref.source);
+          const matchingLink = (p.retailer_links ?? []).find(
+            (l: { label: string; url: string }) =>
+              l.label.toLowerCase().includes(ref.source.toLowerCase()) && l.label.toLowerCase().includes('review'),
+          );
+          gearSourceRefs.push({ source: ref.source, note: ref.note, url: matchingLink?.url });
+        }
+      }
+    }
+  }
+
+  // Interaction notes from product tendencies
+  const interactionNotes: string[] = [];
+  for (const p of products) {
+    if (p.tendencies?.interactions) {
+      for (const inter of p.tendencies.interactions) {
+        const prefix = inter.valence === 'caution' ? 'Caution: ' : '';
+        interactionNotes.push(`${prefix}${inter.condition.charAt(0).toUpperCase() + inter.condition.slice(1)} — ${inter.effect}.`);
+      }
+    }
+  }
+
+  // Trade-offs from product tendencies
+  const gearTradeOffs: string[] = [];
+  for (const p of products) {
+    if (p.tendencies?.tradeoffs) {
+      for (const t of p.tendencies.tradeoffs) {
+        const rel = t.relative_to ? ` (relative to ${t.relative_to})` : '';
+        gearTradeOffs.push(`What you gain: ${t.gains}. What you trade: ${t.cost}${rel}.`);
+      }
+    }
+  }
+
+  // Country of origin
+  const origin = primaryProduct ? countryName(primaryProduct.country) : undefined;
+  const originNote = origin
+    ? `Made in ${origin}.${primaryProduct?.architecture ? ` ${primaryProduct.architecture} design.` : ''}`
+    : undefined;
+
   return enrichAdvisory({
     kind: 'consultation',
     advisoryMode: 'gear_advice',
@@ -1172,8 +1262,17 @@ export function gearResponseToAdvisory(
     tendencies: r.character,
     systemFit: r.interpretation,
 
+    // Product detail
+    productOrigin: originNote,
+    interactionNotes: interactionNotes.length > 0 ? interactionNotes : undefined,
+
     recommendedDirection: r.direction,
+    tradeOffs: gearTradeOffs.length > 0 ? gearTradeOffs : undefined,
     followUp: r.clarification,
+
+    // Links and sources from catalog
+    links: gearLinks.length > 0 ? gearLinks : undefined,
+    sourceReferences: gearSourceRefs.length > 0 ? gearSourceRefs : undefined,
   }, undefined, r.subjects.length > 0 ? r.subjects : undefined);
 }
 
@@ -1317,6 +1416,58 @@ export interface ShoppingAdvisoryContext {
   systemTendencies?: string;
 }
 
+/**
+ * Build an editorial closing verdict — deterministic, no LLM involved.
+ * Uses the ranked product list and user context to surface "best match for your system"
+ * and "best on sound quality alone" picks.
+ */
+function buildEditorialClosing(
+  products: ShoppingAnswer['productExamples'],
+  ctx?: ShoppingAdvisoryContext,
+  reasoning?: ReasoningResult,
+): EditorialClosing | undefined {
+  if (products.length === 0) return undefined;
+
+  // "Top picks on sound quality alone" — first 2 products (already sorted by score)
+  const topPicks: EditorialPick[] = products.slice(0, Math.min(2, products.length)).map((p) => ({
+    name: `${p.brand} ${p.name}`,
+    reason: p.fitNote,
+  }));
+
+  // "What I'd recommend for YOUR system" — only when we have system context
+  let systemPicks: EditorialPick[] | undefined;
+  let systemSummary: string | undefined;
+  let avoidanceNote: string | undefined;
+
+  if (ctx?.systemComponents && ctx.systemComponents.length > 0) {
+    systemSummary = `Given your ${ctx.systemComponents.join(' + ')}${ctx.systemTendencies ? ` (${ctx.systemTendencies})` : ''}`;
+
+    // System picks are the top products that have a systemDelta or specific fitNote
+    systemPicks = products.slice(0, Math.min(2, products.length)).map((p) => {
+      const systemReason = p.systemDelta?.whyFitsSystem ?? p.fitNote;
+      return { name: `${p.brand} ${p.name}`, reason: systemReason };
+    });
+
+    // Avoidance note from risk trait signals
+    if (reasoning?.taste.traitSignals) {
+      const avoidances: string[] = [];
+      const ts = reasoning.taste.traitSignals;
+      if (ts.fatigue_risk === 'up') avoidances.push('treble forwardness or fatigue');
+      if (ts.glare_risk === 'up') avoidances.push('upper-frequency glare');
+      if (avoidances.length > 0) {
+        avoidanceNote = `Based on your preferences, I would be cautious with products that lean toward ${avoidances.join(' or ')}.`;
+      }
+    }
+  }
+
+  return {
+    topPicks,
+    systemPicks,
+    systemSummary,
+    avoidanceNote,
+  };
+}
+
 export function shoppingToAdvisory(
   a: ShoppingAnswer,
   signals?: ExtractedSignals,
@@ -1378,6 +1529,7 @@ export function shoppingToAdvisory(
   const statedGaps = a.statedGaps?.map((g) => GAP_LABELS[g]);
 
   // Collect source references from recommended products (deduplicated)
+  // Cross-reference with product links to find review URLs
   const sourceRefs: SourceReference[] = [];
   const seenSources = new Set<string>();
   for (const p of a.productExamples) {
@@ -1385,7 +1537,11 @@ export function shoppingToAdvisory(
       for (const ref of p.sourceReferences) {
         if (!seenSources.has(ref.source)) {
           seenSources.add(ref.source);
-          sourceRefs.push({ source: ref.source, note: ref.note });
+          // Try to find a matching review URL from the product's links
+          const matchingLink = p.links?.find(
+            (l) => l.label.toLowerCase().includes(ref.source.toLowerCase()) && l.label.toLowerCase().includes('review'),
+          );
+          sourceRefs.push({ source: ref.source, note: ref.note, url: matchingLink?.url });
         }
       }
     }
@@ -1415,6 +1571,10 @@ export function shoppingToAdvisory(
     reasoning?.taste.archetype ?? undefined,
   );
 
+  // ── Build editorial closing (best-match verdict) ─────
+  // Only when we have product examples and user context
+  const editorialClosing = buildEditorialClosing(a.productExamples, ctx, reasoning);
+
   return enrichAdvisory({
     kind: 'shopping',
     advisoryMode: 'upgrade_suggestions',
@@ -1440,6 +1600,8 @@ export function shoppingToAdvisory(
     decisionFrame: decisionFrame ?? undefined,
     refinementPrompts: a.refinementPrompts,
     followUp,
+
+    editorialClosing,
 
     // Source references from recommended products
     sourceReferences: sourceRefs.length > 0 ? sourceRefs : undefined,

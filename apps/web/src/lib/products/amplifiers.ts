@@ -929,6 +929,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'Crayon Audio', url: 'https://www.crayonaudio.com/' },
       { label: 'HiFi Shark (used)', url: 'https://www.hifishark.com/search?q=crayon+cia' },
+      { label: '6moons review', url: 'https://www.6moons.com/audioreviews2/crayon/1.html' },
+      { label: 'Mono & Stereo review', url: 'https://www.monoandstereo.com/crayon-audio-cia-1-integrated-amplifier-review/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -947,6 +949,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     },
     sourceReferences: [
       { source: '6moons', note: 'Review highlighting the CIA-1T\'s current-feedback speed and rhythmic precision.' },
+      { source: 'Mono & Stereo', note: 'In-depth review of the CIA-1 covering build quality, sonic character, and system synergy.' },
       { source: 'HiFi+', note: 'Review praising the transparency and spatial presentation.' },
     ],
     notes: 'CIA-1T discontinued but the Crayon CFA-1.2 continues the lineage. Used CIA-1T represents excellent value.',

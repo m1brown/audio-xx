@@ -14,7 +14,18 @@ export default function AdvisorySources({ sources }: AdvisorySourcesProps) {
     <div style={{ fontSize: '0.82rem', color: '#888', lineHeight: 1.7 }}>
       {sources.map((s, i) => (
         <div key={i} style={{ marginBottom: '0.25rem' }}>
-          <span style={{ fontWeight: 600, color: '#777' }}>{s.source}</span>
+          {s.url ? (
+            <a
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ fontWeight: 600, color: '#4a7a8a', textDecoration: 'none' }}
+            >
+              {s.source} ↗
+            </a>
+          ) : (
+            <span style={{ fontWeight: 600, color: '#777' }}>{s.source}</span>
+          )}
           <span style={{ margin: '0 0.35rem', color: '#bbb' }}>—</span>
           <span>{s.note}</span>
         </div>

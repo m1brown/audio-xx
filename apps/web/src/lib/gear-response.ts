@@ -292,82 +292,199 @@ function confidenceTradeoffFrame(
  *
  * @param desireQualities - user's desire qualities, used to select relevant tendencies
  */
-function productCharacter(product: Product, desireQualities: string[] = []): string {
-  // ── Tendency-driven path ──────────────────────────
-  if (hasTendencies(product.tendencies)) {
-    const tendencies = desireQualities.length > 0
-      ? selectCharacterTendencies(product.tendencies.character, desireQualities)
-      : selectDefaultTendencies(product.tendencies.character);
+// ── Domain synthesis helpers ──────────────────────────
+//
+// Map tendencyProfile traits to the 5 core character domains so that
+// profile-only and legacy products can produce domain-labeled output
+// consistent with the curated tendency path.
 
-    const parts: string[] = [`${product.architecture} design.`];
-    for (const t of tendencies) {
-      const text = t.tendency.charAt(0).toUpperCase() + t.tendency.slice(1);
-      parts.push(t.context ? `${text} — ${t.context}.` : `${text}.`);
-    }
+/** Core domains ordered for display. */
+const CORE_DOMAINS: readonly string[] = ['tonality', 'timing', 'spatial', 'dynamics', 'texture'];
 
-    const risks = buildRiskNotes(product);
-    if (risks) parts.push(risks);
+/** Domain display labels. */
+const DOMAIN_LABELS: Record<string, string> = {
+  tonality: 'Tonality',
+  timing: 'Timing',
+  spatial: 'Spatial',
+  dynamics: 'Dynamics',
+  texture: 'Texture',
+  clarity: 'Clarity',
+  flow: 'Flow',
+  bass: 'Bass',
+  resolution: 'Resolution',
+};
 
-    return parts.join(' ');
-  }
+/** Map individual traits to the domain they best represent. */
+const TRAIT_TO_DOMAIN: Record<string, string> = {
+  warmth: 'tonality',
+  tonal_density: 'tonality',
+  clarity: 'tonality',
+  speed: 'timing',
+  elasticity: 'timing',
+  flow: 'timing',
+  rhythm: 'timing',
+  spatial_precision: 'spatial',
+  openness: 'spatial',
+  dynamics: 'dynamics',
+  composure: 'dynamics',
+  texture: 'texture',
+};
 
-  // ── Qualitative profile path (high/medium only) ───
-  if (hasExplainableProfile(product.tendencyProfile)) {
-    const emphasized = getEmphasizedTraits(product.tendencyProfile);
-    const lessEmphasized = getLessEmphasizedTraits(product.tendencyProfile);
-    const conf = product.tendencyProfile.confidence;
+/** Describe a trait-level emphasis in natural language, keyed by trait name + level. */
+const TRAIT_DOMAIN_DESCRIPTIONS: Record<string, Record<string, string>> = {
+  tonality: {
+    warmth_emphasized: 'warm and tonally rich — favors body and harmonic weight over analytical precision',
+    warmth_present: 'slightly warm side of neutral — there is tonal weight without heaviness',
+    warmth_less: 'lean and transparent — prioritizes clarity over tonal density',
+    tonal_density_emphasized: 'dense and harmonically saturated — notes carry real weight and body',
+    tonal_density_present: 'moderate tonal weight — present but not overly dense',
+    tonal_density_less: 'lighter tonal character — favors speed and agility over density',
+    clarity_emphasized: 'high clarity and transparency — detail is surfaced without editorial smoothing',
+    clarity_present: 'good clarity — resolving without being analytical',
+    clarity_less: 'softer focus — musical but not the most revealing',
+  },
+  timing: {
+    speed_emphasized: 'fast and articulate — leading edges arrive with precision',
+    speed_present: 'good transient speed — responsive without being aggressive',
+    speed_less: 'relaxed timing — favors flow over attack',
+    elasticity_emphasized: 'elastic and rhythmically alive — music breathes and bounces',
+    elasticity_present: 'moderate rhythmic flexibility',
+    flow_emphasized: 'strong musical flow — events connect seamlessly',
+    flow_present: 'good continuity between musical events',
+    flow_less: 'more analytical than flowing — events can feel discrete',
+    rhythm_emphasized: 'strong rhythmic drive and pace',
+    rhythm_present: 'good rhythmic engagement',
+  },
+  spatial: {
+    spatial_precision_emphasized: 'precise imaging and well-defined soundstage — instruments are placed with specificity',
+    spatial_precision_present: 'decent spatial presentation — reasonable depth and width',
+    spatial_precision_less: 'less emphasis on imaging specificity — more about tone than space',
+    openness_emphasized: 'open and expansive presentation — the soundstage breathes',
+    openness_present: 'reasonable openness',
+    openness_less: 'more intimate staging — focused rather than expansive',
+  },
+  dynamics: {
+    dynamics_emphasized: 'dynamic and punchy — contrast between loud and soft is well preserved',
+    dynamics_present: 'decent dynamic range',
+    dynamics_less: 'more even and composed than dynamically explosive',
+    composure_emphasized: 'very composed and controlled — stays calm under pressure',
+    composure_present: 'good composure',
+    composure_less: 'can become slightly unsettled with demanding material',
+  },
+  texture: {
+    texture_emphasized: 'rich textural detail — surfaces and timbres are tangible',
+    texture_present: 'moderate textural information',
+    texture_less: 'smoother rendering — less surface detail but easier long-term listening',
+  },
+};
 
-    const parts: string[] = [`${product.architecture} design.`];
-    if (emphasized.length > 0) {
-      const list = emphasized.join(' and ');
-      parts.push(confidenceFrame(conf, list, 'emphasize'));
-    }
-    if (lessEmphasized.length > 0) {
-      const list = lessEmphasized.slice(0, 2).join(' and ');
-      parts.push(`Less of a priority: ${list}.`);
-    }
-
-    const risks = buildRiskNotes(product);
-    if (risks) parts.push(risks);
-
-    return parts.join(' ');
-  }
-
-  // ── Design archetype fallback ─────────────────────
-  const archetype = resolveArchetype(product.architecture);
-  if (archetype) {
-    const charSentence = archetypeCharacter(archetype);
-    if (charSentence) {
-      const parts: string[] = [`${product.architecture} design.`, charSentence];
-      const risks = buildRiskNotes(product);
-      if (risks) parts.push(risks);
-      return parts.join(' ');
-    }
-  }
-
-  // ── Legacy fallback: description + trait labels ───
+/**
+ * Synthesize domain descriptions from a tendencyProfile.
+ * Returns domain-labeled lines for domains where we have signal.
+ */
+function synthesizeDomainLines(product: Product): string[] {
+  const lines: string[] = [];
+  const profile = product.tendencyProfile;
   const traits = product.traits;
 
-  const strengths: string[] = [];
-  for (const [key, label] of Object.entries(TRAIT_LABELS)) {
-    if ((traits[key] ?? 0) >= 0.7) strengths.push(label);
+  if (profile && hasExplainableProfile(profile)) {
+    // Group profile traits by domain
+    const domainTraits = new Map<string, { trait: string; level: string }[]>();
+    for (const t of profile.tendencies) {
+      const domain = TRAIT_TO_DOMAIN[t.trait];
+      if (domain) {
+        if (!domainTraits.has(domain)) domainTraits.set(domain, []);
+        domainTraits.get(domain)!.push({ trait: t.trait, level: t.level });
+      }
+    }
+
+    // Build lines for each domain that has data
+    for (const domain of CORE_DOMAINS) {
+      const domTraits = domainTraits.get(domain);
+      if (!domTraits || domTraits.length === 0) continue;
+
+      // Pick the most prominent trait in this domain (emphasized > present > less_emphasized)
+      const sorted = [...domTraits].sort((a, b) => {
+        const order: Record<string, number> = { emphasized: 0, present: 1, less_emphasized: 2 };
+        return (order[a.level] ?? 9) - (order[b.level] ?? 9);
+      });
+      const best = sorted[0];
+      const key = `${best.trait}_${best.level === 'less_emphasized' ? 'less' : best.level}`;
+      const desc = TRAIT_DOMAIN_DESCRIPTIONS[domain]?.[key];
+      if (desc) {
+        lines.push(`${DOMAIN_LABELS[domain]}: ${desc}.`);
+      }
+    }
+    return lines;
   }
 
-  let char = `${product.description} It uses ${product.architecture}`;
-  if (strengths.length > 0) {
-    const last = strengths.pop()!;
-    const list = strengths.length > 0
-      ? `${strengths.join(', ')} and ${last}`
-      : last;
-    char += `, and its design leans toward ${list}.`;
+  // Fall back to numeric traits — synthesize from values >= 0.7 or <= 0.3
+  const domainHits = new Map<string, string[]>();
+  for (const [trait, value] of Object.entries(traits)) {
+    const domain = TRAIT_TO_DOMAIN[trait];
+    if (!domain) continue;
+    const level = value >= 0.7 ? 'emphasized' : value <= 0.3 ? 'less' : 'present';
+    if (level === 'present') continue; // Only surface notable traits
+    const key = `${trait}_${level}`;
+    const desc = TRAIT_DOMAIN_DESCRIPTIONS[domain]?.[key];
+    if (desc) {
+      if (!domainHits.has(domain)) domainHits.set(domain, []);
+      domainHits.get(domain)!.push(desc);
+    }
+  }
+
+  for (const domain of CORE_DOMAINS) {
+    const descs = domainHits.get(domain);
+    if (descs && descs.length > 0) {
+      lines.push(`${DOMAIN_LABELS[domain]}: ${descs[0]}.`);
+    }
+  }
+
+  return lines;
+}
+
+/**
+ * Build a sonic character description for a product.
+ *
+ * Unified template: always produces domain-labeled sections where data exists.
+ * The template contracts gracefully when less data is available.
+ *
+ *   Full tendencies   → verbatim curated domain lines + interactions
+ *   Profile only      → synthesized domain lines from trait emphasis
+ *   Legacy            → synthesized domain lines from numeric traits
+ *
+ * @param desireQualities - user's desire qualities, used to prioritize relevant domains
+ */
+function productCharacter(product: Product, desireQualities: string[] = []): string {
+  const parts: string[] = [`${product.architecture} design.`];
+
+  // ── Curated tendency path (highest quality) ─────────
+  if (hasTendencies(product.tendencies)) {
+    // Show ALL character domains (not just top 2), prioritized by desire relevance
+    const tendencies = desireQualities.length > 0
+      ? selectCharacterTendencies(product.tendencies.character, desireQualities, product.tendencies.character.length)
+      : product.tendencies.character;
+
+    for (const t of tendencies) {
+      const label = DOMAIN_LABELS[t.domain] ?? (t.domain.charAt(0).toUpperCase() + t.domain.slice(1));
+      const text = t.tendency.charAt(0).toUpperCase() + t.tendency.slice(1);
+      parts.push(t.context ? `${label}: ${text} — ${t.context}.` : `${label}: ${text}.`);
+    }
   } else {
-    char += '.';
+    // ── Synthesized domain lines (profile or legacy) ──
+    const domainLines = synthesizeDomainLines(product);
+    if (domainLines.length > 0) {
+      parts.push(...domainLines);
+    } else {
+      // Absolute fallback: use product description
+      parts.push(product.description);
+    }
   }
 
   const risks = buildRiskNotes(product);
-  if (risks) char += ` ${risks}`;
+  if (risks) parts.push(risks);
 
-  return char;
+  return parts.join(' ');
 }
 
 /** Shared risk note builder using tendencyProfile when available. */
@@ -1589,6 +1706,7 @@ export function buildGearResponse(
         userArchetype: sysDir.inferredArchetype
         ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
         : undefined,
+        matchedProducts: [a, b].filter(Boolean) as Product[],
       };
     }
 
@@ -1647,6 +1765,7 @@ export function buildGearResponse(
         userArchetype: sysDir.inferredArchetype
           ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
           : undefined,
+        matchedProducts: [known!],
       };
     }
 
@@ -1718,6 +1837,7 @@ export function buildGearResponse(
       userArchetype: sysDir.inferredArchetype
         ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
         : undefined,
+      matchedProducts: products.length > 0 ? products : undefined,
     };
   }
 
@@ -1736,6 +1856,7 @@ export function buildGearResponse(
       userArchetype: sysDir.inferredArchetype
         ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
         : undefined,
+      matchedProducts: products,
     };
   }
 
