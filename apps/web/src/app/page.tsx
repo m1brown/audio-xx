@@ -1139,7 +1139,7 @@ export default function Home() {
                   animationDelay: `${Math.min(i * 0.05, 0.3)}s`,
                 }}
               >
-                <MessageBubble key={i} message={msg} />
+                <MessageBubble key={i} message={msg} onIntakeSubmit={handleSubmit} />
               </div>
             ))}
           {/* Skip-to-suggestions button — visible when asking clarifying questions in shopping mode */}
@@ -1373,7 +1373,7 @@ function ThinkingIndicator() {
 
 // ── Message Rendering ─────────────────────────────────
 
-function MessageBubble({ message }: { message: Message }) {
+function MessageBubble({ message, onIntakeSubmit }: { message: Message; onIntakeSubmit?: (overrideText?: string) => void }) {
   if (message.role === 'user') {
     return (
       <div
@@ -1398,7 +1398,7 @@ function MessageBubble({ message }: { message: Message }) {
         <hr style={{ border: 0, borderTop: '1px solid #e5e5e3', margin: '0 0 1.5rem 0' }} />
         <AdvisoryMessage
           advisory={message.advisory}
-          onIntakeSubmit={message.advisory.kind === 'intake' ? handleSubmit : undefined}
+          onIntakeSubmit={message.advisory.kind === 'intake' ? onIntakeSubmit : undefined}
         />
       </div>
     );

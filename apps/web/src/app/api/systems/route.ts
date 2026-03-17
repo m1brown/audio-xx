@@ -34,6 +34,7 @@ function normalizeSystem(raw: {
     room: raw.room,
     primaryUse: raw.primaryUse,
     tendencies: raw.tendencies,
+    updatedAt: (raw as { updatedAt?: Date | string }).updatedAt ?? null,
     components: raw.components.map((sc) => ({
       id: sc.id,
       componentId: sc.component.id,

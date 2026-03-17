@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserId } from '@/lib/session';
 
+/** Safely parse a JSON string field, returning fallback on null/error. */
+function safeJson(value: string | null | undefined, fallback: unknown = []) {
+  if (!value) return fallback;
+  try { return JSON.parse(value); } catch { return fallback; }
+}
+
 export async function GET() {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -15,11 +21,11 @@ export async function GET() {
 
   return NextResponse.json({
     ...profile,
-    sourceTypes: JSON.parse(profile.sourceTypes),
-    sensitivityFlags: JSON.parse(profile.sensitivityFlags),
-    preferredTraits: JSON.parse(profile.preferredTraits),
-    archetypes: JSON.parse(profile.archetypes),
-    musicGenres: JSON.parse(profile.musicGenres),
+    sourceTypes: safeJson(profile.sourceTypes),
+    sensitivityFlags: safeJson(profile.sensitivityFlags),
+    preferredTraits: safeJson(profile.preferredTraits),
+    archetypes: safeJson(profile.archetypes),
+    musicGenres: safeJson(profile.musicGenres),
     activeSystemId: profile.activeSystemId ?? null,
   });
 }
@@ -69,11 +75,11 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({
     ...profile,
-    sourceTypes: JSON.parse(profile.sourceTypes),
-    sensitivityFlags: JSON.parse(profile.sensitivityFlags),
-    preferredTraits: JSON.parse(profile.preferredTraits),
-    archetypes: JSON.parse(profile.archetypes),
-    musicGenres: JSON.parse(profile.musicGenres),
+    sourceTypes: safeJson(profile.sourceTypes),
+    sensitivityFlags: safeJson(profile.sensitivityFlags),
+    preferredTraits: safeJson(profile.preferredTraits),
+    archetypes: safeJson(profile.archetypes),
+    musicGenres: safeJson(profile.musicGenres),
     activeSystemId: profile.activeSystemId ?? null,
   });
 }

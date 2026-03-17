@@ -215,22 +215,28 @@ export default function Resources() {
             draws heavily from it.
           </p>
 
-          <Resource name="Stereophile" url="https://www.stereophile.com/">
-            Combines subjective listening evaluation with supporting
-            measurements. One of the longest-running publications in the field.
+          <Resource name="6moons" url="https://www.6moons.com/">
+            Extremely thorough and detailed reviews, fast gear, high-resolution
+            digital audio. Introduced me to Job Integrated, Crayon CIA, WLM Diva,
+            and more. Emphasizes system synergy, tonal character, and long-term
+            listening impressions. Known for covering lesser-known manufacturers
+            and design philosophies.
           </Resource>
           <Resource name="The Absolute Sound" url="https://www.theabsolutesound.com/">
             Focuses on musical realism and high-end system building. Emphasizes
             the relationship between equipment and the experience of live music.
           </Resource>
-          <Resource name="6moons" url="https://www.6moons.com/">
-            Emphasizes system synergy, tonal character, and long-term listening
-            impressions. Known for covering lesser-known manufacturers and
-            design philosophies.
-          </Resource>
           <Resource name="Darko.Audio" url="https://darko.audio/">
             Bridges traditional listening evaluation with modern digital
             systems, streaming, and desktop audio.
+          </Resource>
+          <Resource name="Twittering Machines" url="https://twitteringmachines.com/">
+            Thoughtful, literate reviews with an emphasis on musical engagement
+            and how equipment serves the listening experience.
+          </Resource>
+          <Resource name="Mono and Stereo" url="https://www.monoandstereo.com/">
+            Covers high-end and ultra-high-end audio with detailed photography
+            and system context. Strong coverage of European and boutique manufacturers.
           </Resource>
         </div>
       </section>
