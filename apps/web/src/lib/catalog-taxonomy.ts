@@ -56,6 +56,7 @@ export type ProductSubcategory =
   // Streamers
   | 'streamer'
   // Turntables
+  | 'turntable'
   | 'manual'
   | 'semi-automatic'
   | 'automatic'
@@ -87,9 +88,11 @@ export type ProductSubcategory =
  */
 export type PriceTier =
   | 'budget'
+  | 'mid'
   | 'mid-fi'
   | 'upper-mid'
   | 'high-end'
+  | 'reference'
   | 'statement';
 
 // ── Brand scale ──────────────────────────────────────
@@ -108,8 +111,11 @@ export type PriceTier =
  */
 export type BrandScale =
   | 'mainstream'
+  | 'major'
   | 'specialist'
-  | 'boutique';
+  | 'boutique'
+  | 'luxury'
+  | 'heritage';
 
 // ── Region ───────────────────────────────────────────
 
@@ -124,6 +130,7 @@ export type GeoRegion =
   | 'europe'
   | 'uk'               // distinct audio design heritage
   | 'japan'            // distinct audio design heritage
+  | 'asia'             // broad Asian origin
   | 'east-asia'        // China, South Korea, Taiwan, etc.
   | 'southeast-asia'
   | 'oceania'
@@ -160,6 +167,7 @@ export type DesignTopology =
   | 'open-baffle'
   | 'transmission-line'
   | 'high-efficiency'
+  | 'planar-magnetic'
   // Turntable topologies
   | 'belt-drive'
   | 'direct-drive'

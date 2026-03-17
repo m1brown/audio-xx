@@ -35,13 +35,13 @@
 export type WarmBrightLeaning = 'warm' | 'bright' | 'neutral';
 
 /** Position on the Smooth ↔ Detailed axis. */
-export type SmoothDetailedLeaning = 'smooth' | 'detailed' | 'neutral';
+export type SmoothDetailedLeaning = 'smooth' | 'detailed' | 'neutral' | 'balanced';
 
 /** Position on the Elastic ↔ Controlled axis. */
-export type ElasticControlledLeaning = 'elastic' | 'controlled' | 'neutral';
+export type ElasticControlledLeaning = 'elastic' | 'controlled' | 'neutral' | 'balanced';
 
 /** Position on the Airy ↔ Closed axis. */
-export type AiryClosedLeaning = 'airy' | 'closed' | 'neutral';
+export type AiryClosedLeaning = 'airy' | 'closed' | 'neutral' | 'moderate';
 
 /**
  * Primary axis leanings for a product or system.
@@ -83,7 +83,7 @@ export interface PrimaryAxisLeanings {
  */
 export interface FatigueAssessment {
   /** Qualitative fatigue risk level. */
-  risk: 'low' | 'moderate' | 'high' | 'context_dependent';
+  risk: 'very_low' | 'low' | 'moderate' | 'high' | 'context_dependent';
   /** When or why fatigue risk manifests. */
   notes: string;
 }

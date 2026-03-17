@@ -1944,7 +1944,7 @@ function selectProductExamples(
       brand: t.brand,
       price: t.price,
       priceCurrency: t.priceCurrency,
-      fitNote: phonoAbsent ? t.phonoAbsentNote : t.fitNote,
+      fitNote: (phonoAbsent ? t.phonoAbsentNote : t.fitNote) ?? '',
     }));
   }
 

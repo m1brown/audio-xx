@@ -1329,26 +1329,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Footer */}
-      <div
-        style={{
-          marginTop: '3.5rem',
-          paddingTop: '1.25rem',
-          borderTop: '1px solid #e5e5e3',
-        }}
-      >
-        <Link
-          href="/about"
-          style={{
-            color: '#aaa',
-            fontSize: '0.85rem',
-            textDecoration: 'none',
-            letterSpacing: '0.01em',
-          }}
-        >
-          How this works
-        </Link>
-      </div>
     </div>
   );
 }

@@ -44,6 +44,10 @@ export interface TurntableProduct extends Product {
   driveType: 'belt' | 'direct' | 'idler';
   /** Plinth/suspension approach. */
   suspensionType: 'rigid' | 'suspended' | 'semi-suspended';
+  /** Advisory note when user lacks a phono stage. */
+  phonoAbsentNote?: string;
+  /** General fit note for advisory context. */
+  fitNote?: string;
 }
 
 export const TURNTABLE_PRODUCTS: TurntableProduct[] = [

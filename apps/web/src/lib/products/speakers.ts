@@ -2169,7 +2169,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'uk',
     country: 'UK',
     topology: 'bass-reflex',
-    availability: 'used',
+    availability: 'discontinued',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -2418,7 +2418,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'horn-loaded',
-    availability: 'used',
+    availability: 'discontinued',
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',

@@ -27,6 +27,7 @@
  */
 export type SourceBasis =
   | 'founder_reference'      // calibrated from founder's direct listening experience — highest confidence
+  | 'owner_reference'        // calibrated from owner's direct listening experience
   | 'review_consensus'       // consistent across multiple independent reviews
   | 'manufacturer_intent'    // stated design goal from the manufacturer
   | 'listener_consensus'     // recurring listener reports (forums, communities)
@@ -37,7 +38,12 @@ export type SourceBasis =
 /**
  * The five perceptual domains a tendency can address.
  */
-export type TendencyDomain = 'timing' | 'tonality' | 'dynamics' | 'spatial' | 'texture';
+/**
+ * Core domains: timing, tonality, dynamics, spatial, texture.
+ * Product data may use extended domains (flow, clarity, bass, resolution, etc.)
+ * for more specific tendency descriptions.
+ */
+export type TendencyDomain = string;
 
 /**
  * A single sonic tendency — what the product tends to do.
@@ -121,7 +127,7 @@ export interface QualitativeTendency {
  * Risk conditions worth flagging.
  * Binary — either worth mentioning or not.
  */
-export type RiskFlag = 'fatigue_risk' | 'glare_risk';
+export type RiskFlag = 'fatigue_risk' | 'glare_risk' | string;
 
 /**
  * The qualitative tendency profile for a product.
@@ -231,6 +237,7 @@ export function getLessEmphasizedTraits(profile: TendencyProfile): string[] {
 /** Source basis priority for selection — prefer better-sourced tendencies. */
 const BASIS_PRIORITY: Record<SourceBasis, number> = {
   founder_reference: 4,
+  owner_reference: 4,
   review_consensus: 3,
   listener_consensus: 2,
   manufacturer_intent: 1,
