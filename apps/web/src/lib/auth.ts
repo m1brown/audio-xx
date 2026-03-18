@@ -14,27 +14,32 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        let user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
-
-        if (!user) {
-          // Auto-register for MVP
-          const hashed = await bcrypt.hash(credentials.password, 10);
-          user = await prisma.user.create({
-            data: {
-              email: credentials.email,
-              password: hashed,
-              profile: { create: {} },
-            },
+        try {
+          let user = await prisma.user.findUnique({
+            where: { email: credentials.email },
           });
-        } else {
-          if (!user.password) return null;
-          const valid = await bcrypt.compare(credentials.password, user.password);
-          if (!valid) return null;
-        }
 
-        return { id: user.id, email: user.email };
+          if (!user) {
+            // Auto-register for MVP
+            const hashed = await bcrypt.hash(credentials.password, 10);
+            user = await prisma.user.create({
+              data: {
+                email: credentials.email,
+                password: hashed,
+                profile: { create: {} },
+              },
+            });
+          } else {
+            if (!user.password) return null;
+            const valid = await bcrypt.compare(credentials.password, user.password);
+            if (!valid) return null;
+          }
+
+          return { id: user.id, email: user.email };
+        } catch (err) {
+          console.error('[auth] authorize error:', err);
+          return null;
+        }
       },
     }),
   ],
