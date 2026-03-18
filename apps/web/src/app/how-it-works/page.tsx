@@ -158,7 +158,7 @@ export default function HowItWorks() {
     <div style={{ maxWidth: 640 }}>
       <h1 style={{ marginBottom: '0.35rem' }}>How It Works</h1>
       <p className="muted small" style={{ marginBottom: '2rem' }}>
-        A look at the methodology behind Audio&thinsp;XX.
+        Audio&thinsp;XX Methodology
       </p>
 
       {/* ── 1. The Problem ──────────────────────────────── */}
@@ -427,15 +427,6 @@ export default function HowItWorks() {
           </p>
         </div>
       </section>
-
-      <hr style={{ margin: '2rem 0 1.25rem' }} />
-
-      <p style={{ fontSize: '13.5px', color: '#888', lineHeight: 1.65 }}>
-        Audio&thinsp;XX is built to help you make aligned decisions with greater
-        confidence. The goal is long-term listening engagement and musical
-        pleasure — with both the music and the equipment that brings it into
-        the room.
-      </p>
 
       <div className="mt-2" style={{ marginBottom: '2rem' }}>
         <Link href="/" className="small muted">← Back to home</Link>

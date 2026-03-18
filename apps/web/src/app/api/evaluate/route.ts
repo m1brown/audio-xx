@@ -14,11 +14,18 @@ export async function POST(req: NextRequest) {
   }
 
   // Load archetypes from profile if authenticated
-  const userId = await getUserId();
+  // Wrapped in try/catch so the engine still works when the database is
+  // unavailable (e.g. SQLite on serverless where the file is ephemeral).
   let archetypes: string[] = [];
-  if (userId) {
-    const profile = await prisma.profile.findUnique({ where: { userId } });
-    if (profile) archetypes = JSON.parse(profile.archetypes);
+  let userId: string | null = null;
+  try {
+    userId = await getUserId();
+    if (userId) {
+      const profile = await prisma.profile.findUnique({ where: { userId } });
+      if (profile) archetypes = JSON.parse(profile.archetypes);
+    }
+  } catch {
+    // Database unavailable — continue without profile data
   }
 
   // Run evaluation pipeline
@@ -26,20 +33,24 @@ export async function POST(req: NextRequest) {
 
   // Save snapshot only if systemId is provided and user is authenticated
   let snapshotId: string | null = null;
-  if (systemId && userId) {
-    const system = await prisma.system.findFirst({ where: { id: systemId, userId } });
-    if (system) {
-      const snapshot = await prisma.preferenceSnapshot.create({
-        data: {
-          systemId,
-          inputText: input,
-          extractedSignals: JSON.stringify(signals),
-          firedRules: JSON.stringify(result.fired_rules.map((r) => r.id)),
-          output: JSON.stringify(result),
-        },
-      });
-      snapshotId = snapshot.id;
+  try {
+    if (systemId && userId) {
+      const system = await prisma.system.findFirst({ where: { id: systemId, userId } });
+      if (system) {
+        const snapshot = await prisma.preferenceSnapshot.create({
+          data: {
+            systemId,
+            inputText: input,
+            extractedSignals: JSON.stringify(signals),
+            firedRules: JSON.stringify(result.fired_rules.map((r) => r.id)),
+            output: JSON.stringify(result),
+          },
+        });
+        snapshotId = snapshot.id;
+      }
     }
+  } catch {
+    // Database unavailable — skip snapshot persistence
   }
 
   return NextResponse.json({
