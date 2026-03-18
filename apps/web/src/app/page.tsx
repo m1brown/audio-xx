@@ -212,6 +212,8 @@ export default function Home() {
   const dismissedFingerprintsRef = useRef(new Set<string>());
   /** When true, bypasses consultation confidence gating and produces exploratory suggestions. */
   const skipToSuggestionsRef = useRef(false);
+  /** Set after an intake form has been shown — forces next intake-classified message to shopping. */
+  const intakeShownRef = useRef(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -325,6 +327,14 @@ export default function Home() {
     // already canonical in turnCtx.
     let { intent } = detectIntent(submittedText);
 
+    // ── Intake → shopping promotion ─────────────────────
+    // If we already showed intake questions, the user's reply is their
+    // intake answers. Force to shopping regardless of what intent
+    // detection returns — the composed text often matches other intents.
+    if (intakeShownRef.current) {
+      intent = 'shopping';
+      intakeShownRef.current = false; // Reset so future messages detect normally
+    }
 
 
     // ── Dispatch proposed system ────────────────────────
@@ -415,6 +425,7 @@ export default function Home() {
     if (intent === 'intake') {
       const intakeResult = buildIntakeResponse(submittedText);
       dispatchAdvisory(intakeToAdvisory(intakeResult), advisoryId());
+      intakeShownRef.current = true;
       dispatch({ type: 'SET_LOADING', value: false });
       return;
     }
@@ -971,6 +982,11 @@ export default function Home() {
   const hasPendingQuestion =
     lastMessage?.role === 'assistant' &&
     (lastMessage.kind === 'question' || lastMessage.kind === 'advisory');
+  /** True when the last assistant message is an intake form — hides the main input area. */
+  const hasPendingIntake =
+    lastMessage?.role === 'assistant' &&
+    lastMessage.kind === 'advisory' &&
+    lastMessage.advisory?.kind === 'intake';
 
   return (
     <div
@@ -1207,8 +1223,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* Input area */}
-      <div style={{ marginBottom: '1rem' }}>
+      {/* Input area — hidden when an intake form is active (it has its own Submit) */}
+      {!hasPendingIntake && <div style={{ marginBottom: '1rem' }}>
         {!hasMessages && (
           <label
             htmlFor="audio-input"
@@ -1300,7 +1316,7 @@ export default function Home() {
           </div>
         )}
 
-      </div>
+      </div>}
 
       {/* Start-over link — only during conversation */}
       {hasMessages && (
