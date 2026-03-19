@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaLibSql } from '@prisma/adapter-libsql';
+import { PrismaLibSQL } from '@prisma/adapter-libsql';
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
@@ -11,7 +11,7 @@ function buildPrismaClient(): PrismaClient {
   // fall back to local SQLite file for development.
   if (tursoUrl && tursoToken) {
     try {
-      const adapter = new PrismaLibSql({ url: tursoUrl, authToken: tursoToken });
+      const adapter = new PrismaLibSQL({ url: tursoUrl, authToken: tursoToken });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return new PrismaClient({ adapter } as any);
     } catch (err) {
