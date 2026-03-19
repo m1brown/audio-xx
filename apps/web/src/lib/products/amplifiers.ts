@@ -1787,7 +1787,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     },
     fatigueAssessment: {
       risk: 'very_low',
-      notes: 'Luscious, sweet, full-bodied presentation. Inherently non-fatiguing — the warm tonality and graceful dynamics invite extended listening.',
+      notes: 'Warm, full-bodied presentation with smooth dynamics. Non-fatiguing — well-suited for extended listening sessions.',
     },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -1821,16 +1821,16 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       glare_risk: 0.0,
     },
     description:
-      'Swiss statement integrated — 200W into 8Ω of luscious, musically seductive power. Warm, sweet, full-bodied without softness. Proprietary 50Ω Zeel BNC inputs for darTZeel-to-darTZeel connection. Combines the harmonic richness and flow of the best tube amplifiers with solid-state authority. Bold, dynamic, and textured with exceptional finesse in timbre reproduction.',
+      'Swiss statement integrated — 200W into 8Ω with a warm, full-bodied character that avoids softness. Proprietary 50Ω Zeel BNC inputs for darTZeel-to-darTZeel connection. Combines harmonic richness and musical flow with solid-state authority. Strong timbral accuracy and textural detail.',
     retailer_links: [
       { label: 'darTZeel', url: 'https://www.dartzeel.com/cth-8550/' },
     ],
     tendencies: {
       confidence: 'high',
       character: [
-        { domain: 'tonality', tendency: 'warm, luscious, harmonically rich — sweet without softness, full-bodied without thickness', basis: 'review_consensus' },
-        { domain: 'timing', tendency: 'fluid and musical — prioritises natural musical flow and elasticity over incisive precision', basis: 'review_consensus' },
-        { domain: 'texture', tendency: 'exceptional finesse in timbre recreation — instruments sound tangible and real', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'warm, harmonically rich — full-bodied without thickness, sweet without softness', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'fluid, musical — prioritises natural flow and elasticity over transient precision', basis: 'review_consensus' },
+        { domain: 'texture', tendency: 'strong timbral accuracy — instruments have a tangible, present quality', basis: 'review_consensus' },
       ],
       interactions: [
         { condition: 'paired with revealing or slightly lean speakers', effect: 'the warmth and body fill out the presentation beautifully — complementary match', valence: 'positive', basis: 'review_consensus' },
@@ -1838,7 +1838,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
         { condition: 'with darTZeel source via Zeel 50Ω connection', effect: 'proprietary connection optimises impedance matching — designed for all-darTZeel systems', valence: 'positive', basis: 'review_consensus' },
       ],
       tradeoffs: [
-        { gains: 'harmonic richness, musicality, warmth, timbral beauty, and supreme long-session engagement', cost: 'the last degree of transient precision, analytical clarity, and bass slam', relative_to: 'high-power precision solid-state amplifiers (Soulution, Goldmund)', basis: 'review_consensus' },
+        { gains: 'harmonic richness, warmth, timbral quality, and long-session engagement', cost: 'some transient precision, analytical clarity, and bass authority', relative_to: 'high-power precision solid-state (Soulution, Goldmund)', basis: 'review_consensus' },
       ],
     },
     sourceReferences: [
