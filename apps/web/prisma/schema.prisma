@@ -4,7 +4,9 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  // Local dev uses file:./dev.db; production uses Turso via the adapter
+  // in prisma.ts. This URL is only needed for prisma generate / migrate.
+  url = env("DATABASE_URL")
 }
 
 model User {

@@ -10,8 +10,14 @@ function buildPrismaClient(): PrismaClient {
   // Use Turso adapter when credentials are available (production / Vercel),
   // fall back to local SQLite file for development.
   if (tursoUrl && tursoToken) {
-    const adapter = new PrismaLibSql({ url: tursoUrl, authToken: tursoToken });
-    return new PrismaClient({ adapter } as never);
+    try {
+      const adapter = new PrismaLibSql({ url: tursoUrl, authToken: tursoToken });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return new PrismaClient({ adapter } as any);
+    } catch (err) {
+      console.error('[prisma] Failed to initialize Turso adapter:', err);
+      // Fall through to default client
+    }
   }
 
   return new PrismaClient();
