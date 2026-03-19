@@ -15,19 +15,23 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) return null;
 
         try {
-          let user = await prisma.user.findUnique({
+          let user = await prisma.user.findFirst({
             where: { email: credentials.email },
           });
 
           if (!user) {
-            // Auto-register for MVP
+            // Auto-register for MVP — create user first, then profile separately
+            // (nested creates can fail with some driver adapters)
             const hashed = await bcrypt.hash(credentials.password, 10);
             user = await prisma.user.create({
               data: {
                 email: credentials.email,
                 password: hashed,
-                profile: { create: {} },
               },
+            });
+            // Create profile separately to avoid nested write issues
+            await prisma.profile.create({
+              data: { userId: user.id },
             });
           } else {
             if (!user.password) return null;
