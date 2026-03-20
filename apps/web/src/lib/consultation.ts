@@ -5887,6 +5887,20 @@ export function buildConsultationEntry(
   // Detect broad upgrade vs assessment intent
   const isUpgradeFocused = /\b(?:upgrade|improve|change|next\s+step|move)\b/i.test(currentMessage);
   const isAssessmentFocused = /\b(?:assess|evaluat|review|think\s+(?:of|about)|thoughts?\s+on)\b/i.test(currentMessage);
+  const isRestraintFocused = /\bcase\s+for\s+(?:doing\s+)?nothing\b|\bshould\s+i\s+(?:just\s+)?(?:wait|hold|stay|keep)\b|\bmaybe\s+i\s+should(?:n'?t)?\s+change\b|\breason\s+not\s+to\s+(?:change|upgrade)\b|\bkeep\s+(?:my\s+)?(?:system|setup|chain)\s+as\s+is\b|\bdon'?t\s+(?:need\s+to\s+)?change\s+anything\b/i.test(currentMessage);
+  const isMetaQuery = /\bnot\s+in\s+(?:your|the)\s+(?:database|catalog|system)\b|\bdon'?t\s+(?:have|know)\s+(?:that|this|a)\s+(?:product|brand|model)\b|\bhow\s+(?:do|would)\s+you\s+handle\b|\bwhat\s+if\s+you\s+don'?t\s+(?:know|have)\b|\bcan\s+you\s+handle\b|\bwhat\s+are\s+your\s+(?:limits|limitations|capabilities)\b|\bisn'?t\s+in\s+your\b|\bhow\s+many\s+products?\b/i.test(currentMessage);
+
+  // ── Meta / capability query: system self-description ──
+  // Fires before system-specific paths because meta questions are
+  // independent of whether the user has a saved system.
+  if (isMetaQuery) {
+    return {
+      subject: 'how Audio XX works',
+      philosophy: `Audio XX maintains a curated anchor catalog of well-understood components — currently around 127 products across DACs, amplifiers, speakers, headphones, turntables, and streamers. These are products with enough critical and community data to assign confident sonic trait profiles.`,
+      tendencies: `When you mention a product outside that catalog, the system doesn't go silent. It identifies the product's design family — topology (R2R, delta-sigma, FPGA, SET, push-pull, etc.), brand philosophy, and price tier — and reasons from established principles for that family. The response will be clearly marked as inferred rather than calibrated, and the confidence level will be stated.\n\nYou can also describe a product in your own words — its general character, what you like and dislike about it — and the system will work from your description. That's often more useful than specs anyway, because it tells me how the product actually sounds in your system and room.\n\nWhat I won't do: invent specific sonic details about a product I haven't been calibrated on, or present inferred knowledge with the same confidence as calibrated data. If I'm uncertain, I'll say so.`,
+      followUp: 'Is there a specific product you\'re curious about? I\'m happy to show you what the system can do with it — whether it\'s in the catalog or not.',
+    };
+  }
 
   // ── Active system present: acknowledge and contextualize ──
   if (activeSystem && activeSystem.components.length > 0) {
@@ -5895,6 +5909,30 @@ export function buildConsultationEntry(
     const tendenciesNote = activeSystem.tendencies
       ? ` The system leans toward ${activeSystem.tendencies}.`
       : '';
+
+    // ── Restraint path: user asks whether any change is warranted ──
+    if (isRestraintFocused) {
+      const tendencies = activeSystem.tendencies;
+      let philosophy: string;
+      let tendenciesText: string;
+
+      if (tendencies) {
+        // System has a known character — reason from it
+        philosophy = `Based on what you've described, your ${activeSystem.name} system (${componentList}) has a consistent character: ${tendencies}. That coherence is itself worth something. A system with a well-defined point of view is easier to live with than one that's been upgraded toward no particular direction.`;
+        tendenciesText = `The case for doing nothing: if the system is doing what it's supposed to do — and the tendency you've described is what you actually want — then a change would shift that character, not improve on it. You'd be exchanging a known quantity for an unknown one. That's only worth it if you have a specific, nameable dissatisfaction.\n\nThe case for change: if the tendency you've described is something you've been tolerating rather than enjoying, or if there's a consistent quality you want more of, then that's a real signal. But "maybe I should change something" isn't that signal — it's restlessness.`;
+      } else {
+        // No tendency data — reason from structure
+        philosophy = `Based on what you've shared, your ${activeSystem.name} system is: ${componentList}. Without knowing how it sounds in your room, I can't tell you whether it's balanced or imbalanced — but I can tell you what a case for doing nothing looks like.`;
+        tendenciesText = `The case for doing nothing: if you aren't hearing a consistent problem — something that bothers you across most material — then there's no gap to fill. Upgrades that don't address a real gap tend to change the system's character without improving it. Changing for change's sake rarely resolves anything.\n\nThe case for change: if you've been living with something that consistently bothers you — a tonal quality, a texture, a dynamic limitation — that's worth acting on. But if the system sounds good and nothing is obviously wrong, patience is the more defensible position.`;
+      }
+
+      return {
+        subject: `restraint case — ${activeSystem.name}`,
+        philosophy,
+        tendencies: tendenciesText,
+        followUp: "Is there something specific in the current sound that's been bothering you — something that comes up consistently, not just on bad recordings? That's the question that decides it.",
+      };
+    }
     const locationNote = activeSystem.location
       ? ` (${activeSystem.location})`
       : '';
@@ -5922,6 +5960,30 @@ export function buildConsultationEntry(
 
     return {
       subject: `system guidance — ${activeSystem.name}`,
+      philosophy,
+      tendencies,
+      followUp,
+    };
+  }
+
+  // ── No active system: restraint query without system context ──
+  // The user asks "should I change anything?" but we don't have their system.
+  // Rather than ignoring the restraint framing, validate it explicitly and
+  // use accumulated taste signals (desires) as reasoning material.
+  if (isRestraintFocused) {
+    const hasTasteSignals = priorityParts.length > 0;
+    const philosophy = hasTasteSignals
+      ? `You've described what you value — ${priorityParts.join(' and ')} — and that's useful even without knowing your exact components. The question "should I change anything?" is one of the best questions in audio, because the answer is often no.`
+      : `"Should I change anything?" is one of the best questions in audio, because the answer is often no. Change that isn't driven by a specific, repeatable dissatisfaction tends to move you sideways rather than forward.`;
+
+    const tendencies = `The case for doing nothing is strongest when: you're enjoying the music most of the time, your dissatisfaction is vague rather than specific, you're not sure what "better" means in concrete terms, or your interest in upgrading feels more like curiosity than frustration.\n\nThe case for change is strongest when: a specific quality bothers you consistently across material you know well, the problem is repeatable and nameable, and you can describe what "better" would sound like — even roughly.`;
+
+    const followUp = hasTasteSignals
+      ? `You've already told me some of what you value. If you can share your current system — even roughly (source, amplification, speakers/headphones) — I can tell you whether those priorities are likely being served or whether there's a real gap.`
+      : `If you can share your current system — even roughly — I can help you figure out whether there's a real case for change or whether the instinct to hold is the right one.`;
+
+    return {
+      subject: 'restraint case — general',
       philosophy,
       tendencies,
       followUp,

@@ -71,6 +71,13 @@ const SYSTEM_ASSESSMENT_SIGNALS = [
   /\bwhat\s+(?:should|would|could)\s+i\s+(?:upgrade|improve|change)\b/i,
   /\bareas?\s+to\s+(?:upgrade|improve|focus\s+on)\b/i,
   /\bnext\s+(?:step|upgrade|move)\s+for\s+(?:my\s+)?(?:system|setup)\b/i,
+  // Restraint / do-nothing queries — user asks whether changing is necessary at all
+  /\bcase\s+for\s+(?:doing\s+)?nothing\b/i,
+  /\bshould\s+i\s+(?:just\s+)?(?:wait|hold|stay|keep)\b/i,
+  /\bmaybe\s+i\s+should(?:n'?t)?\s+change\b/i,
+  /\breason\s+not\s+to\s+(?:change|upgrade)\b/i,
+  /\bkeep\s+(?:my\s+)?(?:system|setup|chain)\s+as\s+is\b/i,
+  /\bdon'?t\s+(?:need\s+to\s+)?change\s+anything\b/i,
 ];
 
 // ── Cable signals ─────────────────────────────────────
@@ -96,6 +103,13 @@ const DIAGNOSIS_SIGNALS = [
   /\bsomething\s+(?:is\s+)?(?:off|wrong|missing)\b/i,
   /\blacking\b/i,
   /\bnot\s+(?:enough|happy|satisfied)\b/i,
+  // Sensitivity / intolerance language — "sensitive to brightness", "can't tolerate harshness"
+  /\bsensitive\s+to\s+(?:brightness|harshness|fatigue|glare|sibilance|treble|sharpness)\b/i,
+  /\bcan'?t\s+(?:tolerate|stand|handle)\s+(?:brightness|harshness|fatigue|glare|sibilance)\b/i,
+  /\bdon'?t\s+want\s+(?:something\s+)?(?:sharp|clinical|harsh|bright|fatiguing|sterile|aggressive)\b/i,
+  /\bnot\s+(?:sharp|clinical|harsh|bright|fatiguing|sterile|aggressive)\b/i,
+  /\bfatiguing\s+(?:over\s+time|quickly|easily|after\b)/i,
+  /\bget(?:s)?\s+fatiguing\b/i,
 ];
 
 // ── Shopping signals ────────────────────────────────
@@ -108,6 +122,23 @@ const SHOPPING_SIGNALS = [
   /\bunder\s+\$\d/i,
   /\bbudget\b/i,
   /\bwhat\s+(?:dac|amp|speaker|headphone)\b.*\bfor\b/i,
+];
+
+// ── Meta / capability signals ─────────────────────────
+// User asks about the system's own capabilities, limitations, or
+// how it handles unknown products. Routes to consultation so the
+// advisory engine can produce a transparent self-description.
+
+const META_SIGNALS = [
+  /\bnot\s+in\s+(?:your|the)\s+(?:database|catalog|system)\b/i,
+  /\bdon'?t\s+(?:have|know)\s+(?:that|this|a)\s+(?:product|brand|model)\b/i,
+  /\bhow\s+(?:do|would)\s+you\s+handle\b/i,
+  /\bwhat\s+if\s+you\s+don'?t\s+(?:know|have|recogni[sz]e)\b/i,
+  /\bcan\s+you\s+handle\b/i,
+  /\bwhat\s+are\s+your\s+(?:limits|limitations|capabilities)\b/i,
+  /\bhow\s+(?:do\s+you|does\s+(?:this|the\s+system))\s+work\b/i,
+  /\bwhat\s+(?:do\s+you|can\s+you)\s+(?:actually\s+)?(?:know|cover|have\s+data)\b/i,
+  /\bisn'?t\s+in\s+your\b/i,
 ];
 
 // ── Router ──────────────────────────────────────────
@@ -145,6 +176,12 @@ export function routeConversation(currentMessage: string): ConversationMode {
 
   // 2b. Cable advisory — cable queries go to consultation, not shopping
   if (CABLE_SIGNALS.some((p) => p.test(currentMessage))) {
+    return 'consultation';
+  }
+
+  // 2c. Meta / capability — user asks about system limitations or behavior.
+  //     Routes to consultation so the advisory engine can self-describe.
+  if (META_SIGNALS.some((p) => p.test(currentMessage))) {
     return 'consultation';
   }
 

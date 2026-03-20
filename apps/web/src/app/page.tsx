@@ -329,11 +329,19 @@ export default function Home() {
 
     // ── Intake → shopping promotion ─────────────────────
     // If we already showed intake questions, the user's reply is their
-    // intake answers. Force to shopping regardless of what intent
-    // detection returns — the composed text often matches other intents.
+    // intake answers. Default to shopping — UNLESS the router detected
+    // a strong non-shopping signal (diagnosis, consultation, system
+    // assessment). These signals indicate the user is providing
+    // constraint/preference info, not answering intake questions, and
+    // must break the intake→shopping lock to avoid misrouting.
     if (intakeShownRef.current) {
-      intent = 'shopping';
-      intakeShownRef.current = false; // Reset so future messages detect normally
+      intakeShownRef.current = false; // Always reset so future messages detect normally
+      const strongNonShoppingMode = routedMode === 'diagnosis' || routedMode === 'consultation';
+      if (!strongNonShoppingMode) {
+        intent = 'shopping';
+      }
+      // When a strong signal is detected, keep the intent from detectIntent()
+      // and let the normal routing (effectiveMode) handle it correctly.
     }
 
 

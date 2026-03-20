@@ -330,6 +330,38 @@ const SYSTEM_GUIDANCE_PATTERNS = [
   /\badvice\s+(?:on|for|about)\s+(?:my\s+)?(?:system|setup|rig|chain)\b/i,
 ];
 
+/** Restraint / do-nothing queries — user asks whether changing is warranted.
+ *  These don't require ownership language because the framing is inherently
+ *  self-referential: "should I change anything" implies it's their system. */
+const RESTRAINT_PATTERNS = [
+  /\bcase\s+for\s+(?:doing\s+)?nothing\b/i,
+  /\bshould\s+i\s+(?:just\s+)?(?:wait|hold|stay|keep)\b/i,
+  /\bmaybe\s+i\s+should(?:n'?t)?\s+change\b/i,
+  /\breason\s+not\s+to\s+(?:change|upgrade)\b/i,
+  /\bkeep\s+(?:my\s+)?(?:system|setup|chain)\s+as\s+is\b/i,
+  /\bdon'?t\s+(?:need\s+to\s+)?change\s+anything\b/i,
+  /\bam\s+i\s+(?:good|fine|ok(?:ay)?)\s+(?:as\s+is|for\s+now|where\s+i\s+am)\b/i,
+  /\bis\s+(?:it|this|my\s+system)\s+(?:good\s+)?enough\b/i,
+  /\bleave\s+(?:it|things?|everything)\s+(?:alone|as\s+(?:it\s+is|they\s+are))\b/i,
+  /\bsit\s+tight\b/i,
+];
+
+/** Meta / capability queries — user asks about the system's own limitations,
+ *  coverage, or how it handles unknown products. These are trust-building
+ *  moments that should produce transparent self-description, not advisory output. */
+const META_PATTERNS = [
+  /\bnot\s+in\s+(?:your|the)\s+(?:database|catalog|system)\b/i,
+  /\bdon'?t\s+(?:have|know)\s+(?:that|this|a)\s+(?:product|brand|model)\b/i,
+  /\bhow\s+(?:do|would)\s+you\s+handle\b/i,
+  /\bwhat\s+if\s+you\s+don'?t\s+(?:know|have|recogni[sz]e)\b/i,
+  /\bcan\s+you\s+handle\b/i,
+  /\bwhat\s+are\s+your\s+(?:limits|limitations|capabilities)\b/i,
+  /\bwhat\s+(?:do\s+you|can\s+you)\s+(?:actually\s+)?(?:know|cover|have\s+data)\b/i,
+  /\bisn'?t\s+in\s+your\b/i,
+  /\bhow\s+many\s+products?\s+(?:do\s+you|are\s+in)\b/i,
+  /\bwhat\s+(?:brands?|products?)\s+(?:do\s+you|are)\s+(?:cover|in\s+your)\b/i,
+];
+
 /** Ownership language — indicates user is describing components they own. */
 const OWNERSHIP_PATTERNS = [
   /\bi\s+have\b/i,
@@ -355,6 +387,13 @@ const DIAGNOSIS_PATTERNS = [
   /\bsomething\s+(?:is\s+)?(?:off|wrong|missing)\b/i,
   /\bi\s+(?:don't|don't)\s+like\s+(?:the|how)\b/i,
   /\b(?:problem|issue)\s+with\b/i,
+  // Sensitivity / intolerance language — "sensitive to brightness", "can't tolerate harshness"
+  /\bsensitive\s+to\s+(?:brightness|harshness|fatigue|glare|sibilance|treble|sharpness)\b/i,
+  /\bcan'?t\s+(?:tolerate|stand|handle)\s+(?:brightness|harshness|fatigue|glare|sibilance)\b/i,
+  /\bdon'?t\s+want\s+(?:something\s+)?(?:sharp|clinical|harsh|bright|fatiguing|sterile|aggressive)\b/i,
+  /\bnot\s+(?:sharp|clinical|harsh|bright|fatiguing|sterile|aggressive)\b/i,
+  /\bfatiguing\s+(?:over\s+time|quickly|easily|after\b)/i,
+  /\bget(?:s)?\s+fatiguing\b/i,
 ];
 
 // ── Subject extraction ───────────────────────────────
@@ -536,6 +575,9 @@ const QUALITY_ALIASES: Record<string, string> = {
   fatiguing: 'fatigue',
   aggressive: 'aggression',
   lean: 'thinness',                // "lean" in complaint context ≈ thin
+  sharp: 'brightness',             // "not sharp" → wants less brightness/glare
+  clinical: 'fatigue',             // "not clinical" → wants less analytical fatigue
+  sterile: 'fatigue',              // "not sterile" → same clinical-fatigue cluster
 };
 
 /** Resolve a word to a canonical quality, checking both KNOWN_QUALITIES and aliases. */
@@ -830,6 +872,27 @@ export function detectIntent(currentMessage: string): IntentResult {
   //     response instead of falling through to generic shopping.
   const hasGuidanceLanguage = SYSTEM_GUIDANCE_PATTERNS.some((p) => p.test(currentMessage));
   if ((hasAssessmentLanguage || hasGuidanceLanguage) && hasOwnership) {
+    return { intent: 'consultation_entry', subjects, subjectMatches, desires };
+  }
+
+  // 1c-restraint. Restraint / do-nothing query — user questions whether any
+  //     change is warranted. No ownership language required because phrases
+  //     like "is there a case for doing nothing" are inherently self-referential.
+  //     Routes to consultation_entry so buildConsultationEntry can produce
+  //     a "do nothing is valid" response when an active system is present.
+  const hasRestraintLanguage = RESTRAINT_PATTERNS.some((p) => p.test(currentMessage));
+  if (hasRestraintLanguage) {
+    return { intent: 'consultation_entry', subjects, subjectMatches, desires };
+  }
+
+  // 1c-meta. Meta / capability query — user asks about the system's own
+  //     limitations, coverage, or unknown-product handling. Routes to
+  //     consultation_entry so buildConsultationEntry can produce a
+  //     transparent self-description. Checked before shopping/gear paths
+  //     so "what if a product isn't in your database?" doesn't trigger
+  //     a product lookup.
+  const hasMetaLanguage = META_PATTERNS.some((p) => p.test(currentMessage));
+  if (hasMetaLanguage) {
     return { intent: 'consultation_entry', subjects, subjectMatches, desires };
   }
 
