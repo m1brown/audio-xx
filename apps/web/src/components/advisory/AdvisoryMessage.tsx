@@ -25,7 +25,7 @@
  * Only populated sections render in both modes.
  */
 
-import type { AdvisoryResponse, AdvisoryMode, AdvisorySource, AudioProfile, ProductAssessment, KnowledgeResponse, AssistantResponse, EditorialClosing, EditorialPick } from '../../lib/advisory-response';
+import type { AdvisoryResponse, AdvisoryMode, AdvisorySource, AudioProfile, ProductAssessment, KnowledgeResponse, AssistantResponse, EditorialClosing, EditorialPick, QuickRecommendation } from '../../lib/advisory-response';
 import type { DecisionFrame, DecisionDirection, SystemInteraction } from '../../lib/decision-frame';
 import AdvisorySection from './AdvisorySection';
 import AdvisoryProse from './AdvisoryProse';
@@ -1886,9 +1886,83 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
   );
 }
 
+// ── Quick Recommendation Format ────────────────────────
+
+function QuickRecFormat({ quickRec }: { quickRec: QuickRecommendation }) {
+  return (
+    <div
+      style={{
+        padding: '0.85rem 0',
+        fontSize: '0.95rem',
+        lineHeight: 1.6,
+        color: '#2a2a2a',
+      }}
+    >
+      {/* Summary */}
+      <p style={{ margin: '0 0 0.85rem 0', color: '#555', fontSize: '0.92rem' }}>
+        {quickRec.summary}
+      </p>
+
+      {/* Options */}
+      {quickRec.options.map((opt, i) => (
+        <div
+          key={i}
+          style={{
+            marginBottom: '0.75rem',
+            paddingLeft: '0.75rem',
+            borderLeft: '2px solid #e5e5e3',
+          }}
+        >
+          <div style={{ fontWeight: 600, fontSize: '0.92rem', marginBottom: '0.2rem' }}>
+            {opt.name}
+          </div>
+          <div
+            style={{
+              fontSize: '0.8rem',
+              color: '#888',
+              letterSpacing: '0.02em',
+              marginBottom: '0.3rem',
+            }}
+          >
+            {opt.direction}
+          </div>
+          <ul
+            style={{
+              margin: '0.15rem 0 0 0',
+              paddingLeft: '1.1rem',
+              fontSize: '0.88rem',
+              color: '#555',
+            }}
+          >
+            {opt.bullets.map((bullet, j) => (
+              <li key={j} style={{ marginBottom: '0.1rem' }}>{bullet}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+
+      {/* Follow-up question */}
+      <p
+        style={{
+          margin: '0.85rem 0 0 0',
+          color: '#666',
+          fontSize: '0.9rem',
+          fontStyle: 'italic',
+        }}
+      >
+        {quickRec.followUp}
+      </p>
+    </div>
+  );
+}
+
 // ── Main Export ────────────────────────────────────────
 
 export default function AdvisoryMessage({ advisory, onIntakeSubmit }: AdvisoryMessageProps) {
+  // Quick recommendation format — compact output from onboarding flow
+  if (advisory.quickRecommendation) {
+    return <QuickRecFormat quickRec={advisory.quickRecommendation} />;
+  }
   if (isIntakeFormat(advisory)) {
     return <AdvisoryIntake advisory={advisory} onSubmit={onIntakeSubmit} />;
   }

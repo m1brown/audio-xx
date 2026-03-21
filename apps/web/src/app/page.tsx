@@ -26,6 +26,7 @@ import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
 import { checkGlossaryQuestion } from '@/lib/glossary';
 import { detectIntent, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
+import { attachQuickRecommendation } from '@/lib/quick-recommendation';
 import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
@@ -330,7 +331,12 @@ export default function Home() {
           const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning, syntheticAdvisoryCtx.systemComponents);
           const decisionFrame = buildDecisionFrame(shoppingCtx.category, syntheticAdvisoryCtx, tasteProfile);
           const shoppingAdvisory = shoppingToAdvisory(answer, data.signals, reasoning, syntheticAdvisoryCtx, decisionFrame);
-          dispatch({ type: 'ADD_ADVISORY', advisory: shoppingAdvisory, id: advisoryId() });
+          // Build a summary sentence for the quick-rec format
+          const budgetMatch = submittedText.match(/\$?\d[\d,]*/);
+          const budgetStr = budgetMatch ? `under ${budgetMatch[0].startsWith('$') ? budgetMatch[0] : '$' + budgetMatch[0]}` : '';
+          const quickSummary = `You're looking for ${category}${budgetStr ? ' ' + budgetStr : ''}.`;
+          const quickAdvisory = attachQuickRecommendation(shoppingAdvisory, category, quickSummary);
+          dispatch({ type: 'ADD_ADVISORY', advisory: quickAdvisory, id: advisoryId() });
         } else {
           dispatch({ type: 'ADD_NOTE', content: 'Something went wrong — try rephrasing your request.' });
         }

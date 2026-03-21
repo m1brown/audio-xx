@@ -90,6 +90,29 @@ export interface SystemDelta {
   tradeOffs?: string[];
 }
 
+// ── Quick Recommendation (compact onboarding output) ──
+
+/** A single option in the quick-recommendation format. */
+export interface QuickRecOption {
+  /** Product name. */
+  name: string;
+  /** Short direction label (e.g. "More energy and impact"). */
+  direction: string;
+  /** 2–3 short bullet points: sound, use case, key trait. */
+  bullets: string[];
+}
+
+/** Compact structured recommendation — replaces verbose shopping advisory
+ *  when sufficient intent is gathered through the onboarding flow. */
+export interface QuickRecommendation {
+  /** One-sentence summary confirming intent (e.g. "You're looking for headphones with energy and impact under $200."). */
+  summary: string;
+  /** 2–3 differentiated options. */
+  options: QuickRecOption[];
+  /** One directional follow-up question. */
+  followUp: string;
+}
+
 export interface AdvisoryOption {
   name: string;
   brand?: string;
@@ -643,6 +666,10 @@ export interface AdvisoryResponse {
   // ── 11b. Product Assessment ─────────────────────────
   /** Structured product assessment — populated for product_assessment advisory mode. */
   productAssessment?: ProductAssessment;
+
+  // ── 11c. Quick Recommendation ────────────────────────
+  /** Compact structured recommendation — used when sufficient intent is gathered via onboarding. */
+  quickRecommendation?: QuickRecommendation;
 
   // ── 12. Knowledge & Assistant Lanes ────────────────
   /** Structured knowledge response — populated for audio_knowledge intent. */
