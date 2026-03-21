@@ -68,6 +68,7 @@ import type {
   ComponentVerdict,
 } from './memo-findings';
 import { renderDeterministicMemo } from './memo-deterministic-renderer';
+import { isWhitelistedSource } from './evidence/source-whitelist';
 // StructuredMemoInputs is transitional — the canonical rendering path is
 // renderDeterministicMemo(findings, prose) without the third argument.
 // See memo-deterministic-renderer.ts header for the removal plan.
@@ -3397,7 +3398,7 @@ export function buildSystemAssessment(
   // Cross-reference with retailer_links to find review URLs.
   // Only whitelisted publications are surfaced to users (see source-whitelist.ts).
   // Non-whitelisted sources are still used internally for trait synthesis.
-  const { isWhitelistedSource } = await import('./evidence/source-whitelist');
+  // isWhitelistedSource is imported statically at top of file
   const memoSourceRefs: import('./advisory-response').SourceReference[] = [];
   const seenSources = new Set<string>();
   for (const c of components) {
