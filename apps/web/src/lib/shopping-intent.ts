@@ -989,7 +989,7 @@ export interface ProductExample {
   caution?: string;
   links?: { label: string; url: string; region?: string }[];
   /** Named source references from the product catalog. */
-  sourceReferences?: Array<{ source: string; note: string }>;
+  sourceReferences?: Array<{ source: string; note: string; url?: string }>;
   // ── Enhanced card fields ─────────────────────────────
   /** Sonic direction label (e.g. "flow-oriented", "precision-focused"). */
   sonicDirectionLabel?: string;

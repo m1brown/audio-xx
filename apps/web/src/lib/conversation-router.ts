@@ -124,6 +124,23 @@ const SHOPPING_SIGNALS = [
   /\bwhat\s+(?:dac|amp|speaker|headphone)\b.*\bfor\b/i,
 ];
 
+// ── Hypothetical / counterfactual signals ─────────────
+// User introduces a hypothetical system modification or asks about
+// a component they don't own yet. Routes to consultation so the
+// advisory engine can reason from architecture and taste context.
+
+const HYPOTHETICAL_SIGNALS = [
+  /\blet'?s\s+say\b/i,
+  /\bsuppose\s+(?:i|we|you)\b/i,
+  /\bwhat\s+if\s+(?:i|we|my)\b/i,
+  /\bimagine\s+(?:i|we)\b/i,
+  /\bhypothetically\b/i,
+  /\bwhat\s+(?:would|could)\s+(?:happen|change)\s+if\b/i,
+  /\bhow\s+would\s+(?:that|it|a|an|the)\s+(?:change|affect|alter|shift|modify)\b/i,
+  /\bif\s+i\s+(?:replaced|swapped|switched|added|used|had)\b/i,
+  /\bwould\s+(?:a|an)\s+(?:tube|solid[- ]state|class[- ]?a|set|push[- ]pull|r2r|fpga|horn|planar)\b/i,
+];
+
 // ── Meta / capability signals ─────────────────────────
 // User asks about the system's own capabilities, limitations, or
 // how it handles unknown products. Routes to consultation so the
@@ -174,12 +191,19 @@ export function routeConversation(currentMessage: string): ConversationMode {
     return 'shopping';
   }
 
-  // 2b. Cable advisory — cable queries go to consultation, not shopping
+  // 2b. Hypothetical / counterfactual — user introduces a hypothetical
+  //     system change. Must fire before cable and consultation to catch
+  //     "what if I had a tube amp" before the generic consultation pattern.
+  if (HYPOTHETICAL_SIGNALS.some((p) => p.test(currentMessage))) {
+    return 'consultation';
+  }
+
+  // 2c. Cable advisory — cable queries go to consultation, not shopping
   if (CABLE_SIGNALS.some((p) => p.test(currentMessage))) {
     return 'consultation';
   }
 
-  // 2c. Meta / capability — user asks about system limitations or behavior.
+  // 2d. Meta / capability — user asks about system limitations or behavior.
   //     Routes to consultation so the advisory engine can self-describe.
   if (META_SIGNALS.some((p) => p.test(currentMessage))) {
     return 'consultation';

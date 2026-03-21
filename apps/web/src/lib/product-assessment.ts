@@ -563,5 +563,7 @@ export function buildProductAssessment(
     goalAlignment,
     recommendation,
     catalogMatch: candidate !== null,
+    retailerLinks: (candidate ?? siblingProduct)?.retailer_links,
+    sourceReferences: (candidate ?? siblingProduct)?.sourceReferences,
   };
 }

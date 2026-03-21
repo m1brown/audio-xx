@@ -362,6 +362,20 @@ const META_PATTERNS = [
   /\bwhat\s+(?:brands?|products?)\s+(?:do\s+you|are)\s+(?:cover|in\s+your)\b/i,
 ];
 
+/** Hypothetical / counterfactual queries — user asks about a component
+ *  or system modification they don't own yet. These introduce speculative
+ *  system context that should be reasoned about architecturally. */
+const HYPOTHETICAL_PATTERNS = [
+  /\blet'?s\s+say\s+(?:i|we|my)\b/i,
+  /\bsuppose\s+(?:i|we)\s+(?:had|have|used|went\s+with|switched|replaced)\b/i,
+  /\bwhat\s+if\s+(?:i|we|my)\s+(?:had|have|used|added|replaced|switched|went)\b/i,
+  /\bimagine\s+(?:i|we)\s+(?:had|have|used)\b/i,
+  /\bhypothetically\b/i,
+  /\bhow\s+would\s+(?:that|it|a|an|the)\s+(?:change|affect|alter|shift)\b/i,
+  /\bif\s+i\s+(?:replaced|swapped|switched|added|used|had|went\s+with)\b/i,
+  /\bwould\s+(?:a|an)\s+(?:tube|solid[- ]state|class[- ]?a|set|push[- ]pull)\s+(?:amp|amplifier)\b/i,
+];
+
 /** Ownership language — indicates user is describing components they own. */
 const OWNERSHIP_PATTERNS = [
   /\bi\s+have\b/i,
@@ -893,6 +907,15 @@ export function detectIntent(currentMessage: string): IntentResult {
   //     a product lookup.
   const hasMetaLanguage = META_PATTERNS.some((p) => p.test(currentMessage));
   if (hasMetaLanguage) {
+    return { intent: 'consultation_entry', subjects, subjectMatches, desires };
+  }
+
+  // 1c-hypothetical. Hypothetical / counterfactual query — user introduces
+  //     a speculative system change ("let's say I have a tube amp", "what if
+  //     I replaced the DAC?"). Routes to consultation_entry so the builder
+  //     can reason from component archetype and accumulated taste signals.
+  const hasHypotheticalLanguage = HYPOTHETICAL_PATTERNS.some((p) => p.test(currentMessage));
+  if (hasHypotheticalLanguage) {
     return { intent: 'consultation_entry', subjects, subjectMatches, desires };
   }
 

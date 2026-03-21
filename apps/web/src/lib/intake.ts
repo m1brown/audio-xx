@@ -50,22 +50,49 @@ const INTAKE_PATTERNS = [
 /**
  * Guard patterns — when present alongside intake patterns, the query
  * has enough specificity to skip intake and go straight to shopping.
- * (e.g. "I want new speakers under $2000 for a small room" is specific enough.)
+ *
+ * Philosophy: if the user volunteers ANY concrete context (budget, room,
+ * baseline system, use case), they're ready to talk — not fill out a form.
+ * A form should only appear when the message is truly bare ("i want a stereo"
+ * with nothing else). One signal of specificity is enough to enter a
+ * conversational flow where the system can ask follow-ups naturally.
+ *
+ * See Case 001: "i'd like a stereo. my budget is 1500. i'm used to sonos
+ * but i want something a little better, with a turntable too" — that single
+ * message contains budget, baseline, intent, and taste signal. A form would
+ * have blocked a more productive conversation.
  */
 const INTAKE_GUARD_PATTERNS = [
+  // Budget signals
   /\bunder\s+\$\d/i,
   /\$\s?\d{3,}/,
-  /\bbudget\s+(?:of|around|is)\s+\$?\d/i,
+  /\€\s?\d{3,}/,
+  /\bbudget\s+(?:of|around|is)\s+\$?\€?\d/i,
+
+  // Room / placement signals
   /\bfor\s+(?:my|a)\s+(?:small|large|medium|tiny|big)\s+room\b/i,
+  /\b(?:apartment|flat|bedroom|office|desk|living\s+room|studio)\b/i,
+  /\b(?:against|near|close\s+to)\s+(?:the\s+)?wall\b/i,
+
+  // Listening habit signals
   /\b(?:i\s+)?listen\s+to\s+(?:mostly|mainly|a\s+lot\s+of)\b/i,
+  /\b(?:jazz|classical|rock|electronic|hip.hop|vinyl|streaming)\b/i,
+
+  // Baseline system / upgrade context
+  /\b(?:used\s+to|coming\s+from|currently\s+(?:have|use|using)|replacing|upgrading\s+from)\b/i,
+  /\b(?:sonos|bose|soundbar|bluetooth\s+speaker|airpods|homepod|echo)\b/i,
+
+  // Use-case / feature signals
+  /\b(?:turntable|vinyl|record\s+player|phono)\b/i,
+  /\b(?:a\s+little|much|way)\s+better\b/i,
 ];
 
 /**
  * How many guard signals are needed to bypass intake.
- * A single budget mention isn't enough — we want at least 2 of:
- * budget, room, listening habits to consider the query "specified enough".
+ * A single concrete signal is enough — the conversation can extract the
+ * rest naturally. The form should only appear for truly bare queries.
  */
-const GUARD_THRESHOLD = 2;
+const GUARD_THRESHOLD = 1;
 
 // ── Scope detection ──────────────────────────────────
 
@@ -288,6 +315,6 @@ export function intakeToAdvisory(intake: IntakeResponse): import('./advisory-res
     subject: `getting started — ${scopeLabel}`,
     philosophy: intake.greeting,
     intakeQuestions: intake.questions,
-    followUp: 'Answer whichever questions feel relevant — you don\'t need to address every one. Even partial context helps me give better guidance than a generic list.',
+    followUp: 'Answer whichever questions feel relevant — or skip this entirely and just tell me what you\'re looking for in your own words. Even a sentence or two gives me enough to start.',
   };
 }

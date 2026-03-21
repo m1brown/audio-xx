@@ -872,6 +872,20 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
           {a.followUp}
         </div>
       )}
+
+      {/* ── Learn more (links) ────────────────────────── */}
+      {a.links && a.links.length > 0 && (
+        <AdvisorySection label="Learn more">
+          <AdvisoryLinks links={a.links} />
+        </AdvisorySection>
+      )}
+
+      {/* ── Sources (continued reading) ──────────────── */}
+      {a.sourceReferences && a.sourceReferences.length > 0 && (
+        <AdvisorySection label="Sources">
+          <AdvisorySources sources={a.sourceReferences} />
+        </AdvisorySection>
+      )}
     </div>
   );
 }

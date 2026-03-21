@@ -213,6 +213,8 @@ export interface SourceReferenceFinding {
   source: string;
   /** What the source covers. */
   note: string;
+  /** Direct URL to the review or source, if available. */
+  url?: string;
 }
 
 // ── The contract ───────────────────────────────────────

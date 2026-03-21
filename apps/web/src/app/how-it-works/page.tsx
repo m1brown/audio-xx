@@ -180,7 +180,42 @@ export default function HowItWorks() {
         </div>
       </section>
 
-      {/* ── 2. Two Models, One Bridge ──────────────────── */}
+      {/* ── 2. No Best, Only Aligned ─────────────────────── */}
+      <section style={sectionStyle}>
+        <h2 style={headingStyle}>There Is No &ldquo;Best&rdquo;</h2>
+        <div style={bodyStyle}>
+          <p style={{ marginBottom: '0.65rem' }}>
+            There is no best amplifier, no best DAC, no best speaker. There might be
+            a system that&rsquo;s best <em>for you</em> — given your taste, your
+            music, your room, and the trade-offs you&rsquo;re willing to make. But
+            that&rsquo;s a personal alignment question, not a universal ranking.
+          </p>
+          <p style={{ marginBottom: '0.65rem' }}>
+            Even the idea of &ldquo;getting as close to the original recording as
+            possible&rdquo; is more complicated than it sounds. Recordings are shaped
+            by the microphones used, the room they were captured in, the mixing
+            console, the monitoring speakers the engineer was listening through, and
+            however many analog-to-digital and digital-to-analog conversions happened
+            along the way. There is no single &ldquo;original&rdquo; to faithfully
+            reproduce — only a chain of creative and technical decisions that
+            produced the file or disc you&rsquo;re playing back.
+          </p>
+          <p style={{ marginBottom: '0.65rem' }}>
+            This is not a flaw in audio. It&rsquo;s the nature of it. Every system
+            is an interpretation. Some prioritize accuracy, some prioritize musicality,
+            some prioritize raw emotional impact. None of these is more correct than
+            the others.
+          </p>
+          <p>
+            Audio&thinsp;XX doesn&rsquo;t pretend to know what sounds best. It helps
+            you understand what you respond to, and matches that to equipment that
+            supports it. The goal is a system that keeps you listening — not one that
+            wins a spec sheet competition.
+          </p>
+        </div>
+      </section>
+
+      {/* ── 3. Two Models, One Bridge ──────────────────── */}
       <section style={sectionStyle}>
         <h2 style={headingStyle}>The Core Idea</h2>
         <div style={bodyStyle}>

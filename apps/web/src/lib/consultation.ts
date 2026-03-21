@@ -3394,19 +3394,22 @@ export function buildSystemAssessment(
   );
 
   // ── Collect source references from catalogued products ──
-  // Cross-reference with retailer_links to find review URLs
+  // Cross-reference with retailer_links to find review URLs.
+  // Only whitelisted publications are surfaced to users (see source-whitelist.ts).
+  // Non-whitelisted sources are still used internally for trait synthesis.
+  const { isWhitelistedSource } = await import('./evidence/source-whitelist');
   const memoSourceRefs: import('./advisory-response').SourceReference[] = [];
   const seenSources = new Set<string>();
   for (const c of components) {
     if (c.product?.sourceReferences) {
       for (const ref of c.product.sourceReferences) {
-        if (!seenSources.has(ref.source)) {
+        if (!seenSources.has(ref.source) && isWhitelistedSource(ref.source)) {
           seenSources.add(ref.source);
           const matchingLink = c.product.retailer_links?.find(
             (l: { label: string; url: string }) =>
               l.label.toLowerCase().includes(ref.source.toLowerCase()) && l.label.toLowerCase().includes('review'),
           );
-          memoSourceRefs.push({ source: ref.source, note: ref.note, url: matchingLink?.url });
+          memoSourceRefs.push({ source: ref.source, note: ref.note, url: ref.url ?? matchingLink?.url });
         }
       }
     }
@@ -5634,6 +5637,7 @@ function extractMemoFindings(
   const sourceReferences: SourceReferenceFinding[] = sourceRefs.map((r) => ({
     source: r.source,
     note: r.note,
+    url: r.url,
   }));
 
   return {
@@ -5867,6 +5871,95 @@ function buildAssessmentPreferenceAlignment(
  * Called when the user asks for system evaluation or upgrade advice
  * but hasn't named specific components.
  */
+
+// ── Hypothetical component detection ─────────────────
+// Maps common hypothetical component descriptions to architectural
+// knowledge. Returns null if no known component type is detected.
+
+interface HypotheticalComponentInfo {
+  label: string;
+  character: string;
+  tradeoff: string;
+  /** How this component type typically aligns with or shifts a system. */
+  alignment: string;
+}
+
+function detectHypotheticalComponent(text: string): HypotheticalComponentInfo | null {
+  const lower = text.toLowerCase();
+
+  // ── Amplifier topologies ─────────────────────────────
+  if (/\btube\s+(?:amp|amplifier|integrated)\b/i.test(lower) || /\bvalve\s+amp/i.test(lower)) {
+    return {
+      label: 'a tube amplifier',
+      character: 'Tube amplifiers — particularly single-ended designs — tend toward harmonic richness, midrange density, and elastic dynamics. They often add even-order harmonic texture that many listeners perceive as warmth and tonal beauty. Low-feedback tube designs prioritize musical flow over measured precision.',
+      tradeoff: 'What you typically give up: ultimate bass control and damping, transient speed at the frequency extremes, and absolute low-noise transparency. Tubes add their own character — that\'s the point, but it means the amp is an active participant in the sound, not a neutral wire.',
+      alignment: 'a tube amplifier would likely push the system toward warmth, flow, and midrange density — potentially compensating for analytical or lean tendencies elsewhere in the chain, or compounding warmth if the source and speakers already lean that way.',
+    };
+  }
+  if (/\bset\b|\bsingle[- ]ended\s+triode/i.test(lower)) {
+    return {
+      label: 'a single-ended triode (SET) amplifier',
+      character: 'SET amplifiers represent the far end of the tube spectrum: minimal circuitry, no push-pull cancellation, very low power (typically 2–8 watts). They prioritize midrange purity, harmonic texture, and a direct, intimate presentation. The best SETs convey a sense of immediacy and presence that higher-power designs can\'t replicate.',
+      tradeoff: 'The constraint is power. SETs require high-efficiency speakers (typically 93 dB+ sensitivity) to work at realistic volumes. Bass control is limited by low damping factor. Complex orchestral passages at high volume will compress. This is a design that optimizes for intimacy and tonal beauty at the cost of scale and authority.',
+      alignment: 'a SET amplifier would fundamentally reshape the system\'s character toward intimacy, midrange beauty, and harmonic richness — but only with compatible speakers. If the speakers are below ~93 dB sensitivity, the SET won\'t have enough power to drive them properly, and the trade-off becomes a limitation rather than a choice.',
+    };
+  }
+  if (/\bsolid[- ]state\s+(?:amp|amplifier)/i.test(lower) || /\bclass[- ]?a\b.*\b(?:amp|amplifier)/i.test(lower)) {
+    return {
+      label: 'a solid-state amplifier',
+      character: 'Solid-state amplifiers tend toward precision, bass control, and dynamic authority. High-feedback designs offer low distortion and high damping factor — they grip the speaker and control its behavior. Class A solid-state designs often split the difference: the control and transparency of solid-state with a touch of warmth from the bias topology.',
+      tradeoff: 'What you typically give up compared to tubes: harmonic richness, midrange texture, and the elastic dynamic quality that comes from soft clipping. High-feedback solid-state can sound analytical or clinical to listeners who prioritize musical flow over precision.',
+      alignment: 'a solid-state amplifier would likely push the system toward precision, control, and transparency — potentially compensating for warmth or looseness elsewhere, or compounding analytical tendencies if the source is already precision-focused.',
+    };
+  }
+  if (/\bpush[- ]pull\b.*\b(?:tube|amp|amplifier)/i.test(lower) || /\b(?:tube|amp|amplifier).*\bpush[- ]pull\b/i.test(lower)) {
+    return {
+      label: 'a push-pull tube amplifier',
+      character: 'Push-pull tube designs offer more power than SETs (typically 15–50+ watts) while retaining some tube character. They cancel even-order harmonics through the output transformer, which reduces the overt "tubey" texture but adds dynamic headroom and bass control. Many iconic designs (Dynaco, Marantz, McIntosh) use this topology.',
+      tradeoff: 'Push-pull tubes are a compromise position: more power and control than SET, more warmth and midrange weight than solid-state. They don\'t have the stark intimacy of SET or the iron grip of high-feedback solid-state. That middle ground is exactly what many listeners want.',
+      alignment: 'a push-pull tube amplifier would add warmth and midrange weight without the speaker-sensitivity constraints of SET. It\'s a moderate shift — noticeable but not radical.',
+    };
+  }
+
+  // ── DAC topologies ───────────────────────────────────
+  if (/\br[- ]?2r\s+(?:dac|ladder)/i.test(lower) || /\br[- ]?2r\b/i.test(lower)) {
+    return {
+      label: 'an R2R (ladder) DAC',
+      character: 'R2R DACs use resistor-ladder networks for direct voltage output. They tend toward tonal density, harmonic texture, and musical flow. The best R2R designs convey a sense of solidity and weight that delta-sigma designs often trade for speed and precision.',
+      tradeoff: 'What you typically give up: measured precision, ultimate detail retrieval, and spatial sharpness. R2R designs prioritize the body of the sound over its edges.',
+      alignment: 'an R2R DAC would push the source toward warmth, density, and flow — potentially compensating for a lean or clinical downstream chain, or compounding richness if the amplifier already leans warm.',
+    };
+  }
+  if (/\bdelta[- ]sigma\b/i.test(lower) || /\bsabre\b/i.test(lower) || /\bakm\b/i.test(lower)) {
+    return {
+      label: 'a delta-sigma DAC',
+      character: 'Delta-sigma DACs use oversampling and noise shaping for high measured accuracy. They tend toward clarity, spatial precision, and speed. Well-implemented designs can sound detailed and transparent without harshness.',
+      tradeoff: 'What you typically give up: tonal density and harmonic weight. Some listeners find delta-sigma designs leaner or less "organic" than R2R alternatives.',
+      alignment: 'a delta-sigma DAC would push the source toward clarity and precision — potentially compensating for a warm or dense downstream chain, or compounding analytical tendencies if the amplifier is already precision-focused.',
+    };
+  }
+
+  // ── Speaker topologies ───────────────────────────────
+  if (/\bhorn\s+(?:speaker|loaded)/i.test(lower) || /\bhigh[- ]efficiency\s+speaker/i.test(lower)) {
+    return {
+      label: 'horn-loaded speakers',
+      character: 'Horn speakers use a horn to couple the driver to the room more efficiently. They tend toward dynamic liveliness, presence, and a direct, immediate presentation. High-efficiency designs (typically 95–100+ dB) require very little amplifier power, which opens up the full range of low-power tube amplification.',
+      tradeoff: 'What you typically give up: cabinet refinement, bass extension below the horn cutoff, and the polished evenness of conventional direct-radiating designs. Horns can sound colored or forward if poorly implemented.',
+      alignment: 'horn speakers would fundamentally change the system\'s dynamic behavior — more immediacy, more presence, and compatibility with low-power tube amplification. The trade-off is typically less bass extension and a more forward presentation.',
+    };
+  }
+  if (/\bplanar\b|\belectrostatic\b|\bribbon\b|\bmagnepan\b|\bmartin logan\b/i.test(lower)) {
+    return {
+      label: 'planar/electrostatic speakers',
+      character: 'Planar and electrostatic speakers use large, thin diaphragms that move air over a wide surface area. They tend toward transparency, speed, and spatial accuracy with a quality of effortlessness that cone speakers rarely match. The best planars disappear sonically — you hear the recording, not the speaker.',
+      tradeoff: 'What you typically give up: dynamic punch in the bass, room-filling macro-dynamics, and easy amplifier compatibility. Most planars need substantial current and a room with some distance from the back wall.',
+      alignment: 'planar speakers would push the system toward transparency and spatial accuracy — potentially revealing everything upstream with unforgiving clarity.',
+    };
+  }
+
+  return null;
+}
+
 export function buildConsultationEntry(
   currentMessage: string,
   desires: { quality: string; direction: 'more' | 'less'; raw: string }[],
@@ -5899,6 +5992,46 @@ export function buildConsultationEntry(
       philosophy: `Audio XX maintains a curated anchor catalog of well-understood components — currently around 127 products across DACs, amplifiers, speakers, headphones, turntables, and streamers. These are products with enough critical and community data to assign confident sonic trait profiles.`,
       tendencies: `When you mention a product outside that catalog, the system doesn't go silent. It identifies the product's design family — topology (R2R, delta-sigma, FPGA, SET, push-pull, etc.), brand philosophy, and price tier — and reasons from established principles for that family. The response will be clearly marked as inferred rather than calibrated, and the confidence level will be stated.\n\nYou can also describe a product in your own words — its general character, what you like and dislike about it — and the system will work from your description. That's often more useful than specs anyway, because it tells me how the product actually sounds in your system and room.\n\nWhat I won't do: invent specific sonic details about a product I haven't been calibrated on, or present inferred knowledge with the same confidence as calibrated data. If I'm uncertain, I'll say so.`,
       followUp: 'Is there a specific product you\'re curious about? I\'m happy to show you what the system can do with it — whether it\'s in the catalog or not.',
+    };
+  }
+
+  // ── Hypothetical / counterfactual query ──────────────
+  // User introduces a speculative system modification ("let's say I have
+  // a tube amp", "what if I replaced the DAC with an R2R?"). Reason from
+  // component archetype knowledge + accumulated taste signals.
+  const isHypothetical = /\blet'?s\s+say\b|\bsuppose\s+(?:i|we)\b|\bwhat\s+if\s+(?:i|we|my)\b|\bimagine\s+(?:i|we)\b|\bhypothetically\b|\bhow\s+would\s+(?:that|it|a|an|the)\s+(?:change|affect|alter|shift)\b|\bif\s+i\s+(?:replaced|swapped|switched|added|used|had)\b/i.test(currentMessage);
+  if (isHypothetical) {
+    const hypotheticalComponent = detectHypotheticalComponent(currentMessage);
+    const hasTasteSignals = priorityParts.length > 0;
+
+    if (hypotheticalComponent) {
+      const { label, character, tradeoff, alignment } = hypotheticalComponent;
+
+      // Build system-context-aware or taste-signal-aware response
+      let systemNote = '';
+      if (activeSystem && activeSystem.components.length > 0) {
+        const componentList = activeSystem.components.map((c) => normalizeDisplayName(c.brand, c.name)).join(', ');
+        systemNote = `\n\nIn your current system (${componentList}${activeSystem.tendencies ? `, which leans ${activeSystem.tendencies}` : ''}), ${alignment}`;
+      } else if (hasTasteSignals) {
+        systemNote = `\n\nGiven what you've said you value — ${priorityParts.join(' and ')} — ${alignment}`;
+      }
+
+      return {
+        subject: `hypothetical — ${label}`,
+        philosophy: `${label} is a design philosophy, not a single product. But the family has characteristic tendencies that would shape the system's direction.${systemNote}`,
+        tendencies: `${character}\n\nTrade-off: ${tradeoff}`,
+        followUp: 'This is architectural reasoning — specific products within the family vary. If you have a particular model in mind, I can be more specific about how it would interact with the rest of the chain.',
+      };
+    }
+
+    // Hypothetical language detected but no specific component identified
+    return {
+      subject: 'hypothetical change',
+      philosophy: 'That\'s a good question to reason through before committing. The impact of a component change depends on what role it plays in the chain — whether it\'s adding something missing, compensating for an existing tendency, or compounding one.',
+      tendencies: hasTasteSignals
+        ? `Based on what you've said you value — ${priorityParts.join(' and ')} — the question is whether the change moves the system closer to those priorities or shifts it sideways. Not all changes are improvements; some are just different.`
+        : 'Without knowing your current system or preferences in detail, I can reason about the architectural direction — what a given topology tends to contribute and what it tends to trade away.',
+      followUp: 'Can you tell me more about what you\'d be changing — and what you\'re hoping it would improve? That helps me frame whether it\'s a compensating move or a compounding one.',
     };
   }
 

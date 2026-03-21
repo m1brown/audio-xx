@@ -403,6 +403,11 @@ export interface ProductAssessment {
 
   /** Whether the product was found in the catalog (affects confidence). */
   catalogMatch: boolean;
+
+  /** Retailer / manufacturer links from catalog data. */
+  retailerLinks?: Array<{ label: string; url: string; region?: string }>;
+  /** Review and community source references from catalog data. */
+  sourceReferences?: Array<{ source: string; note: string; url?: string }>;
 }
 
 /**
@@ -1213,7 +1218,7 @@ export function gearResponseToAdvisory(
             (l: { label: string; url: string }) =>
               l.label.toLowerCase().includes(ref.source.toLowerCase()) && l.label.toLowerCase().includes('review'),
           );
-          gearSourceRefs.push({ source: ref.source, note: ref.note, url: matchingLink?.url });
+          gearSourceRefs.push({ source: ref.source, note: ref.note, url: ref.url ?? matchingLink?.url });
         }
       }
     }
@@ -1541,7 +1546,7 @@ export function shoppingToAdvisory(
           const matchingLink = p.links?.find(
             (l) => l.label.toLowerCase().includes(ref.source.toLowerCase()) && l.label.toLowerCase().includes('review'),
           );
-          sourceRefs.push({ source: ref.source, note: ref.note, url: matchingLink?.url });
+          sourceRefs.push({ source: ref.source, note: ref.note, url: ref.url ?? matchingLink?.url });
         }
       }
     }
@@ -1694,8 +1699,21 @@ export function assessmentToAdvisory(
       ? undefined
       : 'If you can share the specific model, I may be able to offer a more detailed assessment.',
 
-    // Links from the candidate product (if catalog match)
-    links: undefined, // Will be populated by the routing layer if needed
+    // Links and sources from catalog product data
+    links: assessment.retailerLinks
+      ? assessment.retailerLinks.map((l) => ({
+          label: l.label,
+          url: l.url,
+          kind: 'reference' as const,
+          region: l.region,
+        }))
+      : undefined,
+    sourceReferences: assessment.sourceReferences
+      ? assessment.sourceReferences.map((s) => ({
+          source: s.source,
+          note: s.note,
+        }))
+      : undefined,
   };
 }
 

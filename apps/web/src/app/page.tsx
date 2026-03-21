@@ -56,11 +56,12 @@ import type { DraftSystem } from '@/lib/system-types';
 // ── Constants ─────────────────────────────────────────
 
 const CYCLING_PLACEHOLDERS = [
-  'Assess my system: Eversolo → Hugo → JOB → WLM Diva',
-  'Best DAC under $2000',
+  'I want a warm, musical system for jazz and vocals under $5k',
   'Best integrated amplifier under $3000',
-  'How\u2019s the Laiv Harmony uDAC?',
+  'My system sounds bright and fatiguing — what should I change?',
   'Compare Klipsch Heresy to DeVore O/96',
+  'Assess my system: Eversolo → Hugo → JOB → WLM Diva',
+  'I\u2019m coming from Sonos and want real hi-fi for the first time',
 ];
 
 /** Interval in ms between placeholder rotations. */
@@ -1008,14 +1009,23 @@ export default function Home() {
     >
       {/* Header — always visible */}
       <div
+        onClick={() => dispatch({ type: 'RESET' })}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') dispatch({ type: 'RESET' }); }}
         style={{
           borderTop: '3px solid #b8372e',
           width: 48,
           marginBottom: '1.5rem',
+          cursor: 'pointer',
         }}
       />
 
       <h1
+        onClick={() => dispatch({ type: 'RESET' })}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') dispatch({ type: 'RESET' }); }}
         style={{
           marginBottom: '0.4rem',
           fontSize: '1.85rem',
@@ -1023,6 +1033,7 @@ export default function Home() {
           letterSpacing: '-0.03em',
           lineHeight: 1.15,
           color: '#2a2a2a',
+          cursor: 'pointer',
         }}
       >
         Audio XX
@@ -1049,7 +1060,7 @@ export default function Home() {
           >
             {audioState.savedSystems.length > 0 || audioState.draftSystem
               ? 'Select system'
-              : 'Add your system'}
+              : 'Tell us about your system'}
           </button>
         )}
         {systemPanelOpen && (
@@ -1099,8 +1110,8 @@ export default function Home() {
               lineHeight: 1.65,
             }}
           >
-            A listening advisor that interprets what you hear, reflects underlying system traits,
-            and suggests the most sensible next step.
+            Find the right gear for how you actually listen. Audio XX matches components to your
+            taste, explains how they work together, and helps you build a system you&#39;ll love long-term.
           </p>
 
           {/* Compact taste widget — authenticated users with profile data */}
@@ -1246,7 +1257,7 @@ export default function Home() {
               color: '#999',
             }}
           >
-            Listening note
+            What are you looking for?
           </label>
         )}
 
@@ -1320,7 +1331,7 @@ export default function Home() {
               lineHeight: 1.5,
             }}
           >
-            Describe what you hear, name a component, or ask about a technology. Press Enter to send.
+            Describe your ideal sound, ask for gear recommendations, or tell us about your current system. Press Enter to send.
           </div>
         )}
 

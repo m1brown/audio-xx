@@ -257,6 +257,21 @@ function generateAcknowledge(
     return 'That budget opens up some interesting options.';
   }
 
+  // System-building intent — user is describing what they want, not a problem.
+  // Reflect priorities back in advisor voice before asking for clarification.
+  if (lower.includes('build') || lower.includes('where should i start') ||
+      lower.includes('getting started') || lower.includes('first system') ||
+      lower.includes('want to build') || lower.includes('new stereo')) {
+    if (phrases.length >= 2) {
+      const topTwo = phrases.slice(0, 2).map((p) => p.toLowerCase()).join(' and ');
+      return `Good starting picture — you value ${topTwo}, and you know what you don\'t want. That\'s more useful than a budget number for pointing you in the right direction.`;
+    }
+    if (phrases.length >= 1) {
+      return `Good starting picture — ${phrases[0].toLowerCase()} tells me something about the kind of system that would work for you.`;
+    }
+    return 'Good starting picture — knowing what you value is the most useful starting point.';
+  }
+
   // Describing what they hear — reflect the descriptive terms
   if (phrases.length >= 3) {
     const topTwo = phrases.slice(0, 2).map((p) => p.toLowerCase()).join(' and ');
@@ -297,9 +312,9 @@ function generateContext(
         .map((p) => p.toLowerCase())
         .filter((p) => ['sweet', 'smooth', 'detailed', 'warm', 'open', 'musical', 'natural', 'fast'].includes(p));
       if (ambiguousTerms.length > 0) {
-        return `"${ambiguousTerms[0]}" can mean quite different things depending on the listener.`;
+        return `Different designs pursue "${ambiguousTerms[0]}" in different ways — and the distinction shapes which direction I\'d point you.`;
       }
-      return 'That can mean different things to different listeners.';
+      return 'That can mean different things to different listeners — worth clarifying before I point you in a direction.';
     }
     case 'shopping':
       if (signals.symptoms.length >= 2) {

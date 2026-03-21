@@ -299,6 +299,7 @@ function mapSourceReferences(findings: MemoFindings): SourceReference[] {
   return findings.sourceReferences.map((r) => ({
     source: r.source,
     note: r.note,
+    url: r.url,
   }));
 }
 
