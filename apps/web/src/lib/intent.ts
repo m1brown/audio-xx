@@ -16,7 +16,7 @@ import { isIntakeQuery } from './intake';
 
 // ── Intent type ──────────────────────────────────────
 
-export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory' | 'product_assessment' | 'audio_knowledge' | 'audio_assistant' | 'exploration' | 'intake';
+export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory' | 'product_assessment' | 'audio_knowledge' | 'audio_assistant' | 'exploration' | 'intake' | 'music_input';
 
 /** A desire the user has expressed — "want more speed", "wish it had warmth". */
 export interface DesireSignal {
@@ -957,6 +957,14 @@ export function detectIntent(currentMessage: string): IntentResult {
     return { intent: 'product_assessment', subjects, subjectMatches, desires };
   }
 
+  // 2c-pre. Music input — user leads with taste rather than gear.
+  //     "I listen to Van Halen", "I like jazz", "mostly electronic music".
+  //     Only fires when no gear subjects are detected — otherwise the message
+  //     is about gear that happens to mention music, not a taste signal.
+  if (subjectMatches.length === 0 && isMusicInput(currentMessage)) {
+    return { intent: 'music_input', subjects, subjectMatches, desires };
+  }
+
   // 2c. Intake — vague entry queries like "I want a new stereo" or "I need speakers".
   //     These need structured intake questions before routing to shopping.
   //     Must fire before shopping so "I want new speakers" gets intake, not
@@ -1329,4 +1337,115 @@ export function extractShortlistBudget(text: string): number | null {
     if (!isNaN(parsed)) return parsed;
   }
   return null;
+}
+
+// ── Music input detection ───────────────────────────
+//
+// Detects when a user leads with musical taste rather than gear.
+// "I listen to Van Halen", "mostly jazz", "I like electronic music".
+// These are preference signals, not gear questions.
+
+const MUSIC_INPUT_PATTERNS: RegExp[] = [
+  /\bi\s+(?:listen\s+to|like|love|enjoy|play)\s+/i,
+  /\b(?:mostly|mainly|primarily)\s+(?:listen|into)\b/i,
+  /\bmy\s+(?:music|listening)\s+is\s+(?:mostly|mainly|primarily)\b/i,
+  /\bi(?:'m| am)\s+(?:into|a fan of|really into)\s+/i,
+  /\bfavorite\s+(?:music|genre|artist|band)\b/i,
+];
+
+/** Known genre keywords — kept intentionally small, no external API. */
+const GENRE_KEYWORDS = /\b(?:jazz|classical|rock|metal|electronic|techno|house|ambient|hip[- ]?hop|rap|r&b|soul|funk|blues|folk|country|pop|punk|indie|alternative|acoustic|vocal|opera|orchestral|chamber|vinyl|reggae|latin|world|edm|drum\s*(?:and|&|n)\s*bass)\b/i;
+
+/** A handful of well-known artists for quick matching. Fallback handles the rest. */
+const ARTIST_KEYWORDS = /\b(?:van halen|beatles|pink floyd|miles davis|coltrane|radiohead|tool|led zeppelin|steely dan|joni mitchell|billie eilish|kendrick|drake|taylor swift|deadmau5|aphex twin|boards of canada|norah jones|diana krall|keith jarrett|oscar peterson|bill evans|pat metheny|herbie hancock)\b/i;
+
+/**
+ * Returns true when the message is primarily about musical taste.
+ * Only triggers when no gear subjects are present (checked by caller).
+ */
+export function isMusicInput(text: string): boolean {
+  const lower = text.toLowerCase();
+  // Must match a music input pattern OR contain a genre/artist keyword
+  const hasPattern = MUSIC_INPUT_PATTERNS.some((p) => p.test(text));
+  const hasGenre = GENRE_KEYWORDS.test(lower);
+  const hasArtist = ARTIST_KEYWORDS.test(lower);
+  return hasPattern || hasGenre || hasArtist;
+}
+
+// ── Music taste descriptors ─────────────────────────
+//
+// Simple genre-to-character mappings. Intentionally small.
+// The fallback handles anything not listed.
+
+interface MusicCharacter {
+  description: string;
+  traits: string[];
+}
+
+const MUSIC_CHARACTER_MAP: Record<string, MusicCharacter> = {
+  'rock': { description: 'energetic, guitar-driven', traits: ['dynamics', 'rhythm', 'punch'] },
+  'metal': { description: 'aggressive, high-energy', traits: ['dynamics', 'speed', 'impact'] },
+  'jazz': { description: 'relaxed, acoustic, nuanced', traits: ['flow', 'texture', 'spatial_depth'] },
+  'classical': { description: 'dynamic, orchestral, spatial', traits: ['dynamics', 'spatial_depth', 'tonal_density'] },
+  'electronic': { description: 'punchy, rhythmic, bass-forward', traits: ['rhythm', 'bass_weight', 'control'] },
+  'techno': { description: 'driving, rhythmic, bass-heavy', traits: ['rhythm', 'bass_weight', 'control'] },
+  'house': { description: 'groovy, rhythmic, warm bass', traits: ['rhythm', 'bass_weight', 'flow'] },
+  'ambient': { description: 'atmospheric, spacious, textured', traits: ['spatial_depth', 'texture', 'flow'] },
+  'hip-hop': { description: 'bass-heavy, rhythmic, punchy', traits: ['bass_weight', 'rhythm', 'dynamics'] },
+  'rap': { description: 'bass-heavy, rhythmic, punchy', traits: ['bass_weight', 'rhythm', 'dynamics'] },
+  'r&b': { description: 'warm, smooth, vocal-forward', traits: ['warmth', 'flow', 'tonal_density'] },
+  'soul': { description: 'warm, vocal-rich, flowing', traits: ['warmth', 'flow', 'tonal_density'] },
+  'folk': { description: 'acoustic, intimate, natural', traits: ['texture', 'flow', 'spatial_depth'] },
+  'blues': { description: 'warm, gritty, expressive', traits: ['warmth', 'texture', 'dynamics'] },
+  'country': { description: 'acoustic, clear, vocal-forward', traits: ['clarity', 'texture', 'flow'] },
+  'pop': { description: 'polished, vocal-forward, balanced', traits: ['clarity', 'flow', 'dynamics'] },
+  'punk': { description: 'raw, fast, energetic', traits: ['dynamics', 'speed', 'rhythm'] },
+  'indie': { description: 'textured, layered, atmospheric', traits: ['texture', 'spatial_depth', 'flow'] },
+  'vocal': { description: 'voice-forward, intimate, natural', traits: ['tonal_density', 'texture', 'clarity'] },
+  'acoustic': { description: 'natural, intimate, detailed', traits: ['texture', 'spatial_depth', 'clarity'] },
+  'opera': { description: 'dynamic, spatial, voice-centered', traits: ['dynamics', 'spatial_depth', 'tonal_density'] },
+  'orchestral': { description: 'dynamic, spacious, layered', traits: ['dynamics', 'spatial_depth', 'tonal_density'] },
+  'vinyl': { description: 'warm, textured, analog', traits: ['warmth', 'texture', 'flow'] },
+};
+
+/**
+ * Produce a short, conversational response to a music-taste message.
+ * Max 2 sentences. Always ends with one guiding question.
+ */
+export function respondToMusicInput(message: string): string {
+  const lower = message.toLowerCase();
+
+  // Try to match a genre
+  for (const [genre, character] of Object.entries(MUSIC_CHARACTER_MAP)) {
+    const pattern = new RegExp(`\\b${genre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    if (pattern.test(lower)) {
+      return `Got it — ${character.description} music. Are you looking to build a new system, or improve one you already have?`;
+    }
+  }
+
+  // Try to match an artist and infer character
+  if (/van halen|led zeppelin|tool|metal/i.test(lower)) {
+    return 'Got it — energetic, hard-hitting music. Are you looking to build a new system, or improve one you already have?';
+  }
+  if (/miles davis|coltrane|keith jarrett|bill evans|oscar peterson|pat metheny|herbie hancock|diana krall|norah jones/i.test(lower)) {
+    return 'Got it — acoustic, nuanced music where texture and space matter. Are you looking to build a new system, or improve one you already have?';
+  }
+  if (/pink floyd|radiohead|boards of canada/i.test(lower)) {
+    return 'Got it — atmospheric, layered music where space and immersion matter. Are you looking to build a new system, or improve one you already have?';
+  }
+  if (/beatles|steely dan|joni mitchell/i.test(lower)) {
+    return 'Got it — well-produced, musically rich recordings. Are you looking to build a new system, or improve one you already have?';
+  }
+  if (/deadmau5|aphex twin|edm|drum\s*(?:and|&|n)\s*bass/i.test(lower)) {
+    return 'Got it — electronic music where bass and rhythm drive the experience. Are you looking to build a new system, or improve one you already have?';
+  }
+  if (/kendrick|drake|hip[- ]?hop|rap/i.test(lower)) {
+    return 'Got it — bass-heavy, rhythmic music. Are you looking to build a new system, or improve one you already have?';
+  }
+  if (/taylor swift|billie eilish|pop/i.test(lower)) {
+    return 'Got it — modern, vocal-forward music. Are you looking to build a new system, or improve one you already have?';
+  }
+
+  // Fallback — we know it's music-related but can't classify further
+  return 'Got it — that gives me a sense of your taste. Are you looking to build a new system, or improve one you already have?';
 }

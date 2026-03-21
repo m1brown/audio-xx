@@ -25,7 +25,7 @@ import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
 import { checkGlossaryQuestion } from '@/lib/glossary';
-import { detectIntent, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, type SubjectMatch } from '@/lib/intent';
+import { detectIntent, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, respondToMusicInput, type SubjectMatch } from '@/lib/intent';
 import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
@@ -424,6 +424,16 @@ export default function Home() {
     if (intent === 'consultation_entry') {
       const entryResult = buildConsultationEntry(submittedText, turnCtx.desires, turnCtx.activeSystem);
       dispatchAdvisory(consultationToAdvisory(entryResult, undefined, advisoryCtx), advisoryId());
+      dispatch({ type: 'SET_LOADING', value: false });
+      return;
+    }
+
+    // ── Music input path ──────────────────────────────────
+    // User leads with musical taste ("I listen to jazz", "I like Van Halen").
+    // Acknowledge briefly and ask one guiding question. No advisory logic yet.
+    if (intent === 'music_input') {
+      const musicResponse = respondToMusicInput(submittedText);
+      dispatch({ type: 'ADD_NOTE', content: musicResponse });
       dispatch({ type: 'SET_LOADING', value: false });
       return;
     }
