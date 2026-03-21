@@ -20,5 +20,9 @@
     "eslint": "^9.0.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "@libsql/isomorphic-fetch": "^0.3.1",
+    "async-mutex": "^0.5.0"
   }
 }
