@@ -1387,7 +1387,7 @@ const MUSIC_CHARACTER_MAP: Record<string, MusicCharacter> = {
   'metal': { description: 'aggressive, high-energy', traits: ['dynamics', 'speed', 'impact'] },
   'jazz': { description: 'relaxed, acoustic, nuanced', traits: ['flow', 'texture', 'spatial_depth'] },
   'classical': { description: 'dynamic, orchestral, spatial', traits: ['dynamics', 'spatial_depth', 'tonal_density'] },
-  'electronic': { description: 'punchy, rhythmic, bass-forward', traits: ['rhythm', 'bass_weight', 'control'] },
+  'electronic': { description: 'punchy, rhythmic, heavy bass', traits: ['rhythm', 'bass_weight', 'control'] },
   'techno': { description: 'driving, rhythmic, bass-heavy', traits: ['rhythm', 'bass_weight', 'control'] },
   'house': { description: 'groovy, rhythmic, warm bass', traits: ['rhythm', 'bass_weight', 'flow'] },
   'ambient': { description: 'atmospheric, spacious, textured', traits: ['spatial_depth', 'texture', 'flow'] },
@@ -1412,6 +1412,30 @@ const MUSIC_CHARACTER_MAP: Record<string, MusicCharacter> = {
  * Produce a short, conversational response to a music-taste message.
  * Max 2 sentences. Always ends with one guiding question.
  */
+// ── Music-input second stage ──────────────────────────────────────────────────
+
+export type ListeningPath = 'headphones' | 'speakers' | 'unknown';
+
+/**
+ * Detects whether a reply to "Are you listening on headphones, speakers, or something else?"
+ * indicates headphones, speakers, or neither.
+ */
+export function detectListeningPath(message: string): ListeningPath {
+  const lower = message.toLowerCase();
+  if (/\b(headphone|headphones|cans|iems|earbuds|airpods)\b/.test(lower)) return 'headphones';
+  if (/\b(speaker|speakers|stereo|hifi|hi-fi|system|room|living room|office system)\b/.test(lower)) return 'speakers';
+  return 'unknown';
+}
+
+/**
+ * Returns the second-stage follow-up response based on the detected listening path.
+ */
+export function respondToListeningPath(path: ListeningPath): string {
+  if (path === 'headphones') return 'Got it. Do you already have headphones you like, or are you looking for new ones?';
+  if (path === 'speakers') return 'Got it. Do you already have speakers or gear you want to improve around, or are you starting from scratch?';
+  return 'No problem. Are you mostly using headphones, speakers, or a bit of both?';
+}
+
 export function respondToMusicInput(message: string): string {
   const lower = message.toLowerCase();
 
@@ -1419,33 +1443,33 @@ export function respondToMusicInput(message: string): string {
   for (const [genre, character] of Object.entries(MUSIC_CHARACTER_MAP)) {
     const pattern = new RegExp(`\\b${genre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
     if (pattern.test(lower)) {
-      return `Got it — ${character.description} music. Are you looking to build a new system, or improve one you already have?`;
+      return `Got it — ${character.description} music. Are you listening on headphones, speakers, or something else?`;
     }
   }
 
   // Try to match an artist and infer character
   if (/van halen|led zeppelin|tool|metal/i.test(lower)) {
-    return 'Got it — energetic, hard-hitting music. Are you looking to build a new system, or improve one you already have?';
+    return 'Got it — energetic, hard-hitting music. Are you listening on headphones, speakers, or something else?';
   }
   if (/miles davis|coltrane|keith jarrett|bill evans|oscar peterson|pat metheny|herbie hancock|diana krall|norah jones/i.test(lower)) {
-    return 'Got it — acoustic, nuanced music where texture and space matter. Are you looking to build a new system, or improve one you already have?';
+    return 'Got it — acoustic, nuanced music where texture and space matter. Are you listening on headphones, speakers, or something else?';
   }
   if (/pink floyd|radiohead|boards of canada/i.test(lower)) {
-    return 'Got it — atmospheric, layered music where space and immersion matter. Are you looking to build a new system, or improve one you already have?';
+    return 'Got it — atmospheric, layered music where space and immersion matter. Are you listening on headphones, speakers, or something else?';
   }
   if (/beatles|steely dan|joni mitchell/i.test(lower)) {
-    return 'Got it — well-produced, musically rich recordings. Are you looking to build a new system, or improve one you already have?';
+    return 'Got it — well-produced, musically rich recordings. Are you listening on headphones, speakers, or something else?';
   }
   if (/deadmau5|aphex twin|edm|drum\s*(?:and|&|n)\s*bass/i.test(lower)) {
-    return 'Got it — electronic music where bass and rhythm drive the experience. Are you looking to build a new system, or improve one you already have?';
+    return 'Got it — electronic music where bass and rhythm drive the experience. Are you listening on headphones, speakers, or something else?';
   }
   if (/kendrick|drake|hip[- ]?hop|rap/i.test(lower)) {
-    return 'Got it — bass-heavy, rhythmic music. Are you looking to build a new system, or improve one you already have?';
+    return 'Got it — bass-heavy, rhythmic music. Are you listening on headphones, speakers, or something else?';
   }
   if (/taylor swift|billie eilish|pop/i.test(lower)) {
-    return 'Got it — modern, vocal-forward music. Are you looking to build a new system, or improve one you already have?';
+    return 'Got it — modern, vocal-forward music. Are you listening on headphones, speakers, or something else?';
   }
 
   // Fallback — we know it's music-related but can't classify further
-  return 'Got it — that gives me a sense of your taste. Are you looking to build a new system, or improve one you already have?';
+  return 'Got it — all kinds of music. Are you listening on headphones, speakers, or something else?';
 }
