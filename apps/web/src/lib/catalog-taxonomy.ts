@@ -112,6 +112,7 @@ export type PriceTier =
 export type BrandScale =
   | 'mainstream'
   | 'major'
+  | 'established'
   | 'specialist'
   | 'boutique'
   | 'luxury'
