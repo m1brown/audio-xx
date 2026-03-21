@@ -25,7 +25,7 @@ import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
 import { checkGlossaryQuestion } from '@/lib/glossary';
-import { detectIntent, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, type SubjectMatch } from '@/lib/intent';
+import { detectIntent, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
 import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
@@ -55,17 +55,7 @@ import type { DraftSystem } from '@/lib/system-types';
 
 // ── Constants ─────────────────────────────────────────
 
-const CYCLING_PLACEHOLDERS = [
-  'I listen to a lot of Van Halen — what kind of system would do that justice?',
-  'I want more bass from my speakers without adding a sub',
-  'Best turntable setup under $1,000?',
-  'My system sounds too bright — what should I change first?',
-  'Chord Qutest vs Denafrips Ares II — which fits a warm system better?',
-  'Here\u2019s my current system: Bluesound Node → Schiit Bifrost → Yamaha A-S1200 → Wharfedale Linton',
-];
-
-/** Interval in ms between placeholder rotations. */
-const PLACEHOLDER_INTERVAL = 4000;
+// Cycling placeholders removed — static placeholder is now used.
 
 /** Generate a stable message ID for advisory messages. */
 function advisoryId(): string {
@@ -217,6 +207,11 @@ export default function Home() {
   const intakeShownRef = useRef(false);
   /** Set after the music-input first question is asked — next message is interpreted as the listening-path answer. */
   const awaitingListeningPathRef = useRef(false);
+  /** Tracks accumulated onboarding context across the music → path → follow-up sequence. */
+  const onboardingContextRef = useRef<{
+    musicDescription: string;
+    listeningPath: 'headphones' | 'speakers' | 'unknown';
+  } | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -236,15 +231,7 @@ export default function Home() {
       .catch(() => {/* ignore — widget just won't appear */});
   }, [status]);
 
-  // Cycling placeholder — rotates through example prompts on the landing page
-  const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  useEffect(() => {
-    if (messages.length > 0 || currentInput.length > 0) return;
-    const timer = setInterval(() => {
-      setPlaceholderIndex((i) => (i + 1) % CYCLING_PLACEHOLDERS.length);
-    }, PLACEHOLDER_INTERVAL);
-    return () => clearInterval(timer);
-  }, [messages.length, currentInput.length]);
+
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -288,6 +275,68 @@ export default function Home() {
       const listeningPath = detectListeningPath(submittedText);
       const listeningResponse = respondToListeningPath(listeningPath);
       dispatch({ type: 'ADD_NOTE', content: listeningResponse });
+      // Store path in onboarding context — next reply completes the sequence
+      if (onboardingContextRef.current) {
+        onboardingContextRef.current.listeningPath = listeningPath;
+      }
+      dispatch({ type: 'SET_LOADING', value: false });
+      return;
+    }
+
+    // ── Onboarding third stage ──────────────────────────
+    // The user answered: music → path → now budget/preference.
+    // Synthesize a shopping query from accumulated context and route directly.
+    if (onboardingContextRef.current) {
+      const ctx = onboardingContextRef.current;
+      onboardingContextRef.current = null; // Clear — one-shot
+      const category = ctx.listeningPath === 'headphones' ? 'headphones' : 'speakers';
+      const synthesized = synthesizeOnboardingQuery(ctx.musicDescription, category, submittedText);
+      // Replace the submitted text with the synthesized query for downstream routing
+      const syntheticTurnCtx = buildTurnContext(synthesized, audioState, dismissedFingerprintsRef.current);
+      const syntheticAdvisoryCtx: ShoppingAdvisoryContext = {
+        systemComponents: syntheticTurnCtx.activeSystem
+          ? syntheticTurnCtx.activeSystem.components.map((c) => {
+              const b = (c.brand || '').trim();
+              const n = (c.name || '').trim();
+              if (!b) return n || 'Unknown';
+              if (!n) return b;
+              if (n.toLowerCase().startsWith(b.toLowerCase())) return n;
+              return `${b} ${n}`;
+            })
+          : undefined,
+        systemLocation: syntheticTurnCtx.activeSystem?.location ?? undefined,
+        systemPrimaryUse: syntheticTurnCtx.activeSystem?.primaryUse ?? undefined,
+        storedDesires: tasteProfile
+          ? topTraits(tasteProfile, 5).map((t) => t.label)
+          : undefined,
+        systemTendencies: syntheticTurnCtx.activeSystem?.tendencies ?? undefined,
+      };
+      // Route into shopping: fire API call with synthesized query
+      dispatch({ type: 'SET_MODE', mode: 'shopping' });
+      try {
+        const res = await fetch('/api/evaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: synthesized }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const shoppingCtx = detectShoppingIntent(synthesized, data.signals, syntheticAdvisoryCtx.systemComponents);
+          const reasoning = reason(
+            synthesized, syntheticTurnCtx.desires, data.signals,
+            tasteProfile ?? null, shoppingCtx, syntheticTurnCtx.activeProfile,
+          );
+          dispatch({ type: 'SET_REASONING', reasoning });
+          const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning, syntheticAdvisoryCtx.systemComponents);
+          const decisionFrame = buildDecisionFrame(shoppingCtx.category, syntheticAdvisoryCtx, tasteProfile);
+          const shoppingAdvisory = shoppingToAdvisory(answer, data.signals, reasoning, syntheticAdvisoryCtx, decisionFrame);
+          dispatch({ type: 'ADD_ADVISORY', advisory: shoppingAdvisory, id: advisoryId() });
+        } else {
+          dispatch({ type: 'ADD_NOTE', content: 'Something went wrong — try rephrasing your request.' });
+        }
+      } catch {
+        dispatch({ type: 'ADD_NOTE', content: 'Something went wrong — try rephrasing your request.' });
+      }
       dispatch({ type: 'SET_LOADING', value: false });
       return;
     }
@@ -450,6 +499,8 @@ export default function Home() {
       const musicResponse = respondToMusicInput(submittedText);
       dispatch({ type: 'ADD_NOTE', content: musicResponse });
       awaitingListeningPathRef.current = true;
+      // Store original music description for the onboarding sequence
+      onboardingContextRef.current = { musicDescription: submittedText, listeningPath: 'unknown' };
       dispatch({ type: 'SET_LOADING', value: false });
       return;
     }
@@ -1086,7 +1137,7 @@ export default function Home() {
           >
             {audioState.savedSystems.length > 0 || audioState.draftSystem
               ? 'Select system'
-              : 'Tell us about your system'}
+              : 'Add your system'}
           </button>
         )}
         {systemPanelOpen && (
@@ -1129,15 +1180,27 @@ export default function Home() {
           <p
             style={{
               marginTop: '0.15rem',
-              marginBottom: '1.5rem',
-              maxWidth: 560,
-              color: '#888',
-              fontSize: '1.05rem',
+              marginBottom: '0.5rem',
+              maxWidth: 580,
+              color: '#2a2a2a',
+              fontSize: '1.08rem',
               lineHeight: 1.55,
-              letterSpacing: '0.01em',
+              fontWeight: 500,
             }}
           >
-            A listening advisor for music, gear, and system choices.
+            Get clear, practical recommendations for audio gear that match your preferences and budget.
+          </p>
+          <p
+            style={{
+              marginTop: 0,
+              marginBottom: '1.5rem',
+              maxWidth: 560,
+              color: '#999',
+              fontSize: '0.92rem',
+              lineHeight: 1.5,
+            }}
+          >
+            Start with your system, a problem, or something you&apos;re considering.
           </p>
 
           {/* Compact taste widget — authenticated users with profile data */}
@@ -1270,22 +1333,7 @@ export default function Home() {
 
       {/* Input area — hidden when an intake form is active (it has its own Submit) */}
       {!hasPendingIntake && <div style={{ marginBottom: '1rem' }}>
-        {!hasMessages && (
-          <label
-            htmlFor="audio-input"
-            style={{
-              display: 'block',
-              marginBottom: '0.5rem',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              color: '#999',
-            }}
-          >
-            Start anywhere
-          </label>
-        )}
+        {/* Label is visually handled by the headline + supporting line above */}
 
         <textarea
           ref={textareaRef}
@@ -1298,7 +1346,7 @@ export default function Home() {
               ? 'Reply here…'
               : hasMessages
                 ? 'Continue describing what you hear…'
-                : CYCLING_PLACEHOLDERS[placeholderIndex]
+                : 'What would you like help figuring out about your sound or setup?'
           }
           style={{
             width: '100%',
@@ -1347,19 +1395,7 @@ export default function Home() {
           {isLoading ? 'Thinking…' : 'Send'}
         </button>
 
-        {/* Input hint — landing state only */}
-        {!hasMessages && (
-          <div
-            style={{
-              marginTop: '0.5rem',
-              fontSize: '0.82rem',
-              color: '#aaa',
-              lineHeight: 1.5,
-            }}
-          >
-            Tell us what you listen to, what you&apos;re looking for, or what&apos;s bugging you about your system.
-          </div>
-        )}
+        {/* Helper text removed — headline + supporting line above handle orientation */}
 
         {/* Starter chips — landing state only */}
         {!hasMessages && (
@@ -1372,12 +1408,10 @@ export default function Home() {
             }}
           >
             {[
-              { label: 'Music I like', prefill: 'I mostly listen to ' },
-              { label: 'Sound I want', prefill: 'I\u2019m looking for a sound that\u2019s ' },
-              { label: 'Problem I hear', prefill: 'Something about my system sounds ' },
-              { label: 'Gear I own', prefill: 'Here\u2019s my current system: ' },
-              { label: 'Product shopping', prefill: 'I\u2019m considering buying ' },
-              { label: 'Compare components', prefill: 'Compare ' },
+              { label: 'I want to buy something', prefill: 'I want to buy ' },
+              { label: 'Help me improve my system', prefill: 'My system is ' },
+              { label: 'Something sounds off', prefill: 'My system sounds ' },
+              { label: 'Compare two components', prefill: 'Compare ' },
             ].map((chip) => (
               <button
                 key={chip.label}
