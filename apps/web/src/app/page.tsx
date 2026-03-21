@@ -25,7 +25,7 @@ import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
 import { checkGlossaryQuestion } from '@/lib/glossary';
-import { detectIntent, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, respondToMusicInput, type SubjectMatch } from '@/lib/intent';
+import { detectIntent, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, type SubjectMatch } from '@/lib/intent';
 import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
@@ -56,12 +56,12 @@ import type { DraftSystem } from '@/lib/system-types';
 // ── Constants ─────────────────────────────────────────
 
 const CYCLING_PLACEHOLDERS = [
-  'I want a warm, musical system for jazz and vocals under $5k',
-  'Best integrated amplifier under $3000',
-  'My system sounds bright and fatiguing — what should I change?',
-  'Compare Klipsch Heresy to DeVore O/96',
-  'Assess my system: Eversolo → Hugo → JOB → WLM Diva',
-  'I\u2019m coming from Sonos and want real hi-fi for the first time',
+  'I listen to a lot of Van Halen — what kind of system would do that justice?',
+  'I want more bass from my speakers without adding a sub',
+  'Best turntable setup under $1,000?',
+  'My system sounds too bright — what should I change first?',
+  'Chord Qutest vs Denafrips Ares II — which fits a warm system better?',
+  'Here\u2019s my current system: Bluesound Node → Schiit Bifrost → Yamaha A-S1200 → Wharfedale Linton',
 ];
 
 /** Interval in ms between placeholder rotations. */
@@ -215,6 +215,8 @@ export default function Home() {
   const skipToSuggestionsRef = useRef(false);
   /** Set after an intake form has been shown — forces next intake-classified message to shopping. */
   const intakeShownRef = useRef(false);
+  /** Set after the music-input first question is asked — next message is interpreted as the listening-path answer. */
+  const awaitingListeningPathRef = useRef(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -273,6 +275,19 @@ export default function Home() {
     const glossaryResult = checkGlossaryQuestion(submittedText);
     if (glossaryResult) {
       dispatch({ type: 'ADD_GLOSSARY', entry: glossaryResult });
+      dispatch({ type: 'SET_LOADING', value: false });
+      return;
+    }
+
+    // ── Music-input second stage ─────────────────────────
+    // If the previous turn asked "Do you listen on headphones or speakers?"
+    // interpret this message as the listening-path answer and return the
+    // appropriate follow-up. Still clarification mode — no advisory yet.
+    if (awaitingListeningPathRef.current) {
+      awaitingListeningPathRef.current = false;
+      const listeningPath = detectListeningPath(submittedText);
+      const listeningResponse = respondToListeningPath(listeningPath);
+      dispatch({ type: 'ADD_NOTE', content: listeningResponse });
       dispatch({ type: 'SET_LOADING', value: false });
       return;
     }
@@ -434,6 +449,7 @@ export default function Home() {
     if (intent === 'music_input') {
       const musicResponse = respondToMusicInput(submittedText);
       dispatch({ type: 'ADD_NOTE', content: musicResponse });
+      awaitingListeningPathRef.current = true;
       dispatch({ type: 'SET_LOADING', value: false });
       return;
     }
@@ -1112,16 +1128,16 @@ export default function Home() {
         <>
           <p
             style={{
-              marginTop: 0,
-              marginBottom: '1.75rem',
+              marginTop: '0.15rem',
+              marginBottom: '1.5rem',
               maxWidth: 560,
-              color: '#666',
-              fontSize: '0.98rem',
-              lineHeight: 1.65,
+              color: '#888',
+              fontSize: '1.05rem',
+              lineHeight: 1.55,
+              letterSpacing: '0.01em',
             }}
           >
-            Find the right gear for how you actually listen. Audio XX matches components to your
-            taste, explains how they work together, and helps you build a system you&#39;ll love long-term.
+            A listening advisor for music, gear, and system choices.
           </p>
 
           {/* Compact taste widget — authenticated users with profile data */}
@@ -1267,7 +1283,7 @@ export default function Home() {
               color: '#999',
             }}
           >
-            What are you looking for?
+            Start anywhere
           </label>
         )}
 
@@ -1341,7 +1357,61 @@ export default function Home() {
               lineHeight: 1.5,
             }}
           >
-            Describe your ideal sound, ask for gear recommendations, or tell us about your current system. Press Enter to send.
+            Tell us what you listen to, what you&apos;re looking for, or what&apos;s bugging you about your system.
+          </div>
+        )}
+
+        {/* Starter chips — landing state only */}
+        {!hasMessages && (
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.45rem',
+              marginTop: '0.85rem',
+            }}
+          >
+            {[
+              { label: 'Music I like', prefill: 'I mostly listen to ' },
+              { label: 'Sound I want', prefill: 'I\u2019m looking for a sound that\u2019s ' },
+              { label: 'Problem I hear', prefill: 'Something about my system sounds ' },
+              { label: 'Gear I own', prefill: 'Here\u2019s my current system: ' },
+              { label: 'Product shopping', prefill: 'I\u2019m considering buying ' },
+              { label: 'Compare components', prefill: 'Compare ' },
+            ].map((chip) => (
+              <button
+                key={chip.label}
+                type="button"
+                onClick={() => {
+                  dispatch({ type: 'SET_INPUT', value: chip.prefill });
+                  textareaRef.current?.focus();
+                }}
+                style={{
+                  padding: '0.35rem 0.75rem',
+                  background: 'none',
+                  border: '1px solid #d5d5d0',
+                  borderRadius: 16,
+                  cursor: 'pointer',
+                  fontSize: '0.82rem',
+                  color: '#777',
+                  fontFamily: 'inherit',
+                  letterSpacing: '0.01em',
+                  transition: 'color 0.15s ease, border-color 0.15s ease, background 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#444';
+                  e.currentTarget.style.borderColor = '#aaa';
+                  e.currentTarget.style.background = '#fafaf8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = '#777';
+                  e.currentTarget.style.borderColor = '#d5d5d0';
+                  e.currentTarget.style.background = 'none';
+                }}
+              >
+                {chip.label}
+              </button>
+            ))}
           </div>
         )}
 
