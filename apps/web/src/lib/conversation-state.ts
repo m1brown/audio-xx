@@ -294,6 +294,20 @@ export function transition(
     // ── SHOPPING ───────────────────────────────────────
     case 'shopping': {
       if (isReadyToRecommend(facts)) {
+        // If we accumulated music context from the onboarding flow,
+        // synthesize a rich query so the shopping pipeline has full context.
+        if (facts.musicDescription) {
+          const category = facts.listeningPath === 'headphones' ? 'headphones' : 'speakers';
+          const musicPart = facts.musicDescription.replace(/^i\s+(listen\s+to|like|love|enjoy)\s+/i, '');
+          const budgetPart = facts.budget
+            ? ` under ${facts.budget.replace(/^under\s*/i, '')}`
+            : '';
+          const synthesized = `I listen to ${musicPart}. Looking for ${category}${budgetPart}.`;
+          return {
+            state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
+            response: { kind: 'proceed', synthesizedQuery: synthesized },
+          };
+        }
         return {
           state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
           response: { kind: 'proceed' },
@@ -537,23 +551,35 @@ export function transition(
       }
 
       if (current.stage === 'awaiting_onboarding_followup') {
-        // Third turn: user provides budget/preference → synthesize shopping query
+        // Third turn: user answers about existing gear or starting fresh
         const category = facts.listeningPath === 'headphones' ? 'headphones' : 'speakers';
+        const categoryLabel = category === 'headphones' ? 'headphones' : 'a speaker setup';
         const musicDesc = facts.musicDescription ?? '';
 
         // Extract budget from this message
         if (newBudget) facts.budget = newBudget;
 
-        // Build synthesized query for the shopping pipeline
-        const musicPart = musicDesc.replace(/^i\s+(listen\s+to|like|love|enjoy)\s+/i, '');
-        const budgetPart = facts.budget
-          ? ` under ${facts.budget.replace(/^under\s*/i, '')}`
-          : '';
-        const synthesized = `I listen to ${musicPart}. Looking for ${category}${budgetPart}.`;
+        // If we have budget, synthesize and recommend
+        if (facts.budget) {
+          const musicPart = musicDesc.replace(/^i\s+(listen\s+to|like|love|enjoy)\s+/i, '');
+          const budgetPart = ` under ${facts.budget.replace(/^under\s*/i, '')}`;
+          const synthesized = `I listen to ${musicPart}. Looking for ${category}${budgetPart}.`;
+          return {
+            state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
+            response: { kind: 'proceed', synthesizedQuery: synthesized },
+          };
+        }
 
+        // No budget yet — stay in shopping mode and ask for budget.
+        // "Starting from scratch" / "looking for new ones" / "don't have any"
+        // are directional signals, not purchase-ready.
         return {
-          state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
-          response: { kind: 'proceed', synthesizedQuery: synthesized },
+          state: { mode: 'shopping', stage: 'clarify_budget', facts },
+          response: {
+            kind: 'question',
+            acknowledge: `Great — let's find ${categoryLabel} for that kind of listening.`,
+            question: "What's your budget?",
+          },
         };
       }
 
