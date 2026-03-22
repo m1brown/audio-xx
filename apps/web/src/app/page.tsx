@@ -58,6 +58,22 @@ import type { DraftSystem } from '@/lib/system-types';
 
 // Cycling placeholders removed — static placeholder is now used.
 
+/** Maps internal category keys to natural, correctly-cased display labels. */
+const CATEGORY_DISPLAY: Record<string, string> = {
+  dac: 'a DAC',
+  amplifier: 'an amplifier',
+  speaker: 'speakers',
+  headphone: 'headphones',
+  turntable: 'a turntable',
+  streamer: 'a streamer',
+  general: 'audio gear',
+};
+
+/** Returns a natural display phrase for a category key. */
+function categoryLabel(key: string): string {
+  return CATEGORY_DISPLAY[key] ?? key;
+}
+
 /** Generate a stable message ID for advisory messages. */
 function advisoryId(): string {
   return typeof crypto !== 'undefined' && crypto.randomUUID
@@ -308,7 +324,7 @@ export default function Home() {
               dispatch({
                 type: 'ADD_QUESTION',
                 clarification: {
-                  acknowledge: `Got it — ${shoppingCtx.category}s.`,
+                  acknowledge: `Got it — looking for ${categoryLabel(shoppingCtx.category)}.`,
                   question: 'What\'s your budget? And do you have a system these need to work with?',
                 },
               });
@@ -480,7 +496,7 @@ export default function Home() {
           // Build a summary sentence for the quick-rec format
           const budgetMatch = submittedText.match(/\$?\d[\d,]*/);
           const budgetStr = budgetMatch ? `under ${budgetMatch[0].startsWith('$') ? budgetMatch[0] : '$' + budgetMatch[0]}` : '';
-          const quickSummary = `You're looking for ${category}${budgetStr ? ' ' + budgetStr : ''}.`;
+          const quickSummary = `You're looking for ${categoryLabel(category)}${budgetStr ? ' ' + budgetStr : ''}.`;
           const quickAdvisory = attachQuickRecommendation(shoppingAdvisory, category, quickSummary);
           dispatch({ type: 'ADD_ADVISORY', advisory: quickAdvisory, id: advisoryId() });
         } else {
@@ -1406,7 +1422,7 @@ export default function Home() {
               fontWeight: 500,
             }}
           >
-            Get clear, practical recommendations for audio gear that match your preferences and budget.
+            Get clear, practical recommendations for audio gear that matches your preferences and budget.
           </p>
           <p
             style={{

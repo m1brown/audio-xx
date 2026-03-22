@@ -182,9 +182,10 @@ function checkNeutralQuestion(
 const CATEGORY_NAMES: Record<string, string> = {
   dac: 'DACs',
   amplifier: 'amplifiers',
-  speakers: 'speakers',
-  headphones: 'headphones',
+  speaker: 'speakers',
+  headphone: 'headphones',
   streamer: 'streamers',
+  turntable: 'turntables',
   general: 'gear',
 };
 
