@@ -213,6 +213,8 @@ export default function Home() {
     musicDescription: string;
     listeningPath: 'headphones' | 'speakers' | 'unknown';
   } | null>(null);
+  /** Tracks chip-initiated intent — persists across turns so follow-ups stay in the correct lane. */
+  const chipIntentRef = useRef<'shopping' | 'improvement' | 'diagnosis' | 'comparison' | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -265,6 +267,150 @@ export default function Home() {
       dispatch({ type: 'ADD_GLOSSARY', entry: glossaryResult });
       dispatch({ type: 'SET_LOADING', value: false });
       return;
+    }
+
+    // ── Chip-intent routing ──────────────────────────────
+    // When a chip set an explicit intent, the user's reply should stay in
+    // that lane. Override normal intent detection with the chip's intent.
+    if (chipIntentRef.current) {
+      const chipIntent = chipIntentRef.current;
+      chipIntentRef.current = null; // One-shot: consume after use
+
+      if (chipIntent === 'shopping') {
+        // User replied to "What are you looking for?" → route to shopping
+        // Prepend "I want to buy" to strengthen shopping signal for downstream
+        const shoppingText = `I want to buy ${submittedText}`;
+        dispatch({ type: 'SET_MODE', mode: 'shopping' });
+
+        // Build context and fire shopping pipeline
+        const turnCtx = buildTurnContext(shoppingText, audioState, dismissedFingerprintsRef.current);
+        try {
+          const res = await fetch('/api/evaluate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: shoppingText }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const shoppingCtx = detectShoppingIntent(shoppingText, data.signals, undefined);
+            // Check if we have enough to recommend (category + budget)
+            const hasBudget = /\$\d|\bunder\b|\bbudget\b/i.test(submittedText);
+            if (shoppingCtx.category !== 'general' && hasBudget) {
+              // Enough info — recommend immediately
+              const reasoning = reason(shoppingText, turnCtx.desires, data.signals, tasteProfile ?? null, shoppingCtx, turnCtx.activeProfile);
+              dispatch({ type: 'SET_REASONING', reasoning });
+              const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning, undefined);
+              const decisionFrame = buildDecisionFrame(shoppingCtx.category, {} as ShoppingAdvisoryContext, tasteProfile);
+              const advisory = shoppingToAdvisory(answer, data.signals, reasoning, {} as ShoppingAdvisoryContext, decisionFrame);
+              dispatch({ type: 'ADD_ADVISORY', advisory, id: advisoryId() });
+            } else if (shoppingCtx.category !== 'general') {
+              // Have category but no budget — ask budget
+              dispatch({
+                type: 'ADD_QUESTION',
+                clarification: {
+                  acknowledge: `Got it — ${shoppingCtx.category}s.`,
+                  question: 'What\'s your budget? And do you have a system these need to work with?',
+                },
+              });
+              chipIntentRef.current = 'shopping'; // Keep in shopping lane
+            } else {
+              // Category not detected — ask to clarify
+              dispatch({
+                type: 'ADD_QUESTION',
+                clarification: {
+                  acknowledge: 'Got it.',
+                  question: 'What type of component? For example: speakers, headphones, DAC, amplifier, or turntable.',
+                },
+              });
+              chipIntentRef.current = 'shopping'; // Keep in shopping lane
+            }
+          } else {
+            dispatch({ type: 'ADD_NOTE', content: 'Something went wrong — try rephrasing.' });
+          }
+        } catch {
+          dispatch({ type: 'ADD_NOTE', content: 'Something went wrong — try rephrasing.' });
+        }
+        dispatch({ type: 'SET_LOADING', value: false });
+        return;
+      }
+
+      if (chipIntent === 'diagnosis') {
+        // User described a problem → route directly to diagnosis
+        // Let the normal diagnosis path handle it, but force intent
+        const turnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current);
+        // If no system is declared, ask for system before diagnosing
+        if (!turnCtx.activeSystem && !audioState.activeSystemRef) {
+          dispatch({
+            type: 'ADD_QUESTION',
+            clarification: {
+              acknowledge: `"${submittedText}" — that's a useful starting point.`,
+              question: 'What\'s in your system? List the main components (source, DAC, amp, speakers) so I can pinpoint what\'s likely causing this.',
+            },
+          });
+          // Stay in diagnosis lane — next reply provides system context
+          chipIntentRef.current = 'diagnosis';
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+        // Has system — fall through to normal diagnosis (don't return, let handleSubmit continue)
+      }
+
+      if (chipIntent === 'improvement') {
+        // User provided system details → treat as system_assessment
+        // The text likely contains component names now
+        const turnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current);
+        if (turnCtx.subjectMatches.length > 0) {
+          // Has gear names — route to consultation/assessment
+          // Fall through to normal routing with a nudge toward consultation
+          dispatch({ type: 'SET_MODE', mode: 'consultation' });
+          // Don't return — let normal handleSubmit routing handle it with mode set
+        } else {
+          // No gear detected — ask again more specifically
+          dispatch({
+            type: 'ADD_QUESTION',
+            clarification: {
+              acknowledge: 'Got it.',
+              question: 'Can you name the specific components? For example: "Bluesound Node, Hegel H190, KEF Q350." That way I can identify the best upgrade path.',
+            },
+          });
+          chipIntentRef.current = 'improvement'; // Stay in lane
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+      }
+
+      if (chipIntent === 'comparison') {
+        // User named components to compare
+        const turnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current);
+        if (turnCtx.subjectMatches.length >= 2) {
+          // Two subjects detected — fall through to comparison routing
+          // Normal detectIntent will pick up 'comparison' since text has two products
+        } else if (turnCtx.subjectMatches.length === 1) {
+          // Only one component — ask for the second
+          dispatch({
+            type: 'ADD_QUESTION',
+            clarification: {
+              acknowledge: `${turnCtx.subjectMatches[0].name} — got it.`,
+              question: 'What do you want to compare it against?',
+            },
+          });
+          chipIntentRef.current = 'comparison'; // Stay in lane
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        } else {
+          // No components detected — ask again
+          dispatch({
+            type: 'ADD_QUESTION',
+            clarification: {
+              acknowledge: 'I didn\'t catch specific product names.',
+              question: 'Which two components are you comparing? For example: "Chord Qutest vs Denafrips Ares II"',
+            },
+          });
+          chipIntentRef.current = 'comparison'; // Stay in lane
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+      }
     }
 
     // ── Music-input second stage ─────────────────────────
@@ -1061,11 +1207,77 @@ export default function Home() {
     handleSubmit('Show me options from different design approaches.');
   }, [isLoading, handleSubmit]);
 
+  function handleReset() {
+    chipIntentRef.current = null;
+    onboardingContextRef.current = null;
+    awaitingListeningPathRef.current = false;
+    intakeShownRef.current = false;
+    dispatch({ type: 'RESET' });
+  }
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) {
       // Enter sends, Shift+Enter for newline
       e.preventDefault();
       handleSubmit();
+    }
+  }
+
+  /**
+   * Chip click handler — each chip acts as a strong intent signal.
+   * Instead of prefilling text, it immediately starts a focused conversation
+   * with the right first question for that intent lane.
+   */
+  function handleChipClick(intent: 'shopping' | 'improvement' | 'diagnosis' | 'comparison', label: string) {
+    if (isLoading) return;
+    chipIntentRef.current = intent;
+
+    // Show the chip label as a "user message" so the conversation has context
+    dispatch({ type: 'SET_INPUT', value: label });
+    dispatch({ type: 'ADD_USER_MESSAGE' });
+
+    // Dispatch intent-specific first response
+    switch (intent) {
+      case 'shopping':
+        dispatch({ type: 'SET_MODE', mode: 'shopping' });
+        dispatch({
+          type: 'ADD_QUESTION',
+          clarification: {
+            acknowledge: 'Great — let\'s find something good.',
+            question: 'What are you looking for? For example: headphones, speakers, a DAC, an amplifier, or a turntable.',
+          },
+        });
+        break;
+
+      case 'diagnosis':
+        dispatch({
+          type: 'ADD_QUESTION',
+          clarification: {
+            acknowledge: 'Let\'s figure out what\'s going on.',
+            question: 'What does it sound like? For example: too bright, thin, muddy, fatiguing, or lacking energy.',
+          },
+        });
+        break;
+
+      case 'improvement':
+        dispatch({
+          type: 'ADD_QUESTION',
+          clarification: {
+            acknowledge: 'Let\'s see what would make the biggest difference.',
+            question: 'What\'s in your system right now? List the main components — source, DAC, amp, speakers — and I\'ll identify where to focus.',
+          },
+        });
+        break;
+
+      case 'comparison':
+        dispatch({
+          type: 'ADD_QUESTION',
+          clarification: {
+            acknowledge: 'Sure — let\'s compare.',
+            question: 'Which two components are you deciding between?',
+          },
+        });
+        break;
     }
   }
 
@@ -1092,10 +1304,10 @@ export default function Home() {
     >
       {/* Header — always visible */}
       <div
-        onClick={() => dispatch({ type: 'RESET' })}
+        onClick={() => handleReset()}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') dispatch({ type: 'RESET' }); }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleReset(); }}
         style={{
           borderTop: '3px solid #b8372e',
           width: 48,
@@ -1105,10 +1317,10 @@ export default function Home() {
       />
 
       <h1
-        onClick={() => dispatch({ type: 'RESET' })}
+        onClick={() => handleReset()}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') dispatch({ type: 'RESET' }); }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleReset(); }}
         style={{
           marginBottom: '0.4rem',
           fontSize: '1.85rem',
@@ -1414,18 +1626,15 @@ export default function Home() {
             }}
           >
             {[
-              { label: 'I want to buy something', prefill: 'I want to buy ' },
-              { label: 'Help me improve my system', prefill: 'My system is ' },
-              { label: 'Something sounds off', prefill: 'My system sounds ' },
-              { label: 'Compare two components', prefill: 'Compare ' },
+              { label: 'I want to buy something', intent: 'shopping' as const },
+              { label: 'Help me improve my system', intent: 'improvement' as const },
+              { label: 'Something sounds off', intent: 'diagnosis' as const },
+              { label: 'Compare two components', intent: 'comparison' as const },
             ].map((chip) => (
               <button
                 key={chip.label}
                 type="button"
-                onClick={() => {
-                  dispatch({ type: 'SET_INPUT', value: chip.prefill });
-                  textareaRef.current?.focus();
-                }}
+                onClick={() => handleChipClick(chip.intent, chip.label)}
                 style={{
                   padding: '0.35rem 0.75rem',
                   background: 'none',
@@ -1462,7 +1671,7 @@ export default function Home() {
         <div style={{ marginBottom: '1.5rem' }}>
           <button
             type="button"
-            onClick={() => dispatch({ type: 'RESET' })}
+            onClick={() => handleReset()}
             style={{
               background: 'none',
               border: 'none',
