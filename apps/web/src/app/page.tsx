@@ -27,6 +27,7 @@ import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } f
 import { checkGlossaryQuestion } from '@/lib/glossary';
 import { detectIntent, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
 import { attachQuickRecommendation } from '@/lib/quick-recommendation';
+import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode } from '@/lib/conversation-state';
 import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
@@ -222,6 +223,8 @@ export default function Home() {
   const skipToSuggestionsRef = useRef(false);
   /** Set after an intake form has been shown — forces next intake-classified message to shopping. */
   const intakeShownRef = useRef(false);
+  /** Conversation state machine — tracks the first 2–4 turns with explicit transitions. */
+  const convStateRef = useRef<ConvState>(INITIAL_CONV_STATE);
   /** Set after the music-input first question is asked — next message is interpreted as the listening-path answer. */
   const awaitingListeningPathRef = useRef(false);
   /** Tracks accumulated onboarding context across the music → path → follow-up sequence. */
@@ -285,7 +288,110 @@ export default function Home() {
       return;
     }
 
-    // ── Chip-intent routing ──────────────────────────────
+    // ── Conversation state machine routing ──────────────
+    // When the state machine is active (mode !== 'idle'), route through
+    // transition() before the legacy ref-based blocks below.
+    let convModeHint: ConversationMode | undefined;
+    if (convStateRef.current.mode !== 'idle') {
+      const earlyTurnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current);
+      const { intent: earlyIntent } = detectIntent(submittedText);
+      const convResult = convTransition(convStateRef.current, submittedText, {
+        hasSystem: !!earlyTurnCtx.activeSystem || !!audioState.activeSystemRef,
+        subjectCount: earlyTurnCtx.subjectMatches.length,
+        detectedIntent: earlyIntent,
+      });
+      convStateRef.current = convResult.state;
+
+      if (convResult.response) {
+        if (convResult.response.kind === 'question') {
+          dispatch({
+            type: 'ADD_QUESTION',
+            clarification: {
+              acknowledge: convResult.response.acknowledge,
+              question: convResult.response.question,
+            },
+          });
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+        if (convResult.response.kind === 'note') {
+          dispatch({ type: 'ADD_NOTE', content: convResult.response.content });
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+        if (convResult.response.kind === 'proceed') {
+          // ── Synthesized query (onboarding music → path → budget completion) ──
+          if (convResult.response.synthesizedQuery) {
+            const synthesized = convResult.response.synthesizedQuery;
+            const synCategory = convResult.state.facts.listeningPath === 'headphones' ? 'headphones' : 'speakers';
+            const synTurnCtx = buildTurnContext(synthesized, audioState, dismissedFingerprintsRef.current);
+            const synAdvisoryCtx: ShoppingAdvisoryContext = {
+              systemComponents: synTurnCtx.activeSystem
+                ? synTurnCtx.activeSystem.components.map((c) => {
+                    const b = (c.brand || '').trim();
+                    const n = (c.name || '').trim();
+                    if (!b) return n || 'Unknown';
+                    if (!n) return b;
+                    if (n.toLowerCase().startsWith(b.toLowerCase())) return n;
+                    return `${b} ${n}`;
+                  })
+                : undefined,
+              systemLocation: synTurnCtx.activeSystem?.location ?? undefined,
+              systemPrimaryUse: synTurnCtx.activeSystem?.primaryUse ?? undefined,
+              storedDesires: tasteProfile
+                ? topTraits(tasteProfile, 5).map((t) => t.label)
+                : undefined,
+              systemTendencies: synTurnCtx.activeSystem?.tendencies ?? undefined,
+            };
+            dispatch({ type: 'SET_MODE', mode: 'shopping' });
+            try {
+              const res = await fetch('/api/evaluate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: synthesized }),
+              });
+              if (res.ok) {
+                const data = await res.json();
+                const shoppingCtx = detectShoppingIntent(synthesized, data.signals, synAdvisoryCtx.systemComponents);
+                const reasoning = reason(
+                  synthesized, synTurnCtx.desires, data.signals,
+                  tasteProfile ?? null, shoppingCtx, synTurnCtx.activeProfile,
+                );
+                dispatch({ type: 'SET_REASONING', reasoning });
+                const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning, synAdvisoryCtx.systemComponents);
+                const decisionFrame = buildDecisionFrame(shoppingCtx.category, synAdvisoryCtx, tasteProfile);
+                const shoppingAdvisory = shoppingToAdvisory(answer, data.signals, reasoning, synAdvisoryCtx, decisionFrame);
+                const budgetMatch = submittedText.match(/\$?\d[\d,]*/);
+                const budgetStr = budgetMatch ? `under ${budgetMatch[0].startsWith('$') ? budgetMatch[0] : '$' + budgetMatch[0]}` : '';
+                const quickSummary = `You're looking for ${categoryLabel(synCategory)}${budgetStr ? ' ' + budgetStr : ''}.`;
+                const quickAdvisory = attachQuickRecommendation(shoppingAdvisory, synCategory, quickSummary);
+                dispatch({ type: 'ADD_ADVISORY', advisory: quickAdvisory, id: advisoryId() });
+              } else {
+                dispatch({ type: 'ADD_NOTE', content: 'Something went wrong — try rephrasing your request.' });
+              }
+            } catch {
+              dispatch({ type: 'ADD_NOTE', content: 'Something went wrong — try rephrasing your request.' });
+            }
+            convStateRef.current = INITIAL_CONV_STATE;
+            dispatch({ type: 'SET_LOADING', value: false });
+            return;
+          }
+
+          // ── Ready to recommend / diagnose / compare ──
+          // Set mode hint and fall through to normal pipeline.
+          if (convResult.state.stage === 'ready_to_recommend') convModeHint = 'shopping';
+          else if (convResult.state.stage === 'ready_to_diagnose') convModeHint = 'diagnosis';
+          convStateRef.current = INITIAL_CONV_STATE;
+          // Fall through to normal pipeline below...
+        }
+      }
+      // null response or proceed — fall through to normal pipeline
+      if (convStateRef.current.stage === 'done') {
+        convStateRef.current = INITIAL_CONV_STATE;
+      }
+    }
+
+    // ── Chip-intent routing (legacy — dead code when convState is active) ──
     // When a chip set an explicit intent, the user's reply should stay in
     // that lane. Override normal intent detection with the chip's intent.
     if (chipIntentRef.current) {
@@ -551,7 +657,7 @@ export default function Home() {
     // Classify the message into a conversation mode before detailed
     // intent detection. Mode persistence carries across turns.
     const routedMode = routeConversation(submittedText);
-    const effectiveMode = resolveMode(routedMode, state.activeMode);
+    const effectiveMode = convModeHint ?? resolveMode(routedMode, state.activeMode);
     dispatch({ type: 'SET_MODE', mode: effectiveMode });
 
     // ── Detect intent ───────────────────────────────────
@@ -559,6 +665,58 @@ export default function Home() {
     // classification — subjectMatches, desires, and subjects are
     // already canonical in turnCtx.
     let { intent } = detectIntent(submittedText);
+
+    // ── State machine: initial mode detection (idle → active) ──
+    // Intercepts orientation inputs (Rule 1) and gates diagnosis without system (Rule 2).
+    if (convStateRef.current.mode === 'idle' && !convModeHint) {
+      const initialConvMode = detectConvMode(submittedText, {
+        detectedIntent: intent,
+        hasSystem: !!turnCtx.activeSystem || !!audioState.activeSystemRef,
+        subjectCount: turnCtx.subjectMatches.length,
+      });
+      if (initialConvMode) {
+        // Orientation — beginner uncertainty must not fall to diagnosis
+        if (initialConvMode.mode === 'orientation') {
+          convStateRef.current = initialConvMode;
+          dispatch({
+            type: 'ADD_QUESTION',
+            clarification: {
+              acknowledge: 'Good place to start.',
+              question: 'Are you looking to buy something new, improve what you already have, or troubleshoot a problem you\'re hearing?',
+            },
+          });
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+        // Diagnosis without system — gate before running engine
+        if (initialConvMode.mode === 'diagnosis' && initialConvMode.stage === 'clarify_system') {
+          convStateRef.current = initialConvMode;
+          dispatch({
+            type: 'ADD_QUESTION',
+            clarification: {
+              acknowledge: `"${submittedText.length > 60 ? submittedText.slice(0, 57) + '...' : submittedText}" — that's a useful starting point.`,
+              question: "What's in your system? List the main components so I can pinpoint what's likely causing this.",
+            },
+          });
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+        // Music input — set state so subsequent turns use state machine
+        if (initialConvMode.mode === 'music_input') {
+          convStateRef.current = initialConvMode;
+          // Let existing music_input handler below run for the first response
+        }
+        // Shopping needing clarification — set state for subsequent turns
+        if (initialConvMode.mode === 'shopping' && initialConvMode.stage !== 'ready_to_recommend') {
+          convStateRef.current = initialConvMode;
+          // Let existing pipeline handle the first clarification
+        }
+        // Ready states — let normal pipeline handle directly
+        if (initialConvMode.stage === 'ready_to_recommend') {
+          intent = 'shopping';
+        }
+      }
+    }
 
     // ── Intake → shopping promotion ─────────────────────
     // If we already showed intake questions, the user's reply is their
@@ -1224,6 +1382,7 @@ export default function Home() {
   }, [isLoading, handleSubmit]);
 
   function handleReset() {
+    convStateRef.current = INITIAL_CONV_STATE;
     chipIntentRef.current = null;
     onboardingContextRef.current = null;
     awaitingListeningPathRef.current = false;
@@ -1246,15 +1405,16 @@ export default function Home() {
    */
   function handleChipClick(intent: 'shopping' | 'improvement' | 'diagnosis' | 'comparison', label: string) {
     if (isLoading) return;
-    chipIntentRef.current = intent;
 
     // Show the chip label as a "user message" so the conversation has context
     dispatch({ type: 'SET_INPUT', value: label });
     dispatch({ type: 'ADD_USER_MESSAGE' });
 
-    // Dispatch intent-specific first response
+    // Set the state machine to the appropriate initial mode
+    // so the user's next reply routes through convTransition().
     switch (intent) {
       case 'shopping':
+        convStateRef.current = { mode: 'shopping', stage: 'clarify_category', facts: {} };
         dispatch({ type: 'SET_MODE', mode: 'shopping' });
         dispatch({
           type: 'ADD_QUESTION',
@@ -1266,6 +1426,7 @@ export default function Home() {
         break;
 
       case 'diagnosis':
+        convStateRef.current = { mode: 'diagnosis', stage: 'clarify_symptom', facts: {} };
         dispatch({
           type: 'ADD_QUESTION',
           clarification: {
@@ -1276,6 +1437,7 @@ export default function Home() {
         break;
 
       case 'improvement':
+        convStateRef.current = { mode: 'improvement', stage: 'clarify_system', facts: {} };
         dispatch({
           type: 'ADD_QUESTION',
           clarification: {
@@ -1286,6 +1448,7 @@ export default function Home() {
         break;
 
       case 'comparison':
+        convStateRef.current = { mode: 'comparison', stage: 'clarify_targets', facts: {} };
         dispatch({
           type: 'ADD_QUESTION',
           clarification: {
