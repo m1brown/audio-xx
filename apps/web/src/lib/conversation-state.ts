@@ -109,7 +109,7 @@ export function isOrientationInput(text: string): boolean {
 
 // ── Budget extraction ──────────────────────────────────
 
-const BUDGET_PATTERN = /(?:under\s+)?\$\s?\d[\d,]*|\bbudget\s+(?:of|around|is)\s+\$?\d[\d,]*/i;
+const BUDGET_PATTERN = /(?:under\s+)?\$\s?\d[\d,]*|\bunder\s+\d[\d,]*\b|\bbudget\s+(?:of|around|is)\s+\$?\d[\d,]*/i;
 
 function extractBudget(text: string): string | undefined {
   const match = text.match(BUDGET_PATTERN);
@@ -726,6 +726,9 @@ export function detectInitialMode(
   if (context.detectedIntent === 'intake') {
     // If they have specifics (category or budget), route to shopping
     if (facts.category || facts.budget) {
+      if (isReadyToRecommend(facts)) {
+        return { mode: 'shopping', stage: 'ready_to_recommend', facts };
+      }
       return { mode: 'shopping', stage: facts.category ? 'clarify_budget' : 'clarify_category', facts };
     }
     // Otherwise treat as orientation

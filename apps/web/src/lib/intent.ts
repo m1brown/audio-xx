@@ -251,7 +251,7 @@ const SHOPPING_PATTERNS = [
   /\blooking\s+for\b/i,
   /\bshould\s+i\s+(?:get|buy|pick)\b/i,
   /\bwhat\s+(?:dac|amp|amplifier|speaker|headphone|streamer|cable)\b/i,
-  /\bunder\s+\$\d/i,
+  /\bunder\s+\$?\d/i,
   /\bbudget\b.*\b(?:dac|amp|speaker|headphone|streamer)\b/i,
   /\b(?:dac|amp|speaker|headphone|streamer)\b.*\bbudget\b/i,
   /\bfor\s+(?:speed|warmth|detail|clarity|dynamics|punch|flow)\b/i,
@@ -961,8 +961,17 @@ export function detectIntent(currentMessage: string): IntentResult {
   //     "I listen to Van Halen", "I like jazz", "mostly electronic music".
   //     Only fires when no gear subjects are detected — otherwise the message
   //     is about gear that happens to mention music, not a taste signal.
+  //     Also skipped when the message contains clear shopping signals (category +
+  //     budget or shopping patterns) — e.g. "I want speakers under $1500 for rock"
+  //     should route to shopping, not music_input.
   if (subjectMatches.length === 0 && isMusicInput(currentMessage)) {
-    return { intent: 'music_input', subjects, subjectMatches, desires };
+    const hasShoppingSignal = SHOPPING_PATTERNS.some((p) => p.test(currentMessage));
+    const hasCategoryWord = /\b(?:dac|d\/a|amp|amplifier|speaker|speakers|headphone|headphones|turntable|streamer|receiver|bookshelf|floorstander)\b/i.test(currentMessage);
+    const hasBudgetSignal = /(?:under\s+)?\$\s?\d|\bunder\s+\d|\bbudget\b/i.test(currentMessage);
+    if (!(hasCategoryWord && (hasBudgetSignal || hasShoppingSignal))) {
+      return { intent: 'music_input', subjects, subjectMatches, desires };
+    }
+    // Fall through to shopping/intake detection below
   }
 
   // 2c. Intake — vague entry queries like "I want a new stereo" or "I need speakers".
