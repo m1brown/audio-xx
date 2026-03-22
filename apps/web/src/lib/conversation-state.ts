@@ -564,7 +564,76 @@ export function transition(
       };
     }
 
-    // ── IDLE / SYSTEM_ASSESSMENT / OTHER ───────────────
+    // ── SYSTEM ASSESSMENT (system entry) ────────────────
+    case 'system_assessment': {
+      if (current.stage === 'entry') {
+        // User described their system — confirm and ask what to improve.
+        // Do NOT run a full assessment yet.
+        facts.hasSystem = true;
+        return {
+          state: { mode: 'system_assessment', stage: 'clarify_preference', facts },
+          response: {
+            kind: 'question',
+            acknowledge: 'Got it — that\'s your system.',
+            question: 'What are you trying to improve or change about it?',
+          },
+        };
+      }
+
+      if (current.stage === 'clarify_preference') {
+        // User told us what they want to improve — check if it's a symptom or a goal
+        const wantsDiagnose = /\b(?:sounds?\s+(?:off|bad|wrong|thin|bright|muddy|harsh)|problem|issue|something.*off|fatiguing|lacking)\b/i.test(text);
+        const wantsBuy = /\b(?:buy|new|shop|looking\s+for|get\s+(?:a|some)|upgrade|replace|add)\b/i.test(text);
+
+        if (wantsDiagnose) {
+          facts.symptom = text;
+          return {
+            state: { mode: 'diagnosis', stage: 'ready_to_diagnose', facts },
+            response: { kind: 'proceed' },
+          };
+        }
+
+        if (wantsBuy && facts.category && facts.budget) {
+          return {
+            state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
+            response: { kind: 'proceed' },
+          };
+        }
+
+        if (wantsBuy && facts.category) {
+          return {
+            state: { mode: 'shopping', stage: 'clarify_budget', facts },
+            response: {
+              kind: 'question',
+              acknowledge: categoryAcknowledge(facts.category),
+              question: "What's your budget?",
+            },
+          };
+        }
+
+        if (wantsBuy) {
+          return {
+            state: { mode: 'shopping', stage: 'clarify_category', facts },
+            response: {
+              kind: 'question',
+              acknowledge: 'Got it — let\'s find the right upgrade.',
+              question: 'What component are you looking to change? DAC, amplifier, speakers, headphones, or something else?',
+            },
+          };
+        }
+
+        // General improvement goal — fall through to consultation pipeline
+        return {
+          state: { mode: 'improvement', stage: 'done', facts },
+          response: { kind: 'proceed' },
+        };
+      }
+
+      // Default: fall through to pipeline
+      return { state: current, response: null };
+    }
+
+    // ── IDLE / OTHER ────────────────────────────────────
     default:
       return { state: current, response: null };
   }
@@ -645,8 +714,16 @@ export function detectInitialMode(
     return { mode: 'comparison', stage: 'clarify_targets', facts };
   }
 
-  // System assessment
-  if (context.detectedIntent === 'system_assessment' || context.detectedIntent === 'consultation_entry') {
+  // System entry — user describes their components
+  // Route through state machine so we confirm and ask what to improve,
+  // rather than immediately running a full assessment.
+  if (context.detectedIntent === 'system_assessment') {
+    facts.hasSystem = true;
+    return { mode: 'system_assessment', stage: 'entry', facts };
+  }
+
+  // Consultation entry — user asks for system guidance without naming gear
+  if (context.detectedIntent === 'consultation_entry') {
     return { mode: 'system_assessment', stage: 'entry', facts };
   }
 

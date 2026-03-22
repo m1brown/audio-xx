@@ -1473,3 +1473,44 @@ export function respondToMusicInput(message: string): string {
   // Fallback — we know it's music-related but can't classify further
   return 'Got it — all kinds of music. Are you listening on headphones, speakers, or something else?';
 }
+
+// ── Onboarding query synthesis ─────────────────────────────────────────────────
+
+/**
+ * Synthesizes a shopping-ready query string from the accumulated onboarding
+ * context: music taste, category (headphones/speakers), and the user's
+ * final reply (budget, preference, or both).
+ *
+ * Example output: "I listen to Van Halen. Looking for new headphones under $200."
+ */
+export function synthesizeOnboardingQuery(
+  musicDescription: string,
+  category: string,
+  followUp: string,
+): string {
+  // Extract budget if present
+  const budgetMatch = followUp.match(/\$?\d[\d,]*|\bunder\s+\$?\d[\d,]*/i);
+  const budget = budgetMatch ? budgetMatch[0] : '';
+
+  // Detect if the follow-up mentions "new" / "looking for" / "upgrade"
+  const wantsNew = /\bnew\b|\blooking\b|\bfind\b|\brecommend\b|\bget\b|\bbuy\b|\bwant\b/i.test(followUp);
+  const wantsUpgrade = /\bupgrade\b|\bbetter\b|\breplace\b|\bimprove\b/i.test(followUp);
+
+  // Build a natural query the shopping pipeline will understand
+  const parts: string[] = [];
+
+  // Music context
+  parts.push(`I listen to ${musicDescription.replace(/^i\s+(listen\s+to|like|love|enjoy)\s+/i, '')}.`);
+
+  // Shopping intent
+  if (wantsUpgrade) {
+    parts.push(`Looking to upgrade my ${category}${budget ? ` ${budget}` : ''}.`);
+  } else if (wantsNew || budget) {
+    parts.push(`Looking for ${category}${budget ? ` under ${budget.replace(/^under\s*/i, '')}` : ''}.`);
+  } else {
+    // Use the follow-up verbatim as extra context
+    parts.push(`Looking for ${category}. ${followUp}`);
+  }
+
+  return parts.join(' ');
+}

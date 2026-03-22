@@ -57,6 +57,16 @@ import type { DraftSystem } from '@/lib/system-types';
 
 // ── Constants ─────────────────────────────────────────
 
+/** Design tokens — restrained, Goldmund-inspired palette. */
+const COLOR = {
+  bg: '#F7F5F2',
+  textPrimary: '#2B2A28',
+  textSecondary: '#6B6863',
+  accent: '#A88F5A',
+  accentHover: '#8F7748',
+  border: '#E6E2DC',
+} as const;
+
 // Cycling placeholders removed — static placeholder is now used.
 
 /** Maps internal category keys to natural, correctly-cased display labels. */
@@ -667,7 +677,8 @@ export default function Home() {
     let { intent } = detectIntent(submittedText);
 
     // ── State machine: initial mode detection (idle → active) ──
-    // Intercepts orientation inputs (Rule 1) and gates diagnosis without system (Rule 2).
+    // Routes every first message through detectConvMode to ensure the
+    // response clearly reflects the detected entry mode.
     if (convStateRef.current.mode === 'idle' && !convModeHint) {
       const initialConvMode = detectConvMode(submittedText, {
         detectedIntent: intent,
@@ -675,9 +686,32 @@ export default function Home() {
         subjectCount: turnCtx.subjectMatches.length,
       });
       if (initialConvMode) {
-        // Orientation — beginner uncertainty must not fall to diagnosis
+        convStateRef.current = initialConvMode;
+
+        // ── System entry — confirm system, ask what to improve ──
+        if (initialConvMode.mode === 'system_assessment' && initialConvMode.stage === 'entry') {
+          // Run transition immediately to produce the "what are you trying to improve?" question
+          const convResult = convTransition(initialConvMode, submittedText, {
+            hasSystem: !!turnCtx.activeSystem || !!audioState.activeSystemRef,
+            subjectCount: turnCtx.subjectMatches.length,
+            detectedIntent: intent,
+          });
+          convStateRef.current = convResult.state;
+          if (convResult.response && convResult.response.kind === 'question') {
+            dispatch({
+              type: 'ADD_QUESTION',
+              clarification: {
+                acknowledge: convResult.response.acknowledge,
+                question: convResult.response.question,
+              },
+            });
+            dispatch({ type: 'SET_LOADING', value: false });
+            return;
+          }
+        }
+
+        // ── Orientation — beginner uncertainty must not fall to diagnosis ──
         if (initialConvMode.mode === 'orientation') {
-          convStateRef.current = initialConvMode;
           dispatch({
             type: 'ADD_QUESTION',
             clarification: {
@@ -688,9 +722,9 @@ export default function Home() {
           dispatch({ type: 'SET_LOADING', value: false });
           return;
         }
-        // Diagnosis without system — gate before running engine
+
+        // ── Problem entry — gate on system before running diagnosis ──
         if (initialConvMode.mode === 'diagnosis' && initialConvMode.stage === 'clarify_system') {
-          convStateRef.current = initialConvMode;
           dispatch({
             type: 'ADD_QUESTION',
             clarification: {
@@ -701,19 +735,48 @@ export default function Home() {
           dispatch({ type: 'SET_LOADING', value: false });
           return;
         }
-        // Music input — set state so subsequent turns use state machine
+
+        // ── Music input — set state, let existing handler produce first response ──
         if (initialConvMode.mode === 'music_input') {
-          convStateRef.current = initialConvMode;
           // Let existing music_input handler below run for the first response
         }
-        // Shopping needing clarification — set state for subsequent turns
-        if (initialConvMode.mode === 'shopping' && initialConvMode.stage !== 'ready_to_recommend') {
-          convStateRef.current = initialConvMode;
-          // Let existing pipeline handle the first clarification
-        }
-        // Ready states — let normal pipeline handle directly
-        if (initialConvMode.stage === 'ready_to_recommend') {
+
+        // ── Shopping — recommend immediately or ask ONE question ──
+        if (initialConvMode.mode === 'shopping') {
+          // Override intent so we never fall to generic intake
           intent = 'shopping';
+          if (initialConvMode.stage === 'ready_to_recommend') {
+            // Fall through to normal pipeline for immediate recommendation
+          } else {
+            // State is set — pipeline will ask ONE narrowing question via getShoppingClarification
+          }
+        }
+
+        // ── Comparison — compare directly when 2+ subjects, else ask ──
+        if (initialConvMode.mode === 'comparison') {
+          if (initialConvMode.stage === 'ready_to_compare') {
+            intent = 'comparison';
+            // Fall through to normal pipeline for direct comparison
+          } else {
+            // Only 1 or 0 subjects — ask for targets
+            const convResult = convTransition(initialConvMode, submittedText, {
+              hasSystem: !!turnCtx.activeSystem || !!audioState.activeSystemRef,
+              subjectCount: turnCtx.subjectMatches.length,
+              detectedIntent: intent,
+            });
+            convStateRef.current = convResult.state;
+            if (convResult.response && convResult.response.kind === 'question') {
+              dispatch({
+                type: 'ADD_QUESTION',
+                clarification: {
+                  acknowledge: convResult.response.acknowledge,
+                  question: convResult.response.question,
+                },
+              });
+              dispatch({ type: 'SET_LOADING', value: false });
+              return;
+            }
+          }
         }
       }
     }
@@ -1477,7 +1540,9 @@ export default function Home() {
         maxWidth: 720,
         margin: '0 auto',
         padding: '3rem 1.5rem 3rem',
-        color: '#2a2a2a',
+        color: COLOR.textPrimary,
+        background: COLOR.bg,
+        minHeight: '100vh',
         lineHeight: 1.6,
       }}
     >
@@ -1488,7 +1553,7 @@ export default function Home() {
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleReset(); }}
         style={{
-          borderTop: '3px solid #b8372e',
+          borderTop: `2px solid ${COLOR.accent}`,
           width: 48,
           marginBottom: '1.5rem',
           cursor: 'pointer',
@@ -1506,11 +1571,11 @@ export default function Home() {
           fontWeight: 700,
           letterSpacing: '-0.03em',
           lineHeight: 1.15,
-          color: '#2a2a2a',
+          color: COLOR.textPrimary,
           cursor: 'pointer',
         }}
       >
-        Audio XX
+        Audio <span style={{ color: COLOR.accent }}>XX</span>
       </h1>
 
       {/* System badge + panel */}
@@ -1526,7 +1591,7 @@ export default function Home() {
               border: 'none',
               cursor: 'pointer',
               fontSize: '0.78rem',
-              color: '#aaa',
+              color: COLOR.textSecondary,
               fontFamily: 'inherit',
               padding: 0,
               textDecoration: 'underline',
@@ -1579,7 +1644,7 @@ export default function Home() {
               marginTop: '0.15rem',
               marginBottom: '0.5rem',
               maxWidth: 580,
-              color: '#2a2a2a',
+              color: COLOR.textPrimary,
               fontSize: '1.08rem',
               lineHeight: 1.55,
               fontWeight: 500,
@@ -1592,7 +1657,7 @@ export default function Home() {
               marginTop: 0,
               marginBottom: '1.5rem',
               maxWidth: 560,
-              color: '#999',
+              color: COLOR.textSecondary,
               fontSize: '0.92rem',
               lineHeight: 1.5,
             }}
@@ -1609,15 +1674,15 @@ export default function Home() {
                 gap: '0.85rem',
                 marginBottom: '1.75rem',
                 padding: '0.7rem 0.95rem',
-                border: '1px solid #e5e5e3',
+                border: `1px solid ${COLOR.border}`,
                 borderRadius: 8,
                 background: '#fff',
                 maxWidth: 360,
               }}
             >
               <TasteRadar profile={tasteProfile} compact size={80} />
-              <div style={{ fontSize: '0.88rem', lineHeight: 1.55, color: '#666' }}>
-                <div style={{ fontWeight: 600, color: '#333', marginBottom: '0.2rem', fontSize: '0.82rem', letterSpacing: '0.03em', textTransform: 'uppercase' as const }}>
+              <div style={{ fontSize: '0.88rem', lineHeight: 1.55, color: COLOR.textSecondary }}>
+                <div style={{ fontWeight: 600, color: COLOR.textPrimary, marginBottom: '0.2rem', fontSize: '0.82rem', letterSpacing: '0.03em', textTransform: 'uppercase' as const }}>
                   Your taste
                 </div>
                 <div>
@@ -1627,7 +1692,7 @@ export default function Home() {
                   href="/profile"
                   style={{
                     fontSize: '0.82rem',
-                    color: '#999',
+                    color: COLOR.textSecondary,
                     textDecoration: 'none',
                   }}
                 >
@@ -1673,22 +1738,22 @@ export default function Home() {
                 margin: '0.5rem 0 1rem 0',
                 padding: '0.45rem 0.85rem',
                 background: 'none',
-                border: '1px solid #d5d5d0',
+                border: `1px solid ${COLOR.border}`,
                 borderRadius: 6,
                 cursor: 'pointer',
-                color: '#888',
+                color: COLOR.textSecondary,
                 fontSize: '0.85rem',
                 fontFamily: 'inherit',
                 letterSpacing: '0.01em',
                 transition: 'color 0.15s ease, border-color 0.15s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#555';
-                e.currentTarget.style.borderColor = '#aaa';
+                e.currentTarget.style.color = COLOR.accent;
+                e.currentTarget.style.borderColor = COLOR.accent;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#888';
-                e.currentTarget.style.borderColor = '#d5d5d0';
+                e.currentTarget.style.color = COLOR.textSecondary;
+                e.currentTarget.style.borderColor = COLOR.border;
               }}
             >
               Skip → show me options from different design approaches
@@ -1743,29 +1808,29 @@ export default function Home() {
               ? 'Reply here…'
               : hasMessages
                 ? 'Continue describing what you hear…'
-                : 'What would you like help figuring out about your sound or setup?'
+                : 'Start with your system, a problem, or something you\'re considering.'
           }
           style={{
             width: '100%',
             minHeight: hasMessages ? 72 : 130,
             padding: '0.9rem 1rem',
-            border: '1px solid #d5d5d0',
+            border: `1px solid ${COLOR.border}`,
             borderRadius: 8,
             outline: 'none',
             fontSize: '0.98rem',
             lineHeight: 1.6,
             resize: 'vertical',
             background: '#fff',
-            color: '#2a2a2a',
+            color: COLOR.textPrimary,
             boxSizing: 'border-box',
             transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = '#8a8a85';
-            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,0,0,0.04)';
+            e.currentTarget.style.borderColor = COLOR.accent;
+            e.currentTarget.style.boxShadow = `0 0 0 3px rgba(168,143,90,0.1)`;
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = '#d5d5d0';
+            e.currentTarget.style.borderColor = COLOR.border;
             e.currentTarget.style.boxShadow = 'none';
           }}
         />
@@ -1778,8 +1843,8 @@ export default function Home() {
           style={{
             marginTop: '0.5rem',
             padding: '0.5rem 1.4rem',
-            background: isLoading || !currentInput.trim() ? '#ccc' : '#333',
-            color: '#fff',
+            background: isLoading || !currentInput.trim() ? COLOR.border : COLOR.accent,
+            color: isLoading || !currentInput.trim() ? COLOR.textSecondary : '#fff',
             border: 'none',
             borderRadius: 6,
             fontSize: '0.88rem',
@@ -1816,25 +1881,25 @@ export default function Home() {
                 onClick={() => handleChipClick(chip.intent, chip.label)}
                 style={{
                   padding: '0.35rem 0.75rem',
-                  background: 'none',
-                  border: '1px solid #d5d5d0',
+                  background: 'transparent',
+                  border: `1px solid ${COLOR.border}`,
                   borderRadius: 16,
                   cursor: 'pointer',
                   fontSize: '0.82rem',
-                  color: '#777',
+                  color: COLOR.textPrimary,
                   fontFamily: 'inherit',
                   letterSpacing: '0.01em',
                   transition: 'color 0.15s ease, border-color 0.15s ease, background 0.15s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#444';
-                  e.currentTarget.style.borderColor = '#aaa';
-                  e.currentTarget.style.background = '#fafaf8';
+                  e.currentTarget.style.color = COLOR.accent;
+                  e.currentTarget.style.borderColor = COLOR.accent;
+                  e.currentTarget.style.background = 'rgba(168,143,90,0.1)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '#777';
-                  e.currentTarget.style.borderColor = '#d5d5d0';
-                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.color = COLOR.textPrimary;
+                  e.currentTarget.style.borderColor = COLOR.border;
+                  e.currentTarget.style.background = 'transparent';
                 }}
               >
                 {chip.label}
@@ -1857,15 +1922,15 @@ export default function Home() {
               padding: '2px 0',
               margin: 0,
               cursor: 'pointer',
-              color: '#aaa',
+              color: COLOR.textSecondary,
               fontSize: '0.85rem',
               fontFamily: 'inherit',
               textDecoration: 'none',
               letterSpacing: '0.01em',
               transition: 'color 0.15s ease',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#666'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = '#aaa'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = COLOR.accent; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = COLOR.textSecondary; }}
           >
             Start over
           </button>
@@ -1883,7 +1948,7 @@ function ThinkingIndicator() {
     <div
       style={{
         padding: '0.85rem 0',
-        color: '#999',
+        color: COLOR.textSecondary,
         fontSize: '0.88rem',
         letterSpacing: '0.01em',
         animation: 'thinking-pulse 2.2s ease-in-out infinite',
@@ -1903,9 +1968,9 @@ function MessageBubble({ message, onIntakeSubmit }: { message: Message; onIntake
         style={{
           marginBottom: '1.5rem',
           padding: '0.85rem 1.1rem',
-          background: '#f5f5f3',
+          background: COLOR.bg,
           borderRadius: 8,
-          color: '#333',
+          color: COLOR.textPrimary,
           fontSize: '0.98rem',
           lineHeight: 1.6,
         }}
@@ -1918,7 +1983,7 @@ function MessageBubble({ message, onIntakeSubmit }: { message: Message; onIntake
   if (message.kind === 'advisory') {
     return (
       <div style={{ marginBottom: '1.75rem' }}>
-        <hr style={{ border: 0, borderTop: '1px solid #e5e5e3', margin: '0 0 1.5rem 0' }} />
+        <hr style={{ border: 0, borderTop: `1px solid ${COLOR.border}`, margin: '0 0 1.5rem 0' }} />
         <AdvisoryMessage
           advisory={message.advisory}
           onIntakeSubmit={message.advisory.kind === 'intake' ? onIntakeSubmit : undefined}
@@ -1934,8 +1999,8 @@ function MessageBubble({ message, onIntakeSubmit }: { message: Message; onIntake
           marginTop: '1.25rem',
           marginBottom: '1.5rem',
           padding: '1rem 1.15rem',
-          borderLeft: '3px solid #3d8a5a',
-          background: '#f7faf8',
+          borderLeft: `3px solid ${COLOR.accent}`,
+          background: '#faf9f6',
           borderRadius: '0 8px 8px 0',
         }}
       >
@@ -1946,7 +2011,7 @@ function MessageBubble({ message, onIntakeSubmit }: { message: Message; onIntake
             fontWeight: 600,
             letterSpacing: '0.06em',
             textTransform: 'uppercase',
-            color: '#3d8a5a',
+            color: COLOR.accent,
           }}
         >
           Audio term
@@ -1956,16 +2021,16 @@ function MessageBubble({ message, onIntakeSubmit }: { message: Message; onIntake
             marginBottom: '0.4rem',
             fontSize: '1.05rem',
             fontWeight: 600,
-            color: '#2a2a2a',
+            color: COLOR.textPrimary,
           }}
         >
           {message.entry.term}
         </div>
-        <p style={{ margin: '0 0 0.35rem 0', color: '#333', fontSize: '0.95rem', lineHeight: 1.65 }}>
+        <p style={{ margin: '0 0 0.35rem 0', color: COLOR.textPrimary, fontSize: '0.95rem', lineHeight: 1.65 }}>
           {message.entry.explanation}
         </p>
         {message.entry.example && (
-          <p style={{ margin: 0, color: '#888', fontSize: '0.9rem', lineHeight: 1.55, fontStyle: 'italic' }}>
+          <p style={{ margin: 0, color: COLOR.textSecondary, fontSize: '0.9rem', lineHeight: 1.55, fontStyle: 'italic' }}>
             {message.entry.example}
           </p>
         )}
@@ -1986,7 +2051,7 @@ function MessageBubble({ message, onIntakeSubmit }: { message: Message; onIntake
         <div
           style={{
             marginBottom: '0.75rem',
-            color: '#333',
+            color: COLOR.textPrimary,
             fontSize: '1rem',
             lineHeight: 1.6,
           }}
@@ -2001,13 +2066,13 @@ function MessageBubble({ message, onIntakeSubmit }: { message: Message; onIntake
         <div
           style={{
             padding: '0.85rem 1rem',
-            borderLeft: '3px solid #c4122f',
-            background: '#faf7f7',
+            borderLeft: `3px solid ${COLOR.accent}`,
+            background: '#faf9f6',
           }}
         >
           <div
             style={{
-              color: '#333',
+              color: COLOR.textPrimary,
               fontSize: '1.05rem',
               lineHeight: 1.6,
               whiteSpace: 'pre-line',
@@ -2025,7 +2090,7 @@ function MessageBubble({ message, onIntakeSubmit }: { message: Message; onIntake
     <div
       style={{
         marginBottom: '1.25rem',
-        color: '#555',
+        color: COLOR.textSecondary,
         fontSize: '0.98rem',
         lineHeight: 1.55,
       }}
