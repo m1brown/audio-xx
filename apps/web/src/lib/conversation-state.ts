@@ -704,6 +704,11 @@ export function detectInitialMode(
   // Diagnosis: detect symptom-based inputs
   if (context.detectedIntent === 'diagnosis') {
     facts.symptom = text;
+    // If the user named components in this message, treat as system-provided.
+    // This prevents asking "what's in your system?" when they already told us.
+    if (context.subjectCount >= 1) {
+      facts.hasSystem = true;
+    }
     // Rule 1: No diagnosis without system
     if (!facts.hasSystem) {
       return { mode: 'diagnosis', stage: 'clarify_system', facts };
@@ -719,7 +724,7 @@ export function detectInitialMode(
     // Explicit purchase intent ("buy a DAC", "purchase speakers") — recommend
     // immediately with an exploratory set rather than asking for budget first.
     // The follow-up question will offer to narrow by budget/system.
-    const hasExplicitPurchase = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up)\b/i.test(text);
+    const hasExplicitPurchase = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|recommend|suggest)\b/i.test(text);
     if (facts.category && hasExplicitPurchase) {
       return { mode: 'shopping', stage: 'ready_to_recommend', facts };
     }

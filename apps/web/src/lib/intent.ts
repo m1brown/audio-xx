@@ -394,13 +394,16 @@ const DIAGNOSIS_PATTERNS = [
   /\bmy\s+system\s+sounds?\b/i,
   /\bmy\s+setup\s+(?:sounds?|is|feels?)\b/i,
   /\bsounds?\s+(?:too\s+)?(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|boring|lifeless|congested|sibilant|dry|sterile|clinical|analytical|cold|hard|brittle|forward|strident|sharp|lean|aggressive)\b/i,
-  /\blacking\s+(?:in\s+)?(?:bass|treble|detail|warmth|body|dynamics|punch|clarity|air|space|depth)\b/i,
+  /\black(?:s|ing)\s+(?:in\s+)?(?:bass|treble|detail|warmth|body|dynamics|punch|clarity|air|space|depth)\b/i,
   /\btoo\s+much\s+(?:brightness|treble|bass|warmth|sibilance|glare)\b/i,
+  // Standalone "too X" complaints — "too forward", "too dry", "too lean"
+  /,\s*too\s+(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|dry|sterile|clinical|analytical|cold|hard|forward|strident|sharp|lean|aggressive)\b/i,
+  /\btoo\s+(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|dry|sterile|clinical|analytical|cold|hard|forward|strident|sharp|lean|aggressive)\b/i,
   /\bwhy\s+does\s+(?:my|the)\b/i,
   /\b(?:bothers?|annoys?|fatigues?)\s+me\b/i,
   /\blistening\s+fatigue\b/i,
   /\bnot\s+(?:enough|happy|satisfied)\b/i,
-  /\bsomething\s+(?:is\s+)?(?:off|wrong|missing)\b/i,
+  /\bsomething\s+(?:is\s+|feels?\s+)?(?:off|wrong|missing)\b/i,
   /\bi\s+(?:don't|don't)\s+like\s+(?:the|how)\b/i,
   /\b(?:problem|issue)\s+with\b/i,
   // Sensitivity / intolerance language — "sensitive to brightness", "can't tolerate harshness"
@@ -993,7 +996,7 @@ export function detectIntent(currentMessage: string): IntentResult {
   //     a clear shopping query — skip intake entirely and route to shopping.
   //     This prevents vague-looking but actually decisive queries from being
   //     caught by the broader intake patterns below.
-  const hasPurchaseVerb = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|pick\s+out)\b/i.test(currentMessage);
+  const hasPurchaseVerb = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|pick\s+out|recommend|suggest)\b/i.test(currentMessage);
   const hasCategoryTarget = /\b(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp)\b/i.test(currentMessage);
   if (hasPurchaseVerb && hasCategoryTarget) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
@@ -1028,6 +1031,19 @@ export function detectIntent(currentMessage: string): IntentResult {
   //     instead of being caught by the subjects catch-all.
   if (AUDIO_KNOWLEDGE_PATTERNS.some((p) => p.test(currentMessage))) {
     return { intent: 'audio_knowledge', subjects, subjectMatches, desires };
+  }
+
+  // 4c. Diagnosis with inline system — user names components AND includes a
+  //     complaint adjective. This catches cases where structured DIAGNOSIS_PATTERNS
+  //     didn't fire but the intent is clearly diagnostic.
+  //     Must fire BEFORE gear inquiry so "wilson + soulution, too forward" isn't
+  //     treated as a gear inquiry.
+  if (subjectMatches.length >= 1) {
+    const hasComplaintAdjective = /\b(?:dry|bright|thin|harsh|lean|cold|sterile|clinical|analytical|hard|forward|fatiguing|aggressive|muddy|dull|veiled|grainy|flat|boring|lifeless|congested|sibilant|brittle|strident|sharp)\b/i.test(currentMessage);
+    const hasSoftComplaint = /\b(?:a\s+(?:little|bit|touch|tad)|too\s+|lacks?\s+|lacking\s+|not\s+enough|could\s+use\s+more|needs?\s+more|wish\s+(?:it\s+)?(?:had|were|was)|sounds?\s+(?:a\s+bit\s+)?)/i.test(currentMessage);
+    if (hasComplaintAdjective && hasSoftComplaint) {
+      return { intent: 'diagnosis', subjects, subjectMatches, desires };
+    }
   }
 
   // 5. Gear inquiry — "what do you think of X?" or brand mention

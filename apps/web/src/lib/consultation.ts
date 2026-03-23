@@ -6569,6 +6569,22 @@ function extractComplaint(text: string): string | null {
   for (const word of complaintWords) {
     if (lower.includes(word)) return word;
   }
+  // "lacks X" / "lacking X" → map quality deficit to a complaint adjective
+  const lacksMatch = lower.match(/\black(?:s|ing)\s+(?:in\s+)?(\w+)/);
+  if (lacksMatch) {
+    const quality = lacksMatch[1];
+    const qualityToComplaint: Record<string, string> = {
+      bass: 'thin', treble: 'dull', detail: 'dull', warmth: 'cold',
+      body: 'thin', dynamics: 'dull', punch: 'dull', clarity: 'muddy',
+      air: 'dull', space: 'dull', depth: 'thin', energy: 'dull',
+      richness: 'dry', weight: 'thin', presence: 'thin',
+    };
+    if (qualityToComplaint[quality]) return qualityToComplaint[quality];
+  }
+  // "something feels off" → map to generic thin (user is vague, so start neutral)
+  if (/\bsomething\s+(?:is\s+|feels?\s+)?(?:off|wrong|missing)\b/.test(lower)) {
+    return 'thin';
+  }
   return null;
 }
 
