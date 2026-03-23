@@ -487,6 +487,25 @@ function productCharacter(product: Product, desireQualities: string[] = []): str
   return parts.join(' ');
 }
 
+/**
+ * Compact product character for comparisons — 2-3 traits in 1-2 sentences.
+ * No domain labels, no risk notes. Just the sonic signature.
+ */
+function productCharacterCompact(product: Product): string {
+  if (hasTendencies(product.tendencies)) {
+    // Take top 2-3 character domains, no labels
+    const chars = product.tendencies.character.slice(0, 3);
+    const traits = chars.map((t) => t.tendency).join(', ');
+    // Add one system note if available
+    const positive = product.tendencies.interactions?.find((i) => i.valence === 'positive');
+    const sysNote = positive ? ` Works well ${positive.condition}.` : '';
+    return `${traits}.${sysNote}`;
+  }
+  // Fallback: first sentence of description
+  const firstSentence = product.description.split(/\.\s/)[0];
+  return firstSentence.endsWith('.') ? firstSentence : `${firstSentence}.`;
+}
+
 /** Shared risk note builder using tendencyProfile when available. */
 function buildRiskNotes(product: Product): string | undefined {
   const risks: string[] = [];
@@ -1682,25 +1701,55 @@ export function buildGearResponse(
       }
 
       // ── General comparison path (different architectures/brands) ──
-      const archetypeFrame = compareProductArchetypes(a, b);
+      // Concise side-by-side format: opening + two trait blocks + decision guidance.
+      const nameA = `${a.brand} ${a.name}`;
+      const nameB = `${b.brand} ${b.name}`;
+
+      // Extract compact character descriptions (1 sentence each)
+      const charA = productCharacterCompact(a);
+      const charB = productCharacterCompact(b);
+
+      // System note — compact context if user has a system
       const systemNote = buildSystemComparisonNote(a, b, activeSystem);
 
-      const baseAnchor = systemNote
-        ? `${systemNote} Here is how the two compare.`
-        : `The ${a.brand} ${a.name} and ${b.brand} ${b.name} come from different design traditions.`;
+      // Price context
+      let priceNote = '';
+      if (a.price && b.price) {
+        const ratio = Math.max(a.price, b.price) / Math.min(a.price, b.price);
+        if (ratio >= 2) {
+          priceNote = ` (different tiers — ~$${Math.min(a.price, b.price).toLocaleString()} vs ~$${Math.max(a.price, b.price).toLocaleString()})`;
+        } else if (ratio >= 1.3) {
+          priceNote = ` (~$${Math.min(a.price, b.price).toLocaleString()} vs ~$${Math.max(a.price, b.price).toLocaleString()})`;
+        }
+      }
 
-      const directionText = withDirection(buildComparisonDirection(a, b));
+      const opening = systemNote
+        ? `${systemNote} These take different approaches${priceNote}:`
+        : `These take different approaches${priceNote}:`;
+
+      // Per-product trait blocks: architecture + 2-3 traits + 1 system note
+      const archA = a.architecture ? `${a.architecture} design. ` : '';
+      const archB = b.architecture ? `${b.architecture} design. ` : '';
+      const blockA = `**${nameA}** — ${archA}${charA}`;
+      const blockB = `**${nameB}** — ${archB}${charB}`;
+
+      // Decision guidance
+      const directionCompact = buildComparisonDirection(a, b);
+
+      const conciseComparison = `${opening}\n\n${blockA}\n\n${blockB}\n\n${directionCompact}`;
 
       return {
         intent,
         subjects,
-        anchor: withTendency(baseAnchor),
-        character: `${archetypeFrame} ${productCharacter(a, desires.length > 0 ? [desires[0].quality] : [])} ${productCharacter(b, desires.length > 0 ? [desires[0].quality] : [])}`,
+        anchor: conciseComparison,
+        character: '',
         interpretation: desires.length > 0
           ? QUALITY_PROFILES[desires[0].quality]?.interpretation
           : undefined,
-        direction: directionText,
-        clarification: buildClarification({ activeSystem, seed, churn, hasDesires: desires.length > 0 }),
+        direction: '',
+        clarification: activeSystem
+          ? `How does your current setup lean — warmer or more precise?`
+          : `What are you pairing it with?`,
         systemDirection: sysDir,
         hearing,
         userArchetype: sysDir.inferredArchetype
@@ -1774,8 +1823,8 @@ export function buildGearResponse(
       return {
         intent,
         subjects,
-        anchor: withTendency('Those come from different corners of the market.'),
-        character: 'The comparison usually comes down to design philosophy — what each designer chose to prioritize. Architecture, feedback topology, and output stage all shape character differently.',
+        anchor: withTendency('Neither of those products appears in my catalog, so I can\'t give you component-level trait data. What I can do is reason from design class.'),
+        character: 'The comparison comes down to design philosophy — what each designer chose to prioritize. Architecture, feedback topology, and output stage all shape character differently, and two products at the same price point can be optimised for completely opposite listener priorities.',
         interpretation: desires.length > 0
           ? QUALITY_PROFILES[desires[0].quality]?.interpretation
           : undefined,
@@ -1792,8 +1841,8 @@ export function buildGearResponse(
     return {
       intent,
       subjects,
-      anchor: 'Comparisons always depend on context.',
-      character: products.length > 0 ? productCharacter(products[0]) : 'Every component has a character — the question is how it interacts with your system.',
+      anchor: 'To reason about any comparison, I need to know what\'s actually being compared — the design architectures, not just the names.',
+      character: products.length > 0 ? productCharacter(products[0]) : 'Every component has a design priority — a set of things it does well and things it trades away. The comparison is only meaningful relative to a specific system and listener.',
       direction: 'To make a useful comparison, I\'d need to know what you\'re comparing and what dimensions matter most. Two excellent components can be optimized for very different priorities.',
       clarification: 'What are you comparing, and what\'s driving the question?',
       systemDirection: sysDir,
@@ -1818,10 +1867,15 @@ export function buildGearResponse(
       ? ` ${sysDir.archetypeNote}`
       : '';
 
+    // Use product description for interpretation when available, otherwise
+    // synthesize from what we know about the desire + product architecture.
+    const desireAnchor = product && product.description
+      ? `The ${productName} — ${product.description.charAt(0).toLowerCase() + product.description.slice(1)} Wanting ${primary.direction} ${primary.quality} from that tells me something specific about the gap you're trying to close.${archetypeContext}`
+      : `The ${productName} has a clear design direction. Wanting ${primary.direction} ${primary.quality} from it tells me where you feel the gap — and that gap usually sits in a specific part of the chain.${archetypeContext}`;
     return {
       intent,
       subjects,
-      anchor: withTendency(`The ${productName} has a well-established character, and wanting ${primary.direction} ${primary.quality} from it tells me something useful about where you want to go.${archetypeContext}`),
+      anchor: withTendency(desireAnchor),
       character: product
         ? productCharacter(product, [primary.quality])
         : brandCharacter(productName),
@@ -1844,10 +1898,15 @@ export function buildGearResponse(
   // ── Pure gear inquiry (known product) ───────────────
   if (products.length > 0) {
     const product = products[0];
+    // Use the product description as the interpretation anchor if available.
+    // Fallback to architecture-based framing — never use generic acknowledgment.
+    const productInterpretation = product.description
+      ? `The ${product.brand} ${product.name} — ${product.description.charAt(0).toLowerCase() + product.description.slice(1)}`
+      : `The ${product.brand} ${product.name} is built around ${product.architecture} architecture, which shapes its character in specific ways.`;
     return {
       intent,
       subjects,
-      anchor: withTendency(`The ${product.brand} ${product.name} is a well-known piece in this space.`),
+      anchor: withTendency(productInterpretation),
       character: productCharacter(product),
       direction: buildInquiryDirection(product, sysDir.inferredArchetype ?? undefined),
       clarification: buildClarification({ activeSystem, seed, churn, hasDesires: desires.length > 0 }),
@@ -1866,7 +1925,7 @@ export function buildGearResponse(
     return {
       intent,
       subjects,
-      anchor: withTendency(`${brandName} is a name that comes up regularly in these conversations.`),
+      anchor: withTendency(`${brandName} has a recognizable design philosophy — the question is how it maps to your system and what you're trying to change.`),
       character: brandCharacter(brandName),
       direction: 'The best way to evaluate any piece of gear is relative to the system it\'s going into. A component that sounds extraordinary in one system can be unremarkable in another — that\'s not a flaw, it\'s how audio works.',
       clarification: buildClarification({ activeSystem, seed, churn, hasDesires: desires.length > 0 }),
@@ -1882,7 +1941,7 @@ export function buildGearResponse(
   return {
     intent,
     subjects: [],
-    anchor: 'That\'s a good question.',
+    anchor: 'Every piece of audio gear makes trade-offs — what it prioritizes shapes what you hear, and what it trades away shapes what you don\'t.',
     character: 'Every component has a character — a set of things it does well and things it trades away.',
     direction: 'What matters is how that character interacts with your system and your listening priorities. The same piece can sound relaxed in one system and forward in another.',
     clarification: buildClarification({ activeSystem, seed, churn, hasDesires: desires.length > 0 }),

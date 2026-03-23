@@ -29,7 +29,7 @@ import type { AdvisoryResponse, AdvisoryMode, AdvisorySource, AudioProfile, Prod
 import type { DecisionFrame, DecisionDirection, SystemInteraction } from '../../lib/decision-frame';
 import AdvisorySection from './AdvisorySection';
 import AdvisoryProse from './AdvisoryProse';
-import AdvisoryProductCards from './AdvisoryProductCard';
+import AdvisoryProductCards, { ShoppingLinks } from './AdvisoryProductCard';
 import AdvisoryLinks from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
 import AdvisoryDiagnostics from './AdvisoryDiagnostics';
@@ -68,11 +68,11 @@ const COLORS = {
 };
 
 const FONTS = {
-  bodySize: '0.98rem',
-  smallSize: '0.9rem',
-  labelSize: '0.78rem',
+  bodySize: '1.02rem',
+  smallSize: '0.92rem',
+  labelSize: '0.82rem',
   sectionHeading: '1.3rem',
-  lineHeight: 1.75,
+  lineHeight: 1.85,
 };
 
 /** Inline bullet list — reused across both modes. */
@@ -80,7 +80,7 @@ function BulletList({ items, color }: { items: string[]; color?: string }) {
   return (
     <ul style={{ margin: 0, paddingLeft: '1.2rem', lineHeight: FONTS.lineHeight, color: color ?? COLORS.text }}>
       {items.map((item, i) => (
-        <li key={i} style={{ marginBottom: '0.4rem', fontSize: FONTS.bodySize }}>{renderText(item)}</li>
+        <li key={i} style={{ marginBottom: '0.55rem', fontSize: FONTS.bodySize }}>{renderText(item)}</li>
       ))}
     </ul>
   );
@@ -96,7 +96,7 @@ function isMemoFormat(a: AdvisoryResponse): boolean {
 
 /** Subtle section divider. */
 function SectionDivider() {
-  return <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.border}`, margin: '2.25rem 0' }} />;
+  return <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.border}`, margin: '2.75rem 0' }} />;
 }
 
 /** Mode label display names. */
@@ -212,13 +212,13 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
       <AdvisorySection number={next()} label="System Character">
         {/* Intro summary — system philosophy framing */}
         {a.introSummary && (
-          <p style={{ margin: '0 0 0.7rem 0', fontSize: '0.98rem', lineHeight: 1.8 }}>
+          <p style={{ margin: '0 0 0.85rem 0', fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight }}>
             {renderText(a.introSummary)}
           </p>
         )}
         {/* System character prose */}
         {a.systemContext && (
-          <p style={{ margin: '0 0 0.7rem 0', fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight }}>
+          <p style={{ margin: '0 0 0.85rem 0', fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight }}>
             {renderText(a.systemContext)}
           </p>
         )}
@@ -339,7 +339,7 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
         <>
           <AdvisorySection number={next()} label="Trade-offs in the System">
             {a.primaryConstraint && (
-              <p style={{ margin: '0 0 0.7rem 0', fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight, color: COLORS.textSecondary }}>
+              <p style={{ margin: '0 0 0.85rem 0', fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight, color: COLORS.textSecondary }}>
                 {renderText(a.primaryConstraint.explanation)}
               </p>
             )}
@@ -858,6 +858,15 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
         </p>
       </div>
 
+      {/* ── Shopping links ─────────────────────────────── */}
+      <div style={{ marginTop: '1.25rem', marginBottom: '1rem' }}>
+        <ShoppingLinks
+          brand={pa.candidateBrand}
+          name={pa.candidateName}
+          manufacturerUrl={a.links?.find(l => l.kind === 'reference')?.url}
+        />
+      </div>
+
       {/* ── Follow-up ────────────────────────────────── */}
       {a.followUp && (
         <div style={{
@@ -1029,7 +1038,7 @@ function EditorialClosingBlock({ closing }: { closing: EditorialClosing }) {
           </h3>
           <p style={{
             margin: '0 0 0.75rem 0',
-            fontSize: '0.93rem',
+            fontSize: '0.95rem',
             color: COLORS.textSecondary,
           }}>
             If choosing purely on sound quality:
@@ -1057,7 +1066,7 @@ function EditorialClosingBlock({ closing }: { closing: EditorialClosing }) {
           {closing.systemSummary && (
             <p style={{
               margin: '0 0 0.75rem 0',
-              fontSize: '0.93rem',
+              fontSize: '0.95rem',
               color: COLORS.textSecondary,
             }}>
               {closing.systemSummary}
@@ -1128,186 +1137,116 @@ function EditorialPickLine({ pick, index }: { pick: EditorialPick; index: number
 //   9. Sources
 
 function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
+  // Build concise decision guidance — short "If you want X → choose Y" lines.
+  // Extract the core quality from fitNote (expected format: "Best for X and Y").
+  const decisionLines: string[] = [];
+  if (a.options && a.options.length >= 2) {
+    for (const opt of a.options) {
+      const name = [opt.brand, opt.name].filter(Boolean).join(' ');
+      const raw = opt.fitNote || opt.character || '';
+      if (!raw) continue;
+      // Strip "Best for " prefix to get the quality, then rebuild as guidance
+      const quality = raw.replace(/^best for\s+/i, '').split('.')[0].trim();
+      if (quality && quality.length <= 60) {
+        decisionLines.push(`If you want ${quality.toLowerCase()} → **${name}**`);
+      }
+    }
+  }
+
   return (
     <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
-      {/* ── Mode indicator ──────────────────────────── */}
-      <ModeIndicator mode={a.advisoryMode} />
 
-      {/* ── 1. Page title ────────────────────────────── */}
-      {a.subject && (
-        <h2 style={{
-          margin: '0 0 1.25rem 0',
-          fontSize: '1.6rem',
-          fontWeight: 700,
+      {/* ── 1. System Interpretation (reasoning before products) ── */}
+      {a.systemInterpretation && (
+        <p style={{
+          margin: '0 0 1.5rem 0',
+          fontSize: FONTS.bodySize,
+          lineHeight: FONTS.lineHeight,
           color: COLORS.text,
-          letterSpacing: '-0.025em',
-          lineHeight: 1.25,
         }}>
-          {a.subject}
-        </h2>
+          {renderText(a.systemInterpretation)}
+        </p>
       )}
 
-      {/* ── 2. Audio Preferences (replaces listener priorities) ── */}
-      {a.audioProfile && (
-        <AudioPreferencesBlock profile={a.audioProfile} />
-      )}
-
-      {/* ── 2b. Decision Frame ───────────────────────── */}
-      {a.decisionFrame && (
-        <DecisionFrameBlock frame={a.decisionFrame} />
-      )}
-
-      {/* ── 2c. System Context Preamble ─────────────── */}
-      {a.systemContextPreamble && (
+      {/* ── 2. Strategy Bullets (conceptual guidance) ──────── */}
+      {a.strategyBullets && a.strategyBullets.length > 0 && (
         <div style={{
-          margin: '0.5rem 0 1.25rem 0',
+          margin: '0 0 1.5rem 0',
           padding: '0.75rem 1rem',
           background: COLORS.accentBg,
           borderRadius: '6px',
           borderLeft: `3px solid ${COLORS.accent}`,
           fontSize: '0.95rem',
-          lineHeight: 1.75,
+          lineHeight: 1.8,
           color: COLORS.text,
         }}>
-          <div style={{
-            fontSize: '0.78rem',
-            fontWeight: 600,
-            textTransform: 'uppercase' as const,
-            letterSpacing: '0.05em',
-            color: COLORS.textMuted,
-            marginBottom: '0.35rem',
-          }}>
-            System Context
-          </div>
-          {renderText(a.systemContextPreamble)}
+          {a.strategyBullets.map((bullet, i) => (
+            <p key={i} style={{ margin: i === 0 ? 0 : '0.35rem 0 0 0' }}>
+              {renderText(`• ${bullet}`)}
+            </p>
+          ))}
         </div>
       )}
 
-      {/* ── 3. Editorial intro — taste-anchored framing ── */}
-      {a.editorialIntro && (
-        <p style={{
-          margin: '0 0 1.25rem 0',
-          fontSize: '0.97rem',
-          lineHeight: 1.75,
-          color: COLORS.text,
-        }}>
-          {renderText(a.editorialIntro)}
-        </p>
-      )}
+      {/* ── 3. Transition to products ─────────────────────── */}
+      <p style={{
+        margin: '0 0 1.25rem 0',
+        fontSize: '0.95rem',
+        lineHeight: 1.75,
+        color: COLORS.textSecondary,
+      }}>
+        {a.editorialIntro
+          ? renderText(a.editorialIntro)
+          : (a.systemInterpretation ? 'With that in mind, here are a few strong options:' : 'Here are a few strong options:')}
+      </p>
 
-      {/* ── Divider ──────────────────────────────────── */}
-      <SectionDivider />
-
-      {/* ── 4. Product sections (PRIMARY CONTENT) ────── */}
+      {/* ── 4. Product cards ──────────────────────────────── */}
       {a.options && a.options.length > 0 && (
         <AdvisoryProductCards options={a.options} />
       )}
 
-      {/* ── 5. Editorial closing (LLM: system picks + avoidance) ── */}
-      {a.editorialClosing && (
-        <>
-          <SectionDivider />
-          <EditorialClosingBlock closing={a.editorialClosing} />
-        </>
+      {/* ── 5. Decision guidance ──────────────────────────── */}
+      {decisionLines.length > 0 && (
+        <div style={{
+          margin: '2rem 0 1.5rem 0',
+          padding: '0.85rem 1.1rem',
+          background: COLORS.accentBg,
+          borderRadius: '6px',
+          borderLeft: `3px solid ${COLORS.accent}`,
+          fontSize: '0.95rem',
+          lineHeight: 1.85,
+          color: COLORS.text,
+        }}>
+          {decisionLines.map((line, i) => (
+            <p key={i} style={{ margin: i === 0 ? 0 : '0.4rem 0 0 0' }}>
+              {renderText(line)}
+            </p>
+          ))}
+        </div>
       )}
 
-      {/* ── Divider before supplementary sections ────── */}
-      <SectionDivider />
+      {/* ── 6. Follow-up question ─────────────────────────── */}
+      {a.followUp && (
+        <p style={{
+          margin: '0 0 1rem 0',
+          fontSize: '0.95rem',
+          lineHeight: 1.75,
+          color: COLORS.textSecondary,
+          fontStyle: 'italic',
+        }}>
+          {a.followUp}
+        </p>
+      )}
 
-      {/* ── 5b. Provisional caveats ──────────────────── */}
+      {/* ── 7. Provisional caveat (subtle) ────────────────── */}
       {a.provisional && a.statedGaps && a.statedGaps.length > 0 && (
         <div style={{
           fontSize: '0.88rem',
           color: COLORS.textLight,
           fontStyle: 'italic',
-          marginBottom: '1.25rem',
+          marginBottom: '1rem',
         }}>
           Based on limited context — missing: {a.statedGaps.join(', ')}
-          {a.dependencyCaveat && <>. {a.dependencyCaveat}</>}
-        </div>
-      )}
-
-      {/* ── 6. Sonic landscape (kept — unique content) ── */}
-      {a.sonicLandscape && (
-        <AdvisorySection label="Sonic directions represented">
-          <div style={{ fontSize: FONTS.bodySize, lineHeight: 1.8, color: COLORS.text }}>
-            {a.sonicLandscape.split('\n').map((line, i) => {
-              const boldMatch = line.match(/^\*\*(.+?)\*\*\s*(.+)/);
-              if (boldMatch) {
-                return (
-                  <div key={i} style={{ marginBottom: '0.55rem', paddingLeft: '0.25rem' }}>
-                    <span style={{ fontWeight: 600, color: '#333' }}>{boldMatch[1]}</span>
-                    <span style={{ color: COLORS.textSecondary }}> {boldMatch[2]}</span>
-                  </div>
-                );
-              }
-              if (line.trim() === '') return null;
-              return (
-                <p key={i} style={{ margin: '0 0 0.55rem 0', color: i === 0 ? COLORS.text : COLORS.textSecondary }}>
-                  {line}
-                </p>
-              );
-            })}
-          </div>
-        </AdvisorySection>
-      )}
-
-      {/* ── 7. Refinement prompts ────────────────────── */}
-      {a.refinementPrompts && a.refinementPrompts.length > 0 && (
-        <div
-          style={{
-            borderLeft: '3px solid #7a9aaa',
-            paddingLeft: '1rem',
-            padding: '0.8rem 1rem',
-            marginBottom: '1.5rem',
-            background: '#f6f9fa',
-            borderRadius: '0 6px 6px 0',
-          }}
-        >
-          <div
-            style={{
-              fontSize: FONTS.labelSize,
-              fontWeight: 600,
-              letterSpacing: '0.05em',
-              textTransform: 'uppercase' as const,
-              color: '#7a9aaa',
-              marginBottom: '0.45rem',
-            }}
-          >
-            To refine this shortlist
-          </div>
-          <ul style={{ margin: 0, paddingLeft: '1.1rem', lineHeight: FONTS.lineHeight }}>
-            {a.refinementPrompts.map((prompt, i) => (
-              <li key={i} style={{ fontSize: '0.93rem', color: COLORS.textSecondary, marginBottom: '0.15rem' }}>
-                {prompt}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* ── 8. Learn more (links) ────────────────────── */}
-      {a.links && a.links.length > 0 && (
-        <AdvisorySection label="Learn more">
-          <AdvisoryLinks links={a.links} />
-        </AdvisorySection>
-      )}
-
-      {/* ── 9. Sources ───────────────────────────────── */}
-      {a.sourceReferences && a.sourceReferences.length > 0 && (
-        <AdvisorySection label="Sources">
-          <AdvisorySources sources={a.sourceReferences} />
-        </AdvisorySection>
-      )}
-
-      {/* ── 10. Diagnostics (collapsible) ────────────── */}
-      {a.diagnostics && (
-        <div style={{ marginTop: '0.75rem' }}>
-          <AdvisoryDiagnostics
-            matchedPhrases={a.diagnostics.matchedPhrases}
-            symptoms={a.diagnostics.symptoms}
-            traits={a.diagnostics.traits}
-          />
         </div>
       )}
     </div>
@@ -1349,7 +1288,7 @@ function KnowledgeFormat({ advisory: a }: AdvisoryMessageProps) {
       {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} />}
 
       <AdvisorySection label={kr.topic}>
-        <p style={{ margin: '0 0 0.8rem 0', color: COLORS.text, lineHeight: FONTS.lineHeight }}>
+        <p style={{ margin: '0 0 0.95rem 0', color: COLORS.text, lineHeight: FONTS.lineHeight }}>
           {kr.explanation}
         </p>
       </AdvisorySection>
@@ -1412,7 +1351,7 @@ function AssistantFormat({ advisory: a }: AdvisoryMessageProps) {
       <ModeIndicator mode={a.advisoryMode} />
 
       <AdvisorySection label={taskLabel}>
-        <p style={{ margin: '0 0 0.8rem 0', color: COLORS.text, lineHeight: FONTS.lineHeight, whiteSpace: 'pre-wrap' }}>
+        <p style={{ margin: '0 0 0.95rem 0', color: COLORS.text, lineHeight: FONTS.lineHeight, whiteSpace: 'pre-wrap' }}>
           {ar.body}
         </p>
       </AdvisorySection>
@@ -1460,19 +1399,39 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
       {/* ── Provenance label (LLM-inferred responses) ── */}
       <ProvenanceLabel source={a.source} unknownComponents={a.unknownComponents} />
 
-      {/* ── 1. Comparison summary ────────────────────── */}
+      {/* ── 0a. Diagnosis: system interpretation ────────── */}
+      {a.diagnosisInterpretation && (
+        <p style={{
+          margin: '0 0 1.25rem 0',
+          fontSize: FONTS.bodySize,
+          lineHeight: FONTS.lineHeight,
+          color: COLORS.text,
+        }}>
+          {a.diagnosisInterpretation}
+        </p>
+      )}
+
+      {/* ── 1. Comparison summary (side-by-side format) ── */}
       {a.comparisonSummary && (
-        <p
+        <div
           style={{
             margin: '0 0 1.25rem 0',
-            fontWeight: 500,
-            fontSize: '1.02rem',
+            fontSize: '1rem',
             color: '#333',
-            lineHeight: 1.7,
+            lineHeight: 1.75,
           }}
         >
-          {a.comparisonSummary}
-        </p>
+          {a.comparisonSummary.split(/\n\n/).filter((s: string) => s.trim()).map((segment: string, i: number) => (
+            <p
+              key={i}
+              style={{
+                margin: i === 0 ? '0 0 0.7rem 0' : '0 0 0.7rem 0',
+              }}
+            >
+              {renderText(segment.trim())}
+            </p>
+          ))}
+        </div>
       )}
 
       {/* ── 2. Audio Preferences ────────────────────── */}
@@ -1490,7 +1449,7 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
       {a.componentReadings && a.componentReadings.length > 0 && (
         <div style={{ marginBottom: '1.5rem' }}>
           {a.componentReadings.map((para, i) => (
-            <p key={i} style={{ margin: '0 0 0.8rem 0', fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight, color: COLORS.text }}>
+            <p key={i} style={{ margin: '0 0 0.95rem 0', fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight, color: COLORS.text }}>
               {para}
             </p>
           ))}
@@ -1568,7 +1527,7 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
           </div>
           <ul style={{ margin: 0, paddingLeft: '1.1rem', lineHeight: FONTS.lineHeight }}>
             {a.whyFitsYou.map((bullet, i) => (
-              <li key={i} style={{ fontSize: '0.93rem', color: COLORS.textSecondary, marginBottom: '0.2rem' }}>
+              <li key={i} style={{ fontSize: '0.95rem', color: COLORS.textSecondary, marginBottom: '0.4rem' }}>
                 {bullet}
               </li>
             ))}
@@ -1605,6 +1564,53 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
           tendencies={a.tendencies}
           systemFit={a.systemFit}
         />
+      )}
+
+      {/* ── 5a. Diagnosis: what this means ────────────── */}
+      {a.diagnosisExplanation && (
+        <AdvisorySection label="What this means">
+          <p style={{ margin: 0, fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight }}>
+            {a.diagnosisExplanation}
+          </p>
+        </AdvisorySection>
+      )}
+
+      {/* ── 5b. Diagnosis: where to act ─────────────── */}
+      {a.diagnosisActions && a.diagnosisActions.length > 0 && (
+        <AdvisorySection label="Where to act">
+          <div style={{ display: 'grid', gap: '1.1rem' }}>
+            {a.diagnosisActions.map((action, i) => (
+              <div key={i} style={{ paddingLeft: '0.25rem' }}>
+                <div style={{
+                  fontWeight: 600,
+                  fontSize: FONTS.bodySize,
+                  color: COLORS.text,
+                  marginBottom: '0.25rem',
+                }}>
+                  {i + 1}. {action.area}
+                </div>
+                <p style={{
+                  margin: 0,
+                  fontSize: FONTS.bodySize,
+                  lineHeight: FONTS.lineHeight,
+                  color: COLORS.textSecondary,
+                }}>
+                  {action.guidance}
+                </p>
+                {action.examples && (
+                  <p style={{
+                    margin: '0.3rem 0 0 0',
+                    fontSize: FONTS.smallSize,
+                    color: COLORS.textMuted,
+                    fontStyle: 'italic',
+                  }}>
+                    Examples: {action.examples}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </AdvisorySection>
       )}
 
       {a.improvements && a.improvements.length > 0 && (
@@ -1679,7 +1685,7 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
                   display: 'flex',
                   alignItems: 'baseline',
                   gap: '0.5rem',
-                  fontSize: '0.93rem',
+                  fontSize: '0.95rem',
                   lineHeight: 1.65,
                 }}
               >
@@ -1805,6 +1811,14 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
         </p>
       )}
 
+      {/* ── 11b. Shopping links (product consultations) ── */}
+      {a.kind === 'consultation' && !a.componentReadings && (a.tendencies || a.philosophy || a.productOrigin || (a.improvements && a.improvements.length > 0)) && (
+        <ShoppingLinks
+          name={a.subject}
+          manufacturerUrl={a.links?.find((l) => l.kind === 'reference')?.url}
+        />
+      )}
+
       {/* ── 12. Refinement prompts ────────────────── */}
       {a.refinementPrompts && a.refinementPrompts.length > 0 && (
         <div
@@ -1831,7 +1845,7 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
           </div>
           <ul style={{ margin: 0, paddingLeft: '1.1rem', lineHeight: FONTS.lineHeight }}>
             {a.refinementPrompts.map((prompt, i) => (
-              <li key={i} style={{ fontSize: '0.93rem', color: COLORS.textSecondary, marginBottom: '0.15rem' }}>
+              <li key={i} style={{ fontSize: '0.95rem', color: COLORS.textSecondary, marginBottom: '0.15rem' }}>
                 {prompt}
               </li>
             ))}

@@ -730,6 +730,71 @@ const BRAND_PROFILES: BrandProfile[] = [
       { label: 'Official website', url: 'https://auralic.com/', region: 'global' },
     ],
   },
+  {
+    names: ['kef'],
+    country: 'UK',
+    brandScale: 'established',
+    region: 'europe',
+    categories: ['speaker'],
+    philosophy: 'KEF designs speakers around its proprietary Uni-Q coaxial driver, placing the tweeter at the acoustic centre of the midrange cone. The goal is point-source coherence and precise imaging. Engineering-led, measurement-informed.',
+    tendencies: 'KEF speakers tend toward precision, neutral tonal balance, and wide controlled dispersion. Strong stereo imaging and detail retrieval. Can lean analytical with certain partnering equipment.',
+    systemContext: 'KEF speakers reward clean, well-controlled amplification. They pair well with neutral to slightly warm electronics. Less forgiving of harsh or grainy upstream components.',
+    links: [
+      { label: 'Official website', url: 'https://www.kef.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['elac'],
+    country: 'Germany',
+    brandScale: 'established',
+    region: 'europe',
+    categories: ['speaker'],
+    philosophy: 'ELAC builds speakers across a wide range, from budget Debut series (designed by Andrew Jones) to reference Concentro flagships. The philosophy blends accessibility with genuine engineering ambition. Known for punching above price class.',
+    tendencies: 'ELAC speakers tend toward warmth and body, with fuller bass than competitors at similar price points. The Debut and Carina series favour musical engagement over analytical precision. Higher-end models (Vela, Concentro) add refinement and resolution.',
+    systemContext: 'ELAC speakers are relatively easy to drive and forgiving of upstream electronics. Their warmth complements leaner solid-state amplification. May become too full in already warm systems.',
+    links: [
+      { label: 'Official website', url: 'https://www.elac.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['wharfedale'],
+    country: 'UK',
+    brandScale: 'established',
+    region: 'europe',
+    categories: ['speaker'],
+    philosophy: 'Wharfedale is one of the oldest speaker companies in the world, with designs that prioritise tonal warmth and musical ease. The Linton Heritage revived their classic British voicing. Recent designs balance tradition with modern driver technology.',
+    tendencies: 'Warm, rich midrange with a slightly relaxed top end. Prioritises long-session listenability over razor-sharp detail. The Linton Heritage emphasises vintage character; the Evo series is more modern and balanced.',
+    systemContext: 'Wharfedale speakers pair well with both tube and solid-state amplification. Their warm voicing can compensate for lean electronics. May sound slightly veiled with overly warm or slow amplifiers.',
+    links: [
+      { label: 'Official website', url: 'https://www.wharfedale.co.uk/', region: 'global' },
+    ],
+  },
+  {
+    names: ['harbeth'],
+    country: 'UK',
+    brandScale: 'specialist',
+    region: 'europe',
+    categories: ['speaker'],
+    philosophy: 'Harbeth continues the BBC monitor tradition with proprietary RADIAL cone technology. The design goal is natural midrange reproduction and accurate voice rendering. Engineering-led with psychoacoustic research informing voicing decisions.',
+    tendencies: 'Listeners describe Harbeth speakers as supremely natural in the midrange, with exceptional voice reproduction. Slightly warm, with a forgiving top end. Not the last word in bass extension or dynamic slam, but vocally and instrumentally honest.',
+    systemContext: 'Harbeth speakers respond well to quality amplification — both tube and solid-state. They reveal upstream differences clearly in the midrange but are forgiving of modest electronics. Stand placement matters significantly.',
+    links: [
+      { label: 'Official website', url: 'https://www.harbeth.co.uk/', region: 'global' },
+    ],
+  },
+  {
+    names: ['magnepan'],
+    country: 'USA',
+    brandScale: 'specialist',
+    region: 'north-america',
+    categories: ['speaker'],
+    philosophy: 'Magnepan builds planar magnetic speakers — large, thin panels that move air differently from conventional box speakers. The design philosophy prioritises transparency, open presentation, and freedom from box coloration.',
+    tendencies: 'Magnepan speakers sound open, airy, and transparent. They excel at soundstage depth and width. Bass is present but differently textured than box speakers — more speed, less slam. Can sound thin without adequate amplification.',
+    systemContext: 'Magnepan speakers need power (high current, stable into low impedance) and room space. They reward quality amplification but demand it. Not ideal for small rooms or low-power tube amplifiers.',
+    links: [
+      { label: 'Official website', url: 'https://www.magnepan.com/', region: 'global' },
+    ],
+  },
 ];
 
 // ── Topology keywords for archetype matching ────────
@@ -941,7 +1006,7 @@ function buildProductConsultation(products: Product[], subject: string): Consult
         warm_bright: { warm: 'warm and tonally rich', bright: 'bright and articulate', neutral: 'tonally balanced' },
         smooth_detailed: { smooth: 'smooth and flowing', detailed: 'detailed and resolving', neutral: 'balanced between smoothness and detail' },
         elastic_controlled: { elastic: 'dynamically expressive', controlled: 'composed and controlled', neutral: 'balanced in dynamics' },
-        airy_closed: { airy: 'open and spacious in staging', closed: 'focused and intimate', neutral: 'moderate in spatial presentation' },
+        scale_intimacy: { scale: 'open and spacious in staging', intimacy: 'focused and intimate', neutral: 'moderate in spatial presentation' },
       };
       for (const [axis, value] of Object.entries(ax)) {
         const desc = AXIS_LABELS[axis]?.[value];
@@ -1202,123 +1267,115 @@ function buildBrandComparison(
   const nameA = capitalize('names' in profileA ? profileA.names[0] : profileA.name);
   const nameB = capitalize('names' in profileB ? profileB.names[0] : profileB.name);
 
-  // Use up to two sentences for philosophy and tendencies — enough to convey
-  // character without overwhelming. Truncating to a single period fragment
-  // loses too much information.
-  const philoA = takeSentences(profileA.philosophy, 2);
-  const philoB = takeSentences(profileB.philosophy, 2);
-  const tendA = takeSentences(profileA.tendencies, 2);
-  const tendB = takeSentences(profileB.tendencies, 2);
-
-  // Build a concise comparison summary — answers the question first.
-  // Extracts the core character from each side's tendencies to form a contrast.
+  // Extract core traits — 2-3 words that capture each brand's character.
   const charA = extractCoreCharacter(profileA.tendencies);
   const charB = extractCoreCharacter(profileB.tendencies);
 
-  // Add price context when both sides have price data.
-  // Strategy: try to match specific products mentioned in the query first.
-  // Fall back to single-product brand or median brand price.
+  // Extract 1 sentence of tendency detail for each side.
+  const tendA = takeSentences(profileA.tendencies, 1);
+  const tendB = takeSentences(profileB.tendencies, 1);
+
+  // System context — 1 sentence each, for pairing guidance.
+  const sysA = 'systemContext' in profileA && profileA.systemContext
+    ? takeSentences(profileA.systemContext, 1)
+    : '';
+  const sysB = 'systemContext' in profileB && profileB.systemContext
+    ? takeSentences(profileB.systemContext, 1)
+    : '';
+
+  // Price context — compact, inline.
   const brandNameA = ('names' in profileA ? profileA.names[0] : profileA.name).toLowerCase();
   const brandNameB = ('names' in profileB ? profileB.names[0] : profileB.name).toLowerCase();
-  const productsA = ALL_PRODUCTS.filter(
-    (p) => p.brand.toLowerCase() === brandNameA,
-  );
-  const productsB = ALL_PRODUCTS.filter(
-    (p) => p.brand.toLowerCase() === brandNameB,
-  );
-
-  // Try to identify the specific products referenced in the user's query.
-  // Matches full name, or any significant word from the product name (3+ chars).
+  const productsA = ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === brandNameA);
+  const productsB = ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === brandNameB);
   const findQueryProduct = (products: Product[], query: string | undefined): Product | null => {
     if (!query || products.length <= 1) return products[0] ?? null;
     const q = query.toLowerCase();
-    // Try full name match first
     const fullMatch = products.find((p) => q.includes(p.name.toLowerCase()));
     if (fullMatch) return fullMatch;
-    // Try matching significant name tokens — handles cases like
-    // "heresy" matching "Heresy IV" or "o/96" matching "Orangutan O/96"
     return products.find((p) => {
       const words = p.name.toLowerCase().split(/[\s]+/);
-      return words.some((w) => {
-        // Match words 3+ chars, or shorter words containing non-alpha (like "o/96")
-        return (w.length >= 3 || /[^a-z]/.test(w)) && w.length >= 2 && q.includes(w);
-      });
+      return words.some((w) => (w.length >= 3 || /[^a-z]/.test(w)) && w.length >= 2 && q.includes(w));
     }) ?? null;
   };
   const specificA = findQueryProduct(productsA, queryText);
   const specificB = findQueryProduct(productsB, queryText);
-
   const priceA = specificA?.price ?? (productsA.length === 1 ? productsA[0].price : null);
   const priceB = specificB?.price ?? (productsB.length === 1 ? productsB[0].price : null);
 
-  // Use specific product names for price labels when available
-  const priceLabelA = specificA ? `${specificA.brand} ${specificA.name}` : nameA;
-  const priceLabelB = specificB ? `${specificB.brand} ${specificB.name}` : nameB;
-
-  let priceContext = '';
+  let priceNote = '';
   if (priceA && priceB) {
     const ratio = Math.max(priceA, priceB) / Math.min(priceA, priceB);
-    const cheaperLabel = priceA < priceB ? priceLabelA : priceLabelB;
-    const pricierLabel = priceA < priceB ? priceLabelB : priceLabelA;
-    const cheaperPrice = Math.min(priceA, priceB);
-    const pricierPrice = Math.max(priceA, priceB);
     if (ratio >= 2) {
-      // Large gap — frame as different tiers with editorial note
-      priceContext = ` These occupy different price tiers — ${cheaperLabel} around ~$${cheaperPrice.toLocaleString()} vs ${pricierLabel} around ~$${pricierPrice.toLocaleString()}. The comparison is less about which is "better" and more about different design philosophies at different investment levels.`;
+      priceNote = ` (different price tiers — ~$${Math.min(priceA, priceB).toLocaleString()} vs ~$${Math.max(priceA, priceB).toLocaleString()})`;
     } else if (ratio >= 1.3) {
-      // Moderate gap — note the difference without editorializing
-      priceContext = ` Price context: ${cheaperLabel} ~$${cheaperPrice.toLocaleString()}, ${pricierLabel} ~$${pricierPrice.toLocaleString()}.`;
+      priceNote = ` (~$${Math.min(priceA, priceB).toLocaleString()} vs ~$${Math.max(priceA, priceB).toLocaleString()})`;
     }
   }
 
-  const summary = `${nameA} tends toward ${charA}, while ${nameB} leans toward ${charB}.${priceContext}`;
+  // ── Build concise side-by-side comparison ──
+  // Opening line + two trait blocks + decision guidance.
+  // Total target: 5–10 lines.
+  const opening = `These take different approaches${priceNote}:`;
 
-  // ── Architectural explanation ──────────────────────────
-  // When both brands have products with known topologies, explain WHY
-  // the architectures produce different sonic results. Educational, not prescriptive.
-  const archNote = buildArchitecturalExplanation(nameA, profileA, nameB, profileB);
+  // Per-brand trait blocks: 2-3 traits + 1 system note each.
+  const blockA = `**${nameA}** — ${charA}. ${tendA}${sysA ? ` ${sysA}` : ''}`;
+  const blockB = `**${nameB}** — ${charB}. ${tendB}${sysB ? ` ${sysB}` : ''}`;
 
-  // ── System consequence ─────────────────────────────────
-  // What happens when each brand's character enters warm vs precise systems.
-  const systemConsequence = buildSystemConsequence(nameA, profileA, nameB, profileB);
+  // Decision guidance — derive from character contrast.
+  const guidance = buildComparisonGuidance(nameA, charA, profileA, nameB, charB, profileB);
 
-  // Check for design families that would qualify the brand-level comparison
+  // Check for design families that need model-level follow-up
   const familiesA = 'designFamilies' in profileA ? (profileA as BrandProfile).designFamilies : undefined;
   const familiesB = 'designFamilies' in profileB ? (profileB as BrandProfile).designFamilies : undefined;
-  const familyContext = buildDesignFamilyContext(nameA, familiesA, nameB, familiesB);
-
-  // If either brand has design families, steer the follow-up toward model specifics
   const hasAnyFamilies = (familiesA && familiesA.length > 0) || (familiesB && familiesB.length > 0);
+
   const followUp = hasAnyFamilies
-    ? `Which model or series are you considering? That matters for how this comparison plays out.`
-    : `What draws you toward one of these over the other — is it a specific quality, or more of a general direction?`;
+    ? `Which models are you comparing? That changes the picture.`
+    : `What are you pairing it with?`;
 
-  // Assemble system context — family context + system consequence
-  let systemContext: string;
-  if (familyContext && systemConsequence) {
-    systemContext = `${systemConsequence}\n\n${familyContext}`;
-  } else if (systemConsequence) {
-    systemContext = systemConsequence;
-  } else if (familyContext) {
-    systemContext = `Where they diverge most shapes which fits better.\n\n${familyContext}`;
-  } else {
-    systemContext = `Where they diverge most shapes which fits better — this depends on what you value in your listening and where your system currently sits.`;
-  }
-
-  // Assemble tendencies — core tendencies + architectural note.
-  // Use **bold** brand labels for visual attribution in rendered prose.
-  const tendenciesText = archNote
-    ? `**${nameA}:** ${tendA}\n\n**${nameB}:** ${tendB}\n\n${archNote}`
-    : `**${nameA}:** ${tendA}\n\n**${nameB}:** ${tendB}`;
+  // Pack everything into comparisonSummary so it renders as one concise block.
+  // philosophy/tendencies/systemContext left empty — prevents long review sections.
+  const fullComparison = `${opening}\n\n${blockA}\n\n${blockB}\n\n${guidance}`;
 
   return {
     subject: `${nameA} vs ${nameB}`,
-    comparisonSummary: summary,
-    philosophy: `**${nameA}:** ${philoA}\n\n**${nameB}:** ${philoB}`,
-    tendencies: tendenciesText,
-    systemContext,
+    comparisonSummary: fullComparison,
     followUp,
   };
+}
+
+/**
+ * Build compact decision guidance from brand character contrast.
+ * Format: "If your system is X → A. If you want Y → B."
+ */
+function buildComparisonGuidance(
+  nameA: string, charA: string, profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  nameB: string, charB: string, profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
+): string {
+  // Detect warm vs precise axis (most common comparison dimension)
+  const warmWords = /warm|rich|lush|dense|full|musical|organic|relaxed|smooth/i;
+  const preciseWords = /precise|neutral|analytical|detailed|clean|fast|controlled|resolving|transparent/i;
+  const aWarm = warmWords.test(profileA.tendencies) || warmWords.test(charA);
+  const bWarm = warmWords.test(profileB.tendencies) || warmWords.test(charB);
+  const aPrecise = preciseWords.test(profileA.tendencies) || preciseWords.test(charA);
+  const bPrecise = preciseWords.test(profileB.tendencies) || preciseWords.test(charB);
+
+  if (aWarm && bPrecise) {
+    return `If you want warmth and body → ${nameA}. If you want precision and detail → ${nameB}.`;
+  }
+  if (bWarm && aPrecise) {
+    return `If you want precision and detail → ${nameA}. If you want warmth and body → ${nameB}.`;
+  }
+  // Both warm or both precise — find subtler contrast
+  if (aWarm && bWarm) {
+    return `Both lean warm — the difference is in texture and presentation. ${nameA} tends toward ${charA}, ${nameB} toward ${charB}.`;
+  }
+  if (aPrecise && bPrecise) {
+    return `Both lean precise — the difference is in voicing. ${nameA} tends toward ${charA}, ${nameB} toward ${charB}.`;
+  }
+  // Fallback — use extracted characters directly
+  return `${nameA} leans toward ${charA}. ${nameB} leans toward ${charB}. The right choice depends on what your system needs.`;
 }
 
 /**
@@ -1793,12 +1850,12 @@ export function buildComparisonRefinement(
     }
   }
 
+  // Pack into concise side-by-side format — no long review sections.
+  const concise = `${summary}\n\n**${nameA}:** ${contextA}\n\n**${nameB}:** ${contextB}`;
+
   return {
     subject: `${nameA} vs ${nameB} — ${criterion.label}`,
-    comparisonSummary: summary,
-    philosophy: `${contextA}\n\n${contextB}`,
-    tendencies: `The difference comes down to design priorities — ${criterion.label.toLowerCase()} is shaped differently by each approach.`,
-    systemContext,
+    comparisonSummary: concise,
     followUp: refinedFollowUp,
   };
 }
@@ -1843,12 +1900,12 @@ export function buildContextRefinement(
   const summary = buildContextSummary(nameA, nameB, infoA, infoB, contextKind, contextMessage, activeComparison.scope);
   const followUp = buildContextFollowUp(contextKind);
 
+  // Pack into concise side-by-side format.
+  const concise = `${summary}\n\n**${nameA}:** ${sideA}\n\n**${nameB}:** ${sideB}`;
+
   return {
     subject: `${nameA} vs ${nameB} — ${contextLabel}`,
-    comparisonSummary: summary,
-    philosophy: `${sideA}\n\n${sideB}`,
-    tendencies: `How this context shapes the comparison depends on what each design prioritises.`,
-    systemContext: 'The rest of the chain matters too — one variable doesn\'t determine the whole picture.',
+    comparisonSummary: concise,
     followUp,
   };
 }
@@ -3517,7 +3574,7 @@ function inferSystemCharacterOpening(components: SystemComponent[]): string {
   });
   const totalWeight = weights.reduce((s, w) => s + w, 0);
 
-  function numericAvg(axis: 'warm_bright_n' | 'smooth_detailed_n' | 'elastic_controlled_n' | 'airy_closed_n'): number {
+  function numericAvg(axis: 'warm_bright_n' | 'smooth_detailed_n' | 'elastic_controlled_n' | 'scale_intimacy_n'): number {
     let sum = 0;
     for (let i = 0; i < axes.length; i++) {
       const val = (axes[i] as unknown as Record<string, unknown>)[axis];
@@ -3529,7 +3586,7 @@ function inferSystemCharacterOpening(components: SystemComponent[]): string {
   const wb = numericAvg('warm_bright_n');
   const sd = numericAvg('smooth_detailed_n');
   const ec = numericAvg('elastic_controlled_n');
-  const ac = numericAvg('airy_closed_n');
+  const ac = numericAvg('scale_intimacy_n');
 
   // Classify each axis as strong (>0.7), moderate (>0.3), contested (<=0.3), or neutral (~0)
   const CONTESTED_THRESHOLD = 0.35;
@@ -3621,8 +3678,8 @@ function inferSystemInteraction(components: SystemComponent[]): string {
     const compoundDesc = compounding.map(w => {
       if (w.includes('Elastic')) return 'dynamic elasticity';
       if (w.includes('Controlled')) return 'control';
-      if (w.includes('Airy')) return 'spatial openness';
-      if (w.includes('Closed')) return 'intimacy';
+      if (w.includes('Scale')) return 'scale';
+      if (w.includes('Intimacy')) return 'intimacy';
       return null;
     }).filter(Boolean);
 
@@ -3642,8 +3699,8 @@ function inferSystemInteraction(components: SystemComponent[]): string {
       if (w.includes('Detailed')) return 'detail';
       if (w.includes('Elastic')) return 'dynamic energy';
       if (w.includes('Controlled')) return 'control';
-      if (w.includes('Airy')) return 'spatial openness';
-      if (w.includes('Closed')) return 'intimacy';
+      if (w.includes('Scale')) return 'scale';
+      if (w.includes('Intimacy')) return 'intimacy';
       return 'a shared tendency';
     });
     return `The system leans toward ${compoundDesc.join(' and ')} across the chain — multiple components push in the same direction, creating a strong and coherent character.`;
@@ -3857,7 +3914,7 @@ function inferAssessmentStrengths(components: SystemComponent[]): string[] {
     if (system.elastic_controlled === 'controlled') {
       strengths.push('Composure and grip — the system should handle complex passages with authority');
     }
-    if (system.airy_closed === 'airy') {
+    if (system.scale_intimacy === 'scale') {
       strengths.push('Spatial openness — soundstage and image separation should be well-developed');
     }
   }
@@ -3943,7 +4000,7 @@ function inferUpgradeDirection(components: SystemComponent[]): string {
       system.warm_bright !== 'neutral',
       system.smooth_detailed !== 'neutral',
       system.elastic_controlled !== 'neutral',
-      system.airy_closed !== 'neutral',
+      system.scale_intimacy !== 'neutral',
     ].filter(Boolean).length;
 
     if (nonNeutralAxes <= 1) {
@@ -4048,11 +4105,11 @@ function classifyComponentAxes(components: SystemComponent[]): ComponentAxisProf
               : hasAffirmative(t, ['controlled', 'composed', 'authoritative', 'grip', 'damping'])
                 ? 'controlled' as const
                 : 'neutral' as const,
-          airy_closed:
+          scale_intimacy:
             hasAffirmative(t, ['open', 'airy', 'spacious', 'expansive'])
-              ? 'airy' as const
+              ? 'scale' as const
               : hasAffirmative(t, ['intimate', 'closed', 'focused'])
-                ? 'closed' as const
+                ? 'intimacy' as const
                 : 'neutral' as const,
         },
         source: 'brand' as const,
@@ -4062,7 +4119,7 @@ function classifyComponentAxes(components: SystemComponent[]): ComponentAxisProf
     // 3. Unknown — all neutral
     return {
       name: c.displayName,
-      axes: { warm_bright: 'neutral', smooth_detailed: 'neutral', elastic_controlled: 'neutral', airy_closed: 'neutral' },
+      axes: { warm_bright: 'neutral', smooth_detailed: 'neutral', elastic_controlled: 'neutral', scale_intimacy: 'neutral' },
       source: 'inferred' as const,
     };
   });
@@ -4453,7 +4510,7 @@ function buildIntroSummary(
   if (system.smooth_detailed === 'smooth') traits.push('musical flow');
   if (system.elastic_controlled === 'elastic') traits.push('elasticity');
   if (system.elastic_controlled === 'controlled') traits.push('stability');
-  if (system.airy_closed === 'airy') traits.push('spatial scale');
+  if (system.scale_intimacy === 'scale') traits.push('spatial scale');
 
   const traitPhrase = traits.length > 0
     ? `prioritising ${traits.join(' and ')}`
@@ -4519,7 +4576,7 @@ function assessSystemDeliberateness(
     system.warm_bright !== 'neutral',
     system.smooth_detailed !== 'neutral',
     system.elastic_controlled !== 'neutral',
-    system.airy_closed !== 'neutral',
+    system.scale_intimacy !== 'neutral',
   ].filter(Boolean).length;
 
   // Count how many components have identifiable brand profiles or catalog products
@@ -4951,7 +5008,7 @@ function detectPrimaryConstraint(
         severity += 2;
         issues.push('limited spatial precision');
       }
-      if (axes.airy_closed === 'closed') {
+      if (axes.scale_intimacy === 'intimacy') {
         severity += 2;
         issues.push('constrained spatial scale');
       }
@@ -5076,7 +5133,7 @@ function buildComponentAssessments(
     if (axes.elastic_controlled === 'controlled') {
       strengths.push(isDac ? 'Clock stability and conversion composure' : isAmp ? 'Damping factor and load control' : isSpeaker ? 'Cone control and transient discipline' : 'Stability and grip under load');
     }
-    if (axes.airy_closed === 'airy') {
+    if (axes.scale_intimacy === 'scale') {
       strengths.push(isDac ? 'Spatial reconstruction from the conversion stage' : isAmp ? 'Amplifier-stage spatial openness' : isSpeaker ? 'Cabinet design and driver dispersion create open staging' : 'Spatial scale and image separation');
     }
 
@@ -5108,7 +5165,7 @@ function buildComponentAssessments(
     }
     if (axes.elastic_controlled === 'controlled') axisTarget.push('Dynamic elasticity may be suppressed');
     if (axes.elastic_controlled === 'elastic') axisTarget.push('May lose grip on dense orchestral material');
-    if (axes.airy_closed === 'closed') axisTarget.push('Spatial scale is constrained');
+    if (axes.scale_intimacy === 'intimacy') axisTarget.push('Spatial scale is constrained');
 
     // ── Trait-enriched weaknesses (genuine deficiencies — always weaknesses) ──
     if (traits) {
@@ -5539,7 +5596,7 @@ function extractMemoFindings(
       if (axes.warm_bright !== 'neutral') constrainedAxes.push('warm_bright');
       if (axes.smooth_detailed !== 'neutral') constrainedAxes.push('smooth_detailed');
       if (axes.elastic_controlled !== 'neutral') constrainedAxes.push('elastic_controlled');
-      if (axes.airy_closed !== 'neutral') constrainedAxes.push('airy_closed');
+      if (axes.scale_intimacy !== 'neutral') constrainedAxes.push('scale_intimacy');
     }
 
     bottleneck = {
@@ -5564,7 +5621,7 @@ function extractMemoFindings(
     if (r.includes('tonal density') || r.includes('warmth')) targetAxes.push('warm_bright');
     if (r.includes('detail') || r.includes('microdetail') || r.includes('flow')) targetAxes.push('smooth_detailed');
     if (r.includes('elasticity') || r.includes('stability') || r.includes('grip')) targetAxes.push('elastic_controlled');
-    if (r.includes('spatial') || r.includes('scale')) targetAxes.push('airy_closed');
+    if (r.includes('spatial') || r.includes('scale')) targetAxes.push('scale_intimacy');
 
     return {
       rank: p.rank,
@@ -5575,7 +5632,7 @@ function extractMemoFindings(
         name: o.name,
         brand: o.brand ?? '',
         priceRange: o.priceNote ?? '',
-        axisProfile: { warm_bright: 'neutral', smooth_detailed: 'neutral', elastic_controlled: 'neutral', airy_closed: 'neutral' } as PrimaryAxisLeanings,
+        axisProfile: { warm_bright: 'neutral', smooth_detailed: 'neutral', elastic_controlled: 'neutral', scale_intimacy: 'neutral' } as PrimaryAxisLeanings,
       })),
     };
   });
@@ -5589,7 +5646,7 @@ function extractMemoFindings(
       if (axes.warm_bright !== 'neutral') alignedAxes.push('warm_bright');
       if (axes.smooth_detailed !== 'neutral') alignedAxes.push('smooth_detailed');
       if (axes.elastic_controlled !== 'neutral') alignedAxes.push('elastic_controlled');
-      if (axes.airy_closed !== 'neutral') alignedAxes.push('airy_closed');
+      if (axes.scale_intimacy !== 'neutral') alignedAxes.push('scale_intimacy');
     }
     return {
       name: k.name,
@@ -5625,7 +5682,7 @@ function extractMemoFindings(
       systemAxes.warm_bright !== 'neutral',
       systemAxes.smooth_detailed !== 'neutral',
       systemAxes.elastic_controlled !== 'neutral',
-      systemAxes.airy_closed !== 'neutral',
+      systemAxes.scale_intimacy !== 'neutral',
     ].filter(Boolean).length;
     if (nonNeutralAxes >= 1) deliberatenessSignals.push('consistent_axis_alignment');
     if (deliberateness.note.includes('punches above')) deliberatenessSignals.push('punches_above_tier');
@@ -5707,7 +5764,7 @@ function inferListenerPriorityTags(
       priorities.push('dynamic_contrast');
     }
   }
-  if (system.airy_closed === 'airy') {
+  if (system.scale_intimacy === 'scale') {
     priorities.push('spatial_openness');
   }
 
@@ -6356,6 +6413,273 @@ export function buildCableAdvisory(
     systemContext,
     followUp,
     links: systemLinks.length > 0 ? systemLinks : undefined,
+  };
+}
+
+// ── System Diagnosis ─────────────────────────────────
+//
+// When a user provides system components AND a subjective complaint
+// (e.g. "I have Wilson speakers and a Soulution amp, sound is a little dry"),
+// produce a concise diagnostic response instead of a product profile.
+//
+// Format:
+//   1. Acknowledge system + issue (1 sentence)
+//   2. Interpret what the issue means in context (1–2 sentences)
+//   3. 2–4 practical adjustment paths (concise bullets)
+//   4. One focused follow-up question
+
+/** Complaint vocabulary mapped to interpretation and remedy directions. */
+const COMPLAINT_MAP: Record<string, {
+  interpretation: string;
+  remedyDirections: string[];
+  followUpAngle: string;
+}> = {
+  dry: {
+    interpretation: 'lacking harmonic richness, body, or tonal moisture — the music sounds correct but doesn\'t breathe or flow naturally',
+    remedyDirections: [
+      'Introduce tube character upstream — a tube preamp or tube-output DAC adds second-order harmonics perceived as warmth and body',
+      'Adjust source voicing — a warmer-leaning DAC (R-2R, multibit, or tube-output) can shift the tonal center without losing resolution',
+      'Review room treatment — overdamped rooms strip harmonic decay and make systems sound drier than they are',
+      'Fine-tune speaker placement — increasing distance from rear wall often adds bass weight, which reduces the perception of dryness',
+    ],
+    followUpAngle: 'source',
+  },
+  thin: {
+    interpretation: 'lacking bass weight and midrange density — the tonal balance feels tilted toward the upper frequencies',
+    remedyDirections: [
+      'Add tonal weight upstream — a warmer source or DAC (R-2R architecture, tube output) introduces midrange density',
+      'Check speaker placement — pulling speakers further from the rear wall reduces bass reinforcement; moving them closer often helps',
+      'Consider amplifier pairing — if the amp is lean/neutral, a warmer-voiced alternative can restore body',
+      'Room treatment — thin sound often correlates with bare floors and hard walls reflecting upper frequencies',
+    ],
+    followUpAngle: 'source',
+  },
+  bright: {
+    interpretation: 'treble energy feels emphasized — upper frequencies draw attention ahead of the midrange and bass',
+    remedyDirections: [
+      'Source voicing — an analytical DAC compounds brightness in a revealing system. A warmer, more relaxed source can recalibrate',
+      'Cable tuning — copper cables generally sound warmer than silver; this is a subtle but real adjustment at this system level',
+      'Room acoustics — hard reflective surfaces behind and beside the listening position amplify treble energy. Absorption at first reflection points helps',
+      'Speaker toe-in — reducing toe-in with many speakers softens the direct treble energy reaching the listening position',
+    ],
+    followUpAngle: 'source',
+  },
+  harsh: {
+    interpretation: 'upper midrange and treble have an aggressive, edgy quality — transients feel hard rather than natural',
+    remedyDirections: [
+      'Source character — the DAC is often the primary contributor to harshness in a transparent system. A more organic-sounding source helps',
+      'Power conditioning — dirty power introduces high-frequency noise that manifests as harshness. A quality power conditioner or regenerator can help',
+      'Tube buffering — a tube preamp or buffer between source and amplifier softens transient edges without losing information',
+      'Room treatment — first reflection point absorption reduces the doubled attack transients that create perceived harshness',
+    ],
+    followUpAngle: 'source',
+  },
+  fatiguing: {
+    interpretation: 'the system becomes uncomfortable over extended listening — often caused by treble energy, compression, or relentless detail',
+    remedyDirections: [
+      'Reduce upstream resolution pressure — a more musical source (tube DAC, R-2R) can ease the relentless detail that causes fatigue',
+      'Check listening level — highly resolving systems reveal more at lower volumes. Listening slightly quieter often eliminates fatigue entirely',
+      'Room acoustics — excessive reflections compound detail overload. Diffusion and selective absorption can help',
+      'Consider a tube preamp — adds harmonic cushioning that makes extended sessions more comfortable',
+    ],
+    followUpAngle: 'listening_habits',
+  },
+  sterile: {
+    interpretation: 'the sound is technically correct but emotionally uninvolving — precision without musical engagement',
+    remedyDirections: [
+      'Introduce harmonic texture — a tube preamp or tube-output DAC adds the subtle distortion that makes music feel alive',
+      'Source voicing — moving from a purely measuring source to one with more musical character often transforms sterile systems',
+      'Analog source — vinyl naturally adds harmonic richness and flow that can bring a sterile system to life',
+      'Revisit speaker placement — toe-in and distance adjustments can shift the balance from analytical to engaging',
+    ],
+    followUpAngle: 'source',
+  },
+  clinical: {
+    interpretation: 'the system prioritizes accuracy over musicality — technically impressive but emotionally distant',
+    remedyDirections: [
+      'Introduce tube character — a tube preamp or DAC is the most effective single change for shifting a clinical system toward musicality',
+      'Source voicing — a more organic DAC architecture (R-2R, tube output) adds the harmonic density that clinical systems lack',
+      'Consider cabling — warmer-voiced cables (Cardas, certain Transparent models) can subtly shift tonal character',
+      'Room acoustics — adding diffusion (bookshelves, irregular surfaces) creates a more natural-sounding space',
+    ],
+    followUpAngle: 'source',
+  },
+  analytical: {
+    interpretation: 'the system presents everything with forensic detail but at the cost of musical flow and engagement',
+    remedyDirections: [
+      'Upstream voicing — a tube DAC or preamp introduces the harmonic texture that softens analytical precision into musical involvement',
+      'Source selection — moving from a delta-sigma DAC to an R-2R or multibit architecture often shifts the balance from analysis to engagement',
+      'Room treatment — adding diffusion and reducing early reflections helps the brain process detail more naturally',
+      'Speaker positioning — slight adjustments to toe-in and rake angle can shift the tonal center',
+    ],
+    followUpAngle: 'source',
+  },
+  cold: {
+    interpretation: 'the system sounds tonally lean and emotionally distant — missing the warmth and body that make music inviting',
+    remedyDirections: [
+      'Add warmth upstream — a tube preamp or warm-voiced DAC is the most direct path to adding tonal warmth',
+      'Review the source chain — analytical digital sources compound coldness in transparent systems',
+      'Consider speaker placement — closer wall proximity increases bass reinforcement, adding perceived warmth',
+      'Room acoustics — overdamped rooms suppress warmth. Reducing absorption (especially bass traps) can help',
+    ],
+    followUpAngle: 'source',
+  },
+  muddy: {
+    interpretation: 'bass frequencies bleed into the midrange — individual instruments and voices lose definition',
+    remedyDirections: [
+      'Speaker placement — too close to walls causes bass buildup that muddies the midrange. Experiment with pulling speakers out',
+      'Room treatment — bass traps in room corners reduce the low-frequency buildup that causes muddiness',
+      'Amp control — if the amplifier lacks damping factor for the speakers, bass becomes loose. A higher-control amp may help',
+      'Source clarity — a more detailed, precise DAC can improve separation and reduce the perception of muddiness',
+    ],
+    followUpAngle: 'room',
+  },
+  dull: {
+    interpretation: 'the system lacks energy, sparkle, and treble extension — music sounds lifeless or veiled',
+    remedyDirections: [
+      'Source resolution — a more detailed, transparent DAC can restore the treble energy and air that a warm system suppresses',
+      'Cable voicing — silver or silver-plated cables tend to open up treble extension and add sparkle',
+      'Speaker positioning — more toe-in directs higher frequencies toward the listening position',
+      'Room acoustics — heavy absorption can over-damp treble. Reducing curtains or carpeting near the speakers may help',
+    ],
+    followUpAngle: 'source',
+  },
+  forward: {
+    interpretation: 'the presentation pushes toward the listener rather than creating depth — sound feels aggressive or in-your-face',
+    remedyDirections: [
+      'Speaker placement — increasing distance from the listening position and reducing toe-in can create more depth',
+      'Source voicing — a more laid-back, relaxed DAC can counter an aggressive presentation',
+      'Room treatment — absorption behind the speakers and diffusion at the listening position creates perceived depth',
+      'Amplifier character — some amps push the midrange forward. A more relaxed design may create better staging',
+    ],
+    followUpAngle: 'room',
+  },
+};
+
+/** Extract the primary complaint word from user text. */
+function extractComplaint(text: string): string | null {
+  const lower = text.toLowerCase();
+  // Check for explicit complaint words, ordered by specificity
+  const complaintWords = [
+    'fatiguing', 'clinical', 'analytical', 'sterile',
+    'forward', 'strident', 'brittle',
+    'bright', 'harsh', 'thin', 'dry', 'cold', 'dull', 'muddy',
+    'lean', 'hard', 'aggressive',
+  ];
+  for (const word of complaintWords) {
+    if (lower.includes(word)) return word;
+  }
+  return null;
+}
+
+/**
+ * Build a concise system diagnosis response.
+ *
+ * Fires when the user provides system components AND a subjective complaint.
+ * Returns null if it can't produce a meaningful diagnosis (no complaint found
+ * or no system context to reason about).
+ */
+export function buildSystemDiagnosis(
+  currentMessage: string,
+  subjectMatches: SubjectMatch[],
+): ConsultationResponse | null {
+  // 1. Extract complaint
+  const complaint = extractComplaint(currentMessage);
+  if (!complaint) return null;
+
+  // 2. Map complaint to remedies (use exact match first, then fall back to nearest)
+  const complaintKey = COMPLAINT_MAP[complaint]
+    ? complaint
+    : complaint === 'lean' ? 'thin'
+    : complaint === 'hard' || complaint === 'brittle' || complaint === 'strident' ? 'harsh'
+    : complaint === 'aggressive' ? 'forward'
+    : null;
+
+  if (!complaintKey || !COMPLAINT_MAP[complaintKey]) return null;
+  const mapping = COMPLAINT_MAP[complaintKey];
+
+  // 3. Look up system components
+  const componentNames: string[] = [];
+  const componentCharacters: string[] = [];
+
+  for (const match of subjectMatches) {
+    if (match.parenthetical) continue;
+    const matchLower = match.name.toLowerCase();
+
+    // Try product-level match first, then brand-level (allow partial brand match)
+    const product = ALL_PRODUCTS.find(
+      (p) => p.name.toLowerCase() === matchLower
+        || p.brand.toLowerCase() === matchLower
+        || p.brand.toLowerCase().startsWith(matchLower)
+        || matchLower.startsWith(p.brand.toLowerCase()),
+    );
+
+    if (product) {
+      const displayName = match.kind === 'brand' ? product.brand : product.name;
+      if (!componentNames.includes(displayName)) {
+        componentNames.push(displayName);
+        // Extract a brief character note
+        if (hasTendencies(product.tendencies)) {
+          const chars = product.tendencies.character.slice(0, 2);
+          const traits = chars.map((t) => t.tendency).join(', ');
+          componentCharacters.push(`${displayName}: ${traits}`);
+        } else {
+          const firstSentence = product.description.split(/\.\s/)[0];
+          componentCharacters.push(`${displayName}: ${firstSentence}`);
+        }
+      }
+    } else {
+      // Capitalize first letter of each word for display
+      const displayName = match.name.replace(/\b\w/g, (c) => c.toUpperCase());
+      componentNames.push(displayName);
+    }
+  }
+
+  if (componentNames.length === 0) return null;
+
+  // 4. Build the concise diagnosis
+  const systemLabel = componentNames.join(' + ');
+
+  // Opening: acknowledge system + issue
+  const opening = `${systemLabel} is a high-caliber combination. What you're describing as "${complaint}" is ${mapping.interpretation}.`;
+
+  // Context: interpret in terms of the system
+  let systemNote = '';
+  if (componentCharacters.length > 0) {
+    // Check if the system's character compounds the complaint
+    const charText = componentCharacters.join('; ').toLowerCase();
+    const compounders = ['neutral', 'precise', 'controlled', 'detailed', 'resolving', 'transparent', 'clean'];
+    const isCompounding = complaintKey === 'dry' || complaintKey === 'sterile' || complaintKey === 'clinical' || complaintKey === 'cold' || complaintKey === 'analytical';
+    if (isCompounding && compounders.some((w) => charText.includes(w))) {
+      systemNote = `With highly transparent, controlled components on both ends, the system may be too \"correct\" — precision without harmonic richness. This is a common characteristic of reference-grade solid-state chains, not a flaw.`;
+    } else if ((complaintKey === 'bright' || complaintKey === 'harsh') && charText.includes('detail')) {
+      systemNote = `A system this resolving can expose recording-quality issues that less transparent systems smooth over. The harshness may be partly recording-dependent.`;
+    }
+  }
+
+  // Paths: 2-4 adjustment directions
+  const paths = mapping.remedyDirections.slice(0, 4);
+  const pathsText = paths.map((p, i) => `**${i + 1}.** ${p}`).join('\n\n');
+
+  // Follow-up question
+  let followUp: string;
+  if (mapping.followUpAngle === 'source') {
+    followUp = 'What source are you using (DAC, streamer, turntable)? That\'s usually the most effective place to introduce tonal warmth in a system like this.';
+  } else if (mapping.followUpAngle === 'room') {
+    followUp = 'Can you describe your room — size, surfaces, treatment? Room interaction is often the biggest factor here.';
+  } else {
+    followUp = 'What are your listening habits — typical volume, session length, music types? That helps me calibrate the direction.';
+  }
+
+  // Assemble
+  const fullDiagnosis = systemNote
+    ? `${opening}\n\n${systemNote}\n\n${pathsText}`
+    : `${opening}\n\n${pathsText}`;
+
+  return {
+    subject: `${systemLabel} — ${complaint}`,
+    comparisonSummary: fullDiagnosis,
+    followUp,
   };
 }
 

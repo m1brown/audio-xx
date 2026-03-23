@@ -4,20 +4,12 @@
  * Redesigned to match editorial recommendation pages (à la ChatGPT gold standard).
  * Each product renders as a full-width editorial section rather than a compact card.
  *
- * Structure per product:
- *   1. Numbered product name (H2-level)
- *   2. Image gallery (3-up horizontal row)
- *   3. Approx price (new + used)
- *   4. Subtle links (manufacturer · buy)
- *   5. Architecture line
- *   6. Sound character bullets
- *   7. Verdict / fit note
- *   8. System delta reasoning (if available)
- *
- * Links (subtle text, not buttons):
- *   - Manufacturer → brand site
- *   - Buy → HiFiShark search (new + used listings)
- *   All open in new tab.
+ * Concise structure per product:
+ *   1. Numbered product name
+ *   2. Compact price line (new · used)
+ *   3. 2–3 trait bullets (merged from standoutFeatures + soundProfile)
+ *   4. Fit note / "best for" line
+ *   5. Subtle links (manufacturer · buy)
  */
 
 import type { AdvisoryOption } from '../../lib/advisory-response';
@@ -46,20 +38,16 @@ function formatPrice(amount: number, currency?: string): string {
   return `${symbol}${amount.toLocaleString()}`;
 }
 
-// ── Helper: build HiFiShark URL ───────────────────────
+// ── Helper: build marketplace URLs ───────────────────
 
 function hifiSharkUrl(brand: string | undefined, name: string): string {
   const query = [brand, name].filter(Boolean).join(' ');
   return `https://www.hifishark.com/search?q=${encodeURIComponent(query)}`;
 }
 
-// ── Helper: get buy-new URL ───────────────────────────
-
-function getBuyNewUrl(opt: AdvisoryOption): string | undefined {
-  // Prefer manufacturer URL, fall back to first retailer link
-  if (opt.manufacturerUrl) return opt.manufacturerUrl;
-  if (opt.links && opt.links.length > 0) return opt.links[0].url;
-  return undefined;
+function ebayUrl(brand: string | undefined, name: string): string {
+  const query = [brand, name].filter(Boolean).join(' ');
+  return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}&_sacat=293&LH_All=1`;
 }
 
 const AVAILABILITY_LABELS: Record<string, { text: string; color: string; bg: string; border: string }> = {
@@ -83,19 +71,21 @@ const LINK_SEP_STYLE: React.CSSProperties = {
 };
 
 function ProductLinks({ opt }: { opt: AdvisoryOption }) {
-  const searchUrl = opt.usedMarketUrl ?? hifiSharkUrl(opt.brand, opt.name);
+  const isDiscontinued = opt.availability === 'discontinued' || opt.availability === 'vintage';
 
   const links: Array<{ label: string; url: string }> = [];
 
-  // Manufacturer site
-  if (opt.manufacturerUrl) {
+  // Current products: manufacturer/retail link first
+  if (!isDiscontinued && opt.manufacturerUrl) {
     links.push({ label: opt.brand ?? 'Manufacturer', url: opt.manufacturerUrl });
   }
 
-  // Buy — HiFiShark search showing new + used listings
-  links.push({ label: 'Buy', url: searchUrl });
+  // HiFiShark — primary used-market link (always shown)
+  const hifiShark = opt.usedMarketUrl ?? hifiSharkUrl(opt.brand, opt.name);
+  links.push({ label: isDiscontinued ? 'Find used' : 'HiFiShark', url: hifiShark });
 
-  if (links.length === 0) return null;
+  // eBay — secondary marketplace link
+  links.push({ label: 'eBay', url: ebayUrl(opt.brand, opt.name) });
 
   return (
     <div style={{ marginTop: '0.6rem', lineHeight: 1.8 }}>
@@ -121,43 +111,9 @@ function ProductLinks({ opt }: { opt: AdvisoryOption }) {
 // ── Section divider ───────────────────────────────────
 
 function ProductDivider() {
-  return <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.border}`, margin: '3.5rem 0' }} />;
+  return <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.border}`, margin: '2.25rem 0' }} />;
 }
 
-// ── Sub-heading ───────────────────────────────────────
-
-function SubHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h4 style={{
-      margin: '1.5rem 0 0.55rem 0',
-      fontSize: '1rem',
-      fontWeight: 700,
-      color: COLORS.text,
-      letterSpacing: '-0.005em',
-    }}>
-      {children}
-    </h4>
-  );
-}
-
-// ── Bullet list ───────────────────────────────────────
-
-function Bullets({ items, color }: { items: string[]; color?: string }) {
-  return (
-    <ul style={{
-      margin: 0,
-      paddingLeft: '1.2rem',
-      lineHeight: 1.8,
-      color: color ?? COLORS.text,
-    }}>
-      {items.map((item, i) => (
-        <li key={i} style={{ marginBottom: '0.45rem', fontSize: '0.95rem' }}>
-          {renderText(item)}
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 // ── Single editorial product section ──────────────────
 
@@ -166,12 +122,29 @@ function EditorialProductSection({ opt, index }: { opt: AdvisoryOption; index: n
   const availBadge = opt.availability ? AVAILABILITY_LABELS[opt.availability] : undefined;
   const isDiscontinued = opt.availability === 'discontinued' || opt.availability === 'vintage';
 
+  // Merge standoutFeatures + soundProfile, take up to 3 traits
+  const traits: string[] = [
+    ...(opt.standoutFeatures ?? []),
+    ...(opt.soundProfile ?? []),
+  ].slice(0, 3);
+
+  // Build compact price string
+  const priceParts: string[] = [];
+  if (!isDiscontinued && opt.price != null && opt.price > 0) {
+    priceParts.push(`~${formatPrice(opt.price, opt.priceCurrency)}`);
+  }
+  if (opt.usedPriceRange) {
+    priceParts.push(`used ${formatPrice(opt.usedPriceRange.low, opt.priceCurrency)}–${formatPrice(opt.usedPriceRange.high, opt.priceCurrency)}`);
+  } else if (isDiscontinued) {
+    priceParts.push('used market only');
+  }
+
   return (
     <div>
-      {/* ── Product name (numbered) ──────────────────── */}
+      {/* ── Product name (numbered) + price ────────── */}
       <h3 style={{
-        margin: '0 0 0.3rem 0',
-        fontSize: '1.5rem',
+        margin: '0 0 0.15rem 0',
+        fontSize: '1.3rem',
         fontWeight: 700,
         color: COLORS.text,
         letterSpacing: '-0.02em',
@@ -216,103 +189,47 @@ function EditorialProductSection({ opt, index }: { opt: AdvisoryOption; index: n
         )}
       </h3>
 
-      {/* ── Sonic direction label (subtle) ───────────── */}
-      {opt.sonicDirectionLabel && (
+      {/* ── Compact price line ──────────────────────── */}
+      {priceParts.length > 0 && (
         <div style={{
-          fontSize: '0.9rem',
-          fontStyle: 'italic',
-          color: COLORS.accent,
-          marginBottom: '0.65rem',
+          fontSize: '0.88rem',
+          color: COLORS.textMuted,
+          marginBottom: '0.5rem',
           lineHeight: 1.5,
         }}>
-          {opt.sonicDirectionLabel}
+          {priceParts.join(' · ')}
         </div>
       )}
 
-      {/* ── Typical price ─────────────────────────────── */}
-      <SubHeading>Typical price</SubHeading>
-      <ul style={{ margin: '0 0 0 0', paddingLeft: '1.2rem', lineHeight: 1.7, fontSize: '0.93rem', color: COLORS.text }}>
-        {!isDiscontinued && opt.price != null && opt.price > 0 && (
-          <li>New: ~{formatPrice(opt.price, opt.priceCurrency)}</li>
-        )}
-        {opt.usedPriceRange ? (
-          <li>Used: {formatPrice(opt.usedPriceRange.low, opt.priceCurrency)}–{formatPrice(opt.usedPriceRange.high, opt.priceCurrency)}</li>
-        ) : isDiscontinued ? (
-          <li>Used market only</li>
-        ) : null}
-      </ul>
-
-      {/* ── Why it stands out ─────────────────────────── */}
-      {opt.standoutFeatures && opt.standoutFeatures.length > 0 && (
-        <>
-          <SubHeading>Why it stands out</SubHeading>
-          <Bullets items={opt.standoutFeatures} />
-        </>
-      )}
-
-      {/* ── Sound profile ─────────────────────────────── */}
-      {opt.soundProfile && opt.soundProfile.length > 0 && (
-        <>
-          <SubHeading>Sound profile</SubHeading>
-          <Bullets items={opt.soundProfile} color={COLORS.textSecondary} />
-        </>
-      )}
-
-      {/* ── With your system ──────────────────────────── */}
-      {opt.systemDelta && (
-        <>
-          <SubHeading>With your system</SubHeading>
-          <ul style={{
-            margin: 0,
-            paddingLeft: '1.2rem',
-            lineHeight: 1.7,
-            color: COLORS.text,
-          }}>
-            {opt.systemDelta.whyFitsSystem && (
-              <li style={{ marginBottom: '0.15rem', fontSize: '0.93rem' }}>
-                {renderText(opt.systemDelta.whyFitsSystem)}
-              </li>
-            )}
-            {opt.systemDelta.likelyImprovements && opt.systemDelta.likelyImprovements.length > 0 && (
-              <li style={{ marginBottom: '0.15rem', fontSize: '0.93rem' }}>
-                Would likely add <strong>{opt.systemDelta.likelyImprovements.join(', ')}</strong>
-              </li>
-            )}
-            {opt.systemDelta.tradeOffs && opt.systemDelta.tradeOffs.length > 0 && (
-              <li style={{ marginBottom: '0.15rem', fontSize: '0.93rem', color: COLORS.textSecondary }}>
-                Trade-off: may reduce {opt.systemDelta.tradeOffs.join(', ')}
-              </li>
-            )}
-          </ul>
-        </>
-      )}
-
-      {/* ── Verdict ───────────────────────────────────── */}
-      {opt.fitNote && (
-        <p style={{
-          margin: '1.1rem 0 0.3rem 0',
-          fontSize: '0.95rem',
-          lineHeight: 1.75,
+      {/* ── 2–3 trait bullets ──────────────────────── */}
+      {traits.length > 0 && (
+        <ul style={{
+          margin: '0 0 0.6rem 0',
+          paddingLeft: '1.2rem',
+          lineHeight: 1.8,
           color: COLORS.text,
         }}>
-          <strong style={{ fontWeight: 600 }}>Verdict:</strong>{' '}
+          {traits.map((trait, i) => (
+            <li key={i} style={{ marginBottom: '0.35rem', fontSize: '0.95rem' }}>
+              {renderText(trait)}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* ── Best for / fit note ────────────────────── */}
+      {opt.fitNote && (
+        <p style={{
+          margin: '0 0 0.4rem 0',
+          fontSize: '0.95rem',
+          lineHeight: 1.7,
+          color: COLORS.textSecondary,
+        }}>
           {renderText(opt.fitNote)}
         </p>
       )}
 
-      {/* ── Caution ──────────────────────────────────── */}
-      {opt.caution && (
-        <p style={{
-          margin: '0.3rem 0 0.3rem 0',
-          color: COLORS.textMuted,
-          fontSize: '0.9rem',
-          lineHeight: 1.6,
-        }}>
-          {opt.caution}
-        </p>
-      )}
-
-      {/* ── Subtle links (manufacturer · buy) ────────── */}
+      {/* ── Subtle links (manufacturer · buy) ──────── */}
       <ProductLinks opt={opt} />
     </div>
   );
@@ -332,6 +249,51 @@ export default function AdvisoryProductCards({ options }: AdvisoryProductCardPro
           {i > 0 && <ProductDivider />}
           <EditorialProductSection opt={opt} index={i} />
         </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Standalone shopping links for non-card contexts ───
+//
+// Used by AssessmentFormat, StandardFormat, and any context
+// where a product is discussed but not rendered as a full card.
+
+interface StandaloneShoppingLinksProps {
+  brand?: string;
+  name: string;
+  manufacturerUrl?: string;
+  availability?: 'current' | 'discontinued' | 'vintage';
+}
+
+export function ShoppingLinks({ brand, name, manufacturerUrl, availability }: StandaloneShoppingLinksProps) {
+  const isDiscontinued = availability === 'discontinued' || availability === 'vintage';
+
+  const links: Array<{ label: string; url: string }> = [];
+
+  if (!isDiscontinued && manufacturerUrl) {
+    links.push({ label: brand ?? 'Manufacturer', url: manufacturerUrl });
+  }
+
+  links.push({ label: 'HiFiShark', url: hifiSharkUrl(brand, name) });
+  links.push({ label: 'eBay', url: ebayUrl(brand, name) });
+
+  return (
+    <div style={{ marginTop: '0.6rem', lineHeight: 1.8 }}>
+      {links.map((link, i) => (
+        <span key={i}>
+          <a
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={LINK_STYLE}
+          >
+            {link.label}
+          </a>
+          {i < links.length - 1 && (
+            <span style={LINK_SEP_STYLE}>&middot;</span>
+          )}
+        </span>
       ))}
     </div>
   );

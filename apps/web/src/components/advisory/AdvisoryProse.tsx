@@ -28,7 +28,7 @@ function renderParagraphs(text: string, isLast: boolean) {
     <p
       key={i}
       style={{
-        margin: isLast && i === segments.length - 1 ? 0 : '0 0 0.7rem 0',
+        margin: isLast && i === segments.length - 1 ? 0 : '0 0 0.9rem 0',
       }}
     >
       {renderText(segment.trim())}
@@ -45,10 +45,10 @@ export default function AdvisoryProse({ philosophy, tendencies, systemFit }: Adv
   return (
     <div
       style={{
-        margin: '0 0 1.4rem 0',
+        margin: '0 0 1.6rem 0',
         color: '#2a2a2a',
-        fontSize: '1rem',
-        lineHeight: 1.75,
+        fontSize: '1.02rem',
+        lineHeight: 1.85,
       }}
     >
       {philosophy && renderParagraphs(philosophy, lastField === 'philosophy')}

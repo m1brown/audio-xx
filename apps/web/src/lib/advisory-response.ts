@@ -639,6 +639,16 @@ export interface AdvisoryResponse {
    *  Only populated when an active system is available during shopping. */
   systemContextPreamble?: string;
 
+  // ── 7e2. System Interpretation ──────────────────────
+  /** 2–4 sentence system interpretation paragraph — explains what's happening sonically.
+   *  Rendered before product cards. Always populated when system or taste context exists. */
+  systemInterpretation?: string;
+
+  // ── 7e3. Strategy Bullets ─────────────────────────
+  /** 2–4 directional strategy lines — conceptual guidance before product recommendations.
+   *  Each bullet describes a kind of change and why it would help. */
+  strategyBullets?: string[];
+
   // ── 7f. Editorial Intro ─────────────────────────────
   /** Taste-anchored intro paragraph — frames the shortlist in terms of user preferences. */
   editorialIntro?: string;
@@ -680,6 +690,18 @@ export interface AdvisoryResponse {
   // ── 12b. Intake Questions ───────────────────────────
   /** Structured intake questions for new/vague user queries. */
   intakeQuestions?: import('./intake').IntakeQuestion[];
+
+  // ── 12c. Diagnosis — enriched structure ─────────────
+  /** System interpretation — explains the system character and design trade-off. */
+  diagnosisInterpretation?: string;
+  /** "What this means" — explains WHY the symptom occurs in this specific system. */
+  diagnosisExplanation?: string;
+  /** Ranked action areas with product directions. */
+  diagnosisActions?: Array<{
+    area: string;
+    guidance: string;
+    examples?: string;
+  }>;
 
   // ── 13. Diagnostics (collapsible) ───────────────────
   /** Signal interpretation transparency. */
@@ -848,6 +870,137 @@ function buildSystemContextPreamble(
   if (parts.length === 0) return undefined;
 
   return parts.join(' ');
+}
+
+/**
+ * Build a system interpretation paragraph — 2-4 sentences that demonstrate
+ * the advisor understands the user's context before jumping to products.
+ *
+ * This is the key "system reading" step inspired by expert advisor patterns:
+ * - Acknowledge the system or user context
+ * - Identify the main tendency or likely sonic character
+ * - Explain what is happening in plain but expert language
+ *
+ * Renders before product cards. Always populated when ANY context exists
+ * (system, taste signals, genre preferences, or even just category + budget).
+ */
+function buildSystemInterpretation(
+  a: import('./shopping-intent').ShoppingAnswer,
+  reasoning?: ReasoningResult,
+  ctx?: ShoppingAdvisoryContext,
+): string | undefined {
+  const parts: string[] = [];
+
+  // Detect whether a real taste profile was matched (vs. fallback)
+  const hasTasteSignal = !!reasoning?.taste.archetype;
+
+  // ── Layer 1: System acknowledgment ──
+  if (ctx?.systemComponents && ctx.systemComponents.length > 0) {
+    const systemList = ctx.systemComponents.slice(0, 3).join(', ');
+    const tendency = reasoning?.system.tendencySummary ?? ctx.systemTendencies;
+    if (tendency) {
+      parts.push(`Your system (${systemList}) leans toward ${tendency.toLowerCase().replace(/\.$/, '')}.`);
+    } else {
+      parts.push(`With ${systemList} in your system, the component you add will shape the overall character.`);
+    }
+  }
+
+  // ── Layer 2: Taste/preference interpretation (only with real signal) ──
+  if (hasTasteSignal && reasoning?.taste.archetype) {
+    const archetype = reasoning.taste.archetype;
+    const ARCHETYPE_INTERPRETATION: Record<string, string> = {
+      flow_organic: 'You seem to value musical flow and natural phrasing over clinical precision.',
+      rhythmic_propulsive: 'You seem drawn to rhythmic energy and transient speed — music that feels alive and forward-moving.',
+      tonal_saturated: 'You seem to prioritize tonal richness and harmonic density over speed or detail.',
+      precision_explicit: 'You seem to value resolution, separation, and precision — hearing everything clearly matters to you.',
+      spatial_holographic: 'You seem to prioritize spatial depth and imaging — the sense of a performance in a real space.',
+    };
+    const interpretation = ARCHETYPE_INTERPRETATION[archetype];
+    if (interpretation) parts.push(interpretation);
+  }
+
+  // ── Layer 3: Direction framing (only when taste or system gave signal) ──
+  if (parts.length > 0 && hasTasteSignal && a.bestFitDirection) {
+    const dirBrief = a.bestFitDirection.split(/\.\s/)[0];
+    if (dirBrief.length < 120) {
+      parts.push(`${dirBrief}.`);
+    }
+  }
+
+  // ── Layer 4: Budget-only fallback — category landscape framing ──
+  if (parts.length === 0) {
+    // Use singular form for "X designs vary..." phrasing
+    const catSingular = a.category.replace(/s$/, '');
+    const catLabel = catSingular;
+    if (a.budget) {
+      // Check if bestFitDirection is real content (not a reasoning engine fallback)
+      const FALLBACK_DIRECTION_MARKERS = ['avoids strong bias', 'no strong directional change', 'current balance may be close'];
+      const isFallbackDirection = !a.bestFitDirection
+        || FALLBACK_DIRECTION_MARKERS.some(m => a.bestFitDirection.toLowerCase().includes(m));
+      if (!isFallbackDirection) {
+        const dirBrief = a.bestFitDirection.split(/\.\s/).slice(0, 2).join('. ').replace(/\.+$/, '');
+        // Lowercase the first character of the direction to flow after the price
+        const lowerDir = dirBrief.charAt(0).toLowerCase() + dirBrief.slice(1);
+        parts.push(`At ~$${a.budget.toLocaleString()}, ${lowerDir}.`);
+      } else {
+        parts.push(`At this price point, ${catLabel} designs vary considerably in philosophy — from precision-focused to warmth-oriented to rhythm-driven.`);
+        parts.push(`The right choice depends on what you want the ${catSingular} to do in your system and for your listening priorities.`);
+      }
+    }
+  }
+
+  if (parts.length === 0) return undefined;
+  return parts.join(' ');
+}
+
+/**
+ * Build 2-4 strategy bullets — conceptual guidance about what kind
+ * of change would help, before naming specific products.
+ *
+ * Each bullet describes a direction and why it would help.
+ * These are NOT product names — they are sonic strategies.
+ */
+function buildStrategyBullets(
+  a: import('./shopping-intent').ShoppingAnswer,
+  reasoning?: ReasoningResult,
+): string[] | undefined {
+  // Only render strategy when there's a real taste or system signal.
+  // Without context, strategy bullets would just be generic filler.
+  const hasTasteSignal = !!reasoning?.taste.archetype;
+  const hasSystemSignal = !!(reasoning?.system.tendencySummary || reasoning?.system.currentTendencies?.length);
+  if (!hasTasteSignal && !hasSystemSignal) return undefined;
+
+  const bullets: string[] = [];
+
+  // ── From whyThisFits — concise directional reasons ──
+  // Skip fallback content (starts with "No strong single-trait")
+  if (a.whyThisFits && a.whyThisFits.length > 0) {
+    for (const fit of a.whyThisFits.slice(0, 3)) {
+      if (fit.toLowerCase().startsWith('no strong')) continue;
+      const clean = fit.split(/\.\s/)[0].replace(/\.$/, '');
+      if (clean.length > 10 && clean.length < 100) {
+        bullets.push(clean);
+      }
+    }
+  }
+
+  // ── From watchFor — reframe as "what to avoid" strategy ──
+  if (a.watchFor && a.watchFor.length > 0) {
+    const caution = a.watchFor[0].split(/\.\s/)[0].replace(/\.$/, '');
+    // Skip fallback "Balanced components rarely excel" text
+    if (caution.length > 10 && caution.length < 100 && !caution.toLowerCase().startsWith('balanced components')) {
+      bullets.push(`Avoid: ${caution.charAt(0).toLowerCase()}${caution.slice(1)}`);
+    }
+  }
+
+  // ── From reasoning preserve signals — what to protect ──
+  if (reasoning?.direction.preserve && reasoning.direction.preserve.length > 0) {
+    const preserve = reasoning.direction.preserve.slice(0, 2).join(' and ');
+    bullets.push(`Preserve: ${preserve} in whatever you change`);
+  }
+
+  if (bullets.length < 2) return undefined;
+  return bullets.slice(0, 4);
 }
 
 /**
@@ -1558,7 +1711,7 @@ export function shoppingToAdvisory(
     }
   }
 
-  const statedGaps = a.statedGaps?.map((g) => GAP_LABELS[g]);
+  const statedGaps = a.statedGaps?.map((g) => GAP_LABELS[g]).filter(Boolean) as string[] | undefined;
 
   // Collect source references from recommended products (deduplicated)
   // Cross-reference with product links to find review URLs
@@ -1603,6 +1756,12 @@ export function shoppingToAdvisory(
     reasoning?.taste.archetype ?? undefined,
   );
 
+  // Build system interpretation (mandatory reasoning layer before products)
+  const systemInterpretation = buildSystemInterpretation(a, reasoning, ctx);
+
+  // Build strategy bullets (conceptual guidance before product cards)
+  const strategyBullets = buildStrategyBullets(a, reasoning);
+
   // ── Build editorial closing (best-match verdict) ─────
   // Only when we have product examples and user context
   const editorialClosing = buildEditorialClosing(a.productExamples, ctx, reasoning);
@@ -1614,6 +1773,8 @@ export function shoppingToAdvisory(
 
     audioProfile,
     systemContextPreamble,
+    systemInterpretation,
+    strategyBullets,
     editorialIntro,
     listenerPriorities,
     whyFitsYou: a.whyFitsYou,
@@ -1675,6 +1836,20 @@ export function analysisToAdvisory(
     listenerAvoids.push(sysDir.tendencySummary);
   }
 
+  // ── Build enriched diagnosis layers ──────────────────
+
+  // Layer 1: System interpretation — what the system IS and what trade-off it represents
+  const diagnosisInterpretation = buildDiagnosisInterpretation(signals, sysDir, reasoning, ctx);
+
+  // Layer 2: What this means — why the symptom occurs in THIS system
+  const diagnosisExplanation = buildDiagnosisExplanation(primary, signals, sysDir, reasoning);
+
+  // Layer 3: Ranked action areas with product directions
+  const diagnosisActions = buildDiagnosisActions(primary, signals, sysDir);
+
+  // Follow-up: focused, not generic
+  const followUp = buildDiagnosisFollowUp(primary, signals, sysDir, ctx);
+
   return enrichAdvisory({
     kind: 'diagnosis',
     subject: primary?.label ?? 'your listening situation',
@@ -1684,15 +1859,20 @@ export function analysisToAdvisory(
     listenerAvoids: listenerAvoids.length > 0 ? listenerAvoids : undefined,
     systemTendencies: sysDir?.tendencySummary ?? undefined,
 
-    // Primary rule explanation becomes the tendencies prose
+    // Primary rule explanation remains as tendencies prose
     tendencies: primary?.outputs.explanation,
 
     // Suggestions become whyThisFits (what to do and why)
     whyThisFits: allSuggestions.length > 0 ? allSuggestions : undefined,
     tradeOffs: allRisks.length > 0 ? allRisks : undefined,
 
-    // Next step from primary rule becomes follow-up
-    followUp: primary?.outputs.next_step,
+    // Enriched diagnosis layers
+    diagnosisInterpretation,
+    diagnosisExplanation,
+    diagnosisActions: diagnosisActions.length > 0 ? diagnosisActions : undefined,
+
+    // Focused follow-up
+    followUp,
 
     // Archetype note surfaced if present
     alignmentRationale: primary?.outputs.archetype_note ?? sysDir?.archetypeNote ?? undefined,
@@ -1704,6 +1884,251 @@ export function analysisToAdvisory(
       traits: signals.traits,
     },
   }, reasoning);
+}
+
+// ── Diagnosis enrichment helpers ────────────────────────
+
+/**
+ * Layer 1: System interpretation.
+ * Explains the system's character and design trade-off in 1–2 sentences.
+ * Only populated when we have system or taste context.
+ */
+function buildDiagnosisInterpretation(
+  signals: ExtractedSignals,
+  sysDir?: SystemDirection,
+  reasoning?: ReasoningResult,
+  ctx?: ShoppingAdvisoryContext,
+): string | undefined {
+  const parts: string[] = [];
+
+  // System character from components
+  if (ctx?.systemComponents && ctx.systemComponents.length > 0) {
+    const names = ctx.systemComponents.slice(0, 3).join(', ');
+    if (ctx.systemTendencies) {
+      parts.push(`Your system (${names}) has a ${ctx.systemTendencies.toLowerCase()} character.`);
+    } else {
+      parts.push(`Your system includes ${names}.`);
+    }
+  }
+
+  // Tendency interpretation — what the system optimizes for
+  if (sysDir?.tendencySummary) {
+    const tendencies = sysDir.currentTendencies;
+    if (tendencies.length > 0) {
+      const TENDENCY_TRADE_OFFS: Record<string, string> = {
+        bright_lean: 'This is a system that prioritizes resolution and transient speed — sometimes at the expense of tonal warmth and harmonic density.',
+        warm_dense: 'This is a system that prioritizes harmonic richness and body — sometimes at the expense of detail retrieval and transient precision.',
+        forward_aggressive: 'This is a system that prioritizes presence and immediacy — sometimes at the expense of depth and long-session comfort.',
+        polite_smooth: 'This is a system that prioritizes composure and ease — sometimes at the expense of dynamic contrast and rhythmic engagement.',
+        neutral_transparent: 'This is a system that prioritizes accuracy and neutrality — sometimes at the expense of musical engagement and harmonic character.',
+      };
+      const primaryTendency = tendencies[0];
+      const tradeOff = TENDENCY_TRADE_OFFS[primaryTendency] ?? null;
+      if (tradeOff) {
+        parts.push(tradeOff);
+      }
+    }
+  } else if (reasoning?.taste.archetype) {
+    // No system info but we have taste — frame the listener
+    const ARCHETYPE_CONTEXT: Record<string, string> = {
+      flow_organic: 'Your preferences lean toward flow and natural presentation — systems that feel effortless and musically involving.',
+      precision_explicit: 'Your preferences lean toward precision and detail — systems that reveal structure, layering, and micro-dynamics.',
+      rhythmic_propulsive: 'Your preferences lean toward rhythmic engagement and dynamics — systems that convey momentum and transient energy.',
+      tonal_saturated: 'Your preferences lean toward harmonic density and tonal richness — systems with midrange weight and body.',
+      spatial_holographic: 'Your preferences lean toward spatial presentation — systems that create depth, air, and a convincing soundstage.',
+    };
+    const ctx2 = ARCHETYPE_CONTEXT[reasoning.taste.archetype];
+    if (ctx2) parts.push(ctx2);
+  }
+
+  if (parts.length === 0) return undefined;
+  return parts.join(' ');
+}
+
+/**
+ * Layer 2: What this means.
+ * Explains WHY the symptom occurs in this specific system.
+ * Connects the rule engine's diagnosis to the system's character.
+ */
+function buildDiagnosisExplanation(
+  primary: FiredRule | undefined,
+  signals: ExtractedSignals,
+  sysDir?: SystemDirection,
+  reasoning?: ReasoningResult,
+): string | undefined {
+  if (!primary) return undefined;
+
+  const symptomId = primary.id;
+  const hasTendencies = sysDir && sysDir.currentTendencies.length > 0;
+  const hasSystem = !!(sysDir?.tendencySummary);
+
+  // Symptom-specific explanations that connect system character to the complaint
+  const SYMPTOM_EXPLANATIONS: Record<string, { withSystem: string; withoutSystem: string }> = {
+    'fatigue-brightness': {
+      withSystem: 'In a resolving, transparent system, brightness and fatigue often come from the upstream chain — the DAC or source feeds detail faster than the ear can comfortably absorb. This is not a flaw in the system; it is a design trade-off that becomes audible when every component is highly revealing.',
+      withoutSystem: 'Brightness and listening fatigue typically originate upstream — the source or DAC is feeding more treble energy or transient detail than the system can absorb comfortably. The effect compounds in resolving systems where nothing softens the signal.',
+    },
+    'detail-fatigue-tradeoff': {
+      withSystem: 'Your system is doing its job — revealing more of the recording. The fatigue you are experiencing is the cost of that transparency. Over time, the ear may adjust. If it does not, the system may be more analytical than your long-term listening preferences require.',
+      withoutSystem: 'More detail often means more fatigue initially. A highly resolving system presents everything — including recording artifacts and compression — with full clarity. The question is whether this is temporary adjustment or a genuine mismatch with your preferences.',
+    },
+    'flat-presentation': {
+      withSystem: 'A flat, unengaging presentation usually points to the amplifier or to a system that optimizes for composure at the expense of dynamic contrast. When everything is perfectly controlled, music can lose the tension and release that makes it involving.',
+      withoutSystem: 'A flat presentation typically reflects insufficient dynamic contrast — the amplifier may prioritize composure over engagement, or the system as a whole may be over-damped, trading musical involvement for measured precision.',
+    },
+    'thinness-bass-deficit': {
+      withSystem: 'Thinness in a system is most often a room interaction — speaker placement and boundary reinforcement have a larger effect on bass weight than any component change. But it can also indicate a lean-voiced source chain that strips midrange density.',
+      withoutSystem: 'Thinness is almost always dominated by room interaction and speaker placement before any component is at fault. The distance from rear and side walls directly controls how much bass energy the room reinforces.',
+    },
+    'congestion-bottleneck': {
+      withSystem: 'Congestion means something in the chain cannot keep up — one component is limiting the system\'s ability to separate and present information clearly. In a well-matched system, this often points to a single bottleneck rather than a general problem.',
+      withoutSystem: 'Congestion usually means a bottleneck — one component cannot process information as cleanly as the rest of the chain demands. The source is the most common culprit, followed by the amplifier.',
+    },
+    'narrow-soundstage': {
+      withSystem: 'Soundstage is overwhelmingly determined by speaker positioning and room acoustics. Component changes have a secondary effect. Before looking at gear, the speaker geometry (separation, toe-in, distance from walls) is the single most effective lever.',
+      withoutSystem: 'Soundstage width and depth are primarily determined by speaker placement and room geometry — not components. An equilateral triangle between speakers and listening position, with adequate wall clearance, is the foundation.',
+    },
+    'bass-bloom': {
+      withSystem: 'Bass bloom is almost always room-driven — specific frequencies are being reinforced by the room\'s dimensions. The amplifier\'s damping factor plays a secondary role, but moving the speakers away from walls and corners is the most effective first step.',
+      withoutSystem: 'Boomy or resonant bass is a room acoustics problem — the room is reinforcing certain frequencies. Corner placement and wall proximity amplify this. Moving speakers into the room and adding corner treatment are the primary remedies.',
+    },
+  };
+
+  const entry = SYMPTOM_EXPLANATIONS[symptomId];
+  if (entry) {
+    return hasSystem ? entry.withSystem : entry.withoutSystem;
+  }
+
+  // Fallback: build from rule explanation + system context
+  if (primary.outputs.explanation && hasSystem) {
+    return `${primary.outputs.explanation.trim()} In your system, this tendency is likely shaped by the overall voicing — ${sysDir!.tendencySummary!.toLowerCase()}.`;
+  }
+
+  return undefined;
+}
+
+/**
+ * Layer 3: Ranked action areas with product directions.
+ * Returns 2–4 concrete paths, each with an area label, guidance text,
+ * and optional product examples.
+ */
+function buildDiagnosisActions(
+  primary: FiredRule | undefined,
+  signals: ExtractedSignals,
+  sysDir?: SystemDirection,
+): Array<{ area: string; guidance: string; examples?: string }> {
+  if (!primary) return [];
+
+  const symptomId = primary.id;
+
+  // Symptom-specific ranked action paths
+  const SYMPTOM_ACTIONS: Record<string, Array<{ area: string; guidance: string; examples?: string }>> = {
+    'fatigue-brightness': [
+      { area: 'Source / DAC', guidance: 'The most effective single change. A warmer, more organic DAC shifts the tonal center without sacrificing resolution.', examples: 'R-2R designs (Denafrips Ares II, Schiit Bifrost 2), tube-output DACs (MHDT Orchid)' },
+      { area: 'Tube buffer or preamp', guidance: 'A tube stage between source and amplifier adds second-order harmonics that soften transient edges and reduce fatigue.', examples: 'Schiit Freya+, Black Ice Audio FOZ, Linear Tube Audio MicroZOTL' },
+      { area: 'Cables', guidance: 'Copper interconnects generally present a warmer tonal balance than silver. This is a subtle but real adjustment at the system level.', examples: 'Cardas Clear Reflection, AudioQuest Yukon' },
+      { area: 'Room treatment', guidance: 'Absorption at first reflection points reduces the doubled treble energy that contributes to perceived brightness.' },
+    ],
+    'detail-fatigue-tradeoff': [
+      { area: 'Wait and observe', guidance: 'The ear adjusts to increased resolution over 2–4 weeks. If fatigue persists beyond this, the system may genuinely be too analytical for your preferences.' },
+      { area: 'Source voicing', guidance: 'If fatigue does not resolve, a more musical source can ease the relentless detail without losing the improvements you have gained.', examples: 'Denafrips Pontus, Schiit Gungnir, MHDT Orchid' },
+      { area: 'Listening level', guidance: 'Highly resolving systems reveal more at lower volumes. Dropping the volume slightly often eliminates fatigue entirely.' },
+    ],
+    'flat-presentation': [
+      { area: 'Amplifier', guidance: 'If the amplifier prioritizes composure, a more dynamic design restores the tension and release that makes music involving.', examples: 'Naim Nait 5si, Rega Brio, Exposure 2510 (for rhythmic drive); Decware Zen (for tube-based engagement)' },
+      { area: 'Source / DAC', guidance: 'An analytical source can flatten dynamics before the amplifier sees them. A more expressive DAC can help.', examples: 'Chord Qutest, Denafrips Ares II' },
+      { area: 'Speaker positioning', guidance: 'Slight toe-in adjustments and moving closer to the listening position can increase perceived presence and energy.' },
+    ],
+    'thinness-bass-deficit': [
+      { area: 'Speaker placement', guidance: 'Moving speakers closer to the rear wall increases bass reinforcement. Start with 6-inch increments and listen for a few days at each position.' },
+      { area: 'Source voicing', guidance: 'A warmer-voiced DAC or source adds midrange density and perceived weight to the tonal balance.', examples: 'Schiit Bifrost 2, Denafrips Ares II, Border Patrol DAC' },
+      { area: 'Amplifier pairing', guidance: 'If the amplifier is lean or neutral, a warmer-voiced alternative can restore body without compromising detail.', examples: 'Rega Brio, Exposure 2510, PrimaLuna EVO 100 (tube)' },
+      { area: 'Room treatment', guidance: 'Bare floors and hard walls tilt the balance toward upper frequencies. Adding a rug or diffusion panels can shift perceived warmth.' },
+    ],
+    'congestion-bottleneck': [
+      { area: 'Source / DAC', guidance: 'A cleaner, more resolving source often clears congestion throughout the chain. This is the most common bottleneck.', examples: 'Chord Qutest, Denafrips Pontus, Schiit Bifrost 2' },
+      { area: 'Amplifier control', guidance: 'If the amplifier lacks damping factor for the speakers, bass becomes loose and bleeds into the midrange.', examples: 'Benchmark AHB2, Parasound A23+, NAD C 298' },
+      { area: 'Simplify the chain', guidance: 'Temporarily removing components (external DACs, preamps, equalizers) and running a minimal chain can isolate the bottleneck.' },
+    ],
+    'narrow-soundstage': [
+      { area: 'Speaker positioning', guidance: 'Increase separation to form an equilateral triangle with the listening position. Pull speakers at least 2 feet from side walls.' },
+      { area: 'Room treatment', guidance: 'Diffusion on the rear wall and absorption at first reflection points widen the perceived stage.' },
+      { area: 'Source quality', guidance: 'Higher-resolution sources can improve spatial cues. This is a secondary factor after positioning.', examples: 'Chord Qutest, Denafrips Pontus' },
+    ],
+    'bass-bloom': [
+      { area: 'Speaker placement', guidance: 'Move speakers away from rear walls and corners. Each inch of distance reduces bass reinforcement at the boundary frequencies.' },
+      { area: 'Room treatment', guidance: 'Bass traps in room corners absorb the low-frequency buildup that causes bloom. Start conservatively — over-treatment deadens the room.' },
+      { area: 'Amplifier damping', guidance: 'An amplifier with higher damping factor controls the woofer more tightly, reducing bass overshoot.', examples: 'Benchmark AHB2, Parasound A23+' },
+    ],
+  };
+
+  const actions = SYMPTOM_ACTIONS[symptomId];
+  if (actions) return actions;
+
+  // Fallback: convert rule suggestions into action entries
+  if (primary.outputs.suggestions.length > 0) {
+    return primary.outputs.suggestions.map((s) => ({
+      area: 'Suggested action',
+      guidance: s,
+    }));
+  }
+
+  return [];
+}
+
+/**
+ * Build a focused follow-up question for diagnosis responses.
+ * Avoids generic prompts — asks about the specific next diagnostic step.
+ */
+function buildDiagnosisFollowUp(
+  primary: FiredRule | undefined,
+  signals: ExtractedSignals,
+  sysDir?: SystemDirection,
+  ctx?: ShoppingAdvisoryContext,
+): string | undefined {
+  if (!primary) return primary?.outputs.next_step;
+
+  const hasSystem = !!(ctx?.systemComponents && ctx.systemComponents.length > 0);
+
+  // Symptom-specific focused follow-ups
+  const FOCUSED_FOLLOWUPS: Record<string, { withSystem: string; withoutSystem: string }> = {
+    'fatigue-brightness': {
+      withSystem: 'What source or DAC are you using? That is usually the most effective place to shift tonal balance in a system like this.',
+      withoutSystem: 'What is your current source — DAC, streamer, or turntable? And what amplifier and speakers are in the chain? Knowing the full signal path will help me identify where the brightness originates.',
+    },
+    'detail-fatigue-tradeoff': {
+      withSystem: 'How long have you been listening with the current configuration? If it has been less than a few weeks, the fatigue may resolve on its own.',
+      withoutSystem: 'How recently did the system change? And what are the main components — knowing the chain helps me assess whether this is adjustment or genuine mismatch.',
+    },
+    'flat-presentation': {
+      withSystem: 'What amplifier are you using? That is often the pivot point for dynamic engagement.',
+      withoutSystem: 'What are the main components in your system? A flat presentation often traces to the amplifier or source.',
+    },
+    'thinness-bass-deficit': {
+      withSystem: 'How far are your speakers from the rear wall? And what is the floor surface — carpet, hardwood, tile?',
+      withoutSystem: 'Can you describe the room — size, floor surface, speaker distance from walls? Room interaction is usually the dominant factor for thinness.',
+    },
+    'congestion-bottleneck': {
+      withSystem: 'Have you tried simplifying the chain — running source directly into the amplifier, bypassing any preamp or processor? That often reveals the bottleneck.',
+      withoutSystem: 'What are the main components in your chain, from source to speakers? Congestion usually has a single origin point.',
+    },
+    'narrow-soundstage': {
+      withSystem: 'How are the speakers positioned — separation distance, toe-in angle, distance from side walls? Small changes here have the biggest impact on staging.',
+      withoutSystem: 'How wide apart are your speakers, and how far are you sitting from them? Speaker geometry is the primary factor for soundstage.',
+    },
+    'bass-bloom': {
+      withSystem: 'How close are the speakers to the rear wall and corners? And is the room roughly square — square rooms amplify bass modes significantly.',
+      withoutSystem: 'Can you describe the room — size, shape, and where the speakers are positioned relative to walls and corners?',
+    },
+  };
+
+  const entry = FOCUSED_FOLLOWUPS[primary.id];
+  if (entry) {
+    return hasSystem ? entry.withSystem : entry.withoutSystem;
+  }
+
+  // Fall back to rule engine's next_step
+  return primary.outputs.next_step;
 }
 
 // ── Product Assessment Adapter ──────────────────────
