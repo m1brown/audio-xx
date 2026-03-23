@@ -36,8 +36,10 @@ export async function POST(req: NextRequest) {
   const candidate = await prisma.component.findUnique({ where: { id: candidateComponentId } });
   if (!candidate) return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
 
-  const candidateTraits: Record<string, string> = JSON.parse(candidate.traitTendencies);
-  const candidateRisks: string[] = JSON.parse(candidate.riskFlags);
+  let candidateTraits: Record<string, string> = {};
+  let candidateRisks: string[] = [];
+  try { candidateTraits = JSON.parse(candidate.traitTendencies); } catch { /* malformed */ }
+  try { candidateRisks = JSON.parse(candidate.riskFlags); } catch { /* malformed */ }
 
   // Find existing component in same category
   const existingInCategory = system.components.find(
@@ -48,7 +50,8 @@ export async function POST(req: NextRequest) {
   const regressionRisks: string[] = [];
 
   if (existingInCategory) {
-    const existingTraits: Record<string, string> = JSON.parse(existingInCategory.component.traitTendencies);
+    let existingTraits: Record<string, string> = {};
+    try { existingTraits = JSON.parse(existingInCategory.component.traitTendencies); } catch { /* malformed */ }
 
     // Compare traits
     const allTraits = new Set([...Object.keys(existingTraits), ...Object.keys(candidateTraits)]);

@@ -17,8 +17,12 @@ export async function POST(req: NextRequest) {
   const userId = await getUserId();
   let archetypes: string[] = [];
   if (userId) {
-    const profile = await prisma.profile.findUnique({ where: { userId } });
-    if (profile) archetypes = JSON.parse(profile.archetypes);
+    try {
+      const profile = await prisma.profile.findUnique({ where: { userId } });
+      if (profile) archetypes = JSON.parse(profile.archetypes);
+    } catch {
+      // Database unavailable or malformed JSON — continue without profile data
+    }
   }
 
   const { signals, result } = evaluateText(input, archetypes);

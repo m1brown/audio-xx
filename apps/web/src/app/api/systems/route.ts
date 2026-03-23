@@ -133,5 +133,6 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json(normalizeSystem(fullSystem!), { status: 201 });
+  if (!fullSystem) return NextResponse.json({ error: 'Failed to fetch created system' }, { status: 500 });
+  return NextResponse.json(normalizeSystem(fullSystem), { status: 201 });
 }

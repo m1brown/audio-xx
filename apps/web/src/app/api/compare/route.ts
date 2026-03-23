@@ -42,7 +42,8 @@ export async function POST(req: NextRequest) {
     const totals: Record<string, number> = {};
     const counts: Record<string, number> = {};
     for (const sc of components) {
-      const traits: Record<string, string> = JSON.parse(sc.component.traitTendencies);
+      let traits: Record<string, string> = {};
+      try { traits = JSON.parse(sc.component.traitTendencies); } catch { /* malformed JSON — skip */ }
       for (const [trait, val] of Object.entries(traits)) {
         totals[trait] = (totals[trait] || 0) + qualToNum(val);
         counts[trait] = (counts[trait] || 0) + 1;
