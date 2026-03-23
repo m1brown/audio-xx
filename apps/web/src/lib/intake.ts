@@ -88,7 +88,7 @@ const INTAKE_GUARD_PATTERNS = [
 
   // Explicit purchase intent — "buy", "purchase", "shop for"
   // When someone says "buy a DAC" they're ready to shop, not fill a form.
-  /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|pick\s+out)\b/i,
+  /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|pick\s+out|recommend|suggest)\b/i,
 ];
 
 /**

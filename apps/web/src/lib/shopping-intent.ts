@@ -88,6 +88,7 @@ const INTENT_KEYWORDS = [
   'looking for',
   'recommend',
   'recommendation',
+  'suggest',
   'should i get',
   'should i buy',
   'what should i get',
@@ -1358,9 +1359,15 @@ function extractKeyPhrase(text: string): string {
     : text.trim();
   // Strip trailing qualifiers
   phrase = phrase.replace(/\s+(?:compared to|rather than|relative to|with\s+\w+)\s+.*/i, '');
-  // Cap at 4 words to keep it punchy
+  // Cap at 6 words to keep it punchy but complete
   const words = phrase.split(/\s+/);
-  if (words.length > 4) phrase = words.slice(0, 4).join(' ');
+  if (words.length > 6) phrase = words.slice(0, 6).join(' ');
+  // Strip trailing dangling prepositions/articles (may need multiple passes)
+  while (/\s+(?:from|with|for|in|on|to|of|and|the|a|that|without)$/i.test(phrase)) {
+    phrase = phrase.replace(/\s+(?:from|with|for|in|on|to|of|and|the|a|that|without)$/i, '');
+  }
+  // Strip incomplete prepositional phrases at the end (e.g. "authority from a tiny")
+  phrase = phrase.replace(/\s+(?:from|with|for|in|on|to|of)\s+.*$/i, '');
   return phrase.toLowerCase();
 }
 
@@ -1368,6 +1375,69 @@ function extractKeyPhrase(text: string): string {
  * Generate a one-sentence fit note for a product based on its
  * architecture and strongest matching traits.
  */
+// ── Fit language simplification ──────────────────────
+//
+// Product tendency descriptions are written in reviewer/audiophile vocabulary
+// ("holographic staging", "zero-crossover coherence", "tonal density").
+// For user-facing product cards these need to read as plain, approachable
+// language. This map normalizes the most common audiophile phrases.
+//
+// Rules:
+//   - Replace jargon with listener-experience descriptions
+//   - Keep phrases short and conversational
+//   - Preserve meaning without requiring expertise to parse
+
+const FIT_LANGUAGE_SIMPLIFICATIONS: [RegExp, string][] = [
+  // Spatial
+  [/holographic(?:\s+and\s+boundless)?(?:\s+(?:staging|imaging))?/gi, 'open and immersive soundstage'],
+  [/holographic,?\s*three-dimensional/gi, 'open and three-dimensional'],
+  [/expansive\s+and\s+layered/gi, 'wide and layered'],
+  [/enormous\s+spatial\s+depth/gi, 'deep, spacious presentation'],
+  [/disappearing\s+act/gi, 'speakers disappear into the room'],
+  [/exceptional\s+image\s+specificity/gi, 'precisely placed instruments'],
+  [/monitor-type\s+staging\s+spookiness/gi, 'uncanny spatial realism'],
+  // Texture / coherence
+  [/zero-crossover\s+coherence/gi, 'coherent and natural'],
+  [/without\s+the\s+discontinuities\s+of\s+multi-way\s+designs/gi, 'seamless from top to bottom'],
+  [/unified\s+and\s+natural/gi, 'smooth and natural'],
+  // Tonal / harmonic
+  [/extraordinar(?:y|ily)\s+(?:warm,?\s*)?rich(?:,?\s*golden)?/gi, 'warm and richly textured'],
+  [/deep\s+tonal\s+density/gi, 'full, weighty tone'],
+  [/rich\s+harmonic\s+overtones/gi, 'harmonically rich'],
+  [/rich\s+tactile\s+quality/gi, 'rich and tactile'],
+  [/tonal\s+(?:density|richness)/gi, 'tonal richness'],
+  [/harmonically\s+dense/gi, 'harmonically rich'],
+  // Dynamics
+  [/explosive\s+transient\s+impact/gi, 'punchy and dynamic'],
+  [/blazing\s+speed\s+on\s+leading\s+edges/gi, 'fast and immediate'],
+  [/effortless\s+dynamic\s+expression/gi, 'effortless dynamics'],
+  [/punchy\s+macrodynamics/gi, 'impactful dynamics'],
+  [/transient\s+precision/gi, 'rhythmic precision'],
+  // Flow / organic
+  [/liquid,?\s*organic,?\s*tangible/gi, 'fluid and lifelike'],
+  [/unhurried\s+phrasing/gi, 'relaxed, natural pacing'],
+  [/music\s+flows\s+rather\s+than\s+pushes/gi, 'music flows naturally'],
+  // Precision
+  [/transparent\s+and\s+refined/gi, 'transparent and refined'],
+  [/extremely\s+resolved/gi, 'highly detailed'],
+  [/fast,?\s*precise,?\s*articulate/gi, 'fast and articulate'],
+  [/neutral,?\s*transparent,?\s*clean/gi, 'neutral and transparent'],
+  // Generic cleanup
+  [/instruments\s+sound\s+maximally\s+real\s+and\s+present/gi, 'instruments sound lifelike'],
+  [/notes\s+start\s+with\s+conviction/gi, 'notes have clear, decisive attack'],
+  [/— (?:the\s+)?(?:Ring\s+DAC|OTL\s+topology|open-back\s+design|single\s+driver)\s+[^.]+\./gi, '.'],
+];
+
+/** Apply plain-language normalization to a product character or fit string. */
+function simplifyFitLanguage(text: string): string {
+  let result = text;
+  for (const [pattern, replacement] of FIT_LANGUAGE_SIMPLIFICATIONS) {
+    result = result.replace(pattern, replacement);
+  }
+  // Clean up doubled spaces and trailing punctuation issues
+  return result.replace(/\s{2,}/g, ' ').replace(/\.\s*\./g, '.').trim();
+}
+
 /**
  * Build a concise "best for" summary for a product.
  *
@@ -1375,6 +1445,11 @@ function extractKeyPhrase(text: string): string {
  * No architecture labels, no trade-off clauses, no internal modelling language.
  */
 function buildFitNote(product: Product, _userTraits: Record<string, SignalDirection>): string {
+  return simplifyFitLanguage(buildFitNoteRaw(product, _userTraits));
+}
+
+/** Raw fit note — before plain-language normalization. */
+function buildFitNoteRaw(product: Product, _userTraits: Record<string, SignalDirection>): string {
   // Priority 1: curated character tendencies — extract the two strongest qualities
   if (hasTendencies(product.tendencies)) {
     const top = selectDefaultTendencies(product.tendencies.character, 3);
@@ -1717,6 +1792,11 @@ function findArchitectureTendency(product: Product): ArchitectureTendency | unde
  * archetype → description fallback.
  */
 function buildProductCharacter(product: Product): string {
+  return simplifyFitLanguage(buildProductCharacterRaw(product));
+}
+
+/** Raw character string — before plain-language normalization. */
+function buildProductCharacterRaw(product: Product): string {
   // Priority 1: curated character tendencies — the most authoritative source
   if (hasTendencies(product.tendencies)) {
     const top = selectDefaultTendencies(product.tendencies.character, 2);
@@ -1983,7 +2063,6 @@ function selectProductExamples(
     case 'amplifier': catalog = AMPLIFIER_PRODUCTS; break;
     default: return [];
   }
-  if (budgetAmount === null) return [];
 
   const ranked = rankProducts(catalog, userTraits, budgetAmount, systemProfile);
 
@@ -2040,12 +2119,16 @@ function selectProductExamples(
   //
   // Shortlist sizing: 2–3 products. Products serve as supporting evidence
   // for strategic directions, not an exhaustive catalog.
-  // Sparse signals → diversity-aware selection (target 3).
-  // Rich signals  → score-ranked selection (target 3).
+  //
+  // No-budget queries use tiered selection (accessible / mid / stretch)
+  // to avoid ultra-high-end outliers dominating an exploratory shortlist.
+  // Budget queries use the standard diversity or score-ranked selection.
   const hasSparseSignals = Object.keys(userTraits).length < 2;
-  const top = hasSparseSignals
-    ? selectDiverseByTopology(ranked, 3)
-    : ranked.slice(0, 3);
+  const top = budgetAmount === null
+    ? selectTieredExploratory(ranked)
+    : hasSparseSignals
+      ? selectDiverseByTopology(ranked, 3)
+      : ranked.slice(0, 3);
 
   // Build lowercase set of current component names for matching
   const currentNames = new Set(
@@ -2172,6 +2255,146 @@ function selectDiverseByTopology(
       }
     }
   }
+
+  return selected;
+}
+
+/**
+ * Tiered exploratory selection — for no-budget queries.
+ *
+ * When the user hasn't stated a budget, the shortlist should feel
+ * approachable and credible — not insider-heavy. The composition rule is:
+ *
+ *   2 anchor picks — mainstream, established, or well-known specialist
+ *   1 wildcard    — boutique or distinctive option for character
+ *
+ * Price tiers prevent ultra-high-end outliers from dominating:
+ *
+ *   Accessible:  ≤ 0.6 × median
+ *   Mid-tier:    0.6 – 1.8 × median
+ *   Stretch:     1.8 – 3.0 × median
+ *   Excluded:    > 3.0 × median (reference/statement pieces)
+ *
+ * Anchors are drawn from accessible and mid tiers.
+ * The wildcard is drawn from any tier (often stretch).
+ * Topology diversity is enforced across all three picks.
+ */
+
+/** Brand scales considered broadly credible / recognizable. */
+const ANCHOR_BRAND_SCALES = new Set(['mainstream', 'major', 'established', 'heritage', 'specialist']);
+/** Brand scales considered distinctive / insider-oriented. */
+const WILDCARD_BRAND_SCALES = new Set(['boutique', 'luxury']);
+
+function selectTieredExploratory(ranked: ScoredProduct[]): ScoredProduct[] {
+  if (ranked.length === 0) return [];
+  if (ranked.length <= 3) return ranked;
+
+  // Compute median price from the candidate pool
+  const prices = ranked.map((r) => r.product.price).sort((a, b) => a - b);
+  const median = prices.length % 2 === 0
+    ? (prices[prices.length / 2 - 1] + prices[prices.length / 2]) / 2
+    : prices[Math.floor(prices.length / 2)];
+
+  // Price ceiling — exclude reference/statement pieces
+  const stretchCeil = median * 3.0;
+  const priceCapped = ranked.filter((r) => r.product.price <= stretchCeil);
+  if (priceCapped.length <= 3) return priceCapped;
+
+  // Tier boundaries for price spread
+  const accessibleCeil = median * 0.6;
+  const midCeil = median * 1.8;
+
+  // Helper: resolve topology tag for diversity checks
+  function topoOf(r: ScoredProduct): string {
+    return r.product.topology
+      ?? r.product.architecture?.split(/\s/)[0]?.toLowerCase()
+      ?? 'unknown';
+  }
+
+  // Helper: resolve brand recognition tier
+  function isAnchor(r: ScoredProduct): boolean {
+    return ANCHOR_BRAND_SCALES.has(r.product.brandScale ?? 'specialist');
+  }
+
+  // ── Pass 1: pick two anchors from different price tiers ──
+  const usedTopologies = new Set<string>();
+  const usedBrands = new Set<string>();
+  const selected: ScoredProduct[] = [];
+
+  function tryPick(
+    pool: ScoredProduct[],
+    filter: (r: ScoredProduct) => boolean,
+  ): ScoredProduct | null {
+    // First pass: matching filter + new topology + new brand
+    for (const r of pool) {
+      if (!filter(r)) continue;
+      if (selected.includes(r)) continue;
+      const topo = topoOf(r);
+      const brand = r.product.brand.toLowerCase();
+      if (!usedTopologies.has(topo) && !usedBrands.has(brand)) {
+        usedTopologies.add(topo);
+        usedBrands.add(brand);
+        return r;
+      }
+    }
+    // Second pass: relax brand constraint (allow same brand, require new topology)
+    for (const r of pool) {
+      if (!filter(r)) continue;
+      if (selected.includes(r)) continue;
+      const topo = topoOf(r);
+      if (!usedTopologies.has(topo)) {
+        usedTopologies.add(topo);
+        usedBrands.add(r.product.brand.toLowerCase());
+        return r;
+      }
+    }
+    // Third pass: accept anything matching the filter
+    for (const r of pool) {
+      if (!filter(r)) continue;
+      if (selected.includes(r)) continue;
+      usedTopologies.add(topoOf(r));
+      usedBrands.add(r.product.brand.toLowerCase());
+      return r;
+    }
+    return null;
+  }
+
+  // Anchor 1: prefer accessible tier (the "strong starting point" pick)
+  const accessiblePool = priceCapped.filter((r) => r.product.price <= accessibleCeil);
+  const midPool = priceCapped.filter((r) => r.product.price > accessibleCeil && r.product.price <= midCeil);
+  // Try accessible first, fall back to mid if accessible has no anchors
+  const anchor1 = tryPick(accessiblePool, isAnchor)
+    ?? tryPick(accessiblePool, () => true)
+    ?? tryPick(midPool, isAnchor);
+  if (anchor1) selected.push(anchor1);
+
+  // Anchor 2: prefer mid-to-stretch tier (the "step-up" pick)
+  const stepUpPool = priceCapped.filter((r) => r.product.price > accessibleCeil);
+  const anchor2 = tryPick(stepUpPool, isAnchor);
+  if (anchor2) selected.push(anchor2);
+
+  // ── Pass 2: pick one wildcard (boutique/luxury) — any tier ──
+  const wildcard = tryPick(
+    priceCapped,
+    (r) => WILDCARD_BRAND_SCALES.has(r.product.brandScale ?? 'specialist'),
+  );
+  if (wildcard) selected.push(wildcard);
+
+  // ── Pass 3: fill remaining slots if any tier was empty ──
+  // Prefer different brand recognition from what's already selected
+  if (selected.length < 3) {
+    const anchorCount = selected.filter(isAnchor).length;
+    const needsAnchor = anchorCount < 2;
+    const fill = tryPick(priceCapped, needsAnchor ? isAnchor : () => true);
+    if (fill) selected.push(fill);
+  }
+  if (selected.length < 3) {
+    const fill = tryPick(priceCapped, () => true);
+    if (fill) selected.push(fill);
+  }
+
+  // Sort final picks by price ascending — accessible → mid → stretch
+  selected.sort((a, b) => a.product.price - b.product.price);
 
   return selected;
 }
