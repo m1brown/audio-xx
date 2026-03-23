@@ -191,6 +191,74 @@ export function isReadyToCompare(facts: ConvFacts): boolean {
 
 // ── Transition logic ───────────────────────────────────
 
+// ── Intent-change detection ─────────────────────────────
+// Maps conversation modes to the intents they are compatible with.
+// When a new intent arrives that is NOT in the compatible set,
+// the state machine resets to idle with fresh facts.
+
+const MODE_COMPATIBLE_INTENTS: Record<ConvMode, Set<string>> = {
+  idle: new Set(), // idle accepts everything — never checked
+  orientation: new Set(['shopping', 'diagnosis', 'intake', 'music_input', 'consultation_entry']),
+  shopping: new Set(['shopping', 'intake', 'music_input']),
+  diagnosis: new Set(['diagnosis', 'system_assessment', 'consultation_entry']),
+  music_input: new Set(['music_input', 'shopping', 'intake']),
+  improvement: new Set(['diagnosis', 'shopping', 'intake']),
+  comparison: new Set(['comparison', 'exploration']),
+  system_assessment: new Set(['system_assessment', 'diagnosis', 'consultation_entry']),
+};
+
+/**
+ * Lightweight diagnosis signal check — returns true when the text
+ * contains an explicit diagnostic pattern (complaint, symptom, etc.)
+ * rather than falling through to the default "diagnosis" bucket
+ * in detectIntent().
+ */
+const DIAGNOSIS_SIGNAL_PATTERNS = [
+  /\bmy\s+(?:system|setup)\s+(?:sounds?|is|feels?)\b/i,
+  /\bsounds?\s+(?:too\s+)?(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|boring|lifeless|congested|sibilant|dry|sterile|clinical|analytical|cold|hard|brittle|forward|strident|sharp|lean|aggressive)\b/i,
+  /\btoo\s+(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|dry|sterile|clinical|analytical|cold|hard|forward|strident|sharp|lean|aggressive)\b/i,
+  /\black(?:s|ing)\s+/i,
+  /\blistening\s+fatigue\b/i,
+  /\bnot\s+(?:enough|happy|satisfied)\b/i,
+  /\bsomething\s+(?:is\s+|feels?\s+)?(?:off|wrong|missing)\b/i,
+  /\b(?:problem|issue)\s+with\b/i,
+];
+
+function hasExplicitDiagnosisSignal(text: string): boolean {
+  return DIAGNOSIS_SIGNAL_PATTERNS.some((p) => p.test(text));
+}
+
+/**
+ * Returns true when the detected intent is clearly incompatible
+ * with the active conversation mode.
+ *
+ * Only strong, recognized intents trigger a reset. Unknown/ambiguous
+ * intents never cause the state to clear.
+ *
+ * Special-case: 'diagnosis' is the default fallback in detectIntent() —
+ * bare numbers, ambiguous text, etc. all return diagnosis. We only treat
+ * it as a mismatch when the text contains an explicit diagnosis signal.
+ */
+function isIntentMismatch(mode: ConvMode, detectedIntent: string, text?: string): boolean {
+  if (mode === 'idle') return false;
+  const compatible = MODE_COMPATIBLE_INTENTS[mode];
+  if (!compatible) return false;
+
+  const STRONG_INTENTS = new Set([
+    'shopping', 'comparison', 'music_input', 'intake',
+    'system_assessment', 'consultation_entry', 'exploration',
+    'product_assessment', 'cable_advisory',
+  ]);
+
+  if (detectedIntent === 'diagnosis') {
+    if (!text || !hasExplicitDiagnosisSignal(text)) return false;
+    return !compatible.has('diagnosis');
+  }
+
+  if (!STRONG_INTENTS.has(detectedIntent)) return false;
+  return !compatible.has(detectedIntent);
+}
+
 /**
  * Given current state and new user input, compute the next state + response.
  *
@@ -206,6 +274,18 @@ export function transition(
     detectedIntent?: string;
   },
 ): ConvTransition {
+  // ── Intent-change detection ────────────────────────────
+  // When the user's new intent is clearly incompatible with the
+  // active conversation mode, reset to idle with fresh facts.
+  // This prevents stale category/budget/system data from leaking
+  // across unrelated flows (e.g. DAC shopping → KEF vs ELAC comparison).
+  if (context.detectedIntent && isIntentMismatch(current.mode, context.detectedIntent, text)) {
+    return {
+      state: INITIAL_CONV_STATE,
+      response: null,
+    };
+  }
+
   const facts = { ...current.facts };
   facts.hasSystem = context.hasSystem || facts.hasSystem;
   facts.subjectCount = context.subjectCount;
