@@ -253,8 +253,8 @@ export function transition(
           state: { mode: 'diagnosis', stage: 'clarify_system', facts },
           response: {
             kind: 'question',
-            acknowledge: `"${text.length > 60 ? text.slice(0, 57) + '...' : text}" — that's a useful starting point.`,
-            question: "What's in your system? List the main components so I can pinpoint what's likely causing this.",
+            acknowledge: `Understood — "${text.length > 60 ? text.slice(0, 57) + '...' : text}."`,
+            question: "What's in your system? Knowing the main components will help me pinpoint where this is coming from.",
           },
         };
       }
@@ -714,6 +714,13 @@ export function detectInitialMode(
   // Shopping with complete intent → skip clarification
   if (context.detectedIntent === 'shopping') {
     if (isReadyToRecommend(facts)) {
+      return { mode: 'shopping', stage: 'ready_to_recommend', facts };
+    }
+    // Explicit purchase intent ("buy a DAC", "purchase speakers") — recommend
+    // immediately with an exploratory set rather than asking for budget first.
+    // The follow-up question will offer to narrow by budget/system.
+    const hasExplicitPurchase = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up)\b/i.test(text);
+    if (facts.category && hasExplicitPurchase) {
       return { mode: 'shopping', stage: 'ready_to_recommend', facts };
     }
     if (facts.category) {

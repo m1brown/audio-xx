@@ -495,7 +495,10 @@ export function detectShoppingIntent(
   const lower = userText.toLowerCase();
 
   // 1. Intent
-  const detected = INTENT_KEYWORDS.some((kw) => lower.includes(kw));
+  // INTENT_KEYWORDS uses string matching which requires '$' in budget phrases.
+  // Also check BUDGET_PATTERNS (regex) to catch "under 1500" without '$'.
+  const detected = INTENT_KEYWORDS.some((kw) => lower.includes(kw))
+    || BUDGET_PATTERNS.some((re) => re.test(userText));
   if (!detected) {
     return {
       detected: false,
@@ -724,7 +727,7 @@ function phraseSystemQuestion(ctx: ShoppingContext): string {
 }
 
 function phraseBudgetQuestion(ctx: ShoppingContext): string {
-  const catLabel = CATEGORY_LABELS[ctx.category];
+  const catLabel = CATEGORY_LABELS[ctx.category] ?? 'component';
   return `Do you have a rough budget range in mind for the ${catLabel}?`;
 }
 
@@ -877,6 +880,11 @@ export function isAnswerReady(
   // under $2000"). Enough context to produce a useful recommendation
   // immediately; taste and system signals enrich but don't gate.
   if (ctx.category !== 'general' && ctx.budgetMentioned) return true;
+
+  // Explicit buy intent — "I want to buy a DAC" without budget or taste.
+  // Show popular options immediately rather than gating on discovery.
+  // The response will note missing budget/taste as caveats, not blockers.
+  if (ctx.category !== 'general' && ctx.mode === 'specific-component') return true;
 
   const hasSystem = isSystemSufficient(ctx);
   const signalCount = countPreferenceSignals(ctx, signals);
@@ -1345,75 +1353,78 @@ import type { ReasoningResult } from './reasoning';
 function extractKeyPhrase(text: string): string {
   // Split on em-dash (—) and take the first part
   const emDashIndex = text.indexOf('—');
-  if (emDashIndex > 0) {
-    return text.slice(0, emDashIndex).trim().toLowerCase();
-  }
-  // Fallback: take first ~10 words
-  const words = text.split(/\s+/);
-  if (words.length <= 10) return text.toLowerCase();
-  return words.slice(0, 10).join(' ').toLowerCase();
+  let phrase = emDashIndex > 0
+    ? text.slice(0, emDashIndex).trim()
+    : text.trim();
+  // Strip trailing qualifiers
+  phrase = phrase.replace(/\s+(?:compared to|rather than|relative to|with\s+\w+)\s+.*/i, '');
+  // Cap at 4 words to keep it punchy
+  const words = phrase.split(/\s+/);
+  if (words.length > 4) phrase = words.slice(0, 4).join(' ');
+  return phrase.toLowerCase();
 }
 
 /**
  * Generate a one-sentence fit note for a product based on its
  * architecture and strongest matching traits.
  */
-function buildFitNote(product: Product, userTraits: Record<string, SignalDirection>): string {
-  const arch = product.architecture;
-
-  // Priority 1: curated character tendencies — synthesize a verdict
-  // Extract the key phrase from each tendency (before the em-dash elaboration)
-  // to keep the verdict concise rather than copying full sound profile text.
+/**
+ * Build a concise "best for" summary for a product.
+ *
+ * Output: short phrase like "Best for warmth and body" or "Best for speed and clarity".
+ * No architecture labels, no trade-off clauses, no internal modelling language.
+ */
+function buildFitNote(product: Product, _userTraits: Record<string, SignalDirection>): string {
+  // Priority 1: curated character tendencies — extract the two strongest qualities
   if (hasTendencies(product.tendencies)) {
     const top = selectDefaultTendencies(product.tendencies.character, 3);
     if (top.length >= 2) {
-      const phrase1 = extractKeyPhrase(top[0].tendency);
-      const phrase2 = extractKeyPhrase(top[1].tendency);
-      // Build directional verdict with trade-off awareness
-      const tradeoff = product.tendencies.tradeoffs?.[0];
-      const tradeoffNote = tradeoff ? `. Less ideal if you prioritize ${extractKeyPhrase(tradeoff.cost)}` : '';
-      return `${arch} design — strong choice if you value ${phrase1} and ${phrase2}${tradeoffNote}`;
+      return `Best for ${extractKeyPhrase(top[0].tendency)} and ${extractKeyPhrase(top[1].tendency)}`;
     }
     if (top.length === 1) {
-      return `${arch} design — best suits listeners drawn to ${extractKeyPhrase(top[0].tendency)}`;
+      return `Best for ${extractKeyPhrase(top[0].tendency)}`;
     }
   }
 
-  // Priority 2: qualitative tendency profile (high/medium only)
+  // Priority 2: qualitative tendency profile — prefer 'emphasized', fall back to 'present'
   if (hasExplainableProfile(product.tendencyProfile)) {
     const emphasized = getEmphasizedTraits(product.tendencyProfile);
-    const lessEmph = getLessEmphasizedTraits(product.tendencyProfile);
-    if (emphasized.length > 0) {
-      const conf = product.tendencyProfile.confidence;
-      const verb = (conf === 'high' || conf === 'founder_reference') ? 'emphasizes' : 'leans toward';
-      const tradeOff = lessEmph.length > 0 ? `. Less ideal if you prioritize ${lessEmph[0]}` : '';
-      return `${arch} design — ${verb} ${emphasized.slice(0, 2).join(' and ')}${tradeOff}`;
+    if (emphasized.length >= 2) {
+      return `Best for ${emphasized[0]} and ${emphasized[1]}`;
+    }
+    if (emphasized.length === 1) {
+      return `Best for ${emphasized[0]}`;
+    }
+    // No 'emphasized' traits — use 'present' traits as fallback
+    const present = product.tendencyProfile.tendencies
+      .filter((t) => t.level === 'present')
+      .map((t) => t.trait.replace(/_/g, ' '));
+    if (present.length >= 2) {
+      return `Best for ${present[0]} and ${present[1]}`;
+    }
+    if (present.length === 1) {
+      return `Best for ${present[0]}`;
     }
   }
 
-  // Priority 3: design archetype (class-level knowledge)
-  const fitArchetype = resolveArchetype(arch);
-  const fitNote = fitArchetype ? archetypeFitNote(fitArchetype) : undefined;
-  if (fitNote) {
-    return `${arch} design — ${fitNote}`;
+  // Priority 3: primary axis leanings
+  if (product.primaryAxes) {
+    const qualities: string[] = [];
+    const wb = product.primaryAxes.warm_bright;
+    const sd = product.primaryAxes.smooth_detailed;
+    const ec = product.primaryAxes.elastic_controlled;
+    if (wb === 'warm') qualities.push('warmth');
+    if (wb === 'bright') qualities.push('clarity and energy');
+    if (sd === 'smooth') qualities.push('smooth listening');
+    if (sd === 'detailed') qualities.push('detail retrieval');
+    if (ec === 'elastic') qualities.push('dynamics and punch');
+    if (ec === 'controlled') qualities.push('composure and control');
+    if (qualities.length >= 2) return `Best for ${qualities[0]} and ${qualities[1]}`;
+    if (qualities.length === 1) return `Best for ${qualities[0]}`;
   }
 
-  // Priority 4: legacy trait-label + description path
-  const strongTraits: string[] = [];
-
-  for (const [trait, direction] of Object.entries(userTraits)) {
-    const val = resolveTraitValue(product.tendencyProfile, product.traits, trait);
-    if (direction === 'up' && val >= 0.7) {
-      strongTraits.push(trait.replace(/_/g, ' '));
-    }
-  }
-
-  if (strongTraits.length > 0) {
-    const traitList = strongTraits.slice(0, 2).join(' and ');
-    return `${arch} design with strong ${traitList}. ${product.description.split('.')[0]}.`;
-  }
-
-  return `${arch} design. ${product.description.split('.')[0]}.`;
+  // Priority 4: description fallback
+  return `${product.description.split('.')[0]}.`;
 }
 
 // ── Enhanced card field builders ────────────────────────
@@ -1861,7 +1872,7 @@ function buildSoundProfile(product: Product): string[] {
       warm_bright:       { warm: 'Warm-leaning tonality', bright: 'Bright, energetic presentation', neutral: 'Tonally neutral' },
       smooth_detailed:   { smooth: 'Smooth, easy-going', detailed: 'Detail-forward and resolving', neutral: 'Balanced detail retrieval' },
       elastic_controlled:{ elastic: 'Dynamic and expressive', controlled: 'Controlled and composed', neutral: 'Even-handed dynamics' },
-      airy_closed:       { airy: 'Open, airy staging', closed: 'Intimate staging', neutral: 'Moderate staging' },
+      scale_intimacy:    { scale: 'Large-scale, room-filling presentation', intimacy: 'Close, listener-focused presentation', neutral: 'Moderate spatial presentation' },
     };
     for (const [axis, leaning] of Object.entries(product.primaryAxes)) {
       const label = AXIS_LABELS[axis]?.[leaning];
@@ -1934,7 +1945,7 @@ function selectProductExamples(
   reasoning?: ReasoningResult,
   currentComponentNames?: string[],
 ): ProductExample[] {
-  // ── Turntable: illustrative examples (no trait scoring) ──
+  // ── Turntable: illustrative examples with full card data ──
   if (category === 'turntable') {
     const phonoDep = dependencies.find((d) => d.id === 'phono_stage');
     const phonoAbsent = phonoDep?.status === 'absent';
@@ -1944,7 +1955,14 @@ function selectProductExamples(
       brand: t.brand,
       price: t.price,
       priceCurrency: t.priceCurrency,
-      fitNote: (phonoAbsent ? t.phonoAbsentNote : t.fitNote) ?? '',
+      character: buildProductCharacter(t),
+      standoutFeatures: buildStandoutFeatures(t),
+      soundProfile: buildSoundProfile(t),
+      fitNote: buildFitNote(t, userTraits),
+      sonicDirectionLabel: buildSonicDirectionLabel(t),
+      manufacturerUrl: t.retailer_links?.[0]?.url,
+      availability: t.availability,
+      usedPriceRange: t.usedPriceRange,
     }));
   }
 
@@ -2086,8 +2104,8 @@ function selectProductExamples(
  * Pass 3: last resort — fill from ranked list.
  */
 /** Shortlist bounds — applied after diversity selection. */
-const MIN_SHORTLIST = 4;
-const MAX_SHORTLIST = 6;
+const MIN_SHORTLIST = 2;
+const MAX_SHORTLIST = 3;
 
 function selectDiverseByTopology(
   ranked: ScoredProduct[],
@@ -2579,7 +2597,7 @@ export function buildShoppingAnswer(
   activeSystemComponents?: string[],
 ): ShoppingAnswer {
   const traits = signals.traits;
-  const categoryLabel = CATEGORY_LABELS[ctx.category];
+  const categoryLabel = CATEGORY_LABELS[ctx.category] ?? 'component';
 
   // Find the best-matching taste profile
   const matchedProfile = TASTE_PROFILES.find((p) => p.check(traits));
@@ -2598,8 +2616,9 @@ export function buildShoppingAnswer(
 
   // 1. Preference summary — use reasoning taste label when available
   const effectiveTasteLabel = reasoning?.taste.tasteLabel ?? taste.label;
-  const archetypeLabel = (reasoning?.taste.archetype ?? matchedProfile?.archetype)
-    ? ` — a ${ARCHETYPE_LABELS[(reasoning?.taste.archetype ?? matchedProfile?.archetype)!]} preference`
+  const archetype = reasoning?.taste.archetype ?? matchedProfile?.archetype;
+  const archetypeLabel = archetype && ARCHETYPE_LABELS[archetype]
+    ? ` — a ${ARCHETYPE_LABELS[archetype]} preference`
     : '';
   const profileNote = reasoning?.taste.storedProfileUsed
     ? ` Your stored taste profile reinforces this.`

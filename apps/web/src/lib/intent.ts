@@ -61,10 +61,11 @@ const BRAND_NAMES = [
   'bluesound', 'innuos', 'sonnet',
   // Speakers
   'wlm', 'harbeth', 'devore', 'zu', 'zu audio', 'klipsch', 'focal', 'boenicke',
-  'kef', 'b&w', 'bowers', 'dynaudio', 'wilson', 'wilson audio', 'magico',
+  'kef', 'elac', 'b&w', 'bowers', 'dynaudio', 'wilson', 'wilson audio', 'magico',
   'sonus faber', 'proac', 'spendor', 'atc', 'tannoy',
-  'magnepan', 'martin logan', 'quad',
-  'cube audio', 'hornshoppe', 'qualio', 'totem',
+  'magnepan', 'martin logan', 'quad', 'wharfedale', 'dali', 'monitor audio',
+  'cube audio', 'hornshoppe', 'qualio', 'totem', 'tekton', 'borresen', 'qln',
+  'dutch & dutch', 'dutch and dutch', 'voxativ', 'spatial audio', 'fyne', 'fyne audio',
   'falcon', 'falcon acoustics', 'mission', 'amphion', 'jbl', 'altec', 'altec lansing',
   // Amplifiers
   'pass labs', 'first watt', 'naim', 'luxman', 'accuphase',
@@ -72,10 +73,11 @@ const BRAND_NAMES = [
   'shindo', 'leben', 'audio note',
   'line magnetic', 'primaluna', 'cary', 'arc', 'audio research',
   'job', 'goldmund', 'crayon', 'xsa', 'trends', 'trends audio',
-  'kinki studio', 'kinki', 'enleum', 'bakoon', 'grandinote',
+  'kinki studio', 'kinki', 'enleum', 'bakoon', 'grandinote', 'singxer',
   'soulution', 'dartzeel', 'decware', 'linear tube audio', 'lta',
   'vinnie rossi', 'ayre', 'boulder', 'primare', 'electrocompaniet',
   'rotel', 'cambridge audio', 'audiolab', 'nad', 'bottlehead', 'yamamoto',
+  'purifi', 'mola mola', 'aric audio', 'audio analogue',
   // Turntables / tonearms / cartridges
   'rega', 'pro-ject', 'technics', 'clearaudio', 'vpi',
   'linn', 'thorens', 'michell', 'michell engineering',
@@ -89,7 +91,7 @@ const BRAND_NAMES = [
   'hifiman', 'audeze', 'shure', 'etymotic',
   'moondrop', 'apple', 'grado',
   'zmf', 'focal', 'meze', 'dan clark audio', 'dan clark',
-  'campfire audio', 'campfire',
+  'campfire audio', 'campfire', 'raal', 'raal requisite',
 ];
 
 /**
@@ -391,7 +393,7 @@ const OWNERSHIP_PATTERNS = [
 const DIAGNOSIS_PATTERNS = [
   /\bmy\s+system\s+sounds?\b/i,
   /\bmy\s+setup\s+(?:sounds?|is|feels?)\b/i,
-  /\bsounds?\s+(?:too\s+)?(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|boring|lifeless|congested|sibilant)\b/i,
+  /\bsounds?\s+(?:too\s+)?(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|boring|lifeless|congested|sibilant|dry|sterile|clinical|analytical|cold|hard|brittle|forward|strident|sharp|lean|aggressive)\b/i,
   /\blacking\s+(?:in\s+)?(?:bass|treble|detail|warmth|body|dynamics|punch|clarity|air|space|depth)\b/i,
   /\btoo\s+much\s+(?:brightness|treble|bass|warmth|sibilance|glare)\b/i,
   /\bwhy\s+does\s+(?:my|the)\b/i,
@@ -408,6 +410,11 @@ const DIAGNOSIS_PATTERNS = [
   /\bnot\s+(?:sharp|clinical|harsh|bright|fatiguing|sterile|aggressive)\b/i,
   /\bfatiguing\s+(?:over\s+time|quickly|easily|after\b)/i,
   /\bget(?:s)?\s+fatiguing\b/i,
+  // Soft-complaint patterns — "a little dry", "can be harsh", "tends to sound bright"
+  /\b(?:a\s+(?:little|bit|touch|tad)\s+(?:dry|bright|thin|harsh|lean|cold|sterile|clinical|analytical|hard|forward|fatiguing|aggressive|muddy|dull))\b/i,
+  /\b(?:can\s+be|tends?\s+to\s+(?:be|sound)|sometimes?\s+(?:sounds?|feels?|gets?))\s+(?:a\s+(?:little|bit)\s+)?(?:dry|bright|thin|harsh|lean|cold|sterile|clinical|analytical|hard|forward|fatiguing|aggressive|muddy|dull)\b/i,
+  // Hedged complaints — "great but dry", "love it but a bit thin"
+  /\b(?:great|good|fine|love|enjoy|like)\s+(?:it\s+)?but\s+(?:a\s+(?:little|bit|touch|tad)\s+)?(?:dry|bright|thin|harsh|lean|cold|sterile|clinical|analytical|hard|forward|fatiguing|aggressive|muddy|dull)\b/i,
 ];
 
 // ── Subject extraction ───────────────────────────────
@@ -510,7 +517,7 @@ const KNOWN_QUALITIES = [
   // Negative qualities (things listeners want less of)
   'glare', 'sibilance', 'harshness', 'fatigue',
   'brightness', 'edge', 'sweetness', 'thinness', 'dullness',
-  'aggression',
+  'aggression', 'dryness', 'coldness', 'sterility',
 ];
 
 /**
@@ -590,8 +597,15 @@ const QUALITY_ALIASES: Record<string, string> = {
   aggressive: 'aggression',
   lean: 'thinness',                // "lean" in complaint context ≈ thin
   sharp: 'brightness',             // "not sharp" → wants less brightness/glare
-  clinical: 'fatigue',             // "not clinical" → wants less analytical fatigue
-  sterile: 'fatigue',              // "not sterile" → same clinical-fatigue cluster
+  clinical: 'sterility',           // "not clinical" → wants less analytical character
+  sterile: 'sterility',            // "not sterile" → same clinical cluster
+  dry: 'dryness',                  // "dry" → lacking harmonic richness / body
+  cold: 'coldness',                // "cold" → lacking warmth and engagement
+  analytical: 'sterility',         // "analytical" → overly precise, lacking musicality
+  brittle: 'harshness',            // "brittle" → hard-edged transients
+  hard: 'harshness',               // "hard" → aggressive transient character
+  forward: 'aggression',           // "forward" → in-your-face presentation
+  strident: 'harshness',           // "strident" → aggressive upper midrange
 };
 
 /** Resolve a word to a canonical quality, checking both KNOWN_QUALITIES and aliases. */
@@ -760,7 +774,7 @@ function extractImplicitDesires(
       const quality = resolveQuality(word);
       if (quality) {
         // Skip qualities that are inherently negative (wanting "more glare" is unlikely)
-        const NEGATIVE_QUALITIES = ['glare', 'sibilance', 'harshness', 'fatigue', 'brightness', 'edge', 'thinness', 'dullness', 'grain', 'aggression'];
+        const NEGATIVE_QUALITIES = ['glare', 'sibilance', 'harshness', 'fatigue', 'brightness', 'edge', 'thinness', 'dullness', 'grain', 'aggression', 'dryness', 'coldness', 'sterility'];
         if (NEGATIVE_QUALITIES.includes(quality)) continue;
         addIfNew(quality, 'more', word);
       }
@@ -972,6 +986,17 @@ export function detectIntent(currentMessage: string): IntentResult {
       return { intent: 'music_input', subjects, subjectMatches, desires };
     }
     // Fall through to shopping/intake detection below
+  }
+
+  // 2c-buy. Explicit purchase intent — "I want to buy a DAC", "looking to purchase speakers".
+  //     When the user combines a purchase verb with a product category, that's
+  //     a clear shopping query — skip intake entirely and route to shopping.
+  //     This prevents vague-looking but actually decisive queries from being
+  //     caught by the broader intake patterns below.
+  const hasPurchaseVerb = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|pick\s+out)\b/i.test(currentMessage);
+  const hasCategoryTarget = /\b(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp)\b/i.test(currentMessage);
+  if (hasPurchaseVerb && hasCategoryTarget) {
+    return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
   // 2c. Intake — vague entry queries like "I want a new stereo" or "I need speakers".

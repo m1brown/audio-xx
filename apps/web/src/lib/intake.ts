@@ -64,7 +64,7 @@ const INTAKE_PATTERNS = [
  */
 const INTAKE_GUARD_PATTERNS = [
   // Budget signals
-  /\bunder\s+\$\d/i,
+  /\bunder\s+\$?\d/i,
   /\$\s?\d{3,}/,
   /\€\s?\d{3,}/,
   /\bbudget\s+(?:of|around|is)\s+\$?\€?\d/i,
@@ -85,6 +85,10 @@ const INTAKE_GUARD_PATTERNS = [
   // Use-case / feature signals
   /\b(?:turntable|vinyl|record\s+player|phono)\b/i,
   /\b(?:a\s+little|much|way)\s+better\b/i,
+
+  // Explicit purchase intent — "buy", "purchase", "shop for"
+  // When someone says "buy a DAC" they're ready to shop, not fill a form.
+  /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|pick\s+out)\b/i,
 ];
 
 /**

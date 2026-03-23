@@ -96,20 +96,24 @@ const CABLE_SIGNALS = [
 
 const DIAGNOSIS_SIGNALS = [
   /\bmy\s+(?:system|setup|rig)\b/i,
-  /\bsounds?\s+(?:too\s+)?(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|boring|lifeless|congested|sibilant)\b/i,
+  /\bsounds?\s+(?:too\s+)?(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|boring|lifeless|congested|sibilant|dry|sterile|clinical|analytical|cold|hard|brittle|forward|strident|sharp|lean|aggressive)\b/i,
   /\btoo\s+much\s+(?:brightness|treble|bass|warmth|sibilance|glare)\b/i,
   /\b(?:bothers?|annoys?|fatigues?)\s+me\b/i,
   /\blistening\s+fatigue\b/i,
   /\bsomething\s+(?:is\s+)?(?:off|wrong|missing)\b/i,
   /\blacking\b/i,
   /\bnot\s+(?:enough|happy|satisfied)\b/i,
-  // Sensitivity / intolerance language — "sensitive to brightness", "can't tolerate harshness"
+  // Sensitivity / intolerance language
   /\bsensitive\s+to\s+(?:brightness|harshness|fatigue|glare|sibilance|treble|sharpness)\b/i,
   /\bcan'?t\s+(?:tolerate|stand|handle)\s+(?:brightness|harshness|fatigue|glare|sibilance)\b/i,
   /\bdon'?t\s+want\s+(?:something\s+)?(?:sharp|clinical|harsh|bright|fatiguing|sterile|aggressive)\b/i,
   /\bnot\s+(?:sharp|clinical|harsh|bright|fatiguing|sterile|aggressive)\b/i,
   /\bfatiguing\s+(?:over\s+time|quickly|easily|after\b)/i,
   /\bget(?:s)?\s+fatiguing\b/i,
+  // Soft-complaint patterns — "a little dry", "can be harsh"
+  /\b(?:a\s+(?:little|bit|touch|tad)\s+(?:dry|bright|thin|harsh|lean|cold|sterile|clinical|analytical|hard|forward|fatiguing|aggressive|muddy|dull))\b/i,
+  /\b(?:can\s+be|tends?\s+to\s+(?:be|sound)|sometimes?\s+(?:sounds?|feels?|gets?))\s+(?:a\s+(?:little|bit)\s+)?(?:dry|bright|thin|harsh|lean|cold|sterile|clinical|analytical|hard|forward|fatiguing|aggressive|muddy|dull)\b/i,
+  /\b(?:great|good|fine|love|enjoy|like)\s+(?:it\s+)?but\s+(?:a\s+(?:little|bit|touch|tad)\s+)?(?:dry|bright|thin|harsh|lean|cold|sterile|clinical|analytical|hard|forward|fatiguing|aggressive|muddy|dull)\b/i,
 ];
 
 // ── Shopping signals ────────────────────────────────
@@ -119,9 +123,11 @@ const SHOPPING_SIGNALS = [
   /\brecommend/i,
   /\blooking\s+for\b/i,
   /\bshould\s+i\s+(?:get|buy)\b/i,
-  /\bunder\s+\$\d/i,
+  /\bunder\s+\$?\d/i,
   /\bbudget\b/i,
   /\bwhat\s+(?:dac|amp|speaker|headphone)\b.*\bfor\b/i,
+  /\b(?:i\s+)?want\s+(?:a|an)\s+(?:dac|amp|amplifier|speaker|speakers|headphones?|turntable|streamer)\b/i,
+  /\b(?:i\s+)?need\s+(?:a|an)\s+(?:dac|amp|amplifier|speaker|speakers|headphones?|turntable|streamer)\b/i,
 ];
 
 // ── Hypothetical / counterfactual signals ─────────────
@@ -181,12 +187,22 @@ export function routeConversation(currentMessage: string): ConversationMode {
     return 'consultation';
   }
 
+  // 0b. Explicit shopping override — buying intent + product category.
+  //     Must fire BEFORE diagnosis so "I want to buy a DAC" isn't caught
+  //     by diagnosis patterns like "don't want something harsh".
+  //     Only fires when intent is unambiguously shopping (buy/want/need/recommend + category).
+  const hasExplicitBuyingIntent = /\b(?:buy|purchase|looking\s+for|want\s+(?:a|an|to\s+buy)|need\s+(?:a|an)|recommend|suggest|shopping\s+for|get\s+(?:a|an|me))\b/i.test(currentMessage);
+  const hasProductCategory = /\b(?:dac|amp|amplifier|speaker|speakers|headphones?|turntable|streamer|preamp|preamplifier|subwoofer|cables?|cartridge|phono\s+stage|integrated)\b/i.test(currentMessage);
+  if (hasExplicitBuyingIntent && hasProductCategory) {
+    return 'shopping';
+  }
+
   // 1. Diagnosis takes priority — listening problem overrides all
   if (DIAGNOSIS_SIGNALS.some((p) => p.test(currentMessage))) {
     return 'diagnosis';
   }
 
-  // 2. Shopping — recommendation request
+  // 2. Shopping — recommendation request (broader patterns)
   if (SHOPPING_SIGNALS.some((p) => p.test(currentMessage))) {
     return 'shopping';
   }

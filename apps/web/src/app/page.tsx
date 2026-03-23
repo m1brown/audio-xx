@@ -32,7 +32,7 @@ import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
-import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory } from '@/lib/consultation';
+import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory, buildSystemDiagnosis } from '@/lib/consultation';
 import { findReferenceProduct, buildExplorationResponse, explorationToConsultation } from '@/lib/exploration';
 import { buildIntakeResponse, intakeToAdvisory } from '@/lib/intake';
 import { inferUnknownProduct } from '@/lib/llm-product-inference';
@@ -57,14 +57,18 @@ import type { DraftSystem } from '@/lib/system-types';
 
 // ── Constants ─────────────────────────────────────────
 
-/** Design tokens — restrained, Goldmund-inspired palette. */
+/** Design tokens — FT-inspired, calm premium palette. */
 const COLOR = {
-  bg: '#F7F5F2',
+  bg: '#F7F3EB',
   textPrimary: '#2B2A28',
-  textSecondary: '#6B6863',
-  accent: '#A88F5A',
-  accentHover: '#8F7748',
-  border: '#E6E2DC',
+  textSecondary: '#7A7570',
+  accent: '#B08D57',
+  accentHover: '#9A7A48',
+  accentSubtle: 'rgba(176,141,87,0.08)',
+  border: '#E2DDD4',
+  inputBg: '#FFFEFA',
+  chipBg: '#F0EBE1',
+  chipBorder: '#D5CEBC',
 } as const;
 
 // Cycling placeholders removed — static placeholder is now used.
@@ -475,8 +479,8 @@ export default function Home() {
           dispatch({
             type: 'ADD_QUESTION',
             clarification: {
-              acknowledge: `"${submittedText}" — that's a useful starting point.`,
-              question: 'What\'s in your system? List the main components (source, DAC, amp, speakers) so I can pinpoint what\'s likely causing this.',
+              acknowledge: `Understood — "${submittedText}."`,
+              question: 'What\'s in your system? Knowing the main components (source, DAC, amp, speakers) will help me pinpoint where this is coming from.',
             },
           });
           // Stay in diagnosis lane — next reply provides system context
@@ -728,8 +732,8 @@ export default function Home() {
           dispatch({
             type: 'ADD_QUESTION',
             clarification: {
-              acknowledge: `"${submittedText.length > 60 ? submittedText.slice(0, 57) + '...' : submittedText}" — that's a useful starting point.`,
-              question: "What's in your system? List the main components so I can pinpoint what's likely causing this.",
+              acknowledge: `Understood — "${submittedText.length > 60 ? submittedText.slice(0, 57) + '...' : submittedText}."`,
+              question: "What's in your system? Knowing the main components will help me pinpoint where this is coming from.",
             },
           });
           dispatch({ type: 'SET_LOADING', value: false });
@@ -746,7 +750,8 @@ export default function Home() {
           // Override intent so we never fall to generic intake
           intent = 'shopping';
           if (initialConvMode.stage === 'ready_to_recommend') {
-            // Fall through to normal pipeline for immediate recommendation
+            // Explicit purchase intent — skip clarifications, recommend immediately
+            skipToSuggestionsRef.current = true;
           } else {
             // State is set — pipeline will ask ONE narrowing question via getShoppingClarification
           }
@@ -1230,6 +1235,28 @@ export default function Home() {
       return;
     }
 
+    // ── System diagnosis short-circuit ─────────────────
+    // When diagnosis intent fires AND user mentioned system components,
+    // produce a concise contextual diagnosis directly — no need for the
+    // full evaluate engine. This handles: "I have X and Y, sounds dry."
+    if (intent === 'diagnosis' && turnCtx.subjectMatches.length >= 1) {
+      const sysDiag = buildSystemDiagnosis(submittedText, turnCtx.subjectMatches);
+      if (sysDiag) {
+        dispatchAdvisory(consultationToAdvisory(sysDiag, undefined, advisoryCtx), advisoryId());
+        // Save system context for continuity
+        if (turnCtx.subjectMatches.length >= 2) {
+          dispatch({
+            type: 'SET_SYSTEM_CONTEXT',
+            components: turnCtx.subjectMatches.map((m) => m.name),
+            source: submittedText,
+          });
+        }
+        dispatch({ type: 'SET_LOADING', value: false });
+        return;
+      }
+      // If buildSystemDiagnosis returns null, fall through to evaluate engine
+    }
+
     // Shopping and diagnosis intents go through the evaluation engine
     const allUserText = [...messages.filter((m) => m.role === 'user').map((m) => m.content), submittedText].join('\n');
     const newTurnCount = turnCount + 1;
@@ -1426,9 +1453,11 @@ export default function Home() {
             dispatchAdvisory(analysisToAdvisory(data.result, data.signals, diagDirection, reasoning, advisoryCtx), advisoryId());
           }
         }
+      } else {
+        dispatch({ type: 'ADD_NOTE', content: 'Something went wrong — try rephrasing your request.' });
       }
     } catch {
-      // Silently handle — user can retry
+      dispatch({ type: 'ADD_NOTE', content: 'Could not reach the server — please try again.' });
     }
 
     dispatch({ type: 'SET_LOADING', value: false });
@@ -1553,9 +1582,9 @@ export default function Home() {
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleReset(); }}
         style={{
-          borderTop: `2px solid ${COLOR.accent}`,
-          width: 48,
-          marginBottom: '1.5rem',
+          borderTop: `2.5px solid ${COLOR.accent}`,
+          width: 40,
+          marginBottom: '1.75rem',
           cursor: 'pointer',
         }}
       />
@@ -1566,10 +1595,10 @@ export default function Home() {
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleReset(); }}
         style={{
-          marginBottom: '0.4rem',
-          fontSize: '1.85rem',
+          marginBottom: '0.35rem',
+          fontSize: '1.8rem',
           fontWeight: 700,
-          letterSpacing: '-0.03em',
+          letterSpacing: '-0.025em',
           lineHeight: 1.15,
           color: COLOR.textPrimary,
           cursor: 'pointer',
@@ -1581,8 +1610,7 @@ export default function Home() {
       {/* System badge + panel */}
       <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
         <SystemBadge onClick={() => setSystemPanelOpen((v) => !v)} />
-        {/* Fallback entry point when no system is active (and no auto-activated single system) */}
-        {!audioState.activeSystemRef && audioState.savedSystems.length !== 1 && !systemPanelOpen && (
+        {!audioState.activeSystemRef && !systemPanelOpen && (
           <button
             type="button"
             onClick={() => setSystemPanelOpen(true)}
@@ -1590,16 +1618,16 @@ export default function Home() {
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              fontSize: '0.78rem',
+              fontSize: '0.8rem',
               color: COLOR.textSecondary,
               fontFamily: 'inherit',
-              padding: 0,
+              padding: '0.15rem 0',
               textDecoration: 'underline',
+              textDecorationColor: COLOR.border,
+              textUnderlineOffset: '2px',
             }}
           >
-            {audioState.savedSystems.length > 0 || audioState.draftSystem
-              ? 'Select system'
-              : 'Add your system'}
+            {audioState.savedSystems.length > 0 ? 'Select system' : 'Add your system'}
           </button>
         )}
         {systemPanelOpen && (
@@ -1643,27 +1671,16 @@ export default function Home() {
             style={{
               marginTop: '0.15rem',
               marginBottom: '0.5rem',
-              maxWidth: 580,
+              maxWidth: 520,
               color: COLOR.textPrimary,
-              fontSize: '1.08rem',
+              fontSize: '1.05rem',
               lineHeight: 1.55,
               fontWeight: 500,
             }}
           >
-            Get clear, practical recommendations for audio gear that matches your preferences and budget.
+            Audio advice shaped by your system, your ears, and how you listen.
           </p>
-          <p
-            style={{
-              marginTop: 0,
-              marginBottom: '1.5rem',
-              maxWidth: 560,
-              color: COLOR.textSecondary,
-              fontSize: '0.92rem',
-              lineHeight: 1.5,
-            }}
-          >
-            Start with your system, a problem, or something you&apos;re considering.
-          </p>
+          <div style={{ marginBottom: '2rem' }} />
 
           {/* Compact taste widget — authenticated users with profile data */}
           {tasteProfile && tasteProfile.confidence > 0 && (
@@ -1725,7 +1742,7 @@ export default function Home() {
                   animationDelay: `${Math.min(i * 0.05, 0.3)}s`,
                 }}
               >
-                <MessageBubble key={i} message={msg} onIntakeSubmit={handleSubmit} />
+                <MessageBubble message={msg} onIntakeSubmit={handleSubmit} />
               </div>
             ))}
           {/* Skip-to-suggestions button — visible when asking clarifying questions in shopping mode */}
@@ -1812,26 +1829,28 @@ export default function Home() {
           }
           style={{
             width: '100%',
-            minHeight: hasMessages ? 72 : 130,
-            padding: '0.9rem 1rem',
-            border: `1px solid ${COLOR.border}`,
-            borderRadius: 8,
+            minHeight: hasMessages ? 72 : 120,
+            padding: '1rem 1.1rem',
+            border: `1.5px solid ${COLOR.border}`,
+            borderRadius: 10,
             outline: 'none',
             fontSize: '0.98rem',
             lineHeight: 1.6,
             resize: 'vertical',
-            background: '#fff',
+            background: COLOR.inputBg,
             color: COLOR.textPrimary,
             boxSizing: 'border-box',
-            transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+            transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
           }}
           onFocus={(e) => {
             e.currentTarget.style.borderColor = COLOR.accent;
-            e.currentTarget.style.boxShadow = `0 0 0 3px rgba(168,143,90,0.1)`;
+            e.currentTarget.style.boxShadow = `0 0 0 3px rgba(176,141,87,0.12)`;
+            e.currentTarget.style.background = '#fff';
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = COLOR.border;
             e.currentTarget.style.boxShadow = 'none';
+            e.currentTarget.style.background = COLOR.inputBg;
           }}
         />
 
@@ -1841,23 +1860,27 @@ export default function Home() {
           onClick={() => handleSubmit()}
           disabled={isLoading || !currentInput.trim()}
           style={{
-            marginTop: '0.5rem',
-            padding: '0.5rem 1.4rem',
+            marginTop: '0.6rem',
+            padding: '0.55rem 1.5rem',
             background: isLoading || !currentInput.trim() ? COLOR.border : COLOR.accent,
-            color: isLoading || !currentInput.trim() ? COLOR.textSecondary : '#fff',
+            color: isLoading || !currentInput.trim() ? COLOR.textSecondary : '#FFFEFA',
             border: 'none',
-            borderRadius: 6,
+            borderRadius: 8,
             fontSize: '0.88rem',
             fontWeight: 600,
             letterSpacing: '0.04em',
             cursor: isLoading || !currentInput.trim() ? 'default' : 'pointer',
-            transition: 'background 0.15s ease',
+            transition: 'background 0.15s ease, transform 0.1s ease',
+          }}
+          onMouseEnter={(e) => {
+            if (!isLoading && currentInput.trim()) e.currentTarget.style.background = COLOR.accentHover;
+          }}
+          onMouseLeave={(e) => {
+            if (!isLoading && currentInput.trim()) e.currentTarget.style.background = COLOR.accent;
           }}
         >
           {isLoading ? 'Thinking…' : 'Send'}
         </button>
-
-        {/* Helper text removed — headline + supporting line above handle orientation */}
 
         {/* Starter chips — landing state only */}
         {!hasMessages && (
@@ -1865,41 +1888,49 @@ export default function Home() {
             style={{
               display: 'flex',
               flexWrap: 'wrap',
-              gap: '0.45rem',
-              marginTop: '0.85rem',
+              gap: '0.5rem',
+              marginTop: '1rem',
             }}
           >
             {[
-              { label: 'I want to buy something', intent: 'shopping' as const },
-              { label: 'Help me improve my system', intent: 'improvement' as const },
+              { label: 'Buy something new', intent: 'shopping' as const },
+              { label: 'Improve my system', intent: 'improvement' as const },
               { label: 'Something sounds off', intent: 'diagnosis' as const },
-              { label: 'Compare two components', intent: 'comparison' as const },
+              { label: 'Compare two options', intent: 'comparison' as const },
             ].map((chip) => (
               <button
                 key={chip.label}
                 type="button"
                 onClick={() => handleChipClick(chip.intent, chip.label)}
                 style={{
-                  padding: '0.35rem 0.75rem',
-                  background: 'transparent',
-                  border: `1px solid ${COLOR.border}`,
-                  borderRadius: 16,
+                  padding: '0.4rem 0.85rem',
+                  background: COLOR.chipBg,
+                  border: `1px solid ${COLOR.chipBorder}`,
+                  borderRadius: 20,
                   cursor: 'pointer',
-                  fontSize: '0.82rem',
+                  fontSize: '0.83rem',
+                  fontWeight: 500,
                   color: COLOR.textPrimary,
                   fontFamily: 'inherit',
                   letterSpacing: '0.01em',
-                  transition: 'color 0.15s ease, border-color 0.15s ease, background 0.15s ease',
+                  transition: 'color 0.15s ease, border-color 0.15s ease, background 0.15s ease, transform 0.1s ease',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = COLOR.accent;
                   e.currentTarget.style.borderColor = COLOR.accent;
-                  e.currentTarget.style.background = 'rgba(168,143,90,0.1)';
+                  e.currentTarget.style.background = COLOR.accentSubtle;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = COLOR.textPrimary;
-                  e.currentTarget.style.borderColor = COLOR.border;
-                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.borderColor = COLOR.chipBorder;
+                  e.currentTarget.style.background = COLOR.chipBg;
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = 'scale(0.97)';
+                  e.currentTarget.style.background = 'rgba(176,141,87,0.15)';
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
                 }}
               >
                 {chip.label}
@@ -1908,11 +1939,43 @@ export default function Home() {
           </div>
         )}
 
+        {/* Contact line — subtle, below chips */}
+        {!hasMessages && (
+          <p style={{
+            margin: '1.25rem 0 0 0',
+            fontSize: '0.78rem',
+            color: COLOR.textSecondary,
+            letterSpacing: '0.01em',
+            opacity: 0.7,
+          }}>
+            Questions or feedback?{' '}
+            <a
+              href="mailto:hello@audio-xx.com"
+              style={{
+                color: COLOR.textSecondary,
+                textDecoration: 'none',
+                borderBottom: '1px solid transparent',
+                transition: 'color 0.15s ease, border-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = COLOR.accent;
+                e.currentTarget.style.borderBottomColor = COLOR.accent;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = COLOR.textSecondary;
+                e.currentTarget.style.borderBottomColor = 'transparent';
+              }}
+            >
+              hello@audio-xx.com
+            </a>
+          </p>
+        )}
+
       </div>}
 
-      {/* Start-over link — only during conversation */}
+      {/* Footer — start-over + contact */}
       {hasMessages && (
-        <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
           <button
             type="button"
             onClick={() => handleReset()}
@@ -1934,6 +1997,21 @@ export default function Home() {
           >
             Start over
           </button>
+          <a
+            href="mailto:hello@audio-xx.com"
+            style={{
+              color: COLOR.textSecondary,
+              fontSize: '0.85rem',
+              fontFamily: 'inherit',
+              textDecoration: 'none',
+              letterSpacing: '0.01em',
+              transition: 'color 0.15s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = COLOR.accent; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = COLOR.textSecondary; }}
+          >
+            Contact
+          </a>
         </div>
       )}
 
