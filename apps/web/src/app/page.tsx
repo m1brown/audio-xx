@@ -307,6 +307,12 @@ export default function Home() {
     // transition() before the legacy ref-based blocks below.
     let convModeHint: ConversationMode | undefined;
     if (convStateRef.current.mode !== 'idle') {
+      // When the state machine is active, it is the single source of truth.
+      // Clear legacy refs that duplicate music_input / onboarding tracking
+      // so they never fire stale handlers after convState resets.
+      awaitingListeningPathRef.current = false;
+      onboardingContextRef.current = null;
+
       const earlyTurnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current);
       const { intent: earlyIntent } = detectIntent(submittedText);
       const convResult = convTransition(convStateRef.current, submittedText, {
@@ -358,6 +364,11 @@ export default function Home() {
               systemTendencies: synTurnCtx.activeSystem?.tendencies ?? undefined,
             };
             dispatch({ type: 'SET_MODE', mode: 'shopping' });
+
+            // Attempt API evaluation for richer signal extraction.
+            // On failure, fall back to deterministic shopping with
+            // empty signals — the user always gets recommendations.
+            let evalSignals: import('@/lib/signal-types').ExtractedSignals | null = null;
             try {
               const res = await fetch('/api/evaluate', {
                 method: 'POST',
@@ -366,25 +377,44 @@ export default function Home() {
               });
               if (res.ok) {
                 const data = await res.json();
-                const shoppingCtx = detectShoppingIntent(synthesized, data.signals, synAdvisoryCtx.systemComponents);
-                const reasoning = reason(
-                  synthesized, synTurnCtx.desires, data.signals,
-                  tasteProfile ?? null, shoppingCtx, synTurnCtx.activeProfile,
-                );
-                dispatch({ type: 'SET_REASONING', reasoning });
-                const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning, synAdvisoryCtx.systemComponents);
-                const decisionFrame = buildDecisionFrame(shoppingCtx.category, synAdvisoryCtx, tasteProfile);
-                const shoppingAdvisory = shoppingToAdvisory(answer, data.signals, reasoning, synAdvisoryCtx, decisionFrame);
-                const budgetMatch = submittedText.match(/\$?\d[\d,]*/);
-                const budgetStr = budgetMatch ? `under ${budgetMatch[0].startsWith('$') ? budgetMatch[0] : '$' + budgetMatch[0]}` : '';
-                const quickSummary = `You're looking for ${categoryLabel(synCategory)}${budgetStr ? ' ' + budgetStr : ''}.`;
-                const quickAdvisory = attachQuickRecommendation(shoppingAdvisory, synCategory, quickSummary);
-                dispatch({ type: 'ADD_ADVISORY', advisory: quickAdvisory, id: advisoryId() });
+                evalSignals = data.signals;
               } else {
-                dispatch({ type: 'ADD_NOTE', content: 'Something went wrong — try rephrasing your request.' });
+                console.warn('[onboarding→shopping] /api/evaluate returned', res.status, '— using deterministic fallback');
               }
-            } catch {
-              dispatch({ type: 'ADD_NOTE', content: 'Something went wrong — try rephrasing your request.' });
+            } catch (err) {
+              console.warn('[onboarding→shopping] /api/evaluate failed:', err, '— using deterministic fallback');
+            }
+
+            // Use evaluated signals or fall back to empty signals.
+            // The shopping pipeline works deterministically with empty
+            // signals — it just produces less personalized results.
+            const signals = evalSignals ?? {
+              traits: {} as Record<string, import('@/lib/signal-types').SignalDirection>,
+              symptoms: [] as string[],
+              archetype_hints: [] as string[],
+              uncertainty_level: 0,
+              matched_phrases: [] as string[],
+              matched_uncertainty_markers: [] as string[],
+            };
+
+            try {
+              const shoppingCtx = detectShoppingIntent(synthesized, signals, synAdvisoryCtx.systemComponents);
+              const reasoning = reason(
+                synthesized, synTurnCtx.desires, signals,
+                tasteProfile ?? null, shoppingCtx, synTurnCtx.activeProfile,
+              );
+              dispatch({ type: 'SET_REASONING', reasoning });
+              const answer = buildShoppingAnswer(shoppingCtx, signals, tasteProfile ?? undefined, reasoning, synAdvisoryCtx.systemComponents);
+              const decisionFrame = buildDecisionFrame(shoppingCtx.category, synAdvisoryCtx, tasteProfile);
+              const shoppingAdvisory = shoppingToAdvisory(answer, signals, reasoning, synAdvisoryCtx, decisionFrame);
+              const budgetMatch = submittedText.match(/\$?\d[\d,]*/);
+              const budgetStr = budgetMatch ? `under ${budgetMatch[0].startsWith('$') ? budgetMatch[0] : '$' + budgetMatch[0]}` : '';
+              const quickSummary = `You're looking for ${categoryLabel(synCategory)}${budgetStr ? ' ' + budgetStr : ''}.`;
+              const quickAdvisory = attachQuickRecommendation(shoppingAdvisory, synCategory, quickSummary);
+              dispatch({ type: 'ADD_ADVISORY', advisory: quickAdvisory, id: advisoryId() });
+            } catch (err) {
+              console.error('[onboarding→shopping] Shopping pipeline error:', err);
+              dispatch({ type: 'ADD_NOTE', content: 'Something went wrong building recommendations — try rephrasing your request.' });
             }
             convStateRef.current = INITIAL_CONV_STATE;
             dispatch({ type: 'SET_LOADING', value: false });
@@ -594,8 +624,10 @@ export default function Home() {
           : undefined,
         systemTendencies: syntheticTurnCtx.activeSystem?.tendencies ?? undefined,
       };
-      // Route into shopping: fire API call with synthesized query
+      // Route into shopping: fire API call with synthesized query.
+      // Falls back to deterministic shopping if the API is unavailable.
       dispatch({ type: 'SET_MODE', mode: 'shopping' });
+      let legacyEvalSignals: import('@/lib/signal-types').ExtractedSignals | null = null;
       try {
         const res = await fetch('/api/evaluate', {
           method: 'POST',
@@ -604,26 +636,39 @@ export default function Home() {
         });
         if (res.ok) {
           const data = await res.json();
-          const shoppingCtx = detectShoppingIntent(synthesized, data.signals, syntheticAdvisoryCtx.systemComponents);
-          const reasoning = reason(
-            synthesized, syntheticTurnCtx.desires, data.signals,
-            tasteProfile ?? null, shoppingCtx, syntheticTurnCtx.activeProfile,
-          );
-          dispatch({ type: 'SET_REASONING', reasoning });
-          const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning, syntheticAdvisoryCtx.systemComponents);
-          const decisionFrame = buildDecisionFrame(shoppingCtx.category, syntheticAdvisoryCtx, tasteProfile);
-          const shoppingAdvisory = shoppingToAdvisory(answer, data.signals, reasoning, syntheticAdvisoryCtx, decisionFrame);
-          // Build a summary sentence for the quick-rec format
-          const budgetMatch = submittedText.match(/\$?\d[\d,]*/);
-          const budgetStr = budgetMatch ? `under ${budgetMatch[0].startsWith('$') ? budgetMatch[0] : '$' + budgetMatch[0]}` : '';
-          const quickSummary = `You're looking for ${categoryLabel(category)}${budgetStr ? ' ' + budgetStr : ''}.`;
-          const quickAdvisory = attachQuickRecommendation(shoppingAdvisory, category, quickSummary);
-          dispatch({ type: 'ADD_ADVISORY', advisory: quickAdvisory, id: advisoryId() });
+          legacyEvalSignals = data.signals;
         } else {
-          dispatch({ type: 'ADD_NOTE', content: 'Something went wrong — try rephrasing your request.' });
+          console.warn('[legacy-onboarding] /api/evaluate returned', res.status, '— using deterministic fallback');
         }
-      } catch {
-        dispatch({ type: 'ADD_NOTE', content: 'Something went wrong — try rephrasing your request.' });
+      } catch (err) {
+        console.warn('[legacy-onboarding] /api/evaluate failed:', err, '— using deterministic fallback');
+      }
+      const legacySignals = legacyEvalSignals ?? {
+        traits: {} as Record<string, import('@/lib/signal-types').SignalDirection>,
+        symptoms: [] as string[],
+        archetype_hints: [] as string[],
+        uncertainty_level: 0,
+        matched_phrases: [] as string[],
+        matched_uncertainty_markers: [] as string[],
+      };
+      try {
+        const shoppingCtx = detectShoppingIntent(synthesized, legacySignals, syntheticAdvisoryCtx.systemComponents);
+        const reasoning = reason(
+          synthesized, syntheticTurnCtx.desires, legacySignals,
+          tasteProfile ?? null, shoppingCtx, syntheticTurnCtx.activeProfile,
+        );
+        dispatch({ type: 'SET_REASONING', reasoning });
+        const answer = buildShoppingAnswer(shoppingCtx, legacySignals, tasteProfile ?? undefined, reasoning, syntheticAdvisoryCtx.systemComponents);
+        const decisionFrame = buildDecisionFrame(shoppingCtx.category, syntheticAdvisoryCtx, tasteProfile);
+        const shoppingAdvisory = shoppingToAdvisory(answer, legacySignals, reasoning, syntheticAdvisoryCtx, decisionFrame);
+        const budgetMatch = submittedText.match(/\$?\d[\d,]*/);
+        const budgetStr = budgetMatch ? `under ${budgetMatch[0].startsWith('$') ? budgetMatch[0] : '$' + budgetMatch[0]}` : '';
+        const quickSummary = `You're looking for ${categoryLabel(category)}${budgetStr ? ' ' + budgetStr : ''}.`;
+        const quickAdvisory = attachQuickRecommendation(shoppingAdvisory, category, quickSummary);
+        dispatch({ type: 'ADD_ADVISORY', advisory: quickAdvisory, id: advisoryId() });
+      } catch (err) {
+        console.error('[legacy-onboarding] Shopping pipeline error:', err);
+        dispatch({ type: 'ADD_NOTE', content: 'Something went wrong building recommendations — try rephrasing your request.' });
       }
       dispatch({ type: 'SET_LOADING', value: false });
       return;
@@ -1678,7 +1723,9 @@ export default function Home() {
               fontWeight: 500,
             }}
           >
-            Audio advice shaped by your system, your ears, and how you listen.
+            Audio advice based on your system and how you listen.
+            <br />
+            Describe your setup, a problem, or an upgrade you&#39;re considering.
           </p>
           <div style={{ marginBottom: '2rem' }} />
 

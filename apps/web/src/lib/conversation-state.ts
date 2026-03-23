@@ -58,6 +58,8 @@ export interface ConvFacts {
   comparisonTargets?: string[];
   /** Number of detected product/brand subjects. */
   subjectCount?: number;
+  /** User explicitly said they're starting from scratch / building new. */
+  fromScratch?: boolean;
 }
 
 export interface ConvState {
@@ -111,9 +113,23 @@ export function isOrientationInput(text: string): boolean {
 
 const BUDGET_PATTERN = /(?:under\s+)?\$\s?\d[\d,]*|\bunder\s+\d[\d,]*\b|\bbudget\s+(?:of|around|is)\s+\$?\d[\d,]*/i;
 
+/**
+ * Relaxed budget pattern for when we've already asked "what's your budget?"
+ * Accepts plain numbers like "5000", "2,000", "500", "around 2000" — contexts
+ * where a number is almost certainly a budget figure.
+ */
+const PLAIN_BUDGET_PATTERN = /(?:around|about|roughly|maybe|approximately)?\s*\$?\s?(\d[\d,]{2,})/i;
+
 function extractBudget(text: string): string | undefined {
   const match = text.match(BUDGET_PATTERN);
-  return match ? match[0] : undefined;
+  if (!match) return undefined;
+  // Normalize: strip "budget of/around/is" prefix, keep just the amount
+  const raw = match[0];
+  const normalized = raw.replace(/^budget\s+(?:of|around|is)\s+/i, '');
+  // Ensure dollar sign
+  return normalized.startsWith('$') || /^under\s/i.test(normalized)
+    ? normalized
+    : `$${normalized}`;
 }
 
 // ── Category detection (lightweight) ───────────────────
@@ -293,6 +309,16 @@ export function transition(
 
     // ── SHOPPING ───────────────────────────────────────
     case 'shopping': {
+      // Relaxed budget extraction: when we've already asked for budget,
+      // accept plain numbers like "5000", "around 2000" as budget figures.
+      // Must run BEFORE isReadyToRecommend so synthesizedQuery generation fires.
+      if (current.stage === 'clarify_budget' && !facts.budget) {
+        const plainMatch = text.match(PLAIN_BUDGET_PATTERN);
+        if (plainMatch) {
+          facts.budget = `$${plainMatch[1]}`;
+        }
+      }
+
       if (isReadyToRecommend(facts)) {
         // If we accumulated music context from the onboarding flow,
         // synthesize a rich query so the shopping pipeline has full context.
@@ -302,7 +328,8 @@ export function transition(
           const budgetPart = facts.budget
             ? ` under ${facts.budget.replace(/^under\s*/i, '')}`
             : '';
-          const synthesized = `I listen to ${musicPart}. Looking for ${category}${budgetPart}.`;
+          const scratchPart = facts.fromScratch ? ' Starting from scratch.' : '';
+          const synthesized = `I listen to ${musicPart}. Looking for ${category}${budgetPart}.${scratchPart}`;
           return {
             state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
             response: { kind: 'proceed', synthesizedQuery: synthesized },
@@ -556,6 +583,12 @@ export function transition(
         const categoryLabel = category === 'headphones' ? 'headphones' : 'a speaker setup';
         const musicDesc = facts.musicDescription ?? '';
 
+        // Detect "from scratch" / "starting fresh" / "don't have any" signals
+        const FROM_SCRATCH_PATTERN = /\b(?:from\s+scratch|starting\s+(?:fresh|out|new)|don'?t\s+have\s+(?:any|a)|no\s+(?:system|gear|equipment|setup)|first\s+(?:system|setup)|building\s+(?:new|a\s+new)|brand\s+new)\b/i;
+        if (FROM_SCRATCH_PATTERN.test(text)) {
+          facts.fromScratch = true;
+        }
+
         // Extract budget from this message
         if (newBudget) facts.budget = newBudget;
 
@@ -563,7 +596,8 @@ export function transition(
         if (facts.budget) {
           const musicPart = musicDesc.replace(/^i\s+(listen\s+to|like|love|enjoy)\s+/i, '');
           const budgetPart = ` under ${facts.budget.replace(/^under\s*/i, '')}`;
-          const synthesized = `I listen to ${musicPart}. Looking for ${category}${budgetPart}.`;
+          const scratchPart = facts.fromScratch ? ' Starting from scratch.' : '';
+          const synthesized = `I listen to ${musicPart}. Looking for ${category}${budgetPart}.${scratchPart}`;
           return {
             state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
             response: { kind: 'proceed', synthesizedQuery: synthesized },

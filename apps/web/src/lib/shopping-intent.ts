@@ -927,7 +927,8 @@ export function getStatedGaps(
   const gaps: GapDimension[] = [];
 
   if (!isTasteSufficient(signals)) gaps.push('taste');
-  if (!isSystemSufficient(ctx)) gaps.push('system');
+  // Build-a-system users have no existing system — asking for one is wrong.
+  if (!isSystemSufficient(ctx) && ctx.mode !== 'build-a-system') gaps.push('system');
   if (!ctx.budgetMentioned) gaps.push('budget');
   if (ctx.mode === 'build-a-system' && !ctx.useCaseProvided) gaps.push('use_case');
 
