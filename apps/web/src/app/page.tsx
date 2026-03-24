@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import TasteRadar from '@/components/TasteRadar';
 import AdvisoryMessage from '@/components/advisory/AdvisoryMessage';
+import type { PreferenceSelection } from '@/components/advisory/AdvisoryMessage';
 import {
   consultationToAdvisory,
   gearResponseToAdvisory,
@@ -32,7 +33,7 @@ import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
-import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory, buildSystemDiagnosis } from '@/lib/consultation';
+import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, classifySubjectAsContext, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory, buildSystemDiagnosis } from '@/lib/consultation';
 import { findReferenceProduct, buildExplorationResponse, explorationToConsultation } from '@/lib/exploration';
 import { buildIntakeResponse, intakeToAdvisory } from '@/lib/intake';
 import { inferUnknownProduct } from '@/lib/llm-product-inference';
@@ -925,6 +926,24 @@ export default function Home() {
       }
     }
 
+    // ── Bare product/brand answer for active comparison ──
+    // If the comparison follow-up asked about pairing context and the
+    // user answered with a product/brand name (e.g. "devore o96"),
+    // treat it as system context rather than triggering a gear essay.
+    if (
+      state.activeComparison &&
+      intent !== 'comparison' &&
+      intent !== 'shopping' &&
+      effectiveMode !== 'diagnosis' &&
+      turnCtx.subjectMatches.length > 0
+    ) {
+      const subjectContextKind = classifySubjectAsContext(turnCtx.subjectMatches);
+      const refinement = buildContextRefinement(state.activeComparison, submittedText, subjectContextKind);
+      dispatchAdvisory(consultationToAdvisory(refinement, undefined, advisoryCtx), advisoryId());
+      dispatch({ type: 'SET_LOADING', value: false });
+      return;
+    }
+
     // ── Clear comparison on explicit mode shift ─────────
     // Shopping and diagnosis are new topics — drop the comparison context.
     if (state.activeComparison && (effectiveMode === 'shopping' || effectiveMode === 'diagnosis')) {
@@ -1590,6 +1609,88 @@ export default function Home() {
     handleSubmit('Show me options from different design approaches.');
   }, [isLoading, handleSubmit]);
 
+  // ── Preference Capture Handler ──────────────────────
+  // Fires when user completes the "Start here" preference capture flow.
+  // Maps binary taste selections to trait signals and re-runs shopping.
+  const handlePreferenceCapture = useCallback(async (selections: PreferenceSelection[], category: string) => {
+    if (isLoading) return;
+    dispatch({ type: 'SET_LOADING', value: true });
+
+    // Map preference selections to trait signals
+    const traits: Record<string, import('@/lib/signal-types').SignalDirection> = {};
+    const phrases: string[] = [];
+    for (const sel of selections) {
+      phrases.push(sel.label);
+      if (sel.axis === 'tonal') {
+        if (sel.choice === 'a') {
+          // Warm / rich → tonal_density up, flow up
+          traits.tonal_density = 'up';
+          traits.flow = 'up';
+        } else {
+          // Clean / detailed → clarity up
+          traits.clarity = 'up';
+        }
+      } else if (sel.axis === 'energy') {
+        if (sel.choice === 'a') {
+          // Relaxed / smooth → flow up, composure up
+          traits.flow = traits.flow ?? 'up';
+          traits.composure = 'up';
+        } else {
+          // Fast / dynamic → dynamics up, elasticity up
+          traits.dynamics = 'up';
+          traits.elasticity = 'up';
+        }
+      } else if (sel.axis === 'spatial') {
+        if (sel.choice === 'a') {
+          // Big / spacious → spatiality up (no direct trait — map through symptom)
+          traits.spaciousness = 'up';
+        } else {
+          // Focused / intimate → dynamics up (rhythm/focus)
+          traits.dynamics = traits.dynamics ?? 'up';
+        }
+      }
+    }
+
+    const capturedSignals: import('@/lib/signal-types').ExtractedSignals = {
+      traits: traits as Record<string, import('@/lib/signal-types').SignalDirection>,
+      symptoms: [],
+      archetype_hints: [],
+      uncertainty_level: 0,
+      matched_phrases: phrases,
+      matched_uncertainty_markers: [],
+    };
+
+    // Build a synthetic query for the shopping pipeline
+    const syntheticQuery = `I want ${category} — I prefer ${phrases.join(', ')}`;
+
+    try {
+      const turnCtx = buildTurnContext(syntheticQuery, audioState, dismissedFingerprintsRef.current);
+      const shoppingCtx = detectShoppingIntent(syntheticQuery, capturedSignals, turnCtx.activeSystem);
+      const reasoning = reason(syntheticQuery, turnCtx.desires, capturedSignals, tasteProfile ?? null, shoppingCtx, turnCtx.activeProfile);
+      dispatch({ type: 'SET_REASONING', reasoning });
+
+      const advisoryCtx: ShoppingAdvisoryContext = {
+        systemComponents: turnCtx.activeSystem,
+        systemTendencies: turnCtx.systemTendencies ?? undefined,
+        storedDesires: turnCtx.desires,
+      };
+
+      const answer = buildShoppingAnswer(shoppingCtx, capturedSignals, tasteProfile ?? undefined, reasoning, advisoryCtx.systemComponents);
+      const decisionFrame = buildDecisionFrame(shoppingCtx.category, advisoryCtx, tasteProfile);
+      const advisory = shoppingToAdvisory(answer, capturedSignals, reasoning, advisoryCtx, decisionFrame);
+
+      // Add user message showing what they selected
+      dispatch({ type: 'SET_INPUT', value: `My sound preferences: ${phrases.join(', ')}` });
+      dispatch({ type: 'ADD_USER_MESSAGE' });
+      dispatch({ type: 'ADD_ADVISORY', advisory, id: advisoryId() });
+      dispatch({ type: 'SET_MODE', mode: 'shopping' });
+    } catch (err) {
+      console.warn('[preference-capture] pipeline error:', err);
+    }
+
+    dispatch({ type: 'SET_LOADING', value: false });
+  }, [isLoading, audioState, tasteProfile, state.activeMode]);
+
   function handleReset() {
     convStateRef.current = INITIAL_CONV_STATE;
     chipIntentRef.current = null;
@@ -1861,7 +1962,7 @@ export default function Home() {
                   animationDelay: `${Math.min(i * 0.05, 0.3)}s`,
                 }}
               >
-                <MessageBubble message={msg} onIntakeSubmit={handleSubmit} />
+                <MessageBubble message={msg} onIntakeSubmit={handleSubmit} onPreferenceCapture={handlePreferenceCapture} />
               </div>
             ))}
           {/* Skip-to-suggestions button — visible when asking clarifying questions in shopping mode */}
@@ -2158,7 +2259,7 @@ function ThinkingIndicator() {
 
 // ── Message Rendering ─────────────────────────────────
 
-function MessageBubble({ message, onIntakeSubmit }: { message: Message; onIntakeSubmit?: (overrideText?: string) => void }) {
+function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture }: { message: Message; onIntakeSubmit?: (overrideText?: string) => void; onPreferenceCapture?: (selections: PreferenceSelection[], category: string) => void }) {
   if (message.role === 'user') {
     return (
       <div
@@ -2184,6 +2285,7 @@ function MessageBubble({ message, onIntakeSubmit }: { message: Message; onIntake
         <AdvisoryMessage
           advisory={message.advisory}
           onIntakeSubmit={message.advisory.kind === 'intake' ? onIntakeSubmit : undefined}
+          onPreferenceCapture={message.advisory.lowPreferenceSignal ? onPreferenceCapture : undefined}
         />
       </div>
     );

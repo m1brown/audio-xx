@@ -204,6 +204,8 @@ export interface EditorialClosing {
   systemSummary?: string;
   /** Avoidance note (e.g. "I would avoid overly analytical ESS DACs in your system…"). */
   avoidanceNote?: string;
+  /** Taste-based verdict — explicit leaning based on listener priorities. */
+  tasteVerdict?: string;
 }
 
 // ── Structured assessment types (memo format) ─────────
@@ -616,6 +618,10 @@ export interface AdvisoryResponse {
   options?: AdvisoryOption[];
   /** True when based on incomplete context. */
   provisional?: boolean;
+  /** True when preference signal is weak/generic — triggers "Start here" CTA. */
+  lowPreferenceSignal?: boolean;
+  /** The shopping category for this response (used for preference re-run). */
+  shoppingCategory?: string;
   /** What context is missing (shown as caveats). */
   statedGaps?: string[];
   /** Category-specific dependency caveat. */
@@ -1158,8 +1164,8 @@ function enrichAdvisory(
     );
   }
 
-  // Alignment rationale — only when not already set
-  if (!enriched.alignmentRationale) {
+  // Alignment rationale — only when not already set and not a comparison
+  if (!enriched.alignmentRationale && enriched.advisoryMode !== 'gear_comparison') {
     enriched.alignmentRationale = generateAlignmentRationale(
       enriched.systemTendencies,
       enriched.listenerPriorities,
@@ -1227,18 +1233,26 @@ export function consultationToAdvisory(
   // into AdvisoryProse and would duplicate the content).
   const isAssessment = !!(c.componentReadings && c.componentReadings.length > 0);
 
+  // Comparison responses should be concise and decision-oriented.
+  // Suppress heavy advisory blocks (audioProfile, philosophy, tendencies,
+  // systemFit, recommendations) when comparisonSummary is the primary content.
+  const isComparison = !!c.comparisonSummary;
+
   return enrichAdvisory({
     kind: 'consultation',
+    advisoryMode: isComparison ? 'gear_comparison' as AdvisoryMode : c.advisoryMode,
     title: c.title,
     subject: c.subject,
     source: c.source,
 
-    audioProfile: reasoning || ctx ? buildAudioProfile(reasoning, ctx) : undefined,
+    // Suppress audioProfile and prose blocks for comparisons —
+    // the comparisonSummary + followUp is all that should render.
+    audioProfile: isComparison ? undefined : (reasoning || ctx ? buildAudioProfile(reasoning, ctx) : undefined),
     comparisonSummary: c.comparisonSummary,
-    philosophy: c.philosophy,
-    tendencies: c.tendencies,
-    systemFit: isAssessment ? undefined : c.systemContext,
-    systemContext: isAssessment ? c.systemContext : undefined,
+    philosophy: isComparison ? undefined : c.philosophy,
+    tendencies: isComparison ? undefined : c.tendencies,
+    systemFit: isComparison ? undefined : (isAssessment ? undefined : c.systemContext),
+    systemContext: isComparison ? undefined : (isAssessment ? c.systemContext : undefined),
     followUp: c.followUp,
     links: c.links?.map((l) => ({
       label: l.label,
@@ -1248,28 +1262,27 @@ export function consultationToAdvisory(
     })),
 
     // System assessment specific fields (populated only for assessment responses)
-    componentReadings: c.componentReadings,
-    systemInteraction: c.systemInteraction,
-    assessmentStrengths: c.assessmentStrengths,
-    assessmentLimitations: c.assessmentLimitations,
-    upgradeDirection: c.upgradeDirection,
+    componentReadings: isComparison ? undefined : c.componentReadings,
+    systemInteraction: isComparison ? undefined : c.systemInteraction,
+    assessmentStrengths: isComparison ? undefined : c.assessmentStrengths,
+    assessmentLimitations: isComparison ? undefined : c.assessmentLimitations,
+    upgradeDirection: isComparison ? undefined : c.upgradeDirection,
 
-    // Structured memo-format fields
-    systemChain: c.systemChain,
-    introSummary: c.introSummary,
-    primaryConstraint: c.primaryConstraint,
-    stackedTraitInsights: c.stackedTraitInsights,
-    componentAssessments: c.componentAssessments,
-    upgradePaths: c.upgradePaths,
-    keepRecommendations: c.keepRecommendations,
-    recommendedSequence: c.recommendedSequence,
-    keyObservation: c.keyObservation,
-    systemSynergy: c.systemSynergy,
-    listenerTasteProfile: c.listenerTasteProfile,
-    spiderChartData: c.spiderChartData,
+    // Structured memo-format fields — suppress for comparisons
+    systemChain: isComparison ? undefined : c.systemChain,
+    introSummary: isComparison ? undefined : c.introSummary,
+    primaryConstraint: isComparison ? undefined : c.primaryConstraint,
+    stackedTraitInsights: isComparison ? undefined : c.stackedTraitInsights,
+    componentAssessments: isComparison ? undefined : c.componentAssessments,
+    upgradePaths: isComparison ? undefined : c.upgradePaths,
+    keepRecommendations: isComparison ? undefined : c.keepRecommendations,
+    recommendedSequence: isComparison ? undefined : c.recommendedSequence,
+    keyObservation: isComparison ? undefined : c.keyObservation,
+    systemSynergy: isComparison ? undefined : c.systemSynergy,
+    listenerTasteProfile: isComparison ? undefined : c.listenerTasteProfile,
+    spiderChartData: isComparison ? undefined : c.spiderChartData,
     sourceReferences: c.sourceReferences,
-    advisoryMode: c.advisoryMode,
-    systemSignature: c.systemSignature,
+    systemSignature: isComparison ? undefined : c.systemSignature,
   });
 }
 
@@ -1318,8 +1331,11 @@ export function gearResponseToAdvisory(
   reasoning?: ReasoningResult,
   ctx?: ShoppingAdvisoryContext,
 ): AdvisoryResponse {
+  const isComparison = r.intent === 'comparison';
+
   // "What I'm hearing" bullets become listener priorities
-  const listenerPriorities = r.hearing && r.hearing.length > 0
+  // Suppress for comparisons — they add weight without decision value.
+  const listenerPriorities = !isComparison && r.hearing && r.hearing.length > 0
     ? r.hearing
     : undefined;
 
@@ -1331,10 +1347,10 @@ export function gearResponseToAdvisory(
     const ua = r.upgradeAnalysis;
     return enrichAdvisory({
       kind: 'consultation',
-      advisoryMode: 'upgrade_suggestions',
+      advisoryMode: isComparison ? 'gear_comparison' as AdvisoryMode : 'upgrade_suggestions',
       subject: r.subjects.length > 0 ? r.subjects.join(', ') : 'your question',
 
-      audioProfile: reasoning || ctx ? buildAudioProfile(reasoning, ctx) : undefined,
+      audioProfile: isComparison ? undefined : (reasoning || ctx ? buildAudioProfile(reasoning, ctx) : undefined),
       listenerPriorities,
       systemTendencies: r.systemDirection?.tendencySummary ?? undefined,
 
@@ -1432,27 +1448,30 @@ export function gearResponseToAdvisory(
     ? `Made in ${origin}.${primaryProduct?.architecture ? ` ${primaryProduct.architecture} design.` : ''}`
     : undefined;
 
+  // Comparison responses: concise side-by-side contrast with follow-up.
+  // Suppress audioProfile, whyFitsYou, productOrigin, interactionNotes,
+  // recommendedDirection, tradeOffs — these create review-weight bloat.
   return enrichAdvisory({
     kind: 'consultation',
-    advisoryMode: 'gear_advice',
+    advisoryMode: isComparison ? 'gear_comparison' as AdvisoryMode : 'gear_advice',
     subject: r.subjects.length > 0 ? r.subjects.join(', ') : 'your question',
 
-    audioProfile: reasoning || ctx ? buildAudioProfile(reasoning, ctx) : undefined,
+    audioProfile: isComparison ? undefined : (reasoning || ctx ? buildAudioProfile(reasoning, ctx) : undefined),
     listenerPriorities,
-    whyFitsYou: buildGearWhyFitsYou(r),
-    systemTendencies: r.systemDirection?.tendencySummary ?? undefined,
+    whyFitsYou: isComparison ? undefined : buildGearWhyFitsYou(r),
+    systemTendencies: isComparison ? undefined : (r.systemDirection?.tendencySummary ?? undefined),
 
     // anchor + character become the prose body
     philosophy: r.anchor,
     tendencies: r.character,
-    systemFit: r.interpretation,
+    systemFit: isComparison ? undefined : r.interpretation,
 
-    // Product detail
-    productOrigin: originNote,
-    interactionNotes: interactionNotes.length > 0 ? interactionNotes : undefined,
+    // Product detail — suppress for comparisons
+    productOrigin: isComparison ? undefined : originNote,
+    interactionNotes: isComparison ? undefined : (interactionNotes.length > 0 ? interactionNotes : undefined),
 
-    recommendedDirection: r.direction,
-    tradeOffs: gearTradeOffs.length > 0 ? gearTradeOffs : undefined,
+    recommendedDirection: isComparison ? undefined : r.direction,
+    tradeOffs: isComparison ? undefined : (gearTradeOffs.length > 0 ? gearTradeOffs : undefined),
     followUp: r.clarification,
 
     // Links and sources from catalog
@@ -1645,11 +1664,19 @@ function buildEditorialClosing(
     }
   }
 
+  // Taste-based verdict — explicit leaning based on listener priorities
+  let tasteVerdict: string | undefined;
+  if (reasoning?.taste.tasteLabel && products.length > 0) {
+    const top = products[0];
+    tasteVerdict = `Based on your preference for ${reasoning.taste.tasteLabel}, **${top.brand} ${top.name}** is the closest match in this shortlist.`;
+  }
+
   return {
     topPicks,
     systemPicks,
     systemSummary,
     avoidanceNote,
+    tasteVerdict,
   };
 }
 
@@ -1786,6 +1813,8 @@ export function shoppingToAdvisory(
 
     options: options.length > 0 ? options : undefined,
     provisional: a.provisional,
+    lowPreferenceSignal: a.statedGaps?.includes('taste') ?? false,
+    shoppingCategory: a.category,
     statedGaps: statedGaps && statedGaps.length > 0 ? statedGaps : undefined,
     dependencyCaveat: a.dependencyCaveat,
 

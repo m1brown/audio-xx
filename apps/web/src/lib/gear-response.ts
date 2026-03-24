@@ -52,6 +52,7 @@ import {
   archetypeCaution,
 } from './design-archetypes';
 import { detectChurnSignal, buildChurnNote, type ChurnSignal } from './churn-avoidance';
+import { buildTasteDecisionFrame } from './consultation';
 
 // ── Product lookup ───────────────────────────────────
 
@@ -1736,7 +1737,12 @@ export function buildGearResponse(
       // Decision guidance
       const directionCompact = buildComparisonDirection(a, b);
 
-      const conciseComparison = `${opening}\n\n${blockA}\n\n${blockB}\n\n${directionCompact}`;
+      // Taste-based decision frame — listener-centered layer
+      const tendTextA = a.tendencies?.character?.map((t) => `${t.tendency}`).join(', ') ?? charA;
+      const tendTextB = b.tendencies?.character?.map((t) => `${t.tendency}`).join(', ') ?? charB;
+      const tasteFrame = buildTasteDecisionFrame(currentMessage, nameA, charA, tendTextA, nameB, charB, tendTextB);
+
+      const conciseComparison = `${opening}\n\n${blockA}\n\n${blockB}\n\n${directionCompact}${tasteFrame ? `\n\n${tasteFrame}` : ''}`;
 
       return {
         intent,

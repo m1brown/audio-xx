@@ -25,6 +25,7 @@
  * Only populated sections render in both modes.
  */
 
+import { useState } from 'react';
 import type { AdvisoryResponse, AdvisoryMode, AdvisorySource, AudioProfile, ProductAssessment, KnowledgeResponse, AssistantResponse, EditorialClosing, EditorialPick, QuickRecommendation } from '../../lib/advisory-response';
 import type { DecisionFrame, DecisionDirection, SystemInteraction } from '../../lib/decision-frame';
 import AdvisorySection from './AdvisorySection';
@@ -40,10 +41,19 @@ import AdvisoryListenerProfile from './AdvisoryListenerProfile';
 import AdvisoryIntake from './AdvisoryIntake';
 import { renderText } from './render-text';
 
+/** Preference selections from the "Start here" quick-capture flow. */
+export interface PreferenceSelection {
+  axis: string;
+  choice: 'a' | 'b';
+  label: string;
+}
+
 interface AdvisoryMessageProps {
   advisory: AdvisoryResponse;
   /** Callback for intake form submission — threaded to AdvisoryIntake. */
   onIntakeSubmit?: (text: string) => void;
+  /** Callback when user completes the "Start here" preference capture flow. */
+  onPreferenceCapture?: (selections: PreferenceSelection[], category: string) => void;
 }
 
 // ── Design tokens ─────────────────────────────────────
@@ -707,6 +717,276 @@ function AudioPreferencesBlock({ profile }: { profile: AudioProfile }) {
   );
 }
 
+// ── Start Here Block (Preference Capture CTA) ────────
+//
+// High-visibility entry point for users with low preference signal.
+// Replaces passive "balanced" output with an active refinement path.
+// Shows inline binary choices, then fires callback to re-run pipeline.
+
+const PREFERENCE_PAIRS = [
+  {
+    axis: 'tonal',
+    a: { label: 'Warm / rich', traits: 'warmth and tonal richness' },
+    b: { label: 'Clean / detailed', traits: 'detail and precision' },
+  },
+  {
+    axis: 'energy',
+    a: { label: 'Relaxed / smooth', traits: 'natural, organic presentation' },
+    b: { label: 'Fast / dynamic', traits: 'dynamics and impact' },
+  },
+  {
+    axis: 'spatial',
+    a: { label: 'Big / spacious', traits: 'spatial presentation' },
+    b: { label: 'Focused / intimate', traits: 'rhythmic engagement' },
+  },
+];
+
+function StartHereBlock({
+  category,
+  onCapture,
+}: {
+  category: string;
+  onCapture: (selections: PreferenceSelection[]) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [selections, setSelections] = useState<Record<string, 'a' | 'b'>>({});
+  const [submitted, setSubmitted] = useState(false);
+
+  const selectedCount = Object.keys(selections).length;
+  const canSubmit = selectedCount >= 2;
+
+  function handleSelect(axis: string, choice: 'a' | 'b') {
+    if (submitted) return;
+    setSelections((prev) => ({ ...prev, [axis]: choice }));
+  }
+
+  function handleSubmit() {
+    if (!canSubmit || submitted) return;
+    setSubmitted(true);
+    const result: PreferenceSelection[] = [];
+    for (const pair of PREFERENCE_PAIRS) {
+      const choice = selections[pair.axis];
+      if (choice) {
+        const picked = choice === 'a' ? pair.a : pair.b;
+        result.push({ axis: pair.axis, choice, label: picked.traits });
+      }
+    }
+    onCapture(result);
+  }
+
+  if (submitted) {
+    return (
+      <div style={{
+        margin: '1.25rem 0',
+        padding: '1rem 1.25rem',
+        background: '#f0ece3',
+        borderRadius: '8px',
+        border: `2px solid ${COLORS.accent}`,
+        textAlign: 'center',
+      }}>
+        <div style={{
+          fontSize: '0.92rem',
+          color: COLORS.accent,
+          fontWeight: 600,
+        }}>
+          Updating recommendations…
+        </div>
+      </div>
+    );
+  }
+
+  if (!expanded) {
+    return (
+      <div style={{
+        margin: '1.25rem 0',
+        padding: '1.15rem 1.35rem',
+        background: '#f5f0e6',
+        borderRadius: '10px',
+        border: `2px solid ${COLORS.accent}`,
+        cursor: 'pointer',
+        transition: 'background 0.15s ease',
+      }}
+        onClick={() => setExpanded(true)}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#f0ece3'; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = '#f5f0e6'; }}
+      >
+        {/* START HERE label */}
+        <div style={{
+          fontSize: '0.72rem',
+          fontWeight: 700,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase' as const,
+          color: COLORS.accent,
+          marginBottom: '0.45rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+        }}>
+          {/* Waveform icon */}
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+            <rect x="1" y="6" width="2" height="4" rx="1" fill={COLORS.accent} />
+            <rect x="4.5" y="4" width="2" height="8" rx="1" fill={COLORS.accent} />
+            <rect x="8" y="2" width="2" height="12" rx="1" fill={COLORS.accent} />
+            <rect x="11.5" y="4" width="2" height="8" rx="1" fill={COLORS.accent} />
+          </svg>
+          START HERE
+        </div>
+        {/* CTA text */}
+        <div style={{
+          fontSize: '1.05rem',
+          fontWeight: 600,
+          color: COLORS.text,
+          lineHeight: 1.5,
+        }}>
+          Dial in your sound → get better suggestions
+        </div>
+      </div>
+    );
+  }
+
+  // ── Expanded: preference capture flow ──
+  return (
+    <div style={{
+      margin: '1.25rem 0',
+      padding: '1.25rem 1.35rem',
+      background: '#f5f0e6',
+      borderRadius: '10px',
+      border: `2px solid ${COLORS.accent}`,
+    }}>
+      {/* Header */}
+      <div style={{
+        fontSize: '0.72rem',
+        fontWeight: 700,
+        letterSpacing: '0.12em',
+        textTransform: 'uppercase' as const,
+        color: COLORS.accent,
+        marginBottom: '0.15rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.4rem',
+      }}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+          <rect x="1" y="6" width="2" height="4" rx="1" fill={COLORS.accent} />
+          <rect x="4.5" y="4" width="2" height="8" rx="1" fill={COLORS.accent} />
+          <rect x="8" y="2" width="2" height="12" rx="1" fill={COLORS.accent} />
+          <rect x="11.5" y="4" width="2" height="8" rx="1" fill={COLORS.accent} />
+        </svg>
+        START HERE
+      </div>
+      <div style={{
+        fontSize: '0.98rem',
+        color: COLORS.text,
+        marginBottom: '1.1rem',
+        lineHeight: 1.6,
+      }}>
+        Let&apos;s tune this quickly.
+      </div>
+
+      {/* Preference pairs */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', marginBottom: '1.1rem' }}>
+        {PREFERENCE_PAIRS.map((pair) => {
+          const selected = selections[pair.axis];
+          return (
+            <div key={pair.axis} style={{
+              display: 'flex',
+              gap: '0.5rem',
+              alignItems: 'stretch',
+            }}>
+              <button
+                onClick={() => handleSelect(pair.axis, 'a')}
+                style={{
+                  flex: 1,
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: '7px',
+                  border: `2px solid ${selected === 'a' ? COLORS.accent : '#ddd8ce'}`,
+                  background: selected === 'a' ? '#f0ece3' : COLORS.white,
+                  cursor: 'pointer',
+                  fontSize: '0.92rem',
+                  fontWeight: selected === 'a' ? 600 : 400,
+                  color: selected === 'a' ? COLORS.text : COLORS.textSecondary,
+                  textAlign: 'center',
+                  lineHeight: 1.4,
+                  transition: 'all 0.12s ease',
+                }}
+              >
+                {pair.a.label}
+              </button>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                color: COLORS.textMuted,
+                fontSize: '0.78rem',
+                fontWeight: 500,
+                flexShrink: 0,
+                width: '1.6rem',
+                justifyContent: 'center',
+              }}>
+                or
+              </div>
+              <button
+                onClick={() => handleSelect(pair.axis, 'b')}
+                style={{
+                  flex: 1,
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: '7px',
+                  border: `2px solid ${selected === 'b' ? COLORS.accent : '#ddd8ce'}`,
+                  background: selected === 'b' ? '#f0ece3' : COLORS.white,
+                  cursor: 'pointer',
+                  fontSize: '0.92rem',
+                  fontWeight: selected === 'b' ? 600 : 400,
+                  color: selected === 'b' ? COLORS.text : COLORS.textSecondary,
+                  textAlign: 'center',
+                  lineHeight: 1.4,
+                  transition: 'all 0.12s ease',
+                }}
+              >
+                {pair.b.label}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Submit button */}
+      <button
+        onClick={handleSubmit}
+        disabled={!canSubmit}
+        style={{
+          width: '100%',
+          padding: '0.7rem 1rem',
+          borderRadius: '8px',
+          border: 'none',
+          background: canSubmit ? COLORS.accent : '#d5d0c5',
+          color: canSubmit ? COLORS.white : '#a09888',
+          fontSize: '0.95rem',
+          fontWeight: 600,
+          cursor: canSubmit ? 'pointer' : 'default',
+          transition: 'all 0.15s ease',
+          letterSpacing: '0.01em',
+        }}
+      >
+        {canSubmit ? 'Update my recommendations' : `Pick at least ${2 - selectedCount} more`}
+      </button>
+
+      {/* Optional system add — non-blocking, secondary */}
+      <div style={{
+        marginTop: '0.85rem',
+        textAlign: 'center',
+        fontSize: '0.82rem',
+        color: COLORS.textMuted,
+      }}>
+        <span style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '2px' }}
+          onClick={() => {
+            /* User can type system info in the chat — no gating here */
+          }}
+        >
+          Add your system (optional)
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ── Assessment Format (Practical Product Assessment) ──
 //
 // Assessment-first response for "I'm considering X" queries.
@@ -1136,7 +1416,7 @@ function EditorialPickLine({ pick, index }: { pick: EditorialPick; index: number
 //   8. Refinement prompts
 //   9. Sources
 
-function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
+function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessageProps) {
   // Build concise decision guidance — short "If you want X → choose Y" lines.
   // Extract the core quality from fitNote (expected format: "Best for X and Y").
   const decisionLines: string[] = [];
@@ -1155,6 +1435,17 @@ function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
 
   return (
     <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
+
+      {/* ── 0. Audio Preferences ────────────────────────── */}
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} />}
+
+      {/* ── 0b. Start Here — preference capture CTA ────── */}
+      {a.lowPreferenceSignal && a.shoppingCategory && onPreferenceCapture && (
+        <StartHereBlock
+          category={a.shoppingCategory}
+          onCapture={(sels) => onPreferenceCapture(sels, a.shoppingCategory!)}
+        />
+      )}
 
       {/* ── 1. System Interpretation (reasoning before products) ── */}
       {a.systemInterpretation && (
@@ -1226,7 +1517,8 @@ function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
       )}
 
       {/* ── 6. Follow-up question ─────────────────────────── */}
-      {a.followUp && (
+      {/* Suppress when StartHereBlock is active — it replaces the text-based refinement path */}
+      {a.followUp && !a.lowPreferenceSignal && (
         <p style={{
           margin: '0 0 1rem 0',
           fontSize: '0.95rem',
@@ -1239,7 +1531,8 @@ function EditorialFormat({ advisory: a }: AdvisoryMessageProps) {
       )}
 
       {/* ── 7. Provisional caveat (subtle) ────────────────── */}
-      {a.provisional && a.statedGaps && a.statedGaps.length > 0 && (
+      {/* Suppress when StartHereBlock is active — it provides the refinement path */}
+      {a.provisional && a.statedGaps && a.statedGaps.length > 0 && !a.lowPreferenceSignal && (
         <div style={{
           fontSize: '0.88rem',
           color: COLORS.textLight,
@@ -1378,10 +1671,10 @@ function AssistantFormat({ advisory: a }: AdvisoryMessageProps) {
 
 // ── Classic Format (Consultations, Diagnosis, Comparisons) ──
 
-function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
+function StandardFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessageProps) {
   // Redirect to editorial format when product options are present
   if (isEditorialFormat(a)) {
-    return <EditorialFormat advisory={a} />;
+    return <EditorialFormat advisory={a} onPreferenceCapture={onPreferenceCapture} />;
   }
 
   const hasListenerPriorities = (a.listenerPriorities && a.listenerPriorities.length > 0)
@@ -1820,7 +2113,8 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
       )}
 
       {/* ── 12. Refinement prompts ────────────────── */}
-      {a.refinementPrompts && a.refinementPrompts.length > 0 && (
+      {/* Suppress when StartHereBlock is active — it replaces text-based refinement */}
+      {a.refinementPrompts && a.refinementPrompts.length > 0 && !a.lowPreferenceSignal && (
         <div
           style={{
             borderLeft: '3px solid #7a9aaa',
@@ -1854,7 +2148,7 @@ function StandardFormat({ advisory: a }: AdvisoryMessageProps) {
       )}
 
       {/* ── 13. Follow-up ─────────────────────────── */}
-      {a.followUp && !a.refinementPrompts?.length && (
+      {a.followUp && !a.refinementPrompts?.length && !a.lowPreferenceSignal && (
         <div
           style={{
             borderLeft: '3px solid #7a9aaa',
@@ -1972,7 +2266,7 @@ function QuickRecFormat({ quickRec }: { quickRec: QuickRecommendation }) {
 
 // ── Main Export ────────────────────────────────────────
 
-export default function AdvisoryMessage({ advisory, onIntakeSubmit }: AdvisoryMessageProps) {
+export default function AdvisoryMessage({ advisory, onIntakeSubmit, onPreferenceCapture }: AdvisoryMessageProps) {
   // Quick recommendation format — compact output from onboarding flow
   if (advisory.quickRecommendation) {
     return <QuickRecFormat quickRec={advisory.quickRecommendation} />;
@@ -1992,5 +2286,5 @@ export default function AdvisoryMessage({ advisory, onIntakeSubmit }: AdvisoryMe
   if (isAssistantFormat(advisory)) {
     return <AssistantFormat advisory={advisory} />;
   }
-  return <StandardFormat advisory={advisory} />;
+  return <StandardFormat advisory={advisory} onPreferenceCapture={onPreferenceCapture} />;
 }

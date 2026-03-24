@@ -42,6 +42,20 @@ import {
   type DesignArchetypeId,
 } from './design-archetypes';
 import type { SubjectMatch, ContextKind, DesireSignal } from './intent';
+import {
+  type ComparisonPayload,
+  type ComparisonSide,
+  type ComparisonDecision,
+  type TradeoffAxis,
+  type DominantAxis,
+  scoreKeywords,
+  detectDominantAxis,
+  computeTradeoffAxis,
+  TRADEOFF_LABELS,
+  validateComparisonPayload,
+  validateComparisonOutput,
+  renderComparisonPayload,
+} from './comparison-payload';
 import { getApprovedBrand } from './knowledge';
 import type { BrandKnowledge } from './knowledge/schema';
 import type { ActiveSystemContext } from './system-types';
@@ -396,9 +410,10 @@ const BRAND_PROFILES: BrandProfile[] = [
     brandScale: 'boutique',
     region: 'europe',
     categories: ['amplifier'],
-    philosophy: 'JOB (a sister brand to Goldmund) designs compact, high-current solid-state amplifiers that prioritise speed, transparency, and control. The design philosophy favours minimal signal path and high damping factor.',
-    tendencies: 'JOB amplifiers are described as fast, transparent, and rhythmically precise. They tend toward a lean, articulate presentation with excellent transient definition. Tonal warmth is not a primary characteristic — the emphasis is on speed and control.',
-    systemContext: 'JOB integrated amplifiers tend to work well with speakers that provide their own tonal body and warmth, such as high-efficiency or paper-cone designs. In systems already biased toward leanness, the cumulative precision may thin out the presentation.',
+    philosophy: 'JOB (derived from Goldmund) builds compact, high-current solid-state amplifiers from Goldmund\'s own circuit topology. Very low global feedback, short signal path, high speed. The design prioritises transient fidelity, timing, and musical flow — the intent is to sound like music happening in real time, not a controlled reproduction. Minimalist feature set; no DAC, no streaming, no tone controls.',
+    tendencies: 'JOB amplifiers are described as fast, elastic, and alive. Slightly golden tonality — fluid, almost tube-adjacent harmonic character for solid-state. Strong microdynamic nuance and expressive phrasing. Soundstage is dimensional, airy, holographic. Very low listener fatigue. The emphasis is on rhythmic engagement and transient fidelity over raw grip or bass authority.',
+    systemContext: 'JOB integrated amplifiers tend to work well with speakers that provide their own tonal body and warmth, such as high-efficiency or paper-cone designs. Thrives with expressive, organic speakers (DeVore, WLM, horns). In systems already biased toward leanness, the cumulative precision may thin out the presentation.',
+    pairingNotes: 'JOB + DeVore is a well-regarded complementary pairing — the JOB\'s speed and precision balances DeVore\'s warmth and tonal density. Also works well with WLM and horn-loaded speakers that supply their own body.',
     links: [
       { label: 'Goldmund (parent brand)', url: 'https://www.goldmund.com/', region: 'global' },
     ],
@@ -606,10 +621,10 @@ const BRAND_PROFILES: BrandProfile[] = [
     brandScale: 'boutique',
     region: 'japan',
     categories: ['amplifier'],
-    philosophy: 'Leben builds hand-wired tube amplifiers in the Japanese tradition — small-scale, obsessively crafted, voiced by ear. The CS600X and CS300X prioritise tonal density, rhythmic drive, and harmonic richness over measured neutrality. Very low negative feedback.',
-    tendencies: 'Listeners describe Leben amplifiers as warm, tonally dense, rhythmically alive, and harmonically rich. Strong midrange presence and natural instrument tone. Excellent dynamics for their power rating. The KT77/KT88 push-pull topology delivers surprising bass grip for a tube amp.',
+    philosophy: 'Leben builds hand-wired tube amplifiers in the Japanese tradition — small-scale, obsessively crafted, voiced by ear. The CS600X and CS300X use push-pull KT77/KT88/EL34 topology with very low negative feedback. The design prioritises tonal density, harmonic richness, and rhythmic drive over measured neutrality. Every unit is hand-assembled in Japan.',
+    tendencies: 'Listeners describe Leben amplifiers as warm, tonally dense, rhythmically alive, and harmonically rich. Strong midrange presence and natural instrument tone — voices and acoustic instruments have unusual body and presence. Excellent dynamics for their power rating — surprising bass grip from the KT77/KT88 push-pull topology. The presentation is lush and flowing, with a dimensional soundstage that rewards close listening.',
     systemContext: 'Leben amplifiers are a natural match for high-efficiency speakers — DeVore, Zu, Klipsch Heritage. The CS600X (~32W) drives speakers in the 90–96dB range with authority. A staple of the Japanese high-end community and widely regarded as one of the best tube integrateds under $10k.',
-    pairingNotes: 'The Leben CS600X + DeVore O/96 is one of the most celebrated pairings in modern high-efficiency audio. Tube rolling is a significant part of the Leben experience — KT77, KT88, and EL34 all produce meaningfully different voicing.',
+    pairingNotes: 'The Leben CS600X + DeVore O/96 is one of the most celebrated pairings in modern high-efficiency audio — it appears consistently in "best system" discussions. Tube rolling is a significant part of the Leben experience — KT77, KT88, and EL34 all produce meaningfully different voicing.',
     links: [
       { label: 'Leben (Japan)', url: 'https://www.leben-hifi.com/', region: 'global' },
       { label: 'Tone Imports (US distributor)', url: 'https://www.toneimports.com/', kind: 'dealer', region: 'US' },
@@ -793,6 +808,20 @@ const BRAND_PROFILES: BrandProfile[] = [
     systemContext: 'Magnepan speakers need power (high current, stable into low impedance) and room space. They reward quality amplification but demand it. Not ideal for small rooms or low-power tube amplifiers.',
     links: [
       { label: 'Official website', url: 'https://www.magnepan.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['hegel'],
+    country: 'Norway (Oslo)',
+    brandScale: 'specialist',
+    region: 'europe',
+    categories: ['amplifier', 'dac', 'streamer'],
+    philosophy: 'Hegel designs amplifiers around their proprietary "SoundEngine" technology — a patented feed-forward error correction system that aims to eliminate distortion without the phase issues of conventional negative feedback. High damping factor, strong speaker control, integrated streaming and DAC in many models. The engineering prioritises measured accuracy and signal purity.',
+    tendencies: 'Hegel amplifiers are described as controlled, composed, and neutral to slightly cool. Very clean, explicit detail retrieval — analytical rather than organic. Strong macrodynamic authority with grip and slam. Soundstage is structured, precise, and wide but flatter than tube or low-feedback designs. Bass is tight and highly controlled. Can sound dry over extended listening sessions — fatigue may creep in with revealing speakers.',
+    systemContext: 'Hegel excels with difficult speaker loads — low impedance, multi-driver, or power-hungry designs (Wilson, KEF, B&W). The high damping factor provides strong bass control. All-in-one models (H190, H390, H590) include DAC and streaming, reducing box count. Less synergistic with already-lean or analytical speakers where the additive precision may push toward clinical presentation.',
+    pairingNotes: 'Hegel + KEF, Wilson, or B&W is a common pairing — the grip and control complements modern multi-driver designs. Less common with high-efficiency or tube-friendly speakers where the control can suppress the speaker\'s natural character.',
+    links: [
+      { label: 'Official website', url: 'https://www.hegel.com/', region: 'global' },
     ],
   },
 ];
@@ -1254,128 +1283,507 @@ function buildKnowledgeBrandConsultation(entry: BrandKnowledge): ConsultationRes
 }
 
 /**
- * Build a brand-level comparison response.
- * Used when two brands are mentioned with comparison intent and both
- * have profiles (curated or catalog-derived). Compares at the
- * philosophy/tendency level — not individual products.
+ * Build an expert-level brand comparison response.
+ *
+ * Flow: build ComparisonPayload → validate → render → ConsultationResponse
+ *
+ * All comparison reasoning is deterministic and validated before rendering.
  */
 function buildBrandComparison(
   profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
   profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
   queryText?: string,
 ): ConsultationResponse {
+  const payload = buildInitialComparisonPayload(profileA, profileB, queryText);
+
+  // Validate — log warnings, but don't block rendering (graceful degradation).
+  const validation = validateComparisonPayload(payload);
+  if (!validation.valid) {
+    // eslint-disable-next-line no-console
+    console.warn('[comparison-payload] validation errors:', validation.errors);
+  }
+
+  // Render from payload
+  const rendered = renderComparisonPayload(payload);
+
+  // Output validation — check rendered text for generic phrases
+  const outputValidation = validateComparisonOutput(rendered.comparisonSummary);
+  if (!outputValidation.valid) {
+    // eslint-disable-next-line no-console
+    console.warn('[comparison-output] validation errors:', outputValidation.errors);
+  }
+
+  return {
+    subject: payload.subject,
+    comparisonSummary: rendered.comparisonSummary,
+    followUp: rendered.followUp,
+  };
+}
+
+/**
+ * Build the structured ComparisonPayload for an initial brand comparison
+ * (no system context yet).
+ */
+export function buildInitialComparisonPayload(
+  profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  queryText?: string,
+): ComparisonPayload {
   const nameA = capitalize('names' in profileA ? profileA.names[0] : profileA.name);
   const nameB = capitalize('names' in profileB ? profileB.names[0] : profileB.name);
 
-  // Extract core traits — 2-3 words that capture each brand's character.
   const charA = extractCoreCharacter(profileA.tendencies);
   const charB = extractCoreCharacter(profileB.tendencies);
 
-  // Extract 1 sentence of tendency detail for each side.
-  const tendA = takeSentences(profileA.tendencies, 1);
-  const tendB = takeSentences(profileB.tendencies, 1);
+  // ── Sides ──────────────────────────────────────────
+  const sonicTraitsA = extractSonicTraits(profileA.tendencies);
+  const sonicTraitsB = extractSonicTraits(profileB.tendencies);
 
-  // System context — 1 sentence each, for pairing guidance.
-  const sysA = 'systemContext' in profileA && profileA.systemContext
-    ? takeSentences(profileA.systemContext, 1)
-    : '';
-  const sysB = 'systemContext' in profileB && profileB.systemContext
-    ? takeSentences(profileB.systemContext, 1)
-    : '';
-
-  // Price context — compact, inline.
-  const brandNameA = ('names' in profileA ? profileA.names[0] : profileA.name).toLowerCase();
-  const brandNameB = ('names' in profileB ? profileB.names[0] : profileB.name).toLowerCase();
-  const productsA = ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === brandNameA);
-  const productsB = ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === brandNameB);
-  const findQueryProduct = (products: Product[], query: string | undefined): Product | null => {
-    if (!query || products.length <= 1) return products[0] ?? null;
-    const q = query.toLowerCase();
-    const fullMatch = products.find((p) => q.includes(p.name.toLowerCase()));
-    if (fullMatch) return fullMatch;
-    return products.find((p) => {
-      const words = p.name.toLowerCase().split(/[\s]+/);
-      return words.some((w) => (w.length >= 3 || /[^a-z]/.test(w)) && w.length >= 2 && q.includes(w));
-    }) ?? null;
+  const sideA: ComparisonSide = {
+    name: nameA,
+    character: charA,
+    designPhilosophy: takeSentences(profileA.philosophy, 2),
+    sonicTraits: sonicTraitsA,
   };
-  const specificA = findQueryProduct(productsA, queryText);
-  const specificB = findQueryProduct(productsB, queryText);
-  const priceA = specificA?.price ?? (productsA.length === 1 ? productsA[0].price : null);
-  const priceB = specificB?.price ?? (productsB.length === 1 ? productsB[0].price : null);
 
-  let priceNote = '';
-  if (priceA && priceB) {
-    const ratio = Math.max(priceA, priceB) / Math.min(priceA, priceB);
-    if (ratio >= 2) {
-      priceNote = ` (different price tiers — ~$${Math.min(priceA, priceB).toLocaleString()} vs ~$${Math.max(priceA, priceB).toLocaleString()})`;
-    } else if (ratio >= 1.3) {
-      priceNote = ` (~$${Math.min(priceA, priceB).toLocaleString()} vs ~$${Math.max(priceA, priceB).toLocaleString()})`;
-    }
+  const sideB: ComparisonSide = {
+    name: nameB,
+    character: charB,
+    designPhilosophy: takeSentences(profileB.philosophy, 2),
+    sonicTraits: sonicTraitsB,
+  };
+
+  // ── Trade-off ──────────────────────────────────────
+  const dominantA = detectDominantAxis(charA, profileA.tendencies);
+  const dominantB = detectDominantAxis(charB, profileB.tendencies);
+  const flowScoreA = scoreKeywords(charA + ' ' + profileA.tendencies, ['flow', 'elastic', 'alive', 'engagement', 'rhythmic', 'drive', 'timing']);
+  const flowScoreB = scoreKeywords(charB + ' ' + profileB.tendencies, ['flow', 'elastic', 'alive', 'engagement', 'rhythmic', 'drive', 'timing']);
+
+  const tradeoffAxis = computeTradeoffAxis(dominantA, dominantB, flowScoreA, flowScoreB);
+  const tradeoffStatement = buildTradeoffStatement(nameA, charA, profileA.tendencies, nameB, charB, profileB.tendencies);
+  const [labelA, labelB] = TRADEOFF_LABELS[tradeoffAxis];
+
+  // ── Taste frame ────────────────────────────────────
+  const explicitTaste = queryText
+    ? buildTasteDecisionFrame(queryText, nameA, charA, profileA.tendencies, nameB, charB, profileB.tendencies)
+    : null;
+  const tasteStatement = explicitTaste ?? buildProvisionalTasteInference(nameA, charA, nameB, charB);
+
+  // ── Decision ───────────────────────────────────────
+  const guidanceText = buildComparisonGuidance(nameA, charA, profileA, nameB, charB, profileB);
+  const guidanceLines = guidanceText.split(/[.\n]/).filter((l) => l.trim());
+  const decision: ComparisonDecision = {
+    chooseAIf: guidanceLines[0]?.trim() || `If you want ${labelA} → ${nameA}.`,
+    chooseBIf: guidanceLines[1]?.trim() || `If you want ${labelB} → ${nameB}.`,
+  };
+
+  // Taste-based recommendation (overrides if explicit taste signals present)
+  const tasteRec = buildInitialComparisonRecommendation(nameA, charA, profileA, nameB, charB, profileB, queryText);
+  if (tasteRec) {
+    decision.recommended = tasteRec;
   }
 
-  // ── Build concise side-by-side comparison ──
-  // Opening line + two trait blocks + decision guidance.
-  // Total target: 5–10 lines.
-  const opening = `These take different approaches${priceNote}:`;
+  // ── Recommendation (always present) ────────────────
+  const rec = buildComparisonRecommendation(nameA, charA, profileA, nameB, charB, profileB);
+  if (!decision.recommended) {
+    decision.recommended = rec.recommended;
+  }
+  decision.rationale = rec.rationale;
 
-  // Per-brand trait blocks: 2-3 traits + 1 system note each.
-  const blockA = `**${nameA}** — ${charA}. ${tendA}${sysA ? ` ${sysA}` : ''}`;
-  const blockB = `**${nameB}** — ${charB}. ${tendB}${sysB ? ` ${sysB}` : ''}`;
+  // ── Shopping ───────────────────────────────────────
+  const recommendedName = decision.recommended?.match(/\*\*(\w+)\*\*/)?.[1];
+  const shopping = buildComparisonShopping(nameA, profileA, nameB, profileB, recommendedName);
 
-  // Decision guidance — derive from character contrast.
-  const guidance = buildComparisonGuidance(nameA, charA, profileA, nameB, charB, profileB);
+  // ── Sources ────────────────────────────────────────
+  const sources = buildComparisonSourceRefs(nameA, profileA, nameB, profileB);
 
-  // Check for design families that need model-level follow-up
+  // ── Follow-up ──────────────────────────────────────
   const familiesA = 'designFamilies' in profileA ? (profileA as BrandProfile).designFamilies : undefined;
   const familiesB = 'designFamilies' in profileB ? (profileB as BrandProfile).designFamilies : undefined;
   const hasAnyFamilies = (familiesA && familiesA.length > 0) || (familiesB && familiesB.length > 0);
-
   const followUp = hasAnyFamilies
-    ? `Which models are you comparing? That changes the picture.`
-    : `What are you pairing it with?`;
-
-  // Pack everything into comparisonSummary so it renders as one concise block.
-  // philosophy/tendencies/systemContext left empty — prevents long review sections.
-  const fullComparison = `${opening}\n\n${blockA}\n\n${blockB}\n\n${guidance}`;
+    ? `Which models are you comparing? That changes the picture — and if you tell me your speakers, the recommendation gets sharper.`
+    : undefined;
 
   return {
     subject: `${nameA} vs ${nameB}`,
-    comparisonSummary: fullComparison,
+    sideA,
+    sideB,
+    tradeoff: {
+      axis: tradeoffAxis,
+      label: `${labelA} vs ${labelB}`,
+      statement: tradeoffStatement,
+    },
+    tasteFrame: {
+      source: explicitTaste ? 'explicit' : 'provisional',
+      statement: tasteStatement,
+    },
+    decision,
+    shopping,
+    sources: sources.length > 0 ? sources : undefined,
     followUp,
   };
 }
 
 /**
+ * Extract sonic traits as a string array from tendency text.
+ * Used to populate ComparisonSide.sonicTraits in the payload.
+ */
+function extractSonicTraits(tendencies: string): string[] {
+  const lower = tendencies.toLowerCase();
+  const traits: string[] = [];
+
+  // Timing & energy
+  if (/fast|speed|elastic|alive|timing|rhythmic|pace|drive/i.test(lower)) {
+    if (/elastic|alive/i.test(lower)) traits.push('fast, elastic energy — music feels alive');
+    else if (/rhythmic|drive|pace/i.test(lower)) traits.push('strong rhythmic drive and timing');
+    else traits.push('fast, precise timing');
+  }
+  if (/controlled|stable|composed|restrained/i.test(lower)) {
+    traits.push('controlled, stable presentation');
+  }
+
+  // Tone & harmonics
+  const warmTone = /warm|golden|fluid(?!.*than)|tube[- ]?(?:adjacent|like)|harmonic.*rich|tonal.*dens|lush/i.test(lower);
+  const coolTone = /neutral.*cool|slightly cool|cool|clean|dry|analytical/i.test(lower);
+  if (warmTone) {
+    if (/golden|tube[- ]?adjacent/i.test(lower)) traits.push('slightly golden tonality — fluid, almost tube-adjacent');
+    else if (/lush|dense/i.test(lower)) traits.push('warm, tonally dense, harmonically rich');
+    else traits.push('warm harmonic character');
+  }
+  if (coolTone && !warmTone) {
+    if (/dry/i.test(lower)) traits.push('neutral to cool tonality — clean, sometimes dry');
+    else traits.push('neutral, clean tonality');
+  }
+
+  // Dynamics
+  if (/microdynamic|nuance|expressive.*phras/i.test(lower)) {
+    traits.push('microdynamic nuance and expressive phrasing');
+  }
+  if (/macrodynamic|grip|slam|authority|bass.*grip/i.test(lower)) {
+    traits.push('macrodynamic authority — grip and slam');
+  }
+  if (/dynamic/i.test(lower) && traits.every((t) => !/dynamic/i.test(t))) {
+    traits.push('good dynamic range');
+  }
+
+  // Spatial
+  if (/dimensional|airy|holographic|depth/i.test(lower)) {
+    traits.push('dimensional, airy soundstage');
+  }
+  if (/structured|precise.*stage|flat|wide but/i.test(lower)) {
+    traits.push('structured, precise imaging');
+  }
+
+  return traits;
+}
+
+/**
+ * Build the trade-off statement — reduce the comparison to a simple tension.
+ * "The real choice here is X vs Y."
+ */
+function buildTradeoffStatement(
+  nameA: string, charA: string, tendA: string,
+  nameB: string, charB: string, tendB: string,
+): string {
+  // Score each side's dominant tendency by counting keyword matches.
+  // This avoids misclassification when a brand has traits on both axes
+  // (e.g. JOB is fast AND slightly golden).
+  const warmWords = ['warm', 'rich', 'dense', 'harmonic', 'tonal density', 'tonal body', 'lush', 'musical', 'golden', 'tube-adjacent', 'saturated'];
+  const controlWords = ['controlled', 'composed', 'neutral', 'clean', 'damping', 'precise', 'analytical', 'tight', 'restrained', 'cool', 'dry'];
+  const flowWords = ['flow', 'elastic', 'alive', 'engagement', 'rhythmic', 'drive', 'timing'];
+
+  function score(text: string, words: string[]): number {
+    const lower = text.toLowerCase();
+    return words.filter((w) => lower.includes(w)).length;
+  }
+
+  const textA = charA + ' ' + tendA;
+  const textB = charB + ' ' + tendB;
+
+  const warmScoreA = score(textA, warmWords);
+  const warmScoreB = score(textB, warmWords);
+  const controlScoreA = score(textA, controlWords);
+  const controlScoreB = score(textB, controlWords);
+  const flowScoreA = score(textA, flowWords);
+  const flowScoreB = score(textB, flowWords);
+
+  // Determine dominant axis for each side
+  const dominantA = warmScoreA > controlScoreA ? 'warm' : controlScoreA > warmScoreA ? 'control' : (flowScoreA > 0 ? 'flow' : 'neutral');
+  const dominantB = warmScoreB > controlScoreB ? 'warm' : controlScoreB > warmScoreB ? 'control' : (flowScoreB > 0 ? 'flow' : 'neutral');
+
+  if (dominantA === 'warm' && dominantB === 'control') {
+    if (flowScoreA > 0) return `The real choice: **musical realism through flow and harmonic richness** (${nameA}) vs **technical accuracy through control and precision** (${nameB}). These are not small variations of the same idea — they are fundamentally different interpretations of what "good sound" means.`;
+    return `The real choice: **warmth and tonal body** (${nameA}) vs **precision and control** (${nameB}).`;
+  }
+  if (dominantB === 'warm' && dominantA === 'control') {
+    if (flowScoreB > 0) return `The real choice: **technical accuracy through control and precision** (${nameA}) vs **musical realism through flow and harmonic richness** (${nameB}). These are not small variations of the same idea — they are fundamentally different interpretations of what "good sound" means.`;
+    return `The real choice: **precision and control** (${nameA}) vs **warmth and tonal body** (${nameB}).`;
+  }
+
+  // Flow vs control
+  if (flowScoreA > flowScoreB && controlScoreB > controlScoreA) {
+    return `The real choice: **musical flow and rhythmic engagement** (${nameA}) vs **composure and control** (${nameB}).`;
+  }
+  if (flowScoreB > flowScoreA && controlScoreA > controlScoreB) {
+    return `The real choice: **composure and control** (${nameA}) vs **musical flow and rhythmic engagement** (${nameB}).`;
+  }
+
+  // Both on same axis but different emphasis
+  if (warmScoreA > 0 && warmScoreB > 0) {
+    if (flowScoreA > flowScoreB) return `The real choice: **speed and rhythmic precision** (${nameA}) vs **tonal density and harmonic saturation** (${nameB}). Both have warmth — the question is how it arrives.`;
+    if (flowScoreB > flowScoreA) return `The real choice: **tonal density and harmonic saturation** (${nameA}) vs **speed and rhythmic precision** (${nameB}). Both have warmth — the question is how it arrives.`;
+  }
+
+  // Generic contrast
+  return `The real choice: **${charA}** (${nameA}) vs **${charB}** (${nameB}). Different priorities, not a quality gap.`;
+}
+
+/**
+ * Build a provisional taste inference when no explicit taste signal is present.
+ * Never say "no strong signal" — always infer a direction.
+ */
+function buildProvisionalTasteInference(
+  nameA: string, charA: string,
+  nameB: string, charB: string,
+): string {
+  const warmA = /warm|rich|lush|dense|musical|organic|harmonic|tonal|flow|engage/i.test(charA);
+  const warmB = /warm|rich|lush|dense|musical|organic|harmonic|tonal|flow|engage/i.test(charB);
+  const preciseA = /precise|neutral|analytical|detailed|clean|fast|controlled|resolving|transparent|speed/i.test(charA);
+  const preciseB = /precise|neutral|analytical|detailed|clean|fast|controlled|resolving|transparent|speed/i.test(charB);
+
+  if (warmA && preciseB) {
+    return `Most listeners asking this question are drawn to the comparison because they want more engagement without losing quality. If that resonates — **${nameA}** is likely where your instinct is pointing.`;
+  }
+  if (warmB && preciseA) {
+    return `Most listeners asking this question are drawn to the comparison because they want more engagement without losing quality. If that resonates — **${nameB}** is likely where your instinct is pointing.`;
+  }
+  return `The right answer depends on what keeps you listening longer — not what sounds impressive in the first five minutes. If you value long-session engagement, lean toward whichever character description above made you think "that's what I want."`;
+}
+
+/**
+ * Build a light recommendation for initial comparisons based on
+ * taste signals or brand character asymmetry.
+ */
+function buildInitialComparisonRecommendation(
+  nameA: string, charA: string,
+  profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  nameB: string, charB: string,
+  profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  queryText?: string,
+): string | null {
+  if (!queryText) return null;
+  const signals = extractTasteSignals(queryText);
+  if (signals.length === 0) return null;
+
+  const primary = signals[0];
+  const textA = `${charA} ${profileA.tendencies}`;
+  const textB = `${charB} ${profileB.tendencies}`;
+  const alignA = AXIS_ALIGNMENT[primary.axis].test(textA);
+  const alignB = AXIS_ALIGNMENT[primary.axis].test(textB);
+
+  if (alignA && !alignB) {
+    return `Given your interest in ${primary.phrase}, **${nameA}** is the more natural fit in this comparison.`;
+  }
+  if (alignB && !alignA) {
+    return `Given your interest in ${primary.phrase}, **${nameB}** is the more natural fit in this comparison.`;
+  }
+  return null;
+}
+
+/**
  * Build compact decision guidance from brand character contrast.
- * Format: "If your system is X → A. If you want Y → B."
+ * Format: "If you want X → A. If you want Y → B."
+ *
+ * Uses keyword scoring (not simple regex match) to determine dominant axis,
+ * since many brands have traits on both warm and precise axes.
  */
 function buildComparisonGuidance(
   nameA: string, charA: string, profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
   nameB: string, charB: string, profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
 ): string {
-  // Detect warm vs precise axis (most common comparison dimension)
-  const warmWords = /warm|rich|lush|dense|full|musical|organic|relaxed|smooth/i;
-  const preciseWords = /precise|neutral|analytical|detailed|clean|fast|controlled|resolving|transparent/i;
-  const aWarm = warmWords.test(profileA.tendencies) || warmWords.test(charA);
-  const bWarm = warmWords.test(profileB.tendencies) || warmWords.test(charB);
-  const aPrecise = preciseWords.test(profileA.tendencies) || preciseWords.test(charA);
-  const bPrecise = preciseWords.test(profileB.tendencies) || preciseWords.test(charB);
+  const warmKw = ['warm', 'rich', 'dense', 'harmonic', 'lush', 'musical', 'organic', 'golden', 'tonal density', 'tonal body', 'flowing', 'tube-adjacent'];
+  const preciseKw = ['precise', 'neutral', 'analytical', 'detailed', 'clean', 'controlled', 'composed', 'resolving', 'transparent', 'tight', 'damping', 'restrained', 'dry', 'cool'];
 
-  if (aWarm && bPrecise) {
+  function scoreAxis(text: string, keywords: string[]): number {
+    const lower = text.toLowerCase();
+    return keywords.filter((w) => lower.includes(w)).length;
+  }
+
+  const textA = charA + ' ' + profileA.tendencies;
+  const textB = charB + ' ' + profileB.tendencies;
+  const warmA = scoreAxis(textA, warmKw);
+  const warmB = scoreAxis(textB, warmKw);
+  const preciseA = scoreAxis(textA, preciseKw);
+  const preciseB = scoreAxis(textB, preciseKw);
+
+  // Determine dominant direction for each side
+  const aDominant = warmA > preciseA ? 'warm' : preciseA > warmA ? 'precise' : 'mixed';
+  const bDominant = warmB > preciseB ? 'warm' : preciseB > warmB ? 'precise' : 'mixed';
+
+  if (aDominant === 'warm' && bDominant === 'precise') {
     return `If you want warmth and body → ${nameA}. If you want precision and detail → ${nameB}.`;
   }
-  if (bWarm && aPrecise) {
-    return `If you want precision and detail → ${nameA}. If you want warmth and body → ${nameB}.`;
+  if (bDominant === 'warm' && aDominant === 'precise') {
+    return `If you want warmth and body → ${nameB}. If you want precision and detail → ${nameA}.`;
   }
-  // Both warm or both precise — find subtler contrast
-  if (aWarm && bWarm) {
+  // Both lean the same way — find subtler contrast using flow/density axis
+  const flowKw = ['flow', 'elastic', 'alive', 'timing', 'speed', 'fast', 'rhythmic', 'drive'];
+  const densityKw = ['dense', 'density', 'body', 'harmonic', 'saturated', 'lush', 'weight', 'presence'];
+  if (aDominant === 'warm' && bDominant === 'warm') {
+    const flowA2 = scoreAxis(textA, flowKw);
+    const flowB2 = scoreAxis(textB, flowKw);
+    const densA = scoreAxis(textA, densityKw);
+    const densB = scoreAxis(textB, densityKw);
+    if (flowA2 > flowB2 && densB > densA) {
+      return `If you want speed and rhythmic precision → ${nameA}. If you want tonal density and harmonic saturation → ${nameB}.`;
+    }
+    if (flowB2 > flowA2 && densA > densB) {
+      return `If you want tonal density and harmonic saturation → ${nameA}. If you want speed and rhythmic precision → ${nameB}.`;
+    }
     return `Both lean warm — the difference is in texture and presentation. ${nameA} tends toward ${charA}, ${nameB} toward ${charB}.`;
   }
-  if (aPrecise && bPrecise) {
+  if (aDominant === 'precise' && bDominant === 'precise') {
     return `Both lean precise — the difference is in voicing. ${nameA} tends toward ${charA}, ${nameB} toward ${charB}.`;
   }
   // Fallback — use extracted characters directly
   return `${nameA} leans toward ${charA}. ${nameB} leans toward ${charB}. The right choice depends on what your system needs.`;
+}
+
+// ── Taste-based decision framing ──────────────────────
+//
+// Listener-centered layer that explicitly connects product traits
+// to what the user values. This is the "which one is for YOU" layer.
+//
+// Differs from guidance (which is generic: "if you want X → A")
+// by using second-person address and resolving the comparison
+// toward the user's stated or inferred priorities.
+
+/** Preference axes detected from user language. */
+interface TasteSignal {
+  axis: 'warm' | 'precise' | 'rhythmic' | 'spatial' | 'organic' | 'dynamic';
+  /** The preference phrase extracted from the query (for natural quoting). */
+  phrase: string;
+}
+
+const TASTE_EXTRACTORS: Array<{ axis: TasteSignal['axis']; pattern: RegExp; phrase: string }> = [
+  // Warm / musical / organic
+  { axis: 'warm', pattern: /\b(?:warm(?:th)?|lush|rich(?:ness)?|musical|body|harmonic|tone|tonal\s+density|vocal|midrange|tube[- ]?like)\b/i, phrase: 'warmth and tonal richness' },
+  // Precise / detailed / controlled
+  { axis: 'precise', pattern: /\b(?:detail(?:ed)?|precis(?:ion|e)|clarity|resolv(?:ing|e)|analytic(?:al)?|clean|speed|fast|control(?:led)?|transparent|neutral|tight)\b/i, phrase: 'detail and precision' },
+  // Rhythmic / timing
+  { axis: 'rhythmic', pattern: /\b(?:rhythm(?:ic)?|timing|pace|prat|drive|boogie|energy|swing|groove|toe[- ]?tapping|engagement)\b/i, phrase: 'rhythmic engagement' },
+  // Spatial
+  { axis: 'spatial', pattern: /\b(?:soundstage|stage|imag(?:ing|e)|spatial|separation|3d|dimensional|depth|width|air(?:y|iness)?)\b/i, phrase: 'spatial presentation' },
+  // Organic / natural
+  { axis: 'organic', pattern: /\b(?:organic|natural|realistic|lifelike|presence|texture|grain[- ]?free|smooth(?:ness)?|ease|relaxed|effortless)\b/i, phrase: 'natural, organic presentation' },
+  // Dynamic
+  { axis: 'dynamic', pattern: /\b(?:dynamic(?:s)?|slam|punch|impact|macro|micro|transient|attack|weight|authority|power(?:ful)?)\b/i, phrase: 'dynamics and impact' },
+];
+
+/** Extract listener taste signals from query text. */
+function extractTasteSignals(text: string): TasteSignal[] {
+  const signals: TasteSignal[] = [];
+  const seen = new Set<string>();
+  for (const ext of TASTE_EXTRACTORS) {
+    if (ext.pattern.test(text) && !seen.has(ext.axis)) {
+      seen.add(ext.axis);
+      signals.push({ axis: ext.axis, phrase: ext.phrase });
+    }
+  }
+  return signals;
+}
+
+/** Map a taste axis to the brand character words it aligns with. */
+const AXIS_ALIGNMENT: Record<TasteSignal['axis'], RegExp> = {
+  warm: /warm|rich|lush|dense|full|musical|organic|harmonic|tonal|vocal|midrange|tube|smooth/i,
+  precise: /precise|neutral|analytical|detailed|clean|fast|controlled|resolving|transparent|clear|speed|tight/i,
+  rhythmic: /rhythm|timing|pace|drive|energy|engagement|alive|dynamic|boogie|snappy|agile/i,
+  spatial: /spatial|soundstage|imaging|separation|dimensional|airy|open|wide|holographic|3d/i,
+  organic: /organic|natural|realistic|texture|smooth|relaxed|effortless|ease|lifelike|grain/i,
+  dynamic: /dynamic|slam|punch|impact|transient|attack|weight|authority|power|macro|grip/i,
+};
+
+/**
+ * Build a taste-based decision frame for a comparison.
+ *
+ * Returns a listener-centered paragraph that explicitly connects the
+ * comparison to what the user values. Returns null when no taste signal
+ * is detected — callers should fall back to generic guidance.
+ *
+ * @param queryText - the user's original message (for taste extraction)
+ * @param nameA - display name of side A
+ * @param charA - character summary of side A
+ * @param tendenciesA - full tendency text for side A
+ * @param nameB - display name of side B
+ * @param charB - character summary of side B
+ * @param tendenciesB - full tendency text for side B
+ */
+export function buildTasteDecisionFrame(
+  queryText: string,
+  nameA: string, charA: string, tendenciesA: string,
+  nameB: string, charB: string, tendenciesB: string,
+): string | null {
+  const signals = extractTasteSignals(queryText);
+  if (signals.length === 0) return null;
+
+  // Find which side aligns better with the strongest taste signal
+  const primary = signals[0];
+  const textA = `${charA} ${tendenciesA}`;
+  const textB = `${charB} ${tendenciesB}`;
+  const alignA = AXIS_ALIGNMENT[primary.axis].test(textA);
+  const alignB = AXIS_ALIGNMENT[primary.axis].test(textB);
+
+  if (alignA && !alignB) {
+    return `If your priority is ${primary.phrase}, **${nameA}** is the more natural fit — its design leans into exactly that quality.${signals.length > 1 ? ` ${nameB} would serve a different emphasis.` : ''}`;
+  }
+  if (alignB && !alignA) {
+    return `If your priority is ${primary.phrase}, **${nameB}** is the more natural fit — its design leans into exactly that quality.${signals.length > 1 ? ` ${nameA} would serve a different emphasis.` : ''}`;
+  }
+  if (alignA && alignB) {
+    // Both align — the distinction is subtler
+    return `Both serve ${primary.phrase} to some degree — the difference is in how. ${nameA} tends toward ${charA}, ${nameB} toward ${charB}. The question is which expression of that quality resonates more with your listening.`;
+  }
+
+  // Neither clearly aligns — use the secondary signal if available
+  if (signals.length > 1) {
+    const secondary = signals[1];
+    const align2A = AXIS_ALIGNMENT[secondary.axis].test(textA);
+    const align2B = AXIS_ALIGNMENT[secondary.axis].test(textB);
+    if (align2A && !align2B) {
+      return `Given your interest in ${secondary.phrase}, **${nameA}** is likely the closer match.`;
+    }
+    if (align2B && !align2A) {
+      return `Given your interest in ${secondary.phrase}, **${nameB}** is likely the closer match.`;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Build a generic taste tie-breaker for comparisons where the user
+ * hasn't expressed a preference. This is a softer prompt than
+ * `buildTasteDecisionFrame` — it asks the user to consider priorities
+ * rather than resolving for them.
+ */
+function buildTasteTieBreakerPrompt(
+  nameA: string, charA: string,
+  nameB: string, charB: string,
+): string {
+  // Identify the axis of contrast
+  const warmA = /warm|rich|lush|dense|musical|organic|harmonic|tonal|smooth/i.test(charA);
+  const warmB = /warm|rich|lush|dense|musical|organic|harmonic|tonal|smooth/i.test(charB);
+  const preciseA = /precise|neutral|analytical|detailed|clean|fast|controlled|resolving|transparent/i.test(charA);
+  const preciseB = /precise|neutral|analytical|detailed|clean|fast|controlled|resolving|transparent/i.test(charB);
+
+  if (warmA && preciseB) {
+    return `This is ultimately a question of what you want more of in your listening — harmonic body and engagement, or resolution and clarity. That preference, more than any spec, will tell you which direction is right.`;
+  }
+  if (warmB && preciseA) {
+    return `This is ultimately a question of what you want more of in your listening — resolution and clarity, or harmonic body and engagement. That preference, more than any spec, will tell you which direction is right.`;
+  }
+  return `The right choice here comes down to what you prioritise in your listening. Neither is objectively better — they optimise for different qualities, and your taste is what breaks the tie.`;
 }
 
 /**
@@ -1850,8 +2258,13 @@ export function buildComparisonRefinement(
     }
   }
 
+  // Taste-based decision frame for the criterion follow-up.
+  const tasteFrame = infoA && infoB
+    ? buildTasteDecisionFrame(followUpMessage, nameA, '', infoA.tendencies, nameB, '', infoB.tendencies)
+    : null;
+
   // Pack into concise side-by-side format — no long review sections.
-  const concise = `${summary}\n\n**${nameA}:** ${contextA}\n\n**${nameB}:** ${contextB}`;
+  const concise = `${summary}\n\n**${nameA}:** ${contextA}\n\n**${nameB}:** ${contextB}${tasteFrame ? `\n\n${tasteFrame}` : ''}`;
 
   return {
     subject: `${nameA} vs ${nameB} — ${criterion.label}`,
@@ -1886,10 +2299,32 @@ export function buildContextRefinement(
   const infoA = resolveBrandInfo(activeComparison.left.name);
   const infoB = resolveBrandInfo(activeComparison.right.name);
 
+  // Resolve the context component's brand info (e.g. DeVore for a speaker)
+  const contextBrandInfo = resolveBrandInfo(contextMessage);
+  const contextName = contextBrandInfo ? capitalize(contextMessage.trim()) : contextMessage.trim();
+
   // Extract what the user told us for the summary
   const contextLabel = describeContext(contextMessage, contextKind);
 
-  // Build context-aware comparison text for each side
+  // ── System-anchored decision path ──────────────────────
+  // When the user provides system context (speaker for amp comparison,
+  // amp for speaker comparison), produce a decision-oriented response
+  // anchored to the specific pairing — NOT re-descriptions.
+  if (infoA && infoB && isSystemAnchorableContext(contextKind)) {
+    const anchored = buildSystemAnchoredDecision(
+      nameA, infoA, nameB, infoB,
+      contextName, contextBrandInfo, contextKind,
+      contextMessage,
+    );
+
+    return {
+      subject: `${nameA} vs ${nameB} — with ${contextName}`,
+      comparisonSummary: anchored.body,
+      followUp: anchored.followUp,
+    };
+  }
+
+  // ── Fallback: generic context refinement ───────────────
   const sideA = infoA
     ? buildContextSideAnswer(nameA, infoA, contextKind, contextMessage)
     : `I don't have enough data about ${nameA} to assess this pairing specifically.`;
@@ -1898,16 +2333,708 @@ export function buildContextRefinement(
     : `I don't have enough data about ${nameB} to assess this pairing specifically.`;
 
   const summary = buildContextSummary(nameA, nameB, infoA, infoB, contextKind, contextMessage, activeComparison.scope);
-  const followUp = buildContextFollowUp(contextKind);
+  const followUp = buildContextFollowUp(contextKind, infoA, infoB);
 
-  // Pack into concise side-by-side format.
-  const concise = `${summary}\n\n**${nameA}:** ${sideA}\n\n**${nameB}:** ${sideB}`;
+  const tasteFrame = infoA && infoB
+    ? buildTasteDecisionFrame(contextMessage, nameA, '', infoA.tendencies, nameB, '', infoB.tendencies)
+    : null;
+
+  const concise = `${summary}\n\n**${nameA}:** ${sideA}\n\n**${nameB}:** ${sideB}${tasteFrame ? `\n\n${tasteFrame}` : ''}`;
 
   return {
     subject: `${nameA} vs ${nameB} — ${contextLabel}`,
     comparisonSummary: concise,
     followUp,
   };
+}
+
+/** Can we build a system-anchored decision for this context type? */
+function isSystemAnchorableContext(kind: ContextKind): boolean {
+  return kind === 'speaker' || kind === 'amplifier' || kind === 'power';
+}
+
+/**
+ * Build a system-anchored decision response (expert level).
+ *
+ * Flow: build ComparisonPayload → validate → render
+ * The response MUST end with a decision. No questions.
+ */
+function buildSystemAnchoredDecision(
+  nameA: string, infoA: BrandInfo,
+  nameB: string, infoB: BrandInfo,
+  contextName: string, contextInfo: BrandInfo | null,
+  contextKind: ContextKind,
+  contextMessage: string,
+): { body: string; followUp?: string } {
+  const payload = buildSystemAnchoredPayload(
+    nameA, infoA, nameB, infoB,
+    contextName, contextInfo, contextKind, contextMessage,
+  );
+
+  // Validate
+  const validation = validateComparisonPayload(payload);
+  if (!validation.valid) {
+    // eslint-disable-next-line no-console
+    console.warn('[comparison-payload] system-anchored validation errors:', validation.errors);
+  }
+
+  const rendered = renderComparisonPayload(payload);
+
+  // Output validation
+  const outputValidation = validateComparisonOutput(rendered.comparisonSummary);
+  if (!outputValidation.valid) {
+    // eslint-disable-next-line no-console
+    console.warn('[comparison-output] system-anchored validation errors:', outputValidation.errors);
+  }
+
+  return { body: rendered.comparisonSummary, followUp: rendered.followUp };
+}
+
+/**
+ * Build a ComparisonPayload for a system-anchored comparison
+ * (system context already provided, e.g. speaker for amp comparison).
+ */
+export function buildSystemAnchoredPayload(
+  nameA: string, infoA: BrandInfo,
+  nameB: string, infoB: BrandInfo,
+  contextName: string, contextInfo: BrandInfo | null,
+  contextKind: ContextKind,
+  contextMessage: string,
+): ComparisonPayload {
+  const charA = extractCoreCharacter(infoA.tendencies);
+  const charB = extractCoreCharacter(infoB.tendencies);
+  const contextChar = contextInfo ? extractCoreCharacter(contextInfo.tendencies) : null;
+
+  // ── Sides ──────────────────────────────────────────
+  const sideA: ComparisonSide = {
+    name: nameA,
+    character: charA,
+    designPhilosophy: takeSentences(infoA.philosophy, 2),
+    sonicTraits: extractSonicTraits(infoA.tendencies),
+    systemInteraction: buildSystemInteractionNote(nameA, infoA, contextName, contextInfo, contextKind),
+  };
+
+  const sideB: ComparisonSide = {
+    name: nameB,
+    character: charB,
+    designPhilosophy: takeSentences(infoB.philosophy, 2),
+    sonicTraits: extractSonicTraits(infoB.tendencies),
+    systemInteraction: buildSystemInteractionNote(nameB, infoB, contextName, contextInfo, contextKind),
+  };
+
+  // ── System anchor ──────────────────────────────────
+  const anchorStatement = buildAnchorStatement(nameA, nameB, contextName, contextChar, contextKind);
+
+  // ── Trade-off ──────────────────────────────────────
+  const dominantA = detectDominantAxis(charA, infoA.tendencies);
+  const dominantB = detectDominantAxis(charB, infoB.tendencies);
+  const flowScoreA = scoreKeywords(charA + ' ' + infoA.tendencies, ['flow', 'elastic', 'alive', 'engagement', 'rhythmic', 'drive', 'timing']);
+  const flowScoreB = scoreKeywords(charB + ' ' + infoB.tendencies, ['flow', 'elastic', 'alive', 'engagement', 'rhythmic', 'drive', 'timing']);
+  const tradeoffAxis = computeTradeoffAxis(dominantA, dominantB, flowScoreA, flowScoreB);
+  const [labelA, labelB] = TRADEOFF_LABELS[tradeoffAxis];
+
+  // System-specific trade-off statement
+  const systemTradeoffText = buildSystemTradeoff(nameA, charA, infoA, nameB, charB, infoB, contextName, contextChar);
+  // Generic trade-off for the axis
+  const tradeoffStatement = buildTradeoffStatement(nameA, charA, infoA.tendencies, nameB, charB, infoB.tendencies);
+
+  // ── Taste frame ────────────────────────────────────
+  const explicitTaste = buildTasteDecisionFrame(
+    contextMessage, nameA, charA, infoA.tendencies, nameB, charB, infoB.tendencies,
+  );
+  const tasteStatement = explicitTaste ?? buildProvisionalTasteInference(nameA, charA, nameB, charB);
+
+  // ── Decision ───────────────────────────────────────
+  const decisionText = buildDecisionGuidance(nameA, charA, infoA, nameB, charB, infoB, contextName, contextInfo, contextKind);
+  const decisionLines = decisionText.split('\n').filter((l) => l.trim());
+  const decision: ComparisonDecision = {
+    chooseAIf: decisionLines[0]?.trim() || `If you want ${labelA} → **${nameA}**`,
+    chooseBIf: decisionLines[1]?.trim() || `If you want ${labelB} → **${nameB}**`,
+  };
+
+  // Light recommendation from known pairings
+  const lightRec = buildLightRecommendation(nameA, infoA, nameB, infoB, contextName, contextInfo, contextKind);
+  if (lightRec) {
+    decision.recommended = lightRec;
+  }
+
+  // ── Recommendation (always present) ────────────────
+  // Use BrandProfile if available for richer recommendation
+  const profileA = findBrandProfileByName(nameA);
+  const profileB = findBrandProfileByName(nameB);
+  const fullProfileA = profileA ?? { name: nameA, philosophy: infoA.philosophy, tendencies: infoA.tendencies };
+  const fullProfileB = profileB ?? { name: nameB, philosophy: infoB.philosophy, tendencies: infoB.tendencies };
+
+  const fullRec = buildComparisonRecommendation(
+    nameA, charA, fullProfileA, nameB, charB, fullProfileB,
+    contextName, contextChar,
+  );
+  if (!decision.recommended) {
+    decision.recommended = fullRec.recommended;
+  }
+  decision.rationale = fullRec.rationale;
+
+  // ── Shopping ───────────────────────────────────────
+  const recommendedName = decision.recommended?.match(/\*\*(\w+)\*\*/)?.[1];
+  const shopping = buildComparisonShopping(nameA, fullProfileA, nameB, fullProfileB, recommendedName);
+
+  // ── Sources ────────────────────────────────────────
+  const sources = buildComparisonSourceRefs(nameA, fullProfileA, nameB, fullProfileB, contextName);
+
+  return {
+    subject: `${nameA} vs ${nameB} — with ${contextName}`,
+    sideA,
+    sideB,
+    tradeoff: {
+      axis: tradeoffAxis,
+      label: `${labelA} vs ${labelB}`,
+      statement: tradeoffStatement,
+    },
+    tasteFrame: {
+      source: explicitTaste ? 'explicit' : 'provisional',
+      statement: tasteStatement,
+    },
+    decision,
+    systemAnchor: {
+      name: contextName,
+      character: contextChar,
+      anchorStatement,
+    },
+    systemTradeoff: systemTradeoffText ?? undefined,
+    shopping,
+    sources: sources.length > 0 ? sources : undefined,
+  };
+}
+
+/**
+ * Build system-anchored trade-off — the real choice in context.
+ */
+function buildSystemTradeoff(
+  nameA: string, charA: string, infoA: BrandInfo,
+  nameB: string, charB: string, infoB: BrandInfo,
+  contextName: string, contextChar: string | null,
+): string | null {
+  if (!contextChar) return null;
+
+  const contextWarm = /warm|rich|dense|harmonic|tonal/i.test(contextChar);
+  const warmA = /warm|rich|dense|harmonic|tonal|lush|flowing|tube/i.test(charA + ' ' + infoA.tendencies);
+  const warmB = /warm|rich|dense|harmonic|tonal|lush|flowing|tube/i.test(charB + ' ' + infoB.tendencies);
+  const fastA = /fast|speed|lean|precise|transparent|control|analytical/i.test(charA + ' ' + infoA.tendencies);
+  const fastB = /fast|speed|lean|precise|transparent|control|analytical/i.test(charB + ' ' + infoB.tendencies);
+
+  if (contextWarm) {
+    if (warmA && fastB) {
+      return `With ${contextName}'s own warmth in the equation: ${nameA} compounds richness (lush but risks thickness), while ${nameB} provides counterbalance (precision against body). That's the real system-level trade-off.`;
+    }
+    if (warmB && fastA) {
+      return `With ${contextName}'s own warmth in the equation: ${nameA} provides counterbalance (precision against body), while ${nameB} compounds richness (lush but risks thickness). That's the real system-level trade-off.`;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Build concise source references for comparison context.
+ */
+function buildComparisonSources(
+  nameA: string, infoA: BrandInfo,
+  nameB: string, infoB: BrandInfo,
+  contextName: string, contextInfo: BrandInfo | null,
+): string | null {
+  const refs: string[] = [];
+
+  // Check pairing notes for known references
+  if (infoA.pairingNotes && contextName.split(/\s+/).some((w) =>
+    w.length > 2 && infoA.pairingNotes!.toLowerCase().includes(w.toLowerCase()))) {
+    refs.push(`${nameA} + ${contextName}: documented pairing with established track record`);
+  }
+  if (infoB.pairingNotes && contextName.split(/\s+/).some((w) =>
+    w.length > 2 && infoB.pairingNotes!.toLowerCase().includes(w.toLowerCase()))) {
+    refs.push(`${nameB} + ${contextName}: documented pairing with established track record`);
+  }
+
+  if (refs.length === 0) return null;
+  return `*Sources: ${refs.join('. ')}.*`;
+}
+
+/** Anchor the comparison to the system component — "this is not a neutral comparison." */
+function buildAnchorStatement(
+  nameA: string, nameB: string,
+  contextName: string, contextChar: string | null,
+  contextKind: ContextKind,
+): string {
+  const componentType = contextKind === 'speaker' ? 'speaker' : 'amplifier';
+  if (contextChar) {
+    return `With ${contextName}, this is not a neutral comparison. ${contextName} tends toward ${contextChar} — that shifts the balance between ${nameA} and ${nameB}.`;
+  }
+  return `With ${contextName} as your ${componentType}, the comparison between ${nameA} and ${nameB} takes on a specific character.`;
+}
+
+/** Explain how one side of the comparison interacts with the context component. */
+function buildSystemInteractionNote(
+  name: string, info: BrandInfo,
+  contextName: string, contextInfo: BrandInfo | null,
+  contextKind: ContextKind,
+): string {
+  const char = extractCoreCharacter(info.tendencies);
+  const contextChar = contextInfo ? extractCoreCharacter(contextInfo.tendencies) : null;
+
+  // Check for known pairing match
+  const pairingMentionsContext = info.pairingNotes
+    && contextName.split(/\s+/).some((word) =>
+      word.length > 2 && info.pairingNotes!.toLowerCase().includes(word.toLowerCase()));
+
+  if (pairingMentionsContext) {
+    return takeSentences(info.pairingNotes!, 2);
+  }
+
+  // Analyze complementary vs compounding interaction
+  if (contextChar) {
+    const bothWarm = /warm|rich|dense|lush/i.test(char) && /warm|rich|dense|lush/i.test(contextChar);
+    const bothLean = /lean|fast|precise|speed|control/i.test(char) && /lean|fast|precise|speed|control/i.test(contextChar);
+    const complementary = (/warm|rich|dense/i.test(char) && /lean|fast|precise|speed/i.test(contextChar))
+      || (/lean|fast|precise|speed/i.test(char) && /warm|rich|dense/i.test(contextChar));
+
+    if (bothWarm) {
+      return `${name} tends toward ${char}. With ${contextName}'s own warmth, expect a tonally rich, dense presentation — possibly at the cost of some transient precision.`;
+    }
+    if (bothLean) {
+      return `${name} tends toward ${char}. Combined with ${contextName}'s own lean character, the pairing may prioritise speed and transparency — watch for thinness.`;
+    }
+    if (complementary) {
+      return `${name} tends toward ${char}. That's a complementary balance against ${contextName}'s tendencies — the system should sound coherent without overcorrection.`;
+    }
+  }
+
+  // Fallback: use system context or tendencies
+  if (info.systemContext) {
+    return takeSentences(info.systemContext, 2);
+  }
+  return `${name} tends toward ${char}. How that interacts with ${contextName} depends on sensitivity and impedance behaviour.`;
+}
+
+/** Build "If you want X → choose A, If you want Y → choose B" decision guidance. */
+function buildDecisionGuidance(
+  nameA: string, charA: string, infoA: BrandInfo,
+  nameB: string, charB: string, infoB: BrandInfo,
+  contextName: string, contextInfo: BrandInfo | null,
+  contextKind: ContextKind,
+): string {
+  // Determine the primary contrast axis
+  const warmA = /warm|rich|dense|harmonic|tube|tonal/i.test(charA + ' ' + infoA.tendencies);
+  const warmB = /warm|rich|dense|harmonic|tube|tonal/i.test(charB + ' ' + infoB.tendencies);
+  const fastA = /fast|speed|lean|precise|transparent|control|damping/i.test(charA + ' ' + infoA.tendencies);
+  const fastB = /fast|speed|lean|precise|transparent|control|damping/i.test(charB + ' ' + infoB.tendencies);
+
+  const lines: string[] = [];
+
+  if (warmA && fastB) {
+    lines.push(`If you want harmonic richness and tonal density → **${nameA}**`);
+    lines.push(`If you want speed, control, and transient precision → **${nameB}**`);
+  } else if (warmB && fastA) {
+    lines.push(`If you want speed, control, and transient precision → **${nameA}**`);
+    lines.push(`If you want harmonic richness and tonal density → **${nameB}**`);
+  } else {
+    // Generic contrast
+    lines.push(`If you want ${charA.toLowerCase()} → **${nameA}**`);
+    lines.push(`If you want ${charB.toLowerCase()} → **${nameB}**`);
+  }
+
+  return lines.join('\n');
+}
+
+/** Provide a light recommendation when one pairing is clearly stronger.
+ * This is the first-pass recommendation for system-anchored comparisons.
+ * It feeds into decision.recommended and may be overridden by buildComparisonRecommendation.
+ */
+function buildLightRecommendation(
+  nameA: string, infoA: BrandInfo,
+  nameB: string, infoB: BrandInfo,
+  contextName: string, contextInfo: BrandInfo | null,
+  contextKind: ContextKind,
+): string | null {
+  // Check if either side has known pairing notes mentioning the context component
+  const aMentionsContext = infoA.pairingNotes
+    && contextName.split(/\s+/).some((word) =>
+      word.length > 2 && infoA.pairingNotes!.toLowerCase().includes(word.toLowerCase()));
+  const bMentionsContext = infoB.pairingNotes
+    && contextName.split(/\s+/).some((word) =>
+      word.length > 2 && infoB.pairingNotes!.toLowerCase().includes(word.toLowerCase()));
+
+  if (aMentionsContext && !bMentionsContext) {
+    return `The ${nameA} + ${contextName} pairing is well-documented — it's a known combination with a strong track record.`;
+  }
+  if (bMentionsContext && !aMentionsContext) {
+    return `The ${nameB} + ${contextName} pairing is well-documented — it's a known combination with a strong track record.`;
+  }
+
+  // When both have documented pairings, don't return here — let buildComparisonRecommendation
+  // produce a deeper system-aware recommendation instead.
+  if (aMentionsContext && bMentionsContext) return null;
+
+  return null;
+}
+
+// ── Recommendation, Shopping, Sources builders ────────
+//
+// These populate the final three sections of every comparison output.
+// They read from BrandProfile data (links, pairingNotes, philosophy)
+// and produce deterministic content — no LLM inference.
+
+/**
+ * Build a decisive recommendation with system-aware rationale.
+ * Always returns a recommendation — this is mandatory for every comparison.
+ *
+ * Reasoning structure:
+ *   1. What the system (or general listening context) already provides
+ *   2. What each option changes about that
+ *   3. The real trade-off at system level
+ *   4. Decisive recommendation
+ *
+ * Avoids shallow "complements warmth" or "balances brightness" language.
+ * Instead describes: preserving flow, increasing control, adding density,
+ * sharpening articulation, improving emotional coherence.
+ */
+function buildComparisonRecommendation(
+  nameA: string, charA: string,
+  profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  nameB: string, charB: string,
+  profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  contextName?: string,
+  contextChar?: string | null,
+): { recommended: string; rationale: string } {
+  const warmKw = ['warm', 'rich', 'dense', 'harmonic', 'lush', 'musical', 'golden', 'tube-adjacent', 'saturated', 'tonal density', 'tonal body'];
+  const preciseKw = ['controlled', 'composed', 'neutral', 'clean', 'precise', 'analytical', 'tight', 'restrained', 'cool', 'dry', 'damping'];
+  const flowKw = ['flow', 'elastic', 'alive', 'engagement', 'rhythmic', 'drive', 'timing', 'fast', 'speed'];
+  const densityKw = ['dense', 'density', 'body', 'harmonic', 'saturated', 'lush', 'weight', 'presence', 'tonal'];
+
+  const textA = charA + ' ' + profileA.tendencies;
+  const textB = charB + ' ' + profileB.tendencies;
+  const warmA = scoreKeywords(textA, warmKw);
+  const warmB = scoreKeywords(textB, warmKw);
+  const preciseA = scoreKeywords(textA, preciseKw);
+  const preciseB = scoreKeywords(textB, preciseKw);
+  const flowA = scoreKeywords(textA, flowKw);
+  const flowB = scoreKeywords(textB, flowKw);
+  const densityA = scoreKeywords(textA, densityKw);
+  const densityB = scoreKeywords(textB, densityKw);
+
+  // ── System-anchored recommendation ────────────────
+  if (contextName && contextChar) {
+    const contextWarm = /warm|rich|dense|harmonic|tonal/i.test(contextChar);
+    const contextLean = /lean|precise|controlled|neutral|analytical|cool/i.test(contextChar);
+    const contextFlowing = /flow|rhythmic|alive|engagement|drive/i.test(contextChar);
+
+    if (contextWarm) {
+      // The speaker already provides warmth and tonal density.
+      // The question is: what does each amplifier add or preserve?
+      if (flowA > flowB && preciseA >= preciseB) {
+        return {
+          recommended: `With ${contextName} already providing warmth and tonal density, **${nameA}** preserves the speaker's natural flow while adding articulation and transient speed — the system stays musically alive without losing body.`,
+          rationale: `${nameB} adds more harmonic saturation to an already warm speaker. That can be gorgeous at low volumes but risks congestion and reduced clarity on complex passages.`,
+        };
+      }
+      if (flowB > flowA && preciseB >= preciseA) {
+        return {
+          recommended: `With ${contextName} already providing warmth and tonal density, **${nameB}** preserves the speaker's natural flow while adding articulation and transient speed — the system stays musically alive without losing body.`,
+          rationale: `${nameA} adds more harmonic saturation to an already warm speaker. That can be gorgeous at low volumes but risks congestion and reduced clarity on complex passages.`,
+        };
+      }
+      if (preciseA > preciseB) {
+        return {
+          recommended: `${contextName} already supplies warmth and harmonic richness. **${nameA}** sharpens articulation and grip without stripping that character — it increases clarity while the speaker holds the tonal center.`,
+          rationale: `${nameB} doubles down on density, which some listeners love — but the system may sacrifice transient definition and dynamic contrast at higher levels.`,
+        };
+      }
+      if (preciseB > preciseA) {
+        return {
+          recommended: `${contextName} already supplies warmth and harmonic richness. **${nameB}** sharpens articulation and grip without stripping that character — it increases clarity while the speaker holds the tonal center.`,
+          rationale: `${nameA} doubles down on density, which some listeners love — but the system may sacrifice transient definition and dynamic contrast at higher levels.`,
+        };
+      }
+      // Both warm — distinguish on flow vs density
+      if (flowA > flowB) {
+        return {
+          recommended: `Both amplifiers lean warm with ${contextName}. **${nameA}** brings stronger rhythmic drive and elastic energy — the system breathes more. **${nameB}** adds weight and harmonic saturation.`,
+          rationale: `The choice is between emotional coherence through flow (${nameA}) and tonal immersion through density (${nameB}). With a warm speaker, flow tends to preserve engagement over longer sessions.`,
+        };
+      }
+      if (flowB > flowA) {
+        return {
+          recommended: `Both amplifiers lean warm with ${contextName}. **${nameB}** brings stronger rhythmic drive and elastic energy — the system breathes more. **${nameA}** adds weight and harmonic saturation.`,
+          rationale: `The choice is between emotional coherence through flow (${nameB}) and tonal immersion through density (${nameA}). With a warm speaker, flow tends to preserve engagement over longer sessions.`,
+        };
+      }
+    }
+
+    if (contextLean) {
+      if (warmA > warmB) {
+        return {
+          recommended: `${contextName} is already lean and controlled. **${nameA}** introduces tonal body and harmonic richness that the speaker doesn't provide on its own — the system gains emotional weight.`,
+          rationale: `${nameB} keeps the system analytical, which rewards detail-focused listening but may feel sterile over long sessions.`,
+        };
+      }
+      if (warmB > warmA) {
+        return {
+          recommended: `${contextName} is already lean and controlled. **${nameB}** introduces tonal body and harmonic richness that the speaker doesn't provide on its own — the system gains emotional weight.`,
+          rationale: `${nameA} keeps the system analytical, which rewards detail-focused listening but may feel sterile over long sessions.`,
+        };
+      }
+    }
+
+    if (contextFlowing) {
+      if (preciseA > preciseB) {
+        return {
+          recommended: `${contextName} already delivers rhythmic engagement and flow. **${nameA}** adds control and definition to that foundation — tightening the system without dampening its musical energy.`,
+          rationale: `${nameB} may compound the flowing character — alive but potentially loose at the bottom end.`,
+        };
+      }
+      if (preciseB > preciseA) {
+        return {
+          recommended: `${contextName} already delivers rhythmic engagement and flow. **${nameB}** adds control and definition to that foundation — tightening the system without dampening its musical energy.`,
+          rationale: `${nameA} may compound the flowing character — alive but potentially loose at the bottom end.`,
+        };
+      }
+    }
+  }
+
+  // ── Initial comparison (no system context) ────────
+  const aDominant = warmA > preciseA ? 'warm' : preciseA > warmA ? 'precise' : 'mixed';
+  const bDominant = warmB > preciseB ? 'warm' : preciseB > warmB ? 'precise' : 'mixed';
+
+  if (aDominant === 'warm' && bDominant === 'precise') {
+    return {
+      recommended: `In most systems, **${nameA}** is the more natural match unless you're explicitly chasing maximum control and neutrality.`,
+      rationale: `${nameA} prioritises musical flow and emotional coherence — the kind of engagement that sustains long-term listening. ${nameB} rewards listeners who value analytical precision and absolute grip, but that can narrow the range of recordings that sound enjoyable.`,
+    };
+  }
+  if (bDominant === 'warm' && aDominant === 'precise') {
+    return {
+      recommended: `In most systems, **${nameB}** is the more natural match unless you're explicitly chasing maximum control and neutrality.`,
+      rationale: `${nameB} prioritises musical flow and emotional coherence — the kind of engagement that sustains long-term listening. ${nameA} rewards listeners who value analytical precision and absolute grip, but that can narrow the range of recordings that sound enjoyable.`,
+    };
+  }
+
+  // Both lean the same way — distinguish on flow vs density
+  if (flowA > flowB) {
+    return {
+      recommended: `For long-session musical engagement, **${nameA}** has the edge — stronger rhythmic drive and elastic energy keep the music in motion.`,
+      rationale: `${nameB} offers more tonal weight and harmonic saturation, which suits listeners who prioritise immersive density over rhythmic articulation.`,
+    };
+  }
+  if (flowB > flowA) {
+    return {
+      recommended: `For long-session musical engagement, **${nameB}** has the edge — stronger rhythmic drive and elastic energy keep the music in motion.`,
+      rationale: `${nameA} offers more tonal weight and harmonic saturation, which suits listeners who prioritise immersive density over rhythmic articulation.`,
+    };
+  }
+
+  // True tie
+  return {
+    recommended: `Both are strong choices with different strengths — **${nameA}** leans toward ${charA.toLowerCase()}, **${nameB}** toward ${charB.toLowerCase()}.`,
+    rationale: `The right choice depends on whether you prioritise ${charA.toLowerCase()} or ${charB.toLowerCase()} in your system and with your music.`,
+  };
+}
+
+/**
+ * Build shopping pointers for comparison outputs.
+ * Prioritises actionable buying links: HiFiShark, eBay, then dealer/official as fallback.
+ *
+ * Returns an array of shopping lines:
+ *   - Primary recommendation with search link
+ *   - Secondary path with search link
+ *   - Optional dealer fallback (max 2 total alternatives)
+ */
+function buildComparisonShopping(
+  nameA: string,
+  profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  nameB: string,
+  profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  recommendedName?: string,
+): string[] {
+  const lines: string[] = [];
+
+  // Determine primary based on recommendation
+  const primary = recommendedName === nameB ? nameB : nameA;
+  const secondary = primary === nameA ? nameB : nameA;
+  const primaryProfile = primary === nameA ? profileA : profileB;
+  const secondaryProfile = secondary === nameA ? profileA : profileB;
+
+  // Build HiFiShark and eBay search URLs
+  const hifisharkUrl = (name: string) => `https://www.hifishark.com/search?q=${encodeURIComponent(name)}`;
+  const ebayUrl = (name: string) => `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(name + ' amplifier')}`;
+
+  // Primary recommendation — HiFiShark first, eBay second
+  lines.push(`- **${primary}** — primary recommendation. Search: [HiFiShark](${hifisharkUrl(primary)}), [eBay](${ebayUrl(primary)})`);
+
+  // Secondary path
+  lines.push(`- **${secondary}** — alternative if your priorities differ. Search: [HiFiShark](${hifisharkUrl(secondary)}), [eBay](${ebayUrl(secondary)})`);
+
+  // Dealer fallback (max 2 more lines total)
+  let dealerCount = 0;
+  for (const [name, profile] of [[primary, primaryProfile], [secondary, secondaryProfile]] as const) {
+    if (dealerCount >= 2) break;
+    const dealerLink = 'links' in profile
+      ? (profile as BrandProfile).links?.find((l) => l.kind === 'dealer')
+      : undefined;
+    if (dealerLink) {
+      lines.push(`- ${dealerLink.label} — [${dealerLink.url}](${dealerLink.url})`);
+      dealerCount++;
+    }
+  }
+
+  return lines;
+}
+
+/**
+ * Known editorial / review outlets that represent expert-level sources.
+ * Used to generate source references from brand tendencies and pairing notes.
+ *
+ * Each entry maps a brand name pattern to the outlets that have published
+ * notable coverage of that brand. This is curated data — not a web scrape.
+ */
+const EDITORIAL_SOURCES: Array<{
+  brandPattern: RegExp;
+  sources: Array<{ outlet: string; note: string }>;
+}> = [
+  {
+    brandPattern: /\bjob\b/i,
+    sources: [
+      { outlet: '6moons', note: 'JOB INTegrated review — Goldmund-derived circuit analysis' },
+      { outlet: 'Darko.Audio', note: 'JOB 225 coverage — compact high-current amplification' },
+    ],
+  },
+  {
+    brandPattern: /\bleben\b/i,
+    sources: [
+      { outlet: '6moons', note: 'Leben CS600X review — push-pull KT77/KT88 tube integrated' },
+      { outlet: 'Stereophile', note: 'Leben CS600 coverage — tube amplifier design philosophy' },
+      { outlet: 'Tone Imports', note: 'US distributor — Leben product notes and system pairing guidance' },
+    ],
+  },
+  {
+    brandPattern: /\bhegel\b/i,
+    sources: [
+      { outlet: 'Stereophile', note: 'Hegel H390/H590 reviews — SoundEngine technology analysis' },
+      { outlet: 'Darko.Audio', note: 'Hegel integrated amplifier coverage — streaming DAC integration' },
+      { outlet: 'The Audiophiliac', note: 'Hegel amplifier impressions — value and performance assessment' },
+    ],
+  },
+  {
+    brandPattern: /\bdevore\b/i,
+    sources: [
+      { outlet: '6moons', note: 'DeVore Fidelity O/96 review — high-efficiency speaker design' },
+      { outlet: 'Stereophile', note: 'DeVore O/96 measurements and listening impressions' },
+    ],
+  },
+  {
+    brandPattern: /\bkef\b/i,
+    sources: [
+      { outlet: 'Stereophile', note: 'KEF speaker reviews — Uni-Q driver technology' },
+      { outlet: 'The Audiophiliac', note: 'KEF speaker coverage — value assessment' },
+    ],
+  },
+  {
+    brandPattern: /\belac\b/i,
+    sources: [
+      { outlet: 'Stereophile', note: 'ELAC speaker reviews — Andrew Jones designs' },
+      { outlet: 'Darko.Audio', note: 'ELAC coverage — accessible audiophile speakers' },
+    ],
+  },
+  {
+    brandPattern: /\bshindo\b/i,
+    sources: [
+      { outlet: '6moons', note: 'Shindo Laboratory reviews — tube amplification heritage' },
+    ],
+  },
+  {
+    brandPattern: /\btotaldac\b/i,
+    sources: [
+      { outlet: '6moons', note: 'TotalDAC reviews — discrete R2R ladder DAC analysis' },
+    ],
+  },
+];
+
+/**
+ * Build source reference lines for comparison outputs.
+ * Prioritises editorial / review sources (6moons, Stereophile, Darko.Audio, etc.).
+ * Official brand websites are fallback only.
+ *
+ * Returns 2-3 short reference strings.
+ */
+function buildComparisonSourceRefs(
+  nameA: string,
+  profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  nameB: string,
+  profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  contextName?: string,
+): string[] {
+  const refs: string[] = [];
+  const usedOutlets = new Set<string>();
+
+  // 1. Editorial sources — highest priority
+  for (const entry of EDITORIAL_SOURCES) {
+    if (refs.length >= 3) break;
+    const matchesA = entry.brandPattern.test(nameA);
+    const matchesB = entry.brandPattern.test(nameB);
+    const matchesContext = contextName && entry.brandPattern.test(contextName);
+
+    if (matchesA || matchesB || matchesContext) {
+      for (const src of entry.sources) {
+        if (refs.length >= 3) break;
+        if (usedOutlets.has(src.outlet)) continue;
+        refs.push(`${src.outlet} — ${src.note}`);
+        usedOutlets.add(src.outlet);
+      }
+    }
+  }
+
+  // 2. Documented pairing references (when system context present)
+  if (contextName && refs.length < 3) {
+    const pairingA = 'pairingNotes' in profileA ? (profileA as BrandProfile).pairingNotes : undefined;
+    const pairingB = 'pairingNotes' in profileB ? (profileB as BrandProfile).pairingNotes : undefined;
+
+    if (pairingA && contextName.split(/\s+/).some((w) => w.length > 2 && pairingA.toLowerCase().includes(w.toLowerCase()))) {
+      if (!refs.some((r) => r.includes(nameA) && r.includes(contextName))) {
+        refs.push(`${nameA} + ${contextName} — documented pairing, community track record`);
+      }
+    }
+    if (refs.length < 3 && pairingB && contextName.split(/\s+/).some((w) => w.length > 2 && pairingB.toLowerCase().includes(w.toLowerCase()))) {
+      if (!refs.some((r) => r.includes(nameB) && r.includes(contextName))) {
+        refs.push(`${nameB} + ${contextName} — documented pairing, community track record`);
+      }
+    }
+  }
+
+  // 3. Review links from brand profiles (still editorial, not official)
+  if (refs.length < 2) {
+    const reviewLinksA = 'links' in profileA
+      ? (profileA as BrandProfile).links?.filter((l) => l.kind === 'review') ?? []
+      : [];
+    const reviewLinksB = 'links' in profileB
+      ? (profileB as BrandProfile).links?.filter((l) => l.kind === 'review') ?? []
+      : [];
+    for (const link of [...reviewLinksA, ...reviewLinksB].slice(0, 3 - refs.length)) {
+      refs.push(`${link.label} — ${nameA} review`);
+    }
+  }
+
+  // 4. Fallback — official/dealer links only if we have nothing better
+  if (refs.length < 2) {
+    const allLinks = [
+      ...('links' in profileA ? (profileA as BrandProfile).links ?? [] : []),
+      ...('links' in profileB ? (profileB as BrandProfile).links ?? [] : []),
+    ];
+    for (const link of allLinks) {
+      if (refs.length >= 3) break;
+      if (link.kind === 'dealer') {
+        refs.push(`${link.label} — dealer/distributor`);
+      }
+    }
+  }
+
+  return refs.slice(0, 3);
 }
 
 /** Produce a short human-readable label for the context the user provided. */
@@ -1919,7 +3046,10 @@ function describeContext(text: string, kind: ContextKind): string {
       if (ampMatch) return `with ${ampMatch[1].trim()}`;
       return 'amplifier context';
     }
-    case 'speaker': return 'speaker context';
+    case 'speaker': {
+      const cleaned = text.replace(/^(?:my\s+)?speakers?\s+(?:are?|is)\s+(?:the?\s+)?/i, '').trim();
+      return cleaned.length > 0 && cleaned.length < 40 ? `with ${cleaned}` : 'speaker context';
+    }
     case 'room': return 'room context';
     case 'music': return 'music preferences';
     case 'listening_priority': return 'listening priorities';
@@ -1986,14 +3116,23 @@ function buildContextSummary(
   return `That context helps frame the comparison between ${nameA} and ${nameB}.`;
 }
 
-/** Build a follow-up question appropriate to the context just provided. */
-function buildContextFollowUp(contextKind: ContextKind): string {
+/** Build a follow-up question appropriate to the context just provided.
+ *  Note: speaker/amplifier context follow-ups are handled by the
+ *  system-anchored decision path — this is the fallback for non-anchorable contexts.
+ */
+function buildContextFollowUp(
+  contextKind: ContextKind,
+  _infoA?: BrandInfo | null,
+  _infoB?: BrandInfo | null,
+): string {
   switch (contextKind) {
     case 'amplifier':
     case 'power':
-      return 'What speakers is that amp driving — or is that what we\'re choosing between?';
+      // The user just told us their amp — don't ask for more system info.
+      return 'What matters most to you — tonal body and engagement, or speed and clarity?';
     case 'speaker':
-      return 'What amplifier are you pairing with those speakers?';
+      // The user just told us their speaker — don't ask for amplifier.
+      return 'What matters most to you — tonal body and engagement, or speed and clarity?';
     case 'room':
       return 'What kind of listening do you do most — and at what volume?';
     case 'music':
@@ -2005,6 +3144,50 @@ function buildContextFollowUp(contextKind: ContextKind): string {
     default:
       return 'What would help most — narrowing by a specific quality, or understanding how they differ in that context?';
   }
+}
+
+// ── Subject-to-context classification ─────────────────
+//
+// When an active comparison exists and the user answers with a bare
+// product/brand name (e.g. "devore o96" in response to "What are you
+// pairing it with?"), we need to classify that subject as a ContextKind
+// so buildContextRefinement can generate an appropriate response.
+
+/**
+ * Classify a bare product/brand answer as a ContextKind for
+ * comparison refinement. Looks up the product catalog to determine
+ * category; falls back to brand profile heuristics.
+ */
+export function classifySubjectAsContext(
+  subjectMatches: SubjectMatch[],
+): ContextKind {
+  for (const match of subjectMatches) {
+    const lower = match.name.toLowerCase();
+
+    // 1. Check product catalog for exact category
+    const product = ALL_PRODUCTS.find(
+      (p) => lower.includes(p.name.toLowerCase()) || lower.includes(p.brand.toLowerCase()),
+    );
+    if (product) {
+      switch (product.category) {
+        case 'speaker': return 'speaker';
+        case 'amplifier': return 'amplifier';
+        case 'dac': return 'general_system';
+        case 'turntable': return 'general_system';
+        case 'streamer': return 'general_system';
+      }
+    }
+
+    // 2. Check brand profiles — brand philosophy often reveals category
+    const profile = findBrandProfile(match.name);
+    if (profile) {
+      const phil = profile.philosophy.toLowerCase();
+      if (phil.includes('speaker') || phil.includes('loudspeaker')) return 'speaker';
+      if (phil.includes('amplif') || phil.includes('integrated')) return 'amplifier';
+    }
+  }
+
+  return 'general_system';
 }
 
 function buildDesignFamilyAmpNote(nameA: string, nameB: string, criterion: ComparisonCriterion): string | null {
@@ -2146,6 +3329,7 @@ interface BrandInfo {
   philosophy: string;
   tendencies: string;
   systemContext?: string;
+  pairingNotes?: string;
 }
 
 /** Resolve brand info from curated profile, catalog, or null. */
@@ -2157,6 +3341,7 @@ function resolveBrandInfo(brandName: string): BrandInfo | null {
       philosophy: profile.philosophy,
       tendencies: profile.tendencies,
       systemContext: profile.systemContext,
+      pairingNotes: profile.pairingNotes,
     };
   }
   // Catalog-derived

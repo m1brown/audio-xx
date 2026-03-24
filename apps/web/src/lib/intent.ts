@@ -1016,6 +1016,14 @@ export function detectIntent(currentMessage: string): IntentResult {
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
+  // 3b. Bare category name — the entire message is just a component category
+  //     (e.g. "DAC", "speakers", "headphones"). Route to shopping so the
+  //     pipeline can ask for budget/preferences rather than diagnosing.
+  const bareCategory = /^\s*(?:a\s+|an?\s+|the\s+|some\s+|new\s+)?(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp|iems?|earphones?|earbuds?|cans)\s*[?.!]?\s*$/i;
+  if (bareCategory.test(currentMessage)) {
+    return { intent: 'shopping', subjects, subjectMatches, desires };
+  }
+
   // 4. Audio assistant — negotiation, translation, message writing,
   //    travel/audition logistics, buying help.
   //    Checked BEFORE gear inquiry because assistant patterns are

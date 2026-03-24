@@ -765,7 +765,9 @@ export function evaluateContextGaps(
       question: phraseTasteQuestion(ctx),
     },
     system: {
-      filled: isSystemSufficient(ctx),
+      // If the user never mentioned a system, don't treat it as a gap —
+      // fresh shopping inputs shouldn't be asked about their current gear.
+      filled: isSystemSufficient(ctx) || !ctx.systemProvided,
       question: phraseSystemQuestion(ctx),
     },
     budget: {
@@ -893,8 +895,10 @@ export function isAnswerReady(
 
   // System context is required for chain-sensitive categories unless
   // the user is building from scratch (system is inherently absent)
+  // or the user never mentioned having a system at all.
   const systemRequired = SYSTEM_REQUIRED_CATEGORIES.includes(ctx.category)
-    && ctx.mode !== 'build-a-system';
+    && ctx.mode !== 'build-a-system'
+    && ctx.systemProvided;
 
   if (systemRequired && !hasSystem) return false;
 
@@ -928,7 +932,9 @@ export function getStatedGaps(
 
   if (!isTasteSufficient(signals)) gaps.push('taste');
   // Build-a-system users have no existing system — asking for one is wrong.
-  if (!isSystemSufficient(ctx) && ctx.mode !== 'build-a-system') gaps.push('system');
+  // Only flag system as a gap when the user actually indicated they have one.
+  // Fresh shopping inputs ("I want speakers") should not be asked about their system.
+  if (!isSystemSufficient(ctx) && ctx.mode !== 'build-a-system' && ctx.systemProvided) gaps.push('system');
   if (!ctx.budgetMentioned) gaps.push('budget');
   if (ctx.mode === 'build-a-system' && !ctx.useCaseProvided) gaps.push('use_case');
 
@@ -2851,14 +2857,22 @@ export function buildShoppingAnswer(
       : '';
   const preferenceSummary = `You appear to value ${effectiveTasteLabel} more than ${getContrastLabel(effectiveTasteLabel)}${archetypeLabel}.${profileNote}`;
 
-  // 2. Best-fit direction — prefer reasoning direction statement when available
-  const bestFitDirection = reasoning?.direction.statement
+  // 2. Best-fit direction — prefer reasoning direction statement when available.
+  //    Wrap in a listener-centered frame that connects the direction to the
+  //    user's stated priorities rather than stating it as a generic design note.
+  const rawDirection = reasoning?.direction.statement
     ?? matchedProfile?.directionByCategory[ctx.category]
     ?? taste.defaultDirection;
+  const bestFitDirection = hasTasteSignal
+    ? `Given your preference for ${effectiveTasteLabel}, ${rawDirection.charAt(0).toLowerCase()}${rawDirection.slice(1)}${rawDirection.endsWith('.') ? '' : '.'} This matters because the ${categoryLabel} sets the tonal and temporal character for everything downstream.`
+    : rawDirection;
 
-  // 3. Why this fits
-  const whyThisFits = matchedProfile?.whyByCategory?.[ctx.category]
+  // 3. Why this fits — explicitly listener-centered framing
+  const rawWhyThisFits = matchedProfile?.whyByCategory?.[ctx.category]
     ?? taste.defaultWhy ?? matchedProfile?.defaultWhy ?? FALLBACK_TASTE.defaultWhy;
+  const whyThisFits = hasTasteSignal && Array.isArray(rawWhyThisFits) && rawWhyThisFits.length > 0
+    ? [`If what you value most is ${effectiveTasteLabel}, these designs lean into that quality.`, ...rawWhyThisFits.slice(0, 2)]
+    : rawWhyThisFits;
 
   // 4. Product examples (only when catalog exists + budget known)
   // Pass reasoning for directional bias — existing scoring is preserved.
