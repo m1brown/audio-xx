@@ -34,9 +34,11 @@ export type ConvStage =
   | 'clarify_targets'
   | 'awaiting_listening_path'
   | 'awaiting_onboarding_followup'
+  | 'assembling_system'
   | 'ready_to_recommend'
   | 'ready_to_diagnose'
   | 'ready_to_compare'
+  | 'ready_to_assess'
   | 'done';
 
 export interface ConvFacts {
@@ -60,6 +62,10 @@ export interface ConvFacts {
   subjectCount?: number;
   /** User explicitly said they're starting from scratch / building new. */
   fromScratch?: boolean;
+  /** Accumulated system component descriptions for system_assessment mode. */
+  systemComponents?: string[];
+  /** All user text collected during system_assessment (for re-running assessment). */
+  systemAssessmentText?: string;
 }
 
 export interface ConvState {
@@ -204,7 +210,7 @@ const MODE_COMPATIBLE_INTENTS: Record<ConvMode, Set<string>> = {
   music_input: new Set(['music_input', 'shopping', 'intake']),
   improvement: new Set(['diagnosis', 'shopping', 'intake']),
   comparison: new Set(['comparison', 'exploration']),
-  system_assessment: new Set(['system_assessment', 'diagnosis', 'consultation_entry']),
+  system_assessment: new Set(['system_assessment', 'diagnosis', 'consultation_entry', 'shopping', 'intake']),
 };
 
 /**
@@ -252,6 +258,53 @@ const EVALUATION_LANGUAGE_PATTERNS = [
 
 function hasExplicitEvaluationLanguage(text: string): boolean {
   return EVALUATION_LANGUAGE_PATTERNS.some((p) => p.test(text));
+}
+
+/**
+ * Detects whether the user is describing system components rather than
+ * expressing a preference, symptom, or buying intent. Used in
+ * system_assessment mode to keep assembling the system when the user
+ * lists or clarifies components.
+ *
+ * Returns true when the text mentions audio component categories
+ * (amp, speaker, DAC, etc.) or uses ownership + pairing language
+ * ("I pair it with", "my amp is", "running a").
+ */
+const COMPONENT_DESCRIPTION_PATTERNS = [
+  // Explicit component categories
+  /\b(?:amp(?:lifier)?|integrated(?:\s+amp(?:lifier)?)?|speaker|speakers|dac|d\/a|streamer|turntable|phono|preamp|pre-amp|power\s+amp|headphone|headphones|source|transport|cd\s+player)\b/i,
+  // Pairing / combining language
+  /\b(?:pair(?:ed|ing)?\s+(?:it\s+)?with|paired\s+with|running\s+(?:a|an|the)|using\s+(?:a|an|the)|hooked\s+(?:up\s+)?to|connected\s+to|feeding\s+(?:a|an|the|into))\b/i,
+  // Ownership of specific gear
+  /\b(?:my|the)\s+(?:amp|amplifier|speakers?|dac|streamer|turntable|source|preamp)\b/i,
+  // Arrow chain notation (e.g., "Node → Hugo → Job → Diva")
+  /(?:→|-{1,3}>|={1,2}>|>{2,3})/,
+];
+
+function hasComponentDescription(text: string): boolean {
+  return COMPONENT_DESCRIPTION_PATTERNS.some((p) => p.test(text));
+}
+
+/**
+ * Counts major system roles mentioned in text.
+ * Returns the number of distinct roles (source, amplification, output).
+ */
+function countSystemRoles(text: string): { source: boolean; amplification: boolean; output: boolean } {
+  const lower = text.toLowerCase();
+  return {
+    source: /\b(?:dac|d\/a|streamer|turntable|phono|cd\s+player|transport|source|node|wiim)\b/i.test(lower),
+    amplification: /\b(?:amp(?:lifier)?|integrated|preamp|pre-amp|power\s+amp|receiver)\b/i.test(lower),
+    output: /\b(?:speaker|speakers|headphone|headphones|monitor|monitors)\b/i.test(lower),
+  };
+}
+
+function getMissingRoles(text: string): string[] {
+  const roles = countSystemRoles(text);
+  const missing: string[] = [];
+  if (!roles.source) missing.push('source (DAC, streamer, or turntable)');
+  if (!roles.amplification) missing.push('amplifier');
+  if (!roles.output) missing.push('speakers or headphones');
+  return missing;
 }
 
 /**
@@ -730,23 +783,57 @@ export function transition(
       };
     }
 
-    // ── SYSTEM ASSESSMENT (system entry) ────────────────
+    // ── SYSTEM ASSESSMENT (system entry + assembly) ─────
     case 'system_assessment': {
       if (current.stage === 'entry') {
         facts.hasSystem = true;
-        // If the original message already contained evaluation language
-        // (e.g. "evaluate my system: ..."), skip clarification entirely.
-        // The text var here is the user's NEXT message (after entry was set
-        // by detectInitialMode), but we also check the original facts
-        // for evaluation intent carried from detectInitialMode.
-        if (hasExplicitEvaluationLanguage(text)) {
-          facts.symptom = text;
+
+        // Check if user provided component descriptions alongside the request
+        const hasComponents = hasComponentDescription(text) && context.subjectCount > 0;
+
+        if (hasComponents) {
+          // User described components — start assembling
+          facts.systemComponents = [text];
+          facts.systemAssessmentText = text;
+
+          if (hasExplicitEvaluationLanguage(text)) {
+            // e.g. "evaluate my system: JOB integrated and WLM Diva"
+            return {
+              state: { mode: 'system_assessment', stage: 'ready_to_assess', facts },
+              response: { kind: 'proceed' },
+            };
+          }
+
+          const missing = getMissingRoles(text);
+          if (missing.length === 0 || context.subjectCount >= 2) {
+            return {
+              state: { mode: 'system_assessment', stage: 'ready_to_assess', facts },
+              response: { kind: 'proceed' },
+            };
+          }
           return {
-            state: { mode: 'diagnosis', stage: 'ready_to_diagnose', facts },
-            response: { kind: 'proceed' },
+            state: { mode: 'system_assessment', stage: 'assembling_system', facts },
+            response: {
+              kind: 'question',
+              acknowledge: 'Got it — building the picture.',
+              question: `What about the ${missing.join(' and ')}?`,
+            },
           };
         }
-        // No explicit evaluation intent — ask what they want to do.
+
+        // Evaluation language but NO components — ask for the system first
+        if (hasExplicitEvaluationLanguage(text)) {
+          return {
+            state: { mode: 'system_assessment', stage: 'assembling_system', facts },
+            response: {
+              kind: 'question',
+              acknowledge: 'Happy to help with that.',
+              question: 'What components are in your system?',
+            },
+          };
+        }
+
+        // No evaluation intent and no components — ask what they want to do
         return {
           state: { mode: 'system_assessment', stage: 'clarify_preference', facts },
           response: {
@@ -757,16 +844,138 @@ export function transition(
         };
       }
 
+      // ── Assembling system: user is adding components turn by turn ──
+      if (current.stage === 'assembling_system') {
+        // Accumulate new component text
+        const priorComponents = facts.systemComponents ?? [];
+        facts.systemComponents = [...priorComponents, text];
+        facts.systemAssessmentText = (facts.systemAssessmentText ? facts.systemAssessmentText + '\n' : '') + text;
+        facts.hasSystem = true;
+
+        // Check if user explicitly asked for evaluation now
+        if (hasExplicitEvaluationLanguage(text)) {
+          return {
+            state: { mode: 'system_assessment', stage: 'ready_to_assess', facts },
+            response: { kind: 'proceed' },
+          };
+        }
+
+        // Check how complete the system is (using ALL accumulated text)
+        const allText = facts.systemAssessmentText;
+        const missing = getMissingRoles(allText);
+
+        // If enough context (≤1 missing role or ≥2 subjects), proceed to assessment
+        if (missing.length <= 1 || context.subjectCount >= 1) {
+          return {
+            state: { mode: 'system_assessment', stage: 'ready_to_assess', facts },
+            response: { kind: 'proceed' },
+          };
+        }
+
+        // Still missing major roles — ask for them
+        return {
+          state: { mode: 'system_assessment', stage: 'assembling_system', facts },
+          response: {
+            kind: 'question',
+            acknowledge: 'Got it.',
+            question: `What about the ${missing.join(' and ')}?`,
+          },
+        };
+      }
+
+      // ── Ready to assess: user adds more components or clarifies ──
+      if (current.stage === 'ready_to_assess') {
+        // User is adding/clarifying components after assessment already ran.
+        // Accumulate and re-assess.
+        const priorComponents = facts.systemComponents ?? [];
+        facts.systemComponents = [...priorComponents, text];
+        facts.systemAssessmentText = (facts.systemAssessmentText ? facts.systemAssessmentText + '\n' : '') + text;
+
+        // Check for explicit mode changes
+        const wantsBuy = /\b(?:buy|new|shop|looking\s+for|get\s+(?:a|some)|upgrade|replace|add)\b/i.test(text);
+        const wantsDiagnose = /\b(?:sounds?\s+(?:off|bad|wrong|thin|bright|muddy|harsh)|problem|issue|something.*off|fatiguing|lacking)\b/i.test(text);
+
+        if (wantsDiagnose) {
+          facts.symptom = text;
+          return {
+            state: { mode: 'diagnosis', stage: 'ready_to_diagnose', facts },
+            response: { kind: 'proceed' },
+          };
+        }
+
+        if (wantsBuy) {
+          if (facts.category && facts.budget) {
+            return {
+              state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
+              response: { kind: 'proceed' },
+            };
+          }
+          return {
+            state: { mode: 'shopping', stage: facts.category ? 'clarify_budget' : 'clarify_category', facts },
+            response: {
+              kind: 'question',
+              acknowledge: 'Got it — let\'s find the right upgrade.',
+              question: facts.category ? "What's your budget?" : 'What component are you looking to change?',
+            },
+          };
+        }
+
+        // Component description or reinforcement → stay in assessment and re-run
+        if (hasComponentDescription(text) || context.subjectCount > 0) {
+          return {
+            state: { mode: 'system_assessment', stage: 'ready_to_assess', facts },
+            response: { kind: 'proceed' },
+          };
+        }
+
+        // General follow-up — still in assessment context
+        return {
+          state: { mode: 'system_assessment', stage: 'ready_to_assess', facts },
+          response: { kind: 'proceed' },
+        };
+      }
+
       if (current.stage === 'clarify_preference') {
-        // User told us what they want to improve — check if it's a symptom, evaluation, or a goal
+        // User told us what they want to improve — check what kind of response.
+        // FIRST: check if user is providing component descriptions instead of a preference.
+        // This happens when "evaluate my system" triggers the question "What are you trying
+        // to improve?" and the user responds with component names.
+        if (hasComponentDescription(text) || context.subjectCount > 0) {
+          facts.systemComponents = [text];
+          facts.systemAssessmentText = text;
+          facts.hasSystem = true;
+          const missing = getMissingRoles(text);
+          if (missing.length <= 1 || context.subjectCount >= 2) {
+            return {
+              state: { mode: 'system_assessment', stage: 'ready_to_assess', facts },
+              response: { kind: 'proceed' },
+            };
+          }
+          return {
+            state: { mode: 'system_assessment', stage: 'assembling_system', facts },
+            response: {
+              kind: 'question',
+              acknowledge: 'Got it — building the picture.',
+              question: `What about the ${missing.join(' and ')}?`,
+            },
+          };
+        }
+
         const wantsDiagnose = /\b(?:sounds?\s+(?:off|bad|wrong|thin|bright|muddy|harsh)|problem|issue|something.*off|fatiguing|lacking)\b/i.test(text);
         const wantsEvaluation = hasExplicitEvaluationLanguage(text);
         const wantsBuy = /\b(?:buy|new|shop|looking\s+for|get\s+(?:a|some)|upgrade|replace|add)\b/i.test(text);
 
-        if (wantsDiagnose || wantsEvaluation) {
+        if (wantsDiagnose) {
           facts.symptom = text;
           return {
             state: { mode: 'diagnosis', stage: 'ready_to_diagnose', facts },
+            response: { kind: 'proceed' },
+          };
+        }
+
+        if (wantsEvaluation) {
+          return {
+            state: { mode: 'system_assessment', stage: 'ready_to_assess', facts },
             response: { kind: 'proceed' },
           };
         }
@@ -909,12 +1118,13 @@ export function detectInitialMode(
 
   // System entry — user describes their components.
   // When the user explicitly asks for evaluation/assessment AND provides
-  // their system, skip clarification and go straight to diagnosis.
+  // their system, skip clarification and go straight to assessment.
   if (context.detectedIntent === 'system_assessment') {
     facts.hasSystem = true;
+    facts.systemAssessmentText = text;
+    facts.systemComponents = [text];
     if (hasExplicitEvaluationLanguage(text)) {
-      facts.symptom = text;
-      return { mode: 'diagnosis', stage: 'ready_to_diagnose', facts };
+      return { mode: 'system_assessment', stage: 'ready_to_assess', facts };
     }
     return { mode: 'system_assessment', stage: 'entry', facts };
   }

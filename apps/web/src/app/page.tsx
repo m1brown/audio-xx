@@ -26,7 +26,7 @@ import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
 import { checkGlossaryQuestion } from '@/lib/glossary';
-import { detectIntent, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
+import { detectIntent, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
 import { attachQuickRecommendation } from '@/lib/quick-recommendation';
 import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode } from '@/lib/conversation-state';
 import { buildGearResponse } from '@/lib/gear-response';
@@ -444,10 +444,18 @@ export default function Home() {
               budget: convResult.state.facts.budget,
               fromScratch: convResult.state.facts.fromScratch,
             };
+            convStateRef.current = INITIAL_CONV_STATE;
           } else if (convResult.state.stage === 'ready_to_diagnose') {
             convModeHint = 'diagnosis';
+            convStateRef.current = INITIAL_CONV_STATE;
+          } else if (convResult.state.stage === 'ready_to_assess') {
+            // System assessment — override intent and keep convState alive
+            // so subsequent turns accumulate components.
+            intent = 'system_assessment';
+            // Do NOT reset convState — keep system_assessment mode active.
+          } else {
+            convStateRef.current = INITIAL_CONV_STATE;
           }
-          convStateRef.current = INITIAL_CONV_STATE;
           // Fall through to normal pipeline below...
         }
       }
@@ -1064,8 +1072,23 @@ export default function Home() {
     // per-component character descriptions and system interaction summary,
     // then ask what they want to explore. Must fire before consultation/comparison
     // to prevent multi-brand system descriptions from being misrouted.
+    //
+    // When the state machine is in system_assessment/ready_to_assess, use
+    // ALL accumulated text (not just the current message) for subject extraction
+    // so that incrementally-provided components are all included.
     if (intent === 'system_assessment') {
-      const assessmentResult = buildSystemAssessment(submittedText, turnCtx.subjectMatches, turnCtx.activeSystem, turnCtx.desires);
+      const isAccumulating = convStateRef.current.mode === 'system_assessment'
+        && convStateRef.current.stage === 'ready_to_assess';
+      const accumulatedText = isAccumulating
+        ? (convStateRef.current.facts.systemAssessmentText ?? submittedText)
+        : submittedText;
+
+      // Re-extract subjects from accumulated text to capture all components
+      const assessmentSubjects = isAccumulating
+        ? extractSubjectMatches(accumulatedText)
+        : turnCtx.subjectMatches;
+
+      const assessmentResult = buildSystemAssessment(accumulatedText, assessmentSubjects, turnCtx.activeSystem, turnCtx.desires);
       if (assessmentResult) {
         if (assessmentResult.kind === 'clarification') {
           // Validation detected a conflict — ask the user before proceeding
