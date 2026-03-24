@@ -1055,6 +1055,8 @@ export interface ProductExample {
   catalogBrandScale?: string;
   /** True when this product is already in the user's current system. */
   isCurrentComponent?: boolean;
+  /** True when this is the primary recommendation in directed mode. */
+  isPrimary?: boolean;
 }
 
 // ── Synthesis Brief ───────────────────────────────────
@@ -1173,6 +1175,12 @@ export interface ShoppingAnswer {
   refinementPrompts?: string[];
   /** Compact personalization bullets — "why this fits you" layer. */
   whyFitsYou?: string[];
+  /** True when budget + category + any taste signal are present — shifts
+   *  output from exploratory options to directed system-building. */
+  directed?: boolean;
+  /** Next build step — what the user should consider next in a system build.
+   *  Only populated in directed mode when a logical next step exists. */
+  nextBuildStep?: string;
 }
 
 // ── Taste direction templates ─────────────────────────
@@ -2864,6 +2872,23 @@ export function buildShoppingAnswer(
 
   // ── Standard taste-driven path (DAC, etc.) ──────────
 
+  // ── Directed mode detection ───────────────────────────
+  // When budget, category, and *any* taste signal (explicit or inferred) are
+  // present, shift from exploratory options to directed system-building:
+  //   • Primary direction statement
+  //   • 1–2 anchored recommendations (not 3 equal options)
+  //   • Stronger, taste-committed language
+  //   • No generic filler or refinement prompts
+  const hasBudget = !!ctx.budgetAmount;
+  const hasCategory = ctx.category !== 'general';
+  // Accept even inferred/weak taste — the reasoning engine always produces
+  // a tasteLabel, so we check for a matched profile OR stored profile OR
+  // reasoning-level archetype as evidence of *any* signal.
+  const hasAnyTaste = hasTasteSignal
+    || (tasteProfile && tasteProfile.confidence > 0.15)
+    || !!reasoning?.taste.archetype;
+  const directed = hasBudget && hasCategory && hasAnyTaste;
+
   // 1. Preference summary — use reasoning taste label when available
   const effectiveTasteLabel = reasoning?.taste.tasteLabel ?? taste.label;
   const archetype = reasoning?.taste.archetype ?? matchedProfile?.archetype;
@@ -2875,28 +2900,52 @@ export function buildShoppingAnswer(
     : tasteProfile && tasteProfile.confidence > 0.3
       ? ` Your stored taste profile reinforces this.`
       : '';
-  const preferenceSummary = `You appear to value ${effectiveTasteLabel} more than ${getContrastLabel(effectiveTasteLabel)}${archetypeLabel}.${profileNote}`;
+
+  // In directed mode, use assertive taste-committed language.
+  // Exploratory mode retains the observational framing.
+  const preferenceSummary = directed
+    ? `Given your preference for ${effectiveTasteLabel}, this direction makes the most sense${archetypeLabel}.${profileNote}`
+    : `You appear to value ${effectiveTasteLabel} more than ${getContrastLabel(effectiveTasteLabel)}${archetypeLabel}.${profileNote}`;
 
   // 2. Best-fit direction — prefer reasoning direction statement when available.
-  //    Wrap in a listener-centered frame that connects the direction to the
-  //    user's stated priorities rather than stating it as a generic design note.
+  //    In directed mode, lead with a system-building directive.
+  //    In exploratory mode, wrap in a listener-centered frame.
   const rawDirection = reasoning?.direction.statement
     ?? matchedProfile?.directionByCategory[ctx.category]
     ?? taste.defaultDirection;
-  const bestFitDirection = hasTasteSignal
-    ? `Given your preference for ${effectiveTasteLabel}, ${rawDirection.charAt(0).toLowerCase()}${rawDirection.slice(1)}${rawDirection.endsWith('.') ? '' : '.'} This matters because the ${categoryLabel} sets the tonal and temporal character for everything downstream.`
-    : rawDirection;
+
+  // In directed mode, prefer the archetype's category-specific direction
+  // over the reasoning engine's raw statement, which may include generic
+  // fallback text ("no strong directional change detected").
+  const FALLBACK_MARKERS = ['no strong directional', 'avoids strong bias', 'current balance may be close'];
+  const isRawFallback = FALLBACK_MARKERS.some(m => rawDirection.toLowerCase().includes(m));
+  const directedDirection = matchedProfile?.directionByCategory[ctx.category]
+    ?? (isRawFallback ? taste.defaultDirection : rawDirection);
+
+  const bestFitDirection = directed
+    ? `This system should lean toward ${effectiveTasteLabel.toLowerCase()} — ${directedDirection.charAt(0).toLowerCase()}${directedDirection.slice(1)}${directedDirection.endsWith('.') ? '' : '.'}`
+    : hasTasteSignal
+      ? `Given your preference for ${effectiveTasteLabel}, ${rawDirection.charAt(0).toLowerCase()}${rawDirection.slice(1)}${rawDirection.endsWith('.') ? '' : '.'} This matters because the ${categoryLabel} sets the tonal and temporal character for everything downstream.`
+      : rawDirection;
 
   // 3. Why this fits — explicitly listener-centered framing
   const rawWhyThisFits = matchedProfile?.whyByCategory?.[ctx.category]
     ?? taste.defaultWhy ?? matchedProfile?.defaultWhy ?? FALLBACK_TASTE.defaultWhy;
-  const whyThisFits = hasTasteSignal && Array.isArray(rawWhyThisFits) && rawWhyThisFits.length > 0
-    ? [`If what you value most is ${effectiveTasteLabel}, these designs lean into that quality.`, ...rawWhyThisFits.slice(0, 2)]
+  const whyThisFits = (hasTasteSignal || directed) && Array.isArray(rawWhyThisFits) && rawWhyThisFits.length > 0
+    ? [`Given your preference for ${effectiveTasteLabel}, these designs lean into that quality.`, ...rawWhyThisFits.slice(0, directed ? 1 : 2)]
     : rawWhyThisFits;
 
   // 4. Product examples (only when catalog exists + budget known)
   // Pass reasoning for directional bias — existing scoring is preserved.
-  const productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents);
+  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents);
+
+  // ── Directed mode: cap at 2 products, mark primary ──
+  if (directed && productExamples.length > 2) {
+    productExamples = productExamples.slice(0, 2);
+  }
+  if (directed && productExamples.length > 0) {
+    productExamples[0] = { ...productExamples[0], isPrimary: true };
+  }
 
   // 5. Watch for
   const watchFor = taste.watchFor;
@@ -2920,7 +2969,9 @@ export function buildShoppingAnswer(
   const sonicLandscape = buildSonicLandscape(productExamples, fullCatalog, categoryLabel);
 
   // 8. Refinement prompts — questions to deepen personalization
-  const refinementPrompts = provisional ? buildRefinementPrompts(gaps, ctx.category) : [];
+  // Suppress in directed mode: user has already provided enough context,
+  // generic prompts ("For sharper recommendations...") create noise.
+  const refinementPrompts = provisional && !directed ? buildRefinementPrompts(gaps, ctx.category) : [];
 
   // 9. Why this fits you — compact personalization bullets
   const whyFitsYou = buildWhyThisFitsYou(matchedProfile, ctx, signals, productExamples, fullCatalog, reasoning);
@@ -2959,7 +3010,30 @@ export function buildShoppingAnswer(
     sonicLandscape,
     refinementPrompts: refinementPrompts.length > 0 ? refinementPrompts : undefined,
     whyFitsYou,
+    directed,
+    nextBuildStep: directed ? buildNextBuildStep(ctx.category, ctx.systemProvided) : undefined,
   };
+}
+
+/**
+ * Suggest the next logical build step based on the current category.
+ * Only meaningful in directed mode when building a coherent system.
+ */
+function buildNextBuildStep(category: ShoppingCategory, systemProvided: boolean): string | undefined {
+  // When the user already has a system, the "next step" is less relevant —
+  // they're upgrading a single component, not building from scratch.
+  if (systemProvided) return undefined;
+
+  const NEXT_STEPS: Record<string, string> = {
+    speaker: 'This speaker choice makes amplifier matching the critical next step — the amp needs to control and complement the speaker\'s character.',
+    amplifier: 'Once the amplifier is chosen, the next decision should be the source — DAC or streamer — which sets the tonal foundation.',
+    dac: 'With the DAC chosen, the amplifier becomes the next priority — it determines how much of the DAC\'s character reaches the speakers.',
+    headphone: 'With the headphones chosen, the source and amplification chain determines how much of their potential you hear.',
+    streamer: 'The streamer sets the digital foundation. The DAC is the next critical link in the chain.',
+    turntable: 'The turntable is the mechanical foundation. The phono stage and cartridge matching are the next priorities.',
+  };
+
+  return NEXT_STEPS[category];
 }
 
 // ── Turntable-specific answer builder ─────────────────

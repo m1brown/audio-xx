@@ -166,6 +166,8 @@ export interface AdvisoryOption {
   directionLabel?: string;
   /** True when this product is already in the user's current system. */
   isCurrentComponent?: boolean;
+  /** True when this is the primary recommendation in directed mode. */
+  isPrimary?: boolean;
 }
 
 export interface AdvisoryLink {
@@ -620,6 +622,13 @@ export interface AdvisoryResponse {
   provisional?: boolean;
   /** True when preference signal is weak/generic — triggers "Start here" CTA. */
   lowPreferenceSignal?: boolean;
+  /** True when budget + category + taste are all present — shifts output from
+   *  exploratory options to directed system-building with a primary recommendation. */
+  directed?: boolean;
+  /** Next logical build step — what to consider next in a system build.
+   *  Only populated in directed mode (e.g. "This speaker choice makes amplifier
+   *  matching the critical next step."). */
+  nextBuildStep?: string;
   /** The shopping category for this response (used for preference re-run). */
   shoppingCategory?: string;
   /** What context is missing (shown as caveats). */
@@ -813,6 +822,65 @@ function buildEditorialIntro(
 }
 
 /**
+ * Build a directed editorial intro — used when budget + category + taste
+ * are all present and the output shifts to system-building mode.
+ *
+ * Leads with a primary direction statement rather than a curated-list frame.
+ * Example: "This system should lean toward rhythmic energy and transient
+ * speed. Here is the strongest match for that direction at ~$5,000."
+ */
+function buildDirectedEditorialIntro(
+  category: string,
+  budget?: string,
+  tasteLabel?: string,
+  archetype?: string,
+  systemComponents?: string[],
+): string | undefined {
+  if (!category || category === 'general') return undefined;
+
+  // Use singular/article form for "The [X] should lean toward..." phrasing.
+  // Category arrives as the display label (e.g. "speakers" not "speaker"),
+  // so map both raw keys and display labels.
+  const CATEGORY_LABELS: Record<string, string> = {
+    dac: 'DAC',
+    DAC: 'DAC',
+    amplifier: 'amplifier',
+    speaker: 'speaker choice',
+    speakers: 'speaker choice',
+    headphone: 'headphone choice',
+    headphones: 'headphone choice',
+    streamer: 'streamer',
+    turntable: 'turntable',
+  };
+  const catLabel = CATEGORY_LABELS[category] ?? category;
+
+  // Archetype-specific direction statements — assertive, system-building language
+  const ARCHETYPE_DIRECTION: Record<string, string> = {
+    flow_organic: 'musical flow and natural phrasing — designs that prioritise rhythmic ease over clinical precision',
+    precision_explicit: 'precision and detail retrieval — designs that reveal everything in the recording',
+    rhythmic_propulsive: 'rhythmic energy and transient speed — designs that make music feel alive and forward-moving',
+    tonal_saturated: 'tonal richness and harmonic density — designs that favour body and warmth over speed',
+    spatial_holographic: 'spatial precision and holographic staging — designs that recreate the recording space',
+  };
+
+  const directionPhrase = archetype && ARCHETYPE_DIRECTION[archetype]
+    ? ARCHETYPE_DIRECTION[archetype]
+    : tasteLabel
+      ? `${tasteLabel.toLowerCase()} — designs that lean into that quality`
+      : undefined;
+
+  if (!directionPhrase) return undefined;
+
+  const budgetClause = budget ? ` at ~${budget}` : '';
+
+  const systemClause = systemComponents && systemComponents.length > 0
+    ? `, working with your ${systemComponents.slice(0, 2).join(' and ')}`
+    : '';
+
+  return `This ${catLabel} should lean toward ${directionPhrase}. Here is the strongest match for that direction${budgetClause}${systemClause}.`;
+}
+
+/**
  * Build a compact system context preamble for shopping responses.
  *
  * When an active system is available, this produces 2–3 sentences covering:
@@ -913,8 +981,18 @@ function buildSystemInterpretation(
   }
 
   // ── Layer 2: Taste/preference interpretation (only with real signal) ──
+  // In directed mode, use assertive "Given your preference" framing.
+  // In exploratory mode, use observational "You seem to" framing.
   if (hasTasteSignal && reasoning?.taste.archetype) {
     const archetype = reasoning.taste.archetype;
+    const isDirected = !!a.directed;
+    const ARCHETYPE_INTERPRETATION_DIRECTED: Record<string, string> = {
+      flow_organic: 'Given your preference for musical flow and natural phrasing, this direction makes the most sense.',
+      rhythmic_propulsive: 'Given your preference for energy and impact, this direction makes the most sense.',
+      tonal_saturated: 'Given your preference for tonal richness and harmonic density, this direction makes the most sense.',
+      precision_explicit: 'Given your preference for resolution and precision, this direction makes the most sense.',
+      spatial_holographic: 'Given your preference for spatial depth and imaging, this direction makes the most sense.',
+    };
     const ARCHETYPE_INTERPRETATION: Record<string, string> = {
       flow_organic: 'You seem to value musical flow and natural phrasing over clinical precision.',
       rhythmic_propulsive: 'You seem drawn to rhythmic energy and transient speed — music that feels alive and forward-moving.',
@@ -922,7 +1000,9 @@ function buildSystemInterpretation(
       precision_explicit: 'You seem to value resolution, separation, and precision — hearing everything clearly matters to you.',
       spatial_holographic: 'You seem to prioritize spatial depth and imaging — the sense of a performance in a real space.',
     };
-    const interpretation = ARCHETYPE_INTERPRETATION[archetype];
+    const interpretation = isDirected
+      ? ARCHETYPE_INTERPRETATION_DIRECTED[archetype]
+      : ARCHETYPE_INTERPRETATION[archetype];
     if (interpretation) parts.push(interpretation);
   }
 
@@ -1781,18 +1861,34 @@ export function shoppingToAdvisory(
   // True when no explicit taste signal was provided by the user.
   const isPreferenceWeak = a.statedGaps?.includes('taste') ?? false;
 
-  // Build editorial intro — suppress when preference is weak
-  // (StartHereBlock replaces it with "Here are strong starting points...")
-  const editorialIntro = isPreferenceWeak
-    ? undefined
-    : buildEditorialIntro(
-        a.category,
-        a.budget ? `$${a.budget}` : undefined,
-        ctx?.storedDesires,
-        reasoning?.taste.tasteLabel,
-        ctx?.systemComponents,
-        reasoning?.taste.archetype ?? undefined,
-      );
+  // ── Directed mode ────────────────────────────────────
+  // When budget + category + taste are all present, shift from exploratory
+  // options to directed system-building with a primary recommendation.
+  const isDirected = !!a.directed;
+
+  // Build editorial intro — suppress when preference is weak.
+  // In directed mode, use a taste-committed directive instead of a curated-list frame.
+  let editorialIntro: string | undefined;
+  if (isPreferenceWeak) {
+    editorialIntro = undefined;
+  } else if (isDirected) {
+    editorialIntro = buildDirectedEditorialIntro(
+      a.category,
+      a.budget ? `$${a.budget}` : undefined,
+      reasoning?.taste.tasteLabel,
+      reasoning?.taste.archetype ?? undefined,
+      ctx?.systemComponents,
+    );
+  } else {
+    editorialIntro = buildEditorialIntro(
+      a.category,
+      a.budget ? `$${a.budget}` : undefined,
+      ctx?.storedDesires,
+      reasoning?.taste.tasteLabel,
+      ctx?.systemComponents,
+      reasoning?.taste.archetype ?? undefined,
+    );
+  }
 
   // Build system interpretation (mandatory reasoning layer before products)
   // Suppress for weak preference signal — StartHereBlock takes its place.
@@ -1806,6 +1902,19 @@ export function shoppingToAdvisory(
   // ── Build editorial closing (best-match verdict) ─────
   // Only when we have product examples and user context
   const editorialClosing = buildEditorialClosing(a.productExamples, ctx, reasoning);
+
+  // ── Map isPrimary from product examples to options ──
+  if (isDirected) {
+    for (let i = 0; i < options.length; i++) {
+      if (a.productExamples[i]?.isPrimary) {
+        options[i] = { ...options[i], isPrimary: true };
+      }
+    }
+  }
+
+  // ── In directed mode, suppress generic filler ──
+  // No "For sharper recommendations...", no "Tell me about your system..."
+  const suppressFiller = isDirected || isPreferenceWeak;
 
   return enrichAdvisory({
     kind: 'shopping',
@@ -1823,20 +1932,22 @@ export function shoppingToAdvisory(
 
     recommendedDirection: a.bestFitDirection,
     // Suppress passive content when preference is weak — StartHereBlock is the primary CTA
-    whyThisFits: isPreferenceWeak ? undefined : (a.whyThisFits.length > 0 ? a.whyThisFits : undefined),
-    tradeOffs: isPreferenceWeak ? undefined : (a.watchFor.length > 0 ? a.watchFor : undefined),
+    whyThisFits: suppressFiller ? undefined : (a.whyThisFits.length > 0 ? a.whyThisFits : undefined),
+    tradeOffs: suppressFiller ? undefined : (a.watchFor.length > 0 ? a.watchFor : undefined),
 
     options: options.length > 0 ? options : undefined,
-    provisional: isPreferenceWeak ? false : a.provisional,
+    provisional: suppressFiller ? false : a.provisional,
     lowPreferenceSignal: isPreferenceWeak,
+    directed: isDirected,
+    nextBuildStep: isDirected ? a.nextBuildStep : undefined,
     shoppingCategory: a.category,
-    statedGaps: isPreferenceWeak ? undefined : (statedGaps && statedGaps.length > 0 ? statedGaps : undefined),
-    dependencyCaveat: isPreferenceWeak ? undefined : a.dependencyCaveat,
+    statedGaps: suppressFiller ? undefined : (statedGaps && statedGaps.length > 0 ? statedGaps : undefined),
+    dependencyCaveat: suppressFiller ? undefined : a.dependencyCaveat,
 
     sonicLandscape: a.sonicLandscape,
-    decisionFrame: isPreferenceWeak ? undefined : (decisionFrame ?? undefined),
-    refinementPrompts: isPreferenceWeak ? undefined : a.refinementPrompts,
-    followUp: isPreferenceWeak ? undefined : followUp,
+    decisionFrame: suppressFiller ? undefined : (decisionFrame ?? undefined),
+    refinementPrompts: suppressFiller ? undefined : a.refinementPrompts,
+    followUp: suppressFiller ? undefined : followUp,
 
     editorialClosing,
 

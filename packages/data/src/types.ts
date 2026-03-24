@@ -46,7 +46,7 @@ export type SmoothDetailedLeaning = 'smooth' | 'detailed' | 'neutral';
 /** Leaning on the Elastic ↔ Controlled axis. */
 export type ElasticControlledLeaning = 'elastic' | 'controlled' | 'neutral';
 
-/** Leaning on the Airy ↔ Closed axis. */
+/** Leaning on the Scale ↔ Intimacy axis. */
 export type AiryClosedLeaning = 'airy' | 'closed' | 'neutral';
 
 /**

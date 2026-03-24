@@ -4,7 +4,7 @@
 # Edit this file to add phrases — no code changes required.
 #
 # ── v1 Axis Model ──────────────────────────────────────
-# Primary axes: Warm↔Bright, Smooth↔Detailed, Elastic↔Controlled, Airy↔Closed
+# Primary axes: Warm↔Bright, Smooth↔Detailed, Elastic↔Controlled, Scale↔Intimacy
 # Overlay: Relaxed↔Fatiguing
 #
 # Each signal entry maps user language to secondary trait signals.
@@ -211,8 +211,8 @@ signals:
       clarity: up
     symptom: detail_revealing
 
-  # ── Airy / Open / Spacious ─────────────────────────
-  # Axis: Airy side of Airy ↔ Closed
+  # ── Scale / Open / Spacious ────────────────────────
+  # Axis: Scale side of Scale ↔ Intimacy
 
   - phrases:
       - airy
@@ -227,8 +227,8 @@ signals:
       soundstage: up
     symptom: airy_open
 
-  # ── Closed / Boxy / Intimate ───────────────────────
-  # Axis: Closed side of Airy ↔ Closed
+  # ── Intimacy / Boxy / Intimate ─────────────────────
+  # Axis: Intimacy side of Scale ↔ Intimacy
 
   - phrases:
       - closed

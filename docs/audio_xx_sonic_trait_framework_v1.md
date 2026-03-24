@@ -90,17 +90,17 @@ The four axes use language drawn directly from how listeners actually describe s
 
 ---
 
-### 2.4 Airy ↔ Closed
+### 2.4 Scale ↔ Intimacy
 
 **What it describes:** Whether the presentation feels spacious, open, and dimensionally free — or bounded, intimate, and contained.
 
-**Airy side:** There is a sense of space around instruments. The soundstage extends beyond the speakers. High-frequency harmonics decay into the room rather than stopping abruptly. The presentation breathes. At the extreme, this becomes diffuse, unfocused, or lacking in directness.
+**Scale side:** There is a sense of space around instruments. The soundstage extends beyond the speakers. High-frequency harmonics decay into the room rather than stopping abruptly. The presentation breathes. At the extreme, this becomes diffuse, unfocused, or lacking in directness.
 
-**Closed side:** The presentation is intimate and bounded. Instruments are present and direct but the space around them is compressed. The listener is close to the performance rather than in the concert hall. At the extreme, this becomes boxy, congested, or claustrophobic.
+**Intimacy side:** The presentation is intimate and bounded. Instruments are present and direct but the space around them is compressed. The listener is close to the performance rather than in the concert hall. At the extreme, this becomes boxy, congested, or claustrophobic.
 
 **What shapes it:** High-frequency extension, inter-driver coherence, cabinet diffraction, room interaction. Speakers with clean off-axis response, open-baffle designs, electrostatics, and ribbon tweeters tend airy. Compact sealed bookshelf speakers, horn-loaded designs (paradoxically direct but sometimes closed-in spatially), and heavily damped rooms tend closed. Room treatment has an outsized effect on this axis — more than most component changes.
 
-**In system reasoning:** This axis is disproportionately affected by room acoustics. Before attributing spatial complaints to equipment, the advisor should flag room context as a confounding factor. Adding air to a system that is already bright may tip the upper frequencies toward glare rather than openness — the Warm ↔ Bright axis interacts strongly with Airy ↔ Closed.
+**In system reasoning:** This axis is disproportionately affected by room acoustics. Before attributing spatial complaints to equipment, the advisor should flag room context as a confounding factor. Adding air to a system that is already bright may tip the upper frequencies toward glare rather than openness — the Warm ↔ Bright axis interacts strongly with Scale ↔ Intimacy.
 
 ---
 
@@ -146,11 +146,11 @@ Secondary traits appear in product tendency profiles, in advisory explanations, 
 
 **`composure`** — Behaviour under stress. Whether the system maintains its character during orchestral climaxes, dense electronic music, and high volumes. Expresses the controlled side of Elastic ↔ Controlled. High-power solid-state amplifiers and speakers with large driver complements favour composure. When composure breaks down, the result is often fatigue or glare.
 
-**`openness`** — Spaciousness and the sense of unbounded presentation. Expresses the airy side of Airy ↔ Closed. Speakers with clean off-axis response and electrostatics tend toward openness.
+**`openness`** — Spaciousness and the sense of unbounded presentation. Expresses the scale side of Scale ↔ Intimacy. Speakers with clean off-axis response and electrostatics tend toward openness.
 
-**`soundstage`** — Width and depth of the spatial presentation. The dimensional scale of the image. Related to Airy ↔ Closed but not identical — a system can be spatially large without feeling "airy" (if the space is dense or dark-toned).
+**`soundstage`** — Width and depth of the spatial presentation. The dimensional scale of the image. Related to Scale ↔ Intimacy but not identical — a system can be spatially large without feeling expansive (if the space is dense or dark-toned).
 
-**`spatial_precision`** — Imaging specificity. The ability to place instruments precisely in the sound field. Can coexist with either end of Airy ↔ Closed — a speaker can image precisely in a small space, or vaguely in a large space.
+**`spatial_precision`** — Imaging specificity. The ability to place instruments precisely in the sound field. Can coexist with either end of Scale ↔ Intimacy — a speaker can image precisely in a small space, or vaguely in a large space.
 
 **`groundedness`** — Physical weight in the bass and lower midrange. The sense that the presentation has a solid foundation. Relates to the warm side of Warm ↔ Bright, but operates lower in frequency. Large floorstanding speakers and powerful amplifiers with substantial power supplies contribute groundedness.
 
@@ -174,8 +174,8 @@ Secondary traits appear in product tendency profiles, in advisory explanations, 
 | `elasticity` | Elastic side of Elastic ↔ Controlled | Micro-scale |
 | `rhythm` | Elastic side of Elastic ↔ Controlled | Temporal emphasis |
 | `composure` | Controlled side of Elastic ↔ Controlled | Behaviour under stress |
-| `openness` | Airy side of Airy ↔ Closed | Spaciousness |
-| `soundstage` | Airy ↔ Closed related | Dimensional scale |
+| `openness` | Scale side of Scale ↔ Intimacy | Spaciousness |
+| `soundstage` | Scale ↔ Intimacy related | Dimensional scale |
 | `spatial_precision` | Cross-axis | Imaging; independent of openness |
 | `groundedness` | Warm ↔ Bright (low-frequency) | Physical foundation |
 | `bass_weight` | Warm ↔ Bright (low-frequency) | Bass-specific |
@@ -194,7 +194,7 @@ The user-facing taste profile uses simplified keys that map to the primary axes:
 | `flow` | Smooth ↔ Detailed (smooth side) | `flow`, `sweetness` |
 | `dynamics` | Elastic ↔ Controlled (elastic side) | `dynamics`, `elasticity` |
 | `rhythm` | Elastic ↔ Controlled (elastic side) | `rhythm`, `elasticity` |
-| `spatial_depth` | Airy ↔ Closed | `openness`, `soundstage`, `spatial_precision` |
+| `spatial_depth` | Scale ↔ Intimacy | `openness`, `soundstage`, `spatial_precision` |
 | `tonal_density` | Warm ↔ Bright (warm side) | `tonal_density`, `bass_weight` |
 
 ---
@@ -208,7 +208,7 @@ When assessing a system, the advisor reasons through the primary axes first:
 1. **Where does this system sit on Warm ↔ Bright?** Look for compounding: are multiple components pushing the same direction? Is the system warm enough to sound congested, or bright enough to produce edge?
 2. **Where on Smooth ↔ Detailed?** Is the system resolving well or smoothing things over? Is the listener getting flow at the expense of articulation, or detail at the expense of musical involvement?
 3. **Where on Elastic ↔ Controlled?** Is the system dynamically alive or overdamped? Does it have rhythmic conviction or does it sound mechanical?
-4. **Where on Airy ↔ Closed?** Is the soundstage appropriate for the listener's space and preferences? Is room acoustics a confounding factor?
+4. **Where on Scale ↔ Intimacy?** Is the soundstage appropriate for the listener's space and preferences? Is room acoustics a confounding factor?
 5. **What is the fatigue picture?** Does the combination of positions across all four axes produce a system the listener can enjoy for extended sessions?
 
 After establishing primary positions, use secondary traits to explain *why* the system sounds the way it does and *where* in the chain the tendency originates.
@@ -260,7 +260,7 @@ When evaluating how components work together:
 | "analytical" | Detailed on Smooth ↔ Detailed + Bright | `clarity` | High resolution without musical engagement |
 | "warm" | Warm on Warm ↔ Bright | `tonal_density`, `sweetness` | Positive — the listener wants more |
 | "smooth" | Smooth on Smooth ↔ Detailed | `flow`, `sweetness` | Temporal and tonal smoothness |
-| "airy" | Airy on Airy ↔ Closed | `openness` | Spatial quality — distinct from brightness |
+| "airy" | Scale on Scale ↔ Intimacy | `openness` | Spatial quality — distinct from brightness |
 | "congested" | Warm (extreme / compounded) | `damping_control` down | System-level compounding symptom |
 | "dull" | Smooth (extreme) + Controlled (extreme) | `flow` down, `dynamics` down | Disengagement across multiple axes |
 | "exciting" | Elastic on Elastic ↔ Controlled | `dynamics`, `elasticity`, `rhythm` | Desire for engagement |
@@ -268,10 +268,10 @@ When evaluating how components work together:
 | "lush" | Warm + Smooth | `tonal_density`, `flow`, `sweetness` | Richness with continuity |
 | "clinical" | Bright + Detailed + Controlled | `clarity`, `composure` | Technically impressive but emotionally cold |
 | "musical" | Smooth + Elastic | `flow`, `elasticity`, `rhythm` | Engages the listener emotionally and physically |
-| "open" | Airy + Detailed | `openness`, `clarity` | Spacious with resolution |
+| "open" | Scale + Detailed | `openness`, `clarity` | Spacious with resolution |
 | "aggressive" | Bright + Elastic (extreme) | `fatigue_risk`, `dynamics` | Forward energy without tonal cushion |
 | "laid back" | Warm + Smooth + Controlled | `flow`, `composure` | Relaxed but potentially uninvolving |
-| "thin" | Bright + Closed (low groundedness) | `tonal_density` down, `bass_weight` down | Lacks physical foundation |
+| "thin" | Bright + Intimacy (low groundedness) | `tonal_density` down, `bass_weight` down | Lacks physical foundation |
 | "liquid" | Smooth (emphasis on flow) | `flow`, `sweetness` | Extreme smoothness as a positive quality |
 
 ### 5.2 Mapping Principles
@@ -458,8 +458,8 @@ These are recognisable axis combinations that produce predictable system-level e
 | Warm + Smooth + Elastic | Musically engaging, long-session | The "musical" system. Flows, breathes, has life. May lack last-degree resolution. |
 | Warm + Detailed + Elastic | Vivid and physically involving | The "front row" experience. Dense and dynamic. Risk of being overwhelming with complex material. |
 | Bright + Smooth + Controlled | Unusual / contradictory | These leanings rarely coexist coherently. Flag for investigation. |
-| Airy + Bright + Detailed | Spectacular staging, fatigue risk | Immersive and transparent but demanding. Needs warm/smooth elements for balance. |
-| Closed + Warm + Smooth | Intimate and cosy | Comfortable for small-scale music. May feel congested with orchestral or electronic material. |
+| Scale + Bright + Detailed | Spectacular staging, fatigue risk | Immersive and transparent but demanding. Needs warm/smooth elements for balance. |
+| Intimacy + Warm + Smooth | Intimate and cosy | Comfortable for small-scale music. May feel congested with orchestral or electronic material. |
 
 ### 7.2 System Reasoning Rules
 

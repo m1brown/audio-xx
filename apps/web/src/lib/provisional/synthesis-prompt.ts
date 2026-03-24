@@ -51,10 +51,10 @@ or tonal energy shifted toward upper frequencies.
 - Neutral: balanced dynamic behavior — neither notably expressive nor notably rigid
 - Controlled pole: composed, authoritative grip, high current delivery, stable under load
 
-### airy_closed (Airy ↔ Closed)
-- Airy pole: open, spacious staging with depth layering and air between images
-- Neutral: moderate spatial presentation — neither notably open nor notably intimate
-- Closed pole: focused, intimate presentation with near-field imaging
+### airy_closed (Scale ↔ Intimacy)
+- Scale pole: open, spacious staging with depth layering and air between images
+- Neutral: moderate spatial presentation — neither notably expansive nor notably intimate
+- Intimacy pole: focused, intimate presentation with near-field imaging
 `;
 
 // ── Trait definitions ────────────────────────────────

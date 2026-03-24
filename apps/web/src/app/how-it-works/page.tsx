@@ -7,7 +7,7 @@ function AxesDiagram() {
     { label: 'Warm', opposite: 'Bright', color: '#b58a4c' },
     { label: 'Smooth', opposite: 'Detailed', color: '#7a9a6a' },
     { label: 'Elastic', opposite: 'Controlled', color: '#6a7fa8' },
-    { label: 'Airy', opposite: 'Closed', color: '#9a6a8a' },
+    { label: 'Scale', opposite: 'Intimacy', color: '#9a6a8a' },
   ];
   const w = 340;
   const rowH = 36;
@@ -283,8 +283,7 @@ export default function HowItWorks() {
         <h2 style={headingStyle}>System Character</h2>
         <div style={bodyStyle}>
           <p style={{ marginBottom: '0.65rem' }}>
-            Equipment is described using a different model — four sonic axes that
-            capture how a component or system sounds:
+            Audio XX describes components and systems using four sonic axes:
           </p>
 
           <div style={diagramWrapStyle}>
@@ -305,7 +304,7 @@ export default function HowItWorks() {
               Timing — how freely or precisely the system renders rhythm.
             </div>
             <div style={axisPairItemStyle}>
-              <span style={axisPairLabelStyle}>Airy ↔ Closed</span><br />
+              <span style={axisPairLabelStyle}>Scale ↔ Intimacy</span><br />
               Spatial character — open, breathing presentation versus dense, focused imaging.
             </div>
           </div>

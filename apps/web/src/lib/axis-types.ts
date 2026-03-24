@@ -40,7 +40,7 @@ export type SmoothDetailedLeaning = 'smooth' | 'detailed' | 'neutral' | 'balance
 /** Position on the Elastic ↔ Controlled axis. */
 export type ElasticControlledLeaning = 'elastic' | 'controlled' | 'neutral' | 'balanced';
 
-/** Position on the Airy ↔ Closed axis. */
+/** Position on the Scale ↔ Intimacy axis. */
 export type AiryClosedLeaning = 'airy' | 'closed' | 'neutral' | 'moderate';
 
 /**
@@ -48,7 +48,7 @@ export type AiryClosedLeaning = 'airy' | 'closed' | 'neutral' | 'moderate';
  * The first thing the engine reads when reasoning about character.
  *
  * Numeric intensity (`_n` fields) use a -2 to +2 ordinal scale:
- *   -2 = strong first pole (warm, smooth, elastic, airy)
+ *   -2 = strong first pole (warm, smooth, elastic, scale)
  *   -1 = moderate first pole
  *    0 = neutral
  *   +1 = moderate second pole (bright, detailed, controlled, closed)
@@ -158,7 +158,7 @@ export const AXIS_LABELS: Record<CategoricalAxis, { low: string; high: string; n
   warm_bright: { low: 'warm', high: 'bright', name: 'Warm ↔ Bright' },
   smooth_detailed: { low: 'smooth', high: 'detailed', name: 'Smooth ↔ Detailed' },
   elastic_controlled: { low: 'elastic', high: 'controlled', name: 'Elastic ↔ Controlled' },
-  airy_closed: { low: 'airy', high: 'closed', name: 'Airy ↔ Closed' },
+  airy_closed: { low: 'scale', high: 'intimacy', name: 'Scale ↔ Intimacy' },
 };
 
 /**

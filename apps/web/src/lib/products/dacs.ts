@@ -867,7 +867,7 @@ export const DAC_PRODUCTS: Product[] = [
     //   "Composed and controlled — maintains grip without excess energy." No dynamic
     //   excitement — authority through restraint.
     //
-    // Airy↔Closed: NEUTRAL — "precise, stable imaging" is spatial precision, not
+    // Scale↔Intimacy: NEUTRAL — "precise, stable imaging" is spatial precision, not
     //   spaciousness. No sense of open/airy in the documentation.
     primaryAxes: {
       warm_bright: 'neutral',             // Ruler-flat transparency — genuinely neutral, not bright
@@ -1143,7 +1143,7 @@ export const DAC_PRODUCTS: Product[] = [
     //   Different from the Hugo TT2's controlled composure — the Qutest has
     //   more snap and less authority.
     //
-    // Airy↔Closed: AIRY (slight) — subtle spatial openness in the FPGA
+    // Scale↔Intimacy: SCALE (slight) — subtle spatial openness in the FPGA
     //   presentation. Less pronounced than the Pontus holographic staging,
     //   but present enough to warrant 'airy' rather than neutral.
     primaryAxes: {
@@ -1243,7 +1243,7 @@ export const DAC_PRODUCTS: Product[] = [
     //   Elasticity at 0.4 is the only weak signal, but "relaxed" timing suggests
     //   neither elastic snap nor controlled grip — just flow.
     //
-    // Airy↔Closed: AIRY (slight) — "deep, holographic staging with good layering
+    // Scale↔Intimacy: SCALE (slight) — "deep, holographic staging with good layering
     //   front-to-back." The R2R architecture creates a sense of dimensional
     //   space that delta-sigma designs often lack at this price. Present but not
     //   the defining trait — slightly airy rather than dramatically open.
@@ -1826,7 +1826,7 @@ export const DAC_PRODUCTS: Product[] = [
     // Elastic↔Controlled: NEUTRAL — neither snappy nor overdamped.
     //   Musical pacing is natural.
     //
-    // Airy↔Closed: NEUTRAL — unremarkable spatial presentation,
+    // Scale↔Intimacy: NEUTRAL — unremarkable spatial presentation,
     //   neither closed-in nor holographic.
     primaryAxes: {
       warm_bright: 'warm',
@@ -1919,7 +1919,7 @@ export const DAC_PRODUCTS: Product[] = [
     // Elastic↔Controlled: NEUTRAL — balanced dynamics, neither snappy
     //   nor overdamped.
     //
-    // Airy↔Closed: NEUTRAL — clean spatial presentation without
+    // Scale↔Intimacy: NEUTRAL — clean spatial presentation without
     //   the holographic staging of higher-tier Holo models.
     primaryAxes: {
       warm_bright: 'warm',
@@ -2415,7 +2415,7 @@ export const DAC_PRODUCTS: Product[] = [
       warm_bright_n: -1,         // Warm — natural, non-digital tone
       smooth_detailed_n: -1,     // Smooth — highly relaxed presentation
       elastic_controlled_n: -1,  // Elastic — naturally flowing, not controlled
-      airy_closed_n: -1,         // Airy — natural, open staging
+      airy_closed_n: -1,         // Scale — natural, open staging
     },
     fatigueAssessment: {
       risk: 'low',

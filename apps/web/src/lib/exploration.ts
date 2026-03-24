@@ -329,7 +329,7 @@ function buildAntiPatterns(ref: Product): string[] {
     anti.push('Slow or ponderous presentations that lack energy');
   }
   if (tags.primary === 'spatial_holographic') {
-    anti.push('Closed-in, forward presentations with compressed staging');
+    anti.push('Intimate, forward presentations with compressed staging');
     anti.push('Designs that sacrifice image specificity for warmth or body');
   }
 
