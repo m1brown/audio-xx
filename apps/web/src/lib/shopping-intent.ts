@@ -492,6 +492,9 @@ export function detectShoppingIntent(
   userText: string,
   signals: ExtractedSignals,
   activeSystemComponents?: string[],
+  /** When switching categories mid-shopping, pass the latest message so its
+   *  category takes priority over earlier mentions in the accumulated text. */
+  latestMessage?: string,
 ): ShoppingContext {
   const lower = userText.toLowerCase();
 
@@ -500,7 +503,10 @@ export function detectShoppingIntent(
   // Also check BUDGET_PATTERNS (regex) to catch "under 1500" without '$'.
   const detected = INTENT_KEYWORDS.some((kw) => lower.includes(kw))
     || BUDGET_PATTERNS.some((re) => re.test(userText));
-  if (!detected) {
+  // When latestMessage is provided, the caller is already in shopping mode
+  // (category switch / refinement). Skip the early bail-out so category
+  // detection runs even when allUserText lacks explicit intent keywords.
+  if (!detected && !latestMessage) {
     return {
       detected: false,
       mode: 'specific-component',
@@ -527,10 +533,24 @@ export function detectShoppingIntent(
     category = 'general';
     subcategory = 'cables';
   } else {
-    for (const pat of CATEGORY_PATTERNS) {
-      if (pat.keywords.some((kw) => lower.includes(kw))) {
-        category = pat.category;
-        break;
+    // When a latest message is provided (category switch), detect from it
+    // first so the new category overrides earlier mentions in allUserText.
+    if (latestMessage) {
+      const latestLower = latestMessage.toLowerCase();
+      for (const pat of CATEGORY_PATTERNS) {
+        if (pat.keywords.some((kw) => latestLower.includes(kw))) {
+          category = pat.category;
+          break;
+        }
+      }
+    }
+    // Fall back to full text only if latest message had no category
+    if (category === 'general') {
+      for (const pat of CATEGORY_PATTERNS) {
+        if (pat.keywords.some((kw) => lower.includes(kw))) {
+          category = pat.category;
+          break;
+        }
       }
     }
   }

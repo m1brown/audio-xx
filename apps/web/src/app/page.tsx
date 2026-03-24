@@ -250,6 +250,12 @@ export default function Home() {
   /** Tracks chip-initiated intent — persists across turns so follow-ups stay in the correct lane. */
   const chipIntentRef = useRef<'shopping' | 'improvement' | 'diagnosis' | 'comparison' | null>(null);
 
+  /** Preserved shopping facts for category switches.
+   *  When the user finishes one shopping round and switches to a new
+   *  category ("great — now how about an amp"), budget and from-scratch
+   *  context carry forward so we don't re-ask. */
+  const lastShoppingFactsRef = useRef<{ budget?: string; fromScratch?: boolean } | null>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -430,8 +436,17 @@ export default function Home() {
 
           // ── Ready to recommend / diagnose / compare ──
           // Set mode hint and fall through to normal pipeline.
-          if (convResult.state.stage === 'ready_to_recommend') convModeHint = 'shopping';
-          else if (convResult.state.stage === 'ready_to_diagnose') convModeHint = 'diagnosis';
+          if (convResult.state.stage === 'ready_to_recommend') {
+            convModeHint = 'shopping';
+            // Preserve shopping facts for potential category switches on the next turn.
+            // Without this, budget and from-scratch context are lost when convState resets.
+            lastShoppingFactsRef.current = {
+              budget: convResult.state.facts.budget,
+              fromScratch: convResult.state.facts.fromScratch,
+            };
+          } else if (convResult.state.stage === 'ready_to_diagnose') {
+            convModeHint = 'diagnosis';
+          }
           convStateRef.current = INITIAL_CONV_STATE;
           // Fall through to normal pipeline below...
         }
@@ -767,10 +782,22 @@ export default function Home() {
     // already canonical in turnCtx.
     let { intent } = detectIntent(submittedText);
 
+    // Count prior shopping advisory turns (needed early for category-switch bypass).
+    const shoppingAnswerCount = messages.filter(
+      (m) => m.role === 'assistant' && m.kind === 'advisory' && m.advisory.kind === 'shopping',
+    ).length;
+
     // ── State machine: initial mode detection (idle → active) ──
     // Routes every first message through detectConvMode to ensure the
     // response clearly reflects the detected entry mode.
-    if (convStateRef.current.mode === 'idle' && !convModeHint) {
+    //
+    // CATEGORY-SWITCH BYPASS: When the user is already in shopping mode
+    // and has received recommendations (shoppingAnswerCount > 0), skip
+    // state machine re-entry. The shopping pipeline at line ~1400
+    // handles refinement/category switches directly via pastClarificationCap.
+    // Without this bypass, detectConvMode would re-enter clarify_budget
+    // and lose preserved context.
+    if (convStateRef.current.mode === 'idle' && !convModeHint && !(effectiveMode === 'shopping' && shoppingAnswerCount > 0)) {
       const initialConvMode = detectConvMode(submittedText, {
         detectedIntent: intent,
         hasSystem: !!turnCtx.activeSystem || !!audioState.activeSystemRef,
@@ -1244,11 +1271,6 @@ export default function Home() {
       // If no reference product found, fall through to gear inquiry
     }
 
-    // Count how many shopping advisory turns have already been shown.
-    const shoppingAnswerCount = messages.filter(
-      (m) => m.role === 'assistant' && m.kind === 'advisory' && m.advisory.kind === 'shopping',
-    ).length;
-
     // Gear inquiries and comparisons — conversational path, skip diagnostic engine
     if (intent === 'gear_inquiry' || intent === 'comparison') {
       const gearResponse = buildGearResponse(intent, turnCtx.subjects, submittedText, turnCtx.desires, tasteProfile ?? undefined, turnCtx.activeSystem);
@@ -1400,7 +1422,27 @@ export default function Home() {
       // ── Shopping path ────────────────────────────
       // All shopping logic runs here — no diagnostic fallback.
       try {
-        const shoppingCtx = detectShoppingIntent(allUserText, pipelineSignals, advisoryCtx.systemComponents);
+        const shoppingCtx = detectShoppingIntent(
+          allUserText, pipelineSignals, advisoryCtx.systemComponents,
+          // On refinement/category-switch turns, pass the latest message so its
+          // category takes priority over earlier mentions in allUserText.
+          shoppingAnswerCount > 0 ? submittedText : undefined,
+        );
+
+        // ── Inject preserved budget from prior shopping round ──
+        // When the user switches categories ("great — now how about an amp"),
+        // the plain budget response from the earlier round (e.g. "5000") isn't
+        // matched by BUDGET_AMOUNT_PATTERNS (requires $ prefix or keyword).
+        // Carry forward the state-machine-extracted budget so recommendations
+        // honour the user's stated price range.
+        if (shoppingAnswerCount > 0 && !shoppingCtx.budgetMentioned && lastShoppingFactsRef.current?.budget) {
+          const budgetStr = lastShoppingFactsRef.current.budget;
+          const amount = parseInt(budgetStr.replace(/[$,]/g, ''), 10);
+          if (!isNaN(amount)) {
+            shoppingCtx.budgetMentioned = true;
+            shoppingCtx.budgetAmount = amount;
+          }
+        }
 
         // Decide: ask a clarification question or give a recommendation?
         // Skip clarifications if we've already given a recommendation
