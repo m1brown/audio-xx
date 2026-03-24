@@ -1,4 +1,14 @@
 # -------------------------
+# Remaining noise
+# -------------------------
+AUDIOPHILE_RESEARCH.md
+Audio_XX_*alias
+Audio_XX_Regression_*
+audio-xx-governing-scheme.md
+
+# SQL / local infra
+migration.sql
+# -------------------------
 # OS
 # -------------------------
 .DS_Store
