@@ -413,8 +413,14 @@ export default function Home() {
               const quickAdvisory = attachQuickRecommendation(shoppingAdvisory, synCategory, quickSummary);
               dispatch({ type: 'ADD_ADVISORY', advisory: quickAdvisory, id: advisoryId() });
             } catch (err) {
-              console.error('[onboarding→shopping] Shopping pipeline error:', err);
-              dispatch({ type: 'ADD_NOTE', content: 'Something went wrong building recommendations — try rephrasing your request.' });
+              console.warn('[onboarding→shopping] Shopping pipeline error:', err, '— asking category');
+              dispatch({
+                type: 'ADD_QUESTION',
+                clarification: {
+                  acknowledge: 'Got it.',
+                  question: 'What type of component? For example: speakers, headphones, DAC, amplifier, or turntable.',
+                },
+              });
             }
             convStateRef.current = INITIAL_CONV_STATE;
             dispatch({ type: 'SET_LOADING', value: false });
@@ -448,8 +454,18 @@ export default function Home() {
         const shoppingText = `I want to buy ${submittedText}`;
         dispatch({ type: 'SET_MODE', mode: 'shopping' });
 
-        // Build context and fire shopping pipeline
+        // Build context and fire shopping pipeline.
+        // Attempt API evaluation for richer signals; on failure, fall back
+        // to deterministic shopping with empty signals.
         const turnCtx = buildTurnContext(shoppingText, audioState, dismissedFingerprintsRef.current);
+        let chipSignals: import('@/lib/signal-types').ExtractedSignals = {
+          traits: {} as Record<string, import('@/lib/signal-types').SignalDirection>,
+          symptoms: [] as string[],
+          archetype_hints: [] as string[],
+          uncertainty_level: 0,
+          matched_phrases: [] as string[],
+          matched_uncertainty_markers: [] as string[],
+        };
         try {
           const res = await fetch('/api/evaluate', {
             method: 'POST',
@@ -458,43 +474,57 @@ export default function Home() {
           });
           if (res.ok) {
             const data = await res.json();
-            const shoppingCtx = detectShoppingIntent(shoppingText, data.signals, undefined);
-            // Check if we have enough to recommend (category + budget)
-            const hasBudget = /\$\d|\bunder\b|\bbudget\b/i.test(submittedText);
-            if (shoppingCtx.category !== 'general' && hasBudget) {
-              // Enough info — recommend immediately
-              const reasoning = reason(shoppingText, turnCtx.desires, data.signals, tasteProfile ?? null, shoppingCtx, turnCtx.activeProfile);
-              dispatch({ type: 'SET_REASONING', reasoning });
-              const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning, undefined);
-              const decisionFrame = buildDecisionFrame(shoppingCtx.category, {} as ShoppingAdvisoryContext, tasteProfile);
-              const advisory = shoppingToAdvisory(answer, data.signals, reasoning, {} as ShoppingAdvisoryContext, decisionFrame);
-              dispatch({ type: 'ADD_ADVISORY', advisory, id: advisoryId() });
-            } else if (shoppingCtx.category !== 'general') {
-              // Have category but no budget — ask budget
-              dispatch({
-                type: 'ADD_QUESTION',
-                clarification: {
-                  acknowledge: `Got it — looking for ${categoryLabel(shoppingCtx.category)}.`,
-                  question: 'What\'s your budget? And do you have a system these need to work with?',
-                },
-              });
-              chipIntentRef.current = 'shopping'; // Keep in shopping lane
-            } else {
-              // Category not detected — ask to clarify
-              dispatch({
-                type: 'ADD_QUESTION',
-                clarification: {
-                  acknowledge: 'Got it.',
-                  question: 'What type of component? For example: speakers, headphones, DAC, amplifier, or turntable.',
-                },
-              });
-              chipIntentRef.current = 'shopping'; // Keep in shopping lane
-            }
+            chipSignals = data.signals;
           } else {
-            dispatch({ type: 'ADD_NOTE', content: 'Something went wrong — try rephrasing.' });
+            console.warn('[chip→shopping] /api/evaluate returned', res.status, '— using deterministic fallback');
           }
-        } catch {
-          dispatch({ type: 'ADD_NOTE', content: 'Something went wrong — try rephrasing.' });
+        } catch (err) {
+          console.warn('[chip→shopping] /api/evaluate failed:', err, '— using deterministic fallback');
+        }
+
+        try {
+          const shoppingCtx = detectShoppingIntent(shoppingText, chipSignals, undefined);
+          // Check if we have enough to recommend (category + budget)
+          const hasBudget = /\$\d|\bunder\b|\bbudget\b/i.test(submittedText);
+          if (shoppingCtx.category !== 'general' && hasBudget) {
+            // Enough info — recommend immediately
+            const reasoning = reason(shoppingText, turnCtx.desires, chipSignals, tasteProfile ?? null, shoppingCtx, turnCtx.activeProfile);
+            dispatch({ type: 'SET_REASONING', reasoning });
+            const answer = buildShoppingAnswer(shoppingCtx, chipSignals, tasteProfile ?? undefined, reasoning, undefined);
+            const decisionFrame = buildDecisionFrame(shoppingCtx.category, {} as ShoppingAdvisoryContext, tasteProfile);
+            const advisory = shoppingToAdvisory(answer, chipSignals, reasoning, {} as ShoppingAdvisoryContext, decisionFrame);
+            dispatch({ type: 'ADD_ADVISORY', advisory, id: advisoryId() });
+          } else if (shoppingCtx.category !== 'general') {
+            // Have category but no budget — ask budget
+            dispatch({
+              type: 'ADD_QUESTION',
+              clarification: {
+                acknowledge: `Got it — looking for ${categoryLabel(shoppingCtx.category)}.`,
+                question: 'What\'s your budget? And do you have a system these need to work with?',
+              },
+            });
+            chipIntentRef.current = 'shopping'; // Keep in shopping lane
+          } else {
+            // Category not detected — ask to clarify
+            dispatch({
+              type: 'ADD_QUESTION',
+              clarification: {
+                acknowledge: 'Got it.',
+                question: 'What type of component? For example: speakers, headphones, DAC, amplifier, or turntable.',
+              },
+            });
+            chipIntentRef.current = 'shopping'; // Keep in shopping lane
+          }
+        } catch (err) {
+          console.warn('[chip→shopping] pipeline error:', err, '— asking category');
+          dispatch({
+            type: 'ADD_QUESTION',
+            clarification: {
+              acknowledge: 'Got it.',
+              question: 'What type of component? For example: speakers, headphones, DAC, amplifier, or turntable.',
+            },
+          });
+          chipIntentRef.current = 'shopping';
         }
         dispatch({ type: 'SET_LOADING', value: false });
         return;
@@ -667,8 +697,14 @@ export default function Home() {
         const quickAdvisory = attachQuickRecommendation(shoppingAdvisory, category, quickSummary);
         dispatch({ type: 'ADD_ADVISORY', advisory: quickAdvisory, id: advisoryId() });
       } catch (err) {
-        console.error('[legacy-onboarding] Shopping pipeline error:', err);
-        dispatch({ type: 'ADD_NOTE', content: 'Something went wrong building recommendations — try rephrasing your request.' });
+        console.warn('[legacy-onboarding] Shopping pipeline error:', err, '— asking category');
+        dispatch({
+          type: 'ADD_QUESTION',
+          clarification: {
+            acknowledge: 'Got it.',
+            question: 'What type of component? For example: speakers, headphones, DAC, amplifier, or turntable.',
+          },
+        });
       }
       dispatch({ type: 'SET_LOADING', value: false });
       return;
@@ -1302,207 +1338,243 @@ export default function Home() {
       // If buildSystemDiagnosis returns null, fall through to evaluate engine
     }
 
-    // Shopping and diagnosis intents go through the evaluation engine
+    // Shopping and diagnosis intents go through the evaluation engine.
+    // Attempt API evaluation for richer signals; on failure, fall back
+    // to deterministic pipeline with empty signals.
     const allUserText = [...messages.filter((m) => m.role === 'user').map((m) => m.content), submittedText].join('\n');
     const newTurnCount = turnCount + 1;
 
+    let evalData: { signals: import('@/lib/signal-types').ExtractedSignals; result?: unknown } | null = null;
     try {
       const res = await fetch('/api/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: allUserText }),
       });
-
       if (res.ok) {
-        const data = await res.json();
+        evalData = await res.json();
+      } else {
+        console.warn('[main-pipeline] /api/evaluate returned', res.status, '— using deterministic fallback');
+      }
+    } catch (err) {
+      console.warn('[main-pipeline] /api/evaluate failed:', err, '— using deterministic fallback');
+    }
 
-        if (intent === 'shopping') {
-          // ── Shopping path ────────────────────────────
-          // All shopping logic runs here — no diagnostic fallback.
-          const shoppingCtx = detectShoppingIntent(allUserText, data.signals, advisoryCtx.systemComponents);
+    // Use evaluated signals or fall back to empty signals.
+    // The shopping pipeline works deterministically with empty signals —
+    // it just produces less personalized results.
+    const pipelineSignals: import('@/lib/signal-types').ExtractedSignals = evalData?.signals ?? {
+      traits: {} as Record<string, import('@/lib/signal-types').SignalDirection>,
+      symptoms: [] as string[],
+      archetype_hints: [] as string[],
+      uncertainty_level: 0,
+      matched_phrases: [] as string[],
+      matched_uncertainty_markers: [] as string[],
+    };
 
-          // Decide: ask a clarification question or give a recommendation?
-          // Skip clarifications if we've already given a recommendation
-          // (refinement mode), hit the turn cap, or user requested quick suggestions.
-          const maxClarifications = 2;
-          const wantsQuickSuggestions = skipToSuggestionsRef.current;
-          const pastClarificationCap = shoppingAnswerCount > 0 || newTurnCount > maxClarifications;
-          const shoppingQuestion = pastClarificationCap
-            ? null
-            : getShoppingClarification(shoppingCtx, data.signals, newTurnCount, wantsQuickSuggestions);
-          // Reset skip flag after use
-          if (wantsQuickSuggestions) skipToSuggestionsRef.current = false;
+    if (intent === 'shopping') {
+      // ── Shopping path ────────────────────────────
+      // All shopping logic runs here — no diagnostic fallback.
+      try {
+        const shoppingCtx = detectShoppingIntent(allUserText, pipelineSignals, advisoryCtx.systemComponents);
 
-          if (shoppingQuestion) {
-            // Still gathering context — ask one more question
-            dispatch({
-              type: 'ADD_QUESTION',
-              clarification: {
-                acknowledge: 'Got it — that helps narrow things down.',
-                question: shoppingQuestion,
-              },
-            });
-          } else {
-            // ── Three-layer reasoning ──────────────────
-            // Always run fresh reasoning on accumulated text.
-            // lastReasoning is continuity context, not a substitute.
-            const reasoning = reason(
-              allUserText, turnCtx.desires, data.signals,
-              tasteProfile ?? null, shoppingCtx, turnCtx.activeProfile,
-            );
-            dispatch({ type: 'SET_REASONING', reasoning });
+        // Decide: ask a clarification question or give a recommendation?
+        // Skip clarifications if we've already given a recommendation
+        // (refinement mode), hit the turn cap, or user requested quick suggestions.
+        const maxClarifications = 2;
+        const wantsQuickSuggestions = skipToSuggestionsRef.current;
+        const pastClarificationCap = shoppingAnswerCount > 0 || newTurnCount > maxClarifications;
+        const shoppingQuestion = pastClarificationCap
+          ? null
+          : getShoppingClarification(shoppingCtx, pipelineSignals, newTurnCount, wantsQuickSuggestions);
+        // Reset skip flag after use
+        if (wantsQuickSuggestions) skipToSuggestionsRef.current = false;
 
-            // On refinement turns, add a brief conversational bridge.
-            if (shoppingAnswerCount > 0) {
-              dispatch({
-                type: 'ADD_NOTE',
-                content: 'Got it — adjusting the direction based on what you\'ve added.',
-              });
-            }
-            // Add exploratory note when skipping to quick suggestions
-            if (wantsQuickSuggestions) {
-              dispatch({
-                type: 'ADD_NOTE',
-                content: 'Showing a range of design philosophies since I don\'t have your full listening profile yet. Tell me more about your system and preferences anytime to sharpen the direction.',
-              });
-            }
-            const answer = buildShoppingAnswer(shoppingCtx, data.signals, tasteProfile ?? undefined, reasoning, advisoryCtx.systemComponents);
-
-            // Build decision frame — strategic framing before product shortlist
-            const decisionFrame = buildDecisionFrame(shoppingCtx.category, advisoryCtx, tasteProfile);
-
-            const deterministicShoppingAdvisory = shoppingToAdvisory(answer, data.signals, reasoning, advisoryCtx, decisionFrame);
-            const shoppingMsgId = advisoryId();
-            dispatchAdvisory(deterministicShoppingAdvisory, shoppingMsgId);
-
-            // Fire-and-forget: request LLM editorial overlay for richer product descriptions.
-            // On success, merge enriched fields into the advisory and update in place.
-            // On failure (timeout, validation rejection), the deterministic descriptions stand.
-            if (deterministicShoppingAdvisory.options && deterministicShoppingAdvisory.options.length > 0) {
-              const editorialContext: ShoppingEditorialContext = {
-                // System
-                systemComponents: turnCtx.activeSystem
-                  ? turnCtx.activeSystem.components.map((c) =>
-                      c.name.toLowerCase().startsWith(c.brand.toLowerCase())
-                        ? c.name
-                        : `${c.brand} ${c.name}`,
-                    )
-                  : undefined,
-                systemCharacter: turnCtx.activeSystem?.tendencies ?? undefined,
-                // Taste & preferences
-                tasteLabel: reasoning.taste.tasteLabel || undefined,
-                archetype: reasoning.taste.archetype ?? undefined,
-                desires: reasoning.taste.desires.map((d) => ({
-                  quality: d.quality,
-                  direction: d.direction,
-                })),
-                preserve: reasoning.direction.preserve.length > 0
-                  ? reasoning.direction.preserve
-                  : undefined,
-                traitSignals: Object.keys(reasoning.taste.traitSignals).length > 0
-                  ? reasoning.taste.traitSignals
-                  : undefined,
-                archetypeHints: data.signals.archetype_hints?.length > 0
-                  ? data.signals.archetype_hints
-                  : undefined,
-                // Shopping context
-                category: shoppingCtx.category,
-                budget: shoppingCtx.budgetAmount ? `$${shoppingCtx.budgetAmount}` : undefined,
-                userQuery: submittedText,
-                // Directional recommendation
-                directionStatement: reasoning.direction.statement || undefined,
-                archetypeNote: reasoning.direction.archetypeNote ?? undefined,
-              };
-              // Fire both LLM requests in parallel
-              const editorialPromise = requestShoppingEditorial(
-                deterministicShoppingAdvisory.options, editorialContext,
-              );
-              const closingPromise = requestEditorialClosing(
-                deterministicShoppingAdvisory.options, editorialContext,
-              );
-
-              Promise.allSettled([editorialPromise, closingPromise])
-                .then(([editorialResult, closingResult]) => {
-                  const editorial = editorialResult.status === 'fulfilled' ? editorialResult.value : null;
-                  const closing = closingResult.status === 'fulfilled' ? closingResult.value : null;
-
-                  if (!editorial && !closing) return;
-
-                  const enrichedOptions = editorial && editorial.length > 0
-                    ? mergeEditorialIntoOptions(deterministicShoppingAdvisory.options!, editorial)
-                    : deterministicShoppingAdvisory.options;
-
-                  dispatch({
-                    type: 'UPDATE_ADVISORY',
-                    id: shoppingMsgId,
-                    advisory: {
-                      ...deterministicShoppingAdvisory,
-                      options: enrichedOptions,
-                      editorialClosing: closing ?? undefined,
-                    },
-                  });
-                })
-                .catch(() => { /* deterministic descriptions stand */ });
-            }
-
-            // Subtle note when the stored taste profile influenced the direction
-            if (reasoning.taste.storedProfileUsed) {
-              dispatch({
-                type: 'ADD_NOTE',
-                content: 'Your taste profile contributed to this direction.',
-              });
-            }
-          }
+        if (shoppingQuestion) {
+          // Still gathering context — ask one more question
+          dispatch({
+            type: 'ADD_QUESTION',
+            clarification: {
+              acknowledge: 'Got it — that helps narrow things down.',
+              question: shoppingQuestion,
+            },
+          });
         } else {
-          // ── Diagnosis path ───────────────────────────
-          // Churn avoidance — on first turn, check for vague upgrade intent
-          // without clear symptoms. If detected, ask a reflective question
-          // before proceeding to diagnosis.
-          if (newTurnCount === 1) {
-            const churn = detectChurnSignal(submittedText);
-            if (churn.detected && churn.reflectiveQuestion) {
-              dispatch({
-                type: 'ADD_QUESTION',
-                clarification: {
-                  acknowledge: 'That\'s worth thinking through.',
-                  question: churn.reflectiveQuestion,
-                },
-              });
-              dispatch({ type: 'SET_LOADING', value: false });
-              return;
-            }
-          }
-
-          // Check if more context is needed before showing results
-          const clarification = getClarificationQuestion(
-            data.signals,
-            data.result,
-            newTurnCount,
-            allUserText,
-            submittedText,
-          );
-
-          // ── Three-layer reasoning (diagnosis) ──────
+          // ── Three-layer reasoning ──────────────────
+          // Always run fresh reasoning on accumulated text.
+          // lastReasoning is continuity context, not a substitute.
           const reasoning = reason(
-            allUserText, turnCtx.desires, data.signals,
-            tasteProfile ?? null, null, turnCtx.activeProfile,
+            allUserText, turnCtx.desires, pipelineSignals,
+            tasteProfile ?? null, shoppingCtx, turnCtx.activeProfile,
           );
           dispatch({ type: 'SET_REASONING', reasoning });
 
-          // Use reasoning direction to frame diagnosis results
-          const diagDirection = inferSystemDirection(submittedText, turnCtx.desires, undefined, tasteProfile ?? undefined);
+          // On refinement turns, add a brief conversational bridge.
+          if (shoppingAnswerCount > 0) {
+            dispatch({
+              type: 'ADD_NOTE',
+              content: 'Got it — adjusting the direction based on what you\'ve added.',
+            });
+          }
+          // Add exploratory note when skipping to quick suggestions
+          if (wantsQuickSuggestions) {
+            dispatch({
+              type: 'ADD_NOTE',
+              content: 'Showing a range of design philosophies since I don\'t have your full listening profile yet. Tell me more about your system and preferences anytime to sharpen the direction.',
+            });
+          }
+          const answer = buildShoppingAnswer(shoppingCtx, pipelineSignals, tasteProfile ?? undefined, reasoning, advisoryCtx.systemComponents);
 
-          if (clarification) {
-            dispatch({ type: 'ADD_QUESTION', clarification });
-          } else {
-            dispatchAdvisory(analysisToAdvisory(data.result, data.signals, diagDirection, reasoning, advisoryCtx), advisoryId());
+          // Build decision frame — strategic framing before product shortlist
+          const decisionFrame = buildDecisionFrame(shoppingCtx.category, advisoryCtx, tasteProfile);
+
+          const deterministicShoppingAdvisory = shoppingToAdvisory(answer, pipelineSignals, reasoning, advisoryCtx, decisionFrame);
+          const shoppingMsgId = advisoryId();
+          dispatchAdvisory(deterministicShoppingAdvisory, shoppingMsgId);
+
+          // Fire-and-forget: request LLM editorial overlay for richer product descriptions.
+          // On success, merge enriched fields into the advisory and update in place.
+          // On failure (timeout, validation rejection), the deterministic descriptions stand.
+          if (deterministicShoppingAdvisory.options && deterministicShoppingAdvisory.options.length > 0) {
+            const editorialContext: ShoppingEditorialContext = {
+              // System
+              systemComponents: turnCtx.activeSystem
+                ? turnCtx.activeSystem.components.map((c) =>
+                    c.name.toLowerCase().startsWith(c.brand.toLowerCase())
+                      ? c.name
+                      : `${c.brand} ${c.name}`,
+                  )
+                : undefined,
+              systemCharacter: turnCtx.activeSystem?.tendencies ?? undefined,
+              // Taste & preferences
+              tasteLabel: reasoning.taste.tasteLabel || undefined,
+              archetype: reasoning.taste.archetype ?? undefined,
+              desires: reasoning.taste.desires.map((d) => ({
+                quality: d.quality,
+                direction: d.direction,
+              })),
+              preserve: reasoning.direction.preserve.length > 0
+                ? reasoning.direction.preserve
+                : undefined,
+              traitSignals: Object.keys(reasoning.taste.traitSignals).length > 0
+                ? reasoning.taste.traitSignals
+                : undefined,
+              archetypeHints: pipelineSignals.archetype_hints?.length > 0
+                ? pipelineSignals.archetype_hints
+                : undefined,
+              // Shopping context
+              category: shoppingCtx.category,
+              budget: shoppingCtx.budgetAmount ? `$${shoppingCtx.budgetAmount}` : undefined,
+              userQuery: submittedText,
+              // Directional recommendation
+              directionStatement: reasoning.direction.statement || undefined,
+              archetypeNote: reasoning.direction.archetypeNote ?? undefined,
+            };
+            // Fire both LLM requests in parallel
+            const editorialPromise = requestShoppingEditorial(
+              deterministicShoppingAdvisory.options, editorialContext,
+            );
+            const closingPromise = requestEditorialClosing(
+              deterministicShoppingAdvisory.options, editorialContext,
+            );
+
+            Promise.allSettled([editorialPromise, closingPromise])
+              .then(([editorialResult, closingResult]) => {
+                const editorial = editorialResult.status === 'fulfilled' ? editorialResult.value : null;
+                const closing = closingResult.status === 'fulfilled' ? closingResult.value : null;
+
+                if (!editorial && !closing) return;
+
+                const enrichedOptions = editorial && editorial.length > 0
+                  ? mergeEditorialIntoOptions(deterministicShoppingAdvisory.options!, editorial)
+                  : deterministicShoppingAdvisory.options;
+
+                dispatch({
+                  type: 'UPDATE_ADVISORY',
+                  id: shoppingMsgId,
+                  advisory: {
+                    ...deterministicShoppingAdvisory,
+                    options: enrichedOptions,
+                    editorialClosing: closing ?? undefined,
+                  },
+                });
+              })
+              .catch(() => { /* deterministic descriptions stand */ });
+          }
+
+          // Subtle note when the stored taste profile influenced the direction
+          if (reasoning.taste.storedProfileUsed) {
+            dispatch({
+              type: 'ADD_NOTE',
+              content: 'Your taste profile contributed to this direction.',
+            });
           }
         }
-      } else {
-        dispatch({ type: 'ADD_NOTE', content: 'Something went wrong — try rephrasing your request.' });
+      } catch (err) {
+        console.warn('[main-pipeline] shopping pipeline error:', err, '— asking category');
+        dispatch({
+          type: 'ADD_QUESTION',
+          clarification: {
+            acknowledge: 'Got it.',
+            question: 'What type of component? For example: speakers, headphones, DAC, amplifier, or turntable.',
+          },
+        });
       }
-    } catch {
-      dispatch({ type: 'ADD_NOTE', content: 'Could not reach the server — please try again.' });
+    } else {
+      // ── Diagnosis path ───────────────────────────
+      // Churn avoidance — on first turn, check for vague upgrade intent
+      // without clear symptoms. If detected, ask a reflective question
+      // before proceeding to diagnosis.
+      if (newTurnCount === 1) {
+        const churn = detectChurnSignal(submittedText);
+        if (churn.detected && churn.reflectiveQuestion) {
+          dispatch({
+            type: 'ADD_QUESTION',
+            clarification: {
+              acknowledge: 'That\'s worth thinking through.',
+              question: churn.reflectiveQuestion,
+            },
+          });
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+      }
+
+      if (evalData) {
+        // API succeeded — use full evaluation data
+        const clarification = getClarificationQuestion(
+          pipelineSignals,
+          evalData.result,
+          newTurnCount,
+          allUserText,
+          submittedText,
+        );
+
+        // ── Three-layer reasoning (diagnosis) ──────
+        const reasoning = reason(
+          allUserText, turnCtx.desires, pipelineSignals,
+          tasteProfile ?? null, null, turnCtx.activeProfile,
+        );
+        dispatch({ type: 'SET_REASONING', reasoning });
+
+        // Use reasoning direction to frame diagnosis results
+        const diagDirection = inferSystemDirection(submittedText, turnCtx.desires, undefined, tasteProfile ?? undefined);
+
+        if (clarification) {
+          dispatch({ type: 'ADD_QUESTION', clarification });
+        } else {
+          dispatchAdvisory(analysisToAdvisory(evalData.result, pipelineSignals, diagDirection, reasoning, advisoryCtx), advisoryId());
+        }
+      } else {
+        // API failed — ask a refinement question to gather more context
+        dispatch({
+          type: 'ADD_QUESTION',
+          clarification: {
+            acknowledge: 'Got it — let me understand a bit more.',
+            question: 'Can you describe what you\'re hearing that you\'d like to change? And what equipment are you using?',
+          },
+        });
+      }
     }
 
     dispatch({ type: 'SET_LOADING', value: false });
