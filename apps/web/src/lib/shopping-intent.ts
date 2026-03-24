@@ -1311,15 +1311,15 @@ const TASTE_PROFILES: TasteProfile[] = [
 ];
 
 const FALLBACK_TASTE: Pick<TasteProfile, 'label' | 'defaultDirection' | 'defaultWhy' | 'watchFor'> = {
-  label: 'a balanced presentation',
-  defaultDirection: 'A component direction that avoids strong bias toward any single trait. Well-balanced designs that trade peak performance for versatility.',
+  label: 'musical engagement',
+  defaultDirection: 'Designs that prioritise long-term listening enjoyment and emotional connection with the music, rather than optimising any single trait.',
   defaultWhy: [
-    'No strong single-trait preference was detected.',
-    'A balanced design reduces the risk of system-level overcorrection.',
+    'Specific listening priorities are still being determined — these options cover the strongest design directions at this level.',
+    'Narrowing your sonic preferences will sharpen the shortlist considerably.',
   ],
   watchFor: [
-    'Balanced components rarely excel at any single quality — they trade peak performance for versatility.',
-    'What feels balanced in one system may feel colored in another. System context matters.',
+    'Without a clear preference signal, these recommendations cover a range of philosophies — each excels in a different dimension.',
+    'Telling the system what you value most (warmth, detail, rhythm, space) will produce a more targeted list.',
   ],
 };
 

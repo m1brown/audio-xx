@@ -74,8 +74,9 @@ describe('Shopping with no budget → must produce product cards', () => {
         expect(advisory.options!.length).toBeGreaterThanOrEqual(2);
       });
 
-      it('advisory has editorialIntro', () => {
-        expect(advisory.editorialIntro).toBeTruthy();
+      it('advisory has editorialIntro or lowPreferenceSignal (StartHereBlock replaces intro)', () => {
+        // When preference is weak, editorialIntro is suppressed in favor of StartHereBlock
+        expect(advisory.editorialIntro || advisory.lowPreferenceSignal).toBeTruthy();
       });
 
       it('marks as provisional with stated gaps', () => {

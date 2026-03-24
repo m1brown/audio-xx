@@ -1356,8 +1356,8 @@ export function buildInitialComparisonPayload(
   // ── Trade-off ──────────────────────────────────────
   const dominantA = detectDominantAxis(charA, profileA.tendencies);
   const dominantB = detectDominantAxis(charB, profileB.tendencies);
-  const flowScoreA = scoreKeywords(charA + ' ' + profileA.tendencies, ['flow', 'elastic', 'alive', 'engagement', 'rhythmic', 'drive', 'timing']);
-  const flowScoreB = scoreKeywords(charB + ' ' + profileB.tendencies, ['flow', 'elastic', 'alive', 'engagement', 'rhythmic', 'drive', 'timing']);
+  const flowScoreA = scoreKeywords(charA + ' ' + profileA.tendencies, ['flow', 'elastic', 'alive', 'rhythmic', 'drive']);
+  const flowScoreB = scoreKeywords(charB + ' ' + profileB.tendencies, ['flow', 'elastic', 'alive', 'rhythmic', 'drive']);
 
   const tradeoffAxis = computeTradeoffAxis(dominantA, dominantB, flowScoreA, flowScoreB);
   const tradeoffStatement = buildTradeoffStatement(nameA, charA, profileA.tendencies, nameB, charB, profileB.tendencies);
@@ -1491,7 +1491,7 @@ function buildTradeoffStatement(
   // (e.g. JOB is fast AND slightly golden).
   const warmWords = ['warm', 'rich', 'dense', 'harmonic', 'tonal density', 'tonal body', 'lush', 'musical', 'golden', 'tube-adjacent', 'saturated'];
   const controlWords = ['controlled', 'composed', 'neutral', 'clean', 'damping', 'precise', 'analytical', 'tight', 'restrained', 'cool', 'dry'];
-  const flowWords = ['flow', 'elastic', 'alive', 'engagement', 'rhythmic', 'drive', 'timing'];
+  const flowWords = ['flow', 'elastic', 'alive', 'rhythmic', 'drive'];
 
   function score(text: string, words: string[]): number {
     const lower = text.toLowerCase();
@@ -1542,23 +1542,53 @@ function buildTradeoffStatement(
 /**
  * Build a provisional taste inference when no explicit taste signal is present.
  * Never say "no strong signal" — always infer a direction.
+ *
+ * Uses trait-consistent session-affinity logic:
+ *   warm / dense / smooth / relaxed → long-session ease and comfort
+ *   fast / precise / analytical / lean → short-session impact and resolution
+ * Avoids generic "engagement" or "keeps you listening" heuristics.
  */
 function buildProvisionalTasteInference(
   nameA: string, charA: string,
   nameB: string, charB: string,
 ): string {
-  const warmA = /warm|rich|lush|dense|musical|organic|harmonic|tonal|flow|engage/i.test(charA);
-  const warmB = /warm|rich|lush|dense|musical|organic|harmonic|tonal|flow|engage/i.test(charB);
-  const preciseA = /precise|neutral|analytical|detailed|clean|fast|controlled|resolving|transparent|speed/i.test(charA);
-  const preciseB = /precise|neutral|analytical|detailed|clean|fast|controlled|resolving|transparent|speed/i.test(charB);
+  // Session-affinity keywords (not "engagement" which conflates rhythm with ease)
+  const easeKw = ['warm', 'rich', 'lush', 'dense', 'relaxed', 'smooth', 'ease', 'body', 'tonal', 'harmonic', 'flowing', 'organic'];
+  const impactKw = ['fast', 'precise', 'analytical', 'detailed', 'clean', 'controlled', 'speed', 'articulate', 'resolving', 'transparent', 'tight'];
 
-  if (warmA && preciseB) {
-    return `Most listeners asking this question are drawn to the comparison because they want more engagement without losing quality. If that resonates — **${nameA}** is likely where your instinct is pointing.`;
+  const easeA = scoreKeywords(charA, easeKw);
+  const easeB = scoreKeywords(charB, easeKw);
+  const impactA = scoreKeywords(charA, impactKw);
+  const impactB = scoreKeywords(charB, impactKw);
+
+  const aDominant = easeA > impactA ? 'ease' : impactA > easeA ? 'impact' : 'mixed';
+  const bDominant = easeB > impactB ? 'ease' : impactB > easeB ? 'impact' : 'mixed';
+
+  if (aDominant === 'ease' && bDominant === 'impact') {
+    return `If long listening sessions and tonal comfort matter to you, **${nameA}** is likely the better fit. If you prioritise clarity and transient precision — the ability to hear everything in a recording — **${nameB}** is where that lives.`;
   }
-  if (warmB && preciseA) {
-    return `Most listeners asking this question are drawn to the comparison because they want more engagement without losing quality. If that resonates — **${nameB}** is likely where your instinct is pointing.`;
+  if (bDominant === 'ease' && aDominant === 'impact') {
+    return `If long listening sessions and tonal comfort matter to you, **${nameB}** is likely the better fit. If you prioritise clarity and transient precision — the ability to hear everything in a recording — **${nameA}** is where that lives.`;
   }
-  return `The right answer depends on what keeps you listening longer — not what sounds impressive in the first five minutes. If you value long-session engagement, lean toward whichever character description above made you think "that's what I want."`;
+  // Both lean the same direction — differentiate on degree and sub-traits
+  if (aDominant === 'ease' && bDominant === 'ease') {
+    // Both warm — distinguish by density vs flow
+    const densityA = scoreKeywords(charA, ['dense', 'density', 'body', 'saturated', 'lush', 'weight', 'harmonic']);
+    const densityB = scoreKeywords(charB, ['dense', 'density', 'body', 'saturated', 'lush', 'weight', 'harmonic']);
+    const flowA = scoreKeywords(charA, ['flow', 'elastic', 'alive', 'rhythmic', 'drive', 'speed', 'articulate']);
+    const flowB = scoreKeywords(charB, ['flow', 'elastic', 'alive', 'rhythmic', 'drive', 'speed', 'articulate']);
+    if (flowA > densityA && densityB > flowB) {
+      return `Both prioritise musical warmth, but **${nameA}** leans toward rhythmic drive and articulation while **${nameB}** leans toward harmonic density and tonal weight. The choice depends on whether you want your music to move or to envelop.`;
+    }
+    if (densityA > flowA && flowB > densityB) {
+      return `Both prioritise musical warmth, but **${nameA}** leans toward harmonic density and tonal weight while **${nameB}** leans toward rhythmic drive and articulation. The choice depends on whether you want your music to envelop or to move.`;
+    }
+    return `Both ${nameA} and ${nameB} prioritise musical warmth. The distinction is in degree and voicing — listen for which tonal character resonates with the music you return to most.`;
+  }
+  if (aDominant === 'impact' && bDominant === 'impact') {
+    return `Both ${nameA} and ${nameB} prioritise precision and control. The distinction is in how they handle micro-dynamics and tonal weight at the margins — which matters most depends on your source material and listening priorities.`;
+  }
+  return `This is ultimately a question of what you want more of in your listening — warmth and body, or speed and resolution. That preference, more than any specification, determines which direction is right.`;
 }
 
 /**
@@ -2428,8 +2458,8 @@ export function buildSystemAnchoredPayload(
   // ── Trade-off ──────────────────────────────────────
   const dominantA = detectDominantAxis(charA, infoA.tendencies);
   const dominantB = detectDominantAxis(charB, infoB.tendencies);
-  const flowScoreA = scoreKeywords(charA + ' ' + infoA.tendencies, ['flow', 'elastic', 'alive', 'engagement', 'rhythmic', 'drive', 'timing']);
-  const flowScoreB = scoreKeywords(charB + ' ' + infoB.tendencies, ['flow', 'elastic', 'alive', 'engagement', 'rhythmic', 'drive', 'timing']);
+  const flowScoreA = scoreKeywords(charA + ' ' + infoA.tendencies, ['flow', 'elastic', 'alive', 'rhythmic', 'drive']);
+  const flowScoreB = scoreKeywords(charB + ' ' + infoB.tendencies, ['flow', 'elastic', 'alive', 'rhythmic', 'drive']);
   const tradeoffAxis = computeTradeoffAxis(dominantA, dominantB, flowScoreA, flowScoreB);
   const [labelA, labelB] = TRADEOFF_LABELS[tradeoffAxis];
 
@@ -2706,7 +2736,18 @@ function buildComparisonRecommendation(
 ): { recommended: string; rationale: string } {
   const warmKw = ['warm', 'rich', 'dense', 'harmonic', 'lush', 'musical', 'golden', 'tube-adjacent', 'saturated', 'tonal density', 'tonal body'];
   const preciseKw = ['controlled', 'composed', 'neutral', 'clean', 'precise', 'analytical', 'tight', 'restrained', 'cool', 'dry', 'damping'];
-  const flowKw = ['flow', 'elastic', 'alive', 'engagement', 'rhythmic', 'drive', 'timing', 'fast', 'speed'];
+  // Session-affinity keywords — NOT the same as "flow" or "engagement."
+  // Long-session ease comes from warmth, density, smoothness, relaxed timing.
+  // Short-session impact comes from speed, precision, articulation, transient clarity.
+  // "fast" and "speed" are impact traits, NOT ease traits.
+  const easeKw = ['warm', 'dense', 'smooth', 'relaxed', 'ease', 'body', 'flowing', 'lush', 'organic', 'musical weight', 'fatigue'];
+  const impactKw = ['fast', 'speed', 'precise', 'articulate', 'detailed', 'analytical', 'transient', 'resolving', 'transparent', 'clarity'];
+  // Rhythmic flow — distinct from transient speed. Flow = elastic, alive, rhythmic, drive.
+  // Speed/precision without these words is NOT flow.
+  const flowKw = ['flow', 'elastic', 'alive', 'rhythmic', 'drive'];
+  // Broader flow scoring for system-anchored comparisons where we're evaluating
+  // what each component adds to the system (speed IS relevant there).
+  const systemFlowKw = ['flow', 'elastic', 'alive', 'rhythmic', 'drive', 'fast', 'speed', 'timing'];
   const densityKw = ['dense', 'density', 'body', 'harmonic', 'saturated', 'lush', 'weight', 'presence', 'tonal'];
 
   const textA = charA + ' ' + profileA.tendencies;
@@ -2715,8 +2756,9 @@ function buildComparisonRecommendation(
   const warmB = scoreKeywords(textB, warmKw);
   const preciseA = scoreKeywords(textA, preciseKw);
   const preciseB = scoreKeywords(textB, preciseKw);
-  const flowA = scoreKeywords(textA, flowKw);
-  const flowB = scoreKeywords(textB, flowKw);
+  // Use broader flow scoring for system-anchored, narrow for initial
+  const flowA = contextName ? scoreKeywords(textA, systemFlowKw) : scoreKeywords(textA, flowKw);
+  const flowB = contextName ? scoreKeywords(textB, systemFlowKw) : scoreKeywords(textB, flowKw);
   const densityA = scoreKeywords(textA, densityKw);
   const densityB = scoreKeywords(textB, densityKw);
 
@@ -2724,7 +2766,7 @@ function buildComparisonRecommendation(
   if (contextName && contextChar) {
     const contextWarm = /warm|rich|dense|harmonic|tonal/i.test(contextChar);
     const contextLean = /lean|precise|controlled|neutral|analytical|cool/i.test(contextChar);
-    const contextFlowing = /flow|rhythmic|alive|engagement|drive/i.test(contextChar);
+    const contextFlowing = /flow|rhythmic|alive|elastic|drive/i.test(contextChar);
 
     if (contextWarm) {
       // The speaker already provides warmth and tonal density.
@@ -2757,13 +2799,13 @@ function buildComparisonRecommendation(
       if (flowA > flowB) {
         return {
           recommended: `Both amplifiers lean warm with ${contextName}. **${nameA}** brings stronger rhythmic drive and elastic energy — the system breathes more. **${nameB}** adds weight and harmonic saturation.`,
-          rationale: `The choice is between emotional coherence through flow (${nameA}) and tonal immersion through density (${nameB}). With a warm speaker, flow tends to preserve engagement over longer sessions.`,
+          rationale: `The choice is rhythmic articulation (${nameA}) vs tonal immersion (${nameB}). With an already warm speaker, rhythmic drive tends to keep the system from sounding sluggish.`,
         };
       }
       if (flowB > flowA) {
         return {
           recommended: `Both amplifiers lean warm with ${contextName}. **${nameB}** brings stronger rhythmic drive and elastic energy — the system breathes more. **${nameA}** adds weight and harmonic saturation.`,
-          rationale: `The choice is between emotional coherence through flow (${nameB}) and tonal immersion through density (${nameA}). With a warm speaker, flow tends to preserve engagement over longer sessions.`,
+          rationale: `The choice is rhythmic articulation (${nameB}) vs tonal immersion (${nameA}). With an already warm speaker, rhythmic drive tends to keep the system from sounding sluggish.`,
         };
       }
     }
@@ -2786,13 +2828,13 @@ function buildComparisonRecommendation(
     if (contextFlowing) {
       if (preciseA > preciseB) {
         return {
-          recommended: `${contextName} already delivers rhythmic engagement and flow. **${nameA}** adds control and definition to that foundation — tightening the system without dampening its musical energy.`,
+          recommended: `${contextName} already delivers rhythmic drive and dynamic life. **${nameA}** adds control and definition to that foundation — tightening the system without dampening its energy.`,
           rationale: `${nameB} may compound the flowing character — alive but potentially loose at the bottom end.`,
         };
       }
       if (preciseB > preciseA) {
         return {
-          recommended: `${contextName} already delivers rhythmic engagement and flow. **${nameB}** adds control and definition to that foundation — tightening the system without dampening its musical energy.`,
+          recommended: `${contextName} already delivers rhythmic drive and dynamic life. **${nameB}** adds control and definition to that foundation — tightening the system without dampening its energy.`,
           rationale: `${nameA} may compound the flowing character — alive but potentially loose at the bottom end.`,
         };
       }
@@ -2803,34 +2845,72 @@ function buildComparisonRecommendation(
   const aDominant = warmA > preciseA ? 'warm' : preciseA > warmA ? 'precise' : 'mixed';
   const bDominant = warmB > preciseB ? 'warm' : preciseB > warmB ? 'precise' : 'mixed';
 
+  // Session-affinity scores — determines whether traits align with ease or impact
+  const easeA = scoreKeywords(textA, easeKw);
+  const easeB = scoreKeywords(textB, easeKw);
+  const impactA = scoreKeywords(textA, impactKw);
+  const impactB = scoreKeywords(textB, impactKw);
+
+  // Confidence gating — when the axis separation is narrow, soften the claim
+  const warmPreciseSeparation = Math.abs(
+    (aDominant === 'warm' ? warmA - preciseA : preciseA - warmA)
+    + (bDominant === 'precise' ? preciseB - warmB : warmB - preciseB),
+  );
+  const highConfidence = warmPreciseSeparation >= 4;
+
   if (aDominant === 'warm' && bDominant === 'precise') {
+    const warmName = nameA;
+    const preciseName = nameB;
+    const easeWinner = easeA > easeB ? warmName : preciseName;
+    const isEaseAlignedWithWarm = easeWinner === warmName;
+
+    if (highConfidence && isEaseAlignedWithWarm) {
+      return {
+        recommended: `In most systems, **${warmName}** is the more natural match unless you're explicitly chasing maximum control and neutrality.`,
+        rationale: `${warmName} leans toward warmth, density, and listening ease — traits that tend to sustain comfort over long sessions. ${preciseName} prioritises speed and analytical resolution, which rewards focused critical listening but can narrow the range of recordings that feel enjoyable.`,
+      };
+    }
+    // Low confidence or ease doesn't align with warm side → directional, not strong
     return {
-      recommended: `In most systems, **${nameA}** is the more natural match unless you're explicitly chasing maximum control and neutrality.`,
-      rationale: `${nameA} prioritises musical flow and emotional coherence — the kind of engagement that sustains long-term listening. ${nameB} rewards listeners who value analytical precision and absolute grip, but that can narrow the range of recordings that sound enjoyable.`,
+      recommended: `**${warmName}** leans toward tonal density and ease; **${preciseName}** leans toward speed and resolution. Without knowing your system and priorities, either could be the right choice.`,
+      rationale: `If you value warmth and long-session comfort → ${warmName}. If you value transient clarity and analytical detail → ${preciseName}. The difference is philosophical, not quality.`,
     };
   }
   if (bDominant === 'warm' && aDominant === 'precise') {
+    const warmName = nameB;
+    const preciseName = nameA;
+    const easeWinner = easeB > easeA ? warmName : preciseName;
+    const isEaseAlignedWithWarm = easeWinner === warmName;
+
+    if (highConfidence && isEaseAlignedWithWarm) {
+      return {
+        recommended: `In most systems, **${warmName}** is the more natural match unless you're explicitly chasing maximum control and neutrality.`,
+        rationale: `${warmName} leans toward warmth, density, and listening ease — traits that tend to sustain comfort over long sessions. ${preciseName} prioritises speed and analytical resolution, which rewards focused critical listening but can narrow the range of recordings that feel enjoyable.`,
+      };
+    }
     return {
-      recommended: `In most systems, **${nameB}** is the more natural match unless you're explicitly chasing maximum control and neutrality.`,
-      rationale: `${nameB} prioritises musical flow and emotional coherence — the kind of engagement that sustains long-term listening. ${nameA} rewards listeners who value analytical precision and absolute grip, but that can narrow the range of recordings that sound enjoyable.`,
+      recommended: `**${warmName}** leans toward tonal density and ease; **${preciseName}** leans toward speed and resolution. Without knowing your system and priorities, either could be the right choice.`,
+      rationale: `If you value warmth and long-session comfort → ${warmName}. If you value transient clarity and analytical detail → ${preciseName}. The difference is philosophical, not quality.`,
     };
   }
 
   // Both lean the same way — distinguish on flow vs density
-  if (flowA > flowB) {
+  const flowInitA = scoreKeywords(textA, flowKw);
+  const flowInitB = scoreKeywords(textB, flowKw);
+  if (flowInitA > flowInitB) {
     return {
-      recommended: `For long-session musical engagement, **${nameA}** has the edge — stronger rhythmic drive and elastic energy keep the music in motion.`,
-      rationale: `${nameB} offers more tonal weight and harmonic saturation, which suits listeners who prioritise immersive density over rhythmic articulation.`,
+      recommended: `**${nameA}** brings stronger rhythmic drive — the music feels more elastic and alive. **${nameB}** offers more tonal weight and density.`,
+      rationale: `${nameB} suits listeners who prioritise immersive harmonic saturation. ${nameA} suits listeners who value rhythmic articulation and dynamic phrasing.`,
     };
   }
-  if (flowB > flowA) {
+  if (flowInitB > flowInitA) {
     return {
-      recommended: `For long-session musical engagement, **${nameB}** has the edge — stronger rhythmic drive and elastic energy keep the music in motion.`,
-      rationale: `${nameA} offers more tonal weight and harmonic saturation, which suits listeners who prioritise immersive density over rhythmic articulation.`,
+      recommended: `**${nameB}** brings stronger rhythmic drive — the music feels more elastic and alive. **${nameA}** offers more tonal weight and density.`,
+      rationale: `${nameA} suits listeners who prioritise immersive harmonic saturation. ${nameB} suits listeners who value rhythmic articulation and dynamic phrasing.`,
     };
   }
 
-  // True tie
+  // True tie — directional only, no strong claim
   return {
     recommended: `Both are strong choices with different strengths — **${nameA}** leans toward ${charA.toLowerCase()}, **${nameB}** toward ${charB.toLowerCase()}.`,
     rationale: `The right choice depends on whether you prioritise ${charA.toLowerCase()} or ${charB.toLowerCase()} in your system and with your music.`,

@@ -229,6 +229,32 @@ function hasExplicitDiagnosisSignal(text: string): boolean {
 }
 
 /**
+ * Returns true when the user explicitly requests evaluation/assessment
+ * of their system — "evaluate my system", "strengths and weaknesses",
+ * "how does it sound", "full assessment", etc.
+ *
+ * This is distinct from diagnosis (symptom-based) and improvement (goal-based).
+ * Evaluation requests should skip clarification and run immediately.
+ */
+const EVALUATION_LANGUAGE_PATTERNS = [
+  /\bevaluat/i,
+  /\bassess(?:ment)?\b/i,
+  /\bstrengths?\b.*\bweakness/i,
+  /\bweakness.*\bstrengths?\b/i,
+  /\breview\s+(?:my|the)\s+(?:system|setup|rig|chain)\b/i,
+  /\bhow\s+does\s+(?:it|my\s+(?:system|setup))\s+sound\b/i,
+  /\bfull\s+(?:assessment|evaluation|review|analysis)\b/i,
+  /\bwhat\s+(?:do\s+you\s+think|are\s+the\s+(?:strengths?|weaknesses?))\b/i,
+  /\banalyze\s+(?:my|the)\s+(?:system|setup|rig|chain)\b/i,
+  /\brate\s+(?:my|the)\s+(?:system|setup|rig|chain)\b/i,
+  /\bopinion\s+on\s+(?:my|the)\s+(?:system|setup|rig|chain)\b/i,
+];
+
+function hasExplicitEvaluationLanguage(text: string): boolean {
+  return EVALUATION_LANGUAGE_PATTERNS.some((p) => p.test(text));
+}
+
+/**
  * Returns true when the detected intent is clearly incompatible
  * with the active conversation mode.
  *
@@ -707,9 +733,20 @@ export function transition(
     // ── SYSTEM ASSESSMENT (system entry) ────────────────
     case 'system_assessment': {
       if (current.stage === 'entry') {
-        // User described their system — confirm and ask what to improve.
-        // Do NOT run a full assessment yet.
         facts.hasSystem = true;
+        // If the original message already contained evaluation language
+        // (e.g. "evaluate my system: ..."), skip clarification entirely.
+        // The text var here is the user's NEXT message (after entry was set
+        // by detectInitialMode), but we also check the original facts
+        // for evaluation intent carried from detectInitialMode.
+        if (hasExplicitEvaluationLanguage(text)) {
+          facts.symptom = text;
+          return {
+            state: { mode: 'diagnosis', stage: 'ready_to_diagnose', facts },
+            response: { kind: 'proceed' },
+          };
+        }
+        // No explicit evaluation intent — ask what they want to do.
         return {
           state: { mode: 'system_assessment', stage: 'clarify_preference', facts },
           response: {
@@ -721,11 +758,12 @@ export function transition(
       }
 
       if (current.stage === 'clarify_preference') {
-        // User told us what they want to improve — check if it's a symptom or a goal
+        // User told us what they want to improve — check if it's a symptom, evaluation, or a goal
         const wantsDiagnose = /\b(?:sounds?\s+(?:off|bad|wrong|thin|bright|muddy|harsh)|problem|issue|something.*off|fatiguing|lacking)\b/i.test(text);
+        const wantsEvaluation = hasExplicitEvaluationLanguage(text);
         const wantsBuy = /\b(?:buy|new|shop|looking\s+for|get\s+(?:a|some)|upgrade|replace|add)\b/i.test(text);
 
-        if (wantsDiagnose) {
+        if (wantsDiagnose || wantsEvaluation) {
           facts.symptom = text;
           return {
             state: { mode: 'diagnosis', stage: 'ready_to_diagnose', facts },
@@ -869,11 +907,15 @@ export function detectInitialMode(
     return { mode: 'comparison', stage: 'clarify_targets', facts };
   }
 
-  // System entry — user describes their components
-  // Route through state machine so we confirm and ask what to improve,
-  // rather than immediately running a full assessment.
+  // System entry — user describes their components.
+  // When the user explicitly asks for evaluation/assessment AND provides
+  // their system, skip clarification and go straight to diagnosis.
   if (context.detectedIntent === 'system_assessment') {
     facts.hasSystem = true;
+    if (hasExplicitEvaluationLanguage(text)) {
+      facts.symptom = text;
+      return { mode: 'diagnosis', stage: 'ready_to_diagnose', facts };
+    }
     return { mode: 'system_assessment', stage: 'entry', facts };
   }
 

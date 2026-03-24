@@ -283,13 +283,19 @@ describe('Synthesis brief and sonic landscape', () => {
     expect(advisory.sonicLandscape).toBeDefined();
   });
 
-  it('passes refinement prompts through to AdvisoryResponse', () => {
+  it('passes refinement prompts through to AdvisoryResponse (or suppresses when preference weak)', () => {
     const ctx = detectShoppingIntent('best DAC under $2000', EMPTY_SIGNALS);
     const answer = buildShoppingAnswer(ctx, EMPTY_SIGNALS);
     const advisory = shoppingToAdvisory(answer, EMPTY_SIGNALS);
 
-    expect(advisory.refinementPrompts).toBeDefined();
-    expect(advisory.refinementPrompts!.length).toBeGreaterThan(0);
+    // When preference signal is weak, refinementPrompts are suppressed
+    // in favor of StartHereBlock. Either refinementPrompts exist OR lowPreferenceSignal is true.
+    if (advisory.lowPreferenceSignal) {
+      expect(advisory.refinementPrompts).toBeUndefined();
+    } else {
+      expect(advisory.refinementPrompts).toBeDefined();
+      expect(advisory.refinementPrompts!.length).toBeGreaterThan(0);
+    }
   });
 
   it('candidate philosophies reflect different topologies', () => {

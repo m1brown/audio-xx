@@ -138,7 +138,7 @@ const TASTE_LABEL_RULES: TasteLabelRule[] = [
   },
 ];
 
-const FALLBACK_TASTE_LABEL = 'a balanced presentation';
+const FALLBACK_TASTE_LABEL = 'musical engagement';
 
 // ── Preserve inference ───────────────────────────────
 // Given directional arrows, infer what qualities should not be lost.

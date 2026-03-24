@@ -771,7 +771,8 @@ function buildEditorialIntro(
         ? `${traitList[0].toLowerCase()} and ${traitList[1].toLowerCase()}`
         : `${traitList.slice(0, -1).map(t => t.toLowerCase()).join(', ')}, and ${traitList[traitList.length - 1].toLowerCase()}`;
     preferenceClause = ` The list considers your listening priorities: ${formatted}`;
-  } else if (tasteLabel) {
+  } else if (tasteLabel && !/balanced presentation|musical engagement/i.test(tasteLabel)) {
+    // Only include preference clause for real taste signals, not fallback labels
     preferenceClause = ` The list is aligned with your preference for ${tasteLabel.toLowerCase()}`;
   }
 
@@ -934,7 +935,10 @@ function buildSystemInterpretation(
   }
 
   // ── Layer 4: Budget-only fallback — category landscape framing ──
-  if (parts.length === 0) {
+  // When lowPreferenceSignal is true, skip this entirely — the StartHereBlock
+  // replaces passive landscape text with an active preference capture CTA.
+  const isLowSignal = a.statedGaps?.includes('taste') ?? false;
+  if (parts.length === 0 && !isLowSignal) {
     // Use singular form for "X designs vary..." phrasing
     const catSingular = a.category.replace(/s$/, '');
     const catLabel = catSingular;
@@ -948,10 +952,9 @@ function buildSystemInterpretation(
         // Lowercase the first character of the direction to flow after the price
         const lowerDir = dirBrief.charAt(0).toLowerCase() + dirBrief.slice(1);
         parts.push(`At ~$${a.budget.toLocaleString()}, ${lowerDir}.`);
-      } else {
-        parts.push(`At this price point, ${catLabel} designs vary considerably in philosophy — from precision-focused to warmth-oriented to rhythm-driven.`);
-        parts.push(`The right choice depends on what you want the ${catSingular} to do in your system and for your listening priorities.`);
       }
+      // No else — when isLowSignal is false but direction is fallback,
+      // the StartHereBlock will handle it. No passive landscape text.
     }
   }
 
@@ -1773,18 +1776,29 @@ export function shoppingToAdvisory(
     ctx?.systemTendencies,
   );
 
-  // Build editorial intro
-  const editorialIntro = buildEditorialIntro(
-    a.category,
-    a.budget ? `$${a.budget}` : undefined,
-    ctx?.storedDesires,
-    reasoning?.taste.tasteLabel,
-    ctx?.systemComponents,
-    reasoning?.taste.archetype ?? undefined,
-  );
+  // ── Weak preference signal detection ──────────────────
+  // Computed once, used to suppress passive text when StartHereBlock is active.
+  // True when no explicit taste signal was provided by the user.
+  const isPreferenceWeak = a.statedGaps?.includes('taste') ?? false;
+
+  // Build editorial intro — suppress when preference is weak
+  // (StartHereBlock replaces it with "Here are strong starting points...")
+  const editorialIntro = isPreferenceWeak
+    ? undefined
+    : buildEditorialIntro(
+        a.category,
+        a.budget ? `$${a.budget}` : undefined,
+        ctx?.storedDesires,
+        reasoning?.taste.tasteLabel,
+        ctx?.systemComponents,
+        reasoning?.taste.archetype ?? undefined,
+      );
 
   // Build system interpretation (mandatory reasoning layer before products)
-  const systemInterpretation = buildSystemInterpretation(a, reasoning, ctx);
+  // Suppress for weak preference signal — StartHereBlock takes its place.
+  const systemInterpretation = isPreferenceWeak
+    ? undefined
+    : buildSystemInterpretation(a, reasoning, ctx);
 
   // Build strategy bullets (conceptual guidance before product cards)
   const strategyBullets = buildStrategyBullets(a, reasoning);
@@ -1808,20 +1822,21 @@ export function shoppingToAdvisory(
     systemContext: a.systemNote,
 
     recommendedDirection: a.bestFitDirection,
-    whyThisFits: a.whyThisFits.length > 0 ? a.whyThisFits : undefined,
-    tradeOffs: a.watchFor.length > 0 ? a.watchFor : undefined,
+    // Suppress passive content when preference is weak — StartHereBlock is the primary CTA
+    whyThisFits: isPreferenceWeak ? undefined : (a.whyThisFits.length > 0 ? a.whyThisFits : undefined),
+    tradeOffs: isPreferenceWeak ? undefined : (a.watchFor.length > 0 ? a.watchFor : undefined),
 
     options: options.length > 0 ? options : undefined,
-    provisional: a.provisional,
-    lowPreferenceSignal: a.statedGaps?.includes('taste') ?? false,
+    provisional: isPreferenceWeak ? false : a.provisional,
+    lowPreferenceSignal: isPreferenceWeak,
     shoppingCategory: a.category,
-    statedGaps: statedGaps && statedGaps.length > 0 ? statedGaps : undefined,
-    dependencyCaveat: a.dependencyCaveat,
+    statedGaps: isPreferenceWeak ? undefined : (statedGaps && statedGaps.length > 0 ? statedGaps : undefined),
+    dependencyCaveat: isPreferenceWeak ? undefined : a.dependencyCaveat,
 
     sonicLandscape: a.sonicLandscape,
-    decisionFrame: decisionFrame ?? undefined,
-    refinementPrompts: a.refinementPrompts,
-    followUp,
+    decisionFrame: isPreferenceWeak ? undefined : (decisionFrame ?? undefined),
+    refinementPrompts: isPreferenceWeak ? undefined : a.refinementPrompts,
+    followUp: isPreferenceWeak ? undefined : followUp,
 
     editorialClosing,
 

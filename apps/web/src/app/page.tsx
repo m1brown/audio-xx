@@ -436,9 +436,14 @@ export default function Home() {
           // Fall through to normal pipeline below...
         }
       }
-      // null response or proceed — fall through to normal pipeline
+      // null response or proceed — fall through to normal pipeline.
+      // When the state machine is done and the user had provided their system,
+      // preserve that fact so the fallthrough pipeline doesn't re-ask.
       if (convStateRef.current.stage === 'done') {
-        convStateRef.current = INITIAL_CONV_STATE;
+        const preserveHasSystem = convStateRef.current.facts?.hasSystem ?? false;
+        convStateRef.current = preserveHasSystem
+          ? { ...INITIAL_CONV_STATE, facts: { ...INITIAL_CONV_STATE.facts, hasSystem: true } }
+          : INITIAL_CONV_STATE;
       }
     }
 
@@ -1435,13 +1440,8 @@ export default function Home() {
               content: 'Got it — adjusting the direction based on what you\'ve added.',
             });
           }
-          // Add exploratory note when skipping to quick suggestions
-          if (wantsQuickSuggestions) {
-            dispatch({
-              type: 'ADD_NOTE',
-              content: 'Showing a range of design philosophies since I don\'t have your full listening profile yet. Tell me more about your system and preferences anytime to sharpen the direction.',
-            });
-          }
+          // Skip passive exploratory note — StartHereBlock provides the active CTA
+          // when preference signal is weak.
           const answer = buildShoppingAnswer(shoppingCtx, pipelineSignals, tasteProfile ?? undefined, reasoning, advisoryCtx.systemComponents);
 
           // Build decision frame — strategic framing before product shortlist

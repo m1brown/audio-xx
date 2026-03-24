@@ -1448,7 +1448,8 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
       )}
 
       {/* ── 1. System Interpretation (reasoning before products) ── */}
-      {a.systemInterpretation && (
+      {/* Suppress when StartHereBlock is active — passive explanations replaced by active CTA */}
+      {a.systemInterpretation && !a.lowPreferenceSignal && (
         <p style={{
           margin: '0 0 1.5rem 0',
           fontSize: FONTS.bodySize,
@@ -1486,9 +1487,11 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
         lineHeight: 1.75,
         color: COLORS.textSecondary,
       }}>
-        {a.editorialIntro
-          ? renderText(a.editorialIntro)
-          : (a.systemInterpretation ? 'With that in mind, here are a few strong options:' : 'Here are a few strong options:')}
+        {a.lowPreferenceSignal
+          ? 'Here are strong starting points across different design directions:'
+          : a.editorialIntro
+            ? renderText(a.editorialIntro)
+            : (a.systemInterpretation ? 'With that in mind, here are a few strong options:' : 'Here are a few strong options:')}
       </p>
 
       {/* ── 4. Product cards ──────────────────────────────── */}
