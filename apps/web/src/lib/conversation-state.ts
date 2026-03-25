@@ -206,7 +206,7 @@ const MODE_COMPATIBLE_INTENTS: Record<ConvMode, Set<string>> = {
   idle: new Set(), // idle accepts everything — never checked
   orientation: new Set(['shopping', 'diagnosis', 'intake', 'music_input', 'consultation_entry']),
   shopping: new Set(['shopping', 'intake', 'music_input']),
-  diagnosis: new Set(['diagnosis', 'system_assessment', 'consultation_entry']),
+  diagnosis: new Set(['diagnosis', 'system_assessment', 'consultation_entry', 'gear_inquiry', 'intake', 'shopping']),
   music_input: new Set(['music_input', 'shopping', 'intake']),
   improvement: new Set(['diagnosis', 'shopping', 'intake']),
   comparison: new Set(['comparison', 'exploration']),
@@ -230,8 +230,53 @@ const DIAGNOSIS_SIGNAL_PATTERNS = [
   /\b(?:problem|issue)\s+with\b/i,
 ];
 
+/**
+ * Lighter symptom-word check for use when already inside diagnosis mode.
+ * Matches standalone symptom adjectives like "bright and fatiguing", "harsh",
+ * "thin and dry". Too broad for general intent detection, but safe when the
+ * state machine has already confirmed diagnosis context.
+ */
+const SYMPTOM_KEYWORD_PATTERN = /\b(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|boring|lifeless|congested|sibilant|dry|sterile|clinical|analytical|cold|hard|brittle|forward|strident|sharp|lean|aggressive)\b/i;
+
+function hasSymptomKeyword(text: string): boolean {
+  return SYMPTOM_KEYWORD_PATTERN.test(text);
+}
+
 function hasExplicitDiagnosisSignal(text: string): boolean {
   return DIAGNOSIS_SIGNAL_PATTERNS.some((p) => p.test(text));
+}
+
+// ── Symptom interpretation ──────────────────────────────
+// Maps common symptom keywords to brief architectural interpretations.
+// Used to acknowledge symptoms intelligently before asking for system details.
+
+const SYMPTOM_INTERPRETATIONS: Array<[RegExp, string]> = [
+  [/\bthin\b/i, 'Thin usually points to tonal balance — lightweight bass, lean midrange, or a mismatch between source and amplification.'],
+  [/\bdry\b/i, 'Dry often comes from a system that strips harmonic overtones — high-feedback amplification, overly analytical sources, or aggressive room treatment.'],
+  [/\bbright\b.*\bfatigu/i, 'Brightness with fatigue usually traces to compounded energy in the upper frequencies — source, amplification, and speakers all pushing the same direction.'],
+  [/\bfatigu/i, 'Listening fatigue typically points to excess upper-midrange energy, poor damping interaction, or compounded brightness in the signal chain.'],
+  [/\bbright\b/i, 'Brightness usually comes from tonal balance — energy concentrated in the upper frequencies, often compounded across multiple components.'],
+  [/\bharsh\b/i, 'Harshness typically originates from distortion or resonance in the upper midrange — amplifier clipping, crossover artifacts, or room reflections can all contribute.'],
+  [/\bmuddy\b/i, 'Muddiness usually means excess low-mid energy or poor bass control — room modes, underdamped speakers, or warm components stacking up.'],
+  [/\bdull\b/i, 'A dull or lifeless sound often comes from over-smoothing — too much warmth, excessive damping, or detail being lost in the source or cable path.'],
+  [/\bveiled\b/i, 'A veiled quality usually traces to something masking fine detail — cable losses, a warm DAC compounding a warm amp, or driver limitations.'],
+  [/\bcongested\b/i, 'Congestion typically points to a system that compresses spatial and dynamic information — inadequate amplifier headroom, room overload, or overly warm voicing.'],
+  [/\bsibilan/i, 'Sibilance usually comes from a peak in the presence region — tweeter behavior, crossover alignment, or a source that over-emphasizes transients.'],
+  [/\bsterile\b|\bclinical\b|\bcold\b/i, 'A sterile or clinical sound usually means the system prioritizes precision over musicality — high feedback, neutral voicing with no warmth offset.'],
+  [/\bflat\b|\bboring\b|\blifeless\b/i, 'A flat or lifeless presentation often means the system is over-controlled — dynamic compression, excessive damping, or components that smooth out musical energy.'],
+  [/\blacking\b|\bmissing\b/i, 'That sense of something missing usually comes from a gap in the system\'s voicing — knowing the components helps identify where the loss originates.'],
+  [/\baggressive\b|\bforward\b|\bstrident\b/i, 'An aggressive or forward sound usually traces to upper-midrange emphasis — speaker directivity, amplifier voicing, or room reflections compounding.'],
+];
+
+/**
+ * Produces a brief architectural interpretation of the symptom described in the
+ * user's text. Returns a generic fallback if no specific pattern matches.
+ */
+export function interpretSymptom(text: string): string {
+  for (const [pattern, interpretation] of SYMPTOM_INTERPRETATIONS) {
+    if (pattern.test(text)) return interpretation;
+  }
+  return 'That kind of issue usually traces to a specific interaction in the signal chain — tonal balance, damping, or component voicing.';
 }
 
 /**
@@ -428,8 +473,8 @@ export function transition(
           state: { mode: 'diagnosis', stage: 'clarify_system', facts },
           response: {
             kind: 'question',
-            acknowledge: `Understood — "${text.length > 60 ? text.slice(0, 57) + '...' : text}."`,
-            question: "What's in your system? Knowing the main components will help me pinpoint where this is coming from.",
+            acknowledge: interpretSymptom(text),
+            question: 'What components are you using? Knowing the chain will help pinpoint where this is coming from.',
           },
         };
       }
@@ -566,6 +611,26 @@ export function transition(
 
     // ── DIAGNOSIS ──────────────────────────────────────
     case 'diagnosis': {
+      // ── Explicit shopping exit (any stage) ──
+      // When the user clearly switches to shopping ("best DAC under $1000"),
+      // exit diagnosis cleanly rather than staying stuck.
+      if (context.detectedIntent === 'shopping') {
+        const shoppingFacts: ConvFacts = { category: newCategory, budget: newBudget, preference: newPreference };
+        if (isReadyToRecommend(shoppingFacts)) {
+          return { state: { mode: 'shopping', stage: 'ready_to_recommend', facts: shoppingFacts }, response: { kind: 'proceed' } };
+        }
+        if (shoppingFacts.category) {
+          return {
+            state: { mode: 'shopping', stage: 'clarify_budget', facts: shoppingFacts },
+            response: { kind: 'question', acknowledge: 'Got it — switching to shopping.', question: "What's your budget?" },
+          };
+        }
+        return {
+          state: { mode: 'shopping', stage: 'clarify_category', facts: shoppingFacts },
+          response: { kind: 'question', acknowledge: 'Got it.', question: 'What are you looking for? Speakers, headphones, a DAC, an amplifier, or a turntable?' },
+        };
+      }
+
       if (current.stage === 'clarify_system') {
         // User provided system details
         facts.hasSystem = facts.hasSystem || context.subjectCount > 0;
@@ -575,12 +640,18 @@ export function transition(
             response: { kind: 'proceed' },
           };
         }
-        // Still no system detected
+        // Check if the user elaborated on their symptom instead of naming components.
+        // Uses the lighter keyword check since we're already in diagnosis mode.
+        // Update the stored symptom so the interpretation stays current.
+        if (hasSymptomKeyword(text)) {
+          facts.symptom = text;
+        }
+        // Still no system detected — interpret whatever symptom we have
         return {
           state: { mode: 'diagnosis', stage: 'clarify_system', facts },
           response: {
             kind: 'question',
-            acknowledge: 'Got it.',
+            acknowledge: facts.symptom ? interpretSymptom(facts.symptom) : 'Got it.',
             question: 'Can you name the specific components? For example: "Bluesound Node, Hegel H190, KEF Q350."',
           },
         };
@@ -598,13 +669,36 @@ export function transition(
           state: { mode: 'diagnosis', stage: 'clarify_system', facts },
           response: {
             kind: 'question',
-            acknowledge: `"${text.length > 60 ? text.slice(0, 57) + '...' : text}" — got it.`,
-            question: "What's in your system? List the main components so I can pinpoint what's likely causing this.",
+            acknowledge: interpretSymptom(text),
+            question: 'What components are you using? Knowing the chain will help pinpoint where this is coming from.',
           },
         };
       }
 
-      // Ready
+      // ── Follow-up turns after diagnosis has run ──
+      // User might ask remedy questions ("maybe a tube dac?"), elaborate
+      // on symptoms, or provide additional system context. Stay in
+      // diagnosis mode and re-proceed so the pipeline can use full context.
+      if (current.stage === 'ready_to_diagnose') {
+        // Note: explicit shopping exit is handled above (detectedIntent === 'shopping').
+
+        // Update symptom if the follow-up contains diagnosis language
+        if (hasExplicitDiagnosisSignal(text)) {
+          facts.symptom = text;
+        }
+
+        // Absorb additional component names
+        if (context.subjectCount > 0) {
+          facts.hasSystem = true;
+        }
+
+        return {
+          state: { mode: 'diagnosis', stage: 'ready_to_diagnose', facts },
+          response: { kind: 'proceed' },
+        };
+      }
+
+      // Ready (from other stages)
       if (isReadyToDiagnose(facts)) {
         return {
           state: { mode: 'diagnosis', stage: 'ready_to_diagnose', facts },
@@ -612,13 +706,13 @@ export function transition(
         };
       }
 
-      // Fallback
+      // Fallback — acknowledge any symptom context before asking for system
       return {
         state: { mode: 'diagnosis', stage: 'clarify_system', facts },
         response: {
           kind: 'question',
-          acknowledge: 'Got it.',
-          question: "What's in your system?",
+          acknowledge: facts.symptom ? interpretSymptom(facts.symptom) : 'Got it.',
+          question: 'What components are you using? Knowing the chain will help pinpoint where this is coming from.',
         },
       };
     }
@@ -1070,11 +1164,12 @@ export function detectInitialMode(
     if (context.subjectCount >= 1) {
       facts.hasSystem = true;
     }
-    // Rule 1: No diagnosis without system
-    if (!facts.hasSystem) {
-      return { mode: 'diagnosis', stage: 'clarify_system', facts };
+    if (facts.hasSystem) {
+      return { mode: 'diagnosis', stage: 'ready_to_diagnose', facts };
     }
-    return { mode: 'diagnosis', stage: 'ready_to_diagnose', facts };
+    // No system yet — interpret the symptom first, then ask for components.
+    // This avoids the blunt "What's in your system?" gating.
+    return { mode: 'diagnosis', stage: 'clarify_system', facts };
   }
 
   // Shopping with complete intent → skip clarification

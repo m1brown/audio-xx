@@ -1,0 +1,252 @@
+# Case 002 — "Best DAC Under $1,000"
+# Source: Real conversation (ChatGPT, same user thread). Single turn.
+# Extracted: 2026-03-20 (revised with intent-first advisory posture)
+
+case:
+  id: case-002-best-dacs-under-1000
+  label: "DAC shopping — no stated problem, existing DAC in chain"
+  source: chatgpt-dan-2026
+  turns: 1
+
+  # ── Advisory posture ──────────────────────────────────
+  # This case is defined by what the user DIDN'T say.
+  # No symptom. No complaint. No "something's missing."
+  # The system already has a DAC. The query is browsing, not diagnosis.
+  # Correct first move: clarify intent before producing any shortlist.
+
+  advisory_posture: restraint
+  reason_for_restraint: >
+    User has an aligned system with a functioning DAC (Eversolo DMP-A6).
+    No dissatisfaction stated. All four axes lean the same direction,
+    matching stated preferences. System coherence is a reason for
+    caution, not action.
+
+  user:
+    experience_level: intermediate
+    current_system:
+      amplifier: "JOB Integrated"
+      speakers: "WLM Diva monitors"
+      source: "Eversolo DMP-A6"  # also current DAC
+    has_separates: true
+    has_component_in_target_slot: true  # already has a DAC
+    vocabulary: intermediate  # "flow", "elasticity", "sparkle", "glare"
+    motivation: curiosity  # no dissatisfaction stated
+    dissatisfaction_stated: false
+    region: unknown
+
+    budget:
+      stated: 1000
+      currency: USD
+      type: ceiling  # "under $1,000" — hard ceiling, not a range
+
+  preferences:
+    explicit:
+      - "flow, elasticity, sparkle without glare"
+    inferred:
+      - values timing and transient speed  # JOB Integrated is speed-first
+      - tolerates lean tonality  # JOB + WLM are both tonally light
+      - sensitive to glare/fatigue  # "without glare" is specific, indicates past experience
+      - not chasing warmth  # system architecture + language confirm
+
+  axes:
+    smooth_to_crisp:
+      position: center-right
+      confidence: high
+      evidence: "'sparkle' = crispness; 'without glare' = explicit ceiling"
+    relaxed_to_dynamic:
+      position: right
+      confidence: medium-high
+      evidence: "'elasticity' + JOB topology = dynamic priority"
+    dense_to_open:
+      position: center-right
+      confidence: medium
+      evidence: "'flow' suggests openness; system already lean"
+    forgiving_to_resolving:
+      position: center-right
+      confidence: medium
+      evidence: "wants resolution but sets explicit fatigue ceiling"
+
+  axis_coherence: >
+    All four axes lean the same direction (center-right to right).
+    This is a coherent system with a clear signature. The user's
+    language matches the system's character. Coherence is itself
+    a signal — it suggests the user has found their direction.
+    Advisory posture should be conservative.
+
+  intent:
+    type: shopping
+    mode: specific-component
+    category: dac
+    constraints:
+      - budget_ceiling: true
+      - system_context_available: true
+      - no_symptom_stated: true
+      - current_component_in_slot: true  # Eversolo DMP-A6 is the current DAC
+
+  correct_first_move: >
+    "What's prompting the DAC search? Is there something you're hearing
+    that you'd like to change — or are you just exploring what's out there?"
+
+  core_problem: >
+    There may be no problem. The user has an aligned system with a
+    functioning DAC. Nothing in the query indicates dissatisfaction.
+    The advisor's job is to determine whether a problem exists before
+    offering solutions. If no problem exists, the honest answer is
+    "your system is doing what you want — keep listening."
+
+  # ── What the advisor did wrong ────────────────────────
+  advisor_errors:
+    - id: skipped-intent-clarification
+      description: >
+        Went straight to a ranked product list without asking what
+        prompted the search. The user may have a specific dissatisfaction,
+        or may just be browsing. These require completely different responses.
+      severity: high
+
+    - id: ignored-existing-dac
+      description: >
+        Never acknowledged that the Eversolo DMP-A6 is already functioning
+        as the system's DAC. A sub-$1,000 upgrade over an adequate existing
+        DAC requires justification that was never established.
+      severity: high
+
+    - id: generic-ranking-before-system-ranking
+      description: >
+        Presented a generic "best 5 DACs" list, then a separate "for your
+        system" list with different ordering. The generic list contradicts
+        the system-aware advice. Only the system-aware output matters.
+      severity: medium
+
+    - id: five-product-shortlist
+      description: >
+        Listed 5 DACs. Two shared the same ESS chipset with similar character
+        (Topping D90SE + SMSL VMV D1SE). One added nothing the other didn't
+        cover. Max 2-3 options with clear directional differentiation.
+      severity: low
+
+    - id: best-insight-buried
+      description: >
+        "Avoid overly analytical ESS DACs in your system" was the most
+        useful sentence in the response — a system-interaction judgment
+        that tells the user what NOT to do and why. It appeared as a
+        throwaway closing line instead of leading the response.
+      severity: medium
+
+  # ── Directional paths ─────────────────────────────────
+  directional_paths:
+    - id: do-nothing
+      label: "Keep the Eversolo as DAC"
+      is_lead_path: true
+      optimises: "Zero risk, zero cost, preserves system coherence"
+      tradeoff: "No change"
+      rationale: >
+        System is aligned with stated preferences. Eversolo is not a
+        bottleneck. No symptom described. At sub-$1,000, the marginal
+        improvement from a dedicated DAC is subtle. Honest recommendation
+        is to keep listening and revisit if something specific bothers them.
+
+    - id: compound-speed
+      label: "More of What the System Already Does"
+      is_lead_path: false
+      condition: "Only if user identifies wanting more timing/air/resolution"
+      optimises: "Timing precision, transient articulation, spatial resolution"
+      tradeoff: "System becomes leaner; may cross glare threshold"
+      direction: "FPGA / timing-first topology"
+      illustrative_components:
+        dac: "Chord Qutest"
+      system_interaction: >
+        FPGA timing stacks with JOB's low-feedback speed. Compounds the
+        system's existing lean. High ceiling but narrowing margin before
+        thinness in the upper midrange.
+
+    - id: introduce-counterbalance
+      label: "Add What the System Currently Lacks"
+      is_lead_path: false
+      condition: "Only if user identifies wanting more body/density/warmth"
+      optimises: "Tonal density, midrange body, bass texture"
+      tradeoff: "May soften 'sparkle' user explicitly values; less transient speed"
+      direction: "R2R / multibit topology"
+      illustrative_components:
+        dac: "Denafrips Ares II or Schiit Bifrost 2/64"
+      system_interaction: >
+        Adds harmonic density the JOB doesn't provide. Compensates for
+        lean tendency. Risk: may slow perceived timing.
+
+  # ── Products mentioned in original conversation ───────
+  products_mentioned:
+    - name: "Chord Qutest"
+      architecture: "FPGA (Rob Watts WTA filter)"
+      price_used: "$850–1,000"
+      sonic_character_stated: "Clean transients, wide stage, high resolution"
+      weakness_stated: "Slightly lean tonally in some systems"
+      reference_cited: "Stereophile (Atkinson 2018)"
+      trait_invented: false
+
+    - name: "Denafrips Ares II / Enyo"
+      architecture: "R2R ladder + FPGA processing"
+      price_used: "$650–850"
+      sonic_character_stated: "Rich tone, smooth treble, natural timbre"
+      weakness_stated: "Less transient speed than Chord, slightly smaller stage"
+      reference_cited: null
+      trait_invented: false
+
+    - name: "Topping D90SE"
+      architecture: "ESS Sabre ES9038Pro"
+      price_used: "$600–900"
+      sonic_character_stated: "Extremely transparent, ultra-low distortion"
+      weakness_stated: "Can sound sterile, less emotional engagement"
+      reference_cited: null
+      trait_invented: false
+
+    - name: "SMSL VMV D1SE"
+      architecture: "ESS ES9038Pro"
+      price_new: "~$800"
+      sonic_character_stated: "Smooth for ESS, slightly warmer than Topping"
+      weakness_stated: "Not as engaging as Chord, basic interface"
+      reference_cited: null
+      trait_invented: false
+      note: "Redundant with Topping — same chipset, similar character. Should not have been a separate entry."
+
+    - name: "Schiit Bifrost 2/64"
+      architecture: "Multibit R2R with proprietary DSP"
+      price_new: "~$799"
+      sonic_character_stated: "Dense tone, strong macrodynamics, natural midrange"
+      weakness_stated: "Less resolution than Chord, slightly softer top end"
+      reference_cited: null
+      trait_invented: false
+
+  # ── Conversation patterns ─────────────────────────────
+  conversation_patterns:
+    - pattern: browsing-not-diagnosing
+      frequency: very-common
+      note: >
+        "Best X under $Y" is the most common query format and the most
+        dangerous for an advisory system. It invites a ranked list.
+        The correct response is intent clarification, not a shortlist.
+
+    - pattern: existing-component-in-target-slot
+      frequency: common
+      note: >
+        User already has a DAC. The conversation never asked whether it's
+        inadequate. "Do nothing" should have been the lead path.
+
+    - pattern: aligned-system-coherence
+      frequency: medium
+      note: >
+        All four axes lean the same direction. System character matches
+        stated preferences. This coherence is a signal for restraint —
+        the user has found their direction. Don't disrupt it without cause.
+
+    - pattern: exclusion-more-useful-than-recommendation
+      frequency: high-value
+      note: >
+        "Avoid analytical ESS DACs in your system" is more actionable
+        than any product ranking. Audio XX should lead with what to
+        exclude and why, then narrow to what fits — if anything.
+
+    - pattern: architecture-as-direction
+      frequency: high-value
+      note: >
+        FPGA = speed, R2R = density, ESS = transparency. This topology-to-
+        character mapping is more useful than product-level rankings.
+        Lead with direction, not product names.

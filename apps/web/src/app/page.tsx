@@ -28,7 +28,7 @@ import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } f
 import { checkGlossaryQuestion } from '@/lib/glossary';
 import { detectIntent, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
 import { attachQuickRecommendation } from '@/lib/quick-recommendation';
-import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode } from '@/lib/conversation-state';
+import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode, interpretSymptom } from '@/lib/conversation-state';
 import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
@@ -447,7 +447,12 @@ export default function Home() {
             convStateRef.current = INITIAL_CONV_STATE;
           } else if (convResult.state.stage === 'ready_to_diagnose') {
             convModeHint = 'diagnosis';
-            convStateRef.current = INITIAL_CONV_STATE;
+            // Override intent so the diagnosis builder fires even when
+            // detectIntent returned gear_inquiry (user named components).
+            intent = 'diagnosis';
+            // Do NOT reset convState — keep diagnosis mode active so
+            // follow-up turns (remedy questions, additional symptoms)
+            // stay in context instead of collapsing to idle.
           } else if (convResult.state.stage === 'ready_to_assess') {
             // System assessment — override intent and keep convState alive
             // so subsequent turns accumulate components.
@@ -849,13 +854,13 @@ export default function Home() {
           return;
         }
 
-        // ── Problem entry — gate on system before running diagnosis ──
+        // ── Problem entry — interpret symptom, then ask for system ──
         if (initialConvMode.mode === 'diagnosis' && initialConvMode.stage === 'clarify_system') {
           dispatch({
             type: 'ADD_QUESTION',
             clarification: {
-              acknowledge: `Understood — "${submittedText.length > 60 ? submittedText.slice(0, 57) + '...' : submittedText}."`,
-              question: "What's in your system? Knowing the main components will help me pinpoint where this is coming from.",
+              acknowledge: interpretSymptom(submittedText),
+              question: 'What components are you using? Knowing the chain will help pinpoint where this is coming from.',
             },
           });
           dispatch({ type: 'SET_LOADING', value: false });
@@ -1389,8 +1394,20 @@ export default function Home() {
     // When diagnosis intent fires AND user mentioned system components,
     // produce a concise contextual diagnosis directly — no need for the
     // full evaluate engine. This handles: "I have X and Y, sounds dry."
+    //
+    // When the state machine is in diagnosis mode, the symptom may have
+    // been provided on an earlier turn (stored in facts.symptom). Combine
+    // the stored symptom with the current message so buildSystemDiagnosis
+    // can extract the complaint even when the current turn is purely
+    // component names.
     if (intent === 'diagnosis' && turnCtx.subjectMatches.length >= 1) {
-      const sysDiag = buildSystemDiagnosis(submittedText, turnCtx.subjectMatches);
+      const diagSymptom = convStateRef.current.mode === 'diagnosis'
+        ? convStateRef.current.facts.symptom
+        : undefined;
+      const diagText = diagSymptom && !submittedText.includes(diagSymptom)
+        ? `${diagSymptom}. ${submittedText}`
+        : submittedText;
+      const sysDiag = buildSystemDiagnosis(diagText, turnCtx.subjectMatches);
       if (sysDiag) {
         dispatchAdvisory(consultationToAdvisory(sysDiag, undefined, advisoryCtx), advisoryId());
         // Save system context for continuity

@@ -89,10 +89,12 @@ describe('Shopping → new intent resets state', () => {
 // ── Diagnosis → other intent ────────────────────────────
 
 describe('Diagnosis → new intent resets state', () => {
-  it('diagnosis + "best DAC under $1000" → idle (shopping clears diagnosis)', () => {
+  it('diagnosis + "best DAC under $1000" → shopping (exits diagnosis cleanly)', () => {
     const result = transition(diagnosisState(), 'best DAC under $1000', contextFor('best DAC under $1000'));
-    expect(result.state.mode).toBe('idle');
-    expect(result.state.facts).toEqual({});
+    expect(result.state.mode).toBe('shopping');
+    expect(result.state.facts.category).toBe('dac');
+    // Diagnosis symptom should NOT leak into the new shopping context
+    expect(result.state.facts.symptom).toBeUndefined();
   });
 
   it('diagnosis + "KEF vs ELAC" → idle (comparison clears diagnosis)', () => {
@@ -167,9 +169,11 @@ describe('Facts do not leak across intents', () => {
     expect(result.state.facts.budget).toBeUndefined();
   });
 
-  it('symptom from diagnosis does not appear after shopping reset', () => {
+  it('symptom from diagnosis does not appear after shopping transition', () => {
     const prior = diagnosisState({ symptom: 'too bright' });
     const result = transition(prior, 'best DAC under $1000', contextFor('best DAC under $1000'));
+    // Shopping exit creates fresh facts — symptom must not leak
+    expect(result.state.mode).toBe('shopping');
     expect(result.state.facts.symptom).toBeUndefined();
   });
 

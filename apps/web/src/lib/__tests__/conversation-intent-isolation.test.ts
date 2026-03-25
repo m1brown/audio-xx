@@ -303,7 +303,7 @@ describe('additional cross-mode transitions', () => {
     expect(result.state.facts.symptom).toBeUndefined();
   });
 
-  it('diagnosis → shopping resets cleanly', () => {
+  it('diagnosis → shopping transitions cleanly', () => {
     const diagState: ConvState = {
       mode: 'diagnosis',
       stage: 'ready_to_diagnose',
@@ -317,7 +317,8 @@ describe('additional cross-mode transitions', () => {
       detectedIntent: i2.intent,
     });
 
-    expect(result.state.mode).toBe('idle');
-    expect(result.state.facts.symptom).toBeUndefined();
+    // Diagnosis → shopping should route to shopping directly (not reset to idle)
+    expect(result.state.mode).toBe('shopping');
+    expect(result.state.facts.category).toBe('dac');
   });
 });

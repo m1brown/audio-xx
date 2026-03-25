@@ -1,0 +1,154 @@
+# Rule Candidates — Case 002 (Best DACs Under $1,000)
+# Revised with intent-first advisory posture.
+#
+# These rules enforce the principle: if no dissatisfaction is stated,
+# the correct first move is to clarify intent, not produce a shortlist.
+
+rule_candidates:
+
+  # ── Clarify Intent Before Shortlist ─────────────────
+  # Trigger: shopping query with no stated symptom/dissatisfaction,
+  # AND the user already has a component in the target slot.
+  #
+  # This is the core rule from this case. It prevents the most common
+  # advisory failure: answering "best X under $Y" with a ranked list
+  # when the user may not need anything at all.
+
+  - id: clarify-intent-before-shortlist
+    label: "No symptom stated — clarify intent before recommending"
+    priority: 2
+    conditions:
+      symptoms_absent:
+        - brightness_harshness
+        - thinness
+        - flat_lifeless
+        - congestion_muddiness
+        - fatigue
+        - too_polite
+        - too_forward
+        - regression
+        - narrow_soundstage
+        - bass_bloom
+      # Plus: shopping intent detected, user has existing component
+      # in the target category.
+    outputs:
+      explanation: >
+        You're looking at options in a category where your system already
+        has a working component. Before recommending alternatives — what's
+        prompting the search? If something specific is bothering you, that
+        changes the answer. If you're just exploring, the honest response
+        may be that your current setup is doing its job.
+      suggestions:
+        - Ask what the user hopes changes before producing any shortlist.
+        - If the answer is "nothing specific," surface "do nothing" as the lead path.
+      risks:
+        - Producing a ranked list for a curiosity query implies the current component is inadequate.
+        - The user may buy something that sounds different but not better, then chase further changes.
+      next_step: >
+        Ask: "What's prompting the search? Is there something you'd like
+        to change about what you're hearing — or are you exploring?"
+
+  # ── System Coherence as Restraint Signal ────────────
+  # Trigger: user's system shows consistent axis alignment, and
+  # stated preferences match system character.
+  #
+  # When a system is coherent (all axes lean the same direction)
+  # AND the user's language confirms that direction, the advisory
+  # posture should be conservative. Disrupting alignment requires
+  # a stated reason.
+
+  - id: system-coherence-restraint
+    label: "Aligned system — do not disrupt without stated reason"
+    priority: 4
+    conditions:
+      # Implementation: fires when axis synthesis shows consistent
+      # directional lean (all axes center or further in same direction)
+      # AND user preference language matches system character.
+      system_axes_aligned: true
+      preferences_match_system: true
+    outputs:
+      explanation: >
+        Your system has a coherent character, and your preferences align
+        with what the system already delivers. That alignment is valuable.
+        Changes should be deliberate — made to address something specific,
+        not just to try something new.
+      suggestions:
+        - Lead with restraint. Name the coherence explicitly.
+        - If the user still wants to explore, frame options as directional choices with clear trade-off awareness.
+      risks:
+        - Recommending changes to an aligned system can disrupt what the user already enjoys.
+        - "Different" is not "better" — the user may lose something they valued without realizing it.
+      next_step: >
+        "Your system is doing what you've told me you want. Before
+        changing anything — is there something specific that's missing?"
+
+  # ── Exclusion Before Recommendation ─────────────────
+  # Trigger: system has a detectable directional lean, AND the
+  # shopping category contains products that would conflict.
+  #
+  # "Don't put an analytical ESS DAC in this chain" is more
+  # actionable than "here are 5 DACs ranked." Lead with what
+  # to avoid and why.
+
+  - id: exclusion-before-recommendation
+    label: "Lead with what to avoid in this system"
+    priority: 6
+    conditions:
+      system_has_directional_lean: true
+      category_has_conflicting_options: true
+    outputs:
+      explanation: >
+        Your system has a clear direction. Some products in this category
+        would work against that direction. Before looking at what fits,
+        it helps to know what to avoid — and why.
+      suggestions:
+        - Name the topology or design approach that conflicts with the system, and explain the interaction.
+        - Then narrow to products that align or constructively counterbalance.
+      risks:
+        - Presenting conflicting options alongside aligned ones creates false equivalence.
+        - The user may pick the wrong product because the exclusion logic was buried or absent.
+      next_step: >
+        State the exclusion clearly and first: "In your system, [topology X]
+        would likely [specific negative interaction]. Here's why."
+        Then present aligned options.
+
+
+# ── Signal Candidates ─────────────────────────────────
+
+signal_candidates:
+
+  - phrases:
+      - "best dac under"
+      - "best amp under"
+      - "best speakers under"
+      - "best headphones under"
+      - "recommend a dac"
+      - "recommend an amp"
+      - "recommend speakers"
+      - "what dac should i get"
+      - "looking for a dac"
+      - "shopping for"
+      - "what should i buy"
+    signals: {}
+    symptom: component_shopping
+    archetype_hint: null
+    note: >
+      Category-level shopping query. Does NOT indicate dissatisfaction.
+      System should clarify intent before producing a shortlist.
+
+  - phrases:
+      - "sparkle without glare"
+      - "detail without fatigue"
+      - "resolving but not harsh"
+      - "clear but not bright"
+      - "open but not thin"
+      - "fast but not aggressive"
+    signals:
+      clarity: up
+      fatigue_risk: down
+    symptom: bounded_resolution_preference
+    archetype_hint: null
+    note: >
+      User wants resolution with an explicit ceiling. Stronger signal
+      than generic "clarity + warmth" — the qualifier ("without X")
+      indicates past experience with the failure mode.

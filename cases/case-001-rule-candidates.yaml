@@ -1,0 +1,255 @@
+# Rule Candidates — Extracted from Case 001 (First System from Sonos)
+# These address patterns not covered by existing rules.yaml
+# Existing rules focus on symptom-based diagnosis of established systems.
+# These rules target system-building and first-time buyer scenarios.
+
+rule_candidates:
+
+  # ── Convenience Dependency ──────────────────────────
+  # Trigger: user comes from Sonos, Bose, or other convenience ecosystem
+  # Why reusable: very common entry point. Without this rule, the system
+  # recommends components without addressing the convenience gap, which
+  # is the #1 reason first-time buyers abandon separates.
+
+  - id: convenience-dependency-detected
+    label: "Convenience dependency — streamer required in chain"
+    priority: 5
+    conditions:
+      symptoms_present_any:
+        - sonos_baseline
+        - convenience_dependency
+        - streaming_habit
+      # Note: requires new signals for these symptoms (see signal candidates below)
+    outputs:
+      explanation: >
+        You're coming from a system where everything was app-controlled.
+        A separates system can match most of that convenience, but only if
+        a dedicated streamer is included in the chain. Without it, the daily
+        experience will feel like a downgrade regardless of sound quality.
+      suggestions:
+        - Include a network streamer (e.g., WiiM Pro) as a non-negotiable component.
+        - Connect via optical to the amplifier for cleanest signal path.
+      risks:
+        - Skipping the streamer saves $150 but risks the user returning to Sonos within weeks.
+        - The streamer's internal DAC is adequate at this budget level — do not upsell an external DAC.
+      next_step: >
+        Confirm the user's primary streaming services (Spotify, Apple Music, Tidal)
+        to ensure compatibility before recommending a specific streamer.
+
+  # ── Near-Wall Placement Risk ────────────────────────
+  # Trigger: user asks about wall placement or describes constrained space
+  # Why reusable: most real-world systems are placed near walls.
+  # Existing rule "thinness-bass-deficit" handles the symptom AFTER placement.
+  # This rule intervenes BEFORE purchase to prevent the problem.
+
+  - id: near-wall-placement-risk
+    label: "Near-wall placement — speaker selection constraint"
+    priority: 8
+    conditions:
+      symptoms_present_any:
+        - wall_placement
+        - small_room
+        - space_constrained
+    outputs:
+      explanation: >
+        If speakers will be placed within 20 cm of the rear wall, this becomes
+        a hard constraint on speaker selection. Rear-ported speakers placed against
+        a wall produce bloated bass and collapsed imaging — often sounding worse
+        than the system being replaced.
+      suggestions:
+        - Prefer front-ported or sealed speakers for near-wall placement.
+        - If using rear-ported speakers, budget for port plugs and expect a compromise.
+      risks:
+        - Recommending high-resolution rear-ported speakers for near-wall use wastes the user's investment.
+        - The user may not know their placement is constrained until they set up — ask proactively.
+      next_step: >
+        Ask: "How far from the wall will the speakers sit?" before finalising
+        speaker recommendations. If uncertain, default to forgiving speakers.
+
+  # ── Budget Escalation Framing ─────────────────────────
+  # Trigger: user asks about more expensive options after receiving
+  # a within-budget recommendation.
+  # Why reusable: users frequently ask "what if I spent more?" This is
+  # legitimate curiosity, not an invitation to abandon the original budget.
+  # The risk is not escalation itself — it's losing the anchor.
+  # In this case, the user asked "if i wanted better speakers and amplifier?"
+  # which is an explicit invitation. The advisor responded with $2,200.
+  # That's fine. What matters is HOW the escalation is framed:
+  # the original $1,500 system should remain validated, not displaced.
+
+  - id: budget-escalation-framing
+    label: "Budget escalation — anchor the original recommendation"
+    priority: 3
+    conditions:
+      # Fires when a higher-budget path is presented after an initial
+      # within-budget recommendation has already been given.
+      budget_escalation_requested: true
+      initial_recommendation_given: true
+    outputs:
+      explanation: >
+        You asked what a higher budget would get you — that's a fair question.
+        The system recommended at your original budget is a genuinely good
+        system. The upgrade path below improves specific qualities, but it is
+        not a correction of the first recommendation. Both are valid.
+      suggestions:
+        - Name exactly what improves and what stays the same. Do not reframe the entire system.
+        - Keep the original recommendation visible as "still a strong option" — do not let the upgrade displace it.
+      risks:
+        - If the upgrade is presented without anchoring, the original recommendation feels like a compromise rather than a real system.
+        - Repeated escalation across turns (e.g., $1,500 → $2,200 → $2,700) can make the user feel the advisor will always suggest spending more.
+        - The user may interpret "better speakers + amp" as meaning the original ones were inadequate.
+      next_step: >
+        Present the upgrade path with a clear statement of what specifically
+        changes (e.g., "imaging precision, midrange texture") and what stays
+        the same (e.g., "same turntable, same streamer — those are already right").
+        Reaffirm the original system as a legitimate stopping point.
+      archetype_note: >
+        For first-time buyers, the original recommendation is psychologically
+        important. It's the thing they decided they could afford. If it gets
+        quietly replaced by something more expensive, trust erodes — even if
+        the user asked the question.
+
+  # ── Weak Taste Signal ───────────────────────────────
+  # Trigger: user expresses preference in generic terms
+  # ("clear but warm", "detailed but musical", "not too bright")
+  # Why reusable: ~70% of first-time users describe preferences this way.
+  # These are real preferences but at low confidence. The system should
+  # mirror them back without over-interpreting into strong axis positions.
+
+  - id: weak-taste-signal
+    label: "Weak taste signal — mirror, don't amplify"
+    priority: 6
+    conditions:
+      # Implementation note: fires when extracted axis positions are all
+      # within center ±1 band and confidence is medium or below.
+      taste_confidence: low
+      axis_positions_central: true
+    outputs:
+      explanation: >
+        Your preference — wanting both clarity and warmth — is a real and common
+        starting point. It tells us you're looking for a balanced system that
+        doesn't lean too far in any direction. That's useful, and it narrows
+        the field more than you might think.
+      suggestions:
+        - Recommend components known for balance rather than strong character.
+        - Avoid speakers or amplifiers with pronounced sonic signatures at this stage.
+      risks:
+        - Over-interpreting a weak signal leads to recommendations that feel prescriptive.
+        - The user's taste will sharpen with experience — don't lock them into a direction prematurely.
+      next_step: >
+        Present a balanced system. Note that preferences often become clearer
+        after living with a system for a few months. The first system is for
+        exploration, not final alignment.
+
+  # ── DAC Upsell Prevention ───────────────────────────
+  # Trigger: user asks about DAC upgrade in a system under $2,500
+  # Why reusable: "do I need a better DAC?" is one of the most common
+  # questions and one of the most common sources of unnecessary spending.
+  # At entry/mid-level, DAC differences are the smallest audible variable.
+
+  - id: dac-upsell-prevention
+    label: "DAC upgrade — not yet justified"
+    priority: 12
+    conditions:
+      symptoms_present_any:
+        - dac_upgrade_question
+      # Fires when system total is below threshold and no DAC-specific
+      # symptoms (glare, digital fatigue) are present.
+      symptoms_absent:
+        - brightness_harshness
+        - fatigue
+    outputs:
+      explanation: >
+        At your current system level, a DAC upgrade is the lowest-impact change
+        available. The DAC you have (or the one built into your streamer/amp)
+        is doing its job. The differences between DACs at this price point are
+        subtle and easily masked by speaker and room interactions.
+      suggestions:
+        - Do not upgrade the DAC until speakers, amplifier, and placement are settled.
+        - If you hear digital glare or fatigue, that's a different conversation — describe what you're hearing.
+      risks:
+        - Spending $500 on a DAC in a $1,500 system is disproportionate and audibly negligible.
+        - DAC upgrades become meaningful when the rest of the chain can resolve the difference.
+      next_step: >
+        The correct upgrade order for your system is: speakers → amplifier →
+        placement → cartridge (if vinyl) → DAC. Revisit DAC when the rest is settled.
+      verdict: no_purchase_recommended
+
+
+# ── Signal Candidates ─────────────────────────────────
+# New signals needed to support the rules above.
+# These would be added to packages/signals/signals.yaml
+
+signal_candidates:
+
+  - phrases:
+      - "used to sonos"
+      - "coming from sonos"
+      - "have sonos"
+      - "currently use sonos"
+      - "replacing sonos"
+      - "upgrading from sonos"
+      - "used to bose"
+      - "used to a soundbar"
+    signals:
+      fatigue_risk: down  # Sonos users are accustomed to non-fatiguing sound
+    symptom: sonos_baseline
+    archetype_hint: null
+    note: "Indicates convenience-system baseline. High convenience dependency likely."
+
+  - phrases:
+      - "app control"
+      - "control from phone"
+      - "use spotify"
+      - "stream from phone"
+      - "airplay"
+      - "like the convenience"
+      - "easy to use"
+    signals: {}
+    symptom: convenience_dependency
+    archetype_hint: null
+    note: "Indicates streaming/app convenience is a hard requirement, not a nice-to-have."
+
+  - phrases:
+      - "against the wall"
+      - "near the wall"
+      - "on a shelf"
+      - "not much space"
+      - "small room"
+      - "small apartment"
+      - "limited space"
+      - "on the bookshelf"
+    signals:
+      bass_weight: up  # Wall proximity reinforces bass, often excessively
+    symptom: wall_placement
+    archetype_hint: null
+    note: "Triggers placement-aware speaker selection. Prefer front-ported or sealed."
+
+  - phrases:
+      - "do i need a dac"
+      - "should i upgrade the dac"
+      - "is the dac important"
+      - "better dac"
+      - "worth upgrading the dac"
+      - "external dac"
+    signals: {}
+    symptom: dac_upgrade_question
+    archetype_hint: null
+    note: "User is checking whether DAC is a priority. Usually not at entry/mid level."
+
+  - phrases:
+      - "clarity but warm"
+      - "clear but warm"
+      - "detailed but musical"
+      - "resolving but not harsh"
+      - "not too bright but detailed"
+      - "warm but not muddy"
+      - "i like both"
+    signals:
+      clarity: up
+      tonal_density: up
+    symptom: balanced_preference
+    archetype_hint: null
+    note: >
+      Most common entry-level taste signal. Indicates center-axis preference.
+      Do not over-interpret into strong directional pull.

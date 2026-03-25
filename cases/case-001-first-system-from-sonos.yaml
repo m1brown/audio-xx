@@ -1,0 +1,175 @@
+# Case 001 — First System Build from Sonos
+# Source: Real conversation (ChatGPT, Dan). 8 turns.
+# Extracted: 2026-03-20
+
+case:
+  id: case-001-first-system-from-sonos
+  label: "First separates system — Sonos upgrade with turntable"
+  source: chatgpt-dan-2026
+  turns: 8
+
+  user:
+    experience_level: beginner
+    current_system: sonos  # wireless all-in-one, no separates
+    has_separates: false
+    vocabulary: plain  # no audiophile terminology used
+    motivation: curiosity  # not dissatisfaction — "a little better"
+    vinyl_interest: true
+    convenience_dependency: high  # Sonos-level app control expected
+    region: US  # switched from FR mid-conversation
+    budget:
+      stated: 1500
+      currency: USD
+      flexible: true  # explored up to $2,700 when prompted
+
+  preferences:
+    explicit:
+      - "a little better than Sonos"
+      - "clarity but also a rich warm sound"
+      - "wants a turntable"
+    inferred:
+      - low complexity tolerance  # evidence: Sonos baseline, practical questions
+      - pragmatic orientation  # evidence: asked about space, cables, streaming, retailers
+      - checking for upsell  # evidence: "do i need to upgrade the dac or no?"
+      - no stated genre or artist preferences
+      - no sonic complaint about current system
+
+  axes:
+    smooth_to_crisp:
+      position: center-right
+      confidence: medium
+      evidence: "'clarity' stated explicitly, qualified with 'warm'"
+    relaxed_to_dynamic:
+      position: center
+      confidence: low
+      evidence: "no direct signal in either direction"
+    dense_to_open:
+      position: center-left
+      confidence: medium
+      evidence: "'rich warm sound' = density preference"
+    forgiving_to_resolving:
+      position: center-left
+      confidence: medium
+      evidence: "coming from forgiving system, wants incremental improvement"
+
+  intent:
+    type: build-a-system
+    components_needed:
+      - speakers
+      - amplifier
+      - turntable
+      - streamer
+      - cables
+    constraints:
+      - budget_hard: false
+      - convenience_parity_required: true  # must replicate Sonos streaming UX
+      - placement_likely_constrained: true  # near-wall probable, not confirmed
+      - complete_chain: true  # no existing components to build around
+
+  core_problem: >
+    Architecture problem, not component selection. User needs a complete 5-component
+    chain within budget that audibly improves on Sonos while preserving convenience.
+    Risk: complexity without payoff causes abandonment.
+
+  risks:
+    - id: complexity-without-payoff
+      description: >
+        If the system is harder to use than Sonos but sounds only marginally better,
+        the user abandons separates and returns to convenience audio.
+      severity: high
+      mitigation: "WiiM Pro as convenience bridge; minimize component count"
+
+    - id: overspecification
+      description: >
+        Too many alternatives per component slot creates decision paralysis
+        for a first-time buyer with no reference points.
+      severity: medium
+      mitigation: "One primary recommendation per slot; alternatives only on request"
+
+    - id: placement-sensitivity
+      description: >
+        Revealing speakers placed against a wall in a shared room will underperform
+        expectations and may sound worse than Sonos in the bass region.
+      severity: high
+      mitigation: "Default to forgiving, front-ported or sealed speakers; ask about room before recommending"
+
+    - id: budget-anchor-erosion
+      description: >
+        User asked about better speakers/amp — a legitimate question. The advisor
+        responded with $2,200, then the conversation drifted to $2,700. The risk
+        is not escalation itself (the user invited it) but that the original $1,500
+        system quietly stops being presented as a valid outcome.
+      severity: medium
+      mitigation: "When presenting upgrade paths, explicitly reaffirm the original recommendation as a complete, legitimate system"
+
+  directional_paths:
+    - id: balanced-entry
+      label: "Balanced Entry"
+      optimises: "Convenience parity + clear sonic upgrade over Sonos"
+      tradeoff: "No single component is exceptional; moderate ceiling"
+      budget_range: "$1,200–1,350"
+      illustrative_components:
+        speakers: "KEF Q350 or ELAC Debut B6.2"
+        amplifier: "Yamaha A-S301"
+        turntable: "Audio-Technica AT-LP120X"
+        streamer: "WiiM Pro"
+      fit: "Someone who might return to Sonos if the system is frustrating"
+
+    - id: speaker-forward
+      label: "Speaker-Forward"
+      optimises: "Largest audible upgrade — imaging, midrange, texture"
+      tradeoff: "Higher cost ($2,000+), amp pairing becomes more critical"
+      budget_range: "$2,000–2,200"
+      illustrative_components:
+        speakers: "Monitor Audio Silver 100"
+        amplifier: "Rega Brio"
+        turntable: "Audio-Technica AT-LP120X"
+        streamer: "WiiM Pro"
+      fit: "Someone committed to the upgrade who means 'clarity and warmth'"
+
+    - id: do-nothing-different
+      label: "Test the Interest First"
+      optimises: "Zero risk, minimal commitment"
+      tradeoff: "No full separates system, limited improvement"
+      budget_range: "$400–600"
+      illustrative_components:
+        turntable: "Audio-Technica AT-LP60X"
+        speakers: "Kanto YU4 or Edifier R1280DB (powered)"
+      fit: >
+        If the real motivation is vinyl curiosity, a turntable + powered speakers
+        tests the interest without committing to a full chain. Never explored
+        in the original conversation.
+
+  conversation_patterns:
+    - pattern: budget-stated-upfront
+      frequency: common
+      note: "User leads with budget. System should acknowledge it as a constraint, not a target to spend."
+
+    - pattern: sonos-as-baseline
+      frequency: common
+      note: "Sonos is both the floor (must beat it sonically) and the ceiling (must match its convenience)."
+
+    - pattern: practical-questions-as-trust-test
+      frequency: high-in-beginners
+      note: >
+        Questions about space, cables, streaming, and where to buy are not digressions.
+        They test whether the advisor understands the user's actual life.
+
+    - pattern: taste-signal-weak-but-real
+      frequency: very-common
+      note: >
+        'Clarity + warmth' is the most common entry-level preference statement.
+        It describes a center-of-axis position. Do not over-interpret into strong pulls.
+
+    - pattern: region-switch
+      frequency: occasional
+      note: "User switched from France to San Francisco mid-conversation. System must handle without losing context."
+
+    - pattern: user-invited-escalation
+      frequency: common
+      note: >
+        The user asked "if i wanted better speakers and amplifier?" — an explicit
+        invitation to explore higher. The advisor responded appropriately with $2,200.
+        The risk is not that escalation happened but that the original $1,500 system
+        quietly became the "lesser" option. Audio XX should anchor the original
+        recommendation even when presenting upgrades.
