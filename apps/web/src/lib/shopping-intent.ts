@@ -413,9 +413,20 @@ const CABLE_MODIFIER_PATTERNS = [
 interface CategoryPattern {
   category: ShoppingCategory;
   keywords: string[];
+  /** Pre-compiled word-boundary patterns for accurate matching. */
+  _patterns: RegExp[];
 }
 
-const CATEGORY_PATTERNS: CategoryPattern[] = [
+function buildCategoryPatterns(
+  entries: Array<{ category: ShoppingCategory; keywords: string[] }>,
+): CategoryPattern[] {
+  return entries.map((e) => ({
+    ...e,
+    _patterns: e.keywords.map((kw) => new RegExp(`\\b${kw.replace(/[-/]/g, '[-\\s]?')}s?\\b`, 'i')),
+  }));
+}
+
+const CATEGORY_PATTERNS: CategoryPattern[] = buildCategoryPatterns([
   {
     category: 'dac',
     keywords: ['dac', 'converter', 'digital to analog', 'digital-to-analog'],
@@ -440,7 +451,7 @@ const CATEGORY_PATTERNS: CategoryPattern[] = [
     category: 'turntable',
     keywords: ['turntable', 'record player', 'vinyl player', 'vinyl setup', 'vinyl playback', 'tt setup'],
   },
-];
+]);
 
 // ── Build-a-system detection ──────────────────────────
 
@@ -1205,7 +1216,7 @@ export function detectShoppingIntent(
     if (latestMessage) {
       const latestLower = latestMessage.toLowerCase();
       for (const pat of CATEGORY_PATTERNS) {
-        if (pat.keywords.some((kw) => latestLower.includes(kw))) {
+        if (pat._patterns.some((re) => re.test(latestLower))) {
           category = pat.category;
           break;
         }
@@ -1225,7 +1236,7 @@ export function detectShoppingIntent(
     // stale keywords from earlier turns must NOT override the locked category.
     if (category === 'general' && !fallbackCategory) {
       for (const pat of CATEGORY_PATTERNS) {
-        if (pat.keywords.some((kw) => lower.includes(kw))) {
+        if (pat._patterns.some((re) => re.test(lower))) {
           category = pat.category;
           break;
         }
@@ -1243,7 +1254,7 @@ export function detectShoppingIntent(
     // Find all categories mentioned in the text
     const mentionedCategories: ShoppingCategory[] = [];
     for (const pat of CATEGORY_PATTERNS) {
-      if (pat.keywords.some((kw) => multiCatText.includes(kw))) {
+      if (pat._patterns.some((re) => re.test(multiCatText))) {
         if (!mentionedCategories.includes(pat.category)) {
           mentionedCategories.push(pat.category);
         }
@@ -3336,8 +3347,11 @@ function selectProductExamples(
 
     function diversityPenalty(p: Ranked): number {
       let penalty = 0;
-      if (diversityHistory.brands.has((p.brand ?? '').toLowerCase())) penalty += 2;
-      if (p.philosophy && diversityHistory.philosophies.has(p.philosophy)) penalty += 1;
+      // Strong brand penalty — avoid showing the same brand repeatedly
+      if (diversityHistory.brands.has((p.brand ?? '').toLowerCase())) penalty += 4;
+      // Philosophy overlap — weaker but still meaningful
+      if (p.philosophy && diversityHistory.philosophies.has(p.philosophy)) penalty += 2;
+      // Market type overlap — weakest signal
       if (p.marketType && diversityHistory.marketTypes.has(p.marketType)) penalty += 1;
       return penalty;
     }
@@ -3411,8 +3425,9 @@ function selectProductExamples(
       }
     }
 
-    // ── Non-default: hard-exclude previous anchor product ──
-    if (selectionMode !== 'default' && previousAnchor) {
+    // ── Hard-exclude previous anchor from re-anchoring in ALL modes ──
+    // Prevents over-convergence where the same product anchors every turn.
+    if (previousAnchor) {
       const withoutPrev = eligible.filter((ex) => !isPrevAnchor(ex));
       if (withoutPrev.length >= 2) {
         eligible = withoutPrev;
@@ -4688,10 +4703,14 @@ export function buildShoppingAnswer(
   // Low = no preference claims. Medium = mild interpretation. High/directed = confident.
   let preferenceSummary: string;
   if (tasteConfidence === 'low') {
-    // Low confidence: no preference assertions — frame around what we DO know
+    // Low confidence: provide directional value without preference claims.
+    // Contextualize with budget/system when available, and orient around the product category.
     const budgetFrame = ctx.budgetAmount ? `your $${ctx.budgetAmount.toLocaleString()} budget` : 'your budget';
-    const setupFrame = ctx.systemProvided ? 'your current setup' : 'what you\'ve told me';
-    preferenceSummary = `Based on ${budgetFrame} and ${setupFrame}, here are some solid starting points.`;
+    if (ctx.category !== 'general') {
+      preferenceSummary = `There are a few solid directions to consider in the ${categoryLabel} space at this level. Each one prioritizes something different — warmth, precision, energy, or control.`;
+    } else {
+      preferenceSummary = `Based on ${budgetFrame}, here are some solid starting points.`;
+    }
   } else if (directed) {
     preferenceSummary = `Given your preference for ${effectiveTasteLabel}, this direction makes the most sense${archetypeLabel}.${profileNote}`;
   } else {
@@ -4716,8 +4735,12 @@ export function buildShoppingAnswer(
 
   let bestFitDirection: string;
   if (tasteConfidence === 'low') {
-    // Low confidence: present directions without preference claims
-    bestFitDirection = `Here are a few different directions within this ${categoryLabel} category. Each represents a different design philosophy and listening experience.`;
+    // Low confidence: orient the user with meaningful direction, not just generic framing.
+    if (ctx.category !== 'general') {
+      bestFitDirection = `These represent distinct approaches to ${categoryLabel} design — from warmer, more musical options to more precise, controlled ones. Each would take your system in a meaningfully different direction.`;
+    } else {
+      bestFitDirection = `Here are a few different directions. Each represents a different design philosophy and listening experience.`;
+    }
   } else if (directed) {
     bestFitDirection = `This system should lean toward ${effectiveTasteLabel.toLowerCase()} — ${directedDirection.charAt(0).toLowerCase()}${directedDirection.slice(1)}${directedDirection.endsWith('.') ? '' : '.'}`;
   } else {

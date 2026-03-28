@@ -323,15 +323,21 @@ const PRODUCT_ASSESSMENT_PATTERNS = [
 // Requires ownership language + assessment intent; no listening complaint.
 
 const SYSTEM_ASSESSMENT_PATTERNS = [
-  /\bassess(?:ment)?\s+(?:of\s+)?(?:my|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
-  /\bevaluat(?:e|ion)\s+(?:of\s+)?(?:my|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
-  /\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bassess(?:ment)?\s+(?:of\s+)?(?:my|the|this)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bevaluat(?:e|ion)\s+(?:of\s+)?(?:my|the|this)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
   /\bwhat\s+do\s+you\s+think\b/i,  // Broad — requires ownership + subjects gate in detectIntent
-  /\bthoughts\s+on\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
-  /\bhow\s+does\s+(?:my|this|the)\s+(?:system|setup|rig|chain)\s+(?:look|seem|stack\s+up)\b/i,
-  /\breview\s+(?:of\s+)?my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
-  /\bopinion\s+on\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bthoughts\s+on\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bhow\s+(?:does|is)\s+(?:my|this|the)\s+(?:system|setup|rig|chain)\s*(?:look|seem|stack\s+up|sound)?\b/i,
+  /\breview\s+(?:of\s+)?(?:my|this)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bopinion\s+on\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
   /\bhow\s+does\s+(?:this|that)\s+(?:look|sound|work)\b/i,  // "how does this look?"
+  // Contractions: "how's this system", "what's this system like"
+  /\bhow'?s\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bis\s+this\s+(?:a\s+)?(?:good|solid|decent|balanced|coherent)\s+(?:system|setup|rig|chain|combo|combination)\b/i,
+  // "is X + Y + Z a good setup?" — trailing quality+system word after component list
+  /(?:a\s+)?(?:good|solid|decent|balanced|coherent)\s+(?:system|setup|rig|chain|combo|combination)\s*\??\s*$/i,
+  /\brate\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
 ];
 
 /** Broader system guidance patterns — user wants help with their system
@@ -898,7 +904,15 @@ export function detectIntent(currentMessage: string): IntentResult {
   const hasProductAssessmentPattern = PRODUCT_ASSESSMENT_PATTERNS.some((p) => p.test(currentMessage));
   const hasProductSubject = subjectMatches.some((m) => m.kind === 'product');
   const hasBrandSubject = subjectMatches.some((m) => m.kind === 'brand' && !m.parenthetical);
-  if (hasProductAssessmentPattern && (hasProductSubject || hasBrandSubject)) {
+  // Guard: if the message also matches system_assessment patterns AND contains
+  // a chain separator (+ or →) with multiple subjects, skip product_assessment
+  // and let the system_assessment gate handle it. This prevents "what do you
+  // think of this system? X + Y + Z" from routing as product_assessment.
+  const earlySystemCheck = SYSTEM_ASSESSMENT_PATTERNS.some((p) => p.test(currentMessage));
+  const earlyChainCheck = /(?:→|-{1,3}>|={1,2}>|>{2,3})/.test(currentMessage)
+    || (/\w\s*\+\s*\w/.test(currentMessage) && subjectMatches.length >= 2);
+  const isLikelySystemEval = earlySystemCheck && earlyChainCheck && subjectMatches.length >= 2;
+  if (hasProductAssessmentPattern && (hasProductSubject || hasBrandSubject) && !isLikelySystemEval) {
     return { intent: 'product_assessment', subjects, subjectMatches, desires };
   }
 
@@ -918,7 +932,14 @@ export function detectIntent(currentMessage: string): IntentResult {
   const hasAssessmentLanguage = SYSTEM_ASSESSMENT_PATTERNS.some((p) => p.test(currentMessage));
   const hasOwnership = OWNERSHIP_PATTERNS.some((p) => p.test(currentMessage));
   const hasArrowChain = /(?:→|-{1,3}>|={1,2}>|>{2,3})/.test(currentMessage);
+  const hasPlusChain = /\w\s*\+\s*\w/.test(currentMessage) && subjectMatches.length >= 2;
+  const hasChainSeparator = hasArrowChain || hasPlusChain;
   if (hasAssessmentLanguage && hasOwnership && subjectMatches.length >= 2) {
+    return { intent: 'system_assessment', subjects, subjectMatches, desires };
+  }
+  // Assessment language + chain notation (+ or →) with 2+ components implies system
+  // evaluation even without explicit ownership ("how's this system?" is sufficient).
+  if (hasAssessmentLanguage && hasChainSeparator && subjectMatches.length >= 2) {
     return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }
   if (hasArrowChain && subjectMatches.length >= 3) {
