@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@libsql/isomorphic-fetch": "^0.3.1",
+    "@rollup/rollup-linux-arm64-gnu": "^4.60.0",
     "async-mutex": "^0.5.0"
   }
 }

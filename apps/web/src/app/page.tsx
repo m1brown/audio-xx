@@ -24,7 +24,20 @@ import type { KnowledgeContext, AssistantContext as AudioAssistantContext } from
 import { buildDecisionFrame } from '@/lib/decision-frame';
 import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
-import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification } from '@/lib/shopping-intent';
+import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification, parseBudgetAmount, detectSelectionMode, detectExplicitCategorySwitch, type PreviousAnchor, type SelectionMode } from '@/lib/shopping-intent';
+import {
+  createEmptyListenerProfile,
+  detectPreferenceSignals,
+  applyPreferenceSignals,
+  mergeEffectiveTaste,
+  generateTasteAcknowledgment,
+  generateTasteReflection,
+  buildTasteReflection,
+  detectConclusionIntent,
+  buildDecisiveRecommendation,
+  buildSystemPairingIntro,
+  type ListenerProfile,
+} from '@/lib/listener-profile';
 import { checkGlossaryQuestion } from '@/lib/glossary';
 import { detectIntent, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
 import { attachQuickRecommendation } from '@/lib/quick-recommendation';
@@ -50,6 +63,14 @@ import { requestLlmOverlay } from '@/lib/memo-llm-overlay';
 import { requestShoppingEditorial, mergeEditorialIntoOptions, requestEditorialClosing } from '@/lib/shopping-llm-overlay';
 import type { ShoppingEditorialContext } from '@/lib/shopping-llm-overlay';
 import { logOverlayAttempt, logOverlayFailure } from '@/lib/memo-render-log';
+import { fireShadowOrchestrator, buildOrchestratorInput, callOrchestratorAPI } from '@/lib/assistant/shadowOrchestrator';
+import type { ShadowOrchestratorContext } from '@/lib/assistant/shadowOrchestrator';
+import {
+  isOrchestratorRenderEnabled,
+  extractValidShoppingOutput,
+  orchestratorToAdvisory,
+  logRenderSource,
+} from '@/lib/assistant/orchestratorAdapter';
 import SystemBadge from '@/components/system/SystemBadge';
 import SystemPanel from '@/components/system/SystemPanel';
 import SystemEditor from '@/components/system/SystemEditor';
@@ -254,7 +275,36 @@ export default function Home() {
    *  When the user finishes one shopping round and switches to a new
    *  category ("great — now how about an amp"), budget and from-scratch
    *  context carry forward so we don't re-ask. */
-  const lastShoppingFactsRef = useRef<{ budget?: string; fromScratch?: boolean } | null>(null);
+  const lastShoppingFactsRef = useRef<{
+    budget?: string;
+    fromScratch?: boolean;
+    roomContext?: 'large' | 'small' | 'desktop' | 'nearfield' | null;
+    musicHints?: string[];
+    energyLevel?: 'high' | 'low' | null;
+    wantsBigScale?: boolean;
+    constraints?: import('@/lib/shopping-intent').HardConstraints;
+    category?: import('@/lib/shopping-intent').ShoppingCategory;
+  } | null>(null);
+
+  /** Products the user has engaged with (selected from cards, mentioned by name,
+   *  or received as recommendations). These must never be treated as unknown
+   *  on subsequent turns. Keyed by lowercase product name → full product info. */
+  const engagedProductsRef = useRef<Map<string, { name: string; brand?: string; category?: string }>>(new Map());
+
+  /** Listener profile — accumulates taste across conversation turns.
+   *  Updated when user expresses product/brand preferences. */
+  const listenerProfileRef = useRef<import('@/lib/listener-profile').ListenerProfile>(
+    createEmptyListenerProfile(),
+  );
+
+  // ── Category lock: persists active shopping category across turns ──
+  // Only an explicit switch ("show me dacs", "speakers instead") changes this.
+  // Clarifications, preferences, budget changes, and mode switches do NOT reset it.
+  const activeShoppingCategoryRef = useRef<import('@/lib/shopping-intent').ShoppingCategory | null>(null);
+
+  // ── Selection mode: previous anchor + recent products for anti-repetition ──
+  const lastAnchorRef = useRef<PreviousAnchor | null>(null);
+  const recentShoppingProductsRef = useRef<string[]>([]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -534,7 +584,7 @@ export default function Home() {
               type: 'ADD_QUESTION',
               clarification: {
                 acknowledge: `Got it — looking for ${categoryLabel(shoppingCtx.category)}.`,
-                question: 'What\'s your budget? And do you have a system these need to work with?',
+                question: 'What\'s your budget?',
               },
             });
             chipIntentRef.current = 'shopping'; // Keep in shopping lane
@@ -650,11 +700,21 @@ export default function Home() {
     if (awaitingListeningPathRef.current) {
       awaitingListeningPathRef.current = false;
       const listeningPath = detectListeningPath(submittedText);
-      const listeningResponse = respondToListeningPath(listeningPath);
+
+      // Detect "from scratch" / "starting fresh" / "don't have any" in this
+      // message so we never ask the ownership question after the user already
+      // said they're building new.
+      const FROM_SCRATCH_RE = /\b(?:from\s+scratch|starting\s+(?:fresh|out|new)|don'?t\s+have\s+(?:any|a)|no\s+(?:system|gear|equipment|setup)|first\s+(?:system|setup)|building\s+(?:new|a\s+new)|brand\s+new)\b/i;
+      const isFromScratch = FROM_SCRATCH_RE.test(submittedText);
+
+      const listeningResponse = respondToListeningPath(listeningPath, isFromScratch);
       dispatch({ type: 'ADD_NOTE', content: listeningResponse });
       // Store path in onboarding context — next reply completes the sequence
       if (onboardingContextRef.current) {
         onboardingContextRef.current.listeningPath = listeningPath;
+        if (isFromScratch) {
+          (onboardingContextRef.current as Record<string, unknown>).fromScratch = true;
+        }
       }
       dispatch({ type: 'SET_LOADING', value: false });
       return;
@@ -667,7 +727,14 @@ export default function Home() {
       const ctx = onboardingContextRef.current;
       onboardingContextRef.current = null; // Clear — one-shot
       const category = ctx.listeningPath === 'headphones' ? 'headphones' : 'speakers';
-      const synthesized = synthesizeOnboardingQuery(ctx.musicDescription, category, submittedText);
+
+      // Detect "from scratch" in this message OR carry it from the listening-path stage
+      const FROM_SCRATCH_RE = /\b(?:from\s+scratch|starting\s+(?:fresh|out|new)|don'?t\s+have\s+(?:any|a)|no\s+(?:system|gear|equipment|setup)|first\s+(?:system|setup)|building\s+(?:new|a\s+new)|brand\s+new)\b/i;
+      const isFromScratch = FROM_SCRATCH_RE.test(submittedText) || !!(ctx as Record<string, unknown>).fromScratch;
+
+      // Append "Starting from scratch." so the shopping pipeline detects build-a-system mode
+      const scratchSuffix = isFromScratch ? ' Starting from scratch.' : '';
+      const synthesized = synthesizeOnboardingQuery(ctx.musicDescription, category, submittedText) + scratchSuffix;
       // Replace the submitted text with the synthesized query for downstream routing
       const syntheticTurnCtx = buildTurnContext(synthesized, audioState, dismissedFingerprintsRef.current);
       const syntheticAdvisoryCtx: ShoppingAdvisoryContext = {
@@ -769,6 +836,7 @@ export default function Home() {
         ? topTraits(tasteProfile, 5).map((t) => t.label)
         : undefined,
       systemTendencies: turnCtx.activeSystem?.tendencies ?? undefined,
+      tasteReflection: generateTasteReflection(listenerProfileRef.current) ?? undefined,
     };
 
     // ── Phono caveat helper ────────────────────────────────
@@ -799,6 +867,11 @@ export default function Home() {
     const shoppingAnswerCount = messages.filter(
       (m) => m.role === 'assistant' && m.kind === 'advisory' && m.advisory.kind === 'shopping',
     ).length;
+
+    // ── Debug: turn entry ──────────────────────────────
+    console.log('[turn-debug] msg="%s" intent=%s routedMode=%s effectiveMode=%s activeMode=%s shoppingCount=%d convState=%s/%s',
+      submittedText, intent, routedMode, effectiveMode, state.activeMode, shoppingAnswerCount,
+      convStateRef.current.mode, convStateRef.current.stage);
 
     // ── State machine: initial mode detection (idle → active) ──
     // Routes every first message through detectConvMode to ensure the
@@ -931,6 +1004,20 @@ export default function Home() {
     }
 
 
+    // ── SHOPPING MODE LOCK ─────────────────────────────
+    // When effectiveMode is 'shopping' and the user has already received
+    // at least one recommendation (shoppingAnswerCount > 0), ALL subsequent
+    // turns MUST route to the shopping pipeline. Override intent immediately
+    // so early-return blocks (comparison follow-up, consultation follow-up,
+    // consultation path, exploration, gear inquiry) cannot intercept.
+    // product_assessment is the sole exception — "I'm considering the X"
+    // should always produce a direct assessment, even mid-shopping flow.
+    const isInShoppingFlow = effectiveMode === 'shopping' && shoppingAnswerCount > 0;
+    if (isInShoppingFlow && intent !== 'product_assessment') {
+      console.log('[shopping-lock] Overriding intent=%s → shopping (effectiveMode=%s, shoppingAnswerCount=%d)', intent, effectiveMode, shoppingAnswerCount);
+      intent = 'shopping';
+    }
+
     // ── Dispatch proposed system ────────────────────────
     if (turnCtx.proposedSystem && !dismissedFingerprintsRef.current.has(turnCtx.proposedSystem.fingerprint)) {
       audioDispatch({ type: 'SET_PROPOSED_SYSTEM', proposed: turnCtx.proposedSystem });
@@ -943,9 +1030,12 @@ export default function Home() {
     // If an active comparison exists and the message looks like a
     // follow-up ("what's better with tubes?", "which has more flow?"),
     // resolve against the stored pair instead of falling through.
+    // GUARD: Never intercept when in shopping flow — refinements like
+    // "i don't want tubes" must reach the shopping pipeline.
     if (
       state.activeComparison &&
       intent !== 'comparison' &&
+      intent !== 'shopping' &&
       isComparisonFollowUp(submittedText, state.activeComparison)
     ) {
       const refinement = buildComparisonRefinement(state.activeComparison, submittedText);
@@ -958,9 +1048,11 @@ export default function Home() {
     // If an active comparison exists and the user provides system context
     // ("my amp is a Crayon CIA", "small room", "mostly jazz"), use it to
     // refine the comparison instead of falling through to diagnostic evaluation.
+    // GUARD: Never intercept when in shopping flow.
     if (
       state.activeComparison &&
-      intent !== 'comparison'
+      intent !== 'comparison' &&
+      intent !== 'shopping'
     ) {
       const contextKind = detectContextEnrichment(submittedText);
       if (contextKind) {
@@ -1256,12 +1348,27 @@ export default function Home() {
       intent = 'diagnosis';
     }
 
-    // ── Product assessment — "I'm considering the X" ───
-    // Fires when user asks about a specific product with assessment
-    // language. Produces a structured evaluation, not a shopping list.
+    // ── Product assessment — hard gate ─────────────────
+    // When intent is product_assessment, this block MUST resolve the
+    // request. It never falls through to shopping, exploration, or
+    // gear_inquiry. If the product can't be resolved, a clarification
+    // question is returned instead.
     if (intent === 'product_assessment') {
+      // ── Enrich subject matches with previously recommended products ──
+      // If the user references a product we already recommended, inject
+      // its brand/category so assessment doesn't treat it as "unknown".
+      const enrichedSubjects = turnCtx.subjectMatches.map((m) => {
+        if (m.kind === 'product' || m.kind === 'brand') {
+          const engaged = engagedProductsRef.current.get(m.name.toLowerCase());
+          if (engaged && !m.brand) {
+            return { ...m, brand: engaged.brand, category: engaged.category } as SubjectMatch;
+          }
+        }
+        return m;
+      });
+
       const assessmentCtx: AssessmentContext = {
-        subjectMatches: turnCtx.subjectMatches,
+        subjectMatches: enrichedSubjects,
         activeSystem: turnCtx.activeSystem,
         tasteProfile: tasteProfile ?? undefined,
         advisoryCtx,
@@ -1274,8 +1381,23 @@ export default function Home() {
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
-      // If assessment builder returns null (can't identify product),
-      // fall through to gear inquiry path
+      // ── Safety check (Task 5): product detected but resolution failed ──
+      // Do NOT fall through to shopping/exploration/gear_inquiry.
+      // Instead, return a clarification question so we don't hallucinate
+      // substitutes or return unrelated products.
+      const productName = turnCtx.subjectMatches.find((m) => m.kind === 'product')?.name
+        ?? turnCtx.subjectMatches.find((m) => m.kind === 'brand')?.name
+        ?? 'that product';
+      const clarificationAdvisory: AdvisoryResponse = {
+        kind: 'assessment',
+        subject: productName,
+        advisoryMode: 'product_assessment',
+        bottomLine: `I want to make sure I understand — are you asking about the ${productName}? I don't have full catalog data on that specific model yet. If you can share more details (brand, model number, or category), I can offer a more informed assessment.`,
+        followUp: `Could you confirm the exact product name or share a link? That way I can give you a proper evaluation rather than guessing.`,
+      };
+      dispatchAdvisory(clarificationAdvisory);
+      dispatch({ type: 'SET_LOADING', value: false });
+      return;
     }
 
     // ── Exploration — "what else is like X?" ───────────
@@ -1430,12 +1552,247 @@ export default function Home() {
     const allUserText = [...messages.filter((m) => m.role === 'user').map((m) => m.content), submittedText].join('\n');
     const newTurnCount = turnCount + 1;
 
+    // ── Listener Profile: detect and apply preference signals ──
+    // Scan the latest message for "I like X" / "I prefer Y" / "I don't like Z"
+    // and update the persistent listener profile.
+    const preferenceSignals = detectPreferenceSignals(submittedText);
+    if (preferenceSignals.length > 0) {
+      const { profile: updatedProfile, applied } = applyPreferenceSignals(
+        listenerProfileRef.current, preferenceSignals,
+      );
+      listenerProfileRef.current = updatedProfile;
+
+      console.log('[listener-profile] signals detected:', applied);
+      console.log('[listener-profile]', {
+        likedProducts: updatedProfile.likedProducts,
+        inferredTraits: Object.entries(updatedProfile.inferredTraits)
+          .filter(([, v]) => v > 0.1).map(([k, v]) => `${k}:${v.toFixed(2)}`),
+        confidence: updatedProfile.confidence,
+      });
+
+      // ── "I like X" / "I don't like X" interception ─────
+      // When the user expresses preference for a recommended product during
+      // shopping, don't re-show the same recommendations. Instead:
+      //   1. Acknowledge what that says about taste (short + sharp)
+      //   2. Move to the next decision step
+      if (intent === 'shopping' && shoppingAnswerCount > 0) {
+        // Like interception
+        const likeSignal = preferenceSignals.find((s) => s.kind === 'like' && s.product);
+        if (likeSignal && likeSignal.product) {
+          const tasteAck = generateTasteAcknowledgment(
+            updatedProfile,
+            `${likeSignal.product.brand} ${likeSignal.product.name}`,
+          );
+
+          if (tasteAck) {
+            dispatch({
+              type: 'ADD_NOTE',
+              content: `${tasteAck.acknowledgment}\n\n${tasteAck.nextStep}`,
+            });
+
+            if (lastShoppingFactsRef.current) {
+              lastShoppingFactsRef.current = {
+                ...lastShoppingFactsRef.current,
+                category: (tasteAck.nextCategory as import('@/lib/shopping-intent').ShoppingCategory | undefined) ?? lastShoppingFactsRef.current.category,
+              };
+            }
+
+            console.log('[listener-profile] intercepted "I like %s" — acknowledged taste, suggesting %s',
+              likeSignal.product.name, tasteAck.nextCategory);
+
+            dispatch({ type: 'SET_LOADING', value: false });
+            return;
+          }
+        }
+
+        // Dislike interception — short acknowledgment, no product dump
+        const dislikeSignal = preferenceSignals.find((s) => s.kind === 'dislike' && (s.product || s.isBrand));
+        if (dislikeSignal && !likeSignal) {
+          const dislikedName = dislikeSignal.product
+            ? `${dislikeSignal.product.brand} ${dislikeSignal.product.name}`
+            : dislikeSignal.subject;
+
+          console.log('[decisive-followup] dislike_signal=%s (product=%s, isBrand=%s)',
+            dislikedName, !!dislikeSignal.product, dislikeSignal.isBrand);
+
+          // ── Decisive follow-up: if a recent turn was a decisive answer,
+          // stay in decisive mode — rebuild with updated dislikes instead of
+          // falling back to full product cards.
+          // Walk backward through messages to find the latest decisive advisory.
+          // This is more robust than checking only messages[-1] since notes or
+          // other messages may have been inserted between the decisive turn and now.
+          const prevDecisiveMsg = [...messages].reverse().find(
+            (m): m is Extract<typeof m, { kind: 'advisory' }> =>
+              m.role === 'assistant' && 'kind' in m && m.kind === 'advisory'
+              && !!m.advisory.decisiveRecommendation
+              && (!m.advisory.options || m.advisory.options.length === 0),
+          );
+          const prevWasDecisive = !!prevDecisiveMsg;
+
+          console.log('[decisive-followup] detected_previous_decisive=%s', prevWasDecisive);
+
+          if (prevWasDecisive) {
+            console.log('[decisive-followup] rebuilding_decisive=true, skipping_orchestrator=true');
+
+            // Find most recent advisory with product options for candidate pool.
+            // This may be several turns back — the original shopping cards.
+            const lastWithOptions = [...messages].reverse().find(
+              (m): m is Extract<typeof m, { kind: 'advisory' }> =>
+                m.role === 'assistant' && 'kind' in m && m.kind === 'advisory'
+                && m.advisory.kind === 'shopping' && !!m.advisory.options && m.advisory.options.length >= 1,
+            );
+            const candidateOptions = lastWithOptions?.advisory.options;
+
+            console.log('[decisive-followup] candidate_pool=%d products from prior advisory',
+              candidateOptions?.length ?? 0);
+
+            if (candidateOptions && candidateOptions.length >= 1) {
+              const products = candidateOptions.map((o) => ({
+                name: o.name ?? '',
+                brand: o.brand ?? '',
+                price: o.price ?? 0,
+              }));
+
+              const category = lastWithOptions.advisory.shoppingCategory
+                ?? lastShoppingFactsRef.current?.category ?? 'general';
+              const anchorPairing = buildSystemPairingIntro(
+                listenerProfileRef.current, category, advisoryCtx.systemComponents,
+              );
+              const decisive = buildDecisiveRecommendation(
+                products, listenerProfileRef.current, anchorPairing?.anchorName ?? null,
+              );
+
+              console.log('[decisive-followup] decisive_built=%s', !!decisive);
+
+              if (decisive) {
+                const ackText = `Noted — ${dislikedName} is off the table.`;
+                dispatch({ type: 'ADD_NOTE', content: ackText });
+
+                const decisiveAdvisory: AdvisoryResponse = {
+                  kind: 'shopping',
+                  subject: lastWithOptions.advisory.subject || 'recommendation',
+                  shoppingCategory: lastWithOptions.advisory.shoppingCategory,
+                  decisiveRecommendation: decisive,
+                  systemPairingIntro: anchorPairing?.intro,
+                  options: undefined,
+                };
+
+                console.log('[decisive-followup] dispatching revised: top=%s %s, alt=%s',
+                  decisive.topPick.brand, decisive.topPick.name,
+                  decisive.alternative ? `${decisive.alternative.brand} ${decisive.alternative.name}` : 'none');
+                console.log('[decisive-followup] early_return=true');
+
+                dispatchAdvisory(decisiveAdvisory, advisoryId());
+                dispatch({ type: 'SET_LOADING', value: false });
+                return;
+              }
+              console.log('[decisive-followup] fell_through_to_pipeline=true (buildDecisiveRecommendation returned null)');
+            } else {
+              console.log('[decisive-followup] fell_through_to_pipeline=true (no prior candidate pool)');
+            }
+          }
+
+          // Default dislike acknowledgment (non-decisive context)
+          const ackText = `Noted — ${dislikedName} is off the table. That helps narrow the direction.`;
+          dispatch({ type: 'ADD_NOTE', content: ackText });
+          console.log('[listener-profile] intercepted dislike: %s', dislikedName);
+          // Don't return — let the pipeline continue with updated taste filtering
+        }
+      }
+    }
+
+    // ── Conclusion / Decisive Mode ─────────────────────────
+    // When the user asks "what should I get?" / "just tell me" / "which one?"
+    // and we have accumulated taste data, run the pipeline but only render
+    // the decisive "What I would actually do" block — no product cards.
+    const conclusionDetected = detectConclusionIntent(submittedText);
+    const isConclusionRequest = intent === 'shopping' && shoppingAnswerCount > 0
+      && conclusionDetected
+      && listenerProfileRef.current.confidence >= 0.15;
+
+    console.log('[decisive-debug] detection: text=%s, conclusionDetected=%s, intent=%s, answerCount=%d, confidence=%.2f → isConclusionRequest=%s',
+      submittedText.slice(0, 60), conclusionDetected, intent, shoppingAnswerCount,
+      listenerProfileRef.current.confidence, isConclusionRequest);
+
+    // ── DECISIVE BYPASS ─────────────────────────────────────
+    // When conclusion intent is detected, skip the entire pipeline
+    // (no /api/evaluate, no buildShoppingAnswer, no orchestrator).
+    // Build the decisive recommendation from the last known products
+    // and dispatch immediately.
+    if (isConclusionRequest) {
+      console.log('[decisive-bypass] skipping orchestrator — building from last known products');
+
+      // Extract products from the most recent shopping advisory
+      const lastShoppingMsg = [...messages].reverse().find(
+        (m): m is Extract<typeof m, { kind: 'advisory' }> =>
+          m.role === 'assistant' && 'kind' in m && m.kind === 'advisory'
+          && m.advisory.kind === 'shopping' && !!m.advisory.options && m.advisory.options.length >= 2,
+      );
+
+      const lastOptions = lastShoppingMsg?.advisory.options;
+
+      if (lastOptions && lastOptions.length >= 2) {
+        const products = lastOptions.map((o) => ({
+          name: o.name ?? '',
+          brand: o.brand ?? '',
+          price: o.price ?? 0,
+        }));
+
+        // Build system pairing intro (optional)
+        const anchorPairing = buildSystemPairingIntro(
+          listenerProfileRef.current,
+          lastShoppingMsg.advisory.shoppingCategory ?? lastShoppingFactsRef.current?.category ?? 'general',
+          advisoryCtx.systemComponents,
+        );
+
+        // Build decisive recommendation
+        const decisive = buildDecisiveRecommendation(
+          products,
+          listenerProfileRef.current,
+          anchorPairing?.anchorName ?? null,
+        );
+
+        if (decisive) {
+          const decisiveAdvisory: AdvisoryResponse = {
+            kind: 'shopping',
+            subject: lastShoppingMsg.advisory.subject || 'recommendation',
+            shoppingCategory: lastShoppingMsg.advisory.shoppingCategory,
+            decisiveRecommendation: decisive,
+            systemPairingIntro: anchorPairing?.intro,
+            options: undefined,
+          };
+
+          console.log('[decisive-bypass] dispatching: top=%s %s, alt=%s',
+            decisive.topPick.brand, decisive.topPick.name,
+            decisive.alternative ? `${decisive.alternative.brand} ${decisive.alternative.name}` : 'none');
+
+          dispatchAdvisory(decisiveAdvisory, advisoryId());
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+
+        console.log('[decisive-bypass] buildDecisiveRecommendation returned null — falling through to normal pipeline');
+      } else {
+        console.log('[decisive-bypass] no prior shopping options found — falling through to normal pipeline');
+      }
+    }
+
+    // ── Task A: Scoped evaluate for shopping refinement turns ──
+    // On refinement turns (already in shopping, shoppingAnswerCount > 0),
+    // only evaluate the current turn + recent context — not the entire
+    // accumulated allUserText. This avoids redundant Prisma calls and
+    // keeps signal extraction focused on what's new.
+    const isShoppingRefinement = intent === 'shopping' && shoppingAnswerCount > 0;
+    const evaluateText = isShoppingRefinement
+      ? [submittedText, ...messages.filter((m) => m.role === 'user').map((m) => m.content).slice(-2)].join('\n')
+      : allUserText;
+
     let evalData: { signals: import('@/lib/signal-types').ExtractedSignals; result?: unknown } | null = null;
     try {
       const res = await fetch('/api/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: allUserText }),
+        body: JSON.stringify({ text: evaluateText }),
       });
       if (res.ok) {
         evalData = await res.json();
@@ -1458,31 +1815,196 @@ export default function Home() {
       matched_uncertainty_markers: [] as string[],
     };
 
+    // ── Enrich pipeline signals with listener profile taste ──
+    // If the listener profile has accumulated taste (confidence > 0),
+    // inject inferred traits as soft 'up' signals so the scoring engine
+    // reflects accumulated preference direction. Only traits above a
+    // meaningful threshold are injected, and only when the pipeline
+    // doesn't already have an explicit signal from the current turn.
+    if (listenerProfileRef.current.confidence > 0) {
+      const lp = listenerProfileRef.current;
+      const TRAIT_MAP: Record<string, string> = {
+        flow: 'flow', clarity: 'clarity', rhythm: 'elasticity',
+        tonal_density: 'tonal_density', spatial_depth: 'spatial_precision',
+        dynamics: 'dynamics', warmth: 'warmth',
+      };
+      // Scale injection threshold with confidence — higher confidence = more sensitive
+      const injectionThreshold = Math.max(0.1, 0.3 - lp.confidence * 0.15);
+      for (const [profileKey, traitKey] of Object.entries(TRAIT_MAP)) {
+        const inferredValue = lp.inferredTraits[profileKey as keyof typeof lp.inferredTraits];
+        // Only inject if the trait is meaningfully present in the profile
+        // AND the pipeline doesn't already have an explicit signal for it
+        if (inferredValue > injectionThreshold && !pipelineSignals.traits[traitKey]) {
+          pipelineSignals.traits[traitKey] = 'up' as import('@/lib/signal-types').SignalDirection;
+          console.log('[taste→signals] injected %s:up (profile %s=%.2f, threshold=%.2f, confidence=%.2f)',
+            traitKey, profileKey, inferredValue, injectionThreshold, lp.confidence);
+        }
+      }
+
+      // Log taste reflection state for debugging
+      const reflection = generateTasteReflection(lp);
+      if (reflection) {
+        console.log('[taste-reflection] direction=%s confident=%s bullets=%d summary="%s"',
+          reflection.direction, reflection.confident, reflection.bullets.length, reflection.summary);
+      }
+    }
+
     if (intent === 'shopping') {
       // ── Shopping path ────────────────────────────
       // All shopping logic runs here — no diagnostic fallback.
       try {
+        // ── Category lock: explicit switch detection ──────────
+        // Check if this message explicitly requests a different category.
+        // Only directive intent counts — not questions about categories.
+        const explicitCategorySwitch = shoppingAnswerCount > 0
+          ? detectExplicitCategorySwitch(submittedText)
+          : null;
+
+        // Update locked category: explicit switch overrides, otherwise preserve lock
+        if (explicitCategorySwitch) {
+          const previousCategory = activeShoppingCategoryRef.current;
+          activeShoppingCategoryRef.current = explicitCategorySwitch;
+          console.log('[category-switch]', {
+            from: previousCategory,
+            to: explicitCategorySwitch,
+            reason: 'explicit user switch',
+          });
+        }
+
         const shoppingCtx = detectShoppingIntent(
           allUserText, pipelineSignals, advisoryCtx.systemComponents,
           // On refinement/category-switch turns, pass the latest message so its
           // category takes priority over earlier mentions in allUserText.
           shoppingAnswerCount > 0 ? submittedText : undefined,
+          // Category lock: use locked category as fallback so stale allUserText
+          // keywords don't override the user's active category on follow-up turns.
+          shoppingAnswerCount > 0 ? (activeShoppingCategoryRef.current ?? lastShoppingFactsRef.current?.category) : undefined,
         );
 
-        // ── Inject preserved budget from prior shopping round ──
-        // When the user switches categories ("great — now how about an amp"),
-        // the plain budget response from the earlier round (e.g. "5000") isn't
-        // matched by BUDGET_AMOUNT_PATTERNS (requires $ prefix or keyword).
-        // Carry forward the state-machine-extracted budget so recommendations
-        // honour the user's stated price range.
-        if (shoppingAnswerCount > 0 && !shoppingCtx.budgetMentioned && lastShoppingFactsRef.current?.budget) {
-          const budgetStr = lastShoppingFactsRef.current.budget;
-          const amount = parseInt(budgetStr.replace(/[$,]/g, ''), 10);
-          if (!isNaN(amount)) {
+        // ── effectiveBudget: single source of truth ────────────
+        // Priority: latest message budget > allUserText budget > saved budget
+        // This prevents stale earlier budgets from overriding the user's
+        // most recent budget statement.
+        if (shoppingAnswerCount > 0) {
+          // Parse budget from latest message FIRST — this is the authority
+          const latestBudget = parseBudgetAmount(submittedText);
+          if (latestBudget !== null) {
+            // User explicitly stated a new budget in this message — override everything
+            shoppingCtx.budgetAmount = latestBudget;
             shoppingCtx.budgetMentioned = true;
-            shoppingCtx.budgetAmount = amount;
+            console.log('[budget-debug] latest message override: $%d (from: "%s")', latestBudget, submittedText.slice(0, 80));
           }
         }
+
+        if (shoppingAnswerCount > 0 && lastShoppingFactsRef.current) {
+          const saved = lastShoppingFactsRef.current;
+
+          // Budget carry-forward — only when current turn has NO budget
+          if (!shoppingCtx.budgetAmount && saved.budget) {
+            const amount = parseInt(saved.budget.replace(/[$,]/g, ''), 10);
+            if (!isNaN(amount)) {
+              shoppingCtx.budgetMentioned = true;
+              shoppingCtx.budgetAmount = amount;
+              console.log('[budget-debug] carry-forward from saved: $%d', amount);
+            }
+          }
+
+          // Room context carry-forward (room persists across speaker → amp switches)
+          if (!shoppingCtx.roomContext && saved.roomContext) {
+            shoppingCtx.roomContext = saved.roomContext;
+          }
+
+          // Energy / scale / music carry-forward into semantic preferences
+          const sp = shoppingCtx.semanticPreferences;
+          if (!sp.energyLevel && saved.energyLevel) {
+            sp.energyLevel = saved.energyLevel;
+          }
+          if (!sp.wantsBigScale && saved.wantsBigScale) {
+            sp.wantsBigScale = true;
+          }
+          if (sp.musicHints.length === 0 && saved.musicHints && saved.musicHints.length > 0) {
+            sp.musicHints = saved.musicHints;
+          }
+
+          // Constraint accumulation: merge saved constraints with current.
+          // Constraints are additive — "no tubes" from a prior turn persists
+          // even when the current turn says "class ab amps".
+          if (saved.constraints) {
+            const cur = shoppingCtx.constraints;
+            for (const t of saved.constraints.excludeTopologies) {
+              if (!cur.excludeTopologies.includes(t)) cur.excludeTopologies.push(t);
+            }
+            for (const t of saved.constraints.requireTopologies) {
+              if (!cur.requireTopologies.includes(t)) cur.requireTopologies.push(t);
+            }
+            if (saved.constraints.newOnly && !cur.newOnly) cur.newOnly = true;
+            if (saved.constraints.usedOnly && !cur.usedOnly) cur.usedOnly = true;
+          }
+
+          // ── Category lock enforcement ──────────────────────
+          // If the locked category is set and no explicit switch happened this
+          // turn, force the locked category. This prevents stale allUserText
+          // keywords from overriding the active category on clarification,
+          // preference, budget, or follow-up turns.
+          const lockedCategory = activeShoppingCategoryRef.current;
+          if (lockedCategory && lockedCategory !== 'general' && !explicitCategorySwitch) {
+            if (shoppingCtx.category !== lockedCategory) {
+              console.log('[category-lock]', {
+                overridden: shoppingCtx.category,
+                locked: lockedCategory,
+                reason: 'no explicit switch — preserving locked category',
+              });
+              shoppingCtx.category = lockedCategory;
+            }
+          } else if (shoppingCtx.category === 'general' && saved.category && saved.category !== 'general') {
+            // Legacy fallback for first-time carry-forward before lock is set
+            shoppingCtx.category = saved.category;
+          }
+        }
+
+        // ── Lock category after all resolution ──────────────
+        // Once category is resolved (from explicit switch, latestMessage, or
+        // carry-forward), lock it so subsequent turns preserve it.
+        if (shoppingCtx.category !== 'general' && shoppingCtx.category !== 'unknown') {
+          if (!activeShoppingCategoryRef.current) {
+            console.log('[category-lock]', {
+              initial: shoppingCtx.category,
+              reason: 'first category establishment',
+            });
+          }
+          activeShoppingCategoryRef.current = shoppingCtx.category;
+        }
+
+        // ── Budget adjustment for "cheaper" / "more expensive" ──
+        // Applied AFTER carry-forward so it works with both fresh and
+        // carried-forward budgets. Only fires on refinement turns.
+        if (shoppingAnswerCount > 0 && shoppingCtx.budgetAmount) {
+          const msgLower = submittedText.toLowerCase();
+          const wantsCheaper = /\bcheaper\b|\bless expensive\b|\blower.{0,8}budget\b|\bmore affordable\b|\bbudget.{0,6}friendly\b|\bspend less\b/i.test(msgLower);
+          const wantsMore = /\bmore expensive\b|\bhigher.{0,8}budget\b|\bstep up\b|\bspend more\b|\bstretch.{0,6}budget\b/i.test(msgLower);
+          if (wantsCheaper) {
+            shoppingCtx.budgetAmount = Math.round(shoppingCtx.budgetAmount * 0.6);
+            console.log('[budget-adjust] "cheaper" detected — budget scaled to $%d', shoppingCtx.budgetAmount);
+          } else if (wantsMore) {
+            shoppingCtx.budgetAmount = Math.round(shoppingCtx.budgetAmount * 1.5);
+            console.log('[budget-adjust] "more expensive" detected — budget scaled to $%d', shoppingCtx.budgetAmount);
+          }
+        }
+
+        // ── effectiveBudget — the single authoritative value ──────
+        const effectiveBudget = shoppingCtx.budgetAmount;
+
+        // ── Debug: shopping pipeline state ──────────────────
+        console.log('[budget-debug] turn=%d msg="%s"', newTurnCount, submittedText.slice(0, 80));
+        console.log('[budget-debug]   parsedFromAllText=$%s parsedFromLatest=$%s effective=$%s',
+          parseBudgetAmount(allUserText), parseBudgetAmount(submittedText), effectiveBudget);
+        console.log('[budget-debug]   savedBudget=%s', lastShoppingFactsRef.current?.budget ?? 'none');
+        console.log('[shopping-debug] turn=%d msg="%s"', newTurnCount, submittedText);
+        console.log('[shopping-debug]   intent=%s effectiveMode=%s shoppingAnswerCount=%d', intent, effectiveMode, shoppingAnswerCount);
+        console.log('[shopping-debug]   ctx.category=%s ctx.budget=$%s ctx.room=%s lockedCategory=%s', shoppingCtx.category, effectiveBudget, shoppingCtx.roomContext, activeShoppingCategoryRef.current ?? 'none');
+        console.log('[shopping-debug]   constraints=%j', shoppingCtx.constraints);
+        console.log('[shopping-debug]   semantic: bigScale=%s energy=%s', shoppingCtx.semanticPreferences.wantsBigScale, shoppingCtx.semanticPreferences.energyLevel);
+        console.log('[shopping-debug]   savedFacts=%j', lastShoppingFactsRef.current);
 
         // Decide: ask a clarification question or give a recommendation?
         // Skip clarifications if we've already given a recommendation
@@ -1515,28 +2037,362 @@ export default function Home() {
           );
           dispatch({ type: 'SET_REASONING', reasoning });
 
-          // On refinement turns, add a brief conversational bridge.
-          if (shoppingAnswerCount > 0) {
-            dispatch({
-              type: 'ADD_NOTE',
-              content: 'Got it — adjusting the direction based on what you\'ve added.',
-            });
-          }
+          // Task 5: Removed redundant "Got it — adjusting the direction" note.
+          // On refinement turns, the updated recommendations speak for themselves.
           // Skip passive exploratory note — StartHereBlock provides the active CTA
           // when preference signal is weak.
-          const answer = buildShoppingAnswer(shoppingCtx, pipelineSignals, tasteProfile ?? undefined, reasoning, advisoryCtx.systemComponents);
+
+          // ── Engaged product names for shortlist continuity ──
+          // When refining, extract product names the user has mentioned across
+          // all turns. These get a scoring boost so they stay in the shortlist
+          // (e.g. "Klipsch Heresy IV → large living room" keeps the Heresy IV).
+          const engagedNames = shoppingAnswerCount > 0
+            ? extractSubjectMatches(allUserText)
+                .filter((m) => m.kind === 'product')
+                .map((m) => m.name)
+            : undefined;
+
+          // Detect selection mode for 4-option anchor override
+          const selectionMode = detectSelectionMode(submittedText);
+          if (selectionMode !== 'default') {
+            console.log('[selection-mode]', { input: submittedText, mode: selectionMode });
+          }
+
+          const answer = buildShoppingAnswer(shoppingCtx, pipelineSignals, tasteProfile ?? undefined, reasoning, advisoryCtx.systemComponents, engagedNames, listenerProfileRef.current, selectionMode, lastAnchorRef.current, recentShoppingProductsRef.current);
+
+          // ── Debug: final product list ──────────────────
+          if (answer.productExamples && answer.productExamples.length > 0) {
+            console.log('[shopping-debug]   products:');
+            for (const p of answer.productExamples) {
+              console.log('[shopping-debug]     %s ($%d) topo=%s sub=%s avail=%s realism=%s role=%s',
+                p.name, p.price, (p as any).topology ?? '?', (p as any).subcategory ?? '?',
+                p.availability ?? '?', p.budgetRealism ?? '?', p.pickRole ?? '?');
+            }
+          }
+
+          // ── Hard category guard: verify answer matches locked category ──
+          // If the category lock is active, the answer MUST be for that category.
+          // This catches any residual drift in the pipeline.
+          if (activeShoppingCategoryRef.current
+            && activeShoppingCategoryRef.current !== 'general'
+            && activeShoppingCategoryRef.current !== 'unknown'
+            && shoppingCtx.category !== activeShoppingCategoryRef.current) {
+            console.error('[CATEGORY VIOLATION] expected=%s got=%s — forcing locked category',
+              activeShoppingCategoryRef.current, shoppingCtx.category);
+            // Do not throw — force correct category on the context for downstream use
+            shoppingCtx.category = activeShoppingCategoryRef.current;
+          }
+
+          // ── Track anchor + recent products for selection mode ──
+          if (answer.productExamples && answer.productExamples.length > 0) {
+            const anchorEx = answer.productExamples.find((p) => p.pickRole === 'anchor') ?? answer.productExamples[0];
+            lastAnchorRef.current = {
+              name: anchorEx.name,
+              brand: anchorEx.brand,
+              philosophy: anchorEx.philosophy,
+              marketType: anchorEx.marketType,
+              primaryAxes: anchorEx.primaryAxes,
+            };
+            recentShoppingProductsRef.current = answer.productExamples.map((p) => `${p.brand} ${p.name}`);
+          }
+
+          // ── Orchestrator context (shared by render + shadow paths) ──
+          const orchestratorCtx: ShadowOrchestratorContext = {
+            messages: state.messages,
+            allUserText,
+            currentMessage: submittedText,
+            shoppingAnswerCount,
+            category: shoppingCtx.category,
+            budgetAmount: shoppingCtx.budgetAmount,
+            roomContext: shoppingCtx.roomContext ?? null,
+            hardConstraints: shoppingCtx.constraints,
+            semanticPreferences: shoppingCtx.semanticPreferences,
+            productExamples: answer.productExamples ?? [],
+            systemComponents: advisoryCtx.systemComponents,
+            systemTendencies: advisoryCtx.systemTendencies ?? undefined,
+            musicPreferences: shoppingCtx.semanticPreferences.musicHints.length > 0
+              ? shoppingCtx.semanticPreferences.musicHints
+              : undefined,
+            tasteProfile: tasteProfile
+              ? { confidence: tasteProfile.confidence, traits: tasteProfile.traits }
+              : undefined,
+            dislikedBrands: listenerProfileRef.current.dislikedBrands.length > 0
+              ? [...listenerProfileRef.current.dislikedBrands]
+              : undefined,
+            dislikedProducts: listenerProfileRef.current.dislikedProducts.length > 0
+              ? [...listenerProfileRef.current.dislikedProducts]
+              : undefined,
+            isRefinement: shoppingAnswerCount > 0,
+            wantsQuickSuggestions: wantsQuickSuggestions,
+          };
 
           // Build decision frame — strategic framing before product shortlist
           const decisionFrame = buildDecisionFrame(shoppingCtx.category, advisoryCtx, tasteProfile);
 
+          // ── Generate decisive recommendation + system pairing ──
+          // These are post-shortlist additions that require the product list.
+          if (answer.productExamples && answer.productExamples.length >= 2 && listenerProfileRef.current.confidence >= 0.15) {
+            const anchorPairing = buildSystemPairingIntro(
+              listenerProfileRef.current,
+              shoppingCtx.category,
+              advisoryCtx.systemComponents,
+            );
+
+            if (anchorPairing) {
+              advisoryCtx.systemPairingIntro = anchorPairing.intro;
+            }
+
+            const decisive = buildDecisiveRecommendation(
+              answer.productExamples.map((p) => ({ name: p.name, brand: p.brand, price: p.price })),
+              listenerProfileRef.current,
+              anchorPairing?.anchorName ?? null,
+            );
+            if (decisive) {
+              advisoryCtx.decisiveRecommendation = decisive;
+            }
+          }
+
+          // ── Deterministic advisory (always built — used as fallback) ──
           const deterministicShoppingAdvisory = shoppingToAdvisory(answer, pipelineSignals, reasoning, advisoryCtx, decisionFrame);
+
+          // ── Taste reflection: override editorial intro with profile-derived framing ──
+          // Only on first shopping answer (deep conversation guard strips it later).
+          if (listenerProfileRef.current.confidence >= 0.15) {
+            const tasteReflectionText = buildTasteReflection(listenerProfileRef.current);
+            if (tasteReflectionText) {
+              deterministicShoppingAdvisory.editorialIntro = tasteReflectionText;
+              console.log('[taste-reflection] attached to editorialIntro');
+            }
+          }
+
+          // ── Refinement guard: suppress onboarding signals on follow-up turns ──
+          if (shoppingAnswerCount > 0) {
+            deterministicShoppingAdvisory.lowPreferenceSignal = false;
+            deterministicShoppingAdvisory.provisional = false;
+            deterministicShoppingAdvisory.statedGaps = undefined;
+          }
+
+          // ── Deep conversation guard: reduce repetition ──────────
+          // After 2+ shopping answers or high confidence, suppress sections
+          // the user has already seen — taste reflection, editorial intro,
+          // strategy bullets, sonic landscape. Keep: product cards, decisive
+          // block, system pairing, refinement prompts (max 2), decision frame.
+          const isDeepConversation = shoppingAnswerCount >= 2
+            || listenerProfileRef.current.confidence >= 0.4;
+          if (isDeepConversation) {
+            // Taste reflection was already shown — don't repeat it
+            deterministicShoppingAdvisory.tasteReflection = undefined;
+            // Editorial intro repeats the same taste narrative
+            deterministicShoppingAdvisory.editorialIntro = undefined;
+            // System interpretation doesn't change across turns
+            deterministicShoppingAdvisory.systemInterpretation = undefined;
+            // Strategy bullets are directional — only useful on first pass
+            if (shoppingAnswerCount >= 3) {
+              deterministicShoppingAdvisory.strategyBullets = undefined;
+            }
+            // Sonic landscape repeats the same design philosophy overview
+            deterministicShoppingAdvisory.sonicLandscape = undefined;
+            // Trim refinement prompts to max 2 on deep turns
+            if (deterministicShoppingAdvisory.refinementPrompts
+              && deterministicShoppingAdvisory.refinementPrompts.length > 2) {
+              deterministicShoppingAdvisory.refinementPrompts =
+                deterministicShoppingAdvisory.refinementPrompts.slice(0, 2);
+            }
+            console.log('[deep-conversation] suppressed repeated sections (answerCount=%d, confidence=%.2f)',
+              shoppingAnswerCount, listenerProfileRef.current.confidence);
+          }
+
+          // ── Step 7: Orchestrator render path ──────────────────
+          // When NEXT_PUBLIC_ORCHESTRATOR_RENDER=true, await the orchestrator
+          // and use its output for rendering. Otherwise, fire-and-forget shadow.
+          let finalAdvisory = deterministicShoppingAdvisory;
+          let renderSource: 'orchestrator' | 'deterministic' = 'deterministic';
+          let orchestratorDebug: Record<string, unknown> | undefined;
+
+          // Bypass orchestrator for any constrained query:
+          // 1. Non-default selection modes (less_traditional, different) — LLM ignores mode constraints
+          // 2. Component shopping queries (dac, speaker, amplifier) — LLM can hallucinate products
+          //    outside the filtered/validated set, violating budget and category guards.
+          // Only allow orchestrator for general/unconstrained default-mode queries.
+          const isConstrainedCategory = shoppingCtx.category !== 'general' && shoppingCtx.category !== 'unknown';
+          const allowOrchestrator = selectionMode === 'default' && !isConstrainedCategory;
+          if (allowOrchestrator && isOrchestratorRenderEnabled() && (answer.productExamples ?? []).length > 0) {
+            try {
+              const input = buildOrchestratorInput(orchestratorCtx);
+              const orchestratorOutput = await callOrchestratorAPI(input);
+              const validShopping = extractValidShoppingOutput(orchestratorOutput);
+
+              if (validShopping && orchestratorOutput) {
+                const adapted = orchestratorToAdvisory({
+                  shoppingOutput: validShopping,
+                  productExamples: answer.productExamples ?? [],
+                  category: shoppingCtx.category,
+                  budget: shoppingCtx.budgetAmount,
+                  debug: orchestratorOutput.debug,
+                });
+                finalAdvisory = adapted;
+                renderSource = 'orchestrator';
+                orchestratorDebug = orchestratorOutput.debug;
+                console.log('[orchestrator-render] Using orchestrator output — %d recommendations',
+                  validShopping.recommendations.length);
+              } else {
+                console.log('[orchestrator-render] Invalid or empty orchestrator output — using deterministic fallback');
+              }
+            } catch (orchErr) {
+              console.error('[orchestrator-render] Failed — using deterministic fallback:', orchErr);
+            }
+          } else if ((answer.productExamples ?? []).length > 0) {
+            // Flag OFF — fire shadow orchestrator (existing behavior)
+            try {
+              fireShadowOrchestrator(orchestratorCtx);
+            } catch (shadowErr) {
+              console.error('[orchestrator-shadow] Setup error:', shadowErr);
+            }
+          }
+
+          if (!allowOrchestrator && isOrchestratorRenderEnabled()) {
+            const bypassReason = isConstrainedCategory
+              ? `constrained category=${shoppingCtx.category}`
+              : `selectionMode=${selectionMode}`;
+            console.log('[orchestrator-bypass] %s — using deterministic pipeline to enforce constraints', bypassReason);
+          }
+          logRenderSource(renderSource, orchestratorDebug);
+
+          // ── Post-validation: hard budget enforcement on final output ──
+          // Regardless of render source (deterministic or orchestrator),
+          // strip any option whose price exceeds effectiveBudget.
+          // This is the last line of defence — no over-budget product can
+          // reach the user.
+          if (effectiveBudget && finalAdvisory.options && finalAdvisory.options.length > 0) {
+            const beforeCount = finalAdvisory.options.length;
+            finalAdvisory = {
+              ...finalAdvisory,
+              options: finalAdvisory.options.filter((opt) => {
+                if (!opt.price) return true; // no price info → keep
+                if (opt.price <= effectiveBudget) return true;
+                // Check used price
+                if (opt.usedPriceRange && opt.usedPriceRange.high <= effectiveBudget) return true;
+                console.log('[budget-debug] POST-FILTER removed: %s %s ($%d) > budget $%d',
+                  opt.brand, opt.name, opt.price, effectiveBudget);
+                return false;
+              }),
+            };
+            if (finalAdvisory.options!.length === 0) {
+              // All products removed — fall back to deterministic (which has budget-filtered products)
+              console.warn('[budget-debug] All orchestrator products exceeded budget $%d — reverting to deterministic', effectiveBudget);
+              finalAdvisory = deterministicShoppingAdvisory;
+            } else if (finalAdvisory.options!.length < beforeCount) {
+              console.log('[budget-debug] Post-filter: %d → %d products (budget=$%d)',
+                beforeCount, finalAdvisory.options!.length, effectiveBudget);
+            }
+          }
+
+          // Debug: final candidates after all filtering
+          console.log('[budget-debug] FINAL candidates: [%s] budget=$%s',
+            (finalAdvisory.options ?? []).map((o) => `${o.brand} ${o.name} ($${o.price})`).join(', '),
+            effectiveBudget);
+
+          // Task 9: Debug log for re-ranking on refinement turns
+          if (isShoppingRefinement) {
+            const productNames = (finalAdvisory.options ?? []).map((o) => [o.brand, o.name].filter(Boolean).join(' '));
+            console.log('[re-ranking] refinement turn=%d, renderSource=%s, products=[%s], category=%s, newSignal=%s',
+              shoppingAnswerCount, renderSource, productNames.join(', '), shoppingCtx.category, submittedText.slice(0, 80));
+          }
+
+          // ── Conclusion mode: decisive-only rendering ──────────
+          // When the user asked "what should I get?" / "just tell me" etc.,
+          // strip everything except the decisive recommendation block and
+          // system pairing intro. No product cards, no editorial, no
+          // repeated taste reflection — just the direct answer.
+          console.log('[decisive-debug] pre-strip: isConclusionRequest=%s, hasDecisive=%s, hasOptions=%s, optionCount=%d',
+            isConclusionRequest, !!finalAdvisory.decisiveRecommendation,
+            !!finalAdvisory.options, (finalAdvisory.options ?? []).length);
+
+          // Fallback: conclusion requested but no decisive rec was generated
+          // (e.g., confidence was borderline). Force-build from top 2 options.
+          if (isConclusionRequest && !finalAdvisory.decisiveRecommendation
+            && finalAdvisory.options && finalAdvisory.options.length >= 2) {
+            const top = finalAdvisory.options[0];
+            const alt = finalAdvisory.options[1];
+            finalAdvisory.decisiveRecommendation = {
+              topPick: {
+                name: top.name ?? '',
+                brand: top.brand ?? '',
+                reason: top.fitNote || top.character || 'Best overall alignment with your listening priorities.',
+              },
+              alternative: {
+                name: alt.name ?? '',
+                brand: alt.brand ?? '',
+                reason: alt.fitNote || alt.character || 'A different balance worth considering.',
+              },
+            };
+            console.log('[decisive-debug] fallback: built decisive from top 2 options');
+          }
+
+          if (isConclusionRequest && finalAdvisory.decisiveRecommendation) {
+            finalAdvisory = {
+              kind: finalAdvisory.kind,
+              subject: finalAdvisory.subject,
+              shoppingCategory: finalAdvisory.shoppingCategory,
+              // Keep the decisive block — the whole point
+              decisiveRecommendation: finalAdvisory.decisiveRecommendation,
+              // Keep system pairing intro if present (anchor context)
+              systemPairingIntro: finalAdvisory.systemPairingIntro,
+              // Strip everything else: no product cards, no editorial,
+              // no taste reflection, no strategy bullets, no refinement prompts
+              options: undefined,
+              editorialIntro: undefined,
+              editorialClosing: undefined,
+              tasteReflection: undefined,
+              strategyBullets: undefined,
+              systemInterpretation: undefined,
+              refinementPrompts: undefined,
+              sonicLandscape: undefined,
+              decisionFrame: undefined,
+              systemContextPreamble: undefined,
+              statedGaps: undefined,
+              lowPreferenceSignal: false,
+              provisional: false,
+            };
+            console.log('[decisive-debug] post-strip: hasOptions=%s, hasDecisive=%s, top=%s %s, alt=%s %s',
+              !!finalAdvisory.options, !!finalAdvisory.decisiveRecommendation,
+              finalAdvisory.decisiveRecommendation.topPick.brand,
+              finalAdvisory.decisiveRecommendation.topPick.name,
+              finalAdvisory.decisiveRecommendation.alternative?.brand ?? 'none',
+              finalAdvisory.decisiveRecommendation.alternative?.name ?? '');
+          }
+
           const shoppingMsgId = advisoryId();
-          dispatchAdvisory(deterministicShoppingAdvisory, shoppingMsgId);
+          dispatchAdvisory(finalAdvisory, shoppingMsgId);
+
+          // ── Multi-category follow-up ──────────────────────
+          // When the user asked for two categories ("amp and dac"), build
+          // a second shopping answer for the secondary category and dispatch
+          // it immediately after the first.
+          if (shoppingCtx.secondaryCategory && shoppingCtx.secondaryCategory !== 'general') {
+            try {
+              const secondaryCtx = { ...shoppingCtx, category: shoppingCtx.secondaryCategory, secondaryCategory: undefined };
+              const secondaryAnswer = buildShoppingAnswer(secondaryCtx, pipelineSignals, tasteProfile ?? undefined, reasoning, advisoryCtx.systemComponents, engagedNames, listenerProfileRef.current);
+              if (secondaryAnswer.productExamples && secondaryAnswer.productExamples.length > 0) {
+                const secondaryAdvisory = shoppingToAdvisory(secondaryAnswer, pipelineSignals, reasoning, advisoryCtx, buildDecisionFrame(secondaryCtx.category, advisoryCtx, tasteProfile));
+                if (shoppingAnswerCount > 0) {
+                  secondaryAdvisory.lowPreferenceSignal = false;
+                  secondaryAdvisory.provisional = false;
+                }
+                dispatchAdvisory(secondaryAdvisory, advisoryId());
+                console.log('[multi-category] dispatched secondary=%s with %d products',
+                  secondaryCtx.category, secondaryAnswer.productExamples.length);
+              }
+            } catch (secErr) {
+              console.warn('[multi-category] secondary category failed:', secErr);
+            }
+          }
 
           // Fire-and-forget: request LLM editorial overlay for richer product descriptions.
           // On success, merge enriched fields into the advisory and update in place.
           // On failure (timeout, validation rejection), the deterministic descriptions stand.
-          if (deterministicShoppingAdvisory.options && deterministicShoppingAdvisory.options.length > 0) {
+          // Skip when using orchestrator output — it already provides rich LLM prose.
+          if (renderSource === 'deterministic' && deterministicShoppingAdvisory.options && deterministicShoppingAdvisory.options.length > 0) {
             const editorialContext: ShoppingEditorialContext = {
               // System
               systemComponents: turnCtx.activeSystem
@@ -1601,6 +2457,55 @@ export default function Home() {
                 });
               })
               .catch(() => { /* deterministic descriptions stand */ });
+          }
+
+          // ── Preserve context for category switches ──────────
+          // When user switches categories ("great — now how about an amp"),
+          // carry forward room context, music genre, energy, and scale preferences
+          // so the next category gets the same environmental context.
+          // Merge constraints: accumulate across turns so "no tubes" from
+          // Turn 8 persists through Turn 9 "i want new" and Turn 10 "class ab amps".
+          const mergedConstraints: import('@/lib/shopping-intent').HardConstraints = {
+            excludeTopologies: [
+              ...new Set([
+                ...(lastShoppingFactsRef.current?.constraints?.excludeTopologies ?? []),
+                ...shoppingCtx.constraints.excludeTopologies,
+              ]),
+            ],
+            requireTopologies: [
+              ...new Set([
+                ...(lastShoppingFactsRef.current?.constraints?.requireTopologies ?? []),
+                ...shoppingCtx.constraints.requireTopologies,
+              ]),
+            ],
+            newOnly: shoppingCtx.constraints.newOnly || (lastShoppingFactsRef.current?.constraints?.newOnly ?? false),
+            usedOnly: shoppingCtx.constraints.usedOnly || (lastShoppingFactsRef.current?.constraints?.usedOnly ?? false),
+          };
+
+          lastShoppingFactsRef.current = {
+            ...lastShoppingFactsRef.current,
+            budget: shoppingCtx.budgetAmount ? `$${shoppingCtx.budgetAmount}` : lastShoppingFactsRef.current?.budget,
+            roomContext: shoppingCtx.roomContext ?? lastShoppingFactsRef.current?.roomContext,
+            musicHints: shoppingCtx.semanticPreferences.musicHints.length > 0
+              ? shoppingCtx.semanticPreferences.musicHints
+              : lastShoppingFactsRef.current?.musicHints,
+            energyLevel: shoppingCtx.semanticPreferences.energyLevel ?? lastShoppingFactsRef.current?.energyLevel,
+            wantsBigScale: shoppingCtx.semanticPreferences.wantsBigScale || lastShoppingFactsRef.current?.wantsBigScale,
+            constraints: mergedConstraints,
+            category: shoppingCtx.category !== 'general' ? shoppingCtx.category : lastShoppingFactsRef.current?.category,
+          };
+
+          // ── Persist recommended products for cross-turn continuity ──
+          // When a product appears in recommendations, it should never be
+          // treated as "unknown" on subsequent turns.
+          if (answer.productExamples) {
+            for (const p of answer.productExamples) {
+              engagedProductsRef.current.set(p.name.toLowerCase(), {
+                name: p.name,
+                brand: p.brand,
+                category: p.category,
+              });
+            }
           }
 
           // Subtle note when the stored taste profile influenced the direction
@@ -2346,24 +3251,59 @@ function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture }: { messa
     return (
       <div
         style={{
-          marginBottom: '1.5rem',
-          padding: '0.85rem 1.1rem',
-          background: COLOR.bg,
-          borderRadius: 8,
-          color: COLOR.textPrimary,
-          fontSize: '0.98rem',
-          lineHeight: 1.6,
+          display: 'flex',
+          justifyContent: 'flex-end',
+          marginBottom: '1.25rem',
         }}
       >
-        {message.content}
+        <div
+          style={{
+            maxWidth: '82%',
+            padding: '0.75rem 1rem',
+            background: '#eae6dc',
+            borderRadius: '12px 12px 4px 12px',
+            color: COLOR.textPrimary,
+            fontSize: '0.96rem',
+            lineHeight: 1.65,
+          }}
+        >
+          {message.content}
+        </div>
       </div>
     );
   }
 
   if (message.kind === 'advisory') {
     return (
-      <div style={{ marginBottom: '1.75rem' }}>
-        <hr style={{ border: 0, borderTop: `1px solid ${COLOR.border}`, margin: '0 0 1.5rem 0' }} />
+      <div style={{
+        marginBottom: '1.75rem',
+        paddingLeft: '0.25rem',
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          marginBottom: '0.85rem',
+          paddingTop: '0.5rem',
+          borderTop: `1px solid ${COLOR.border}`,
+        }}>
+          <div style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: COLOR.accent,
+            flexShrink: 0,
+          }} />
+          <span style={{
+            fontSize: '0.7rem',
+            fontWeight: 600,
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase' as const,
+            color: COLOR.textSecondary,
+          }}>
+            Audio XX
+          </span>
+        </div>
         <AdvisoryMessage
           advisory={message.advisory}
           onIntakeSubmit={message.advisory.kind === 'intake' ? onIntakeSubmit : undefined}
@@ -2471,9 +3411,11 @@ function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture }: { messa
     <div
       style={{
         marginBottom: '1.25rem',
+        paddingLeft: '0.75rem',
+        borderLeft: `2px solid ${COLOR.border}`,
         color: COLOR.textSecondary,
-        fontSize: '0.98rem',
-        lineHeight: 1.55,
+        fontSize: '0.96rem',
+        lineHeight: 1.6,
       }}
     >
       {message.content}

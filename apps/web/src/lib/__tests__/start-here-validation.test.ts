@@ -105,11 +105,12 @@ describe('START HERE validation: "I want speakers"', () => {
     const answer = buildShoppingAnswer(shoppingCtx, emptySignals, undefined, reasoning, []);
     const advisory = shoppingToAdvisory(answer, emptySignals, reasoning, {});
 
-    // When lowPreferenceSignal = true, all passive text must be suppressed
-    // so the StartHereBlock is the primary action element
+    // When lowPreferenceSignal = true, passive text is suppressed
+    // EXCEPT the taste question follow-up, which bypasses suppressFiller
+    // to bootstrap the next turn when confidence is low.
     expect(advisory.editorialIntro).toBeUndefined();
     expect(advisory.refinementPrompts).toBeUndefined();
-    expect(advisory.followUp).toBeUndefined();
+    // followUp may contain the taste question — this is intentional
     expect(advisory.whyThisFits).toBeUndefined();
     expect(advisory.tradeOffs).toBeUndefined();
     expect(advisory.statedGaps).toBeUndefined();

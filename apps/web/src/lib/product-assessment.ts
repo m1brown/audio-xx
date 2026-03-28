@@ -373,7 +373,10 @@ export function buildProductAssessment(
       }
     }
   } else {
-    whatChanges.push('Product not in catalog and brand not recognized — assessment is limited');
+    // Softer phrasing — the product may have been recommended or is simply
+    // outside the validated catalog. Avoid implying the system can't help.
+    const fallbackName = candidateName !== 'Unknown product' ? candidateName : 'this product';
+    whatChanges.push(`${fallbackName} is outside the validated catalog, so this assessment draws on general knowledge of the brand and category rather than measured data`);
   }
 
   // ── Build "system behavior" ────────────────────────

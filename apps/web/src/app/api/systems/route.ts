@@ -51,88 +51,98 @@ export async function GET() {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const systems = await prisma.system.findMany({
-    where: { userId },
-    include: {
-      components: {
-        include: { component: { select: { id: true, name: true, brand: true, category: true } } },
-        orderBy: { addedAt: 'asc' },
+  try {
+    const systems = await prisma.system.findMany({
+      where: { userId },
+      include: {
+        components: {
+          include: { component: { select: { id: true, name: true, brand: true, category: true } } },
+          orderBy: { addedAt: 'asc' },
+        },
       },
-    },
-    orderBy: { updatedAt: 'desc' },
-  });
+      orderBy: { updatedAt: 'desc' },
+    });
 
-  return NextResponse.json(systems.map(normalizeSystem));
+    return NextResponse.json(systems.map(normalizeSystem));
+  } catch (err) {
+    console.error('[api/systems] Database unavailable:', err);
+    return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+  }
 }
 
 export async function POST(req: NextRequest) {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json();
+  try {
+    const body = await req.json();
 
-  // Create the system record
-  const system = await prisma.system.create({
-    data: {
-      userId,
-      name: body.name,
-      notes: body.notes || null,
-      location: body.location || null,
-      room: body.room || null,
-      primaryUse: body.primaryUse || null,
-      tendencies: body.tendencies || null,
-    },
-  });
-
-  // Create component records and link them to the system
-  const components: Array<{ name: string; brand: string; category: string; roleOverride?: string }> =
-    body.components ?? [];
-
-  for (const comp of components) {
-    if (!comp.name || !comp.brand) continue;
-
-    // Find or create the component record (user-submitted)
-    let component = await prisma.component.findFirst({
-      where: {
-        name: comp.name,
-        brand: comp.brand,
+    // Create the system record
+    const system = await prisma.system.create({
+      data: {
+        userId,
+        name: body.name,
+        notes: body.notes || null,
+        location: body.location || null,
+        room: body.room || null,
+        primaryUse: body.primaryUse || null,
+        tendencies: body.tendencies || null,
       },
     });
 
-    if (!component) {
-      component = await prisma.component.create({
-        data: {
+    // Create component records and link them to the system
+    const components: Array<{ name: string; brand: string; category: string; roleOverride?: string }> =
+      body.components ?? [];
+
+    for (const comp of components) {
+      if (!comp.name || !comp.brand) continue;
+
+      // Find or create the component record (user-submitted)
+      let component = await prisma.component.findFirst({
+        where: {
           name: comp.name,
           brand: comp.brand,
-          category: comp.category || 'other',
-          confidenceLevel: 'user',
-          userSubmitted: true,
+        },
+      });
+
+      if (!component) {
+        component = await prisma.component.create({
+          data: {
+            name: comp.name,
+            brand: comp.brand,
+            category: comp.category || 'other',
+            confidenceLevel: 'user',
+            userSubmitted: true,
+          },
+        });
+      }
+
+      // Link to system
+      await prisma.systemComponent.create({
+        data: {
+          systemId: system.id,
+          componentId: component.id,
+          roleOverride: comp.roleOverride || null,
+          actionLog: JSON.stringify([{ action: 'added', timestamp: new Date().toISOString() }]),
         },
       });
     }
 
-    // Link to system
-    await prisma.systemComponent.create({
-      data: {
-        systemId: system.id,
-        componentId: component.id,
-        roleOverride: comp.roleOverride || null,
-        actionLog: JSON.stringify([{ action: 'added', timestamp: new Date().toISOString() }]),
+    // Re-fetch with full includes for consistent response
+    const fullSystem = await prisma.system.findUnique({
+      where: { id: system.id },
+      include: {
+        components: {
+          include: { component: { select: { id: true, name: true, brand: true, category: true } } },
+          orderBy: { addedAt: 'asc' },
+        },
       },
     });
+
+    if (!fullSystem) return NextResponse.json({ error: 'Failed to fetch created system' }, { status: 500 });
+    return NextResponse.json(normalizeSystem(fullSystem), { status: 201 });
+  } catch (err) {
+    console.error('[api/systems] Database unavailable:', err);
+    return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
   }
-
-  // Re-fetch with full includes for consistent response
-  const fullSystem = await prisma.system.findUnique({
-    where: { id: system.id },
-    include: {
-      components: {
-        include: { component: { select: { id: true, name: true, brand: true, category: true } } },
-        orderBy: { addedAt: 'asc' },
-      },
-    },
-  });
-
-  if (!fullSystem) return NextResponse.json({ error: 'Failed to fetch created system' }, { status: 500 });
-  return NextResponse.json(normalizeSystem(fullSystem), { status: 201 });
 }

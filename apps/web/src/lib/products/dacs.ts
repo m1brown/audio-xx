@@ -128,6 +128,18 @@ export interface Product {
   typicalMarket?: 'new' | 'used' | 'both';
   /** Approximate used-market price range (USD), for discontinued/vintage products. */
   usedPriceRange?: { low: number; high: number };
+
+  // ── Enhanced catalog fields (Step 10) ─────────────────
+  /** Product image URL — official press image or product shot. */
+  imageUrl?: string;
+  /** Structured buying context label for the card. Overrides inference when present. */
+  buyingContext?: 'easy_new' | 'better_used' | 'dealer_likely' | 'used_only';
+
+  // ── 4-option recommendation metadata ──────────────────
+  /** Design philosophy — energy, neutral, warm, or analytical. */
+  philosophy?: 'energy' | 'neutral' | 'warm' | 'analytical';
+  /** Market type — traditional (major/established), nonTraditional (boutique/niche), or value (performance-per-dollar). */
+  marketType?: 'traditional' | 'nonTraditional' | 'value';
 }
 
 export const DAC_PRODUCTS: Product[] = [
@@ -185,6 +197,8 @@ export const DAC_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'Schiit', url: 'https://www.schiit.com/products/modius' },
     ],
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   {
@@ -244,6 +258,12 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'Apos Audio', url: 'https://apos.audio/products/smsl-do300' },
     ],
     notes: 'Can lean analytical in bright systems. Pairs well with warmer amplifiers.',
+    // Step 10: buying metadata
+    typicalMarket: 'new',
+    buyingContext: 'easy_new',
+    // imageUrl: undefined, // TODO: add official product image
+    philosophy: 'analytical',
+    marketType: 'value',
   },
 
   // ── Mid tier ($400–$700) ────────────────────────────
@@ -306,6 +326,12 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'Apos Audio', url: 'https://apos.audio/products/topping-d70-pro-sabre' },
     ],
     notes: 'Very explicit presentation. May feel relentless in systems already biased toward speed.',
+    // Step 10: buying metadata
+    typicalMarket: 'new',
+    buyingContext: 'easy_new',
+    // imageUrl: undefined, // TODO: add official product image
+    philosophy: 'analytical',
+    marketType: 'value',
   },
 
   {
@@ -365,6 +391,8 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B09RFDMZPJ' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/gustard-x16' },
     ],
+    philosophy: 'neutral',
+    marketType: 'value',
   },
 
   {
@@ -443,6 +471,12 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Twittering Machines', note: 'Positive coverage of the R2R tonal character and listening ease.' },
       { source: 'Head-Fi community', note: 'Extensive owner comparisons with Bifrost 2, SMSL, and Topping alternatives.' },
     ],
+    // Step 10: buying metadata
+    typicalMarket: 'new',
+    buyingContext: 'dealer_likely',
+    // imageUrl: undefined, // TODO: add official product image
+    philosophy: 'warm',
+    marketType: 'value',
   },
 
   {
@@ -524,6 +558,13 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising the Bifrost as a musical, engaging multibit alternative.' },
       { source: 'Stereophile', note: 'Herb Reichert review covering tonal weight and dynamic character.' },
     ],
+    // Step 10: buying metadata
+    typicalMarket: 'both',
+    usedPriceRange: { low: 450, high: 600 },
+    buyingContext: 'easy_new',
+    // imageUrl: undefined, // TODO: add official product image
+    philosophy: 'energy',
+    marketType: 'traditional',
   },
 
   {
@@ -599,6 +640,8 @@ export const DAC_PRODUCTS: Product[] = [
         { gains: 'measured transparency and composure', cost: 'tonal richness and harmonic engagement', relative_to: 'R2R and multibit designs at this price', basis: 'review_consensus' },
       ],
     },
+    philosophy: 'analytical',
+    marketType: 'value',
   },
 
   // ── Upper-mid tier ($700–$1000) ─────────────────────
@@ -683,6 +726,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising the Orchid for organic musicality.' },
       { source: 'Audiogon community', note: 'Tube-rolling reports and system pairing impressions.' },
     ],
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   // ── Goldmund / JOB ──────────────────────────────────────
@@ -767,6 +812,8 @@ export const DAC_PRODUCTS: Product[] = [
       ],
     },
     notes: 'Discontinued. The Goldmund DAC module appears in various Goldmund components. Standalone units available on the used market.',
+    philosophy: 'neutral',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -827,6 +874,8 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B0DJCCBSMZ' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/eversolo-dac-z8' },
     ],
+    philosophy: 'energy',
+    marketType: 'value',
   },
 
   // ── Serious tier ($1000–$1500) ──────────────────────
@@ -930,6 +979,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Audio Science Review', note: 'Comprehensive measurements confirming exceptional SINAD and parametric EQ capabilities.' },
       { source: 'Head-Fi community', note: 'Extensive headphone pairing reports and EQ configuration sharing.' },
     ],
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   {
@@ -1016,6 +1067,12 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'What Hi-Fi?', note: 'Review of original Hugo covering portability and Chord FPGA character.' },
       { source: 'Head-Fi community', note: 'Extensive headphone pairing impressions and comparisons with Hugo 2 and Qutest.' },
     ],
+    // Step 10: buying metadata
+    typicalMarket: 'both',
+    buyingContext: 'dealer_likely',
+    // imageUrl: undefined, // TODO: add official product image
+    philosophy: 'energy',
+    marketType: 'traditional',
   },
 
   {
@@ -1099,6 +1156,13 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Darko.Audio', note: 'Comparison with Qutest and Hugo 2 covering upgrade path reasoning.' },
       { source: 'Head-Fi community', note: 'Extensive impressions on Hugo TT2 as preamp/DAC and comparisons within the Chord lineup.' },
     ],
+    // Step 10: buying metadata
+    typicalMarket: 'both',
+    usedPriceRange: { low: 3500, high: 4500 },
+    buyingContext: 'dealer_likely',
+    // imageUrl: undefined, // TODO: add official product image
+    philosophy: 'energy',
+    marketType: 'traditional',
   },
 
   {
@@ -1207,6 +1271,11 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'What Hi-Fi?', note: 'Multi-award coverage noting detail retrieval and timing.' },
       { source: 'Head-Fi community', note: 'Extensive listener impressions on tonal weight vs clarity balance.' },
     ],
+    // Step 10: buying metadata
+    buyingContext: 'easy_new',
+    // imageUrl: undefined, // TODO: add official product image
+    philosophy: 'energy',
+    marketType: 'traditional',
   },
 
   {
@@ -1310,6 +1379,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Darko.Audio', note: 'Comparison placing Pontus in the Denafrips lineup and R2R landscape.' },
       { source: 'Head-Fi / Audiogon communities', note: 'Extensive comparisons with Chord, Schiit, and ESS-based alternatives.' },
     ],
+    philosophy: 'warm',
+    marketType: 'value',
   },
 
   {
@@ -1386,6 +1457,8 @@ export const DAC_PRODUCTS: Product[] = [
         { gains: 'a middle ground between R2R warmth and delta-sigma precision', cost: 'the full tonal saturation of Denafrips or the explicit speed of ESS designs', relative_to: 'both R2R and delta-sigma at this price', basis: 'editorial_inference' },
       ],
     },
+    philosophy: 'analytical',
+    marketType: 'value',
   },
 
   // ── Lightweight product anchors ────────────────────
@@ -1443,6 +1516,8 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'Eversolo', url: 'https://eversolo.com/products/dmp-a6' },
       { label: 'Apos Audio (retailer)', url: 'https://apos.audio/products/eversolo-dmp-a6' },
     ],
+    philosophy: 'energy',
+    marketType: 'value',
   },
 
   {
@@ -1475,6 +1550,8 @@ export const DAC_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'WiiM official', url: 'https://www.wiimhome.com/wiimpro' },
     ],
+    philosophy: 'neutral',
+    marketType: 'value',
   },
 
   {
@@ -1507,6 +1584,8 @@ export const DAC_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'WiiM official', url: 'https://www.wiimhome.com/wiimultra' },
     ],
+    philosophy: 'neutral',
+    marketType: 'value',
   },
 
   {
@@ -1545,6 +1624,8 @@ export const DAC_PRODUCTS: Product[] = [
     sourceReferences: [
       { source: 'Audio Science Review', note: 'Detailed measurements and listening impressions of the AKM-based D90.' },
     ],
+    philosophy: 'analytical',
+    marketType: 'value',
   },
 
   {
@@ -1580,6 +1661,8 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'SMSL', url: 'https://www.smsl-audio.com/portal/product/detail/id/792.html' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/smsl-su-9' },
     ],
+    philosophy: 'analytical',
+    marketType: 'value',
   },
 
   {
@@ -1615,6 +1698,8 @@ export const DAC_PRODUCTS: Product[] = [
       { label: 'Gustard', url: 'https://www.gustard.cn/productinfo/3758920.html' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/gustard-x26-pro' },
     ],
+    philosophy: 'analytical',
+    marketType: 'value',
   },
 
   {
@@ -1689,6 +1774,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Head-Fi community', note: 'Listening comparisons with Denafrips Pontus II and Holo Spring.' },
       { source: 'Audio Science Review', note: 'Discussion thread covering R2R implementation and sound character.' },
     ],
+    philosophy: 'warm',
+    marketType: 'value',
   },
 
   {
@@ -1723,6 +1810,8 @@ export const DAC_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'Audalytic', url: 'https://www.audalytic.com/' },
     ],
+    philosophy: 'analytical',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -1756,6 +1845,8 @@ export const DAC_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'FiiO official', url: 'https://www.fiio.com/k9pro' },
     ],
+    philosophy: 'analytical',
+    marketType: 'traditional',
   },
 
   {
@@ -1794,6 +1885,8 @@ export const DAC_PRODUCTS: Product[] = [
     sourceReferences: [
       { source: 'Head-Fi community', note: 'Impressions and comparisons with Schiit Bifrost and dedicated R2R DACs.' },
     ],
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   {
@@ -1887,6 +1980,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Darko.Audio', note: 'Review covering the Frérot\'s analogue voicing and Swiss design philosophy.' },
       { source: 'Part-Time Audiophile', note: 'Impressions emphasising warmth and musicality uncommon at the price.' },
     ],
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -1981,6 +2076,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Audio Science Review', note: 'Measurements and listening impressions of the Cyan 2 R2R implementation.' },
       { source: '6moons', note: 'Review covering the discrete R2R implementation and Holo Audio design philosophy.' },
     ],
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   // ── Boutique expansion ────────────────────────────────
@@ -2062,6 +2159,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Darko.Audio', note: 'Review covering the DAC204\'s pro-audio heritage and DSP refinement.' },
       { source: 'Headphone.Guru', note: 'Review noting the spatial precision and low-fatigue presentation.' },
     ],
+    philosophy: 'neutral',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -2143,6 +2242,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Head-Fi community', note: 'Extensive owner impressions comparing Spring 3 to May and competing R2R designs.' },
       { source: '6moons', note: 'Review praising the Spring\'s tonal authority and musical engagement.' },
     ],
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -2223,6 +2324,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: '6moons', note: 'Review covering the Morpheus\'s sign-magnitude R2R design and dynamic presentation.' },
       { source: 'Darko.Audio', note: 'Impressions noting the lively, energetic character compared to typical R2R.' },
     ],
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   // ── Reference-tier DACs ($3,000–$5,000) ─────────────
@@ -2306,6 +2409,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Headphone.Guru', note: 'Review praising tonal density and soundstage scale.' },
       { source: 'Head-Fi community', note: 'Extensive owner consensus on analog-like presentation.' },
     ],
+    philosophy: 'warm',
+    marketType: 'value',
   },
 
   {
@@ -2387,6 +2492,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: '6moons', note: 'Review covering the FPGA+R2R hybrid approach.' },
       { source: 'Head-Fi community', note: 'Extensive comparisons positioning Wavelight as best imaging under $5k.' },
     ],
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -2483,6 +2590,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Head-Fi community', note: 'Owner impressions praising tonal realism and natural timbre.' },
       { source: 'Founder listening notes', note: 'Full TotalDAC chain (d1 → Amp-1 → d100%wood) at TotalDAC Fun Day 2022, Paris. Effortless and supremely refined.' },
     ],
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -2565,6 +2674,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising the May\'s natural, analog-like quality.' },
       { source: '6moons', note: 'Review comparing the May to competing R2R and FPGA DACs.' },
     ],
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -2644,6 +2755,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Head-Fi community', note: 'Growing owner consensus as a high-value competitor to Rockna and Denafrips.' },
       { source: 'Audiophile Style', note: 'Discussion threads covering the Harmony vs established R2R competitors.' },
     ],
+    philosophy: 'warm',
+    marketType: 'value',
   },
 
   {
@@ -2728,6 +2841,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Darko.Audio', note: 'Coverage of the dCS Ring DAC technology and Bartók value proposition.' },
       { source: 'Head-Fi community', note: 'Used market consensus — occasionally found near $5k.' },
     ],
+    philosophy: 'analytical',
+    marketType: 'traditional',
   },
 
   // ── Auralic ─────────────────────────────────────────
@@ -2815,6 +2930,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Stereophile', note: 'Review of original Vega praising the refinement and tonal sophistication of the implementation.' },
     ],
     notes: 'Founder reference DAC. The Vega sits opposite to the Hugo v1 on the tonal axis — where Hugo is fast and airy, the Vega is grounded and composed. Good for lean systems that need body; less suited when the system already has density.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   // ── Vintage / disc players ────────────────────────────
@@ -2889,6 +3006,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Community consensus', note: 'Early Oppo players regarded as clean, slightly warm, musically inoffensive disc players.' },
     ],
     notes: 'Review-synthesis entry. Vintage universal disc player — modest source that contributes gentle warmth. In the founder\'s Oppo → Marantz → Hornshoppe chain, it serves as a clean, unobtrusive front end that lets the amp and speaker character dominate.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   {
@@ -2974,6 +3093,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Head-Fi communities', note: 'User reports comparing Venus II to Pontus II and contemporary flagship DACs.' },
     ],
     notes: 'Venus II sits between Pontus II and Terminator II in the Denafrips R-2R lineup. More refined than Pontus — better spatial staging, smoother treble, more precise. Retains warm, organic house sound but with greater clarity and texture differentiation. A meaningful step up for systems that benefit from both R-2R warmth and spatial resolution.',
+    philosophy: 'warm',
+    marketType: 'value',
   },
 
   // ── Streamers ────────────────────────────
@@ -3051,6 +3172,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Owner reference', note: 'Excellent streaming transport with stable BluOS app. Built-in DAC is competent but external DAC via coax/optical recommended for serious listening.' },
     ],
     notes: 'Owner reference. Excellent streaming transport with stable BluOS app. Built-in DAC is competent but external DAC via coax/optical recommended for serious listening. No USB digital output.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   {
@@ -3128,6 +3251,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Innuos ecosystem', note: 'The Zen occupies the sweet spot between the budget Pulse and the statement Statement in the Innuos line.' },
     ],
     notes: 'Former owner reference. Minimalist music server — the value is in the clean USB output via linear PSU and dedicated Innuos Sense app. Storage-based with SSD. Ripping capability. The Zen occupies the sweet spot in the Innuos line between the budget Pulse and the statement Statement.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   {
@@ -3204,6 +3329,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Innuos product positioning', note: 'Entry point to Innuos ecosystem with linear PSU and dedicated streaming app.' },
     ],
     notes: 'Entry point to Innuos ecosystem. Linear PSU, Innuos Sense app, USB and S/PDIF output. A meaningful upgrade from generic computer/NAS streaming.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   // ── Five new statement-tier DACs ──────────────────────
@@ -3287,6 +3414,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Head-Fi community', note: 'Extensive comparisons placing DAVE at the pinnacle of precision DACs.' },
     ],
     notes: 'Statement-tier FPGA design. The Chord DAVE represents the pinnacle of timing-first DAC architecture. Extraordinary spatial depth, clarity, and composure. Best in systems that benefit from precision without requiring tonal warmth.',
+    philosophy: 'energy',
+    marketType: 'traditional',
   },
 
   {
@@ -3367,6 +3496,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'AudioGon community', note: 'Comparisons with DAVE and other statement-tier precision DACs.' },
     ],
     notes: 'Statement-tier discrete design by Bruno Putzeys. The Tambaqui represents a different architectural philosophy from R2R — pure custom discrete implementation with extraordinary cleanliness. Best for systems that prioritize analytical clarity and imaging precision.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -3448,6 +3579,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Head-Fi communities', note: 'User reports on tube warmth character and comparison to other R2R designs.' },
     ],
     notes: 'Lampizator Baltic 5 is the entry to serious tube-based R2R conversion. NOS architecture with tube output stage delivers organic warmth and musical flow. Best for listeners prioritizing organic musicality over analytical precision.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -3528,6 +3661,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Head-Fi', note: 'User comparisons between Pasithea and Morpheus highlighting upgrade path.' },
     ],
     notes: 'Sonnet Pasithea offers exceptional value for boutique tube-grade R2R conversion. Eight discrete modules per channel deliver richness that justifies the higher architecture count. Best for listeners seeking organic warmth and harmonic authenticity at high-end price point.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -3609,6 +3744,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'AudioGon community', note: 'Comparisons with d1-twelve MK2 and other statement-tier R2R DACs.' },
     ],
     notes: 'Statement-tier discrete R2R masterwork. The d1-unity represents TotalDAC\'s architectural pinnacle — consolidated design with 100 Vishay foil resistors per channel. Unified presentation delivers organic musicality with serious clarity and presence. Best for listeners who value harmonic authenticity and textural richness at the highest level.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   // ── Budget warm/musical DACs ──────────────────────────
@@ -3669,6 +3806,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Head-Fi community', note: 'Extensive impressions as a warm budget DAC/amp.' },
     ],
     notes: 'Budget warm DAC with balanced output. The Burr-Brown implementation adds body and warmth that most sub-$200 DACs lack.',
+    philosophy: 'warm',
+    marketType: 'traditional',
   },
 
   {
@@ -3724,6 +3863,8 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Stereophile', note: 'Brief coverage of Musical Fidelity V-series budget components.' },
     ],
     notes: 'Budget warm DAC from a heritage British brand. The Class A output stage gives it more body than typical budget DACs.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   {
@@ -3780,5 +3921,7 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'The Audiophiliac', note: 'Steve Guttenberg coverage of the multibit Modi as a budget giant-killer.' },
     ],
     notes: 'Budget multibit DAC with surprising dynamics and engagement. Entry point into Schiit\'s multibit house sound.',
+    philosophy: 'energy',
+    marketType: 'traditional',
   },
 ];

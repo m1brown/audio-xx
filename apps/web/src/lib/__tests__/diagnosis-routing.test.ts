@@ -106,9 +106,12 @@ describe('Diagnosis must NOT be triggered for pure gear queries', () => {
   ];
 
   for (const q of PURE_GEAR_QUERIES) {
-    it(`routes "${q}" to gear_inquiry, not diagnosis`, () => {
+    it(`routes "${q}" to product_assessment, not diagnosis`, () => {
       const result = detectIntent(q);
-      expect(result.intent).toBe('gear_inquiry');
+      // These now correctly route to product_assessment (not gear_inquiry)
+      // because assessment language + known product/brand triggers
+      // the product_assessment priority gate.
+      expect(result.intent).toBe('product_assessment');
     });
   }
 

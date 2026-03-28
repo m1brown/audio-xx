@@ -301,6 +301,21 @@ const PRODUCT_ASSESSMENT_PATTERNS = [
   /\bshould\s+i\s+switch\s+(?:from\b|to\b)/i,
   /\bthinking\s+(?:about|of)\s+(?:getting|trying|picking up|going with|switching\s+to)\b/i,
   /\bcurious\s+about\s+(?:the\s+|a\s+)?/i,
+  // ── Direct assessment / opinion patterns ──
+  // "thoughts on X", "what do you think of/about X", "opinion on X",
+  // "how good is X", "how is X", "tell me about X", "know anything about X"
+  // These fire product_assessment when a known product is present,
+  // overriding gear_inquiry which would otherwise match them first.
+  /\bthoughts\s+on\b/i,
+  /\bwhat\s+do\s+you\s+think\s+(?:of|about)\b/i,
+  /\bwhat\s+are\s+your\s+thoughts\b/i,
+  /\bopinions?\s+on\b/i,
+  /\bhow\s+(?:good|is|are)\s+(?:the\s+|a\s+)?/i,
+  /\btell\s+me\s+about\b/i,
+  /\bknow\s+anything\s+about\b/i,
+  /\bhave\s+you\s+heard\b/i,
+  /\bany\s+experience\s+with\b/i,
+  /\bwhat\s+(?:is|are)\s+(?:the\s+)?(?:character|sound|signature|house sound)\b/i,
 ];
 
 // ── System assessment patterns ────────────────────────
@@ -875,6 +890,18 @@ export function detectIntent(currentMessage: string): IntentResult {
   const subjects = subjectMatches.map((m) => m.name);
   const desires = extractDesires(currentMessage);
 
+  // 0. Priority gate — when a known product is named and the user uses
+  //    assessment language ("thoughts on", "what do you think of", "how is",
+  //    etc.), force product_assessment BEFORE any other intent can intercept.
+  //    This prevents "thoughts on JOB integrated" from being swallowed by
+  //    system_assessment, consultation_entry, or gear_inquiry.
+  const hasProductAssessmentPattern = PRODUCT_ASSESSMENT_PATTERNS.some((p) => p.test(currentMessage));
+  const hasProductSubject = subjectMatches.some((m) => m.kind === 'product');
+  const hasBrandSubject = subjectMatches.some((m) => m.kind === 'brand' && !m.parenthetical);
+  if (hasProductAssessmentPattern && (hasProductSubject || hasBrandSubject)) {
+    return { intent: 'product_assessment', subjects, subjectMatches, desires };
+  }
+
   // 1. Explicit diagnosis — user describes a listening problem
   if (DIAGNOSIS_PATTERNS.some((p) => p.test(currentMessage))) {
     return { intent: 'diagnosis', subjects, subjectMatches, desires };
@@ -963,16 +990,9 @@ export function detectIntent(currentMessage: string): IntentResult {
     return { intent: 'exploration', subjects, subjectMatches, desires };
   }
 
-  // 2b. Product assessment — "I'm considering the X", "would X work in my system"
-  //     Requires: (a) a product assessment pattern, AND (b) at least one
-  //     product-level subject match. This fires BEFORE shopping so that
-  //     "I'm considering the Qutest" produces an assessment, not a category list.
-  const hasProductAssessmentPattern = PRODUCT_ASSESSMENT_PATTERNS.some((p) => p.test(currentMessage));
-  const hasProductSubject = subjectMatches.some((m) => m.kind === 'product');
-  const hasBrandSubject = subjectMatches.some((m) => m.kind === 'brand' && !m.parenthetical);
-  if (hasProductAssessmentPattern && (hasProductSubject || hasBrandSubject)) {
-    return { intent: 'product_assessment', subjects, subjectMatches, desires };
-  }
+  // 2b. Product assessment — now handled by priority gate (step 0) above.
+  //     The early gate ensures product_assessment fires before system_assessment,
+  //     consultation_entry, and gear_inquiry when a known product is named.
 
   // 2c-pre. Music input — user leads with taste rather than gear.
   //     "I listen to Van Halen", "I like jazz", "mostly electronic music".
@@ -985,9 +1005,17 @@ export function detectIntent(currentMessage: string): IntentResult {
     const hasShoppingSignal = SHOPPING_PATTERNS.some((p) => p.test(currentMessage));
     const hasCategoryWord = /\b(?:dac|d\/a|amp|amplifier|speaker|speakers|headphone|headphones|turntable|streamer|receiver|bookshelf|floorstander)\b/i.test(currentMessage);
     const hasBudgetSignal = /(?:under\s+)?\$\s?\d|\bunder\s+\d|\bbudget\b/i.test(currentMessage);
-    if (!(hasCategoryWord && (hasBudgetSignal || hasShoppingSignal))) {
+    const hasRoomSignal = /\b(?:large|small|medium|big|tiny|apartment|bedroom|living\s*room|studio|office|den|loft|open\s*plan|nearfield|near[- ]?field|desktop)\b/i.test(currentMessage);
+    // Task 1: Skip music_input when the user provides enough signal to go
+    // straight to shopping (2+ of: music, budget, room). Music is already
+    // confirmed by isMusicInput(). So budget OR room is sufficient.
+    const richSignalCount = [true /* music */, hasBudgetSignal, hasRoomSignal, hasCategoryWord].filter(Boolean).length;
+    if (!(hasCategoryWord && (hasBudgetSignal || hasShoppingSignal)) && richSignalCount < 2) {
       return { intent: 'music_input', subjects, subjectMatches, desires };
     }
+    // Task 9: Log when onboarding skip triggers
+    console.log('[onboarding-skip] music_input bypassed → shopping (richSignals=%d, budget=%s, room=%s, category=%s)',
+      richSignalCount, hasBudgetSignal, hasRoomSignal, hasCategoryWord);
     // Fall through to shopping/intake detection below
   }
 
@@ -1487,8 +1515,15 @@ export function detectListeningPath(message: string): ListeningPath {
 
 /**
  * Returns the second-stage follow-up response based on the detected listening path.
+ *
+ * When `fromScratch` is true the ownership question is suppressed — the user
+ * already told us they don't have existing gear, so asking again is wrong.
  */
-export function respondToListeningPath(path: ListeningPath): string {
+export function respondToListeningPath(path: ListeningPath, fromScratch?: boolean): string {
+  if (fromScratch) {
+    const categoryLabel = path === 'headphones' ? 'headphones' : 'a speaker setup';
+    return `Great — let's find ${categoryLabel} for that kind of listening. What's your budget?`;
+  }
   if (path === 'headphones') return 'Got it. Do you already have headphones you like, or are you looking for new ones?';
   if (path === 'speakers') return 'Got it. Do you already have speakers or gear you want to improve around, or are you starting from scratch?';
   return 'No problem. Are you mostly using headphones, speakers, or a bit of both?';

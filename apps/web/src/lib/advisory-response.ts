@@ -129,7 +129,7 @@ export interface AdvisoryOption {
   /** Any caution or trade-off note. */
   caution?: string;
   /** Links to official site, reviews, retailers. */
-  links?: Array<{ label: string; url: string }>;
+  links?: Array<{ label: string; url: string; kind?: 'reference' | 'dealer' | 'review' }>;
 
   // ── Enhanced card fields ─────────────────────────────
   /** Product image URL — falls back to placeholder when absent. */
@@ -168,6 +168,14 @@ export interface AdvisoryOption {
   isCurrentComponent?: boolean;
   /** True when this is the primary recommendation in directed mode. */
   isPrimary?: boolean;
+  /** Practical buying guidance — new vs used, availability, regional notes. */
+  buyingNote?: string;
+  /** Role tag in the 4-option recommendation model. */
+  pickRole?: 'anchor' | 'close_alt' | 'contrast' | 'wildcard' | 'top_pick' | 'upgrade_pick' | 'value_pick';
+  /** Where this product is typically found (new / used / both). */
+  typicalMarket?: 'new' | 'used' | 'both';
+  /** Structured buying context label — overrides card inference when present. */
+  buyingContext?: 'easy_new' | 'better_used' | 'dealer_likely' | 'used_only';
 }
 
 export interface AdvisoryLink {
@@ -664,6 +672,27 @@ export interface AdvisoryResponse {
    *  Each bullet describes a kind of change and why it would help. */
   strategyBullets?: string[];
 
+  // ── 7f0. Taste Reflection ─────────────────────────────
+  /** Structured taste interpretation — expert-level bullets derived from
+   *  accumulated listener profile, rendered before product recommendations. */
+  tasteReflection?: {
+    bullets: string[];
+    summary: string;
+    direction: string | null;
+    confident: boolean;
+  };
+
+  // ── 7f-1. Decisive Recommendation ──────────────────
+  /** "What I would actually do" block — top pick + alternative with reasons. */
+  decisiveRecommendation?: {
+    topPick: { name: string; brand: string; reason: string };
+    alternative?: { name: string; brand: string; reason: string };
+  };
+
+  // ── 7f-2. System Pairing Intro ────────────────────
+  /** System-aware intro referencing the anchor product and pairing logic. */
+  systemPairingIntro?: string;
+
   // ── 7f. Editorial Intro ─────────────────────────────
   /** Taste-anchored intro paragraph — frames the shortlist in terms of user preferences. */
   editorialIntro?: string;
@@ -994,11 +1023,11 @@ function buildSystemInterpretation(
       spatial_holographic: 'Given your preference for spatial depth and imaging, this direction makes the most sense.',
     };
     const ARCHETYPE_INTERPRETATION: Record<string, string> = {
-      flow_organic: 'You seem to value musical flow and natural phrasing over clinical precision.',
-      rhythmic_propulsive: 'You seem drawn to rhythmic energy and transient speed — music that feels alive and forward-moving.',
-      tonal_saturated: 'You seem to prioritize tonal richness and harmonic density over speed or detail.',
-      precision_explicit: 'You seem to value resolution, separation, and precision — hearing everything clearly matters to you.',
-      spatial_holographic: 'You seem to prioritize spatial depth and imaging — the sense of a performance in a real space.',
+      flow_organic: 'Based on your inputs, musical flow and natural phrasing are the primary axis here — not clinical precision.',
+      rhythmic_propulsive: 'Based on your inputs, rhythmic energy and transient speed are the driving priorities — music that feels alive and forward-moving.',
+      tonal_saturated: 'Based on your inputs, tonal richness and harmonic density take precedence over speed or detail.',
+      precision_explicit: 'Based on your inputs, resolution, separation, and precision are the primary axis — hearing everything clearly.',
+      spatial_holographic: 'Based on your inputs, spatial depth and imaging are the driving priorities — the sense of a performance in a real space.',
     };
     const interpretation = isDirected
       ? ARCHETYPE_INTERPRETATION_DIRECTED[archetype]
@@ -1701,6 +1730,20 @@ export interface ShoppingAdvisoryContext {
   storedDesires?: string[];
   /** Stored system tendencies string (e.g. "warm, tube-driven, vinyl-focused"). */
   systemTendencies?: string;
+  /** Listener profile taste reflection (from listener-profile.ts). */
+  tasteReflection?: {
+    bullets: string[];
+    summary: string;
+    direction: string | null;
+    confident: boolean;
+  };
+  /** Decisive recommendation block (from listener-profile.ts). */
+  decisiveRecommendation?: {
+    topPick: { name: string; brand: string; reason: string };
+    alternative?: { name: string; brand: string; reason: string };
+  };
+  /** System-aware pairing intro (from listener-profile.ts). */
+  systemPairingIntro?: string;
 }
 
 /**
@@ -1788,7 +1831,7 @@ export function shoppingToAdvisory(
     soundProfile: p.soundProfile,
     fitNote: p.fitNote,
     caution: p.caution,
-    links: p.links?.map((l) => ({ label: l.label, url: l.url })),
+    links: p.links?.map((l) => ({ label: l.label, url: l.url, kind: l.label.toLowerCase().includes('review') ? 'review' as const : l.label.toLowerCase().includes('buy') || l.label.toLowerCase().includes('dealer') ? 'dealer' as const : 'reference' as const })),
     // Enhanced card fields
     sonicDirectionLabel: p.sonicDirectionLabel,
     productType: p.productType,
@@ -1804,6 +1847,13 @@ export function shoppingToAdvisory(
     catalogCountry: p.catalogCountry,
     catalogBrandScale: p.catalogBrandScale,
     isCurrentComponent: p.isCurrentComponent,
+    // Buying and role metadata (from deterministic pipeline)
+    pickRole: p.pickRole,
+    isPrimary: p.isPrimary ?? p.pickRole === 'top_pick',
+    // Step 10: Enhanced catalog fields
+    imageUrl: p.imageUrl,
+    typicalMarket: p.typicalMarket,
+    buyingContext: p.buyingContext,
   }));
 
   // Tag each product with its decision frame direction (if frame is available)
@@ -1842,9 +1892,11 @@ export function shoppingToAdvisory(
     }
   }
 
-  // Build follow-up: prefer explicit refinement question, then
-  // synthesize from refinement prompts
-  const followUp = a.refinementQuestion
+  // Build follow-up: taste question takes priority when confidence is low,
+  // then explicit refinement question, then synthesized refinement prompts
+  const followUp = a.tasteQuestion
+    ?? a.categoryQuestion
+    ?? a.refinementQuestion
     ?? (a.refinementPrompts && a.refinementPrompts.length > 0
       ? a.refinementPrompts.join(' ')
       : undefined);
@@ -1925,6 +1977,9 @@ export function shoppingToAdvisory(
     systemContextPreamble,
     systemInterpretation,
     strategyBullets,
+    tasteReflection: ctx?.tasteReflection,
+    decisiveRecommendation: ctx?.decisiveRecommendation,
+    systemPairingIntro: ctx?.systemPairingIntro,
     editorialIntro,
     listenerPriorities,
     whyFitsYou: a.whyFitsYou,
@@ -1947,7 +2002,8 @@ export function shoppingToAdvisory(
     sonicLandscape: a.sonicLandscape,
     decisionFrame: suppressFiller ? undefined : (decisionFrame ?? undefined),
     refinementPrompts: suppressFiller ? undefined : a.refinementPrompts,
-    followUp: suppressFiller ? undefined : followUp,
+    // Taste/category questions always pass through (even when suppressFiller); other followUps suppressed
+    followUp: (a.tasteQuestion || a.categoryQuestion) ? (a.tasteQuestion ?? a.categoryQuestion) : (suppressFiller ? undefined : followUp),
 
     editorialClosing,
 

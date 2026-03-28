@@ -520,7 +520,7 @@ function buildRiskNotes(product: Product): string | undefined {
 }
 
 function brandCharacter(brandName: string): string {
-  return `I don't have a detailed profile for that specific model, but ${brandName} has a recognizable design approach. How it sounds in practice depends heavily on what it's paired with and what the listener prioritizes.`;
+  return `This specific model isn't in the validated catalog yet, but ${brandName} has a recognizable design approach. I can reason about it from the brand's general tendencies — how it sounds in practice will depend on what it's paired with and what you prioritize as a listener.`;
 }
 
 // ── Follow-up questions ──────────────────────────────
@@ -619,15 +619,15 @@ function buildHearingBlock(
       if (secondary) {
         const secLabel = TRAIT_LABELS[secondary.quality] ?? secondary.quality;
         if (secondary.direction === 'more') {
-          bullets.push(`You seem to be looking for more ${desireLabel} and ${secLabel}`);
+          bullets.push(`Based on your inputs, the direction points toward more ${desireLabel} and ${secLabel}`);
         } else {
-          bullets.push(`You seem to prefer ${desireLabel} over ${secLabel}`);
+          bullets.push(`Based on your inputs, the direction favors ${desireLabel} over ${secLabel}`);
         }
       } else {
-        bullets.push(`You seem to want more ${desireLabel} from your system`);
+        bullets.push(`Based on your inputs, the direction points toward more ${desireLabel} from the system`);
       }
     } else {
-      bullets.push(`You seem to want less ${desireLabel} — looking to pull back there`);
+      bullets.push(`Based on your inputs, the direction points toward less ${desireLabel} — pulling back there`);
     }
   }
 

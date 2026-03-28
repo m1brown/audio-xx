@@ -6,40 +6,50 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { id: systemId } = await params;
+  try {
+    const { id: systemId } = await params;
 
-  // Verify ownership
-  const system = await prisma.system.findFirst({ where: { id: systemId, userId } });
-  if (!system) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    // Verify ownership
+    const system = await prisma.system.findFirst({ where: { id: systemId, userId } });
+    if (!system) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const body = await req.json();
-  const { componentId, roleOverride, notes } = body;
+    const body = await req.json();
+    const { componentId, roleOverride, notes } = body;
 
-  const sc = await prisma.systemComponent.create({
-    data: {
-      systemId,
-      componentId,
-      roleOverride: roleOverride || null,
-      notes: notes || null,
-      actionLog: JSON.stringify([{ action: 'added', timestamp: new Date().toISOString() }]),
-    },
-    include: { component: true },
-  });
+    const sc = await prisma.systemComponent.create({
+      data: {
+        systemId,
+        componentId,
+        roleOverride: roleOverride || null,
+        notes: notes || null,
+        actionLog: JSON.stringify([{ action: 'added', timestamp: new Date().toISOString() }]),
+      },
+      include: { component: true },
+    });
 
-  return NextResponse.json(sc, { status: 201 });
+    return NextResponse.json(sc, { status: 201 });
+  } catch (err) {
+    console.error('[api/systems/[id]/components] Database unavailable:', err);
+    return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+  }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { id: systemId } = await params;
-  const system = await prisma.system.findFirst({ where: { id: systemId, userId } });
-  if (!system) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  try {
+    const { id: systemId } = await params;
+    const system = await prisma.system.findFirst({ where: { id: systemId, userId } });
+    if (!system) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const body = await req.json();
-  const { systemComponentId } = body;
+    const body = await req.json();
+    const { systemComponentId } = body;
 
-  await prisma.systemComponent.delete({ where: { id: systemComponentId } });
-  return NextResponse.json({ ok: true });
+    await prisma.systemComponent.delete({ where: { id: systemComponentId } });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error('[api/systems/[id]/components] Database unavailable:', err);
+    return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+  }
 }

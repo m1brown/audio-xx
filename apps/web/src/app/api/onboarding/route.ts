@@ -47,96 +47,101 @@ export async function POST(req: Request) {
   // ── Map room size to existing profile field ──────────────────
   const mappedRoomSize = roomSize === 'nearfield' ? 'small' : roomSize;
 
-  // ── Upsert profile with onboarding data ──────────────────────
-  await prisma.profile.upsert({
-    where: { userId },
-    create: {
-      userId,
-      intent: intent ?? null,
-      experienceLevel: experienceLevel ?? null,
-      preferredTraits: preferencesJson,
-      musicGenres: JSON.stringify(musicGenres ?? []),
-      listeningStyle: listeningStyle ?? null,
-      roomSize: mappedRoomSize ?? null,
-      listeningLevel: volume ?? null,
-      locale,
-      onboardedAt: new Date(),
-    },
-    update: {
-      intent: intent ?? undefined,
-      experienceLevel: experienceLevel ?? undefined,
-      preferredTraits: preferencesJson,
-      musicGenres: musicGenres ? JSON.stringify(musicGenres) : undefined,
-      listeningStyle: listeningStyle ?? undefined,
-      roomSize: mappedRoomSize ?? undefined,
-      listeningLevel: volume ?? undefined,
-      locale,
-      onboardedAt: new Date(),
-    },
-  });
+  try {
+    // ── Upsert profile with onboarding data ──────────────────────
+    await prisma.profile.upsert({
+      where: { userId },
+      create: {
+        userId,
+        intent: intent ?? null,
+        experienceLevel: experienceLevel ?? null,
+        preferredTraits: preferencesJson,
+        musicGenres: JSON.stringify(musicGenres ?? []),
+        listeningStyle: listeningStyle ?? null,
+        roomSize: mappedRoomSize ?? null,
+        listeningLevel: volume ?? null,
+        locale,
+        onboardedAt: new Date(),
+      },
+      update: {
+        intent: intent ?? undefined,
+        experienceLevel: experienceLevel ?? undefined,
+        preferredTraits: preferencesJson,
+        musicGenres: musicGenres ? JSON.stringify(musicGenres) : undefined,
+        listeningStyle: listeningStyle ?? undefined,
+        roomSize: mappedRoomSize ?? undefined,
+        listeningLevel: volume ?? undefined,
+        locale,
+        onboardedAt: new Date(),
+      },
+    });
 
-  // ── Create initial system if user provided components ────────
-  if (hasSystem && system) {
-    const { speakers, amplifier, dac, source } = system as Record<string, string>;
-    const parts = [
-      { raw: speakers, category: 'speakers' },
-      { raw: amplifier, category: 'amplifier' },
-      { raw: dac, category: 'dac' },
-      { raw: source, category: 'streamer' },
-    ].filter((p) => p.raw?.trim());
+    // ── Create initial system if user provided components ────────
+    if (hasSystem && system) {
+      const { speakers, amplifier, dac, source } = system as Record<string, string>;
+      const parts = [
+        { raw: speakers, category: 'speakers' },
+        { raw: amplifier, category: 'amplifier' },
+        { raw: dac, category: 'dac' },
+        { raw: source, category: 'streamer' },
+      ].filter((p) => p.raw?.trim());
 
-    if (parts.length > 0) {
-      // Build raw_input for fallback reference
-      const rawInput = [speakers, amplifier, dac, source].filter(Boolean).join(' → ');
+      if (parts.length > 0) {
+        // Build raw_input for fallback reference
+        const rawInput = [speakers, amplifier, dac, source].filter(Boolean).join(' → ');
 
-      const sys = await prisma.system.create({
-        data: {
-          userId,
-          name: 'My System',
-          notes: rawInput ? `Raw input: ${rawInput}` : 'Created during onboarding.',
-          primaryUse: listeningStyle === 'focused' ? 'critical listening' : listeningStyle === 'background' ? 'background music' : null,
-        },
-      });
-
-      for (const part of parts) {
-        const trimmed = part.raw.trim();
-        const spaceIdx = trimmed.indexOf(' ');
-        const brand = spaceIdx > 0 ? trimmed.slice(0, spaceIdx) : trimmed;
-        const name = spaceIdx > 0 ? trimmed.slice(spaceIdx + 1) : trimmed;
-
-        // Find existing catalog entry or create user-submitted component
-        let component = await prisma.component.findFirst({
-          where: { brand: { equals: brand }, name: { equals: name }, category: part.category },
+        const sys = await prisma.system.create({
+          data: {
+            userId,
+            name: 'My System',
+            notes: rawInput ? `Raw input: ${rawInput}` : 'Created during onboarding.',
+            primaryUse: listeningStyle === 'focused' ? 'critical listening' : listeningStyle === 'background' ? 'background music' : null,
+          },
         });
 
-        if (!component) {
-          component = await prisma.component.create({
+        for (const part of parts) {
+          const trimmed = part.raw.trim();
+          const spaceIdx = trimmed.indexOf(' ');
+          const brand = spaceIdx > 0 ? trimmed.slice(0, spaceIdx) : trimmed;
+          const name = spaceIdx > 0 ? trimmed.slice(spaceIdx + 1) : trimmed;
+
+          // Find existing catalog entry or create user-submitted component
+          let component = await prisma.component.findFirst({
+            where: { brand: { equals: brand }, name: { equals: name }, category: part.category },
+          });
+
+          if (!component) {
+            component = await prisma.component.create({
+              data: {
+                name,
+                brand,
+                category: part.category,
+                confidenceLevel: 'user',
+                userSubmitted: true,
+              },
+            });
+          }
+
+          await prisma.systemComponent.create({
             data: {
-              name,
-              brand,
-              category: part.category,
-              confidenceLevel: 'user',
-              userSubmitted: true,
+              systemId: sys.id,
+              componentId: component.id,
+              actionLog: JSON.stringify([{ action: 'added', timestamp: new Date().toISOString() }]),
             },
           });
         }
 
-        await prisma.systemComponent.create({
-          data: {
-            systemId: sys.id,
-            componentId: component.id,
-            actionLog: JSON.stringify([{ action: 'added', timestamp: new Date().toISOString() }]),
-          },
+        // Set as active system
+        await prisma.profile.update({
+          where: { userId },
+          data: { activeSystemId: sys.id },
         });
       }
-
-      // Set as active system
-      await prisma.profile.update({
-        where: { userId },
-        data: { activeSystemId: sys.id },
-      });
     }
-  }
 
-  return NextResponse.json({ ok: true }, { status: 200 });
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (err) {
+    console.error('[api/onboarding] Database unavailable:', err);
+    return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+  }
 }

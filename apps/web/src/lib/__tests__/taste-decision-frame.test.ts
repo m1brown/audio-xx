@@ -114,14 +114,14 @@ describe('Shopping recommendation taste framing', () => {
   it('bestFitDirection includes listener-centered framing when taste signals exist', () => {
     const ctx = detectShoppingIntent('I want a warm DAC under $1000', WARM_SIGNALS, undefined);
     const answer = buildShoppingAnswer(ctx, WARM_SIGNALS);
-    // bestFitDirection should be wrapped with "Given your preference for..."
-    expect(answer.bestFitDirection).toMatch(/given your preference|this matters/i);
+    // bestFitDirection should include listener-centered or directed framing
+    expect(answer.bestFitDirection).toMatch(/based on what you've described|given your preference|this system should lean toward/i);
   });
 
   it('whyThisFits includes taste-leading bullet when taste signals exist', () => {
     const ctx = detectShoppingIntent('I want a warm DAC under $1000', WARM_SIGNALS, undefined);
     const answer = buildShoppingAnswer(ctx, WARM_SIGNALS);
-    // First whyThisFits bullet should reference listener values
-    expect(answer.whyThisFits[0]).toMatch(/what you value|if what you value/i);
+    // First whyThisFits bullet should reference listener preference
+    expect(answer.whyThisFits[0]).toMatch(/your preference|what you value|if what you value/i);
   });
 });

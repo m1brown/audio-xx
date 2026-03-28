@@ -102,6 +102,12 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       ],
     },
     notes: 'Requires 94dB+ speakers. Wait times can exceed 6 months. The experience is deeply personal — either it clicks or it doesn\'t.',
+    // Step 10: buying metadata
+    typicalMarket: 'new',
+    buyingContext: 'dealer_likely',
+    // imageUrl: undefined, // TODO: add official product image from decware.com
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -178,6 +184,12 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       ],
     },
     notes: 'Very low power (~1W @ 8Ω). Best with speakers 90dB+ and 8Ω+. The Berning ZOTL circuit is unlike conventional tube amps — audition expectations accordingly.',
+    // Step 10: buying metadata
+    typicalMarket: 'new',
+    buyingContext: 'dealer_likely',
+    // imageUrl: undefined, // TODO: add official product image from lineartubeaudio.com
+    philosophy: 'neutral',
+    marketType: 'nonTraditional',
   },
 
   // ── Push-Pull Tube ────────────────────────────────────
@@ -261,6 +273,13 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: '6moons', note: 'Extensive review covering the CS300\'s musical character and EL84 voicing.', url: 'https://6moons.com/audioreviews/leben/cs300x.html' },
       { source: 'Stereophile', note: 'Ken Micallef review praising rhythmic engagement and tonal richness.', url: 'https://www.stereophile.com/content/leben-cs300-integrated-amplifier' },
     ],
+    // Step 10: buying metadata
+    typicalMarket: 'both',
+    usedPriceRange: { low: 1800, high: 2500 },
+    buyingContext: 'dealer_likely',
+    // imageUrl: undefined, // TODO: add official product image from leben-hifi.com
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -352,6 +371,13 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: '6moons', note: 'Review covering the CS600X\'s musical authority and tube-rolling potential.' },
       { source: 'Tone Publications', note: 'Detailed coverage of the Leben + DeVore pairing and tube rolling options.' },
     ],
+    // Step 10: buying metadata
+    typicalMarket: 'both',
+    usedPriceRange: { low: 4000, high: 5500 },
+    buyingContext: 'dealer_likely',
+    // imageUrl: undefined, // TODO: add official product image from leben-hifi.com
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -438,6 +464,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       ],
     },
     notes: 'Vintage product — condition and restoration quality vary enormously. Budget for professional servicing if buying unrestored. Tube complement affects the sound significantly.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   // ── Class A Solid-State ────────────────────────────────
@@ -516,6 +544,13 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       ],
     },
     notes: 'Power amp only — requires a preamp or DAC with volume control. Bridgeable to ~80W mono for more demanding speakers.',
+    // Step 10: buying metadata
+    typicalMarket: 'both',
+    usedPriceRange: { low: 500, high: 700 },
+    buyingContext: 'easy_new',
+    // imageUrl: undefined, // TODO: add official product image from schiit.com
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   {
@@ -601,6 +636,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: '6moons', note: 'Review covering the SIT topology\'s distinctive tube-like qualities.', url: 'https://6moons.com/audioreviews2/firstwatt5/1.html' },
     ],
     notes: 'Power amp only. Discontinued — SIT transistors are no longer manufactured. Prices rising on used market.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   // ── Class AB Solid-State ───────────────────────────────
@@ -684,6 +721,13 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'What Hi-Fi?', note: 'Five-star review praising composure and dynamic authority.' },
       { source: 'Stereophile', note: 'Review noting the H190\'s transparent, grip-oriented character.' },
     ],
+    // Step 10: buying metadata
+    typicalMarket: 'both',
+    usedPriceRange: { low: 1800, high: 2400 },
+    buyingContext: 'easy_new',
+    // imageUrl: undefined, // TODO: add official product image from hegel.com
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   // ── Minimalist / Reference Anchors ─────────────────────
@@ -771,6 +815,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       ],
     },
     notes: 'Discontinued. Goldmund-derived circuit at a fraction of the Goldmund price. Used market is the only option.',
+    philosophy: 'neutral',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -860,6 +906,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: '6moons', note: 'Review of the JOB 225 as a Goldmund-derived giant-killer.', url: 'https://6moons.com/audioreviews/job/2.html' },
     ],
     notes: 'Power amp only — requires preamp. Discontinued. Used prices represent extraordinary value.',
+    philosophy: 'neutral',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -953,6 +1001,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'HiFi+', note: 'Review praising the transparency and spatial presentation.' },
     ],
     notes: 'CIA-1T discontinued but the Crayon CFA-1.2 continues the lineage. Used CIA-1T represents excellent value.',
+    philosophy: 'energy',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -1046,6 +1096,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'TNT Audio', note: 'Review praising the speed and rhythmic engagement at its price point.' },
     ],
     notes: 'Discontinued. The TA-10 is a founder reference amplifier — used to calibrate what extreme elasticity and low stored energy sound like. 15W limits speaker pairing to high-efficiency designs.',
+    philosophy: 'neutral',
+    marketType: 'nonTraditional',
   },
 
   // ── Hegel ───────────────────────────────────────────
@@ -1136,6 +1188,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'What Hi-Fi?', note: 'Review praising the Rost\'s composure and value relative to the H190.' },
     ],
     notes: 'Founder reference amplifier. The Rost is the Hegel entry point — same design philosophy as the H190 (control, grip, transparency) at lower power. Good when speakers need discipline; risk of overdamping in already controlled chains.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   // ── Marantz (vintage) ───────────────────────────────
@@ -1153,6 +1207,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'japan',
     country: 'JP',
     topology: 'class-ab-solid-state',
+    availability: 'vintage',
     archetypes: { primary: 'flow_organic', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
       warm_bright: 'warm',            // Classic warm Marantz house sound
@@ -1163,7 +1218,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       warm_bright_n: -2,        // Strongly warm — tonal density and midrange body
       smooth_detailed_n: -1,    // Smooth — relaxed treble, not analytical
       elastic_controlled_n: -1, // Elastic — fluid musical presentation
-      airy_closed_n: -1,        // Slightly closed — intimate staging
+      airy_closed_n: 1,        // Slightly closed — intimate staging
     },
     fatigueAssessment: {
       risk: 'low',
@@ -1230,6 +1285,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'Founder system observation', note: 'Oppo → 2220B → Hornshoppe Horn: tabla realism, microdynamic expression, instrument presence.' },
     ],
     notes: 'Vintage receiver (1974–1977). Price reflects typical used market value. May need recapping if original capacitors are still in place — recap can significantly improve clarity without losing the warm character. 20W is sufficient for speakers above 93dB sensitivity.',
+    philosophy: 'warm',
+    marketType: 'traditional',
   },
 
   // ── Kinki Studio (China) ────────────────────────────
@@ -1256,7 +1313,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       warm_bright_n: 0,
       smooth_detailed_n: 1,
       elastic_controlled_n: 1,
-      airy_closed_n: 1,
+      airy_closed_n: -1,
     },
     fatigueAssessment: {
       risk: 'low',
@@ -1318,6 +1375,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: '6moons', note: 'Blue Moon award. Noted exceptional composure and spatial depth.', url: 'https://6moons.com/audioreviews2/kinki/1.html' },
     ],
     notes: 'Major value proposition in the $2–4K segment. Dual-mono topology with fully balanced operation. Often compared favorably to amplifiers at 2–3x its price.',
+    philosophy: 'neutral',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -1342,7 +1401,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       warm_bright_n: 0,
       smooth_detailed_n: 1,
       elastic_controlled_n: 2,
-      airy_closed_n: 1,
+      airy_closed_n: -1,
     },
     fatigueAssessment: {
       risk: 'low',
@@ -1402,6 +1461,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'Darko.Audio', note: '2025 coverage of the Dazzle as Kinki\'s flagship MOSFET integrated.', url: 'https://darko.audio/2025/11/kinki-studio-x-vinshine-audios-dazzle/' },
     ],
     notes: 'Recent release (2025). Limited review corpus — character inference extrapolated from EX-M1+ lineage and architecture. SSCLD topology is Kinki\'s proprietary MOSFET current-drive design.',
+    philosophy: 'neutral',
+    marketType: 'nonTraditional',
   },
 
   // ── Enleum (Korea, formerly Bakoon) ─────────────────
@@ -1428,7 +1489,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       warm_bright_n: -1,
       smooth_detailed_n: -1,
       elastic_controlled_n: -1,
-      airy_closed_n: 1,
+      airy_closed_n: -1,
     },
     fatigueAssessment: {
       risk: 'very_low',
@@ -1491,6 +1552,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'Headphone.guru', note: 'Praised as exceptional combined speaker/headphone amplifier.' },
     ],
     notes: 'Formerly Bakoon — rebranded as Enleum. The AMP-23R is the speaker amp version (the HPA-23R is headphone-only). JET 2 Bias is their proprietary adaptive biasing circuit. 25W demands careful speaker matching — best with 88dB+ sensitivity.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   // ── Grandinote (Italy) ──────────────────────────────
@@ -1517,7 +1580,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       warm_bright_n: -1,
       smooth_detailed_n: -1,
       elastic_controlled_n: -1,
-      airy_closed_n: 1,
+      airy_closed_n: -1,
     },
     fatigueAssessment: {
       risk: 'very_low',
@@ -1580,6 +1643,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: '6moons', note: 'Noted rare combination of warmth and energetic dynamics.', url: 'https://6moons.com/audioreview_articles/grandinote2/' },
     ],
     notes: 'Pure Class A runs hot — requires adequate ventilation. Dual-mono with separate mains leads per channel. 37W is sufficient for most bookshelf and moderate floorstanders. The Shinai is Grandinote\'s most popular model — sits between the entry Genesi and flagship Supremo.',
+    philosophy: 'energy',
+    marketType: 'nonTraditional',
   },
 
   // ── Goldmund Telos (Switzerland) ────────────────────
@@ -1606,7 +1671,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       warm_bright_n: 1,
       smooth_detailed_n: 2,
       elastic_controlled_n: 2,
-      airy_closed_n: 1,
+      airy_closed_n: -1,
     },
     fatigueAssessment: {
       risk: 'low',
@@ -1668,6 +1733,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'Stereophile', note: 'Goldmund Telos line praised for speed, precision, and authority.' },
     ],
     notes: 'Goldmund Telos line is distinct from JOB — these are serious reference-level electronics. Swiss manufacturing. The 590 is the integrated; the 690 adds a DAC module.',
+    philosophy: 'analytical',
+    marketType: 'nonTraditional',
   },
 
   // ── Soulution (Switzerland) ─────────────────────────
@@ -1694,7 +1761,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       warm_bright_n: 0,
       smooth_detailed_n: 2,
       elastic_controlled_n: 2,
-      airy_closed_n: 1,
+      airy_closed_n: -1,
     },
     fatigueAssessment: {
       risk: 'low',
@@ -1757,6 +1824,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'Stereophile', note: 'Praised composure, bass authority, and musical refinement.' },
     ],
     notes: 'Swiss precision engineering. Six separate power supplies is unusual in an integrated chassis. Optional $3K DAC module and $4K phono module. Class A runs warm — requires ventilation. 120W Class A is substantially more muscular than typical 30–50W Class A designs.',
+    philosophy: 'neutral',
+    marketType: 'nonTraditional',
   },
 
   // ── darTZeel (Switzerland) ──────────────────────────
@@ -1783,7 +1852,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       warm_bright_n: -1,
       smooth_detailed_n: 0,
       elastic_controlled_n: -1,
-      airy_closed_n: 1,
+      airy_closed_n: -1,
     },
     fatigueAssessment: {
       risk: 'very_low',
@@ -1846,6 +1915,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Noted as warm-leaning but detailed, with exceptional texture.' },
     ],
     notes: 'Hervé Delétraz design. The 50Ω Zeel BNC input is proprietary — only relevant in all-darTZeel systems (otherwise use standard RCA/XLR). Price reflects Swiss boutique manufacturing. The CTH-8550 is the integrated version of their NHB-108/NHB-18 separates philosophy.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
   {
     id: 'vinnie-rossi-l2i-se',
@@ -1868,8 +1939,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       airy_closed: 'airy',
       warm_bright_n: -1,
       smooth_detailed_n: 0,
-      elastic_controlled_n: 1,
-      airy_closed_n: 1,
+      elastic_controlled_n: -1,
+      airy_closed_n: -1,
     },
     fatigueAssessment: {
       risk: 'very_low',
@@ -1929,6 +2000,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Noted as one of the finest hybrid integrateds, combining tube magic with solid-state control.' },
     ],
     notes: 'Hand-assembled in the US. DHT (direct-heated triode) preamp stage is the sonic signature — extraordinarily transparent and musical. MOSFET output provides power and control without noise or distortion character. Typically 12–16 week build lead time. Flagship of Vinnie Rossi Audio philosophy.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
   {
     id: 'shindo-cortese',
@@ -1951,7 +2024,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       airy_closed: 'moderate',
       warm_bright_n: -2,
       smooth_detailed_n: 0,
-      elastic_controlled_n: 1,
+      elastic_controlled_n: -1,
       airy_closed_n: 0,
     },
     fatigueAssessment: {
@@ -2011,6 +2084,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Shindo house sound — warm, alive, complete — considered reference for tube amplifier naturalness.' },
     ],
     notes: 'Hand-assembled in Japan. Limited annual production (~50 units globally). Point-to-point wiring, hand-wound transformers, and traditional tube topology prioritize sonic coherence over spec sheet performance. Not for power-hungry systems. The Cortese represents Shindo philosophy: musical completeness over technical precision. Used market typically $10k–12k for well-maintained examples.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
   {
     id: 'ayre-vx-5-twenty',
@@ -2092,6 +2167,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Noted as exceptional value for Ayre-level refinement and current-mode signal integrity.' },
     ],
     notes: 'Ayre philosophy: zero global feedback, balanced current-mode architecture, and uncompromising parts quality. The VX-5 Twenty represents twenty years of Ayre integrated refinement. Partnered well with both analytical and warm speakers — acts as system reference for transparency rather than colorant.',
+    philosophy: 'neutral',
+    marketType: 'nonTraditional',
   },
   {
     id: 'boulder-866',
@@ -2173,6 +2250,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Noted as the reference for solid-state integrated authority and bass control.' },
     ],
     notes: 'Boulder Amplifiers — US manufacturer known for precision and authority. The 866 represents their integrated philosophy: Class A musicality with Class AB power delivery. Discrete topology throughout. Warm enough for analytical systems, controlled enough for warm-leaning speakers. Excellent long-term component value.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
   {
     id: 'primare-i35',
@@ -2254,6 +2333,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'Darko.Audio', note: 'Coverage of Primare\'s Prisma platform and streaming integration.', url: 'https://darko.audio/2017/05/primares-prisma-party/' },
     ],
     notes: 'Primare — Swedish manufacturer specializing in transparent, design-focused amplification. The i35 uses Hypex Ncore modules (same as used in high-end separates). Efficient thermal design, low power draw, and excellent build quality. Ideal for streaming-native listeners and transparent system priorities.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
   {
     id: 'electrocompaniet-eci-6',
@@ -2276,7 +2357,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       airy_closed: 'moderate',
       warm_bright_n: -1,
       smooth_detailed_n: -1,
-      elastic_controlled_n: 1,
+      elastic_controlled_n: -1,
       airy_closed_n: 0,
     },
     fatigueAssessment: {
@@ -2335,6 +2416,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Noted as excellent example of warm-leaning Class AB without bloat.' },
     ],
     notes: 'Electrocompaniet — Norwegian manufacturer representing Scandinavian audio philosophy emphasizing listening comfort and musical naturalness. The ECI 6 is unpretentious, warm-leaning, and designed for long-session engagement rather than technical specification showcase. Excellent choice for listeners who prioritize musical flow over analytical detail.',
+    philosophy: 'warm',
+    marketType: 'traditional',
   },
   {
     id: 'naim-nait-xs-3',
@@ -2357,7 +2440,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       airy_closed: 'airy',
       warm_bright_n: 0,
       smooth_detailed_n: 0,
-      elastic_controlled_n: -1,
+      elastic_controlled_n: 1,
       airy_closed_n: 0,
     },
     fatigueAssessment: {
@@ -2417,6 +2500,13 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'Darko.Audio', note: 'Review covering the Nait XS 3 alongside the SuperNait 3.', url: 'https://darko.audio/2019/07/the-tables-turn-on-naims-nait-xs-3-supernait-3/' },
     ],
     notes: 'Naim Audio — British manufacturer famous for PRAT (Pace, Rhythm, And Timing) philosophy. The XS 3 brings Naim timing excellence to entry integrated market. Excellent for rhythm-focused and dynamic music lovers. Restless, energetic presentation may not suit all classical or ambient listening.',
+    // Step 10: buying metadata
+    typicalMarket: 'both',
+    usedPriceRange: { low: 1600, high: 2200 },
+    buyingContext: 'easy_new',
+    // imageUrl: undefined, // TODO: add official product image from naimaudio.com
+    philosophy: 'energy',
+    marketType: 'traditional',
   },
   {
     id: 'naim-supernait-3',
@@ -2499,6 +2589,13 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'Darko.Audio', note: 'Review covering SuperNait 3 and Nait XS 3 updates.', url: 'https://darko.audio/2019/07/the-tables-turn-on-naims-nait-xs-3-supernait-3/' },
     ],
     notes: 'Naim Audio flagship integrated. SuperNait 3 retains PRAT timing philosophy while adding refinement, clarity, and power versus XS 3. Excellent for listeners who want Naim rhythmic engagement without XS 3 constraints. Strong preamp output for future expansion.',
+    // Step 10: buying metadata
+    typicalMarket: 'both',
+    usedPriceRange: { low: 2800, high: 3800 },
+    buyingContext: 'easy_new',
+    // imageUrl: undefined, // TODO: add official product image from naimaudio.com
+    philosophy: 'energy',
+    marketType: 'traditional',
   },
   {
     id: 'quad-va-one-plus',
@@ -2521,8 +2618,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       airy_closed: 'closed',
       warm_bright_n: -1,
       smooth_detailed_n: -1,
-      elastic_controlled_n: 1,
-      airy_closed_n: -1,
+      elastic_controlled_n: -1,
+      airy_closed_n: 1,
     },
     fatigueAssessment: {
       risk: 'very_low',
@@ -2579,6 +2676,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Noted as excellent entry point to tube amplifier listening.' },
     ],
     notes: 'Quad — British manufacturer famous for ESL speakers and tube amplifier designs. The VA-One+ represents decades of Quad warmth philosophy. Hand-assembled, point-to-point wiring. Not a power amplifier — requires speaker matching. Excellent first tube amplifier or second system component.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
   {
     id: 'rotel-a11-tribute',
@@ -2659,6 +2758,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Praised as excellent entry-level value proposition.' },
     ],
     notes: 'Rotel — Japanese manufacturer with strong UK design heritage (Michi, etc.). The A11 Tribute represents entry-level reliability and musicality. Excellent first integrated or second-system component. Balanced presentation suits most system synergies.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
   {
     id: 'mcintosh-ma252',
@@ -2740,6 +2841,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Noted as excellent entry to McIntosh philosophy at accessible pricing.' },
     ],
     notes: 'McIntosh Labs — American manufacturer famous for tube amplifiers and iconic glass-front designs. The MA252 represents entry to McIntosh warmth philosophy. Hybrid topology balances tube musicality with modern solid-state authority. Strong preamp output for future expansion. McIntosh house sound — warm, inviting, musical.',
+    philosophy: 'warm',
+    marketType: 'traditional',
   },
   {
     id: 'mcintosh-ma12000',
@@ -2763,7 +2866,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       warm_bright_n: -1,
       smooth_detailed_n: -1,
       elastic_controlled_n: 0,
-      airy_closed_n: 1,
+      airy_closed_n: -1,
     },
     fatigueAssessment: {
       risk: 'very_low',
@@ -2821,6 +2924,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Noted as flagship expression of McIntosh philosophy — warmth, authority, and holography.' },
     ],
     notes: 'McIntosh Labs flagship. The MA12000 represents apex of McIntosh design — 350W/ch power delivery with tube preamp musicality and autoformer output coupling. Capable of driving any speaker in any room while maintaining warm, musical character. Reference for statement-grade hybrid amplification.',
+    philosophy: 'warm',
+    marketType: 'traditional',
   },
   {
     id: 'cambridge-audio-cxa81',
@@ -2901,6 +3006,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Noted as excellent budget transparent integrated.' },
     ],
     notes: 'Cambridge Audio — British manufacturer. The CXA81 represents analytical British design at accessible pricing. Excellent for system diagnostics and revealing source material. Not inherently colored — provides neutral foundation.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
   {
     id: 'audiolab-6000a',
@@ -2981,6 +3088,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Praised as excellent value-oriented design.' },
     ],
     notes: 'Audiolab — UK specialist manufacturer. The 6000A represents budget value with genuine British character. Clean, neutral, balanced presentation suits most system synergies. Excellent entry-level integrated.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
   {
     id: 'nad-c-316bee-v2',
@@ -3061,6 +3170,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Noted as exceptional value and warm design reference.' },
     ],
     notes: 'NAD — Canadian manufacturer famous for value and warm sound engineering. The C 316BEE V2 is legendary for making music sound good regardless of system matching. Warm, flowing presentation accessible to beginners. Extremely popular in entry-level and dorm systems. Often retained despite significant upgrades for its musicality.',
+    philosophy: 'warm',
+    marketType: 'traditional',
   },
   {
     id: 'nad-c-3050',
@@ -3083,7 +3194,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       airy_closed: 'airy',
       warm_bright_n: 0,
       smooth_detailed_n: 1,
-      elastic_controlled_n: -1,
+      elastic_controlled_n: 1,
       airy_closed_n: 0,
     },
     fatigueAssessment: {
@@ -3141,6 +3252,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Noted as excellent modern integrated combining efficiency with performance.' },
     ],
     notes: 'NAD modern interpretation — Purifi Eigentakt Class D combined with streaming connectivity. Represents shift toward streaming-native design philosophy. Clean, efficient, modern approach contrasts with NAD warmth legacy but serves modern listener needs excellently.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
   {
     id: 'bottlehead-crack',
@@ -3163,8 +3276,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       airy_closed: 'closed',
       warm_bright_n: -1,
       smooth_detailed_n: -1,
-      elastic_controlled_n: 1,
-      airy_closed_n: -1,
+      elastic_controlled_n: -1,
+      airy_closed_n: 1,
     },
     fatigueAssessment: {
       risk: 'very_low',
@@ -3221,6 +3334,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'AudioZine', note: 'Noted as cult classic for warm headphone listening and DIY culture.' },
     ],
     notes: 'Bottlehead Electronics — US boutique DIY manufacturer. The Crack is shipped as a kit requiring assembly (8–12 hours, no advanced skills needed). OTL (no output transformer) design delivers tube warmth directly to headphones. Legendary HD6xx pairing. Strong DIY community and modification culture. ~1W output suits 32Ω+ headphones beautifully.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
   {
     id: 'yamamoto-a-08s',
@@ -3243,8 +3358,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       airy_closed: 'closed',
       warm_bright_n: -2,
       smooth_detailed_n: -1,
-      elastic_controlled_n: 1,
-      airy_closed_n: -1,
+      elastic_controlled_n: -1,
+      airy_closed_n: 1,
     },
     fatigueAssessment: {
       risk: 'very_low',
@@ -3304,6 +3419,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: '6moons', note: 'Review of the Yamamoto A-08S single-ended 45 triode design.', url: 'https://6moons.com/audioreviews/yamamoto2/45.html' },
     ],
     notes: 'Yamamoto Sound Craft — Japanese boutique manufacturer specializing in exotic single-ended triode designs. The A-08S represents peak single-ended 45 triode expression — hand-wired, point-to-point, pure Class A. Not for power-hungry systems. Requires speaker matching discipline. Legendary among single-ended devotees.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
   {
     id: 'goldmund-telos-390',
@@ -3326,8 +3443,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       airy_closed: 'airy',
       warm_bright_n: 0,
       smooth_detailed_n: 1,
-      elastic_controlled_n: -1,
-      airy_closed_n: 1,
+      elastic_controlled_n: 1,
+      airy_closed_n: -1,
     },
     fatigueAssessment: {
       risk: 'low',
@@ -3384,6 +3501,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Noted as reference for transparent integrated amplification.' },
     ],
     notes: 'Goldmund — Swiss luxury manufacturer. The Telos 390 represents Swiss precision philosophy — transparent, fast, controlled. Not about warmth or musicality, but about revealing system and music truth. Excellent for transparent, revealing systems. Requires upstream transparency to shine.',
+    philosophy: 'neutral',
+    marketType: 'nonTraditional',
   },
   {
     id: 'goldmund-telos-690',
@@ -3406,8 +3525,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       airy_closed: 'airy',
       warm_bright_n: 0,
       smooth_detailed_n: 1,
-      elastic_controlled_n: -1,
-      airy_closed_n: 1,
+      elastic_controlled_n: 1,
+      airy_closed_n: -1,
     },
     fatigueAssessment: {
       risk: 'low',
@@ -3465,6 +3584,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Noted as flagship expression of Goldmund precision philosophy.' },
     ],
     notes: 'Goldmund flagship. The Telos 690 represents apex of Swiss precision integrated design — 175W delivered with extraordinary control, transparency, and authority. Reference-grade amplifier combining power with surgical precision. Designed for revealing systems and large rooms.',
+    philosophy: 'neutral',
+    marketType: 'nonTraditional',
   },
 
   // ── Accuphase (Japan) ─────────────────────────────────
@@ -3490,8 +3611,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       airy_closed: 'airy',
       warm_bright_n: -0.5,
       smooth_detailed_n: 0.5,
-      elastic_controlled_n: -1,
-      airy_closed_n: 0.5,
+      elastic_controlled_n: 1,
+      airy_closed_n: -0.5,
     },
     fatigueAssessment: {
       risk: 'very_low',
@@ -3555,6 +3676,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'Mono and Stereo', note: 'Noted as benchmark for Japanese precision engineering at this price. Compared to higher Accuphase models.' },
     ],
     notes: 'Accuphase E-280 is the current entry point to Accuphase integrated amplifiers. AAVA (Accuphase Analog Vari-gain Amplifier) volume control is a key differentiator — operates without resistors in the signal path. Dual-mono construction. Optional DAC and phono boards available. Japanese domestic pricing is significantly lower than export.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
   {
     id: 'accuphase-e-4000',
@@ -3577,8 +3700,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       airy_closed: 'airy',
       warm_bright_n: -0.5,
       smooth_detailed_n: 1,
-      elastic_controlled_n: -1,
-      airy_closed_n: 1,
+      elastic_controlled_n: 1,
+      airy_closed_n: -1,
     },
     fatigueAssessment: {
       risk: 'very_low',
@@ -3640,6 +3763,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'Darko.Audio', note: 'Featured in system context. Noted for composure and long-session listening quality.' },
     ],
     notes: 'Accuphase E-4000 replaced the E-380. Flagship integrated with instrumentation-grade output modules. Optional DAC-60 and phono boards available. Japanese domestic pricing approximately 40% lower than export. Build quality is legendary — 20+ year lifespan is standard for Accuphase.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 ];
 

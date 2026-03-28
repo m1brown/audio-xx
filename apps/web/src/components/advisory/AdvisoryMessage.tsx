@@ -1138,15 +1138,6 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
         </p>
       </div>
 
-      {/* ── Shopping links ─────────────────────────────── */}
-      <div style={{ marginTop: '1.25rem', marginBottom: '1rem' }}>
-        <ShoppingLinks
-          brand={pa.candidateBrand}
-          name={pa.candidateName}
-          manufacturerUrl={a.links?.find(l => l.kind === 'reference')?.url}
-        />
-      </div>
-
       {/* ── Follow-up ────────────────────────────────── */}
       {a.followUp && (
         <div style={{
@@ -1163,11 +1154,19 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
       )}
 
       {/* ── Learn more (links) ────────────────────────── */}
-      {a.links && a.links.length > 0 && (
-        <AdvisorySection label="Learn more">
-          <AdvisoryLinks links={a.links} />
-        </AdvisorySection>
-      )}
+      {/* All outbound links render here — never above the follow-up. */}
+      <div style={{ marginTop: '1.25rem' }}>
+        {a.links && a.links.length > 0 && (
+          <AdvisorySection label="Learn more">
+            <AdvisoryLinks links={a.links} />
+          </AdvisorySection>
+        )}
+        <ShoppingLinks
+          brand={pa.candidateBrand}
+          name={pa.candidateName}
+          manufacturerUrl={a.links?.find(l => l.kind === 'reference')?.url}
+        />
+      </div>
 
       {/* ── Sources (continued reading) ──────────────── */}
       {a.sourceReferences && a.sourceReferences.length > 0 && (
@@ -1480,6 +1479,152 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
         </div>
       )}
 
+      {/* ── 2b. Preference reflection ("What I'm optimizing for") ──── */}
+      {(a.listenerPriorities && a.listenerPriorities.length > 0) && (
+        <div style={{
+          margin: '0 0 1.5rem 0',
+          padding: '1rem 1.25rem',
+          background: 'linear-gradient(135deg, #faf8f3 0%, #f5f3ee 100%)',
+          borderRadius: '8px',
+          borderLeft: `3px solid ${COLORS.accent}`,
+          fontSize: '0.93rem',
+          lineHeight: 1.7,
+          color: COLORS.text,
+        }}>
+          <div style={{
+            fontWeight: 700,
+            marginBottom: '0.5rem',
+            fontSize: '0.75rem',
+            color: COLORS.accent,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+          }}>
+            What I&apos;m optimizing for
+          </div>
+
+          {/* Context signals: budget / room / music (compact row) */}
+          {a.audioProfile && (a.audioProfile.budget || (a.audioProfile.listeningContext && a.audioProfile.listeningContext.length > 0)) && (
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.4rem',
+              marginBottom: '0.6rem',
+            }}>
+              {a.audioProfile.budget && (
+                <span style={{
+                  fontSize: '0.78rem',
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '3px',
+                  background: '#eee',
+                  color: COLORS.textSecondary,
+                  fontWeight: 500,
+                }}>
+                  {a.audioProfile.budget}
+                </span>
+              )}
+              {a.audioProfile.listeningContext?.map((ctx, i) => (
+                <span key={i} style={{
+                  fontSize: '0.78rem',
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '3px',
+                  background: '#eee',
+                  color: COLORS.textSecondary,
+                  fontWeight: 500,
+                }}>
+                  {ctx}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Priority values */}
+          {a.listenerPriorities.map((p, i) => (
+            <p key={i} style={{ margin: i === 0 ? 0 : '0.3rem 0 0 0' }}>
+              {renderText(`\u2022 ${p}`)}
+            </p>
+          ))}
+
+          {/* Avoids */}
+          {a.listenerAvoids && a.listenerAvoids.length > 0 && (
+            <div style={{
+              marginTop: '0.6rem',
+              paddingTop: '0.5rem',
+              borderTop: '1px solid #e8e4dd',
+            }}>
+              <span style={{
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                color: COLORS.textMuted,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+              }}>
+                Deprioritizing
+              </span>
+              <span style={{ fontSize: '0.88rem', color: COLORS.textMuted, marginLeft: '0.5rem' }}>
+                {a.listenerAvoids.join(', ')}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 2c. Taste Reflection Block ─────────────────────── */}
+      {a.tasteReflection && a.tasteReflection.bullets.length > 0 && (
+        <div style={{
+          margin: '0 0 1.5rem 0',
+          padding: '1rem 1.25rem',
+          background: 'linear-gradient(135deg, #f8f6f1 0%, #f3f0ea 100%)',
+          borderRadius: '8px',
+          borderLeft: '3px solid #8a7a5a',
+          fontSize: '0.9rem',
+          lineHeight: 1.75,
+          color: COLORS.text,
+        }}>
+          <div style={{
+            fontWeight: 700,
+            marginBottom: '0.6rem',
+            fontSize: '0.73rem',
+            color: '#8a7a5a',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+          }}>
+            What your choices reveal
+          </div>
+          <p style={{
+            margin: '0 0 0.7rem 0',
+            fontSize: '0.88rem',
+            fontWeight: 500,
+            color: COLORS.textSecondary,
+            fontStyle: 'italic',
+          }}>
+            {a.tasteReflection.summary}
+          </p>
+          {a.tasteReflection.bullets.map((bullet, i) => (
+            <p key={i} style={{
+              margin: i === 0 ? 0 : '0.5rem 0 0 0',
+              fontSize: '0.88rem',
+              lineHeight: 1.7,
+              color: COLORS.text,
+            }}>
+              {renderText(`\u2022 ${bullet}`)}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {/* ── 2d. System Pairing Intro ────────────────────── */}
+      {a.systemPairingIntro && (
+        <p style={{
+          margin: '0 0 1rem 0',
+          fontSize: '0.93rem',
+          lineHeight: 1.75,
+          color: COLORS.text,
+          fontWeight: 500,
+        }}>
+          {renderText(a.systemPairingIntro)}
+        </p>
+      )}
+
       {/* ── 3. Transition to products ─────────────────────── */}
       <p style={{
         margin: '0 0 1.25rem 0',
@@ -1497,6 +1642,53 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
       {/* ── 4. Product cards ──────────────────────────────── */}
       {a.options && a.options.length > 0 && (
         <AdvisoryProductCards options={a.options} />
+      )}
+
+      {/* ── 4b. Decisive Recommendation ("What I would actually do") ── */}
+      {a.decisiveRecommendation && (
+        <div style={{
+          margin: '1.75rem 0 1.5rem 0',
+          padding: '1rem 1.25rem',
+          background: 'linear-gradient(135deg, #f5f3ee 0%, #f0ede6 100%)',
+          borderRadius: '8px',
+          borderLeft: '3px solid #6a7a5a',
+          fontSize: '0.9rem',
+          lineHeight: 1.7,
+          color: COLORS.text,
+        }}>
+          <div style={{
+            fontWeight: 700,
+            marginBottom: '0.7rem',
+            fontSize: '0.73rem',
+            color: '#6a7a5a',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+          }}>
+            What I would actually do
+          </div>
+          <div style={{ marginBottom: '0.6rem' }}>
+            <span style={{ fontWeight: 600, color: COLORS.text }}>
+              {'→ Pick '}
+              {a.decisiveRecommendation.topPick.brand}{' '}
+              {a.decisiveRecommendation.topPick.name}
+            </span>
+            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.88rem', color: COLORS.textSecondary }}>
+              {a.decisiveRecommendation.topPick.reason}
+            </p>
+          </div>
+          {a.decisiveRecommendation.alternative && (
+            <div>
+              <span style={{ fontWeight: 600, color: COLORS.textSecondary }}>
+                {'→ Alternative: '}
+                {a.decisiveRecommendation.alternative.brand}{' '}
+                {a.decisiveRecommendation.alternative.name}
+              </span>
+              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.88rem', color: COLORS.textSecondary }}>
+                {a.decisiveRecommendation.alternative.reason}
+              </p>
+            </div>
+          )}
+        </div>
       )}
 
       {/* ── 5. Decision guidance ──────────────────────────── */}
@@ -1544,6 +1736,14 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
         }}>
           Based on limited context — missing: {a.statedGaps.join(', ')}
         </div>
+      )}
+
+      {/* ── 8. Learn more (links) ──────────────────────────── */}
+      {/* Guard: any response-level links render here, after follow-up. */}
+      {a.links && a.links.length > 0 && (
+        <AdvisorySection label="Learn more">
+          <AdvisoryLinks links={a.links} />
+        </AdvisorySection>
       )}
     </div>
   );
@@ -1668,6 +1868,144 @@ function AssistantFormat({ advisory: a }: AdvisoryMessageProps) {
           <BulletList items={ar.tips} />
         </AdvisorySection>
       )}
+    </div>
+  );
+}
+
+// ── Decisive Format (Conclusion mode — "What would you actually do?") ──
+//
+// A completely separate render path for conclusion-intent turns.
+// Shows ONLY the advisor's direct recommendation — no product cards,
+// no price blocks, no "Why this fits you", no editorial chrome.
+// Designed to feel like a personal conclusion from a trusted advisor.
+
+function isDecisiveFormat(a: AdvisoryResponse): boolean {
+  // Decisive mode wins when decisiveRecommendation is present AND options are
+  // absent/empty. The page.tsx conclusion-mode code strips options before
+  // dispatch, so this should always be true for conclusion-intent turns.
+  const result = !!(a.decisiveRecommendation && (!a.options || a.options.length === 0));
+  console.log('[decisive-debug] isDecisiveFormat: hasDecisive=%s, hasOptions=%s, optionCount=%d → %s',
+    !!a.decisiveRecommendation, !!a.options, (a.options ?? []).length, result);
+  return result;
+}
+
+function DecisiveFormat({ advisory: a }: AdvisoryMessageProps) {
+  const d = a.decisiveRecommendation!;
+
+  return (
+    <div style={{
+      lineHeight: FONTS.lineHeight,
+      color: COLORS.text,
+      maxWidth: 560,
+    }}>
+
+      {/* ── System pairing context (if available) ──────── */}
+      {a.systemPairingIntro && (
+        <p style={{
+          margin: '0 0 1.5rem 0',
+          fontSize: '0.94rem',
+          lineHeight: 1.8,
+          color: COLORS.textSecondary,
+        }}>
+          {renderText(a.systemPairingIntro)}
+        </p>
+      )}
+
+      {/* ── Decisive container ───────────────────────── */}
+      <div style={{
+        padding: '1.4rem 1.5rem 1.3rem',
+        background: '#faf9f5',
+        borderRadius: '10px',
+        border: '1px solid #e8e4da',
+      }}>
+        {/* Section label */}
+        <div style={{
+          fontWeight: 700,
+          marginBottom: '1.1rem',
+          paddingBottom: '0.65rem',
+          borderBottom: '1px solid #ece8df',
+          fontSize: '0.72rem',
+          color: '#6a7a5a',
+          letterSpacing: '0.07em',
+          textTransform: 'uppercase',
+        }}>
+          What I would actually do
+        </div>
+
+        {/* ── Top pick ─────────────────────────────── */}
+        <div style={{ marginBottom: '1.2rem' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '0.45rem',
+            marginBottom: '0.35rem',
+          }}>
+            <span style={{
+              color: '#6a7a5a',
+              fontWeight: 700,
+              fontSize: '1rem',
+              lineHeight: 1,
+            }}>→</span>
+            <span style={{
+              fontWeight: 600,
+              fontSize: '1.05rem',
+              color: COLORS.text,
+              letterSpacing: '-0.01em',
+            }}>
+              {d.topPick.brand} {d.topPick.name}
+            </span>
+          </div>
+          <p style={{
+            margin: '0 0 0 1.15rem',
+            fontSize: '0.93rem',
+            color: COLORS.textSecondary,
+            lineHeight: 1.75,
+          }}>
+            {d.topPick.reason}
+          </p>
+        </div>
+
+        {/* ── Alternative (optional — omitted when only one eligible product) ── */}
+        {d.alternative && (
+          <>
+            <div style={{
+              height: 1,
+              background: '#ece8df',
+              margin: '0 0 1.1rem 0',
+            }} />
+            <div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: '0.45rem',
+                marginBottom: '0.3rem',
+              }}>
+                <span style={{
+                  color: COLORS.textMuted,
+                  fontWeight: 600,
+                  fontSize: '0.92rem',
+                  lineHeight: 1,
+                }}>→</span>
+                <span style={{
+                  fontWeight: 600,
+                  fontSize: '0.95rem',
+                  color: COLORS.textSecondary,
+                }}>
+                  Alternative: {d.alternative.brand} {d.alternative.name}
+                </span>
+              </div>
+              <p style={{
+                margin: '0 0 0 1.15rem',
+                fontSize: '0.9rem',
+                color: COLORS.textMuted,
+                lineHeight: 1.7,
+              }}>
+                {d.alternative.reason}
+              </p>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -2107,14 +2445,6 @@ function StandardFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePro
         </p>
       )}
 
-      {/* ── 11b. Shopping links (product consultations) ── */}
-      {a.kind === 'consultation' && !a.componentReadings && (a.tendencies || a.philosophy || a.productOrigin || (a.improvements && a.improvements.length > 0)) && (
-        <ShoppingLinks
-          name={a.subject}
-          manufacturerUrl={a.links?.find((l) => l.kind === 'reference')?.url}
-        />
-      )}
-
       {/* ── 12. Refinement prompts ────────────────── */}
       {/* Suppress when StartHereBlock is active — it replaces text-based refinement */}
       {a.refinementPrompts && a.refinementPrompts.length > 0 && !a.lowPreferenceSignal && (
@@ -2170,11 +2500,20 @@ function StandardFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePro
       )}
 
       {/* ── 14. Learn more (links) ───────────────── */}
-      {a.links && a.links.length > 0 && (
+      {/* All outbound links render here — never above the follow-up. */}
+      {(a.links && a.links.length > 0) || (a.kind === 'consultation' && !a.componentReadings && (a.tendencies || a.philosophy || a.productOrigin || (a.improvements && a.improvements.length > 0))) ? (
         <AdvisorySection label="Learn more">
-          <AdvisoryLinks links={a.links} />
+          {a.links && a.links.length > 0 && (
+            <AdvisoryLinks links={a.links} />
+          )}
+          {a.kind === 'consultation' && !a.componentReadings && (a.tendencies || a.philosophy || a.productOrigin || (a.improvements && a.improvements.length > 0)) && (
+            <ShoppingLinks
+              name={a.subject}
+              manufacturerUrl={a.links?.find((l) => l.kind === 'reference')?.url}
+            />
+          )}
         </AdvisorySection>
-      )}
+      ) : null}
 
       {/* ── 15. Sources ──────────────────────────── */}
       {a.sourceReferences && a.sourceReferences.length > 0 && (
@@ -2289,5 +2628,11 @@ export default function AdvisoryMessage({ advisory, onIntakeSubmit, onPreference
   if (isAssistantFormat(advisory)) {
     return <AssistantFormat advisory={advisory} />;
   }
+  if (isDecisiveFormat(advisory)) {
+    console.log('[decisive-debug] routing → DecisiveFormat');
+    return <DecisiveFormat advisory={advisory} />;
+  }
+  console.log('[decisive-debug] routing → StandardFormat (hasDecisive=%s, hasOptions=%s)',
+    !!advisory.decisiveRecommendation, !!advisory.options);
   return <StandardFormat advisory={advisory} onPreferenceCapture={onPreferenceCapture} />;
 }

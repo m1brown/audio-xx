@@ -197,6 +197,15 @@ export function routeConversation(currentMessage: string): ConversationMode {
     return 'shopping';
   }
 
+  // 0c. Budget + category shortcut — "$5k speakers", "speakers under $1000"
+  //     When someone states a price and a product type, they're shopping.
+  //     Must fire before diagnosis to prevent budget+category inputs from
+  //     being misrouted (e.g. "Van Halen $5k speakers").
+  const hasBudgetSignal = /\$\s?\d[\d,.]*k?\b|\bunder\s+\$?\d|\bbudget\b/i.test(currentMessage);
+  if (hasBudgetSignal && hasProductCategory) {
+    return 'shopping';
+  }
+
   // 1. Diagnosis takes priority — listening problem overrides all
   if (DIAGNOSIS_SIGNALS.some((p) => p.test(currentMessage))) {
     return 'diagnosis';

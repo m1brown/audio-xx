@@ -13,7 +13,10 @@
 
 import type { Product } from './products/dacs';
 import type { SystemProfile } from './system-profile';
+import type { HardConstraints } from './shopping-intent';
 import { resolveTraitValue, hasRisk } from './sonic-tendencies';
+import type { ListenerProfile } from './listener-profile';
+import { computeTastePenalty } from './listener-profile';
 
 // ── Types ─────────────────────────────────────────────
 
@@ -144,9 +147,9 @@ function scoreBudgetFit(product: Product, budgetAmount: number): number {
   } else if (product.usedPriceRange && product.usedPriceRange.high <= budgetAmount) {
     gate = 0.75;
     effectivePrice = product.usedPriceRange.high;
-  } else if (product.price <= budgetAmount * 1.15) {
-    gate = 0.5;
   } else {
+    // No stretch allowance — budget is a hard constraint.
+    // Products above budget (even within 15%) must not appear.
     return 0;
   }
 
@@ -310,6 +313,18 @@ export function scoreProduct(
   score += scoreSystemCoherence(product, systemProfile);
   score += scoreReviewerAcclaim(product);
 
+  // ── Soft availability penalty ──────────────────────────
+  // Discontinued and vintage products are slightly penalized by default
+  // (even without the newOnly hard constraint). This reflects the practical
+  // reality that current products are easier to audition, purchase, and
+  // service. The penalty is small enough that genuinely excellent
+  // discontinued gear still ranks well on trait alignment.
+  if (product.availability === 'discontinued') {
+    score -= 0.3;
+  } else if (product.availability === 'vintage') {
+    score -= 0.2; // vintage products often have collector appeal
+  }
+
   return score;
 }
 
@@ -326,23 +341,129 @@ export function rankProducts(
   userTraits: Record<string, SignalDirection>,
   budgetAmount: number | null,
   systemProfile: SystemProfile,
+  constraints?: HardConstraints,
+  listenerProfile?: ListenerProfile,
 ): ScoredProduct[] {
-  // Budget filter — allows used-market pricing
-  const candidates = budgetAmount
-    ? products.filter((p) =>
-        p.price <= budgetAmount ||
-        (p.usedPriceRange && p.usedPriceRange.high <= budgetAmount),
-      )
+  // Budget filter — hard constraint, no stretch allowance.
+  // Used-market pricing qualifies a product only if the new price
+  // is within 2× budget (prevents $5000 products appearing in $1500 searches
+  // just because they can be found used for $1400).
+  let candidates = budgetAmount
+    ? products.filter((p) => {
+        if (p.price <= budgetAmount) return true;
+        if (p.usedPriceRange && p.usedPriceRange.high <= budgetAmount && p.price <= budgetAmount * 2) return true;
+        return false;
+      })
     : products;
+
+  // ── Hard constraint filters ──────────────────────────
+  // These are user-stated requirements that act as gates, not preferences.
+  if (constraints) {
+    // Topology exclusion: "no tubes" → exclude set, push-pull-tube
+    if (constraints.excludeTopologies.length > 0) {
+      candidates = candidates.filter((p) =>
+        !p.topology || !constraints.excludeTopologies.includes(p.topology),
+      );
+    }
+
+    // Topology requirement: "class AB only" → only class-ab-solid-state
+    if (constraints.requireTopologies.length > 0) {
+      candidates = candidates.filter((p) =>
+        p.topology && constraints.requireTopologies.includes(p.topology),
+      );
+    }
+
+    // Availability: "I want new" → exclude discontinued/vintage
+    if (constraints.newOnly) {
+      candidates = candidates.filter((p) =>
+        !p.availability || p.availability === 'current',
+      );
+    }
+
+    // Availability: "used only" → only discontinued/vintage
+    if (constraints.usedOnly) {
+      candidates = candidates.filter((p) =>
+        p.availability === 'discontinued' || p.availability === 'vintage',
+      );
+    }
+  }
 
   if (candidates.length === 0) return [];
 
-  return candidates
-    .map((product) => ({
-      product,
-      score: scoreProduct(product, userTraits, budgetAmount, systemProfile),
-    }))
+  // ── Taste-based filtering (listener profile) ────────
+  // Apply taste penalties from the accumulated listener profile.
+  // Disliked brands are effectively removed (penalty = -3).
+  // Products contradicting inferred taste get soft penalties.
+  const removedByTaste: string[] = [];
+  const penalizedByTaste: string[] = [];
+
+  // Hard removal fires at ANY confidence — explicit dislikes are unconditional.
+  if (listenerProfile) {
+    // Hard removal: disliked brands
+    const dislikedBrands = new Set(listenerProfile.dislikedBrands);
+    if (dislikedBrands.size > 0) {
+      const before = candidates.length;
+      candidates = candidates.filter((p) => {
+        if (dislikedBrands.has(p.brand.toLowerCase())) {
+          removedByTaste.push(`${p.brand} ${p.name} (disliked brand)`);
+          return false;
+        }
+        return true;
+      });
+      if (candidates.length < before) {
+        console.log('[taste-filter] removed %d products from disliked brands: %s',
+          before - candidates.length, removedByTaste.join(', '));
+      }
+    }
+
+    // Hard removal: disliked products
+    const dislikedProducts = listenerProfile.dislikedProducts;
+    if (dislikedProducts.length > 0) {
+      candidates = candidates.filter((p) => {
+        const fullName = `${p.brand} ${p.name}`.toLowerCase();
+        const isDisliked = dislikedProducts.some((dp) =>
+          fullName.includes(dp) || dp.includes(fullName),
+        );
+        if (isDisliked) {
+          removedByTaste.push(`${p.brand} ${p.name} (disliked product)`);
+        }
+        return !isDisliked;
+      });
+    }
+  }
+
+  if (candidates.length === 0) return [];
+
+  const scored = candidates
+    .map((product) => {
+      let score = scoreProduct(product, userTraits, budgetAmount, systemProfile);
+
+      // Apply taste penalties (soft scoring, not hard removal)
+      if (listenerProfile && listenerProfile.confidence >= 0.1) {
+        const { penalty, reasons } = computeTastePenalty(product, listenerProfile);
+        if (penalty < 0) {
+          score += penalty;
+          penalizedByTaste.push(`${product.brand} ${product.name} (${penalty.toFixed(1)}: ${reasons.join('; ')})`);
+        }
+      }
+
+      return { product, score };
+    })
     .sort((a, b) => b.score - a.score);
+
+  if (removedByTaste.length > 0 || penalizedByTaste.length > 0) {
+    console.log('[taste-filter]', {
+      inferredTraits: listenerProfile
+        ? Object.entries(listenerProfile.inferredTraits)
+            .filter(([, v]) => v > 0.1)
+            .map(([k, v]) => `${k}:${(v as number).toFixed(2)}`)
+        : 'none',
+      removedProducts: removedByTaste,
+      penalizedProducts: penalizedByTaste,
+    });
+  }
+
+  return scored;
 }
 
 // ── Amplifier Architecture Sonic Tendencies ──────────

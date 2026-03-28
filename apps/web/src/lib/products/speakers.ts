@@ -115,6 +115,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
         { gains: 'rhythmic engagement and dynamic life', cost: 'the pinpoint imaging and spatial precision of sealed-box or narrow-baffle designs', relative_to: 'precision-oriented monitors', basis: 'listener_consensus' },
       ],
     },
+    philosophy: 'energy',
+    marketType: 'nonTraditional',
   },
 
   // ── Boenicke ──────────────────────────────────────────
@@ -206,6 +208,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
         { gains: 'spatial precision, texture, and disappearing act', cost: 'dynamic scale and bass weight', relative_to: 'full-size floorstanders', basis: 'review_consensus' },
       ],
     },
+    // Step 10: buying metadata
+    typicalMarket: 'new',
+    buyingContext: 'dealer_likely',
+    // imageUrl: undefined, // TODO: add official product image from boenicke-audio.ch
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   // ── Harbeth ───────────────────────────────────────────
@@ -296,6 +304,11 @@ export const SPEAKER_PRODUCTS: Product[] = [
         { gains: 'vocal naturalness, tonal beauty, and indefinite listening comfort', cost: 'dynamic scale, bass extension, and explicit transient definition', relative_to: 'efficiency-oriented or horn designs', basis: 'review_consensus' },
       ],
     },
+    // Step 10: buying metadata
+    buyingContext: 'better_used',
+    // imageUrl: undefined, // TODO: add official product image from harbeth.co.uk
+    philosophy: 'warm',
+    marketType: 'traditional',
   },
 
   {
@@ -360,6 +373,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'The Audiophiliac', note: 'Steve Guttenberg coverage of the SHL5+ as a do-everything monitor.' },
       { source: '6moons', note: 'Review covering the BBC thin-wall design evolution and full-range balance.' },
     ],
+    philosophy: 'warm',
+    marketType: 'traditional',
   },
 
   // ── DeVore ────────────────────────────────────────────
@@ -448,6 +463,13 @@ export const SPEAKER_PRODUCTS: Product[] = [
         { gains: 'engagement, tonal richness, and dynamic scale', cost: 'the spatial precision and disappearing act of smaller, narrow-baffle designs', relative_to: 'stand-mounted monitors', basis: 'review_consensus' },
       ],
     },
+    // Step 10: buying metadata
+    typicalMarket: 'both',
+    usedPriceRange: { low: 7500, high: 10000 },
+    buyingContext: 'dealer_likely',
+    // imageUrl: undefined, // TODO: add official product image from devorefidelity.com
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   // ── Zu ────────────────────────────────────────────────
@@ -515,6 +537,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Darko.Audio', note: 'John Darko coverage of Zu Audio and the full-range high-efficiency philosophy.' },
       { source: 'Twittering Machines', note: 'Review covering the raw energy and musical immediacy of the Dirty Weekend.' },
     ],
+    philosophy: 'energy',
+    marketType: 'nonTraditional',
   },
 
   // ── Klipsch ───────────────────────────────────────────
@@ -605,6 +629,11 @@ export const SPEAKER_PRODUCTS: Product[] = [
         { gains: 'dynamic impact and transient speed', cost: 'spatial finesse and tonal purity on sustained tones', relative_to: 'conventional cone-and-dome designs', basis: 'review_consensus' },
       ],
     },
+    // Step 10: buying metadata
+    buyingContext: 'easy_new',
+    // imageUrl: undefined, // TODO: add official product image from klipsch.com
+    philosophy: 'energy',
+    marketType: 'traditional',
   },
 
   // ── Focal ─────────────────────────────────────────────
@@ -676,6 +705,13 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Darko.Audio', note: 'John Darko video review on the Kanta No.2 as a resolving all-rounder.' },
       { source: 'What Hi-Fi?', note: 'Award coverage praising detail and build quality.' },
     ],
+    // Step 10: buying metadata
+    typicalMarket: 'both',
+    usedPriceRange: { low: 4000, high: 5500 },
+    buyingContext: 'dealer_likely',
+    // imageUrl: undefined, // TODO: add official product image from focal.com
+    philosophy: 'analytical',
+    marketType: 'traditional',
   },
 
   {
@@ -741,6 +777,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review noting the flax driver naturalness and open sound.' },
       { source: 'Stereophile', note: 'Review covering the Aria line as Focal\'s best value proposition.' },
     ],
+    philosophy: 'analytical',
+    marketType: 'traditional',
   },
 
   // ── Boutique expansion ────────────────────────────────
@@ -822,6 +860,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: '6moons', note: 'Srajan Ebaen review covering the 10-inch wideband driver and musical engagement.' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg feature on the O/93 and DeVore Fidelity philosophy.' },
     ],
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -903,6 +943,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: '6moons', note: 'Srajan Ebaen review covering the full-range widebander coherence and spatial performance.' },
       { source: 'Twittering Machines', note: 'Review praising the Nenuphar family for holographic imaging and musical flow.' },
     ],
+    philosophy: 'energy',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -980,6 +1022,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
         { gains: 'spatial precision, composure, and transparency', cost: 'tonal density, warmth, and the musical ease of high-efficiency designs', relative_to: 'DeVore O/93, Harbeth 30.2', basis: 'review_consensus' },
       ],
     },
+    philosophy: 'neutral',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -1073,6 +1117,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Stereophile', note: 'Review covering the Horn Shoppe Horn loudspeaker.' },
       { source: 'Founder listening notes', note: 'Heard in Oppo → Marantz 2220B → Hornshoppe chain. Tabla realism, transient immediacy, physical presence.' },
     ],
+    philosophy: 'energy',
+    marketType: 'nonTraditional',
   },
 
   {
@@ -1152,6 +1198,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: '6moons', note: 'Srajan Ebaen review covering the PHY-HP driver and French artisanal build.' },
       { source: 'Twittering Machines', note: 'Review praising tonal richness and midrange density.' },
     ],
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   // ── DeVore Fidelity Gibbon 3XL ─────────────────────────
@@ -1235,6 +1283,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       ],
     },
     notes: 'Discontinued but available used in the $1,400-2,000 range. Predecessor to the Orangutan line. Shares the DeVore musical DNA at a fraction of the O/96 price.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   // ── KEF R3 ──────────────────────────────────────────────
@@ -1324,6 +1374,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       level: 'high',
       notes: 'Highly sensitive to positioning and room acoustics. Quality stands are essential. Benefits from acoustic treatment — the analytical presentation reveals room anomalies as readily as source quality.',
     },
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   // ── Spendor A1 ──────────────────────────────────────────
@@ -1406,6 +1458,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       ],
     },
     notes: 'At $1,900 new, fits under a $2k budget. BBC heritage with modern engineering. Excellent for acoustic, jazz, and vocal-forward music.',
+    philosophy: 'warm',
+    marketType: 'traditional',
   },
 
   // ── Wharfedale Linton Heritage ──────────────────────────
@@ -1488,6 +1542,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       ],
     },
     notes: 'Includes dedicated stands at $1,499 (speaker + stand bundle). Exceptional value proposition in the under-$2k category.',
+    philosophy: 'warm',
+    marketType: 'traditional',
   },
 
   // ── Totem Acoustic Model 1 Signature ────────────────────
@@ -1568,6 +1624,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       ],
     },
     notes: 'Discontinued but legendary. Available used for $1,200-1,800. Needs quality amplification and good stands. The sealed box means clean, fast bass rather than deep bass.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   // ── XSA ─────────────────────────────────────────────
@@ -1653,6 +1711,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Founder listening notes', note: 'Calibrated from extended in-system use. Compact, quick, slightly lean, open.' },
     ],
     notes: 'Founder reference speaker. Best understood as a speed-and-clarity optimised monitor — works well when the system provides tonal body from other components.',
+    philosophy: 'neutral',
+    marketType: 'nonTraditional',
   },
 
   // ── Boenicke W8 ─────────────────────────────────────
@@ -1734,6 +1794,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'HiFi+', note: 'Review noting the disappearing act and musical engagement.' },
     ],
     notes: 'Swiss manufacturing. The swing-base decoupling system is key to the W8\'s imaging precision. Available in multiple wood finishes. Benefits from good amplification — 50–100W recommended.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   // ── DeVore Fidelity O/Baby ──────────────────────────
@@ -1815,6 +1877,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Positive Feedback', note: 'Review praising the O/Baby\'s natural tonality and SET compatibility.' },
     ],
     notes: 'Brooklyn, NY manufacturing. The 10Ω nominal impedance is key — it presents an easy load that lets tube amps deliver their best. Paper cones and silk domes are chosen for tonal naturalism over measured flatness.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   // ── Magnepan ────────────────────────────────────────
@@ -1901,6 +1965,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Review noting the extraordinary midrange purity.' },
     ],
     notes: 'Factory-direct from Minnesota. Must be paired with a capable amplifier — weak amps are the #1 cause of Magnepan disappointment. A subwoofer integration is common for listeners who want full-range capability.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   {
@@ -1983,6 +2049,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Stereophile', note: 'Review praising the .7 as a scaled-up LRS with better bass and dynamics.' },
     ],
     notes: 'Factory-direct from Minnesota. The .7 is the sweet spot of the Magnepan line for many — more bass than the LRS+ without the size/cost leap to the 1.7i.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   // ── Falcon LS3/5a ───────────────────────────────────
@@ -2069,6 +2137,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Stereophile', note: 'Multiple reviews praising the LS3/5a as a reference monitor and domestic speaker.' },
     ],
     notes: 'Manufactured under license by Falcon Acoustics in the UK. The LS3/5a is a speaker that rewards careful listening and proper setup. Not a crowd-pleaser, but a tool for listeners who value truth over drama.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   // ── Mission 770 ───────────────────────────────────
@@ -2152,6 +2222,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Hi-Fi News', note: 'Review of the reissue praising the faithful reproduction of the original character.' },
     ],
     notes: 'British engineering with modern manufacturing. A speaker for music lovers who value engagement over analysis.',
+    philosophy: 'warm',
+    marketType: 'traditional',
   },
 
   // ── Mission MS 50 8VET ───────────────────────────────────
@@ -2235,6 +2307,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Listener Consensus', note: 'Used market evidence and long-term listener satisfaction with vintage Mission speakers.' },
     ],
     notes: 'This speaker is a beloved reference point for the user. It represents genuine musicality at minimal cost. A humbling reminder that taste and character matter more than specifications and price.',
+    philosophy: 'warm',
+    marketType: 'traditional',
   },
 
   // ── Amphion Argon3S ───────────────────────────────────
@@ -2318,6 +2392,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Stereophile', note: 'Review praising the Argon3S for studio-grade clarity in a residential setting.' },
     ],
     notes: 'Studio heritage applied to domestic listening. For listeners who value accuracy and detail retrieval above all else.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 
   // ── JBL L100 Classic ───────────────────────────────────
@@ -2401,6 +2477,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Stereophile', note: 'Review celebrating the L100 Classic as a fun, energetic speaker with modern reliability.' },
     ],
     notes: 'A speaker that knows what it is: engaging and entertaining. Not for critical listening, but for music lovers who want to feel the energy.',
+    philosophy: 'energy',
+    marketType: 'traditional',
   },
 
   // ── Altec Model 19 ───────────────────────────────────
@@ -2485,6 +2563,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Stereophile Archives', note: 'Vintage speaker retrospectives praising the Model 19 for its dynamic impact.' },
     ],
     notes: 'A vintage speaker that requires respect for its age and design philosophy. Not a precision tool, but an experience. Best used by listeners comfortable with vintage equipment and its attendant quirks. A legendary pairing with low-power tube amps.',
+    philosophy: 'energy',
+    marketType: 'nonTraditional',
   },
 
   // ── DeVore Fidelity O/92 ───────────────────────────────────
@@ -2569,6 +2649,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Stereophile', note: 'Review praising the O/92 as a musical, tube-friendly loudspeaker with excellent scaling from the O/Baby.' },
     ],
     notes: 'A musical instrument, not a measuring stick. The O/92 is designed for listeners who value engagement and emotional involvement. The 10Ω impedance and bass-reflex design allow the speaker to work in diverse room contexts.',
+    philosophy: 'warm',
+    marketType: 'nonTraditional',
   },
 
   // ── Wilson Audio Sabrina X ───────────────────────────────────
@@ -2652,6 +2734,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Stereophile', note: 'Review praising the Sabrina X as a statement-level loudspeaker at the entry of Wilson\'s line.' },
     ],
     notes: 'An engineering statement. The Sabrina X is designed for listeners who value precision and control above all. Synergy with high-quality amplification and sources is essential.',
+    philosophy: 'analytical',
+    marketType: 'traditional',
   },
 
   // ── Magico A3 ───────────────────────────────────
@@ -2735,6 +2819,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Stereophile', note: 'Review praising the A3 for studio-grade precision in a residential floorstanding format.' },
     ],
     notes: 'A precision instrument. The A3 is for listeners comfortable with neutral, analytical sound and willing to invest in component synergy. Not a casual speaker, but a reference tool.',
+    philosophy: 'analytical',
+    marketType: 'traditional',
   },
 
   // ── Magnepan 1.7i ───────────────────────────────────
@@ -2821,5 +2907,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'Stereophile', note: 'Long-standing Stereophile recommendation for spatial presentation and transparency.' },
     ],
     notes: 'Factory-direct from Minnesota. The 1.7i is the gateway Magnepan for many listeners — a clear step into planar territory without the size and cost of larger models. Room and amplification must be part of the decision.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
   },
 ];

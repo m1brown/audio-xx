@@ -18,6 +18,7 @@ import type { SystemProfile, OutputType, SystemCharacter } from './system-profil
 import { DEFAULT_SYSTEM_PROFILE } from './system-profile';
 export type { SystemProfile, OutputType, SystemCharacter } from './system-profile';
 import type { SonicArchetype } from './archetype';
+import type { PrimaryAxisLeanings } from './axis-types';
 import { hasTendencies, selectDefaultTendencies, hasRisk, getEmphasizedTraits, getLessEmphasizedTraits, hasExplainableProfile, resolveTraitValue } from './sonic-tendencies';
 import { resolveArchetype, archetypeFitNote } from './design-archetypes';
 
@@ -60,12 +61,283 @@ export interface CategoryDependency {
 /** Optional subcategory for finer routing (e.g. cables within 'general'). */
 export type ShoppingSubcategory = 'cables' | undefined;
 
+// ── Taste confidence ──────────────────────────────────
+// Measures how much we know about the user's listening preferences.
+// Controls response language assertiveness and question injection.
+
+export type TasteConfidence = 'low' | 'sufficient';
+
+export function computeTasteConfidence({
+  hasBudget,
+  hasCategory,
+  hasSemanticPreferences,
+  hasReference,
+  hasDislikes,
+  hasDirectionSignal,
+  hasSpecialistSignal,
+}: {
+  hasBudget: boolean;
+  hasCategory: boolean;
+  hasSemanticPreferences: boolean;
+  hasReference: boolean;
+  hasDislikes: boolean;
+  hasDirectionSignal: boolean;
+  /** User expressed specialist-path intent (SET, horn, high-efficiency, etc.) */
+  hasSpecialistSignal?: boolean;
+}): TasteConfidence {
+  let score = 0;
+  if (hasBudget) score += 1;
+  if (hasCategory) score += 1;
+  if (hasSemanticPreferences) score += 1;
+  if (hasReference) score += 2;
+  if (hasDislikes) score += 2;
+  if (hasDirectionSignal) score += 2;
+  if (hasSpecialistSignal) score += 2;
+
+  if (score <= 2) return 'low';
+  return 'sufficient';
+}
+
+/** Detect product references ("I like X", "I have X", "something like X"). */
+const REFERENCE_PATTERNS = [
+  /\bi (?:like|love|own|have|use|enjoy|prefer)\b.{0,30}\b[A-Z][a-z]+\b/,
+  /\bsomething like\b/i,
+  /\bsimilar to\b/i,
+  /\bmy (?:current|existing)\b/i,
+];
+
+export function hasProductReference(text: string): boolean {
+  return REFERENCE_PATTERNS.some((re) => re.test(text));
+}
+
+/** Detect dislike signals ("don't like", "too harsh", "hate bright sound"). */
+const DISLIKE_PATTERNS = [
+  /\b(?:don'?t|do not|never|hate|dislike|can'?t stand)\b.{0,30}\b(?:like|want|enjoy|listen)/i,
+  /\btoo (?:harsh|bright|warm|cold|dry|thin|aggressive|fatiguing|shrill|dark|muddy|slow|boring|clinical|sterile)\b/i,
+  /\bnot a fan of\b/i,
+  /\bavoid\b.{0,20}\b(?:sound|tone|character)/i,
+  // Comparative negation — "less dry", "less harsh" implies dissatisfaction with current state
+  /\bless\s+(?:dry|harsh|bright|cold|thin|clinical|sterile|boring|fatiguing|aggressive)\b/i,
+];
+
+export function hasDislikeSignal(text: string): boolean {
+  return DISLIKE_PATTERNS.some((re) => re.test(text));
+}
+
+/** Detect directional sonic preference signals ("warm", "detailed", "punchy"). */
+const DIRECTION_SIGNAL_PATTERNS = [
+  /\b(?:warm|smooth|lush|rich|tubey|organic|liquid|relaxed)\b/i,
+  /\b(?:bright|detailed|analytical|precise|crisp|transparent|revealing|airy)\b/i,
+  /\b(?:punchy|dynamic|impactful|slam|attack|fast|snappy)\b/i,
+  /\b(?:controlled|tight|grip|disciplined|composed)\b/i,
+  /\b(?:elastic|flowing|musical|natural|easy|effortless)\b/i,
+  /\b(?:spatial|wide|open|holographic|imaging|soundstage)\b/i,
+  // Emotional / involvement language — clear directional intent
+  /\b(?:engaging|emotional|involving|immersive|captivating|intimate|soulful|evocative)\b/i,
+  // Comparative negation — "less dry", "less harsh" etc. imply a direction
+  /\bless\s+(?:dry|harsh|bright|cold|thin|clinical|sterile|boring|fatiguing|aggressive)\b/i,
+  // "More X" phrasing — "more body", "more weight", "more presence"
+  /\bmore\s+(?:body|weight|presence|texture|depth|slam|air|space|detail|warmth|punch|energy)\b/i,
+];
+
+export function hasDirectionSignal(text: string): boolean {
+  return DIRECTION_SIGNAL_PATTERNS.some((re) => re.test(text));
+}
+
+/** Build a single targeted question when taste confidence is low. */
+export function buildTasteQuestion({
+  category,
+  hasDirectionSignalPresent,
+  hasReferencePresent,
+}: {
+  category: string;
+  hasDirectionSignalPresent: boolean;
+  hasReferencePresent: boolean;
+}): string | null {
+  // Don't ask if user already gave direction or reference signals
+  if (hasDirectionSignalPresent || hasReferencePresent) return null;
+  return 'Do you want this to lean more warm and punchy, or clean and controlled?';
+}
+
+/** Build a focused category question when taste is clear but category is missing.
+ *  Only fires when: tasteConfidence is sufficient, category is general, and
+ *  no products can be returned. */
+export function buildCategoryQuestion({
+  tasteConfidence,
+  category,
+  hasProducts,
+}: {
+  tasteConfidence: TasteConfidence;
+  category: string;
+  hasProducts: boolean;
+}): string | null {
+  // Only ask when we have taste signal but no category to act on
+  if (tasteConfidence !== 'sufficient') return null;
+  if (category !== 'general' && category !== 'component') return null;
+  if (hasProducts) return null;
+  return 'Are you thinking about speakers, headphones, or amplification?';
+}
+
+/** Detected room/environment context for ranking adjustments. */
+export type RoomContext = 'large' | 'small' | 'desktop' | 'nearfield' | null;
+
+/** Hard constraints extracted from user refinement text. These act as
+ *  filters, not soft preferences — products that violate them are excluded. */
+export interface HardConstraints {
+  /** Topologies to exclude (e.g., user says "no tubes"). */
+  excludeTopologies: string[];
+  /** Topologies to require (e.g., user says "class AB only"). */
+  requireTopologies: string[];
+  /** Only show currently available / new products (exclude discontinued/vintage). */
+  newOnly: boolean;
+  /** Only show used-market / discontinued products. */
+  usedOnly: boolean;
+}
+
+// ── Selection mode ────────────────────────────────────
+// Detects whether the user is asking for a directional shift in
+// the recommendation set, not just a refinement of the same center.
+
+export type SelectionMode = 'default' | 'different' | 'less_traditional';
+
+const DIFFERENT_PATTERNS = [
+  /\bsomething\s+different\b/i,
+  /\bdifferent\s+direction\b/i,
+  /\bshow\s+me\s+(?:something\s+)?(?:else|different)\b/i,
+  /\banother\s+option\b/i,
+  /\bwhat\s+else\b/i,
+  /\bother\s+options?\b/i,
+];
+
+const LESS_TRADITIONAL_PATTERNS = [
+  /\bless\s+traditional\b/i,
+  /\bnon[\s-]?traditional\b/i,
+  /\bunusual\b/i,
+  /\boffbeat\b/i,
+  /\bboutique\b/i,
+  /\bniche\b/i,
+  /\bweird(?:er)?\b/i,
+  /\besoteric\b/i,
+];
+
+export function detectSelectionMode(text: string): SelectionMode {
+  for (const re of LESS_TRADITIONAL_PATTERNS) {
+    if (re.test(text)) return 'less_traditional';
+  }
+  for (const re of DIFFERENT_PATTERNS) {
+    if (re.test(text)) return 'different';
+  }
+  return 'default';
+}
+
+// ── Explicit category switch detection ────────────────
+// Returns a category ONLY when the user's message clearly requests one.
+// Questions *about* categories ("are these dacs or amps?") do NOT count.
+// Preference statements, budget changes, dislikes, and selection modes do NOT count.
+const EXPLICIT_CATEGORY_SWITCH_PATTERNS: { category: ShoppingCategory; patterns: RegExp[] }[] = [
+  {
+    category: 'dac',
+    patterns: [
+      /\b(?:show|find|recommend|suggest|looking for|help.*(?:with|find)|want|need|get)\b.{0,20}\b(?:dac|converter)s?\b/i,
+      /\b(?:what about|how about|let'?s (?:try|look at|see)|now (?:for|let'?s|show))\b.{0,15}\b(?:dac|converter)s?\b/i,
+      /\b(?:dac|converter)s?\b.{0,15}\b(?:instead|now|next)\b/i,
+      /\b(?:switch|change|move)\b.{0,15}\b(?:to\s+)?(?:dac|converter)s?\b/i,
+      /\bi want (?:a\s+)?dacs?\b/i,
+    ],
+  },
+  {
+    category: 'amplifier',
+    patterns: [
+      /\b(?:show|find|recommend|suggest|looking for|help.*(?:with|find)|want|need|get)\b.{0,20}\b(?:amp|amplifier|integrated|power amp|preamp)s?\b/i,
+      /\b(?:what about|how about|let'?s (?:try|look at|see)|now (?:for|let'?s|show))\b.{0,15}\b(?:amp|amplifier|integrated)s?\b/i,
+      /\b(?:amp|amplifier|integrated)s?\b.{0,15}\b(?:instead|now|next)\b/i,
+      /\b(?:switch|change|move)\b.{0,15}\b(?:to\s+)?(?:amp|amplifier|integrated)s?\b/i,
+      /\bi want (?:an?\s+)?(?:amp|amplifier|integrated)s?\b/i,
+    ],
+  },
+  {
+    category: 'speaker',
+    patterns: [
+      /\b(?:show|find|recommend|suggest|looking for|help.*(?:with|find)|want|need|get)\b.{0,20}\b(?:speaker|speakers|monitors|bookshelf|floorstanding)s?\b/i,
+      /\b(?:what about|how about|let'?s (?:try|look at|see)|now (?:for|let'?s|show))\b.{0,15}\b(?:speaker|speakers|monitors)s?\b/i,
+      /\b(?:speaker|speakers|monitors)\b.{0,15}\b(?:instead|now|next)\b/i,
+      /\b(?:switch|change|move)\b.{0,15}\b(?:to\s+)?(?:speaker|speakers|monitors)\b/i,
+      /\bi want\b.{0,10}\b(?:speaker|speakers)\b/i,
+    ],
+  },
+  {
+    category: 'headphone',
+    patterns: [
+      /\b(?:show|find|recommend|suggest|looking for|help.*(?:with|find)|want|need|get)\b.{0,20}\b(?:headphone|headphones|iem|iems|earphone)s?\b/i,
+      /\b(?:what about|how about|let'?s (?:try|look at|see)|now (?:for|let'?s|show))\b.{0,15}\b(?:headphone|headphones|iem|iems)s?\b/i,
+      /\b(?:headphone|headphones|iem|iems)\b.{0,15}\b(?:instead|now|next)\b/i,
+      /\bi want\b.{0,10}\b(?:headphone|headphones|iem|iems)\b/i,
+    ],
+  },
+  {
+    category: 'turntable',
+    patterns: [
+      /\b(?:show|find|recommend|suggest|looking for|help.*(?:with|find)|want|need|get)\b.{0,20}\b(?:turntable|record player|vinyl)s?\b/i,
+      /\b(?:what about|how about|let'?s (?:try|look at|see)|now (?:for|let'?s|show))\b.{0,15}\b(?:turntable|record player|vinyl)s?\b/i,
+      /\b(?:turntable|record player)\b.{0,15}\b(?:instead|now|next)\b/i,
+    ],
+  },
+  {
+    category: 'streamer',
+    patterns: [
+      /\b(?:show|find|recommend|suggest|looking for|help.*(?:with|find)|want|need|get)\b.{0,20}\b(?:streamer|transport|network player)s?\b/i,
+      /\b(?:what about|how about|let'?s (?:try|look at|see)|now (?:for|let'?s|show))\b.{0,15}\b(?:streamer|transport|network player)s?\b/i,
+      /\b(?:streamer|transport)\b.{0,15}\b(?:instead|now|next)\b/i,
+    ],
+  },
+];
+
+/**
+ * Detects an EXPLICIT category switch from user text.
+ * Returns the new category if the user clearly asks for one, null otherwise.
+ *
+ * Questions ABOUT categories ("are these dacs?", "is this an amp or dac?")
+ * do NOT trigger a switch. Only directive intent does:
+ * "show me dacs", "what about speakers", "amplifiers instead", "i want an amp"
+ */
+export function detectExplicitCategorySwitch(text: string): ShoppingCategory | null {
+  const lower = text.toLowerCase();
+
+  // Reject question-about-category patterns — these should NOT trigger a switch.
+  // "are these dacs or amplifiers?", "is this a dac?", "which category"
+  if (/\b(?:are\s+these|is\s+(?:this|it)|which\s+(?:category|type))\b.{0,30}\b(?:dac|amp|speaker|headphone|turntable|streamer)/i.test(lower)) {
+    return null;
+  }
+
+  for (const entry of EXPLICIT_CATEGORY_SWITCH_PATTERNS) {
+    for (const re of entry.patterns) {
+      if (re.test(lower)) {
+        return entry.category;
+      }
+    }
+  }
+  return null;
+}
+
+// ── Previous anchor info (for mode-aware anchor selection) ──
+
+export interface PreviousAnchor {
+  name: string;
+  brand: string;
+  philosophy?: 'energy' | 'neutral' | 'warm' | 'analytical';
+  marketType?: 'traditional' | 'nonTraditional' | 'value';
+  primaryAxes?: PrimaryAxisLeanings;
+}
+
 export interface ShoppingContext {
   detected: boolean;
   mode: ShoppingMode;
   category: ShoppingCategory;
   /** Finer classification within category. */
   subcategory?: ShoppingSubcategory;
+  /** When the user asks for multiple categories ("amp and dac"), the
+   *  primary category is handled first and this stores the second. */
+  secondaryCategory?: ShoppingCategory;
   budgetMentioned: boolean;
   budgetAmount: number | null;
   tasteProvided: boolean;
@@ -76,6 +348,12 @@ export interface ShoppingContext {
   limitingProvided: boolean;
   /** Category-specific dependencies (e.g., phono stage for turntables). */
   dependencies: CategoryDependency[];
+  /** Detected room size / environment context. Affects speaker ranking. */
+  roomContext: RoomContext;
+  /** Hard constraints (topology exclusion, new-only, etc.). */
+  constraints: HardConstraints;
+  /** Semantic preferences derived from natural language ("big and powerful", etc.). */
+  semanticPreferences: SemanticPreferences;
 }
 
 // ── Intent keywords ───────────────────────────────────
@@ -193,6 +471,9 @@ const BUDGET_PATTERNS = [
   /under\s+\d/i,
   /around\s+\d/i,
   /spend\s+\d/i,
+  /\bsame\s+budget\b/i,
+  /\bsame\s+price\s+range\b/i,
+  /\bkeep(?:ing)?\s+(?:the\s+)?budget\b/i,
 ];
 
 // ── System / gear detection ───────────────────────────
@@ -235,6 +516,352 @@ const USE_CASE_KEYWORDS = [
   'headphones',
   'speakers',
 ];
+
+// ── Hard constraint extraction ──────────────────────────
+// Detects explicit user constraints that must act as hard filters,
+// not soft preferences. "no tubes", "class AB", "new only" etc.
+
+// Topology name → canonical DesignTopology values
+const TOPOLOGY_ALIASES: Record<string, string[]> = {
+  // Tube topologies
+  'tube': ['set', 'push-pull-tube'],
+  'tubes': ['set', 'push-pull-tube'],
+  'valve': ['set', 'push-pull-tube'],
+  'set': ['set'],
+  'single ended triode': ['set'],
+  'push pull': ['push-pull-tube'],
+  'otl': ['push-pull-tube'],
+  // Solid-state topologies
+  'class a': ['class-a-solid-state'],
+  'class ab': ['class-ab-solid-state'],
+  'class a/b': ['class-ab-solid-state'],
+  'class-ab': ['class-ab-solid-state'],
+  'class d': ['class-d'],
+  'class-d': ['class-d'],
+  'solid state': ['class-a-solid-state', 'class-ab-solid-state', 'class-d'],
+  'solid-state': ['class-a-solid-state', 'class-ab-solid-state', 'class-d'],
+  // Hybrid
+  'hybrid': ['hybrid'],
+};
+
+/** Extract hard constraints from accumulated user text. */
+function extractHardConstraints(text: string): HardConstraints {
+  const lower = text.toLowerCase();
+  const excludeTopologies: string[] = [];
+  const requireTopologies: string[] = [];
+
+  // ── Exclusion patterns: "no tubes", "don't want tubes", "not tube", "exclude class d"
+  const exclusionRe = /\b(?:no|don'?t\s+want|not|without|exclude|avoid|skip)\s+(tube[s]?|valve[s]?|solid[\s-]?state|class[\s-]?a\b(?![\s/]*b)|class[\s-]?ab|class[\s-]?a\s*\/\s*b|class[\s-]?d|hybrid|set|push[\s-]?pull|single[\s-]?ended)/gi;
+  let match: RegExpExecArray | null;
+  while ((match = exclusionRe.exec(lower)) !== null) {
+    const term = match[1].replace(/[-\s]+/g, ' ').trim();
+    const topos = TOPOLOGY_ALIASES[term];
+    if (topos) {
+      for (const t of topos) {
+        if (!excludeTopologies.includes(t)) excludeTopologies.push(t);
+      }
+    }
+  }
+
+  // ── Requirement patterns: "class ab amps", "in class ab", "only class ab"
+  const requireRe = /\b(?:in|only|just|strictly|specifically)\s+(?:class[\s-]?(?:a\b(?![\s/]*b)|ab|a\s*\/\s*b|d)|tube[s]?|solid[\s-]?state|hybrid)/gi;
+  while ((match = requireRe.exec(lower)) !== null) {
+    const term = match[0].replace(/^(?:in|only|just|strictly|specifically)\s+/i, '').replace(/[-\s]+/g, ' ').trim();
+    const topos = TOPOLOGY_ALIASES[term];
+    if (topos) {
+      for (const t of topos) {
+        if (!requireTopologies.includes(t)) requireTopologies.push(t);
+      }
+    }
+  }
+
+  // Also detect bare topology mentions as category-level requirements:
+  // "class ab amps?" or "what about class ab?" in isolation
+  const bareTopoRe = /\bclass[\s-]?(?:a\b(?![\s/]*b)|ab|a\s*\/\s*b|d)\b/gi;
+  // Only treat as requirement if the sentence context implies filtering,
+  // not just mentioning. Check for question mark, "amps", "amplifier", or "what about"
+  if (/\bclass[\s-]?ab\s+(?:amp|amplifier)/i.test(lower)
+    || /\bin\s+class[\s-]?ab/i.test(lower)
+    || /\bclass[\s-]?ab\s+(?:amp|amplifier)?s?\s*\??$/im.test(lower)) {
+    if (!requireTopologies.includes('class-ab-solid-state')) {
+      requireTopologies.push('class-ab-solid-state');
+    }
+  }
+  if (/\bclass[\s-]?a\b(?![\s/]*b)\s+(?:amp|amplifier)/i.test(lower)
+    || /\bin\s+class[\s-]?a\b(?![\s/]*b)/i.test(lower)) {
+    if (!requireTopologies.includes('class-a-solid-state')) {
+      requireTopologies.push('class-a-solid-state');
+    }
+  }
+
+  // ── SET / single-ended triode intent detection ──
+  // Catch "SET amp", "single-ended triode", "triode amp", brand-driven SET (Decware, Yamamoto, Bottlehead)
+  if (/\b(?:set\s+amp|single[\s-]?ended(?:\s+triode)?|triode\s+amp)/i.test(lower)
+    || /\b(?:decware|yamamoto|bottlehead)\b/i.test(lower)) {
+    if (!requireTopologies.includes('set')) {
+      requireTopologies.push('set');
+    }
+  }
+
+  // ── Availability constraints
+  const newOnly = /\b(?:i\s+want\s+new|new\s+only|only\s+new|buy\s+new|brand\s+new|currently\s+(?:available|in\s+production)|still\s+(?:made|in\s+production)|not\s+(?:discontinued|used|vintage))\b/i.test(lower);
+  const usedOnly = /\b(?:used\s+only|only\s+used|secondhand|second[\s-]hand|pre[\s-]?owned)\b/i.test(lower);
+
+  return { excludeTopologies, requireTopologies, newOnly, usedOnly };
+}
+
+// ── Semantic preference extraction ──────────────────────
+// Extracts soft semantic preferences from natural language
+// (e.g., "big and powerful", "warm and smooth", "detailed and precise").
+// These produce weighted scoring adjustments, not hard filters.
+
+/** A semantic preference maps to one or more product traits with a weight. */
+export interface SemanticWeight {
+  trait: string;
+  weight: number;
+}
+
+export interface SemanticPreferences {
+  /** Weighted trait adjustments derived from user language. */
+  weights: SemanticWeight[];
+  /** Whether the user expressed a scale/power preference. */
+  wantsBigScale: boolean;
+  /** Whether the user expressed a compact/intimate preference. */
+  wantsSmallScale: boolean;
+  /** Energy level preference: 'high' | 'low' | null */
+  energyLevel: 'high' | 'low' | null;
+  /** Music genre hints that inform sonic priorities. */
+  musicHints: string[];
+  /** Specialist-path hints — detected signals for future routing (no behavior change yet). */
+  specialistHints: string[];
+}
+
+/** Semantic patterns: natural-language phrase → trait weights.
+ *  Each pattern can map to multiple traits with different weights.
+ *  Weights are strong enough to visibly affect ranking (0.3–0.8 range). */
+const SEMANTIC_PATTERNS: Array<{ pattern: RegExp; weights: SemanticWeight[] }> = [
+  // ── Power / scale / dynamics ──
+  { pattern: /\bbig\s+(?:and\s+)?powerful\b/i, weights: [{ trait: 'dynamics', weight: 0.8 }, { trait: 'speed', weight: 0.4 }, { trait: 'composure', weight: 0.3 }] },
+  { pattern: /\bpowerful\b/i, weights: [{ trait: 'dynamics', weight: 0.6 }, { trait: 'speed', weight: 0.3 }] },
+  { pattern: /\bbig\s+sound\b/i, weights: [{ trait: 'dynamics', weight: 0.6 }, { trait: 'tonal_density', weight: 0.3 }] },
+  { pattern: /\bbig\s+scale\b/i, weights: [{ trait: 'dynamics', weight: 0.6 }] },
+  { pattern: /\bauthoritative\b/i, weights: [{ trait: 'dynamics', weight: 0.5 }, { trait: 'composure', weight: 0.4 }] },
+  { pattern: /\bimpactful\b/i, weights: [{ trait: 'dynamics', weight: 0.5 }] },
+  { pattern: /\bpunchy\b/i, weights: [{ trait: 'dynamics', weight: 0.5 }, { trait: 'speed', weight: 0.4 }] },
+  { pattern: /\bhigh[\s-]?power\b/i, weights: [{ trait: 'dynamics', weight: 0.6 }, { trait: 'composure', weight: 0.3 }] },
+  { pattern: /\brock\s+out\b/i, weights: [{ trait: 'dynamics', weight: 0.5 }, { trait: 'speed', weight: 0.3 }] },
+  // ── Warmth / density / richness ──
+  { pattern: /\bwarm\s+(?:and\s+)?smooth\b/i, weights: [{ trait: 'warmth', weight: 0.6 }, { trait: 'flow', weight: 0.4 }, { trait: 'tonal_density', weight: 0.3 }] },
+  { pattern: /\bwarm\b/i, weights: [{ trait: 'warmth', weight: 0.5 }, { trait: 'tonal_density', weight: 0.2 }] },
+  { pattern: /\brich\b/i, weights: [{ trait: 'tonal_density', weight: 0.5 }, { trait: 'warmth', weight: 0.3 }] },
+  { pattern: /\blush\b/i, weights: [{ trait: 'tonal_density', weight: 0.5 }, { trait: 'warmth', weight: 0.4 }] },
+  { pattern: /\bsmooth\b/i, weights: [{ trait: 'flow', weight: 0.4 }, { trait: 'warmth', weight: 0.3 }] },
+  { pattern: /\bfull[\s-]?bodied\b/i, weights: [{ trait: 'tonal_density', weight: 0.6 }, { trait: 'warmth', weight: 0.3 }] },
+  { pattern: /\btubey\b/i, weights: [{ trait: 'warmth', weight: 0.5 }, { trait: 'tonal_density', weight: 0.4 }, { trait: 'flow', weight: 0.3 }] },
+  // ── Clarity / precision / detail ──
+  { pattern: /\bdetailed\s+(?:and\s+)?precise\b/i, weights: [{ trait: 'clarity', weight: 0.6 }, { trait: 'spatial_precision', weight: 0.4 }, { trait: 'speed', weight: 0.3 }] },
+  { pattern: /\bdetailed\b/i, weights: [{ trait: 'clarity', weight: 0.5 }] },
+  { pattern: /\bprecise\b/i, weights: [{ trait: 'clarity', weight: 0.4 }, { trait: 'spatial_precision', weight: 0.4 }] },
+  { pattern: /\banalytical\b/i, weights: [{ trait: 'clarity', weight: 0.5 }, { trait: 'speed', weight: 0.3 }] },
+  { pattern: /\btransparent\b/i, weights: [{ trait: 'clarity', weight: 0.5 }] },
+  { pattern: /\brevealing\b/i, weights: [{ trait: 'clarity', weight: 0.5 }, { trait: 'spatial_precision', weight: 0.2 }] },
+  // ── Speed / timing / rhythm ──
+  { pattern: /\bfast\s+(?:and\s+)?tight\b/i, weights: [{ trait: 'speed', weight: 0.6 }, { trait: 'dynamics', weight: 0.3 }] },
+  { pattern: /\bfast\b/i, weights: [{ trait: 'speed', weight: 0.5 }] },
+  { pattern: /\btight\b/i, weights: [{ trait: 'speed', weight: 0.4 }, { trait: 'composure', weight: 0.3 }] },
+  { pattern: /\brhythmic\b/i, weights: [{ trait: 'elasticity', weight: 0.5 }, { trait: 'speed', weight: 0.3 }] },
+  { pattern: /\bPRaT\b/i, weights: [{ trait: 'speed', weight: 0.5 }, { trait: 'elasticity', weight: 0.4 }] },
+  // ── Flow / musicality / organic ──
+  { pattern: /\bmusical\b/i, weights: [{ trait: 'flow', weight: 0.5 }, { trait: 'elasticity', weight: 0.3 }] },
+  { pattern: /\borganic\b/i, weights: [{ trait: 'flow', weight: 0.5 }, { trait: 'texture', weight: 0.3 }] },
+  { pattern: /\bnatural\b/i, weights: [{ trait: 'flow', weight: 0.4 }, { trait: 'texture', weight: 0.3 }] },
+  { pattern: /\bengaging\b/i, weights: [{ trait: 'flow', weight: 0.4 }, { trait: 'dynamics', weight: 0.3 }] },
+  { pattern: /\bemotional\b/i, weights: [{ trait: 'flow', weight: 0.5 }, { trait: 'warmth', weight: 0.3 }, { trait: 'tonal_density', weight: 0.2 }] },
+  { pattern: /\binvolving\b/i, weights: [{ trait: 'flow', weight: 0.5 }, { trait: 'elasticity', weight: 0.3 }] },
+  { pattern: /\bimmersive\b/i, weights: [{ trait: 'spatial_precision', weight: 0.4 }, { trait: 'flow', weight: 0.3 }] },
+  { pattern: /\bcaptivating\b/i, weights: [{ trait: 'flow', weight: 0.4 }, { trait: 'dynamics', weight: 0.3 }] },
+  { pattern: /\bsoulful\b/i, weights: [{ trait: 'warmth', weight: 0.4 }, { trait: 'flow', weight: 0.4 }, { trait: 'tonal_density', weight: 0.3 }] },
+  { pattern: /\bevocative\b/i, weights: [{ trait: 'flow', weight: 0.4 }, { trait: 'texture', weight: 0.3 }] },
+  { pattern: /\bintimate\b/i, weights: [{ trait: 'texture', weight: 0.4 }, { trait: 'flow', weight: 0.3 }] },
+  // ── Comparative negation → directional weights ──
+  { pattern: /\bless\s+dry\b/i, weights: [{ trait: 'warmth', weight: 0.5 }, { trait: 'tonal_density', weight: 0.3 }] },
+  { pattern: /\bless\s+(?:harsh|bright|aggressive|fatiguing)\b/i, weights: [{ trait: 'warmth', weight: 0.4 }, { trait: 'flow', weight: 0.3 }] },
+  { pattern: /\bless\s+(?:cold|clinical|sterile)\b/i, weights: [{ trait: 'warmth', weight: 0.5 }, { trait: 'tonal_density', weight: 0.3 }] },
+  { pattern: /\bless\s+(?:thin|boring)\b/i, weights: [{ trait: 'tonal_density', weight: 0.4 }, { trait: 'dynamics', weight: 0.3 }] },
+  // ── Spatial / imaging ──
+  { pattern: /\bsoundstage\b/i, weights: [{ trait: 'spatial_precision', weight: 0.5 }] },
+  { pattern: /\bimaging\b/i, weights: [{ trait: 'spatial_precision', weight: 0.5 }] },
+  { pattern: /\bholographic\b/i, weights: [{ trait: 'spatial_precision', weight: 0.6 }] },
+  // ── Upgrade / improvement language (weak weights — directional hints, not strong filters) ──
+  { pattern: /\bstep\s+up\b/i, weights: [{ trait: 'clarity', weight: 0.2 }, { trait: 'dynamics', weight: 0.2 }] },
+  { pattern: /\bmore\s+refined\b/i, weights: [{ trait: 'clarity', weight: 0.3 }, { trait: 'composure', weight: 0.3 }] },
+  { pattern: /\bmore\s+resolving\b/i, weights: [{ trait: 'clarity', weight: 0.4 }, { trait: 'spatial_precision', weight: 0.3 }] },
+  // ── Composure / control ──
+  { pattern: /\bcontrolled\b/i, weights: [{ trait: 'composure', weight: 0.5 }, { trait: 'speed', weight: 0.2 }] },
+  { pattern: /\bcomposed\b/i, weights: [{ trait: 'composure', weight: 0.5 }] },
+  { pattern: /\bgrip\b/i, weights: [{ trait: 'composure', weight: 0.4 }, { trait: 'dynamics', weight: 0.3 }] },
+  // ── Texture ──
+  { pattern: /\btextured\b/i, weights: [{ trait: 'texture', weight: 0.5 }] },
+  { pattern: /\btactile\b/i, weights: [{ trait: 'texture', weight: 0.5 }] },
+];
+
+/** Scale/power phrases for speaker and amplifier ranking. */
+const BIG_SCALE_PATTERNS = [
+  /\bbig\s+(?:and\s+)?powerful\b/i,
+  /\bbig\s+sound\b/i,
+  /\bbig\s+scale\b/i,
+  /\bloud\b/i,
+  /\bhigh[\s-]?power\b/i,
+  /\bfill\s+(?:a\s+)?(?:large|big)\s+room\b/i,
+  /\bauthoritative\b/i,
+  /\broom[\s-]?filling\b/i,
+];
+
+const SMALL_SCALE_PATTERNS = [
+  /\bintimate\b/i,
+  /\bnear[\s-]?field\b/i,
+  /\bdesktop\b/i,
+  /\bquiet\s+listening\b/i,
+  /\bsmall\s+room\b/i,
+  /\bbedroom\b/i,
+  /\bcompact\b/i,
+];
+
+/** Energy level detection for music-genre inference. */
+const HIGH_ENERGY_PATTERNS = [
+  /\brock\b/i,
+  /\bmetal\b/i,
+  /\bvan\s+halen\b/i,
+  /\bac\s*\/?\s*dc\b/i,
+  /\bpunk\b/i,
+  /\bhip[\s-]?hop\b/i,
+  /\belectronic\b/i,
+  /\bedm\b/i,
+  /\bhigh[\s-]?energy\b/i,
+  /\benergetic\b/i,
+  /\bdynamic\b/i,
+];
+
+const LOW_ENERGY_PATTERNS = [
+  /\bjazz\b/i,
+  /\bclassical\b/i,
+  /\bchamber\b/i,
+  /\bfolk\b/i,
+  /\bacoustic\b/i,
+  /\bambient\b/i,
+  /\bvocal\b/i,
+  /\brelaxed\b/i,
+  /\blate[\s-]?night\b/i,
+  /\blow[\s-]?volume\b/i,
+];
+
+/** Specialist-path hint patterns — signal capture for future routing. */
+const SPECIALIST_HINT_PATTERNS: Array<{ pattern: RegExp; hint: string }> = [
+  // SET / triode / single-ended
+  { pattern: /\b(?:set|single[\s-]?ended|triode)\b/i, hint: 'set_triode' },
+  { pattern: /\b(?:decware|yamamoto|bottlehead)\b/i, hint: 'set_triode' },
+  // Horn / high-efficiency speakers
+  { pattern: /\bhorn(?:[\s-]?loaded)?\b/i, hint: 'horn_higheff' },
+  { pattern: /\bhigh[\s-]?(?:efficiency|sensitivity)\b/i, hint: 'horn_higheff' },
+  { pattern: /\b(?:klipsch|altec|tannoy|avantgarde|zu\s+audio|zu\b|omega)\b/i, hint: 'horn_higheff' },
+  // Low-power preference
+  { pattern: /\blow[\s-]?power\b/i, hint: 'low_power' },
+  { pattern: /\bfew\s+watts?\b/i, hint: 'low_power' },
+  { pattern: /\bunder\s+10\s*w/i, hint: 'low_power' },
+  // Specialist amplifier brands
+  { pattern: /\bfirst[\s-]?watt\b/i, hint: 'specialist_amp' },
+  { pattern: /\bpass[\s-]?labs\b/i, hint: 'specialist_amp' },
+  { pattern: /\bshindo\b/i, hint: 'specialist_amp' },
+  { pattern: /\bleben\b/i, hint: 'specialist_amp' },
+];
+
+/** Music genre hints — extracted for context persistence. */
+const MUSIC_HINT_PATTERNS: Array<{ pattern: RegExp; hint: string }> = [
+  { pattern: /\bvan\s+halen\b/i, hint: 'rock' },
+  { pattern: /\brock\b/i, hint: 'rock' },
+  { pattern: /\bmetal\b/i, hint: 'metal' },
+  { pattern: /\bjazz\b/i, hint: 'jazz' },
+  { pattern: /\bclassical\b/i, hint: 'classical' },
+  { pattern: /\belectronic\b/i, hint: 'electronic' },
+  { pattern: /\bhip[\s-]?hop\b/i, hint: 'hip-hop' },
+  { pattern: /\bfolk\b/i, hint: 'folk' },
+  { pattern: /\bvocal\b/i, hint: 'vocal' },
+  { pattern: /\bpop\b/i, hint: 'pop' },
+];
+
+/**
+ * Derive semantic preferences from accumulated user text.
+ *
+ * Scans for natural-language descriptors ("big and powerful", "warm and smooth")
+ * and maps them to weighted trait adjustments. These are applied as soft scoring
+ * bonuses in product ranking — strong enough to visibly shift results, but not
+ * hard filters.
+ *
+ * Supports recency weighting: when lineBreakCount is provided, patterns found
+ * in later lines get a higher multiplier (recent input matters more).
+ */
+export function deriveSemanticPreferences(text: string): SemanticPreferences {
+  const weights: SemanticWeight[] = [];
+  const lines = text.split('\n');
+  const lineCount = lines.length;
+
+  // ── Trait weights from semantic patterns ──
+  // Aggregate across all matching patterns with recency weighting.
+  // Later lines get up to 1.5× multiplier, earlier lines get 1.0×.
+  const traitAccumulator: Record<string, number> = {};
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Recency multiplier: 1.0 for first line, up to 1.5 for last line
+    const recency = lineCount > 1
+      ? 1.0 + 0.5 * (i / (lineCount - 1))
+      : 1.0;
+
+    for (const { pattern, weights: pw } of SEMANTIC_PATTERNS) {
+      if (pattern.test(line)) {
+        for (const w of pw) {
+          traitAccumulator[w.trait] = (traitAccumulator[w.trait] ?? 0) + w.weight * recency;
+        }
+      }
+    }
+  }
+
+  // Convert accumulator to weights array
+  for (const [trait, weight] of Object.entries(traitAccumulator)) {
+    weights.push({ trait, weight });
+  }
+
+  // ── Scale preferences ──
+  const wantsBigScale = BIG_SCALE_PATTERNS.some((p) => p.test(text));
+  const wantsSmallScale = SMALL_SCALE_PATTERNS.some((p) => p.test(text));
+
+  // ── Energy level ──
+  const highEnergy = HIGH_ENERGY_PATTERNS.some((p) => p.test(text));
+  const lowEnergy = LOW_ENERGY_PATTERNS.some((p) => p.test(text));
+  const energyLevel: SemanticPreferences['energyLevel'] = highEnergy && !lowEnergy
+    ? 'high'
+    : lowEnergy && !highEnergy
+      ? 'low'
+      : null;
+
+  // ── Music hints ──
+  const musicHints: string[] = [];
+  for (const { pattern, hint } of MUSIC_HINT_PATTERNS) {
+    if (pattern.test(text) && !musicHints.includes(hint)) {
+      musicHints.push(hint);
+    }
+  }
+
+  // ── Specialist hints ──
+  const specialistHints: string[] = [];
+  for (const { pattern, hint } of SPECIALIST_HINT_PATTERNS) {
+    if (pattern.test(text) && !specialistHints.includes(hint)) {
+      specialistHints.push(hint);
+    }
+  }
+
+  return { weights, wantsBigScale, wantsSmallScale, energyLevel, musicHints, specialistHints };
+}
 
 // ── Preserve detection ("what I like…") ───────────────
 
@@ -282,13 +909,20 @@ const LIMITING_KEYWORDS = [
 const BUDGET_AMOUNT_PATTERNS = [
   /\$\s?(\d{1,6}(?:,\d{3})*)/,                      // $1000 or $1,500
   /(\d{1,6}(?:,\d{3})*)\s*dollars/i,                 // 1000 dollars
-  /budget\s+(?:of\s+)?(?:around\s+)?\$?(\d{1,6}(?:,\d{3})*)/i,
+  /budget\s*(?:of|around|is|=|:)?\s*\$?(\d{1,6}(?:,\d{3})*)/i,  // budget is 2000, budget: 2000, budget of 1500
   /under\s+\$?(\d{1,6}(?:,\d{3})*)/i,
   /up\s+to\s+\$?(\d{1,6}(?:,\d{3})*)/i,
   /around\s+\$?(\d{1,6}(?:,\d{3})*)/i,
   /spend\s+\$?(\d{1,6}(?:,\d{3})*)/i,
   /i\s+have\s+\$?(\d{1,6}(?:,\d{3})*)/i,
+  /(\d{1,6}(?:,\d{3})*)\s+total\b/i,                // 2000 total
+  /limit\s+(?:of\s+)?\$?(\d{1,6}(?:,\d{3})*)/i,    // limit of 2000
 ];
+
+// "k" suffix patterns — "$5k", "5k", "$2.5k", "2.5k dollars" etc.
+// Handled separately because the multiplier needs special treatment in parseBudgetAmount.
+const K_SUFFIX_PATTERN = /\$\s?(\d{1,4}(?:\.\d{1,2})?)\s*k\b/gi;
+const K_SUFFIX_PATTERN_NO_DOLLAR = /(?:under|around|about|up\s+to|budget\s+(?:of\s+|around\s+|is\s+|=\s*|:\s*)?|spend|limit\s+(?:of\s+)?)\s*(\d{1,4}(?:\.\d{1,2})?)\s*k\b/gi;
 
 /**
  * Extract the most recent numeric budget amount from user text.
@@ -301,8 +935,20 @@ const BUDGET_AMOUNT_PATTERNS = [
 export function parseBudgetAmount(text: string): number | null {
   let lastAmount: number | null = null;
 
+  // 1. Check "k" suffix patterns first — "$5k" → 5000, "$2.5k" → 2500
+  for (const kPattern of [K_SUFFIX_PATTERN, K_SUFFIX_PATTERN_NO_DOLLAR]) {
+    kPattern.lastIndex = 0; // reset global regex state
+    let match: RegExpExecArray | null;
+    while ((match = kPattern.exec(text)) !== null) {
+      const parsed = parseFloat(match[1]);
+      if (!isNaN(parsed)) {
+        lastAmount = Math.round(parsed * 1000);
+      }
+    }
+  }
+
+  // 2. Standard numeric patterns — "$1000", "under 500", etc.
   for (const pattern of BUDGET_AMOUNT_PATTERNS) {
-    // Use a global copy to find ALL matches in the text
     const globalPattern = new RegExp(pattern.source, pattern.flags.includes('i') ? 'gi' : 'g');
     let match: RegExpExecArray | null;
     while ((match = globalPattern.exec(text)) !== null) {
@@ -310,6 +956,19 @@ export function parseBudgetAmount(text: string): number | null {
       if (!isNaN(parsed)) {
         lastAmount = parsed;
       }
+    }
+  }
+
+  // 3. Sanity guard: if final amount is suspiciously low ($1-$99) but
+  // the original text contained a "k" suffix we missed, reject it.
+  // This catches edge cases where "$5k" matched "$5" via the standard
+  // patterns after k-patterns failed.
+  if (lastAmount !== null && lastAmount < 100 && /\d\s*k\b/i.test(text)) {
+    // Re-extract from the k-suffix manually
+    const kFallback = text.match(/(\d{1,4}(?:\.\d{1,2})?)\s*k\b/i);
+    if (kFallback) {
+      const kAmount = Math.round(parseFloat(kFallback[1]) * 1000);
+      if (kAmount >= 100) lastAmount = kAmount;
     }
   }
 
@@ -495,6 +1154,11 @@ export function detectShoppingIntent(
   /** When switching categories mid-shopping, pass the latest message so its
    *  category takes priority over earlier mentions in the accumulated text. */
   latestMessage?: string,
+  /** On refinement turns, carry the active category forward so that
+   *  stale allUserText (containing prior category keywords) doesn't
+   *  override the user's current category. Used only when latestMessage
+   *  has no explicit category keyword. */
+  fallbackCategory?: ShoppingCategory,
 ): ShoppingContext {
   const lower = userText.toLowerCase();
 
@@ -520,6 +1184,9 @@ export function detectShoppingIntent(
       preserveProvided: false,
       limitingProvided: false,
       dependencies: [],
+      roomContext: null,
+      constraints: { excludeTopologies: [], requireTopologies: [], newOnly: false, usedOnly: false },
+      semanticPreferences: { weights: [], wantsBigScale: false, wantsSmallScale: false, energyLevel: null, musicHints: [], specialistHints: [] },
     };
   }
 
@@ -544,14 +1211,48 @@ export function detectShoppingIntent(
         }
       }
     }
-    // Fall back to full text only if latest message had no category
-    if (category === 'general') {
+    // Fall back: prefer carried-forward category over scanning allUserText.
+    // This prevents stale category keywords in historical messages from
+    // overriding the user's active category (e.g. user discussed DACs
+    // earlier, now refining amps — allUserText contains "dac" but active
+    // category should remain "amplifier").
+    if (category === 'general' && fallbackCategory && fallbackCategory !== 'general') {
+      category = fallbackCategory;
+      console.log('[category-fallback] using carried-forward category=%s (latestMessage had no explicit category)', category);
+    }
+    // Last resort: scan full text ONLY if no carried-forward category was used.
+    // When fallbackCategory is active, allUserText scanning is suppressed —
+    // stale keywords from earlier turns must NOT override the locked category.
+    if (category === 'general' && !fallbackCategory) {
       for (const pat of CATEGORY_PATTERNS) {
         if (pat.keywords.some((kw) => lower.includes(kw))) {
           category = pat.category;
           break;
         }
       }
+    }
+  }
+
+  // 2b. Multi-category detection ("amp and dac", "dac + amp", "dac/amp")
+  // Detect when the user asks for two categories in one message.
+  // We handle the first and store the second for a follow-up.
+  let secondaryCategory: ShoppingCategory | undefined;
+  const multiCatText = (latestMessage ?? userText).toLowerCase();
+  const MULTI_CAT_CONNECTORS = /\b(?:and|&|\+|\/|,)\b/;
+  if (MULTI_CAT_CONNECTORS.test(multiCatText) && category !== 'general') {
+    // Find all categories mentioned in the text
+    const mentionedCategories: ShoppingCategory[] = [];
+    for (const pat of CATEGORY_PATTERNS) {
+      if (pat.keywords.some((kw) => multiCatText.includes(kw))) {
+        if (!mentionedCategories.includes(pat.category)) {
+          mentionedCategories.push(pat.category);
+        }
+      }
+    }
+    if (mentionedCategories.length >= 2) {
+      // Primary is the one already detected; secondary is the other
+      secondaryCategory = mentionedCategories.find((c) => c !== category);
+      console.log('[multi-category] detected: primary=%s secondary=%s', category, secondaryCategory);
     }
   }
 
@@ -581,6 +1282,21 @@ export function detectShoppingIntent(
   const preserveProvided = PRESERVE_KEYWORDS.some((kw) => lower.includes(kw));
   const limitingProvided = LIMITING_KEYWORDS.some((kw) => lower.includes(kw));
 
+  // 4b. Room context — extract room size for speaker ranking adjustments
+  const roomContext: RoomContext = /\blarge\s+room\b/i.test(userText) || /\bliving\s+room\b/i.test(userText)
+    ? 'large'
+    : /\bdesktop\b/i.test(userText) || /\bnear[\s-]?field\b/i.test(userText)
+      ? 'nearfield'
+      : /\bsmall\s+room\b/i.test(userText) || /\bbedroom\b/i.test(userText) || /\bapartment\b/i.test(userText)
+        ? 'small'
+        : null;
+
+  // 4c. Hard constraints — topology exclusion, availability requirements
+  const constraints = extractHardConstraints(userText);
+
+  // 4d. Semantic preferences — natural-language descriptors → trait weights
+  const semanticPreferences = deriveSemanticPreferences(userText);
+
   // 5. Category-specific dependencies
   const dependencies = detectCategoryDependencies(category, userText);
 
@@ -589,6 +1305,7 @@ export function detectShoppingIntent(
     mode,
     category,
     subcategory,
+    secondaryCategory,
     budgetMentioned,
     budgetAmount,
     tasteProvided,
@@ -598,6 +1315,9 @@ export function detectShoppingIntent(
     preserveProvided,
     limitingProvided,
     dependencies,
+    roomContext,
+    constraints,
+    semanticPreferences,
   };
 }
 
@@ -1053,10 +1773,42 @@ export interface ProductExample {
   catalogCountry?: string;
   /** Brand scale (e.g. "specialist", "boutique", "major"). */
   catalogBrandScale?: string;
+  /** Subcategory from catalog (e.g. "integrated-amp", "power-amp", "headphone-amp"). */
+  catalogSubcategory?: string;
   /** True when this product is already in the user's current system. */
   isCurrentComponent?: boolean;
   /** True when this is the primary recommendation in directed mode. */
   isPrimary?: boolean;
+  /** Budget realism tier — how realistic this product is at the stated budget.
+   *  - realistic_new:  comfortably within budget at retail
+   *  - realistic_used: within budget at used-market prices
+   *  - stretch_used:   a stretch even on the used market
+   *  - above_budget:   technically outside budget range */
+  budgetRealism?: 'realistic_new' | 'realistic_used' | 'stretch_used' | 'above_budget';
+  /** Pick role in the structured recommendation (4-option model).
+   *  - anchor:      best-fit product for this listener
+   *  - close_alt:   same philosophy, slightly different
+   *  - contrast:    different sonic direction
+   *  - wildcard:    non-traditional / high-character option
+   *  Legacy roles retained for backward compatibility:
+   *  - top_pick / upgrade_pick / value_pick */
+  pickRole?: 'anchor' | 'close_alt' | 'contrast' | 'wildcard' | 'top_pick' | 'upgrade_pick' | 'value_pick';
+
+  // ── 4-option recommendation metadata ──────────────────
+  /** Design philosophy — carried through from catalog for anchor tracking. */
+  philosophy?: 'energy' | 'neutral' | 'warm' | 'analytical';
+  /** Market type — carried through from catalog for selection mode logic. */
+  marketType?: 'traditional' | 'nonTraditional' | 'value';
+  /** Primary axis leanings — carried through for sonic distance calculation. */
+  primaryAxes?: PrimaryAxisLeanings;
+
+  // ── Enhanced catalog fields (Step 10) ─────────────────
+  /** Product image URL — official press image or product shot. */
+  imageUrl?: string;
+  /** Where this product is typically found (new / used / both). */
+  typicalMarket?: 'new' | 'used' | 'both';
+  /** Structured buying context label — overrides card inference when present. */
+  buyingContext?: 'easy_new' | 'better_used' | 'dealer_likely' | 'used_only';
 }
 
 // ── Synthesis Brief ───────────────────────────────────
@@ -1181,6 +1933,12 @@ export interface ShoppingAnswer {
   /** Next build step — what the user should consider next in a system build.
    *  Only populated in directed mode when a logical next step exists. */
   nextBuildStep?: string;
+  /** Taste confidence level — controls language assertiveness. */
+  tasteConfidence?: TasteConfidence;
+  /** Targeted question to append when confidence is low. */
+  tasteQuestion?: string;
+  /** Focused category question when taste is clear but category is missing. */
+  categoryQuestion?: string;
 }
 
 // ── Taste direction templates ─────────────────────────
@@ -1372,6 +2130,7 @@ import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
 import { HEADPHONE_PRODUCTS, type HeadphoneProduct } from './products/headphones';
 import { selectTurntableExamples } from './products/turntables';
 import { rankProducts, type ScoredProduct, AMPLIFIER_ARCHITECTURE_TENDENCIES, type ArchitectureTendency } from './product-scoring';
+import type { ListenerProfile } from './listener-profile';
 import { tagProductArchetype } from './archetype';
 import { topTraits, type TasteProfile as UserTasteProfile, type ProfileTraitKey } from './taste-profile';
 import type { ReasoningResult } from './reasoning';
@@ -2059,6 +2818,21 @@ function selectProductExamples(
   tasteProfile?: UserTasteProfile,
   reasoning?: ReasoningResult,
   currentComponentNames?: string[],
+  roomContext?: RoomContext,
+  /** Product names the user has engaged with (mentioned, selected, or discussed). */
+  engagedProductNames?: string[],
+  /** Hard constraints (topology exclusion, availability) for filtering. */
+  constraints?: HardConstraints,
+  /** Semantic preferences from natural language ("big and powerful", etc.). */
+  semanticPreferences?: SemanticPreferences,
+  /** Accumulated listener profile for taste-based filtering. */
+  listenerProfile?: ListenerProfile,
+  /** Selection mode override — shifts anchor based on user intent. */
+  selectionMode?: SelectionMode,
+  /** Previous anchor info for mode-aware anchor selection. */
+  previousAnchor?: PreviousAnchor | null,
+  /** Product names shown in recent shopping turns (for anti-repetition). */
+  recentProductNames?: string[],
 ): ProductExample[] {
   // ── Turntable: illustrative examples with full card data ──
   if (category === 'turntable') {
@@ -2099,7 +2873,7 @@ function selectProductExamples(
     default: return [];
   }
 
-  const ranked = rankProducts(catalog, userTraits, budgetAmount, systemProfile);
+  const ranked = rankProducts(catalog, userTraits, budgetAmount, systemProfile, constraints, listenerProfile);
 
   // Apply taste profile bonus — small boost for products aligned with stored taste
   if (tasteProfile && tasteProfile.confidence > 0.2) {
@@ -2146,6 +2920,226 @@ function selectProductExamples(
     ranked.sort((a, b) => b.score - a.score);
   }
 
+  // ── Room-context scoring ────────────────────────────
+  // When room size is detected, materially adjust speaker ranking.
+  // Large rooms need sensitivity, dynamics, scale, and cabinet size.
+  // Small/desktop rooms need compact designs that work nearfield.
+  // Bonuses are substantial (up to ±1.0) because room-speaker mismatch
+  // is one of the most common real-world buying mistakes.
+  // Only applies to speaker category — DACs and amps are room-agnostic.
+  if (roomContext && category === 'speaker') {
+    // Room-speaker mismatch is one of the most common real-world buying
+    // mistakes. Penalties/bonuses must be STRONG (cap 2.0) to materially
+    // shift ranking. A standmount should never rank first in a large room.
+    const ROOM_BONUS_CAP = 2.0;
+    for (const entry of ranked) {
+      let bonus = 0;
+      const p = entry.product;
+      const pTraits = p.traits ?? {};
+      const tp = p.tendencyProfile;
+      const notes = (p.notes ?? '').toLowerCase();
+      const desc = (p.description ?? '').toLowerCase();
+      const sub = (p as unknown as Record<string, unknown>).subcategory as string | undefined;
+
+      if (roomContext === 'large') {
+        // ── Dynamics: high dynamics = essential for large rooms
+        const dynamicsVal = resolveTraitValue(tp, pTraits, 'dynamics');
+        if (dynamicsVal >= 0.7) bonus += 0.6;
+        else if (dynamicsVal >= 0.5) bonus += 0.2;
+        else if (dynamicsVal <= 0.4) bonus -= 0.8;
+
+        // ── Floorstanding / larger cabinets: strong preference for large rooms
+        if (sub === 'floorstanding') bonus += 0.5;
+        else if (sub === 'standmount') bonus -= 0.8; // Strong penalty — standmounts don't fill large rooms
+
+        // ── High-sensitivity / horn designs: ideal for large rooms
+        const isHighSensitivity = notes.includes('high-efficiency')
+          || desc.includes('high-efficiency')
+          || desc.includes('high sensitivity')
+          || p.topology === 'horn-loaded'
+          || p.topology === 'high-efficiency'
+          || p.architecture?.toLowerCase().includes('horn');
+        if (isHighSensitivity) bonus += 0.4;
+
+        // ── Penalize speakers explicitly described as small-room
+        const isSmallScale = notes.includes('smaller rooms')
+          || notes.includes('small room')
+          || notes.includes('limited bass extension')
+          || notes.includes('limited dynamic scale')
+          || desc.includes('miniature')
+          || desc.includes('small enclosure')
+          || desc.includes('desktop')
+          || desc.includes('compact')
+          || notes.includes('nearfield')
+          || desc.includes('nearfield');
+        if (isSmallScale) bonus -= 1.2; // Very strong penalty — wrong product for this room
+
+        // ── "Big scale" text signal boost
+        const isBigScale = desc.includes('scale')
+          || desc.includes('dynamic expression')
+          || desc.includes('dynamic range')
+          || notes.includes('large room')
+          || notes.includes('larger room')
+          || desc.includes('authority');
+        if (isBigScale) bonus += 0.3;
+      } else if (roomContext === 'small' || roomContext === 'nearfield' || roomContext === 'desktop') {
+        // Small / nearfield: boost compact designs, penalize large-scale
+        if (sub === 'standmount') bonus += 0.5;
+        else if (sub === 'floorstanding') bonus -= 0.6;
+
+        const isCompact = notes.includes('smaller rooms')
+          || notes.includes('small room')
+          || desc.includes('small')
+          || desc.includes('miniature')
+          || desc.includes('nearfield')
+          || desc.includes('compact');
+        if (isCompact) bonus += 0.4;
+
+        const dynamicsVal = resolveTraitValue(tp, pTraits, 'dynamics');
+        if (dynamicsVal >= 0.9) bonus -= 0.3;
+      }
+
+      entry.score += Math.max(-ROOM_BONUS_CAP, Math.min(bonus, ROOM_BONUS_CAP));
+    }
+    ranked.sort((a, b) => b.score - a.score);
+  }
+
+  // ── Semantic preference scoring ────────────────────────
+  // When natural language descriptors like "big and powerful" are detected,
+  // apply weighted scoring adjustments to shift ranking meaningfully.
+  // These are soft boosts, not hard filters — capped at ±1.5.
+  if (semanticPreferences && semanticPreferences.weights.length > 0) {
+    const SEMANTIC_BONUS_CAP = 1.5;
+    for (const entry of ranked) {
+      let bonus = 0;
+      const p = entry.product;
+      const pTraits = p.traits ?? {};
+      const tp = p.tendencyProfile;
+
+      for (const { trait, weight } of semanticPreferences.weights) {
+        const productValue = resolveTraitValue(tp, pTraits, trait);
+        // Product trait value (0–1) × semantic weight → bonus
+        // High-trait products get full boost; low-trait products get nothing
+        if (productValue >= 0.7) bonus += weight;
+        else if (productValue >= 0.4) bonus += weight * 0.5;
+        else if (productValue <= 0.0) bonus -= weight * 0.3;
+      }
+
+      entry.score += Math.max(-SEMANTIC_BONUS_CAP, Math.min(bonus, SEMANTIC_BONUS_CAP));
+    }
+    ranked.sort((a, b) => b.score - a.score);
+  }
+
+  // ── Scale preference scoring (amplifiers) ────────────
+  // "Big and powerful" should boost high-power amps; "intimate" should
+  // boost low-power designs. This complements room-context scoring for speakers.
+  if (semanticPreferences && category === 'amplifier') {
+    const SCALE_BONUS = 0.6;
+    for (const entry of ranked) {
+      const p = entry.product;
+      const pTraits = p.traits ?? {};
+      const tp = p.tendencyProfile;
+      const dynamicsVal = resolveTraitValue(tp, pTraits, 'dynamics');
+      const composureVal = resolveTraitValue(tp, pTraits, 'composure');
+
+      if (semanticPreferences.wantsBigScale || semanticPreferences.energyLevel === 'high') {
+        // Boost high-power, high-dynamics amps
+        if (dynamicsVal >= 0.7 && composureVal >= 0.5) entry.score += SCALE_BONUS;
+        else if (dynamicsVal >= 0.7) entry.score += SCALE_BONUS * 0.6;
+        // Penalize low-power amps
+        if (dynamicsVal <= 0.4) entry.score -= SCALE_BONUS * 0.5;
+      }
+
+      if (semanticPreferences.wantsSmallScale || semanticPreferences.energyLevel === 'low') {
+        // Boost refined, low-power designs
+        const flowVal = resolveTraitValue(tp, pTraits, 'flow');
+        const textureVal = resolveTraitValue(tp, pTraits, 'texture');
+        if (flowVal >= 0.7 || textureVal >= 0.7) entry.score += SCALE_BONUS * 0.5;
+        // Don't penalize high-power amps for small scale — they still work
+      }
+    }
+    ranked.sort((a, b) => b.score - a.score);
+  }
+
+  // ── Energy-level scoring for speakers ────────────────
+  // High-energy music (rock, metal) needs speakers with dynamics and speed.
+  // Low-energy music (jazz, classical) benefits from texture and flow.
+  if (semanticPreferences && category === 'speaker' && semanticPreferences.energyLevel) {
+    const ENERGY_BONUS = 0.4;
+    for (const entry of ranked) {
+      const p = entry.product;
+      const pTraits = p.traits ?? {};
+      const tp = p.tendencyProfile;
+
+      if (semanticPreferences.energyLevel === 'high') {
+        const dynamicsVal = resolveTraitValue(tp, pTraits, 'dynamics');
+        const speedVal = resolveTraitValue(tp, pTraits, 'speed');
+        if (dynamicsVal >= 0.7) entry.score += ENERGY_BONUS;
+        if (speedVal >= 0.7) entry.score += ENERGY_BONUS * 0.5;
+      } else if (semanticPreferences.energyLevel === 'low') {
+        const flowVal = resolveTraitValue(tp, pTraits, 'flow');
+        const textureVal = resolveTraitValue(tp, pTraits, 'texture');
+        if (flowVal >= 0.7) entry.score += ENERGY_BONUS;
+        if (textureVal >= 0.7) entry.score += ENERGY_BONUS * 0.5;
+      }
+    }
+    ranked.sort((a, b) => b.score - a.score);
+  }
+
+  // ── Esoteric product penalty in mainstream flows ──────
+  // When the user is in a practical shopping flow (budget stated, no explicit
+  // signal for niche/boutique interest), penalize esoteric products so that
+  // commercially available, widely reviewed, non-niche designs rank higher.
+  // This prevents products like Yamamoto from appearing in "van halen + $5000"
+  // flows where the user expects mainstream-accessible recommendations.
+  if (budgetAmount !== null) {
+    const ESOTERIC_PENALTY = 0.5;
+    // Check if user explicitly wants boutique/niche gear
+    const userWantsNiche = semanticPreferences
+      && (semanticPreferences.weights.some((w) => w.trait === 'texture' && w.weight > 0.3)
+        || semanticPreferences.weights.some((w) => w.trait === 'spatial_precision' && w.weight > 0.3));
+    if (!userWantsNiche) {
+      for (const entry of ranked) {
+        const scale = entry.product.brandScale;
+        if (scale === 'boutique') {
+          entry.score -= ESOTERIC_PENALTY;
+        } else if (scale === 'luxury') {
+          entry.score -= ESOTERIC_PENALTY * 0.6;
+        }
+        // Bonus for mainstream / established / specialist brands
+        if (scale === 'mainstream' || scale === 'major') {
+          entry.score += 0.2;
+        } else if (scale === 'established' || scale === 'specialist') {
+          entry.score += 0.1;
+        }
+      }
+      ranked.sort((a, b) => b.score - a.score);
+    }
+  }
+
+  // ── Engaged-product continuity (Task 5) ──────────────
+  // When the user has mentioned or selected a specific product in earlier
+  // turns, boost its score so it remains in the shortlist during refinement.
+  // This prevents "Klipsch Heresy IV → large living room" from dropping
+  // the Heresy IV from the recommendations.
+  if (engagedProductNames && engagedProductNames.length > 0) {
+    const ENGAGEMENT_BOOST = 0.25;
+    const engagedLower = new Set(engagedProductNames.map((n) => n.toLowerCase()));
+
+    for (const entry of ranked) {
+      const productFull = `${entry.product.brand} ${entry.product.name}`.toLowerCase();
+      const productName = entry.product.name.toLowerCase();
+      const isEngaged = engagedLower.has(productFull)
+        || engagedLower.has(productName)
+        || [...engagedLower].some((en) => productFull.includes(en) || en.includes(productName));
+
+      if (isEngaged) {
+        entry.score += ENGAGEMENT_BOOST;
+      }
+    }
+    ranked.sort((a, b) => b.score - a.score);
+  }
+
   // ── Architecture diversity selection ────────────────
   // When taste signals are sparse (direct shortlist queries like "best DAC
   // under $2000"), enforce topology diversity so the shortlist represents
@@ -2157,20 +3151,665 @@ function selectProductExamples(
   //
   // No-budget queries use tiered selection (accessible / mid / stretch)
   // to avoid ultra-high-end outliers dominating an exploratory shortlist.
-  // Budget queries use the standard diversity or score-ranked selection.
+  //
+  // CRITICAL: When budget is stated, ALWAYS use score-ranked selection.
+  // The budget filter in rankProducts already constrains the price range,
+  // and scoreBudgetFit rewards utilization. Sparse signals with a budget
+  // must NOT trigger topology-diversity selection — that downgrades
+  // product quality by selecting cheaper representatives per topology
+  // instead of the best-scoring products within budget. This is especially
+  // important on refinement turns where "large living room" adds use-case
+  // context without new taste traits.
   const hasSparseSignals = Object.keys(userTraits).length < 2;
-  const top = budgetAmount === null
-    ? selectTieredExploratory(ranked)
-    : hasSparseSignals
-      ? selectDiverseByTopology(ranked, 3)
-      : ranked.slice(0, 3);
+
+  // ── Sonic distance computation ────────────────────────
+  // Converts primaryAxes to numeric values and computes Manhattan distance.
+  // Used by "different" mode to ensure the anchor is a genuinely different
+  // listening experience, not just a superficially different brand/philosophy.
+
+  const LEANING_TO_N: Record<string, number> = {
+    warm: -1, bright: 1, neutral: 0,
+    smooth: -1, detailed: 1, balanced: 0,
+    elastic: -1, controlled: 1,
+    airy: -1, closed: 1, moderate: 0,
+  };
+
+  function axisN(axes: PrimaryAxisLeanings | undefined, axis: 'warm_bright' | 'smooth_detailed' | 'elastic_controlled' | 'airy_closed'): number {
+    if (!axes) return 0;
+    // Prefer numeric _n value when present (–2 to +2 ordinal scale)
+    const nKey = `${axis}_n` as keyof PrimaryAxisLeanings;
+    const nVal = axes[nKey];
+    if (typeof nVal === 'number') return nVal;
+    // Fall back to categorical label → numeric mapping
+    const label = axes[axis];
+    if (typeof label === 'string') return LEANING_TO_N[label] ?? 0;
+    return 0;
+  }
+
+  const SONIC_AXES = ['warm_bright', 'smooth_detailed', 'elastic_controlled', 'airy_closed'] as const;
+
+  /** Manhattan distance across all 4 sonic axes. Range: 0–16 (theoretical max with _n values). */
+  function sonicDistance(a: { primaryAxes?: PrimaryAxisLeanings }, b: { primaryAxes?: PrimaryAxisLeanings }): number {
+    let dist = 0;
+    for (const axis of SONIC_AXES) {
+      dist += Math.abs(axisN(a.primaryAxes, axis) - axisN(b.primaryAxes, axis));
+    }
+    return dist;
+  }
+
+  /** Minimum sonic distance for "different" mode anchor. Tunable. */
+  const MIN_SONIC_DISTANCE = 3;
+  /** Practical max distance (with categorical labels: 4 axes × 2 max per axis). */
+  const MAX_DISTANCE_PRACTICAL = 8;
+  /** Scoring weights for distance-ranked anchor selection. */
+  const DISTANCE_WEIGHT = 2;
+  const RANK_WEIGHT = 1.5;
+
+  // ── Mode-aware pool construction ───────────────────────
+  // Default: top 8 by score. Non-default modes: pre-balance the pool to ensure
+  // mode-appropriate candidates exist BEFORE filtering. Without this, pools are
+  // dominated by traditional products and mode filters return empty sets.
+  let top: ScoredProduct[];
+
+  if (selectionMode === 'less_traditional') {
+    // Guarantee nonTraditional products in pool regardless of score ranking
+    const nonTrad = ranked.filter((sp) => sp.product.marketType === 'nonTraditional');
+    const other = ranked.filter((sp) => sp.product.marketType !== 'nonTraditional');
+    top = [
+      ...nonTrad.slice(0, 8),
+      ...other.slice(0, 7),
+    ];
+    console.log('[pool-balance]', {
+      mode: 'less_traditional',
+      nonTraditionalCount: nonTrad.length,
+      poolNonTraditional: Math.min(nonTrad.length, 8),
+      poolOther: Math.min(other.length, 7),
+      poolTotal: top.length,
+    });
+  } else if (selectionMode === 'different' && previousAnchor) {
+    // Guarantee sonically distant products in pool — use actual axis distance,
+    // not just philosophy/marketType tags which can be superficially different.
+    const different = ranked.filter((sp) =>
+      sp.product.brand.toLowerCase() !== previousAnchor.brand.toLowerCase()
+      && sonicDistance(sp.product, previousAnchor) >= MIN_SONIC_DISTANCE,
+    );
+    const similar = ranked.filter((sp) => !different.includes(sp));
+    top = [
+      ...different.slice(0, 8),
+      ...similar.slice(0, 7),
+    ];
+    console.log('[pool-balance]', {
+      mode: 'different',
+      differentCount: different.length,
+      poolDifferent: Math.min(different.length, 8),
+      poolSimilar: Math.min(similar.length, 7),
+      poolTotal: top.length,
+    });
+  } else {
+    // Default mode: standard pool
+    const poolSize = 8;
+    top = budgetAmount === null
+      ? selectTieredExploratory(ranked)
+      : hasSparseSignals
+        ? selectDiverseByTopology(ranked, poolSize, budgetAmount)
+        : ranked.slice(0, poolSize);
+  }
 
   // Build lowercase set of current component names for matching
   const currentNames = new Set(
     (currentComponentNames ?? []).map((n) => n.toLowerCase()),
   );
 
-  return top.map(({ product }) => {
+  // ── Budget realism computation ──────────────────────
+  // Classify each product's price realism relative to stated budget.
+  function computeBudgetRealism(product: Product): ProductExample['budgetRealism'] {
+    if (!budgetAmount) return undefined;
+    // Retail price within budget → realistic new purchase
+    if (product.price <= budgetAmount) return 'realistic_new';
+    // Used price within budget → realistic used purchase
+    if (product.usedPriceRange && product.usedPriceRange.high <= budgetAmount) return 'realistic_used';
+    // Used price is a stretch (within 120% of budget)
+    if (product.usedPriceRange && product.usedPriceRange.high <= budgetAmount * 1.2) return 'stretch_used';
+    return 'above_budget';
+  }
+
+  // ── 4-option recommendation set builder ─────────────
+  // Selects up to 4 products with distinct roles:
+  //   anchor    — best-fit product
+  //   close_alt — same philosophy, slightly different
+  //   contrast  — different sonic direction
+  //   wildcard  — non-traditional / high-character option
+  // Deduplicates: no product appears in more than one role.
+  // Returns the subset of ProductExamples that were assigned roles.
+
+  /**
+   * Diminishing returns on sonic distance above the "sweet spot" threshold.
+   * Distance 0–5 maps linearly. Distance 6–8+ gets compressed so that
+   * extreme-contrast products don't dominate over practical, well-ranked ones.
+   *
+   * Examples: 3→3, 5→5, 6→5.5, 7→5.75, 8→5.875
+   */
+  const DISTANCE_SWEET_SPOT = 5;
+  function effectiveDistance(raw: number): number {
+    if (raw <= DISTANCE_SWEET_SPOT) return raw;
+    return DISTANCE_SWEET_SPOT + (raw - DISTANCE_SWEET_SPOT) * 0.5;
+  }
+
+  function buildRecommendationSet(
+    examples: ProductExample[],
+    profile?: ListenerProfile,
+    selectionMode: SelectionMode = 'default',
+    previousAnchor?: PreviousAnchor | null,
+    recentProductNames?: string[],
+    budgetCeiling?: number | null,
+    /** Product category — used for subcategory-based anchor filtering. */
+    productCategory?: ShoppingCategory,
+    /** When true, vintage products are eligible as anchors (user explicitly requested vintage). */
+    userRequestedVintage?: boolean,
+    /** When true, separates (power-amp, preamp) are eligible as anchors. */
+    userRequestedSeparates?: boolean,
+    /** When true, SET topology products are eligible as anchors (user explicitly requested SET/triode). */
+    userRequestedSET?: boolean,
+  ): ProductExample[] {
+    if (examples.length === 0) return [];
+
+    // ── Helpers ──────────────────────────────────────────
+    type Ranked = ProductExample & { _rank: number };
+    const ranked: Ranked[] = examples.map((ex, i) => ({ ...ex, _rank: i }));
+    const exKey = (ex: ProductExample) => `${ex.brand} ${ex.name}`;
+
+    // ── Diversity history ────────────────────────────────
+    const recentLower = (recentProductNames ?? []).map((n) => n.toLowerCase());
+    const diversityHistory = {
+      brands: new Set<string>(),
+      philosophies: new Set<string>(),
+      marketTypes: new Set<string>(),
+    };
+    for (const rn of recentLower) {
+      const match = ranked.find((ex) => `${ex.brand} ${ex.name}`.toLowerCase() === rn || ex.name.toLowerCase() === rn);
+      if (match) {
+        diversityHistory.brands.add((match.brand ?? '').toLowerCase());
+        if (match.philosophy) diversityHistory.philosophies.add(match.philosophy);
+        if (match.marketType) diversityHistory.marketTypes.add(match.marketType);
+      }
+    }
+
+    function diversityPenalty(p: Ranked): number {
+      let penalty = 0;
+      if (diversityHistory.brands.has((p.brand ?? '').toLowerCase())) penalty += 2;
+      if (p.philosophy && diversityHistory.philosophies.has(p.philosophy)) penalty += 1;
+      if (p.marketType && diversityHistory.marketTypes.has(p.marketType)) penalty += 1;
+      return penalty;
+    }
+
+    /** For role filling (post-anchor): lowest (_rank + diversityPenalty). */
+    function bestOf(candidates: Ranked[]): Ranked | undefined {
+      if (candidates.length === 0) return undefined;
+      return candidates.reduce((best, c) => {
+        const cScore = c._rank + diversityPenalty(c);
+        const bScore = best._rank + diversityPenalty(best);
+        return cScore < bScore ? c : best;
+      });
+    }
+
+    /** For anchor selection in non-default modes: raw rank only — no diversity penalty. */
+    function bestByRank(candidates: Ranked[]): Ranked | undefined {
+      if (candidates.length === 0) return undefined;
+      return candidates.reduce((best, c) => c._rank < best._rank ? c : best);
+    }
+
+    const recentSet = new Set(recentLower);
+    const isRecent = (ex: Ranked) => {
+      const fn = `${ex.brand} ${ex.name}`.toLowerCase();
+      return recentSet.has(fn) || recentSet.has(ex.name.toLowerCase());
+    };
+
+    const isPrevAnchor = (p: Ranked): boolean => {
+      if (!previousAnchor) return false;
+      const fn = `${p.brand} ${p.name}`.toLowerCase();
+      const prevFn = `${previousAnchor.brand} ${previousAnchor.name}`.toLowerCase();
+      return fn === prevFn || p.name.toLowerCase() === previousAnchor.name.toLowerCase();
+    };
+
+    // ── Debug: dump eligible products with metadata BEFORE any mode filtering ──
+    console.log('[debug-products]', ranked.map((p) => ({
+      name: `${p.brand} ${p.name}`,
+      philosophy: p.philosophy ?? 'MISSING',
+      marketType: p.marketType ?? 'MISSING',
+    })));
+
+    // ── Dislike filter ──────────────────────────────────
+    let eligible = ranked;
+    if (profile) {
+      const dislikedBrands = new Set(profile.dislikedBrands.map((b) => b.toLowerCase()));
+      const dislikedProducts = new Set(profile.dislikedProducts.map((p) => p.toLowerCase()));
+      if (dislikedBrands.size > 0 || dislikedProducts.size > 0) {
+        const filtered = eligible.filter((ex) => {
+          if (dislikedBrands.has(ex.brand.toLowerCase())) return false;
+          const fn = `${ex.brand} ${ex.name}`.toLowerCase();
+          return !dislikedProducts.has(fn) && !dislikedProducts.has(ex.name.toLowerCase());
+        });
+        if (filtered.length > 0) eligible = filtered;
+      }
+    }
+
+    // ── Anti-repetition ─────────────────────────────────
+    if (recentSet.size > 0) {
+      if (selectionMode !== 'default') {
+        // Non-default modes: HARD exclude all recent products
+        const hardFiltered = eligible.filter((ex) => !isRecent(ex));
+        if (hardFiltered.length >= 2) {
+          eligible = hardFiltered;
+        }
+      } else {
+        // Default mode: soft — push recent to back
+        const fresh = eligible.filter((ex) => !isRecent(ex));
+        const stale = eligible.filter((ex) => isRecent(ex));
+        if (fresh.length >= 2) {
+          eligible = [...fresh, ...stale];
+        }
+      }
+    }
+
+    // ── Non-default: hard-exclude previous anchor product ──
+    if (selectionMode !== 'default' && previousAnchor) {
+      const withoutPrev = eligible.filter((ex) => !isPrevAnchor(ex));
+      if (withoutPrev.length >= 2) {
+        eligible = withoutPrev;
+      }
+    }
+
+    // ──────────────────────────────────────────────────────
+    // ANCHOR ELIGIBILITY: filter impractical products from anchor pool.
+    // Excluded products remain in `eligible` for contrast/wildcard roles.
+    // Applies in ALL modes (default, different, less_traditional).
+    // ──────────────────────────────────────────────────────
+    let anchorEligible = eligible;
+    {
+      const excluded = { vintage: 0, separates: 0, set: 0 };
+
+      anchorEligible = eligible.filter((p) => {
+        // Rule 1: Exclude vintage unless user explicitly requested it
+        if (!userRequestedVintage && p.availability === 'vintage') {
+          excluded.vintage++;
+          return false;
+        }
+        // Rule 2: Exclude separates (power-amp, headphone-amp) for amplifier category
+        //         unless user explicitly requested separates
+        if (
+          !userRequestedSeparates
+          && productCategory === 'amplifier'
+          && p.catalogSubcategory
+          && p.catalogSubcategory !== 'integrated-amp'
+        ) {
+          excluded.separates++;
+          return false;
+        }
+        // Rule 3: Exclude SET topology from anchor unless user explicitly requested SET/triode
+        if (!userRequestedSET && p.catalogTopology === 'set') {
+          excluded.set++;
+          return false;
+        }
+        return true;
+      });
+
+      if (excluded.vintage > 0 || excluded.separates > 0 || excluded.set > 0) {
+        console.log('[anchor-filter] excluded:', {
+          vintage: excluded.vintage,
+          separates: excluded.separates,
+          set: excluded.set,
+          anchorPoolSize: anchorEligible.length,
+          fullPoolSize: eligible.length,
+        });
+      }
+
+      // Safety: if filter removed everything, fall back to full eligible
+      if (anchorEligible.length === 0) {
+        console.warn('[anchor-filter] all candidates excluded — falling back to full eligible pool');
+        anchorEligible = eligible;
+      }
+    }
+
+    // ──────────────────────────────────────────────────────
+    // ANCHOR SELECTION: filter first, then select — NO BYPASS
+    // ──────────────────────────────────────────────────────
+    let anchor: Ranked | undefined;
+
+    if (selectionMode === 'different' && previousAnchor) {
+      console.log('[selection-mode]', {
+        mode: 'different',
+        previousAnchor: previousAnchor.name ?? null,
+        previousAxes: previousAnchor.primaryAxes
+          ? { wb: axisN(previousAnchor.primaryAxes, 'warm_bright'), sd: axisN(previousAnchor.primaryAxes, 'smooth_detailed'), ec: axisN(previousAnchor.primaryAxes, 'elastic_controlled'), ac: axisN(previousAnchor.primaryAxes, 'airy_closed') }
+          : 'none',
+      });
+
+      // Step 1: Build mode pool — from anchor-eligible, exclude same brand
+      let modePool = anchorEligible.filter((p) =>
+        p.brand.toLowerCase() !== previousAnchor.brand.toLowerCase(),
+      );
+
+      // Compute distance for each candidate and log
+      const withDistance = modePool.map((p) => {
+        const dist = sonicDistance(p, previousAnchor);
+        console.log('[distance]', {
+          previous: previousAnchor.name,
+          candidate: `${p.brand} ${p.name}`,
+          distance: dist,
+        });
+        return { p, dist };
+      });
+
+      // Prefer products meeting MIN_SONIC_DISTANCE; keep all if none qualify
+      const meetsThreshold = withDistance.filter((d) => d.dist >= MIN_SONIC_DISTANCE);
+
+      console.log('[filter]', {
+        mode: 'different',
+        totalCandidates: modePool.length,
+        meetingMinDistance: meetsThreshold.length,
+        minDistance: MIN_SONIC_DISTANCE,
+      });
+
+      let scoredPool: { p: Ranked; dist: number }[];
+      if (meetsThreshold.length > 0) {
+        scoredPool = meetsThreshold;
+      } else {
+        // Fallback: expand to full ranked pool (drop recency filters)
+        // but preserve anchor eligibility rules — no vintage/separates leak
+        const isAnchorIneligible = (p: Ranked): boolean => {
+          if (!userRequestedVintage && p.availability === 'vintage') return true;
+          if (!userRequestedSeparates && productCategory === 'amplifier'
+            && p.catalogSubcategory && p.catalogSubcategory !== 'integrated-amp') return true;
+          return false;
+        };
+        const expanded = ranked
+          .filter((p) =>
+            !isPrevAnchor(p)
+            && p.brand.toLowerCase() !== previousAnchor.brand.toLowerCase()
+            && !isAnchorIneligible(p),
+          )
+          .map((p) => ({ p, dist: sonicDistance(p, previousAnchor) }));
+        const expandedMeetsThreshold = expanded.filter((d) => d.dist >= MIN_SONIC_DISTANCE);
+        scoredPool = expandedMeetsThreshold.length > 0 ? expandedMeetsThreshold : expanded;
+
+        if (scoredPool.length > 0) {
+          console.log('[filter]', { mode: 'different', expandedPool: true, remaining: scoredPool.length });
+        }
+      }
+
+      // Step 2: Score by weighted combination of distance + rank + budget proximity
+      // Higher distance = better (with diminishing returns above sweet spot)
+      // Lower rank = better (rank 0 is best)
+      // Budget proximity: products closer to budget center score higher
+      const maxRank = Math.max(...scoredPool.map((d) => d.p._rank), 1);
+
+      /** Budget proximity bonus: 0–2 points. Products within budget get full bonus;
+       *  products at budget edges or outside get reduced/zero bonus.
+       *  This prevents the system from anchoring on $400 vintage or $5K ceiling items
+       *  when good mid-budget candidates exist. */
+      const BUDGET_PROXIMITY_WEIGHT = 2;
+      function budgetProximityBonus(p: ProductExample): number {
+        if (!budgetCeiling || !p.price) return 0;
+        // Use effective price (used-low if available, else retail)
+        const effectivePrice = (p.usedPriceRange?.low ?? p.price);
+        // Budget center is 60% of ceiling (sweet spot for most shoppers)
+        const budgetCenter = budgetCeiling * 0.6;
+        const maxDeviation = budgetCeiling; // normalize against full budget
+        const deviation = Math.abs(effectivePrice - budgetCenter) / maxDeviation;
+        // 1.0 at center, tapering to 0 at extremes
+        return Math.max(0, 1 - deviation) * BUDGET_PROXIMITY_WEIGHT;
+      }
+
+      /** Practicality penalty: deprioritize products that are impractical for
+       *  a typical system unless the user has explicitly signaled interest.
+       *  SET amps (2–3W) get a heavy penalty — they can't drive most speakers.
+       *  Vintage products get a lighter penalty — reliability/availability concerns. */
+      const PRACTICALITY_PENALTY_SET = 4;
+      const PRACTICALITY_PENALTY_VINTAGE = 1.5;
+      function practicalityPenalty(p: ProductExample): number {
+        let penalty = 0;
+        if (p.catalogTopology === 'set') penalty += PRACTICALITY_PENALTY_SET;
+        if (p.availability === 'vintage') penalty += PRACTICALITY_PENALTY_VINTAGE;
+        return penalty;
+      }
+
+      function candidateScore(d: { p: Ranked; dist: number }): number {
+        const distScore = effectiveDistance(d.dist) * DISTANCE_WEIGHT;
+        const rankScore = (1 - d.p._rank / maxRank) * MAX_DISTANCE_PRACTICAL * RANK_WEIGHT;
+        const budgetScore = budgetProximityBonus(d.p);
+        const penalty = practicalityPenalty(d.p);
+        return distScore + rankScore + budgetScore - penalty;
+      }
+
+      // Log top 5 candidates by score for debugging
+      const scoredWithDetails = scoredPool.map((d) => ({
+        ...d,
+        score: candidateScore(d),
+        breakdown: {
+          dist: d.dist,
+          effDist: effectiveDistance(d.dist),
+          distScore: effectiveDistance(d.dist) * DISTANCE_WEIGHT,
+          rankScore: (1 - d.p._rank / maxRank) * MAX_DISTANCE_PRACTICAL * RANK_WEIGHT,
+          budgetBonus: budgetProximityBonus(d.p),
+          practicPenalty: practicalityPenalty(d.p),
+        },
+      }));
+      scoredWithDetails.sort((a, b) => b.score - a.score);
+
+      console.log('[candidate-scores]', scoredWithDetails.slice(0, 5).map((d) => ({
+        name: `${d.p.brand} ${d.p.name}`,
+        score: Math.round(d.score * 100) / 100,
+        ...d.breakdown,
+      })));
+
+      const bestByDistanceScore = scoredWithDetails.length > 0
+        ? scoredWithDetails[0]
+        : undefined;
+
+      anchor = bestByDistanceScore?.p;
+
+      // ── HARD ASSERTION — must throw ──
+      if (!anchor) {
+        console.error('[FATAL] different mode: no candidates found after distance scoring', {
+          eligibleCount: eligible.length,
+          rankedCount: ranked.length,
+          previousAnchor: `${previousAnchor.brand} ${previousAnchor.name}`,
+        });
+        throw new Error('DIFFERENT MODE FAILED: no candidates after distance scoring');
+      }
+
+      const anchorDist = bestByDistanceScore!.dist;
+      if (anchorDist < MIN_SONIC_DISTANCE) {
+        console.warn('[distance-fallback] using max available contrast: distance=%d < threshold=%d', anchorDist, MIN_SONIC_DISTANCE);
+      }
+
+      console.log('[anchor-distance]', {
+        selected: `${anchor.brand} ${anchor.name}`,
+        distanceFromPrevious: anchorDist,
+        axes: anchor.primaryAxes
+          ? { wb: axisN(anchor.primaryAxes, 'warm_bright'), sd: axisN(anchor.primaryAxes, 'smooth_detailed'), ec: axisN(anchor.primaryAxes, 'elastic_controlled'), ac: axisN(anchor.primaryAxes, 'airy_closed') }
+          : 'none',
+      });
+      console.log('[anchor]', {
+        mode: 'different',
+        name: anchor.name,
+        philosophy: anchor.philosophy ?? null,
+        marketType: anchor.marketType ?? null,
+        reason: anchorDist >= MIN_SONIC_DISTANCE ? 'sonic_distance' : 'max_available_contrast',
+      });
+
+    } else if (selectionMode === 'less_traditional') {
+      console.log('[selection-mode]', {
+        mode: 'less_traditional',
+        previousAnchor: previousAnchor?.name ?? null,
+      });
+
+      // Step 1: Build mode pool — from anchor-eligible, FILTER FIRST
+      let modePool = anchorEligible.filter((p) => p.marketType === 'nonTraditional');
+
+      console.log('[filter]', { mode: 'less_traditional', remaining: modePool.length });
+      console.log('[modePool]', modePool.map((p) => ({
+        name: `${p.brand} ${p.name}`,
+        philosophy: p.philosophy,
+        marketType: p.marketType,
+      })));
+
+      // Step 2: If empty — expand to ranked pool (preserve anchor eligibility), reapply filter
+      if (modePool.length === 0) {
+        const anchorSafe = (p: Ranked): boolean => {
+          if (!userRequestedVintage && p.availability === 'vintage') return false;
+          if (!userRequestedSeparates && productCategory === 'amplifier'
+            && p.catalogSubcategory && p.catalogSubcategory !== 'integrated-amp') return false;
+          return true;
+        };
+        modePool = ranked.filter((p) =>
+          p.marketType === 'nonTraditional' && !isRecent(p) && anchorSafe(p),
+        );
+        // If STILL empty, drop recency but keep nonTraditional + anchor safety
+        if (modePool.length === 0) {
+          modePool = ranked.filter((p) => p.marketType === 'nonTraditional' && anchorSafe(p));
+        }
+        if (modePool.length > 0) {
+          console.log('[filter]', { mode: 'less_traditional', expandedPool: true, remaining: modePool.length });
+        }
+      }
+
+      // Step 3: Select AFTER filtering — raw rank, no diversity penalty
+      anchor = bestByRank(modePool);
+
+      // ── HARD ASSERTION — must throw ──
+      if (!anchor) {
+        console.error('[FATAL] less_traditional mode: no nonTraditional candidates found', {
+          eligibleCount: eligible.length,
+          rankedCount: ranked.length,
+          eligibleMarketTypes: eligible.map((p) => `${p.brand} ${p.name}: ${p.marketType}`),
+        });
+        throw new Error('LESS_TRADITIONAL FAILED: no nonTraditional candidates in pool');
+      }
+      if (anchor.marketType !== 'nonTraditional') {
+        console.error('[FATAL] less_traditional violation', {
+          anchor: `${anchor.brand} ${anchor.name}`,
+          marketType: anchor.marketType,
+        });
+        throw new Error('LESS_TRADITIONAL FAILED: anchor marketType is ' + anchor.marketType);
+      }
+
+      console.log('[anchor]', {
+        mode: 'less_traditional',
+        name: anchor.name,
+        philosophy: anchor.philosophy ?? null,
+        marketType: anchor.marketType ?? null,
+      });
+
+    } else {
+      // Default mode: best with diversity penalty (no mode constraint)
+      // anchorEligible === eligible in default mode (no anchor filter applied)
+      anchor = bestOf(anchorEligible) ?? anchorEligible[0];
+    }
+
+    anchor.pickRole = 'anchor';
+    const anchorPhilosophy = anchor.philosophy;
+    const used = new Set<string>([exKey(anchor)]);
+
+    const remaining = () => eligible.filter((ex) => !used.has(exKey(ex)));
+
+    // ── Role assignment: filter → bestOf (score + diversity) ──
+    // close_alt: low sonic distance from anchor (similar listening experience)
+    // contrast: high sonic distance from anchor (different listening experience)
+    // wildcard: nonTraditional OR max distance from anchor
+
+    // Close alternative — low sonic distance from anchor (same sonic neighborhood)
+    let closeAlt: Ranked | undefined;
+    const closePool = remaining().filter((ex) => ex.philosophy === anchorPhilosophy);
+    if (closePool.length > 0) {
+      // Among same-philosophy candidates, pick the one with lowest distance (most similar)
+      closeAlt = closePool.reduce((best, cur) => {
+        const curDist = sonicDistance(cur, anchor);
+        const bestDist = sonicDistance(best, anchor);
+        return curDist < bestDist ? cur : (curDist === bestDist ? bestOf([best, cur])! : best);
+      });
+    }
+    if (closeAlt) { closeAlt.pickRole = 'close_alt'; used.add(exKey(closeAlt)); }
+
+    // Contrast — highest sonic distance from anchor (genuinely different listening experience)
+    const contrastPool = remaining().filter((ex) => !!ex.philosophy && ex.philosophy !== anchorPhilosophy);
+    let contrast: Ranked | undefined;
+    if (contrastPool.length > 0) {
+      contrast = contrastPool.reduce((best, cur) => {
+        const curDist = sonicDistance(cur, anchor);
+        const bestDist = sonicDistance(best, anchor);
+        return curDist > bestDist ? cur : best;
+      });
+    }
+    if (contrast) { contrast.pickRole = 'contrast'; used.add(exKey(contrast)); }
+
+    // Wildcard — nonTraditional OR highest distance from anchor if no nonTraditional
+    let wildcard: Ranked | undefined;
+    const nonTradPool = remaining().filter((ex) => ex.marketType === 'nonTraditional');
+    if (nonTradPool.length > 0) {
+      // Among nonTraditional, prefer highest distance from anchor
+      wildcard = nonTradPool.reduce((best, cur) => {
+        const curDist = sonicDistance(cur, anchor);
+        const bestDist = sonicDistance(best, anchor);
+        return curDist > bestDist ? cur : best;
+      });
+    } else {
+      // No nonTraditional available — pick highest distance from anchor
+      const distPool = remaining();
+      if (distPool.length > 0) {
+        wildcard = distPool.reduce((best, cur) => {
+          const curDist = sonicDistance(cur, anchor);
+          const bestDist = sonicDistance(best, anchor);
+          return curDist > bestDist ? cur : best;
+        });
+      }
+    }
+    if (wildcard) { wildcard.pickRole = 'wildcard'; used.add(exKey(wildcard)); }
+
+    // ── Assemble result ─────────────────────────────────
+    const result: ProductExample[] = [anchor];
+    if (closeAlt) result.push(closeAlt);
+    if (contrast) result.push(contrast);
+    if (wildcard) result.push(wildcard);
+
+    // Pad to minimum 3 — mode-aware: padding must respect constraints
+    if (result.length < 3) {
+      let padPool: Ranked[];
+      if (selectionMode === 'less_traditional') {
+        padPool = eligible.filter((ex) =>
+          !used.has(exKey(ex)) && ex.marketType === 'nonTraditional',
+        );
+      } else if (selectionMode === 'different' && previousAnchor) {
+        // Padding in different mode: prefer sonically distant products
+        const distCandidates = eligible
+          .filter((ex) => !used.has(exKey(ex)))
+          .map((ex) => ({ ex, dist: sonicDistance(ex, previousAnchor) }))
+          .sort((a, b) => b.dist - a.dist);
+        padPool = distCandidates.map((d) => d.ex);
+      } else {
+        padPool = eligible.filter((ex) => !used.has(exKey(ex)));
+      }
+      // Never fall back to unrestricted pool — empty padding is acceptable
+      const padding = padPool.slice(0, 4 - result.length);
+      for (const ex of padding) {
+        result.push(ex);
+        used.add(exKey(ex));
+      }
+    }
+
+    console.log('[role-set]', {
+      mode: selectionMode,
+      anchor: `${anchor.brand} ${anchor.name}`,
+      closeAlt: closeAlt ? `${closeAlt.brand} ${closeAlt.name}` : null,
+      contrast: contrast ? `${contrast.brand} ${contrast.name}` : null,
+      wildcard: wildcard ? `${wildcard.brand} ${wildcard.name}` : null,
+      total: result.length,
+    });
+
+    return result.map(({ _rank, ...rest }) => rest as ProductExample);
+  }
+
+  const results = top.map(({ product }) => {
     // Check if this product matches a current system component
     const fullName = `${product.brand} ${product.name}`.toLowerCase();
     const isCurrent = currentNames.has(fullName)
@@ -2203,10 +3842,92 @@ function selectProductExamples(
       catalogTopology: product.topology,
       catalogCountry: product.country,
       catalogBrandScale: product.brandScale,
+      catalogSubcategory: (product as any).subcategory,
       // Flag when this is the user's current component
       isCurrentComponent: isCurrent || undefined,
-    };
+      // Budget realism tier
+      budgetRealism: computeBudgetRealism(product),
+      // Step 10: Enhanced catalog fields
+      imageUrl: (product as any).imageUrl,
+      typicalMarket: (product as any).typicalMarket ?? (product.availability === 'discontinued' ? 'used' : undefined),
+      buyingContext: (product as any).buyingContext,
+      // 4-option metadata — carried through for anchor tracking
+      philosophy: product.philosophy,
+      marketType: product.marketType,
+      primaryAxes: product.primaryAxes,
+    } as ProductExample;
   });
+
+  // ── Final budget safety net ────────────────────────────
+  // Strip any product that somehow ended up above budget (e.g. via
+  // engaged-product boost or diversity selection overriding the filter).
+  // Products with budgetRealism === 'above_budget' must not be shown.
+  const budgetFiltered = budgetAmount
+    ? results.filter((r) => r.budgetRealism !== 'above_budget')
+    : results;
+  // If all products were filtered out, fall back to unfiltered (edge case).
+  const finalResults = budgetFiltered.length > 0 ? budgetFiltered : results;
+
+  // Apply 4-option recommendation set: anchor, close_alt, contrast, wildcard.
+  // Pass the scored products so the builder can access philosophy/marketType.
+  // Detect explicit vintage/separates intent from constraints and conversation signals.
+  // Default: exclude from anchor. Only include when user explicitly signaled intent.
+  const userRequestedVintage = constraints?.requireTopologies?.some(
+    (t) => /vintage|classic|retro/i.test(t),
+  ) ?? false;
+  const userRequestedSeparates = constraints?.requireTopologies?.some(
+    (t) => /power.amp|preamp|pre.amp|separates/i.test(t),
+  ) ?? false;
+  const userRequestedSET = constraints?.requireTopologies?.some(
+    (t) => /\bset\b|single.ended|triode|low.power|decware|yamamoto|bottlehead/i.test(t),
+  ) ?? false;
+
+  const recommendationSet = buildRecommendationSet(
+    finalResults, listenerProfile,
+    selectionMode ?? 'default', previousAnchor, recentProductNames,
+    budgetAmount,
+    category,
+    userRequestedVintage,
+    userRequestedSeparates,
+    userRequestedSET,
+  );
+  // ── Hard validation guards ──────────────────────────
+  // Enforce category + budget constraints on final output.
+  // These are last-line-of-defense checks — if anything upstream
+  // leaked a wrong-category or over-budget product, we catch it here.
+  const validatedSet = recommendationSet.filter((p) => {
+    // Budget guard: allow up to 25% tolerance (covers stretch_used),
+    // but hard-reject anything beyond that.
+    if (budgetAmount && p.price) {
+      const hardCeiling = budgetAmount * 1.25;
+      if (p.price > hardCeiling && (!p.usedPriceRange || p.usedPriceRange.low > hardCeiling)) {
+        console.warn('[budget-guard] REJECTED %s %s — price %d exceeds hard ceiling %d', p.brand, p.name, p.price, hardCeiling);
+        return false;
+      }
+    }
+    return true;
+  });
+
+  console.log('[post-filter]', {
+    category,
+    budget: budgetAmount ?? 'none',
+    recommendationCount: recommendationSet.length,
+    validatedCount: validatedSet.length,
+    rejected: recommendationSet.length - validatedSet.length,
+  });
+
+  const finalSet = validatedSet.length >= 2 ? validatedSet : recommendationSet;
+
+  // Constrained modes NEVER fall back to finalResults — that list has no
+  // mode filtering and would reintroduce traditional products in less_traditional
+  // or same-philosophy products in different mode.
+  if (selectionMode !== 'default') {
+    return finalSet;
+  }
+
+  // Default mode only: fall back to the full filtered list if the builder
+  // produced fewer than 2 (e.g., very small catalog).
+  return finalSet.length >= 2 ? finalSet : finalResults;
 }
 
 /**
@@ -2228,19 +3949,31 @@ const MAX_SHORTLIST = 3;
 function selectDiverseByTopology(
   ranked: ScoredProduct[],
   target: number,
+  budgetAmount?: number | null,
 ): ScoredProduct[] {
   if (ranked.length === 0) return [];
 
   // Clamp target within bounds
   const count = Math.max(MIN_SHORTLIST, Math.min(target, MAX_SHORTLIST));
 
+  // ── Price floor guard (Task 2): when budget is stated, never select
+  // products below 30% of budget. This prevents refinement turns from
+  // collapsing to entry-level products. A $5000 budget must produce
+  // $1500+ products, not $999 starter options.
+  const priceFloor = budgetAmount ? budgetAmount * 0.3 : 0;
+  const eligible = priceFloor > 0
+    ? ranked.filter((r) => r.product.price >= priceFloor)
+    : ranked;
+  // Fallback to full ranked list if price floor eliminates everything
+  const pool = eligible.length >= count ? eligible : ranked;
+
   // Group by topology, keeping only top-scoring entries per topology.
   // Within each topology group, prefer higher price (more refined design).
   const byTopology = new Map<string, ScoredProduct>();
-  const topScore = ranked[0].score;
+  const topScore = pool[0]?.score ?? 0;
   const scoreTolerance = 0.5; // entries within 0.5 of the top are considered competitive
 
-  for (const entry of ranked) {
+  for (const entry of pool) {
     if (entry.score < topScore - scoreTolerance) continue;
     const topo = entry.product.topology
       ?? entry.product.architecture?.split(/\s/)[0]?.toLowerCase()
@@ -2270,10 +4003,10 @@ function selectDiverseByTopology(
   if (selected.length < count) {
     const pass2Floor = topScore - 1.5;
     const usedBrands = new Set(selected.map((s) => s.product.brand.toLowerCase()));
-    for (const entry of ranked) {
+    for (const entry of pool) {
       if (selected.length >= count) break;
       if (selected.includes(entry)) continue;
-      if (entry.score < pass2Floor) break; // ranked is sorted; stop early
+      if (entry.score < pass2Floor) break; // pool is sorted; stop early
       if (!usedBrands.has(entry.product.brand.toLowerCase())) {
         selected.push(entry);
         usedBrands.add(entry.product.brand.toLowerCase());
@@ -2281,9 +4014,9 @@ function selectDiverseByTopology(
     }
   }
 
-  // Pass 3: last resort — fill from ranked list
+  // Pass 3: last resort — fill from pool (price-floor-filtered when budget stated)
   if (selected.length < count) {
-    for (const entry of ranked) {
+    for (const entry of pool) {
       if (selected.length >= count) break;
       if (!selected.includes(entry)) {
         selected.push(entry);
@@ -2853,6 +4586,16 @@ export function buildShoppingAnswer(
   tasteProfile?: UserTasteProfile,
   reasoning?: ReasoningResult,
   activeSystemComponents?: string[],
+  /** Product names the user has engaged with in prior turns (for shortlist continuity). */
+  engagedProductNames?: string[],
+  /** Accumulated listener profile for taste filtering + decisive recommendations. */
+  listenerProfile?: ListenerProfile,
+  /** Selection mode override — shifts anchor based on user intent. */
+  selectionMode?: SelectionMode,
+  /** Previous anchor info for mode-aware anchor selection. */
+  previousAnchor?: PreviousAnchor | null,
+  /** Product names shown in recent shopping turns (for anti-repetition). */
+  recentProductNames?: string[],
 ): ShoppingAnswer {
   const traits = signals.traits;
   const categoryLabel = CATEGORY_LABELS[ctx.category] ?? 'component';
@@ -2889,6 +4632,46 @@ export function buildShoppingAnswer(
     || !!reasoning?.taste.archetype;
   const directed = hasBudget && hasCategory && hasAnyTaste;
 
+  // ── Taste confidence computation ────────────────────
+  const hasSemanticPrefs = ctx.semanticPreferences.weights.length > 0;
+  const hasRef = (engagedProductNames ?? []).length > 0;
+  const hasDislikesSignal = !!(listenerProfile
+    && (listenerProfile.dislikedBrands.length > 0 || listenerProfile.dislikedProducts.length > 0));
+  // Direction signal: any non-neutral trait counts
+  const hasDir = Object.values(signals.traits).some((v) => v === 'up' || v === 'down');
+  // Specialist signal: user expressed SET/horn/high-efficiency/low-power intent
+  const hasSpecialist = ctx.semanticPreferences.specialistHints.length > 0;
+
+  const tasteConfidence = computeTasteConfidence({
+    hasBudget,
+    hasCategory,
+    hasSemanticPreferences: hasSemanticPrefs,
+    hasReference: hasRef,
+    hasDislikes: hasDislikesSignal,
+    hasDirectionSignal: hasDir,
+    hasSpecialistSignal: hasSpecialist,
+  });
+
+  console.log('[taste-confidence]', {
+    level: tasteConfidence,
+    hasBudget,
+    hasCategory,
+    hasSemanticPreferences: hasSemanticPrefs,
+    hasReference: hasRef,
+    hasDislikes: hasDislikesSignal,
+    hasDirectionSignal: hasDir,
+    hasSpecialistSignal: hasSpecialist,
+  });
+
+  // Build optional taste question (only when low confidence + no direction)
+  const tasteQuestion = tasteConfidence === 'low'
+    ? buildTasteQuestion({
+        category: ctx.category,
+        hasDirectionSignalPresent: hasDir,
+        hasReferencePresent: hasRef,
+      })
+    : null;
+
   // 1. Preference summary — use reasoning taste label when available
   const effectiveTasteLabel = reasoning?.taste.tasteLabel ?? taste.label;
   const archetype = reasoning?.taste.archetype ?? matchedProfile?.archetype;
@@ -2901,11 +4684,20 @@ export function buildShoppingAnswer(
       ? ` Your stored taste profile reinforces this.`
       : '';
 
-  // In directed mode, use assertive taste-committed language.
-  // Exploratory mode retains the observational framing.
-  const preferenceSummary = directed
-    ? `Given your preference for ${effectiveTasteLabel}, this direction makes the most sense${archetypeLabel}.${profileNote}`
-    : `You appear to value ${effectiveTasteLabel} more than ${getContrastLabel(effectiveTasteLabel)}${archetypeLabel}.${profileNote}`;
+  // Language gating: adjust assertiveness based on taste confidence.
+  // Low = no preference claims. Medium = mild interpretation. High/directed = confident.
+  let preferenceSummary: string;
+  if (tasteConfidence === 'low') {
+    // Low confidence: no preference assertions — frame around what we DO know
+    const budgetFrame = ctx.budgetAmount ? `your $${ctx.budgetAmount.toLocaleString()} budget` : 'your budget';
+    const setupFrame = ctx.systemProvided ? 'your current setup' : 'what you\'ve told me';
+    preferenceSummary = `Based on ${budgetFrame} and ${setupFrame}, here are some solid starting points.`;
+  } else if (directed) {
+    preferenceSummary = `Given your preference for ${effectiveTasteLabel}, this direction makes the most sense${archetypeLabel}.${profileNote}`;
+  } else {
+    // sufficient confidence, non-directed
+    preferenceSummary = `Based on what you've said so far, you seem to lean toward ${effectiveTasteLabel}${archetypeLabel}.${profileNote}`;
+  }
 
   // 2. Best-fit direction — prefer reasoning direction statement when available.
   //    In directed mode, lead with a system-building directive.
@@ -2922,11 +4714,16 @@ export function buildShoppingAnswer(
   const directedDirection = matchedProfile?.directionByCategory[ctx.category]
     ?? (isRawFallback ? taste.defaultDirection : rawDirection);
 
-  const bestFitDirection = directed
-    ? `This system should lean toward ${effectiveTasteLabel.toLowerCase()} — ${directedDirection.charAt(0).toLowerCase()}${directedDirection.slice(1)}${directedDirection.endsWith('.') ? '' : '.'}`
-    : hasTasteSignal
-      ? `Given your preference for ${effectiveTasteLabel}, ${rawDirection.charAt(0).toLowerCase()}${rawDirection.slice(1)}${rawDirection.endsWith('.') ? '' : '.'} This matters because the ${categoryLabel} sets the tonal and temporal character for everything downstream.`
-      : rawDirection;
+  let bestFitDirection: string;
+  if (tasteConfidence === 'low') {
+    // Low confidence: present directions without preference claims
+    bestFitDirection = `Here are a few different directions within this ${categoryLabel} category. Each represents a different design philosophy and listening experience.`;
+  } else if (directed) {
+    bestFitDirection = `This system should lean toward ${effectiveTasteLabel.toLowerCase()} — ${directedDirection.charAt(0).toLowerCase()}${directedDirection.slice(1)}${directedDirection.endsWith('.') ? '' : '.'}`;
+  } else {
+    // sufficient confidence, non-directed
+    bestFitDirection = `Based on what you've described, ${rawDirection.charAt(0).toLowerCase()}${rawDirection.slice(1)}${rawDirection.endsWith('.') ? '' : '.'}`;
+  }
 
   // 3. Why this fits — explicitly listener-centered framing
   const rawWhyThisFits = matchedProfile?.whyByCategory?.[ctx.category]
@@ -2937,7 +4734,7 @@ export function buildShoppingAnswer(
 
   // 4. Product examples (only when catalog exists + budget known)
   // Pass reasoning for directional bias — existing scoring is preserved.
-  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents);
+  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents, ctx.roomContext, engagedProductNames, ctx.constraints, ctx.semanticPreferences, listenerProfile, selectionMode, previousAnchor, recentProductNames);
 
   // ── Directed mode: cap at 2 products, mark primary ──
   if (directed && productExamples.length > 2) {
@@ -3012,6 +4809,13 @@ export function buildShoppingAnswer(
     whyFitsYou,
     directed,
     nextBuildStep: directed ? buildNextBuildStep(ctx.category, ctx.systemProvided) : undefined,
+    tasteConfidence,
+    tasteQuestion: tasteQuestion ?? undefined,
+    categoryQuestion: buildCategoryQuestion({
+      tasteConfidence,
+      category: ctx.category,
+      hasProducts: productExamples.length > 0,
+    }) ?? undefined,
   };
 }
 

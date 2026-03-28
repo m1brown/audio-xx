@@ -181,7 +181,10 @@ function buildDirectionStatement(
   archetype: SonicArchetype | null,
 ): string {
   if (arrows.length === 0) {
-    return 'No strong directional change detected — the current balance may be close to what you value.';
+    if (archetype) {
+      return `Your preferences align with a ${archetype} sensibility. The recommendations below are chosen to match that direction.`;
+    }
+    return 'Your current balance appears well-suited to your preferences. The recommendations below explore options that maintain that character.';
   }
 
   const gains = arrows

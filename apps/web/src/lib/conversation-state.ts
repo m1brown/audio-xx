@@ -117,7 +117,7 @@ export function isOrientationInput(text: string): boolean {
 
 // ── Budget extraction ──────────────────────────────────
 
-const BUDGET_PATTERN = /(?:under\s+)?\$\s?\d[\d,]*|\bunder\s+\d[\d,]*\b|\bbudget\s+(?:of|around|is)\s+\$?\d[\d,]*/i;
+const BUDGET_PATTERN = /(?:under\s+)?\$\s?\d[\d,]*(?:\.\d{1,2})?\s*k?\b|\bunder\s+\d[\d,]*\s*k?\b|\bbudget\s+(?:of|around|is)\s+\$?\d[\d,]*(?:\.\d{1,2})?\s*k?\b/i;
 
 /**
  * Relaxed budget pattern for when we've already asked "what's your budget?"
@@ -131,7 +131,15 @@ function extractBudget(text: string): string | undefined {
   if (!match) return undefined;
   // Normalize: strip "budget of/around/is" prefix, keep just the amount
   const raw = match[0];
-  const normalized = raw.replace(/^budget\s+(?:of|around|is)\s+/i, '');
+  let normalized = raw.replace(/^budget\s+(?:of|around|is)\s+/i, '');
+
+  // Expand "k" suffix: "$5k" → "$5000", "under 2.5k" → "under $2500"
+  const kMatch = normalized.match(/(\d+(?:\.\d{1,2})?)\s*k\b/i);
+  if (kMatch) {
+    const expanded = Math.round(parseFloat(kMatch[1]) * 1000);
+    normalized = normalized.replace(/\d+(?:\.\d{1,2})?\s*k\b/i, String(expanded));
+  }
+
   // Ensure dollar sign
   return normalized.startsWith('$') || /^under\s/i.test(normalized)
     ? normalized
@@ -172,6 +180,10 @@ function extractPreference(text: string): string | undefined {
   }
   return undefined;
 }
+
+// ── From-scratch detection ────────────────────────────
+
+const FROM_SCRATCH_PATTERN = /\b(?:from\s+scratch|starting\s+(?:fresh|out|new)|don'?t\s+have\s+(?:any|a)|no\s+(?:system|gear|equipment|setup)|first\s+(?:system|setup)|building\s+(?:new|a\s+new)|brand\s+new)\b/i;
 
 // ── Readiness checks ───────────────────────────────────
 
@@ -422,6 +434,54 @@ export function transition(
   if (newBudget) facts.budget = newBudget;
   if (newPreference) facts.preference = newPreference;
 
+  // Detect "from scratch" / "starting fresh" signals on every turn
+  if (!facts.fromScratch && FROM_SCRATCH_PATTERN.test(text)) {
+    facts.fromScratch = true;
+  }
+
+  // ── Onboarding bypass — sufficient signals skip remaining questions ──
+  // If accumulated facts already contain budget + category (non-general),
+  // there is no reason to keep asking onboarding questions. Jump straight
+  // to ready_to_recommend regardless of which mode/stage we're currently in.
+  // This handles multi-turn accumulation: Turn 1 "I listen to Van Halen",
+  // Turn 2 "speakers, $5k" → category+budget now present → skip.
+  const bypassCategory = facts.category && facts.category !== 'general';
+  const bypassBudget = !!facts.budget;
+  const bypassListeningPath = facts.listeningPath === 'headphones' || facts.listeningPath === 'speakers';
+  const shouldBypass =
+    (bypassBudget && bypassCategory) ||                        // budget + category
+    (bypassBudget && bypassListeningPath) ||                   // budget + output type
+    (bypassCategory && !!facts.musicDescription && bypassBudget); // music + category + budget
+
+  if (shouldBypass && current.stage !== 'ready_to_recommend' && current.stage !== 'done') {
+    // Default category from listening path if not explicitly set
+    if (!bypassCategory && bypassListeningPath) {
+      facts.category = facts.listeningPath === 'headphones' ? 'headphone' : 'speaker';
+    }
+    if (facts.musicDescription || facts.preference) {
+      facts.musicDescription = facts.musicDescription ?? text;
+    }
+    console.log("[onboarding-bypass]", { budget: facts.budget, category: facts.category, mode: current.mode, stage: current.stage });
+
+    // Synthesize query when music context exists
+    if (facts.musicDescription) {
+      const category = facts.category === 'headphone' ? 'headphones' : (facts.category === 'speaker' ? 'speakers' : facts.category);
+      const musicPart = facts.musicDescription.replace(/^i\s+(listen\s+to|like|love|enjoy)\s+/i, '');
+      const budgetPart = facts.budget ? ` under ${facts.budget.replace(/^under\s*/i, '')}` : '';
+      const scratchPart = facts.fromScratch ? ' Starting from scratch.' : '';
+      const synthesized = `I listen to ${musicPart}. Looking for ${category}${budgetPart}.${scratchPart}`;
+      return {
+        state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
+        response: { kind: 'proceed', synthesizedQuery: synthesized },
+      };
+    }
+
+    return {
+      state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
+      response: { kind: 'proceed' },
+    };
+  }
+
   // ── Mode-specific transitions ────────────────────────
 
   switch (current.mode) {
@@ -558,12 +618,15 @@ export function transition(
           };
         }
         // Have category — now need budget
+        const budgetQuestion = facts.fromScratch
+          ? "What's your budget?"
+          : "What's your budget? And do you have an existing system these need to work with?";
         return {
           state: { mode: 'shopping', stage: 'clarify_budget', facts },
           response: {
             kind: 'question',
             acknowledge: categoryAcknowledge(facts.category),
-            question: "What's your budget? And do you have an existing system these need to work with?",
+            question: budgetQuestion,
           },
         };
       }
@@ -818,6 +881,20 @@ export function transition(
           facts.listeningPath = 'unknown';
         }
 
+        // If fromScratch is already known, skip the ownership question
+        // and go straight to budget.
+        if (facts.fromScratch) {
+          const categoryLabel = facts.listeningPath === 'headphones' ? 'headphones' : 'a speaker setup';
+          return {
+            state: { mode: 'shopping', stage: 'clarify_budget', facts },
+            response: {
+              kind: 'question',
+              acknowledge: `Great — let's find ${categoryLabel} for that kind of listening.`,
+              question: "What's your budget?",
+            },
+          };
+        }
+
         const pathResponse = facts.listeningPath === 'headphones'
           ? 'Got it. Do you already have headphones you like, or are you looking for new ones?'
           : facts.listeningPath === 'speakers'
@@ -836,11 +913,8 @@ export function transition(
         const categoryLabel = category === 'headphones' ? 'headphones' : 'a speaker setup';
         const musicDesc = facts.musicDescription ?? '';
 
-        // Detect "from scratch" / "starting fresh" / "don't have any" signals
-        const FROM_SCRATCH_PATTERN = /\b(?:from\s+scratch|starting\s+(?:fresh|out|new)|don'?t\s+have\s+(?:any|a)|no\s+(?:system|gear|equipment|setup)|first\s+(?:system|setup)|building\s+(?:new|a\s+new)|brand\s+new)\b/i;
-        if (FROM_SCRATCH_PATTERN.test(text)) {
-          facts.fromScratch = true;
-        }
+        // fromScratch is now detected globally at the top of transition(),
+        // so no need to check again here.
 
         // Extract budget from this message
         if (newBudget) facts.budget = newBudget;
@@ -1145,14 +1219,51 @@ export function detectInitialMode(
     preference: extractPreference(text),
   };
 
+  // Detect "from scratch" / "starting fresh" signals on the first turn too
+  if (FROM_SCRATCH_PATTERN.test(text)) {
+    facts.fromScratch = true;
+  }
+
+  console.log("[DEBUG ROUTER]", { category: facts.category, budget: facts.budget });
+
   // Rule 3: Beginner uncertainty → orientation
   if (isOrientationInput(text)) {
     return { mode: 'orientation', stage: 'entry', facts };
   }
 
-  // Music input
+  // Rule 3b: Budget + category → shopping (deterministic, any intent).
+  // "Van Halen $5k speakers" has budget + category + preference — go straight
+  // to shopping regardless of what the intent detector classified it as.
+  if (facts.budget && facts.category && facts.category !== 'general') {
+    console.log('[onboarding-skip] budget+category fast-tracked to shopping (category=%s, budget=%s)', facts.category, facts.budget);
+    if (facts.preference) facts.musicDescription = text;
+    if (isReadyToRecommend(facts)) {
+      return { mode: 'shopping', stage: 'ready_to_recommend', facts };
+    }
+    return { mode: 'shopping', stage: 'ready_to_recommend', facts };
+  }
+
+  // Music input — fast-track to shopping when enough signal is present.
+  // If the user provides music + budget (+ optional room/category), skip the
+  // onboarding question flow and go straight to shopping. Default category
+  // to "speaker" when not explicitly stated, since speakers are the most
+  // common first purchase.
   if (context.detectedIntent === 'music_input') {
     facts.musicDescription = text;
+    const hasRoom = /\b(?:large|small|medium|big|tiny|apartment|bedroom|living\s*room|studio|office|den|loft|open\s*plan|nearfield|near[- ]?field|desktop)\b/i.test(text);
+    const hasBudget = !!facts.budget;
+    const hasCategory = !!facts.category && facts.category !== 'general';
+    // Count signals: music (always true here), budget, room, category
+    const signalCount = [true, hasBudget, hasRoom, hasCategory].filter(Boolean).length;
+    if (signalCount >= 2) {
+      // Enough signal — skip onboarding, go straight to shopping
+      if (!hasCategory) facts.category = 'speaker'; // default
+      console.log('[onboarding-skip] music_input fast-tracked to shopping (signals=%d, category=%s, budget=%s)', signalCount, facts.category, facts.budget);
+      if (isReadyToRecommend(facts)) {
+        return { mode: 'shopping', stage: 'ready_to_recommend', facts };
+      }
+      return { mode: 'shopping', stage: hasBudget ? 'clarify_category' : 'clarify_budget', facts };
+    }
     return { mode: 'music_input', stage: 'awaiting_listening_path', facts };
   }
 
