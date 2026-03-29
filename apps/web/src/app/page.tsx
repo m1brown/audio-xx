@@ -873,6 +873,43 @@ export default function Home() {
       submittedText, intent, routedMode, effectiveMode, state.activeMode, shoppingAnswerCount,
       convStateRef.current.mode, convStateRef.current.stage);
 
+    // ── First-turn intent authority ──────────────────────
+    // When detectIntent returns a high-confidence mode (system_assessment,
+    // comparison, product_assessment) with sufficient subject evidence,
+    // bypass the state machine entirely. This prevents budget+category
+    // fast-tracking, orientation heuristics, or other detectConvMode
+    // priorities from overriding a clear, well-supported intent.
+    const intentAuthoritative = convStateRef.current.mode === 'idle' && (
+      (intent === 'system_assessment' && turnCtx.subjectMatches.length >= 2) ||
+      (intent === 'comparison' && (turnCtx.subjectMatches.length >= 2 || /\bvs\.?\b/i.test(submittedText))) ||
+      (intent === 'product_assessment' && turnCtx.subjectMatches.length >= 1)
+    );
+
+    if (intentAuthoritative) {
+      console.log('[intent-authority] Bypassing state machine: intent=%s subjects=%d', intent, turnCtx.subjectMatches.length);
+      // Set convState to match the authoritative intent so follow-up
+      // turns retain context (e.g. system_assessment accumulates components).
+      if (intent === 'system_assessment') {
+        convStateRef.current = {
+          mode: 'system_assessment',
+          stage: 'ready_to_assess',
+          facts: {
+            hasSystem: true,
+            systemAssessmentText: submittedText,
+            systemComponents: [submittedText],
+          },
+        };
+      } else if (intent === 'comparison') {
+        convStateRef.current = {
+          mode: 'comparison',
+          stage: 'ready_to_compare',
+          facts: { subjectCount: turnCtx.subjectMatches.length },
+        };
+      }
+      // product_assessment is stateless — no convState setup needed.
+      // Intent falls through to the handler blocks below unchanged.
+    }
+
     // ── State machine: initial mode detection (idle → active) ──
     // Routes every first message through detectConvMode to ensure the
     // response clearly reflects the detected entry mode.
@@ -883,7 +920,7 @@ export default function Home() {
     // handles refinement/category switches directly via pastClarificationCap.
     // Without this bypass, detectConvMode would re-enter clarify_budget
     // and lose preserved context.
-    if (convStateRef.current.mode === 'idle' && !convModeHint && !(effectiveMode === 'shopping' && shoppingAnswerCount > 0)) {
+    if (convStateRef.current.mode === 'idle' && !convModeHint && !intentAuthoritative && !(effectiveMode === 'shopping' && shoppingAnswerCount > 0)) {
       const initialConvMode = detectConvMode(submittedText, {
         detectedIntent: intent,
         hasSystem: !!turnCtx.activeSystem || !!audioState.activeSystemRef,
