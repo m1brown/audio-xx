@@ -85,4 +85,50 @@ describe('Comparison Pair Resolution', () => {
     expect(anchor).toContain('ares');
     console.log('ANCHOR:', result!.anchor.substring(0, 300));
   });
+
+  // ── "compare X with Y" separator tests ───────────────
+
+  it('"compare kinki ex-m1 with hegel h190" treats EX-M1 as known, Hegel as unknown', () => {
+    const text = 'compare kinki ex-m1 with hegel h190';
+    const { intent, subjects, subjectMatches, desires } = detectIntent(text);
+
+    // 1. Intent should be comparison
+    expect(intent).toBe('comparison');
+    console.log('INTENT:', intent);
+    console.log('SUBJECTS:', subjects);
+    console.log('SUBJECT_MATCHES:', subjectMatches.map(m => `${m.name}(${m.kind})`));
+
+    // 2. Build the gear response
+    const result = buildGearResponse('comparison', subjects, text, desires);
+    expect(result).not.toBeNull();
+
+    const anchor = result!.anchor.toLowerCase();
+    console.log('ANCHOR:', result!.anchor.substring(0, 500));
+
+    // 3. Should reference the Kinki Studio EX-M1 (known product)
+    expect(anchor).toContain('ex-m1');
+
+    // 4. Should reference "Hegel" as the unknown side, NOT "Hegel Rost"
+    //    (H190 is not in the catalog, so brand fallback to Rost is wrong)
+    expect(anchor).not.toContain('rost');
+
+    // 5. The unknown name should be "Hegel" not "Kinki Hegel"
+    //    (partial brand "kinki" must be recognized as belonging to EX-M1)
+    expect(anchor).not.toMatch(/kinki\s+hegel/i);
+  });
+
+  it('"compare kinki ex-m1 with job integrated" resolves both products correctly', () => {
+    const text = 'compare kinki ex-m1 with job integrated';
+    const { subjects, desires } = detectIntent(text);
+    const result = buildGearResponse('comparison', subjects, text, desires);
+    expect(result).not.toBeNull();
+    const anchor = result!.anchor.toLowerCase();
+    console.log('ANCHOR:', result!.anchor.substring(0, 300));
+    // Both products are in the catalog — full comparison should fire
+    expect(anchor).toContain('ex-m1');
+    expect(anchor).toContain('job');
+    // Should NOT be a half-known comparison
+    expect(anchor).not.toContain('don\'t have');
+    expect(anchor).not.toContain('not in');
+  });
 });

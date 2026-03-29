@@ -174,9 +174,12 @@ function resolveComparisonPair(
   currentMessage: string,
   subjects: string[],
 ): ComparisonResolution | null {
-  // Find the separator — "vs", "versus", or "or" (word-bounded)
+  // Find the separator — "vs", "versus", "or", or "compare…with" (word-bounded).
+  // "with" is only treated as a separator when preceded by "compare" to avoid
+  // false positives on phrases like "pair X with Y".
   const sepMatch = currentMessage.match(/\b(vs\.?|versus)\b/i)
-    ?? currentMessage.match(/\b(or)\b/i);
+    ?? currentMessage.match(/\b(or)\b/i)
+    ?? (/\bcompare\b/i.test(currentMessage) ? currentMessage.match(/\b(with)\b/i) : null);
   if (!sepMatch) return null;
 
   const sepIdx = sepMatch.index!;
@@ -224,6 +227,24 @@ function resolveComparisonPair(
   // Differing products — unique to each side
   const leftOnly = leftProducts.filter((p) => !shared.some((s) => s.id === p.id));
   const rightOnly = rightProducts.filter((p) => !shared.some((s) => s.id === p.id));
+
+  // Guard: if a side resolved only via brand fallback and the side text
+  // contains digit-bearing tokens not covered by recognized subjects,
+  // the user likely referenced a specific model we don't have (e.g.
+  // "hegel h190" → brand "hegel" resolves to Rost, but "h190" is
+  // unrecognized). Return null to use the half-known path instead.
+  const leftDirectCount = findProducts(leftSubjects).length;
+  const rightDirectCount = findProducts(rightSubjects).length;
+  const hasUnresolvedModel = (text: string, subs: string[]): boolean => {
+    const covered = new Set(subs.flatMap((s) => s.toLowerCase().split(/\s+/)));
+    return text.trim().split(/\s+/).some((t) => /\d/.test(t) && !covered.has(t.toLowerCase()));
+  };
+  if (
+    (leftDirectCount === 0 && leftOnly.length > 0 && hasUnresolvedModel(leftHalf, leftSubjects)) ||
+    (rightDirectCount === 0 && rightOnly.length > 0 && hasUnresolvedModel(rightHalf, rightSubjects))
+  ) {
+    return null;
+  }
 
   if (leftOnly.length >= 1 && rightOnly.length >= 1) {
     return {
@@ -1941,9 +1962,16 @@ export function buildGearResponse(
     if (subjects.length >= 2 && (a || b)) {
       const known = a ?? b;
       const knownName = `${known!.brand} ${known!.name}`;
-      const unknownSubjects = subjects.filter(
-        (s) => s.toLowerCase() !== known!.brand.toLowerCase() && s.toLowerCase() !== known!.name.toLowerCase(),
-      );
+      const unknownSubjects = subjects.filter((s) => {
+        const sl = s.toLowerCase();
+        const bl = known!.brand.toLowerCase();
+        const nl = known!.name.toLowerCase();
+        // Exact match on brand or product name
+        if (sl === bl || sl === nl) return false;
+        // Partial brand match — "kinki" belongs to "Kinki Studio"
+        if (bl.startsWith(sl + ' ') || sl.startsWith(bl + ' ')) return false;
+        return true;
+      });
       const unknownName = unknownSubjects.length > 0
         ? unknownSubjects.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
         : 'the other product';
