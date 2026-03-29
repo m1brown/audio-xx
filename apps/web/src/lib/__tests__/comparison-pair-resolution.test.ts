@@ -133,6 +133,54 @@ describe('Comparison Pair Resolution', () => {
     expect(anchor).not.toContain('not in');
   });
 
+  // ── Normalization + canonical output tests ────────────
+
+  it('"compare kinki ex m1 with hegel h190" (space variant) resolves full comparison', () => {
+    const text = 'compare kinki ex m1 with hegel h190';
+    const { subjects, desires } = detectIntent(text);
+    const result = buildGearResponse('comparison', subjects, text, desires);
+    expect(result).not.toBeNull();
+    const anchor = result!.anchor;
+    console.log('ANCHOR [space variant]:', anchor.substring(0, 500));
+    // Full comparison — both products resolved
+    expect(anchor).toContain('Kinki Studio EX-M1+');
+    expect(anchor).toContain('Hegel H190');
+    // No half-known fallback
+    expect(anchor).not.toContain('less represented');
+    // No ~$ prefix on prices
+    expect(anchor).not.toContain('~$');
+  });
+
+  it('"compare hegel h190 vs kinki ex-m1" resolves full comparison', () => {
+    const text = 'compare hegel h190 vs kinki ex-m1';
+    const { subjects, desires } = detectIntent(text);
+    const result = buildGearResponse('comparison', subjects, text, desires);
+    expect(result).not.toBeNull();
+    const anchor = result!.anchor;
+    console.log('ANCHOR [vs variant]:', anchor.substring(0, 500));
+    // Both products with canonical names
+    expect(anchor).toContain('Kinki Studio EX-M1+');
+    expect(anchor).toContain('Hegel H190');
+    expect(anchor).not.toContain('less represented');
+    expect(anchor).not.toContain('~$');
+  });
+
+  it('"compare hegel h190 integrated amplifier vs kinki ex-m1 integrated amplifier" resolves full comparison', () => {
+    const text = 'compare hegel h190 integrated amplifier vs kinki ex-m1 integrated amplifier';
+    const { intent, subjects, subjectMatches, desires } = detectIntent(text);
+    console.log('INTENT:', intent, 'SUBJECTS:', subjects, 'MATCHES:', subjectMatches.map(m => `${m.name}(${m.kind})`));
+    expect(intent).toBe('comparison');
+    const result = buildGearResponse('comparison', subjects, text, desires);
+    expect(result).not.toBeNull();
+    const anchor = result!.anchor;
+    console.log('ANCHOR [verbose variant]:', anchor.substring(0, 500));
+    // Both products with canonical names
+    expect(anchor).toContain('Kinki Studio EX-M1+');
+    expect(anchor).toContain('Hegel H190');
+    expect(anchor).not.toContain('less represented');
+    expect(anchor).not.toContain('~$');
+  });
+
   // ── Alias coverage tests ─────────────────────────────
 
   it('H190 aliases all extract as product subjects', () => {
@@ -149,11 +197,11 @@ describe('Comparison Pair Resolution', () => {
 
   it('EX-M1 aliases all extract as product subjects', () => {
     const aliases = ['ex-m1', 'kinki ex-m1', 'kinki studio ex-m1', 'kinki ex m1', 'kinki studio ex m1'];
+    // Accept any product subject containing "ex-m1" or "ex m1" (bare or compound)
+    const isEXM1 = (name: string) => /ex[-\s]?m1/i.test(name);
     for (const alias of aliases) {
       const { subjectMatches } = detectIntent(`tell me about the ${alias}`);
-      const hasEXM1 = subjectMatches.some(
-        (m) => m.kind === 'product' && (m.name === 'ex-m1' || m.name === 'ex-m1+' || m.name === 'ex m1'),
-      );
+      const hasEXM1 = subjectMatches.some((m) => m.kind === 'product' && isEXM1(m.name));
       expect(hasEXM1).toBe(true);
       console.log(`ALIAS "${alias}": ${subjectMatches.map(m => `${m.name}(${m.kind})`).join(', ')}`);
     }

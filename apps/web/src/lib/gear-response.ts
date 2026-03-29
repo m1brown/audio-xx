@@ -70,6 +70,9 @@ const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIF
  * When an exact match exists, brand-level fallbacks are suppressed for
  * that subject so "Hugo TT2" never resolves to Qutest.
  */
+/** Normalize for matching: treat hyphens and spaces as equivalent, strip trailing "+". */
+const normMatch = (s: string): string => s.replace(/[-\s]/g, ' ').replace(/\+$/, '').trim();
+
 function findProducts(subjects: string[]): Product[] {
   if (subjects.length === 0) return [];
   const found: Product[] = [];
@@ -95,6 +98,22 @@ function findProducts(subjects: string[]): Product[] {
         score = 1; // product name contains subject (partial)
       } else if (lower.includes(brandLower) || brandLower === lower) {
         score = 0; // brand-only — do not add via this path
+      }
+
+      // Normalized fallback: "ex m1" ↔ "ex-m1+", "h 190" ↔ "h190"
+      if (score === 0) {
+        const lnorm = normMatch(lower);
+        const nnorm = normMatch(nameLower);
+        const fnorm = normMatch(fullLower);
+        if (nnorm === lnorm || fnorm === lnorm) {
+          score = 4;
+        } else if (lnorm.includes(nnorm) && lnorm.includes(normMatch(brandLower))) {
+          score = 3;
+        } else if (lnorm.includes(nnorm)) {
+          score = 2;
+        } else if (nnorm.includes(lnorm)) {
+          score = 1;
+        }
       }
 
       if (score > bestScore) {
@@ -1897,9 +1916,9 @@ export function buildGearResponse(
       if (a.price && b.price) {
         const ratio = Math.max(a.price, b.price) / Math.min(a.price, b.price);
         if (ratio >= 2) {
-          priceNote = ` (different tiers — ~$${Math.min(a.price, b.price).toLocaleString()} vs ~$${Math.max(a.price, b.price).toLocaleString()})`;
+          priceNote = ` (different tiers — $${Math.min(a.price, b.price).toLocaleString()} vs $${Math.max(a.price, b.price).toLocaleString()})`;
         } else if (ratio >= 1.3) {
-          priceNote = ` (~$${Math.min(a.price, b.price).toLocaleString()} vs ~$${Math.max(a.price, b.price).toLocaleString()})`;
+          priceNote = ` ($${Math.min(a.price, b.price).toLocaleString()} vs $${Math.max(a.price, b.price).toLocaleString()})`;
         }
       }
 
