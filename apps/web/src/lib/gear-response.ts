@@ -110,6 +110,153 @@ function findProducts(subjects: string[]): Product[] {
   return found;
 }
 
+// ── Comparison pair resolution ──────────────────────
+//
+// For system-vs-system queries ("X + Y vs Z + Y"), splits the query
+// at the separator, identifies which products belong to each side,
+// detects shared components (held constant), and returns the
+// differing pair to compare. Falls back to null for simple A vs B.
+
+interface ComparisonResolution {
+  left: Product;
+  right: Product;
+  shared: Product[];
+  isSystemComparison: boolean;
+}
+
+/**
+ * Find a product by partial brand name (for comparison context only).
+ * "crayon" → Crayon Audio CIA-1T, "wlm" → WLM Diva, etc.
+ * Only matches when the brand's first word matches the subject.
+ */
+function findProductByBrand(brandSubject: string): Product | null {
+  const lower = brandSubject.toLowerCase();
+  return ALL_PRODUCTS.find((p) => {
+    const brandLower = p.brand.toLowerCase();
+    // Exact brand match or first-word match
+    return brandLower === lower || brandLower.split(/\s+/)[0] === lower;
+  }) ?? null;
+}
+
+/**
+ * Enhanced product finder for comparison sides.
+ * Uses standard findProducts first, then falls back to brand resolution.
+ */
+function findProductsForSide(subjects: string[]): Product[] {
+  const found = findProducts(subjects);
+  // For any unresolved subject, try brand-based fallback
+  for (const subject of subjects) {
+    const lower = subject.toLowerCase();
+    const alreadyResolved = found.some(
+      (p) => p.name.toLowerCase().includes(lower)
+        || `${p.brand} ${p.name}`.toLowerCase().includes(lower)
+        || lower.includes(p.name.toLowerCase()),
+    );
+    if (!alreadyResolved) {
+      const brandMatch = findProductByBrand(subject);
+      if (brandMatch && !found.some((p) => p.id === brandMatch.id)) {
+        found.push(brandMatch);
+      }
+    }
+  }
+  return found;
+}
+
+/**
+ * Resolve which products to compare when the query has "vs"/"versus"/"or" structure.
+ * Splits the query at the separator, assigns subjects to each side,
+ * identifies shared components, and returns the differing pair.
+ *
+ * Also handles "with" as a shared-context marker:
+ *   "compare JOB vs Crayon with WLM Diva"
+ */
+function resolveComparisonPair(
+  currentMessage: string,
+  subjects: string[],
+): ComparisonResolution | null {
+  // Find the separator — "vs", "versus", or "or" (word-bounded)
+  const sepMatch = currentMessage.match(/\b(vs\.?|versus)\b/i)
+    ?? currentMessage.match(/\b(or)\b/i);
+  if (!sepMatch) return null;
+
+  const sepIdx = sepMatch.index!;
+  const leftHalf = currentMessage.slice(0, sepIdx).toLowerCase();
+  let rightHalf = currentMessage.slice(sepIdx + sepMatch[0].length).toLowerCase();
+
+  // Handle "with X" as shared context
+  //   "compare JOB vs Crayon with WLM Diva"
+  //   rightHalf = " crayon with wlm diva"
+  let withSubjects: string[] = [];
+  const withMatch = rightHalf.match(/\bwith\b(.+)/i);
+  if (withMatch) {
+    const withText = withMatch[1];
+    withSubjects = subjects.filter((s) => withText.includes(s.toLowerCase()));
+    rightHalf = rightHalf.slice(0, withMatch.index);
+  }
+
+  // Assign subjects to left/right side by text position
+  const leftSubjects: string[] = [];
+  const rightSubjects: string[] = [];
+
+  for (const s of subjects) {
+    const sLower = s.toLowerCase();
+    const inLeft = leftHalf.includes(sLower);
+    const inRight = rightHalf.includes(sLower);
+    if (inLeft) leftSubjects.push(s);
+    if (inRight) rightSubjects.push(s);
+  }
+
+  // "with" subjects are shared context
+  for (const s of withSubjects) {
+    if (!leftSubjects.includes(s)) leftSubjects.push(s);
+    if (!rightSubjects.includes(s)) rightSubjects.push(s);
+  }
+
+  // Resolve products per side (with brand fallback)
+  const leftProducts = findProductsForSide(leftSubjects);
+  const rightProducts = findProductsForSide(rightSubjects);
+
+  // Identify shared products (same product on both sides)
+  const shared = leftProducts.filter((lp) =>
+    rightProducts.some((rp) => rp.id === lp.id),
+  );
+
+  // Differing products — unique to each side
+  const leftOnly = leftProducts.filter((p) => !shared.some((s) => s.id === p.id));
+  const rightOnly = rightProducts.filter((p) => !shared.some((s) => s.id === p.id));
+
+  if (leftOnly.length >= 1 && rightOnly.length >= 1) {
+    return {
+      left: leftOnly[0],
+      right: rightOnly[0],
+      shared,
+      isSystemComparison: shared.length > 0,
+    };
+  }
+
+  // One side has no unique product — try fallback from unresolved subjects
+  // (e.g., "crayon" when only brand name is given)
+  if (leftOnly.length === 0 && rightOnly.length >= 1) {
+    // Left side unresolved — look for brand-only subjects on the left
+    for (const s of leftSubjects) {
+      const fallback = findProductByBrand(s);
+      if (fallback && !shared.some((p) => p.id === fallback.id) && fallback.id !== rightOnly[0].id) {
+        return { left: fallback, right: rightOnly[0], shared, isSystemComparison: shared.length > 0 };
+      }
+    }
+  }
+  if (rightOnly.length === 0 && leftOnly.length >= 1) {
+    for (const s of rightSubjects) {
+      const fallback = findProductByBrand(s);
+      if (fallback && !shared.some((p) => p.id === fallback.id) && fallback.id !== leftOnly[0].id) {
+        return { left: leftOnly[0], right: fallback, shared, isSystemComparison: shared.length > 0 };
+      }
+    }
+  }
+
+  return null; // Fall back to default product ordering
+}
+
 // ── Quality interpretation ───────────────────────────
 
 interface QualityProfile {
@@ -1652,8 +1799,14 @@ export function buildGearResponse(
 
   // ── Comparison ──────────────────────────────────────
   if (intent === 'comparison') {
-    const a = products[0] ?? null;
-    const b = products[1] ?? null;
+    // ── System-vs-system resolution ──────────────────
+    // For "X + Y vs Z + Y", resolve which products are shared (held
+    // constant) and which differ (the actual comparison targets).
+    const compPair = resolveComparisonPair(currentMessage, subjects);
+    const a = compPair?.left ?? products[0] ?? null;
+    const b = compPair?.right ?? products[1] ?? null;
+    const sharedComponents = compPair?.shared ?? [];
+    const isSystemComparison = compPair?.isSystemComparison ?? false;
 
     if (a && b) {
       // ── Upgrade comparison path ──────────────────────
@@ -1713,6 +1866,11 @@ export function buildGearResponse(
       // System note — compact context if user has a system
       const systemNote = buildSystemComparisonNote(a, b, activeSystem);
 
+      // Shared-component context for system-vs-system comparisons
+      const sharedNote = isSystemComparison && sharedComponents.length > 0
+        ? buildSharedComponentNote(a, b, sharedComponents)
+        : null;
+
       // Price context
       let priceNote = '';
       if (a.price && b.price) {
@@ -1724,9 +1882,15 @@ export function buildGearResponse(
         }
       }
 
-      const opening = systemNote
-        ? `${systemNote} These take different approaches${priceNote}:`
-        : `These take different approaches${priceNote}:`;
+      // Opening — shared-component note takes priority over system note
+      let opening: string;
+      if (sharedNote) {
+        opening = `${sharedNote} These take different approaches${priceNote}:`;
+      } else if (systemNote) {
+        opening = `${systemNote} These take different approaches${priceNote}:`;
+      } else {
+        opening = `These take different approaches${priceNote}:`;
+      }
 
       // Per-product trait blocks: architecture + 2-3 traits + 1 system note
       const archA = a.architecture ? `${a.architecture} design. ` : '';
@@ -1742,7 +1906,12 @@ export function buildGearResponse(
       const tendTextB = b.tendencies?.character?.map((t) => `${t.tendency}`).join(', ') ?? charB;
       const tasteFrame = buildTasteDecisionFrame(currentMessage, nameA, charA, tendTextA, nameB, charB, tendTextB);
 
-      const conciseComparison = `${opening}\n\n${blockA}\n\n${blockB}\n\n${directionCompact}${tasteFrame ? `\n\n${tasteFrame}` : ''}`;
+      // System interaction note for shared components
+      const sharedInteraction = isSystemComparison && sharedComponents.length > 0
+        ? buildSharedInteractionNote(a, b, sharedComponents)
+        : '';
+
+      const conciseComparison = `${opening}\n\n${blockA}\n\n${blockB}\n\n${directionCompact}${sharedInteraction ? `\n\n${sharedInteraction}` : ''}${tasteFrame ? `\n\n${tasteFrame}` : ''}`;
 
       return {
         intent,
@@ -1753,15 +1922,17 @@ export function buildGearResponse(
           ? QUALITY_PROFILES[desires[0].quality]?.interpretation
           : undefined,
         direction: '',
-        clarification: activeSystem
-          ? `How does your current setup lean — warmer or more precise?`
-          : `What are you pairing it with?`,
+        clarification: isSystemComparison
+          ? `What matters more to you — rhythmic engagement or tonal refinement?`
+          : activeSystem
+            ? `How does your current setup lean — warmer or more precise?`
+            : `What are you pairing it with?`,
         systemDirection: sysDir,
         hearing,
         userArchetype: sysDir.inferredArchetype
         ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
         : undefined,
-        matchedProducts: [a, b].filter(Boolean) as Product[],
+        matchedProducts: [a, b, ...sharedComponents].filter(Boolean) as Product[],
       };
     }
 
@@ -1957,6 +2128,69 @@ export function buildGearResponse(
       ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
       : undefined,
   };
+}
+
+// ── Shared-component helpers ───────────────────────
+//
+// For system-vs-system comparisons ("X + Y vs Z + Y"), these helpers
+// produce context about the shared component (Y) and how the differing
+// components (X vs Z) interact with it differently.
+
+/**
+ * Build opening note about the shared component held constant.
+ *   "Both systems share the WLM Diva. The difference is the amplifier."
+ */
+function buildSharedComponentNote(
+  left: Product,
+  right: Product,
+  shared: Product[],
+): string {
+  const sharedNames = shared.map((p) => `${p.brand} ${p.name}`).join(' and ');
+  const leftCat = left.category ?? 'component';
+  const rightCat = right.category ?? 'component';
+  const differingType = leftCat === rightCat ? leftCat : 'component';
+  return `Both systems share the ${sharedNames}. The difference is the ${differingType} — ${left.brand} ${left.name} vs ${right.brand} ${right.name}.`;
+}
+
+/**
+ * Build interaction note about how each differing component behaves
+ * with the shared component(s).
+ */
+function buildSharedInteractionNote(
+  left: Product,
+  right: Product,
+  shared: Product[],
+): string {
+  const parts: string[] = [];
+  for (const sharedProd of shared) {
+    const sharedName = `${sharedProd.brand} ${sharedProd.name}`;
+    // Check if either product has interaction notes about the shared component's category
+    const sharedCat = sharedProd.category ?? '';
+    if (hasTendencies(left.tendencies)) {
+      const relevant = left.tendencies.interactions.find(
+        (i) => i.condition.toLowerCase().includes(sharedCat)
+          || i.condition.toLowerCase().includes(sharedProd.name.toLowerCase()),
+      );
+      if (relevant) {
+        parts.push(`The ${left.name} paired with the ${sharedName}: ${relevant.effect}`);
+      }
+    }
+    if (hasTendencies(right.tendencies)) {
+      const relevant = right.tendencies.interactions.find(
+        (i) => i.condition.toLowerCase().includes(sharedCat)
+          || i.condition.toLowerCase().includes(sharedProd.name.toLowerCase()),
+      );
+      if (relevant) {
+        parts.push(`The ${right.name} paired with the ${sharedName}: ${relevant.effect}`);
+      }
+    }
+  }
+  if (parts.length === 0) {
+    // Generic framing when no specific interaction data exists
+    const sharedName = shared.map((p) => p.name).join(' and ');
+    return `With the ${sharedName} held constant, the difference comes down to what each ${left.category ?? 'component'} brings to the pairing — they'll shape the overall character in distinctly different ways.`;
+  }
+  return parts.join(' ');
 }
 
 // ── Direction helpers ────────────────────────────────

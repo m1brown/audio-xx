@@ -234,6 +234,7 @@ const COMPARISON_PATTERNS = [
   /\bbetween\b.*\band\b/i,
   /\bdifference[s]?\s+between\b/i,
   /\bor\b.*\bfor\b/i,          // "Bifrost or Pontus for my system"
+  /\w\s*\+\s*\w.*\bor\b.*\w\s*\+\s*\w/i, // "X + Y or Z + Y?" — system-vs-system with chain separators
   /\bhow\s+(?:does|do)\b.*\bcompare\b/i,
   // ── Upgrade / replacement patterns ─────────────────
   // "upgrade from X to Y", "replace X with Y", "swap X for Y"
