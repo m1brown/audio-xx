@@ -88,7 +88,7 @@ describe('Comparison Pair Resolution', () => {
 
   // ── "compare X with Y" separator tests ───────────────
 
-  it('"compare kinki ex-m1 with hegel h190" treats EX-M1 as known, Hegel as unknown', () => {
+  it('"compare kinki ex-m1 with hegel h190" resolves both products for full comparison', () => {
     const text = 'compare kinki ex-m1 with hegel h190';
     const { intent, subjects, subjectMatches, desires } = detectIntent(text);
 
@@ -98,23 +98,24 @@ describe('Comparison Pair Resolution', () => {
     console.log('SUBJECTS:', subjects);
     console.log('SUBJECT_MATCHES:', subjectMatches.map(m => `${m.name}(${m.kind})`));
 
-    // 2. Build the gear response
+    // 2. H190 should now be extracted as a product subject (compound or bare)
+    expect(subjectMatches.some(m => m.kind === 'product' && (m.name === 'h190' || m.name === 'hegel h190'))).toBe(true);
+
+    // 3. Build the gear response
     const result = buildGearResponse('comparison', subjects, text, desires);
     expect(result).not.toBeNull();
 
     const anchor = result!.anchor.toLowerCase();
     console.log('ANCHOR:', result!.anchor.substring(0, 500));
 
-    // 3. Should reference the Kinki Studio EX-M1 (known product)
+    // 4. Should be a full comparison — both products resolved
     expect(anchor).toContain('ex-m1');
+    expect(anchor).toContain('h190');
 
-    // 4. Should reference "Hegel" as the unknown side, NOT "Hegel Rost"
-    //    (H190 is not in the catalog, so brand fallback to Rost is wrong)
+    // 5. Should NOT fall back to Rost or produce half-known output
     expect(anchor).not.toContain('rost');
-
-    // 5. The unknown name should be "Hegel" not "Kinki Hegel"
-    //    (partial brand "kinki" must be recognized as belonging to EX-M1)
-    expect(anchor).not.toMatch(/kinki\s+hegel/i);
+    expect(anchor).not.toContain('don\'t have');
+    expect(anchor).not.toContain('less represented');
   });
 
   it('"compare kinki ex-m1 with job integrated" resolves both products correctly', () => {
@@ -130,5 +131,31 @@ describe('Comparison Pair Resolution', () => {
     // Should NOT be a half-known comparison
     expect(anchor).not.toContain('don\'t have');
     expect(anchor).not.toContain('not in');
+  });
+
+  // ── Alias coverage tests ─────────────────────────────
+
+  it('H190 aliases all extract as product subjects', () => {
+    const aliases = ['h190', 'hegel h190', 'hegel h190 integrated'];
+    for (const alias of aliases) {
+      const { subjectMatches } = detectIntent(`tell me about the ${alias}`);
+      const hasH190 = subjectMatches.some(
+        (m) => m.kind === 'product' && (m.name === 'h190' || m.name === 'hegel h190'),
+      );
+      expect(hasH190).toBe(true);
+      console.log(`ALIAS "${alias}": ${subjectMatches.map(m => `${m.name}(${m.kind})`).join(', ')}`);
+    }
+  });
+
+  it('EX-M1 aliases all extract as product subjects', () => {
+    const aliases = ['ex-m1', 'kinki ex-m1', 'kinki studio ex-m1', 'kinki ex m1', 'kinki studio ex m1'];
+    for (const alias of aliases) {
+      const { subjectMatches } = detectIntent(`tell me about the ${alias}`);
+      const hasEXM1 = subjectMatches.some(
+        (m) => m.kind === 'product' && (m.name === 'ex-m1' || m.name === 'ex-m1+' || m.name === 'ex m1'),
+      );
+      expect(hasEXM1).toBe(true);
+      console.log(`ALIAS "${alias}": ${subjectMatches.map(m => `${m.name}(${m.kind})`).join(', ')}`);
+    }
   });
 });
