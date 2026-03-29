@@ -1322,7 +1322,12 @@ export default function Home() {
     // and must route to gear_response, not the brand consultation path.
     const isBrandComparison = intent === 'comparison' && brandMatches.length >= 2 && productMatches.length === 0;
     const isGearWithSubjects = intent === 'gear_inquiry' && turnCtx.subjectMatches.length > 0;
-    if (effectiveMode === 'consultation' || isBrandComparison || isGearWithSubjects) {
+    // Guard: system_assessment intent must NEVER fall into the consultation path.
+    // If buildSystemAssessment returned null above, we still don't want consultation
+    // to intercept and produce a brand comparison (e.g. "Chord vs Wlm").
+    // product_assessment is similarly guarded — it has its own hard gate above.
+    const consultationGuarded = intent === 'system_assessment' || intent === 'product_assessment';
+    if (!consultationGuarded && (effectiveMode === 'consultation' || isBrandComparison || isGearWithSubjects)) {
       const consultResult = buildConsultationResponse(submittedText, turnCtx.subjectMatches);
       if (consultResult) {
         // Store comparison context for follow-up turns
@@ -2926,9 +2931,20 @@ export default function Home() {
               fontWeight: 500,
             }}
           >
+
             Audio advice based on your system and how you listen.
-            <br />
-            Describe your setup, a problem, or an upgrade you&#39;re considering.
+          </p>
+          <p
+            style={{
+              margin: 0,
+              marginTop: '0.35rem',
+              color: COLOR.textSecondary,
+              fontSize: '0.85rem',
+              letterSpacing: '0.04em',
+              fontWeight: 500,
+            }}
+          >
+            System Synergy &nbsp;&middot;&nbsp; Component Matching &nbsp;&middot;&nbsp; Product Research
           </p>
           <div style={{ marginBottom: '2rem' }} />
 
