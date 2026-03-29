@@ -61,11 +61,15 @@ const CONSULTATION_PATTERNS = [
 // diagnosis because "assessment of my system" contains "my system".
 
 const SYSTEM_ASSESSMENT_SIGNALS = [
-  /\bassess(?:ment)?\s+(?:of\s+)?(?:my|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
-  /\bevaluat(?:e|ion)\s+(?:of\s+)?(?:my|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
-  /\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
-  /\bthoughts\s+on\s+my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
-  /\breview\s+(?:of\s+)?my\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bassess(?:ment)?\s+(?:of\s+)?(?:my|the|this)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bevaluat(?:e|ion)\s+(?:of\s+)?(?:my|the|this)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bthoughts\s+on\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  /\breview\s+(?:of\s+)?(?:my|the|this)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  // "how's this system?" / "is this a good setup?" / "is X + Y + Z a good system?"
+  /\bhow(?:'s| is)\s+(?:my|this|the)\s+(?:system|setup|chain)\b/i,
+  /\bis\s+(?:this|that)\s+(?:a\s+)?(?:good|decent|solid|balanced|well.matched)\s+(?:system|setup|chain|combination|combo|pairing)\b/i,
+  /\bis\s+.{5,60}\s+(?:a\s+)?(?:good|decent|solid|balanced|well.matched)\s+(?:system|setup|chain|combination|combo|pairing)\b/i,
   /\bsuggestions?\s+(?:on|for)\s+(?:areas?\s+to\s+)?(?:upgrade|improve)\b/i,
   /\bhelp\s+(?:me\s+)?(?:improve|upgrade)\s+(?:my\s+)?(?:system|setup)\b/i,
   /\bwhat\s+(?:should|would|could)\s+i\s+(?:upgrade|improve|change)\b/i,

@@ -1291,7 +1291,7 @@ export function detectInitialMode(
     // Explicit purchase intent ("buy a DAC", "purchase speakers") — recommend
     // immediately with an exploratory set rather than asking for budget first.
     // The follow-up question will offer to narrow by budget/system.
-    const hasExplicitPurchase = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|recommend|suggest)\b/i.test(text);
+    const hasExplicitPurchase = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|recommend|suggest|need\s+(?:a|an)\b|need\s+(?:a\s+)?(?:better|new|good|decent))\b/i.test(text);
     if (facts.category && hasExplicitPurchase) {
       return { mode: 'shopping', stage: 'ready_to_recommend', facts };
     }

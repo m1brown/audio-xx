@@ -1279,7 +1279,11 @@ export default function Home() {
     // brand links surface and richer brand profiles are used when available.
     // Falls through to gear-response if consultation returns null.
     const brandMatches = turnCtx.subjectMatches.filter((m) => m.kind === 'brand');
-    const isBrandComparison = intent === 'comparison' && brandMatches.length >= 2;
+    const productMatches = turnCtx.subjectMatches.filter((m) => m.kind === 'product');
+    // Only treat as brand comparison when NO product-level subjects exist.
+    // "compare JOB integrated + WLM Diva vs Crayon + WLM Diva" has product subjects
+    // and must route to gear_response, not the brand consultation path.
+    const isBrandComparison = intent === 'comparison' && brandMatches.length >= 2 && productMatches.length === 0;
     const isGearWithSubjects = intent === 'gear_inquiry' && turnCtx.subjectMatches.length > 0;
     if (effectiveMode === 'consultation' || isBrandComparison || isGearWithSubjects) {
       const consultResult = buildConsultationResponse(submittedText, turnCtx.subjectMatches);
@@ -1341,7 +1345,9 @@ export default function Home() {
     // returns early, so it cannot be swallowed by this override.
     // product_assessment is exempt — "I'm considering the X" should
     // always produce a direct assessment, even mid-shopping flow.
-    if (effectiveMode === 'shopping' && intent !== 'shopping' && intent !== 'product_assessment') {
+    // system_assessment and comparison are exempt — these are topic changes
+    // that must break out of shopping context regardless of prior mode.
+    if (effectiveMode === 'shopping' && intent !== 'shopping' && intent !== 'product_assessment' && intent !== 'system_assessment' && intent !== 'comparison') {
       intent = 'shopping';
     }
     if (effectiveMode === 'diagnosis' && intent !== 'comparison' && intent !== 'gear_inquiry' && intent !== 'system_assessment') {

@@ -264,6 +264,8 @@ const SHOPPING_PATTERNS = [
   /\b(?:dac|amp|amplifier|integrated|speaker|headphone|streamer)\s+(?:for|that)\b/i,
   /\bgood\s+integrated\b/i,
   /\bbest\s+integrated\b/i,
+  // Upgrade-desire: "I need a better amp", "want a new DAC", "need a different turntable"
+  /\b(?:need|want)\s+(?:a\s+)?(?:better|new|different|another|upgraded?)\s+(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|preamp|power\s*amp)\b/i,
 ];
 
 // ── Gear inquiry patterns ────────────────────────────
@@ -1045,7 +1047,7 @@ export function detectIntent(currentMessage: string): IntentResult {
   //     a clear shopping query — skip intake entirely and route to shopping.
   //     This prevents vague-looking but actually decisive queries from being
   //     caught by the broader intake patterns below.
-  const hasPurchaseVerb = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|pick\s+out|recommend|suggest)\b/i.test(currentMessage);
+  const hasPurchaseVerb = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|pick\s+out|recommend|suggest|need\s+(?:a\s+)?(?:new|better|different|another|upgraded?))\b/i.test(currentMessage);
   const hasCategoryTarget = /\b(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp)\b/i.test(currentMessage);
   if (hasPurchaseVerb && hasCategoryTarget) {
     return { intent: 'shopping', subjects, subjectMatches, desires };

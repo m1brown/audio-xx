@@ -316,6 +316,24 @@ export function detectExplicitCategorySwitch(text: string): ShoppingCategory | n
       }
     }
   }
+
+  // Budget + category shorthand is always an explicit category request even without
+  // a directive verb. Handles: "warm amp under $3000", "I need a better amp",
+  // "speakers under $1500". Only fires when exactly one category is present
+  // to avoid ambiguity in multi-category queries.
+  const hasBudgetOrUpgrade = /(?:under\s+)?\$\s?\d|\bunder\s+\d|\bbudget\b|\bneed\s+(?:a\s+)?(?:better|new|different)\b|\bwant\s+(?:a\s+)?(?:better|new|different)\b/i.test(lower);
+  if (hasBudgetOrUpgrade) {
+    const categoryMatches: ShoppingCategory[] = [
+      /\b(?:amp|amplifier|integrated|power\s*amp|preamp)s?\b/i.test(lower) ? 'amplifier' : null,
+      /\b(?:dac|d\/a|converter)s?\b/i.test(lower) ? 'dac' : null,
+      /\b(?:speaker|speakers|bookshelf|floorstanding)s?\b/i.test(lower) ? 'speaker' : null,
+      /\b(?:headphone|headphones|iem|iems|earphone|cans)s?\b/i.test(lower) ? 'headphone' : null,
+      /\b(?:streamer|transport|network\s+player)s?\b/i.test(lower) ? 'streamer' : null,
+      /\b(?:turntable|record\s+player|vinyl)s?\b/i.test(lower) ? 'turntable' : null,
+    ].filter((c): c is ShoppingCategory => c !== null);
+    if (categoryMatches.length === 1) return categoryMatches[0];
+  }
+
   return null;
 }
 
