@@ -97,7 +97,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       notes: 'Spatial precision improves significantly with careful positioning. Bass energy from the passive radiator can overwhelm small or untreated rooms.',
     },
     sourceReferences: [
-      { source: '6moons', note: 'Srajan Ebaen review covering the coaxial wideband design and rhythmic engagement.' },
+      { source: '6moons', note: 'Srajan Ebaen review covering the coaxial wideband design and rhythmic engagement.', url: 'https://6moons.com/audioreviews/wlm/divamonitor.html' },
       { source: 'Twittering Machines', note: 'Review praising dynamic expression and musical involvement.' },
     ],
     tendencies: {
@@ -189,7 +189,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       notes: 'Compact cabinet means bass thins significantly in larger rooms without boundary reinforcement or subwoofer support. Imaging precision depends heavily on positioning — benefits from precise toe-in and symmetrical placement away from side walls.',
     },
     sourceReferences: [
-      { source: '6moons', note: 'Srajan Ebaen review covering spatial performance and Swiss craftsmanship.' },
+      { source: '6moons', note: 'Srajan Ebaen review covering spatial performance and Swiss craftsmanship.', url: 'https://6moons.com/audioreviews/boenicke5/1.html' },
       { source: 'Darko.Audio', note: 'John Darko video feature on Boenicke W5 as a holographic small speaker.' },
       { source: 'HiFi Huff', note: 'Review praising textural detail and imaging from a compact enclosure.' },
     ],
@@ -284,9 +284,9 @@ export const SPEAKER_PRODUCTS: Product[] = [
       notes: 'Compact sealed design works well near boundaries but bass extension is limited. Best in smaller rooms where the speaker-listener distance allows the sound to coalesce. In larger spaces, the presentation can feel small-scale.',
     },
     sourceReferences: [
-      { source: 'Stereophile', note: 'Herb Reichert and Art Dudley reviews praising midrange beauty and BBC heritage.' },
+      { source: 'Stereophile', note: 'Herb Reichert and Art Dudley reviews praising midrange beauty and BBC heritage.', url: 'https://www.stereophile.com/content/harbeth-p3esr-loudspeaker' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review calling the P3ESR one of the most satisfying small speakers ever made.' },
-      { source: '6moons', note: 'Review covering the BBC thin-wall design and vocal naturalness.' },
+      { source: '6moons', note: 'Review covering the BBC thin-wall design and vocal naturalness.', url: 'https://6moons.com/audioreviews/harbeth3/1.html' },
       { source: 'What Hi-Fi?', note: 'Multi-award coverage noting refinement and musicality.' },
     ],
     tendencies: {
@@ -369,7 +369,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'Music Direct', url: 'https://www.musicdirect.com/speakers/harbeth-super-hl5-plus/' },
     ],
     sourceReferences: [
-      { source: 'Stereophile', note: 'Herb Reichert review praising the SHL5+ as the complete Harbeth — midrange beauty with dynamic authority.' },
+      { source: 'Stereophile', note: 'Herb Reichert review praising the SHL5+ as the complete Harbeth — midrange beauty with dynamic authority.', url: 'https://www.stereophile.com/content/harbeth-super-hl5plus-loudspeaker' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg coverage of the SHL5+ as a do-everything monitor.' },
       { source: '6moons', note: 'Review covering the BBC thin-wall design evolution and full-range balance.' },
     ],
@@ -442,7 +442,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       notes: 'Wide-baffle design produces substantial bass energy that can overwhelm rooms smaller than 15 square metres. Needs breathing room — pull away from rear walls to let the presentation open up.',
     },
     sourceReferences: [
-      { source: 'Stereophile', note: 'Art Dudley review establishing the O/96 as a modern classic for tube systems.' },
+      { source: 'Stereophile', note: 'Art Dudley review establishing the O/96 as a modern classic for tube systems.', url: 'https://www.stereophile.com/content/devore-fidelity-orangutan-o96-loudspeaker' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising engagement and musicality.' },
       { source: '6moons', note: 'Srajan Ebaen review covering the high-efficiency design philosophy.' },
       { source: 'Darko.Audio', note: 'John Darko coverage of the DeVore house sound and O/96 appeal.' },
@@ -612,7 +612,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     sourceReferences: [
       { source: 'Stereophile', note: 'Herb Reichert review praising the Heresy IV as a modern update to a heritage design.' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review covering the dynamic impact and horn character.' },
-      { source: 'Darko.Audio', note: 'Video review on the Heresy IV as an accessible horn speaker.' },
+      { source: 'Darko.Audio', note: 'Video review on the Heresy IV as an accessible horn speaker.', url: 'https://darko.audio/2024/08/klipsch-heresy-iv-video-review/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -701,7 +701,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       notes: 'Beryllium tweeter can interact strongly with reflective rooms — first reflections from side walls and hard floors can push the treble toward brightness. Acoustic treatment or toe-in adjustment helps manage this.',
     },
     sourceReferences: [
-      { source: 'Stereophile', note: 'Review covering the beryllium tweeter precision and bass authority.' },
+      { source: 'Stereophile', note: 'Review covering the beryllium tweeter precision and bass authority.', url: 'https://www.stereophile.com/content/focal-kanta-no2-loudspeaker' },
       { source: 'Darko.Audio', note: 'John Darko video review on the Kanta No.2 as a resolving all-rounder.' },
       { source: 'What Hi-Fi?', note: 'Award coverage praising detail and build quality.' },
     ],
@@ -773,7 +773,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'Crutchfield', url: 'https://www.crutchfield.com/p_091AR906/' },
     ],
     sourceReferences: [
-      { source: 'What Hi-Fi?', note: 'Multi-award review praising the Aria 906 as one of the best bookshelf speakers at its price.' },
+      { source: 'What Hi-Fi?', note: 'Multi-award review praising the Aria 906 as one of the best bookshelf speakers at its price.', url: 'https://www.whathifi.com/focal/aria-906/review' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review noting the flax driver naturalness and open sound.' },
       { source: 'Stereophile', note: 'Review covering the Aria line as Focal\'s best value proposition.' },
     ],
@@ -856,7 +856,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
-      { source: 'Stereophile', note: 'Art Dudley review praising the O/93 as a modern classic for tube-based systems.' },
+      { source: 'Stereophile', note: 'Art Dudley review praising the O/93 as a modern classic for tube-based systems.', url: 'https://www.stereophile.com/content/devore-fidelity-orangutan-o93-loudspeaker' },
       { source: '6moons', note: 'Srajan Ebaen review covering the 10-inch wideband driver and musical engagement.' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg feature on the O/93 and DeVore Fidelity philosophy.' },
     ],
@@ -940,7 +940,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       notes: 'Open-back cabinet radiates sound forward and rearward. Requires at least 3 feet from the rear wall and ideally rear-wall absorption. Without treatment, rear-radiated energy arrives at the listener ~5–15ms after the direct sound, smearing transients and degrading image specificity. The room is functionally part of the speaker design.',
     },
     sourceReferences: [
-      { source: '6moons', note: 'Srajan Ebaen review covering the full-range widebander coherence and spatial performance.' },
+      { source: '6moons', note: 'Srajan Ebaen review covering the full-range widebander coherence and spatial performance.', url: 'https://6moons.com/audioreview_articles/cubeaudio6/' },
       { source: 'Twittering Machines', note: 'Review praising the Nenuphar family for holographic imaging and musical flow.' },
     ],
     philosophy: 'energy',
@@ -1262,7 +1262,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       'Expressive standmount with natural tone and midrange presence. High sensitivity (~90dB) makes it friendly with moderate-power amps. The precursor to the O/96 — shares the musical, lively DeVore house sound.',
     retailer_links: [],
     sourceReferences: [
-      { source: 'Stereophile', note: 'Art Dudley review praising the Gibbon 3XL for expressive musicality and tonal naturalness.' },
+      { source: 'Stereophile', note: 'Art Dudley review praising the Gibbon 3XL for expressive musicality and tonal naturalness.', url: 'https://www.stereophile.com/content/devore-fidelity-gibbon-3xl-loudspeaker' },
       { source: '6moons', note: 'Review covering the paper cone driver and lively, organic presentation.' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg feature on DeVore Fidelity and the Gibbon lineage.' },
       { source: 'Head-Fi community', note: 'Used market consensus as one of the most musical standmounts under $2k.' },
@@ -1350,8 +1350,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
     ],
     sourceReferences: [
       { source: 'Stereophile', note: 'Herb Reichert review praising the Uni-Q imaging and neutrality.' },
-      { source: 'Darko.Audio', note: 'Video review covering the R3 as a precision standmount.' },
-      { source: 'What Hi-Fi?', note: 'Multi-award coverage for imaging and build quality.' },
+      { source: 'Darko.Audio', note: 'Video review covering the R3 as a precision standmount.', url: 'https://darko.audio/2023/09/kef-r3-meta-video-review/' },
+      { source: 'What Hi-Fi?', note: 'Multi-award coverage for imaging and build quality.', url: 'https://www.whathifi.com/reviews/kef-r3' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review noting resolution and soundstage width.' },
     ],
     tendencies: {
@@ -1523,9 +1523,9 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { label: 'Wharfedale', url: 'https://www.wharfedale.co.uk/linton/' },
     ],
     sourceReferences: [
-      { source: 'Darko.Audio', note: 'Video review praising the Linton as exceptional value with old-school warmth.' },
+      { source: 'Darko.Audio', note: 'Video review praising the Linton as exceptional value with old-school warmth.', url: 'https://darko.audio/2023/06/wharfedale-linton-heritage-video-review/' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review calling it one of the best values in hi-fi.' },
-      { source: 'What Hi-Fi?', note: 'Award-winning review noting rich, full-bodied sound.' },
+      { source: 'What Hi-Fi?', note: 'Award-winning review noting rich, full-bodied sound.', url: 'https://www.whathifi.com/reviews/wharfedale-linton' },
     ],
     tendencies: {
       confidence: 'high',
@@ -1605,7 +1605,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       'Legendary sealed-box standmount with holographic imaging and natural musicality. Exceptional for its size — produces a disappearing soundstage that belies its compact dimensions.',
     retailer_links: [],
     sourceReferences: [
-      { source: 'Stereophile', note: 'Multiple reviews over decades praising holographic imaging and musical engagement.' },
+      { source: 'Stereophile', note: 'Multiple reviews over decades praising holographic imaging and musical engagement.', url: 'https://www.stereophile.com/standloudspeakers/820/index.html' },
       { source: '6moons', note: 'Review covering the Model 1 as a reference small speaker.' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg feature on Totem and the Model 1 legacy.' },
     ],
@@ -3124,5 +3124,75 @@ export const SPEAKER_PRODUCTS: Product[] = [
     notes: 'The LSX II is KEF\'s desktop solution — Uni-Q imaging in a compact package with full streaming capability. No external electronics needed for a complete desktop system.',
     philosophy: 'neutral',
     marketType: 'traditional',
+  },
+
+  // ── Mission MS-50 (UK — vintage value bookshelf) ───────
+
+  {
+    id: 'mission-ms-50',
+    brand: 'Mission',
+    name: 'MS-50',
+    price: 100,
+    category: 'speaker',
+    architecture: '2-way front-ported, 4-inch midbass + 1-inch silk dome tweeter, 50W continuous, 6Ω',
+    subcategory: 'standmount',
+    priceTier: 'budget',
+    brandScale: 'established',
+    region: 'europe',
+    country: 'GB',
+    topology: 'bass-reflex',
+    archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
+    primaryAxes: {
+      warm_bright: 'warm',
+      smooth_detailed: 'smooth',
+      elastic_controlled: 'elastic',
+      airy_closed: 'closed',
+    },
+    fatigueAssessment: {
+      risk: 'very_low',
+      notes: 'Silk dome tweeter and warm voicing are inherently non-fatiguing. Forgiving of source quality.',
+    },
+    tendencyProfile: {
+      basis: 'listener_consensus',
+      confidence: 'medium',
+      tendencies: [
+        { trait: 'warmth', level: 'emphasized' },
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'present' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 0.45, warmth: 0.7, tonal_density: 0.65,
+      speed: 0.45, dynamics: 0.5, flow: 0.7,
+      spatial_precision: 0.4, composure: 0.5, texture: 0.6,
+      fatigue_risk: 0.0, glare_risk: 0.0,
+      elasticity: 0.55,
+    },
+    description: 'Vintage British bookshelf with warm, laid-back character from a silk dome tweeter and front-ported 4-inch midbass. Originally bundled with Denon mini systems, now recognized as a standout value on the used market. The 6Ω impedance and 50W handling make them easy to drive with modest amplification. Compact dimensions suit desktop, bedroom, and small-room use. The warm tonal balance and forgiving nature make them ideal for casual listening and non-audiophile entry points.',
+    retailer_links: [],
+    tendencies: {
+      confidence: 'medium',
+      character: [
+        { domain: 'tonality', tendency: 'warm, laid-back — silk dome tweeter rolls off gently, avoiding harshness. Front port adds bass weight relative to size', basis: 'listener_consensus' },
+        { domain: 'dynamics', tendency: 'modest dynamic range from 4-inch driver — adequate for nearfield and low-to-moderate volumes, not for large rooms', basis: 'listener_consensus' },
+        { domain: 'timing', tendency: 'relaxed, musical phrasing — prioritises flow over transient precision', basis: 'listener_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with warm vintage receivers or tube amplification', effect: 'warmth compounds — pleasant and immersive at low volumes but can become too soft for critical listening', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in small rooms or desktop nearfield', effect: 'designed for this scale — the compact front-ported design works well close to walls', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in large rooms or at high volumes', effect: 'the 4-inch driver runs out of headroom — dynamic compression and bass distortion appear', valence: 'caution', basis: 'listener_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'exceptional value, warm non-fatiguing presentation, compact size, easy to drive, forgiving of sources', cost: 'bass extension, dynamic range, detail retrieval, and staging precision of larger or more expensive speakers', relative_to: 'modern bookshelf speakers ($200-500)', basis: 'listener_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Head-Fi', note: 'Thread discussing the MS-50\'s warm character and value.', url: 'https://www.head-fi.org/threads/mission-ms-50s-why-do-i-love-them-so.951621/' },
+      { source: 'eBay', note: 'Used market listings — typical prices $75-150.', url: 'https://www.ebay.com/sch/i.html?_nkw=Mission+MS-50' },
+    ],
+    notes: 'Originally bundled with Denon DM-30S and DM-50S mini systems. Favorite bargain speaker of the Audio XX editor — and spotted in a Geese music video. The MS-50 has developed a cult following for its warm, musical character at a fraction of the cost of purpose-built audiophile bookshelf speakers. Best suited as an entry point, gift speaker, or casual listening solution. Previously available for $50-75; rising recognition has pushed used prices to $75-150.',
+    philosophy: 'warmth',
+    marketType: 'value',
   },
 ];

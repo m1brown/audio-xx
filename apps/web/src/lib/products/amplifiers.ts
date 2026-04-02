@@ -1640,7 +1640,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     },
     sourceReferences: [
       { source: '6moons', note: 'Extensive review praising triode-like immediacy and warmth. Compared favorably to SET amplifiers.', url: 'https://6moons.com/audioreview_articles/enleum-amp-23r/' },
-      { source: 'Headphone.guru', note: 'Praised as exceptional combined speaker/headphone amplifier.' },
+      { source: 'Headphone.guru', note: 'Praised as exceptional combined speaker/headphone amplifier.', url: 'https://headphone.guru/the-enleum-amp-23r-headphone-speaker-amplifier-the-best-of-both-worlds/' },
     ],
     notes: 'Formerly Bakoon — rebranded as Enleum. The AMP-23R is the speaker amp version (the HPA-23R is headphone-only). JET 2 Bias is their proprietary adaptive biasing circuit. 25W demands careful speaker matching — best with 88dB+ sensitivity.',
     philosophy: 'warm',
@@ -1911,7 +1911,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
-      { source: 'The Absolute Sound', note: 'Called a "bargain" for integrated pre+power performance. Exceptional bass and spatial effects.' },
+      { source: 'The Absolute Sound', note: 'Called a "bargain" for integrated pre+power performance. Exceptional bass and spatial effects.', url: 'https://www.theabsolutesound.com/articles/soulution-330-integrated-amplifier/' },
       { source: 'Stereophile', note: 'Praised composure, bass authority, and musical refinement.' },
     ],
     notes: 'Swiss precision engineering. Six separate power supplies is unusual in an integrated chassis. Optional $3K DAC module and $4K phono module. Class A runs warm — requires ventilation. 120W Class A is substantially more muscular than typical 30–50W Class A designs.',
@@ -2002,8 +2002,8 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
-      { source: 'Stereophile', note: 'Extensive review praising musicality, sweetness, and timbral finesse.' },
-      { source: 'The Absolute Sound', note: 'Noted as warm-leaning but detailed, with exceptional texture.' },
+      { source: 'Stereophile', note: 'Extensive review praising musicality, sweetness, and timbral finesse.', url: 'https://www.stereophile.com/integratedamps/dartzeel_cth-8550_integrated_amplifier/index.html' },
+      { source: 'The Absolute Sound', note: 'Noted as warm-leaning but detailed, with exceptional texture.', url: 'https://www.theabsolutesound.com/articles/2023-golden-ear-dartzeel-cth-8550-mkii-integrated-amplifier/' },
     ],
     notes: 'Hervé Delétraz design. The 50Ω Zeel BNC input is proprietary — only relevant in all-darTZeel systems (otherwise use standard RCA/XLR). Price reflects Swiss boutique manufacturing. The CTH-8550 is the integrated version of their NHB-108/NHB-18 separates philosophy.',
     philosophy: 'warm',

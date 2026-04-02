@@ -134,6 +134,7 @@ const PRODUCT_NAMES = [
   'ar5000', 'aune ar5000',
   'ahb2', 'benchmark ahb2',
   'vox 3a', 'vox3a', 'soundkaos vox',
+  'ms-50', 'ms50', 'mission ms-50', 'mission ms50',
   'shinai', 'genesi', 'supremo',
   'telos 590', 'telos 690', 'telos 390',
   'soulution 330', 'soulution 530', 'soulution 711',

@@ -547,7 +547,7 @@ export const DAC_PRODUCTS: Product[] = [
     },
     sourceReferences: [
       { source: 'Denafrips official', note: 'Ares 15th is the current mid-range R2R DAC at $1,199.' },
-      { source: 'Darko.Audio', note: 'Review covering Denafrips R2R house sound.' },
+      { source: 'Darko.Audio', note: 'Review covering Denafrips R2R house sound.', url: 'https://darko.audio/2021/06/denafrips-ares-ii-video-review/' },
       { source: 'Head-Fi community', note: 'Extensive owner comparisons with Bifrost 2 and other R2R alternatives.' },
     ],
     typicalMarket: 'new',
@@ -798,7 +798,7 @@ export const DAC_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
-      { source: '6Moons', note: 'Review covering the NOS tube output stage and its effect on musical continuity.' },
+      { source: '6Moons', note: 'Review covering the NOS tube output stage and its effect on musical continuity.', url: 'https://6moons.com/audioreview_articles/mhdtlab/2/' },
       { source: 'Twittering Machines', note: 'Coverage of the Orchid as a musically engaging NOS alternative.' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising the Orchid for organic musicality.' },
       { source: 'Audiogon community', note: 'Tube-rolling reports and system pairing impressions.' },
@@ -1344,8 +1344,8 @@ export const DAC_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
-      { source: 'Darko.Audio', note: 'Review covering FPGA pulse array architecture and transient performance.' },
-      { source: 'What Hi-Fi?', note: 'Multi-award coverage noting detail retrieval and timing.' },
+      { source: 'Darko.Audio', note: 'Review covering FPGA pulse array architecture and transient performance.', url: 'https://darko.audio/2018/11/a-short-film-about-the-chord-qutest/' },
+      { source: 'What Hi-Fi?', note: 'Multi-award coverage noting detail retrieval and timing.', url: 'https://www.whathifi.com/chord/qutest/review' },
       { source: 'Head-Fi community', note: 'Extensive listener impressions on tonal weight vs clarity balance.' },
     ],
     // Step 10: buying metadata
@@ -3568,7 +3568,7 @@ export const DAC_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
-      { source: 'Darko.Audio', note: 'Review highlighting custom discrete architecture and signal purity.' },
+      { source: 'Darko.Audio', note: 'Review highlighting custom discrete architecture and signal purity.', url: 'https://darko.audio/2020/08/mola-mola-tambaqui-video-review/' },
       { source: 'Stereophile', note: 'Measurement and listening coverage of the Tambaqui\'s exceptional SNR and imaging.' },
       { source: 'AudioGon community', note: 'Comparisons with DAVE and other statement-tier precision DACs.' },
     ],
