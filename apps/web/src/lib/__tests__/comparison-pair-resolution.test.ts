@@ -76,13 +76,13 @@ describe('Comparison Pair Resolution', () => {
   });
 
   it('simple "X vs Y" comparison still works correctly', () => {
-    const text = 'compare Chord Qutest vs Denafrips Ares II';
+    const text = 'compare Chord Qutest vs Denafrips Enyo 15th';
     const { subjects, desires } = detectIntent(text);
     const result = buildGearResponse('comparison', subjects, text, desires);
     expect(result).not.toBeNull();
     const anchor = result!.anchor.toLowerCase();
     expect(anchor).toContain('qutest');
-    expect(anchor).toContain('ares');
+    expect(anchor).toContain('enyo');
     console.log('ANCHOR:', result!.anchor.substring(0, 300));
   });
 

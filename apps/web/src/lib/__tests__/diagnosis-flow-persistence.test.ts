@@ -15,7 +15,7 @@ import { detectInitialMode, transition, type ConvState } from '../conversation-s
 describe('Diagnosis flow: "evaluate my system" with full system', () => {
   const EVALUATE_WITH_SYSTEM_QUERIES = [
     'evaluate my system: Bluesound Node, Hegel H190, KEF LS50 Meta',
-    'evaluate my system: Denafrips Ares II, Pass Labs INT-25, DeVore O/96',
+    'evaluate my system: Denafrips Enyo 15th, Pass Labs INT-25, DeVore O/96',
     'assess my setup: Chord Qutest, First Watt SIT-3, Harbeth P3ESR',
     'review my system: Schiit Bifrost, Naim Nait 5si, ProAc Tablette',
   ];

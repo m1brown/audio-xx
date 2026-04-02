@@ -1479,10 +1479,32 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
         </div>
       )}
 
-      {/* ── 2b. Preference reflection ("What I'm optimizing for") ──── */}
-      {(a.listenerPriorities && a.listenerPriorities.length > 0) && (
+      {/* ── 3. Transition to products ─────────────────────── */}
+      <p style={{
+        margin: '0 0 1.25rem 0',
+        fontSize: '0.95rem',
+        lineHeight: 1.75,
+        color: COLORS.textSecondary,
+      }}>
+        {a.editorialIntro
+          ? renderText(a.editorialIntro)
+          : null}
+      </p>
+
+      {/* ── 4. Product cards ──────────────────────────────── */}
+      {a.options && a.options.length > 0 && (
+        <AdvisoryProductCards options={a.options} />
+      )}
+
+      {/* ── 4a. Preference reflection ── */}
+      {/* Suppress when content is thin (≤2 priorities, no avoids, no listening context)
+          — it would just echo back what the user already said. Only show when there's
+          enough accumulated signal to add genuine value. */}
+      {(a.listenerPriorities && a.listenerPriorities.length > 2
+        || (a.listenerPriorities && a.listenerPriorities.length > 0 && a.listenerAvoids && a.listenerAvoids.length > 0)
+        || (a.listenerPriorities && a.listenerPriorities.length > 0 && a.audioProfile?.listeningContext && a.audioProfile.listeningContext.length > 0)) && (
         <div style={{
-          margin: '0 0 1.5rem 0',
+          margin: '1.5rem 0',
           padding: '1rem 1.25rem',
           background: 'linear-gradient(135deg, #faf8f3 0%, #f5f3ee 100%)',
           borderRadius: '8px',
@@ -1499,7 +1521,7 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
             letterSpacing: '0.06em',
             textTransform: 'uppercase',
           }}>
-            What I&apos;m optimizing for
+            What I&apos;m hearing from you
           </div>
 
           {/* Context signals: budget / room / music (compact row) */}
@@ -1568,10 +1590,10 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
         </div>
       )}
 
-      {/* ── 2c. Taste Reflection Block ─────────────────────── */}
+      {/* ── 4b. Taste Reflection Block (post-products context) ── */}
       {a.tasteReflection && a.tasteReflection.bullets.length > 0 && (
         <div style={{
-          margin: '0 0 1.5rem 0',
+          margin: '1.5rem 0',
           padding: '1rem 1.25rem',
           background: 'linear-gradient(135deg, #f8f6f1 0%, #f3f0ea 100%)',
           borderRadius: '8px',
@@ -1612,7 +1634,7 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
         </div>
       )}
 
-      {/* ── 2d. System Pairing Intro ────────────────────── */}
+      {/* ── 4c. System Pairing Intro (post-products context) ── */}
       {a.systemPairingIntro && (
         <p style={{
           margin: '0 0 1rem 0',
@@ -1625,26 +1647,7 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
         </p>
       )}
 
-      {/* ── 3. Transition to products ─────────────────────── */}
-      <p style={{
-        margin: '0 0 1.25rem 0',
-        fontSize: '0.95rem',
-        lineHeight: 1.75,
-        color: COLORS.textSecondary,
-      }}>
-        {a.lowPreferenceSignal
-          ? 'Here are strong starting points across different design directions:'
-          : a.editorialIntro
-            ? renderText(a.editorialIntro)
-            : (a.systemInterpretation ? 'With that in mind, here are a few strong options:' : 'Here are a few strong options:')}
-      </p>
-
-      {/* ── 4. Product cards ──────────────────────────────── */}
-      {a.options && a.options.length > 0 && (
-        <AdvisoryProductCards options={a.options} />
-      )}
-
-      {/* ── 4b. Decisive Recommendation ("What I would actually do") ── */}
+      {/* ── 4d. Decisive Recommendation ("What I would actually do") ── */}
       {a.decisiveRecommendation && (
         <div style={{
           margin: '1.75rem 0 1.5rem 0',
@@ -1664,7 +1667,7 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
             letterSpacing: '0.06em',
             textTransform: 'uppercase',
           }}>
-            What I would actually do
+            What I would do
           </div>
           <div style={{ marginBottom: '0.6rem' }}>
             <span style={{ fontWeight: 600, color: COLORS.text }}>
@@ -1691,8 +1694,8 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
         </div>
       )}
 
-      {/* ── 5. Decision guidance ──────────────────────────── */}
-      {decisionLines.length > 0 && (
+      {/* ── 5. Decision guidance (only when ≥4 products — small lists speak for themselves) ── */}
+      {decisionLines.length >= 4 && (
         <div style={{
           margin: '2rem 0 1.5rem 0',
           padding: '0.85rem 1.1rem',

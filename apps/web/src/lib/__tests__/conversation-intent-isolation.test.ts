@@ -57,11 +57,10 @@ describe('shopping → comparison (no DAC leakage)', () => {
     expect(initial.mode).toBe('shopping');
     expect(initial.facts.category).toBe('dac');
 
-    // Turn 2: comparison intent is incompatible with shopping → reset
-    expect(result.state.mode).toBe('idle');
+    // Turn 2: comparison intent switches to comparison mode
+    expect(result.state.mode).toBe('comparison');
     expect(result.state.facts.category).toBeUndefined();
     expect(result.state.facts.budget).toBeUndefined();
-    expect(result.response).toBeNull();
   });
 
   it('clears budget from shopping when switching to comparison', () => {
@@ -78,7 +77,7 @@ describe('shopping → comparison (no DAC leakage)', () => {
       detectedIntent: i2.intent,
     });
 
-    expect(result.state.mode).toBe('idle');
+    expect(result.state.mode).toBe('comparison');
     expect(result.state.facts.category).toBeUndefined();
     expect(result.state.facts.budget).toBeUndefined();
   });
@@ -89,7 +88,7 @@ describe('shopping → comparison (no DAC leakage)', () => {
 // ══════════════════════════════════════════════════════════
 
 describe('comparison → shopping (no comparison residue)', () => {
-  it('resets to idle when shopping intent arrives during comparison', () => {
+  it('switches to shopping when shopping intent arrives during comparison', () => {
     const { initial, result } = twoTurnFlow(
       'KEF vs ELAC',
       'I want speakers',
@@ -98,8 +97,8 @@ describe('comparison → shopping (no comparison residue)', () => {
     // Turn 1 should have entered comparison
     expect(initial.mode).toBe('comparison');
 
-    // Turn 2: shopping intent is incompatible with comparison → reset
-    expect(result.state.mode).toBe('idle');
+    // Turn 2: shopping intent switches to shopping mode
+    expect(result.state.mode).toBe('shopping');
     expect(result.state.facts.comparisonTargets).toBeUndefined();
     expect(result.response).toBeNull();
   });
@@ -118,7 +117,7 @@ describe('comparison → shopping (no comparison residue)', () => {
       detectedIntent: i2.intent,
     });
 
-    expect(result.state.mode).toBe('idle');
+    expect(result.state.mode).toBe('shopping');
     expect(result.state.facts.comparisonTargets).toBeUndefined();
   });
 });
@@ -256,7 +255,7 @@ describe('edge cases — no false resets', () => {
       detectedIntent: i2.intent,
     });
 
-    expect(result.state.mode).toBe('idle');
+    expect(result.state.mode).toBe('diagnosis');
   });
 });
 
@@ -265,7 +264,7 @@ describe('edge cases — no false resets', () => {
 // ══════════════════════════════════════════════════════════
 
 describe('additional cross-mode transitions', () => {
-  it('shopping → diagnosis resets on explicit symptom', () => {
+  it('shopping → diagnosis switches on explicit symptom', () => {
     const shoppingState: ConvState = {
       mode: 'shopping',
       stage: 'clarify_budget',
@@ -280,12 +279,12 @@ describe('additional cross-mode transitions', () => {
       detectedIntent: i2.intent,
     });
 
-    expect(result.state.mode).toBe('idle');
+    expect(result.state.mode).toBe('diagnosis');
     expect(result.state.facts.category).toBeUndefined();
     expect(result.state.facts.budget).toBeUndefined();
   });
 
-  it('diagnosis → comparison resets cleanly', () => {
+  it('diagnosis → comparison switches cleanly', () => {
     const diagState: ConvState = {
       mode: 'diagnosis',
       stage: 'ready_to_diagnose',
@@ -299,7 +298,7 @@ describe('additional cross-mode transitions', () => {
       detectedIntent: i2.intent,
     });
 
-    expect(result.state.mode).toBe('idle');
+    expect(result.state.mode).toBe('comparison');
     expect(result.state.facts.symptom).toBeUndefined();
   });
 

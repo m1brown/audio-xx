@@ -160,6 +160,9 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   'hornshoppe horns': { brand: 'Hornshoppe', category: 'speaker' },
   // Denafrips aliases
   'ares ii': { brand: 'Denafrips', category: 'dac' },
+  'ares 15th': { brand: 'Denafrips', category: 'dac' },
+  'enyo 15th': { brand: 'Denafrips', category: 'dac' },
+  'enyo': { brand: 'Denafrips', category: 'dac' },
   'pontus 12th-1': { brand: 'Denafrips', category: 'dac' },
   // TotalDAC
   'd1-unity': { brand: 'TotalDAC', category: 'dac' },

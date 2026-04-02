@@ -811,6 +811,32 @@ const BRAND_PROFILES: BrandProfile[] = [
     ],
   },
   {
+    names: ['kinki studio', 'kinki'],
+    country: 'China',
+    brandScale: 'boutique',
+    region: 'east-asia',
+    categories: ['amplifier'],
+    philosophy: 'Kinki Studio builds Class AB solid-state amplifiers with a deliberately warm, tonally engaged voicing. The design philosophy prioritises tonal density, midrange richness, and musical engagement over analytical neutrality or measured transparency. Dual-mono, fully balanced topologies with high current output.',
+    tendencies: 'Kinki Studio amplifiers are described as warm, dense, and muscular. Tonal body and midrange richness are the signature strengths. Bass is weighty and authoritative. The EX-M1 leans toward warmth and engagement; the EX-M1+ and Dazzle are more neutral and transparent while retaining the brand\'s composure and current authority.',
+    systemContext: 'Kinki Studio amplifiers work best with neutral or analytical speakers where the added warmth and density provide complementary balance. Pairing with already-warm or tonally dense speakers may compound into heaviness. Strong value at price — frequently compared favourably to amplifiers at 2–3× their cost.',
+    pairingNotes: 'The EX-M1 pairs well with neutral or revealing speakers (Dynaudio, KEF, B&W) where its tonal density is an asset. The EX-M1+ is more system-neutral and suits a wider range. High current output handles low-impedance and demanding loads.',
+    links: [
+      { label: 'Official website', url: 'https://www.kinkistudio.com/', region: 'global' },
+    ],
+    designFamilies: [
+      {
+        name: 'EX-M1 (original)',
+        character: 'Warm-leaning, tonally dense, muscular. More colored than the successor — trades some precision for engagement.',
+        ampPairing: 'Best with neutral or analytical speakers. Avoid pairing with already-warm designs.',
+      },
+      {
+        name: 'EX-M1+ and Dazzle',
+        character: 'Neutral, transparent, exceptional imaging. The house sound evolved toward precision while retaining current authority.',
+        ampPairing: 'System-neutral — works across a wide range of speakers.',
+      },
+    ],
+  },
+  {
     names: ['hegel'],
     country: 'Norway (Oslo)',
     brandScale: 'specialist',
@@ -823,6 +849,121 @@ const BRAND_PROFILES: BrandProfile[] = [
     links: [
       { label: 'Official website', url: 'https://www.hegel.com/', region: 'global' },
     ],
+  },
+  {
+    names: ['kinki studio', 'kinki'],
+    country: 'China',
+    brandScale: 'specialist',
+    region: 'asia',
+    categories: ['amplifier'],
+    philosophy: 'Kinki Studio is a Chinese boutique amplifier manufacturer distributed internationally through Vinshine Audio. Their designs use high-current Class AB topologies with fully balanced, dual-mono layouts. The EX-M1+ became a cult favourite for delivering reference-level transparency and imaging at a fraction of the price of European competitors.',
+    tendencies: 'Kinki Studio amplifiers lean toward transparency, composure, and three-dimensional staging. Neutral to slightly warm tonal balance with strong current delivery and bass authority. Detail retrieval is high without becoming aggressive. Imaging and soundstage depth are standout traits. Can sound slightly dry with already-lean speakers.',
+    systemContext: 'Kinki Studio amplifiers pair well with speakers that benefit from current and control — planar magnetics, inefficient bookshelf designs, and power-hungry floorstanders. The neutral transparency makes them revealing of upstream source character. Work well with both R-2R and delta-sigma DACs.',
+    links: [
+      { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['singxer'],
+    country: 'China',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    categories: ['amplifier', 'dac'],
+    philosophy: 'Singxer is better known for USB bridge products (the SU-6) but their SA-90 monoblock amplifiers use GaN FET transistors in a class AB configuration. The design philosophy applies semiconductor speed advantages to musical amplification — GaN transistors switch approximately 10x faster than silicon MOSFETs, enabling wider bandwidth and lower distortion at a price accessible to most audiophiles.',
+    tendencies: 'Fast, clean, and musical without clinical coldness. GaN transistor speed provides excellent transient resolution and dynamics. Neutral tonal balance leans slightly toward detail and clarity rather than warmth. Outstanding value-per-dollar — performance associated with amplifiers at several times the price.',
+    systemContext: 'Singxer SA-90 monoblocks pair well with warm or full-bodied speakers where the GaN neutrality complements rather than compounds tonal character. Excellent with planar magnetic speakers that benefit from monoblock current delivery. Less ideal in already-lean or analytical systems.',
+    links: [
+      { label: 'Singxer', url: 'https://singxer.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['raal-requisite', 'raal requisite', 'raal'],
+    country: 'Serbia',
+    brandScale: 'boutique',
+    region: 'europe',
+    categories: ['headphone'],
+    philosophy: 'Raal-Requisite builds true ribbon headphones — a fundamentally different transducer type from dynamic or planar magnetic drivers. Their designs require speaker amplification, not headphone amps. The ribbon driver offers electrostatic-like speed with direct, zero-compression dynamics.',
+    tendencies: 'Raal headphones are among the fastest and most transparent available. Massive open soundstage, lightning transients, and resolution that rivals the best electrostatics. The ribbon driver is inherently smooth despite extreme detail retrieval. Demands careful amplification pairing.',
+    systemContext: 'Raal headphones need speaker amplifiers or dedicated ribbon interface boxes. The Benchmark AHB2 is a popular pairing. Not compatible with conventional headphone amplifiers. Room-like presentation — these are headphones that sound like speakers.',
+    links: [
+      { label: 'Raal-Requisite', url: 'https://rfrequestie.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['sound|kaos', 'soundkaos', 'sound kaos'],
+    country: 'Switzerland',
+    brandScale: 'boutique',
+    region: 'europe',
+    categories: ['speaker'],
+    philosophy: 'Martin Gateley designs speakers around widebander drivers for single-point-source coherence, supplemented by supertweeters for extension. Handcrafted in Switzerland. The design philosophy prioritises tonal purity, midrange presence, and musical flow over measurement-sheet performance.',
+    tendencies: 'Natural, coherent, musically engaging. Warm midrange with widebander directness. Intimate staging suited to small and medium rooms. Prioritises long-session listenability and tonal truth over analytical detail or dynamic slam.',
+    systemContext: 'sound|kaos speakers are efficient enough for low-power tube amplification and sensitive enough to reveal upstream character. Pair well with SET amps, quality integrated amplifiers, and high-current solid-state designs. Room-friendly — designed for real listening spaces.',
+    links: [
+      { label: 'sound|kaos', url: 'https://www.soundkaos.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['linnenberg'],
+    country: 'Germany',
+    brandScale: 'boutique',
+    region: 'europe',
+    categories: ['amplifier', 'dac'],
+    philosophy: 'Ivo Linnenberg designs amplifiers with ultra-wide bandwidth and zero global feedback. The philosophy prioritises phase coherence and timing accuracy over low measured distortion. German precision engineering applied to musical reproduction.',
+    tendencies: 'LinnenberG amplifiers are fast, transparent, and spatially precise. Zero global feedback preserves phase relationships, creating holographic imaging. Neutral tonal balance — reveals rather than editorialises. Speed and bandwidth are the signature traits.',
+    systemContext: 'LinnenberG amplifiers partner exceptionally well with widebander and full-range speakers where the speed and bandwidth match the driver coherence. Also excellent with planar magnetic speakers. The transparency is revealing — upstream source quality matters.',
+    links: [
+      { label: 'LinnenberG', url: 'https://www.linnenberg-audio.de/', region: 'global' },
+    ],
+  },
+  {
+    names: ['agd', 'agd productions'],
+    country: 'USA',
+    brandScale: 'boutique',
+    region: 'north-america',
+    categories: ['amplifier'],
+    philosophy: 'Alberto Guerra pioneered the use of GaN (Gallium Nitride) transistors in class D amplification. His designs use proprietary GaN output stages to eliminate the timing artifacts that make conventional class D sound mechanical. The goal is tube-like musicality from a class D topology.',
+    tendencies: 'AGD amplifiers sound warm, organic, and musically engaging despite being class D. Tube-like midrange richness with solid-state speed and control. GaN transistors switch fast enough to preserve musical flow and natural phrasing. Breaks the class D stereotype.',
+    systemContext: 'AGD amplifiers add warmth and organic character — pair well with neutral or detailed speakers. Less ideal in already-warm systems where the organic character could push toward lush. Efficient and cool-running — practical advantages of class D with musical advantages of class A.',
+    links: [
+      { label: 'AGD Productions', url: 'https://agdproductions.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['cen.grand', 'cengrand'],
+    country: 'China',
+    brandScale: 'specialist',
+    region: 'asia',
+    categories: ['dac'],
+    philosophy: 'Cen.Grand builds DACs with discrete DSD conversion — no off-the-shelf DAC chips. The DSD path uses individual components for conversion, similar in philosophy to how R-2R DACs approach PCM. The design goal is analog-like naturalness, particularly for DSD content.',
+    tendencies: 'Dense, warm, analog-like presentation. The discrete DSD path is the standout — DSD files sound exceptionally natural and rich. PCM handled by R-2R ladder with similar character. Prioritises musicality and tonal density over analytical precision.',
+    systemContext: 'Cen.Grand DACs pair well with transparent or neutral amplification where the warmth and density provide complementary balance. DSD listeners get the most from this design. Not ideal paired with already-warm tube equipment.',
+    links: [
+      { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['benchmark'],
+    country: 'USA',
+    brandScale: 'specialist',
+    region: 'north-america',
+    categories: ['amplifier', 'dac'],
+    philosophy: 'Benchmark comes from pro audio — their products are designed to add nothing to the signal. The AHB2 amplifier has the lowest noise and distortion of any consumer amplifier by measurement. Engineering-first, measurement-validated design philosophy.',
+    tendencies: 'Benchmark products are clinically transparent. Vanishingly low distortion and noise. The AHB2 is either a revelation or too clean depending on your priorities. Pro-audio DNA means accuracy over character. Polarising in the audiophile world.',
+    systemContext: 'Benchmark amplifiers excel with speakers and headphones that benefit from pristine amplification — Raal ribbon headphones, planar magnetics, and revealing studio monitors. Less synergistic in systems where warmth and character are desired. The transparency reveals everything upstream.',
+    links: [
+      { label: 'Benchmark', url: 'https://benchmarkmedia.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['aune'],
+    country: 'China',
+    brandScale: 'specialist',
+    region: 'asia',
+    categories: ['headphone', 'amplifier', 'dac'],
+    philosophy: 'Aune designs headphones and audio electronics that punch above their price class. Value-oriented but not budget-compromised. Their planar magnetic headphones and tube/solid-state hybrid amplifiers aim for refinement typically found at higher price points.',
+    tendencies: 'Clean, fast, refined. Planar magnetic headphones with good composure and speed. Not warm or romantic — precision-oriented but not clinical. Outstanding value-per-dollar. Srajan Ebaen\'s 2024 brand pick on 6moons.',
+    systemContext: 'Aune products are accessible entry points for listeners exploring higher-end sound. Their headphones work well with modest amplification. Their amplifiers and DACs pair broadly.',
+    links: [],
   },
 ];
 
@@ -5269,7 +5410,7 @@ function inferUpgradeDirection(components: SystemComponent[]): string {
     ].filter(Boolean).length;
 
     if (nonNeutralAxes <= 1) {
-      return 'This system appears well-balanced — no single tonal or textural direction dominates. Changes would likely shift the character rather than fix a gap. If you want to explore, focus on the quality you most want to intensify — but "do nothing" is a strong option here.';
+      return 'No single tonal or textural direction dominates here. Any change would shift the character rather than fix a gap. If you want to explore, focus on the quality you most want to intensify — but "do nothing" is a strong option.';
     }
   }
 
@@ -7922,7 +8063,7 @@ export function buildSystemDiagnosis(
   const systemLabel = componentNames.join(' + ');
 
   // Opening: acknowledge system + issue
-  const opening = `${systemLabel} is a high-caliber combination. What you're describing as "${complaint}" is ${mapping.interpretation}.`;
+  const opening = `With ${systemLabel}, what you're hearing as "${complaint}" is ${mapping.interpretation}.`;
 
   // Context: interpret in terms of the system
   let systemNote = '';
@@ -7942,14 +8083,15 @@ export function buildSystemDiagnosis(
   const paths = mapping.remedyDirections.slice(0, 4);
   const pathsText = paths.map((p, i) => `**${i + 1}.** ${p}`).join('\n\n');
 
-  // Follow-up question
+  // Follow-up question — stays diagnostic, with optional shopping transition
+  const shoppingOffer = ' I can suggest specific components to try.';
   let followUp: string;
   if (mapping.followUpAngle === 'source') {
-    followUp = 'What source are you using (DAC, streamer, turntable)? That\'s usually the most effective place to introduce tonal warmth in a system like this.';
+    followUp = 'What source are you using (DAC, streamer, turntable)? That\'s the first place I\'d look.' + shoppingOffer;
   } else if (mapping.followUpAngle === 'room') {
-    followUp = 'Can you describe your room — size, surfaces, treatment? Room interaction is often the biggest factor here.';
+    followUp = 'Can you describe your room — size, surfaces, treatment? That\'s the biggest variable here.' + shoppingOffer;
   } else {
-    followUp = 'What are your listening habits — typical volume, session length, music types? That helps me calibrate the direction.';
+    followUp = 'What are your listening habits — typical volume, session length, music types? That helps me calibrate.' + shoppingOffer;
   }
 
   // Assemble
@@ -7960,6 +8102,7 @@ export function buildSystemDiagnosis(
   return {
     subject: `${systemLabel} — ${complaint}`,
     comparisonSummary: fullDiagnosis,
+    advisoryMode: 'system_review' as import('./advisory-response').AdvisoryMode,
     followUp,
   };
 }

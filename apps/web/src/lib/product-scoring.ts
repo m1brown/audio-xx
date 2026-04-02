@@ -434,6 +434,18 @@ export function rankProducts(
 
   if (candidates.length === 0) return [];
 
+  // ── Liked-brand boost setup ─────────────────────────
+  // Meaningful directional boost for brands the user explicitly likes.
+  // At +0.8, this is strong enough to shift ranking by 1–3 positions but
+  // not so large that it overpowers trait alignment or budget fit. A product
+  // with poor trait fit won't become anchor just because the brand is liked.
+  // Asymmetric with −3.0 dislike (removal).
+  const LIKED_BRAND_BOOST = 0.8;
+  const likedBrandSet = listenerProfile
+    ? new Set(listenerProfile.likedBrands)
+    : new Set<string>();
+  const boostedByTaste: string[] = [];
+
   const scored = candidates
     .map((product) => {
       let score = scoreProduct(product, userTraits, budgetAmount, systemProfile);
@@ -447,11 +459,17 @@ export function rankProducts(
         }
       }
 
+      // Liked-brand boost: positive nudge for brands the user has expressed affinity for
+      if (likedBrandSet.size > 0 && likedBrandSet.has(product.brand.toLowerCase())) {
+        score += LIKED_BRAND_BOOST;
+        boostedByTaste.push(`${product.brand} ${product.name} (+${LIKED_BRAND_BOOST})`);
+      }
+
       return { product, score };
     })
     .sort((a, b) => b.score - a.score);
 
-  if (removedByTaste.length > 0 || penalizedByTaste.length > 0) {
+  if (removedByTaste.length > 0 || penalizedByTaste.length > 0 || boostedByTaste.length > 0) {
     console.log('[taste-filter]', {
       inferredTraits: listenerProfile
         ? Object.entries(listenerProfile.inferredTraits)
@@ -460,6 +478,7 @@ export function rankProducts(
         : 'none',
       removedProducts: removedByTaste,
       penalizedProducts: penalizedByTaste,
+      boostedProducts: boostedByTaste,
     });
   }
 

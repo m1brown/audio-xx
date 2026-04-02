@@ -1196,10 +1196,13 @@ export function detectShoppingIntent(
   // Also check BUDGET_PATTERNS (regex) to catch "under 1500" without '$'.
   const detected = INTENT_KEYWORDS.some((kw) => lower.includes(kw))
     || BUDGET_PATTERNS.some((re) => re.test(userText));
+  // A bare category word ("DAC", "speakers") is also a shopping signal —
+  // the user is implicitly asking for recommendations in that category.
+  const hasCategoryWord = CATEGORY_PATTERNS.some((pat) => pat._patterns.some((re) => re.test(userText)));
   // When latestMessage is provided, the caller is already in shopping mode
   // (category switch / refinement). Skip the early bail-out so category
   // detection runs even when allUserText lacks explicit intent keywords.
-  if (!detected && !latestMessage) {
+  if (!detected && !hasCategoryWord && !latestMessage) {
     return {
       detected: false,
       mode: 'specific-component',
@@ -1258,6 +1261,27 @@ export function detectShoppingIntent(
           category = pat.category;
           break;
         }
+      }
+    }
+
+    // ── Product-to-category inference ────────────────────
+    // When category is still 'general' but the text mentions a known product
+    // name alongside a budget signal (e.g., "i think the ares is under 1000"),
+    // infer the category from the product's catalog entry. This prevents
+    // clarification loops when the user names a specific product without an
+    // explicit category keyword. Only fires when a budget signal is present
+    // to avoid false positives on taste-only messages ("more engaging and
+    // less dry") that could coincidentally contain product name substrings.
+    const hasBudgetForInference = BUDGET_PATTERNS.some((re) => re.test(latestMessage ?? userText))
+      || /\bunder\s+\$?\d/i.test(latestMessage ?? userText);
+    if (category === 'general' && hasBudgetForInference) {
+      const textToScan = (latestMessage ?? userText).toLowerCase();
+      // Try PRODUCT_NAME_ALIASES (curated, no false positives)
+      const aliasHit = tryProductAliasCategory(textToScan);
+      if (aliasHit) {
+        category = aliasHit.category as ShoppingCategory;
+        console.log('[category-product-infer] alias "%s" → %s %s → category=%s',
+          aliasHit.alias, aliasHit.brand, aliasHit.name, category);
       }
     }
   }
@@ -1792,6 +1816,10 @@ export interface ProductExample {
   usedMarketSources?: UsedMarketSource[];
   /** Predicted sonic delta — what this product would change in the system. */
   systemDelta?: { whyFitsSystem?: string; likelyImprovements?: string[]; tradeOffs?: string[] };
+  /** Anchor-only justification — 2–3 sentence expert rationale connecting
+   *  user context (symptom / preference / system state) to this specific product.
+   *  Only populated for the anchor product (pickRole === 'anchor' or isPrimary). */
+  anchorJustification?: string;
 
   // ── Catalog facts (not rendered — used for LLM validation) ──
   /** Raw architecture string from catalog (e.g. "delta-sigma (ESS)"). */
@@ -2138,6 +2166,34 @@ const FALLBACK_TASTE: Pick<TasteProfile, 'label' | 'defaultDirection' | 'default
   ],
 };
 
+// ── Product-to-category inference helper ──────────────
+// Uses the curated alias map + catalog lookup to infer category from a
+// product name mentioned in text. Only returns a result when the product
+// name is unambiguously a known alias (not fuzzy matched on common words).
+function tryProductAliasCategory(textLower: string): { alias: string; brand: string; name: string; category: string } | null {
+  // Extract word tokens and try 1-3 word phrases against resolveProductAlias
+  const words = textLower.replace(/[.,!?;:()]/g, ' ').split(/\s+/).filter(Boolean);
+  for (let len = 3; len >= 1; len--) {
+    for (let i = 0; i <= words.length - len; i++) {
+      const phrase = words.slice(i, i + len).join(' ');
+      // resolveProductAlias only matches the curated PRODUCT_NAME_ALIASES map
+      const resolved = resolveProductAlias(phrase);
+      if (resolved && resolved !== phrase) {
+        // The alias resolved to a canonical name — look up in catalog
+        const hit = findCatalogProduct(resolved);
+        if (hit && hit.category !== 'general') {
+          return { alias: phrase, brand: hit.brand, name: hit.name, category: hit.category };
+        }
+      }
+      // NOTE: Direct findCatalogProduct matching is intentionally NOT used
+      // here — its fuzzy matching produces false positives (e.g., "bifrost"
+      // matches "Rost" because "rost" ⊂ "bifrost"). Only the curated alias
+      // map above is safe for category inference.
+    }
+  }
+  return null;
+}
+
 // ── Category labels ───────────────────────────────────
 
 const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
@@ -2160,6 +2216,7 @@ import { HEADPHONE_PRODUCTS, type HeadphoneProduct } from './products/headphones
 import { selectTurntableExamples } from './products/turntables';
 import { rankProducts, type ScoredProduct, AMPLIFIER_ARCHITECTURE_TENDENCIES, type ArchitectureTendency } from './product-scoring';
 import type { ListenerProfile } from './listener-profile';
+import { findCatalogProduct, resolveProductAlias } from './listener-profile';
 import { tagProductArchetype } from './archetype';
 import { topTraits, type TasteProfile as UserTasteProfile, type ProfileTraitKey } from './taste-profile';
 import type { ReasoningResult } from './reasoning';
@@ -2605,6 +2662,158 @@ function findArchitectureTendency(product: Product): ArchitectureTendency | unde
   return undefined;
 }
 
+// ── Anchor justification (anchor product only) ─────────
+//
+// Builds a 2–3 sentence expert rationale for the first recommendation.
+// Fuses symptom / preference / system context with product character
+// and includes one explicit trade-off.
+//
+// Fallback hierarchy:
+//   1. Full context: symptom + system + product → system-effect sentence
+//   2. Partial context: preference + product → taste-alignment sentence
+//   3. Minimal context: conditional phrasing → "If your system leans X…"
+//
+// Does NOT change ranking, routing, or selection. Output layer only.
+
+/** Symptom keys → human-readable descriptions for anchor justification. */
+const SYMPTOM_DESCRIPTIONS: Record<string, string> = {
+  brightness_harshness: 'bright or harsh',
+  thinness: 'thin or lacking body',
+  bass_bloom: 'bass-heavy or boomy',
+  flat_lifeless: 'flat or lifeless',
+  congestion_muddiness: 'congested or muddy',
+  fatigue: 'fatiguing over time',
+  clinical_sterile: 'clinical or sterile',
+  too_warm: 'overly warm',
+  closed_boxy: 'closed-in or boxy',
+  too_polite: 'polite but uninvolving',
+  too_forward: 'too forward or aggressive',
+  overdamped: 'overdamped or mechanical',
+  narrow_soundstage: 'narrow or flat in staging',
+  imbalanced: 'sonically off-balance',
+  regression: 'worse than expected',
+  dynamic_punchy: 'dynamically alive',
+};
+
+/**
+ * Build anchor-only justification for the primary recommendation.
+ *
+ * Deterministic. Draws on:
+ *   - Product tendency profile (strengths / weaknesses)
+ *   - System character (bright / warm / neutral)
+ *   - User symptom signals (from signal extraction)
+ *   - Taste / archetype inference (from reasoning engine)
+ *   - Pre-computed system delta (improvements + trade-offs)
+ *
+ * Returns undefined when no meaningful justification can be built
+ * (better to show nothing than generic filler).
+ */
+function buildAnchorJustification(
+  product: Product,
+  systemProfile: SystemProfile,
+  userTraits: Record<string, SignalDirection>,
+  reasoning?: ReasoningResult,
+  delta?: SystemDeltaResult,
+  symptoms?: string[],
+): string | undefined {
+  // ── Gather product strengths and weaknesses ──────────
+  const strengths: string[] = [];
+  const weaknesses: string[] = [];
+
+  if (product.tendencyProfile) {
+    for (const t of product.tendencyProfile.tendencies) {
+      const label = TRAIT_LABELS[t.trait];
+      if (!label) continue;
+      if (t.level === 'emphasized') strengths.push(label);
+      else if (t.level === 'less_emphasized') weaknesses.push(label);
+    }
+  }
+
+  // Supplement from architecture tendency map
+  const archTendency = findArchitectureTendency(product);
+  if (archTendency) {
+    for (const s of archTendency.strengths) {
+      const label = TRAIT_LABELS[s];
+      if (label && !strengths.includes(label)) strengths.push(label);
+    }
+    for (const w of archTendency.weaknesses) {
+      const label = TRAIT_LABELS[w];
+      if (label && !weaknesses.includes(label)) weaknesses.push(label);
+    }
+  }
+
+  if (strengths.length === 0) return undefined;
+
+  // ── Build trade-off sentence (required) ──────────────
+  // Prefer delta trade-offs (system-aware), fall back to product weaknesses
+  let tradeOff: string | undefined;
+  if (delta?.tradeOffs && delta.tradeOffs.length > 0) {
+    tradeOff = delta.tradeOffs[0];
+  } else if (weaknesses.length > 0) {
+    tradeOff = `less ${weaknesses[0]}`;
+  }
+
+  // No trade-off derivable — can't meet the hard requirement
+  if (!tradeOff) return undefined;
+
+  const tradeOffSentence = `You give up some ${tradeOff} for more ${strengths.slice(0, 2).join(' and ')}.`;
+
+  // ── Detect context tier ──────────────────────────────
+  const sysChar = systemProfile.systemCharacter;
+  const hasSystem = sysChar !== 'unknown';
+  const symptomList = symptoms?.filter((s) => SYMPTOM_DESCRIPTIONS[s]) ?? [];
+  const hasSymptom = symptomList.length > 0;
+  const tasteLabel = reasoning?.taste.tasteLabel;
+  const archetype = reasoning?.taste.archetype;
+  const hasTaste = !!(tasteLabel || archetype);
+
+  // ── Tier 1: Full context (symptom + system + product) ──
+  if (hasSymptom && hasSystem) {
+    const symptomDesc = SYMPTOM_DESCRIPTIONS[symptomList[0]];
+    const topStrength = strengths[0];
+
+    // Use delta's system-fit sentence when available, otherwise build our own
+    const systemEffect = delta?.likelyImprovements && delta.likelyImprovements.length > 0
+      ? `adding ${delta.likelyImprovements.slice(0, 2).join(' and ')}`
+      : `adding ${topStrength}`;
+
+    return `In a system that sounds ${symptomDesc}, this moves it toward ${systemEffect.replace(/^adding /, '')}. ${tradeOffSentence}`;
+  }
+
+  // Symptom without system — still use symptom framing
+  if (hasSymptom) {
+    const symptomDesc = SYMPTOM_DESCRIPTIONS[symptomList[0]];
+    const topStrength = strengths[0];
+    return `You're describing something ${symptomDesc}. This moves the system toward ${topStrength}. ${tradeOffSentence}`;
+  }
+
+  // ── Tier 2: Partial context (taste/preference + product) ──
+  if (hasTaste && hasSystem) {
+    const preference = tasteLabel ?? 'your stated priorities';
+    const topStrength = strengths[0];
+    return `In a system that leans ${sysChar}, your preference for ${preference.toLowerCase()} points toward more ${topStrength} — this moves it there. ${tradeOffSentence}`;
+  }
+
+  if (hasTaste) {
+    const preference = tasteLabel ?? 'your stated priorities';
+    const topStrength = strengths[0];
+    return `Your preference for ${preference.toLowerCase()} points toward more ${topStrength}. If your system needs that, this is a clean way to get it. ${tradeOffSentence}`;
+  }
+
+  // ── Tier 3: Minimal context (conditional phrasing) ──
+  if (hasSystem) {
+    const topStrength = strengths[0];
+    return `In a system that leans ${sysChar}, this shifts it toward ${topStrength}. ${tradeOffSentence}`;
+  }
+
+  // No system, no taste, no symptom — use conditional framing
+  if (strengths.length >= 2) {
+    return `If your system is leaning away from ${strengths[0]}, this pulls it back while adding ${strengths[1]}. ${tradeOffSentence}`;
+  }
+
+  return `If your system needs more ${strengths[0]}, this gets you there. ${tradeOffSentence}`;
+}
+
 /**
  * Build a brief sonic character description for a product.
  *
@@ -2674,6 +2883,16 @@ function buildCaution(product: Product): string | undefined {
       parts.push(`Placement-sensitive: ${ps.notes}`);
     } else {
       parts.push(`Moderately placement-sensitive: ${ps.notes}`);
+    }
+  }
+
+  // Fallback: extract trade-off from curated tendencies if no other caution exists.
+  // This ensures every product card shows at least one trade-off, matching the
+  // advisor standard of always presenting what you give up alongside what you gain.
+  if (parts.length === 0 && product.tendencies?.tradeoffs && product.tendencies.tradeoffs.length > 0) {
+    const t = product.tendencies.tradeoffs[0];
+    if (t.cost) {
+      parts.push(t.cost.charAt(0).toUpperCase() + t.cost.slice(1) + '.');
     }
   }
 
@@ -2862,6 +3081,10 @@ function selectProductExamples(
   previousAnchor?: PreviousAnchor | null,
   /** Product names shown in recent shopping turns (for anti-repetition). */
   recentProductNames?: string[],
+  /** Brand constraint from user query (e.g., "denafrips" from "denafrips dacs under 1000"). */
+  brandConstraint?: string,
+  /** Extracted symptom keys for anchor justification (output layer only). */
+  symptoms?: string[],
 ): ProductExample[] {
   // ── Turntable: illustrative examples with full card data ──
   if (category === 'turntable') {
@@ -3169,6 +3392,37 @@ function selectProductExamples(
     ranked.sort((a, b) => b.score - a.score);
   }
 
+  // ── Brand constraint boost ─────────────────────────
+  // When the user explicitly asked about a brand (e.g., "denafrips dacs
+  // under 1000" or "and the ares?"), strongly boost products from that
+  // brand. Products slightly over budget (within 25%) get extra rescue
+  // points to compensate for the zero budget score — the user explicitly
+  // asked, so the system should show what they asked for.
+  if (brandConstraint) {
+    const BRAND_CONSTRAINT_BOOST = 0.6;
+    const OVER_BUDGET_RESCUE = 1.0; // compensate for missing budget score
+    const brandLower = brandConstraint.toLowerCase();
+    const ceiling = budgetAmount ? budgetAmount * 1.25 : Infinity;
+    let brandMatchCount = 0;
+    for (const entry of ranked) {
+      if (entry.product.brand.toLowerCase() === brandLower) {
+        entry.score += BRAND_CONSTRAINT_BOOST;
+        // Rescue over-budget products within the hard ceiling
+        if (budgetAmount && entry.product.price > budgetAmount && entry.product.price <= ceiling) {
+          entry.score += OVER_BUDGET_RESCUE;
+          console.log('[brand-constraint] over-budget rescue: %s %s ($%d, budget $%d)',
+            entry.product.brand, entry.product.name, entry.product.price, budgetAmount);
+        }
+        brandMatchCount++;
+      }
+    }
+    if (brandMatchCount > 0) {
+      ranked.sort((a, b) => b.score - a.score);
+      console.log('[brand-constraint] boosted %d products from %s (+%s)',
+        brandMatchCount, brandConstraint, BRAND_CONSTRAINT_BOOST);
+    }
+  }
+
   // ── Architecture diversity selection ────────────────
   // When taste signals are sparse (direct shortlist queries like "best DAC
   // under $2000"), enforce topology diversity so the shortlist represents
@@ -3282,6 +3536,31 @@ function selectProductExamples(
       : hasSparseSignals
         ? selectDiverseByTopology(ranked, poolSize, budgetAmount)
         : ranked.slice(0, poolSize);
+  }
+
+  // ── Liked-brand over-budget injection (post-pool) ────────
+  // When the user has explicitly liked a brand (e.g., "I like Denafrips") and
+  // a budget is set, products from liked brands may be hard-filtered by
+  // rankProducts' budget filter AND excluded from the pool by topology
+  // diversity selection. Inject them directly into the pool so they appear
+  // as "worth hearing" options. Score is set to pool median.
+  if (budgetAmount && listenerProfile && listenerProfile.likedBrands.length > 0) {
+    const likedSet = new Set(listenerProfile.likedBrands.map((b) => b.toLowerCase()));
+    const ceiling = budgetAmount * 1.25;
+    const poolIds = new Set(top.map((sp) => sp.product.id));
+    const medianIdx = Math.floor(top.length / 2);
+    const medianScore = top.length > 0 ? top[Math.min(medianIdx, top.length - 1)].score : 0;
+
+    for (const product of catalog) {
+      if (poolIds.has(product.id)) continue;
+      if (!likedSet.has(product.brand.toLowerCase())) continue;
+      if (product.price <= budgetAmount) continue; // would have survived rankProducts
+      if (product.price > ceiling) continue; // too far over budget
+
+      top.push({ product, score: medianScore });
+      console.log('[liked-brand-inject] %s %s ($%d, score=%s) injected into pool — liked brand, within 25%% ceiling ($%d)',
+        product.brand, product.name, product.price, medianScore.toFixed(2), ceiling);
+    }
   }
 
   // Build lowercase set of current component names for matching
@@ -3735,9 +4014,25 @@ function selectProductExamples(
       });
 
     } else {
-      // Default mode: best with diversity penalty (no mode constraint)
-      // anchorEligible === eligible in default mode (no anchor filter applied)
-      anchor = bestOf(anchorEligible) ?? anchorEligible[0];
+      // Default mode: prefer liked-brand product as anchor when available.
+      // The +1.5 scoring boost in rankProducts already pushes liked-brand products
+      // toward the top, but diversity penalty or anti-repetition might push them
+      // out of #1. This forces the best liked-brand product into the anchor slot
+      // when it exists in the anchor-eligible pool.
+      const likedBrands = profile?.likedBrands ?? [];
+      if (likedBrands.length > 0) {
+        const likedSet = new Set(likedBrands.map((b) => b.toLowerCase()));
+        const likedCandidates = anchorEligible.filter((p) => likedSet.has(p.brand.toLowerCase()));
+        if (likedCandidates.length > 0) {
+          anchor = bestByRank(likedCandidates);
+          console.log('[anchor-liked-brand] forced anchor from liked brand: %s %s (rank %d)',
+            anchor!.brand, anchor!.name, anchor!._rank);
+        }
+      }
+      // Fallback: best with diversity penalty (no liked-brand match or no profile)
+      if (!anchor) {
+        anchor = bestOf(anchorEligible) ?? anchorEligible[0];
+      }
     }
 
     anchor.pickRole = 'anchor';
@@ -3839,6 +4134,22 @@ function selectProductExamples(
       total: result.length,
     });
 
+    // ── Anchor justification (anchor product only) ──────
+    // Compute expert rationale for the anchor. Uses existing product data,
+    // system profile, user traits, and reasoning — output layer only.
+    const anchorProduct = catalog.find(
+      (p) => p.brand === anchor.brand && p.name === anchor.name,
+    );
+    if (anchorProduct) {
+      const justification = buildAnchorJustification(
+        anchorProduct, systemProfile, userTraits, reasoning,
+        anchor.systemDelta, symptoms,
+      );
+      if (justification) {
+        anchor.anchorJustification = justification;
+      }
+    }
+
     return result.map(({ _rank, ...rest }) => rest as ProductExample);
   }
 
@@ -3894,9 +4205,31 @@ function selectProductExamples(
   // ── Final budget safety net ────────────────────────────
   // Strip any product that somehow ended up above budget (e.g. via
   // engaged-product boost or diversity selection overriding the filter).
-  // Products with budgetRealism === 'above_budget' must not be shown.
+  // Products with budgetRealism === 'above_budget' must not be shown —
+  // UNLESS the user explicitly asked for that brand and the price is
+  // within the hard ceiling (25% over budget). This lets "and the ares?"
+  // surface a $1,199 product on a $1,000 budget.
+  const brandConstraintLower = brandConstraint?.toLowerCase();
+  const hardCeiling = budgetAmount ? budgetAmount * 1.25 : Infinity;
+  // Build the set of brands that should be exempt from budget filtering:
+  // explicit brand constraint + liked brands from listener profile.
+  const exemptBrands = new Set<string>();
+  if (brandConstraintLower) exemptBrands.add(brandConstraintLower);
+  if (listenerProfile) {
+    for (const lb of listenerProfile.likedBrands) {
+      exemptBrands.add(lb.toLowerCase());
+    }
+  }
   const budgetFiltered = budgetAmount
-    ? results.filter((r) => r.budgetRealism !== 'above_budget')
+    ? results.filter((r) => {
+        if (r.budgetRealism !== 'above_budget') return true;
+        // Exempt explicitly requested or liked brand within hard ceiling
+        if (exemptBrands.has(r.brand.toLowerCase()) && r.price <= hardCeiling) {
+          console.log('[budget-exempt] %s %s ($%d) — requested/liked brand, within hard ceiling ($%d)', r.brand, r.name, r.price, hardCeiling);
+          return true;
+        }
+        return false;
+      })
     : results;
   // If all products were filtered out, fall back to unfiltered (edge case).
   const finalResults = budgetFiltered.length > 0 ? budgetFiltered : results;
@@ -4430,7 +4763,7 @@ function buildSonicLandscape(
     }
   }
   lines.push(
-    'Each approach has trade-offs. The right choice depends on your listening priorities and how the component interacts with the rest of your system.',
+    'Each approach has trade-offs — the right choice depends on system interaction.',
   );
   return lines.join('\n');
 }
@@ -4517,7 +4850,7 @@ function buildWhyThisFitsYou(
   // 1. Taste alignment — connect recommendations to listener preferences
   const tasteLabel = reasoning?.taste.tasteLabel ?? matchedProfile?.label;
   if (tasteLabel) {
-    bullets.push(`Your preference for ${tasteLabel} shaped the selection toward designs that prioritize those qualities.`);
+    bullets.push(`Selection weighted toward designs that prioritize ${tasteLabel.toLowerCase()}.`);
   }
 
   // 2. System interaction — how these fit the existing chain
@@ -4542,7 +4875,7 @@ function buildWhyThisFitsYou(
     // Only add this if we didn't already use tasteLabel (avoids redundancy)
     const archetypePhrase = ARCHETYPE_LABELS[archetype];
     if (archetypePhrase) {
-      bullets.push(`Your ${archetypePhrase} listening style informed the range of design approaches included here.`);
+      bullets.push(`${archetypePhrase.charAt(0).toUpperCase() + archetypePhrase.slice(1)} listening style — shortlist reflects that axis.`);
     }
   }
 
@@ -4554,7 +4887,7 @@ function buildWhyThisFitsYou(
     if (topo !== 'unknown') topoSet.add(topo);
   }
   if (topoSet.size >= 2 && bullets.length < 3) {
-    bullets.push('The shortlist spans different design philosophies so you can compare how each approach interacts with your priorities.');
+    bullets.push('Shortlist spans different design philosophies for comparison.');
   }
 
   // 5. Budget alignment
@@ -4564,7 +4897,7 @@ function buildWhyThisFitsYou(
       const min = Math.min(...prices);
       const max = Math.max(...prices);
       if (max <= ctx.budgetAmount && min < ctx.budgetAmount * 0.7) {
-        bullets.push(`Options range from $${min.toLocaleString()} to $${max.toLocaleString()}, giving room to allocate budget elsewhere in the chain if needed.`);
+        bullets.push(`Options range $${min.toLocaleString()}–$${max.toLocaleString()}, leaving room elsewhere in the chain.`);
       }
     }
   }
@@ -4597,7 +4930,7 @@ function buildUserContextNote(
 
   if (parts.length === 0) return undefined;
 
-  return `These options represent different sonic directions that could work well given ${parts.join(' and ')}.`;
+  return `Options selected with ${parts.join(' and ')} in mind.`;
 }
 
 // ── Builder ───────────────────────────────────────────
@@ -4629,6 +4962,8 @@ export function buildShoppingAnswer(
   previousAnchor?: PreviousAnchor | null,
   /** Product names shown in recent shopping turns (for anti-repetition). */
   recentProductNames?: string[],
+  /** Brand constraint from user query (e.g., "denafrips" from "denafrips dacs under 1000"). */
+  brandConstraint?: string,
 ): ShoppingAnswer {
   const traits = signals.traits;
   const categoryLabel = CATEGORY_LABELS[ctx.category] ?? 'component';
@@ -4725,15 +5060,15 @@ export function buildShoppingAnswer(
     // Contextualize with budget/system when available, and orient around the product category.
     const budgetFrame = ctx.budgetAmount ? `your $${ctx.budgetAmount.toLocaleString()} budget` : 'your budget';
     if (ctx.category !== 'general') {
-      preferenceSummary = `There are a few solid directions to consider in the ${categoryLabel} space at this level. Each one prioritizes something different — warmth, precision, energy, or control.`;
+      preferenceSummary = `${categoryLabel.charAt(0).toUpperCase() + categoryLabel.slice(1)} shortlist at this budget — each represents a different design trade-off.`;
     } else {
       preferenceSummary = `Based on ${budgetFrame}, here are some solid starting points.`;
     }
   } else if (directed) {
-    preferenceSummary = `Given your preference for ${effectiveTasteLabel}, this direction makes the most sense${archetypeLabel}.${profileNote}`;
+    preferenceSummary = `Optimizing for ${effectiveTasteLabel}${archetypeLabel}.${profileNote}`;
   } else {
     // sufficient confidence, non-directed
-    preferenceSummary = `Based on what you've said so far, you seem to lean toward ${effectiveTasteLabel}${archetypeLabel}.${profileNote}`;
+    preferenceSummary = `Leaning toward ${effectiveTasteLabel}${archetypeLabel}.${profileNote}`;
   }
 
   // 2. Best-fit direction — prefer reasoning direction statement when available.
@@ -4755,9 +5090,9 @@ export function buildShoppingAnswer(
   if (tasteConfidence === 'low') {
     // Low confidence: orient the user with meaningful direction, not just generic framing.
     if (ctx.category !== 'general') {
-      bestFitDirection = `These represent distinct approaches to ${categoryLabel} design — from warmer, more musical options to more precise, controlled ones. Each would take your system in a meaningfully different direction.`;
+      bestFitDirection = `Distinct approaches to ${categoryLabel} design — warmer and musical through to precise and controlled. Each shifts the system differently.`;
     } else {
-      bestFitDirection = `Here are a few different directions. Each represents a different design philosophy and listening experience.`;
+      bestFitDirection = `A few different design directions, each with distinct trade-offs.`;
     }
   } else if (directed) {
     bestFitDirection = `This system should lean toward ${effectiveTasteLabel.toLowerCase()} — ${directedDirection.charAt(0).toLowerCase()}${directedDirection.slice(1)}${directedDirection.endsWith('.') ? '' : '.'}`;
@@ -4770,12 +5105,12 @@ export function buildShoppingAnswer(
   const rawWhyThisFits = matchedProfile?.whyByCategory?.[ctx.category]
     ?? taste.defaultWhy ?? matchedProfile?.defaultWhy ?? FALLBACK_TASTE.defaultWhy;
   const whyThisFits = (hasTasteSignal || directed) && Array.isArray(rawWhyThisFits) && rawWhyThisFits.length > 0
-    ? [`Given your preference for ${effectiveTasteLabel}, these designs lean into that quality.`, ...rawWhyThisFits.slice(0, directed ? 1 : 2)]
+    ? [`Designs selected to lean into ${effectiveTasteLabel.toLowerCase()}.`, ...rawWhyThisFits.slice(0, directed ? 1 : 2)]
     : rawWhyThisFits;
 
   // 4. Product examples (only when catalog exists + budget known)
   // Pass reasoning for directional bias — existing scoring is preserved.
-  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents, ctx.roomContext, engagedProductNames, ctx.constraints, ctx.semanticPreferences, listenerProfile, selectionMode, previousAnchor, recentProductNames);
+  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents, ctx.roomContext, engagedProductNames, ctx.constraints, ctx.semanticPreferences, listenerProfile, selectionMode, previousAnchor, recentProductNames, brandConstraint, signals.symptoms);
 
   // ── Directed mode: cap at 2 products, mark primary ──
   if (directed && productExamples.length > 2) {

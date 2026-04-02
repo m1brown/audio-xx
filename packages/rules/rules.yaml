@@ -24,6 +24,8 @@ rules:
         - narrow_soundstage
         - bass_bloom
         - thin_at_low_volume
+        - too_warm
+        - imbalanced
       has_improvement_signals: true
     outputs:
       explanation: >
@@ -233,6 +235,57 @@ rules:
         Pull speakers at least 12 inches from the rear wall. If bass bloom persists,
         experiment with corner absorption.
 
+  # ── Too Warm / Sluggish ───────────────────────────
+
+  - id: too-warm-sluggish
+    label: Excessive warmth — clarity or dynamics investigation
+    priority: 22
+    conditions:
+      symptoms_present_any:
+        - too_warm
+      traits:
+        tonal_density: up
+        clarity: down
+    outputs:
+      explanation: >
+        Your system sounds overly warm, thick, or sluggish. While warmth is often
+        desirable, too much can obscure detail, slow transients, and reduce musical
+        articulation. This is frequently a downstream issue — the amplifier or
+        speakers may be adding more tonal weight than the signal requires.
+      suggestions:
+        - Investigate whether the amplifier is adding excessive warmth or softening transients.
+        - Check speaker placement — too close to rear walls adds bass weight that reads as warmth.
+      risks:
+        - Swapping to an analytical component to "fix" warmth may overshoot into brightness.
+        - Some of what feels like excessive warmth may be room acoustics, not components.
+      next_step: >
+        Try pulling speakers a few inches away from the rear wall. If that doesn't help,
+        experiment with a different source to see if the warmth reduces upstream.
+
+  # ── Imbalanced / Something Off ───────────────────
+
+  - id: general-imbalance
+    label: General imbalance — system evaluation needed
+    priority: 55
+    conditions:
+      symptoms_present_any:
+        - imbalanced
+    outputs:
+      explanation: >
+        Your description suggests a general sense that something is off or unbalanced,
+        without a specific symptom like brightness, thinness, or fatigue. This often
+        indicates an interaction between components that doesn't resolve into a clear
+        character — the system may be pulling in conflicting directions.
+      suggestions:
+        - Describe what specifically sounds wrong — is it tonal (brightness, warmth), spatial (narrow, closed), or temporal (slow, flat)?
+        - Try simplifying the chain temporarily to isolate where the imbalance originates.
+      risks:
+        - Vague imbalance can lead to unfocused component swapping without progress.
+        - The issue may be room-related rather than component-related.
+      next_step: >
+        Listen to a familiar recording and try to identify one specific thing that
+        bothers you — that will help narrow the diagnosis significantly.
+
   # ── Engagement Archetype: Over-refinement Warning ─
 
   - id: engagement-over-refinement
@@ -309,7 +362,7 @@ rules:
         Low-volume integrity is a specific trait that some components handle better
         than others.
       suggestions:
-        - - Prioritize components known for low-volume completeness; check trait low_volume_integrity.
+        - Prioritize components known for low-volume completeness; check trait low_volume_integrity.
         - Consider whether the DAC or amplifier loses weight at low levels.
       risks:
         - Compensating with loudness curves or EQ can introduce other issues.
@@ -413,7 +466,6 @@ rules:
       suggestions:
         - Describe one thing that sounds wrong.
         - Say whether this is new or long-standing.
-        - Note whether it happens at low, normal, or high volume.
 
       risks:
         - Acting without a clear symptom often leads to unnecessary churn.

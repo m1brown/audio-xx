@@ -548,18 +548,18 @@ describe('Group D — Diagnosis', () => {
       { text: 'My system sounds thin', hasSystem: false, subjectCount: 0 },
     ]);
 
-    // Rule 5: Diagnosis requires system first
+    // Rule 5: Diagnosis ready with symptom only
     expect(results[0].state.mode).toBe('diagnosis');
-    expect(results[0].state.stage).toBe('clarify_system');
+    expect(results[0].state.stage).toBe('ready_to_diagnose');
     expect(results[0].state.facts.symptom).toBeTruthy();
 
     score({
       test: 'D1',
       detectedMode: 'diagnosis',
-      expectedBehavior: 'Ask for system details before diagnosing',
+      expectedBehavior: 'Diagnose based on symptom (no system required)',
       actualBehavior: `${results[0].state.mode}/${results[0].state.stage}`,
       scores: { routing: 5, contextRetention: 5, decisiveness: 5, recommendationTiming: 5, naturalness: 5 },
-      pass: results[0].state.stage === 'clarify_system',
+      pass: results[0].state.stage === 'ready_to_diagnose',
     });
   });
 
@@ -588,15 +588,15 @@ describe('Group D — Diagnosis', () => {
     ]);
 
     expect(results[0].state.mode).toBe('diagnosis');
-    expect(results[0].state.stage).toBe('clarify_system');
+    expect(results[0].state.stage).toBe('ready_to_diagnose');
 
     score({
       test: 'D3',
       detectedMode: 'diagnosis',
-      expectedBehavior: 'Ask for system (diagnosis without system = blocked)',
+      expectedBehavior: 'Diagnose based on symptom (no system required)',
       actualBehavior: `${results[0].state.mode}/${results[0].state.stage}`,
       scores: { routing: 5, contextRetention: 5, decisiveness: 5, recommendationTiming: 5, naturalness: 5 },
-      pass: results[0].state.stage === 'clarify_system',
+      pass: results[0].state.stage === 'ready_to_diagnose',
     });
   });
 });
@@ -752,9 +752,9 @@ describe('Group F — Context Persistence', () => {
       { text: 'WiiM Mini → Schiit Magni → KEF Q150', hasSystem: true, subjectCount: 3 },
     ]);
 
-    // Turn 1: diagnosis, ask for system
+    // Turn 1: diagnosis, ready to diagnose (symptom only)
     expect(results[0].state.mode).toBe('diagnosis');
-    expect(results[0].state.stage).toBe('clarify_system');
+    expect(results[0].state.stage).toBe('ready_to_diagnose');
 
     // Turn 2: system provided → ready to diagnose
     expect(results[1].state.mode).toBe('diagnosis');
@@ -873,8 +873,8 @@ describe('Readiness Checks', () => {
     expect(isReadyToDiagnose({ symptom: 'sounds thin', hasSystem: true })).toBe(true);
   });
 
-  test('isReadyToDiagnose: symptom only = false', () => {
-    expect(isReadyToDiagnose({ symptom: 'sounds thin' })).toBe(false);
+  test('isReadyToDiagnose: symptom only = true', () => {
+    expect(isReadyToDiagnose({ symptom: 'sounds thin' })).toBe(true);
   });
 
   test('isReadyToDiagnose: system only = false', () => {

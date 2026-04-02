@@ -15,6 +15,7 @@ import {
   knowledgeToAdvisory,
   assistantToAdvisory,
   withPhonoCaveat,
+  refineDiagnosisWithContext,
 } from '@/lib/advisory-response';
 import type { AdvisoryResponse, ShoppingAdvisoryContext } from '@/lib/advisory-response';
 import { buildProductAssessment } from '@/lib/product-assessment';
@@ -36,10 +37,11 @@ import {
   detectConclusionIntent,
   buildDecisiveRecommendation,
   buildSystemPairingIntro,
+  findCatalogProduct,
   type ListenerProfile,
 } from '@/lib/listener-profile';
 import { checkGlossaryQuestion } from '@/lib/glossary';
-import { detectIntent, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
+import { detectIntent, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
 import { attachQuickRecommendation } from '@/lib/quick-recommendation';
 import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode, interpretSymptom } from '@/lib/conversation-state';
 import { buildGearResponse } from '@/lib/gear-response';
@@ -76,6 +78,7 @@ import SystemPanel from '@/components/system/SystemPanel';
 import SystemEditor from '@/components/system/SystemEditor';
 import SystemSavePrompt from '@/components/system/SystemSavePrompt';
 import type { DraftSystem } from '@/lib/system-types';
+import ListenerProfileBadge, { buildProfileSnapshot, type ListenerProfileSnapshot } from '@/components/ListenerProfileBadge';
 
 // ── Constants ─────────────────────────────────────────
 
@@ -309,6 +312,10 @@ export default function Home() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Listener profile snapshot — read-only UI display of inferred preferences.
+  // Updated after each turn when the profile changes.
+  const [profileSnapshot, setProfileSnapshot] = useState<ListenerProfileSnapshot | null>(null);
+
   // Taste profile — loaded from API for authenticated users
   const [tasteProfile, setTasteProfile] = useState<TasteProfile | null>(null);
   useEffect(() => {
@@ -363,6 +370,7 @@ export default function Home() {
     // When the state machine is active (mode !== 'idle'), route through
     // transition() before the legacy ref-based blocks below.
     let convModeHint: ConversationMode | undefined;
+    let intent: string = '';
     if (convStateRef.current.mode !== 'idle') {
       // When the state machine is active, it is the single source of truth.
       // Clear legacy refs that duplicate music_input / onboarding tracking
@@ -683,7 +691,7 @@ export default function Home() {
             type: 'ADD_QUESTION',
             clarification: {
               acknowledge: 'I didn\'t catch specific product names.',
-              question: 'Which two components are you comparing? For example: "Chord Qutest vs Denafrips Ares II"',
+              question: 'Which two components are you comparing? For example: "Chord Qutest vs Denafrips Enyo 15th"',
             },
           });
           chipIntentRef.current = 'comparison'; // Stay in lane
@@ -861,7 +869,7 @@ export default function Home() {
     // Intent detection runs after extraction. We only need the intent
     // classification — subjectMatches, desires, and subjects are
     // already canonical in turnCtx.
-    let { intent } = detectIntent(submittedText);
+    ({ intent } = detectIntent(submittedText));
 
     // Count prior shopping advisory turns (needed early for category-switch bypass).
     const shoppingAnswerCount = messages.filter(
@@ -926,6 +934,7 @@ export default function Home() {
         hasSystem: !!turnCtx.activeSystem || !!audioState.activeSystemRef,
         subjectCount: turnCtx.subjectMatches.length,
       });
+      console.log('[diag-cold] detectConvMode result:', initialConvMode ? `${initialConvMode.mode}/${initialConvMode.stage}` : 'null');
       if (initialConvMode) {
         convStateRef.current = initialConvMode;
 
@@ -964,7 +973,15 @@ export default function Home() {
           return;
         }
 
-        // ── Problem entry — interpret symptom, then ask for system ──
+        // ── Problem entry — symptom alone is sufficient to diagnose ──
+        if (initialConvMode.mode === 'diagnosis' && initialConvMode.stage === 'ready_to_diagnose') {
+          convModeHint = 'diagnosis';
+          intent = 'diagnosis';
+          console.log('[diag-cold] ready_to_diagnose — convModeHint set, falling through to eval engine');
+          // Fall through to evaluation engine — diagnosis-first, no clarification
+        }
+
+        // Legacy: if detectInitialMode ever returns clarify_system, ask for system
         if (initialConvMode.mode === 'diagnosis' && initialConvMode.stage === 'clarify_system') {
           dispatch({
             type: 'ADD_QUESTION',
@@ -1149,6 +1166,37 @@ export default function Home() {
       dispatch({ type: 'CLEAR_CONSULTATION_CONTEXT' });
     }
 
+    // ── Diagnosis follow-up detection ──────────────────
+    // If the previous assistant message was a diagnosis with a follow-up
+    // question (e.g., "Can you describe the room?"), and the user's
+    // response provides context rather than a new symptom, refine the
+    // diagnosis with the provided context instead of repeating it.
+    if (
+      intent !== 'shopping' &&
+      intent !== 'comparison'
+    ) {
+      const lastAssistant = [...messages].reverse().find(
+        (m): m is Extract<typeof m, { kind: 'advisory' }> =>
+          m.role === 'assistant' && 'kind' in m && m.kind === 'advisory'
+          && m.advisory.kind === 'diagnosis',
+      );
+      const prevFollowUp = lastAssistant?.advisory.followUp;
+      if (
+        lastAssistant &&
+        isDiagnosisFollowUp(submittedText, prevFollowUp)
+      ) {
+        const refined = refineDiagnosisWithContext(lastAssistant.advisory, submittedText);
+        if (refined) {
+          console.log('[diagnosis-followup] Refined diagnosis with room/system context');
+          dispatchAdvisory(refined, advisoryId());
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+        // If refineDiagnosisWithContext returns undefined (no extractable
+        // context), fall through to the normal pipeline.
+      }
+    }
+
     // ── Consultation entry path ────────────────────────
     // User asks for system assessment or upgrade guidance but hasn't named
     // specific gear. Produces a structured intake response that explains
@@ -1326,7 +1374,21 @@ export default function Home() {
     // If buildSystemAssessment returned null above, we still don't want consultation
     // to intercept and produce a brand comparison (e.g. "Chord vs Wlm").
     // product_assessment is similarly guarded — it has its own hard gate above.
-    const consultationGuarded = intent === 'system_assessment' || intent === 'product_assessment';
+    // Active shopping guard: when the user is in an active shopping session
+    // (shoppingAnswerCount > 0), brand/product mentions like "denafrips?" or
+    // "what about denafrips?" are shopping refinements, not consultation queries.
+    // Without this guard, gear_inquiry subjects trigger buildConsultationResponse
+    // which produces brand essays and early-returns before the mode override can
+    // redirect to the shopping pipeline.
+    // Diagnosis guard: when diagnosis is active, component mentions ("my dac
+    // is a topping") must NOT trigger brand essays. The consultation path would
+    // see isGearWithSubjects=true and fire buildConsultationResponse before the
+    // diagnosis continuity override can fold gear_inquiry back into diagnosis.
+    // Block the entire consultation path during active diagnosis — all inputs
+    // must flow to the diagnosis handling downstream.
+    const consultationGuarded = intent === 'system_assessment' || intent === 'product_assessment'
+      || (effectiveMode === 'shopping' && shoppingAnswerCount > 0)
+      || effectiveMode === 'diagnosis';
     if (!consultationGuarded && (effectiveMode === 'consultation' || isBrandComparison || isGearWithSubjects)) {
       const consultResult = buildConsultationResponse(submittedText, turnCtx.subjectMatches);
       if (consultResult) {
@@ -1385,15 +1447,34 @@ export default function Home() {
     // never fall through to the diagnostic engine.
     // Consultation is handled upstream (before detectIntent) and
     // returns early, so it cannot be swallowed by this override.
-    // product_assessment is exempt — "I'm considering the X" should
-    // always produce a direct assessment, even mid-shopping flow.
+    // product_assessment: when we're in an active shopping session
+    // (prior shopping answers shown), "what about denafrips?" is a
+    // shopping refinement, not a standalone assessment. Override to
+    // shopping so brand/product context is retained. Only allow
+    // product_assessment to break out when no shopping answers have
+    // been shown yet (i.e., first turn with assessment language).
     // system_assessment and comparison are exempt — these are topic changes
     // that must break out of shopping context regardless of prior mode.
-    if (effectiveMode === 'shopping' && intent !== 'shopping' && intent !== 'product_assessment' && intent !== 'system_assessment' && intent !== 'comparison') {
-      intent = 'shopping';
+    const productAssessmentInShopping = intent === 'product_assessment' && shoppingAnswerCount > 0;
+    if (effectiveMode === 'shopping' && intent !== 'shopping' && intent !== 'system_assessment' && intent !== 'comparison') {
+      if (intent !== 'product_assessment' || productAssessmentInShopping) {
+        intent = 'shopping';
+      }
     }
-    if (effectiveMode === 'diagnosis' && intent !== 'comparison' && intent !== 'gear_inquiry' && intent !== 'system_assessment') {
+    // ── Diagnosis continuity override ─────────────────
+    // When diagnosis is active, ALL intents fold back into diagnosis
+    // except comparison and system_assessment (genuine topic changes).
+    // This prevents component mentions ("my dac is a topping"),
+    // brand mentions ("topping"), and gear inquiries from escaping
+    // to consultation/exploratory handlers mid-diagnosis. The
+    // consultation path guard above (consultationGuarded) blocks the
+    // early-return path; this override catches anything that slips
+    // through to the gear_inquiry handler downstream.
+    if (effectiveMode === 'diagnosis' && intent !== 'comparison' && intent !== 'system_assessment') {
       intent = 'diagnosis';
+      // Ensure the diagnosis clarification skip is active even when the state
+      // machine wasn't engaged (e.g., follow-up after shopping reset to idle).
+      if (!convModeHint) convModeHint = 'diagnosis';
     }
 
     // ── Product assessment — hard gate ─────────────────
@@ -1597,6 +1678,13 @@ export default function Home() {
     // Shopping and diagnosis intents go through the evaluation engine.
     // Attempt API evaluation for richer signals; on failure, fall back
     // to deterministic pipeline with empty signals.
+    //
+    // Final convModeHint safety net: if detectIntent resolved to diagnosis
+    // but the state machine wasn't engaged (idle, or returned null), ensure
+    // the hint is set so skipDiagClarification works downstream.
+    if (intent === 'diagnosis' && !convModeHint) {
+      convModeHint = 'diagnosis';
+    }
     const allUserText = [...messages.filter((m) => m.role === 'user').map((m) => m.content), submittedText].join('\n');
     const newTurnCount = turnCount + 1;
 
@@ -1609,6 +1697,15 @@ export default function Home() {
         listenerProfileRef.current, preferenceSignals,
       );
       listenerProfileRef.current = updatedProfile;
+
+      // Update profile badge immediately so early-return paths also show changes
+      const earlyReflection = generateTasteReflection(updatedProfile);
+      setProfileSnapshot(buildProfileSnapshot(
+        updatedProfile.inferredTraits,
+        updatedProfile.confidence,
+        updatedProfile.sourceSignals.length,
+        earlyReflection?.direction,
+      ));
 
       console.log('[listener-profile] signals detected:', applied);
       console.log('[listener-profile]', {
@@ -1830,11 +1927,21 @@ export default function Home() {
     // only evaluate the current turn + recent context — not the entire
     // accumulated allUserText. This avoids redundant Prisma calls and
     // keeps signal extraction focused on what's new.
+    //
+    // Also scope the first shopping turn after a non-shopping mode to
+    // prevent prior-mode signals (e.g. diagnosis symptoms) from leaking
+    // into shopping product selection. state.activeMode still reflects
+    // the *prior* turn's mode here because SET_MODE dispatches async.
     const isShoppingRefinement = intent === 'shopping' && shoppingAnswerCount > 0;
-    const evaluateText = isShoppingRefinement
+    const isFirstShoppingAfterModeSwitch = intent === 'shopping'
+      && shoppingAnswerCount === 0
+      && state.activeMode !== 'shopping';
+    const scopeShoppingText = isShoppingRefinement || isFirstShoppingAfterModeSwitch;
+    const evaluateText = scopeShoppingText
       ? [submittedText, ...messages.filter((m) => m.role === 'user').map((m) => m.content).slice(-2)].join('\n')
       : allUserText;
 
+    console.log('[diag-cold] about to call /api/evaluate (intent=%s, convModeHint=%s, text=%s)', intent, convModeHint, evaluateText.slice(0, 80));
     let evalData: { signals: import('@/lib/signal-types').ExtractedSignals; result?: unknown } | null = null;
     try {
       const res = await fetch('/api/evaluate', {
@@ -1844,6 +1951,7 @@ export default function Home() {
       });
       if (res.ok) {
         evalData = await res.json();
+        console.log('[diag-cold] /api/evaluate OK (rules=%d)', evalData?.result?.fired_rules?.length ?? 'n/a');
       } else {
         console.warn('[main-pipeline] /api/evaluate returned', res.status, '— using deterministic fallback');
       }
@@ -2106,7 +2214,23 @@ export default function Home() {
             console.log('[selection-mode]', { input: submittedText, mode: selectionMode });
           }
 
-          const answer = buildShoppingAnswer(shoppingCtx, pipelineSignals, tasteProfile ?? undefined, reasoning, advisoryCtx.systemComponents, engagedNames, listenerProfileRef.current, selectionMode, lastAnchorRef.current, recentShoppingProductsRef.current);
+          // Extract brand constraint from current-turn subject matches.
+          // If no explicit brand subject, infer from a product subject via catalog lookup
+          // (e.g., "and the ares?" → catalog finds Denafrips Ares 15th → brand = "denafrips").
+          const brandSubject = turnCtx.subjectMatches.find((m) => m.kind === 'brand' && !m.parenthetical);
+          let brandConstraint = brandSubject?.name;
+          if (!brandConstraint) {
+            const productSubject = turnCtx.subjectMatches.find((m) => m.kind === 'product');
+            if (productSubject) {
+              const catalogHit = findCatalogProduct(productSubject.name);
+              if (catalogHit) {
+                brandConstraint = catalogHit.brand.toLowerCase();
+                console.log('[brand-infer] "%s" → catalog brand "%s"', productSubject.name, brandConstraint);
+              }
+            }
+          }
+
+          const answer = buildShoppingAnswer(shoppingCtx, pipelineSignals, tasteProfile ?? undefined, reasoning, advisoryCtx.systemComponents, engagedNames, listenerProfileRef.current, selectionMode, lastAnchorRef.current, recentShoppingProductsRef.current, brandConstraint);
 
           // ── Debug: final product list ──────────────────
           if (answer.productExamples && answer.productExamples.length > 0) {
@@ -2594,15 +2718,24 @@ export default function Home() {
         }
       }
 
+      const skipDiagClarification = convModeHint === 'diagnosis';
+
       if (evalData) {
         // API succeeded — use full evaluation data
-        const clarification = getClarificationQuestion(
-          pipelineSignals,
-          evalData.result,
-          newTurnCount,
-          allUserText,
-          submittedText,
-        );
+        // When the state machine already decided ready_to_diagnose (symptom
+        // is sufficient), skip the clarification gate and diagnose immediately.
+        // This prevents low-information checks from overriding the state
+        // machine's readiness decision with a generic "describe what bothers
+        // you" question.
+        const clarification = skipDiagClarification
+          ? null
+          : getClarificationQuestion(
+              pipelineSignals,
+              evalData.result,
+              newTurnCount,
+              allUserText,
+              submittedText,
+            );
 
         // ── Three-layer reasoning (diagnosis) ──────
         const reasoning = reason(
@@ -2615,12 +2748,15 @@ export default function Home() {
         const diagDirection = inferSystemDirection(submittedText, turnCtx.desires, undefined, tasteProfile ?? undefined);
 
         if (clarification) {
+          console.log('[diag-cold] clarification fired (skipDiag=%s)', skipDiagClarification);
           dispatch({ type: 'ADD_QUESTION', clarification });
         } else {
+          console.log('[diag-cold] dispatching advisory (rules=%d)', evalData.result?.fired_rules?.length ?? 0);
           dispatchAdvisory(analysisToAdvisory(evalData.result, pipelineSignals, diagDirection, reasoning, advisoryCtx), advisoryId());
         }
-      } else {
+      } else if (!skipDiagClarification) {
         // API failed — ask a refinement question to gather more context
+        // (skipped when state machine already committed to diagnosis mode)
         dispatch({
           type: 'ADD_QUESTION',
           clarification: {
@@ -2630,6 +2766,17 @@ export default function Home() {
         });
       }
     }
+
+    // ── Update listener profile snapshot for UI ──
+    // Refresh after all turn processing so the badge reflects the latest state.
+    const lp = listenerProfileRef.current;
+    const reflection = generateTasteReflection(lp);
+    setProfileSnapshot(buildProfileSnapshot(
+      lp.inferredTraits,
+      lp.confidence,
+      lp.sourceSignals.length,
+      reflection?.direction,
+    ));
 
     dispatch({ type: 'SET_LOADING', value: false });
   }, [currentInput, isLoading, messages, turnCount, tasteProfile, state.activeMode, audioState]);
@@ -2732,6 +2879,7 @@ export default function Home() {
     onboardingContextRef.current = null;
     awaitingListeningPathRef.current = false;
     intakeShownRef.current = false;
+    setProfileSnapshot(null);
     dispatch({ type: 'RESET' });
   }
 
@@ -2902,6 +3050,11 @@ export default function Home() {
         )}
       </div>
 
+      {/* Listener profile badge — visible during conversation when profile has data */}
+      {hasMessages && profileSnapshot && (
+        <ListenerProfileBadge snapshot={profileSnapshot} />
+      )}
+
       {/* System editor modal */}
       {systemEditorOpen && (
         <SystemEditor
@@ -2994,8 +3147,13 @@ export default function Home() {
         <div style={{ marginTop: '0.75rem', marginBottom: '1.5rem' }}>
           {messages
             .filter((msg) => {
-              // In inquiry mode (pending question), suppress diagnosis advisory messages
-              if (hasPendingQuestion && msg.role === 'assistant' && 'kind' in msg && msg.kind === 'advisory' && msg.advisory.kind === 'diagnosis') {
+              // In inquiry mode (pending question), suppress diagnosis advisory messages —
+              // but only when the pending item is an actual clarification question,
+              // not when the diagnosis advisory itself is the last message.
+              if (
+                lastMessage?.kind === 'question' &&
+                msg.role === 'assistant' && 'kind' in msg && msg.kind === 'advisory' && msg.advisory.kind === 'diagnosis'
+              ) {
                 return false;
               }
               return true;

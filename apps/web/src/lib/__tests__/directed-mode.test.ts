@@ -77,8 +77,8 @@ describe('Directed mode: budget + category + taste → directed output', () => {
     const reasoning = reason(allUserText, [], warmSignals, null, ctx, undefined);
     const answer = buildShoppingAnswer(ctx, warmSignals, undefined, reasoning, []);
 
-    // Should use "Given your preference" framing, NOT "You appear to value"
-    expect(answer.preferenceSummary).toMatch(/given your preference/i);
+    // Should use direct preference framing, NOT "You appear to value"
+    expect(answer.preferenceSummary).toMatch(/optimizing for/i);
     expect(answer.preferenceSummary).not.toMatch(/you appear to value/i);
   });
 

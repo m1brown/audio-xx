@@ -396,10 +396,10 @@ export const DAC_PRODUCTS: Product[] = [
   },
 
   {
-    id: 'denafrips-ares-12th-1',
+    id: 'denafrips-enyo-15th',
     brand: 'Denafrips',
-    name: 'Ares 12th-1',
-    price: 600,
+    name: 'Enyo 15th',
+    price: 699,
     category: 'dac',
     architecture: 'R2R',
     subcategory: 'standalone-dac',
@@ -409,9 +409,9 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'SG',
     topology: 'r2r',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
-    // Axis reasoning: Entry R2R — "body and engagement over analytical precision."
-    // Flow+density present, clarity less_emphasized. Dense harmonic texture, relaxed
-    // timing. Warm, smooth, neutral dynamics, neutral staging.
+    // Axis reasoning: Entry R2R — successor to the Ares 12th-1 at this price point.
+    // Same Denafrips house sound: body, engagement, warmth over analytical precision.
+    // Inherits the Ares 12th-1 sonic character at the entry-level position.
     primaryAxes: {
       warm_bright: 'warm',            // Tonal density 0.7, flow 0.7, clarity 0.4 — clearly warm
       smooth_detailed: 'smooth',      // Flow present, clarity less_emphasized, "relaxed timing"
@@ -446,9 +446,9 @@ export const DAC_PRODUCTS: Product[] = [
       elasticity: 0.4,
     },
     description:
-      'Entry-level R2R with strong tonal density and natural rhythmic flow. Favors body and engagement over analytical precision.',
+      'Entry-level R2R DAC inheriting the Denafrips house sound. Strong tonal density and natural rhythmic flow. Favors body and engagement over analytical precision.',
     retailer_links: [
-      { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/product/denafrips-ares-12th-1' },
+      { label: 'Denafrips', url: 'https://www.denafrips.com/product-page/denafrips-enyo-15th-r-2r-dac' },
     ],
     tendencies: {
       confidence: 'high',
@@ -466,15 +466,92 @@ export const DAC_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
-      { source: 'Darko.Audio', note: 'Review covering Denafrips R2R house sound and the Ares as entry point to the lineup.' },
-      { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising the Ares II for musicality and engagement at its price.' },
-      { source: 'Twittering Machines', note: 'Positive coverage of the R2R tonal character and listening ease.' },
-      { source: 'Head-Fi community', note: 'Extensive owner comparisons with Bifrost 2, SMSL, and Topping alternatives.' },
+      { source: 'Denafrips official', note: 'Enyo 15th is the current entry-level R2R DAC, replacing the Ares 12th-1 at this price point.' },
+      { source: 'Head-Fi community', note: 'Owner comparisons confirm similar tonal character to the Ares 12th-1.' },
     ],
-    // Step 10: buying metadata
     typicalMarket: 'new',
     buyingContext: 'dealer_likely',
-    // imageUrl: undefined, // TODO: add official product image
+    philosophy: 'warm',
+    marketType: 'value',
+  },
+
+  {
+    id: 'denafrips-ares-15th',
+    brand: 'Denafrips',
+    name: 'Ares 15th',
+    price: 1199,
+    category: 'dac',
+    architecture: 'R2R',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid-fi',
+    brandScale: 'specialist',
+    region: 'southeast-asia',
+    country: 'SG',
+    topology: 'r2r',
+    archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
+    // Axis reasoning: Mid-range R2R — refined version of Denafrips house sound.
+    // More resolving than the Enyo while retaining the tonal density and flow
+    // that define the Denafrips character. Enhanced power supply and I2S input.
+    primaryAxes: {
+      warm_bright: 'warm',            // Denafrips house sound — tonal density, flow
+      smooth_detailed: 'smooth',      // Flow present, slightly more resolving than Enyo
+      elastic_controlled: 'neutral',  // Dynamics present but balanced
+      airy_closed: 'neutral',        // No strong spatial data
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Warmth and ease make fatigue unlikely. Slightly more resolving than the Enyo but still relaxed.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'flow', level: 'present' },
+        { trait: 'tonal_density', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'clarity', level: 'present' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      flow: 0.75,
+      tonal_density: 0.75,
+      clarity: 0.5,
+      dynamics: 0.7,
+      fatigue_risk: 0.0,
+      glare_risk: 0.0,
+      texture: 0.75,
+      composure: 0.5,
+      elasticity: 0.45,
+    },
+    description:
+      'Mid-range R2R DAC with refined Denafrips house sound. More resolving than the Enyo while retaining tonal density and natural flow. Enhanced power supply with UPOCC copper.',
+    retailer_links: [
+      { label: 'Denafrips', url: 'https://www.denafrips.com/product-page/denafrips-ares-15th-r-2r-dac' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'tonality', tendency: 'dense harmonic texture with physical midrange weight — more refined than Enyo', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'relaxed sense of timing with improved microdynamic resolution', basis: 'listener_consensus' },
+        { domain: 'texture', tendency: 'grain-free detail retrieval with better separation than entry-level', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with bright or analytical amplifiers', effect: 'tends to temper upper-frequency edge without dulling transients', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in systems already biased toward warmth', effect: 'can compound density — midrange may feel heavy or congested', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'tonal body, listening ease, and improved resolution over Enyo', cost: 'transient precision and analytical separation vs delta-sigma', relative_to: 'delta-sigma designs at this price', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Denafrips official', note: 'Ares 15th is the current mid-range R2R DAC at $1,199.' },
+      { source: 'Darko.Audio', note: 'Review covering Denafrips R2R house sound.' },
+      { source: 'Head-Fi community', note: 'Extensive owner comparisons with Bifrost 2 and other R2R alternatives.' },
+    ],
+    typicalMarket: 'new',
+    buyingContext: 'dealer_likely',
     philosophy: 'warm',
     marketType: 'value',
   },
@@ -3922,6 +3999,77 @@ export const DAC_PRODUCTS: Product[] = [
     ],
     notes: 'Budget multibit DAC with surprising dynamics and engagement. Entry point into Schiit\'s multibit house sound.',
     philosophy: 'energy',
+    marketType: 'traditional',
+  },
+
+  // ── Cen.Grand (China — discrete DSD) ───────────────────
+
+  {
+    id: 'cengrand-dsdac-1-0-deluxe',
+    brand: 'Cen.Grand',
+    name: 'DSDAC 1.0 Deluxe',
+    price: 3500,
+    category: 'dac',
+    architecture: 'Discrete DSD conversion (no off-the-shelf DAC chip) + R-2R ladder for PCM',
+    subcategory: 'standalone-dac',
+    priceTier: 'upper-mid',
+    brandScale: 'specialist',
+    region: 'asia',
+    country: 'CN',
+    topology: 'r2r',
+    archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
+    primaryAxes: {
+      warm_bright: 'warm',
+      smooth_detailed: 'smooth',
+      elastic_controlled: 'elastic',
+      airy_closed: 'neutral',
+    },
+    fatigueAssessment: {
+      risk: 'very_low',
+      notes: 'Dense, rich, analog-like presentation. Inherently non-fatiguing.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'warmth', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'texture', level: 'present' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 0.6, warmth: 0.8, tonal_density: 0.85,
+      speed: 0.6, dynamics: 0.7, flow: 0.85,
+      spatial_precision: 0.65, composure: 0.65, texture: 0.8,
+      fatigue_risk: 0.0, glare_risk: 0.0,
+      elasticity: 0.7,
+    },
+    description: 'Discrete DSD conversion without off-the-shelf DAC chips — the DSD path is built from discrete components for exceptional naturalness. PCM uses R-2R ladder with similar warmth. Dense, rich, analog-like. Not for detail-first listeners. Reviewed on 6moons.',
+    retailer_links: [
+      { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'tonality', tendency: 'warm, dense, analog-like — the discrete DSD path sounds exceptionally natural', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'musically flowing — organic phrasing over transient precision', basis: 'review_consensus' },
+        { domain: 'texture', tendency: 'rich harmonic texture — instruments have body and substance', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'fed DSD files (DSD64, DSD128, DSD256)', effect: 'the discrete DSD path is where this DAC truly shines', valence: 'positive', basis: 'review_consensus' },
+        { condition: 'paired with transparent amplification', effect: 'warmth and density provide excellent complementary balance', valence: 'positive', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'tonal density, harmonic richness, analog-like naturalness, and DSD excellence', cost: 'ultimate resolution, transient speed, and analytical precision', relative_to: 'precision delta-sigma or FPGA DACs', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: '6moons', note: 'Reviewed. Praised for discrete DSD topology and analog-like presentation.' },
+    ],
+    notes: 'Discrete DSD topology is genuinely unique — most DACs use chips or FPGA. Cen.Grand builds DSD conversion from individual components.',
+    philosophy: 'warm',
     marketType: 'traditional',
   },
 ];

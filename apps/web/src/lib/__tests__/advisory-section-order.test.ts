@@ -1,7 +1,7 @@
 /**
  * Advisory section order snapshot test.
  *
- * Verifies the 9-section system-assessment structure is preserved.
+ * Verifies the 8-section system-assessment structure is preserved.
  * If this test fails, the advisory section order has changed —
  * which requires intentional approval.
  *
@@ -11,10 +11,9 @@
  *   3. What the System Does Especially Well
  *   4. Trade-offs in the System
  *   5. Strength of Each Component
- *   6. Upgrade Paths
- *   7. Components I Would Keep
- *   8. Recommended Upgrade Path
- *   9. System Philosophy Insight
+ *   6. Components I Would Keep
+ *   7. Recommended Upgrade Path
+ *   8. System Philosophy Insight
  */
 
 // @ts-nocheck — globals provided by test-runner.ts
@@ -32,7 +31,6 @@ const EXPECTED_SECTION_ORDER = [
   'What the System Does Especially Well',
   'Trade-offs in the System',
   'Strength of Each Component',
-  'Upgrade Paths',
   'Components I Would Keep',
   'Recommended Upgrade Path',
   'System Philosophy Insight',
@@ -143,7 +141,7 @@ describe('Advisory section order', () => {
       'My system is Eversolo DMP-A6 → Chord Hugo → JOB Integrated → WLM Diva. How does it look?',
     );
 
-    // A 4-component system should produce all 9 sections
+    // A 4-component system should produce all 8 sections
     expect(sections).toEqual(EXPECTED_SECTION_ORDER);
   });
 
@@ -157,7 +155,7 @@ describe('Advisory section order', () => {
     }
   });
 
-  it('expected section order constant is exactly 9 entries', () => {
-    expect(EXPECTED_SECTION_ORDER.length).toBe(9);
+  it('expected section order constant is exactly 8 entries', () => {
+    expect(EXPECTED_SECTION_ORDER.length).toBe(8);
   });
 });

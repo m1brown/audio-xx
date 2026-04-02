@@ -199,7 +199,7 @@ export function isReadyToRecommend(facts: ConvFacts): boolean {
 
 /** True when we have enough to run diagnosis. */
 export function isReadyToDiagnose(facts: ConvFacts): boolean {
-  return !!facts.symptom && !!facts.hasSystem;
+  return !!facts.symptom;
 }
 
 /** True when we have enough to run a comparison. */
@@ -218,7 +218,7 @@ const MODE_COMPATIBLE_INTENTS: Record<ConvMode, Set<string>> = {
   idle: new Set(), // idle accepts everything — never checked
   orientation: new Set(['shopping', 'diagnosis', 'intake', 'music_input', 'consultation_entry']),
   shopping: new Set(['shopping', 'intake', 'music_input']),
-  diagnosis: new Set(['diagnosis', 'system_assessment', 'consultation_entry', 'gear_inquiry', 'intake', 'shopping']),
+  diagnosis: new Set(['diagnosis', 'system_assessment', 'consultation_entry', 'gear_inquiry', 'intake']),
   music_input: new Set(['music_input', 'shopping', 'intake']),
   improvement: new Set(['diagnosis', 'shopping', 'intake']),
   comparison: new Set(['comparison', 'exploration']),
@@ -416,8 +416,9 @@ export function transition(
   // This prevents stale category/budget/system data from leaking
   // across unrelated flows (e.g. DAC shopping → KEF vs ELAC comparison).
   if (context.detectedIntent && isIntentMismatch(current.mode, context.detectedIntent, text)) {
+    const freshMode = detectInitialMode(text, context);
     return {
-      state: INITIAL_CONV_STATE,
+      state: freshMode ?? INITIAL_CONV_STATE,
       response: null,
     };
   }
@@ -695,28 +696,16 @@ export function transition(
       }
 
       if (current.stage === 'clarify_system') {
-        // User provided system details
+        // User provided system details — or couldn't. Either way, proceed.
+        // System info enriches diagnosis but never gates it.
         facts.hasSystem = facts.hasSystem || context.subjectCount > 0;
-        if (facts.hasSystem) {
-          return {
-            state: { mode: 'diagnosis', stage: 'ready_to_diagnose', facts },
-            response: { kind: 'proceed' },
-          };
-        }
         // Check if the user elaborated on their symptom instead of naming components.
-        // Uses the lighter keyword check since we're already in diagnosis mode.
-        // Update the stored symptom so the interpretation stays current.
         if (hasSymptomKeyword(text)) {
           facts.symptom = text;
         }
-        // Still no system detected — interpret whatever symptom we have
         return {
-          state: { mode: 'diagnosis', stage: 'clarify_system', facts },
-          response: {
-            kind: 'question',
-            acknowledge: facts.symptom ? interpretSymptom(facts.symptom) : 'Got it.',
-            question: 'Can you name the specific components? For example: "Bluesound Node, Hegel H190, KEF Q350."',
-          },
+          state: { mode: 'diagnosis', stage: 'ready_to_diagnose', facts },
+          response: { kind: 'proceed' },
         };
       }
 
@@ -1243,6 +1232,17 @@ export function detectInitialMode(
     return { mode: 'shopping', stage: 'ready_to_recommend', facts };
   }
 
+  // Rule 3c: Brand/product + budget → shopping (no category required).
+  // "denafrips under 1000" or "denafrips ares under 1000" — the user named
+  // a recognized brand or product AND stated a budget. That's a shopping
+  // query even without an explicit category keyword. The shopping pipeline
+  // will ask for category if needed, or the brand constraint will guide
+  // product selection once category is clarified.
+  if (facts.budget && context.subjectCount >= 1) {
+    console.log('[brand+budget] recognized brand/product + budget → shopping (subjects=%d, budget=%s)', context.subjectCount, facts.budget);
+    return { mode: 'shopping', stage: 'clarify_category', facts };
+  }
+
   // Music input — fast-track to shopping when enough signal is present.
   // If the user provides music + budget (+ optional room/category), skip the
   // onboarding question flow and go straight to shopping. Default category
@@ -1275,12 +1275,9 @@ export function detectInitialMode(
     if (context.subjectCount >= 1) {
       facts.hasSystem = true;
     }
-    if (facts.hasSystem) {
-      return { mode: 'diagnosis', stage: 'ready_to_diagnose', facts };
-    }
-    // No system yet — interpret the symptom first, then ask for components.
-    // This avoids the blunt "What's in your system?" gating.
-    return { mode: 'diagnosis', stage: 'clarify_system', facts };
+    // Symptom alone is sufficient to diagnose — system info enriches but
+    // never gates. Proceed directly to ready_to_diagnose.
+    return { mode: 'diagnosis', stage: 'ready_to_diagnose', facts };
   }
 
   // Shopping with complete intent → skip clarification

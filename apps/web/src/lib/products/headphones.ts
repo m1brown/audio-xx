@@ -1048,4 +1048,102 @@ export const HEADPHONE_PRODUCTS: HeadphoneProduct[] = [
       useCases: ['commute', 'flight', 'home'],
     },
   },
+
+  // ── Raal-Requisite (Serbia — ribbon headphones) ────────
+
+  {
+    id: 'raal-requisite-1995-immanis',
+    brand: 'Raal-Requisite',
+    name: '1995 Immanis',
+    price: 6000,
+    category: 'headphone',
+    architecture: 'True ribbon driver, open-back, requires speaker amplifier or dedicated ribbon amp interface',
+    subcategory: 'other',
+    priceTier: 'high-end',
+    brandScale: 'boutique',
+    region: 'europe',
+    country: 'RS',
+    archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'speed', level: 'emphasized' },
+        { trait: 'spatial_precision', level: 'emphasized' },
+        { trait: 'texture', level: 'emphasized' },
+        { trait: 'dynamics', level: 'emphasized' },
+        { trait: 'flow', level: 'present' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 1.0, warmth: 0.2, tonal_density: 0.6,
+      speed: 1.0, dynamics: 0.9, flow: 0.8,
+      spatial_precision: 1.0, composure: 0.8, texture: 0.9,
+      fatigue_risk: 0.1, openness: 1.0,
+    },
+    description: 'True ribbon headphone requiring speaker amplification — not a conventional headphone in any sense. Electrostatic-like speed and transparency with ribbon directness and zero compression. Massive soundstage, lightning transients, and detail retrieval that rivals the best electrostatics. The ribbon driver is inherently smooth in attack despite extreme resolution. Srajan Ebaen\'s (6moons) reference headphone.',
+    retailer_links: [
+      { label: 'Raal-Requisite', url: 'https://rfrequestie.com/' },
+    ],
+    sourceReferences: [
+      { source: '6moons', note: 'Srajan Ebaen\'s reference headphone. Extensive coverage of the 1995 and Immanis models.' },
+    ],
+    headphoneMeta: {
+      formFactor: 'over-ear',
+      wireless: false,
+      anc: false,
+      isolation: 'low',
+      portableUse: false,
+      useCases: ['home'],
+    },
+  },
+
+  // ── Aune (China — value planar magnetic) ───────────────
+
+  {
+    id: 'aune-ar5000',
+    brand: 'Aune',
+    name: 'AR5000',
+    price: 500,
+    category: 'headphone',
+    architecture: 'Open-back planar magnetic',
+    subcategory: 'other',
+    priceTier: 'mid',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'medium',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'speed', level: 'emphasized' },
+        { trait: 'composure', level: 'emphasized' },
+        { trait: 'flow', level: 'present' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 0.8, warmth: 0.3, tonal_density: 0.5,
+      speed: 0.85, dynamics: 0.7, flow: 0.65,
+      spatial_precision: 0.75, composure: 0.8, texture: 0.7,
+      fatigue_risk: 0.15, openness: 0.8,
+    },
+    description: 'Clean, fast, surprisingly refined open-back planar magnetic at an accessible price. Srajan Ebaen\'s 2024 brand pick on 6moons. Planar speed and composure typically associated with much more expensive designs. Not warm or romantic — precision-oriented with good soundstage for a planar. Outstanding value proposition.',
+    retailer_links: [],
+    sourceReferences: [
+      { source: '6moons', note: 'Aune was Srajan\'s 2024 favourite brand. AR5000 praised for refinement-per-dollar.' },
+    ],
+    headphoneMeta: {
+      formFactor: 'over-ear',
+      wireless: false,
+      anc: false,
+      isolation: 'low',
+      portableUse: false,
+      useCases: ['home'],
+    },
+  },
 ];

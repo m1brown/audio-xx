@@ -57,17 +57,19 @@ function contextFor(text: string) {
 // ── Shopping → other intent ─────────────────────────────
 
 describe('Shopping → new intent resets state', () => {
-  it('shopping + "KEF vs ELAC" → idle (comparison clears DAC state)', () => {
+  it('shopping + "KEF vs ELAC" → comparison (re-detects new mode, clears DAC state)', () => {
     const result = transition(shoppingState(), 'KEF vs ELAC', contextFor('KEF vs ELAC'));
-    expect(result.state.mode).toBe('idle');
-    expect(result.state.facts).toEqual({});
+    expect(result.state.mode).toBe('comparison');
+    expect(result.state.facts.category).toBeUndefined();
+    expect(result.state.facts.budget).toBeUndefined();
     expect(result.response).toBeNull();
   });
 
-  it('shopping + "my system sounds thin" → idle (diagnosis clears shopping)', () => {
+  it('shopping + "my system sounds thin" → diagnosis (re-detects new mode, clears shopping)', () => {
     const result = transition(shoppingState(), 'my system sounds thin', contextFor('my system sounds thin'));
-    expect(result.state.mode).toBe('idle');
-    expect(result.state.facts).toEqual({});
+    expect(result.state.mode).toBe('diagnosis');
+    expect(result.state.facts.category).toBeUndefined();
+    expect(result.state.facts.budget).toBeUndefined();
     expect(result.response).toBeNull();
   });
 
@@ -97,10 +99,10 @@ describe('Diagnosis → new intent resets state', () => {
     expect(result.state.facts.symptom).toBeUndefined();
   });
 
-  it('diagnosis + "KEF vs ELAC" → idle (comparison clears diagnosis)', () => {
+  it('diagnosis + "KEF vs ELAC" → comparison (re-detects new mode, clears diagnosis)', () => {
     const result = transition(diagnosisState(), 'KEF vs ELAC', contextFor('KEF vs ELAC'));
-    expect(result.state.mode).toBe('idle');
-    expect(result.state.facts).toEqual({});
+    expect(result.state.mode).toBe('comparison');
+    expect(result.state.facts.symptom).toBeUndefined();
   });
 
   it('diagnosis + "Bryston and Harbeth" → stays in diagnosis (system info is compatible)', () => {
@@ -116,16 +118,16 @@ describe('Diagnosis → new intent resets state', () => {
 // ── Comparison → other intent ───────────────────────────
 
 describe('Comparison → new intent resets state', () => {
-  it('comparison + "I want a DAC" → idle (shopping clears comparison)', () => {
+  it('comparison + "I want a DAC" → shopping (re-detects new mode, clears comparison)', () => {
     const result = transition(comparisonState(), 'I want a DAC', contextFor('I want a DAC'));
-    expect(result.state.mode).toBe('idle');
-    expect(result.state.facts).toEqual({});
+    expect(result.state.mode).toBe('shopping');
+    expect(result.state.facts.comparisonTargets).toBeUndefined();
   });
 
-  it('comparison + "my system sounds bright" → idle (diagnosis clears comparison)', () => {
+  it('comparison + "my system sounds bright" → diagnosis (re-detects new mode, clears comparison)', () => {
     const result = transition(comparisonState(), 'my system sounds bright', contextFor('my system sounds bright'));
-    expect(result.state.mode).toBe('idle');
-    expect(result.state.facts).toEqual({});
+    expect(result.state.mode).toBe('diagnosis');
+    expect(result.state.facts.comparisonTargets).toBeUndefined();
   });
 });
 
@@ -147,15 +149,15 @@ describe('Music input → compatible transitions', () => {
     expect(result.state.mode).not.toBe('idle');
   });
 
-  it('music_input + "KEF vs ELAC" → idle (comparison clears music_input)', () => {
+  it('music_input + "KEF vs ELAC" → comparison (re-detects new mode, clears music_input)', () => {
     const musicState: ConvState = {
       mode: 'music_input',
       stage: 'awaiting_listening_path',
       facts: { musicDescription: 'van halen' },
     };
     const result = transition(musicState, 'KEF vs ELAC', contextFor('KEF vs ELAC'));
-    expect(result.state.mode).toBe('idle');
-    expect(result.state.facts).toEqual({});
+    expect(result.state.mode).toBe('comparison');
+    expect(result.state.facts.musicDescription).toBeUndefined();
   });
 });
 

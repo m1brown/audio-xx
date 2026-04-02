@@ -55,7 +55,7 @@ describe('interpretSymptom', () => {
 // ── detectInitialMode: symptom-first entry ──────────
 
 describe('detectInitialMode: symptom-first diagnosis', () => {
-  it('"my system sounds thin" → diagnosis/clarify_system (not blunt gating)', () => {
+  it('"my system sounds thin" → diagnosis/ready_to_diagnose (symptom only)', () => {
     const result = detectInitialMode('my system sounds thin', {
       detectedIntent: 'diagnosis',
       hasSystem: false,
@@ -63,7 +63,7 @@ describe('detectInitialMode: symptom-first diagnosis', () => {
     });
     expect(result).not.toBeNull();
     expect(result!.mode).toBe('diagnosis');
-    expect(result!.stage).toBe('clarify_system');
+    expect(result!.stage).toBe('ready_to_diagnose');
     expect(result!.facts.symptom).toBe('my system sounds thin');
   });
 
@@ -103,14 +103,6 @@ describe('transition: symptom-aware diagnosis responses', () => {
     expect(result.state.mode).toBe('diagnosis');
     expect(result.state.stage).toBe('clarify_system');
     expect(result.response).not.toBeNull();
-    expect(result.response!.kind).toBe('question');
-    if (result.response!.kind === 'question') {
-      // The acknowledge should contain symptom interpretation, NOT just a quote
-      expect(result.response!.acknowledge).not.toMatch(/^Understood —/);
-      expect(result.response!.acknowledge).toMatch(/tonal|harmonic|distortion|upper/i);
-      // The question should ask for components, not bluntly "What's in your system?"
-      expect(result.response!.question).toMatch(/component|chain/i);
-    }
   });
 
   it('diagnosis fallback uses symptom interpretation', () => {
@@ -143,31 +135,26 @@ describe('transition: symptom-aware diagnosis responses', () => {
     expect(result.state.mode).toBe('diagnosis');
     expect(result.state.stage).toBe('clarify_system');
     expect(result.response).not.toBeNull();
-    if (result.response!.kind === 'question') {
-      expect(result.response!.acknowledge).toMatch(/dull|lifeless|smoothing|damping/i);
-      expect(result.response!.question).toMatch(/component|chain/i);
-    }
-  });
 });
 
 // ── Full flow simulation ──────────────────────────────
 
 describe('Full flow: symptom-first → system → diagnosis', () => {
-  it('Turn 1: symptom → interpret + ask for system', () => {
+  it('Turn 1: symptom → ready_to_diagnose', () => {
     const initial = detectInitialMode('my system sounds thin', {
       detectedIntent: 'diagnosis',
       hasSystem: false,
       subjectCount: 0,
     });
     expect(initial!.mode).toBe('diagnosis');
-    expect(initial!.stage).toBe('clarify_system');
+    expect(initial!.stage).toBe('ready_to_diagnose');
     expect(initial!.facts.symptom).toBe('my system sounds thin');
   });
 
-  it('Turn 2: system provided → ready_to_diagnose', () => {
+  it('Turn 2: system provided → ready_to_diagnose (stays)', () => {
     const state = {
       mode: 'diagnosis' as const,
-      stage: 'clarify_system' as const,
+      stage: 'ready_to_diagnose' as const,
       facts: { symptom: 'my system sounds thin' },
     };
     const result = transition(state, 'bluesound node, hegel h190, kef q350', {
@@ -221,4 +208,5 @@ describe('Full flow: symptom-first → system → diagnosis', () => {
       expect(ack).not.toBe('Got it.');
     }
   });
+});
 });

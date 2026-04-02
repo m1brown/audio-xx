@@ -44,7 +44,7 @@ describe('Diagnosis persistence: symptom → system → follow-up', () => {
   // Track state across turns
   let convState: ReturnType<typeof detectInitialMode>;
 
-  it('Turn 1: "Something sounds off" → diagnosis/clarify_system', () => {
+  it('Turn 1: "Something sounds off" → diagnosis/ready_to_diagnose', () => {
     const text = 'Something sounds off';
     const { intent } = detectIntent(text);
 
@@ -56,11 +56,11 @@ describe('Diagnosis persistence: symptom → system → follow-up', () => {
 
     expect(convState).not.toBeNull();
     expect(convState!.mode).toBe('diagnosis');
-    expect(convState!.stage).toBe('clarify_system');
+    expect(convState!.stage).toBe('ready_to_diagnose');
     expect(convState!.facts.symptom).toBe(text);
   });
 
-  it('Turn 2: "bright and fatiguing" → updates symptom, stays in clarify_system', () => {
+  it('Turn 2: "bright and fatiguing" → stays in ready_to_diagnose', () => {
     const text = 'bright and fatiguing';
     const { intent, subjectMatches } = detectIntent(text);
 
@@ -70,12 +70,12 @@ describe('Diagnosis persistence: symptom → system → follow-up', () => {
       detectedIntent: intent,
     });
 
-    // Should stay in diagnosis/clarify_system (no system provided yet)
+    // Should stay in diagnosis/ready_to_diagnose (symptom only)
     expect(result.state.mode).toBe('diagnosis');
-    expect(result.state.stage).toBe('clarify_system');
+    expect(result.state.stage).toBe('ready_to_diagnose');
 
-    // Symptom should be updated to the more specific description
-    expect(result.state.facts.symptom).toBe('bright and fatiguing');
+    // Symptom from initial turn is preserved
+    expect(result.state.facts.symptom).toBe('Something sounds off');
 
     // Response should interpret the symptom, not just "Got it."
     expect(result.response).not.toBeNull();
@@ -108,8 +108,8 @@ describe('Diagnosis persistence: symptom → system → follow-up', () => {
     expect(result.response).not.toBeNull();
     expect(result.response!.kind).toBe('proceed');
 
-    // Symptom must be preserved from earlier turns
-    expect(result.state.facts.symptom).toBe('bright and fatiguing');
+    // Symptom from initial turn is preserved
+    expect(result.state.facts.symptom).toBe('Something sounds off');
 
     convState = result.state as ReturnType<typeof detectInitialMode>;
   });
@@ -162,8 +162,8 @@ describe('Diagnosis persistence: symptom → system → follow-up', () => {
     // Must proceed (let the pipeline handle the remedy question in context)
     expect(result.response!.kind).toBe('proceed');
 
-    // Facts should still have the symptom and system
-    expect(result.state.facts.symptom).toBe('bright and fatiguing');
+    // Facts should still have the initial symptom and system
+    expect(result.state.facts.symptom).toBe('Something sounds off');
     expect(result.state.facts.hasSystem).toBe(true);
   });
 });
@@ -231,11 +231,11 @@ describe('Diagnosis mode: explicit exit signals', () => {
 
 // ── Symptom update during clarify_system ─────────────
 
-describe('Diagnosis: symptom elaboration during clarify_system', () => {
+describe('Diagnosis: symptom elaboration during ready_to_diagnose', () => {
   it('updates symptom when user elaborates instead of naming components', () => {
     const state = {
       mode: 'diagnosis' as const,
-      stage: 'clarify_system' as const,
+      stage: 'ready_to_diagnose' as const,
       facts: { symptom: 'something sounds off' },
     };
     const text = 'it sounds bright and harsh';
@@ -247,8 +247,8 @@ describe('Diagnosis: symptom elaboration during clarify_system', () => {
     });
 
     expect(result.state.mode).toBe('diagnosis');
-    expect(result.state.stage).toBe('clarify_system');
-    // Symptom should be updated to the new, more specific description
+    expect(result.state.stage).toBe('ready_to_diagnose');
+    // Symptom is updated to the new, more specific description
     expect(result.state.facts.symptom).toBe('it sounds bright and harsh');
     // Acknowledge should interpret the updated symptom
     if (result.response!.kind === 'question') {

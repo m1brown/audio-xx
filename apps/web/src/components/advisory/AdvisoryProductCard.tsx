@@ -18,6 +18,7 @@ import type { AdvisoryOption } from '../../lib/advisory-response';
 import { renderText } from './render-text';
 import { trackLinkClick, trackCardView } from '../../lib/interaction-tracker';
 import { shouldShowAmazonLink, getAmazonSearchUrl } from '../../lib/amazon-links';
+import { buildProductLinks } from '../../lib/product-links';
 
 // ── Design tokens ─────────────────────────────────────
 
@@ -68,10 +69,10 @@ const AVAILABILITY_LABELS: Record<string, { text: string; color: string; bg: str
 
 const ROLE_LABELS: Record<string, { text: string; color: string; bg: string; border: string }> = {
   // 4-option model roles
-  anchor:    { text: 'What I Would Start With',                 color: '#2d5a2d', bg: '#e8f2e8', border: '#a8d0a8' },
-  close_alt: { text: 'If You Want the Same Idea, Slightly Different', color: '#3d5a5a', bg: '#e8f0f0', border: '#a8c8c8' },
-  contrast:  { text: 'If You Want a Different Direction',       color: '#3d3d6e', bg: '#e8e9f2', border: '#a8a8d0' },
-  wildcard:  { text: 'Worth Hearing (Less Traditional)',        color: '#6e5a2d', bg: '#f2efe8', border: '#d0c4a0' },
+  anchor:    { text: 'Start here',                              color: '#2d5a2d', bg: '#e8f2e8', border: '#a8d0a8' },
+  close_alt: { text: 'Similar direction',                       color: '#3d5a5a', bg: '#e8f0f0', border: '#a8c8c8' },
+  contrast:  { text: 'Different trade-off',                     color: '#3d3d6e', bg: '#e8e9f2', border: '#a8a8d0' },
+  wildcard:  { text: 'Worth hearing',                           color: '#6e5a2d', bg: '#f2efe8', border: '#d0c4a0' },
   // Legacy roles (backward compatibility)
   top_pick:     { text: 'Best Choice',    color: '#2d5a2d', bg: '#e8f2e8', border: '#a8d0a8' },
   upgrade_pick: { text: 'Upgrade Choice', color: '#3d3d6e', bg: '#e8e9f2', border: '#a8a8d0' },
@@ -162,67 +163,28 @@ function TrackedLinkRow({ links, kind, onClick }: {
 }
 
 function ProductLinksSection({ opt, onLinkClick }: { opt: AdvisoryOption; onLinkClick?: (kind: string, label: string, url: string) => void }) {
-  const isDiscontinued = opt.availability === 'discontinued' || opt.availability === 'vintage';
-  const isUsedOnly = isDiscontinued || opt.typicalMarket === 'used';
-
-  // ── New purchase links ──
-  const newLinks: Array<{ label: string; url: string }> = [];
-  if (!isUsedOnly && opt.manufacturerUrl) {
-    newLinks.push({ label: opt.brand ?? 'Manufacturer', url: opt.manufacturerUrl });
-  }
-  // Add dealer links from structured link metadata
-  if (!isUsedOnly && opt.links) {
-    for (const l of opt.links) {
-      if (l.kind === 'dealer' || l.label.toLowerCase().includes('dealer')) {
-        if (!newLinks.some((nl) => nl.url === l.url)) {
-          // Strip "Buy new — " prefix if present to avoid duplication
-          // with the "Buy new" section label rendered by the parent.
-          const cleanLabel = l.label.replace(/^buy\s+new\s*[-—–]\s*/i, '');
-          newLinks.push({ label: cleanLabel, url: l.url });
-        }
-      }
-    }
-  }
-
-  // ── Amazon (appended to new links when appropriate) ──
-  const showAmazon = shouldShowAmazonLink({
+  // ── Deterministic link builder ──
+  // Priority: dealer → amazon (verified ASIN only) → manufacturer → hifishark → ebay
+  // See product-links.ts for full priority logic and deduplication.
+  //
+  // opt.links contains the original retailer_links from the catalog with
+  // kind metadata added by the advisory layer. We pass them as both
+  // retailerLinks (for URL/label analysis) and advisoryLinks (for kind).
+  // manufacturerUrl is retailer_links[0].url — also passed as a fallback.
+  const resolved = buildProductLinks({
+    name: opt.name,
     brand: opt.brand,
+    retailerLinks: opt.links?.map(l => ({ label: l.label, url: l.url })),
+    advisoryLinks: opt.links,
     availability: opt.availability,
     typicalMarket: opt.typicalMarket,
     buyingContext: opt.buyingContext,
+    usedMarketUrl: opt.usedMarketUrl,
+    usedMarketSources: opt.usedMarketSources,
+    manufacturerUrl: opt.manufacturerUrl,
   });
-  if (!isUsedOnly && showAmazon) {
-    // Prevent duplicate if an existing link already points to Amazon
-    const hasAmazon = newLinks.some((nl) => nl.url.includes('amazon.com') || nl.label.toLowerCase() === 'amazon');
-    if (!hasAmazon) {
-      newLinks.push({ label: 'Amazon', url: getAmazonSearchUrl(opt.name, opt.brand) });
-    }
-  }
 
-  // ── Used purchase links ──
-  const usedLinks: Array<{ label: string; url: string }> = [];
-  const hifiShark = opt.usedMarketUrl ?? hifiSharkUrl(opt.brand, opt.name);
-  usedLinks.push({ label: 'HiFi Shark', url: hifiShark });
-  usedLinks.push({ label: 'eBay', url: ebayUrl(opt.brand, opt.name) });
-  // Add any structured used-market sources
-  if (opt.usedMarketSources) {
-    for (const src of opt.usedMarketSources) {
-      if (!usedLinks.some((ul) => ul.url === src.url)) {
-        usedLinks.push({ label: src.name, url: src.url });
-      }
-    }
-  }
-
-  // ── Further reading links (reviews, references) ──
-  const readingLinks: Array<{ label: string; url: string }> = [];
-  if (opt.links) {
-    for (const l of opt.links) {
-      const lowerLabel = l.label.toLowerCase();
-      if (l.kind === 'review' || l.kind === 'reference' || lowerLabel.includes('review') || lowerLabel.includes('reference') || lowerLabel.includes('read')) {
-        readingLinks.push({ label: l.label, url: l.url });
-      }
-    }
-  }
+  const { newLinks, usedLinks, readingLinks, isUsedOnly } = resolved;
 
   const handleClick = (kind: string, label: string, url: string) => {
     // Distinguish Amazon clicks for tracking granularity
@@ -501,8 +463,8 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
 
       {/* ── Content sections (standardized order per Task 2) ── */}
 
-      {/* 1. Why this fits you */}
-      {opt.fitNote && (
+      {/* 1. Why this fits you — prefer system-aware note when available */}
+      {(opt.systemDelta?.whyFitsSystem || opt.fitNote) && (
         <div style={{ marginBottom: '1rem' }}>
           <SectionLabel>Why this fits you</SectionLabel>
           <p style={{
@@ -511,7 +473,7 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
             lineHeight: 1.75,
             color: COLORS.text,
           }}>
-            {renderText(opt.fitNote)}
+            {renderText(opt.systemDelta?.whyFitsSystem ?? opt.fitNote ?? '')}
           </p>
         </div>
       )}

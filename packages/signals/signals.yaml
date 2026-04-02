@@ -28,6 +28,35 @@ signals:
       - aggressive
       - etched
       - hard
+      - metallic
+      - too metallic
+      - tinny
+      - shrill
+      - shrieky
+      - ear piercing
+      - s sounds are harsh
+      - too much treble
+      - too much high end
+      - highs are too much
+      # "how much X" pattern
+      - how much treble
+      - so much treble
+      - how bright
+      - how harsh
+      # simile / metaphor
+      - sounds like a tin can
+      - tin can sound
+      - sounds like a phone speaker
+      - sounds like a cheap radio
+      # instrument-specific
+      - cymbals are painful
+      - cymbals hurt
+      - guitar sounds harsh
+      - piano sounds tinny
+      - vocals sound harsh
+      # negated positive
+      - no smoothness
+      - no sweetness
     signals:
       fatigue_risk: up
       glare_risk: up
@@ -55,6 +84,14 @@ signals:
       - forward
       - antiseptic
       - soulless
+      - sounds fake
+      - sounds artificial
+      - sounds synthetic
+      - sounds processed
+      - no soul
+      - lacks soul
+      - too perfect
+      - surgically clean
     signals:
       fatigue_risk: up
       sweetness: down
@@ -138,6 +175,43 @@ signals:
       - no body
       - lacks weight
       - skeletal
+      - not enough body
+      - not enough weight
+      - not enough warmth
+      - not enough richness
+      - needs more body
+      - lacks bass
+      - no bass
+      - missing bass
+      - not enough bass
+      - hollow
+      - hollow sounding
+      - nasal
+      - voices sound nasal
+      - no low end
+      - no bottom end
+      - sounds empty
+      - where is the bass
+      # simile / metaphor
+      - sounds like a radio
+      - sounds like a telephone
+      - sounds tinny
+      - sounds cheap
+      # instrument-specific
+      - vocals sound thin
+      - drums sound weak
+      - drums have no weight
+      - guitar sounds thin
+      - piano sounds thin
+      # negated positive
+      - no warmth
+      - no richness
+      - no fullness
+      - no bottom
+      - no heft
+      - lacks fullness
+      - needs more warmth
+      - needs more bass
     signals:
       tonal_density: down
       bass_weight: down
@@ -155,12 +229,88 @@ signals:
       - unengaging
       - uninvolving
       - dry
+      - not enough energy
+      - not enough dynamics
+      - not enough life
+      - lacks energy
+      - lacks dynamics
+      - underwhelming
+      - doesn't move me
+      - nothing special
+      - sounds like background music
+      - not exciting
+      - no emotion
+      - lacks emotion
+      - doesn't do anything for me
+      # compressed / dynamics family
+      - sounds compressed
+      - compressed
+      - everything is one volume
+      - no loud and soft
+      - dynamics are flat
+      - no dynamic range
+      - no contrast
+      # instrument-specific
+      - drums have no punch
+      - drums have no impact
+      - no kick
+      - drums sound flat
+      - music sounds flat
+      # negated positive
+      - no punch
+      - no impact
+      - no slam
+      - no drive
+      - no excitement
+      - no groove
+      - lacks punch
+      - lacks impact
+      - no presence
+      # behavioral / emotional
+      - music isn't fun anymore
+      - can't enjoy the music
+      - doesn't make me want to listen
+      - I don't listen as much
+      - I keep turning it off
     signals:
       flow: down
       tonal_density: down
       dynamics: down
       elasticity: down
     symptom: flat_lifeless
+
+  # ── Too Warm / Sluggish ────────────────────────────
+  # Complaint about excessive warmth — distinct from positive warmth preference
+
+  - phrases:
+      - too warm
+      - overly warm
+      - sluggish
+      - syrupy
+      - too thick
+      - too heavy
+      - slow and heavy
+      - lacks clarity
+      - woolly
+      # "how much X" pattern
+      - how warm
+      - so warm
+      - too much warmth
+      # simile / metaphor
+      - sounds like molasses
+      - sounds bloated
+      # negated positive
+      - no sparkle
+      - no air
+      - no crispness
+      - lacks sparkle
+      - lacks air
+      - lacks crispness
+    signals:
+      tonal_density: up
+      clarity: down
+      dynamics: down
+    symptom: too_warm
 
   # ── Congestion / Muddiness ────────────────────────
 
@@ -171,6 +321,35 @@ signals:
       - cloudy
       - smeared
       - veiled
+      - not enough detail
+      - not enough clarity
+      - not enough separation
+      - lacks detail
+      - lacks clarity
+      - muffled
+      - sounds muffled
+      - sounds underwater
+      - like underwater
+      - sounds like a tunnel
+      - can't hear the words
+      - can't hear vocals
+      - vocals are buried
+      - everything blends together
+      - no definition
+      - can't make out
+      # instrument-specific
+      - instruments blur together
+      - can't tell instruments apart
+      - bass guitar all sounds the same
+      - voices are unclear
+      - vocals are muddy
+      # negated positive
+      - no detail
+      - no clarity
+      - no separation
+      - no resolution
+      - lacks resolution
+      - lacks separation
     signals:
       clarity: down
       damping_control: down
@@ -184,9 +363,37 @@ signals:
       - tiring
       - exhausting
       - can't listen long
+      - can't listen for long
       - need a break
+      - ears need a break
       - wearing
       - grating
+      - distortion
+      - too much distortion
+      - sounds distorted
+      - makes me sweat
+      - causes me to sweat
+      - sweating
+      - gives me a headache
+      - headache
+      - physically uncomfortable
+      - painful to listen
+      - hurts my ears
+      - ears hurt
+      - ear pain
+      - makes my ears ring
+      - want to turn it down
+      - have to turn it down
+      - listening is stressful
+      # temporal / behavioral
+      - gets worse over time
+      - fine at first but
+      - after an hour
+      - after a while
+      - the longer I listen
+      - wears me out
+      - draining to listen
+      - I used to listen more
     signals:
       fatigue_risk: up
     symptom: fatigue
@@ -238,6 +445,19 @@ signals:
       - small sounding
       - boxed in
       - intimate
+      # simile / metaphor
+      - sounds like it's in a box
+      - sounds like a box
+      - sounds like a closet
+      - sounds trapped
+      - sounds confined
+      - sounds closed off
+      # negated positive
+      - no air
+      - no openness
+      - no space
+      - lacks openness
+      - not open
     signals:
       openness: down
       soundstage: down
@@ -266,6 +486,12 @@ signals:
       - impactful
       - explosive
       - transient
+      - slam
+      - bass slam
+      - chest thump
+      - hits hard
+      - kick drum impact
+      - weight behind the notes
     signals:
       dynamics: up
       elasticity: up
@@ -343,6 +569,12 @@ signals:
       - suffocated
       - no life
       - mechanical
+      - robotic
+      - sounds like a machine
+      - no breath
+      - no swing
+      - sterile but not bright
+      - held back
     signals:
       elasticity: down
       dynamics: down
@@ -360,6 +592,15 @@ signals:
       - lacks excitement
       - no toe tapping
       - doesn't grab me
+      - sounds nice but boring
+      - pleasant but uninvolving
+      - correct but lifeless
+      - accurate but boring
+      - technically good but
+      - doesn't make me tap my foot
+      - no groove
+      - no swing
+      - no boogie
     signals:
       elasticity: down
       dynamics: down
@@ -376,6 +617,10 @@ signals:
       - stressful
       - too much energy
       - overwhelming
+      - too loud even at low volume
+      - always feels loud
+      - hard to relax
+      - feels like it's yelling
     signals:
       composure: down
       fatigue_risk: up
@@ -420,6 +665,12 @@ signals:
       - step backwards
       - regression
       - downgrade
+      - sounded better in the store
+      - sounded better at the shop
+      - not as good as the demo
+      - not what I expected
+      - didn't sound like this before
+      - what happened
     signals:
       flow: down
     symptom: regression
@@ -438,6 +689,28 @@ signals:
       flow: up
     symptom: improvement
 
+  # ── Imbalanced / Not Balanced ──────────────────────
+
+  - phrases:
+      - not balanced
+      - unbalanced
+      - imbalanced
+      - off balance
+      - something is off
+      - doesn't sound right
+      - sounds wrong
+      - out of balance
+      - sounds off
+      - sounds weird
+      - sounds bad
+      - not right
+      - sounds crappy
+      - sounds terrible
+      - just doesn't sound good
+    signals:
+      flow: down
+    symptom: imbalanced
+
   # ── Narrow Soundstage ─────────────────────────────
 
   - phrases:
@@ -447,6 +720,21 @@ signals:
       - no separation
       - everything in the middle
       - collapsed
+      - sounds mono
+      - no stereo
+      - no spread
+      - coming from one spot
+      - no space between instruments
+      - everything is piled together
+      # negated positive
+      - no soundstage
+      - no imaging
+      - no depth
+      - sounds flat and two dimensional
+      - two dimensional
+      - no layering
+      - lacks width
+      - lacks depth
     signals:
       soundstage: down
     symptom: narrow_soundstage
@@ -458,9 +746,48 @@ signals:
       - bloated
       - boomy
       - one-note bass
+      - one note bass
       - bass overhang
       - room boom
       - resonant bass
+      - too much bass
+      - too bassy
+      - excessive bass
+      - bass heavy
+      - overpowering bass
+      - muddy bass
+      - bass is overwhelming
+      - how much bass
+      - so much bass
+      - all bass
+      - all i hear is bass
+      - way too much low end
+      - too much low end
+      - overwhelmed by bass
+      - drowning in bass
+      - bass overpowers
+      - bass drowns out
+      - loose bass
+      - flabby bass
+      - wobbly bass
+      - bass is out of control
+      - low end is out of control
+      - bass resonance
+      - rumbling
+      - everything sounds boomy
+      - bass in everything
+      # "how much X" pattern
+      - how much low end
+      - how bassy
+      # instrument-specific
+      - bass guitar is booming
+      - kick drum is boomy
+      - every bass note sounds the same
+      # simile / metaphor
+      - sounds like a subwoofer is on
+      - the room is vibrating
+      - walls are shaking
+      - can feel it in my chest
     signals:
       damping_control: down
       bass_weight: up

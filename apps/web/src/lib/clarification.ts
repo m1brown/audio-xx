@@ -247,7 +247,7 @@ function generateAcknowledge(
     if (category !== 'general') {
       return `There are a few good directions for ${catName} — the right one depends on your system and listening preferences.`;
     }
-    return 'There are several directions worth considering — the best fit depends on your priorities.';
+    return 'A few directions come to mind — the right one depends on your priorities.';
   }
 
   // Budget-led questions

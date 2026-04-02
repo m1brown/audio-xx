@@ -56,8 +56,10 @@ const CORRECTIONS: Record<string, string> = {
   'reveling': 'revealing',
 
   // Shorthand / product variants
-  'ares 2': 'ares ii',
-  'ares2': 'ares ii',
+  'ares 2': 'ares 15th',
+  'ares2': 'ares 15th',
+  'ares ii': 'ares 15th',
+  'enyo': 'enyo 15th',
   'hugo tt2': 'hugo tt2',
   'tt 2': 'tt2',
 };

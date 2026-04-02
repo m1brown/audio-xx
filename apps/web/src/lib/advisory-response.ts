@@ -794,40 +794,6 @@ function buildEditorialIntro(
     ? ` under ~${budget} (new price or typical used price)`
     : '';
 
-  // Selection philosophy sentence
-  const selectionNote = ` I selected models that are widely regarded for sound quality and musical engagement, not simply "good for the money."`;
-
-  // Build the preference anchor
-  let preferenceClause = '';
-
-  if (storedDesires && storedDesires.length >= 2) {
-    // Use stored taste profile traits
-    const traitList = storedDesires.slice(0, 3);
-    const formatted = traitList.length === 1
-      ? traitList[0].toLowerCase()
-      : traitList.length === 2
-        ? `${traitList[0].toLowerCase()} and ${traitList[1].toLowerCase()}`
-        : `${traitList.slice(0, -1).map(t => t.toLowerCase()).join(', ')}, and ${traitList[traitList.length - 1].toLowerCase()}`;
-    preferenceClause = ` The list considers your listening priorities: ${formatted}`;
-  } else if (tasteLabel && !/balanced presentation|musical engagement/i.test(tasteLabel)) {
-    // Only include preference clause for real taste signals, not fallback labels
-    preferenceClause = ` The list is aligned with your preference for ${tasteLabel.toLowerCase()}`;
-  }
-
-  // Build the archetype bridge
-  const ARCHETYPE_BRIDGES: Record<string, string> = {
-    flow_organic: 'musical flow and organic presentation',
-    precision_explicit: 'precision and detail retrieval',
-    rhythmic_propulsive: 'rhythmic energy and dynamic engagement',
-    tonal_saturated: 'tonal richness and harmonic density',
-    spatial_holographic: 'spatial precision and holographic staging',
-  };
-
-  let alignmentClause = '';
-  if (archetype && ARCHETYPE_BRIDGES[archetype]) {
-    alignmentClause = `, prioritising ${ARCHETYPE_BRIDGES[archetype]} rather than purely measurement-driven designs`;
-  }
-
   // System compatibility note — extract amplifier name if present
   let systemClause = '';
   if (systemComponents && systemComponents.length > 0) {
@@ -836,18 +802,15 @@ function buildEditorialIntro(
       AMP_KEYWORDS.some(kw => c.toLowerCase().includes(kw)),
     );
     if (ampComponent) {
-      systemClause = `, and compatibility with your ${ampComponent}`;
+      systemClause = `, with compatibility for your ${ampComponent}`;
     } else {
-      systemClause = `, and compatibility with your current system`;
+      systemClause = `, with compatibility for your current system`;
     }
   }
 
-  // Combine: "Below are … under ~$2,000 (new price or typical used price). I selected …
-  //           The list considers … prioritising …, and compatibility with …."
-  const opening = `Below are the most consistently respected ${catLabel}${budgetClause}.`;
-  const body = `${selectionNote}${preferenceClause}${alignmentClause}${systemClause}.`;
-
-  return `${opening}${body}`;
+  // Combine — preference and archetype detail now live in systemInterpretation,
+  // so the intro stays brief: what category, what budget, what system constraint.
+  return `These ${catLabel}${budgetClause} represent different design trade-offs${systemClause}. The first is where I'd start.`;
 }
 
 /**
@@ -906,7 +869,7 @@ function buildDirectedEditorialIntro(
     ? `, working with your ${systemComponents.slice(0, 2).join(' and ')}`
     : '';
 
-  return `This ${catLabel} should lean toward ${directionPhrase}. Here is the strongest match for that direction${budgetClause}${systemClause}.`;
+  return `This ${catLabel} should lean toward ${directionPhrase}. Here's where I'd look${budgetClause}${systemClause}.`;
 }
 
 /**
@@ -999,14 +962,10 @@ function buildSystemInterpretation(
   const hasTasteSignal = !!reasoning?.taste.archetype;
 
   // ── Layer 1: System acknowledgment ──
+  // Tendency detail is in systemContextPreamble — keep this brief.
   if (ctx?.systemComponents && ctx.systemComponents.length > 0) {
     const systemList = ctx.systemComponents.slice(0, 3).join(', ');
-    const tendency = reasoning?.system.tendencySummary ?? ctx.systemTendencies;
-    if (tendency) {
-      parts.push(`Your system (${systemList}) leans toward ${tendency.toLowerCase().replace(/\.$/, '')}.`);
-    } else {
-      parts.push(`With ${systemList} in your system, the component you add will shape the overall character.`);
-    }
+    parts.push(`With ${systemList} in your system:`);
   }
 
   // ── Layer 2: Taste/preference interpretation (only with real signal) ──
@@ -1016,18 +975,18 @@ function buildSystemInterpretation(
     const archetype = reasoning.taste.archetype;
     const isDirected = !!a.directed;
     const ARCHETYPE_INTERPRETATION_DIRECTED: Record<string, string> = {
-      flow_organic: 'Given your preference for musical flow and natural phrasing, this direction makes the most sense.',
-      rhythmic_propulsive: 'Given your preference for energy and impact, this direction makes the most sense.',
-      tonal_saturated: 'Given your preference for tonal richness and harmonic density, this direction makes the most sense.',
-      precision_explicit: 'Given your preference for resolution and precision, this direction makes the most sense.',
-      spatial_holographic: 'Given your preference for spatial depth and imaging, this direction makes the most sense.',
+      flow_organic: 'Priority: musical flow and natural phrasing.',
+      rhythmic_propulsive: 'Priority: energy, impact, and transient speed.',
+      tonal_saturated: 'Priority: tonal richness and harmonic density.',
+      precision_explicit: 'Priority: resolution and precision.',
+      spatial_holographic: 'Priority: spatial depth and imaging.',
     };
     const ARCHETYPE_INTERPRETATION: Record<string, string> = {
-      flow_organic: 'Based on your inputs, musical flow and natural phrasing are the primary axis here — not clinical precision.',
-      rhythmic_propulsive: 'Based on your inputs, rhythmic energy and transient speed are the driving priorities — music that feels alive and forward-moving.',
-      tonal_saturated: 'Based on your inputs, tonal richness and harmonic density take precedence over speed or detail.',
-      precision_explicit: 'Based on your inputs, resolution, separation, and precision are the primary axis — hearing everything clearly.',
-      spatial_holographic: 'Based on your inputs, spatial depth and imaging are the driving priorities — the sense of a performance in a real space.',
+      flow_organic: 'Your inputs point toward musical flow and natural phrasing over clinical precision.',
+      rhythmic_propulsive: 'Your inputs point toward rhythmic energy and transient speed — music that feels alive.',
+      tonal_saturated: 'Your inputs point toward tonal richness and harmonic density over speed or detail.',
+      precision_explicit: 'Your inputs point toward resolution, separation, and precision.',
+      spatial_holographic: 'Your inputs point toward spatial depth and imaging — a sense of real performance space.',
     };
     const interpretation = isDirected
       ? ARCHETYPE_INTERPRETATION_DIRECTED[archetype]
@@ -1352,7 +1311,7 @@ export function consultationToAdvisory(
 
   return enrichAdvisory({
     kind: 'consultation',
-    advisoryMode: isComparison ? 'gear_comparison' as AdvisoryMode : c.advisoryMode,
+    advisoryMode: c.advisoryMode ?? (isComparison ? 'gear_comparison' as AdvisoryMode : undefined),
     title: c.title,
     subject: c.subject,
     source: c.source,
@@ -1794,7 +1753,7 @@ function buildEditorialClosing(
   let tasteVerdict: string | undefined;
   if (reasoning?.taste.tasteLabel && products.length > 0) {
     const top = products[0];
-    tasteVerdict = `Based on your preference for ${reasoning.taste.tasteLabel}, **${top.brand} ${top.name}** is the closest match in this shortlist.`;
+    tasteVerdict = `**${top.brand} ${top.name}** is the closest match in this shortlist.`;
   }
 
   return {
@@ -1813,8 +1772,11 @@ export function shoppingToAdvisory(
   ctx?: ShoppingAdvisoryContext,
   decisionFrame?: DecisionFrame | null,
 ): AdvisoryResponse {
-  // Parse preferenceSummary into listenerPriorities if it's a meaningful sentence
-  const listenerPriorities = a.preferenceSummary
+  // Parse preferenceSummary into listenerPriorities if it's a meaningful sentence.
+  // Suppress when systemInterpretation will be rendered — it already covers
+  // preference/direction, so "What I'm optimizing for" would repeat it.
+  const hasInterpretation = !!(reasoning?.taste.archetype) || !!(ctx?.systemComponents?.length);
+  const listenerPriorities = (!hasInterpretation && a.preferenceSummary)
     ? [a.preferenceSummary]
     : undefined;
 
@@ -2019,6 +1981,70 @@ export function shoppingToAdvisory(
   }, reasoning);
 }
 
+// ── Multi-symptom tendencies helper ──────────────────
+
+/**
+ * Combine primary + secondary rule explanations into a single tendencies
+ * string. When only one rule fires, returns its explanation unchanged.
+ * When multiple fire, appends a brief note about the secondary issue(s)
+ * so both symptoms are acknowledged in the diagnosis.
+ */
+// Maps rule IDs to natural-language symptom descriptions.
+// Used instead of rule labels, which are internal/technical.
+const SYMPTOM_DESCRIPTIONS: Record<string, string> = {
+  'fatigue-brightness': 'brightness or listening fatigue',
+  'detail-fatigue-tradeoff': 'detail fatigue',
+  'flat-presentation': 'a flat or lifeless presentation',
+  'thinness-bass-deficit': 'thinness or bass deficit',
+  'congestion-bottleneck': 'congestion or compression',
+  'narrow-soundstage': 'narrow staging',
+  'bass-bloom': 'bass bloom or looseness',
+  'too-warm': 'excessive warmth',
+};
+
+// Known co-occurring symptom pairs that warrant an integrated description
+// rather than a primary-plus-appendix structure.
+const COMBINED_DESCRIPTIONS: Record<string, string> = {
+  'fatigue-brightness+thinness-bass-deficit':
+    'Your system sounds bright and lean — too much energy in the upper frequencies and not enough weight underneath. These often share a common cause: a tonal balance that is tilted toward the treble. The brightness adds edge, and the lack of bass reinforcement leaves nothing to counterbalance it. Addressing one may partially resolve the other.',
+  'thinness-bass-deficit+fatigue-brightness':
+    'Your system sounds lean and bright — the bass feels absent while the upper frequencies push forward. This combination usually points to a tonal imbalance rather than two separate problems. When the low end is underrepresented, brightness becomes more pronounced because there is less body to balance it.',
+};
+
+function buildMultiSymptomTendencies(firedRules: FiredRule[]): string | undefined {
+  if (firedRules.length === 0) return undefined;
+
+  const primary = firedRules[0];
+  const base = primary.outputs.explanation;
+  if (!base) return undefined;
+
+  // Single rule — return as-is
+  if (firedRules.length === 1) return base;
+
+  // Filter to meaningful secondary rules
+  const secondary = firedRules.slice(1, 3).filter(r => r.id !== 'friendly-advisor-fallback');
+  if (secondary.length === 0) return base;
+
+  // Check for a known combined description
+  const comboKey = `${primary.id}+${secondary[0].id}`;
+  if (COMBINED_DESCRIPTIONS[comboKey]) {
+    return COMBINED_DESCRIPTIONS[comboKey];
+  }
+
+  // Fallback: append natural-language description of secondary symptoms
+  const secondaryDescriptions = secondary
+    .map(r => SYMPTOM_DESCRIPTIONS[r.id])
+    .filter(Boolean);
+
+  if (secondaryDescriptions.length === 0) return base;
+
+  const trimmed = base.replace(/\s+$/, '');
+  const joined = secondaryDescriptions.join(' and ');
+  const connector = `You also described ${joined}. These issues may share a common cause — addressing the primary symptom often improves both.`;
+
+  return `${trimmed}\n\n${connector}`;
+}
+
 // ── Adapter: Analysis → Advisory ─────────────────────
 
 export function analysisToAdvisory(
@@ -2031,9 +2057,24 @@ export function analysisToAdvisory(
   // Use the highest-priority fired rule for the main advisory content
   const primary: FiredRule | undefined = result.fired_rules[0];
 
-  // Collect all suggestions and risks across fired rules
+  // Collect all suggestions and risks across fired rules.
+  // Deduplicate risks that share the same core warning (e.g. multiple rules
+  // warning about "warm" components masking qualities). Keep the first
+  // occurrence and drop near-duplicates.
   const allSuggestions = result.fired_rules.flatMap((r) => r.outputs.suggestions);
-  const allRisks = result.fired_rules.flatMap((r) => r.outputs.risks);
+  const rawRisks = result.fired_rules.flatMap((r) => r.outputs.risks);
+  const allRisks: string[] = [];
+  const seenRiskKeys = new Set<string>();
+  for (const risk of rawRisks) {
+    // Normalize: lowercase, strip quotes, collapse whitespace
+    const key = risk.toLowerCase().replace(/["'"]/g, '').replace(/\s+/g, ' ').trim();
+    // Check for semantic overlap — risks starting with the same 6 words
+    const shortKey = key.split(' ').slice(0, 6).join(' ');
+    if (!seenRiskKeys.has(shortKey)) {
+      seenRiskKeys.add(shortKey);
+      allRisks.push(risk);
+    }
+  }
 
   // Derive listener priorities from system direction if available
   const listenerPriorities: string[] = [];
@@ -2055,23 +2096,35 @@ export function analysisToAdvisory(
   // Layer 2: What this means — why the symptom occurs in THIS system
   const diagnosisExplanation = buildDiagnosisExplanation(primary, signals, sysDir, reasoning);
 
-  // Layer 3: Ranked action areas with product directions
-  const diagnosisActions = buildDiagnosisActions(primary, signals, sysDir);
+  // Layer 3: Ranked action areas with product directions.
+  // When multiple symptom rules fire, use a combined action set that
+  // interleaves both symptoms' priorities instead of only showing the primary.
+  const diagnosisActions = buildDiagnosisActions(primary, signals, sysDir, result.fired_rules);
 
-  // Follow-up: focused, not generic
-  const followUp = buildDiagnosisFollowUp(primary, signals, sysDir, ctx);
+  // Follow-up: focused, not generic. When multiple symptom rules fire,
+  // produce a combined follow-up that reflects both symptoms.
+  const followUp = buildDiagnosisFollowUp(primary, signals, sysDir, ctx, result.fired_rules);
 
   return enrichAdvisory({
     kind: 'diagnosis',
     subject: primary?.label ?? 'your listening situation',
 
-    audioProfile: reasoning || ctx ? buildAudioProfile(reasoning, ctx) : undefined,
+    // Only show Audio Preferences when the user has provided system context
+    // AND expressed real preferences. For diagnosis-only inputs ("too bright",
+    // "lacks bass") the reasoning fallback produces generic priorities like
+    // "musical engagement" — surfacing these feels fabricated and broadens the
+    // response beyond the symptom the user actually described.
+    audioProfile: ctx?.systemComponents
+      ? buildAudioProfile(reasoning, ctx)
+      : undefined,
     listenerPriorities: listenerPriorities.length > 0 ? listenerPriorities : undefined,
     listenerAvoids: listenerAvoids.length > 0 ? listenerAvoids : undefined,
     systemTendencies: sysDir?.tendencySummary ?? undefined,
 
-    // Primary rule explanation remains as tendencies prose
-    tendencies: primary?.outputs.explanation,
+    // Primary rule explanation remains as tendencies prose.
+    // When multiple rules fire, append a brief acknowledgment of secondary
+    // symptoms so both issues are visible in the explanation.
+    tendencies: buildMultiSymptomTendencies(result.fired_rules),
 
     // Suggestions become whyThisFits (what to do and why)
     whyThisFits: allSuggestions.length > 0 ? allSuggestions : undefined,
@@ -2139,18 +2192,13 @@ function buildDiagnosisInterpretation(
         parts.push(tradeOff);
       }
     }
-  } else if (reasoning?.taste.archetype) {
-    // No system info but we have taste — frame the listener
-    const ARCHETYPE_CONTEXT: Record<string, string> = {
-      flow_organic: 'Your preferences lean toward flow and natural presentation — systems that feel effortless and musically involving.',
-      precision_explicit: 'Your preferences lean toward precision and detail — systems that reveal structure, layering, and micro-dynamics.',
-      rhythmic_propulsive: 'Your preferences lean toward rhythmic engagement and dynamics — systems that convey momentum and transient energy.',
-      tonal_saturated: 'Your preferences lean toward harmonic density and tonal richness — systems with midrange weight and body.',
-      spatial_holographic: 'Your preferences lean toward spatial presentation — systems that create depth, air, and a convincing soundstage.',
-    };
-    const ctx2 = ARCHETYPE_CONTEXT[reasoning.taste.archetype];
-    if (ctx2) parts.push(ctx2);
   }
+  // NOTE: Previously this had an `else if (reasoning?.taste.archetype)` branch
+  // that added "Your preferences lean toward..." for diagnosis outputs without
+  // system context. Removed: for diagnosis-only inputs ("too bright", "lacks
+  // bass"), the reasoning engine infers an archetype from symptom language,
+  // producing a preference statement that does not reflect anything the user
+  // actually said. Archetype framing belongs in shopping, not diagnosis.
 
   if (parts.length === 0) return undefined;
   return parts.join(' ');
@@ -2212,7 +2260,7 @@ function buildDiagnosisExplanation(
 
   // Fallback: build from rule explanation + system context
   if (primary.outputs.explanation && hasSystem) {
-    return `${primary.outputs.explanation.trim()} In your system, this tendency is likely shaped by the overall voicing — ${sysDir!.tendencySummary!.toLowerCase()}.`;
+    return `${primary.outputs.explanation.trim()} Given your system's voicing — ${sysDir!.tendencySummary!.toLowerCase()} — that tendency is reinforced rather than counterbalanced.`;
   }
 
   return undefined;
@@ -2227,15 +2275,46 @@ function buildDiagnosisActions(
   primary: FiredRule | undefined,
   signals: ExtractedSignals,
   sysDir?: SystemDirection,
+  allRules?: FiredRule[],
 ): Array<{ area: string; guidance: string; examples?: string }> {
   if (!primary) return [];
 
+  // ── Combined action sets for known multi-symptom pairs ──
+  // When two symptom rules co-fire, interleave both symptoms' action
+  // priorities so the secondary symptom is treated as co-equal.
+  const secondaryIds = (allRules ?? [])
+    .slice(1, 3)
+    .filter(r => r.id !== 'friendly-advisor-fallback')
+    .map(r => r.id);
+
+  const COMBINED_ACTIONS: Record<string, Array<{ area: string; guidance: string; examples?: string }>> = {
+    'fatigue-brightness+thinness-bass-deficit': [
+      { area: 'Speaker placement', guidance: 'The most reversible fix. Moving speakers closer to the rear wall increases bass reinforcement and adds body that counterbalances perceived brightness. Start with 6-inch increments.' },
+      { area: 'Source / DAC', guidance: 'A warmer, more organic DAC addresses brightness at the source while adding midrange density that helps with perceived thinness.', examples: 'R-2R designs (Denafrips Enyo 15th, Schiit Bifrost 2), tube-output DACs (MHDT Orchid)' },
+      { area: 'Room treatment', guidance: 'Two interventions: absorption at first reflection points reduces treble energy; a rug or soft furnishings on hard floors shifts the tonal balance warmer.' },
+      { area: 'Amplifier pairing', guidance: 'If the amplifier is lean or neutral, a warmer-voiced alternative can restore body without masking detail.', examples: 'Rega Brio, Exposure 2510, PrimaLuna EVO 100 (tube)' },
+    ],
+    'thinness-bass-deficit+fatigue-brightness': [
+      { area: 'Speaker placement', guidance: 'The most reversible fix. Moving speakers closer to the rear wall increases bass reinforcement — and the added body often reduces the perception of brightness by restoring tonal balance.' },
+      { area: 'Source / DAC', guidance: 'A warmer DAC adds midrange density and reduces upstream treble edge simultaneously.', examples: 'Denafrips Enyo 15th, Schiit Bifrost 2, Border Patrol DAC' },
+      { area: 'Room treatment', guidance: 'Hard floors and bare walls tilt the balance bright and thin. Adding a rug, diffusion panels, or absorption at first reflections addresses both symptoms.' },
+      { area: 'Amplifier pairing', guidance: 'A warmer-voiced amplifier restores harmonic weight. Especially impactful if the current amp is lean or analytical.', examples: 'Rega Brio, Exposure 2510, PrimaLuna EVO 100 (tube)' },
+    ],
+  };
+
+  if (secondaryIds.length > 0) {
+    const comboKey = `${primary.id}+${secondaryIds[0]}`;
+    if (COMBINED_ACTIONS[comboKey]) {
+      return COMBINED_ACTIONS[comboKey];
+    }
+  }
+
   const symptomId = primary.id;
 
-  // Symptom-specific ranked action paths
+  // Symptom-specific ranked action paths (single-symptom)
   const SYMPTOM_ACTIONS: Record<string, Array<{ area: string; guidance: string; examples?: string }>> = {
     'fatigue-brightness': [
-      { area: 'Source / DAC', guidance: 'The most effective single change. A warmer, more organic DAC shifts the tonal center without sacrificing resolution.', examples: 'R-2R designs (Denafrips Ares II, Schiit Bifrost 2), tube-output DACs (MHDT Orchid)' },
+      { area: 'Source / DAC', guidance: 'The most effective single change. A warmer, more organic DAC shifts the tonal center without sacrificing resolution.', examples: 'R-2R designs (Denafrips Enyo 15th, Schiit Bifrost 2), tube-output DACs (MHDT Orchid)' },
       { area: 'Tube buffer or preamp', guidance: 'A tube stage between source and amplifier adds second-order harmonics that soften transient edges and reduce fatigue.', examples: 'Schiit Freya+, Black Ice Audio FOZ, Linear Tube Audio MicroZOTL' },
       { area: 'Cables', guidance: 'Copper interconnects generally present a warmer tonal balance than silver. This is a subtle but real adjustment at the system level.', examples: 'Cardas Clear Reflection, AudioQuest Yukon' },
       { area: 'Room treatment', guidance: 'Absorption at first reflection points reduces the doubled treble energy that contributes to perceived brightness.' },
@@ -2247,12 +2326,12 @@ function buildDiagnosisActions(
     ],
     'flat-presentation': [
       { area: 'Amplifier', guidance: 'If the amplifier prioritizes composure, a more dynamic design restores the tension and release that makes music involving.', examples: 'Naim Nait 5si, Rega Brio, Exposure 2510 (for rhythmic drive); Decware Zen (for tube-based engagement)' },
-      { area: 'Source / DAC', guidance: 'An analytical source can flatten dynamics before the amplifier sees them. A more expressive DAC can help.', examples: 'Chord Qutest, Denafrips Ares II' },
+      { area: 'Source / DAC', guidance: 'An analytical source can flatten dynamics before the amplifier sees them. A more expressive DAC can help.', examples: 'Chord Qutest, Denafrips Enyo 15th' },
       { area: 'Speaker positioning', guidance: 'Slight toe-in adjustments and moving closer to the listening position can increase perceived presence and energy.' },
     ],
     'thinness-bass-deficit': [
       { area: 'Speaker placement', guidance: 'Moving speakers closer to the rear wall increases bass reinforcement. Start with 6-inch increments and listen for a few days at each position.' },
-      { area: 'Source voicing', guidance: 'A warmer-voiced DAC or source adds midrange density and perceived weight to the tonal balance.', examples: 'Schiit Bifrost 2, Denafrips Ares II, Border Patrol DAC' },
+      { area: 'Source voicing', guidance: 'A warmer-voiced DAC or source adds midrange density and perceived weight to the tonal balance.', examples: 'Schiit Bifrost 2, Denafrips Enyo 15th, Border Patrol DAC' },
       { area: 'Amplifier pairing', guidance: 'If the amplifier is lean or neutral, a warmer-voiced alternative can restore body without compromising detail.', examples: 'Rega Brio, Exposure 2510, PrimaLuna EVO 100 (tube)' },
       { area: 'Room treatment', guidance: 'Bare floors and hard walls tilt the balance toward upper frequencies. Adding a rug or diffusion panels can shift perceived warmth.' },
     ],
@@ -2296,15 +2375,43 @@ function buildDiagnosisFollowUp(
   signals: ExtractedSignals,
   sysDir?: SystemDirection,
   ctx?: ShoppingAdvisoryContext,
+  allRules?: FiredRule[],
 ): string | undefined {
   if (!primary) return primary?.outputs.next_step;
 
   const hasSystem = !!(ctx?.systemComponents && ctx.systemComponents.length > 0);
 
-  // Symptom-specific focused follow-ups
+  // ── Combined follow-ups for known multi-symptom pairs ──
+  // When two symptom rules co-fire, the follow-up should address both
+  // rather than asking only about the primary symptom.
+  const secondaryIds = (allRules ?? [])
+    .slice(1, 3)
+    .filter(r => r.id !== 'friendly-advisor-fallback')
+    .map(r => r.id);
+
+  const COMBINED_FOLLOWUPS: Record<string, { withSystem: string; withoutSystem: string }> = {
+    'fatigue-brightness+thinness-bass-deficit': {
+      withSystem: 'Two things would help narrow this down: what source or DAC is in the chain (brightness often starts upstream), and how far are the speakers from the rear wall (bass reinforcement is the most reversible fix for thinness).',
+      withoutSystem: 'Can you walk me through the signal chain — source, DAC, amplifier, speakers? And describe the room: size, floor surface, how far the speakers sit from walls. Brightness usually traces to the source; thinness to room interaction.',
+    },
+    'thinness-bass-deficit+fatigue-brightness': {
+      withSystem: 'How far are the speakers from the rear wall? And what source or DAC feeds the chain? Thinness often responds to placement, while brightness usually points upstream.',
+      withoutSystem: 'Can you describe the room — size, floor surface, speaker distance from walls — and the main components from source to speakers? The bass issue is likely room-related; the brightness may originate further upstream.',
+    },
+  };
+
+  if (secondaryIds.length > 0) {
+    const comboKey = `${primary.id}+${secondaryIds[0]}`;
+    const comboEntry = COMBINED_FOLLOWUPS[comboKey];
+    if (comboEntry) {
+      return hasSystem ? comboEntry.withSystem : comboEntry.withoutSystem;
+    }
+  }
+
+  // Symptom-specific focused follow-ups (single-symptom)
   const FOCUSED_FOLLOWUPS: Record<string, { withSystem: string; withoutSystem: string }> = {
     'fatigue-brightness': {
-      withSystem: 'What source or DAC are you using? That is usually the most effective place to shift tonal balance in a system like this.',
+      withSystem: 'What source or DAC are you using? That\'s the first place I\'d look to shift tonal balance.',
       withoutSystem: 'What is your current source — DAC, streamer, or turntable? And what amplifier and speakers are in the chain? Knowing the full signal path will help me identify where the brightness originates.',
     },
     'detail-fatigue-tradeoff': {
@@ -2340,6 +2447,209 @@ function buildDiagnosisFollowUp(
 
   // Fall back to rule engine's next_step
   return primary.outputs.next_step;
+}
+
+// ── Diagnosis Follow-Up Refinement ──────────────────
+//
+// When the user answers a diagnostic follow-up question (e.g., room
+// details after a bass_bloom diagnosis), this function builds a
+// refined response that incorporates the context instead of repeating
+// the same generic diagnosis.
+
+interface RoomContext {
+  small?: boolean;
+  large?: boolean;
+  speakersNearWall?: boolean;
+  speakersInCorner?: boolean;
+  speakersCloseTogether?: boolean;
+  hardFloor?: boolean;
+  carpet?: boolean;
+  square?: boolean;
+}
+
+function extractRoomContext(text: string): RoomContext {
+  const lower = text.toLowerCase();
+  return {
+    small: /\b(?:small|tiny|compact|little|rather small|quite small|not (?:very )?big)\b/i.test(lower),
+    large: /\b(?:large|big|spacious|open plan|open.?plan)\b/i.test(lower),
+    speakersNearWall: /\b(?:(?:against|near|close to|next to|by|up against)\s+(?:the\s+)?wall|wall\s*(?:mounted|hugging)|middle of the wall|on the wall)\b/i.test(lower),
+    speakersInCorner: /\b(?:corner|corners)\b/i.test(lower),
+    speakersCloseTogether: /\b(?:next to each other|close together|not (?:very )?far apart|side by side|bunched|(?:only|about|maybe|like)\s+\d+\s*(?:inch|foot|feet|cm|"|')?\s*apart)\b/i.test(lower),
+    hardFloor: /\b(?:hardwood|hard\s*floor|tile|tiles|concrete|laminate|wood\s*floor|wooden\s*floor)\b/i.test(lower),
+    carpet: /\b(?:carpet|carpeted|rug|rugs)\b/i.test(lower),
+    square: /\b(?:square|cube|cubic|almost square|nearly square)\b/i.test(lower),
+  };
+}
+
+/**
+ * Refine a diagnosis advisory using room/system context the user just provided.
+ *
+ * Returns a new AdvisoryResponse that replaces the original, or undefined
+ * if no meaningful refinement can be produced.
+ */
+export function refineDiagnosisWithContext(
+  originalAdvisory: AdvisoryResponse,
+  userText: string,
+): AdvisoryResponse | undefined {
+  const room = extractRoomContext(userText);
+  const hasRoomInfo = Object.values(room).some(Boolean);
+
+  // If no room or system context was extractable, return undefined
+  // to let the normal pipeline handle it.
+  if (!hasRoomInfo) return undefined;
+
+  // ── Bass bloom + room context refinement ──────────
+  const isBassBloom = originalAdvisory.diagnostics?.symptoms?.includes('bass_bloom')
+    || originalAdvisory.subject?.toLowerCase().includes('bass')
+    || originalAdvisory.subject?.toLowerCase().includes('boom');
+
+  if (isBassBloom) {
+    return buildBassBloomRoomRefinement(originalAdvisory, room, userText);
+  }
+
+  // ── Generic room context refinement ──────────────
+  // For other symptoms, provide a lighter-touch refinement
+  return buildGenericRoomRefinement(originalAdvisory, room);
+}
+
+function buildBassBloomRoomRefinement(
+  original: AdvisoryResponse,
+  room: RoomContext,
+  _userText: string,
+): AdvisoryResponse {
+  // Build a contextualized explanation
+  const explanationParts: string[] = [];
+
+  if (room.small) {
+    explanationParts.push(
+      'A small room is the single biggest contributor to bass problems. The walls are close enough that low-frequency sound waves bounce back before they decay, reinforcing certain bass frequencies and creating audible resonances (room modes). This is physics, not a flaw in your equipment.',
+    );
+  }
+
+  if (room.speakersNearWall) {
+    explanationParts.push(
+      'Speakers placed against or near a wall get a significant bass boost from the boundary — the wall acts as an acoustic mirror, roughly doubling the bass energy at certain frequencies. This is called boundary reinforcement.',
+    );
+  }
+
+  if (room.speakersCloseTogether) {
+    explanationParts.push(
+      'Speakers placed close together can couple their bass output, reinforcing low frequencies further. Separating them changes which room modes are excited.',
+    );
+  }
+
+  if (room.speakersInCorner) {
+    explanationParts.push(
+      'Corner placement gives the strongest possible bass reinforcement — three boundaries converge, each adding energy. Moving even one speaker away from the corner will produce a noticeable improvement.',
+    );
+  }
+
+  if (room.square) {
+    explanationParts.push(
+      'A square room is acoustically the worst case for bass — the same resonant frequencies are reinforced in both horizontal dimensions, creating very pronounced modes.',
+    );
+  }
+
+  // Build room-specific actions
+  const actions: Array<{ area: string; guidance: string; examples?: string }> = [];
+
+  if (room.speakersNearWall) {
+    actions.push({
+      area: 'Pull speakers away from the wall',
+      guidance: 'This is the single most impactful change. Even 6–12 inches of clearance from the rear wall reduces boundary reinforcement significantly. If the room allows it, 18–24 inches is better. Move in small increments and listen for a few days at each position before adjusting further.',
+    });
+  }
+
+  if (room.speakersCloseTogether) {
+    actions.push({
+      area: 'Increase speaker separation',
+      guidance: 'Wider spacing changes which room modes are excited and improves stereo imaging. Aim for an equilateral triangle between the two speakers and your listening position. Even modest separation — moving each speaker 6 inches outward — can reduce bass coupling.',
+    });
+  }
+
+  if (room.small) {
+    actions.push({
+      area: 'Corner bass traps',
+      guidance: 'In a small room, bass traps in two or more corners are highly effective. They absorb the excess energy that room modes create. Start with the rear corners — you can use commercial acoustic panels or even dense rockwool panels propped into corners.',
+    });
+  }
+
+  if (!room.speakersNearWall && !room.speakersCloseTogether) {
+    // If we don't know the exact position, give general placement advice
+    actions.push({
+      area: 'Speaker placement experiment',
+      guidance: 'Try pulling speakers further from all walls and increasing the distance between them. Each boundary (wall, floor, ceiling) adds bass energy — more distance means less reinforcement.',
+    });
+  }
+
+  // Always include the "before buying anything" framing
+  if (actions.length > 0) {
+    actions.push({
+      area: 'Listen before buying anything',
+      guidance: 'Placement and treatment changes are free (or cheap) and reversible. Spend a week experimenting before considering component changes. In a small room with wall-adjacent speakers, placement alone often resolves the issue entirely.',
+    });
+  }
+
+  // Build the next follow-up question (context-dependent)
+  let followUp: string | undefined;
+  if (!room.hardFloor && !room.carpet) {
+    followUp = 'What is the floor surface — carpet, hardwood, tile? And are there curtains or soft furnishings in the room? This affects how much high-frequency energy balances the bass.';
+  } else if (actions.length > 0) {
+    followUp = 'Try the placement changes when you have a chance and let me know how it sounds. I can also look at whether your amplifier\'s damping characteristics might be contributing.';
+  }
+
+  return {
+    ...original,
+    // Update the explanation to be room-specific
+    diagnosisExplanation: explanationParts.length > 0
+      ? explanationParts.join(' ')
+      : original.diagnosisExplanation,
+    // Replace generic actions with room-specific ones
+    diagnosisActions: actions.length > 0 ? actions : original.diagnosisActions,
+    // Update tendencies to acknowledge the room context
+    tendencies: buildRoomAcknowledgedTendencies(original.tendencies, room),
+    // Replace the follow-up (don't ask the same room question again)
+    followUp,
+    // Clear the interpretation since we now have actual room context
+    diagnosisInterpretation: room.small
+      ? 'Small room with wall-adjacent speaker placement — this is a room acoustics issue, not an equipment problem.'
+      : original.diagnosisInterpretation,
+  };
+}
+
+function buildGenericRoomRefinement(
+  original: AdvisoryResponse,
+  room: RoomContext,
+): AdvisoryResponse {
+  // For non-bass-bloom symptoms, just acknowledge the room context
+  // and adjust the follow-up so we don't re-ask.
+  const roomDesc = room.small ? 'small room' : room.large ? 'large room' : 'your room';
+
+  return {
+    ...original,
+    diagnosisInterpretation: original.diagnosisInterpretation
+      ? `${original.diagnosisInterpretation} (Noted: ${roomDesc}${room.speakersNearWall ? ', speakers near the wall' : ''}${room.speakersCloseTogether ? ', speakers close together' : ''}.)`
+      : undefined,
+    // Replace the room question with the next diagnostic step
+    followUp: 'What amplifier and source are you using? Knowing the chain will help me assess whether this is purely room-driven or if there\'s a component contribution.',
+  };
+}
+
+function buildRoomAcknowledgedTendencies(
+  original: string | undefined,
+  room: RoomContext,
+): string | undefined {
+  if (!original) return original;
+
+  const roomFactors: string[] = [];
+  if (room.small) roomFactors.push('small room');
+  if (room.speakersNearWall) roomFactors.push('speakers positioned near the wall');
+  if (room.speakersCloseTogether) roomFactors.push('speakers placed close together');
+  if (room.speakersInCorner) roomFactors.push('corner placement');
+
+  if (roomFactors.length === 0) return original;
+
+  return `Based on your room — ${roomFactors.join(', ')} — the bass issue is almost certainly room-driven. The room is reinforcing certain bass frequencies, creating the excess you\'re hearing.`;
 }
 
 // ── Product Assessment Adapter ──────────────────────

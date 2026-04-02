@@ -94,7 +94,7 @@ describe('Diagnosis conversation state — inline system detection', () => {
     });
     expect(state).not.toBeNull();
     expect(state!.mode).toBe('diagnosis');
-    expect(state!.stage).toBe('clarify_system');
+    expect(state!.stage).toBe('ready_to_diagnose');
   });
 });
 

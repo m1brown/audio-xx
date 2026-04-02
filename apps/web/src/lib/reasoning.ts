@@ -184,7 +184,7 @@ function buildDirectionStatement(
     if (archetype) {
       return `Your preferences align with a ${archetype} sensibility. The recommendations below are chosen to match that direction.`;
     }
-    return 'Your current balance appears well-suited to your preferences. The recommendations below explore options that maintain that character.';
+    return 'No strong directional signal — the recommendations below maintain the current character rather than pulling in a new direction.';
   }
 
   const gains = arrows

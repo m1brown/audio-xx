@@ -114,6 +114,53 @@ export function createEmptyListenerProfile(): ListenerProfile {
   };
 }
 
+// ── Product name aliases ────────────────────────────
+// Maps common user-facing names to catalog product names.
+// Applied before fuzzy matching so "Ares II" resolves correctly, etc.
+const PRODUCT_NAME_ALIASES: Record<string, string> = {
+  'ares': 'denafrips ares 15th',
+  'ares 15th': 'denafrips ares 15th',
+  'denafrips ares': 'denafrips ares 15th',
+  'ares ii': 'denafrips ares 15th',
+  'ares 2': 'denafrips ares 15th',
+  'ares 12th-1': 'denafrips ares 15th',
+  'enyo': 'denafrips enyo 15th',
+  'enyo 15th': 'denafrips enyo 15th',
+  'denafrips enyo': 'denafrips enyo 15th',
+  'pontus': 'denafrips pontus ii 12th-1',
+  'pontus ii': 'denafrips pontus ii 12th-1',
+  'denafrips pontus': 'denafrips pontus ii 12th-1',
+  'terminator': 'denafrips terminator ii',
+  'terminator ii': 'denafrips terminator ii',
+  'denafrips terminator': 'denafrips terminator ii',
+  'venus': 'denafrips venus ii',
+  'venus ii': 'denafrips venus ii',
+  'denafrips venus': 'denafrips venus ii',
+  'bifrost': 'schiit bifrost 2/64',
+  'bifrost 2': 'schiit bifrost 2/64',
+  'schiit bifrost': 'schiit bifrost 2/64',
+  'bifrost 2/64': 'schiit bifrost 2/64',
+  'gungnir': 'schiit gungnir multibit',
+  'yggdrasil': 'schiit yggdrasil',
+};
+
+/**
+ * Normalize a product name through the alias map.
+ * If the entire input (lowercased) matches an alias key, replace it.
+ * Also checks if the input *contains* an alias key and substitutes.
+ */
+export function resolveProductAlias(normalized: string): string {
+  // Exact alias match (most common case)
+  if (PRODUCT_NAME_ALIASES[normalized]) return PRODUCT_NAME_ALIASES[normalized];
+  // Partial: input contains an alias key (e.g., "the denafrips ares dac")
+  for (const [alias, canonical] of Object.entries(PRODUCT_NAME_ALIASES)) {
+    if (normalized.includes(alias)) {
+      return normalized.replace(alias, canonical);
+    }
+  }
+  return normalized;
+}
+
 // ── Product lookup ───────────────────────────────────
 
 /**
@@ -121,7 +168,7 @@ export function createEmptyListenerProfile(): ListenerProfile {
  * Returns null if no reasonable match found.
  */
 export function findCatalogProduct(name: string): Product | null {
-  const normalized = name.toLowerCase().trim();
+  const normalized = resolveProductAlias(name.toLowerCase().trim());
   if (!normalized) return null;
 
   let bestMatch: Product | null = null;
@@ -1050,17 +1097,18 @@ export function buildDecisiveRecommendation(
   const dominantLabel = EXPERT_SHORT_MAP[dominantTrait.key] ?? dominantTrait.key;
   const secondaryLabel = secondaryTrait ? (EXPERT_SHORT_MAP[secondaryTrait.key] ?? secondaryTrait.key) : null;
 
-  // Build reason for top pick — grounded in taste + system
+  // Build reason for top pick — system-level action first, then product
+  const catLabel = { flow: 'source', tonal_density: 'DAC', clarity: 'amplifier', control: 'amplifier', spatial: 'speakers' }[dominantTrait.key] ?? 'this part of the chain';
   let topReason: string;
   if (anchorProduct) {
-    topReason = `Pairs naturally with ${anchorProduct} — reinforces the ${dominantLabel} you responded to while letting the existing chain do what it already does well.`;
+    topReason = `I'd change ${catLabel} first. Your ${anchorProduct} is doing its job — ${catLabel} is where the system can move toward more ${dominantLabel}.`;
     if (secondaryLabel && dominantTrait.value > 0.3) {
-      topReason += ` Also preserves ${secondaryLabel} in the interaction.`;
+      topReason += ` Keeps ${secondaryLabel} intact.`;
     }
   } else if (secondaryLabel && dominantTrait.value > 0.3) {
-    topReason = `Aligns with your emphasis on ${dominantLabel} while maintaining ${secondaryLabel} — the combination your listening history points toward.`;
+    topReason = `I'd start with ${catLabel}. Cleanest way to get more ${dominantLabel} without losing ${secondaryLabel}.`;
   } else {
-    topReason = `Best overall alignment with your listening priorities.`;
+    topReason = `I'd start with ${catLabel}. That's where the biggest shift toward what you respond to will come from.`;
   }
 
   // Build alternative (if available)
@@ -1068,11 +1116,11 @@ export function buildDecisiveRecommendation(
   if (alt) {
     let altReason: string;
     if (anchorProduct && secondaryLabel && dominantTrait.value > 0.3) {
-      altReason = `Shifts the ${anchorProduct} pairing toward ${secondaryLabel} — trades some ${dominantLabel} for a different system balance. Worth hearing if you want to explore that axis.`;
+      altReason = `Moves the system toward ${secondaryLabel} instead. You give up some ${dominantLabel}, but it's a different balance worth hearing.`;
     } else if (secondaryLabel && dominantTrait.value > 0.3) {
-      altReason = `Stronger on ${secondaryLabel}, trades some ${dominantLabel}. A different balance — try this if your priorities are evolving.`;
+      altReason = `More ${secondaryLabel}, less ${dominantLabel}. Different balance — worth hearing if your priorities are shifting.`;
     } else {
-      altReason = `A different design philosophy — worth considering if you value a different balance of qualities.`;
+      altReason = `Different trade-offs. Worth hearing if the top pick doesn't land the way you expect.`;
     }
     altEntry = { name: alt.name, brand: alt.brand, reason: altReason };
   }
@@ -1156,9 +1204,9 @@ export function buildSystemPairingIntro(
 
   let intro: string;
   if (direction === 'reinforce') {
-    intro = `Your ${anchorName} is the anchor here — it already delivers ${anchorCharacter}, which aligns with what you've told me you value. Every ${categoryLabel} below is evaluated against that: does it preserve that character, or does it pull the system in a different direction? I've weighted toward pairings that reinforce what's working.`;
+    intro = `Your ${anchorName} sets the system's character. The ${categoryLabel} options below are evaluated against that — does each one preserve what's working or pull the system somewhere else?`;
   } else {
-    intro = `Your ${anchorName} delivers ${anchorCharacter}, but your taste leans toward ${listenerCharacter}. That gap is the ${categoryLabel} opportunity — the right pairing fills what ${anchorName} doesn't naturally provide. The options below are chosen with that interaction in mind.`;
+    intro = `Your ${anchorName} leans toward ${anchorCharacter}, but your taste points toward ${listenerCharacter}. That gap is the ${categoryLabel} opportunity — the right pairing fills what the anchor doesn't naturally provide.`;
   }
 
   console.log('[system-pairing]', {

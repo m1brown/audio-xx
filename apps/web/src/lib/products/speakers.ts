@@ -2910,4 +2910,74 @@ export const SPEAKER_PRODUCTS: Product[] = [
     philosophy: 'neutral',
     marketType: 'traditional',
   },
+
+  // ── sound|kaos (Switzerland — widebander) ──────────────
+
+  {
+    id: 'soundkaos-vox-3a',
+    brand: 'sound|kaos',
+    name: 'Vox 3a',
+    price: 5500,
+    category: 'speaker',
+    architecture: '2-way widebander with supertweeter, rear-ported, handcrafted',
+    subcategory: 'standmount',
+    priceTier: 'upper-mid',
+    brandScale: 'boutique',
+    region: 'europe',
+    country: 'CH',
+    topology: 'high-efficiency',
+    archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
+    primaryAxes: {
+      warm_bright: 'warm',
+      smooth_detailed: 'smooth',
+      elastic_controlled: 'elastic',
+      airy_closed: 'closed',
+    },
+    fatigueAssessment: {
+      risk: 'very_low',
+      notes: 'Widebander coherence with warm voicing. Inherently non-fatiguing — musical flow over detail.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'flow', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'texture', level: 'emphasized' },
+        { trait: 'warmth', level: 'present' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 0.6, warmth: 0.7, tonal_density: 0.8,
+      speed: 0.7, dynamics: 0.65, flow: 0.9,
+      spatial_precision: 0.7, composure: 0.6, texture: 0.85,
+      fatigue_risk: 0.0, openness: 0.6,
+    },
+    description: 'Swiss-designed widebander with supertweeter extension. Martin Gateley\'s designs prioritise tonal purity, midrange presence, and musical coherence over analytical detail. Natural, intimate, room-friendly. Extensively reviewed by Srajan Ebaen on 6moons.',
+    retailer_links: [
+      { label: 'sound|kaos', url: 'https://www.soundkaos.com/' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'tonality', tendency: 'warm, rich midrange with widebander coherence — instruments sound whole and connected', basis: 'review_consensus' },
+        { domain: 'spatial', tendency: 'intimate staging — designed for small to medium rooms, not concert-hall scale', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'musically elastic and flowing — prioritises natural musical phrasing over metronomic precision', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with low-power tube or SET amplification', effect: 'synergistic — widebander efficiency and tube warmth complement beautifully', valence: 'positive', basis: 'review_consensus' },
+        { condition: 'in small to medium rooms (12x14 or smaller)', effect: 'designed for this scale — the intimacy is a feature, not a limitation', valence: 'positive', basis: 'review_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'midrange coherence, musical flow, tonal purity, and long-session listenability', cost: 'bass extension, dynamic slam, and analytical detail retrieval', relative_to: 'multi-way dynamic speakers', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: '6moons', note: 'Extensive coverage by Srajan Ebaen. Martin Gateley\'s sound|kaos is one of 6moons\' most-reviewed speaker brands.' },
+    ],
+    notes: 'Handcrafted in Switzerland. The Vox 3a uses a widebander driver for single-point-source coherence, supplemented by a supertweeter for air and extension. Designed for listeners who value tonal purity over measurement-sheet performance.',
+    philosophy: 'warm',
+    marketType: 'traditional',
+  },
 ];

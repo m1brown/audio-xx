@@ -78,6 +78,8 @@ const BRAND_NAMES = [
   'vinnie rossi', 'ayre', 'boulder', 'primare', 'electrocompaniet',
   'rotel', 'cambridge audio', 'audiolab', 'nad', 'bottlehead', 'yamamoto',
   'purifi', 'mola mola', 'aric audio', 'audio analogue',
+  'linnenberg', 'agd', 'agd productions', 'benchmark', 'cen.grand', 'cengrand', 'aune',
+  'raal', 'raal-requisite', 'raal requisite', 'sound|kaos', 'soundkaos', 'sound kaos',
   // Turntables / tonearms / cartridges
   'rega', 'pro-ject', 'technics', 'clearaudio', 'vpi',
   'linn', 'thorens', 'michell', 'michell engineering',
@@ -107,7 +109,7 @@ const PRODUCT_NAMES = [
   'dmp-a6', 'dmp-a8', 'dac-z8',
   'wiim ultra', 'wiim pro',
   'harmony dac', 'udac',
-  'ares 12th-1', 'ares ii', 'pontus ii', 'pontus 12th-1',
+  'ares 15th', 'ares 12th-1', 'ares ii', 'enyo 15th', 'pontus ii', 'pontus 12th-1',
   'terminator ii', 'd1-twelve', 'd1-unity', 'd1-tube',
   'x26 pro', 'su-9', 'd90',
   'k9 pro', 'ef400',
@@ -119,6 +121,14 @@ const PRODUCT_NAMES = [
   'srda', 'cia-1', 'cia-1t', 'ta-10', 'trends ta-10',
   'ex-m1+', 'ex-m1 plus', 'kinki studio ex-m1', 'kinki studio ex m1', 'kinki ex-m1', 'kinki ex m1', 'ex-m1', 'ex m1', 'kinki integrated', 'kinki ex-m1 integrated amplifier', 'dazzle',
   'amp-23r', 'amp-23', 'hpa-23r',
+  '1995 immanis', 'immanis', 'raal 1995', 'raal immanis',
+  'sa-90', 'sa90', 'singxer sa-90', 'singxer sa90',
+  'linnenberg liszt', 'liszt',
+  'agd vivace', 'vivace', 'agd audion', 'audion',
+  'dsdac', 'dsdac 1.0', 'dsdac 1.0 deluxe', 'cengrand dsdac',
+  'ar5000', 'aune ar5000',
+  'ahb2', 'benchmark ahb2',
+  'vox 3a', 'vox3a', 'soundkaos vox',
   'shinai', 'genesi', 'supremo',
   'telos 590', 'telos 690', 'telos 390',
   'soulution 330', 'soulution 530', 'soulution 711',
@@ -167,7 +177,7 @@ const PRODUCT_NAMES = [
   'x2 b',
   'aria 2', 'blessing 3', 'aonic 3',
   // ── Single-token names ─────────────────────────────
-  'spring', 'may', 'cyan', 'ares', 'pontus', 'venus', 'terminator',
+  'spring', 'may', 'cyan', 'ares', 'enyo', 'pontus', 'venus', 'terminator',
   'bifrost', 'gungnir', 'yggdrasil', 'modi', 'modius',
   'qutest', 'hugo', 'dave', 'mojo', 'tt2',
   'dac3', 'dac4', 'brooklyn', 'tambaqui',
@@ -446,8 +456,30 @@ const DIAGNOSIS_PATTERNS = [
 
 // ── Subject extraction ───────────────────────────────
 
+// ── Common brand misspellings ──────────────────────
+// Normalized before entity extraction so "denefrips" → "denafrips", etc.
+// Only includes high-frequency typos observed in real user input.
+const BRAND_TYPOS: Record<string, string> = {
+  'denefrips': 'denafrips',
+  'dennafrips': 'denafrips',
+  'denfrips': 'denafrips',
+  'schitt': 'schiit',
+  'shiit': 'schiit',
+  'schit': 'schiit',
+  'primaluna': 'primaluna',
+  'klipsh': 'klipsch',
+  'kef': 'kef',
+  'macintosh': 'mcintosh',
+};
+
 export function extractSubjectMatches(text: string): SubjectMatch[] {
-  const lower = text.toLowerCase();
+  // Apply typo normalization before matching
+  let lower = text.toLowerCase();
+  for (const [typo, correct] of Object.entries(BRAND_TYPOS)) {
+    if (lower.includes(typo) && typo !== correct) {
+      lower = lower.replace(new RegExp(typo, 'g'), correct);
+    }
+  }
   const found: SubjectMatch[] = [];
 
   // Track which character spans have already been claimed by a longer match.
@@ -915,7 +947,15 @@ export function detectIntent(currentMessage: string): IntentResult {
   const earlyChainCheck = /(?:→|-{1,3}>|={1,2}>|>{2,3})/.test(currentMessage)
     || (/\w\s*\+\s*\w/.test(currentMessage) && subjectMatches.length >= 2);
   const isLikelySystemEval = earlySystemCheck && earlyChainCheck && subjectMatches.length >= 2;
-  if (hasProductAssessmentPattern && (hasProductSubject || hasBrandSubject) && !isLikelySystemEval) {
+  // Budget escape hatch: when the message contains both a budget signal AND
+  // a category keyword (e.g., "what about denafrips dacs under 1000?"), skip
+  // the assessment gate and let the shopping patterns handle it.
+  const earlyBudgetSignal = /\bunder\s+\$?\d|\$\s?\d[\d,.]*k?\b|\bbudget\b/i.test(currentMessage);
+  const earlyCategorySignal = /\b(?:dacs?|d\/a|amps?|amplifiers?|integrated|speakers?|headphones?|turntables?|streamers?|preamps?|power\s*amps?|iems?)\b/i.test(currentMessage);
+  const isLikelyShopping = earlyBudgetSignal && earlyCategorySignal;
+  // Comparison escape hatch: "what about X vs Y" is a comparison, not an assessment.
+  const isLikelyComparison = /\bvs\.?\b/i.test(currentMessage) && subjectMatches.length >= 2;
+  if (hasProductAssessmentPattern && (hasProductSubject || hasBrandSubject) && !isLikelySystemEval && !isLikelyShopping && !isLikelyComparison) {
     return { intent: 'product_assessment', subjects, subjectMatches, desires };
   }
 
@@ -1368,6 +1408,54 @@ export function isConsultationFollowUp(
   }
 
   return false;
+}
+
+// ── Diagnosis follow-up detection ─────────────────────
+//
+// Detects when a user is answering a diagnostic follow-up question
+// (e.g., "Can you describe the room?") rather than introducing a
+// new symptom or topic change.
+
+/**
+ * Check whether a message is a follow-up to an active diagnosis.
+ *
+ * Returns true when:
+ *   - A previous diagnosis asked a follow-up question, AND
+ *   - The message does NOT introduce a new symptom/complaint
+ *
+ * The heuristic is generous — when the app explicitly asked a question,
+ * any non-symptom response is treated as an answer to that question.
+ */
+export function isDiagnosisFollowUp(
+  text: string,
+  previousDiagnosisFollowUp: string | undefined,
+): boolean {
+  if (!previousDiagnosisFollowUp) return false;
+
+  const lower = text.toLowerCase();
+
+  // Reject if the message contains clear new symptom descriptions —
+  // "now it sounds thin" after a bass diagnosis is a NEW complaint.
+  const NEW_SYMPTOM_INDICATORS = [
+    /\bsounds?\s+(?:too\s+)?(?:bright|thin|harsh|fatiguing|muddy|dull|boring|lifeless|congested|sibilant|metallic|tinny|veiled|flat|dry|dead)\b/i,
+    /\btoo\s+(?:bright|thin|harsh|warm|bassy|trebly|forward|much\s+(?:treble|brightness|distortion))\b/i,
+    /\bsomething\s+(?:is\s+)?(?:off|wrong|missing)\b/i,
+    /\b(?:fatiguing|tiring|exhausting|grating|piercing|boomy|bloated)\b/i,
+    /\bnot\s+enough\s+(?:bass|treble|detail|clarity|warmth|body)\b/i,
+    /\blacks?\s+(?:bass|detail|clarity|warmth|body|weight|dynamics)\b/i,
+  ];
+
+  if (NEW_SYMPTOM_INDICATORS.some((p) => p.test(lower))) return false;
+
+  // Reject if the message looks like a completely new topic
+  // (explicit shopping or comparison request)
+  if (/\b(?:best|recommend|which|compare|vs\.?|versus)\b/i.test(lower) && /\b(?:dac|amp|speaker|headphone)\b/i.test(lower)) {
+    return false;
+  }
+
+  // Any non-symptom response after a diagnosis follow-up question
+  // is treated as answering that question.
+  return true;
 }
 
 // ── Ranked shortlist helpers ────────────────────────

@@ -24,6 +24,7 @@ import { SPEAKER_PRODUCTS } from './products/speakers';
 import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
 import { TURNTABLE_PRODUCTS } from './products/turntables';
 import { inferSystemDirection, type SystemDirection } from './system-direction';
+import { resolveProductAlias } from './listener-profile';
 import {
   compareProductArchetypes,
   tagProductArchetype,
@@ -78,7 +79,8 @@ function findProducts(subjects: string[]): Product[] {
   const found: Product[] = [];
 
   for (const subject of subjects) {
-    const lower = subject.toLowerCase();
+    // Resolve aliases first: "ares" → "denafrips ares 15th", "terminator" → ...
+    const lower = resolveProductAlias(subject.toLowerCase()) ?? subject.toLowerCase();
     let bestMatch: Product | null = null;
     let bestScore = 0;
 
