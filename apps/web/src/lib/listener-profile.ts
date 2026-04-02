@@ -853,11 +853,11 @@ export function buildTasteReflection(profile: ListenerProfile): string | null {
   // Build natural sentence
   let reflection: string;
   if (priorities.length >= 2 && depriority && depriority.length > 0) {
-    reflection = `Given your focus on ${priorities.slice(0, 2).join(' and ')} over ${depriority.join(' or ')}, the options below explore whether to reinforce that character, push it further, or try a different direction.`;
+    reflection = `You prioritize ${priorities.slice(0, 2).join(' and ')} over ${depriority.join(' or ')}. The options below reinforce that, push further, or offer a contrasting direction.`;
   } else if (priorities.length >= 2) {
-    reflection = `Given your focus on ${priorities.slice(0, 2).join(' and ')}, the options below explore different ways to serve that.`;
+    reflection = `You prioritize ${priorities.slice(0, 2).join(' and ')}. The options below each deliver that differently.`;
   } else {
-    reflection = `Given your focus on ${priorities[0]}, the options below explore different ways to deliver that.`;
+    reflection = `You prioritize ${priorities[0]}. The options below each deliver that differently.`;
   }
 
   console.log('[taste-reflection] %s (confidence=%.2f)', reflection, profile.confidence);
@@ -1116,11 +1116,11 @@ export function buildDecisiveRecommendation(
   if (alt) {
     let altReason: string;
     if (anchorProduct && secondaryLabel && dominantTrait.value > 0.3) {
-      altReason = `Moves the system toward ${secondaryLabel} instead. You give up some ${dominantLabel}, but it's a different balance worth hearing.`;
+      altReason = `Moves the system toward ${secondaryLabel} instead — you give up some ${dominantLabel}, but the balance shifts in a direction that may suit you better.`;
     } else if (secondaryLabel && dominantTrait.value > 0.3) {
-      altReason = `More ${secondaryLabel}, less ${dominantLabel}. Different balance — worth hearing if your priorities are shifting.`;
+      altReason = `More ${secondaryLabel}, less ${dominantLabel}. Pick this if your priorities are shifting toward that balance.`;
     } else {
-      altReason = `Different trade-offs. Worth hearing if the top pick doesn't land the way you expect.`;
+      altReason = `Different trade-offs. Fall back to this if the top pick doesn't land the way you expect.`;
     }
     altEntry = { name: alt.name, brand: alt.brand, reason: altReason };
   }
@@ -1204,7 +1204,7 @@ export function buildSystemPairingIntro(
 
   let intro: string;
   if (direction === 'reinforce') {
-    intro = `Your ${anchorName} sets the system's character. The ${categoryLabel} options below are evaluated against that — does each one preserve what's working or pull the system somewhere else?`;
+    intro = `Your ${anchorName} sets the system's character. Each ${categoryLabel} below either preserves what's working or pulls the system in a new direction.`;
   } else {
     intro = `Your ${anchorName} leans toward ${anchorCharacter}, but your taste points toward ${listenerCharacter}. That gap is the ${categoryLabel} opportunity — the right pairing fills what the anchor doesn't naturally provide.`;
   }

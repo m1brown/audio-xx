@@ -1096,7 +1096,7 @@ function generateBottomLine(
   const dirBrief = recommendedDirection.split(/\.\s/)[0];
 
   if (kind === 'diagnosis' && tradeOffs && tradeOffs.length > 0) {
-    return `For ${subject}: ${dirBrief.toLowerCase()} — worth exploring, with awareness that ${tradeOffs[0].toLowerCase()}.`;
+    return `For ${subject}: ${dirBrief.toLowerCase()} — the trade-off is ${tradeOffs[0].toLowerCase()}.`;
   }
   if (kind === 'shopping') {
     return `For ${subject}: ${dirBrief.toLowerCase()}.`;
@@ -1125,9 +1125,9 @@ function generateAlignmentRationale(
   if (systemTendencies && listenerPriorities && listenerPriorities.length > 0) {
     const priorityBrief = listenerPriorities[0];
     if (recommendedDirection) {
-      return `Your system's current tendencies — ${systemTendencies.toLowerCase()} — interact with your preference for ${priorityBrief.toLowerCase()}. The recommended direction addresses that relationship.`;
+      return `Your system leans ${systemTendencies.toLowerCase()}, and you want ${priorityBrief.toLowerCase()}. The direction below closes that gap.`;
     }
-    return `Your system's current tendencies — ${systemTendencies.toLowerCase()} — relate to your preference for ${priorityBrief.toLowerCase()}.`;
+    return `Your system leans ${systemTendencies.toLowerCase()}, and you want ${priorityBrief.toLowerCase()}.`;
   }
 
   if (!reasoning) return undefined;
@@ -1377,18 +1377,18 @@ function buildGearWhyFitsYou(r: GearResponse): string[] | undefined {
     };
     const label = archetypeLabels[r.userArchetype.primary];
     if (label) {
-      bullets.push(`Your ${label} listening style is relevant to how this component will present music in your system.`);
+      bullets.push(`You listen ${label} — this shapes which traits matter most in the evaluation.`);
     }
   }
 
   // System tendency interaction
   if (r.systemDirection?.tendencySummary) {
-    bullets.push(`Given your system's current character — ${r.systemDirection.tendencySummary.toLowerCase()} — this component's behavior may shift or reinforce the balance.`);
+    bullets.push(`Your system leans ${r.systemDirection.tendencySummary.toLowerCase()} — this component either reinforces or counterbalances that.`);
   }
 
   // Hearing-derived context (summarize if present)
   if (r.hearing && r.hearing.length > 0 && bullets.length < 3) {
-    bullets.push('Your stated priorities are reflected in the evaluation above — the fit assessment considers what you told us you value.');
+    bullets.push('Your stated priorities are factored into the fit assessment above.');
   }
 
   if (bullets.length === 0) return undefined;
@@ -1744,7 +1744,7 @@ function buildEditorialClosing(
       if (ts.fatigue_risk === 'up') avoidances.push('treble forwardness or fatigue');
       if (ts.glare_risk === 'up') avoidances.push('upper-frequency glare');
       if (avoidances.length > 0) {
-        avoidanceNote = `Based on your preferences, I would be cautious with products that lean toward ${avoidances.join(' or ')}.`;
+        avoidanceNote = `Avoid products that lean toward ${avoidances.join(' or ')} — your preferences point away from that.`;
       }
     }
   }
@@ -1793,7 +1793,10 @@ export function shoppingToAdvisory(
     soundProfile: p.soundProfile,
     fitNote: p.fitNote,
     caution: p.caution,
-    links: p.links?.map((l) => ({ label: l.label, url: l.url, kind: l.label.toLowerCase().includes('review') ? 'review' as const : l.label.toLowerCase().includes('buy') || l.label.toLowerCase().includes('dealer') ? 'dealer' as const : 'reference' as const })),
+    links: [
+      ...(p.links?.map((l) => ({ label: l.label, url: l.url, kind: l.label.toLowerCase().includes('review') ? 'review' as const : l.label.toLowerCase().includes('buy') || l.label.toLowerCase().includes('dealer') ? 'dealer' as const : 'reference' as const })) ?? []),
+      ...(p.sourceReferences?.filter((r) => r.url).map((r) => ({ label: r.source, url: r.url!, kind: 'review' as const })) ?? []),
+    ],
     // Enhanced card fields
     sonicDirectionLabel: p.sonicDirectionLabel,
     productType: p.productType,
@@ -2006,9 +2009,9 @@ const SYMPTOM_DESCRIPTIONS: Record<string, string> = {
 // rather than a primary-plus-appendix structure.
 const COMBINED_DESCRIPTIONS: Record<string, string> = {
   'fatigue-brightness+thinness-bass-deficit':
-    'Your system sounds bright and lean — too much energy in the upper frequencies and not enough weight underneath. These often share a common cause: a tonal balance that is tilted toward the treble. The brightness adds edge, and the lack of bass reinforcement leaves nothing to counterbalance it. Addressing one may partially resolve the other.',
+    'Your system sounds bright and lean — too much energy in the upper frequencies and not enough weight underneath. These share a common cause: a tonal balance tilted toward the treble. The brightness adds edge, and the lack of bass reinforcement leaves nothing to counterbalance it. Addressing one will partially resolve the other.',
   'thinness-bass-deficit+fatigue-brightness':
-    'Your system sounds lean and bright — the bass feels absent while the upper frequencies push forward. This combination usually points to a tonal imbalance rather than two separate problems. When the low end is underrepresented, brightness becomes more pronounced because there is less body to balance it.',
+    'Your system sounds lean and bright — the bass feels absent while the upper frequencies push forward. This is a tonal imbalance, not two separate problems. When the low end is underrepresented, brightness becomes more pronounced because there is less body to balance it.',
 };
 
 function buildMultiSymptomTendencies(firedRules: FiredRule[]): string | undefined {
@@ -2040,7 +2043,7 @@ function buildMultiSymptomTendencies(firedRules: FiredRule[]): string | undefine
 
   const trimmed = base.replace(/\s+$/, '');
   const joined = secondaryDescriptions.join(' and ');
-  const connector = `You also described ${joined}. These issues may share a common cause — addressing the primary symptom often improves both.`;
+  const connector = `You also described ${joined}. These share a common cause — addressing the primary symptom addresses both.`;
 
   return `${trimmed}\n\n${connector}`;
 }
@@ -2224,23 +2227,23 @@ function buildDiagnosisExplanation(
   // Symptom-specific explanations that connect system character to the complaint
   const SYMPTOM_EXPLANATIONS: Record<string, { withSystem: string; withoutSystem: string }> = {
     'fatigue-brightness': {
-      withSystem: 'In a resolving, transparent system, brightness and fatigue often come from the upstream chain — the DAC or source feeds detail faster than the ear can comfortably absorb. This is not a flaw in the system; it is a design trade-off that becomes audible when every component is highly revealing.',
-      withoutSystem: 'Brightness and listening fatigue typically originate upstream — the source or DAC is feeding more treble energy or transient detail than the system can absorb comfortably. The effect compounds in resolving systems where nothing softens the signal.',
+      withSystem: 'In a resolving, transparent system, brightness and fatigue come from the upstream chain — the DAC or source feeds detail faster than the ear can comfortably absorb. This is not a flaw; it is a design trade-off that becomes audible when every component is highly revealing.',
+      withoutSystem: 'Brightness and listening fatigue originate upstream — the source or DAC is feeding more treble energy or transient detail than the system can absorb comfortably. The effect compounds in resolving systems where nothing softens the signal.',
     },
     'detail-fatigue-tradeoff': {
       withSystem: 'Your system is doing its job — revealing more of the recording. The fatigue you are experiencing is the cost of that transparency. Over time, the ear may adjust. If it does not, the system may be more analytical than your long-term listening preferences require.',
-      withoutSystem: 'More detail often means more fatigue initially. A highly resolving system presents everything — including recording artifacts and compression — with full clarity. The question is whether this is temporary adjustment or a genuine mismatch with your preferences.',
+      withoutSystem: 'More detail means more fatigue initially. A highly resolving system presents everything — including recording artifacts and compression — with full clarity. The question is whether this is temporary adjustment or a genuine mismatch with your preferences.',
     },
     'flat-presentation': {
       withSystem: 'A flat, unengaging presentation usually points to the amplifier or to a system that optimizes for composure at the expense of dynamic contrast. When everything is perfectly controlled, music can lose the tension and release that makes it involving.',
-      withoutSystem: 'A flat presentation typically reflects insufficient dynamic contrast — the amplifier may prioritize composure over engagement, or the system as a whole may be over-damped, trading musical involvement for measured precision.',
+      withoutSystem: 'A flat presentation reflects insufficient dynamic contrast — the amplifier prioritizes composure over engagement, or the system as a whole is over-damped, trading musical involvement for measured precision.',
     },
     'thinness-bass-deficit': {
-      withSystem: 'Thinness in a system is most often a room interaction — speaker placement and boundary reinforcement have a larger effect on bass weight than any component change. But it can also indicate a lean-voiced source chain that strips midrange density.',
+      withSystem: 'Thinness is primarily a room interaction — speaker placement and boundary reinforcement have a larger effect on bass weight than any component change. It can also indicate a lean-voiced source chain that strips midrange density.',
       withoutSystem: 'Thinness is almost always dominated by room interaction and speaker placement before any component is at fault. The distance from rear and side walls directly controls how much bass energy the room reinforces.',
     },
     'congestion-bottleneck': {
-      withSystem: 'Congestion means something in the chain cannot keep up — one component is limiting the system\'s ability to separate and present information clearly. In a well-matched system, this often points to a single bottleneck rather than a general problem.',
+      withSystem: 'Congestion means something in the chain cannot keep up — one component is limiting the system\'s ability to separate and present information clearly. In a well-matched system, this points to a single bottleneck rather than a general problem.',
       withoutSystem: 'Congestion usually means a bottleneck — one component cannot process information as cleanly as the rest of the chain demands. The source is the most common culprit, followed by the amplifier.',
     },
     'narrow-soundstage': {
@@ -2295,7 +2298,7 @@ function buildDiagnosisActions(
       { area: 'Amplifier pairing', guidance: 'If the amplifier is lean or neutral, a warmer-voiced alternative can restore body without masking detail.', examples: 'Rega Brio, Exposure 2510, PrimaLuna EVO 100 (tube)' },
     ],
     'thinness-bass-deficit+fatigue-brightness': [
-      { area: 'Speaker placement', guidance: 'The most reversible fix. Moving speakers closer to the rear wall increases bass reinforcement — and the added body often reduces the perception of brightness by restoring tonal balance.' },
+      { area: 'Speaker placement', guidance: 'The most reversible fix. Moving speakers closer to the rear wall increases bass reinforcement — the added body reduces the perception of brightness by restoring tonal balance.' },
       { area: 'Source / DAC', guidance: 'A warmer DAC adds midrange density and reduces upstream treble edge simultaneously.', examples: 'Denafrips Enyo 15th, Schiit Bifrost 2, Border Patrol DAC' },
       { area: 'Room treatment', guidance: 'Hard floors and bare walls tilt the balance bright and thin. Adding a rug, diffusion panels, or absorption at first reflections addresses both symptoms.' },
       { area: 'Amplifier pairing', guidance: 'A warmer-voiced amplifier restores harmonic weight. Especially impactful if the current amp is lean or analytical.', examples: 'Rega Brio, Exposure 2510, PrimaLuna EVO 100 (tube)' },
@@ -2322,7 +2325,7 @@ function buildDiagnosisActions(
     'detail-fatigue-tradeoff': [
       { area: 'Wait and observe', guidance: 'The ear adjusts to increased resolution over 2–4 weeks. If fatigue persists beyond this, the system may genuinely be too analytical for your preferences.' },
       { area: 'Source voicing', guidance: 'If fatigue does not resolve, a more musical source can ease the relentless detail without losing the improvements you have gained.', examples: 'Denafrips Pontus, Schiit Gungnir, MHDT Orchid' },
-      { area: 'Listening level', guidance: 'Highly resolving systems reveal more at lower volumes. Dropping the volume slightly often eliminates fatigue entirely.' },
+      { area: 'Listening level', guidance: 'Highly resolving systems reveal more at lower volumes. Dropping the volume slightly eliminates fatigue in many cases.' },
     ],
     'flat-presentation': [
       { area: 'Amplifier', guidance: 'If the amplifier prioritizes composure, a more dynamic design restores the tension and release that makes music involving.', examples: 'Naim Nait 5si, Rega Brio, Exposure 2510 (for rhythmic drive); Decware Zen (for tube-based engagement)' },
@@ -2336,7 +2339,7 @@ function buildDiagnosisActions(
       { area: 'Room treatment', guidance: 'Bare floors and hard walls tilt the balance toward upper frequencies. Adding a rug or diffusion panels can shift perceived warmth.' },
     ],
     'congestion-bottleneck': [
-      { area: 'Source / DAC', guidance: 'A cleaner, more resolving source often clears congestion throughout the chain. This is the most common bottleneck.', examples: 'Chord Qutest, Denafrips Pontus, Schiit Bifrost 2' },
+      { area: 'Source / DAC', guidance: 'A cleaner, more resolving source clears congestion throughout the chain — this is the most common bottleneck.', examples: 'Chord Qutest, Denafrips Pontus, Schiit Bifrost 2' },
       { area: 'Amplifier control', guidance: 'If the amplifier lacks damping factor for the speakers, bass becomes loose and bleeds into the midrange.', examples: 'Benchmark AHB2, Parasound A23+, NAD C 298' },
       { area: 'Simplify the chain', guidance: 'Temporarily removing components (external DACs, preamps, equalizers) and running a minimal chain can isolate the bottleneck.' },
     ],
@@ -2391,11 +2394,11 @@ function buildDiagnosisFollowUp(
 
   const COMBINED_FOLLOWUPS: Record<string, { withSystem: string; withoutSystem: string }> = {
     'fatigue-brightness+thinness-bass-deficit': {
-      withSystem: 'Two things would help narrow this down: what source or DAC is in the chain (brightness often starts upstream), and how far are the speakers from the rear wall (bass reinforcement is the most reversible fix for thinness).',
+      withSystem: 'Two things would narrow this down: what source or DAC is in the chain (brightness starts upstream), and how far are the speakers from the rear wall (bass reinforcement is the most reversible fix for thinness).',
       withoutSystem: 'Can you walk me through the signal chain — source, DAC, amplifier, speakers? And describe the room: size, floor surface, how far the speakers sit from walls. Brightness usually traces to the source; thinness to room interaction.',
     },
     'thinness-bass-deficit+fatigue-brightness': {
-      withSystem: 'How far are the speakers from the rear wall? And what source or DAC feeds the chain? Thinness often responds to placement, while brightness usually points upstream.',
+      withSystem: 'How far are the speakers from the rear wall? And what source or DAC feeds the chain? Thinness responds to placement; brightness points upstream.',
       withoutSystem: 'Can you describe the room — size, floor surface, speaker distance from walls — and the main components from source to speakers? The bass issue is likely room-related; the brightness may originate further upstream.',
     },
   };
@@ -2419,15 +2422,15 @@ function buildDiagnosisFollowUp(
       withoutSystem: 'How recently did the system change? And what are the main components — knowing the chain helps me assess whether this is adjustment or genuine mismatch.',
     },
     'flat-presentation': {
-      withSystem: 'What amplifier are you using? That is often the pivot point for dynamic engagement.',
-      withoutSystem: 'What are the main components in your system? A flat presentation often traces to the amplifier or source.',
+      withSystem: 'What amplifier are you using? That is the pivot point for dynamic engagement.',
+      withoutSystem: 'What are the main components in your system? A flat presentation traces to the amplifier or source.',
     },
     'thinness-bass-deficit': {
       withSystem: 'How far are your speakers from the rear wall? And what is the floor surface — carpet, hardwood, tile?',
       withoutSystem: 'Can you describe the room — size, floor surface, speaker distance from walls? Room interaction is usually the dominant factor for thinness.',
     },
     'congestion-bottleneck': {
-      withSystem: 'Have you tried simplifying the chain — running source directly into the amplifier, bypassing any preamp or processor? That often reveals the bottleneck.',
+      withSystem: 'Have you tried simplifying the chain — running source directly into the amplifier, bypassing any preamp or processor? That reveals the bottleneck.',
       withoutSystem: 'What are the main components in your chain, from source to speakers? Congestion usually has a single origin point.',
     },
     'narrow-soundstage': {
@@ -2586,7 +2589,7 @@ function buildBassBloomRoomRefinement(
   if (actions.length > 0) {
     actions.push({
       area: 'Listen before buying anything',
-      guidance: 'Placement and treatment changes are free (or cheap) and reversible. Spend a week experimenting before considering component changes. In a small room with wall-adjacent speakers, placement alone often resolves the issue entirely.',
+      guidance: 'Placement and treatment changes are free (or cheap) and reversible. Spend a week experimenting before considering component changes. In a small room with wall-adjacent speakers, placement alone resolves the issue.',
     });
   }
 
@@ -2595,7 +2598,7 @@ function buildBassBloomRoomRefinement(
   if (!room.hardFloor && !room.carpet) {
     followUp = 'What is the floor surface — carpet, hardwood, tile? And are there curtains or soft furnishings in the room? This affects how much high-frequency energy balances the bass.';
   } else if (actions.length > 0) {
-    followUp = 'Try the placement changes when you have a chance and let me know how it sounds. I can also look at whether your amplifier\'s damping characteristics might be contributing.';
+    followUp = 'Try the placement changes when you have a chance and let me know how it sounds. I can also assess whether your amplifier\'s damping characteristics are contributing.';
   }
 
   return {

@@ -1083,10 +1083,26 @@ export const HEADPHONE_PRODUCTS: HeadphoneProduct[] = [
       spatial_precision: 1.0, composure: 0.8, texture: 0.9,
       fatigue_risk: 0.1, openness: 1.0,
     },
-    description: 'True ribbon headphone requiring speaker amplification — not a conventional headphone in any sense. Electrostatic-like speed and transparency with ribbon directness and zero compression. Massive soundstage, lightning transients, and detail retrieval that rivals the best electrostatics. The ribbon driver is inherently smooth in attack despite extreme resolution. Srajan Ebaen\'s (6moons) reference headphone.',
+    description: 'True ribbon headphone requiring speaker amplification — not a conventional headphone. The ribbon driver has negligible mass, which means transient response is limited only by the amplifier, not the driver. Soundstage is room-like rather than head-locked: instruments separate in three dimensions. Detail retrieval rivals electrostatics but the ribbon\'s attack is smooth, not etched — resolution without grain. Demands careful amplifier pairing: needs current, low noise, and enough power to drive a ribbon load. Srajan Ebaen\'s (6moons) reference headphone.',
     retailer_links: [
       { label: 'Raal-Requisite', url: 'https://rfrequestie.com/' },
     ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'tonality', tendency: 'neutral and transparent — the ribbon adds almost no coloration; tonal character comes entirely from the amplifier and source', basis: 'review_consensus' },
+        { domain: 'spatial', tendency: 'open, room-like staging that conventional headphones cannot replicate — the ribbon\'s dipole radiation pattern creates a sense of space rather than in-head imaging', basis: 'review_consensus' },
+        { domain: 'dynamics', tendency: 'zero compression from DC to ultrasonic — the near-zero-mass ribbon responds instantly to the signal with no inertia-related lag', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'driven by Benchmark AHB2', effect: 'popular pairing — the AHB2\'s low noise and current capability match the ribbon\'s resolving power and impedance needs', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'driven by tube speaker amplifiers', effect: 'the ribbon reveals tube character clearly — SET warmth and harmonic richness are audible in a way that\'s harder to hear through dynamic headphones', valence: 'positive', basis: 'editorial_inference' },
+        { condition: 'driven by conventional headphone amplifiers', effect: 'incompatible — ribbon impedance and power requirements are fundamentally different from dynamic or planar headphones', valence: 'caution', basis: 'review_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'transient speed, spatial realism, zero-compression dynamics, and resolution without grain', cost: 'requires speaker amplifier (not portable, not compatible with headphone amps); ribbon is fragile compared to dynamic drivers; no isolation', relative_to: 'high-end planar magnetic headphones (HiFiMAN Susvara, Audeze LCD-5)', basis: 'review_consensus' },
+      ],
+    },
     sourceReferences: [
       { source: '6moons', note: 'Srajan Ebaen\'s reference headphone. Extensive coverage of the 1995 and Immanis models.' },
     ],
@@ -1100,7 +1116,7 @@ export const HEADPHONE_PRODUCTS: HeadphoneProduct[] = [
     },
   },
 
-  // ── Aune (China — value planar magnetic) ───────────────
+  // ── Aune (China — value dynamic open-back) ──────────────
 
   {
     id: 'aune-ar5000',
@@ -1108,7 +1124,7 @@ export const HEADPHONE_PRODUCTS: HeadphoneProduct[] = [
     name: 'AR5000',
     price: 500,
     category: 'headphone',
-    architecture: 'Open-back planar magnetic',
+    architecture: 'Open-back dynamic driver',
     subcategory: 'other',
     priceTier: 'mid',
     brandScale: 'specialist',
@@ -1120,20 +1136,35 @@ export const HEADPHONE_PRODUCTS: HeadphoneProduct[] = [
       confidence: 'medium',
       tendencies: [
         { trait: 'clarity', level: 'emphasized' },
-        { trait: 'speed', level: 'emphasized' },
+        { trait: 'speed', level: 'present' },
         { trait: 'composure', level: 'emphasized' },
         { trait: 'flow', level: 'present' },
       ],
       riskFlags: [],
     },
     traits: {
-      clarity: 0.8, warmth: 0.3, tonal_density: 0.5,
-      speed: 0.85, dynamics: 0.7, flow: 0.65,
-      spatial_precision: 0.75, composure: 0.8, texture: 0.7,
+      clarity: 0.8, warmth: 0.35, tonal_density: 0.55,
+      speed: 0.75, dynamics: 0.7, flow: 0.7,
+      spatial_precision: 0.7, composure: 0.8, texture: 0.7,
       fatigue_risk: 0.15, openness: 0.8,
     },
-    description: 'Clean, fast, surprisingly refined open-back planar magnetic at an accessible price. Srajan Ebaen\'s 2024 brand pick on 6moons. Planar speed and composure typically associated with much more expensive designs. Not warm or romantic — precision-oriented with good soundstage for a planar. Outstanding value proposition.',
+    description: 'Open-back dynamic headphone that delivers composure and tonal refinement at a price point where most competitors cut corners. The dynamic driver has good extension and a well-controlled midrange — not warm or romantic, but even-handed and easy to listen to for extended sessions. Open-back design provides natural soundstage width. Srajan Ebaen\'s 2024 brand pick on 6moons.',
     retailer_links: [],
+    tendencies: {
+      confidence: 'medium',
+      character: [
+        { domain: 'tonality', tendency: 'neutral and composed — neither warm nor bright; the tuning prioritises evenness across the frequency range rather than emphasising any particular region', basis: 'review_consensus' },
+        { domain: 'dynamics', tendency: 'clean transient response with good dynamic driver weight — bass has natural body and impact that comes from moving air', basis: 'review_consensus' },
+        { domain: 'spatial', tendency: 'open-back staging with natural width — not holographic, but the presentation breathes and instruments separate clearly', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'driven by modest desktop amplifiers', effect: 'dynamic driver efficiency means the AR5000 performs well without high-power headphone amps — a strong entry point for open-back sound', valence: 'positive', basis: 'review_consensus' },
+        { condition: 'in systems that need warmth or tonal body', effect: 'the AR5000 won\'t add warmth — pair with a warmer DAC or tube amp if body is desired', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'composure, tonal evenness, natural dynamics, and value-per-dollar that punches above its class', cost: 'doesn\'t match the transient speed of planar magnetics or the ultimate resolution of flagships at 3–5x the price; bass extension is good but not subterranean', relative_to: 'mid-range open-backs ($500–$1000: Sennheiser HD 600, HiFiMAN Sundara)', basis: 'review_consensus' },
+      ],
+    },
     sourceReferences: [
       { source: '6moons', note: 'Aune was Srajan\'s 2024 favourite brand. AR5000 praised for refinement-per-dollar.' },
     ],

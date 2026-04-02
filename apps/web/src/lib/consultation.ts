@@ -851,19 +851,6 @@ const BRAND_PROFILES: BrandProfile[] = [
     ],
   },
   {
-    names: ['kinki studio', 'kinki'],
-    country: 'China',
-    brandScale: 'specialist',
-    region: 'asia',
-    categories: ['amplifier'],
-    philosophy: 'Kinki Studio is a Chinese boutique amplifier manufacturer distributed internationally through Vinshine Audio. Their designs use high-current Class AB topologies with fully balanced, dual-mono layouts. The EX-M1+ became a cult favourite for delivering reference-level transparency and imaging at a fraction of the price of European competitors.',
-    tendencies: 'Kinki Studio amplifiers lean toward transparency, composure, and three-dimensional staging. Neutral to slightly warm tonal balance with strong current delivery and bass authority. Detail retrieval is high without becoming aggressive. Imaging and soundstage depth are standout traits. Can sound slightly dry with already-lean speakers.',
-    systemContext: 'Kinki Studio amplifiers pair well with speakers that benefit from current and control — planar magnetics, inefficient bookshelf designs, and power-hungry floorstanders. The neutral transparency makes them revealing of upstream source character. Work well with both R-2R and delta-sigma DACs.',
-    links: [
-      { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/', region: 'global' },
-    ],
-  },
-  {
     names: ['singxer'],
     country: 'China',
     brandScale: 'specialist',
@@ -964,6 +951,19 @@ const BRAND_PROFILES: BrandProfile[] = [
     tendencies: 'Clean, fast, refined. Planar magnetic headphones with good composure and speed. Not warm or romantic — precision-oriented but not clinical. Outstanding value-per-dollar. Srajan Ebaen\'s 2024 brand pick on 6moons.',
     systemContext: 'Aune products are accessible entry points for listeners exploring higher-end sound. Their headphones work well with modest amplification. Their amplifiers and DACs pair broadly.',
     links: [],
+  },
+  {
+    names: ['bluesound'],
+    country: 'Canada',
+    brandScale: 'specialist',
+    region: 'north-america',
+    categories: ['dac', 'streamer'],
+    philosophy: 'Bluesound builds streaming audio products around the BluOS multi-room platform. The design priority is ecosystem integration — seamless multi-room streaming with audiophile-grade output quality. Products use ESS DAC chips and support major streaming services natively.',
+    tendencies: 'Clean, neutral conversion with ESS DAC chips. The NODE series provides streaming convenience with competent DAC quality. The NODE X upgrades to ES9038PRO for better measured performance and balanced output. Sound character is determined more by the DAC implementation than any house voicing.',
+    systemContext: 'Bluesound products are streaming sources — they feed amplifiers and active speakers. The BluOS ecosystem competes with Sonos for multi-room control but targets higher output quality. Best suited as convenient streaming transports; dedicated DACs at similar prices provide better conversion quality.',
+    links: [
+      { label: 'Bluesound', url: 'https://www.bluesound.com/', region: 'global' },
+    ],
   },
 ];
 
@@ -4819,7 +4819,7 @@ export function buildSystemAssessment(
   // ── Follow-up — preference-aware when possible ────────
   const followUp = preferenceNote
     ? preferenceNote + '\n\nIf you want to explore a specific direction, name the quality or the component — that narrows the analysis.'
-    : 'What are you exploring — is there something you\'d like to change about this balance, or are you looking to understand what a specific upgrade path might shift?';
+    : 'What are you exploring — is there something you\'d like to change about this balance, or are you looking to understand what a specific upgrade path would shift?';
 
   // ── Subject line ────────────────────────────────────
   const subject = components.map((c) => c.displayName).join(', ');
@@ -7310,7 +7310,7 @@ function buildAssessmentPreferenceAlignment(
     return `You mentioned wanting more ${quality}. Your system leans warm, so there would likely be room to increase definition without losing the underlying tonal body — the question is which component to address first.`;
   }
   if (wantsLessFatigue) {
-    return `You mentioned wanting less ${quality}. This is worth investigating component by component — fatigue-related traits often trace to a specific point in the chain rather than the system as a whole.`;
+    return `You mentioned wanting less ${quality}. That traces to a specific point in the chain — tell me the signal path and I'll identify it.`;
   }
 
   // Generic fallback for other desires
@@ -8073,9 +8073,9 @@ export function buildSystemDiagnosis(
     const compounders = ['neutral', 'precise', 'controlled', 'detailed', 'resolving', 'transparent', 'clean'];
     const isCompounding = complaintKey === 'dry' || complaintKey === 'sterile' || complaintKey === 'clinical' || complaintKey === 'cold' || complaintKey === 'analytical';
     if (isCompounding && compounders.some((w) => charText.includes(w))) {
-      systemNote = `With highly transparent, controlled components on both ends, the system may be too \"correct\" — precision without harmonic richness. This is a common characteristic of reference-grade solid-state chains, not a flaw.`;
+      systemNote = `With highly transparent, controlled components on both ends, the system is too \"correct\" — precision without harmonic richness. This is a characteristic of reference-grade solid-state chains, not a flaw.`;
     } else if ((complaintKey === 'bright' || complaintKey === 'harsh') && charText.includes('detail')) {
-      systemNote = `A system this resolving can expose recording-quality issues that less transparent systems smooth over. The harshness may be partly recording-dependent.`;
+      systemNote = `A system this resolving exposes recording-quality issues that less transparent systems smooth over. The harshness is partly recording-dependent.`;
     }
   }
 

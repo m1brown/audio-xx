@@ -107,7 +107,12 @@ const PRODUCT_NAMES = [
   // ── Compound names first (longest match wins) ──────
   'hugo tt2', 'hugo tt', 'hugo 2',
   'dmp-a6', 'dmp-a8', 'dac-z8',
-  'wiim ultra', 'wiim pro',
+  'wiim ultra', 'wiim pro', 'wiim amp', 'wiim amp ultra',
+  'k11 r2r', 'fiio k11', 'fiio k11 r2r',
+  'node x', 'bluesound node x',
+  'ls60', 'kef ls60', 'ls60 wireless',
+  'lsx ii', 'lsx 2', 'kef lsx', 'kef lsx ii',
+  'h390', 'hegel h390',
   'harmony dac', 'udac',
   'ares 15th', 'ares 12th-1', 'ares ii', 'enyo 15th', 'pontus ii', 'pontus 12th-1',
   'terminator ii', 'd1-twelve', 'd1-unity', 'd1-tube',

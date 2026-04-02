@@ -658,18 +658,18 @@ export const DAC_PRODUCTS: Product[] = [
     country: 'CN',
     topology: 'delta-sigma',
     archetypes: { primary: 'precision_explicit' },
-    // Axis reasoning: "Reference-grade ESS Sabre. Precision and composure over musicality."
-    // Clarity 1.0, composure 0.7, flow 0.4, density 0.4, glare risk. "Lean tonal balance."
-    // "Composed rather than explosive." "Can feel clinical."
+    // Axis reasoning: ESS Sabre delta-sigma measures flat. The "lean" perception comes from
+    // low harmonic distortion and fast transients — the chip doesn't add body or warmth.
+    // Not bright by measurement, but systems that rely on source-level warmth will sound lean.
     primaryAxes: {
-      warm_bright: 'bright',              // Clarity 1.0, density 0.4, "lean" — clearly bright
-      smooth_detailed: 'detailed',        // Clarity emphasized, flow less_emphasized
-      elastic_controlled: 'controlled',   // Composure 0.7, "composed rather than explosive"
-      airy_closed: 'neutral',            // "Precise imaging" but not described as airy
+      warm_bright: 'neutral',              // Measures flat — perceived leanness comes from absence of added harmonics, not from treble emphasis
+      smooth_detailed: 'detailed',         // Clarity emphasized, flow less_emphasized
+      elastic_controlled: 'controlled',    // Composure 0.7, composed
+      airy_closed: 'neutral',             // Precise imaging but not described as airy
     },
     fatigueAssessment: {
       risk: 'context_dependent',
-      notes: 'Can feel clinical in lean systems — sterility rather than glare. Low fatigue when paired with warm or tube amplification.',
+      notes: 'The D90SE itself measures flat and adds minimal distortion. Fatigue in D90SE systems typically comes from what it doesn\'t do — it adds no warmth or harmonic cushion, so aggressive amplification or speakers become more audible.',
     },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -695,26 +695,26 @@ export const DAC_PRODUCTS: Product[] = [
       composure: 0.7,
     },
     description:
-      'Reference-grade ESS Sabre implementation with very low distortion and wide bandwidth. Precision and composure over musicality.',
+      'ESS Sabre delta-sigma implementation with very low distortion and wide bandwidth. The chip\'s fast transient response and low harmonic distortion mean the D90SE contributes minimal coloration — what goes in comes out with high measured fidelity. The trade-off is that it adds no harmonic body of its own, so systems that rely on the DAC for tonal weight will sound lean.',
     retailer_links: [
       { label: 'Topping', url: 'https://www.toppingaudio.com/product-item/d90se' },
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B09DVCCQGP' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/topping-d90se' },
     ],
-    notes: 'Strengths are measured performance. Can feel clinical in systems that lack warmth upstream.',
+    notes: 'Strengths are measurable: low distortion, wide bandwidth, high channel separation. The ESS chip\'s fast reconstruction filter produces sharp transients that some listeners read as "lean" compared to the slower rolloff of R2R or NOS designs.',
     tendencies: {
       confidence: 'high',
       character: [
-        { domain: 'tonality', tendency: 'lean tonal balance — prioritizes separation over body', basis: 'review_consensus' },
-        { domain: 'spatial', tendency: 'precise imaging with well-defined instrument placement', basis: 'review_consensus' },
-        { domain: 'dynamics', tendency: 'controlled dynamic delivery — composed rather than explosive', basis: 'listener_consensus' },
+        { domain: 'tonality', tendency: 'low harmonic distortion means the D90SE contributes minimal tonal coloration — instruments have separation and definition but less midrange body than R2R designs that add even-order harmonics', basis: 'review_consensus' },
+        { domain: 'spatial', tendency: 'precise imaging from high channel separation and low noise floor — instrument placement is explicit', basis: 'review_consensus' },
+        { domain: 'dynamics', tendency: 'controlled and composed — the fast reconstruction filter preserves transient shape but the low-level delivery is even rather than explosive', basis: 'listener_consensus' },
       ],
       interactions: [
-        { condition: 'paired with warm or tube-based amplification', effect: 'tends to provide a transparent, clean source that lets the amplifier add color', valence: 'positive', basis: 'listener_consensus' },
-        { condition: 'in systems that are already lean or bright', effect: 'can feel clinical — the precision becomes sterility without compensating warmth', valence: 'caution', basis: 'review_consensus' },
+        { condition: 'paired with warm or tube-based amplification', effect: 'the DAC provides a transparent, uncolored source signal — the amplifier\'s harmonic character passes through without being fought or duplicated', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in systems that are already lean or lacking midrange body', effect: 'the D90SE won\'t compensate — it adds no warmth or harmonic padding, so leanness upstream or downstream becomes more audible', valence: 'caution', basis: 'review_consensus' },
       ],
       tradeoffs: [
-        { gains: 'measured transparency and composure', cost: 'tonal richness and harmonic engagement', relative_to: 'R2R and multibit designs at this price', basis: 'review_consensus' },
+        { gains: 'measured transparency, transient accuracy, and channel separation at this price', cost: 'the midrange body and harmonic density that R2R designs produce through their inherent even-order distortion products — the D90SE is accurate but not rich', relative_to: 'R2R designs (Denafrips Enyo 15th, Schiit Bifrost 2/64)', basis: 'review_consensus' },
       ],
     },
     philosophy: 'analytical',
@@ -3682,7 +3682,7 @@ export const DAC_PRODUCTS: Product[] = [
     },
     fatigueAssessment: {
       risk: 'very_low',
-      notes: 'NOS R2R with organic warmth. Inherently non-fatiguing. Zero digital harshness.',
+      notes: 'NOS mode bypasses reconstruction filtering, avoiding pre-ringing that causes listening fatigue. R2R ladder conversion adds even-order harmonic density that softens the presentation.',
     },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -3713,31 +3713,31 @@ export const DAC_PRODUCTS: Product[] = [
       glare_risk: 0.0,
     },
     description:
-      'Natural, organic, analog-like character. Clear without being clinical. Musical fluidity with full-bodied dynamics. Eight R2R modules per channel — densest discrete architecture in price class. Step up from Morpheus with refined harmonic complexity.',
+      'Eight discrete R2R modules per channel — more resistor elements per conversion step means finer voltage resolution, reducing quantization noise and producing smoother low-level detail than simpler R2R implementations. NOS mode bypasses digital reconstruction filtering, allowing transients to arrive without the pre-ringing that sharp digital filters introduce. The combination delivers dense harmonic midrange and natural phrasing, stepping up from the Morpheus with greater resolution.',
     retailer_links: [
       { label: 'Sonnet', url: 'https://www.sonnet.nl/' },
     ],
     tendencies: {
       confidence: 'high',
       character: [
-        { domain: 'tonality', tendency: 'natural and organic with full-bodied warmth — analog-like without artificial sweetness', basis: 'review_consensus' },
-        { domain: 'texture', tendency: 'layered harmonic texture with rich instrumental tones and body', basis: 'listener_consensus' },
-        { domain: 'flow', tendency: 'musical fluidity and natural phrasing — coherent without analytical dissection', basis: 'listener_consensus' },
-        { domain: 'dynamics', tendency: 'full-bodied dynamic delivery with natural transient articulation', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'R2R ladder conversion inherently produces even-order harmonics that delta-sigma chips suppress — this gives the Pasithea a denser midrange with more overtone structure per instrument', basis: 'review_consensus' },
+        { domain: 'texture', tendency: 'eight modules per channel increase voltage resolution in the ladder — finer steps mean smoother low-level transitions and less quantization roughness in quiet passages', basis: 'listener_consensus' },
+        { domain: 'flow', tendency: 'NOS mode avoids the pre-ringing of sharp digital reconstruction filters — transients arrive without the smeared leading edge that oversampling introduces, which listeners perceive as more natural phrasing', basis: 'listener_consensus' },
+        { domain: 'dynamics', tendency: 'discrete transistor output stage has higher current capability than the op-amp outputs typical at this price — macro-dynamics have physical weight', basis: 'review_consensus' },
       ],
       interactions: [
-        { condition: 'paired with precision or fast amplifiers', effect: 'R2R organic character and amp clarity create balance — musicality without sluggishness', valence: 'positive', basis: 'listener_consensus' },
-        { condition: 'in systems already warm or tonally dense', effect: 'cumulative body can reduce transparency — best with some brightness for clarity', valence: 'caution', basis: 'editorial_inference' },
+        { condition: 'paired with fast or precision-oriented amplifiers', effect: 'the DAC\'s harmonic richness complements the amp\'s transient speed — body from the source, control from the amp', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in systems already warm or tonally dense', effect: 'cumulative harmonic density can reduce transparency and separation — midrange may feel congested', valence: 'caution', basis: 'editorial_inference' },
       ],
       tradeoffs: [
-        { gains: 'organic warmth and harmonic texture at $5000 price point', cost: 'ultimate transient speed and analytical clarity versus precision designs', relative_to: 'ESS-based and FPGA flagship DACs', basis: 'editorial_inference' },
+        { gains: 'harmonic density from R2R conversion, smooth low-level detail from eight-module architecture, and natural transient shape from NOS mode', cost: 'the ultimate transient precision and treble extension of oversampling delta-sigma designs — NOS mode trades high-frequency accuracy for temporal purity', relative_to: 'ESS-based and FPGA flagship DACs (Weiss DAC501, Chord DAVE)', basis: 'editorial_inference' },
       ],
     },
     sourceReferences: [
       { source: 'Audiophile Style', note: 'Analysis of eight-module SDA-3 architecture and NOS implementation.' },
       { source: 'Head-Fi', note: 'User comparisons between Pasithea and Morpheus highlighting upgrade path.' },
     ],
-    notes: 'Sonnet Pasithea offers exceptional value for boutique tube-grade R2R conversion. Eight discrete modules per channel deliver richness that justifies the higher architecture count. Best for listeners seeking organic warmth and harmonic authenticity at high-end price point.',
+    notes: 'Eight discrete R2R modules per channel is the densest ladder architecture at this price. More modules = finer voltage resolution = smoother conversion. NOS mode bypasses reconstruction filtering for temporal purity at the cost of high-frequency rolloff.',
     philosophy: 'warm',
     marketType: 'nonTraditional',
   },
@@ -3909,7 +3909,7 @@ export const DAC_PRODUCTS: Product[] = [
     },
     fatigueAssessment: {
       risk: 'low' as const,
-      notes: 'Warm, refined British sound. Musical Fidelity house voicing is gentle and non-fatiguing.',
+      notes: 'The Class A output stage rolls off the top end gently and adds even-order harmonic body that the PCM5102A chip doesn\'t natively produce. The result is a softer presentation than the chip alone would deliver.',
     },
     tendencyProfile: {
       basis: 'review_consensus' as const,
@@ -3931,7 +3931,7 @@ export const DAC_PRODUCTS: Product[] = [
       warmth: 0.7,
     },
     description:
-      'Compact, warm-voiced British DAC with Musical Fidelity\'s characteristic smoothness. Class A output stage adds body and refinement rare at this price. An excellent complement to lean or analytical systems.',
+      'Budget DAC using a Burr-Brown PCM5102A delta-sigma chip with a single-ended Class A analog output stage. The PCM5102A converts neutrally — the warmth comes from the Class A output stage, which adds even-order harmonics and softens the treble downstream. More midrange body than typical budget DACs that use op-amp outputs.',
     retailer_links: [
       { label: 'Musical Fidelity', url: 'https://www.musicalfidelity.com/v90-dac' },
     ],
@@ -3939,7 +3939,7 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'What Hi-Fi?', note: 'Review praising warm tonality and musicality for the price.' },
       { source: 'Stereophile', note: 'Brief coverage of Musical Fidelity V-series budget components.' },
     ],
-    notes: 'Budget warm DAC from a heritage British brand. The Class A output stage gives it more body than typical budget DACs.',
+    notes: 'The warmth comes from the Class A analog output stage, not the delta-sigma chip. The PCM5102A converts neutrally; the output stage adds harmonic body. This is why the entry has delta-sigma topology but warm traits — the analog section downstream of the chip defines the tonal character.',
     philosophy: 'neutral',
     marketType: 'traditional',
   },
@@ -4026,7 +4026,7 @@ export const DAC_PRODUCTS: Product[] = [
     },
     fatigueAssessment: {
       risk: 'very_low',
-      notes: 'Dense, rich, analog-like presentation. Inherently non-fatiguing.',
+      notes: 'Discrete DSD conversion avoids the sharp reconstruction filters of chip-based delta-sigma — no pre-ringing on transients. The slower transient edges and harmonic density make extended listening easy.',
     },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -4046,30 +4046,239 @@ export const DAC_PRODUCTS: Product[] = [
       fatigue_risk: 0.0, glare_risk: 0.0,
       elasticity: 0.7,
     },
-    description: 'Discrete DSD conversion without off-the-shelf DAC chips — the DSD path is built from discrete components for exceptional naturalness. PCM uses R-2R ladder with similar warmth. Dense, rich, analog-like. Not for detail-first listeners. Reviewed on 6moons.',
+    description: 'Discrete DSD conversion without off-the-shelf DAC chips — the DSD-to-analog path is built from individual resistors and transistors, avoiding the reconstruction filtering that chip-based converters impose. DSD\'s native 1-bit stream reaches the analog output with minimal processing, producing denser harmonic structure and softer transient edges than chip-based designs. PCM input is converted via a discrete R-2R ladder with similar tonal character.',
     retailer_links: [
       { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/' },
     ],
     tendencies: {
       confidence: 'high',
       character: [
-        { domain: 'tonality', tendency: 'warm, dense, analog-like — the discrete DSD path sounds exceptionally natural', basis: 'review_consensus' },
-        { domain: 'timing', tendency: 'musically flowing — organic phrasing over transient precision', basis: 'review_consensus' },
-        { domain: 'texture', tendency: 'rich harmonic texture — instruments have body and substance', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'the discrete conversion path produces denser harmonic overtones than chip-based DSD decoding — instruments have more body and midrange weight because the conversion preserves harmonic information that integrated chips attenuate during internal processing', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'transient edges are slower than chip-based designs because there is no sharp reconstruction filter — leading edges are rounded rather than pre-rung, which listeners perceive as more continuous phrasing', basis: 'review_consensus' },
+        { domain: 'texture', tendency: 'the discrete resistor ladder for PCM and discrete transistor path for DSD both add their own harmonic signature — more textural complexity per note than the cleaner output of integrated chips', basis: 'review_consensus' },
       ],
       interactions: [
-        { condition: 'fed DSD files (DSD64, DSD128, DSD256)', effect: 'the discrete DSD path is where this DAC truly shines', valence: 'positive', basis: 'review_consensus' },
-        { condition: 'paired with transparent amplification', effect: 'warmth and density provide excellent complementary balance', valence: 'positive', basis: 'editorial_inference' },
+        { condition: 'fed native DSD files (DSD64, DSD128, DSD256)', effect: 'DSD reaches the analog output with minimal processing — the discrete path handles the 1-bit stream directly, which is where the topology\'s advantage over chip-based DSD is most audible', valence: 'positive', basis: 'review_consensus' },
+        { condition: 'paired with transparent or fast amplification', effect: 'the DAC provides harmonic density and body; a transparent amp lets that through without adding further coloration', valence: 'positive', basis: 'editorial_inference' },
+        { condition: 'paired with already-warm tube amplification', effect: 'cumulative harmonic density may reduce clarity and separation — the system can tip toward congestion in the midrange', valence: 'caution', basis: 'editorial_inference' },
       ],
       tradeoffs: [
-        { gains: 'tonal density, harmonic richness, analog-like naturalness, and DSD excellence', cost: 'ultimate resolution, transient speed, and analytical precision', relative_to: 'precision delta-sigma or FPGA DACs', basis: 'review_consensus' },
+        { gains: 'harmonic density from discrete conversion, DSD-native processing without chip compromises, and textural richness from the analog output path', cost: 'transient speed and leading-edge precision are slower than chip-based delta-sigma or FPGA designs — the discrete path trades temporal accuracy for harmonic completeness', relative_to: 'precision delta-sigma (Weiss DAC501) or FPGA DACs (Chord DAVE)', basis: 'review_consensus' },
       ],
     },
     sourceReferences: [
-      { source: '6moons', note: 'Reviewed. Praised for discrete DSD topology and analog-like presentation.' },
+      { source: '6moons', note: 'Reviewed. Praised for discrete DSD topology and harmonically dense presentation.' },
     ],
     notes: 'Discrete DSD topology is genuinely unique — most DACs use chips or FPGA. Cen.Grand builds DSD conversion from individual components.',
     philosophy: 'warm',
+    marketType: 'traditional',
+  },
+
+  // ── WiiM Ultra (China — streaming DAC) ─────────────────
+
+  {
+    id: 'wiim-ultra',
+    brand: 'WiiM',
+    name: 'Ultra',
+    price: 329,
+    category: 'dac',
+    architecture: 'Streaming transport + ESS ES9038Q2M DAC, balanced XLR output, no amplification',
+    subcategory: 'standalone-dac',
+    priceTier: 'budget',
+    brandScale: 'established',
+    region: 'asia',
+    country: 'CN',
+    topology: 'delta-sigma',
+    archetypes: { primary: 'precision_explicit' },
+    primaryAxes: {
+      warm_bright: 'neutral',
+      smooth_detailed: 'detailed',
+      elastic_controlled: 'controlled',
+      airy_closed: 'neutral',
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'ES9038Q2M is clean and well-behaved. No inherent fatigue triggers at this implementation level.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'medium',
+      tendencies: [
+        { trait: 'clarity', level: 'present' },
+        { trait: 'composure', level: 'present' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 0.65, warmth: 0.25, tonal_density: 0.4,
+      speed: 0.6, dynamics: 0.5, flow: 0.5,
+      spatial_precision: 0.55, composure: 0.6, texture: 0.4,
+      fatigue_risk: 0.1, glare_risk: 0.05,
+      elasticity: 0.4,
+    },
+    description: 'Streaming DAC with ES9038Q2M and balanced output. The ES9038Q2M provides clean, detailed conversion with adequate dynamic range for this price tier. Balanced XLR output extends the performance ceiling when paired with balanced amplification. No built-in amplification — source-only device.',
+    retailer_links: [
+      { label: 'WiiM', url: 'https://www.wiimhome.com/' },
+    ],
+    tendencies: {
+      confidence: 'medium',
+      character: [
+        { domain: 'tonality', tendency: 'neutral to slightly lean — ESS delta-sigma provides clarity over tonal density', basis: 'review_consensus' },
+        { domain: 'dynamics', tendency: 'clean conversion with adequate dynamic range for the price tier', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'feeding a warm or tube amplifier', effect: 'the neutral source lets downstream warmth dominate — good complementary pairing', valence: 'positive', basis: 'editorial_inference' },
+        { condition: 'compared to standalone DACs at 3-5x price', effect: 'resolution, staging, and tonal density differences become apparent', valence: 'neutral', basis: 'review_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'streaming integration, balanced output, ESS DAC quality, compact, affordable', cost: 'tonal density, spatial depth, and harmonic texture of dedicated DACs at higher price points', relative_to: 'standalone DACs ($800+)', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'WiiM', note: 'Manufacturer product page.', url: 'https://www.wiimhome.com/' },
+    ],
+    notes: 'The Ultra is WiiM\'s source-only offering — no amplification. Balanced XLR output makes it a viable source for balanced amplifiers and active speakers.',
+    philosophy: 'neutral',
+    marketType: 'nonTraditional',
+  },
+
+  // ── FiiO K11 R2R (China — budget R-2R DAC) ────────────
+
+  {
+    id: 'fiio-k11-r2r',
+    brand: 'FiiO',
+    name: 'K11 R2R',
+    price: 150,
+    category: 'dac',
+    architecture: 'R-2R (resistor ladder) DAC with headphone amplifier, balanced 4.4mm output',
+    subcategory: 'standalone-dac',
+    priceTier: 'budget',
+    brandScale: 'specialist',
+    region: 'asia',
+    country: 'CN',
+    topology: 'r2r',
+    archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
+    primaryAxes: {
+      warm_bright: 'warm',
+      smooth_detailed: 'smooth',
+      elastic_controlled: 'elastic',
+      airy_closed: 'neutral',
+    },
+    fatigueAssessment: {
+      risk: 'very_low',
+      notes: 'R-2R conversion produces smoother transient edges than delta-sigma. Warm tonal balance reduces fatigue risk.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'medium',
+      tendencies: [
+        { trait: 'warmth', level: 'present' },
+        { trait: 'tonal_density', level: 'present' },
+        { trait: 'flow', level: 'present' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 0.5, warmth: 0.6, tonal_density: 0.6,
+      speed: 0.5, dynamics: 0.5, flow: 0.65,
+      spatial_precision: 0.45, composure: 0.5, texture: 0.6,
+      fatigue_risk: 0.0, glare_risk: 0.0,
+      elasticity: 0.5,
+    },
+    description: 'Budget R-2R DAC with headphone amplifier. The resistor ladder topology produces warmer, denser tonal balance than delta-sigma designs at this price. Transient edges are smoother. Measured precision is lower than ESS/AKM chips — the trade-off is tonal character for measured accuracy. At $150, R-2R implementation has linearity limitations but delivers the characteristic tonal density.',
+    retailer_links: [
+      { label: 'FiiO', url: 'https://www.fiio.com/' },
+    ],
+    tendencies: {
+      confidence: 'medium',
+      character: [
+        { domain: 'tonality', tendency: 'warm, tonally dense — R-2R ladder produces more harmonic weight than delta-sigma at this price', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'smoother transient edges — R-2R conversion rounds leading edges compared to delta-sigma sharpness', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with neutral or lean headphones/amplifiers', effect: 'R-2R warmth adds body and tonal substance — good complementary pairing', valence: 'positive', basis: 'editorial_inference' },
+        { condition: 'paired with already-warm equipment', effect: 'warmth may compound — bass and lower midrange can become heavy', valence: 'caution', basis: 'editorial_inference' },
+      ],
+      tradeoffs: [
+        { gains: 'R-2R tonal character, warmth, smooth transients, and non-fatiguing presentation at entry price', cost: 'measured precision, detail retrieval, and transient speed of delta-sigma designs at this price', relative_to: 'delta-sigma desktop DACs (Topping DX5, SMSL DO400)', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Darko.Audio', note: 'DAR-KO Award winner.', url: 'https://darko.audio/2025/07/fiios-k11-r2r-is-a-very-special-dac-for-very-little-money/' },
+      { source: 'FiiO', note: 'Manufacturer product page.', url: 'https://www.fiio.com/' },
+    ],
+    notes: 'One of the cheapest true R-2R DACs available. At this price, R-2R linearity is not reference-grade, but the tonal character of ladder conversion is present and distinct from delta-sigma alternatives.',
+    philosophy: 'warm',
+    marketType: 'traditional',
+  },
+
+  // ── Bluesound NODE X (Canada — streaming DAC) ──────────
+
+  {
+    id: 'bluesound-node-x',
+    brand: 'Bluesound',
+    name: 'NODE X',
+    price: 799,
+    category: 'dac',
+    architecture: 'Streaming transport + ESS ES9038PRO DAC, MQA decoding, balanced XLR output, BluOS ecosystem',
+    subcategory: 'standalone-dac',
+    priceTier: 'mid',
+    brandScale: 'specialist',
+    region: 'north-america',
+    country: 'CA',
+    topology: 'delta-sigma',
+    archetypes: { primary: 'precision_explicit' },
+    primaryAxes: {
+      warm_bright: 'neutral',
+      smooth_detailed: 'detailed',
+      elastic_controlled: 'controlled',
+      airy_closed: 'neutral',
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'ES9038PRO is well-implemented at this tier. Clean, detailed without aggression.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'medium',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'spatial_precision', level: 'present' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 0.75, warmth: 0.3, tonal_density: 0.5,
+      speed: 0.65, dynamics: 0.6, flow: 0.55,
+      spatial_precision: 0.65, composure: 0.7, texture: 0.5,
+      fatigue_risk: 0.1, glare_risk: 0.05,
+      elasticity: 0.45,
+    },
+    description: 'Streaming DAC with flagship ESS ES9038PRO chip and balanced output. The ES9038PRO provides better measured performance than budget ESS implementations — wider dynamic range, lower noise floor, improved linearity. BluOS ecosystem enables multi-room streaming. MQA hardware decoding (value depends on your streaming service and perspective on MQA).',
+    retailer_links: [
+      { label: 'Bluesound', url: 'https://www.bluesound.com/products/node-x/' },
+    ],
+    tendencies: {
+      confidence: 'medium',
+      character: [
+        { domain: 'tonality', tendency: 'neutral, clean — ES9038PRO provides high resolution without tonal coloration', basis: 'review_consensus' },
+        { domain: 'dynamics', tendency: 'good dynamic range from flagship ESS chip — better than budget streaming DACs', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'in a BluOS multi-room setup', effect: 'ecosystem integration is seamless — grouping, routing, and control are strengths', valence: 'positive', basis: 'review_consensus' },
+        { condition: 'compared to dedicated DACs at similar price (Denafrips Ares, Schiit Bifrost)', effect: 'streaming convenience vs dedicated conversion quality — the NODE X trades some DAC performance for integration', valence: 'neutral', basis: 'review_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'streaming ecosystem, flagship ESS DAC, balanced output, multi-room capability', cost: 'DAC performance ceiling vs dedicated converters at similar price; MQA dependency (controversial)', relative_to: 'standalone DAC + separate streamer', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Darko.Audio', note: 'Video review + 18 follow-up thoughts.', url: 'https://darko.audio/2023/06/bluesound-node-x-video-review/' },
+      { source: 'Bluesound', note: 'Manufacturer product page.', url: 'https://www.bluesound.com/products/node-x/' },
+    ],
+    notes: 'The NODE X is Bluesound\'s DAC-focused streamer — the ES9038PRO is a meaningful upgrade over the standard NODE\'s chip. The BluOS ecosystem competes with Sonos for multi-room but targets audiophile-grade output quality.',
+    philosophy: 'neutral',
     marketType: 'traditional',
   },
 ];

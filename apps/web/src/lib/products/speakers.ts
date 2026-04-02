@@ -915,29 +915,29 @@ export const SPEAKER_PRODUCTS: Product[] = [
       openness: 1.0,
     },
     description:
-      'Polish full-range widebander in a compact open-back cabinet. Ultra-high efficiency (96dB) with holographic spatial presentation and zero-crossover coherence. Designed for SET amps — the musical equivalent of a disappearing act.',
+      'Polish full-range widebander in a compact open-back cabinet — 96dB efficiency requires only 2–5W for full dynamic range, pairing naturally with SET amplifiers. The single driver handles the full frequency range without a crossover, avoiding the phase discontinuities that crossover networks introduce between drivers. The open-back cabinet radiates energy rearward as well as forward, so room reflections contribute to the spatial image — but also make speaker placement and room treatment critical.',
     retailer_links: [
       { label: 'Cube Audio', url: 'https://www.cubeaudio.com/' },
     ],
     tendencies: {
       confidence: 'high',
       character: [
-        { domain: 'spatial', tendency: 'holographic and boundless — the open-back design and single driver create a disappearing act with exceptional image specificity', basis: 'listener_consensus' },
-        { domain: 'texture', tendency: 'zero-crossover coherence — textures are unified and natural, without the discontinuities of multi-way designs', basis: 'review_consensus' },
-        { domain: 'timing', tendency: 'effortless, flowing musicality — single driver means perfect phase coherence and natural timing', basis: 'listener_consensus' },
+        { domain: 'spatial', tendency: 'the open-back cabinet sends energy rearward into the room — when rear-wall distance and absorption are correct, the reflected energy arrives late enough to expand the spatial image beyond the cabinets; when the room is untreated, those reflections interfere with the direct sound and the image becomes diffuse', basis: 'listener_consensus' },
+        { domain: 'texture', tendency: 'a single driver handling the full range means every frequency arrives from one point source with one radiation pattern — there are no crossover-induced phase shifts between drivers, so instrumental textures are time-coherent from bass through treble', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'one driver = one impulse response — transients arrive as a single unified event rather than the staggered arrivals that multi-way crossovers produce, giving music a continuity and rhythmic coherence', basis: 'listener_consensus' },
       ],
       interactions: [
-        { condition: 'driven by SET or low-power Class A amps', effect: 'the 96dB efficiency lets even 2W amps deliver full dynamics — magical synergy', valence: 'positive', basis: 'listener_consensus' },
-        { condition: 'in untreated or small rooms', effect: 'the open-back design radiates energy in all directions — room treatment is important', valence: 'caution', basis: 'editorial_inference' },
+        { condition: 'driven by SET or low-power Class A amps (2–8W)', effect: '96dB efficiency means 2W reaches ~99dB SPL — the amp operates in its most linear range without strain, and the low-power amp\'s limitations in current delivery are never exposed', valence: 'positive', basis: 'listener_consensus' },
+        { condition: 'in untreated or small rooms', effect: 'the open-back radiation pattern sends as much energy rearward as forward — without absorption behind the speaker, early reflections interfere with the direct sound and spatial precision degrades', valence: 'caution', basis: 'editorial_inference' },
       ],
       tradeoffs: [
-        { gains: 'spatial holography, coherence, and the disappearing-speaker experience', cost: 'bass extension, composure under pressure, and room-treatment requirements', relative_to: 'conventional sealed or ported two-way monitors', basis: 'listener_consensus' },
+        { gains: 'time-coherent reproduction from a single driver, expanded spatial image from rear-radiated room reflections, and the ability to reach full dynamic range with very low amplifier power', cost: 'bass extension is limited by driver excursion (no separate woofer), dynamic composure degrades at high SPL as the single driver handles everything, and room treatment is not optional — the speaker\'s spatial performance is room-dependent to a degree that conventional sealed or ported designs are not', relative_to: 'conventional sealed or ported two-way monitors (Qualio IQ, KEF LS50)', basis: 'listener_consensus' },
       ],
     },
-    notes: 'Ultra-high efficiency (96dB). Designed for SET amps. Requires careful room placement and ideally acoustic treatment.',
+    notes: '96dB efficiency. Designed for SET amps (2–8W). Single widebander driver, no crossover. Open-back cabinet requires room treatment.',
     placementSensitivity: {
       level: 'high',
-      notes: 'Open-back cabinet design radiates sound in multiple directions. Requires significant distance from rear walls and ideally acoustic treatment. Room interaction is a defining part of the sound — placement determines whether the holographic imaging magic appears or collapses.',
+      notes: 'Open-back cabinet radiates sound forward and rearward. Requires at least 3 feet from the rear wall and ideally rear-wall absorption. Without treatment, rear-radiated energy arrives at the listener ~5–15ms after the direct sound, smearing transients and degrading image specificity. The room is functionally part of the speaker design.',
     },
     sourceReferences: [
       { source: '6moons', note: 'Srajan Ebaen review covering the full-range widebander coherence and spatial performance.' },
@@ -2919,7 +2919,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     name: 'Vox 3a',
     price: 5500,
     category: 'speaker',
-    architecture: '2-way widebander with supertweeter, rear-ported, handcrafted',
+    architecture: 'Full-range driver + dual woofers + ambient ribbon supertweeter, rear-ported box, handcrafted',
     subcategory: 'standmount',
     priceTier: 'upper-mid',
     brandScale: 'boutique',
@@ -2931,11 +2931,11 @@ export const SPEAKER_PRODUCTS: Product[] = [
       warm_bright: 'warm',
       smooth_detailed: 'smooth',
       elastic_controlled: 'elastic',
-      airy_closed: 'closed',
+      airy_closed: 'airy',
     },
     fatigueAssessment: {
       risk: 'very_low',
-      notes: 'Widebander coherence with warm voicing. Inherently non-fatiguing — musical flow over detail.',
+      notes: 'The full-range driver handles the critical midrange band without a crossover transition through it, avoiding the phase issues that cause fatigue in conventional two-ways. The ribbon supertweeter adds air without energy or edge. Long-session speaker.',
     },
     tendencyProfile: {
       basis: 'review_consensus',
@@ -2945,39 +2945,184 @@ export const SPEAKER_PRODUCTS: Product[] = [
         { trait: 'tonal_density', level: 'emphasized' },
         { trait: 'texture', level: 'emphasized' },
         { trait: 'warmth', level: 'present' },
+        { trait: 'spatial_precision', level: 'less_emphasized' },
+        { trait: 'dynamics', level: 'less_emphasized' },
       ],
       riskFlags: [],
     },
     traits: {
-      clarity: 0.6, warmth: 0.7, tonal_density: 0.8,
-      speed: 0.7, dynamics: 0.65, flow: 0.9,
-      spatial_precision: 0.7, composure: 0.6, texture: 0.85,
-      fatigue_risk: 0.0, openness: 0.6,
+      clarity: 0.55, warmth: 0.7, tonal_density: 0.8,
+      speed: 0.7, dynamics: 0.5, flow: 0.9,
+      spatial_precision: 0.5, composure: 0.6, texture: 0.85,
+      fatigue_risk: 0.0, openness: 0.8,
     },
-    description: 'Swiss-designed widebander with supertweeter extension. Martin Gateley\'s designs prioritise tonal purity, midrange presence, and musical coherence over analytical detail. Natural, intimate, room-friendly. Extensively reviewed by Srajan Ebaen on 6moons.',
+    description: 'Swiss-designed speaker built around a full-range driver that handles the midrange band without a crossover, supported by dual woofers for bass extension and an ambient ribbon supertweeter for air. The full-range driver gives the midrange a directness and coherence that conventional crossover-based designs trade away. Staging is intimate and immediate rather than wide or deep — the listener sits inside the music rather than observing it from a distance. Dynamic headroom is limited by the full-range driver\'s excursion, and bass is managed by the woofers rather than produced by a large cabinet. Extensively reviewed by Srajan Ebaen on 6moons.',
     retailer_links: [
       { label: 'sound|kaos', url: 'https://www.soundkaos.com/' },
     ],
     tendencies: {
       confidence: 'high',
       character: [
-        { domain: 'tonality', tendency: 'warm, rich midrange with widebander coherence — instruments sound whole and connected', basis: 'review_consensus' },
-        { domain: 'spatial', tendency: 'intimate staging — designed for small to medium rooms, not concert-hall scale', basis: 'review_consensus' },
-        { domain: 'timing', tendency: 'musically elastic and flowing — prioritises natural musical phrasing over metronomic precision', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'warm, rich midrange from full-range driver coherence — the critical vocal and instrument band is handled by one driver without a crossover transition through it, giving instruments a directness and wholeness', basis: 'review_consensus' },
+        { domain: 'spatial', tendency: 'intimate, immediate staging — the listener is placed inside the performance rather than at a distance; soundstage width and depth are modest, not holographic', basis: 'review_consensus' },
+        { domain: 'timing', tendency: 'elastic phrasing and natural musical flow — the full-range driver\'s midrange coherence gives music an effortless continuity; woofers and supertweeter extend the range without disrupting it', basis: 'review_consensus' },
       ],
       interactions: [
-        { condition: 'paired with low-power tube or SET amplification', effect: 'synergistic — widebander efficiency and tube warmth complement beautifully', valence: 'positive', basis: 'review_consensus' },
-        { condition: 'in small to medium rooms (12x14 or smaller)', effect: 'designed for this scale — the intimacy is a feature, not a limitation', valence: 'positive', basis: 'review_consensus' },
+        { condition: 'paired with low-power tube or SET amplification', effect: 'high efficiency means SET amps have enough headroom; the tube midrange reinforces the full-range driver\'s tonal strengths', valence: 'positive', basis: 'review_consensus' },
+        { condition: 'in small to medium rooms (under ~250 sq ft)', effect: 'the intimate staging works with the room rather than fighting it — the speaker disappears more easily at close listening distances', valence: 'positive', basis: 'review_consensus' },
+        { condition: 'in large rooms or at high SPL', effect: 'dynamic headroom becomes limiting — the full-range driver runs out of excursion before filling the space, and the woofers cannot compensate for the midrange\'s output ceiling', valence: 'caution', basis: 'review_consensus' },
       ],
       tradeoffs: [
-        { gains: 'midrange coherence, musical flow, tonal purity, and long-session listenability', cost: 'bass extension, dynamic slam, and analytical detail retrieval', relative_to: 'multi-way dynamic speakers', basis: 'review_consensus' },
+        { gains: 'midrange coherence, tonal purity, musical flow, and long-session listenability from a full-range driver handling the critical band without crossover', cost: 'dynamic headroom at high SPL, and the wide precise imaging that conventional multi-way designs achieve through dedicated dome tweeters with narrower dispersion', relative_to: 'multi-way dynamic speakers (KEF, Dynaudio, Harbeth)', basis: 'review_consensus' },
       ],
     },
     sourceReferences: [
       { source: '6moons', note: 'Extensive coverage by Srajan Ebaen. Martin Gateley\'s sound|kaos is one of 6moons\' most-reviewed speaker brands.' },
     ],
-    notes: 'Handcrafted in Switzerland. The Vox 3a uses a widebander driver for single-point-source coherence, supplemented by a supertweeter for air and extension. Designed for listeners who value tonal purity over measurement-sheet performance.',
+    notes: 'Handcrafted in Switzerland. The Vox 3a uses a full-range driver for midrange coherence, dual woofers for bass extension, and an ambient ribbon supertweeter for air. The full-range driver handles the critical midrange band without a crossover transition through it. Designed for listeners who value tonal purity and musical flow over measurement-sheet performance.',
     philosophy: 'warm',
+    marketType: 'traditional',
+  },
+
+  // ── KEF LS60 Wireless (UK — active floorstander) ───────
+
+  {
+    id: 'kef-ls60-wireless',
+    brand: 'KEF',
+    name: 'LS60 Wireless',
+    price: 7000,
+    category: 'speaker',
+    architecture: 'Active wireless floorstander, 12th-gen Uni-Q coaxial driver, 4x class D amps per speaker (1400W total system), DSP crossovers, built-in streaming',
+    subcategory: 'floorstanding',
+    priceTier: 'upper-mid',
+    brandScale: 'established',
+    region: 'europe',
+    country: 'GB',
+    topology: 'class-d',
+    archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
+    primaryAxes: {
+      warm_bright: 'neutral',
+      smooth_detailed: 'detailed',
+      elastic_controlled: 'controlled',
+      airy_closed: 'airy',
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'DSP-controlled crossovers eliminate passive crossover phase issues. Uni-Q coaxial provides coherent wavefront. Clean, controlled presentation.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'spatial_precision', level: 'emphasized' },
+        { trait: 'composure', level: 'emphasized' },
+        { trait: 'speed', level: 'present' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 0.85, warmth: 0.3, tonal_density: 0.55,
+      speed: 0.75, dynamics: 0.8, flow: 0.6,
+      spatial_precision: 0.9, composure: 0.85, texture: 0.6,
+      fatigue_risk: 0.1, glare_risk: 0.05,
+      elasticity: 0.45,
+    },
+    description: 'Active wireless floorstander with 12th-gen Uni-Q coaxial driver and DSP crossovers. 1400W total system power from 4 class D amps per speaker. The Uni-Q places the tweeter at the acoustic centre of the midrange cone — point-source imaging with wide controlled dispersion. DSP crossovers provide phase-linear driver integration that passive crossovers cannot achieve. Built-in streaming eliminates the need for separate electronics.',
+    retailer_links: [
+      { label: 'KEF', url: 'https://www.kef.com/products/ls60-wireless' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'spatial', tendency: 'Uni-Q coaxial produces point-source imaging with wide, controlled dispersion — precise stereo image across a wide listening area', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'neutral, DSP-controlled — flat frequency response with room correction capability', basis: 'review_consensus' },
+        { domain: 'dynamics', tendency: '1400W total system power provides headroom for dynamic peaks without compression', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'in rooms with DSP room correction engaged', effect: 'bass integration and room modes are actively managed — cleaner low-frequency response than passive alternatives', valence: 'positive', basis: 'review_consensus' },
+        { condition: 'for listeners who value component tunability', effect: 'the all-in-one design eliminates amp/cable/DAC matching — either a feature or a limitation depending on priorities', valence: 'neutral', basis: 'review_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'all-in-one convenience, DSP precision, point-source imaging, massive power reserves, room correction', cost: 'component upgrade path eliminated, tonal tunability limited to DSP settings, box coloration present in floorstander format', relative_to: 'passive speakers + separate amplification', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Darko.Audio', note: 'John Darko\'s personal speaker. Two-part video review.', url: 'https://darko.audio/2022/05/kef-ls60-wireless-video-review-part-1/' },
+      { source: 'KEF', note: 'Manufacturer product page.', url: 'https://www.kef.com/products/ls60-wireless' },
+    ],
+    notes: 'The LS60 is KEF\'s all-in-one statement — 12th-gen Uni-Q, DSP crossovers, 1400W amplification, streaming, and room correction in a single pair of speakers. No external electronics required.',
+    philosophy: 'neutral',
+    marketType: 'traditional',
+  },
+
+  // ── KEF LSX II (UK — active desktop) ───────────────────
+
+  {
+    id: 'kef-lsx-ii',
+    brand: 'KEF',
+    name: 'LSX II',
+    price: 999,
+    category: 'speaker',
+    architecture: 'Active wireless bookshelf, 11th-gen Uni-Q coaxial driver, class D amplification, DSP crossovers, built-in streaming',
+    subcategory: 'standmount',
+    priceTier: 'mid',
+    brandScale: 'established',
+    region: 'europe',
+    country: 'GB',
+    topology: 'class-d',
+    archetypes: { primary: 'precision_explicit' },
+    primaryAxes: {
+      warm_bright: 'neutral',
+      smooth_detailed: 'detailed',
+      elastic_controlled: 'controlled',
+      airy_closed: 'closed',
+    },
+    fatigueAssessment: {
+      risk: 'low',
+      notes: 'Small Uni-Q driver provides coherent presentation. DSP crossover keeps phase clean. Desktop-optimized voicing.',
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'clarity', level: 'present' },
+        { trait: 'spatial_precision', level: 'present' },
+        { trait: 'composure', level: 'present' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 0.7, warmth: 0.3, tonal_density: 0.45,
+      speed: 0.65, dynamics: 0.5, flow: 0.55,
+      spatial_precision: 0.7, composure: 0.65, texture: 0.45,
+      fatigue_risk: 0.1, glare_risk: 0.05,
+      elasticity: 0.4,
+    },
+    description: 'Compact active wireless speaker with 11th-gen Uni-Q coaxial and DSP crossovers. Optimized for desktop and nearfield listening. Same Uni-Q point-source principle as LS60 but smaller driver limits bass extension and dynamic scale. Built-in streaming and wireless connectivity make it a complete desktop system.',
+    retailer_links: [
+      { label: 'KEF', url: 'https://www.kef.com/products/lsx-ii' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'spatial', tendency: 'Uni-Q provides precise nearfield imaging — point-source coherence works well at desktop distances', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'neutral, slightly lean in the bass — small driver limits low-frequency extension below ~50Hz', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'on a desktop at nearfield distances (1-2m)', effect: 'designed for this use case — imaging and tonal balance are optimized for close listening', valence: 'positive', basis: 'review_consensus' },
+        { condition: 'in a larger room as primary speakers', effect: 'bass extension and dynamic scale are insufficient — a subwoofer or larger speakers are needed', valence: 'caution', basis: 'review_consensus' },
+      ],
+      tradeoffs: [
+        { gains: 'compact all-in-one desktop system, Uni-Q imaging, wireless streaming, DSP precision', cost: 'bass extension, dynamic scale, and power handling of larger speakers', relative_to: 'passive bookshelf speakers + separate amplification', basis: 'review_consensus' },
+      ],
+    },
+    sourceReferences: [
+      { source: 'Darko.Audio', note: 'Video review of desktop all-in-one speaker.', url: 'https://darko.audio/2022/11/kef-lsx-ii-video-review/' },
+      { source: 'KEF', note: 'Manufacturer product page.', url: 'https://www.kef.com/products/lsx-ii' },
+    ],
+    notes: 'The LSX II is KEF\'s desktop solution — Uni-Q imaging in a compact package with full streaming capability. No external electronics needed for a complete desktop system.',
+    philosophy: 'neutral',
     marketType: 'traditional',
   },
 ];
