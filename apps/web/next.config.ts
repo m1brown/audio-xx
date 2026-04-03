@@ -3,9 +3,19 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   transpilePackages: ['@audio-xx/rules', '@audio-xx/data', '@audio-xx/signals'],
   typescript: {
-    // TypeScript errors are checked separately via `npm run typecheck`.
-    // SWC handles compilation for the build — tsc errors don't block deploy.
     ignoreBuildErrors: true,
+  },
+  serverExternalPackages: [
+    '@prisma/client',
+    '@libsql/client',
+    '@prisma/adapter-libsql',
+  ],
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /\.md$/,
+      type: 'asset/source',
+    });
+    return config;
   },
 };
 
