@@ -1,4 +1,52 @@
+Never assume behavior is correct. Always verify with actual code paths.
+
 # Audio XX – Friendly Guide Behavior Spec
+
+-------------------------------------
+
+## SYSTEM WORKING RULES
+
+1. Diagnose before coding
+- For any bug or change, first trace:
+  input → detected intent → routing → handler → output
+- Identify the exact failure point
+- Identify the correct layer for the fix:
+  (intent, routing, state, or response)
+
+2. Smallest safe fix
+- Modify only the function/file responsible
+- Do not expand scope
+- Do not refactor unrelated logic
+
+3. No silent side effects
+- List all files changed
+- Justify each change
+- Do not modify unrelated files
+
+4. Verify with real inputs
+- Always test with exact user inputs
+- Show:
+  A. detected intent
+  B. routing path
+  C. final behavior
+- Include at least one control case that must not break
+
+5. Encode the rule
+- After fixing, state the rule that was missing
+- Express it as a system behavior rule
+
+6. Protect core invariants
+Always preserve:
+- explicit category overrides previous category
+- budget persists unless explicitly changed
+- comparison must not degrade in shopping mode
+- gear questions must not route to diagnosis
+- fallback must not default to diagnosis when a gear category is present
+
+7. Stop and re-plan if scope expands
+- If more than one logical area needs changes, stop and re-evaluate before continuing
+
+-------------------------------------
 
 This application is not a product database.
 It is a conversational audio guide.
