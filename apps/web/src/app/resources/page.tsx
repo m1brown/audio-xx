@@ -294,6 +294,36 @@ export default function Resources() {
         </div>
       </section>
 
+      {/* ── 8. Featured Video ─────────────────────────── */}
+      <section style={sectionStyle}>
+        <h2 style={headingStyle}>Why Some Upgrades Matter (and Many Don&rsquo;t)</h2>
+        <div style={bodyStyle}>
+          <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, marginBottom: '0.85rem' }}>
+            <iframe
+              src="https://www.youtube.com/embed/ohuahjd-yxM"
+              title="Most DAC Upgrades Do Nothing, UNTIL They Don't!"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none', borderRadius: '6px' }}
+            />
+          </div>
+          <p style={{ marginBottom: '0.65rem' }}>
+            DAC upgrades are often described as universally transformative or
+            universally negligible. Neither is accurate. The impact of a source
+            component depends on what it feeds into — the amplification, the
+            speakers, and how resolved the system is overall.
+          </p>
+          <p style={{ marginBottom: '0.65rem', fontWeight: 500, color: '#2a2a2a' }}>
+            What this means in practice:
+          </p>
+          <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '13.5px', lineHeight: 1.65, color: '#555' }}>
+            <li style={{ marginBottom: '0.3rem' }}>Most DAC changes are subtle in systems that aren&rsquo;t resolving enough to reveal them.</li>
+            <li style={{ marginBottom: '0.3rem' }}>In well-matched, resolving systems, source differences become clearly audible.</li>
+            <li>In mismatched systems, a DAC swap can be corrective — shifting tonal balance or timing in ways that compensate for downstream weaknesses.</li>
+          </ul>
+        </div>
+      </section>
+
       <hr style={{ margin: '2rem 0 1.25rem' }} />
 
       <p style={{ fontSize: '13.5px', color: '#888', lineHeight: 1.65 }}>
