@@ -16,7 +16,7 @@ import { isIntakeQuery } from './intake';
 
 // ── Intent type ──────────────────────────────────────
 
-export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory' | 'product_assessment' | 'audio_knowledge' | 'audio_assistant' | 'exploration' | 'intake' | 'music_input';
+export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory' | 'product_assessment' | 'audio_knowledge' | 'audio_assistant' | 'exploration' | 'intake' | 'music_input' | 'greeting' | 'educational';
 
 /** A desire the user has expressed — "want more speed", "wish it had warmth". */
 export interface DesireSignal {
@@ -1166,6 +1166,46 @@ export function detectIntent(currentMessage: string): IntentResult {
   // 5b. Brand/product mention without any other pattern → gear inquiry
   if (subjects.length > 0) {
     return { intent: 'gear_inquiry', subjects, subjectMatches, desires };
+  }
+
+  // 6. Greeting — "hello", "hi", "hey there", "good morning"
+  //    Must fire before the diagnosis default so casual openers don't
+  //    get treated as listening problems.
+  const GREETING_PATTERNS = [
+    /^\s*(?:hi|hello|hey|howdy|yo|sup|good\s+(?:morning|afternoon|evening|day))\s*[!.?,]?\s*$/i,
+    /^\s*(?:hi|hello|hey)\s+(?:there|again)\s*[!.?,]?\s*$/i,
+  ];
+  if (GREETING_PATTERNS.some((p) => p.test(currentMessage))) {
+    return { intent: 'greeting', subjects, subjectMatches, desires };
+  }
+
+  // 6b. Educational / meta — "can you teach me?", "what do you do?",
+  //     "how does this work?", "what is Audio XX?"
+  //     Routes to an orientation/explainer flow, not diagnosis.
+  const EDUCATIONAL_PATTERNS = [
+    /\b(?:teach|educate)\s+me\b/i,
+    /\bwhat\s+(?:do\s+you\s+do|can\s+you\s+(?:do|help\s+(?:me\s+)?with))\b/i,
+    /\bwhat\s+is\s+(?:this|this\s+app|audio\s*xx)\b/i,
+    /\bhow\s+(?:does\s+(?:this|this\s+app)\s+work|can\s+you\s+help(?:\s+me)?)\b/i,
+    /\bwhat\s+are\s+you\b/i,
+    /\btell\s+me\s+about\s+(?:yourself|this\s+app|audio\s*xx)\b/i,
+  ];
+  if (EDUCATIONAL_PATTERNS.some((p) => p.test(currentMessage))) {
+    return { intent: 'educational', subjects, subjectMatches, desires };
+  }
+
+  // 6c. Explicit non-diagnosis — "no issue", "I have no issue",
+  //     "nothing wrong", "everything sounds fine"
+  //     The user is explicitly saying there's no problem. Must not
+  //     fall to the diagnosis default.
+  const NO_PROBLEM_PATTERNS = [
+    /\b(?:no|don'?t\s+have\s+(?:a|an|any))\s+(?:issues?|problems?|complaints?)\b/i,
+    /\bnothing\s+(?:wrong|bad|off)\b/i,
+    /\beverything\s+(?:sounds?\s+)?(?:fine|good|great|ok(?:ay)?)\b/i,
+    /\bno\s+(?:issues?|problems?|complaints?)\b/i,
+  ];
+  if (NO_PROBLEM_PATTERNS.some((p) => p.test(currentMessage))) {
+    return { intent: 'greeting', subjects, subjectMatches, desires };
   }
 
   // 7. Default — treat as diagnostic / open-ended listening discussion

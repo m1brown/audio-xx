@@ -387,6 +387,14 @@ export default function Home() {
       });
       convStateRef.current = convResult.state;
 
+      // When a transition re-enters orientation (e.g. educational intent
+      // during an active orientation session), reset to idle so the
+      // normal idle → orientation entry path at line ~953 handles
+      // response generation with the correct intent-specific copy.
+      if (convResult.state.mode === 'orientation' && !convResult.response) {
+        convStateRef.current = INITIAL_CONV_STATE;
+      }
+
       if (convResult.response) {
         if (convResult.response.kind === 'question') {
           dispatch({
@@ -962,12 +970,23 @@ export default function Home() {
 
         // ── Orientation — beginner uncertainty must not fall to diagnosis ──
         if (initialConvMode.mode === 'orientation') {
+          let acknowledge: string;
+          let question: string;
+
+          if (intent === 'greeting') {
+            acknowledge = 'Hey — welcome to Audio XX.';
+            question = 'Are you looking to buy something new, improve what you already have, or troubleshoot a problem you\'re hearing?';
+          } else if (intent === 'educational') {
+            acknowledge = 'Audio XX is a system-level audio advisor. It helps you understand how your components interact, evaluate trade-offs, and make aligned decisions — whether you\'re shopping, diagnosing, or just exploring.';
+            question = 'Want to start with your current system, or is there something specific you\'re curious about?';
+          } else {
+            acknowledge = 'Good place to start.';
+            question = 'Are you looking to buy something new, improve what you already have, or troubleshoot a problem you\'re hearing?';
+          }
+
           dispatch({
             type: 'ADD_QUESTION',
-            clarification: {
-              acknowledge: 'Good place to start.',
-              question: 'Are you looking to buy something new, improve what you already have, or troubleshoot a problem you\'re hearing?',
-            },
+            clarification: { acknowledge, question },
           });
           dispatch({ type: 'SET_LOADING', value: false });
           return;
