@@ -141,6 +141,8 @@ export interface ConversationState {
   activeComparison?: {
     left: SubjectMatch;
     right: SubjectMatch;
+    /** Additional subjects beyond the primary pair (3+ way comparisons). */
+    additional?: SubjectMatch[];
     scope: 'brand' | 'product';
   };
   /**

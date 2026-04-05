@@ -195,7 +195,7 @@ export function routeConversation(currentMessage: string): ConversationMode {
   //     Must fire BEFORE diagnosis so "I want to buy a DAC" isn't caught
   //     by diagnosis patterns like "don't want something harsh".
   //     Only fires when intent is unambiguously shopping (buy/want/need/recommend + category).
-  const hasExplicitBuyingIntent = /\b(?:buy|purchase|looking\s+for|want\s+(?:a|an|to\s+buy)|need\s+(?:a|an)|recommend|suggest|shopping\s+for|get\s+(?:a|an|me))\b/i.test(currentMessage);
+  const hasExplicitBuyingIntent = /\b(?:buy|purchase|looking\s+for|want\s+(?:a|an|to\s+buy)|need\s+(?:a|an)|recommend|suggest|interested\s+in|shopping\s+for|get\s+(?:a|an|me))\b/i.test(currentMessage);
   const hasProductCategory = /\b(?:dac|amp|amplifier|speaker|speakers|headphones?|turntable|streamer|preamp|preamplifier|subwoofer|cables?|cartridge|phono\s+stage|integrated)\b/i.test(currentMessage);
   if (hasExplicitBuyingIntent && hasProductCategory) {
     return 'shopping';

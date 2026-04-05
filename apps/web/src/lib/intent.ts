@@ -221,6 +221,9 @@ const CABLE_INTENT_PATTERNS = [
   /\bcable\s+(?:recommendation|suggestion|advice|upgrade)\b/i,
   /\b(?:best|good|recommend)\b.*\bcables?\b/i,
   /\bcables?\s+for\b/i,
+  // Transition phrases — "what about cables", "how about cables", "now cables"
+  /\b(?:what|how)\s+about\s+(?:\w+\s+)?cables?\b/i,
+  /\b(?:suggest|need|want)\b.*\bcables?\b/i,
 ];
 
 // ── Exploration patterns ─────────────────────────────
@@ -293,7 +296,7 @@ const GEAR_INQUIRY_PATTERNS = [
   /\bopinion[s]?\s+on\b/i,
   /\bwhat\s+are\s+your\s+thoughts\b/i,
   /\bhow\s+(?:good|would you rate)\b/i,
-  /\bis\s+(?:the|a|an)\s+.+\s+(?:good|worth|any\s+good)\b/i,
+  /\bis\s+(?:the|this|that|a|an)\s+.+\s+(?:good|worth|any\s+good)\b/i,
   /\bany\s+experience\s+with\b/i,
   /\bhave\s+you\s+heard\b/i,
   /\bknow\s+anything\s+about\b/i,
@@ -333,6 +336,7 @@ const PRODUCT_ASSESSMENT_PATTERNS = [
   /\btell\s+me\s+about\b/i,
   /\bknow\s+anything\s+about\b/i,
   /\bhave\s+you\s+heard\b/i,
+  /\bis\s+(?:the|this|that|a|an)\s+.+\s+(?:good|worth|any\s+good)\b/i,
   /\bany\s+experience\s+with\b/i,
   /\bwhat\s+(?:is|are)\s+(?:the\s+)?(?:character|sound|signature|house sound)\b/i,
 ];
@@ -1052,6 +1056,18 @@ export function detectIntent(currentMessage: string): IntentResult {
     return { intent: 'comparison', subjects, subjectMatches, desires };
   }
 
+  // 2-suggest. Suggestion prompts with named alternatives — "would you suggest
+  //     X or Y?", "should I go with denafrips or chord or laiv?"
+  //     When suggestion/choice language appears with 2+ brand/product subjects
+  //     connected by "or"/"and", treat as comparison rather than shopping.
+  //     This prevents "would you suggest denafrips or chord" from entering
+  //     the shopping pipeline and losing the comparative framing.
+  const hasSuggestionLanguage = /\b(?:suggest|recommend|pick|choose|go\s+with|lean\s+toward)\b/i.test(currentMessage);
+  const hasAlternativeSeparator = /\b(?:or|and)\b/i.test(currentMessage);
+  if (hasSuggestionLanguage && hasAlternativeSeparator && subjectMatches.length >= 2) {
+    return { intent: 'comparison', subjects, subjectMatches, desires };
+  }
+
   // 2a. Exploration — "what else is like X?", "similar to the JOB"
   //     Requires at least one subject to anchor the neighborhood.
   //     Must fire before shopping so "what else is like the Hugo" doesn't
@@ -1094,8 +1110,8 @@ export function detectIntent(currentMessage: string): IntentResult {
   //     a clear shopping query — skip intake entirely and route to shopping.
   //     This prevents vague-looking but actually decisive queries from being
   //     caught by the broader intake patterns below.
-  const hasPurchaseVerb = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|pick\s+out|recommend|suggest|need\s+(?:a\s+)?(?:new|better|different|another|upgraded?))\b/i.test(currentMessage);
-  const hasCategoryTarget = /\b(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp)\b/i.test(currentMessage);
+  const hasPurchaseVerb = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|pick\s+out|recommend|suggest|interested\s+in(?:\s+(?:a|an|getting))?\s+(?:new|better|different)?|need\s+(?:a\s+)?(?:new|better|different|another|upgraded?))\b/i.test(currentMessage);
+  const hasCategoryTarget = /\b(?:dacs?|d\/a|amps?|amplifiers?|integrated|speakers?|headphones?|turntables?|streamers?|receivers?|bookshelf|floorstanders?|subwoofers?|preamps?|power\s*amps?)\b/i.test(currentMessage);
   if (hasPurchaseVerb && hasCategoryTarget) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
@@ -1114,11 +1130,19 @@ export function detectIntent(currentMessage: string): IntentResult {
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
-  // 3b. Bare category name — the entire message is just a component category
-  //     (e.g. "DAC", "speakers", "headphones"). Route to shopping so the
-  //     pipeline can ask for budget/preferences rather than diagnosing.
-  const bareCategory = /^\s*(?:a\s+|an?\s+|the\s+|some\s+|new\s+)?(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp|iems?|earphones?|earbuds?|cans)\s*[?.!]?\s*$/i;
-  if (bareCategory.test(currentMessage)) {
+  // 3b. Bare category name or category-interest phrase — the message is
+  //     just a component category (e.g. "DAC", "speakers") or a short
+  //     interest phrase ("what about turntables", "how about headphones").
+  //     Route to shopping so the pipeline can ask for budget/preferences
+  //     rather than falling to the diagnosis default.
+  const CATEGORY_WORD = /(?:dacs?|d\/a|amps?|amplifiers?|integrated|speakers?|headphones?|turntables?|streamers?|receivers?|bookshelf|floorstanders?|subwoofers?|preamps?|power\s*amps?|iems?|earphones?|earbuds?|cans)/i;
+  const bareCategory = new RegExp(
+    `^\\s*(?:a\\s+|an?\\s+|the\\s+|some\\s+|new\\s+)?${CATEGORY_WORD.source}\\s*[?.!]?\\s*$`, 'i',
+  );
+  const categoryInterest = new RegExp(
+    `^\\s*(?:what|how)\\s+about\\s+(?:a\\s+|an?\\s+|the\\s+|some\\s+|new\\s+)?${CATEGORY_WORD.source}\\s*[?.!]?\\s*$`, 'i',
+  );
+  if (bareCategory.test(currentMessage) || categoryInterest.test(currentMessage)) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
@@ -1225,6 +1249,12 @@ export function isComparisonFollowUp(
     const hasNewSubject = newMatches.some((m) => !activeNames.has(m.name.toLowerCase()));
     if (hasNewSubject) return false; // Topic changed
   }
+
+  // Category keyword without any brand/product subject is a topic shift,
+  // not a comparison follow-up. "what about turntables" should route to
+  // shopping/intake, not refine the active comparison.
+  const hasCategoryKeyword = /\b(?:dacs?|d\/a|amps?|amplifiers?|integrated|speakers?|headphones?|turntables?|streamers?|cables?|preamps?|power\s*amps?|iems?|earphones?|subwoofers?|receivers?)\b/i.test(text);
+  if (hasCategoryKeyword && newMatches.length === 0) return false;
 
   // Check follow-up patterns
   return COMPARISON_FOLLOWUP_PATTERNS.some((p) => p.test(text));
@@ -1414,6 +1444,64 @@ export function isConsultationFollowUp(
   }
 
   return false;
+}
+
+// ── Brand follow-up detection ─────────────────────────
+//
+// Detects short brand-only or "what about [brand]" queries that
+// should be treated as refinements within an active shopping session
+// rather than new topics or standalone product assessments.
+
+/** Patterns that indicate a brand follow-up within active shopping context. */
+const BRAND_FOLLOWUP_PATTERNS = [
+  /^\s*what\s+about\s+/i,                      // "what about denafrips"
+  /^\s*(?:any|show|got)\s+.*\boptions?\b/i,    // "any denafrips options"
+  /^\s*how\s+about\s+/i,                       // "how about denafrips"
+  /^\s*and\s+/i,                               // "and denafrips?"
+  /^\s*(?:or\s+)?(?:maybe\s+)?/i,             // "or maybe denafrips"
+];
+
+/**
+ * Detect brand follow-up: a short message mentioning a brand (or product)
+ * that should be treated as a refinement within the active shopping session.
+ *
+ * Returns the brand name if detected, undefined otherwise.
+ *
+ * Criteria:
+ *   - Message is short (≤ 10 words)
+ *   - Contains a recognized brand or product name
+ *   - Matches a follow-up pattern OR is just a brand name with optional punctuation
+ */
+export function detectBrandFollowUp(text: string): string | undefined {
+  const wordCount = text.trim().split(/\s+/).length;
+  if (wordCount > 10) return undefined;
+
+  // Explicit comparisons are NOT brand follow-ups — they must route to the
+  // comparison handler even during active shopping.
+  if (/\bcompare[ds]?\b|\bvs\.?\b|\bversus\b|\bagainst\b/i.test(text)) return undefined;
+
+  const matches = extractSubjectMatches(text);
+
+  // Suggestion prompts with multiple named alternatives ("would you suggest
+  // X or Y?", "should I go with X or Y or Z?") are comparisons, not follow-ups.
+  const multiSubjectCount = matches.filter((m) => m.kind === 'brand' || m.kind === 'product').length;
+  if (multiSubjectCount >= 2 && /\b(?:suggest|recommend|pick|choose|go\s+with|lean\s+toward)\b/i.test(text)) {
+    return undefined;
+  }
+
+  const brandMatch = matches.find((m) => m.kind === 'brand' && !m.parenthetical);
+  const productMatch = matches.find((m) => m.kind === 'product');
+
+  if (!brandMatch && !productMatch) return undefined;
+
+  // Pure brand/product query: "denafrips?" or "denafrips"
+  const name = brandMatch?.name ?? productMatch?.name;
+  if (wordCount <= 3) return name;
+
+  // Pattern match: "what about denafrips", "any denafrips options"
+  if (BRAND_FOLLOWUP_PATTERNS.some((p) => p.test(text))) return name;
+
+  return undefined;
 }
 
 // ── Diagnosis follow-up detection ─────────────────────

@@ -51,6 +51,10 @@ export interface TasteInference {
   archetype: SonicArchetype | null;
   /** Whether the stored taste profile contributed to this inference. */
   storedProfileUsed: boolean;
+  /** Origin of the tasteLabel — determines UI copy behavior.
+   *  'user'    = extracted from user language or stored profile (confidence > 0.3)
+   *  'default' = system fallback, no user signal detected */
+  preferenceSource: 'user' | 'default';
 }
 
 // ── Layer 2: System Diagnosis ────────────────────────
@@ -251,12 +255,18 @@ export function inferTaste(
     }
   }
 
+  // Determine preference source: 'user' if derived from actual signals
+  // (current message traits or stored profile), 'default' if using fallback.
+  const preferenceSource: 'user' | 'default' =
+    matched || storedProfileUsed ? 'user' : 'default';
+
   return {
     desires,
     traitSignals: traits,
     tasteLabel,
     archetype,
     storedProfileUsed,
+    preferenceSource,
   };
 }
 

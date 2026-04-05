@@ -149,12 +149,12 @@ function extractBudget(text: string): string | undefined {
 // ── Category detection (lightweight) ───────────────────
 
 const CATEGORY_PATTERNS: Array<[RegExp, string]> = [
-  [/\b(?:dac|d\/a|digital.to.analog)\b/i, 'dac'],
-  [/\b(?:amp|amplifier|integrated|receiver)\b/i, 'amplifier'],
-  [/\b(?:speaker|speakers|monitor|monitors|bookshelf|floorstander|tower)\b/i, 'speaker'],
-  [/\b(?:headphone|headphones|cans|iems?|earbuds?|over.ear|on.ear)\b/i, 'headphone'],
-  [/\b(?:turntable|vinyl|record\s+player|phono)\b/i, 'turntable'],
-  [/\b(?:streamer|streaming|network\s+player)\b/i, 'streamer'],
+  [/\b(?:dacs?|d\/a|digital.to.analog)\b/i, 'dac'],
+  [/\b(?:amps?|amplifiers?|integrated|receivers?)\b/i, 'amplifier'],
+  [/\b(?:speakers?|monitors?|bookshelf|floorstanders?|towers?)\b/i, 'speaker'],
+  [/\b(?:headphones?|cans|iems?|earbuds?|over.ear|on.ear)\b/i, 'headphone'],
+  [/\b(?:turntables?|vinyl|record\s+player|phono)\b/i, 'turntable'],
+  [/\b(?:streamers?|streaming|network\s+player)\b/i, 'streamer'],
 ];
 
 function extractCategory(text: string): string | undefined {

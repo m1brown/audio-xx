@@ -1430,6 +1430,134 @@ function buildKnowledgeBrandConsultation(entry: BrandKnowledge): ConsultationRes
  *
  * All comparison reasoning is deterministic and validated before rendering.
  */
+
+// ── Multi-brand comparison (3+ brands) ─────────────────
+//
+// Produces a structured overview when the user asks about 3+ brands at once.
+// Format: brief character block per brand → trade-off axis → taste guidance.
+
+type BrandProfileLike = BrandProfile | { name: string; philosophy: string; tendencies: string };
+
+function buildMultiBrandComparison(
+  profiles: BrandProfileLike[],
+  queryText?: string,
+): ConsultationResponse {
+  const names = profiles.map((p) =>
+    capitalize('names' in p ? (p as BrandProfile).names[0] : p.name),
+  );
+
+  // Per-brand character blocks
+  const blocks = profiles.map((p, i) => {
+    const char = extractCoreCharacter(p.tendencies);
+    const philo = takeSentences(p.philosophy, 1);
+    return `**${names[i]}** — ${philo} ${char}`;
+  });
+
+  // Identify the primary tension axis across all brands
+  const axes = profiles.map((p) => {
+    const char = extractCoreCharacter(p.tendencies);
+    return detectDominantAxis(char, p.tendencies);
+  });
+
+  // Build a trade-off summary: group by dominant axis
+  const axisGroups: Record<string, string[]> = {};
+  axes.forEach((axis, i) => {
+    const label = axis || 'balanced';
+    if (!axisGroups[label]) axisGroups[label] = [];
+    axisGroups[label].push(names[i]);
+  });
+
+  let tradeoffSummary: string;
+  const groupEntries = Object.entries(axisGroups);
+  if (groupEntries.length === 1) {
+    tradeoffSummary = `All three lean toward ${groupEntries[0][0]} but differ in how they get there.`;
+  } else {
+    const parts = groupEntries.map(([axis, brands]) =>
+      brands.length === 1
+        ? `${brands[0]} prioritises ${axis}`
+        : `${brands.join(' and ')} prioritise ${axis}`,
+    );
+    tradeoffSummary = `Different directions: ${parts.join('; ')}.`;
+  }
+
+  // ── Per-brand "choose if" lines ──────────────────────
+  // Map each brand's dominant axis to a listener-facing recommendation.
+  const AXIS_LISTENER_MAP: Record<string, string> = {
+    warm: 'tonal richness and harmonic density over measured precision',
+    control: 'timing precision, transient speed, and analytical clarity',
+    flow: 'rhythmic engagement and musical drive',
+    neutral: 'an even-handed balance without a strong tonal lean',
+    balanced: 'an even-handed balance without a strong tonal lean',
+  };
+
+  const chooseLines = profiles.map((_, i) => {
+    const axisLabel = axes[i] || 'balanced';
+    const listenerGoal = AXIS_LISTENER_MAP[axisLabel] ?? axisLabel;
+    return `**${names[i]}** if you want ${listenerGoal}.`;
+  });
+
+  // ── Default lean ──────────────────────────────────────
+  // Pick the brand with the most distinctive axis (warm or control
+  // over neutral/balanced). If all are the same, lean toward the
+  // one with the richest tendency text (most specific character).
+  let defaultIdx = 0;
+  const distinctAxes = axes.filter((a) => a === 'warm' || a === 'control' || a === 'flow');
+  if (distinctAxes.length > 0) {
+    // Prefer 'warm' as a safe default for musical enjoyment,
+    // then 'flow', then 'control'
+    const preferenceOrder = ['warm', 'flow', 'control'];
+    for (const pref of preferenceOrder) {
+      const idx = axes.indexOf(pref);
+      if (idx !== -1) { defaultIdx = idx; break; }
+    }
+  }
+  const defaultLean = `Without more context, I would lean toward **${names[defaultIdx]}** — ${extractCoreCharacter(profiles[defaultIdx].tendencies)} tends to be the easiest path to long-term musical engagement.`;
+
+  // ── Explicit taste override ───────────────────────────
+  // If the query contains taste signals, override the default lean.
+  let tasteOverride = '';
+  if (queryText) {
+    const tasteKeywords: [RegExp, string][] = [
+      [/warm|lush|tube|harmonic/i, 'warmth'],
+      [/detail|resolv|precis|analytic/i, 'precision'],
+      [/flow|rhyth|alive|elastic|timing/i, 'rhythmic engagement'],
+      [/dynamic|punch|slam|impact/i, 'dynamics'],
+      [/smooth|gentle|fatigue|relax/i, 'smoothness'],
+    ];
+    for (const [re, signal] of tasteKeywords) {
+      if (re.test(queryText)) {
+        let bestIdx2 = 0;
+        let bestScore = 0;
+        profiles.forEach((p, i) => {
+          const text = (p.tendencies + ' ' + extractCoreCharacter(p.tendencies)).toLowerCase();
+          const score = signal.split(/\s+/).filter((k) => text.includes(k)).length;
+          if (score > bestScore) { bestScore = score; bestIdx2 = i; }
+        });
+        if (bestScore > 0) {
+          tasteOverride = `You mentioned ${signal} — that points toward **${names[bestIdx2]}**.`;
+        }
+        break;
+      }
+    }
+  }
+
+  const conclusion = tasteOverride
+    ? `${chooseLines.join('\n')}\n\n${tasteOverride}`
+    : `${chooseLines.join('\n')}\n\n${defaultLean}`;
+
+  const comparisonSummary = [
+    blocks.join('\n\n'),
+    tradeoffSummary,
+    conclusion,
+  ].join('\n\n');
+
+  return {
+    subject: names.join(' vs '),
+    comparisonSummary,
+    followUp: `If you tell me your system and what you listen to, the recommendation gets sharper.`,
+  };
+}
+
 function buildBrandComparison(
   profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
   profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
@@ -2259,24 +2387,30 @@ export function buildConsultationResponse(
   if (subjectMatches && subjectMatches.length >= 2) {
     const brandMatches = subjectMatches.filter((m) => m.kind === 'brand');
     if (brandMatches.length >= 2) {
-      const a = brandMatches[0];
-      const b = brandMatches[1];
-      const profileA = findBrandProfile(a.name);
-      const profileB = findBrandProfile(b.name);
-
-      // Both have curated profiles — direct comparison
-      if (profileA && profileB) {
-        return buildBrandComparison(profileA, profileB, currentMessage);
+      // Resolve profiles for all brand matches (not just the first two)
+      const resolvedProfiles: BrandProfileLike[] = [];
+      for (const bm of brandMatches) {
+        const curated = findBrandProfile(bm.name);
+        if (curated) {
+          resolvedProfiles.push(curated);
+          continue;
+        }
+        const products = ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === bm.name.toLowerCase());
+        if (products.length > 0) {
+          resolvedProfiles.push(deriveBrandSummaryFromCatalog(bm.name, products));
+          continue;
+        }
+        // Unknown brand — skip it but don't block the comparison
       }
 
-      // One or both missing curated profiles — try catalog-derived summaries
-      const productsA = ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === a.name.toLowerCase());
-      const productsB = ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === b.name.toLowerCase());
-      const summaryA = profileA ?? (productsA.length > 0 ? deriveBrandSummaryFromCatalog(a.name, productsA) : null);
-      const summaryB = profileB ?? (productsB.length > 0 ? deriveBrandSummaryFromCatalog(b.name, productsB) : null);
+      // 3+ brands with profiles — multi-brand comparison
+      if (resolvedProfiles.length >= 3) {
+        return buildMultiBrandComparison(resolvedProfiles, currentMessage);
+      }
 
-      if (summaryA && summaryB) {
-        return buildBrandComparison(summaryA, summaryB, currentMessage);
+      // 2 brands with profiles — pairwise comparison
+      if (resolvedProfiles.length >= 2) {
+        return buildBrandComparison(resolvedProfiles[0], resolvedProfiles[1], currentMessage);
       }
     }
   }
@@ -3051,9 +3185,9 @@ function buildComparisonRecommendation(
     };
   }
 
-  // True tie — directional only, no strong claim
+  // True tie — directional only, no ranking
   return {
-    recommended: `Both are strong choices with different strengths — **${nameA}** leans toward ${charA.toLowerCase()}, **${nameB}** toward ${charB.toLowerCase()}.`,
+    recommended: `Different directions — **${nameA}** leans toward ${charA.toLowerCase()}, **${nameB}** toward ${charB.toLowerCase()}.`,
     rationale: `The right choice depends on whether you prioritise ${charA.toLowerCase()} or ${charB.toLowerCase()} in your system and with your music.`,
   };
 }
@@ -3321,11 +3455,11 @@ function buildContextSummary(
     if (scope === 'brand') {
       return `${contextLabel} — that helps frame the comparison. ${nameA} tends toward ${charA}, while ${nameB} leans toward ${charB}. How each interacts with that amplifier depends on sensitivity, impedance behaviour, and what the amp does well.`;
     }
-    return `${contextLabel} — that helps narrow the comparison. ${nameA} and ${nameB} would likely interact with that amplifier differently based on their load characteristics and design priorities.`;
+    return `${contextLabel} — that helps narrow the comparison. ${nameA} and ${nameB} interact with that amplifier differently because of their load characteristics and design priorities.`;
   }
 
   if (contextKind === 'room') {
-    return `That room context matters. ${nameA} and ${nameB} would likely behave differently depending on boundary interaction, efficiency, and radiation pattern.`;
+    return `That room context matters. ${nameA} and ${nameB} behave differently depending on boundary interaction, efficiency, and radiation pattern.`;
   }
 
   if (contextKind === 'music' || contextKind === 'listening_priority') {
@@ -7307,7 +7441,7 @@ function buildAssessmentPreferenceAlignment(
     return `You mentioned wanting more ${quality}. Your system already emphasises this — adding more could push past incisive into fatiguing. Consider whether the current level is close to what you want before making changes.`;
   }
   if (wantsPrecision && systemLean === 'warm') {
-    return `You mentioned wanting more ${quality}. Your system leans warm, so there would likely be room to increase definition without losing the underlying tonal body — the question is which component to address first.`;
+    return `You mentioned wanting more ${quality}. Your system leans warm, so there is room to increase definition without losing the underlying tonal body — the question is which component to address first.`;
   }
   if (wantsLessFatigue) {
     return `You mentioned wanting less ${quality}. That traces to a specific point in the chain — tell me the signal path and I'll identify it.`;
@@ -7357,7 +7491,7 @@ function detectHypotheticalComponent(text: string): HypotheticalComponentInfo | 
       label: 'a tube amplifier',
       character: 'Tube amplifiers — particularly single-ended designs — tend toward harmonic richness, midrange density, and elastic dynamics. They often add even-order harmonic texture that many listeners perceive as warmth and tonal beauty. Low-feedback tube designs prioritize musical flow over measured precision.',
       tradeoff: 'What you typically give up: ultimate bass control and damping, transient speed at the frequency extremes, and absolute low-noise transparency. Tubes add their own character — that\'s the point, but it means the amp is an active participant in the sound, not a neutral wire.',
-      alignment: 'a tube amplifier would likely push the system toward warmth, flow, and midrange density — potentially compensating for analytical or lean tendencies elsewhere in the chain, or compounding warmth if the source and speakers already lean that way.',
+      alignment: 'a tube amplifier pushes the system toward warmth, flow, and midrange density — compensating for analytical or lean tendencies elsewhere in the chain, or compounding warmth if the source and speakers already lean that way.',
     };
   }
   if (/\bset\b|\bsingle[- ]ended\s+triode/i.test(lower)) {
@@ -7373,7 +7507,7 @@ function detectHypotheticalComponent(text: string): HypotheticalComponentInfo | 
       label: 'a solid-state amplifier',
       character: 'Solid-state amplifiers tend toward precision, bass control, and dynamic authority. High-feedback designs offer low distortion and high damping factor — they grip the speaker and control its behavior. Class A solid-state designs often split the difference: the control and transparency of solid-state with a touch of warmth from the bias topology.',
       tradeoff: 'What you typically give up compared to tubes: harmonic richness, midrange texture, and the elastic dynamic quality that comes from soft clipping. High-feedback solid-state can sound analytical or clinical to listeners who prioritize musical flow over precision.',
-      alignment: 'a solid-state amplifier would likely push the system toward precision, control, and transparency — potentially compensating for warmth or looseness elsewhere, or compounding analytical tendencies if the source is already precision-focused.',
+      alignment: 'a solid-state amplifier pushes the system toward precision, control, and transparency — compensating for warmth or looseness elsewhere, or compounding analytical tendencies if the source is already precision-focused.',
     };
   }
   if (/\bpush[- ]pull\b.*\b(?:tube|amp|amplifier)/i.test(lower) || /\b(?:tube|amp|amplifier).*\bpush[- ]pull\b/i.test(lower)) {
@@ -7776,7 +7910,7 @@ export function buildCableAdvisory(
   // Tendencies — system-specific cable direction
   let tendencies: string;
   if (systemLean === 'precise' && desireParts.length > 0) {
-    tendencies = `Your system leans toward precision and speed (${systemComponents.join(', ')}). You've expressed wanting ${desireParts.join(' and ')}. Cable choices would likely either reinforce the existing transparency or introduce a degree of warmth and body. For ${desireParts.join(' and ')}, copper conductors and relaxed geometries tend to be more effective than silver or aggressive shielding.`;
+    tendencies = `Your system leans toward precision and speed (${systemComponents.join(', ')}). You've expressed wanting ${desireParts.join(' and ')}. Cable choices either reinforce the existing transparency or introduce a degree of warmth and body. For ${desireParts.join(' and ')}, copper conductors and relaxed geometries tend to be more effective than silver or aggressive shielding.`;
   } else if (systemLean === 'warm' && desireParts.length > 0) {
     tendencies = `Your system already leans warm (${systemComponents.join(', ')}). You've expressed wanting ${desireParts.join(' and ')}. Cable choices should complement rather than compound the existing warmth. For detail and sparkle, silver-plated or silver-core cables can introduce some upper-frequency energy, but be cautious about glare if the system is already bright in other ways.`;
   } else if (systemLean === 'balanced' && desireParts.length > 0) {

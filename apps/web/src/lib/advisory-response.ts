@@ -70,6 +70,9 @@ export interface AudioProfile {
   budget?: string;
   /** One-line direction statement (e.g. "Move toward more warmth without sacrificing detail"). */
   directionStatement?: string;
+  /** Origin of sonic priorities — 'user' if extracted from user language/stored profile,
+   *  'default' if using system fallback (e.g. "musical engagement"). */
+  preferenceSource?: 'user' | 'default';
   /** Whether the profile has enough data for personalized recommendations. */
   profileComplete: boolean;
   /** Which dimensions are missing when profile is incomplete. */
@@ -774,6 +777,7 @@ function buildEditorialIntro(
   tasteLabel?: string,
   systemComponents?: string[],
   archetype?: string,
+  preferenceSource?: 'user' | 'default',
 ): string | undefined {
   // Need at least a category
   if (!category || category === 'general') return undefined;
@@ -827,6 +831,7 @@ function buildDirectedEditorialIntro(
   tasteLabel?: string,
   archetype?: string,
   systemComponents?: string[],
+  preferenceSource?: 'user' | 'default',
 ): string | undefined {
   if (!category || category === 'general') return undefined;
 
@@ -855,10 +860,13 @@ function buildDirectedEditorialIntro(
     spatial_holographic: 'spatial precision and holographic staging — designs that recreate the recording space',
   };
 
+  const isDefaultTaste = preferenceSource === 'default';
   const directionPhrase = archetype && ARCHETYPE_DIRECTION[archetype]
     ? ARCHETYPE_DIRECTION[archetype]
     : tasteLabel
-      ? `${tasteLabel.toLowerCase()} — designs that lean into that quality`
+      ? isDefaultTaste
+        ? `${tasteLabel.toLowerCase()} as a starting assumption (tell me your priorities and I'll refine)`
+        : `${tasteLabel.toLowerCase()} — designs that lean into that quality`
       : undefined;
 
   if (!directionPhrase) return undefined;
@@ -1146,6 +1154,9 @@ function generateAlignmentRationale(
   if (reasoning.taste.archetype) {
     const label = getArchetypeLabel(reasoning.taste.archetype);
     if (label) {
+      if (reasoning.taste.preferenceSource === 'default') {
+        return `Starting assumption: a ${label.toLowerCase()} listening approach. Tell me what you actually value and I'll adjust.`;
+      }
       return `Your preferences align with a ${label.toLowerCase()} listening approach.`;
     }
   }
@@ -1661,6 +1672,9 @@ function buildAudioProfile(
   const profileComplete = missingDimensions.length === 0
     || (systemChain && systemChain.length > 0 && sonicPriorities.length > 0);
 
+  // Preference source: forward from reasoning layer
+  const preferenceSource = reasoning?.taste.preferenceSource ?? 'default';
+
   return {
     systemChain,
     sonicPriorities: sonicPriorities.length > 0 ? sonicPriorities : undefined,
@@ -1669,6 +1683,7 @@ function buildAudioProfile(
     archetype: archetype ?? undefined,
     budget,
     directionStatement,
+    preferenceSource,
     profileComplete: !!profileComplete,
     missingDimensions: missingDimensions.length > 0 ? missingDimensions : undefined,
   };
@@ -1858,8 +1873,14 @@ export function shoppingToAdvisory(
   }
 
   // Build follow-up: taste question takes priority when confidence is low,
-  // then explicit refinement question, then synthesized refinement prompts
+  // then explicit refinement question, then synthesized refinement prompts.
+  // When preferenceSource is 'default' and no explicit taste question exists,
+  // inject a single refinement question so the user knows to clarify.
+  const defaultTasteRefinement = reasoning?.taste.preferenceSource === 'default' && !a.tasteQuestion
+    ? 'Do you want to keep that direction, or shift toward clarity and precision?'
+    : undefined;
   const followUp = a.tasteQuestion
+    ?? defaultTasteRefinement
     ?? a.categoryQuestion
     ?? a.refinementQuestion
     ?? (a.refinementPrompts && a.refinementPrompts.length > 0
@@ -1895,6 +1916,7 @@ export function shoppingToAdvisory(
       reasoning?.taste.tasteLabel,
       reasoning?.taste.archetype ?? undefined,
       ctx?.systemComponents,
+      reasoning?.taste.preferenceSource,
     );
   } else {
     editorialIntro = buildEditorialIntro(
@@ -1904,6 +1926,7 @@ export function shoppingToAdvisory(
       reasoning?.taste.tasteLabel,
       ctx?.systemComponents,
       reasoning?.taste.archetype ?? undefined,
+      reasoning?.taste.preferenceSource,
     );
   }
 
@@ -1967,8 +1990,8 @@ export function shoppingToAdvisory(
     sonicLandscape: a.sonicLandscape,
     decisionFrame: suppressFiller ? undefined : (decisionFrame ?? undefined),
     refinementPrompts: suppressFiller ? undefined : a.refinementPrompts,
-    // Taste/category questions always pass through (even when suppressFiller); other followUps suppressed
-    followUp: (a.tasteQuestion || a.categoryQuestion) ? (a.tasteQuestion ?? a.categoryQuestion) : (suppressFiller ? undefined : followUp),
+    // Taste/category/default-refinement questions always pass through (even when suppressFiller); other followUps suppressed
+    followUp: (a.tasteQuestion || defaultTasteRefinement || a.categoryQuestion) ? (a.tasteQuestion ?? defaultTasteRefinement ?? a.categoryQuestion) : (suppressFiller ? undefined : followUp),
 
     editorialClosing,
 

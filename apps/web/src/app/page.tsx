@@ -41,7 +41,7 @@ import {
   type ListenerProfile,
 } from '@/lib/listener-profile';
 import { checkGlossaryQuestion } from '@/lib/glossary';
-import { detectIntent, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
+import { detectIntent, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, detectContextEnrichment, detectBrandFollowUp, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
 import { attachQuickRecommendation } from '@/lib/quick-recommendation';
 import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode, interpretSymptom } from '@/lib/conversation-state';
 import { buildGearResponse } from '@/lib/gear-response';
@@ -134,7 +134,7 @@ type Action =
   | { type: 'ADD_NOTE'; content: string }
   | { type: 'SET_MODE'; mode: ConversationMode }
   | { type: 'SET_REASONING'; reasoning: ReasoningResult }
-  | { type: 'SET_COMPARISON'; left: SubjectMatch; right: SubjectMatch; scope: 'brand' | 'product' }
+  | { type: 'SET_COMPARISON'; left: SubjectMatch; right: SubjectMatch; additional?: SubjectMatch[]; scope: 'brand' | 'product' }
   | { type: 'CLEAR_COMPARISON' }
   | { type: 'SET_CONSULTATION_CONTEXT'; subjects: SubjectMatch[]; originalQuery: string }
   | { type: 'CLEAR_CONSULTATION_CONTEXT' }
@@ -216,7 +216,7 @@ function reducer(state: ConversationState, action: Action): ConversationState {
     case 'SET_COMPARISON':
       return {
         ...state,
-        activeComparison: { left: action.left, right: action.right, scope: action.scope },
+        activeComparison: { left: action.left, right: action.right, additional: action.additional, scope: action.scope },
       };
 
     case 'CLEAR_COMPARISON':
@@ -501,6 +501,7 @@ export default function Home() {
             lastShoppingFactsRef.current = {
               budget: convResult.state.facts.budget,
               fromScratch: convResult.state.facts.fromScratch,
+              category: convResult.state.facts.category as import('@/lib/shopping-intent').ShoppingCategory | undefined,
             };
             convStateRef.current = INITIAL_CONV_STATE;
           } else if (convResult.state.stage === 'ready_to_diagnose') {
@@ -862,7 +863,7 @@ export default function Home() {
     // Classify the message into a conversation mode before detailed
     // intent detection. Mode persistence carries across turns.
     const routedMode = routeConversation(submittedText);
-    const effectiveMode = convModeHint ?? resolveMode(routedMode, state.activeMode);
+    let effectiveMode = convModeHint ?? resolveMode(routedMode, state.activeMode);
     dispatch({ type: 'SET_MODE', mode: effectiveMode });
 
     // ── Detect intent ───────────────────────────────────
@@ -876,10 +877,30 @@ export default function Home() {
       (m) => m.role === 'assistant' && m.kind === 'advisory' && m.advisory.kind === 'shopping',
     ).length;
 
+    // ── Brand follow-up detection ─────────────────────────
+    // "what about denafrips", "denafrips?", "any chord options" — when the
+    // user mentions a brand in a short message and we already have shopping
+    // context, treat it as a shopping refinement. This overrides
+    // product_assessment intent and prevents the state machine from
+    // re-entering and losing category/budget context.
+    const brandFollowUp = shoppingAnswerCount > 0
+      ? detectBrandFollowUp(submittedText)
+      : undefined;
+    if (brandFollowUp) {
+      console.log('[brand-followup] detected brand="%s" in active shopping (count=%d) — forcing shopping intent', brandFollowUp, shoppingAnswerCount);
+      intent = 'shopping';
+      // Ensure mode stays in shopping — don't let routeConversation's
+      // 'inquiry' default pull it out.
+      if (effectiveMode !== 'shopping') {
+        effectiveMode = 'shopping';
+        dispatch({ type: 'SET_MODE', mode: 'shopping' });
+      }
+    }
+
     // ── Debug: turn entry ──────────────────────────────
-    console.log('[turn-debug] msg="%s" intent=%s routedMode=%s effectiveMode=%s activeMode=%s shoppingCount=%d convState=%s/%s',
+    console.log('[turn-debug] msg="%s" intent=%s routedMode=%s effectiveMode=%s activeMode=%s shoppingCount=%d convState=%s/%s brandFollowUp=%s',
       submittedText, intent, routedMode, effectiveMode, state.activeMode, shoppingAnswerCount,
-      convStateRef.current.mode, convStateRef.current.stage);
+      convStateRef.current.mode, convStateRef.current.stage, brandFollowUp ?? 'none');
 
     // ── First-turn intent authority ──────────────────────
     // When detectIntent returns a high-confidence mode (system_assessment,
@@ -887,7 +908,8 @@ export default function Home() {
     // bypass the state machine entirely. This prevents budget+category
     // fast-tracking, orientation heuristics, or other detectConvMode
     // priorities from overriding a clear, well-supported intent.
-    const intentAuthoritative = convStateRef.current.mode === 'idle' && (
+    // Brand follow-ups are exempt — they've already been routed to shopping above.
+    const intentAuthoritative = !brandFollowUp && convStateRef.current.mode === 'idle' && (
       (intent === 'system_assessment' && turnCtx.subjectMatches.length >= 2) ||
       (intent === 'comparison' && (turnCtx.subjectMatches.length >= 2 || /\bvs\.?\b/i.test(submittedText))) ||
       (intent === 'product_assessment' && turnCtx.subjectMatches.length >= 1)
@@ -1067,7 +1089,7 @@ export default function Home() {
     // product_assessment is the sole exception — "I'm considering the X"
     // should always produce a direct assessment, even mid-shopping flow.
     const isInShoppingFlow = effectiveMode === 'shopping' && shoppingAnswerCount > 0;
-    if (isInShoppingFlow && intent !== 'product_assessment') {
+    if (isInShoppingFlow && intent !== 'product_assessment' && intent !== 'comparison' && intent !== 'cable_advisory') {
       console.log('[shopping-lock] Overriding intent=%s → shopping (effectiveMode=%s, shoppingAnswerCount=%d)', intent, effectiveMode, shoppingAnswerCount);
       intent = 'shopping';
     }
@@ -1136,8 +1158,13 @@ export default function Home() {
     }
 
     // ── Clear comparison on explicit mode shift ─────────
-    // Shopping and diagnosis are new topics — drop the comparison context.
-    if (state.activeComparison && (effectiveMode === 'shopping' || effectiveMode === 'diagnosis')) {
+    // Shopping, diagnosis, and category-keyword messages are new topics —
+    // drop the comparison context. Without this, "what about turntables"
+    // after a comparison leaves stale comparison state that can intercept
+    // subsequent turns.
+    const hasCategoryShift = /\b(?:dacs?|amps?|amplifiers?|speakers?|headphones?|turntables?|streamers?|cables?|integrated)\b/i.test(submittedText)
+      && turnCtx.subjectMatches.length === 0;
+    if (state.activeComparison && (effectiveMode === 'shopping' || effectiveMode === 'diagnosis' || hasCategoryShift)) {
       dispatch({ type: 'CLEAR_COMPARISON' });
     }
 
@@ -1386,8 +1413,13 @@ export default function Home() {
     // diagnosis continuity override can fold gear_inquiry back into diagnosis.
     // Block the entire consultation path during active diagnosis — all inputs
     // must flow to the diagnosis handling downstream.
+    // Brand comparisons that survived the shopping lock (line 1092) must still
+    // reach buildConsultationResponse / buildMultiBrandComparison. Without the
+    // comparison carve-out, consultationGuarded blocks the entire consultation
+    // path and the 3+ brand comparison degrades to a 2-product pair via
+    // gear-response's resolveComparisonPair.
     const consultationGuarded = intent === 'system_assessment' || intent === 'product_assessment'
-      || (effectiveMode === 'shopping' && shoppingAnswerCount > 0)
+      || (effectiveMode === 'shopping' && shoppingAnswerCount > 0 && intent !== 'comparison')
       || effectiveMode === 'diagnosis';
     if (!consultationGuarded && (effectiveMode === 'consultation' || isBrandComparison || isGearWithSubjects)) {
       const consultResult = buildConsultationResponse(submittedText, turnCtx.subjectMatches);
@@ -1398,6 +1430,7 @@ export default function Home() {
             type: 'SET_COMPARISON',
             left: turnCtx.subjectMatches[0],
             right: turnCtx.subjectMatches[1],
+            additional: turnCtx.subjectMatches.length > 2 ? turnCtx.subjectMatches.slice(2) : undefined,
             scope: 'brand',
           });
         }
@@ -1448,18 +1481,14 @@ export default function Home() {
     // Consultation is handled upstream (before detectIntent) and
     // returns early, so it cannot be swallowed by this override.
     // product_assessment: when we're in an active shopping session
-    // (prior shopping answers shown), "what about denafrips?" is a
-    // shopping refinement, not a standalone assessment. Override to
-    // shopping so brand/product context is retained. Only allow
-    // product_assessment to break out when no shopping answers have
-    // been shown yet (i.e., first turn with assessment language).
-    // system_assessment and comparison are exempt — these are topic changes
-    // that must break out of shopping context regardless of prior mode.
-    const productAssessmentInShopping = intent === 'product_assessment' && shoppingAnswerCount > 0;
-    if (effectiveMode === 'shopping' && intent !== 'shopping' && intent !== 'system_assessment' && intent !== 'comparison') {
-      if (intent !== 'product_assessment' || productAssessmentInShopping) {
-        intent = 'shopping';
-      }
+    // product_assessment, system_assessment, and comparison are exempt —
+    // these are topic changes or specific-product queries that must break
+    // out of shopping context regardless of prior mode. product_assessment
+    // is gated by Step 0 in detectIntent (requires known product/brand +
+    // assessment language), so it's already strict enough to prevent
+    // bare category mentions from escaping the shopping flow.
+    if (effectiveMode === 'shopping' && intent !== 'shopping' && intent !== 'system_assessment' && intent !== 'comparison' && intent !== 'product_assessment') {
+      intent = 'shopping';
     }
     // ── Diagnosis continuity override ─────────────────
     // When diagnosis is active, ALL intents fold back into diagnosis
@@ -1560,6 +1589,7 @@ export default function Home() {
             type: 'SET_COMPARISON',
             left: turnCtx.subjectMatches[0],
             right: turnCtx.subjectMatches[1],
+            additional: turnCtx.subjectMatches.length > 2 ? turnCtx.subjectMatches.slice(2) : undefined,
             scope: turnCtx.subjectMatches.every((m) => m.kind === 'product') ? 'product' : 'brand',
           });
         }
@@ -2027,6 +2057,13 @@ export default function Home() {
           });
         }
 
+        // Category from state machine clarification flow (e.g. "interested in speakers" → budget → "5000").
+        // When convModeHint === 'shopping', the state machine just completed and stored the category in
+        // lastShoppingFactsRef — pass it even when shoppingAnswerCount is 0 so the first shopping call
+        // uses the clarified category instead of re-scanning allUserText (which may contain stale mentions).
+        const clarifiedCategory = lastShoppingFactsRef.current?.category;
+        const hasClarifiedCategory = convModeHint === 'shopping' && !!clarifiedCategory;
+
         const shoppingCtx = detectShoppingIntent(
           allUserText, pipelineSignals, advisoryCtx.systemComponents,
           // On refinement/category-switch turns, pass the latest message so its
@@ -2034,7 +2071,10 @@ export default function Home() {
           shoppingAnswerCount > 0 ? submittedText : undefined,
           // Category lock: use locked category as fallback so stale allUserText
           // keywords don't override the user's active category on follow-up turns.
-          shoppingAnswerCount > 0 ? (activeShoppingCategoryRef.current ?? lastShoppingFactsRef.current?.category) : undefined,
+          // Also pass clarified category from state machine completion (budget follow-up).
+          (shoppingAnswerCount > 0)
+            ? (activeShoppingCategoryRef.current ?? clarifiedCategory)
+            : (hasClarifiedCategory ? clarifiedCategory : undefined),
         );
 
         // ── effectiveBudget: single source of truth ────────────

@@ -195,12 +195,14 @@ function resolveComparisonPair(
   currentMessage: string,
   subjects: string[],
 ): ComparisonResolution | null {
-  // Find the separator — "vs", "versus", "or", or "compare…with" (word-bounded).
-  // "with" is only treated as a separator when preceded by "compare" to avoid
-  // false positives on phrases like "pair X with Y".
+  // Find the separator — "vs", "versus", "or", "and" (after "compare"/"suggest"/"recommend"),
+  // or "compare…with". "with" and "and" are only treated as separators when preceded by
+  // comparative/suggestive language to avoid false positives on phrases like
+  // "pair X with Y" or "denafrips and a subwoofer".
+  const hasComparativeContext = /\b(?:compare|suggest|recommend|pick|choose)\b/i.test(currentMessage);
   const sepMatch = currentMessage.match(/\b(vs\.?|versus)\b/i)
     ?? currentMessage.match(/\b(or)\b/i)
-    ?? (/\bcompare\b/i.test(currentMessage) ? currentMessage.match(/\b(with)\b/i) : null);
+    ?? (hasComparativeContext ? currentMessage.match(/\b(and|with)\b/i) : null);
   if (!sepMatch) return null;
 
   const sepIdx = sepMatch.index!;
@@ -1841,9 +1843,78 @@ export function buildGearResponse(
 
   // ── Comparison ──────────────────────────────────────
   if (intent === 'comparison') {
-    // ── System-vs-system resolution ──────────────────
-    // For "X + Y vs Z + Y", resolve which products are shared (held
-    // constant) and which differ (the actual comparison targets).
+    // ── Multi-product comparison (3+ products) ────────
+    // When 3+ distinct products are resolved, produce a structured
+    // multi-way comparison instead of silently dropping the extras.
+    if (products.length >= 3) {
+      const compared = products.slice(0, 4);
+      const blocks = compared.map((p) => {
+        const name = `${p.brand} ${p.name}`;
+        const arch = p.architecture ? `${p.architecture} design. ` : '';
+        const char = productCharacterCompact(p);
+        return `**${name}** — ${arch}${char}`;
+      });
+
+      // Price context
+      const prices = compared.filter((p) => p.price > 0);
+      const priceNote = prices.length >= 2
+        ? ` ($${Math.min(...prices.map((p) => p.price)).toLocaleString()}–$${Math.max(...prices.map((p) => p.price)).toLocaleString()} range)`
+        : '';
+
+      const opening = `These take different approaches${priceNote}:`;
+
+      // ── Per-product "choose if" conclusions ────────────
+      // Derive a one-line listener-facing recommendation per product
+      // from its character tendencies.
+      const chooseLines = compared.map((p) => {
+        const name = `${p.brand} ${p.name}`;
+        const char = productCharacterCompact(p);
+        // Extract the dominant quality from the character description
+        const firstTrait = char.split(/[.,]/)[0].trim().toLowerCase();
+        return `**${name}** if you want ${firstTrait}.`;
+      });
+
+      // Default lean: prefer the product with the richest harmonic
+      // character (warm/dense/organic) as the safest starting point
+      // for long-term engagement. Fall back to the first product.
+      const WARM_SIGNALS = /warm|dense|rich|organic|lush|harmonic|tonal|tube|flow/i;
+      let defaultIdx = 0;
+      let bestWarmScore = -1;
+      compared.forEach((p, i) => {
+        const char = productCharacterCompact(p);
+        const score = (char.match(WARM_SIGNALS) || []).length;
+        if (score > bestWarmScore) { bestWarmScore = score; defaultIdx = i; }
+      });
+      const defaultName = `${compared[defaultIdx].brand} ${compared[defaultIdx].name}`;
+      const defaultLean = `Without more context, I would lean toward **${defaultName}** — it tends to be the easiest path to long-term musical engagement.`;
+
+      const conclusion = `${chooseLines.join('\n')}\n\n${defaultLean}`;
+      const multiComparison = `${opening}\n\n${blocks.join('\n\n')}\n\n${conclusion}`;
+
+      return {
+        intent,
+        subjects,
+        anchor: multiComparison,
+        character: '',
+        interpretation: desires.length > 0
+          ? QUALITY_PROFILES[desires[0].quality]?.interpretation
+          : undefined,
+        direction: '',
+        clarification: activeSystem
+          ? `How does your current setup lean — warmer or more precise?`
+          : `What are you pairing these with?`,
+        systemDirection: sysDir,
+        hearing,
+        userArchetype: sysDir.inferredArchetype
+          ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
+          : undefined,
+        matchedProducts: compared,
+      };
+    }
+
+    // ── Pair comparison (2 products) ──────────────────
+    // System-vs-system resolution: for "X + Y vs Z + Y", resolve which
+    // products are shared (held constant) and which differ.
     const compPair = resolveComparisonPair(currentMessage, subjects);
     const a = compPair?.left ?? products[0] ?? null;
     const b = compPair?.right ?? products[1] ?? null;

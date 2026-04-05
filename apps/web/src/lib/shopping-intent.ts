@@ -334,6 +334,41 @@ export function detectExplicitCategorySwitch(text: string): ShoppingCategory | n
     if (categoryMatches.length === 1) return categoryMatches[0];
   }
 
+  // ── Broad single-category fallback ──────────────────────
+  // When the latest message mentions exactly one product category, treat it
+  // as an implicit switch regardless of phrasing. This covers natural
+  // expressions like "a new dac", "i'm interested in headphones", "actually
+  // turntables", etc. The question guard above already filters out
+  // interrogative category mentions.
+  // When two categories appear, check for negation/correction language
+  // ("not speakers - a dac") and return the non-negated one.
+  const allDetected: { category: ShoppingCategory; index: number }[] = [];
+  for (const pat of CATEGORY_PATTERNS) {
+    for (const re of pat._patterns) {
+      const m = lower.match(re);
+      if (m && m.index !== undefined) {
+        allDetected.push({ category: pat.category, index: m.index });
+        break; // one match per category is enough
+      }
+    }
+  }
+  if (allDetected.length === 1) return allDetected[0].category;
+  if (allDetected.length === 2) {
+    // Correction / negation: "not speakers - a dac", "no more amps, try DACs"
+    const negMatch = lower.match(/\b(?:not|no|nah|never|forget|skip|stop|don'?t\s+want)\b/i);
+    if (negMatch && negMatch.index !== undefined) {
+      // The category closest after the negation word is the rejected one
+      const afterNeg = allDetected
+        .filter((d) => d.index > negMatch.index!)
+        .sort((a, b) => a.index - b.index);
+      if (afterNeg.length >= 1) {
+        const rejected = afterNeg[0].category;
+        const kept = allDetected.find((d) => d.category !== rejected);
+        if (kept) return kept.category;
+      }
+    }
+  }
+
   return null;
 }
 
@@ -1790,7 +1825,7 @@ export interface ProductExample {
   priceCurrency?: string;
   /** Brief sonic character — what this component fundamentally sounds like. */
   character?: string;
-  /** Design/architecture highlights — "Why it stands out" bullets. */
+  /** Design mechanism → audible effect bullets — "What changes". */
   standoutFeatures?: string[];
   /** Sonic character bullets — "Sound profile" (distinct from fitNote verdict). */
   soundProfile?: string[];
@@ -2319,10 +2354,10 @@ function simplifyFitLanguage(text: string): string {
 }
 
 /**
- * Build a concise "best for" summary for a product.
+ * Build a concise directional label for a product.
  *
- * Output: short phrase like "Best for warmth and body" or "Best for speed and clarity".
- * No architecture labels, no trade-off clauses, no internal modelling language.
+ * Output: short phrase like "Direction: tonal density, flow" or "Direction: speed, precision".
+ * No "best for" framing — states what the product moves the system toward.
  */
 function buildFitNote(product: Product, _userTraits: Record<string, SignalDirection>): string {
   return simplifyFitLanguage(buildFitNoteRaw(product, _userTraits));
@@ -2334,10 +2369,10 @@ function buildFitNoteRaw(product: Product, _userTraits: Record<string, SignalDir
   if (hasTendencies(product.tendencies)) {
     const top = selectDefaultTendencies(product.tendencies.character, 3);
     if (top.length >= 2) {
-      return `Best for ${extractKeyPhrase(top[0].tendency)} and ${extractKeyPhrase(top[1].tendency)}`;
+      return `Direction: ${extractKeyPhrase(top[0].tendency)}, ${extractKeyPhrase(top[1].tendency)}`;
     }
     if (top.length === 1) {
-      return `Best for ${extractKeyPhrase(top[0].tendency)}`;
+      return `Direction: ${extractKeyPhrase(top[0].tendency)}`;
     }
   }
 
@@ -2345,20 +2380,20 @@ function buildFitNoteRaw(product: Product, _userTraits: Record<string, SignalDir
   if (hasExplainableProfile(product.tendencyProfile)) {
     const emphasized = getEmphasizedTraits(product.tendencyProfile);
     if (emphasized.length >= 2) {
-      return `Best for ${emphasized[0]} and ${emphasized[1]}`;
+      return `Direction: ${emphasized[0]}, ${emphasized[1]}`;
     }
     if (emphasized.length === 1) {
-      return `Best for ${emphasized[0]}`;
+      return `Direction: ${emphasized[0]}`;
     }
     // No 'emphasized' traits — use 'present' traits as fallback
     const present = product.tendencyProfile.tendencies
       .filter((t) => t.level === 'present')
       .map((t) => t.trait.replace(/_/g, ' '));
     if (present.length >= 2) {
-      return `Best for ${present[0]} and ${present[1]}`;
+      return `Direction: ${present[0]}, ${present[1]}`;
     }
     if (present.length === 1) {
-      return `Best for ${present[0]}`;
+      return `Direction: ${present[0]}`;
     }
   }
 
@@ -2369,13 +2404,13 @@ function buildFitNoteRaw(product: Product, _userTraits: Record<string, SignalDir
     const sd = product.primaryAxes.smooth_detailed;
     const ec = product.primaryAxes.elastic_controlled;
     if (wb === 'warm') qualities.push('warmth');
-    if (wb === 'bright') qualities.push('clarity and energy');
-    if (sd === 'smooth') qualities.push('smooth listening');
+    if (wb === 'bright') qualities.push('clarity, energy');
+    if (sd === 'smooth') qualities.push('softer transients');
     if (sd === 'detailed') qualities.push('detail retrieval');
-    if (ec === 'elastic') qualities.push('dynamics and punch');
-    if (ec === 'controlled') qualities.push('composure and control');
-    if (qualities.length >= 2) return `Best for ${qualities[0]} and ${qualities[1]}`;
-    if (qualities.length === 1) return `Best for ${qualities[0]}`;
+    if (ec === 'elastic') qualities.push('dynamics, punch');
+    if (ec === 'controlled') qualities.push('composure, control');
+    if (qualities.length >= 2) return `Direction: ${qualities[0]}, ${qualities[1]}`;
+    if (qualities.length === 1) return `Direction: ${qualities[0]}`;
   }
 
   // Priority 4: description fallback
@@ -2522,6 +2557,24 @@ interface SystemDeltaResult {
 }
 
 /**
+ * Build a short design-mechanism clause for causal explanations.
+ *
+ * Maps architecture/topology to a concrete "because …" reason.
+ * Falls back to a generic but honest description.
+ */
+function buildDesignMechanism(product: Product): string {
+  const topo = product.topology;
+  if (topo && TOPOLOGY_PHILOSOPHY[topo]) {
+    return TOPOLOGY_PHILOSOPHY[topo].emphasis.toLowerCase();
+  }
+  const archLabel = ARCHITECTURE_LABELS[product.architecture];
+  if (archLabel) {
+    return `its ${archLabel.toLowerCase()} prioritises that`;
+  }
+  return `its design architecture prioritises that`;
+}
+
+/**
  * Build a system delta explanation for a product within the current system.
  *
  * Deterministic. Uses:
@@ -2637,10 +2690,14 @@ function buildSystemDelta(
 
   if (sysLabel && improvements.length > 0) {
     const topImprovement = improvements[0].replace(/^(greater|enhanced|added) /, '');
-    whyFitsSystem = `Your current system leans ${sysLabel}. This component would likely introduce ${topImprovement} while preserving what the system already does well.`;
+    const topTradeoff = tradeoffs.length > 0
+      ? tradeoffs[0].replace(/^(less|may not improve|doesn't address|may compound existing) /, '')
+      : undefined;
+    const tradeoffClause = topTradeoff ? ` You give up some ${topTradeoff} for more ${topImprovement}.` : '';
+    whyFitsSystem = `In a system that leans ${sysLabel}, this shifts it toward ${topImprovement} because ${buildDesignMechanism(product)}.${tradeoffClause}`;
   } else if (improvements.length > 0) {
     const topImprovement = improvements[0].replace(/^(greater|enhanced|added) /, '');
-    whyFitsSystem = `Based on this product's design tendencies, it would likely bring ${topImprovement} to your system.`;
+    whyFitsSystem = `This shifts the system toward ${topImprovement} because ${buildDesignMechanism(product)}.`;
   }
 
   return {
@@ -2788,15 +2845,22 @@ function buildAnchorJustification(
   }
 
   // ── Tier 2: Partial context (taste/preference + product) ──
+  const isDefaultTaste = reasoning?.taste.preferenceSource === 'default';
   if (hasTaste && hasSystem) {
     const preference = tasteLabel ?? 'your stated priorities';
     const topStrength = strengths[0];
+    if (isDefaultTaste) {
+      return `In a system that leans ${sysChar}, this shifts it toward more ${topStrength}. Starting assumption: ${preference.toLowerCase()} — tell me if that's off. ${tradeOffSentence}`;
+    }
     return `In a system that leans ${sysChar}, your preference for ${preference.toLowerCase()} points toward more ${topStrength} — this moves it there. ${tradeOffSentence}`;
   }
 
   if (hasTaste) {
     const preference = tasteLabel ?? 'your stated priorities';
     const topStrength = strengths[0];
+    if (isDefaultTaste) {
+      return `This leans toward ${topStrength}. Starting assumption: ${preference.toLowerCase()} — tell me what you actually prioritize and I'll adjust. ${tradeOffSentence}`;
+    }
     return `Your preference for ${preference.toLowerCase()} points toward more ${topStrength}. If your system needs that, this is a clean way to get it. ${tradeOffSentence}`;
   }
 
@@ -2899,7 +2963,7 @@ function buildCaution(product: Product): string | undefined {
   return parts.length > 0 ? parts.join(' ') : undefined;
 }
 
-// ── "Why it stands out" — architecture & design highlights ──────
+// ── "What changes" — architecture & design mechanism bullets ─────
 
 /** Human-readable architecture descriptions. */
 const ARCHITECTURE_LABELS: Record<string, string> = {
@@ -2919,46 +2983,44 @@ const ARCHITECTURE_LABELS: Record<string, string> = {
 };
 
 /**
- * Build "Why it stands out" feature bullets (2–3 items).
+ * Build "What changes" bullets (2–3 items).
  *
- * Draws from architecture, topology philosophy, tendency profile,
- * primary axes, and fatigue assessment to explain the design's
- * distinguishing characteristics.
+ * Each bullet links a design mechanism to an audible effect.
+ * Format: concrete sonic change, not generic praise.
  */
 function buildStandoutFeatures(product: Product): string[] {
   const features: string[] = [];
 
-  // Bullet 1: Architecture identity
+  // Bullet 1: Architecture → audible consequence
   const archLabel = ARCHITECTURE_LABELS[product.topology ?? '']
     ?? ARCHITECTURE_LABELS[product.architecture]
     ?? `${product.architecture} design`;
-  features.push(archLabel);
-
-  // Bullet 2: Key design emphasis from topology philosophy
   const topo = product.topology;
   if (topo && TOPOLOGY_PHILOSOPHY[topo]) {
-    features.push(capitalizeFirst(TOPOLOGY_PHILOSOPHY[topo].emphasis));
+    features.push(`${archLabel} — ${TOPOLOGY_PHILOSOPHY[topo].emphasis.toLowerCase()}`);
+  } else {
+    features.push(archLabel);
   }
 
-  // Bullet 3: Notable quality from tendency profile or fatigue assessment
+  // Bullet 2: Notable quality from tendency profile or fatigue assessment
   if (product.fatigueAssessment?.notes) {
     features.push(product.fatigueAssessment.notes);
   } else if (product.notes) {
     features.push(product.notes);
   }
 
-  return features.slice(0, 3);
+  return features.slice(0, 2);
 }
 
 /**
- * Build "Sound profile" bullets (2–3 items).
+ * Build "What you give up" trade-off bullets (1–2 items).
  *
- * Uses curated character tendencies when available (richest source),
- * falling back to qualitative tendency profile, then primary axes.
- * Each bullet is a distinct sonic trait — not a verdict or fit note.
+ * Uses curated tendencies, tendency profile, or primary axes to identify
+ * the concrete sonic trade-offs of this design. Each bullet states an
+ * explicit cost — not a hedged "may" or generic qualifier.
  */
 function buildSoundProfile(product: Product): string[] {
-  // Priority 1: curated character tendencies — the most authoritative source
+  // Priority 1: curated character tendencies — extract de-emphasized traits
   if (hasTendencies(product.tendencies)) {
     const selected = selectDefaultTendencies(product.tendencies.character, 3);
     if (selected.length > 0) {
@@ -2966,23 +3028,17 @@ function buildSoundProfile(product: Product): string[] {
     }
   }
 
-  // Priority 2: qualitative tendency profile → readable bullets
+  // Priority 2: qualitative tendency profile → explicit trade-offs + strengths
   if (hasExplainableProfile(product.tendencyProfile)) {
     const bullets: string[] = [];
     const emphasized = getEmphasizedTraits(product.tendencyProfile);
-    const present = product.tendencyProfile.tendencies
-      .filter((t) => t.level === 'present')
-      .map((t) => t.trait.replace(/_/g, ' '));
     const lessEmph = getLessEmphasizedTraits(product.tendencyProfile);
 
-    for (const trait of emphasized) {
-      bullets.push(`Strong ${trait}`);
-    }
-    for (const trait of present.slice(0, 2)) {
-      bullets.push(`Good ${trait}`);
+    for (const trait of emphasized.slice(0, 2)) {
+      bullets.push(capitalizeFirst(trait));
     }
     if (lessEmph.length > 0) {
-      bullets.push(`Less emphasis on ${lessEmph.slice(0, 2).join(' and ')}`);
+      bullets.push(`Less ${lessEmph.slice(0, 2).join(' and ')}`);
     }
     if (bullets.length > 0) return bullets.slice(0, 3);
   }
@@ -2991,10 +3047,10 @@ function buildSoundProfile(product: Product): string[] {
   if (product.primaryAxes) {
     const bullets: string[] = [];
     const AXIS_LABELS: Record<string, Record<string, string>> = {
-      warm_bright:       { warm: 'Warm-leaning tonality', bright: 'Bright, energetic presentation', neutral: 'Tonally neutral' },
-      smooth_detailed:   { smooth: 'Smooth, easy-going', detailed: 'Detail-forward and resolving', neutral: 'Balanced detail retrieval' },
-      elastic_controlled:{ elastic: 'Dynamic and expressive', controlled: 'Controlled and composed', neutral: 'Even-handed dynamics' },
-      scale_intimacy:    { scale: 'Large-scale, room-filling presentation', intimacy: 'Close, listener-focused presentation', neutral: 'Moderate spatial presentation' },
+      warm_bright:       { warm: 'Warm-leaning tonality', bright: 'Bright, forward treble', neutral: 'Tonally neutral' },
+      smooth_detailed:   { smooth: 'Softer transients', detailed: 'Detail-forward', neutral: 'Balanced detail retrieval' },
+      elastic_controlled:{ elastic: 'Dynamic, punchy', controlled: 'Controlled, composed', neutral: 'Even-handed dynamics' },
+      scale_intimacy:    { scale: 'Large-scale presentation', intimacy: 'Close, focused presentation', neutral: 'Moderate spatial presentation' },
     };
     for (const [axis, leaning] of Object.entries(product.primaryAxes)) {
       const label = AXIS_LABELS[axis]?.[leaning];
@@ -3536,6 +3592,42 @@ function selectProductExamples(
       : hasSparseSignals
         ? selectDiverseByTopology(ranked, poolSize, budgetAmount)
         : ranked.slice(0, poolSize);
+  }
+
+  // ── Brand constraint injection (post-pool) ──────────────
+  // When the user explicitly asked about a brand ("what about denafrips"),
+  // ensure ALL products from that brand that survived rankProducts are in
+  // the pool. Topology diversity may have excluded them in favor of another
+  // product with the same topology (e.g., Holo Cyan 2 takes the R2R slot
+  // over Denafrips Enyo). Also inject slightly-over-budget brand products
+  // so the user sees what they asked for.
+  if (brandConstraint) {
+    const brandLower = brandConstraint.toLowerCase();
+    const ceiling = budgetAmount ? budgetAmount * 1.25 : Infinity;
+    const poolIds = new Set(top.map((sp) => sp.product.id));
+    const topScore = top.length > 0 ? top[0].score : 0;
+
+    // Inject in-budget brand products that were excluded by diversity selection
+    for (const sp of ranked) {
+      if (poolIds.has(sp.product.id)) continue;
+      if (sp.product.brand.toLowerCase() !== brandLower) continue;
+      top.push(sp);
+      poolIds.add(sp.product.id);
+      console.log('[brand-inject] %s %s ($%d, score=%s) injected into pool — requested brand',
+        sp.product.brand, sp.product.name, sp.product.price, sp.score.toFixed(2));
+    }
+
+    // Inject over-budget brand products within 25% ceiling (not in ranked — filtered by budget)
+    for (const product of catalog) {
+      if (poolIds.has(product.id)) continue;
+      if (product.brand.toLowerCase() !== brandLower) continue;
+      if (!budgetAmount || product.price <= budgetAmount) continue; // already in ranked
+      if (product.price > ceiling) continue; // too far over budget
+      top.push({ product, score: topScore * 0.8 }); // score slightly below best
+      poolIds.add(product.id);
+      console.log('[brand-inject] %s %s ($%d) injected into pool — requested brand, over-budget within ceiling ($%d)',
+        product.brand, product.name, product.price, ceiling);
+    }
   }
 
   // ── Liked-brand over-budget injection (post-pool) ────────
@@ -4849,8 +4941,13 @@ function buildWhyThisFitsYou(
 
   // 1. Taste alignment — connect recommendations to listener preferences
   const tasteLabel = reasoning?.taste.tasteLabel ?? matchedProfile?.label;
+  const isDefaultTaste = reasoning?.taste.preferenceSource === 'default';
   if (tasteLabel) {
-    bullets.push(`Selection weighted toward designs that prioritize ${tasteLabel.toLowerCase()}.`);
+    if (isDefaultTaste) {
+      bullets.push(`Starting point: ${tasteLabel.toLowerCase()}. I'm using this as a default until you tell me otherwise.`);
+    } else {
+      bullets.push(`Selection weighted toward designs that prioritize ${tasteLabel.toLowerCase()}.`);
+    }
   }
 
   // 2. System interaction — how these fit the existing chain

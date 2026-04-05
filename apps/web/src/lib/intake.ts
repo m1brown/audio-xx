@@ -37,6 +37,7 @@ const INTAKE_PATTERNS = [
   // Vague category desire without specificity
   /\b(?:i\s+)?want\s+(?:a\s+)?(?:some\s+)?(?:new\s+)?(?:speakers?|headphones?(?:\s+setup)?|dac|amp|amplifier|turntable)\b/i,
   /\b(?:i\s+)?need\s+(?:a\s+)?(?:some\s+)?(?:new\s+)?(?:speakers?|headphones?(?:\s+setup)?|dac|amp|amplifier|turntable)\b/i,
+  /\b(?:i'?m\s+)?interested\s+in\s+(?:a\s+)?(?:new\s+)?(?:speakers?|headphones?(?:\s+setup)?|dac|amp|amplifier|turntable|streamer)\b/i,
   /\blooking\s+for\s+(?:a\s+)?(?:new\s+)?(?:stereo|system|setup|speakers?|headphones?)\b/i,
 
   // Open-ended audio desire
