@@ -504,7 +504,13 @@ function isEditorialFormat(a: AdvisoryResponse): boolean {
 // context, and archetype. When profile is incomplete, shows a
 // transparent note about what's missing.
 
-function AudioPreferencesBlock({ profile }: { profile: AudioProfile }) {
+function AudioPreferencesBlock({ profile, advisoryMode, namedProduct }: {
+  profile: AudioProfile;
+  advisoryMode?: string;
+  /** True when the query targets a specific named product (even if not in catalog).
+   *  False/undefined when only a brand name was mentioned. */
+  namedProduct?: boolean;
+}) {
   const hasSystem = profile.systemChain && profile.systemChain.length > 0;
   const hasPriorities = profile.sonicPriorities && profile.sonicPriorities.length > 0;
   const hasAvoids = profile.sonicAvoids && profile.sonicAvoids.length > 0;
@@ -512,7 +518,15 @@ function AudioPreferencesBlock({ profile }: { profile: AudioProfile }) {
   const hasAnything = hasSystem || hasPriorities || hasContext;
 
   if (!hasAnything) {
-    // No profile at all — show exploratory note
+    // Determine the correct label based on advisory mode
+    const isAssessment = advisoryMode === 'product_assessment';
+    const label = isAssessment
+      ? (namedProduct ? 'Product assessment' : 'Brand assessment')
+      : 'Exploratory recommendations';
+    const description = isAssessment
+      ? 'Tell me about your system, sonic preferences, and listening habits for a more specific fit assessment.'
+      : 'These suggestions represent different design philosophies. Tell me about your system, sonic preferences, and listening habits for more personalized direction.';
+
     return (
       <div
         style={{
@@ -532,7 +546,7 @@ function AudioPreferencesBlock({ profile }: { profile: AudioProfile }) {
           color: COLORS.textMuted,
           marginBottom: '0.4rem',
         }}>
-          Exploratory recommendations
+          {label}
         </div>
         <p style={{
           margin: 0,
@@ -540,7 +554,7 @@ function AudioPreferencesBlock({ profile }: { profile: AudioProfile }) {
           lineHeight: 1.7,
           color: COLORS.textSecondary,
         }}>
-          These suggestions represent different design philosophies. Tell me about your system, sonic preferences, and listening habits for more personalized direction.
+          {description}
         </p>
       </div>
     );
@@ -609,7 +623,9 @@ function AudioPreferencesBlock({ profile }: { profile: AudioProfile }) {
             color: COLORS.textSecondary,
             marginBottom: '0.2rem',
           }}>
-            You prefer
+            {profile.preferenceSource === 'default'
+              ? 'Starting point (default)'
+              : 'You prefer'}
           </div>
           <div style={{
             fontSize: '0.91rem',
@@ -618,6 +634,27 @@ function AudioPreferencesBlock({ profile }: { profile: AudioProfile }) {
           }}>
             {profile.sonicPriorities!.join(' · ')}
           </div>
+          {profile.preferenceSource === 'default' && (
+            <>
+              <div style={{
+                fontSize: '0.86rem',
+                color: COLORS.textSecondary,
+                marginTop: '0.3rem',
+                lineHeight: 1.6,
+              }}>
+                This is a safe starting assumption — slightly warm and easy to listen to.
+              </div>
+              <div style={{
+                fontSize: '0.86rem',
+                color: COLORS.text,
+                marginTop: '0.25rem',
+                fontWeight: 500,
+                lineHeight: 1.6,
+              }}>
+                Do you want to keep that direction, or shift toward clarity and precision?
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -1003,7 +1040,7 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
   return (
     <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
       {/* ── Audio Preferences ────────────────────────── */}
-      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} />}
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} namedProduct={pa.catalogMatch || pa.candidateName.toLowerCase() !== pa.candidateBrand.toLowerCase()} />}
 
       {/* ── Product name heading ─────────────────────── */}
       <h2 style={{
@@ -1436,7 +1473,7 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
     <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
 
       {/* ── 0. Audio Preferences ────────────────────────── */}
-      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} />}
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} />}
 
       {/* ── 0b. Start Here — preference capture CTA ────── */}
       {a.lowPreferenceSignal && a.shoppingCategory && onPreferenceCapture && (
@@ -1784,7 +1821,7 @@ function KnowledgeFormat({ advisory: a }: AdvisoryMessageProps) {
     <div style={{ fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight, color: COLORS.text }}>
       <ModeIndicator mode={a.advisoryMode} />
 
-      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} />}
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} />}
 
       <AdvisorySection label={kr.topic}>
         <p style={{ margin: '0 0 0.95rem 0', color: COLORS.text, lineHeight: FONTS.lineHeight }}>
@@ -2072,7 +2109,7 @@ function StandardFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePro
       )}
 
       {/* ── 2. Audio Preferences ────────────────────── */}
-      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} />}
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} />}
 
       {/* ── System Assessment Block ── */}
       {a.componentReadings && a.componentReadings.length > 0 && a.systemContext && (
