@@ -489,6 +489,37 @@ export function transition(
 
     // ── ORIENTATION ────────────────────────────────────
     case 'orientation': {
+      // ── Intent-driven exit ──────────────────────────────
+      // When the user provides a clear, actionable message instead of
+      // answering the orientation triage question, honour the detected
+      // intent and re-enter the state machine fresh.  This avoids
+      // maintaining a second, weaker regex for each symptom word.
+      //
+      // "diagnosis" is excluded from the set because detectIntent uses
+      // diagnosis as its default fallback — a bare "buy" or "improve"
+      // would trigger an unwanted exit.  Instead, diagnosis exits only
+      // when an explicit symptom signal is present.
+      const ORIENTATION_EXIT_INTENTS = new Set([
+        'shopping', 'comparison', 'system_assessment',
+        'product_assessment', 'consultation_entry', 'cable_advisory',
+        'educational', 'greeting',
+      ]);
+      const shouldExitOrientation =
+        (context.detectedIntent && ORIENTATION_EXIT_INTENTS.has(context.detectedIntent)) ||
+        (context.detectedIntent === 'diagnosis' && hasExplicitDiagnosisSignal(text));
+
+      if (shouldExitOrientation) {
+        const freshMode = detectInitialMode(text, {
+          detectedIntent: context.detectedIntent!,
+          hasSystem: context.hasSystem,
+          subjectCount: context.subjectCount,
+        });
+        return {
+          state: freshMode ?? INITIAL_CONV_STATE,
+          response: null,
+        };
+      }
+
       // User replied to "buying new or improving what you have?"
       const wantsBuy = /\b(?:buy|new|shop|looking\s+for|get\s+(?:a|some))\b/i.test(text);
       const wantsImprove = /\b(?:improve|upgrade|fix|change|better|replace)\b/i.test(text);
@@ -1265,6 +1296,11 @@ export function detectInitialMode(
       return { mode: 'shopping', stage: hasBudget ? 'clarify_category' : 'clarify_budget', facts };
     }
     return { mode: 'music_input', stage: 'awaiting_listening_path', facts };
+  }
+
+  // Greeting / educational / no-problem → orientation (never diagnosis)
+  if (context.detectedIntent === 'greeting' || context.detectedIntent === 'educational') {
+    return { mode: 'orientation', stage: 'entry', facts };
   }
 
   // Diagnosis: detect symptom-based inputs
