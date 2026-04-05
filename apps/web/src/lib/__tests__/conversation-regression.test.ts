@@ -661,6 +661,57 @@ describe('Group E — Beginner / Uncertain', () => {
       pass: results[0].state.mode === 'orientation',
     });
   });
+
+  test('E4: "hello" → orientation (not diagnosis)', () => {
+    const results = runConversation([{ text: 'hello' }]);
+
+    expect(results[0].state.mode).toBe('orientation');
+    expect(results[0].state.mode).not.toBe('diagnosis');
+    expect(results[0].intentResult?.intent).toBe('greeting');
+
+    score({
+      test: 'E4',
+      detectedMode: results[0].state.mode,
+      expectedBehavior: 'Greeting routes to orientation, not diagnosis',
+      actualBehavior: `${results[0].state.mode}/${results[0].state.stage}, intent=${results[0].intentResult?.intent}`,
+      scores: { routing: 5, contextRetention: 5, decisiveness: 5, recommendationTiming: 5, naturalness: 5 },
+      pass: results[0].state.mode === 'orientation',
+    });
+  });
+
+  test('E5: "Can you teach me?" → orientation (educational)', () => {
+    const results = runConversation([{ text: 'Can you teach me?' }]);
+
+    expect(results[0].state.mode).toBe('orientation');
+    expect(results[0].state.mode).not.toBe('diagnosis');
+    expect(results[0].intentResult?.intent).toBe('educational');
+
+    score({
+      test: 'E5',
+      detectedMode: results[0].state.mode,
+      expectedBehavior: 'Educational routes to orientation, not diagnosis',
+      actualBehavior: `${results[0].state.mode}/${results[0].state.stage}, intent=${results[0].intentResult?.intent}`,
+      scores: { routing: 5, contextRetention: 5, decisiveness: 5, recommendationTiming: 5, naturalness: 5 },
+      pass: results[0].state.mode === 'orientation',
+    });
+  });
+
+  test('E6: "I have no issue" → orientation (not diagnosis)', () => {
+    const results = runConversation([{ text: 'I have no issue' }]);
+
+    expect(results[0].state.mode).toBe('orientation');
+    expect(results[0].state.mode).not.toBe('diagnosis');
+    expect(results[0].intentResult?.intent).toBe('greeting');
+
+    score({
+      test: 'E6',
+      detectedMode: results[0].state.mode,
+      expectedBehavior: '"No issue" routes to orientation via greeting intent, not diagnosis',
+      actualBehavior: `${results[0].state.mode}/${results[0].state.stage}, intent=${results[0].intentResult?.intent}`,
+      scores: { routing: 5, contextRetention: 5, decisiveness: 5, recommendationTiming: 5, naturalness: 5 },
+      pass: results[0].state.mode === 'orientation',
+    });
+  });
 });
 
 // ══════════════════════════════════════════════════════
@@ -922,6 +973,30 @@ describe('Intent Detection Validation', () => {
     expect(isOrientationInput('My system sounds thin')).toBe(false);
     expect(isOrientationInput('I get listening fatigue')).toBe(false);
   });
+
+  test('Greeting inputs detect as greeting', () => {
+    expect(detectIntent('hello').intent).toBe('greeting');
+    expect(detectIntent('hi there').intent).toBe('greeting');
+    expect(detectIntent('good morning').intent).toBe('greeting');
+    // NO_PROBLEM_PATTERNS → greeting intent
+    expect(detectIntent('I have no issue').intent).toBe('greeting');
+    expect(detectIntent('everything sounds fine').intent).toBe('greeting');
+    expect(detectIntent('nothing wrong').intent).toBe('greeting');
+  });
+
+  test('Educational inputs detect as educational', () => {
+    expect(detectIntent('Can you teach me?').intent).toBe('educational');
+    expect(detectIntent('What do you do?').intent).toBe('educational');
+    expect(detectIntent('How does this work?').intent).toBe('educational');
+    expect(detectIntent('What is Audio XX?').intent).toBe('educational');
+    expect(detectIntent('What are you?').intent).toBe('educational');
+  });
+
+  test('Greeting/educational do NOT detect as diagnosis', () => {
+    expect(detectIntent('hello').intent).not.toBe('diagnosis');
+    expect(detectIntent('Can you teach me?').intent).not.toBe('diagnosis');
+    expect(detectIntent('I have no issue').intent).not.toBe('diagnosis');
+  });
 });
 
 // ══════════════════════════════════════════════════════
@@ -956,6 +1031,147 @@ describe('Budget Pattern Coverage', () => {
 });
 
 // ══════════════════════════════════════════════════════
+// TEST GROUP G — ORIENTATION FOLLOW-UP TRANSITIONS
+// ══════════════════════════════════════════════════════
+//
+// These test the orientation exit logic in conversation-state.ts transition().
+// When the user provides a strong intent during an active orientation session,
+// the state machine should exit orientation and re-route.
+//
+// NOTE: These tests cover STATE MACHINE behavior only. The page.tsx idle-reset
+// that re-dispatches orientation re-entries to produce educational copy is an
+// integration concern not covered here. For G1/G2, response === null proves
+// the intent-driven exit fired (versus the "unclear reply" path which returns
+// a question response).
+
+describe('Group G — Orientation Follow-Up Transitions', () => {
+
+  test('G1: "I have no issue" → "What do you do?" → educational re-entry', () => {
+    const results = runConversation([
+      { text: 'I have no issue' },
+      { text: 'What do you do?' },
+    ]);
+
+    // Turn 1: greeting → orientation
+    expect(results[0].state.mode).toBe('orientation');
+    expect(results[0].intentResult?.intent).toBe('greeting');
+
+    // Turn 2: educational intent detected, intent-driven exit fires,
+    // detectInitialMode returns orientation (re-entry). response is null
+    // (not a question — proving exit path, not "unclear reply" fallback).
+    expect(results[1].intentResult?.intent).toBe('educational');
+    expect(results[1].state.mode).toBe('orientation');
+    expect(results[1].response).toBeNull();
+
+    score({
+      test: 'G1',
+      detectedMode: 'orientation → orientation (educational re-entry)',
+      expectedBehavior: 'Educational intent exits orientation, re-enters with null response',
+      actualBehavior: `${results[0].state.mode} → ${results[1].state.mode}, response=${results[1].response === null ? 'null' : results[1].response?.kind}`,
+      scores: { routing: 5, contextRetention: 5, decisiveness: 5, recommendationTiming: 5, naturalness: 5 },
+      pass: results[1].intentResult?.intent === 'educational' && results[1].response === null,
+    });
+  });
+
+  test('G2: "hello" → "How does this work?" → educational re-entry', () => {
+    const results = runConversation([
+      { text: 'hello' },
+      { text: 'How does this work?' },
+    ]);
+
+    expect(results[0].state.mode).toBe('orientation');
+    expect(results[0].intentResult?.intent).toBe('greeting');
+
+    expect(results[1].intentResult?.intent).toBe('educational');
+    expect(results[1].state.mode).toBe('orientation');
+    expect(results[1].response).toBeNull();
+
+    score({
+      test: 'G2',
+      detectedMode: 'orientation → orientation (educational re-entry)',
+      expectedBehavior: 'Educational intent exits orientation, re-enters with null response',
+      actualBehavior: `${results[0].state.mode} → ${results[1].state.mode}, response=${results[1].response === null ? 'null' : results[1].response?.kind}`,
+      scores: { routing: 5, contextRetention: 5, decisiveness: 5, recommendationTiming: 5, naturalness: 5 },
+      pass: results[1].intentResult?.intent === 'educational' && results[1].response === null,
+    });
+  });
+
+  test('G3: "Can you teach me?" → "my system sounds harsh" → diagnosis exit', () => {
+    const results = runConversation([
+      { text: 'Can you teach me?' },
+      { text: 'my system sounds harsh' },
+    ]);
+
+    // Turn 1: educational → orientation
+    expect(results[0].state.mode).toBe('orientation');
+    expect(results[0].intentResult?.intent).toBe('educational');
+
+    // Turn 2: diagnosis intent + explicit symptom signal → exits orientation
+    // to diagnosis/ready_to_diagnose.
+    expect(results[1].state.mode).toBe('diagnosis');
+    expect(results[1].state.stage).toBe('ready_to_diagnose');
+    expect(results[1].response).toBeNull();
+
+    score({
+      test: 'G3',
+      detectedMode: 'orientation → diagnosis',
+      expectedBehavior: 'Explicit diagnosis exits orientation to ready_to_diagnose',
+      actualBehavior: `${results[0].state.mode} → ${results[1].state.mode}/${results[1].state.stage}`,
+      scores: { routing: 5, contextRetention: 5, decisiveness: 5, recommendationTiming: 5, naturalness: 5 },
+      pass: results[1].state.mode === 'diagnosis' && results[1].state.stage === 'ready_to_diagnose',
+    });
+  });
+
+  test('G4: "hello" → "buy" → shopping via triage answer', () => {
+    const results = runConversation([
+      { text: 'hello' },
+      { text: 'buy' },
+    ]);
+
+    expect(results[0].state.mode).toBe('orientation');
+
+    // Turn 2: "buy" falls to diagnosis default in detectIntent (no category),
+    // but has no explicit diagnosis signal → intent-driven exit skipped.
+    // Local wantsBuy regex matches → shopping clarification (asks for category).
+    expect(results[1].state.mode).toBe('shopping');
+    expect(results[1].state.stage).toBe('clarify_category');
+    expect(results[1].response?.kind).toBe('question');
+
+    score({
+      test: 'G4',
+      detectedMode: 'orientation → shopping',
+      expectedBehavior: 'Triage answer "buy" routes via local regex to shopping clarification',
+      actualBehavior: `${results[0].state.mode} → ${results[1].state.mode}/${results[1].state.stage}`,
+      scores: { routing: 5, contextRetention: 5, decisiveness: 5, recommendationTiming: 5, naturalness: 5 },
+      pass: results[1].state.mode === 'shopping' && results[1].state.stage === 'clarify_category',
+    });
+  });
+
+  test('G5: "hello" → "interested in speakers" → shopping via intent exit', () => {
+    const results = runConversation([
+      { text: 'hello' },
+      { text: 'interested in speakers' },
+    ]);
+
+    expect(results[0].state.mode).toBe('orientation');
+
+    // Turn 2: detectIntent returns 'shopping' (purchase verb + category).
+    // Intent-driven exit fires → detectInitialMode routes to shopping.
+    expect(results[1].intentResult?.intent).toBe('shopping');
+    expect(results[1].state.mode).toBe('shopping');
+
+    score({
+      test: 'G5',
+      detectedMode: 'orientation → shopping',
+      expectedBehavior: 'Shopping intent exits orientation to shopping mode',
+      actualBehavior: `${results[0].state.mode} → ${results[1].state.mode}/${results[1].state.stage}`,
+      scores: { routing: 5, contextRetention: 5, decisiveness: 5, recommendationTiming: 5, naturalness: 5 },
+      pass: results[1].state.mode === 'shopping',
+    });
+  });
+});
+
+// ══════════════════════════════════════════════════════
 // REPORT GENERATION (runs after all tests)
 // ══════════════════════════════════════════════════════
 
@@ -975,6 +1191,7 @@ afterAll(() => {
       : s.test.startsWith('D') ? 'Diagnosis'
       : s.test.startsWith('E') ? 'Beginner/Orientation'
       : s.test.startsWith('F') ? 'Context Persistence'
+      : s.test.startsWith('G') ? 'Orientation Follow-Up'
       : s.test.startsWith('ML') ? 'Mode Locking'
       : 'Other';
     if (!categories[cat]) categories[cat] = [];
