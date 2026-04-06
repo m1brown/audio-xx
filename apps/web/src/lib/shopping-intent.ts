@@ -342,7 +342,7 @@ export function detectExplicitCategorySwitch(text: string): ShoppingCategory | n
   if (lower.trim().length <= 40) {
     const bareCategory: [RegExp, ShoppingCategory][] = [
       [/^(?:dac|dacs|d\/a|converter)s?$/i, 'dac'],
-      [/^(?:amp|amps|amplifier|amplifiers|integrated|tube\s*amp|tube\s*amps|power\s*amp)$/i, 'amplifier'],
+      [/^(?:amp|amps|amplifier|amplifiers|integrated|integrated\s*amp(?:lifier)?s?|tube\s*amps?|power\s*amps?|preamps?|pre[- ]?amps?|receivers?)$/i, 'amplifier'],
       [/^(?:speaker|speakers|monitors?)$/i, 'speaker'],
       [/^(?:headphone|headphones|iems?|earphones?|cans)$/i, 'headphone'],
       [/^(?:turntable|turntables|record\s*player|vinyl)$/i, 'turntable'],
@@ -378,6 +378,8 @@ export interface ShoppingContext {
   secondaryCategory?: ShoppingCategory;
   budgetMentioned: boolean;
   budgetAmount: number | null;
+  /** Lower bound from "over $X", "above $X", "between $X and $Y" phrasing. */
+  budgetFloor?: number | null;
   tasteProvided: boolean;
   systemProvided: boolean;
   systemProfile: SystemProfile;
@@ -992,7 +994,92 @@ const K_SUFFIX_PATTERN_NO_DOLLAR = /(?:under|around|about|up\s+to|budget\s+(?:of
  * budget ("best dac under $1000" → later "best dac under $500"),
  * we need the LAST match, not the first.
  */
+/**
+ * Parse a budget floor from "over $X", "above $X", "more than $X", and the
+ * lower bound of "between $X and $Y" / "$X to $Y" / "$X-$Y" expressions.
+ * Returns the dollar amount that products must meet or exceed, or null.
+ */
+export function parseBudgetFloor(text: string): number | null {
+  const toAmount = (raw: string): number | null => {
+    const cleaned = raw.replace(/[$,\s]/g, '');
+    const kMatch = cleaned.match(/^(\d+(?:\.\d{1,2})?)k$/i);
+    if (kMatch) return Math.round(parseFloat(kMatch[1]) * 1000);
+    const n = parseInt(cleaned.replace(/k$/i, ''), 10);
+    return isNaN(n) ? null : n;
+  };
+
+  // "between $X and $Y" / "$X to $Y" / "$X – $Y" / "$X-$Y"
+  const rangePatterns: RegExp[] = [
+    /between\s+\$?\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)\s+(?:and|to|-|–|—)\s+\$?\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)/i,
+    /\$\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)\s*(?:to|-|–|—)\s*\$?\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)/i,
+  ];
+  for (const re of rangePatterns) {
+    const m = text.match(re);
+    if (m) {
+      const lo = toAmount(m[1]);
+      const hi = toAmount(m[2]);
+      if (lo !== null && hi !== null) return Math.min(lo, hi);
+    }
+  }
+
+  // "over $X" / "above $X" / "more than $X" / "north of $X" / "starting at $X"
+  const overPatterns: RegExp[] = [
+    /(?:over|above|more\s+than|greater\s+than|north\s+of|starting\s+at|at\s+least|minimum\s+(?:of\s+)?)\s*\$?\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)/i,
+  ];
+  for (const re of overPatterns) {
+    const m = text.match(re);
+    if (m) {
+      const v = toAmount(m[1]);
+      if (v !== null) return v;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Parse a budget cap from a range expression like "between $X and $Y".
+ * Used internally to ensure parseBudgetAmount returns the upper bound.
+ */
+function parseRangeUpper(text: string): number | null {
+  const toAmount = (raw: string): number | null => {
+    const cleaned = raw.replace(/[$,\s]/g, '');
+    const kMatch = cleaned.match(/^(\d+(?:\.\d{1,2})?)k$/i);
+    if (kMatch) return Math.round(parseFloat(kMatch[1]) * 1000);
+    const n = parseInt(cleaned.replace(/k$/i, ''), 10);
+    return isNaN(n) ? null : n;
+  };
+  const rangePatterns: RegExp[] = [
+    /between\s+\$?\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)\s+(?:and|to|-|–|—)\s+\$?\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)/i,
+    /\$\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)\s*(?:to|-|–|—)\s*\$?\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)/i,
+  ];
+  for (const re of rangePatterns) {
+    const m = text.match(re);
+    if (m) {
+      const lo = toAmount(m[1]);
+      const hi = toAmount(m[2]);
+      if (lo !== null && hi !== null) return Math.max(lo, hi);
+    }
+  }
+  return null;
+}
+
 export function parseBudgetAmount(text: string): number | null {
+  // "over $X" / "above $X" / "more than $X" → no upper cap.
+  // We must check this BEFORE the generic numeric scan, otherwise the dollar
+  // amount in "over $10000" gets picked up as a ceiling.
+  if (/\b(?:over|above|more\s+than|greater\s+than|north\s+of|starting\s+at|at\s+least|minimum\s+(?:of\s+)?)\s*\$?\s?\d/i.test(text)) {
+    // If it's *also* a range ("between $X and over $Y"), fall through to range handling.
+    // Otherwise return null — the floor lives in parseBudgetFloor.
+    if (!/between\s+\$?\d/i.test(text) && !/\$\s?\d[\d,]*(?:\.\d{1,2})?\s*k?\s*(?:to|-|–|—)\s*\$?\s?\d/i.test(text)) {
+      return null;
+    }
+  }
+
+  // For range expressions, prefer the explicit upper bound.
+  const rangeUpper = parseRangeUpper(text);
+  if (rangeUpper !== null) return rangeUpper;
+
   let lastAmount: number | null = null;
 
   // 1. Check "k" suffix patterns first — "$5k" → 5000, "$2.5k" → 2500
@@ -1356,6 +1443,7 @@ export function detectShoppingIntent(
   // 4. Context signals
   const budgetMentioned = BUDGET_PATTERNS.some((re) => re.test(userText));
   const budgetAmount = parseBudgetAmount(userText);
+  const budgetFloor = parseBudgetFloor(userText);
   const tasteProvided = signals.symptoms.length >= 2;
   const hasActiveSystem = Array.isArray(activeSystemComponents) && activeSystemComponents.length > 0;
   const systemProvided = hasActiveSystem || SYSTEM_KEYWORDS.some((kw) => lower.includes(kw));
@@ -1390,8 +1478,9 @@ export function detectShoppingIntent(
     category,
     subcategory,
     secondaryCategory,
-    budgetMentioned,
+    budgetMentioned: budgetMentioned || budgetFloor !== null,
     budgetAmount,
+    budgetFloor,
     tasteProvided,
     systemProvided,
     systemProfile,
@@ -3148,6 +3237,8 @@ function selectProductExamples(
   brandConstraint?: string,
   /** Extracted symptom keys for anchor justification (output layer only). */
   symptoms?: string[],
+  /** Lower price bound from "over $X" / "between $X and $Y" expressions. */
+  budgetFloor?: number | null,
 ): ProductExample[] {
   // ── Turntable: illustrative examples with full card data ──
   if (category === 'turntable') {
@@ -3186,6 +3277,23 @@ function selectProductExamples(
     case 'speaker': catalog = SPEAKER_PRODUCTS; break;
     case 'amplifier': catalog = AMPLIFIER_PRODUCTS; break;
     default: return [];
+  }
+
+  // ── Budget floor pre-filter ──────────────────────────
+  // For "over $X" or "between $X and $Y", drop catalog entries whose
+  // price falls below 85% of the floor (used-market high may qualify).
+  if (budgetFloor && budgetFloor > 0) {
+    const floor = budgetFloor * 0.85;
+    const beforeCount = catalog.length;
+    catalog = catalog.filter((p) => {
+      const price = (p as { price?: number }).price;
+      const used = (p as { usedPriceRange?: { high: number } }).usedPriceRange;
+      if (price === undefined) return true;
+      if (price >= floor) return true;
+      if (used && used.high >= floor) return true;
+      return false;
+    });
+    console.log('[budget-floor] catalog %d → %d (floor=$%d)', beforeCount, catalog.length, budgetFloor);
   }
 
   const ranked = rankProducts(catalog, userTraits, budgetAmount, systemProfile, constraints, listenerProfile);
@@ -5278,7 +5386,25 @@ export function buildShoppingAnswer(
 
   // 4. Product examples (only when catalog exists + budget known)
   // Pass reasoning for directional bias — existing scoring is preserved.
-  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents, ctx.roomContext, engagedProductNames, ctx.constraints, ctx.semanticPreferences, listenerProfile, selectionMode, previousAnchor, recentProductNames, brandConstraint, signals.symptoms);
+  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents, ctx.roomContext, engagedProductNames, ctx.constraints, ctx.semanticPreferences, listenerProfile, selectionMode, previousAnchor, recentProductNames, brandConstraint, signals.symptoms, ctx.budgetFloor);
+
+  // ── Budget floor filter ───────────────────────────────
+  // When the user specifies "over $X" or "between $X and $Y", remove
+  // products whose price falls below 85% of the floor. Used-market pricing
+  // qualifies a product if its used-high meets the floor.
+  if (ctx.budgetFloor && ctx.budgetFloor > 0) {
+    const floor = ctx.budgetFloor * 0.85;
+    const beforeCount = productExamples.length;
+    productExamples = productExamples.filter((p) => {
+      if (!p.price) return true;
+      if (p.price >= floor) return true;
+      if (p.usedPriceRange && p.usedPriceRange.high >= floor) return true;
+      return false;
+    });
+    if (productExamples.length !== beforeCount) {
+      console.log('[budget-floor] filtered %d → %d (floor=$%d)', beforeCount, productExamples.length, ctx.budgetFloor);
+    }
+  }
 
   // ── Directed mode: cap at 2 products, mark primary ──
   if (directed && productExamples.length > 2) {
