@@ -1483,6 +1483,18 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
         />
       )}
 
+      {/* ── 0c. Category Preamble — decision framing (NOT gated by lowPreferenceSignal) ── */}
+      {a.categoryPreamble && (
+        <p style={{
+          margin: '0 0 1.25rem 0',
+          fontSize: FONTS.bodySize,
+          lineHeight: FONTS.lineHeight,
+          color: COLORS.text,
+        }}>
+          {renderText(a.categoryPreamble)}
+        </p>
+      )}
+
       {/* ── 1. System Interpretation (reasoning before products) ── */}
       {/* Suppress when StartHereBlock is active — passive explanations replaced by active CTA */}
       {a.systemInterpretation && !a.lowPreferenceSignal && (

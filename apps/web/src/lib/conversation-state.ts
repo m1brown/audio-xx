@@ -1336,12 +1336,18 @@ export function detectInitialMode(
 
   // Intake (vague shopping) → check if we should route to orientation
   if (context.detectedIntent === 'intake') {
-    // If they have specifics (category or budget), route to shopping
+    // If they have specifics (category or budget), route to shopping.
+    // When category is present (e.g. "I want a DAC", "I want speakers"),
+    // go straight to ready_to_recommend with an exploratory set rather
+    // than asking for budget first. Budget can be refined in follow-up.
     if (facts.category || facts.budget) {
       if (isReadyToRecommend(facts)) {
         return { mode: 'shopping', stage: 'ready_to_recommend', facts };
       }
-      return { mode: 'shopping', stage: facts.category ? 'clarify_budget' : 'clarify_category', facts };
+      if (facts.category) {
+        return { mode: 'shopping', stage: 'ready_to_recommend', facts };
+      }
+      return { mode: 'shopping', stage: 'clarify_category', facts };
     }
     // Otherwise treat as orientation
     return { mode: 'orientation', stage: 'entry', facts };

@@ -1108,28 +1108,59 @@ export function buildDecisiveRecommendation(
   const catLabel = requestedCategory && requestedCategory !== 'general'
     ? requestedCategory
     : traitCatLabel;
+
+  // ── HARD RULE: decisive category must match requestedCategory ──
+  // If the user asked for amplifiers, "What I would do" MUST stay in
+  // amplifier. Never redirect to another category.
+  const effectiveCatLabel = requestedCategory && requestedCategory !== 'general'
+    ? requestedCategory
+    : catLabel;
+
+  // ── Product-specific reasoning ──────────────────────────
+  // Reference the recommended product by name with a trait-grounded explanation.
+  const topName = `${top.brand} ${top.name}`;
   let topReason: string;
   if (anchorProduct) {
-    topReason = `I'd change ${catLabel} first. Your ${anchorProduct} is doing its job — ${catLabel} is where the system can move toward more ${dominantLabel}.`;
+    topReason = `Start with ${topName}. Your ${anchorProduct} is doing its job — ${effectiveCatLabel} is where the system can move toward more ${dominantLabel}.`;
     if (secondaryLabel && dominantTrait.value > 0.3) {
       topReason += ` Keeps ${secondaryLabel} intact.`;
     }
   } else if (secondaryLabel && dominantTrait.value > 0.3) {
-    topReason = `I'd start with ${catLabel}. Cleanest way to get more ${dominantLabel} without losing ${secondaryLabel}.`;
+    topReason = `Start with ${topName}. Best path toward more ${dominantLabel} without losing ${secondaryLabel}.`;
   } else {
-    topReason = `I'd start with ${catLabel}. That's where the biggest shift toward what you respond to will come from.`;
+    topReason = `Start with ${topName}. That's where the biggest shift toward what you respond to will come from.`;
+  }
+
+  // ── Avoid guidance — category-specific cautions ────────
+  // Help the user avoid common overcorrections.
+  const AVOID_GUIDANCE: Record<string, Record<string, string>> = {
+    amplifier: {
+      tonal_density: 'Avoid starting with low-power SET amps or overly lush tunings — they can slow things down more than you expect.',
+      flow: 'Avoid over-damped or high-feedback designs — they may feel controlled but lifeless.',
+      clarity: 'Avoid warm-leaning tube designs if your priority is transparency — the texture may mask detail.',
+    },
+    dac: {
+      tonal_density: 'Avoid ultra-clinical measuring DACs — they may technically excel but feel emotionally flat.',
+      flow: 'Avoid overly smooth R2R designs if you want rhythmic engagement — they can soften leading edges.',
+      clarity: 'Avoid NOS or warm-tuned DACs — they trade precision for character.',
+    },
+  };
+  const avoidNote = effectiveCatLabel && dominantTrait.key
+    ? AVOID_GUIDANCE[effectiveCatLabel]?.[dominantTrait.key]
+    : undefined;
+  if (avoidNote) {
+    topReason += ` ${avoidNote}`;
   }
 
   // Build alternative (if available)
   let altEntry: { name: string; brand: string; reason: string } | undefined;
   if (alt) {
+    const altName = `${alt.brand} ${alt.name}`;
     let altReason: string;
-    if (anchorProduct && secondaryLabel && dominantTrait.value > 0.3) {
-      altReason = `Moves the system toward ${secondaryLabel} instead — you give up some ${dominantLabel}, but the balance shifts in a direction that may suit you better.`;
-    } else if (secondaryLabel && dominantTrait.value > 0.3) {
-      altReason = `More ${secondaryLabel}, less ${dominantLabel}. Pick this if your priorities are shifting toward that balance.`;
+    if (secondaryLabel && dominantTrait.value > 0.3) {
+      altReason = `Or ${altName} — trades some ${dominantLabel} for more ${secondaryLabel}. Pick this if your priorities are shifting toward that balance.`;
     } else {
-      altReason = `Different trade-offs. Fall back to this if the top pick doesn't land the way you expect.`;
+      altReason = `Or ${altName} — different trade-offs. Fall back to this if the top pick doesn't land the way you expect.`;
     }
     altEntry = { name: alt.name, brand: alt.brand, reason: altReason };
   }

@@ -670,6 +670,12 @@ export interface AdvisoryResponse {
    *  Rendered before product cards. Always populated when system or taste context exists. */
   systemInterpretation?: string;
 
+  // ── 7e2b. Category Preamble ──────────────────────────
+  /** Category-level decision framing — orients the user before any product
+   *  recommendations. Not gated by preference signal. Only fires on cold/generic
+   *  requests where taste signal is absent or default. */
+  categoryPreamble?: string;
+
   // ── 7e3. Strategy Bullets ─────────────────────────
   /** 2–4 directional strategy lines — conceptual guidance before product recommendations.
    *  Each bullet describes a kind of change and why it would help. */
@@ -974,6 +980,53 @@ function buildSystemContextPreamble(
  * Renders before product cards. Always populated when ANY context exists
  * (system, taste signals, genre preferences, or even just category + budget).
  */
+
+/**
+ * Category decision preamble — orients the user with a category-level
+ * insight before any product recommendations. Fires on cold/generic
+ * requests where taste signal is absent or default.
+ *
+ * Topology-aware: when product examples are all tube, uses a tube-specific
+ * preamble that helps the user understand the landscape.
+ */
+function buildCategoryPreamble(
+  category: string,
+  budget: number | null,
+  productExamples?: Array<{ catalogTopology?: string }>,
+): string | undefined {
+  if (!category || category === 'general') return undefined;
+
+  // Normalize category label to lowercase for PREAMBLES lookup.
+  // ShoppingAnswer.category uses CATEGORY_LABELS (e.g., 'DAC') but keys are lowercase.
+  const catKey = category.toLowerCase();
+
+  // Detect tube-specific request from product topologies
+  const tubeTopologies = new Set(['push-pull-tube', 'set']);
+  const isTubeRequest = catKey === 'amplifier'
+    && productExamples
+    && productExamples.length >= 2
+    && productExamples.every((p) => p.catalogTopology && tubeTopologies.has(p.catalogTopology));
+
+  if (isTubeRequest) {
+    return 'Tube amplifiers span a wide range — from fast, dynamic push-pull designs to intimate single-ended triodes. The safest entry is a broadly compatible push-pull design with enough power for most speakers.';
+  }
+
+  // Category-level preambles for generic requests
+  const PREAMBLES: Record<string, string | ((b: number | null) => string)> = {
+    amplifier: 'Amplifier design varies more than most categories — from fast and transparent to warm and harmonically rich. The real question is what kind of presentation you want from your system.',
+    dac: (b) => b
+      ? `Under ~$${b.toLocaleString()}, DAC differences are about presentation style — how timing, tone, and texture are shaped — not quality tier.`
+      : 'DAC differences are less about resolution and more about presentation style — how timing, tone, and texture are shaped.',
+    speaker: 'Speakers define system character more than any other component. The first question is what kind of listening experience you want — not which model measures best.',
+    headphone: 'Headphone design involves fundamental trade-offs between isolation, soundstage, and tonal character. The right choice depends on how and where you listen.',
+    turntable: 'Turntable performance depends on the entire mechanical chain — platter, tonearm, cartridge, and isolation. Small changes compound.',
+  };
+
+  const entry = PREAMBLES[catKey];
+  if (!entry) return undefined;
+  return typeof entry === 'function' ? entry(budget) : entry;
+}
+
 function buildSystemInterpretation(
   a: import('./shopping-intent').ShoppingAnswer,
   reasoning?: ReasoningResult,
@@ -2024,7 +2077,12 @@ export function shoppingToAdvisory(
   // ── Weak preference signal detection ──────────────────
   // Computed once, used to suppress passive text when StartHereBlock is active.
   // True when no explicit taste signal was provided by the user.
-  const isPreferenceWeak = a.statedGaps?.includes('taste') ?? false;
+  // Override: when budget + specific category are both present, this is a
+  // decisive request — show products even without taste signals. The
+  // StartHereBlock should only gate display when context is genuinely
+  // insufficient (no category or no budget).
+  const hasBudgetAndCategory = !!a.budget && !!a.category && a.category !== 'general';
+  const isPreferenceWeak = (a.statedGaps?.includes('taste') ?? false) && !hasBudgetAndCategory;
 
   // ── Directed mode ────────────────────────────────────
   // When budget + category + taste are all present, shift from exploratory
@@ -2063,6 +2121,15 @@ export function shoppingToAdvisory(
     ? undefined
     : buildSystemInterpretation(a, reasoning, ctx);
 
+  // ── Category preamble: NOT gated by isPreferenceWeak ──────────
+  // Fires on cold/generic requests (no taste signal or default preference).
+  // Orients the user with category-level insight before products.
+  const hasTasteSignal = !!reasoning?.taste.archetype;
+  const isDefaultPreference = reasoning?.taste.preferenceSource === 'default';
+  const categoryPreamble = (!hasTasteSignal || isDefaultPreference)
+    ? buildCategoryPreamble(a.category, a.budget, a.productExamples)
+    : undefined;
+
   // Build strategy bullets (conceptual guidance before product cards)
   const strategyBullets = buildStrategyBullets(a, reasoning);
 
@@ -2091,6 +2158,7 @@ export function shoppingToAdvisory(
     audioProfile,
     systemContextPreamble,
     systemInterpretation,
+    categoryPreamble,
     strategyBullets,
     expectedImpact: deriveExpectedImpact(ctx, reasoning, signals),
     systemFitExplanation: deriveSystemFitExplanation(a.category, ctx, reasoning, signals),

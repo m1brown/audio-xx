@@ -775,12 +775,13 @@ describe('Group F — Context Persistence', () => {
       { text: 'under $1000' },
     ]);
 
-    // Turn 1: shopping with DAC, no budget → ask budget
+    // Turn 1: shopping with DAC, no budget → show exploratory products immediately
+    // (intake + category routes to ready_to_recommend, not clarify_budget)
     expect(results[0].state.mode).toBe('shopping');
     expect(results[0].state.facts.category).toBe('dac');
-    expect(results[0].state.stage).toBe('clarify_budget');
+    expect(results[0].state.stage).toBe('ready_to_recommend');
 
-    // Turn 2: budget → ready
+    // Turn 2: budget refinement → still ready
     expect(results[1].state.mode).toBe('shopping');
     expect(results[1].state.stage).toBe('ready_to_recommend');
     expect(results[1].state.facts.budget).toContain('1000');
@@ -790,10 +791,10 @@ describe('Group F — Context Persistence', () => {
     score({
       test: 'F2',
       detectedMode: 'shopping',
-      expectedBehavior: 'DAC → budget → recommend (2-turn)',
+      expectedBehavior: 'DAC → immediate products → budget refinement (1-turn fast-track)',
       actualBehavior: `${results[0].state.mode}/${results[0].state.stage} → ${results[1].state.mode}/${results[1].state.stage}`,
       scores: { routing: 5, contextRetention: 5, decisiveness: 5, recommendationTiming: 5, naturalness: 5 },
-      pass: results[1].state.stage === 'ready_to_recommend' && results[1].state.facts.category === 'dac',
+      pass: results[0].state.stage === 'ready_to_recommend' && results[1].state.facts.category === 'dac',
     });
   });
 
