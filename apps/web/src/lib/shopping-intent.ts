@@ -334,6 +334,26 @@ export function detectExplicitCategorySwitch(text: string): ShoppingCategory | n
     if (categoryMatches.length === 1) return categoryMatches[0];
   }
 
+  // ── Bare category word in short input ──────────────────────
+  // During active shopping, a short message that is just a category name
+  // (e.g. "dac", "tube amp", "speakers") is an unambiguous category switch.
+  // Only fire for short inputs (≤ 40 chars) to avoid false positives in
+  // longer sentences where a category word appears incidentally.
+  if (lower.trim().length <= 40) {
+    const bareCategory: [RegExp, ShoppingCategory][] = [
+      [/^(?:dac|dacs|d\/a|converter)s?$/i, 'dac'],
+      [/^(?:amp|amps|amplifier|amplifiers|integrated|tube\s*amp|tube\s*amps|power\s*amp)$/i, 'amplifier'],
+      [/^(?:speaker|speakers|monitors?)$/i, 'speaker'],
+      [/^(?:headphone|headphones|iems?|earphones?|cans)$/i, 'headphone'],
+      [/^(?:turntable|turntables|record\s*player|vinyl)$/i, 'turntable'],
+      [/^(?:streamer|streamers|transport|network\s*player)$/i, 'streamer'],
+    ];
+    const trimmed = lower.trim();
+    for (const [re, cat] of bareCategory) {
+      if (re.test(trimmed)) return cat;
+    }
+  }
+
   return null;
 }
 

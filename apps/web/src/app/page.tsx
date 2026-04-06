@@ -371,6 +371,26 @@ export default function Home() {
     // transition() before the legacy ref-based blocks below.
     let convModeHint: ConversationMode | undefined;
     let intent: string = '';
+
+    // ── Category switch bypass ──────────────────────────
+    // When the user sends a bare category request (e.g. "tube amp", "dac",
+    // "speakers") during an active state machine session, reset to idle so
+    // the message flows through the normal shopping pipeline. Without this,
+    // the state machine intercepts the message and asks for budget/category
+    // clarification instead of immediately switching to the new category.
+    if (convStateRef.current.mode !== 'idle') {
+      const shoppingAnswerCount = messages.filter(
+        (m) => m.role === 'assistant' && m.kind === 'advisory' && m.advisory.kind === 'shopping',
+      ).length;
+      if (shoppingAnswerCount > 0) {
+        const bareCategorySwitch = detectExplicitCategorySwitch(submittedText);
+        if (bareCategorySwitch) {
+          console.log('[category-switch-bypass] resetting convState to idle for bare category switch: %s', bareCategorySwitch);
+          convStateRef.current = INITIAL_CONV_STATE;
+        }
+      }
+    }
+
     if (convStateRef.current.mode !== 'idle') {
       // When the state machine is active, it is the single source of truth.
       // Clear legacy refs that duplicate music_input / onboarding tracking
