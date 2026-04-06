@@ -54,9 +54,11 @@ describe('Shopping with no budget → must produce product cards', () => {
         expect(q).toBeNull();
       });
 
-      it('produces 2-3 product examples', () => {
+      it('produces 2-4 product examples', () => {
+        // 4 products is valid when each serves a distinct role:
+        // anchor, close_alt, contrast, wildcard (1-2 per direction).
         expect(answer.productExamples.length).toBeGreaterThanOrEqual(2);
-        expect(answer.productExamples.length).toBeLessThanOrEqual(3);
+        expect(answer.productExamples.length).toBeLessThanOrEqual(4);
       });
 
       it('each product has name, brand, price, fitNote', () => {

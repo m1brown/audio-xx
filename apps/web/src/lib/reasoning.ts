@@ -127,7 +127,7 @@ const TASTE_LABEL_RULES: TasteLabelRule[] = [
     archetype: 'flow_organic',
   },
   {
-    check: (t) => t.warmth === 'up',
+    check: (t) => t.tonal_density === 'up',
     label: 'warmth and tonal body',
     archetype: 'tonal_saturated',
   },

@@ -2080,6 +2080,38 @@ const TASTE_PROFILES: TasteProfile[] = [
     ],
   },
   {
+    check: (t) => t.tonal_density === 'up',
+    label: 'warmth and tonal body',
+    archetype: 'tonal_saturated',
+    directionByCategory: {
+      dac: 'A DAC direction that prioritizes tonal weight, harmonic texture, and midrange body over analytical precision.',
+      amplifier: 'An amplifier direction that prioritizes harmonic density, tube-like richness, and tonal weight over measured specifications.',
+      speaker: 'A speaker direction that prioritizes tonal weight and natural warmth over speed or analytical precision.',
+    },
+    defaultDirection: 'A component direction that prioritizes warmth, tonal body, and harmonic richness.',
+    whyByCategory: {
+      dac: [
+        'You prioritized warmth and tonal body.',
+        'R2R, NOS, and tube-output DAC architectures tend to deliver this kind of presentation.',
+        'Your budget supports several DACs in this design family.',
+      ],
+      amplifier: [
+        'You prioritized warmth and tonal richness.',
+        'Tube amplifiers — especially push-pull and SET designs — naturally deliver this presentation.',
+        'Your budget supports several amplifiers in this design family.',
+      ],
+    },
+    defaultWhy: [
+      'You prioritized warmth and tonal body.',
+      'Components with strong harmonic density tend to serve this preference.',
+    ],
+    watchFor: [
+      'Components that maximize warmth may sacrifice some detail retrieval and transient edge.',
+      'Very warm systems can sound slow or congested if pushed too far.',
+      'If the rest of the system is already warm, adding more density may obscure detail.',
+    ],
+  },
+  {
     check: (t) => t.clarity === 'up',
     label: 'detail, clarity, and resolution',
     archetype: 'precision_explicit',
@@ -3183,6 +3215,33 @@ function selectProductExamples(
     ranked.sort((a, b) => b.score - a.score);
   }
 
+  // ── Topology-aware boost for tube amplifier requests ──
+  // When the user explicitly requested tube topologies AND expressed
+  // warmth/density preference (tonal_density: up), apply a small boost
+  // to tube products by topology hierarchy:
+  //   push-pull-tube > set > hybrid (warm request)
+  // This ensures "warm tube amp" surfaces the most practical and
+  // tonally aligned tube designs first (push-pull), with SET as
+  // the higher-personality alternative, and hybrid as the trade-off.
+  const TOPOLOGY_WARMTH_BOOST: Record<string, number> = {
+    'push-pull-tube': 0.15,
+    'set': 0.10,
+    'hybrid': 0.05,
+  };
+  const isTubeRequest = category === 'amplifier'
+    && constraints?.requireTopologies?.some(t => t === 'set' || t === 'push-pull-tube');
+  const isWarmRequest = userTraits.tonal_density === 'up';
+  if (isTubeRequest && isWarmRequest) {
+    for (const entry of ranked) {
+      const topo = entry.product.topology;
+      if (topo && TOPOLOGY_WARMTH_BOOST[topo]) {
+        entry.score += TOPOLOGY_WARMTH_BOOST[topo];
+      }
+    }
+    ranked.sort((a, b) => b.score - a.score);
+    console.log('[topology-boost] warm tube request — boosted push-pull/set/hybrid products');
+  }
+
   // ── Room-context scoring ────────────────────────────
   // When room size is detected, materially adjust speaker ranking.
   // Large rooms need sensitivity, dynamics, scale, and cabinet size.
@@ -3542,8 +3601,19 @@ function selectProductExamples(
   } else {
     // Default mode: standard pool
     const poolSize = 8;
+    // When preference signals are weak (enforceBroadSet territory) AND no budget,
+    // skip selectTieredExploratory — it picks by price tier without considering
+    // brand credibility, causing niche accessible-tier products to anchor.
+    // Using ranked.slice lets enforceBroadSet + sweet-spot re-sort downstream
+    // ensure credible mainstream products anchor the recommendation.
+    // Pool size capped at 4 (not poolSize=8) to keep output at 3 products
+    // — matching the expected shortlist size for no-budget exploratory queries.
+    // 4 products in pool lets buildRecommendationSet fill anchor + close_alt +
+    // contrast, with the 4th available for wildcard only when appropriate.
+    const weakProfile = !tasteProfile || (tasteProfile.confidence ?? 0) < 0.2;
+    const weakPoolSize = 4;
     top = budgetAmount === null
-      ? selectTieredExploratory(ranked)
+      ? (weakProfile ? ranked.slice(0, weakPoolSize) : selectTieredExploratory(ranked))
       : hasSparseSignals
         ? selectDiverseByTopology(ranked, poolSize, budgetAmount)
         : ranked.slice(0, poolSize);
@@ -3790,6 +3860,60 @@ function selectProductExamples(
       if (anchorEligible.length === 0) {
         console.warn('[anchor-filter] all candidates excluded — falling back to full eligible pool');
         anchorEligible = eligible;
+      }
+    }
+
+    // ──────────────────────────────────────────────────────
+    // BROAD-FIRST GATING: when preference signals are weak,
+    // prefer mainstream / broadly compatible products for anchor.
+    // Specialized or boutique products remain in `eligible` for
+    // contrast/wildcard roles — they are not excluded entirely.
+    // ──────────────────────────────────────────────────────
+    {
+      const enforceBroadSet = !profile || profile.confidence < 0.2;
+      if (enforceBroadSet) {
+        // ── Step 1: Prefer traditional marketType — the strongest credibility signal.
+        // These are products with established dealer networks and broad recognition.
+        let broadPool = anchorEligible.filter((p) => p.marketType === 'traditional');
+
+        // ── Step 2: Fallback — if fewer than 2 traditional, expand to specialist/mainstream.
+        // This ensures categories with fewer traditional products still get broad anchoring.
+        if (broadPool.length < 2) {
+          broadPool = anchorEligible.filter((p) =>
+            p.marketType === 'traditional'
+            || p.catalogBrandScale === 'specialist'
+            || p.catalogBrandScale === 'mainstream'
+          );
+        }
+
+        if (broadPool.length >= 2) {
+          // When no budget is set, re-sort the broad pool to prefer products
+          // in the $2,500–$5,000 sweet spot — these are most likely to be
+          // broadly compatible (sufficient power, wide speaker matching).
+          // With a budget, the existing scoreBudgetFit already handles this.
+          if (!budgetCeiling) {
+            const SWEET_CENTER = 3500;
+            const SWEET_RANGE = 2500;
+            broadPool.sort((a, b) => {
+              const aDev = Math.abs((a.price ?? 0) - SWEET_CENTER) / SWEET_RANGE;
+              const bDev = Math.abs((b.price ?? 0) - SWEET_CENTER) / SWEET_RANGE;
+              // Lower deviation = closer to sweet spot = better.
+              // Tiebreak on rank (preserve scoring order).
+              if (Math.abs(aDev - bDev) > 0.05) return aDev - bDev;
+              return a._rank - b._rank;
+            });
+          }
+          // Reassign _rank to match re-sorted order.
+          // Without this, bestOf() uses the original scoring index,
+          // which ignores the sweet-spot re-sort entirely.
+          broadPool.forEach((p, i) => { p._rank = i; });
+          console.log('[broad-first] weak preference signal — narrowing anchor pool', {
+            before: anchorEligible.length,
+            after: broadPool.length,
+            profileConfidence: profile?.confidence ?? null,
+          });
+          anchorEligible = broadPool;
+        }
       }
     }
 
@@ -4058,8 +4182,21 @@ function selectProductExamples(
     // wildcard: nonTraditional OR max distance from anchor
 
     // Close alternative — low sonic distance from anchor (same sonic neighborhood)
+    // Exclude vintage/discontinued from close_alt — these are secondary
+    // recommendations that should be currently available products.
+    // For amplifiers: also require same topology family as anchor.
+    // A push-pull tube and SET are fundamentally different designs —
+    // labeling them "Similar direction" is misleading.
+    const anchorTopology = anchor.catalogTopology;
     let closeAlt: Ranked | undefined;
-    const closePool = remaining().filter((ex) => ex.philosophy === anchorPhilosophy);
+    const closePool = remaining().filter((ex) =>
+      ex.philosophy === anchorPhilosophy
+      && (!ex.availability || ex.availability === 'current')
+      && (productCategory !== 'amplifier' || !anchorTopology || ex.catalogTopology === anchorTopology)
+      // Brand diversity: close_alt should be a different brand from anchor.
+      // Two products from the same brand in positions 1-2 fails credibility.
+      && ex.brand.toLowerCase() !== anchor.brand.toLowerCase(),
+    );
     if (closePool.length > 0) {
       // Among same-philosophy candidates, pick the one with lowest distance (most similar)
       closeAlt = closePool.reduce((best, cur) => {

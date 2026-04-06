@@ -510,6 +510,13 @@ export default function Home() {
               budget: convResult.state.facts.budget,
               fromScratch: convResult.state.facts.fromScratch,
             };
+            // Update category lock to match state machine's resolved category.
+            // Without this, a category switch via convTransition (e.g. tube amp → DAC → budget)
+            // leaves activeShoppingCategoryRef stale, causing the shopping pipeline
+            // to revert to the old category.
+            if (convResult.state.facts.category) {
+              activeShoppingCategoryRef.current = convResult.state.facts.category as import('@/lib/shopping-intent').ShoppingCategory;
+            }
             convStateRef.current = INITIAL_CONV_STATE;
           } else if (convResult.state.stage === 'ready_to_diagnose') {
             convModeHint = 'diagnosis';
@@ -1936,9 +1943,11 @@ export default function Home() {
         }));
 
         // Build system pairing intro (optional)
+        const bypassCategory = lastShoppingMsg.advisory.shoppingCategory
+          ?? lastShoppingFactsRef.current?.category ?? 'general';
         const anchorPairing = buildSystemPairingIntro(
           listenerProfileRef.current,
-          lastShoppingMsg.advisory.shoppingCategory ?? lastShoppingFactsRef.current?.category ?? 'general',
+          bypassCategory,
           advisoryCtx.systemComponents,
         );
 
@@ -1992,6 +2001,14 @@ export default function Home() {
       && state.activeMode !== 'shopping';
     const scopeShoppingText = isShoppingRefinement || isFirstShoppingAfterModeSwitch;
 
+    // Early category-switch detection: when the user explicitly switches
+    // categories mid-shopping (e.g. "show me tube amps" after DAC browsing),
+    // scope evaluateText to ONLY the current message to prevent prior-category
+    // trait signals from leaking into the new category's product selection.
+    const earlyCategorySwitch = isShoppingRefinement
+      ? detectExplicitCategorySwitch(submittedText)
+      : null;
+
     // Scope diagnosis text when entering diagnosis after shopping.
     // allUserText concatenates ALL prior messages, so shopping phrases
     // like "warm tube amp" inject fatigue_risk:down which overwrites
@@ -2003,12 +2020,16 @@ export default function Home() {
 
     // For diagnosis after shopping, use ONLY the current message to avoid
     // signal contamination from prior shopping text. For shopping scoping,
-    // include the last 2 user messages for refinement context.
+    // include the last 2 user messages for refinement context — UNLESS
+    // an explicit category switch was detected, in which case use only
+    // the current message to prevent prior-category trait leakage.
     const evaluateText = scopeDiagnosisText
       ? submittedText
-      : scopeShoppingText
-        ? [submittedText, ...messages.filter((m) => m.role === 'user').map((m) => m.content).slice(-2)].join('\n')
-        : allUserText;
+      : earlyCategorySwitch
+        ? submittedText
+        : scopeShoppingText
+          ? [submittedText, ...messages.filter((m) => m.role === 'user').map((m) => m.content).slice(-2)].join('\n')
+          : allUserText;
 
     console.log('[diag-cold] about to call /api/evaluate (intent=%s, convModeHint=%s, scopeDiag=%s, scopeShop=%s, text=%s)', intent, convModeHint, scopeDiagnosisText, scopeShoppingText, evaluateText.slice(0, 80));
     let evalData: { signals: import('@/lib/signal-types').ExtractedSignals; result?: unknown } | null = null;
@@ -2079,11 +2100,8 @@ export default function Home() {
       // All shopping logic runs here — no diagnostic fallback.
       try {
         // ── Category lock: explicit switch detection ──────────
-        // Check if this message explicitly requests a different category.
-        // Only directive intent counts — not questions about categories.
-        const explicitCategorySwitch = shoppingAnswerCount > 0
-          ? detectExplicitCategorySwitch(submittedText)
-          : null;
+        // Reuse early detection result (computed before evaluateText scoping).
+        const explicitCategorySwitch = earlyCategorySwitch;
 
         // Update locked category: explicit switch overrides, otherwise preserve lock.
         // When the category genuinely changes, clear stale carry-forward context
@@ -2111,6 +2129,17 @@ export default function Home() {
         const isFreshCategorySwitch = !!(explicitCategorySwitch && activeShoppingCategoryRef.current === explicitCategorySwitch
           && lastShoppingFactsRef.current === null);
         const shoppingInputText = isFreshCategorySwitch ? submittedText : allUserText;
+
+        // When an explicit category switch is detected, scope the text to
+        // ONLY the current message. This prevents prior-category constraints
+        // (e.g. tube amp topology requirements) from contaminating the new
+        // category's product selection (e.g. DAC, speaker).
+        // Also scope when the state machine just completed (convModeHint === 'shopping').
+        // The budget reply ("5000") is not an explicit category switch, but
+        // allUserText still contains the old category's constraints (e.g. "tube amp"
+        // topology requirements). The state machine already extracted category/budget
+        // into lastShoppingFactsRef, so we only need the current message.
+        const shoppingInputText = (earlyCategorySwitch || convModeHint === 'shopping') ? submittedText : allUserText;
 
         const shoppingCtx = detectShoppingIntent(
           shoppingInputText, pipelineSignals, advisoryCtx.systemComponents,
@@ -2173,13 +2202,20 @@ export default function Home() {
           // Constraint accumulation: merge saved constraints with current.
           // Constraints are additive — "no tubes" from a prior turn persists
           // even when the current turn says "class ab amps".
+          // BUT: skip topology constraints on explicit category switch —
+          // tube amp constraints (requireTopologies: ['push-pull-tube'])
+          // must NOT leak into DAC or speaker selection.
           if (saved.constraints) {
             const cur = shoppingCtx.constraints;
-            for (const t of saved.constraints.excludeTopologies) {
-              if (!cur.excludeTopologies.includes(t)) cur.excludeTopologies.push(t);
-            }
-            for (const t of saved.constraints.requireTopologies) {
-              if (!cur.requireTopologies.includes(t)) cur.requireTopologies.push(t);
+            if (!explicitCategorySwitch) {
+              for (const t of saved.constraints.excludeTopologies) {
+                if (!cur.excludeTopologies.includes(t)) cur.excludeTopologies.push(t);
+              }
+              for (const t of saved.constraints.requireTopologies) {
+                if (!cur.requireTopologies.includes(t)) cur.requireTopologies.push(t);
+              }
+            } else {
+              console.log('[category-switch] skipping topology constraint carry-forward (switch to %s)', explicitCategorySwitch);
             }
             if (saved.constraints.newOnly && !cur.newOnly) cur.newOnly = true;
             if (saved.constraints.usedOnly && !cur.usedOnly) cur.usedOnly = true;
