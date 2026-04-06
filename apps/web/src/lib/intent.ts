@@ -1094,7 +1094,7 @@ export function detectIntent(currentMessage: string): IntentResult {
   //     a clear shopping query — skip intake entirely and route to shopping.
   //     This prevents vague-looking but actually decisive queries from being
   //     caught by the broader intake patterns below.
-  const hasPurchaseVerb = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|pick\s+out|recommend|suggest|need\s+(?:a\s+)?(?:new|better|different|another|upgraded?))\b/i.test(currentMessage);
+  const hasPurchaseVerb = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|pick\s+out|recommend|suggest|interested\s+in|need\s+(?:a\s+)?(?:new|better|different|another|upgraded?))\b/i.test(currentMessage);
   const hasCategoryTarget = /\b(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp)\b/i.test(currentMessage);
   if (hasPurchaseVerb && hasCategoryTarget) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
@@ -1107,6 +1107,15 @@ export function detectIntent(currentMessage: string): IntentResult {
   //     enough specificity (budget + room + listening habits), skips to shopping.
   if (isIntakeQuery(currentMessage, subjectMatches.length)) {
     return { intent: 'intake', subjects, subjectMatches, desires };
+  }
+
+  // 2d. "want a [adj]* category" — catches qualified desires that intake
+  //     misses because of intervening adjectives. "I want a warm tube amp"
+  //     has a clear category target but intake's regex can't skip adjectives.
+  //     Requires article (a/an/some) to exclude "want to fix my amp".
+  const hasWantCategory = /\bwant\s+(?:a|an|some)\s+(?:\w+\s+){0,3}(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp)\b/i.test(currentMessage);
+  if (hasWantCategory) {
+    return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
   // 3. Shopping — "best DAC under $1000", "recommend a DAC"

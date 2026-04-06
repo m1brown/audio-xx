@@ -1064,6 +1064,7 @@ export function buildDecisiveRecommendation(
   products: Array<{ name: string; brand: string; price: number }>,
   profile: ListenerProfile,
   anchorProduct?: string | null,
+  requestedCategory?: string,
 ): DecisiveRecommendation | null {
   // Filter out disliked brands and products BEFORE selecting top/alt.
   // This ensures a disliked product never appears in the decisive block.
@@ -1097,8 +1098,16 @@ export function buildDecisiveRecommendation(
   const dominantLabel = EXPERT_SHORT_MAP[dominantTrait.key] ?? dominantTrait.key;
   const secondaryLabel = secondaryTrait ? (EXPERT_SHORT_MAP[secondaryTrait.key] ?? secondaryTrait.key) : null;
 
-  // Build reason for top pick — system-level action first, then product
-  const catLabel = { flow: 'source', tonal_density: 'DAC', clarity: 'amplifier', control: 'amplifier', spatial: 'speakers' }[dominantTrait.key] ?? 'this part of the chain';
+  // Build reason for top pick — system-level action first, then product.
+  // When the user explicitly requested a category (e.g. "amp"), use that
+  // instead of the trait-inferred category. The trait mapping is a useful
+  // fallback when no category is specified, but the user's explicit
+  // request must override it to avoid contradictions like
+  // "I'd start with source" on an amp request.
+  const traitCatLabel = { flow: 'source', tonal_density: 'DAC', clarity: 'amplifier', control: 'amplifier', spatial: 'speakers' }[dominantTrait.key] ?? 'this part of the chain';
+  const catLabel = requestedCategory && requestedCategory !== 'general'
+    ? requestedCategory
+    : traitCatLabel;
   let topReason: string;
   if (anchorProduct) {
     topReason = `I'd change ${catLabel} first. Your ${anchorProduct} is doing its job — ${catLabel} is where the system can move toward more ${dominantLabel}.`;

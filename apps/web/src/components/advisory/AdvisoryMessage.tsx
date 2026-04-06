@@ -1516,6 +1516,52 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
         </div>
       )}
 
+      {/* ── 2b. Expected Impact ───────────────────────────── */}
+      {a.expectedImpact && (
+        <div style={{
+          margin: '0 0 1.25rem 0',
+          padding: '0.6rem 0.85rem',
+          background: '#f8f7f4',
+          borderRadius: '5px',
+          fontSize: '0.9rem',
+          lineHeight: 1.6,
+          color: COLORS.textSecondary,
+        }}>
+          <span style={{ fontWeight: 600, color: COLORS.text }}>
+            Expected impact in your system:
+          </span>{' '}
+          <span style={{
+            fontWeight: 600,
+            color: a.expectedImpact.tier === 'system-level' ? COLORS.green
+              : a.expectedImpact.tier === 'noticeable' ? COLORS.amber
+              : COLORS.textMuted,
+          }}>
+            {a.expectedImpact.label}
+          </span>
+          <span style={{ color: COLORS.textMuted }}> — </span>
+          {a.expectedImpact.explanation}
+        </div>
+      )}
+
+      {/* ── 2c. System Fit Explanation ─────────────────────── */}
+      {a.systemFitExplanation && (
+        <p style={{
+          margin: '0 0 1.25rem 0',
+          padding: '0.55rem 0.85rem',
+          fontSize: '0.9rem',
+          lineHeight: 1.65,
+          color: COLORS.text,
+          fontStyle: 'italic',
+          borderLeft: `2px solid ${COLORS.accent}`,
+          background: 'transparent',
+        }}>
+          <span style={{ fontWeight: 600, fontStyle: 'normal', fontSize: '0.85rem', color: COLORS.textSecondary }}>
+            Why this works in your system:
+          </span>{' '}
+          {renderText(a.systemFitExplanation)}
+        </p>
+      )}
+
       {/* ── 3. Transition to products ─────────────────────── */}
       <p style={{
         margin: '0 0 1.25rem 0',

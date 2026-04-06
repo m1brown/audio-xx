@@ -672,6 +672,21 @@ export interface AdvisoryResponse {
    *  Each bullet describes a kind of change and why it would help. */
   strategyBullets?: string[];
 
+  // ── 7e4. Expected Impact ──────────────────────────────
+  /** Lightweight impact indicator for shopping recommendations.
+   *  Helps users understand whether a recommendation will matter in their system. */
+  expectedImpact?: {
+    tier: 'subtle' | 'noticeable' | 'system-level';
+    label: string;
+    explanation: string;
+  };
+
+  // ── 7e5. System Fit Explanation ───────────────────────────
+  /** 1–2 sentence explanation grounding the recommendation in the user's
+   *  system context — what the change addresses and why it matters here.
+   *  Only populated when system tendencies or taste signals exist. */
+  systemFitExplanation?: string;
+
   // ── 7f0. Taste Reflection ─────────────────────────────
   /** Structured taste interpretation — expert-level bullets derived from
    *  accumulated listener profile, rendered before product recommendations. */
@@ -1765,6 +1780,118 @@ function buildEditorialClosing(
   };
 }
 
+// ── Expected Impact Heuristic ──────────────────────────
+// Simple, context-driven classification of how much a shopping
+// recommendation is likely to matter in the user's system.
+// Uses system context strength and mismatch signals — no scoring.
+
+function deriveExpectedImpact(
+  ctx?: ShoppingAdvisoryContext,
+  reasoning?: ReasoningResult,
+  signals?: ExtractedSignals,
+): AdvisoryResponse['expectedImpact'] {
+  const hasSystem = !!(ctx?.systemComponents && ctx.systemComponents.length > 0);
+  const hasTendencies = !!ctx?.systemTendencies;
+  const hasSymptoms = !!(signals?.symptoms && signals.symptoms.length > 0);
+  const hasTaste = !!(reasoning?.taste.tasteLabel);
+
+  // System-level: user has a diagnosed mismatch or explicit symptoms
+  // that the recommendation directly addresses.
+  if (hasSystem && hasSymptoms) {
+    return {
+      tier: 'system-level',
+      label: 'System-level change',
+      explanation: 'This addresses an active issue in your signal chain — the difference should be clearly audible.',
+    };
+  }
+
+  // Noticeable: user has system context and some alignment signal
+  // (taste profile or system tendencies), so the recommendation
+  // is targeted rather than generic.
+  if (hasSystem && (hasTendencies || hasTaste)) {
+    return {
+      tier: 'noticeable',
+      label: 'Noticeable',
+      explanation: 'Your system is resolving enough that this change should be audible, though not dramatic.',
+    };
+  }
+
+  // Subtle: limited system context — recommendation is reasonable
+  // but impact depends on factors we can't assess yet.
+  return {
+    tier: 'subtle',
+    label: 'Subtle',
+    explanation: 'Without more system context, this is a sound direction — but the audible difference may be modest.',
+  };
+}
+
+// ── System Fit Explanation ────────────────────────────
+// 1–2 sentence explanation grounding the recommendation in the user's
+// actual system context. References tendencies, direction of change,
+// and what gets preserved. Returns undefined when context is too thin.
+
+function deriveSystemFitExplanation(
+  category?: string,
+  ctx?: ShoppingAdvisoryContext,
+  reasoning?: ReasoningResult,
+  signals?: ExtractedSignals,
+): string | undefined {
+  const tendencies = ctx?.systemTendencies;
+  const direction = reasoning?.direction;
+  const archetype = reasoning?.taste.archetype;
+  const tasteLabel = reasoning?.taste.tasteLabel;
+  const hasSystem = !!(ctx?.systemComponents && ctx.systemComponents.length > 0);
+  const hasSymptoms = !!(signals?.symptoms && signals.symptoms.length > 0);
+
+  // Need at least system context or strong taste signal
+  if (!hasSystem && !archetype) return undefined;
+
+  const parts: string[] = [];
+
+  // ── Sentence 1: What the system is doing now ──
+  if (tendencies && hasSystem) {
+    // System tendencies available — describe the current character
+    parts.push(`Your system leans ${tendencies}.`);
+  } else if (hasSystem && hasSymptoms && signals?.symptoms) {
+    // No explicit tendencies string, but symptoms describe what's wrong
+    const symptomList = signals.symptoms.slice(0, 2).join(' and ');
+    parts.push(`Your system is showing ${symptomList}.`);
+  } else if (hasSystem && reasoning?.system.tendencySummary) {
+    parts.push(`Your system currently reads as ${reasoning.system.tendencySummary}.`);
+  }
+
+  // ── Sentence 2: What the change does and why it matters here ──
+  if (direction?.statement) {
+    // Use the reasoning direction statement — it's already concise
+    // and describes the desired shift (e.g., "add body without losing speed")
+    parts.push(direction.statement.endsWith('.') ? direction.statement : `${direction.statement}.`);
+  } else if (archetype && tasteLabel && category) {
+    // No direction statement but we have taste context — explain the match
+    const ARCHETYPE_FIT: Record<string, string> = {
+      flow_organic: 'prioritizes musical flow over analytical detail — less edge, more sustained engagement',
+      rhythmic_propulsive: 'preserves transient speed and dynamic contrast — energy stays intact',
+      tonal_saturated: 'adds harmonic density and tonal weight without slowing the presentation',
+      precision_explicit: 'sharpens resolution and separation without introducing fatigue',
+      spatial_holographic: 'deepens spatial layering and imaging precision',
+    };
+    const fitPhrase = ARCHETYPE_FIT[archetype];
+    if (fitPhrase) {
+      parts.push(`A ${category} in this direction ${fitPhrase}.`);
+    }
+  }
+
+  // ── Preservation note (when available and system context exists) ──
+  if (hasSystem && direction?.preserve && direction.preserve.length > 0) {
+    const preserved = direction.preserve.slice(0, 2).join(' and ');
+    parts.push(`This keeps your ${preserved} intact.`);
+  }
+
+  if (parts.length === 0) return undefined;
+
+  // Cap at 2 sentences to stay concise
+  return parts.slice(0, 2).join(' ');
+}
+
 export function shoppingToAdvisory(
   a: ShoppingAnswer,
   signals?: ExtractedSignals,
@@ -1942,6 +2069,8 @@ export function shoppingToAdvisory(
     systemContextPreamble,
     systemInterpretation,
     strategyBullets,
+    expectedImpact: deriveExpectedImpact(ctx, reasoning, signals),
+    systemFitExplanation: deriveSystemFitExplanation(a.category, ctx, reasoning, signals),
     tasteReflection: ctx?.tasteReflection,
     decisiveRecommendation: ctx?.decisiveRecommendation,
     systemPairingIntro: ctx?.systemPairingIntro,
