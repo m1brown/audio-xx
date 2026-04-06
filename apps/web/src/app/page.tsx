@@ -870,7 +870,7 @@ export default function Home() {
     // Classify the message into a conversation mode before detailed
     // intent detection. Mode persistence carries across turns.
     const routedMode = routeConversation(submittedText);
-    const effectiveMode = convModeHint ?? resolveMode(routedMode, state.activeMode);
+    let effectiveMode = convModeHint ?? resolveMode(routedMode, state.activeMode);
     dispatch({ type: 'SET_MODE', mode: effectiveMode });
 
     // ── Detect intent ───────────────────────────────────
@@ -978,7 +978,7 @@ export default function Home() {
             question = 'Are you looking to buy something new, improve what you already have, or troubleshoot a problem you\'re hearing?';
           } else if (intent === 'educational') {
             acknowledge = 'Audio XX is a system-level audio advisor. It helps you understand how your components interact, evaluate trade-offs, and make aligned decisions — whether you\'re shopping, diagnosing, or just exploring.';
-            question = 'Want to start with your current system, or is there something specific you\'re curious about?';
+            question = 'Where would you like to start?\n• Help me choose gear\n• Improve my current system\n• Diagnose a sound issue\n• Learn how system matching works';
           } else {
             acknowledge = 'Good place to start.';
             question = 'Are you looking to buy something new, improve what you already have, or troubleshoot a problem you\'re hearing?';
@@ -1077,18 +1077,36 @@ export default function Home() {
     }
 
 
+    // ── Diagnosis breakout from shopping ─────────────────
+    // Must be computed BEFORE the shopping mode lock so that confirmed
+    // diagnosis signals are not overridden. Gate: intent must be
+    // diagnosis AND either the router independently detected diagnosis
+    // (strong symptom signal) or the text has explicit repair language.
+    // Vague diagnosis fallbacks ("more warmth") don't qualify.
+    const diagnosisBreakout = intent === 'diagnosis' && (
+      routedMode === 'diagnosis'
+      || /\b(?:fix|repair|troubleshoot|diagnose)\b/i.test(submittedText)
+    );
+
     // ── SHOPPING MODE LOCK ─────────────────────────────
     // When effectiveMode is 'shopping' and the user has already received
     // at least one recommendation (shoppingAnswerCount > 0), ALL subsequent
     // turns MUST route to the shopping pipeline. Override intent immediately
     // so early-return blocks (comparison follow-up, consultation follow-up,
     // consultation path, exploration, gear inquiry) cannot intercept.
-    // product_assessment is the sole exception — "I'm considering the X"
-    // should always produce a direct assessment, even mid-shopping flow.
+    // Exceptions: product_assessment (standalone assessments) and confirmed
+    // diagnosis (the user is reporting a problem, not refining a purchase).
     const isInShoppingFlow = effectiveMode === 'shopping' && shoppingAnswerCount > 0;
-    if (isInShoppingFlow && intent !== 'product_assessment') {
+    if (isInShoppingFlow && intent !== 'product_assessment' && !diagnosisBreakout) {
       console.log('[shopping-lock] Overriding intent=%s → shopping (effectiveMode=%s, shoppingAnswerCount=%d)', intent, effectiveMode, shoppingAnswerCount);
       intent = 'shopping';
+    }
+    // When diagnosis breaks out, flip effectiveMode so the diagnosis
+    // pipeline runs instead of the shopping pipeline.
+    if (diagnosisBreakout && effectiveMode === 'shopping') {
+      effectiveMode = 'diagnosis';
+      dispatch({ type: 'SET_MODE', mode: 'diagnosis' });
+      console.log('[diagnosis-breakout] shopping→diagnosis on:', submittedText.slice(0, 60));
     }
 
     // ── Dispatch proposed system ────────────────────────
@@ -1472,14 +1490,29 @@ export default function Home() {
     // shopping so brand/product context is retained. Only allow
     // product_assessment to break out when no shopping answers have
     // been shown yet (i.e., first turn with assessment language).
-    // system_assessment and comparison are exempt — these are topic changes
-    // that must break out of shopping context regardless of prior mode.
+    // system_assessment, comparison, and confirmed diagnosis are
+    // exempt — the SHOPPING MODE LOCK + diagnosis breakout above
+    // handles the shoppingAnswerCount > 0 case; this block catches
+    // the remaining case (effectiveMode=shopping but no prior answers).
     const productAssessmentInShopping = intent === 'product_assessment' && shoppingAnswerCount > 0;
-    if (effectiveMode === 'shopping' && intent !== 'shopping' && intent !== 'system_assessment' && intent !== 'comparison') {
+    if (effectiveMode === 'shopping' && intent !== 'shopping' && intent !== 'system_assessment' && intent !== 'comparison' && !diagnosisBreakout) {
       if (intent !== 'product_assessment' || productAssessmentInShopping) {
         intent = 'shopping';
       }
     }
+    // ── Shopping context cleanup on mode exit ──────────
+    // When the user transitions from shopping to diagnosis, comparison,
+    // or system_assessment, clear shopping-specific refs so stale budget,
+    // category lock, and constraints don't leak into the new mode or
+    // contaminate a future return to shopping.
+    // listenerProfileRef (taste preferences) is intentionally preserved —
+    // only shopping-specific facts are cleared.
+    if (state.activeMode === 'shopping' && effectiveMode !== 'shopping') {
+      lastShoppingFactsRef.current = null;
+      activeShoppingCategoryRef.current = null;
+      console.log('[mode-exit] shopping→%s: cleared shopping context', effectiveMode);
+    }
+
     // ── Diagnosis continuity override ─────────────────
     // When diagnosis is active, ALL intents fold back into diagnosis
     // except comparison and system_assessment (genuine topic changes).
@@ -1823,7 +1856,7 @@ export default function Home() {
                 listenerProfileRef.current, category, advisoryCtx.systemComponents,
               );
               const decisive = buildDecisiveRecommendation(
-                products, listenerProfileRef.current, anchorPairing?.anchorName ?? null,
+                products, listenerProfileRef.current, anchorPairing?.anchorName ?? null, category,
               );
 
               console.log('[decisive-followup] decisive_built=%s', !!decisive);
@@ -1910,10 +1943,12 @@ export default function Home() {
         );
 
         // Build decisive recommendation
+        const decisiveCategory = lastShoppingMsg.advisory.shoppingCategory ?? lastShoppingFactsRef.current?.category ?? 'general';
         const decisive = buildDecisiveRecommendation(
           products,
           listenerProfileRef.current,
           anchorPairing?.anchorName ?? null,
+          decisiveCategory,
         );
 
         if (decisive) {
@@ -1956,11 +1991,26 @@ export default function Home() {
       && shoppingAnswerCount === 0
       && state.activeMode !== 'shopping';
     const scopeShoppingText = isShoppingRefinement || isFirstShoppingAfterModeSwitch;
-    const evaluateText = scopeShoppingText
-      ? [submittedText, ...messages.filter((m) => m.role === 'user').map((m) => m.content).slice(-2)].join('\n')
-      : allUserText;
 
-    console.log('[diag-cold] about to call /api/evaluate (intent=%s, convModeHint=%s, text=%s)', intent, convModeHint, evaluateText.slice(0, 80));
+    // Scope diagnosis text when entering diagnosis after shopping.
+    // allUserText concatenates ALL prior messages, so shopping phrases
+    // like "warm tube amp" inject fatigue_risk:down which overwrites
+    // fatigue_risk:up from "harsh", causing the brightness rule to fail.
+    // Use only the current message for fresh diagnosis entry after shopping.
+    const isDiagnosisAfterShopping = intent === 'diagnosis'
+      && (diagnosisBreakout || state.activeMode === 'shopping');
+    const scopeDiagnosisText = isDiagnosisAfterShopping;
+
+    // For diagnosis after shopping, use ONLY the current message to avoid
+    // signal contamination from prior shopping text. For shopping scoping,
+    // include the last 2 user messages for refinement context.
+    const evaluateText = scopeDiagnosisText
+      ? submittedText
+      : scopeShoppingText
+        ? [submittedText, ...messages.filter((m) => m.role === 'user').map((m) => m.content).slice(-2)].join('\n')
+        : allUserText;
+
+    console.log('[diag-cold] about to call /api/evaluate (intent=%s, convModeHint=%s, scopeDiag=%s, scopeShop=%s, text=%s)', intent, convModeHint, scopeDiagnosisText, scopeShoppingText, evaluateText.slice(0, 80));
     let evalData: { signals: import('@/lib/signal-types').ExtractedSignals; result?: unknown } | null = null;
     try {
       const res = await fetch('/api/evaluate', {
@@ -2035,7 +2085,10 @@ export default function Home() {
           ? detectExplicitCategorySwitch(submittedText)
           : null;
 
-        // Update locked category: explicit switch overrides, otherwise preserve lock
+        // Update locked category: explicit switch overrides, otherwise preserve lock.
+        // When the category genuinely changes, clear stale carry-forward context
+        // so the new category starts clean (no leaked budget, constraints, or
+        // semantic preferences from the prior category session).
         if (explicitCategorySwitch) {
           const previousCategory = activeShoppingCategoryRef.current;
           activeShoppingCategoryRef.current = explicitCategorySwitch;
@@ -2044,10 +2097,23 @@ export default function Home() {
             to: explicitCategorySwitch,
             reason: 'explicit user switch',
           });
+
+          // Clear stale context when switching to a genuinely different category
+          if (previousCategory && previousCategory !== explicitCategorySwitch) {
+            lastShoppingFactsRef.current = null;
+            console.log('[category-switch] cleared lastShoppingFactsRef (was %s, now %s)', previousCategory, explicitCategorySwitch);
+          }
         }
 
+        // On explicit category switch, use ONLY the latest message for signal
+        // extraction to avoid prior-category preferences contaminating the new
+        // request. Otherwise, use full allUserText for context accumulation.
+        const isFreshCategorySwitch = !!(explicitCategorySwitch && activeShoppingCategoryRef.current === explicitCategorySwitch
+          && lastShoppingFactsRef.current === null);
+        const shoppingInputText = isFreshCategorySwitch ? submittedText : allUserText;
+
         const shoppingCtx = detectShoppingIntent(
-          allUserText, pipelineSignals, advisoryCtx.systemComponents,
+          shoppingInputText, pipelineSignals, advisoryCtx.systemComponents,
           // On refinement/category-switch turns, pass the latest message so its
           // category takes priority over earlier mentions in allUserText.
           shoppingAnswerCount > 0 ? submittedText : undefined,
@@ -2055,6 +2121,9 @@ export default function Home() {
           // keywords don't override the user's active category on follow-up turns.
           shoppingAnswerCount > 0 ? (activeShoppingCategoryRef.current ?? lastShoppingFactsRef.current?.category) : undefined,
         );
+        if (isFreshCategorySwitch) {
+          console.log('[category-switch] using submittedText only for signal extraction (clean slate)');
+        }
 
         // ── effectiveBudget: single source of truth ────────────
         // Priority: latest message budget > allUserText budget > saved budget
@@ -2337,6 +2406,7 @@ export default function Home() {
               answer.productExamples.map((p) => ({ name: p.name, brand: p.brand, price: p.price })),
               listenerProfileRef.current,
               anchorPairing?.anchorName ?? null,
+              shoppingCtx.category,
             );
             if (decisive) {
               advisoryCtx.decisiveRecommendation = decisive;
@@ -2737,7 +2807,36 @@ export default function Home() {
         }
       }
 
-      const skipDiagClarification = convModeHint === 'diagnosis';
+      // Only skip clarification when we have symptoms to act on.
+      // If the diagnosis intent fired but no symptom was extracted
+      // (e.g. "I want to fix my amp"), we NEED to ask what's wrong.
+      const hasSymptomSignals = pipelineSignals.symptoms.length > 0;
+      const skipDiagClarification = convModeHint === 'diagnosis' && hasSymptomSignals;
+
+      // ── Component-aware diagnosis clarification ─────────
+      // When diagnosis fires with no symptoms but the user mentioned a
+      // component category ("amp", "speakers", "DAC"), ask a targeted
+      // troubleshooting question instead of a generic "what's wrong?"
+      const componentCategoryMap: Array<[RegExp, string, string]> = [
+        [/\b(?:amp|amplifier|integrated)\b/i, 'amplifier', 'Is it distorting, running hot, lacking dynamics, sounding thin — or something else?'],
+        [/\b(?:speakers?|monitors?|floorstanders?|bookshelfs?)\b/i, 'speakers', 'Are they sounding harsh, boomy, lacking detail, or imaging poorly — or something else?'],
+        [/\b(?:dac|d\/a\s*converter)\b/i, 'DAC', 'Does it sound thin, digital, fatiguing, or lifeless — or something else?'],
+        [/\b(?:turntable|phono|cartridge|vinyl)\b/i, 'turntable', 'Is it noisy, distorting, lacking bass, or tracking poorly — or something else?'],
+        [/\b(?:streamer|transport|source)\b/i, 'source', 'Does it sound flat, lifeless, harsh, or lacking dynamics — or something else?'],
+        [/\b(?:cables?|interconnects?|power\s*cords?)\b/i, 'cables', 'What changed when you added or swapped them? More brightness, less bass, different staging?'],
+      ];
+      let componentClarification: { acknowledge: string; question: string } | null = null;
+      if (!hasSymptomSignals && intent === 'diagnosis') {
+        for (const [pattern, label, followUp] of componentCategoryMap) {
+          if (pattern.test(submittedText)) {
+            componentClarification = {
+              acknowledge: `Got it — let's figure out what's going on with your ${label}.`,
+              question: followUp,
+            };
+            break;
+          }
+        }
+      }
 
       if (evalData) {
         // API succeeded — use full evaluation data
@@ -2748,7 +2847,7 @@ export default function Home() {
         // you" question.
         const clarification = skipDiagClarification
           ? null
-          : getClarificationQuestion(
+          : componentClarification ?? getClarificationQuestion(
               pipelineSignals,
               evalData.result,
               newTurnCount,
@@ -2767,18 +2866,18 @@ export default function Home() {
         const diagDirection = inferSystemDirection(submittedText, turnCtx.desires, undefined, tasteProfile ?? undefined);
 
         if (clarification) {
-          console.log('[diag-cold] clarification fired (skipDiag=%s)', skipDiagClarification);
+          console.log('[diag-cold] clarification fired (skipDiag=%s, componentAware=%s)', skipDiagClarification, !!componentClarification);
           dispatch({ type: 'ADD_QUESTION', clarification });
         } else {
           console.log('[diag-cold] dispatching advisory (rules=%d)', evalData.result?.fired_rules?.length ?? 0);
           dispatchAdvisory(analysisToAdvisory(evalData.result, pipelineSignals, diagDirection, reasoning, advisoryCtx), advisoryId());
         }
       } else if (!skipDiagClarification) {
-        // API failed — ask a refinement question to gather more context
-        // (skipped when state machine already committed to diagnosis mode)
+        // API failed — ask a component-aware refinement question if available,
+        // otherwise ask a generic question to gather more context.
         dispatch({
           type: 'ADD_QUESTION',
-          clarification: {
+          clarification: componentClarification ?? {
             acknowledge: 'Got it — let me understand a bit more.',
             question: 'Can you describe what you\'re hearing that you\'d like to change? And what equipment are you using?',
           },

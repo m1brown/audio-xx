@@ -238,7 +238,7 @@ const DIAGNOSIS_SIGNAL_PATTERNS = [
   /\black(?:s|ing)\s+/i,
   /\blistening\s+fatigue\b/i,
   /\bnot\s+(?:enough|happy|satisfied)\b/i,
-  /\bsomething\s+(?:is\s+|feels?\s+)?(?:off|wrong|missing)\b/i,
+  /\bsomething\s+(?:(?:is|sounds?|feels?)\s+)?(?:off|wrong|missing)\b/i,
   /\b(?:problem|issue)\s+with\b/i,
 ];
 

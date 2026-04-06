@@ -104,7 +104,7 @@ const DIAGNOSIS_SIGNALS = [
   /\btoo\s+much\s+(?:brightness|treble|bass|warmth|sibilance|glare)\b/i,
   /\b(?:bothers?|annoys?|fatigues?)\s+me\b/i,
   /\blistening\s+fatigue\b/i,
-  /\bsomething\s+(?:is\s+)?(?:off|wrong|missing)\b/i,
+  /\bsomething\s+(?:(?:is|sounds?|feels?)\s+)?(?:off|wrong|missing)\b/i,
   /\blacking\b/i,
   /\bnot\s+(?:enough|happy|satisfied)\b/i,
   // Sensitivity / intolerance language
