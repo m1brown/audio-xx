@@ -667,6 +667,17 @@ function extractHardConstraints(text: string): HardConstraints {
     }
   }
 
+  // ── Bare "tube amp" / "tube amplifier" intent detection ──
+  // When the user says "tube amp", "tube amplifier", or "a tube integrated",
+  // they expect only tube-based products. Unlike the modal requireRe above,
+  // this catches the common phrasing without "only" or "just".
+  if (/\btube\s+(?:amp|amplifier|integrated)\b/i.test(lower)
+    || /\b(?:valve|tube)\s+(?:amp|amplifier)s?\b/i.test(lower)) {
+    for (const t of (TOPOLOGY_ALIASES['tube'] ?? [])) {
+      if (!requireTopologies.includes(t)) requireTopologies.push(t);
+    }
+  }
+
   // ── Availability constraints
   const newOnly = /\b(?:i\s+want\s+new|new\s+only|only\s+new|buy\s+new|brand\s+new|currently\s+(?:available|in\s+production)|still\s+(?:made|in\s+production)|not\s+(?:discontinued|used|vintage))\b/i.test(lower);
   const usedOnly = /\b(?:used\s+only|only\s+used|secondhand|second[\s-]hand|pre[\s-]?owned)\b/i.test(lower);

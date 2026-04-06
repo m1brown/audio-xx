@@ -1125,6 +1125,15 @@ export function detectIntent(currentMessage: string): IntentResult {
     return { intent: 'intake', subjects, subjectMatches, desires };
   }
 
+  // 2d. "want a [adj]* category" — catches qualified desires that intake
+  //     misses because of intervening adjectives. "I want a warm tube amp"
+  //     has a clear category target but intake's regex can't skip adjectives.
+  //     Requires article (a/an/some) to exclude "want to fix my amp".
+  const hasWantCategory = /\bwant\s+(?:a|an|some)\s+(?:\w+\s+){0,3}(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp)\b/i.test(currentMessage);
+  if (hasWantCategory) {
+    return { intent: 'shopping', subjects, subjectMatches, desires };
+  }
+
   // 3. Shopping — "best DAC under $1000", "recommend a DAC"
   if (SHOPPING_PATTERNS.some((p) => p.test(currentMessage))) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
