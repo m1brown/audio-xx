@@ -2123,23 +2123,16 @@ export default function Home() {
           }
         }
 
-        // On explicit category switch, use ONLY the latest message for signal
-        // extraction to avoid prior-category preferences contaminating the new
-        // request. Otherwise, use full allUserText for context accumulation.
+        // On explicit category switch or state machine completion, use ONLY
+        // the latest message for signal extraction to avoid prior-category
+        // preferences/constraints contaminating the new request.
+        // - isFreshCategorySwitch: first-time explicit switch with no prior facts
+        // - earlyCategorySwitch: any explicit category switch detected
+        // - convModeHint === 'shopping': state machine just completed a budget flow
+        //   (e.g. tube amp → DAC → "5000") — allUserText still contains old topology
         const isFreshCategorySwitch = !!(explicitCategorySwitch && activeShoppingCategoryRef.current === explicitCategorySwitch
           && lastShoppingFactsRef.current === null);
-        const shoppingInputText = isFreshCategorySwitch ? submittedText : allUserText;
-
-        // When an explicit category switch is detected, scope the text to
-        // ONLY the current message. This prevents prior-category constraints
-        // (e.g. tube amp topology requirements) from contaminating the new
-        // category's product selection (e.g. DAC, speaker).
-        // Also scope when the state machine just completed (convModeHint === 'shopping').
-        // The budget reply ("5000") is not an explicit category switch, but
-        // allUserText still contains the old category's constraints (e.g. "tube amp"
-        // topology requirements). The state machine already extracted category/budget
-        // into lastShoppingFactsRef, so we only need the current message.
-        const shoppingInputText = (earlyCategorySwitch || convModeHint === 'shopping') ? submittedText : allUserText;
+        const shoppingInputText = (isFreshCategorySwitch || earlyCategorySwitch || convModeHint === 'shopping') ? submittedText : allUserText;
 
         const shoppingCtx = detectShoppingIntent(
           shoppingInputText, pipelineSignals, advisoryCtx.systemComponents,
