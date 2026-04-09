@@ -80,6 +80,7 @@ import type {
   DeliberatenessSignal,
   CatalogSource,
   ComponentVerdict,
+  ActiveDACInference,
 } from './memo-findings';
 import { renderDeterministicMemo } from './memo-deterministic-renderer';
 import { isWhitelistedSource } from './evidence/source-whitelist';
@@ -3861,8 +3862,14 @@ export function buildConsultationFollowUp(
 export interface SystemComponent {
   /** Display name (e.g. "Chord Qutest", "Pass Labs INT-25"). */
   displayName: string;
-  /** Component role (dac, amplifier, speaker, etc). */
+  /** Primary component role (dac, amplifier, speaker, etc). */
   role: string;
+  /**
+   * All functional roles this component fulfills in the system.
+   * E.g., Bluesound Node → ['streamer', 'dac'].
+   * Always contains at least the primary role.
+   */
+  roles: string[];
   /** One-line character description. */
   character: string;
   /** Brand profile if available. */
@@ -3874,6 +3881,277 @@ export interface SystemComponent {
   };
   /** Product data if available. */
   product?: Product;
+}
+
+// ── Multi-role resolution ────────────────────────────
+//
+// Centralised inference of all functional roles a component fulfils.
+// Sources (in priority order):
+//   1. Explicit Product.roles when present in catalog data
+//   2. Subcategory → roles mapping (e.g. 'dac-preamp' → ['dac', 'preamp'])
+//   3. Known multi-role product overrides (e.g. Bluesound Node)
+//   4. Fallback: [primaryRole]
+
+/** Known products whose functional roles differ from their primary category. */
+const KNOWN_MULTI_ROLE_PRODUCTS: Record<string, string[]> = {
+  'bluesound node':   ['streamer', 'dac'],
+  'bluesound node x': ['streamer', 'dac'],
+  'node':             ['streamer', 'dac'],
+  'node x':           ['streamer', 'dac'],
+  'wiim pro':         ['streamer', 'dac'],
+  'wiim ultra':       ['streamer', 'dac'],
+  'eversolo dmp-a6':  ['streamer', 'dac'],
+  'dmp-a6':           ['streamer', 'dac'],
+  'eversolo dmp-a8':  ['streamer', 'dac'],
+  'dmp-a8':           ['streamer', 'dac'],
+  'k9 pro':           ['dac', 'headphone_amp'],
+  'ef400':            ['dac', 'headphone_amp'],
+};
+
+/** Subcategory → additional roles beyond the primary category. */
+const SUBCATEGORY_ROLES: Record<string, string[]> = {
+  'dac-preamp':    ['dac', 'preamp'],
+  'dac-amp':       ['dac', 'headphone_amp'],
+  'portable-dac':  ['dac', 'headphone_amp'],
+  'integrated-amp': ['amplifier', 'preamp'],
+};
+
+/**
+ * Resolve all functional roles for a component.
+ *
+ * Always returns an array containing at least the primary role.
+ * The primary role is always the first element.
+ */
+export function resolveComponentRoles(
+  primaryRole: string,
+  product?: Product,
+  displayName?: string,
+): string[] {
+  // 1. Explicit product roles take top priority
+  if (product?.roles && product.roles.length > 0) {
+    return product.roles;
+  }
+
+  // 2. Subcategory-based inference
+  if (product?.subcategory) {
+    const subcatRoles = SUBCATEGORY_ROLES[product.subcategory];
+    if (subcatRoles) {
+      return subcatRoles;
+    }
+  }
+
+  // 3. Known multi-role product override (name-based)
+  const nameLower = (displayName ?? product?.name ?? '').toLowerCase().trim();
+  if (nameLower) {
+    const knownRoles = KNOWN_MULTI_ROLE_PRODUCTS[nameLower];
+    if (knownRoles) {
+      return knownRoles;
+    }
+    // Also try brand + name combined
+    if (product?.brand) {
+      const fullName = `${product.brand} ${product.name}`.toLowerCase().trim();
+      const knownFullRoles = KNOWN_MULTI_ROLE_PRODUCTS[fullName];
+      if (knownFullRoles) {
+        return knownFullRoles;
+      }
+    }
+  }
+
+  // 4. Fallback: single-role array from primary
+  return [primaryRole];
+}
+
+// ── Active DAC inference ─────────────────────────────
+//
+// Topology-based best guess for which DAC is active. NOT a confirmed
+// signal path — the narrative layer treats it accordingly.
+//
+// Behaviour summary for maintainers:
+//
+//   • A component is DAC-capable when its roles[] (or fallback role)
+//     includes 'dac'. Classification then sorts it into standalone,
+//     integrated, or source based on what other roles it carries.
+//
+//   • Priority: standalone (3) > integrated (2) > source (1).
+//     All-in-one units (dac + amp + streamer) classify as integrated.
+//
+//   • Confidence is high only when exactly one DAC-capable component
+//     exists and its role data is clean (roles[] present and non-empty).
+//
+//   • Confidence is medium when multiple DACs exist but priority
+//     cleanly selects one and no role data is degraded.
+//
+//   • Confidence is low on same-priority ties, missing/empty roles[],
+//     or unrecognised co-roles. Low confidence always sets
+//     needsDACClarification = true (unless there are zero DAC-capable
+//     components — that is incomplete input, not ambiguity).
+//
+//   • Single-DAC systems produce no narrative note. The DAC note only
+//     appears when multipleDACs is true or needsDACClarification is true.
+//
+//   • Narrative wording scales with confidence: "uses" (high),
+//     "likely uses… If…" (medium), "unclear" (low).
+
+/** Patterns for classifying DAC-hosting components. */
+const AMP_ROLES_RE = /\b(amp|amplifier|integrated|headphone_amp|preamp)\b/i;
+const SOURCE_ROLES_RE = /\b(streamer|transport|cd|cdp|network|player|digital)\b/i;
+
+type DACHostType = 'standalone' | 'integrated' | 'source';
+
+/**
+ * Safely extract a normalised role list from a component.
+ * Uses `roles[]` when present and non-empty, falls back to `[role]`,
+ * and returns `['component']` as a last resort. Never throws.
+ */
+function safeRoles(c: { role?: string; roles?: string[] }): string[] {
+  if (Array.isArray(c.roles) && c.roles.length > 0) return c.roles;
+  if (typeof c.role === 'string' && c.role) return [c.role];
+  return ['component'];
+}
+
+/**
+ * Classify a DAC-capable component by what else it does.
+ *
+ * Classification rules (strict):
+ * - standalone: has `dac`, does NOT have amp/integrated/streamer roles
+ * - integrated: has `dac` AND has amp/integrated roles
+ *   (all-in-one dac+amp+streamer also classifies as integrated)
+ * - source: has `dac` AND has streamer/source AND does NOT have amp/integrated
+ *
+ * Returns `{ hostType, degraded }` where `degraded` is true when
+ * classification relied on fallback heuristics (e.g. missing roles[]).
+ */
+function classifyDACHost(c: { role?: string; roles?: string[] }): { hostType: DACHostType; degraded: boolean } {
+  const roles = safeRoles(c);
+  const hasDac = roles.some((r) => r.toLowerCase() === 'dac');
+  if (!hasDac) return { hostType: 'standalone', degraded: true }; // shouldn't happen — caller filters
+
+  const otherRoles = roles.filter((r) => r.toLowerCase() !== 'dac');
+  const hasAmp = otherRoles.some((r) => AMP_ROLES_RE.test(r));
+  const hasSource = otherRoles.some((r) => SOURCE_ROLES_RE.test(r));
+
+  // Integrated wins over source when both present (all-in-one units)
+  if (hasAmp) return { hostType: 'integrated', degraded: false };
+  if (hasSource) return { hostType: 'source', degraded: false };
+
+  // No other recognised role — check primary `role` as fallback
+  const primaryRole = (typeof c.role === 'string' ? c.role : '').toLowerCase();
+  if (AMP_ROLES_RE.test(primaryRole)) return { hostType: 'integrated', degraded: true };
+  if (SOURCE_ROLES_RE.test(primaryRole)) return { hostType: 'source', degraded: true };
+
+  // Pure DAC with no other roles
+  if (otherRoles.length === 0) return { hostType: 'standalone', degraded: false };
+
+  // Unrecognised co-roles — treat as standalone but flag degraded
+  return { hostType: 'standalone', degraded: true };
+}
+
+/** Priority: standalone > integrated > source. */
+const DAC_PRIORITY: Record<DACHostType, number> = {
+  standalone: 3,
+  integrated: 2,
+  source: 1,
+};
+
+/**
+ * Infer which DAC-capable component is most likely active.
+ *
+ * This is a topology-based best guess, not a confirmed signal path.
+ * Accepts SystemComponent[] so it can run at any pipeline stage.
+ *
+ * Rules:
+ *   1. Standalone DAC wins over all others
+ *   2. Integrated amp DAC beats source DAC
+ *   3. Single DAC → use it
+ *   4. Tie at same level → needsDACClarification
+ *
+ * Confidence:
+ *   - high: exactly one DAC-capable component
+ *   - medium: multiple DACs, priority cleanly selects one
+ *   - low: same-priority tie, malformed data, or classification ambiguity
+ */
+export function inferActiveDAC(components: SystemComponent[]): ActiveDACInference {
+  // Defensive: handle null/undefined components array.
+  // This is incomplete input, not DAC-path ambiguity → needsDACClarification stays false.
+  if (!Array.isArray(components) || components.length === 0) {
+    return { activeDACName: null, activeDACType: null, multipleDACs: false, needsDACClarification: false, confidence: 'low' };
+  }
+
+  // Find all DAC-capable components using safe role extraction.
+  //
+  // Degradation is tracked at two independent levels and OR'd together:
+  //
+  //   1. safeRoles fallback — roles[] was missing or empty, so we fell back
+  //      to [role] or ['component']. This must degrade confidence because
+  //      the single-string `role` field cannot represent multi-role products.
+  //      A streamer/DAC combo with only `role: 'dac'` looks like a standalone
+  //      DAC, which would silently produce wrong classification and a
+  //      misleadingly confident result.
+  //
+  //   2. classifyDACHost degradation — the roles[] data existed but contained
+  //      unrecognised co-roles, or classification had to fall back to the
+  //      primary `role` string.
+  //
+  const dacCapable: { component: SystemComponent; hostType: DACHostType; degraded: boolean; priority: number }[] = [];
+  for (const c of components) {
+    const rolesFellBack = !Array.isArray(c.roles) || c.roles.length === 0;
+    const roles = safeRoles(c);
+    const hasDac = roles.some((r) => r.toLowerCase() === 'dac');
+    if (hasDac) {
+      const { hostType, degraded: classifyDegraded } = classifyDACHost(c);
+      dacCapable.push({ component: c, hostType, degraded: rolesFellBack || classifyDegraded, priority: DAC_PRIORITY[hostType] });
+    }
+  }
+
+  // No DAC-capable component in the system.
+  // Not ambiguity — just no DAC. Low confidence because we can't say anything useful.
+  if (dacCapable.length === 0) {
+    return { activeDACName: null, activeDACType: null, multipleDACs: false, needsDACClarification: false, confidence: 'low' };
+  }
+
+  // Single DAC — high confidence unless classification was degraded
+  if (dacCapable.length === 1) {
+    const d = dacCapable[0];
+    const confidence = d.degraded ? 'low' as const : 'high' as const;
+    return {
+      activeDACName: d.component.displayName,
+      activeDACType: d.hostType,
+      multipleDACs: false,
+      // Degraded single-DAC = low confidence = the user may need to clarify
+      needsDACClarification: confidence === 'low',
+      confidence,
+    };
+  }
+
+  // Multiple DACs — rank by host type priority
+  const anyDegraded = dacCapable.some((d) => d.degraded);
+  const ranked = [...dacCapable].sort((a, b) => b.priority - a.priority);
+
+  const topPriority = ranked[0].priority;
+  const topTied = ranked.filter((r) => r.priority === topPriority);
+
+  if (topTied.length > 1) {
+    // Same-priority tie — low confidence, needs clarification
+    return {
+      activeDACName: null,
+      activeDACType: null,
+      multipleDACs: true,
+      needsDACClarification: true,
+      confidence: 'low',
+    };
+  }
+
+  // Clear priority winner
+  const winner = ranked[0];
+  const confidence = anyDegraded ? 'low' as const : 'medium' as const;
+  return {
+    activeDACName: winner.component.displayName,
+    activeDACType: winner.hostType,
+    multipleDACs: true,
+    // needsDACClarification = true whenever confidence is low and DACs exist
+    needsDACClarification: confidence === 'low',
+    confidence,
+  };
 }
 
 // ── Pre-assessment validation ────────────────────────
@@ -4410,9 +4688,11 @@ export function buildSystemAssessment(
           || df.name.toLowerCase().includes(nameLower),
       );
 
+      const primaryRole = product?.category ?? ac.category ?? 'component';
       components.push({
         displayName: fullName,
-        role: product?.category ?? ac.category ?? 'component',
+        role: primaryRole,
+        roles: resolveComponentRoles(primaryRole, product ?? undefined, fullName),
         character: product?.description
           ?? designFamily?.character
           ?? brandProfile?.tendencies
@@ -4478,9 +4758,11 @@ export function buildSystemAssessment(
             || df.name.toLowerCase().includes(product.name.toLowerCase()),
         );
 
+        const prodDisplayName = normalizeDisplayName(product.brand, product.name);
         components.push({
-          displayName: normalizeDisplayName(product.brand, product.name),
+          displayName: prodDisplayName,
           role: product.category,
+          roles: resolveComponentRoles(product.category, product, prodDisplayName),
           character: product.description,
           brandProfile: brandProfile ? {
             philosophy: brandProfile.philosophy,
@@ -4492,7 +4774,6 @@ export function buildSystemAssessment(
         });
 
         // Collect product links — track per-component
-        const prodDisplayName = normalizeDisplayName(product.brand, product.name);
         if (product.retailer_links) {
           for (const l of product.retailer_links) {
             trackLink({ label: l.label, url: l.url }, prodDisplayName);
@@ -4587,6 +4868,7 @@ export function buildSystemAssessment(
         components.push({
           displayName,
           role,
+          roles: resolveComponentRoles(role, undefined, displayName),
           character: bp?.tendencies ?? `${displayName} ${role}`,
           brandProfile: bp ? {
             philosophy: bp.philosophy,
@@ -4632,6 +4914,7 @@ export function buildSystemAssessment(
         components.push({
           displayName,
           role,
+          roles: resolveComponentRoles(role, specificProduct ?? undefined, displayName),
           character,
           brandProfile: {
             philosophy: brandProfile.philosophy,
@@ -4716,9 +4999,11 @@ export function buildSystemAssessment(
           }
         }
 
+        const resolvedRole = specificProduct?.category ?? role;
         components.push({
           displayName,
-          role: specificProduct?.category ?? role,
+          role: resolvedRole,
+          roles: resolveComponentRoles(resolvedRole, specificProduct ?? undefined, displayName),
           character: specificProduct?.description ?? `${capitalized} ${role}`,
           product: specificProduct,
         });
@@ -4953,7 +5238,864 @@ export function buildSystemAssessment(
 
   const response = renderDeterministicMemo(findings, prose, structured);
 
+  // ── Rewritten system assessment output ──────────────
+  // A system review is now presented as a single six-section narrative
+  // carried in `systemContext`. Interpretation logic is unchanged — this
+  // post-processor only re-expresses the same findings. The legacy
+  // structured fields stay on the response object so existing parity
+  // tests and any non-UI consumers still see them; the UI layer
+  // (MemoFormat in AdvisoryMessage.tsx) skips the legacy sections
+  // whenever advisoryMode === 'system_review' and systemContext is set.
+  response.systemContext = composeAssessmentNarrative(findings);
+
   return { kind: 'assessment', findings, response };
+}
+
+// ── Rewritten system-assessment narrative composer ────
+//
+// Turns a MemoFindings object (the deterministic pipeline's structured
+// output) into a single six-section markdown narrative. The six sections
+// are fixed:
+//   1. System overview
+//   2. What the system is doing well
+//   3. Where the system is constrained
+//   4. Core identity
+//   5. If you change nothing
+//   6. If you optimize
+//
+// No hedging, no filler, no "likely" / "probably" language. No new
+// interpretation — every claim is sourced from the findings contract.
+
+function composeAssessmentNarrative(findings: MemoFindings): string {
+  const axes = findings.systemAxes;
+  const comps = findings.componentVerdicts;
+  const stacked = findings.stackedTraits;
+  const bottleneck = findings.bottleneck;
+  const keeps = findings.keeps;
+  const sequence = findings.recommendedSequence;
+  const paths = findings.upgradePaths;
+
+  // Listener-facing axis phrases — describe what the listener actually
+  // hears rather than the abstract axis name. Each phrase is a short
+  // observation in plain language.
+  const tonal =
+    axes.warm_bright === 'warm' ? 'a generous, weighted tonality you can sit inside for hours'
+    : axes.warm_bright === 'bright' ? 'an immediate, lit-from-the-front tonality that puts the music slightly forward of the speakers'
+    : 'a tonally even balance that does not pull the music in either direction';
+  const detail =
+    axes.smooth_detailed === 'detailed' ? 'a clear view into the recording — small inner voices and transient edges stay legible'
+    : axes.smooth_detailed === 'smooth' ? 'a polished, easygoing surface that softens edges and rewards long listening'
+    : 'a balance between resolution and ease — neither chasing detail nor hiding it';
+  const timing =
+    axes.elastic_controlled === 'elastic' ? 'a breathing, swinging sense of timing that lets phrasing land naturally'
+    : axes.elastic_controlled === 'controlled' ? 'a tight, well-gripped sense of timing that keeps complex passages from blurring'
+    : 'a relaxed but stable rhythmic feel';
+  const stage =
+    axes.airy_closed === 'airy' ? 'an open, layered soundstage that puts space around each instrument'
+    : axes.airy_closed === 'closed' ? 'a closer, more intimate presentation that draws the music toward you'
+    : 'a natural, undramatic sense of space';
+
+  // Dedupe component names — catalog matches can produce both a free-text
+  // and a catalog row for the same physical component. Compare on a
+  // normalized key (lowercased, punctuation- and whitespace-collapsed) so
+  // "WLM Diva Monitor" and "WLM Diva monitors" collapse to one entry.
+  const seenNameKeys = new Set<string>();
+  const uniqueNames: string[] = [];
+  for (const n of findings.componentNames) {
+    const key = n.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    if (!key || seenNameKeys.has(key)) continue;
+    seenNameKeys.add(key);
+    uniqueNames.push(n);
+  }
+  const namesList =
+    uniqueNames.length > 1
+      ? uniqueNames.slice(0, -1).join(', ') + ', and ' + uniqueNames[uniqueNames.length - 1]
+      : uniqueNames[0] ?? '';
+  const names = `The ${namesList}`;
+  const deliberate = findings.isDeliberate
+    ? 'The pieces lean in compatible directions rather than fighting one another.'
+    : 'The chain is technically competent but not strongly unified around a single philosophy.';
+  // ── Active DAC note ──
+  // When multiple DACs exist, surface which one is likely active.
+  // Wording is calibrated to confidence level — never states signal path as fact.
+  let dacNote = '';
+  const dac = findings.activeDACInference;
+  if (dac.multipleDACs && dac.activeDACName && !dac.needsDACClarification) {
+    const dacOverlap = findings.roleOverlaps.find((o) => o.role === 'dac');
+    const others = dacOverlap?.components.filter((n) => n !== dac.activeDACName) ?? [];
+
+    if (dac.confidence === 'high') {
+      // Single DAC — shouldn't reach here (multipleDACs is true), but handle gracefully
+      dacNote = `\n\nYour system uses the ${dac.activeDACName} as its DAC.`;
+    } else if (dac.confidence === 'medium') {
+      // Multiple DACs, clear priority winner
+      if (dac.activeDACType === 'standalone' && others.length > 0) {
+        dacNote = `\n\nYour system likely uses the ${dac.activeDACName} as the primary DAC. If it is handling digital conversion, the DAC stage in the ${others.join(' and ')} would typically not be used.`;
+      } else if (dac.activeDACType === 'integrated' && others.length > 0) {
+        dacNote = `\n\nYour system likely uses the DAC in your integrated amplifier (${dac.activeDACName}). If so, the ${others.join(' and ')} feeds it as a transport.`;
+      } else {
+        dacNote = `\n\nYour system likely uses the ${dac.activeDACName} as its primary DAC.`;
+      }
+    } else {
+      // Low confidence — note but don't assert
+      dacNote = `\n\nYour system includes multiple DAC-capable components. The ${dac.activeDACName} is the most likely active DAC, but the actual conversion path depends on how they are connected.`;
+    }
+  } else if (dac.needsDACClarification) {
+    dacNote = `\n\nYour system includes multiple DAC-capable components, and the active conversion path is unclear. Which DAC is handling conversion affects the sound — worth confirming your signal routing.`;
+  }
+
+  const overview = [
+    `**System overview**`,
+    ``,
+    `${names} form a chain built around ${tonal}, ${detail}, ${timing}, and ${stage}. ${deliberate} At its core this is ${describeCoreIdentity(axes)}.${dacNote}`,
+  ].join('\n');
+
+  // Dedupe component verdicts on the same normalized name key used above,
+  // so a duplicated catalog/free-text pair doesn't generate two strength bullets.
+  const seenVerdictKeys = new Set<string>();
+  const dedupedComps = comps.filter(c => {
+    const key = c.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    if (!key || seenVerdictKeys.has(key)) return false;
+    seenVerdictKeys.add(key);
+    return true;
+  });
+  const keepComps = dedupedComps.filter(c => c.verdict === 'keep');
+  const charTraits = stacked.filter(s => s.classification === 'system_character');
+  const strengths: string[] = [];
+  // Vary the connective sentence per index so the section doesn't read as a template.
+  // Listener-impact tails: what this strength sounds like in the room.
+  const compTails = [
+    (_role: string) => `In practice, you hear it as the system's signature — the thing that makes you reach for one record over another at the end of a long day.`,
+    (_role: string) => `On music you know well, this is the contribution you stop noticing as a "feature" and start hearing as the way the system simply sounds.`,
+    (_role: string) => `It is also the easiest part of the chain to lose: swap this piece and the personality of the system goes with it.`,
+  ];
+  const traitTails = [
+    (contribs: string) => `${contribs} are pulling in the same direction here, and the listening result is unambiguous — you do not have to work to notice it, it is just there in every track.`,
+    (contribs: string) => `Because ${contribs} agree on this, you get a clean, undiluted version of it instead of two components arguing through the music.`,
+    (contribs: string) => `${contribs} reinforce each other on this — the system commits to it rather than splitting the difference, which is what makes it audible rather than theoretical.`,
+  ];
+  // ── Strength prioritisation ──
+  // Build a candidate list of strength items, then keep at most two — three
+  // only if the third is clearly distinct from the first two (no shared
+  // contributor component, no overlapping axis property). An expert names
+  // the one or two things the system actually does and stops talking; the
+  // earlier four-bullet shape diluted that.
+  type StrengthItem =
+    | { kind: 'component'; name: string; role: string; text: string; key: string }
+    | { kind: 'trait'; property: string; contributors: string[]; key: string };
+  const strengthCandidates: StrengthItem[] = [];
+  for (const c of keepComps) {
+    const s = c.strengths[0];
+    if (!s) continue;
+    strengthCandidates.push({
+      kind: 'component',
+      name: c.name,
+      role: c.role,
+      text: s,
+      key: c.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
+    });
+  }
+  for (const t of charTraits) {
+    strengthCandidates.push({
+      kind: 'trait',
+      property: t.property,
+      contributors: t.contributors,
+      key: t.property.toLowerCase(),
+    });
+  }
+  // Select with overlap-aware filtering. A trait that shares both contributors
+  // with an already-selected component bullet is redundant.
+  const selectedStrengths: StrengthItem[] = [];
+  const usedComponentKeys = new Set<string>();
+  const usedPropertyKeys = new Set<string>();
+  for (const cand of strengthCandidates) {
+    if (selectedStrengths.length >= 2) break;
+    if (cand.kind === 'component') {
+      if (usedComponentKeys.has(cand.key)) continue;
+      // Skip if a previously selected component shares the same role —
+      // that is an overlapping trait, not a distinct strength.
+      const roleClash = selectedStrengths.some(
+        (s) => s.kind === 'component' && s.role.toLowerCase() === cand.role.toLowerCase(),
+      );
+      if (roleClash) continue;
+      selectedStrengths.push(cand);
+      usedComponentKeys.add(cand.key);
+    } else {
+      if (usedPropertyKeys.has(cand.key)) continue;
+      const allCovered = cand.contributors.every((c) =>
+        usedComponentKeys.has(c.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()),
+      );
+      if (allCovered) continue;
+      selectedStrengths.push(cand);
+      usedPropertyKeys.add(cand.key);
+    }
+  }
+  let sn = 1;
+  for (const item of selectedStrengths) {
+    if (item.kind === 'component') {
+      const tail = compTails[(sn - 1) % compTails.length](item.role);
+      strengths.push(`${sn}. **${item.name}** — ${item.text}. ${tail}`);
+    } else {
+      const contribs = item.contributors.join(' and ');
+      const tail = traitTails[(sn - 1) % traitTails.length](contribs);
+      strengths.push(`${sn}. **${humanizeProperty(item.property)}** — ${tail}`);
+    }
+    sn++;
+  }
+  if (strengths.length === 0) {
+    for (const c of dedupedComps) {
+      if (c.strengths[0]) {
+        strengths.push(`${sn}. **${c.name}** — ${c.strengths[0]}.`);
+        sn++;
+        if (sn > 2) break;
+      }
+    }
+  }
+  if (strengths.length === 0) {
+    strengths.push(`1. The chain is internally consistent — no component is fighting the others for dominance, and that coherence is itself the primary strength.`);
+  }
+
+  // ── Elasticity augmentation (single, in-place). ──────────────────
+  // When timing / flow / phrasing is a clear strength of this system,
+  // surface the canonical listener term "elasticity" exactly once,
+  // attached to the first relevant strength bullet. The term is paired
+  // with a short concrete cue so it lands as a recognisable listening
+  // experience rather than jargon. No new bullet, no use elsewhere.
+  const elasticityProfile = axes.elastic_controlled === 'elastic';
+  const alreadyMentionsElasticity = strengths.some(s => /elasticity/i.test(s));
+  if (elasticityProfile && !alreadyMentionsElasticity) {
+    // Prefer attaching to a bullet that already references the
+    // amp / source / cdp role (where timing usually originates), then
+    // fall back to a trait bullet, then to the first bullet.
+    const flowRoleRe = /\b(amp|amplifier|integrated|preamp|source|streamer|transport|cdp|cd player|dac)\b/i;
+    let idx = strengths.findIndex(s => flowRoleRe.test(s));
+    if (idx === -1) idx = strengths.findIndex(s => /flow|timing|swing|phrasing|elastic/i.test(s));
+    if (idx === -1) idx = 0;
+    const augmentation = ' You hear it as elasticity — phrasing breathes and notes push and release.';
+    strengths[idx] = strengths[idx].replace(/\s*$/, '') + augmentation;
+  }
+
+  const strengthsSection = [`**What the system is doing well**`, ``, ...strengths].join('\n');
+
+  // ── Primary-constraint selection ──
+  // The renderer used to dump every constraint as an equal bullet, which
+  // diluted the most important point. We now pick exactly one primary
+  // constraint and expand it; everything else is demoted to a single
+  // optional "Also worth noting" line. Selection priority:
+  //   1. A bottleneck component with concrete constrained axes (strongest signal).
+  //   2. The first verdict marked 'bottleneck' or 'upgrade' that has a real weakness.
+  //   3. The first stacked imbalance.
+  // If none of the above, we surface the "no material constraint" line.
+  type PrimaryConstraint =
+    | { kind: 'bottleneck'; component: string; role: string; axes: string[] }
+    | { kind: 'component'; name: string; role: string; weakness: string }
+    | { kind: 'imbalance'; property: string; contributors: string[] }
+    | { kind: 'none' };
+
+  const bottleneckName = bottleneck?.component;
+  // ── Guard: positive-trait properties cannot be selected as a
+  // constraint unless negative evidence exists. Flow / elasticity /
+  // breathing / timing-coherence properties are listener strengths by
+  // default; they may only become a primary constraint when the axis
+  // profile shows damping or restraint (i.e. the trait is being
+  // compressed rather than expressed). Scoring, rendering, and UI are
+  // untouched — this only filters candidates before selection.
+  const POSITIVE_TRAIT_PROPERTIES = new Set([
+    'dynamic_elasticity',
+    'musical_flow',
+    'timing_coherence',
+    'breathing',
+    'phrasing',
+    'elasticity',
+    'flow',
+  ]);
+  const isPositiveTraitProperty = (prop: string): boolean => {
+    const key = (prop || '').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    return POSITIVE_TRAIT_PROPERTIES.has(key);
+  };
+  // Damping evidence must be explicit, not inferred from an axis lean.
+  // Axis combinations like "controlled + detailed" describe a fast,
+  // clean profile and are NOT sufficient evidence of damping. We only
+  // accept upstream findings that name compression / damping / loss of
+  // body, bloom, sustain, or audible thinning / dryness directly.
+  const stackedConstraintHint = stacked.some((s) => {
+    const t = `${s.property} ${(s as { description?: string }).description ?? ''}`.toLowerCase();
+    if (/compress|compressed|damping|damped|flatten|flattened|restrained|choked|overdamp/.test(t)) return true;
+    if (/reduced\s+body|reduced\s+bloom|reduced\s+sustain|\bthin\b|\bdry\b|dryness/.test(t)) return true;
+    return false;
+  });
+  const hasDampingEvidence = stackedConstraintHint;
+  const imbalances = stacked
+    .filter(s => s.classification === 'system_imbalance')
+    .filter(s => {
+      // Skip positive-trait properties unless real damping evidence
+      // exists. Without that evidence, the trait is a strength or bias
+      // and must not be identified as the system's primary limitation.
+      if (isPositiveTraitProperty(s.property) && !hasDampingEvidence) return false;
+      return true;
+    });
+
+  // ── Evidence-ranked component selection. ───────────────────────────────
+  // Candidates are scored against a strength hierarchy instead of taken
+  // in source order. The highest-scoring component with a specific,
+  // audible weakness becomes primary; vague/hedged weakness text does not
+  // qualify on its own. Only when no component clears the specificity bar
+  // do we fall back to a stacked imbalance.
+  //
+  // Hierarchy (highest first):
+  //   a. Bottleneck with concrete constrained axes.
+  //   b. Component carrying multiple specific weaknesses.
+  //   c. Upgrade/bottleneck verdict with a specific weakness.
+  //   d. Generic or hedged weakness text (does not qualify alone).
+
+  /** Detects vague/hedged weakness language that should not qualify
+   * a component as primary on its own. */
+  const isVagueWeakness = (w: string | undefined): boolean => {
+    if (!w) return true;
+    const t = w.trim();
+    if (t.length < 25) return true;
+    return /\b(may|might|could|can)\b|\bslightly\b|\bsomewhat\b|\ba bit\b|less precise|may soften|tends to|arguably/i.test(t);
+  };
+  const isSpecificWeakness = (w: string | undefined): boolean => !isVagueWeakness(w);
+
+  type Scored = {
+    comp: typeof dedupedComps[number];
+    score: number;
+    specificWeakness: string | undefined;
+  };
+  const scoreComponent = (c: typeof dedupedComps[number]): Scored => {
+    const weaknesses = Array.isArray(c.weaknesses) ? c.weaknesses : [];
+    const specific = weaknesses.filter(isSpecificWeakness);
+    let score = 0;
+    // (a) Explicit bottleneck match with constrained axes — strongest.
+    if (
+      bottleneck &&
+      c.name === bottleneck.component &&
+      bottleneck.constrainedAxes &&
+      bottleneck.constrainedAxes.length > 0
+    ) {
+      score += 100 + bottleneck.constrainedAxes.length * 5;
+    }
+    // Bottleneck match without axes — still a component-level signal.
+    if (bottleneck && c.name === bottleneck.component && !(bottleneck.constrainedAxes && bottleneck.constrainedAxes.length > 0)) {
+      score += 60;
+    }
+    // (b) Multiple specific weaknesses.
+    if (specific.length >= 2) score += 50 + specific.length * 5;
+    // (c) Upgrade / bottleneck verdict with a specific weakness.
+    if ((c.verdict === 'bottleneck' || c.verdict === 'upgrade') && specific.length >= 1) {
+      score += c.verdict === 'bottleneck' ? 45 : 35;
+    }
+    // Verdict alone (no specific weakness) is a weak signal.
+    if ((c.verdict === 'bottleneck' || c.verdict === 'upgrade') && specific.length === 0) {
+      score += 10;
+    }
+    // (d) Any specific weakness at all adds a modest baseline.
+    if (specific.length >= 1) score += 15;
+    return { comp: c, score, specificWeakness: specific[0] };
+  };
+
+  const scored = dedupedComps
+    .map(scoreComponent)
+    .filter(s => s.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  // A component only qualifies as primary if it carries a specific,
+  // audible weakness — or is the axis-backed bottleneck (which is
+  // already audible by construction).
+  const QUALIFY_THRESHOLD = 40;
+  const winner = scored.find(s =>
+    s.score >= QUALIFY_THRESHOLD && (
+      (bottleneck && s.comp.name === bottleneck.component && bottleneck.constrainedAxes && bottleneck.constrainedAxes.length > 0) ||
+      !!s.specificWeakness
+    ),
+  );
+
+  let primary: PrimaryConstraint = { kind: 'none' };
+  if (
+    winner &&
+    bottleneck &&
+    winner.comp.name === bottleneck.component &&
+    bottleneck.constrainedAxes &&
+    bottleneck.constrainedAxes.length > 0
+  ) {
+    primary = {
+      kind: 'bottleneck',
+      component: bottleneck.component,
+      role: bottleneck.role,
+      axes: bottleneck.constrainedAxes,
+    };
+  } else if (winner) {
+    primary = {
+      kind: 'component',
+      name: winner.comp.name,
+      role: winner.comp.role,
+      weakness:
+        winner.specificWeakness ||
+        'it is the weakest link in the chain relative to what the rest of the system is set up to do',
+    };
+  } else if (imbalances.length > 0) {
+    // No component cleared the specificity bar → fall back to imbalance.
+    primary = {
+      kind: 'imbalance',
+      property: imbalances[0].property,
+      contributors: imbalances[0].contributors,
+    };
+  }
+
+  // ── Final positive-trait guard (applied globally, after selection). ──
+  // Listener-positive traits (elasticity, flow, timing, breathing, swing)
+  // must never be reported as the system's primary limitation unless
+  // explicit negative evidence (damping / detail-forward restraint) is
+  // present in the axis profile. This guard runs AFTER bottleneck /
+  // component / imbalance selection and BEFORE rendering, and falls
+  // through to the next valid candidate if the current one fails.
+  const normalizeKey = (s: string): string =>
+    (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  const isPositiveTraitText = (s: string): boolean => {
+    const k = normalizeKey(s);
+    return /elastic|flow|timing|breath|swing/.test(k);
+  };
+  // Same explicit rule at the final guard. Axis combinations are NOT
+  // accepted here either. The only ways to set damping evidence true
+  // are: an explicit stacked-finding keyword match, or a real
+  // axis-backed component bottleneck (which is concrete, not inferred).
+  const bottleneckAlignsNegative = !!(
+    bottleneck &&
+    bottleneck.constrainedAxes &&
+    bottleneck.constrainedAxes.length > 0
+  );
+  const finalDampingEvidence = stackedConstraintHint || bottleneckAlignsNegative;
+  // Contextual rule: low stored energy / clean note endings is part of
+  // a fast, elastic profile by default. It only becomes a constraint
+  // when upstream findings explicitly describe loss of body, bloom,
+  // sustain, density, scale, fullness, or audible flattening / dryness
+  // / thinning. Without that evidence, suppress it as a candidate even
+  // though it is not in the elastic / flow / timing keyword set above.
+  const isLowStoredEnergyText = (s: string): boolean => {
+    const k = normalizeKey(s);
+    return /low_stored_energy|stored_energy|clean_note_endings|note_endings/.test(k);
+  };
+  const hasLowStoredEnergyLossEvidence = stacked.some((s) => {
+    const t = `${s.property} ${(s as { description?: string }).description ?? ''}`.toLowerCase();
+    return /body|bloom|sustain|tonal[_\s-]?density|scale|fullness|flatten|dry|dryness|thin/.test(t);
+  });
+  const isFlowProfile =
+    axes.elastic_controlled === 'elastic' ||
+    (axes.elastic_controlled === 'neutral' && axes.smooth_detailed !== 'detailed');
+  const lowStoredEnergyShouldBeSuppressed =
+    isFlowProfile && !hasLowStoredEnergyLossEvidence;
+
+  const constraintViolatesPositiveGuard = (p: PrimaryConstraint): boolean => {
+    if (finalDampingEvidence) return false; // damping signal = real constraint
+    // Generic positive-trait keywords (elastic / flow / timing / breath / swing).
+    if (p.kind === 'imbalance' && isPositiveTraitText(p.property)) return true;
+    if (p.kind === 'component' && isPositiveTraitText(p.weakness)) return true;
+    if (p.kind === 'bottleneck' && p.axes.every(isPositiveTraitText)) return true;
+    // Contextual low-stored-energy rule (only suppressed when no loss evidence).
+    if (lowStoredEnergyShouldBeSuppressed) {
+      if (p.kind === 'imbalance' && isLowStoredEnergyText(p.property)) return true;
+      if (p.kind === 'component' && isLowStoredEnergyText(p.weakness)) return true;
+      if (p.kind === 'bottleneck' && p.axes.every(isLowStoredEnergyText)) return true;
+    }
+    return false;
+  };
+  if (constraintViolatesPositiveGuard(primary)) {
+    // Discard this candidate and try the next valid imbalance, then fall
+    // through to 'none' if nothing survives the guard.
+    const remainingImbalances = imbalances.filter((im) => {
+      if (finalDampingEvidence) return true;
+      if (isPositiveTraitText(im.property)) return false;
+      if (lowStoredEnergyShouldBeSuppressed && isLowStoredEnergyText(im.property)) return false;
+      return true;
+    });
+    if (remainingImbalances.length > 0) {
+      primary = {
+        kind: 'imbalance',
+        property: remainingImbalances[0].property,
+        contributors: remainingImbalances[0].contributors,
+      };
+    } else {
+      primary = { kind: 'none' };
+    }
+  }
+
+  // ── Tier-relative bottleneck detection ──────────────────────────────
+  // Heuristic layer: when the evidence-ranked selection found no
+  // component-level bottleneck but a component is clearly below the
+  // tier of the rest of the chain, promote it to primary.
+  //
+  // Example: Bluesound Node (mid-fi) → Leben CS600 (upper-mid) →
+  // Boenicke W5 (upper-mid). The source has no explicit trait deficiency
+  // but is objectively the weakest link by capability.
+  //
+  // Guards against false positives:
+  //   - Price tier is a heuristic, not truth. It can nominate a
+  //     candidate but never decides alone.
+  //   - Source/DAC/streamer: gap ≥ 2 vs the *minimum* downstream tier
+  //     among components that have known tiers. This prevents flagging
+  //     a source that is at the same level as the amp just because the
+  //     speakers are higher (e.g. Hugo + JOB + WLM — all coherent).
+  //   - Amp/speaker: gap ≥ 3 vs overall max AND secondary confirmation
+  //     (upgrade verdict or real weakness text).
+  //   - Never overrides an already-detected component bottleneck.
+  const TIER_RANK: Record<string, number> = {
+    budget: 1, 'mid-fi': 1, mid: 2, 'upper-mid': 3, 'high-end': 4, reference: 5, statement: 6,
+  };
+  const tierOf = (c: typeof dedupedComps[number]): number =>
+    TIER_RANK[c.priceTier ?? ''] ?? 0;
+  const SOURCE_ROLES = /\b(dac|source|streamer|transport|cd|cdp|network|player|digital)\b/i;
+  const DOWNSTREAM_ROLES = /\b(amp|amplifier|integrated|speaker|headphone|monitor)\b/i;
+
+  if (primary.kind === 'none' || primary.kind === 'imbalance') {
+    const withTiers = dedupedComps.filter(c => tierOf(c) > 0);
+    if (withTiers.length >= 2) {
+      // Downstream components with known tiers — the chain that the
+      // source feeds into.
+      const downstreamWithTiers = withTiers.filter(c => DOWNSTREAM_ROLES.test(c.role));
+      const downstreamTiers = downstreamWithTiers.map(tierOf).filter(t => t > 0);
+      const maxOverallTier = Math.max(...withTiers.map(tierOf));
+
+      // For source roles, compare against the MINIMUM downstream tier.
+      // This means ALL downstream components must be clearly above the
+      // source for the tier heuristic to fire. If the source is at the
+      // same tier as the amp, they're a matched pair — the speakers
+      // being higher does not make the source a bottleneck.
+      //
+      // Example:  Chord Hugo (1) + JOB (1) + WLM (3)
+      //   min downstream = 1, gap = 0 → no trigger (coherent pair)
+      //
+      // Example:  Bluesound Node (1) + Leben CS600 (3) + Boenicke W5 (3)
+      //   min downstream = 3, gap = 2 → triggers (clear mismatch)
+      //
+      // When the source and one downstream piece are at the same tier
+      // (e.g. Node + Scott 222B + Boenicke), the tier heuristic stays
+      // silent — the trait-based pipeline catches real source limitations
+      // via tonal_density / flow / composure checks upstream.
+      const minDownstreamTier = downstreamTiers.length > 0
+        ? Math.min(...downstreamTiers)
+        : 0;
+
+      // Secondary confirmation for non-source roles: must have signals
+      // beyond price alone (upgrade verdict or real weakness text).
+      const hasSecondarySignal = (c: typeof dedupedComps[number]): boolean => {
+        if (c.verdict === 'upgrade' || c.verdict === 'bottleneck') return true;
+        const realWeaknesses = (c.weaknesses ?? []).filter(w => !isVagueWeakness(w));
+        return realWeaknesses.length > 0;
+      };
+
+      const tierBottleneck = withTiers
+        .filter(c => {
+          const isSource = SOURCE_ROLES.test(c.role);
+          if (isSource) {
+            // Source must be ≥ 2 tiers below ALL downstream.
+            if (minDownstreamTier === 0) return false;
+            return (minDownstreamTier - tierOf(c)) >= 2;
+          }
+          // Non-source: ≥ 3 below overall max AND secondary signal.
+          const gap = maxOverallTier - tierOf(c);
+          return gap >= 3 && hasSecondarySignal(c);
+        })
+        .sort((a, b) => tierOf(a) - tierOf(b))[0];
+
+      if (tierBottleneck) {
+        primary = {
+          kind: 'component',
+          name: tierBottleneck.name,
+          role: tierBottleneck.role,
+          weakness:
+            'it is the weakest link in the chain — the rest of the system can resolve more than this component hands it',
+        };
+      }
+    }
+  }
+
+  // ── Dominant insight selector ──────────────────────────────────────
+  // Every system review organises around one primary idea:
+  //   'bottleneck' — a component clearly limits the system
+  //   'identity'  — no bottleneck; the system is coherent and trade-off driven
+  const dominantInsight: 'bottleneck' | 'identity' =
+    primary.kind === 'bottleneck' || primary.kind === 'component'
+      ? 'bottleneck'
+      : 'identity';
+
+  // Render the primary constraint as expanded prose, not a bullet.
+  const constraintParts: string[] = [];
+
+  // ── TEMP DEV-ONLY DEBUG LINE ──────────────────────────────────────
+  // Surfaces the final post-guard primary constraint directly in the
+  // rendered narrative so we can verify in the UI which value the
+  // renderer is using. Gated on NODE_ENV !== 'production'.
+  if (process.env.NODE_ENV !== 'production') {
+    const dbgKind = primary.kind;
+    const dbgProperty =
+      primary.kind === 'imbalance' ? primary.property
+      : primary.kind === 'bottleneck' ? `${primary.component} / axes: ${primary.axes.join(', ')}`
+      : primary.kind === 'component' ? `${primary.name} / ${primary.weakness}`
+      : '(none)';
+    const dbgDamping =
+      (axes.elastic_controlled === 'controlled' || axes.smooth_detailed === 'detailed')
+        ? 'true' : 'false';
+    constraintParts.push(
+      `_DEBUG dominant: ${dominantInsight} · primary kind: ${dbgKind} · primary property: ${dbgProperty} · damping evidence: ${dbgDamping}_`,
+    );
+    constraintParts.push('');
+  }
+  // Short listener-facing example clauses keyed to axis/property. Exactly
+  // one appears in the primary-constraint sentence — nowhere else in the
+  // response. Each is a brief noun-phrase tied to what the listener hears.
+  const axisExample = (axis: string): string => {
+    switch (axis) {
+      case 'warm_bright': return 'less weight under male vocals';
+      case 'smooth_detailed': return 'shorter cymbal decay';
+      case 'elastic_controlled': return 'bass notes starting a fraction late';
+      case 'airy_closed': return 'less air between instruments';
+      case 'scale_intimacy': return 'a narrower stage between the speakers';
+      default: return 'thinner body on sustained notes';
+    }
+  };
+  const propertyExample = (prop: string): string => {
+    const key = prop.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    const map: Record<string, string> = {
+      low_stored_energy: 'shorter decay on snare hits',
+      transient_speed: 'harder leading edges on plucked strings',
+      tonal_density: 'less body in the lower vocal register',
+      harmonic_density: 'less bloom around piano notes',
+      dynamic_elasticity: 'a flatter rise into crescendos',
+      microdetail: 'quieter room tone behind the performers',
+    };
+    return map[key] ?? 'less body on sustained notes';
+  };
+
+  if (primary.kind === 'bottleneck') {
+    const axesText = primary.axes.slice(0, 2).map(listenerAxisLabel).join(' and ');
+    const role = primary.role.toUpperCase().length <= 4 ? primary.role.toUpperCase() : primary.role.toLowerCase();
+    const example = axisExample(primary.axes[0]);
+    constraintParts.push(
+      `The single thing holding this system back is the **${primary.component}**. You hear it as a slight flattening of ${axesText} — think ${example}. The music is correct, but a layer of texture and depth that should be there is held back; everything downstream can only resolve what the ${role} hands it.`,
+    );
+  } else if (primary.kind === 'component') {
+    const role = primary.role.toUpperCase().length <= 4 ? primary.role.toUpperCase() : primary.role.toLowerCase();
+    const isTierDetected = primary.weakness.includes('weakest link in the chain');
+    if (isTierDetected) {
+      constraintParts.push(
+        `The single thing holding this system back is the **${primary.name}**. The rest of the chain — the amp and speakers especially — can resolve more than the ${role} is handing them. You are hearing what the ${role} allows, not what the system can do.`,
+      );
+    } else {
+      constraintParts.push(
+        `The clearest limitation in the chain is the **${primary.name}**: ${primary.weakness}. The audible result is a narrower version of what the rest of the system is set up to do — not a fault, but the place where the system stops scaling.`,
+      );
+    }
+  } else if (primary.kind === 'imbalance') {
+    const contribs = primary.contributors.join(' and ');
+    const example = propertyExample(primary.property);
+    const favors =
+      axes.warm_bright === 'warm' || axes.smooth_detailed === 'smooth'
+        ? 'the system favours acoustic, vocal, and jazz over hard rock or fast electronic material'
+        : axes.elastic_controlled === 'controlled' || axes.smooth_detailed === 'detailed'
+          ? 'the system favours rhythm-led rock, jazz, and electronic over dense orchestral and large-scale vocal work'
+          : 'the system serves some material more generously than the opposite lean';
+    void contribs;
+    // ── Listener-facing lean descriptor. ─────────────────────────────
+    // Only describe the system as "controlled / tight" when the axis
+    // profile actually shows damping or restraint. When the traits
+    // combine into coherent timing without conflicting damping, invert
+    // the framing to "flowing / elastic" — the sentence must match the
+    // actual listening experience, not the raw trait direction.
+    const isDamped =
+      axes.elastic_controlled === 'controlled' ||
+      axes.smooth_detailed === 'detailed';
+    const isFlowing =
+      axes.elastic_controlled === 'elastic' ||
+      (axes.elastic_controlled === 'neutral' && axes.smooth_detailed !== 'detailed');
+    const leanDescriptor = isDamped
+      ? 'controlled rather than relaxed, precise rather than loose'
+      : isFlowing
+        ? 'flowing rather than stiff, elastic rather than clipped'
+        : 'even rather than exaggerated, coherent rather than rushed';
+    constraintParts.push(
+      `The clearest constraint is **${listenerPropertyLabel(primary.property)}** — the way phrasing breathes, how a kick lands, how a bass line leans into the next note. Here it comes across as ${leanDescriptor}: think ${example}. On familiar material, ${favors}.`,
+    );
+  }
+  // primary.kind === 'none' falls through with constraintParts empty;
+  // the section is suppressed entirely below.
+
+  // No secondary "Also worth noting" tail — the primary is the point.
+  // The constraint section renders only when dominantInsight is
+  // 'bottleneck'. When the system is coherent (identity mode), the
+  // constraint section is suppressed entirely — no filler, no hedging.
+  const constraintsSection =
+    dominantInsight === 'bottleneck' && constraintParts.length > 0
+      ? [`**Where the system is constrained**`, ``, ...constraintParts].join('\n')
+      : '';
+
+  const identitySection = [
+    `**Core identity**`,
+    ``,
+    `This is ${describeCoreIdentity(axes)}. It rewards ${rewardFromAxes(axes)} and feels slightly out of its element with ${weakFromAxes(axes)}. That is a clear personality, not a flaw — and the same character runs from source to transducer.`,
+  ].join('\n');
+
+  const keepNames = keeps.slice(0, 3).map(k => k.name);
+  const changeNothing = [
+    `**If you change nothing**`,
+    ``,
+    keeps.length > 0
+      ? `You already own a coherent chain. ${keepNames.join(', ')} are the pieces carrying the personality you sit down to hear — replace any of them and the character of the room changes. Staying put means trading the dream of "more" for an evening that already works, every night, on the music you actually play.`
+      : `Staying here means trading the urge to upgrade for a system that already does its job — the fastest route to dissatisfaction in this hobby is churning components that are already earning their place in the room.`,
+  ].join('\n');
+
+  // ── Optimize section ──
+  // Single move, aligned to the primary constraint. If the analysis
+  // identified clear "keep" components, lead with an explicit do-not-touch
+  // line — this is one of the strongest expert tells in the reference
+  // example, and it costs nothing because the data is already in `keeps`.
+  const optimizeParts: string[] = [];
+  // Exclude the primary-constraint component from the do-not-touch list —
+  // the optimize section cannot simultaneously tell the user to change X
+  // and not touch X.
+  const primaryConstraintName =
+    primary.kind === 'bottleneck' ? primary.component
+    : primary.kind === 'component' ? primary.name
+    : null;
+  const primaryKey = primaryConstraintName
+    ? primaryConstraintName.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+    : null;
+  const doNotTouch = keeps
+    .filter(k => {
+      if (!primaryKey) return true;
+      const kKey = k.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+      return kKey !== primaryKey;
+    })
+    .slice(0, 3)
+    .map(k => k.name);
+  if (doNotTouch.length > 0) {
+    optimizeParts.push(`**Do not touch:** ${doNotTouch.join(', ')}.`);
+    optimizeParts.push('');
+  }
+
+  // Find a real swap step from the sequence — generic-sentence rows are
+  // filtered out as before. Also filter out any step that targets a
+  // do-not-touch component (keeps), so the optimize line cannot contradict
+  // the do-not-touch line above it.
+  const doNotTouchKeys = new Set(
+    doNotTouch.map(n => n.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()),
+  );
+  const realSteps = sequence.filter((s) => {
+    const role = (s.targetRole ?? '').trim();
+    if (!role) return false;
+    if (/[.!?]/.test(role)) return false;
+    if (role.split(/\s+/).length > 4) return false;
+    const actionKey = (s.action ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    for (const k of doNotTouchKeys) {
+      if (k && actionKey.includes(k)) return false;
+    }
+    return true;
+  });
+
+  // Advisor-tone wording, branched on dominantInsight.
+  // Bottleneck mode: lead with a clear "Change the X" directive.
+  // Identity mode: frame all changes as lateral, not upgrades.
+  let chosenStepText: string;
+  if (dominantInsight === 'bottleneck') {
+    // We have a real bottleneck or component-level limitation.
+    const targetRole = (primary as { role: string }).role;
+    const role = targetRole.toUpperCase().length <= 4 ? targetRole.toUpperCase() : targetRole.toLowerCase();
+    const matchedStep = realSteps.find((s) => {
+      const r = s.targetRole.toLowerCase();
+      return r.includes(targetRole.toLowerCase()) || targetRole.toLowerCase().includes(r);
+    });
+    const lead = matchedStep ? `**${matchedStep.action}.**` : `**Change the ${role}.**`;
+    // Build a listener-terms result phrase from the bottleneck axes when available.
+    let resultPhrase = 'Expect more depth, more texture, more space.';
+    if (primary.kind === 'bottleneck' && primary.axes.length > 0) {
+      const axesText = primary.axes.slice(0, 2).map(listenerAxisLabel).join(' and ');
+      if (axesText) resultPhrase = `Expect more ${axesText}.`;
+    }
+    chosenStepText = `${lead} ${resultPhrase}`;
+  } else {
+    // Identity mode — no single component to blame.
+    chosenStepText =
+      `There are no clear bottlenecks here.\n\nAny change will shift the sound rather than fix it. Swapping a component is a lateral move — a different flavour, not a fix.\n\nStart with setup before swapping components.`;
+  }
+
+  optimizeParts.push(chosenStepText);
+  const optimizeSection = [`**If you optimize**`, ``, ...optimizeParts].join('\n');
+
+  // Filter out the empty constraint section so it leaves no trailing
+  // blank line in the rendered narrative when suppressed.
+  return [
+    overview,
+    strengthsSection,
+    constraintsSection,
+    identitySection,
+    changeNothing,
+    optimizeSection,
+  ]
+    .filter((s) => typeof s === 'string' && s.trim().length > 0)
+    .join('\n\n');
+}
+
+function describeCoreIdentity(axes: PrimaryAxisLeanings): string {
+  if (axes.warm_bright === 'warm' && axes.smooth_detailed === 'smooth') return 'a tone-first, long-session architecture';
+  if (axes.warm_bright === 'warm' && axes.elastic_controlled === 'elastic') return 'a tone-and-flow architecture that privileges musical continuity over forensic precision';
+  if (axes.smooth_detailed === 'detailed' && axes.elastic_controlled === 'controlled') return 'a resolution-first architecture that privileges precision and control';
+  if (axes.warm_bright === 'bright' && axes.smooth_detailed === 'detailed') return 'a transparency-first architecture';
+  if (axes.elastic_controlled === 'elastic') return 'a flow-first architecture';
+  if (axes.elastic_controlled === 'controlled') return 'a control-first architecture';
+  return 'a neutral, balanced architecture with no dominant bias';
+}
+function rewardFromAxes(axes: PrimaryAxisLeanings): string {
+  if (axes.warm_bright === 'warm' || axes.smooth_detailed === 'smooth') return 'long, dense listening sessions';
+  if (axes.elastic_controlled === 'controlled' || axes.smooth_detailed === 'detailed') return 'rhythmically driven, well-engineered recordings';
+  return 'a wide range of material without a strong directional preference';
+}
+function weakFromAxes(axes: PrimaryAxisLeanings): string {
+  if (axes.warm_bright === 'warm' || axes.smooth_detailed === 'smooth') return 'music that lives on edge and snap';
+  if (axes.elastic_controlled === 'controlled' || axes.smooth_detailed === 'detailed') return 'music that lives on body and bloom';
+  return 'no specific category';
+}
+// Concrete, listener-facing label for an axis. Used in constraint and
+// optimize bullets where the user wants to know what they will *hear*,
+// not what dimension changed.
+function listenerAxisLabel(a: string): string {
+  switch (a) {
+    case 'warm_bright': return 'tonal weight and body';
+    case 'smooth_detailed': return 'inner detail and texture';
+    case 'elastic_controlled': return 'rhythmic flow and grip';
+    case 'airy_closed': return 'air and depth around instruments';
+    case 'scale_intimacy': return 'soundstage size';
+    default: return a.replace(/_/g, ' ');
+  }
+}
+function humanizeAxis(a: string): string {
+  return a
+    .replace('warm_bright', 'tone')
+    .replace('smooth_detailed', 'resolution')
+    .replace('elastic_controlled', 'timing')
+    .replace('airy_closed', 'stage')
+    .replace('scale_intimacy', 'soundstage size')
+    .replace(/_/g, ' ');
+}
+// Listener-facing label for stacked-trait property names. The raw property
+// keys are short engineering tokens (e.g. "low_stored_energy"); these
+// translations describe the audible result, not the mechanism.
+function listenerPropertyLabel(p: string): string {
+  const key = p.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  const map: Record<string, string> = {
+    low_stored_energy: 'clean note endings',
+    transient_speed: 'attack and snap',
+    tonal_density: 'body and weight',
+    harmonic_density: 'tonal richness',
+    dynamic_elasticity: 'elasticity',
+    microdetail: 'inner detail',
+    musical_flow: 'musical flow',
+    stability: 'rhythmic grip',
+    spatial_scale: 'soundstage size',
+  };
+  return map[key] ?? p.replace(/_/g, ' ');
+}
+function humanizeProperty(p: string): string {
+  return listenerPropertyLabel(p);
 }
 
 /**
@@ -5858,7 +7000,17 @@ function tryCanonicalOrder(segments: string[]): string[] | undefined {
  * fullChain is left undefined — the renderer falls back to the major signal path.
  */
 function buildSystemChain(components: SystemComponent[], rawMessage: string): MemoSystemChain {
-  const sorted = [...components].sort((a, b) => roleSort(a.role) - roleSort(b.role));
+  // Dedupe components on a normalized display-name key so the same physical
+  // component (free-text + catalog match, or repeated entry) appears once
+  // in the rendered chain. Same key shape used by composeAssessmentNarrative.
+  const seenCompKeys = new Set<string>();
+  const dedupedComponents = components.filter((c) => {
+    const key = (c.displayName || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    if (!key || seenCompKeys.has(key)) return false;
+    seenCompKeys.add(key);
+    return true;
+  });
+  const sorted = [...dedupedComponents].sort((a, b) => roleSort(a.role) - roleSort(b.role));
   const extracted = extractFullChain(rawMessage);
 
   let fullChain: string[] | undefined;
@@ -6975,12 +8127,15 @@ function extractMemoFindings(
     return {
       name: c.displayName,
       role: c.role,
+      roles: c.roles,
       catalogSource: profile.source as CatalogSource,
       axisPosition: profile.axes,
       strengths: assessment?.strengths ?? [],
       weaknesses: assessment?.weaknesses ?? [],
       verdict,
       architecture: c.product?.architecture,
+      priceTier: c.product?.priceTier,
+      price: c.product?.price,
       links: perComponentLinks?.get(c.displayName),
     };
   });
@@ -7104,6 +8259,30 @@ function extractMemoFindings(
     url: r.url,
   }));
 
+  // ── Multi-role redundancy detection ──
+  const roleCounts = new Map<string, string[]>();
+  for (const cv of componentVerdicts) {
+    for (const r of cv.roles) {
+      const norm = r.toLowerCase();
+      if (!roleCounts.has(norm)) roleCounts.set(norm, []);
+      roleCounts.get(norm)!.push(cv.name);
+    }
+  }
+  const hasMultipleDACs = (roleCounts.get('dac')?.length ?? 0) >= 2;
+  const hasMultipleAmps = (
+    (roleCounts.get('amplifier')?.length ?? 0) >= 2
+    || (roleCounts.get('headphone_amp')?.length ?? 0) >= 2
+  );
+  const roleOverlaps: { role: string; components: string[] }[] = [];
+  for (const [role, names] of roleCounts) {
+    if (names.length >= 2) {
+      roleOverlaps.push({ role, components: names });
+    }
+  }
+
+  // ── Active DAC inference ──
+  const activeDACInference = inferActiveDAC(components);
+
   return {
     componentNames: components.map((c) => c.displayName),
     systemChain: {
@@ -7126,6 +8305,10 @@ function extractMemoFindings(
     isDeliberate: deliberateness.isDeliberate,
     deliberatenessSignals,
     listenerPriorities,
+    hasMultipleDACs,
+    hasMultipleAmps,
+    roleOverlaps,
+    activeDACInference,
     sourceReferences,
   };
 }
@@ -7732,9 +8915,11 @@ export function buildCableAdvisory(
           || p.brand.toLowerCase() === match.name.toLowerCase(),
       );
       if (bp || product) {
+        const cableRole = product?.category ?? 'component';
         cableComponents.push({
           displayName: match.name,
-          role: product?.category ?? 'component',
+          role: cableRole,
+          roles: resolveComponentRoles(cableRole, product ?? undefined, match.name),
           character: product?.description ?? bp?.tendencies ?? '',
           brandProfile: bp ? { philosophy: bp.philosophy, tendencies: bp.tendencies, systemContext: bp.systemContext } : undefined,
           product: product ?? undefined,

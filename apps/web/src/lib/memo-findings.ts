@@ -103,8 +103,14 @@ export type CatalogSource = 'product' | 'brand' | 'inferred';
 export interface ComponentFindings {
   /** Display name (e.g. "Chord Qutest", "Pass Labs INT-25"). */
   name: string;
-  /** Role in the signal chain. */
+  /** Primary role in the signal chain (backward compat). */
   role: string;
+  /**
+   * All functional roles this component fulfills.
+   * E.g., a Bluesound Node → ['streamer', 'dac'].
+   * Always contains at least the primary role.
+   */
+  roles: string[];
   /** How the component was characterised. */
   catalogSource: CatalogSource;
   /** This component's axis position. */
@@ -117,6 +123,10 @@ export interface ComponentFindings {
   verdict: ComponentVerdict;
   /** Architecture topology if known (e.g. "FPGA pulse array", "R2R"). */
   architecture?: string;
+  /** Price tier from catalog (e.g. "budget", "mid", "upper-mid", "high-end"). */
+  priceTier?: string;
+  /** Approximate price if known. */
+  price?: number;
   /** Product/brand links associated with this component. */
   links?: Array<{ label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }>;
 }
@@ -217,6 +227,33 @@ export interface SourceReferenceFinding {
   url?: string;
 }
 
+// ── Active DAC inference ──────────────────────────────
+
+/**
+ * Result of active DAC inference.
+ *
+ * This is a topology-based best guess, not a confirmed signal path.
+ * When multiple DAC-capable components exist, this identifies which one
+ * is most likely defining the system's digital-to-analogue conversion.
+ */
+export interface ActiveDACInference {
+  /** Display name of the inferred active DAC, or null if ambiguous. */
+  activeDACName: string | null;
+  /** How the active DAC is hosted: standalone unit, built into amp, or built into source. */
+  activeDACType: 'standalone' | 'integrated' | 'source' | null;
+  /** True when 2+ components have DAC capability. */
+  multipleDACs: boolean;
+  /** True when inference cannot resolve a clear winner. */
+  needsDACClarification: boolean;
+  /**
+   * How much we trust this inference.
+   * - high: exactly one DAC-capable component — no ambiguity
+   * - medium: multiple DACs but priority cleanly selects one
+   * - low: same-priority tie, malformed data, or classification ambiguity
+   */
+  confidence: 'high' | 'medium' | 'low';
+}
+
 // ── The contract ───────────────────────────────────────
 
 /**
@@ -278,6 +315,21 @@ export interface MemoFindings {
   deliberatenessSignals: DeliberatenessSignal[];
   /** Inferred listener priorities (controlled tags). */
   listenerPriorities: ListenerPriority[];
+
+  // ── Multi-role awareness ──
+  /** True when 2+ components both fulfil the DAC role. */
+  hasMultipleDACs: boolean;
+  /** True when 2+ components both fulfil an amplifier role. */
+  hasMultipleAmps: boolean;
+  /**
+   * Components whose roles overlap with another component in the chain.
+   * E.g., a streamer/DAC combo paired with a standalone DAC.
+   */
+  roleOverlaps: { role: string; components: string[] }[];
+
+  // ── Active DAC inference ──
+  /** Which DAC is most likely defining the system's sound. */
+  activeDACInference: ActiveDACInference;
 
   // ── Sources ──
   /** References from catalogued products. */

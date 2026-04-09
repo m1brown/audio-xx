@@ -58,10 +58,10 @@ function makeMockFindings(overrides?: Partial<MemoFindings>): MemoFindings {
       severity: 5,
     },
     componentVerdicts: [
-      { name: 'Eversolo DMP-A6', role: 'Streamer', catalogSource: 'product', axisPosition: neutralAxes, strengths: ['affordable', 'feature-rich'], weaknesses: ['limited resolving power'], verdict: 'bottleneck' },
-      { name: 'Chord Hugo', role: 'DAC', catalogSource: 'product', axisPosition: neutralAxes, strengths: ['timing precision', 'detail'], weaknesses: [], verdict: 'keep' },
-      { name: 'JOB Integrated', role: 'Amplifier', catalogSource: 'brand', axisPosition: neutralAxes, strengths: ['transparency'], weaknesses: [], verdict: 'keep' },
-      { name: 'WLM Diva Monitor', role: 'Speakers', catalogSource: 'product', axisPosition: neutralAxes, strengths: ['efficiency', 'dynamics'], weaknesses: [], verdict: 'keep' },
+      { name: 'Eversolo DMP-A6', role: 'Streamer', roles: ['streamer', 'dac'], catalogSource: 'product', axisPosition: neutralAxes, strengths: ['affordable', 'feature-rich'], weaknesses: ['limited resolving power'], verdict: 'bottleneck' },
+      { name: 'Chord Hugo', role: 'DAC', roles: ['dac'], catalogSource: 'product', axisPosition: neutralAxes, strengths: ['timing precision', 'detail'], weaknesses: [], verdict: 'keep' },
+      { name: 'JOB Integrated', role: 'Amplifier', roles: ['amplifier', 'preamp'], catalogSource: 'brand', axisPosition: neutralAxes, strengths: ['transparency'], weaknesses: [], verdict: 'keep' },
+      { name: 'WLM Diva Monitor', role: 'Speakers', roles: ['speaker'], catalogSource: 'product', axisPosition: neutralAxes, strengths: ['efficiency', 'dynamics'], weaknesses: [], verdict: 'keep' },
     ],
     upgradePaths: [
       {
@@ -87,6 +87,16 @@ function makeMockFindings(overrides?: Partial<MemoFindings>): MemoFindings {
     listenerPriorities: ['timing_accuracy', 'transparency'],
     isDeliberate: true,
     deliberatenessSignals: ['multi_brand_coherence'],
+    hasMultipleDACs: true,
+    hasMultipleAmps: false,
+    roleOverlaps: [{ role: 'dac', components: ['Eversolo DMP-A6', 'Chord Hugo'] }],
+    activeDACInference: {
+      activeDACName: 'Chord Hugo',
+      activeDACType: 'standalone',
+      multipleDACs: true,
+      needsDACClarification: false,
+      confidence: 'medium',
+    },
     ...overrides,
   };
 }

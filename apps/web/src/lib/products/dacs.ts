@@ -140,6 +140,14 @@ export interface Product {
   philosophy?: 'energy' | 'neutral' | 'warm' | 'analytical';
   /** Market type — traditional (major/established), nonTraditional (boutique/niche), or value (performance-per-dollar). */
   marketType?: 'traditional' | 'nonTraditional' | 'value';
+
+  // ── Multi-role support ──────────────────────────────────
+  /**
+   * All functional roles this component fulfills in a system.
+   * E.g., a Bluesound Node is both a streamer and a DAC.
+   * When omitted, roles are inferred from category + subcategory.
+   */
+  roles?: string[];
 }
 
 export const DAC_PRODUCTS: Product[] = [
