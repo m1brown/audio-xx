@@ -76,9 +76,12 @@ describe('Symptom-only diagnosis output verification', () => {
         expect(advisory.tendencies).toBeTruthy();
         expect(advisory.tendencies!.length).toBeGreaterThan(20);
 
-        // Must have suggestions (directions)
-        expect(advisory.whyThisFits).toBeTruthy();
-        expect(advisory.whyThisFits!.length).toBeGreaterThanOrEqual(1);
+        // Must have actionable content. Cleanup pass: when symptom maps
+        // to the suggestions fallback, whyThisFits is suppressed to avoid
+        // rendering the same text twice (also appears in diagnosisActions).
+        const whyHasContent = !!advisory.whyThisFits && advisory.whyThisFits.length >= 1;
+        const actionsHaveContent = !!advisory.diagnosisActions && advisory.diagnosisActions.length >= 1;
+        expect(whyHasContent || actionsHaveContent).toBe(true);
 
         // Must have a follow-up question (targeted, not generic)
         expect(advisory.followUp).toBeTruthy();

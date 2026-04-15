@@ -27,11 +27,16 @@ export default function AdvisoryUpgradePaths({ paths }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {paths.map((path) => (
         <div key={path.rank}>
-          {/* Path header — rank + label + impact tag */}
-          <div style={{ marginBottom: '0.45rem', display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+          {/* Path header — rank + strategy label + impact tag */}
+          <div style={{ marginBottom: '0.45rem', display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap' }}>
             <span style={{ fontWeight: 600, fontSize: '0.98rem', color: '#333' }}>
-              Path {path.rank}: {path.label}
+              Path {path.rank}: {path.strategyLabel ?? path.label}
             </span>
+            {path.strategyLabel && path.strategyLabel !== path.label && (
+              <span style={{ fontSize: '0.82rem', color: '#999', fontWeight: 400 }}>
+                {path.label}
+              </span>
+            )}
             {path.impact && (
               <span
                 style={{
@@ -54,6 +59,18 @@ export default function AdvisoryUpgradePaths({ paths }: Props) {
           <p style={{ margin: '0 0 0.7rem 0', fontSize: '0.95rem', lineHeight: 1.65, color: '#444' }}>
             {renderText(path.rationale)}
           </p>
+
+          {/* Explanation layer (Feature 9) — "Why this works" */}
+          {path.explanation && path.explanation.length > 0 && (
+            <div style={{ margin: '0 0 0.7rem 0', fontSize: '0.88rem', color: '#6a6a5a', lineHeight: 1.55 }}>
+              <span style={{ fontWeight: 500, fontSize: '0.82rem', letterSpacing: '0.02em', color: '#888' }}>Why this works:</span>
+              <ul style={{ margin: '0.2rem 0 0 1.1rem', padding: 0, listStyle: 'disc' }}>
+                {path.explanation.slice(0, 2).map((line, i) => (
+                  <li key={i} style={{ marginBottom: '0.1rem' }}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Product options */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', paddingLeft: '0.25rem' }}>

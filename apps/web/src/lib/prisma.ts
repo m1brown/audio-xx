@@ -15,21 +15,32 @@
 import type { PrismaClient } from '@prisma/client';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const globalForPrisma = globalThis as unknown as { __prisma?: PrismaClient; __prismaFailed?: boolean };
+const globalForPrisma = globalThis as unknown as { __prisma?: PrismaClient };
 
 function buildPrismaClient(): PrismaClient | null {
   // Already initialised in this process (dev hot-reload safety)
   if (globalForPrisma.__prisma) return globalForPrisma.__prisma;
 
-  // Already tried and failed — don't retry every request
-  if (globalForPrisma.__prismaFailed) return null;
+  const isDev = process.env.NODE_ENV !== 'production';
+  // In development, always use local SQLite unless explicitly opted out.
+  // This avoids depending on a remote Turso connection during local dev.
+  const forceLocal = process.env.USE_LOCAL_DB === '1' || (isDev && process.env.USE_LOCAL_DB !== '0');
 
   try {
+    if (forceLocal) {
+      // Local SQLite — highest priority in dev
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { PrismaClient: PC } = require('@prisma/client');
+      const client = new PC();
+      globalForPrisma.__prisma = client;
+      console.log('[prisma] Connected to local SQLite');
+      return client;
+    }
+
     const tursoUrl = process.env.TURSO_DATABASE_URL;
     const tursoToken = process.env.TURSO_AUTH_TOKEN;
 
     if (tursoUrl && tursoToken) {
-      // Dynamic require so the adapter is only loaded when credentials exist
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { PrismaLibSQL } = require('@prisma/adapter-libsql');
       // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -37,26 +48,15 @@ function buildPrismaClient(): PrismaClient | null {
       const adapter = new PrismaLibSQL({ url: tursoUrl, authToken: tursoToken });
       const client = new PC({ adapter });
       globalForPrisma.__prisma = client;
+      console.log('[prisma] Connected to Turso');
       return client;
     }
 
-    // In production without Turso creds there is no usable database.
-    // Return null instead of creating a SQLite client that will fail.
-    if (process.env.NODE_ENV === 'production') {
-      console.warn('[prisma] No Turso credentials — database unavailable');
-      globalForPrisma.__prismaFailed = true;
-      return null;
-    }
-
-    // Development — local SQLite file
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { PrismaClient: PC } = require('@prisma/client');
-    const client = new PC();
-    globalForPrisma.__prisma = client;
-    return client;
+    // Production without Turso creds — no usable database.
+    console.warn('[prisma] No database credentials available');
+    return null;
   } catch (err) {
     console.error('[prisma] Initialisation failed:', err);
-    globalForPrisma.__prismaFailed = true;
     return null;
   }
 }

@@ -142,6 +142,15 @@ const PRODUCT_NAME_ALIASES: Record<string, string> = {
   'bifrost 2/64': 'schiit bifrost 2/64',
   'gungnir': 'schiit gungnir multibit',
   'yggdrasil': 'schiit yggdrasil',
+  // Kinki Studio shorthands — user-facing names differ from catalog.
+  // Catalog uses brand="Kinki Studio" and names "EX-M1+" / "EX-M1" / "Dazzle".
+  // Without these aliases, "kinki integrated" never resolves because the
+  // fuzzy match in findCatalogProduct needs a brand or name substring.
+  // EX-M1+ is the most representative / reference integrated in the lineup.
+  'kinki integrated': 'kinki studio ex-m1+',
+  'kinki amp': 'kinki studio ex-m1+',
+  'kinki studio integrated': 'kinki studio ex-m1+',
+  'kinki studio amp': 'kinki studio ex-m1+',
 };
 
 /**
@@ -162,6 +171,100 @@ export function resolveProductAlias(normalized: string): string {
 }
 
 // ── Product lookup ───────────────────────────────────
+
+/**
+ * Category-keyword patterns used only by the last-resort brand+category
+ * fallback in findCatalogProduct. Each entry maps a user-facing noun to
+ * the catalog `Product['category']` values it should search within.
+ *
+ * Order matters: more specific patterns (integrated, power amp) come
+ * before the generic 'amp' bucket so they claim first.
+ */
+const FALLBACK_CATEGORY_KEYWORDS: Array<[RegExp, Array<Product['category']>]> = [
+  [/\bintegrated\b/i, ['integrated', 'amplifier']],
+  [/\bpower\s*amp(?:lifier)?\b/i, ['amplifier']],
+  [/\bpre-?amp(?:lifier)?\b/i, ['amplifier']],
+  [/\b(?:amp|amplifier|amps|amplifiers)\b/i, ['amplifier', 'integrated']],
+  [/\bdacs?\b/i, ['dac']],
+  [/\b(?:speakers?|monitors?|bookshelf|floorstanding|floor-standing)\b/i, ['speaker']],
+  [/\b(?:headphones?|cans)\b/i, ['headphone']],
+  [/\biems?\b/i, ['iem']],
+  [/\b(?:streamers?|transports?|network\s+player)\b/i, ['streamer']],
+  [/\b(?:turntables?|record\s+player)\b/i, ['turntable']],
+];
+
+/** Escape a literal string for safe inclusion in a RegExp. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Last-resort resolver for "<brand> <category>" shorthands that slip past
+ * the alias map and the main fuzzy score loop. Only fires when the main
+ * loop returned no match (score < 50).
+ *
+ * Strategy:
+ *   1. Detect a brand anchor in `normalized` — try longest catalog brand
+ *      first so "kinki studio" wins over "kinki". Fall back to the brand's
+ *      first word (e.g. "kinki" for "Kinki Studio") when the full brand
+ *      isn't present.
+ *   2. Detect a category anchor from FALLBACK_CATEGORY_KEYWORDS.
+ *   3. Deterministically pick the highest-price product in that
+ *      (brand, category) bucket as the flagship proxy.
+ *
+ * Deterministic, no randomness. Bypassed entirely when any earlier path
+ * already succeeded — so existing alias / exact / fuzzy behavior is
+ * preserved unchanged.
+ */
+function resolveByBrandAndCategory(normalized: string): Product | null {
+  // Collect unique catalog brands, longest-first for specificity.
+  const brandSet = new Set<string>();
+  for (const p of ALL_CATALOG) brandSet.add(p.brand.toLowerCase());
+  const brandsSorted = [...brandSet].sort((a, b) => b.length - a.length);
+
+  // Step 1a: full-brand substring match (word-bounded).
+  let matchedBrand: string | null = null;
+  for (const b of brandsSorted) {
+    const re = new RegExp(`\\b${escapeRegExp(b)}\\b`, 'i');
+    if (re.test(normalized)) {
+      matchedBrand = b;
+      break;
+    }
+  }
+  // Step 1b: first-word fallback for multi-word brands ("kinki" → "kinki studio").
+  // Only accept first words of length ≥ 4 to avoid noisy matches like "arc" or "sony".
+  if (!matchedBrand) {
+    for (const b of brandsSorted) {
+      const firstWord = b.split(' ')[0];
+      if (firstWord.length < 4) continue;
+      const re = new RegExp(`\\b${escapeRegExp(firstWord)}\\b`, 'i');
+      if (re.test(normalized)) {
+        matchedBrand = b;
+        break;
+      }
+    }
+  }
+  if (!matchedBrand) return null;
+
+  // Step 2: detect category keyword.
+  let categories: Array<Product['category']> | null = null;
+  for (const [re, cats] of FALLBACK_CATEGORY_KEYWORDS) {
+    if (re.test(normalized)) {
+      categories = cats;
+      break;
+    }
+  }
+  if (!categories) return null;
+
+  // Step 3: filter and choose flagship (highest price, deterministic).
+  const candidates = ALL_CATALOG.filter(
+    (p) => p.brand.toLowerCase() === matchedBrand && categories!.includes(p.category),
+  );
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => b.price - a.price);
+  return candidates[0];
+}
 
 /**
  * Find a product in the catalog by name (case-insensitive, fuzzy).
@@ -196,7 +299,12 @@ export function findCatalogProduct(name: string): Product | null {
     }
   }
 
-  return bestScore >= 50 ? bestMatch : null;
+  if (bestScore >= 50) return bestMatch;
+
+  // Last-resort brand+category fallback. Only consulted when no scored
+  // path hit. Handles shorthand like "kinki integrated" / "denafrips dac"
+  // where the user names a brand + category but no specific model.
+  return resolveByBrandAndCategory(normalized);
 }
 
 /**

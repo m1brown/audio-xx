@@ -199,16 +199,64 @@ export function evaluate(ctx: EvaluationContext): EvaluationResult {
     }
   }
 
-  // If nothing matched, run fallback
+  // If nothing matched, decide whether to fire the dismissive fallback.
+  //
+  // Phase K — fallback overuse fix:
+  //   The friendly-advisor-fallback says "does not strongly activate a
+  //   specific symptom pattern". Surfacing that copy whenever no rule
+  //   matches is too aggressive — users frequently describe a recognisable
+  //   signal (e.g. "noisy", "no bass", "sounds tiny") that we DID detect
+  //   in symptoms[] / archetypes[] but for which no curated rule exists.
+  //
+  //   New behaviour:
+  //     - If we recognised at least one signal (symptom OR archetype OR
+  //       any trait), emit a soft "partial-recognition" acknowledgement
+  //       that names what we saw, without claiming the user was unclear.
+  //     - Only fire the dismissive fallback when the input produced
+  //       genuinely zero recognised content.
+  //
+  //   This naturally caps the dismissive copy to inputs where it is true,
+  //   instead of using it as a generic "no rule matched" placeholder.
   if (firedRules.length === 0) {
-    const fallback = allRules.find((r: Rule) => r.id === 'friendly-advisor-fallback');
-    if (fallback) {
+    const hasAnyRecognisedSignal =
+      ctx.symptoms.length > 0
+      || ctx.archetypes.length > 0
+      || Object.keys(ctx.traits).length > 0;
+
+    if (hasAnyRecognisedSignal) {
+      const recognisedLabel =
+        ctx.symptoms[0]
+        ?? ctx.archetypes[0]
+        ?? Object.keys(ctx.traits)[0]
+        ?? 'something in your description';
+      const readable = recognisedLabel.replace(/_/g, ' ');
       firedRules.push({
-        id: fallback.id,
-        label: fallback.label,
-        priority: fallback.priority,
-        outputs: fallback.outputs,
+        id: 'partial-recognition',
+        label: 'Partial recognition — recognised signal, no curated rule',
+        priority: 950,
+        outputs: {
+          explanation: `I recognised "${readable}" in what you described, but I do not yet have a confident pattern that ties it to a specific architectural cause. A short follow-up will let me give you something useful instead of guessing.`,
+          suggestions: [
+            'Mention which component(s) the issue seems to track with (source, amp, speakers, room).',
+            'Note whether the experience is constant or only on certain music or volumes.',
+          ],
+          risks: [
+            'Acting on a single symptom word without context often leads to component swaps that miss the real cause.',
+          ],
+          next_step: 'Tell me one more thing about when this happens or what changed recently, and I can give a more pointed read.',
+          verdict: 'wait_recommended',
+        },
       });
+    } else {
+      const fallback = allRules.find((r: Rule) => r.id === 'friendly-advisor-fallback');
+      if (fallback) {
+        firedRules.push({
+          id: fallback.id,
+          label: fallback.label,
+          priority: fallback.priority,
+          outputs: fallback.outputs,
+        });
+      }
     }
   }
 

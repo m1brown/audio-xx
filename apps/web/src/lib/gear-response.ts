@@ -924,7 +924,7 @@ function buildSystemComparisonNote(
   }
 
   // Neither is in system — still note the system context
-  return `Your current system (${componentNames}) provides context for this comparison. How either product interacts with the rest of the chain would likely matter more than how they compare in isolation.`;
+  return `Your current system (${componentNames}) sets the frame for this comparison. How either product interacts with the rest of the chain matters more than how they compare in isolation.`;
 }
 
 // ── Third-product scrubbing ──────────────────────────
@@ -1278,12 +1278,12 @@ function buildUpgradeDirection(
     if (ratio > 3) {
       parts.push(`At ${ratio.toFixed(1)}x the price, this is a refinement within the same architecture — real gains, but incremental rather than transformational.`);
     } else if (ratio > 1.8) {
-      parts.push(`The price step is meaningful. Whether the gains justify it depends on how close the ${from.name} is to its ceiling in your system.`);
+      parts.push(`The price step is meaningful. Justified only if the ${from.name} is near its ceiling in your current chain — otherwise this reads as a lateral move.`);
     }
   }
 
   if (parts.length === 0) {
-    return `The ${to.name} would likely deliver more of what the ${from.name} already does well, with greater authority and composure. Whether your system reveals that difference depends on the resolving power downstream.`;
+    return `The ${to.name} refines what the ${from.name} already does well, with greater authority and composure. The test worth running: whether the rest of your chain resolves the step.`;
   }
 
   return parts.join(' ');

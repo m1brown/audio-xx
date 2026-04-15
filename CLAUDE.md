@@ -46,6 +46,54 @@ Always preserve:
 7. Stop and re-plan if scope expands
 - If more than one logical area needs changes, stop and re-evaluate before continuing
 
+8. Engine vs Domain Boundary (Mandatory Check)
+
+Core engine logic must be domain-agnostic.
+Audio-specific logic must be isolated in adapter/mapping layers.
+
+Prohibited in core reasoning modules (tradeoff-assessment, preference-protection, and future engine modules):
+- Audio vocabulary (warm, bright, DAC, amplifier, speaker, tonal, harmonic, sonic, etc.)
+- Audio-specific type references (PrimaryAxisLeanings, ListenerPriority, ProductEntry, etc.)
+- Assumptions about signal chains, listening, or sound reproduction
+
+Domain-specific vocabulary belongs in:
+- Product catalogs and brand data
+- Keyword mapping tables consumed as configuration (PRIORITY_KEYWORDS, AXIS_PRIORITY_ALIGNMENT, DESIRE_TO_PRIORITY)
+- Adapter functions that translate between domain types and engine types
+- consultation.ts wiring code
+
+Test: "Could this logic run unchanged in Climate Screen?"
+If no → it belongs in the adapter layer, not the engine.
+
+-------------------------------------
+
+## Feature Template
+
+Use this template when planning any new feature:
+
+```
+Feature X — [Name]
+
+Type: Engine / Adapter / Hybrid
+
+Boundary decision:
+- What part is reusable across domains?
+- What part is audio-specific?
+- Where does domain vocabulary enter and exit?
+```
+
+-------------------------------------
+
+## Implementation Checkpoint
+
+Before writing code, always answer:
+
+1. Is this engine logic or domain-specific?
+2. Where should it live? (engine module / adapter / consultation wiring)
+3. Does it violate portability? Apply the Climate Screen test.
+
+If any answer is unclear, stop and resolve before proceeding.
+
 -------------------------------------
 
 This application is not a product database.
@@ -329,4 +377,80 @@ A knowledgeable friend helping orient someone in a confusing hobby.
 Do not escalate recommendations beyond the user’s stated budget or system tier without explicit signal.
 
 If a user appears to optimize for a variable misaligned with their stated priorities, reframe gently rather than contradict directly.
+
+-------------------------------------
+
+## Audio XX Playbook — Advisor Quality Standards
+
+These principles define the quality bar for the Audio XX reasoning engine. They apply to implementation decisions, reviews, and advisory output. When there is tension between local implementation convenience and these standards, these standards win.
+
+### 1. Design → Behavior → Experience
+All reasoning should follow this chain:
+- design choices → behavioral tendencies → perceived experience
+No direct shortcuts from design to conclusion unless explicitly justified by curated product knowledge.
+
+### 2. Trade-off discipline
+Every recommendation should explicitly identify:
+- what it is likely to improve
+- what it may compromise
+Recommendations should never be presented as pure upside.
+
+### 3. Preference protection
+The system should identify what the current system does well and avoid degrading those strengths without explicit justification.
+
+### 4. Constraint hierarchy
+Hard constraints and incompatibilities take priority over softer tonal or preference refinements.
+
+### 5. Confidence calibration
+Language strength must match source quality and inference confidence. Low-confidence inference must not be presented as fact.
+
+### 6. Partial knowledge handling
+When information is missing, do not invent. Degrade confidence and surface uncertainty where relevant.
+
+### 7. System identity
+A system has a character. Recommendations should improve the system without flattening or erasing its core identity unless that identity is itself the problem.
+
+### 8. Counterfactual thinking
+Before recommending a change, the system should consider:
+- what happens if nothing changes
+- whether an alternative path may better preserve strengths
+
+### 9. Reversibility
+Prefer recommendations that are easier to reverse unless a strong constraint justifies a more structural change.
+
+### 10. Restraint
+"No change" is a valid outcome. The system should not recommend change unless the likely benefit is meaningful and justified.
+
+### Implementation guidance
+- Do not overfit logic just to satisfy tests if it violates these principles.
+- Do not increase confidence unless justified by source quality.
+- Do not ignore existing structured product knowledge when it is available.
+- Prefer explicit reasoning over unexplained output.
+
+### Output standard
+Outputs should feel like those of a knowledgeable human advisor:
+- system-aware
+- trade-off-aware
+- preference-aligned
+- confidence-calibrated
+- clear about uncertainty
+
+-------------------------------------
+
+## Portability Requirement
+
+Audio XX is the first domain implementation of a portable decision-quality reasoning engine.
+Core features should be designed as domain-agnostic by default.
+Domain-specific language belongs in a mapping/adapter layer, not in core logic.
+
+Core engine primitives (portable):
+inference (design → behavior → outcome), trade-off assessment, preference protection,
+constraint evaluation, confidence calibration, option framing (multi-path), "do nothing" enforcement.
+
+Audio-layer examples (domain-specific):
+warm/bright axes, flow/detail axes, DAC/amp/speaker entities, sonic trait stacking,
+listener priorities (tonal_warmth, transparency, etc.), bottleneck categories (power_match, dac_limitation).
+
+When implementing new features, isolate domain vocabulary from core reasoning logic.
+Defer full multi-domain abstraction until after Feature 5–6. Use Audio XX as testbed.
 

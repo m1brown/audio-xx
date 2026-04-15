@@ -154,15 +154,34 @@ function mapPrimaryConstraint(findings: MemoFindings): PrimaryConstraint | undef
 }
 
 function mapStackedTraitInsights(findings: MemoFindings): StackedTraitInsight[] {
-  return findings.stackedTraits.map((s) => ({
-    label: s.property,
-    contributors: s.contributors,
-    classification: s.classification,
-    // Generate a concise explanation — tone depends on classification
-    explanation: s.classification === 'system_character'
-      ? `${s.contributors.join(' and ')} share ${s.property.replace(/_/g, ' ')} — a defining feature of this system's sonic identity.`
-      : `${s.contributors.join(' and ')} both push toward ${s.property.replace(/_/g, ' ')}.`,
-  }));
+  return findings.stackedTraits.map((s) => {
+    const contribs = s.contributors.join(' and ');
+    const trait = s.property.replace(/_/g, ' ');
+
+    // Confidence-calibrated stacking language (Feature 5)
+    // high = assertive, medium = light hedge, low = clearly tentative
+    let explanation: string;
+    if (s.classification === 'system_character') {
+      explanation = s.confidence === 'low'
+        ? `${contribs} may share ${trait}, though component data is limited.`
+        : s.confidence === 'medium'
+        ? `${contribs} likely share ${trait} — a probable feature of this system's character.`
+        : `${contribs} share ${trait} — a defining feature of this system's sonic identity.`;
+    } else {
+      explanation = s.confidence === 'low'
+        ? `${contribs} may both push toward ${trait}, though this is based on limited data.`
+        : s.confidence === 'medium'
+        ? `${contribs} likely both push toward ${trait}.`
+        : `${contribs} both push toward ${trait}.`;
+    }
+
+    return {
+      label: s.property,
+      contributors: s.contributors,
+      classification: s.classification,
+      explanation,
+    };
+  });
 }
 
 function mapVerdictKind(verdict: ComponentFindings['verdict']): VerdictKind {
@@ -180,23 +199,29 @@ function mapComponentAssessments(findings: MemoFindings): ComponentAssessment[] 
     // Map from MemoFindings verdict to constructive reviewer-style prose
     let verdict: string;
     let verdictKind: VerdictKind;
+
+    // Confidence-calibrated hedging prefix (Feature 5)
+    // high = no hedge, medium = light hedge, low = clearly tentative
+    const hedge = cv.confidence === 'low' ? 'Based on limited data, '
+      : cv.confidence === 'medium' ? 'Likely — ' : '';
+
     switch (cv.verdict) {
       case 'bottleneck':
-        verdict = `The ${cv.role || 'component'} is where the system has the most room to grow. Upgrading here would have the largest impact on overall performance.`;
+        verdict = `${hedge}The ${cv.role || 'component'} is where the system has the most room to grow. Upgrading here would have the largest impact on overall performance.`;
         verdictKind = 'bottleneck';
         break;
       case 'keep':
         verdict = cv.weaknesses.length === 0
-          ? 'Well matched to the rest of the chain. No strong reason to change.'
-          : 'A meaningful contributor to the system\'s character. Well placed in this chain.';
+          ? `${hedge}Well matched to the rest of the chain. No strong reason to change.`
+          : `${hedge}A meaningful contributor to the system's character. Well placed in this chain.`;
         verdictKind = 'keeper';
         break;
       case 'upgrade':
-        verdict = 'Could be refined, though it\'s not the first priority in this system.';
+        verdict = `${hedge}Could be refined, though it's not the first priority in this system.`;
         verdictKind = 'upgrade_candidate';
         break;
       default:
-        verdict = 'Solid at its tier. Doing its job within the chain.';
+        verdict = `${hedge}Solid at its tier. Doing its job within the chain.`;
         verdictKind = 'balanced';
     }
     return {
@@ -212,16 +237,147 @@ function mapComponentAssessments(findings: MemoFindings): ComponentAssessment[] 
   });
 }
 
+/**
+ * Build a fused substance sentence from tradeoff data.
+ * Combines gains, sacrifices, and (when meaningful) preservation into 1–2 sentences.
+ * Confidence governs verb strength (Playbook P5).
+ *
+ * Feature 8: replaces the old template-based "A {role} change {verb}: …" pattern.
+ */
+function buildSubstance(t: NonNullable<typeof undefined | import('./tradeoff-assessment').TradeoffAssessment>, targetAxes: string[]): string {
+  if (!t || (t.likelyGains.length === 0 && t.likelySacrifices.length === 0)) {
+    // Axis-only fallback when no tradeoff detail exists
+    if (targetAxes.length > 0) {
+      return `Would shift the ${targetAxes.map((a) => a.replace(/_/g, ' ')).join(' and ')} balance.`;
+    }
+    return '';
+  }
+
+  const gainsVerb = t.confidence === 'high' ? 'Should improve'
+    : t.confidence === 'medium' ? 'Should improve'
+    : 'May improve';
+  const gainsPhrase = t.likelyGains.slice(0, 2).join(' and ');
+
+  const sacrificePhrase = t.likelySacrifices.length > 0
+    ? t.likelySacrifices.slice(0, 2).join(' and ')
+    : '';
+
+  // Build fused sentence: gains + sacrifices in one clause
+  let substance: string;
+  if (sacrificePhrase) {
+    const sacrificeVerb = t.confidence === 'high' ? 'though'
+      : t.confidence === 'medium' ? 'though'
+      : 'though the effect on';
+    substance = t.confidence === 'low'
+      ? `${gainsVerb} ${gainsPhrase}, ${sacrificeVerb} ${sacrificePhrase} is uncertain.`
+      : `${gainsVerb} ${gainsPhrase}, though ${sacrificePhrase} may decrease.`;
+  } else {
+    substance = `${gainsVerb} ${gainsPhrase}.`;
+  }
+
+  // Preservation note — only when it meaningfully offsets the sacrifice
+  // or protects a strength that the sacrifice directly threatens.
+  // Omit when: no sacrifices stated, or preserved strengths don't relate to the sacrifice.
+  if (
+    t.preservedStrengths.length > 0
+    && t.likelySacrifices.length > 0
+  ) {
+    const preserved = t.preservedStrengths[0];
+    substance += ` ${preserved.charAt(0).toUpperCase() + preserved.slice(1)} should remain intact.`;
+  }
+
+  return substance;
+}
+
+/**
+ * Select at most one caution signal from the available assessments.
+ * Priority order (Feature 8 approved design):
+ *   1. Restraint reason (counterfactual)
+ *   2. Protection reason (block/caution)
+ *   3. netNegative (tradeoff)
+ *   4. Overcorrection risk (counterfactual)
+ *   5. Stable baseline note (counterfactual)
+ *
+ * Returns empty string when no caution is warranted.
+ * Suppresses the "Tentatively:" prefix when tradeoff verb hedging
+ * already conveys uncertainty (hasTradeoff = true).
+ */
+function selectCaution(
+  t: import('./tradeoff-assessment').TradeoffAssessment | undefined,
+  prot: import('./preference-protection').PreferenceProtectionResult | undefined,
+  cf: import('./counterfactual-assessment').CounterfactualAssessment | undefined,
+  hasTradeoff: boolean,
+): string {
+  // 1. Restraint reason — strongest signal
+  if (cf?.restraintRecommended && cf.restraintReason) {
+    const hedge = (!hasTradeoff && cf.confidence === 'low') ? 'Tentatively: ' : '';
+    return `${hedge}${cf.restraintReason}`;
+  }
+
+  // 2. Protection reason (caution only — block is handled separately)
+  if (prot && prot.verdict === 'caution' && prot.reason) {
+    return prot.reason;
+  }
+
+  // 3. netNegative
+  if (t?.netNegative) {
+    return 'Consider whether this change is necessary — the trade-offs may outweigh the gains.';
+  }
+
+  // 4. Overcorrection risk
+  if (cf?.overcorrectionRisk.present && cf.overcorrectionRisk.reason) {
+    const hedge = (!hasTradeoff && cf.confidence === 'low') ? 'Tentatively: ' : '';
+    return `${hedge}${cf.overcorrectionRisk.reason}`;
+  }
+
+  // 5. Stable baseline note — weakest
+  if (cf?.baseline === 'stable') {
+    const hedge = (!hasTradeoff && cf.confidence === 'low') ? 'Tentatively: ' : '';
+    return `${hedge}The current system balance is working — change is optional.`;
+  }
+
+  return '';
+}
+
 function mapUpgradePaths(findings: MemoFindings): UpgradePath[] {
   const systemAxes = findings.systemAxes;
 
-  return findings.upgradePaths.map((p) => ({
+  return findings.upgradePaths.map((p) => {
+    const t = p.tradeoff;
+    const prot = p.protection;
+    const cf = p.counterfactual;
+    const hasTradeoff = !!(t && (t.likelyGains.length > 0 || t.likelySacrifices.length > 0));
+
+    // ── Assemble rationale (Feature 8 — unified voice) ──
+    let rationale: string;
+
+    if (prot && prot.verdict === 'block') {
+      // Block verdict replaces entire rationale — no substance, no strategyIntent
+      rationale = `Not recommended given your stated preference for ${prot.threats.map((t) => t.label).join(' and ')}. ${prot.reason}`;
+    } else if (hasTradeoff) {
+      // Substance from tradeoff — strategyIntent suppressed (label carries direction)
+      const substance = buildSubstance(t!, p.targetAxes);
+      const caution = selectCaution(t, prot, cf, true);
+      rationale = caution ? `${substance} ${caution}` : substance;
+    } else {
+      // No tradeoff data — use strategyIntent as the rationale
+      const fallback = p.strategyIntent
+        ?? `Would shift the ${p.targetAxes.map((a) => a.replace(/_/g, ' ')).join(' and ')} balance.`;
+      const caution = selectCaution(t, prot, cf, false);
+      rationale = caution ? `${fallback} ${caution}` : fallback;
+    }
+
+    return {
     rank: p.rank,
-    label: `${p.targetRole} refinement`,
+    label: p.strategyLabel ?? `${p.targetRole} refinement`,
     impact: p.impact === 'highest' ? 'Highest impact'
       : p.impact === 'moderate' ? 'Moderate impact'
       : 'Refinement',
-    rationale: `A ${p.targetRole.toLowerCase()} change would shift ${p.targetAxes.join(' and ').replace(/_/g, '↔')}.`,
+    rationale,
+    explanation: p.explanation && p.explanation.length > 0 ? p.explanation : undefined,
+    tradeoff: p.tradeoff,
+    protection: p.protection,
+    counterfactual: p.counterfactual,
     options: p.options.map((o, i) => {
       // Derive system delta by comparing product axis profile to system axes
       const improvements: string[] = [];
@@ -276,7 +432,8 @@ function mapUpgradePaths(findings: MemoFindings): UpgradePath[] {
         systemDelta,
       };
     }),
-  }));
+  };
+  });
 }
 
 function mapKeepRecommendations(findings: MemoFindings): KeepRecommendation[] {

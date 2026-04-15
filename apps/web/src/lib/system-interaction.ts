@@ -423,13 +423,27 @@ export function analyzeSystemInteraction(
       const consequence = STACKING_CONSEQUENCES[trait];
       if (!consequence) continue;
 
+      // Pre-review blocker fix (PDF 2 — strengths section duplication):
+      // the same component can appear twice in `pushers` when upstream
+      // resolution surfaced two name forms for one product. Dedupe by the
+      // canonical "brand name" pair before publishing the contributor list
+      // so downstream renderers never see "X and X and Y and Y".
+      const seenContributors = new Set<string>();
+      const dedupedContributors: string[] = [];
+      for (const p of pushers) {
+        const display = `${p.product.brand} ${p.product.name}`;
+        const key = display.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+        if (!key || seenContributors.has(key)) continue;
+        seenContributors.add(key);
+        dedupedContributors.push(display);
+      }
       stackingRisks.push({
         trait,
         label: TRAIT_LABELS[trait],
-        componentCount: pushers.length,
-        contributors: pushers.map((r) => `${r.product.brand} ${r.product.name}`),
+        componentCount: dedupedContributors.length,
+        contributors: dedupedContributors,
         averageValue: Math.round(avg * 100) / 100,
-        severity: pushers.length >= 3 || avg >= 0.85 ? 'significant' : 'moderate',
+        severity: dedupedContributors.length >= 3 || avg >= 0.85 ? 'significant' : 'moderate',
         consequence,
       });
     }

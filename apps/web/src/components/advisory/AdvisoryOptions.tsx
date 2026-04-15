@@ -32,8 +32,35 @@ export default function AdvisoryOptions({ options }: AdvisoryOptionsProps) {
             padding: '0.85rem 1rem',
             borderLeft: '3px solid #d9d9d9',
             background: '#fafafa',
+            display: 'flex',
+            gap: '0.85rem',
+            alignItems: 'flex-start',
           }}
         >
+          {/* Optional thumbnail — square, consistent 56×56. Hidden on load
+              failure via onError so a broken URL never leaves a broken icon. */}
+          {opt.imageUrl && (
+            <div style={{
+              flex: '0 0 auto',
+              width: 56,
+              height: 56,
+              borderRadius: 4,
+              overflow: 'hidden',
+              background: '#faf7f2',
+              border: '1px solid #ece6da',
+            }}>
+              <img
+                src={opt.imageUrl}
+                alt={[opt.brand, opt.name].filter(Boolean).join(' ')}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                onError={(e) => {
+                  const wrap = (e.currentTarget as HTMLImageElement).parentElement;
+                  if (wrap) wrap.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
+          <div style={{ flex: '1 1 auto', minWidth: 0 }}>
           {/* 1. Product — name + price */}
           <div style={{ marginBottom: '0.35rem' }}>
             <strong style={{ color: '#2a2a2a' }}>
@@ -90,6 +117,7 @@ export default function AdvisoryOptions({ options }: AdvisoryOptionsProps) {
               ))}
             </div>
           )}
+          </div>
         </div>
       ))}
     </div>

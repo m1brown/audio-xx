@@ -796,6 +796,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'bass-reflex',
+    sensitivity_db: 93,
     archetypes: { primary: 'flow_organic', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
       warm_bright: 'warm',             // Rich tonal density and harmonic weight
@@ -877,6 +878,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'PL',
     topology: 'open-baffle',
+    sensitivity_db: 96,
     archetypes: { primary: 'spatial_holographic', secondary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'warm',             // Tonal density present, zero fatigue
@@ -1039,6 +1041,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'horn-loaded',
+    sensitivity_db: 95,
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'precision_explicit' },
     primaryAxes: {
       warm_bright: 'bright',            // Immediate, lively — sparkle and presence
@@ -1134,6 +1137,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'FR',
     topology: 'bass-reflex',
+    sensitivity_db: 94,
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'warm',             // Deeply warm — PHY-HP drivers are renowned for tonal richness
@@ -1220,6 +1224,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'bass-reflex',
+    sensitivity_db: 90,
     archetypes: { primary: 'flow_organic', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
       warm_bright: 'warm',             // Rich tonal density, DeVore family warmth
@@ -1813,6 +1818,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'bass-reflex',
+    sensitivity_db: 92,
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -1896,6 +1902,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'planar-magnetic',
+    sensitivity_db: 86,
     archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -1982,6 +1989,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'planar-magnetic',
+    sensitivity_db: 86,
     archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -2068,6 +2076,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'uk',
     country: 'UK',
     topology: 'sealed',
+    sensitivity_db: 83,
     archetypes: { primary: 'precision_explicit', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -2156,6 +2165,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'uk',
     country: 'UK',
     topology: 'bass-reflex',
+    sensitivity_db: 87,
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -2241,6 +2251,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'uk',
     country: 'UK',
     topology: 'bass-reflex',
+    sensitivity_db: 86,
     availability: 'discontinued',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     primaryAxes: {
@@ -2326,6 +2337,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'Finland',
     topology: 'sealed',
+    sensitivity_db: 86,
     archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -2411,6 +2423,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'bass-reflex',
+    sensitivity_db: 90,
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'bright',
@@ -2496,6 +2509,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'horn-loaded',
+    sensitivity_db: 100,
     availability: 'discontinued',
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
     primaryAxes: {
@@ -2582,6 +2596,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'bass-reflex',
+    sensitivity_db: 92,
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -2668,6 +2683,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'bass-reflex',
+    sensitivity_db: 87,
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
       warm_bright: 'bright',
@@ -2753,6 +2769,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'sealed',
+    sensitivity_db: 88,
     archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -2838,6 +2855,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'other',
+    sensitivity_db: 86,
     archetypes: { primary: 'spatial_holographic', secondary: 'precision_explicit' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -2999,6 +3017,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'GB',
     topology: 'class-d',
+    activeAmplification: true,
     archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -3071,6 +3090,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'GB',
     topology: 'class-d',
+    activeAmplification: true,
     archetypes: { primary: 'precision_explicit' },
     primaryAxes: {
       warm_bright: 'neutral',

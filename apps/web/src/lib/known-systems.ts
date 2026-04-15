@@ -284,19 +284,22 @@ export function findKnownSystemMatch(
 /**
  * Build a suggested system name from a known system match.
  *
- * Returns the known system's label (e.g., "Michael Lavorgna's reference system")
- * when the match is strong. Returns null for weak matches.
+ * Phase C blocker fix #5 — Reviewer-attribution guardrail:
+ * Named-reviewer attribution ("Similar to Srajan Ebaen's system") is a
+ * specific third-party claim and must be gated on an exact curated
+ * match, not inferred from a ≥0.66 brand-chain overlap. Partial overlap
+ * is frequently coincidental for well-known chains and produces
+ * attribution claims the advisor cannot defend (§5 Confidence
+ * Calibration: language strength must match source quality). Partial
+ * matches now return null — only a full core overlap produces a label.
  */
 export function suggestKnownSystemName(
   match: KnownSystemMatch,
 ): string | null {
-  // Full core match → use the full label
+  // Full core match → use the full label. Anything less is not
+  // strong enough evidence to attribute the chain to a named reviewer.
   if (match.coreOverlap >= 1.0) {
     return match.system.label;
-  }
-  // Partial core match → softer attribution
-  if (match.coreOverlap >= 0.66) {
-    return `Similar to ${match.system.attribution}'s system`;
   }
   return null;
 }

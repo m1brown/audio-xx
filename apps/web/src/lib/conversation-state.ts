@@ -44,6 +44,16 @@ export type ConvStage =
 export interface ConvFacts {
   /** Product category: 'dac', 'speaker', 'headphone', 'amplifier', 'turntable', etc. */
   category?: string;
+  /**
+   * Sticky domain context (Phase K — conversation continuity).
+   * Once a category is established in any turn (shopping or diagnosis),
+   * it is mirrored here and persists across intent transitions. The
+   * orchestrator passes this as `fallbackCategory` so a turn like
+   * "it's noisy" after "recommend a turntable" stays in the turntable
+   * domain instead of drifting to streamer / DAC / general.
+   * Cleared only by an explicit, mismatched override.
+   */
+  domainContext?: string;
   /** Budget string (e.g. '$1000', 'under 500'). */
   budget?: string;
   /** Whether the user has an active/declared system. */
@@ -66,6 +76,25 @@ export interface ConvFacts {
   systemComponents?: string[];
   /** All user text collected during system_assessment (for re-running assessment). */
   systemAssessmentText?: string;
+  /**
+   * Temporary / hypothetical chain named by the user in the current thread.
+   * Takes precedence over the saved system for shopping, fit, and
+   * compatibility reasoning as long as the thread does not explicitly
+   * change topic. Populated by the orchestrator when
+   * detectHypotheticalChain returns a non-null chain. The UI may still
+   * display the saved system — this field only governs recommendation
+   * logic.
+   *
+   * See: hypothetical-system.ts, Pass 15.
+   */
+  hypotheticalChain?: {
+    /** Brand+name strings forming the hypothetical chain. */
+    componentNames: string[];
+    /** True when the chain contains an external amplifier. */
+    hasExternalAmplification: boolean;
+    /** Captured on first detection; used to scope lifetime to the thread. */
+    detectedAt: number;
+  };
 }
 
 export interface ConvState {
@@ -408,6 +437,13 @@ export function transition(
     hasSystem: boolean;
     subjectCount: number;
     detectedIntent?: string;
+    /**
+     * Optional synthetic system description sourced from the new
+     * SavedSystemProfile store (Step 3 of the saved-system bridge).
+     * When present, the system_assessment entry path uses this text
+     * instead of asking the user to list components.
+     */
+    injectedSystemText?: string;
   },
 ): ConvTransition {
   // ── Intent-change detection ────────────────────────────
@@ -416,7 +452,12 @@ export function transition(
   // This prevents stale category/budget/system data from leaking
   // across unrelated flows (e.g. DAC shopping → KEF vs ELAC comparison).
   if (context.detectedIntent && isIntentMismatch(current.mode, context.detectedIntent, text)) {
-    const freshMode = detectInitialMode(text, context);
+    const freshMode = detectInitialMode(text, {
+      detectedIntent: context.detectedIntent,
+      hasSystem: context.hasSystem,
+      subjectCount: context.subjectCount,
+      injectedSystemText: context.injectedSystemText,
+    });
     return {
       state: freshMode ?? INITIAL_CONV_STATE,
       response: null,
@@ -434,6 +475,17 @@ export function transition(
   if (newCategory) facts.category = newCategory;
   if (newBudget) facts.budget = newBudget;
   if (newPreference) facts.preference = newPreference;
+
+  // Phase K — sticky domain continuity.
+  // Mirror category into domainContext so it survives turns that don't
+  // re-state a category keyword. The orchestrator reads facts.domainContext
+  // (or falls back to facts.category) when calling detectShoppingIntent so
+  // that "it's noisy" after "recommend a turntable" stays in the turntable
+  // domain. We never overwrite an established domain with `undefined`;
+  // explicit category mismatches still clear it via isIntentMismatch above.
+  if (facts.category && facts.category !== 'general') {
+    facts.domainContext = facts.category;
+  }
 
   // Detect "from scratch" / "starting fresh" signals on every turn
   if (!facts.fromScratch && FROM_SCRATCH_PATTERN.test(text)) {
@@ -1009,8 +1061,19 @@ export function transition(
           };
         }
 
-        // Evaluation language but NO components — ask for the system first
+        // Evaluation language but NO components in text.
+        // If a saved system was injected from the SavedSystemProfile store,
+        // use it directly and skip the component-ask branch entirely.
         if (hasExplicitEvaluationLanguage(text)) {
+          if (context.injectedSystemText && context.injectedSystemText.trim().length > 0) {
+            const injected = context.injectedSystemText.trim();
+            facts.systemComponents = [injected];
+            facts.systemAssessmentText = injected;
+            return {
+              state: { mode: 'system_assessment', stage: 'ready_to_assess', facts },
+              response: { kind: 'proceed' },
+            };
+          }
           return {
             state: { mode: 'system_assessment', stage: 'assembling_system', facts },
             response: {
@@ -1229,6 +1292,7 @@ export function detectInitialMode(
     detectedIntent: string;
     hasSystem: boolean;
     subjectCount: number;
+    injectedSystemText?: string;
   },
 ): ConvState | null {
   const facts: ConvFacts = {
@@ -1366,16 +1430,50 @@ export function detectInitialMode(
   // their system, skip clarification and go straight to assessment.
   if (context.detectedIntent === 'system_assessment') {
     facts.hasSystem = true;
-    facts.systemAssessmentText = text;
-    facts.systemComponents = [text];
-    if (hasExplicitEvaluationLanguage(text)) {
+    // If a saved system was injected and the user's text has no
+    // components of its own, use the injected system as the assessment
+    // source. Otherwise preserve existing behavior (text drives it).
+    const injected =
+      context.injectedSystemText && context.injectedSystemText.trim().length > 0
+        ? context.injectedSystemText.trim()
+        : null;
+    if (injected && !hasComponentDescription(text)) {
+      facts.systemAssessmentText = injected;
+      facts.systemComponents = [injected];
+    } else {
+      facts.systemAssessmentText = text;
+      facts.systemComponents = [text];
+    }
+    if (hasExplicitEvaluationLanguage(text) || injected) {
       return { mode: 'system_assessment', stage: 'ready_to_assess', facts };
     }
     return { mode: 'system_assessment', stage: 'entry', facts };
   }
 
-  // Consultation entry — user asks for system guidance without naming gear
+  // Consultation entry — user asks for system guidance without naming gear.
+  // If a saved system was injected via the SavedSystemProfile bridge, use it
+  // directly and jump to ready_to_assess instead of asking for components.
+  // Guard: only inject saved system when the user's text has no component
+  // descriptions of its own. Mirrors the system_assessment guard above.
   if (context.detectedIntent === 'consultation_entry') {
+    const injectedForConsult =
+      context.injectedSystemText && context.injectedSystemText.trim().length > 0
+        ? context.injectedSystemText.trim()
+        : null;
+    if (injectedForConsult && !hasComponentDescription(text)) {
+      facts.hasSystem = true;
+      facts.systemAssessmentText = injectedForConsult;
+      facts.systemComponents = [injectedForConsult];
+      return { mode: 'system_assessment', stage: 'ready_to_assess', facts };
+    }
+    if (hasComponentDescription(text)) {
+      // User described components but intent was classified as consultation_entry.
+      // Treat as system_assessment with user's own text.
+      facts.hasSystem = true;
+      facts.systemAssessmentText = text;
+      facts.systemComponents = [text];
+      return { mode: 'system_assessment', stage: 'ready_to_assess', facts };
+    }
     return { mode: 'system_assessment', stage: 'entry', facts };
   }
 

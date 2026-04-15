@@ -15,6 +15,10 @@
  */
 
 import type { PrimaryAxisLeanings } from './axis-types';
+import type { InferenceResult } from './inference-layer';
+import type { TradeoffAssessment } from './tradeoff-assessment';
+import type { PreferenceProtectionResult } from './preference-protection';
+import type { CounterfactualAssessment } from './counterfactual-assessment';
 
 // ── Controlled tag vocabularies ────────────────────────
 
@@ -81,7 +85,8 @@ export type ConstraintCategory =
   | 'amplifier_control'
   | 'tonal_imbalance'
   | 'stacked_bias'
-  | 'source_limitation';
+  | 'source_limitation'
+  | 'power_match';
 
 /**
  * Component verdict — how the deterministic engine classifies
@@ -129,6 +134,18 @@ export interface ComponentFindings {
   price?: number;
   /** Product/brand links associated with this component. */
   links?: Array<{ label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }>;
+  /**
+   * Inference layer result for this component.
+   * Present when a product was matched and design signals exist.
+   * When hasCuratedData is true, curated tendencyProfile takes precedence.
+   */
+  inference?: InferenceResult;
+  /**
+   * How confident the system is in this component's behavioral assessment.
+   * Derived from inference confidence: high/medium/low.
+   * When no inference exists, defaults to 'low'.
+   */
+  confidence: 'high' | 'medium' | 'low';
 }
 
 /**
@@ -141,6 +158,8 @@ export interface StackedTraitFinding {
   contributors: string[];
   /** Whether this stacking is system identity or a problematic imbalance. */
   classification: 'system_character' | 'system_imbalance';
+  /** Min confidence of contributing components. */
+  confidence?: 'high' | 'medium' | 'low';
 }
 
 /**
@@ -157,6 +176,8 @@ export interface BottleneckFinding {
   constrainedAxes: string[];
   /** Severity score from the detection pipeline. */
   severity: number;
+  /** Confidence in the bottleneck identification, from the bottleneck component. */
+  confidence?: 'high' | 'medium' | 'low';
 }
 
 /**
@@ -171,6 +192,18 @@ export interface UpgradePathFinding {
   impact: 'highest' | 'moderate' | 'refinement';
   /** Which axes this path addresses. */
   targetAxes: string[];
+  /** Trade-off assessment for this path. Populated by Feature 2. */
+  tradeoff?: TradeoffAssessment;
+  /** Preference protection assessment. Populated by Feature 3. */
+  protection?: PreferenceProtectionResult;
+  /** Counterfactual reasoning assessment. Populated by Feature 6. */
+  counterfactual?: CounterfactualAssessment;
+  /** Strategy label — short name for optimization direction. Populated by Feature 7. */
+  strategyLabel?: string;
+  /** Strategy intent — what this path optimizes. Populated by Feature 7. */
+  strategyIntent?: string;
+  /** Concise explanation lines ("why this works"). Max 2. Populated by Feature 9. */
+  explanation?: string[];
   /** Product options within this path. */
   options: UpgradeOptionFinding[];
 }
@@ -254,6 +287,51 @@ export interface ActiveDACInference {
   confidence: 'high' | 'medium' | 'low';
 }
 
+// ── Amp/speaker power-match assessment ───────────────────
+
+/**
+ * Result of amp/speaker power-match inference.
+ *
+ * Evaluates whether the amplifier can physically drive the speakers
+ * to adequate listening levels without dynamic compression.
+ * This is a deterministic calculation from power_watts and sensitivity_db,
+ * not a subjective preference assessment.
+ *
+ * When data is missing for either side, compatibility is 'unknown'
+ * and the assessment is invisible in the narrative.
+ */
+export interface PowerMatchAssessment {
+  /** Display name of the amplifier, or null if no amp found. */
+  ampName: string | null;
+  /** Display name of the speaker, or null if no speaker found. */
+  speakerName: string | null;
+  /** Amp power output in watts, or null if not cataloged. */
+  ampPowerWatts: number | null;
+  /** Speaker sensitivity in dB, or null if not cataloged. */
+  speakerSensitivityDb: number | null;
+  /**
+   * Compatibility tier:
+   * - optimal: amp and speaker are well-matched for typical room levels
+   * - adequate: workable with some headroom limitations
+   * - strained: dynamics will compress at moderate-to-loud levels
+   * - mismatched: amp fundamentally cannot drive these speakers
+   * - unknown: missing data on one or both sides
+   */
+  compatibility: 'optimal' | 'adequate' | 'strained' | 'mismatched' | 'unknown';
+  /**
+   * Estimated maximum clean SPL at listening position (dB).
+   * Calculated as: sensitivity_db + 10 * log10(power_watts).
+   * Null when either input is missing.
+   */
+  estimatedMaxCleanSPL: number | null;
+  /**
+   * Relevant interaction note from the amp's catalog data,
+   * if one matches the speaker's efficiency range.
+   * Null when no matching interaction exists.
+   */
+  relevantInteraction: string | null;
+}
+
 // ── The contract ───────────────────────────────────────
 
 /**
@@ -330,6 +408,10 @@ export interface MemoFindings {
   // ── Active DAC inference ──
   /** Which DAC is most likely defining the system's sound. */
   activeDACInference: ActiveDACInference;
+
+  // ── Amp/speaker power match ──
+  /** Whether the amplifier can physically drive the speakers. */
+  powerMatchAssessment: PowerMatchAssessment;
 
   // ── Sources ──
   /** References from catalogued products. */

@@ -96,8 +96,22 @@ interface TasteLabelRule {
 }
 
 const TASTE_LABEL_RULES: TasteLabelRule[] = [
+  // ── Render-verification blocker fix (Audio XX Playbook §3 Preference Protection) ──
+  // Mirrors the shopping-intent.ts TASTE_PROFILES correction. The previous
+  // predicate fired on `elasticity === 'up'` alone, but the signals dictionary
+  // lights `elasticity: up` for the "musical / organic / flowing" cluster
+  // ("musical", "organic", "natural", "flow"). That made the rendered
+  // preference summary and direction for "warm, musical DAC" lead with
+  // "speed, transient precision, and rhythmic engagement" — the opposite of
+  // the user's stated preference. `buildShoppingAnswer` prefers
+  // `reasoning?.taste.tasteLabel` over the shopping-intent label, so fixing
+  // shopping-intent alone was insufficient. Genuine rhythm signals
+  // ("fast", "PRaT", "rhythmic drive", "punchy") all set `dynamics: up` in
+  // addition to `elasticity: up`, so requiring `dynamics` keeps this rule
+  // firing for rhythm-forward queries while preventing it from hijacking
+  // warmth / flow requests.
   {
-    check: (t) => t.dynamics === 'up' || t.elasticity === 'up',
+    check: (t) => t.dynamics === 'up',
     label: 'speed, transient precision, and rhythmic engagement',
     archetype: 'rhythmic_propulsive',
   },
@@ -182,9 +196,23 @@ function buildDirectionStatement(
 ): string {
   if (arrows.length === 0) {
     if (archetype) {
-      return `Your preferences align with a ${archetype} sensibility. The recommendations below are chosen to match that direction.`;
+      // Presentation-layer guardrail: internal archetype enums must not
+      // reach the UI. Map to a short human-readable phrase; if the
+      // enum has no mapping, omit the archetype sentence entirely
+      // rather than leaking the raw token.
+      const ARCHETYPE_READABLE: Record<SonicArchetype, string> = {
+        flow_organic: 'flow-oriented',
+        precision_explicit: 'precision-oriented',
+        rhythmic_propulsive: 'rhythm-oriented',
+        tonal_saturated: 'tonally rich',
+        spatial_holographic: 'spatially focused',
+      };
+      const readable = ARCHETYPE_READABLE[archetype];
+      if (readable) {
+        return `Your preferences align with a ${readable} sensibility. The recommendations below are chosen to match that direction.`;
+      }
     }
-    return 'No strong directional signal — the recommendations below maintain the current character rather than pulling in a new direction.';
+    return 'The current system character is already centred. The picks below refine within that balance rather than pushing it in a new direction.';
   }
 
   const gains = arrows

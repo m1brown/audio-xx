@@ -157,8 +157,11 @@ export default function HowItWorks() {
   return (
     <div style={{ maxWidth: 640 }}>
       <h1 style={{ marginBottom: '0.35rem' }}>How It Works</h1>
-      <p className="muted small" style={{ marginBottom: '2rem' }}>
+      <p className="muted small" style={{ marginBottom: '0.35rem' }}>
         Audio&thinsp;XX Methodology
+      </p>
+      <p className="muted small" style={{ marginBottom: '2rem', fontStyle: 'italic' }}>
+        A calm, system-aware advisor — not a scoring engine.
       </p>
 
       {/* ── 1. The Problem ──────────────────────────────── */}
@@ -227,8 +230,9 @@ export default function HowItWorks() {
           <p>
             When you ask for a recommendation, the advisory engine bridges the
             two — it evaluates how a component or system change would move your
-            setup relative to what you actually care about. That bridge is what
-            makes the guidance personal rather than generic.
+            setup relative to what you actually care about, and names the
+            trade-offs involved. That bridge is what makes the guidance
+            system-level rather than component-level.
           </p>
         </div>
       </section>
@@ -333,8 +337,9 @@ export default function HowItWorks() {
         <h2 style={headingStyle}>Advisory Process</h2>
         <div style={bodyStyle}>
           <p style={{ marginBottom: '0.75rem' }}>
-            When you ask Audio&thinsp;XX for guidance, the process follows four
-            stages:
+            When you ask Audio&thinsp;XX for guidance, the reasoning runs in four
+            stages — moving from what you value, through how your components
+            interact, to the trade-offs involved in any change:
           </p>
         </div>
 

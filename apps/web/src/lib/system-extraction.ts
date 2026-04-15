@@ -66,6 +66,12 @@ const BRAND_CATEGORY_MAP: Record<string, ProductCategory> = {
   hifiman: 'headphone', audeze: 'headphone',
   // IEMs
   moondrop: 'iem', shure: 'iem', etymotic: 'iem',
+  // ── Phase K: consumer / lifestyle audio brands ──
+  // Allows messages like "I have a Sonos and iPhone" to detect a 2-component
+  // system. Best-effort categorisation — the lifestyle/streaming brands are
+  // bucketed as 'streamer', wireless speakers as 'speaker', earbuds as 'iem'.
+  sonos: 'streamer', bose: 'speaker', homepod: 'speaker', echo: 'speaker',
+  alexa: 'speaker', iphone: 'streamer', airpods: 'iem',
 };
 
 // ── Product → brand+category fallback ─────────────────
@@ -98,6 +104,10 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   orangutan: { brand: 'DeVore', category: 'speaker' },
   p3esr: { brand: 'Harbeth', category: 'speaker' },
   'super hl5': { brand: 'Harbeth', category: 'speaker' },
+  // Pre-review blocker fix: register the "Plus" variant explicitly so
+  // PRODUCT_HINTS lookup picks up the longer canonical name.
+  'super hl5 plus': { brand: 'Harbeth', category: 'speaker' },
+  'hl5 plus': { brand: 'Harbeth', category: 'speaker' },
   diva: { brand: 'WLM', category: 'speaker' },
   'diva monitor': { brand: 'WLM', category: 'speaker' },
   heresy: { brand: 'Klipsch', category: 'speaker' },
@@ -116,6 +126,16 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   // WiiM
   'wiim pro': { brand: 'WiiM', category: 'streamer' },
   'wiim ultra': { brand: 'WiiM', category: 'streamer' },
+  // Bluesound (streamers)
+  'bluesound node x': { brand: 'Bluesound', category: 'streamer' },
+  'bluesound node': { brand: 'Bluesound', category: 'streamer' },
+  'node x': { brand: 'Bluesound', category: 'streamer' },
+  'node': { brand: 'Bluesound', category: 'streamer' },
+  // PrimaLuna (tube amplifiers)
+  'evo 300 integrated': { brand: 'PrimaLuna', category: 'amplifier' },
+  'evo 300': { brand: 'PrimaLuna', category: 'amplifier' },
+  'evo 400': { brand: 'PrimaLuna', category: 'amplifier' },
+  'evo 100': { brand: 'PrimaLuna', category: 'amplifier' },
   // Topping
   'd90': { brand: 'Topping', category: 'dac' },
   // SMSL
@@ -216,6 +236,94 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   'edition xs': { brand: 'HiFiMAN', category: 'headphone' },
 };
 
+// ── Canonical product name display ────────────────────
+// Some product names use non-standard capitalization (acronyms, model
+// codes) that the naive `capitalize()` helper would mangle:
+//   "p3esr"     → "P3esr"   (should be "P3ESR")
+//   "cs300"     → "Cs300"   (should be "CS300")
+//   "evo 300"   → "Evo 300" (should be "EVO 300")
+//   "node x"    → "Node x"  (should be "NODE X")
+// Keys are the same normalized lowercase used by PRODUCT_HINTS.
+// When a key is present here, `displayName()` returns this canonical form
+// instead of running `capitalize()`.
+
+const CANONICAL_NAMES: Record<string, string> = {
+  // Harbeth
+  p3esr: 'P3ESR',
+  'super hl5': 'Super HL5',
+  'super hl5 plus': 'Super HL5 Plus',
+  'hl5 plus': 'HL5 Plus',
+  // Leben
+  cs300: 'CS300',
+  cs300x: 'CS300X',
+  cs600: 'CS600',
+  cs600x: 'CS600X',
+  'leben cs300': 'Leben CS300',
+  'leben cs300x': 'Leben CS300X',
+  'leben cs600': 'Leben CS600',
+  'leben cs600x': 'Leben CS600X',
+  // PrimaLuna EVO line — brand uses uppercase "EVO"
+  'evo 100': 'EVO 100',
+  'evo 300': 'EVO 300',
+  'evo 300 integrated': 'EVO 300 Integrated',
+  'evo 400': 'EVO 400',
+  // Bluesound NODE — brand styles model name in uppercase
+  node: 'NODE',
+  'node x': 'NODE X',
+  'bluesound node': 'Bluesound NODE',
+  'bluesound node x': 'Bluesound NODE X',
+  // Denafrips Pontus / Ares / Venus / Terminator
+  pontus: 'Pontus',
+  'pontus ii': 'Pontus II',
+  'pontus 12th-1': 'Pontus 12th-1',
+  ares: 'Ares',
+  'ares ii': 'Ares II',
+  'ares 15th': 'Ares 15th',
+  'ares 12th-1': 'Ares 12th-1',
+  enyo: 'Enyo',
+  'enyo 15th': 'Enyo 15th',
+  venus: 'Venus',
+  'venus ii': 'Venus II',
+  terminator: 'Terminator',
+  'terminator ii': 'Terminator II',
+  // Chord — preserve capitalization on TT2
+  'hugo tt2': 'Hugo TT2',
+  'hugo tt': 'Hugo TT',
+  tt2: 'TT2',
+  // Eversolo
+  'dmp-a6': 'DMP-A6',
+  'dmp-a8': 'DMP-A8',
+  'dac-z8': 'DAC-Z8',
+  // SMSL
+  'su-9': 'SU-9',
+  // Topping
+  d90: 'D90',
+  // Holo Audio
+  'may kte': 'May KTE',
+  // FiiO
+  'k9 pro': 'K9 Pro',
+  ef400: 'EF400',
+  // dCS
+  bartok: 'Bartók',
+  // HiFiMAN
+  'hd 600': 'HD 600',
+  'hd 650': 'HD 650',
+  'hd 800': 'HD 800',
+  'hd 800 s': 'HD 800 S',
+};
+
+/**
+ * Display-friendly name for a normalized product key. Returns the canonical
+ * form when present (preserves brand-conventional capitalization for
+ * acronyms and model codes), otherwise falls back to first-letter
+ * capitalization. Never mangles known canonical forms.
+ */
+function displayName(key: string): string {
+  const lookup = CANONICAL_NAMES[key.toLowerCase()];
+  if (lookup) return lookup;
+  return capitalize(key);
+}
+
 // ── Ownership patterns ────────────────────────────────
 // Must strongly indicate the user owns this gear, not merely asking about it.
 
@@ -226,6 +334,8 @@ const STRONG_OWNERSHIP_RE = [
   /\bi\s+(?:run|use|own)\b/i,
   /\bcurrent\s+(?:system|setup|rig|chain)\b.*:/i,       // "Current setup: ..."
   /\bmy\s+(?:dac|amp|amplifier|speakers?|headphones?|turntable|streamer)\b/i,
+  // "this system:" / "here's my system:" — colon signals what follows is a component list
+  /\b(?:this|here'?s?\s+(?:my|the|a))\s+(?:current\s+)?(?:system|setup|rig|chain)\s*:/i,
 ];
 
 // ── Anti-patterns: aspirational, comparative, hypothetical ──
@@ -355,34 +465,105 @@ export function detectSystemDescription(
     seen.add(key);
 
     if (hint) {
+      // Use the matched normalized key for canonical lookup so e.g.
+      // "p3esr" → "P3ESR" instead of being mangled to "P3esr".
       components.push({
         brand: hint.brand,
-        name: capitalize(match.name),
+        name: displayName(key),
         category: hint.category,
         role: null,
       });
       coveredBrands.add(hint.brand.toLowerCase());
+      // CRITICAL: also claim the brand name in `seen` so a subsequent
+      // un-hinted product (e.g. "ex-m1+") cannot rebind to this brand.
+      // Without this, multi-brand inputs like
+      //   "LAiV Harmony DAC, Kinki Studio EX-M1+, Qualio IQ"
+      // would bleed: "harmony dac" sets coveredBrands:laiv but seen lacks
+      // "used:laiv", so "ex-m1+" later claims laiv by first-available.
+      seen.add(`used:${hint.brand.toLowerCase()}`);
     } else {
-      // Product without known hint — try to associate with a brand match
-      const brandMatch = subjectMatches.find(
-        (m) => m.kind === 'brand' && !seen.has(`used:${m.name.toLowerCase()}`),
+      // Suppress overlapping duplicate products (e.g. both "kinki studio ex-m1"
+      // and "ex-m1+" match the same physical device). If the source-text span
+      // of this product overlaps any already-pushed component's source-text
+      // span, skip it. We only apply this to un-hinted products because
+      // hinted products are authoritative by design.
+      const productIdx = match.index;
+      if (typeof productIdx === 'number') {
+        const productEnd = productIdx + match.name.length;
+        const overlaps = components.some((c) => {
+          const cName = c.name.toLowerCase();
+          if (!cName) return false;
+          const cStart = currentMessage.toLowerCase().indexOf(cName);
+          if (cStart < 0) return false;
+          const cEnd = cStart + cName.length;
+          return productIdx < cEnd && productEnd > cStart;
+        });
+        if (overlaps) continue;
+      }
+
+      // Product without known hint — first check if the product name
+      // contains an embedded brand (e.g. "bluesound node x" contains
+      // "bluesound", "kinki studio ex-m1" contains "kinki studio"). Scan
+      // both the subjectMatches brand set and the full BRAND_CATEGORY_MAP,
+      // because a brand's character span may have been claimed by the
+      // product match (so the brand won't appear in subjectMatches).
+      let embeddedBrand: { name: string } | undefined = subjectMatches.find(
+        (m) => m.kind === 'brand' && match.name.toLowerCase().includes(m.name.toLowerCase()),
       );
-      if (brandMatch) {
-        seen.add(`used:${brandMatch.name.toLowerCase()}`);
-        coveredBrands.add(brandMatch.name.toLowerCase());
+      if (!embeddedBrand) {
+        const matchLower = match.name.toLowerCase();
+        // Prefer longer brand names first (e.g. "kinki studio" over "kinki").
+        const candidates = Object.keys(BRAND_CATEGORY_MAP)
+          .filter((b) => matchLower.includes(b))
+          .sort((a, b) => b.length - a.length);
+        if (candidates.length > 0) embeddedBrand = { name: candidates[0] };
+      }
+      if (embeddedBrand) {
+        seen.add(`used:${embeddedBrand.name.toLowerCase()}`);
+        coveredBrands.add(embeddedBrand.name.toLowerCase());
         components.push({
-          brand: capitalize(brandMatch.name),
-          name: capitalize(match.name),
-          category: BRAND_CATEGORY_MAP[brandMatch.name.toLowerCase()] ?? 'other',
+          brand: capitalize(embeddedBrand.name),
+          name: displayName(match.name),
+          category: BRAND_CATEGORY_MAP[embeddedBrand.name.toLowerCase()] ?? 'other',
           role: null,
         });
       } else {
-        components.push({
-          brand: '',
-          name: capitalize(match.name),
-          category: 'other',
-          role: null,
-        });
+        // Proximity-based brand selection: among unused brands, pick the one
+        // whose source-text position is closest to this product's position.
+        // Falls back to first-available if indices are missing.
+        const availableBrands = subjectMatches.filter(
+          (m) => m.kind === 'brand' && !m.parenthetical
+            && !seen.has(`used:${m.name.toLowerCase()}`),
+        );
+        let brandMatch: SubjectMatch | undefined;
+        if (typeof productIdx === 'number' && availableBrands.some((b) => typeof b.index === 'number')) {
+          brandMatch = availableBrands
+            .filter((b) => typeof b.index === 'number')
+            .sort((a, b) => {
+              const da = Math.abs((a.index as number) - productIdx);
+              const db = Math.abs((b.index as number) - productIdx);
+              return da - db;
+            })[0] ?? availableBrands[0];
+        } else {
+          brandMatch = availableBrands[0];
+        }
+        if (brandMatch) {
+          seen.add(`used:${brandMatch.name.toLowerCase()}`);
+          coveredBrands.add(brandMatch.name.toLowerCase());
+          components.push({
+            brand: capitalize(brandMatch.name),
+            name: displayName(match.name),
+            category: BRAND_CATEGORY_MAP[brandMatch.name.toLowerCase()] ?? 'other',
+            role: null,
+          });
+        } else {
+          components.push({
+            brand: '',
+            name: displayName(match.name),
+            category: 'other',
+            role: null,
+          });
+        }
       }
     }
   }
@@ -413,11 +594,35 @@ export function detectSystemDescription(
     });
   }
 
-  // Also pick up generic component descriptors not in subject matches
+  // Also pick up generic component descriptors not in subject matches.
+  //
+  // Label-word guard: in labeled chains like
+  //   "speakers: wlm diva - amp: job integrated - streamer: eversolo dmp-a6"
+  // the bare words "streamer", "turntable", "preamp", etc. are role LABELS
+  // naming the slot that follows, not components in their own right.
+  // When the match is immediately followed by a ':' (optionally with trailing
+  // whitespace), treat that occurrence as a label and do not promote it.
+  // This preserves the intended behavior of flagging unbranded descriptors
+  // like "I have a streamer and some monitors" where no colon follows.
+  //
+  // Scan every occurrence (not just the first) so a labeled use earlier in
+  // the sentence doesn't prevent finding a legitimate descriptor later.
+  const isLabelAt = (endIdx: number): boolean => {
+    let i = endIdx;
+    while (i < currentMessage.length && /\s/.test(currentMessage[i])) i++;
+    return i < currentMessage.length && currentMessage[i] === ':';
+  };
+
   for (const { pattern, category } of GENERIC_COMPONENT_RE) {
-    const m = currentMessage.match(pattern);
-    if (m) {
-      const desc = m[0];
+    // Compile a global version of the pattern for iteration.
+    const globalPattern = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g');
+    let matchResult: RegExpExecArray | null;
+    let promoted = false;
+    while ((matchResult = globalPattern.exec(currentMessage)) !== null) {
+      const desc = matchResult[0];
+      const matchIdx = matchResult.index;
+      if (isLabelAt(matchIdx + desc.length)) continue;
+
       const descKey = desc.toLowerCase();
       if (!seen.has(descKey) && !components.some((c) => c.name.toLowerCase() === descKey)) {
         seen.add(descKey);
@@ -428,7 +633,10 @@ export function detectSystemDescription(
           role: null,
         });
       }
+      promoted = true;
+      break; // one descriptor per pattern, matching the prior behavior
     }
+    void promoted;
   }
 
   // ── Gate 4: need at least 2 real components ──
@@ -447,8 +655,15 @@ export function detectSystemDescription(
   const suggestedName = suggestSystemName(components);
 
   // ── Check for known system match ──
+  // Phase C blocker fix #5: only surface a named-reviewer attribution
+  // when the core overlap is a full 1.0. Partial (≥0.66) matches are
+  // frequently coincidental for common brand chains and produce
+  // reviewer-attribution claims the advisor cannot defend (§5
+  // Confidence Calibration). The SystemSavePrompt UI that shows
+  // "(partial match)" next to the attribution label is therefore
+  // never reached for partials under this rule.
   const knownMatch = findKnownSystemMatch(components);
-  const knownSystemMatch = knownMatch
+  const knownSystemMatch = knownMatch && knownMatch.coreOverlap >= 1.0
     ? {
         id: knownMatch.system.id,
         label: knownMatch.system.label,

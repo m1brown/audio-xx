@@ -19,21 +19,254 @@ import { renderText } from './render-text';
 import { trackLinkClick, trackCardView } from '../../lib/interaction-tracker';
 import { shouldShowAmazonLink, getAmazonSearchUrl } from '../../lib/amazon-links';
 import { buildProductLinks } from '../../lib/product-links';
+import { findBrandProfileByName } from '../../lib/consultation';
+
+// ── Brand philosophy accessor ─────────────────────────
+// Pass 10: composeWhyThisMaker replaces the old getBrandPhilosophy.
+// It pulls ONE sentence from the brand's authored philosophy and — when
+// systemDelta carries a directional gain — appends a short connector that
+// ties the maker's design philosophy to THIS system's need. The philosophy
+// extraction is deterministic and consistent per brand, so the same maker
+// reads the same way across every card it appears on.
+
+// Voicing / sound-direction keywords — preferred when extracting a
+// philosophy sentence so the maker line reads as a sound claim, not a
+// mechanical engineering note. "prioritises", "emphasises", "voiced",
+// "leans" almost always land on the sound-direction sentence in our
+// authored profiles.
+const VOICING_RE = /(priorit|emphasi|voic(?:ed|ing)|leans?|tuned)/i;
+// Secondary design-intent keywords — only used when no voicing sentence
+// exists. "designed around", "focuses on" can land on a mechanical
+// sentence, which reads as documentation rather than review.
+const DESIGN_INTENT_RE = /(design(?:ed|s)?\s+around|focus(?:es|ed)?\s+on|centre[sd]?\s+on|center[sd]?\s+on)/i;
+
+/** Split a string into up to 4 sentences (period / ? / !). */
+function splitSentences(s: string): string[] {
+  return s.match(/[^.!?]+[.!?]+/g)?.map((x) => x.trim()) ?? [s.trim()];
+}
+
+/** Pick the sentence from a brand philosophy that reads as a sound/voice
+ *  claim. Prefers voicing keywords; falls back to design-intent; finally
+ *  to the first sentence. */
+function extractValueSentence(philosophy: string): string {
+  const sentences = splitSentences(philosophy);
+  const voicing = sentences.find((s) => VOICING_RE.test(s));
+  if (voicing) return voicing.trim();
+  const designIntent = sentences.find((s) => DESIGN_INTENT_RE.test(s));
+  if (designIntent) return designIntent.trim();
+  return (sentences[0] ?? philosophy).trim();
+}
+
+/** Strip meta-lede prefixes so the sentence reads as a direct reviewer
+ *  claim, not a meta description. "The philosophy prioritises X" becomes
+ *  "Prioritises X"; the section label already frames this as a maker
+ *  statement, so the prefix is redundant. */
+function trimPhilosophyLede(s: string): string {
+  return s
+    .replace(/^The\s+(design|engineering|company|brand|core)\s+philosophy\s+/i, '')
+    .replace(/^The\s+philosophy\s+is\s+/i, '')
+    .replace(/^The\s+philosophy\s+/i, '')
+    .replace(/^Their\s+(design|engineering)?\s*philosophy\s+/i, '')
+    .replace(/^The\s+(design|engineering)\s+/i, '')
+    .replace(/^The\s+intent\s+is\s+to\s+/i, '')
+    .trim();
+}
+
+/** Capitalise the first character of a string. */
+function capitalizeFirst(s: string): string {
+  return s.length ? s[0].toUpperCase() + s.slice(1) : s;
+}
+
+/** Compose the one-sentence "Why this maker for this call" line.
+ *
+ *  Copy pass: ONE sentence, sound + direction only, expert-reviewer voice.
+ *  We strip the meta-lede ("The philosophy …") so the sentence reads as a
+ *  direct claim, and we drop the old "exactly the direction this chain
+ *  needs for X" filler tail — the section title ("Why this maker for
+ *  this call") already anchors the claim to the recommendation, so the
+ *  tail was redundant padding.
+ *
+ *  Same brand → same sentence across every card it appears on. */
+function composeWhyThisMaker(opt: AdvisoryOption): string | undefined {
+  if (!opt.brand) return undefined;
+  const profile = findBrandProfileByName(opt.brand);
+  if (!profile?.philosophy) return undefined;
+
+  const raw = extractValueSentence(profile.philosophy);
+  const trimmed = trimPhilosophyLede(raw).replace(/[.!?\s]+$/, '').trim();
+  if (!trimmed) return undefined;
+
+  return `${capitalizeFirst(trimmed)}.`;
+}
+
+// ── Product identity line (Pass 10) ───────────────────
+//
+// Composes a factual, single-line label directly under the product name —
+// e.g. "Discrete R2R DAC", "SET integrated amplifier", "Standmount speaker".
+// Presentation-only: derived from catalogTopology + productType, both
+// already on AdvisoryOption. When topology is unavailable, falls back to
+// productType alone. No new data, no invention.
+
+const TOPOLOGY_PREFIX: Record<string, string> = {
+  // DACs
+  'r2r':          'Discrete R2R',
+  'fpga':         'FPGA',
+  'delta-sigma':  'Delta-sigma',
+  'multibit':     'Multibit ladder',
+  'nos':          'NOS',
+  // Amplifiers
+  'set':                 'SET tube',
+  'push-pull-tube':      'Push-pull tube',
+  'hybrid':              'Hybrid tube / solid-state',
+  'class-a-solid-state': 'Class A solid-state',
+  'class-ab-solid-state':'Solid-state',
+  'class-d':             'Class D',
+  // Turntables
+  'belt-drive':   'Belt-drive',
+  'direct-drive': 'Direct-drive',
+  // Speakers / headphones
+  'bass-reflex':     'Ported',
+  'sealed':          'Sealed',
+  'horn-loaded':     'Horn-loaded',
+  'high-efficiency': 'High-efficiency',
+  'open-baffle':     'Open-baffle',
+  'planar-magnetic': 'Planar magnetic',
+};
+
+/** Lowercase the productType for composition, but keep "DAC" uppercase. */
+function productTypeForComposition(productType: string): string {
+  // "DAC", "DAC / Preamp", "DAC / Headphone Amp" — keep DAC uppercase.
+  if (/\bDAC\b/.test(productType)) {
+    return productType.replace(/Integrated Amplifier/, 'integrated amplifier')
+                      .replace(/Power Amplifier/, 'power amplifier')
+                      .replace(/Preamplifier/, 'preamplifier')
+                      .replace(/Headphone Amp/i, 'headphone amp');
+  }
+  return productType.toLowerCase();
+}
+
+function buildIdentityLine(opt: AdvisoryOption): string | undefined {
+  const topology = opt.catalogTopology?.toLowerCase();
+  const productType = opt.productType;
+  if (!productType && !topology) return undefined;
+
+  const prefix = topology ? TOPOLOGY_PREFIX[topology] : undefined;
+
+  if (prefix && productType) {
+    return `${prefix} ${productTypeForComposition(productType)}`;
+  }
+  if (productType) return productType;
+  return undefined;
+}
+
+// ── Link label normalization (Pass 10, Step 6) ────────
+//
+// Strips incidental "official" / "(retailer)" / "authorized" decorations
+// from catalog link labels so the rendered buy-row stays neutral. We
+// cannot verify the authorized-distributor status of every dealer in a
+// global catalog, so the safer default is broadly correct rather than
+// precisely wrong. The manufacturer URL remains labelled by brand name.
+
+function cleanLinkLabel(label: string): string {
+  // "Official website" is a generic placeholder that appears across many
+  // brand profiles. Collapse it to a plain "Website" so the chip reads as a
+  // neutral pointer rather than a marketing claim. Other decorations —
+  // "(retailer)", "… official", "… authorised dealer",
+  // "(official distributor)", "(US distributor)", "(parent brand)" — are
+  // stripped so only the dealer or maker name remains.
+  const cleaned = label
+    .replace(/^\s*official\s+website\s*$/i, 'Website')
+    .replace(/\s*\(retailer\)\s*$/i, '')
+    .replace(/\s*\(official\s+distributor\)\s*$/i, '')
+    .replace(/\s*\(distributor\)\s*$/i, '')
+    .replace(/\s*\([A-Z]{2,}\s+distributor\)\s*$/i, '')
+    .replace(/\s*\(parent\s+brand\)\s*$/i, '')
+    .replace(/\s+official\s*$/i, '')
+    .replace(/^\s*official\s+/i, '')
+    .replace(/\s+authori[sz]ed\s+dealer\s*$/i, '')
+    .replace(/\s+authori[sz]ed\s*$/i, '')
+    .trim();
+  return cleaned.length > 0 ? cleaned : label.trim();
+}
+
+// ── Verdict synthesizer ───────────────────────────────
+// Pass 8: deterministic, role-aware, conditional verdict line.
+// Presentation-only: composes a single sentence from existing option fields.
+// No new data, no calls into engine logic.
+//
+// Templates are intentionally conditional ("best if…", "only choose if…")
+// and never present an alternative as equal-weight to the anchor.
+
+/** Role-aware verdict synthesizer.
+ *
+ *  The verdict's job is DECISION framing — who this card is for — not a
+ *  restatement of gain or trade-off, both of which are already printed in
+ *  the "What you gain" / "What you give up" bullets directly above.
+ *
+ *  Critical: upstream gain / trade-off strings are full advisor-voice
+ *  phrases ("lifts the dynamic range the chain is currently short on",
+ *  "by design, less warmth than flatter, more analytical alternatives").
+ *  They read well as bullets but cannot be safely interpolated into a
+ *  sentence template like "pick it when X is the bias you want" — the
+ *  result is ungrammatical or recursive. So every branch below is STATIC
+ *  and role-specific; the role itself carries the differentiation.
+ */
+function buildVerdict(opt: AdvisoryOption, role: string | undefined): string | null {
+  // Anchor / primary — decisive default, no gain restatement.
+  if (role === 'anchor' || role === 'top_pick' || opt.isPrimary) {
+    return 'The default call for this chain. Pick an alternative below only when a specific trade-off outweighs breadth of fit.';
+  }
+
+  // Close alternative — same philosophy, finer bias. The gain bullets
+  // above already name what the finer bias delivers; the verdict only
+  // needs to frame the decision.
+  if (role === 'close_alt') {
+    return 'A finer-grained version of the primary direction. Pick it to nudge the bias toward the gains above, not to shift philosophy.';
+  }
+
+  // Contrast — fundamentally different direction. The trade-off IS the
+  // identity of this option; point the reader at the bullets rather than
+  // restating them inline.
+  if (role === 'contrast') {
+    return "A deliberately different direction. Right only if the trade-offs above are ones you'd actively choose, not merely tolerate.";
+  }
+
+  // Wildcard — defined by being off-pattern; static framing is the point.
+  if (role === 'wildcard') {
+    return 'Outside the obvious answers. Pick only if curiosity outweighs the safer call, and the trade-offs above are ones you can live with.';
+  }
+
+  // Legacy upgrade / value picks.
+  if (role === 'upgrade_pick') {
+    return 'A step-up bet. Only worth it when the budget absorbs the jump and the gains above map to a priority you actually listen for.';
+  }
+  if (role === 'value_pick') {
+    return 'The budget-first answer. Right when the last increments of refinement are not the priority.';
+  }
+
+  return null;
+}
 
 // ── Design tokens ─────────────────────────────────────
+//
+// Pass 9: aligned with the page palette in app/page.tsx so the cards share
+// the same single accent and contrast hierarchy as the rest of the UI.
+// These values mirror page COLOR exactly. Keep in sync — there is no
+// shared module yet (intentional, to avoid pulling page-level imports
+// into the card layer).
 
 const COLORS = {
-  text: '#2a2a2a',
-  textSecondary: '#5a5a5a',
-  textMuted: '#8a8a8a',
-  accent: '#a89870',
-  accentBg: '#faf8f3',
-  border: '#eeece8',
-  borderLight: '#f4f2ef',
-  green: '#5a7050',
+  text: '#1F1D1B',          // page COLOR.textPrimary
+  textSecondary: '#5C5852', // page COLOR.textSecondary
+  textMuted: '#8C877F',     // page COLOR.textMuted
+  accent: '#B08D57',        // page COLOR.accent — single accent across UI
+  accentBg: '#FBF6EC',      // page COLOR.accentBg — verdict block fill
+  border: '#D8D2C5',        // page COLOR.border
+  borderLight: '#E8E3D7',   // page COLOR.borderLight
+  green: '#4F6645',
   white: '#fff',
-  cardBg: '#ffffff',
-  sectionBg: '#fafaf8',
+  cardBg: '#FFFEFA',        // page COLOR.cardBg — lifts off warm bg
+  sectionBg: '#FAF6EC',
 };
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -68,16 +301,36 @@ const AVAILABILITY_LABELS: Record<string, { text: string; color: string; bg: str
 // ── Role label styles ────────────────────────────────
 
 const ROLE_LABELS: Record<string, { text: string; color: string; bg: string; border: string }> = {
-  // 4-option model roles
-  anchor:    { text: 'Start here',                              color: '#2d5a2d', bg: '#e8f2e8', border: '#a8d0a8' },
-  close_alt: { text: 'Similar direction',                       color: '#3d5a5a', bg: '#e8f0f0', border: '#a8c8c8' },
-  contrast:  { text: 'Different trade-off',                     color: '#3d3d6e', bg: '#e8e9f2', border: '#a8a8d0' },
-  wildcard:  { text: 'Worth hearing',                           color: '#6e5a2d', bg: '#f2efe8', border: '#d0c4a0' },
+  // 4-option model roles — generic fallback text only; prefer opt.roleLabel when present.
+  anchor:    { text: 'Start here',          color: '#2d5a2d', bg: '#e8f2e8', border: '#a8d0a8' },
+  close_alt: { text: 'Close alternative',   color: '#3d5a5a', bg: '#e8f0f0', border: '#a8c8c8' },
+  contrast:  { text: 'Different direction', color: '#3d3d6e', bg: '#e8e9f2', border: '#a8a8d0' },
+  wildcard:  { text: 'Outside the obvious', color: '#6e5a2d', bg: '#f2efe8', border: '#d0c4a0' },
   // Legacy roles (backward compatibility)
-  top_pick:     { text: 'Best Choice',    color: '#2d5a2d', bg: '#e8f2e8', border: '#a8d0a8' },
-  upgrade_pick: { text: 'Upgrade Choice', color: '#3d3d6e', bg: '#e8e9f2', border: '#a8a8d0' },
-  value_pick:   { text: 'Value Choice',   color: '#6e5a2d', bg: '#f2efe8', border: '#d0c4a0' },
+  top_pick:     { text: 'Start here',     color: '#2d5a2d', bg: '#e8f2e8', border: '#a8d0a8' },
+  upgrade_pick: { text: 'Upgrade pick',   color: '#3d3d6e', bg: '#e8e9f2', border: '#a8a8d0' },
+  value_pick:   { text: 'Value pick',     color: '#6e5a2d', bg: '#f2efe8', border: '#d0c4a0' },
 };
+
+// Pass 8: Role qualifier — small uppercase strip rendered ABOVE the dynamic
+// role label to make hierarchy explicit. The dynamic roleLabel (e.g. "Best
+// for warmth") describes character; the qualifier signals position in the
+// recommendation hierarchy (default vs. conditional alternative).
+const ROLE_QUALIFIER: Record<string, string> = {
+  anchor:       'Primary recommendation',
+  top_pick:     'Primary recommendation',
+  close_alt:    'Alternative \u2014 only if',
+  contrast:     'Different direction \u2014 only if',
+  wildcard:     'Outside the obvious',
+  upgrade_pick: 'Upgrade pick \u2014 only if',
+  value_pick:   'Value pick \u2014 only if',
+};
+
+/** Color palette used when opt.roleLabel is set and we want the dynamic text
+ *  rendered with role-appropriate styling. */
+function roleStyle(role: string): { color: string; bg: string; border: string } {
+  return ROLE_LABELS[role] ?? ROLE_LABELS.anchor;
+}
 
 function getRoleFromOption(opt: AdvisoryOption): string | undefined {
   if (opt.pickRole) return opt.pickRole;
@@ -144,20 +397,25 @@ function TrackedLinkRow({ links, kind, onClick }: {
 }) {
   return (
     <span style={{ lineHeight: 1.9 }}>
-      {links.map((link, i) => (
-        <span key={i}>
-          <a
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={LINK_STYLE}
-            onClick={() => onClick?.(kind, link.label, link.url)}
-          >
-            {link.label}
-          </a>
-          {i < links.length - 1 && <span style={LINK_SEP_STYLE}>&middot;</span>}
-        </span>
-      ))}
+      {links.map((link, i) => {
+        // Pass 10, Step 6: strip incidental "official" / "(retailer)" /
+        // "authorized" decorations so the rendered label is neutral.
+        const displayLabel = cleanLinkLabel(link.label);
+        return (
+          <span key={i}>
+            <a
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={LINK_STYLE}
+              onClick={() => onClick?.(kind, link.label, link.url)}
+            >
+              {displayLabel}
+            </a>
+            {i < links.length - 1 && <span style={LINK_SEP_STYLE}>&middot;</span>}
+          </span>
+        );
+      })}
     </span>
   );
 }
@@ -203,23 +461,38 @@ function ProductLinksSection({ opt, onLinkClick }: { opt: AdvisoryOption; onLink
       flexDirection: 'column',
       gap: '0.4rem',
     }}>
+      {/* Pass 8: single "Where to buy" header for the natural-next-step feel,
+        * with sub-labels for new vs used so the structural distinction stays
+        * visible. Used-only products collapse to a single "Available from"
+        * row, since there is no new/used split to preserve. */}
+      <div style={{
+        fontSize: '0.7rem',
+        fontWeight: 700,
+        color: COLORS.text,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        marginBottom: '0.15rem',
+      }}>
+        {isUsedOnly ? 'Available from' : 'Where to buy'}
+      </div>
+
       {/* New purchase links */}
       {newLinks.length > 0 && (
         <div>
-          <span style={linkLabelStyle}>Buy new</span>
+          <span style={linkLabelStyle}>New</span>
           <TrackedLinkRow links={newLinks} kind="buy_new" onClick={handleClick} />
         </div>
       )}
 
       {/* Used purchase links */}
       <div>
-        <span style={linkLabelStyle}>{isUsedOnly ? 'Find used' : 'Buy used'}</span>
+        <span style={linkLabelStyle}>{isUsedOnly ? 'Used market' : 'Used'}</span>
         <TrackedLinkRow links={usedLinks} kind="buy_used" onClick={handleClick} />
       </div>
 
       {/* Further reading links */}
       {readingLinks.length > 0 && (
-        <div>
+        <div style={{ marginTop: '0.3rem' }}>
           <span style={linkLabelStyle}>Further reading</span>
           <TrackedLinkRow links={readingLinks} kind="further_reading" onClick={handleClick} />
         </div>
@@ -228,13 +501,10 @@ function ProductLinksSection({ opt, onLinkClick }: { opt: AdvisoryOption; onLink
   );
 }
 
-// ── Section divider ───────────────────────────────────
-
-function ProductDivider() {
-  return <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.border}`, margin: '2rem 0' }} />;
-}
-
 // ── Section label ────────────────────────────────────
+// Pass 9: ProductDivider removed — cards are now self-contained surfaces
+// separated by gap-spacing in the parent flex column, so an inter-card
+// rule would be visual noise.
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -255,24 +525,52 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 const SECTION_HEADER_ROLES = new Set(['anchor', 'close_alt', 'contrast', 'wildcard']);
 
-function RoleBadge({ role }: { role: string }) {
-  const label = ROLE_LABELS[role];
-  if (!label) return null;
+function RoleBadge({ role, dynamicLabel }: { role: string; dynamicLabel?: string }) {
+  const staticLabel = ROLE_LABELS[role];
+  const style = dynamicLabel ? roleStyle(role) : staticLabel;
+  const text = dynamicLabel ?? staticLabel?.text;
+  if (!text || !style) return null;
 
-  // 4-option model: render as a prominent section header
+  // 4-option model: render as a prominent section header.
+  // Pass 8: two-line structure makes hierarchy explicit —
+  //   line 1: role qualifier (Primary recommendation / Alternative — only if / …)
+  //   line 2: dynamic descriptor (Best for warmth / Best overall / …)
+  // Pass 9: anchor qualifier rendered in the shared ACCENT (#B08D57)
+  // rather than role-green so PRIMARY RECOMMENDATION reads as the
+  // single dominant signal in the card stack.
   if (SECTION_HEADER_ROLES.has(role)) {
+    const qualifier = ROLE_QUALIFIER[role];
+    const showQualifier = qualifier && qualifier.toLowerCase() !== text.toLowerCase();
+    const isAnchor = role === 'anchor';
+    const qualifierColor = isAnchor ? COLORS.accent : style.color;
     return (
       <div style={{
-        fontSize: '0.72rem',
-        fontWeight: 700,
-        letterSpacing: '0.08em',
-        color: label.color,
-        textTransform: 'uppercase',
-        marginBottom: '0.6rem',
-        paddingBottom: '0.4rem',
-        borderBottom: `1px solid ${label.border}`,
+        marginBottom: '0.7rem',
+        paddingBottom: '0.5rem',
+        borderBottom: `1px solid ${isAnchor ? COLORS.borderLight : style.border}`,
       }}>
-        {label.text}
+        {showQualifier && (
+          <div style={{
+            fontSize: isAnchor ? '0.74rem' : '0.66rem',
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            color: qualifierColor,
+            textTransform: 'uppercase',
+            marginBottom: '0.2rem',
+          }}>
+            {qualifier}
+          </div>
+        )}
+        <div style={{
+          fontSize: '0.78rem',
+          fontWeight: 700,
+          letterSpacing: '0.06em',
+          color: style.color,
+          textTransform: 'uppercase',
+          opacity: isAnchor ? 0.75 : 1,
+        }}>
+          {text}
+        </div>
       </div>
     );
   }
@@ -286,13 +584,13 @@ function RoleBadge({ role }: { role: string }) {
       letterSpacing: '0.05em',
       padding: '0.25rem 0.7rem',
       borderRadius: '4px',
-      color: label.color,
-      background: label.bg,
-      border: `1px solid ${label.border}`,
+      color: style.color,
+      background: style.bg,
+      border: `1px solid ${style.border}`,
       marginBottom: '0.5rem',
       textTransform: 'uppercase',
     }}>
-      {label.text}
+      {text}
     </span>
   );
 }
@@ -332,11 +630,25 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
     priceParts.push('used market only');
   }
 
+  // Pass 9: anchor / primary card carries a slightly stronger visual
+  // signature — accent top stripe + warmer shadow — so the PRIMARY
+  // RECOMMENDATION reads as visually dominant in a stack of cards.
+  const isAnchor = role === 'anchor' || role === 'top_pick' || opt.isPrimary;
+
   return (
-    <div style={{ padding: '0.25rem 0' }}>
+    <div style={{
+      background: COLORS.cardBg,
+      border: `1px solid ${COLORS.border}`,
+      borderRadius: 8,
+      borderTop: isAnchor ? `3px solid ${COLORS.accent}` : `1px solid ${COLORS.border}`,
+      padding: isAnchor ? '1.5rem 1.75rem 1.5rem' : '1.5rem 1.75rem',
+      boxShadow: isAnchor
+        ? '0 2px 6px rgba(176,141,87,0.08), 0 1px 2px rgba(31,29,27,0.04)'
+        : '0 1px 2px rgba(31,29,27,0.03)',
+    }}>
 
       {/* ── Role badge ── */}
-      {role && <RoleBadge role={role} />}
+      {role && <RoleBadge role={role} dynamicLabel={opt.roleLabel} />}
 
       {/* ── Product header: name + brand + badges ── */}
       <div style={{ marginBottom: '0.4rem' }}>
@@ -357,11 +669,13 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
         {/* Product name (large, bold) + inline badges */}
         <h3 style={{
           margin: 0,
-          fontSize: '1.4rem',
+          // Pass 9: bumped product-name size for stronger card hierarchy
+          // now that cards have real surface and width.
+          fontSize: '1.55rem',
           fontWeight: 700,
           color: COLORS.text,
-          letterSpacing: '-0.02em',
-          lineHeight: 1.3,
+          letterSpacing: '-0.025em',
+          lineHeight: 1.25,
         }}>
           {opt.name}
           {opt.isCurrentComponent && (
@@ -397,6 +711,27 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
             </span>
           )}
         </h3>
+
+        {/* Pass 10: factual product-identity line directly under the
+          * product name. Adds density + authority without adding content
+          * — gives the card a clear object identity ("Discrete R2R DAC",
+          * "SET integrated amplifier") so it reads complete even without
+          * an image. One line only, factual, not marketing. */}
+        {(() => {
+          const identity = buildIdentityLine(opt);
+          if (!identity) return null;
+          return (
+            <div style={{
+              marginTop: '0.3rem',
+              fontSize: '0.86rem',
+              fontWeight: 500,
+              color: COLORS.textSecondary,
+              letterSpacing: '0.005em',
+            }}>
+              {identity}
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── Price line + buying context ── */}
@@ -441,110 +776,255 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
         )}
       </div>
 
-      {/* ── Task 6: Product image ── */}
+      {/* ── Product image (Pass 11 hardening) ──
+       * Fixed 4:3 frame keeps cards visually aligned regardless of the
+       * shape of the source image (tall speaker vs. rack DAC vs. square
+       * component). `object-fit: contain` avoids cropping or stretching;
+       * a neutral background fills the gutter cleanly when the image has
+       * transparency or non-4:3 native dimensions. No placeholder ever
+       * renders: when imageUrl is absent the whole block is omitted, and
+       * if the URL fails to load the onError handler hides the wrapper
+       * so the card collapses cleanly. */}
       {opt.imageUrl && (
         <div style={{
           marginBottom: '1rem',
           borderRadius: '6px',
           overflow: 'hidden',
           maxWidth: '280px',
+          aspectRatio: '4 / 3',
+          background: COLORS.sectionBg,
+          border: `1px solid ${COLORS.borderLight}`,
         }}>
           <img
             src={opt.imageUrl}
             alt={[opt.brand, opt.name].filter(Boolean).join(' ')}
+            loading="lazy"
             style={{
               width: '100%',
-              height: 'auto',
+              height: '100%',
+              objectFit: 'contain',
               display: 'block',
+            }}
+            onError={(e) => {
+              // Broken URL → hide the wrapper cleanly; no broken-icon artifact.
+              const wrap = (e.currentTarget as HTMLImageElement).parentElement;
+              if (wrap) wrap.style.display = 'none';
             }}
           />
         </div>
       )}
 
-      {/* ── Content sections (standardized order per Task 2) ── */}
+      {/* ── Content sections (Pass 5 redesign) ──
+       * Structure: WHAT THIS CHANGES / WHY THIS DIRECTION / WHAT YOU GAIN /
+       * WHAT YOU GIVE UP / BUY LINKS. Each section is intentionally short;
+       * copy comes from systemDelta when populated, with conservative
+       * fallbacks. No "Sound character", no "Why this fits you", no long
+       * paragraphs, no trait dumping. */}
+      {(() => {
+        // Resolve sources once so fallback logic is explicit.
+        //
+        // "What this changes in your system" — must describe the shift in
+        // THIS system, from system context. Each section must carry distinct
+        // information, so this section must NOT mirror "What you gain"
+        // bullet 1. Resolution order:
+        //   1. prefer systemDelta.whyFitsSystem (already system-framed,
+        //      structurally distinct from the gain list)
+        //   2. else use fitNote ONLY if it opens with "In your chain"
+        //      (a system-framed note, not a generic product description)
+        //   3. else omit the section entirely — synthesizing from
+        //      likelyImprovements[0] would just restate "What you gain"
+        //      bullet 1, adding no new information
+        const whyFits = opt.systemDelta?.whyFitsSystem;
+        const whatChanges =
+          whyFits
+          ?? (opt.fitNote && /^in your chain/i.test(opt.fitNote) ? opt.fitNote : undefined);
 
-      {/* 1. Why this fits you — prefer system-aware note when available */}
-      {(opt.systemDelta?.whyFitsSystem || opt.fitNote) && (
-        <div style={{ marginBottom: '1rem' }}>
-          <SectionLabel>Why this fits you</SectionLabel>
-          <p style={{
-            margin: 0,
-            fontSize: '0.95rem',
-            lineHeight: 1.75,
-            color: COLORS.text,
-          }}>
-            {renderText(opt.systemDelta?.whyFitsSystem ?? opt.fitNote ?? '')}
-          </p>
-        </div>
-      )}
+        const whyDirection = composeWhyThisMaker(opt);
 
-      {/* 2. Sound character */}
-      {opt.character && (
-        <div style={{ marginBottom: '1rem' }}>
-          <SectionLabel>Sound character</SectionLabel>
-          <p style={{
-            margin: 0,
-            fontSize: '0.93rem',
-            lineHeight: 1.75,
-            color: COLORS.textSecondary,
-            fontStyle: 'italic',
-          }}>
-            {renderText(opt.character)}
-          </p>
-        </div>
-      )}
+        const gainsRaw = (opt.systemDelta?.likelyImprovements ?? []).filter(Boolean);
+        const gainsFallback = traits.slice(0, 2);
+        const gains = (gainsRaw.length > 0 ? gainsRaw : gainsFallback).slice(0, 2);
 
-      {/* 2b. Trait bullets (fallback when no character text) */}
-      {!opt.character && traits.length > 0 && (
-        <div style={{ marginBottom: '1rem' }}>
-          <SectionLabel>Key traits</SectionLabel>
-          <ul style={{
-            margin: 0,
-            paddingLeft: '1.2rem',
-            lineHeight: 1.8,
-            color: COLORS.text,
-          }}>
-            {traits.map((trait, i) => (
-              <li key={i} style={{ marginBottom: '0.2rem', fontSize: '0.93rem' }}>
-                {renderText(trait)}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        const tradeRaw = (opt.systemDelta?.tradeOffs ?? []).filter(Boolean);
+        const tradeFallback = opt.caution ? [opt.caution] : [];
+        const tradeoffs = (tradeRaw.length > 0 ? tradeRaw : tradeFallback).slice(0, 2);
 
-      {/* 3. Trade-offs */}
-      {opt.caution && (
-        <div style={{ marginBottom: '1rem' }}>
-          <SectionLabel>Trade-offs</SectionLabel>
-          <p style={{
-            margin: 0,
-            fontSize: '0.90rem',
-            lineHeight: 1.75,
-            color: COLORS.textSecondary,
-          }}>
-            {renderText(opt.caution)}
-          </p>
-        </div>
-      )}
+        const sectionStyle: React.CSSProperties = { marginBottom: '1rem' };
+        const textStyle: React.CSSProperties = {
+          margin: 0,
+          fontSize: '0.93rem',
+          lineHeight: 1.7,
+          color: COLORS.text,
+        };
+        const bulletStyle: React.CSSProperties = {
+          margin: 0,
+          paddingLeft: '1.2rem',
+          lineHeight: 1.7,
+          color: COLORS.text,
+        };
 
-      {/* 4. Buying note */}
-      {opt.buyingNote && (
-        <div style={{ marginBottom: '0.75rem' }}>
-          <SectionLabel>Buying note</SectionLabel>
-          <p style={{
-            margin: 0,
-            fontSize: '0.88rem',
-            lineHeight: 1.7,
-            color: COLORS.textSecondary,
-          }}>
-            {renderText(opt.buyingNote)}
-          </p>
-        </div>
-      )}
+        return (
+          <>
+            {/* 1. WHAT THIS CHANGES IN YOUR SYSTEM */}
+            {whatChanges && (
+              <div style={sectionStyle}>
+                <SectionLabel>What this changes in your system</SectionLabel>
+                <p style={textStyle}>{renderText(whatChanges)}</p>
+              </div>
+            )}
 
-      {/* 5. All links at card bottom (Task 4–5) */}
-      <ProductLinksSection opt={opt} onLinkClick={handleLinkClick} />
+            {/* 2. WHY THIS MAKER — one-sentence manufacturer philosophy.
+              * Pass 8: relabeled to make it clear this reinforces the
+              * recommendation, not just describing the brand in isolation. */}
+            {whyDirection && (
+              <div style={sectionStyle}>
+                <SectionLabel>Why this maker for this call</SectionLabel>
+                <p style={{ ...textStyle, color: COLORS.textSecondary }}>
+                  {renderText(whyDirection)}
+                </p>
+              </div>
+            )}
+
+            {/* 3. WHAT YOU GAIN */}
+            {gains.length > 0 && (
+              <div style={sectionStyle}>
+                <SectionLabel>What you gain</SectionLabel>
+                <ul style={bulletStyle}>
+                  {gains.map((g, i) => (
+                    <li key={i} style={{ marginBottom: '0.2rem', fontSize: '0.93rem' }}>
+                      {renderText(g)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 4. WHAT YOU GIVE UP */}
+            {tradeoffs.length > 0 && (
+              <div style={sectionStyle}>
+                <SectionLabel>What you give up</SectionLabel>
+                <ul style={{ ...bulletStyle, color: COLORS.textSecondary }}>
+                  {tradeoffs.map((t, i) => (
+                    <li key={i} style={{ marginBottom: '0.2rem', fontSize: '0.93rem' }}>
+                      {renderText(t)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 5. VERDICT — Pass 8.
+              * Decisive, conditional one-liner derived from role + systemDelta.
+              * Anchor reads as the default; alternatives read as conditional. */}
+            {(() => {
+              const verdict = buildVerdict(opt, role);
+              if (!verdict) return null;
+              return (
+                <div style={{
+                  // Pass 9: bumped weight on the verdict block so it reads
+                  // unmistakably as the decision moment of the card —
+                  // thicker accent rule, deeper padding, slightly stronger
+                  // label color.
+                  marginTop: '0.5rem',
+                  marginBottom: '1rem',
+                  padding: '0.85rem 1rem 0.95rem',
+                  background: COLORS.accentBg,
+                  borderLeft: `4px solid ${COLORS.accent}`,
+                  borderRadius: '3px',
+                }}>
+                  <div style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    color: COLORS.accent,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    marginBottom: '0.35rem',
+                  }}>
+                    Verdict
+                  </div>
+                  <p style={{
+                    margin: 0,
+                    fontSize: '0.96rem',
+                    lineHeight: 1.55,
+                    color: COLORS.text,
+                    fontWeight: 500,
+                  }}>
+                    {renderText(verdict)}
+                  </p>
+                </div>
+              );
+            })()}
+
+            {/* Buying note: small footer line, not a full section — kept
+              because it carries availability/market-context signal that
+              the buy links alone don't convey. */}
+            {opt.buyingNote && (
+              <p style={{
+                margin: '0 0 0.75rem',
+                fontSize: '0.82rem',
+                lineHeight: 1.6,
+                color: COLORS.textMuted,
+                fontStyle: 'italic',
+              }}>
+                {renderText(opt.buyingNote)}
+              </p>
+            )}
+
+            {/* FURTHER READING — compact expert-reference block.
+             *
+             * Provenance-only: sources come from the curated `sources`
+             * array attached upstream via `topReviewsForCard`. No
+             * fabrication — if a product isn't in the curated wedge,
+             * `opt.sources` is empty and this block renders nothing.
+             *
+             * Audio XX voice dominates the card; this block is explicitly
+             * secondary — muted label, small type, at most two rows,
+             * quote in italics and strictly ≤15 words by curation policy.
+             * The synthesis sentence written in Audio XX voice remains on
+             * the ResolvedReview record but is NOT surfaced here — only
+             * the reviewer's own attributed short quote + publication +
+             * year + link appear, which is exactly the "supportive, not
+             * dominant" role the spec calls for.
+             */}
+            {opt.sources && opt.sources.length > 0 && (
+              <div style={{ margin: '0 0 0.85rem' }}>
+                <SectionLabel>Further reading</SectionLabel>
+                <ul style={{
+                  margin: 0,
+                  paddingLeft: '1.1rem',
+                }}>
+                  {opt.sources.slice(0, 2).map((s) => (
+                    <li key={s.id} style={{
+                      fontSize: '0.82rem',
+                      lineHeight: 1.55,
+                      color: COLORS.textMuted,
+                      marginBottom: '0.25rem',
+                    }}>
+                      <span style={{ color: COLORS.textSecondary, fontWeight: 500 }}>
+                        {s.reviewer.publication}
+                      </span>
+                      {' '}({s.year}):{' '}
+                      <em>&ldquo;{s.shortQuote}&rdquo;</em>{' '}
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => handleLinkClick('further_reading', `${s.reviewer.publication} review`, s.url)}
+                        style={{ color: COLORS.accent, textDecoration: 'none' }}
+                      >
+                        read
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 5. BUY LINKS */}
+            <ProductLinksSection opt={opt} onLinkClick={handleLinkClick} />
+          </>
+        );
+      })()}
     </div>
   );
 }
@@ -569,13 +1049,13 @@ export default function AdvisoryProductCards({ options }: AdvisoryProductCardPro
     return (ROLE_SORT_ORDER[roleA] ?? 9) - (ROLE_SORT_ORDER[roleB] ?? 9);
   });
 
+  // Pass 9: vertical-stack of self-contained cards. Spacing replaces the
+  // old <hr/> divider — each card is now its own surface with a real
+  // border, so a between-cards rule would be visual noise.
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {sorted.map((opt, i) => (
-        <div key={i}>
-          {i > 0 && <ProductDivider />}
-          <EditorialProductSection opt={opt} index={i} />
-        </div>
+        <EditorialProductSection key={i} opt={opt} index={i} />
       ))}
     </div>
   );

@@ -40,6 +40,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'set',
+    power_watts: 2,
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -206,6 +207,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'set',
+    power_watts: 1,
     archetypes: { primary: 'spatial_holographic', secondary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -288,6 +290,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'hybrid',
+    power_watts: 40,
     availability: 'current',
     archetypes: { primary: 'spatial_holographic', secondary: 'precision_explicit' },
     primaryAxes: {
@@ -376,6 +379,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'japan',
     country: 'JP',
     topology: 'push-pull-tube',
+    power_watts: 15,
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -464,6 +468,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'japan',
     country: 'JP',
     topology: 'push-pull-tube',
+    power_watts: 32,
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -562,6 +567,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'japan',
     country: 'JP',
     topology: 'push-pull-tube',
+    power_watts: 25,
     availability: 'current',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     primaryAxes: {
@@ -645,6 +651,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'push-pull-tube',
+    power_watts: 100,
     availability: 'current',
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
     primaryAxes: {
@@ -732,6 +739,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'NL',
     topology: 'push-pull-tube',
+    power_watts: 42,
     availability: 'current',
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     primaryAxes: {
@@ -821,6 +829,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'china',
     country: 'CN',
     topology: 'push-pull-tube',
+    power_watts: 45,
     archetypes: { primary: 'tonal_saturated', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -911,6 +920,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'china',
     country: 'CN',
     topology: 'push-pull-tube',
+    power_watts: 32,
     archetypes: { primary: 'tonal_saturated', secondary: 'spatial_holographic' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -1090,6 +1100,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'class-a-solid-state',
+    power_watts: 20,
     archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -1173,6 +1184,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'class-a-solid-state',
+    power_watts: 18,
     availability: 'discontinued',
     typicalMarket: 'used',
     usedPriceRange: { low: 3000, high: 5000 },
@@ -1262,6 +1274,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'NO',
     topology: 'class-ab-solid-state',
+    power_watts: 150,
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -1442,6 +1455,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'CH',
     topology: 'class-ab-solid-state',
+    power_watts: 225,
     availability: 'discontinued',
     typicalMarket: 'used',
     usedPriceRange: { low: 700, high: 1400 },
@@ -1533,6 +1547,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'AT',
     topology: 'class-ab-solid-state',
+    power_watts: 50,
     availability: 'discontinued',
     typicalMarket: 'both',
     usedPriceRange: { low: 1500, high: 2800 },
@@ -1628,6 +1643,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'east-asia',
     country: 'HK',
     topology: 'class-d',
+    power_watts: 15,
     availability: 'discontinued',
     typicalMarket: 'used',
     usedPriceRange: { low: 50, high: 150 },
@@ -1725,6 +1741,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'NO',
     topology: 'class-ab-solid-state',
+    power_watts: 75,
     archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'bright',             // Slightly bright of neutral — clarity and grip prioritised
@@ -1817,6 +1834,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'japan',
     country: 'JP',
     topology: 'class-ab-solid-state',
+    power_watts: 20,
     availability: 'vintage',
     archetypes: { primary: 'flow_organic', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
@@ -1914,6 +1932,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'asia',
     country: 'CN',
     topology: 'class-ab-solid-state',
+    power_watts: 215,
     archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -1962,7 +1981,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Chinese dual-mono integrated with 215W into 8Ω. Strikingly neutral with excellent three-dimensional imaging and composure. Airy, extended top end without etch. Clean, sweet midrange. An exceptional value proposition that competes well above its price class in transparency and spatial precision.',
     retailer_links: [
-      { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/product/kinki-studio-ex-m1-plus' },
+      { label: 'Kinki Studio', url: 'https://www.kinki-studio.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -2002,6 +2021,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'asia',
     country: 'CN',
     topology: 'class-ab-solid-state',
+    power_watts: 215,
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -2090,6 +2110,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'asia',
     country: 'CN',
     topology: 'class-ab-solid-state',
+    power_watts: 300,
     archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -2138,7 +2159,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Flagship Kinki Studio collaboration with Vinshine Audio. 300W into 8Ω via 12 EXICON MOSFETs per channel using their Super Symmetry Current Linear Drive topology. Extends the EX-M1+ house sound — transparency, composure, imaging — with significantly greater power reserves and dynamic authority for demanding speakers.',
     retailer_links: [
-      { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/' },
+      { label: 'Kinki Studio', url: 'https://www.kinki-studio.com/' },
     ],
     tendencies: {
       confidence: 'medium',
@@ -2178,6 +2199,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'asia',
     country: 'KR',
     topology: 'class-ab-solid-state',
+    power_watts: 25,
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -2269,6 +2291,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'IT',
     topology: 'class-a-solid-state',
+    power_watts: 37,
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -2360,6 +2383,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'CH',
     topology: 'class-ab-solid-state',
+    power_watts: 225,
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
       warm_bright: 'bright',
@@ -2450,6 +2474,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'CH',
     topology: 'class-a-solid-state',
+    power_watts: 120,
     archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -2541,6 +2566,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'CH',
     topology: 'class-ab-solid-state',
+    power_watts: 200,
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -2629,6 +2655,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'hybrid',
+    power_watts: 100,
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -2714,6 +2741,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'japan',
     country: 'JP',
     topology: 'push-pull-tube',
+    power_watts: 10,
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -2798,6 +2826,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'class-ab-solid-state',
+    power_watts: 175,
     archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -2881,6 +2910,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'class-ab-solid-state',
+    power_watts: 200,
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -2964,6 +2994,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'SE',
     topology: 'class-d',
+    power_watts: 150,
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -3047,6 +3078,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'NO',
     topology: 'class-ab-solid-state',
+    power_watts: 125,
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -3130,6 +3162,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'uk',
     country: 'UK',
     topology: 'class-ab-solid-state',
+    power_watts: 70,
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'precision_explicit' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -3219,6 +3252,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'uk',
     country: 'UK',
     topology: 'class-ab-solid-state',
+    power_watts: 80,
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'precision_explicit' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -3308,6 +3342,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'uk',
     country: 'UK',
     topology: 'push-pull-tube',
+    power_watts: 15,
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -3390,6 +3425,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'east-asia',
     country: 'JP',
     topology: 'class-ab-solid-state',
+    power_watts: 50,
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -3472,6 +3508,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'hybrid',
+    power_watts: 100,
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -3555,6 +3592,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'US',
     topology: 'hybrid',
+    power_watts: 350,
     archetypes: { primary: 'tonal_saturated', secondary: 'spatial_holographic' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -3638,6 +3676,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'uk',
     country: 'UK',
     topology: 'class-ab-solid-state',
+    power_watts: 80,
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -3720,6 +3759,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'uk',
     country: 'UK',
     topology: 'class-ab-solid-state',
+    power_watts: 50,
     archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -3802,6 +3842,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'CA',
     topology: 'class-ab-solid-state',
+    power_watts: 40,
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -3884,6 +3925,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'north-america',
     country: 'CA',
     topology: 'class-d',
+    power_watts: 100,
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -4028,6 +4070,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
+      { source: '6moons', note: 'Srajan Ebaen review of the Bottlehead Crack OTL kit.', url: 'https://6moons.com/audioreviews2/bottlehead/1.html' },
       { source: 'Head-Fi', note: 'Legendary pairing with HD6xx — warm amp, warm headphones, magical result.' },
       { source: 'AudioZine', note: 'Noted as cult classic for warm headphone listening and DIY culture.' },
     ],
@@ -4048,6 +4091,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'japan',
     country: 'JP',
     topology: 'set',
+    power_watts: 2,
     archetypes: { primary: 'flow_organic', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -4133,6 +4177,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'CH',
     topology: 'class-ab-solid-state',
+    power_watts: 130,
     archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -4215,6 +4260,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'CH',
     topology: 'class-ab-solid-state',
+    power_watts: 175,
     archetypes: { primary: 'precision_explicit', secondary: 'spatial_holographic' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -4301,6 +4347,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'asia',
     country: 'JP',
     topology: 'class-ab-solid-state',
+    power_watts: 90,
     archetypes: { primary: 'precision_explicit', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -4390,6 +4437,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'asia',
     country: 'JP',
     topology: 'class-ab-solid-state',
+    power_watts: 120,
     archetypes: { primary: 'precision_explicit', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',
@@ -4480,6 +4528,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'asia',
     country: 'CN',
     topology: 'class-ab-solid-state',
+    power_watts: 90,
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -4771,6 +4820,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'asia',
     country: 'CN',
     topology: 'class-d',
+    power_watts: 60,
     archetypes: { primary: 'precision_explicit' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -4838,6 +4888,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'asia',
     country: 'CN',
     topology: 'class-d',
+    power_watts: 100,
     archetypes: { primary: 'precision_explicit' },
     primaryAxes: {
       warm_bright: 'neutral',
@@ -4907,6 +4958,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'NO',
     topology: 'class-ab-solid-state',
+    power_watts: 250,
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
       warm_bright: 'neutral',

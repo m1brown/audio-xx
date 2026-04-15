@@ -148,6 +148,31 @@ export interface Product {
    * When omitted, roles are inferred from category + subcategory.
    */
   roles?: string[];
+
+  // ── Amp/speaker compatibility fields ───────────────────
+  /**
+   * Nominal power output in watts per channel (amplifiers only).
+   * Used by amp/speaker power-match assessment.
+   * Populated from catalog prose — omit when not clearly documented.
+   */
+  power_watts?: number;
+  /**
+   * Nominal sensitivity in dB (speakers only, typically 2.83V/1m).
+   * Used by amp/speaker power-match assessment.
+   * Populated from catalog prose — omit when not clearly documented.
+   */
+  sensitivity_db?: number;
+
+  // ── Topology compatibility flags ───────────────────────
+  /**
+   * Speakers only. True when the speaker has its own built-in amplification
+   * (active / powered / wireless designs such as KEF LS60 Wireless, LSX II,
+   * Genelec monitors, Dutch & Dutch 8c). When the user already has an
+   * external amplifier in the chain, these products are architecturally
+   * incompatible as a primary recommendation and must be excluded from the
+   * anchor pool. See `rankProducts` compatibility filter.
+   */
+  activeAmplification?: boolean;
 }
 
 export const DAC_PRODUCTS: Product[] = [
@@ -1439,7 +1464,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Full-scale R2R with rich tonal density, strong harmonic texture, and refined composure. Prioritizes body and musical weight over transient sharpness.',
     retailer_links: [
-      { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/product/denafrips-pontus-ii-12th-1' },
+      { label: 'Denafrips', url: 'https://www.denafrips.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -1599,7 +1624,7 @@ export const DAC_PRODUCTS: Product[] = [
       'Network streamer with a capable internal DAC stage. Clean, neutral digital front-end designed for streaming service integration and network transport. Most commonly used feeding an external DAC via USB or coaxial output.',
     retailer_links: [
       { label: 'Eversolo', url: 'https://eversolo.com/products/dmp-a6' },
-      { label: 'Apos Audio (retailer)', url: 'https://apos.audio/products/eversolo-dmp-a6' },
+      { label: 'Apos Audio', url: 'https://apos.audio/products/eversolo-dmp-a6' },
     ],
     philosophy: 'energy',
     marketType: 'value',
@@ -1633,7 +1658,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Affordable network streamer with broad streaming service support and a polished control app. The internal DAC is functional but the primary value is as a digital transport feeding better external conversion.',
     retailer_links: [
-      { label: 'WiiM official', url: 'https://www.wiimhome.com/wiimpro' },
+      { label: 'WiiM', url: 'https://www.wiimhome.com/wiimpro' },
     ],
     philosophy: 'neutral',
     marketType: 'value',
@@ -1667,7 +1692,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Mid-tier network streamer with improved DAC stage and analogue output over the WiiM Pro. Supports room correction and multiroom. Still best used as a transport, but the internal DAC is competent for its price.',
     retailer_links: [
-      { label: 'WiiM official', url: 'https://www.wiimhome.com/wiimultra' },
+      { label: 'WiiM', url: 'https://www.wiimhome.com/wiimultra' },
     ],
     philosophy: 'neutral',
     marketType: 'value',
@@ -1928,7 +1953,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Desktop DAC/headphone amplifier combining an AKM DAC with balanced headphone output. A capable all-rounder — clean, slightly warm, and non-fatiguing. Serves as a solid desktop hub for headphone systems.',
     retailer_links: [
-      { label: 'FiiO official', url: 'https://www.fiio.com/k9pro' },
+      { label: 'FiiO', url: 'https://www.fiio.com/k9pro' },
     ],
     philosophy: 'analytical',
     marketType: 'traditional',
@@ -1965,7 +1990,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Desktop DAC/headphone amplifier built around HiFiMAN\'s proprietary R2R "Hymalaya" DAC module. Smooth, slightly warm presentation with good tonal density. Designed as a one-box headphone system paired with HiFiMAN planar headphones.',
     retailer_links: [
-      { label: 'HiFiMAN official', url: 'https://hifiman.com/products/detail/327' },
+      { label: 'HiFiMAN', url: 'https://hifiman.com/products/detail/327' },
     ],
     sourceReferences: [
       { source: 'Head-Fi community', note: 'Impressions and comparisons with Schiit Bifrost and dedicated R2R DACs.' },
@@ -2472,7 +2497,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Denafrips\' flagship R2R DAC — dense, analog-sounding, with extraordinary tonal weight and a large soundstage. The Terminator II is widely considered one of the best R2R DACs under $5,000 and a reference for vinyl-like digital playback.',
     retailer_links: [
-      { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/product/denafrips-terminator-ii' },
+      { label: 'Denafrips', url: 'https://www.denafrips.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -3152,7 +3177,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Refined R-2R ladder DAC stepping up from Pontus — more textured staging, smoother treble control, and greater compositional coherence. Retains the house Denafrips warmth and organic flow while adding precision and spatial clarity. Fully balanced, supports USB, I2S, coaxial, and optical inputs with both NOS and oversampling modes.',
     retailer_links: [
-      { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/' },
+      { label: 'Denafrips', url: 'https://www.denafrips.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -4055,9 +4080,7 @@ export const DAC_PRODUCTS: Product[] = [
       elasticity: 0.7,
     },
     description: 'Discrete DSD conversion without off-the-shelf DAC chips — the DSD-to-analog path is built from individual resistors and transistors, avoiding the reconstruction filtering that chip-based converters impose. DSD\'s native 1-bit stream reaches the analog output with minimal processing, producing denser harmonic structure and softer transient edges than chip-based designs. PCM input is converted via a discrete R-2R ladder with similar tonal character.',
-    retailer_links: [
-      { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/' },
-    ],
+    retailer_links: [],
     tendencies: {
       confidence: 'high',
       character: [

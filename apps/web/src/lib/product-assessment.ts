@@ -217,12 +217,14 @@ function describeTraitDelta(
     const curVal = currentTraits[key] ?? 0;
     const delta = cVal - curVal;
 
+    // Trait deltas > 0.3 are measured catalog differences, not hypotheses —
+    // render them as assertions. Playbook §5 Confidence Calibration.
     if (key === 'fatigue_risk' || key === 'glare_risk') {
-      if (delta > 0.3) changes.push(`May increase ${label}`);
-      else if (delta < -0.3) changes.push(`Should reduce ${label}`);
+      if (delta > 0.3) changes.push(`Raises ${label}`);
+      else if (delta < -0.3) changes.push(`Reduces ${label}`);
     } else {
-      if (delta > 0.3) changes.push(`Likely adds ${label}`);
-      else if (delta < -0.3) changes.push(`May reduce ${label}`);
+      if (delta > 0.3) changes.push(`Adds ${label}`);
+      else if (delta < -0.3) changes.push(`Gives up some ${label}`);
     }
   }
 
@@ -250,6 +252,31 @@ function describeCharacter(product: Product): string[] {
   }
 
   return lines;
+}
+
+// ── Display-name helpers ────────────────────────────
+
+/**
+ * Title-case a brand/product name extracted from raw user text.
+ *
+ * BRAND_NAMES / PRODUCT_NAMES are stored lowercase for case-insensitive
+ * matching, so the subject.name we get back is also lowercase. When we
+ * fall through to using that string directly in rendered output (brand-
+ * only queries, un-catalogued products), we need to recover display
+ * casing. This is a conservative first-letter-upper per whitespace token.
+ *
+ * Does NOT attempt fancy cases (e.g. "KEF" → "Kef", "B&W" → "B&w"); if
+ * we need those, we'd pull from the catalog's canonical brand field.
+ * The goal here is to fix the cosmetic regression where "chord" renders
+ * as lowercase in the brand-only template (QA residual R2).
+ */
+function toDisplayName(raw: string): string {
+  return raw
+    .split(/(\s+)/)
+    .map((tok) => (/\s/.test(tok) || tok.length === 0
+      ? tok
+      : tok.charAt(0).toUpperCase() + tok.slice(1)))
+    .join('');
 }
 
 // ── Assessment builder ──────────────────────────────
@@ -280,9 +307,16 @@ export function buildProductAssessment(
   // Extract brand name even if no product match
   const brandSubject = subjectMatches.find((m) => m.kind === 'brand');
   const productSubject = subjectMatches.find((m) => m.kind === 'product');
+  // When falling through to raw subject text (no catalog match), recover
+  // display casing so the rendered output doesn't show lowercase brand
+  // names like "chord" instead of "Chord" (QA residual R2).
   const candidateName = candidate
     ? `${candidate.brand} ${candidate.name}`
-    : productSubject?.name ?? brandSubject?.name ?? 'Unknown product';
+    : productSubject?.name
+      ? toDisplayName(productSubject.name)
+      : brandSubject?.name
+        ? toDisplayName(brandSubject.name)
+        : 'Unknown product';
 
   if (!candidate && !brandSubject && !productSubject) {
     return null; // Can't identify what they're asking about
@@ -293,7 +327,7 @@ export function buildProductAssessment(
   const productNote = productKey ? KNOWN_PRODUCT_NOTES[productKey] : undefined;
   const brandName = candidate?.brand
     ?? productNote?.brand
-    ?? brandSubject?.name
+    ?? (brandSubject?.name ? toDisplayName(brandSubject.name) : undefined)
     ?? (productSubject ? findBrandForProduct(productSubject.name) : undefined);
   const siblings = brandName ? findBrandSiblings(brandName) : [];
   const brandProfile = siblings.length > 0 ? describeBrandCharacter(siblings) : null;
@@ -354,8 +388,26 @@ export function buildProductAssessment(
         );
       }
       if (brandProfile.strengths.length > 0) {
+        // Humanize internal trait keys and cap to 2 — Playbook §2: no trait dumps,
+        // and no snake_case leakage into user copy. "Likely follows" dropped —
+        // if we know the brand's house sound, we can assert that siblings share it.
+        const STRENGTH_LABELS: Record<string, string> = {
+          flow: 'musical flow',
+          tonal_density: 'tonal density',
+          clarity: 'clarity',
+          dynamics: 'dynamic energy',
+          texture: 'textural richness',
+          composure: 'composure',
+          warmth: 'warmth',
+          speed: 'transient speed',
+          spatial_precision: 'spatial precision',
+          elasticity: 'rhythmic elasticity',
+        };
+        const humanStrengths = brandProfile.strengths
+          .slice(0, 2)
+          .map((s) => STRENGTH_LABELS[s] ?? s.replace(/_/g, ' '));
         whatChanges.push(
-          `Brand's house sound emphasises ${brandProfile.strengths.join(', ')} — the ${candidateName} likely follows this direction`,
+          `${brandName}'s house sound emphasises ${humanStrengths.join(' and ')} — the ${candidateName} sits in that family.`,
         );
       }
     }
@@ -512,7 +564,12 @@ export function buildProductAssessment(
     shortAnswer = `${candidateName} is a ${candidate.architecture} design priced at ~$${candidate.price.toLocaleString()}. ${candidate.description.split('.')[0]}.`;
   } else if (productNote && siblingProduct) {
     shortAnswer = `The ${candidateName} is a ${productNote.relationship} of the ${siblingProduct.brand} ${siblingProduct.name} (${productNote.architecture ?? brandProfile?.architecture ?? 'unknown architecture'}). ${productNote.notes.split('.')[0]}.`;
+  } else if (brandProfile && !productSubject) {
+    // Brand-only query (e.g. "Tell me about the Chord sound") — the brand
+    // IS in the catalog (we have siblings). Don't say "isn't in my catalog".
+    shortAnswer = `${brandName} designs ${brandProfile.architecture} components that emphasise ${brandProfile.strengths.slice(0, 2).join(' and ')}. Assessment is based on the brand's known character.`;
   } else if (brandProfile) {
+    // Specific product not found, but brand recognized with siblings
     shortAnswer = `The ${candidateName} isn't in my catalog, but ${brandName} designs ${brandProfile.architecture} components that emphasise ${brandProfile.strengths.slice(0, 2).join(' and ')}. Assessment is based on the brand's known character.`;
   } else {
     shortAnswer = `I don't have catalog data on the ${candidateName}. If you can share the brand or model details, I can offer a more specific assessment.`;
@@ -565,7 +622,10 @@ export function buildProductAssessment(
     systemBehavior,
     goalAlignment,
     recommendation,
-    catalogMatch: candidate !== null,
+    // Brand-only queries with siblings count as "in catalog" — the brand
+    // IS recognized and we have product data. Suppress the "not in catalog"
+    // disclaimer for these cases (QA blocker N3).
+    catalogMatch: candidate !== null || (!productSubject && siblings.length > 0),
     retailerLinks: (candidate ?? siblingProduct)?.retailer_links,
     sourceReferences: (candidate ?? siblingProduct)?.sourceReferences,
   };

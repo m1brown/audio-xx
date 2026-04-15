@@ -42,6 +42,26 @@ export interface DecisionDirection {
   topologyFilter?: string[];
   /** Is this the "do nothing" path? */
   isDoNothing?: boolean;
+  /**
+   * Lightweight illustrative examples for this direction. Not full product
+   * cards — just 2–3 representative names with deterministic used-market
+   * (HiFiShark) and manufacturer links. Exists only to give the user a
+   * path to explore concrete gear after reading the strategic framing.
+   * Populated deterministically from the catalog; ranking/compatibility
+   * logic is NOT duplicated here.
+   */
+  exampleGear?: ExampleGearLink[];
+}
+
+export interface ExampleGearLink {
+  /** Display: "Brand Name". */
+  brand: string;
+  /** Display: product model. */
+  name: string;
+  /** Used-market search URL (always available — deterministic). */
+  hifiSharkUrl: string;
+  /** Manufacturer or official-site URL when catalog has one. */
+  manufacturerUrl?: string;
 }
 
 export interface DecisionFrame {
@@ -147,6 +167,86 @@ function getCatalog(category: ShoppingCategory): Product[] {
     case 'amplifier': return AMPLIFIER_PRODUCTS;
     default: return [];
   }
+}
+
+// ── Example-gear picker ──────────────────────────────
+//
+// Deterministic, read-only selection of 2–3 illustrative products per
+// direction. Pure catalog filter — no scoring, no taste weighting, no
+// compatibility evaluation. The decision frame already does all of that
+// work for the main recommendation block; these examples exist only as
+// a path for the user to explore representative gear in the named
+// philosophy.
+
+const HIFISHARK_BASE = 'https://www.hifishark.com/search?q=';
+
+function hifiSharkUrlFor(brand: string, name: string): string {
+  return `${HIFISHARK_BASE}${encodeURIComponent(`${brand} ${name}`)}`;
+}
+
+/** First retailer_link whose URL looks like a manufacturer / official site. */
+function pickManufacturerUrl(product: Product): string | undefined {
+  if (!product.retailer_links || product.retailer_links.length === 0) return undefined;
+  const brandSlug = product.brand.toLowerCase().split(/\s+/)[0];
+  // Prefer labels that mention the brand or "Manufacturer"/"Official".
+  const preferred = product.retailer_links.find((l) => {
+    const lbl = l.label.toLowerCase();
+    return lbl.includes('manufacturer') || lbl.includes('official')
+      || lbl.includes(brandSlug);
+  });
+  if (preferred) return preferred.url;
+  // Fallback: first retailer_link that isn't a used-market search.
+  const nonUsed = product.retailer_links.find((l) => {
+    const u = l.url.toLowerCase();
+    return !u.includes('hifishark') && !u.includes('ebay') && !u.includes('audiogon');
+  });
+  return nonUsed?.url;
+}
+
+function pickExamplesForDirection(
+  direction: DecisionDirection,
+  category: ShoppingCategory,
+  current: Product | null,
+): ExampleGearLink[] | undefined {
+  // "Keep your X" path is explicitly about preserving the current product —
+  // suggesting alternatives here contradicts the framing.
+  if (direction.isDoNothing) return undefined;
+  if (!direction.topologyFilter || direction.topologyFilter.length === 0) return undefined;
+
+  const catalog = getCatalog(category);
+  if (catalog.length === 0) return undefined;
+
+  const filterSet = new Set(direction.topologyFilter.map((t) => t.toLowerCase()));
+  const currentId = current?.id;
+
+  const matches = catalog.filter((p) => {
+    if (p.id === currentId) return false;
+    if (!p.topology) return false;
+    const topo = p.topology.toLowerCase();
+    return [...filterSet].some((t) => topo === t || topo.includes(t) || t.includes(topo));
+  });
+
+  if (matches.length === 0) return undefined;
+
+  // Deterministic order: (1) prefer 'current' availability, (2) higher price
+  // tier = more representative flagship, (3) name ascending for stability.
+  const availabilityRank = (p: Product): number =>
+    p.availability === 'discontinued' || p.availability === 'vintage' ? 1 : 0;
+  const ranked = [...matches].sort((a, b) => {
+    const av = availabilityRank(a) - availabilityRank(b);
+    if (av !== 0) return av;
+    const pr = (b.price ?? 0) - (a.price ?? 0);
+    if (pr !== 0) return pr;
+    return a.name.localeCompare(b.name);
+  });
+
+  const selected = ranked.slice(0, 3);
+  return selected.map((p) => ({
+    brand: p.brand,
+    name: p.name,
+    hifiSharkUrl: hifiSharkUrlFor(p.brand, p.name),
+    manufacturerUrl: pickManufacturerUrl(p),
+  }));
 }
 
 function getPhilosophies(category: ShoppingCategory): PhilosophyGroup[] {
@@ -325,10 +425,18 @@ export function buildDecisionFrame(
     ...rankedAlternatives.slice(0, current ? 1 : 2), // More alternatives if no current
   ];
 
+  // Enrich each non-do-nothing direction with 2-3 illustrative examples
+  // from the catalog. Deterministic, read-only — does not affect the
+  // main recommendation pipeline.
+  const enrichedDirections = finalDirections.map((d) => {
+    const examples = pickExamplesForDirection(d, category, current ?? null);
+    return examples ? { ...d, exampleGear: examples } : d;
+  });
+
   return {
     currentComponent: currentInfo,
     coreQuestion,
-    directions: finalDirections,
+    directions: enrichedDirections,
     category: categoryLabel,
     systemAnalysis: systemAnalysis ?? undefined,
   };
@@ -347,7 +455,8 @@ function buildCharacterSummary(product: Product): string {
     }
   }
   if (strongTraits.length > 0) {
-    parts.push(`emphasises ${strongTraits.slice(0, 3).join(', ')}`);
+    // Playbook §2: ≤2 defining characteristics per clause — no trait dumps.
+    parts.push(`emphasises ${strongTraits.slice(0, 2).join(' and ')}`);
   }
 
   return parts.join(' — ') || product.description?.split('.')[0] || 'Character not profiled';

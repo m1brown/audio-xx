@@ -25,7 +25,7 @@ import type { KnowledgeContext, AssistantContext as AudioAssistantContext } from
 import { buildDecisionFrame } from '@/lib/decision-frame';
 import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
-import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification, parseBudgetAmount, detectSelectionMode, detectExplicitCategorySwitch, type PreviousAnchor, type SelectionMode } from '@/lib/shopping-intent';
+import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification, parseBudgetAmount, detectSelectionMode, detectExplicitCategorySwitch, extractPriorityCategory, type PreviousAnchor, type SelectionMode } from '@/lib/shopping-intent';
 import {
   createEmptyListenerProfile,
   detectPreferenceSignals,
@@ -41,9 +41,12 @@ import {
   type ListenerProfile,
 } from '@/lib/listener-profile';
 import { checkGlossaryQuestion } from '@/lib/glossary';
+import { fetchWithTimeout, EVALUATE_TIMEOUT_MS } from '@/lib/fetch-with-timeout';
 import { detectIntent, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
 import { attachQuickRecommendation } from '@/lib/quick-recommendation';
 import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode, interpretSymptom } from '@/lib/conversation-state';
+import { detectHypotheticalChain, chainToComponentNames, type HypotheticalChain } from '@/lib/hypothetical-system';
+import { resolveSavedSystemForAdvisory } from '@/lib/saved-system';
 import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
@@ -82,18 +85,39 @@ import ListenerProfileBadge, { buildProfileSnapshot, type ListenerProfileSnapsho
 
 // ── Constants ─────────────────────────────────────────
 
-/** Design tokens — FT-inspired, calm premium palette. */
+/** Design tokens — FT-inspired, calm premium palette.
+ *  Pass 9: tightened for contrast and a single shared accent.
+ *    - textPrimary darkened (was #2B2A28) for stronger primary hierarchy.
+ *    - textSecondary darkened (was #7A7570) for clearer secondary contrast.
+ *    - cardBg added so product cards lift cleanly off the warm page bg.
+ *    - accent unchanged: warm gold #B08D57 is the SINGLE accent across
+ *      buttons, key labels (PRIMARY RECOMMENDATION), links and verdict
+ *      block. AdvisoryProductCard.tsx mirrors these exact values so the
+ *      palette is consistent across components. */
 const COLOR = {
   bg: '#F7F3EB',
-  textPrimary: '#2B2A28',
-  textSecondary: '#7A7570',
+  cardBg: '#FFFEFA',
+  textPrimary: '#1F1D1B',
+  textSecondary: '#5C5852',
+  textMuted: '#8C877F',
   accent: '#B08D57',
   accentHover: '#9A7A48',
   accentSubtle: 'rgba(176,141,87,0.08)',
-  border: '#E2DDD4',
+  accentBg: '#FBF6EC',
+  border: '#D8D2C5',
+  borderLight: '#E8E3D7',
   inputBg: '#FFFEFA',
   chipBg: '#F0EBE1',
   chipBorder: '#D5CEBC',
+} as const;
+
+/** Pass 9: layout tokens — wider container, but text and conversation
+ *  columns stay readable. Cards live inside CONVERSATION column and breathe
+ *  wider than text. */
+const LAYOUT = {
+  pageMax: 1180,        // outer container
+  textMax: 720,         // hero, intro, input — readable measure
+  conversationMax: 1040, // conversation thread — cards expand into this
 } as const;
 
 // Cycling placeholders removed — static placeholder is now used.
@@ -287,6 +311,11 @@ export default function Home() {
     wantsBigScale?: boolean;
     constraints?: import('@/lib/shopping-intent').HardConstraints;
     category?: import('@/lib/shopping-intent').ShoppingCategory;
+    /** Phase K — sticky domain mirror. Set whenever a non-general
+     *  category appears in any turn (shopping or diagnosis), so a
+     *  follow-up like "it's noisy" after "recommend a turntable"
+     *  retains turntable as the active domain. */
+    domainContext?: import('@/lib/shopping-intent').ShoppingCategory;
   } | null>(null);
 
   /** Products the user has engaged with (selected from cards, mentioned by name,
@@ -304,6 +333,23 @@ export default function Home() {
   // Only an explicit switch ("show me dacs", "speakers instead") changes this.
   // Clarifications, preferences, budget changes, and mode switches do NOT reset it.
   const activeShoppingCategoryRef = useRef<import('@/lib/shopping-intent').ShoppingCategory | null>(null);
+
+  // ── Hypothetical chain: user-defined temporary system for the thread ──
+  // When the user names a specific chain that differs from the saved system
+  // ("what do you think of the kinki integrated with denafrips dac?"), the
+  // saved system MUST NOT drive recommendation logic while that thread is
+  // active. The saved system may still be visible in the UI. Lifetime: the
+  // thread — cleared on full reset (same conditions that clear the
+  // category lock and saved shopping facts).
+  //
+  // Populated incrementally: each turn's detectHypotheticalChain merges
+  // newly-named components into the slot map. Explicit category change
+  // does NOT clear it — the user is often switching the slot they're
+  // asking about ("and for speakers, with kinki and terminator"), not
+  // walking away from the chain.
+  //
+  // See: hypothetical-system.ts, Pass 15.
+  const hypotheticalChainRef = useRef<HypotheticalChain | null>(null);
 
   // ── Selection mode: previous anchor + recent products for anti-repetition ──
   const lastAnchorRef = useRef<PreviousAnchor | null>(null);
@@ -366,6 +412,12 @@ export default function Home() {
       return;
     }
 
+    // Phase 5 resilience: guarantee SET_LOADING:false no matter how the
+    // pipeline exits. The many inner SET_LOADING:false dispatches remain
+    // (they keep the existing behaviour for clean exits); this `finally`
+    // is the safety net that prevents the UI from ever being stuck at
+    // "Thinking…" if an unexpected throw/hang slips past them.
+    try {
     // ── Conversation state machine routing ──────────────
     // When the state machine is active (mode !== 'idle'), route through
     // transition() before the legacy ref-based blocks below.
@@ -399,11 +451,48 @@ export default function Home() {
       onboardingContextRef.current = null;
 
       const earlyTurnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current);
-      const { intent: earlyIntent } = detectIntent(submittedText);
+      // Blocker fix §1: pass active-saved-system flag so bare evaluation
+      // phrasings ("assess my system", "evaluate the saved system",
+      // "tell me what you think") route to system_assessment instead of
+      // consultation_entry intake.
+      const hasActiveSavedSystemEarly = earlyTurnCtx.systemSource === 'saved'
+        || earlyTurnCtx.systemSource === 'draft';
+      const { intent: earlyIntent } = detectIntent(submittedText, {
+        hasActiveSavedSystem: hasActiveSavedSystemEarly,
+      });
+
+      // ── Saved-system bridge (Step 3): if the user is asking for a
+      // system assessment, try to inject a saved SavedSystemProfile so
+      // we don't ask them to re-describe components. Ambiguous case
+      // (multiple saved systems, none active) emits a clarification.
+      // Guard: skip injection when the user already described a system
+      // in this message (proposedSystem with ≥ 2 components). The user's
+      // stated chain takes precedence over any saved system.
+      let injectedSystemText: string | undefined;
+      const userStatedSystemWarm = earlyTurnCtx.proposedSystem && earlyTurnCtx.proposedSystem.components.length >= 2;
+      if ((earlyIntent === 'system_assessment' || earlyIntent === 'consultation_entry') && !userStatedSystemWarm) {
+        const resolved = resolveSavedSystemForAdvisory();
+        if (resolved.kind === 'one' && resolved.syntheticText.length > 0) {
+          injectedSystemText = resolved.syntheticText;
+        } else if (resolved.kind === 'ambiguous') {
+          const list = resolved.labels.map((l) => `• ${l.label}`).join('\n');
+          dispatch({
+            type: 'ADD_QUESTION',
+            clarification: {
+              acknowledge: 'You have more than one saved system.',
+              question: `Which one should I evaluate?\n${list}\n\nOpen the system you want from Saved Systems and ask again.`,
+            },
+          });
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+      }
+
       const convResult = convTransition(convStateRef.current, submittedText, {
-        hasSystem: !!earlyTurnCtx.activeSystem || !!audioState.activeSystemRef,
+        hasSystem: !!earlyTurnCtx.activeSystem || !!audioState.activeSystemRef || !!injectedSystemText,
         subjectCount: earlyTurnCtx.subjectMatches.length,
         detectedIntent: earlyIntent,
+        injectedSystemText,
       });
       convStateRef.current = convResult.state;
 
@@ -463,11 +552,11 @@ export default function Home() {
             // empty signals — the user always gets recommendations.
             let evalSignals: import('@/lib/signal-types').ExtractedSignals | null = null;
             try {
-              const res = await fetch('/api/evaluate', {
+              const res = await fetchWithTimeout('/api/evaluate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: synthesized }),
-              });
+              }, EVALUATE_TIMEOUT_MS);
               if (res.ok) {
                 const data = await res.json();
                 evalSignals = data.signals;
@@ -529,6 +618,11 @@ export default function Home() {
             lastShoppingFactsRef.current = {
               budget: convResult.state.facts.budget,
               fromScratch: convResult.state.facts.fromScratch,
+              // Phase K — mirror sticky domain so a follow-up symptom
+              // turn after recommendation keeps the right category.
+              domainContext: convResult.state.facts.domainContext as
+                | import('@/lib/shopping-intent').ShoppingCategory
+                | undefined,
             };
             // Update category lock to match state machine's resolved category.
             // Without this, a category switch via convTransition (e.g. tube amp → DAC → budget)
@@ -594,11 +688,11 @@ export default function Home() {
           matched_uncertainty_markers: [] as string[],
         };
         try {
-          const res = await fetch('/api/evaluate', {
+          const res = await fetchWithTimeout('/api/evaluate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: shoppingText }),
-          });
+          }, EVALUATE_TIMEOUT_MS);
           if (res.ok) {
             const data = await res.json();
             chipSignals = data.signals;
@@ -803,11 +897,11 @@ export default function Home() {
       dispatch({ type: 'SET_MODE', mode: 'shopping' });
       let legacyEvalSignals: import('@/lib/signal-types').ExtractedSignals | null = null;
       try {
-        const res = await fetch('/api/evaluate', {
+        const res = await fetchWithTimeout('/api/evaluate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: synthesized }),
-        });
+        }, EVALUATE_TIMEOUT_MS);
         if (res.ok) {
           const data = await res.json();
           legacyEvalSignals = data.signals;
@@ -861,26 +955,67 @@ export default function Home() {
     const turnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current);
 
     // ── Build AudioProfile context (shared across all advisory paths) ──
+    //
+    // Saved-system personalization split: when the user did NOT state a
+    // system in this message but has a saved/draft system, we keep the
+    // main answer general and add the system context as a secondary
+    // personalized note. The user's stated system (inline) drives the
+    // main answer as before.
+    const activeComponentNames: string[] | undefined = turnCtx.activeSystem
+      ? turnCtx.activeSystem.components.map((c) => {
+          const b = (c.brand || '').trim();
+          const n = (c.name || '').trim();
+          if (!b) return n || 'Unknown';
+          if (!n) return b;
+          if (n.toLowerCase().startsWith(b.toLowerCase())) return n;
+          return `${b} ${n}`;
+        })
+      : undefined;
+
+    const isInlineSystem = turnCtx.systemSource === 'inline';
+    const isSavedSystem = turnCtx.systemSource === 'saved' || turnCtx.systemSource === 'draft';
+
+    // Build a personalized note when a saved/draft system exists but
+    // the user didn't state one — keeps the main answer general.
+    const tendenciesStr = typeof turnCtx.activeSystem?.tendencies === 'string'
+      && turnCtx.activeSystem.tendencies.trim().length > 0
+      && turnCtx.activeSystem.tendencies.trim() !== '{}'
+      ? turnCtx.activeSystem.tendencies.trim().toLowerCase()
+      : null;
+
+    const savedSystemNote: string | undefined =
+      isSavedSystem && activeComponentNames && activeComponentNames.length > 0
+        ? `Evaluated against your current chain (${activeComponentNames.slice(0, 3).join(', ')})${tendenciesStr ? `, which leans ${tendenciesStr}` : ''} — picks below are judged on fit with that system, not in isolation.`
+        : undefined;
+
+    // Phase C blocker A.4 fix: when a saved/draft system is active, the
+    // shopping overlay and editorial context must receive it as first-class
+    // grounding — not merely as a secondary savedSystemNote. Without this,
+    // `deriveExpectedImpact` and `deriveSystemFitExplanation` in
+    // advisory-response.ts fall back to the "Without more system context"
+    // copy because they gate on `ctx.systemComponents.length > 0`. The
+    // EXPLICIT-GEAR PRECEDENCE rule from Blocker 4 is unaffected: it lives
+    // in shopping-llm-overlay.ts via queryAnchors, which still win over
+    // systemComponents for the systemFit anchor.
+    const hasActiveSystem = isInlineSystem || isSavedSystem;
     const advisoryCtx: ShoppingAdvisoryContext = {
-      systemComponents: turnCtx.activeSystem
-        ? turnCtx.activeSystem.components.map((c) => {
-            const b = (c.brand || '').trim();
-            const n = (c.name || '').trim();
-            if (!b) return n || 'Unknown';
-            if (!n) return b;
-            // Avoid "JOB JOB Integrated" — if name already starts with the brand, skip prefix
-            if (n.toLowerCase().startsWith(b.toLowerCase())) return n;
-            return `${b} ${n}`;
-          })
-        : undefined,
-      systemLocation: turnCtx.activeSystem?.location ?? undefined,
-      systemPrimaryUse: turnCtx.activeSystem?.primaryUse ?? undefined,
+      systemComponents: hasActiveSystem ? activeComponentNames : undefined,
+      systemLocation: hasActiveSystem ? (turnCtx.activeSystem?.location ?? undefined) : undefined,
+      systemPrimaryUse: hasActiveSystem ? (turnCtx.activeSystem?.primaryUse ?? undefined) : undefined,
       storedDesires: tasteProfile
         ? topTraits(tasteProfile, 5).map((t) => t.label)
         : undefined,
-      systemTendencies: turnCtx.activeSystem?.tendencies ?? undefined,
+      systemTendencies: hasActiveSystem ? (turnCtx.activeSystem?.tendencies ?? undefined) : undefined,
       tasteReflection: generateTasteReflection(listenerProfileRef.current) ?? undefined,
+      savedSystemNote,
     };
+
+    // ── Non-assessment active system ─────────────────────
+    // For builders outside the system_assessment path, only pass the
+    // active system when the user stated it in this message (inline).
+    // Saved/draft systems appear only as the secondary savedSystemNote.
+    // Assessment mode overrides this — see the safeguard below.
+    const generalActiveSystem = isInlineSystem ? turnCtx.activeSystem : null;
 
     // ── Phono caveat helper ────────────────────────────────
     // Wraps any advisory with phono stage awareness before dispatch.
@@ -904,7 +1039,13 @@ export default function Home() {
     // Intent detection runs after extraction. We only need the intent
     // classification — subjectMatches, desires, and subjects are
     // already canonical in turnCtx.
-    ({ intent } = detectIntent(submittedText));
+    // Blocker fix §1: pass active-saved-system flag so bare evaluation
+    // phrasings route to system_assessment rather than consultation_entry.
+    const hasActiveSavedSystemMain = turnCtx.systemSource === 'saved'
+      || turnCtx.systemSource === 'draft';
+    ({ intent } = detectIntent(submittedText, {
+      hasActiveSavedSystem: hasActiveSavedSystemMain,
+    }));
 
     // Count prior shopping advisory turns (needed early for category-switch bypass).
     const shoppingAnswerCount = messages.filter(
@@ -964,22 +1105,63 @@ export default function Home() {
     // Without this bypass, detectConvMode would re-enter clarify_budget
     // and lose preserved context.
     if (convStateRef.current.mode === 'idle' && !convModeHint && !intentAuthoritative && !(effectiveMode === 'shopping' && shoppingAnswerCount > 0)) {
+      // Saved-system bridge (Step 3) — cold path. Mirrors the warm-path
+      // injection above. Only runs when intent is system_assessment.
+      // Guard: skip when user already described a system in this message.
+      let coldInjectedSystemText: string | undefined;
+      const userStatedSystemCold = turnCtx.proposedSystem && turnCtx.proposedSystem.components.length >= 2;
+      if ((intent === 'system_assessment' || intent === 'consultation_entry') && !userStatedSystemCold) {
+        const resolved = resolveSavedSystemForAdvisory();
+        if (resolved.kind === 'one' && resolved.syntheticText.length > 0) {
+          coldInjectedSystemText = resolved.syntheticText;
+        } else if (resolved.kind === 'ambiguous') {
+          const list = resolved.labels.map((l) => `• ${l.label}`).join('\n');
+          dispatch({
+            type: 'ADD_QUESTION',
+            clarification: {
+              acknowledge: 'You have more than one saved system.',
+              question: `Which one should I evaluate?\n${list}\n\nOpen the system you want from Saved Systems and ask again.`,
+            },
+          });
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+      }
+
       const initialConvMode = detectConvMode(submittedText, {
         detectedIntent: intent,
-        hasSystem: !!turnCtx.activeSystem || !!audioState.activeSystemRef,
+        hasSystem: !!turnCtx.activeSystem || !!audioState.activeSystemRef || !!coldInjectedSystemText,
         subjectCount: turnCtx.subjectMatches.length,
+        injectedSystemText: coldInjectedSystemText,
       });
       console.log('[diag-cold] detectConvMode result:', initialConvMode ? `${initialConvMode.mode}/${initialConvMode.stage}` : 'null');
       if (initialConvMode) {
         convStateRef.current = initialConvMode;
 
+        // ── System assessment ready (saved system injected) ──
+        // When detectInitialMode short-circuits straight to ready_to_assess
+        // (because a saved system's synthetic text was injected above),
+        // override `intent` so the downstream dispatcher calls
+        // buildSystemAssessment instead of the consultation_entry builder.
+        // Without this override, "evaluate my system" with a saved system
+        // is classified as consultation_entry by detectIntent and never
+        // reaches buildSystemAssessment → composeAssessmentNarrative.
+        if (
+          initialConvMode.mode === 'system_assessment'
+          && initialConvMode.stage === 'ready_to_assess'
+        ) {
+          intent = 'system_assessment';
+          console.log('[diag-cold] ready_to_assess from injection — intent overridden to system_assessment');
+        }
+
         // ── System entry — confirm system, ask what to improve ──
         if (initialConvMode.mode === 'system_assessment' && initialConvMode.stage === 'entry') {
           // Run transition immediately to produce the "what are you trying to improve?" question
           const convResult = convTransition(initialConvMode, submittedText, {
-            hasSystem: !!turnCtx.activeSystem || !!audioState.activeSystemRef,
+            hasSystem: !!turnCtx.activeSystem || !!audioState.activeSystemRef || !!coldInjectedSystemText,
             subjectCount: turnCtx.subjectMatches.length,
             detectedIntent: intent,
+            injectedSystemText: coldInjectedSystemText,
           });
           convStateRef.current = convResult.state;
           if (convResult.response && convResult.response.kind === 'question') {
@@ -1216,7 +1398,15 @@ export default function Home() {
       intent !== 'shopping' &&
       isConsultationFollowUp(submittedText, state.activeConsultation)
     ) {
-      const followUp = buildConsultationFollowUp(state.activeConsultation, submittedText);
+      // Blocker fix §2: pass active saved/inline system into the
+      // consultation follow-up so fit questions ("would it fit my
+      // system?") ground in the user's real chain instead of asking
+      // them to describe it again.
+      const followUp = buildConsultationFollowUp(
+        state.activeConsultation,
+        submittedText,
+        turnCtx.activeSystem,
+      );
       if (followUp) {
         dispatchAdvisory(consultationToAdvisory(followUp, undefined, advisoryCtx), advisoryId());
         dispatch({ type: 'SET_LOADING', value: false });
@@ -1266,7 +1456,7 @@ export default function Home() {
     // specific gear. Produces a structured intake response that explains
     // the evaluation approach and asks for system details.
     if (intent === 'consultation_entry') {
-      const entryResult = buildConsultationEntry(submittedText, turnCtx.desires, turnCtx.activeSystem);
+      const entryResult = buildConsultationEntry(submittedText, turnCtx.desires, generalActiveSystem);
       dispatchAdvisory(consultationToAdvisory(entryResult, undefined, advisoryCtx), advisoryId());
       dispatch({ type: 'SET_LOADING', value: false });
       return;
@@ -1300,7 +1490,7 @@ export default function Home() {
     // Cable queries get a structured advisory response covering cable
     // strategy, system context, tuning direction, and trade-offs.
     if (intent === 'cable_advisory') {
-      const cableResult = buildCableAdvisory(submittedText, turnCtx.subjectMatches, turnCtx.desires, turnCtx.activeSystem);
+      const cableResult = buildCableAdvisory(submittedText, turnCtx.subjectMatches, turnCtx.desires, generalActiveSystem);
       dispatchAdvisory(consultationToAdvisory(cableResult, undefined, advisoryCtx), advisoryId());
       if (turnCtx.subjectMatches.length > 0) {
         dispatch({
@@ -1311,6 +1501,18 @@ export default function Home() {
       }
       dispatch({ type: 'SET_LOADING', value: false });
       return;
+    }
+
+    // ── Assessment safeguard: restore full system context ──
+    // For system assessments, the active system IS the subject — not
+    // secondary context. Restore systemComponents so the assessment
+    // pipeline sees the full chain regardless of systemSource.
+    if (intent === 'system_assessment' && activeComponentNames && !advisoryCtx.systemComponents) {
+      advisoryCtx.systemComponents = activeComponentNames;
+      advisoryCtx.systemTendencies = turnCtx.activeSystem?.tendencies ?? undefined;
+      advisoryCtx.systemLocation = turnCtx.activeSystem?.location ?? undefined;
+      advisoryCtx.systemPrimaryUse = turnCtx.activeSystem?.primaryUse ?? undefined;
+      advisoryCtx.savedSystemNote = undefined; // Not an addendum in assessment mode
     }
 
     // ── System assessment path ─────────────────────────
@@ -1537,6 +1739,7 @@ export default function Home() {
     if (state.activeMode === 'shopping' && effectiveMode !== 'shopping') {
       lastShoppingFactsRef.current = null;
       activeShoppingCategoryRef.current = null;
+      hypotheticalChainRef.current = null;
       console.log('[mode-exit] shopping→%s: cleared shopping context', effectiveMode);
     }
 
@@ -1575,6 +1778,11 @@ export default function Home() {
         return m;
       });
 
+      // Phase C blocker fix #3: pass the active saved/draft system (not
+      // generalActiveSystem) into product assessment. When the user has a
+      // saved system active, brand/product inquiries must ground in that
+      // chain — the "No system context available" fallback is only valid
+      // when there is genuinely no system in session.
       const assessmentCtx: AssessmentContext = {
         subjectMatches: enrichedSubjects,
         activeSystem: turnCtx.activeSystem,
@@ -1586,6 +1794,17 @@ export default function Home() {
       if (assessment) {
         const advisory = assessmentToAdvisory(assessment, advisoryCtx);
         dispatchAdvisory(advisory);
+        // Phase C blocker fix #2: set consultation context so elliptical
+        // follow-ups ("would it fit my system?", "how does it pair?")
+        // route through the consultation-follow-up gate instead of
+        // falling through to diagnosis.
+        if (enrichedSubjects.length > 0) {
+          dispatch({
+            type: 'SET_CONSULTATION_CONTEXT',
+            subjects: enrichedSubjects,
+            originalQuery: submittedText,
+          });
+        }
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -1613,7 +1832,7 @@ export default function Home() {
     if (intent === 'exploration') {
       const refProduct = findReferenceProduct(turnCtx.subjectMatches, submittedText);
       if (refProduct) {
-        const exploration = buildExplorationResponse(refProduct, turnCtx.activeSystem, submittedText);
+        const exploration = buildExplorationResponse(refProduct, generalActiveSystem, submittedText);
         const consultResult = explorationToConsultation(exploration);
         dispatchAdvisory(consultationToAdvisory(consultResult, undefined, advisoryCtx), advisoryId());
         if (turnCtx.subjectMatches.length > 0) {
@@ -1631,7 +1850,7 @@ export default function Home() {
 
     // Gear inquiries and comparisons — conversational path, skip diagnostic engine
     if (intent === 'gear_inquiry' || intent === 'comparison') {
-      const gearResponse = buildGearResponse(intent, turnCtx.subjects, submittedText, turnCtx.desires, tasteProfile ?? undefined, turnCtx.activeSystem);
+      const gearResponse = buildGearResponse(intent, turnCtx.subjects, submittedText, turnCtx.desires, tasteProfile ?? undefined, generalActiveSystem);
       if (gearResponse) {
         // Store comparison context for product-level comparisons
         if (intent === 'comparison' && turnCtx.subjectMatches.length >= 2) {
@@ -1663,7 +1882,7 @@ export default function Home() {
       const knowledgeCtx: KnowledgeContext = {
         currentMessage: submittedText,
         subjectMatches: turnCtx.subjectMatches,
-        activeSystem: turnCtx.activeSystem,
+        activeSystem: generalActiveSystem,
         tasteProfile: tasteProfile ?? undefined,
         advisoryCtx,
       };
@@ -1697,7 +1916,7 @@ export default function Home() {
       const assistCtx: AudioAssistantContext = {
         currentMessage: submittedText,
         subjectMatches: turnCtx.subjectMatches,
-        activeSystem: turnCtx.activeSystem,
+        activeSystem: generalActiveSystem,
       };
       const assistant = buildAssistantResponse(assistCtx);
       const assistMsgId = advisoryId();
@@ -2025,9 +2244,22 @@ export default function Home() {
     // categories mid-shopping (e.g. "show me tube amps" after DAC browsing),
     // scope evaluateText to ONLY the current message to prevent prior-category
     // trait signals from leaking into the new category's product selection.
-    const earlyCategorySwitch = isShoppingRefinement
+    // Primary: verb-first directive switches ("show me amps", "what about dacs").
+    const verbDirectiveSwitch = isShoppingRefinement
       ? detectExplicitCategorySwitch(submittedText)
       : null;
+    // Secondary: noun-first explicit-override shapes that the verb-first
+    // detector misses ("amp recommendations", "not speakers, amps",
+    // "what about amps"). These are the user's literal category demand and
+    // MUST replace any prior lock, so they count as an explicit switch.
+    const priorityOverride = isShoppingRefinement
+      ? extractPriorityCategory(submittedText)
+      : undefined;
+    const earlyCategorySwitch: import('@/lib/shopping-intent').ShoppingCategory | null =
+      verbDirectiveSwitch ?? priorityOverride?.category ?? null;
+    if (priorityOverride && !verbDirectiveSwitch) {
+      console.log('[category-override] priority pattern treated as explicit switch → %s', priorityOverride.category);
+    }
 
     // Scope diagnosis text when entering diagnosis after shopping.
     // allUserText concatenates ALL prior messages, so shopping phrases
@@ -2054,11 +2286,14 @@ export default function Home() {
     console.log('[diag-cold] about to call /api/evaluate (intent=%s, convModeHint=%s, scopeDiag=%s, scopeShop=%s, text=%s)', intent, convModeHint, scopeDiagnosisText, scopeShoppingText, evaluateText.slice(0, 80));
     let evalData: { signals: import('@/lib/signal-types').ExtractedSignals; result?: unknown } | null = null;
     try {
-      const res = await fetch('/api/evaluate', {
+      // Phase 5 resilience: bounded fetch — if /api/evaluate hangs (e.g. prisma
+      // lock on SQLite), we still fall through to the deterministic path below
+      // rather than blocking the UI at "Thinking…" forever.
+      const res = await fetchWithTimeout('/api/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: evaluateText }),
-      });
+      }, EVALUATE_TIMEOUT_MS);
       if (res.ok) {
         evalData = await res.json();
         console.log('[diag-cold] /api/evaluate OK (rules=%d)', evalData?.result?.fired_rules?.length ?? 'n/a');
@@ -2066,7 +2301,7 @@ export default function Home() {
         console.warn('[main-pipeline] /api/evaluate returned', res.status, '— using deterministic fallback');
       }
     } catch (err) {
-      console.warn('[main-pipeline] /api/evaluate failed:', err, '— using deterministic fallback');
+      console.warn('[main-pipeline] /api/evaluate failed/timed out:', err, '— using deterministic fallback');
     }
 
     // Use evaluated signals or fall back to empty signals.
@@ -2154,14 +2389,93 @@ export default function Home() {
           && lastShoppingFactsRef.current === null);
         const shoppingInputText = (isFreshCategorySwitch || earlyCategorySwitch || convModeHint === 'shopping') ? submittedText : allUserText;
 
+        // ── Hypothetical (temporary) chain detection — Pass 15 ────
+        // When the user names a specific chain in the thread that differs
+        // from the saved system, treat that chain as the active reasoning
+        // context. The saved system may remain visible in the UI, but must
+        // not control shopping, fit, or compatibility reasoning while the
+        // hypothetical chain is active.
+        //
+        // Detection is per-turn; slots accumulate across turns (amp named
+        // on turn 1 + dac named on turn 2 → chain has both by turn 2).
+        // The ref persists across turns; full reset happens on mode exit.
+        const turnHypChain = detectHypotheticalChain(`${submittedText}\n${allUserText}`);
+        if (turnHypChain) {
+          const prev = hypotheticalChainRef.current;
+          if (!prev) {
+            hypotheticalChainRef.current = turnHypChain;
+            console.log('[hypothetical-chain] detected: amp=%s dac=%s speaker=%s',
+              turnHypChain.amp?.name ?? '-', turnHypChain.dac?.name ?? '-', turnHypChain.speaker?.name ?? '-');
+          } else {
+            // Merge: newly-named slots override previous values for the
+            // same role. "terminator - not entry level" refines the DAC
+            // slot after an earlier "denafrips dac" was less specific.
+            const merged: HypotheticalChain = {
+              amp: turnHypChain.amp ?? prev.amp,
+              dac: turnHypChain.dac ?? prev.dac,
+              speaker: turnHypChain.speaker ?? prev.speaker,
+              headphone: turnHypChain.headphone ?? prev.headphone,
+              componentNames: Array.from(new Set([...prev.componentNames, ...turnHypChain.componentNames])),
+              hasExternalAmplification: !!(turnHypChain.amp ?? prev.amp),
+            };
+            hypotheticalChainRef.current = merged;
+          }
+        }
+        const activeHypChain = hypotheticalChainRef.current;
+        const hypComponents = chainToComponentNames(activeHypChain);
+
+        // Pass 16: HARD OVERRIDE — when a hypothetical chain is active, it
+        // takes ABSOLUTE precedence over the saved system. The saved system's
+        // component names, tendencies, location, and savedSystemNote must
+        // NOT be injected into shopping reasoning, even if the chain is
+        // partial (e.g. only the amp slot is filled).
+        //
+        // Strict priority:
+        //   activeHypChain present → hypComponents (may be undefined if
+        //                             chain is empty — still no saved leak)
+        //   → else advisoryCtx.systemComponents
+        //   → else saved activeComponentNames
+        //
+        // We also mutate advisoryCtx in place so every downstream caller
+        // (buildShoppingAnswer, shoppingToAdvisory, secondary dispatch,
+        // editorial overlay, etc.) sees ONLY the hypothetical chain, never
+        // the saved system. This is the single chokepoint.
+        const shoppingSystemComponents = activeHypChain
+          ? hypComponents
+          : (advisoryCtx.systemComponents
+              ?? (turnCtx.activeSystem && activeComponentNames ? activeComponentNames : undefined));
+        if (activeHypChain) {
+          console.log('[hypothetical-chain] HARD OVERRIDE — suppressing saved system (hyp components=%d, saved present=%s)',
+            hypComponents?.length ?? 0, !!advisoryCtx.systemComponents);
+          // Purge saved-system fields from advisoryCtx so downstream text
+          // generation (savedSystemNote, "Evaluated against your chain",
+          // "In your system", editorial preamble) cannot reference the
+          // saved chain. Replace with hypothetical chain components when
+          // available; otherwise leave undefined so callers emit neutral
+          // phrasing.
+          advisoryCtx.systemComponents = hypComponents;
+          advisoryCtx.savedSystemNote = undefined;
+          advisoryCtx.systemTendencies = undefined;
+          advisoryCtx.systemLocation = undefined;
+          advisoryCtx.systemPrimaryUse = undefined;
+        }
         const shoppingCtx = detectShoppingIntent(
-          shoppingInputText, pipelineSignals, advisoryCtx.systemComponents,
+          shoppingInputText, pipelineSignals, shoppingSystemComponents,
           // On refinement/category-switch turns, pass the latest message so its
           // category takes priority over earlier mentions in allUserText.
           shoppingAnswerCount > 0 ? submittedText : undefined,
           // Category lock: use locked category as fallback so stale allUserText
           // keywords don't override the user's active category on follow-up turns.
-          shoppingAnswerCount > 0 ? (activeShoppingCategoryRef.current ?? lastShoppingFactsRef.current?.category) : undefined,
+          // Phase K — sticky domain continuity: also check facts.domainContext
+          // so a turn like "it's noisy" after "recommend a turntable" stays
+          // in the turntable domain instead of drifting back to general.
+          shoppingAnswerCount > 0
+            ? (
+              activeShoppingCategoryRef.current
+              ?? lastShoppingFactsRef.current?.category
+              ?? lastShoppingFactsRef.current?.domainContext
+            )
+            : undefined,
         );
         if (isFreshCategorySwitch) {
           console.log('[category-switch] using submittedText only for signal extraction (clean slate)');
@@ -2339,11 +2653,22 @@ export default function Home() {
           // When refining, extract product names the user has mentioned across
           // all turns. These get a scoring boost so they stay in the shortlist
           // (e.g. "Klipsch Heresy IV → large living room" keeps the Heresy IV).
-          const engagedNames = shoppingAnswerCount > 0
+          //
+          // Pass 15: when a hypothetical chain is active, its resolved
+          // brand+name strings are seeded into engagedNames on every turn
+          // (not just refinements). This drives the anchor + tier-floor
+          // logic in rankProducts for the thread's declared components —
+          // e.g. a named "Denafrips Terminator II" anchors at position 0
+          // and drops the cheaper Ares/Pontus from the same shortlist.
+          const baseEngagedNames = shoppingAnswerCount > 0
             ? extractSubjectMatches(allUserText)
                 .filter((m) => m.kind === 'product')
                 .map((m) => m.name)
             : undefined;
+          const hypEngaged = activeHypChain?.componentNames ?? [];
+          const engagedNames = hypEngaged.length > 0
+            ? Array.from(new Set([...(baseEngagedNames ?? []), ...hypEngaged]))
+            : baseEngagedNames;
 
           // Detect selection mode for 4-option anchor override
           const selectionMode = detectSelectionMode(submittedText);
@@ -2628,12 +2953,12 @@ export default function Home() {
               topPick: {
                 name: top.name ?? '',
                 brand: top.brand ?? '',
-                reason: top.fitNote || top.character || 'Best overall alignment with your listening priorities.',
+                reason: top.fitNote || top.character || 'Closest alignment with your stated priorities.',
               },
               alternative: {
                 name: alt.name ?? '',
                 brand: alt.brand ?? '',
-                reason: alt.fitNote || alt.character || 'A different balance worth considering.',
+                reason: alt.fitNote || alt.character || 'A different trade-off — leans the other direction on flow vs detail.',
               },
             };
             console.log('[decisive-debug] fallback: built decisive from top 2 options');
@@ -2676,10 +3001,33 @@ export default function Home() {
           dispatchAdvisory(finalAdvisory, shoppingMsgId);
 
           // ── Multi-category follow-up ──────────────────────
-          // When the user asked for two categories ("amp and dac"), build
-          // a second shopping answer for the secondary category and dispatch
-          // it immediately after the first.
-          if (shoppingCtx.secondaryCategory && shoppingCtx.secondaryCategory !== 'general') {
+          // Pass 16 SINGLE-PANEL RULE: IF the current turn has a definite
+          // category (not 'general'/'unknown'), render ONLY that category
+          // block. The secondary panel is suppressed entirely — no stale
+          // DAC panel trailing a speaker recommendation, no amp panel
+          // trailing a DAC recommendation.
+          //
+          // The only remaining path to a secondary panel is an EXPLICIT,
+          // neutral multi-category query where the current turn did not
+          // narrow to a single category (no early switch, no priority
+          // override, no verb directive, no hypothetical chain anchor).
+          const isSingleCategoryTurn =
+            !!activeHypChain
+            || !!earlyCategorySwitch
+            || !!verbDirectiveSwitch
+            || !!priorityOverride
+            || (shoppingCtx.category !== 'general' && shoppingAnswerCount > 0);
+          const shouldDispatchSecondary =
+            !isSingleCategoryTurn
+            && !!shoppingCtx.secondaryCategory
+            && shoppingCtx.secondaryCategory !== 'general'
+            && shoppingCtx.secondaryCategory !== shoppingCtx.category;
+          if (!shouldDispatchSecondary && shoppingCtx.secondaryCategory) {
+            console.log('[single-panel] suppressing secondary=%s (primary=%s, hypChain=%s, earlySwitch=%s, priorityOverride=%s)',
+              shoppingCtx.secondaryCategory, shoppingCtx.category,
+              !!activeHypChain, !!earlyCategorySwitch, !!priorityOverride);
+          }
+          if (shouldDispatchSecondary) {
             try {
               const secondaryCtx = { ...shoppingCtx, category: shoppingCtx.secondaryCategory, secondaryCategory: undefined };
               const secondaryAnswer = buildShoppingAnswer(secondaryCtx, pipelineSignals, tasteProfile ?? undefined, reasoning, advisoryCtx.systemComponents, engagedNames, listenerProfileRef.current);
@@ -2703,16 +3051,26 @@ export default function Home() {
           // On failure (timeout, validation rejection), the deterministic descriptions stand.
           // Skip when using orchestrator output — it already provides rich LLM prose.
           if (renderSource === 'deterministic' && deterministicShoppingAdvisory.options && deterministicShoppingAdvisory.options.length > 0) {
+            // Pass 16: when a hypothetical chain is active, the editorial
+            // overlay must see ONLY the hypothetical components, never the
+            // saved turnCtx.activeSystem — otherwise LLM prose will re-inject
+            // saved-system names ("WLM Diva / Job Integrated / Chord Hugo").
+            const editorialSystemComponents = activeHypChain
+              ? hypComponents
+              : (turnCtx.activeSystem
+                  ? turnCtx.activeSystem.components.map((c) =>
+                      c.name.toLowerCase().startsWith(c.brand.toLowerCase())
+                        ? c.name
+                        : `${c.brand} ${c.name}`,
+                    )
+                  : undefined);
+            const editorialSystemCharacter = activeHypChain
+              ? undefined
+              : (turnCtx.activeSystem?.tendencies ?? undefined);
             const editorialContext: ShoppingEditorialContext = {
               // System
-              systemComponents: turnCtx.activeSystem
-                ? turnCtx.activeSystem.components.map((c) =>
-                    c.name.toLowerCase().startsWith(c.brand.toLowerCase())
-                      ? c.name
-                      : `${c.brand} ${c.name}`,
-                  )
-                : undefined,
-              systemCharacter: turnCtx.activeSystem?.tendencies ?? undefined,
+              systemComponents: editorialSystemComponents,
+              systemCharacter: editorialSystemCharacter,
               // Taste & preferences
               tasteLabel: reasoning.taste.tasteLabel || undefined,
               archetype: reasoning.taste.archetype ?? undefined,
@@ -2733,6 +3091,17 @@ export default function Home() {
               category: shoppingCtx.category,
               budget: shoppingCtx.budgetAmount ? `$${shoppingCtx.budgetAmount}` : undefined,
               userQuery: submittedText,
+              // Phase C blocker fix #4: pull brand/product names out of the
+              // user's query and surface them as the PRIMARY system-fit
+              // anchor so the LLM does not silently swap the user-named
+              // component ("for Harbeth") with the saved-system speaker.
+              queryAnchors: (() => {
+                const anchors = turnCtx.subjectMatches
+                  .filter((m) => m.kind === 'brand' || m.kind === 'product')
+                  .map((m) => m.name)
+                  .filter((n, i, arr) => arr.indexOf(n) === i);
+                return anchors.length > 0 ? anchors : undefined;
+              })(),
               // Directional recommendation
               directionStatement: reasoning.direction.statement || undefined,
               archetypeNote: reasoning.direction.archetypeNote ?? undefined,
@@ -2944,8 +3313,11 @@ export default function Home() {
       lp.sourceSignals.length,
       reflection?.direction,
     ));
-
-    dispatch({ type: 'SET_LOADING', value: false });
+    } finally {
+      // Phase 5 resilience: guarantee the loading state always clears, even
+      // if an unexpected exception slips past the inner handlers.
+      dispatch({ type: 'SET_LOADING', value: false });
+    }
   }, [currentInput, isLoading, messages, turnCount, tasteProfile, state.activeMode, audioState]);
 
   /**
@@ -3134,9 +3506,11 @@ export default function Home() {
   return (
     <div
       style={{
-        maxWidth: 720,
+        // Pass 9: outer container widened so cards have horizontal room.
+        // Per-section maxWidth wrappers below keep text blocks readable.
+        maxWidth: LAYOUT.pageMax,
         margin: '0 auto',
-        padding: '3rem 1.5rem 3rem',
+        padding: '3rem 2rem 3rem',
         color: COLOR.textPrimary,
         background: COLOR.bg,
         minHeight: '100vh',
@@ -3163,17 +3537,35 @@ export default function Home() {
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleReset(); }}
         style={{
-          marginBottom: '0.35rem',
-          fontSize: '1.8rem',
+          // Pass 9: bumped weight for stronger top-of-page hierarchy
+          // now that the container is wider.
+          marginBottom: '0.2rem',
+          fontSize: '2.15rem',
           fontWeight: 700,
-          letterSpacing: '-0.025em',
-          lineHeight: 1.15,
+          letterSpacing: '-0.03em',
+          lineHeight: 1.1,
           color: COLOR.textPrimary,
           cursor: 'pointer',
         }}
       >
         Audio <span style={{ color: COLOR.accent }}>XX</span>
       </h1>
+
+      {/* Brand signal — small pillared line directly under the wordmark.
+       * Present on both landing and conversation views so the identity
+       * carries through the whole session without being loud. */}
+      <div
+        style={{
+          marginBottom: '0.75rem',
+          fontSize: '0.72rem',
+          fontWeight: 600,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase' as const,
+          color: COLOR.textSecondary,
+        }}
+      >
+        System interaction &nbsp;&middot;&nbsp; Listener alignment &nbsp;&middot;&nbsp; Real trade-offs
+      </div>
 
       {/* System badge + panel */}
       <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
@@ -3237,36 +3629,28 @@ export default function Home() {
         />
       )}
 
-      {/* Intro — only before conversation starts */}
+      {/* Intro — only before conversation starts.
+       * Pass 6 refinement: sharper POV subheadline, brand signal moved
+       * up under the wordmark, example prompts rewritten to sound like
+       * real user inputs (not echoes of the action-button labels). */}
       {!hasMessages && (
         <>
           <p
             style={{
-              marginTop: '0.15rem',
-              marginBottom: '0.5rem',
-              maxWidth: 520,
+              marginTop: '0.1rem',
+              marginBottom: '1.75rem',
+              maxWidth: LAYOUT.textMax,
               color: COLOR.textPrimary,
-              fontSize: '1.05rem',
-              lineHeight: 1.55,
+              // Pass 9: bumped subheadline to read as a clear intro statement,
+              // not a caption. Stays inside the readable text column.
+              fontSize: '1.18rem',
+              lineHeight: 1.45,
               fontWeight: 500,
+              letterSpacing: '-0.005em',
             }}
           >
-
-            Audio advice based on your system and how you listen.
+            Every component judged by what it does to your chain &mdash; not by what it does alone.
           </p>
-          <p
-            style={{
-              margin: 0,
-              marginTop: '0.35rem',
-              color: COLOR.textSecondary,
-              fontSize: '0.85rem',
-              letterSpacing: '0.04em',
-              fontWeight: 500,
-            }}
-          >
-            System Synergy &nbsp;&middot;&nbsp; Component Matching &nbsp;&middot;&nbsp; Product Research
-          </p>
-          <div style={{ marginBottom: '2rem' }} />
 
           {/* Compact taste widget — authenticated users with profile data */}
           {tasteProfile && tasteProfile.confidence > 0 && (
@@ -3305,13 +3689,133 @@ export default function Home() {
             </div>
           )}
 
-          {/* Example prompts removed — revisit later */}
+          {/* 3 primary actions — single row, no chips, no example stack.
+           * Each action submits a short intent phrase; the downstream
+           * router resolves system context (asks for components if none
+           * saved) and routes to the appropriate flow. */}
+          {(() => {
+            const actions: Array<{ label: string; prompt: string }> = [
+              { label: 'Assess my system', prompt: 'Assess my system.' },
+              { label: 'Improve my system', prompt: 'What should I upgrade in my system?' },
+              { label: 'Compare components', prompt: 'I want to compare two components.' },
+            ];
+            return (
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
+                  marginTop: '0.25rem',
+                  marginBottom: '0.9rem',
+                  maxWidth: LAYOUT.textMax,
+                }}
+              >
+                {actions.map(({ label, prompt }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => handleSubmit(prompt)}
+                    style={{
+                      padding: '0.55rem 0.95rem',
+                      background: 'transparent',
+                      border: `1px solid ${COLOR.border}`,
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      fontSize: '0.92rem',
+                      fontWeight: 500,
+                      color: COLOR.textPrimary,
+                      fontFamily: 'inherit',
+                      transition: 'color 0.15s ease, border-color 0.15s ease, background 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = COLOR.accent;
+                      e.currentTarget.style.borderColor = COLOR.accent;
+                      e.currentTarget.style.background = COLOR.accentSubtle;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = COLOR.textPrimary;
+                      e.currentTarget.style.borderColor = COLOR.border;
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Two compact example prompts — phrased as real user inputs
+           * (diagnostic + decision), not as echoes of the action-button
+           * labels above. Single-line, tappable, muted. */}
+          {(() => {
+            const examples: string[] = [
+              'My chain feels a little lean in the mids \u2014 Node \u2192 Qutest \u2192 Leben CS300 \u2192 P3ESR. Where should I look first?',
+              'DeVore O/93 vs Harbeth SHL5 on a low-power SET \u2014 which is the safer call?',
+            ];
+            return (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.25rem',
+                  marginTop: '0.1rem',
+                  marginBottom: '1.5rem',
+                  maxWidth: LAYOUT.textMax,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 600,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase' as const,
+                    color: COLOR.textMuted,
+                    marginBottom: '0.15rem',
+                  }}
+                >
+                  Ask something like
+                </div>
+                {examples.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    onClick={() => handleSubmit(prompt)}
+                    style={{
+                      textAlign: 'left',
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      color: COLOR.textSecondary,
+                      fontSize: '0.85rem',
+                      fontFamily: 'inherit',
+                      lineHeight: 1.5,
+                      transition: 'color 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = COLOR.accent; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = COLOR.textSecondary; }}
+                  >
+                    &ldquo;{prompt}&rdquo;
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
         </>
       )}
 
-      {/* Conversation thread */}
+      {/* Conversation thread.
+       * Pass 9: widened to LAYOUT.conversationMax so product cards inside
+       * can breathe horizontally on desktop while text-heavy assistant
+       * messages still wrap at a comfortable measure (handled per-block
+       * inside MessageBubble / AdvisoryMessage). */}
       {hasMessages && (
-        <div style={{ marginTop: '0.75rem', marginBottom: '1.5rem' }}>
+        <div style={{
+          marginTop: '0.75rem',
+          marginBottom: '1.5rem',
+          maxWidth: LAYOUT.conversationMax,
+        }}>
           {messages
             .filter((msg) => {
               // In inquiry mode (pending question), suppress diagnosis advisory messages —
@@ -3401,8 +3905,10 @@ export default function Home() {
         </div>
       )}
 
-      {/* Input area — hidden when an intake form is active (it has its own Submit) */}
-      {!hasPendingIntake && <div style={{ marginBottom: '1rem' }}>
+      {/* Input area — hidden when an intake form is active (it has its own Submit).
+       * Pass 9: capped at text-column width so the input doesn't stretch
+       * across the whole 1180px container on desktop. */}
+      {!hasPendingIntake && <div style={{ marginBottom: '1rem', maxWidth: LAYOUT.textMax }}>
         {/* Label is visually handled by the headline + supporting line above */}
 
         <textarea
@@ -3416,21 +3922,26 @@ export default function Home() {
               ? 'Reply here…'
               : hasMessages
                 ? 'Continue describing what you hear…'
-                : 'Start with your system, a problem, or something you\'re considering.'
+                : 'Describe your chain, what you\'re hearing, or the decision you\'re weighing.'
           }
           style={{
             width: '100%',
-            minHeight: hasMessages ? 72 : 120,
-            padding: '1rem 1.1rem',
-            border: `1.5px solid ${COLOR.border}`,
+            // Landing view: make the input box feel like the primary
+            // interaction point — taller, slightly warmer border, deeper
+            // resting shadow so it reads as weightier than the surrounding
+            // ghost-style action chips.
+            minHeight: hasMessages ? 72 : 140,
+            padding: hasMessages ? '1rem 1.1rem' : '1.15rem 1.2rem',
+            border: `1.5px solid ${hasMessages ? COLOR.border : COLOR.chipBorder}`,
             borderRadius: 10,
             outline: 'none',
-            fontSize: '0.98rem',
+            fontSize: hasMessages ? '0.98rem' : '1rem',
             lineHeight: 1.6,
             resize: 'vertical',
-            background: COLOR.inputBg,
+            background: hasMessages ? COLOR.inputBg : '#fff',
             color: COLOR.textPrimary,
             boxSizing: 'border-box',
+            boxShadow: hasMessages ? 'none' : '0 1px 2px rgba(43,42,40,0.04)',
             transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
           }}
           onFocus={(e) => {
@@ -3473,64 +3984,13 @@ export default function Home() {
           {isLoading ? 'Thinking…' : 'Send'}
         </button>
 
-        {/* Starter chips — landing state only */}
-        {!hasMessages && (
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '0.5rem',
-              marginTop: '1rem',
-            }}
-          >
-            {[
-              { label: 'Buy something new', intent: 'shopping' as const },
-              { label: 'Improve my system', intent: 'improvement' as const },
-              { label: 'Something sounds off', intent: 'diagnosis' as const },
-              { label: 'Compare two options', intent: 'comparison' as const },
-            ].map((chip) => (
-              <button
-                key={chip.label}
-                type="button"
-                onClick={() => handleChipClick(chip.intent, chip.label)}
-                style={{
-                  padding: '0.4rem 0.85rem',
-                  background: COLOR.chipBg,
-                  border: `1px solid ${COLOR.chipBorder}`,
-                  borderRadius: 20,
-                  cursor: 'pointer',
-                  fontSize: '0.83rem',
-                  fontWeight: 500,
-                  color: COLOR.textPrimary,
-                  fontFamily: 'inherit',
-                  letterSpacing: '0.01em',
-                  transition: 'color 0.15s ease, border-color 0.15s ease, background 0.15s ease, transform 0.1s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = COLOR.accent;
-                  e.currentTarget.style.borderColor = COLOR.accent;
-                  e.currentTarget.style.background = COLOR.accentSubtle;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = COLOR.textPrimary;
-                  e.currentTarget.style.borderColor = COLOR.chipBorder;
-                  e.currentTarget.style.background = COLOR.chipBg;
-                }}
-                onMouseDown={(e) => {
-                  e.currentTarget.style.transform = 'scale(0.97)';
-                  e.currentTarget.style.background = 'rgba(176,141,87,0.15)';
-                }}
-                onMouseUp={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Starter chips removed in Pass 6 — they duplicated the three
+         * hero action buttons (Assess / Improve / Compare) that sit just
+         * above the input box. A "Something sounds off" entry point is
+         * still reachable via free text and via the Assess-my-system
+         * flow, which asks for symptoms when routing. */}
 
-        {/* Contact line — subtle, below chips */}
+        {/* Contact line — subtle, below input */}
         {!hasMessages && (
           <p style={{
             margin: '1.25rem 0 0 0',
@@ -3643,11 +4103,13 @@ function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture }: { messa
         <div
           style={{
             maxWidth: '82%',
-            padding: '0.75rem 1rem',
-            background: '#eae6dc',
+            padding: '0.85rem 1.1rem',
+            background: '#e3dcc8',
+            border: `1px solid ${COLOR.chipBorder}`,
             borderRadius: '12px 12px 4px 12px',
             color: COLOR.textPrimary,
             fontSize: '0.96rem',
+            fontWeight: 500,
             lineHeight: 1.65,
           }}
         >

@@ -97,6 +97,15 @@ function makeMockFindings(overrides?: Partial<MemoFindings>): MemoFindings {
       needsDACClarification: false,
       confidence: 'medium',
     },
+    powerMatchAssessment: {
+      ampName: 'Leben CS600X',
+      speakerName: 'DeVore O/93',
+      ampPowerWatts: 32,
+      speakerSensitivityDb: 93,
+      compatibility: 'optimal',
+      estimatedMaxCleanSPL: 108,
+      relevantInteraction: null,
+    },
     ...overrides,
   };
 }

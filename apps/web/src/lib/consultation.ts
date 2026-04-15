@@ -81,6 +81,7 @@ import type {
   CatalogSource,
   ComponentVerdict,
   ActiveDACInference,
+  PowerMatchAssessment,
 } from './memo-findings';
 import { renderDeterministicMemo } from './memo-deterministic-renderer';
 import { isWhitelistedSource } from './evidence/source-whitelist';
@@ -89,6 +90,13 @@ import { isWhitelistedSource } from './evidence/source-whitelist';
 // See memo-deterministic-renderer.ts header for the removal plan.
 import type { LegacyProseInputs, StructuredMemoInputs } from './memo-deterministic-renderer';
 import { computeSystemConfidence } from './llm-system-inference';
+import { runInference } from './inference-layer';
+import { assessTradeoffs } from './tradeoff-assessment';
+import { assessPreferenceProtection, classifyPriorities } from './preference-protection';
+import { assessCounterfactual } from './counterfactual-assessment';
+import { frameStrategy, deduplicateStrategies } from './strategy-framing';
+import { getProductImage } from './product-images';
+import { findCatalogProduct } from './listener-profile';
 
 // ── Types ───────────────────────────────────────────
 
@@ -113,6 +121,16 @@ export interface ConsultationResponse {
    * consultations.
    */
   comparisonSummary?: string;
+  /**
+   * Optional thumbnails for the two sides of a comparison. When the
+   * compared subjects resolve to brand+name pairs that have a known
+   * placeholder image (via `getProductImage`), populate this array so
+   * the UI can render the same visual treatment used in shopping cards
+   * (catalog `imageUrl` first, deterministic SVG placeholder fallback).
+   * Length is always 2 when present; first entry corresponds to the
+   * "A" side, second to the "B" side.
+   */
+  comparisonImages?: Array<{ brand: string; name: string; imageUrl?: string }>;
   /** 1. Design philosophy — what it prioritizes. */
   philosophy?: string;
   /** 2. Typical tendencies — how it tends to sound. */
@@ -290,8 +308,8 @@ const BRAND_PROFILES: BrandProfile[] = [
     tendencies: 'Pass amplifiers tend toward warmth and midrange richness for solid-state. First Watt designs emphasise texture and intimacy at the cost of dynamic scale.',
     systemContext: 'Pass Labs works across a range of speakers. First Watt pairs best with high-efficiency speakers — similar territory to low-power tube amps.',
     links: [
-      { label: 'Pass Labs official', url: 'https://www.passlabs.com/', region: 'global' },
-      { label: 'First Watt official', url: 'https://www.firstwatt.com/', region: 'global' },
+      { label: 'Pass Labs', url: 'https://www.passlabs.com/', region: 'global' },
+      { label: 'First Watt', url: 'https://www.firstwatt.com/', region: 'global' },
       { label: 'Dealer (Reno HiFi)', url: 'https://www.renohifi.com/', region: 'US' },
     ],
     designFamilies: [
@@ -332,7 +350,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     systemContext: 'Versatile pairing — works across a range of speaker types. The refined character complements both analytical and warmer speakers.',
     links: [
       { label: 'Official website', url: 'https://www.luxman.com/', region: 'global' },
-      { label: 'US distributor (On a Higher Note)', url: 'https://www.onahighernote.com/', region: 'US' },
+      { label: 'On a Higher Note', url: 'https://www.onahighernote.com/', region: 'US' },
     ],
   },
   {
@@ -402,7 +420,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     systemContext: 'Denafrips DACs tend to add warmth and body to the chain. In systems that are already warm or tonally dense, this can compound into congestion — bass and lower midrange may feel heavy. In precise or lean systems, a Denafrips source provides a welcome counterbalance, adding tonal substance without changing the downstream character.',
     pairingNotes: 'Pairs well with fast or transparent amplifiers where the R2R density is balanced by downstream speed. Widely used with solid-state amplification from brands like Benchmark, Topping, and Pass Labs. Can compound warmth with tube amplifiers — works best when the tube stage is on the transparent side.',
     links: [
-      { label: 'Vinshine Audio (official distributor)', url: 'https://www.vinshineaudio.com/', kind: 'dealer', region: 'global' },
+      { label: 'Denafrips', url: 'https://www.denafrips.com/', region: 'global' },
     ],
   },
   {
@@ -925,9 +943,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     philosophy: 'Cen.Grand builds DACs with discrete DSD conversion — no off-the-shelf DAC chips. The DSD path uses individual components for conversion, similar in philosophy to how R-2R DACs approach PCM. The design goal is analog-like naturalness, particularly for DSD content.',
     tendencies: 'Dense, warm, analog-like presentation. The discrete DSD path is the standout — DSD files sound exceptionally natural and rich. PCM handled by R-2R ladder with similar character. Prioritises musicality and tonal density over analytical precision.',
     systemContext: 'Cen.Grand DACs pair well with transparent or neutral amplification where the warmth and density provide complementary balance. DSD listeners get the most from this design. Not ideal paired with already-warm tube equipment.',
-    links: [
-      { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/', region: 'global' },
-    ],
+    links: [],
   },
   {
     names: ['benchmark'],
@@ -988,6 +1004,18 @@ const TOPOLOGY_KEYWORDS: TopologyKeyword[] = [
   { patterns: [/\bbass[- ]reflex\b/i, /\bported\s+speaker/i], archetypeId: 'bass_reflex', label: 'bass-reflex speakers' },
   { patterns: [/\bhigh[- ]efficiency\b.*\bspeaker/i, /\bfull[- ]range\s+driver\b/i, /\bsingle[- ]driver\b/i], archetypeId: 'high_efficiency_wideband', label: 'high-efficiency speakers' },
 ];
+
+// ── List serialisation ──────────────────────────────────
+//
+// Pre-review blocker fix (PDF 2): the ad-hoc `.join(' and ')` joiner reads
+// fine for two items but produces "X and Y and Z and W" for three or more.
+// Use a comma-and-final-and joiner everywhere we render a contributor list.
+function joinWithCommas(items: string[]): string {
+  if (items.length === 0) return '';
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
+}
 
 // ── Subject extraction ──────────────────────────────
 
@@ -1458,8 +1486,85 @@ function buildBrandComparison(
   return {
     subject: payload.subject,
     comparisonSummary: rendered.comparisonSummary,
+    comparisonImages: buildComparisonImages(payload.sideA.name, payload.sideB.name, queryText),
     followUp: rendered.followUp,
   };
+}
+
+/**
+ * Build comparison-side thumbnails. For each side, try to resolve a
+ * brand+product name from the catalog or from the query text, then ask
+ * `getProductImage` for a placeholder. When the side is brand-only and no
+ * product can be inferred, the entry is still returned with an undefined
+ * imageUrl — the renderer is responsible for the visual fallback.
+ *
+ * Domain note: this is a presentation-layer helper that delegates the
+ * actual image lookup to the portable `getProductImage` mapping.
+ */
+function buildComparisonImages(
+  sideAName: string,
+  sideBName: string,
+  queryText?: string,
+): Array<{ brand: string; name: string; imageUrl?: string }> | undefined {
+  const a = resolveComparisonSubject(sideAName, queryText);
+  const b = resolveComparisonSubject(sideBName, queryText);
+  if (!a && !b) return undefined;
+  return [
+    a ?? { brand: sideAName, name: '', imageUrl: undefined },
+    b ?? { brand: sideBName, name: '', imageUrl: undefined },
+  ];
+}
+
+/**
+ * Resolve a comparison side label to a brand+name pair with a thumbnail.
+ *
+ * Priority:
+ *   1. Catalog product whose `${brand} ${name}` matches the side label.
+ *   2. Catalog product mentioned in the user's query text under this brand.
+ *   3. Brand-only entry — getProductImage falls through to undefined for
+ *      unknown brands; known seed brands still return a placeholder via
+ *      the brand-only path.
+ */
+function resolveComparisonSubject(
+  sideLabel: string,
+  queryText?: string,
+): { brand: string; name: string; imageUrl?: string } | null {
+  if (!sideLabel) return null;
+  const lowerLabel = sideLabel.toLowerCase();
+
+  // 1. Direct catalog match by combined "brand name"
+  const direct = ALL_PRODUCTS.find(
+    (p) => `${p.brand} ${p.name}`.toLowerCase() === lowerLabel,
+  );
+  if (direct) {
+    return {
+      brand: direct.brand,
+      name: direct.name,
+      imageUrl: direct.imageUrl ?? getProductImage(direct.brand, direct.name),
+    };
+  }
+
+  // 2. Brand mentioned + product mentioned in the query text
+  if (queryText) {
+    const lowerQuery = queryText.toLowerCase();
+    const brandHit = ALL_PRODUCTS.find(
+      (p) => p.brand.toLowerCase() === lowerLabel
+        && lowerQuery.includes(p.name.toLowerCase()),
+    );
+    if (brandHit) {
+      return {
+        brand: brandHit.brand,
+        name: brandHit.name,
+        imageUrl: brandHit.imageUrl ?? getProductImage(brandHit.brand, brandHit.name),
+      };
+    }
+  }
+
+  // 3. Brand-only fallback. getProductImage will return a placeholder for
+  // brands that have at least one entry in its KNOWN_PRODUCTS seed list,
+  // and undefined otherwise.
+  const brandOnlyImage = getProductImage(sideLabel, undefined);
+  return { brand: sideLabel, name: '', imageUrl: brandOnlyImage };
 }
 
 /**
@@ -2330,6 +2435,30 @@ export function buildConsultationResponse(
     return buildProductConsultation(products, brandName);
   }
 
+  // 2b-alias. Shorthand product resolution via alias map.
+  //     When the user names a product by shorthand ("terminator",
+  //     "kinki integrated") without the brand word in the message,
+  //     findProductsByBrand above fails because the brand string isn't
+  //     in the message. Consult findCatalogProduct — which runs through
+  //     PRODUCT_NAME_ALIASES and the brand+category fallback — and
+  //     build a product consultation from the resolved catalog entry.
+  //     This keeps "Not from verified catalog" from firing on products
+  //     that ARE in the catalog under a canonical name.
+  if (hasProductSubject && subjectMatches) {
+    const productSubject = subjectMatches.find((m) => m.kind === 'product');
+    if (productSubject) {
+      const resolved = findCatalogProduct(productSubject.name);
+      if (resolved) {
+        const brandProducts = ALL_PRODUCTS.filter(
+          (p) => p.brand.toLowerCase() === resolved.brand.toLowerCase(),
+        );
+        if (brandProducts.length > 0) {
+          return buildProductConsultation(brandProducts, resolved.brand);
+        }
+      }
+    }
+  }
+
   // 2c. Check provisional product store (review_synthesis / review_validated)
   //     This is tier 2 of the resolution chain — products with structured
   //     trait data derived from curated review evidence.
@@ -2441,6 +2570,7 @@ export function buildComparisonRefinement(
   return {
     subject: `${nameA} vs ${nameB} — ${criterion.label}`,
     comparisonSummary: concise,
+    comparisonImages: buildComparisonImages(nameA, nameB, followUpMessage),
     followUp: refinedFollowUp,
   };
 }
@@ -2492,6 +2622,7 @@ export function buildContextRefinement(
     return {
       subject: `${nameA} vs ${nameB} — with ${contextName}`,
       comparisonSummary: anchored.body,
+      comparisonImages: buildComparisonImages(nameA, nameB, contextMessage),
       followUp: anchored.followUp,
     };
   }
@@ -2516,6 +2647,7 @@ export function buildContextRefinement(
   return {
     subject: `${nameA} vs ${nameB} — ${contextLabel}`,
     comparisonSummary: concise,
+    comparisonImages: buildComparisonImages(nameA, nameB, contextMessage),
     followUp,
   };
 }
@@ -3688,12 +3820,31 @@ function classifyFollowUp(text: string): FollowUpKind {
 export function buildConsultationFollowUp(
   activeConsultation: { subjects: SubjectMatch[]; originalQuery: string },
   followUpMessage: string,
+  activeSystem?: { components: Array<{ brand: string; name: string; category?: string }> } | null,
 ): ConsultationResponse | null {
   if (activeConsultation.subjects.length === 0) return null;
 
   const primarySubject = activeConsultation.subjects[0];
   const subjectName = capitalize(primarySubject.name);
   const kind = classifyFollowUp(followUpMessage);
+
+  // Blocker fix §2: render saved-system components inline when the user
+  // asks a fit question with no gear named in the current turn. Without
+  // this, "would it fit my system?" gets answered generically even when
+  // the user has a saved system waiting to be referenced.
+  const savedSystemRender: string | null = activeSystem && activeSystem.components.length > 0
+    ? activeSystem.components
+        .map((c) => {
+          const b = (c.brand || '').trim();
+          const n = (c.name || '').trim();
+          if (!b) return n || 'Unknown';
+          if (!n) return b;
+          if (n.toLowerCase().startsWith(b.toLowerCase())) return n;
+          return `${b} ${n}`;
+        })
+        .slice(0, 4)
+        .join(', ')
+    : null;
 
   // Resolve the brand profile for the subject
   const brandProfile = findBrandProfile(primarySubject.name);
@@ -3815,15 +3966,25 @@ export function buildConsultationFollowUp(
         contextualNote = `${subjectName} in that context: ${productTendencies}${pairingNotes ? ` ${pairingNotes}` : ''}`;
       }
 
+      // Blocker fix §2: when a saved system is active, ground the fit
+      // assessment in the user's actual chain rather than asking them
+      // to describe it.
+      const groundedContextualNote = savedSystemRender
+        ? `${contextualNote} Against your saved system (${savedSystemRender}), this would interact with the existing chain — worth weighing how the new character compounds or counterbalances what you already have.`
+        : contextualNote;
+      const groundedFollowUp = savedSystemRender
+        ? 'Want me to walk through how this would interact with each component in your saved system?'
+        : mentionsTubes
+          ? 'Which tube amp are you using — or are you choosing one?'
+          : 'What else is in the chain?';
+
       return {
         subject: subjectName,
-        philosophy: contextualNote,
+        philosophy: groundedContextualNote,
         tendencies: pairingNotes && !mentionsTubes
           ? takeSentences(pairingNotes, 2)
           : 'How well it fits depends on what the rest of the chain brings — amplifier topology, source character, and room all interact.',
-        followUp: mentionsTubes
-          ? 'Which tube amp are you using — or are you choosing one?'
-          : 'What else is in the chain?',
+        followUp: groundedFollowUp,
       };
     }
   }
@@ -3891,6 +4052,31 @@ export interface SystemComponent {
 //   2. Subcategory → roles mapping (e.g. 'dac-preamp' → ['dac', 'preamp'])
 //   3. Known multi-role product overrides (e.g. Bluesound Node)
 //   4. Fallback: [primaryRole]
+
+/**
+ * Catalog lookup aliases: when the user mentions a product that doesn't
+ * have its own catalog entry but is part of a documented family, alias
+ * the lookup to the family's representative entry. This prevents
+ * recommendation drift when the only difference is a suffix (e.g.
+ * Bluesound NODE vs NODE X — same brand, same family, only the latter
+ * has a catalog entry today).
+ *
+ * Keys and values are the normalized lowercase forms used by catalog
+ * `name` and `${brand} ${name}` matches.
+ *
+ * Domain note: this is purely a name-resolution alias for catalog
+ * lookup. It does not change role classification (already handled by
+ * KNOWN_MULTI_ROLE_PRODUCTS) or the user-visible display name.
+ */
+const CATALOG_NAME_ALIASES: Record<string, string> = {
+  'bluesound node': 'bluesound node x',
+  node: 'node x',
+};
+
+/** Apply CATALOG_NAME_ALIASES to a normalized lookup key. */
+function aliasCatalogLookup(key: string): string {
+  return CATALOG_NAME_ALIASES[key] ?? key;
+}
 
 /** Known products whose functional roles differ from their primary category. */
 const KNOWN_MULTI_ROLE_PRODUCTS: Record<string, string[]> = {
@@ -4154,6 +4340,161 @@ export function inferActiveDAC(components: SystemComponent[]): ActiveDACInferenc
   };
 }
 
+// ── Amp/speaker power-match assessment ───────────────
+//
+// Deterministic assessment of whether an amplifier can physically
+// drive the speakers to adequate listening levels.
+//
+// Behaviour summary for maintainers:
+//
+//   • Uses power_watts (amp) and sensitivity_db (speaker) from Product.
+//     Both are optional — when either is missing, compatibility is 'unknown'
+//     and the assessment produces no narrative output.
+//
+//   • Estimated max clean SPL = sensitivity_db + 10 * log10(power_watts).
+//     This is a simplified model (anechoic, no room gain) that provides
+//     a useful directional signal, not a precise prediction.
+//
+//   • Compatibility tiers:
+//       optimal:    estimated SPL ≥ 100 dB (ample headroom)
+//       adequate:   estimated SPL ≥ 95 dB  (comfortable listening, limited peaks)
+//       strained:   estimated SPL ≥ 90 dB  (dynamics compress at moderate levels)
+//       mismatched: estimated SPL < 90 dB   (amp cannot deliver adequate levels)
+//
+//   • When the amp's interactions[] array contains a condition that
+//     references the speaker's efficiency range, the matching interaction
+//     note is surfaced in the assessment.
+//
+//   • Integrates as a constraint candidate in detectPrimaryConstraint()
+//     with severity 6 (strained) or 9 (mismatched), outranking most
+//     axis-based constraints because power mismatch is more fundamental.
+
+type PowerMatchCompatibility = PowerMatchAssessment['compatibility'];
+
+/**
+ * Classify the power match between an amp and a speaker.
+ *
+ * @param powerWatts   Amp power output in watts (null if unknown)
+ * @param sensitivityDb Speaker sensitivity in dB (null if unknown)
+ * @returns Compatibility tier and estimated max clean SPL
+ */
+function classifyPowerMatch(
+  powerWatts: number | null,
+  sensitivityDb: number | null,
+): { compatibility: PowerMatchCompatibility; estimatedMaxCleanSPL: number | null } {
+  if (powerWatts == null || sensitivityDb == null || powerWatts <= 0) {
+    return { compatibility: 'unknown', estimatedMaxCleanSPL: null };
+  }
+
+  const estimatedSPL = sensitivityDb + 10 * Math.log10(powerWatts);
+
+  if (estimatedSPL >= 100) return { compatibility: 'optimal', estimatedMaxCleanSPL: estimatedSPL };
+  if (estimatedSPL >= 95)  return { compatibility: 'adequate', estimatedMaxCleanSPL: estimatedSPL };
+  if (estimatedSPL >= 90)  return { compatibility: 'strained', estimatedMaxCleanSPL: estimatedSPL };
+  return { compatibility: 'mismatched', estimatedMaxCleanSPL: estimatedSPL };
+}
+
+/**
+ * Search the amp's interactions for a note matching the speaker's
+ * efficiency range. Returns the interaction effect text, or null.
+ */
+function surfaceAmpSpeakerInteraction(
+  ampProduct: Product | undefined,
+  speakerSensitivityDb: number | null,
+): string | null {
+  if (!ampProduct || speakerSensitivityDb == null) return null;
+  const interactions = ampProduct.tendencies?.interactions;
+  if (!interactions || interactions.length === 0) return null;
+
+  // Look for interactions whose condition references efficiency/sensitivity
+  // thresholds that match this speaker
+  for (const ix of interactions) {
+    const cond = ix.condition.toLowerCase();
+    // Match patterns like "94dB+", "90dB+", "88dB+", "85dB+"
+    const dbMatch = cond.match(/(\d{2,3})\s*db\s*\+?\)?/);
+    if (dbMatch) {
+      const threshold = parseInt(dbMatch[1], 10);
+      if (ix.valence === 'positive' && speakerSensitivityDb >= threshold) {
+        return ix.effect;
+      }
+      if (ix.valence === 'caution' && speakerSensitivityDb < threshold) {
+        return ix.effect;
+      }
+    }
+    // Match "below NNdB" or "<NNdB" patterns
+    const belowMatch = cond.match(/below\s+(\d{2,3})\s*db|<\s*(\d{2,3})\s*db/);
+    if (belowMatch) {
+      const threshold = parseInt(belowMatch[1] || belowMatch[2], 10);
+      if (speakerSensitivityDb < threshold) {
+        return ix.effect;
+      }
+    }
+    // Match "low-efficiency" or "low-impedance" general patterns
+    if (
+      (cond.includes('low-efficiency') || cond.includes('low-impedance'))
+      && speakerSensitivityDb < 88
+    ) {
+      return ix.effect;
+    }
+    // Match "high-efficiency" general patterns
+    if (cond.includes('high-efficiency') && speakerSensitivityDb >= 92) {
+      return ix.effect;
+    }
+  }
+  return null;
+}
+
+/**
+ * Assess amp/speaker power match for a system.
+ *
+ * Finds the primary amplifier and primary speaker, reads their
+ * power_watts and sensitivity_db fields, and classifies compatibility.
+ * When no amp or no speaker exists, returns an 'unknown' assessment.
+ */
+export function assessPowerMatch(components: SystemComponent[]): PowerMatchAssessment {
+  // Find the primary amplifier (prefer integrated > power amp > headphone amp)
+  const ampCandidates = components.filter((c) => {
+    const role = c.role.toLowerCase();
+    return role.includes('amp') || role.includes('integrated');
+  });
+  // Exclude headphone amps when speakers are present
+  const hasSpeakers = components.some((c) => c.role.toLowerCase().includes('speak'));
+  const amp = hasSpeakers
+    ? ampCandidates.find((c) => !c.role.toLowerCase().includes('headphone'))
+      ?? ampCandidates[0]
+    : ampCandidates[0];
+
+  // Find the primary speaker
+  const speaker = components.find((c) => c.role.toLowerCase().includes('speak'));
+
+  if (!amp || !speaker) {
+    return {
+      ampName: amp?.displayName ?? null,
+      speakerName: speaker?.displayName ?? null,
+      ampPowerWatts: amp?.product?.power_watts ?? null,
+      speakerSensitivityDb: speaker?.product?.sensitivity_db ?? null,
+      compatibility: 'unknown',
+      estimatedMaxCleanSPL: null,
+      relevantInteraction: null,
+    };
+  }
+
+  const powerWatts = amp.product?.power_watts ?? null;
+  const sensitivityDb = speaker.product?.sensitivity_db ?? null;
+  const { compatibility, estimatedMaxCleanSPL } = classifyPowerMatch(powerWatts, sensitivityDb);
+  const relevantInteraction = surfaceAmpSpeakerInteraction(amp.product, sensitivityDb);
+
+  return {
+    ampName: amp.displayName,
+    speakerName: speaker.displayName,
+    ampPowerWatts: powerWatts,
+    speakerSensitivityDb: sensitivityDb,
+    compatibility,
+    estimatedMaxCleanSPL,
+    relevantInteraction,
+  };
+}
+
 // ── Pre-assessment validation ────────────────────────
 //
 // Lightweight validation pass that runs before the system assessment pipeline.
@@ -4277,6 +4618,31 @@ const USER_ROLE_KEYWORDS: { pattern: RegExp; role: string }[] = [
   { pattern: /\bphono\b/i, role: 'phono' },
 ];
 
+/**
+ * Explicit "<role>: <product>" colon labels. These are the unambiguous
+ * signal that the user has asserted a role for a specific component, so
+ * they take priority over nearby-keyword detection (QA residual R3 —
+ * "streamer: eversolo dmp-a6" was being mis-read as amplifier because
+ * the " - amp: job integrated -" phrase earlier in the chain bled into
+ * the segment scan).
+ *
+ * The pattern matches `role:` at the start of the adjacent phrase —
+ * typically the chunk between two chain separators.
+ */
+const USER_ROLE_COLON_PATTERNS: { pattern: RegExp; role: string }[] = [
+  { pattern: /\bstream(?:er|ing)?\s*:/i, role: 'streamer' },
+  { pattern: /\bdac\s*:/i, role: 'dac' },
+  { pattern: /\bintegrated\s*:/i, role: 'integrated' },
+  { pattern: /\bpre[- ]?amp(?:lifier)?\s*:/i, role: 'preamplifier' },
+  { pattern: /\bamp(?:lifier)?\s*:/i, role: 'amplifier' },
+  { pattern: /\bspeak(?:er)?s?\s*:/i, role: 'speaker' },
+  { pattern: /\bheadphones?\s*:/i, role: 'headphone' },
+  { pattern: /\bturntable\s*:/i, role: 'turntable' },
+  { pattern: /\btone\s*arm\s*:/i, role: 'tonearm' },
+  { pattern: /\bcartridge\s*:/i, role: 'cartridge' },
+  { pattern: /\bphono\s*:/i, role: 'phono' },
+];
+
 /** Roles that are functionally equivalent for duplicate detection. */
 const ROLE_EQUIVALENCES: Record<string, string> = {
   amplifier: 'amplification',
@@ -4303,9 +4669,14 @@ function detectUserAppliedRole(
   if (prodIdx < 0) return undefined;
 
   // Extract the text segment between the previous and next chain separators
-  // (arrows, "into", commas) around the product name. This prevents role
-  // keywords attached to other products from being picked up.
-  const SEP = /(?:\s*(?:→|—>|-{1,3}>|={1,2}>|>{2,3})\s*|\s+into\s+|\s*,\s*)/g;
+  // (arrows, "into", commas, " - ") around the product name. This prevents
+  // role keywords attached to other products from being picked up.
+  //
+  // " - " (whitespace-hyphen-whitespace) was added as a separator so that
+  // labelled chains like "speakers: X - amp: Y - streamer: Z" segment
+  // correctly and a trailing "streamer:" doesn't collide with an earlier
+  // "amp:" label (QA residual R3).
+  const SEP = /(?:\s*(?:→|—>|-{1,3}>|={1,2}>|>{2,3})\s*|\s+into\s+|\s*,\s*|\s+-\s+)/g;
   const separators: { start: number; end: number }[] = [];
   let m;
   while ((m = SEP.exec(msgLower)) !== null) {
@@ -4330,6 +4701,12 @@ function detectUserAppliedRole(
     for (const other of otherComponentNames) {
       segment = segment.replace(other.toLowerCase(), ' '.repeat(other.length));
     }
+  }
+
+  // Explicit colon-labeled role wins over nearby keyword detection.
+  // "streamer: eversolo dmp-a6" is an unambiguous user assertion.
+  for (const { pattern, role } of USER_ROLE_COLON_PATTERNS) {
+    if (pattern.test(segment)) return role;
   }
 
   for (const { pattern, role } of USER_ROLE_KEYWORDS) {
@@ -4506,15 +4883,26 @@ export function validateSystemComponents(
   // Only flag when the full chain extraction returned medium confidence
   // AND the canonical ordering failed (couldn't classify all segments).
   // Reuse chainExtracted from duplicate-role check if available.
+  //
+  // Suppress when all components have distinct, well-known roles (dac, amplifier,
+  // speaker, streamer, etc.) — the canonical signal path is inferrable even without
+  // explicit ordering notation. This avoids unnecessary clarification friction for
+  // natural phrasing like "I have a X DAC, Y amp, and Z speakers."
   const ambiguityExtracted = chainExtracted ?? extractFullChain(rawMessage);
   if (ambiguityExtracted && ambiguityExtracted.confidence === 'medium') {
-    const canonicalAttempt = tryCanonicalOrder(ambiguityExtracted.segments);
-    if (!canonicalAttempt) {
-      issues.push({
-        kind: 'chain-order-ambiguity',
-        subject: 'signal path order',
-        detail: 'I\'m not confident about the signal-flow order here. Could you describe the chain from source to output?',
-      });
+    const knownSignalRoles = new Set(['dac', 'amplifier', 'speaker', 'streamer', 'turntable', 'phono', 'preamp', 'integrated']);
+    const allRolesKnown = components.every((c) => knownSignalRoles.has(c.role));
+    const allRolesDistinct = new Set(components.map((c) => c.role)).size === components.length;
+
+    if (!allRolesKnown || !allRolesDistinct) {
+      const canonicalAttempt = tryCanonicalOrder(ambiguityExtracted.segments);
+      if (!canonicalAttempt) {
+        issues.push({
+          kind: 'chain-order-ambiguity',
+          subject: 'signal path order',
+          detail: 'I\'m not confident about the signal-flow order here. Could you describe the chain from source to output?',
+        });
+      }
     }
   }
 
@@ -4586,6 +4974,36 @@ function stripVersionTag(name: string): string {
   return name.replace(/\s*\((?:v\d+|mk\s*\d+|gen\s*\d+|rev\s*\w+|amp\s+section|dac\s+section|pre\s*amp?\s+section)\)\s*$/i, '').trim();
 }
 
+/**
+ * Category/role words that are too generic to uniquely identify a saved
+ * component when seeding a new assessment. If a saved component's model
+ * name is exactly one of these words, the seeding pass requires the brand
+ * (or the full "brand name" literal) to appear in the new message before
+ * pulling the component in — otherwise words like "Integrated" in one
+ * user's freshly-typed chain would drag a different brand's "Integrated"
+ * in from a saved system (QA residual R1).
+ *
+ * This is deliberately narrow: only truly generic, interchangeable category
+ * terms. Specific model names like "Diva", "Hugo", "Node" stay out — those
+ * are discriminating even without the brand.
+ */
+const GENERIC_COMPONENT_WORDS = new Set<string>([
+  'integrated', 'amp', 'amplifier', 'amplification',
+  'dac', 'streamer', 'source', 'transport',
+  'speaker', 'speakers', 'monitor', 'monitors',
+  'pre', 'preamp', 'preamplifier', 'power', 'poweramp',
+  'phono', 'phono stage', 'phonostage',
+  'headphone', 'headphones', 'iem', 'iems',
+  'turntable', 'tonearm', 'cartridge',
+  'component',
+]);
+
+function isGenericComponentWord(nameLower: string): boolean {
+  const n = nameLower.trim();
+  if (!n) return true;
+  return GENERIC_COMPONENT_WORDS.has(n);
+}
+
 function normalizeDisplayName(brand: string, name: string): string {
   const b = brand.trim();
   const n = stripVersionTag(name.trim());
@@ -4650,17 +5068,34 @@ export function buildSystemAssessment(
       // Only seed if the component's brand or model name appears in the message.
       // Use word-boundary matching for short names (≤4 chars) to prevent
       // false positives like "W5" matching inside unrelated words.
-      const mentionedInMessage = wordAwareIncludes(msgLowerForSeed, fullName.toLowerCase())
-        || wordAwareIncludes(msgLowerForSeed, nameLower)
-        || wordAwareIncludes(msgLowerForSeed, strippedNameLower)
-        || wordAwareIncludes(msgLowerForSeed, brandLower);
+      //
+      // Generic category/role words (e.g. "integrated", "monitor", "streamer")
+      // are ambiguous — "Job Integrated" in a saved system would otherwise
+      // match inside "PrimaLuna EVO 300 Integrated" in a newly-typed chain
+      // and inject phantom components (QA residual R1). For these, require
+      // that the brand also appears in the message, or that the full
+      // "<brand> <name>" literal appears verbatim.
+      const brandMentioned = wordAwareIncludes(msgLowerForSeed, brandLower);
+      const fullMentioned = wordAwareIncludes(msgLowerForSeed, fullName.toLowerCase());
+      const nameIsGeneric = isGenericComponentWord(nameLower);
+      const strippedIsGeneric = isGenericComponentWord(strippedNameLower);
+      const nameMentioned =
+        (!nameIsGeneric && wordAwareIncludes(msgLowerForSeed, nameLower))
+        || (!strippedIsGeneric && wordAwareIncludes(msgLowerForSeed, strippedNameLower));
+      const mentionedInMessage = fullMentioned || brandMentioned || nameMentioned;
       if (!mentionedInMessage) continue;
 
       processedNames.add(nameLower);
       processedNames.add(strippedNameLower);
       processedNames.add(brandLower);
 
-      // Try to find rich catalog data (use stripped name for matching too)
+      // Try to find rich catalog data (use stripped name for matching too).
+      // Apply CATALOG_NAME_ALIASES so family members without their own
+      // entry (e.g. plain "Bluesound NODE") still resolve to the family's
+      // catalog representative ("NODE X").
+      const aliasedName = aliasCatalogLookup(nameLower);
+      const aliasedStripped = aliasCatalogLookup(strippedNameLower);
+      const aliasedFull = aliasCatalogLookup(fullName.toLowerCase());
       const product = ALL_PRODUCTS.find(
         (p) => {
           const pName = p.name.toLowerCase();
@@ -4668,7 +5103,10 @@ export function buildSystemAssessment(
           const pBrand = p.brand.toLowerCase();
           return pName === nameLower
             || pName === strippedNameLower
+            || pName === aliasedName
+            || pName === aliasedStripped
             || pFull === fullName.toLowerCase()
+            || pFull === aliasedFull
             // Brand+partial-name: "horn" matches inside "horns" when brand matches
             || (pBrand === brandLower && nameLower.length >= 2 && pName.includes(nameLower))
             || (pBrand === brandLower && strippedNameLower.length >= 2 && pName.includes(strippedNameLower));
@@ -4733,7 +5171,10 @@ export function buildSystemAssessment(
 
     if (match.kind === 'product') {
       // Product-level lookup — try exact name, brand+name compound, partial name,
-      // and brand+partial-name (handles singular/plural: "hornshoppe horn" → "Hornshoppe Horns")
+      // and brand+partial-name (handles singular/plural: "hornshoppe horn" → "Hornshoppe Horns").
+      // Apply CATALOG_NAME_ALIASES so family members without their own entry
+      // (e.g. plain "node") resolve to the family representative ("node x").
+      const aliasedLower = aliasCatalogLookup(lower);
       const product = ALL_PRODUCTS.find(
         (p) => {
           const pName = p.name.toLowerCase();
@@ -4741,7 +5182,11 @@ export function buildSystemAssessment(
           const pBrand = p.brand.toLowerCase();
           return pName === lower
             || pFull === lower
+            || pName === aliasedLower
+            || pFull === aliasedLower
             || (lower.length >= 3 && pName.startsWith(lower))
+            // Model suffix match: "o/96" matches "Orangutan O/96"
+            || (lower.length >= 3 && pName.endsWith(lower))
             // Brand+partial-name: input contains brand AND product name contains the remainder
             // e.g. "hornshoppe horn" → brand "hornshoppe" matches, name "horns" includes "horn"
             || (lower.includes(pBrand) && pBrand.length >= 3 && (() => {
@@ -4898,9 +5343,12 @@ export function buildSystemAssessment(
           currentMessage.toLowerCase().includes(p.name.toLowerCase()),
         );
 
+        // Use proper brand casing from catalog products when available (e.g. "DeVore" not "Devore")
+        const catalogBrandCasing = brandProducts.length > 0 ? brandProducts[0].brand : undefined;
         const displayName = specificProduct
           ? normalizeDisplayName(specificProduct.brand, specificProduct.name)
-          : brandProfile.names[0].split(' ').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
+          : catalogBrandCasing
+            ?? brandProfile.names[0].split(' ').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
 
         const role = specificProduct?.category
           ?? brandProfile.categories?.[0]
@@ -5123,9 +5571,11 @@ export function buildSystemAssessment(
     ? undefined  // Reference-level systems don't have meaningful bottlenecks
     : detectPrimaryConstraint(components, componentAxisProfiles, memoStacked, systemAxes);
   const memoAssessments = buildComponentAssessments(components, componentAxisProfiles, memoConstraint);
+  // Hoist listener priority inference before upgrade paths (Feature 3: preference protection)
+  const memoListenerPriorities = inferListenerPriorityTags(systemAxes, desires);
   const memoUpgradePaths = systemTier === 'reference'
     ? []  // Suppress upgrade paths for reference-tier systems
-    : buildUpgradePaths(components, componentAxisProfiles, memoAssessments, memoConstraint, memoStacked);
+    : buildUpgradePaths(components, componentAxisProfiles, memoAssessments, memoConstraint, memoStacked, systemAxes, memoListenerPriorities, desires);
   const memoKeepsRaw = buildKeepRecommendations(memoAssessments, memoUpgradePaths, memoConstraint);
   const memoIntro = buildIntroSummary(components, systemAxes, memoStacked, systemTier);
   const memoKeyObservation = buildKeyObservation(components, componentAxisProfiles, memoStacked, systemAxes, desires);
@@ -5181,6 +5631,7 @@ export function buildSystemAssessment(
     memoSourceRefs,
     desires,
     componentLinks,
+    memoListenerPriorities,
   );
 
   // ── System character opening (brief) ──────────────
@@ -5344,10 +5795,36 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     dacNote = `\n\nYour system includes multiple DAC-capable components, and the active conversion path is unclear. Which DAC is handling conversion affects the sound — worth confirming your signal routing.`;
   }
 
+  // ── Amp/speaker power-match note ──
+  // When power data exists and shows a concerning mismatch, surface it.
+  // Uses trust-calibrated language: factual observation, not alarm.
+  let powerNote = '';
+  const pm = findings.powerMatchAssessment;
+  if (pm.compatibility === 'mismatched' && pm.ampName && pm.speakerName) {
+    const splStr = pm.estimatedMaxCleanSPL != null
+      ? ` (estimated ~${Math.round(pm.estimatedMaxCleanSPL)} dB maximum clean output)`
+      : '';
+    const interactionNote = pm.relevantInteraction
+      ? ` Catalog notes suggest: ${pm.relevantInteraction}`
+      : '';
+    powerNote = `\n\nThe ${pm.ampName} at ${pm.ampPowerWatts}W is significantly underpowered for the ${pm.speakerName} at ${pm.speakerSensitivityDb} dB sensitivity${splStr}. Dynamic compression and loss of bass control are expected at moderate listening levels.${interactionNote}`;
+  } else if (pm.compatibility === 'strained' && pm.ampName && pm.speakerName) {
+    const splStr = pm.estimatedMaxCleanSPL != null
+      ? ` (estimated ~${Math.round(pm.estimatedMaxCleanSPL)} dB maximum clean output)`
+      : '';
+    const interactionNote = pm.relevantInteraction
+      ? ` Catalog notes suggest: ${pm.relevantInteraction}`
+      : '';
+    powerNote = `\n\nThe ${pm.ampName} at ${pm.ampPowerWatts}W has limited headroom for the ${pm.speakerName} at ${pm.speakerSensitivityDb} dB sensitivity${splStr}. Dynamic peaks may compress on demanding material.${interactionNote}`;
+  } else if (pm.compatibility === 'optimal' && pm.relevantInteraction && pm.ampName && pm.speakerName) {
+    // Positive pairing note — only when there's a relevant interaction to surface
+    powerNote = `\n\nThe ${pm.ampName} and ${pm.speakerName} are well-matched on power and efficiency. ${pm.relevantInteraction}`;
+  }
+
   const overview = [
     `**System overview**`,
     ``,
-    `${names} form a chain built around ${tonal}, ${detail}, ${timing}, and ${stage}. ${deliberate} At its core this is ${describeCoreIdentity(axes)}.${dacNote}`,
+    `${names} form a chain built around ${tonal}, ${detail}, ${timing}, and ${stage}. ${deliberate} At its core this is ${describeCoreIdentity(axes)}.${dacNote}${powerNote}`,
   ].join('\n');
 
   // Dedupe component verdicts on the same normalized name key used above,
@@ -5436,7 +5913,21 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       const tail = compTails[(sn - 1) % compTails.length](item.role);
       strengths.push(`${sn}. **${item.name}** — ${item.text}. ${tail}`);
     } else {
-      const contribs = item.contributors.join(' and ');
+      // Pre-review blocker fix (PDF 2 — PrimaLuna / NODE X / P3ESR review):
+      // upstream stacking detection occasionally surfaces the same component
+      // twice (different name forms resolving to the same product), and the
+      // raw `.join(' and ')` then renders text like "X and X and Y and Y are
+      // pulling in the same direction." Dedupe defensively here, and use an
+      // oxford-comma joiner when the list has more than two members so the
+      // reading flows naturally.
+      const seen = new Set<string>();
+      const dedupedContributors = item.contributors.filter((c) => {
+        const k = (c || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+        if (!k || seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      const contribs = joinWithCommas(dedupedContributors);
       const tail = traitTails[(sn - 1) % traitTails.length](contribs);
       strengths.push(`${sn}. **${humanizeProperty(item.property)}** — ${tail}`);
     }
@@ -5822,25 +6313,9 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   // Render the primary constraint as expanded prose, not a bullet.
   const constraintParts: string[] = [];
 
-  // ── TEMP DEV-ONLY DEBUG LINE ──────────────────────────────────────
-  // Surfaces the final post-guard primary constraint directly in the
-  // rendered narrative so we can verify in the UI which value the
-  // renderer is using. Gated on NODE_ENV !== 'production'.
-  if (process.env.NODE_ENV !== 'production') {
-    const dbgKind = primary.kind;
-    const dbgProperty =
-      primary.kind === 'imbalance' ? primary.property
-      : primary.kind === 'bottleneck' ? `${primary.component} / axes: ${primary.axes.join(', ')}`
-      : primary.kind === 'component' ? `${primary.name} / ${primary.weakness}`
-      : '(none)';
-    const dbgDamping =
-      (axes.elastic_controlled === 'controlled' || axes.smooth_detailed === 'detailed')
-        ? 'true' : 'false';
-    constraintParts.push(
-      `_DEBUG dominant: ${dominantInsight} · primary kind: ${dbgKind} · primary property: ${dbgProperty} · damping evidence: ${dbgDamping}_`,
-    );
-    constraintParts.push('');
-  }
+  // _DEBUG instrumentation removed — the bottleneck detection logic is
+  // stable and the diagnostic output was leaking into user-facing
+  // system reviews (QA blocker N1).
   // Short listener-facing example clauses keyed to axis/property. Exactly
   // one appears in the primary-constraint sentence — nowhere else in the
   // response. Each is a brief noun-phrase tied to what the listener hears.
@@ -7478,7 +7953,7 @@ function detectPrimaryConstraint(
       candidates.push({
         componentName: topContributor,
         category: 'stacked_bias',
-        explanation: `The chain leans toward ${dominant.label}. ${topContributor} is the strongest contributor to this bias.`,
+        explanation: `The ${topContributor} is reinforcing the system's lean toward ${dominant.label} — addressing it would open up the most room for improvement.`,
         severity: imbalanceTraits.length * 2 + 1,
       });
     }
@@ -7524,7 +7999,7 @@ function detectPrimaryConstraint(
         candidates.push({
           componentName: c.displayName,
           category: 'dac_limitation',
-          explanation: `DAC limitation: ${issues.join(', ')}. The DAC sets the analog quality ceiling for everything downstream.`,
+          explanation: `The DAC is holding back the chain — ${issues.join(', ')}. Everything downstream inherits its limitations.`,
           severity,
         });
       }
@@ -7552,7 +8027,7 @@ function detectPrimaryConstraint(
         candidates.push({
           componentName: c.displayName,
           category: 'amplifier_control',
-          explanation: `Amplifier constraint: ${issues.join(', ')}.`,
+          explanation: `The amplifier is the limiting factor — ${issues.join(', ')}.`,
           severity,
         });
       }
@@ -7594,7 +8069,7 @@ function detectPrimaryConstraint(
         candidates.push({
           componentName: c.displayName,
           category: 'speaker_scale',
-          explanation: `Speaker constraint: ${issues.join(', ')}. Speakers set the output ceiling for the entire chain.`,
+          explanation: `The speakers are where the chain is most limited — ${issues.join(', ')}. They set the output ceiling for everything upstream.`,
           severity,
         });
       }
@@ -7620,6 +8095,34 @@ function detectPrimaryConstraint(
       category: 'tonal_imbalance',
       explanation: `System-wide brightness bias. ${brightContributors.join(' and ')} compound analytical character, potentially thinning tonal body and increasing fatigue risk.`,
       severity: brightCount * 2,
+    });
+  }
+
+  // ── Amp/speaker power mismatch ──
+  // Uses power_watts and sensitivity_db from product data. When both
+  // are available, calculates estimated max clean SPL and flags
+  // strained or mismatched pairings. Severity is high because power
+  // mismatch is more fundamental than axis-based constraints.
+  const powerMatch = assessPowerMatch(components);
+  if (powerMatch.compatibility === 'mismatched' && powerMatch.ampName && powerMatch.speakerName) {
+    const splNote = powerMatch.estimatedMaxCleanSPL != null
+      ? ` Estimated max clean SPL is ~${Math.round(powerMatch.estimatedMaxCleanSPL)} dB — well below comfortable listening levels for dynamic music.`
+      : '';
+    candidates.push({
+      componentName: powerMatch.ampName,
+      category: 'power_match',
+      explanation: `The ${powerMatch.ampName} (${powerMatch.ampPowerWatts}W) cannot adequately drive the ${powerMatch.speakerName} (${powerMatch.speakerSensitivityDb} dB sensitivity).${splNote} Dynamics will compress significantly, bass control will suffer, and the system will run out of headroom at moderate listening levels. Either more amplifier power or higher-efficiency speakers would resolve this.`,
+      severity: 9,
+    });
+  } else if (powerMatch.compatibility === 'strained' && powerMatch.ampName && powerMatch.speakerName) {
+    const splNote = powerMatch.estimatedMaxCleanSPL != null
+      ? ` Estimated max clean SPL is ~${Math.round(powerMatch.estimatedMaxCleanSPL)} dB — adequate for quiet listening but limited on dynamic peaks.`
+      : '';
+    candidates.push({
+      componentName: powerMatch.ampName,
+      category: 'power_match',
+      explanation: `The ${powerMatch.ampName} (${powerMatch.ampPowerWatts}W) is working hard to drive the ${powerMatch.speakerName} (${powerMatch.speakerSensitivityDb} dB sensitivity).${splNote} Dynamic compression on peaks is likely, and the amp may lose composure on complex passages. More headroom — either through amplifier power or speaker efficiency — would improve dynamic expression.`,
+      severity: 6,
     });
   }
 
@@ -7882,36 +8385,57 @@ function buildUpgradePaths(
   assessments: MemoComponentAssessment[],
   constraint?: MemoPrimaryConstraint,
   stacked?: MemoStackedTraitInsight[],
+  systemAxes?: import('./axis-types').PrimaryAxisLeanings,
+  listenerPriorities?: import('./memo-findings').ListenerPriority[],
+  desires?: DesireSignal[],
 ): MemoUpgradePath[] {
   const paths: MemoUpgradePath[] = [];
 
   // ── Path 1: Bottleneck (Highest Impact) ──
   if (constraint) {
-    const bottleneckIdx = components.findIndex((c) => c.displayName === constraint.componentName);
-    const role = bottleneckIdx >= 0 ? canonicalRole(components[bottleneckIdx].role) : constraint.componentName;
-    const axes = bottleneckIdx >= 0 ? profiles[bottleneckIdx].axes : undefined;
+    // Power mismatch is a special case: both amp and speaker are
+    // valid upgrade targets. Frame as "amp OR speaker" rather than
+    // blaming a single component.
+    if (constraint.category === 'power_match') {
+      const speaker = components.find((c) => c.role.toLowerCase().includes('speak'));
+      const speakerRole = speaker ? canonicalRole(speaker.role) : 'Speaker';
+      const ampRole = canonicalRole(
+        components.find((c) => c.displayName === constraint.componentName)?.role ?? 'Amplifier',
+      );
+      paths.push({
+        rank: 1,
+        label: `${ampRole} or ${speakerRole} Change`,
+        impact: 'Highest Impact',
+        rationale: `${constraint.explanation} This can be resolved from either side: more amplifier power, or higher-efficiency speakers that are easier to drive.`,
+        options: [],
+      });
+    } else {
+      const bottleneckIdx = components.findIndex((c) => c.displayName === constraint.componentName);
+      const role = bottleneckIdx >= 0 ? canonicalRole(components[bottleneckIdx].role) : constraint.componentName;
+      const axes = bottleneckIdx >= 0 ? profiles[bottleneckIdx].axes : undefined;
 
-    // What the upgrade should introduce
-    const targets: string[] = [];
-    if (axes) {
-      if (axes.warm_bright === 'bright') targets.push('tonal density');
-      if (axes.warm_bright === 'warm') targets.push('transient speed');
-      if (axes.smooth_detailed === 'smooth') targets.push('microdetail');
-      if (axes.smooth_detailed === 'detailed') targets.push('musical flow');
-      if (axes.elastic_controlled === 'controlled') targets.push('elasticity');
-      if (axes.elastic_controlled === 'elastic') targets.push('stability');
+      // What the upgrade should introduce
+      const targets: string[] = [];
+      if (axes) {
+        if (axes.warm_bright === 'bright') targets.push('tonal density');
+        if (axes.warm_bright === 'warm') targets.push('transient speed');
+        if (axes.smooth_detailed === 'smooth') targets.push('microdetail');
+        if (axes.smooth_detailed === 'detailed') targets.push('musical flow');
+        if (axes.elastic_controlled === 'controlled') targets.push('elasticity');
+        if (axes.elastic_controlled === 'elastic') targets.push('stability');
+      }
+      const targetPhrase = targets.length > 0
+        ? `A replacement with stronger ${targets.join(' and ')} would shift the system's balance meaningfully.`
+        : 'A change here would shift the system\'s fundamental character.';
+
+      paths.push({
+        rank: 1,
+        label: `${role} Upgrade`,
+        impact: 'Highest Impact',
+        rationale: `${constraint.explanation} ${targetPhrase}`,
+        options: [],
+      });
     }
-    const targetPhrase = targets.length > 0
-      ? `Look for components offering ${targets.join(' and ')}.`
-      : 'A change here shifts the system\'s fundamental character.';
-
-    paths.push({
-      rank: 1,
-      label: `${role} Upgrade`,
-      impact: 'Highest Impact',
-      rationale: `${constraint.explanation} ${targetPhrase}`,
-      options: [],
-    });
   }
 
   // ── Paths 2–3: remaining components by weakness severity ──
@@ -7962,13 +8486,33 @@ function buildUpgradePaths(
     usedRoles.add(label);
 
     const rank = paths.length + 1;
-    const weakSummary = r.assessment.weaknesses.slice(0, 2).join('; ').toLowerCase();
+    // Strip leading role prefix from weakness text to avoid redundancy
+    // ("amplifier coloration may soften…" → "coloration may soften…" when already in an amplifier context)
+    const roleLower = role.toLowerCase();
+    const weaknesses = r.assessment.weaknesses.slice(0, 2).map((w) => {
+      let cleaned = w.toLowerCase();
+      if (cleaned.startsWith(`${roleLower} `)) cleaned = cleaned.slice(roleLower.length + 1);
+      return cleaned;
+    });
+    const weakSummary = weaknesses.length === 1
+      ? weaknesses[0]
+      : `${weaknesses[0]} and ${weaknesses[1]}`;
+
+    // Singularize the role for natural phrasing ("speakers" → "speaker")
+    const roleSingular = roleLower.endsWith('s') && !roleLower.endsWith('ss')
+      ? roleLower.slice(0, -1) : roleLower;
+
+    const impactTier = added === 0 ? 'Moderate Impact' : 'Refinement';
+    const brandShort = r.component.displayName.split(' ')[0];
+    const rationaleVerb = added === 0
+      ? `The ${brandShort} has some room to grow here — ${weakSummary}. A stronger ${roleSingular} would tighten the overall presentation.`
+      : `Room for refinement in the ${roleSingular} — ${weakSummary}. Upgrading here would improve the system without changing its direction.`;
 
     paths.push({
       rank,
       label,
-      impact: added === 0 ? 'Moderate Impact' : 'Refinement',
-      rationale: `Current limitation: ${weakSummary}. Addressing this refines the system's balance without changing its core identity.`,
+      impact: impactTier,
+      rationale: rationaleVerb,
       options: [],
     });
     added++;
@@ -7981,12 +8525,198 @@ function buildUpgradePaths(
       rank: paths.length + 1,
       label: 'System Rebalancing',
       impact: paths.length === 0 ? 'Highest Impact' : 'Moderate Impact',
-      rationale: `The chain stacks ${insight.label}. Introducing a component with contrasting character would broaden the system's range. ${insight.explanation}`,
+      rationale: `Multiple components reinforce ${insight.label.replace(/_/g, ' ')}, narrowing the system's range. Introducing something with contrasting character would open up the palette. ${insight.explanation}`,
       options: [],
     });
   }
 
+  // ── Attach trade-off assessments (Feature 2) ──
+  if (systemAxes) {
+    const defaultAxes: import('./axis-types').PrimaryAxisLeanings = {
+      warm_bright: 'neutral', smooth_detailed: 'neutral',
+      elastic_controlled: 'neutral', airy_closed: 'neutral',
+    };
+    const axes = systemAxes ?? defaultAxes;
+
+    for (const p of paths) {
+      // Find the target component for this path by matching the path label
+      // back to a component role. Labels are "DAC Upgrade", "Speaker Upgrade", etc.
+      const pathRole = p.label.replace(/\s+(Upgrade|Change)$/i, '').toLowerCase();
+      const targetIdx = components.findIndex((c) =>
+        canonicalRole(c.role).toLowerCase() === pathRole
+        || c.role.toLowerCase().includes(pathRole),
+      );
+      const targetAssessment = targetIdx >= 0
+        ? assessments.find((a) => a.name === components[targetIdx].displayName)
+        : undefined;
+      const targetInference = targetIdx >= 0 && components[targetIdx].product
+        ? runInference(components[targetIdx].product!)
+        : undefined;
+
+      // Determine impact tier for the assessment
+      const pathImpact: 'highest' | 'moderate' | 'refinement' =
+        p.impact === 'Highest Impact' ? 'highest'
+        : p.impact === 'Moderate Impact' ? 'moderate'
+        : 'refinement';
+
+      if (targetAssessment) {
+        p.tradeoff = assessTradeoffs(
+          targetAssessment,
+          targetInference,
+          pathImpact,
+          pathImpact === 'highest' ? constraint : undefined,
+          stacked ?? [],
+          axes,
+        );
+      }
+    }
+  }
+
+  // ── Attach preference protection assessments (Feature 3) ──
+  if (listenerPriorities && listenerPriorities.length > 0) {
+    const classified = classifyPriorities(listenerPriorities, desires);
+
+    for (const p of paths) {
+      if (!p.tradeoff) continue;
+
+      const pathImpact: 'highest' | 'moderate' | 'refinement' =
+        p.impact === 'Highest Impact' ? 'highest'
+        : p.impact === 'Moderate Impact' ? 'moderate'
+        : 'refinement';
+
+      // Extract target axes from rationale for axis-opposition fallback
+      const targetAxes: string[] = [];
+      const r = (p.rationale ?? '').toLowerCase();
+      if (r.includes('tonal density') || r.includes('warmth')) targetAxes.push('warm_bright');
+      if (r.includes('detail') || r.includes('microdetail') || r.includes('flow')) targetAxes.push('smooth_detailed');
+      if (r.includes('elasticity') || r.includes('stability') || r.includes('grip')) targetAxes.push('elastic_controlled');
+
+      p.protection = assessPreferenceProtection(
+        p.tradeoff,
+        classified,
+        pathImpact,
+        pathImpact === 'highest' ? constraint : undefined,
+        targetAxes,
+      );
+    }
+  }
+
+  // ── Attach counterfactual assessments (Feature 6) ──
+  for (const p of paths) {
+    if (!p.tradeoff) continue;
+
+    p.counterfactual = assessCounterfactual({
+      tradeoff: p.tradeoff,
+      protection: p.protection,
+      constraint,
+      stacked: stacked ?? [],
+    });
+  }
+
+  // ── Attach strategy frames (Feature 7) ──
+  for (const p of paths) {
+    const frame = frameStrategy({
+      rank: p.rank,
+      label: p.label,
+      impact: p.impact,
+      rationale: p.rationale,
+      tradeoff: p.tradeoff,
+      protection: p.protection,
+      counterfactual: p.counterfactual,
+    });
+    p.strategyLabel = frame.strategyLabel;
+    p.strategyIntent = frame.strategyIntent;
+  }
+
+  // Deduplicate strategy labels across paths
+  deduplicateStrategies(
+    paths.filter((p): p is typeof p & { strategyLabel: string; strategyIntent: string } =>
+      !!p.strategyLabel && !!p.strategyIntent,
+    ),
+  );
+
+  // ── Attach explanation lines (Feature 9) ──
+  // Select 1–2 strongest signals per path. Suppressed for HOLD paths.
+  for (const p of paths) {
+    p.explanation = buildExplanation(p, constraint, stacked ?? []);
+  }
+
   return paths;
+}
+
+/**
+ * Build concise explanation lines ("why this works") from existing signals.
+ * Priority: constraint → stacked trait → tradeoff driver → preference alignment.
+ * Max 2 lines. Suppressed for HOLD paths and low-confidence paths.
+ * Feature 9 — no new reasoning, only signal selection.
+ * @internal Exported for testing. Not part of the public API.
+ */
+export function buildExplanation(
+  p: MemoUpgradePath,
+  constraint: MemoPrimaryConstraint | undefined,
+  stacked: MemoStackedTraitInsight[],
+): string[] | undefined {
+  // Suppress for HOLD paths — rationale already fully explains
+  if (p.counterfactual?.restraintRecommended) return undefined;
+  if (p.protection?.verdict === 'block') return undefined;
+
+  // Suppress when confidence is low — explanation would add noise
+  if (p.tradeoff?.confidence === 'low') return undefined;
+
+  const lines: string[] = [];
+
+  // 1. Constraint / bottleneck — if this path targets the bottleneck component
+  if (constraint && p.label.toLowerCase().includes(constraint.componentName.toLowerCase())) {
+    const category = constraint.category.replace(/_/g, ' ');
+    lines.push(`Your ${constraint.componentName.toLowerCase()} is the current limiting factor (${category}).`);
+  }
+
+  // 2. Stacked traits — if any stacked trait relates to this path's target role
+  if (lines.length < 2) {
+    const role = (p.label ?? '').toLowerCase();
+    for (const s of stacked) {
+      if (lines.length >= 2) break;
+      // Only include if a contributor matches the path's target
+      const relevant = s.contributors.some((c) => role.includes(c.toLowerCase()));
+      if (!relevant) continue;
+
+      const trait = s.label.replace(/_/g, ' ');
+      if (s.classification === 'system_character') {
+        lines.push(`${s.contributors.join(' and ')} share a ${trait} tendency — this is a system signature, not a flaw.`);
+      } else {
+        lines.push(`${s.contributors.join(' and ')} both push toward ${trait}, compounding the effect.`);
+      }
+    }
+  }
+
+  // 3. Trade-off driver — the core gain/sacrifice tension
+  if (lines.length < 2 && p.tradeoff) {
+    const t = p.tradeoff;
+    if (t.likelyGains.length > 0 && t.likelySacrifices.length > 0) {
+      const gain = t.likelyGains[0];
+      const sacrifice = t.likelySacrifices[0];
+      // Skip when gain or sacrifice text is unusually long — these are
+      // constraint explanations or compound phrases that don't fit the
+      // "improving X requires trading Y" pattern cleanly.
+      if (gain.length <= 60 && sacrifice.length <= 60) {
+        lines.push(`Improving ${gain.toLowerCase()} requires trading some ${sacrifice.toLowerCase()}.`);
+      }
+    }
+  }
+
+  // 4. Preference alignment — if priorities match the path's direction
+  if (lines.length < 2 && p.protection) {
+    const prot = p.protection;
+    if (prot.verdict === 'safe' && prot.threats.length === 0) {
+      // Check if there are explicit priorities that align
+      const explicit = prot.explicitAtRisk === false;
+      if (explicit && p.tradeoff?.likelyGains && p.tradeoff.likelyGains.length > 0) {
+        lines.push(`This aligns with your stated listening priorities.`);
+      }
+    }
+  }
+
+  return lines.length > 0 ? lines : undefined;
 }
 
 // ── Recommended sequence ────────────────────────────
@@ -8108,6 +8838,7 @@ function extractMemoFindings(
   sourceRefs: import('./advisory-response').SourceReference[],
   desires?: DesireSignal[],
   perComponentLinks?: Map<string, { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[]>,
+  precomputedListenerPriorities?: ListenerPriority[],
 ): MemoFindings {
   // ── Per-component findings ──
   const componentVerdicts: ComponentFindings[] = components.map((c, i) => {
@@ -8124,6 +8855,13 @@ function extractMemoFindings(
       verdict = 'upgrade';
     }
 
+    // Run inference layer when product data is available
+    const inference = c.product ? runInference(c.product) : undefined;
+
+    // Derive component confidence from inference layer (Feature 5)
+    const componentConfidence: 'high' | 'medium' | 'low' =
+      inference && inference.confidence !== 'none' ? inference.confidence : 'low';
+
     return {
       name: c.displayName,
       role: c.role,
@@ -8137,15 +8875,30 @@ function extractMemoFindings(
       priceTier: c.product?.priceTier,
       price: c.product?.price,
       links: perComponentLinks?.get(c.displayName),
+      inference,
+      confidence: componentConfidence,
     };
   });
 
   // ── Stacked traits → structured tags ──
-  const stackedTraits: StackedTraitFinding[] = stacked.map((s) => ({
-    property: s.label, // inherits from STACKED_LABELS — already a short tag
-    contributors: s.contributors,
-    classification: s.classification,
-  }));
+  const stackedTraits: StackedTraitFinding[] = stacked.map((s) => {
+    // Stacked trait confidence = min of contributing components (Feature 5)
+    const contributorConfidences = s.contributors.map((name) => {
+      const cv = componentVerdicts.find((v) => v.name === name);
+      return cv?.confidence ?? 'low';
+    });
+    const CONF_RANK: Record<string, number> = { high: 3, medium: 2, low: 1 };
+    const minConf = contributorConfidences.reduce<'high' | 'medium' | 'low'>(
+      (acc, c) => (CONF_RANK[c] < CONF_RANK[acc] ? c : acc),
+      'high',
+    );
+    return {
+      property: s.label,
+      contributors: s.contributors,
+      classification: s.classification,
+      confidence: minConf,
+    };
+  });
 
   // ── Bottleneck → structured finding ──
   let bottleneck: BottleneckFinding | null = null;
@@ -8160,12 +8913,18 @@ function extractMemoFindings(
       if (axes.scale_intimacy !== 'neutral') constrainedAxes.push('scale_intimacy');
     }
 
+    // Bottleneck confidence from the identified component (Feature 5)
+    const bottleneckComponentConf = componentVerdicts.find(
+      (v) => v.name === constraint.componentName,
+    )?.confidence;
+
     bottleneck = {
       component: constraint.componentName,
       role: idx >= 0 ? components[idx].role : 'component',
       category: constraint.category,
       constrainedAxes,
       severity: 0, // severity not preserved through PrimaryConstraint — default
+      confidence: bottleneckComponentConf,
     };
   }
 
@@ -8189,6 +8948,12 @@ function extractMemoFindings(
       targetRole: p.label.replace(/\s+Upgrade$/i, ''),
       impact: impactTag,
       targetAxes,
+      tradeoff: p.tradeoff,
+      protection: p.protection,
+      counterfactual: p.counterfactual,
+      strategyLabel: p.strategyLabel,
+      strategyIntent: p.strategyIntent,
+      explanation: p.explanation,
       options: (p.options ?? []).map((o) => ({
         name: o.name,
         brand: o.brand ?? '',
@@ -8250,7 +9015,8 @@ function extractMemoFindings(
   }
 
   // ── Listener priorities (controlled tags) ──
-  const listenerPriorities: ListenerPriority[] = inferListenerPriorityTags(systemAxes, desires);
+  // Reuse precomputed priorities from the pipeline when available (Feature 3).
+  const listenerPriorities: ListenerPriority[] = precomputedListenerPriorities ?? inferListenerPriorityTags(systemAxes, desires);
 
   // ── Source references ──
   const sourceReferences: SourceReferenceFinding[] = sourceRefs.map((r) => ({
@@ -8283,6 +9049,9 @@ function extractMemoFindings(
   // ── Active DAC inference ──
   const activeDACInference = inferActiveDAC(components);
 
+  // ── Amp/speaker power-match assessment ──
+  const powerMatchAssessment = assessPowerMatch(components);
+
   return {
     componentNames: components.map((c) => c.displayName),
     systemChain: {
@@ -8309,6 +9078,7 @@ function extractMemoFindings(
     hasMultipleAmps,
     roleOverlaps,
     activeDACInference,
+    powerMatchAssessment,
     sourceReferences,
   };
 }

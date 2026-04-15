@@ -466,6 +466,122 @@ function buildCategoryPatterns(
   }));
 }
 
+/**
+ * Explicit-intent category patterns. When the user writes "for speakers",
+ * "speaker recommendations", or "speakers not amps", that category is the
+ * clear subject of the question — even if incidental category keywords
+ * (e.g. "integrated" as part of a named amp in the chain context) appear
+ * elsewhere in the sentence.
+ *
+ * Checked BEFORE the ordered CATEGORY_PATTERNS scan so that, for example,
+ * "and for speakers, what would you recommend with kinki integrated and
+ *  denafrips terminator?" resolves to `speaker` and not `amplifier`
+ * (which is what the plain ordered scan produces because the 'amplifier'
+ * bucket contains `'integrated'`).
+ *
+ * Engine/domain boundary: these patterns are intent-shape rules ("the user
+ * is asking FOR <noun>"), not audio vocabulary. They belong in the
+ * category-detection adapter layer. The Climate Screen test passes —
+ * "for <category>" and "<category> recommendations" work equally well for
+ * any product taxonomy.
+ */
+const CATEGORY_PRIORITY_PATTERNS: Array<[RegExp, ShoppingCategory]> = [
+  // ── Leading-negation: "not speakers, amps" — the POST-negation word wins.
+  // Listed first so it outranks a bare "speakers" that appears before "amps".
+  [/\bnot\s+(?:an?\s+)?speakers?\b.{0,30}\b(?:amps?|amplifiers?|integrated)\b/i, 'amplifier'],
+  [/\bnot\s+(?:an?\s+)?(?:amps?|amplifiers?|integrated)\b.{0,30}\bspeakers?\b/i, 'speaker'],
+  [/\bnot\s+(?:an?\s+)?dacs?\b.{0,30}\b(?:amps?|amplifiers?|integrated)\b/i, 'amplifier'],
+  [/\bnot\s+(?:an?\s+)?dacs?\b.{0,30}\bspeakers?\b/i, 'speaker'],
+  [/\bnot\s+(?:an?\s+)?(?:amps?|amplifiers?|integrated)\b.{0,30}\bdacs?\b/i, 'dac'],
+  [/\bnot\s+(?:an?\s+)?speakers?\b.{0,30}\bdacs?\b/i, 'dac'],
+  [/\bnot\s+(?:an?\s+)?(?:amps?|amplifiers?|speakers?|dacs?)\b.{0,30}\bheadphones?\b/i, 'headphone'],
+
+  // ── Trailing-negation: "speaker not amp" / "dac not speaker" — PRE-negation wins.
+  [/\bspeakers?\s+not\s+(?:an?\s+)?(?:amp|amplifier|dac|headphone|streamer|turntable)/i, 'speaker'],
+  [/\b(?:amps?|amplifiers?)\s+not\s+(?:an?\s+)?(?:speaker|dac|headphone|streamer|turntable)/i, 'amplifier'],
+  [/\bdacs?\s+not\s+(?:an?\s+)?(?:amp|amplifier|speaker|headphone|streamer|turntable)/i, 'dac'],
+  [/\bheadphones?\s+not\s+(?:an?\s+)?(?:amp|amplifier|speaker|dac|streamer|turntable)/i, 'headphone'],
+
+  // ── "for <category>": "for speakers" / "for the amp" / "for a new dac"
+  [/\bfor\s+(?:an?\s+|the\s+|some\s+|my\s+|a\s+new\s+)?speakers?\b/i, 'speaker'],
+  [/\bfor\s+(?:an?\s+|the\s+|some\s+|my\s+|a\s+new\s+)?(?:amp|amplifier|integrated(?:\s+amp(?:lifier)?)?|power\s*amp|preamp|pre-amp|receiver)s?\b/i, 'amplifier'],
+  [/\bfor\s+(?:an?\s+|the\s+|some\s+|my\s+|a\s+new\s+)?dacs?\b/i, 'dac'],
+  [/\bfor\s+(?:an?\s+|the\s+|some\s+|my\s+|a\s+new\s+)?headphones?\b/i, 'headphone'],
+  [/\bfor\s+(?:an?\s+|the\s+|some\s+|my\s+|a\s+new\s+)?(?:streamer|transport|network\s+player)s?\b/i, 'streamer'],
+  [/\bfor\s+(?:an?\s+|the\s+|some\s+|my\s+|a\s+new\s+)?(?:turntable|record\s+player)s?\b/i, 'turntable'],
+
+  // ── "<category> recommendations" / "<category> suggestions" / "<category> ideas"
+  [/\bspeakers?\s+(?:recommendations?|suggestions?|picks?|options?|ideas?)\b/i, 'speaker'],
+  [/\b(?:amps?|amplifiers?|integrated\s+amps?)\s+(?:recommendations?|suggestions?|picks?|options?|ideas?)\b/i, 'amplifier'],
+  [/\bdacs?\s+(?:recommendations?|suggestions?|picks?|options?|ideas?)\b/i, 'dac'],
+  [/\bheadphones?\s+(?:recommendations?|suggestions?|picks?|options?|ideas?)\b/i, 'headphone'],
+
+  // ── "<category> instead" / "<category> now" / "<category> next"
+  [/\bspeakers?\s+(?:instead|now|next)\b/i, 'speaker'],
+  [/\b(?:amps?|amplifiers?|integrated)\s+(?:instead|now|next)\b/i, 'amplifier'],
+  [/\bdacs?\s+(?:instead|now|next)\b/i, 'dac'],
+
+  // ── "what about <category>" / "how about <category>"
+  [/\b(?:what|how)\s+about\s+(?:an?\s+|the\s+|some\s+)?speakers?\b/i, 'speaker'],
+  [/\b(?:what|how)\s+about\s+(?:an?\s+|the\s+|some\s+)?(?:amps?|amplifiers?|integrated)\b/i, 'amplifier'],
+  [/\b(?:what|how)\s+about\s+(?:an?\s+|the\s+|some\s+)?dacs?\b/i, 'dac'],
+
+  // ── "what <category> should I…"
+  [/\bwhat\s+speakers?\b/i, 'speaker'],
+  [/\bwhat\s+(?:amps?|amplifiers?|integrated)\b/i, 'amplifier'],
+  [/\bwhat\s+dacs?\b/i, 'dac'],
+
+  // ── Phase K: noun-first directive intents ─────────────
+  // "recommend / suggest / show / find / looking for / need / want a <category>"
+  // covering ALL six categories (especially turntable / streamer / headphone)
+  // so the directive verb locks the noun and stale category keywords from
+  // earlier in the buffer cannot re-route to a different bucket.
+  [/\b(?:recommend|suggest|show|find|need|want|looking\s+for)\s+(?:me\s+)?(?:an?\s+|the\s+|some\s+|my\s+|a\s+new\s+|a\s+good\s+)?turntables?\b/i, 'turntable'],
+  [/\b(?:recommend|suggest|show|find|need|want|looking\s+for)\s+(?:me\s+)?(?:an?\s+|the\s+|some\s+|my\s+|a\s+new\s+|a\s+good\s+)?(?:streamer|network\s+player|transport)s?\b/i, 'streamer'],
+  // Negative lookahead protects "recommend a headphone amp" — that's an
+  // amplifier request (handled by the amplifier branch below + existing
+  // CATEGORY_PATTERNS scan), not a headphone request.
+  [/\b(?:recommend|suggest|show|find|need|want|looking\s+for)\s+(?:me\s+)?(?:an?\s+|the\s+|some\s+|my\s+|a\s+new\s+|a\s+good\s+)?headphones?\b(?!\s*(?:amp|amplifier|pre[-\s]?amp))/i, 'headphone'],
+  [/\b(?:recommend|suggest|show|find|need|want|looking\s+for)\s+(?:me\s+)?(?:an?\s+|the\s+|some\s+|my\s+|a\s+new\s+|a\s+good\s+)?speakers?\b/i, 'speaker'],
+  [/\b(?:recommend|suggest|show|find|need|want|looking\s+for)\s+(?:me\s+)?(?:an?\s+|the\s+|some\s+|my\s+|a\s+new\s+|a\s+good\s+)?dacs?\b/i, 'dac'],
+  // Allow up to 3 modifier words between the article and the amp noun so
+  // "need a tube amp" / "recommend a class A amp" / "want a solid state
+  // integrated" all route to amplifier. The negative lookahead earlier in
+  // the headphone branch keeps "headphone amp" off the headphone bucket;
+  // this pattern then catches it on the amplifier side.
+  [/\b(?:recommend|suggest|show|find|need|want|looking\s+for)\s+(?:me\s+)?(?:an?\s+|the\s+|some\s+|my\s+|a\s+new\s+|a\s+good\s+)?(?:[a-z][\w-]*\s+){0,3}(?:amps?|amplifiers?|integrated(?:\s+amp(?:lifier)?)?|preamp|pre-amp|power\s*amp|receiver)s?\b/i, 'amplifier'],
+];
+
+/**
+ * Result of priority-category detection. When present, the match represents
+ * an EXPLICIT override — the user has directly named the category they want,
+ * and this must replace any previously locked category in page-level state.
+ */
+export interface PriorityCategoryResult {
+  category: ShoppingCategory;
+  /** Always true when this result is returned — signals that the lock ref
+   *  should be reset to this category, regardless of prior state. */
+  isExplicitOverride: true;
+}
+
+/**
+ * Check the explicit-intent patterns first. Returns the first category whose
+ * pattern matches the input, or undefined if none match.
+ *
+ * EXPORTED so the page-level category-lock logic can treat these matches as
+ * explicit overrides that take precedence over any previously held lock.
+ * This closes the gap where `detectExplicitCategorySwitch` requires a
+ * directive verb before the category noun (e.g. "show me amps") and misses
+ * the noun-first shapes users actually type ("amp recommendations",
+ * "what about amps", "not speakers, amps").
+ */
+export function extractPriorityCategory(text: string): PriorityCategoryResult | undefined {
+  for (const [re, cat] of CATEGORY_PRIORITY_PATTERNS) {
+    if (re.test(text)) return { category: cat, isExplicitOverride: true };
+  }
+  return undefined;
+}
+
 const CATEGORY_PATTERNS: CategoryPattern[] = buildCategoryPatterns([
   {
     category: 'dac',
@@ -1162,6 +1278,30 @@ const LOW_POWER_KEYWORDS = [
 ];
 
 /**
+ * Keywords that signal the user already owns or is using an external
+ * amplifier. Detection is conservative — the list only counts phrases that
+ * strongly imply "an amp is in the chain right now", not generic shopping
+ * language like "I'm looking for an amp".
+ *
+ * Used by parseSystemProfile to populate SystemProfile.hasExternalAmplification,
+ * which gates the active-speaker compatibility filter in rankProducts.
+ */
+const HAS_EXTERNAL_AMP_KEYWORDS = [
+  'integrated amp', 'integrated amplifier', 'my integrated',
+  'tube amp', 'tube amplifier', 'tube integrated',
+  'power amp', 'power amplifier', 'my power amp',
+  'my amp', 'my amplifier', 'my receiver',
+  'using a receiver', 'with a receiver', 'my pre-amp', 'my preamp',
+  'single-ended triode', 'set amp', 'set amplifier',
+  'class a amp', 'class ab amp', 'class-a amp', 'class-ab amp',
+  'naim nait', 'rega brio', 'rega elex', 'rega aethos',
+  'primaluna', 'leben cs', 'schiit vidar', 'schiit aegir',
+  'kinki studio ex-m1', 'kinki ex-m1', 'kinki studio dazzle',
+  'pass labs', 'first watt', 'job integrated', 'luxman',
+  'mcintosh', 'accuphase', 'hegel',
+];
+
+/**
  * Extract a structured system profile from user text.
  * Keyword-based, deterministic, no LLM.
  */
@@ -1190,7 +1330,19 @@ export function parseSystemProfile(text: string): SystemProfile {
   // Low power context
   const lowPowerContext = LOW_POWER_KEYWORDS.some((kw) => lower.includes(kw));
 
-  return { outputType, systemCharacter, tubeAmplification, lowPowerContext };
+  // External amplification — does the user already have an amp in the chain?
+  // Tube amplification implies an external amp; any named amp keyword implies
+  // one; the LOW_POWER_KEYWORDS set is too generic (e.g., "horn") to count.
+  const hasExternalAmplification =
+    tubeAmplification || HAS_EXTERNAL_AMP_KEYWORDS.some((kw) => lower.includes(kw));
+
+  return {
+    outputType,
+    systemCharacter,
+    tubeAmplification,
+    lowPowerContext,
+    hasExternalAmplification,
+  };
 }
 
 // ── Category dependency detection ────────────────────
@@ -1350,9 +1502,29 @@ export function detectShoppingIntent(
     category = 'general';
     subcategory = 'cables';
   } else {
+    // ── Priority category: explicit "for <X>" / "<X> recommendations" ──
+    // These outrank ordered-scan hits on the amplifier bucket when the
+    // user's message contains both an incidental amp keyword ("integrated"
+    // in a named chain) and an explicit speaker/dac subject. Checked on
+    // latestMessage first; falls through to the full text if absent.
+    if (latestMessage) {
+      const priority = extractPriorityCategory(latestMessage);
+      if (priority) {
+        category = priority.category;
+        console.log('[category-priority] latestMessage matched explicit-intent pattern → %s (override=%s)', priority.category, priority.isExplicitOverride);
+      }
+    }
+    if (category === 'general') {
+      const priority = extractPriorityCategory(userText);
+      if (priority) {
+        category = priority.category;
+        console.log('[category-priority] fullText matched explicit-intent pattern → %s (override=%s)', priority.category, priority.isExplicitOverride);
+      }
+    }
+
     // When a latest message is provided (category switch), detect from it
     // first so the new category overrides earlier mentions in allUserText.
-    if (latestMessage) {
+    if (category === 'general' && latestMessage) {
       const latestLower = latestMessage.toLowerCase();
       for (const pat of CATEGORY_PATTERNS) {
         if (pat._patterns.some((re) => re.test(latestLower))) {
@@ -1903,6 +2075,9 @@ export function getShoppingClarification(
 // ── Shopping Answer (advisor-first structure) ─────────
 
 export interface ProductExample {
+  /** Catalog product id — stable slug used as foreign key by the
+   *  curation layer. Optional for backward compat with older callers. */
+  id?: string;
   name: string;
   brand: string;
   price: number;
@@ -1970,6 +2145,13 @@ export interface ProductExample {
    *  Legacy roles retained for backward compatibility:
    *  - top_pick / upgrade_pick / value_pick */
   pickRole?: 'anchor' | 'close_alt' | 'contrast' | 'wildcard' | 'top_pick' | 'upgrade_pick' | 'value_pick';
+  /** Dynamic expert role label for the card header — e.g. "Best overall",
+   *  "Best for warmth", "Best for control". When absent, the card falls back
+   *  to the generic ROLE_LABELS text. */
+  roleLabel?: string;
+  /** Resolved curated reviews for this product. Empty/absent when the
+   *  product is not in the curation wedge. */
+  sources?: import('./curation').ResolvedReview[];
 
   // ── 4-option recommendation metadata ──────────────────
   /** Design philosophy — carried through from catalog for anchor tracking. */
@@ -2133,8 +2315,18 @@ interface TasteProfile {
 }
 
 const TASTE_PROFILES: TasteProfile[] = [
+  // ── Pre-review blocker fix (Audio XX Playbook §3 Preference Protection) ──
+  // The rhythmic_propulsive check used to fire on `t.elasticity === 'up'`
+  // alone, but the signals dictionary lights up `elasticity: up` for the
+  // "musical / organic / flowing" cluster ("musical", "organic", "natural",
+  // "flow"). That made queries like "warm, musical system" route to a
+  // speed/transient archetype — the exact opposite of the user's stated
+  // direction. Genuine rhythm signals ("fast", "PRaT", "rhythmic drive",
+  // "punchy") all set BOTH `dynamics: up` AND `elasticity: up`, so requiring
+  // dynamics is sufficient to keep this profile firing for rhythm requests
+  // while preventing it from hijacking warmth/flow requests.
   {
-    check: (t) => t.dynamics === 'up' || t.elasticity === 'up',
+    check: (t) => t.dynamics === 'up',
     label: 'speed, transient precision, and rhythmic engagement',
     archetype: 'rhythmic_propulsive',
     directionByCategory: {
@@ -2720,53 +2912,77 @@ function buildSystemDelta(
   // ── Compute improvements: product strengths that address system deficiencies
   // or align with user desires ─────────────────────────────────────────────
 
+  // Rotate general-add phrasing so stacked cards don't all read "added X".
+  // Each form carries the same direction but a different advisor framing.
+  let generalAddIdx = 0;
   for (const trait of productStrengths) {
     const label = TRAIT_LABELS[trait];
     if (!label) continue;
 
-    // Product strength fills a system gap
+    // Product strength fills a system gap — reason-carrying phrasing so the
+    // bullet tells the user *why* this lift matters in their chain, not just
+    // that a trait goes up.
     if (systemChar.deficient.includes(trait)) {
-      improvements.push(`greater ${label}`);
+      improvements.push(`lifts the ${label} the chain is currently short on`);
       continue;
     }
 
-    // Product strength matches user desire
+    // Product strength matches user desire — naming the alignment makes the
+    // bullet feel specific to the user's intent rather than generic.
     if (userTraits[trait] === 'up') {
-      improvements.push(`enhanced ${label}`);
+      improvements.push(`sharpens ${label} — the direction you asked for`);
       continue;
     }
 
-    // Product strength doesn't conflict with system saturation
+    // Product strength doesn't conflict with system saturation. Rotate three
+    // reviewer-voice forms so stacked cards read distinctly.
     if (!systemChar.saturated.includes(trait)) {
-      // Only include if we don't already have enough
       if (improvements.length < 3) {
-        improvements.push(`added ${label}`);
+        const forms = [
+          `adds ${label} without crowding what's already working`,
+          `broadens the ${label} envelope without reshaping the chain`,
+          `extra ${label} where the chain has room for it`,
+        ];
+        improvements.push(forms[generalAddIdx % forms.length]);
+        generalAddIdx++;
       }
     }
   }
 
   // ── Compute trade-offs: product weaknesses, or product strengths that
   // compound system saturation ─────────────────────────────────────────
+  //
+  // Copy pass: vary phrasing across templates so cards stacked together
+  // do not all read "gives up some X". Each branch has one canonical
+  // reviewer-voice form, no hedges ("may", "could"), no filler.
 
+  let generalIdx = 0;
   for (const trait of productWeaknesses) {
     const label = TRAIT_LABELS[trait];
     if (!label) continue;
 
     // Product weakness in an area the user wants more of
     if (userTraits[trait] === 'up') {
-      tradeoffs.push(`may not improve ${label}`);
+      tradeoffs.push(`does not move the needle on ${label} — the direction you asked for`);
       continue;
     }
 
     // Product weakness in an area the system already lacks
     if (systemChar.deficient.includes(trait)) {
-      tradeoffs.push(`doesn't address ${label} deficit`);
+      tradeoffs.push(`leaves the ${label} deficit in your chain untouched`);
       continue;
     }
 
-    // General weakness
+    // General weakness — rotate between three expert-voice forms so
+    // stacked cards don't read identically.
     if (tradeoffs.length < 2) {
-      tradeoffs.push(`less ${label}`);
+      const forms = [
+        `by design, less ${label} than flatter, more analytical alternatives`,
+        `${label} takes a back seat — that is the cost of the voicing`,
+        `trades a measure of ${label} for its core character`,
+      ];
+      tradeoffs.push(forms[generalIdx % forms.length]);
+      generalIdx++;
     }
   }
 
@@ -2775,25 +2991,43 @@ function buildSystemDelta(
     const label = TRAIT_LABELS[trait];
     if (!label) continue;
     if (systemChar.saturated.includes(trait) && tradeoffs.length < 2) {
-      tradeoffs.push(`may compound existing ${label}`);
+      tradeoffs.push(`compounds the ${label} your chain already leans into`);
     }
   }
 
   if (improvements.length === 0 && tradeoffs.length === 0) return undefined;
 
   // ── Build system fit sentence ────────────────────────────────────────
+  //
+  // Must be structurally distinct from "What you gain" bullets — this
+  // sentence's job is POSTURE ("how it fits the chain"), not GAIN
+  // restatement. Earlier versions built "In your ${sys} chain, this adds
+  // ${topImprovement} without eroding what already works" which re-stated
+  // improvements[0] verbatim — the same string that is bullet 1 of "What
+  // you gain" and (via fitGain) the body of the verdict. Three places,
+  // one string.
+  //
+  // New posture: reference the chain character + the count/direction of
+  // the delta, without naming the specific trait. When no sysLabel is
+  // available, leave undefined — the card layer already omits "What this
+  // changes" when whyFitsSystem is absent rather than inventing a fallback.
   let whyFitsSystem: string | undefined;
   const sysLabel = systemProfile.systemCharacter !== 'unknown'
     ? systemProfile.systemCharacter
     : undefined;
 
-  if (sysLabel && improvements.length > 0) {
-    const topImprovement = improvements[0].replace(/^(greater|enhanced|added) /, '');
-    whyFitsSystem = `Your current system leans ${sysLabel}. This component would likely introduce ${topImprovement} while preserving what the system already does well.`;
-  } else if (improvements.length > 0) {
-    const topImprovement = improvements[0].replace(/^(greater|enhanced|added) /, '');
-    whyFitsSystem = `Based on this product's design tendencies, it would likely bring ${topImprovement} to your system.`;
+  if (sysLabel && improvements.length > 0 && tradeoffs.length > 0) {
+    // Both sides of the ledger exist → frame as a balanced posture claim.
+    whyFitsSystem = `Pairs with a ${sysLabel}-leaning chain: the gains below land in areas the chain has room for, the trade-offs sit where the chain can absorb them.`;
+  } else if (sysLabel && improvements.length > 0) {
+    // Gains only → frame as additive fit.
+    whyFitsSystem = `Slots into a ${sysLabel}-leaning chain without eroding what the chain already does well.`;
+  } else if (sysLabel && tradeoffs.length > 0) {
+    // Trade-offs only → frame as tension-aware fit.
+    whyFitsSystem = `Sits in a ${sysLabel}-leaning chain with visible trade-offs — read them before committing.`;
   }
+  // If sysLabel is unknown, leave whyFitsSystem undefined. The card layer
+  // skips "What this changes" rather than invent a generic fallback.
 
   return {
     whyFitsSystem,
@@ -2902,13 +3136,23 @@ function buildAnchorJustification(
   if (delta?.tradeOffs && delta.tradeOffs.length > 0) {
     tradeOff = delta.tradeOffs[0];
   } else if (weaknesses.length > 0) {
-    tradeOff = `less ${weaknesses[0]}`;
+    tradeOff = weaknesses[0];
   }
 
   // No trade-off derivable — can't meet the hard requirement
   if (!tradeOff) return undefined;
 
-  const tradeOffSentence = `You give up some ${tradeOff} for more ${strengths.slice(0, 2).join(' and ')}.`;
+  // delta.tradeOffs entries are verb-phrased sentences ("does not move the
+  // needle…", "by design, less detail…") — use standalone. A raw weakness
+  // label is a noun ("detail") — frame it as a direct reviewer trade.
+  // Copy pass: removed "that is the actual exchange, not a hedge" filler —
+  // the exchange is already explicit.
+  const isVerbPhrased =
+    /^(gives up|does not|will not|leaves|compounds|by design|loses|trades)/i.test(tradeOff);
+  const strengthClause = strengths.slice(0, 2).join(' and ');
+  const tradeOffSentence = isVerbPhrased
+    ? `It ${tradeOff[0].toLowerCase()}${tradeOff.slice(1)} — the exchange is more ${strengthClause}.`
+    : `You trade some ${tradeOff} for ${strengthClause}.`;
 
   // ── Detect context tier ──────────────────────────────
   const sysChar = systemProfile.systemCharacter;
@@ -3209,6 +3453,33 @@ const DIRECTION_TRAIT_MAP: Record<string, string> = {
 /** Maximum directional bonus per product. Small and auditable. */
 const DIRECTION_BONUS_CAP = 0.12;
 
+/** Map a product's primary archetype to a "Best for X" card label.
+ *  Used for non-anchor positions where the user can see what the product
+ *  is optimized for at a glance. Anchor always gets "Best overall". */
+const ARCHETYPE_ROLE_TEXT: Record<string, string> = {
+  flow_organic:        'Best for flow and ease',
+  tonal_saturated:     'Best for warmth and body',
+  precision_explicit:  'Best for detail and control',
+  rhythmic_propulsive: 'Best for drive and pace',
+  spatial_holographic: 'Best for soundstage and scale',
+};
+
+function labelForRole(
+  product: { archetypes?: { primary?: string; secondary?: string }; philosophy?: string },
+  role: 'close_alt' | 'contrast' | 'wildcard',
+): string {
+  const primary = product.archetypes?.primary;
+  if (primary && ARCHETYPE_ROLE_TEXT[primary]) return ARCHETYPE_ROLE_TEXT[primary];
+  // Philosophy fallback
+  if (product.philosophy === 'warm')    return 'Best for warmth';
+  if (product.philosophy === 'neutral') return 'Best for neutrality';
+  if (product.philosophy === 'bright')  return 'Best for detail';
+  // Role fallback
+  if (role === 'close_alt') return 'Close alternative';
+  if (role === 'contrast')  return 'Different direction';
+  return 'Worth auditioning';
+}
+
 function selectProductExamples(
   category: ShoppingCategory,
   userTraits: Record<string, SignalDirection>,
@@ -3277,6 +3548,26 @@ function selectProductExamples(
     case 'speaker': catalog = SPEAKER_PRODUCTS; break;
     case 'amplifier': catalog = AMPLIFIER_PRODUCTS; break;
     default: return [];
+  }
+
+  // ── Hard category guard (belt-and-suspenders) ──────
+  // The category-specific arrays above SHOULD already be homogeneous,
+  // but an explicit per-product check makes cross-category leakage
+  // impossible even if a catalog file ever mis-buckets an entry.
+  // Audio XX Playbook §4 (constraint hierarchy): category is a hard
+  // constraint — no blending, no fallback.
+  const allowedCategories: Record<'dac' | 'speaker' | 'amplifier', Array<Product['category']>> = {
+    dac: ['dac'],
+    speaker: ['speaker'],
+    // Integrated amps live in AMPLIFIER_PRODUCTS with category='amplifier'
+    // today, but preserve 'integrated' here in case a future entry uses it.
+    amplifier: ['amplifier', 'integrated'],
+  };
+  const allowed = allowedCategories[category as 'dac' | 'speaker' | 'amplifier'];
+  const beforeGuard = catalog.length;
+  catalog = catalog.filter((p) => allowed.includes(p.category));
+  if (catalog.length !== beforeGuard) {
+    console.warn('[category-guard] dropped %d products mismatched to category=%s', beforeGuard - catalog.length, category);
   }
 
   // ── Budget floor pre-filter ──────────────────────────
@@ -3588,6 +3879,110 @@ function selectProductExamples(
       }
     }
     ranked.sort((a, b) => b.score - a.score);
+  }
+
+  // ── Named-product anchor + tier floor ────────────────
+  // When the user explicitly names a specific product (e.g. "Denafrips
+  // Terminator II", "KEF LS50 Meta"), brand-level defaults and generic trait
+  // ranking must not downgrade or replace that named product. The engagement
+  // boost above (+0.25) is a soft bias; it is not enough when the user's
+  // traits happen to match a cheaper sibling better. This block does two
+  // things:
+  //
+  //   1. **Anchor.** Pin the named product to the top of the ranked list
+  //      regardless of trait score. If the user said "Terminator II", the
+  //      Terminator II is the anchor — not the Ares.
+  //
+  //   2. **Tier floor.** Drop same-brand products whose priceTier is strictly
+  //      below the anchor's. A user asking about the flagship Terminator is
+  //      not served by also seeing the entry-level Ares in the same shortlist;
+  //      that framing implies the Terminator is "entry-level" by proximity.
+  //
+  // Matching is exact brand + name (case-insensitive). Substring-only hits
+  // (e.g. generic "Denafrips") do not anchor — that would pin whichever
+  // product happened to rank first. Anchoring requires the user to have
+  // named the specific model.
+  if (engagedProductNames && engagedProductNames.length > 0) {
+    const PRICE_TIER_ORDER: Record<string, number> = {
+      budget: 0,
+      mid: 1,
+      'mid-fi': 1,
+      'upper-mid': 2,
+      'high-end': 3,
+      reference: 4,
+      statement: 5,
+    };
+
+    // Pre-resolve engaged names through the alias table so that shorthand
+    // shown to the user ("terminator", "pontus", "ares") resolves to the
+    // canonical catalog name ("denafrips terminator ii", etc.) before we
+    // compare. Without this, a user who only types "terminator" never
+    // anchors the flagship II — a Playbook §4 constraint-hierarchy failure.
+    const engagedResolved = engagedProductNames.map((en) => ({
+      raw: en.toLowerCase(),
+      resolved: resolveProductAlias(en.toLowerCase()),
+    }));
+
+    let anchorIdx = -1;
+    for (let i = 0; i < ranked.length; i++) {
+      const p = ranked[i]?.product;
+      if (!p) continue;
+      const full = `${p.brand} ${p.name}`.toLowerCase();
+      const nameLower = p.name.toLowerCase();
+      const matched = engagedResolved.some(({ raw, resolved }) => {
+        // Exact-match on the raw name (preserves original Pass 14 behavior).
+        if (raw === full || raw === nameLower) return true;
+        // Alias-resolved match: "terminator" → "denafrips terminator ii"
+        // which matches the catalog product's full brand+name.
+        if (resolved === full) return true;
+        // Alias-resolved name-only match: "terminator ii" === "terminator ii"
+        if (resolved === nameLower) return true;
+        return false;
+      });
+      if (matched) {
+        anchorIdx = i;
+        break;
+      }
+    }
+
+    if (anchorIdx > 0) {
+      const [anchor] = ranked.splice(anchorIdx, 1);
+      if (anchor) {
+        ranked.unshift(anchor);
+        console.log('[anchor] pinned %s %s to position 0 (was %d)',
+          anchor.product.brand, anchor.product.name, anchorIdx);
+      }
+    }
+
+    // Tier floor: when an anchor exists with a defined priceTier, drop
+    // strictly lower-tier products from the same brand.
+    if (anchorIdx >= 0) {
+      const anchor = ranked[0];
+      const anchorTier = anchor?.product.priceTier;
+      if (anchor && anchorTier && PRICE_TIER_ORDER[anchorTier] !== undefined) {
+        const anchorLevel = PRICE_TIER_ORDER[anchorTier]!;
+        const anchorBrand = anchor.product.brand.toLowerCase();
+        const before = ranked.length;
+        const dropped: string[] = [];
+        const kept = ranked.filter((entry) => {
+          if (entry === anchor) return true;
+          if (entry.product.brand.toLowerCase() !== anchorBrand) return true;
+          const tier = entry.product.priceTier;
+          if (!tier || PRICE_TIER_ORDER[tier] === undefined) return true;
+          if (PRICE_TIER_ORDER[tier]! < anchorLevel) {
+            dropped.push(`${entry.product.brand} ${entry.product.name}`);
+            return false;
+          }
+          return true;
+        });
+        if (kept.length < before) {
+          ranked.length = 0;
+          ranked.push(...kept);
+          console.log('[anchor-tier] dropped %d lower-tier %s product(s) below %s: %s',
+            before - kept.length, anchor.product.brand, anchorTier, dropped.join(', '));
+        }
+      }
+    }
   }
 
   // ── Brand constraint boost ─────────────────────────
@@ -4299,6 +4694,7 @@ function selectProductExamples(
     }
 
     anchor.pickRole = 'anchor';
+    anchor.roleLabel = 'Best overall';
     const anchorPhilosophy = anchor.philosophy;
     const used = new Set<string>([exKey(anchor)]);
 
@@ -4333,7 +4729,7 @@ function selectProductExamples(
         return curDist < bestDist ? cur : (curDist === bestDist ? bestOf([best, cur])! : best);
       });
     }
-    if (closeAlt) { closeAlt.pickRole = 'close_alt'; used.add(exKey(closeAlt)); }
+    if (closeAlt) { closeAlt.pickRole = 'close_alt'; closeAlt.roleLabel = labelForRole(closeAlt, 'close_alt'); used.add(exKey(closeAlt)); }
 
     // Contrast — highest sonic distance from anchor (genuinely different listening experience)
     const contrastPool = remaining().filter((ex) => !!ex.philosophy && ex.philosophy !== anchorPhilosophy);
@@ -4345,7 +4741,7 @@ function selectProductExamples(
         return curDist > bestDist ? cur : best;
       });
     }
-    if (contrast) { contrast.pickRole = 'contrast'; used.add(exKey(contrast)); }
+    if (contrast) { contrast.pickRole = 'contrast'; contrast.roleLabel = labelForRole(contrast, 'contrast'); used.add(exKey(contrast)); }
 
     // Wildcard — nonTraditional OR highest distance from anchor if no nonTraditional
     let wildcard: Ranked | undefined;
@@ -4368,13 +4764,34 @@ function selectProductExamples(
         });
       }
     }
-    if (wildcard) { wildcard.pickRole = 'wildcard'; used.add(exKey(wildcard)); }
+    if (wildcard) { wildcard.pickRole = 'wildcard'; wildcard.roleLabel = labelForRole(wildcard, 'wildcard'); used.add(exKey(wildcard)); }
 
     // ── Assemble result ─────────────────────────────────
     const result: ProductExample[] = [anchor];
     if (closeAlt) result.push(closeAlt);
     if (contrast) result.push(contrast);
     if (wildcard) result.push(wildcard);
+
+    // ── Attach curated provenance (phase-1 wedge) ──────
+    // Silently returns empty for products not in the wedge.
+    try {
+      // Lazy require to avoid any import cycles at module init.
+      const { topReviewsForCard } = require('./curation') as typeof import('./curation');
+      for (const ex of result) {
+        const domain: import('./curation').ReviewerDomain =
+          productCategory === 'dac' ? 'dac'
+          : productCategory === 'amplifier'
+            ? (ex.catalogTopology === 'set' || ex.catalogTopology === 'push-pull-tube' || ex.catalogTopology === 'tube'
+                ? 'tube-amp'
+                : 'solid-state-amp')
+          : productCategory === 'speaker' ? 'speaker'
+          : productCategory === 'headphone' ? 'headphone'
+          : 'general';
+        if (!ex.id) continue;
+        const sources = topReviewsForCard(ex.id, domain, 2);
+        if (sources.length > 0) ex.sources = sources;
+      }
+    } catch { /* curation layer optional */ }
 
     // Pad to minimum 3 — mode-aware: padding must respect constraints
     if (result.length < 3) {
@@ -4437,6 +4854,7 @@ function selectProductExamples(
       || [...currentNames].some((cn) => cn.includes(product.name.toLowerCase()) || fullName.includes(cn));
 
     return {
+      id: product.id,
       name: product.name,
       brand: product.brand,
       price: product.price,
@@ -4963,6 +5381,7 @@ function selectHeadphoneExamples(
     const metaLabel = metaParts.length > 0 ? ` [${metaParts.join(', ')}]` : '';
 
     return {
+      id: product.id,
       name: `${product.name}${metaLabel}`,
       brand: product.brand,
       price: product.price,
@@ -5357,7 +5776,12 @@ export function buildShoppingAnswer(
   // In directed mode, prefer the archetype's category-specific direction
   // over the reasoning engine's raw statement, which may include generic
   // fallback text ("no strong directional change detected").
-  const FALLBACK_MARKERS = ['no strong directional', 'avoids strong bias', 'current balance may be close'];
+  const FALLBACK_MARKERS = [
+    'no strong directional',
+    'avoids strong bias',
+    'current balance may be close',
+    'current system character is already centred',
+  ];
   const isRawFallback = FALLBACK_MARKERS.some(m => rawDirection.toLowerCase().includes(m));
   const directedDirection = matchedProfile?.directionByCategory[ctx.category]
     ?? (isRawFallback ? taste.defaultDirection : rawDirection);

@@ -35,6 +35,10 @@ export interface SubjectMatch {
   /** True when the brand appears inside parentheses as a clarification,
    *  e.g. "Job (Goldmund)" — Goldmund is a manufacturer note, not a component. */
   parenthetical?: boolean;
+  /** Starting character index of this match in the source text. Used by
+   *  detectSystemDescription to pair un-hinted products with the nearest
+   *  brand rather than blindly picking the first unused brand. */
+  index?: number;
 }
 
 export interface IntentResult {
@@ -94,6 +98,11 @@ const BRAND_NAMES = [
   'moondrop', 'apple', 'grado',
   'zmf', 'focal', 'meze', 'dan clark audio', 'dan clark',
   'campfire audio', 'campfire', 'raal', 'raal requisite',
+  // ── Phase K: consumer / lifestyle audio brands ──
+  // Recognised so that "I have a Sonos and an iPhone" or "we use a HomePod"
+  // is detectable as a system description, not silently ignored. Categories
+  // are assigned in system-extraction.ts BRAND_CATEGORY_MAP.
+  'sonos', 'bose', 'iphone', 'homepod', 'echo', 'alexa', 'airpods',
 ];
 
 /**
@@ -110,12 +119,17 @@ const PRODUCT_NAMES = [
   'wiim ultra', 'wiim pro', 'wiim amp', 'wiim amp ultra',
   'k11 r2r', 'fiio k11', 'fiio k11 r2r',
   'node x', 'bluesound node x',
+  'evo 300 integrated', 'evo 300', 'evo 400', 'evo 100',
   'ls60', 'kef ls60', 'ls60 wireless',
   'lsx ii', 'lsx 2', 'kef lsx', 'kef lsx ii',
   'h390', 'hegel h390',
   'harmony dac', 'udac',
   'ares 15th', 'ares 12th-1', 'ares ii', 'enyo 15th', 'pontus ii', 'pontus 12th-1',
   'terminator ii', 'd1-twelve', 'd1-unity', 'd1-tube',
+  // Brand shorthands — resolved through PRODUCT_NAME_ALIASES to specific
+  // flagship catalog entries. Listed AFTER compound names so longest match
+  // wins (e.g. "terminator ii" claims its span before "terminator" alone).
+  'terminator', 'pontus', 'ares', 'enyo', 'venus',
   'x26 pro', 'su-9', 'd90',
   'k9 pro', 'ef400',
   'dr70',
@@ -124,7 +138,13 @@ const PRODUCT_NAMES = [
   'leben cs600x', 'leben cs600', 'leben cs300x', 'leben cs300', 'leben cs-300',
   'may kte', 'holo may',
   'srda', 'cia-1', 'cia-1t', 'ta-10', 'trends ta-10',
-  'ex-m1+', 'ex-m1 plus', 'kinki studio ex-m1', 'kinki studio ex m1', 'kinki ex-m1', 'kinki ex m1', 'ex-m1', 'ex m1', 'kinki integrated', 'kinki ex-m1 integrated amplifier', 'dazzle',
+  'ex-m1+', 'ex-m1 plus', 'kinki studio ex-m1', 'kinki studio ex m1', 'kinki ex-m1', 'kinki ex m1', 'ex-m1', 'ex m1',
+  // Brand+category shorthand — resolved through PRODUCT_NAME_ALIASES to
+  // Kinki Studio EX-M1+ (the representative integrated). Longer forms
+  // listed first so "kinki studio integrated" claims its span before
+  // "kinki integrated".
+  'kinki studio integrated', 'kinki studio amp', 'kinki integrated', 'kinki amp',
+  'kinki ex-m1 integrated amplifier', 'dazzle',
   'amp-23r', 'amp-23', 'hpa-23r',
   '1995 immanis', 'immanis', 'raal 1995', 'raal immanis',
   'sa-90', 'sa90', 'singxer sa-90', 'singxer sa90',
@@ -163,6 +183,11 @@ const PRODUCT_NAMES = [
   'andromeda', 'solaris', 'honeydew',
   'stealth', 'susvara',
   'vanguard', 'rost', 'h190', 'vega', '2220b', 'opdv971h', 'cs600x', 'cs600', 'cs300x', 'cs300',
+  // Pre-review blocker fix: "Super HL5 Plus" was being shortened to
+  // "Super HL5" in renders because only the shorter alias was registered.
+  // Listing the longer compound BEFORE the short form ensures the
+  // longest-match-wins sort selects the correct canonical name.
+  'super hl5 plus', 'hl5 plus',
   'diva monitor', 'super hl5', 'dirty weekend', 'hornshoppe horn', 'hornshoppe horns',
   // Turntable / tonearm / cartridge / phono products
   'gyro se', 'gyrodec', 'sa1.2',
@@ -259,7 +284,12 @@ const COMPARISON_PATTERNS = [
   /\bswap\s+(?:my|the|a)\b.*\b(?:for|with|to)\b/i,
   /\bchange\s+(?:from|my)\b.*\bto\b/i,
   /\bmove\s+(?:from|up\s+from)\b.*\bto\b/i,
-  /\bwhat\s+would\b.*\b(?:upgrade|change|swap|switch|move)\b/i,
+  // NOTE: previous pattern `/\bwhat\s+would\b.*\b(?:upgrade|change|...)/i`
+  // was removed (Phase C blocker fix #1) — it over-matched bare upgrade
+  // follow-ups like "what would you upgrade first?" which belong to the
+  // system-assessment/consultation-entry frame, not gear comparison.
+  // Concrete "upgrade from X to Y" phrasings are still caught by the
+  // `\bupgrade\s+(?:from|my)\b` pattern above.
 ];
 
 // ── Shopping patterns ────────────────────────────────
@@ -297,6 +327,7 @@ const GEAR_INQUIRY_PATTERNS = [
   /\bany\s+experience\s+with\b/i,
   /\bhave\s+you\s+heard\b/i,
   /\bknow\s+anything\s+about\b/i,
+  /\bwhat\s+do\s+you\s+(?:know|have)\s+(?:about|on)\b/i,
   /\btell\s+me\s+about\b/i,
   /\bwhat\s+(?:is|are)\s+(?:the\s+)?(?:character|sound|signature|house sound)\b/i,
   /\bhow\s+(?:does|do)\s+(?:the\s+)?(?:\w+\s+)?sound\b/i,
@@ -332,6 +363,7 @@ const PRODUCT_ASSESSMENT_PATTERNS = [
   /\bhow\s+(?:good|is|are)\s+(?:the\s+|a\s+)?/i,
   /\btell\s+me\s+about\b/i,
   /\bknow\s+anything\s+about\b/i,
+  /\bwhat\s+do\s+you\s+(?:know|have)\s+(?:about|on)\b/i,
   /\bhave\s+you\s+heard\b/i,
   /\bany\s+experience\s+with\b/i,
   /\bwhat\s+(?:is|are)\s+(?:the\s+)?(?:character|sound|signature|house sound)\b/i,
@@ -357,6 +389,34 @@ const SYSTEM_ASSESSMENT_PATTERNS = [
   // "is X + Y + Z a good setup?" — trailing quality+system word after component list
   /(?:a\s+)?(?:good|solid|decent|balanced|coherent)\s+(?:system|setup|rig|chain|combo|combination)\s*\??\s*$/i,
   /\brate\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+];
+
+// Bare evaluation-intent phrasings that presume an already-known system.
+// These alone don't imply system_assessment (the user could be asking about
+// a product or a third-party setup), but when a saved system is active
+// they are unambiguous — the saved system IS the subject of the request.
+// Blocker fix §1 — evaluation intent routing.
+const BARE_EVALUATION_PATTERNS = [
+  /\b(?:please\s+)?evaluat(?:e|ion)\s+(?:the\s+saved\s+|my\s+saved\s+|my\s+|this\s+|the\s+|it|them)?(?:system|setup|rig|chain|gear)?\b/i,
+  /\b(?:please\s+)?assess\s+(?:the\s+saved\s+|my\s+saved\s+|my\s+|this\s+|the\s+|it|them)?(?:system|setup|rig|chain|gear)?\b/i,
+  /\btell\s+me\s+what\s+you\s+think\b/i,
+  /\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+it\b/i,
+  /\breview\s+(?:my|the|this)\s+(?:saved\s+)?(?:system|setup|rig|chain)\b/i,
+  /\bhow\s+good\s+is\s+(?:my|this|the)\b/i,
+  /\bgive\s+(?:me\s+)?(?:your\s+)?thoughts\b/i,
+];
+
+// Bare upgrade/improvement follow-up phrasings that presume an already-known
+// system (the active saved system or the system just under review). These
+// used to be caught by the comparison pattern `/what would ... upgrade/`,
+// but that miscategorised them as "gear comparison" (2-subject vs/with
+// structure). Phase C blocker fix #1 — route upgrade follow-ups into the
+// consultation/system-assessment frame, anchored on the active system.
+const UPGRADE_FOLLOWUP_PATTERNS = [
+  /\bwhat\s+would\s+you\s+(?:upgrade|change|swap|switch|replace|improve|do)\s*(?:first|next)?\b/i,
+  /\bwhat\s+(?:should|could)\s+i\s+(?:upgrade|change|swap|improve|replace|do)\s*(?:first|next)?\b/i,
+  /\bwhere\s+(?:should|could|would)\s+(?:i|you)\s+(?:upgrade|improve|start|focus)\b/i,
+  /\b(?:what|where)(?:'s|\s+is)\s+(?:the\s+)?(?:weak(?:est)?\s+link|bottleneck|next\s+(?:step|move|upgrade))\b/i,
 ];
 
 /** Broader system guidance patterns — user wants help with their system
@@ -425,6 +485,10 @@ const OWNERSHIP_PATTERNS = [
   /\bi(?:'m|\s+am)\s+(?:running|using)\b/i,
   /\bi\s+(?:run|use)\b/i,
   /\bmy\s+(?:dac|amp|amplifier|speakers?|headphones?|streamer)\b/i,
+  // "current system:" without "my" — matches STRONG_OWNERSHIP_RE in system-extraction.ts
+  /\bcurrent\s+(?:system|setup|rig|chain)\b/i,
+  // "here's my/the system:" — presentation phrasing signals ownership
+  /\bhere'?s?\s+(?:my|the|a)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
 ];
 
 // ── Diagnosis patterns ───────────────────────────────
@@ -458,6 +522,21 @@ const DIAGNOSIS_PATTERNS = [
   /\b(?:can\s+be|tends?\s+to\s+(?:be|sound)|sometimes?\s+(?:sounds?|feels?|gets?))\s+(?:a\s+(?:little|bit)\s+)?(?:dry|bright|thin|harsh|lean|cold|sterile|clinical|analytical|hard|forward|fatiguing|aggressive|muddy|dull)\b/i,
   // Hedged complaints — "great but dry", "love it but a bit thin"
   /\b(?:great|good|fine|love|enjoy|like)\s+(?:it\s+)?but\s+(?:a\s+(?:little|bit|touch|tad)\s+)?(?:dry|bright|thin|harsh|lean|cold|sterile|clinical|analytical|hard|forward|fatiguing|aggressive|muddy|dull)\b/i,
+  // ── Phase K: relaxed symptom phrasings ──
+  // "no <thing>" complaints — bass, treble, body, scale, etc. The earlier
+  // "lacks/lacking" pattern only matches the verb form; users more often
+  // type "no bass", "no body", "no presence". Routes these to diagnosis
+  // so they hit the symptom rules instead of the friendly-advisor fallback.
+  /\bno\s+(?:bass|treble|body|warmth|dynamics|punch|impact|life|presence|weight|scale|low\s+end|bottom\s+end|mid(?:s|range)?|detail|air)\b/i,
+  // Bare "sounds X" complaints with the broader trait vocabulary used by
+  // the signal dictionary — "sounds tiny", "sounds dark", "sounds noisy",
+  // "sounds hollow", "sounds boomy". Already covered for the Bright/Harsh
+  // cluster; this extends to Thin/Dull/Boom/Noise families.
+  /\bsounds?\s+(?:tiny|small|dark|empty|hollow|boomy|noisy|nasal|distant|lifeless|congested)\b/i,
+  // Standalone noise / grounding descriptors. Short utterances like "noisy"
+  // or "there's a hum" should route to diagnosis, not orientation.
+  /\b(?:it'?s\s+)?(?:noisy|noise\s+floor|hum(?:ming)?|buzz(?:ing)?|background\s+(?:hiss|noise))\b/i,
+  /\bground(?:ing)?\s+(?:loop|hum|noise|issue|problem)\b/i,
 ];
 
 // ── Subject extraction ───────────────────────────────
@@ -511,14 +590,19 @@ export function extractSubjectMatches(text: string): SubjectMatch[] {
     return true;
   }
 
-  // PRODUCT_NAMES is sorted longest-first so compound names win over substrings.
+  // PRODUCT_NAMES is curated longest-first by hand. We rely on declaration
+  // order so callers retain control over alias precedence in cases where two
+  // names overlap but have different downstream catalog mappings (see
+  // comparison-pair-resolution.test.ts — 'kinki ex-m1' must claim the span
+  // before the longer 'kinki ex-m1 integrated amplifier' wrapper). New
+  // compound entries should be added immediately above their shorter form.
   for (const name of PRODUCT_NAMES) {
     const idx = lower.indexOf(name);
     if (idx === -1) continue;
     const end = idx + name.length;
     if (isSpanClaimed(idx, end)) continue;
     if (!isWordBoundary(idx, end)) continue;
-    found.push({ name, kind: 'product' });
+    found.push({ name, kind: 'product', index: idx });
     claimedRanges.push([idx, end]);
   }
 
@@ -540,12 +624,12 @@ export function extractSubjectMatches(text: string): SubjectMatch[] {
     const afterParen = lower.indexOf(')', idx + name.length);
     if (beforeParen >= 0 && afterParen >= 0 && (idx - beforeParen) <= 2 && (afterParen - end) <= 2) {
       // This brand is inside parentheses — treat as clarification, not component
-      found.push({ name, kind: 'brand', parenthetical: true });
+      found.push({ name, kind: 'brand', parenthetical: true, index: idx });
       claimedRanges.push([beforeParen, afterParen + 1]);
       continue;
     }
 
-    found.push({ name, kind: 'brand' });
+    found.push({ name, kind: 'brand', index: idx });
     claimedRanges.push([idx, end]);
   }
   return found;
@@ -932,7 +1016,19 @@ const AUDIO_ASSISTANT_PATTERNS = [
  * "my system sounds bright, what do you think of the Bifrost?"
  * the listening problem should drive the response.
  */
-export function detectIntent(currentMessage: string): IntentResult {
+export interface DetectIntentOptions {
+  /** True when the session already has an active saved/draft system.
+   *  When set, bare assessment phrasings ("assess my system", "evaluate
+   *  this system", "what do you think?") route to system_assessment
+   *  even without enough subjectMatches, because the saved system IS
+   *  the subject. Blocker fix §1 — evaluation intent routing. */
+  hasActiveSavedSystem?: boolean;
+}
+
+export function detectIntent(
+  currentMessage: string,
+  options: DetectIntentOptions = {},
+): IntentResult {
   const subjectMatches = extractSubjectMatches(currentMessage);
   const subjects = subjectMatches.map((m) => m.name);
   const desires = extractDesires(currentMessage);
@@ -951,7 +1047,8 @@ export function detectIntent(currentMessage: string): IntentResult {
   // think of this system? X + Y + Z" from routing as product_assessment.
   const earlySystemCheck = SYSTEM_ASSESSMENT_PATTERNS.some((p) => p.test(currentMessage));
   const earlyChainCheck = /(?:→|-{1,3}>|={1,2}>|>{2,3})/.test(currentMessage)
-    || (/\w\s*\+\s*\w/.test(currentMessage) && subjectMatches.length >= 2);
+    || (/\w\s*\+\s*\w/.test(currentMessage) && subjectMatches.length >= 2)
+    || ((currentMessage.match(/\b(?:speakers?|amp(?:lifier)?|dac|streamer|turntable|preamp|pre-amp|source|headphones?|integrated)\s*:/ig) || []).length >= 2);
   const isLikelySystemEval = earlySystemCheck && earlyChainCheck && subjectMatches.length >= 2;
   // Budget escape hatch: when the message contains both a budget signal AND
   // a category keyword (e.g., "what about denafrips dacs under 1000?"), skip
@@ -979,16 +1076,52 @@ export function detectIntent(currentMessage: string): IntentResult {
   //     treated as an implicit system assessment even without ownership or
   //     assessment language — the chain notation itself signals intent.
   const hasAssessmentLanguage = SYSTEM_ASSESSMENT_PATTERNS.some((p) => p.test(currentMessage));
+  const hasBareEvaluation = BARE_EVALUATION_PATTERNS.some((p) => p.test(currentMessage));
+  const hasUpgradeFollowUp = UPGRADE_FOLLOWUP_PATTERNS.some((p) => p.test(currentMessage));
   const hasOwnership = OWNERSHIP_PATTERNS.some((p) => p.test(currentMessage));
   const hasArrowChain = /(?:→|-{1,3}>|={1,2}>|>{2,3})/.test(currentMessage);
+
+  // Blocker fix §1: when an active saved system exists and the user
+  // uses any evaluation-style phrasing, route directly to system_assessment.
+  // Without this, "assess my system" / "evaluate the saved system" /
+  // "tell me what you think" fall through to consultation_entry and the
+  // user gets asked to re-describe components they've already saved.
+  if (
+    options.hasActiveSavedSystem
+    && (hasAssessmentLanguage || hasBareEvaluation)
+  ) {
+    return { intent: 'system_assessment', subjects, subjectMatches, desires };
+  }
+
+  // Phase C blocker fix #1: bare upgrade/improvement follow-ups after a
+  // system review ("what would you upgrade first?", "where should I
+  // start?") route to consultation_entry so the upgrade-guidance handler
+  // can reason from the active system. Gated on an active saved system
+  // OR explicit ownership to avoid swallowing unrelated phrasings.
+  if (
+    hasUpgradeFollowUp
+    && (options.hasActiveSavedSystem || hasOwnership)
+  ) {
+    return { intent: 'consultation_entry', subjects, subjectMatches, desires };
+  }
   const hasPlusChain = /\w\s*\+\s*\w/.test(currentMessage) && subjectMatches.length >= 2;
-  const hasChainSeparator = hasArrowChain || hasPlusChain;
+  // Labeled-role format: "speaker: X - amp: Y - dac: Z" — 2+ role labels signal a system chain.
+  const ROLE_LABEL_RE = /\b(?:speakers?|amp(?:lifier)?|dac|streamer|turntable|preamp|pre-amp|source|headphones?|integrated)\s*:/ig;
+  const hasLabeledRoleChain = ((currentMessage.match(ROLE_LABEL_RE) || []).length >= 2);
+  const hasChainSeparator = hasArrowChain || hasPlusChain || hasLabeledRoleChain;
   if (hasAssessmentLanguage && hasOwnership && subjectMatches.length >= 2) {
     return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }
   // Assessment language + chain notation (+ or →) with 2+ components implies system
   // evaluation even without explicit ownership ("how's this system?" is sufficient).
   if (hasAssessmentLanguage && hasChainSeparator && subjectMatches.length >= 2) {
+    return { intent: 'system_assessment', subjects, subjectMatches, desires };
+  }
+  // Ownership + chain separator + 2+ subjects implies system presentation.
+  // "here's my system: dac: X - amp: Y - speakers: Z" — the act of presenting
+  // a multi-component chain with ownership language is itself an assessment request,
+  // even without explicit "evaluate" or "how's this" phrasing.
+  if (hasOwnership && hasChainSeparator && subjectMatches.length >= 2) {
     return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }
   if (hasArrowChain && subjectMatches.length >= 3) {
@@ -1020,7 +1153,11 @@ export function detectIntent(currentMessage: string): IntentResult {
   //     so "what if a product isn't in your database?" doesn't trigger
   //     a product lookup.
   const hasMetaLanguage = META_PATTERNS.some((p) => p.test(currentMessage));
-  if (hasMetaLanguage) {
+  // Guard: when the query mentions a recognised product or brand, the user
+  // is asking about that product, not about the system's own capabilities.
+  // "what do you know about the LAiV uDAC?" is a product inquiry, not meta.
+  // Let it fall through to gear_inquiry / product_assessment instead.
+  if (hasMetaLanguage && subjectMatches.length === 0) {
     return { intent: 'consultation_entry', subjects, subjectMatches, desires };
   }
 
@@ -1406,6 +1543,14 @@ const CONSULTATION_FOLLOWUP_PATTERNS = [
   /\bwhat\s+(?:pairs?|works?|goes?)\s+well\s+with\b/i,
   /\bgood\s+(?:match|pairing|fit)\b/i,
   /\bpair\s+(?:it|them)\s+with\b/i,
+  // Blocker fix §2: elliptical fit questions — "would it fit my system?",
+  // "would that work with my setup?", "does it match my chain?" — these
+  // refer to the prior product and should stay inside the consultation
+  // rather than falling through to diagnosis.
+  /\bwould\s+(?:it|this|that|they|them)\s+(?:fit|work|match|pair|improve|help|sound\s+good)\b/i,
+  /\b(?:does|do)\s+(?:it|this|that|they|them)\s+(?:fit|work|match|pair)\s+(?:with|in)\s+(?:my|the|this)\b/i,
+  /\b(?:is|would)\s+(?:it|this|that)\s+(?:a\s+)?good\s+(?:fit|match|pair)\s+(?:for|with|in)\b/i,
+  /\bhow\s+(?:would|does)\s+(?:it|this|that)\s+(?:fit|work|pair|sound)\b/i,
 
   // "What about…" / "And…" / "But…" follow-up patterns
   /^(?:and|but)\s+/i,

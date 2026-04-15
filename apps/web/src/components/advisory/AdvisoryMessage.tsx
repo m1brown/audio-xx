@@ -60,17 +60,21 @@ interface AdvisoryMessageProps {
 //
 // Centralized here for consistency across both rendering modes.
 
+// Palette aligned with page.tsx (single warm-neutral family, no new hues).
+// Primary/secondary/muted shifted ~1 step darker to increase contrast against
+// the warm page bg (#F7F3EB) so headings, body, and muted labels separate
+// more clearly without changing the palette's character.
 const COLORS = {
-  text: '#2a2a2a',
-  textSecondary: '#5a5a5a',
-  textMuted: '#8a8a8a',
-  textLight: '#aaa',
+  text: '#1F1D1B',           // was #2a2a2a — matches page.tsx textPrimary; stronger headlines/body
+  textSecondary: '#4F4B46',  // was #5a5a5a — warmer dark secondary, higher contrast on warm bg
+  textMuted: '#7A756D',      // was #8a8a8a — warm-toned muted, still recedes but legible
+  textLight: '#A09B91',      // was #aaa     — warm-neutral
   accent: '#a89870',
   accentLight: '#c8c0a8',
   accentBg: '#faf8f3',
-  border: '#eeece8',
-  borderLight: '#f4f2ee',
-  sectionLabel: '#a89870',
+  border: '#E4DFD2',         // was #eeece8 — stronger section/card edge vs warm bg
+  borderLight: '#ECE8DD',    // was #f4f2ee — visible but soft dividers
+  sectionLabel: '#8E7A4E',   // was #a89870 — same warm-gold family, darker for label-vs-content contrast
   green: '#5a7050',
   amber: '#8a6a50',
   white: '#fff',
@@ -81,8 +85,10 @@ const FONTS = {
   bodySize: '1.02rem',
   smallSize: '0.92rem',
   labelSize: '0.82rem',
-  sectionHeading: '1.3rem',
+  sectionHeading: '1.38rem',  // was 1.3rem — slight bump for header dominance
   lineHeight: 1.85,
+  labelTracking: '0.08em',    // consistent tracking for uppercase section labels
+  labelWeight: 700 as const,  // unified weight for labels (was mixed 600/700)
 };
 
 /** Inline bullet list — reused across both modes. */
@@ -101,12 +107,19 @@ function isMemoFormat(a: AdvisoryResponse): boolean {
   return !!(
     (a.componentAssessments && a.componentAssessments.length > 0)
     || (a.upgradePaths && a.upgradePaths.length > 0)
+    // Rewritten system review: six-section narrative is carried in systemContext.
+    // All the legacy structured sections (componentAssessments, upgradePaths, etc.)
+    // are intentionally cleared by buildSystemAssessment after narrative composition,
+    // so detect memo mode from the advisory mode tag instead.
+    || (a.advisoryMode === 'system_review' && !!a.systemContext)
   );
 }
 
 /** Subtle section divider. */
 function SectionDivider() {
-  return <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.border}`, margin: '2.75rem 0' }} />;
+  // Slightly wider margin + stronger border color (via COLORS.border bump) for
+  // clearer separation between major advisory blocks without adding new elements.
+  return <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.border}`, margin: '3.1rem 0' }} />;
 }
 
 /** Mode label display names. */
@@ -196,9 +209,874 @@ function ProvenanceLabel({ source, unknownComponents }: { source?: AdvisorySourc
 //   9. Components Worth Keeping
 //  10. Listener Taste Profile
 
+/**
+ * Rewritten system review renderer.
+ *
+ * Parses the six-section narrative carried in `systemContext` and applies
+ * section-level styling: constraint section is visually dominant, optimize
+ * section is emphasized as the action section, "Do not touch:" renders as
+ * a distinct chip row, and the system chain renders as a single deduplicated
+ * horizontal line above the narrative.
+ *
+ * Pure presentation — no wording, logic, or structural changes.
+ */
+/**
+ * Display-only normalization for component names.
+ *
+ * `normalizeComponentName` title-cases a full component phrase and forces
+ * known brand tokens (WLM, JOB, Chord) to their canonical form. Safe to
+ * call on standalone names like "wlm diva monitor" → "WLM Diva Monitor".
+ *
+ * `normalizeBrandCasing` operates on prose: it only rewrites bolded
+ * markdown spans (**…**) via `normalizeComponentName` and patches the
+ * known all-caps brand tokens as standalone words. It does NOT title-case
+ * arbitrary prose words.
+ *
+ * Presentation-only. Matching logic and internal keys are untouched.
+ */
+const BRAND_CANONICAL: Record<string, string> = {
+  wlm: 'WLM',
+  job: 'JOB',
+  chord: 'Chord',
+};
+
+// Pre-review blocker fix: "job" is also a common English word ("does its job",
+// "the job of the amp is to..."), so unconditional standalone replacement
+// uppercases it to "JOB" in narrative prose. The bolded-component path
+// (normalizeComponentName) already handles canonical brand casing for
+// component names like "Job Integrated"; the standalone-prose patch should
+// only apply to brand tokens that are unambiguous in free text.
+const STANDALONE_BRAND_CANONICAL: Record<string, string> = {
+  wlm: 'WLM',
+  chord: 'Chord',
+};
+
+// Audio-domain acronyms that must stay uppercase even when they appear
+// as lowercase model-name tokens ("wlm dac" → "WLM DAC").
+const ACRONYM_CANONICAL: Record<string, string> = {
+  dac: 'DAC',
+  adc: 'ADC',
+  set: 'SET',
+  nos: 'NOS',
+  pse: 'PSE',
+  sacd: 'SACD',
+  dsd: 'DSD',
+  pcm: 'PCM',
+  se: 'SE',
+  mk: 'Mk',
+  ii: 'II',
+  iii: 'III',
+  iv: 'IV',
+};
+
+function titleCaseWord(word: string): string {
+  if (!word) return word;
+  const lower = word.toLowerCase();
+  if (BRAND_CANONICAL[lower]) return BRAND_CANONICAL[lower];
+  if (ACRONYM_CANONICAL[lower]) return ACRONYM_CANONICAL[lower];
+  // Preserve tokens that already look intentional (all-caps acronyms,
+  // mixed case like "McIntosh", numerics like "300B").
+  if (/^[A-Z0-9]+$/.test(word) && word.length >= 2) return word;
+  if (/[A-Z]/.test(word.slice(1))) return word;
+  if (/^\d/.test(word)) return word;
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+function normalizeComponentName(name: string): string {
+  if (!name) return name;
+  return name
+    .split(/(\s+|-)/)
+    .map((tok) => (/^\s+$|^-$/.test(tok) ? tok : titleCaseWord(tok)))
+    .join('');
+}
+
+function normalizeBrandCasing(text: string): string {
+  if (!text) return text;
+  // 1. Rewrite any bolded span as a full component phrase.
+  let out = text.replace(/\*\*([^*]+)\*\*/g, (_m, inner: string) =>
+    `**${normalizeComponentName(inner)}**`,
+  );
+  // 2. Patch standalone brand tokens in prose (word-bounded, any case).
+  // Pre-review blocker fix: use STANDALONE_BRAND_CANONICAL so genuine English
+  // words shared with brand names (e.g. "job") are not force-uppercased
+  // in narrative copy ("does its job" → "does its JOB"). Bolded component
+  // spans still pick up the full BRAND_CANONICAL via normalizeComponentName.
+  for (const [lower, canonical] of Object.entries(STANDALONE_BRAND_CANONICAL)) {
+    const re = new RegExp(`\\b${lower}\\b`, 'gi');
+    out = out.replace(re, canonical);
+  }
+  // 3. Model-name pass (runs AFTER brand normalization): when a canonical
+  //    brand is followed by lowercase model words in prose, title-case
+  //    the trailing phrase up to four words, stopping at punctuation or
+  //    any already-capitalized token. Known acronyms (DAC, SET, NOS, …)
+  //    are forced uppercase via titleCaseWord.
+  const brandAlt = Object.values(BRAND_CANONICAL).map(
+    (b) => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+  ).join('|');
+  const modelPass = new RegExp(
+    `(\\b(?:${brandAlt})\\b)((?:\\s+[a-z][a-z0-9-]*){1,4})`,
+    'g',
+  );
+  out = out.replace(modelPass, (_m, brand: string, tail: string) => {
+    const fixed = tail.replace(/\s+([a-z][a-z0-9-]*)/g, (_s, w: string) =>
+      ' ' + titleCaseWord(w),
+    );
+    return brand + fixed;
+  });
+  return out;
+}
+
+function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
+  // ── Parse the narrative into { header, body } sections. ──
+  // The composer emits sections as:   **Header**\n\nbody...\n\n**Next**...
+  // Presentation-only brand-casing normalization is applied to the raw
+  // narrative so every downstream parsed section inherits it.
+  const raw = normalizeBrandCasing(a.systemContext ?? '');
+  // Pre-review blocker fix (PDF 4 — Pontus II / Leben CS300 / Super HL5 Plus):
+  // the section parser used `(?=\n\*\*[^*]+\*\*|$)` as the end-of-section
+  // lookahead, which matched ANY `\n**...**` — including inline bolds like
+  // `\n**Change the DAC.** Expect more depth...`. The result was that the
+  // optimize body was truncated to just the "Do not touch:" line, and the
+  // actual upgrade directive ended up orphaned (no recognised section claimed
+  // it, so the renderer dropped it). Tighten the lookahead to require the
+  // bolded text to occupy the entire line — i.e. `**Header**` followed
+  // immediately by a newline or end-of-input. Inline bolds inside a paragraph
+  // no longer terminate the section.
+  const sectionRegex = /\*\*([^*]+)\*\*\s*\n+([\s\S]*?)(?=\n\*\*[^*\n]+\*\*\s*(?:\n|$)|$)/g;
+  type Section = { header: string; body: string };
+  const sections: Section[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = sectionRegex.exec(raw)) !== null) {
+    sections.push({ header: m[1].trim(), body: m[2].trim() });
+  }
+  const findSection = (needle: string) =>
+    sections.find((s) => s.header.toLowerCase().includes(needle));
+
+  const overview = findSection('overview');
+  const strengths = findSection('doing well');
+  const constrained = findSection('constrained');
+  const identity = findSection('identity');
+  const changeNothing = findSection('change nothing');
+  const optimize = findSection('optimize');
+
+  // ── Dedupe chain into a single aligned array of { name, role }. ──
+  // One source of truth so name and role can never drift out of alignment.
+  type ChainEntry = { name: string; role: string | null };
+  const chain: ChainEntry[] = [];
+  if (a.systemChain?.names) {
+    const seen = new Set<string>();
+    a.systemChain.names.forEach((n, i) => {
+      const key = (n || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      chain.push({ name: normalizeComponentName(n), role: a.systemChain?.roles?.[i] ?? null });
+    });
+  }
+  const hasAnyRole = chain.some((c) => !!c.role);
+
+  // ── Follow-up panel state. ──
+  const [hearExpanded, setHearExpanded] = useState(false);
+  const [optionsExpanded, setOptionsExpanded] = useState(false);
+
+  // ── Extract "Do not touch:" line from optimize body. ──
+  let optimizeBody = optimize?.body ?? '';
+  let doNotTouchItems: string[] = [];
+  const dntMatch = optimizeBody.match(/\*\*Do not touch:\*\*\s*([^\n]+?)\.?\s*(?:\n|$)/i);
+  if (dntMatch) {
+    doNotTouchItems = dntMatch[1]
+      .split(',')
+      .map((s) => normalizeComponentName(s.trim()))
+      .filter((s) => s.length > 0);
+    optimizeBody = optimizeBody.replace(dntMatch[0], '').trim();
+  }
+
+  // ── Shared tokens. ──
+  const maxWidth = '42rem';
+  const sectionGap = '2.9rem'; // was 2.6rem — more vertical air between major sections
+  const bodyLine = 1.9;
+
+  const sectionLabel = (text: string, opts?: { emphasis?: 'primary' | 'action' }) => {
+    const emphasis = opts?.emphasis;
+    return (
+      <h3 style={{
+        margin: '0 0 1rem 0', // was 0.9rem — clearer label-to-content separation
+        fontSize: emphasis ? '1.3rem' : '1.05rem', // primary header bumped 1.25 → 1.3rem
+        fontWeight: 700, // unified (was 700/600 split); stronger hierarchy for non-emphasis too
+        letterSpacing: emphasis === 'primary' ? '-0.01em'
+          : emphasis === 'action' ? '0'
+          : FONTS.labelTracking, // uppercase labels get wider tracking for scannability
+        color: emphasis === 'action' ? COLORS.accent : COLORS.text,
+        textTransform: emphasis ? 'none' : 'uppercase',
+      }}>
+        {text}
+      </h3>
+    );
+  };
+
+  const bodyPara = (text: string, extra?: React.CSSProperties) => (
+    <p style={{
+      margin: 0,
+      fontSize: FONTS.bodySize,
+      lineHeight: bodyLine,
+      color: COLORS.text,
+      ...(extra ?? {}),
+    }}>
+      {renderText(text)}
+    </p>
+  );
+
+  // Strengths render as numbered list items (already numbered in source).
+  const renderListBody = (body: string) => {
+    const items = body
+      .split(/\n+/)
+      .map((l) => l.replace(/^\s*\d+\.\s*/, '').trim())
+      .filter((l) => l.length > 0);
+    return (
+      <ol style={{
+        margin: 0,
+        paddingLeft: '1.3rem',
+        lineHeight: bodyLine,
+        fontSize: FONTS.bodySize,
+        color: COLORS.text,
+      }}>
+        {items.map((it, i) => (
+          <li key={i} style={{ marginBottom: '0.75rem' }}>{renderText(it)}</li>
+        ))}
+      </ol>
+    );
+  };
+
+  return (
+    <div style={{
+      lineHeight: bodyLine,
+      color: COLORS.text,
+      maxWidth,
+      margin: '0 auto',
+    }}>
+      <ModeIndicator mode={a.advisoryMode} />
+
+      {a.title && (
+        <h2 style={{
+          margin: '0 0 1.65rem 0', // was 1.5rem — slightly more air before system chain/overview
+          fontSize: '1.6rem',       // was 1.55rem — key decisions read first
+          fontWeight: 700,
+          color: COLORS.text,       // was hard-coded #2a2a2a; use darkened primary token
+          letterSpacing: '-0.02em',
+        }}>
+          {a.title}
+        </h2>
+      )}
+
+      {/* System chain — single horizontal line, deduped. */}
+      {chain.length > 0 && (
+        <div style={{
+          marginBottom: sectionGap,
+          padding: '0.75rem 1rem',
+          background: COLORS.accentBg,
+          borderRadius: '8px',
+          border: `1px solid ${COLORS.border}`,
+          fontSize: '0.95rem',
+          overflowX: 'auto',
+          whiteSpace: 'nowrap',
+        }}>
+          <div style={{
+            color: COLORS.text,
+            fontWeight: 500,
+            display: 'inline-block',
+          }}>
+            {chain.map((c, i) => (
+              <span key={i}>
+                {i > 0 && (
+                  <span style={{ color: COLORS.accentLight, margin: '0 0.55rem' }}>→</span>
+                )}
+                <span>{c.name}</span>
+              </span>
+            ))}
+          </div>
+          {hasAnyRole && (
+            <div style={{
+              marginTop: '0.3rem',
+              fontSize: '0.82rem',
+              color: COLORS.textMuted,
+            }}>
+              {chain.map((c, i) => (
+                <span key={i}>
+                  {i > 0 && <span style={{ margin: '0 0.55rem' }}>→</span>}
+                  <span>{c.role ?? ''}</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Overview. */}
+      {overview && (
+        <section style={{ marginBottom: sectionGap }}>
+          {sectionLabel('System overview')}
+          {bodyPara(overview.body)}
+        </section>
+      )}
+
+      {/* Strengths. */}
+      {strengths && (
+        <section style={{ marginBottom: sectionGap }}>
+          {sectionLabel('What the system is doing well')}
+          {renderListBody(strengths.body)}
+        </section>
+      )}
+
+      {/* Constraint — visually dominant. */}
+      {constrained && (
+        <section style={{
+          marginBottom: sectionGap,
+          padding: '1.5rem 1.6rem',
+          background: '#fbfaf6',
+          borderLeft: `4px solid ${COLORS.accent}`,
+          borderRadius: '6px',
+        }}>
+          {sectionLabel('Where the system is constrained', { emphasis: 'primary' })}
+          {bodyPara(constrained.body, { lineHeight: 1.95 })}
+        </section>
+      )}
+
+      {/* Identity. */}
+      {identity && (
+        <section style={{ marginBottom: sectionGap }}>
+          {sectionLabel('Core identity')}
+          {bodyPara(identity.body)}
+        </section>
+      )}
+
+      {/* Change nothing. */}
+      {changeNothing && (
+        <section style={{ marginBottom: sectionGap }}>
+          {sectionLabel('If you change nothing')}
+          {bodyPara(changeNothing.body)}
+        </section>
+      )}
+
+      {/* Optimize — action emphasis, grouped with follow-up chips. */}
+      {optimize && (
+        <div style={{ marginBottom: sectionGap }}>
+        <section style={{
+          padding: '1.5rem 1.6rem',
+          background: COLORS.white,
+          border: `1.5px solid ${COLORS.accent}`,
+          borderRadius: '6px',
+        }}>
+          {sectionLabel('If you optimize', { emphasis: 'action' })}
+
+          {doNotTouchItems.length > 0 && (
+            <div style={{ marginBottom: '1.15rem' }}>
+              <div style={{
+                fontSize: FONTS.labelSize,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                color: COLORS.textMuted,
+                marginBottom: '0.5rem',
+                fontWeight: 600,
+              }}>
+                Do not touch
+              </div>
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
+              }}>
+                {doNotTouchItems.map((name, i) => (
+                  <span key={i} style={{
+                    display: 'inline-block',
+                    padding: '0.35rem 0.7rem',
+                    background: COLORS.accentBg,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: '999px',
+                    fontSize: '0.88rem',
+                    color: COLORS.text,
+                    fontWeight: 500,
+                  }}>
+                    {name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {optimizeBody && bodyPara(optimizeBody, { lineHeight: 1.95 })}
+        </section>
+
+          {/* Follow-up action chips — continuation of optimize, placeholder (no logic yet). */}
+          <div style={{ marginTop: '0.9rem', paddingLeft: '0.15rem' }}>
+            <div style={{
+              fontSize: '0.82rem',
+              color: COLORS.textMuted,
+              fontStyle: 'italic',
+              marginBottom: '0.45rem',
+            }}>
+              You can explore this further:
+            </div>
+            <div
+              role="group"
+              aria-label="Follow-up actions"
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '0.45rem',
+              }}
+            >
+              {[
+                'See upgrade options',
+                'Hear what this change does',
+                'Compare paths',
+              ].map((label) => {
+                const isHear = label === 'Hear what this change does';
+                const isOptions = label === 'See upgrade options';
+                const active =
+                  (isHear && hearExpanded) || (isOptions && optionsExpanded);
+                const onClick = isHear
+                  ? () => setHearExpanded((v) => !v)
+                  : isOptions
+                  ? () => setOptionsExpanded((v) => !v)
+                  : undefined;
+                return (
+                  <FollowUpChip
+                    key={label}
+                    label={label}
+                    active={active}
+                    onClick={onClick}
+                  />
+                );
+              })}
+            </div>
+
+            {hearExpanded && (
+              <HearFollowUp
+                constrainedBody={constrained?.body ?? ''}
+                optimizeBody={optimizeBody}
+                onDismiss={() => setHearExpanded(false)}
+              />
+            )}
+
+            {optionsExpanded && (
+              <UpgradeOptionsFollowUp
+                constrainedBody={constrained?.body ?? ''}
+                optimizeBody={optimizeBody}
+                onDismiss={() => setOptionsExpanded(false)}
+              />
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Deterministic follow-up for the "Hear what this change does" chip.
+ *
+ * Composes a calm, non-hyped explanation from the already-parsed narrative
+ * sections. References the primary constraint and the recommended change,
+ * then surfaces 2–3 concrete listening phrases chosen from keywords present
+ * in the constraint and optimize text. No network call, no product
+ * recommendations, no new sections — purely a continuation of the advisor's
+ * existing analysis.
+ */
+function HearFollowUp({
+  constrainedBody,
+  optimizeBody,
+  onDismiss,
+}: {
+  constrainedBody: string;
+  optimizeBody: string;
+  onDismiss: () => void;
+}) {
+  // First-sentence extraction — keep references short and precise.
+  const firstSentence = (text: string): string => {
+    const clean = text.replace(/\s+/g, ' ').trim();
+    if (!clean) return '';
+    const match = clean.match(/^(.*?[.!?])(\s|$)/);
+    return (match ? match[1] : clean).trim();
+  };
+
+  const constraintLead = firstSentence(constrainedBody);
+  const changeLead = firstSentence(optimizeBody);
+
+  // ── Concrete listening phrases keyed to language in the narrative. ──
+  // Order matters: first match wins, and we take at most three.
+  const haystack = `${constrainedBody} ${optimizeBody}`.toLowerCase();
+  const examplePool: { test: RegExp; phrase: string }[] = [
+    { test: /decay|ring|sustain/, phrase: 'shorter decay on snare hits' },
+    { test: /attack|leading edge|transient|speed/, phrase: 'harder leading edges on plucked strings' },
+    { test: /body|density|weight|warmth|lower/, phrase: 'more weight in the lower vocal register' },
+    { test: /space|air|stage|image|separation/, phrase: 'clearer space between instruments' },
+    { test: /control|damping|grip|bass|low end|bottom/, phrase: 'a tighter stop on bass notes' },
+    { test: /detail|resolution|fine|micro/, phrase: 'small room cues surfacing more clearly' },
+    { test: /smooth|ease|relaxed|fatigue/, phrase: 'less edge on massed strings' },
+  ];
+  const picked: string[] = [];
+  for (const { test, phrase } of examplePool) {
+    if (picked.length >= 3) break;
+    if (test.test(haystack)) picked.push(phrase);
+  }
+  // Fallback defaults if the narrative language did not match.
+  if (picked.length < 2) {
+    const defaults = [
+      'cleaner space between instruments',
+      'a firmer stop on bass notes',
+      'more body in sustained vocal notes',
+    ];
+    for (const d of defaults) {
+      if (picked.length >= 3) break;
+      if (!picked.includes(d)) picked.push(d);
+    }
+  }
+
+  return (
+    <div
+      aria-label="Hear what this change does"
+      style={{
+        marginTop: '1rem',
+        padding: '1rem 1.15rem',
+        background: COLORS.accentBg,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: '6px',
+        fontSize: '0.95rem',
+        lineHeight: 1.85,
+        color: COLORS.text,
+      }}
+    >
+      <div style={{
+        fontSize: FONTS.labelSize,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        color: COLORS.textMuted,
+        fontWeight: 600,
+        marginBottom: '0.55rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}>
+        <span>What this change does, in listening terms</span>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Close"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: COLORS.textMuted,
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            padding: '0 0.25rem',
+            lineHeight: 1,
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      {constraintLead && (
+        <p style={{ margin: '0 0 0.55rem 0' }}>
+          The constraint we are addressing: {constraintLead.replace(/\.$/, '')}.
+        </p>
+      )}
+      {changeLead && (
+        <p style={{ margin: '0 0 0.55rem 0' }}>
+          The recommended change: {changeLead.replace(/\.$/, '')}.
+        </p>
+      )}
+      <p style={{ margin: '0 0 0.4rem 0' }}>
+        If it lands, the shift is subtle rather than dramatic — you would notice it on familiar tracks before you noticed it on new ones. Specifically:
+      </p>
+      <ul style={{ margin: '0.1rem 0 0 1.1rem', padding: 0 }}>
+        {picked.map((p, i) => (
+          <li key={i} style={{ marginBottom: '0.2rem' }}>{p}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * Deterministic follow-up for the "See upgrade options" chip.
+ *
+ * Translates the primary optimize recommendation into three archetypal
+ * slots — Safe, Stretch, Alternative flavor — each with a short name,
+ * one-sentence rationale tied to the current system, and one tradeoff.
+ * Archetype family (amp / DAC / speaker / source / placement) is inferred
+ * from keywords in the optimize body. No product recommendations, no
+ * external data, no links.
+ */
+function UpgradeOptionsFollowUp({
+  constrainedBody,
+  optimizeBody,
+  onDismiss,
+}: {
+  constrainedBody: string;
+  optimizeBody: string;
+  onDismiss: () => void;
+}) {
+  type Slot = { tier: string; name: string; why: string; tradeoff: string };
+
+  const haystack = `${constrainedBody} ${optimizeBody}`.toLowerCase();
+  const noSingleSwap = /no single\s+high-?leverage swap|property of the chain/.test(haystack);
+
+  const pickFamily = (): 'amp' | 'dac' | 'speaker' | 'source' | 'placement' => {
+    if (noSingleSwap || /placement|toe-?in|room/.test(haystack)) return 'placement';
+    if (/\bamp(lifier)?\b|integrated|power amp|preamp/.test(haystack)) return 'amp';
+    if (/\bdac\b|converter|digital[- ]to[- ]analog/.test(haystack)) return 'dac';
+    if (/speaker|monitor|transducer|driver|cabinet/.test(haystack)) return 'speaker';
+    if (/source|streamer|transport|turntable|cartridge/.test(haystack)) return 'source';
+    return 'amp';
+  };
+  const family = pickFamily();
+
+  const slotsByFamily: Record<typeof family, Slot[]> = {
+    amp: [
+      {
+        tier: 'Safe',
+        name: 'A used higher-current unit in your current topology',
+        why: 'A low-risk, reversible step that directly addresses the control shortfall without reshaping the rest of the chain.',
+        tradeoff: 'Incremental character change; if the constraint is deeper than current delivery, the gain will feel modest.',
+      },
+      {
+        tier: 'Stretch',
+        name: 'Dedicated separates with a beefy power amp',
+        why: 'Substantially more grip, headroom, and dynamic authority — a structural step up the system has not seen before.',
+        tradeoff: 'Major financial and physical commitment, an added interconnect to get right, and a longer settling period.',
+      },
+      {
+        tier: 'Alternative flavor',
+        name: 'A low-power SET or single-ended triode integrated',
+        why: 'A fundamentally different design philosophy — harmonic density and presence over grip, prioritising tone and immediacy.',
+        tradeoff: 'Less bass control, limited loudness ceiling, and real speaker-matching constraints; a different destination, not this one reached cheaper.',
+      },
+    ],
+    dac: [
+      {
+        tier: 'Safe',
+        name: 'Same-family DAC one step up',
+        why: 'Keeps the timing signature you know and lifts resolution modestly with minimal risk of upsetting system balance.',
+        tradeoff: 'Gains are quiet and may not feel proportional to cost until you live with them.',
+      },
+      {
+        tier: 'Stretch',
+        name: 'A reference R-2R or discrete-ladder DAC',
+        why: 'A clearly higher-impact move — denser tone, more spatial stability, and meaningfully lower noise floor that reshapes what the system can resolve.',
+        tradeoff: 'Significant spend, and it will expose whatever weakness remains downstream — often triggering further change.',
+      },
+      {
+        tier: 'Alternative flavor',
+        name: 'A NOS or tube-output DAC',
+        why: 'A different conversion philosophy — softer edges, tonal warmth, and an analog-leaning presentation rather than maximum precision.',
+        tradeoff: 'Gives up top-end air, measured linearity, and some detail retrieval; suits tonal listeners, not detail-first ones.',
+      },
+    ],
+    speaker: [
+      {
+        tier: 'Safe',
+        name: 'Current model in a larger enclosure',
+        why: 'Keeps the voicing and driver behaviour you trust while giving the low end more room; fully recoverable if you dislike the change.',
+        tradeoff: 'Needs more floor space and more careful placement; the character move is small.',
+      },
+      {
+        tier: 'Stretch',
+        name: 'A flagship from a clearly higher tier',
+        why: 'A much larger jump in resolution, dynamic range, and staging — the kind of move that resets the ceiling for the whole system.',
+        tradeoff: 'Expensive, demanding of everything upstream, and will relocate the bottleneck to the source or amp.',
+      },
+      {
+        tier: 'Alternative flavor',
+        name: 'A planar, electrostatic, or single-driver design',
+        why: 'A different transducer principle — coherence, speed, and presence that box speakers cannot quite produce.',
+        tradeoff: 'Trades bass weight, dynamic headroom, and placement freedom; a genuinely different listening experience, not a better version of this one.',
+      },
+    ],
+    source: [
+      {
+        tier: 'Safe',
+        name: 'Cleaner power and better cabling for your current source',
+        why: 'Low-risk, reversible noise reduction at the start of the chain with no change in character.',
+        tradeoff: 'Easily lost if the downstream is the real bottleneck; the ceiling here is low.',
+      },
+      {
+        tier: 'Stretch',
+        name: 'A reference-tier streamer or transport with separate clocking',
+        why: 'A structurally different front end with measurable timing and noise gains that the rest of the system can genuinely resolve.',
+        tradeoff: 'High cost, added complexity, and the improvement is often refinement rather than transformation.',
+      },
+      {
+        tier: 'Alternative flavor',
+        name: 'A proper analog front end — turntable, phono stage, cartridge',
+        why: 'A different relationship with recordings entirely: physical media, different mastering lineage, and a more present-in-the-room presentation.',
+        tradeoff: 'New ritual, setup, and ongoing media cost; not a drop-in replacement for digital.',
+      },
+    ],
+    placement: [
+      {
+        tier: 'Safe',
+        name: 'Methodical placement and toe-in pass',
+        why: 'Directly addresses the chain-level constraint at zero cost and is fully reversible.',
+        tradeoff: 'Takes patient listening over several sessions; it is work, not a purchase.',
+      },
+      {
+        tier: 'Stretch',
+        name: 'Measured room treatment plus bass trapping',
+        why: 'A much larger structural change — addresses modal behaviour and first reflections that placement alone cannot reach.',
+        tradeoff: 'Visible in the room, meaningful cost, and needs real measurement to avoid overdamping.',
+      },
+      {
+        tier: 'Alternative flavor',
+        name: 'Near-field or desktop listening geometry',
+        why: 'A different way to listen altogether — minimises room involvement and prioritises intimacy and imaging over scale.',
+        tradeoff: 'Gives up room-filling presentation and shared-listening use; reshapes the relationship with the system, not just the sound.',
+      },
+    ],
+  };
+
+  const slots = slotsByFamily[family];
+
+  return (
+    <div
+      aria-label="Upgrade options"
+      style={{
+        marginTop: '1rem',
+        padding: '1rem 1.15rem',
+        background: COLORS.accentBg,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: '6px',
+        fontSize: '0.95rem',
+        lineHeight: 1.75,
+        color: COLORS.text,
+      }}
+    >
+      <div style={{
+        fontSize: FONTS.labelSize,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        color: COLORS.textMuted,
+        fontWeight: 600,
+        marginBottom: '0.75rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}>
+        <span>Three directions for this recommendation</span>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Close"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: COLORS.textMuted,
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            padding: '0 0.25rem',
+            lineHeight: 1,
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        {slots.map((s, i) => (
+          <div
+            key={i}
+            style={{
+              padding: '0.7rem 0.85rem',
+              background: COLORS.white,
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: '5px',
+            }}
+          >
+            <div style={{
+              fontSize: '0.72rem',
+              textTransform: 'uppercase',
+              letterSpacing: '0.09em',
+              color: COLORS.accent,
+              fontWeight: 700,
+              marginBottom: '0.25rem',
+            }}>
+              {s.tier}
+            </div>
+            <div style={{ fontWeight: 600, marginBottom: '0.3rem' }}>{s.name}</div>
+            <div style={{ marginBottom: '0.25rem' }}>
+              <span style={{ color: COLORS.textMuted }}>Why it fits: </span>
+              {s.why}
+            </div>
+            <div>
+              <span style={{ color: COLORS.textMuted }}>Tradeoff: </span>
+              {s.tradeoff}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <p style={{
+        margin: '0.85rem 0 0 0',
+        fontSize: '0.82rem',
+        color: COLORS.textMuted,
+        fontStyle: 'italic',
+      }}>
+        These are directional archetypes, not specific product picks — they describe the kind of move, so you can evaluate whether any of them match your constraints before we narrow further.
+      </p>
+    </div>
+  );
+}
+
+function FollowUpChip({
+  label,
+  onClick,
+  active = false,
+}: {
+  label: string;
+  onClick?: () => void;
+  active?: boolean;
+}) {
+  const [hover, setHover] = useState(false);
+  const lit = hover || active;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={onClick ? active : undefined}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        padding: '0.3rem 0.75rem',
+        background: lit ? COLORS.accentBg : 'transparent',
+        border: `1px ${active ? 'solid' : 'dashed'} ${lit ? COLORS.accentLight : COLORS.border}`,
+        borderRadius: '999px',
+        fontSize: '0.82rem',
+        color: lit ? COLORS.text : COLORS.textMuted,
+        fontWeight: 400,
+        cursor: 'pointer',
+        fontFamily: 'inherit',
+        lineHeight: 1.3,
+        transition: 'background 120ms ease, border-color 120ms ease, color 120ms ease',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
   let sectionNum = 0;
   const next = () => ++sectionNum;
+
+  // Rewritten system review: when the assessment response carries the
+  // six-section narrative in `systemContext`, the legacy multi-section
+  // memo layout is suppressed and only the narrative renders. The
+  // structured fields are still present on the response (so parity tests
+  // and non-UI consumers keep working) but are intentionally hidden.
+  const isRewrittenReview = a.advisoryMode === 'system_review' && !!a.systemContext;
+
+  if (isRewrittenReview) {
+    return <RewrittenSystemReview advisory={a} />;
+  }
 
   return (
     <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
@@ -208,20 +1086,37 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
       {/* ── Title ──────────────────────────────────── */}
       {a.title && (
         <h2 style={{
-          margin: '0 0 1.25rem 0',
-          fontSize: '1.5rem',
+          margin: '0 0 1.35rem 0', // was 1.25rem — pairs with strengthened label hierarchy below
+          fontSize: '1.55rem',      // was 1.5rem — match primary-mode title weight
           fontWeight: 700,
-          color: '#2a2a2a',
+          color: COLORS.text,       // was hard-coded #2a2a2a; use darkened primary token
           letterSpacing: '-0.02em',
         }}>
           {a.title}
         </h2>
       )}
 
+      {/* ── Assessment summary one-liner (Feature 10) ── */}
+      {!isRewrittenReview && a.systemSignature && (
+        <p style={{
+          margin: '0 0 1.5rem 0',
+          fontSize: '1.02rem',
+          fontWeight: 500,
+          lineHeight: 1.55,
+          color: '#555',
+          fontStyle: 'italic',
+        }}>
+          {a.systemSignature}
+          {a.primaryConstraint
+            ? ` — the ${a.primaryConstraint.componentName.toLowerCase()} is the main area for improvement.`
+            : ' — no urgent changes needed.'}
+        </p>
+      )}
+
       {/* ── 1. System Character ────────────────────── */}
       <AdvisorySection number={next()} label="System Character">
         {/* Intro summary — system philosophy framing */}
-        {a.introSummary && (
+        {!isRewrittenReview && a.introSummary && (
           <p style={{ margin: '0 0 0.85rem 0', fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight }}>
             {renderText(a.introSummary)}
           </p>
@@ -233,13 +1128,13 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
           </p>
         )}
         {/* System interaction description */}
-        {a.systemInteraction && (
+        {!isRewrittenReview && a.systemInteraction && (
           <p style={{ margin: '0 0 0.4rem 0', fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight }}>
             {renderText(a.systemInteraction)}
           </p>
         )}
         {/* System synergy — folded into System Character instead of separate section */}
-        {a.systemSynergy && (
+        {!isRewrittenReview && a.systemSynergy && (
           <p style={{
             margin: '0.6rem 0 0.4rem 0',
             fontSize: FONTS.bodySize,
@@ -305,7 +1200,7 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
       <SectionDivider />
 
       {/* ── 2. System Signature ─────────────────────── */}
-      {a.systemSignature && (
+      {!isRewrittenReview && a.systemSignature && (
         <>
           <AdvisorySection number={next()} label="System Signature">
             <p style={{
@@ -325,7 +1220,7 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
       {/* System Synergy is now folded into System Character above */}
 
       {/* ── 4. What the System Does Well ─────────── */}
-      {a.assessmentStrengths && a.assessmentStrengths.length > 0 && (
+      {!isRewrittenReview && a.assessmentStrengths && a.assessmentStrengths.length > 0 && (
         <>
           <AdvisorySection number={next()} label="What the System Does Well">
             <BulletList items={a.assessmentStrengths} />
@@ -345,7 +1240,7 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
       )}
 
       {/* ── 5. Trade-offs in the System ───────────── */}
-      {a.assessmentLimitations && a.assessmentLimitations.length > 0 && (
+      {!isRewrittenReview && a.assessmentLimitations && a.assessmentLimitations.length > 0 && (
         <>
           <AdvisorySection number={next()} label="Trade-offs in the System">
             {a.primaryConstraint && (
@@ -360,7 +1255,7 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
       )}
 
       {/* ── 6. Component Contributions ────────────── */}
-      {a.componentAssessments && a.componentAssessments.length > 0 && (
+      {!isRewrittenReview && a.componentAssessments && a.componentAssessments.length > 0 && (
         <>
           <AdvisorySection number={next()} label="Component Contributions">
             <AdvisoryComponentAssessments assessments={a.componentAssessments} />
@@ -370,17 +1265,17 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
       )}
 
       {/* ── 7. System Bottlenecks ─────────────────── */}
-      {a.upgradePaths && a.upgradePaths.length > 0 && (
+      {!isRewrittenReview && a.upgradePaths && a.upgradePaths.length > 0 && (
         <>
           <AdvisorySection number={next()} label="System Bottlenecks">
-            <AdvisoryUpgradePaths paths={a.upgradePaths.slice(0, 2)} />
+            <AdvisoryUpgradePaths paths={a.upgradePaths} />
           </AdvisorySection>
           <SectionDivider />
         </>
       )}
 
       {/* ── 8. Upgrade Strategy (only for upgrade queries) ── */}
-      {a.advisoryMode !== 'system_review' && a.recommendedSequence && a.recommendedSequence.length > 0 && (
+      {!isRewrittenReview && a.advisoryMode !== 'system_review' && a.recommendedSequence && a.recommendedSequence.length > 0 && (
         <>
           <AdvisorySection number={next()} label="Upgrade Strategy">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
@@ -397,14 +1292,14 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
       )}
 
       {/* ── 9. Components Worth Keeping (only for upgrade queries) ── */}
-      {a.advisoryMode !== 'system_review' && a.keepRecommendations && a.keepRecommendations.length > 0 && (
+      {!isRewrittenReview && a.advisoryMode !== 'system_review' && a.keepRecommendations && a.keepRecommendations.length > 0 && (
         <>
           <AdvisorySection number={next()} label="Components Worth Keeping">
             {a.keepRecommendations.map((k, i) => (
               <div key={i}>
                 {i > 0 && <hr style={{ border: 'none', borderTop: `1px solid ${COLORS.borderLight}`, margin: '0.8rem 0' }} />}
                 <div style={{ marginBottom: '0.3rem' }}>
-                  <strong style={{ fontSize: '0.98rem', color: '#2a2a2a' }}>{k.name}</strong>
+                  <strong style={{ fontSize: '0.98rem', color: COLORS.text }}>{k.name}</strong>
                 </div>
                 <p style={{ margin: 0, fontSize: FONTS.bodySize, lineHeight: 1.65, color: COLORS.textSecondary }}>
                   {renderText(k.reason)}
@@ -417,7 +1312,7 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
       )}
 
       {/* ── 10. Listener Taste Profile ─────────────── */}
-      {(a.listenerTasteProfile || a.keyObservation) && (
+      {!isRewrittenReview && (a.listenerTasteProfile || a.keyObservation) && (
         <>
           <AdvisorySection number={next()} label="Listener Taste Profile">
             {/* Spider chart visualization */}
@@ -1059,6 +1954,9 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
             color: COLORS.textMuted,
             marginLeft: '0.6rem',
           }}>
+            {/* Explicit separator so copy-paste reads as "Chord · FPGA"
+                rather than "chordFPGA" (QA residual R2 — run-on header). */}
+            {'· '}
             {pa.candidateArchitecture}
             {pa.candidatePrice ? ` · ~$${pa.candidatePrice.toLocaleString()}` : ''}
           </span>
@@ -1173,6 +2071,43 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
         }}>
           {pa.recommendation}
         </p>
+        {/*
+          Pre-review blocker fix (Audio XX Playbook §5 Confidence Calibration):
+          this attribution claims the recommendation is grounded in the user's
+          components and listener profile. On brand-only inquiries ("Tell me
+          about the Chord sound") neither exists, so the line is a false
+          confidence signal. Render only when at least one of those grounding
+          sources is actually present.
+        */}
+        {(() => {
+          const hasSystem = !!(a.audioProfile?.systemChain?.length);
+          const hasProfile = !!(
+            (a.audioProfile?.sonicPriorities?.length ?? 0) > 0 ||
+            (a.audioProfile?.sonicAvoids?.length ?? 0) > 0 ||
+            !!a.audioProfile?.archetype
+          );
+          if (!hasSystem && !hasProfile) return null;
+          let attribution: string;
+          if (hasSystem && hasProfile) {
+            attribution = 'Based on how your components interact and your listener profile.';
+          } else if (hasSystem) {
+            attribution = 'Based on how your components interact.';
+          } else {
+            attribution = 'Based on your stated listening preferences.';
+          }
+          return (
+            <p style={{
+              margin: '0.55rem 0 0 0',
+              fontSize: '0.78rem',
+              lineHeight: 1.5,
+              color: COLORS.textSecondary,
+              fontStyle: 'italic',
+              opacity: 0.9,
+            }}>
+              {attribution}
+            </p>
+          );
+        })()}
       </div>
 
       {/* ── Follow-up ────────────────────────────────── */}
@@ -1331,6 +2266,85 @@ function DirectionCard({ direction: d }: { direction: DecisionDirection }) {
           {d.systemInteraction}
         </div>
       )}
+      {d.exampleGear && d.exampleGear.length > 0 && (
+        <DirectionExamples examples={d.exampleGear} />
+      )}
+    </div>
+  );
+}
+
+// ── Explore examples block ───────────────────────────
+//
+// Minimal, secondary-weight list of 2–3 representative products per
+// direction. Mirrors the visual level of "Further reading" on product
+// cards: 0.72rem uppercase muted label, inline link row beneath.
+// No pricing, no trait data, no full card UI — name + links only.
+
+function DirectionExamples({
+  examples,
+}: { examples: Array<{ brand: string; name: string; hifiSharkUrl: string; manufacturerUrl?: string }> }) {
+  return (
+    <div style={{ marginTop: '0.5rem' }}>
+      <span style={{
+        fontSize: '0.72rem',
+        fontWeight: 600,
+        color: COLORS.textMuted,
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        marginRight: '0.4rem',
+      }}>
+        Explore examples
+      </span>
+      <ul style={{
+        margin: '0.25rem 0 0 0',
+        padding: 0,
+        listStyle: 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.2rem',
+      }}>
+        {examples.map((ex, idx) => (
+          <li key={idx} style={{
+            fontSize: '0.82rem',
+            lineHeight: 1.55,
+            color: COLORS.textSecondary,
+          }}>
+            <span style={{ fontWeight: 500, color: COLORS.text }}>
+              {ex.brand} {ex.name}
+            </span>
+            <span style={{ color: COLORS.textLight, margin: '0 0.4rem' }}>·</span>
+            <a
+              href={ex.hifiSharkUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: COLORS.accent,
+                textDecoration: 'none',
+                fontSize: '0.78rem',
+              }}
+            >
+              HiFiShark
+            </a>
+            {ex.manufacturerUrl && (
+              <>
+                <span style={{ color: COLORS.textLight, margin: '0 0.4rem' }}>·</span>
+                <a
+                  href={ex.manufacturerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: COLORS.accent,
+                    textDecoration: 'none',
+                    fontSize: '0.78rem',
+                  }}
+                >
+                  Manufacturer
+                </a>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -1495,6 +2509,38 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
         </p>
       )}
 
+      {/* ── 0d. Category Framing — what actually matters in this category ── */}
+      {a.categoryFraming && (
+        <div style={{
+          margin: '0 0 1.5rem 0',
+          padding: '0.9rem 1.1rem',
+          background: '#f6f4ee',
+          borderRadius: '6px',
+          borderLeft: `3px solid ${COLORS.accent}`,
+        }}>
+          <div style={{
+            fontWeight: 700,
+            fontSize: '0.78rem',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color: COLORS.accent,
+            marginBottom: '0.5rem',
+          }}>
+            {a.categoryFraming.headline}
+          </div>
+          {a.categoryFraming.points.map((pt, i) => (
+            <p key={i} style={{
+              margin: i === 0 ? 0 : '0.4rem 0 0 0',
+              fontSize: '0.92rem',
+              lineHeight: 1.65,
+              color: COLORS.text,
+            }}>
+              {renderText(`\u2022 ${pt}`)}
+            </p>
+          ))}
+        </div>
+      )}
+
       {/* ── 1. System Interpretation (reasoning before products) ── */}
       {/* Suppress when StartHereBlock is active — passive explanations replaced by active CTA */}
       {a.systemInterpretation && !a.lowPreferenceSignal && (
@@ -1589,6 +2635,39 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
       {/* ── 4. Product cards ──────────────────────────────── */}
       {a.options && a.options.length > 0 && (
         <AdvisoryProductCards options={a.options} />
+      )}
+
+      {/* ── 4a0. Decision Guidance — "If X → choose Y" ── */}
+      {a.decisionGuidance && a.decisionGuidance.length > 0 && (
+        <div style={{
+          margin: '1.5rem 0',
+          padding: '1rem 1.25rem',
+          background: '#fbfaf6',
+          borderRadius: '8px',
+          border: `1px solid ${COLORS.accent}`,
+        }}>
+          <div style={{
+            fontWeight: 700,
+            fontSize: '0.78rem',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color: COLORS.accent,
+            marginBottom: '0.6rem',
+          }}>
+            How to choose
+          </div>
+          {a.decisionGuidance.map((g, i) => (
+            <p key={i} style={{
+              margin: i === 0 ? 0 : '0.45rem 0 0 0',
+              fontSize: '0.95rem',
+              lineHeight: 1.65,
+              color: COLORS.text,
+            }}>
+              <span style={{ color: COLORS.textSecondary }}>If {g.condition} → </span>
+              <strong>{g.pick}</strong>
+            </p>
+          ))}
+        </div>
       )}
 
       {/* ── 4a. Preference reflection ── */}
@@ -2153,6 +3232,68 @@ function StandardFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePro
             lineHeight: 1.75,
           }}
         >
+          {/* Compared-subject thumbnails. Only render when BOTH entries have a
+              real image — otherwise the block collapses and the comparison
+              renders as clean labelled prose. Letter-tile placeholders are
+              suppressed globally (see product-images.ts) because the
+              catalog's imageUrl fields are not yet populated. */}
+          {a.comparisonImages
+            && a.comparisonImages.length === 2
+            && a.comparisonImages.every((e) => !!e.imageUrl) && (
+            <div
+              style={{
+                display: 'flex',
+                gap: '1rem',
+                alignItems: 'center',
+                margin: '0 0 0.85rem 0',
+                flexWrap: 'wrap',
+              }}
+            >
+              {a.comparisonImages.map((entry, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: '0.92rem',
+                    color: '#555',
+                  }}
+                >
+                  {entry.imageUrl ? (
+                    <img
+                      src={entry.imageUrl}
+                      alt={`${entry.brand} ${entry.name}`.trim()}
+                      width={56}
+                      height={56}
+                      style={{ borderRadius: '4px', objectFit: 'cover', border: '1px solid #e8ddc9' }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: '4px',
+                        background: '#faf7f2',
+                        border: '1px solid #e8ddc9',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.1rem',
+                        fontWeight: 600,
+                        color: '#b08d57',
+                        fontFamily: 'Georgia, "Times New Roman", serif',
+                      }}
+                    >
+                      {(entry.brand || entry.name || '?').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span>{[entry.brand, entry.name].filter(Boolean).join(' ')}</span>
+                  {i === 0 && <span style={{ color: '#999', margin: '0 0.25rem' }}>vs</span>}
+                </div>
+              ))}
+            </div>
+          )}
           {a.comparisonSummary.split(/\n\n/).filter((s: string) => s.trim()).map((segment: string, i: number) => (
             <p
               key={i}
@@ -2541,6 +3682,34 @@ function StandardFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePro
         >
           {a.bottomLine}
         </p>
+      )}
+
+      {/* ── 11b. Saved-system note ────────────────── */}
+      {a.savedSystemNote && (
+        <div
+          style={{
+            borderLeft: `3px solid ${COLORS.accent}`,
+            paddingLeft: '1rem',
+            padding: '0.8rem 1rem',
+            marginBottom: '1.5rem',
+            background: '#f6f9fa',
+            borderRadius: '0 6px 6px 0',
+          }}
+        >
+          <div style={{
+            fontSize: '0.78rem',
+            fontWeight: 600,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase' as const,
+            color: COLORS.accentLight,
+            marginBottom: '0.4rem',
+          }}>
+            In your system
+          </div>
+          <p style={{ margin: 0, color: COLORS.text, lineHeight: FONTS.lineHeight }}>
+            {a.savedSystemNote}
+          </p>
+        </div>
       )}
 
       {/* ── 12. Refinement prompts ────────────────── */}

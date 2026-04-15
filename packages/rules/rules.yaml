@@ -453,6 +453,38 @@ rules:
 
       verdict: no_purchase_recommended
 
+  # Phase K — Electrical noise / hum / grounding (non-tonal symptom).
+  # Surfaces concrete diagnostic guidance instead of the friendly-advisor
+  # fallback when the user describes hum, buzz, hiss, or grounding issues.
+  - id: electrical-noise-diagnostic
+    label: Electrical noise — diagnostic orientation
+    priority: 200
+    conditions:
+      symptoms_present:
+        - electrical_noise
+    outputs:
+      explanation: >
+        What you are describing sounds like a noise-floor or grounding issue rather than a
+        tonal balance problem. Audible hum, buzz, or hiss usually points to a specific
+        electrical interaction in the chain — ground loops between components, an unshielded
+        interconnect picking up RF, a phono stage with insufficient gain headroom, or a
+        component that should be on its own circuit.
+
+      suggestions:
+        - Note whether the noise is constant or tied to one input — that isolates source vs chain.
+        - Lift components one at a time (or, for a turntable, verify the ground wire from arm to phono stage).
+
+      risks:
+        - Treating a grounding issue as a tonal problem leads to component swaps that do not address the cause.
+        - Ground-loop noise can compound if more components share the same outlet.
+
+      next_step: >
+        Note when the noise appears (idle, with music, only on one input) and which
+        components are connected at that moment. That isolation step will identify the
+        source far more reliably than swapping gear.
+
+      verdict: wait_recommended
+
   - id: friendly-advisor-fallback
     label: Friendly advisor structured response
     priority: 1000

@@ -12,9 +12,13 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          console.log('[auth] Missing credentials');
+          return null;
+        }
 
         try {
+          console.log('[auth] Attempting login for:', credentials.email);
           let user = await prisma.user.findFirst({
             where: { email: credentials.email },
           });
@@ -22,6 +26,7 @@ export const authOptions: NextAuthOptions = {
           if (!user) {
             // Auto-register for MVP — create user first, then profile separately
             // (nested creates can fail with some driver adapters)
+            console.log('[auth] No user found, auto-registering:', credentials.email);
             const hashed = await bcrypt.hash(credentials.password, 10);
             user = await prisma.user.create({
               data: {
@@ -33,12 +38,20 @@ export const authOptions: NextAuthOptions = {
             await prisma.profile.create({
               data: { userId: user.id },
             });
+            console.log('[auth] Auto-registered user:', user.id);
           } else {
-            if (!user.password) return null;
+            if (!user.password) {
+              console.log('[auth] User has no password:', user.id);
+              return null;
+            }
             const valid = await bcrypt.compare(credentials.password, user.password);
-            if (!valid) return null;
+            if (!valid) {
+              console.log('[auth] Invalid password for:', credentials.email);
+              return null;
+            }
           }
 
+          console.log('[auth] Login successful:', user.id, user.email);
           return { id: user.id, email: user.email };
         } catch (err) {
           console.error('[auth] authorize error:', err);

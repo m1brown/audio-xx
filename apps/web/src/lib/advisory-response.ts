@@ -22,8 +22,12 @@ import type { ExtractedSignals } from './signal-types';
 import type { SystemDirection } from './system-direction';
 import type { ReasoningResult } from './reasoning';
 import { getArchetypeLabel } from './archetype';
+import type { TradeoffAssessment } from './tradeoff-assessment';
+import type { PreferenceProtectionResult } from './preference-protection';
+import type { CounterfactualAssessment } from './counterfactual-assessment';
 import type { DecisionFrame } from './decision-frame';
 import { detectSystemPhono, buildPhonoCaveat } from './products/turntables';
+import { getProductImage } from './product-images';
 
 // ── Country code to name ──────────────────────────────
 
@@ -172,6 +176,12 @@ export interface AdvisoryOption {
   buyingNote?: string;
   /** Role tag in the 4-option recommendation model. */
   pickRole?: 'anchor' | 'close_alt' | 'contrast' | 'wildcard' | 'top_pick' | 'upgrade_pick' | 'value_pick';
+  /** Dynamic expert role label that overrides the static ROLE_LABELS text in the card.
+   *  e.g. "Best overall", "Best for warmth", "Best for control", "Best for dynamics". */
+  roleLabel?: string;
+  /** Curated review provenance for this product (phase-1 wedge).
+   *  Empty/absent when the product is not in the curated wedge. */
+  sources?: import('./curation').ResolvedReview[];
   /** Where this product is typically found (new / used / both). */
   typicalMarket?: 'new' | 'used' | 'both';
   /** Structured buying context label — overrides card inference when present. */
@@ -273,6 +283,18 @@ export interface UpgradePath {
   impact?: string;
   /** Why this path matters (1–2 sentences). */
   rationale: string;
+  /** Trade-off assessment for this path. Populated by Feature 2. */
+  tradeoff?: TradeoffAssessment;
+  /** Preference protection assessment. Populated by Feature 3. */
+  protection?: PreferenceProtectionResult;
+  /** Counterfactual reasoning assessment. Populated by Feature 6. */
+  counterfactual?: CounterfactualAssessment;
+  /** Strategy label — short name for this path's optimization direction (3–6 words). Populated by Feature 7. */
+  strategyLabel?: string;
+  /** Strategy intent — one sentence explaining what this path optimizes. Populated by Feature 7. */
+  strategyIntent?: string;
+  /** Concise explanation lines ("why this works"). Max 2. Populated by Feature 9. */
+  explanation?: string[];
   /** Ranked product options within this path. */
   options: UpgradePathOption[];
 }
@@ -347,7 +369,7 @@ export interface PrimaryConstraint {
   /** Which component (by display name) is the bottleneck. */
   componentName: string;
   /** Constraint category. */
-  category: 'dac_limitation' | 'speaker_scale' | 'amplifier_control' | 'tonal_imbalance' | 'stacked_bias' | 'source_limitation';
+  category: 'dac_limitation' | 'speaker_scale' | 'amplifier_control' | 'tonal_imbalance' | 'stacked_bias' | 'source_limitation' | 'power_match';
   /** One-line explanation of the constraint. */
   explanation: string;
 }
@@ -537,6 +559,12 @@ export interface AdvisoryResponse {
   systemFit?: string;
   /** Comparison summary — renders first for comparison responses. */
   comparisonSummary?: string;
+  /**
+   * Optional thumbnails for the two sides of a comparison — passed through
+   * from ConsultationResponse. Same `getProductImage` fallback used by
+   * shopping cards. Length 2 when present.
+   */
+  comparisonImages?: Array<{ brand: string; name: string; imageUrl?: string }>;
 
   // ── 4b. Product Detail ────────────────────────────────
   /** Country of manufacture (human-readable, e.g. "Austria", "Japan"). */
@@ -673,6 +701,19 @@ export interface AdvisoryResponse {
    *  requests where taste signal is absent or default. */
   categoryPreamble?: string;
 
+  // ── 7e2c. Category Framing (what actually matters) ──
+  /** Short headline + 2-4 tradeoff points explaining what actually matters
+   *  when choosing in this category. Rendered before product cards. */
+  categoryFraming?: {
+    headline: string;
+    points: string[];
+  };
+
+  // ── 7e2d. Decision Guidance (end-of-response) ───────
+  /** "If X → choose Y" guidance lines, rendered after the shortlist to give
+   *  the user a clear, actionable decision tree. */
+  decisionGuidance?: Array<{ condition: string; pick: string }>;
+
   // ── 7e3. Strategy Bullets ─────────────────────────
   /** 2–4 directional strategy lines — conceptual guidance before product recommendations.
    *  Each bullet describes a kind of change and why it would help. */
@@ -725,6 +766,11 @@ export interface AdvisoryResponse {
   // ── 8. Bottom Line ──────────────────────────────────
   /** One-sentence restrained conclusion. */
   bottomLine?: string;
+
+  // ── 8b. Saved-System Note ─────────────────────────
+  /** Secondary note connecting general advice to user's saved system.
+   *  Rendered as a visually separated accent block — never part of main answer framing. */
+  savedSystemNote?: string;
 
   // ── 9. Continuation ─────────────────────────────────
   /** Light follow-up question. */
@@ -829,9 +875,18 @@ function buildEditorialIntro(
     }
   }
 
+  // Replacement framing — when the saved system already contains a component
+  // in the requested category, the shortlist represents ALTERNATIVE directions
+  // rather than additions to the signal chain. Makes the mental model explicit
+  // so the user doesn't read the recommendations as "stack another DAC".
+  const catSingular = (catLabel || category).replace(/s$/, '');
+  const replacementClause = systemContainsCategory(systemComponents, category)
+    ? ` These are alternative ${catSingular} directions — replacements for what's in your chain now, not additions.`
+    : '';
+
   // Combine — preference and archetype detail now live in systemInterpretation,
   // so the intro stays brief: what category, what budget, what system constraint.
-  return `These ${catLabel}${budgetClause} represent different design trade-offs${systemClause}. The first is where I'd start.`;
+  return `These ${catLabel}${budgetClause} represent different design trade-offs${systemClause}. The first is where I'd start.${replacementClause}`;
 }
 
 /**
@@ -890,7 +945,14 @@ function buildDirectedEditorialIntro(
     ? `, working with your ${systemComponents.slice(0, 2).join(' and ')}`
     : '';
 
-  return `This ${catLabel} should lean toward ${directionPhrase}. Here's where I'd look${budgetClause}${systemClause}.`;
+  // Replacement framing — same logic as buildEditorialIntro. When a component
+  // in the requested category already exists in the saved system, make it
+  // explicit these are REPLACEMENT directions, not additions.
+  const replacementClause = systemContainsCategory(systemComponents, category)
+    ? ` Think of these as alternative ${catLabel.replace(/\s+(choice|amp|amplifier)$/i, '')} directions — replacements for what's in your chain now, not additions.`
+    : '';
+
+  return `This ${catLabel} should lean toward ${directionPhrase}. Here's where I'd look${budgetClause}${systemClause}.${replacementClause}`;
 }
 
 /**
@@ -904,6 +966,33 @@ function buildDirectedEditorialIntro(
  * Uses the existing deterministic reasoning engine — no LLM call.
  * Returns undefined when no active system or reasoning data is available.
  */
+/**
+ * Drop duplicate AdvisoryOptions whose normalized `${brand} ${name}` is
+ * already present. Render-layer dedupe — does not change scoring,
+ * filtering, or ordering. Identity uses lowercase + collapsed whitespace.
+ *
+ * Domain note: this is a presentation-layer concern, not engine logic.
+ * Two recommendation passes can legitimately surface the same product;
+ * we just don't want to render the same card twice.
+ */
+function dedupeOptionsByIdentity(options: AdvisoryOption[]): AdvisoryOption[] {
+  const seen = new Set<string>();
+  const out: AdvisoryOption[] = [];
+  for (const opt of options) {
+    const key = `${(opt.brand ?? '').toLowerCase()} ${(opt.name ?? '').toLowerCase()}`
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!key) {
+      out.push(opt);
+      continue;
+    }
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(opt);
+  }
+  return out;
+}
+
 function buildSystemContextPreamble(
   systemComponents?: string[],
   reasoning?: ReasoningResult,
@@ -981,6 +1070,143 @@ function buildSystemContextPreamble(
  * Topology-aware: when product examples are all tube, uses a tube-specific
  * preamble that helps the user understand the landscape.
  */
+// ── Category framing: what actually matters when choosing ──
+// Short, specific, category-keyed. Independent of preference signal.
+const CATEGORY_FRAMING: Record<string, { headline: string; points: string[] }> = {
+  dac: {
+    headline: 'What actually matters in a DAC at this level',
+    points: [
+      'Topology sets the character — R2R leans denser and more analogue; delta-sigma leans cleaner and more etched.',
+      'Output stage and analogue section often matter more than the DAC chip on the spec sheet.',
+      'Jitter rejection and clocking shape depth and stability, not headline resolution.',
+    ],
+  },
+  amplifier: {
+    headline: 'What actually matters in an amplifier at this level',
+    points: [
+      'Match power and damping to your speakers first — everything else is secondary.',
+      'Topology (Class A, AB, D, tube) sets the tonal and dynamic fingerprint more than brand.',
+      'Gain structure with your source determines how the volume knob feels and where the system lives.',
+    ],
+  },
+  'tube-amplifier': {
+    headline: 'What actually matters when choosing a tube amplifier',
+    points: [
+      'Output topology is the single biggest variable — SET is dense and intimate, push-pull is more controlled, OTL is fast but speaker-picky.',
+      'Speaker sensitivity and impedance curve decide whether a tube amp sings or wheezes.',
+      'Transformer quality and output tubes together shape tone more than any marketing spec.',
+    ],
+  },
+  speakers: {
+    headline: 'What actually matters when choosing speakers',
+    points: [
+      'Room size and placement constrain the choice more than taste — a speaker that needs space will underperform near walls.',
+      'Sensitivity and impedance must match your amplifier — otherwise dynamics collapse.',
+      'Driver topology (dynamic, planar, horn, electrostatic) sets the presentation style; crossover quality sets coherence.',
+    ],
+  },
+  headphones: {
+    headline: 'What actually matters when choosing headphones',
+    points: [
+      'Driver type (dynamic, planar, electrostatic) shapes tone and speed more than any frequency-response curve.',
+      'Impedance and sensitivity must pair with your amp — wrong match means either thin sound or loss of control.',
+      'Fit and pad material affect perceived bass and soundstage as much as the driver itself.',
+    ],
+  },
+};
+
+function buildCategoryFraming(
+  category: string,
+): { headline: string; points: string[] } | undefined {
+  const key = (category || '').toLowerCase();
+  return CATEGORY_FRAMING[key] ?? CATEGORY_FRAMING[key.replace(/\s+/g, '-')];
+}
+
+// ── Decision guidance: end-of-response "if X → choose Y" tree ──
+// Uses the roleLabel assigned during product selection. The anchor is the
+// "safe default"; other positions are conditional picks based on their
+// dynamic role label ("Best for warmth" → "you want warmth and body", etc.).
+const ROLE_LABEL_TO_CONDITION: Record<string, string> = {
+  'Best for flow and ease':          'you want ease, flow, and long unfatiguing sessions',
+  'Best for warmth and body':        'you want warmth, density, and tonal weight',
+  'Best for detail and control':     'you want detail, transient precision, and control',
+  'Best for drive and pace':         'you want drive, pace, and rhythmic propulsion',
+  'Best for soundstage and scale':   'you want soundstage scale and holographic imaging',
+  'Best for warmth':                 'you want more warmth and body',
+  'Best for neutrality':             'you want a neutral, unembellished presentation',
+  'Best for detail':                 'you want more detail and air',
+};
+
+/** Philosophy → concrete condition fallback. Specific enough that each row
+ *  carries a distinct decision cue, rather than meta-phrasing ("a different
+ *  trade-off"). */
+const PHILOSOPHY_TO_CONDITION: Record<string, string> = {
+  warm:        'warmth, density, and tonal weight matter most',
+  analytical:  'detail, resolution, and transient precision matter most',
+  neutral:     'you want a neutral, unembellished presentation',
+  musical:     'flow and long-session ease matter more than peak resolution',
+  dynamic:     'drive, pace, and rhythmic propulsion matter most',
+  spatial:     'soundstage scale and imaging matter most',
+};
+
+function buildDecisionGuidance(
+  productExamples?: Array<{ brand: string; name: string; pickRole?: string; roleLabel?: string; philosophy?: string }>,
+): Array<{ condition: string; pick: string }> | undefined {
+  if (!productExamples || productExamples.length < 2) return undefined;
+  const out: Array<{ condition: string; pick: string }> = [];
+
+  const nameOf = (p: { brand: string; name: string }) => `${p.brand} ${p.name}`.trim();
+
+  const byRole: Record<string, typeof productExamples[number]> = {};
+  for (const p of productExamples) {
+    if (p.pickRole) byRole[p.pickRole] = p;
+  }
+
+  // Anchor condition: prefer the anchor's own roleLabel → concrete condition,
+  // so the anchor row reads with the same role-specific language as the
+  // alternatives rather than a generic hedge ("safest, most broadly
+  // competent choice"). Fallback is a decisive, non-hedging default phrase.
+  const anchor = byRole.anchor ?? productExamples[0];
+  if (anchor) {
+    const anchorCond =
+      (anchor.roleLabel && ROLE_LABEL_TO_CONDITION[anchor.roleLabel])
+      ?? (anchor.philosophy && PHILOSOPHY_TO_CONDITION[anchor.philosophy])
+      ?? 'you want the default path for this chain — minimum structural change, broadest compatibility';
+    out.push({
+      condition: anchorCond,
+      pick: nameOf(anchor),
+    });
+  }
+
+  const seen = new Set<string>([nameOf(anchor)]);
+  const usedConditions = new Set<string>(out.map((o) => o.condition));
+  for (const role of ['contrast', 'close_alt', 'wildcard'] as const) {
+    const p = byRole[role];
+    if (!p) continue;
+    const nm = nameOf(p);
+    if (seen.has(nm)) continue;
+    seen.add(nm);
+    // Role-aware fallbacks: when no roleLabel or philosophy is present, use
+    // a role-specific decision cue (not a meta-phrase). Each row must map a
+    // concrete user preference → the correct pick.
+    const roleFallback =
+      role === 'contrast'   ? 'you want a fundamentally different presentation, not a refinement of the primary'
+      : role === 'close_alt' ? 'you want a finer-grained bias within the same philosophy as the primary'
+      : /* wildcard */        'you want to step outside the obvious answers and can live with the trade-offs';
+    let cond = (p.roleLabel && ROLE_LABEL_TO_CONDITION[p.roleLabel])
+      ?? (p.philosophy && PHILOSOPHY_TO_CONDITION[p.philosophy])
+      ?? roleFallback;
+    // Prevent duplicate condition strings across rows — if the anchor and
+    // this alt happened to resolve to the same condition, fall to the
+    // role-specific cue so each row carries distinct signal.
+    if (usedConditions.has(cond)) cond = roleFallback;
+    usedConditions.add(cond);
+    out.push({ condition: cond, pick: nm });
+  }
+
+  return out.length >= 2 ? out.slice(0, 4) : undefined;
+}
+
 function buildCategoryPreamble(
   category: string,
   budget: number | null,
@@ -1189,13 +1415,17 @@ function generateAlignmentRationale(
   recommendedDirection?: string,
   reasoning?: ReasoningResult,
 ): string | undefined {
-  // 1. Full bridge — system tendencies + listener priorities
-  if (systemTendencies && listenerPriorities && listenerPriorities.length > 0) {
+  // 1. Full bridge — system tendencies + listener priorities.
+  // Presentation-layer guardrail: only render this sentence when
+  // systemTendencies is a meaningful human-readable string. A raw "{}",
+  // "null", or whitespace value must not reach the UI.
+  const normalizedTendencies = normalizeTendenciesForRender(systemTendencies);
+  if (normalizedTendencies && listenerPriorities && listenerPriorities.length > 0) {
     const priorityBrief = listenerPriorities[0];
     if (recommendedDirection) {
-      return `Your system leans ${systemTendencies.toLowerCase()}, and you want ${priorityBrief.toLowerCase()}. The direction below closes that gap.`;
+      return `Your system leans ${normalizedTendencies}, and you want ${priorityBrief.toLowerCase()}. The direction below closes that gap.`;
     }
-    return `Your system leans ${systemTendencies.toLowerCase()}, and you want ${priorityBrief.toLowerCase()}.`;
+    return `Your system leans ${normalizedTendencies}, and you want ${priorityBrief.toLowerCase()}.`;
   }
 
   if (!reasoning) return undefined;
@@ -1388,6 +1618,7 @@ export function consultationToAdvisory(
     // the comparisonSummary + followUp is all that should render.
     audioProfile: isComparison ? undefined : (reasoning || ctx ? buildAudioProfile(reasoning, ctx) : undefined),
     comparisonSummary: c.comparisonSummary,
+    comparisonImages: c.comparisonImages,
     philosophy: isComparison ? undefined : c.philosophy,
     tendencies: isComparison ? undefined : c.tendencies,
     systemFit: isComparison ? undefined : (isAssessment ? undefined : c.systemContext),
@@ -1422,6 +1653,10 @@ export function consultationToAdvisory(
     spiderChartData: isComparison ? undefined : c.spiderChartData,
     sourceReferences: c.sourceReferences,
     systemSignature: isComparison ? undefined : c.systemSignature,
+
+    // Saved-system personalization: secondary note, never main framing.
+    // Only for non-assessment, non-comparison responses where savedSystemNote exists.
+    savedSystemNote: (!isAssessment && !isComparison && ctx?.savedSystemNote) ? ctx.savedSystemNote : undefined,
   });
 }
 
@@ -1521,6 +1756,9 @@ export function gearResponseToAdvisory(
 
       // Follow-up → followUp
       followUp: r.clarification,
+
+      // Saved-system personalization: secondary note, never main framing.
+      savedSystemNote: (!isComparison && ctx?.savedSystemNote) ? ctx.savedSystemNote : undefined,
     }, undefined, r.subjects.length > 0 ? r.subjects : undefined);
   }
 
@@ -1616,6 +1854,9 @@ export function gearResponseToAdvisory(
     // Links and sources from catalog
     links: gearLinks.length > 0 ? gearLinks : undefined,
     sourceReferences: gearSourceRefs.length > 0 ? gearSourceRefs : undefined,
+
+    // Saved-system personalization: secondary note, never main framing.
+    savedSystemNote: (!isComparison && ctx?.savedSystemNote) ? ctx.savedSystemNote : undefined,
   }, undefined, r.subjects.length > 0 ? r.subjects : undefined);
 }
 
@@ -1771,6 +2012,13 @@ export interface ShoppingAdvisoryContext {
   };
   /** System-aware pairing intro (from listener-profile.ts). */
   systemPairingIntro?: string;
+  /**
+   * Secondary personalization note when the user has a saved/draft system
+   * but did not explicitly state a system in the current message.
+   * Used as an addendum ("In your system..."), not as the main framing.
+   * Undefined when the user stated their own system (inline) or has no system.
+   */
+  savedSystemNote?: string;
 }
 
 /**
@@ -1838,6 +2086,111 @@ function buildEditorialClosing(
 // recommendation is likely to matter in the user's system.
 // Uses system context strength and mismatch signals — no scoring.
 
+// ── Diagnostic symptom humanisation (presentation-layer adapter) ──
+// Maps ONLY problem-style symptoms to human prose. Preference-direction
+// tokens (warmth_richness, sweetness_flow, improvement, regression,
+// musical_organic, airy_open, smooth_relaxed, dynamic_punchy, etc.) are
+// deliberately excluded — they describe what the user VALUES, not what
+// the system is DOING WRONG. Rendering them inside "your system is
+// showing …" is a category error that breaks confidence calibration
+// (Audio XX Playbook §5) and leaks internal-label vocabulary (§6).
+//
+// If a symptom token is not in this table, it is dropped from any
+// user-facing rendering and does NOT contribute to the "active issue"
+// impact tier.
+const DIAGNOSTIC_SYMPTOM_LABELS: Record<string, string> = {
+  brightness_harshness: 'brightness or harshness',
+  glare: 'digital glare',
+  clinical_sterile: 'a clinical or sterile presentation',
+  thinness: 'thinness',
+  flat_lifeless: 'a flat or lifeless presentation',
+  too_warm: 'excessive warmth',
+  congestion_muddiness: 'congestion or muddiness',
+  fatigue: 'listening fatigue',
+  closed_boxy: 'a closed or boxy presentation',
+  overdamped: 'an overdamped presentation',
+  too_polite: 'an overly polite presentation',
+  too_forward: 'a forward or aggressive presentation',
+  thin_at_low_volume: 'thinness at low volume',
+  imbalanced: 'imbalance between frequency ranges',
+  narrow_soundstage: 'a narrow soundstage',
+  bass_bloom: 'bass bloom or looseness',
+};
+
+/**
+ * Translate raw symptom tokens to user-facing prose. Filters out
+ * preference-direction tokens and any unknown values. Returns null
+ * when nothing survives — the caller should suppress the sentence
+ * entirely rather than render an empty or partial string.
+ */
+function humaniseDiagnosticSymptoms(
+  symptoms: string[] | undefined,
+  limit = 2,
+): string | null {
+  if (!symptoms || symptoms.length === 0) return null;
+  const out: string[] = [];
+  for (const s of symptoms) {
+    const label = DIAGNOSTIC_SYMPTOM_LABELS[s];
+    if (label) out.push(label);
+    if (out.length >= limit) break;
+  }
+  if (out.length === 0) return null;
+  return out.join(' and ');
+}
+
+// ── Category-presence check for replacement framing ──
+// Domain-specific adapter: detects whether the user's saved system already
+// contains a component in the requested category. Keyword tables are
+// configuration, not portable engine logic — this lives in the adapter
+// layer per the engine/adapter boundary rule (CLAUDE.md §8). Keep the
+// well-known lists conservative: false negatives are acceptable, false
+// positives are not.
+const CATEGORY_PRESENCE_KEYWORDS: Record<
+  string,
+  { literal: RegExp; wellKnown: RegExp }
+> = {
+  dac: {
+    literal: /\bdac(s|\/)?\b/i,
+    wellKnown:
+      /\b(hugo|qutest|dave|bifrost|modi|gungnir|yggdrasil|terminator|pontus|ares|may\s?2|spring\s?kte?|holo|dragonfly|chord\s+tt|chord\s+mojo|benchmark\s+dac|mytek|weiss|musetec|grace\s+m900|rme\s+adi|topping\s+d\d|smsl\s+d\d)\b/i,
+  },
+};
+
+function systemContainsCategory(
+  systemComponents: string[] | undefined,
+  category: string | undefined,
+): boolean {
+  if (!systemComponents || systemComponents.length === 0) return false;
+  if (!category) return false;
+  const rule = CATEGORY_PRESENCE_KEYWORDS[category.toLowerCase()];
+  if (!rule) return false;
+  return systemComponents.some(
+    (c) => rule.literal.test(c) || rule.wellKnown.test(c),
+  );
+}
+
+/**
+ * Hybrid DAC/headphone-amp detector. Used only to de-prioritise such
+ * picks as the LEAD recommendation when the ask is a pure DAC — hybrids
+ * remain in the shortlist, they just should not occupy slot 0 unless
+ * nothing else qualifies.
+ */
+function isDacAmpHybrid(option: AdvisoryOption): boolean {
+  const pool = [
+    option.catalogArchitecture,
+    option.productType,
+    option.character,
+    (option.standoutFeatures ?? []).join(' '),
+  ]
+    .filter((v): v is string => typeof v === 'string' && v.length > 0)
+    .join(' ')
+    .toLowerCase();
+  if (!pool) return false;
+  return /headphone\s*amp(lifier)?|dac\s*\/\s*(headphone\s*)?amp|all-in-one|one-?box\b/.test(
+    pool,
+  );
+}
+
 function deriveExpectedImpact(
   ctx?: ShoppingAdvisoryContext,
   reasoning?: ReasoningResult,
@@ -1845,16 +2198,21 @@ function deriveExpectedImpact(
 ): AdvisoryResponse['expectedImpact'] {
   const hasSystem = !!(ctx?.systemComponents && ctx.systemComponents.length > 0);
   const hasTendencies = !!ctx?.systemTendencies;
-  const hasSymptoms = !!(signals?.symptoms && signals.symptoms.length > 0);
+  // Only diagnostic (problem) symptoms promote to the "system-level" tier.
+  // Preference-direction tokens (warmth_richness, improvement, …) must not
+  // claim an "active issue" the system review did not identify.
+  const hasDiagnosticSymptoms =
+    humaniseDiagnosticSymptoms(signals?.symptoms, 2) !== null;
   const hasTaste = !!(reasoning?.taste.tasteLabel);
 
-  // System-level: user has a diagnosed mismatch or explicit symptoms
-  // that the recommendation directly addresses.
-  if (hasSystem && hasSymptoms) {
+  // System-level: user has a diagnosed mismatch or an explicit
+  // problem-style symptom the recommendation directly addresses.
+  if (hasSystem && hasDiagnosticSymptoms) {
     return {
       tier: 'system-level',
       label: 'System-level change',
-      explanation: 'This addresses an active issue in your signal chain — the difference should be clearly audible.',
+      explanation:
+        'This targets a characteristic the current system is pushing against — the difference should be audible.',
     };
   }
 
@@ -1869,7 +2227,19 @@ function deriveExpectedImpact(
     };
   }
 
-  // Subtle: limited system context — recommendation is reasonable
+  // Subtle with saved system but no tendencies/taste signal — we DO have
+  // a chain to reason against, we just lack the resolving preference data.
+  // Do not render "Without more system context" — that would be a false
+  // claim about what we know (Playbook §5 Confidence Calibration).
+  if (hasSystem) {
+    return {
+      tier: 'subtle',
+      label: 'Subtle',
+      explanation: 'Directionally sound for your chain, but without stronger preference signal the audible difference may be modest.',
+    };
+  }
+
+  // Subtle: no system context at all — recommendation is reasonable
   // but impact depends on factors we can't assess yet.
   return {
     tier: 'subtle',
@@ -1883,13 +2253,30 @@ function deriveExpectedImpact(
 // actual system context. References tendencies, direction of change,
 // and what gets preserved. Returns undefined when context is too thin.
 
+/**
+ * Normalize a tendencies string for user-facing render. Rejects
+ * placeholder literals like "{}", "null", whitespace-only strings, and
+ * non-string values — returns null when the value should not be shown.
+ * Presentation-layer guardrail (Audio XX Playbook §5 Confidence
+ * Calibration, §6 Partial Knowledge Handling): never render partial
+ * sentences around a missing value.
+ */
+function normalizeTendenciesForRender(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  if (trimmed === '{}' || trimmed === '[]') return null;
+  if (trimmed.toLowerCase() === 'null' || trimmed.toLowerCase() === 'undefined') return null;
+  return trimmed.toLowerCase();
+}
+
 function deriveSystemFitExplanation(
   category?: string,
   ctx?: ShoppingAdvisoryContext,
   reasoning?: ReasoningResult,
   signals?: ExtractedSignals,
 ): string | undefined {
-  const tendencies = ctx?.systemTendencies;
+  const tendencies = normalizeTendenciesForRender(ctx?.systemTendencies);
   const direction = reasoning?.direction;
   const archetype = reasoning?.taste.archetype;
   const tasteLabel = reasoning?.taste.tasteLabel;
@@ -1906,9 +2293,14 @@ function deriveSystemFitExplanation(
     // System tendencies available — describe the current character
     parts.push(`Your system leans ${tendencies}.`);
   } else if (hasSystem && hasSymptoms && signals?.symptoms) {
-    // No explicit tendencies string, but symptoms describe what's wrong
-    const symptomList = signals.symptoms.slice(0, 2).join(' and ');
-    parts.push(`Your system is showing ${symptomList}.`);
+    // No explicit tendencies string, but symptoms may describe a problem.
+    // Filter through the diagnostic humaniser — internal preference-direction
+    // tokens (warmth_richness, improvement, …) are dropped. If nothing
+    // survives, suppress the sentence entirely rather than render snake_case.
+    const symptomText = humaniseDiagnosticSymptoms(signals.symptoms, 2);
+    if (symptomText) {
+      parts.push(`Your system is showing ${symptomText}.`);
+    }
   } else if (hasSystem && reasoning?.system.tendencySummary) {
     parts.push(`Your system currently reads as ${reasoning.system.tendencySummary}.`);
   }
@@ -1963,7 +2355,7 @@ export function shoppingToAdvisory(
   // ── Build Audio Profile ─────────────────────────────
   const audioProfile = buildAudioProfile(reasoning, ctx, a.budget);
 
-  const options: AdvisoryOption[] = a.productExamples.map((p) => ({
+  const rawOptions: AdvisoryOption[] = a.productExamples.map((p) => ({
     name: p.name,
     brand: p.brand,
     price: p.price,
@@ -1994,12 +2386,23 @@ export function shoppingToAdvisory(
     isCurrentComponent: p.isCurrentComponent,
     // Buying and role metadata (from deterministic pipeline)
     pickRole: p.pickRole,
+    roleLabel: p.roleLabel,
+    sources: p.sources,
     isPrimary: p.isPrimary ?? p.pickRole === 'top_pick',
     // Step 10: Enhanced catalog fields
-    imageUrl: p.imageUrl,
+    // Catalog imageUrl wins; fall back to the seeded product-image mapping.
+    imageUrl: p.imageUrl ?? getProductImage(p.brand, p.name),
     typicalMarket: p.typicalMarket,
     buyingContext: p.buyingContext,
   }));
+
+  // Dedupe by normalized brand+name. The same product can appear in
+  // productExamples more than once when multiple ranking passes surface it
+  // (e.g. catalog match + provisional reinforcement). Render-layer dedupe
+  // is the safest layer for this — earlier ranking logic relies on the
+  // duplicates to weight the recommendation, and de-duplicating upstream
+  // would change scores. Keep the first occurrence.
+  const options: AdvisoryOption[] = dedupeOptionsByIdentity(rawOptions);
 
   // Tag each product with its decision frame direction (if frame is available)
   if (decisionFrame) {
@@ -2110,6 +2513,10 @@ export function shoppingToAdvisory(
   // Build strategy bullets (conceptual guidance before product cards)
   const strategyBullets = buildStrategyBullets(a, reasoning);
 
+  // ── Category framing + decision guidance (decision confidence layer) ──
+  const categoryFraming = buildCategoryFraming(a.category);
+  const decisionGuidance = buildDecisionGuidance(a.productExamples);
+
   // ── Build editorial closing (best-match verdict) ─────
   // Only when we have product examples and user context
   const editorialClosing = buildEditorialClosing(a.productExamples, ctx, reasoning);
@@ -2119,6 +2526,28 @@ export function shoppingToAdvisory(
     for (let i = 0; i < options.length; i++) {
       if (a.productExamples[i]?.isPrimary) {
         options[i] = { ...options[i], isPrimary: true };
+      }
+    }
+  }
+
+  // ── Lead-pick credibility guardrail (presentation-layer) ──
+  // For a pure-DAC ask, DAC/headphone-amp hybrids are legitimate picks but
+  // should not LEAD the shortlist when a pure-DAC alternative exists — the
+  // ask was for a DAC, not a one-box headphone system. Keep the hybrid on
+  // the list, demote it below the first pure-DAC pick. Leaves the order
+  // alone when no pure-DAC alternative exists (we still show the best
+  // available). Runs AFTER isPrimary mapping so we can cleanly normalise
+  // the flag to the new lead without index-parity assumptions.
+  if (a.category === 'dac' && options.length > 1 && isDacAmpHybrid(options[0])) {
+    const pureIdx = options.findIndex((o) => !isDacAmpHybrid(o));
+    if (pureIdx > 0) {
+      const [promoted] = options.splice(pureIdx, 1);
+      options.unshift(promoted);
+      // Normalise isPrimary: only slot 0 is primary after a reorder.
+      for (let i = 0; i < options.length; i++) {
+        if (options[i].isPrimary !== (i === 0 && isDirected)) {
+          options[i] = { ...options[i], isPrimary: i === 0 && isDirected };
+        }
       }
     }
   }
@@ -2136,6 +2565,8 @@ export function shoppingToAdvisory(
     systemContextPreamble,
     systemInterpretation,
     categoryPreamble,
+    categoryFraming,
+    decisionGuidance,
     strategyBullets,
     expectedImpact: deriveExpectedImpact(ctx, reasoning, signals),
     systemFitExplanation: deriveSystemFitExplanation(a.category, ctx, reasoning, signals),
@@ -2171,6 +2602,9 @@ export function shoppingToAdvisory(
 
     // Source references from recommended products
     sourceReferences: sourceRefs.length > 0 ? sourceRefs : undefined,
+
+    // Saved-system personalization: secondary note, never main framing.
+    savedSystemNote: ctx?.savedSystemNote ?? undefined,
 
     // Diagnostics from signals
     diagnostics: signals ? {
@@ -2299,7 +2733,8 @@ export function analysisToAdvisory(
   // Layer 3: Ranked action areas with product directions.
   // When multiple symptom rules fire, use a combined action set that
   // interleaves both symptoms' priorities instead of only showing the primary.
-  const diagnosisActions = buildDiagnosisActions(primary, signals, sysDir, result.fired_rules);
+  const { actions: diagnosisActions, fromSuggestionsFallback: actionsFromFallback } =
+    buildDiagnosisActions(primary, signals, sysDir, result.fired_rules);
 
   // Follow-up: focused, not generic. When multiple symptom rules fire,
   // produce a combined follow-up that reflects both symptoms.
@@ -2326,8 +2761,11 @@ export function analysisToAdvisory(
     // symptoms so both issues are visible in the explanation.
     tendencies: buildMultiSymptomTendencies(result.fired_rules),
 
-    // Suggestions become whyThisFits (what to do and why)
-    whyThisFits: allSuggestions.length > 0 ? allSuggestions : undefined,
+    // Suggestions become whyThisFits (what to do and why).
+    // When diagnosisActions came from the suggestions fallback, suppress
+    // whyThisFits so the same suggestion text does not render twice
+    // (once in WHERE TO ACT and again in WHY THIS FITS).
+    whyThisFits: (allSuggestions.length > 0 && !actionsFromFallback) ? allSuggestions : undefined,
     tradeOffs: allRisks.length > 0 ? allRisks : undefined,
 
     // Enriched diagnosis layers
@@ -2476,8 +2914,8 @@ function buildDiagnosisActions(
   signals: ExtractedSignals,
   sysDir?: SystemDirection,
   allRules?: FiredRule[],
-): Array<{ area: string; guidance: string; examples?: string }> {
-  if (!primary) return [];
+): { actions: Array<{ area: string; guidance: string; examples?: string }>; fromSuggestionsFallback: boolean } {
+  if (!primary) return { actions: [], fromSuggestionsFallback: false };
 
   // ── Combined action sets for known multi-symptom pairs ──
   // When two symptom rules co-fire, interleave both symptoms' action
@@ -2505,7 +2943,7 @@ function buildDiagnosisActions(
   if (secondaryIds.length > 0) {
     const comboKey = `${primary.id}+${secondaryIds[0]}`;
     if (COMBINED_ACTIONS[comboKey]) {
-      return COMBINED_ACTIONS[comboKey];
+      return { actions: COMBINED_ACTIONS[comboKey], fromSuggestionsFallback: false };
     }
   }
 
@@ -2553,17 +2991,22 @@ function buildDiagnosisActions(
   };
 
   const actions = SYMPTOM_ACTIONS[symptomId];
-  if (actions) return actions;
+  if (actions) return { actions, fromSuggestionsFallback: false };
 
-  // Fallback: convert rule suggestions into action entries
+  // Fallback: convert rule suggestions into action entries.
+  // Caller suppresses whyThisFits when this branch is used so the same
+  // suggestion text is not rendered twice (in WHERE TO ACT and WHY THIS FITS).
   if (primary.outputs.suggestions.length > 0) {
-    return primary.outputs.suggestions.map((s) => ({
-      area: 'Suggested action',
-      guidance: s,
-    }));
+    return {
+      actions: primary.outputs.suggestions.map((s) => ({
+        area: 'Suggested action',
+        guidance: s,
+      })),
+      fromSuggestionsFallback: true,
+    };
   }
 
-  return [];
+  return { actions: [], fromSuggestionsFallback: false };
 }
 
 /**
@@ -2901,13 +3344,20 @@ export function knowledgeToAdvisory(
   knowledge: KnowledgeResponse,
   ctx?: ShoppingAdvisoryContext,
 ): AdvisoryResponse {
+  // If the knowledge response has no deterministic systemNote but the user
+  // has a saved system, use savedSystemNote as a secondary personalization.
+  const effectiveSystemNote = knowledge.systemNote ?? undefined;
+
   return {
     kind: 'knowledge',
     subject: knowledge.topic,
     advisoryMode: 'audio_knowledge',
     audioProfile: ctx ? buildAudioProfile(undefined, ctx) : undefined,
-    knowledgeResponse: knowledge,
-    bottomLine: knowledge.systemNote ?? undefined,
+    knowledgeResponse: effectiveSystemNote
+      ? knowledge
+      : { ...knowledge, systemNote: ctx?.savedSystemNote },
+    bottomLine: effectiveSystemNote,
+    savedSystemNote: (!effectiveSystemNote && ctx?.savedSystemNote) ? ctx.savedSystemNote : undefined,
   };
 }
 

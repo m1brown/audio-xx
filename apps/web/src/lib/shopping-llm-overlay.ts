@@ -61,7 +61,9 @@ export interface ProductEditorial {
  */
 export interface ShoppingEditorialContext {
   // ── System ─────────────────────────────────────────
-  /** Component names in the current system (e.g. ["JOB Integrated", "WLM Diva"]). */
+  /** Component names in the current system (brand + model strings provided
+   *  by the caller — e.g. ["<amp>", "<speakers>"]). Never synthesize names
+   *  the user didn't provide; see buildSystemPrompt for the no-system rule. */
   systemComponents?: string[];
   /** System tendencies / character (e.g. "fast, lean, resolving"). */
   systemCharacter?: string;
@@ -87,6 +89,13 @@ export interface ShoppingEditorialContext {
   budget?: string;
   /** Raw user query text for natural language grounding. */
   userQuery?: string;
+  /** Components the user explicitly named in the shopping query
+   *  (e.g. "Harbeth" in "best integrated amp for Harbeth under $5000").
+   *  Phase C blocker fix #4: these take precedence over `systemComponents`
+   *  when writing the system-fit rationale — a user who asks for an amp
+   *  "for Harbeth" is evaluating that amp against Harbeth speakers, not
+   *  against whatever speakers their saved system currently contains. */
+  queryAnchors?: string[];
 
   // ── Directional recommendation ─────────────────────
   /** The reasoning engine's recommended direction statement. */
@@ -110,11 +119,15 @@ For EACH product, produce:
 
 3. systemFit — 1–2 bullets explaining how this product would interact with THIS USER'S specific system. Reference their actual components by name. Explain whether it would complement or contrast their current tendencies. Be honest about both synergies and potential mismatches. This is the most important section — it must feel personal.
 
-4. verdict — One direct sentence. Relate it to this user's situation (e.g. "One of the safest upgrades given your preference for flow without sacrificing the speed your JOB provides" not just "Good DAC").
+4. verdict — One direct sentence. Relate it to this user's situation (e.g. "One of the safest upgrades given your preference for flow without sacrificing the speed your current amp provides" not just "Good DAC").
 
 CRITICAL RULES:
 - Every description must relate back to the user's stated preferences, system, and context.
 - Use ONLY the product names provided. Do NOT introduce, suggest, or mention any product not in the shortlist.
+- NEVER invent or name system components (brands or models) the user did not provide. If the "Current system" field is absent or empty, speak about system fit abstractly ("your current amplifier", "your speakers", "your existing chain") — do not guess what they own.
+- EXPLICIT-GEAR PRECEDENCE: If the user names a component in their query (surfaced as "Evaluating against" in the context), that named component is the PRIMARY anchor for the systemFit rationale. When it conflicts with components in "Current system", the user's named component wins — do NOT substitute the saved-system component. Example: if the user asks for an amp "for Harbeth" while their current system lists different speakers, reason the amp against Harbeth — treat the saved system only as secondary background.
+- CATEGORY REPLACEMENT FRAMING: If the recommended product occupies the SAME category as a component already in the user's "Current system" (e.g. recommending a DAC when a DAC is already listed), frame the recommendation as a REPLACEMENT or ALTERNATIVE — not as an addition to the chain. Do NOT write phrases that imply stacking two components of the same category (e.g. "with your Chord Hugo in the chain, the R26 can…" when both are DACs). Instead, write "stepping up from your Chord Hugo…" or "as an alternative to your current Chord Hugo…" or "taking the place of your current DAC…". Reference the existing same-category component only as the point of comparison being replaced.
+- OMIT RATHER THAN GUESS: If a field in the context is missing, empty, or a placeholder (e.g. empty tendencies, absent taste label), omit the sentence entirely — do NOT render a partial sentence or a literal placeholder token.
 - No numeric scores, star ratings, or rankings.
 - No urgency, hype, or affiliate language ("buy now", "limited", "must-have").
 - No superlatives ("perfect", "ultimate", "flawless", "best"). Say "strong match" or "well-aligned" instead.
@@ -137,8 +150,19 @@ function buildUserPrompt(
   if (ctx.systemComponents?.length) {
     parts.push(`Current system: ${ctx.systemComponents.join(' → ')}`);
   }
-  if (ctx.systemCharacter) {
-    parts.push(`System tendencies: ${ctx.systemCharacter}`);
+  // Presentation guardrail: only pass systemCharacter to the LLM when
+  // it is a meaningful human-readable string. Placeholder literals like
+  // "{}" or empty/whitespace strings must not leak into the prompt and
+  // potentially the render.
+  if (typeof ctx.systemCharacter === 'string') {
+    const trimmed = ctx.systemCharacter.trim();
+    const isPlaceholder = trimmed.length === 0
+      || trimmed === '{}'
+      || trimmed === '[]'
+      || /^(null|undefined)$/i.test(trimmed);
+    if (!isPlaceholder) {
+      parts.push(`System tendencies: ${trimmed}`);
+    }
   }
   if (ctx.tasteLabel) {
     parts.push(`What they value: ${ctx.tasteLabel}`);
@@ -185,6 +209,13 @@ function buildUserPrompt(
   if (ctx.category) parts.push(`Looking for: ${ctx.category}`);
   if (ctx.budget) parts.push(`Budget: ${ctx.budget}`);
   if (ctx.userQuery) parts.push(`Their words: "${ctx.userQuery}"`);
+  // Phase C blocker fix #4: surface any components the user explicitly
+  // named in the query. The system prompt instructs the LLM to anchor
+  // system-fit reasoning on these — NOT on the saved-system components —
+  // whenever the two disagree.
+  if (ctx.queryAnchors?.length) {
+    parts.push(`Evaluating against (from user's query — PRIMARY anchor for system fit): ${ctx.queryAnchors.join(', ')}`);
+  }
 
   // ── Product shortlist ─────────────────────────────
   parts.push('');
@@ -570,12 +601,15 @@ You receive the shortlist and the user's system/taste context. Write two section
 
 2. systemPicks — Your top 3 picks FOR THIS USER'S SPECIFIC SYSTEM, each with a one-line reason explaining WHY it works with their components. Reference their actual gear by name.
 
-3. systemSummary — One line listing their system components as context (e.g. "Given your JOB Integrated + Boenicke W5 + Eversolo DMP-A6").
+3. systemSummary — One line listing the user's system components as context. Use ONLY the components listed in the provided "System:" line. If no system is listed, omit this field entirely — DO NOT invent components.
 
-4. avoidanceNote — One sentence about what to be cautious of in this system. Be specific about design tendencies, not brands. Example: "I would be cautious about very analytical delta-sigma designs in this system — they may lean too bright with the JOB's forward character." If nothing applies, omit this field.
+4. avoidanceNote — One sentence about what to be cautious of in this system. Be specific about design tendencies, not brands. Example: "I would be cautious about very analytical delta-sigma designs here — they may lean too bright with a forward-voiced amplifier." If nothing applies, omit this field.
 
 CRITICAL RULES:
 - Use ONLY products from the provided shortlist. Do NOT mention any other products.
+- NEVER invent or name system components (brands or models) the user did not provide. If the "System:" line is absent, omit systemSummary and speak about system fit abstractly.
+- CATEGORY REPLACEMENT FRAMING: If a recommended product occupies the same category as a component already in the user's System line (e.g. recommending a DAC when a DAC is listed), frame it as a REPLACEMENT / ALTERNATIVE — not as something added alongside. Do NOT imply stacking two components of the same category in the chain.
+- OMIT RATHER THAN GUESS: If a context field is missing or a placeholder, omit the sentence entirely. Never render partial text around a missing value.
 - No scores, urgency, or affiliate language.
 - No superlatives ("perfect", "ultimate", "best ever"). Use "strongest" or "most aligned" if needed.
 - Calm, confident advisor tone.
@@ -595,10 +629,22 @@ function buildClosingUserPrompt(
   if (ctx.systemComponents?.length) {
     parts.push(`System: ${ctx.systemComponents.join(' → ')}`);
   }
-  if (ctx.systemCharacter) parts.push(`System character: ${ctx.systemCharacter}`);
+  if (typeof ctx.systemCharacter === 'string') {
+    const trimmed = ctx.systemCharacter.trim();
+    const isPlaceholder = trimmed.length === 0
+      || trimmed === '{}'
+      || trimmed === '[]'
+      || /^(null|undefined)$/i.test(trimmed);
+    if (!isPlaceholder) parts.push(`System character: ${trimmed}`);
+  }
   if (ctx.tasteLabel) parts.push(`Values: ${ctx.tasteLabel}`);
   if (ctx.archetype) parts.push(`Archetype: ${ctx.archetype}`);
   if (ctx.budget) parts.push(`Budget: ${ctx.budget}`);
+  // Phase C blocker fix #4: user-named components take precedence over
+  // saved-system components for the systemPicks rationale.
+  if (ctx.queryAnchors?.length) {
+    parts.push(`Evaluating against (PRIMARY anchor from user's query): ${ctx.queryAnchors.join(', ')}`);
+  }
 
   parts.push('');
   parts.push('=== SHORTLIST ===');

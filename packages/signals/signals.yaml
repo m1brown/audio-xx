@@ -192,6 +192,32 @@ signals:
       - no bottom end
       - sounds empty
       - where is the bass
+      # ── Phase K v2: natural bass-deficit phrasings ──
+      - doesn't have bass
+      - doesn't have a lot of bass
+      - doesn't have much bass
+      - does not have bass
+      - does not have a lot of bass
+      - does not have much bass
+      - not much bass
+      - little bass
+      - very little bass
+      - barely any bass
+      - hardly any bass
+      - weak bass
+      - thin bass
+      - light on bass
+      - light in the bass
+      - bass shy
+      - bass-shy
+      # ── Phase K: scale / size complaints ──
+      - tiny
+      - sounds tiny
+      - sounds small
+      - too small
+      - lacks scale
+      - no scale
+      - small sounding
       # simile / metaphor
       - sounds like a radio
       - sounds like a telephone
@@ -229,6 +255,12 @@ signals:
       - unengaging
       - uninvolving
       - dry
+      # ── Phase K: darkness as part of the dull/lifeless cluster ──
+      - dark
+      - sounds dark
+      - too dark
+      - overly dark
+      - dark sounding
       - not enough energy
       - not enough dynamics
       - not enough life
@@ -792,6 +824,36 @@ signals:
       damping_control: down
       bass_weight: up
     symptom: bass_bloom
+
+  # ── Electrical noise / hum / grounding (Phase K) ────────
+  # Symptoms that point to noise floor, grounding, or cartridge/phono
+  # interface issues rather than tonal balance. Surfaces as a
+  # recognizable signal so the user gets a substantive response
+  # instead of the friendly-advisor fallback.
+
+  - phrases:
+      - noisy
+      - it's noisy
+      - sounds noisy
+      - noise floor
+      - background noise
+      - hum
+      - humming
+      - buzzing
+      - buzz
+      - ground hum
+      - ground noise
+      - grounding issue
+      - grounding problem
+      - 60 cycle hum
+      - hiss
+      - hissy
+      - background hiss
+      - picks up noise
+      - audible noise
+    signals:
+      noise_floor: up
+    symptom: electrical_noise
 
 # ── Uncertainty Markers ───────────────────────────
 # These are not signal entries — they are tracked separately.

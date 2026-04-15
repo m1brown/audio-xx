@@ -23,6 +23,7 @@
 
 import type { AdvisoryResponse, AdvisoryOption, SourceReference } from '../advisory-response';
 import type { ProductExample } from '../shopping-intent';
+import { getProductImage } from '../product-images';
 import type {
   OrchestratorOutput,
   ShoppingDecisionOutput,
@@ -153,7 +154,8 @@ function recommendationToOption(
     pickRole: ROLE_MAP[rec.role ?? ''] ?? (original as any)?.pickRole ?? undefined,
 
     // Step 10: Enhanced catalog fields (from original product)
-    imageUrl: original?.imageUrl,
+    // Catalog imageUrl wins; fall back to the seeded product-image mapping.
+    imageUrl: original?.imageUrl ?? getProductImage(original?.brand ?? rec.productName.split(' ')[0], original?.name ?? rec.productName),
     typicalMarket: original?.typicalMarket,
     buyingContext: original?.buyingContext,
   };
@@ -214,10 +216,24 @@ export function orchestratorToAdvisory(ctx: AdapterContext): AdvisoryResponse {
   const { preferenceSummary, recommendations, overallGuidance, whatToAvoid } = shoppingOutput;
 
   // ── Map recommendations to options ──
-  const options: AdvisoryOption[] = recommendations.map((rec) => {
+  // Dedupe by normalized brand+name. The orchestrator can occasionally
+  // emit the same product under more than one role (e.g. value_choice and
+  // best_choice) when its candidate list is small. Render-layer dedupe
+  // keeps the first occurrence so we never surface the same card twice.
+  const rawOptions: AdvisoryOption[] = recommendations.map((rec) => {
     const original = findOriginalProduct(rec, productExamples);
     return recommendationToOption(rec, original);
   });
+  const seenIdentity = new Set<string>();
+  const options: AdvisoryOption[] = [];
+  for (const opt of rawOptions) {
+    const key = `${(opt.brand ?? '').toLowerCase()} ${(opt.name ?? '').toLowerCase()}`
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (key && seenIdentity.has(key)) continue;
+    if (key) seenIdentity.add(key);
+    options.push(opt);
+  }
 
   // ── Source references from matched products ──
   const sourceRefs = collectSourceReferences(recommendations, productExamples);

@@ -356,6 +356,29 @@ export function rankProducts(
       })
     : products;
 
+  // ── Hard compatibility filter: active speakers vs. existing amp ──
+  // When the user's chain already contains external amplification, active /
+  // powered / wireless speakers (those carrying their own amps) are
+  // architecturally incompatible as a primary recommendation — buying one
+  // would duplicate amplification and leave the existing amp unused. Exclude
+  // these products unconditionally. This gate runs before every other filter
+  // so no downstream scoring bonus can rescue an incompatible product.
+  if (systemProfile.hasExternalAmplification) {
+    const before = candidates.length;
+    const excluded: string[] = [];
+    candidates = candidates.filter((p) => {
+      if (p.activeAmplification) {
+        excluded.push(`${p.brand} ${p.name}`);
+        return false;
+      }
+      return true;
+    });
+    if (candidates.length < before) {
+      console.log('[compat-filter] excluded %d active speaker(s) (user has external amp): %s',
+        before - candidates.length, excluded.join(', '));
+    }
+  }
+
   // ── Hard constraint filters ──────────────────────────
   // These are user-stated requirements that act as gates, not preferences.
   if (constraints) {

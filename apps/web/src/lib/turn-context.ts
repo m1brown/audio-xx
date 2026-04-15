@@ -134,24 +134,19 @@ export function buildTurnContext(
   const proposedSystem = detectSystemDescription(rawMessage, subjectMatches, audioState);
 
   // ── Step 4: Active system resolution ────────────────
-  // Priority: explicit ref → auto-activate single saved → inline promotion
-  let activeSystem = resolveActiveSystemContext(audioState);
+  // Priority: user-stated system (inline) → explicit ref → auto-activate single saved
+  //
+  // When the user explicitly describes a system in the current message
+  // (proposedSystem with ≥ 2 components), that ALWAYS takes precedence
+  // over any saved/draft system. This prevents phantom saved-system
+  // contamination when the user provides a new chain to evaluate.
+  // Saved systems only apply when the user did NOT state components.
+  let activeSystem: ActiveSystemContext | null = null;
   let systemSource: TurnContext['systemSource'] = null;
 
-  if (activeSystem) {
-    const ref = audioState.activeSystemRef;
-    systemSource = ref?.kind === 'draft' ? 'draft' : 'saved';
-    activeSystem = normalizeSystemComponents(activeSystem);
-  } else if (audioState.savedSystems.length === 1) {
-    // resolveActiveSystemContext already handles this, but track the source
-    systemSource = 'saved';
-    if (activeSystem) {
-      activeSystem = normalizeSystemComponents(activeSystem);
-    }
-  }
-
-  // Inline promotion: if no active system but we detected components
-  if (!activeSystem && proposedSystem && proposedSystem.components.length >= 2) {
+  if (proposedSystem && proposedSystem.components.length >= 2) {
+    // User explicitly stated a system in this message — use it,
+    // regardless of whether a saved system exists.
     activeSystem = {
       name: proposedSystem.suggestedName,
       components: proposedSystem.components.map((c) => ({
@@ -165,6 +160,51 @@ export function buildTurnContext(
       primaryUse: null,
     };
     systemSource = 'inline';
+  } else if (
+    // Phase K — persistence of inline-detected system across follow-up turns.
+    //
+    // Without this branch, the orchestrator only honours an inline
+    // ProposedSystem on the turn it was detected. A follow-up like
+    // "my stereo doesn't have a lot of bass" carries no system tokens
+    // of its own, so the resolver fell back to the saved system and
+    // phantom components (e.g. WLM / JOB / Chord) re-leaked into the
+    // active system.
+    //
+    // The page.tsx orchestrator stores the most recent inline detection
+    // on audioState.proposedSystem until the user explicitly accepts or
+    // dismisses it. We honour that persistence here: while a non-dismissed
+    // proposedSystem exists, it takes precedence over saved/draft systems
+    // for subsequent turns. The user's freshly-stated system stays active
+    // for the rest of the conversation.
+    audioState.proposedSystem
+    && audioState.proposedSystem.components.length >= 2
+    && !dismissedFingerprints.has(audioState.proposedSystem.fingerprint)
+  ) {
+    const persisted = audioState.proposedSystem;
+    activeSystem = {
+      name: persisted.suggestedName,
+      components: persisted.components.map((c) => ({
+        name: c.name,
+        brand: c.brand,
+        category: c.category,
+        role: c.role,
+      })),
+      tendencies: null,
+      location: null,
+      primaryUse: null,
+    };
+    systemSource = 'inline';
+  } else {
+    // No user-stated system — fall back to saved/draft system.
+    activeSystem = resolveActiveSystemContext(audioState);
+    if (activeSystem) {
+      const ref = audioState.activeSystemRef;
+      systemSource = ref?.kind === 'draft' ? 'draft' : 'saved';
+      activeSystem = normalizeSystemComponents(activeSystem);
+    } else if (audioState.savedSystems.length === 1) {
+      // resolveActiveSystemContext already handles this, but track the source
+      systemSource = 'saved';
+    }
   }
 
   // ── Step 5: Profile resolution ──────────────────────
