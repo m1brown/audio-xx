@@ -34,7 +34,6 @@ export default function Nav() {
           Audio<span className="brand-accent">&thinsp;XX</span>
         </Link>
         <div className="nav-links">
-          <Link href="/">Home</Link>
           <Link href="/how-it-works">How It Works</Link>
           <Link href="/resources">Resources</Link>
           {session && (

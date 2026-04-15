@@ -15,6 +15,11 @@
 
 import type { ConsultationResponse } from './consultation';
 import { findBrandProfileByName } from './consultation';
+import {
+  classifySystemFromStrings,
+  consumerThinnessRemediation,
+  consumerElectricalNoiseRemediation,
+} from './system-class';
 import type { ShoppingAnswer, GapDimension } from './shopping-intent';
 import type { GearResponse } from './conversation-types';
 import type { EvaluationResult, FiredRule } from './rule-types';
@@ -2688,6 +2693,61 @@ export function analysisToAdvisory(
   reasoning?: ReasoningResult,
   ctx?: ShoppingAdvisoryContext,
 ): AdvisoryResponse {
+  // ── Consumer-wireless override ──────────────────────
+  // Audio XX Playbook §2 + §3: a Sonos or HomePod owner should not get
+  // "move the speakers six inches closer to the rear wall" for a
+  // thinness complaint, and should not get ground-loop isolation steps
+  // for a noise complaint — the physics do not apply. When the active
+  // system is consumer_wireless, rewrite the fired-rule outputs in
+  // place (local copy only — the shared rule objects are not mutated).
+  const systemClass = classifySystemFromStrings(ctx?.systemComponents);
+  // Holds consumer remediation so we can also post-process the final
+  // AdvisoryResponse — downstream diagnosis builders run on `primary`
+  // and don't honor our rule-level rewrites for every field.
+  let consumerRem: { explanation: string; suggestions: string[]; nextStep: string } | null = null;
+  let consumerRuleKind: 'thinness' | 'electrical_noise' | null = null;
+  if (systemClass === 'consumer_wireless' && result.fired_rules.length > 0) {
+    result = {
+      ...result,
+      fired_rules: result.fired_rules.map((r) => {
+        if (r.id === 'thinness-bass-deficit') {
+          const rem = consumerThinnessRemediation();
+          consumerRem = rem;
+          consumerRuleKind = consumerRuleKind ?? 'thinness';
+          return {
+            ...r,
+            outputs: {
+              ...r.outputs,
+              explanation: rem.explanation,
+              suggestions: rem.suggestions,
+              next_step: rem.nextStep,
+              // Clear audiophile risks (rear-wall / warm-component compensations).
+              risks: [],
+            },
+          };
+        }
+        if (r.id === 'electrical-noise-diagnostic') {
+          const rem = consumerElectricalNoiseRemediation();
+          consumerRem = rem;
+          // electrical noise takes precedence if both fire
+          consumerRuleKind = 'electrical_noise';
+          return {
+            ...r,
+            outputs: {
+              ...r.outputs,
+              explanation: rem.explanation,
+              suggestions: rem.suggestions,
+              next_step: rem.nextStep,
+              // Clear ground-loop / interconnect-grounding risks.
+              risks: [],
+            },
+          };
+        }
+        return r;
+      }),
+    };
+  }
+
   // Use the highest-priority fired rule for the main advisory content
   const primary: FiredRule | undefined = result.fired_rules[0];
 
@@ -2740,7 +2800,7 @@ export function analysisToAdvisory(
   // produce a combined follow-up that reflects both symptoms.
   const followUp = buildDiagnosisFollowUp(primary, signals, sysDir, ctx, result.fired_rules);
 
-  return enrichAdvisory({
+  const advisory = enrichAdvisory({
     kind: 'diagnosis',
     subject: primary?.label ?? 'your listening situation',
 
@@ -2786,6 +2846,36 @@ export function analysisToAdvisory(
       traits: signals.traits,
     },
   }, reasoning);
+
+  // ── Consumer-wireless post-processing ───────────────
+  // The enrichment pipeline runs buildDiagnosisExplanation /
+  // buildDiagnosisActions / buildDiagnosisFollowUp on the original rule
+  // semantics (thinness → rear-wall placement, electrical-noise →
+  // ground-loop isolation). On a Sonos/HomePod/iPhone chain that physics
+  // doesn't apply. Replace those fields in-place with the consumer
+  // remediation we captured above.
+  if (consumerRem !== null) {
+    const rem = consumerRem as { explanation: string; suggestions: string[]; nextStep: string };
+    const area =
+      consumerRuleKind === 'electrical_noise'
+        ? 'Isolate the source of the noise'
+        : 'Scale — the speaker class, not the placement';
+    return {
+      ...advisory,
+      diagnosisExplanation: rem.explanation,
+      diagnosisActions: [
+        {
+          area,
+          guidance: rem.suggestions.join(' '),
+          examples: undefined,
+        },
+      ],
+      followUp: rem.nextStep,
+      tradeOffs: undefined,
+    };
+  }
+
+  return advisory;
 }
 
 // ── Diagnosis enrichment helpers ────────────────────────

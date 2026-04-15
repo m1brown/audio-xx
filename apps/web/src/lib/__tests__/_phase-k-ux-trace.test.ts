@@ -16,6 +16,8 @@ import { evaluateText } from '../engine';
 import { extractSubjectMatches } from '../intent';
 import { detectShoppingIntent, buildShoppingAnswer, extractPriorityCategory } from '../shopping-intent';
 import { buildSystemAssessment, buildSystemDiagnosis } from '../consultation';
+import { analysisToAdvisory } from '../advisory-response';
+import type { ShoppingAdvisoryContext } from '../advisory-response';
 import type { AudioSessionState, SavedSystem } from '../system-types';
 
 const PHANTOM_SAVED_SYSTEM: SavedSystem = {
@@ -88,62 +90,92 @@ describe('Phase K UX trace — visible copy per turn', () => {
     const ctx = turn(text, 'Turn 1');
     const subjects = extractSubjectMatches(text);
     const assessment = buildSystemAssessment(text, subjects, ctx.activeSystem, ctx.desires);
-    console.log('  assessment.introSummary:', assessment.introSummary);
-    console.log('  assessment.systemInteraction:', assessment.systemInteraction);
-    console.log('  assessment.upgradeDirection:', assessment.upgradeDirection);
+    if (assessment?.kind === 'assessment') {
+      console.log('  assessment.kind:', assessment.kind);
+      console.log('  assessment.response.title:', assessment.response.title);
+      console.log('  assessment.response.systemSignature:', assessment.response.systemSignature);
+      console.log('  assessment.response.philosophy:', assessment.response.philosophy);
+      console.log('  assessment.response.tendencies:', assessment.response.tendencies);
+      console.log('  assessment.response.systemContext:', assessment.response.systemContext);
+      // T1 fix: consumer system must produce non-empty narrative.
+      expect(assessment.response.systemContext).toBeTruthy();
+      expect((assessment.response.systemContext ?? '').length).toBeGreaterThan(200);
+    }
 
     const blob = visible(assessment);
     expect(PHANTOM_RE.test(blob)).toBe(false);
     expect(DISMISSIVE_RE.test(blob)).toBe(false);
   });
 
-  it('T2 — "my stereo doesn\'t have a lot of bass" → diagnosis copy', () => {
+  it('T2 — "my stereo doesn\'t have a lot of bass" → diagnosis copy (consumer-aware)', () => {
     const text = "my stereo doesn't have a lot of bass";
     const ctx = turn(text, 'Turn 2');
-    const subjects = extractSubjectMatches(text);
-    const diag = buildSystemDiagnosis(text, subjects);
-    console.log('  diagnosis:', diag
-      ? {
-        subject: diag.subject,
-        philosophy: diag.philosophy,
-        tendencies: diag.tendencies,
-        systemContext: diag.systemContext,
-      }
-      : '(null)');
+    const { signals, result } = evaluateText(text);
 
-    const blob = visible({ ctx: ctx.activeSystem, diag });
+    // Rebuild the advisoryCtx the way page.tsx does for a diagnosis turn.
+    const advisoryCtx: ShoppingAdvisoryContext = {
+      systemComponents: ctx.activeSystem
+        ? ctx.activeSystem.components.map((c) => `${c.brand} ${c.name}`.trim())
+        : undefined,
+    };
+    const advisory = analysisToAdvisory(result, signals, undefined, undefined, advisoryCtx);
+    console.log('  [T2] advisory.tendencies:', advisory.tendencies);
+    console.log('  [T2] advisory.whyThisFits:', advisory.whyThisFits);
+
+    // Consumer override must have rewritten the output: no rear-wall advice.
+    const blob = JSON.stringify(advisory).toLowerCase();
+    expect(blob).not.toMatch(/rear\s*wall/);
+    expect(blob).not.toMatch(/move\s+speakers?\s+(closer|6\s*inches)/);
+    // New copy must mention the actual physical constraint (fixed drivers / room correction).
+    expect(blob).toMatch(/fixed\s+drivers?|room\s+correction|trueplay|arc|homepod|step\s+up/i);
     expect(PHANTOM_RE.test(blob)).toBe(false);
     expect(DISMISSIVE_RE.test(blob)).toBe(false);
   });
 
-  it('T3 — "it sounds tiny" → scale / thinness copy', () => {
+  it('T3 — "it sounds tiny" → scale / thinness copy (consumer-aware)', () => {
     const text = 'it sounds tiny';
     const ctx = turn(text, 'Turn 3');
-    const subjects = extractSubjectMatches(text);
-    const diag = buildSystemDiagnosis(text, subjects);
-    console.log('  diagnosis:', diag ? {
-      subject: diag.subject,
-      philosophy: diag.philosophy,
-      tendencies: diag.tendencies,
-    } : '(null)');
+    const { signals, result } = evaluateText(text);
+    const advisoryCtx: ShoppingAdvisoryContext = {
+      systemComponents: ctx.activeSystem
+        ? ctx.activeSystem.components.map((c) => `${c.brand} ${c.name}`.trim())
+        : undefined,
+    };
+    const advisory = analysisToAdvisory(result, signals, undefined, undefined, advisoryCtx);
+    console.log('  [T3] advisory.tendencies:', advisory.tendencies);
 
-    const blob = visible({ ctx: ctx.activeSystem, diag });
+    const blob = JSON.stringify(advisory).toLowerCase();
+    expect(blob).not.toMatch(/rear\s*wall/);
+    expect(blob).not.toMatch(/excess\s+bass|too\s+much\s+bass|room\s+reinforc/);
     expect(PHANTOM_RE.test(blob)).toBe(false);
     expect(DISMISSIVE_RE.test(blob)).toBe(false);
   });
 
-  it('T4 — "it is noisy" → electrical noise diagnostic copy', () => {
+  it('T4 — "it is noisy" → electrical noise diagnostic copy (consumer-aware)', () => {
     const text = 'it is noisy';
     const ctx = turn(text, 'Turn 4');
     const { signals, result } = evaluateText(text);
     expect(signals.symptoms).toContain('electrical_noise');
     const noiseRule = result.fired_rules.find((r) => r.id === 'electrical-noise-diagnostic');
     expect(noiseRule).toBeDefined();
-    // Verdict must be diagnostic, not buy
     expect(['wait_recommended', 'no_purchase_recommended', 'revert_recommended'])
       .toContain(noiseRule!.outputs.verdict);
 
-    const blob = visible({ ctx: ctx.activeSystem, rules: result.fired_rules });
+    // Run through adapter to get consumer override copy
+    const advisoryCtx: ShoppingAdvisoryContext = {
+      systemComponents: ctx.activeSystem
+        ? ctx.activeSystem.components.map((c) => `${c.brand} ${c.name}`.trim())
+        : undefined,
+    };
+    const advisory = analysisToAdvisory(result, signals, undefined, undefined, advisoryCtx);
+    console.log('  [T4] advisory.tendencies:', advisory.tendencies);
+    console.log('  [T4] advisory.whyThisFits:', advisory.whyThisFits);
+
+    const blob = JSON.stringify(advisory).toLowerCase();
+    // On a wireless/consumer system, no ground-loop / interconnect talk.
+    expect(blob).not.toMatch(/ground\s*loop|unshielded\s+interconnect|lift\s+components/);
+    // But noise must remain framed as diagnostic (network / source isolation).
+    expect(blob).toMatch(/wifi|network|source|spotify|apple\s+music|airplay|2\.4\s*ghz/i);
     expect(PHANTOM_RE.test(blob)).toBe(false);
     expect(DISMISSIVE_RE.test(blob)).toBe(false);
   });

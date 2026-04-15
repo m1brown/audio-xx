@@ -59,6 +59,7 @@ import {
 import { getApprovedBrand } from './knowledge';
 import type { BrandKnowledge } from './knowledge/schema';
 import type { ActiveSystemContext } from './system-types';
+import { classifySystemClass, consumerSystemIntro } from './system-class';
 import type { ClarificationResponse } from './clarification';
 import {
   type PrimaryAxisLeanings,
@@ -5029,6 +5030,70 @@ export function buildSystemAssessment(
   activeSystem?: ActiveSystemContext | null,
   desires?: DesireSignal[],
 ): SystemAssessmentResult {
+  // ── Consumer-wireless short-circuit ──────────────────
+  // Audio XX Playbook §3 (preference protection) + §6 (partial-knowledge
+  // handling): if the user's system is purely lifestyle/wireless
+  // (Sonos, HomePod, iPhone, Bose, etc.), the audiophile-chain
+  // deterministic pipeline below produces empty output — none of these
+  // brands live in the product catalog, so MemoFindings comes back
+  // blank. Instead of surfacing an empty assessment, synthesize a
+  // consumer-appropriate narrative that names what the user has, what
+  // it's good at, and where its ceiling lies. This is the T1 fix
+  // from the Phase K correctness pass.
+  if (activeSystem && classifySystemClass(activeSystem.components) === 'consumer_wireless') {
+    const intro = consumerSystemIntro(activeSystem.components);
+    const rawName = activeSystem.name ?? '';
+    const title = rawName
+      ? (rawName.toLowerCase().endsWith('system') ? rawName : `${rawName} System`)
+      : 'Your System';
+    const subject = activeSystem.components
+      .map((c) => c.name || c.brand)
+      .filter(Boolean)
+      .join(' + ') || 'your system';
+
+    const systemContext =
+      `## What you have\n\n${intro.systemSignature}\n\n`
+      + `## Design philosophy\n\n${intro.philosophy}\n\n`
+      + `## Typical tendencies\n\n${intro.tendencies}\n\n`
+      + `## Where it fits\n\n${intro.systemContext}\n\n`
+      + `## If you want more scale\n\n`
+      + `Two realistic directions: step up within the same ecosystem (a larger model, `
+      + `a stereo pair), or move to a traditional stereo setup (compact integrated amp + `
+      + `a pair of bookshelf speakers). The second path trades the lifestyle convenience `
+      + `for real dynamic scale and bass extension.`;
+
+    const response: ConsultationResponse = {
+      title,
+      subject,
+      advisoryMode: 'system_review',
+      source: 'brand_profile',
+      systemSignature: intro.systemSignature,
+      philosophy: intro.philosophy,
+      tendencies: intro.tendencies,
+      systemContext,
+    };
+
+    // Minimal findings so downstream code that expects the contract
+    // (e.g. tests) receives a well-formed object. Only systemContext
+    // is actually rendered in the UI for this path.
+    const findings = {
+      systemChain: activeSystem.components.map((c, i) => ({
+        position: i + 1,
+        role: c.category || 'component',
+        name: c.name || c.brand,
+      })),
+      componentVerdicts: [],
+      stackedTraits: [],
+      systemAxes: { warm_bright: 'neutral', smooth_detailed: 'balanced', control_bloom: 'balanced' },
+      bottleneck: null,
+      keeps: [],
+      recommendedSequence: [],
+      upgradePaths: [],
+    } as unknown as MemoFindings;
+
+    return { kind: 'assessment', findings, response };
+  }
+
   const components: SystemComponent[] = [];
   const allLinks: { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[] = [];
   /** Per-component links keyed by displayName. */

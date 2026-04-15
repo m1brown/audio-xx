@@ -3506,14 +3506,21 @@ export default function Home() {
   return (
     <div
       style={{
+        // Full-viewport cream backdrop so the page no longer appears to
+        // float in a narrow column on wide screens.
+        background: COLOR.bg,
+        minHeight: '100vh',
+        width: '100%',
+      }}
+    >
+    <div
+      style={{
         // Pass 9: outer container widened so cards have horizontal room.
         // Per-section maxWidth wrappers below keep text blocks readable.
         maxWidth: LAYOUT.pageMax,
         margin: '0 auto',
         padding: '3rem 2rem 3rem',
         color: COLOR.textPrimary,
-        background: COLOR.bg,
-        minHeight: '100vh',
         lineHeight: 1.6,
       }}
     >
@@ -3649,7 +3656,7 @@ export default function Home() {
               letterSpacing: '-0.005em',
             }}
           >
-            Every component judged by what it does to your chain &mdash; not by what it does alone.
+            Every component evaluated by what it does in your system &mdash; not by what it does alone.
           </p>
 
           {/* Compact taste widget — authenticated users with profile data */}
@@ -4066,6 +4073,7 @@ export default function Home() {
         </div>
       )}
 
+    </div>
     </div>
   );
 }
