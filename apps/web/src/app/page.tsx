@@ -52,6 +52,7 @@ import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, classifySubjectAsContext, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory, buildSystemDiagnosis } from '@/lib/consultation';
+import { classifySystemArchetype, buildConsumerWirelessResponse } from '@/lib/system-class';
 import { findReferenceProduct, buildExplorationResponse, explorationToConsultation } from '@/lib/exploration';
 import { buildIntakeResponse, intakeToAdvisory } from '@/lib/intake';
 import { inferUnknownProduct } from '@/lib/llm-product-inference';
@@ -113,11 +114,16 @@ const COLOR = {
 
 /** Pass 9: layout tokens — wider container, but text and conversation
  *  columns stay readable. Cards live inside CONVERSATION column and breathe
- *  wider than text. */
+ *  wider than text.
+ *
+ *  Pass 10 (visual polish): page and conversation columns bumped
+ *  moderately so the centered layout feels less tight on wide
+ *  displays. `textMax` stays at 720 — the readable measure for prose,
+ *  hero, and input must not widen or long lines hurt legibility. */
 const LAYOUT = {
-  pageMax: 1180,        // outer container
-  textMax: 720,         // hero, intro, input — readable measure
-  conversationMax: 1040, // conversation thread — cards expand into this
+  pageMax: 1240,        // outer container (was 1180)
+  textMax: 720,         // hero, intro, input — readable measure (unchanged)
+  conversationMax: 1100, // conversation thread — cards expand into this (was 1040)
 } as const;
 
 // Cycling placeholders removed — static placeholder is now used.
@@ -286,6 +292,8 @@ export default function Home() {
   const skipToSuggestionsRef = useRef(false);
   /** Set after an intake form has been shown — forces next intake-classified message to shopping. */
   const intakeShownRef = useRef(false);
+  /** Tracks which consumer-wireless system fingerprints we've already greeted with the short intro. */
+  const consumerWirelessIntroShownRef = useRef<Set<string>>(new Set());
   /** Conversation state machine — tracks the first 2–4 turns with explicit transitions. */
   const convStateRef = useRef<ConvState>(INITIAL_CONV_STATE);
   /** Set after the music-input first question is asked — next message is interpreted as the listening-path answer. */
@@ -1450,6 +1458,73 @@ export default function Home() {
         // context), fall through to the normal pipeline.
       }
     }
+
+    // ── System archetype router ────────────────────────
+    // Classify the user's system into one of five coarse archetypes and
+    // route BEFORE any inferred-product consultation / advisory logic /
+    // LLM inference runs. This replaces case-by-case brand and product-
+    // gap branching with a single classify → dispatch step.
+    //
+    //   - consumer_wireless   → buildConsumerWirelessResponse (short)
+    //   - entry_hifi          → fall through to normal pipeline
+    //   - resolving_hifi      → fall through to normal pipeline
+    //   - high_end            → fall through to normal pipeline
+    //   - unknown             → fall through to normal pipeline
+    //
+    // The archetype router fires ONCE per system fingerprint per
+    // session, only on system-description turns (gear_inquiry /
+    // system_assessment / consultation_entry) — follow-ups (diagnosis,
+    // shopping, refinement) pass through unaffected. This preserves
+    // context and avoids re-greeting the user.
+    const systemArchetype = classifySystemArchetype(turnCtx.activeSystem?.components);
+    const systemFingerprint = turnCtx.activeSystem
+      ? turnCtx.activeSystem.components
+          .map((c) => `${(c.brand ?? '').toLowerCase()}|${(c.name ?? '').toLowerCase()}`)
+          .sort()
+          .join('::')
+      : '';
+    const archetypeRoutingAllowed =
+      intent === 'gear_inquiry'
+      || intent === 'system_assessment'
+      || intent === 'consultation_entry';
+
+    if (
+      systemArchetype === 'consumer_wireless'
+      && archetypeRoutingAllowed
+      && !consumerWirelessIntroShownRef.current.has(systemFingerprint)
+      && turnCtx.activeSystem
+    ) {
+      consumerWirelessIntroShownRef.current.add(systemFingerprint);
+      const response = buildConsumerWirelessResponse(turnCtx.activeSystem.components);
+      const cwResponse: import('@/lib/consultation').ConsultationResponse = {
+        title: turnCtx.activeSystem.name ?? response.title,
+        subject: response.subject,
+        advisoryMode: 'system_review',
+        source: 'brand_profile',
+        systemSignature: response.systemSignature,
+        tendencies: response.tendencies,
+        systemContext:
+          `${response.systemSignature}\n\n`
+          + `${response.tendencies}`,
+        provenanceNote: response.provenanceNote,
+        followUp: response.followUp,
+      };
+      dispatchAdvisory(consultationToAdvisory(cwResponse, undefined, advisoryCtx), advisoryId());
+      dispatch({
+        type: 'SET_CONSULTATION_CONTEXT',
+        subjects: turnCtx.subjectMatches,
+        originalQuery: submittedText,
+      });
+      dispatch({ type: 'SET_LOADING', value: false });
+      return;
+    }
+    // entry_hifi / resolving_hifi / high_end / unknown all fall through
+    // to the normal pipeline below — the existing deterministic
+    // consultation + advisory paths already produce correct output for
+    // those archetypes. This keeps archetype routing as an additive
+    // layer: today it only intercepts consumer_wireless, but future
+    // archetype-specific builders can hook in here without disturbing
+    // downstream code.
 
     // ── Consultation entry path ────────────────────────
     // User asks for system assessment or upgrade guidance but hasn't named
@@ -3506,9 +3581,14 @@ export default function Home() {
   return (
     <div
       style={{
-        // Full-viewport cream backdrop so the page no longer appears to
-        // float in a narrow column on wide screens.
-        background: COLOR.bg,
+        // Pass 10 (visual polish): the flat warm-cream backdrop
+        // carried the whole page on a single value and read a little
+        // prototype-flat. A gentle vertical gradient from the cream
+        // base to a slightly deeper warm tone keeps the tone calm
+        // and editorial while giving the page a sense of depth. The
+        // shift is small (about one step on the cream scale) so no
+        // color is ever bright or assertive.
+        background: `linear-gradient(180deg, ${COLOR.bg} 0%, #F2EDE1 100%)`,
         minHeight: '100vh',
         width: '100%',
       }}
@@ -3517,9 +3597,17 @@ export default function Home() {
       style={{
         // Pass 9: outer container widened so cards have horizontal room.
         // Per-section maxWidth wrappers below keep text blocks readable.
+        //
+        // Pass 10 (visual polish): a single-hairline left rail in the
+        // lightest warm-neutral border token anchors the content
+        // column without introducing a dashboard feel. Outer padding
+        // lifted slightly (top + sides) so the main column breathes
+        // against the gradient backdrop and reads as intentional
+        // rather than tightly centered.
         maxWidth: LAYOUT.pageMax,
         margin: '0 auto',
-        padding: '3rem 2rem 3rem',
+        padding: '3.25rem 2.5rem 3rem',
+        borderLeft: `1px solid ${COLOR.borderLight}`,
         color: COLOR.textPrimary,
         lineHeight: 1.6,
       }}
@@ -3644,8 +3732,11 @@ export default function Home() {
         <>
           <p
             style={{
-              marginTop: '0.1rem',
-              marginBottom: '1.75rem',
+              marginTop: '0.15rem',
+              // Pass 10: subheadline gets a touch more space below so
+              // the gap to the action buttons reads as a deliberate
+              // pause rather than a prototype default.
+              marginBottom: '2.1rem',
               maxWidth: LAYOUT.textMax,
               color: COLOR.textPrimary,
               // Pass 9: bumped subheadline to read as a clear intro statement,
@@ -3711,9 +3802,13 @@ export default function Home() {
                 style={{
                   display: 'flex',
                   flexWrap: 'wrap',
-                  gap: '0.5rem',
+                  // Pass 10: tighter inter-chip gap (0.5 → 0.6rem) and
+                  // more space below the action row so the input
+                  // textarea lands as its own focused element rather
+                  // than crowding against the chips.
+                  gap: '0.6rem',
                   marginTop: '0.25rem',
-                  marginBottom: '0.9rem',
+                  marginBottom: '1.75rem',
                   maxWidth: LAYOUT.textMax,
                 }}
               >
@@ -3752,63 +3847,12 @@ export default function Home() {
             );
           })()}
 
-          {/* Two compact example prompts — phrased as real user inputs
-           * (diagnostic + decision), not as echoes of the action-button
-           * labels above. Single-line, tappable, muted. */}
-          {(() => {
-            const examples: string[] = [
-              'My chain feels a little lean in the mids \u2014 Node \u2192 Qutest \u2192 Leben CS300 \u2192 P3ESR. Where should I look first?',
-              'DeVore O/93 vs Harbeth SHL5 on a low-power SET \u2014 which is the safer call?',
-            ];
-            return (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.25rem',
-                  marginTop: '0.1rem',
-                  marginBottom: '1.5rem',
-                  maxWidth: LAYOUT.textMax,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: '0.68rem',
-                    fontWeight: 600,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase' as const,
-                    color: COLOR.textMuted,
-                    marginBottom: '0.15rem',
-                  }}
-                >
-                  Ask something like
-                </div>
-                {examples.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => handleSubmit(prompt)}
-                    style={{
-                      textAlign: 'left',
-                      background: 'transparent',
-                      border: 'none',
-                      padding: 0,
-                      cursor: 'pointer',
-                      color: COLOR.textSecondary,
-                      fontSize: '0.85rem',
-                      fontFamily: 'inherit',
-                      lineHeight: 1.5,
-                      transition: 'color 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = COLOR.accent; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = COLOR.textSecondary; }}
-                  >
-                    &ldquo;{prompt}&rdquo;
-                  </button>
-                ))}
-              </div>
-            );
-          })()}
+          {/* "Ask something like" example prompts removed — the previous
+           * examples were technically misleading (e.g. low-power SET paired
+           * with Harbeth SHL5) and damaged credibility. The slot is left
+           * empty for now rather than replaced with new examples. Surrounding
+           * elements (action buttons above, input box below) keep their
+           * existing margins unchanged. */}
         </>
       )}
 
@@ -3937,8 +3981,13 @@ export default function Home() {
             // interaction point — taller, slightly warmer border, deeper
             // resting shadow so it reads as weightier than the surrounding
             // ghost-style action chips.
-            minHeight: hasMessages ? 72 : 140,
-            padding: hasMessages ? '1rem 1.1rem' : '1.15rem 1.2rem',
+            //
+            // Pass 10: a little more vertical height and interior
+            // padding on the landing-state textarea so the hero input
+            // reads as an intentional, focused field rather than a
+            // prototype box. Conversation-state remains compact.
+            minHeight: hasMessages ? 72 : 152,
+            padding: hasMessages ? '1rem 1.1rem' : '1.3rem 1.35rem',
             border: `1.5px solid ${hasMessages ? COLOR.border : COLOR.chipBorder}`,
             borderRadius: 10,
             outline: 'none',
@@ -3969,8 +4018,10 @@ export default function Home() {
           onClick={() => handleSubmit()}
           disabled={isLoading || !currentInput.trim()}
           style={{
-            marginTop: '0.6rem',
-            padding: '0.55rem 1.5rem',
+            // Pass 10: a touch more space between textarea and Send
+            // so the action reads as a separate commitment step.
+            marginTop: '0.85rem',
+            padding: '0.6rem 1.6rem',
             background: isLoading || !currentInput.trim() ? COLOR.border : COLOR.accent,
             color: isLoading || !currentInput.trim() ? COLOR.textSecondary : '#FFFEFA',
             border: 'none',
@@ -4031,30 +4082,34 @@ export default function Home() {
 
       </div>}
 
-      {/* Footer — start-over + contact */}
-      {hasMessages && (
-        <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
-          <button
-            type="button"
-            onClick={() => handleReset()}
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: '2px 0',
-              margin: 0,
-              cursor: 'pointer',
-              color: COLOR.textSecondary,
-              fontSize: '0.85rem',
-              fontFamily: 'inherit',
-              textDecoration: 'none',
-              letterSpacing: '0.01em',
-              transition: 'color 0.15s ease',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = COLOR.accent; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = COLOR.textSecondary; }}
-          >
-            Start over
-          </button>
+      {/* Footer — "Start over" is always visible below the Send button, so
+        * the reset affordance never disappears. "Contact" is kept conditional
+        * on `hasMessages` so the fresh-session view (which already shows the
+        * "Questions or feedback? hello@audio-xx.com" welcome line above)
+        * doesn't render Contact twice. */}
+      <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
+        <button
+          type="button"
+          onClick={() => handleReset()}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: '2px 0',
+            margin: 0,
+            cursor: 'pointer',
+            color: COLOR.textSecondary,
+            fontSize: '0.85rem',
+            fontFamily: 'inherit',
+            textDecoration: 'none',
+            letterSpacing: '0.01em',
+            transition: 'color 0.15s ease',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = COLOR.accent; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = COLOR.textSecondary; }}
+        >
+          Start over
+        </button>
+        {hasMessages && (
           <a
             href="mailto:hello@audio-xx.com"
             style={{
@@ -4070,8 +4125,8 @@ export default function Home() {
           >
             Contact
           </a>
-        </div>
-      )}
+        )}
+      </div>
 
     </div>
     </div>

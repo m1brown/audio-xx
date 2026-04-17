@@ -1,23 +1,19 @@
 /**
- * System class — classify an active system as consumer-wireless vs
- * traditional audiophile, so the advisory layer can swap in remediation
- * copy that actually applies to the user's gear.
+ * System archetype — classify an active system into one of five coarse
+ * classes so the advisory layer can route to the right response path
+ * *before* any case-by-case brand or product-gap branching runs.
  *
  * Audio XX Playbook alignment:
- *   - §3 Preference protection — do not give "move the speakers closer to
- *     the rear wall" advice to someone running a Sonos. Fixed-driver
- *     wireless speakers have no user-placement latitude.
- *   - §2 Trade-off discipline — consumer systems have different failure
- *     modes (scale ceiling, WiFi interference) than traditional chains
- *     (room placement, ground loops).
+ *   - §3 Preference protection — consumer-wireless speakers have no
+ *     placement latitude, so they should never receive rear-wall advice.
+ *   - §2 Trade-off discipline — each archetype has its own ceiling and
+ *     its own set of meaningful levers (upgrade paths, remediation).
+ *   - §8 Engine/Domain boundary — this module is PURE domain mapping.
+ *     No engine vocabulary, no axis scoring. Consumed by page.tsx
+ *     orchestrator, consultation wiring, and advisory adapters.
  *
- * Boundary decision (per CLAUDE.md §8):
- *   - PURE domain mapping table. No engine vocabulary. No axis scoring.
- *   - Consumed by advisory-response adapters and consultation wiring;
- *     never by the rule engine itself.
- *   - Climate-Screen test: the CLASSIFIER function is portable (it takes
- *     a list of component brands and returns a class label). Only the
- *     brand set is audio-specific — which is fine for an adapter.
+ * Archetype layer replaces per-brand, per-product-gap edge-case branching
+ * in the top-level response builder with a single classifier + lookup.
  */
 
 // ── Consumer / lifestyle / mainstream-tech brands ─────
@@ -62,15 +58,44 @@ const CONSUMER_SOURCE_BRANDS: ReadonlySet<string> = new Set([
   'iphone', 'ipad', 'ipod', 'airpods', 'airpod', 'apple', 'google', 'samsung',
 ]);
 
-export type SystemClass =
-  | 'audiophile'        // traditional component chain
-  | 'consumer_wireless' // Sonos / Bose / HomePod / phone only
-  | 'mixed'             // some of each
+/**
+ * System archetype — the primary classification that drives top-level
+ * response routing. Five coarse buckets:
+ *
+ *   - consumer_wireless: Sonos, Bose, HomePod, AirPods, phone-as-source,
+ *     or any single-box speaker system. No meaningful upstream levers;
+ *     the speaker class determines the ceiling.
+ *
+ *   - entry_hifi: traditional amp + speakers chain at entry-level tiers.
+ *     Placement, source, and component swaps all produce audible changes.
+ *
+ *   - resolving_hifi: traditional chain where the system is resolving
+ *     enough that source/cable/placement choices dominate the result.
+ *
+ *   - high_end: ultra-resolving chains where trade-off discipline is
+ *     paramount and "do nothing" is often the correct answer.
+ *
+ *   - unknown: insufficient component info to classify.
+ *
+ * Note: entry/resolving/high_end tier detection is driven by brand/price
+ * heuristics and is intentionally conservative — unrecognized traditional
+ * chains default to entry_hifi rather than over-claiming.
+ */
+export type SystemArchetype =
+  | 'consumer_wireless'
+  | 'entry_hifi'
+  | 'resolving_hifi'
+  | 'high_end'
   | 'unknown';
+
+/** Back-compat alias — callers should migrate to SystemArchetype. */
+export type SystemClass = SystemArchetype;
 
 export interface SystemComponentLite {
   brand?: string;
   name?: string;
+  /** Optional role hint — 'speaker', 'amp', 'integrated', 'dac', 'source', etc. */
+  category?: string | null;
 }
 
 function norm(s?: string): string {
@@ -87,46 +112,148 @@ function isConsumerBrand(brand?: string): boolean {
   return CONSUMER_BRANDS.has(first);
 }
 
+// ── High-end / resolving brand heuristics ─────────────
+//
+// Intentionally conservative starter sets. These drive tier selection
+// ONLY when an amp + speaker pattern is already present — they never
+// upgrade a consumer-wireless chain into high_end.
+//
+// Extend these sets as the product catalog grows; unrecognized
+// audiophile chains default safely to entry_hifi.
+
+const HIGH_END_BRANDS: ReadonlySet<string> = new Set([
+  'wilson audio', 'wilson', 'magico', 'rockport',
+  'audio research', 'vtl', 'mcintosh', 'boulder', 'soulution',
+  'dcs', 'msb', 'chord dave', 'dartzeel',
+  'constellation', 'vitus', 'gryphon', 'dan dagostino',
+]);
+
+const RESOLVING_BRANDS: ReadonlySet<string> = new Set([
+  'devore', 'harbeth', 'spendor', 'atc', 'proac',
+  'focal', 'dynaudio', 'kef reference',
+  'hegel', 'luxman', 'accuphase', 'pass labs', 'ayre',
+  'chord', 'naim', 'linn', 'bryston',
+  'rega', // higher-tier rega only, but starter
+  'job', 'goldmund',
+]);
+
+/** Speaker-like categories — classifier looks for the amp+speaker pattern. */
+const SPEAKER_CATEGORIES: ReadonlySet<string> = new Set([
+  'speaker', 'speakers', 'bookshelf', 'floorstander', 'monitor',
+  'loudspeaker', 'subwoofer', 'sub',
+]);
+
+/** Amp-like categories (anything that amplifies). */
+const AMP_CATEGORIES: ReadonlySet<string> = new Set([
+  'amp', 'amplifier', 'integrated', 'integrated_amp', 'power_amp',
+  'preamp', 'pre-amp', 'pre_amp', 'tube_amp', 'receiver',
+]);
+
+function matchesBrandSet(brand: string | undefined, name: string | undefined, set: ReadonlySet<string>): boolean {
+  const b = norm(brand);
+  const n = norm(name);
+  if (b && set.has(b)) return true;
+  if (n && set.has(n)) return true;
+  const firstB = b.split(/\s+/)[0];
+  const firstN = n.split(/\s+/)[0];
+  if (firstB && set.has(firstB)) return true;
+  if (firstN && set.has(firstN)) return true;
+  return false;
+}
+
+function hasCategory(c: SystemComponentLite, set: ReadonlySet<string>): boolean {
+  return !!c.category && set.has(c.category.trim().toLowerCase());
+}
+
 /**
- * Classify an active system by the provenance of its components.
+ * Primary classifier. Returns the system archetype based on component
+ * provenance, role composition, and brand tier heuristics.
  *
- * Pure function — safe for any caller (adapters, consultation wiring,
- * or the page-orchestrator).
+ * Decision order:
+ *   1. All-consumer OR single-box speaker-only → consumer_wireless
+ *   2. Amp + speakers present:
+ *      - any high-end brand → high_end
+ *      - any resolving brand → resolving_hifi
+ *      - else → entry_hifi
+ *   3. Other traditional components (no speaker pair) → entry_hifi
+ *   4. Nothing identifiable → unknown
  */
-export function classifySystemClass(components: SystemComponentLite[] | undefined | null): SystemClass {
+export function classifySystemArchetype(
+  components: SystemComponentLite[] | undefined | null,
+): SystemArchetype {
   if (!components || components.length === 0) return 'unknown';
 
-  let consumerHits = 0;
-  let otherHits = 0;
+  const consumer: SystemComponentLite[] = [];
+  const other: SystemComponentLite[] = [];
   for (const c of components) {
+    const isNamed = !!(c.brand || c.name);
+    if (!isNamed) continue;
     if (isConsumerBrand(c.brand) || isConsumerBrand(c.name)) {
-      consumerHits++;
-    } else if (c.brand || c.name) {
-      otherHits++;
+      consumer.push(c);
+    } else {
+      other.push(c);
     }
   }
 
-  if (consumerHits === 0 && otherHits === 0) return 'unknown';
-  if (consumerHits > 0 && otherHits === 0) return 'consumer_wireless';
-  if (consumerHits === 0 && otherHits > 0) return 'audiophile';
-  return 'mixed';
+  if (consumer.length === 0 && other.length === 0) return 'unknown';
+
+  // 1a. All-consumer chain.
+  if (consumer.length > 0 && other.length === 0) return 'consumer_wireless';
+
+  // 1b. Single-box speaker system (one named component that IS a speaker
+  //     with no amp — typical of powered / active / wireless speakers).
+  if (components.length === 1) {
+    const only = components[0];
+    if (hasCategory(only, SPEAKER_CATEGORIES)) return 'consumer_wireless';
+  }
+
+  // 2. Amp + speakers pattern → entry / resolving / high_end.
+  const hasAmp = components.some((c) => hasCategory(c, AMP_CATEGORIES));
+  const hasSpeakers = components.some((c) => hasCategory(c, SPEAKER_CATEGORIES));
+  const anyHighEnd = components.some((c) => matchesBrandSet(c.brand, c.name, HIGH_END_BRANDS));
+  const anyResolving = components.some((c) => matchesBrandSet(c.brand, c.name, RESOLVING_BRANDS));
+
+  if (hasAmp && hasSpeakers) {
+    if (anyHighEnd) return 'high_end';
+    if (anyResolving) return 'resolving_hifi';
+    return 'entry_hifi';
+  }
+
+  // 3. Traditional components without a full amp+speaker pair — DAC,
+  //    streamer, turntable on their own. Default to entry_hifi so the
+  //    normal advisory paths run. Tier bumping still applies when a
+  //    high-end / resolving brand is named.
+  if (anyHighEnd) return 'high_end';
+  if (anyResolving) return 'resolving_hifi';
+  if (other.length > 0) return 'entry_hifi';
+
+  // Fallback: at this point consumer > 0 and other === 0 is already
+  // handled above. Anything left is unclassifiable.
+  return 'unknown';
 }
 
 /**
  * Convenience: accept a list of free-text component strings (e.g.
- * "Sonos Arc", "iPhone 14", "Rega Planar 3") and classify. Used by
- * advisory-response.ts where ShoppingAdvisoryContext.systemComponents
- * is string[] rather than structured components.
+ * "Sonos Arc", "iPhone 14", "Rega Planar 3") and classify.
  */
-export function classifySystemFromStrings(componentStrings: string[] | undefined | null): SystemClass {
+export function classifySystemArchetypeFromStrings(
+  componentStrings: string[] | undefined | null,
+): SystemArchetype {
   if (!componentStrings || componentStrings.length === 0) return 'unknown';
   const lite: SystemComponentLite[] = componentStrings.map((s) => {
     const trimmed = s.trim();
     const firstToken = trimmed.split(/\s+/)[0] ?? '';
     return { brand: firstToken, name: trimmed };
   });
-  return classifySystemClass(lite);
+  return classifySystemArchetype(lite);
 }
+
+// ── Back-compat aliases ───────────────────────────────
+// Callers still import classifySystemClass / classifySystemFromStrings.
+// Keep the old names working so this refactor stays scoped.
+
+export const classifySystemClass = classifySystemArchetype;
+export const classifySystemFromStrings = classifySystemArchetypeFromStrings;
 
 /** Role inference for a single consumer component. */
 export function inferConsumerRole(component: SystemComponentLite): 'speaker' | 'source' | 'accessory' | 'unknown' {
@@ -196,6 +323,103 @@ export function consumerElectricalNoiseRemediation(): ConsumerRemediation {
       + 'tells you whether it is the network, the source, or the speaker itself.',
   };
 }
+
+/**
+ * Short first-turn response for a consumer-wireless system.
+ *
+ * Per the Audio XX Playbook first-turn spec for mainstream consumer systems:
+ *   1. one-sentence characterization
+ *   2. one short "what this means" explanation
+ *   3. one useful follow-up question
+ *   4. subtle provenance — "Based on general product knowledge"
+ *
+ * Deliberately avoids the encyclopedic 5-section narrative the
+ * deterministic audiophile pipeline produces. Also avoids the
+ * LLM inferred-product path (which fires "Not from verified catalog").
+ */
+export interface ConsumerFirstTurn {
+  title: string;
+  subject: string;
+  systemSignature: string;
+  /** The "what this means" paragraph. */
+  tendencies: string;
+  /** The single follow-up question. */
+  followUp: string;
+  /** Soft provenance note appended to the UI. */
+  provenanceNote: string;
+}
+
+/**
+ * Top-level response builder for the consumer_wireless archetype.
+ *
+ * Spec: 3–5 sentences, practical, constraint-focused. No product
+ * database disclaimers, no long explanations, no audiophile
+ * terminology. This is invoked by the page-orchestrator's archetype
+ * router BEFORE any inferred-product consultation, advisory logic,
+ * or LLM inference path runs.
+ */
+export function buildConsumerWirelessResponse(
+  components: SystemComponentLite[],
+): ConsumerFirstTurn {
+  const roles = components.map((c) => ({ c, role: inferConsumerRole(c) }));
+  const speakers = roles.filter((r) => r.role === 'speaker').map((r) => r.c);
+  const sources = roles.filter((r) => r.role === 'source').map((r) => r.c);
+
+  const speakerLabel = speakers.length > 0
+    ? speakers.map((s) => (s.brand ?? s.name ?? '').trim()).filter(Boolean).join(' + ')
+    : null;
+  const sourceLabel = sources.length > 0
+    ? sources.map((s) => (s.brand ?? s.name ?? '').trim()).filter(Boolean).join(' + ')
+    : null;
+
+  // One-sentence characterization.
+  let systemSignature: string;
+  if (speakerLabel && sourceLabel) {
+    systemSignature =
+      `A ${speakerLabel} speaker driven from an ${sourceLabel} — a convenience-first `
+      + `wireless setup where the speaker itself shapes most of what you hear.`;
+  } else if (speakerLabel) {
+    systemSignature =
+      `A ${speakerLabel} wireless speaker — a convenience-first setup where the speaker `
+      + `itself shapes most of what you hear.`;
+  } else {
+    systemSignature =
+      'A consumer wireless audio setup — convenience-first, where the speaker itself '
+      + 'shapes most of what you hear.';
+  }
+
+  // One short "what this means" paragraph — names the likely limits without
+  // pushing the user toward a purchase and without audiophile vocabulary.
+  const tendencies =
+    'Because the speaker is a sealed, fixed-driver design with its own amplification '
+    + 'and room correction, the usual upstream levers (source, amp, cables, placement) '
+    + 'have only small effects. The likely limits are bass authority, scale, and '
+    + 'headroom at higher volumes — those live with the speaker, not the source.';
+
+  const followUp =
+    'What\'s bothering you about the sound right now — bass, clarity, loudness, '
+    + 'fullness, or something else?';
+
+  const provenanceNote =
+    'Based on general product knowledge of this class of system.';
+
+  const subject = components
+    .map((c) => (c.name || c.brand || '').trim())
+    .filter(Boolean)
+    .join(' + ') || 'your system';
+
+  return {
+    title: 'Your System',
+    subject,
+    systemSignature,
+    tendencies,
+    followUp,
+    provenanceNote,
+  };
+}
+
+/** Back-compat alias — callers should migrate to buildConsumerWirelessResponse. */
+export const buildConsumerWirelessFirstTurn = buildConsumerWirelessResponse;
 
 /** First-contact system assessment copy for consumer-only chains. */
 export function consumerSystemIntro(

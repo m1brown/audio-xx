@@ -26,11 +26,16 @@
  */
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { toSlug } from '../../lib/route-slug';
 import type { AdvisoryResponse, AdvisoryMode, AdvisorySource, AudioProfile, ProductAssessment, KnowledgeResponse, AssistantResponse, EditorialClosing, EditorialPick, QuickRecommendation } from '../../lib/advisory-response';
 import type { DecisionFrame, DecisionDirection, SystemInteraction } from '../../lib/decision-frame';
 import AdvisorySection from './AdvisorySection';
 import AdvisoryProse from './AdvisoryProse';
 import AdvisoryProductCards, { ShoppingLinks } from './AdvisoryProductCard';
+import { DIRECTION_CONTENT } from '../../lib/upgrade-path-content';
+import { findProductByComponentName, findBrandProfileByName } from '../../lib/consultation';
+import { getProductImage } from '../../lib/product-images';
 import AdvisoryLinks from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
 import AdvisoryDiagnostics from './AdvisoryDiagnostics';
@@ -327,6 +332,39 @@ function normalizeBrandCasing(text: string): string {
 }
 
 function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
+  // ── Post-response follow-up chip state. ──
+  // Chips dispatch in-chat panels rather than navigating away. Selecting
+  // a chip toggles its panel open; selecting it again (or clicking the
+  // × on the panel) closes it. Only one panel is open at a time — the
+  // previous one is replaced rather than accumulated, so the
+  // conversation stays tight.
+  //
+  // Two chip families share this single state so they cannot be open
+  // simultaneously:
+  //   - the "See upgrade options / Hear what this change does /
+  //     Compare paths" direction chips (kind: 'upgrade' | 'hear' |
+  //     'compare').
+  //   - the "Do not touch" component chips (kind: 'component'), each
+  //     keyed by component name.
+  type FollowUpKey =
+    | { kind: 'upgrade' | 'hear' | 'compare' }
+    | { kind: 'component'; name: string };
+  const [activeFollowUp, setActiveFollowUp] = useState<FollowUpKey | null>(null);
+
+  // Small toggle helpers — close if the same chip is clicked again,
+  // otherwise open the requested panel (and replace any other open
+  // panel). Keeps the chip onClick handlers terse.
+  const toggleDirection = (kind: 'upgrade' | 'hear' | 'compare') =>
+    setActiveFollowUp((prev) =>
+      prev && prev.kind === kind ? null : { kind },
+    );
+  const toggleComponent = (name: string) =>
+    setActiveFollowUp((prev) =>
+      prev && prev.kind === 'component' && prev.name === name
+        ? null
+        : { kind: 'component', name },
+    );
+
   // ── Parse the narrative into { header, body } sections. ──
   // The composer emits sections as:   **Header**\n\nbody...\n\n**Next**...
   // Presentation-only brand-casing normalization is applied to the raw
@@ -373,10 +411,6 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
     });
   }
   const hasAnyRole = chain.some((c) => !!c.role);
-
-  // ── Follow-up panel state. ──
-  const [hearExpanded, setHearExpanded] = useState(false);
-  const [optionsExpanded, setOptionsExpanded] = useState(false);
 
   // ── Extract "Do not touch:" line from optimize body. ──
   let optimizeBody = optimize?.body ?? '';
@@ -584,28 +618,83 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
                 flexWrap: 'wrap',
                 gap: '0.5rem',
               }}>
-                {doNotTouchItems.map((name, i) => (
-                  <span key={i} style={{
-                    display: 'inline-block',
-                    padding: '0.35rem 0.7rem',
-                    background: COLORS.accentBg,
-                    border: `1px solid ${COLORS.border}`,
-                    borderRadius: '999px',
-                    fontSize: '0.88rem',
-                    color: COLORS.text,
-                    fontWeight: 500,
-                  }}>
-                    {name}
-                  </span>
-                ))}
+                {doNotTouchItems.map((name, i) => {
+                  // Component chips behave the same way as the
+                  // "See upgrade options / Hear / Compare" chips:
+                  // clicking dispatches an inline follow-up panel
+                  // inside the same chat message rather than
+                  // navigating to a brand page. Single-panel-at-a-
+                  // time is enforced by the shared `activeFollowUp`
+                  // state.
+                  //
+                  // Styling is preserved from the prior <Link>
+                  // implementation (same padding, accent-bg, pill
+                  // radius, border, weight) with an `aria-pressed`
+                  // treatment when the chip's panel is open.
+                  const isActive =
+                    activeFollowUp !== null &&
+                    activeFollowUp.kind === 'component' &&
+                    activeFollowUp.name === name;
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => toggleComponent(name)}
+                      aria-pressed={isActive}
+                      style={{
+                        display: 'inline-block',
+                        padding: '0.35rem 0.7rem',
+                        background: isActive
+                          ? COLORS.accentBg
+                          : COLORS.accentBg,
+                        border: `1px ${isActive ? 'solid' : 'solid'} ${
+                          isActive ? COLORS.accent : COLORS.border
+                        }`,
+                        borderRadius: '999px',
+                        fontSize: '0.88rem',
+                        color: COLORS.text,
+                        fontWeight: 500,
+                        fontFamily: 'inherit',
+                        cursor: 'pointer',
+                        lineHeight: 1.3,
+                        transition:
+                          'border-color 120ms ease, background 120ms ease, color 120ms ease',
+                      }}
+                    >
+                      {name}
+                    </button>
+                  );
+                })}
               </div>
+
+              {/* Inline follow-up panel for a selected "Do not touch"
+                * component. Dispatched in-chat from the chips above;
+                * never navigates. Shares `activeFollowUp` with the
+                * direction chips so only one panel is open at a
+                * time. */}
+              {activeFollowUp?.kind === 'component' && (
+                <ComponentKeepFollowUp
+                  name={activeFollowUp.name}
+                  onDismiss={() => setActiveFollowUp(null)}
+                />
+              )}
             </div>
           )}
 
           {optimizeBody && bodyPara(optimizeBody, { lineHeight: 1.95 })}
         </section>
 
-          {/* Follow-up action chips — continuation of optimize, placeholder (no logic yet). */}
+          {/* Follow-up action chips — in-chat dispatch (no page navigation).
+            *
+            * Each chip toggles an inline follow-up panel below the chip
+            * row. The panels reuse the existing AdvisoryProductCards
+            * component so product images, manufacturer insight, and
+            * retailer links render identically to the primary advisory
+            * output. Only one panel is open at a time.
+            *
+            * Chip wording, styling, spacing, and layout are unchanged
+            * from the prior route-based implementation. The only change
+            * is the dispatch mechanism: `href` → `onClick`. */}
           <div style={{ marginTop: '0.9rem', paddingLeft: '0.15rem' }}>
             <div style={{
               fontSize: '0.82rem',
@@ -624,44 +713,42 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
                 gap: '0.45rem',
               }}
             >
-              {[
-                'See upgrade options',
-                'Hear what this change does',
-                'Compare paths',
-              ].map((label) => {
-                const isHear = label === 'Hear what this change does';
-                const isOptions = label === 'See upgrade options';
-                const active =
-                  (isHear && hearExpanded) || (isOptions && optionsExpanded);
-                const onClick = isHear
-                  ? () => setHearExpanded((v) => !v)
-                  : isOptions
-                  ? () => setOptionsExpanded((v) => !v)
-                  : undefined;
-                return (
-                  <FollowUpChip
-                    key={label}
-                    label={label}
-                    active={active}
-                    onClick={onClick}
-                  />
-                );
-              })}
+              {([
+                { key: 'upgrade' as const, label: 'See upgrade options' },
+                { key: 'hear'    as const, label: 'Hear what this change does' },
+                { key: 'compare' as const, label: 'Compare paths' },
+              ]).map(({ key, label }) => (
+                <FollowUpChip
+                  key={label}
+                  label={label}
+                  active={
+                    activeFollowUp !== null &&
+                    activeFollowUp.kind === key
+                  }
+                  onClick={() => toggleDirection(key)}
+                />
+              ))}
             </div>
 
-            {hearExpanded && (
+            {/* Inline follow-up panels — dispatched in-chat from the
+              * chips above. Each panel is a direction-specific
+              * continuation of the advisor's analysis and reuses the
+              * rich product-card component for product rendering. */}
+            {activeFollowUp?.kind === 'upgrade' && (
+              <UpgradeOptionsFollowUp
+                onDismiss={() => setActiveFollowUp(null)}
+              />
+            )}
+            {activeFollowUp?.kind === 'hear' && (
               <HearFollowUp
                 constrainedBody={constrained?.body ?? ''}
                 optimizeBody={optimizeBody}
-                onDismiss={() => setHearExpanded(false)}
+                onDismiss={() => setActiveFollowUp(null)}
               />
             )}
-
-            {optionsExpanded && (
-              <UpgradeOptionsFollowUp
-                constrainedBody={constrained?.body ?? ''}
-                optimizeBody={optimizeBody}
-                onDismiss={() => setOptionsExpanded(false)}
+            {activeFollowUp?.kind === 'compare' && (
+              <ComparePathsFollowUp
+                onDismiss={() => setActiveFollowUp(null)}
               />
             )}
           </div>
@@ -672,14 +759,21 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
 }
 
 /**
- * Deterministic follow-up for the "Hear what this change does" chip.
+ * In-chat follow-up for the "Hear what this change does" chip.
  *
- * Composes a calm, non-hyped explanation from the already-parsed narrative
- * sections. References the primary constraint and the recommended change,
- * then surfaces 2–3 concrete listening phrases chosen from keywords present
- * in the constraint and optimize text. No network call, no product
- * recommendations, no new sections — purely a continuation of the advisor's
- * existing analysis.
+ * Dispatched inline from the chip row — no page navigation. Keeps a
+ * tight connection to the advisor's existing narrative: the primary
+ * constraint and the recommended change are summarised in one or two
+ * short sentences, followed by 2–3 concrete listening phrases matched
+ * against keywords in the narrative, and then anchored by 2–3
+ * direction-exemplar products rendered via the shared product-card
+ * component (photos, manufacturer insight, retailer links).
+ *
+ * Products are drawn from DIRECTION_CONTENT.safe — the refinement
+ * direction — because the purpose of this panel is to illustrate the
+ * listening outcome of the recommended change, not to explore a
+ * different philosophy. Selection is static; see Playbook §8 (engine vs
+ * domain boundary).
  */
 function HearFollowUp({
   constrainedBody,
@@ -731,12 +825,16 @@ function HearFollowUp({
     }
   }
 
+  // Anchor products — first 2–3 from the Safe direction, rendered with
+  // full card treatment (image, maker insight, retailer links).
+  const anchors = DIRECTION_CONTENT.safe.options.slice(0, 3);
+
   return (
     <div
       aria-label="Hear what this change does"
       style={{
         marginTop: '1rem',
-        padding: '1rem 1.15rem',
+        padding: '1.15rem 1.3rem',
         background: COLORS.accentBg,
         border: `1px solid ${COLORS.border}`,
         borderRadius: '6px',
@@ -775,173 +873,150 @@ function HearFollowUp({
         </button>
       </div>
 
-      {constraintLead && (
+      {(constraintLead || changeLead) && (
         <p style={{ margin: '0 0 0.55rem 0' }}>
-          The constraint we are addressing: {constraintLead.replace(/\.$/, '')}.
-        </p>
-      )}
-      {changeLead && (
-        <p style={{ margin: '0 0 0.55rem 0' }}>
-          The recommended change: {changeLead.replace(/\.$/, '')}.
+          {constraintLead && <>The constraint we are addressing: {constraintLead.replace(/\.$/, '')}. </>}
+          {changeLead && <>The recommended change: {changeLead.replace(/\.$/, '')}.</>}
         </p>
       )}
       <p style={{ margin: '0 0 0.4rem 0' }}>
         If it lands, the shift is subtle rather than dramatic — you would notice it on familiar tracks before you noticed it on new ones. Specifically:
       </p>
-      <ul style={{ margin: '0.1rem 0 0 1.1rem', padding: 0 }}>
+      <ul style={{ margin: '0.1rem 0 0.9rem 1.1rem', padding: 0 }}>
         {picked.map((p, i) => (
           <li key={i} style={{ marginBottom: '0.2rem' }}>{p}</li>
         ))}
       </ul>
+
+      {/* Anchor products — photos, maker insight, retailer links. */}
+      <div style={{
+        fontSize: FONTS.labelSize,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        color: COLORS.textMuted,
+        fontWeight: 600,
+        margin: '0.55rem 0 0.5rem 0',
+      }}>
+        Products that express this direction
+      </div>
+      <AdvisoryProductCards options={anchors} hideMakerInsight preferImage />
     </div>
   );
 }
 
 /**
- * Deterministic follow-up for the "See upgrade options" chip.
+ * In-chat follow-up for the "See upgrade options" chip.
  *
- * Translates the primary optimize recommendation into three archetypal
- * slots — Safe, Stretch, Alternative flavor — each with a short name,
- * one-sentence rationale tied to the current system, and one tradeoff.
- * Archetype family (amp / DAC / speaker / source / placement) is inferred
- * from keywords in the optimize body. No product recommendations, no
- * external data, no links.
+ * Renders the Safe direction — refinement within the same design
+ * philosophy — as a set of real catalog products via the shared
+ * AdvisoryProductCards component. Each card carries the product
+ * photo (when available), maker insight, and retailer links, so the
+ * chip produces a richer continuation than a text-only archetype.
+ *
+ * Data comes from DIRECTION_CONTENT.safe in the shared
+ * upgrade-path-content module; the same data drives the full
+ * /path/upgrade/safe page. Per Playbook §8, the curated product
+ * selection is a domain-layer artifact and appropriate here.
  */
 function UpgradeOptionsFollowUp({
-  constrainedBody,
-  optimizeBody,
   onDismiss,
 }: {
-  constrainedBody: string;
-  optimizeBody: string;
   onDismiss: () => void;
 }) {
-  type Slot = { tier: string; name: string; why: string; tradeoff: string };
-
-  const haystack = `${constrainedBody} ${optimizeBody}`.toLowerCase();
-  const noSingleSwap = /no single\s+high-?leverage swap|property of the chain/.test(haystack);
-
-  const pickFamily = (): 'amp' | 'dac' | 'speaker' | 'source' | 'placement' => {
-    if (noSingleSwap || /placement|toe-?in|room/.test(haystack)) return 'placement';
-    if (/\bamp(lifier)?\b|integrated|power amp|preamp/.test(haystack)) return 'amp';
-    if (/\bdac\b|converter|digital[- ]to[- ]analog/.test(haystack)) return 'dac';
-    if (/speaker|monitor|transducer|driver|cabinet/.test(haystack)) return 'speaker';
-    if (/source|streamer|transport|turntable|cartridge/.test(haystack)) return 'source';
-    return 'amp';
-  };
-  const family = pickFamily();
-
-  const slotsByFamily: Record<typeof family, Slot[]> = {
-    amp: [
-      {
-        tier: 'Safe',
-        name: 'A used higher-current unit in your current topology',
-        why: 'A low-risk, reversible step that directly addresses the control shortfall without reshaping the rest of the chain.',
-        tradeoff: 'Incremental character change; if the constraint is deeper than current delivery, the gain will feel modest.',
-      },
-      {
-        tier: 'Stretch',
-        name: 'Dedicated separates with a beefy power amp',
-        why: 'Substantially more grip, headroom, and dynamic authority — a structural step up the system has not seen before.',
-        tradeoff: 'Major financial and physical commitment, an added interconnect to get right, and a longer settling period.',
-      },
-      {
-        tier: 'Alternative flavor',
-        name: 'A low-power SET or single-ended triode integrated',
-        why: 'A fundamentally different design philosophy — harmonic density and presence over grip, prioritising tone and immediacy.',
-        tradeoff: 'Less bass control, limited loudness ceiling, and real speaker-matching constraints; a different destination, not this one reached cheaper.',
-      },
-    ],
-    dac: [
-      {
-        tier: 'Safe',
-        name: 'Same-family DAC one step up',
-        why: 'Keeps the timing signature you know and lifts resolution modestly with minimal risk of upsetting system balance.',
-        tradeoff: 'Gains are quiet and may not feel proportional to cost until you live with them.',
-      },
-      {
-        tier: 'Stretch',
-        name: 'A reference R-2R or discrete-ladder DAC',
-        why: 'A clearly higher-impact move — denser tone, more spatial stability, and meaningfully lower noise floor that reshapes what the system can resolve.',
-        tradeoff: 'Significant spend, and it will expose whatever weakness remains downstream — often triggering further change.',
-      },
-      {
-        tier: 'Alternative flavor',
-        name: 'A NOS or tube-output DAC',
-        why: 'A different conversion philosophy — softer edges, tonal warmth, and an analog-leaning presentation rather than maximum precision.',
-        tradeoff: 'Gives up top-end air, measured linearity, and some detail retrieval; suits tonal listeners, not detail-first ones.',
-      },
-    ],
-    speaker: [
-      {
-        tier: 'Safe',
-        name: 'Current model in a larger enclosure',
-        why: 'Keeps the voicing and driver behaviour you trust while giving the low end more room; fully recoverable if you dislike the change.',
-        tradeoff: 'Needs more floor space and more careful placement; the character move is small.',
-      },
-      {
-        tier: 'Stretch',
-        name: 'A flagship from a clearly higher tier',
-        why: 'A much larger jump in resolution, dynamic range, and staging — the kind of move that resets the ceiling for the whole system.',
-        tradeoff: 'Expensive, demanding of everything upstream, and will relocate the bottleneck to the source or amp.',
-      },
-      {
-        tier: 'Alternative flavor',
-        name: 'A planar, electrostatic, or single-driver design',
-        why: 'A different transducer principle — coherence, speed, and presence that box speakers cannot quite produce.',
-        tradeoff: 'Trades bass weight, dynamic headroom, and placement freedom; a genuinely different listening experience, not a better version of this one.',
-      },
-    ],
-    source: [
-      {
-        tier: 'Safe',
-        name: 'Cleaner power and better cabling for your current source',
-        why: 'Low-risk, reversible noise reduction at the start of the chain with no change in character.',
-        tradeoff: 'Easily lost if the downstream is the real bottleneck; the ceiling here is low.',
-      },
-      {
-        tier: 'Stretch',
-        name: 'A reference-tier streamer or transport with separate clocking',
-        why: 'A structurally different front end with measurable timing and noise gains that the rest of the system can genuinely resolve.',
-        tradeoff: 'High cost, added complexity, and the improvement is often refinement rather than transformation.',
-      },
-      {
-        tier: 'Alternative flavor',
-        name: 'A proper analog front end — turntable, phono stage, cartridge',
-        why: 'A different relationship with recordings entirely: physical media, different mastering lineage, and a more present-in-the-room presentation.',
-        tradeoff: 'New ritual, setup, and ongoing media cost; not a drop-in replacement for digital.',
-      },
-    ],
-    placement: [
-      {
-        tier: 'Safe',
-        name: 'Methodical placement and toe-in pass',
-        why: 'Directly addresses the chain-level constraint at zero cost and is fully reversible.',
-        tradeoff: 'Takes patient listening over several sessions; it is work, not a purchase.',
-      },
-      {
-        tier: 'Stretch',
-        name: 'Measured room treatment plus bass trapping',
-        why: 'A much larger structural change — addresses modal behaviour and first reflections that placement alone cannot reach.',
-        tradeoff: 'Visible in the room, meaningful cost, and needs real measurement to avoid overdamping.',
-      },
-      {
-        tier: 'Alternative flavor',
-        name: 'Near-field or desktop listening geometry',
-        why: 'A different way to listen altogether — minimises room involvement and prioritises intimacy and imaging over scale.',
-        tradeoff: 'Gives up room-filling presentation and shared-listening use; reshapes the relationship with the system, not just the sound.',
-      },
-    ],
-  };
-
-  const slots = slotsByFamily[family];
+  const { blurb, options } = DIRECTION_CONTENT.safe;
+  // Show up to 4 options — matches the page's authored list length.
+  const picked = options.slice(0, 4);
 
   return (
     <div
       aria-label="Upgrade options"
       style={{
         marginTop: '1rem',
-        padding: '1rem 1.15rem',
+        padding: '1.15rem 1.3rem',
+        background: COLORS.accentBg,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: '6px',
+        fontSize: '0.95rem',
+        lineHeight: 1.75,
+        color: COLORS.text,
+      }}
+    >
+      <div style={{
+        fontSize: FONTS.labelSize,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        color: COLORS.textMuted,
+        fontWeight: 600,
+        marginBottom: '0.6rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}>
+        <span>Safe upgrade path — direction exemplars</span>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Close"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: COLORS.textMuted,
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            padding: '0 0.25rem',
+            lineHeight: 1,
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      <p style={{ margin: '0 0 0.9rem 0' }}>{blurb}</p>
+
+      <AdvisoryProductCards options={picked} preferImage />
+
+      <p style={{
+        margin: '0.85rem 0 0 0',
+        fontSize: '0.82rem',
+        color: COLORS.textMuted,
+        fontStyle: 'italic',
+      }}>
+        Direction exemplars — curated catalog illustrations of this path, not personalised picks for your current chain.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * In-chat follow-up for the "Compare paths" chip.
+ *
+ * Shows all three direction paths inline — Safe, Alternative, Stretch —
+ * each with its authored blurb and two catalog products rendered via
+ * the shared product-card component. The purpose is side-by-side
+ * comparison of what each direction gains and trades off, using real
+ * products to make the differences concrete.
+ *
+ * Data comes from DIRECTION_CONTENT. Each path is capped at two
+ * products here (the full list remains on /path/upgrade/[flavor]) to
+ * keep the comparison legible in the chat flow.
+ */
+function ComparePathsFollowUp({
+  onDismiss,
+}: {
+  onDismiss: () => void;
+}) {
+  const paths = [
+    { key: 'safe' as const, label: 'Safe — refinement' },
+    { key: 'alternative' as const, label: 'Alternative — different philosophy' },
+    { key: 'stretch' as const, label: 'Stretch — structural step-up' },
+  ];
+
+  return (
+    <div
+      aria-label="Compare upgrade paths"
+      style={{
+        marginTop: '1rem',
+        padding: '1.15rem 1.3rem',
         background: COLORS.accentBg,
         border: `1px solid ${COLORS.border}`,
         borderRadius: '6px',
@@ -961,7 +1036,7 @@ function UpgradeOptionsFollowUp({
         justifyContent: 'space-between',
         alignItems: 'center',
       }}>
-        <span>Three directions for this recommendation</span>
+        <span>Three paths, side by side</span>
         <button
           type="button"
           onClick={onDismiss}
@@ -980,38 +1055,35 @@ function UpgradeOptionsFollowUp({
         </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-        {slots.map((s, i) => (
-          <div
-            key={i}
-            style={{
-              padding: '0.7rem 0.85rem',
-              background: COLORS.white,
-              border: `1px solid ${COLORS.border}`,
-              borderRadius: '5px',
-            }}
-          >
-            <div style={{
-              fontSize: '0.72rem',
-              textTransform: 'uppercase',
-              letterSpacing: '0.09em',
-              color: COLORS.accent,
-              fontWeight: 700,
-              marginBottom: '0.25rem',
-            }}>
-              {s.tier}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+        {paths.map(({ key, label }) => {
+          const content = DIRECTION_CONTENT[key];
+          const picked = content.options.slice(0, 2);
+          return (
+            <div
+              key={key}
+              style={{
+                padding: '0.85rem 0.95rem',
+                background: COLORS.white,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: '5px',
+              }}
+            >
+              <div style={{
+                fontSize: '0.72rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.09em',
+                color: COLORS.accent,
+                fontWeight: 700,
+                marginBottom: '0.35rem',
+              }}>
+                {label}
+              </div>
+              <p style={{ margin: '0 0 0.7rem 0' }}>{content.blurb}</p>
+              <AdvisoryProductCards options={picked} hideMakerInsight preferImage />
             </div>
-            <div style={{ fontWeight: 600, marginBottom: '0.3rem' }}>{s.name}</div>
-            <div style={{ marginBottom: '0.25rem' }}>
-              <span style={{ color: COLORS.textMuted }}>Why it fits: </span>
-              {s.why}
-            </div>
-            <div>
-              <span style={{ color: COLORS.textMuted }}>Tradeoff: </span>
-              {s.tradeoff}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <p style={{
@@ -1020,7 +1092,333 @@ function UpgradeOptionsFollowUp({
         color: COLORS.textMuted,
         fontStyle: 'italic',
       }}>
-        These are directional archetypes, not specific product picks — they describe the kind of move, so you can evaluate whether any of them match your constraints before we narrow further.
+        Direction exemplars across three philosophies — each list is curated, not filtered against your current chain.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * In-chat follow-up for a "Do not touch" component chip.
+ *
+ * Renders a compact component dossier with real catalog data when
+ * available — product photo, brand/manufacturer identity, country of
+ * origin, what the component contributes to the chain, why it is being
+ * kept, and reference links (manufacturer, used market, reviews).
+ *
+ * Data resolution:
+ *   1. `findProductByComponentName` matches the free-form chip text
+ *      ("WLM Diva Monitor") against the unified product catalog.
+ *   2. `findBrandProfileByName` resolves the brand to its curated
+ *      philosophy/country/tendency profile.
+ *   3. `getProductImage` resolves product photos.
+ *   4. When no catalog match exists, the panel degrades honestly to
+ *      a short generic keep rationale — no fabricated details.
+ *
+ * Per Playbook §8 (engine vs domain boundary), this is a presentation-
+ * layer component consuming domain data from the adapter layer. The
+ * product/brand lookups are read-only and deterministic; no engine
+ * logic runs here.
+ */
+function ComponentKeepFollowUp({
+  name,
+  onDismiss,
+}: {
+  name: string;
+  onDismiss: () => void;
+}) {
+  const product = findProductByComponentName(name);
+  const brandName = product?.brand ?? name.trim().split(/\s+/)[0] ?? '';
+  const brandProfile = findBrandProfileByName(brandName);
+  const imageUrl = product
+    ? product.imageUrl ?? getProductImage(product.brand, product.name)
+    : undefined;
+
+  // ── Derive "what this component contributes" from catalog tendencies.
+  // First sentence of the product description is the densest summary
+  // available. Tendency character entries add specificity.
+  const contributionLines: string[] = [];
+  if (product?.tendencies?.character) {
+    for (const c of product.tendencies.character) {
+      contributionLines.push(c.tendency);
+    }
+  }
+  // Fallback: first sentence of description if no structured tendencies.
+  if (contributionLines.length === 0 && product?.description) {
+    const first = product.description.match(/^(.*?[.!?])(\s|$)/);
+    if (first) contributionLines.push(first[1]);
+  }
+
+  // ── Collect reference links from product + brand profile.
+  type RefLink = { label: string; url: string };
+  const links: RefLink[] = [];
+  if (product?.retailer_links) {
+    for (const rl of product.retailer_links) {
+      if (rl.url) links.push({ label: rl.label, url: rl.url });
+    }
+  }
+  if (brandProfile?.links) {
+    for (const bl of brandProfile.links) {
+      if (bl.url && !links.some((l) => l.url === bl.url)) {
+        links.push({ label: bl.label, url: bl.url });
+      }
+    }
+  }
+  if (product?.sourceReferences) {
+    for (const sr of product.sourceReferences) {
+      if (sr.url && !links.some((l) => l.url === sr.url)) {
+        links.push({ label: `${sr.source} — ${sr.note}`, url: sr.url });
+      }
+    }
+  }
+
+  // ── Country of origin: product.country (ISO), brand profile country,
+  // or nothing. Display the more human-readable brand profile version
+  // when available.
+  const country = brandProfile?.country ?? product?.country;
+
+  // ── Panel header label ──
+  const headerLabel = product
+    ? `${product.brand} ${product.name} — kept in place`
+    : `${name} — kept in place`;
+
+  return (
+    <div
+      aria-label={`Why ${name} is being preserved`}
+      style={{
+        marginTop: '0.9rem',
+        padding: '1.15rem 1.3rem',
+        background: COLORS.accentBg,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: '6px',
+        fontSize: '0.95rem',
+        lineHeight: 1.8,
+        color: COLORS.text,
+      }}
+    >
+      {/* ── Header + dismiss ── */}
+      <div style={{
+        fontSize: FONTS.labelSize,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        color: COLORS.textMuted,
+        fontWeight: 600,
+        marginBottom: '0.55rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}>
+        <span>Component dossier</span>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Close"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: COLORS.textMuted,
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            padding: '0 0.25rem',
+            lineHeight: 1,
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      {/* ── Product image + identity header ── */}
+      <div style={{
+        display: 'flex',
+        gap: '1rem',
+        alignItems: 'flex-start',
+        marginBottom: '0.75rem',
+      }}>
+        {imageUrl && (
+          <div style={{
+            flexShrink: 0,
+            width: 80,
+            height: 80,
+            borderRadius: '6px',
+            overflow: 'hidden',
+            border: `1px solid ${COLORS.border}`,
+            background: '#fff',
+          }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageUrl}
+              alt={name}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+              }}
+            />
+          </div>
+        )}
+        <div>
+          <div style={{
+            fontSize: '1.05rem',
+            fontWeight: 600,
+            color: COLORS.text,
+            lineHeight: 1.3,
+          }}>
+            {headerLabel}
+          </div>
+          <div style={{
+            fontSize: '0.82rem',
+            color: COLORS.textMuted,
+            lineHeight: 1.5,
+            marginTop: '0.15rem',
+          }}>
+            {[
+              product?.category,
+              country,
+              product?.architecture,
+            ].filter(Boolean).join(' · ')}
+          </div>
+          {product?.availability === 'discontinued' && (
+            <div style={{
+              fontSize: '0.78rem',
+              color: COLORS.amber,
+              marginTop: '0.15rem',
+            }}>
+              Discontinued — {product.typicalMarket === 'used'
+                ? 'used market only'
+                : 'available new and used'}
+              {product.usedPriceRange
+                ? ` ($${product.usedPriceRange.low}–$${product.usedPriceRange.high} used)`
+                : ''}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Manufacturer identity (from brand profile) ── */}
+      {brandProfile && (
+        <div style={{
+          marginBottom: '0.7rem',
+          padding: '0.6rem 0.75rem',
+          background: COLORS.white,
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: '5px',
+          fontSize: '0.88rem',
+          lineHeight: 1.65,
+        }}>
+          <div style={{
+            fontSize: '0.72rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.09em',
+            color: COLORS.accent,
+            fontWeight: 700,
+            marginBottom: '0.2rem',
+          }}>
+            Manufacturer
+          </div>
+          {brandProfile.designPhilosophy
+            ? <p style={{ margin: 0, color: COLORS.text }}>{brandProfile.designPhilosophy}</p>
+            : <p style={{ margin: 0, color: COLORS.text }}>
+                {brandProfile.philosophy.length > 200
+                  ? brandProfile.philosophy.slice(0, 200).replace(/\s+\S*$/, '') + '…'
+                  : brandProfile.philosophy}
+              </p>
+          }
+          {brandProfile.sonicTendency && (
+            <p style={{ margin: '0.3rem 0 0 0', color: COLORS.textSecondary, fontStyle: 'italic' }}>
+              {brandProfile.sonicTendency}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── What this component contributes ── */}
+      {contributionLines.length > 0 && (
+        <>
+          <div style={{
+            fontSize: FONTS.labelSize,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            color: COLORS.textMuted,
+            fontWeight: 600,
+            margin: '0.55rem 0 0.3rem 0',
+          }}>
+            What it contributes in this chain
+          </div>
+          <ul style={{ margin: '0 0 0.5rem 1.1rem', padding: 0, fontSize: '0.92rem' }}>
+            {contributionLines.map((line, i) => (
+              <li key={i} style={{ marginBottom: '0.2rem' }}>{line}</li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {/* ── Why it holds — specific to catalog data when available ── */}
+      <div style={{
+        fontSize: FONTS.labelSize,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        color: COLORS.textMuted,
+        fontWeight: 600,
+        margin: '0.55rem 0 0.3rem 0',
+      }}>
+        Why it holds
+      </div>
+      {product?.tendencies?.tradeoffs?.[0] ? (
+        <p style={{ margin: '0 0 0.4rem 0', fontSize: '0.92rem' }}>
+          Replacing the {product.brand} {product.name} means giving up{' '}
+          <strong>{product.tendencies.tradeoffs[0].gains}</strong> in exchange
+          for uncertainty. The current recommendation targets a higher-leverage
+          change elsewhere in the chain.
+        </p>
+      ) : (
+        <p style={{ margin: '0 0 0.4rem 0', fontSize: '0.92rem' }}>
+          This component already expresses a strength the chain relies on.
+          Swapping it trades a known tendency for an unknown one — higher-leverage
+          change exists elsewhere in the chain.
+        </p>
+      )}
+
+      {/* ── Reference links ── */}
+      {links.length > 0 && (
+        <>
+          <div style={{
+            fontSize: FONTS.labelSize,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            color: COLORS.textMuted,
+            fontWeight: 600,
+            margin: '0.55rem 0 0.3rem 0',
+          }}>
+            Further reading
+          </div>
+          <ul style={{ margin: '0 0 0.4rem 1.1rem', padding: 0, fontSize: '0.85rem' }}>
+            {links.map((lk, i) => (
+              <li key={i} style={{ marginBottom: '0.15rem' }}>
+                <a
+                  href={lk.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: COLORS.accent,
+                    textDecoration: 'none',
+                  }}
+                >
+                  {lk.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <p style={{
+        margin: '0.55rem 0 0 0',
+        fontSize: '0.82rem',
+        color: COLORS.textMuted,
+        fontStyle: 'italic',
+      }}>
+        Worth revisiting if the room changes, the rest of the chain
+        steps up a tier, or a new listening priority emerges.
       </p>
     </div>
   );
@@ -1029,14 +1427,53 @@ function UpgradeOptionsFollowUp({
 function FollowUpChip({
   label,
   onClick,
+  href,
   active = false,
 }: {
   label: string;
   onClick?: () => void;
+  /**
+   * When provided, the chip renders as a Next.js `<Link>` with identical
+   * inline styling. Mutually exclusive with `onClick` in practice — if both
+   * are supplied, `href` wins (navigation is the stronger affordance).
+   */
+  href?: string;
   active?: boolean;
 }) {
   const [hover, setHover] = useState(false);
   const lit = hover || active;
+
+  // Identical style payload for both render paths. Centralized so the
+  // `<Link>` and `<button>` cases cannot drift visually.
+  const style = {
+    padding: '0.3rem 0.75rem',
+    background: lit ? COLORS.accentBg : 'transparent',
+    border: `1px ${active ? 'solid' : 'dashed'} ${lit ? COLORS.accentLight : COLORS.border}`,
+    borderRadius: '999px',
+    fontSize: '0.82rem',
+    color: lit ? COLORS.text : COLORS.textMuted,
+    fontWeight: 400,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    lineHeight: 1.3,
+    transition: 'background 120ms ease, border-color 120ms ease, color 120ms ease',
+    textDecoration: 'none',
+    display: 'inline-block',
+  } as const;
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        style={style}
+      >
+        {label}
+      </Link>
+    );
+  }
+
   return (
     <button
       type="button"
@@ -1044,19 +1481,7 @@ function FollowUpChip({
       aria-pressed={onClick ? active : undefined}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      style={{
-        padding: '0.3rem 0.75rem',
-        background: lit ? COLORS.accentBg : 'transparent',
-        border: `1px ${active ? 'solid' : 'dashed'} ${lit ? COLORS.accentLight : COLORS.border}`,
-        borderRadius: '999px',
-        fontSize: '0.82rem',
-        color: lit ? COLORS.text : COLORS.textMuted,
-        fontWeight: 400,
-        cursor: 'pointer',
-        fontFamily: 'inherit',
-        lineHeight: 1.3,
-        transition: 'background 120ms ease, border-color 120ms ease, color 120ms ease',
-      }}
+      style={style}
     >
       {label}
     </button>
@@ -2223,6 +2648,16 @@ function DirectionCard({ direction: d }: { direction: DecisionDirection }) {
   const isDoNothing = d.isDoNothing;
   const borderColor = isDoNothing ? COLORS.accentLight : COLORS.accent;
 
+  // Pass 13 (interaction depth): the direction LABEL is the click target,
+  // routing to a filtered recommendation view at /path/upgrade/[flavor].
+  // Destination is a placeholder until the filtered view ships.
+  //
+  // Why label-only and not the whole card: when `exampleGear` is present,
+  // DirectionExamples renders inline <a> tags (HiFiShark / Manufacturer).
+  // Wrapping the card in a <Link> would create nested anchors (invalid
+  // HTML, unpredictable click behavior). Label-as-link is the smallest
+  // change that satisfies "each card clickable" without restructuring the
+  // existing nested-link layout.
   return (
     <div
       style={{
@@ -2239,7 +2674,13 @@ function DirectionCard({ direction: d }: { direction: DecisionDirection }) {
         color: COLORS.text,
         marginBottom: '0.3rem',
       }}>
-        {isDoNothing ? '→ ' : ''}{d.label}
+        <Link
+          href={`/path/upgrade/${toSlug(d.label)}`}
+          className="audioxx-direction-label"
+          style={{ color: 'inherit', textDecoration: 'none' }}
+        >
+          {isDoNothing ? '→ ' : ''}{d.label}
+        </Link>
       </div>
       <div style={{
         fontSize: '0.86rem',
@@ -2634,7 +3075,7 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
 
       {/* ── 4. Product cards ──────────────────────────────── */}
       {a.options && a.options.length > 0 && (
-        <AdvisoryProductCards options={a.options} />
+        <AdvisoryProductCards options={a.options} preferImage />
       )}
 
       {/* ── 4a0. Decision Guidance — "If X → choose Y" ── */}
@@ -3436,6 +3877,7 @@ function StandardFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePro
           philosophy={a.philosophy}
           tendencies={a.tendencies}
           systemFit={a.systemFit}
+          provenanceNote={a.provenanceNote}
         />
       )}
 

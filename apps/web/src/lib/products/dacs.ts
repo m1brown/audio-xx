@@ -1383,7 +1383,7 @@ export const DAC_PRODUCTS: Product[] = [
     ],
     // Step 10: buying metadata
     buyingContext: 'easy_new',
-    // imageUrl: undefined, // TODO: add official product image
+    imageUrl: 'https://chordelectronics.co.uk/wp-content/uploads/2018/09/Qutest-2.jpg',
     philosophy: 'energy',
     marketType: 'traditional',
   },
@@ -3524,6 +3524,7 @@ export const DAC_PRODUCTS: Product[] = [
       { source: 'Head-Fi community', note: 'Extensive comparisons placing DAVE at the pinnacle of precision DACs.' },
     ],
     notes: 'Statement-tier FPGA design. The Chord DAVE represents the pinnacle of timing-first DAC architecture. Extraordinary spatial depth, clarity, and composure. Best in systems that benefit from precision without requiring tonal warmth.',
+    imageUrl: 'https://chordelectronics.co.uk/wp-content/uploads/2018/09/DAVE-1.jpg',
     philosophy: 'energy',
     marketType: 'traditional',
   },

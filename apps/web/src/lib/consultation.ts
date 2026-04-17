@@ -59,7 +59,7 @@ import {
 import { getApprovedBrand } from './knowledge';
 import type { BrandKnowledge } from './knowledge/schema';
 import type { ActiveSystemContext } from './system-types';
-import { classifySystemClass, consumerSystemIntro } from './system-class';
+import { classifySystemArchetype, consumerSystemIntro, buildConsumerWirelessResponse } from './system-class';
 import type { ClarificationResponse } from './clarification';
 import {
   type PrimaryAxisLeanings,
@@ -98,6 +98,7 @@ import { assessCounterfactual } from './counterfactual-assessment';
 import { frameStrategy, deduplicateStrategies } from './strategy-framing';
 import { getProductImage } from './product-images';
 import { findCatalogProduct } from './listener-profile';
+import { toSlug as routeToSlug } from './route-slug';
 
 // ── Types ───────────────────────────────────────────
 
@@ -138,6 +139,14 @@ export interface ConsultationResponse {
   tendencies?: string;
   /** 3. System context — where it works well. */
   systemContext?: string;
+  /**
+   * Optional provenance note — rendered below the main body with subdued
+   * styling at the component layer. Used by the archetype layer to indicate
+   * that guidance is based on general product knowledge rather than a
+   * verified catalog entry. No markdown markers — styling is applied in
+   * presentation only.
+   */
+  provenanceNote?: string;
   /** 4. Optional light follow-up question. */
   followUp?: string;
   /** 5. Optional neutral reference links (website, importer, dealers, reviews). */
@@ -251,6 +260,48 @@ interface BrandProfile {
   region?: GeoRegion;
   /** Primary product categories this brand operates in. */
   categories?: ProductCategory[];
+
+  // ── Manufacturer card summaries (Pass 12) ──
+  // Three short, brand-general summary lines surfaced in the product card's
+  // manufacturer block. Distinct in scope from the system-specific
+  // "What you gain / give up" bullets, which describe behavior in the
+  // user's chain. These describe the brand's constant character.
+  //
+  // Source rule: derive from existing curated `philosophy` / `tendencies`
+  // prose above. No new claims about brands. Each field one short line.
+  // When all three are populated, the card renders the structured block;
+  // when any is missing, the card falls back to the legacy single-sentence
+  // composition over `philosophy`.
+
+  /** What the brand designs FOR (engineering intent / bias). */
+  designPhilosophy?: string;
+  /** Consistent sonic / behavioral signature across the range. */
+  sonicTendency?: string;
+  /** Typical trade-off accepted to deliver the above. */
+  typicalTradeoff?: string;
+
+  // ── Brand imagery (Pass 14 — schema only) ──────────
+  // Schema-enabling fields for brand-level imagery on /brand/[slug] and
+  // brand-only comparison thumbnails. Both optional and additive — no
+  // existing entry breaks. NO entries are populated yet; populate per
+  // brand only after asset verification (manufacturer press kit, licensed
+  // source, or Wikimedia Commons). See Image_Coverage_Audit.md §4a / §5
+  // for source / verification / hosting rules.
+  //
+  // Resolution precedence at render time (when wired): representative
+  // product hero is preferred over wordmark, since the same brand-only
+  // path also feeds comparison thumbnails where a logo reads as weak
+  // signal compared to a real product photo. Wiring lives in two
+  // places and is intentionally NOT changed here:
+  //   - consultation.ts brand-only resolver (audit §4b)
+  //   - app/brand/[slug]/page.tsx header (new, on first asset)
+  // Doing the wiring without verified assets creates an empty-data
+  // shape and forces speculative URL discipline on future contributors.
+
+  /** Representative product hero image. Preferred over `logoUrl`. */
+  representativeImageUrl?: string;
+  /** Brand wordmark / logo. Used only when no product image is available. */
+  logoUrl?: string;
 }
 
 const BRAND_PROFILES: BrandProfile[] = [
@@ -264,6 +315,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     philosophy: 'DeVore Fidelity designs speakers around musical engagement and natural tonal character. The philosophy prioritises ease and flow over analytical precision. Speakers are voiced by ear rather than measurement target.',
     tendencies: 'Listeners describe DeVore speakers as warm, rhythmically alive, and harmonically rich. They tend to emphasise tonal body and midrange presence at the cost of some measured linearity.',
     systemContext: 'DeVore speakers span a range of sensitivities and amplifier requirements. The brand-level tendency is warmth and engagement, but the specific design family matters for amplifier pairing.',
+    designPhilosophy: 'Voiced by ear for ease and flow, not to a measurement target.',
+    sonicTendency: 'Warm, harmonically dense, rhythmically alive.',
+    typicalTradeoff: 'Tonal body over measured linearity and surgical detail.',
     pairingNotes: 'The Orangutan series is widely paired with single-ended triode amplifiers (Shindo, Line Magnetic, Audion). The Gibbon series works with a broader range of amplifiers including solid-state.',
     links: [
       { label: 'Official website', url: 'https://www.dfridelity.com/', region: 'global' },
@@ -336,6 +390,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     philosophy: 'Naim designs prioritise rhythmic drive and musical timing. The engineering philosophy emphasises pace and engagement over tonal density or spatial refinement.',
     tendencies: 'Listeners describe Naim systems as propulsive and engaging, with strong rhythmic coherence. They tend to de-emphasise warmth and spatial holography.',
     systemContext: 'Traditionally paired with Naim sources and Naim-friendly speakers. The timing-first approach works well with speakers that have good transient response.',
+    designPhilosophy: 'Engineered around timing and rhythmic drive over tonal density.',
+    sonicTendency: 'Propulsive, rhythmically coherent, forward-leaning.',
+    typicalTradeoff: 'Less warmth and spatial holography than tonally lush designs.',
     links: [
       { label: 'Official website', url: 'https://www.naimaudio.com/', region: 'global' },
     ],
@@ -405,6 +462,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     philosophy: 'Chord Electronics designs around proprietary FPGA-based pulse array DAC technology developed by Rob Watts. The design philosophy prioritises timing precision and transient definition, using custom digital processing rather than off-the-shelf DAC chips.',
     tendencies: 'Listeners consistently describe Chord DACs as fast, articulate, and detailed. Timing resolution and transient clarity are the signature strengths. Tonal weight is lighter than R2R designs but avoids the clinical edge of typical delta-sigma implementations.',
     systemContext: 'Chord DACs tend to work well with warm or tonally dense amplification, where the source-level clarity cuts through added warmth rather than being masked. In systems already biased toward speed and transparency, the tonal lightness may become noticeable.',
+    designPhilosophy: 'Custom FPGA pulse-array conversion built around timing precision.',
+    sonicTendency: 'Fast, articulate, transient-clear; lighter tonal weight than R2R.',
+    typicalTradeoff: 'Pairs better with warm/dense downstream than already-lean chains.',
     pairingNotes: 'Works well with tube amplification and warm solid-state designs. The Hugo and Qutest lines are widely used as headphone DAC/amps and desktop sources.',
     links: [
       { label: 'Official website', url: 'https://chordelectronics.co.uk/', region: 'global' },
@@ -419,6 +479,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     philosophy: 'Denafrips designs around discrete R2R ladder conversion — resistor networks that convert digital audio directly to analog voltage. The philosophy prioritises tonal density, harmonic texture, and musical flow over measured precision. Products range from the entry-level Ares to the flagship Terminator, sharing a consistent R2R voice at different levels of refinement and scale.',
     tendencies: 'Listeners consistently describe Denafrips DACs as warm, dense, and harmonically rich. Tonal body, midrange texture, and a relaxed sense of timing are the signature strengths. Detail retrieval is present but softer-focused than delta-sigma designs — the emphasis is on musical weight rather than analytical separation.',
     systemContext: 'Denafrips DACs tend to add warmth and body to the chain. In systems that are already warm or tonally dense, this can compound into congestion — bass and lower midrange may feel heavy. In precise or lean systems, a Denafrips source provides a welcome counterbalance, adding tonal substance without changing the downstream character.',
+    designPhilosophy: 'Discrete R2R ladder conversion built for tonal density.',
+    sonicTendency: 'Warm, dense, harmonically rich; softer-focused detail.',
+    typicalTradeoff: 'Adds warmth — can compound congestion in already-dense chains.',
     pairingNotes: 'Pairs well with fast or transparent amplifiers where the R2R density is balanced by downstream speed. Widely used with solid-state amplification from brands like Benchmark, Topping, and Pass Labs. Can compound warmth with tube amplifiers — works best when the tube stage is on the transparent side.',
     links: [
       { label: 'Denafrips', url: 'https://www.denafrips.com/', region: 'global' },
@@ -448,6 +511,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     philosophy: 'Rega designs prioritise mechanical integrity, low resonance, and rhythmic engagement. The turntable philosophy centres on rigidity and simplicity — lightweight plinths, glass platters, and minimal damping. Roy Gandy\'s approach favours getting the mechanical fundamentals right over feature count.',
     tendencies: 'Rega turntables are consistently described as rhythmically alive and musically engaging. They tend to emphasise pace, timing, and midrange coherence. Bass weight and tonal richness are present but secondary to rhythmic drive.',
     systemContext: 'Rega turntables work well across a range of systems. The Planar series is widely considered a benchmark for musical engagement at each price point. Cartridge matching matters — Rega\'s own cartridges are voiced for the arm, but third-party cartridges can shift the tonal balance.',
+    designPhilosophy: 'Mechanical-fundamentals-first; rigidity and low resonance over features.',
+    sonicTendency: 'Pace-driven, rhythmically alive, midrange-coherent.',
+    typicalTradeoff: 'Bass weight and tonal richness secondary to rhythmic drive.',
     links: [
       { label: 'Official website', url: 'https://www.rega.co.uk/', region: 'global' },
       { label: 'Dealer (The Sound Organisation, US)', url: 'https://www.soundorg.com/', kind: 'dealer', region: 'US' },
@@ -805,6 +871,22 @@ const BRAND_PROFILES: BrandProfile[] = [
     ],
   },
   {
+    names: ['wlm'],
+    country: 'Austria',
+    brandScale: 'boutique',
+    region: 'europe',
+    categories: ['speaker'],
+    philosophy: 'WLM builds high-efficiency speakers around coaxial wideband drivers, prioritising dynamic expression, rhythmic engagement, and tonal color over analytical precision. The design philosophy favors musical involvement — energy and momentum over measurement-flat neutrality.',
+    tendencies: 'WLM speakers are described as rhythmically insistent, dynamically alive, and tonally warm. High efficiency delivers visceral micro and macro contrasts. The midrange is weighted and natural-sounding. Spatial precision is secondary to musical flow.',
+    systemContext: 'WLM speakers pair well with moderate-power amplification, including tube amps whose full dynamic range is unlocked by the high efficiency. In small or untreated rooms, bass energy from the passive radiator can overwhelm.',
+    designPhilosophy: 'High-efficiency coaxial wideband; dynamic expression and rhythmic engagement over analytical precision.',
+    sonicTendency: 'Rhythmically insistent, dynamically explosive, warm midrange with natural timbres.',
+    typicalTradeoff: 'Less pinpoint imaging and spatial precision than sealed-box or narrow-baffle monitors.',
+    links: [
+      { label: 'Official website', url: 'https://www.wlm-loudspeakers.com/', region: 'global' },
+    ],
+  },
+  {
     names: ['harbeth'],
     country: 'UK',
     brandScale: 'specialist',
@@ -813,6 +895,9 @@ const BRAND_PROFILES: BrandProfile[] = [
     philosophy: 'Harbeth continues the BBC monitor tradition with proprietary RADIAL cone technology. The design goal is natural midrange reproduction and accurate voice rendering. Engineering-led with psychoacoustic research informing voicing decisions.',
     tendencies: 'Listeners describe Harbeth speakers as supremely natural in the midrange, with exceptional voice reproduction. Slightly warm, with a forgiving top end. Not the last word in bass extension or dynamic slam, but vocally and instrumentally honest.',
     systemContext: 'Harbeth speakers respond well to quality amplification — both tube and solid-state. They reveal upstream differences clearly in the midrange but are forgiving of modest electronics. Stand placement matters significantly.',
+    designPhilosophy: 'BBC-monitor lineage; engineered around natural midrange and voice.',
+    sonicTendency: 'Vocally honest, slightly warm, forgiving top end.',
+    typicalTradeoff: 'Less bass extension and dynamic slam than larger floorstanders.',
     links: [
       { label: 'Official website', url: 'https://www.harbeth.co.uk/', region: 'global' },
     ],
@@ -1035,11 +1120,71 @@ export function findBrandProfileByName(brandName: string): BrandProfile | undefi
   );
 }
 
+/**
+ * Look up a brand profile by URL slug (output of `toSlug`).
+ * Used by `/brand/[slug]` to resolve the route segment back to its
+ * curated profile. Match is by slug-equivalence on any name in
+ * BrandProfile.names — so '/brand/devore' and '/brand/devore-fidelity'
+ * both resolve to the same profile.
+ */
+export function findBrandProfileBySlug(slug: string): BrandProfile | undefined {
+  if (!slug) return undefined;
+  return BRAND_PROFILES.find((bp) =>
+    bp.names.some((name) => routeToSlug(name) === slug),
+  );
+}
+
+/**
+ * Catalog products whose brand slugifies to `slug`. Filters the unified
+ * ALL_PRODUCTS pool by exact slug match on `product.brand`, so a brand
+ * with multiple BrandProfile aliases (e.g. ['pass labs', 'first watt'])
+ * correctly returns only the products matching the URL the user clicked
+ * — not the union of every alias.
+ */
+export function findProductsByBrandSlug(slug: string): Product[] {
+  if (!slug) return [];
+  return ALL_PRODUCTS.filter((p) => routeToSlug(p.brand) === slug);
+}
+
 function findProductsByBrand(text: string): Product[] {
   const lower = text.toLowerCase();
   return ALL_PRODUCTS.filter((p) =>
     lower.includes(p.brand.toLowerCase()) || lower.includes(p.name.toLowerCase()),
   );
+}
+
+/**
+ * Look up a single catalog product by a free-form component name such as
+ * "WLM Diva Monitor", "JOB Integrated", or "Chord Hugo". The name comes
+ * from the parsed "Do not touch:" line in the advisor's optimize body —
+ * it is a display string, not a structured key.
+ *
+ * Strategy:
+ *   1. Exact `brand + " " + name` match (case-insensitive).
+ *   2. Name-only match when the input contains the brand AND name tokens.
+ *   3. ID slug match ("wlm-diva-monitor" ↔ "WLM Diva Monitor").
+ *
+ * Returns `undefined` when no catalog product matches — callers degrade
+ * honestly.
+ */
+export function findProductByComponentName(text: string): Product | undefined {
+  if (!text) return undefined;
+  const lower = text.toLowerCase().trim();
+  // 1. Exact brand+name match
+  const exact = ALL_PRODUCTS.find(
+    (p) => `${p.brand} ${p.name}`.toLowerCase() === lower,
+  );
+  if (exact) return exact;
+  // 2. Contains both brand and name tokens
+  const byTokens = ALL_PRODUCTS.find(
+    (p) =>
+      lower.includes(p.brand.toLowerCase()) &&
+      lower.includes(p.name.toLowerCase()),
+  );
+  if (byTokens) return byTokens;
+  // 3. ID slug match (hyphen-separated lowercase)
+  const slug = lower.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return ALL_PRODUCTS.find((p) => p.id === slug);
 }
 
 /**
@@ -5040,37 +5185,33 @@ export function buildSystemAssessment(
   // consumer-appropriate narrative that names what the user has, what
   // it's good at, and where its ceiling lies. This is the T1 fix
   // from the Phase K correctness pass.
-  if (activeSystem && classifySystemClass(activeSystem.components) === 'consumer_wireless') {
-    const intro = consumerSystemIntro(activeSystem.components);
+  if (activeSystem && classifySystemArchetype(activeSystem.components) === 'consumer_wireless') {
+    // Archetype-driven short first-turn shape — no encyclopedic
+    // narrative, no "Not from verified catalog" (source is brand_profile).
+    const firstTurn = buildConsumerWirelessResponse(activeSystem.components);
     const rawName = activeSystem.name ?? '';
     const title = rawName
       ? (rawName.toLowerCase().endsWith('system') ? rawName : `${rawName} System`)
-      : 'Your System';
-    const subject = activeSystem.components
-      .map((c) => c.name || c.brand)
-      .filter(Boolean)
-      .join(' + ') || 'your system';
+      : firstTurn.title;
 
+    // systemContext carries the full short body. Keep it compact:
+    //   1. one-sentence characterization
+    //   2. one "what this means" paragraph
+    //   3. soft provenance line
     const systemContext =
-      `## What you have\n\n${intro.systemSignature}\n\n`
-      + `## Design philosophy\n\n${intro.philosophy}\n\n`
-      + `## Typical tendencies\n\n${intro.tendencies}\n\n`
-      + `## Where it fits\n\n${intro.systemContext}\n\n`
-      + `## If you want more scale\n\n`
-      + `Two realistic directions: step up within the same ecosystem (a larger model, `
-      + `a stereo pair), or move to a traditional stereo setup (compact integrated amp + `
-      + `a pair of bookshelf speakers). The second path trades the lifestyle convenience `
-      + `for real dynamic scale and bass extension.`;
+      `${firstTurn.systemSignature}\n\n`
+      + `${firstTurn.tendencies}`;
 
     const response: ConsultationResponse = {
       title,
-      subject,
+      subject: firstTurn.subject,
       advisoryMode: 'system_review',
       source: 'brand_profile',
-      systemSignature: intro.systemSignature,
-      philosophy: intro.philosophy,
-      tendencies: intro.tendencies,
+      systemSignature: firstTurn.systemSignature,
+      tendencies: firstTurn.tendencies,
       systemContext,
+      provenanceNote: firstTurn.provenanceNote,
+      followUp: firstTurn.followUp,
     };
 
     // Minimal findings so downstream code that expects the contract
@@ -5916,20 +6057,36 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     (contribs: string) => `Because ${contribs} agree on this, you get a clean, undiluted version of it instead of two components arguing through the music.`,
     (contribs: string) => `${contribs} reinforce each other on this — the system commits to it rather than splitting the difference, which is what makes it audible rather than theoretical.`,
   ];
-  // ── Strength prioritisation ──
-  // Build a candidate list of strength items, then keep at most two — three
-  // only if the third is clearly distinct from the first two (no shared
-  // contributor component, no overlapping axis property). An expert names
-  // the one or two things the system actually does and stops talking; the
-  // earlier four-bullet shape diluted that.
+  // ── Role-based strength inclusion ──
+  // Every system has up to three core role buckets:
+  //   • source    — DAC, streamer, turntable, transport, phono
+  //   • amplifier — integrated, preamp, power amp
+  //   • listener  — speakers or headphones
+  // If a keep-verdict component exists in a bucket, it MUST appear in
+  // "doing well". The previous implementation capped selection at two
+  // bullets, so three-component chains (DAC → amp → speakers) silently
+  // dropped one — typically the source. Selection is now role-based
+  // rather than top-N; ordering follows the signal chain.
   type StrengthItem =
     | { kind: 'component'; name: string; role: string; text: string; key: string }
     | { kind: 'trait'; property: string; contributors: string[]; key: string };
-  const strengthCandidates: StrengthItem[] = [];
+  const STRENGTH_SOURCE_ROLES = new Set(['dac', 'streamer', 'turntable', 'cdp', 'transport', 'phono', 'source']);
+  const STRENGTH_AMP_ROLES = new Set(['amplifier', 'amp', 'integrated', 'preamp', 'preamplifier', 'power-amp', 'poweramp']);
+  const STRENGTH_LISTENER_ROLES = new Set(['speaker', 'speakers', 'headphone', 'headphones']);
+  const bucketOf = (role: string): 'source' | 'amp' | 'listener' | 'other' => {
+    const r = (role || '').toLowerCase();
+    if (STRENGTH_SOURCE_ROLES.has(r)) return 'source';
+    if (STRENGTH_AMP_ROLES.has(r)) return 'amp';
+    if (STRENGTH_LISTENER_ROLES.has(r)) return 'listener';
+    return 'other';
+  };
+
+  type ComponentCandidate = Extract<StrengthItem, { kind: 'component' }>;
+  const componentCandidates: ComponentCandidate[] = [];
   for (const c of keepComps) {
     const s = c.strengths[0];
     if (!s) continue;
-    strengthCandidates.push({
+    componentCandidates.push({
       kind: 'component',
       name: c.name,
       role: c.role,
@@ -5937,40 +6094,53 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       key: c.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
     });
   }
-  for (const t of charTraits) {
-    strengthCandidates.push({
-      kind: 'trait',
-      property: t.property,
-      contributors: t.contributors,
-      key: t.property.toLowerCase(),
-    });
-  }
-  // Select with overlap-aware filtering. A trait that shares both contributors
-  // with an already-selected component bullet is redundant.
+
   const selectedStrengths: StrengthItem[] = [];
   const usedComponentKeys = new Set<string>();
   const usedPropertyKeys = new Set<string>();
-  for (const cand of strengthCandidates) {
-    if (selectedStrengths.length >= 2) break;
-    if (cand.kind === 'component') {
-      if (usedComponentKeys.has(cand.key)) continue;
-      // Skip if a previously selected component shares the same role —
-      // that is an overlapping trait, not a distinct strength.
-      const roleClash = selectedStrengths.some(
-        (s) => s.kind === 'component' && s.role.toLowerCase() === cand.role.toLowerCase(),
-      );
-      if (roleClash) continue;
-      selectedStrengths.push(cand);
-      usedComponentKeys.add(cand.key);
-    } else {
-      if (usedPropertyKeys.has(cand.key)) continue;
-      const allCovered = cand.contributors.every((c) =>
-        usedComponentKeys.has(c.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()),
-      );
-      if (allCovered) continue;
-      selectedStrengths.push(cand);
-      usedPropertyKeys.add(cand.key);
+
+  // Pick the first keep-verdict candidate per role bucket, in signal-chain
+  // order. "First" preserves whatever ordering upstream findings applied —
+  // this is a selection filter, not a re-ranking pass.
+  for (const bucket of ['source', 'amp', 'listener'] as const) {
+    const pick = componentCandidates.find(
+      (c) => bucketOf(c.role) === bucket && !usedComponentKeys.has(c.key),
+    );
+    if (pick) {
+      selectedStrengths.push(pick);
+      usedComponentKeys.add(pick.key);
     }
+  }
+
+  // Components whose role does not map to a core bucket (e.g. a rare
+  // 'transport' variant or an unknown label) get a chance to appear after
+  // the three core roles, up to a total of three component bullets.
+  for (const cand of componentCandidates) {
+    if (selectedStrengths.filter((s) => s.kind === 'component').length >= 3) break;
+    if (bucketOf(cand.role) !== 'other') continue;
+    if (usedComponentKeys.has(cand.key)) continue;
+    selectedStrengths.push(cand);
+    usedComponentKeys.add(cand.key);
+  }
+
+  // Optionally surface one character-trait bullet after the role bullets,
+  // but only when it adds information the component bullets haven't
+  // already covered via their own contributors.
+  for (const t of charTraits) {
+    const pKey = t.property.toLowerCase();
+    if (usedPropertyKeys.has(pKey)) continue;
+    const allCovered = t.contributors.every((c) =>
+      usedComponentKeys.has(c.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()),
+    );
+    if (allCovered) continue;
+    selectedStrengths.push({
+      kind: 'trait',
+      property: t.property,
+      contributors: t.contributors,
+      key: pKey,
+    });
+    usedPropertyKeys.add(pKey);
+    break;
   }
   let sn = 1;
   for (const item of selectedStrengths) {

@@ -224,3 +224,26 @@ nav .nav-radar-link:hover {
   0%, 100% { opacity: 0.35; }
   50% { opacity: 0.85; }
 }
+
+/* ── Pass 13: interaction-depth click affordances ─────────────────────
+ * Subtle hover cues for navigable card elements. Underline on text links,
+ * very faint background on the upgrade-direction card label. No shadows,
+ * no scale, no color shift, no layout-affecting changes. The transitions
+ * are short so the cards feel responsive without being theatrical. */
+
+.audioxx-brand-bubble:hover,
+.audioxx-product-name:hover,
+.audioxx-direction-label:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: currentColor;
+}
+
+.audioxx-brand-bubble:focus-visible,
+.audioxx-product-name:focus-visible,
+.audioxx-direction-label:focus-visible {
+  outline: 2px solid #B08D57;
+  outline-offset: 2px;
+  border-radius: 2px;
+}

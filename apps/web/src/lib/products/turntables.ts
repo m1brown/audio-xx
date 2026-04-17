@@ -124,6 +124,7 @@ export const TURNTABLE_PRODUCTS: TurntableProduct[] = [
       ],
     },
     notes: 'The RB330 tonearm is widely considered one of the best at this price. Rega\'s design philosophy explicitly rejects mass-loading and suspended subchassis in favour of minimal energy storage.',
+    imageUrl: 'https://www.rega.co.uk/wp-content/uploads/2021/03/Planar-3-Black.jpg',
   },
 
   // ── Technics SL-1500C ─────────────────────────────

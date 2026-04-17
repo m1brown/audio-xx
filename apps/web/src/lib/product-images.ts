@@ -81,11 +81,25 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
   { key: 'wiim pro plus',       url: 'https://www.wiimhome.com/images/wiim-pro-plus/wiim-pro-plus-front.png' },
   { key: 'wiim pro',            url: 'https://www.wiimhome.com/images/wiim-pro/wiim-pro-front.png' },
 
+  // Lampizator — Wix static CDN (manufacturer-hosted)
+  { key: 'lampizator baltic',   url: 'https://static.wixstatic.com/media/c6db56_c2f789243c0341758ce9d2ac7d360caf~mv2.jpg/v1/fill/w_1200,h_910,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/B3%20-%202.jpg' },
+
   // ── Amplifiers ────────────────────────────────────────
 
-  // Naim — naimaudio.com canonical product pages
+  // Hegel — hegel.com /images/products/ CDN
+  { key: 'hegel h190',          url: 'https://www.hegel.com/images/products/discontinued/H190.jpg' },
+
+  // Naim — Focal-Naim DAM CDN + naimaudio.com fallbacks
+  { key: 'naim supernait 3',    url: 'https://dam.focal-naim.com/m/41d5e6176c409ae5/original/SUPERNAIT3_faceV2-jpg.jpg' },
+  { key: 'naim supernait',      url: 'https://dam.focal-naim.com/m/41d5e6176c409ae5/original/SUPERNAIT3_faceV2-jpg.jpg' },
   { key: 'naim nait xs',        url: 'https://www.naimaudio.com/sites/default/files/nait-xs3-front.jpg' },
   { key: 'naim nait',           url: 'https://www.naimaudio.com/sites/default/files/nait-5si-front.jpg' },
+
+  // Boulder — boulderamp.com /wp-content/uploads/ CDN
+  { key: 'boulder 866',         url: 'https://boulderamp.com/wp-content/uploads/866-Front-on-surface-Roon-1200x800.jpg' },
+
+  // Decware — Wix static CDN (manufacturer-hosted)
+  { key: 'decware se84ufo',     url: 'https://static.wixstatic.com/media/f1f204_31700c6023e1475b88ac443535dad8c7~mv2.jpg/v1/fill/w_396,h_336,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/SE84UFO2022.jpg' },
 
   // Rega — rega.co.uk /wp-content/uploads/ CDN
   { key: 'rega brio',           url: 'https://www.rega.co.uk/wp-content/uploads/2020/01/Brio-front.jpg' },
@@ -102,8 +116,13 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
   { key: 'primaluna evo 300',   url: 'https://www.primaluna.nl/wp-content/uploads/2019/01/EVO-300-Integrated-Amplifier-Silver-Front.jpg' },
 
   // Leben — leben-hifi.com
+  // Spaceless variants ("cs300", "cs600x") cover catalog names like
+  // "CS300" and "CS600X" where normalize strips the slash/hyphen but
+  // does not insert a space between letters and digits.
   { key: 'leben cs 300',        url: 'https://www.leben-hifi.com/images/cs300xs-front.jpg' },
+  { key: 'leben cs300',         url: 'https://www.leben-hifi.com/images/cs300xs-front.jpg' },
   { key: 'leben cs 600',        url: 'https://www.leben-hifi.com/images/cs600x-front.jpg' },
+  { key: 'leben cs600',         url: 'https://www.leben-hifi.com/images/cs600x-front.jpg' },
 
   // ── Speakers ──────────────────────────────────────────
 
@@ -117,9 +136,17 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
   { key: 'harbeth super hl5',   url: 'https://www.harbeth.co.uk/images/SHL5plus-XD-Cherry-Front.jpg' },
   { key: 'harbeth 30',          url: 'https://www.harbeth.co.uk/images/M30.2-XD-Cherry-Front.jpg' },
 
-  // DeVore — devorefidelity.com
-  { key: 'devore orangutan o 93', url: 'https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-93-Front.jpg' },
-  { key: 'devore orangutan o 96', url: 'https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-96-Front.jpg' },
+  // DeVore Fidelity — devorefidelity.com
+  // Keys include "fidelity" to match the catalog brand "DeVore Fidelity".
+  // Shorter alias without "fidelity" kept as fallback for contexts that
+  // use the abbreviated brand name.
+  { key: 'devore fidelity orangutan o 93', url: 'https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-93-Front.jpg' },
+  { key: 'devore orangutan o 93',          url: 'https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-93-Front.jpg' },
+  { key: 'devore fidelity orangutan o 96', url: 'https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-96-Front.jpg' },
+  { key: 'devore orangutan o 96',          url: 'https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-96-Front.jpg' },
+
+  // Magico — Squarespace CDN (manufacturer-hosted)
+  { key: 'magico a3',            url: 'https://images.squarespace-cdn.com/content/v1/5d6806d4d4a70b00015c75b4/1567191992078-77SK24QU4NQ1S2MILAHZ/3+%284%29.jpg?format=2500w' },
 
   // Klipsch Heritage — klipsch.com /medias/ CDN
   { key: 'klipsch heresy',      url: 'https://www.klipsch.com/medias/heresy-iv-natural-cherry-front.jpg' },

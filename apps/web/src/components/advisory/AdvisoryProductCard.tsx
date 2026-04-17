@@ -13,13 +13,17 @@
  *   9. Links section (buying links + further reading, grouped separately)
  */
 
-import { useEffect } from 'react';
+import Link from 'next/link';
 import type { AdvisoryOption } from '../../lib/advisory-response';
 import { renderText } from './render-text';
-import { trackLinkClick, trackCardView } from '../../lib/interaction-tracker';
+// Card-view and link-click telemetry live in a 'use client' sidecar so
+// this file stays server-renderable (the brand page imports it from a
+// server component).
+import { CardViewTracker, TrackedAnchor } from './CardTelemetry';
 import { shouldShowAmazonLink, getAmazonSearchUrl } from '../../lib/amazon-links';
 import { buildProductLinks } from '../../lib/product-links';
 import { findBrandProfileByName } from '../../lib/consultation';
+import { toSlug } from '../../lib/route-slug';
 
 // ── Brand philosophy accessor ─────────────────────────
 // Pass 10: composeWhyThisMaker replaces the old getBrandPhilosophy.
@@ -86,7 +90,12 @@ function capitalizeFirst(s: string): string {
  *  this call") already anchors the claim to the recommendation, so the
  *  tail was redundant padding.
  *
- *  Same brand → same sentence across every card it appears on. */
+ *  Same brand → same sentence across every card it appears on.
+ *
+ *  Pass 12: still used as the FALLBACK voice when a brand profile has not
+ *  yet been migrated to the structured (designPhilosophy / sonicTendency
+ *  / typicalTradeoff) summary fields. Migrated brands skip this path and
+ *  render the structured 3-line block instead — see composeMakerInsight. */
 function composeWhyThisMaker(opt: AdvisoryOption): string | undefined {
   if (!opt.brand) return undefined;
   const profile = findBrandProfileByName(opt.brand);
@@ -97,6 +106,57 @@ function composeWhyThisMaker(opt: AdvisoryOption): string | undefined {
   if (!trimmed) return undefined;
 
   return `${capitalizeFirst(trimmed)}.`;
+}
+
+// ── Maker insight (Pass 12) ───────────────────────────
+//
+// Replaces the thin "Why this maker for this call" sentence with a structured
+// 3-line block: design intent, sonic tendency, typical trade-off. Each line
+// is brand-general — constant across every card from this maker. Distinct in
+// scope from the system-specific "What you gain / give up" bullets, which
+// translate brand character into the user's chain.
+//
+// When all three structured fields are present on the brand profile, we
+// render the structured block. When ANY is missing, we fall back to the
+// legacy single-sentence compose so unmigrated brands still produce
+// useful output rather than an empty section.
+
+type MakerInsight =
+  | {
+      kind: 'structured';
+      brand: string;
+      designPhilosophy: string;
+      sonicTendency: string;
+      typicalTradeoff: string;
+    }
+  | { kind: 'legacy'; brand: string; sentence: string }
+  | null;
+
+function composeMakerInsight(opt: AdvisoryOption): MakerInsight {
+  if (!opt.brand) return null;
+  const profile = findBrandProfileByName(opt.brand);
+  if (!profile) return null;
+
+  const dp = profile.designPhilosophy?.trim();
+  const st = profile.sonicTendency?.trim();
+  const tt = profile.typicalTradeoff?.trim();
+
+  if (dp && st && tt) {
+    return {
+      kind: 'structured',
+      brand: opt.brand,
+      designPhilosophy: dp,
+      sonicTendency: st,
+      typicalTradeoff: tt,
+    };
+  }
+
+  const sentence = composeWhyThisMaker(opt);
+  if (sentence) {
+    return { kind: 'legacy', brand: opt.brand, sentence };
+  }
+
+  return null;
 }
 
 // ── Product identity line (Pass 10) ───────────────────
@@ -390,10 +450,12 @@ const LINK_SEP_STYLE: React.CSSProperties = {
   color: '#ddd',
 };
 
-function TrackedLinkRow({ links, kind, onClick }: {
+function TrackedLinkRow({ links, kind, product, role }: {
   links: Array<{ label: string; url: string }>;
   kind: string;
-  onClick?: (kind: string, label: string, url: string) => void;
+  /** Card-level context used for click-event attribution. */
+  product: string;
+  role: string | undefined;
 }) {
   return (
     <span style={{ lineHeight: 1.9 }}>
@@ -401,17 +463,26 @@ function TrackedLinkRow({ links, kind, onClick }: {
         // Pass 10, Step 6: strip incidental "official" / "(retailer)" /
         // "authorized" decorations so the rendered label is neutral.
         const displayLabel = cleanLinkLabel(link.label);
+        // Per-link Amazon-kind resolution — previously computed in
+        // ProductLinksSection.handleClick and passed up via the onClick
+        // bubble. Now resolved at the call site so TrackedAnchor can be a
+        // pure passthrough. Logged kind stays byte-identical.
+        const resolvedKind =
+          kind === 'buy_new' && link.label === 'Amazon' ? 'buy_new_amazon' : kind;
         return (
           <span key={i}>
-            <a
+            <TrackedAnchor
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
               style={LINK_STYLE}
-              onClick={() => onClick?.(kind, link.label, link.url)}
+              product={product}
+              role={role}
+              kind={resolvedKind}
+              label={link.label}
             >
               {displayLabel}
-            </a>
+            </TrackedAnchor>
             {i < links.length - 1 && <span style={LINK_SEP_STYLE}>&middot;</span>}
           </span>
         );
@@ -420,7 +491,12 @@ function TrackedLinkRow({ links, kind, onClick }: {
   );
 }
 
-function ProductLinksSection({ opt, onLinkClick }: { opt: AdvisoryOption; onLinkClick?: (kind: string, label: string, url: string) => void }) {
+function ProductLinksSection({ opt, product, role }: {
+  opt: AdvisoryOption;
+  /** Card-level context threaded down to per-link click tracking. */
+  product: string;
+  role: string | undefined;
+}) {
   // ── Deterministic link builder ──
   // Priority: dealer → amazon (verified ASIN only) → manufacturer → hifishark → ebay
   // See product-links.ts for full priority logic and deduplication.
@@ -444,22 +520,20 @@ function ProductLinksSection({ opt, onLinkClick }: { opt: AdvisoryOption; onLink
 
   const { newLinks, usedLinks, readingLinks, isUsedOnly } = resolved;
 
-  const handleClick = (kind: string, label: string, url: string) => {
-    // Distinguish Amazon clicks for tracking granularity
-    const resolvedKind = (kind === 'buy_new' && label === 'Amazon') ? 'buy_new_amazon' : kind;
-    onLinkClick?.(resolvedKind, label, url);
-  };
+  // Amazon-kind resolution now happens inside TrackedLinkRow (per-link)
+  // since the onClick bubble was removed to make this subtree server-safe.
+  // Event shape is unchanged.
 
   const linkLabelStyle: React.CSSProperties = { fontSize: '0.72rem', fontWeight: 600, color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '0.4rem' };
 
   return (
     <div style={{
-      marginTop: '1rem',
-      paddingTop: '0.75rem',
+      marginTop: '1.15rem',
+      paddingTop: '0.85rem',
       borderTop: `1px solid ${COLORS.borderLight}`,
       display: 'flex',
       flexDirection: 'column',
-      gap: '0.4rem',
+      gap: '0.45rem',
     }}>
       {/* Pass 8: single "Where to buy" header for the natural-next-step feel,
         * with sub-labels for new vs used so the structural distinction stays
@@ -480,21 +554,21 @@ function ProductLinksSection({ opt, onLinkClick }: { opt: AdvisoryOption; onLink
       {newLinks.length > 0 && (
         <div>
           <span style={linkLabelStyle}>New</span>
-          <TrackedLinkRow links={newLinks} kind="buy_new" onClick={handleClick} />
+          <TrackedLinkRow links={newLinks} kind="buy_new" product={product} role={role} />
         </div>
       )}
 
       {/* Used purchase links */}
       <div>
         <span style={linkLabelStyle}>{isUsedOnly ? 'Used market' : 'Used'}</span>
-        <TrackedLinkRow links={usedLinks} kind="buy_used" onClick={handleClick} />
+        <TrackedLinkRow links={usedLinks} kind="buy_used" product={product} role={role} />
       </div>
 
       {/* Further reading links */}
       {readingLinks.length > 0 && (
         <div style={{ marginTop: '0.3rem' }}>
           <span style={linkLabelStyle}>Further reading</span>
-          <TrackedLinkRow links={readingLinks} kind="further_reading" onClick={handleClick} />
+          <TrackedLinkRow links={readingLinks} kind="further_reading" product={product} role={role} />
         </div>
       )}
     </div>
@@ -597,21 +671,15 @@ function RoleBadge({ role, dynamicLabel }: { role: string; dynamicLabel?: string
 
 // ── Single editorial product section ──────────────────
 
-function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }) {
+function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOption; index: number; hideMakerInsight?: boolean }) {
   const fullName = [opt.brand, opt.name].filter(Boolean).join(' ');
   const isDiscontinued = opt.availability === 'discontinued' || opt.availability === 'vintage';
   const role = getRoleFromOption(opt);
-  const buyingCtx = resolveBuyingContext(opt);
   const availBadge = opt.availability ? AVAILABILITY_LABELS[opt.availability] : undefined;
 
-  // Step 10, Task 4: Track card view on mount
-  useEffect(() => {
-    trackCardView({ product: fullName, pickRole: role });
-  }, [fullName, role]);
-
-  const handleLinkClick = (kind: string, label: string, url: string) => {
-    trackLinkClick({ product: fullName, pickRole: role, linkKind: kind, linkLabel: label, linkUrl: url });
-  };
+  // Step 10, Task 4: card-view and link-click events now fire from
+  // <CardViewTracker /> and <TrackedAnchor /> — both 'use client' wrappers
+  // in ./CardTelemetry — so the rest of this component tree can SSR.
 
   // Merge standoutFeatures + soundProfile, take up to 3 traits (fallback when no character)
   const traits: string[] = [
@@ -641,32 +709,56 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
       border: `1px solid ${COLORS.border}`,
       borderRadius: 8,
       borderTop: isAnchor ? `3px solid ${COLORS.accent}` : `1px solid ${COLORS.border}`,
-      padding: isAnchor ? '1.5rem 1.75rem 1.5rem' : '1.5rem 1.75rem',
+      padding: isAnchor ? '1.65rem 1.85rem 1.65rem' : '1.6rem 1.85rem',
       boxShadow: isAnchor
         ? '0 2px 6px rgba(176,141,87,0.08), 0 1px 2px rgba(31,29,27,0.04)'
         : '0 1px 2px rgba(31,29,27,0.03)',
     }}>
+
+      {/* ── Card-view beacon (renders nothing, fires one event on mount). ── */}
+      <CardViewTracker product={fullName} role={role} />
 
       {/* ── Role badge ── */}
       {role && <RoleBadge role={role} dynamicLabel={opt.roleLabel} />}
 
       {/* ── Product header: name + brand + badges ── */}
       <div style={{ marginBottom: '0.4rem' }}>
-        {/* Brand (secondary, above name) */}
+        {/* Brand (secondary, above name)
+          *
+          * Pass 13 (interaction depth): the brand label is now a link to the
+          * brand-level view (`/brand/[slug]`). Visual styling is unchanged
+          * — the wrapping <Link> is `display: inline-block` and inherits
+          * color so the bubble looks identical at rest. Hover cue is a
+          * subtle underline only; no color shift, no background, no
+          * layout change. */}
         {opt.brand && (
-          <div style={{
-            fontSize: '0.78rem',
-            fontWeight: 500,
-            color: COLORS.textMuted,
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase',
-            marginBottom: '0.1rem',
-          }}>
+          <Link
+            href={`/brand/${toSlug(opt.brand)}`}
+            className="audioxx-brand-bubble"
+            style={{
+              display: 'inline-block',
+              fontSize: '0.78rem',
+              fontWeight: 500,
+              color: COLORS.textMuted,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              marginBottom: '0.1rem',
+              textDecoration: 'none',
+            }}
+          >
             {opt.brand}
-          </div>
+          </Link>
         )}
 
-        {/* Product name (large, bold) + inline badges */}
+        {/* Product name (large, bold) + inline badges
+          *
+          * Pass 13 (interaction depth): the product name is now a link to
+          * the per-product detail view (`/product/[brand]/[name]`). Only
+          * the name text is wrapped — badges (CURRENT, availability) stay
+          * outside the link so they don't read as part of the navigation
+          * label. Heading element stays h3 for a11y / outline; the link
+          * inherits color and weight so the rendered name looks identical
+          * at rest. Hover cue is a subtle underline. */}
         <h3 style={{
           margin: 0,
           // Pass 9: bumped product-name size for stronger card hierarchy
@@ -677,7 +769,13 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
           letterSpacing: '-0.025em',
           lineHeight: 1.25,
         }}>
-          {opt.name}
+          <Link
+            href={`/product/${toSlug(opt.brand)}/${toSlug(opt.name)}`}
+            className="audioxx-product-name"
+            style={{ color: 'inherit', textDecoration: 'none' }}
+          >
+            {opt.name}
+          </Link>
           {opt.isCurrentComponent && (
             <span style={{
               marginLeft: '0.6rem',
@@ -734,12 +832,12 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
         })()}
       </div>
 
-      {/* ── Price line + buying context ── */}
+      {/* ── Price line ── */}
       <div style={{
         display: 'flex',
         alignItems: 'baseline',
         gap: '0.75rem',
-        marginBottom: '1rem',
+        marginBottom: '1.1rem',
         flexWrap: 'wrap',
       }}>
         {priceParts.length > 0 && (
@@ -758,20 +856,6 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
             color: COLORS.textMuted,
           }}>
             {priceParts.slice(1).join(' \u00b7 ')}
-          </span>
-        )}
-        {/* Task 9: Buying context label */}
-        {buyingCtx && (
-          <span style={{
-            fontSize: '0.72rem',
-            fontWeight: 600,
-            color: buyingCtx.color,
-            background: `${buyingCtx.color}10`,
-            padding: '0.15rem 0.5rem',
-            borderRadius: '3px',
-            letterSpacing: '0.02em',
-          }}>
-            {buyingCtx.label}
           </span>
         )}
       </div>
@@ -839,7 +923,7 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
           whyFits
           ?? (opt.fitNote && /^in your chain/i.test(opt.fitNote) ? opt.fitNote : undefined);
 
-        const whyDirection = composeWhyThisMaker(opt);
+        const makerInsight = composeMakerInsight(opt);
 
         const gainsRaw = (opt.systemDelta?.likelyImprovements ?? []).filter(Boolean);
         const gainsFallback = traits.slice(0, 2);
@@ -849,7 +933,7 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
         const tradeFallback = opt.caution ? [opt.caution] : [];
         const tradeoffs = (tradeRaw.length > 0 ? tradeRaw : tradeFallback).slice(0, 2);
 
-        const sectionStyle: React.CSSProperties = { marginBottom: '1rem' };
+        const sectionStyle: React.CSSProperties = { marginBottom: '1.15rem' };
         const textStyle: React.CSSProperties = {
           margin: 0,
           fontSize: '0.93rem',
@@ -873,15 +957,61 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
               </div>
             )}
 
-            {/* 2. WHY THIS MAKER — one-sentence manufacturer philosophy.
-              * Pass 8: relabeled to make it clear this reinforces the
-              * recommendation, not just describing the brand in isolation. */}
-            {whyDirection && (
+            {/* 2. MAKER INSIGHT (Pass 12) — structured manufacturer block.
+              *
+              * Migrated brands render a 3-line block keyed on bold brand
+              * name: Design / Tendency / In this system. Brand-general
+              * content; the system-specific "What you gain / give up"
+              * sections below carry chain-aware reasoning.
+              *
+              * Unmigrated brands fall back to the legacy one-sentence
+              * compose under the brand-name lead. Both shapes share the
+              * same outer container so the card hierarchy stays consistent.
+              *
+              * Why no SectionLabel: the bold brand name IS the section
+              * marker for this slot — repeating "Maker" or "Why this
+              * maker" above it would double-label. The brand name is also
+              * shown in the card header (uppercase, muted) but at a
+              * different visual weight; this lead acts as the section
+              * anchor, not a duplicate identifier. */}
+            {makerInsight && !hideMakerInsight && (
               <div style={sectionStyle}>
-                <SectionLabel>Why this maker for this call</SectionLabel>
-                <p style={{ ...textStyle, color: COLORS.textSecondary }}>
-                  {renderText(whyDirection)}
+                <p style={{
+                  margin: '0 0 0.4rem 0',
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  color: COLORS.text,
+                  letterSpacing: '-0.005em',
+                }}>
+                  {makerInsight.brand}
                 </p>
+                {makerInsight.kind === 'structured' ? (
+                  <ul style={{
+                    margin: 0,
+                    padding: 0,
+                    listStyle: 'none',
+                    color: COLORS.textSecondary,
+                    fontSize: '0.93rem',
+                    lineHeight: 1.65,
+                  }}>
+                    <li style={{ marginBottom: '0.15rem' }}>
+                      <span style={{ fontWeight: 600, color: COLORS.text }}>Design:</span>{' '}
+                      {renderText(makerInsight.designPhilosophy)}
+                    </li>
+                    <li style={{ marginBottom: '0.15rem' }}>
+                      <span style={{ fontWeight: 600, color: COLORS.text }}>Tendency:</span>{' '}
+                      {renderText(makerInsight.sonicTendency)}
+                    </li>
+                    <li>
+                      <span style={{ fontWeight: 600, color: COLORS.text }}>In this system:</span>{' '}
+                      {renderText(makerInsight.typicalTradeoff)}
+                    </li>
+                  </ul>
+                ) : (
+                  <p style={{ ...textStyle, color: COLORS.textSecondary, margin: 0 }}>
+                    {renderText(makerInsight.sentence)}
+                  </p>
+                )}
               </div>
             )}
 
@@ -955,20 +1085,10 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
               );
             })()}
 
-            {/* Buying note: small footer line, not a full section — kept
-              because it carries availability/market-context signal that
-              the buy links alone don't convey. */}
-            {opt.buyingNote && (
-              <p style={{
-                margin: '0 0 0.75rem',
-                fontSize: '0.82rem',
-                lineHeight: 1.6,
-                color: COLORS.textMuted,
-                fontStyle: 'italic',
-              }}>
-                {renderText(opt.buyingNote)}
-              </p>
-            )}
+            {/* Buying note removed — commercial context is now integrated
+              into the structured New/Used link row in ProductLinksSection.
+              Standalone lines like "Easy to buy new" and "Dealer purchase
+              likely" were visually redundant with the link labels. */}
 
             {/* FURTHER READING — compact expert-reference block.
              *
@@ -1005,15 +1125,18 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
                       </span>
                       {' '}({s.year}):{' '}
                       <em>&ldquo;{s.shortQuote}&rdquo;</em>{' '}
-                      <a
+                      <TrackedAnchor
                         href={s.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={() => handleLinkClick('further_reading', `${s.reviewer.publication} review`, s.url)}
+                        product={fullName}
+                        role={role}
+                        kind="further_reading"
+                        label={`${s.reviewer.publication} review`}
                         style={{ color: COLORS.accent, textDecoration: 'none' }}
                       >
                         read
-                      </a>
+                      </TrackedAnchor>
                     </li>
                   ))}
                 </ul>
@@ -1021,7 +1144,7 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
             )}
 
             {/* 5. BUY LINKS */}
-            <ProductLinksSection opt={opt} onLinkClick={handleLinkClick} />
+            <ProductLinksSection opt={opt} product={fullName} role={role} />
           </>
         );
       })()}
@@ -1033,6 +1156,24 @@ function EditorialProductSection({ opt }: { opt: AdvisoryOption; index: number }
 
 interface AdvisoryProductCardProps {
   options: AdvisoryOption[];
+  /**
+   * Suppress the structured "Maker insight" block (Design / Tendency /
+   * In this system) on every card.
+   *
+   * Used by single-brand contexts (e.g. /brand/[slug]) where the brand's
+   * identity is already shown ONCE at the page header — re-rendering it
+   * on every card from the same maker would duplicate advisory text. Default
+   * false so existing recommendation contexts are unchanged.
+   */
+  hideMakerInsight?: boolean;
+  /**
+   * Soft image-preference for surfaced recommendation contexts.
+   * When true, image-backed products sort first and non-image products
+   * backfill only when needed to meet a healthy floor (minimum 2,
+   * target 3). Does NOT affect long-tail catalog or brand-page card
+   * rendering. Default false.
+   */
+  preferImage?: boolean;
 }
 
 // Role sort order: anchor first → close_alt → contrast → wildcard → legacy roles → untagged
@@ -1041,9 +1182,33 @@ const ROLE_SORT_ORDER: Record<string, number> = {
   top_pick: 0, upgrade_pick: 1, value_pick: 2,
 };
 
-export default function AdvisoryProductCards({ options }: AdvisoryProductCardProps) {
+/** Minimum products to show in a surfaced block (unless the pool is smaller). */
+const SURFACED_FLOOR = 2;
+/** Target product count when preferImage is active. */
+const SURFACED_TARGET = 3;
+
+export default function AdvisoryProductCards({ options, hideMakerInsight, preferImage }: AdvisoryProductCardProps) {
+  // ── Soft image-preference selection ──
+  // When preferImage is set, image-backed products sort first. If fewer
+  // than SURFACED_TARGET have images, backfill with non-image products
+  // until we reach the target (or exhaust the pool). Never show fewer
+  // than SURFACED_FLOOR unless the candidate pool itself is smaller.
+  let eligible: AdvisoryOption[];
+  if (preferImage) {
+    const withImg = options.filter((o) => !!o.imageUrl);
+    const withoutImg = options.filter((o) => !o.imageUrl);
+    const needed = Math.max(SURFACED_FLOOR, SURFACED_TARGET) - withImg.length;
+    eligible = needed > 0
+      ? [...withImg, ...withoutImg.slice(0, needed)]
+      : withImg.length >= SURFACED_TARGET
+        ? withImg.slice(0, Math.max(withImg.length, SURFACED_TARGET))
+        : withImg;
+  } else {
+    eligible = options;
+  }
+
   // Sort by role: Best Choice -> Upgrade Choice -> Value Choice -> untagged
-  const sorted = [...options].sort((a, b) => {
+  const sorted = [...eligible].sort((a, b) => {
     const roleA = getRoleFromOption(a) ?? '';
     const roleB = getRoleFromOption(b) ?? '';
     return (ROLE_SORT_ORDER[roleA] ?? 9) - (ROLE_SORT_ORDER[roleB] ?? 9);
@@ -1053,9 +1218,9 @@ export default function AdvisoryProductCards({ options }: AdvisoryProductCardPro
   // old <hr/> divider — each card is now its own surface with a real
   // border, so a between-cards rule would be visual noise.
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.6rem' }}>
       {sorted.map((opt, i) => (
-        <EditorialProductSection key={i} opt={opt} index={i} />
+        <EditorialProductSection key={i} opt={opt} index={i} hideMakerInsight={hideMakerInsight} />
       ))}
     </div>
   );

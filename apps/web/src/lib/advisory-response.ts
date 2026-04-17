@@ -16,7 +16,7 @@
 import type { ConsultationResponse } from './consultation';
 import { findBrandProfileByName } from './consultation';
 import {
-  classifySystemFromStrings,
+  classifySystemArchetypeFromStrings,
   consumerThinnessRemediation,
   consumerElectricalNoiseRemediation,
 } from './system-class';
@@ -776,6 +776,16 @@ export interface AdvisoryResponse {
   /** Secondary note connecting general advice to user's saved system.
    *  Rendered as a visually separated accent block — never part of main answer framing. */
   savedSystemNote?: string;
+
+  // ── 8c. Provenance Note ───────────────────────────
+  /**
+   * Subdued provenance line (e.g. "Based on general product knowledge of
+   * this class of system."). Emitted by the archetype layer when guidance
+   * comes from general class knowledge rather than a verified catalog
+   * entry. Rendered at the component layer with italic/muted styling —
+   * no markdown markers in the string itself.
+   */
+  provenanceNote?: string;
 
   // ── 9. Continuation ─────────────────────────────────
   /** Light follow-up question. */
@@ -1662,6 +1672,11 @@ export function consultationToAdvisory(
     // Saved-system personalization: secondary note, never main framing.
     // Only for non-assessment, non-comparison responses where savedSystemNote exists.
     savedSystemNote: (!isAssessment && !isComparison && ctx?.savedSystemNote) ? ctx.savedSystemNote : undefined,
+
+    // Provenance note — threaded straight through when provided by the
+    // consultation builder. Rendered at the component layer with
+    // italic/muted styling; no markdown markers in the string.
+    provenanceNote: c.provenanceNote,
   });
 }
 
@@ -2700,13 +2715,13 @@ export function analysisToAdvisory(
   // for a noise complaint — the physics do not apply. When the active
   // system is consumer_wireless, rewrite the fired-rule outputs in
   // place (local copy only — the shared rule objects are not mutated).
-  const systemClass = classifySystemFromStrings(ctx?.systemComponents);
+  const systemArchetype = classifySystemArchetypeFromStrings(ctx?.systemComponents);
   // Holds consumer remediation so we can also post-process the final
   // AdvisoryResponse — downstream diagnosis builders run on `primary`
   // and don't honor our rule-level rewrites for every field.
   let consumerRem: { explanation: string; suggestions: string[]; nextStep: string } | null = null;
   let consumerRuleKind: 'thinness' | 'electrical_noise' | null = null;
-  if (systemClass === 'consumer_wireless' && result.fired_rules.length > 0) {
+  if (systemArchetype === 'consumer_wireless' && result.fired_rules.length > 0) {
     result = {
       ...result,
       fired_rules: result.fired_rules.map((r) => {

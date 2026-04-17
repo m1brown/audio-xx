@@ -631,7 +631,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     },
     // Step 10: buying metadata
     buyingContext: 'easy_new',
-    // imageUrl: undefined, // TODO: add official product image from klipsch.com
+    imageUrl: 'https://assets.klipsch.com/product-images/Heresy-IV-Walnut-pair.png',
     philosophy: 'energy',
     marketType: 'traditional',
   },

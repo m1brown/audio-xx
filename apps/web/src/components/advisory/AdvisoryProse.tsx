@@ -16,6 +16,12 @@ interface AdvisoryProseProps {
   philosophy?: string;
   tendencies?: string;
   systemFit?: string;
+  /**
+   * Optional subdued provenance line rendered beneath the body prose.
+   * Styled with italic/muted treatment at the component layer — the caller
+   * must pass a plain sentence with no markdown emphasis markers.
+   */
+  provenanceNote?: string;
 }
 
 /**
@@ -36,8 +42,8 @@ function renderParagraphs(text: string, isLast: boolean) {
   ));
 }
 
-export default function AdvisoryProse({ philosophy, tendencies, systemFit }: AdvisoryProseProps) {
-  if (!philosophy && !tendencies && !systemFit) return null;
+export default function AdvisoryProse({ philosophy, tendencies, systemFit, provenanceNote }: AdvisoryProseProps) {
+  if (!philosophy && !tendencies && !systemFit && !provenanceNote) return null;
 
   // Determine which is the last populated field for margin control
   const lastField = systemFit ? 'systemFit' : tendencies ? 'tendencies' : 'philosophy';
@@ -54,6 +60,19 @@ export default function AdvisoryProse({ philosophy, tendencies, systemFit }: Adv
       {philosophy && renderParagraphs(philosophy, lastField === 'philosophy')}
       {tendencies && renderParagraphs(tendencies, lastField === 'tendencies')}
       {systemFit && renderParagraphs(systemFit, lastField === 'systemFit')}
+      {provenanceNote && (
+        <p
+          style={{
+            margin: '0.9rem 0 0 0',
+            fontSize: '0.9rem',
+            fontStyle: 'italic',
+            color: '#888',
+            lineHeight: 1.6,
+          }}
+        >
+          {provenanceNote}
+        </p>
+      )}
     </div>
   );
 }
