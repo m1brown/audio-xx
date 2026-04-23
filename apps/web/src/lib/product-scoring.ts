@@ -346,12 +346,15 @@ export function rankProducts(
 ): ScoredProduct[] {
   // Budget filter — hard constraint, no stretch allowance.
   // Used-market pricing qualifies a product only if the new price
-  // is within 2× budget (prevents $5000 products appearing in $1500 searches
-  // just because they can be found used for $1400).
+  // is within 1.5× budget. This prevents expensive products from
+  // leaking into moderate-budget searches via used-market pricing
+  // (e.g. a $3000 product appearing in a $1500 search because it
+  // trades used for $1400). The 1.5× ceiling still allows products
+  // with strong used-market value to surface when relevant.
   let candidates = budgetAmount
     ? products.filter((p) => {
         if (p.price <= budgetAmount) return true;
-        if (p.usedPriceRange && p.usedPriceRange.high <= budgetAmount && p.price <= budgetAmount * 2) return true;
+        if (p.usedPriceRange && p.usedPriceRange.high <= budgetAmount && p.price <= budgetAmount * 1.5) return true;
         return false;
       })
     : products;

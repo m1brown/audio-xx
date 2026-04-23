@@ -20,9 +20,9 @@ a:hover { color: #2d4a58; text-decoration: underline; text-underline-offset: 2px
 /* ── Layout ──────────────────────────────────────── */
 
 .container {
-  max-width: 780px;
+  max-width: 90rem; /* 1440px — let each page control its own readable measure */
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: 2rem 2.5rem;
 }
 
 /* ── Headings ────────────────────────────────────── */
@@ -161,8 +161,9 @@ nav {
   background: #fff;
 }
 nav .nav-inner {
-  max-width: 780px;
+  max-width: 90rem; /* match .container */
   margin: 0 auto;
+  padding: 0 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;

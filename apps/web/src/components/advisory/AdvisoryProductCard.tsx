@@ -533,44 +533,70 @@ function ProductLinksSection({ opt, product, role }: {
       borderTop: `1px solid ${COLORS.borderLight}`,
       display: 'flex',
       flexDirection: 'column',
-      gap: '0.45rem',
+      gap: '0.5rem',
     }}>
-      {/* Pass 8: single "Where to buy" header for the natural-next-step feel,
-        * with sub-labels for new vs used so the structural distinction stays
-        * visible. Used-only products collapse to a single "Available from"
-        * row, since there is no new/used split to preserve. */}
-      <div style={{
-        fontSize: '0.7rem',
-        fontWeight: 700,
-        color: COLORS.text,
-        textTransform: 'uppercase',
-        letterSpacing: '0.08em',
-        marginBottom: '0.15rem',
-      }}>
-        {isUsedOnly ? 'Available from' : 'Where to buy'}
-      </div>
-
-      {/* New purchase links */}
+      {/* Buy new — action-oriented links */}
       {newLinks.length > 0 && (
         <div>
-          <span style={linkLabelStyle}>New</span>
-          <TrackedLinkRow links={newLinks} kind="buy_new" product={product} role={role} />
+          <div style={linkLabelStyle}>Buy new</div>
+          <span style={{ lineHeight: 1.9 }}>
+            {newLinks.map((link, i) => {
+              const displayLabel = cleanLinkLabel(link.label);
+              return (
+                <span key={i}>
+                  <TrackedAnchor
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={LINK_STYLE}
+                    product={product}
+                    role={role}
+                    kind={link.label === 'Amazon' ? 'buy_new_amazon' : 'buy_new'}
+                    label={link.label}
+                  >
+                    Buy new &rarr; {displayLabel}
+                  </TrackedAnchor>
+                  {i < newLinks.length - 1 && <span style={LINK_SEP_STYLE}>&middot;</span>}
+                </span>
+              );
+            })}
+          </span>
         </div>
       )}
 
-      {/* Used purchase links */}
+      {/* Buy used — action-oriented links */}
       <div>
-        <span style={linkLabelStyle}>{isUsedOnly ? 'Used market' : 'Used'}</span>
-        <TrackedLinkRow links={usedLinks} kind="buy_used" product={product} role={role} />
+        <div style={linkLabelStyle}>Buy used</div>
+        <span style={{ lineHeight: 1.9 }}>
+          {usedLinks.map((link, i) => {
+            const isHiFiShark = link.label.toLowerCase().includes('hifi shark') || link.label.toLowerCase().includes('hifishark');
+            const prefix = isHiFiShark ? 'Browse used' : 'Search used';
+            return (
+              <span key={i}>
+                <TrackedAnchor
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={LINK_STYLE}
+                  product={product}
+                  role={role}
+                  kind="buy_used"
+                  label={link.label}
+                >
+                  {prefix} &rarr; {link.label}
+                </TrackedAnchor>
+                {i < usedLinks.length - 1 && <span style={LINK_SEP_STYLE}>&middot;</span>}
+              </span>
+            );
+          })}
+        </span>
+        {/* Typical used price — only from catalog data, never estimated */}
+        {opt.usedPriceRange && (
+          <div style={{ fontSize: '0.78rem', color: COLORS.textMuted, marginTop: '0.15rem' }}>
+            Typical used: ${opt.usedPriceRange.low.toLocaleString()}&ndash;${opt.usedPriceRange.high.toLocaleString()}
+          </div>
+        )}
       </div>
-
-      {/* Further reading links */}
-      {readingLinks.length > 0 && (
-        <div style={{ marginTop: '0.3rem' }}>
-          <span style={linkLabelStyle}>Further reading</span>
-          <TrackedLinkRow links={readingLinks} kind="further_reading" product={product} role={role} />
-        </div>
-      )}
     </div>
   );
 }
@@ -676,6 +702,8 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
   const isDiscontinued = opt.availability === 'discontinued' || opt.availability === 'vintage';
   const role = getRoleFromOption(opt);
   const availBadge = opt.availability ? AVAILABILITY_LABELS[opt.availability] : undefined;
+  // Card context — always show image when available (no dedup).
+  const shouldShowImage = !!opt.imageUrl;
 
   // Step 10, Task 4: card-view and link-click events now fire from
   // <CardViewTracker /> and <TrackedAnchor /> — both 'use client' wrappers
@@ -752,13 +780,9 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
 
         {/* Product name (large, bold) + inline badges
           *
-          * Pass 13 (interaction depth): the product name is now a link to
-          * the per-product detail view (`/product/[brand]/[name]`). Only
-          * the name text is wrapped — badges (CURRENT, availability) stay
-          * outside the link so they don't read as part of the navigation
-          * label. Heading element stays h3 for a11y / outline; the link
-          * inherits color and weight so the rendered name looks identical
-          * at rest. Hover cue is a subtle underline. */}
+          * Product-name link is deferred until `/product/[brand]/[name]`
+          * has a real detail view (currently placeholder). Name stays
+          * styled strongly but not clickable. */}
         <h3 style={{
           margin: 0,
           // Pass 9: bumped product-name size for stronger card hierarchy
@@ -769,13 +793,11 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
           letterSpacing: '-0.025em',
           lineHeight: 1.25,
         }}>
-          <Link
-            href={`/product/${toSlug(opt.brand)}/${toSlug(opt.name)}`}
+          <span
             className="audioxx-product-name"
-            style={{ color: 'inherit', textDecoration: 'none' }}
           >
             {opt.name}
-          </Link>
+          </span>
           {opt.isCurrentComponent && (
             <span style={{
               marginLeft: '0.6rem',
@@ -830,6 +852,24 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
             </div>
           );
         })()}
+
+        {/* Legacy note — successor context for discontinued/vintage models */}
+        {opt.legacyNote && (
+          <div style={{
+            marginTop: '0.35rem',
+            fontSize: '0.78rem',
+            color: '#b08030',
+            fontStyle: 'italic',
+            lineHeight: 1.5,
+          }}>
+            {opt.legacyNote}
+            {opt.legacyUsedNote && (
+              <span style={{ color: COLORS.textMuted, fontStyle: 'normal' }}>
+                {' · '}{opt.legacyUsedNote}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Price line ── */}
@@ -860,32 +900,38 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
         )}
       </div>
 
-      {/* ── Product image (Pass 11 hardening) ──
-       * Fixed 4:3 frame keeps cards visually aligned regardless of the
-       * shape of the source image (tall speaker vs. rack DAC vs. square
-       * component). `object-fit: contain` avoids cropping or stretching;
-       * a neutral background fills the gutter cleanly when the image has
-       * transparency or non-4:3 native dimensions. No placeholder ever
-       * renders: when imageUrl is absent the whole block is omitted, and
-       * if the URL fails to load the onError handler hides the wrapper
-       * so the card collapses cleanly. */}
-      {opt.imageUrl && (
+      {/* ── Product image (hero presentation) ──
+       * Full-width hero image block — the product is the visual anchor.
+       * "If the image does not materially improve decision confidence,
+       * it is too small." Large, clean, generous padding so the product
+       * breathes. No border; clean white background. 4:3 aspect ratio
+       * with contain ensures no cropping while maintaining visual
+       * consistency across product shapes (tall speakers, rack DACs,
+       * square components). Silent collapse on missing/broken URLs. */}
+      {shouldShowImage && opt.imageUrl && (
         <div style={{
-          marginBottom: '1rem',
-          borderRadius: '6px',
+          marginBottom: '1.25rem',
+          borderRadius: '8px',
           overflow: 'hidden',
-          maxWidth: '280px',
+          width: '100%',
+          maxHeight: '420px',
+          minHeight: '240px',
           aspectRatio: '4 / 3',
-          background: COLORS.sectionBg,
-          border: `1px solid ${COLORS.borderLight}`,
+          background: '#ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+          boxSizing: 'border-box',
         }}>
           <img
             src={opt.imageUrl}
             alt={[opt.brand, opt.name].filter(Boolean).join(' ')}
-            loading="lazy"
+            loading="eager"
+            referrerPolicy="no-referrer"
             style={{
-              width: '100%',
-              height: '100%',
+              maxWidth: '100%',
+              maxHeight: '100%',
               objectFit: 'contain',
               display: 'block',
             }}
@@ -954,6 +1000,34 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
               <div style={sectionStyle}>
                 <SectionLabel>What this changes in your system</SectionLabel>
                 <p style={textStyle}>{renderText(whatChanges)}</p>
+              </div>
+            )}
+
+            {/* 1b. WHAT YOU'LL HEAR — sensory delta bullets */}
+            {opt.whatYoullHear && opt.whatYoullHear.length > 0 && (
+              <div style={sectionStyle}>
+                <SectionLabel>What you&apos;ll hear</SectionLabel>
+                <ul style={bulletStyle}>
+                  {opt.whatYoullHear.slice(0, 3).map((h, i) => (
+                    <li key={i} style={{ marginBottom: '0.2rem', fontSize: '0.93rem', color: '#4a6a50' }}>
+                      {renderText(h)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 1c. TECHNICAL RATIONALE — design → audible outcome */}
+            {opt.technicalRationale && opt.technicalRationale.length > 0 && (
+              <div style={sectionStyle}>
+                <SectionLabel>Technical rationale</SectionLabel>
+                <ul style={bulletStyle}>
+                  {opt.technicalRationale.slice(0, 3).map((t, i) => (
+                    <li key={i} style={{ marginBottom: '0.2rem', fontSize: '0.93rem' }}>
+                      {renderText(t)}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
 
@@ -1085,10 +1159,22 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
               );
             })()}
 
-            {/* Buying note removed — commercial context is now integrated
-              into the structured New/Used link row in ProductLinksSection.
-              Standalone lines like "Easy to buy new" and "Dealer purchase
-              likely" were visually redundant with the link labels. */}
+            {/* 5b. POSITIONING HINT — Best for / Less ideal if */}
+            {(opt.bestFor || opt.lessIdealIf) && (
+              <div style={{
+                marginBottom: '1rem',
+                fontSize: '0.88rem',
+                lineHeight: 1.6,
+                color: COLORS.textSecondary,
+              }}>
+                {opt.bestFor && (
+                  <div><span style={{ fontWeight: 600, color: '#5a7050' }}>Best for:</span> {opt.bestFor}</div>
+                )}
+                {opt.lessIdealIf && (
+                  <div><span style={{ fontWeight: 600, color: '#8a6a50' }}>Less ideal if:</span> {opt.lessIdealIf}</div>
+                )}
+              </div>
+            )}
 
             {/* FURTHER READING — compact expert-reference block.
              *
@@ -1135,7 +1221,7 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
                         label={`${s.reviewer.publication} review`}
                         style={{ color: COLORS.accent, textDecoration: 'none' }}
                       >
-                        read
+                        {s.medium === 'video' ? 'watch' : 'read'}
                       </TrackedAnchor>
                     </li>
                   ))}

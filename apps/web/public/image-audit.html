@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Audio XX — Product Image URL Audit</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,system-ui,sans-serif;padding:2rem;background:#f5f5f0;color:#333}
+h1{margin-bottom:.5rem;font-size:1.5rem}
+.summary{margin:1rem 0;padding:1rem;background:#fff;border-radius:8px;font-size:.95rem}
+.pass-text{color:#2a7a2a;font-weight:600}
+.fail-text{color:#c33;font-weight:600}
+.pending-text{color:#888}
+.controls{margin:1rem 0}
+.controls button{padding:.5rem 1rem;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;margin-right:.5rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
+.card{background:#fff;border-radius:8px;padding:.75rem;border:2px solid #eee}
+.card.pass{border-color:#aed6ae}
+.card.fail{border-color:#e5a0a0;background:#fef5f5}
+.key{font-weight:600;font-size:.85rem;margin-bottom:.3rem}
+.status{font-size:.8rem;margin-bottom:.3rem}
+.url{font-size:.7rem;color:#888;word-break:break-all}
+.card img{max-width:100%;max-height:150px;object-fit:contain;display:block;margin:.5rem auto}
+.ph{height:80px;display:flex;align-items:center;justify-content:center;background:#f8f8f5;border-radius:4px;font-size:.8rem;color:#aaa}
+</style>
+</head>
+<body>
+<h1>Audio XX — Product Image URL Audit</h1>
+<p style="color:#666;margin-bottom:1rem">Tests every URL in product-images.ts by loading it as an img element with referrerPolicy=no-referrer.</p>
+<div class="summary" id="summary"><span class="pending-text">Testing URLs…</span></div>
+<div class="controls">
+<button onclick="copyFailures()">Copy Failures to Clipboard</button>
+<button onclick="location.reload()">Re-run</button>
+<label style="margin-left:1rem"><input type="checkbox" id="ff" onchange="document.querySelectorAll('.card.pass').forEach(c=>c.style.display=this.checked?'none':'')"> Show failures only</label>
+</div>
+<div class="grid" id="grid"></div>
+<script>
+var E=[
+  {
+    "key": "chord hugo tt2",
+    "url": "https://chordelectronics.co.uk/wp-content/uploads/2017/01/Hugo.jpg"
+  },
+  {
+    "key": "chord hugo 2",
+    "url": "https://chordelectronics.co.uk/wp-content/uploads/2017/01/Hugo.jpg"
+  },
+  {
+    "key": "chord hugo",
+    "url": "https://chordelectronics.co.uk/wp-content/uploads/2016/09/Hugo-Angle-900x675.jpg"
+  },
+  {
+    "key": "chord qutest",
+    "url": "https://chordelectronics.co.uk/wp-content/uploads/2018/01/Qutest-Product-Thumbnail.jpg"
+  },
+  {
+    "key": "chord mojo 2",
+    "url": "https://chordelectronics.co.uk/wp-content/uploads/2023/04/Mojo-2-4.4-2-Edited-1024x1024.png"
+  },
+  {
+    "key": "chord mojo",
+    "url": "https://chordelectronics.co.uk/wp-content/uploads/2023/04/Mojo-2-4.4-2-Edited-1024x1024.png"
+  },
+  {
+    "key": "chord dave",
+    "url": "https://chordelectronics.co.uk/wp-content/uploads/2016/09/Dave.jpg"
+  },
+  {
+    "key": "schiit bifrost",
+    "url": "https://www.schiit.com/img/img_2364.jpg"
+  },
+  {
+    "key": "schiit modius",
+    "url": "https://www.schiit.com/img/img_5100.jpg"
+  },
+  {
+    "key": "schiit modi",
+    "url": "https://www.schiit.com/img/img_3680.jpg"
+  },
+  {
+    "key": "denafrips terminator",
+    "url": "https://www.denafrips.com/_files/ugd/d1b21d_b5deb62d43e84d9f8ea7cbf53bab8fd5~mv2.jpg"
+  },
+  {
+    "key": "denafrips pontus",
+    "url": "https://www.denafrips.com/_files/ugd/d1b21d_f1aae8cf00564a35a8e5f33c5ccad9a7~mv2.jpg"
+  },
+  {
+    "key": "denafrips ares",
+    "url": "https://www.denafrips.com/_files/ugd/d1b21d_2cb41c4b40ac4987aa8bbb2de1c06a3b~mv2.jpg"
+  },
+  {
+    "key": "denafrips enyo",
+    "url": "https://static.wixstatic.com/media/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg/v1/crop/x_3,y_29,w_1164,h_599/fill/w_1096,h_564,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg"
+  },
+  {
+    "key": "ifi zen dac",
+    "url": "https://ifi-audio.com/wp-content/uploads/2020/02/ZEN-DAC_front_white_2000x1333.jpg"
+  },
+  {
+    "key": "rme adi 2 dac",
+    "url": "https://www.rme-audio.de/images/products/adi-2-dac-fs/adi-2-dac-fs-front.jpg"
+  },
+  {
+    "key": "bluesound node",
+    "url": "https://www.bluesound.com/wp-content/uploads/2021/02/N130-Front-Hero.png"
+  },
+  {
+    "key": "wiim pro plus",
+    "url": "https://www.wiimhome.com/images/wiim-pro-plus/wiim-pro-plus-front.png"
+  },
+  {
+    "key": "wiim pro",
+    "url": "https://www.wiimhome.com/images/wiim-pro/wiim-pro-front.png"
+  },
+  {
+    "key": "lampizator baltic",
+    "url": "https://static.wixstatic.com/media/c6db56_c2f789243c0341758ce9d2ac7d360caf~mv2.jpg/v1/fill/w_1200,h_910,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/B3%20-%202.jpg"
+  },
+  {
+    "key": "rockna wavelight",
+    "url": "https://www.rockna-audio.com/themes/rockna/img/product/wavelight/wavelight-dac-silver.jpg"
+  },
+  {
+    "key": "dcs bart k",
+    "url": "https://dcsaudio.com/assets/bartok-highlights-bhd-2.jpg"
+  },
+  {
+    "key": "gustard r26",
+    "url": "https://www.gustard.com/qfy-content/uploads/2022/10/ae6b2c24323caabb87bd8814319e8140-100.webp"
+  },
+  {
+    "key": "topping d70",
+    "url": "http://upload.toppingaudio.com/contents/2025/86/e0/iFkOZUtDRIHy85TQH1D2yWBOQDBCbUqkz6x5iJFb.webp"
+  },
+  {
+    "key": "topping d90se",
+    "url": "https://upload.toppingaudio.com/contents/2025/2a/e9/l8tqlW4252nLGvNXR1LTJIwxymzkf4Q8JGOk1wHy.webp"
+  },
+  {
+    "key": "eversolo dac z8",
+    "url": "https://eversolo.com/Uploads/product/cc469ca22b4d35699bde1cdf245ef714.jpg"
+  },
+  {
+    "key": "totaldac d1 unity",
+    "url": "https://www.totaldac.com/fichiers/D1-core-front.jpg"
+  },
+  {
+    "key": "hegel h390",
+    "url": "https://www.hegel.com/images/products/discontinued/H390.jpg"
+  },
+  {
+    "key": "hegel h190",
+    "url": "https://www.hegel.com/images/products/discontinued/H190.jpg"
+  },
+  {
+    "key": "naim supernait 3",
+    "url": "https://dam.focal-naim.com/m/41d5e6176c409ae5/original/SUPERNAIT3_faceV2-jpg.jpg"
+  },
+  {
+    "key": "naim supernait",
+    "url": "https://dam.focal-naim.com/m/41d5e6176c409ae5/original/SUPERNAIT3_faceV2-jpg.jpg"
+  },
+  {
+    "key": "naim nait xs",
+    "url": "https://www.naimaudio.com/sites/default/files/nait-xs3-front.jpg"
+  },
+  {
+    "key": "naim nait",
+    "url": "https://www.naimaudio.com/sites/default/files/nait-5si-front.jpg"
+  },
+  {
+    "key": "boulder 866",
+    "url": "https://boulderamp.com/wp-content/uploads/866-Front-on-surface-Roon-1200x800.jpg"
+  },
+  {
+    "key": "decware se84ufo",
+    "url": "https://static.wixstatic.com/media/f1f204_31700c6023e1475b88ac443535dad8c7~mv2.jpg/v1/fill/w_396,h_336,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/SE84UFO2022.jpg"
+  },
+  {
+    "key": "line magnetic lm 211ia",
+    "url": "https://www.line-magnetic.eu/fileadmin/_processed_/b/9/csm_LM-211IA_front_eb5372c116.png"
+  },
+  {
+    "key": "enleum amp 23r",
+    "url": "https://enleum.com/wp-content/uploads/2022/08/AMP-23R_1-scaled.jpg.webp"
+  },
+  {
+    "key": "benchmark ahb2",
+    "url": "https://benchmarkmedia.com/cdn/shop/products/AHB2_SilverAngle.JPG"
+  },
+  {
+    "key": "mcintosh ma252",
+    "url": "https://www.mcintoshlabs.com/-/media/images/mcintoshlabs/products/productimages/ma252/ma252-front.jpg"
+  },
+  {
+    "key": "job integrated",
+    "url": "https://tmraudio.com/cdn/shop/files/56114-3__07620.1703123373.1280.1280_700x700.jpg"
+  },
+  {
+    "key": "nad c 3050",
+    "url": "https://nadelectronics.com/cdn/shop/files/NAD-C-3050-3-4--on-black-for-web_2000x.jpg"
+  },
+  {
+    "key": "primare i35",
+    "url": "https://primare.net/wp-content/uploads/2020/02/primare-i35-prisma-modular-integrated-amplifier-and-network-player-front-black.jpg"
+  },
+  {
+    "key": "rotel a11",
+    "url": "https://www.rotel.com/sites/default/files/product/A11%20Tribute_silver.png"
+  },
+  {
+    "key": "kinki studio ex m1",
+    "url": "https://static.wixstatic.com/media/4b933e_7c6071af923a4d89b2b2d648432e2998~mv2.png/v1/fill/w_1200,h_800,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/4b933e_7c6071af923a4d89b2b2d648432e2998~mv2.png"
+  },
+  {
+    "key": "accuphase e 4000",
+    "url": "https://www.accuphase.com/model/photo/e-4000.jpg"
+  },
+  {
+    "key": "accuphase e 280",
+    "url": "https://www.accuphase.com/model/photo/e-280.jpg"
+  },
+  {
+    "key": "rega brio",
+    "url": "https://www.rega.co.uk/wp-content/uploads/2020/01/Brio-front.jpg"
+  },
+  {
+    "key": "rega elex",
+    "url": "https://www.rega.co.uk/wp-content/uploads/2020/01/Elex-R-front.jpg"
+  },
+  {
+    "key": "rega aethos",
+    "url": "https://www.rega.co.uk/wp-content/uploads/2020/01/Aethos-front.jpg"
+  },
+  {
+    "key": "schiit vidar",
+    "url": "https://www.schiit.com/img/img_2480.jpg"
+  },
+  {
+    "key": "schiit aegir",
+    "url": "https://www.schiit.com/img/img_4195.jpg"
+  },
+  {
+    "key": "schiit saga",
+    "url": "https://www.schiit.com/img/img_5335.jpg"
+  },
+  {
+    "key": "primaluna evo 400",
+    "url": "https://www.primaluna.nl/wp-content/uploads/2019/01/EVO-400-Integrated-Amplifier-Silver-Front.jpg"
+  },
+  {
+    "key": "primaluna evo 300",
+    "url": "https://www.primaluna.nl/wp-content/uploads/2019/01/EVO-300-Integrated-Amplifier-Silver-Front.jpg"
+  },
+  {
+    "key": "leben cs 300",
+    "url": "https://www.leben-hifi.com/images/cs300xs-front.jpg"
+  },
+  {
+    "key": "leben cs300",
+    "url": "https://www.leben-hifi.com/images/cs300xs-front.jpg"
+  },
+  {
+    "key": "leben cs 600",
+    "url": "https://www.leben-hifi.com/images/cs600x-front.jpg"
+  },
+  {
+    "key": "leben cs600",
+    "url": "https://www.leben-hifi.com/images/cs600x-front.jpg"
+  },
+  {
+    "key": "kef ls50 meta",
+    "url": "https://www.kef.com/cdn/shop/products/LS50-Meta-Carbon-Black-Single-Front_1200x.jpg"
+  },
+  {
+    "key": "kef ls50",
+    "url": "https://www.kef.com/cdn/shop/products/LS50-Meta-Carbon-Black-Single-Front_1200x.jpg"
+  },
+  {
+    "key": "kef r3",
+    "url": "https://www.kef.com/cdn/shop/products/R3-Meta-Black-Gloss-Single-Front_1200x.jpg"
+  },
+  {
+    "key": "harbeth p3esr",
+    "url": "https://www.harbeth.co.uk/images/P3ESR-XD-Cherry-Front.jpg"
+  },
+  {
+    "key": "harbeth super hl5",
+    "url": "https://www.harbeth.co.uk/images/SHL5plus-XD-Cherry-Front.jpg"
+  },
+  {
+    "key": "harbeth 30",
+    "url": "https://www.harbeth.co.uk/images/M30.2-XD-Cherry-Front.jpg"
+  },
+  {
+    "key": "devore fidelity orangutan o 93",
+    "url": "https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-93-Front.jpg"
+  },
+  {
+    "key": "devore orangutan o 93",
+    "url": "https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-93-Front.jpg"
+  },
+  {
+    "key": "devore fidelity orangutan o 96",
+    "url": "https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-96-Front.jpg"
+  },
+  {
+    "key": "devore orangutan o 96",
+    "url": "https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-96-Front.jpg"
+  },
+  {
+    "key": "magico a3",
+    "url": "https://images.squarespace-cdn.com/content/v1/5d6806d4d4a70b00015c75b4/1567191992078-77SK24QU4NQ1S2MILAHZ/3+%284%29.jpg?format=2500w"
+  },
+  {
+    "key": "klipsch heresy",
+    "url": "https://www.klipsch.com/medias/heresy-iv-natural-cherry-front.jpg"
+  },
+  {
+    "key": "klipsch cornwall",
+    "url": "https://www.klipsch.com/medias/cornwall-iv-natural-cherry-front.jpg"
+  },
+  {
+    "key": "klipsch forte",
+    "url": "https://www.klipsch.com/medias/forte-iv-natural-cherry-front.jpg"
+  },
+  {
+    "key": "boenicke w5",
+    "url": "https://boenicke-audio.ch/wp-content/uploads/2017/08/W5_halbvorne_web.jpg"
+  },
+  {
+    "key": "boenicke w8",
+    "url": "https://boenicke-audio.ch/wp-content/uploads/2017/08/W8_halbseite_web.jpg"
+  },
+  {
+    "key": "magnepan 1 7i",
+    "url": "https://magnepan.com/cdn/shop/products/Mg_1.7_White_Pair_1_1800x1800.jpg?v=1643770217"
+  },
+  {
+    "key": "magnepan lrs",
+    "url": "https://magnepan.com/cdn/shop/products/Speakers-3_1800x1800.jpg?v=1754334504"
+  },
+  {
+    "key": "focal kanta no 2",
+    "url": "https://dam.focal-naim.com/m/52fdcf02309f4f88/original/KantaN2_walnut-mat_Ivory_mat_34-jpg.jpg"
+  },
+  {
+    "key": "focal aria 906",
+    "url": "https://www.focal.com/sites/www.focal.com/files/aria-906-walnut-front.jpg"
+  },
+  {
+    "key": "wharfedale linton",
+    "url": "https://www.wharfedaleusa.com/cdn/shop/products/LINTONHeritageWalnut_1_1200x.jpg?v=1630422663"
+  },
+  {
+    "key": "bowers wilkins 705",
+    "url": "https://www.bowerswilkins.com/medias/705-s3-gloss-black-front.png"
+  },
+  {
+    "key": "spendor d7",
+    "url": "https://spendoraudio.com/wp-content/uploads/d7.2-natural-oak-front.jpg"
+  },
+  {
+    "key": "dynaudio heritage",
+    "url": "https://www.dynaudio.com/media/product/heritage-special-rosewood-front.jpg"
+  },
+  {
+    "key": "wilson audio sabrina",
+    "url": "https://www.wilsonaudio.com/media/941/sabrinax.jpg"
+  },
+  {
+    "key": "jbl l100",
+    "url": "https://www.jbl.com/dw/image/v2/BFND_PRD/on/demandware.static/-/Sites-masterCatalog_Harman/default/dw32dc552f/JBLL100MK2ORG_QtrRightWithGrille_1605x1605.png"
+  },
+  {
+    "key": "mission 770",
+    "url": "https://www.mission.co.uk/wp-content/uploads/magictoolbox_cache/cf3e6ec01aac7cb79461bcfe9d0d075e/450x/660543342/770-Walnut-Standard-2.jpg"
+  },
+  {
+    "key": "quad va one",
+    "url": "https://quad-hifi.co.uk/cdn/shop/files/VA-ONE_StandardBlack_3.jpg"
+  },
+  {
+    "key": "goldmund telos 590",
+    "url": "https://goldmund.com/wp-content/uploads/2024/02/Telos-690-low-res-9.png"
+  },
+  {
+    "key": "electrocompaniet eci 6",
+    "url": "https://electrocompaniet.com/cdn/shop/products/ECI6-front-1000x666.jpg"
+  },
+  {
+    "key": "dartzeel cth 8550",
+    "url": "https://dartzeel.com/wp-content/uploads/2018/03/cth-8550-front-top-left-800x5903.png"
+  },
+  {
+    "key": "linn lp12 majik",
+    "url": "https://small.linncdn.com/web-media/isolated/Majik-LP12-MM_Front_Cherry.png"
+  },
+  {
+    "key": "technics sl 1500c",
+    "url": "https://us.technics.com/cdn/shop/products/ShopifySL-1500C_-K__1_1800x.jpg?v=1655765762"
+  },
+  {
+    "key": "thorens td 1600",
+    "url": "https://www.thorens.com/en/assets/media/products/td1600/20200623-thorens-td-1600-nb-12-72.jpg"
+  },
+  {
+    "key": "apple airpods pro",
+    "url": "https://www.apple.com/v/airpods-pro/r/images/overview/welcome/hero__b0eal3mn03ua_large.jpg"
+  },
+  {
+    "key": "audio technica ath m50xbt2",
+    "url": "https://www.audio-technica.com/media/catalog/product/cache/177161fc218aa2dd413f2b73f6832b88/a/t/ath-m50xbt2_01.png"
+  },
+  {
+    "key": "audeze lcd x",
+    "url": "https://www.audeze.com/cdn/shop/products/LCD-X_Updated_2019_4471x4471_600x.jpg"
+  },
+  {
+    "key": "hifiman susvara",
+    "url": "https://store.hifiman.com/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/s/u/susvara.jpg"
+  },
+  {
+    "key": "hifiman arya organic",
+    "url": "https://store.hifiman.com/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/a/r/arya_organic-main.jpg"
+  },
+  {
+    "key": "hifiman ef400",
+    "url": "https://store.hifiman.com/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/1/2/1200_1200_-3.jpg"
+  },
+  {
+    "key": "sennheiser hd 800 s",
+    "url": "https://assets.sennheiser.com/img/hd-800-s/gallery/hd-800-s_1.jpg"
+  },
+  {
+    "key": "sennheiser hd 600",
+    "url": "https://assets.sennheiser.com/img/hd-600/gallery/hd-600_1.jpg"
+  },
+  {
+    "key": "zmf verite closed",
+    "url": "https://shop.zmfheadphones.com/cdn/shop/files/DSC0072_1200x1200.jpg"
+  },
+  {
+    "key": "grado rs2x",
+    "url": "https://gradolabs.com/cdn/shop/products/GradoRSX2-028-Edit.jpg"
+  },
+  {
+    "key": "grado sr80x",
+    "url": "https://gradolabs.com/cdn/shop/files/SR80x-side.jpg"
+  },
+  {
+    "key": "meze empyrean",
+    "url": "https://mezeaudio.com/cdn/shop/files/Meze-Audio-Empyrean-headphone-01_4226ba5f-d514-438b-a00c-cadf82e6bbfd.webp"
+  },
+  {
+    "key": "dan clark audio stealth",
+    "url": "https://danclarkaudio.com/pub/media/catalog/product/cache/6517c62f5899ad6aa0ba23ceb3eeff97/s/t/stealth_1.png"
+  },
+  {
+    "key": "kef ls60",
+    "url": "https://us.kef.com/cdn/shop/files/pdt-ls60w-stn-pks-040_1200x1200.png"
+  },
+  {
+    "key": "mcintosh ma12000",
+    "url": "https://www.mcintoshlabs.com/-/media/images/mcintoshlabs/products/productimages/ma12000/ma12000-front.jpg"
+  },
+  {
+    "key": "hegel rost",
+    "url": "https://www.hegel.com/images/products/discontinued/Rost.jpg"
+  },
+  {
+    "key": "rega planar 3",
+    "url": "https://www.rega.co.uk/wp-content/uploads/2020/01/Planar-3-front.jpg"
+  },
+  {
+    "key": "pro ject debut pro",
+    "url": "https://www.project-audio.com/wp-content/uploads/2020/09/Debut-PRO_1_black_o_cartridge-1536x1536.png"
+  },
+  {
+    "key": "wiim ultra",
+    "url": "https://cdn.shopify.com/s/files/1/0833/6441/3757/files/listing_1_Main_picture_Gray_2056e197-e4f8-4e39-8f41-bd792622f0a8.jpg"
+  },
+  {
+    "key": "wiim amp",
+    "url": "https://cloudadmin-file.linkplay.com/product/image/b4bb2c26859e4f68b32df583307bf82e.png"
+  },
+  {
+    "key": "cambridge audio cxa81",
+    "url": "https://www.cambridgeaudio.com/sites/default/files/ecommece/product/image/Cambridge_Audio_CXA81_Front.png"
+  },
+  {
+    "key": "amphion argon3s",
+    "url": "https://amphion.fi/wp-content/uploads/2022/04/Argon3s-black.png"
+  },
+  {
+    "key": "focal clear mg",
+    "url": "https://dam.focal-naim.com/m/305c17715d989c72/original/Clear_MG_34-jpg.jpg"
+  },
+  {
+    "key": "sony wh 1000xm5",
+    "url": "https://www.sony.com/image/5d02da5df552836db894cead8a68f5f3"
+  },
+  {
+    "key": "sony ier m7",
+    "url": "https://www.sony.com/image/a7b7c7f037f84ee1b17df8e57534ed70"
+  },
+  {
+    "key": "etymotic er2xr",
+    "url": "https://www.etymotic.com/wp-content/uploads/2022/03/er2xr-earphone-front.jpg"
+  },
+  {
+    "key": "shure aonic 3",
+    "url": "https://pubs.shure.com/guide/aonic3/images/aonic3-hero.png"
+  },
+  {
+    "key": "sennheiser momentum 4",
+    "url": "https://assets.sennheiser.com/img/momentum-4-wireless/gallery/momentum-4-wireless_1.jpg"
+  },
+  {
+    "key": "holo audio may",
+    "url": "https://kitsunehifi.com/cdn/shop/files/may1.jpg"
+  },
+  {
+    "key": "magnepan 7",
+    "url": "https://magnepan.com/cdn/shop/products/Mg.7_White_Pair_1_1200x1200.jpg"
+  },
+  {
+    "key": "audiolab 6000a",
+    "url": "https://www.audiolab.co.uk/cdn/shop/files/6000ABlack2048x2048jpg_1.jpg"
+  },
+  {
+    "key": "nad c 316bee",
+    "url": "https://nadelectronics.com/cdn/shop/files/NAD-C-316BEE-Intagrated-amplifier-Front.jpg"
+  },
+  {
+    "key": "auralic vega",
+    "url": "https://us.auralic.com/cdn/shop/products/VEGA-S1-Front-Silver.jpg"
+  },
+  {
+    "key": "smsl do300",
+    "url": "https://www.smsl-audio.com/upload/portal/20230118/DO300-1.png"
+  },
+  {
+    "key": "smsl su 9",
+    "url": "https://www.smsl-audio.com/upload/portal/20210301/SU-9-1.jpg"
+  },
+  {
+    "key": "weiss dac204",
+    "url": "https://weiss.ch/wp-content/uploads/2023/11/DAC204-front-silver.jpg"
+  },
+  {
+    "key": "musical fidelity v90",
+    "url": "https://musicalfidelity.com/wp-content/uploads/2020/01/V90-DAC-front.jpg"
+  },
+  {
+    "key": "rogue audio cronus magnum",
+    "url": "https://rogueaudio.com/Images/cronusmag3.jpg"
+  },
+  {
+    "key": "spendor a1",
+    "url": "https://spendoraudio.com/wp-content/uploads/a1-natural-oak-front.jpg"
+  }
+];
+var R=[];
+var pc=0,fc=0,pn=E.length;
+function upd(){document.getElementById('summary').innerHTML='<span class="pass-text">✅ '+pc+' passed</span> · <span class="fail-text">❌ '+fc+' failed</span> · <span class="pending-text">'+pn+' pending</span>';}
+upd();
+var g=document.getElementById('grid');
+E.forEach(function(e,i){
+var c=document.createElement('div');c.className='card';c.id='c'+i;
+c.innerHTML='<div class="key">'+e.key+'</div><div class="status" id="s'+i+'">⏳</div><div class="ph" id="p'+i+'">Loading…</div><div class="url">'+e.url.slice(0,90)+'</div>';
+g.appendChild(c);
+var img=new Image();img.referrerPolicy='no-referrer';
+img.style.cssText='max-width:100%;max-height:150px;object-fit:contain;display:block;margin:.5rem auto';
+img.onload=function(){c.className='card pass';document.getElementById('s'+i).innerHTML='✅ '+img.naturalWidth+'×'+img.naturalHeight;document.getElementById('p'+i).replaceWith(img);pc++;pn--;R.push({key:e.key,url:e.url,ok:true});upd();};
+img.onerror=function(){c.className='card fail';document.getElementById('s'+i).innerHTML='❌ Failed';document.getElementById('p'+i).textContent='FAILED';document.getElementById('p'+i).style.color='#c33';fc++;pn--;R.push({key:e.key,url:e.url,ok:false});upd();};
+setTimeout(function(){img.src=e.url;},i*30);
+});
+function copyFailures(){var f=R.filter(function(r){return !r.ok;});navigator.clipboard.writeText(f.map(function(x){return x.key+'\t'+x.url;}).join('\n')).then(function(){alert('Copied '+f.length+' failures');});}
+</script>
+</body>
+</html>

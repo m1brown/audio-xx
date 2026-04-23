@@ -233,6 +233,152 @@ describe('Used-market links', () => {
 // 6. Reading links
 // ══════════════════════════════════════════════════════════
 
+// ══════════════════════════════════════════════════════════
+// 6. Purchase path regression — parity between card types
+// ══════════════════════════════════════════════════════════
+// Both AdvisoryProductCard (shopping) and AdvisoryUpgradePaths (upgrade)
+// now call buildProductLinks(). These tests verify the builder produces
+// correct output for the field shapes available from each card path.
+
+describe('Purchase path regression: product with both new + used links', () => {
+  const QUTEST_LIKE: ProductLinkInput = {
+    name: 'Qutest',
+    brand: 'Chord',
+    retailerLinks: [
+      { label: 'Chord', url: 'https://chordelectronics.co.uk/product/qutest/' },
+      { label: 'Amazon', url: 'https://www.amazon.com/dp/B07B4NY7DH' },
+    ],
+    availability: 'current',
+    typicalMarket: 'both',
+    manufacturerUrl: 'https://chordelectronics.co.uk/product/qutest/',
+  };
+
+  it('produces at least one Buy new link', () => {
+    const result = buildProductLinks(QUTEST_LIKE);
+    expect(result.newLinks.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('produces HiFi Shark + eBay used links', () => {
+    const result = buildProductLinks(QUTEST_LIKE);
+    expect(result.usedLinks.some(l => l.label === 'HiFi Shark')).toBe(true);
+    expect(result.usedLinks.some(l => l.label === 'eBay')).toBe(true);
+  });
+
+  it('includes Amazon when verified ASIN is present', () => {
+    const result = buildProductLinks(QUTEST_LIKE);
+    expect(result.hasVerifiedAmazon).toBe(true);
+    expect(result.newLinks.some(l => l.label === 'Amazon')).toBe(true);
+  });
+
+  it('isUsedOnly is false for current products', () => {
+    const result = buildProductLinks(QUTEST_LIKE);
+    expect(result.isUsedOnly).toBe(false);
+  });
+});
+
+describe('Purchase path regression: used-only product', () => {
+  const VINTAGE_AMP: ProductLinkInput = {
+    name: 'Citation II',
+    brand: 'Harman Kardon',
+    retailerLinks: [],
+    availability: 'vintage',
+    manufacturerUrl: undefined,
+  };
+
+  it('has zero Buy new links', () => {
+    const result = buildProductLinks(VINTAGE_AMP);
+    expect(result.newLinks.length).toBe(0);
+  });
+
+  it('isUsedOnly is true', () => {
+    const result = buildProductLinks(VINTAGE_AMP);
+    expect(result.isUsedOnly).toBe(true);
+  });
+
+  it('still generates used links', () => {
+    const result = buildProductLinks(VINTAGE_AMP);
+    expect(result.usedLinks.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('Purchase path regression: product with no retailer links', () => {
+  const BARE: ProductLinkInput = {
+    name: 'Bifrost 2/64',
+    brand: 'Schiit',
+    retailerLinks: undefined,
+    availability: 'current',
+    manufacturerUrl: 'https://www.schiit.com/products/bifrost',
+  };
+
+  it('falls back to manufacturer for Buy new', () => {
+    const result = buildProductLinks(BARE);
+    expect(result.newLinks.length).toBeGreaterThanOrEqual(1);
+    expect(result.newLinks[0].label).toBe('Schiit');
+    expect(result.newLinks[0].url).toBe('https://www.schiit.com/products/bifrost');
+  });
+
+  it('still generates used links', () => {
+    const result = buildProductLinks(BARE);
+    expect(result.usedLinks.some(l => l.label === 'HiFi Shark')).toBe(true);
+    expect(result.usedLinks.some(l => l.label === 'eBay')).toBe(true);
+  });
+});
+
+describe('Purchase path regression: upgrade-path field shape parity', () => {
+  // Simulates the field mapping used by UpgradePurchaseLinks:
+  //   retailerLinks from UpgradePathOption → ProductLinkInput.retailerLinks
+  //   manufacturerUrl from UpgradePathOption → ProductLinkInput.manufacturerUrl
+  // This must produce identical output to the shopping-card path for
+  // the same underlying product data.
+
+  const PONTUS_RETAILER_LINKS = [
+    { label: 'Vinshine Audio', url: 'https://www.vinshineaudio.com/product/denafrips-pontus-ii' },
+  ];
+  const PONTUS_MFR_URL = 'https://www.vinshineaudio.com/product/denafrips-pontus-ii';
+
+  const shoppingCardInput: ProductLinkInput = {
+    name: 'Pontus II',
+    brand: 'Denafrips',
+    retailerLinks: PONTUS_RETAILER_LINKS.map(l => ({ label: l.label, url: l.url })),
+    advisoryLinks: PONTUS_RETAILER_LINKS.map(l => ({ label: l.label, url: l.url, kind: 'dealer' as const })),
+    availability: 'current',
+    typicalMarket: 'both',
+    manufacturerUrl: PONTUS_MFR_URL,
+  };
+
+  const upgradeCardInput: ProductLinkInput = {
+    name: 'Pontus II',
+    brand: 'Denafrips',
+    retailerLinks: PONTUS_RETAILER_LINKS.map(l => ({ label: l.label, url: l.url })),
+    availability: 'current',
+    typicalMarket: 'both',
+    manufacturerUrl: PONTUS_MFR_URL,
+  };
+
+  it('both paths produce Buy new links', () => {
+    const shopping = buildProductLinks(shoppingCardInput);
+    const upgrade = buildProductLinks(upgradeCardInput);
+    expect(shopping.newLinks.length).toBeGreaterThanOrEqual(1);
+    expect(upgrade.newLinks.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('used links are identical between card types', () => {
+    const shopping = buildProductLinks(shoppingCardInput);
+    const upgrade = buildProductLinks(upgradeCardInput);
+    expect(shopping.usedLinks).toEqual(upgrade.usedLinks);
+  });
+
+  it('isUsedOnly matches between card types', () => {
+    const shopping = buildProductLinks(shoppingCardInput);
+    const upgrade = buildProductLinks(upgradeCardInput);
+    expect(shopping.isUsedOnly).toBe(upgrade.isUsedOnly);
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// 7. Reading links
+// ══════════════════════════════════════════════════════════
+
 describe('Reading links', () => {
   it('extracts review links from advisory links', () => {
     const withReview: ProductLinkInput = {

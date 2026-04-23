@@ -43,6 +43,7 @@ import type {
   ProposedSystem,
   SavedSystem,
 } from './system-types';
+import { setActiveSavedSystemId } from './saved-system/activeSystem';
 
 // ── Constants ───────────────────────────────────────────
 
@@ -329,11 +330,15 @@ export function AudioSessionProvider({ children }: { children: ReactNode }) {
   const setActiveSavedSystem = useCallback(async (id: string) => {
     // Optimistic: update state immediately, persist in background.
     dispatch({ type: 'SET_ACTIVE_SYSTEM', ref: { kind: 'saved', id } });
+    // Sync sessionStorage pointer so all resolution layers agree.
+    setActiveSavedSystemId(id);
     await patchProfileActiveSystem(id);
   }, []);
 
   const clearActiveSystem = useCallback(async () => {
     dispatch({ type: 'SET_ACTIVE_SYSTEM', ref: null });
+    // Clear sessionStorage pointer to prevent stale reads.
+    setActiveSavedSystemId(null);
     if (status === 'authenticated') {
       await patchProfileActiveSystem(null);
     }

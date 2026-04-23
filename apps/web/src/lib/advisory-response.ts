@@ -33,6 +33,7 @@ import type { CounterfactualAssessment } from './counterfactual-assessment';
 import type { DecisionFrame } from './decision-frame';
 import { detectSystemPhono, buildPhonoCaveat } from './products/turntables';
 import { getProductImage } from './product-images';
+import { getLegacyMapping } from './products/legacy-models';
 
 // ── Country code to name ──────────────────────────────
 
@@ -191,6 +192,22 @@ export interface AdvisoryOption {
   typicalMarket?: 'new' | 'used' | 'both';
   /** Structured buying context label — overrides card inference when present. */
   buyingContext?: 'easy_new' | 'better_used' | 'dealer_likely' | 'used_only';
+
+  // ── Technical depth fields (progressive enhancement) ──
+  /** Sensory delta bullets — what the listener will hear change (2–3 items). */
+  whatYoullHear?: string[];
+  /** Design-to-outcome bullets tying topology to audible result (2–3 items). */
+  technicalRationale?: string[];
+  /** Short positioning summary — who/what this option is best for. */
+  bestFor?: string;
+  /** Short counter-positioning — when this option is less ideal. */
+  lessIdealIf?: string;
+
+  // ── Legacy model context ──
+  /** Note shown when this product is a legacy model with a known successor. */
+  legacyNote?: string;
+  /** Note about the legacy model's used-market relevance. */
+  legacyUsedNote?: string;
 }
 
 export interface AdvisoryLink {
@@ -328,6 +345,58 @@ export interface UpgradePathOption {
   verdict?: string;
   /** System-level reasoning — how this option interacts with the current system. */
   systemDelta?: SystemDelta;
+  /** Product image URL — resolved from catalog or product-images mapping. */
+  imageUrl?: string;
+
+  // ── Technical depth fields (progressive enhancement) ──
+  /** Concise topology/architecture line (e.g. "FPGA DAC, discrete output stage"). */
+  topologyLine?: string;
+  /** Sensory delta bullets — what the listener will hear change (2–3 items). */
+  whatYoullHear?: string[];
+  /** Design-to-outcome bullets tying topology to audible result (2–3 items). */
+  technicalRationale?: string[];
+  /** Short positioning summary — who/what this option is best for. */
+  bestFor?: string;
+  /** Short counter-positioning — when this option is less ideal. */
+  lessIdealIf?: string;
+  /** Manufacturer context bullets (design philosophy, sonic profile, engineering approach). */
+  makerContext?: string[];
+  /** Curated review sources resolved from the curation layer. */
+  sources?: import('./curation').ResolvedReview[];
+
+  // ── Purchase clarity fields ──
+  /** Manufacturer or primary retailer URL for "Buy new" link. */
+  manufacturerUrl?: string;
+  /** All retailer links from catalog — enables full Buy new rendering. */
+  retailerLinks?: Array<{ label: string; url: string }>;
+  /** Market availability status. */
+  availability?: 'current' | 'discontinued' | 'vintage';
+  /** Where this product is typically found. */
+  typicalMarket?: 'new' | 'used' | 'both';
+  /** Approximate used-market price range (USD). */
+  usedPriceRange?: { low: number; high: number };
+
+  // ── Legacy model context ──
+  /** Note shown when this product is a legacy model with a known successor. */
+  legacyNote?: string;
+  /** Note about the legacy model's used-market relevance. */
+  legacyUsedNote?: string;
+
+  // ── Recommendation classification ──
+  /**
+   * Distinguishes true upgrades from directional changes and sidegrades.
+   *
+   * - `upgrade`:      Same design intent, strictly better (e.g. R2R → better R2R)
+   * - `directional`:  Different philosophy or sonic profile — trades strengths
+   * - `sidegrade`:    Similar tier, different voicing preference
+   *
+   * When absent, legacy cards default to 'upgrade' for backward compat.
+   */
+  recommendationType?: 'upgrade' | 'directional' | 'sidegrade';
+  /** For directional/sidegrade: what the new product improves over the current one. */
+  directionalGains?: string[];
+  /** For directional/sidegrade: what the current product does better. */
+  directionalLosses?: string[];
 }
 
 /**
@@ -1523,6 +1592,62 @@ function collectBrandLinks(
   return links;
 }
 
+// ── Technical depth derivation for AdvisoryOption ────
+//
+// Maps catalogTopology + catalogArchitecture + systemDelta to sensory
+// and technical bullets. Idempotent — skips fields already populated.
+
+const TOPO_RATIONALE: Record<string, string> = {
+  'fpga': 'FPGA timing engine \u2192 improved transient precision and phase coherence',
+  'r2r': 'R2R ladder conversion \u2192 fuller tone with less digital edge',
+  'delta-sigma': 'Delta-sigma conversion \u2192 wide dynamic range and low noise floor',
+  'set': 'Single-ended triode output \u2192 harmonic richness and midrange density',
+  'push-pull-tube': 'Push-pull tube topology \u2192 power headroom with harmonic warmth',
+  'hybrid': 'Hybrid tube/solid-state \u2192 tube warmth with solid-state control',
+  'class-a-solid-state': 'Class A bias \u2192 smoother treble and richer midrange texture',
+  'class-ab-solid-state': 'Class AB output \u2192 balanced efficiency and linearity',
+  'class-d': 'Class D output stage \u2192 high efficiency with tight low-end control',
+  'belt-drive': 'Belt-drive isolation \u2192 lower motor noise reaching the platter',
+  'direct-drive': 'Direct-drive motor \u2192 superior speed stability and torque',
+  'horn-loaded': 'Horn-loaded design \u2192 high efficiency with dynamic immediacy',
+  'open-baffle': 'Open-baffle design \u2192 natural spatial presentation and transient speed',
+  'planar-magnetic': 'Planar magnetic driver \u2192 fast transients and low distortion',
+};
+
+function enrichOptionTechnicalDepth(opt: AdvisoryOption): AdvisoryOption {
+  const topo = opt.catalogTopology?.toLowerCase();
+  const arch = (opt.catalogArchitecture ?? '').toLowerCase();
+
+  // ── Technical rationale ──
+  if (!opt.technicalRationale) {
+    const bullets: string[] = [];
+    if (topo && TOPO_RATIONALE[topo]) bullets.push(TOPO_RATIONALE[topo]);
+    if (arch.includes('discrete')) bullets.push('Discrete output stage \u2192 lower noise floor and cleaner signal path');
+    if (arch.includes('balanced') || arch.includes('differential')) bullets.push('Balanced/differential design \u2192 common-mode noise rejection');
+    if (bullets.length > 0) opt = { ...opt, technicalRationale: bullets.slice(0, 3) };
+  }
+
+  // ── What you'll hear (from systemDelta + sound profile) ──
+  if (!opt.whatYoullHear) {
+    const hear: string[] = [];
+    if (opt.systemDelta?.likelyImprovements) {
+      // Reframe improvements as sensory outcomes
+      for (const imp of opt.systemDelta.likelyImprovements.slice(0, 2)) {
+        if (imp) hear.push(imp);
+      }
+    }
+    if (hear.length < 2 && opt.soundProfile) {
+      for (const sp of opt.soundProfile.slice(0, 2)) {
+        if (sp && !hear.includes(sp)) hear.push(sp);
+        if (hear.length >= 3) break;
+      }
+    }
+    if (hear.length > 0) opt = { ...opt, whatYoullHear: hear.slice(0, 3) };
+  }
+
+  return opt;
+}
+
 /**
  * Enrich an AdvisoryResponse with generated content.
  * Called after the base adapter mapping. Only adds fields that
@@ -1569,6 +1694,16 @@ function enrichAdvisory(
     if (brandLinks.length > 0) {
       enriched.links = brandLinks;
     }
+  }
+
+  // ── Technical depth enrichment for product cards ──
+  // Derive whatYoullHear, technicalRationale, and positioning from
+  // existing catalog metadata when not already set. Runs once per
+  // enrichment — idempotent (checks for existing values).
+  if (enriched.options) {
+    enriched.options = enriched.options.map((opt) =>
+      enrichOptionTechnicalDepth(opt),
+    );
   }
 
   return enriched;
@@ -1659,7 +1794,14 @@ export function consultationToAdvisory(
     primaryConstraint: isComparison ? undefined : c.primaryConstraint,
     stackedTraitInsights: isComparison ? undefined : c.stackedTraitInsights,
     componentAssessments: isComparison ? undefined : c.componentAssessments,
-    upgradePaths: isComparison ? undefined : c.upgradePaths,
+    // Enrich upgrade-path options with product images (same pattern as advisory options).
+    upgradePaths: isComparison ? undefined : c.upgradePaths?.map((path) => ({
+      ...path,
+      options: path.options.map((opt) => ({
+        ...opt,
+        imageUrl: opt.imageUrl ?? getProductImage(opt.brand, opt.name),
+      })),
+    })),
     keepRecommendations: isComparison ? undefined : c.keepRecommendations,
     recommendedSequence: isComparison ? undefined : c.recommendedSequence,
     keyObservation: isComparison ? undefined : c.keyObservation,
@@ -2414,6 +2556,11 @@ export function shoppingToAdvisory(
     imageUrl: p.imageUrl ?? getProductImage(p.brand, p.name),
     typicalMarket: p.typicalMarket,
     buyingContext: p.buyingContext,
+    // Legacy model context — attach successor notes for discontinued/vintage products
+    ...(p.id ? (() => {
+      const legacy = getLegacyMapping(p.id);
+      return legacy ? { legacyNote: legacy.legacyNote, legacyUsedNote: legacy.usedNote } : {};
+    })() : {}),
   }));
 
   // Dedupe by normalized brand+name. The same product can appear in

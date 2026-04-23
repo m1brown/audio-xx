@@ -42,6 +42,7 @@ import AdvisoryDiagnostics from './AdvisoryDiagnostics';
 import AdvisoryComponentAssessments from './AdvisoryComponentAssessments';
 import AdvisoryUpgradePaths from './AdvisoryUpgradePaths';
 import AdvisorySpiderChart from './AdvisorySpiderChart';
+import { ProductImageProvider, useProductImageClaim } from './ProductImageContext';
 import AdvisoryListenerProfile from './AdvisoryListenerProfile';
 import AdvisoryIntake from './AdvisoryIntake';
 import { renderText } from './render-text';
@@ -341,20 +342,18 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
   //
   // Two chip families share this single state so they cannot be open
   // simultaneously:
-  //   - the "See upgrade options / Hear what this change does /
-  //     Compare paths" direction chips (kind: 'upgrade' | 'hear' |
-  //     'compare').
+  //   - the "See recommended upgrades" primary action (kind: 'upgrade').
   //   - the "Do not touch" component chips (kind: 'component'), each
   //     keyed by component name.
   type FollowUpKey =
-    | { kind: 'upgrade' | 'hear' | 'compare' }
+    | { kind: 'upgrade' }
     | { kind: 'component'; name: string };
   const [activeFollowUp, setActiveFollowUp] = useState<FollowUpKey | null>(null);
 
   // Small toggle helpers — close if the same chip is clicked again,
   // otherwise open the requested panel (and replace any other open
   // panel). Keeps the chip onClick handlers terse.
-  const toggleDirection = (kind: 'upgrade' | 'hear' | 'compare') =>
+  const toggleDirection = (kind: 'upgrade') =>
     setActiveFollowUp((prev) =>
       prev && prev.kind === kind ? null : { kind },
     );
@@ -390,12 +389,16 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
   const findSection = (needle: string) =>
     sections.find((s) => s.header.toLowerCase().includes(needle));
 
-  const overview = findSection('overview');
-  const strengths = findSection('doing well');
+  // Parse both old (v1) and new (v2) section headers for backwards compat.
+  const overview = findSection('system read') ?? findSection('overview');
+  const strengths = findSection('does well') ?? findSection('doing well');
   const constrained = findSection('constrained');
-  const identity = findSection('identity');
-  const changeNothing = findSection('change nothing');
-  const optimize = findSection('optimize');
+  const identity = findSection('listener alignment') ?? findSection('identity');
+  const decision = findSection('decision');
+  const tradeoffs = findSection('trade-offs') ?? findSection('trade offs');
+  const changeNothing = findSection('do nothing check') ?? findSection('change nothing');
+  const optimize = findSection('action path') ?? findSection('optimize');
+  const outcomeValidation = findSection('outcome validation');
 
   // ── Dedupe chain into a single aligned array of { name, role }. ──
   // One source of truth so name and role can never drift out of alignment.
@@ -425,7 +428,7 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
   }
 
   // ── Shared tokens. ──
-  const maxWidth = '42rem';
+  const maxWidth = '56rem';
   const sectionGap = '2.9rem'; // was 2.6rem — more vertical air between major sections
   const bodyLine = 1.9;
 
@@ -459,7 +462,66 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
     </p>
   );
 
+  // ── Narrative prose image rendering ──
+  // Dedup applies only here (prose/inline context). Card contexts
+  // (comparison cards, product cards, upgrade paths) always show images.
+  const { claimImage } = useProductImageClaim();
+
+  /** Resolve and render an inline product image for a component name.
+   *  Returns null if no image is available or already claimed. */
+  const renderFirstReferenceImage = (componentName: string) => {
+    const product = findProductByComponentName(componentName);
+    const brand = product?.brand ?? componentName.split(/\s+/)[0];
+    const name = product?.name ?? componentName;
+    const imageUrl = product
+      ? product.imageUrl ?? getProductImage(product.brand, product.name)
+      : getProductImage(brand, name);
+    if (!imageUrl) return null;
+    if (!claimImage(brand, name)) return null;
+    return (
+      <div style={{
+        marginTop: '0.6rem',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        width: '100%',
+        maxHeight: '320px',
+        minHeight: '140px',
+        aspectRatio: '4 / 3',
+        background: '#ffffff',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        boxSizing: 'border-box' as const,
+      }}>
+        <img
+          src={imageUrl}
+          alt={componentName}
+          loading="eager"
+          referrerPolicy="no-referrer"
+          style={{
+            maxWidth: '100%',
+            maxHeight: '100%',
+            objectFit: 'contain' as const,
+            display: 'block',
+          }}
+          onError={(e) => {
+            const wrap = (e.currentTarget as HTMLImageElement).parentElement;
+            if (wrap) wrap.style.display = 'none';
+          }}
+        />
+      </div>
+    );
+  };
+
+  /** Extract a bold product name from a list item (e.g. "**Chord Hugo** — ..."). */
+  const extractBoldName = (text: string): string | null => {
+    const m = text.match(/\*\*(.+?)\*\*/);
+    return m ? m[1] : null;
+  };
+
   // Strengths render as numbered list items (already numbered in source).
+  // Each item that names a product in bold gets an inline image at first reference.
   const renderListBody = (body: string) => {
     const items = body
       .split(/\n+/)
@@ -473,9 +535,16 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
         fontSize: FONTS.bodySize,
         color: COLORS.text,
       }}>
-        {items.map((it, i) => (
-          <li key={i} style={{ marginBottom: '0.75rem' }}>{renderText(it)}</li>
-        ))}
+        {items.map((it, i) => {
+          const productName = extractBoldName(it);
+          const img = productName ? renderFirstReferenceImage(productName) : null;
+          return (
+            <li key={i} style={{ marginBottom: img ? '1.25rem' : '0.75rem' }}>
+              {renderText(it)}
+              {img}
+            </li>
+          );
+        })}
       </ol>
     );
   };
@@ -544,10 +613,10 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
         </div>
       )}
 
-      {/* Overview. */}
+      {/* System read. */}
       {overview && (
         <section style={{ marginBottom: sectionGap }}>
-          {sectionLabel('System overview')}
+          {sectionLabel('System read')}
           {bodyPara(overview.body)}
         </section>
       )}
@@ -555,7 +624,7 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
       {/* Strengths. */}
       {strengths && (
         <section style={{ marginBottom: sectionGap }}>
-          {sectionLabel('What the system is doing well')}
+          {sectionLabel('What the system does well')}
           {renderListBody(strengths.body)}
         </section>
       )}
@@ -574,23 +643,37 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
         </section>
       )}
 
-      {/* Identity. */}
+      {/* Listener alignment. */}
       {identity && (
         <section style={{ marginBottom: sectionGap }}>
-          {sectionLabel('Core identity')}
+          {sectionLabel('Listener alignment')}
           {bodyPara(identity.body)}
         </section>
       )}
 
-      {/* Change nothing. */}
-      {changeNothing && (
-        <section style={{ marginBottom: sectionGap }}>
-          {sectionLabel('If you change nothing')}
-          {bodyPara(changeNothing.body)}
+      {/* Decision — clear verdict. */}
+      {decision && (
+        <section style={{
+          marginBottom: sectionGap,
+          padding: '1.25rem 1.5rem',
+          background: '#f8f7f3',
+          borderRadius: '6px',
+          borderLeft: `4px solid ${COLORS.text}`,
+        }}>
+          {sectionLabel('Decision', { emphasis: 'primary' })}
+          {bodyPara(decision.body, { fontWeight: 500 })}
         </section>
       )}
 
-      {/* Optimize — action emphasis, grouped with follow-up chips. */}
+      {/* Trade-offs. */}
+      {tradeoffs && (
+        <section style={{ marginBottom: sectionGap }}>
+          {sectionLabel('Trade-offs')}
+          {bodyPara(tradeoffs.body)}
+        </section>
+      )}
+
+      {/* Action path — action emphasis, grouped with follow-up chips. */}
       {optimize && (
         <div style={{ marginBottom: sectionGap }}>
         <section style={{
@@ -599,7 +682,7 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
           border: `1.5px solid ${COLORS.accent}`,
           borderRadius: '6px',
         }}>
-          {sectionLabel('If you optimize', { emphasis: 'action' })}
+          {sectionLabel('Action path', { emphasis: 'action' })}
 
           {doNotTouchItems.length > 0 && (
             <div style={{ marginBottom: '1.15rem' }}>
@@ -620,7 +703,7 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
               }}>
                 {doNotTouchItems.map((name, i) => {
                   // Component chips behave the same way as the
-                  // "See upgrade options / Hear / Compare" chips:
+                  // "See recommended upgrades" chip:
                   // clicking dispatches an inline follow-up panel
                   // inside the same chat message rather than
                   // navigating to a brand page. Single-panel-at-a-
@@ -682,77 +765,66 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
           )}
 
           {optimizeBody && bodyPara(optimizeBody, { lineHeight: 1.95 })}
+
+          {/* Structured upgrade-path product cards — rendered inside the
+            * action path section so product images are visible without
+            * requiring user interaction. The narrative prose above provides
+            * the directional context; these cards make the recommendations
+            * tangible with images, pricing, and trade-offs. */}
+          {a.upgradePaths && a.upgradePaths.length > 0 && (
+            <div style={{ marginTop: '1.25rem' }}>
+              <AdvisoryUpgradePaths paths={a.upgradePaths} />
+            </div>
+          )}
         </section>
-
-          {/* Follow-up action chips — in-chat dispatch (no page navigation).
-            *
-            * Each chip toggles an inline follow-up panel below the chip
-            * row. The panels reuse the existing AdvisoryProductCards
-            * component so product images, manufacturer insight, and
-            * retailer links render identically to the primary advisory
-            * output. Only one panel is open at a time.
-            *
-            * Chip wording, styling, spacing, and layout are unchanged
-            * from the prior route-based implementation. The only change
-            * is the dispatch mechanism: `href` → `onClick`. */}
-          <div style={{ marginTop: '0.9rem', paddingLeft: '0.15rem' }}>
-            <div style={{
-              fontSize: '0.82rem',
-              color: COLORS.textMuted,
-              fontStyle: 'italic',
-              marginBottom: '0.45rem',
-            }}>
-              You can explore this further:
-            </div>
-            <div
-              role="group"
-              aria-label="Follow-up actions"
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '0.45rem',
-              }}
-            >
-              {([
-                { key: 'upgrade' as const, label: 'See upgrade options' },
-                { key: 'hear'    as const, label: 'Hear what this change does' },
-                { key: 'compare' as const, label: 'Compare paths' },
-              ]).map(({ key, label }) => (
-                <FollowUpChip
-                  key={label}
-                  label={label}
-                  active={
-                    activeFollowUp !== null &&
-                    activeFollowUp.kind === key
-                  }
-                  onClick={() => toggleDirection(key)}
-                />
-              ))}
-            </div>
-
-            {/* Inline follow-up panels — dispatched in-chat from the
-              * chips above. Each panel is a direction-specific
-              * continuation of the advisor's analysis and reuses the
-              * rich product-card component for product rendering. */}
-            {activeFollowUp?.kind === 'upgrade' && (
-              <UpgradeOptionsFollowUp
-                onDismiss={() => setActiveFollowUp(null)}
-              />
-            )}
-            {activeFollowUp?.kind === 'hear' && (
-              <HearFollowUp
-                constrainedBody={constrained?.body ?? ''}
-                optimizeBody={optimizeBody}
-                onDismiss={() => setActiveFollowUp(null)}
-              />
-            )}
-            {activeFollowUp?.kind === 'compare' && (
-              <ComparePathsFollowUp
-                onDismiss={() => setActiveFollowUp(null)}
-              />
-            )}
-          </div>
         </div>
+      )}
+
+      {/* Primary follow-up action — always visible, independent of Action Path.
+        *
+        * Single high-value next step: opens the Safe direction upgrade
+        * panel with rich product cards (images, audible outcomes,
+        * technical rationale, positioning). Renders unconditionally so
+        * users can always explore upgrade options regardless of
+        * whether the decision was KEEP or a specific change. */}
+      <div style={{ marginBottom: sectionGap, marginTop: optimize ? '0' : sectionGap, paddingLeft: '0.15rem' }}>
+        <div style={{
+          fontSize: '0.82rem',
+          color: COLORS.textMuted,
+          fontStyle: 'italic',
+          marginBottom: '0.45rem',
+        }}>
+          Your next step:
+        </div>
+        <div>
+          <FollowUpChip
+            label="See recommended upgrades"
+            active={activeFollowUp !== null && activeFollowUp.kind === 'upgrade'}
+            onClick={() => toggleDirection('upgrade')}
+          />
+        </div>
+
+        {activeFollowUp?.kind === 'upgrade' && (
+          <UpgradeOptionsFollowUp
+            onDismiss={() => setActiveFollowUp(null)}
+          />
+        )}
+      </div>
+
+      {/* Do nothing check. */}
+      {changeNothing && (
+        <section style={{ marginBottom: sectionGap }}>
+          {sectionLabel('Do nothing check')}
+          {bodyPara(changeNothing.body)}
+        </section>
+      )}
+
+      {/* Outcome validation. */}
+      {outcomeValidation && (
+        <section style={{ marginBottom: sectionGap }}>
+          {sectionLabel('Outcome validation')}
+          {bodyPara(outcomeValidation.body)}
+        </section>
       )}
     </div>
   );
@@ -827,7 +899,11 @@ function HearFollowUp({
 
   // Anchor products — first 2–3 from the Safe direction, rendered with
   // full card treatment (image, maker insight, retailer links).
-  const anchors = DIRECTION_CONTENT.safe.options.slice(0, 3);
+  // Enrich with product images from the catalog when not already set.
+  const anchors = DIRECTION_CONTENT.safe.options.slice(0, 3).map((o) => ({
+    ...o,
+    imageUrl: o.imageUrl ?? getProductImage(o.brand, o.name),
+  }));
 
   return (
     <div
@@ -925,7 +1001,11 @@ function UpgradeOptionsFollowUp({
 }) {
   const { blurb, options } = DIRECTION_CONTENT.safe;
   // Show up to 4 options — matches the page's authored list length.
-  const picked = options.slice(0, 4);
+  // Enrich with product images from the catalog when not already set.
+  const picked = options.slice(0, 4).map((o) => ({
+    ...o,
+    imageUrl: o.imageUrl ?? getProductImage(o.brand, o.name),
+  }));
 
   return (
     <div
@@ -1058,7 +1138,11 @@ function ComparePathsFollowUp({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
         {paths.map(({ key, label }) => {
           const content = DIRECTION_CONTENT[key];
-          const picked = content.options.slice(0, 2);
+          // Enrich with product images from the catalog when not already set.
+          const picked = content.options.slice(0, 2).map((o) => ({
+            ...o,
+            imageUrl: o.imageUrl ?? getProductImage(o.brand, o.name),
+          }));
           return (
             <div
               key={key}
@@ -1130,9 +1214,11 @@ function ComponentKeepFollowUp({
   const product = findProductByComponentName(name);
   const brandName = product?.brand ?? name.trim().split(/\s+/)[0] ?? '';
   const brandProfile = findBrandProfileByName(brandName);
-  const imageUrl = product
+  const rawImageUrl = product
     ? product.imageUrl ?? getProductImage(product.brand, product.name)
     : undefined;
+  // Card context — always show image when available (no dedup).
+  const imageUrl = rawImageUrl ?? undefined;
 
   // ── Derive "what this component contributes" from catalog tendencies.
   // First sentence of the product description is the densest summary
@@ -1227,35 +1313,44 @@ function ComponentKeepFollowUp({
         </button>
       </div>
 
-      {/* ── Product image + identity header ── */}
-      <div style={{
-        display: 'flex',
-        gap: '1rem',
-        alignItems: 'flex-start',
-        marginBottom: '0.75rem',
-      }}>
-        {imageUrl && (
-          <div style={{
-            flexShrink: 0,
-            width: 80,
-            height: 80,
-            borderRadius: '6px',
-            overflow: 'hidden',
-            border: `1px solid ${COLORS.border}`,
-            background: '#fff',
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imageUrl}
-              alt={name}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-              }}
-            />
-          </div>
-        )}
+      {/* ── Product hero image ── */}
+      {imageUrl && (
+        <div style={{
+          marginBottom: '1rem',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          width: '100%',
+          minHeight: '180px',
+          maxHeight: '340px',
+          aspectRatio: '4 / 3',
+          background: '#ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.25rem',
+          boxSizing: 'border-box',
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrl}
+            alt={name}
+            referrerPolicy="no-referrer"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              display: 'block',
+            }}
+            onError={(e) => {
+              const wrap = (e.currentTarget as HTMLImageElement).parentElement;
+              if (wrap) wrap.style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+
+      {/* ── Identity header ── */}
+      <div style={{ marginBottom: '0.75rem' }}>
         <div>
           <div style={{
             fontSize: '1.05rem',
@@ -1446,17 +1541,17 @@ function FollowUpChip({
   // Identical style payload for both render paths. Centralized so the
   // `<Link>` and `<button>` cases cannot drift visually.
   const style = {
-    padding: '0.3rem 0.75rem',
-    background: lit ? COLORS.accentBg : 'transparent',
-    border: `1px ${active ? 'solid' : 'dashed'} ${lit ? COLORS.accentLight : COLORS.border}`,
+    padding: '0.45rem 0.9rem',
+    background: lit ? 'rgba(47, 95, 179, 0.16)' : 'rgba(47, 95, 179, 0.08)',
+    border: `1px solid ${lit ? 'rgba(47, 95, 179, 0.5)' : 'rgba(47, 95, 179, 0.3)'}`,
     borderRadius: '999px',
-    fontSize: '0.82rem',
-    color: lit ? COLORS.text : COLORS.textMuted,
-    fontWeight: 400,
+    fontSize: '0.9rem',
+    color: '#2f5fb3',
+    fontWeight: 500 as const,
     cursor: 'pointer',
     fontFamily: 'inherit',
     lineHeight: 1.3,
-    transition: 'background 120ms ease, border-color 120ms ease, color 120ms ease',
+    transition: 'background 120ms ease, border-color 120ms ease',
     textDecoration: 'none',
     display: 'inline-block',
   } as const;
@@ -3514,7 +3609,7 @@ function DecisiveFormat({ advisory: a }: AdvisoryMessageProps) {
     <div style={{
       lineHeight: FONTS.lineHeight,
       color: COLORS.text,
-      maxWidth: 560,
+      maxWidth: '56rem',
     }}>
 
       {/* ── System pairing context (if available) ──────── */}
@@ -3678,61 +3773,65 @@ function StandardFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePro
               renders as clean labelled prose. Letter-tile placeholders are
               suppressed globally (see product-images.ts) because the
               catalog's imageUrl fields are not yet populated. */}
+          {/* ── Comparison hero images — side by side, large format ── */}
           {a.comparisonImages
             && a.comparisonImages.length === 2
             && a.comparisonImages.every((e) => !!e.imageUrl) && (
             <div
               style={{
                 display: 'flex',
-                gap: '1rem',
-                alignItems: 'center',
-                margin: '0 0 0.85rem 0',
-                flexWrap: 'wrap',
+                gap: '0.75rem',
+                alignItems: 'stretch',
+                margin: '0 0 1rem 0',
               }}
             >
-              {a.comparisonImages.map((entry, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    fontSize: '0.92rem',
-                    color: '#555',
-                  }}
-                >
-                  {entry.imageUrl ? (
+              {a.comparisonImages.map((entry, i) => {
+                // Card context — always show image when available (no dedup).
+                const show = !!entry.imageUrl;
+                return show ? (
+                <div key={i} style={{ flex: '1 1 0', minWidth: 0 }}>
+                  <div
+                    style={{
+                      width: '100%',
+                      aspectRatio: '4 / 3',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      background: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0.75rem',
+                      boxSizing: 'border-box',
+                      marginBottom: '0.4rem',
+                    }}
+                  >
                     <img
                       src={entry.imageUrl}
                       alt={`${entry.brand} ${entry.name}`.trim()}
-                      width={56}
-                      height={56}
-                      style={{ borderRadius: '4px', objectFit: 'cover', border: '1px solid #e8ddc9' }}
-                    />
-                  ) : (
-                    <div
+                      referrerPolicy="no-referrer"
                       style={{
-                        width: 56,
-                        height: 56,
-                        borderRadius: '4px',
-                        background: '#faf7f2',
-                        border: '1px solid #e8ddc9',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '1.1rem',
-                        fontWeight: 600,
-                        color: '#b08d57',
-                        fontFamily: 'Georgia, "Times New Roman", serif',
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain',
+                        display: 'block',
                       }}
-                    >
-                      {(entry.brand || entry.name || '?').charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <span>{[entry.brand, entry.name].filter(Boolean).join(' ')}</span>
-                  {i === 0 && <span style={{ color: '#999', margin: '0 0.25rem' }}>vs</span>}
+                      onError={(e) => {
+                        const wrap = (e.currentTarget as HTMLImageElement).parentElement;
+                        if (wrap) wrap.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                  <div style={{
+                    fontSize: '0.85rem',
+                    color: '#555',
+                    textAlign: 'center',
+                    fontWeight: 500,
+                  }}>
+                    {[entry.brand, entry.name].filter(Boolean).join(' ')}
+                  </div>
                 </div>
-              ))}
+                ) : <div key={i} />;
+              })}
             </div>
           )}
           {a.comparisonSummary.split(/\n\n/).filter((s: string) => s.trim()).map((segment: string, i: number) => (
@@ -4318,30 +4417,39 @@ function QuickRecFormat({ quickRec }: { quickRec: QuickRecommendation }) {
 // ── Main Export ────────────────────────────────────────
 
 export default function AdvisoryMessage({ advisory, onIntakeSubmit, onPreferenceCapture }: AdvisoryMessageProps) {
-  // Quick recommendation format — compact output from onboarding flow
+  // Each advisory message gets its own ProductImageProvider.
+  // Card contexts (product cards, comparison cards, upgrade paths)
+  // always show images when available — no dedup.
+  // Narrative prose references use claimImage() for first-reference dedup.
+  let content: React.ReactNode;
+
   if (advisory.quickRecommendation) {
-    return <QuickRecFormat quickRec={advisory.quickRecommendation} />;
-  }
-  if (isIntakeFormat(advisory)) {
-    return <AdvisoryIntake advisory={advisory} onSubmit={onIntakeSubmit} />;
-  }
-  if (isMemoFormat(advisory)) {
-    return <MemoFormat advisory={advisory} />;
-  }
-  if (isAssessmentFormat(advisory)) {
-    return <AssessmentFormat advisory={advisory} />;
-  }
-  if (isKnowledgeFormat(advisory)) {
-    return <KnowledgeFormat advisory={advisory} />;
-  }
-  if (isAssistantFormat(advisory)) {
-    return <AssistantFormat advisory={advisory} />;
-  }
-  if (isDecisiveFormat(advisory)) {
+    content = <QuickRecFormat quickRec={advisory.quickRecommendation} />;
+  } else if (isIntakeFormat(advisory)) {
+    content = <AdvisoryIntake advisory={advisory} onSubmit={onIntakeSubmit} />;
+  } else if (isMemoFormat(advisory)) {
+    content = <MemoFormat advisory={advisory} />;
+  } else if (isAssessmentFormat(advisory)) {
+    content = <AssessmentFormat advisory={advisory} />;
+  } else if (isKnowledgeFormat(advisory)) {
+    content = <KnowledgeFormat advisory={advisory} />;
+  } else if (isAssistantFormat(advisory)) {
+    content = <AssistantFormat advisory={advisory} />;
+  } else if (isDecisiveFormat(advisory)) {
     console.log('[decisive-debug] routing → DecisiveFormat');
-    return <DecisiveFormat advisory={advisory} />;
+    content = <DecisiveFormat advisory={advisory} />;
+  } else {
+    console.log('[decisive-debug] routing → StandardFormat (hasDecisive=%s, hasOptions=%s)',
+      !!advisory.decisiveRecommendation, !!advisory.options);
+    content = <StandardFormat advisory={advisory} onPreferenceCapture={onPreferenceCapture} />;
   }
-  console.log('[decisive-debug] routing → StandardFormat (hasDecisive=%s, hasOptions=%s)',
-    !!advisory.decisiveRecommendation, !!advisory.options);
-  return <StandardFormat advisory={advisory} onPreferenceCapture={onPreferenceCapture} />;
+
+  return (
+    <ProductImageProvider
+      comparisonImages={advisory.comparisonImages}
+      options={advisory.options}
+    >
+      {content}
+    </ProductImageProvider>
+  );
 }

@@ -306,7 +306,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     },
     // Step 10: buying metadata
     buyingContext: 'better_used',
-    // imageUrl: undefined, // TODO: add official product image from harbeth.co.uk
+    imageUrl: 'https://harbeth.co.uk/wp-content/uploads/2024/11/P3ESR-XD2-cherry.png',
     philosophy: 'warm',
     marketType: 'traditional',
   },
@@ -373,6 +373,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'The Audiophiliac', note: 'Steve Guttenberg coverage of the SHL5+ as a do-everything monitor.' },
       { source: '6moons', note: 'Review covering the BBC thin-wall design evolution and full-range balance.' },
     ],
+    imageUrl: 'https://www.harbeth.co.uk/images/SHL5plus-XD-Cherry-Front.jpg',
     philosophy: 'warm',
     marketType: 'traditional',
   },

@@ -6,7 +6,7 @@
  * text, and verifies that:
  *
  *   1. buildSystemAssessment is called and returns kind: 'assessment'
- *   2. composeAssessmentNarrative has run (all six section headers
+ *   2. composeAssessmentNarrative has run (seven section headers
  *      appear in response.systemContext)
  *   3. the legacy structured fields subsumed by the narrative are
  *      cleared on the response
@@ -74,15 +74,20 @@ describe('narrative rewrite — end-to-end', () => {
     if (result!.kind !== 'assessment') return;
     const r = result!.response;
 
-    // Narrative must have run: six section headers present.
+    // Narrative must have run: seven section headers present.
     expect(r.systemContext).toBeDefined();
     const ctx = r.systemContext!;
-    expect(ctx).toContain('**System overview**');
-    expect(ctx).toContain('**What the system is doing well**');
-    expect(ctx).toContain('**Where the system is constrained**');
-    expect(ctx).toContain('**Core identity**');
-    expect(ctx).toContain('**If you change nothing**');
-    expect(ctx).toContain('**If you optimize**');
+    expect(ctx).toContain('**System read**');
+    expect(ctx).toContain('**What the system does well**');
+    // Constraint section may be suppressed for identity-mode systems.
+    // expect(ctx).toContain('**Where the system is constrained**');
+    expect(ctx).toContain('**Listener alignment**');
+    expect(ctx).toContain('**Decision**');
+    expect(ctx).toContain('**Trade-offs**');
+    expect(ctx).toContain('**Do nothing check**');
+    expect(ctx).toContain('**Outcome validation**');
+    // Action path is only present for non-KEEP decisions.
+    // expect(ctx).toContain('**Action path**');
 
     // Legacy structured fields remain populated on the response object
     // (parity tests depend on them). The UI MemoFormat renderer skips
@@ -117,9 +122,10 @@ describe('narrative rewrite — end-to-end', () => {
     expect(result!.kind).not.toBe('clarification');
   });
 
-  it('multiple saved systems → resolver picks most recent (no ambiguity)', async () => {
-    // Import at runtime so the repository module uses a fresh in-memory
-    // localStorage shim for this test.
+  it('multiple saved systems with no active ID → resolver returns none (P0 fix)', async () => {
+    // P0 fix: multiple saved systems with no explicit active ID must NOT
+    // silently pick one. The previous "most recently updated" fallback
+    // was the root cause of phantom-system contamination.
     const { loadAll, saveOne, clearAll } = await import('../saved-system/repository');
     const { resolveSavedSystemForAdvisory } = await import('../saved-system/resolveForAdvisory');
 
@@ -141,8 +147,7 @@ describe('narrative rewrite — end-to-end', () => {
     expect(loadAll().length).toBe(2);
 
     const resolved = resolveSavedSystemForAdvisory();
-    expect(resolved.kind).toBe('one');
-    if (resolved.kind !== 'one') return;
-    expect(resolved.profile.label).toBe('Newer');
+    // Must return 'none' — never silently pick a system.
+    expect(resolved.kind).toBe('none');
   });
 });

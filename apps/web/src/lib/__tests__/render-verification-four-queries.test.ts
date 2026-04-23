@@ -173,11 +173,12 @@ describe('Render verification — Query 2: NODE X / EVO 300 / P3ESR upgrade', ()
     expect(allProse).not.toMatch(/\bJOB\b/);         // the English-word uppercasing leak
     expect(allProse).not.toMatch(/dominant:|damping evidence:|primary kind:/);
 
-    // Blocker 6 (optimize panel consistency): if there's an "If you optimize"
-    // section, the body should either (a) include a "Change the ..." directive
-    // that matches an identified bottleneck, or (b) not exist at all.
+    // Blocker 6 (optimize panel consistency): if there's an "Action path"
+    // (or legacy "If you optimize") section, the body should either
+    // (a) include a "Change the ..." directive that matches an identified
+    // bottleneck, or (b) not exist at all.
     const sections = parseSections(ctx);
-    const optimize = sections.find((s) => /optimize/i.test(s.header));
+    const optimize = sections.find((s) => /optimize|action path/i.test(s.header));
     if (optimize) {
       console.log('─ optimize body ─');
       console.log(optimize.body);

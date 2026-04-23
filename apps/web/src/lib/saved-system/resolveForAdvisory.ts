@@ -4,18 +4,15 @@
  * Selection rule:
  *   - if an active saved-system id is set and resolves → use it
  *   - else if exactly one saved system exists → use it
- *   - else if multiple saved systems exist → pick the most recently
- *     updated one (the last system the user actually touched). This
- *     avoids an ambiguity-prompt deadlock where the user has no in-chat
- *     way to resolve the conflict. A system with no current components
- *     still returns kind:'one' but with empty syntheticText — the caller
- *     can decide whether that counts as "injectable".
+ *   - else if multiple saved systems exist → return 'none' (P0 fix:
+ *     the previous "most recently updated" fallback silently injected
+ *     wrong systems into evaluations)
  *   - else → none
  *
- * Ambiguity is only reported when the most-recent tiebreak cannot pick
- * a winner (i.e. zero systems), so in practice the resolver no longer
- * returns 'ambiguous' from normal use. The variant is kept in the union
- * for compatibility with existing call sites.
+ * NOTE: page.tsx no longer calls this function for advisory injection.
+ * It uses turnCtx.activeSystem (AudioSessionContext) as the single
+ * source of truth. This function is retained for the test suite and
+ * any non-advisory callers.
  *
  * Pure browser-local. No advisory imports. Caller decides what to do
  * with the result; this module never mutates state.
@@ -54,16 +51,18 @@ export function resolveSavedSystemForAdvisory(): ResolvedAdvisorySystem {
     };
   }
   if (all.length > 1) {
-    // Pick the most recently updated system as the implicit active system.
-    // This eliminates the ambiguity-prompt deadlock while still respecting
-    // an explicit active-id (checked above) when the user set one.
-    const sorted = [...all].sort((a, b) => b.updatedAt - a.updatedAt);
-    const most = sorted[0];
-    return {
-      kind: 'one',
-      profile: most,
-      syntheticText: buildSyntheticSystemText(most),
-    };
+    // Multiple saved systems with no active ID set — do NOT silently pick one.
+    // The previous "most recently updated" fallback was the root cause of
+    // phantom-system contamination: a wrong system was silently injected
+    // into evaluations. Return 'none' to force explicit selection.
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        '[resolveForAdvisory] Multiple saved systems but no activeId — returning none.',
+        'Count:', all.length,
+        'Labels:', all.map((s) => s.label),
+      );
+    }
+    return { kind: 'none' };
   }
   return { kind: 'none' };
 }

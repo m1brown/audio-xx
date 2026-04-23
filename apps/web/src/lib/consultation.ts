@@ -96,6 +96,8 @@ import { assessTradeoffs } from './tradeoff-assessment';
 import { assessPreferenceProtection, classifyPriorities } from './preference-protection';
 import { assessCounterfactual } from './counterfactual-assessment';
 import { frameStrategy, deduplicateStrategies } from './strategy-framing';
+import { topReviewsForCard, type ReviewerDomain } from './curation';
+import { getLegacyMapping } from './products/legacy-models';
 import { getProductImage } from './product-images';
 import { findCatalogProduct } from './listener-profile';
 import { toSlug as routeToSlug } from './route-slug';
@@ -5911,14 +5913,15 @@ export function buildSystemAssessment(
 // ── Rewritten system-assessment narrative composer ────
 //
 // Turns a MemoFindings object (the deterministic pipeline's structured
-// output) into a single six-section markdown narrative. The six sections
-// are fixed:
-//   1. System overview
-//   2. What the system is doing well
-//   3. Where the system is constrained
-//   4. Core identity
-//   5. If you change nothing
-//   6. If you optimize
+// output) into a single seven-section markdown narrative. The seven
+// sections are fixed:
+//   1. System read        — sonic behavior, strengths, constraints
+//   2. Listener alignment — who this system works for, identity
+//   3. Decision           — KEEP / REFINE / CHANGE DIRECTION / FIX A PROBLEM
+//   4. Trade-offs         — what improves, gets worse, stays the same
+//   5. Action path        — direction, products, risk level
+//   6. Do nothing check   — when the user should stay put
+//   7. Outcome validation — what to hear differently, how to judge success
 //
 // No hedging, no filler, no "likely" / "probably" language. No new
 // interpretation — every claim is sourced from the findings contract.
@@ -6028,7 +6031,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   }
 
   const overview = [
-    `**System overview**`,
+    `**System read**`,
     ``,
     `${names} form a chain built around ${tonal}, ${detail}, ${timing}, and ${stage}. ${deliberate} At its core this is ${describeCoreIdentity(axes)}.${dacNote}${powerNote}`,
   ].join('\n');
@@ -6201,7 +6204,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     strengths[idx] = strengths[idx].replace(/\s*$/, '') + augmentation;
   }
 
-  const strengthsSection = [`**What the system is doing well**`, ``, ...strengths].join('\n');
+  const strengthsSection = [`**What the system does well**`, ``, ...strengths].join('\n');
 
   // ── Primary-constraint selection ──
   // The renderer used to dump every constraint as an equal bullet, which
@@ -6640,14 +6643,14 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       : '';
 
   const identitySection = [
-    `**Core identity**`,
+    `**Listener alignment**`,
     ``,
     `This is ${describeCoreIdentity(axes)}. It rewards ${rewardFromAxes(axes)} and feels slightly out of its element with ${weakFromAxes(axes)}. That is a clear personality, not a flaw — and the same character runs from source to transducer.`,
   ].join('\n');
 
   const keepNames = keeps.slice(0, 3).map(k => k.name);
-  const changeNothing = [
-    `**If you change nothing**`,
+  const doNothingCheck = [
+    `**Do nothing check**`,
     ``,
     keeps.length > 0
       ? `You already own a coherent chain. ${keepNames.join(', ')} are the pieces carrying the personality you sit down to hear — replace any of them and the character of the room changes. Staying put means trading the dream of "more" for an evening that already works, every night, on the music you actually play.`
@@ -6729,17 +6732,134 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   }
 
   optimizeParts.push(chosenStepText);
-  const optimizeSection = [`**If you optimize**`, ``, ...optimizeParts].join('\n');
+  const actionPathSection = [`**Action path**`, ``, ...optimizeParts].join('\n');
 
-  // Filter out the empty constraint section so it leaves no trailing
-  // blank line in the rendered narrative when suppressed.
+  // ── Decision section ──
+  // One of four verdicts, derived from the dominant-insight mode and
+  // the primary constraint. No hedging — a clear, one-line call.
+  let decisionVerdict: string;
+  let riskLevel: string;
+  if (dominantInsight === 'identity') {
+    decisionVerdict = 'KEEP';
+    riskLevel = 'LOW';
+  } else if (primary.kind === 'none') {
+    decisionVerdict = 'KEEP';
+    riskLevel = 'LOW';
+  } else if (
+    primary.kind === 'bottleneck' &&
+    primary.axes.length >= 2
+  ) {
+    decisionVerdict = 'FIX A PROBLEM';
+    riskLevel = 'LOW';
+  } else if (primary.kind === 'bottleneck' || primary.kind === 'component') {
+    decisionVerdict = 'REFINE';
+    riskLevel = 'LOW';
+  } else {
+    decisionVerdict = 'CHANGE DIRECTION';
+    riskLevel = 'MEDIUM';
+  }
+
+  const decisionReason =
+    decisionVerdict === 'KEEP'
+      ? 'The system is coherent and internally aligned. No single component is holding it back.'
+      : decisionVerdict === 'FIX A PROBLEM'
+        ? `The ${(primary as { component?: string; name?: string }).component ?? (primary as { name?: string }).name ?? 'current bottleneck'} is limiting what the rest of the chain can deliver. Addressing it unlocks existing potential.`
+        : decisionVerdict === 'REFINE'
+          ? `The system is fundamentally sound but one component is constraining the overall performance. A targeted swap raises the floor without changing the system's character.`
+          : 'The system imbalance runs deeper than a single component swap. A directional change shifts the entire chain toward a different set of priorities.';
+
+  const decisionSection = [
+    `**Decision**`,
+    ``,
+    `${decisionVerdict}`,
+    ``,
+    decisionReason,
+  ].join('\n');
+
+  // ── Trade-offs section ──
+  // Explicit three-part structure: improves / gets worse / stays same.
+  const tradeOffImproves: string[] = [];
+  const tradeOffWorse: string[] = [];
+  const tradeOffSame: string[] = [];
+
+  if (decisionVerdict === 'KEEP') {
+    tradeOffSame.push('Current sonic character and system coherence');
+    tradeOffSame.push('Listening engagement on familiar material');
+    tradeOffWorse.push('No access to qualities outside the current architecture');
+  } else {
+    // What improves — derived from bottleneck axes or constraint description
+    if (primary.kind === 'bottleneck' && primary.axes.length > 0) {
+      for (const ax of primary.axes.slice(0, 2)) {
+        tradeOffImproves.push(listenerAxisLabel(ax));
+      }
+    } else if (primary.kind === 'component') {
+      tradeOffImproves.push('Resolution at the constrainted link in the chain');
+    } else if (primary.kind === 'imbalance') {
+      tradeOffImproves.push(`Balance across ${humanizeProperty(primary.property)}`);
+    }
+    if (tradeOffImproves.length === 0) {
+      tradeOffImproves.push('Overall coherence and system ceiling');
+    }
+    // What gets worse — honest downside
+    if (keeps.length > 0) {
+      tradeOffWorse.push('Risk of disrupting the existing synergy between ' + keeps.slice(0, 2).map(k => k.name).join(' and '));
+    }
+    tradeOffWorse.push('Adjustment period — the system will sound different before it sounds better');
+    // What stays the same
+    if (keeps.length > 0) {
+      tradeOffSame.push(`Core character (anchored by ${keeps[0].name})`);
+    }
+    tradeOffSame.push('Listening habits and room acoustics');
+  }
+
+  const tradeOffsSection = [
+    `**Trade-offs**`,
+    ``,
+    `What improves: ${tradeOffImproves.join(', ') || 'Nothing — system is at equilibrium'}`,
+    `What gets worse: ${tradeOffWorse.join('. ') || 'Nothing material'}`,
+    `What stays the same: ${tradeOffSame.join('. ')}`,
+  ].join('\n');
+
+  // ── Outcome validation section ──
+  // What the user should hear differently and how to judge success.
+  let outcomeValidation: string;
+  if (decisionVerdict === 'KEEP') {
+    outcomeValidation = 'Success here is stability — the system continues to draw you into long listening sessions without restlessness. If three months from now you are still reaching for the same records with the same pleasure, the system is doing its job.';
+  } else {
+    const outcomeTerms: string[] = [];
+    if (primary.kind === 'bottleneck' && primary.axes.length > 0) {
+      for (const ax of primary.axes.slice(0, 2)) {
+        outcomeTerms.push(listenerAxisLabel(ax));
+      }
+    }
+    if (outcomeTerms.length === 0) {
+      outcomeTerms.push('resolution', 'coherence');
+    }
+    outcomeValidation = `After the change, listen for more ${outcomeTerms.join(' and ')} on recordings you know well. The improvement should be audible within the first few tracks — not subtle, not ambiguous. If you find yourself reaching for music you had stopped playing, that is the strongest signal that the change worked. If the system sounds different but not more engaging, re-evaluate.`;
+  }
+
+  const outcomeSection = [
+    `**Outcome validation**`,
+    ``,
+    outcomeValidation,
+  ].join('\n');
+
+  // Append risk level to the action path section
+  const actionPathWithRisk = decisionVerdict === 'KEEP'
+    ? '' // No action path for KEEP
+    : actionPathSection + `\n\nRisk level: ${riskLevel}`;
+
+  // Filter out empty sections so no trailing blank lines appear.
   return [
     overview,
     strengthsSection,
     constraintsSection,
     identitySection,
-    changeNothing,
-    optimizeSection,
+    decisionSection,
+    tradeOffsSection,
+    decisionVerdict === 'KEEP' ? '' : actionPathWithRisk,
+    doNothingCheck,
+    outcomeSection,
   ]
     .filter((s) => typeof s === 'string' && s.trim().length > 0)
     .join('\n\n');
@@ -8609,6 +8729,505 @@ function inferBrandScale(c: SystemComponent): string {
   return 'unknown';
 }
 
+// ── Upgrade-path product selection ──────────────────
+//
+// For each upgrade path, select 2–3 catalog products matching the target role.
+// Products are ranked by price proximity to the user's current component in that
+// role, with a slight boost for products that contrast the current axis weaknesses.
+// The user's own component is excluded.
+
+/** Map ProductCategory → ReviewerDomain for curation lookups. */
+const CATEGORY_TO_REVIEWER_DOMAIN: Record<string, ReviewerDomain> = {
+  dac: 'dac', speaker: 'speaker', amplifier: 'tube-amp',
+  streamer: 'streamer', turntable: 'turntable', cartridge: 'cartridge',
+  headphone: 'headphone', phono: 'general',
+};
+
+const ROLE_TO_CATEGORY: Record<string, import('./catalog-taxonomy').ProductCategory> = {
+  dac: 'dac', speakers: 'speaker', speaker: 'speaker',
+  amplifier: 'amplifier', preamplifier: 'amplifier',
+  streamer: 'streamer', turntable: 'turntable',
+  cartridge: 'cartridge', 'phono stage': 'phono',
+  headphones: 'headphone', subwoofer: 'speaker',
+};
+
+const TOPOLOGY_DISPLAY: Record<string, string> = {
+  'fpga': 'FPGA DAC',
+  'r2r': 'R2R DAC',
+  'delta-sigma': 'Delta-sigma DAC',
+  'set': 'Single-ended triode',
+  'push-pull-tube': 'Push-pull tube',
+  'hybrid': 'Hybrid tube/solid-state',
+  'class-a-solid-state': 'Class A solid-state',
+  'class-ab-solid-state': 'Class AB solid-state',
+  'class-d': 'Class D',
+  'belt-drive': 'Belt-drive turntable',
+  'direct-drive': 'Direct-drive turntable',
+  'bass-reflex': 'Ported speaker',
+  'sealed': 'Sealed speaker',
+  'horn-loaded': 'Horn-loaded speaker',
+  'open-baffle': 'Open-baffle speaker',
+  'planar-magnetic': 'Planar magnetic',
+};
+
+/**
+ * Safely extract the first sentence from a product's tendencies.character field.
+ *
+ * The canonical type is CharacterTendency[] (array of { domain, tendency, ... }),
+ * but some legacy inline data may pass a plain string. This helper normalises
+ * both shapes and guards against malformed entries.
+ */
+function getCharacterSentence(character: unknown): string | undefined {
+  if (Array.isArray(character)) {
+    const first = character.find((t: Record<string, unknown>) => t?.tendency);
+    const sentence = typeof first?.tendency === 'string'
+      ? first.tendency.split('.')[0]
+      : undefined;
+    return sentence?.trim() || undefined;
+  }
+  if (typeof character === 'string') {
+    const sentence = character.split('.')[0];
+    return sentence?.trim() || undefined;
+  }
+  return undefined;
+}
+
+// ── Recommendation type classification ────────────────
+//
+// Compares current component against a candidate to determine whether the
+// recommendation is a true upgrade, a directional change, or a sidegrade.
+//
+// Engine-portable: the classifier uses generic axis comparison, philosophy
+// strings, and price ratios. No audio-specific vocabulary in the logic
+// itself — axis names and philosophy values come from the catalog layer.
+
+interface RecommendationClassification {
+  type: 'upgrade' | 'directional' | 'sidegrade';
+  gains: string[];
+  losses: string[];
+}
+
+const AXIS_GAIN_LABELS: Record<string, Record<string, string>> = {
+  warm_bright:        { warm: 'tonal density and midrange richness', bright: 'transient speed and air' },
+  smooth_detailed:    { smooth: 'listening ease and musical flow', detailed: 'micro-detail and texture resolution' },
+  elastic_controlled: { elastic: 'rhythmic flow and dynamic looseness', controlled: 'grip, precision, and bass control' },
+  airy_closed:        { airy: 'spatial openness and staging', closed: 'focus and intimacy' },
+};
+
+function classifyRecommendation(
+  current: { primaryAxes?: Record<string, string>; philosophy?: string; price: number; archetypes?: { primary?: string; secondary?: string } },
+  candidate: { primaryAxes?: Record<string, string>; philosophy?: string; price: number; archetypes?: { primary?: string; secondary?: string } },
+): RecommendationClassification {
+  const gains: string[] = [];
+  const losses: string[] = [];
+
+  // Count axis flips: axes where candidate and current differ (non-neutral)
+  let axisFlips = 0;
+  const AXIS_KEYS = ['warm_bright', 'smooth_detailed', 'elastic_controlled', 'airy_closed'];
+  const cAxes = current.primaryAxes ?? {};
+  const pAxes = candidate.primaryAxes ?? {};
+
+  for (const axis of AXIS_KEYS) {
+    const cVal = cAxes[axis] ?? 'neutral';
+    const pVal = pAxes[axis] ?? 'neutral';
+    if (cVal === pVal) continue; // same direction or both neutral — no flip
+
+    // Candidate has a direction where current is neutral → potential improvement
+    if (cVal === 'neutral' && pVal !== 'neutral') {
+      const label = AXIS_GAIN_LABELS[axis]?.[pVal];
+      if (label) gains.push(label);
+      continue;
+    }
+
+    // Current has a direction where candidate is neutral → potential loss
+    if (pVal === 'neutral' && cVal !== 'neutral') {
+      const label = AXIS_GAIN_LABELS[axis]?.[cVal];
+      if (label) losses.push(label);
+      continue;
+    }
+
+    // Both have different non-neutral values → clear axis flip (directional)
+    axisFlips++;
+    const gainLabel = AXIS_GAIN_LABELS[axis]?.[pVal];
+    const lossLabel = AXIS_GAIN_LABELS[axis]?.[cVal];
+    if (gainLabel) gains.push(gainLabel);
+    if (lossLabel) losses.push(lossLabel);
+  }
+
+  // Philosophy comparison
+  const cPhil = current.philosophy ?? '';
+  const pPhil = candidate.philosophy ?? '';
+  const philosophyDiffers = cPhil !== '' && pPhil !== '' && cPhil !== pPhil;
+
+  // Archetype comparison (primary design intent)
+  const cArch = current.archetypes?.primary ?? '';
+  const pArch = candidate.archetypes?.primary ?? '';
+  const archetypeDiffers = cArch !== '' && pArch !== '' && cArch !== pArch;
+
+  // Price tier comparison for sidegrade detection
+  const priceRatio = candidate.price / Math.max(current.price, 1);
+  const sameTier = priceRatio >= 0.75 && priceRatio <= 1.35;
+
+  // Classification rules:
+  //
+  // DIRECTIONAL: any axis flip (opposite non-neutral values), or philosophy
+  //   differs with archetype flip. This is a change in character, not a
+  //   strict improvement.
+  //
+  // SIDEGRADE: no axis flips but philosophy or archetype differs, and price
+  //   is within the same tier. Different flavor, not different level.
+  //
+  // UPGRADE: same philosophy + same archetype direction (or no difference
+  //   detected), candidate is at same or higher tier. Strictly better within
+  //   the same design intent.
+
+  if (axisFlips > 0) {
+    return { type: 'directional', gains, losses };
+  }
+
+  if ((philosophyDiffers || archetypeDiffers) && sameTier) {
+    return { type: 'sidegrade', gains, losses };
+  }
+
+  if (philosophyDiffers || archetypeDiffers) {
+    return { type: 'directional', gains, losses };
+  }
+
+  return { type: 'upgrade', gains, losses };
+}
+
+function selectUpgradeOptions(
+  pathLabel: string,
+  components: SystemComponent[],
+  weaknesses: string[],
+  maxOptions = 3,
+): import('./advisory-response').UpgradePathOption[] {
+  // Map path label (e.g. "DAC Upgrade") → product category
+  const roleKey = pathLabel.replace(/\s+(Upgrade|Change)$/i, '').toLowerCase();
+  const category = ROLE_TO_CATEGORY[roleKey];
+  if (!category) return [];
+
+  // Find the user's current component in this role
+  const currentComponent = components.find((c) =>
+    canonicalRole(c.role).toLowerCase() === roleKey
+    || c.role.toLowerCase().includes(roleKey),
+  );
+  const currentProduct = currentComponent?.product;
+  const currentPrice = currentProduct?.price ?? 1000;
+  const currentName = currentComponent?.displayName?.toLowerCase() ?? '';
+
+  // Filter catalog: same category, exclude user's current product
+  const candidates = ALL_PRODUCTS.filter((p) => {
+    if (p.category !== category) return false;
+    // Exclude the user's own product
+    if (currentName && `${p.brand} ${p.name}`.toLowerCase() === currentName) return false;
+    if (currentProduct && p.id === currentProduct.id) return false;
+    // Only include products that represent an upgrade (at least 70% of current price)
+    if (p.price < currentPrice * 0.7) return false;
+    // Cap at 3× current price to stay in tier
+    if (p.price > currentPrice * 3) return false;
+    return true;
+  });
+
+  if (candidates.length === 0) return [];
+
+  // Score: prefer price proximity + axis contrast with current weaknesses
+  const scored = candidates.map((p) => {
+    // Price proximity (closer = better, slight preference for modestly higher)
+    const priceRatio = p.price / currentPrice;
+    const priceDist = Math.abs(Math.log(priceRatio));
+    let score = 10 - priceDist * 5;
+
+    // Prefer current models: penalty for discontinued/vintage
+    const avail = p.availability ?? 'current';
+    if (avail === 'discontinued') score -= 3;
+    if (avail === 'vintage') score -= 5;
+
+    // Slight boost for products with primaryAxes that contrast weaknesses
+    if (p.primaryAxes && weaknesses.length > 0) {
+      const w = weaknesses.join(' ').toLowerCase();
+      if (w.includes('bright') || w.includes('thin')) {
+        if (p.primaryAxes.warm_bright === 'warm') score += 2;
+      }
+      if (w.includes('warm') || w.includes('dull') || w.includes('veiled')) {
+        if (p.primaryAxes.warm_bright === 'bright') score += 2;
+      }
+      if (w.includes('smooth') || w.includes('soft')) {
+        if (p.primaryAxes.smooth_detailed === 'detailed') score += 2;
+      }
+      if (w.includes('detailed') || w.includes('harsh') || w.includes('fatiguing')) {
+        if (p.primaryAxes.smooth_detailed === 'smooth') score += 2;
+      }
+    }
+
+    return { product: p, score };
+  });
+
+  // Sort by score descending
+  scored.sort((a, b) => b.score - a.score);
+
+  // Take top N and build UpgradePathOption objects
+  return scored.slice(0, maxOptions).map((s, i) => {
+    const p = s.product;
+    const priceNote = p.usedPriceRange
+      ? `~$${p.usedPriceRange.low.toLocaleString()}–${p.usedPriceRange.high.toLocaleString()} used`
+      : `$${p.price.toLocaleString()}`;
+
+    // Build pros from primaryAxes
+    const pros: string[] = [];
+    if (p.primaryAxes) {
+      const axisLabels: Record<string, Record<string, string>> = {
+        warm_bright: { warm: 'Warmer tonal balance', bright: 'Faster transients and clarity' },
+        smooth_detailed: { smooth: 'Musical flow and ease', detailed: 'Greater microdetail retrieval' },
+        elastic_controlled: { elastic: 'Dynamic elasticity', controlled: 'Grip and stability' },
+      };
+      for (const [axis, val] of Object.entries(p.primaryAxes)) {
+        if (val && val !== 'neutral' && axisLabels[axis]?.[val]) {
+          pros.push(axisLabels[axis][val]);
+        }
+      }
+    }
+    if (pros.length === 0 && p.tendencyProfile) {
+      // Fallback: derive a pro from the tendency profile's strongest direction
+      const entries = Object.entries(p.tendencyProfile).filter(([_, v]) => v !== 'neutral');
+      if (entries.length > 0) {
+        pros.push(`Strong ${entries[0][0].replace(/_/g, ' ')} character`);
+      }
+    }
+
+    // ── Topology line ──
+    const topoLabel = p.topology ? TOPOLOGY_DISPLAY[p.topology] : undefined;
+    const archShort = p.architecture?.split(',')[0]?.trim();
+    const topologyLine = topoLabel && archShort
+      ? `${topoLabel}, ${archShort}`
+      : topoLabel ?? archShort ?? undefined;
+
+    // ── What you'll hear (sensory delta) ��─
+    const whatYoullHear: string[] = [];
+    if (p.primaryAxes) {
+      const sensoryMap: Record<string, Record<string, string>> = {
+        warm_bright: {
+          warm: 'Midrange gains body and richness',
+          bright: 'Transients sharpen — more attack and air',
+        },
+        smooth_detailed: {
+          smooth: 'Treble softens — less edge, more ease',
+          detailed: 'Low-level textures become more visible',
+        },
+        elastic_controlled: {
+          elastic: 'Dynamics loosen — more bounce and flow',
+          controlled: 'Bass tightens and becomes more controlled',
+        },
+        airy_closed: {
+          airy: 'Staging opens — more air and space between instruments',
+          closed: 'Focus tightens — denser, more intimate presentation',
+        },
+      };
+      for (const [axis, val] of Object.entries(p.primaryAxes)) {
+        if (val && val !== 'neutral' && sensoryMap[axis]?.[val]) {
+          whatYoullHear.push(sensoryMap[axis][val]);
+        }
+      }
+    }
+    // Pad from tendencies.character if under 2 items
+    if (whatYoullHear.length < 2 && p.tendencies?.character) {
+      const charSentence = getCharacterSentence(p.tendencies.character);
+      if (charSentence) whatYoullHear.push(charSentence);
+    }
+    // Second pad: extract from tendencies.tradeoffs gains description
+    if (whatYoullHear.length < 2 && p.tendencies?.tradeoffs) {
+      const tradeoff = (p.tendencies.tradeoffs as Array<{ gains?: string }>)[0];
+      if (tradeoff?.gains) {
+        const gainStr = tradeoff.gains.split(',')[0]?.trim();
+        if (gainStr && !whatYoullHear.some(w => w.toLowerCase().includes(gainStr.toLowerCase().slice(0, 15)))) {
+          whatYoullHear.push(gainStr.charAt(0).toUpperCase() + gainStr.slice(1));
+        }
+      }
+    }
+
+    // ── Technical rationale (design → outcome) ──
+    const technicalRationale: string[] = [];
+    const archLower = (p.architecture ?? '').toLowerCase();
+    const topoLower = (p.topology ?? '').toLowerCase();
+    if (topoLower.includes('fpga')) {
+      technicalRationale.push('FPGA timing engine \u2192 improved transient precision and phase coherence');
+    } else if (topoLower.includes('r2r') || archLower.includes('r2r') || archLower.includes('ladder') || topoLower.includes('multibit') || archLower.includes('multibit')) {
+      technicalRationale.push('R2R/multibit conversion \u2192 fuller tone with less digital edge');
+    } else if (topoLower.includes('delta-sigma') || archLower.includes('delta-sigma')) {
+      technicalRationale.push('Delta-sigma conversion \u2192 wide dynamic range and low noise floor');
+    } else if (topoLower.includes('set') || topoLower.includes('single-ended')) {
+      technicalRationale.push('Single-ended triode output \u2192 harmonic richness and midrange density');
+    } else if (topoLower.includes('class-a')) {
+      technicalRationale.push('Class A bias \u2192 smoother treble and richer midrange texture');
+    } else if (topoLower.includes('class-d')) {
+      technicalRationale.push('Class D output stage \u2192 high efficiency with tight low-end control');
+    } else if (topoLower.includes('push-pull')) {
+      technicalRationale.push('Push-pull tube topology \u2192 power headroom with harmonic warmth');
+    }
+    // ── Speaker topology / architecture rationale ──
+    // Design choice → mechanism → audible result (speaker-specific).
+    // Checked after DAC/amp topologies so they don't collide.
+    // Additive: multiple can match (e.g. sealed + BBC thin-wall + coaxial).
+    if (topoLower === 'sealed' || archLower.includes('sealed')) {
+      technicalRationale.push('Sealed-box loading \u2192 more predictable room interaction and easier placement, without port tuning effects');
+    } else if (topoLower === 'bass-reflex' || archLower.includes('bass-reflex') || archLower.includes('ported') || archLower.includes('rear-ported') || archLower.includes('front-ported')) {
+      technicalRationale.push('Ported/bass-reflex loading \u2192 extended low-frequency output from a smaller cabinet');
+    } else if (topoLower === 'horn-loaded' || archLower.includes('horn')) {
+      technicalRationale.push('Horn-loaded design \u2192 high sensitivity and dynamic immediacy with minimal amplifier demand');
+    } else if (topoLower === 'open-baffle' || archLower.includes('open-baffle') || archLower.includes('open-back')) {
+      technicalRationale.push('Open-baffle design \u2192 dipole radiation pattern with natural spatial depth and minimal box coloration');
+    } else if (topoLower === 'planar-magnetic' || archLower.includes('planar magnetic')) {
+      technicalRationale.push('Planar-magnetic driver \u2192 low distortion and uniform diaphragm excursion for coherent large-area radiation');
+    }
+    // Architecture additive: can layer on top of topology match
+    if (archLower.includes('bbc') || archLower.includes('thin-wall')) {
+      technicalRationale.push('BBC thin-wall cabinet \u2192 midrange naturalness and reduced boxiness through controlled panel damping');
+    }
+    if (archLower.includes('coaxial') || archLower.includes('uni-q')) {
+      technicalRationale.push('Coaxial/Uni-Q driver \u2192 point-source coherence and stable imaging across the listening window');
+    }
+    if ((archLower.includes('full-range') || archLower.includes('fullrange') || archLower.includes('widebander') || archLower.includes('wideband driver')) && !archLower.includes('planar')) {
+      technicalRationale.push('Full-range/widebander driver \u2192 crossoverless signal path preserving transient purity and tonal coherence');
+    }
+    if (archLower.includes('high-efficiency') || archLower.includes('high efficiency')) {
+      technicalRationale.push('High-efficiency design \u2192 dynamic liveliness and responsiveness to low-power amplification');
+    }
+    // ── Generic additive checks (DAC/amp) ──
+    if (archLower.includes('discrete')) {
+      technicalRationale.push('Discrete output stage \u2192 lower noise floor and cleaner signal path');
+    }
+    if (archLower.includes('balanced') || archLower.includes('differential')) {
+      technicalRationale.push('Balanced/differential design \u2192 common-mode noise rejection');
+    }
+    // Fallback: extract a design → outcome from catalog architecture if still empty
+    if (technicalRationale.length === 0 && p.architecture) {
+      const archFirst = p.architecture.split(',')[0]?.trim();
+      if (archFirst && archFirst.length > 10) {
+        technicalRationale.push(archFirst);
+      }
+    }
+
+    // ── Cons / explicit trade-offs ──
+    // Pull from catalog tendencies.tradeoffs — the 'cost' field is the
+    // explicitly stated trade-off for each product.
+    const cons: string[] = [];
+    if (p.tendencies?.tradeoffs) {
+      for (const t of p.tendencies.tradeoffs as Array<{ cost?: string }>) {
+        if (t.cost) {
+          // Capitalize first letter and clean up
+          const costStr = t.cost.charAt(0).toUpperCase() + t.cost.slice(1);
+          cons.push(costStr);
+          if (cons.length >= 2) break;  // Max 2 explicit trade-offs
+        }
+      }
+    }
+    // Fallback from lessIdealIf (computed below) — handled after positioning
+
+    // ── Positioning ──
+    let bestFor: string | undefined;
+    let lessIdealIf: string | undefined;
+    if (p.primaryAxes) {
+      const axVal = p.primaryAxes;
+      if (axVal.warm_bright === 'warm') {
+        bestFor = 'Systems that need tonal density or midrange richness';
+        lessIdealIf = 'You prioritise transient speed and analytical clarity';
+      } else if (axVal.warm_bright === 'bright') {
+        bestFor = 'Listeners who want attack, air, and resolution';
+        lessIdealIf = 'Your system already leans bright or fatiguing';
+      } else if (axVal.smooth_detailed === 'detailed') {
+        bestFor = 'Detail-focused listening and critical evaluation';
+        lessIdealIf = 'You listen for long sessions and value ease over precision';
+      } else if (axVal.smooth_detailed === 'smooth') {
+        bestFor = 'Long listening sessions and musical flow';
+        lessIdealIf = 'You need forensic detail retrieval';
+      }
+    }
+
+    // ── Manufacturer context ──
+    const bp = BRAND_PROFILES.find((b) =>
+      b.names.some((n) => p.brand.toLowerCase().includes(n.toLowerCase())),
+    );
+    const makerContext: string[] = [];
+    if (bp) {
+      if (bp.philosophy) {
+        const firstSentence = bp.philosophy.split('.')[0];
+        if (firstSentence) makerContext.push(firstSentence.trim());
+      }
+      if (bp.tendency) {
+        const tendSentence = bp.tendency.split('.')[0];
+        if (tendSentence) makerContext.push(tendSentence.trim());
+      }
+      if (bp.systemContext) {
+        const sysSentence = bp.systemContext.split('.')[0];
+        if (sysSentence) makerContext.push(sysSentence.trim());
+      }
+    }
+
+    // ── Curated review sources ──
+    const reviewDomain = CATEGORY_TO_REVIEWER_DOMAIN[category] ?? 'general';
+    const sources = topReviewsForCard(p.id, reviewDomain, 2);
+
+    // ── Legacy model context ──
+    // If this product is a known legacy model, attach notes so the card
+    // can surface successor info and used-market context.
+    const legacy = getLegacyMapping(p.id);
+    const legacyNote = legacy?.legacyNote;
+    const legacyUsedNote = legacy?.usedNote;
+
+    // ── Recommendation type classification ──
+    // Compare candidate against the user's current component to determine
+    // whether this is a true upgrade, directional change, or sidegrade.
+    const classification = currentProduct
+      ? classifyRecommendation(
+          {
+            primaryAxes: currentProduct.primaryAxes as Record<string, string> | undefined,
+            philosophy: (currentProduct as unknown as { philosophy?: string }).philosophy,
+            price: currentProduct.price ?? currentPrice,
+            archetypes: currentProduct.archetypes as { primary?: string; secondary?: string } | undefined,
+          },
+          {
+            primaryAxes: p.primaryAxes as Record<string, string> | undefined,
+            philosophy: (p as unknown as { philosophy?: string }).philosophy,
+            price: p.price,
+            archetypes: p.archetypes as { primary?: string; secondary?: string } | undefined,
+          },
+        )
+      : undefined;
+
+    return {
+      rank: i + 1,
+      name: p.name,
+      brand: p.brand,
+      price: p.usedPriceRange ? p.usedPriceRange.high : p.price,
+      priceCurrency: p.priceCurrency,
+      priceNote,
+      summary: p.description.split('.')[0] + '.',
+      pros,
+      cons: cons.length > 0 ? cons : undefined,
+      imageUrl: p.imageUrl ?? getProductImage(p.brand, p.name),
+      topologyLine: topologyLine || undefined,
+      whatYoullHear: whatYoullHear.length > 0 ? whatYoullHear.slice(0, 3) : undefined,
+      technicalRationale: technicalRationale.length > 0 ? technicalRationale.slice(0, 3) : undefined,
+      bestFor,
+      lessIdealIf,
+      makerContext: makerContext.length > 0 ? makerContext.slice(0, 3) : undefined,
+      sources: sources.length > 0 ? sources : undefined,
+      manufacturerUrl: p.retailer_links?.[0]?.url,
+      retailerLinks: p.retailer_links?.length > 0
+        ? p.retailer_links.map((l) => ({ label: l.label, url: l.url }))
+        : undefined,
+      availability: p.availability,
+      typicalMarket: p.typicalMarket,
+      usedPriceRange: p.usedPriceRange,
+      legacyNote,
+      legacyUsedNote,
+      recommendationType: classification?.type,
+      directionalGains: classification?.gains?.length ? classification.gains : undefined,
+      directionalLosses: classification?.losses?.length ? classification.losses : undefined,
+    };
+  });
+}
+
 // ── Upgrade paths (bottleneck-driven) ───────────────
 //
 // Pipeline: constraint → Path 1 (bottleneck) → Path 2 (secondary) → Path 3 (refinement).
@@ -8637,12 +9256,15 @@ function buildUpgradePaths(
       const ampRole = canonicalRole(
         components.find((c) => c.displayName === constraint.componentName)?.role ?? 'Amplifier',
       );
+      const powerLabel = `${ampRole} or ${speakerRole} Change`;
+      // For power mismatch, select options from the amplifier side
+      const powerOptions = selectUpgradeOptions(`${ampRole} Upgrade`, components, ['power']);
       paths.push({
         rank: 1,
-        label: `${ampRole} or ${speakerRole} Change`,
+        label: powerLabel,
         impact: 'Highest Impact',
         rationale: `${constraint.explanation} This can be resolved from either side: more amplifier power, or higher-efficiency speakers that are easier to drive.`,
-        options: [],
+        options: powerOptions,
       });
     } else {
       const bottleneckIdx = components.findIndex((c) => c.displayName === constraint.componentName);
@@ -8668,7 +9290,7 @@ function buildUpgradePaths(
         label: `${role} Upgrade`,
         impact: 'Highest Impact',
         rationale: `${constraint.explanation} ${targetPhrase}`,
-        options: [],
+        options: selectUpgradeOptions(`${role} Upgrade`, components, targets),
       });
     }
   }
@@ -8748,7 +9370,7 @@ function buildUpgradePaths(
       label,
       impact: impactTier,
       rationale: rationaleVerb,
-      options: [],
+      options: selectUpgradeOptions(label, components, weaknesses),
     });
     added++;
   }
@@ -8756,6 +9378,7 @@ function buildUpgradePaths(
   // ── If stacked and no component-level paths remain, add a rebalancing path ──
   if (paths.length < 2 && stacked && stacked.length > 0) {
     const insight = stacked[0];
+    // System rebalancing doesn't target a single role — no product selection
     paths.push({
       rank: paths.length + 1,
       label: 'System Rebalancing',

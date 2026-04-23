@@ -148,7 +148,7 @@ export default async function BrandPage({ params }: PageProps) {
     .map(productToAdvisoryOption);
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto' }}>
+    <div style={{ maxWidth: 960, margin: '0 auto' }}>
       {/* ── Back link ── */}
       <p style={{
         fontSize: '0.82rem',
@@ -172,19 +172,32 @@ export default async function BrandPage({ params }: PageProps) {
             profile?.representativeImageUrl ?? profile?.logoUrl ?? null;
           if (!imageSrc) return null;
           return (
-            <img
-              src={imageSrc}
-              alt={displayName}
-              loading="lazy"
-              style={{
-                display: 'block',
-                maxWidth: 320,
-                width: '100%',
-                height: 'auto',
-                objectFit: 'contain',
-                marginBottom: '1rem',
-              }}
-            />
+            <div style={{
+              width: '100%',
+              maxHeight: '380px',
+              aspectRatio: '3 / 2',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              background: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1.25rem',
+              boxSizing: 'border-box',
+              marginBottom: '1.25rem',
+            }}>
+              <img
+                src={imageSrc}
+                alt={displayName}
+                loading="lazy"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain',
+                  display: 'block',
+                }}
+              />
+            </div>
           );
         })()}
         <h1 style={{

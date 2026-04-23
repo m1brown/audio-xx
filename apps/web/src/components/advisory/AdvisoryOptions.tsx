@@ -25,34 +25,41 @@ interface AdvisoryOptionsProps {
 export default function AdvisoryOptions({ options }: AdvisoryOptionsProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-      {options.map((opt, i) => (
+      {options.map((opt, i) => {
+        // Card context — always show image when available (no dedup).
+        const shouldShowImage = !!opt.imageUrl;
+        return (
         <div
           key={i}
           style={{
             padding: '0.85rem 1rem',
             borderLeft: '3px solid #d9d9d9',
             background: '#fafafa',
-            display: 'flex',
-            gap: '0.85rem',
-            alignItems: 'flex-start',
           }}
         >
-          {/* Optional thumbnail — square, consistent 56×56. Hidden on load
-              failure via onError so a broken URL never leaves a broken icon. */}
-          {opt.imageUrl && (
+          {/* Product hero image — full width above text. Clean white
+              background, generous padding. Replaces old 56×56 thumbnail. */}
+          {shouldShowImage && opt.imageUrl && (
             <div style={{
-              flex: '0 0 auto',
-              width: 56,
-              height: 56,
-              borderRadius: 4,
+              width: '100%',
+              minHeight: '140px',
+              maxHeight: '280px',
+              aspectRatio: '4 / 3',
+              borderRadius: 6,
               overflow: 'hidden',
-              background: '#faf7f2',
-              border: '1px solid #ece6da',
+              background: '#ffffff',
+              marginBottom: '0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1rem',
+              boxSizing: 'border-box',
             }}>
               <img
                 src={opt.imageUrl}
                 alt={[opt.brand, opt.name].filter(Boolean).join(' ')}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                referrerPolicy="no-referrer"
+                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }}
                 onError={(e) => {
                   const wrap = (e.currentTarget as HTMLImageElement).parentElement;
                   if (wrap) wrap.style.display = 'none';
@@ -60,7 +67,7 @@ export default function AdvisoryOptions({ options }: AdvisoryOptionsProps) {
               />
             </div>
           )}
-          <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+          <div style={{ minWidth: 0 }}>
           {/* 1. Product — name + price */}
           <div style={{ marginBottom: '0.35rem' }}>
             <strong style={{ color: '#2a2a2a' }}>
@@ -119,7 +126,8 @@ export default function AdvisoryOptions({ options }: AdvisoryOptionsProps) {
           )}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

@@ -32,9 +32,12 @@ import { buildSystemAssessment } from '../consultation';
 import { extractSubjectMatches } from '../intent';
 
 function strengthsSection(ctx: string): string {
-  const i = ctx.indexOf('**What the system is doing well**');
+  // Support both old and new section header names.
+  let i = ctx.indexOf('**What the system does well**');
+  if (i < 0) i = ctx.indexOf('**What the system is doing well**');
   if (i < 0) return '';
-  const j = ctx.indexOf('**Where the system is constrained**', i);
+  let j = ctx.indexOf('**Where the system is constrained**', i);
+  if (j < 0) j = ctx.indexOf('**Listener alignment**', i);
   return ctx.slice(i, j < 0 ? undefined : j);
 }
 

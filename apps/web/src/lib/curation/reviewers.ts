@@ -96,6 +96,44 @@ export const REVIEWERS: Reviewer[] = [
     homepageUrl: 'https://hifipig.com/',
     notes: 'Secondary trusted source.',
   },
+
+  // ── Supplementary: YouTube ────────────────────────
+  {
+    id: 'iiwi-reviews',
+    displayName: 'iiWi Reviews',
+    publication: 'iiWi Reviews',
+    tier: 'community',
+    areasOfAuthority: ['dac', 'solid-state-amp', 'streamer'],
+    homepageUrl: 'https://www.youtube.com/@iiWiReviews',
+    notes: 'Supplementary YouTube source. Measurement-informed DAC and '
+      + 'solid-state comparisons with clear listening methodology.',
+  },
+  {
+    id: 'cheapaudioman',
+    displayName: 'Cheap Audio Man',
+    publication: 'Cheap Audio Man',
+    tier: 'community',
+    areasOfAuthority: ['dac', 'solid-state-amp', 'speaker', 'general'],
+    homepageUrl: 'https://www.youtube.com/@CheapAudioMan',
+    notes: 'Supplementary YouTube source. Budget-to-midrange gear with '
+      + 'practical system-integration perspective. Useful for entry-level '
+      + 'and value-oriented recommendations.',
+  },
+  {
+    id: 'british-audiophile',
+    displayName: 'A British Audiophile',
+    publication: 'A British Audiophile',
+    tier: 'community',
+    domainTiers: {
+      'dac': 'trusted',
+      'streamer': 'trusted',
+    },
+    areasOfAuthority: ['dac', 'streamer', 'solid-state-amp'],
+    homepageUrl: 'https://www.youtube.com/@ABritishAudiophile',
+    notes: 'Supplementary YouTube source. Detailed DAC and streamer '
+      + 'comparisons with consistent listening methodology. Elevated to '
+      + 'trusted in DAC and streamer domains based on depth and consistency.',
+  },
 ];
 
 /** Fast lookup by id. */

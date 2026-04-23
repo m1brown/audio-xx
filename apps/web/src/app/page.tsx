@@ -46,7 +46,8 @@ import { detectIntent, extractSubjectMatches, isComparisonFollowUp, isConsultati
 import { attachQuickRecommendation } from '@/lib/quick-recommendation';
 import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode, interpretSymptom } from '@/lib/conversation-state';
 import { detectHypotheticalChain, chainToComponentNames, type HypotheticalChain } from '@/lib/hypothetical-system';
-import { resolveSavedSystemForAdvisory } from '@/lib/saved-system';
+// P0 fix: resolveSavedSystemForAdvisory no longer called from page.tsx.
+// System resolution now uses turnCtx.activeSystem exclusively (single source of truth).
 import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import { routeConversation, resolveMode } from '@/lib/conversation-router';
@@ -121,9 +122,9 @@ const COLOR = {
  *  displays. `textMax` stays at 720 — the readable measure for prose,
  *  hero, and input must not widen or long lines hurt legibility. */
 const LAYOUT = {
-  pageMax: 1240,        // outer container (was 1180)
+  pageMax: 1440,        // outer container — widened for product image prominence
   textMax: 720,         // hero, intro, input — readable measure (unchanged)
-  conversationMax: 1100, // conversation thread — cards expand into this (was 1040)
+  conversationMax: 1280, // conversation thread — cards expand into this for large product images
 } as const;
 
 // Cycling placeholders removed — static placeholder is now used.
@@ -284,6 +285,9 @@ export default function Home() {
   const [systemPanelOpen, setSystemPanelOpen] = useState(false);
   const [systemEditorOpen, setSystemEditorOpen] = useState(false);
   const [editingDraft, setEditingDraft] = useState(false);
+  // ── Toast state for system switch/save feedback ──
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Prefill data for editor when opening from a proposed system. */
   const [editorPrefill, setEditorPrefill] = useState<DraftSystem | null>(null);
   /** Fingerprints of dismissed proposals — prevents re-prompting same system. */
@@ -305,6 +309,13 @@ export default function Home() {
   } | null>(null);
   /** Tracks chip-initiated intent — persists across turns so follow-ups stay in the correct lane. */
   const chipIntentRef = useRef<'shopping' | 'improvement' | 'diagnosis' | 'comparison' | null>(null);
+
+  /** Show a brief toast notification (auto-dismisses after 2.5s). */
+  const showToast = useCallback((msg: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastMessage(msg);
+    toastTimerRef.current = setTimeout(() => setToastMessage(null), 2500);
+  }, []);
 
   /** Preserved shopping facts for category switches.
    *  When the user finishes one shopping round and switches to a new
@@ -469,21 +480,41 @@ export default function Home() {
         hasActiveSavedSystem: hasActiveSavedSystemEarly,
       });
 
-      // ── Saved-system bridge (Step 3): if the user is asking for a
-      // system assessment, try to inject a saved SavedSystemProfile so
-      // we don't ask them to re-describe components. Ambiguous case
-      // (multiple saved systems, none active) emits a clarification.
+      // ── Saved-system bridge (Step 3): inject the active system into
+      // the text pipeline for system assessments and consultation entry.
+      //
+      // P0 fix: use earlyTurnCtx.activeSystem (resolved from AudioSessionContext)
+      // as the SINGLE SOURCE OF TRUTH instead of calling resolveSavedSystemForAdvisory()
+      // which reads from a separate localStorage layer. The two sources can
+      // diverge, causing the evaluated system to differ from the selected one.
+      //
       // Guard: skip injection when the user already described a system
       // in this message (proposedSystem with ≥ 2 components). The user's
       // stated chain takes precedence over any saved system.
       let injectedSystemText: string | undefined;
       const userStatedSystemWarm = earlyTurnCtx.proposedSystem && earlyTurnCtx.proposedSystem.components.length >= 2;
       if ((earlyIntent === 'system_assessment' || earlyIntent === 'consultation_entry') && !userStatedSystemWarm) {
-        const resolved = resolveSavedSystemForAdvisory();
-        if (resolved.kind === 'one' && resolved.syntheticText.length > 0) {
-          injectedSystemText = resolved.syntheticText;
-        } else if (resolved.kind === 'ambiguous') {
-          const list = resolved.labels.map((l) => `• ${l.label}`).join('\n');
+        if (earlyTurnCtx.activeSystem && earlyTurnCtx.activeSystem.components.length > 0) {
+          // Build synthetic text from the resolved active system — same source
+          // that all downstream advisory builders will use.
+          const componentNames = earlyTurnCtx.activeSystem.components.map((c) => {
+            const b = (c.brand || '').trim();
+            const n = (c.name || '').trim();
+            if (!b) return n || 'Unknown';
+            if (n.toLowerCase().startsWith(b.toLowerCase())) return n;
+            return `${b} ${n}`;
+          });
+          injectedSystemText = `My system: ${componentNames.join(', ')}.`;
+
+          // P0 debug log
+          console.log('[system-bridge] Active system used for evaluation:', {
+            name: earlyTurnCtx.activeSystem.name,
+            source: earlyTurnCtx.systemSource,
+            components: componentNames,
+          });
+        } else if (!earlyTurnCtx.activeSystem && audioState.savedSystems.length > 1 && !audioState.activeSystemRef) {
+          // Multiple saved systems, none explicitly active — ask user to pick.
+          const list = audioState.savedSystems.map((s) => `• ${s.name}`).join('\n');
           dispatch({
             type: 'ADD_QUESTION',
             clarification: {
@@ -1114,16 +1145,28 @@ export default function Home() {
     // and lose preserved context.
     if (convStateRef.current.mode === 'idle' && !convModeHint && !intentAuthoritative && !(effectiveMode === 'shopping' && shoppingAnswerCount > 0)) {
       // Saved-system bridge (Step 3) — cold path. Mirrors the warm-path
-      // injection above. Only runs when intent is system_assessment.
-      // Guard: skip when user already described a system in this message.
+      // injection above. Uses turnCtx.activeSystem as single source of truth
+      // (P0 fix: no longer calls resolveSavedSystemForAdvisory / localStorage).
       let coldInjectedSystemText: string | undefined;
       const userStatedSystemCold = turnCtx.proposedSystem && turnCtx.proposedSystem.components.length >= 2;
       if ((intent === 'system_assessment' || intent === 'consultation_entry') && !userStatedSystemCold) {
-        const resolved = resolveSavedSystemForAdvisory();
-        if (resolved.kind === 'one' && resolved.syntheticText.length > 0) {
-          coldInjectedSystemText = resolved.syntheticText;
-        } else if (resolved.kind === 'ambiguous') {
-          const list = resolved.labels.map((l) => `• ${l.label}`).join('\n');
+        if (turnCtx.activeSystem && turnCtx.activeSystem.components.length > 0) {
+          const coldNames = turnCtx.activeSystem.components.map((c) => {
+            const b = (c.brand || '').trim();
+            const n = (c.name || '').trim();
+            if (!b) return n || 'Unknown';
+            if (n.toLowerCase().startsWith(b.toLowerCase())) return n;
+            return `${b} ${n}`;
+          });
+          coldInjectedSystemText = `My system: ${coldNames.join(', ')}.`;
+
+          console.log('[system-bridge-cold] Active system used for evaluation:', {
+            name: turnCtx.activeSystem.name,
+            source: turnCtx.systemSource,
+            components: coldNames,
+          });
+        } else if (!turnCtx.activeSystem && audioState.savedSystems.length > 1 && !audioState.activeSystemRef) {
+          const list = audioState.savedSystems.map((s) => `• ${s.name}`).join('\n');
           dispatch({
             type: 'ADD_QUESTION',
             clarification: {
@@ -1297,12 +1340,20 @@ export default function Home() {
     // ── Diagnosis breakout from shopping ─────────────────
     // Must be computed BEFORE the shopping mode lock so that confirmed
     // diagnosis signals are not overridden. Gate: intent must be
-    // diagnosis AND either the router independently detected diagnosis
-    // (strong symptom signal) or the text has explicit repair language.
-    // Vague diagnosis fallbacks ("more warmth") don't qualify.
+    // diagnosis AND at least one concrete symptom signal is present.
+    // Covers: router-detected diagnosis, explicit repair language, AND
+    // symptom descriptions that DIAGNOSIS_PATTERNS already matched
+    // (standalone "too bright", "no bass", "sounds harsh", etc.).
+    // Vague desires without symptom language ("more warmth") don't qualify.
     const diagnosisBreakout = intent === 'diagnosis' && (
       routedMode === 'diagnosis'
       || /\b(?:fix|repair|troubleshoot|diagnose)\b/i.test(submittedText)
+      || /\btoo\s+(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|dry|sterile|clinical|analytical|cold|hard|forward|strident|sharp|lean|aggressive)\b/i.test(submittedText)
+      || /\bsounds?\s+(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|dry|sterile|clinical|analytical|cold|hard|forward|strident|sharp|lean|aggressive|tiny|small|dark|empty|hollow|boomy|noisy|nasal|distant|lifeless|congested)\b/i.test(submittedText)
+      || /\b(?:lacks?|lacking|no)\s+(?:bass|treble|body|warmth|dynamics|punch|impact|life|presence|weight|detail|air|clarity|low\s+end)\b/i.test(submittedText)
+      || /\b(?:problem|issue)\s+with\b/i.test(submittedText)
+      || /\blistening\s+fatigue\b/i.test(submittedText)
+      || /\b(?:noisy|hum(?:ming)?|buzz(?:ing)?|ground(?:ing)?\s+(?:loop|hum|noise))\b/i.test(submittedText)
     );
 
     // ── SHOPPING MODE LOCK ─────────────────────────────
@@ -3665,7 +3716,8 @@ export default function Home() {
       {/* System badge + panel */}
       <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
         <SystemBadge onClick={() => setSystemPanelOpen((v) => !v)} />
-        {!audioState.activeSystemRef && !systemPanelOpen && (
+        {/* Fallback: only shown when no systems exist at all (SystemBadge handles multi-system) */}
+        {!audioState.activeSystemRef && audioState.savedSystems.length === 0 && !audioState.draftSystem && !systemPanelOpen && (
           <button
             type="button"
             onClick={() => setSystemPanelOpen(true)}
@@ -3682,7 +3734,7 @@ export default function Home() {
               textUnderlineOffset: '2px',
             }}
           >
-            {audioState.savedSystems.length > 0 ? 'Select system' : 'Add your system'}
+            Add your system
           </button>
         )}
         {systemPanelOpen && (
@@ -3700,9 +3752,22 @@ export default function Home() {
               setEditorPrefill(null);
               setSystemEditorOpen(true);
             }}
+            onSwitch={(name) => showToast(`Switched to: ${name}`)}
           />
         )}
       </div>
+
+      {/* Helper text when no system is active and user has systems available */}
+      {!hasMessages && !audioState.activeSystemRef && audioState.savedSystems.length > 1 && (
+        <p style={{
+          fontSize: '0.78rem',
+          color: COLOR.textMuted,
+          margin: '0 0 0.5rem 0',
+          fontStyle: 'italic',
+        }}>
+          Select a system to get tailored recommendations
+        </p>
+      )}
 
       {/* Listener profile badge — visible during conversation when profile has data */}
       {hasMessages && profileSnapshot && (
@@ -3720,6 +3785,7 @@ export default function Home() {
           onSaved={() => {
             setSystemEditorOpen(false);
             setEditorPrefill(null);
+            showToast('System saved');
           }}
         />
       )}
@@ -3787,43 +3853,73 @@ export default function Home() {
             </div>
           )}
 
-          {/* 3 primary actions — single row, no chips, no example stack.
-           * Each action submits a short intent phrase; the downstream
-           * router resolves system context (asks for components if none
-           * saved) and routes to the appropriate flow. */}
+          {/* 4 starter paths — each maps cleanly to a core mode.
+           * Clicking the chip submits the prompt directly; users can also
+           * just type freely. Paths:
+           *   Assess my system → system_assessment
+           *   Something sounds off → diagnosis
+           *   Find the right gear → shopping
+           *   Compare two options → comparison
+           */}
           {(() => {
-            const actions: Array<{ label: string; prompt: string }> = [
-              { label: 'Assess my system', prompt: 'Assess my system.' },
-              { label: 'Improve my system', prompt: 'What should I upgrade in my system?' },
-              { label: 'Compare components', prompt: 'I want to compare two components.' },
+            // Build dynamic "Assess my system" prompt from active system.
+            // When a saved/draft system is active, use its actual components.
+            // Never use hardcoded placeholder components.
+            const activeComponents = audioState.activeSystemRef
+              ? (() => {
+                  if (audioState.activeSystemRef.kind === 'draft' && audioState.draftSystem) {
+                    return audioState.draftSystem.components.map((c) => {
+                      const b = (c.brand || '').trim();
+                      const n = (c.name || '').trim();
+                      return b && !n.toLowerCase().startsWith(b.toLowerCase()) ? `${b} ${n}` : n || b || 'Unknown';
+                    });
+                  }
+                  const saved = audioState.savedSystems.find((s) => audioState.activeSystemRef?.kind === 'saved' && s.id === audioState.activeSystemRef.id);
+                  return saved ? saved.components.map((c) => {
+                    const b = (c.brand || '').trim();
+                    const n = (c.name || '').trim();
+                    return b && !n.toLowerCase().startsWith(b.toLowerCase()) ? `${b} ${n}` : n || b || 'Unknown';
+                  }) : [];
+                })()
+              : audioState.savedSystems.length === 1
+                ? audioState.savedSystems[0].components.map((c) => {
+                    const b = (c.brand || '').trim();
+                    const n = (c.name || '').trim();
+                    return b && !n.toLowerCase().startsWith(b.toLowerCase()) ? `${b} ${n}` : n || b || 'Unknown';
+                  })
+                : [];
+            const assessPrompt = activeComponents.length > 0
+              ? `Assess my system: ${activeComponents.join(' \u2192 ')}`
+              : 'Assess my system';
+            const paths: Array<{ label: string; prompt: string }> = [
+              { label: 'Assess my system', prompt: assessPrompt },
+              { label: 'Something sounds off', prompt: 'My system sounds harsh \u2014 what\u2019s causing it?' },
+              { label: 'Find the right gear', prompt: 'Best DAC under $2,000 for a warm system' },
+              { label: 'Compare two options', prompt: 'Compare Bifrost 2/64 vs Qutest for a relaxed listening style' },
             ];
             return (
               <div
                 style={{
                   display: 'flex',
                   flexWrap: 'wrap',
-                  // Pass 10: tighter inter-chip gap (0.5 → 0.6rem) and
-                  // more space below the action row so the input
-                  // textarea lands as its own focused element rather
-                  // than crowding against the chips.
-                  gap: '0.6rem',
+                  gap: '0.5rem',
                   marginTop: '0.25rem',
                   marginBottom: '1.75rem',
                   maxWidth: LAYOUT.textMax,
                 }}
               >
-                {actions.map(({ label, prompt }) => (
+                {paths.map(({ label, prompt }) => (
                   <button
                     key={label}
                     type="button"
                     onClick={() => handleSubmit(prompt)}
                     style={{
-                      padding: '0.55rem 0.95rem',
+                      padding: '0.5rem 0.9rem',
                       background: 'transparent',
                       border: `1px solid ${COLOR.border}`,
                       borderRadius: 8,
                       cursor: 'pointer',
-                      fontSize: '0.92rem',
+                      fontSize: '0.9rem',
                       fontWeight: 500,
                       color: COLOR.textPrimary,
                       fontFamily: 'inherit',
@@ -3846,13 +3942,6 @@ export default function Home() {
               </div>
             );
           })()}
-
-          {/* "Ask something like" example prompts removed — the previous
-           * examples were technically misleading (e.g. low-power SET paired
-           * with Harbeth SHL5) and damaged credibility. The slot is left
-           * empty for now rather than replaced with new examples. Surrounding
-           * elements (action buttons above, input box below) keep their
-           * existing margins unchanged. */}
         </>
       )}
 
@@ -3973,7 +4062,7 @@ export default function Home() {
               ? 'Reply here…'
               : hasMessages
                 ? 'Continue describing what you hear…'
-                : 'Describe your chain, what you\'re hearing, or the decision you\'re weighing.'
+                : 'Describe your system, a listening problem, or what you\'re considering.'
           }
           style={{
             width: '100%',
@@ -4129,6 +4218,39 @@ export default function Home() {
       </div>
 
     </div>
+
+    {/* Toast notification — lightweight feedback for system switch/save */}
+    {toastMessage && (
+      <div
+        key={toastMessage}
+        style={{
+          position: 'fixed',
+          bottom: '1.5rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: '#1F1D1B',
+          color: '#FFFEFA',
+          padding: '0.55rem 1.2rem',
+          borderRadius: 8,
+          fontSize: '0.85rem',
+          fontWeight: 500,
+          letterSpacing: '0.01em',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+          zIndex: 9999,
+          animation: 'toast-in 0.2s ease-out',
+          fontFamily: 'inherit',
+        }}
+      >
+        {toastMessage}
+      </div>
+    )}
+    <style>{`
+      @keyframes toast-in {
+        from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+      }
+    `}</style>
+
     </div>
   );
 }

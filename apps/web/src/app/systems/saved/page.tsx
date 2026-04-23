@@ -11,7 +11,7 @@ import { SavedSystemsPanel } from '@/components/saved-system/SavedSystemsPanel';
 
 export default function SavedSystemsPage() {
   return (
-    <div style={{ padding: '1.5rem' }}>
+    <div style={{ padding: '1.5rem', maxWidth: 720 }}>
       <SavedSystemsPanel />
     </div>
   );

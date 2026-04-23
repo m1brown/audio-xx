@@ -4,6 +4,7 @@ import {
   DIRECTION_CONTENT,
   type DirectionKey,
 } from '@/lib/upgrade-path-content';
+import { getProductImage } from '@/lib/product-images';
 
 /**
  * Audio XX — Upgrade direction.
@@ -63,7 +64,7 @@ export default async function UpgradeDirectionPage({ params }: PageProps) {
     .join(' ');
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto' }}>
+    <div style={{ maxWidth: 960, margin: '0 auto' }}>
       {/* ── Back link ── */}
       <p style={{
         fontSize: '0.82rem',
@@ -130,7 +131,10 @@ export default async function UpgradeDirectionPage({ params }: PageProps) {
             }}>
               Direction exemplars
             </p>
-            <AdvisoryProductCards options={content.options} />
+            <AdvisoryProductCards options={content.options.map((o) => ({
+              ...o,
+              imageUrl: o.imageUrl ?? getProductImage(o.brand, o.name),
+            }))} />
           </section>
         </>
       ) : (

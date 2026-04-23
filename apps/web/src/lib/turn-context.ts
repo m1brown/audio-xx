@@ -223,10 +223,23 @@ export function buildTurnContext(
   }
 
   // ── Dev logging ─────────────────────────────────────
+  // P0 debug: always log the active system used for evaluation (temporary).
+  console.log('[TurnContext] Active system used for evaluation:', activeSystem
+    ? {
+        name: activeSystem.name,
+        source: systemSource,
+        components: activeSystem.components.map((c) => {
+          const b = (c.brand || '').trim();
+          const n = (c.name || '').trim();
+          return b && !n.toLowerCase().startsWith(b.toLowerCase()) ? `${b} ${n}` : n || b || 'Unknown';
+        }),
+        tendencies: activeSystem.tendencies,
+      }
+    : '(none)',
+  );
   if (process.env.NODE_ENV === 'development') {
     console.log('[TurnContext] subjects:', subjects);
     console.log('[TurnContext] subjectMatches:', subjectMatches.map((m) => `${m.kind}:${m.name}`));
-    console.log('[TurnContext] activeSystem:', activeSystem?.name ?? '(none)', '| source:', systemSource);
     if (proposedSystem) {
       console.log('[TurnContext] proposed:', proposedSystem.suggestedName,
         '| components:', proposedSystem.components.map((c) => normalizeDisplayName(c.brand, c.name)));

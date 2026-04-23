@@ -80,6 +80,9 @@ export interface ReviewEntry {
   /** Optional: system pairing used in the review. Important context
    *  when a reviewer's verdict is pairing-dependent. */
   pairingContext?: string;
+  /** Content medium. Defaults to 'article' when omitted.
+   *  Controls link label: "read" for articles, "watch" for videos. */
+  medium?: 'article' | 'video';
 }
 
 // ── Saved system (minimal schema, no UI yet) ──────────
