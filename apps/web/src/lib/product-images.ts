@@ -78,9 +78,9 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
   // Bluesound — bluesound.com product catalog
   { key: 'bluesound node',      url: 'https://www.bluesound.com/media/catalog/product/n/o/node_blk_front-top_1.png' },
 
-  // WiiM — Linkplay CDN (manufacturer-hosted)
-  { key: 'wiim pro plus',       url: 'https://cloudadmin-file.linkplay.com/product/image/eab0d6891be0415c85123307419d2033.png' },
-  { key: 'wiim pro',            url: 'https://cloudadmin-file.linkplay.com/product/image/eab0d6891be0415c85123307419d2033.png' },
+  // WiiM — Amazon product images (manufacturer Linkplay CDN showed wrong product)
+  { key: 'wiim pro plus',       url: 'https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg' },
+  { key: 'wiim pro',            url: 'https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg' },
 
   // Lampizator — Wix static CDN (manufacturer-hosted)
   { key: 'lampizator baltic',   url: 'https://static.wixstatic.com/media/c6db56_c2f789243c0341758ce9d2ac7d360caf~mv2.jpg/v1/fill/w_1200,h_910,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/B3%20-%202.jpg' },
