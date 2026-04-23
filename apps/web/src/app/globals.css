@@ -248,3 +248,18 @@ nav .nav-radar-link:hover {
   outline-offset: 2px;
   border-radius: 2px;
 }
+
+/* ── Card hover lift — product and upgrade cards ──────────────── */
+
+.audioxx-product-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+}
+.audioxx-product-card.audioxx-card-anchor:hover {
+  box-shadow: 0 5px 16px rgba(176,141,87,0.14), 0 2px 4px rgba(31,29,27,0.06) !important;
+}
+
+.audioxx-upgrade-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+}

@@ -428,8 +428,8 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
   }
 
   // ── Shared tokens. ──
-  const maxWidth = '56rem';
-  const sectionGap = '2.9rem'; // was 2.6rem — more vertical air between major sections
+  const maxWidth = '68rem';
+  const sectionGap = '1.8rem';
   const bodyLine = 1.9;
 
   const sectionLabel = (text: string, opts?: { emphasis?: 'primary' | 'action' }) => {
@@ -773,7 +773,10 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
             * tangible with images, pricing, and trade-offs. */}
           {a.upgradePaths && a.upgradePaths.length > 0 && (
             <div style={{ marginTop: '1.25rem' }}>
-              <AdvisoryUpgradePaths paths={a.upgradePaths} />
+              <AdvisoryUpgradePaths
+                paths={a.upgradePaths}
+                stackedTraits={a.stackedTraitInsights?.map((s) => ({ label: s.label, classification: s.classification }))}
+              />
             </div>
           )}
         </section>
@@ -1012,12 +1015,12 @@ function UpgradeOptionsFollowUp({
       aria-label="Upgrade options"
       style={{
         marginTop: '1rem',
-        padding: '1.15rem 1.3rem',
+        padding: '0.85rem 1.1rem',
         background: COLORS.accentBg,
         border: `1px solid ${COLORS.border}`,
         borderRadius: '6px',
         fontSize: '0.95rem',
-        lineHeight: 1.75,
+        lineHeight: 1.65,
         color: COLORS.text,
       }}
     >
@@ -1096,12 +1099,12 @@ function ComparePathsFollowUp({
       aria-label="Compare upgrade paths"
       style={{
         marginTop: '1rem',
-        padding: '1.15rem 1.3rem',
+        padding: '0.85rem 1.1rem',
         background: COLORS.accentBg,
         border: `1px solid ${COLORS.border}`,
         borderRadius: '6px',
         fontSize: '0.95rem',
-        lineHeight: 1.75,
+        lineHeight: 1.65,
         color: COLORS.text,
       }}
     >
@@ -1788,7 +1791,10 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
       {!isRewrittenReview && a.upgradePaths && a.upgradePaths.length > 0 && (
         <>
           <AdvisorySection number={next()} label="System Bottlenecks">
-            <AdvisoryUpgradePaths paths={a.upgradePaths} />
+            <AdvisoryUpgradePaths
+              paths={a.upgradePaths}
+              stackedTraits={a.stackedTraitInsights?.map((s) => ({ label: s.label, classification: s.classification }))}
+            />
           </AdvisorySection>
           <SectionDivider />
         </>
@@ -3609,7 +3615,7 @@ function DecisiveFormat({ advisory: a }: AdvisoryMessageProps) {
     <div style={{
       lineHeight: FONTS.lineHeight,
       color: COLORS.text,
-      maxWidth: '56rem',
+      maxWidth: '68rem',
     }}>
 
       {/* ── System pairing context (if available) ──────── */}

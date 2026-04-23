@@ -304,6 +304,43 @@ interface BrandProfile {
   representativeImageUrl?: string;
   /** Brand wordmark / logo. Used only when no product image is available. */
   logoUrl?: string;
+
+  // ── Authority page fields (Pass 16) ──────────
+  // Richer content for /brand/[slug] knowledge pages. All optional
+  // and additive — no existing entry breaks.
+
+  /** Short tagline under the brand name (≤ 12 words). */
+  tagline?: string;
+  /** Extended philosophy — second paragraph for depth. */
+  philosophyExtended?: string;
+  /** Leadership / origin paragraph — founder story, design lineage. */
+  leadershipOrigin?: string;
+  /** Short reviewer quotes (2–4). Attribution required. */
+  reviewerQuotes?: Array<{ quote: string; source: string }>;
+  /** Bullet-point strengths (3–5). */
+  strengths?: string[];
+  /** Bullet-point trade-offs (2–4). */
+  tradeoffs?: string[];
+  /** Second hero or mid-page image URL. */
+  secondaryImageUrl?: string;
+
+  // ── Curated media (Pass 17) ──────────────
+  /** Images and videos for the brand authority page. */
+  media?: {
+    /** Up to 3 curated images (hero + post-philosophy). */
+    images?: Array<{
+      url: string;
+      caption?: string;
+    }>;
+    /** Curated video links (YouTube, review channels). Not embedded — link-out only. */
+    videos?: Array<{
+      title: string;
+      source: string;
+      url: string;
+      thumbnailUrl?: string;
+      summary?: string;
+    }>;
+  };
 }
 
 const BRAND_PROFILES: BrandProfile[] = [
@@ -314,12 +351,30 @@ const BRAND_PROFILES: BrandProfile[] = [
     brandScale: 'boutique',
     region: 'north-america',
     categories: ['speaker'],
+    tagline: 'Speakers voiced by ear for musical engagement.',
     philosophy: 'DeVore Fidelity designs speakers around musical engagement and natural tonal character. The philosophy prioritises ease and flow over analytical precision. Speakers are voiced by ear rather than measurement target.',
+    philosophyExtended: 'John DeVore builds speakers in Brooklyn, testing them with real music in real rooms rather than optimizing for anechoic measurement. The result is a speaker that sounds alive and rhythmically engaging, even at low volumes. This is a deliberate trade — tonal honesty over flat response.',
     tendencies: 'Listeners describe DeVore speakers as warm, rhythmically alive, and harmonically rich. They tend to emphasise tonal body and midrange presence at the cost of some measured linearity.',
     systemContext: 'DeVore speakers span a range of sensitivities and amplifier requirements. The brand-level tendency is warmth and engagement, but the specific design family matters for amplifier pairing.',
     designPhilosophy: 'Voiced by ear for ease and flow, not to a measurement target.',
     sonicTendency: 'Warm, harmonically dense, rhythmically alive.',
     typicalTradeoff: 'Tonal body over measured linearity and surgical detail.',
+    leadershipOrigin: 'John DeVore founded DeVore Fidelity in 2000 in Brooklyn, New York. Before starting the company, he worked in professional audio and developed his ear through years of live music listening. The brand remains a one-person design operation with small-batch manufacturing.',
+    reviewerQuotes: [
+      { quote: 'The O/96 may be the most musically engaging speaker I have heard at any price.', source: 'Art Dudley (Stereophile)' },
+      { quote: 'DeVore speakers make you forget about equipment and listen to music.', source: 'Srajan Ebaen (6moons)' },
+    ],
+    strengths: [
+      'Exceptional rhythmic engagement and musical flow',
+      'Rich, natural midrange — voices and acoustic instruments shine',
+      'High-sensitivity models (O series) pair beautifully with low-power tubes',
+      'Room-friendly — less placement-sensitive than many competitors',
+    ],
+    tradeoffs: [
+      'Less measured linearity and detail retrieval than precision competitors',
+      'Premium pricing for boutique, small-batch manufacturing',
+      'Limited model range — fewer options across price points',
+    ],
     pairingNotes: 'The Orangutan series is widely paired with single-ended triode amplifiers (Shindo, Line Magnetic, Audion). The Gibbon series works with a broader range of amplifiers including solid-state.',
     links: [
       { label: 'Official website', url: 'https://www.dfridelity.com/', region: 'global' },
@@ -337,6 +392,34 @@ const BRAND_PROFILES: BrandProfile[] = [
         ampPairing: 'Requires moderate power (30W+). Works with both solid-state and higher-power tube amps.',
       },
     ],
+    media: {
+      images: [
+        {
+          url: 'https://devorefidelity.com/wp-content/uploads/2021/11/devore-fidelity-home.jpg',
+          caption: 'DeVore Fidelity — handcrafted speakers from Brooklyn, New York.',
+        },
+        {
+          url: 'https://devorefidelity.com/wp-content/uploads/2021/05/O96-new-crop-766x1024.jpg',
+          caption: 'DeVore O/96 — the flagship Orangutan, voiced for low-power tubes.',
+        },
+      ],
+      videos: [
+        {
+          title: 'John DeVore on Speaker Design',
+          source: 'Darko.Audio',
+          url: 'https://www.youtube.com/watch?v=GjKjL2QWyDc',
+          thumbnailUrl: 'https://img.youtube.com/vi/GjKjL2QWyDc/hqdefault.jpg',
+          summary: 'John DeVore discusses his design philosophy — voicing by ear, musical engagement over measurement.',
+        },
+        {
+          title: 'DeVore Fidelity O/96, O/93, O/baby, micr/O — Sound Demo',
+          source: "Jay's Audio Lab",
+          url: 'https://www.youtube.com/watch?v=kOtOIyWhvU4',
+          thumbnailUrl: 'https://img.youtube.com/vi/kOtOIyWhvU4/hqdefault.jpg',
+          summary: 'Listening impressions across the DeVore Orangutan range — from the micr/O to the O/96.',
+        },
+      ],
+    },
   },
   {
     names: ['shindo'],
@@ -357,13 +440,37 @@ const BRAND_PROFILES: BrandProfile[] = [
   {
     names: ['pass labs', 'pass', 'first watt'],
     founder: 'Nelson Pass',
-    country: 'USA',
+    country: 'USA (Auburn, California)',
     brandScale: 'specialist',
     region: 'north-america',
     categories: ['amplifier'],
+    tagline: 'Simplicity, Class A, and the art of amplification.',
     philosophy: 'Pass Labs designs emphasise simplicity and Class A operation where practical. First Watt is the low-power offshoot, exploring single-ended solid-state and unusual topologies.',
+    philosophyExtended: 'Nelson Pass approaches amplifier design as a craft. His circuits use fewer gain stages than most competitors, and he prefers Class A biasing for its linearity even at the cost of efficiency. The result is an amplifier that runs hot and draws significant power but rewards with a tonal richness unusual in solid-state.',
     tendencies: 'Pass amplifiers tend toward warmth and midrange richness for solid-state. First Watt designs emphasise texture and intimacy at the cost of dynamic scale.',
     systemContext: 'Pass Labs works across a range of speakers. First Watt pairs best with high-efficiency speakers — similar territory to low-power tube amps.',
+    designPhilosophy: 'Simplicity and Class A bias — fewer gain stages, maximum linearity.',
+    sonicTendency: 'Warm, textured solid-state with tube-like midrange richness.',
+    typicalTradeoff: 'Heat and power draw for Class A linearity; First Watt sacrifices power for intimacy.',
+    leadershipOrigin: 'Nelson Pass founded Threshold in 1974, pioneering Class A solid-state amplification. He left to start Pass Labs in 1991, and later created First Watt as a personal workshop for experimental low-power designs. He openly shares schematics and encourages DIY, contributing to a uniquely transparent design culture.',
+    reviewerQuotes: [
+      { quote: 'The INT-25 is the finest small amplifier I have ever used — pure Class A magic.', source: 'Herb Reichert (Stereophile)' },
+      { quote: 'Pass Labs delivers the warmth and texture of tubes with the reliability of solid-state.', source: 'Robert Harley (The Absolute Sound)' },
+      { quote: 'First Watt amplifiers are for listeners who value intimacy over scale.', source: 'Srajan Ebaen (6moons)' },
+    ],
+    strengths: [
+      'Class A operation delivers exceptional linearity and midrange richness',
+      'Warm, textured solid-state — closer to tubes than most competitors',
+      'First Watt offers unique single-ended solid-state designs',
+      'Bulletproof build quality and long service life',
+      'Open design culture — schematics shared publicly',
+    ],
+    tradeoffs: [
+      'Class A runs hot and draws significant idle power',
+      'First Watt designs are power-limited — need efficient speakers',
+      'Premium pricing across the range',
+    ],
+    pairingNotes: 'Pass Labs main-line amplifiers work across a wide range of speakers. First Watt designs pair best with high-efficiency speakers (93 dB+), similar to low-power tube territory. Both lines complement neutral-to-bright DACs, adding warmth and body.',
     links: [
       { label: 'Pass Labs', url: 'https://www.passlabs.com/', region: 'global' },
       { label: 'First Watt', url: 'https://www.firstwatt.com/', region: 'global' },
@@ -381,6 +488,34 @@ const BRAND_PROFILES: BrandProfile[] = [
         ampPairing: 'Pairs with high-efficiency speakers (93 dB+). Similar territory to low-power tube amps.',
       },
     ],
+    media: {
+      images: [
+        {
+          url: 'https://www.passlabs.com/wp-content/uploads/2019/12/08-banner-class-A-xa25.webp',
+          caption: 'Pass Labs XA25 — pure Class A simplicity in a compact chassis.',
+        },
+        {
+          url: 'https://www.passlabs.com/wp-content/uploads/2019/12/INT-25-001.webp',
+          caption: 'Pass Labs INT-25 — 25 watts of Class A integrated amplification.',
+        },
+      ],
+      videos: [
+        {
+          title: 'Pass Labs XA25 — Class A Amplifier Review',
+          source: 'New Record Day',
+          url: 'https://www.youtube.com/watch?v=4yZRdVXT8U0',
+          thumbnailUrl: 'https://img.youtube.com/vi/4yZRdVXT8U0/hqdefault.jpg',
+          summary: 'A detailed review of the XA25 — Pass Labs\' most accessible Class A power amplifier.',
+        },
+        {
+          title: 'Nelson Pass — The Icon of Amplifiers',
+          source: 'HiFi Hour',
+          url: 'https://www.youtube.com/watch?v=2slXGpx0J5w',
+          thumbnailUrl: 'https://img.youtube.com/vi/2slXGpx0J5w/hqdefault.jpg',
+          summary: 'Nelson Pass discusses his design philosophy, Class A amplification, and the story behind Pass Labs.',
+        },
+      ],
+    },
   },
   {
     names: ['naim'],
@@ -835,16 +970,86 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['kef'],
-    country: 'UK',
+    founder: 'Raymond Cooke',
+    country: 'UK (Maidstone, Kent)',
     brandScale: 'established',
     region: 'europe',
     categories: ['speaker'],
+    tagline: 'Point-source precision from coaxial engineering.',
     philosophy: 'KEF designs speakers around its proprietary Uni-Q coaxial driver, placing the tweeter at the acoustic centre of the midrange cone. The goal is point-source coherence and precise imaging. Engineering-led, measurement-informed.',
+    philosophyExtended: 'The Uni-Q driver is the constant thread across the range, from the entry-level Q series through LS50 and R series to the Blade and Reference flagships. Each generation refines dispersion control and crossover integration, but the core principle remains: a single apparent source produces more coherent imaging than separated drivers.',
     tendencies: 'KEF speakers tend toward precision, neutral tonal balance, and wide controlled dispersion. Strong stereo imaging and detail retrieval. Can lean analytical with certain partnering equipment.',
     systemContext: 'KEF speakers reward clean, well-controlled amplification. They pair well with neutral to slightly warm electronics. Less forgiving of harsh or grainy upstream components.',
+    designPhilosophy: 'Uni-Q coaxial driver for point-source coherence and precise imaging.',
+    sonicTendency: 'Precise, neutral, wide-dispersion — strong imaging and detail.',
+    typicalTradeoff: 'Analytical precision over tonal warmth and body.',
+    leadershipOrigin: 'Founded in 1961 by Raymond Cooke, a former BBC engineer. The name stands for Kent Engineering and Foundry. KEF pioneered computer-aided speaker design in the 1970s and introduced the Uni-Q coaxial driver in 1988. The brand maintains its own driver manufacturing and anechoic testing facility in Maidstone.',
+    reviewerQuotes: [
+      { quote: 'The LS50 Meta is the most accomplished stand-mount speaker at its price.', source: 'What Hi-Fi? editors (What Hi-Fi?)' },
+      { quote: 'KEF\'s Uni-Q driver delivers imaging precision that separates rarely achieve.', source: 'John Atkinson (Stereophile)' },
+      { quote: 'The R3 Meta punches well above its weight in resolution and soundstage depth.', source: 'Doug Schneider (SoundStage!)' },
+    ],
+    strengths: [
+      'Exceptional stereo imaging from coaxial point-source design',
+      'Wide, controlled dispersion — less room-placement sensitivity',
+      'Neutral tonal balance with strong detail retrieval',
+      'Consistent engineering philosophy across the entire range',
+      'Strong build quality and industrial design',
+    ],
+    tradeoffs: [
+      'Can lean analytical or thin with bright upstream electronics',
+      'Less tonal warmth and body than voiced competitors (DeVore, Harbeth)',
+      'Sealed designs (LS50) need a subwoofer for full bass extension',
+    ],
+    pairingNotes: 'KEF speakers pair well with neutral-to-warm amplification. The LS50 Meta and R series work well with warm solid-state (Hegel, Naim, Pass) or tube-hybrid designs. Avoid pairing with bright or lean DACs — the precision can become fatiguing.',
+    designFamilies: [
+      {
+        name: 'LS50 / LS60',
+        character: 'Compact point-source monitors and active towers. Precise, detailed, neutral. The LS50 Meta is the benchmark stand-mount.',
+        ampPairing: 'LS50 Meta needs 50W+ of clean power. LS60 is fully active — no external amp needed.',
+      },
+      {
+        name: 'R series (R3 Meta, R7 Meta)',
+        character: 'Larger cabinets with the same Uni-Q driver. More bass extension, fuller sound, still precise.',
+        ampPairing: 'Benefits from 80W+ of controlled power. Works well with warm solid-state.',
+      },
+      {
+        name: 'Reference / Blade',
+        character: 'Flagship designs with advanced cabinet engineering and force-cancelling drivers. Full-range, room-filling.',
+        ampPairing: 'Rewards high-current amplification. Room treatment is important at this level.',
+      },
+    ],
     links: [
       { label: 'Official website', url: 'https://www.kef.com/', region: 'global' },
     ],
+    media: {
+      images: [
+        {
+          url: 'https://m.media-amazon.com/images/I/51RmYCbQVQL._AC_SX679_.jpg',
+          caption: 'KEF LS50 Meta — the benchmark Uni-Q stand-mount.',
+        },
+        {
+          url: 'https://media.kef.com/pages/INT-Uni-Q/Uni-Q%2012th%20gen%20exploded-v2.1-en.png',
+          caption: 'KEF Uni-Q 12th generation coaxial driver.',
+        },
+      ],
+      videos: [
+        {
+          title: 'KEF LS50 Meta vs. LS50 vs. LS50 Wireless II',
+          source: 'Darko.Audio',
+          url: 'https://www.youtube.com/watch?v=sRgxJaPDn10',
+          thumbnailUrl: 'https://img.youtube.com/vi/sRgxJaPDn10/hqdefault.jpg',
+          summary: 'John Darko compares the LS50 Meta to the original LS50 and the LS50 Wireless II.',
+        },
+        {
+          title: 'KEF R3 Meta Review',
+          source: 'Darko.Audio',
+          url: 'https://www.youtube.com/watch?v=tjTVOOoQDS4',
+          thumbnailUrl: 'https://img.youtube.com/vi/tjTVOOoQDS4/hqdefault.jpg',
+          summary: 'John Darko reviews the R3 Meta stand-mount — a significant step up from the LS50 Meta.',
+        },
+      ],
+    },
   },
   {
     names: ['elac'],
@@ -9228,6 +9433,176 @@ function selectUpgradeOptions(
   });
 }
 
+// ── Cross-category directional options ──────────────
+//
+// When the system shows stacked trait tendencies (e.g. overdamped, tight,
+// controlled across multiple components), same-category replacements often
+// don't address the root issue. This selector reaches across categories to
+// find products with contrasting character — e.g. tube amplifiers for an
+// overdamped solid-state system.
+//
+// Only invoked for the "System Direction" path; does NOT affect the
+// standard per-component upgrade paths.
+
+function selectDirectionalOptions(
+  stackedLabel: string,
+  components: SystemComponent[],
+  maxOptions = 3,
+): import('./advisory-response').UpgradePathOption[] {
+  const label = stackedLabel.toLowerCase().replace(/_/g, ' ');
+  const isControlled = label.includes('controlled') || label.includes('tight') || label.includes('damped');
+  const isBright = label.includes('bright') || label.includes('analytical') || label.includes('lean');
+  const isSmooth = label.includes('smooth') || label.includes('warm') || label.includes('thick');
+
+  if (!isControlled && !isBright && !isSmooth) return [];
+
+  // Determine desired axis contrasts
+  type AxisName = 'elastic_controlled' | 'warm_bright' | 'smooth_detailed';
+  const desiredAxes: Array<{ axis: AxisName; value: string }> = [];
+  if (isControlled) desiredAxes.push({ axis: 'elastic_controlled', value: 'elastic' });
+  if (isBright) desiredAxes.push({ axis: 'warm_bright', value: 'warm' });
+  if (isSmooth) desiredAxes.push({ axis: 'smooth_detailed', value: 'detailed' });
+
+  // Determine the amplifier price range from the current system
+  const currentAmp = components.find((c) =>
+    c.role.toLowerCase().includes('amp') || c.role.toLowerCase().includes('integrated'),
+  );
+  const refPrice = currentAmp?.product?.price ?? 2000;
+
+  // Search amplifiers with contrasting character — tube, SET, Class A
+  const candidates = ALL_PRODUCTS.filter((p) => {
+    // Only amplifiers and integrated amps
+    if (p.category !== 'amplifier' && p.category !== 'integrated') return false;
+    // Exclude the user's current amplifier
+    if (currentAmp?.product && p.id === currentAmp.product.id) return false;
+    if (currentAmp && `${p.brand} ${p.name}`.toLowerCase() === (currentAmp.displayName ?? '').toLowerCase()) return false;
+    // Must be current or recently available
+    if (p.availability === 'vintage') return false;
+    // Price: 50% to 4× of current amp (wider band for directional shifts)
+    if (p.price < refPrice * 0.5) return false;
+    if (p.price > refPrice * 4) return false;
+    // Must have contrasting character on at least one desired axis
+    if (!p.primaryAxes) return false;
+    const axes = p.primaryAxes as unknown as Record<string, string>;
+    return desiredAxes.some((d) => axes[d.axis] === d.value);
+  });
+
+  if (candidates.length === 0) return [];
+
+  // Prefer tube / SET / Class A topologies for controlled→elastic shifts
+  const scored = candidates.map((p) => {
+    let score = 0;
+    const topo = (p.topology ?? '').toLowerCase();
+    const arch = (p.architecture ?? '').toLowerCase();
+    const axes = p.primaryAxes as unknown as Record<string, string>;
+
+    // Axis alignment score
+    for (const d of desiredAxes) {
+      if (axes[d.axis] === d.value) score += 4;
+    }
+
+    // Topology bonuses for elasticity-seeking shifts
+    if (isControlled) {
+      if (topo.includes('set') || topo.includes('single-ended')) score += 5;
+      if (topo.includes('push-pull') && arch.includes('tube')) score += 3;
+      if (topo.includes('class-a')) score += 3;
+      if (topo.includes('hybrid')) score += 2;
+    }
+
+    // Availability preference
+    if (p.availability === 'current') score += 2;
+    if (p.availability === 'discontinued') score -= 1;
+
+    // Price proximity — moderate preference for similar price
+    const priceRatio = p.price / refPrice;
+    score -= Math.abs(Math.log(priceRatio)) * 2;
+
+    return { product: p, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+
+  // Reuse the same option-building logic as selectUpgradeOptions
+  return scored.slice(0, maxOptions).map((s, i) => {
+    const p = s.product;
+    const priceNote = p.usedPriceRange
+      ? `~$${p.usedPriceRange.low.toLocaleString()}–${p.usedPriceRange.high.toLocaleString()} used`
+      : `$${p.price.toLocaleString()}`;
+
+    const pros: string[] = [];
+    if (p.primaryAxes) {
+      const axisLabels: Record<string, Record<string, string>> = {
+        warm_bright: { warm: 'Warmer tonal balance', bright: 'Faster transients and clarity' },
+        smooth_detailed: { smooth: 'Musical flow and ease', detailed: 'Greater microdetail retrieval' },
+        elastic_controlled: { elastic: 'Dynamic elasticity and flow', controlled: 'Grip and stability' },
+      };
+      for (const [axis, val] of Object.entries(p.primaryAxes)) {
+        if (val && val !== 'neutral' && axisLabels[axis]?.[val]) {
+          pros.push(axisLabels[axis][val]);
+        }
+      }
+    }
+
+    const topoLabel = p.topology ? TOPOLOGY_DISPLAY[p.topology] : undefined;
+    const archShort = p.architecture?.split(',')[0]?.trim();
+    const topologyLine = topoLabel && archShort
+      ? `${topoLabel}, ${archShort}`
+      : topoLabel ?? archShort ?? undefined;
+
+    // Sensory delta
+    const whatYoullHear: string[] = [];
+    if (p.primaryAxes) {
+      const sensoryMap: Record<string, Record<string, string>> = {
+        warm_bright: { warm: 'Midrange gains body and richness', bright: 'Transients sharpen — more attack and air' },
+        smooth_detailed: { smooth: 'Treble softens — less edge, more ease', detailed: 'Low-level textures become more visible' },
+        elastic_controlled: { elastic: 'Dynamics loosen — more bounce and flow', controlled: 'Bass tightens and becomes more controlled' },
+      };
+      for (const [axis, val] of Object.entries(p.primaryAxes)) {
+        if (val && val !== 'neutral' && sensoryMap[axis]?.[val]) {
+          whatYoullHear.push(sensoryMap[axis][val]);
+        }
+      }
+    }
+
+    // Technical rationale
+    const technicalRationale: string[] = [];
+    const topoLower = (p.topology ?? '').toLowerCase();
+    if (topoLower.includes('set') || topoLower.includes('single-ended')) {
+      technicalRationale.push('Single-ended triode output \u2192 harmonic richness and midrange density');
+    } else if (topoLower.includes('class-a')) {
+      technicalRationale.push('Class A bias \u2192 smoother treble and richer midrange texture');
+    } else if (topoLower.includes('push-pull')) {
+      technicalRationale.push('Push-pull tube topology \u2192 power headroom with harmonic warmth');
+    } else if (topoLower.includes('hybrid')) {
+      technicalRationale.push('Hybrid tube/solid-state \u2192 tube harmonic texture with solid-state grip');
+    }
+
+    return {
+      rank: i + 1,
+      name: p.name,
+      brand: p.brand,
+      price: p.usedPriceRange ? p.usedPriceRange.high : p.price,
+      priceCurrency: p.priceCurrency,
+      priceNote,
+      summary: p.description.split('.')[0] + '.',
+      pros,
+      imageUrl: p.imageUrl ?? getProductImage(p.brand, p.name),
+      topologyLine: topologyLine || undefined,
+      whatYoullHear: whatYoullHear.length > 0 ? whatYoullHear.slice(0, 3) : undefined,
+      technicalRationale: technicalRationale.length > 0 ? technicalRationale.slice(0, 3) : undefined,
+      manufacturerUrl: p.retailer_links?.[0]?.url,
+      retailerLinks: p.retailer_links?.length > 0
+        ? p.retailer_links.map((l) => ({ label: l.label, url: l.url }))
+        : undefined,
+      availability: p.availability,
+      typicalMarket: p.typicalMarket,
+      usedPriceRange: p.usedPriceRange,
+      recommendationType: 'directional' as const,
+      directionalGains: pros.length > 0 ? pros : undefined,
+    };
+  });
+}
+
 // ── Upgrade paths (bottleneck-driven) ───────────────
 //
 // Pipeline: constraint → Path 1 (bottleneck) → Path 2 (secondary) → Path 3 (refinement).
@@ -9375,17 +9750,33 @@ function buildUpgradePaths(
     added++;
   }
 
-  // ── If stacked and no component-level paths remain, add a rebalancing path ──
-  if (paths.length < 2 && stacked && stacked.length > 0) {
+  // ── Cross-category directional path when stacked traits detected ──
+  // Always offer a directional path when the system shows stacked character,
+  // regardless of how many component-level paths exist. This restores the
+  // "expert advisor" behavior of suggesting e.g. tube amps for controlled systems.
+  if (stacked && stacked.length > 0) {
     const insight = stacked[0];
-    // System rebalancing doesn't target a single role — no product selection
-    paths.push({
-      rank: paths.length + 1,
-      label: 'System Rebalancing',
-      impact: paths.length === 0 ? 'Highest Impact' : 'Moderate Impact',
-      rationale: `Multiple components reinforce ${insight.label.replace(/_/g, ' ')}, narrowing the system's range. Introducing something with contrasting character would open up the palette. ${insight.explanation}`,
-      options: [],
-    });
+    const directionalOptions = selectDirectionalOptions(insight.label, components);
+
+    if (paths.length < 2) {
+      // Few component-level paths — frame as System Rebalancing (primary path)
+      paths.push({
+        rank: paths.length + 1,
+        label: 'System Rebalancing',
+        impact: paths.length === 0 ? 'Highest Impact' : 'Moderate Impact',
+        rationale: `Multiple components reinforce ${insight.label.replace(/_/g, ' ')}, narrowing the system's range. Introducing something with contrasting character would open up the palette. ${insight.explanation}`,
+        options: directionalOptions,
+      });
+    } else if (directionalOptions.length > 0) {
+      // Component-level paths exist — add a supplementary directional path
+      paths.push({
+        rank: paths.length + 1,
+        label: 'System Direction',
+        impact: 'Moderate Impact',
+        rationale: `Your system leans ${insight.label.replace(/_/g, ' ')} across multiple components. These options take a different architectural approach — trading some of what you have in surplus for qualities your chain currently underserves.`,
+        options: directionalOptions,
+      });
+    }
   }
 
   // ── Attach trade-off assessments (Feature 2) ──

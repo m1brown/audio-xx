@@ -48,18 +48,39 @@ import { setActiveSavedSystemId } from './saved-system/activeSystem';
 // ── Constants ───────────────────────────────────────────
 
 const DRAFT_STORAGE_KEY = 'audioxx:draft-system';
+const SAVED_SYSTEMS_KEY = 'audioxx.systems.v1';
+const ACTIVE_SYSTEM_KEY = 'audioxx.active-system.v1';
 
 // ── Initial state ───────────────────────────────────────
 
 /**
  * Synchronous lazy initializer for useReducer.
- * Hydrates guest draft from sessionStorage on first render.
+ * Hydrates guest draft from sessionStorage AND saved systems from
+ * localStorage on first render. Systems persisted in localStorage
+ * survive refresh and deployments.
  */
 function buildInitialState(): AudioSessionState {
   const draft = readDraftFromStorage();
+  const savedSystems = readSavedSystemsFromStorage();
+  const storedRef = readActiveSystemRefFromStorage();
+
+  // Determine active ref: prioritize stored ref, validate it exists
+  let activeSystemRef: ActiveSystemRef = null;
+  if (storedRef?.kind === 'saved') {
+    const exists = savedSystems.some((s) => s.id === storedRef.id);
+    activeSystemRef = exists ? storedRef : null;
+  } else if (storedRef?.kind === 'draft' && draft) {
+    activeSystemRef = { kind: 'draft' };
+  } else if (draft) {
+    activeSystemRef = { kind: 'draft' };
+  } else if (savedSystems.length > 0) {
+    // Auto-select first saved system if no other ref
+    activeSystemRef = { kind: 'saved', id: savedSystems[0].id };
+  }
+
   return {
-    activeSystemRef: draft ? { kind: 'draft' } : null,
-    savedSystems: [],
+    activeSystemRef,
+    savedSystems,
     draftSystem: draft,
     loading: false,
     proposedSystem: null,
@@ -233,6 +254,69 @@ function writeDraftToStorage(draft: DraftSystem | null): void {
   }
 }
 
+// ── localStorage helpers for saved systems ─────────────
+
+function readSavedSystemsFromStorage(): SavedSystem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(SAVED_SYSTEMS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    // Basic shape validation: each entry must have id, name, components
+    return parsed.filter(
+      (s: unknown) =>
+        s &&
+        typeof s === 'object' &&
+        typeof (s as SavedSystem).id === 'string' &&
+        typeof (s as SavedSystem).name === 'string' &&
+        Array.isArray((s as SavedSystem).components),
+    ) as SavedSystem[];
+  } catch {
+    return [];
+  }
+}
+
+function writeSavedSystemsToStorage(systems: SavedSystem[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(SAVED_SYSTEMS_KEY, JSON.stringify(systems));
+  } catch {
+    // Quota or privacy mode — degrade silently
+  }
+}
+
+function readActiveSystemRefFromStorage(): ActiveSystemRef {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(ACTIVE_SYSTEM_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.kind === 'saved' && typeof parsed.id === 'string') {
+      return { kind: 'saved', id: parsed.id };
+    }
+    if (parsed && parsed.kind === 'draft') {
+      return { kind: 'draft' };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function writeActiveSystemRefToStorage(ref: ActiveSystemRef): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (ref === null) {
+      window.localStorage.removeItem(ACTIVE_SYSTEM_KEY);
+    } else {
+      window.localStorage.setItem(ACTIVE_SYSTEM_KEY, JSON.stringify(ref));
+    }
+  } catch {
+    // degrade silently
+  }
+}
+
 // ── API helpers ─────────────────────────────────────────
 
 interface ProfileResponse {
@@ -287,6 +371,16 @@ export function AudioSessionProvider({ children }: { children: ReactNode }) {
     writeDraftToStorage(state.draftSystem);
   }, [state.draftSystem]);
 
+  // ── Persist saved systems to localStorage on every change ──
+  useEffect(() => {
+    writeSavedSystemsToStorage(state.savedSystems);
+  }, [state.savedSystems]);
+
+  // ── Persist active system ref to localStorage on every change ──
+  useEffect(() => {
+    writeActiveSystemRefToStorage(state.activeSystemRef);
+  }, [state.activeSystemRef]);
+
   // ── Auth-aware loading ──
   const loadSavedSystems = useCallback(async () => {
     dispatch({ type: 'SET_LOADING', loading: true });
@@ -296,9 +390,16 @@ export function AudioSessionProvider({ children }: { children: ReactNode }) {
       fetchSystems(),
     ]);
 
+    // Prevent backend from wiping locally-persisted systems.
+    // If the backend returns empty (new user, no DB rows yet), preserve
+    // whatever localStorage already has so we don't lose client-created
+    // systems on authentication.
+    const systemsToSet =
+      systems.length > 0 ? systems : readSavedSystemsFromStorage();
+
     dispatch({
       type: 'SET_SAVED_SYSTEMS',
-      systems,
+      systems: systemsToSet,
       activeSystemId: profile?.activeSystemId ?? null,
     });
   }, []);
@@ -313,14 +414,19 @@ export function AudioSessionProvider({ children }: { children: ReactNode }) {
         loadSavedSystems();
       }
     } else if (status === 'unauthenticated') {
-      // User signed out. Clear saved systems but preserve any draft.
+      // User signed out. Preserve localStorage systems — they persist
+      // across sessions. Only reset the in-memory tracking ref.
       if (loadedForUserRef.current) {
         loadedForUserRef.current = null;
-        dispatch({
-          type: 'SET_SAVED_SYSTEMS',
-          systems: [],
-          activeSystemId: null,
-        });
+        // Re-hydrate from localStorage instead of clearing to [].
+        const persisted = readSavedSystemsFromStorage();
+        if (persisted.length > 0) {
+          dispatch({
+            type: 'SET_SAVED_SYSTEMS',
+            systems: persisted,
+            activeSystemId: persisted[0]?.id ?? null,
+          });
+        }
       }
     }
   }, [status, session, loadSavedSystems]);

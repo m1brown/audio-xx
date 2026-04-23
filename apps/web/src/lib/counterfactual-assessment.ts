@@ -139,8 +139,8 @@ function assessOvercorrectionRisk(
   if (imbalances.length === 0) return { present: false };
 
   for (const imbalance of imbalances) {
-    if (gainReinforcesImbalance(tradeoff.likelyGains, imbalance.property)) {
-      const traitLabel = imbalance.property.replace(/^high_/, '').replace(/_/g, ' ');
+    if (gainReinforcesImbalance(tradeoff.likelyGains, imbalance.label)) {
+      const traitLabel = imbalance.label.replace(/^high_/, '').replace(/_/g, ' ');
       return {
         present: true,
         trait: traitLabel,

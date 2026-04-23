@@ -4,6 +4,7 @@ import './globals.css';
 import Providers from '@/components/Providers';
 import Nav from '@/components/Nav';
 import Footer from '@/components/Footer';
+import StartOverBar from '@/components/StartOverBar';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="container">
             {children}
           </main>
+          <StartOverBar />
           <Footer />
         </Providers>
       </body>

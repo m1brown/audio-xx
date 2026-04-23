@@ -3213,7 +3213,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'eBay', note: 'Used market listings — typical prices $75-150.', url: 'https://www.ebay.com/sch/i.html?_nkw=Mission+MS-50' },
     ],
     notes: 'Originally bundled with Denon DM-30S and DM-50S mini systems. Favorite bargain speaker of the Audio XX editor — and spotted in a Geese music video. The MS-50 has developed a cult following for its warm, musical character at a fraction of the cost of purpose-built audiophile bookshelf speakers. Best suited as an entry point, gift speaker, or casual listening solution. Previously available for $50-75; rising recognition has pushed used prices to $75-150.',
-    philosophy: 'warmth',
+    philosophy: 'warm',
     marketType: 'value',
   },
 ];

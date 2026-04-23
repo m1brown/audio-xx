@@ -25,13 +25,13 @@ export default function AdvisorySection({ number, label, children }: AdvisorySec
     // Modeled on ChatGPT system evaluation: large, bold numbered sections
     // with generous vertical breathing room.
     return (
-      <div style={{ marginBottom: '2rem' }}>
+      <div style={{ marginBottom: '1.25rem' }}>
         <h3
           style={{
             margin: '0 0 0.85rem 0',
-            fontSize: '1.3rem',
-            fontWeight: 700,
-            color: '#2a2a2a',
+            fontSize: '1.35rem',
+            fontWeight: 800,
+            color: '#1F1D1B',
             lineHeight: 1.35,
             letterSpacing: '-0.015em',
           }}
@@ -46,15 +46,15 @@ export default function AdvisorySection({ number, label, children }: AdvisorySec
 
   // ── Default uppercase label ──
   return (
-    <div style={{ marginBottom: '2rem' }}>
+    <div style={{ marginBottom: '1.25rem' }}>
       <div
         style={{
           marginBottom: '0.7rem',
-          fontSize: '0.82rem',
+          fontSize: '0.84rem',
           fontWeight: 700,
           letterSpacing: '0.07em',
           textTransform: 'uppercase' as const,
-          color: '#a89870',
+          color: '#96875e',
         }}
       >
         {label}

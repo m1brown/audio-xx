@@ -321,7 +321,7 @@ const COLORS = {
   textMuted: '#8C877F',     // page COLOR.textMuted
   accent: '#B08D57',        // page COLOR.accent — single accent across UI
   accentBg: '#FBF6EC',      // page COLOR.accentBg — verdict block fill
-  border: '#D8D2C5',        // page COLOR.border
+  border: '#D0CABf',         // slightly stronger than page — card edge needs definition
   borderLight: '#E8E3D7',   // page COLOR.borderLight
   green: '#4F6645',
   white: '#fff',
@@ -528,8 +528,8 @@ function ProductLinksSection({ opt, product, role }: {
 
   return (
     <div style={{
-      marginTop: '1.15rem',
-      paddingTop: '0.85rem',
+      marginTop: '0.75rem',
+      paddingTop: '0.55rem',
       borderTop: `1px solid ${COLORS.borderLight}`,
       display: 'flex',
       flexDirection: 'column',
@@ -610,8 +610,8 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
       fontSize: '0.72rem',
-      fontWeight: 600,
-      color: COLORS.textMuted,
+      fontWeight: 700,
+      color: '#7A756D',
       textTransform: 'uppercase',
       letterSpacing: '0.06em',
       marginBottom: '0.3rem',
@@ -645,8 +645,8 @@ function RoleBadge({ role, dynamicLabel }: { role: string; dynamicLabel?: string
     const qualifierColor = isAnchor ? COLORS.accent : style.color;
     return (
       <div style={{
-        marginBottom: '0.7rem',
-        paddingBottom: '0.5rem',
+        marginBottom: '0.45rem',
+        paddingBottom: '0.35rem',
         borderBottom: `1px solid ${isAnchor ? COLORS.borderLight : style.border}`,
       }}>
         {showQualifier && (
@@ -732,16 +732,20 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
   const isAnchor = role === 'anchor' || role === 'top_pick' || opt.isPrimary;
 
   return (
-    <div style={{
-      background: COLORS.cardBg,
-      border: `1px solid ${COLORS.border}`,
-      borderRadius: 8,
-      borderTop: isAnchor ? `3px solid ${COLORS.accent}` : `1px solid ${COLORS.border}`,
-      padding: isAnchor ? '1.65rem 1.85rem 1.65rem' : '1.6rem 1.85rem',
-      boxShadow: isAnchor
-        ? '0 2px 6px rgba(176,141,87,0.08), 0 1px 2px rgba(31,29,27,0.04)'
-        : '0 1px 2px rgba(31,29,27,0.03)',
-    }}>
+    <div
+      className={isAnchor ? 'audioxx-product-card audioxx-card-anchor' : 'audioxx-product-card'}
+      style={{
+        background: COLORS.cardBg,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: 8,
+        borderTop: isAnchor ? `3px solid ${COLORS.accent}` : `1px solid ${COLORS.border}`,
+        padding: isAnchor ? '1.15rem 1.4rem 1.15rem' : '1.1rem 1.4rem',
+        boxShadow: isAnchor
+          ? '0 3px 10px rgba(176,141,87,0.1), 0 1px 3px rgba(31,29,27,0.05)'
+          : '0 2px 6px rgba(0,0,0,0.05)',
+        transition: 'transform 0.15s, box-shadow 0.15s',
+      }}
+    >
 
       {/* ── Card-view beacon (renders nothing, fires one event on mount). ── */}
       <CardViewTracker product={fullName} role={role} />
@@ -763,11 +767,12 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
           <Link
             href={`/brand/${toSlug(opt.brand)}`}
             className="audioxx-brand-bubble"
+            title={`About ${opt.brand} — philosophy, sonic character & pairing guidance`}
             style={{
               display: 'inline-block',
               fontSize: '0.78rem',
-              fontWeight: 500,
-              color: COLORS.textMuted,
+              fontWeight: 600,
+              color: '#706B63',
               letterSpacing: '0.04em',
               textTransform: 'uppercase',
               marginBottom: '0.1rem',
@@ -877,7 +882,7 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
         display: 'flex',
         alignItems: 'baseline',
         gap: '0.75rem',
-        marginBottom: '1.1rem',
+        marginBottom: '0.6rem',
         flexWrap: 'wrap',
       }}>
         {priceParts.length > 0 && (
@@ -910,18 +915,17 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
        * square components). Silent collapse on missing/broken URLs. */}
       {shouldShowImage && opt.imageUrl && (
         <div style={{
-          marginBottom: '1.25rem',
-          borderRadius: '8px',
+          marginBottom: '0.75rem',
+          borderRadius: '10px',
           overflow: 'hidden',
           width: '100%',
-          maxHeight: '420px',
-          minHeight: '240px',
-          aspectRatio: '4 / 3',
-          background: '#ffffff',
+          maxHeight: '280px',
+          minHeight: '140px',
+          background: 'transparent',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '1.5rem',
+          padding: '0.5rem 0',
           boxSizing: 'border-box',
         }}>
           <img
@@ -979,7 +983,7 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
         const tradeFallback = opt.caution ? [opt.caution] : [];
         const tradeoffs = (tradeRaw.length > 0 ? tradeRaw : tradeFallback).slice(0, 2);
 
-        const sectionStyle: React.CSSProperties = { marginBottom: '1.15rem' };
+        const sectionStyle: React.CSSProperties = { marginBottom: '0.75rem' };
         const textStyle: React.CSSProperties = {
           margin: 0,
           fontSize: '0.93rem',
@@ -1129,9 +1133,9 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
                   // unmistakably as the decision moment of the card —
                   // thicker accent rule, deeper padding, slightly stronger
                   // label color.
-                  marginTop: '0.5rem',
-                  marginBottom: '1rem',
-                  padding: '0.85rem 1rem 0.95rem',
+                  marginTop: '0.35rem',
+                  marginBottom: '0.65rem',
+                  padding: '0.6rem 0.85rem 0.7rem',
                   background: COLORS.accentBg,
                   borderLeft: `4px solid ${COLORS.accent}`,
                   borderRadius: '3px',
@@ -1162,7 +1166,7 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
             {/* 5b. POSITIONING HINT — Best for / Less ideal if */}
             {(opt.bestFor || opt.lessIdealIf) && (
               <div style={{
-                marginBottom: '1rem',
+                marginBottom: '0.65rem',
                 fontSize: '0.88rem',
                 lineHeight: 1.6,
                 color: COLORS.textSecondary,
@@ -1193,7 +1197,7 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
              * dominant" role the spec calls for.
              */}
             {opt.sources && opt.sources.length > 0 && (
-              <div style={{ margin: '0 0 0.85rem' }}>
+              <div style={{ margin: '0 0 0.5rem' }}>
                 <SectionLabel>Further reading</SectionLabel>
                 <ul style={{
                   margin: 0,
@@ -1304,7 +1308,7 @@ export default function AdvisoryProductCards({ options, hideMakerInsight, prefer
   // old <hr/> divider — each card is now its own surface with a real
   // border, so a between-cards rule would be visual noise.
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.6rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       {sorted.map((opt, i) => (
         <EditorialProductSection key={i} opt={opt} index={i} hideMakerInsight={hideMakerInsight} />
       ))}
