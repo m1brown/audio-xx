@@ -104,10 +104,10 @@ describe('Link priority ordering', () => {
     expect(amazonIdx).toBeGreaterThanOrEqual(0);
   });
 
-  it('manufacturer is always present as fallback for current products', () => {
+  it('manufacturer is present in manufacturerLinks (product page, not buy new)', () => {
     const result = buildProductLinks(WITHOUT_AMAZON);
-    expect(result.newLinks.length).toBeGreaterThanOrEqual(1);
-    expect(result.newLinks.some(l => l.label === 'Decware')).toBe(true);
+    expect(result.manufacturerLinks.length).toBeGreaterThanOrEqual(1);
+    expect(result.manufacturerLinks.some(l => l.label === 'Decware')).toBe(true);
   });
 });
 
@@ -310,11 +310,11 @@ describe('Purchase path regression: product with no retailer links', () => {
     manufacturerUrl: 'https://www.schiit.com/products/bifrost',
   };
 
-  it('falls back to manufacturer for Buy new', () => {
+  it('falls back to manufacturer in manufacturerLinks (product page)', () => {
     const result = buildProductLinks(BARE);
-    expect(result.newLinks.length).toBeGreaterThanOrEqual(1);
-    expect(result.newLinks[0].label).toBe('Schiit');
-    expect(result.newLinks[0].url).toBe('https://www.schiit.com/products/bifrost');
+    expect(result.manufacturerLinks.length).toBeGreaterThanOrEqual(1);
+    expect(result.manufacturerLinks[0].label).toBe('Schiit');
+    expect(result.manufacturerLinks[0].url).toBe('https://www.schiit.com/products/bifrost');
   });
 
   it('still generates used links', () => {

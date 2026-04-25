@@ -104,15 +104,15 @@ function buildBridgeText(
     : systemCharacterSummary ?? null;
 
   if (hasDirectional && character) {
-    return `Your system leans ${character}. Some options below refine that character; others shift it in a new direction\u2009—\u2009trading what you have in surplus for qualities your chain currently underserves. Choose based on what you want more of.`;
+    return `Your system leans ${character}. Some options below refine that character; others shift it in a new direction\u2009—\u2009trading what you have in surplus for qualities your system currently underserves. Choose based on what you want more of.`;
   }
   if (hasDirectional) {
     return 'Some options below refine your current system character; others change it. Each trades one strength for another\u2009—\u2009choose based on what you want more of in your listening.';
   }
   if (character) {
-    return `Your system leans ${character}. Each path targets a different part of the chain, ranked by alignment with your priorities\u2009—\u2009not by price or prestige.`;
+    return `Your system leans ${character}. Each path targets a different part of your system, ranked by alignment with your priorities\u2009—\u2009not by price or prestige.`;
   }
-  return 'Each path targets a different part of the chain, ranked by alignment with your system and priorities\u2009—\u2009not by price or prestige.';
+  return 'Each path targets a different part of your system, ranked by alignment with your priorities\u2009—\u2009not by price or prestige.';
 }
 
 export default function AdvisoryUpgradePaths({ paths, stackedTraits, systemCharacterSummary }: Props) {
@@ -214,7 +214,7 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
           Path {path.rank}: {displayStrategy ?? displayLabel}
         </span>
             {displayStrategy && displayStrategy !== displayLabel && (
-              <span style={{ fontSize: '0.82rem', color: '#999', fontWeight: 400 }}>
+              <span style={{ fontSize: '0.82rem', color: '#888', fontWeight: 400 }}>
                 {displayLabel}
               </span>
             )}
@@ -243,8 +243,8 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
 
           {/* Explanation layer (Feature 9) — "Why this works" */}
           {path.explanation && path.explanation.length > 0 && (
-            <div style={{ margin: '0 0 0.7rem 0', fontSize: '0.88rem', color: '#6a6a5a', lineHeight: 1.55 }}>
-              <span style={{ fontWeight: 500, fontSize: '0.82rem', letterSpacing: '0.02em', color: '#888' }}>Why this works:</span>
+            <div style={{ margin: '0 0 0.7rem 0', fontSize: '0.88rem', color: '#555', lineHeight: 1.55 }}>
+              <span style={{ fontWeight: 600, fontSize: '0.82rem', letterSpacing: '0.02em', color: '#7A756D' }}>Why this works:</span>
               <ul style={{ margin: '0.2rem 0 0 1.1rem', padding: 0, listStyle: 'disc' }}>
                 {path.explanation.slice(0, 2).map((line, i) => (
                   <li key={i} style={{ marginBottom: '0.1rem' }}>{line}</li>
@@ -273,13 +273,13 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
             </div>
           )}
 
-          {/* Product options — 2-col grid on desktop, single col on mobile */}
+          {/* Product options — single-column stack */}
           {!(path.counterfactual?.restraintRecommended) && (
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 380px), 1fr))',
+            display: 'flex',
+            flexDirection: 'column',
             gap: '0.6rem',
-            alignItems: 'start',
+            maxWidth: '720px',
           }}>
             {path.options.map((opt) => {
               const isDir = opt.recommendationType === 'directional' || opt.recommendationType === 'sidegrade';
@@ -307,33 +307,45 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
               >
                 {/* Product image — always show when available (card context, no dedup) */}
                 {opt.imageUrl && (
-                  <div style={{
-                    marginBottom: '0.5rem',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    background: 'transparent',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0.35rem 0',
-                    maxHeight: '200px',
-                    minHeight: '100px',
-                  }}>
-                    <img
-                      src={opt.imageUrl}
-                      alt={`${opt.brand ?? ''} ${opt.name}`.trim()}
-                      referrerPolicy="no-referrer"
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '100%',
-                        objectFit: 'contain',
-                        display: 'block',
-                      }}
-                      onError={(e) => {
-                        (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
-                      }}
-                    />
-                  </div>
+                  <figure style={{ margin: 0, marginBottom: '0.5rem' }}>
+                    <div style={{
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      background: 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0.35rem 0',
+                      maxHeight: '200px',
+                      minHeight: '100px',
+                    }}>
+                      <img
+                        src={opt.imageUrl}
+                        alt={`${opt.brand ?? ''} ${opt.name}`.trim()}
+                        referrerPolicy="no-referrer"
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: '100%',
+                          objectFit: 'contain',
+                          display: 'block',
+                        }}
+                        onError={(e) => {
+                          const fig = (e.currentTarget as HTMLImageElement).closest('figure');
+                          if (fig) (fig as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                    {opt.brand && (
+                      <figcaption style={{
+                        marginTop: '0.15rem',
+                        fontSize: '0.68rem',
+                        color: '#a09a90',
+                        textAlign: 'right',
+                      }}>
+                        Image: {opt.brand}
+                      </figcaption>
+                    )}
+                  </figure>
                 )}
 
                 {/* Option header — name row + meta row */}
@@ -502,7 +514,7 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
                 {opt.whatYoullHear && opt.whatYoullHear.length > 0 && (
                   <div style={{ marginBottom: '0.45rem' }}>
                     <div style={{
-                      fontSize: '0.7rem', fontWeight: 700, color: '#888',
+                      fontSize: '0.7rem', fontWeight: 700, color: '#7A756D',
                       textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.15rem',
                     }}>
                       What you&apos;ll hear
@@ -521,7 +533,7 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
                 {opt.technicalRationale && opt.technicalRationale.length > 0 && (
                   <div style={{ marginBottom: '0.45rem' }}>
                     <div style={{
-                      fontSize: '0.7rem', fontWeight: 700, color: '#888',
+                      fontSize: '0.7rem', fontWeight: 700, color: '#7A756D',
                       textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.15rem',
                     }}>
                       Technical rationale
@@ -540,7 +552,7 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
                 {(opt.pros.length > 0 || (opt.cons && opt.cons.length > 0)) && (
                   <div style={{ marginBottom: '0.4rem' }}>
                     <div style={{
-                      fontSize: '0.7rem', fontWeight: 700, color: '#888',
+                      fontSize: '0.7rem', fontWeight: 700, color: '#7A756D',
                       textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.2rem',
                     }}>
                       What changes
@@ -588,7 +600,7 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
                       </div>
                     )}
                     {opt.systemDelta.tradeOffs && opt.systemDelta.tradeOffs.length > 0 && (
-                      <div style={{ color: '#777' }}>
+                      <div style={{ color: '#666' }}>
                         <span style={{ fontWeight: 600 }}>Trade-offs: </span>
                         {opt.systemDelta.tradeOffs.join(' \u00b7 ')}
                       </div>
@@ -627,7 +639,7 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
                 {opt.sources && opt.sources.length > 0 && (
                   <div style={{ marginTop: '0.55rem' }}>
                     <div style={{
-                      fontSize: '0.72rem', fontWeight: 700, color: '#888',
+                      fontSize: '0.72rem', fontWeight: 700, color: '#7A756D',
                       textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.2rem',
                     }}>
                       Further reading
@@ -637,7 +649,7 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
                         <li key={s.id} style={{
                           fontSize: '0.82rem',
                           lineHeight: 1.55,
-                          color: '#777',
+                          color: '#666',
                           marginBottom: '0.15rem',
                         }}>
                           <span style={{ color: '#555', fontWeight: 500 }}>
@@ -676,7 +688,7 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
  * ASIN gating). Maps UpgradePathOption fields to ProductLinkInput.
  */
 function UpgradePurchaseLinks({ opt }: { opt: UpgradePathOption }) {
-  const { newLinks, usedLinks } = buildProductLinks({
+  const { newLinks, manufacturerLinks, usedLinks } = buildProductLinks({
     name: opt.name,
     brand: opt.brand,
     retailerLinks: opt.retailerLinks?.map(l => ({ label: l.label, url: l.url })),
@@ -686,16 +698,17 @@ function UpgradePurchaseLinks({ opt }: { opt: UpgradePathOption }) {
   });
 
   const linkStyle: React.CSSProperties = {
-    color: '#999',
+    color: '#3f3a36',
     textDecoration: 'underline',
     textUnderlineOffset: '3px',
-    textDecorationColor: '#ddd',
-    fontSize: '0.82rem',
+    textDecorationColor: '#b8b2a6',
+    fontSize: '0.84rem',
+    fontWeight: 600,
     transition: 'color 0.15s',
   };
-  const sepStyle: React.CSSProperties = { margin: '0 0.45rem', color: '#ddd' };
+  const sepStyle: React.CSSProperties = { margin: '0 0.45rem', color: '#b8b2a6' };
   const labelStyle: React.CSSProperties = {
-    fontSize: '0.72rem', fontWeight: 600, color: '#888',
+    fontSize: '0.72rem', fontWeight: 700, color: '#7A756D',
     textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.15rem',
   };
 
@@ -730,6 +743,28 @@ function UpgradePurchaseLinks({ opt }: { opt: UpgradePathOption }) {
         </div>
       )}
 
+      {/* Product page — manufacturer info links */}
+      {manufacturerLinks.length > 0 && (
+        <div>
+          <div style={labelStyle}>Product page</div>
+          <span style={{ lineHeight: 1.9 }}>
+            {manufacturerLinks.map((link, i) => (
+              <span key={i}>
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={linkStyle}
+                >
+                  Product page &rarr; {link.label}
+                </a>
+                {i < manufacturerLinks.length - 1 && <span style={sepStyle}>&middot;</span>}
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
+
       {/* Buy used — from canonical link builder */}
       <div>
         <div style={labelStyle}>Buy used</div>
@@ -754,7 +789,7 @@ function UpgradePurchaseLinks({ opt }: { opt: UpgradePathOption }) {
         </span>
         {/* Typical used price — only from catalog data, never estimated */}
         {opt.usedPriceRange && (
-          <div style={{ fontSize: '0.78rem', color: '#aaa', marginTop: '0.15rem' }}>
+          <div style={{ fontSize: '0.78rem', color: '#888', marginTop: '0.15rem' }}>
             Typical used: ${opt.usedPriceRange.low.toLocaleString()}&ndash;${opt.usedPriceRange.high.toLocaleString()}
           </div>
         )}
@@ -780,7 +815,7 @@ function MakerContextBlock({ brand, context }: { brand?: string; context?: strin
           cursor: 'pointer',
           fontSize: '0.8rem',
           fontWeight: 600,
-          color: '#999',
+          color: '#7A756D',
           fontFamily: 'inherit',
           letterSpacing: '0.02em',
         }}
@@ -794,7 +829,7 @@ function MakerContextBlock({ brand, context }: { brand?: string; context?: strin
           lineHeight: 1.6,
         }}>
           {context.map((line, i) => (
-            <li key={i} style={{ fontSize: '0.85rem', color: '#777', marginBottom: '0.1rem' }}>
+            <li key={i} style={{ fontSize: '0.85rem', color: '#555', marginBottom: '0.1rem' }}>
               {line}
             </li>
           ))}

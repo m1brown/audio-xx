@@ -1,16 +1,16 @@
 /**
- * Audio XX — Editorial Product Card (Step 9)
+ * Audio XX — Editorial Product Card
  *
- * Premium recommendation card with clear hierarchy:
- *   1. Role badge (Best Choice / Upgrade Choice / Value Choice)
- *   2. Product name (large, bold) + brand (secondary)
- *   3. Price line + buying context label
- *   4. Product image (when available)
- *   5. Why this fits you
- *   6. Sound character
- *   7. Trade-offs
- *   8. Buying note
- *   9. Links section (buying links + further reading, grouped separately)
+ * Roon-inspired layered hierarchy:
+ *   Layer 1 — Visual + identity
+ *     Role badge, product image (hero), brand, name, price
+ *   Layer 2 — Quick character
+ *     Identity line + catalog description (1–2 lines)
+ *   Layer 3 — What changes
+ *     Gains, trade-offs (tight bullets)
+ *   Layer 4 — Deeper explanation (de-emphasized)
+ *     Technical rationale, maker insight
+ *   Buy links + further reading
  */
 
 import Link from 'next/link';
@@ -24,6 +24,7 @@ import { shouldShowAmazonLink, getAmazonSearchUrl } from '../../lib/amazon-links
 import { buildProductLinks } from '../../lib/product-links';
 import { findBrandProfileByName } from '../../lib/consultation';
 import { toSlug } from '../../lib/route-slug';
+import { ProductImage } from './ProductImage';
 
 // ── Brand philosophy accessor ─────────────────────────
 // Pass 10: composeWhyThisMaker replaces the old getBrandPhilosophy.
@@ -274,7 +275,7 @@ function cleanLinkLabel(label: string): string {
 function buildVerdict(opt: AdvisoryOption, role: string | undefined): string | null {
   // Anchor / primary — decisive default, no gain restatement.
   if (role === 'anchor' || role === 'top_pick' || opt.isPrimary) {
-    return 'The default call for this chain. Pick an alternative below only when a specific trade-off outweighs breadth of fit.';
+    return 'The default call for this system. Pick an alternative below only when a specific trade-off outweighs breadth of fit.';
   }
 
   // Close alternative — same philosophy, finer bias. The gain bullets
@@ -437,17 +438,18 @@ function resolveBuyingContext(opt: AdvisoryOption): { label: string; color: stri
 // Task 4–5: Separate buying links from further reading, both at card bottom.
 
 const LINK_STYLE: React.CSSProperties = {
-  color: COLORS.textMuted,
+  color: '#3f3a36',
   textDecoration: 'underline',
   textUnderlineOffset: '3px',
-  textDecorationColor: '#ddd',
-  fontSize: '0.82rem',
+  textDecorationColor: '#b8b2a6',
+  fontSize: '0.84rem',
+  fontWeight: 600,
   transition: 'color 0.15s',
 };
 
 const LINK_SEP_STYLE: React.CSSProperties = {
   margin: '0 0.45rem',
-  color: '#ddd',
+  color: '#c8c3b8',
 };
 
 function TrackedLinkRow({ links, kind, product, role }: {
@@ -518,13 +520,13 @@ function ProductLinksSection({ opt, product, role }: {
     manufacturerUrl: opt.manufacturerUrl,
   });
 
-  const { newLinks, usedLinks, readingLinks, isUsedOnly } = resolved;
+  const { newLinks, manufacturerLinks, usedLinks, readingLinks, isUsedOnly } = resolved;
 
   // Amazon-kind resolution now happens inside TrackedLinkRow (per-link)
   // since the onClick bubble was removed to make this subtree server-safe.
   // Event shape is unchanged.
 
-  const linkLabelStyle: React.CSSProperties = { fontSize: '0.72rem', fontWeight: 600, color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '0.4rem' };
+  const linkLabelStyle: React.CSSProperties = { fontSize: '0.72rem', fontWeight: 700, color: '#7A756D', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '0.4rem' };
 
   return (
     <div style={{
@@ -557,6 +559,35 @@ function ProductLinksSection({ opt, product, role }: {
                     Buy new &rarr; {displayLabel}
                   </TrackedAnchor>
                   {i < newLinks.length - 1 && <span style={LINK_SEP_STYLE}>&middot;</span>}
+                </span>
+              );
+            })}
+          </span>
+        </div>
+      )}
+
+      {/* Product page — manufacturer info links (not ecommerce) */}
+      {manufacturerLinks.length > 0 && (
+        <div>
+          <div style={linkLabelStyle}>Product page</div>
+          <span style={{ lineHeight: 1.9 }}>
+            {manufacturerLinks.map((link, i) => {
+              const displayLabel = cleanLinkLabel(link.label);
+              return (
+                <span key={i}>
+                  <TrackedAnchor
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={LINK_STYLE}
+                    product={product}
+                    role={role}
+                    kind="manufacturer"
+                    label={link.label}
+                  >
+                    Product page &rarr; {displayLabel}
+                  </TrackedAnchor>
+                  {i < manufacturerLinks.length - 1 && <span style={LINK_SEP_STYLE}>&middot;</span>}
                 </span>
               );
             })}
@@ -753,6 +784,18 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
       {/* ── Role badge ── */}
       {role && <RoleBadge role={role} dynamicLabel={opt.roleLabel} />}
 
+      {/* ── Product image (hero, top-of-card) ──
+       * Full-width hero image — the product is the first visual anchor.
+       * Positioned above the product name so the card reads as a real
+       * product at a glance. Silent collapse on missing/broken URLs. */}
+      {shouldShowImage && opt.imageUrl && (
+        <ProductImage
+          src={opt.imageUrl}
+          alt={[opt.brand, opt.name].filter(Boolean).join(' ')}
+          credit={opt.brand || undefined}
+        />
+      )}
+
       {/* ── Product header: name + brand + badges ── */}
       <div style={{ marginBottom: '0.4rem' }}>
         {/* Brand (secondary, above name)
@@ -790,9 +833,7 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
           * styled strongly but not clickable. */}
         <h3 style={{
           margin: 0,
-          // Pass 9: bumped product-name size for stronger card hierarchy
-          // now that cards have real surface and width.
-          fontSize: '1.55rem',
+          fontSize: '1.15rem',
           fontWeight: 700,
           color: COLORS.text,
           letterSpacing: '-0.025em',
@@ -858,6 +899,22 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
           );
         })()}
 
+        {/* Character context — first sentence of catalog description */}
+        {opt.catalogDescription && (() => {
+          const firstSentence = opt.catalogDescription.match(/^[^.!?]+[.!?]/)?.[0] ?? opt.catalogDescription;
+          return (
+            <div style={{
+              marginTop: '0.25rem',
+              fontSize: '0.82rem',
+              color: COLORS.textMuted,
+              lineHeight: 1.45,
+              fontStyle: 'italic',
+            }}>
+              {firstSentence}
+            </div>
+          );
+        })()}
+
         {/* Legacy note — successor context for discontinued/vintage models */}
         {opt.legacyNote && (
           <div style={{
@@ -875,85 +932,63 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
             )}
           </div>
         )}
-      </div>
 
-      {/* ── Price line ── */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: '0.75rem',
-        marginBottom: '0.6rem',
-        flexWrap: 'wrap',
-      }}>
-        {priceParts.length > 0 && (
-          <span style={{
-            fontSize: '1.05rem',
-            fontWeight: 600,
-            color: COLORS.text,
-            letterSpacing: '-0.01em',
-          }}>
-            {priceParts[0]}
-          </span>
-        )}
-        {priceParts.length > 1 && (
-          <span style={{
-            fontSize: '0.85rem',
-            color: COLORS.textMuted,
-          }}>
-            {priceParts.slice(1).join(' \u00b7 ')}
-          </span>
-        )}
-      </div>
-
-      {/* ── Product image (hero presentation) ──
-       * Full-width hero image block — the product is the visual anchor.
-       * "If the image does not materially improve decision confidence,
-       * it is too small." Large, clean, generous padding so the product
-       * breathes. No border; clean white background. 4:3 aspect ratio
-       * with contain ensures no cropping while maintaining visual
-       * consistency across product shapes (tall speakers, rack DACs,
-       * square components). Silent collapse on missing/broken URLs. */}
-      {shouldShowImage && opt.imageUrl && (
+        {/* ── Price (inline with identity cluster) ── */}
         <div style={{
-          marginBottom: '0.75rem',
-          borderRadius: '10px',
-          overflow: 'hidden',
-          width: '100%',
-          maxHeight: '280px',
-          minHeight: '140px',
-          background: 'transparent',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '0.5rem 0',
-          boxSizing: 'border-box',
+          alignItems: 'baseline',
+          gap: '0.75rem',
+          marginTop: '0.35rem',
+          flexWrap: 'wrap',
         }}>
-          <img
-            src={opt.imageUrl}
-            alt={[opt.brand, opt.name].filter(Boolean).join(' ')}
-            loading="eager"
-            referrerPolicy="no-referrer"
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain',
-              display: 'block',
-            }}
-            onError={(e) => {
-              // Broken URL → hide the wrapper cleanly; no broken-icon artifact.
-              const wrap = (e.currentTarget as HTMLImageElement).parentElement;
-              if (wrap) wrap.style.display = 'none';
-            }}
-          />
+          {priceParts.length > 0 && (
+            <span style={{
+              fontSize: '1.05rem',
+              fontWeight: 600,
+              color: COLORS.text,
+              letterSpacing: '-0.01em',
+            }}>
+              {priceParts[0]}
+            </span>
+          )}
+          {priceParts.length > 1 && (
+            <span style={{
+              fontSize: '0.85rem',
+              color: COLORS.textMuted,
+            }}>
+              {priceParts.slice(1).join(' \u00b7 ')}
+            </span>
+          )}
         </div>
-      )}
 
-      {/* ── Content sections (Pass 5 redesign) ──
-       * Structure: WHAT THIS CHANGES / WHY THIS DIRECTION / WHAT YOU GAIN /
-       * WHAT YOU GIVE UP / BUY LINKS. Each section is intentionally short;
-       * copy comes from systemDelta when populated, with conservative
-       * fallbacks. No "Sound character", no "Why this fits you", no long
-       * paragraphs, no trait dumping. */}
+        {/* "About [brand] →" link — directly under product name cluster */}
+        {opt.brand && !hideMakerInsight && (
+          <Link
+            href={`/brand/${toSlug(opt.brand)}`}
+            style={{
+              display: 'inline-block',
+              marginTop: '0.3rem',
+              fontSize: '0.78rem',
+              color: '#3f3a36',
+              textDecoration: 'underline',
+              textUnderlineOffset: '3px',
+              textDecorationColor: '#b8b2a6',
+              fontWeight: 500,
+            }}
+          >
+            About {opt.brand} →
+          </Link>
+        )}
+      </div>
+
+      {/* ── Layer separator ── */}
+      <div style={{ borderTop: '1px solid #eae7e1', margin: '0.65rem 0' }} />
+
+      {/* ── Content layers (Roon-style vertical hierarchy) ──
+       * Layer 2: What changes (tight)
+       * Layer 3: Gains / trade-offs (tight bullets)
+       * Layer 4: Technical rationale + maker insight (de-emphasized)
+       */}
       {(() => {
         // Resolve sources once so fallback logic is explicit.
         //
@@ -971,7 +1006,7 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
         const whyFits = opt.systemDelta?.whyFitsSystem;
         const whatChanges =
           whyFits
-          ?? (opt.fitNote && /^in your chain/i.test(opt.fitNote) ? opt.fitNote : undefined);
+          ?? (opt.fitNote && /^in your (chain|system)/i.test(opt.fitNote) ? opt.fitNote : undefined);
 
         const makerInsight = composeMakerInsight(opt);
 
@@ -1021,13 +1056,13 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
               </div>
             )}
 
-            {/* 1c. TECHNICAL RATIONALE — design → audible outcome */}
+            {/* 1c. TECHNICAL RATIONALE — design → audible outcome (Layer 4, de-emphasized) */}
             {opt.technicalRationale && opt.technicalRationale.length > 0 && (
-              <div style={sectionStyle}>
+              <div style={{ ...sectionStyle, opacity: 0.82 }}>
                 <SectionLabel>Technical rationale</SectionLabel>
-                <ul style={bulletStyle}>
+                <ul style={{ ...bulletStyle, fontSize: '0.88rem', color: COLORS.textSecondary }}>
                   {opt.technicalRationale.slice(0, 3).map((t, i) => (
-                    <li key={i} style={{ marginBottom: '0.2rem', fontSize: '0.93rem' }}>
+                    <li key={i} style={{ marginBottom: '0.2rem', fontSize: '0.88rem' }}>
                       {renderText(t)}
                     </li>
                   ))}
@@ -1053,12 +1088,12 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
               * different visual weight; this lead acts as the section
               * anchor, not a duplicate identifier. */}
             {makerInsight && !hideMakerInsight && (
-              <div style={sectionStyle}>
+              <div style={{ ...sectionStyle, opacity: 0.82 }}>
                 <p style={{
                   margin: '0 0 0.4rem 0',
-                  fontSize: '0.95rem',
+                  fontSize: '0.9rem',
                   fontWeight: 600,
-                  color: COLORS.text,
+                  color: COLORS.textSecondary,
                   letterSpacing: '-0.005em',
                 }}>
                   {makerInsight.brand}

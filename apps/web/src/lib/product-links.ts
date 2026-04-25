@@ -3,10 +3,12 @@
  *
  * Generates a prioritized, deduplicated set of buying links for each product card.
  *
- * Link priority (new purchase):
- *   1. Authorized dealer (if available in retailer_links)
- *   2. Amazon direct (only if verified ASIN exists in retailer_links)
- *   3. Manufacturer / brand site (always available as fallback)
+ * Link classification:
+ *   "Buy new" — ecommerce / dealer links only:
+ *     1. Authorized dealer (if available in retailer_links)
+ *     2. Amazon direct (only if verified ASIN exists in retailer_links)
+ *   "Product page" — manufacturer / brand info pages (not ecommerce):
+ *     3. Manufacturer / brand site (informational, always available as fallback)
  *
  * Link priority (used purchase):
  *   1. HiFi Shark (global aggregator)
@@ -51,8 +53,10 @@ export interface ResolvedLink {
 }
 
 export interface ProductLinks {
-  /** "Buy new" links — prioritized: dealer → amazon (verified) → manufacturer. */
+  /** "Buy new" links — dealer / ecommerce only, never manufacturer product pages. */
   newLinks: ResolvedLink[];
+  /** Manufacturer product/info pages — labeled "Product page", not "Buy new". */
+  manufacturerLinks: ResolvedLink[];
   /** "Buy used" / "Find used" links — hifishark → ebay → extras. */
   usedLinks: ResolvedLink[];
   /** "Further reading" links — reviews, references. */
@@ -97,6 +101,7 @@ function isDealerLink(label: string, url: string): boolean {
     'apos audio', 'crutchfield', 'audio advisor', 'music direct',
     'needle doctor', 'moon audio', 'headphones.com', 'adorama',
     'b&h', 'world wide stereo', 'safe and sound', 'echo audio',
+    'vinshine', 'upscale audio', 'the music room',
   ];
   if (dealerPatterns.some(p => lower.includes(p))) return true;
   if (lower.includes('dealer') || lower.includes('buy')) return true;
@@ -166,16 +171,23 @@ export function buildProductLinks(input: ProductLinkInput): ProductLinks {
       addIfNew(newLinks, 'Amazon', amazonEntry.url);
     }
 
-    // Priority 3: Manufacturer / brand site
+  }
+
+  // ── Build manufacturer / product-page links ──
+  // These are brand product pages — informational, not ecommerce.
+  // Separated from "Buy new" so the UI can label them "Product page".
+  const manufacturerLinks: ResolvedLink[] = [];
+
+  {
     // First try: non-Amazon, non-dealer retailer link (typically the brand's own site)
     const manufacturerEntry = allRetailer.find(l =>
       !isAmazonLink(l.label, l.url) && !isDealerLink(l.label, l.url),
     );
     if (manufacturerEntry) {
-      addIfNew(newLinks, input.brand ?? 'Manufacturer', manufacturerEntry.url);
+      addIfNew(manufacturerLinks, input.brand ?? 'Manufacturer', manufacturerEntry.url);
     } else if (input.manufacturerUrl) {
       // Fallback: pre-computed manufacturerUrl (retailer_links[0].url)
-      addIfNew(newLinks, input.brand ?? 'Manufacturer', input.manufacturerUrl);
+      addIfNew(manufacturerLinks, input.brand ?? 'Manufacturer', input.manufacturerUrl);
     }
   }
 
@@ -210,11 +222,12 @@ export function buildProductLinks(input: ProductLinkInput): ProductLinks {
   }
 
   // ── Guarantee: at least one link always appears ──
-  // If "Buy new" is empty and product is current, use any available fallback
-  if (!isUsedOnly && newLinks.length === 0) {
+  // If both "Buy new" and "Product page" are empty and product is current,
+  // ensure at least a manufacturer link exists so the card isn't link-less.
+  if (!isUsedOnly && newLinks.length === 0 && manufacturerLinks.length === 0) {
     const fallbackUrl = input.manufacturerUrl ?? allRetailer[0]?.url;
     if (fallbackUrl) {
-      addIfNew(newLinks, input.brand ?? 'Manufacturer', fallbackUrl);
+      addIfNew(manufacturerLinks, input.brand ?? 'Manufacturer', fallbackUrl);
     }
   }
   // "Buy used" always has at least HiFi Shark + eBay (generated), so this is a safety net
@@ -224,6 +237,7 @@ export function buildProductLinks(input: ProductLinkInput): ProductLinks {
 
   return {
     newLinks,
+    manufacturerLinks,
     usedLinks,
     readingLinks,
     isUsedOnly,
