@@ -593,7 +593,7 @@ const CATEGORY_PATTERNS: CategoryPattern[] = buildCategoryPatterns([
   },
   {
     category: 'speaker',
-    keywords: ['speaker', 'speakers', 'monitors', 'bookshelf', 'floorstanding', 'floor-standing'],
+    keywords: ['speaker', 'speakers', 'monitors', 'bookshelf', 'floorstanding', 'floor-standing', 'stereo', 'hi-fi', 'hifi', 'audio system'],
   },
   {
     category: 'headphone',
@@ -627,6 +627,11 @@ const BUILD_KEYWORDS = [
   'new setup',
   'whole system',
   'entire system',
+  // "stereo", "hi-fi", etc. imply a full system, not a single component.
+  'stereo',
+  'hi-fi',
+  'hifi',
+  'audio system',
 ];
 
 // ── Budget detection ──────────────────────────────────
@@ -6067,5 +6072,58 @@ function getContrastLabel(tasteLabel: string): string {
   if (tasteLabel.includes('fatigue') || tasteLabel.includes('smooth')) return 'analytical resolution';
   if (tasteLabel.includes('composure') || tasteLabel.includes('ease')) return 'speed or analytical precision';
   return 'the opposite emphasis';
+}
+
+// ── Refinement trade-off generation (Prompt 3) ──────
+
+/** Trade-off pair for each delta direction. */
+const REFINEMENT_TRADEOFFS: Record<string, { gain: string; risk: string }> = {
+  warmer: {
+    gain: 'More tonal density, body, and harmonic weight',
+    risk: 'May lose some transient speed and top-end sparkle',
+  },
+  brighter: {
+    gain: 'More presence, air, and perceived detail',
+    risk: 'May increase listening fatigue with bright recordings',
+  },
+  more_detailed: {
+    gain: 'More micro-detail retrieval and transparency',
+    risk: 'May lose some musical flow and forgiveness with poor recordings',
+  },
+  smoother: {
+    gain: 'More ease and fatigue resistance across long sessions',
+    risk: 'May lose some edge definition and micro-dynamics',
+  },
+  punchier: {
+    gain: 'More transient impact and rhythmic drive',
+    risk: 'May trade some midrange richness for speed',
+  },
+  more_spacious: {
+    gain: 'Wider soundstage and more spatial separation',
+    risk: 'May lose some midrange intimacy and vocal density',
+  },
+  cheaper: {
+    gain: 'Lower financial commitment with similar sonic direction',
+    risk: 'May lose refinement, build quality, or resale value',
+  },
+  pricier: {
+    gain: 'Higher build quality, refinement, and likely resale value',
+    risk: 'Diminishing returns — the improvement may not justify the cost',
+  },
+  system_fit: {
+    gain: 'Better synergy with your existing components',
+    risk: 'May narrow sonic exploration in favor of system coherence',
+  },
+};
+
+/**
+ * Build compact trade-off bullets for a refinement response.
+ * Returns max 2 bullets — one gain, one risk.
+ */
+export function buildRefinementTradeoffs(deltas: string[]): { gain: string; risk: string } | null {
+  if (deltas.length === 0) return null;
+  // Use the first (primary) delta for trade-offs
+  const primary = deltas[0];
+  return REFINEMENT_TRADEOFFS[primary] ?? null;
 }
 

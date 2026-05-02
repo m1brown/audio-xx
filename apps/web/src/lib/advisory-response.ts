@@ -760,6 +760,12 @@ export interface AdvisoryResponse {
   /** Questions that would deepen personalization in the next turn. */
   refinementPrompts?: string[];
 
+  // ── 7d. Refinement Delta (Prompt 3) ──────────────
+  /** One-line explanation of what changed from the prior recommendation. */
+  refinementDelta?: string;
+  /** Trade-off pair for the refinement direction. */
+  refinementTradeoffs?: { gain: string; risk: string };
+
   // ── 7e. System Context Preamble ─────────────────────
   /** Compact system diagnosis before product recommendations (2–3 sentences).
    *  Covers: current tendency, main interaction risk, sensible upgrade direction.

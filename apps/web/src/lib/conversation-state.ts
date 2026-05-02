@@ -95,6 +95,18 @@ export interface ConvFacts {
     /** Captured on first detection; used to scope lifetime to the thread. */
     detectedAt: number;
   };
+
+  // ── Refinement state (Prompt 3 — follow-up intelligence) ──
+  /** Names of products shown in the most recent recommendation set. */
+  priorProductNames?: string[];
+  /** Category from the prior recommendation (preserved across refinement turns). */
+  priorCategory?: string;
+  /** Budget from the prior recommendation (preserved across refinement turns). */
+  priorBudget?: string;
+  /** Accumulated preference deltas from refinement turns (e.g., ['warmer', 'more detailed']). */
+  preferenceDeltas?: string[];
+  /** True when the current turn is a refinement of prior recommendations. */
+  isRefinement?: boolean;
 }
 
 export interface ConvState {
@@ -114,7 +126,8 @@ export interface ConvTransition {
 export type ConvResponse =
   | { kind: 'question'; acknowledge: string; question: string }
   | { kind: 'note'; content: string }
-  | { kind: 'proceed'; synthesizedQuery?: string };
+  | { kind: 'proceed'; synthesizedQuery?: string }
+  | { kind: 'refine'; deltaExplanation: string; preferenceDeltas: string[] };
 
 // ── Initial state ──────────────────────────────────────
 
@@ -184,6 +197,9 @@ const CATEGORY_PATTERNS: Array<[RegExp, string]> = [
   [/\b(?:headphone|headphones|cans|iems?|earbuds?|over.ear|on.ear)\b/i, 'headphone'],
   [/\b(?:turntable|vinyl|record\s+player|phono)\b/i, 'turntable'],
   [/\b(?:streamer|streaming|network\s+player)\b/i, 'streamer'],
+  // "stereo", "system", "setup", "hi-fi" → speaker (system anchor).
+  // The shopping pipeline treats speaker + build-a-system mode as a full system request.
+  [/\b(?:stereo|hi-?fi|hifi|audio\s+system)\b/i, 'speaker'],
 ];
 
 function extractCategory(text: string): string | undefined {
@@ -208,6 +224,86 @@ function extractPreference(text: string): string | undefined {
     if (m) return m[0];
   }
   return undefined;
+}
+
+// ── Refinement detection (Prompt 3 — follow-up intelligence) ──
+
+/** Preference-shift phrases that indicate refinement of prior recommendations. */
+const REFINEMENT_PATTERNS: Array<{ pattern: RegExp; delta: string }> = [
+  // Warmth axis
+  { pattern: /\b(?:make\s+it\s+)?warmer\b/i, delta: 'warmer' },
+  { pattern: /\bmore\s+warmth\b/i, delta: 'warmer' },
+  { pattern: /\bless\s+bright\b/i, delta: 'warmer' },
+  { pattern: /\btoo\s+bright\b/i, delta: 'warmer' },
+  { pattern: /\bmore\s+body\b/i, delta: 'warmer' },
+  { pattern: /\bmore\s+lush\b/i, delta: 'warmer' },
+  { pattern: /\bricher\b/i, delta: 'warmer' },
+  // Brightness / detail axis
+  { pattern: /\b(?:make\s+it\s+)?brighter\b/i, delta: 'brighter' },
+  { pattern: /\bmore\s+detail(?:ed)?\b/i, delta: 'more_detailed' },
+  { pattern: /\bmore\s+transparent\b/i, delta: 'more_detailed' },
+  { pattern: /\bmore\s+resolving\b/i, delta: 'more_detailed' },
+  { pattern: /\bmore\s+analytical\b/i, delta: 'more_detailed' },
+  { pattern: /\bmore\s+clarity\b/i, delta: 'more_detailed' },
+  { pattern: /\bcleaner\b/i, delta: 'more_detailed' },
+  // Smoothness axis
+  { pattern: /\bsmoother\b/i, delta: 'smoother' },
+  { pattern: /\bless\s+(?:harsh|aggressive|fatiguing)\b/i, delta: 'smoother' },
+  { pattern: /\bmore\s+relaxed\b/i, delta: 'smoother' },
+  { pattern: /\bmore\s+forgiving\b/i, delta: 'smoother' },
+  // Energy / punch axis
+  { pattern: /\bmore\s+punch(?:y|ier)?\b/i, delta: 'punchier' },
+  { pattern: /\bmore\s+energy\b/i, delta: 'punchier' },
+  { pattern: /\bmore\s+dynamic\b/i, delta: 'punchier' },
+  { pattern: /\bmore\s+impact\b/i, delta: 'punchier' },
+  // Spaciousness axis
+  { pattern: /\bmore\s+spacious\b/i, delta: 'more_spacious' },
+  { pattern: /\bwider\s+soundstage\b/i, delta: 'more_spacious' },
+  { pattern: /\bmore\s+air(?:y|ier)?\b/i, delta: 'more_spacious' },
+  // System fit
+  { pattern: /\bbetter\s+(?:for|with)\s+my\s+system\b/i, delta: 'system_fit' },
+  { pattern: /\bfit\s+my\s+system\b/i, delta: 'system_fit' },
+  // General refinement signals
+  { pattern: /\bless\s+expensive\b/i, delta: 'cheaper' },
+  { pattern: /\bcheaper\b/i, delta: 'cheaper' },
+  { pattern: /\bmore\s+expensive\b/i, delta: 'pricier' },
+  { pattern: /\bhigher\s+end\b/i, delta: 'pricier' },
+];
+
+/**
+ * Detect whether a message is a refinement of prior recommendations.
+ * Returns the matched deltas, or empty array if not a refinement.
+ */
+export function detectRefinement(text: string): string[] {
+  const deltas: string[] = [];
+  for (const { pattern, delta } of REFINEMENT_PATTERNS) {
+    if (pattern.test(text) && !deltas.includes(delta)) {
+      deltas.push(delta);
+    }
+  }
+  return deltas;
+}
+
+/** Human-readable delta explanations for each refinement direction. */
+const DELTA_EXPLANATIONS: Record<string, string> = {
+  warmer: 'Shifting toward warmer options — prioritizing tonal density and body over speed.',
+  brighter: 'Shifting toward brighter, more forward options — prioritizing presence and air.',
+  more_detailed: 'Shifting toward more resolving options — prioritizing transparency and micro-detail.',
+  smoother: 'Shifting toward smoother options — prioritizing ease and fatigue resistance over edge.',
+  punchier: 'Shifting toward more dynamic options — prioritizing impact and transient energy.',
+  more_spacious: 'Shifting toward more spacious options — prioritizing soundstage width and air.',
+  system_fit: 'Re-evaluating options for better system synergy.',
+  cheaper: 'Adjusting toward more accessible price points within the same direction.',
+  pricier: 'Moving up in tier — same sonic direction, higher build and refinement quality.',
+};
+
+/** Build a one-line delta explanation from accumulated deltas. */
+export function buildDeltaExplanation(deltas: string[]): string {
+  if (deltas.length === 0) return '';
+  if (deltas.length === 1) return DELTA_EXPLANATIONS[deltas[0]] ?? '';
+  // Combine multiple: take the first two
+  const parts = deltas.slice(0, 2).map(d => DELTA_EXPLANATIONS[d] ?? d).filter(Boolean);
+  return parts.join(' ');
 }
 
 // ── From-scratch detection ────────────────────────────
@@ -475,6 +571,49 @@ export function transition(
   if (newCategory) facts.category = newCategory;
   if (newBudget) facts.budget = newBudget;
   if (newPreference) facts.preference = newPreference;
+
+  // ── Refinement intercept (Prompt 3) ──────────────────
+  // When prior recommendations exist and the user sends a preference-shift
+  // message, re-enter ready_to_recommend with the delta applied.
+  // This fires BEFORE the onboarding bypass to prevent state reset.
+  if (facts.priorProductNames && facts.priorProductNames.length > 0) {
+    const deltas = detectRefinement(text);
+    if (deltas.length > 0) {
+      // "better for my system" guard: if no system known, ask one question
+      if (deltas.includes('system_fit') && !facts.hasSystem && !context.hasSystem) {
+        return {
+          state: { mode: 'shopping', stage: 'ready_to_recommend', facts: { ...facts, isRefinement: false } },
+          response: {
+            kind: 'question',
+            acknowledge: 'I can tailor these to your system.',
+            question: 'What components are in your current system? (e.g., DAC, amp, speakers)',
+          },
+        };
+      }
+
+      // Accumulate deltas
+      const existingDeltas = facts.preferenceDeltas ?? [];
+      const mergedDeltas = [...existingDeltas];
+      for (const d of deltas) {
+        if (!mergedDeltas.includes(d)) mergedDeltas.push(d);
+      }
+
+      // Restore category/budget from prior recommendation context
+      if (!facts.category && facts.priorCategory) facts.category = facts.priorCategory;
+      if (!facts.budget && facts.priorBudget) facts.budget = facts.priorBudget;
+
+      facts.preferenceDeltas = mergedDeltas;
+      facts.isRefinement = true;
+
+      const explanation = buildDeltaExplanation(deltas);
+      console.log('[refinement]', { deltas, mergedDeltas, explanation, priorProducts: facts.priorProductNames });
+
+      return {
+        state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
+        response: { kind: 'refine', deltaExplanation: explanation, preferenceDeltas: mergedDeltas },
+      };
+    }
+  }
 
   // Phase K — sticky domain continuity.
   // Mirror category into domainContext so it survives turns that don't

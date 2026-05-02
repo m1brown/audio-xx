@@ -511,6 +511,110 @@ export function rankProducts(
   return scored;
 }
 
+// ── Refinement re-ranking (Prompt 3) ─────────────────
+//
+// Maps preference deltas (e.g., 'warmer', 'more_detailed') to
+// product axis alignments. Products whose primaryAxes align with
+// the delta get a score boost; those that oppose it get a penalty.
+
+/** Delta → axis alignment rules. Each rule checks a product's primaryAxes. */
+const DELTA_AXIS_RULES: Record<string, { boost: Array<{ axis: string; value: string }>; penalize: Array<{ axis: string; value: string }> }> = {
+  warmer: {
+    boost: [{ axis: 'warm_bright', value: 'warm' }],
+    penalize: [{ axis: 'warm_bright', value: 'bright' }],
+  },
+  brighter: {
+    boost: [{ axis: 'warm_bright', value: 'bright' }],
+    penalize: [{ axis: 'warm_bright', value: 'warm' }],
+  },
+  more_detailed: {
+    boost: [{ axis: 'smooth_detailed', value: 'detailed' }],
+    penalize: [{ axis: 'smooth_detailed', value: 'smooth' }],
+  },
+  smoother: {
+    boost: [{ axis: 'smooth_detailed', value: 'smooth' }],
+    penalize: [{ axis: 'smooth_detailed', value: 'detailed' }],
+  },
+  punchier: {
+    boost: [{ axis: 'elastic_controlled', value: 'controlled' }],
+    penalize: [{ axis: 'elastic_controlled', value: 'elastic' }],
+  },
+  more_spacious: {
+    boost: [{ axis: 'airy_closed', value: 'airy' }],
+    penalize: [{ axis: 'airy_closed', value: 'closed' }],
+  },
+  cheaper: { boost: [], penalize: [] }, // handled by price sorting
+  pricier: { boost: [], penalize: [] }, // handled by price sorting
+  system_fit: { boost: [], penalize: [] }, // handled by system profile
+};
+
+const REFINEMENT_BOOST = 1.5;
+const REFINEMENT_PENALTY = -1.0;
+
+/**
+ * Re-rank an existing scored product list based on preference deltas.
+ * Does NOT run a fresh search — modifies scores in-place and re-sorts.
+ */
+export function reRankForRefinement(
+  scoredProducts: ScoredProduct[],
+  deltas: string[],
+): ScoredProduct[] {
+  if (deltas.length === 0 || scoredProducts.length === 0) return scoredProducts;
+
+  const reRanked = scoredProducts.map(({ product, score }) => {
+    let adjusted = score;
+
+    for (const delta of deltas) {
+      const rules = DELTA_AXIS_RULES[delta];
+      if (!rules) continue;
+
+      const axes = product.primaryAxes;
+      if (!axes) continue;
+
+      // Boost products that align with the delta direction
+      for (const { axis, value } of rules.boost) {
+        const productValue = (axes as unknown as Record<string, string>)[axis];
+        if (productValue === value) {
+          adjusted += REFINEMENT_BOOST;
+        }
+      }
+
+      // Penalize products that oppose the delta direction
+      for (const { axis, value } of rules.penalize) {
+        const productValue = (axes as unknown as Record<string, string>)[axis];
+        if (productValue === value) {
+          adjusted += REFINEMENT_PENALTY;
+        }
+      }
+
+      // Price-based deltas: adjust by relative price position
+      if (delta === 'cheaper') {
+        // Cheaper products get a boost proportional to price distance
+        const maxPrice = Math.max(...scoredProducts.map(s => s.product.price));
+        if (maxPrice > 0) {
+          adjusted += (1 - product.price / maxPrice) * 1.0;
+        }
+      } else if (delta === 'pricier') {
+        const maxPrice = Math.max(...scoredProducts.map(s => s.product.price));
+        if (maxPrice > 0) {
+          adjusted += (product.price / maxPrice) * 1.0;
+        }
+      }
+    }
+
+    return { product, score: adjusted };
+  });
+
+  reRanked.sort((a, b) => b.score - a.score);
+
+  console.log('[re-rank] deltas=%s, top3: %s',
+    deltas.join('+'),
+    reRanked.slice(0, 3).map(s => `${s.product.brand} ${s.product.name} (${s.score.toFixed(1)})`).join(', '),
+  );
+
+  return reRanked;
+}
+
 // ── Amplifier Architecture Sonic Tendencies ──────────
 //
 // Maps amplifier architecture labels to their typical sonic

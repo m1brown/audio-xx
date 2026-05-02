@@ -1054,12 +1054,20 @@ export function detectIntent(
   // a category keyword (e.g., "what about denafrips dacs under 1000?"), skip
   // the assessment gate and let the shopping patterns handle it.
   const earlyBudgetSignal = /\bunder\s+\$?\d|\$\s?\d[\d,.]*k?\b|\bbudget\b/i.test(currentMessage);
-  const earlyCategorySignal = /\b(?:dacs?|d\/a|amps?|amplifiers?|integrated|speakers?|headphones?|turntables?|streamers?|preamps?|power\s*amps?|iems?)\b/i.test(currentMessage);
+  const earlyCategorySignal = /\b(?:dacs?|d\/a|amps?|amplifiers?|integrated|speakers?|headphones?|turntables?|streamers?|preamps?|power\s*amps?|iems?|stereo|hi-?fi|hifi|audio\s+system)\b/i.test(currentMessage);
   const isLikelyShopping = earlyBudgetSignal && earlyCategorySignal;
   // Comparison escape hatch: "what about X vs Y" is a comparison, not an assessment.
   const isLikelyComparison = /\bvs\.?\b/i.test(currentMessage) && subjectMatches.length >= 2;
   if (hasProductAssessmentPattern && (hasProductSubject || hasBrandSubject) && !isLikelySystemEval && !isLikelyShopping && !isLikelyComparison) {
     return { intent: 'product_assessment', subjects, subjectMatches, desires };
+  }
+
+  // 0f. Refinement escape — short preference-shift messages like "make it warmer"
+  //     or "more detailed" must route to shopping, not diagnosis or music_input.
+  //     Only fires for short messages (< 60 chars) that match refinement patterns.
+  const REFINEMENT_ESCAPE = /\b(?:(?:make\s+it\s+)?(?:warmer|brighter|smoother|punchier|cheaper)|more\s+(?:detail(?:ed)?|transparent|resolving|spacious|dynamic|relaxed|lush|forgiving|air(?:y|ier)?|body|warmth|clarity|impact|energy|punch|expensive)|less\s+(?:bright|harsh|aggressive|fatiguing|expensive)|richer|cleaner|higher\s+end|better\s+(?:for|with)\s+my\s+system|fit\s+my\s+system)\b/i;
+  if (currentMessage.length < 60 && REFINEMENT_ESCAPE.test(currentMessage)) {
+    return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
   // 1. Explicit diagnosis — user describes a listening problem
@@ -1210,7 +1218,7 @@ export function detectIntent(
   //     should route to shopping, not music_input.
   if (subjectMatches.length === 0 && isMusicInput(currentMessage)) {
     const hasShoppingSignal = SHOPPING_PATTERNS.some((p) => p.test(currentMessage));
-    const hasCategoryWord = /\b(?:dac|d\/a|amp|amplifier|speaker|speakers|headphone|headphones|turntable|streamer|receiver|bookshelf|floorstander)\b/i.test(currentMessage);
+    const hasCategoryWord = /\b(?:dac|d\/a|amp|amplifier|speaker|speakers|headphone|headphones|turntable|streamer|receiver|bookshelf|floorstander|stereo|hi-?fi|hifi|audio\s+system)\b/i.test(currentMessage);
     const hasBudgetSignal = /(?:under\s+)?\$\s?\d|\bunder\s+\d|\bbudget\b/i.test(currentMessage);
     const hasRoomSignal = /\b(?:large|small|medium|big|tiny|apartment|bedroom|living\s*room|studio|office|den|loft|open\s*plan|nearfield|near[- ]?field|desktop)\b/i.test(currentMessage);
     // Task 1: Skip music_input when the user provides enough signal to go
@@ -1232,7 +1240,7 @@ export function detectIntent(
   //     This prevents vague-looking but actually decisive queries from being
   //     caught by the broader intake patterns below.
   const hasPurchaseVerb = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|pick\s+out|recommend|suggest|interested\s+in|need\s+(?:a\s+)?(?:new|better|different|another|upgraded?))\b/i.test(currentMessage);
-  const hasCategoryTarget = /\b(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp)\b/i.test(currentMessage);
+  const hasCategoryTarget = /\b(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp|stereo|hi-?fi|hifi|audio\s+system)\b/i.test(currentMessage);
   if (hasPurchaseVerb && hasCategoryTarget) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
@@ -1250,7 +1258,7 @@ export function detectIntent(
   //     misses because of intervening adjectives. "I want a warm tube amp"
   //     has a clear category target but intake's regex can't skip adjectives.
   //     Requires article (a/an/some) to exclude "want to fix my amp".
-  const hasWantCategory = /\bwant\s+(?:a|an|some)\s+(?:\w+\s+){0,3}(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp)\b/i.test(currentMessage);
+  const hasWantCategory = /\bwant\s+(?:a|an|some)\s+(?:\w+\s+){0,3}(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp|stereo|hi-?fi|hifi|audio\s+system)\b/i.test(currentMessage);
   if (hasWantCategory) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
@@ -1263,7 +1271,7 @@ export function detectIntent(
   // 3b. Bare category name — the entire message is just a component category
   //     (e.g. "DAC", "speakers", "headphones"). Route to shopping so the
   //     pipeline can ask for budget/preferences rather than diagnosing.
-  const bareCategory = /^\s*(?:a\s+|an?\s+|the\s+|some\s+|new\s+)?(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp|iems?|earphones?|earbuds?|cans)\s*[?.!]?\s*$/i;
+  const bareCategory = /^\s*(?:a\s+|an?\s+|the\s+|some\s+|new\s+)?(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp|iems?|earphones?|earbuds?|cans|stereo|hi-?fi|hifi)\s*[?.!]?\s*$/i;
   if (bareCategory.test(currentMessage)) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }

@@ -670,6 +670,97 @@ export default function Home() {
             if (convResult.state.facts.category) {
               activeShoppingCategoryRef.current = convResult.state.facts.category as import('@/lib/shopping-intent').ShoppingCategory;
             }
+
+            // ── Refinement handling (Prompt 3) ──────────────────
+            // When the state carries refinement data (isRefinement + preferenceDeltas),
+            // intercept and re-rank from the prior product pool instead of running
+            // the full pipeline fresh.
+            const refinementFacts = convResult.state.facts;
+            if (refinementFacts.isRefinement && refinementFacts.preferenceDeltas && refinementFacts.preferenceDeltas.length > 0) {
+              console.log('[refinement-intercept] detected refinement turn',
+                { deltas: refinementFacts.preferenceDeltas, priorProducts: refinementFacts.priorProductNames });
+
+              // Find the most recent shopping advisory with product options
+              const lastShoppingAdvisory = [...messages].reverse().find(
+                (m): m is Extract<typeof m, { kind: 'advisory' }> =>
+                  m.role === 'assistant' && 'kind' in m && m.kind === 'advisory'
+                  && m.advisory.kind === 'shopping' && !!m.advisory.options && m.advisory.options.length >= 1,
+              );
+
+              if (lastShoppingAdvisory?.advisory.options) {
+                const { reRankForRefinement } = await import('@/lib/product-scoring');
+                const { buildRefinementTradeoffs } = await import('@/lib/shopping-intent');
+                const { buildDeltaExplanation } = await import('@/lib/conversation-state');
+                const { findCatalogProduct: findCatalogProductForRerank } = await import('@/lib/listener-profile');
+
+                // Look up catalog products for each prior advisory option
+                const priorScored = lastShoppingAdvisory.advisory.options
+                  .map((o) => {
+                    const searchName = [o.brand, o.name].filter(Boolean).join(' ');
+                    const catalogProduct = findCatalogProductForRerank(searchName);
+                    if (!catalogProduct) return null;
+                    return { product: catalogProduct, score: 0 };
+                  })
+                  .filter((s): s is NonNullable<typeof s> => s !== null);
+
+                const deltas = refinementFacts.preferenceDeltas!;
+                const reRanked = reRankForRefinement(priorScored, deltas);
+
+                // Build delta explanation and trade-offs
+                const deltaExplanation = buildDeltaExplanation(deltas);
+                const tradeoffs = buildRefinementTradeoffs(deltas);
+
+                // Rebuild product options from re-ranked results — preserve original advisory fields
+                const refinedOptions = reRanked.slice(0, 5).map((scored) => {
+                  const original = lastShoppingAdvisory.advisory.options!.find(
+                    (o) => o.name === scored.product.name && (o.brand ?? '') === scored.product.brand,
+                  );
+                  return original ?? null;
+                }).filter((o): o is NonNullable<typeof o> => o !== null);
+
+                if (refinedOptions.length > 0) {
+                  // Dispatch compact refinement advisory
+                  const refinedAdvisory: AdvisoryResponse = {
+                    kind: 'shopping',
+                    subject: lastShoppingAdvisory.advisory.subject || 'refined recommendation',
+                    shoppingCategory: lastShoppingAdvisory.advisory.shoppingCategory,
+                    options: refinedOptions,
+                    // Compact refinement framing
+                    refinementDelta: deltaExplanation,
+                    refinementTradeoffs: tradeoffs ?? undefined,
+                  };
+
+                  // Dispatch the delta explanation as a note, then the refined cards
+                  dispatch({ type: 'ADD_NOTE', content: deltaExplanation });
+                  if (tradeoffs) {
+                    dispatch({ type: 'ADD_NOTE', content: `You gain: ${tradeoffs.gain}\nYou risk: ${tradeoffs.risk}` });
+                  }
+                  // dispatchAdvisory isn't defined yet at this point in the function.
+                  // Use the same mechanism: dispatch ADD_ADVISORY with phonoWrap.
+                  dispatch({ type: 'ADD_ADVISORY', advisory: refinedAdvisory, id: `advisory-refine-${Date.now()}` });
+
+                  // Keep state alive for further refinement
+                  const refinedProductNames = refinedOptions.map(o => `${o.brand ?? ''} ${o.name}`.trim());
+                  convStateRef.current = {
+                    mode: 'shopping',
+                    stage: 'done',
+                    facts: {
+                      ...convResult.state.facts,
+                      priorProductNames: refinedProductNames,
+                      priorCategory: convResult.state.facts.category,
+                      priorBudget: convResult.state.facts.budget,
+                      isRefinement: false,
+                    },
+                  };
+
+                  dispatch({ type: 'SET_LOADING', value: false });
+                  return;
+                }
+              }
+
+              console.log('[refinement-intercept] no prior products found — falling through to fresh pipeline');
+            }
+
             convStateRef.current = INITIAL_CONV_STATE;
           } else if (convResult.state.stage === 'ready_to_diagnose') {
             convModeHint = 'diagnosis';
@@ -3125,6 +3216,29 @@ export default function Home() {
 
           const shoppingMsgId = advisoryId();
           dispatchAdvisory(finalAdvisory, shoppingMsgId);
+
+          // ── Store product names for refinement (Prompt 3) ──
+          // After dispatching shopping advisory, preserve product names in
+          // convState so the next turn can detect refinement and re-rank.
+          if (finalAdvisory.options && finalAdvisory.options.length > 0) {
+            const productNames = finalAdvisory.options.map(
+              (o) => `${o.brand ?? ''} ${o.name ?? ''}`.trim(),
+            );
+            convStateRef.current = {
+              mode: 'shopping',
+              stage: 'done',
+              facts: {
+                priorProductNames: productNames,
+                priorCategory: shoppingCtx.category,
+                priorBudget: lastShoppingFactsRef.current?.budget,
+                category: shoppingCtx.category,
+                budget: lastShoppingFactsRef.current?.budget,
+                domainContext: shoppingCtx.category as string,
+              },
+            };
+            console.log('[refinement-store] stored %d product names for future refinement: %s',
+              productNames.length, productNames.join(', '));
+          }
 
           // ── Multi-category follow-up ──────────────────────
           // Pass 16 SINGLE-PANEL RULE: IF the current turn has a definite
