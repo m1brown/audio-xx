@@ -25,7 +25,7 @@
  * Only populated sections render in both modes.
  */
 
-import { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { toSlug } from '../../lib/route-slug';
 import type { AdvisoryResponse, AdvisoryMode, AdvisorySource, AudioProfile, ProductAssessment, KnowledgeResponse, AssistantResponse, EditorialClosing, EditorialPick, QuickRecommendation } from '../../lib/advisory-response';
@@ -45,7 +45,7 @@ import AdvisorySpiderChart from './AdvisorySpiderChart';
 import { ProductImageProvider, useProductImageClaim } from './ProductImageContext';
 import AdvisoryListenerProfile from './AdvisoryListenerProfile';
 import AdvisoryIntake from './AdvisoryIntake';
-import { renderText } from './render-text';
+import { renderText, renderTextWithProductLinks, type ProductUrlMap } from './render-text';
 
 /** Preference selections from the "Start here" quick-capture flow. */
 export interface PreferenceSelection {
@@ -415,6 +415,27 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
   }
   const hasAnyRole = chain.some((c) => !!c.role);
 
+  // ── Build product URL map for clickable product names. ──
+  // Priority: first retailer_link URL (typically the manufacturer page).
+  // Falls back to brand page URL if no retailer link exists.
+  // Only verified, existing URLs are included — nothing is fabricated.
+  const productUrlMap: ProductUrlMap = useMemo(() => {
+    const map: ProductUrlMap = new Map();
+    for (const c of chain) {
+      const product = findProductByComponentName(c.name);
+      if (!product) continue;
+      const key = c.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+      // Also index by the canonical product name (may differ from chain name)
+      const canonicalKey = `${product.brand} ${product.name}`.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+      const url = product.retailer_links?.[0]?.url;
+      if (url) {
+        if (!map.has(key)) map.set(key, url);
+        if (!map.has(canonicalKey)) map.set(canonicalKey, url);
+      }
+    }
+    return map;
+  }, [chain]);
+
   // ── Extract "Do not touch:" line from optimize body. ──
   let optimizeBody = optimize?.body ?? '';
   let doNotTouchItems: string[] = [];
@@ -458,7 +479,7 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
       color: COLORS.text,
       ...(extra ?? {}),
     }}>
-      {renderText(text)}
+      {renderTextWithProductLinks(text, productUrlMap)}
     </p>
   );
 
@@ -540,7 +561,7 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
           const img = productName ? renderFirstReferenceImage(productName) : null;
           return (
             <li key={i} style={{ marginBottom: img ? '1.25rem' : '0.75rem' }}>
-              {renderText(it)}
+              {renderTextWithProductLinks(it, productUrlMap)}
               {img}
             </li>
           );
@@ -587,14 +608,42 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
             fontWeight: 500,
             display: 'inline-block',
           }}>
-            {chain.map((c, i) => (
-              <span key={i}>
-                {i > 0 && (
-                  <span style={{ color: COLORS.accentLight, margin: '0 0.55rem' }}>→</span>
-                )}
-                <span>{c.name}</span>
-              </span>
-            ))}
+            {chain.map((c, i) => {
+              const key = c.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+              const url = productUrlMap.get(key);
+              return (
+                <span key={i}>
+                  {i > 0 && (
+                    <span style={{ color: COLORS.accentLight, margin: '0 0.55rem' }}>→</span>
+                  )}
+                  {url ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: 'inherit',
+                        textDecoration: 'underline',
+                        textDecorationColor: 'rgba(168, 152, 112, 0.45)',
+                        textUnderlineOffset: '2px',
+                        textDecorationThickness: '1.5px',
+                        transition: 'text-decoration-color 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget.style as CSSStyleDeclaration).textDecorationColor = 'rgba(168, 152, 112, 0.85)';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget.style as CSSStyleDeclaration).textDecorationColor = 'rgba(168, 152, 112, 0.45)';
+                      }}
+                    >
+                      {c.name}
+                    </a>
+                  ) : (
+                    <span>{c.name}</span>
+                  )}
+                </span>
+              );
+            })}
           </div>
           {hasAnyRole && (
             <div style={{
@@ -1064,7 +1113,7 @@ function UpgradeOptionsFollowUp({
         color: COLORS.textMuted,
         fontStyle: 'italic',
       }}>
-        Direction exemplars — curated catalog illustrations of this path, not personalised picks for your current chain.
+        Direction exemplars — curated catalog illustrations of this path, not personalised picks for your current system.
       </p>
     </div>
   );
@@ -1179,7 +1228,7 @@ function ComparePathsFollowUp({
         color: COLORS.textMuted,
         fontStyle: 'italic',
       }}>
-        Direction exemplars across three philosophies — each list is curated, not filtered against your current chain.
+        Direction exemplars across three philosophies — each list is curated, not filtered against your current system.
       </p>
     </div>
   );
@@ -1440,7 +1489,7 @@ function ComponentKeepFollowUp({
             fontWeight: 600,
             margin: '0.55rem 0 0.3rem 0',
           }}>
-            What it contributes in this chain
+            What it contributes in this system
           </div>
           <ul style={{ margin: '0 0 0.5rem 1.1rem', padding: 0, fontSize: '0.92rem' }}>
             {contributionLines.map((line, i) => (
@@ -1466,13 +1515,13 @@ function ComponentKeepFollowUp({
           Replacing the {product.brand} {product.name} means giving up{' '}
           <strong>{product.tendencies.tradeoffs[0].gains}</strong> in exchange
           for uncertainty. The current recommendation targets a higher-leverage
-          change elsewhere in the chain.
+          change elsewhere in your system.
         </p>
       ) : (
         <p style={{ margin: '0 0 0.4rem 0', fontSize: '0.92rem' }}>
-          This component already expresses a strength the chain relies on.
+          This component already expresses a strength the system relies on.
           Swapping it trades a known tendency for an unknown one — higher-leverage
-          change exists elsewhere in the chain.
+          change exists elsewhere in the system.
         </p>
       )}
 
@@ -1515,7 +1564,7 @@ function ComponentKeepFollowUp({
         color: COLORS.textMuted,
         fontStyle: 'italic',
       }}>
-        Worth revisiting if the room changes, the rest of the chain
+        Worth revisiting if the room changes, the rest of the system
         steps up a tier, or a new listening priority emerges.
       </p>
     </div>
@@ -2013,7 +2062,7 @@ function AudioPreferencesBlock({ profile, advisoryMode, namedProduct }: {
             color: COLORS.textSecondary,
             marginBottom: '0.2rem',
           }}>
-            Your chain
+            Your system
           </div>
           <div style={{
             display: 'flex',

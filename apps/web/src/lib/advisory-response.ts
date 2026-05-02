@@ -170,6 +170,8 @@ export interface AdvisoryOption {
   catalogCountry?: string;
   /** Brand scale from catalog (e.g. "specialist", "boutique", "major"). */
   catalogBrandScale?: string;
+  /** One-line product description from catalog (first sentence used for "Character:" line). */
+  catalogDescription?: string;
 
   // ── Decision frame mapping ──────────────────────────
   /** Which decision direction this product supports (label from DecisionFrame). */

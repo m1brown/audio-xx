@@ -331,6 +331,10 @@ interface BrandProfile {
     images?: Array<{
       url: string;
       caption?: string;
+      /** Attribution credit for the image (e.g. photographer, brand, publication). */
+      credit?: string;
+      /** URL to the source page where the image was obtained. */
+      sourceUrl?: string;
     }>;
     /** Curated video links (YouTube, review channels). Not embedded — link-out only. */
     videos?: Array<{
@@ -397,10 +401,14 @@ const BRAND_PROFILES: BrandProfile[] = [
         {
           url: 'https://devorefidelity.com/wp-content/uploads/2021/11/devore-fidelity-home.jpg',
           caption: 'DeVore Fidelity — handcrafted speakers from Brooklyn, New York.',
+          credit: 'DeVore Fidelity',
+          sourceUrl: 'https://devorefidelity.com/',
         },
         {
           url: 'https://devorefidelity.com/wp-content/uploads/2021/05/O96-new-crop-766x1024.jpg',
           caption: 'DeVore O/96 — the flagship Orangutan, voiced for low-power tubes.',
+          credit: 'DeVore Fidelity',
+          sourceUrl: 'https://devorefidelity.com/',
         },
       ],
       videos: [
@@ -421,21 +429,181 @@ const BRAND_PROFILES: BrandProfile[] = [
       ],
     },
   },
+  // ── Boenicke Audio ─────────────────────────────────────
   {
-    names: ['shindo'],
+    names: ['boenicke', 'boenicke audio'],
+    founder: 'Sven Boenicke',
+    country: 'Switzerland (Basel)',
+    brandScale: 'boutique',
+    region: 'europe',
+    categories: ['speaker'],
+    tagline: 'Swiss precision speakers that disappear and leave the music.',
+    philosophy: 'Boenicke Audio designs speakers around spatial truth and tonal refinement in unusually compact enclosures. Sven Boenicke voices every unit personally, drawing on decades of live concert recording to calibrate what sounds real.',
+    philosophyExtended: 'Sven Boenicke founded the company in 1998 in Basel, Switzerland, with a simple premise: build the most honest speakers possible using unconventional engineering. Every cabinet is CNC-machined from solid wood — no MDF, no veneer — and final voicing is done by ear against the memory of live acoustic instruments. The result is a speaker that prioritises spatial precision and textural detail within a footprint most competitors would consider impossible.',
+    tendencies: 'Listeners describe Boenicke speakers as holographic, spatially precise, and texturally vivid. They disappear into the room and leave an unusually coherent soundstage for their size, trading dynamic scale for imaging and refinement.',
+    systemContext: 'Boenicke speakers need quality amplification to reveal their strengths. They reward clean, well-controlled power and are sensitive to upstream source quality. Placement matters — compact cabinets need boundary reinforcement or a subwoofer in larger rooms.',
+    designPhilosophy: 'Compact solid-wood cabinets voiced by ear against live acoustic reference.',
+    sonicTendency: 'Holographic imaging, textural precision, spatial disappearing act.',
+    typicalTradeoff: 'Dynamic scale and bass weight traded for spatial truth and refinement.',
+    leadershipOrigin: 'Sven Boenicke founded Boenicke Audio in 1998 in Basel, Switzerland. Before loudspeakers, he spent years recording live concerts — an experience that shaped his reference for natural timbre and spatial accuracy. He designs, voices, and signs off on every unit personally. All final assembly, quality control, and tuning happen in Basel.',
+    reviewerQuotes: [
+      { quote: 'The W8 supplied the most precise yet expansive imaging and soundstage I have yet to experience in my listening room.', source: 'Srajan Ebaen (6moons)' },
+      { quote: 'They performed that magic trick few speakers can pull off: they disappeared.', source: '6moons (W8 review)' },
+    ],
+    strengths: [
+      'Exceptional spatial precision — holographic imaging far beyond cabinet size',
+      'Textural detail and tonal refinement without analytical harshness',
+      'Solid-wood cabinets with outstanding build quality and finish options',
+      'Compact footprint suits small rooms, desktop, and nearfield listening',
+      'Coherent wideband design — no crossover on primary driver',
+    ],
+    tradeoffs: [
+      'Limited dynamic scale and bass extension from compact cabinets',
+      'Placement-sensitive — needs careful positioning or boundary reinforcement',
+      'Requires quality amplification to perform at its best',
+      'Premium pricing for boutique Swiss manufacturing',
+    ],
+    pairingNotes: 'Best with clean, well-controlled amplification — solid-state integrateds (Hegel, Ayre) or refined tube amps with adequate power (50W+ for W5, 50–100W for W8). Source quality is directly audible. Room gain or a subwoofer helps in larger spaces.',
+    links: [
+      { label: 'Official website', url: 'https://www.boenicke-audio.ch/', region: 'global' },
+      { label: 'Minnesota Audio (US dealer)', url: 'https://minnesota.audio/collections/boenicke-audio-artisanal-speakers-for-the-discerning-audiophile', kind: 'dealer', region: 'US' },
+    ],
+    designFamilies: [
+      {
+        name: 'W5',
+        character: 'Compact standmount — holographic spatial precision and texture from a tiny enclosure. The entry point.',
+        ampPairing: 'Needs 30W minimum. Clean solid-state or moderate-power tubes. Source-quality-sensitive.',
+      },
+      {
+        name: 'W8',
+        character: 'Slim floorstanding — W5 spatial magic scaled up with more bass extension and dynamic range. Swing-base decoupling.',
+        ampPairing: '50–100W recommended. Benefits from amplifiers with good current delivery.',
+      },
+      {
+        name: 'W11 / W13',
+        character: 'Full-range floorstanders — the design philosophy at larger scale with greater bass authority and dynamic headroom.',
+        ampPairing: 'Benefits from high-quality amplification with headroom. Room-dependent bass tuning.',
+      },
+    ],
+    media: {
+      images: [
+        {
+          url: 'https://boenicke-audio.ch/wp-content/uploads/2017/08/W5_raum.jpg',
+          caption: 'Boenicke W5 in a listening room — disappearing act in miniature.',
+          credit: 'Boenicke Audio',
+          sourceUrl: 'https://boenicke-audio.ch/',
+        },
+        {
+          url: 'https://boenicke-audio.ch/wp-content/uploads/2026/01/W5_halbvorne_klei.jpg',
+          caption: 'Boenicke W5 — half-front view showing Swiss cabinet craft.',
+          credit: 'Boenicke Audio',
+          sourceUrl: 'https://boenicke-audio.ch/',
+        },
+        {
+          url: 'https://boenicke-audio.ch/wp-content/uploads/2019/05/sven-1.jpg',
+          caption: 'Sven Boenicke in his Basel workshop.',
+          credit: 'Boenicke Audio',
+          sourceUrl: 'https://boenicke-audio.ch/',
+        },
+      ],
+      videos: [
+        {
+          title: 'Boenicke W5 HiFi Speakers — Review',
+          source: 'Tarun Magazines',
+          url: 'https://www.youtube.com/watch?v=zeJXIEVbn34',
+          thumbnailUrl: 'https://img.youtube.com/vi/zeJXIEVbn34/hqdefault.jpg',
+          summary: 'Review and listening impressions of the Boenicke W5 — compact speakers with outsized spatial performance.',
+        },
+        {
+          title: 'Boenicke W5 Sound Demo & Review',
+          source: 'Tarun Magazines',
+          url: 'https://www.youtube.com/watch?v=F0Abq1OJTgk',
+          thumbnailUrl: 'https://img.youtube.com/vi/F0Abq1OJTgk/hqdefault.jpg',
+          summary: 'Sound demonstration and extended review of the Boenicke W5 speakers.',
+        },
+      ],
+    },
+  },
+  // ── Shindo Laboratory ──────────────────────────────────
+  {
+    names: ['shindo', 'shindo laboratory'],
     founder: 'Ken Shindo',
-    country: 'Japan',
+    country: 'Japan (Tokyo)',
     brandScale: 'boutique',
     region: 'japan',
     categories: ['amplifier'],
-    philosophy: 'Shindo amplifiers are hand-built, tube-based designs rooted in vintage circuit topologies. The design philosophy prioritizes harmonic richness and tonal saturation over measured neutrality.',
-    tendencies: 'Listeners consistently describe Shindo systems as dense, flowing, and harmonically alive. They tend to emphasize tonal weight and midrange texture at the cost of some transient precision.',
-    systemContext: 'Commonly paired with high-efficiency speakers — horn-loaded or single-driver designs that can work with lower power output.',
-    pairingNotes: 'A natural match with DeVore Orangutan, Altec-based horns, and other high-efficiency speakers. The Shindo + DeVore combination is one of the most discussed pairings in the high-efficiency community.',
+    tagline: 'Hand-built tube amplifiers voiced for musical truth.',
+    philosophy: 'Shindo Laboratory designs tube amplifiers around musical naturalness rather than measured specification. Each circuit is designed individually to exploit the sonic character of its chosen tubes — the design serves the parts, not the other way around.',
+    philosophyExtended: 'Ken Shindo started his career as an electrical engineer at Matsushita before founding Shindo Laboratory in Tokyo in 1977. He was a noted collector of new-old-stock vacuum tubes and vintage components, and designed each amplifier as a unique circuit suited to a specific set of parts, a specific kind of system, and a specific musical mood. There are no stock circuits in any Shindo product. The goal was never to build a technically optimal machine — it was to let reproduced music sing with the organic quality of a live performance.',
+    tendencies: 'Listeners consistently describe Shindo amplifiers as dense, flowing, and harmonically alive. They emphasise tonal weight, midrange texture, and a sense of physical musical presence at the cost of some transient precision and measured neutrality.',
+    systemContext: 'Shindo amplifiers are designed for high-efficiency speakers that can work with lower power output. The combination of Shindo electronics with high-sensitivity speakers is one of the most celebrated pairings in the tube audio community.',
+    designPhilosophy: 'Each circuit designed around its chosen tubes — the design serves the parts.',
+    sonicTendency: 'Dense, harmonically alive, flowing — music sounds physically present.',
+    typicalTradeoff: 'Tonal saturation and musical naturalness over transient precision and measured linearity.',
+    leadershipOrigin: 'Ken Shindo (1939–2014) founded Shindo Laboratory in Tokyo in 1977 after working as an electrical engineer at Matsushita. He built every amplifier by hand using point-to-point wiring, hand-wound transformers, and carefully selected vintage and NOS components. Production was deliberately limited — roughly 50 units per year globally. After his passing in 2014, production continues under the guidance of his trained associates, maintaining his methods and sonic philosophy.',
+    reviewerQuotes: [
+      { quote: 'The Cortese did precisely what I expect a good single-ended amplifier to do: it put recorded instruments and voices in front of me with a near-psychedelic level of presence.', source: 'Art Dudley (Stereophile)' },
+      { quote: 'Shindo has a certain quality that allows you to forget about the system — music sounds more like a live acoustic event.', source: 'Pitch Perfect Audio' },
+    ],
+    strengths: [
+      'Legendary harmonic richness and tonal density — the reference for tube musicality',
+      'Each circuit individually designed — no stock topologies',
+      'Hand-wound transformers and point-to-point wiring throughout',
+      'Exceptional midrange presence and vocal naturalness',
+      'Deep synergy with high-efficiency speakers — a defining pairing in the community',
+    ],
+    tradeoffs: [
+      'Very limited production and high pricing — long wait times typical',
+      'Low power output requires high-sensitivity speakers (90 dB+)',
+      'Limited bass authority and dynamic headroom compared to high-power designs',
+      'Vintage NOS tube dependency — replacement tubes can be scarce and expensive',
+    ],
+    pairingNotes: 'A natural match with DeVore Orangutan, Altec-based horns, and other high-efficiency speakers (90 dB+). The Shindo + DeVore combination is one of the most discussed pairings in high-efficiency audio. Source components matter — Shindo preamps are designed as system anchors and pair best with their own amplifiers.',
     links: [
       { label: 'Official website', url: 'https://www.shindo-laboratory.co.jp/', region: 'global' },
       { label: 'Tone Imports (US importer)', url: 'https://www.toneimports.com/', kind: 'dealer', region: 'US' },
     ],
+    designFamilies: [
+      {
+        name: 'Cortese',
+        character: 'Single-ended F2a stereo amplifier (~10W). Entry point to the Shindo line. Psychedelic presence and scale.',
+        ampPairing: 'Requires 90 dB+ speakers. Ideal with DeVore O/96, Altec horns.',
+      },
+      {
+        name: 'Haut-Brion / Montille',
+        character: 'Push-pull designs with more power (15–25W). Richer tonal palette with greater dynamic headroom.',
+        ampPairing: 'Works with 88 dB+ speakers. Broader pairing flexibility than single-ended models.',
+      },
+      {
+        name: 'Preamps (Aurièges, Monbrison, Masseto)',
+        character: 'System anchors — each voiced with a distinct character. The preamp often defines the Shindo system sound more than the power amp.',
+      },
+    ],
+    media: {
+      images: [
+        {
+          url: 'https://6moons.com/audioreviews/shindo3/hero_cortese.jpg',
+          caption: 'Shindo Cortese — single-ended stereo amplifier, point-to-point wired.',
+          credit: 'Shindo Laboratory / 6moons',
+          sourceUrl: 'https://6moons.com/audioreviews/shindo3/shindo.html',
+        },
+        {
+          url: 'https://6moons.com/audioreviews/shindo3/hero_monbrison_front.jpg',
+          caption: 'Shindo Monbrison preamplifier — the system anchor.',
+          credit: 'Shindo Laboratory / 6moons',
+          sourceUrl: 'https://6moons.com/audioreviews/shindo3/shindo.html',
+        },
+      ],
+      videos: [
+        {
+          title: 'Inside Shindo Laboratory in Tokyo, Japan',
+          source: 'Lavorgna (YouTube)',
+          url: 'https://www.youtube.com/watch?v=puUewwqvags',
+          thumbnailUrl: 'https://img.youtube.com/vi/puUewwqvags/hqdefault.jpg',
+          summary: 'Rare footage from inside Ken Shindo\'s workshop in Tokyo — the only known video of its kind.',
+        },
+      ],
+    },
   },
   {
     names: ['pass labs', 'pass', 'first watt'],
@@ -493,10 +661,14 @@ const BRAND_PROFILES: BrandProfile[] = [
         {
           url: 'https://www.passlabs.com/wp-content/uploads/2019/12/08-banner-class-A-xa25.webp',
           caption: 'Pass Labs XA25 — pure Class A simplicity in a compact chassis.',
+          credit: 'Pass Labs',
+          sourceUrl: 'https://www.passlabs.com/',
         },
         {
           url: 'https://www.passlabs.com/wp-content/uploads/2019/12/INT-25-001.webp',
           caption: 'Pass Labs INT-25 — 25 watts of Class A integrated amplification.',
+          credit: 'Pass Labs',
+          sourceUrl: 'https://www.passlabs.com/',
         },
       ],
       videos: [
@@ -584,7 +756,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     categories: ['dac'],
     philosophy: 'Border Patrol builds NOS (non-oversampling) tube-output DACs with minimal digital processing. The philosophy is simplicity and directness.',
     tendencies: 'Listeners describe a natural, unforced sound with strong tonal body and flow. Treble is typically rolled compared to oversampling designs.',
-    systemContext: 'Works best in systems where the rest of the chain provides sufficient detail and air. Pairs naturally with tube amplification and high-efficiency speakers.',
+    systemContext: 'Works best in systems where the rest of the system provides sufficient detail and air. Pairs naturally with tube amplification and high-efficiency speakers.',
     links: [
       { label: 'Official website', url: 'https://www.borderpatrol.net/', region: 'global' },
     ],
@@ -615,10 +787,10 @@ const BRAND_PROFILES: BrandProfile[] = [
     categories: ['dac'],
     philosophy: 'Denafrips designs around discrete R2R ladder conversion — resistor networks that convert digital audio directly to analog voltage. The philosophy prioritises tonal density, harmonic texture, and musical flow over measured precision. Products range from the entry-level Ares to the flagship Terminator, sharing a consistent R2R voice at different levels of refinement and scale.',
     tendencies: 'Listeners consistently describe Denafrips DACs as warm, dense, and harmonically rich. Tonal body, midrange texture, and a relaxed sense of timing are the signature strengths. Detail retrieval is present but softer-focused than delta-sigma designs — the emphasis is on musical weight rather than analytical separation.',
-    systemContext: 'Denafrips DACs tend to add warmth and body to the chain. In systems that are already warm or tonally dense, this can compound into congestion — bass and lower midrange may feel heavy. In precise or lean systems, a Denafrips source provides a welcome counterbalance, adding tonal substance without changing the downstream character.',
+    systemContext: 'Denafrips DACs tend to add warmth and body to the system. In systems that are already warm or tonally dense, this can compound into congestion — bass and lower midrange may feel heavy. In precise or lean systems, a Denafrips source provides a welcome counterbalance, adding tonal substance without changing the downstream character.',
     designPhilosophy: 'Discrete R2R ladder conversion built for tonal density.',
     sonicTendency: 'Warm, dense, harmonically rich; softer-focused detail.',
-    typicalTradeoff: 'Adds warmth — can compound congestion in already-dense chains.',
+    typicalTradeoff: 'Adds warmth — can compound congestion in already-dense systems.',
     pairingNotes: 'Pairs well with fast or transparent amplifiers where the R2R density is balanced by downstream speed. Widely used with solid-state amplification from brands like Benchmark, Topping, and Pass Labs. Can compound warmth with tube amplifiers — works best when the tube stage is on the transparent side.',
     links: [
       { label: 'Denafrips', url: 'https://www.denafrips.com/', region: 'global' },
@@ -950,7 +1122,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     categories: ['dac'],
     philosophy: 'Holo Audio designs discrete R2R DACs with dual-mono architecture and proprietary resistor-ladder networks. Designer Jeff Zhu\'s approach combines the harmonic richness of R2R conversion with careful attention to power supply isolation and analogue output stage quality. The May is the flagship; the Spring is the accessible entry.',
     tendencies: 'Holo Audio DACs are described as warm, harmonically rich, and dynamically engaging. The May KTE (Kitsune Tuned Edition) is considered one of the strongest R2R DACs at its price — delivering dense tonal body with better transient definition than many warm-leaning competitors. Spatial presentation is wide and natural.',
-    systemContext: 'Holo DACs add warmth and harmonic texture to the chain. They pair naturally with transparent or fast amplification where the R2R density provides a welcome counterbalance. In already warm or dense systems, care is needed to avoid congestion. The May KTE is widely used in high-end headphone and speaker systems.',
+    systemContext: 'Holo DACs add warmth and harmonic texture to the system. They pair naturally with transparent or fast amplification where the R2R density provides a welcome counterbalance. In already warm or dense systems, care is needed to avoid congestion. The May KTE is widely used in high-end headphone and speaker systems.',
     links: [
       { label: 'Kitsune HiFi (US distributor)', url: 'https://krantenaudio.com/', kind: 'dealer', region: 'US' },
     ],
@@ -1027,10 +1199,13 @@ const BRAND_PROFILES: BrandProfile[] = [
         {
           url: 'https://m.media-amazon.com/images/I/51RmYCbQVQL._AC_SX679_.jpg',
           caption: 'KEF LS50 Meta — the benchmark Uni-Q stand-mount.',
+          credit: 'KEF',
         },
         {
           url: 'https://media.kef.com/pages/INT-Uni-Q/Uni-Q%2012th%20gen%20exploded-v2.1-en.png',
           caption: 'KEF Uni-Q 12th generation coaxial driver.',
+          credit: 'KEF',
+          sourceUrl: 'https://www.kef.com/',
         },
       ],
       videos: [
@@ -2901,7 +3076,7 @@ export function buildComparisonRefinement(
   const followUp = buildCriterionFollowUp(criterion);
 
   // For brand-level amp-pairing follow-ups, surface design families if they exist
-  let systemContext = 'How much this matters in practice depends on the rest of the chain and how the room interacts.';
+  let systemContext = 'How much this matters in practice depends on the rest of the system and how the room interacts.';
   let refinedFollowUp = followUp;
 
   if (activeComparison.scope === 'brand' && criterion.category === 'amplifier_pairing') {
@@ -3964,7 +4139,7 @@ function buildCriterionSummary(
     if (bRelevance > aRelevance) {
       return `${nameB} tends to be a more natural fit with ${ampType} — its design assumptions align more closely with that topology. ${nameA} can work, but may need more careful matching.`;
     }
-    return `Both can work with ${ampType}, but they respond differently — the interaction depends on specific amplifier characteristics and the rest of the chain.`;
+    return `Both can work with ${ampType}, but they respond differently — the interaction depends on specific amplifier characteristics and the rest of the system.`;
   }
 
   // ── Trait criteria ─────────────────────────────────
@@ -4256,7 +4431,7 @@ export function buildConsultationFollowUp(
         philosophy: `Continuing with ${subjectName} — ${takeSentences(info.tendencies, 2)}`,
         tendencies: info.systemContext
           ? `Context matters: ${takeSentences(info.systemContext, 2)}`
-          : 'Specific sonic performance depends on the rest of the chain — amplifier character, room, and source all shape the final result.',
+          : 'Specific sonic performance depends on the rest of the system — amplifier character, room, and source all shape the final result.',
         followUp: 'What are you pairing this with?',
       };
     }
@@ -4323,20 +4498,20 @@ export function buildConsultationFollowUp(
       // assessment in the user's actual chain rather than asking them
       // to describe it.
       const groundedContextualNote = savedSystemRender
-        ? `${contextualNote} Against your saved system (${savedSystemRender}), this would interact with the existing chain — worth weighing how the new character compounds or counterbalances what you already have.`
+        ? `${contextualNote} Against your saved system (${savedSystemRender}), this would interact with your existing system — worth weighing how the new character compounds or counterbalances what you already have.`
         : contextualNote;
       const groundedFollowUp = savedSystemRender
         ? 'Want me to walk through how this would interact with each component in your saved system?'
         : mentionsTubes
           ? 'Which tube amp are you using — or are you choosing one?'
-          : 'What else is in the chain?';
+          : 'What else is in your system?';
 
       return {
         subject: subjectName,
         philosophy: groundedContextualNote,
         tendencies: pairingNotes && !mentionsTubes
           ? takeSentences(pairingNotes, 2)
-          : 'How well it fits depends on what the rest of the chain brings — amplifier topology, source character, and room all interact.',
+          : 'How well it fits depends on what the rest of the system brings — amplifier topology, source character, and room all interact.',
         followUp: groundedFollowUp,
       };
     }
@@ -5161,7 +5336,7 @@ export function validateSystemComponents(
         issues.push({
           kind: 'role-label-conflict',
           subject: c.displayName,
-          detail: `You described the ${c.displayName} as ${userRoleDisplay}, but our data has it as ${expectedDisplay}. What role does it play in your chain?`,
+          detail: `You described the ${c.displayName} as ${userRoleDisplay}, but our data has it as ${expectedDisplay}. What role does it play in your system?`,
         });
       }
     }
@@ -5253,7 +5428,7 @@ export function validateSystemComponents(
         issues.push({
           kind: 'chain-order-ambiguity',
           subject: 'signal path order',
-          detail: 'I\'m not confident about the signal-flow order here. Could you describe the chain from source to output?',
+          detail: 'I\'m not confident about the signal-flow order here. Could you describe the system from source to output?',
         });
       }
     }
@@ -5976,13 +6151,20 @@ export function buildSystemAssessment(
   // component prices, and system complexity.
   const systemTier = estimateSystemTier(components);
 
+  // ── Voicing coherence ───────────────────────────────
+  // Detect whether components share deliberate axis alignment from
+  // specialist/boutique brands. When coherent, axis stacking is system
+  // identity — not a constraint. This gate prevents the engine from
+  // treating intentional voicing as a bottleneck.
+  const voicingCoherence = assessVoicingCoherence(components, componentAxisProfiles, systemAxes);
+
   // ── Structured memo-format fields ───────────────────
   // Pipeline: chain → stacked traits → bottleneck → assessments → paths → sequence → observation
   const memoChain = buildSystemChain(components, currentMessage);
   const memoStacked = detectStackedTraits(components, componentAxisProfiles);
   const memoConstraint = systemTier === 'reference'
     ? undefined  // Reference-level systems don't have meaningful bottlenecks
-    : detectPrimaryConstraint(components, componentAxisProfiles, memoStacked, systemAxes);
+    : detectPrimaryConstraint(components, componentAxisProfiles, memoStacked, systemAxes, voicingCoherence);
   const memoAssessments = buildComponentAssessments(components, componentAxisProfiles, memoConstraint);
   // Hoist listener priority inference before upgrade paths (Feature 3: preference protection)
   const memoListenerPriorities = inferListenerPriorityTags(systemAxes, desires);
@@ -6045,6 +6227,7 @@ export function buildSystemAssessment(
     desires,
     componentLinks,
     memoListenerPriorities,
+    voicingCoherence,
   );
 
   // ── System character opening (brief) ──────────────
@@ -6144,21 +6327,21 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   // hears rather than the abstract axis name. Each phrase is a short
   // observation in plain language.
   const tonal =
-    axes.warm_bright === 'warm' ? 'a generous, weighted tonality you can sit inside for hours'
-    : axes.warm_bright === 'bright' ? 'an immediate, lit-from-the-front tonality that puts the music slightly forward of the speakers'
-    : 'a tonally even balance that does not pull the music in either direction';
+    axes.warm_bright === 'warm' ? 'a warm, full-bodied tonal balance'
+    : axes.warm_bright === 'bright' ? 'a forward, lit tonal balance that emphasises presence and clarity'
+    : 'an even tonal balance with no strong lean in either direction';
   const detail =
-    axes.smooth_detailed === 'detailed' ? 'a clear view into the recording — small inner voices and transient edges stay legible'
-    : axes.smooth_detailed === 'smooth' ? 'a polished, easygoing surface that softens edges and rewards long listening'
-    : 'a balance between resolution and ease — neither chasing detail nor hiding it';
+    axes.smooth_detailed === 'detailed' ? 'good inner detail — small voices and transient edges stay legible'
+    : axes.smooth_detailed === 'smooth' ? 'a smooth presentation that softens edges and reduces listening fatigue'
+    : 'a balance between resolution and ease';
   const timing =
-    axes.elastic_controlled === 'elastic' ? 'a breathing, swinging sense of timing that lets phrasing land naturally'
-    : axes.elastic_controlled === 'controlled' ? 'a tight, well-gripped sense of timing that keeps complex passages from blurring'
-    : 'a relaxed but stable rhythmic feel';
+    axes.elastic_controlled === 'elastic' ? 'fluid, elastic timing'
+    : axes.elastic_controlled === 'controlled' ? 'tight, well-controlled timing that keeps complex passages organised'
+    : 'relaxed but stable timing';
   const stage =
-    axes.airy_closed === 'airy' ? 'an open, layered soundstage that puts space around each instrument'
-    : axes.airy_closed === 'closed' ? 'a closer, more intimate presentation that draws the music toward you'
-    : 'a natural, undramatic sense of space';
+    axes.airy_closed === 'airy' ? 'an open soundstage with clear separation between instruments'
+    : axes.airy_closed === 'closed' ? 'a closer, more intimate soundstage'
+    : 'a natural sense of space';
 
   // Dedupe component names — catalog matches can produce both a free-text
   // and a catalog row for the same physical component. Compare on a
@@ -6179,7 +6362,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   const names = `The ${namesList}`;
   const deliberate = findings.isDeliberate
     ? 'The pieces lean in compatible directions rather than fighting one another.'
-    : 'The chain is technically competent but not strongly unified around a single philosophy.';
+    : 'The system is technically competent but not strongly unified around a single philosophy.';
   // ── Active DAC note ──
   // When multiple DACs exist, surface which one is likely active.
   // Wording is calibrated to confidence level — never states signal path as fact.
@@ -6238,7 +6421,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   const overview = [
     `**System read**`,
     ``,
-    `${names} form a chain built around ${tonal}, ${detail}, ${timing}, and ${stage}. ${deliberate} At its core this is ${describeCoreIdentity(axes)}.${dacNote}${powerNote}`,
+    `${names} form a system built around ${tonal}, ${detail}, ${timing}, and ${stage}. ${deliberate} At its core this is ${describeCoreIdentity(axes)}.${dacNote}${powerNote}`,
   ].join('\n');
 
   // Dedupe component verdicts on the same normalized name key used above,
@@ -6256,14 +6439,14 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   // Vary the connective sentence per index so the section doesn't read as a template.
   // Listener-impact tails: what this strength sounds like in the room.
   const compTails = [
-    (_role: string) => `In practice, you hear it as the system's signature — the thing that makes you reach for one record over another at the end of a long day.`,
-    (_role: string) => `On music you know well, this is the contribution you stop noticing as a "feature" and start hearing as the way the system simply sounds.`,
-    (_role: string) => `It is also the easiest part of the chain to lose: swap this piece and the personality of the system goes with it.`,
+    (_role: string) => `This defines much of the system's overall character.`,
+    (_role: string) => `On familiar recordings, this contribution is consistent and reliable.`,
+    (_role: string) => `Replacing this component would change the system's sonic identity significantly.`,
   ];
   const traitTails = [
-    (contribs: string) => `${contribs} are pulling in the same direction here, and the listening result is unambiguous — you do not have to work to notice it, it is just there in every track.`,
-    (contribs: string) => `Because ${contribs} agree on this, you get a clean, undiluted version of it instead of two components arguing through the music.`,
-    (contribs: string) => `${contribs} reinforce each other on this — the system commits to it rather than splitting the difference, which is what makes it audible rather than theoretical.`,
+    (contribs: string) => `${contribs} reinforce the same quality, producing a clear and consistent result.`,
+    (contribs: string) => `Because ${contribs} align here, the effect is strong and unambiguous.`,
+    (contribs: string) => `${contribs} work together on this — the system commits rather than splitting the difference.`,
   ];
   // ── Role-based strength inclusion ──
   // Every system has up to three core role buckets:
@@ -6386,7 +6569,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     }
   }
   if (strengths.length === 0) {
-    strengths.push(`1. The chain is internally consistent — no component is fighting the others for dominance, and that coherence is itself the primary strength.`);
+    strengths.push(`1. The system is internally consistent. No component is fighting the others, and that coherence is the primary strength.`);
   }
 
   // ── Elasticity augmentation (single, in-place). ──────────────────
@@ -6405,7 +6588,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     let idx = strengths.findIndex(s => flowRoleRe.test(s));
     if (idx === -1) idx = strengths.findIndex(s => /flow|timing|swing|phrasing|elastic/i.test(s));
     if (idx === -1) idx = 0;
-    const augmentation = ' You hear it as elasticity — phrasing breathes and notes push and release.';
+    const augmentation = ' The timing has noticeable elasticity — phrases expand and contract naturally rather than sounding rigid.';
     strengths[idx] = strengths[idx].replace(/\s*$/, '') + augmentation;
   }
 
@@ -6566,7 +6749,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       role: winner.comp.role,
       weakness:
         winner.specificWeakness ||
-        'it is the weakest link in the chain relative to what the rest of the system is set up to do',
+        'it is the weakest link in the system relative to what the other components can deliver',
     };
   } else if (imbalances.length > 0) {
     // No component cleared the specificity bar → fall back to imbalance.
@@ -6738,7 +6921,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
           name: tierBottleneck.name,
           role: tierBottleneck.role,
           weakness:
-            'it is the weakest link in the chain — the rest of the system can resolve more than this component hands it',
+            'it is the weakest link in the system — the rest of the chain can resolve more than this component provides',
         };
       }
     }
@@ -6790,18 +6973,18 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     const role = primary.role.toUpperCase().length <= 4 ? primary.role.toUpperCase() : primary.role.toLowerCase();
     const example = axisExample(primary.axes[0]);
     constraintParts.push(
-      `The single thing holding this system back is the **${primary.component}**. You hear it as a slight flattening of ${axesText} — think ${example}. The music is correct, but a layer of texture and depth that should be there is held back; everything downstream can only resolve what the ${role} hands it.`,
+      `The main limitation is the **${primary.component}**. It reduces ${axesText} — for example, ${example}. Everything downstream can only resolve what the ${role} provides.`,
     );
   } else if (primary.kind === 'component') {
     const role = primary.role.toUpperCase().length <= 4 ? primary.role.toUpperCase() : primary.role.toLowerCase();
-    const isTierDetected = primary.weakness.includes('weakest link in the chain');
+    const isTierDetected = primary.weakness.includes('weakest link in the system');
     if (isTierDetected) {
       constraintParts.push(
-        `The single thing holding this system back is the **${primary.name}**. The rest of the chain — the amp and speakers especially — can resolve more than the ${role} is handing them. You are hearing what the ${role} allows, not what the system can do.`,
+        `The main limitation is the **${primary.name}**. The rest of the system can resolve more than the ${role} provides. You are hearing what the ${role} allows, not what the system is capable of.`,
       );
     } else {
       constraintParts.push(
-        `The clearest limitation in the chain is the **${primary.name}**: ${primary.weakness}. The audible result is a narrower version of what the rest of the system is set up to do — not a fault, but the place where the system stops scaling.`,
+        `The clearest limitation is the **${primary.name}**: ${primary.weakness}. This is where the system stops scaling.`,
       );
     }
   } else if (primary.kind === 'imbalance') {
@@ -6832,34 +7015,79 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
         ? 'flowing rather than stiff, elastic rather than clipped'
         : 'even rather than exaggerated, coherent rather than rushed';
     constraintParts.push(
-      `The clearest constraint is **${listenerPropertyLabel(primary.property)}** — the way phrasing breathes, how a kick lands, how a bass line leans into the next note. Here it comes across as ${leanDescriptor}: think ${example}. On familiar material, ${favors}.`,
+      `The clearest constraint is **${listenerPropertyLabel(primary.property)}**. The system leans ${leanDescriptor} — for example, ${example}. On familiar material, ${favors}.`,
     );
   }
   // primary.kind === 'none' falls through with constraintParts empty;
   // the section is suppressed entirely below.
 
   // No secondary "Also worth noting" tail — the primary is the point.
-  // The constraint section renders only when dominantInsight is
-  // 'bottleneck'. When the system is coherent (identity mode), the
-  // constraint section is suppressed entirely — no filler, no hedging.
-  const constraintsSection =
-    dominantInsight === 'bottleneck' && constraintParts.length > 0
-      ? [`**Where the system is constrained**`, ``, ...constraintParts].join('\n')
-      : '';
+  //
+  // COHERENT vs. CONSTRAINED distinction:
+  //   - Coherent system (isCoherent): components share deliberate voicing.
+  //     → "System trade-offs" — frame axis stacking as identity with
+  //       explicit trade-off detail. No bottleneck language.
+  //   - Constrained system (!isCoherent, bottleneck found):
+  //     → "Where the system is constrained" — existing bottleneck narrative.
+  //   - Neither: section suppressed entirely.
 
-  const identitySection = [
-    `**Listener alignment**`,
-    ``,
-    `This is ${describeCoreIdentity(axes)}. It rewards ${rewardFromAxes(axes)} and feels slightly out of its element with ${weakFromAxes(axes)}. That is a clear personality, not a flaw — and the same character runs from source to transducer.`,
-  ].join('\n');
+  let constraintsSection: string;
+
+  if (findings.isCoherent && findings.coherentSharedTraits.length > 0) {
+    // ── Coherent system: trade-offs section ──
+    // Expanded narrative that frames the system as intentionally voiced,
+    // describes what it prioritises and what it trades away.
+    const traitsList = findings.coherentSharedTraits.join(', ');
+    const tradeoffsList = findings.coherentTradeoffs.join(', ');
+    const componentNames = comps.map(c => c.name).join(' and ');
+
+    const coherentParts: string[] = [];
+    coherentParts.push(
+      `${componentNames} share a deliberate design direction, both prioritising ${traitsList}. The components reinforce the same sonic goals. Nothing in the chain is working against the rest.`,
+    );
+    coherentParts.push(
+      `That coherence has trade-offs: ${tradeoffsList}. These are architectural choices, not deficiencies. The system commits to a clear voice rather than trying to cover everything.`,
+    );
+
+    // Add listening context
+    coherentParts.push(
+      `This system will favour recordings with natural tone and dynamic variation. Material that depends on analytical precision or extreme transient speed may not be served as fully.`,
+    );
+
+    constraintsSection = [`**System trade-offs**`, ``, ...coherentParts].join('\n');
+  } else if (dominantInsight === 'bottleneck' && constraintParts.length > 0) {
+    // ── True constraint: existing bottleneck narrative ──
+    constraintsSection = [`**Where the system is constrained**`, ``, ...constraintParts].join('\n');
+  } else {
+    constraintsSection = '';
+  }
+
+  // ── Identity section ──
+  // Expanded for coherent systems: more depth on system character,
+  // internal synergy, and listening implications.
+  const identityCoreDesc = `This is ${describeCoreIdentity(axes)}. It rewards ${rewardFromAxes(axes)} and feels slightly out of its element with ${weakFromAxes(axes)}.`;
+
+  const identitySection = findings.isCoherent
+    ? [
+      `**System character**`,
+      ``,
+      `${identityCoreDesc} This identity runs consistently from source to transducer. Every component contributes to the same direction.`,
+      ``,
+      `No component is fighting the others. The system sounds unified rather than assembled. This level of coherence typically reflects careful selection or a shared design philosophy between the manufacturers.`,
+    ].join('\n')
+    : [
+      `**Listener alignment**`,
+      ``,
+      `${identityCoreDesc} That is a clear sonic personality, and the same character runs from source to transducer.`,
+    ].join('\n');
 
   const keepNames = keeps.slice(0, 3).map(k => k.name);
   const doNothingCheck = [
     `**Do nothing check**`,
     ``,
     keeps.length > 0
-      ? `You already own a coherent chain. ${keepNames.join(', ')} are the pieces carrying the personality you sit down to hear — replace any of them and the character of the room changes. Staying put means trading the dream of "more" for an evening that already works, every night, on the music you actually play.`
-      : `Staying here means trading the urge to upgrade for a system that already does its job — the fastest route to dissatisfaction in this hobby is churning components that are already earning their place in the room.`,
+      ? `You already own a coherent system. ${keepNames.join(', ')} define its character — replacing any of them changes the overall sound significantly. Staying put preserves a system that works well on the music you actually listen to.`
+      : `The system already does its job. Changing components without a clear reason risks trading a working setup for an adjustment period with no guaranteed improvement.`,
   ].join('\n');
 
   // ── Optimize section ──
@@ -6933,7 +7161,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   } else {
     // Identity mode — no single component to blame.
     chosenStepText =
-      `There are no clear bottlenecks here.\n\nAny change will shift the sound rather than fix it. Swapping a component is a lateral move — a different flavour, not a fix.\n\nStart with setup before swapping components.`;
+      `There are no clear bottlenecks here.\n\nAny change would shift the sound rather than fix a problem. Swapping a component is a lateral move, not an upgrade.\n\nConsider room setup and positioning before swapping components.`;
   }
 
   optimizeParts.push(chosenStepText);
@@ -6965,13 +7193,15 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   }
 
   const decisionReason =
-    decisionVerdict === 'KEEP'
+    decisionVerdict === 'KEEP' && findings.isCoherent
+      ? 'This is a coherent system. The components reinforce a shared design direction. There is nothing to fix — only a choice about whether these trade-offs continue to match your priorities.'
+      : decisionVerdict === 'KEEP'
       ? 'The system is coherent and internally aligned. No single component is holding it back.'
       : decisionVerdict === 'FIX A PROBLEM'
-        ? `The ${(primary as { component?: string; name?: string }).component ?? (primary as { name?: string }).name ?? 'current bottleneck'} is limiting what the rest of the chain can deliver. Addressing it unlocks existing potential.`
+        ? `The ${(primary as { component?: string; name?: string }).component ?? (primary as { name?: string }).name ?? 'current bottleneck'} is limiting what the rest of the system can deliver. Addressing it unlocks existing potential.`
         : decisionVerdict === 'REFINE'
-          ? `The system is fundamentally sound but one component is constraining the overall performance. A targeted swap raises the floor without changing the system's character.`
-          : 'The system imbalance runs deeper than a single component swap. A directional change shifts the entire chain toward a different set of priorities.';
+          ? `The system is fundamentally sound, but one component constrains overall performance. A targeted swap raises the floor without changing the system's character.`
+          : 'The imbalance is deeper than a single component swap. A directional change shifts the system toward a different set of priorities.';
 
   const decisionSection = [
     `**Decision**`,
@@ -6998,7 +7228,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
         tradeOffImproves.push(listenerAxisLabel(ax));
       }
     } else if (primary.kind === 'component') {
-      tradeOffImproves.push('Resolution at the constrainted link in the chain');
+      tradeOffImproves.push('Resolution at the constrained link in the system');
     } else if (primary.kind === 'imbalance') {
       tradeOffImproves.push(`Balance across ${humanizeProperty(primary.property)}`);
     }
@@ -7009,7 +7239,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     if (keeps.length > 0) {
       tradeOffWorse.push('Risk of disrupting the existing synergy between ' + keeps.slice(0, 2).map(k => k.name).join(' and '));
     }
-    tradeOffWorse.push('Adjustment period — the system will sound different before it sounds better');
+    tradeOffWorse.push('Adjustment period — the system will sound different before it sounds better or worse');
     // What stays the same
     if (keeps.length > 0) {
       tradeOffSame.push(`Core character (anchored by ${keeps[0].name})`);
@@ -7029,7 +7259,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   // What the user should hear differently and how to judge success.
   let outcomeValidation: string;
   if (decisionVerdict === 'KEEP') {
-    outcomeValidation = 'Success here is stability — the system continues to draw you into long listening sessions without restlessness. If three months from now you are still reaching for the same records with the same pleasure, the system is doing its job.';
+    outcomeValidation = 'Success means continued engagement. If in three months you are still listening regularly with the same enjoyment, the system is doing its job.';
   } else {
     const outcomeTerms: string[] = [];
     if (primary.kind === 'bottleneck' && primary.axes.length > 0) {
@@ -7040,7 +7270,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     if (outcomeTerms.length === 0) {
       outcomeTerms.push('resolution', 'coherence');
     }
-    outcomeValidation = `After the change, listen for more ${outcomeTerms.join(' and ')} on recordings you know well. The improvement should be audible within the first few tracks — not subtle, not ambiguous. If you find yourself reaching for music you had stopped playing, that is the strongest signal that the change worked. If the system sounds different but not more engaging, re-evaluate.`;
+    outcomeValidation = `After the change, listen for more ${outcomeTerms.join(' and ')} on recordings you know well. The improvement should be clearly audible, not subtle. If you start returning to music you had stopped playing, the change worked. If the system sounds different but not more engaging, re-evaluate.`;
   }
 
   const outcomeSection = [
@@ -7071,22 +7301,22 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
 }
 
 function describeCoreIdentity(axes: PrimaryAxisLeanings): string {
-  if (axes.warm_bright === 'warm' && axes.smooth_detailed === 'smooth') return 'a tone-first, long-session architecture';
-  if (axes.warm_bright === 'warm' && axes.elastic_controlled === 'elastic') return 'a tone-and-flow architecture that privileges musical continuity over forensic precision';
-  if (axes.smooth_detailed === 'detailed' && axes.elastic_controlled === 'controlled') return 'a resolution-first architecture that privileges precision and control';
-  if (axes.warm_bright === 'bright' && axes.smooth_detailed === 'detailed') return 'a transparency-first architecture';
-  if (axes.elastic_controlled === 'elastic') return 'a flow-first architecture';
-  if (axes.elastic_controlled === 'controlled') return 'a control-first architecture';
-  return 'a neutral, balanced architecture with no dominant bias';
+  if (axes.warm_bright === 'warm' && axes.smooth_detailed === 'smooth') return 'a tone-first system built for extended listening';
+  if (axes.warm_bright === 'warm' && axes.elastic_controlled === 'elastic') return 'a tone-and-flow system that favours musical continuity over analytical precision';
+  if (axes.smooth_detailed === 'detailed' && axes.elastic_controlled === 'controlled') return 'a resolution-first system that prioritises precision and control';
+  if (axes.warm_bright === 'bright' && axes.smooth_detailed === 'detailed') return 'a transparency-first system';
+  if (axes.elastic_controlled === 'elastic') return 'a flow-first system';
+  if (axes.elastic_controlled === 'controlled') return 'a control-first system';
+  return 'a balanced system with no dominant bias';
 }
 function rewardFromAxes(axes: PrimaryAxisLeanings): string {
-  if (axes.warm_bright === 'warm' || axes.smooth_detailed === 'smooth') return 'long, dense listening sessions';
+  if (axes.warm_bright === 'warm' || axes.smooth_detailed === 'smooth') return 'extended listening sessions and tonally rich recordings';
   if (axes.elastic_controlled === 'controlled' || axes.smooth_detailed === 'detailed') return 'rhythmically driven, well-engineered recordings';
-  return 'a wide range of material without a strong directional preference';
+  return 'a wide range of material without strong directional preference';
 }
 function weakFromAxes(axes: PrimaryAxisLeanings): string {
-  if (axes.warm_bright === 'warm' || axes.smooth_detailed === 'smooth') return 'music that lives on edge and snap';
-  if (axes.elastic_controlled === 'controlled' || axes.smooth_detailed === 'detailed') return 'music that lives on body and bloom';
+  if (axes.warm_bright === 'warm' || axes.smooth_detailed === 'smooth') return 'material that depends on sharp transients and edge';
+  if (axes.elastic_controlled === 'controlled' || axes.smooth_detailed === 'detailed') return 'material that depends on body and bloom';
   return 'no specific category';
 }
 // Concrete, listener-facing label for an axis. Used in constraint and
@@ -7210,11 +7440,11 @@ function inferSystemCharacterOpening(components: SystemComponent[]): string {
   }
 
   if (strongTraits.length === 0) {
-    return `The chain has balanced tendencies — no single tonal or textural direction dominates. The overall character depends on how these components interact in practice.`;
+    return `The system has balanced tendencies — no single tonal or textural direction dominates. The overall character depends on how these components interact in practice.`;
   }
 
   if (strongTraits.length === 1) {
-    return `The chain leans toward ${strongTraits[0]}, with the remaining axes staying relatively neutral.`;
+    return `The system leans toward ${strongTraits[0]}, with the remaining axes staying relatively neutral.`;
   }
 
   return `The system is characterised by ${strongTraits.join(' and ')}.`;
@@ -7286,15 +7516,15 @@ function inferSystemInteraction(components: SystemComponent[]): string {
       if (w.includes('Intimacy')) return 'intimacy';
       return 'a shared tendency';
     });
-    return `The system leans toward ${compoundDesc.join(' and ')} across the chain — multiple components push in the same direction, creating a strong and coherent character.`;
+    return `The system leans toward ${compoundDesc.join(' and ')} across multiple components — they push in the same direction, creating a strong and coherent character.`;
   }
 
   // ── Single-axis lean ──
   if (system.warm_bright === 'warm') {
-    return `The chain leans toward warmth and engagement — richness and immersion at the potential cost of transient articulation.`;
+    return `The system leans toward warmth and engagement — richness and immersion at the potential cost of transient articulation.`;
   }
   if (system.warm_bright === 'bright') {
-    return `The chain leans toward precision and clarity — a revealing presentation, though extended sessions may feel lean without a warmth source.`;
+    return `The system leans toward precision and clarity — a revealing presentation, though extended sessions may feel lean without a warmth source.`;
   }
 
   // Mixed or all-neutral
@@ -7472,7 +7702,7 @@ function inferAssessmentStrengths(components: SystemComponent[]): string[] {
   const warmComps = profiles.filter(p => p.axes.warm_bright === 'warm');
   const brightComps = profiles.filter(p => p.axes.warm_bright === 'bright');
   if (warmComps.length > 0 && brightComps.length > 0) {
-    strengths.push('Complementary tonal balance — precision and warmth offset each other across the chain');
+    strengths.push('Complementary tonal balance — precision and warmth offset each other across the system');
     strengths.push('The system is likely to sustain engagement across long sessions');
   }
 
@@ -7601,7 +7831,7 @@ function inferUpgradeDirection(components: SystemComponent[]): string {
     } else if (warning.includes('smooth')) {
       suggestions.push('If you want to introduce more detail and presence without losing the ease, a more revealing source or cables with better transient definition could add clarity without fundamentally changing the system\'s character.');
     } else if (warning.includes('detailed')) {
-      suggestions.push('If the system feels analytically intense, consider a warmer or more fluid component in the chain — a tube stage, a smoother DAC topology, or speakers with more midrange body could restore balance.');
+      suggestions.push('If the system feels analytically intense, consider a warmer or more fluid component — a tube stage, a smoother DAC topology, or speakers with more midrange body could restore balance.');
     } else if (warning.includes('controlled')) {
       suggestions.push('If the system feels overdamped, a more elastic source or amplifier could restore dynamic life. Single-ended or low-feedback topologies tend to introduce more elasticity.');
     } else if (warning.includes('elastic')) {
@@ -8134,10 +8364,10 @@ function buildIntroSummary(
     const characters = stacked.filter((s) => s.classification === 'system_character');
 
     if (imbalances.length > 0) {
-      return `${tierPrefix}${traitPhrase}.${deliberateNote} The chain leans toward ${imbalances[0].label} across multiple stages — this shapes both its strengths and its primary limitation.${intentNote}`;
+      return `${tierPrefix}${traitPhrase}.${deliberateNote} The system leans toward ${imbalances[0].label} across multiple stages — this shapes both its strengths and its primary limitation.${intentNote}`;
     }
     if (characters.length > 0) {
-      return `${tierPrefix}${traitPhrase}.${deliberateNote} The chain shares a consistent lean toward ${characters[0].label} — this defines the system's sonic identity rather than limiting it.${intentNote}`;
+      return `${tierPrefix}${traitPhrase}.${deliberateNote} The system shares a consistent lean toward ${characters[0].label} — this defines the system's sonic identity rather than limiting it.${intentNote}`;
     }
   }
 
@@ -8228,7 +8458,7 @@ function inferListenerIntent(
 
   // Elastic + detail → timing-first, low stored energy
   if (hasElasticity && hasDetail) {
-    return 'The axis profile points toward a listener who prioritises timing accuracy, low stored energy, and rhythmic articulation. This system rewards recordings with good transient information and tends to expose compression or overdamping elsewhere in the chain.';
+    return 'The axis profile points toward a listener who prioritises timing accuracy, low stored energy, and rhythmic articulation. This system rewards recordings with good transient information and tends to expose compression or overdamping elsewhere in the system.';
   }
 
   // Warmth + smoothness → tonal immersion, fatigue resistance
@@ -8400,25 +8630,25 @@ function classifyStackedTrait(
 const CHARACTER_EXPLANATIONS: Record<SonicProperty, string> = {
   high_speed: 'Transient speed and articulation are the dominant sonic trait here — the system prioritises fast, rhythmically engaging presentation.',
   low_stored_energy: 'Multiple low-stored-energy components produce fast, articulate sound. Extended listening may feel lean on harmonically dense material.',
-  high_density: 'The chain leans into tonal richness and midrange body — immersive, harmonically saturated, physically present.',
+  high_density: 'The system leans into tonal richness and midrange body — immersive, harmonically saturated, physically present.',
   high_damping: 'Stacked control and damping. Composure under load is excellent, but dynamic expression and elasticity may feel suppressed.',
   low_density: 'Multiple components contribute thin midrange character. The system may lack tonal body and weight on acoustic material.',
-  high_detail: 'Resolution and transparency run through the chain — revealing, micro-detailed, honest with recordings.',
+  high_detail: 'Resolution and transparency run through the system — revealing, micro-detailed, honest with recordings.',
   high_smoothness: 'Musical flow and liquidity are the prevailing character — effortless, non-fatiguing, easy to listen to for hours.',
   high_elasticity: 'Rhythmic energy and dynamic expression are a shared emphasis — alive, punchy, musically engaging.',
-  high_control: 'Control emphasis stacks in the chain. Stability and grip are excellent, but the presentation may feel overdamped or mechanical.',
+  high_control: 'Control emphasis stacks across the system. Stability and grip are excellent, but the presentation may feel overdamped or mechanical.',
 };
 
 const IMBALANCE_EXPLANATIONS: Record<SonicProperty, string> = {
   high_speed: 'Transient speed stacks beyond typical balance. Excellent articulation, but tonal density and midrange body may be noticeably reduced.',
   low_stored_energy: 'Multiple low-stored-energy components produce fast, articulate sound. Extended listening may feel lean on harmonically dense material.',
-  high_density: 'The chain stacks tonal density beyond typical balance — rich midrange, but transient precision and spatial separation may be constrained.',
+  high_density: 'The system stacks tonal density beyond typical balance — rich midrange, but transient precision and spatial separation may be constrained.',
   high_damping: 'Stacked control and damping. Composure under load is excellent, but dynamic expression and elasticity may feel suppressed.',
   low_density: 'Multiple components contribute thin midrange character. The system may lack tonal body and weight on acoustic material.',
   high_detail: 'Detail emphasis stacks beyond typical balance. Microdetail retrieval is strong, but lesser recordings may sound unforgiving.',
   high_smoothness: 'Smoothness stacks beyond typical balance. Musical flow is excellent, but transient edges and fine detail may be softened.',
   high_elasticity: 'Dynamic energy stacks beyond typical balance. Rhythmic engagement is strong, but composure on complex passages may be limited.',
-  high_control: 'Control emphasis stacks in the chain. Stability and grip are excellent, but the presentation may feel overdamped or mechanical.',
+  high_control: 'Control emphasis stacks across the system. Stability and grip are excellent, but the presentation may feel overdamped or mechanical.',
 };
 
 function detectStackedTraits(
@@ -8458,11 +8688,112 @@ function detectStackedTraits(
   return insights;
 }
 
+// ── Voicing coherence detection ──────────────────────
+//
+// Distinguishes "coherent system with trade-offs" from "constrained system."
+// When components share aligned primary axes AND are from specialist/boutique
+// brands, the system is intentionally voiced — axis stacking is identity,
+// not a bottleneck. This gate prevents the engine from labelling deliberate
+// voicing choices as performance limitations.
+
+interface VoicingCoherenceResult {
+  /** True when components share ≥2 aligned non-neutral axes and are specialist/boutique. */
+  isCoherent: boolean;
+  /** The shared axis directions that define the system's voice. */
+  sharedTraits: string[];
+  /** What the coherent voicing trades away — the deliberate cost. */
+  tradeoffs: string[];
+  /** Number of primary axes where all components agree. */
+  alignedAxisCount: number;
+}
+
+function assessVoicingCoherence(
+  components: SystemComponent[],
+  profiles: ComponentAxisProfile[],
+  system: PrimaryAxisLeanings,
+): VoicingCoherenceResult {
+  const none: VoicingCoherenceResult = { isCoherent: false, sharedTraits: [], tradeoffs: [], alignedAxisCount: 0 };
+
+  // Need at least 2 components with known axis profiles
+  const withAxes = profiles.filter(p =>
+    p.axes.warm_bright !== 'neutral' ||
+    p.axes.smooth_detailed !== 'neutral' ||
+    p.axes.elastic_controlled !== 'neutral',
+  );
+  if (withAxes.length < 2) return none;
+
+  // Check brand quality — coherence defence only applies to specialist/boutique brands
+  // where voicing is an intentional design choice, not a budget limitation.
+  const specialistCount = components.filter(c =>
+    c.product?.brandScale === 'boutique' || c.product?.brandScale === 'specialist',
+  ).length;
+  if (specialistCount < 2) return none;
+
+  // Count axes where ALL profiled components agree on the same non-neutral direction
+  const axisChecks: Array<{
+    axis: string;
+    systemValue: string;
+    trait: string;
+    tradeoff: string;
+  }> = [
+    {
+      axis: 'warm_bright',
+      systemValue: system.warm_bright,
+      trait: system.warm_bright === 'warm' ? 'tonal density and harmonic richness' : 'transient precision and clarity',
+      tradeoff: system.warm_bright === 'warm' ? 'transient edge and analytical detail' : 'tonal body and midrange warmth',
+    },
+    {
+      axis: 'smooth_detailed',
+      systemValue: system.smooth_detailed,
+      trait: system.smooth_detailed === 'smooth' ? 'musical flow and long-session ease' : 'micro-detail and textural resolution',
+      tradeoff: system.smooth_detailed === 'smooth' ? 'micro-detail retrieval and leading-edge definition' : 'listening ease and tonal forgiveness',
+    },
+    {
+      axis: 'elastic_controlled',
+      systemValue: system.elastic_controlled,
+      trait: system.elastic_controlled === 'elastic' ? 'rhythmic elasticity and dynamic expression' : 'bass grip and composure under load',
+      tradeoff: system.elastic_controlled === 'elastic' ? 'iron grip on bass and composure on complex passages' : 'dynamic expressiveness and rhythmic swing',
+    },
+  ];
+
+  let alignedCount = 0;
+  const sharedTraits: string[] = [];
+  const tradeoffs: string[] = [];
+
+  for (const check of axisChecks) {
+    if (check.systemValue === 'neutral') continue;
+
+    // Check if all profiled components lean the same direction on this axis
+    const axisKey = check.axis as keyof PrimaryAxisLeanings;
+    const allAligned = withAxes.every(p => {
+      const val = p.axes[axisKey];
+      return val === check.systemValue || val === 'neutral' || val === 'moderate';
+    });
+
+    if (allAligned) {
+      alignedCount++;
+      sharedTraits.push(check.trait);
+      tradeoffs.push(check.tradeoff);
+    }
+  }
+
+  // Coherent when ≥ 2 axes are deliberately aligned across the system
+  const isCoherent = alignedCount >= 2;
+
+  return { isCoherent, sharedTraits, tradeoffs, alignedAxisCount: alignedCount };
+}
+
+
 // ── Bottleneck detection ────────────────────────────
 //
 // Identifies the primary system constraint — the factor that most
 // limits the system relative to its architectural potential.
 // Pipeline: axis analysis + trait data + stacked traits → constraint ranking.
+//
+// IMPORTANT: voicing coherence suppresses tonal_imbalance and stacked_bias
+// candidates. When components share deliberate voicing, axis stacking is
+// system identity — not a constraint. Only hard constraints (power mismatch,
+// impedance, capability gaps) survive the coherence gate.
 
 type ConstraintCategory = MemoPrimaryConstraint['category'];
 
@@ -8478,6 +8809,7 @@ function detectPrimaryConstraint(
   profiles: ComponentAxisProfile[],
   stacked: MemoStackedTraitInsight[],
   system: PrimaryAxisLeanings,
+  coherence?: VoicingCoherenceResult,
 ): MemoPrimaryConstraint | undefined {
   const candidates: ConstraintCandidate[] = [];
 
@@ -8486,8 +8818,11 @@ function detectPrimaryConstraint(
   // traits define the system's sonic identity and are not penalized.
   // Speakers/headphones define system character — stacking with them is
   // intentional alignment, not a constraint. Blame non-speaker components.
+  //
+  // COHERENCE GATE: When voicing coherence is detected, stacked_bias is
+  // suppressed entirely — the stacking IS the system's deliberate voice.
   const imbalanceTraits = stacked.filter((s) => s.classification === 'system_imbalance');
-  if (imbalanceTraits.length > 0) {
+  if (imbalanceTraits.length > 0 && !coherence?.isCoherent) {
     const dominant = imbalanceTraits[0];
     // Find which NON-SPEAKER component contributes most to the imbalance
     const speakerNames = new Set(
@@ -8553,13 +8888,13 @@ function detectPrimaryConstraint(
       const hasSpeakers = components.some((sc) => sc.role.includes('speak'));
       if (isPortable && hasSpeakers) {
         severity += 4;
-        issues.push('portable DAC in a speaker system — output authority and scale may limit the chain');
+        issues.push('portable DAC in a speaker system — output authority and scale may limit the system');
       }
       if (severity > 0) {
         candidates.push({
           componentName: c.displayName,
           category: 'dac_limitation',
-          explanation: `The DAC is holding back the chain — ${issues.join(', ')}. Everything downstream inherits its limitations.`,
+          explanation: `The DAC is holding back the system — ${issues.join(', ')}. Everything downstream inherits its limitations.`,
           severity,
         });
       }
@@ -8629,7 +8964,7 @@ function detectPrimaryConstraint(
         candidates.push({
           componentName: c.displayName,
           category: 'speaker_scale',
-          explanation: `The speakers are where the chain is most limited — ${issues.join(', ')}. They set the output ceiling for everything upstream.`,
+          explanation: `The speakers are where the system is most limited — ${issues.join(', ')}. They set the output ceiling for everything upstream.`,
           severity,
         });
       }
@@ -8637,9 +8972,12 @@ function detectPrimaryConstraint(
   }
 
   // ── Tonal imbalance (system-level) ──
+  // COHERENCE GATE: When components share deliberate voicing (specialist/
+  // boutique brands with aligned axes), tonal stacking is identity — not
+  // an imbalance. Only flag when the lean is accidental.
   const warmCount = profiles.filter((p) => p.axes.warm_bright === 'warm').length;
   const brightCount = profiles.filter((p) => p.axes.warm_bright === 'bright').length;
-  if (warmCount >= 2 && brightCount === 0) {
+  if (warmCount >= 2 && brightCount === 0 && !coherence?.isCoherent) {
     const warmContributors = profiles.filter((p) => p.axes.warm_bright === 'warm').map((p) => p.name);
     candidates.push({
       componentName: warmContributors[0],
@@ -8648,7 +8986,7 @@ function detectPrimaryConstraint(
       severity: warmCount * 2,
     });
   }
-  if (brightCount >= 2 && warmCount === 0) {
+  if (brightCount >= 2 && warmCount === 0 && !coherence?.isCoherent) {
     const brightContributors = profiles.filter((p) => p.axes.warm_bright === 'bright').map((p) => p.name);
     candidates.push({
       componentName: brightContributors[0],
@@ -8799,7 +9137,7 @@ function buildComponentAssessments(
     let verdict: string;
     let verdictKind: import('./advisory-response').VerdictKind;
     if (isBottleneck) {
-      verdict = `**This is the primary constraint in the chain.** Upgrading here yields the highest system-level impact.`;
+      verdict = `**This is the primary constraint in this system.** Upgrading here yields the highest system-level impact.`;
       verdictKind = 'bottleneck';
     } else if (isElite) {
       verdict = `World-class component. Any different behavior is a matter of upstream matching and taste, not limitation.`;
@@ -9773,7 +10111,7 @@ function buildUpgradePaths(
         rank: paths.length + 1,
         label: 'System Direction',
         impact: 'Moderate Impact',
-        rationale: `Your system leans ${insight.label.replace(/_/g, ' ')} across multiple components. These options take a different architectural approach — trading some of what you have in surplus for qualities your chain currently underserves.`,
+        rationale: `Your system leans ${insight.label.replace(/_/g, ' ')} across multiple components. These options take a different architectural approach — trading some of what you have in surplus for qualities your system currently underserves.`,
         options: directionalOptions,
       });
     }
@@ -10088,6 +10426,7 @@ function extractMemoFindings(
   desires?: DesireSignal[],
   perComponentLinks?: Map<string, { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[]>,
   precomputedListenerPriorities?: ListenerPriority[],
+  voicingCoherence?: VoicingCoherenceResult,
 ): MemoFindings {
   // ── Per-component findings ──
   const componentVerdicts: ComponentFindings[] = components.map((c, i) => {
@@ -10321,6 +10660,9 @@ function extractMemoFindings(
     keeps: keepFindings,
     recommendedSequence: recommendedSteps,
     isDeliberate: deliberateness.isDeliberate,
+    isCoherent: voicingCoherence?.isCoherent ?? false,
+    coherentSharedTraits: voicingCoherence?.sharedTraits ?? [],
+    coherentTradeoffs: voicingCoherence?.tradeoffs ?? [],
     deliberatenessSignals,
     listenerPriorities,
     hasMultipleDACs,
@@ -10439,10 +10781,10 @@ function buildKeyObservation(
     const verb = topDesire.direction === 'more' ? 'values' : 'wants to reduce';
 
     if (philosophyTraits.length > 0) {
-      return `Your taste pattern points toward equipment emphasising **${philosophyTraits.join(' and ')}**. Components in this chain (${brandNames.join(', ')}) share this design approach. You also ${verb} ${quality} — future upgrades should preserve the underlying philosophy while addressing that specific axis.`;
+      return `Your taste pattern points toward equipment emphasising **${philosophyTraits.join(' and ')}**. Components in this system (${brandNames.join(', ')}) share this design approach. You also ${verb} ${quality} — future upgrades should preserve the underlying philosophy while addressing that specific axis.`;
     }
 
-    return `You ${verb} ${quality}. The current chain is broadly balanced, so targeted component changes can address this without destabilising the overall character.`;
+    return `You ${verb} ${quality}. The current system is broadly balanced, so targeted component changes can address this without destabilising the overall character.`;
   }
 
   // ── Philosophy-driven observation ──
@@ -10452,9 +10794,9 @@ function buildKeyObservation(
     const characters = stacked.filter((s) => s.classification === 'system_character');
     let stackedNote = '';
     if (imbalances.length > 0) {
-      stackedNote = ` The chain leans toward ${imbalances[0].label}, which deepens this character but narrows the system's range.`;
+      stackedNote = ` The system leans toward ${imbalances[0].label}, which deepens this character but narrows the system's range.`;
     } else if (characters.length > 0) {
-      stackedNote = ` The chain shares a consistent ${characters[0].label} emphasis — this reinforces the system's identity.`;
+      stackedNote = ` The system shares a consistent ${characters[0].label} emphasis — this reinforces the system's identity.`;
     }
 
     return `Your component choices suggest a preference for equipment emphasising **${philo}**. ${brandNames.join(', ')} share this design philosophy.${stackedNote} Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.`;
@@ -10465,7 +10807,7 @@ function buildKeyObservation(
     const imbalances = stacked.filter((s) => s.classification === 'system_imbalance');
     const characters = stacked.filter((s) => s.classification === 'system_character');
     if (imbalances.length > 0) {
-      return `Despite broadly balanced axis positions, the system stacks ${imbalances[0].label} across the chain. This is worth monitoring — it can be a deliberate strength or an emerging limitation depending on listening priorities. Targeted component changes can adjust this without rebuilding the system.`;
+      return `Despite broadly balanced axis positions, the system stacks ${imbalances[0].label} across multiple components. This is worth monitoring — it can be a deliberate strength or an emerging limitation depending on listening priorities. Targeted component changes can adjust this without rebuilding the system.`;
     }
     if (characters.length > 0) {
       return `The system shares a consistent ${characters[0].label} emphasis across components. This is a defining feature of the system's sonic identity — not a limitation. Future upgrades should preserve this character.`;
@@ -10512,7 +10854,7 @@ function buildAssessmentPreferenceAlignment(
     return `You mentioned wanting more ${quality}. Your system leans warm, so there would likely be room to increase definition without losing the underlying tonal body — the question is which component to address first.`;
   }
   if (wantsLessFatigue) {
-    return `You mentioned wanting less ${quality}. That traces to a specific point in the chain — tell me the signal path and I'll identify it.`;
+    return `You mentioned wanting less ${quality}. That traces to a specific point in the system — tell me the signal path and I'll identify it.`;
   }
 
   // Generic fallback for other desires
@@ -10559,7 +10901,7 @@ function detectHypotheticalComponent(text: string): HypotheticalComponentInfo | 
       label: 'a tube amplifier',
       character: 'Tube amplifiers — particularly single-ended designs — tend toward harmonic richness, midrange density, and elastic dynamics. They often add even-order harmonic texture that many listeners perceive as warmth and tonal beauty. Low-feedback tube designs prioritize musical flow over measured precision.',
       tradeoff: 'What you typically give up: ultimate bass control and damping, transient speed at the frequency extremes, and absolute low-noise transparency. Tubes add their own character — that\'s the point, but it means the amp is an active participant in the sound, not a neutral wire.',
-      alignment: 'a tube amplifier would likely push the system toward warmth, flow, and midrange density — potentially compensating for analytical or lean tendencies elsewhere in the chain, or compounding warmth if the source and speakers already lean that way.',
+      alignment: 'a tube amplifier would likely push the system toward warmth, flow, and midrange density — potentially compensating for analytical or lean tendencies elsewhere in the system, or compounding warmth if the source and speakers already lean that way.',
     };
   }
   if (/\bset\b|\bsingle[- ]ended\s+triode/i.test(lower)) {
@@ -10686,14 +11028,14 @@ export function buildConsultationEntry(
         subject: `hypothetical — ${label}`,
         philosophy: `${label} is a design philosophy, not a single product. But the family has characteristic tendencies that would shape the system's direction.${systemNote}`,
         tendencies: `${character}\n\nTrade-off: ${tradeoff}`,
-        followUp: 'This is architectural reasoning — specific products within the family vary. If you have a particular model in mind, I can be more specific about how it would interact with the rest of the chain.',
+        followUp: 'This is architectural reasoning — specific products within the family vary. If you have a particular model in mind, I can be more specific about how it would interact with the rest of the system.',
       };
     }
 
     // Hypothetical language detected but no specific component identified
     return {
       subject: 'hypothetical change',
-      philosophy: 'That\'s a good question to reason through before committing. The impact of a component change depends on what role it plays in the chain — whether it\'s adding something missing, compensating for an existing tendency, or compounding one.',
+      philosophy: 'That\'s a good question to reason through before committing. The impact of a component change depends on what role it plays in the system — whether it\'s adding something missing, compensating for an existing tendency, or compounding one.',
       tendencies: hasTasteSignals
         ? `Based on what you've said you value — ${priorityParts.join(' and ')} — the question is whether the change moves the system closer to those priorities or shifts it sideways. Not all changes are improvements; some are just different.`
         : 'Without knowing your current system or preferences in detail, I can reason about the architectural direction — what a given topology tends to contribute and what it tends to trade away.',
@@ -10738,7 +11080,7 @@ export function buildConsultationEntry(
 
     let philosophy: string;
     if (isAssessmentFocused) {
-      philosophy = `I have your ${activeSystem.name}${locationNote} system on file: ${componentList}.${tendenciesNote} I can evaluate how these components interact — whether they compound the same tendency or balance each other — and identify where the chain\'s character is being shaped.`;
+      philosophy = `I have your ${activeSystem.name}${locationNote} system on file: ${componentList}.${tendenciesNote} I can evaluate how these components interact — whether they compound the same tendency or balance each other — and identify where the system\'s character is being shaped.`;
     } else if (isUpgradeFocused) {
       philosophy = `Working from your ${activeSystem.name}${locationNote} system: ${componentList}.${tendenciesNote} I can map your upgrade priorities against the current architectural balance — identifying where the most effective intervention lies rather than just the most expensive component change.`;
     } else {
@@ -10792,16 +11134,16 @@ export function buildConsultationEntry(
   // ── No active system: original consultation intake flow ──
   let philosophy: string;
   if (isAssessmentFocused) {
-    philosophy = 'Audio XX evaluates systems by examining how components interact — whether they compound the same tendency or balance each other. A system that leans warm throughout the chain behaves very differently from one where a precise source feeds a rich amplifier. The interaction matters more than any single component\'s quality.';
+    philosophy = 'Audio XX evaluates systems by examining how components interact — whether they compound the same tendency or balance each other. A system that leans warm throughout behaves very differently from one where a precise source feeds a rich amplifier. The interaction matters more than any single component\'s quality.';
   } else if (isUpgradeFocused) {
-    philosophy = 'Before recommending an upgrade path, Audio XX needs to understand your current system\'s architectural balance — where energy accumulates, where it\'s absorbed, and what the chain emphasises as a whole. The most effective upgrade often isn\'t the most expensive component — it\'s the one that resolves the most meaningful imbalance.';
+    philosophy = 'Before recommending an upgrade path, Audio XX needs to understand your current system\'s architectural balance — where energy accumulates, where it\'s absorbed, and what the system emphasises as a whole. The most effective upgrade often isn\'t the most expensive component — it\'s the one that resolves the most meaningful imbalance.';
   } else {
     philosophy = 'Audio XX approaches system guidance by examining the interaction between components, your listening priorities, and your room context. The goal is to identify whether your current system is well-aligned with what you value — and if not, where the most effective intervention lies.';
   }
 
   const tendencies = priorityParts.length > 0
     ? `You've mentioned wanting ${priorityParts.join(' and ')} — that gives a starting direction. To map those priorities to specific system interactions, I need to know what you're working with.`
-    : 'To provide a meaningful assessment, I need to understand the components in your chain and how they interact. Generic advice without system context tends to be less useful than targeted guidance.';
+    : 'To provide a meaningful assessment, I need to understand the components in your system and how they interact. Generic advice without system context tends to be less useful than targeted guidance.';
 
   const followUp = 'What components make up your current system? The key pieces are:\n\n' +
     '— Source (DAC, streamer, turntable)\n' +
@@ -10966,7 +11308,7 @@ export function buildCableAdvisory(
   // Philosophy — cable strategy in audio systems
   let philosophy: string;
   if (cableTypes.includes('speaker') && cableTypes.includes('interconnect')) {
-    philosophy = 'Speaker cables and interconnects play different roles in the chain. Interconnects carry low-level signals between source and amplification — their character influences how detail and texture are transmitted. Speaker cables carry high-current signals to the drivers — their geometry and conductor material affect how dynamics, transient speed, and tonal weight are delivered. Both can shift the system\'s tonal balance, but speaker cables tend to have more audible impact on dynamics and bass character.';
+    philosophy = 'Speaker cables and interconnects play different roles in a system. Interconnects carry low-level signals between source and amplification — their character influences how detail and texture are transmitted. Speaker cables carry high-current signals to the drivers — their geometry and conductor material affect how dynamics, transient speed, and tonal weight are delivered. Both can shift the system\'s tonal balance, but speaker cables tend to have more audible impact on dynamics and bass character.';
   } else if (cableTypes.includes('speaker')) {
     philosophy = 'Speaker cables carry high-current signals from amplifier to drivers. Their conductor material, geometry, and dielectric influence how dynamics, transient speed, and tonal weight are delivered. They tend to have more audible impact on the system\'s macro character than interconnects.';
   } else if (cableTypes.includes('interconnect')) {
@@ -10974,7 +11316,7 @@ export function buildCableAdvisory(
   } else if (cableTypes.includes('power')) {
     philosophy = 'Power cables affect the noise floor and dynamic headroom of each component. Their impact is often described in terms of background blackness, dynamic ease, and a sense of effortlessness rather than tonal shifts. Results vary significantly by component and power supply design.';
   } else {
-    philosophy = 'Cables are a system-tuning tool, not a standalone upgrade. Their role is to transmit signal with minimal coloration — or, in some cases, to introduce a deliberate tonal shift that compensates for tendencies elsewhere in the chain. The most effective cable choice depends on what the rest of the system is doing.';
+    philosophy = 'Cables are a system-tuning tool, not a standalone upgrade. Their role is to transmit signal with minimal coloration — or, in some cases, to introduce a deliberate tonal shift that compensates for tendencies elsewhere in the system. The most effective cable choice depends on what the rest of the system is doing.';
   }
 
   // Tendencies — system-specific cable direction
@@ -10990,7 +11332,7 @@ export function buildCableAdvisory(
   } else if (desireParts.length > 0) {
     tendencies = `You've expressed wanting ${desireParts.join(' and ')} from the cable upgrade. These qualities are often achievable through cable selection, but the degree of change depends on the system context. Cables tend to shift the balance — they don't transform the architecture.`;
   } else if (systemComponents.length > 0) {
-    tendencies = `With ${systemComponents.join(' and ')} in the chain, the cable direction depends on what you want to shift. Cables can fine-tune tonal balance, dynamic weight, and spatial presentation — but only meaningfully when the tuning goal is clear.`;
+    tendencies = `With ${systemComponents.join(' and ')} in the system, the cable direction depends on what you want to shift. Cables can fine-tune tonal balance, dynamic weight, and spatial presentation — but only meaningfully when the tuning goal is clear.`;
   } else {
     tendencies = 'Cable recommendations depend heavily on system context. Without knowing the source, amplification, and speakers, cable advice tends to be generic. The most useful starting point is understanding what the system currently does well and where you want to shift the balance.';
   }

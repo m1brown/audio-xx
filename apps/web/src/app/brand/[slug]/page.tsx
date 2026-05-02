@@ -93,6 +93,7 @@ function productToAdvisoryOption(p: Product): AdvisoryOption {
     buyingContext: p.buyingContext,
     manufacturerUrl: p.retailer_links?.[0]?.url,
     links: p.retailer_links?.map((l) => ({ label: l.label, url: l.url })),
+    catalogDescription: p.description,
   };
 }
 
@@ -171,11 +172,11 @@ export default async function BrandPage({ params }: PageProps) {
         {(() => {
           // Prefer curated media images; fall back to legacy fields
           const imgs = heroImages.length > 0
-            ? heroImages.map((m) => ({ src: m.url, alt: m.caption ?? displayName }))
+            ? heroImages.map((m) => ({ src: m.url, alt: m.caption ?? displayName, credit: m.credit, sourceUrl: m.sourceUrl }))
             : (() => {
                 const src1 = profile?.representativeImageUrl ?? profile?.logoUrl ?? null;
                 if (!src1) return [];
-                const result = [{ src: src1, alt: displayName }];
+                const result: Array<{ src: string; alt: string; credit?: string; sourceUrl?: string }> = [{ src: src1, alt: displayName }];
                 if (profile?.secondaryImageUrl) result.push({ src: profile.secondaryImageUrl, alt: `${displayName} — additional` });
                 return result;
               })();
@@ -187,10 +188,14 @@ export default async function BrandPage({ params }: PageProps) {
               marginBottom: '1.25rem',
             }}>
               {imgs.map((img, i) => (
-                <div
+                <figure
                   key={i}
                   style={{
                     flex: imgs.length > 1 ? '1 1 50%' : '1 1 100%',
+                    margin: 0,
+                  }}
+                >
+                  <div style={{
                     maxHeight: '340px',
                     borderRadius: '8px',
                     overflow: 'hidden',
@@ -199,15 +204,30 @@ export default async function BrandPage({ params }: PageProps) {
                     alignItems: 'center',
                     justifyContent: 'center',
                     padding: '0.5rem 0',
-                  }}
-                >
-                  <img
-                    src={img.src}
-                    alt={img.alt}
-                    loading="lazy"
-                    style={{ maxWidth: '100%', maxHeight: '320px', objectFit: 'contain', display: 'block' }}
-                  />
-                </div>
+                  }}>
+                    <img
+                      src={img.src}
+                      alt={img.alt}
+                      loading="lazy"
+                      style={{ maxWidth: '100%', maxHeight: '320px', objectFit: 'contain', display: 'block' }}
+                    />
+                  </div>
+                  {img.credit && (
+                    <figcaption style={{
+                      marginTop: '0.2rem',
+                      fontSize: '0.72rem',
+                      color: COLOR.textMuted,
+                      textAlign: 'right',
+                    }}>
+                      Image:{' '}
+                      {img.sourceUrl ? (
+                        <a href={img.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: COLOR.textMuted, textDecoration: 'underline', textUnderlineOffset: '2px' }}>
+                          {img.credit}
+                        </a>
+                      ) : img.credit}
+                    </figcaption>
+                  )}
+                </figure>
               ))}
             </div>
           );
@@ -313,15 +333,26 @@ export default async function BrandPage({ params }: PageProps) {
               style={{ maxWidth: '100%', maxHeight: '260px', objectFit: 'contain', display: 'block' }}
             />
           </div>
-          {postPhiloImage.caption && (
+          {(postPhiloImage.caption || postPhiloImage.credit) && (
             <figcaption style={{
               marginTop: '0.3rem',
               fontSize: '0.8rem',
               color: COLOR.textMuted,
-              fontStyle: 'italic',
               textAlign: 'center',
             }}>
-              {postPhiloImage.caption}
+              {postPhiloImage.caption && (
+                <span style={{ fontStyle: 'italic' }}>{postPhiloImage.caption}</span>
+              )}
+              {postPhiloImage.credit && (
+                <span style={{ display: 'block', fontSize: '0.72rem', marginTop: '0.15rem' }}>
+                  Image:{' '}
+                  {postPhiloImage.sourceUrl ? (
+                    <a href={postPhiloImage.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: COLOR.textMuted, textDecoration: 'underline', textUnderlineOffset: '2px' }}>
+                      {postPhiloImage.credit}
+                    </a>
+                  ) : postPhiloImage.credit}
+                </span>
+              )}
             </figcaption>
           )}
         </figure>

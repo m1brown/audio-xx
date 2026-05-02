@@ -4880,6 +4880,7 @@ function selectProductExamples(
       catalogTopology: product.topology,
       catalogCountry: product.country,
       catalogBrandScale: product.brandScale,
+      catalogDescription: product.description,
       catalogSubcategory: (product as any).subcategory,
       // Flag when this is the user's current component
       isCurrentComponent: isCurrent || undefined,

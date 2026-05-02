@@ -389,6 +389,15 @@ export interface MemoFindings {
   // ── System-level signals (controlled tags only) ──
   /** Whether the system appears deliberately assembled. */
   isDeliberate: boolean;
+  /**
+   * Whether components share aligned voicing from specialist/boutique brands.
+   * When true, axis stacking is system identity — not a constraint.
+   */
+  isCoherent: boolean;
+  /** Traits shared by the coherent system's voicing direction. */
+  coherentSharedTraits: string[];
+  /** What the coherent voicing deliberately trades away. */
+  coherentTradeoffs: string[];
   /** Structured signals supporting the deliberateness assessment. */
   deliberatenessSignals: DeliberatenessSignal[];
   /** Inferred listener priorities (controlled tags). */
