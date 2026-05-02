@@ -391,8 +391,10 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
 
   // Parse both old (v1) and new (v2) section headers for backwards compat.
   const overview = findSection('system read') ?? findSection('overview');
+  const systemLogic = findSection('system logic');
   const strengths = findSection('does well') ?? findSection('doing well');
   const constrained = findSection('constrained');
+  const primaryLeverage = findSection('primary leverage');
   const identity = findSection('listener alignment') ?? findSection('identity');
   const decision = findSection('decision');
   const tradeoffs = findSection('trade-offs') ?? findSection('trade offs');
@@ -670,6 +672,26 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
         </section>
       )}
 
+      {/* System logic — causal chain rows. */}
+      {systemLogic && (
+        <section style={{
+          marginBottom: sectionGap,
+          padding: '1rem 1.25rem',
+          background: '#f8f7f3',
+          borderRadius: '6px',
+          fontFamily: 'var(--font-mono, monospace)',
+          fontSize: '0.85rem',
+          lineHeight: 1.7,
+          whiteSpace: 'pre-line',
+          color: COLORS.text,
+        }}>
+          {sectionLabel('System logic')}
+          {systemLogic.body.split('\n').filter(Boolean).map((row, i) => (
+            <div key={i}>{row}</div>
+          ))}
+        </section>
+      )}
+
       {/* Strengths. */}
       {strengths && (
         <section style={{ marginBottom: sectionGap }}>
@@ -692,7 +714,28 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
         </section>
       )}
 
-      {/* Listener alignment. */}
+      {/* Primary leverage — the ONE component to change. */}
+      {primaryLeverage && (
+        <section style={{
+          marginBottom: sectionGap,
+          padding: '1.25rem 1.5rem',
+          background: '#fbfaf6',
+          borderRadius: '6px',
+          borderLeft: `4px solid ${COLORS.accent}`,
+        }}>
+          {sectionLabel('Primary leverage', { emphasis: 'primary' })}
+          {primaryLeverage.body.split('\n').filter(Boolean).map((line, i) => (
+            <div key={i} style={{
+              fontSize: FONTS.bodySize,
+              lineHeight: 1.75,
+              color: COLORS.text,
+              fontWeight: line.startsWith('Change this') ? 500 : 400,
+            }}>{line}</div>
+          ))}
+        </section>
+      )}
+
+      {/* Listener alignment (legacy — no longer emitted). */}
       {identity && (
         <section style={{ marginBottom: sectionGap }}>
           {sectionLabel('Listener alignment')}

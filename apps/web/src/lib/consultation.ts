@@ -4599,6 +4599,16 @@ export interface SystemComponent {
 const CATALOG_NAME_ALIASES: Record<string, string> = {
   'bluesound node': 'bluesound node x',
   node: 'node x',
+  // Goldmund JOB → JOB: the JOB brand is a sub-brand of Goldmund.
+  // Users may enter brand as "Goldmund" but the catalog lists brand as "JOB".
+  'goldmund job integrated': 'job integrated',
+  'job integrated': 'integrated',
+};
+
+// Brand aliases: maps parent-brand names to the catalog brand.
+// Used when the user enters a parent brand but the catalog uses the sub-brand.
+const BRAND_ALIASES: Record<string, string> = {
+  goldmund: 'job',
 };
 
 /** Apply CATALOG_NAME_ALIASES to a normalized lookup key. */
@@ -4706,8 +4716,10 @@ export function resolveComponentRoles(
 //   • Narrative wording scales with confidence: "uses" (high),
 //     "likely uses… If…" (medium), "unclear" (low).
 
-/** Patterns for classifying DAC-hosting components. */
-const AMP_ROLES_RE = /\b(amp|amplifier|integrated|headphone_amp|preamp)\b/i;
+/** Patterns for classifying DAC-hosting components.
+ *  headphone_amp is excluded — a DAC with a headphone output (Chord Hugo,
+ *  RME ADI-2) is still a standalone DAC, not an integrated amplifier. */
+const AMP_ROLES_RE = /\b(amp|amplifier|integrated|preamp)\b/i;
 const SOURCE_ROLES_RE = /\b(streamer|transport|cd|cdp|network|player|digital)\b/i;
 
 type DACHostType = 'standalone' | 'integrated' | 'source';
@@ -5684,6 +5696,7 @@ export function buildSystemAssessment(
       const aliasedName = aliasCatalogLookup(nameLower);
       const aliasedStripped = aliasCatalogLookup(strippedNameLower);
       const aliasedFull = aliasCatalogLookup(fullName.toLowerCase());
+      const aliasedBrand = BRAND_ALIASES[brandLower] ?? brandLower;
       const product = ALL_PRODUCTS.find(
         (p) => {
           const pName = p.name.toLowerCase();
@@ -5697,7 +5710,10 @@ export function buildSystemAssessment(
             || pFull === aliasedFull
             // Brand+partial-name: "horn" matches inside "horns" when brand matches
             || (pBrand === brandLower && nameLower.length >= 2 && pName.includes(nameLower))
-            || (pBrand === brandLower && strippedNameLower.length >= 2 && pName.includes(strippedNameLower));
+            || (pBrand === brandLower && strippedNameLower.length >= 2 && pName.includes(strippedNameLower))
+            // Brand alias: e.g. brand "goldmund" → catalog brand "job"
+            || (pBrand === aliasedBrand && pName === aliasedName)
+            || (pBrand === aliasedBrand && nameLower.length >= 2 && pName.includes(nameLower));
         },
       );
       // Also mark partial product name forms as processed (e.g. "diva" for "Diva Monitor")
@@ -6389,7 +6405,27 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       dacNote = `\n\nYour system includes multiple DAC-capable components. The ${dac.activeDACName} is the most likely active DAC, but the actual conversion path depends on how they are connected.`;
     }
   } else if (dac.needsDACClarification) {
-    dacNote = `\n\nYour system includes multiple DAC-capable components, and the active conversion path is unclear. Which DAC is handling conversion affects the sound — worth confirming your signal routing.`;
+    // Suppress DAC ambiguity when a clearly dominant DAC exists:
+    // If one component's primary role is 'dac' and the other DAC-capable
+    // components are streamers/sources (with an internal DAC as secondary),
+    // the dedicated DAC is obviously active. No need to confuse the user.
+    const hasDedicatedDAC = comps.some(c => (c.role || '').toLowerCase() === 'dac');
+    const otherDACsAreSourcesOnly = comps.every(c => {
+      const r = (c.role || '').toLowerCase();
+      if (r === 'dac') return true; // the dedicated DAC itself — skip
+      // Check if this component has DAC capability (via roles array)
+      const roles = (c as any).roles as string[] | undefined;
+      const hasDACRole = roles?.some((ro: string) => ro.toLowerCase() === 'dac');
+      if (!hasDACRole) return true; // not DAC-capable, no conflict
+      // It IS DAC-capable — is its primary role a source type?
+      return r === 'streamer' || r === 'source' || r === 'transport';
+    });
+    if (hasDedicatedDAC && otherDACsAreSourcesOnly) {
+      // Clear dominant DAC — suppress clarification
+      dacNote = '';
+    } else {
+      dacNote = `\n\nYour system includes multiple DAC-capable components, and the active conversion path is unclear. Which DAC is handling conversion affects the sound — worth confirming your signal routing.`;
+    }
   }
 
   // ── Amp/speaker power-match note ──
@@ -6418,11 +6454,186 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     powerNote = `\n\nThe ${pm.ampName} and ${pm.speakerName} are well-matched on power and efficiency. ${pm.relevantInteraction}`;
   }
 
+  // ── System thesis: max 2 sentences. ──
+  // Sentence 1: interaction-aware — names the upstream character AND
+  //   downstream counterbalance (or alignment), not just dominant axes.
+  // Sentence 2: most consequential note (power > source transport > deliberate).
+  //
+  // Strategy: partition components into "upstream" (dac, amp, integrated)
+  // and "downstream" (speaker, headphone) and "source" (streamer, turntable,
+  // transport). Describe the upstream character, then contrast or align with
+  // downstream, and note the source role.
+  const upstreamComps = comps.filter(c => {
+    const r = (c.role || '').toLowerCase();
+    return r === 'dac' || r === 'amplifier' || r === 'amp' || r === 'integrated';
+  });
+  const downstreamComps = comps.filter(c => {
+    const r = (c.role || '').toLowerCase();
+    return r === 'speaker' || r === 'speakers' || r === 'headphone' || r === 'headphones';
+  });
+  const sourceComps = comps.filter(c => {
+    const r = (c.role || '').toLowerCase();
+    return r === 'streamer' || r === 'source' || r === 'turntable' || r === 'transport';
+  });
+
+  // Derive upstream and downstream character from per-component axes
+  const upstreamAxes = findings.perComponentAxes.filter(a =>
+    upstreamComps.some(c => c.name === a.name),
+  );
+  const downstreamAxes = findings.perComponentAxes.filter(a =>
+    downstreamComps.some(c => c.name === a.name),
+  );
+
+  // Upstream lean: are the upstream components bright/detailed or warm/smooth?
+  const upBright = upstreamAxes.filter(a => a.axes.warm_bright === 'bright').length;
+  const upWarm = upstreamAxes.filter(a => a.axes.warm_bright === 'warm').length;
+  const upDetailed = upstreamAxes.filter(a => a.axes.smooth_detailed === 'detailed').length;
+  const upSmooth = upstreamAxes.filter(a => a.axes.smooth_detailed === 'smooth').length;
+
+  const downWarm = downstreamAxes.filter(a => a.axes.warm_bright === 'warm').length;
+  const downBright = downstreamAxes.filter(a => a.axes.warm_bright === 'bright').length;
+  const downSmooth = downstreamAxes.filter(a => a.axes.smooth_detailed === 'smooth').length;
+
+  // Build upstream character phrase
+  const upstreamNames = upstreamComps.map(c => c.name);
+  const downstreamNames = downstreamComps.map(c => c.name);
+  const sourceNames = sourceComps.map(c => c.name);
+
+  let upstreamChar = '';
+  if (upBright > 0 && upDetailed > 0) upstreamChar = 'speed-and-clarity';
+  else if (upBright > 0) upstreamChar = 'clarity-forward';
+  else if (upDetailed > 0) upstreamChar = 'detail-forward';
+  else if (upWarm > 0 && upSmooth > 0) upstreamChar = 'warmth-and-body';
+  else if (upWarm > 0) upstreamChar = 'warm-leaning';
+  else upstreamChar = 'neutral';
+
+  // Build downstream counterbalance phrase
+  let downstreamPhrase = '';
+  const hasContrast = (upBright > 0 && downWarm > 0) || (upDetailed > 0 && downSmooth > 0)
+    || (upWarm > 0 && downBright > 0);
+  if (hasContrast) {
+    // Counterbalance
+    if (downWarm > 0 || downSmooth > 0) {
+      downstreamPhrase = `balanced by the tonal richness of the ${downstreamNames.join(' and ')}`;
+    } else {
+      downstreamPhrase = `counterbalanced by the ${downstreamNames.join(' and ')}`;
+    }
+  } else {
+    // Alignment
+    downstreamPhrase = `reinforced by the ${downstreamNames.join(' and ')}`;
+  }
+
+  // Compose interaction-aware thesis
+  let thesisSentence1: string;
+  if (upstreamComps.length > 0 && downstreamComps.length > 0) {
+    const upList = upstreamNames.join(' and ');
+    thesisSentence1 = `This is a ${upstreamChar} system anchored by ${upList}, ${downstreamPhrase}.`;
+    if (sourceComps.length > 0) {
+      thesisSentence1 += ` The ${sourceNames.join(' and ')} feeds the chain as a neutral transport.`;
+    }
+  } else {
+    // Fallback: no clear upstream/downstream split
+    const coreId = describeCoreIdentity(axes);
+    thesisSentence1 = `${names} form ${coreId}.`;
+  }
+
+  // Sentence 2: power mismatch > deliberate observation (DAC note removed
+  // from thesis — handled separately or suppressed per Prompt 1C).
+  const thesisSentence2 = powerNote.trim() || '';
   const overview = [
     `**System read**`,
     ``,
-    `${names} form a system built around ${tonal}, ${detail}, ${timing}, and ${stage}. ${deliberate} At its core this is ${describeCoreIdentity(axes)}.${dacNote}${powerNote}`,
+    thesisSentence2
+      ? `${thesisSentence1} ${thesisSentence2}`
+      : thesisSentence1,
   ].join('\n');
+
+  // ── System logic: Component → Behavior → System effect (max 4 rows) ──
+  // Interaction-based: each row explains what the component DOES to the system,
+  // not its generic role. Derives behavior from axes + strengths, and effect
+  // from how the component interacts with the system axes.
+  const systemLogicRows: string[] = [];
+
+  // Helper: derive a short behavior phrase from axes and strengths
+  function deriveComponentBehavior(c: typeof comps[0], compAxes: typeof findings.perComponentAxes[0] | undefined): string {
+    const wb = compAxes?.axes.warm_bright;
+    const sd = compAxes?.axes.smooth_detailed;
+    const ec = compAxes?.axes.elastic_controlled;
+    const parts: string[] = [];
+    if (wb === 'bright') parts.push('fast');
+    else if (wb === 'warm') parts.push('tone-rich');
+    if (sd === 'detailed') parts.push(wb === 'bright' ? 'lean' : 'resolving');
+    else if (sd === 'smooth') parts.push('smooth');
+    if (ec === 'elastic') parts.push('high flow');
+    else if (ec === 'controlled') parts.push('controlled');
+    if (parts.length === 0 && wb === 'neutral' && sd !== 'neutral') {
+      parts.push(sd === 'detailed' ? 'neutral, detailed' : 'neutral');
+    }
+    if (parts.length === 0) parts.push('neutral, controlled');
+    return parts.join(', ');
+  }
+
+  // Helper: derive interaction effect — what this component does relative to system
+  function deriveInteractionEffect(
+    c: typeof comps[0],
+    compAxes: typeof findings.perComponentAxes[0] | undefined,
+    sysAxes: typeof axes,
+  ): string {
+    const roleKey = (c.role || '').toLowerCase();
+    const wb = compAxes?.axes.warm_bright;
+    const sd = compAxes?.axes.smooth_detailed;
+
+    // Source/streamer: typically transparent
+    if (roleKey === 'streamer' || roleKey === 'source' || roleKey === 'turntable' || roleKey === 'transport') {
+      if (wb === 'neutral') return 'stays out of the way';
+      if (wb === 'warm') return 'adds warmth from the source stage';
+      return 'contributes clarity from the source stage';
+    }
+    // DAC: tonal center
+    if (roleKey === 'dac') {
+      if (wb === 'bright' || sd === 'detailed') return 'defines the tonal center';
+      if (wb === 'warm') return 'anchors the tonal foundation with warmth';
+      return 'sets the tonal foundation';
+    }
+    // Amplifier: preserves or shapes
+    if (roleKey === 'amplifier' || roleKey === 'amp' || roleKey === 'integrated') {
+      // Does it match upstream (DAC) lean?
+      if (wb === sysAxes.warm_bright && sd === sysAxes.smooth_detailed) return 'preserves speed and attack';
+      if (wb === 'warm' && sysAxes.warm_bright === 'bright') return 'adds body to a lean upstream';
+      if (wb === 'bright' && sysAxes.warm_bright === 'warm') return 'adds speed to a warm upstream';
+      if (wb === 'neutral') return 'passes signal with low coloration';
+      return 'preserves upstream character';
+    }
+    // Speaker/headphone: final voice
+    if (roleKey === 'speaker' || roleKey === 'speakers' || roleKey === 'headphone' || roleKey === 'headphones') {
+      // Counterbalance or reinforce?
+      if ((wb === 'warm' && sysAxes.warm_bright === 'bright') || (sd === 'smooth' && sysAxes.smooth_detailed === 'detailed')) {
+        return 'adds body and prevents dryness';
+      }
+      if (wb === sysAxes.warm_bright) return 'reinforces the system\'s overall lean';
+      if (wb === 'warm') return 'adds body at the output stage';
+      return 'shapes the final presentation';
+    }
+    return 'contributes to overall character';
+  }
+
+  // Order: DAC first (tonal center), then amp, then speaker, then source last
+  const logicOrder = ['dac', 'amplifier', 'amp', 'integrated', 'speaker', 'speakers', 'headphone', 'headphones', 'streamer', 'source', 'turntable', 'transport'];
+  const sortedComps = [...comps].sort((a, b) => {
+    const aIdx = logicOrder.indexOf((a.role || '').toLowerCase());
+    const bIdx = logicOrder.indexOf((b.role || '').toLowerCase());
+    return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+  });
+  for (const c of sortedComps) {
+    if (systemLogicRows.length >= 4) break;
+    const compAxes = findings.perComponentAxes.find(a => a.name === c.name);
+    const behavior = deriveComponentBehavior(c, compAxes);
+    const effect = deriveInteractionEffect(c, compAxes, axes);
+    systemLogicRows.push(`${c.name} → ${behavior} → ${effect}`);
+  }
+  const systemLogicSection = systemLogicRows.length > 0
+    ? [`**System logic**`, ``, ...systemLogicRows].join('\n')
+    : '';
 
   // Dedupe component verdicts on the same normalized name key used above,
   // so a duplicated catalog/free-text pair doesn't generate two strength bullets.
@@ -6516,36 +6727,34 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
 
   // Optionally surface one character-trait bullet after the role bullets,
   // but only when it adds information the component bullets haven't
-  // already covered via their own contributors.
-  for (const t of charTraits) {
-    const pKey = t.property.toLowerCase();
-    if (usedPropertyKeys.has(pKey)) continue;
-    const allCovered = t.contributors.every((c) =>
-      usedComponentKeys.has(c.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()),
-    );
-    if (allCovered) continue;
-    selectedStrengths.push({
-      kind: 'trait',
-      property: t.property,
-      contributors: t.contributors,
-      key: pKey,
-    });
-    usedPropertyKeys.add(pKey);
-    break;
+  // already covered AND we haven't already hit the 3-bullet cap.
+  if (selectedStrengths.length < 3) {
+    for (const t of charTraits) {
+      if (selectedStrengths.length >= 3) break;
+      const pKey = t.property.toLowerCase();
+      if (usedPropertyKeys.has(pKey)) continue;
+      const allCovered = t.contributors.every((c) =>
+        usedComponentKeys.has(c.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()),
+      );
+      if (allCovered) continue;
+      selectedStrengths.push({
+        kind: 'trait',
+        property: t.property,
+        contributors: t.contributors,
+        key: pKey,
+      });
+      usedPropertyKeys.add(pKey);
+      break;
+    }
   }
+  // Hard cap: max 3 strength bullets (output contract).
+  const cappedStrengths = selectedStrengths.slice(0, 3);
   let sn = 1;
-  for (const item of selectedStrengths) {
+  for (const item of cappedStrengths) {
     if (item.kind === 'component') {
-      const tail = compTails[(sn - 1) % compTails.length](item.role);
-      strengths.push(`${sn}. **${item.name}** — ${item.text}. ${tail}`);
+      // One sentence per bullet: component + what it does. No tail.
+      strengths.push(`${sn}. **${item.name}** — ${item.text}.`);
     } else {
-      // Pre-review blocker fix (PDF 2 — PrimaLuna / NODE X / P3ESR review):
-      // upstream stacking detection occasionally surfaces the same component
-      // twice (different name forms resolving to the same product), and the
-      // raw `.join(' and ')` then renders text like "X and X and Y and Y are
-      // pulling in the same direction." Dedupe defensively here, and use an
-      // oxford-comma joiner when the list has more than two members so the
-      // reading flows naturally.
       const seen = new Set<string>();
       const dedupedContributors = item.contributors.filter((c) => {
         const k = (c || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -6554,8 +6763,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
         return true;
       });
       const contribs = joinWithCommas(dedupedContributors);
-      const tail = traitTails[(sn - 1) % traitTails.length](contribs);
-      strengths.push(`${sn}. **${humanizeProperty(item.property)}** — ${tail}`);
+      strengths.push(`${sn}. **${humanizeProperty(item.property)}** — ${contribs} reinforce this quality consistently.`);
     }
     sn++;
   }
@@ -6564,32 +6772,12 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       if (c.strengths[0]) {
         strengths.push(`${sn}. **${c.name}** — ${c.strengths[0]}.`);
         sn++;
-        if (sn > 2) break;
+        if (sn > 3) break;
       }
     }
   }
   if (strengths.length === 0) {
-    strengths.push(`1. The system is internally consistent. No component is fighting the others, and that coherence is the primary strength.`);
-  }
-
-  // ── Elasticity augmentation (single, in-place). ──────────────────
-  // When timing / flow / phrasing is a clear strength of this system,
-  // surface the canonical listener term "elasticity" exactly once,
-  // attached to the first relevant strength bullet. The term is paired
-  // with a short concrete cue so it lands as a recognisable listening
-  // experience rather than jargon. No new bullet, no use elsewhere.
-  const elasticityProfile = axes.elastic_controlled === 'elastic';
-  const alreadyMentionsElasticity = strengths.some(s => /elasticity/i.test(s));
-  if (elasticityProfile && !alreadyMentionsElasticity) {
-    // Prefer attaching to a bullet that already references the
-    // amp / source / cdp role (where timing usually originates), then
-    // fall back to a trait bullet, then to the first bullet.
-    const flowRoleRe = /\b(amp|amplifier|integrated|preamp|source|streamer|transport|cdp|cd player|dac)\b/i;
-    let idx = strengths.findIndex(s => flowRoleRe.test(s));
-    if (idx === -1) idx = strengths.findIndex(s => /flow|timing|swing|phrasing|elastic/i.test(s));
-    if (idx === -1) idx = 0;
-    const augmentation = ' The timing has noticeable elasticity — phrases expand and contract naturally rather than sounding rigid.';
-    strengths[idx] = strengths[idx].replace(/\s*$/, '') + augmentation;
+    strengths.push(`1. Internal consistency — no component is fighting the others.`);
   }
 
   const strengthsSection = [`**What the system does well**`, ``, ...strengths].join('\n');
@@ -6861,15 +7049,24 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   };
   const tierOf = (c: typeof dedupedComps[number]): number =>
     TIER_RANK[c.priceTier ?? ''] ?? 0;
-  const SOURCE_ROLES = /\b(dac|source|streamer|transport|cd|cdp|network|player|digital)\b/i;
+  // SOURCE_ROLES: components that feed the chain (streamer, transport).
+  // DAC is NOT a source role for tier comparison — a DAC converts, it doesn't
+  // originate the signal. A streamer/transport is upstream of the DAC.
+  const SOURCE_ROLES = /\b(source|streamer|transport|cd|cdp|network|player|digital)\b/i;
   const DOWNSTREAM_ROLES = /\b(amp|amplifier|integrated|speaker|headphone|monitor)\b/i;
+  // For source-vs-downstream comparisons, DAC counts as downstream.
+  // A streamer at tier 1 feeding a DAC at tier 1 is a matched pair —
+  // the speaker being tier 3 should not make the streamer a bottleneck.
+  // DAC is NOT added to DOWNSTREAM_ROLES globally to avoid suppressing
+  // legitimate amp/speaker bottleneck detection.
+  const DOWNSTREAM_OR_DAC = /\b(amp|amplifier|integrated|speaker|headphone|monitor|dac)\b/i;
 
   if (primary.kind === 'none' || primary.kind === 'imbalance') {
     const withTiers = dedupedComps.filter(c => tierOf(c) > 0);
     if (withTiers.length >= 2) {
       // Downstream components with known tiers — the chain that the
-      // source feeds into.
-      const downstreamWithTiers = withTiers.filter(c => DOWNSTREAM_ROLES.test(c.role));
+      // source feeds into. For source comparisons, DAC is downstream.
+      const downstreamWithTiers = withTiers.filter(c => DOWNSTREAM_OR_DAC.test(c.role));
       const downstreamTiers = downstreamWithTiers.map(tierOf).filter(t => t > 0);
       const maxOverallTier = Math.max(...withTiers.map(tierOf));
 
@@ -7034,27 +7231,16 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   let constraintsSection: string;
 
   if (findings.isCoherent && findings.coherentSharedTraits.length > 0) {
-    // ── Coherent system: trade-offs section ──
-    // Expanded narrative that frames the system as intentionally voiced,
-    // describes what it prioritises and what it trades away.
+    // ── Coherent system: trade-offs as primary leverage ──
+    // Concise: what it prioritises, what it trades, one listening consequence.
     const traitsList = findings.coherentSharedTraits.join(', ');
     const tradeoffsList = findings.coherentTradeoffs.join(', ');
-    const componentNames = comps.map(c => c.name).join(' and ');
 
-    const coherentParts: string[] = [];
-    coherentParts.push(
-      `${componentNames} share a deliberate design direction, both prioritising ${traitsList}. The components reinforce the same sonic goals. Nothing in the chain is working against the rest.`,
-    );
-    coherentParts.push(
-      `That coherence has trade-offs: ${tradeoffsList}. These are architectural choices, not deficiencies. The system commits to a clear voice rather than trying to cover everything.`,
-    );
-
-    // Add listening context
-    coherentParts.push(
-      `This system will favour recordings with natural tone and dynamic variation. Material that depends on analytical precision or extreme transient speed may not be served as fully.`,
-    );
-
-    constraintsSection = [`**System trade-offs**`, ``, ...coherentParts].join('\n');
+    constraintsSection = [
+      `**System trade-offs**`,
+      ``,
+      `The system prioritises ${traitsList}. The trade-off: ${tradeoffsList}. These are architectural choices, not deficiencies.`,
+    ].join('\n');
   } else if (dominantInsight === 'bottleneck' && constraintParts.length > 0) {
     // ── True constraint: existing bottleneck narrative ──
     constraintsSection = [`**Where the system is constrained**`, ``, ...constraintParts].join('\n');
@@ -7062,32 +7248,101 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     constraintsSection = '';
   }
 
-  // ── Identity section ──
-  // Expanded for coherent systems: more depth on system character,
-  // internal synergy, and listening implications.
-  const identityCoreDesc = `This is ${describeCoreIdentity(axes)}. It rewards ${rewardFromAxes(axes)} and feels slightly out of its element with ${weakFromAxes(axes)}.`;
+  // Identity section removed per output contract — redundant with thesis.
 
-  const identitySection = findings.isCoherent
-    ? [
-      `**System character**`,
+  // ── Primary leverage section (output contract: mandatory) ──
+  // Exactly ONE component. Explicit. No vague language.
+  let primaryLeverageSection: string;
+  if (primary.kind === 'bottleneck') {
+    const axesText = primary.axes.slice(0, 2).map(listenerAxisLabel).join(' and ');
+    primaryLeverageSection = [
+      `**Primary leverage**`,
       ``,
-      `${identityCoreDesc} This identity runs consistently from source to transducer. Every component contributes to the same direction.`,
-      ``,
-      `No component is fighting the others. The system sounds unified rather than assembled. This level of coherence typically reflects careful selection or a shared design philosophy between the manufacturers.`,
-    ].join('\n')
-    : [
-      `**Listener alignment**`,
-      ``,
-      `${identityCoreDesc} That is a clear sonic personality, and the same character runs from source to transducer.`,
+      `Primary leverage: ${primary.component}`,
+      `Controls: ${axesText}`,
+      `Change this → more ${axesText} from the entire system`,
     ].join('\n');
+  } else if (primary.kind === 'component') {
+    const controlsText = primary.weakness.includes('weakest link')
+      ? 'overall resolution ceiling'
+      : primary.weakness.replace(/\.+$/, '');
+    primaryLeverageSection = [
+      `**Primary leverage**`,
+      ``,
+      `Primary leverage: ${primary.name}`,
+      `Controls: ${controlsText}`,
+      `Change this → unlock what the rest of the chain can already deliver`,
+    ].join('\n');
+  } else if (primary.kind === 'imbalance') {
+    const prop = humanizeProperty(primary.property);
+    primaryLeverageSection = [
+      `**Primary leverage**`,
+      ``,
+      `Primary leverage: system balance (${prop})`,
+      `Controls: ${prop} across the chain`,
+      `Change this → more even response across material`,
+    ].join('\n');
+  } else {
+    // ── KEEP with no bottleneck: identify DAC as voicing leverage ──
+    // When no structural constraint exists, the DAC is the preference-
+    // shaping component — changing it shifts tonal character without
+    // fixing a deficiency. This applies to both coherent and compensating
+    // systems: the DAC sets the tonal foundation either way.
+    const dacName = findings.activeDACInference.activeDACName;
+    const dacComp = dacName
+      ? comps.find(c => c.name === dacName)
+      : comps.find(c => (c.role || '').toLowerCase() === 'dac');
+    if (dacComp) {
+      primaryLeverageSection = [
+        `**Primary leverage**`,
+        ``,
+        `Primary leverage: ${dacComp.name} (DAC voicing)`,
+        `Controls: tonal balance and system character`,
+        `Change this → more tonal density, body, and decay if desired`,
+      ].join('\n');
+    } else {
+      primaryLeverageSection = [
+        `**Primary leverage**`,
+        ``,
+        `Primary leverage: none — system is at equilibrium`,
+        `Controls: n/a`,
+        `Change this → n/a (no single component limits the system)`,
+      ].join('\n');
+    }
+  }
 
-  const keepNames = keeps.slice(0, 3).map(k => k.name);
+  // Do nothing check: max 2 lines (output contract).
+  // System-specific: reference the actual balance this system provides
+  // and what the listener is likely valuing.
+  let doNothingLine1: string;
+  let doNothingLine2: string;
+
+  if (hasContrast && downstreamComps.length > 0 && upstreamComps.length > 0) {
+    // System has upstream/downstream contrast — reference the balance
+    const balanceQuality =
+      (upBright > 0 || upDetailed > 0) && (downWarm > 0 || downSmooth > 0)
+        ? 'the balance of clarity and body'
+        : (upWarm > 0) && (downBright > 0)
+          ? 'the balance of warmth and articulation'
+          : 'the balance';
+    doNothingLine1 = `If you value ${balanceQuality} this system provides, there is no reason to change it.`;
+    // Second line: explain what creates the balance
+    const counterComp = downstreamComps[0]?.name ?? 'the speakers';
+    const upstreamTrait = upBright > 0 || upDetailed > 0 ? 'warmth that the upstream chain deliberately omits' : 'clarity that the upstream chain does not prioritise';
+    doNothingLine2 = `The ${counterComp} ${downstreamComps.length === 1 ? 'is' : 'are'} doing the work of adding ${upstreamTrait}.`;
+  } else if (keeps.length > 0) {
+    const keepNames = keeps.slice(0, 3).map(k => k.name);
+    doNothingLine1 = `${keepNames.join(', ')} define this system's character — replacing any changes the sound significantly.`;
+    doNothingLine2 = 'If the system sounds right to you, that coherence is worth preserving.';
+  } else {
+    doNothingLine1 = `The system already works. Swapping components without clear cause risks an adjustment period with no guaranteed improvement.`;
+    doNothingLine2 = 'If the music sounds engaging, the system is doing its job.';
+  }
+
   const doNothingCheck = [
     `**Do nothing check**`,
     ``,
-    keeps.length > 0
-      ? `You already own a coherent system. ${keepNames.join(', ')} define its character — replacing any of them changes the overall sound significantly. Staying put preserves a system that works well on the music you actually listen to.`
-      : `The system already does its job. Changing components without a clear reason risks trading a working setup for an adjustment period with no guaranteed improvement.`,
+    `${doNothingLine1} ${doNothingLine2}`,
   ].join('\n');
 
   // ── Optimize section ──
@@ -7167,134 +7422,114 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   optimizeParts.push(chosenStepText);
   const actionPathSection = [`**Action path**`, ``, ...optimizeParts].join('\n');
 
-  // ── Decision section ──
-  // One of four verdicts, derived from the dominant-insight mode and
-  // the primary constraint. No hedging — a clear, one-line call.
+  // ── Decision section (output contract: KEEP / CHANGE [component] / UPGRADE PATH) ──
+  // No hedging. Must follow directly from primary leverage.
   let decisionVerdict: string;
   let riskLevel: string;
-  if (dominantInsight === 'identity') {
+  if (dominantInsight === 'identity' || primary.kind === 'none') {
     decisionVerdict = 'KEEP';
-    riskLevel = 'LOW';
-  } else if (primary.kind === 'none') {
-    decisionVerdict = 'KEEP';
-    riskLevel = 'LOW';
-  } else if (
-    primary.kind === 'bottleneck' &&
-    primary.axes.length >= 2
-  ) {
-    decisionVerdict = 'FIX A PROBLEM';
     riskLevel = 'LOW';
   } else if (primary.kind === 'bottleneck' || primary.kind === 'component') {
-    decisionVerdict = 'REFINE';
+    const compName = primary.kind === 'bottleneck' ? primary.component : primary.name;
+    decisionVerdict = `CHANGE ${compName}`;
     riskLevel = 'LOW';
   } else {
-    decisionVerdict = 'CHANGE DIRECTION';
+    // Imbalance — no single component swap fixes it
+    decisionVerdict = 'UPGRADE PATH';
     riskLevel = 'MEDIUM';
   }
 
+  // Decision: verdict + one-line reason.
+  // For KEEP systems with no bottleneck, reference DAC voicing as the optional change path.
+  const dacForDecision = (decisionVerdict === 'KEEP')
+    ? (findings.activeDACInference.activeDACName
+      ?? comps.find(c => (c.role || '').toLowerCase() === 'dac')?.name)
+    : null;
   const decisionReason =
-    decisionVerdict === 'KEEP' && findings.isCoherent
-      ? 'This is a coherent system. The components reinforce a shared design direction. There is nothing to fix — only a choice about whether these trade-offs continue to match your priorities.'
-      : decisionVerdict === 'KEEP'
-      ? 'The system is coherent and internally aligned. No single component is holding it back.'
-      : decisionVerdict === 'FIX A PROBLEM'
-        ? `The ${(primary as { component?: string; name?: string }).component ?? (primary as { name?: string }).name ?? 'current bottleneck'} is limiting what the rest of the system can deliver. Addressing it unlocks existing potential.`
-        : decisionVerdict === 'REFINE'
-          ? `The system is fundamentally sound, but one component constrains overall performance. A targeted swap raises the floor without changing the system's character.`
-          : 'The imbalance is deeper than a single component swap. A directional change shifts the system toward a different set of priorities.';
+    decisionVerdict === 'KEEP'
+      ? (dacForDecision
+        ? `No component is holding the system back. If you want more tonal density, change ${dacForDecision} first.`
+        : 'No component is holding the system back.')
+      : decisionVerdict === 'UPGRADE PATH'
+        ? 'The imbalance is architectural — a directional shift, not a single swap.'
+        : `It limits what the rest of the chain can deliver.`;
 
   const decisionSection = [
     `**Decision**`,
     ``,
-    `${decisionVerdict}`,
-    ``,
-    decisionReason,
+    `${decisionVerdict} — ${decisionReason}`,
   ].join('\n');
 
-  // ── Trade-offs section ──
-  // Explicit three-part structure: improves / gets worse / stays same.
-  const tradeOffImproves: string[] = [];
-  const tradeOffWorse: string[] = [];
-  const tradeOffSame: string[] = [];
+  // ── Trade-offs section (max 3 lines, output contract) ──
+  // ── Trade-offs (output contract: You gain / You give up / Watch out for) ──
+  let tradeOffGain: string;
+  let tradeOffGiveUp: string;
+  let tradeOffWatch: string;
 
   if (decisionVerdict === 'KEEP') {
-    tradeOffSame.push('Current sonic character and system coherence');
-    tradeOffSame.push('Listening engagement on familiar material');
-    tradeOffWorse.push('No access to qualities outside the current architecture');
+    if (dacForDecision) {
+      tradeOffGain = `You gain: more body, density, and harmonic weight (if you change ${dacForDecision})`;
+      tradeOffGiveUp = `You give up: the speed and transparency ${dacForDecision} currently provides`;
+      tradeOffWatch = 'Watch out for: swapping clarity for warmth without gaining engagement';
+    } else {
+      tradeOffGain = 'You gain: nothing new — system is at equilibrium';
+      tradeOffGiveUp = 'You give up: access to qualities outside this architecture';
+      tradeOffWatch = 'Watch out for: restlessness mistaken for a real problem';
+    }
   } else {
-    // What improves — derived from bottleneck axes or constraint description
+    // What you gain — derived from bottleneck axes or constraint
+    let gainText: string;
     if (primary.kind === 'bottleneck' && primary.axes.length > 0) {
-      for (const ax of primary.axes.slice(0, 2)) {
-        tradeOffImproves.push(listenerAxisLabel(ax));
-      }
+      gainText = primary.axes.slice(0, 2).map(listenerAxisLabel).join(' and ');
     } else if (primary.kind === 'component') {
-      tradeOffImproves.push('Resolution at the constrained link in the system');
+      gainText = 'resolution at the constrained link';
     } else if (primary.kind === 'imbalance') {
-      tradeOffImproves.push(`Balance across ${humanizeProperty(primary.property)}`);
+      gainText = `balance across ${humanizeProperty(primary.property)}`;
+    } else {
+      gainText = 'overall coherence';
     }
-    if (tradeOffImproves.length === 0) {
-      tradeOffImproves.push('Overall coherence and system ceiling');
-    }
-    // What gets worse — honest downside
-    if (keeps.length > 0) {
-      tradeOffWorse.push('Risk of disrupting the existing synergy between ' + keeps.slice(0, 2).map(k => k.name).join(' and '));
-    }
-    tradeOffWorse.push('Adjustment period — the system will sound different before it sounds better or worse');
-    // What stays the same
-    if (keeps.length > 0) {
-      tradeOffSame.push(`Core character (anchored by ${keeps[0].name})`);
-    }
-    tradeOffSame.push('Listening habits and room acoustics');
+    tradeOffGain = `You gain: ${gainText}`;
+    // What you give up
+    tradeOffGiveUp = keeps.length > 0
+      ? `You give up: existing synergy between ${keeps.slice(0, 2).map(k => k.name).join(' and ')}`
+      : 'You give up: familiarity — the system will sound different before it sounds better';
+    // Watch out for
+    tradeOffWatch = keeps.length > 0
+      ? `Watch out for: breaking what ${keeps[0].name} currently does well`
+      : 'Watch out for: lateral moves that sound different but not more engaging';
   }
 
   const tradeOffsSection = [
     `**Trade-offs**`,
     ``,
-    `What improves: ${tradeOffImproves.join(', ') || 'Nothing — system is at equilibrium'}`,
-    `What gets worse: ${tradeOffWorse.join('. ') || 'Nothing material'}`,
-    `What stays the same: ${tradeOffSame.join('. ')}`,
+    tradeOffGain,
+    tradeOffGiveUp,
+    tradeOffWatch,
   ].join('\n');
 
-  // ── Outcome validation section ──
-  // What the user should hear differently and how to judge success.
-  let outcomeValidation: string;
-  if (decisionVerdict === 'KEEP') {
-    outcomeValidation = 'Success means continued engagement. If in three months you are still listening regularly with the same enjoyment, the system is doing its job.';
-  } else {
-    const outcomeTerms: string[] = [];
-    if (primary.kind === 'bottleneck' && primary.axes.length > 0) {
-      for (const ax of primary.axes.slice(0, 2)) {
-        outcomeTerms.push(listenerAxisLabel(ax));
-      }
-    }
-    if (outcomeTerms.length === 0) {
-      outcomeTerms.push('resolution', 'coherence');
-    }
-    outcomeValidation = `After the change, listen for more ${outcomeTerms.join(' and ')} on recordings you know well. The improvement should be clearly audible, not subtle. If you start returning to music you had stopped playing, the change worked. If the system sounds different but not more engaging, re-evaluate.`;
-  }
+  // ── Final assembly (output contract) ──
+  // Sections:
+  //   1. System read (thesis, max 2 sentences)
+  //   2. System logic (Component → Behavior → Effect, max 4 rows)
+  //   3. What the system does well (max 3 bullets)
+  //   4. Where the system is constrained / System trade-offs
+  //   5. Primary leverage (mandatory)
+  //   6. Decision (KEEP / CHANGE [x] / UPGRADE PATH)
+  //   7. Trade-offs (You gain / You give up / Watch out for)
+  //   8. Action path (when not KEEP)
+  //   9. Do nothing check (max 2 lines)
+  void riskLevel; // suppressed — was appended to action path, now removed for brevity
 
-  const outcomeSection = [
-    `**Outcome validation**`,
-    ``,
-    outcomeValidation,
-  ].join('\n');
-
-  // Append risk level to the action path section
-  const actionPathWithRisk = decisionVerdict === 'KEEP'
-    ? '' // No action path for KEEP
-    : actionPathSection + `\n\nRisk level: ${riskLevel}`;
-
-  // Filter out empty sections so no trailing blank lines appear.
   return [
     overview,
+    systemLogicSection,
     strengthsSection,
     constraintsSection,
-    identitySection,
+    primaryLeverageSection,
     decisionSection,
     tradeOffsSection,
-    decisionVerdict === 'KEEP' ? '' : actionPathWithRisk,
+    decisionVerdict === 'KEEP' ? '' : actionPathSection,
     doNothingCheck,
-    outcomeSection,
   ]
     .filter((s) => typeof s === 'string' && s.trim().length > 0)
     .join('\n\n');
