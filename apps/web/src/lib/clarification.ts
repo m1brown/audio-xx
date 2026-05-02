@@ -237,7 +237,7 @@ function generateAcknowledge(
   // Upgrade / change intent
   if (lower.includes('upgrade') || lower.includes('replace') || lower.includes('switch')) {
     if (category !== 'general') {
-      return `Changing ${catName} can shift the overall character of a system, so it\'s worth thinking through.`;
+      return `Changing ${catName} shifts the system's character — worth thinking through.`;
     }
     return 'That\'s worth thinking through carefully — the right move depends on what you\'re hearing now and what you want to change.';
   }

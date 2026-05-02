@@ -286,15 +286,15 @@ export function detectRefinement(text: string): string[] {
 
 /** Human-readable delta explanations for each refinement direction. */
 const DELTA_EXPLANATIONS: Record<string, string> = {
-  warmer: 'Shifting toward warmer options — prioritizing tonal density and body over speed.',
-  brighter: 'Shifting toward brighter, more forward options — prioritizing presence and air.',
-  more_detailed: 'Shifting toward more resolving options — prioritizing transparency and micro-detail.',
-  smoother: 'Shifting toward smoother options — prioritizing ease and fatigue resistance over edge.',
-  punchier: 'Shifting toward more dynamic options — prioritizing impact and transient energy.',
-  more_spacious: 'Shifting toward more spacious options — prioritizing soundstage width and air.',
-  system_fit: 'Re-evaluating options for better system synergy.',
-  cheaper: 'Adjusting toward more accessible price points within the same direction.',
-  pricier: 'Moving up in tier — same sonic direction, higher build and refinement quality.',
+  warmer: 'Prioritizing tonal density and body over speed.',
+  brighter: 'Prioritizing presence and air over warmth.',
+  more_detailed: 'Prioritizing transparency and micro-detail.',
+  smoother: 'Prioritizing ease and fatigue resistance over edge.',
+  punchier: 'Prioritizing impact and transient energy.',
+  more_spacious: 'Prioritizing soundstage width and air.',
+  system_fit: 'Re-ranking for system synergy.',
+  cheaper: 'Same direction, lower price tier.',
+  pricier: 'Same direction, higher build and refinement.',
 };
 
 /** Build a one-line delta explanation from accumulated deltas. */
@@ -388,21 +388,21 @@ function hasExplicitDiagnosisSignal(text: string): boolean {
 // Used to acknowledge symptoms intelligently before asking for system details.
 
 const SYMPTOM_INTERPRETATIONS: Array<[RegExp, string]> = [
-  [/\bthin\b/i, 'Thin usually points to tonal balance — lightweight bass, lean midrange, or a mismatch between source and amplification.'],
-  [/\bdry\b/i, 'Dry often comes from a system that strips harmonic overtones — high-feedback amplification, overly analytical sources, or aggressive room treatment.'],
-  [/\bbright\b.*\bfatigu/i, 'Brightness with fatigue usually traces to compounded energy in the upper frequencies — source, amplification, and speakers all pushing the same direction.'],
-  [/\bfatigu/i, 'Listening fatigue typically points to excess upper-midrange energy, poor damping interaction, or compounded brightness in the signal chain.'],
-  [/\bbright\b/i, 'Brightness usually comes from tonal balance — energy concentrated in the upper frequencies, often compounded across multiple components.'],
-  [/\bharsh\b/i, 'Harshness typically originates from distortion or resonance in the upper midrange — amplifier clipping, crossover artifacts, or room reflections can all contribute.'],
-  [/\bmuddy\b/i, 'Muddiness usually means excess low-mid energy or poor bass control — room modes, underdamped speakers, or warm components stacking up.'],
-  [/\bdull\b/i, 'A dull or lifeless sound often comes from over-smoothing — too much warmth, excessive damping, or detail being lost in the source or cable path.'],
-  [/\bveiled\b/i, 'A veiled quality usually traces to something masking fine detail — cable losses, a warm DAC compounding a warm amp, or driver limitations.'],
-  [/\bcongested\b/i, 'Congestion typically points to a system that compresses spatial and dynamic information — inadequate amplifier headroom, room overload, or overly warm voicing.'],
-  [/\bsibilan/i, 'Sibilance usually comes from a peak in the presence region — tweeter behavior, crossover alignment, or a source that over-emphasizes transients.'],
-  [/\bsterile\b|\bclinical\b|\bcold\b/i, 'A sterile or clinical sound usually means the system prioritizes precision over musicality — high feedback, neutral voicing with no warmth offset.'],
-  [/\bflat\b|\bboring\b|\blifeless\b/i, 'A flat or lifeless presentation often means the system is over-controlled — dynamic compression, excessive damping, or components that smooth out musical energy.'],
-  [/\blacking\b|\bmissing\b/i, 'That sense of something missing usually comes from a gap in the system\'s voicing — knowing the components helps identify where the loss originates.'],
-  [/\baggressive\b|\bforward\b|\bstrident\b/i, 'An aggressive or forward sound usually traces to upper-midrange emphasis — speaker directivity, amplifier voicing, or room reflections compounding.'],
+  [/\bthin\b/i, 'Thin points to tonal balance — lightweight bass, lean midrange, or source-amplification mismatch.'],
+  [/\bdry\b/i, 'Dry points to stripped harmonics — high-feedback amplification, analytical sources, or aggressive room treatment.'],
+  [/\bbright\b.*\bfatigu/i, 'Brightness with fatigue traces to compounded upper-frequency energy — source, amp, and speakers all pushing the same way.'],
+  [/\bfatigu/i, 'Fatigue points to excess upper-midrange energy, poor damping interaction, or compounded brightness in the chain.'],
+  [/\bbright\b/i, 'Brightness comes from upper-frequency concentration, often compounded across multiple components.'],
+  [/\bharsh\b/i, 'Harshness originates from upper-midrange distortion or resonance — clipping, crossover artifacts, or room reflections.'],
+  [/\bmuddy\b/i, 'Muddiness means excess low-mid energy or poor bass control — room modes, underdamped speakers, or stacked warmth.'],
+  [/\bdull\b/i, 'Dull or lifeless sound comes from over-smoothing — excess warmth, heavy damping, or detail lost upstream.'],
+  [/\bveiled\b/i, 'Veiled sound traces to something masking fine detail — cable losses, warm DAC compounding a warm amp, or driver limits.'],
+  [/\bcongested\b/i, 'Congestion points to compressed spatial and dynamic information — insufficient headroom, room overload, or stacked warmth.'],
+  [/\bsibilan/i, 'Sibilance comes from a presence-region peak — tweeter behavior, crossover alignment, or transient over-emphasis upstream.'],
+  [/\bsterile\b|\bclinical\b|\bcold\b/i, 'Sterile or clinical sound means the system prioritizes precision over musicality — high feedback, no warmth offset.'],
+  [/\bflat\b|\bboring\b|\blifeless\b/i, 'Lifeless presentation means the system is over-controlled — dynamic compression, heavy damping, or smoothed-out musical energy.'],
+  [/\blacking\b|\bmissing\b/i, 'That sense of something missing comes from a voicing gap — knowing the components identifies where the loss originates.'],
+  [/\baggressive\b|\bforward\b|\bstrident\b/i, 'Aggressive or forward sound traces to upper-midrange emphasis — speaker directivity, amplifier voicing, or room reflections.'],
 ];
 
 /**
@@ -413,7 +413,7 @@ export function interpretSymptom(text: string): string {
   for (const [pattern, interpretation] of SYMPTOM_INTERPRETATIONS) {
     if (pattern.test(text)) return interpretation;
   }
-  return 'That kind of issue usually traces to a specific interaction in the signal chain — tonal balance, damping, or component voicing.';
+  return 'That traces to a specific chain interaction — tonal balance, damping, or component voicing.';
 }
 
 /**

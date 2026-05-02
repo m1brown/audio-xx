@@ -1318,18 +1318,18 @@ function buildCategoryPreamble(
     && productExamples.every((p) => p.catalogTopology && tubeTopologies.has(p.catalogTopology));
 
   if (isTubeRequest) {
-    return 'Tube amplifiers span a wide range — from fast, dynamic push-pull designs to intimate single-ended triodes. The safest entry is a broadly compatible push-pull design with enough power for most speakers.';
+    return 'Tube amplifiers range from fast push-pull designs to intimate single-ended triodes. Push-pull is the safer entry — enough power for most speakers.';
   }
 
   // Category-level preambles for generic requests
   const PREAMBLES: Record<string, string | ((b: number | null) => string)> = {
-    amplifier: 'Amplifier design varies more than most categories — from fast and transparent to warm and harmonically rich. The real question is what kind of presentation you want from your system.',
+    amplifier: 'Amplifier design varies widely — from fast and transparent to warm and harmonically rich. The question is what presentation you want.',
     dac: (b) => b
-      ? `Under ~$${b.toLocaleString()}, DAC differences are about presentation style — how timing, tone, and texture are shaped — not quality tier.`
-      : 'DAC differences are less about resolution and more about presentation style — how timing, tone, and texture are shaped.',
-    speaker: 'Speakers define system character more than any other component. The first question is what kind of listening experience you want — not which model measures best.',
-    headphone: 'Headphone design involves fundamental trade-offs between isolation, soundstage, and tonal character. The right choice depends on how and where you listen.',
-    turntable: 'Turntable performance depends on the entire mechanical chain — platter, tonearm, cartridge, and isolation. Small changes compound.',
+      ? `Under ~$${b.toLocaleString()}, DAC differences are about presentation style — timing, tone, and texture — not quality tier.`
+      : 'DAC differences are about presentation style — timing, tone, and texture — not resolution alone.',
+    speaker: 'Speakers define system character more than any other component. Start with what kind of listening experience you want.',
+    headphone: 'Headphone design trades off isolation, soundstage, and tonal character. The right choice depends on how and where you listen.',
+    turntable: 'Turntable performance depends on the full mechanical chain — platter, tonearm, cartridge, isolation. Small changes compound.',
   };
 
   const entry = PREAMBLES[catKey];
@@ -3224,7 +3224,7 @@ function buildDiagnosisActions(
     ],
     'flat-presentation': [
       { area: 'Amplifier', guidance: 'If the amplifier prioritizes composure, a more dynamic design restores the tension and release that makes music involving.', examples: 'Naim Nait 5si, Rega Brio, Exposure 2510 (for rhythmic drive); Decware Zen (for tube-based engagement)' },
-      { area: 'Source / DAC', guidance: 'An analytical source can flatten dynamics before the amplifier sees them. A more expressive DAC can help.', examples: 'Chord Qutest, Denafrips Enyo 15th' },
+      { area: 'Source / DAC', guidance: 'An analytical source flattens dynamics before the amplifier sees them. A more expressive DAC restores life.', examples: 'Chord Qutest, Denafrips Enyo 15th' },
       { area: 'Speaker positioning', guidance: 'Slight toe-in adjustments and moving closer to the listening position can increase perceived presence and energy.' },
     ],
     'thinness-bass-deficit': [

@@ -11270,11 +11270,11 @@ export function buildConsultationEntry(
     // Hypothetical language detected but no specific component identified
     return {
       subject: 'hypothetical change',
-      philosophy: 'That\'s a good question to reason through before committing. The impact of a component change depends on what role it plays in the system — whether it\'s adding something missing, compensating for an existing tendency, or compounding one.',
+      philosophy: 'Worth reasoning through before committing. The impact depends on the role the component plays — adding something missing, compensating a tendency, or compounding one.',
       tendencies: hasTasteSignals
-        ? `Based on what you've said you value — ${priorityParts.join(' and ')} — the question is whether the change moves the system closer to those priorities or shifts it sideways. Not all changes are improvements; some are just different.`
-        : 'Without knowing your current system or preferences in detail, I can reason about the architectural direction — what a given topology tends to contribute and what it tends to trade away.',
-      followUp: 'Can you tell me more about what you\'d be changing — and what you\'re hoping it would improve? That helps me frame whether it\'s a compensating move or a compounding one.',
+        ? `You value ${priorityParts.join(' and ')}. The question is whether this change moves closer to those priorities or shifts sideways. Not all changes are improvements; some are just different.`
+        : 'I can reason about the architectural direction — what a given topology contributes and what it trades away.',
+      followUp: 'What would you be changing — and what would you want it to improve? That clarifies whether it\'s compensating or compounding.',
     };
   }
 
@@ -11294,12 +11294,12 @@ export function buildConsultationEntry(
 
       if (tendencies) {
         // System has a known character — reason from it
-        philosophy = `Based on what you've described, your ${activeSystem.name} system (${componentList}) has a consistent character: ${tendencies}. That coherence is itself worth something. A system with a well-defined point of view is easier to live with than one that's been upgraded toward no particular direction.`;
-        tendenciesText = `The case for doing nothing: if the system is doing what it's supposed to do — and the tendency you've described is what you actually want — then a change would shift that character, not improve on it. You'd be exchanging a known quantity for an unknown one. That's only worth it if you have a specific, nameable dissatisfaction.\n\nThe case for change: if the tendency you've described is something you've been tolerating rather than enjoying, or if there's a consistent quality you want more of, then that's a real signal. But "maybe I should change something" isn't that signal — it's restlessness.`;
+        philosophy = `Your ${activeSystem.name} system (${componentList}) has a consistent character: ${tendencies}. That coherence is worth something. A system with a clear point of view is easier to live with than one upgraded toward no particular direction.`;
+        tendenciesText = `The case for doing nothing: if the tendency you described is what you actually want, a change shifts that character — it doesn't improve on it. You'd exchange a known quantity for an unknown one. Only worth it with a specific, nameable dissatisfaction.\n\nThe case for change: if that tendency is something you've been tolerating rather than enjoying, that's a real signal. But "maybe I should change something" isn't that signal — it's restlessness.`;
       } else {
         // No tendency data — reason from structure
-        philosophy = `Based on what you've shared, your ${activeSystem.name} system is: ${componentList}. Without knowing how it sounds in your room, I can't tell you whether it's balanced or imbalanced — but I can tell you what a case for doing nothing looks like.`;
-        tendenciesText = `The case for doing nothing: if you aren't hearing a consistent problem — something that bothers you across most material — then there's no gap to fill. Upgrades that don't address a real gap tend to change the system's character without improving it. Changing for change's sake rarely resolves anything.\n\nThe case for change: if you've been living with something that consistently bothers you — a tonal quality, a texture, a dynamic limitation — that's worth acting on. But if the system sounds good and nothing is obviously wrong, patience is the more defensible position.`;
+        philosophy = `Your ${activeSystem.name} system is: ${componentList}. Without hearing it in your room, I can't judge balance — but I can outline the case for doing nothing.`;
+        tendenciesText = `The case for doing nothing: if nothing bothers you consistently across most material, there's no gap to fill. Upgrades without a real target change character without improving it.\n\nThe case for change: if something consistently bothers you — a tonal quality, a texture, a dynamic limitation — that's worth acting on. But if the system sounds good and nothing is obviously wrong, patience is the stronger position.`;
       }
 
       return {
@@ -11315,16 +11315,16 @@ export function buildConsultationEntry(
 
     let philosophy: string;
     if (isAssessmentFocused) {
-      philosophy = `I have your ${activeSystem.name}${locationNote} system on file: ${componentList}.${tendenciesNote} I can evaluate how these components interact — whether they compound the same tendency or balance each other — and identify where the system\'s character is being shaped.`;
+      philosophy = `Your ${activeSystem.name}${locationNote} system: ${componentList}.${tendenciesNote} I can evaluate how these components interact — whether they compound or balance — and identify where character is being shaped.`;
     } else if (isUpgradeFocused) {
-      philosophy = `Working from your ${activeSystem.name}${locationNote} system: ${componentList}.${tendenciesNote} I can map your upgrade priorities against the current architectural balance — identifying where the most effective intervention lies rather than just the most expensive component change.`;
+      philosophy = `Working from your ${activeSystem.name}${locationNote} system: ${componentList}.${tendenciesNote} I can map upgrade priorities against the current balance — identifying the most effective intervention point.`;
     } else {
-      philosophy = `I have your ${activeSystem.name}${locationNote} system: ${componentList}.${tendenciesNote} I can evaluate alignment between these components and your listening priorities.`;
+      philosophy = `Your ${activeSystem.name}${locationNote} system: ${componentList}.${tendenciesNote} I can evaluate alignment between these components and your listening priorities.`;
     }
 
     const tendencies = priorityParts.length > 0
-      ? `You've mentioned wanting ${priorityParts.join(' and ')}. With your system already on file, I can map those priorities directly to component interactions and suggest where a change would be most effective.`
-      : 'Since I already know your components, the most useful thing you can share is what you enjoy about the current sound and what you find unsatisfying — or what direction of change you\'re curious about.';
+      ? `You want ${priorityParts.join(' and ')}. I can map those priorities to component interactions and identify where a change is most effective.`
+      : 'The most useful thing to share now: what you enjoy about the current sound, what feels unsatisfying, or what direction of change you\'re curious about.';
 
     const followUp = priorityParts.length > 0
       ? 'What do you enjoy most about the current sound? And is there anything that feels consistently unsatisfying — even on well-recorded material?'
@@ -11349,14 +11349,14 @@ export function buildConsultationEntry(
   if (isRestraintFocused) {
     const hasTasteSignals = priorityParts.length > 0;
     const philosophy = hasTasteSignals
-      ? `You've described what you value — ${priorityParts.join(' and ')} — and that's useful even without knowing your exact components. The question "should I change anything?" is one of the best questions in audio, because the answer is often no.`
-      : `"Should I change anything?" is one of the best questions in audio, because the answer is often no. Change that isn't driven by a specific, repeatable dissatisfaction tends to move you sideways rather than forward.`;
+      ? `You value ${priorityParts.join(' and ')} — useful even without knowing exact components. "Should I change anything?" is one of the best questions in audio. The answer is often no.`
+      : `"Should I change anything?" — one of the best questions in audio. The answer is often no. Change without a specific, repeatable dissatisfaction moves you sideways.`;
 
-    const tendencies = `The case for doing nothing is strongest when: you're enjoying the music most of the time, your dissatisfaction is vague rather than specific, you're not sure what "better" means in concrete terms, or your interest in upgrading feels more like curiosity than frustration.\n\nThe case for change is strongest when: a specific quality bothers you consistently across material you know well, the problem is repeatable and nameable, and you can describe what "better" would sound like — even roughly.`;
+    const tendencies = `The case for doing nothing: you enjoy the music most of the time, dissatisfaction is vague, you can't define "better" concretely, or the upgrade impulse feels more like curiosity than frustration.\n\nThe case for change: a specific quality bothers you consistently across familiar material. The problem is repeatable, nameable, and you can describe what "better" sounds like — even roughly.`;
 
     const followUp = hasTasteSignals
-      ? `You've already told me some of what you value. If you can share your current system — even roughly (source, amplification, speakers/headphones) — I can tell you whether those priorities are likely being served or whether there's a real gap.`
-      : `If you can share your current system — even roughly — I can help you figure out whether there's a real case for change or whether the instinct to hold is the right one.`;
+      ? `If you can share your current system — even roughly — I can tell you whether those priorities are being served or whether there's a real gap.`
+      : `If you can share your current system — even roughly — I can assess whether there's a real case for change or the instinct to hold is the right one.`;
 
     return {
       subject: 'restraint case — general',
@@ -11655,7 +11655,7 @@ const COMPLAINT_MAP: Record<string, {
     interpretation: 'upper midrange and treble have an aggressive, edgy quality — transients feel hard rather than natural',
     remedyDirections: [
       'Source character — the DAC is often the primary contributor to harshness in a transparent system. A more organic-sounding source helps',
-      'Power conditioning — dirty power introduces high-frequency noise that manifests as harshness. A quality power conditioner or regenerator can help',
+      'Power conditioning — dirty power introduces high-frequency noise that manifests as harshness. A conditioner or regenerator addresses this directly',
       'Tube buffering — a tube preamp or buffer between source and amplifier softens transient edges without losing information',
       'Room treatment — first reflection point absorption reduces the doubled attack transients that create perceived harshness',
     ],
@@ -11666,7 +11666,7 @@ const COMPLAINT_MAP: Record<string, {
     remedyDirections: [
       'Reduce upstream resolution pressure — a more musical source (tube DAC, R-2R) can ease the relentless detail that causes fatigue',
       'Check listening level — highly resolving systems reveal more at lower volumes. Listening slightly quieter often eliminates fatigue entirely',
-      'Room acoustics — excessive reflections compound detail overload. Diffusion and selective absorption can help',
+      'Room acoustics — excessive reflections compound detail overload. Diffusion and selective absorption reduce this',
       'Consider a tube preamp — adds harmonic cushioning that makes extended sessions more comfortable',
     ],
     followUpAngle: 'listening_habits',
@@ -11707,7 +11707,7 @@ const COMPLAINT_MAP: Record<string, {
       'Add warmth upstream — a tube preamp or warm-voiced DAC is the most direct path to adding tonal warmth',
       'Review the source chain — analytical digital sources compound coldness in transparent systems',
       'Consider speaker placement — closer wall proximity increases bass reinforcement, adding perceived warmth',
-      'Room acoustics — overdamped rooms suppress warmth. Reducing absorption (especially bass traps) can help',
+      'Room acoustics — overdamped rooms suppress warmth. Reducing absorption (especially bass traps) restores it',
     ],
     followUpAngle: 'source',
   },

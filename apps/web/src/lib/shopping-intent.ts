@@ -2345,12 +2345,12 @@ const TASTE_PROFILES: TasteProfile[] = [
       dac: [
         'You prioritized speed and rhythmic engagement over smoothness.',
         'Your budget supports DACs designed for transient precision.',
-        'Multibit, R2R, and certain FPGA architectures tend to serve this preference.',
+        'Multibit, R2R, and certain FPGA architectures deliver this well.',
       ],
     },
     defaultWhy: [
       'You prioritized speed and dynamic engagement.',
-      'Components with strong transient definition tend to serve this preference.',
+      'Components with strong transient definition serve this well.',
     ],
     watchFor: [
       'Pushing too far toward speed can reduce perceived tonal density and midrange body.',
@@ -2371,13 +2371,13 @@ const TASTE_PROFILES: TasteProfile[] = [
     whyByCategory: {
       dac: [
         'You prioritized flow, warmth, and tonal density.',
-        'R2R and NOS tube architectures tend to deliver this kind of presentation.',
+        'R2R and NOS tube architectures deliver this well.',
         'Your budget supports several DACs in this design family.',
       ],
     },
     defaultWhy: [
       'You prioritized harmonic richness and musical flow.',
-      'Components with strong tonal density tend to serve this preference.',
+      'Components with strong tonal density serve this well.',
     ],
     watchFor: [
       'Components that maximize tonal density may sacrifice some detail retrieval and transient edge.',
@@ -2398,7 +2398,7 @@ const TASTE_PROFILES: TasteProfile[] = [
     whyByCategory: {
       dac: [
         'You prioritized warmth and tonal body.',
-        'R2R, NOS, and tube-output DAC architectures tend to deliver this kind of presentation.',
+        'R2R, NOS, and tube-output DAC architectures deliver this well.',
         'Your budget supports several DACs in this design family.',
       ],
       amplifier: [
@@ -2409,7 +2409,7 @@ const TASTE_PROFILES: TasteProfile[] = [
     },
     defaultWhy: [
       'You prioritized warmth and tonal body.',
-      'Components with strong harmonic density tend to serve this preference.',
+      'Components with strong harmonic density serve this well.',
     ],
     watchFor: [
       'Components that maximize warmth may sacrifice some detail retrieval and transient edge.',
@@ -2431,13 +2431,13 @@ const TASTE_PROFILES: TasteProfile[] = [
     whyByCategory: {
       dac: [
         'You prioritized clarity and resolution over warmth or density.',
-        'Delta-sigma (ESS, AKM) and FPGA architectures tend to excel at measured detail retrieval.',
+        'Delta-sigma (ESS, AKM) and FPGA architectures excel at measured detail retrieval.',
         'Your budget supports several precision-first DAC designs.',
       ],
     },
     defaultWhy: [
       'You prioritized clarity and detail retrieval.',
-      'Components known for transparency tend to serve this preference.',
+      'Components known for transparency serve this well.',
     ],
     watchFor: [
       'Highly resolving systems can become fatiguing if any upstream component introduces edge or glare.',
@@ -2459,13 +2459,13 @@ const TASTE_PROFILES: TasteProfile[] = [
     whyByCategory: {
       dac: [
         'You indicated fatigue or harshness as a concern.',
-        'NOS tube, R2R, and certain relaxed-filter architectures tend to reduce perceived digital edge.',
+        'NOS tube, R2R, and relaxed-filter architectures reduce perceived digital edge.',
         'Addressing fatigue at the DAC level can be effective when the source is the issue.',
       ],
     },
     defaultWhy: [
       'You indicated fatigue or harshness as a concern.',
-      'Components known for smoothness tend to serve this preference.',
+      'Components known for smoothness serve this well.',
     ],
     watchFor: [
       'Reducing fatigue by softening the presentation can also reduce perceived detail and air.',
@@ -2486,13 +2486,13 @@ const TASTE_PROFILES: TasteProfile[] = [
     whyByCategory: {
       dac: [
         'You prioritized smoothness and musical ease.',
-        'Tube-output and relaxed-filter DAC architectures tend to maximize composure.',
+        'Tube-output and relaxed-filter DAC architectures maximize composure.',
         'This direction works best when the rest of the system provides sufficient energy.',
       ],
     },
     defaultWhy: [
       'You prioritized smoothness and composure.',
-      'Components known for musical ease tend to serve this preference.',
+      'Components known for musical ease serve this well.',
     ],
     watchFor: [
       'Very composed systems can feel sleepy or lack dynamic contrast.',
@@ -2504,14 +2504,14 @@ const TASTE_PROFILES: TasteProfile[] = [
 
 const FALLBACK_TASTE: Pick<TasteProfile, 'label' | 'defaultDirection' | 'defaultWhy' | 'watchFor'> = {
   label: 'musical engagement',
-  defaultDirection: 'Designs that prioritise long-term listening enjoyment and emotional connection with the music, rather than optimising any single trait.',
+  defaultDirection: 'Designs that prioritise long-term listening enjoyment over optimising any single trait.',
   defaultWhy: [
-    'Specific listening priorities are still being determined — these options cover the strongest design directions at this level.',
-    'Narrowing your sonic preferences will sharpen the shortlist considerably.',
+    'No strong preference signal yet — these cover the strongest design directions at this level.',
+    'Narrowing your sonic priorities will sharpen the shortlist.',
   ],
   watchFor: [
-    'Without a clear preference signal, these recommendations cover a range of philosophies — each excels in a different dimension.',
-    'Telling the system what you value most (warmth, detail, rhythm, space) will produce a more targeted list.',
+    'These cover a range of philosophies — each excels in a different dimension.',
+    'Stating what you value most (warmth, detail, rhythm, space) produces a more targeted list.',
   ],
 };
 
@@ -5804,7 +5804,7 @@ export function buildShoppingAnswer(
     bestFitDirection = `This system should lean toward ${effectiveTasteLabel.toLowerCase()} — ${directedDirection.charAt(0).toLowerCase()}${directedDirection.slice(1)}${directedDirection.endsWith('.') ? '' : '.'}`;
   } else {
     // sufficient confidence, non-directed
-    bestFitDirection = `Based on what you've described, ${rawDirection.charAt(0).toLowerCase()}${rawDirection.slice(1)}${rawDirection.endsWith('.') ? '' : '.'}`;
+    bestFitDirection = `${rawDirection.charAt(0).toUpperCase()}${rawDirection.slice(1)}${rawDirection.endsWith('.') ? '' : '.'}`;
   }
 
   // 3. Why this fits — explicitly listener-centered framing
@@ -6021,7 +6021,7 @@ function buildTurntableAnswer(
   const refinementQuestion = depHints.length > 0
     ? depHints[0]
     : !hasTasteSignal
-      ? 'What kind of music do you listen to most? That can help refine the direction.'
+      ? 'What kind of music do you listen to most? That sharpens the direction.'
       : undefined;
 
   // Mark as provisional (turntable recommendations are always provisional
@@ -6079,40 +6079,40 @@ function getContrastLabel(tasteLabel: string): string {
 /** Trade-off pair for each delta direction. */
 const REFINEMENT_TRADEOFFS: Record<string, { gain: string; risk: string }> = {
   warmer: {
-    gain: 'More tonal density, body, and harmonic weight',
-    risk: 'May lose some transient speed and top-end sparkle',
+    gain: 'More tonal density, body, harmonic weight',
+    risk: 'Less transient speed and top-end sparkle',
   },
   brighter: {
-    gain: 'More presence, air, and perceived detail',
-    risk: 'May increase listening fatigue with bright recordings',
+    gain: 'More presence, air, perceived detail',
+    risk: 'Higher fatigue risk with bright recordings',
   },
   more_detailed: {
-    gain: 'More micro-detail retrieval and transparency',
-    risk: 'May lose some musical flow and forgiveness with poor recordings',
+    gain: 'More micro-detail and transparency',
+    risk: 'Less musical flow; less forgiving of poor recordings',
   },
   smoother: {
-    gain: 'More ease and fatigue resistance across long sessions',
-    risk: 'May lose some edge definition and micro-dynamics',
+    gain: 'More ease and fatigue resistance',
+    risk: 'Less edge definition and micro-dynamics',
   },
   punchier: {
     gain: 'More transient impact and rhythmic drive',
-    risk: 'May trade some midrange richness for speed',
+    risk: 'Less midrange richness',
   },
   more_spacious: {
-    gain: 'Wider soundstage and more spatial separation',
-    risk: 'May lose some midrange intimacy and vocal density',
+    gain: 'Wider soundstage and spatial separation',
+    risk: 'Less midrange intimacy and vocal density',
   },
   cheaper: {
-    gain: 'Lower financial commitment with similar sonic direction',
-    risk: 'May lose refinement, build quality, or resale value',
+    gain: 'Lower commitment, same sonic direction',
+    risk: 'Less refinement, build quality, or resale value',
   },
   pricier: {
-    gain: 'Higher build quality, refinement, and likely resale value',
-    risk: 'Diminishing returns — the improvement may not justify the cost',
+    gain: 'Higher build quality and refinement',
+    risk: 'Diminishing returns — cost may outpace improvement',
   },
   system_fit: {
-    gain: 'Better synergy with your existing components',
-    risk: 'May narrow sonic exploration in favor of system coherence',
+    gain: 'Better synergy with existing components',
+    risk: 'Narrower sonic exploration',
   },
 };
 

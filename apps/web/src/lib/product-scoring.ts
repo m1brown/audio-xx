@@ -640,7 +640,7 @@ export const AMPLIFIER_ARCHITECTURE_TENDENCIES: Record<string, ArchitectureTende
     label: 'SET tube',
     strengths: ['tonal_density', 'flow', 'texture', 'warmth'],
     weaknesses: ['dynamics', 'composure', 'speed'],
-    rationale: 'Even-order harmonic distortion enriches midrange; low power limits bass control and dynamic headroom.',
+    rationale: 'Even-order harmonics enrich midrange. Low power limits bass control and headroom.',
   },
   'Push-pull tube': {
     label: 'Push-pull tube',
@@ -652,7 +652,7 @@ export const AMPLIFIER_ARCHITECTURE_TENDENCIES: Record<string, ArchitectureTende
     label: 'SIT / single-ended transistor',
     strengths: ['texture', 'spatial_precision', 'flow', 'tonal_density'],
     weaknesses: ['dynamics', 'composure'],
-    rationale: 'Static induction transistors produce tube-like harmonic structure with solid-state linearity. Very low power.',
+    rationale: 'Tube-like harmonics with solid-state linearity. Very low power.',
   },
   'Class A': {
     label: 'Class A solid-state',
@@ -670,13 +670,13 @@ export const AMPLIFIER_ARCHITECTURE_TENDENCIES: Record<string, ArchitectureTende
     label: 'Low-feedback solid-state',
     strengths: ['flow', 'texture', 'elasticity', 'warmth'],
     weaknesses: ['composure', 'clarity'],
-    rationale: 'Minimal negative feedback preserves musical elasticity at the cost of measured precision.',
+    rationale: 'Minimal feedback preserves musical elasticity. Trades measured precision.',
   },
   'High-feedback': {
     label: 'High-feedback solid-state',
     strengths: ['clarity', 'composure', 'speed', 'dynamics'],
     weaknesses: ['flow', 'warmth', 'texture'],
-    rationale: 'Deep feedback loop lowers distortion and output impedance for precise, controlled sound.',
+    rationale: 'Deep feedback lowers distortion and output impedance. Precise, controlled.',
   },
   'Hybrid': {
     label: 'Hybrid (tube input / SS output)',
@@ -688,7 +688,7 @@ export const AMPLIFIER_ARCHITECTURE_TENDENCIES: Record<string, ArchitectureTende
     label: 'ZOTL (zero-hysteresis OTL)',
     strengths: ['spatial_precision', 'texture', 'flow', 'clarity'],
     weaknesses: ['warmth', 'tonal_density'],
-    rationale: 'Transformer-less output with impedance conversion via RF carrier. Unusually linear for a tube topology.',
+    rationale: 'Transformer-less output via RF carrier impedance conversion. Unusually linear for tubes.',
   },
   'Goldmund': {
     label: 'Goldmund / JOB minimalist',
@@ -700,12 +700,12 @@ export const AMPLIFIER_ARCHITECTURE_TENDENCIES: Record<string, ArchitectureTende
     label: 'Current-feedback',
     strengths: ['speed', 'elasticity', 'dynamics', 'clarity'],
     weaknesses: ['warmth', 'tonal_density'],
-    rationale: 'Current-mode feedback topology provides bandwidth independence from gain, yielding exceptional transient speed.',
+    rationale: 'Bandwidth independent of gain. Exceptional transient speed.',
   },
   'Continuity': {
     label: 'Continuity (Schiit)',
     strengths: ['composure', 'clarity', 'spatial_precision'],
     weaknesses: ['warmth', 'texture'],
-    rationale: 'Proprietary Class A topology eliminates crossover distortion with higher efficiency than traditional Class A.',
+    rationale: 'Class A without crossover distortion. Higher efficiency than traditional Class A.',
   },
 };

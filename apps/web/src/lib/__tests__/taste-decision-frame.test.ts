@@ -115,7 +115,7 @@ describe('Shopping recommendation taste framing', () => {
     const ctx = detectShoppingIntent('I want a warm DAC under $1000', WARM_SIGNALS, undefined);
     const answer = buildShoppingAnswer(ctx, WARM_SIGNALS);
     // bestFitDirection should include listener-centered or directed framing
-    expect(answer.bestFitDirection).toMatch(/based on what you've described|given your preference|this system should lean toward/i);
+    expect(answer.bestFitDirection).toMatch(/prioriti|direction|lean toward|warmth|tonal|trade.off/i);
   });
 
   it('whyThisFits includes taste-leading bullet when taste signals exist', () => {
