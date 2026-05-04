@@ -1,16 +1,14 @@
 /**
  * Audio XX — Editorial Product Card
  *
- * Roon-inspired layered hierarchy:
+ * 3-block decision card:
  *   Layer 1 — Visual + identity
- *     Role badge, product image (hero), brand, name, price
- *   Layer 2 — Quick character
- *     Identity line + catalog description (1–2 lines)
- *   Layer 3 — What changes
- *     Gains, trade-offs (tight bullets)
- *   Layer 4 — Deeper explanation (de-emphasized)
+ *     Role badge, product image (hero), brand, name, identity line, price
+ *   Layer 2 — Decision blocks (3 max)
+ *     Sounds like · Why this one · Trade-off
+ *   Layer 3 — Depth (de-emphasized)
  *     Technical rationale, maker insight
- *   Buy links + further reading
+ *   Further reading + buy links
  */
 
 import Link from 'next/link';
@@ -899,22 +897,6 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
           );
         })()}
 
-        {/* Character context — first sentence of catalog description */}
-        {opt.catalogDescription && (() => {
-          const firstSentence = opt.catalogDescription.match(/^[^.!?]+[.!?]/)?.[0] ?? opt.catalogDescription;
-          return (
-            <div style={{
-              marginTop: '0.25rem',
-              fontSize: '0.82rem',
-              color: COLORS.textMuted,
-              lineHeight: 1.45,
-              fontStyle: 'italic',
-            }}>
-              {firstSentence}
-            </div>
-          );
-        })()}
-
         {/* Legacy note — successor context for discontinued/vintage models */}
         {opt.legacyNote && (
           <div style={{
@@ -984,39 +966,33 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
       {/* ── Layer separator ── */}
       <div style={{ borderTop: '1px solid #eae7e1', margin: '0.65rem 0' }} />
 
-      {/* ── Content layers (Roon-style vertical hierarchy) ──
-       * Layer 2: What changes (tight)
-       * Layer 3: Gains / trade-offs (tight bullets)
-       * Layer 4: Technical rationale + maker insight (de-emphasized)
+      {/* ── Content layers (3-block decision structure) ──
+       * Block 1: Sounds like (sonic identity)
+       * Block 2: Why this one (system-specific reason)
+       * Block 3: Trade-off (what you give up)
+       * Then: de-emphasized depth layers (maker insight, technical rationale)
        */}
       {(() => {
-        // Resolve sources once so fallback logic is explicit.
-        //
-        // "What this changes in your system" — must describe the shift in
-        // THIS system, from system context. Each section must carry distinct
-        // information, so this section must NOT mirror "What you gain"
-        // bullet 1. Resolution order:
-        //   1. prefer systemDelta.whyFitsSystem (already system-framed,
-        //      structurally distinct from the gain list)
-        //   2. else use fitNote ONLY if it opens with "In your chain"
-        //      (a system-framed note, not a generic product description)
-        //   3. else omit the section entirely — synthesizing from
-        //      likelyImprovements[0] would just restate "What you gain"
-        //      bullet 1, adding no new information
-        const whyFits = opt.systemDelta?.whyFitsSystem;
-        const whatChanges =
-          whyFits
-          ?? (opt.fitNote && /^in your (chain|system)/i.test(opt.fitNote) ? opt.fitNote : undefined);
+        // ── Block 1: "Sounds like" ──
+        // Source: catalogDescription first sentence → soundProfile/standoutFeatures prose fallback.
+        const catFirst = opt.catalogDescription?.match(/^[^.!?]+[.!?]/)?.[0]?.trim();
+        const traitProse = traits.length > 0 ? traits.join(', ') + '.' : undefined;
+        const soundsLike = catFirst ?? traitProse;
+
+        // ── Block 2: "Why this one" ──
+        // Source: chooseThisIf (already decision-framed) → systemDelta.whyFitsSystem → bestFor.
+        const chooseRaw = opt.chooseThisIf?.replace(/^Choose this if\s*/i, '').trim();
+        const whyThisOne = chooseRaw ?? opt.systemDelta?.whyFitsSystem ?? opt.bestFor;
+
+        // ── Block 3: "Trade-off" ──
+        // Source: avoidIf → systemDelta.tradeOffs[0] → caution → lessIdealIf.
+        const avoidRaw = opt.avoidIf?.replace(/^Avoid if\s*/i, '').trim();
+        const tradeoff = avoidRaw
+          ?? opt.systemDelta?.tradeOffs?.[0]
+          ?? opt.caution
+          ?? opt.lessIdealIf;
 
         const makerInsight = composeMakerInsight(opt);
-
-        const gainsRaw = (opt.systemDelta?.likelyImprovements ?? []).filter(Boolean);
-        const gainsFallback = traits.slice(0, 2);
-        const gains = (gainsRaw.length > 0 ? gainsRaw : gainsFallback).slice(0, 2);
-
-        const tradeRaw = (opt.systemDelta?.tradeOffs ?? []).filter(Boolean);
-        const tradeFallback = opt.caution ? [opt.caution] : [];
-        const tradeoffs = (tradeRaw.length > 0 ? tradeRaw : tradeFallback).slice(0, 2);
 
         const sectionStyle: React.CSSProperties = { marginBottom: '0.75rem' };
         const textStyle: React.CSSProperties = {
@@ -1034,29 +1010,35 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
 
         return (
           <>
-            {/* 1. WHAT THIS CHANGES IN YOUR SYSTEM */}
-            {whatChanges && (
+            {/* 1. SOUNDS LIKE — sonic identity in one sentence */}
+            {soundsLike && (
               <div style={sectionStyle}>
-                <SectionLabel>What this changes in your system</SectionLabel>
-                <p style={textStyle}>{renderText(whatChanges)}</p>
+                <SectionLabel>Sounds like</SectionLabel>
+                <p style={textStyle}>{renderText(soundsLike)}</p>
               </div>
             )}
 
-            {/* 1b. WHAT YOU'LL HEAR — sensory delta bullets */}
-            {opt.whatYoullHear && opt.whatYoullHear.length > 0 && (
+            {/* 2. WHY THIS ONE — system-specific reason to choose this card */}
+            {whyThisOne && (
               <div style={sectionStyle}>
-                <SectionLabel>What you&apos;ll hear</SectionLabel>
-                <ul style={bulletStyle}>
-                  {opt.whatYoullHear.slice(0, 3).map((h, i) => (
-                    <li key={i} style={{ marginBottom: '0.2rem', fontSize: '0.93rem', color: '#4a6a50' }}>
-                      {renderText(h)}
-                    </li>
-                  ))}
-                </ul>
+                <SectionLabel>Why this one</SectionLabel>
+                <p style={textStyle}>{renderText(whyThisOne)}</p>
               </div>
             )}
 
-            {/* 1c. TECHNICAL RATIONALE — design → audible outcome (Layer 4, de-emphasized) */}
+            {/* 3. TRADE-OFF — what you give up or risk */}
+            {tradeoff && (
+              <div style={sectionStyle}>
+                <SectionLabel>Trade-off</SectionLabel>
+                <p style={{ ...textStyle, color: COLORS.textSecondary }}>
+                  {renderText(tradeoff)}
+                </p>
+              </div>
+            )}
+
+            {/* ── De-emphasized depth layers ── */}
+
+            {/* TECHNICAL RATIONALE — design → audible outcome */}
             {opt.technicalRationale && opt.technicalRationale.length > 0 && (
               <div style={{ ...sectionStyle, opacity: 0.82 }}>
                 <SectionLabel>Technical rationale</SectionLabel>
@@ -1070,23 +1052,11 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
               </div>
             )}
 
-            {/* 2. MAKER INSIGHT (Pass 12) — structured manufacturer block.
+            {/* MAKER INSIGHT — structured manufacturer block.
               *
               * Migrated brands render a 3-line block keyed on bold brand
-              * name: Design / Tendency / In this system. Brand-general
-              * content; the system-specific "What you gain / give up"
-              * sections below carry chain-aware reasoning.
-              *
-              * Unmigrated brands fall back to the legacy one-sentence
-              * compose under the brand-name lead. Both shapes share the
-              * same outer container so the card hierarchy stays consistent.
-              *
-              * Why no SectionLabel: the bold brand name IS the section
-              * marker for this slot — repeating "Maker" or "Why this
-              * maker" above it would double-label. The brand name is also
-              * shown in the card header (uppercase, muted) but at a
-              * different visual weight; this lead acts as the section
-              * anchor, not a duplicate identifier. */}
+              * name: Design / Tendency / In this system.
+              * Unmigrated brands fall back to a legacy one-sentence compose. */}
             {makerInsight && !hideMakerInsight && (
               <div style={{ ...sectionStyle, opacity: 0.82 }}>
                 <p style={{
@@ -1124,93 +1094,6 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
                   <p style={{ ...textStyle, color: COLORS.textSecondary, margin: 0 }}>
                     {renderText(makerInsight.sentence)}
                   </p>
-                )}
-              </div>
-            )}
-
-            {/* 3. WHAT YOU GAIN */}
-            {gains.length > 0 && (
-              <div style={sectionStyle}>
-                <SectionLabel>What you gain</SectionLabel>
-                <ul style={bulletStyle}>
-                  {gains.map((g, i) => (
-                    <li key={i} style={{ marginBottom: '0.2rem', fontSize: '0.93rem' }}>
-                      {renderText(g)}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* 4. WHAT YOU GIVE UP */}
-            {tradeoffs.length > 0 && (
-              <div style={sectionStyle}>
-                <SectionLabel>What you give up</SectionLabel>
-                <ul style={{ ...bulletStyle, color: COLORS.textSecondary }}>
-                  {tradeoffs.map((t, i) => (
-                    <li key={i} style={{ marginBottom: '0.2rem', fontSize: '0.93rem' }}>
-                      {renderText(t)}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* 5. VERDICT — Pass 8.
-              * Decisive, conditional one-liner derived from role + systemDelta.
-              * Anchor reads as the default; alternatives read as conditional. */}
-            {(() => {
-              const verdict = buildVerdict(opt, role);
-              if (!verdict) return null;
-              return (
-                <div style={{
-                  // Pass 9: bumped weight on the verdict block so it reads
-                  // unmistakably as the decision moment of the card —
-                  // thicker accent rule, deeper padding, slightly stronger
-                  // label color.
-                  marginTop: '0.35rem',
-                  marginBottom: '0.65rem',
-                  padding: '0.6rem 0.85rem 0.7rem',
-                  background: COLORS.accentBg,
-                  borderLeft: `4px solid ${COLORS.accent}`,
-                  borderRadius: '3px',
-                }}>
-                  <div style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    color: COLORS.accent,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    marginBottom: '0.35rem',
-                  }}>
-                    Verdict
-                  </div>
-                  <p style={{
-                    margin: 0,
-                    fontSize: '0.96rem',
-                    lineHeight: 1.55,
-                    color: COLORS.text,
-                    fontWeight: 500,
-                  }}>
-                    {renderText(verdict)}
-                  </p>
-                </div>
-              );
-            })()}
-
-            {/* 5b. DIRECTIVE POSITIONING — Choose this if / Avoid if */}
-            {(opt.chooseThisIf || opt.avoidIf || opt.bestFor || opt.lessIdealIf) && (
-              <div style={{
-                marginBottom: '0.65rem',
-                fontSize: '0.88rem',
-                lineHeight: 1.6,
-                color: COLORS.textSecondary,
-              }}>
-                {(opt.chooseThisIf || opt.bestFor) && (
-                  <div><span style={{ fontWeight: 600, color: '#5a7050' }}>Choose this if:</span> {opt.chooseThisIf ? opt.chooseThisIf.replace(/^Choose this if\s*/i, '') : opt.bestFor}</div>
-                )}
-                {(opt.avoidIf || opt.lessIdealIf) && (
-                  <div><span style={{ fontWeight: 600, color: '#8a6a50' }}>Avoid if:</span> {opt.avoidIf ? opt.avoidIf.replace(/^Avoid if\s*/i, '') : opt.lessIdealIf}</div>
                 )}
               </div>
             )}
