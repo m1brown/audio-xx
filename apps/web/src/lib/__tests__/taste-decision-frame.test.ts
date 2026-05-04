@@ -121,7 +121,7 @@ describe('Shopping recommendation taste framing', () => {
   it('whyThisFits includes taste-leading bullet when taste signals exist', () => {
     const ctx = detectShoppingIntent('I want a warm DAC under $1000', WARM_SIGNALS, undefined);
     const answer = buildShoppingAnswer(ctx, WARM_SIGNALS);
-    // First whyThisFits bullet should reference listener preference / design selection
-    expect(answer.whyThisFits[0]).toMatch(/lean into|your preference|what you value/i);
+    // First whyThisFits bullet should reference selection basis
+    expect(answer.whyThisFits[0]).toMatch(/selected for|lean into|your preference|what you value/i);
   });
 });

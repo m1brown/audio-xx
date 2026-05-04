@@ -6500,11 +6500,11 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   const sourceNames = sourceComps.map(c => c.name);
 
   let upstreamChar = '';
-  if (upBright > 0 && upDetailed > 0) upstreamChar = 'speed-and-clarity';
-  else if (upBright > 0) upstreamChar = 'clarity-forward';
-  else if (upDetailed > 0) upstreamChar = 'detail-forward';
-  else if (upWarm > 0 && upSmooth > 0) upstreamChar = 'warmth-and-body';
-  else if (upWarm > 0) upstreamChar = 'warm-leaning';
+  if (upBright > 0 && upDetailed > 0) upstreamChar = 'speed-first';
+  else if (upBright > 0) upstreamChar = 'clarity-first';
+  else if (upDetailed > 0) upstreamChar = 'detail-first';
+  else if (upWarm > 0 && upSmooth > 0) upstreamChar = 'warmth-first';
+  else if (upWarm > 0) upstreamChar = 'tone-first';
   else upstreamChar = 'neutral';
 
   // Build downstream counterbalance phrase
@@ -6514,9 +6514,9 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   if (hasContrast) {
     // Counterbalance
     if (downWarm > 0 || downSmooth > 0) {
-      downstreamPhrase = `balanced by the tonal richness of the ${downstreamNames.join(' and ')}`;
+      downstreamPhrase = `with the ${downstreamNames.join(' and ')} supplying all of the warmth`;
     } else {
-      downstreamPhrase = `counterbalanced by the ${downstreamNames.join(' and ')}`;
+      downstreamPhrase = `with the ${downstreamNames.join(' and ')} adding definition`;
     }
   } else {
     // Alignment
@@ -6525,21 +6525,32 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
 
   // Compose interaction-aware thesis
   let thesisSentence1: string;
+  let thesisSentence2: string;
   if (upstreamComps.length > 0 && downstreamComps.length > 0) {
     const upList = upstreamNames.join(' and ');
     thesisSentence1 = `This is a ${upstreamChar} system anchored by ${upList}, ${downstreamPhrase}.`;
-    if (sourceComps.length > 0) {
-      thesisSentence1 += ` The ${sourceNames.join(' and ')} feeds the chain as a neutral transport.`;
+    // Sentence 2: what dominates (power note overrides if present)
+    const pw = powerNote.trim();
+    if (pw) {
+      thesisSentence2 = pw;
+    } else if (upBright > 0 || upDetailed > 0) {
+      thesisSentence2 = hasContrast
+        ? 'Clarity, timing, and spatial precision dominate unless the speaker compensates.'
+        : 'Clarity, timing, and spatial precision dominate throughout.';
+    } else if (upWarm > 0 || upSmooth > 0) {
+      thesisSentence2 = hasContrast
+        ? 'Warmth and body dominate unless the speaker adds edge.'
+        : 'Warmth and body dominate throughout.';
+    } else {
+      thesisSentence2 = 'No single quality dominates — the system splits the difference.';
     }
   } else {
     // Fallback: no clear upstream/downstream split
     const coreId = describeCoreIdentity(axes);
     thesisSentence1 = `${names} form ${coreId}.`;
+    thesisSentence2 = '';
   }
 
-  // Sentence 2: power mismatch > deliberate observation (DAC note removed
-  // from thesis — handled separately or suppressed per Prompt 1C).
-  const thesisSentence2 = powerNote.trim() || '';
   const overview = [
     `**System read**`,
     ``,
@@ -6559,17 +6570,45 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     const wb = compAxes?.axes.warm_bright;
     const sd = compAxes?.axes.smooth_detailed;
     const ec = compAxes?.axes.elastic_controlled;
+    const roleKey = (c.role || '').toLowerCase();
+    const isSource = /streamer|source|transport|turntable/.test(roleKey);
+    const isAmp = /amplifier|amp|integrated/.test(roleKey);
+    const isSpeaker = /speaker|headphone|monitor/.test(roleKey);
+    const isDac = roleKey === 'dac';
+
+    // Sources: "clean, neutral feed" style
+    if (isSource && wb !== 'warm' && wb !== 'bright') {
+      return 'clean, neutral feed';
+    }
+
     const parts: string[] = [];
     if (wb === 'bright') parts.push('fast');
     else if (wb === 'warm') parts.push('tone-rich');
     if (sd === 'detailed') parts.push(wb === 'bright' ? 'lean' : 'resolving');
     else if (sd === 'smooth') parts.push('smooth');
     if (ec === 'elastic') parts.push('high flow');
-    else if (ec === 'controlled') parts.push('controlled');
+    else if (ec === 'controlled') {
+      parts.push(isAmp ? 'high control' : 'controlled');
+    }
+
+    // Role-specific suffixes
+    if (isDac && parts.length > 0) {
+      return parts.join(', ') + ' conversion';
+    }
+    if (isSpeaker && parts.length > 0) {
+      return parts.join(', ') + ' presentation';
+    }
+
     if (parts.length === 0 && wb === 'neutral' && sd !== 'neutral') {
       parts.push(sd === 'detailed' ? 'neutral, detailed' : 'neutral');
     }
     if (parts.length === 0) parts.push('neutral, controlled');
+
+    // Amp low-coloration note when neutral
+    if (isAmp && wb !== 'bright' && wb !== 'warm' && ec === 'controlled') {
+      return 'high control, low coloration';
+    }
+
     return parts.join(', ');
   }
 
@@ -6598,17 +6637,17 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     // Amplifier: preserves or shapes
     if (roleKey === 'amplifier' || roleKey === 'amp' || roleKey === 'integrated') {
       // Does it match upstream (DAC) lean?
-      if (wb === sysAxes.warm_bright && sd === sysAxes.smooth_detailed) return 'preserves speed and attack';
+      if (wb === sysAxes.warm_bright && sd === sysAxes.smooth_detailed) return 'preserves speed and edge';
       if (wb === 'warm' && sysAxes.warm_bright === 'bright') return 'adds body to a lean upstream';
       if (wb === 'bright' && sysAxes.warm_bright === 'warm') return 'adds speed to a warm upstream';
-      if (wb === 'neutral') return 'passes signal with low coloration';
+      if (wb === 'neutral') return 'low coloration, preserves upstream character';
       return 'preserves upstream character';
     }
     // Speaker/headphone: final voice
     if (roleKey === 'speaker' || roleKey === 'speakers' || roleKey === 'headphone' || roleKey === 'headphones') {
       // Counterbalance or reinforce?
       if ((wb === 'warm' && sysAxes.warm_bright === 'bright') || (sd === 'smooth' && sysAxes.smooth_detailed === 'detailed')) {
-        return 'adds body and prevents dryness';
+        return 'adds body and prevents thinness';
       }
       if (wb === sysAxes.warm_bright) return 'reinforces the system\'s overall lean';
       if (wb === 'warm') return 'adds body at the output stage';
@@ -6631,8 +6670,24 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     const effect = deriveInteractionEffect(c, compAxes, axes);
     systemLogicRows.push(`${c.name} → ${behavior} → ${effect}`);
   }
+  // System logic summary — 2 sentences max, names interaction direction
+  let logicSummary = '';
+  if (upstreamComps.length > 0 && downstreamComps.length > 0) {
+    const upNames = upstreamNames.join(' and ');
+    const downNames = downstreamNames.join(' and ');
+    if (hasContrast) {
+      if (upBright > 0 || upDetailed > 0) {
+        logicSummary = `${upNames} push toward precision. The ${downNames} alone restores weight.`;
+      } else {
+        logicSummary = `${upNames} push toward warmth. The ${downNames} alone adds definition.`;
+      }
+    } else {
+      logicSummary = `${upNames} and ${downNames} reinforce the same direction.`;
+    }
+  }
+
   const systemLogicSection = systemLogicRows.length > 0
-    ? [`**System logic**`, ``, ...systemLogicRows].join('\n')
+    ? [`**System logic**`, ``, ...systemLogicRows, ``, logicSummary].filter(s => s !== '').join('\n')
     : '';
 
   // Dedupe component verdicts on the same normalized name key used above,
@@ -7251,43 +7306,38 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   // Identity section removed per output contract — redundant with thesis.
 
   // ── Primary leverage section (output contract: mandatory) ──
-  // Exactly ONE component. Explicit. No vague language.
+  // Gold format: "The [role].\n\n[Name] sets the system's [quality]. Change it and [consequence]."
   let primaryLeverageSection: string;
   if (primary.kind === 'bottleneck') {
+    const role = primary.role.toUpperCase().length <= 4 ? primary.role.toUpperCase() : primary.role.toLowerCase();
     const axesText = primary.axes.slice(0, 2).map(listenerAxisLabel).join(' and ');
     primaryLeverageSection = [
       `**Primary leverage**`,
       ``,
-      `Primary leverage: ${primary.component}`,
-      `Controls: ${axesText}`,
-      `Change this → more ${axesText} from the entire system`,
+      `The ${role}.`,
+      ``,
+      `${primary.component} limits ${axesText}. Change it and the entire system opens up.`,
     ].join('\n');
   } else if (primary.kind === 'component') {
-    const controlsText = primary.weakness.includes('weakest link')
-      ? 'overall resolution ceiling'
-      : primary.weakness.replace(/\.+$/, '');
+    const role = primary.role.toUpperCase().length <= 4 ? primary.role.toUpperCase() : primary.role.toLowerCase();
     primaryLeverageSection = [
       `**Primary leverage**`,
       ``,
-      `Primary leverage: ${primary.name}`,
-      `Controls: ${controlsText}`,
-      `Change this → unlock what the rest of the chain can already deliver`,
+      `The ${role}.`,
+      ``,
+      `${primary.name} sets the system's resolution ceiling. Change it and the rest of the chain delivers more.`,
     ].join('\n');
   } else if (primary.kind === 'imbalance') {
     const prop = humanizeProperty(primary.property);
     primaryLeverageSection = [
       `**Primary leverage**`,
       ``,
-      `Primary leverage: system balance (${prop})`,
-      `Controls: ${prop} across the chain`,
-      `Change this → more even response across material`,
+      `System balance (${prop}).`,
+      ``,
+      `The chain stacks ${prop} in one direction. Rebalance it and the system serves more material.`,
     ].join('\n');
   } else {
     // ── KEEP with no bottleneck: identify DAC as voicing leverage ──
-    // When no structural constraint exists, the DAC is the preference-
-    // shaping component — changing it shifts tonal character without
-    // fixing a deficiency. This applies to both coherent and compensating
-    // systems: the DAC sets the tonal foundation either way.
     const dacName = findings.activeDACInference.activeDACName;
     const dacComp = dacName
       ? comps.find(c => c.name === dacName)
@@ -7296,17 +7346,17 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       primaryLeverageSection = [
         `**Primary leverage**`,
         ``,
-        `Primary leverage: ${dacComp.name} (DAC voicing)`,
-        `Controls: tonal balance and system character`,
-        `Change this → more tonal density, body, and decay if desired`,
+        `The DAC.`,
+        ``,
+        `${dacComp.name} sets the system's tonal balance. Change it and the entire character shifts.`,
       ].join('\n');
     } else {
       primaryLeverageSection = [
         `**Primary leverage**`,
         ``,
-        `Primary leverage: none — system is at equilibrium`,
-        `Controls: n/a`,
-        `Change this → n/a (no single component limits the system)`,
+        `None — system is at equilibrium.`,
+        ``,
+        `No single component limits the system.`,
       ].join('\n');
     }
   }
@@ -7422,114 +7472,159 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   optimizeParts.push(chosenStepText);
   const actionPathSection = [`**Action path**`, ``, ...optimizeParts].join('\n');
 
-  // ── Decision section (output contract: KEEP / CHANGE [component] / UPGRADE PATH) ──
-  // No hedging. Must follow directly from primary leverage.
-  let decisionVerdict: string;
-  let riskLevel: string;
+  // ── Decision section (gold format: dual KEEP/CHANGE) ──
+  // Always present both sides. KEEP condition + CHANGE condition.
+  let decisionVerdict: 'KEEP' | 'CHANGE' | 'UPGRADE_PATH';
   if (dominantInsight === 'identity' || primary.kind === 'none') {
     decisionVerdict = 'KEEP';
-    riskLevel = 'LOW';
   } else if (primary.kind === 'bottleneck' || primary.kind === 'component') {
-    const compName = primary.kind === 'bottleneck' ? primary.component : primary.name;
-    decisionVerdict = `CHANGE ${compName}`;
-    riskLevel = 'LOW';
+    decisionVerdict = 'CHANGE';
   } else {
-    // Imbalance — no single component swap fixes it
-    decisionVerdict = 'UPGRADE PATH';
-    riskLevel = 'MEDIUM';
+    decisionVerdict = 'UPGRADE_PATH';
   }
 
-  // Decision: verdict + one-line reason.
-  // For KEEP systems with no bottleneck, reference DAC voicing as the optional change path.
-  const dacForDecision = (decisionVerdict === 'KEEP')
-    ? (findings.activeDACInference.activeDACName
-      ?? comps.find(c => (c.role || '').toLowerCase() === 'dac')?.name)
-    : null;
-  const decisionReason =
-    decisionVerdict === 'KEEP'
-      ? (dacForDecision
-        ? `No component is holding the system back. If you want more tonal density, change ${dacForDecision} first.`
-        : 'No component is holding the system back.')
-      : decisionVerdict === 'UPGRADE PATH'
-        ? 'The imbalance is architectural — a directional shift, not a single swap.'
-        : `It limits what the rest of the chain can deliver.`;
+  // Derive system strengths from axes for the KEEP condition
+  const keepQualities: string[] = [];
+  if (upBright > 0 || upDetailed > 0) keepQualities.push('speed', 'separation', 'spatial clarity');
+  else if (upWarm > 0 || upSmooth > 0) keepQualities.push('warmth', 'body', 'tonal richness');
+  else keepQualities.push('balance', 'coherence');
+  const keepLine = `KEEP if you value ${keepQualities.join(', ')}.`;
+
+  // Derive CHANGE condition from primary leverage or DAC
+  const dacForDecision = findings.activeDACInference.activeDACName
+    ?? comps.find(c => (c.role || '').toLowerCase() === 'dac')?.name;
+
+  let changeLine: string;
+  if (primary.kind === 'bottleneck' || primary.kind === 'component') {
+    const compName = primary.kind === 'bottleneck' ? primary.component : primary.name;
+    const role = (primary as { role: string }).role.toLowerCase();
+    changeLine = `CHANGE the ${role} if the system sounds constrained. ${compName} limits what the rest of the chain can deliver.`;
+  } else if (dacForDecision) {
+    // KEEP system — offer DAC as directional change
+    const leanDesc = (upBright > 0 || upDetailed > 0)
+      ? 'This system leans lean unless corrected.'
+      : (upWarm > 0) ? 'This system leans warm — adding clarity requires upstream change.' : '';
+    changeLine = `CHANGE the DAC if vocals feel thin or instruments lack weight. ${leanDesc}`.trim();
+  } else {
+    changeLine = 'No single component demands change.';
+  }
 
   const decisionSection = [
     `**Decision**`,
     ``,
-    `${decisionVerdict} — ${decisionReason}`,
+    keepLine,
+    ``,
+    changeLine,
   ].join('\n');
 
-  // ── Trade-offs section (max 3 lines, output contract) ──
-  // ── Trade-offs (output contract: You gain / You give up / Watch out for) ──
-  let tradeOffGain: string;
-  let tradeOffGiveUp: string;
-  let tradeOffWatch: string;
+  // ── Trade-offs section (gold format: 3 interaction-specific bullets, ≤12 words each) ──
+  const tradeOffBullets: string[] = [];
 
-  if (decisionVerdict === 'KEEP') {
-    if (dacForDecision) {
-      tradeOffGain = `You gain: more body, density, and harmonic weight (if you change ${dacForDecision})`;
-      tradeOffGiveUp = `You give up: the speed and transparency ${dacForDecision} currently provides`;
-      tradeOffWatch = 'Watch out for: swapping clarity for warmth without gaining engagement';
+  if (dacForDecision) {
+    // Bullet 1: warmer DAC trade-off
+    if (upBright > 0 || upDetailed > 0) {
+      tradeOffBullets.push(`Warmer DAC adds body, reduces transient sharpness`);
     } else {
-      tradeOffGain = 'You gain: nothing new — system is at equilibrium';
-      tradeOffGiveUp = 'You give up: access to qualities outside this architecture';
-      tradeOffWatch = 'Watch out for: restlessness mistaken for a real problem';
+      tradeOffBullets.push(`Leaner DAC adds speed, reduces harmonic weight`);
     }
-  } else {
-    // What you gain — derived from bottleneck axes or constraint
-    let gainText: string;
-    if (primary.kind === 'bottleneck' && primary.axes.length > 0) {
-      gainText = primary.axes.slice(0, 2).map(listenerAxisLabel).join(' and ');
-    } else if (primary.kind === 'component') {
-      gainText = 'resolution at the constrained link';
-    } else if (primary.kind === 'imbalance') {
-      gainText = `balance across ${humanizeProperty(primary.property)}`;
-    } else {
-      gainText = 'overall coherence';
-    }
-    tradeOffGain = `You gain: ${gainText}`;
-    // What you give up
-    tradeOffGiveUp = keeps.length > 0
-      ? `You give up: existing synergy between ${keeps.slice(0, 2).map(k => k.name).join(' and ')}`
-      : 'You give up: familiarity — the system will sound different before it sounds better';
-    // Watch out for
-    tradeOffWatch = keeps.length > 0
-      ? `Watch out for: breaking what ${keeps[0].name} currently does well`
-      : 'Watch out for: lateral moves that sound different but not more engaging';
+  } else if (primary.kind === 'bottleneck' || primary.kind === 'component') {
+    const compName = primary.kind === 'bottleneck' ? primary.component : primary.name;
+    tradeOffBullets.push(`Upgrading ${compName} lifts resolution, changes system balance`);
   }
+
+  // Bullet 2: tube/topology alternative
+  if (upBright > 0 || upDetailed > 0) {
+    tradeOffBullets.push('Tube stage adds texture, softens control');
+  } else {
+    tradeOffBullets.push('Solid-state swap adds grip, reduces harmonic bloom');
+  }
+
+  // Bullet 3: current balance + material affinity
+  const strongMaterial = (upBright > 0 || upDetailed > 0) ? 'sparse' : 'dense';
+  const weakMaterial = (upBright > 0 || upDetailed > 0) ? 'dense' : 'sparse';
+  tradeOffBullets.push(`Current setup excels on ${strongMaterial} music, exposes thinness on ${weakMaterial} tracks`);
 
   const tradeOffsSection = [
     `**Trade-offs**`,
     ``,
-    tradeOffGain,
-    tradeOffGiveUp,
-    tradeOffWatch,
+    ...tradeOffBullets.map(b => `- ${b}`),
   ].join('\n');
 
-  // ── Final assembly (output contract) ──
+  // ── Next step options (gold format: 3 directional bullets) ──
+  const nextStepBullets: string[] = [];
+  if (dacForDecision) {
+    if (upBright > 0 || upDetailed > 0) {
+      nextStepBullets.push('Move toward warmer DAC options');
+      nextStepBullets.push(`Compare ${dacForDecision} vs R2R alternatives`);
+    } else {
+      nextStepBullets.push('Move toward more resolving DAC options');
+      nextStepBullets.push(`Compare ${dacForDecision} vs delta-sigma alternatives`);
+    }
+  } else if (primary.kind === 'bottleneck' || primary.kind === 'component') {
+    const compName = primary.kind === 'bottleneck' ? primary.component : primary.name;
+    const role = (primary as { role: string }).role.toLowerCase();
+    nextStepBullets.push(`Compare ${role} alternatives to ${compName}`);
+    nextStepBullets.push(`Check if ${role} change shifts enough`);
+  } else {
+    nextStepBullets.push('Explore directional alternatives');
+    nextStepBullets.push('Compare topology options');
+  }
+  nextStepBullets.push('Check system fit for your listening habits');
+
+  const nextStepSection = [
+    `**Next step options**`,
+    ``,
+    ...nextStepBullets.map(b => `- ${b}`),
+  ].join('\n');
+
+  // ── Do nothing check (1–2 sentences, system-specific restraint) ──
+  // References this system's specific balance and the risk of changing it.
+  // Must not repeat the Decision section verbatim.
+  let doNothingSection: string;
+  if (hasContrast && downstreamComps.length > 0 && upstreamComps.length > 0) {
+    // System has upstream/downstream contrast — name the balance and the risk
+    const upQuality = (upBright > 0 || upDetailed > 0) ? 'speed and clarity' : 'warmth and body';
+    const downQuality = (downWarm > 0 || downSmooth > 0) ? 'warmth' : 'definition';
+    const downName = downstreamNames.join(' and ');
+    const upList = upstreamNames.join(' + ');
+    doNothingSection = [
+      `**Do nothing check**`,
+      ``,
+      `If this balance of ${upQuality} and just enough ${downQuality} is what you enjoy, leave the system alone. The risk of upgrading is losing the ${downName}'s careful compensation for ${upList} precision.`,
+    ].join('\n');
+  } else if (keeps.length > 0) {
+    const keepNames = keeps.slice(0, 2).map(k => k.name).join(' and ');
+    doNothingSection = [
+      `**Do nothing check**`,
+      ``,
+      `If the music sounds engaging, this system is doing its job. ${keepNames} define the character — changing either reshapes what you hear.`,
+    ].join('\n');
+  } else {
+    doNothingSection = [
+      `**Do nothing check**`,
+      ``,
+      `If the system sounds right, it is right. Swapping components without clear cause risks losing coherence without gaining engagement.`,
+    ].join('\n');
+  }
+
+  // ── Final assembly (gold-standard output contract + do nothing check) ──
   // Sections:
-  //   1. System read (thesis, max 2 sentences)
-  //   2. System logic (Component → Behavior → Effect, max 4 rows)
-  //   3. What the system does well (max 3 bullets)
-  //   4. Where the system is constrained / System trade-offs
-  //   5. Primary leverage (mandatory)
-  //   6. Decision (KEEP / CHANGE [x] / UPGRADE PATH)
-  //   7. Trade-offs (You gain / You give up / Watch out for)
-  //   8. Action path (when not KEEP)
-  //   9. Do nothing check (max 2 lines)
-  void riskLevel; // suppressed — was appended to action path, now removed for brevity
+  //   1. System read (max 2 sentences)
+  //   2. System logic (max 4 rows + 2-sentence summary)
+  //   3. Primary leverage (role declaration + 2-sentence explanation)
+  //   4. Decision (dual KEEP/CHANGE)
+  //   5. Trade-offs (3 interaction-specific bullets)
+  //   6. Next step options (3 directional bullets)
+  //   7. Do nothing check (1-2 sentences, restraint)
 
   return [
     overview,
     systemLogicSection,
-    strengthsSection,
-    constraintsSection,
     primaryLeverageSection,
     decisionSection,
     tradeOffsSection,
-    decisionVerdict === 'KEEP' ? '' : actionPathSection,
-    doNothingCheck,
+    nextStepSection,
+    doNothingSection,
   ]
     .filter((s) => typeof s === 'string' && s.trim().length > 0)
     .join('\n\n');

@@ -400,6 +400,7 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
   const tradeoffs = findSection('trade-offs') ?? findSection('trade offs');
   const changeNothing = findSection('do nothing check') ?? findSection('change nothing');
   const optimize = findSection('action path') ?? findSection('optimize');
+  const nextSteps = findSection('next step');
   const outcomeValidation = findSection('outcome validation');
 
   // ── Dedupe chain into a single aligned array of { name, role }. ──
@@ -762,6 +763,14 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
         <section style={{ marginBottom: sectionGap }}>
           {sectionLabel('Trade-offs')}
           {bodyPara(tradeoffs.body)}
+        </section>
+      )}
+
+      {/* Next step options. */}
+      {nextSteps && (
+        <section style={{ marginBottom: sectionGap }}>
+          {sectionLabel('Next step options')}
+          {renderListBody(nextSteps.body)}
         </section>
       )}
 

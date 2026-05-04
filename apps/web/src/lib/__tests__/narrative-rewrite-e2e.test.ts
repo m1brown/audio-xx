@@ -77,17 +77,14 @@ describe('narrative rewrite — end-to-end', () => {
     // Narrative must have run: seven section headers present.
     expect(r.systemContext).toBeDefined();
     const ctx = r.systemContext!;
+    // Gold-standard output contract: 7 sections
     expect(ctx).toContain('**System read**');
-    expect(ctx).toContain('**What the system does well**');
-    // Constraint section may be suppressed for identity-mode systems.
-    // expect(ctx).toContain('**Where the system is constrained**');
-    expect(ctx).toContain('**Listener alignment**');
+    expect(ctx).toContain('**System logic**');
+    expect(ctx).toContain('**Primary leverage**');
     expect(ctx).toContain('**Decision**');
     expect(ctx).toContain('**Trade-offs**');
+    expect(ctx).toContain('**Next step options**');
     expect(ctx).toContain('**Do nothing check**');
-    expect(ctx).toContain('**Outcome validation**');
-    // Action path is only present for non-KEEP decisions.
-    // expect(ctx).toContain('**Action path**');
 
     // Legacy structured fields remain populated on the response object
     // (parity tests depend on them). The UI MemoFormat renderer skips
