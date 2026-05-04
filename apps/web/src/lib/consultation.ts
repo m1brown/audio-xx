@@ -11377,8 +11377,19 @@ export function buildConsultationEntry(
   if (activeSystem && activeSystem.components.length > 0) {
     const componentNames = activeSystem.components.map((c) => normalizeDisplayName(c.brand, c.name));
     const componentList = componentNames.join(', ');
-    const tendenciesNote = activeSystem.tendencies
-      ? ` The system leans toward ${activeSystem.tendencies}.`
+    // Guard: tendencies may be a JSON string — extract prose or suppress.
+    const rawTendencies = activeSystem.tendencies;
+    let cleanTendencies: string | null = null;
+    if (typeof rawTendencies === 'string' && rawTendencies.trim().length > 0) {
+      const t = rawTendencies.trim();
+      if (t.startsWith('{')) {
+        try { const p = JSON.parse(t); cleanTendencies = typeof p.summary === 'string' ? p.summary.trim() : null; } catch { /* not JSON */ cleanTendencies = t; }
+      } else if (t !== '{}' && t !== '[]') {
+        cleanTendencies = t;
+      }
+    }
+    const tendenciesNote = cleanTendencies
+      ? ` The system leans toward ${cleanTendencies}.`
       : '';
 
     // ── Restraint path: user asks whether any change is warranted ──

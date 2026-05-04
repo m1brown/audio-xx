@@ -1102,9 +1102,11 @@ function buildSystemContextPreamble(
 
   // ── Sentence 1: Current system tendency ──
   // Prefer the reasoning engine's tendency summary; fall back to stored tendencies.
-  const tendencySummary = reasoning.system.tendencySummary ?? systemTendencies;
+  // Run through normalizer to guard against raw JSON leaking into prose.
+  const tendencySummary = normalizeTendenciesForRender(reasoning.system.tendencySummary)
+    ?? normalizeTendenciesForRender(systemTendencies);
   if (tendencySummary) {
-    parts.push(`Your current system leans toward ${tendencySummary.toLowerCase().replace(/\.$/, '')}.`);
+    parts.push(`Your current system leans toward ${tendencySummary.replace(/\.$/, '')}.`);
   } else {
     // Derive from current tendencies if no summary
     const tendencyLabels = reasoning.system.currentTendencies;
@@ -1858,9 +1860,10 @@ function buildGearWhyFitsYou(r: GearResponse): string[] | undefined {
     }
   }
 
-  // System tendency interaction
-  if (r.systemDirection?.tendencySummary) {
-    bullets.push(`Your system leans ${r.systemDirection.tendencySummary.toLowerCase()} — this component either reinforces or counterbalances that.`);
+  // System tendency interaction — guard against JSON leak
+  const normalizedDirection = normalizeTendenciesForRender(r.systemDirection?.tendencySummary);
+  if (normalizedDirection) {
+    bullets.push(`Your system leans ${normalizedDirection} — this component either reinforces or counterbalances that.`);
   }
 
   // Hearing-derived context (summarize if present)
@@ -2219,7 +2222,8 @@ function buildEditorialClosing(
   let avoidanceNote: string | undefined;
 
   if (ctx?.systemComponents && ctx.systemComponents.length > 0) {
-    systemSummary = `Given your ${ctx.systemComponents.join(' + ')}${ctx.systemTendencies ? ` (${ctx.systemTendencies})` : ''}`;
+    const normalizedCtxTendencies = normalizeTendenciesForRender(ctx.systemTendencies);
+    systemSummary = `Given your ${ctx.systemComponents.join(' + ')}${normalizedCtxTendencies ? ` (${normalizedCtxTendencies})` : ''}`;
 
     // System picks are the top products that have a systemDelta or specific fitNote
     systemPicks = products.slice(0, Math.min(2, products.length)).map((p) => {
@@ -2441,6 +2445,26 @@ function normalizeTendenciesForRender(value: unknown): string | null {
   if (trimmed.length === 0) return null;
   if (trimmed === '{}' || trimmed === '[]') return null;
   if (trimmed.toLowerCase() === 'null' || trimmed.toLowerCase() === 'undefined') return null;
+
+  // Guard against JSON objects leaking into prose.
+  // The tendencies field is sometimes stored as a serialized JSON object
+  // (e.g. '{"summary":"solid-state amplification, speaker-based"}').
+  // Extract the summary field if present; otherwise suppress.
+  if (trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (typeof parsed === 'object' && parsed !== null) {
+        const summary = parsed.summary ?? parsed.tendencies ?? parsed.description;
+        if (typeof summary === 'string' && summary.trim().length > 0) {
+          return summary.trim().toLowerCase();
+        }
+        return null; // JSON object with no extractable prose — suppress
+      }
+    } catch {
+      // Not valid JSON despite starting with { — fall through to return as-is
+    }
+  }
+
   return trimmed.toLowerCase();
 }
 

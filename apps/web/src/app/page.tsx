@@ -1117,11 +1117,19 @@ export default function Home() {
 
     // Build a personalized note when a saved/draft system exists but
     // the user didn't state one — keeps the main answer general.
-    const tendenciesStr = typeof turnCtx.activeSystem?.tendencies === 'string'
-      && turnCtx.activeSystem.tendencies.trim().length > 0
-      && turnCtx.activeSystem.tendencies.trim() !== '{}'
-      ? turnCtx.activeSystem.tendencies.trim().toLowerCase()
-      : null;
+    // Guard: tendencies may be stored as a JSON object string —
+    // extract prose or suppress to prevent JSON leaking into the UI.
+    let tendenciesStr: string | null = null;
+    if (typeof turnCtx.activeSystem?.tendencies === 'string') {
+      const raw = turnCtx.activeSystem.tendencies.trim();
+      if (raw.length > 0 && raw !== '{}' && raw !== '[]') {
+        if (raw.startsWith('{')) {
+          try { const p = JSON.parse(raw); tendenciesStr = typeof p.summary === 'string' ? p.summary.trim().toLowerCase() : null; } catch { tendenciesStr = raw.toLowerCase(); }
+        } else {
+          tendenciesStr = raw.toLowerCase();
+        }
+      }
+    }
 
     const savedSystemNote: string | undefined =
       isSavedSystem && activeComponentNames && activeComponentNames.length > 0

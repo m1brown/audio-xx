@@ -61,26 +61,24 @@ const ACTIVE_SYSTEM_KEY = 'audioxx.active-system.v1';
  */
 function buildInitialState(): AudioSessionState {
   const draft = readDraftFromStorage();
-  const savedSystems = readSavedSystemsFromStorage();
-  const storedRef = readActiveSystemRefFromStorage();
 
-  // Determine active ref: prioritize stored ref, validate it exists
+  // Saved systems are NOT loaded from localStorage on cold boot.
+  // Auth status is unknown at this point — loading saved systems here
+  // causes phantom-system contamination when the user is signed out
+  // (localStorage retains saved systems from a previous authenticated
+  // session). Instead, saved systems are populated by the auth effect:
+  //   - authenticated → fetched from API (or fallback to localStorage)
+  //   - unauthenticated → remain empty
+  //
+  // Draft systems (sessionStorage) are session-scoped and safe to load.
   let activeSystemRef: ActiveSystemRef = null;
-  if (storedRef?.kind === 'saved') {
-    const exists = savedSystems.some((s) => s.id === storedRef.id);
-    activeSystemRef = exists ? storedRef : null;
-  } else if (storedRef?.kind === 'draft' && draft) {
+  if (draft) {
     activeSystemRef = { kind: 'draft' };
-  } else if (draft) {
-    activeSystemRef = { kind: 'draft' };
-  } else if (savedSystems.length > 0) {
-    // Auto-select first saved system if no other ref
-    activeSystemRef = { kind: 'saved', id: savedSystems[0].id };
   }
 
   return {
     activeSystemRef,
-    savedSystems,
+    savedSystems: [],
     draftSystem: draft,
     loading: false,
     proposedSystem: null,
@@ -414,20 +412,16 @@ export function AudioSessionProvider({ children }: { children: ReactNode }) {
         loadSavedSystems();
       }
     } else if (status === 'unauthenticated') {
-      // User signed out. Preserve localStorage systems — they persist
-      // across sessions. Only reset the in-memory tracking ref.
-      if (loadedForUserRef.current) {
-        loadedForUserRef.current = null;
-        // Re-hydrate from localStorage instead of clearing to [].
-        const persisted = readSavedSystemsFromStorage();
-        if (persisted.length > 0) {
-          dispatch({
-            type: 'SET_SAVED_SYSTEMS',
-            systems: persisted,
-            activeSystemId: persisted[0]?.id ?? null,
-          });
-        }
-      }
+      // User is signed out (or was never signed in). Clear saved systems
+      // from in-memory state so advisory builders see no system context.
+      // localStorage is left intact — if the user signs back in, the
+      // auth handler will re-fetch from the API (or fall back to localStorage).
+      loadedForUserRef.current = null;
+      dispatch({
+        type: 'SET_SAVED_SYSTEMS',
+        systems: [],
+        activeSystemId: null,
+      });
     }
   }, [status, session, loadSavedSystems]);
 
