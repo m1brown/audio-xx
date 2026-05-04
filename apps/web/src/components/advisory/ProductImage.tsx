@@ -7,19 +7,19 @@
  */
 export function ProductImage({ src, alt, credit }: { src: string; alt: string; credit?: string }) {
   return (
-    <figure style={{ margin: 0, marginBottom: '0.75rem' }}>
+    <figure style={{ margin: 0, marginBottom: '0.5rem' }}>
       <div
         style={{
           borderRadius: '10px',
           overflow: 'hidden',
           width: '100%',
-          maxHeight: '280px',
-          minHeight: '140px',
+          maxHeight: '200px',
+          minHeight: '100px',
           background: '#f6f5f2',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '0.5rem 0',
+          padding: '0.35rem 0',
           boxSizing: 'border-box',
         }}
       >
@@ -30,7 +30,7 @@ export function ProductImage({ src, alt, credit }: { src: string; alt: string; c
           referrerPolicy="no-referrer"
           style={{
             maxWidth: '100%',
-            maxHeight: '260px',
+            maxHeight: '180px',
             objectFit: 'contain',
             display: 'block',
           }}

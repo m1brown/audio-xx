@@ -117,8 +117,8 @@ describe('QA-1: Speaker shopping, strong taste (van halen → speakers → $5000
     expect(result.answer.directed).toBe(true);
   });
 
-  it('produces ≤ 2 product options', () => {
-    expect(result.advisory.options!.length).toBeLessThanOrEqual(2);
+  it('produces ≤ 3 product options', () => {
+    expect(result.advisory.options!.length).toBeLessThanOrEqual(3);
     expect(result.advisory.options!.length).toBeGreaterThan(0);
   });
 

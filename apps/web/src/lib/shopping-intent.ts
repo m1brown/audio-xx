@@ -5926,10 +5926,11 @@ export function buildShoppingAnswer(
   }
 
   // ── Cap product count and mark primary ──────────────
-  // Directed mode: 2 products. All other modes: 3 max (enforced by buildRecommendationSet).
-  if (directed && productExamples.length > 2) {
-    productExamples = productExamples.slice(0, 2);
-  } else if (!directed && productExamples.length > 3) {
+  // All modes: 3 max (enforced by buildRecommendationSet).
+  // Previous directed-mode cap of 2 broke comparison quality —
+  // 3 products (anchor + close_alt + contrast/wildcard) is the
+  // minimum for meaningful comparison across recommendation sets.
+  if (productExamples.length > 3) {
     productExamples = productExamples.slice(0, 3);
   }
   // Always mark position 0 as primary — the "Start here" pick.

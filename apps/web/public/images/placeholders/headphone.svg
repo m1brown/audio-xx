@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120">
+  <rect width="200" height="120" fill="#f6f5f2"/>
+  <!-- Headband -->
+  <path d="M60 70 Q100 15 140 70" stroke="#d4d0c8" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <!-- Left ear cup -->
+  <rect x="48" y="60" width="24" height="35" rx="8" fill="#e8e6e0"/>
+  <rect x="52" y="65" width="16" height="25" rx="5" fill="#d4d0c8"/>
+  <!-- Right ear cup -->
+  <rect x="128" y="60" width="24" height="35" rx="8" fill="#e8e6e0"/>
+  <rect x="132" y="65" width="16" height="25" rx="5" fill="#d4d0c8"/>
+  <!-- Label -->
+  <text x="100" y="112" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#b8b4aa">Headphone</text>
+</svg>

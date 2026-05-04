@@ -32,7 +32,7 @@ import type { PreferenceProtectionResult } from './preference-protection';
 import type { CounterfactualAssessment } from './counterfactual-assessment';
 import type { DecisionFrame } from './decision-frame';
 import { detectSystemPhono, buildPhonoCaveat } from './products/turntables';
-import { getProductImage } from './product-images';
+import { getProductImage, resolveProductImage, getBrandImage, getGenericPlaceholder } from './product-images';
 import { getLegacyMapping } from './products/legacy-models';
 
 // ── Country code to name ──────────────────────────────
@@ -1813,7 +1813,7 @@ export function consultationToAdvisory(
       ...path,
       options: path.options.map((opt) => ({
         ...opt,
-        imageUrl: opt.imageUrl ?? getProductImage(opt.brand, opt.name),
+        imageUrl: resolveProductImage(opt.brand, opt.name, opt.imageUrl),
       })),
     })),
     keepRecommendations: isComparison ? undefined : c.keepRecommendations,
@@ -2590,8 +2590,8 @@ export function shoppingToAdvisory(
     chooseThisIf: p.chooseThisIf,
     avoidIf: p.avoidIf,
     // Step 10: Enhanced catalog fields
-    // Catalog imageUrl wins; fall back to the seeded product-image mapping.
-    imageUrl: p.imageUrl ?? getProductImage(p.brand, p.name),
+    // Full 4-step image resolution: catalog → product overlay → brand → category placeholder.
+    imageUrl: resolveProductImage(p.brand, p.name, p.imageUrl, a.category),
     typicalMarket: p.typicalMarket,
     buyingContext: p.buyingContext,
     // Legacy model context — attach successor notes for discontinued/vintage products

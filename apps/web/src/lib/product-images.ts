@@ -94,7 +94,9 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
   { key: 'dcs bart k',          url: 'https://dcsaudio.com/assets/bartok-highlights-bhd-2.jpg' },
 
   // Gustard — gustard.com /qfy-content/uploads/ CDN
-  { key: 'gustard r26',         url: 'https://www.gustard.com/qfy-content/uploads/2022/10/ae6b2c24323caabb87bd8814319e8140-100.webp' },
+  { key: 'gustard x26 pro',    url: 'https://www.gustard.com/qfy-content/uploads/2022/04/8c3d31f03e83f8df9e1e75f72eafb3ac-100.webp' },
+  { key: 'gustard x16',        url: 'https://www.gustard.com/qfy-content/uploads/2021/10/0d3d6e7e4f0a67feaef5e67d8e5b22d4-100.webp' },
+  { key: 'gustard r26',        url: 'https://www.gustard.com/qfy-content/uploads/2022/10/ae6b2c24323caabb87bd8814319e8140-100.webp' },
 
   // Topping — upload.toppingaudio.com CDN
   { key: 'topping d70',         url: 'http://upload.toppingaudio.com/contents/2025/86/e0/iFkOZUtDRIHy85TQH1D2yWBOQDBCbUqkz6x5iJFb.webp' },
@@ -361,6 +363,18 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
   // NAD — nadelectronics.com Shopify CDN (additional model)
   { key: 'nad c 316bee',        url: 'https://nadelectronics.com/cdn/shop/files/NAD-C-316BEE-Intagrated-amplifier-Front.jpg' },
 
+  // MHDT — mhdtlab.com product image
+  { key: 'mhdt orchid',         url: 'https://www.mhdtlab.com/images/product/orchid/orchid-front.jpg' },
+
+  // Holo Audio — kitsunehifi.com Shopify CDN (US distributor)
+  { key: 'holo cyan',           url: 'https://kitsunehifi.com/cdn/shop/files/cyan2.jpg' },
+
+  // Sonnet — sonnetaudio.com product assets
+  { key: 'sonnet morpheus',     url: 'https://www.sonnetaudio.com/images/products/morpheus-front.jpg' },
+
+  // Merason — merason.ch product assets
+  { key: 'merason frerot',      url: 'https://www.merason.ch/images/frerot-front-silver.jpg' },
+
   // ── Remaining DACs ────────────────────────────────────
 
   // Auralic — us.auralic.com product assets
@@ -406,4 +420,85 @@ export function getProductImage(
     if (haystack.includes(entry.key)) return entry.url;
   }
   return undefined;
+}
+
+// ── Brand-level fallback ────────────────────────────────
+//
+// Scans the existing PRODUCT_IMAGE_URLS map for any entry whose key
+// starts with the normalized brand name. Returns the first match —
+// no new external URLs, just reuses what's already curated.
+
+/** @internal Cache brand→URL so repeated lookups are O(1). */
+const _brandCache = new Map<string, string | undefined>();
+
+/**
+ * Return an existing product image for the same brand, if any entry
+ * in PRODUCT_IMAGE_URLS matches. No new external URLs — reuses the
+ * curated overlay map. Returns undefined when the brand has zero coverage.
+ */
+export function getBrandImage(brand: string | undefined): string | undefined {
+  if (!brand) return undefined;
+  const key = normalize(brand);
+  if (!key) return undefined;
+  if (_brandCache.has(key)) return _brandCache.get(key);
+  for (const entry of PRODUCT_IMAGE_URLS) {
+    if (entry.key.startsWith(key)) {
+      _brandCache.set(key, entry.url);
+      return entry.url;
+    }
+  }
+  _brandCache.set(key, undefined);
+  return undefined;
+}
+
+// ── Category placeholders ──────────────────────────────
+//
+// Static local SVGs in /public/images/placeholders/.
+// Served by Next.js from the public directory — no external fetch.
+
+const CATEGORY_PLACEHOLDERS: Record<string, string> = {
+  dac:             '/images/placeholders/dac.svg',
+  amplifier:       '/images/placeholders/amplifier.svg',
+  integrated:      '/images/placeholders/amplifier.svg',
+  preamp:          '/images/placeholders/amplifier.svg',
+  'power-amp':     '/images/placeholders/amplifier.svg',
+  speaker:         '/images/placeholders/speaker.svg',
+  turntable:       '/images/placeholders/turntable.svg',
+  phono:           '/images/placeholders/turntable.svg',
+  headphone:       '/images/placeholders/headphone.svg',
+  iem:             '/images/placeholders/headphone.svg',
+};
+
+const DEFAULT_PLACEHOLDER = '/images/placeholders/product.svg';
+
+/**
+ * Return a static local placeholder image path for the given product category.
+ * Falls back to a generic product silhouette when the category is unknown.
+ */
+export function getGenericPlaceholder(category?: string): string {
+  if (!category) return DEFAULT_PLACEHOLDER;
+  return CATEGORY_PLACEHOLDERS[category.toLowerCase()] ?? DEFAULT_PLACEHOLDER;
+}
+
+/**
+ * Full image resolution chain for product cards:
+ *   1. product.imageUrl (catalog field)
+ *   2. getProductImage(brand, name) (curated overlay map)
+ *   3. getBrandImage(brand) (first existing entry for same brand)
+ *   4. getGenericPlaceholder(category) (static local SVG)
+ *
+ * Always returns a string — no card should ever render without an image.
+ */
+export function resolveProductImage(
+  brand: string | undefined,
+  name: string | undefined,
+  catalogImageUrl?: string,
+  category?: string,
+): string {
+  return (
+    catalogImageUrl
+    ?? getProductImage(brand, name)
+    ?? getBrandImage(brand)
+    ?? getGenericPlaceholder(category)
+  );
 }

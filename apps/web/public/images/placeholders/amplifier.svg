@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120">
+  <rect width="200" height="120" fill="#f6f5f2"/>
+  <!-- Amplifier chassis -->
+  <rect x="25" y="30" width="150" height="55" rx="5" fill="#e8e6e0"/>
+  <!-- VU meters -->
+  <rect x="45" y="40" width="30" height="20" rx="3" fill="#d4d0c8"/>
+  <rect x="85" y="40" width="30" height="20" rx="3" fill="#d4d0c8"/>
+  <!-- Volume knob -->
+  <circle cx="145" cy="57" r="12" fill="#d4d0c8"/>
+  <circle cx="145" cy="57" r="4" fill="#c4c0b8"/>
+  <!-- Label -->
+  <text x="100" y="105" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#b8b4aa">Amplifier</text>
+</svg>

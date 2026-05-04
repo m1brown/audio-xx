@@ -49,13 +49,13 @@ describe('Directed mode: budget + category + taste → directed output', () => {
     expect(answer.directed).toBe(true);
   });
 
-  it('caps product examples at 2 in directed mode', () => {
+  it('caps product examples at 3 in directed mode', () => {
     const ctx = detectShoppingIntent(allUserText, warmSignals, []);
     const reasoning = reason(allUserText, [], warmSignals, null, ctx, undefined);
     const answer = buildShoppingAnswer(ctx, warmSignals, undefined, reasoning, []);
 
     expect(answer.directed).toBe(true);
-    expect(answer.productExamples.length).toBeLessThanOrEqual(2);
+    expect(answer.productExamples.length).toBeLessThanOrEqual(3);
   });
 
   it('marks the first product as isPrimary', () => {
@@ -130,7 +130,7 @@ describe('Directed mode: AdvisoryResponse level', () => {
     const answer = buildShoppingAnswer(ctx, warmSignals, undefined, reasoning, []);
     const advisory = shoppingToAdvisory(answer, warmSignals, reasoning, {});
 
-    expect((advisory.options ?? []).length).toBeLessThanOrEqual(2);
+    expect((advisory.options ?? []).length).toBeLessThanOrEqual(3);
   });
 
   it('uses directed editorial intro with "should lean toward" framing', () => {
@@ -221,7 +221,7 @@ describe('Full flow: van halen → speakers → amp category switch', () => {
     const answer = buildShoppingAnswer(ctx, warmSignals, undefined, reasoning, []);
 
     expect(answer.directed).toBe(true);
-    expect(answer.productExamples.length).toBeLessThanOrEqual(2);
+    expect(answer.productExamples.length).toBeLessThanOrEqual(3);
 
     const advisory = shoppingToAdvisory(answer, warmSignals, reasoning, {});
     expect(advisory.directed).toBe(true);
@@ -327,7 +327,7 @@ describe('Validation scenario outputs', () => {
     console.log('=== END ===\n');
 
     expect(advisory.directed).toBe(true);
-    expect((advisory.options ?? []).length).toBeLessThanOrEqual(2);
+    expect((advisory.options ?? []).length).toBeLessThanOrEqual(3);
   });
 
   it('Scenario 2: category switch → amp (after speakers)', () => {
@@ -371,7 +371,7 @@ describe('Validation scenario outputs', () => {
 
     expect(advisory.directed).toBe(true);
     expect(advisory.shoppingCategory).toBe('amplifier');
-    expect((advisory.options ?? []).length).toBeLessThanOrEqual(2);
+    expect((advisory.options ?? []).length).toBeLessThanOrEqual(3);
   });
 
   it('Scenario 3: "I want a DAC" (weak taste → Start Here)', () => {

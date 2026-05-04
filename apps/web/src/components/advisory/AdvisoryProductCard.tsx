@@ -678,12 +678,12 @@ function ProductLinksSection({ opt, product, role }: {
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      fontSize: '0.72rem',
-      fontWeight: 700,
-      color: '#7A756D',
+      fontSize: '0.68rem',
+      fontWeight: 600,
+      color: '#918C84',
       textTransform: 'uppercase',
       letterSpacing: '0.06em',
-      marginBottom: '0.3rem',
+      marginBottom: '0.15rem',
     }}>
       {children}
     </div>
@@ -808,7 +808,7 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
         border: `1px solid ${COLORS.border}`,
         borderRadius: 8,
         borderTop: isAnchor ? `3px solid ${COLORS.accent}` : `1px solid ${COLORS.border}`,
-        padding: isAnchor ? '1.15rem 1.4rem 1.15rem' : '1.1rem 1.4rem',
+        padding: isAnchor ? '0.9rem 1.2rem 0.9rem' : '0.85rem 1.2rem',
         boxShadow: isAnchor
           ? '0 3px 10px rgba(176,141,87,0.1), 0 1px 3px rgba(31,29,27,0.05)'
           : '0 2px 6px rgba(0,0,0,0.05)',
@@ -835,7 +835,7 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
       )}
 
       {/* ── Product header: name + brand + badges ── */}
-      <div style={{ marginBottom: '0.4rem' }}>
+      <div style={{ marginBottom: '0.25rem' }}>
         {/* Brand (secondary, above name)
           *
           * Pass 13 (interaction depth): the brand label is now a link to the
@@ -1004,7 +1004,7 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
       </div>
 
       {/* ── Layer separator ── */}
-      <div style={{ borderTop: '1px solid #eae7e1', margin: '0.65rem 0' }} />
+      <div style={{ borderTop: '1px solid #eae7e1', margin: '0.45rem 0' }} />
 
       {/* ── Content layers (3-block decision structure) ──
        * Block 1: Sounds like (sonic identity)
@@ -1053,17 +1053,18 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
 
         const makerInsight = composeMakerInsight(opt);
 
-        const sectionStyle: React.CSSProperties = { marginBottom: '0.75rem' };
+        const sectionStyle: React.CSSProperties = { marginBottom: '0.5rem' };
         const textStyle: React.CSSProperties = {
           margin: 0,
-          fontSize: '0.93rem',
-          lineHeight: 1.7,
+          fontSize: '0.91rem',
+          lineHeight: 1.55,
           color: COLORS.text,
+          fontWeight: 450,
         };
         const bulletStyle: React.CSSProperties = {
           margin: 0,
           paddingLeft: '1.2rem',
-          lineHeight: 1.7,
+          lineHeight: 1.55,
           color: COLORS.text,
         };
 
