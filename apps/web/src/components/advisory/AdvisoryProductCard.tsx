@@ -1198,19 +1198,19 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
               );
             })()}
 
-            {/* 5b. POSITIONING HINT — Best for / Less ideal if */}
-            {(opt.bestFor || opt.lessIdealIf) && (
+            {/* 5b. DIRECTIVE POSITIONING — Choose this if / Avoid if */}
+            {(opt.chooseThisIf || opt.avoidIf || opt.bestFor || opt.lessIdealIf) && (
               <div style={{
                 marginBottom: '0.65rem',
                 fontSize: '0.88rem',
                 lineHeight: 1.6,
                 color: COLORS.textSecondary,
               }}>
-                {opt.bestFor && (
-                  <div><span style={{ fontWeight: 600, color: '#5a7050' }}>Best for:</span> {opt.bestFor}</div>
+                {(opt.chooseThisIf || opt.bestFor) && (
+                  <div><span style={{ fontWeight: 600, color: '#5a7050' }}>Choose this if:</span> {opt.chooseThisIf ? opt.chooseThisIf.replace(/^Choose this if\s*/i, '') : opt.bestFor}</div>
                 )}
-                {opt.lessIdealIf && (
-                  <div><span style={{ fontWeight: 600, color: '#8a6a50' }}>Less ideal if:</span> {opt.lessIdealIf}</div>
+                {(opt.avoidIf || opt.lessIdealIf) && (
+                  <div><span style={{ fontWeight: 600, color: '#8a6a50' }}>Avoid if:</span> {opt.avoidIf ? opt.avoidIf.replace(/^Avoid if\s*/i, '') : opt.lessIdealIf}</div>
                 )}
               </div>
             )}

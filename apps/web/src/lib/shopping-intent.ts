@@ -2134,8 +2134,12 @@ export interface ProductExample {
   catalogSubcategory?: string;
   /** True when this product is already in the user's current system. */
   isCurrentComponent?: boolean;
-  /** True when this is the primary recommendation in directed mode. */
+  /** True when this is the primary recommendation. */
   isPrimary?: boolean;
+  /** Directive one-liner: "Choose this if you want X." */
+  chooseThisIf?: string;
+  /** Mandatory exclusion: "Avoid if you X." */
+  avoidIf?: string;
   /** Budget realism tier — how realistic this product is at the stated budget.
    *  - realistic_new:  comfortably within budget at retail
    *  - realistic_used: within budget at used-market prices
@@ -3300,6 +3304,89 @@ function buildCaution(product: Product): string | undefined {
   return parts.length > 0 ? parts.join(' ') : undefined;
 }
 
+// ── Directive framing: "Choose this if" / "Avoid if" ────────────
+//
+// Each product gets a one-line directive that tells the listener
+// exactly when this pick is the right (or wrong) choice. Built
+// from tendency profiles, architecture character, and risk flags.
+
+/** Map philosophy + dominant trait to a "Choose this if" statement. */
+function buildChooseThisIf(product: Product): string {
+  const tp = product.tendencyProfile;
+  const flow = resolveTraitValue(tp, product.traits, 'flow');
+  const clarity = resolveTraitValue(tp, product.traits, 'clarity');
+  const dynamics = resolveTraitValue(tp, product.traits, 'dynamics');
+  const tonalDensity = resolveTraitValue(tp, product.traits, 'tonal_density');
+  const texture = resolveTraitValue(tp, product.traits, 'texture');
+
+  // Find the dominant trait
+  const traits = [
+    { key: 'flow', val: flow, text: 'you want music to feel effortless and continuous' },
+    { key: 'clarity', val: clarity, text: 'you want precision and transparency above all' },
+    { key: 'dynamics', val: dynamics, text: 'you want impact, speed, and dynamic contrast' },
+    { key: 'tonal_density', val: tonalDensity, text: 'you want rich midrange body and warmth' },
+    { key: 'texture', val: texture, text: 'you want harmonic richness and tonal color' },
+  ];
+  traits.sort((a, b) => b.val - a.val);
+  const top = traits[0];
+
+  if (top && top.val >= 0.6) {
+    return `Choose this if ${top.text}.`;
+  }
+
+  // Fallback by philosophy
+  if (product.philosophy === 'warm') return 'Choose this if warmth and musicality are your priority.';
+  if (product.philosophy === 'neutral') return 'Choose this if accuracy and neutrality matter most.';
+  if (product.philosophy === 'energy') return 'Choose this if you want energy and engagement.';
+  if (product.philosophy === 'analytical') return 'Choose this if detail retrieval is your priority.';
+
+  return 'Choose this if you want a well-balanced design with broad compatibility.';
+}
+
+/** Build a mandatory "Avoid if" statement from risk flags and trade-offs. */
+function buildAvoidIf(product: Product): string {
+  const tp = product.tendencyProfile;
+
+  // Risk-based avoidance
+  if (hasRisk(tp, product.traits, 'glare_risk')) {
+    return 'Avoid if your system already trends bright or forward.';
+  }
+  if (hasRisk(tp, product.traits, 'fatigue_risk')) {
+    return 'Avoid if listening fatigue is a concern.';
+  }
+
+  // Trait-based trade-off avoidance
+  const flow = resolveTraitValue(tp, product.traits, 'flow');
+  const clarity = resolveTraitValue(tp, product.traits, 'clarity');
+  const dynamics = resolveTraitValue(tp, product.traits, 'dynamics');
+  const tonalDensity = resolveTraitValue(tp, product.traits, 'tonal_density');
+
+  if (flow >= 0.7 && clarity <= 0.3) {
+    return 'Avoid if you need sharp detail retrieval and analytical precision.';
+  }
+  if (clarity >= 0.7 && flow <= 0.3) {
+    return 'Avoid if you want a relaxed, forgiving presentation.';
+  }
+  if (dynamics >= 0.7 && tonalDensity <= 0.3) {
+    return 'Avoid if you prioritize warmth and midrange body over speed.';
+  }
+  if (tonalDensity >= 0.7 && dynamics <= 0.3) {
+    return 'Avoid if you need tight transients and rhythmic precision.';
+  }
+
+  // Architecture-based
+  if (product.topology === 'set') {
+    return 'Avoid if you need high power or wide speaker compatibility.';
+  }
+
+  // Fallback from first trade-off
+  if (product.tendencies?.tradeoffs?.[0]?.cost) {
+    return `Avoid if you can't accept: ${product.tendencies.tradeoffs[0].cost}.`;
+  }
+
+  return 'Avoid if your system already emphasizes this product\'s strongest trait.';
+}
+
 // ── "Why it stands out" — architecture & design highlights ──────
 
 /** Human-readable architecture descriptions. */
@@ -4136,8 +4223,8 @@ function selectProductExamples(
     // ensure credible mainstream products anchor the recommendation.
     // Pool size capped at 4 (not poolSize=8) to keep output at 3 products
     // — matching the expected shortlist size for no-budget exploratory queries.
-    // 4 products in pool lets buildRecommendationSet fill anchor + close_alt +
-    // contrast, with the 4th available for wildcard only when appropriate.
+    // 3 products in pool lets buildRecommendationSet fill anchor + close_alt +
+    // contrast (max 3 products with distinct roles).
     const weakProfile = !tasteProfile || (tasteProfile.confidence ?? 0) < 0.2;
     const weakPoolSize = 4;
     top = budgetAmount === null
@@ -4699,7 +4786,7 @@ function selectProductExamples(
     }
 
     anchor.pickRole = 'anchor';
-    anchor.roleLabel = 'Best overall';
+    anchor.roleLabel = 'Start here';
     const anchorPhilosophy = anchor.philosophy;
     const used = new Set<string>([exKey(anchor)]);
 
@@ -4771,11 +4858,13 @@ function selectProductExamples(
     }
     if (wildcard) { wildcard.pickRole = 'wildcard'; wildcard.roleLabel = labelForRole(wildcard, 'wildcard'); used.add(exKey(wildcard)); }
 
-    // ── Assemble result ─────────────────────────────────
+    // ── Assemble result (max 3 products with distinct roles) ──
     const result: ProductExample[] = [anchor];
     if (closeAlt) result.push(closeAlt);
+    // Include contrast OR wildcard (not both) to enforce 3-product cap.
+    // Prefer contrast when available — it provides the clearest alternative direction.
     if (contrast) result.push(contrast);
-    if (wildcard) result.push(wildcard);
+    else if (wildcard) result.push(wildcard);
 
     // ── Attach curated provenance (phase-1 wedge) ──────
     // Silently returns empty for products not in the wedge.
@@ -4798,8 +4887,8 @@ function selectProductExamples(
       }
     } catch { /* curation layer optional */ }
 
-    // Pad to minimum 3 — mode-aware: padding must respect constraints
-    if (result.length < 3) {
+    // Pad to minimum 2 — mode-aware: padding must respect constraints
+    if (result.length < 2) {
       let padPool: Ranked[];
       if (selectionMode === 'less_traditional') {
         padPool = eligible.filter((ex) =>
@@ -4816,7 +4905,7 @@ function selectProductExamples(
         padPool = eligible.filter((ex) => !used.has(exKey(ex)));
       }
       // Never fall back to unrestricted pool — empty padding is acceptable
-      const padding = padPool.slice(0, 4 - result.length);
+      const padding = padPool.slice(0, 3 - result.length);
       for (const ex of padding) {
         result.push(ex);
         used.add(exKey(ex));
@@ -4869,6 +4958,8 @@ function selectProductExamples(
       soundProfile: buildSoundProfile(product),
       fitNote: buildFitNote(product, userTraits),
       caution: buildCaution(product),
+      chooseThisIf: buildChooseThisIf(product),
+      avoidIf: buildAvoidIf(product),
       links: product.retailer_links.length > 0 ? product.retailer_links : undefined,
       sourceReferences: product.sourceReferences,
       // Enhanced card fields
@@ -5758,18 +5849,16 @@ export function buildShoppingAnswer(
   let preferenceSummary: string;
   if (tasteConfidence === 'low') {
     // Low confidence: provide directional value without preference claims.
-    // Contextualize with budget/system when available, and orient around the product category.
-    const budgetFrame = ctx.budgetAmount ? `your $${ctx.budgetAmount.toLocaleString()} budget` : 'your budget';
     if (ctx.category !== 'general') {
-      preferenceSummary = `${categoryLabel.charAt(0).toUpperCase() + categoryLabel.slice(1)} shortlist at this budget — each represents a different design trade-off.`;
+      preferenceSummary = `Three ${categoryLabel} picks — each makes a different trade-off. The decision axis: what matters most to your listening.`;
     } else {
-      preferenceSummary = `Based on ${budgetFrame}, here are some solid starting points.`;
+      preferenceSummary = `Three picks, three trade-offs. The right one depends on your priorities.`;
     }
   } else if (directed) {
     preferenceSummary = `Optimizing for ${effectiveTasteLabel}${archetypeLabel}.${profileNote}`;
   } else {
-    // sufficient confidence, non-directed
-    preferenceSummary = `Leaning toward ${effectiveTasteLabel}${archetypeLabel}.${profileNote}`;
+    // sufficient confidence, non-directed — directive, not tentative
+    preferenceSummary = `Optimizing for ${effectiveTasteLabel}${archetypeLabel}.${profileNote}`;
   }
 
   // 2. Best-fit direction — prefer reasoning direction statement when available.
@@ -5794,24 +5883,24 @@ export function buildShoppingAnswer(
 
   let bestFitDirection: string;
   if (tasteConfidence === 'low') {
-    // Low confidence: orient the user with meaningful direction, not just generic framing.
+    // Low confidence: frame the decision axis, not the conclusion.
     if (ctx.category !== 'general') {
-      bestFitDirection = `Distinct approaches to ${categoryLabel} design — warmer and musical through to precise and controlled. Each shifts the system differently.`;
+      bestFitDirection = `The decision axis for ${categoryLabel}: warmth and musicality vs. precision and control. Each pick below commits to a side.`;
     } else {
-      bestFitDirection = `A few different design directions, each with distinct trade-offs.`;
+      bestFitDirection = `Each pick commits to a different design philosophy. The trade-offs are real — read the "Avoid if" lines.`;
     }
   } else if (directed) {
-    bestFitDirection = `This system should lean toward ${effectiveTasteLabel.toLowerCase()} — ${directedDirection.charAt(0).toLowerCase()}${directedDirection.slice(1)}${directedDirection.endsWith('.') ? '' : '.'}`;
+    bestFitDirection = `Direction: ${effectiveTasteLabel.toLowerCase()}. ${directedDirection.charAt(0).toUpperCase()}${directedDirection.slice(1)}${directedDirection.endsWith('.') ? '' : '.'}`;
   } else {
-    // sufficient confidence, non-directed
-    bestFitDirection = `${rawDirection.charAt(0).toUpperCase()}${rawDirection.slice(1)}${rawDirection.endsWith('.') ? '' : '.'}`;
+    // sufficient confidence, non-directed — lead with direction, not hedge
+    bestFitDirection = `Direction: ${rawDirection.charAt(0).toLowerCase()}${rawDirection.slice(1)}${rawDirection.endsWith('.') ? '' : '.'}`;
   }
 
   // 3. Why this fits — explicitly listener-centered framing
   const rawWhyThisFits = matchedProfile?.whyByCategory?.[ctx.category]
     ?? taste.defaultWhy ?? matchedProfile?.defaultWhy ?? FALLBACK_TASTE.defaultWhy;
   const whyThisFits = (hasTasteSignal || directed) && Array.isArray(rawWhyThisFits) && rawWhyThisFits.length > 0
-    ? [`Designs selected to lean into ${effectiveTasteLabel.toLowerCase()}.`, ...rawWhyThisFits.slice(0, directed ? 1 : 2)]
+    ? [`Selected for ${effectiveTasteLabel.toLowerCase()}.`, ...rawWhyThisFits.slice(0, directed ? 1 : 2)]
     : rawWhyThisFits;
 
   // 4. Product examples (only when catalog exists + budget known)
@@ -5836,11 +5925,15 @@ export function buildShoppingAnswer(
     }
   }
 
-  // ── Directed mode: cap at 2 products, mark primary ──
+  // ── Cap product count and mark primary ──────────────
+  // Directed mode: 2 products. All other modes: 3 max (enforced by buildRecommendationSet).
   if (directed && productExamples.length > 2) {
     productExamples = productExamples.slice(0, 2);
+  } else if (!directed && productExamples.length > 3) {
+    productExamples = productExamples.slice(0, 3);
   }
-  if (directed && productExamples.length > 0) {
+  // Always mark position 0 as primary — the "Start here" pick.
+  if (productExamples.length > 0) {
     productExamples[0] = { ...productExamples[0], isPrimary: true };
   }
 

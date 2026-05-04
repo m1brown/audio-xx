@@ -178,8 +178,12 @@ export interface AdvisoryOption {
   directionLabel?: string;
   /** True when this product is already in the user's current system. */
   isCurrentComponent?: boolean;
-  /** True when this is the primary recommendation in directed mode. */
+  /** True when this is the primary recommendation. */
   isPrimary?: boolean;
+  /** Directive one-liner: "Choose this if you want X." */
+  chooseThisIf?: string;
+  /** Mandatory exclusion: "Avoid if you X." */
+  avoidIf?: string;
   /** Practical buying guidance — new vs used, availability, regional notes. */
   buyingNote?: string;
   /** Role tag in the 4-option recommendation model. */
@@ -2559,6 +2563,8 @@ export function shoppingToAdvisory(
     roleLabel: p.roleLabel,
     sources: p.sources,
     isPrimary: p.isPrimary ?? p.pickRole === 'top_pick',
+    chooseThisIf: p.chooseThisIf,
+    avoidIf: p.avoidIf,
     // Step 10: Enhanced catalog fields
     // Catalog imageUrl wins; fall back to the seeded product-image mapping.
     imageUrl: p.imageUrl ?? getProductImage(p.brand, p.name),

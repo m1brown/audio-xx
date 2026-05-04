@@ -719,12 +719,22 @@ export default function Home() {
                 }).filter((o): o is NonNullable<typeof o> => o !== null);
 
                 if (refinedOptions.length > 0) {
+                  // Re-assign primary: new position 0 is the "Start here" pick.
+                  // Clear old primary flags, then mark the new top pick.
+                  const reframedOptions = refinedOptions.map((o, i) => ({
+                    ...o,
+                    isPrimary: i === 0,
+                    roleLabel: i === 0 ? 'Start here' : (o.roleLabel === 'Start here' ? undefined : o.roleLabel),
+                    pickRole: i === 0 ? ('anchor' as const) : o.pickRole,
+                  }));
+                  // Cap at 3
+                  const cappedOptions = reframedOptions.slice(0, 3);
                   // Dispatch compact refinement advisory
                   const refinedAdvisory: AdvisoryResponse = {
                     kind: 'shopping',
                     subject: lastShoppingAdvisory.advisory.subject || 'refined recommendation',
                     shoppingCategory: lastShoppingAdvisory.advisory.shoppingCategory,
-                    options: refinedOptions,
+                    options: cappedOptions,
                     // Compact refinement framing
                     refinementDelta: deltaExplanation,
                     refinementTradeoffs: tradeoffs ?? undefined,
