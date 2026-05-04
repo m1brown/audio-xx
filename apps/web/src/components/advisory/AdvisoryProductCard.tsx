@@ -80,6 +80,46 @@ function capitalizeFirst(s: string): string {
   return s.length ? s[0].toUpperCase() + s.slice(1) : s;
 }
 
+/** Sentence-aware truncation to at most `max` words.
+ *
+ *  If the input fits, return it unchanged. Otherwise look backwards
+ *  from the word-limit boundary for a natural clause break — comma,
+ *  or a conjunction (but / and / while / though / or). If a break is
+ *  found within the last 8 words of the window, cut there. Otherwise
+ *  fall back to a hard word cut. Always ends with a period. */
+function truncateToWords(s: string, max: number): string {
+  const words = s.split(/\s+/);
+  if (words.length <= max) return s;
+
+  // Search backwards from the boundary for a natural break point.
+  // "Last 8 words" keeps the cut close to the limit — cutting too
+  // early would lose too much content.
+  const CLAUSE_RE = /^(but|and|while|though|or)$/i;
+  const searchFloor = Math.max(0, max - 8);
+
+  let breakAt = -1;
+  for (let i = max - 1; i >= searchFloor; i--) {
+    // Comma at end of previous word → clause boundary after word i-1
+    if (i > 0 && words[i - 1].endsWith(',')) {
+      breakAt = i;
+      break;
+    }
+    // Current word is a conjunction → clause boundary before it
+    if (CLAUSE_RE.test(words[i])) {
+      breakAt = i;
+      break;
+    }
+  }
+
+  const cutIndex = breakAt > 0 ? breakAt : max;
+  let truncated = words.slice(0, cutIndex).join(' ');
+  // Strip trailing comma or conjunction remnant
+  truncated = truncated.replace(/[,;:\s]+$/, '');
+  // Ensure it ends with punctuation
+  if (!/[.!?]$/.test(truncated)) truncated += '.';
+  return truncated;
+}
+
 /** Compose the one-sentence "Why this maker for this call" line.
  *
  *  Copy pass: ONE sentence, sound + direction only, expert-reviewer voice.
@@ -974,23 +1014,42 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
        */}
       {(() => {
         // ── Block 1: "Sounds like" ──
-        // Source: catalogDescription first sentence → soundProfile/standoutFeatures prose fallback.
-        const catFirst = opt.catalogDescription?.match(/^[^.!?]+[.!?]/)?.[0]?.trim();
-        const traitProse = traits.length > 0 ? traits.join(', ') + '.' : undefined;
-        const soundsLike = catFirst ?? traitProse;
+        // Behavioral summary, not marketing copy. ≤ 20 words.
+        // Priority: whatYoullHear[0] (sensory delta) → trait prose from
+        // soundProfile/standoutFeatures → catalogDescription first sentence
+        // (last resort only).
+        const hearFirst = opt.whatYoullHear?.[0]?.trim();
+        const traitProse = traits.length > 0 ? (traits.join(', ') + '.') : undefined;
+        const catFallback = opt.catalogDescription?.match(/^[^.!?]+[.!?]/)?.[0]?.trim();
+        const soundsLikeRaw = hearFirst ?? traitProse ?? catFallback;
+        // Enforce ≤ 20-word cap — truncate at the last whole word.
+        const soundsLike = soundsLikeRaw
+          ? truncateToWords(soundsLikeRaw, 20)
+          : undefined;
 
         // ── Block 2: "Why this one" ──
-        // Source: chooseThisIf (already decision-framed) → systemDelta.whyFitsSystem → bestFor.
+        // System interaction first, then decision-framed fallbacks.
+        // Priority: whyFitsSystem (chain-aware) → chooseThisIf → bestFor.
+        const whyFits = opt.systemDelta?.whyFitsSystem?.trim();
         const chooseRaw = opt.chooseThisIf?.replace(/^Choose this if\s*/i, '').trim();
-        const whyThisOne = chooseRaw ?? opt.systemDelta?.whyFitsSystem ?? opt.bestFor;
+        const whyThisOne = whyFits ?? chooseRaw ?? opt.bestFor;
 
         // ── Block 3: "Trade-off" ──
-        // Source: avoidIf → systemDelta.tradeOffs[0] → caution → lessIdealIf.
-        const avoidRaw = opt.avoidIf?.replace(/^Avoid if\s*/i, '').trim();
-        const tradeoff = avoidRaw
-          ?? opt.systemDelta?.tradeOffs?.[0]
-          ?? opt.caution
-          ?? opt.lessIdealIf;
+        // Consequence-based phrasing, not "avoid if" directives. ≤ 20 words.
+        // Priority: systemDelta.tradeOffs[0] (chain-specific) → caution →
+        // avoidIf (stripped of directive prefix) → lessIdealIf.
+        const tradeRaw = opt.systemDelta?.tradeOffs?.[0]?.trim();
+        const cautionRaw = opt.caution?.trim();
+        const avoidStripped = opt.avoidIf
+          ?.replace(/^Avoid if\s+(you\s+)?(want|need|prefer|can't|cannot|don't)\s*/i, '')
+          .trim();
+        const lessIdealStripped = opt.lessIdealIf
+          ?.replace(/^Less ideal if\s+(you\s+)?(want|need|prefer)\s*/i, '')
+          .trim();
+        const tradeoffRaw = tradeRaw ?? cautionRaw ?? avoidStripped ?? lessIdealStripped;
+        const tradeoff = tradeoffRaw
+          ? truncateToWords(tradeoffRaw, 20)
+          : undefined;
 
         const makerInsight = composeMakerInsight(opt);
 
