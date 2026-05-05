@@ -24,6 +24,18 @@ import { findBrandProfileByName } from '../../lib/consultation';
 import { toSlug } from '../../lib/route-slug';
 import { ProductImage } from './ProductImage';
 
+/** Map display productType to category placeholder SVG path. */
+function categoryPlaceholder(productType?: string): string {
+  if (!productType) return '/images/placeholders/product.svg';
+  const t = productType.toLowerCase();
+  if (t.includes('dac') || t.includes('digital-to-analog')) return '/images/placeholders/dac.svg';
+  if (t.includes('amplifier') || t.includes('integrated') || t.includes('preamp') || t.includes('power amp')) return '/images/placeholders/amplifier.svg';
+  if (t.includes('speaker')) return '/images/placeholders/speaker.svg';
+  if (t.includes('turntable') || t.includes('phono')) return '/images/placeholders/turntable.svg';
+  if (t.includes('headphone') || t.includes('iem')) return '/images/placeholders/headphone.svg';
+  return '/images/placeholders/product.svg';
+}
+
 // ── Brand philosophy accessor ─────────────────────────
 // Pass 10: composeWhyThisMaker replaces the old getBrandPhilosophy.
 // It pulls ONE sentence from the brand's authored philosophy and — when
@@ -831,6 +843,7 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
           src={opt.imageUrl}
           alt={[opt.brand, opt.name].filter(Boolean).join(' ')}
           credit={opt.brand || undefined}
+          fallbackSrc={categoryPlaceholder(opt.productType)}
         />
       )}
 
