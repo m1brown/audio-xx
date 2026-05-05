@@ -351,7 +351,7 @@ export function buildDecisionFrame(
     ? `Your current ${categoryLabel} (${current.brand} ${current.name}) sits in the ${currentPhilosophy.label} camp — ${currentPhilosophy.character.split('—')[0].trim().toLowerCase()}. The meaningful decision is whether to refine that approach or explore a different design philosophy.`
     : current
       ? `You have a ${current.brand} ${current.name}. The question is whether to upgrade within the same design approach or shift to a different sonic philosophy.`
-      : `Without knowing your current ${categoryLabel}, the main decision is which design philosophy aligns with your listening priorities.`;
+      : `The main decision is which design philosophy aligns with your listening priorities.`;
 
   // ── Build directions ────────────────────────────
   const directions: DecisionDirection[] = [];

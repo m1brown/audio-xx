@@ -3202,7 +3202,7 @@ function buildAnchorJustification(
   if (hasTaste) {
     const preference = tasteLabel ?? 'your stated priorities';
     const topStrength = strengths[0];
-    return `Your preference for ${preference.toLowerCase()} points toward more ${topStrength}. If your system needs that, this is a clean way to get it. ${tradeOffSentence}`;
+    return `Your preference for ${preference.toLowerCase()} points toward more ${topStrength} — this delivers it cleanly. ${tradeOffSentence}`;
   }
 
   // ── Tier 3: Minimal context (conditional phrasing) ──
@@ -3211,12 +3211,12 @@ function buildAnchorJustification(
     return `In a system that leans ${sysChar}, this shifts it toward ${topStrength}. ${tradeOffSentence}`;
   }
 
-  // No system, no taste, no symptom — use conditional framing
+  // No system, no taste, no symptom — use product-intrinsic framing
   if (strengths.length >= 2) {
-    return `If your system is leaning away from ${strengths[0]}, this pulls it back while adding ${strengths[1]}. ${tradeOffSentence}`;
+    return `Prioritizes ${strengths[0]} while adding ${strengths[1]}. ${tradeOffSentence}`;
   }
 
-  return `If your system needs more ${strengths[0]}, this gets you there. ${tradeOffSentence}`;
+  return `Prioritizes ${strengths[0]}. ${tradeOffSentence}`;
 }
 
 /**
@@ -3349,7 +3349,7 @@ function buildAvoidIf(product: Product): string {
 
   // Risk-based avoidance
   if (hasRisk(tp, product.traits, 'glare_risk')) {
-    return 'Avoid if your system already trends bright or forward.';
+    return 'Avoid if brightness or forwardness is already a concern.';
   }
   if (hasRisk(tp, product.traits, 'fatigue_risk')) {
     return 'Avoid if listening fatigue is a concern.';
@@ -3384,7 +3384,7 @@ function buildAvoidIf(product: Product): string {
     return `Avoid if you can't accept: ${product.tendencies.tradeoffs[0].cost}.`;
   }
 
-  return 'Avoid if your system already emphasizes this product\'s strongest trait.';
+  return 'Avoid if you already have enough of this product\'s strongest trait.';
 }
 
 // ── "Why it stands out" — architecture & design highlights ──────

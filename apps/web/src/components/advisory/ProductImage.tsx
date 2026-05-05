@@ -5,7 +5,16 @@
  * Handles onError gracefully — hides the container if the image fails to load.
  * Optional credit line renders below the image in muted text.
  */
-export function ProductImage({ src, alt, credit }: { src: string; alt: string; credit?: string }) {
+/** Generic local placeholder — always available, no external dependency. */
+const FALLBACK_PLACEHOLDER = '/images/placeholders/product.svg';
+
+export function ProductImage({ src, alt, credit, fallbackSrc }: {
+  src: string;
+  alt: string;
+  credit?: string;
+  /** Optional category-specific placeholder. Falls back to generic product.svg. */
+  fallbackSrc?: string;
+}) {
   return (
     <figure style={{ margin: 0, marginBottom: '0.5rem' }}>
       <div
@@ -35,8 +44,16 @@ export function ProductImage({ src, alt, credit }: { src: string; alt: string; c
             display: 'block',
           }}
           onError={(e) => {
-            const fig = (e.currentTarget as HTMLImageElement).closest('figure');
-            if (fig) fig.style.display = 'none';
+            const img = e.currentTarget as HTMLImageElement;
+            const placeholder = fallbackSrc || FALLBACK_PLACEHOLDER;
+            // Avoid infinite loop: if already showing a placeholder, hide instead.
+            if (img.src.endsWith(placeholder) || img.dataset.fallback === '1') {
+              const fig = img.closest('figure');
+              if (fig) fig.style.display = 'none';
+              return;
+            }
+            img.dataset.fallback = '1';
+            img.src = placeholder;
           }}
         />
       </div>
