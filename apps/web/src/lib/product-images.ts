@@ -53,7 +53,7 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
   { key: 'chord hugo tt2',  url: 'https://chordelectronics.co.uk/wp-content/uploads/2017/01/Hugo.jpg' },
   { key: 'chord hugo 2',    url: 'https://chordelectronics.co.uk/wp-content/uploads/2017/01/Hugo.jpg' },
   { key: 'chord hugo',      url: 'https://chordelectronics.co.uk/wp-content/uploads/2016/09/Hugo-Angle-900x675.jpg' },
-  { key: 'chord qutest',    url: 'https://chordelectronics.co.uk/wp-content/uploads/2018/01/Qutest-Product-Thumbnail.jpg' },
+  { key: 'chord qutest',    url: 'https://image.son-video.com/images/article/chord-electronics/CHORDQUTESTNR/qutest_5aeac418a2fbb_1200.jpg?p=600' },
   { key: 'chord mojo 2',    url: 'https://chordelectronics.co.uk/wp-content/uploads/2023/04/Mojo-2-4.4-2-Edited-1024x1024.png' },
   { key: 'chord mojo',      url: 'https://chordelectronics.co.uk/wp-content/uploads/2023/04/Mojo-2-4.4-2-Edited-1024x1024.png' },
   { key: 'chord dave',      url: 'https://chordelectronics.co.uk/wp-content/uploads/2016/09/Dave.jpg' },
@@ -94,7 +94,7 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
   { key: 'dcs bart k',          url: 'https://dcsaudio.com/assets/bartok-highlights-bhd-2.jpg' },
 
   // Gustard — gustard.com /qfy-content/uploads/ CDN
-  { key: 'gustard x26 pro',    url: 'https://www.gustard.com/qfy-content/uploads/2022/04/8c3d31f03e83f8df9e1e75f72eafb3ac-100.webp' },
+  { key: 'gustard x26 pro',    url: 'https://shenzhenaudio.com/cdn/shop/files/1-1_cec99a1e-1550-459b-b75a-565cbf322481.jpg?v=1730458884' },
   { key: 'gustard x16',        url: 'https://www.gustard.com/qfy-content/uploads/2021/10/0d3d6e7e4f0a67feaef5e67d8e5b22d4-100.webp' },
   { key: 'gustard r26',        url: 'https://www.gustard.com/qfy-content/uploads/2022/10/ae6b2c24323caabb87bd8814319e8140-100.webp' },
 
