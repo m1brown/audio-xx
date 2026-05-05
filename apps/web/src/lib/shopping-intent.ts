@@ -3343,6 +3343,112 @@ function buildChooseThisIf(product: Product): string {
   return 'Choose this if you want a well-balanced design with broad compatibility.';
 }
 
+/**
+ * Post-assembly overwrite: make "Why this one" comparative and set-aware.
+ * Each product's chooseThisIf is rewritten to reference at least one other
+ * product in the set by name, explaining the ranking position or contrast.
+ * Max 2 sentences per product. Preserves existing text if it already
+ * references the user's system ("your system"/"your chain") or if
+ * pickRole/catalog data is missing.
+ */
+function overwriteChooseThisIfFromSet(
+  result: ProductExample[],
+  catalog: Product[],
+): void {
+  if (result.length < 2) return;
+
+  // Build lookup: brand+name → catalog Product
+  const lookupProduct = (ex: ProductExample): Product | undefined =>
+    catalog.find((p) => p.brand === ex.brand && p.name === ex.name);
+
+  // Short display name for referencing other products
+  const displayName = (ex: ProductExample): string => `${ex.brand} ${ex.name}`;
+
+  // Determine if existing text should be preserved
+  const shouldPreserve = (ex: ProductExample): boolean => {
+    if (!ex.pickRole) return true;
+    const text = ex.chooseThisIf ?? '';
+    return /your (system|chain|setup)/i.test(text);
+  };
+
+  // Philosophy → readable label
+  const philLabel = (p: Product | undefined): string => {
+    if (!p?.philosophy) return '';
+    const map: Record<string, string> = {
+      warm: 'warmth and musicality',
+      neutral: 'neutrality and transparency',
+      energy: 'energy and engagement',
+      analytical: 'detail and precision',
+    };
+    return map[p.philosophy] ?? '';
+  };
+
+  // Topology → readable descriptor
+  const topoLabel = (ex: ProductExample): string => {
+    const t = ex.catalogTopology ?? ex.catalogArchitecture ?? '';
+    if (t.includes('r2r') || t.includes('R2R')) return 'R2R';
+    if (t.includes('fpga') || t.includes('FPGA')) return 'FPGA';
+    if (t.includes('delta-sigma')) return 'delta-sigma';
+    if (t.includes('tube')) return 'tube';
+    if (t.includes('class-a') || t.includes('Class A')) return 'Class A';
+    if (t.includes('set') || t.includes('SET')) return 'SET';
+    return '';
+  };
+
+  const anchorEx = result.find((r) => r.pickRole === 'anchor');
+  if (!anchorEx) return; // No anchor — cannot build comparative text
+
+  for (const ex of result) {
+    if (shouldPreserve(ex)) continue;
+
+    const product = lookupProduct(ex);
+    if (!product) continue; // Catalog lookup failed — keep existing text
+
+    const role = ex.pickRole;
+    let text = '';
+
+    if (role === 'anchor') {
+      // Anchor: explain why it ranks above the others
+      const others = result.filter((r) => r !== ex);
+      const otherNames = others.map(displayName);
+      const phil = philLabel(product);
+      const topo = topoLabel(ex);
+      const advantage = phil || (topo ? `${topo} architecture` : 'balanced design');
+      if (otherNames.length === 1) {
+        text = `Ranked above ${otherNames[0]} for its ${advantage}. Best overall alignment with what you described.`;
+      } else {
+        text = `Ranked above ${otherNames.join(' and ')} for its ${advantage}. Best overall alignment with what you described.`;
+      }
+    } else if (role === 'contrast') {
+      // Contrast: explain how it differs from anchor and when that's preferred
+      const anchorName = displayName(anchorEx);
+      const anchorPhil = philLabel(lookupProduct(anchorEx));
+      const thisPhil = philLabel(product);
+      const topo = topoLabel(ex);
+      const diffDescriptor = thisPhil || (topo ? `${topo} character` : 'different design philosophy');
+      text = `A deliberate contrast to ${anchorName}${anchorPhil ? `'s ${anchorPhil}` : ''}. Choose this if you prefer ${diffDescriptor}.`;
+    } else if (role === 'wildcard') {
+      // Wildcard: what it offers that neither of the others does
+      const otherNames = result.filter((r) => r !== ex).map(displayName);
+      const topo = topoLabel(ex);
+      const phil = philLabel(product);
+      const uniqueTrait = topo ? `${topo} implementation` : (phil || 'unconventional approach');
+      text = `Offers something neither ${otherNames.join(' nor ')} provides: a ${uniqueTrait} with distinct character.`;
+    } else if (role === 'close_alt') {
+      // Close alt: same direction as anchor, slightly different
+      const anchorName = displayName(anchorEx);
+      const topo = topoLabel(ex);
+      const anchorTopo = topoLabel(anchorEx);
+      const diff = (topo && topo !== anchorTopo) ? `with ${topo} instead of ${anchorTopo}` : 'at a different price/feature balance';
+      text = `Similar direction to ${anchorName} ${diff}. Choose this if you want the same sonic philosophy with a different implementation.`;
+    }
+
+    if (text) {
+      ex.chooseThisIf = text;
+    }
+  }
+}
+
 /** Build a mandatory "Avoid if" statement from risk flags and trade-offs. */
 function buildAvoidIf(product: Product): string {
   const tp = product.tendencyProfile;
@@ -4925,6 +5031,9 @@ function selectProductExamples(
       wildcard: wildcard ? `${wildcard.brand} ${wildcard.name}` : null,
       total: result.length,
     });
+
+    // ── Set-aware "Why this one" overwrite ──────────────
+    overwriteChooseThisIfFromSet(result, catalog);
 
     // ── Anchor justification (anchor product only) ──────
     // Compute expert rationale for the anchor. Uses existing product data,

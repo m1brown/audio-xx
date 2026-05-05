@@ -1041,11 +1041,16 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
           : undefined;
 
         // ── Block 2: "Why this one" ──
-        // System interaction first, then decision-framed fallbacks.
-        // Priority: whyFitsSystem (chain-aware) → chooseThisIf → bestFor.
-        const whyFits = opt.systemDelta?.whyFitsSystem?.trim();
+        // Priority depends on whether whyFitsSystem references a real system.
+        // Phantom system text (generic "your system/chain/setup" without real
+        // component names) is deprioritised below set-aware chooseThisIf.
+        const whyFitsRaw = opt.systemDelta?.whyFitsSystem?.trim();
         const chooseRaw = opt.chooseThisIf?.replace(/^Choose this if\s*/i, '').trim();
-        const whyThisOne = whyFits ?? chooseRaw ?? opt.bestFor;
+        const isPhantomSystem = whyFitsRaw
+          ? /your\s+(system|chain|setup|current|preference|centred|centered|balanced)/i.test(whyFitsRaw)
+          : false;
+        const whyFits = isPhantomSystem ? undefined : whyFitsRaw;
+        const whyThisOne = whyFits ?? chooseRaw ?? whyFitsRaw ?? opt.bestFor;
 
         // ── Block 3: "Trade-off" ──
         // Consequence-based phrasing, not "avoid if" directives. ≤ 20 words.

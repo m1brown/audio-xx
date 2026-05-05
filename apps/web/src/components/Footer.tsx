@@ -48,6 +48,12 @@ export default function Footer() {
             >
               About
             </Link>
+            <a
+              href="mailto:hello@audio-xx.com?subject=Audio%20XX%20issue%20report&body=What%20were%20you%20trying%20to%20do%3F%0A%0AWhat%20went%20wrong%3F%0A%0AWhat%20did%20you%20expect%3F%0A%0APage%20or%20query%20used%3A%0A%0AScreenshot%20attached%3F"
+              style={{ color: '#888', fontSize: '12.5px' }}
+            >
+              Report issue
+            </a>
           </div>
         </div>
 
