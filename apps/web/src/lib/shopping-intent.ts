@@ -2943,9 +2943,19 @@ function buildSystemDelta(
       continue;
     }
 
-    // Product strength doesn't conflict with system saturation. Rotate three
-    // reviewer-voice forms so stacked cards read distinctly.
+    // Product strength doesn't conflict with system saturation.
+    // First bullet uses the architecture-anchored perceptual sentence
+    // (if available) so "Sounds like" leads with design identity.
+    // Subsequent bullets rotate trait-specific forms.
     if (!systemChar.saturated.includes(trait)) {
+      if (improvements.length === 0) {
+        const archLine = buildArchitectureSentence(product);
+        if (archLine) {
+          improvements.push(archLine);
+          generalAddIdx++;
+          continue;
+        }
+      }
       if (improvements.length < 3) {
         const forms = [
           `adds ${label} without crowding what's already working`,
@@ -2982,13 +2992,13 @@ function buildSystemDelta(
       continue;
     }
 
-    // General weakness — rotate between three expert-voice forms so
+    // General weakness — rotate between product-specific forms so
     // stacked cards don't read identically.
     if (tradeoffs.length < 2) {
       const forms = [
-        `by design, less ${label} than flatter, more analytical alternatives`,
-        `${label} takes a back seat — that is the cost of the voicing`,
-        `trades a measure of ${label} for its core character`,
+        `less ${label} than alternatives — the cost of this voicing's strengths`,
+        `${label} takes a back seat to the traits this design prioritises`,
+        `trades ${label} for its core character — not a flaw, a design choice`,
       ];
       tradeoffs.push(forms[generalIdx % forms.length]);
       generalIdx++;
@@ -3490,7 +3500,37 @@ function buildAvoidIf(product: Product): string {
     return `Avoid if you can't accept: ${product.tendencies.tradeoffs[0].cost}.`;
   }
 
-  return 'Avoid if you already have enough of this product\'s strongest trait.';
+  // Philosophy + trait-based fallback — always produce something specific.
+  // Relaxed thresholds: use dominant trait character even when opposing trait
+  // isn't extremely low.
+  if (clarity >= 0.7) {
+    return 'May lean analytical in already-transparent systems — reduced tonal richness is the trade-off for precision.';
+  }
+  if (flow >= 0.7) {
+    return 'Prioritises musical continuity over explicit detail — separation and transient sharpness take a step back.';
+  }
+  if (tonalDensity >= 0.7) {
+    return 'Dense midrange can congest partnering warmth — pairing with other rich-sounding components risks thickness.';
+  }
+  if (dynamics >= 0.7) {
+    return 'Forward energy may fatigue in long sessions — lighter tonal weight is the cost of speed and impact.';
+  }
+
+  // Philosophy fallback when traits are all moderate
+  if (product.philosophy === 'warm') {
+    return 'Warmth-forward tuning may reduce separation and transient definition in dense mixes.';
+  }
+  if (product.philosophy === 'analytical') {
+    return 'Precision-first voicing may sound lean or clinical without complementary warmth downstream.';
+  }
+  if (product.philosophy === 'energy') {
+    return 'High-energy presentation trades tonal density for speed — may feel lightweight on sparse acoustic material.';
+  }
+  if (product.philosophy === 'neutral') {
+    return 'Even-handed balance means no single trait dominates — may feel unremarkable if you want a clear sonic signature.';
+  }
+
+  return 'No dominant weakness — trade-offs depend on pairing and priorities.';
 }
 
 // ── "Why it stands out" — architecture & design highlights ──────
@@ -3522,19 +3562,23 @@ const ARCHITECTURE_LABELS: Record<string, string> = {
 function buildStandoutFeatures(product: Product): string[] {
   const features: string[] = [];
 
-  // Bullet 1: Architecture identity
-  const archLabel = ARCHITECTURE_LABELS[product.topology ?? '']
-    ?? ARCHITECTURE_LABELS[product.architecture]
-    ?? `${product.architecture} design`;
-  features.push(archLabel);
+  // Architecture identity is now covered by buildArchitectureSentence in
+  // soundProfile[0], so only include the label when no architecture sentence
+  // would be generated (avoids redundant "ESS design, Delta-sigma precision…").
+  if (!buildArchitectureSentence(product)) {
+    const archLabel = ARCHITECTURE_LABELS[product.topology ?? '']
+      ?? ARCHITECTURE_LABELS[product.architecture]
+      ?? `${product.architecture} design`;
+    features.push(archLabel);
+  }
 
-  // Bullet 2: Key design emphasis from topology philosophy
+  // Key design emphasis from topology philosophy
   const topo = product.topology;
   if (topo && TOPOLOGY_PHILOSOPHY[topo]) {
     features.push(capitalizeFirst(TOPOLOGY_PHILOSOPHY[topo].emphasis));
   }
 
-  // Bullet 3: Notable quality from tendency profile or fatigue assessment
+  // Notable quality from tendency profile or fatigue assessment
   if (product.fatigueAssessment?.notes) {
     features.push(product.fatigueAssessment.notes);
   } else if (product.notes) {
@@ -3552,17 +3596,26 @@ function buildStandoutFeatures(product: Product): string[] {
  * Each bullet is a distinct sonic trait — not a verdict or fit note.
  */
 function buildSoundProfile(product: Product): string[] {
-  // Priority 1: curated character tendencies — the most authoritative source
+  // Priority 1: architecture-anchored perceptual sentence.
+  // Leads with design → describes audible consequence. Designed to
+  // differentiate products in the same set without naming others.
+  const archSentence = buildArchitectureSentence(product);
+
+  // Priority 2: curated character tendencies — supplement with detail
   if (hasTendencies(product.tendencies)) {
     const selected = selectDefaultTendencies(product.tendencies.character, 3);
     if (selected.length > 0) {
-      return selected.map((t) => capitalizeFirst(t.tendency));
+      const curated = selected.map((t) => capitalizeFirst(t.tendency));
+      // Lead with architecture sentence, supplement with first curated tendency
+      if (archSentence) return [archSentence, ...curated.slice(0, 2)];
+      return curated;
     }
   }
 
-  // Priority 2: qualitative tendency profile → readable bullets
+  // Priority 3: qualitative tendency profile → readable bullets
   if (hasExplainableProfile(product.tendencyProfile)) {
     const bullets: string[] = [];
+    if (archSentence) bullets.push(archSentence);
     const emphasized = getEmphasizedTraits(product.tendencyProfile);
     const present = product.tendencyProfile.tendencies
       .filter((t) => t.level === 'present')
@@ -3581,9 +3634,10 @@ function buildSoundProfile(product: Product): string[] {
     if (bullets.length > 0) return bullets.slice(0, 3);
   }
 
-  // Priority 3: primary axis leanings
+  // Priority 4: primary axis leanings
   if (product.primaryAxes) {
     const bullets: string[] = [];
+    if (archSentence) bullets.push(archSentence);
     const AXIS_LABELS: Record<string, Record<string, string>> = {
       warm_bright:       { warm: 'Warm-leaning tonality', bright: 'Bright, energetic presentation', neutral: 'Tonally neutral' },
       smooth_detailed:   { smooth: 'Smooth, easy-going', detailed: 'Detail-forward and resolving', neutral: 'Balanced detail retrieval' },
@@ -3597,13 +3651,68 @@ function buildSoundProfile(product: Product): string[] {
     if (bullets.length > 0) return bullets.slice(0, 3);
   }
 
-  // Fallback: split description
+  // Fallback: architecture sentence alone or description
+  if (archSentence) return [archSentence];
   const desc = product.description;
   if (desc) {
     return desc.split('.').map((s) => s.trim()).filter(Boolean).slice(0, 2);
   }
 
   return [];
+}
+
+/** Build an architecture-anchored perceptual sentence.
+ *  Pattern: [Design/topology] → [what the listener hears].
+ *  Designed to differentiate within a set without naming other products. */
+function buildArchitectureSentence(product: Product): string | undefined {
+  const topo = product.topology?.toLowerCase() ?? '';
+  const arch = product.architecture?.toLowerCase() ?? '';
+  const philosophy = product.philosophy;
+
+  // ── DAC topologies ──
+  // Each sentence: ≤18 words, one clause, architecture → audible consequence.
+  if (topo.includes('r2r') || arch.includes('r2r')) {
+    if (philosophy === 'warm') return 'R2R ladder conversion — physical weight, harmonic texture, and a denser midrange.';
+    return 'R2R ladder conversion — natural tonal density with a tactile, unhurried quality.';
+  }
+  if (topo.includes('fpga') || arch.includes('fpga')) {
+    return 'FPGA timing — fast transients, precise spatial cues, and a leaner tonal profile.';
+  }
+  if (topo.includes('delta-sigma') || arch.includes('ess') || arch.includes('akm') || arch.includes('sabre')) {
+    if (philosophy === 'analytical') return 'Delta-sigma conversion — sharper separation, cleaner edges, and stronger detail retrieval.';
+    if (philosophy === 'neutral') return 'Delta-sigma conversion — clean measured delivery with extended bandwidth and low noise.';
+    return 'Delta-sigma conversion — wide bandwidth, low noise floor, and composed detail.';
+  }
+  if (topo.includes('nos') || arch.includes('nos')) {
+    return 'Non-oversampling DAC — raw unfiltered signal path trading measured precision for visceral immediacy.';
+  }
+  if (topo.includes('multibit') || arch.includes('multibit')) {
+    return 'Multibit conversion — naturally weighted tonality with preserved low-level detail.';
+  }
+  // ── Amplifier topologies ──
+  if (topo.includes('set') || arch.includes('single-ended triode')) {
+    return 'Single-ended triode — second-harmonic richness and midrange luminosity at low power.';
+  }
+  if (topo.includes('class-a') || arch.includes('class a') || arch.includes('class-a')) {
+    return 'Pure Class A bias — effortless transients with no crossover artifacts or compression.';
+  }
+  if (topo.includes('push-pull') || arch.includes('push-pull')) {
+    return 'Push-pull tube topology — scale and authority with controlled harmonic warmth.';
+  }
+  if (topo.includes('class-d') || arch.includes('class d') || arch.includes('class-d')) {
+    return 'Class D switching — high damping, tight articulate bass, and controlled dynamics.';
+  }
+  if (topo.includes('hybrid') || arch.includes('hybrid')) {
+    return 'Hybrid tube/solid-state — tube harmonic colour with solid-state grip and extension.';
+  }
+
+  // ── Philosophy fallback (no topology known) ──
+  if (philosophy === 'warm') return 'Voiced for tonal richness — midrange body and harmonic weight over analytical edge.';
+  if (philosophy === 'analytical') return 'Precision-voiced — explicit resolution and separation across the frequency range.';
+  if (philosophy === 'energy') return 'Energy-focused voicing — fast leading edges, immediate dynamics, and rhythmic drive.';
+  if (philosophy === 'neutral') return 'Neutral voicing — no single trait dominates, passing upstream character uncoloured.';
+
+  return undefined;
 }
 
 /** Capitalize the first letter of a string. */
