@@ -53,7 +53,7 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
   { key: 'chord hugo tt2',  url: 'https://chordelectronics.co.uk/wp-content/uploads/2017/01/Hugo.jpg' },
   { key: 'chord hugo 2',    url: 'https://chordelectronics.co.uk/wp-content/uploads/2017/01/Hugo.jpg' },
   { key: 'chord hugo',      url: 'https://chordelectronics.co.uk/wp-content/uploads/2016/09/Hugo-Angle-900x675.jpg' },
-  { key: 'chord qutest',    url: 'https://image.son-video.com/images/article/chord-electronics/CHORDQUTESTNR/qutest_5aeac418a2fbb_1200.jpg?p=600' },
+  { key: 'chord qutest',    url: 'https://chordelectronics.co.uk/wp-content/uploads/2018/01/Qutest-Front-1-900x675.jpg' },
   { key: 'chord mojo 2',    url: 'https://chordelectronics.co.uk/wp-content/uploads/2023/04/Mojo-2-4.4-2-Edited-1024x1024.png' },
   { key: 'chord mojo',      url: 'https://chordelectronics.co.uk/wp-content/uploads/2023/04/Mojo-2-4.4-2-Edited-1024x1024.png' },
   { key: 'chord dave',      url: 'https://chordelectronics.co.uk/wp-content/uploads/2016/09/Dave.jpg' },
