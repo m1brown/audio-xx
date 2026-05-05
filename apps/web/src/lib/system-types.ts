@@ -76,6 +76,12 @@ export interface SavedSystemComponent {
 
 export interface SavedSystem {
   id: string;
+  /**
+   * Owning user id. Optional for back-compat with records persisted before
+   * the P0 storage seam — read paths backfill from the anonymous user record
+   * on first access.
+   */
+  userId?: string;
   name: string;
   components: SavedSystemComponent[];
   tendencies: string | null;

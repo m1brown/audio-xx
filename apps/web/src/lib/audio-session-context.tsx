@@ -39,17 +39,11 @@ import type {
   AudioSessionState,
   ActiveSystemRef,
   DraftSystem,
-  DraftSystemSnapshot,
   ProposedSystem,
   SavedSystem,
 } from './system-types';
 import { setActiveSavedSystemId } from './saved-system/activeSystem';
-
-// ── Constants ───────────────────────────────────────────
-
-const DRAFT_STORAGE_KEY = 'audioxx:draft-system';
-const SAVED_SYSTEMS_KEY = 'audioxx.systems.v1';
-const ACTIVE_SYSTEM_KEY = 'audioxx.active-system.v1';
+import { localStorageAdapter } from './storage/local-storage-adapter';
 
 // ── Initial state ───────────────────────────────────────
 
@@ -60,7 +54,10 @@ const ACTIVE_SYSTEM_KEY = 'audioxx.active-system.v1';
  * survive refresh and deployments.
  */
 function buildInitialState(): AudioSessionState {
-  const draft = readDraftFromStorage();
+  // Ensure the anonymous user record exists from first paint. Idempotent —
+  // returns the same record on subsequent calls. No UI surface yet (P0).
+  localStorageAdapter.getOrCreateAnonymousUser();
+  const draft = localStorageAdapter.readDraft();
 
   // Saved systems are NOT loaded from localStorage on cold boot.
   // Auth status is unknown at this point — loading saved systems here
@@ -206,114 +203,9 @@ interface AudioSessionContextValue {
 
 const AudioSessionContext = createContext<AudioSessionContextValue | null>(null);
 
-// ── sessionStorage helpers ──────────────────────────────
-
-function readDraftFromStorage(): DraftSystem | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
-    if (!raw) return null;
-    const snapshot: DraftSystemSnapshot = JSON.parse(raw);
-    if (
-      typeof snapshot.name !== 'string' ||
-      !Array.isArray(snapshot.components)
-    ) {
-      sessionStorage.removeItem(DRAFT_STORAGE_KEY);
-      return null;
-    }
-    return {
-      name: snapshot.name,
-      components: snapshot.components,
-      tendencies: snapshot.tendencies ?? null,
-      notes: snapshot.notes ?? null,
-    };
-  } catch {
-    sessionStorage.removeItem(DRAFT_STORAGE_KEY);
-    return null;
-  }
-}
-
-function writeDraftToStorage(draft: DraftSystem | null): void {
-  if (typeof window === 'undefined') return;
-  try {
-    if (!draft) {
-      sessionStorage.removeItem(DRAFT_STORAGE_KEY);
-      return;
-    }
-    const snapshot: DraftSystemSnapshot = {
-      name: draft.name,
-      components: draft.components,
-      tendencies: draft.tendencies,
-      notes: draft.notes,
-    };
-    sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(snapshot));
-  } catch {
-    // sessionStorage full or unavailable — degrade silently
-  }
-}
-
-// ── localStorage helpers for saved systems ─────────────
-
-function readSavedSystemsFromStorage(): SavedSystem[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = window.localStorage.getItem(SAVED_SYSTEMS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    // Basic shape validation: each entry must have id, name, components
-    return parsed.filter(
-      (s: unknown) =>
-        s &&
-        typeof s === 'object' &&
-        typeof (s as SavedSystem).id === 'string' &&
-        typeof (s as SavedSystem).name === 'string' &&
-        Array.isArray((s as SavedSystem).components),
-    ) as SavedSystem[];
-  } catch {
-    return [];
-  }
-}
-
-function writeSavedSystemsToStorage(systems: SavedSystem[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(SAVED_SYSTEMS_KEY, JSON.stringify(systems));
-  } catch {
-    // Quota or privacy mode — degrade silently
-  }
-}
-
-function readActiveSystemRefFromStorage(): ActiveSystemRef {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(ACTIVE_SYSTEM_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed && parsed.kind === 'saved' && typeof parsed.id === 'string') {
-      return { kind: 'saved', id: parsed.id };
-    }
-    if (parsed && parsed.kind === 'draft') {
-      return { kind: 'draft' };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function writeActiveSystemRefToStorage(ref: ActiveSystemRef): void {
-  if (typeof window === 'undefined') return;
-  try {
-    if (ref === null) {
-      window.localStorage.removeItem(ACTIVE_SYSTEM_KEY);
-    } else {
-      window.localStorage.setItem(ACTIVE_SYSTEM_KEY, JSON.stringify(ref));
-    }
-  } catch {
-    // degrade silently
-  }
-}
+// Persistence for draft / saved systems / active-system ref now flows
+// through `localStorageAdapter` (./storage/local-storage-adapter). The
+// adapter preserves the prior keys and payload shapes byte-for-byte.
 
 // ── API helpers ─────────────────────────────────────────
 
@@ -366,17 +258,17 @@ export function AudioSessionProvider({ children }: { children: ReactNode }) {
 
   // ── Persist draft to sessionStorage on every change ──
   useEffect(() => {
-    writeDraftToStorage(state.draftSystem);
+    localStorageAdapter.writeDraft(state.draftSystem);
   }, [state.draftSystem]);
 
   // ── Persist saved systems to localStorage on every change ──
   useEffect(() => {
-    writeSavedSystemsToStorage(state.savedSystems);
+    localStorageAdapter.writeSavedSystems(state.savedSystems);
   }, [state.savedSystems]);
 
   // ── Persist active system ref to localStorage on every change ──
   useEffect(() => {
-    writeActiveSystemRefToStorage(state.activeSystemRef);
+    localStorageAdapter.writeActiveSystemRef(state.activeSystemRef);
   }, [state.activeSystemRef]);
 
   // ── Auth-aware loading ──
@@ -393,7 +285,7 @@ export function AudioSessionProvider({ children }: { children: ReactNode }) {
     // whatever localStorage already has so we don't lose client-created
     // systems on authentication.
     const systemsToSet =
-      systems.length > 0 ? systems : readSavedSystemsFromStorage();
+      systems.length > 0 ? systems : localStorageAdapter.readSavedSystems();
 
     dispatch({
       type: 'SET_SAVED_SYSTEMS',
