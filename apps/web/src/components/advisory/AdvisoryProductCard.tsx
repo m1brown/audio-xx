@@ -1133,7 +1133,7 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
             {/* MAKER INSIGHT — structured manufacturer block.
               *
               * Migrated brands render a 3-line block keyed on bold brand
-              * name: Design / Tendency / In this system.
+              * name: Design / Tendency / Typical trade-off.
               * Unmigrated brands fall back to a legacy one-sentence compose. */}
             {makerInsight && !hideMakerInsight && (
               <div style={{ ...sectionStyle, opacity: 0.82 }}>
@@ -1164,7 +1164,7 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
                       {renderText(makerInsight.sonicTendency)}
                     </li>
                     <li>
-                      <span style={{ fontWeight: 600, color: COLORS.text }}>In this system:</span>{' '}
+                      <span style={{ fontWeight: 600, color: COLORS.text }}>Typical trade-off:</span>{' '}
                       {renderText(makerInsight.typicalTradeoff)}
                     </li>
                   </ul>
@@ -1244,7 +1244,7 @@ interface AdvisoryProductCardProps {
   options: AdvisoryOption[];
   /**
    * Suppress the structured "Maker insight" block (Design / Tendency /
-   * In this system) on every card.
+   * Typical trade-off) on every card.
    *
    * Used by single-brand contexts (e.g. /brand/[slug]) where the brand's
    * identity is already shown ONCE at the page header — re-rendering it

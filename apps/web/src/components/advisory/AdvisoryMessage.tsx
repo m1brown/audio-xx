@@ -3229,7 +3229,7 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
           color: COLORS.textSecondary,
         }}>
           <span style={{ fontWeight: 600, color: COLORS.text }}>
-            Expected impact in your system:
+            Expected impact:
           </span>{' '}
           <span style={{
             fontWeight: 600,
@@ -3257,7 +3257,7 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
           background: 'transparent',
         }}>
           <span style={{ fontWeight: 600, fontStyle: 'normal', fontSize: '0.85rem', color: COLORS.textSecondary }}>
-            Why this works in your system:
+            Why this fits:
           </span>{' '}
           {renderText(a.systemFitExplanation)}
         </p>
