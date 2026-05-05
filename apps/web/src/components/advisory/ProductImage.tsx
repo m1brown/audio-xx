@@ -2,7 +2,8 @@
 
 /**
  * Tiny client wrapper for product images in server-rendered cards.
- * Handles onError gracefully — hides the container if the image fails to load.
+ * Handles onError gracefully — swaps to a local placeholder SVG on failure.
+ * If the placeholder itself fails, hides the container as a last resort.
  * Optional credit line renders below the image in muted text.
  */
 /** Generic local placeholder — always available, no external dependency. */
