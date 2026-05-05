@@ -1,21 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" fill="none">
-  <rect width="200" height="120" fill="#f0eeea"/>
-  <!-- DAC chassis -->
-  <rect x="25" y="28" width="150" height="55" rx="5" fill="#ddd9d0" stroke="#c8c3b8" stroke-width="1"/>
-  <!-- Display window -->
-  <rect x="38" y="38" width="48" height="18" rx="3" fill="#c8c3b8"/>
-  <rect x="42" y="43" width="20" height="3" rx="1" fill="#b5b0a5"/>
-  <rect x="42" y="49" width="14" height="3" rx="1" fill="#b5b0a5"/>
-  <!-- Input indicator dots -->
-  <circle cx="112" cy="47" r="5" fill="#c8c3b8"/>
-  <circle cx="128" cy="47" r="5" fill="#c8c3b8"/>
-  <circle cx="144" cy="47" r="5" fill="#c8c3b8"/>
-  <!-- Volume/selector knob -->
-  <circle cx="155" cy="67" r="9" fill="#c8c3b8"/>
-  <circle cx="155" cy="67" r="4" fill="#b5b0a5"/>
-  <!-- Feet -->
-  <rect x="35" y="83" width="10" height="4" rx="2" fill="#c8c3b8"/>
-  <rect x="155" y="83" width="10" height="4" rx="2" fill="#c8c3b8"/>
-  <!-- Label -->
-  <text x="100" y="108" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#a8a298">DAC</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120">
+  <rect width="200" height="120" fill="#f2f2f2"/>
+  <rect x="25" y="25" width="150" height="52" rx="5" fill="#cfcfcf"/>
+  <rect x="38" y="34" width="48" height="18" rx="3" fill="#9a9a9a"/>
+  <circle cx="112" cy="43" r="5" fill="#9a9a9a"/>
+  <circle cx="128" cy="43" r="5" fill="#9a9a9a"/>
+  <circle cx="144" cy="43" r="5" fill="#9a9a9a"/>
+  <circle cx="155" cy="63" r="9" fill="#9a9a9a"/>
+  <rect x="35" y="77" width="10" height="4" rx="2" fill="#cfcfcf"/>
+  <rect x="155" y="77" width="10" height="4" rx="2" fill="#cfcfcf"/>
+  <text x="100" y="106" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="#6f6f6f">DAC</text>
 </svg>

@@ -1,16 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" fill="none">
-  <rect width="200" height="120" fill="#f0eeea"/>
-  <!-- Generic component chassis -->
-  <rect x="35" y="30" width="130" height="55" rx="6" fill="#ddd9d0" stroke="#c8c3b8" stroke-width="1"/>
-  <!-- Knob -->
-  <circle cx="65" cy="57" r="12" fill="#c8c3b8"/>
-  <circle cx="65" cy="57" r="5" fill="#b5b0a5"/>
-  <!-- Display lines -->
-  <rect x="90" y="47" width="55" height="5" rx="2" fill="#c8c3b8"/>
-  <rect x="90" y="58" width="40" height="5" rx="2" fill="#c8c3b8"/>
-  <!-- Feet -->
-  <rect x="45" y="85" width="10" height="4" rx="2" fill="#c8c3b8"/>
-  <rect x="145" y="85" width="10" height="4" rx="2" fill="#c8c3b8"/>
-  <!-- Label -->
-  <text x="100" y="108" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#a8a298">Audio Component</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120">
+  <rect width="200" height="120" fill="#f2f2f2"/>
+  <rect x="35" y="25" width="130" height="55" rx="6" fill="#cfcfcf"/>
+  <circle cx="65" cy="52" r="12" fill="#9a9a9a"/>
+  <rect x="90" y="43" width="55" height="5" rx="2" fill="#9a9a9a"/>
+  <rect x="90" y="54" width="40" height="5" rx="2" fill="#9a9a9a"/>
+  <rect x="45" y="80" width="10" height="4" rx="2" fill="#cfcfcf"/>
+  <rect x="145" y="80" width="10" height="4" rx="2" fill="#cfcfcf"/>
+  <text x="100" y="106" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="#6f6f6f">Audio Component</text>
 </svg>

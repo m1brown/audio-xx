@@ -52,13 +52,13 @@ export function ProductImage({ src, alt, credit, fallbackSrc }: {
           borderRadius: '10px',
           overflow: 'hidden',
           width: '100%',
-          maxHeight: '200px',
+          maxHeight: '220px',
           minHeight: '100px',
           background: '#f6f5f2',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '0.35rem 0',
+          padding: '0.25rem 0',
           boxSizing: 'border-box',
         }}
       >
@@ -70,7 +70,7 @@ export function ProductImage({ src, alt, credit, fallbackSrc }: {
           referrerPolicy="no-referrer"
           style={{
             maxWidth: '100%',
-            maxHeight: '180px',
+            maxHeight: '200px',
             objectFit: 'contain',
             display: 'block',
           }}
