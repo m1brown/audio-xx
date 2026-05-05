@@ -1131,21 +1131,20 @@ export default function Home() {
       }
     }
 
+    // ── System-awareness gate ──────────────────────────
+    // For saved/draft systems, only inject system context when the user
+    // explicitly references their system in the query.  Cold shopping
+    // queries ("best DAC under $1500") should not produce "your current
+    // DAC" language just because a system happens to be saved.
+    // Inline systems always pass — the user stated components directly.
+    const queryReferencesSystem = /\b(?:my|the)\s+(?:system|setup|chain|rig|gear)\b|\bfor\s+(?:my|the)\s+(?:system|setup|chain|rig|gear)\b|\bfit\s+(?:my|the)\b|\bmatch\s+(?:my|the)\b|\bmy\s+(?:dac|amp|amplifier|speakers?|headphones?|turntable|preamp)\b/i.test(submittedText);
+    const useSystemContext = isInlineSystem || (isSavedSystem && queryReferencesSystem);
+    const hasActiveSystem = useSystemContext;
+
     const savedSystemNote: string | undefined =
-      isSavedSystem && activeComponentNames && activeComponentNames.length > 0
+      isSavedSystem && queryReferencesSystem && activeComponentNames && activeComponentNames.length > 0
         ? `Evaluated against your current chain (${activeComponentNames.slice(0, 3).join(', ')})${tendenciesStr ? `, which leans ${tendenciesStr}` : ''} — picks below are judged on fit with that system, not in isolation.`
         : undefined;
-
-    // Phase C blocker A.4 fix: when a saved/draft system is active, the
-    // shopping overlay and editorial context must receive it as first-class
-    // grounding — not merely as a secondary savedSystemNote. Without this,
-    // `deriveExpectedImpact` and `deriveSystemFitExplanation` in
-    // advisory-response.ts fall back to the "Without more system context"
-    // copy because they gate on `ctx.systemComponents.length > 0`. The
-    // EXPLICIT-GEAR PRECEDENCE rule from Blocker 4 is unaffected: it lives
-    // in shopping-llm-overlay.ts via queryAnchors, which still win over
-    // systemComponents for the systemFit anchor.
-    const hasActiveSystem = isInlineSystem || isSavedSystem;
     const advisoryCtx: ShoppingAdvisoryContext = {
       systemComponents: hasActiveSystem ? activeComponentNames : undefined,
       systemLocation: hasActiveSystem ? (turnCtx.activeSystem?.location ?? undefined) : undefined,

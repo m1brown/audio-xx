@@ -4860,11 +4860,16 @@ function selectProductExamples(
 
     // ── Assemble result (max 3 products with distinct roles) ──
     const result: ProductExample[] = [anchor];
-    if (closeAlt) result.push(closeAlt);
-    // Include contrast OR wildcard (not both) to enforce 3-product cap.
-    // Prefer contrast when available — it provides the clearest alternative direction.
-    if (contrast) result.push(contrast);
-    else if (wildcard) result.push(wildcard);
+    if (closeAlt) {
+      result.push(closeAlt);
+      // With closeAlt present, include contrast OR wildcard (not both) to cap at 3.
+      if (contrast) result.push(contrast);
+      else if (wildcard) result.push(wildcard);
+    } else {
+      // No closeAlt — include BOTH contrast and wildcard to reach 3 products.
+      if (contrast) result.push(contrast);
+      if (wildcard && result.length < 3) result.push(wildcard);
+    }
 
     // ── Attach curated provenance (phase-1 wedge) ──────
     // Silently returns empty for products not in the wedge.
