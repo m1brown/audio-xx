@@ -99,6 +99,47 @@ When asked for help, please:
 
 ---
 
+## PM agent (audio-xx-pm-brief)
+
+A scheduled remote routine writes a daily PM brief to `docs/daily-briefs/`.
+
+| Field | Value |
+|---|---|
+| Routine ID | `trig_01AXbHsFTCAu8z6UqbSiNU47` |
+| Cron | `0 6 * * 1-5` UTC (8am Paris during CEST, 7am Paris during CET) |
+| Repo | `github.com/m1brown/audio-xx` (main branch) |
+| Output | `docs/daily-briefs/YYYY-MM-DD.md` + updated `docs/daily-briefs/INDEX.md`, committed to `main` |
+| Email | deferred — Gmail connector is attached but `permitted_tools` is empty; enable by updating the routine prompt + connector permissions |
+| Console URL | `https://claude.ai/code/routines/trig_01AXbHsFTCAu8z6UqbSiNU47` |
+
+### How to call it on-demand
+
+Tell Claude in any session: **"Run the PM brief now."** Claude invokes:
+```
+RemoteTrigger { action: "run", trigger_id: "trig_01AXbHsFTCAu8z6UqbSiNU47" }
+```
+
+Or click "Run now" on the routine page in the Anthropic console.
+
+### How to pause / disable
+
+Tell Claude: **"Disable the PM brief routine."** Or in the console, toggle `enabled: false`.
+
+### How to update
+
+Tell Claude: **"Update the PM brief — [what to change]."** Common changes:
+- Adjust the cron when DST flips (October → `0 7 * * 1-5`)
+- Add the email-send step once Gmail tools are permitted on the routine
+- Tighten or loosen the brief format
+
+### When DST flips
+
+- **Late October 2026:** CET resumes. The current cron fires at 7am Paris instead of 8am. Update to `0 7 * * 1-5` to keep 8am Paris.
+- **Late March 2027:** CEST resumes. Revert to `0 6 * * 1-5`.
+- The agent is instructed to flag this in the relevant week's brief so you don't miss it.
+
+---
+
 ## Decision log (append entries with date)
 
 | Date | Decision | Reasoning |
