@@ -1385,7 +1385,7 @@ export const DAC_PRODUCTS: Product[] = [
     ],
     // Step 10: buying metadata
     buyingContext: 'easy_new',
-    imageUrl: 'https://chordelectronics.co.uk/wp-content/uploads/2018/09/Qutest-2.jpg',
+    imageUrl: 'https://chordelectronics.co.uk/wp-content/uploads/2018/01/Qutest-Front-1-900x675.jpg',
     philosophy: 'energy',
     marketType: 'traditional',
   },

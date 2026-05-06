@@ -71,16 +71,16 @@ interface AdvisoryMessageProps {
 // the warm page bg (#F7F3EB) so headings, body, and muted labels separate
 // more clearly without changing the palette's character.
 const COLORS = {
-  text: '#1F1D1B',           // was #2a2a2a — matches page.tsx textPrimary; stronger headlines/body
-  textSecondary: '#4F4B46',  // was #5a5a5a — warmer dark secondary, higher contrast on warm bg
-  textMuted: '#7A756D',      // was #8a8a8a — warm-toned muted, still recedes but legible
-  textLight: '#A09B91',      // was #aaa     — warm-neutral
-  accent: '#a89870',
-  accentLight: '#c8c0a8',
-  accentBg: '#faf8f3',
-  border: '#E4DFD2',         // was #eeece8 — stronger section/card edge vs warm bg
-  borderLight: '#ECE8DD',    // was #f4f2ee — visible but soft dividers
-  sectionLabel: '#8E7A4E',   // was #a89870 — same warm-gold family, darker for label-vs-content contrast
+  text: '#111827',
+  textSecondary: '#4A5568',
+  textMuted: '#64748B',
+  textLight: '#94A3B8',
+  accent: '#1F3A5F',
+  accentLight: '#2D5C8A',
+  accentBg: '#EEF2F8',
+  border: '#E2E8F0',
+  borderLight: '#EDF2F7',
+  sectionLabel: '#1F3A5F',
   green: '#5a7050',
   amber: '#8a6a50',
   white: '#fff',
@@ -2076,7 +2076,31 @@ function AudioPreferencesBlock({ profile, advisoryMode, namedProduct }: {
           lineHeight: 1.7,
           color: COLORS.textSecondary,
         }}>
-          {description}
+          {(() => {
+            // Linkify the "Tell me about your system" phrase inline so it
+            // routes to /systems. No layout/text change — same string,
+            // same ordering, same surrounding copy. Only visible inside
+            // the no-data block, which already requires hasSystem=false.
+            const phrase = 'Tell me about your system';
+            const idx = description.indexOf(phrase);
+            if (idx < 0) return description;
+            return (
+              <>
+                {description.slice(0, idx)}
+                <Link
+                  href="/systems"
+                  style={{
+                    color: COLORS.accent,
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '2px',
+                  }}
+                >
+                  {phrase}
+                </Link>
+                {description.slice(idx + phrase.length)}
+              </>
+            );
+          })()}
         </p>
       </div>
     );
@@ -2136,8 +2160,11 @@ function AudioPreferencesBlock({ profile, advisoryMode, namedProduct }: {
         </div>
       )}
 
-      {/* Sonic priorities */}
-      {hasPriorities && (
+      {/* Sonic priorities — only rendered when populated by explicit user
+          input or saved-profile data. When empty, the surrounding block
+          shows a neutral "No preferences provided" placeholder so users
+          aren't told they prefer something they never stated. */}
+      {hasPriorities ? (
         <div style={{ marginBottom: hasAvoids || hasContext ? '0.45rem' : 0 }}>
           <div style={{
             fontSize: '0.82rem',
@@ -2147,7 +2174,9 @@ function AudioPreferencesBlock({ profile, advisoryMode, namedProduct }: {
           }}>
             {profile.preferenceSource === 'default'
               ? 'Starting point (default)'
-              : 'You prefer'}
+              : profile.preferenceSource === 'explicit'
+                ? 'You prefer'
+                : 'Leans toward'}
           </div>
           <div style={{
             fontSize: '0.91rem',
@@ -2177,6 +2206,17 @@ function AudioPreferencesBlock({ profile, advisoryMode, namedProduct }: {
               </div>
             </>
           )}
+        </div>
+      ) : (
+        <div style={{ marginBottom: hasAvoids || hasContext ? '0.45rem' : 0 }}>
+          <div style={{
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            color: COLORS.textMuted,
+            fontStyle: 'italic',
+          }}>
+            No preferences provided
+          </div>
         </div>
       )}
 

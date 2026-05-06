@@ -27,16 +27,16 @@ interface AdvisoryIntakeProps {
 // ── Design tokens (matching AdvisoryMessage) ──────────
 
 const COLORS = {
-  text: '#2a2a2a',
-  textSecondary: '#5a5a5a',
-  textMuted: '#8a8a8a',
-  accent: '#a89870',
-  accentBg: '#faf8f3',
-  accentBgHover: '#f5f1e8',
-  border: '#eeece8',
-  borderLight: '#f4f2ee',
-  selectedBorder: '#a89870',
-  selectedBg: '#faf8f3',
+  text: '#111827',
+  textSecondary: '#4A5568',
+  textMuted: '#64748B',
+  accent: '#1F3A5F',
+  accentBg: '#EEF2F8',
+  accentBgHover: '#E2EAF4',
+  border: '#E2E8F0',
+  borderLight: '#EDF2F7',
+  selectedBorder: '#1F3A5F',
+  selectedBg: '#EEF2F8',
   white: '#fff',
 };
 

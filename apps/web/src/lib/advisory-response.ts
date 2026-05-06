@@ -84,6 +84,14 @@ export interface AudioProfile {
   profileComplete: boolean;
   /** Which dimensions are missing when profile is incomplete. */
   missingDimensions?: string[];
+  /**
+   * Where the sonicPriorities came from. Drives renderer label choice:
+   *   'explicit' → "You prefer"   (extracted from user input or saved profile)
+   *   'inferred' → "Leans toward" (engine fallback, no stated preference)
+   *   'default'  → "Starting point (default)" (cold-start placeholder)
+   * Undefined when sonicPriorities is empty.
+   */
+  preferenceSource?: 'explicit' | 'inferred' | 'default';
 }
 
 /**
@@ -2077,10 +2085,14 @@ function buildAudioProfile(
     : undefined;
 
   // ── Sonic priorities ────────────────────────────────
-  // Build from multiple sources, prefer richest
+  // Build from multiple sources, prefer richest. Track ORIGIN so the
+  // renderer can pick "You prefer" vs "Leans toward" honestly — desires
+  // and storedDesires are real user input; the tasteLabel fallback is
+  // an engine inference and must not be presented as user-stated.
   const sonicPriorities: string[] = [];
+  let preferenceSource: 'explicit' | 'inferred' | 'default' | undefined;
 
-  // From reasoning desires (most specific)
+  // From reasoning desires (most specific) — explicit user input.
   if (reasoning?.taste.desires && reasoning.taste.desires.length > 0) {
     for (const d of reasoning.taste.desires) {
       const label = d.direction === 'more'
@@ -2090,21 +2102,24 @@ function buildAudioProfile(
         sonicPriorities.push(label);
       }
     }
+    if (sonicPriorities.length > 0) preferenceSource = 'explicit';
   }
 
-  // From stored desires (if provided and we need more)
+  // From stored desires (if provided and we need more) — saved profile is
+  // also explicit user input from a prior session.
   if (sonicPriorities.length < 2 && ctx?.storedDesires) {
     for (const d of ctx.storedDesires) {
       if (!sonicPriorities.includes(d)) {
         sonicPriorities.push(d);
       }
     }
+    if (!preferenceSource && sonicPriorities.length > 0) preferenceSource = 'explicit';
   }
 
-  // Fallback: from tasteLabel
-  if (sonicPriorities.length === 0 && reasoning?.taste.tasteLabel) {
-    sonicPriorities.push(reasoning.taste.tasteLabel);
-  }
+  // No fallback to tasteLabel — that's an engine inference, not user input.
+  // When no explicit desires or storedDesires exist, sonicPriorities stays
+  // empty and the renderer surfaces "No preferences provided" instead of
+  // fabricating a preference claim.
 
   // ── Sonic avoids ────────────────────────────────────
   const sonicAvoids: string[] = [];
@@ -2157,6 +2172,7 @@ function buildAudioProfile(
     directionStatement,
     profileComplete: !!profileComplete,
     missingDimensions: missingDimensions.length > 0 ? missingDimensions : undefined,
+    preferenceSource,
   };
 }
 

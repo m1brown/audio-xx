@@ -31,12 +31,12 @@ export default function AdvisorySection({ number, label, children }: AdvisorySec
             margin: '0 0 0.85rem 0',
             fontSize: '1.35rem',
             fontWeight: 800,
-            color: '#1F1D1B',
+            color: '#111827',
             lineHeight: 1.35,
             letterSpacing: '-0.015em',
           }}
         >
-          <span style={{ color: '#a89870', marginRight: '0.4rem', fontWeight: 600 }}>{number}.</span>
+          <span style={{ color: '#1F3A5F', marginRight: '0.4rem', fontWeight: 700 }}>{number}.</span>
           {label}
         </h3>
         {children}

@@ -289,20 +289,20 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
                 className="audioxx-upgrade-card"
                 style={{
                   padding: '0.75rem 0.95rem',
-                  border: isDir ? '1px solid #ddd0b8' : '1px solid #dcd7cf',
-                  borderLeft: isDir ? '3px solid #c9a96e' : '1px solid #dcd7cf',
+                  border: isDir ? '1px solid #CBD5E1' : '1px solid #E2E8F0',
+                  borderLeft: isDir ? '3px solid #1F3A5F' : '1px solid #E2E8F0',
                   borderRadius: '8px',
-                  background: isDir ? '#fdfaf5' : '#FFFEFA',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+                  background: isDir ? '#EEF2F8' : '#FFFFFF',
+                  boxShadow: '0 8px 24px rgba(15,23,42,0.08)',
                   transition: 'transform 0.15s, box-shadow 0.15s',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(15,23,42,0.12)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.05)';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(15,23,42,0.08)';
                 }}
               >
                 {/* Product image — always show when available (card context, no dedup) */}

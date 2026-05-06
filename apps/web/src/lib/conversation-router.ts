@@ -247,6 +247,114 @@ export function routeConversation(currentMessage: string): ConversationMode {
   return 'inquiry';
 }
 
+// ── Domain classification ───────────────────────────
+//
+// Sits orthogonal to ConversationMode. Where ConversationMode answers
+// "what kind of question is this?" (shopping, diagnosis, etc.), DomainClass
+// answers "is this a topic the home-audio advisor should answer head-on?"
+//
+//   core         → standard advisor behavior (no wrapping)
+//   adjacent     → live-sound flavor; advisor still answers, but leads with
+//                  a short orientation sentence so expectations match output
+//   out_of_scope → live-sound territory proper; advisor gives a brief
+//                  directional take and points the user to a specialist
+//
+// Keyword-based detection only — no logic changes downstream. The response
+// layer consumes `composeDomainPrefix` / `composeOutOfScopeAnswer` /
+// `composeDomainSuffix` to wrap or replace the advisory body.
+
+export type DomainClass = 'core' | 'adjacent' | 'out_of_scope';
+
+/** Adjacent: still answerable by the home-audio advisor, but with framing. */
+const ADJACENT_DOMAIN_KEYWORDS: RegExp[] = [
+  /\bPA\b/,
+  /\broom\s+size\b/i,
+  /\bvenue\b/i,
+  /\bcoverage\b/i,
+];
+
+/** Out-of-scope: live-sound territory; advisor defers to a specialist. */
+const OUT_OF_SCOPE_DOMAIN_KEYWORDS: RegExp[] = [
+  /\bconcert\b/i,
+  /\btour(?:ing)?\b/i,
+  /\bline\s+array\b/i,
+  /\bfront\s+of\s+house\b/i,
+  /\bmonitor\s+wedges?\b/i,
+];
+
+/**
+ * Classify the home-audio domain fit of a message.
+ *
+ * Out-of-scope wins over adjacent — "PA system for a concert tour"
+ * is out-of-scope, not just adjacent.
+ */
+export function classifyDomain(message: string): DomainClass {
+  if (OUT_OF_SCOPE_DOMAIN_KEYWORDS.some((p) => p.test(message))) {
+    return 'out_of_scope';
+  }
+  if (ADJACENT_DOMAIN_KEYWORDS.some((p) => p.test(message))) {
+    return 'adjacent';
+  }
+  return 'core';
+}
+
+// ── Domain response copy ────────────────────────────
+//
+// Single canonical string per case. No hype, no disclaimers, no apology.
+
+const ADJACENT_PREFIX =
+  "This leans more toward live sound, but here's how to think about it.";
+
+const OUT_OF_SCOPE_SUFFIX =
+  'For this, a live sound engineer or rental provider will give more precise guidance.';
+
+/**
+ * Optional opening sentence to prepend to the advisory body.
+ * Returns null for `core` and `out_of_scope` (the latter uses
+ * `composeOutOfScopeAnswer` instead of wrapping the engine output).
+ */
+export function composeDomainPrefix(domainClass: DomainClass): string | null {
+  return domainClass === 'adjacent' ? ADJACENT_PREFIX : null;
+}
+
+/**
+ * Optional closing sentence to append to the advisory body.
+ * Currently used only for `out_of_scope` to direct the user to a specialist.
+ */
+export function composeDomainSuffix(domainClass: DomainClass): string | null {
+  return domainClass === 'out_of_scope' ? OUT_OF_SCOPE_SUFFIX : null;
+}
+
+/**
+ * Brief 1–2 sentence directional take for out-of-scope queries.
+ *
+ * Replaces the normal advisory body. Keyword-routed so the orientation
+ * matches what the user asked about — line-array vs FOH vs touring vs
+ * monitor wedges all imply different first-principles framings.
+ *
+ * Generic fallback covers the case where an OUT_OF_SCOPE keyword fired
+ * but no specific subtopic was named.
+ */
+export function composeOutOfScopeAnswer(message: string): string {
+  if (/\bline\s+array\b/i.test(message)) {
+    return 'Line arrays are engineered for long-throw, high-SPL coverage of large audiences — a different design goal than home listening, where the priority is tonal balance and intimacy at the seated position.';
+  }
+  if (/\bfront\s+of\s+house\b/i.test(message)) {
+    return 'Front-of-house priorities are coverage, headroom, and crowd-level intelligibility — the tuning approach and the gear stack are different from a domestic listening setup.';
+  }
+  if (/\bmonitor\s+wedges?\b/i.test(message)) {
+    return 'Stage monitors prioritize cut-through clarity at high SPL near the performer — a different optimization than home listening, which targets tonal balance at moderate levels.';
+  }
+  if (/\btour(?:ing)?\b/i.test(message)) {
+    return 'Touring rigs prioritize reliability, repeatable coverage across varied rooms, and SPL headroom — design constraints that diverge from home-listening voicing.';
+  }
+  if (/\bconcert\b/i.test(message)) {
+    return 'Concert-scale reproduction is shaped by venue acoustics, throw distance, and audience coverage — the design priorities differ meaningfully from a domestic listening room.';
+  }
+  // Generic out-of-scope fallback.
+  return 'This sits in live-sound territory, where coverage, throw distance, and SPL headroom drive the design — different priorities from a home listening setup.';
+}
+
 // ── Mode persistence ────────────────────────────────
 
 /**

@@ -50,7 +50,14 @@ import { detectHypotheticalChain, chainToComponentNames, type HypotheticalChain 
 // System resolution now uses turnCtx.activeSystem exclusively (single source of truth).
 import { buildGearResponse } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
-import { routeConversation, resolveMode } from '@/lib/conversation-router';
+import {
+  routeConversation,
+  resolveMode,
+  classifyDomain,
+  composeDomainPrefix,
+  composeOutOfScopeAnswer,
+  composeDomainSuffix,
+} from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, classifySubjectAsContext, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory, buildSystemDiagnosis } from '@/lib/consultation';
 import { classifySystemArchetype, buildConsumerWirelessResponse } from '@/lib/system-class';
@@ -97,20 +104,20 @@ import ListenerProfileBadge, { buildProfileSnapshot, type ListenerProfileSnapsho
  *      block. AdvisoryProductCard.tsx mirrors these exact values so the
  *      palette is consistent across components. */
 const COLOR = {
-  bg: '#F7F3EB',
-  cardBg: '#FFFEFA',
-  textPrimary: '#1F1D1B',
-  textSecondary: '#5C5852',
-  textMuted: '#8C877F',
-  accent: '#B08D57',
-  accentHover: '#9A7A48',
-  accentSubtle: 'rgba(176,141,87,0.08)',
-  accentBg: '#FBF6EC',
-  border: '#D8D2C5',
-  borderLight: '#E8E3D7',
-  inputBg: '#FFFEFA',
-  chipBg: '#F0EBE1',
-  chipBorder: '#D5CEBC',
+  bg: '#F7F9FC',
+  cardBg: '#FFFFFF',
+  textPrimary: '#111827',
+  textSecondary: '#4A5568',
+  textMuted: '#64748B',
+  accent: '#1F3A5F',
+  accentHover: '#2D5C8A',
+  accentSubtle: 'rgba(31,58,95,0.08)',
+  accentBg: '#EEF2F8',
+  border: '#E2E8F0',
+  borderLight: '#EDF2F7',
+  inputBg: '#FFFFFF',
+  chipBg: '#EDF2F7',
+  chipBorder: '#CBD5E1',
 } as const;
 
 /** Pass 9: layout tokens — wider container, but text and conversation
@@ -1172,6 +1179,16 @@ export default function Home() {
 
     // Dispatch wrapper that applies phono caveat to all advisory messages.
     const dispatchAdvisory = (advisory: AdvisoryResponse, id?: string) => {
+      // Adjacent-domain prefix: prepend live-sound framing before dispatch.
+      // Mutates only editorialIntro — no shape change, no new fields.
+      if (domainClass === 'adjacent') {
+        const prefix = composeDomainPrefix(domainClass);
+        if (prefix) {
+          advisory.editorialIntro = advisory.editorialIntro
+            ? `${prefix} ${advisory.editorialIntro}`
+            : prefix;
+        }
+      }
       dispatch({ type: 'ADD_ADVISORY', advisory: phonoWrap(advisory), ...(id ? { id } : {}) });
     };
 
@@ -1179,8 +1196,22 @@ export default function Home() {
     // Classify the message into a conversation mode before detailed
     // intent detection. Mode persistence carries across turns.
     const routedMode = routeConversation(submittedText);
+    const domainClass = classifyDomain(submittedText);
     let effectiveMode = convModeHint ?? resolveMode(routedMode, state.activeMode);
     dispatch({ type: 'SET_MODE', mode: effectiveMode });
+
+    // ── Domain short-circuit (out_of_scope) ─────────────
+    // Live-sound territory — bypass detectIntent + advisory pipeline and
+    // emit a brief templated note. Adjacent and core continue normally.
+    if (domainClass === 'out_of_scope') {
+      const body = composeOutOfScopeAnswer(submittedText);
+      const suffix = composeDomainSuffix(domainClass);
+      dispatch({
+        type: 'ADD_NOTE',
+        content: suffix ? `${body} ${suffix}` : body,
+      });
+      return;
+    }
 
     // ── Detect intent ───────────────────────────────────
     // Intent detection runs after extraction. We only need the intent
@@ -3187,7 +3218,7 @@ export default function Home() {
               topPick: {
                 name: top.name ?? '',
                 brand: top.brand ?? '',
-                reason: top.fitNote || top.character || 'Closest alignment with your stated priorities.',
+                reason: top.fitNote || top.character || 'Strongest overall match in this set.',
               },
               alternative: {
                 name: alt.name ?? '',
@@ -4243,7 +4274,7 @@ export default function Home() {
             marginTop: '0.85rem',
             padding: '0.6rem 1.6rem',
             background: isLoading || !currentInput.trim() ? COLOR.border : COLOR.accent,
-            color: isLoading || !currentInput.trim() ? COLOR.textSecondary : '#FFFEFA',
+            color: isLoading || !currentInput.trim() ? COLOR.textSecondary : '#FFFFFF',
             border: 'none',
             borderRadius: 8,
             fontSize: '0.88rem',
@@ -4346,6 +4377,23 @@ export default function Home() {
             Contact
           </a>
         )}
+        {hasMessages && (
+          <a
+            href="mailto:hello@audio-xx.com?subject=Audio%20XX%20Issue&body=Describe%20the%20issue%20and%20what%20you%20expected"
+            style={{
+              color: COLOR.textSecondary,
+              fontSize: '0.85rem',
+              fontFamily: 'inherit',
+              textDecoration: 'none',
+              letterSpacing: '0.01em',
+              transition: 'color 0.15s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = COLOR.accent; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = COLOR.textSecondary; }}
+          >
+            Report issue
+          </a>
+        )}
       </div>
 
     </div>
@@ -4360,7 +4408,7 @@ export default function Home() {
           left: '50%',
           transform: 'translateX(-50%)',
           background: '#1F1D1B',
-          color: '#FFFEFA',
+          color: '#FFFFFF',
           padding: '0.55rem 1.2rem',
           borderRadius: 8,
           fontSize: '0.85rem',

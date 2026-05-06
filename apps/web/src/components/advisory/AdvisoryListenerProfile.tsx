@@ -65,10 +65,10 @@ export default function AdvisoryListenerProfile({ profile, keyObservation }: Lis
         <div style={{ marginBottom: '0.7rem' }}>
           <div style={{
             fontSize: '0.73rem',
-            fontWeight: 600,
+            fontWeight: 700,
             letterSpacing: '0.06em',
             textTransform: 'uppercase' as const,
-            color: '#a89870',
+            color: '#1F3A5F',
             marginBottom: '0.4rem',
           }}>
             Primary traits

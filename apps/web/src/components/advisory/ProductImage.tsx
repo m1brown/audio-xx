@@ -52,9 +52,9 @@ export function ProductImage({ src, alt, credit, fallbackSrc }: {
           borderRadius: '10px',
           overflow: 'hidden',
           width: '100%',
-          maxHeight: '220px',
-          minHeight: '100px',
-          background: '#f6f5f2',
+          maxHeight: '160px',
+          minHeight: '80px',
+          background: '#F7F9FC',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -70,7 +70,7 @@ export function ProductImage({ src, alt, credit, fallbackSrc }: {
           referrerPolicy="no-referrer"
           style={{
             maxWidth: '100%',
-            maxHeight: '200px',
+            maxHeight: '144px',
             objectFit: 'contain',
             display: 'block',
           }}
@@ -83,7 +83,7 @@ export function ProductImage({ src, alt, credit, fallbackSrc }: {
         <figcaption style={{
           marginTop: '0.2rem',
           fontSize: '0.72rem',
-          color: '#a09a90',
+          color: '#94A3B8',
           textAlign: 'right',
         }}>
           Image: {credit}

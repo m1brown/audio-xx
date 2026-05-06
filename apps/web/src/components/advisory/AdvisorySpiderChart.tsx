@@ -94,8 +94,8 @@ export default function AdvisorySpiderChart({ data }: SpiderChartProps) {
         {/* Data polygon — filled area */}
         <polygon
           points={dataToPolygon(data)}
-          fill="rgba(168, 152, 112, 0.15)"
-          stroke="#a89870"
+          fill="rgba(31, 58, 95, 0.12)"
+          stroke="#1F3A5F"
           strokeWidth={1.8}
           strokeLinejoin="round"
         />
@@ -110,7 +110,7 @@ export default function AdvisorySpiderChart({ data }: SpiderChartProps) {
               cx={pt.x}
               cy={pt.y}
               r={3.5}
-              fill="#a89870"
+              fill="#1F3A5F"
               stroke="#fff"
               strokeWidth={1.5}
             />

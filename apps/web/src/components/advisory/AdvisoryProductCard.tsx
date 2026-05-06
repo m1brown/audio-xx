@@ -367,17 +367,17 @@ function buildVerdict(opt: AdvisoryOption, role: string | undefined): string | n
 // into the card layer).
 
 const COLORS = {
-  text: '#1F1D1B',          // page COLOR.textPrimary
-  textSecondary: '#5C5852', // page COLOR.textSecondary
-  textMuted: '#8C877F',     // page COLOR.textMuted
-  accent: '#B08D57',        // page COLOR.accent — single accent across UI
-  accentBg: '#FBF6EC',      // page COLOR.accentBg — verdict block fill
-  border: '#D0CABf',         // slightly stronger than page — card edge needs definition
-  borderLight: '#E8E3D7',   // page COLOR.borderLight
+  text: '#111827',          // page COLOR.textPrimary
+  textSecondary: '#4A5568', // page COLOR.textSecondary
+  textMuted: '#64748B',     // page COLOR.textMuted
+  accent: '#1F3A5F',        // page COLOR.accent — single accent across UI
+  accentBg: '#EEF2F8',      // page COLOR.accentBg — verdict block fill
+  border: '#E2E8F0',        // page COLOR.border
+  borderLight: '#EDF2F7',   // page COLOR.borderLight
   green: '#4F6645',
   white: '#fff',
-  cardBg: '#FFFEFA',        // page COLOR.cardBg — lifts off warm bg
-  sectionBg: '#FAF6EC',
+  cardBg: '#FFFFFF',        // page COLOR.cardBg — lifts off page bg
+  sectionBg: '#EEF2F8',
 };
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -691,8 +691,8 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
       fontSize: '0.68rem',
-      fontWeight: 600,
-      color: '#918C84',
+      fontWeight: 700,
+      color: COLORS.accent,
       textTransform: 'uppercase',
       letterSpacing: '0.06em',
       marginBottom: '0.15rem',
@@ -820,10 +820,10 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
         border: `1px solid ${COLORS.border}`,
         borderRadius: 8,
         borderTop: isAnchor ? `3px solid ${COLORS.accent}` : `1px solid ${COLORS.border}`,
-        padding: isAnchor ? '0.9rem 1.2rem 0.9rem' : '0.85rem 1.2rem',
+        padding: isAnchor ? '0.75rem 1rem 0.75rem' : '0.7rem 1rem',
         boxShadow: isAnchor
-          ? '0 3px 10px rgba(176,141,87,0.1), 0 1px 3px rgba(31,29,27,0.05)'
-          : '0 2px 6px rgba(0,0,0,0.05)',
+          ? '0 8px 24px rgba(15,23,42,0.10), 0 1px 3px rgba(15,23,42,0.06)'
+          : '0 8px 24px rgba(15,23,42,0.08)',
         transition: 'transform 0.15s, box-shadow 0.15s',
       }}
     >
@@ -1071,19 +1071,20 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
 
         const makerInsight = composeMakerInsight(opt);
 
-        const sectionStyle: React.CSSProperties = { marginBottom: '0.5rem' };
+        const sectionStyle: React.CSSProperties = { marginBottom: '0.4rem' };
         const textStyle: React.CSSProperties = {
           margin: 0,
           fontSize: '0.91rem',
-          lineHeight: 1.55,
+          lineHeight: 1.5,
           color: COLORS.text,
           fontWeight: 450,
         };
         const bulletStyle: React.CSSProperties = {
           margin: 0,
           paddingLeft: '1.2rem',
-          lineHeight: 1.55,
+          lineHeight: 1.5,
           color: COLORS.text,
+          fontWeight: 450,
         };
 
         return (
@@ -1304,7 +1305,7 @@ export default function AdvisoryProductCards({ options, hideMakerInsight, prefer
   // old <hr/> divider — each card is now its own surface with a real
   // border, so a between-cards rule would be visual noise.
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
       {sorted.map((opt, i) => (
         <EditorialProductSection key={i} opt={opt} index={i} hideMakerInsight={hideMakerInsight} />
       ))}

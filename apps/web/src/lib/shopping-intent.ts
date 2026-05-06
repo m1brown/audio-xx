@@ -2988,7 +2988,7 @@ function buildSystemDelta(
 
     // Product weakness in an area the system already lacks
     if (systemChar.deficient.includes(trait)) {
-      tradeoffs.push(`leaves the ${label} deficit in your chain untouched`);
+      tradeoffs.push(`leaves the ${label} deficit in the surrounding setup untouched`);
       continue;
     }
 
@@ -2996,9 +2996,9 @@ function buildSystemDelta(
     // stacked cards don't read identically.
     if (tradeoffs.length < 2) {
       const forms = [
-        `less ${label} than alternatives — the cost of this voicing's strengths`,
-        `${label} takes a back seat to the traits this design prioritises`,
-        `trades ${label} for its core character — not a flaw, a design choice`,
+        `If ${label} carries the music, this design's restraint becomes an audible gap.`,
+        `When ${label} anchors the presentation, the missing emphasis turns into a structural hole rather than a virtue.`,
+        `If partnering gear depends on ${label} for balance, that absence becomes a deficit you'll hear.`,
       ];
       tradeoffs.push(forms[generalIdx % forms.length]);
       generalIdx++;
@@ -3010,7 +3010,7 @@ function buildSystemDelta(
     const label = TRAIT_LABELS[trait];
     if (!label) continue;
     if (systemChar.saturated.includes(trait) && tradeoffs.length < 2) {
-      tradeoffs.push(`compounds the ${label} your chain already leans into`);
+      tradeoffs.push(`compounds the ${label} the setup already leans into`);
     }
   }
 
@@ -3203,16 +3203,23 @@ function buildAnchorJustification(
   }
 
   // ── Tier 2: Partial context (taste/preference + product) ──
+  // Personalization template fires only when an EXPLICIT tasteLabel exists.
+  // When only an archetype was inferred (no stated preference), fall through
+  // to neutral product/system framing so we don't fabricate "your preference".
   if (hasTaste && hasSystem) {
-    const preference = tasteLabel ?? 'your stated priorities';
     const topStrength = strengths[0];
-    return `In a system that leans ${sysChar}, your preference for ${preference.toLowerCase()} points toward more ${topStrength} — this moves it there. ${tradeOffSentence}`;
+    if (tasteLabel) {
+      return `In a system that leans ${sysChar}, your preference for ${tasteLabel.toLowerCase()} points toward more ${topStrength} — this moves it there. ${tradeOffSentence}`;
+    }
+    return `In a system that leans ${sysChar}, this shifts it toward ${topStrength}. ${tradeOffSentence}`;
   }
 
   if (hasTaste) {
-    const preference = tasteLabel ?? 'your stated priorities';
     const topStrength = strengths[0];
-    return `Your preference for ${preference.toLowerCase()} points toward more ${topStrength} — this delivers it cleanly. ${tradeOffSentence}`;
+    if (tasteLabel) {
+      return `Your preference for ${tasteLabel.toLowerCase()} points toward more ${topStrength} — this delivers it cleanly. ${tradeOffSentence}`;
+    }
+    return `Prioritizes ${topStrength}. ${tradeOffSentence}`;
   }
 
   // ── Tier 3: Minimal context (conditional phrasing) ──
@@ -3504,33 +3511,33 @@ function buildAvoidIf(product: Product): string {
   // Relaxed thresholds: use dominant trait character even when opposing trait
   // isn't extremely low.
   if (clarity >= 0.7) {
-    return 'May lean analytical in already-transparent systems — reduced tonal richness is the trade-off for precision.';
+    return 'Paired with already-transparent solid-state gear, this analytical voicing can become glare — precision turns into edge.';
   }
   if (flow >= 0.7) {
-    return 'Prioritises musical continuity over explicit detail — separation and transient sharpness take a step back.';
+    return 'In smooth tube-front systems, this relaxed voicing becomes blur — flow turns into softness.';
   }
   if (tonalDensity >= 0.7) {
-    return 'Dense midrange can congest partnering warmth — pairing with other rich-sounding components risks thickness.';
+    return 'In already-warm tube systems, dense midrange becomes congestion — body turns into thickness.';
   }
   if (dynamics >= 0.7) {
-    return 'Forward energy may fatigue in long sessions — lighter tonal weight is the cost of speed and impact.';
+    return 'Paired with already lean-and-fast gear, this forward energy can become fatigue — speed turns into harshness.';
   }
 
   // Philosophy fallback when traits are all moderate
   if (product.philosophy === 'warm') {
-    return 'Warmth-forward tuning may reduce separation and transient definition in dense mixes.';
+    return 'Paired with warm tubes or rich speakers, this added richness can become congestion — midrange weight turns into thickness.';
   }
   if (product.philosophy === 'analytical') {
-    return 'Precision-first voicing may sound lean or clinical without complementary warmth downstream.';
+    return 'Paired with already-precise solid-state gear, this precision-first voicing can become glare — detail turns into edge.';
   }
   if (product.philosophy === 'energy') {
-    return 'High-energy presentation trades tonal density for speed — may feel lightweight on sparse acoustic material.';
+    return 'In lean fast systems, energy-forward voicing becomes fatigue — drive turns into harshness.';
   }
   if (product.philosophy === 'neutral') {
-    return 'Even-handed balance means no single trait dominates — may feel unremarkable if you want a clear sonic signature.';
+    return 'In systems that need a clear sonic anchor, even-handed voicing becomes uncommitted — neutrality turns into invisibility.';
   }
 
-  return 'No dominant weakness — trade-offs depend on pairing and priorities.';
+  return 'In systems that already balance well on their own, this addition becomes redundant — pairing yields no clear shift in either direction.';
 }
 
 // ── "Why it stands out" — architecture & design highlights ──────
@@ -6073,9 +6080,9 @@ export function buildShoppingAnswer(
   if (tasteConfidence === 'low') {
     // Low confidence: provide directional value without preference claims.
     if (ctx.category !== 'general') {
-      preferenceSummary = `Three ${categoryLabel} picks — each makes a different trade-off. The decision axis: what matters most to your listening.`;
+      preferenceSummary = `Three ${categoryLabel} picks — each makes a different trade-off. The decision axis is what each design optimizes.`;
     } else {
-      preferenceSummary = `Three picks, three trade-offs. The right one depends on your priorities.`;
+      preferenceSummary = `Three picks, three trade-offs. Each takes a different design approach.`;
     }
   } else if (directed) {
     preferenceSummary = `Optimizing for ${effectiveTasteLabel}${archetypeLabel}.${profileNote}`;
