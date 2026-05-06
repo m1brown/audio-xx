@@ -58,6 +58,29 @@ Two products. Audio XX is in late-stage development; Project Climate Screen ("CS
 
 ---
 
+## Day-0 Commitments for Climate Screen
+
+Read this list before writing the first line of CS code. Each entry is a **non-negotiable** — violating it is the kind of decision that costs months later.
+
+1. **No code lands before C1, C2, C3 are answered.** CLAUDE.md skeleton, cloud + compliance posture, identity provider — decisions in writing, not in heads.
+2. **First commit on `main` includes:** repo scaffold, `tsconfig`, `eslint`, `prettier`, **CI workflow with all gates green** (typecheck, lint, test, dependency audit, secret scan), and a passing smoke test. CI exists *before* feature code.
+3. **Identity before UI.** WorkOS / Auth0 / Stytch wired and proving SSO + SCIM roundtrip before any user-facing screen exists. Org → User → Role schema in Postgres on day 1.
+4. **Postgres + RLS from the schema's first table.** Every table has `org_id`. Every query goes through a per-session role that RLS enforces. No application-layer "remember to filter by org" code.
+5. **Audit log from the schema's first migration.** `audit_events (id, org_id, actor_id, action, target_type, target_id, payload_json, created_at)`. Append-only. Every state change writes a row.
+6. **Structured logger from day 1.** `pino` (or platform equivalent) with JSON output, log levels, and request-scoped correlation IDs. No `console.log` in production paths, ever. ESLint rule banning it from the start.
+7. **No localStorage of substantive data, ever.** Use it only for ephemeral UI state (panel collapsed, last-viewed tab). Anything an auditor would want to see lives in Postgres.
+8. **Compliance scaffold signed up week 1.** Vanta or Drata. SOC 2 Type 2 evidence collection runs in the background for ~6 months — start the clock immediately.
+9. **Accessibility is a CI gate from week 1.** axe-core integrated into the test suite. Keyboard-only nav verified by hand. Section 508 / WCAG 2.1 AA is procurement-blocking for cities and federal — it's table stakes, not a polish phase.
+10. **No new dependency without flagging the choice and one alternative.** Dependency sprawl in a single-founder enterprise codebase is fatal. Each new package gets a one-line justification in the PR description.
+11. **Reasoning engine consumed as a published package** (`@audioxx/decision-engine` or its successor name). CS does not copy-paste engine code from Audio XX. The package boundary is the contract.
+12. **Provenance and evidence are first-class output**, not an afterthought. Every recommendation surfaces evidence lineage and stated assumptions. Auditors will read this surface.
+13. **Vercel commercial is fine for cities-first launch; revisit GovCloud / Azure Government when a customer pulls in federal scope.** Don't pre-optimize for FedRAMP High when you're targeting cities.
+14. **One PR per concern.** Same surgical discipline as Audio XX, enforced harder. Reviewer fatigue is a real risk when you're the only reviewer.
+
+If any of these gets compromised, the right move is to stop and re-evaluate — not to push through. The cost of fixing them later compounds quadratically.
+
+---
+
 ## Working norms with the AI assistant
 
 I work in single-file or single-feature increments. Preferred:
