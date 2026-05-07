@@ -172,7 +172,7 @@ type Action =
   | { type: 'ADD_NOTE'; content: string }
   | { type: 'SET_MODE'; mode: ConversationMode }
   | { type: 'SET_REASONING'; reasoning: ReasoningResult }
-  | { type: 'SET_COMPARISON'; left: SubjectMatch; right: SubjectMatch; scope: 'brand' | 'product' }
+  | { type: 'SET_COMPARISON'; left: SubjectMatch; right: SubjectMatch; scope: 'brand' | 'product'; sourceReferences?: import('@/lib/advisory-response').SourceReference[]; links?: import('@/lib/advisory-response').AdvisoryLink[] }
   | { type: 'CLEAR_COMPARISON' }
   | { type: 'SET_CONSULTATION_CONTEXT'; subjects: SubjectMatch[]; originalQuery: string }
   | { type: 'CLEAR_CONSULTATION_CONTEXT' }
@@ -254,7 +254,13 @@ function reducer(state: ConversationState, action: Action): ConversationState {
     case 'SET_COMPARISON':
       return {
         ...state,
-        activeComparison: { left: action.left, right: action.right, scope: action.scope },
+        activeComparison: {
+          left: action.left,
+          right: action.right,
+          scope: action.scope,
+          sourceReferences: action.sourceReferences,
+          links: action.links,
+        },
       };
 
     case 'CLEAR_COMPARISON':
@@ -1929,13 +1935,21 @@ export default function Home() {
     if (!consultationGuarded && (effectiveMode === 'consultation' || isBrandComparison || isGearWithSubjects)) {
       const consultResult = buildConsultationResponse(submittedText, turnCtx.subjectMatches);
       if (consultResult) {
-        // Store comparison context for follow-up turns
+        // Build the advisory once so we can both dispatch it and lift its
+        // source attributions/links into the active-comparison state for
+        // carry-forward to follow-up refinement turns.
+        const consultAdvisory = consultationToAdvisory(consultResult, undefined, advisoryCtx);
+        // Store comparison context for follow-up turns. Carry forward
+        // sources/links so criterion follow-ups and system-relative
+        // refinements stay as rich as the originating turn.
         if (isBrandComparison && turnCtx.subjectMatches.length >= 2) {
           dispatch({
             type: 'SET_COMPARISON',
             left: turnCtx.subjectMatches[0],
             right: turnCtx.subjectMatches[1],
             scope: 'brand',
+            sourceReferences: consultAdvisory.sourceReferences,
+            links: consultAdvisory.links,
           });
         }
         // Store consultation context for single-subject follow-ups
@@ -1946,7 +1960,7 @@ export default function Home() {
             originalQuery: submittedText,
           });
         }
-        dispatchAdvisory(consultationToAdvisory(consultResult, undefined, advisoryCtx), advisoryId());
+        dispatchAdvisory(consultAdvisory, advisoryId());
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -2123,13 +2137,20 @@ export default function Home() {
     if (intent === 'gear_inquiry' || intent === 'comparison') {
       const gearResponse = buildGearResponse(intent, turnCtx.subjects, submittedText, turnCtx.desires, tasteProfile ?? undefined, generalActiveSystem);
       if (gearResponse) {
-        // Store comparison context for product-level comparisons
+        // Build the advisory once so we can dispatch it and (for comparisons)
+        // lift its sourceReferences/links into the active-comparison state.
+        const gearAdvisory = gearResponseToAdvisory(gearResponse, undefined, advisoryCtx);
+        // Store comparison context for product-level comparisons. Carry
+        // forward sources/links so criterion follow-ups and system-relative
+        // refinements stay as rich as the originating turn.
         if (intent === 'comparison' && turnCtx.subjectMatches.length >= 2) {
           dispatch({
             type: 'SET_COMPARISON',
             left: turnCtx.subjectMatches[0],
             right: turnCtx.subjectMatches[1],
             scope: turnCtx.subjectMatches.every((m) => m.kind === 'product') ? 'product' : 'brand',
+            sourceReferences: gearAdvisory.sourceReferences,
+            links: gearAdvisory.links,
           });
         }
         // Store consultation context for single-subject follow-ups
@@ -2140,7 +2161,7 @@ export default function Home() {
             originalQuery: submittedText,
           });
         }
-        dispatchAdvisory(gearResponseToAdvisory(gearResponse, undefined, advisoryCtx), advisoryId());
+        dispatchAdvisory(gearAdvisory, advisoryId());
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }

@@ -98,7 +98,7 @@ import { assessCounterfactual } from './counterfactual-assessment';
 import { frameStrategy, deduplicateStrategies } from './strategy-framing';
 import { topReviewsForCard, type ReviewerDomain } from './curation';
 import { getLegacyMapping } from './products/legacy-models';
-import { getProductImage } from './product-images';
+import { getProductImage, resolveProductImage } from './product-images';
 import { findCatalogProduct } from './listener-profile';
 import { toSlug as routeToSlug } from './route-slug';
 
@@ -2015,6 +2015,7 @@ function buildBrandComparison(
     subject: payload.subject,
     comparisonSummary: rendered.comparisonSummary,
     comparisonImages: buildComparisonImages(payload.sideA.name, payload.sideB.name, queryText),
+    sourceReferences: buildComparisonStructuredSources(profileA, profileB),
     followUp: rendered.followUp,
   };
 }
@@ -2036,8 +2037,7 @@ function buildComparisonImages(
 ): Array<{ brand: string; name: string; imageUrl?: string }> | undefined {
   const a = resolveComparisonSubject(sideAName, queryText);
   const b = resolveComparisonSubject(sideBName, queryText);
-  if (!a && !b) return undefined;
-  return [
+  return (!a && !b) ? undefined : [
     a ?? { brand: sideAName, name: '', imageUrl: undefined },
     b ?? { brand: sideBName, name: '', imageUrl: undefined },
   ];
@@ -2060,39 +2060,61 @@ function resolveComparisonSubject(
   if (!sideLabel) return null;
   const lowerLabel = sideLabel.toLowerCase();
 
+  // Helper: flexible brand match — handles "DeVore Fidelity" vs catalog "DeVore"
+  const brandMatches = (catalogBrand: string) => {
+    const lb = catalogBrand.toLowerCase();
+    return lb === lowerLabel || lowerLabel.startsWith(lb + ' ') || lowerLabel.startsWith(lb);
+  };
+
   // 1. Direct catalog match by combined "brand name"
   const direct = ALL_PRODUCTS.find(
     (p) => `${p.brand} ${p.name}`.toLowerCase() === lowerLabel,
   );
   if (direct) {
+    const img = resolveProductImage(direct.brand, direct.name, direct.imageUrl, direct.category);
     return {
       brand: direct.brand,
       name: direct.name,
-      imageUrl: direct.imageUrl ?? getProductImage(direct.brand, direct.name),
+      imageUrl: img || undefined,
     };
   }
 
-  // 2. Brand mentioned + product mentioned in the query text
+  // 2. Brand mentioned + product name (or model token) mentioned in the query text
+  // Handles shorthand: "o96" matches "Orangutan O/96", "w8" matches "W8"
   if (queryText) {
-    const lowerQuery = queryText.toLowerCase();
+    const lowerQuery = queryText.toLowerCase().replace(/[\/\-]/g, '');
+    const productNameInQuery = (name: string) => {
+      const lowerName = name.toLowerCase();
+      // Full name match
+      if (lowerQuery.includes(lowerName)) return true;
+      // Token match — any word/model-number token from the product name appears in query
+      const tokens = lowerName.replace(/[\/\-]/g, '').split(/\s+/).filter((t) => t.length >= 2);
+      return tokens.some((t) => lowerQuery.includes(t));
+    };
     const brandHit = ALL_PRODUCTS.find(
-      (p) => p.brand.toLowerCase() === lowerLabel
-        && lowerQuery.includes(p.name.toLowerCase()),
+      (p) => brandMatches(p.brand) && productNameInQuery(p.name),
     );
     if (brandHit) {
+      const img = resolveProductImage(brandHit.brand, brandHit.name, brandHit.imageUrl, brandHit.category);
       return {
         brand: brandHit.brand,
         name: brandHit.name,
-        imageUrl: brandHit.imageUrl ?? getProductImage(brandHit.brand, brandHit.name),
+        imageUrl: img || undefined,
       };
     }
   }
 
-  // 3. Brand-only fallback. getProductImage will return a placeholder for
-  // brands that have at least one entry in its KNOWN_PRODUCTS seed list,
-  // and undefined otherwise.
-  const brandOnlyImage = getProductImage(sideLabel, undefined);
-  return { brand: sideLabel, name: '', imageUrl: brandOnlyImage };
+  // 3. Brand-only fallback — try resolveProductImage which chains through
+  // getProductImage → getBrandImage → getGenericPlaceholder.
+  // Also try with just the first word (e.g. "DeVore" from "DeVore Fidelity").
+  const brandImg = resolveProductImage(sideLabel, undefined, undefined, undefined);
+  if (brandImg) return { brand: sideLabel, name: '', imageUrl: brandImg };
+  const firstWord = sideLabel.split(/\s+/)[0];
+  if (firstWord && firstWord.toLowerCase() !== lowerLabel) {
+    const shortImg = resolveProductImage(firstWord, undefined, undefined, undefined);
+    return { brand: sideLabel, name: '', imageUrl: shortImg || undefined };
+  }
+  return { brand: sideLabel, name: '', imageUrl: undefined };
 }
 
 /**
@@ -3051,7 +3073,13 @@ export function buildConsultationResponse(
  * @param followUpMessage  - the user's follow-up question
  */
 export function buildComparisonRefinement(
-  activeComparison: { left: SubjectMatch; right: SubjectMatch; scope: 'brand' | 'product' },
+  activeComparison: {
+    left: SubjectMatch;
+    right: SubjectMatch;
+    scope: 'brand' | 'product';
+    sourceReferences?: import('./advisory-response').SourceReference[];
+    links?: import('./advisory-response').AdvisoryLink[];
+  },
   followUpMessage: string,
 ): ConsultationResponse {
   const nameA = capitalize(activeComparison.left.name);
@@ -3099,6 +3127,11 @@ export function buildComparisonRefinement(
     subject: `${nameA} vs ${nameB} — ${criterion.label}`,
     comparisonSummary: concise,
     comparisonImages: buildComparisonImages(nameA, nameB, followUpMessage),
+    // Carry forward sources/links from the originating comparison turn so
+    // criterion follow-ups stay as rich as their parent. The refinement
+    // builder doesn't re-resolve them — it inherits.
+    sourceReferences: activeComparison.sourceReferences,
+    links: activeComparison.links,
     followUp: refinedFollowUp,
   };
 }
@@ -3119,7 +3152,13 @@ export function buildComparisonRefinement(
  * @param contextKind      - the classified kind of context
  */
 export function buildContextRefinement(
-  activeComparison: { left: SubjectMatch; right: SubjectMatch; scope: 'brand' | 'product' },
+  activeComparison: {
+    left: SubjectMatch;
+    right: SubjectMatch;
+    scope: 'brand' | 'product';
+    sourceReferences?: import('./advisory-response').SourceReference[];
+    links?: import('./advisory-response').AdvisoryLink[];
+  },
   contextMessage: string,
   contextKind: ContextKind,
 ): ConsultationResponse {
@@ -3151,6 +3190,10 @@ export function buildContextRefinement(
       subject: `${nameA} vs ${nameB} — with ${contextName}`,
       comparisonSummary: anchored.body,
       comparisonImages: buildComparisonImages(nameA, nameB, contextMessage),
+      // Carry forward sources/links from the originating comparison turn
+      // so the system-anchored decision retains its parent's richness.
+      sourceReferences: activeComparison.sourceReferences,
+      links: activeComparison.links,
       followUp: anchored.followUp,
     };
   }
@@ -3176,6 +3219,10 @@ export function buildContextRefinement(
     subject: `${nameA} vs ${nameB} — ${contextLabel}`,
     comparisonSummary: concise,
     comparisonImages: buildComparisonImages(nameA, nameB, contextMessage),
+    // Carry forward sources/links from the originating comparison turn so
+    // system-relative refinements stay as rich as their parent.
+    sourceReferences: activeComparison.sourceReferences,
+    links: activeComparison.links,
     followUp,
   };
 }
@@ -3917,6 +3964,54 @@ function buildComparisonSourceRefs(
   }
 
   return refs.slice(0, 3);
+}
+
+/**
+ * Build structured SourceReference objects from brand profiles for comparisons.
+ * Returns references with URLs so AdvisorySources renders them as clickable links.
+ * Pulls from brand profile review/manufacturer links and product sourceReferences.
+ */
+function buildComparisonStructuredSources(
+  profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
+): import('./advisory-response').SourceReference[] | undefined {
+  const refs: import('./advisory-response').SourceReference[] = [];
+  const usedUrls = new Set<string>();
+
+  // Extract links from BrandProfiles
+  for (const profile of [profileA, profileB]) {
+    if (!('links' in profile)) continue;
+    const bp = profile as BrandProfile;
+    const brandName = bp.names[0];
+    for (const link of bp.links ?? []) {
+      if (!link.url || usedUrls.has(link.url)) continue;
+      if (refs.length >= 4) break;
+      usedUrls.add(link.url);
+      refs.push({
+        source: link.label,
+        note: `${brandName} — ${link.kind === 'review' ? 'review' : link.kind === 'dealer' ? 'dealer' : 'reference'}`,
+        url: link.url,
+      });
+    }
+  }
+
+  // Extract from product sourceReferences (catalog products matching brand names)
+  const nameA = 'names' in profileA ? (profileA as BrandProfile).names[0] : (profileA as { name: string }).name;
+  const nameB = 'names' in profileB ? (profileB as BrandProfile).names[0] : (profileB as { name: string }).name;
+  for (const product of ALL_PRODUCTS) {
+    if (refs.length >= 5) break;
+    const brandLower = product.brand.toLowerCase();
+    if (brandLower !== nameA.toLowerCase() && brandLower !== nameB.toLowerCase()) continue;
+    if (!product.sourceReferences) continue;
+    for (const sr of product.sourceReferences) {
+      if (!sr.url || usedUrls.has(sr.url)) continue;
+      if (refs.length >= 5) break;
+      usedUrls.add(sr.url);
+      refs.push({ source: sr.source, note: sr.note, url: sr.url });
+    }
+  }
+
+  return refs.length > 0 ? refs.slice(0, 4) : undefined;
 }
 
 /** Produce a short human-readable label for the context the user provided. */

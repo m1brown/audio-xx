@@ -5,7 +5,7 @@ import type { SystemDirection } from './system-direction';
 import type { UserArchetypePreference } from './archetype';
 import type { ConversationMode } from './conversation-router';
 import type { ReasoningResult } from './reasoning';
-import type { AdvisoryResponse } from './advisory-response';
+import type { AdvisoryLink, AdvisoryResponse, SourceReference } from './advisory-response';
 import type { Product } from './products/dacs';
 
 /**
@@ -142,6 +142,16 @@ export interface ConversationState {
     left: SubjectMatch;
     right: SubjectMatch;
     scope: 'brand' | 'product';
+    /**
+     * Carry-forward of the originating turn's source attributions and
+     * retailer/review links. Re-emitted on follow-up refinement turns
+     * so criterion follow-ups and system-relative refinements keep the
+     * same richness as their origin (review citations, buying paths).
+     * Optional — not every comparison flavor produces these (e.g.
+     * brand-only comparisons may have sources but no links).
+     */
+    sourceReferences?: SourceReference[];
+    links?: AdvisoryLink[];
   };
   /**
    * Active consultation context — persists across follow-up turns.
