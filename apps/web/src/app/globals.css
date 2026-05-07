@@ -2,6 +2,28 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── Editorial palette tokens (Phase 1 — additive) ─────
+ *
+ * Used by the homepage hero and conversational input only.
+ * Do not override the existing slate-blue tokens elsewhere — those
+ * remain the working palette for advisory cards, comparison block,
+ * navigation, and most of the app surface.
+ *
+ * The editorial palette is pure white + charcoal + a single sparse
+ * orange accent dot, matching the approved mockup direction. Used
+ * sparingly to give the entry surface a calmer, more editorial feel
+ * without restyling the rest of the app.
+ */
+:root {
+  --editorial-bg: #FFFFFF;
+  --editorial-ink: #111111;        /* hero headline + primary text */
+  --editorial-ink-muted: #4A4A4A;  /* hero body + supporting prose */
+  --editorial-faint: #8A8A8A;      /* eyebrow labels, hints */
+  --editorial-rule: #E8E8E8;       /* thin hairlines */
+  --editorial-accent: #D85A1F;     /* orange accent dot — used SPARINGLY */
+  --editorial-narrow: 38rem;       /* readable column width for hero */
+}
+
 /* ── Base typography ─────────────────────────────── */
 
 body {

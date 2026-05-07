@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useEffect, useRef, useCallback, useState } from 'react';
+import { useReducer, useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import TasteRadar from '@/components/TasteRadar';
@@ -133,6 +133,45 @@ const LAYOUT = {
   textMax: 720,         // hero, intro, input — readable measure (unchanged)
   conversationMax: 1280, // conversation thread — cards expand into this for large product images
 } as const;
+
+/**
+ * Editorial palette — used by the homepage hero and the entry-surface
+ * conversational input only. Mirrors the CSS variables in globals.css
+ * for inline-style consumption. Not used by advisory rendering, cards,
+ * comparison block, or assessment renderer — those keep the slate-blue
+ * working palette so the rest of the app is untouched.
+ */
+const EDITORIAL = {
+  bg: '#FFFFFF',
+  ink: '#111111',
+  inkMuted: '#4A4A4A',
+  faint: '#8A8A8A',
+  rule: '#E8E8E8',
+  accent: '#D85A1F',
+  narrow: '38rem',
+} as const;
+
+/**
+ * Curated starter prompts. The hero shows three of these as chips
+ * below the input. Selection is session-stable (computed once per
+ * pageload via `useMemo([])`); no animation, no continuous rotation,
+ * no time-based shuffle — calm and intentional.
+ *
+ * When a saved/draft system is active, an "Assess my system: <chain>"
+ * chip replaces the first selection so the personalization affordance
+ * the prior UI offered survives. The other two slots come from this
+ * curated set.
+ */
+const CURATED_STARTER_PROMPTS: ReadonlyArray<string> = [
+  'compare Bifrost 2/64 vs Qutest',
+  'best DAC under $1500',
+  'my system sounds harsh',
+  'should I upgrade my Hugo to Hugo TT2?',
+  'Chord vs Denafrips',
+  'what does tonal density mean?',
+  'I want more flow without losing detail',
+  'best tube amp under $5000',
+];
 
 // Cycling placeholders removed — static placeholder is now used.
 
@@ -393,6 +432,20 @@ export default function Home() {
   // Listener profile snapshot — read-only UI display of inferred preferences.
   // Updated after each turn when the profile changes.
   const [profileSnapshot, setProfileSnapshot] = useState<ListenerProfileSnapshot | null>(null);
+
+  // Session-stable starter prompts — three picks shuffled once per
+  // pageload. No interval, no continuous rotation. The hero renders
+  // these as chips below the conversational input.
+  const sessionStarterPrompts = useMemo(() => {
+    const pool = [...CURATED_STARTER_PROMPTS];
+    // Fisher-Yates shuffle with Math.random — runs ONCE per mount,
+    // so the chips stay stable for the duration of the session.
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return pool;
+  }, []);
 
   // Taste profile — loaded from API for authenticated users
   const [tasteProfile, setTasteProfile] = useState<TasteProfile | null>(null);
@@ -3980,30 +4033,44 @@ export default function Home() {
       )}
 
       {/* Intro — only before conversation starts.
-       * Pass 6 refinement: sharper POV subheadline, brand signal moved
-       * up under the wordmark, example prompts rewritten to sound like
-       * real user inputs (not echoes of the action-button labels). */}
+       * Pass 11 (editorial refresh): hero now reads as a single
+       * editorial block — large headline + supporting paragraph —
+       * styled with the editorial palette (white/charcoal, sparse
+       * orange accent). Stays inside the EDITORIAL.narrow column for
+       * readability. Path-buttons replaced with curated starter
+       * prompts further down. */}
       {!hasMessages && (
         <>
-          <p
+          <div
             style={{
-              marginTop: '0.15rem',
-              // Pass 10: subheadline gets a touch more space below so
-              // the gap to the action buttons reads as a deliberate
-              // pause rather than a prototype default.
+              marginTop: '0.4rem',
               marginBottom: '2.1rem',
-              maxWidth: LAYOUT.textMax,
-              color: COLOR.textPrimary,
-              // Pass 9: bumped subheadline to read as a clear intro statement,
-              // not a caption. Stays inside the readable text column.
-              fontSize: '1.18rem',
-              lineHeight: 1.45,
-              fontWeight: 500,
-              letterSpacing: '-0.005em',
+              maxWidth: EDITORIAL.narrow,
             }}
           >
-            Every component evaluated by what it does in your system &mdash; not by what it does alone.
-          </p>
+            <h1
+              style={{
+                margin: '0 0 1.1rem 0',
+                fontSize: 'clamp(1.7rem, 3.5vw, 2.1rem)',
+                lineHeight: 1.18,
+                letterSpacing: '-0.022em',
+                fontWeight: 600,
+                color: EDITORIAL.ink,
+              }}
+            >
+              Every component evaluated by what it does in your system &mdash; not by what it does alone.
+            </h1>
+            <p
+              style={{
+                margin: 0,
+                fontSize: '1.02rem',
+                lineHeight: 1.65,
+                color: EDITORIAL.inkMuted,
+              }}
+            >
+              Audio XX evaluates components in the context of your actual chain — how each interacts with the others, where synergies form, where trade-offs emerge. Decisions are framed by your listening priorities, not by spec sheets in isolation.
+            </p>
+          </div>
 
           {/* Compact taste widget — authenticated users with profile data */}
           {tasteProfile && tasteProfile.confidence > 0 && (
@@ -4042,18 +4109,21 @@ export default function Home() {
             </div>
           )}
 
-          {/* 4 starter paths — each maps cleanly to a core mode.
-           * Clicking the chip submits the prompt directly; users can also
-           * just type freely. Paths:
-           *   Assess my system → system_assessment
-           *   Something sounds off → diagnosis
-           *   Find the right gear → shopping
-           *   Compare two options → comparison
+          {/* Curated starter prompts.
+           *
+           * Three chips below the hero. Selection is session-stable
+           * (computed once via `sessionStarterPrompts` useMemo at
+           * component-mount time); no animation, no continuous
+           * rotation, no time-based shuffle. Calm and intentional.
+           *
+           * When a saved/draft system is active, the FIRST chip is
+           * always "Assess my system: <chain>" — preserves the
+           * personalization affordance the prior path-buttons offered
+           * without the four-mode chrome. Other slots come from
+           * CURATED_STARTER_PROMPTS via the memo.
            */}
           {(() => {
-            // Build dynamic "Assess my system" prompt from active system.
-            // When a saved/draft system is active, use its actual components.
-            // Never use hardcoded placeholder components.
+            // Active-system component chain for the optional first chip.
             const activeComponents = audioState.activeSystemRef
               ? (() => {
                   if (audioState.activeSystemRef.kind === 'draft' && audioState.draftSystem) {
@@ -4077,55 +4147,56 @@ export default function Home() {
                     return b && !n.toLowerCase().startsWith(b.toLowerCase()) ? `${b} ${n}` : n || b || 'Unknown';
                   })
                 : [];
-            const assessPrompt = activeComponents.length > 0
+            const hasActiveChain = activeComponents.length > 0;
+            const assessPrompt = hasActiveChain
               ? `Assess my system: ${activeComponents.join(' \u2192 ')}`
-              : 'Assess my system';
-            const paths: Array<{ label: string; prompt: string }> = [
-              { label: 'Assess my system', prompt: assessPrompt },
-              { label: 'Something sounds off', prompt: 'My system sounds harsh \u2014 what\u2019s causing it?' },
-              { label: 'Find the right gear', prompt: 'Best DAC under $2,000 for a warm system' },
-              { label: 'Compare two options', prompt: 'Compare Bifrost 2/64 vs Qutest for a relaxed listening style' },
-            ];
+              : null;
+
+            const curatedPicks = sessionStarterPrompts.slice(0, hasActiveChain ? 2 : 3);
+            const prompts: ReadonlyArray<string> = assessPrompt
+              ? [assessPrompt, ...curatedPicks]
+              : curatedPicks;
+
             return (
               <div
                 style={{
                   display: 'flex',
                   flexWrap: 'wrap',
-                  gap: '0.5rem',
-                  marginTop: '0.25rem',
+                  gap: '0.45rem',
+                  marginTop: '0.1rem',
                   marginBottom: '1.75rem',
-                  maxWidth: LAYOUT.textMax,
+                  maxWidth: EDITORIAL.narrow,
                 }}
               >
-                {paths.map(({ label, prompt }) => (
+                {prompts.map((prompt) => (
                   <button
-                    key={label}
+                    key={prompt}
                     type="button"
                     onClick={() => handleSubmit(prompt)}
                     style={{
-                      padding: '0.5rem 0.9rem',
+                      padding: '0.45rem 0.85rem',
                       background: 'transparent',
-                      border: `1px solid ${COLOR.border}`,
-                      borderRadius: 8,
+                      border: `1px solid ${EDITORIAL.rule}`,
+                      borderRadius: 6,
                       cursor: 'pointer',
-                      fontSize: '0.9rem',
-                      fontWeight: 500,
-                      color: COLOR.textPrimary,
+                      fontSize: '0.88rem',
+                      fontWeight: 400,
+                      color: EDITORIAL.inkMuted,
                       fontFamily: 'inherit',
-                      transition: 'color 0.15s ease, border-color 0.15s ease, background 0.15s ease',
+                      lineHeight: 1.4,
+                      textAlign: 'left',
+                      transition: 'color 0.15s ease, border-color 0.15s ease',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.color = COLOR.accent;
-                      e.currentTarget.style.borderColor = COLOR.accent;
-                      e.currentTarget.style.background = COLOR.accentSubtle;
+                      e.currentTarget.style.color = EDITORIAL.ink;
+                      e.currentTarget.style.borderColor = EDITORIAL.ink;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.color = COLOR.textPrimary;
-                      e.currentTarget.style.borderColor = COLOR.border;
-                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = EDITORIAL.inkMuted;
+                      e.currentTarget.style.borderColor = EDITORIAL.rule;
                     }}
                   >
-                    {label}
+                    {prompt}
                   </button>
                 ))}
               </div>
@@ -4240,11 +4311,18 @@ export default function Home() {
       )}
 
       {/* Input area — hidden when an intake form is active (it has its own Submit).
-       * Pass 9: capped at text-column width so the input doesn't stretch
-       * across the whole 1180px container on desktop. */}
-      {!hasPendingIntake && <div style={{ marginBottom: '1rem', maxWidth: LAYOUT.textMax }}>
-        {/* Label is visually handled by the headline + supporting line above */}
-
+       *
+       * Phase 1 editorial refresh (landing state):
+       *   - thin hairline border using the editorial rule color
+       *   - no resting shadow — the field sits flat on the white surface
+       *   - calmer focus state (subtle ink underline, no halo)
+       *   - column width matches EDITORIAL.narrow so the input aligns
+       *     with the hero text above it
+       *
+       * Conversation state retains its existing visual weight (compact,
+       * slate-bordered) — the editorial treatment applies to entry only.
+       */}
+      {!hasPendingIntake && <div style={{ marginBottom: '1rem', maxWidth: hasMessages ? LAYOUT.textMax : EDITORIAL.narrow }}>
         <textarea
           ref={textareaRef}
           id="audio-input"
@@ -4260,38 +4338,40 @@ export default function Home() {
           }
           style={{
             width: '100%',
-            // Landing view: make the input box feel like the primary
-            // interaction point — taller, slightly warmer border, deeper
-            // resting shadow so it reads as weightier than the surrounding
-            // ghost-style action chips.
-            //
-            // Pass 10: a little more vertical height and interior
-            // padding on the landing-state textarea so the hero input
-            // reads as an intentional, focused field rather than a
-            // prototype box. Conversation-state remains compact.
-            minHeight: hasMessages ? 72 : 152,
-            padding: hasMessages ? '1rem 1.1rem' : '1.3rem 1.35rem',
-            border: `1.5px solid ${hasMessages ? COLOR.border : COLOR.chipBorder}`,
-            borderRadius: 10,
+            minHeight: hasMessages ? 72 : 132,
+            padding: hasMessages ? '1rem 1.1rem' : '1.1rem 1.15rem',
+            border: hasMessages
+              ? `1.5px solid ${COLOR.border}`
+              : `1px solid ${EDITORIAL.rule}`,
+            borderRadius: hasMessages ? 10 : 6,
             outline: 'none',
             fontSize: hasMessages ? '0.98rem' : '1rem',
             lineHeight: 1.6,
             resize: 'vertical',
-            background: hasMessages ? COLOR.inputBg : '#fff',
-            color: COLOR.textPrimary,
+            background: hasMessages ? COLOR.inputBg : EDITORIAL.bg,
+            color: hasMessages ? COLOR.textPrimary : EDITORIAL.ink,
             boxSizing: 'border-box',
-            boxShadow: hasMessages ? 'none' : '0 1px 2px rgba(43,42,40,0.04)',
-            transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
+            boxShadow: 'none',
+            fontFamily: 'inherit',
+            transition: 'border-color 0.2s ease',
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = COLOR.accent;
-            e.currentTarget.style.boxShadow = `0 0 0 3px rgba(176,141,87,0.12)`;
-            e.currentTarget.style.background = '#fff';
+            if (hasMessages) {
+              e.currentTarget.style.borderColor = COLOR.accent;
+              e.currentTarget.style.boxShadow = `0 0 0 3px rgba(31,58,95,0.10)`;
+              e.currentTarget.style.background = '#fff';
+            } else {
+              e.currentTarget.style.borderColor = EDITORIAL.ink;
+            }
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = COLOR.border;
-            e.currentTarget.style.boxShadow = 'none';
-            e.currentTarget.style.background = COLOR.inputBg;
+            if (hasMessages) {
+              e.currentTarget.style.borderColor = COLOR.border;
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.background = COLOR.inputBg;
+            } else {
+              e.currentTarget.style.borderColor = EDITORIAL.rule;
+            }
           }}
         />
 
