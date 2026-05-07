@@ -60,6 +60,8 @@ interface AdvisoryMessageProps {
   onIntakeSubmit?: (text: string) => void;
   /** Callback when user completes the "Start here" preference capture flow. */
   onPreferenceCapture?: (selections: PreferenceSelection[], category: string) => void;
+  /** Callback when user clicks a follow-up prompt — submits it as a new message. */
+  onFollowUpClick?: (text: string) => void;
 }
 
 // ── Design tokens ─────────────────────────────────────
@@ -1687,33 +1689,34 @@ function FollowUpChip({
   );
 }
 
-function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
+function MemoFormat({ advisory: a, onFollowUpClick }: AdvisoryMessageProps) {
   let sectionNum = 0;
   const next = () => ++sectionNum;
 
   // Rewritten system review: when the assessment response carries the
-  // six-section narrative in `systemContext`, the legacy multi-section
-  // memo layout is suppressed and only the narrative renders. The
-  // structured fields are still present on the response (so parity tests
-  // and non-UI consumers keep working) but are intentionally hidden.
+  // six-section narrative in `systemContext`, the narrative leads. Most
+  // text sections below are gated `!isRewrittenReview` to avoid
+  // duplicating the prose, but the CARD sections (componentAssessments,
+  // upgradePaths) render in BOTH modes — they anchor the narrative to
+  // actual products with images and clickable references.
   const isRewrittenReview = a.advisoryMode === 'system_review' && !!a.systemContext;
-
-  if (isRewrittenReview) {
-    return <RewrittenSystemReview advisory={a} />;
-  }
 
   return (
     <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
-      {/* ── Mode indicator ──────────────────────────── */}
-      <ModeIndicator mode={a.advisoryMode} />
+      {/* ── Rewritten narrative — leads when systemContext is present ── */}
+      {isRewrittenReview && <RewrittenSystemReview advisory={a} />}
 
-      {/* ── Title ──────────────────────────────────── */}
-      {a.title && (
+      {/* ── Mode indicator (suppressed under rewritten review;
+            RewrittenSystemReview renders its own header) ── */}
+      {!isRewrittenReview && <ModeIndicator mode={a.advisoryMode} />}
+
+      {/* ── Title (same suppression rule) ── */}
+      {!isRewrittenReview && a.title && (
         <h2 style={{
-          margin: '0 0 1.35rem 0', // was 1.25rem — pairs with strengthened label hierarchy below
-          fontSize: '1.55rem',      // was 1.5rem — match primary-mode title weight
+          margin: '0 0 1.35rem 0',
+          fontSize: '1.55rem',
           fontWeight: 700,
-          color: COLORS.text,       // was hard-coded #2a2a2a; use darkened primary token
+          color: COLORS.text,
           letterSpacing: '-0.02em',
         }}>
           {a.title}
@@ -1878,8 +1881,11 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
         </>
       )}
 
-      {/* ── 6. Component Contributions ────────────── */}
-      {!isRewrittenReview && a.componentAssessments && a.componentAssessments.length > 0 && (
+      {/* ── 6. Component Contributions ──────────────
+          Card section — renders in BOTH classic and rewritten review,
+          so the narrative is visually anchored to actual components with
+          images and clickable references. */}
+      {a.componentAssessments && a.componentAssessments.length > 0 && (
         <>
           <AdvisorySection number={next()} label="Component Contributions">
             <AdvisoryComponentAssessments assessments={a.componentAssessments} />
@@ -1888,10 +1894,13 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
         </>
       )}
 
-      {/* ── 7. System Bottlenecks ─────────────────── */}
-      {!isRewrittenReview && a.upgradePaths && a.upgradePaths.length > 0 && (
+      {/* ── 7. System Bottlenecks / Upgrade Paths ────
+          Card section — restored under rewritten review so upgrade paths
+          render with product images and structured presentation, not as
+          plain prose bullets. */}
+      {a.upgradePaths && a.upgradePaths.length > 0 && (
         <>
-          <AdvisorySection number={next()} label="System Bottlenecks">
+          <AdvisorySection number={next()} label={isRewrittenReview ? "Upgrade options" : "System Bottlenecks"}>
             <AdvisoryUpgradePaths
               paths={a.upgradePaths}
               stackedTraits={a.stackedTraitInsights?.map((s) => ({ label: s.label, classification: s.classification }))}
@@ -1964,19 +1973,56 @@ function MemoFormat({ advisory: a }: AdvisoryMessageProps) {
 
       {/* ── Follow-up ────────────────────────────── */}
       {a.followUp && (
-        <div
-          style={{
-            borderLeft: `3px solid ${COLORS.border}`,
-            paddingLeft: '1rem',
-            padding: '0.7rem 1rem',
-            marginBottom: '1.5rem',
-            fontSize: FONTS.bodySize,
-            color: COLORS.textSecondary,
-            lineHeight: 1.7,
-          }}
-        >
-          {renderText(a.followUp)}
-        </div>
+        onFollowUpClick ? (
+          <button
+            type="button"
+            onClick={() => onFollowUpClick(a.followUp!)}
+            style={{
+              display: 'block',
+              width: '100%',
+              textAlign: 'left',
+              borderLeft: `3px solid ${COLORS.accentLight}`,
+              padding: '0.7rem 1rem',
+              marginBottom: '1.5rem',
+              fontSize: FONTS.bodySize,
+              color: COLORS.textSecondary,
+              lineHeight: 1.7,
+              background: 'transparent',
+              border: 'none',
+              borderLeftWidth: '3px',
+              borderLeftStyle: 'solid',
+              borderLeftColor: COLORS.accentLight,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontStyle: 'italic',
+              transition: 'color 0.15s ease, border-color 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = COLORS.text;
+              e.currentTarget.style.borderLeftColor = COLORS.accent ?? COLORS.accentLight;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = COLORS.textSecondary;
+              e.currentTarget.style.borderLeftColor = COLORS.accentLight;
+            }}
+          >
+            {renderText(a.followUp)} →
+          </button>
+        ) : (
+          <div
+            style={{
+              borderLeft: `3px solid ${COLORS.border}`,
+              paddingLeft: '1rem',
+              padding: '0.7rem 1rem',
+              marginBottom: '1.5rem',
+              fontSize: FONTS.bodySize,
+              color: COLORS.textSecondary,
+              lineHeight: 1.7,
+            }}
+          >
+            {renderText(a.followUp)}
+          </div>
+        )
       )}
 
       {/* ── Learn more (links) ───────────────────── */}
@@ -3732,6 +3778,35 @@ function AssistantFormat({ advisory: a }: AdvisoryMessageProps) {
   );
 }
 
+// ── Comparison Format selector ─────────────────────────
+//
+// Comparisons (brand vs brand, product vs product, upgrade comparisons,
+// follow-up criterion turns, system-relative refinements) all render
+// through StandardFormat's comparison block. Historically they reached
+// it by dispatcher fallthrough — every earlier predicate happened to
+// return false. That is fragile: any widening of isMemoFormat,
+// isAssessmentFormat, etc. that incidentally matches a comparison
+// advisory would silently re-route it into the wrong format and lose
+// the side-by-side images + summary block.
+//
+// `isComparisonFormat` makes the selection explicit. It runs BEFORE
+// isMemoFormat in the cascade so comparisons can never be swallowed by
+// a future predicate change without one of the dual gates breaking.
+//
+// Exported for regression-test access. Internal callers in this file
+// continue to use it directly without importing.
+
+export function isComparisonFormat(a: AdvisoryResponse): boolean {
+  // Primary key: explicit advisoryMode set by the comparison adapters
+  // (consultationToAdvisory, gearResponseToAdvisory) at the moment the
+  // payload is constructed.
+  // Defensive AND: comparisonSummary is the renderer-side contract that
+  // StandardFormat's comparison block actually reads. If either side of
+  // the AND is missing, the advisory is not a renderable comparison and
+  // dispatch should continue down the cascade.
+  return a.advisoryMode === 'gear_comparison' && !!a.comparisonSummary;
+}
+
 // ── Decisive Format (Conclusion mode — "What would you actually do?") ──
 //
 // A completely separate render path for conclusion-intent turns.
@@ -3872,7 +3947,7 @@ function DecisiveFormat({ advisory: a }: AdvisoryMessageProps) {
 
 // ── Classic Format (Consultations, Diagnosis, Comparisons) ──
 
-function StandardFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessageProps) {
+function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: AdvisoryMessageProps) {
   // Redirect to editorial format when product options are present
   if (isEditorialFormat(a)) {
     return <EditorialFormat advisory={a} onPreferenceCapture={onPreferenceCapture} />;
@@ -4437,21 +4512,56 @@ function StandardFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePro
 
       {/* ── 13. Follow-up ─────────────────────────── */}
       {a.followUp && !a.refinementPrompts?.length && !a.lowPreferenceSignal && (
-        <div
-          style={{
-            borderLeft: '3px solid #7a9aaa',
-            paddingLeft: '1rem',
-            padding: '0.7rem 1rem',
-            marginBottom: '1.5rem',
-            background: '#f6f9fa',
-            borderRadius: '0 6px 6px 0',
-            fontSize: FONTS.bodySize,
-            color: COLORS.textSecondary,
-            lineHeight: 1.7,
-          }}
-        >
-          {a.followUp}
-        </div>
+        onFollowUpClick ? (
+          <button
+            type="button"
+            onClick={() => onFollowUpClick(a.followUp!)}
+            style={{
+              display: 'block',
+              width: '100%',
+              textAlign: 'left',
+              padding: '0.7rem 1rem',
+              marginBottom: '1.5rem',
+              fontSize: FONTS.bodySize,
+              color: COLORS.textSecondary,
+              lineHeight: 1.7,
+              background: '#f6f9fa',
+              border: 'none',
+              borderLeft: '3px solid #7a9aaa',
+              borderRadius: '0 6px 6px 0',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontStyle: 'italic',
+              transition: 'color 0.15s ease, border-color 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = COLORS.text;
+              e.currentTarget.style.borderLeftColor = COLORS.accent ?? '#5a8a9a';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = COLORS.textSecondary;
+              e.currentTarget.style.borderLeftColor = '#7a9aaa';
+            }}
+          >
+            {renderText(a.followUp)} →
+          </button>
+        ) : (
+          <div
+            style={{
+              borderLeft: '3px solid #7a9aaa',
+              paddingLeft: '1rem',
+              padding: '0.7rem 1rem',
+              marginBottom: '1.5rem',
+              background: '#f6f9fa',
+              borderRadius: '0 6px 6px 0',
+              fontSize: FONTS.bodySize,
+              color: COLORS.textSecondary,
+              lineHeight: 1.7,
+            }}
+          >
+            {a.followUp}
+          </div>
+        )
       )}
 
       {/* ── 14. Learn more (links) ───────────────── */}
@@ -4563,7 +4673,7 @@ function QuickRecFormat({ quickRec }: { quickRec: QuickRecommendation }) {
 
 // ── Main Export ────────────────────────────────────────
 
-export default function AdvisoryMessage({ advisory, onIntakeSubmit, onPreferenceCapture }: AdvisoryMessageProps) {
+export default function AdvisoryMessage({ advisory, onIntakeSubmit, onPreferenceCapture, onFollowUpClick }: AdvisoryMessageProps) {
   // Each advisory message gets its own ProductImageProvider.
   // Card contexts (product cards, comparison cards, upgrade paths)
   // always show images when available — no dedup.
@@ -4574,8 +4684,14 @@ export default function AdvisoryMessage({ advisory, onIntakeSubmit, onPreference
     content = <QuickRecFormat quickRec={advisory.quickRecommendation} />;
   } else if (isIntakeFormat(advisory)) {
     content = <AdvisoryIntake advisory={advisory} onSubmit={onIntakeSubmit} />;
+  } else if (isComparisonFormat(advisory)) {
+    // Comparisons select StandardFormat intentionally — its comparison
+    // block (gated on `comparisonSummary`) is the canonical comparison
+    // surface. This branch must run BEFORE isMemoFormat so any future
+    // memo-predicate widening cannot silently re-route comparisons.
+    content = <StandardFormat advisory={advisory} onPreferenceCapture={onPreferenceCapture} onFollowUpClick={onFollowUpClick} />;
   } else if (isMemoFormat(advisory)) {
-    content = <MemoFormat advisory={advisory} />;
+    content = <MemoFormat advisory={advisory} onFollowUpClick={onFollowUpClick} />;
   } else if (isAssessmentFormat(advisory)) {
     content = <AssessmentFormat advisory={advisory} />;
   } else if (isKnowledgeFormat(advisory)) {
@@ -4588,7 +4704,7 @@ export default function AdvisoryMessage({ advisory, onIntakeSubmit, onPreference
   } else {
     console.log('[decisive-debug] routing → StandardFormat (hasDecisive=%s, hasOptions=%s)',
       !!advisory.decisiveRecommendation, !!advisory.options);
-    content = <StandardFormat advisory={advisory} onPreferenceCapture={onPreferenceCapture} />;
+    content = <StandardFormat advisory={advisory} onPreferenceCapture={onPreferenceCapture} onFollowUpClick={onFollowUpClick} />;
   }
 
   return (
