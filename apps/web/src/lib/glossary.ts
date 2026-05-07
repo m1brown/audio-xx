@@ -14,11 +14,28 @@
 
 // ── Types ─────────────────────────────────────────────
 
+/**
+ * Structured category for grouping glossary entries.
+ *
+ * Display labels are mapped via GLOSSARY_CATEGORIES so the UI layer can
+ * render canonical headings without each consumer re-deriving them.
+ */
+export type GlossaryCategory =
+  | 'timing'
+  | 'tonal'
+  | 'spatial'
+  | 'comfort'
+  | 'flow'
+  | 'architecture'
+  | 'amplification';
+
 export interface GlossaryEntry {
   /** The canonical term (lowercase). */
   term: string;
   /** Alternate phrasings that should match this entry. */
   aliases: string[];
+  /** Structured category — replaces the prior comment-based grouping. */
+  category: GlossaryCategory;
   /** Plain-language explanation (one sentence). */
   explanation: string;
   /** Optional musical example to ground the concept. */
@@ -33,35 +50,40 @@ export interface GlossaryResult {
 
 // ── Glossary entries ──────────────────────────────────
 
-const GLOSSARY: GlossaryEntry[] = [
+export const GLOSSARY: GlossaryEntry[] = [
   // Timing and rhythm
   {
     term: 'transient attack',
     aliases: ['transient', 'transients', 'attack'],
+    category: 'timing',
     explanation: 'How quickly and sharply a note starts — the initial snap or strike.',
     example: 'The crack of a snare drum or the pluck of a guitar string.',
   },
   {
     term: 'leading edge',
     aliases: ['leading edges'],
+    category: 'timing',
     explanation: 'The very first moment of a note — how crisp or soft the beginning is.',
     example: 'A piano hammer hitting the string — some systems make it sharp, others round it off.',
   },
   {
     term: 'pace',
     aliases: ['prat', 'pace rhythm and timing'],
+    category: 'timing',
     explanation: 'How well a system conveys the speed and momentum of music.',
     example: 'Whether a fast jazz track feels lively and driving, or sluggish and dragging.',
   },
   {
     term: 'rhythmic drive',
     aliases: ['rhythmic engagement', 'drive'],
+    category: 'timing',
     explanation: 'How strongly the music\'s timing pulls you along — the sense of forward motion.',
     example: 'A funk bassline that makes you want to move, versus one that just sits there.',
   },
   {
     term: 'elasticity',
     aliases: ['elastic'],
+    category: 'timing',
     explanation: 'How well a system handles sudden dynamic shifts — the bounce and spring in the music.',
     example: 'An orchestra going from quiet to loud and back — elastic systems track these shifts naturally.',
   },
@@ -70,24 +92,28 @@ const GLOSSARY: GlossaryEntry[] = [
   {
     term: 'tonal density',
     aliases: ['density', 'tonal weight', 'body'],
+    category: 'tonal',
     explanation: 'How much weight and substance notes carry — thick and full versus thin and light.',
     example: 'A cello that sounds rich and resonant versus one that sounds hollow.',
   },
   {
     term: 'warmth',
     aliases: ['warm'],
+    category: 'tonal',
     explanation: 'A fuller, rounder quality — more lower-midrange energy, less treble emphasis.',
     example: 'The difference between a cozy vinyl sound and a crisp digital one.',
   },
   {
     term: 'clarity',
     aliases: ['clear', 'transparent', 'transparency'],
+    category: 'tonal',
     explanation: 'How easily you can hear individual details and separate instruments.',
     example: 'Being able to pick out the second guitar in a dense rock mix.',
   },
   {
     term: 'texture',
     aliases: ['textured', 'micro-texture'],
+    category: 'tonal',
     explanation: 'The fine-grained surface detail of sounds — roughness, breathiness, grain.',
     example: 'Hearing the rosin on a violin bow, or the breath in a singer\'s voice.',
   },
@@ -96,18 +122,21 @@ const GLOSSARY: GlossaryEntry[] = [
   {
     term: 'soundstage',
     aliases: ['sound stage', 'stage'],
+    category: 'spatial',
     explanation: 'The sense of physical space the music occupies — width, depth, and height.',
     example: 'Whether instruments feel spread across a wide room or bunched in the center.',
   },
   {
     term: 'imaging',
     aliases: ['image'],
+    category: 'spatial',
     explanation: 'How precisely you can locate each instrument in the stereo picture.',
     example: 'Being able to point to where the drummer sits relative to the vocalist.',
   },
   {
     term: 'air',
     aliases: ['airy', 'airiness'],
+    category: 'spatial',
     explanation: 'A sense of space and openness around instruments — the opposite of congested.',
     example: 'The room ambience around a live recording — reverb tails, the space between notes.',
   },
@@ -116,18 +145,21 @@ const GLOSSARY: GlossaryEntry[] = [
   {
     term: 'listening fatigue',
     aliases: ['fatigue', 'fatiguing', 'listener fatigue'],
+    category: 'comfort',
     explanation: 'When a system becomes tiring to listen to over time — often from treble harshness or compression.',
     example: 'Wanting to turn the volume down after 30 minutes, even though it sounded exciting at first.',
   },
   {
     term: 'glare',
     aliases: ['glary', 'sibilance', 'sibilant'],
+    category: 'comfort',
     explanation: 'A harsh, bright edge — especially on vocals, cymbals, or high-pitched instruments.',
     example: 'S-sounds in vocals that hiss or sting, or cymbals that sound splashy and metallic.',
   },
   {
     term: 'composure',
     aliases: ['composed'],
+    category: 'comfort',
     explanation: 'How calm and controlled a system stays during complex or loud passages.',
     example: 'A full orchestra at fortissimo that remains clear and organized instead of turning to mush.',
   },
@@ -136,18 +168,21 @@ const GLOSSARY: GlossaryEntry[] = [
   {
     term: 'flow',
     aliases: ['musical flow', 'continuity'],
+    category: 'flow',
     explanation: 'How naturally music moves from note to note — a sense of unbroken musical line.',
     example: 'A saxophone solo that feels like one continuous breath rather than a series of separate notes.',
   },
   {
     term: 'musicality',
     aliases: ['musical'],
+    category: 'flow',
     explanation: 'How emotionally engaging a system sounds — whether it conveys the feeling of the music.',
     example: 'A sad ballad that actually makes you feel something, versus one that just plays the notes.',
   },
   {
     term: 'engagement',
     aliases: ['engaging'],
+    category: 'flow',
     explanation: 'Whether the system holds your attention and makes you want to keep listening.',
     example: 'Finding yourself listening to three more albums when you only meant to hear one.',
   },
@@ -156,21 +191,25 @@ const GLOSSARY: GlossaryEntry[] = [
   {
     term: 'R2R',
     aliases: ['r2r', 'resistor ladder', 'multibit'],
+    category: 'architecture',
     explanation: 'A DAC design using a ladder of precision resistors. Often sounds more organic and tonally dense.',
   },
   {
     term: 'delta-sigma',
     aliases: ['delta sigma', 'sigma delta', 'ess sabre', 'akm'],
+    category: 'architecture',
     explanation: 'The most common DAC design — uses oversampling and noise shaping. Often sounds precise and detailed.',
   },
   {
     term: 'NOS',
     aliases: ['non-oversampling', 'nos dac'],
+    category: 'architecture',
     explanation: 'A DAC that skips digital filtering. Often sounds smoother and more relaxed, trading some precision for flow.',
   },
   {
     term: 'FPGA',
     aliases: ['fpga dac'],
+    category: 'architecture',
     explanation: 'A DAC using a programmable chip for custom digital processing. Allows unique filter designs.',
   },
 
@@ -178,19 +217,52 @@ const GLOSSARY: GlossaryEntry[] = [
   {
     term: 'damping factor',
     aliases: ['damping'],
+    category: 'amplification',
     explanation: 'How tightly an amplifier controls the speaker. Higher damping = tighter bass, lower = looser and more relaxed.',
   },
   {
     term: 'single-ended triode',
     aliases: ['set', 'set amp', '300b', '2a3'],
+    category: 'amplification',
     explanation: 'A simple tube amplifier design — typically low power but prized for midrange purity and texture.',
   },
   {
     term: 'feedback',
     aliases: ['negative feedback', 'zero feedback'],
+    category: 'amplification',
     explanation: 'A circuit technique that trades some naturalness for lower distortion and tighter control.',
   },
 ];
+
+/**
+ * Ordered category metadata. Keep in display order — used by the
+ * `/glossary` page to render section headings and the in-page nav.
+ */
+export const GLOSSARY_CATEGORIES: ReadonlyArray<{ id: GlossaryCategory; label: string }> = [
+  { id: 'timing',       label: 'Timing & rhythm' },
+  { id: 'tonal',        label: 'Tonal qualities' },
+  { id: 'spatial',      label: 'Spatial qualities' },
+  { id: 'comfort',      label: 'Comfort & fatigue' },
+  { id: 'flow',         label: 'Flow & musicality' },
+  { id: 'architecture', label: 'Architecture / design' },
+  { id: 'amplification', label: 'Amplification' },
+];
+
+/**
+ * URL-anchor slug for a term. Used both for in-page anchors on `/glossary`
+ * and as the future link target for inline glossary annotations.
+ *
+ * Lowercase, alphanumeric and hyphens only, whitespace becomes hyphen,
+ * runs of separators collapse, leading/trailing separators trimmed.
+ */
+export function slugifyTerm(term: string): string {
+  return term
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
 
 // ── Question detection ────────────────────────────────
 

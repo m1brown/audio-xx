@@ -35,6 +35,7 @@ export default function Nav() {
         </Link>
         <div className="nav-links">
           <Link href="/how-it-works">How It Works</Link>
+          <Link href="/glossary">Glossary</Link>
           <Link href="/resources">Resources</Link>
           {session && (
             <>
