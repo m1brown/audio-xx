@@ -1762,6 +1762,131 @@ export function withPhonoCaveat(
   return { ...advisory, dependencyCaveat: caveat };
 }
 
+// ── Comparison advisory contract ──────────────────────
+//
+// Lightweight documentation-as-code. Names the fields a comparison
+// advisory MUST populate, MAY populate, and MUST NOT populate.
+//
+// Why this exists: comparison rendering is selected explicitly in the
+// dispatcher when `advisoryMode === 'gear_comparison'` AND
+// `comparisonSummary` is set (see AdvisoryMessage.tsx:isComparisonFormat).
+// The legacy single-product advisory fields (philosophy, whyFitsYou,
+// systemFit, audioProfile) belong to gear_advice, not comparisons —
+// leaking them onto a comparison advisory creates noise and duplication.
+// The contract makes that boundary auditable.
+//
+// Carve-out for `tendencies`:
+//   The upgrade-comparison branch of `gearResponseToAdvisory` legitimately
+//   maps `ua.whatChanges` (prose synthesis of the sonic shift) onto
+//   `tendencies`, where StandardFormat renders it as the "What the
+//   proposed change actually does" section. Removing this would leave
+//   upgrade-comparison output as a stack of bullet lists with no
+//   narrative connective tissue. General gear comparisons and brand
+//   comparisons still gate `tendencies: undefined` at the adapter level
+//   (advisory-response.ts:2198, 1801) — the contract relies on those
+//   adapter-side gates for the non-upgrade comparison flavors and stays
+//   silent on `tendencies` itself.
+//
+// Enforcement: adapters call `assertComparisonContract` on the built
+// advisory and route any violations through `console.warn`. NEVER throw —
+// existing flows continue to render. This is documentation-as-code +
+// defensive normalization, not a runtime gate.
+
+/** Self-documenting reference type for a clean comparison advisory. */
+export type ComparisonAdvisoryFields = {
+  /** MUST: explicit advisoryMode tag — read by dispatcher selection. */
+  advisoryMode: 'gear_comparison';
+  /** MUST: prose body of the comparison block. */
+  comparisonSummary: string;
+  /** MAY: side-by-side product thumbnails. */
+  comparisonImages?: Array<{ brand: string; name: string; imageUrl?: string }>;
+  /** MAY: review citations / source attributions. */
+  sourceReferences?: SourceReference[];
+  /** MAY: clickable continuation prompt. */
+  followUp?: string;
+  /** MAY: retailer / review external links. */
+  links?: AdvisoryLink[];
+};
+
+/** Fields a comparison advisory MUST set. */
+const COMPARISON_REQUIRED_FIELDS = ['advisoryMode', 'comparisonSummary'] as const;
+
+/** Fields a comparison advisory MAY set. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const COMPARISON_OPTIONAL_FIELDS = [
+  'comparisonImages',
+  'sourceReferences',
+  'followUp',
+  'links',
+] as const;
+
+/**
+ * Fields a comparison advisory MUST NOT set. These belong to
+ * gear_advice / single-product advisory shapes; populating them on a
+ * comparison advisory leaks single-product framing into the comparison
+ * surface and creates duplicate prose.
+ *
+ * `tendencies` is intentionally NOT on this list — see the carve-out
+ * documented in the contract block above.
+ */
+const COMPARISON_FORBIDDEN_FIELDS = [
+  'philosophy',
+  'whyFitsYou',
+  'systemFit',
+  'audioProfile',
+] as const;
+
+export interface ComparisonContractResult {
+  /** True when the advisory IS a comparison (advisoryMode tag is set). */
+  isComparison: boolean;
+  /** Human-readable violation messages. Empty when the contract holds. */
+  violations: string[];
+}
+
+/**
+ * Inspect an AdvisoryResponse against the comparison contract.
+ *
+ * Returns `isComparison: false` (and no violations) for non-comparison
+ * advisories — the contract is silent on those. For comparison
+ * advisories, checks every MUST and FORBIDDEN field and returns a
+ * violations list. Never throws.
+ */
+export function assertComparisonContract(a: AdvisoryResponse): ComparisonContractResult {
+  if (a.advisoryMode !== 'gear_comparison') {
+    return { isComparison: false, violations: [] };
+  }
+  const violations: string[] = [];
+  for (const field of COMPARISON_REQUIRED_FIELDS) {
+    if (a[field] === undefined || a[field] === null || a[field] === '') {
+      violations.push(`Missing required field: ${field}`);
+    }
+  }
+  for (const field of COMPARISON_FORBIDDEN_FIELDS) {
+    if (a[field] !== undefined) {
+      violations.push(`Forbidden field set: ${field}`);
+    }
+  }
+  return { isComparison: true, violations };
+}
+
+/**
+ * Adapter-side guard. Wraps an AdvisoryResponse, runs the contract
+ * check, logs any violations, and returns the advisory unchanged.
+ * Idempotent and side-effect free apart from the warning log.
+ */
+function withComparisonContractCheck(a: AdvisoryResponse): AdvisoryResponse {
+  const result = assertComparisonContract(a);
+  if (result.isComparison && result.violations.length > 0) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[comparison-contract] violations on built advisory:',
+      result.violations,
+      { subject: a.subject },
+    );
+  }
+  return a;
+}
+
 // ── Adapter: Consultation → Advisory ─────────────────
 
 export function consultationToAdvisory(
@@ -1779,7 +1904,7 @@ export function consultationToAdvisory(
   // systemFit, recommendations) when comparisonSummary is the primary content.
   const isComparison = !!c.comparisonSummary;
 
-  return enrichAdvisory({
+  return withComparisonContractCheck(enrichAdvisory({
     kind: 'consultation',
     advisoryMode: c.advisoryMode ?? (isComparison ? 'gear_comparison' as AdvisoryMode : undefined),
     title: c.title,
@@ -1841,7 +1966,7 @@ export function consultationToAdvisory(
     // consultation builder. Rendered at the component layer with
     // italic/muted styling; no markdown markers in the string.
     provenanceNote: c.provenanceNote,
-  });
+  }));
 }
 
 // ── "Why this fits you" for gear responses ────────────
@@ -1883,6 +2008,32 @@ function buildGearWhyFitsYou(r: GearResponse): string[] | undefined {
   return bullets.slice(0, 4);
 }
 
+// ── Comparison images from products ──────────────────
+//
+// Single source of truth for the products-based comparison image path.
+// Used by both the upgrade-comparison branch and the general comparison
+// branch inside `gearResponseToAdvisory`. Brand-name based comparison
+// image generation lives in `consultation.ts:buildComparisonImages`,
+// which has a different input shape (string labels + query text) and
+// supports brand-only fallback that this helper does not — the two
+// helpers cover non-overlapping input surfaces and remain separate.
+//
+// Behavior contract: returns `undefined` when fewer than two products
+// are available; otherwise returns the first two products mapped to
+// `{ brand, name, imageUrl? }` with imageUrl resolved through the full
+// 4-step chain (catalog → product-images map → brand → placeholder).
+
+export function buildComparisonImagesFromProducts(
+  products: Array<{ brand: string; name: string; imageUrl?: string; category?: string }>,
+): Array<{ brand: string; name: string; imageUrl?: string }> | undefined {
+  if (products.length < 2) return undefined;
+  return products.slice(0, 2).map((p) => ({
+    brand: p.brand,
+    name: p.name,
+    imageUrl: resolveProductImage(p.brand, p.name, p.imageUrl, p.category) || undefined,
+  }));
+}
+
 // ── Adapter: GearResponse → Advisory ─────────────────
 
 export function gearResponseToAdvisory(
@@ -1891,6 +2042,14 @@ export function gearResponseToAdvisory(
   ctx?: ShoppingAdvisoryContext,
 ): AdvisoryResponse {
   const isComparison = r.intent === 'comparison';
+
+  // ── Matched products (hoisted) ──────────────────────
+  // Used by both the upgrade-analysis branch and the general comparison
+  // branch below. Previously declared further down, which created a
+  // temporal-dead-zone forward reference inside `if (r.upgradeAnalysis)`.
+  // The forward reference compiled only because next.config.ts has
+  // `ignoreBuildErrors: true`; declaring it here removes that latent bug.
+  const products = r.matchedProducts ?? [];
 
   // "What I'm hearing" bullets become listener priorities
   // Suppress for comparisons — they add weight without decision value.
@@ -1905,16 +2064,14 @@ export function gearResponseToAdvisory(
   if (r.upgradeAnalysis) {
     const ua = r.upgradeAnalysis;
 
-    // Resolve comparison images for upgrade comparisons too
-    const upgradeImages = isComparison && products.length >= 2
-      ? products.slice(0, 2).map((p) => ({
-          brand: p.brand,
-          name: p.name,
-          imageUrl: resolveProductImage(p.brand, p.name, p.imageUrl, p.category) || undefined,
-        }))
+    // Resolve comparison images for upgrade comparisons too — same helper
+    // used by the general comparison branch below, so both paths produce
+    // byte-identical output for the same inputs.
+    const upgradeImages = isComparison
+      ? buildComparisonImagesFromProducts(products)
       : undefined;
 
-    return enrichAdvisory({
+    return withComparisonContractCheck(enrichAdvisory({
       kind: 'consultation',
       advisoryMode: isComparison ? 'gear_comparison' as AdvisoryMode : 'upgrade_suggestions',
       subject: r.subjects.length > 0 ? r.subjects.join(', ') : 'your question',
@@ -1961,11 +2118,12 @@ export function gearResponseToAdvisory(
 
       // Saved-system personalization: secondary note, never main framing.
       savedSystemNote: (!isComparison && ctx?.savedSystemNote) ? ctx.savedSystemNote : undefined,
-    }, undefined, r.subjects.length > 0 ? r.subjects : undefined);
+    }, undefined, r.subjects.length > 0 ? r.subjects : undefined));
   }
 
   // ── Extract rich data from matched products ──────────
-  const products = r.matchedProducts ?? [];
+  // `products` is hoisted to the top of the function (above the
+  // upgradeAnalysis branch) so both branches share the same array.
   const primaryProduct = products[0];
 
   // Links from product catalog
@@ -2029,18 +2187,15 @@ export function gearResponseToAdvisory(
 
   // Comparison images — resolve product thumbnails for side-by-side display.
   // Uses the same resolveProductImage chain (catalog → product-images → brand → placeholder).
-  const comparisonImages = isComparison && products.length >= 2
-    ? products.slice(0, 2).map((p) => ({
-        brand: p.brand,
-        name: p.name,
-        imageUrl: resolveProductImage(p.brand, p.name, p.imageUrl, p.category) || undefined,
-      }))
+  // Shared helper with the upgrade-comparison branch above.
+  const comparisonImages = isComparison
+    ? buildComparisonImagesFromProducts(products)
     : undefined;
 
   // Comparison responses: concise side-by-side contrast with follow-up.
   // Suppress audioProfile, whyFitsYou, productOrigin, interactionNotes,
   // recommendedDirection, tradeOffs — these create review-weight bloat.
-  return enrichAdvisory({
+  return withComparisonContractCheck(enrichAdvisory({
     kind: 'consultation',
     advisoryMode: isComparison ? 'gear_comparison' as AdvisoryMode : 'gear_advice',
     subject: r.subjects.length > 0 ? r.subjects.join(', ') : 'your question',
@@ -2075,7 +2230,7 @@ export function gearResponseToAdvisory(
 
     // Saved-system personalization: secondary note, never main framing.
     savedSystemNote: (!isComparison && ctx?.savedSystemNote) ? ctx.savedSystemNote : undefined,
-  }, undefined, r.subjects.length > 0 ? r.subjects : undefined);
+  }, undefined, r.subjects.length > 0 ? r.subjects : undefined));
 }
 
 // ── Adapter: ShoppingAnswer → Advisory ───────────────
