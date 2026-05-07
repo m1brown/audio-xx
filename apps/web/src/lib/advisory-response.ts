@@ -1904,6 +1904,16 @@ export function gearResponseToAdvisory(
   // take rendering priority in AdvisoryMessage.
   if (r.upgradeAnalysis) {
     const ua = r.upgradeAnalysis;
+
+    // Resolve comparison images for upgrade comparisons too
+    const upgradeImages = isComparison && products.length >= 2
+      ? products.slice(0, 2).map((p) => ({
+          brand: p.brand,
+          name: p.name,
+          imageUrl: resolveProductImage(p.brand, p.name, p.imageUrl, p.category) || undefined,
+        }))
+      : undefined;
+
     return enrichAdvisory({
       kind: 'consultation',
       advisoryMode: isComparison ? 'gear_comparison' as AdvisoryMode : 'upgrade_suggestions',
@@ -1941,6 +1951,13 @@ export function gearResponseToAdvisory(
 
       // Follow-up → followUp
       followUp: r.clarification,
+
+      // Comparison: route anchor prose to comparisonSummary so StandardFormat's
+      // comparison block renders (images + structured layout).
+      comparisonSummary: isComparison ? r.anchor : undefined,
+
+      // Comparison product images
+      comparisonImages: upgradeImages,
 
       // Saved-system personalization: secondary note, never main framing.
       savedSystemNote: (!isComparison && ctx?.savedSystemNote) ? ctx.savedSystemNote : undefined,
@@ -2010,6 +2027,16 @@ export function gearResponseToAdvisory(
     ? `Made in ${origin}.${primaryProduct?.architecture ? ` ${primaryProduct.architecture} design.` : ''}`
     : undefined;
 
+  // Comparison images — resolve product thumbnails for side-by-side display.
+  // Uses the same resolveProductImage chain (catalog → product-images → brand → placeholder).
+  const comparisonImages = isComparison && products.length >= 2
+    ? products.slice(0, 2).map((p) => ({
+        brand: p.brand,
+        name: p.name,
+        imageUrl: resolveProductImage(p.brand, p.name, p.imageUrl, p.category) || undefined,
+      }))
+    : undefined;
+
   // Comparison responses: concise side-by-side contrast with follow-up.
   // Suppress audioProfile, whyFitsYou, productOrigin, interactionNotes,
   // recommendedDirection, tradeOffs — these create review-weight bloat.
@@ -2023,9 +2050,12 @@ export function gearResponseToAdvisory(
     whyFitsYou: isComparison ? undefined : buildGearWhyFitsYou(r),
     systemTendencies: isComparison ? undefined : (r.systemDirection?.tendencySummary ?? undefined),
 
-    // anchor + character become the prose body
-    philosophy: r.anchor,
-    tendencies: r.character,
+    // For comparisons, route prose to comparisonSummary so StandardFormat's
+    // comparison block activates (images + structured layout). For single-product
+    // inquiries, keep philosophy/tendencies as the prose body.
+    philosophy: isComparison ? undefined : r.anchor,
+    tendencies: isComparison ? undefined : r.character,
+    comparisonSummary: isComparison ? r.anchor : undefined,
     systemFit: isComparison ? undefined : r.interpretation,
 
     // Product detail — suppress for comparisons
@@ -2039,6 +2069,9 @@ export function gearResponseToAdvisory(
     // Links and sources from catalog
     links: gearLinks.length > 0 ? gearLinks : undefined,
     sourceReferences: gearSourceRefs.length > 0 ? gearSourceRefs : undefined,
+
+    // Comparison product images
+    comparisonImages,
 
     // Saved-system personalization: secondary note, never main framing.
     savedSystemNote: (!isComparison && ctx?.savedSystemNote) ? ctx.savedSystemNote : undefined,
