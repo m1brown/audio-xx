@@ -417,7 +417,7 @@ export default function Home() {
     }
   }, [isLoading, messages.length]);
 
-  const handleSubmit = useCallback(async (overrideText?: string) => {
+  const handleSubmit = useCallback(async (overrideText?: string, options?: { source?: 'follow-up' | 'fresh' }) => {
     const inputText = overrideText ?? currentInput;
     if (!inputText.trim() || isLoading) return;
 
@@ -427,15 +427,21 @@ export default function Home() {
     }
 
     const submittedText = inputText;
+    const isFollowUp = options?.source === 'follow-up';
     dispatch({ type: 'ADD_USER_MESSAGE' });
     dispatch({ type: 'SET_LOADING', value: true });
 
-    // Check for glossary questions first — no API call needed
-    const glossaryResult = checkGlossaryQuestion(submittedText);
-    if (glossaryResult) {
-      dispatch({ type: 'ADD_GLOSSARY', entry: glossaryResult });
-      dispatch({ type: 'SET_LOADING', value: false });
-      return;
+    // Check for glossary questions first — no API call needed.
+    // Skip when the submission originated from a clicked follow-up CTA:
+    // advisor-emitted follow-ups are conversational, not definitional, so
+    // the glossary gate would only ever produce a false positive for them.
+    if (!isFollowUp) {
+      const glossaryResult = checkGlossaryQuestion(submittedText);
+      if (glossaryResult) {
+        dispatch({ type: 'ADD_GLOSSARY', entry: glossaryResult });
+        dispatch({ type: 'SET_LOADING', value: false });
+        return;
+      }
     }
 
     // Phase 5 resilience: guarantee SET_LOADING:false no matter how the
@@ -4139,7 +4145,12 @@ export default function Home() {
                   animationDelay: `${Math.min(i * 0.05, 0.3)}s`,
                 }}
               >
-                <MessageBubble message={msg} onIntakeSubmit={handleSubmit} onPreferenceCapture={handlePreferenceCapture} />
+                <MessageBubble
+                  message={msg}
+                  onIntakeSubmit={handleSubmit}
+                  onPreferenceCapture={handlePreferenceCapture}
+                  onFollowUpClick={(text) => handleSubmit(text, { source: 'follow-up' })}
+                />
               </div>
             ))}
           {/* Skip-to-suggestions button — visible when asking clarifying questions in shopping mode */}
@@ -4454,7 +4465,7 @@ function ThinkingIndicator() {
 
 // ── Message Rendering ─────────────────────────────────
 
-function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture }: { message: Message; onIntakeSubmit?: (overrideText?: string) => void; onPreferenceCapture?: (selections: PreferenceSelection[], category: string) => void }) {
+function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture, onFollowUpClick }: { message: Message; onIntakeSubmit?: (overrideText?: string) => void; onPreferenceCapture?: (selections: PreferenceSelection[], category: string) => void; onFollowUpClick?: (text: string) => void }) {
   if (message.role === 'user') {
     return (
       <div
@@ -4518,6 +4529,7 @@ function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture }: { messa
           advisory={message.advisory}
           onIntakeSubmit={message.advisory.kind === 'intake' ? onIntakeSubmit : undefined}
           onPreferenceCapture={message.advisory.lowPreferenceSignal ? onPreferenceCapture : undefined}
+          onFollowUpClick={onFollowUpClick}
         />
       </div>
     );

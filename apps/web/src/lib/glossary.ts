@@ -244,10 +244,17 @@ function findEntry(query: string): GlossaryEntry | null {
     if (entry.aliases.some((a) => a === q)) return entry;
   }
 
-  // Partial match fallback — if query contains a known term
+  // Partial match fallback — query contains a known term as a WHOLE WORD,
+  // not a substring. Substring matching collides on words that happen to
+  // contain a glossary term (e.g. "pairing" contains "air"), which has
+  // hijacked legitimate non-definitional questions whose advisor-emitted
+  // follow-up text resembled a "what is X?" pattern.
+  const wordBoundary = (term: string): RegExp =>
+    new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+
   for (const entry of GLOSSARY) {
-    if (q.includes(entry.term)) return entry;
-    if (entry.aliases.some((a) => q.includes(a))) return entry;
+    if (wordBoundary(entry.term).test(q)) return entry;
+    if (entry.aliases.some((a) => wordBoundary(a).test(q))) return entry;
   }
 
   return null;
