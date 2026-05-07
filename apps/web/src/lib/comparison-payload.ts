@@ -310,15 +310,11 @@ export function renderComparisonPayload(payload: ComparisonPayload): {
     parts.push(rec);
   }
 
-  // 9. Shopping
-  if (payload.shopping && payload.shopping.length > 0) {
-    parts.push(`Recommended direction:\n${payload.shopping.join('\n')}`);
-  }
+  // 9. Shopping — rendered structurally by the UI, not embedded as prose.
+  // (payload.shopping is available for structured rendering if needed.)
 
-  // 10. Sources
-  if (payload.sources && payload.sources.length > 0) {
-    parts.push(`Sources:\n${payload.sources.map((s) => `- ${s}`).join('\n')}`);
-  }
+  // 10. Sources — rendered structurally by AdvisorySources component via
+  // sourceReferences, not embedded as prose.
 
   return {
     comparisonSummary: parts.join('\n\n'),
