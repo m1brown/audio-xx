@@ -1065,8 +1065,16 @@ export function detectIntent(
   // 0f. Refinement escape — short preference-shift messages like "make it warmer"
   //     or "more detailed" must route to shopping, not diagnosis or music_input.
   //     Only fires for short messages (< 60 chars) that match refinement patterns.
+  //
+  //     Active-system guard (added 2026-05-09): when the user has an
+  //     active saved or draft system, "I want more warmth" /
+  //     "I want more clarity" is a TUNING request against that system,
+  //     not a request to shop for new gear. Skip the shopping route in
+  //     that case and let the message fall through to the diagnosis
+  //     default — page.tsx will then route it to the active-system
+  //     tuning handler (which uses the saved chain as context).
   const REFINEMENT_ESCAPE = /\b(?:(?:make\s+it\s+)?(?:warmer|brighter|smoother|punchier|cheaper)|more\s+(?:detail(?:ed)?|transparent|resolving|spacious|dynamic|relaxed|lush|forgiving|air(?:y|ier)?|body|warmth|clarity|impact|energy|punch|expensive)|less\s+(?:bright|harsh|aggressive|fatiguing|expensive)|richer|cleaner|higher\s+end|better\s+(?:for|with)\s+my\s+system|fit\s+my\s+system)\b/i;
-  if (currentMessage.length < 60 && REFINEMENT_ESCAPE.test(currentMessage)) {
+  if (currentMessage.length < 60 && REFINEMENT_ESCAPE.test(currentMessage) && !options.hasActiveSavedSystem) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 

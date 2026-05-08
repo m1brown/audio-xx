@@ -2377,27 +2377,63 @@ export default function Home() {
     }
 
     // ── System diagnosis short-circuit ─────────────────
-    // When diagnosis intent fires AND user mentioned system components,
-    // produce a concise contextual diagnosis directly — no need for the
-    // full evaluate engine. This handles: "I have X and Y, sounds dry."
+    // When diagnosis intent fires AND we have system context (either from
+    // the current message OR from an active saved/draft system), produce
+    // a concise contextual diagnosis directly — no need for the full
+    // evaluate engine.
+    //
+    // Two ways to acquire system context for the diagnosis:
+    //   (a) `turnCtx.subjectMatches.length >= 1` — user named components
+    //       in the current message (e.g. "I have Hugo + Crayon, sounds
+    //       dry").
+    //   (b) `turnCtx.activeSystem.components.length >= 1` — user has a
+    //       saved or draft system selected. Synthesize SubjectMatch
+    //       objects from those components so buildSystemDiagnosis can
+    //       reason against them. This handles tuning queries like
+    //       "I want more flow" or "my system sounds a little dry" where
+    //       the user is implicitly referencing the active chain.
     //
     // When the state machine is in diagnosis mode, the symptom may have
     // been provided on an earlier turn (stored in facts.symptom). Combine
     // the stored symptom with the current message so buildSystemDiagnosis
     // can extract the complaint even when the current turn is purely
     // component names.
-    if (intent === 'diagnosis' && turnCtx.subjectMatches.length >= 1) {
+    const hasInlineSubjects = turnCtx.subjectMatches.length >= 1;
+    const hasActiveSystemForDiagnosis = !!turnCtx.activeSystem
+      && turnCtx.activeSystem.components.length >= 1;
+    if (intent === 'diagnosis' && (hasInlineSubjects || hasActiveSystemForDiagnosis)) {
       const diagSymptom = convStateRef.current.mode === 'diagnosis'
         ? convStateRef.current.facts.symptom
         : undefined;
       const diagText = diagSymptom && !submittedText.includes(diagSymptom)
         ? `${diagSymptom}. ${submittedText}`
         : submittedText;
-      const sysDiag = buildSystemDiagnosis(diagText, turnCtx.subjectMatches);
+
+      // Prefer inline subjects when present (user is actively naming
+      // components in this turn). Fall back to synthesized SubjectMatch
+      // objects from the active system. This preserves the existing
+      // "user names X + Y, sounds dry" behavior while extending the
+      // short-circuit to tuning-with-active-system queries.
+      const diagSubjects = hasInlineSubjects
+        ? turnCtx.subjectMatches
+        : turnCtx.activeSystem!.components.map((c) => {
+            const brand = (c.brand || '').trim();
+            const name = (c.name || '').trim();
+            const fullName = brand && !name.toLowerCase().startsWith(brand.toLowerCase())
+              ? `${brand} ${name}`
+              : name || brand || 'Unknown';
+            // Synthetic SubjectMatch — buildSystemDiagnosis only reads
+            // .name and .kind, so this minimal shape is sufficient.
+            return { name: fullName, kind: 'product' } as import('@/lib/intent').SubjectMatch;
+          });
+
+      const sysDiag = buildSystemDiagnosis(diagText, diagSubjects);
       if (sysDiag) {
         dispatchAdvisory(consultationToAdvisory(sysDiag, undefined, advisoryCtx), advisoryId());
-        // Save system context for continuity
-        if (turnCtx.subjectMatches.length >= 2) {
+        // Save system context for continuity (only when the user named
+        // components in THIS turn — when relying on the active system,
+        // the system context is already persisted upstream).
+        if (hasInlineSubjects && turnCtx.subjectMatches.length >= 2) {
           dispatch({
             type: 'SET_SYSTEM_CONTEXT',
             components: turnCtx.subjectMatches.map((m) => m.name),

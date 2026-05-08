@@ -98,7 +98,7 @@ import { assessCounterfactual } from './counterfactual-assessment';
 import { frameStrategy, deduplicateStrategies } from './strategy-framing';
 import { topReviewsForCard, type ReviewerDomain } from './curation';
 import { getLegacyMapping } from './products/legacy-models';
-import { getProductImage, resolveProductImage } from './product-images';
+import { getProductImage, resolveProductImage, resolveProductImageStrict } from './product-images';
 import { findCatalogProduct } from './listener-profile';
 import { toSlug as routeToSlug } from './route-slug';
 
@@ -1265,7 +1265,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     sonicTendency: 'Rhythmically insistent, dynamically explosive, warm midrange with natural timbres.',
     typicalTradeoff: 'Less pinpoint imaging and spatial precision than sealed-box or narrow-baffle monitors.',
     links: [
-      { label: 'Official website', url: 'https://www.wlm-loudspeakers.com/', region: 'global' },
+      { label: 'Official website', url: 'http://www.wiener-lautsprecher-manufaktur.com/en-speaker', region: 'global' },
     ],
   },
   {
@@ -2060,22 +2060,39 @@ function resolveComparisonSubject(
   if (!sideLabel) return null;
   const lowerLabel = sideLabel.toLowerCase();
 
-  // Helper: flexible brand match — handles "DeVore Fidelity" vs catalog "DeVore"
+  // Helper: flexible brand match.
+  //   - Normalize-tolerant: hyphens/punctuation collapse to spaces so
+  //     "Raal-Requisite" matches "raal requisite", and "Sonnet Digital
+  //     Audio" matches "sonnet digital audio".
+  //   - Bidirectional: side label can be an abbreviation of the
+  //     catalog brand (e.g. "Holo" matching catalog "Holo Audio") OR
+  //     a longer label that includes the catalog brand as prefix
+  //     (e.g. "Chord Electronics" matching catalog "Chord").
+  const norm = (s: string) =>
+    s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const normalizedLabel = norm(sideLabel);
   const brandMatches = (catalogBrand: string) => {
-    const lb = catalogBrand.toLowerCase();
-    return lb === lowerLabel || lowerLabel.startsWith(lb + ' ') || lowerLabel.startsWith(lb);
+    const lb = norm(catalogBrand);
+    if (lb === normalizedLabel) return true;
+    if (normalizedLabel.startsWith(lb + ' ')) return true;
+    if (normalizedLabel.startsWith(lb)) return true;
+    // Bidirectional: side label is abbreviation of catalog brand
+    if (lb.startsWith(normalizedLabel + ' ')) return true;
+    return false;
   };
 
-  // 1. Direct catalog match by combined "brand name"
+  // 1. Direct catalog match by combined "brand name".
+  // Strict resolver: real product image only — no same-brand fallback,
+  // no category placeholder. Comparison artifact degrades cleanly to
+  // text-only when the product image isn't curated.
   const direct = ALL_PRODUCTS.find(
     (p) => `${p.brand} ${p.name}`.toLowerCase() === lowerLabel,
   );
   if (direct) {
-    const img = resolveProductImage(direct.brand, direct.name, direct.imageUrl, direct.category);
     return {
       brand: direct.brand,
       name: direct.name,
-      imageUrl: img || undefined,
+      imageUrl: resolveProductImageStrict(direct.brand, direct.name, direct.imageUrl),
     };
   }
 
@@ -2095,26 +2112,195 @@ function resolveComparisonSubject(
       (p) => brandMatches(p.brand) && productNameInQuery(p.name),
     );
     if (brandHit) {
-      const img = resolveProductImage(brandHit.brand, brandHit.name, brandHit.imageUrl, brandHit.category);
       return {
         brand: brandHit.brand,
         name: brandHit.name,
-        imageUrl: img || undefined,
+        imageUrl: resolveProductImageStrict(brandHit.brand, brandHit.name, brandHit.imageUrl),
       };
     }
   }
 
-  // 3. Brand-only fallback — try resolveProductImage which chains through
-  // getProductImage → getBrandImage → getGenericPlaceholder.
-  // Also try with just the first word (e.g. "DeVore" from "DeVore Fidelity").
-  const brandImg = resolveProductImage(sideLabel, undefined, undefined, undefined);
-  if (brandImg) return { brand: sideLabel, name: '', imageUrl: brandImg };
-  const firstWord = sideLabel.split(/\s+/)[0];
-  if (firstWord && firstWord.toLowerCase() !== lowerLabel) {
-    const shortImg = resolveProductImage(firstWord, undefined, undefined, undefined);
-    return { brand: sideLabel, name: '', imageUrl: shortImg || undefined };
+  // 3. Brand-only side (no specific product identified).
+  //
+  // Editorial fallback: brand-vs-brand comparisons (e.g. "Chord vs
+  // Denafrips") still render images, but as an EXPLICITLY LABELED
+  // representative product from each brand rather than as an
+  // unattributed "brand image". The renderer shows both the brand
+  // small-caps label AND the product name, so the user always knows
+  // exactly which product they're seeing.
+  //
+  // The previous wrong-product-fallback (returning the first overlay
+  // entry that starts with the brand) shipped a Hugo image labelled
+  // simply "Chord" — misleading. The current approach is honest
+  // editorial selection: pick a recognizable, well-curated product per
+  // brand and label it as such.
+  const repName = brandRepresentativeProductName(sideLabel);
+  if (repName) {
+    const rep = ALL_PRODUCTS.find((p) =>
+      brandMatches(p.brand) && p.name.toLowerCase() === repName.toLowerCase(),
+    );
+    if (rep) {
+      return {
+        brand: rep.brand,
+        name: rep.name,
+        imageUrl: resolveProductImageStrict(rep.brand, rep.name, rep.imageUrl),
+      };
+    }
   }
+
+  // Brand isn't in the representative map and no product could be
+  // identified. Return without an image — the comparison artifact
+  // renders a text-only identity block on this side.
   return { brand: sideLabel, name: '', imageUrl: undefined };
+}
+
+/**
+ * Curated brand → representative product mapping for brand-only
+ * comparison sides. Each entry picks a recognizable, well-curated
+ * product to stand in visually for that brand. The comparison renderer
+ * shows both the brand small-caps label and this product's name, so
+ * there's no ambiguity about what's being displayed.
+ *
+ * Keys are lowercase, partial-match enabled — "chord" matches catalog
+ * brand "Chord" and dealer-prefix labels like "Chord Electronics".
+ *
+ * To add a brand, append `[brandLower, representativeProductName]`.
+ * The named product must exist in the catalog and have curated image
+ * coverage (catalog imageUrl OR overlay map entry); otherwise the
+ * strict resolver returns undefined and the side renders without an
+ * image regardless.
+ */
+const BRAND_REPRESENTATIVE_PRODUCTS: ReadonlyArray<readonly [string, string]> = [
+  // Each entry's product name MUST match the catalog product name
+  // exactly (case-insensitive). Verified against
+  // apps/web/src/lib/products/{dacs,amplifiers,speakers,headphones,turntables}.ts
+  // on 2026-05-09.
+  //
+  // The lookup `brandRepresentativeProductName` does longest-prefix
+  // matching, so multi-word brand keys (e.g. 'sonnet digital audio')
+  // win over shorter overlaps ('sonnet'). Aliases (e.g. 'lta' for
+  // 'Linear Tube Audio') work because the upstream `brandMatches`
+  // helper is normalize-tolerant and bidirectional.
+
+  // ── DACs ─────────────────────────────────────────────
+  ['chord',           'Hugo TT2'],
+  ['denafrips',       'Pontus II 12th-1'],
+  ['schiit',          'Bifrost 2/64'],
+  ['holo audio',      'May (KTE)'],
+  ['topping',         'D90SE'],
+  ['gustard',         'X26 Pro'],
+  ['rme',             'ADI-2 DAC FS'],
+  ['ifi',             'Zen DAC V2'],
+  ['wiim',            'Pro'],
+  ['bluesound',       'Node'],
+  ['eversolo',        'DMP-A6'],
+  ['mhdt',            'Orchid'],
+  ['rockna',          'Wavelight'],
+  ['mola mola',       'Tambaqui'],
+  ['lampizator',      'Baltic 5'],
+  ['merason',         'Frérot'],
+  ['weiss',           'DAC204'],
+  ['dcs',             'Bartók'],
+  ['totaldac',        'd1-unity'],
+  ['auralic',         'Vega'],
+  ['innuos',          'Zen Mk3'],
+  ['sonnet digital audio', 'Morpheus'],
+  ['sonnet',          'Pasithea'],
+
+  // ── Amplifiers ──────────────────────────────────────
+  ['hegel',           'H190'],
+  ['naim',            'SuperNait 3'],
+  ['leben',           'CS600X'],
+  ['primaluna',       'EVO 300 Integrated'],
+  ['decware',         'SE84UFO'],
+  ['linear tube audio', 'Z40+'],
+  ['lta',             'Z40+'],
+  ['accuphase',       'E-280'],
+  ['kinki studio',    'EX-M1'],
+  ['kinki',           'EX-M1'],
+  ['boulder',         '866'],
+  ['enleum',          'AMP-23R'],
+  ['benchmark',       'AHB2'],
+  ['mcintosh',        'MA252'],
+  ['rotel',           'A11 Tribute'],
+  ['cambridge audio', 'CXA81'],
+  ['audiolab',        '6000A'],
+  ['line magnetic',   'LM-211IA'],
+  ['shindo',          'Cortese'],
+  ['ayre',            'VX-5 Twenty'],
+  ['vinnie rossi',    'L2i-SE'],
+  ['grandinote',      'Shinai'],
+  ['soulution',       '330'],
+  ['singxer',         'SA-90'],
+  ['agd productions', 'Vivace'],
+  ['agd',             'Vivace'],
+  ['ampsandsound',    'Stereo 17'],
+  ['aurorasound',     'HFSA-01'],
+  ['cayin',           'A-88T MK2'],
+  ['linnenberg',      'Liszt'],
+
+  // ── Speakers ────────────────────────────────────────
+  ['kef',             'R3'],
+  ['harbeth',         'P3ESR'],
+  ['devore fidelity', 'Orangutan O/96'],
+  ['devore',          'Orangutan O/96'],
+  ['klipsch',         'Heresy IV'],
+  ['magico',          'A3'],
+  ['magnepan',        '.7'],
+  ['boenicke',        'W8'],
+  ['spendor',         'A1'],
+  ['focal',           'Kanta No. 2'],
+  ['mission',         '770'],
+  ['xsa labs',        'Vanguard'],
+  ['xsa',             'Vanguard'],
+  ['falcon',          'LS3/5a'],
+  ['wlm',             'Diva Monitor'],
+  ['hornshoppe',      'Horns'],
+  ['qualio audio',    'IQ'],
+  ['qualio',          'IQ'],
+
+  // ── Headphones / IEMs ───────────────────────────────
+  // Note: focal appears under speakers above (Kanta No. 2). The
+  // catalog has Focal Clear Mg too, but speakers are more iconic
+  // for the Focal brand identity.
+  ['sennheiser',      'HD 800 S'],
+  ['audeze',          'LCD-X'],
+  ['hifiman',         'Arya Organic'],
+  ['campfire audio',  'Solaris'],
+  ['moondrop',        'Blessing 3'],
+  ['grado',           'RS2x'],
+  ['zmf',             'Verite Closed'],
+  ['meze',            'Empyrean II'],
+  ['dan clark audio', 'Stealth'],
+  ['raal-requisite',  '1995 Immanis'],
+  ['raal requisite',  '1995 Immanis'],
+
+  // ── Turntables ──────────────────────────────────────
+  // Note: rega appears under turntables (the iconic Rega product is
+  // the Planar 3). For amp-vs-amp comparisons mentioning Rega, the
+  // Planar 3 image is still acceptable as a brand identity image.
+  ['rega',            'Planar 3'],
+  ['pro-ject',        'Debut PRO'],
+  ['technics',        'SL-1500C'],
+  ['vpi',             'Cliffwood'],
+  ['linn',            'LP12 Majik'],
+];
+
+/** Lookup helper for the brand-representative map. Returns the product
+ *  name to stand in for this brand in a brand-only comparison side, or
+ *  undefined when no representative is curated. */
+function brandRepresentativeProductName(sideLabel: string): string | undefined {
+  const lower = sideLabel.toLowerCase().trim();
+  // Longest match wins — try multi-word entries first
+  const sorted = [...BRAND_REPRESENTATIVE_PRODUCTS].sort(
+    (a, b) => b[0].length - a[0].length,
+  );
+  for (const [brandKey, productName] of sorted) {
+    if (lower === brandKey || lower.startsWith(brandKey + ' ') || lower.startsWith(brandKey)) {
+      return productName;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -11968,6 +12154,68 @@ function extractComplaint(text: string): string | null {
       richness: 'dry', weight: 'thin', presence: 'thin',
     };
     if (qualityToComplaint[quality]) return qualityToComplaint[quality];
+  }
+  // "want more X" / "more X" / "could use more X" / "wish it had more X"
+  // — positive desires map to the same complaint vocabulary so a tuning
+  // request ("I want more flow") can use the same remedy infrastructure
+  // as a complaint ("sounds dry"). Symmetric to the "lacks X" path above.
+  //
+  // The regex captures up to TWO words after "more" so multi-word
+  // qualities like "musical flow" or "tonal density" resolve. We then
+  // probe the desire→complaint map with the FULL phrase, the second
+  // word (more specific quality, e.g. "flow" in "musical flow"), and
+  // finally the first word.
+  const desireMatch = lower.match(
+    /(?:\b(?:want(?:s|ed|ing)?|need(?:s|ed|ing)?|wish(?:es|ed)?\s+(?:it|they)\s+had|could\s+use|looking\s+for)\s+more\s+(\w+)(?:\s+(\w+))?\b)|(?:\bmore\s+(\w+)(?:\s+(\w+))?\s+(?:would|please|please\.|\.))/,
+  );
+  if (desireMatch) {
+    const desireToComplaint: Record<string, string> = {
+      // Tonal density / harmonic richness deficit → 'dry'
+      flow: 'dry',
+      richness: 'dry',
+      saturation: 'dry',
+      density: 'dry',
+      texture: 'dry',
+      musicality: 'dry',
+      // Tonal weight / midrange presence deficit → 'thin'
+      body: 'thin',
+      weight: 'thin',
+      presence: 'thin',
+      depth: 'thin',
+      bass: 'thin',
+      // Treble / detail / sparkle deficit → 'dull'
+      detail: 'dull',
+      air: 'dull',
+      sparkle: 'dull',
+      energy: 'dull',
+      dynamics: 'dull',
+      punch: 'dull',
+      treble: 'dull',
+      resolution: 'dull',
+      // Warmth deficit → 'cold'
+      warmth: 'cold',
+      // Definition / separation deficit → 'muddy'
+      clarity: 'muddy',
+      separation: 'muddy',
+      definition: 'muddy',
+      // Engagement deficit → 'sterile'
+      engagement: 'sterile',
+      involvement: 'sterile',
+      soul: 'sterile',
+    };
+    // Try the second-word capture first (more specific in multi-word
+    // qualities like "musical flow" or "tonal density"), then the
+    // first-word capture, then the second-word from the alternate
+    // capture group. First hit in the map wins.
+    const candidates = [
+      desireMatch[2], // second word from "want more X Y" capture (e.g. "flow" in "more musical flow")
+      desireMatch[1], // first word from "want more X" capture
+      desireMatch[4], // second word from "more X Y would" alternate capture
+      desireMatch[3], // first word from "more X would" alternate capture
+    ].filter((s): s is string => !!s).map((s) => s.toLowerCase());
+    for (const c of candidates) {
+      if (desireToComplaint[c]) return desireToComplaint[c];
+    }
   }
   // "something feels off" → map to generic thin (user is vague, so start neutral)
   if (/\bsomething\s+(?:is\s+|feels?\s+)?(?:off|wrong|missing)\b/.test(lower)) {
