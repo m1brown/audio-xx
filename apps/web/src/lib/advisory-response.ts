@@ -32,7 +32,7 @@ import type { PreferenceProtectionResult } from './preference-protection';
 import type { CounterfactualAssessment } from './counterfactual-assessment';
 import type { DecisionFrame } from './decision-frame';
 import { detectSystemPhono, buildPhonoCaveat } from './products/turntables';
-import { getProductImage, resolveProductImage, getBrandImage, getGenericPlaceholder } from './product-images';
+import { getProductImage, resolveProductImage, resolveProductImageStrict, getBrandImage, getGenericPlaceholder } from './product-images';
 import { getLegacyMapping } from './products/legacy-models';
 
 // ── Country code to name ──────────────────────────────
@@ -1991,11 +1991,15 @@ export function consultationToAdvisory(
     stackedTraitInsights: isComparison ? undefined : c.stackedTraitInsights,
     componentAssessments: isComparison ? undefined : c.componentAssessments,
     // Enrich upgrade-path options with product images (same pattern as advisory options).
+    // Strict resolver: real catalog/overlay image only; never the wrong
+    // same-brand image, never a generic SVG placeholder. The upgrade-
+    // card renderer already omits the image surface cleanly when
+    // imageUrl is undefined.
     upgradePaths: isComparison ? undefined : c.upgradePaths?.map((path) => ({
       ...path,
       options: path.options.map((opt) => ({
         ...opt,
-        imageUrl: resolveProductImage(opt.brand, opt.name, opt.imageUrl),
+        imageUrl: resolveProductImageStrict(opt.brand, opt.name, opt.imageUrl),
       })),
     })),
     keepRecommendations: isComparison ? undefined : c.keepRecommendations,
@@ -2076,10 +2080,15 @@ export function buildComparisonImagesFromProducts(
   products: Array<{ brand: string; name: string; imageUrl?: string; category?: string }>,
 ): Array<{ brand: string; name: string; imageUrl?: string }> | undefined {
   if (products.length < 2) return undefined;
+  // Strict resolver: never falls back to same-brand-different-product
+  // images and never returns a category placeholder SVG. When neither
+  // catalog nor curated overlay carries an image for this exact
+  // product, `imageUrl` becomes `undefined` and the comparison block's
+  // `hasImages` gate degrades gracefully to text-only.
   return products.slice(0, 2).map((p) => ({
     brand: p.brand,
     name: p.name,
-    imageUrl: resolveProductImage(p.brand, p.name, p.imageUrl, p.category) || undefined,
+    imageUrl: resolveProductImageStrict(p.brand, p.name, p.imageUrl),
   }));
 }
 
@@ -2248,8 +2257,10 @@ export function gearResponseToAdvisory(
     : undefined;
 
   // Comparison images — resolve product thumbnails for side-by-side display.
-  // Uses the same resolveProductImage chain (catalog → product-images → brand → placeholder).
-  // Shared helper with the upgrade-comparison branch above.
+  // Uses the strict resolver chain (catalog → curated overlay → undefined).
+  // The renderer's `hasImages` gate degrades to text-only when one or
+  // both products lack a curated image. Shared helper with the
+  // upgrade-comparison branch above.
   const comparisonImages = isComparison
     ? buildComparisonImagesFromProducts(products)
     : undefined;
@@ -2856,8 +2867,11 @@ export function shoppingToAdvisory(
     chooseThisIf: p.chooseThisIf,
     avoidIf: p.avoidIf,
     // Step 10: Enhanced catalog fields
-    // Full 4-step image resolution: catalog → product overlay → brand → category placeholder.
-    imageUrl: resolveProductImage(p.brand, p.name, p.imageUrl, a.category),
+    // Strict image resolution: catalog → product overlay → undefined.
+    // No same-brand fallback (would render the wrong product photo),
+    // no category-placeholder SVG (renderer omits the image surface
+    // cleanly when undefined; better than a cheap silhouette).
+    imageUrl: resolveProductImageStrict(p.brand, p.name, p.imageUrl),
     typicalMarket: p.typicalMarket,
     buyingContext: p.buyingContext,
     // Legacy model context — attach successor notes for discontinued/vintage products

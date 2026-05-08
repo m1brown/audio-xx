@@ -741,16 +741,20 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
         </section>
       )}
 
-      {/* System logic — causal chain rows. */}
+      {/* System logic — causal chain rows.
+       *  Typography unified with the rest of the advisory (2026-05-08):
+       *  the monospace font was removed so the System Logic block reads
+       *  in the same prose stack as MemoFormat sections. The structural
+       *  framing (subdued background, padded box, line-by-line) is
+       *  preserved — only the fontFamily changes. */}
       {systemLogic && (
         <section style={{
           marginBottom: sectionGap,
           padding: '1rem 1.25rem',
           background: '#f8f7f3',
           borderRadius: '6px',
-          fontFamily: 'var(--font-mono, monospace)',
-          fontSize: '0.85rem',
-          lineHeight: 1.7,
+          fontSize: FONTS.bodySize,
+          lineHeight: 1.75,
           whiteSpace: 'pre-line',
           color: COLORS.text,
         }}>
@@ -4104,9 +4108,22 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
           measure: '52rem',
         } as const;
 
-        const hasImages = a.comparisonImages
+        // Two-tier gate:
+        //   hasIdentity — both sides carry brand+name (always populated
+        //                 by the comparison adapters); enables the
+        //                 side-by-side identity grid even when no
+        //                 images are curated.
+        //   hasImages   — both sides carry a real product image
+        //                 (catalog or curated overlay). When false, the
+        //                 grid renders without the image frames so the
+        //                 artifact gracefully degrades to text-only
+        //                 identity + prose instead of showing
+        //                 placeholder silhouettes or missing one side.
+        const hasIdentity = a.comparisonImages
           && a.comparisonImages.length === 2
-          && a.comparisonImages.every((e) => !!e.imageUrl);
+          && a.comparisonImages.every((e) => !!(e.brand || e.name));
+        const hasImages = hasIdentity
+          && a.comparisonImages!.every((e) => !!e.imageUrl);
 
         return (
           <div
@@ -4132,8 +4149,15 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
               Comparison
             </div>
 
-            {/* Side-by-side image anchors with structured identity below */}
-            {hasImages && (
+            {/* Side-by-side anchors. The grid renders whenever both sides
+             *  carry brand+name identity (`hasIdentity`); image frames
+             *  render per-side only when a real product image exists
+             *  (`hasImages`). When images are missing, the cell still
+             *  shows the small-caps brand + product name so the artifact
+             *  remains a valid two-side comparison instead of collapsing
+             *  to a one-sided block. No placeholder silhouettes, no
+             *  same-brand fallback images. */}
+            {hasIdentity && (
               <div
                 style={{
                   display: 'grid',
@@ -4144,18 +4168,17 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
               >
                 {a.comparisonImages!.map((entry, i) => (
                   <div key={i} style={{ minWidth: 0 }}>
-                    {/* Image frame — bumped from 200px to 300px and given
-                     *  a hairline border so the anchors read as editorial
-                     *  specimens rather than catalog thumbnails. The
-                     *  white interior + neutral border produces a clean
-                     *  containment without shadow chrome or rounded
-                     *  corners (consistent with the rest of the
-                     *  comparison artifact, which uses hairline rules
-                     *  instead of cards). object-fit: contain is
-                     *  preserved — product photography in the catalog is
-                     *  inconsistently cropped, so contain is the only
-                     *  safe choice. Graceful collapse on broken URLs is
-                     *  unchanged (parent display: none on error). */}
+                    {/* Image frame — 300px tall, hairline-bordered, so
+                     *  the anchors read as editorial specimens rather
+                     *  than catalog thumbnails. Renders only when this
+                     *  side has a real product image; the strict
+                     *  resolver upstream returned undefined otherwise.
+                     *  object-fit: contain is preserved — product
+                     *  photography in the catalog is inconsistently
+                     *  cropped, so contain is the only safe choice.
+                     *  Graceful collapse on broken URLs is unchanged
+                     *  (parent display: none on error). */}
+                    {hasImages && entry.imageUrl && (
                     <div
                       style={{
                         width: '100%',
@@ -4186,7 +4209,10 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
                         }}
                       />
                     </div>
-                    {/* Identity block — small-caps brand, editorial-weight name */}
+                    )}
+                    {/* Identity block — small-caps brand, editorial-weight name.
+                     *  Renders unconditionally per side; carries the
+                     *  comparison even when no image is available. */}
                     <div
                       style={{
                         fontSize: '0.7rem',

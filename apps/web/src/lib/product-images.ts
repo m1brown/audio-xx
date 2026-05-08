@@ -45,12 +45,41 @@ function normalize(s: string | undefined): string {
 // Note: the render layer handles URL failures silently via onError, so
 // an entry that later 404s degrades to "no image" rather than breaking
 // the card. This makes it safe to curate broadly and tighten later.
+//
+// Source attribution (optional, added 2026-05-08):
+//   New entries should include `source: { tier, site, credit, captured }`
+//   so each image carries its own provenance. Existing entries that
+//   pre-date this field continue to work — they're informally grouped
+//   by the manufacturer/dealer section comments above them and can be
+//   migrated incrementally when touched.
 
-const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
+/** Where a curated product image was sourced from. */
+export type ImageSourceTier =
+  | 'manufacturer'        // brand's own product page / press image
+  | 'authorized_dealer'   // certified retail partner
+  | 'review_publication'  // editorial review site (6moons, Stereophile, Positive Feedback, etc.)
+  | 'retailer';           // generic retailer (Apos, Audiophonics, Amazon, etc.)
+
+/** Provenance metadata for one curated product image. */
+export interface ImageSource {
+  /** Provenance tier — used for trust/auditing, not surfaced to users. */
+  tier: ImageSourceTier;
+  /** Bare host where the image lives (e.g. 'bloomaudio.com'). */
+  site: string;
+  /** Human-readable credit line (e.g. 'Bloom Audio', 'Falcon Acoustics'). */
+  credit: string;
+  /** ISO date when we verified the URL renders correctly. */
+  captured: string;
+}
+
+const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: ImageSource }> = [
   // ── DACs ───────────────────────────────────────────────
 
   // Chord Electronics — og:image URLs from product pages (refreshed 2026-04-17)
-  { key: 'chord hugo tt2',  url: 'https://chordelectronics.co.uk/wp-content/uploads/2017/01/Hugo.jpg' },
+  // Hugo TT2: verified TT2-specific manufacturer image. Must appear
+  // BEFORE the more general "chord hugo" key — substring matching is
+  // first-hit-wins, and "chord hugo" is a substring of "chord hugo tt2".
+  { key: 'chord hugo tt2',  url: 'https://chordelectronics.co.uk/wp-content/uploads/2018/05/Chord_Hugo2TT_Top_web-900x675.jpg' },
   { key: 'chord hugo 2',    url: 'https://chordelectronics.co.uk/wp-content/uploads/2017/01/Hugo.jpg' },
   { key: 'chord hugo',      url: 'https://chordelectronics.co.uk/wp-content/uploads/2016/09/Hugo-Angle-900x675.jpg' },
   { key: 'chord qutest',    url: '/images/products/chord-qutest.jpg' },
@@ -66,6 +95,8 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
   // Denafrips — product hero shots on denafrips.com
   { key: 'denafrips terminator', url: 'https://www.denafrips.com/_files/ugd/d1b21d_b5deb62d43e84d9f8ea7cbf53bab8fd5~mv2.jpg' },
   { key: 'denafrips pontus',     url: 'https://static.wixstatic.com/media/d94477_67b3d20582784f36ab923d03ffd83ecd~mv2.jpg/v1/crop/x_0,y_93,w_3250,h_1758/fill/w_1960,h_1060,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/%E6%9C%AA%E6%A0%87%E9%A2%98-1.jpg' },
+  { key: 'denafrips venus ii',   url: 'https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg',
+    source: { tier: 'retailer', site: 'audiophonics.fr', credit: 'Audiophonics', captured: '2026-05-08' } },
   { key: 'denafrips ares',       url: 'https://www.denafrips.com/_files/ugd/d1b21d_2cb41c4b40ac4987aa8bbb2de1c06a3b~mv2.jpg' },
   { key: 'denafrips enyo',       url: 'https://static.wixstatic.com/media/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg/v1/crop/x_3,y_29,w_1164,h_599/fill/w_1096,h_564,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg' },
 
@@ -99,11 +130,19 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
   { key: 'gustard r26',        url: 'https://www.gustard.com/qfy-content/uploads/2022/10/ae6b2c24323caabb87bd8814319e8140-100.webp' },
 
   // Topping — upload.toppingaudio.com CDN
+  // Key ordering: more specific keys (`d90se`) MUST appear before less
+  // specific keys (`d90`). Otherwise a "Topping D90SE" lookup would
+  // substring-match the `topping d90` key first and ship the wrong
+  // image. Same pattern as Chord Hugo TT2 → Hugo 2 → Hugo above.
   { key: 'topping d70',         url: 'http://upload.toppingaudio.com/contents/2025/86/e0/iFkOZUtDRIHy85TQH1D2yWBOQDBCbUqkz6x5iJFb.webp' },
   { key: 'topping d90se',       url: 'https://upload.toppingaudio.com/contents/2025/2a/e9/l8tqlW4252nLGvNXR1LTJIwxymzkf4Q8JGOk1wHy.webp' },
+  { key: 'topping d90',         url: 'https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400',
+    source: { tier: 'retailer', site: 'apos.audio', credit: 'Apos Audio', captured: '2026-05-08' } },
 
-  // Eversolo — eversolo.com /Uploads/product/ CDN
+  // Eversolo — eversolo.com /Uploads/product/ CDN + bloomaudio.com (DMP-A6)
   { key: 'eversolo dac z8',     url: 'https://eversolo.com/Uploads/product/cc469ca22b4d35699bde1cdf245ef714.jpg' },
+  { key: 'eversolo dmp a6',     url: 'https://bloomaudio.com/cdn/shop/files/eversolo-a6-gen2-thumb.webp?v=1737733070&width=1080',
+    source: { tier: 'authorized_dealer', site: 'bloomaudio.com', credit: 'Bloom Audio', captured: '2026-05-08' } },
 
   // TotalDAC — totaldac.com /fichiers/ CDN
   { key: 'totaldac d1 unity',   url: 'https://www.totaldac.com/fichiers/D1-core-front.jpg' },
@@ -183,6 +222,96 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
   { key: 'leben cs 600',        url: 'https://www.leben-hifi.com/images/cs600x-front.jpg' },
   { key: 'leben cs600',         url: 'https://www.leben-hifi.com/images/cs600x-front.jpg' },
 
+  // Marantz — vintage-receiver reference image (the 2220 and 2220B
+  // share the same chassis; image is the canonical 2220 face).
+  { key: 'marantz 2220',        url: 'https://classicreceivers.com/wp-content/uploads/2022/06/marantz-2220.jpg',
+    source: { tier: 'review_publication', site: 'classicreceivers.com', credit: 'Classic Receivers', captured: '2026-05-08' } },
+
+  // First Watt — Positive Feedback review hero (firstwatt.com only
+  // hosts a generic site banner, not a SIT-3-specific shot).
+  { key: 'first watt sit 3',    url: 'https://positive-feedback.com/wp-content/uploads/2018/07/43-First-Watt-SIT-3.jpg',
+    source: { tier: 'review_publication', site: 'positive-feedback.com', credit: 'Positive Feedback', captured: '2026-05-08' } },
+
+  // Shindo — Don Better Audio (authorized US Shindo dealer)
+  { key: 'shindo cortese',      url: 'https://donbetteraudio.com/cdn/shop/products/IMG_2443-1024x683_1024x1024.jpg?v=1622686200',
+    source: { tier: 'authorized_dealer', site: 'donbetteraudio.com', credit: 'Don Better Audio', captured: '2026-05-08' } },
+
+  // Vinnie Rossi — Positive Feedback review (the legacy L2i collection
+  // page is no longer hosted at vinnierossi.com)
+  { key: 'vinnie rossi l2i',    url: 'https://positive-feedback.com/wp-content/uploads/2020/09/L2i-SE-Front-Silver-1.jpg',
+    source: { tier: 'review_publication', site: 'positive-feedback.com', credit: 'Positive Feedback', captured: '2026-05-08' } },
+
+  // ── Round 2 amplifier additions (2026-05-08) ─────────────
+
+  // ampsandsound — manufacturer Shopify CDN
+  { key: 'ampsandsound stereo 17', url: 'https://ampsandsound.com/cdn/shop/files/AXPONAampssmall-12_5000x.jpg?v=1774852440',
+    source: { tier: 'manufacturer', site: 'ampsandsound.com', credit: 'ampsandsound', captured: '2026-05-08' } },
+
+  // Linear Tube Audio — Squarespace CDN (manufacturer-hosted)
+  { key: 'linear tube audio z40', url: 'https://images.squarespace-cdn.com/content/v1/551c5a82e4b0c1e6d1556b74/1574870353049-GQ3TAH3FQEXHAKIVWZH9/Z40i_004+1120x1120+crop.jpg',
+    source: { tier: 'manufacturer', site: 'lineartubeaudio.com', credit: 'Linear Tube Audio', captured: '2026-05-08' } },
+
+  // Aurorasound — highend-electronics dealer Shopify CDN
+  { key: 'aurorasound hfsa 01', url: 'https://highend-electronics.com/cdn/shop/files/HFSA-01-002-1280.jpg?v=1693089381',
+    source: { tier: 'authorized_dealer', site: 'highend-electronics.com', credit: 'highend-electronics', captured: '2026-05-08' } },
+
+  // Cayin — USA Tube Audio (US Cayin distributor) S3 CDN
+  { key: 'cayin a 88t mk2',     url: 'https://usatubeaudio.s3.amazonaws.com/2018/07/Cayin-A-88T-MK2--600x400.jpg',
+    source: { tier: 'authorized_dealer', site: 'usatubeaudio.com', credit: 'USA Tube Audio', captured: '2026-05-08' } },
+  { key: 'cayin a 88t',         url: 'https://usatubeaudio.s3.amazonaws.com/2018/07/Cayin-A-88T-MK2--600x400.jpg',
+    source: { tier: 'authorized_dealer', site: 'usatubeaudio.com', credit: 'USA Tube Audio', captured: '2026-05-08' } },
+
+  // Goldmund / JOB 225 — The Music Room dealer (no manufacturer page for the J225)
+  { key: 'goldmund job 225',    url: 'https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961',
+    source: { tier: 'authorized_dealer', site: 'tmraudio.com', credit: 'The Music Room', captured: '2026-05-08' } },
+  { key: 'job 225',             url: 'https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961',
+    source: { tier: 'authorized_dealer', site: 'tmraudio.com', credit: 'The Music Room', captured: '2026-05-08' } },
+
+  // Crayon Audio — eliseaudio.co.uk dealer Wix CDN (hand-tuned to 900px)
+  { key: 'crayon audio cia 1',  url: 'https://static.wixstatic.com/media/5e5570_6aa5f99be34645d1b56d91ae9bce1479~mv2.jpg/v1/fill/w_900,h_900,al_c,q_85/5e5570_6aa5f99be34645d1b56d91ae9bce1479~mv2.jpg',
+    source: { tier: 'authorized_dealer', site: 'eliteaudiouk.com', credit: 'Elite Audio UK', captured: '2026-05-08' } },
+  { key: 'crayon cia 1',        url: 'https://static.wixstatic.com/media/5e5570_6aa5f99be34645d1b56d91ae9bce1479~mv2.jpg/v1/fill/w_900,h_900,al_c,q_85/5e5570_6aa5f99be34645d1b56d91ae9bce1479~mv2.jpg',
+    source: { tier: 'authorized_dealer', site: 'eliteaudiouk.com', credit: 'Elite Audio UK', captured: '2026-05-08' } },
+
+  // Kinki Studio — manufacturer Wix CDN
+  { key: 'kinki studio dazzle', url: 'https://static.wixstatic.com/media/4b933e_bb82a88a6dcc4ebe9c21686a97c8580e~mv2.png',
+    source: { tier: 'manufacturer', site: 'kinki-studio.com', credit: 'Kinki Studio', captured: '2026-05-08' } },
+
+  // Grandinote — manufacturer Wix CDN (hand-tuned to 900px)
+  { key: 'grandinote shinai',   url: 'https://static.wixstatic.com/media/84cf6f_40414bc3372d4eac812277fcc9fdf99f~mv2.jpg/v1/fill/w_900,h_900,al_c,q_85/shinai7.jpg',
+    source: { tier: 'manufacturer', site: 'grandinote.it', credit: 'Grandinote', captured: '2026-05-08' } },
+
+  // Soulution — manufacturer WordPress CDN
+  { key: 'soulution 330',       url: 'https://soulution-audio.com/wp-content/uploads/2018/02/soulution_330_1802_006.jpg',
+    source: { tier: 'manufacturer', site: 'soulution-audio.com', credit: 'Soulution', captured: '2026-05-08' } },
+
+  // Ayre — manufacturer WordPress CDN
+  { key: 'ayre vx 5',           url: 'https://ayre.com/wp-content/uploads/2018/04/VX-5_FRONT_Web.jpg',
+    source: { tier: 'manufacturer', site: 'ayre.com', credit: 'Ayre Acoustics', captured: '2026-05-08' } },
+
+  // Bottlehead — manufacturer Shopify CDN
+  { key: 'bottlehead crack',    url: 'https://bottlehead.com/cdn/shop/files/Crack_Hero.jpg?v=1775342057&width=1365',
+    source: { tier: 'manufacturer', site: 'bottlehead.com', credit: 'Bottlehead', captured: '2026-05-08' } },
+
+  // Yamamoto — Exclusive Audio (Japanese authorized dealer)
+  { key: 'yamamoto a 08',       url: 'https://exclusive-audio.jp/cdn/shop/files/A-08SS-1-S.jpg?v=1721120085&width=1946',
+    source: { tier: 'authorized_dealer', site: 'exclusive-audio.jp', credit: 'Exclusive Audio', captured: '2026-05-08' } },
+
+  // Singxer — Kitsune HiFi (US Singxer distributor) Shopify CDN
+  { key: 'singxer sa 90',       url: 'https://kitsunehifi.com/cdn/shop/files/sa901.jpg?v=1742920926&width=1232',
+    source: { tier: 'authorized_dealer', site: 'kitsunehifi.com', credit: 'Kitsune HiFi', captured: '2026-05-08' } },
+
+  // LinnenberG — 6moons review (linnenberg-audio.de site uses Mobirise template, no per-product image)
+  { key: 'linnenberg liszt',    url: 'https://6moons.com/audioreviews/linnenberg/1.jpg',
+    source: { tier: 'review_publication', site: '6moons.com', credit: '6moons', captured: '2026-05-08' } },
+
+  // AGD Productions — manufacturer WordPress CDN (image is Gran Vivace MK IV;
+  // catalog "Vivace" matches via substring — same product family).
+  { key: 'agd productions vivace', url: 'https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp',
+    source: { tier: 'manufacturer', site: 'agdproduction.com', credit: 'AGD Productions', captured: '2026-05-08' } },
+  { key: 'agd vivace',          url: 'https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp',
+    source: { tier: 'manufacturer', site: 'agdproduction.com', credit: 'AGD Productions', captured: '2026-05-08' } },
+
   // ── Speakers ──────────────────────────────────────────
 
   // KEF — kef.com product assets
@@ -198,8 +327,22 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
   // WLM — hifi-guide.com product image
   { key: 'wlm diva',            url: 'https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg' },
 
-  // Hornshoppe — stereophile.com product image
-  { key: 'hornshoppe horn',     url: 'https://www.stereophile.com/images/archivesart/104horn1.jpg' },
+  // Hornshoppe — 6moons review (manufacturer site only hosts a tiny banner crop)
+  { key: 'hornshoppe horn',     url: 'https://6moons.com/audioreviews/hornshoppe2/hero_cameohorns.jpg',
+    source: { tier: 'review_publication', site: '6moons.com', credit: '6moons', captured: '2026-05-08' } },
+
+  // XSA Labs — Stereo Times review hero (xsa-labs.com hosts multiple
+  // finishes / configs without a designated single hero shot).
+  { key: 'xsa labs vanguard',   url: 'https://www.stereotimes.com/utils/tinymce/uploaded/xsalabs650.jpg',
+    source: { tier: 'review_publication', site: 'stereotimes.com', credit: 'Stereo Times', captured: '2026-05-08' } },
+  { key: 'xsa vanguard',        url: 'https://www.stereotimes.com/utils/tinymce/uploaded/xsalabs650.jpg',
+    source: { tier: 'review_publication', site: 'stereotimes.com', credit: 'Stereo Times', captured: '2026-05-08' } },
+
+  // Falcon Acoustics — manufacturer cache CDN (2025 Limited Platinum
+  // Edition in Burr Amboyna — special-edition variant, but the
+  // canonical LS3/5a chassis shape is unmistakable).
+  { key: 'falcon ls3 5a',       url: 'https://www.falconacoustics.co.uk/media/catalog/product/cache/c68e9bbb2d73eded5f4972f8e568886c/p/l/plat_amboyna_square_600_optimised.jpg',
+    source: { tier: 'manufacturer', site: 'falconacoustics.co.uk', credit: 'Falcon Acoustics', captured: '2026-05-08' } },
 
   // DeVore Fidelity — devorefidelity.com
   // Keys include "fidelity" to match the catalog brand "DeVore Fidelity".
@@ -352,7 +495,11 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
   { key: 'sennheiser momentum 4', url: 'https://assets.sennheiser.com/img/momentum-4-wireless/gallery/momentum-4-wireless_1.jpg' },
 
   // Holo Audio — kitsunehifi.com Shopify CDN (US distributor)
-  { key: 'holo audio may',      url: 'https://kitsunehifi.com/cdn/shop/files/may1.jpg' },
+  { key: 'holo audio may',          url: 'https://kitsunehifi.com/cdn/shop/files/may1.jpg' },
+  { key: 'holo audio spring 3',     url: 'https://kitsunehifi.com/cdn/shop/files/2-scaled.jpg?v=1743712210&width=2560',
+    source: { tier: 'authorized_dealer', site: 'kitsunehifi.com', credit: 'Kitsune HiFi', captured: '2026-05-08' } },
+  { key: 'holo audio cyan 2',       url: 'https://kitsunehifi.com/cdn/shop/files/cyan-1_1c3a3843-8b1c-44f8-9c5f-df64340e856c.jpg?v=1712877064&width=1232',
+    source: { tier: 'authorized_dealer', site: 'kitsunehifi.com', credit: 'Kitsune HiFi', captured: '2026-05-08' } },
 
   // Magnepan — magnepan.com Shopify CDN (additional model)
   { key: 'magnepan 7',          url: 'https://magnepan.com/cdn/shop/products/Mg.7_White_Pair_1_1200x1200.jpg' },
@@ -369,11 +516,23 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
   // Holo Audio — kitsunehifi.com Shopify CDN (US distributor)
   { key: 'holo cyan',           url: 'https://kitsunehifi.com/cdn/shop/files/cyan2.jpg' },
 
-  // Sonnet — sonnetaudio.com product assets
-  { key: 'sonnet morpheus',     url: 'https://www.sonnetaudio.com/images/products/morpheus-front.jpg' },
+  // Sonnet — sonnetaudio.com product assets + eliseaudio.com (Pasithea)
+  // Note: catalog uses inconsistent brand strings — "Sonnet" for Pasithea
+  // (dacs.ts:3704), "Sonnet Digital Audio" for Morpheus (dacs.ts:2365).
+  // Both keys below are needed to match each catalog brand+name pair.
+  { key: 'sonnet pasithea',           url: 'https://eliseaudio.com/cdn/shop/files/eliseaudiopasithea.png?v=1693561670&width=1946',
+    source: { tier: 'authorized_dealer', site: 'eliseaudio.com', credit: 'Elise Audio', captured: '2026-05-08' } },
+  { key: 'sonnet digital audio morpheus', url: 'https://www.sonnetaudio.com/images/products/morpheus-front.jpg' },
+  { key: 'sonnet morpheus',           url: 'https://www.sonnetaudio.com/images/products/morpheus-front.jpg' },
 
-  // Merason — merason.ch product assets
-  { key: 'merason frerot',      url: 'https://www.merason.ch/images/frerot-front-silver.jpg' },
+  // Merason — Squarespace CDN (merason.ch swapped hosting; old URL stale)
+  // Catalog stores "Frérot" with diacritic. The `normalize()` regex
+  // strips non-ASCII letters → "fr rot", not "frerot". Both keys cover
+  // the parsed and the more-readable spellings.
+  { key: 'merason frerot',      url: 'https://images.squarespace-cdn.com/content/v1/694aade551fad3322e70702a/493eab22-5a4d-4b54-964f-696a3bbbd7e0/Merason_frerot_schwarz_front.jpg',
+    source: { tier: 'manufacturer', site: 'merason.com', credit: 'Merason', captured: '2026-05-08' } },
+  { key: 'merason fr rot',      url: 'https://images.squarespace-cdn.com/content/v1/694aade551fad3322e70702a/493eab22-5a4d-4b54-964f-696a3bbbd7e0/Merason_frerot_schwarz_front.jpg',
+    source: { tier: 'manufacturer', site: 'merason.com', credit: 'Merason', captured: '2026-05-08' } },
 
   // ── Remaining DACs ────────────────────────────────────
 
@@ -400,15 +559,127 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string }> = [
 
   // Spendor — spendoraudio.com (additional speaker)
   { key: 'spendor a1',          url: 'https://spendoraudio.com/wp-content/uploads/a1-natural-oak-front.jpg' },
+
+  // ──────────────────────────────────────────────────────
+  // Round 3 additions (2026-05-08) — full coverage push
+  // ──────────────────────────────────────────────────────
+  // Each entry carries explicit `source` provenance. Products without
+  // a verified source URL (Goldmund SRDA, Goldmund Telos 390, Zu Dirty
+  // Weekend, Cube Audio Nenuphar Mini, Ocellia Calliope .21, Totem Model 1
+  // Signature, Mission MS 50 8VET, Oppo OPDV971H, Linear Tube Audio Z10
+  // discontinued, Trends TA-10, TotalDAC d1-twelve MK2, Campfire
+  // Andromeda) intentionally remain uncurated — strict resolver returns
+  // undefined and the renderer omits the image surface.
+
+  // ── DACs ─────────────────────────────────────────────
+
+  // Audalytic (Gustard sub-brand) — ShenzhenAudio dealer Shopify CDN
+  { key: 'audalytic dr70',      url: 'https://shenzhenaudio.com/cdn/shop/files/2_6148a1d1-7f61-4c1b-936e-ddfba4739c80.png?v=1762239102&width=1946',
+    source: { tier: 'authorized_dealer', site: 'shenzhenaudio.com', credit: 'Shenzhen Audio', captured: '2026-05-08' } },
+
+  // FiiO — manufacturer CDN (Wezhan static host)
+  { key: 'fiio k9 pro',         url: 'https://nwzimg.wezhan.net/contents/sitefiles3600/18000638/images/4833971.png',
+    source: { tier: 'manufacturer', site: 'fiio.com', credit: 'FiiO', captured: '2026-05-08' } },
+  { key: 'fiio k11 r2r',        url: 'https://nwzimg.wezhan.net/contents/sitefiles3600/18000638/images/9436560.png',
+    source: { tier: 'manufacturer', site: 'fiio.com', credit: 'FiiO', captured: '2026-05-08' } },
+
+  // Innuos — manufacturer CloudFront CDN
+  { key: 'innuos zen mk3',      url: 'https://d1stdttvoxapnu.cloudfront.net/wp-content/uploads/2022/12/ZEN_intro.webp',
+    source: { tier: 'manufacturer', site: 'innuos.com', credit: 'Innuos', captured: '2026-05-08' } },
+  { key: 'innuos pulse mini',   url: 'https://d1stdttvoxapnu.cloudfront.net/wp-content/uploads/2023/11/PULSEmini_transparent_1080x1080_front_fascia.webp',
+    source: { tier: 'manufacturer', site: 'innuos.com', credit: 'Innuos', captured: '2026-05-08' } },
+
+  // Mola Mola — manufacturer site (mola-mola.nl)
+  { key: 'mola mola tambaqui',  url: 'https://www.mola-mola.nl/img/tambaqui/Mola_Mola_studio-32.jpg',
+    source: { tier: 'manufacturer', site: 'mola-mola.nl', credit: 'Mola Mola', captured: '2026-05-08' } },
+
+  // Cen.Grand — manufacturer (cen-grand.com)
+  { key: 'cen grand dsdac',     url: 'https://en.cen-grand.com/repository/image/2c07e7b2-91d2-4ef5-b5e5-a9ba9a642fec.jpg',
+    source: { tier: 'manufacturer', site: 'en.cen-grand.com', credit: 'Cen.Grand', captured: '2026-05-08' } },
+
+  // ── Amplifiers (round-2 retries) ─────────────────────
+
+  // Goldmund Telos 690 — manufacturer (Telos 390 has no public page; Telos 690 does)
+  { key: 'goldmund telos 690',  url: 'https://goldmund.com/wp-content/uploads/2024/02/Telos-690-low-res-9.png',
+    source: { tier: 'manufacturer', site: 'goldmund.com', credit: 'Goldmund', captured: '2026-05-08' } },
+
+  // ── Speakers ──────────────────────────────────────────
+
+  // Qualio — manufacturer Shopify CDN (used full-size variant — strip the 120x120 thumbnail param)
+  { key: 'qualio audio iq',     url: 'https://www.qualioaudio.com/cdn/shop/products/QualioIQBlacksatin_3.jpg?v=1669278227',
+    source: { tier: 'manufacturer', site: 'qualioaudio.com', credit: 'Qualio Audio', captured: '2026-05-08' } },
+  { key: 'qualio iq',           url: 'https://www.qualioaudio.com/cdn/shop/products/QualioIQBlacksatin_3.jpg?v=1669278227',
+    source: { tier: 'manufacturer', site: 'qualioaudio.com', credit: 'Qualio Audio', captured: '2026-05-08' } },
+
+  // Altec Lansing — Aural HiFi (vintage restoration specialist)
+  { key: 'altec model 19',      url: 'https://auralhifi.com/cdn/shop/files/vintage-altec-lansing-model-nineteen-speakers-custom-restoration-whiteen19--01_1024x.jpg?v=1691005141',
+    source: { tier: 'authorized_dealer', site: 'auralhifi.com', credit: 'Aural HiFi', captured: '2026-05-08' } },
+  { key: 'altec lansing model 19', url: 'https://auralhifi.com/cdn/shop/files/vintage-altec-lansing-model-nineteen-speakers-custom-restoration-whiteen19--01_1024x.jpg?v=1691005141',
+    source: { tier: 'authorized_dealer', site: 'auralhifi.com', credit: 'Aural HiFi', captured: '2026-05-08' } },
+
+  // sound|kaos — Enleum (authorized dealer, hosts manufacturer image)
+  { key: 'sound kaos vox',      url: 'https://enleum.com/wp-content/uploads/2022/09/VOX_3.jpg',
+    source: { tier: 'authorized_dealer', site: 'enleum.com', credit: 'Enleum', captured: '2026-05-08' } },
+  { key: 'soundkaos vox',       url: 'https://enleum.com/wp-content/uploads/2022/09/VOX_3.jpg',
+    source: { tier: 'authorized_dealer', site: 'enleum.com', credit: 'Enleum', captured: '2026-05-08' } },
+
+  // Mission — The Turntable Store (carries the M50 / MS-50)
+  { key: 'mission ms 50',       url: 'https://www.theturntablestore.com/cdn/shop/files/P1030263.jpg?v=1732189515&width=1946',
+    source: { tier: 'authorized_dealer', site: 'theturntablestore.com', credit: 'The Turntable Store', captured: '2026-05-08' } },
+  { key: 'mission m50',         url: 'https://www.theturntablestore.com/cdn/shop/files/P1030263.jpg?v=1732189515&width=1946',
+    source: { tier: 'authorized_dealer', site: 'theturntablestore.com', credit: 'The Turntable Store', captured: '2026-05-08' } },
+
+  // ── Headphones ────────────────────────────────────────
+
+  // Moondrop — manufacturer Webflow CDN (image-CDN proxied through moondroplab.com)
+  { key: 'moondrop aria 2',     url: 'https://moondroplab.com/cdn-cgi/image/format=avif,quality=90/https://cdn.prod.website-files.com/627128d862c9a44234848dda/6540a32b1b300656259455e3_ARIA2.jpg',
+    source: { tier: 'manufacturer', site: 'moondroplab.com', credit: 'Moondrop', captured: '2026-05-08' } },
+  { key: 'moondrop blessing 3', url: 'https://moondroplab.com/cdn-cgi/image/format=avif,quality=90/https://cdn.prod.website-files.com/627128d862c9a44234848dda/6440b2b621093331fce44fc9_B3.jpg',
+    source: { tier: 'manufacturer', site: 'moondroplab.com', credit: 'Moondrop', captured: '2026-05-08' } },
+
+  // Campfire Audio — Headfonics review (manufacturer + retailers all 404'd)
+  { key: 'campfire audio honeydew', url: 'https://headfonics.com/wp-content/uploads/2021/08/campfire-honeydew-review.jpg',
+    source: { tier: 'review_publication', site: 'headfonics.com', credit: 'Headfonics', captured: '2026-05-08' } },
+  // Campfire Solaris — Bloom Audio (authorized dealer)
+  { key: 'campfire audio solaris',  url: 'https://bloomaudio.com/cdn/shop/files/campfire-solaris-vulcan-thumb-five.webp?v=1731519129&width=1080',
+    source: { tier: 'authorized_dealer', site: 'bloomaudio.com', credit: 'Bloom Audio', captured: '2026-05-08' } },
+
+  // RAAL-Requisite — manufacturer (raalrequisite.com)
+  // Catalog brand "Raal-Requisite" + name "1995 Immanis" → normalize →
+  // "raal requisite 1995 immanis" (the "1995" sits between brand and
+  // name). The exact-match key plus shorter aliases cover both.
+  { key: 'raal requisite 1995 immanis', url: 'https://raalrequisite.com/wp-content/uploads/2024/08/mckinney-template-hero-imannispiano-1.jpg',
+    source: { tier: 'manufacturer', site: 'raalrequisite.com', credit: 'RAAL-Requisite', captured: '2026-05-08' } },
+  { key: '1995 immanis',         url: 'https://raalrequisite.com/wp-content/uploads/2024/08/mckinney-template-hero-imannispiano-1.jpg',
+    source: { tier: 'manufacturer', site: 'raalrequisite.com', credit: 'RAAL-Requisite', captured: '2026-05-08' } },
+
+  // Aune — Plentymarkets (used by aune-store.com EU dealer)
+  { key: 'aune ar5000',         url: 'https://cdn02.plentymarkets.com/dvw13795n3e0/item/images/110208/full/AR5000-Aune-Audio-Open-Ear-Headphone.jpg',
+    source: { tier: 'authorized_dealer', site: 'aune-store.com', credit: 'Aune Store', captured: '2026-05-08' } },
+
+  // ── Turntables ────────────────────────────────────────
+
+  // VPI — manufacturer direct-sales site (vpidirect.com)
+  { key: 'vpi cliffwood',       url: 'https://www.vpidirect.com/cdn/shop/files/cliffwood.jpg?v=1695597766&width=1946',
+    source: { tier: 'manufacturer', site: 'vpidirect.com', credit: 'VPI Industries', captured: '2026-05-08' } },
 ];
 
 /**
  * Resolve an image for a product by brand + name.
  *
- * Matches the curated map by normalized substring (longest key first is
- * implicit in iteration order — we put more specific keys earlier). Returns
- * undefined when no entry matches, letting the render layer cleanly omit
- * the image block.
+ * Matches the curated map by normalized substring (longest/most-specific
+ * key first is implicit in iteration order — we put more specific keys
+ * earlier). Returns undefined when no entry matches, letting the render
+ * layer cleanly omit the image block.
+ *
+ * Empty-URL sentinel: when an entry's `url` is the empty string `''`,
+ * the function treats the key match as "intentionally uncurated" — it
+ * returns `undefined` and stops iteration. This lets us register
+ * specific products that we explicitly do NOT want to fall through to
+ * a less-specific brand-prefix key (e.g. "chord hugo tt2" otherwise
+ * substring-matches the more general "chord hugo" entry below it,
+ * shipping the wrong image for TT2). Empty-URL entries are a positive
+ * curation statement, not a placeholder waiting to be filled.
  */
 export function getProductImage(
   brand: string | undefined,
@@ -417,7 +688,12 @@ export function getProductImage(
   const haystack = normalize(`${brand ?? ''} ${name ?? ''}`);
   if (!haystack) return undefined;
   for (const entry of PRODUCT_IMAGE_URLS) {
-    if (haystack.includes(entry.key)) return entry.url;
+    if (haystack.includes(entry.key)) {
+      // Empty string = intentionally uncurated for this key. Stop and
+      // return undefined so the substring match doesn't fall through to
+      // a less-specific entry that would ship the wrong product image.
+      return entry.url === '' ? undefined : entry.url;
+    }
   }
   return undefined;
 }
@@ -488,6 +764,13 @@ export function getGenericPlaceholder(category?: string): string {
  *   4. getGenericPlaceholder(category) (static local SVG)
  *
  * Always returns a string — no card should ever render without an image.
+ *
+ * Legacy chain. Retained for callers that genuinely benefit from a
+ * placeholder (e.g. brand-vs-brand comparison anchors in
+ * `consultation.ts` where the placeholder grounds the UI when neither
+ * side has a curated product image). New callers should prefer
+ * `resolveProductImageStrict` — most product/recommendation surfaces
+ * read better with the image cleanly omitted than with a generic SVG.
  */
 export function resolveProductImage(
   brand: string | undefined,
@@ -501,4 +784,32 @@ export function resolveProductImage(
     ?? getBrandImage(brand)
     ?? getGenericPlaceholder(category)
   );
+}
+
+/**
+ * Strict image resolution — returns ONLY a real, product-specific URL,
+ * or `undefined` when no curated image exists for THIS product. Used by
+ * recommendation, comparison, and upgrade-path surfaces where shipping
+ * the wrong product's image (brand fallback) or a generic category SVG
+ * (placeholder) is worse than gracefully omitting the image block.
+ *
+ * Chain:
+ *   1. catalogImageUrl (product.imageUrl from the catalog)
+ *   2. getProductImage(brand, name) (curated overlay map — substring
+ *      key match against normalized brand+name)
+ *   3. undefined  ← does NOT fall through to brand-image or placeholder
+ *
+ * Renderer contract: callers downstream (the comparison artifact's
+ * `hasImages` gate, `EditorialProductSection`'s image block, etc.)
+ * already handle `undefined` by omitting the image surface.
+ *
+ * Domain-agnostic: no audio vocabulary. The function is a key-based
+ * lookup that would work unchanged in any product-card domain.
+ */
+export function resolveProductImageStrict(
+  brand: string | undefined,
+  name: string | undefined,
+  catalogImageUrl?: string,
+): string | undefined {
+  return catalogImageUrl ?? getProductImage(brand, name);
 }
