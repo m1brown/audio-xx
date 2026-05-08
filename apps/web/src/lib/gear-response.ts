@@ -723,7 +723,7 @@ function brandCharacter(brandName: string): string {
 const CLARIFICATIONS_NO_SYSTEM = [
   'What does the rest of your system look like? That would help narrow down where the shift is most likely to come from.',
   'What kind of system would it be going into, and what do you value most in your listening?',
-  'What system would these be going into? The pairing often determines which design philosophy wins.',
+  'What system would these be going into? The pairing often determines which design philosophy fits — neither is universally better.',
   'What are you pairing it with? The rest of the chain shapes the experience more than any single component.',
   'Is this about a specific system? Knowing what you\'re pairing with would help me gauge direction.',
 ];
@@ -1283,7 +1283,11 @@ function buildUpgradeDirection(
   }
 
   if (parts.length === 0) {
-    return `The ${to.name} refines what the ${from.name} already does well, with greater authority and composure. The test worth running: whether the rest of your chain resolves the step.`;
+    // Reframed from "refines what the from already does well, with greater
+    // authority and composure" — that wording asserted universal superiority
+    // for the to-product. Whether the trait shift reads as an improvement
+    // depends on the listener's priorities and the rest of the chain.
+    return `The ${to.name} extends the ${from.name}'s architecture toward greater authority and composure. Whether that direction matches what you value, and whether the rest of your chain resolves the difference, are the open questions.`;
   }
 
   return parts.join(' ');
@@ -1449,7 +1453,12 @@ function buildUpgradeAnalysis(
 
   const whatChanges = whatChangesParts.length > 0
     ? whatChangesParts.join(' ')
-    : `The ${to.name} extends what the ${from.name} does well, with greater authority and composure.`;
+    // Reframed: "extends what the from does well, with greater authority and
+    // composure" implied the to-product is universally superior. Both products
+    // are valid expressions of the architecture; the to-product simply leans
+    // further in a particular direction. Whether that direction is desirable
+    // depends on listener priorities and system context.
+    : `The ${to.name} leans further than the ${from.name} toward authority and composure within the same architecture. Whether that lean is desirable depends on what you value in your listening.`;
 
   // ── 5. WHAT IMPROVES ─────────────────────────────────
   const improvements: string[] = [];
@@ -1525,7 +1534,10 @@ function buildUpgradeAnalysis(
     senseParts.push(`you value ${qualities} and your system is resolving enough to reveal the difference`);
   }
   if (activeSystem && activeSystem.components.length > 0) {
-    senseParts.push(`your downstream chain has the transparency to show what a better source delivers`);
+    // Reframed from "what a better source delivers" — that phrasing asserted
+    // the to-product is universally a better source. The condition is about
+    // chain transparency, not about which source is "better" in the abstract.
+    senseParts.push(`your downstream chain is transparent enough to reveal the difference between the two`);
   }
   if (from.price > 0 && to.price > 0 && to.price / from.price <= 2.5) {
     senseParts.push(`the price step feels proportionate to the improvement you're seeking`);
@@ -1533,7 +1545,10 @@ function buildUpgradeAnalysis(
 
   const whenMakesSense = senseParts.length > 0
     ? `This upgrade makes sense when ${senseParts.join(', and ')}.`
-    : `This makes sense when the rest of the chain is resolving enough to reveal what a better source contributes.`;
+    // Reframed from "what a better source contributes" — that wording
+    // implied the to-product is universally better. The condition is about
+    // whether the chain reveals the difference between two valid sources.
+    : `This makes sense when the rest of the chain is resolving enough to reveal the difference between the two — without that, either source would sound similar in your system.`;
 
   // ── 8. WHEN IT MAY NOT BE THE BEST NEXT STEP ────────
   const waitParts: string[] = [];
@@ -1639,10 +1654,13 @@ function buildUpgradeAnalysis(
   // System-level reasoning about where improvement is most meaningful.
   const upgradeImpactAreas: string[] = [];
 
-  // Source / DAC — if the from product has weak traits that the to product fixes
+  // Source / DAC — areas where the proposed change shifts trait emphasis.
+  // "Delivers" was softened to "shifts emphasis" — the to-product changes
+  // the trait balance, but whether that shift is heard as an improvement
+  // depends on listener priorities and downstream chain.
   if (positiveDeltas.length > 0) {
     const labels = positiveDeltas.slice(0, 2).map((d) => d.label).join(' and ');
-    upgradeImpactAreas.push(`Source ${from.category}: ${labels} — this is where the proposed change delivers`);
+    upgradeImpactAreas.push(`Source ${from.category}: ${labels} — this is where the proposed change shifts the emphasis`);
   }
 
   // Downstream components that may limit or benefit
@@ -1893,6 +1911,12 @@ export function buildGearResponse(
             ? { primary: sysDir.inferredArchetype.primary, secondary: sysDir.inferredArchetype.secondary, blended: false }
             : undefined,
           upgradeAnalysis: buildUpgradeAnalysis(from, to, activeSystem, allowed),
+          // Carry the from/to products forward so downstream image and
+          // link/source aggregation in `gearResponseToAdvisory` has the
+          // same data the general-comparison branch (line ~1977) already
+          // delivers. Without this, upgrade-comparison advisories render
+          // without images, retailer links, or source references.
+          matchedProducts: [from, to],
         };
       }
 
