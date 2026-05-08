@@ -28,7 +28,7 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { toSlug } from '../../lib/route-slug';
-import type { AdvisoryResponse, AdvisoryMode, AdvisorySource, AudioProfile, ProductAssessment, KnowledgeResponse, AssistantResponse, EditorialClosing, EditorialPick, QuickRecommendation } from '../../lib/advisory-response';
+import type { AdvisoryResponse, AdvisoryMode, AudioProfile, ProductAssessment, KnowledgeResponse, AssistantResponse, EditorialClosing, EditorialPick, QuickRecommendation, FallbackReason } from '../../lib/advisory-response';
 import type { DecisionFrame, DecisionDirection, SystemInteraction } from '../../lib/decision-frame';
 import AdvisorySection from './AdvisorySection';
 import AdvisoryProse from './AdvisoryProse';
@@ -143,63 +143,129 @@ const MODE_LABELS: Record<AdvisoryMode, string> = {
 };
 
 /** Mode awareness indicator — subtle label at the top of the response. */
-function ModeIndicator({ mode }: { mode?: AdvisoryMode }) {
-  if (!mode || mode === 'general') return null;
-  const label = MODE_LABELS[mode];
-  if (!label) return null; // No label for this mode (e.g. upgrade_suggestions)
+// ── Expanded reasoning trust signal ──────────────────────
+//
+// Replaces the old amber-styled ProvenanceLabel warning box. Two pieces:
+//
+//   <ExpandedReasoningIndicator />  — small dot + uppercase "Expanded
+//      reasoning" label, same visual register as ModeIndicator. Calm,
+//      warm-neutral color (no warning chrome). Renders ONLY when
+//      reasoningMode === 'expanded'.
+//
+//   <ExpandedReasoningCaption />    — single-line italic caption mapped
+//      from fallbackReason. No box, no border, no background. Renders
+//      directly under the indicator row.
+//
+// Both are gated on reasoningMode at the call site. 'core' and 'hybrid'
+// render nothing — hybrid is internal observability only.
+
+/** Copy mapping for fallbackReason → user-facing one-liner. */
+const EXPANDED_REASONING_CAPTIONS: Record<FallbackReason, string> = {
+  unknown_subject:
+    'Using expanded reasoning for products outside the current curated catalog.',
+  low_confidence_system:
+    'Using expanded reasoning because parts of this system are not fully recognized.',
+  brand_only:
+    'Using expanded reasoning for a product not yet covered directly in the curated catalog.',
+  open_ended_query:
+    'Using expanded reasoning for a broader advisory question.',
+  thin_output:
+    'Using expanded reasoning because the curated layer did not produce a complete answer.',
+};
+
+/** Calm warm-neutral color for the indicator. Not amber, not red, not
+ *  accent — sits next to ModeIndicator's accentLight color without
+ *  competing or implying warning. */
+const EXPANDED_REASONING_COLOR = '#9A8A6A';
+
+function ExpandedReasoningIndicator() {
   return (
-    <div style={{
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '0.4rem',
       fontSize: '0.72rem',
       fontWeight: 600,
       letterSpacing: '0.08em',
       textTransform: 'uppercase' as const,
-      color: COLORS.accentLight,
-      marginBottom: '0.6rem',
+      color: EXPANDED_REASONING_COLOR,
     }}>
-      {label}
-    </div>
+      <span
+        aria-hidden="true"
+        style={{
+          width: '6px',
+          height: '6px',
+          borderRadius: '50%',
+          backgroundColor: EXPANDED_REASONING_COLOR,
+          boxShadow: `0 0 0 1px ${EXPANDED_REASONING_COLOR}33`,
+          display: 'inline-block',
+          flexShrink: 0,
+        }}
+      />
+      Expanded reasoning
+    </span>
   );
 }
 
-/** Provenance label — shows when response data comes from LLM inference rather than verified catalog. */
-function ProvenanceLabel({ source, unknownComponents }: { source?: AdvisorySource; unknownComponents?: string[] }) {
-  if (!source || source === 'catalog' || source === 'brand_profile') return null;
+function ExpandedReasoningCaption({ reason }: { reason?: FallbackReason }) {
+  if (!reason) return null;
+  const copy = EXPANDED_REASONING_CAPTIONS[reason];
+  if (!copy) return null;
+  return (
+    <p style={{
+      margin: '0 0 0.85rem 0',
+      fontSize: '0.78rem',
+      lineHeight: 1.55,
+      color: COLORS.textMuted,
+      fontStyle: 'italic',
+    }}>
+      {copy}
+    </p>
+  );
+}
 
-  if (source === 'provisional_system') {
-    const unknownList = unknownComponents && unknownComponents.length > 0
-      ? `: ${unknownComponents.join(', ')}`
-      : '';
-    return (
-      <div style={{
-        fontSize: '0.75rem',
-        lineHeight: 1.4,
-        color: '#7c5e2a',
-        backgroundColor: '#fef6e0',
-        border: '1px solid #e8d5a8',
-        borderRadius: '4px',
-        padding: '0.55rem 0.75rem',
-        marginBottom: '0.85rem',
-      }}>
-        <span style={{ fontWeight: 600 }}>Provisional System Assessment.</span>
-        {' '}This system includes components not yet fully mapped in the Audio XX validated catalog{unknownList}. The analysis below is based on general knowledge and their likely interaction. Treat as directional guidance.
-      </div>
-    );
-  }
+/**
+ * Unified response header — combines the mode indicator and the
+ * expanded-reasoning trust signal in a single inline row, with the
+ * fallback caption underneath when applicable.
+ *
+ * Replaces the old standalone <ModeIndicator /> + <ProvenanceLabel />
+ * pair. Renders nothing when the advisory carries neither a mode label
+ * nor an expanded reasoning signal.
+ */
+function ResponseHeader({ advisory: a }: { advisory: AdvisoryResponse }) {
+  const modeLabel = a.advisoryMode && a.advisoryMode !== 'general'
+    ? MODE_LABELS[a.advisoryMode]
+    : null;
+  const showReasoning = a.reasoningMode === 'expanded';
+  const showCaption = showReasoning && !!a.fallbackReason;
+
+  if (!modeLabel && !showReasoning) return null;
 
   return (
-    <div style={{
-      fontSize: '0.75rem',
-      lineHeight: 1.4,
-      color: '#96722e',
-      backgroundColor: '#fef9ec',
-      border: '1px solid #f0e4c4',
-      borderRadius: '4px',
-      padding: '0.45rem 0.65rem',
-      marginBottom: '0.85rem',
-    }}>
-      <span style={{ fontWeight: 600 }}>Not from verified catalog.</span>
-      {' '}This response is based on general knowledge and may contain inaccuracies. Treat as directional guidance, not confirmed data.
-    </div>
+    <>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.7rem',
+        flexWrap: 'wrap',
+        marginBottom: showCaption ? '0.35rem' : '0.6rem',
+      }}>
+        {modeLabel && (
+          <span style={{
+            fontSize: '0.72rem',
+            fontWeight: 600,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase' as const,
+            color: COLORS.accentLight,
+          }}>
+            {modeLabel}
+          </span>
+        )}
+        {showReasoning && <ExpandedReasoningIndicator />}
+      </div>
+      {showCaption && <ExpandedReasoningCaption reason={a.fallbackReason} />}
+    </>
   );
 }
 
@@ -582,7 +648,7 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
       maxWidth,
       margin: '0 auto',
     }}>
-      <ModeIndicator mode={a.advisoryMode} />
+      <ResponseHeader advisory={a} />
 
       {a.title && (
         <h2 style={{
@@ -1706,9 +1772,10 @@ function MemoFormat({ advisory: a, onFollowUpClick }: AdvisoryMessageProps) {
       {/* ── Rewritten narrative — leads when systemContext is present ── */}
       {isRewrittenReview && <RewrittenSystemReview advisory={a} />}
 
-      {/* ── Mode indicator (suppressed under rewritten review;
-            RewrittenSystemReview renders its own header) ── */}
-      {!isRewrittenReview && <ModeIndicator mode={a.advisoryMode} />}
+      {/* ── Mode indicator + expanded-reasoning trust signal
+            (suppressed under rewritten review; RewrittenSystemReview
+            renders its own header). ── */}
+      {!isRewrittenReview && <ResponseHeader advisory={a} />}
 
       {/* ── Title (same suppression rule) ── */}
       {!isRewrittenReview && a.title && (
@@ -2647,6 +2714,13 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
 
   return (
     <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
+      {/* ── Mode indicator + expanded-reasoning trust signal ──
+       *  Brand-only assessments (catalogMatch === false) carry
+       *  reasoningMode === 'expanded' + fallbackReason === 'brand_only'
+       *  upstream, so the unified caption replaces the legacy
+       *  catalog-warning block that lived inside this format. */}
+      <ResponseHeader advisory={a} />
+
       {/* ── Audio Preferences ────────────────────────── */}
       {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} namedProduct={pa.catalogMatch || pa.candidateName.toLowerCase() !== pa.candidateBrand.toLowerCase()} />}
 
@@ -2696,19 +2770,12 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
         </p>
       </div>
 
-      {!pa.catalogMatch && (
-        <div style={{
-          padding: '0.6rem 0.85rem',
-          marginBottom: '1.25rem',
-          background: '#f9f7f2',
-          borderRadius: '6px',
-          fontSize: '0.88rem',
-          color: COLORS.textMuted,
-          fontStyle: 'italic',
-        }}>
-          This product is not in the Audio XX catalog. Assessment is based on brand-level knowledge and may be less precise.
-        </div>
-      )}
+      {/* Catalog-miss warning block removed in the trust-layer pass —
+       *  the message is now carried by ResponseHeader's expanded-
+       *  reasoning caption (`fallbackReason: 'brand_only'`). One trust
+       *  signal, no duplicate provenance surfaces. The dispatch point
+       *  in page.tsx tags brand-only product assessments with
+       *  `reasoningMode: 'expanded'` so the unified caption renders. */}
 
       {/* ── 1. What actually changes ─────────────────── */}
       {pa.whatChanges.length > 0 && (
@@ -3685,7 +3752,7 @@ function KnowledgeFormat({ advisory: a }: AdvisoryMessageProps) {
 
   return (
     <div style={{ fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight, color: COLORS.text }}>
-      <ModeIndicator mode={a.advisoryMode} />
+      <ResponseHeader advisory={a} />
 
       {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} />}
 
@@ -3750,7 +3817,7 @@ function AssistantFormat({ advisory: a }: AdvisoryMessageProps) {
 
   return (
     <div style={{ fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight, color: COLORS.text }}>
-      <ModeIndicator mode={a.advisoryMode} />
+      <ResponseHeader advisory={a} />
 
       <AdvisorySection label={taskLabel}>
         <p style={{ margin: '0 0 0.95rem 0', color: COLORS.text, lineHeight: FONTS.lineHeight, whiteSpace: 'pre-wrap' }}>
@@ -3961,12 +4028,27 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
     && a.statedGaps.length > 0;
 
   return (
-    <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
-      {/* ── Mode indicator ──────────────────────────── */}
-      <ModeIndicator mode={a.advisoryMode} />
-
-      {/* ── Provenance label (LLM-inferred responses) ── */}
-      <ProvenanceLabel source={a.source} unknownComponents={a.unknownComponents} />
+    // Editorial measure for the entire advisory body. Previously only
+    // the comparison artifact (line ~4032) was constrained to 52rem,
+    // while the upgrade-analysis sections below it expanded to fill
+    // the parent (~1280px), creating a width discontinuity mid-card.
+    // Lifting the constraint to the outer wrapper makes the artifact
+    // read as one editorial column. Inner blocks that already set
+    // their own maxWidth (e.g. the comparison block) continue to do so
+    // — this just caps the upper bound. Mobile collapses naturally:
+    // 52rem > viewport on phones, so width: 100% wins via min().
+    <div style={{
+      lineHeight: FONTS.lineHeight,
+      color: COLORS.text,
+      maxWidth: '52rem',
+    }}>
+      {/* ── Mode indicator + expanded-reasoning trust signal ──
+       *  ResponseHeader unifies the old <ModeIndicator /> +
+       *  <ProvenanceLabel /> pair into one calm header row. The
+       *  amber-styled provenance warning box is gone — when
+       *  reasoningMode === 'expanded', a quiet inline indicator and
+       *  one-line italic caption replace it. */}
+      <ResponseHeader advisory={a} />
 
       {/* ── 0a. Diagnosis: system interpretation ────────── */}
       {a.diagnosisInterpretation && (
@@ -3980,94 +4062,184 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
         </p>
       )}
 
-      {/* ── 1. Comparison summary (side-by-side format) ── */}
-      {a.comparisonSummary && (
-        <div
-          style={{
-            margin: '0 0 1.25rem 0',
-            fontSize: '1rem',
-            color: '#333',
-            lineHeight: 1.75,
-          }}
-        >
-          {/* Compared-subject thumbnails. Only render when BOTH entries have a
-              real image — otherwise the block collapses and the comparison
-              renders as clean labelled prose. Letter-tile placeholders are
-              suppressed globally (see product-images.ts) because the
-              catalog's imageUrl fields are not yet populated. */}
-          {/* ── Comparison hero images — side by side, large format ── */}
-          {a.comparisonImages
-            && a.comparisonImages.length === 2
-            && a.comparisonImages.every((e) => !!e.imageUrl) && (
+      {/* ── 1. Comparison artifact (Phase 1 editorial reskin) ──
+       *
+       * Composition: comparison advisories are rendered as a dominant
+       * editorial module rather than a chat-message footprint. Layout:
+       *
+       *   [ Comparison ]                     ← small-cap eyebrow + top rule
+       *
+       *   <image>            <image>         ← side-by-side anchors,
+       *   <identity>         <identity>       structured brand + name beneath
+       *
+       *   <comparison summary prose>          ← full-width, editorial measure
+       *
+       *                                      ← bottom rule
+       *
+       * Constraints honored:
+       *   - Single file change (this block only).
+       *   - No engine, contract, dispatcher changes.
+       *   - No parsing of free-form prose into named sections — the
+       *     summary renders as-is (paragraph-split on blank lines) the
+       *     same way it did before.
+       *   - No invented metrics, no charts, no laboratory labels.
+       *   - Decision guidance / recommendation blocks are NOT rendered
+       *     here because the comparison advisory shape doesn't carry
+       *     dedicated structured fields for them today. (whenToAct /
+       *     whenToWait still render later in StandardFormat as-is for
+       *     upgrade comparisons; the comparison block stays focused.)
+       *   - Only renders when comparisonSummary is set — same gate as
+       *     before; the rest of StandardFormat continues to render any
+       *     additional sections present on the advisory.
+       */}
+      {a.comparisonSummary && (() => {
+        // Editorial palette inlined here so this block can ship as a
+        // single-file change. If a future pass extracts editorial tokens
+        // to a shared module, these values map 1:1 with page.tsx EDITORIAL.
+        const E = {
+          ink: '#151515',
+          inkMuted: '#3A3A3A',
+          faint: '#8A8A8A',
+          rule: '#E5E5E5',
+          measure: '52rem',
+        } as const;
+
+        const hasImages = a.comparisonImages
+          && a.comparisonImages.length === 2
+          && a.comparisonImages.every((e) => !!e.imageUrl);
+
+        return (
+          <div
+            style={{
+              maxWidth: E.measure,
+              margin: '1.25rem 0 2rem 0',
+              borderTop: `1px solid ${E.rule}`,
+              borderBottom: `1px solid ${E.rule}`,
+              padding: '1.4rem 0 1.6rem 0',
+            }}
+          >
+            {/* Eyebrow — quiet caption, left-aligned */}
             <div
               style={{
-                display: 'flex',
-                gap: '0.75rem',
-                alignItems: 'stretch',
-                margin: '0 0 1rem 0',
+                fontSize: '0.66rem',
+                fontWeight: 500,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase' as const,
+                color: E.faint,
+                marginBottom: '1.2rem',
               }}
             >
-              {a.comparisonImages.map((entry, i) => {
-                // Card context — always show image when available (no dedup).
-                const show = !!entry.imageUrl;
-                return show ? (
-                <div key={i} style={{ flex: '1 1 0', minWidth: 0 }}>
-                  <div
-                    style={{
-                      width: '100%',
-                      aspectRatio: '4 / 3',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                      background: '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '0.75rem',
-                      boxSizing: 'border-box',
-                      marginBottom: '0.4rem',
-                    }}
-                  >
-                    <img
-                      src={entry.imageUrl}
-                      alt={`${entry.brand} ${entry.name}`.trim()}
-                      referrerPolicy="no-referrer"
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '100%',
-                        objectFit: 'contain',
-                        display: 'block',
-                      }}
-                      onError={(e) => {
-                        const wrap = (e.currentTarget as HTMLImageElement).parentElement;
-                        if (wrap) wrap.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                  <div style={{
-                    fontSize: '0.85rem',
-                    color: '#555',
-                    textAlign: 'center',
-                    fontWeight: 500,
-                  }}>
-                    {[entry.brand, entry.name].filter(Boolean).join(' ')}
-                  </div>
-                </div>
-                ) : <div key={i} />;
-              })}
+              Comparison
             </div>
-          )}
-          {a.comparisonSummary.split(/\n\n/).filter((s: string) => s.trim()).map((segment: string, i: number) => (
-            <p
-              key={i}
+
+            {/* Side-by-side image anchors with structured identity below */}
+            {hasImages && (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '1.5rem',
+                  marginBottom: '1.6rem',
+                }}
+              >
+                {a.comparisonImages!.map((entry, i) => (
+                  <div key={i} style={{ minWidth: 0 }}>
+                    {/* Image frame — bumped from 200px to 300px and given
+                     *  a hairline border so the anchors read as editorial
+                     *  specimens rather than catalog thumbnails. The
+                     *  white interior + neutral border produces a clean
+                     *  containment without shadow chrome or rounded
+                     *  corners (consistent with the rest of the
+                     *  comparison artifact, which uses hairline rules
+                     *  instead of cards). object-fit: contain is
+                     *  preserved — product photography in the catalog is
+                     *  inconsistently cropped, so contain is the only
+                     *  safe choice. Graceful collapse on broken URLs is
+                     *  unchanged (parent display: none on error). */}
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '300px',
+                        background: '#FFFFFF',
+                        border: `1px solid ${E.rule}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '1rem',
+                        boxSizing: 'border-box',
+                        marginBottom: '0.95rem',
+                      }}
+                    >
+                      <img
+                        src={entry.imageUrl}
+                        alt={`${entry.brand} ${entry.name}`.trim()}
+                        referrerPolicy="no-referrer"
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: '100%',
+                          objectFit: 'contain',
+                          display: 'block',
+                        }}
+                        onError={(e) => {
+                          const wrap = (e.currentTarget as HTMLImageElement).parentElement;
+                          if (wrap) wrap.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                    {/* Identity block — small-caps brand, editorial-weight name */}
+                    <div
+                      style={{
+                        fontSize: '0.7rem',
+                        fontWeight: 500,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase' as const,
+                        color: E.faint,
+                        marginBottom: '0.25rem',
+                      }}
+                    >
+                      {entry.brand}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '1.06rem',
+                        fontWeight: 600,
+                        color: E.ink,
+                        letterSpacing: '-0.012em',
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {entry.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Comparison summary — full editorial measure prose.
+             *  No section parsing, no fabricated headings. The summary
+             *  renders paragraph-split on blank lines exactly as before;
+             *  only the typographic scale and color shift to editorial. */}
+            <div
               style={{
-                margin: i === 0 ? '0 0 0.7rem 0' : '0 0 0.7rem 0',
+                fontSize: '1.06rem',
+                lineHeight: 1.7,
+                color: E.inkMuted,
               }}
             >
-              {renderText(segment.trim())}
-            </p>
-          ))}
-        </div>
-      )}
+              {a.comparisonSummary.split(/\n\n/).filter((s: string) => s.trim()).map((segment: string, i: number) => (
+                <p
+                  key={i}
+                  style={{
+                    margin: i === 0 ? 0 : '0.85rem 0 0 0',
+                  }}
+                >
+                  {renderText(segment.trim())}
+                </p>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── 2. Audio Preferences ────────────────────── */}
       {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} />}
@@ -4671,9 +4843,55 @@ function QuickRecFormat({ quickRec }: { quickRec: QuickRecommendation }) {
   );
 }
 
+// ── Expanded-reasoning sanitization ──────────────────────
+//
+// Trust-layer safety gate: when an advisory carries
+// reasoningMode === 'expanded', the response was generated through LLM
+// inference beyond the curated catalog. The renderer must not surface
+// fabricated retailer links, source URLs, or product images even if
+// they appear on the advisory data. Existing flows (provisional
+// system assessment, unknown-product inference, thin-output fallback)
+// don't populate these fields today, so this gate is defense in depth
+// against future drift.
+//
+// Sources are NOT stripped here — `<AdvisorySources>` already filters
+// through the SOURCE_WHITELIST (only approved publications surface,
+// and they fall back to the publication's homepage URL when no
+// per-citation URL is curated).
+
+function sanitizeForExpandedReasoning(a: AdvisoryResponse): AdvisoryResponse {
+  if (a.reasoningMode !== 'expanded') return a;
+  const sanitized: AdvisoryResponse = { ...a };
+  // Comparison images — would be the LLM's claim about how an unknown
+  // product looks. Omit the surface; the comparison block already
+  // gracefully degrades to text-only when images are absent.
+  sanitized.comparisonImages = undefined;
+  // Top-level links (retailer + reference grid). For unknown subjects
+  // these would be LLM-fabricated. Omit; the user is not deprived of a
+  // real surface because expanded-reasoning paths don't aggregate
+  // catalog retailer links anyway.
+  sanitized.links = undefined;
+  // Per-option image + link surfaces (shopping recommendations
+  // wouldn't typically reach this gate, but defensive scrubbing
+  // protects against any future surface that puts options on an
+  // LLM-derived advisory).
+  if (sanitized.options) {
+    sanitized.options = sanitized.options.map((o) => ({
+      ...o,
+      imageUrl: undefined,
+      links: undefined,
+    }));
+  }
+  return sanitized;
+}
+
 // ── Main Export ────────────────────────────────────────
 
-export default function AdvisoryMessage({ advisory, onIntakeSubmit, onPreferenceCapture, onFollowUpClick }: AdvisoryMessageProps) {
+export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit, onPreferenceCapture, onFollowUpClick }: AdvisoryMessageProps) {
+  // Apply the expanded-reasoning safety gate before any format is
+  // selected or rendered. For 'core' and 'hybrid' (or absent) modes
+  // this is a no-op — the original advisory passes through unchanged.
+  const advisory = sanitizeForExpandedReasoning(rawAdvisory);
   // Each advisory message gets its own ProductImageProvider.
   // Card contexts (product cards, comparison cards, upgrade paths)
   // always show images when available — no dedup.

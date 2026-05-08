@@ -598,6 +598,42 @@ export interface AssistantResponse {
 /** Where the response data originated — used for provenance labeling. */
 export type AdvisorySource = 'catalog' | 'brand_profile' | 'llm_inferred' | 'provisional_system';
 
+/**
+ * Reasoning mode that produced this response.
+ *
+ * Trust contract surfaced to the user (only 'expanded' renders a visible
+ * indicator + caption; 'core' and 'hybrid' render identically). The field
+ * is OPTIONAL — omitted = 'core' (the deterministic / curated layer
+ * default).
+ *
+ *   'core'       — fully deterministic / curated. Default. Field may be
+ *                  omitted by callers; renderer treats undefined as 'core'.
+ *   'expanded'   — LLM inference beyond curated coverage. Renders a quiet
+ *                  "Expanded reasoning" indicator and one-line caption.
+ *                  Triggered at existing dispatch points (unknown subject,
+ *                  low-confidence system, brand-only fallback, thin
+ *                  output, open-ended advisory).
+ *   'hybrid'     — deterministic structure + validated LLM prose overlay
+ *                  (memo overlay, shopping editorial, orchestrator). The
+ *                  deterministic structure is intact; the trust contract
+ *                  is unchanged. Internal observability only — no UI
+ *                  indicator, no caption. Equivalent to 'core' from the
+ *                  user's perspective.
+ */
+export type ReasoningMode = 'core' | 'expanded' | 'hybrid';
+
+/**
+ * Reason the response landed in 'expanded' reasoning mode. Used to map
+ * to a one-line caption under the indicator. Only consulted when
+ * reasoningMode === 'expanded'.
+ */
+export type FallbackReason =
+  | 'unknown_subject'
+  | 'low_confidence_system'
+  | 'brand_only'
+  | 'open_ended_query'
+  | 'thin_output';
+
 export interface AdvisoryResponse {
   /** Determines framing voice. */
   kind: 'consultation' | 'shopping' | 'diagnosis' | 'assessment' | 'knowledge' | 'assistant' | 'intake';
@@ -611,6 +647,19 @@ export interface AdvisoryResponse {
   source?: AdvisorySource;
   /** Names of components not in the validated catalog (provisional assessments only). */
   unknownComponents?: string[];
+
+  /**
+   * Reasoning mode that produced this response. Optional — omitted = 'core'.
+   * Only 'expanded' triggers a visible UI indicator + caption; 'hybrid' is
+   * internal observability only. See {@link ReasoningMode} for semantics.
+   */
+  reasoningMode?: ReasoningMode;
+  /**
+   * Reason the response landed in 'expanded' reasoning mode. Mapped to a
+   * one-line caption by the renderer. Only consulted when
+   * reasoningMode === 'expanded'.
+   */
+  fallbackReason?: FallbackReason;
   /** System signature — one-sentence characterization of the system's sonic identity. */
   systemSignature?: string;
 
@@ -2051,6 +2100,43 @@ export function gearResponseToAdvisory(
   // `ignoreBuildErrors: true`; declaring it here removes that latent bug.
   const products = r.matchedProducts ?? [];
 
+  // ── Retailer links + source references (hoisted) ──────
+  // Aggregated from `products` once and consumed by BOTH the upgrade
+  // branch and the general comparison branch below. Previously this
+  // aggregation lived inside the general branch only — upgrade
+  // comparisons therefore shipped without `links` or `sourceReferences`.
+  // Hoisting it here closes that gap with no contract change. When
+  // `products` is empty (e.g. non-comparison gear inquiry without a
+  // catalog match) both arrays end up empty and downstream consumers
+  // gracefully degrade.
+  const gearLinks: AdvisoryLink[] = [];
+  for (const p of products) {
+    for (const l of (p.retailer_links ?? [])) {
+      gearLinks.push({
+        label: l.label,
+        url: l.url,
+        kind: l.label.toLowerCase().includes('review') ? 'review' : 'reference',
+        region: (l as { region?: string }).region,
+      });
+    }
+  }
+  const gearSourceRefs: SourceReference[] = [];
+  const seenGearSources = new Set<string>();
+  for (const p of products) {
+    if (p.sourceReferences) {
+      for (const ref of p.sourceReferences) {
+        if (!seenGearSources.has(ref.source)) {
+          seenGearSources.add(ref.source);
+          const matchingLink = (p.retailer_links ?? []).find(
+            (l: { label: string; url: string }) =>
+              l.label.toLowerCase().includes(ref.source.toLowerCase()) && l.label.toLowerCase().includes('review'),
+          );
+          gearSourceRefs.push({ source: ref.source, note: ref.note, url: ref.url ?? matchingLink?.url });
+        }
+      }
+    }
+  }
+
   // "What I'm hearing" bullets become listener priorities
   // Suppress for comparisons — they add weight without decision value.
   const listenerPriorities = !isComparison && r.hearing && r.hearing.length > 0
@@ -2116,46 +2202,22 @@ export function gearResponseToAdvisory(
       // Comparison product images
       comparisonImages: upgradeImages,
 
+      // Retailer / review links and source attributions aggregated
+      // from `products` (hoisted above). For upgrade comparisons,
+      // `products` now carries [from, to] (gear-response.ts upgrade
+      // return) so external links survive into the rendered advisory.
+      links: gearLinks.length > 0 ? gearLinks : undefined,
+      sourceReferences: gearSourceRefs.length > 0 ? gearSourceRefs : undefined,
+
       // Saved-system personalization: secondary note, never main framing.
       savedSystemNote: (!isComparison && ctx?.savedSystemNote) ? ctx.savedSystemNote : undefined,
     }, undefined, r.subjects.length > 0 ? r.subjects : undefined));
   }
 
   // ── Extract rich data from matched products ──────────
-  // `products` is hoisted to the top of the function (above the
-  // upgradeAnalysis branch) so both branches share the same array.
+  // `products`, `gearLinks`, and `gearSourceRefs` are all hoisted above
+  // the upgradeAnalysis branch so both branches share the same data.
   const primaryProduct = products[0];
-
-  // Links from product catalog
-  const gearLinks: AdvisoryLink[] = [];
-  for (const p of products) {
-    for (const l of (p.retailer_links ?? [])) {
-      gearLinks.push({
-        label: l.label,
-        url: l.url,
-        kind: l.label.toLowerCase().includes('review') ? 'review' : 'reference',
-        region: (l as any).region,
-      });
-    }
-  }
-
-  // Source references with review URLs
-  const gearSourceRefs: SourceReference[] = [];
-  const seenGearSources = new Set<string>();
-  for (const p of products) {
-    if (p.sourceReferences) {
-      for (const ref of p.sourceReferences) {
-        if (!seenGearSources.has(ref.source)) {
-          seenGearSources.add(ref.source);
-          const matchingLink = (p.retailer_links ?? []).find(
-            (l: { label: string; url: string }) =>
-              l.label.toLowerCase().includes(ref.source.toLowerCase()) && l.label.toLowerCase().includes('review'),
-          );
-          gearSourceRefs.push({ source: ref.source, note: ref.note, url: ref.url ?? matchingLink?.url });
-        }
-      }
-    }
-  }
 
   // Interaction notes from product tendencies
   const interactionNotes: string[] = [];

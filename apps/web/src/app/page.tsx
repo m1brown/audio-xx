@@ -142,14 +142,43 @@ const LAYOUT = {
  * working palette so the rest of the app is untouched.
  */
 const EDITORIAL = {
-  bg: '#FFFFFF',
-  ink: '#111111',
-  inkMuted: '#4A4A4A',
-  faint: '#8A8A8A',
-  rule: '#E8E8E8',
-  accent: '#D85A1F',
-  narrow: '38rem',
+  bg: '#FCFCFB',           // matches body bg — hero textarea blends in
+  ink: '#151515',          // deep charcoal, slightly warmer than #111
+  inkMuted: '#3A3A3A',     // body prose — slightly darker for confidence
+  faint: '#8A8A8A',        // eyebrow labels, hints (unchanged)
+  rule: '#E5E5E5',         // hairlines — neutral, slightly lighter
+  accent: '#D85A1F',       // orange dot — used SPARINGLY (unchanged)
+  button: '#1A1A1A',       // charcoal CTA — replaces inherited slate-blue
+  buttonHover: '#000000',  // pure black on hover
+  narrow: '42rem',         // editorial column — slight widening from 38rem
 } as const;
+
+/**
+ * ── Canonical homepage headline (LOCKED 2026-05-08, refreshed twice) ────
+ *
+ * Single source of truth for the homepage hero h1 copy.
+ *
+ * 2026-05-08 (first refresh) shortened the line, dropped the
+ * self-referential "Audio XX helps you" preamble, and replaced
+ * "satisfaction" with the more emotionally human "happiness". The hero's
+ * visual weight was reduced (smaller scale, lighter weight, dark charcoal
+ * instead of near-black, narrower measure) so the page reads as an
+ * editorial advisory tool rather than a manifesto landing page.
+ *
+ * 2026-05-08 (second refresh) removed the supporting caption entirely.
+ * The hero now carries the headline alone — one emotional line, then
+ * the interaction surface — so the page feels closer to an editorial
+ * tool than to a positioning page. The methodology principle the old
+ * support line carried is implicit in the system identity caption above
+ * the headline ("System interaction · Listener alignment · Real
+ * trade-offs") and explicit in advisory output downstream.
+ *
+ * DO NOT modify casually. Changes to this string are equivalent to
+ * changing the product's positioning statement. If a copy refresh is
+ * required, surface it as an explicit decision (decision-log entry in
+ * `docs/strategic-briefing.md`), not an inline edit.
+ */
+const HOMEPAGE_HEADLINE = 'Choose components that align with your preferences, system, and long-term happiness.';
 
 /**
  * Curated starter prompts. The hero shows three of these as chips
@@ -1898,6 +1927,12 @@ export default function Home() {
             provisional.source = 'provisional_system';
             const provisionalAdvisory = consultationToAdvisory(provisional, undefined, advisoryCtx);
             provisionalAdvisory.unknownComponents = assessmentResult.unknownComponents;
+            // Trust-layer pass: tag the provisional system assessment
+            // with expanded-reasoning metadata so the unified
+            // ResponseHeader renders the calm indicator + caption
+            // instead of the old amber warning box.
+            provisionalAdvisory.reasoningMode = 'expanded';
+            provisionalAdvisory.fallbackReason = 'low_confidence_system';
             dispatchAdvisory(provisionalAdvisory, advisoryId());
             dispatch({ type: 'SET_LOADING', value: false });
             return;
@@ -1939,6 +1974,11 @@ export default function Home() {
           if (result.fields.introSummary) merged.introSummary = result.fields.introSummary;
           if (result.fields.keyObservation) merged.keyObservation = result.fields.keyObservation;
           if (result.fields.recommendedSequence) merged.recommendedSequence = result.fields.recommendedSequence;
+          // Trust-layer pass: memo overlay merged validated LLM prose
+          // into deterministic findings. Mark as 'hybrid' for
+          // observability — the deterministic structure is intact, so
+          // ResponseHeader continues to render as 'core' (no UI signal).
+          merged.reasoningMode = 'hybrid';
           dispatch({ type: 'UPDATE_ADVISORY', id: assessmentMsgId, advisory: merged });
         }).catch(() => {
           logOverlayFailure(assessmentMsgId, overlayComponentCount, Date.now() - overlayStart);
@@ -2024,7 +2064,12 @@ export default function Home() {
           : undefined;
         const inferred = await inferUnknownProduct(submittedText, subjectName);
         if (inferred) {
-          dispatchAdvisory(consultationToAdvisory(inferred, undefined, advisoryCtx), advisoryId());
+          // Trust-layer pass: LLM-inferred unknown subject. Surface the
+          // calm "Expanded reasoning" indicator + caption.
+          const inferredAdvisory = consultationToAdvisory(inferred, undefined, advisoryCtx);
+          inferredAdvisory.reasoningMode = 'expanded';
+          inferredAdvisory.fallbackReason = 'unknown_subject';
+          dispatchAdvisory(inferredAdvisory, advisoryId());
           dispatch({ type: 'SET_LOADING', value: false });
           return;
         }
@@ -2037,7 +2082,14 @@ export default function Home() {
             tendencies: `If you can tell me more about this product — what type it is, its approximate price range, or what you've heard about it — I can offer general directional guidance based on the design approach. Alternatively, I can suggest products in a similar category that I do have detailed data on.`,
             followUp: `What category is ${subjectName} — is it a DAC, amplifier, speaker, or something else?`,
           };
-          dispatchAdvisory(consultationToAdvisory(fallbackResponse, undefined, advisoryCtx), advisoryId());
+          // Trust-layer pass: thin/degraded fallback response. Curated
+          // layer didn't produce a complete answer, LLM inference also
+          // failed, so the renderer surfaces the trust signal explicitly
+          // rather than letting the response read as authoritative.
+          const fallbackAdvisory = consultationToAdvisory(fallbackResponse, undefined, advisoryCtx);
+          fallbackAdvisory.reasoningMode = 'expanded';
+          fallbackAdvisory.fallbackReason = 'thin_output';
+          dispatchAdvisory(fallbackAdvisory, advisoryId());
           dispatch({ type: 'SET_LOADING', value: false });
           return;
         }
@@ -2131,6 +2183,14 @@ export default function Home() {
       const assessment = buildProductAssessment(assessmentCtx);
       if (assessment) {
         const advisory = assessmentToAdvisory(assessment, advisoryCtx);
+        // Trust-layer pass: when the assessment is on a product that
+        // didn't match the curated catalog (brand-knowledge fallback),
+        // tag it so the unified ResponseHeader caption fires instead of
+        // the legacy in-format catalog-warning block (now removed).
+        if (assessment.catalogMatch === false) {
+          advisory.reasoningMode = 'expanded';
+          advisory.fallbackReason = 'brand_only';
+        }
         dispatchAdvisory(advisory);
         // Phase C blocker fix #2: set consultation context so elliptical
         // follow-ups ("would it fit my system?", "how does it pair?")
@@ -2193,21 +2253,53 @@ export default function Home() {
         // Build the advisory once so we can dispatch it and (for comparisons)
         // lift its sourceReferences/links into the active-comparison state.
         const gearAdvisory = gearResponseToAdvisory(gearResponse, undefined, advisoryCtx);
-        // Store comparison context for product-level comparisons. Carry
-        // forward sources/links so criterion follow-ups and system-relative
-        // refinements stay as rich as the originating turn.
-        if (intent === 'comparison' && turnCtx.subjectMatches.length >= 2) {
+
+        // ── Comparison context resolution ───────────────────
+        // Two paths produce a comparison advisory: an explicit comparison
+        // intent with two subjects, OR an upgrade-comparison response
+        // (gearResponse.upgradeAnalysis populated). Same-brand upgrade
+        // questions like "should I upgrade my Hugo to Hugo TT2?" can
+        // collapse to a single brand subject + model variants, which
+        // failed the old `subjectMatches.length >= 2` gate. We now also
+        // accept the from/to products carried on `matchedProducts` for
+        // upgrade comparisons, synthesizing SubjectMatch entries for the
+        // comparison-state machine.
+        const isUpgradeComparison = !!gearResponse.upgradeAnalysis
+          && (gearResponse.matchedProducts?.length ?? 0) >= 2;
+        const isSubjectMatchedComparison = intent === 'comparison'
+          && turnCtx.subjectMatches.length >= 2;
+
+        if (isUpgradeComparison || isSubjectMatchedComparison) {
+          // Prefer the from/to products on upgrade comparisons (they're
+          // the actual decision pair, even when the user typed only a
+          // brand name). Fall back to subjectMatches for general
+          // comparisons where matchedProducts may not perfectly align.
+          let left: SubjectMatch;
+          let right: SubjectMatch;
+          let scope: 'brand' | 'product';
+
+          if (isUpgradeComparison && gearResponse.matchedProducts && gearResponse.matchedProducts.length >= 2) {
+            const [from, to] = gearResponse.matchedProducts;
+            left = { name: from.name, kind: 'product' };
+            right = { name: to.name, kind: 'product' };
+            scope = 'product';
+          } else {
+            left = turnCtx.subjectMatches[0];
+            right = turnCtx.subjectMatches[1];
+            scope = turnCtx.subjectMatches.every((m) => m.kind === 'product') ? 'product' : 'brand';
+          }
+
           dispatch({
             type: 'SET_COMPARISON',
-            left: turnCtx.subjectMatches[0],
-            right: turnCtx.subjectMatches[1],
-            scope: turnCtx.subjectMatches.every((m) => m.kind === 'product') ? 'product' : 'brand',
+            left,
+            right,
+            scope,
             sourceReferences: gearAdvisory.sourceReferences,
             links: gearAdvisory.links,
           });
         }
         // Store consultation context for single-subject follow-ups
-        if (intent === 'gear_inquiry' && turnCtx.subjectMatches.length > 0) {
+        if (intent === 'gear_inquiry' && !isUpgradeComparison && turnCtx.subjectMatches.length > 0) {
           dispatch({
             type: 'SET_CONSULTATION_CONTEXT',
             subjects: turnCtx.subjectMatches,
@@ -3210,6 +3302,13 @@ export default function Home() {
                   budget: shoppingCtx.budgetAmount,
                   debug: orchestratorOutput.debug,
                 });
+                // Trust-layer pass: orchestrator render path uses
+                // validated LLM prose over deterministic catalog
+                // selection. Mark as 'hybrid' for observability — no
+                // visible UI distinction (treated as 'core' by
+                // ResponseHeader). The deterministic catalog/selection
+                // structure is intact.
+                adapted.reasoningMode = 'hybrid';
                 finalAdvisory = adapted;
                 renderSource = 'orchestrator';
                 orchestratorDebug = orchestratorOutput.debug;
@@ -3500,6 +3599,11 @@ export default function Home() {
                     ...deterministicShoppingAdvisory,
                     options: enrichedOptions,
                     editorialClosing: closing ?? undefined,
+                    // Trust-layer pass: shopping editorial overlay
+                    // merged validated LLM prose into the deterministic
+                    // recommendation set. Mark as 'hybrid' for
+                    // observability — no UI signal (treated as 'core').
+                    reasoningMode: 'hybrid',
                   },
                 });
               })
@@ -3875,33 +3979,25 @@ export default function Home() {
     <div
       style={{
         // Pass 10 (visual polish): the flat warm-cream backdrop
-        // carried the whole page on a single value and read a little
-        // prototype-flat. A gentle vertical gradient from the cream
-        // base to a slightly deeper warm tone keeps the tone calm
-        // and editorial while giving the page a sense of depth. The
-        // shift is small (about one step on the cream scale) so no
-        // color is ever bright or assertive.
-        background: `linear-gradient(180deg, ${COLOR.bg} 0%, #F2EDE1 100%)`,
+        // Phase 2 palette normalization: flat warm off-white. The earlier
+        // cream→beige gradient + tinted central column read muddy and
+        // contradicted the editorial direction. A single calm tone keeps
+        // the page integrated and lets the hero typography carry the
+        // visual weight, not the surface.
+        background: '#FCFCFB',
         minHeight: '100vh',
         width: '100%',
       }}
     >
     <div
       style={{
-        // Pass 9: outer container widened so cards have horizontal room.
-        // Per-section maxWidth wrappers below keep text blocks readable.
-        //
-        // Pass 10 (visual polish): a single-hairline left rail in the
-        // lightest warm-neutral border token anchors the content
-        // column without introducing a dashboard feel. Outer padding
-        // lifted slightly (top + sides) so the main column breathes
-        // against the gradient backdrop and reads as intentional
-        // rather than tightly centered.
+        // Phase 2: rail border removed — the central column should feel
+        // integrated into the page, not like a separate container block.
+        // Outer padding kept; it preserves the editorial breathing room.
         maxWidth: LAYOUT.pageMax,
         margin: '0 auto',
         padding: '3.25rem 2.5rem 3rem',
-        borderLeft: `1px solid ${COLOR.borderLight}`,
-        color: COLOR.textPrimary,
+        color: EDITORIAL.ink,
         lineHeight: 1.6,
       }}
     >
@@ -3941,22 +4037,27 @@ export default function Home() {
 
       {/* Brand signal — small pillared line directly under the wordmark.
        * Present on both landing and conversation views so the identity
-       * carries through the whole session without being loud. */}
+       * carries through the whole session without being loud. Refined to
+       * read as a quiet caption rather than a section label.
+       *
+       * 2026-05-08 second pass: marginBottom tightened (0.65rem → 0.55rem)
+       * to reduce vertical hero footprint without touching layout. */}
       <div
         style={{
-          marginBottom: '0.75rem',
-          fontSize: '0.72rem',
-          fontWeight: 600,
-          letterSpacing: '0.08em',
+          marginBottom: '0.55rem',
+          fontSize: '0.66rem',
+          fontWeight: 500,
+          letterSpacing: '0.14em',
           textTransform: 'uppercase' as const,
-          color: COLOR.textSecondary,
+          color: EDITORIAL.faint,
         }}
       >
         System interaction &nbsp;&middot;&nbsp; Listener alignment &nbsp;&middot;&nbsp; Real trade-offs
       </div>
 
-      {/* System badge + panel */}
-      <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
+      {/* System badge + panel — marginBottom tightened (0.5rem → 0.4rem)
+       *  in the 2026-05-08 second-pass hero refresh. */}
+      <div style={{ position: 'relative', marginBottom: '0.4rem' }}>
         <SystemBadge onClick={() => setSystemPanelOpen((v) => !v)} />
         {/* Fallback: only shown when no systems exist at all (SystemBadge handles multi-system) */}
         {!audioState.activeSystemRef && audioState.savedSystems.length === 0 && !audioState.draftSystem && !systemPanelOpen && (
@@ -4041,35 +4142,35 @@ export default function Home() {
        * prompts further down. */}
       {!hasMessages && (
         <>
+          {/* Hero — fourth pass (2026-05-08): headline color softened
+           *  from the second-pass dark charcoal #2A2A2A to charcoal
+           *  (EDITORIAL.inkMuted, #3A3A3A). Same token used for body
+           *  prose elsewhere — keeps the hero on the document's calmest
+           *  tonal level instead of leaning toward near-black. Other
+           *  visual-weight parameters from prior passes preserved
+           *  (scale ~17% smaller than original lock, weight 500, measure
+           *  36rem, no supporting caption). The headline's internal
+           *  marginBottom stays at 0; the container's marginBottom
+           *  carries the gap to the next block. */}
           <div
             style={{
-              marginTop: '0.4rem',
-              marginBottom: '2.1rem',
-              maxWidth: EDITORIAL.narrow,
+              marginTop: '0.25rem',
+              marginBottom: '1rem',
+              maxWidth: '36rem',
             }}
           >
             <h1
               style={{
-                margin: '0 0 1.1rem 0',
-                fontSize: 'clamp(1.7rem, 3.5vw, 2.1rem)',
-                lineHeight: 1.18,
-                letterSpacing: '-0.022em',
-                fontWeight: 600,
-                color: EDITORIAL.ink,
-              }}
-            >
-              Every component evaluated by what it does in your system &mdash; not by what it does alone.
-            </h1>
-            <p
-              style={{
                 margin: 0,
-                fontSize: '1.02rem',
-                lineHeight: 1.65,
+                fontSize: 'clamp(1.55rem, 3vw, 1.85rem)',
+                lineHeight: 1.2,
+                letterSpacing: '-0.018em',
+                fontWeight: 500,
                 color: EDITORIAL.inkMuted,
               }}
             >
-              Audio XX evaluates components in the context of your actual chain — how each interacts with the others, where synergies form, where trade-offs emerge. Decisions are framed by your listening priorities, not by spec sheets in isolation.
-            </p>
+              {HOMEPAGE_HEADLINE}
+            </h1>
           </div>
 
           {/* Compact taste widget — authenticated users with profile data */}
@@ -4164,7 +4265,7 @@ export default function Home() {
                   flexWrap: 'wrap',
                   gap: '0.45rem',
                   marginTop: '0.1rem',
-                  marginBottom: '1.75rem',
+                  marginBottom: '1.15rem',
                   maxWidth: EDITORIAL.narrow,
                 }}
               >
@@ -4174,12 +4275,12 @@ export default function Home() {
                     type="button"
                     onClick={() => handleSubmit(prompt)}
                     style={{
-                      padding: '0.45rem 0.85rem',
+                      padding: '0.4rem 0.8rem',
                       background: 'transparent',
                       border: `1px solid ${EDITORIAL.rule}`,
-                      borderRadius: 6,
+                      borderRadius: 3,
                       cursor: 'pointer',
-                      fontSize: '0.88rem',
+                      fontSize: '0.9rem',
                       fontWeight: 400,
                       color: EDITORIAL.inkMuted,
                       fontFamily: 'inherit',
@@ -4189,7 +4290,7 @@ export default function Home() {
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.color = EDITORIAL.ink;
-                      e.currentTarget.style.borderColor = EDITORIAL.ink;
+                      e.currentTarget.style.borderColor = EDITORIAL.faint;
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.color = EDITORIAL.inkMuted;
@@ -4336,17 +4437,18 @@ export default function Home() {
                 ? 'Continue describing what you hear…'
                 : 'Describe your system, a listening problem, or what you\'re considering.'
           }
+          className={hasMessages ? '' : 'audioxx-editorial-input'}
           style={{
             width: '100%',
-            minHeight: hasMessages ? 72 : 132,
-            padding: hasMessages ? '1rem 1.1rem' : '1.1rem 1.15rem',
+            minHeight: hasMessages ? 72 : 114,
+            padding: hasMessages ? '1rem 1.1rem' : '1rem 1.15rem',
             border: hasMessages
               ? `1.5px solid ${COLOR.border}`
               : `1px solid ${EDITORIAL.rule}`,
             borderRadius: hasMessages ? 10 : 6,
             outline: 'none',
-            fontSize: hasMessages ? '0.98rem' : '1rem',
-            lineHeight: 1.6,
+            fontSize: hasMessages ? '0.98rem' : '1.02rem',
+            lineHeight: 1.55,
             resize: 'vertical',
             background: hasMessages ? COLOR.inputBg : EDITORIAL.bg,
             color: hasMessages ? COLOR.textPrimary : EDITORIAL.ink,
@@ -4375,31 +4477,31 @@ export default function Home() {
           }}
         />
 
-        {/* Send button */}
+        {/* Send button — Phase 2: charcoal/black editorial CTA, no slate.
+         * Reads as quiet and intentional rather than as a dashboard
+         * primary action. Disabled state uses the neutral hairline. */}
         <button
           type="button"
           onClick={() => handleSubmit()}
           disabled={isLoading || !currentInput.trim()}
           style={{
-            // Pass 10: a touch more space between textarea and Send
-            // so the action reads as a separate commitment step.
             marginTop: '0.85rem',
             padding: '0.6rem 1.6rem',
-            background: isLoading || !currentInput.trim() ? COLOR.border : COLOR.accent,
-            color: isLoading || !currentInput.trim() ? COLOR.textSecondary : '#FFFFFF',
+            background: isLoading || !currentInput.trim() ? EDITORIAL.rule : EDITORIAL.button,
+            color: isLoading || !currentInput.trim() ? EDITORIAL.faint : '#FFFFFF',
             border: 'none',
-            borderRadius: 8,
+            borderRadius: 4,
             fontSize: '0.88rem',
-            fontWeight: 600,
-            letterSpacing: '0.04em',
+            fontWeight: 500,
+            letterSpacing: '0.02em',
             cursor: isLoading || !currentInput.trim() ? 'default' : 'pointer',
-            transition: 'background 0.15s ease, transform 0.1s ease',
+            transition: 'background 0.15s ease',
           }}
           onMouseEnter={(e) => {
-            if (!isLoading && currentInput.trim()) e.currentTarget.style.background = COLOR.accentHover;
+            if (!isLoading && currentInput.trim()) e.currentTarget.style.background = EDITORIAL.buttonHover;
           }}
           onMouseLeave={(e) => {
-            if (!isLoading && currentInput.trim()) e.currentTarget.style.background = COLOR.accent;
+            if (!isLoading && currentInput.trim()) e.currentTarget.style.background = EDITORIAL.button;
           }}
         >
           {isLoading ? 'Thinking…' : 'Send'}
