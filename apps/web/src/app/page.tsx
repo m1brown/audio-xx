@@ -4072,7 +4072,10 @@ export default function Home() {
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleReset(); }}
         style={{
-          borderTop: `2.5px solid ${COLOR.accent}`,
+          // Pass-8: tiny top accent rule picks up the restrained brand
+          // red (#C83A3A), matching the XX span just below it. Replaces
+          // the prior slate-blue (COLOR.accent #1F3A5F).
+          borderTop: '2.5px solid #C83A3A',
           width: 40,
           marginBottom: '1.75rem',
           cursor: 'pointer',
@@ -4102,9 +4105,11 @@ export default function Home() {
           cursor: 'pointer',
         }}
       >
-        {/* XX inherits parent charcoal — no inline color, no warm tint.
-         *  The bold weight comes from the parent h1 (600). */}
-        Audio <span>XX</span>
+        {/* XX picks up the restrained brand red (#C83A3A) — pass-8
+         *  subtle accent restoration. Quieter than the saturated reds
+         *  used by the radar/profile palette so it reads as identity
+         *  rather than competing with the analytical color language. */}
+        Audio <span style={{ color: '#C83A3A' }}>XX</span>
       </h1>
 
       {/* Brand signal — small pillared line directly under the wordmark.
@@ -4844,10 +4849,15 @@ function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture, onFollowU
       >
         <div
           style={{
+            // User message bubble — light neutral grey. Pass-9
+            // (2026-05-09) replaced the prior warm beige (#e3dcc8) and
+            // the slightly cool chipBorder (#CBD5E1) with neutral
+            // greys that match the rest of the workspace's monochrome
+            // direction. No warm tint, no blue tint.
             maxWidth: '82%',
             padding: '0.85rem 1.1rem',
-            background: '#e3dcc8',
-            border: `1px solid ${COLOR.chipBorder}`,
+            background: '#EDEDED',
+            border: '1px solid #E0E0E0',
             borderRadius: '12px 12px 4px 12px',
             color: COLOR.textPrimary,
             fontSize: '0.96rem',

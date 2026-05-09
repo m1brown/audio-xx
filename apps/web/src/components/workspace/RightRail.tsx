@@ -39,7 +39,8 @@ const RAIL = {
   inkMuted: '#5A5A5A',      // softened body
   faint: '#9A9A9A',         // section labels + empty states + restraint footer
   rule: '#EDEDED',          // lower-contrast hairline
-  link: '#4A5568',          // cool slate — action links (matches COLOR.textSecondary)
+  link: '#4A5568',          // cool slate — action link text (matches COLOR.textSecondary)
+  accent: '#C83A3A',        // restrained brand red — action-link arrow glyphs ONLY
 } as const;
 
 /** Section label — uppercase muted-gray eyebrow. Structural marker
@@ -113,7 +114,7 @@ export default function RightRail({
             </div>
             <div>{topTraitLabels.join(' · ')}</div>
             <Link href="/profile" style={TINY_LINK_STYLE}>
-              Edit profile →
+              Edit profile <span style={{ color: RAIL.accent }}>→</span>
             </Link>
           </div>
         ) : (
@@ -153,7 +154,7 @@ export default function RightRail({
               ))}
             </div>
             <Link href="/systems" style={TINY_LINK_STYLE}>
-              Manage systems →
+              Manage systems <span style={{ color: RAIL.accent }}>→</span>
             </Link>
           </div>
         ) : (

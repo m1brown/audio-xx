@@ -43,7 +43,8 @@ const RAIL = {
   inkMuted: '#5A5A5A',      // soft body — idle nav links
   faint: '#9A9A9A',         // section eyebrows
   rule: '#EDEDED',          // low-contrast hairline
-  mark: '#C8C8C8',          // cool light gray — accent rule + current-item left border
+  mark: '#C8C8C8',          // cool light gray — kept as a token for hairlines / inactive marks
+  accent: '#C83A3A',        // restrained brand red — top accent rule + active left border ONLY
 } as const;
 
 /** Soft section eyebrow — uppercase, small scale, faint gray. Marks the
@@ -106,7 +107,10 @@ function ConversationItem({ onReset }: { onReset: () => void }) {
       aria-current="page"
       style={{
         ...NAV_ITEM_BASE,
-        borderLeft: `2px solid ${RAIL.mark}`,
+        // Pass-8 accent restoration: active left border picks up the
+        // restrained brand red. Text stays charcoal — only the small
+        // 2px-wide indicator carries color, keeping the row quiet.
+        borderLeft: `2px solid ${RAIL.accent}`,
         fontWeight: 500,
         color: RAIL.ink,
         cursor: 'pointer',
@@ -135,15 +139,18 @@ export default function LeftRail({ onReset }: LeftRailProps) {
         paddingTop: 0,
       }}
     >
-      {/* Reset affordance — the small accent rule. Subtle cool-gray
-       *  per the monochrome direction. Doubles as a click target. */}
+      {/* Reset affordance — the small top accent rule. Pass-8 picks
+       *  up the restrained brand red so this 24px mark visually rhymes
+       *  with the 40px main-column accent rule and the XX span — a
+       *  single tiny identity gesture across the workspace. Doubles
+       *  as a click target. */}
       <div
         onClick={onReset}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onReset(); }}
         style={{
-          borderTop: `2px solid ${RAIL.mark}`,
+          borderTop: `2px solid ${RAIL.accent}`,
           width: 24,
           cursor: 'pointer',
         }}

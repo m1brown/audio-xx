@@ -239,11 +239,11 @@ nav .brand {
   text-transform: uppercase;
 }
 nav .brand-accent {
-  /* Pass 6: fully neutral. The XX span now inherits the same charcoal
-   * #2a2a2a as the surrounding .brand text, removing the prior
-   * saffron (and prior warm gold) entirely. The span retains its bold
-   * weight purely as a structural carrier. */
-  color: #2a2a2a;
+  /* Pass 8: subtle accent restoration. The XX picks up a single
+   * restrained brand red (#C83A3A) — quieter than the saturated reds
+   * the radar uses, recognizable as identity without reading as
+   * marketing chrome. No warm tint, no blue tint. */
+  color: #C83A3A;
   font-weight: 700;
 }
 nav .nav-radar-link {
