@@ -420,7 +420,11 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Well-rounded ESS implementation with good texture and detail retrieval. Less aggressive than the Topping, more neutral than the Denafrips.',
     retailer_links: [
-      { label: 'Gustard', url: 'https://www.gustard.cn/productinfo/3758918.html' },
+      // Manufacturer link updated 2026-05-09 (link-QA pass): gustard.cn
+      // product URLs (productinfo/<id>.html) verified broken on the X26 Pro
+      // entry and the same path pattern is used here. Pointing to gustard.com
+      // root — same fix pattern applied across the X16 / R26 / X26 Pro batch.
+      { label: 'Gustard', url: 'https://www.gustard.com' },
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B09RFDMZPJ' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/gustard-x16' },
     ],
@@ -1361,7 +1365,7 @@ export const DAC_PRODUCTS: Product[] = [
       'FPGA-based pulse array design with exceptional timing resolution and transient definition. Detail without analytical edge — fast, articulate, and composed.',
     retailer_links: [
       { label: 'Chord Electronics', url: 'https://chordelectronics.co.uk/product/qutest/' },
-      { label: 'Amazon', url: 'https://www.amazon.com/dp/B079C63P1V' },
+      // Amazon link removed 2026-05-09 — verified broken/unreachable.
     ],
     tendencies: {
       confidence: 'high',
@@ -1552,7 +1556,9 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Discrete R2R implementation offering a balance of clarity and tonal body. Less warm than the Denafrips, more textured than delta-sigma alternatives.',
     retailer_links: [
-      { label: 'Gustard', url: 'https://www.gustard.cn/productinfo/3758922.html' },
+      // Manufacturer link updated 2026-05-09 (link-QA pass): same gustard.cn
+      // path pattern as X26 Pro / X16 — replaced with gustard.com root.
+      { label: 'Gustard', url: 'https://www.gustard.com' },
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B0BL2F62LJ' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/gustard-r26' },
     ],
@@ -1809,7 +1815,9 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Dual-mono ESS Sabre implementation with more analogue output stage investment than typical Chi-Fi. More tonal body than the Topping/SMSL tier while retaining measurement-class resolution.',
     retailer_links: [
-      { label: 'Gustard', url: 'https://www.gustard.cn/productinfo/3758920.html' },
+      // Manufacturer link updated 2026-05-09: prior gustard.cn product URL
+      // (productinfo/3758920.html) was broken. Switched to gustard.com root.
+      { label: 'Gustard', url: 'https://www.gustard.com' },
       { label: 'Apos Audio', url: 'https://apos.audio/products/gustard-x26-pro' },
     ],
     philosophy: 'analytical',
