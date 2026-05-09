@@ -87,6 +87,8 @@ import {
 } from '@/lib/assistant/orchestratorAdapter';
 import SystemBadge from '@/components/system/SystemBadge';
 import SystemPanel from '@/components/system/SystemPanel';
+import LeftRail from '@/components/workspace/LeftRail';
+import RightRail from '@/components/workspace/RightRail';
 import SystemEditor from '@/components/system/SystemEditor';
 import SystemSavePrompt from '@/components/system/SystemSavePrompt';
 import type { DraftSystem } from '@/lib/system-types';
@@ -147,7 +149,9 @@ const EDITORIAL = {
   inkMuted: '#3A3A3A',     // body prose — slightly darker for confidence
   faint: '#8A8A8A',        // eyebrow labels, hints (unchanged)
   rule: '#E5E5E5',         // hairlines — neutral, slightly lighter
-  accent: '#D85A1F',       // orange dot — used SPARINGLY (unchanged)
+  // (Dead `accent: '#D85A1F'` token removed pass-6 alongside the
+  //  monochrome direction — there are no consumers of it in the
+  //  codebase. Re-introduce only with explicit design approval.)
   button: '#1A1A1A',       // charcoal CTA — replaces inherited slate-blue
   buttonHover: '#000000',  // pure black on hover
   narrow: '42rem',         // editorial column — slight widening from 38rem
@@ -4025,18 +4029,42 @@ export default function Home() {
         width: '100%',
       }}
     >
+    {/* Workspace shell — 3-column grid on desktop (left rail + main +
+     *  right rail), collapses progressively below tablet/mobile widths.
+     *  This is layout architecture only: no routing change, no advisory
+     *  rendering change, no engine touch.
+     *
+     *  Dimensions (refined 2026-05-09):
+     *    Left rail    184px      atmospheric, navigational
+     *    Main column  ≤ 820px    existing content, capped to keep the
+     *                            reading measure honest at wide viewports
+     *    Right rail   296px      semantic context (Listener / System /
+     *                            Recent)
+     *    Gap          1.5rem (24px)
+     *    Outer max    LAYOUT.pageMax (1440)
+     *
+     *  Total at full grid: 184 + 820 + 296 + 48 (two gaps) = 1348px,
+     *  comfortably under the 1360px content area at pageMax with
+     *  2.5rem padding both sides.
+     *
+     *  Responsive: see globals.css `audioxx-workspace-grid` rules. */}
     <div
+      className="audioxx-workspace-grid"
       style={{
-        // Phase 2: rail border removed — the central column should feel
-        // integrated into the page, not like a separate container block.
-        // Outer padding kept; it preserves the editorial breathing room.
         maxWidth: LAYOUT.pageMax,
         margin: '0 auto',
         padding: '3.25rem 2.5rem 3rem',
         color: EDITORIAL.ink,
         lineHeight: 1.6,
+        display: 'grid',
+        gridTemplateColumns: '184px minmax(0, 820px) 296px',
+        gap: '1.5rem',
+        alignItems: 'start',
       }}
     >
+      <LeftRail onReset={handleReset} />
+
+      <div className="audioxx-workspace-main" style={{ minWidth: 0 }}>
       {/* Header — always visible */}
       <div
         onClick={() => handleReset()}
@@ -4057,18 +4085,26 @@ export default function Home() {
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleReset(); }}
         style={{
-          // Pass 9: bumped weight for stronger top-of-page hierarchy
-          // now that the container is wider.
+          // Pass-7 typography refinement (2026-05-09):
+          //   Reduced from 2.15rem / 700 / -0.03em / 1.1 / COLOR.textPrimary
+          //   to 1.3rem / 600 / -0.015em / 1.2 / #2A2A2A.
+          // The wordmark now reads as a workspace section heading rather
+          // than a homepage masthead. Top-nav already establishes brand
+          // identity, so the center-column wordmark can step down. Color
+          // moved off the slightly-cool COLOR.textPrimary (#111827) to
+          // neutral charcoal — no blue/warm tint.
           marginBottom: '0.2rem',
-          fontSize: '2.15rem',
-          fontWeight: 700,
-          letterSpacing: '-0.03em',
-          lineHeight: 1.1,
-          color: COLOR.textPrimary,
+          fontSize: '1.3rem',
+          fontWeight: 600,
+          letterSpacing: '-0.015em',
+          lineHeight: 1.2,
+          color: '#2A2A2A',
           cursor: 'pointer',
         }}
       >
-        Audio <span style={{ color: COLOR.accent }}>XX</span>
+        {/* XX inherits parent charcoal — no inline color, no warm tint.
+         *  The bold weight comes from the parent h1 (600). */}
+        Audio <span>XX</span>
       </h1>
 
       {/* Brand signal — small pillared line directly under the wordmark.
@@ -4188,6 +4224,19 @@ export default function Home() {
            *  36rem, no supporting caption). The headline's internal
            *  marginBottom stays at 0; the container's marginBottom
            *  carries the gap to the next block. */}
+          {/* Pass-7 typography refinement (2026-05-09):
+           *   Reduced scale + tightened rhythm so the hero feels
+           *   editorial / workstation-like rather than a SaaS landing
+           *   hero, while remaining the strongest text block in the
+           *   workspace.
+           *   - fontSize:      clamp(1.55rem, 3vw, 1.85rem) → clamp(1.4rem, 2.6vw, 1.6rem)
+           *   - lineHeight:    1.2   → 1.18  (slightly tighter)
+           *   - letterSpacing: -0.018em → -0.015em (matches wordmark)
+           *   - fontWeight:    500 (unchanged)
+           *   - color:         EDITORIAL.inkMuted #3A3A3A → #2A2A2A
+           *                    (slightly darker / more grounded; same
+           *                    neutral charcoal as the wordmark)
+           *   - maxWidth 36rem unchanged. */}
           <div
             style={{
               marginTop: '0.25rem',
@@ -4198,11 +4247,11 @@ export default function Home() {
             <h1
               style={{
                 margin: 0,
-                fontSize: 'clamp(1.55rem, 3vw, 1.85rem)',
-                lineHeight: 1.2,
-                letterSpacing: '-0.018em',
+                fontSize: 'clamp(1.4rem, 2.6vw, 1.6rem)',
+                lineHeight: 1.18,
+                letterSpacing: '-0.015em',
                 fontWeight: 500,
-                color: EDITORIAL.inkMuted,
+                color: '#2A2A2A',
               }}
             >
               {HOMEPAGE_HEADLINE}
@@ -4513,9 +4562,12 @@ export default function Home() {
           }}
         />
 
-        {/* Send button — Phase 2: charcoal/black editorial CTA, no slate.
-         * Reads as quiet and intentional rather than as a dashboard
-         * primary action. Disabled state uses the neutral hairline. */}
+        {/* Send button — Pass 6 (2026-05-09 PM): fully reverted to the
+         *  charcoal CTA. No warm tint anywhere. Active state uses the
+         *  EDITORIAL.button token (#1A1A1A) with white text; hover
+         *  deepens to pure black. Disabled / loading state drops to
+         *  neutral grey (#F2F2F2 + EDITORIAL.faint text) so active and
+         *  disabled stay clearly distinguishable. */}
         <button
           type="button"
           onClick={() => handleSubmit()}
@@ -4523,7 +4575,7 @@ export default function Home() {
           style={{
             marginTop: '0.85rem',
             padding: '0.6rem 1.6rem',
-            background: isLoading || !currentInput.trim() ? EDITORIAL.rule : EDITORIAL.button,
+            background: isLoading || !currentInput.trim() ? '#F2F2F2' : EDITORIAL.button,
             color: isLoading || !currentInput.trim() ? EDITORIAL.faint : '#FFFFFF',
             border: 'none',
             borderRadius: 4,
@@ -4534,10 +4586,14 @@ export default function Home() {
             transition: 'background 0.15s ease',
           }}
           onMouseEnter={(e) => {
-            if (!isLoading && currentInput.trim()) e.currentTarget.style.background = EDITORIAL.buttonHover;
+            if (!isLoading && currentInput.trim()) {
+              e.currentTarget.style.background = EDITORIAL.buttonHover;
+            }
           }}
           onMouseLeave={(e) => {
-            if (!isLoading && currentInput.trim()) e.currentTarget.style.background = EDITORIAL.button;
+            if (!isLoading && currentInput.trim()) {
+              e.currentTarget.style.background = EDITORIAL.button;
+            }
           }}
         >
           {isLoading ? 'Thinking…' : 'Send'}
@@ -4646,6 +4702,78 @@ export default function Home() {
         )}
       </div>
 
+      </div> {/* /audioxx-workspace-main */}
+
+      <RightRail
+        topTraitLabels={
+          tasteProfile && tasteProfile.confidence > 0
+            ? topTraits(tasteProfile, 3).map((t) => t.label)
+            : []
+        }
+        activeSystemComponents={(() => {
+          // Mirror the same chain-resolution logic used by the curated
+          // starter prompts above (line ~4174). Active = saved or draft.
+          const ref = audioState.activeSystemRef;
+          if (!ref) {
+            // No active ref but a single saved system → show it
+            if (audioState.savedSystems.length === 1) {
+              return audioState.savedSystems[0].components.map((c) => {
+                const b = (c.brand || '').trim();
+                const n = (c.name || '').trim();
+                return b && !n.toLowerCase().startsWith(b.toLowerCase())
+                  ? `${b} ${n}` : n || b || 'Unknown';
+              });
+            }
+            return [];
+          }
+          if (ref.kind === 'draft' && audioState.draftSystem) {
+            return audioState.draftSystem.components.map((c) => {
+              const b = (c.brand || '').trim();
+              const n = (c.name || '').trim();
+              return b && !n.toLowerCase().startsWith(b.toLowerCase())
+                ? `${b} ${n}` : n || b || 'Unknown';
+            });
+          }
+          const saved = audioState.savedSystems.find(
+            (s) => ref.kind === 'saved' && s.id === ref.id,
+          );
+          return saved
+            ? saved.components.map((c) => {
+                const b = (c.brand || '').trim();
+                const n = (c.name || '').trim();
+                return b && !n.toLowerCase().startsWith(b.toLowerCase())
+                  ? `${b} ${n}` : n || b || 'Unknown';
+              })
+            : [];
+        })()}
+        activeSystemName={(() => {
+          const ref = audioState.activeSystemRef;
+          if (!ref) {
+            return audioState.savedSystems.length === 1
+              ? audioState.savedSystems[0].name
+              : undefined;
+          }
+          if (ref.kind === 'draft') return audioState.draftSystem?.name;
+          return audioState.savedSystems.find(
+            (s) => ref.kind === 'saved' && s.id === ref.id,
+          )?.name;
+        })()}
+        recentActivity={(() => {
+          // Last 3 USER messages, trimmed to a short label. Skips
+          // assistant messages and system-internal entries.
+          const userMessages = messages
+            .filter((m) => m.role === 'user')
+            .map((m) => m.content)
+            .reverse()
+            .slice(0, 3);
+          // Truncate each to a reasonable label length — the rail's
+          // CSS `text-overflow: ellipsis` handles overflow visually too.
+          return userMessages.map((t) =>
+            t.length > 60 ? t.slice(0, 57).trim() + '…' : t,
+          );
+        })()}
+      />
+
     </div>
 
     {/* Toast notification — lightweight feedback for system switch/save */}
@@ -4739,6 +4867,12 @@ function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture, onFollowU
         marginBottom: '1.75rem',
         paddingLeft: '0.25rem',
       }}>
+        {/* Per-advisory turn marker. The "Audio XX" wordmark text was
+         *  removed 2026-05-09 — the persistent left-rail wordmark now
+         *  carries identity across the session, so repeating it on every
+         *  advisory turn was visual duplication. The dot + top hairline
+         *  stay as a quiet turn rhythm marker; the dot uses a light
+         *  grey rather than accent color to keep the rhythm calm. */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -4751,18 +4885,9 @@ function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture, onFollowU
             width: 6,
             height: 6,
             borderRadius: '50%',
-            background: COLOR.accent,
+            background: '#C8C8C8',
             flexShrink: 0,
           }} />
-          <span style={{
-            fontSize: '0.7rem',
-            fontWeight: 600,
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase' as const,
-            color: COLOR.textSecondary,
-          }}>
-            Audio XX
-          </span>
         </div>
         <AdvisoryMessage
           advisory={message.advisory}
