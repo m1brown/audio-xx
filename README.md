@@ -2,6 +2,28 @@
 
 A listener-driven suggestion engine for thoughtful hi-fi system building.
 
+**Status (2026-05-09):** active development on the `friends` branch; pre-public-beta. The deterministic reasoning engine is production-quality; an LLM overlay for unknown-product handling is planned but not yet wired. See [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md) for an honest current-state assessment.
+
+## Documentation
+
+Operational and architectural documentation lives in [`docs/`](docs/). Recommended reading order for a new contributor:
+
+| Order | Document | Purpose |
+|---|---|---|
+| 1 | [`docs/TECHNICAL_HANDOFF.md`](docs/TECHNICAL_HANDOFF.md) | Onboarding memo for technical stewards |
+| 2 | [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md) | Honest current-state briefing |
+| 3 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System architecture reference |
+| 4 | [`docs/PRODUCT_PHILOSOPHY.md`](docs/PRODUCT_PHILOSOPHY.md) | What differentiates Audio XX |
+| 5 | [`docs/SETUP.md`](docs/SETUP.md) | Local development setup |
+| 6 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Deployment and operations |
+| 7 | [`docs/QA.md`](docs/QA.md) / [`docs/QA_CHECKLIST.md`](docs/QA_CHECKLIST.md) | Quality-assurance workflow |
+| 8 | [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) | Known issues and deferred decisions |
+| 9 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Practical near-term roadmap |
+| 10 | [`docs/OPERATING_MODEL.md`](docs/OPERATING_MODEL.md) | Project operating model |
+| 11 | [`docs/AFFILIATE_POLICY.md`](docs/AFFILIATE_POLICY.md) | Outbound-link and affiliate policy |
+
+The locked behavioural specification lives in [`CLAUDE.md`](CLAUDE.md) at the repository root.
+
 ## Philosophy
 
 Audio XX is built on three core principles:
@@ -21,10 +43,10 @@ The system prioritizes protecting existing strengths. It avoids changes that ris
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 20+ *(TODO: verify — no `engines` field declared in `package.json`. Project has been developed on Node 20+; older versions are not tested.)*
 - npm 10+
 
-### Setup
+### Quick setup
 
 ```bash
 npm install
@@ -37,6 +59,31 @@ npm run dev
 ```
 
 The app runs at `http://localhost:3000`. New accounts are created automatically on first sign-in.
+
+For environment variables, database options (local SQLite vs. production Turso), and troubleshooting, see [`docs/SETUP.md`](docs/SETUP.md).
+
+### Common commands (from repo root)
+
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Start the Next.js dev server on port 3000 |
+| `npm run build` | Production build (runs `prisma generate` first) |
+| `npm test` | Vitest test suite (~134 test files) |
+| `npm run typecheck` | TypeScript checking across `apps/web` and `packages/rules` |
+| `npm run lint` | ESLint across `.ts` / `.tsx` |
+| `npm run db:generate` | Regenerate Prisma client |
+| `npm run db:push` | Push Prisma schema to local DB |
+| `npm run db:seed` | Seed reference components from YAML |
+
+### Branch strategy
+
+| Branch | Role |
+|---|---|
+| `main` | Stable. Reserved for journalist-readiness tier. The default branch on GitHub. |
+| `friends` | Active development. All recent work ships here. Deploys automatically to a Vercel preview environment. |
+| `eval-baseline`, `pre-fix-backup`, `safety/before-deploy-sync`, `wip-save-audio-xx`, `fix/system-state` | Historical / backup branches. Treat as read-only. |
+
+Day-to-day work happens on `friends`. Each logical change ships as an isolated commit. Merging `friends` → `main` is gated on the milestone definitions in [`ROADMAP-SPEAKS-FOR-ITSELF.md`](ROADMAP-SPEAKS-FOR-ITSELF.md) and [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ---
 
