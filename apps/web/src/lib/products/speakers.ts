@@ -1092,7 +1092,11 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Handmade single-driver rear-loaded horn by Ed Schilling. Crossoverless Fostex FE126E fullrange driver — ~95dB efficiency, fast, transparent, and utterly coherent. Tonally lean rather than warm; excels at speed, timing, and transient immediacy. Needs corner placement or a subwoofer for bass below ~45Hz. Designed for low-power tube, current-source, and T-amps.',
     retailer_links: [
-      { label: 'Hornshoppe', url: 'http://www.thehornshoppe.com/' },
+      // HTTPS upgrade verified 2026-05-09: live curl probe confirms TLS
+      // works, returns 200, real Hornshoppe site content (not a parking
+      // page). Line Magnetic + WLM HTTPS were also probed but failed
+      // (parked domain / port 443 refused) and were left on HTTP.
+      { label: 'Hornshoppe', url: 'https://www.thehornshoppe.com/' },
     ],
     tendencies: {
       confidence: 'high',
