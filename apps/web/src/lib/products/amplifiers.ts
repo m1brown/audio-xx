@@ -969,7 +969,14 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Chinese push-pull tube integrated with point-to-point wiring and EL34/KT88 compatibility. Rich, dimensional, and slightly romantic — moves further into "tube personality" than Cayin or PrimaLuna. Pairs well with revealing or brighter speakers that benefit from its warmth and density.',
     retailer_links: [
-      { label: 'Line Magnetic', url: 'http://www.line-magnetic.com/' },
+      // Manufacturer URL updated 2026-05-09 (link-QA pass): the prior
+      // line-magnetic.com domain is parked / for sale (verified via
+      // live curl — both HTTP and HTTPS return a JS redirect to a
+      // French "for sale" lander). The European distributor at
+      // line-magnetic.eu returns a clean 200 with valid TLS and the
+      // real homepage (TYPO3 site, lang=de). Probed both `/` and
+      // `/index.html` — identical content; root chosen per cleaner form.
+      { label: 'Line Magnetic', url: 'https://www.line-magnetic.eu/' },
     ],
     tendencies: {
       confidence: 'high',
