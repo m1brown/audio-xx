@@ -4,19 +4,45 @@
  * Each component: bold name heading with role, summary sentence,
  * sonic contribution and tendency bullet lists, verdict sentence.
  * Clean borders between components.
+ *
+ * First-reference image rendering: each component gets a small product
+ * image at the top of its entry, anchoring the visual identity of the
+ * component being analyzed. Uses the strict resolver chain
+ * (catalog → curated overlay → undefined), so products without curated
+ * imagery omit the image surface cleanly — no placeholder SVGs, no
+ * wrong-brand fallback.
  */
 
 import type { ComponentAssessment } from '../../lib/advisory-response';
+import { findProductByComponentName } from '../../lib/consultation';
+import { resolveProductImageStrict } from '../../lib/product-images';
 import { renderText } from './render-text';
 
 interface Props {
   assessments: ComponentAssessment[];
 }
 
+/** Resolve a real product image URL for a component name, or undefined
+ *  when no curated image exists. Mirrors the resolution used by
+ *  RewrittenSystemReview's renderFirstReferenceImage. */
+function resolveComponentImage(componentName: string): string | undefined {
+  const product = findProductByComponentName(componentName);
+  if (product) {
+    return resolveProductImageStrict(product.brand, product.name, product.imageUrl);
+  }
+  // Fallback: split into brand+name from the component name itself.
+  const tokens = componentName.split(/\s+/);
+  const brand = tokens[0];
+  const name = tokens.slice(1).join(' ') || componentName;
+  return resolveProductImageStrict(brand, name);
+}
+
 export default function AdvisoryComponentAssessments({ assessments }: Props) {
   return (
     <div>
-      {assessments.map((comp, i) => (
+      {assessments.map((comp, i) => {
+        const imageUrl = resolveComponentImage(comp.name);
+        return (
         <div key={i}>
           {/* Divider between components (not before first) */}
           {i > 0 && (
@@ -32,6 +58,44 @@ export default function AdvisoryComponentAssessments({ assessments }: Props) {
               </span>
             )}
           </div>
+
+          {/* First-reference product image — renders only when the
+           *  strict resolver returns a real URL. White interior, hairline
+           *  border, modest height — visually consistent with the
+           *  comparison artifact's editorial-anchor treatment. Graceful
+           *  collapse on broken URLs (parent display: none on error). */}
+          {imageUrl && (
+            <div style={{
+              width: '100%',
+              maxWidth: '480px',
+              height: '220px',
+              background: '#FFFFFF',
+              border: '1px solid #E5E5E5',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0.85rem',
+              boxSizing: 'border-box',
+              marginBottom: '0.85rem',
+            }}>
+              <img
+                src={imageUrl}
+                alt={comp.name}
+                loading="eager"
+                referrerPolicy="no-referrer"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain',
+                  display: 'block',
+                }}
+                onError={(e) => {
+                  const wrap = (e.currentTarget as HTMLImageElement).parentElement;
+                  if (wrap) wrap.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
 
           {/* Summary sentence */}
           <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', lineHeight: 1.7, color: '#444' }}>
@@ -129,7 +193,8 @@ export default function AdvisoryComponentAssessments({ assessments }: Props) {
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

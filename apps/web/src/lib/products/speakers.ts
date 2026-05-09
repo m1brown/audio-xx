@@ -89,7 +89,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'High-efficiency coaxial wideband monitor designed for dynamic expression and tonal color. Prioritizes rhythmic engagement, musical flow, and harmonic richness over last-degree analytical precision. The kind of speaker that makes you tap your foot before you start analyzing.',
     retailer_links: [
-      { label: 'WLM', url: 'https://www.wlm-loudspeakers.com/' },
+      { label: 'WLM', url: 'http://www.wiener-lautsprecher-manufaktur.com/en-speaker' },
     ],
     notes: 'Benefits from moderate-power amplification with good current delivery. Spatial precision improves significantly with careful placement.',
     placementSensitivity: {
