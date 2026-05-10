@@ -2409,11 +2409,52 @@ export function buildInitialComparisonPayload(
 }
 
 /**
+ * Strip clauses from a tendency text that explicitly negate the keywords
+ * inside them. Without this preprocessing, naive substring/regex matchers
+ * downstream see "harmonic richness are not the emphasis" and count the
+ * "harmonic" / "rich" tokens as positive warm signals — directly
+ * inverting the brand's actual character.
+ *
+ * The function splits the text on sentence/clause boundaries (`.`, `;`,
+ * `but`, `although`, `however`) and discards any clause whose core verb
+ * phrase is negated:
+ *   - "are not the emphasis" / "is not"
+ *   - "lacks", "lacking"
+ *   - "without"
+ *   - "isn't" / "aren't" / "never"
+ *
+ * Trade-off framings such as "at the cost of", "rather than", and
+ * "softer-focused than" are NOT stripped — they're contrastive but not
+ * negations of the keywords inside the clause. Stripping them would
+ * lose legitimate positive signal.
+ *
+ * Calibration fix 2026-05-10: introduced to address Topping being
+ * mis-classified as warm because its tendency text reads "tonal density
+ * and harmonic richness are not the emphasis." The negation phrase
+ * was being silently dropped by the regex matchers in
+ * extractSonicTraits and buildTradeoffStatement, producing a "warm
+ * harmonic character" trait label that inverted the brand's actual
+ * measurement-focused identity.
+ */
+function stripNegatedClauses(text: string): string {
+  const clauses = text.split(/[.;]+|\bbut\b|\balthough\b|\bhowever\b/i);
+  const NEGATION = /\b(?:not|isn't|aren't|never|without|lacks|lacking)\b/i;
+  return clauses
+    .filter((c) => !NEGATION.test(c))
+    .join('. ');
+}
+
+/**
  * Extract sonic traits as a string array from tendency text.
  * Used to populate ComparisonSide.sonicTraits in the payload.
+ *
+ * Tendency text is preprocessed via stripNegatedClauses to avoid
+ * matching keywords inside negative clauses (e.g. "tonal density and
+ * harmonic richness are not the emphasis" should NOT contribute
+ * positive warm signal).
  */
 function extractSonicTraits(tendencies: string): string[] {
-  const lower = tendencies.toLowerCase();
+  const lower = stripNegatedClauses(tendencies).toLowerCase();
   const traits: string[] = [];
 
   // Timing & energy
@@ -2481,8 +2522,12 @@ function buildTradeoffStatement(
     return words.filter((w) => lower.includes(w)).length;
   }
 
-  const textA = charA + ' ' + tendA;
-  const textB = charB + ' ' + tendB;
+  // Calibration fix 2026-05-10: strip negated clauses before scoring so
+  // brand profiles like Topping ("tonal density and harmonic richness
+  // are not the emphasis") don't accumulate phantom warm-axis hits from
+  // keywords that appear inside an explicitly negative clause.
+  const textA = stripNegatedClauses(charA + ' ' + tendA);
+  const textB = stripNegatedClauses(charB + ' ' + tendB);
 
   const warmScoreA = score(textA, warmWords);
   const warmScoreB = score(textB, warmWords);
