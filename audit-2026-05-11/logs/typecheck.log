@@ -1,0 +1,113 @@
+
+> typecheck
+> npm run typecheck --workspace=apps/web && npm run typecheck --workspace=packages/rules
+
+
+> @audio-xx/web@0.1.0 typecheck
+> tsc --noEmit
+
+qa-tests.ts(8,44): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+qa-tests.ts(9,34): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+qa-tests.ts(10,36): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+qa-tests.ts(177,68): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+qa-tests.ts(178,32): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+qa-tests.ts(221,10): error TS18048: 'p' is possibly 'undefined'.
+qa-tests.ts(221,73): error TS18048: 'p' is possibly 'undefined'.
+qa-tests.ts(222,10): error TS18048: 'p' is possibly 'undefined'.
+qa-tests.ts(222,70): error TS18048: 'p' is possibly 'undefined'.
+qa-tests.ts(223,10): error TS18048: 'p' is possibly 'undefined'.
+qa-tests.ts(223,66): error TS18048: 'p' is possibly 'undefined'.
+qa-tests.ts(229,10): error TS18048: 'e' is possibly 'undefined'.
+qa-tests.ts(229,41): error TS18048: 'e' is possibly 'undefined'.
+qa-tests.ts(230,10): error TS18048: 'e' is possibly 'undefined'.
+qa-tests.ts(230,48): error TS18048: 'e' is possibly 'undefined'.
+qa-tests.ts(236,10): error TS18048: 'result' is possibly 'undefined'.
+qa-tests.ts(236,46): error TS18048: 'result' is possibly 'undefined'.
+qa-tests.ts(237,10): error TS18048: 'result' is possibly 'undefined'.
+qa-tests.ts(237,56): error TS18048: 'result' is possibly 'undefined'.
+qa-tests.ts(243,10): error TS18048: 'result' is possibly 'undefined'.
+qa-tests.ts(243,76): error TS18048: 'result' is possibly 'undefined'.
+qa-tests.ts(244,10): error TS18048: 'result' is possibly 'undefined'.
+qa-tests.ts(244,87): error TS18048: 'result' is possibly 'undefined'.
+qa-tests.ts(263,10): error TS18048: 'chord' is possibly 'undefined'.
+src/app/api/orchestrator/route.ts(77,11): error TS2322: Type '{ type: "shopping_recommendation" | "general_response"; data: {}; }' is not assignable to type 'StructuredData'.
+  Type '{ type: "shopping_recommendation" | "general_response"; data: {}; }' is not assignable to type '{ type: "shopping_recommendation"; data: ShoppingDecisionOutput; } | { type: "general_response"; data: Record<string, unknown>; }'.
+    Type '{ type: "shopping_recommendation" | "general_response"; data: {}; }' is not assignable to type '{ type: "general_response"; data: Record<string, unknown>; }'.
+      Types of property 'type' are incompatible.
+        Type '"shopping_recommendation" | "general_response"' is not assignable to type '"general_response"'.
+          Type '"shopping_recommendation"' is not assignable to type '"general_response"'.
+src/app/page.tsx(2168,29): error TS2339: Property 'brand' does not exist on type 'SubjectMatch'.
+src/app/page.tsx(2442,13): error TS2322: Type '"SET_SYSTEM_CONTEXT"' is not assignable to type '"SET_INPUT" | "ADD_USER_MESSAGE" | "ADD_QUESTION" | "ADD_GLOSSARY" | "ADD_ADVISORY" | "UPDATE_ADVISORY" | "ADD_NOTE" | "SET_MODE" | "SET_REASONING" | "SET_COMPARISON" | "CLEAR_COMPARISON" | "SET_CONSULTATION_CONTEXT" | "CLEAR_CONSULTATION_CONTEXT" | "SET_LOADING" | "RESET"'.
+src/app/page.tsx(2479,9): error TS2345: Argument of type 'InferredTraits' is not assignable to parameter of type 'Record<string, number>'.
+  Index signature for type 'string' is missing in type 'InferredTraits'.
+src/app/page.tsx(2776,82): error TS2339: Property 'fired_rules' does not exist on type '{}'.
+src/app/page.tsx(3052,51): error TS2367: This comparison appears to be unintentional because the types '"speaker" | "amplifier" | "dac" | "streamer" | "turntable" | "headphone"' and '"unknown"' have no overlap.
+src/app/page.tsx(3189,16): error TS2367: This comparison appears to be unintentional because the types '"speaker" | "amplifier" | "dac" | "streamer" | "turntable" | "headphone"' and '"unknown"' have no overlap.
+src/app/page.tsx(3329,79): error TS2367: This comparison appears to be unintentional because the types '"speaker" | "amplifier" | "dac" | "streamer" | "turntable" | "headphone"' and '"unknown"' have no overlap.
+src/app/page.tsx(3378,41): error TS2345: Argument of type 'Record<string, unknown> | undefined' is not assignable to parameter of type '{ mode: OrchestratorMode; timestamp: number; llmCalled: boolean; version: string; candidatesReceived?: number | undefined; candidatesAfterFilter?: number | undefined; llmProvider?: string | undefined; llmModel?: string | undefined; llmWarnings?: string[] | undefined; fallbackReason?: string | undefined; } | undefined'.
+  Type 'Record<string, unknown>' is missing the following properties from type '{ mode: OrchestratorMode; timestamp: number; llmCalled: boolean; version: string; candidatesReceived?: number | undefined; candidatesAfterFilter?: number | undefined; llmProvider?: string | undefined; llmModel?: string | undefined; llmWarnings?: string[] | undefined; fallbackReason?: string | undefined; }': mode, timestamp, llmCalled, version
+src/app/page.tsx(3478,15): error TS18048: 'finalAdvisory.decisiveRecommendation' is possibly 'undefined'.
+src/app/page.tsx(3479,15): error TS18048: 'finalAdvisory.decisiveRecommendation' is possibly 'undefined'.
+src/app/page.tsx(3480,15): error TS18048: 'finalAdvisory.decisiveRecommendation' is possibly 'undefined'.
+src/app/page.tsx(3481,15): error TS18048: 'finalAdvisory.decisiveRecommendation' is possibly 'undefined'.
+src/app/page.tsx(3540,59): error TS2345: Argument of type '{ category: ShoppingCategory | undefined; secondaryCategory: undefined; detected: boolean; mode: ShoppingMode; subcategory?: ShoppingSubcategory; ... 12 more ...; semanticPreferences: SemanticPreferences; }' is not assignable to parameter of type 'ShoppingContext'.
+  Types of property 'category' are incompatible.
+    Type 'ShoppingCategory | undefined' is not assignable to type 'ShoppingCategory'.
+      Type 'undefined' is not assignable to type 'ShoppingCategory'.
+src/app/page.tsx(3542,139): error TS2345: Argument of type 'ShoppingCategory | undefined' is not assignable to parameter of type 'ShoppingCategory'.
+  Type 'undefined' is not assignable to type 'ShoppingCategory'.
+src/app/page.tsx(3697,29): error TS2339: Property 'category' does not exist on type 'ProductExample'.
+src/app/page.tsx(3782,15): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'EvaluationResult'.
+src/app/page.tsx(3802,87): error TS2339: Property 'fired_rules' does not exist on type '{}'.
+src/app/page.tsx(3803,47): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'EvaluationResult'.
+src/app/page.tsx(3823,7): error TS2345: Argument of type 'InferredTraits' is not assignable to parameter of type 'Record<string, number>'.
+  Index signature for type 'string' is missing in type 'InferredTraits'.
+src/app/page.tsx(3901,81): error TS2345: Argument of type 'ActiveSystemContext | null' is not assignable to parameter of type 'string[] | undefined'.
+  Type 'null' is not assignable to type 'string[] | undefined'.
+src/app/page.tsx(3906,9): error TS2322: Type 'ActiveSystemContext | null' is not assignable to type 'string[] | undefined'.
+  Type 'null' is not assignable to type 'string[] | undefined'.
+src/app/page.tsx(3907,35): error TS2339: Property 'systemTendencies' does not exist on type 'TurnContext'.
+src/app/page.tsx(3908,9): error TS2322: Type 'DesireSignal[]' is not assignable to type 'string[]'.
+  Type 'DesireSignal' is not assignable to type 'string'.
+src/app/page.tsx(4416,30): error TS2339: Property 'kind' does not exist on type 'Message'.
+  Property 'kind' does not exist on type '{ role: "user"; content: string; }'.
+src/lib/advisory-response.ts(2993,48): error TS2339: Property 'preferenceSource' does not exist on type 'TasteInference'.
+src/lib/advisory-response.ts(3593,33): error TS2339: Property 'outputs' does not exist on type 'never'.
+src/lib/consultation.ts(8386,16): error TS2339: Property 'scale_intimacy' does not exist on type 'PrimaryAxisLeanings'.
+src/lib/consultation.ts(8472,14): error TS2339: Property 'scale_intimacy' does not exist on type 'PrimaryAxisLeanings'.
+src/lib/consultation.ts(8520,3): error TS2322: Type '({ name: string; axes: PrimaryAxisLeanings; source: "product"; } | { name: string; axes: { warm_bright: "neutral" | "warm" | "bright"; smooth_detailed: "neutral" | "smooth" | "detailed"; elastic_controlled: "neutral" | ... 1 more ... | "controlled"; scale_intimacy: "neutral" | ... 1 more ... | "intimacy"; }; source:...' is not assignable to type 'ComponentAxisProfile[]'.
+  Type '{ name: string; axes: PrimaryAxisLeanings; source: "product"; } | { name: string; axes: { warm_bright: "neutral" | "warm" | "bright"; smooth_detailed: "neutral" | "smooth" | "detailed"; elastic_controlled: "neutral" | ... 1 more ... | "controlled"; scale_intimacy: "neutral" | ... 1 more ... | "intimacy"; }; source: ...' is not assignable to type 'ComponentAxisProfile'.
+    Type '{ name: string; axes: { warm_bright: "neutral" | "warm" | "bright"; smooth_detailed: "neutral" | "smooth" | "detailed"; elastic_controlled: "neutral" | "elastic" | "controlled"; scale_intimacy: "neutral" | ... 1 more ... | "intimacy"; }; source: "brand"; }' is not assignable to type 'ComponentAxisProfile'.
+      Types of property 'axes' are incompatible.
+        Property 'airy_closed' is missing in type '{ warm_bright: "neutral" | "warm" | "bright"; smooth_detailed: "neutral" | "smooth" | "detailed"; elastic_controlled: "neutral" | "elastic" | "controlled"; scale_intimacy: "neutral" | "scale" | "intimacy"; }' but required in type 'PrimaryAxisLeanings'.
+src/lib/consultation.ts(8992,14): error TS2339: Property 'scale_intimacy' does not exist on type 'PrimaryAxisLeanings'.
+src/lib/consultation.ts(9058,12): error TS2339: Property 'scale_intimacy' does not exist on type 'PrimaryAxisLeanings'.
+src/lib/consultation.ts(9595,16): error TS2339: Property 'scale_intimacy' does not exist on type 'PrimaryAxisLeanings'.
+src/lib/consultation.ts(9751,14): error TS2339: Property 'scale_intimacy' does not exist on type 'PrimaryAxisLeanings'.
+src/lib/consultation.ts(9783,14): error TS2339: Property 'scale_intimacy' does not exist on type 'PrimaryAxisLeanings'.
+src/lib/consultation.ts(10355,14): error TS2339: Property 'tendency' does not exist on type 'BrandProfile'.
+src/lib/consultation.ts(10356,33): error TS2339: Property 'tendency' does not exist on type 'BrandProfile'.
+src/lib/consultation.ts(11157,16): error TS2339: Property 'scale_intimacy' does not exist on type 'PrimaryAxisLeanings'.
+src/lib/consultation.ts(11205,22): error TS2352: Conversion of type '{ warm_bright: "neutral"; smooth_detailed: "neutral"; elastic_controlled: "neutral"; scale_intimacy: string; }' to type 'PrimaryAxisLeanings' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property 'airy_closed' is missing in type '{ warm_bright: "neutral"; smooth_detailed: "neutral"; elastic_controlled: "neutral"; scale_intimacy: string; }' but required in type 'PrimaryAxisLeanings'.
+src/lib/consultation.ts(11219,16): error TS2339: Property 'scale_intimacy' does not exist on type 'PrimaryAxisLeanings'.
+src/lib/consultation.ts(11255,18): error TS2339: Property 'scale_intimacy' does not exist on type 'PrimaryAxisLeanings'.
+src/lib/consultation.ts(11373,14): error TS2339: Property 'scale_intimacy' does not exist on type 'PrimaryAxisLeanings'.
+src/lib/inference-layer.ts(495,42): error TS2367: This comparison appears to be unintentional because the types '"moderate" | "less_emphasized" | undefined' and '"emphasized"' have no overlap.
+src/lib/inference-layer.ts(498,42): error TS2367: This comparison appears to be unintentional because the types '"moderate" | "less_emphasized" | undefined' and '"emphasized"' have no overlap.
+src/lib/listener-profile.ts(1215,25): error TS2339: Property 'dynamics' does not exist on type '{ flow: string; tonal_density: string; clarity: string; control: string; spatial: string; }'.
+src/lib/listener-profile.ts(1215,25): error TS2339: Property 'rhythm' does not exist on type '{ flow: string; tonal_density: string; clarity: string; control: string; spatial: string; }'.
+src/lib/listener-profile.ts(1215,25): error TS2339: Property 'spatial_depth' does not exist on type '{ flow: string; tonal_density: string; clarity: string; control: string; spatial: string; }'.
+src/lib/listener-profile.ts(1215,25): error TS2339: Property 'warmth' does not exist on type '{ flow: string; tonal_density: string; clarity: string; control: string; spatial: string; }'.
+src/lib/prisma.ts(84,13): error TS2352: Conversion of type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>' to type 'Record<string | symbol, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/lib/shopping-intent.ts(2537,20): error TS2367: This comparison appears to be unintentional because the types 'ProductCategory' and '"general"' have no overlap.
+src/lib/shopping-intent.ts(5170,26): error TS2339: Property '_rank' does not exist on type 'ProductExample'.
+src/lib/system-bridge.ts(178,3): error TS2741: Property 'hasExternalAmplification' is missing in type '{ outputType: OutputType; systemCharacter: SystemCharacter; tubeAmplification: boolean; lowPowerContext: boolean; }' but required in type 'SystemProfile'.
+npm error Lifecycle script `typecheck` failed with error:
+npm error code 2
+npm error path /Users/mikebrown/audio-xx/audio-xx/apps/web
+npm error workspace @audio-xx/web@0.1.0
+npm error location /Users/mikebrown/audio-xx/audio-xx/apps/web
+npm error command failed
+npm error command sh -c tsc --noEmit

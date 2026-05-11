@@ -1,0 +1,15 @@
+PROMPT 4: "Should I upgrade my DAC or speakers first?"
+=====================================================
+
+RESPONSE:
+"Sure — let's compare.
+Which two components are you deciding between?"
+
+==========================================================
+ISSUES:
+- INTENT MISCLASSIFICATION. The user said "DAC or speakers first" — sequencing question with both components named. Engine routes it as comparison and asks which two components ("Which two components are you deciding between?") even though the user just stated them.
+- "first" is the operative word — sequencing — but engine does not parse it.
+- No upgrade-sequencing capability present.
+- No system context requested even though sequencing answer depends critically on it.
+
+VERDICT: BROKEN intent routing for one of the most common enthusiast questions.

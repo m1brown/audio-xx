@@ -1,0 +1,29 @@
+PROMPT 5 (after Step 2 — pilot capsule wiring): "Is moving from Naim to Pass Labs a sideways move or real upgrade?"
+=====================================================================================================================
+
+EXPANDED REASONING
+Using expanded reasoning for a product not yet covered directly in the curated catalog.
+
+BRAND ASSESSMENT — Pass Labs
+"Pass Labs: Class-A solid-state with low or zero feedback (Nelson Pass design lineage). Even-order harmonic content from class-A topology, contrasted with tube circuits. Listeners typically describe the result as dense (tonally weighted), harmonically natural; relaxed transient response without being slow."
+
+WHAT THIS COMPONENT BRINGS
+"Pass Labs is outside the validated catalog, so this assessment draws on general knowledge of the brand and category rather than measured data"
+
+RECOMMENDATION
+"Assessment is based on Pass Labs's documented design approach: Class-A solid-state with low or zero feedback (Nelson Pass design lineage). Even-order harmonic content from class-A topology, contrasted with tube circuits. Listeners seeking tube-adjacent harmonic structure without tube maintenance. First Watt models pair with high-efficiency speakers; Pass flagship models drive a wide range."
+
+=================================================================
+STEP 2 VERIFICATION:
++ Pass Labs no longer returns "I don't have catalog data on the Pass Labs."
++ Capsule mechanism surfaces: "Class-A solid-state with low or zero feedback (Nelson Pass design lineage). Even-order harmonic content from class-A topology, contrasted with tube circuits."
++ Capsule perception traits surface: "dense (tonally weighted), harmonically natural; relaxed transient response without being slow."
++ Recommendation now grounded in documented design approach + preference fit ("Listeners seeking tube-adjacent harmonic structure without tube maintenance. First Watt models pair with high-efficiency speakers; Pass flagship models drive a wide range.").
++ "Pass Labs is outside the validated catalog" is now an honest note rather than a hard block.
+
+REMAINING (out of scope for Step 2):
+- Naim identity not surfaced in this product-assessment path. product-assessment focuses on one candidate; the Naim ↔ Pass philosophical contrast requires the comparison flow. Belongs to Step 6 (Sideways-vs-Upgrade Framing).
+- "Sideways move vs real upgrade" framing not yet produced. The engine recognizes both brands but does not yet detect or label the philosophical-distance question. Step 6 owns this.
+- Generic "Tell me about your system" filler still appears. Step 3 (Intent Routing Utility Pass) may improve this.
+
+NET: Step 2 success criteria met — Pass Labs is identity-rich, not unknown.

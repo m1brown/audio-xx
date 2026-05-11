@@ -1,0 +1,26 @@
+PROMPT 7 (after Step 3 — beta intent routing): "I have a small reflective room — what should I avoid?"
+========================================================================================================
+
+RESPONSE:
+Room context matters — it usually shapes the sound as much as the gear does.
+
+I don't have your specific room dimensions or speaker model, so this is general guidance rather than a specific recommendation. The principles below are the highest-leverage things to be aware of in your kind of room.
+
+1. Small reflective rooms exaggerate upper-mid and treble energy — first reflections from side walls and the ceiling reinforce what the speaker is already emitting. Forward, bright, or wide-dispersion speakers can feel harsh.
+
+2. Wide-dispersion designs (most box speakers, planars, omnidirectionals) interact strongly with side walls. Controlled-dispersion (sealed bookshelves, waveguide-loaded, near-coaxial) tends to fare better.
+
+3. Near-field listening — listener closer to the speakers than the speakers are to the walls — reduces the room's contribution. Worth trying before treating the room.
+
+4. Treble-energetic sources (chip-DAC + analytical amp + bright speaker) compound in this environment. Adding density at the source or amp stage can offset.
+
+5. Basic first-reflection treatment (absorption at the side-wall and ceiling reflection points) is the highest-leverage cheap fix.
+
+If you can share your room dimensions (rough is fine), your current or candidate speakers, and where you can place them (distance from rear wall, distance from side walls), I can be more specific.
+
+==========================================================
+STEP 3 VERIFICATION:
++ Room context recognized (no more "EXPLORATORY RECOMMENDATIONS" boilerplate).
++ Five practical principles tied to "small" + "reflective" combination.
++ Honest scope statement ("I don't have your specific room dimensions").
++ Asks for the inputs needed for specificity (dimensions, speakers, placement).

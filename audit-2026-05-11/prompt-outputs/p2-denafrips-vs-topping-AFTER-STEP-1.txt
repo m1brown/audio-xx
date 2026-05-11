@@ -1,0 +1,34 @@
+PROMPT 2 (after Step 1 fixes): "Denafrips vs Topping"
+======================================================
+
+GEAR COMPARISON: DENAFRIPS Pontus II 12th-1 vs TOPPING D90SE
+
+Denafrips: Denafrips designs around discrete R2R ladder conversion — resistor networks that convert digital audio directly to analog voltage. The philosophy prioritises tonal density, harmonic texture, and musical flow over measured precision.
+
+Topping: Topping designs measurement-focused DACs and amplifiers using premium chip implementations (ESS Sabre, AKM). The philosophy prioritises measured performance — low distortion, low noise, and wide dynamic range.
+
+Denafrips: fast, precise timing. warm, tonally dense, harmonically rich.
+Topping: neutral, clean tonality.
+
+The real choice: warmth and tonal body (Denafrips) vs precision and control (Topping).
+
+This is ultimately a question of what you want more of in your listening — warmth and body, or speed and resolution. That preference, more than any specification, determines which direction is right.
+
+If you want warmth and body → Denafrips
+If you want precision and detail → Topping
+
+Both are strong choices with different strengths — Denafrips leans toward warmth, tonal density, texture, and harmonic richness, Topping toward clarity. The right choice depends on whether you prioritise warmth, tonal density, texture, and harmonic richness or clarity in your system and with your music.
+
+SOURCES: Darko.Audio — Review covering Denafrips R2R house sound.
+
+=================================================================
+STEP 1 VERIFICATION:
++ TEMPLATE LEAK GONE. Now reads "Topping toward clarity" (was "Topping toward topping dacs are consistently described as clean").
++ Rationale sentence is also clean: "...or clarity in your system and with your music."
++ Engine returned real synthesized output (not deterministic fallback).
++ No `/api/evaluate timed out` warning in console.
+
+REMAINING ISSUES (out of scope for Step 1):
+- "Denafrips: fast, precise timing" still cross-attributed. Belongs to Step 2 (Brand Identity Wiring).
+- No engineering-axis framing. Belongs to Step 2.
+- Specific model versions (Pontus II 12th-1, D90SE) inferred without user input. Possibly Step 4 (Named Model Resolution).

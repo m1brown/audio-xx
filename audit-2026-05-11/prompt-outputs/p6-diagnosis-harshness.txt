@@ -1,0 +1,31 @@
+PROMPT 6: "My system sounds harsh on female vocals"
+==================================================
+
+RESPONSE:
+SYSTEM TENDENCIES
+"Your system currently leans bright and treble-forward."
+
+[Engine asserts a tendency claim WITHOUT knowing the user's system.]
+
+WHAT THIS MEANS — explanation about transparent systems and upstream brightness.
+
+WHERE TO ACT — four numbered remedies:
+1. Source/DAC — warmer/organic DAC examples (Denafrips Enyo 15th, Schiit Bifrost 2, MHDT Orchid)
+2. Tube buffer or preamp — Schiit Freya+, Black Ice FOZ, LTA MicroZOTL
+3. Cables — copper interconnects (Cardas, AudioQuest)
+4. Room treatment — absorption at first reflections
+
+WHY THIS FITS — generic
+TRADE-OFFS — generic
+Then asks for the system at the end.
+
+==========================================================
+ISSUES:
+1. ASSERTS SYSTEM TENDENCY WITHOUT SYSTEM. "Your system currently leans bright and treble-forward" — confident claim with zero data. Should be asked, not asserted.
+2. Cable recommendations introduce controversial-territory advice (cable tonal differences are contested). The advisor temperament should not lean into this without much more disciplined framing.
+3. Recommendations precede diagnostic intake. Order is inverted — should be: ask system → diagnose → recommend.
+4. Solid mention of room treatment as remedy.
+5. Examples lean on the curated catalog (Denafrips, Schiit Bifrost 2, MHDT Orchid, LTA MicroZOTL) — these are well chosen.
+6. Female vocal harshness is often a 2-4kHz issue (presence band, sibilance, recording-side). The response doesn't engage that nuance.
+
+VERDICT: Useful structure, premature confidence. Asks for system AT THE END which is backwards.

@@ -1,0 +1,44 @@
+PROMPT 8 (after Step 4 — named-model resolution): "Is a used Denafrips Pontus II a good buy?"
+==============================================================================================
+
+RESPONSE:
+EXPLORATORY RECOMMENDATIONS
+These suggestions represent different design philosophies. Tell me about your system, sonic preferences, and listening habits for more personalized direction.
+
+Full-scale R2R with rich tonal density, strong harmonic texture, and refined composure. Prioritizes body and musical weight over transient sharpness.
+
+The design is built on R2R architecture.
+
+Retail price: approximately $1,499.
+
+Tonality: rich harmonic density with physical midrange presence.
+Texture: layered, dimensional texture — instruments have body and resonance.
+Timing: relaxed but coherent — phrasing breathes without losing rhythmic thread.
+Spatial: deep, holographic staging with good layering front-to-back.
+
+The characteristic trade-off: harmonic richness, texture, and tonal authority — at the cost of transient sharpness and the explicit separation of delta-sigma designs (relative to ESS-based DACs at this price).
+
+Fatigue risk: low. The R2R warmth and flow are inherently fatigue-resistant. The risk with the Pontus is never fatigue — it is congestion when paired with other warm components.
+
+Works well: paired with fast or precision-oriented amplifiers — the R2R tonal density and the amplifier's speed tend to complement — body without sluggishness.
+
+Worth noting: in systems that are already tonally dense or warm — the cumulative weight can reduce clarity — bass and lower midrange may feel heavy.
+
+Pairs well with fast or transparent amplifiers where the R2R density is balanced by downstream speed. Widely used with solid-state amplification from brands like Benchmark, Topping, and Pass Labs. Can compound warmth with tube amplifiers — works best when the tube stage is on the transparent side.
+
+Reference sources: Audiophile Style: Detailed review of R2R architecture and harmonic character. Audio Science Review: Measurement and listening coverage of the 12th anniversary revision. 6moons: Review covering the Pontus II tonal authority and R2R staging. Darko.Audio: Comparison placing Pontus in the Denafrips lineup and R2R landscape. Head-Fi / Audiogon communities: Extensive comparisons with Chord, Schiit, and ESS-based alternatives.
+
+Are you considering this for a specific system, or exploring what it would bring?
+
+==========================================================
+STEP 4 VERIFICATION:
++ NO Enyo substitution — content is now Pontus II 12th-1 specific.
++ Price is $1,499 (Pontus II's price) — was $699 (Enyo) before.
++ Reference sources point to Pontus II reviews (Audio Science Review's 12th-anniversary revision coverage; 6moons Pontus II tonal authority; Darko.Audio Pontus placement).
++ Tonality/Texture/Timing/Spatial descriptions all from Pontus II's catalog entry.
++ Brand-philosophy fallback wiring from Step 2 untouched.
+
+REMAINING (out of scope for Step 4):
+- "Used" question still not consumed in response register. Belongs to Step 5 (Used-Market Awareness).
+- Topping appears in Denafrips's pairing notes — that's the brand's own pairingNotes field text from BRAND_PROFILES, not the engine's recommendation. Capsule-level editorial, not Step 4.
+- "Holographic staging" in Pontus II's spatial description — vocabulary discipline that the v2 editorial layer flags; would be a future capsule edit, not Step 4.

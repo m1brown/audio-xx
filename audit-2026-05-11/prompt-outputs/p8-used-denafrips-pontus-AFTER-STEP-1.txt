@@ -1,0 +1,15 @@
+PROMPT 8 (after Step 1 fixes): "Is a used Denafrips Pontus II a good buy?"
+===========================================================================
+
+[Engine returned full structured response — entry-level Denafrips R2R DAC description, tonality/timing/texture sections, fatigue risk, pairing notes, reference sources. Content is identical to pre-Step-1 capture.]
+
+=================================================================
+STEP 1 VERIFICATION:
++ Engine returned real synthesized output (not deterministic fallback) — confirmed by content depth.
++ No `/api/evaluate timed out` warning in console.
++ No template leak observed in this response.
+
+REMAINING ISSUES (out of scope for Step 1):
+- Wrong-product substitution: Pontus II → Enyo 15th still happening. Belongs to Step 4 (Named Model Resolution).
+- "Used" question still ignored. Belongs to Step 5 (Used-Market Awareness).
+- Topping-with-Denafrips pairing recommendation still present. Belongs to Step 2 (Brand Identity Wiring) or post-launch.

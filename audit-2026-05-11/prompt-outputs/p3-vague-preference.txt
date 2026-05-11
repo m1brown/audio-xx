@@ -1,0 +1,17 @@
+PROMPT 3: "I want something more musical and engaging"
+======================================================
+
+RESPONSE:
+"Got it — let me understand a bit more.
+Can you describe what you're hearing that you'd like to change? And what equipment are you using?"
+
+==========================================================
+OBSERVATIONS:
++ Asks for clarification rather than responding with adjective soup. Good.
++ Specifically asks about current equipment (system context awareness).
++ Specifically asks what user wants to CHANGE (not just what they want).
+- However: does NOT push back on "musical and engaging" as vague terms.
+- Does NOT offer disciplined preference scaffolding (e.g., "more tonal density? more dynamic engagement? more flow?").
+- Risk: user repeats vague language with system info, engine then operates on still-vague input.
+
+VERDICT: 60% good. The clarification instinct is correct. The clarification depth is shallow.

@@ -1,0 +1,23 @@
+PROMPT 3 (after Step 3 — beta intent routing): "I want something more musical and engaging"
+============================================================================================
+
+RESPONSE:
+Words like "musical" and "engaging" mean different things to different listeners.
+
+Before I suggest anything, it helps to translate that into one or two operational choices — what would you actually change about how the system sounds?
+
+Which of these is closest to what you mean?
+
+• More **tonal density** (body, warmth, midrange weight) — or more **clarity** (transient definition, detail, separation)?
+• More **rhythmic drive** (timing, pace, propulsion) — or more **relaxed flow** (long-session ease, harmonic continuity)?
+• More **spatial precision** (specific image locations) — or more **image scale** (apparent size and body of sources)?
+• More **warmth and body** — or more **transient speed**?
+
+Pick whichever one or two best capture what you want. If none of these quite fits, describe what you're hearing now that you'd like to change.
+
+==========================================================
+STEP 3 VERIFICATION:
++ Vague tokens "musical" and "engaging" echoed back honestly.
++ Four operational binary choices presented (density vs clarity, drive vs flow, precision vs scale, warmth vs speed).
++ No adjective soup — the response refuses to answer "musical" with another adjective.
++ Open exit if none of the choices fit.

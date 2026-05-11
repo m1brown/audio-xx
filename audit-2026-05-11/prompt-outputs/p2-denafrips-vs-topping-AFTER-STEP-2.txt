@@ -1,0 +1,35 @@
+PROMPT 2 (after Step 2 — pilot capsule wiring): "Denafrips vs Topping"
+========================================================================
+
+GEAR COMPARISON: DENAFRIPS Pontus II 12th-1 vs TOPPING D90SE
+
+Denafrips: Denafrips designs around discrete R2R ladder conversion — resistor networks that convert digital audio directly to analog voltage. The philosophy prioritises tonal density, harmonic texture, and musical flow over measured precision.
+
+Topping: Topping designs measurement-focused DACs and amplifiers using premium chip implementations (ESS Sabre, AKM). The philosophy prioritises measured performance — low distortion, low noise, and wide dynamic range.
+
+Denafrips: warm, dense, harmonically rich. relaxed transient timing — softer leading edges than delta-sigma. spatial presentation dimensional rather than precision-imaged.
+
+Topping: neutral, clean tonality. high clarity, fast transient definition. light tonal weight; low harmonic emphasis.
+
+The real choice: warmth and tonal body (Denafrips) vs precision and control (Topping).
+
+This is ultimately a question of what you want more of in your listening — warmth and body, or speed and resolution. That preference, more than any specification, determines which direction is right.
+
+If you want warmth and body → Denafrips
+If you want precision and detail → Topping
+
+Both are strong choices with different strengths — Denafrips leans toward warmth, tonal density, texture, and harmonic richness, Topping toward clarity. The right choice depends on whether you prioritise warmth, tonal density, texture, and harmonic richness or clarity in your system and with your music.
+
+SOURCES: Darko.Audio — Review covering Denafrips R2R house sound.
+
+=================================================================
+STEP 2 VERIFICATION:
++ Denafrips traits NO LONGER include "fast, precise timing" — cross-attribution gone.
++ Denafrips traits NOW carry capsule perception: "warm, dense, harmonically rich; relaxed transient timing — softer leading edges than delta-sigma; spatial presentation dimensional rather than precision-imaged."
++ Topping traits NOW carry capsule perception: "neutral, clean tonality; high clarity, fast transient definition; light tonal weight; low harmonic emphasis."
++ No template leak.
++ Brand identities preserved as v2 capsules describe them.
+
+REMAINING (out of scope for Step 2):
+- "Pontus II 12th-1" inferred without user input. Owned by Step 4 (Named Model Resolution).
+- The closing rationale sentence still uses extractCoreCharacter results ("warmth, tonal density, texture, and harmonic richness, Topping toward clarity"). That's the Step 1 fix already working; not a regression.

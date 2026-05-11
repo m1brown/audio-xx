@@ -1,0 +1,23 @@
+PROMPT 5: "I'm thinking of moving from my Naim NAP 250 to a Pass Labs INT-250. Is this a sideways move or real upgrade?"
+========================================================================================================================
+
+RESPONSE:
+EXPANDED REASONING
+"Using expanded reasoning for a product not yet covered directly in the curated catalog."
+
+BRAND ASSESSMENT — Pass Labs
+"I don't have catalog data on the Pass Labs. If you can share the brand or model details, I can offer a more specific assessment."
+
+WHAT THIS COMPONENT BRINGS
+"Pass Labs is outside the validated catalog, so this assessment draws on general knowledge of the brand and category rather than measured data"
+
+[Generic fallback: asks for system context, sonic priorities. No analysis of Naim PRaT vs Pass class-A philosophy contrast.]
+
+==========================================================
+CRITICAL ISSUES:
+1. PHILOSOPHY LAYER DISCONNECTED FROM ENGINE. Pass Labs is a HIGH CONFIDENCE pilot brand in the v2 master table. Engine says "I don't have catalog data on the Pass Labs." This is the precise gap the architecture proposal identified — capsules exist but engine doesn't consume them.
+2. NAIM ALSO PILOT BRAND. Engine does not surface Naim's PRaT/timing-domain identity at all.
+3. NO SIDEWAYS-VS-UPGRADE FRAMING. Despite the user asking the exact question by name, engine produces no philosophical-contrast analysis. This is one of the canonical enthusiast questions and the system fails it.
+4. Generic "tell me about your system" fallback — does not even attempt the philosophical-distance analysis the v2 capsules support.
+
+VERDICT: CRITICAL BETA BLOCKER. This is the highest-leverage canonical case and it fails completely.

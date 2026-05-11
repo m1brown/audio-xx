@@ -1,0 +1,30 @@
+PROMPT 1 (after Step 7 — right-rail state population): "Evaluate my system: Eversolo DMP-A6 → Chord Hugo → JOB Integrated → WLM Diva Monitor"
+=========================================================================================================================================
+
+RIGHT RAIL (after response renders):
+
+LISTENER
+Tell me what you value in your listening — preferences accumulate here as we talk.
+[Honestly empty — system-evaluation prompts carry no preference signal]
+
+SYSTEM
+Eversolo DMP-A6 → Chord Hugo → Job integrated → WLM Diva monitor
+Manage systems →
+
+RECENT
+Evaluate my system: Eversolo DMP-A6 → Chord Hugo → JOB In…
+
+Doing nothing is also a valid outcome.
+
+==========================================================
+STEP 7 VERIFICATION:
++ SYSTEM rail populates with all four components in chain order.
++ Components rendered with arrow separator matching the response card layout.
++ LISTENER rail remains honestly empty — no preferences extracted from a neutral system prompt; the engine does not invent preferences.
++ RECENT shows the latest prompt.
++ Response content (SYSTEM REVIEW heading + per-component readings + decision frame + trade-offs) preserved.
++ "Manage systems →" link still surfaces.
+
+REMAINING (out of scope for Step 7):
+- The system populates from the latest assistant message's systemChain.names. If the user clears the conversation or starts over, the rail empties — which is correct behavior.
+- LISTENER preference accumulation requires preference signal extraction across turns. The current implementation only populates LISTENER from tasteProfile (which is populated when preference signals are extracted in prior turns). Not regressed; just not improved by Step 7.

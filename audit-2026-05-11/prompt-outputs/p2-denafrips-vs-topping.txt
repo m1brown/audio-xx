@@ -1,0 +1,33 @@
+PROMPT 2: "Denafrips vs Topping"
+================================
+
+GEAR COMPARISON
+COMPARISON: DENAFRIPS Pontus II 12th-1 vs TOPPING D90SE
+
+Denafrips: Denafrips designs around discrete R2R ladder conversion — resistor networks that convert digital audio directly to analog voltage. The philosophy prioritises tonal density, harmonic texture, and musical flow over measured precision.
+
+Topping: Topping designs measurement-focused DACs and amplifiers using premium chip implementations (ESS Sabre, AKM). The philosophy prioritises measured performance — low distortion, low noise, and wide dynamic range.
+
+Denafrips: fast, precise timing. warm, tonally dense, harmonically rich.
+Topping: neutral, clean tonality.
+
+The real choice: warmth and tonal body (Denafrips) vs precision and control (Topping).
+
+If long listening sessions and tonal comfort matter to you, Denafrips is likely the better fit. If you prioritise clarity and transient precision — the ability to hear everything in a recording — Topping is where that lives.
+
+If you want warmth and body → Denafrips
+If you want precision and detail → Topping
+
+Both are strong choices with different strengths — Denafrips leans toward warmth, tonal density, texture, and harmonic richness, Topping toward topping dacs are consistently described as clean. The right choice depends on whether you prioritise warmth, tonal density, texture, and harmonic richness or topping dacs are consistently described as clean in your system and with your music.
+
+SOURCES
+Darko.Audio — Review covering Denafrips R2R house sound.
+
+=================================================================
+ISSUES OBSERVED:
+1. Negation regression in Topping framing — "fast, precise timing" attributed to Denafrips (cross-attribution).
+2. Sentence template breakdown: "Topping toward topping dacs are consistently described as clean" — variable interpolation leaking.
+3. Vocabulary regression: "warmth, tonal density, texture, and harmonic richness" — adjective stack, no engineering-axis frame.
+4. No system context asked; no preference asked; no room context. Pure adjective comparison.
+5. Single source citation (Darko.Audio); no Topping source.
+6. No engineering-intent contrast — R2R vs delta-sigma framing missing despite being canonical in v2 capsules.

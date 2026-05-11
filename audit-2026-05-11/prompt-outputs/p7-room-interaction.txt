@@ -1,0 +1,28 @@
+PROMPT 7: "I have a small reflective room — what should I avoid?"
+================================================================
+
+RESPONSE:
+EXPLORATORY RECOMMENDATIONS
+"These suggestions represent different design philosophies. Tell me about your system, sonic preferences, and listening habits for more personalized direction."
+
+WHY THIS FITS YOU
+"Selection weighted toward designs that prioritize musical engagement."
+
+WHAT THIS MEANS FOR COMPONENT CHOICE
+"Each pick commits to a different design philosophy. The trade-offs are real — read the 'Avoid if' lines."
+
+"For component: each pick commits to a different design philosophy."
+
+==========================================================
+ISSUES:
+1. ROOM QUESTION COMPLETELY UNADDRESSED. User asked specifically about small reflective room. Engine returns generic component-philosophy boilerplate.
+2. NO ROOM REASONING. The engine has no awareness of:
+   - dispersion-pattern implications for small rooms
+   - bright/forward speakers being worse in reflective rooms
+   - rear-firing reflex ports vs sealed designs
+   - near-field listening as an option
+   - first-reflection treatment basics
+3. Template fragment leaked: "For component: each pick commits to a different design philosophy." — appears to be a templating placeholder that didn't substitute.
+4. "Selection weighted toward designs that prioritize musical engagement" — irrelevant filler given the question was about room, not preferences.
+
+VERDICT: BROKEN. Room-interaction reasoning is essentially absent. Question type not recognized.

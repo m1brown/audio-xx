@@ -1,0 +1,40 @@
+PROMPT 1: "Evaluate my system: Eversolo DMP-A6 → Chord Hugo → JOB Integrated → WLM Diva Monitor"
+=================================================================================================
+
+SYSTEM REVIEW
+Speaker System
+Eversolo DMP-A6 → Chord Hugo → JOB Integrated → WLM Diva Monitor
+Streamer → DAC → Amplifier → Speakers
+
+SYSTEM READ
+This is a speed-first system anchored by Job integrated and Chord Hugo, with the WLM Diva monitor supplying all of the warmth. Clarity, timing, and spatial precision dominate unless the speaker compensates.
+
+SYSTEM LOGIC
+Chord Hugo → fast, lean, high flow conversion → defines the tonal center
+Job integrated → fast, lean, high flow → preserves speed and edge
+WLM Diva monitor → tone-rich, smooth, high flow presentation → adds body and prevents thinness
+Eversolo DMP-A6 → clean, neutral feed → stays out of the way
+Job integrated and Chord Hugo push toward precision. The WLM Diva monitor alone restores weight.
+
+Primary leverage: The DAC.
+Chord Hugo sets the system's tonal balance. Change it and the entire character shifts.
+
+DECISION
+KEEP if you value speed, separation, spatial clarity. CHANGE the DAC if vocals feel thin or instruments lack weight. This system leans lean unless corrected.
+
+TRADE-OFFS
+- Warmer DAC adds body, reduces transient sharpness
+- Tube stage adds texture, softens control
+- Current setup excels on sparse music, exposes thinness on dense tracks
+
+NEXT STEP OPTIONS
+- Move toward warmer DAC options
+- Compare Chord Hugo vs R2R alternatives
+- Check system fit for your listening habits
+
+DO NOTHING CHECK
+If this balance of speed and clarity and just enough warmth is what you enjoy, leave the system alone. The risk of upgrading is losing the WLM Diva monitor's careful compensation for Job integrated + Chord Hugo precision.
+
+[Followed by per-component breakdowns for Job integrated, WLM Diva, Eversolo, Chord Hugo with sonic-contribution + tendencies-to-be-aware-of sections. Each component has external links: HiFi Shark, official sites, Apos Audio, 6moons sources.]
+
+Final prompt: "What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"

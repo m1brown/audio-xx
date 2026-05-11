@@ -1,0 +1,22 @@
+PROMPT 4 (after Step 3 — beta intent routing): "Should I upgrade my DAC or speakers first?"
+=============================================================================================
+
+RESPONSE:
+Sequencing question noted — you're asking whether to upgrade DAC, speakers first.
+
+Sequencing depends on which part of the chain is currently most-bottlenecked, not on which category is "most upgradeable" generically.
+
+A few things shape the answer:
+
+• What does the current system already do well? Upgrading a category that already serves its purpose tends to deliver smaller returns than upgrading the bottleneck.
+• What about the current sound do you want to change?
+• Speakers are usually the hardest to undo; DACs are usually the easiest. Reversibility matters when sequencing.
+
+Can you share the current components (brand and model for each) and what you most want to change about how the system sounds? With that I can be specific about the order.
+
+==========================================================
+STEP 3 VERIFICATION:
++ No "which two components are you deciding between?" misroute — the user-named components are echoed back.
++ Sequencing routed to its own branch (not comparison).
++ Hedged but useful: surfaces the bottleneck principle, change-direction principle, and reversibility principle.
++ Asks for system + change direction — the inputs actually needed to give a real sequencing answer.

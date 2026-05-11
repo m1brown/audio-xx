@@ -1,0 +1,81 @@
+
+> @audio-xx/web@0.1.0 build
+> prisma generate && next build
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (v6.19.3) to ./../../node_modules/@prisma/client in 106ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
+
+[@sentry/nextjs] ACTION REQUIRED: To instrument navigations, the Sentry SDK requires you to export an `onRouterTransitionStart` hook from your `instrumentation-client.(js|ts)` file. You can do so by adding `export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;` to the file.
+   ▲ Next.js 15.5.14
+   - Environments: .env.local, .env
+   - Experiments (use with caution):
+     · clientTraceMetadata
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 18.6s
+   Skipping validation of types
+   Linting ...
+   Collecting page data ...
+   Generating static pages (0/33) ...
+   Generating static pages (8/33) 
+   Generating static pages (16/33) 
+   Generating static pages (24/33) 
+ ✓ Generating static pages (33/33)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                     431 kB         623 kB
+├ ○ /_not-found                          1.15 kB         180 kB
+├ ○ /about                                 365 B         181 kB
+├ ○ /affiliate-disclosure                  365 B         181 kB
+├ ƒ /api/auth/[...nextauth]                348 B         179 kB
+├ ƒ /api/compare                           349 B         179 kB
+├ ƒ /api/components                        348 B         179 kB
+├ ƒ /api/diagnose                          348 B         179 kB
+├ ƒ /api/evaluate                          349 B         179 kB
+├ ƒ /api/evaluate/candidate                348 B         179 kB
+├ ƒ /api/memo-overlay                      350 B         179 kB
+├ ƒ /api/memo-overlay/drift                349 B         179 kB
+├ ƒ /api/onboarding                        349 B         179 kB
+├ ƒ /api/orchestrator                      348 B         179 kB
+├ ƒ /api/profile                           349 B         179 kB
+├ ƒ /api/systems                           348 B         179 kB
+├ ƒ /api/systems/[id]                      348 B         179 kB
+├ ƒ /api/systems/[id]/components           348 B         179 kB
+├ ○ /apple-icon.png                          0 B            0 B
+├ ○ /auth/signin                         1.01 kB         189 kB
+├ ƒ /brand/[slug]                        1.32 kB         182 kB
+├ ○ /compare                             1.43 kB         189 kB
+├ ƒ /diagnose                            2.47 kB         190 kB
+├ ƒ /evaluate                            2.37 kB         190 kB
+├ ƒ /evaluate/candidate                  1.93 kB         190 kB
+├ ○ /glossary                              365 B         181 kB
+├ ○ /how-it-works                          364 B         181 kB
+├ ○ /icon.svg                                0 B            0 B
+├ ○ /onboarding                          4.32 kB         192 kB
+├ ƒ /path/upgrade/[flavor]               1.57 kB         182 kB
+├ ○ /privacy                               365 B         181 kB
+├ ƒ /product/[brand]/[name]                366 B         181 kB
+├ ○ /profile                             4.08 kB         192 kB
+├ ○ /resources                             365 B         181 kB
+├ ○ /systems                             1.63 kB         194 kB
+├ ƒ /systems/[id]                        1.95 kB         183 kB
+├ ○ /systems/new                           962 B         180 kB
+├ ○ /systems/saved                       2.43 kB         183 kB
+└ ƒ /systems/saved/[id]                  2.65 kB         183 kB
++ First Load JS shared by all             179 kB
+  ├ chunks/87c73c54-d9d41980806e7ec5.js  54.4 kB
+  ├ chunks/891-5ae3198022779d77.js        122 kB
+  └ other shared chunks (total)          2.94 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

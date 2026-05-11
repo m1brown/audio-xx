@@ -1,0 +1,65 @@
+STEP 8 — MOBILE STABILIZATION VERIFICATION
+============================================
+
+Viewport: 375 × 812 (mobile preset)
+
+----------------------------------------------------------
+P1 — "Evaluate my system: Eversolo DMP-A6 → Chord Hugo → JOB Integrated → WLM Diva Monitor"
+----------------------------------------------------------
+
+DOM probe:
+- docW: 375, winW: 375, horizontalScroll: false
+- visible_startover_count: 1 ("Start over" — the inline one)
+- has_system_review: true
+- response_present: true (long synthesis returned)
+
+Screenshot observations:
+- Heading "Audio XX" + tagline rendered cleanly inside the viewport.
+- User prompt bubble rendered within viewport bounds.
+- "SYSTEM REVIEW" / "Speaker System" / chain visualization render.
+- The chain row (Eversolo → Chord → Job → WLM) uses internal horizontal scroll inside its own card — page-level scroll is NOT triggered. (The card's own constrained scroll is a card-design choice and unrelated to Step 8 scope.)
+- Left rail (Workspace nav) hidden cleanly.
+- Right rail (LISTENER / SYSTEM / RECENT) hidden cleanly.
+- Only one Start Over visible.
+
+VERIFICATION: PASS
+
+----------------------------------------------------------
+P2 — "Denafrips vs Topping"
+----------------------------------------------------------
+
+DOM probe:
+- docW: 375, winW: 375, horizontalScroll: false
+- visible_startover_count: 1
+- has_comparison: true
+- has_denafrips_capsule: true (Step 2 traits intact)
+- has_fast_precise_regression: false (no cross-attribution)
+
+Screenshot observations:
+- "GEAR COMPARISON" heading visible.
+- Both product cards (Pontus II + D90SE) render side-by-side within the viewport — no overflow.
+- Card images render at appropriate scale.
+- Only one Start Over visible.
+
+VERIFICATION: PASS
+
+----------------------------------------------------------
+DESKTOP REGRESSION (1440 × 900)
+----------------------------------------------------------
+
+DOM probe:
+- viewport: 1440
+- aside_count_visible: 2 (left rail + right rail)
+- grid_cols: "184px 752px 296px" (three-column layout restored)
+- visible_startover_count: 2 (inline + global — intentional; out of Step 8 scope)
+- has_comparison: true
+- has_denafrips_capsule: true
+
+Screenshot observations:
+- Three-column grid restored fully.
+- Workspace nav rail (left) visible.
+- LISTENER / SYSTEM / RECENT rail (right) visible.
+- Conversation content + Sources + Reply area render in center column.
+- Two Start Over buttons present — inline near Send, and global at the bottom. Intentional (Step 8 scope was mobile-only).
+
+REGRESSION: PASS — no desktop layout degradation.

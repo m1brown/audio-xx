@@ -1,0 +1,37 @@
+PROMPT 5 (after Step 6 — sideways-vs-upgrade framing): "Is moving from Naim to Pass Labs a sideways move or real upgrade?"
+==========================================================================================================================
+
+RESPONSE:
+Naim → Pass Labs is mainly a philosophical shift, not automatically a "better" move. Whether it counts as an upgrade depends on what you currently value about Naim's presentation and where you want to move.
+
+**Naim.** Timing-domain emphasis through power-supply design and discrete circuit topology; tightly damped bass alignment in the integrated amplifiers. Listeners prioritising rhythmic momentum on rock, jazz, electronic material; less aligned for listeners prioritising spatial precision or tonal density.
+
+**Pass Labs.** Class-A solid-state with low or zero feedback (Nelson Pass design lineage). Even-order harmonic content from class-A topology, contrasted with tube circuits. Listeners seeking tube-adjacent harmonic structure without tube maintenance. First Watt models pair with high-efficiency speakers; Pass flagship models drive a wide range.
+
+**What you would likely gain (Pass Labs's strengths):**
+• dense (tonally weighted), harmonically natural
+• relaxed transient response without being slow
+
+**What you would likely give up (Naim's strengths):**
+• propulsive and forward, tightly defined bass
+• transient definition emphasised
+
+**It is more likely a real upgrade if:** you've been wishing for what Pass Labs prioritises — and Naim's strengths feel less important to you than they used to.
+
+**It is more likely sideways (or the wrong move) if:** you actively value Naim's strengths in your current listening — moving to Pass Labs would trade them away for a different philosophy you may or may not prefer.
+
+To answer this concretely, two things help:
+• What about your current Naim setup do you most value — and what's been bugging you about it?
+• What's the rest of the chain? The same amplifier change can read as upgrade or sideways depending on speakers and source.
+
+==========================================================
+STEP 6 VERIFICATION:
++ Both brands (Naim, Pass Labs) recognised via pilot capsule.
++ Question answered directly — "mainly a philosophical shift, not automatically a 'better' move."
++ Engineering identity contrast used (Naim's timing-domain emphasis vs Pass Labs's class-A harmonic structure).
++ Likely gains surfaced (Pass Labs's perception traits: density, harmonic naturalness, relaxed transient response).
++ Likely losses surfaced (Naim's perception traits: propulsion, tight bass, transient definition).
++ Conditional framing: "real upgrade if..." vs "sideways if..." with concrete listener-priority criteria.
++ Asks only what's needed: current valuation of Naim + chain context.
++ No "best" / "better" language per Audio XX policy.
++ Honest scope — does not pretend to know the user's preferences in advance.
