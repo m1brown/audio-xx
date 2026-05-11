@@ -25,6 +25,7 @@ import type { KnowledgeContext, AssistantContext as AudioAssistantContext } from
 import { buildDecisionFrame } from '@/lib/decision-frame';
 import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
+import { tryBetaInterceptRouting } from '@/lib/beta-intent-routing';
 import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification, parseBudgetAmount, detectSelectionMode, detectExplicitCategorySwitch, extractPriorityCategory, type PreviousAnchor, type SelectionMode } from '@/lib/shopping-intent';
 import {
   createEmptyListenerProfile,
@@ -531,6 +532,32 @@ export default function Home() {
       const glossaryResult = checkGlossaryQuestion(submittedText);
       if (glossaryResult) {
         dispatch({ type: 'ADD_GLOSSARY', entry: glossaryResult });
+        dispatch({ type: 'SET_LOADING', value: false });
+        return;
+      }
+    }
+
+    // ── Beta intent intercepts (Step 3 of 9 — beta path) ──────────────
+    // Three high-frequency real-enthusiast prompt classes that the main
+    // pipeline misroutes today:
+    //   • sequencing ("DAC or speakers first?") → comparison thinks the
+    //     user wants a head-to-head and asks which two components.
+    //   • room context ("small reflective room — what should I avoid?")
+    //     → has no dedicated route; falls into generic recommendations.
+    //   • vague preference ("musical and engaging") → shallow generic
+    //     clarification.
+    // Each rule produces a hedged operational response so the user
+    // gets a useful answer instead of a misroute. Skipped on
+    // follow-ups so the routes do not interrupt mid-conversation
+    // refinements.
+    if (!isFollowUp) {
+      // Cheap pre-pipeline subject count — extractSubjectMatches is the
+      // same pure function the main pipeline uses below.
+      const earlySubjectCount = extractSubjectMatches(submittedText).length;
+      const betaIntercept = tryBetaInterceptRouting(submittedText, earlySubjectCount);
+      if (betaIntercept) {
+        console.log('[beta-intercept] %s rule fired', betaIntercept.kind);
+        dispatch({ type: 'ADD_QUESTION', clarification: betaIntercept.clarification });
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -4728,6 +4755,25 @@ export default function Home() {
                 return b && !n.toLowerCase().startsWith(b.toLowerCase())
                   ? `${b} ${n}` : n || b || 'Unknown';
               });
+            }
+            // 2026-05-11 (Step 7 of 9 — beta path): right-rail population
+            // from the conversation's most recent extracted system chain.
+            // The engine already extracts the chain from prompts like
+            // "Evaluate my system: A → B → C → D" and renders it inside
+            // the response (advisory.systemChain.names). Without this
+            // fallback the SYSTEM rail stays empty even when the engine
+            // is reasoning over a clearly identified chain — a
+            // credibility leak ("preferences accumulate here as we talk"
+            // / "No system active") that contradicts what the user can
+            // see in the response body. Only consulted when no saved or
+            // draft system is active.
+            for (let i = messages.length - 1; i >= 0; i--) {
+              const m = messages[i];
+              if (m.role !== 'assistant' || m.kind !== 'advisory') continue;
+              const names = m.advisory?.systemChain?.names;
+              if (Array.isArray(names) && names.length > 0) {
+                return names;
+              }
             }
             return [];
           }

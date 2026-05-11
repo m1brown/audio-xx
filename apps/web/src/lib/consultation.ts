@@ -58,6 +58,8 @@ import {
 } from './comparison-payload';
 import { getApprovedBrand } from './knowledge';
 import type { BrandKnowledge } from './knowledge/schema';
+import { getPilotCapsule } from './brand-philosophy-pilot';
+import { detectUsedFraming, buildUsedMarketNote } from './used-market';
 import type { ActiveSystemContext } from './system-types';
 import { classifySystemArchetype, consumerSystemIntro, buildConsumerWirelessResponse } from './system-class';
 import type { ClarificationResponse } from './clarification';
@@ -1655,7 +1657,18 @@ function findTopologyMatch(text: string): { archetype: DesignArchetype; label: s
  * Build a consultation response from product tendency data.
  * Used when we have catalog products for the asked-about brand.
  */
-function buildProductConsultation(products: Product[], subject: string): ConsultationResponse {
+function buildProductConsultation(
+  products: Product[],
+  subject: string,
+  /**
+   * 2026-05-11 (Step 5 of 9 — beta path): the original user message
+   * threaded in so the builder can detect explicit used-market framing
+   * ("used", "second-hand", "pre-owned", etc.) and append a small
+   * editorial used-market advisory block. Optional — when absent the
+   * builder behaves exactly as it did before Step 5.
+   */
+  currentMessage?: string,
+): ConsultationResponse {
   const primary = products[0];
 
   // Look up brand links from brand profile (for reference links in response)
@@ -1692,6 +1705,15 @@ function buildProductConsultation(products: Product[], subject: string): Consult
     );
   } else if (primary.price) {
     philosophyParts.push(`Retail price: approximately $${primary.price.toLocaleString()}.`);
+  }
+
+  // ── Used-market block (Step 5 — beta path) ──
+  // When the user's prompt carried explicit used-market framing, append
+  // a generic editorial advisory block. The block uses curated
+  // `usedPriceRange` when present and explicitly disclaims live market
+  // data otherwise. No marketplace integration, no scraping.
+  if (currentMessage && detectUsedFraming(currentMessage)) {
+    philosophyParts.push(buildUsedMarketNote(primary, primary.brand));
   }
 
   // ── Build rich tendencies section ──
@@ -2319,8 +2341,10 @@ export function buildInitialComparisonPayload(
   const charB = extractCoreCharacter(profileB.tendencies);
 
   // ── Sides ──────────────────────────────────────────
-  const sonicTraitsA = extractSonicTraits(profileA.tendencies);
-  const sonicTraitsB = extractSonicTraits(profileB.tendencies);
+  // Pass the canonical brand name so extractSonicTraits can prefer a
+  // pilot capsule (curated) over regex-on-prose extraction.
+  const sonicTraitsA = extractSonicTraits(profileA.tendencies, nameA);
+  const sonicTraitsB = extractSonicTraits(profileB.tendencies, nameB);
 
   const sideA: ComparisonSide = {
     name: nameA,
@@ -2452,8 +2476,20 @@ function stripNegatedClauses(text: string): string {
  * matching keywords inside negative clauses (e.g. "tonal density and
  * harmonic richness are not the emphasis" should NOT contribute
  * positive warm signal).
+ *
+ * 2026-05-11 (Step 2 of 9 — beta path): when `brandName` is provided
+ * and a pilot capsule exists for the brand, the capsule's curated
+ * `perceptionTraits` are returned directly. This prevents the
+ * regex-on-prose path from cross-attributing traits — e.g. Denafrips
+ * picking up "fast, precise timing" because its tendencies text says
+ * "relaxed sense of timing". The regex path remains the fallback for
+ * brands without a pilot capsule.
  */
-function extractSonicTraits(tendencies: string): string[] {
+function extractSonicTraits(tendencies: string, brandName?: string | null): string[] {
+  if (brandName) {
+    const cap = getPilotCapsule(brandName);
+    if (cap) return [...cap.perceptionTraits];
+  }
   const lower = stripNegatedClauses(tendencies).toLowerCase();
   const traits: string[] = [];
 
@@ -3032,15 +3068,29 @@ function extractCoreCharacter(tendencies: string): string {
   if (positiveMatch(/\bengaging|engagement|immersive|immersion\b/i)) traitHits.push('musical engagement');
   if (positiveMatch(/\bsaturated|saturation\b/i)) traitHits.push('tonal saturation');
 
-  if (traitHits.length >= 2) {
-    // Take up to 4 traits for a concise summary
+  if (traitHits.length >= 1) {
+    // Take up to 4 traits for a concise summary.
+    // Threshold lowered from 2 → 1 on 2026-05-11: at 2, brands whose
+    // tendencies match exactly one trait (e.g. Topping → "clarity")
+    // fell through to the sentence-fragment fallback below, which
+    // re-introduced the brand's own name into the trait phrase
+    // ("Topping toward topping dacs are consistently described as
+    // clean"). A single trait is sufficient for the comparison
+    // template's "X leans toward Y" register.
     const selected = traitHits.slice(0, 4);
     return joinNatural(selected);
   }
 
-  // Fallback: first clause of first sentence
+  // Fallback: first clause of first sentence, with leading
+  // "Brand DACs/amps/speakers are/is described/characterized as"
+  // patterns stripped so the comparison template ("X leans toward
+  // <char>") never reads the brand name back into <char>.
   const firstSentence = tendencies.split(/[.!]/)[0] || tendencies;
-  const firstClause = firstSentence.split(/[,;—–]/)[0].trim().toLowerCase();
+  let firstClause = firstSentence.split(/[,;—–]/)[0].trim().toLowerCase();
+  firstClause = firstClause.replace(
+    /^[a-z][a-z0-9 .'-]+?\b(?:dacs?|amps?|amplifiers?|speakers?|monitors?|preamps?|integrateds?|streamers?|cartridges?)?\s+(?:are|is)\s+(?:consistently\s+)?(?:described|characterised|characterized|known)\s+as\s+/i,
+    '',
+  );
   return firstClause;
 }
 
@@ -3202,8 +3252,37 @@ export function buildConsultationResponse(
   if (products.length > 0) {
     // If user mentioned a product name, use product consultation
     if (hasProductSubject) {
-      const brandName = products[0].brand;
-      return buildProductConsultation(products, brandName);
+      // 2026-05-11 (Step 4 of 9 — named-model resolution):
+      // findProductsByBrand returns ALL products of the matched brand
+      // in catalog declaration order — for "Denafrips Pontus II" that
+      // means [Enyo 15th, Ares 15th, Pontus II 12th-1, Terminator II,
+      // Venus II]. buildProductConsultation uses products[0] as the
+      // primary, which silently substituted Enyo for any Denafrips
+      // model the user named (P8 audit failure mode).
+      //
+      // Guard: when a specific product is named, look it up via
+      // findCatalogProduct (alias-aware, score-based). If an exact /
+      // high-confidence match is found, reorder the list so the named
+      // product is the primary. If NOT found, fall through to the
+      // brand-philosophy path below so the engine produces an honest
+      // brand-level response rather than substituting a sibling.
+      const productSubject = subjectMatches!.find((m) => m.kind === 'product');
+      const resolved = productSubject ? findCatalogProduct(productSubject.name) : null;
+      if (resolved) {
+        const reordered = [resolved, ...products.filter((p) => p.id !== resolved.id)];
+        return buildProductConsultation(reordered, reordered[0].brand, currentMessage);
+      }
+      // Named product did not resolve to a specific catalog entry —
+      // fall through to brand-level handling. Do NOT substitute a
+      // sibling. The brand profile path produces honest brand
+      // philosophy content without inventing model-level specificity.
+      const brandProfileForNamedUnknown = findBrandProfile(currentMessage);
+      if (brandProfileForNamedUnknown) {
+        return buildBrandConsultation(brandProfileForNamedUnknown);
+      }
+      // No brand profile either — signal the caller to use the upstream
+      // brand-philosophy fallback (Step 2 wiring in product-assessment).
+      return null;
     }
     // If user mentioned only a brand name and no curated profile exists,
     // check if a brand profile can be found before falling to product level
@@ -3213,7 +3292,7 @@ export function buildConsultationResponse(
     }
     // No curated profile — fall through to product consultation as best-effort
     const brandName = products[0].brand;
-    return buildProductConsultation(products, brandName);
+    return buildProductConsultation(products, brandName, currentMessage);
   }
 
   // 2b-alias. Shorthand product resolution via alias map.
@@ -3234,7 +3313,7 @@ export function buildConsultationResponse(
           (p) => p.brand.toLowerCase() === resolved.brand.toLowerCase(),
         );
         if (brandProducts.length > 0) {
-          return buildProductConsultation(brandProducts, resolved.brand);
+          return buildProductConsultation(brandProducts, resolved.brand, currentMessage);
         }
       }
     }
@@ -3247,7 +3326,7 @@ export function buildConsultationResponse(
   if (provisionalProducts.length > 0) {
     const primary = provisionalProducts[0];
     const adapted = provisionalProducts.map(provisionalToProduct);
-    const response = buildProductConsultation(adapted, primary.brand);
+    const response = buildProductConsultation(adapted, primary.brand, currentMessage);
 
     // Add provenance label so the advisory response frames trust level correctly
     const label = getProvenanceLabel(primary.provenance.sourceType);
@@ -3279,7 +3358,7 @@ export function buildConsultationResponse(
         (p) => p.brand.toLowerCase() === brandSubject.name.toLowerCase(),
       );
       if (brandProducts.length > 0) {
-        return buildProductConsultation(brandProducts, brandProducts[0].brand);
+        return buildProductConsultation(brandProducts, brandProducts[0].brand, currentMessage);
       }
 
       // 5b. Brand recognized in BRAND_NAMES but no catalog data at all —
@@ -3520,7 +3599,7 @@ export function buildSystemAnchoredPayload(
     name: nameA,
     character: charA,
     designPhilosophy: takeSentences(infoA.philosophy, 2),
-    sonicTraits: extractSonicTraits(infoA.tendencies),
+    sonicTraits: extractSonicTraits(infoA.tendencies, nameA),
     systemInteraction: buildSystemInteractionNote(nameA, infoA, contextName, contextInfo, contextKind),
   };
 
@@ -3528,7 +3607,7 @@ export function buildSystemAnchoredPayload(
     name: nameB,
     character: charB,
     designPhilosophy: takeSentences(infoB.philosophy, 2),
-    sonicTraits: extractSonicTraits(infoB.tendencies),
+    sonicTraits: extractSonicTraits(infoB.tendencies, nameB),
     systemInteraction: buildSystemInteractionNote(nameB, infoB, contextName, contextInfo, contextKind),
   };
 

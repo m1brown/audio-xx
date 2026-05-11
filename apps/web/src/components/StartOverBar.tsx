@@ -25,7 +25,18 @@ export default function StartOverBar() {
   }
 
   return (
+    // 2026-05-11 (Step 8 of 9 — beta mobile stabilization): the
+    // workspace page (app/page.tsx) already renders its own inline
+    // "Start over" affordance below the Send button (see line ~4699),
+    // which calls a contextual handleReset() that resets the
+    // conversation state machine cleanly. This component renders the
+    // same control globally via the root layout, producing a visible
+    // duplicate — particularly obvious on mobile where the page
+    // collapses to a single column. The `audioxx-global-startover`
+    // class lets globals.css hide this duplicate on viewports below
+    // the workspace breakpoint without touching the desktop layout.
     <div
+      className="audioxx-global-startover"
       style={{
         display: 'flex',
         justifyContent: 'center',

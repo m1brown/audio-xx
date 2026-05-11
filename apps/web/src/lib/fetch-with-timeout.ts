@@ -23,10 +23,18 @@
 
 /**
  * Default timeout for deterministic backend calls (e.g. /api/evaluate).
- * Short enough that a hung server does not block the UI; long enough
- * to tolerate a cold serverless start and a warm prisma connection.
+ *
+ * Raised 2026-05-11 from 5000 → 15000ms after audit established that
+ * /api/evaluate cold-start latency is ~11s in dev (and meaningfully
+ * non-zero on serverless cold start in production). At 5000ms every
+ * fresh session triggered the deterministic fallback on the first
+ * prompt, even though the engine would have responded successfully a
+ * few seconds later. 15000ms is the smallest value that comfortably
+ * covers observed cold-start latency without making a genuinely hung
+ * server feel infinite. Warm requests still complete in ~50–150ms;
+ * the higher ceiling does not affect happy-path latency.
  */
-export const EVALUATE_TIMEOUT_MS = 5000;
+export const EVALUATE_TIMEOUT_MS = 15000;
 
 export class FetchTimeoutError extends Error {
   constructor(url: string, timeoutMs: number) {

@@ -363,5 +363,14 @@ nav .nav-radar-link:hover {
   .audioxx-workspace-grid > aside {
     display: none !important;
   }
+  /* 2026-05-11 (Step 8 of 9 — beta mobile stabilization): hide the
+   * global StartOverBar on mobile. The workspace page renders its own
+   * inline "Start over" below the Send button; the global bar is a
+   * visible duplicate at small viewports. Desktop keeps both for now
+   * (the duplication is less obtrusive there and out of scope for
+   * Step 8). */
+  .audioxx-global-startover {
+    display: none !important;
+  }
 }
 

@@ -27,6 +27,7 @@ import { SPEAKER_PRODUCTS } from './products/speakers';
 import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
 import { TURNTABLE_PRODUCTS } from './products/turntables';
 import { topTraits } from './taste-profile';
+import { getPilotCapsule, type PilotCapsule } from './brand-philosophy-pilot';
 
 // ── Product catalog ─────────────────────────────────
 
@@ -335,6 +336,15 @@ export function buildProductAssessment(
     ? ALL_PRODUCTS.find((p) => p.id === productNote.siblingId)
     : siblings[0] ?? null;
 
+  // 2026-05-11 (Step 2 of 9 — beta path): pilot-capsule fallback.
+  // When the product catalog has no siblings for this brand (e.g. Pass
+  // Labs, present in the brand-philosophy layer but not in the product
+  // catalog), consult the curated pilot capsule so the response carries
+  // real identity content instead of falling through to "I don't have
+  // catalog data on the X." This is additive and only fires when
+  // brandProfile is null.
+  const pilotCap: PilotCapsule | null = brandProfile ? null : getPilotCapsule(brandName);
+
   // ── Identify current component in same category ────
   let currentComponent: Product | null = null;
   let currentComponentName: string | undefined;
@@ -571,6 +581,14 @@ export function buildProductAssessment(
   } else if (brandProfile) {
     // Specific product not found, but brand recognized with siblings
     shortAnswer = `The ${candidateName} isn't in my catalog, but ${brandName} designs ${brandProfile.architecture} components that emphasise ${brandProfile.strengths.slice(0, 2).join(' and ')}. Assessment is based on the brand's known character.`;
+  } else if (pilotCap) {
+    // Brand is in the curated philosophy layer but not the product catalog.
+    // Use the capsule's mechanism + perception to ground the response in
+    // real identity content rather than falling through to "no catalog data."
+    const charSummary = pilotCap.perceptionTraits.slice(0, 2).join('; ');
+    shortAnswer = productSubject
+      ? `The ${candidateName} isn't in my product catalog, but ${pilotCap.brand} designs are well-known: ${pilotCap.mechanism} Listeners typically describe the result as ${charSummary}.`
+      : `${pilotCap.brand}: ${pilotCap.mechanism} Listeners typically describe the result as ${charSummary}.`;
   } else {
     shortAnswer = `I don't have catalog data on the ${candidateName}. If you can share the brand or model details, I can offer a more specific assessment.`;
   }
@@ -588,6 +606,9 @@ export function buildProductAssessment(
     }
   } else if (!candidate && brandProfile) {
     recommendation = `I can assess this based on ${brandName}'s known design approach. The brand emphasises ${brandProfile.strengths.slice(0, 2).join(' and ')}, which gives a reasonable baseline. For a precise assessment, listener impressions or an audition would fill in the gaps.`;
+  } else if (!candidate && pilotCap) {
+    // Brand recognized via philosophy layer though absent from product catalog.
+    recommendation = `Assessment is based on ${pilotCap.brand}'s documented design approach: ${pilotCap.mechanism} ${pilotCap.preferenceFit}`;
   } else if (!candidate) {
     recommendation = 'I don\'t have enough data on this product to offer a confident recommendation. Share the brand or model details and I can say more.';
   } else if (candidate && currentComponent) {
@@ -609,9 +630,13 @@ export function buildProductAssessment(
 
   return {
     candidateName,
-    candidateBrand: candidate?.brand ?? brandName ?? 'Unknown',
+    candidateBrand: candidate?.brand ?? brandName ?? pilotCap?.brand ?? 'Unknown',
     candidateArchitecture: candidate?.architecture ?? productNote?.architecture ?? brandProfile?.architecture,
-    candidateDescription: candidate?.description ?? productNote?.notes ?? brandProfile?.description,
+    candidateDescription:
+      candidate?.description
+        ?? productNote?.notes
+        ?? brandProfile?.description
+        ?? (pilotCap ? `${pilotCap.mechanism} ${pilotCap.behavior}` : undefined),
     candidateTraits: candidate?.traits ?? (brandProfile ? brandProfile.traits : undefined),
     candidatePrice: candidate?.price,
     candidateTopology: candidate?.topology ?? brandProfile?.topology,
