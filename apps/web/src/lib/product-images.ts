@@ -747,6 +747,114 @@ const CATEGORY_PLACEHOLDERS: Record<string, string> = {
 
 const DEFAULT_PLACEHOLDER = '/images/placeholders/product.svg';
 
+// ── Canonical image resolver (2026-05-11) ──────────────
+//
+// Single entry point that consumers should prefer over the raw
+// `getProductImage` / `getBrandImage` helpers. The resolver returns:
+//   - the chosen URL (always a string — never undefined)
+//   - the confidence tag for that URL
+//   - the source path that produced it
+//
+// Substitution policy (per image-coverage pass spec):
+//   1. Catalog `imageUrl` wins.
+//      Confidence comes from the catalog (`imageConfidence`); fallback
+//      is 'medium' when `imageVerified` is true, else 'low'. Catalog
+//      URLs are not silently swapped for a different product — if the
+//      curator put a URL there, the resolver respects it.
+//   2. Curated overlay map (`getProductImage`) supplies a 'medium'
+//      image when the catalog has none. These are hand-keyed to the
+//      product line so they are not cross-product substitutions.
+//   3. Otherwise the category placeholder renders. Brand-family
+//      fallback (`getBrandImage`) is intentionally NOT used here — the
+//      task's "never silently substitute a clearly different product"
+//      rule treats sibling-product images as substitution. The helper
+//      remains available for explicit opt-in only.
+//
+// The returned URL is always renderable; consumers do not need to
+// check for empty strings or null. Cards always have visual weight.
+
+export type ImageConfidence = 'high' | 'medium' | 'low' | 'placeholder';
+
+export type ImageSourcePath =
+  | 'catalog-verified'
+  | 'catalog'
+  | 'overlay'
+  | 'placeholder';
+
+export interface ResolvedImage {
+  /** A renderable URL (catalog/overlay/placeholder). Never undefined. */
+  readonly url: string;
+  readonly confidence: ImageConfidence;
+  readonly source: ImageSourcePath;
+}
+
+/** Pick the right category placeholder for a product's catalog `category`. */
+function placeholderForCategory(category: string | undefined): string {
+  if (!category) return DEFAULT_PLACEHOLDER;
+  const c = category.toLowerCase();
+  return CATEGORY_PLACEHOLDERS[c] ?? DEFAULT_PLACEHOLDER;
+}
+
+/**
+ * Image resolver with confidence metadata. Always returns a renderable
+ * URL plus a confidence tag and source path. Consumers should pass the
+ * catalog `imageUrl`, the brand+name (for overlay lookup), the category
+ * (for placeholder selection), and the optional `imageVerified` flag.
+ *
+ * Renamed 2026-05-11 to avoid collision with the legacy
+ * `resolveProductImage` (string-returning, brand-fallback) defined
+ * further down this file. The legacy resolver is retained for callers
+ * that rely on its specific chain; new callers wanting confidence
+ * metadata should use this function.
+ *
+ * When `catalogUrl` is present the resolver honours it — it does not
+ * second-guess a curator's choice. Confidence reflects whether the
+ * curator has marked it verified.
+ */
+export function resolveProductImageWithConfidence(args: {
+  catalogUrl?: string;
+  catalogConfidence?: ImageConfidence;
+  catalogVerified?: boolean;
+  brand?: string;
+  name?: string;
+  category?: string;
+}): ResolvedImage {
+  const {
+    catalogUrl,
+    catalogConfidence,
+    catalogVerified,
+    brand,
+    name,
+    category,
+  } = args;
+
+  // 1. Catalog `imageUrl` — curator's explicit choice. Honor it.
+  if (catalogUrl && catalogUrl.length > 0) {
+    const confidence: ImageConfidence =
+      catalogConfidence
+      ?? (catalogVerified ? 'high' : 'medium');
+    return {
+      url: catalogUrl,
+      confidence,
+      source: catalogVerified ? 'catalog-verified' : 'catalog',
+    };
+  }
+
+  // 2. Overlay map — hand-keyed (brand + name substring).
+  const overlay = getProductImage(brand, name);
+  if (overlay) {
+    return { url: overlay, confidence: 'medium', source: 'overlay' };
+  }
+
+  // 3. Category placeholder — last-resort visual weight. No silent
+  //    cross-product substitution.
+  return {
+    url: placeholderForCategory(category),
+    confidence: 'placeholder',
+    source: 'placeholder',
+  };
+}
+
 /**
  * Return a static local placeholder image path for the given product category.
  * Falls back to a generic product silhouette when the category is unknown.

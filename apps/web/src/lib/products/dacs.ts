@@ -132,6 +132,29 @@ export interface Product {
   // ── Enhanced catalog fields (Step 10) ─────────────────
   /** Product image URL — official press image or product shot. */
   imageUrl?: string;
+  /**
+   * Image confidence tag (image-coverage pass, 2026-05-11).
+   *   - 'high'   — official manufacturer hero / press image, verified
+   *                to render the exact named model
+   *   - 'medium' — strong exact-model match from a trusted source
+   *                (authorized dealer, established review publication)
+   *   - 'low'    — approximate family-level / variant image, or
+   *                substring-keyed overlay match awaiting confirmation
+   *   - omitted  — not yet tagged; consumers should treat as 'medium'
+   *                when `imageUrl` is present, else as 'low' when only
+   *                the brand-keyed overlay resolves
+   * Used by the resolver to decide between using the image, falling back
+   * to a sibling, or showing the category placeholder. Does not block
+   * rendering; image is still shown when present.
+   */
+  imageConfidence?: 'high' | 'medium' | 'low';
+  /**
+   * True when a human has confirmed that the `imageUrl` renders the
+   * specific named model (not a different model in the same line, not
+   * a generic brand image). Untagged products default to `false`. Set
+   * to `true` only after manual review.
+   */
+  imageVerified?: boolean;
   /** Structured buying context label for the card. Overrides inference when present. */
   buyingContext?: 'easy_new' | 'better_used' | 'dealer_likely' | 'used_only';
 

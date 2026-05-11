@@ -783,8 +783,13 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
   const isDiscontinued = opt.availability === 'discontinued' || opt.availability === 'vintage';
   const role = getRoleFromOption(opt);
   const availBadge = opt.availability ? AVAILABILITY_LABELS[opt.availability] : undefined;
-  // Card context — always show image when available (no dedup).
-  const shouldShowImage = !!opt.imageUrl;
+  // 2026-05-11 (image-coverage pass): cards always render an image —
+  // either the catalog/overlay URL, or a category-shaped placeholder.
+  // Avoids the "card collapses with no visual" failure mode without
+  // silently substituting a clearly different product.
+  const resolvedImageUrl = opt.imageUrl
+    ?? categoryPlaceholder(opt.productType);
+  const shouldShowImage = !!resolvedImageUrl;
 
   // Step 10, Task 4: card-view and link-click events now fire from
   // <CardViewTracker /> and <TrackedAnchor /> — both 'use client' wrappers
@@ -838,9 +843,9 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
        * Full-width hero image — the product is the first visual anchor.
        * Positioned above the product name so the card reads as a real
        * product at a glance. Silent collapse on missing/broken URLs. */}
-      {shouldShowImage && opt.imageUrl && (
+      {shouldShowImage && resolvedImageUrl && (
         <ProductImage
-          src={opt.imageUrl}
+          src={resolvedImageUrl}
           alt={[opt.brand, opt.name].filter(Boolean).join(' ')}
           credit={opt.brand || undefined}
           fallbackSrc={categoryPlaceholder(opt.productType)}
