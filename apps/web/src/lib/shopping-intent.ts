@@ -3685,7 +3685,16 @@ function buildArchitectureSentence(product: Product): string | undefined {
   if (topo.includes('fpga') || arch.includes('fpga')) {
     return 'FPGA timing — fast transients, precise spatial cues, and a leaner tonal profile.';
   }
-  if (topo.includes('delta-sigma') || arch.includes('ess') || arch.includes('akm') || arch.includes('sabre')) {
+  // Word-boundary regex prevents false positives where the bare 'ess'
+  // substring appears inside unrelated words (e.g. 'OTL (output
+  // transformerless)' — 'transformerless' contains the substring 'ess'
+  // and previously mis-classified the Bottlehead Crack OTL tube
+  // headphone amp as a delta-sigma DAC). 'akm' / 'sabre' tightened
+  // symmetrically. All catalog ESS DACs carry topology='delta-sigma'
+  // already, so the topology check is the primary path; the arch
+  // checks remain as defence-in-depth for entries that name the chip
+  // but omit topology.
+  if (topo.includes('delta-sigma') || /\bess\b/i.test(arch) || /\bakm\b/i.test(arch) || /\bsabre\b/i.test(arch)) {
     if (philosophy === 'analytical') return 'Delta-sigma conversion — sharper separation, cleaner edges, and stronger detail retrieval.';
     if (philosophy === 'neutral') return 'Delta-sigma conversion — clean measured delivery with extended bandwidth and low noise.';
     return 'Delta-sigma conversion — wide bandwidth, low noise floor, and composed detail.';

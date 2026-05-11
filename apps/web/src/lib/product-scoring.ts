@@ -17,6 +17,7 @@ import type { HardConstraints } from './shopping-intent';
 import { resolveTraitValue, hasRisk } from './sonic-tendencies';
 import type { ListenerProfile } from './listener-profile';
 import { computeTastePenalty } from './listener-profile';
+import { scoreCulturalSignificance } from './cultural-significance';
 
 // ── Types ─────────────────────────────────────────────
 
@@ -313,6 +314,17 @@ export function scoreProduct(
   score += scoreSystemCoherence(product, systemProfile);
   score += scoreReviewerAcclaim(product);
 
+  // ── Cultural-significance counter-weight (2026-05-11) ───
+  // The reviewer-acclaim bonus above structurally favours
+  // metadata-rich, mainstream brands. The cultural-significance
+  // scorer applies a symmetric one-sided correction: brands tagged
+  // as historic / design-original / enthusiast-relevant in
+  // `cultural-significance.ts` receive a comparable (capped +0.50)
+  // boost so that sparse-data culturally-important products compete
+  // on trait alignment rather than on review coverage. Untagged
+  // products lose nothing; this is not a penalty for popularity.
+  score += scoreCulturalSignificance(product.brand, product.name);
+
   // ── Soft availability penalty ──────────────────────────
   // Discontinued and vintage products are slightly penalized by default
   // (even without the newOnly hard constraint). This reflects the practical
@@ -508,7 +520,132 @@ export function rankProducts(
     });
   }
 
-  return scored;
+  return diversifyByPhilosophicalSchool(scored);
+}
+
+// ── Philosophical-school diversification pass (2026-05-11) ──
+//
+// After scoring, the top of the ranked list can collapse into a
+// single design-school (e.g. five push-pull-tube integrateds from
+// mainstream brands), starving the user of the philosophically
+// distinct alternatives that the cultural-significance boost is
+// supposed to surface. This pass scans the top window (default 6
+// candidates), and when a single topology / school dominates,
+// promotes the highest-scoring representative of the next school
+// from later in the list so that at least one alternative
+// philosophy surfaces in the top group.
+//
+// The pass is conservative on purpose:
+//   - Operates only on the top-N window (N=6).
+//   - Only fires when the dominant school owns ≥4 of the top 6.
+//   - Only promotes one alternative — preserves the integrity of
+//     the trait-aligned ranking otherwise.
+//   - Never demotes the #1 product (the anchor recommendation
+//     remains the trait-aligned best fit).
+//   - Domain-specific (topology) but works through pure data — no
+//     external dependencies, no LLM, no metadata beyond what the
+//     catalog already carries.
+
+/** Coarse school grouping. Two products share a school iff their
+ *  topology maps to the same SchoolBucket. */
+type SchoolBucket =
+  | 'set'
+  | 'push-pull-tube'
+  | 'otl-tube'
+  | 'hybrid'
+  | 'class-a-solid-state'
+  | 'class-ab-solid-state'
+  | 'class-d-solid-state'
+  | 'r2r'
+  | 'fpga'
+  | 'delta-sigma'
+  | 'horn-high-efficiency'
+  | 'planar'
+  | 'bbc-lineage'
+  | 'box-speaker'
+  | 'other';
+
+function bucketForTopology(topo: string | undefined): SchoolBucket {
+  if (!topo) return 'other';
+  const t = topo.toLowerCase();
+  if (t === 'set' || t.includes('single-ended-tube') || t.includes('single ended tube')) return 'set';
+  if (t === 'push-pull-tube' || t.includes('push-pull')) return 'push-pull-tube';
+  if (t.includes('otl')) return 'otl-tube';
+  if (t === 'hybrid' || t.includes('hybrid')) return 'hybrid';
+  if (t.includes('class-a') && !t.includes('class-ab')) return 'class-a-solid-state';
+  if (t.includes('class-ab')) return 'class-ab-solid-state';
+  if (t.includes('class-d')) return 'class-d-solid-state';
+  if (t === 'r2r' || t.includes('r-2r') || t.includes('ladder')) return 'r2r';
+  if (t.includes('fpga') || t.includes('pulse-array')) return 'fpga';
+  if (t.includes('delta-sigma') || t.includes('sigma-delta') || t.includes('ess') || t.includes('akm')) return 'delta-sigma';
+  if (t.includes('horn') || t.includes('high-efficiency')) return 'horn-high-efficiency';
+  if (t.includes('planar') || t.includes('magnepan')) return 'planar';
+  if (t.includes('bbc')) return 'bbc-lineage';
+  return 'other';
+}
+
+function diversifyByPhilosophicalSchool(
+  scored: ScoredProduct[],
+): ScoredProduct[] {
+  const WINDOW = 6;
+  const DOMINANCE_THRESHOLD = 4;
+  if (scored.length <= WINDOW) return scored;
+
+  const window = scored.slice(0, WINDOW);
+  // Count school occurrences in the top window. The #1 product is
+  // sacred — its school is the "dominant" baseline regardless of count.
+  const counts = new Map<SchoolBucket, number>();
+  for (const sp of window) {
+    const bucket = bucketForTopology(sp.product.topology);
+    counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
+  }
+
+  // Find the dominant school (largest count in the window).
+  let dominantSchool: SchoolBucket = 'other';
+  let dominantCount = 0;
+  for (const [bucket, count] of counts.entries()) {
+    if (count > dominantCount) {
+      dominantSchool = bucket;
+      dominantCount = count;
+    }
+  }
+  if (dominantCount < DOMINANCE_THRESHOLD) return scored;
+
+  // Search the tail for the highest-scoring product whose school
+  // differs from the dominant one. If none exists, return as-is.
+  const tail = scored.slice(WINDOW);
+  const alternative = tail.find(
+    (sp) => bucketForTopology(sp.product.topology) !== dominantSchool,
+  );
+  if (!alternative) return scored;
+
+  // Swap the lowest-ranked dominant-school product in the window
+  // (excluding position 0, which we preserve as the anchor) with the
+  // alternative. The alternative is inserted into the swap position
+  // to preserve overall trait-aligned ordering.
+  let lastDominantIdx = -1;
+  for (let i = WINDOW - 1; i >= 1; i--) {
+    if (bucketForTopology(window[i].product.topology) === dominantSchool) {
+      lastDominantIdx = i;
+      break;
+    }
+  }
+  if (lastDominantIdx < 0) return scored;
+
+  const out = scored.slice();
+  // Remove alternative from its current tail position
+  const altIdx = scored.indexOf(alternative);
+  if (altIdx < 0) return scored;
+  out.splice(altIdx, 1);
+  // Replace the displaced dominant-school product with the alternative
+  out.splice(lastDominantIdx, 1, alternative);
+
+  console.log('[diversify] %s dominated top %d (count=%d); promoted alternative %s %s (school=%s)',
+    dominantSchool, WINDOW, dominantCount,
+    alternative.product.brand, alternative.product.name,
+    bucketForTopology(alternative.product.topology));
+
+  return out;
 }
 
 // ── Refinement re-ranking (Prompt 3) ─────────────────
