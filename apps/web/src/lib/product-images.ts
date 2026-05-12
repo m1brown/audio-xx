@@ -209,18 +209,29 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'schiit aegir',        url: 'https://www.schiit.com/img/img_4195.jpg' },
   { key: 'schiit saga',         url: 'https://www.schiit.com/img/img_5335.jpg' },
 
-  // PrimaLuna — primaluna.nl product hero shots
+  // PrimaLuna — primaluna.nl current Umbraco/media CDN. Previous
+  // /wp-content/uploads/ paths returned 404 after the site re-launched.
+  // The /media/ws1n5gzp/ asset is the canonical silver hero shot used
+  // on the EVO 300 product page (3/4 angle).
+  { key: 'primaluna evo 300',   url: 'https://www.primaluna.nl/media/ws1n5gzp/02_silver_quarter-updated.jpg',
+    source: { tier: 'manufacturer', site: 'primaluna.nl', credit: 'PrimaLuna', captured: '2026-05-12' } },
+  // EVO 400 left at legacy URL (404) — also needs manual curation; out
+  // of scope for the 2026-05-12 narrow pass.
   { key: 'primaluna evo 400',   url: 'https://www.primaluna.nl/wp-content/uploads/2019/01/EVO-400-Integrated-Amplifier-Silver-Front.jpg' },
-  { key: 'primaluna evo 300',   url: 'https://www.primaluna.nl/wp-content/uploads/2019/01/EVO-300-Integrated-Amplifier-Silver-Front.jpg' },
 
-  // Leben — leben-hifi.com
-  // Spaceless variants ("cs300", "cs600x") cover catalog names like
-  // "CS300" and "CS600X" where normalize strips the slash/hyphen but
-  // does not insert a space between letters and digits.
+  // Leben — McLean's Audio (authorized Canadian Leben dealer, Shopify
+  // CDN). Previous leben-hifi.com manufacturer site is unreachable.
+  // Spaceless variants ("cs300", "cs600x") cover catalog names where
+  // normalize strips the slash/hyphen but does not insert a space
+  // between letters and digits.
+  { key: 'leben cs 600',        url: 'https://www.mcleans.info/cdn/shop/products/leben-leben-cs-600x-audiophile-integrated-tube-amplifier-integrated-amplifier-28141914095699_800x.jpg',
+    source: { tier: 'authorized_dealer', site: 'mcleans.info', credit: 'McLean\'s Audio', captured: '2026-05-12' } },
+  { key: 'leben cs600',         url: 'https://www.mcleans.info/cdn/shop/products/leben-leben-cs-600x-audiophile-integrated-tube-amplifier-integrated-amplifier-28141914095699_800x.jpg',
+    source: { tier: 'authorized_dealer', site: 'mcleans.info', credit: 'McLean\'s Audio', captured: '2026-05-12' } },
+  // Leben CS300 — left at legacy URL pending verification; CS300 not in
+  // the narrow-pass scope.
   { key: 'leben cs 300',        url: 'https://www.leben-hifi.com/images/cs300xs-front.jpg' },
   { key: 'leben cs300',         url: 'https://www.leben-hifi.com/images/cs300xs-front.jpg' },
-  { key: 'leben cs 600',        url: 'https://www.leben-hifi.com/images/cs600x-front.jpg' },
-  { key: 'leben cs600',         url: 'https://www.leben-hifi.com/images/cs600x-front.jpg' },
 
   // Marantz — vintage-receiver reference image (the 2220 and 2220B
   // share the same chassis; image is the canonical 2220 face).
@@ -358,7 +369,8 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
 
   // Klipsch Heritage — klipsch.com /medias/ CDN
   { key: 'klipsch la scala',    url: 'https://www.klipsch.com/medias/la-scala-al5-natural-cherry-front.jpg' },
-  { key: 'klipsch heresy',      url: 'https://www.klipsch.com/medias/heresy-iv-natural-cherry-front.jpg' },
+  { key: 'klipsch heresy',      url: 'https://klipsch.imgix.net/product-images/Heresy-IV_American-Walnut_Front_2024-07-09-235240_vpra.jpg',
+    source: { tier: 'manufacturer', site: 'klipsch.imgix.net', credit: 'Klipsch', captured: '2026-05-12' } },
   { key: 'klipsch cornwall',    url: 'https://www.klipsch.com/medias/cornwall-iv-natural-cherry-front.jpg' },
   { key: 'klipsch forte',       url: 'https://www.klipsch.com/medias/forte-iv-natural-cherry-front.jpg' },
 
@@ -537,7 +549,8 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // ── Remaining DACs ────────────────────────────────────
 
   // Auralic — us.auralic.com product assets
-  { key: 'auralic vega',        url: 'https://us.auralic.com/cdn/shop/products/VEGA-S1-Front-Silver.jpg' },
+  { key: 'auralic vega',        url: 'https://www.hifi.fr/3468-large_default/auralic-vega.jpg',
+    source: { tier: 'authorized_dealer', site: 'hifi.fr', credit: 'HiFi France', captured: '2026-05-12' } },
 
   // SMSL — smsl-audio.com product assets
   { key: 'smsl do300',          url: 'https://www.smsl-audio.com/upload/portal/20230118/DO300-1.png' },
@@ -555,7 +568,8 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'scott 222',           url: 'https://preview.redd.it/hh-scott-222b-tube-integrated-amp-estimated-value-v0-7bfwf2ps75ug1.jpeg?width=1080&crop=smart&auto=webp&s=f7b7ce228d6e0f3c42194f35c8eeaf78d8837067' },
 
   // Rogue Audio — rogueaudio.com
-  { key: 'rogue audio cronus magnum', url: 'https://rogueaudio.com/Images/cronusmag3.jpg' },
+  { key: 'rogue audio cronus magnum', url: 'https://listenroom.com/cdn/shop/files/RogueAudioCronusMagnumIIIsilverfront.jpg',
+    source: { tier: 'authorized_dealer', site: 'listenroom.com', credit: 'The Listening Room', captured: '2026-05-12' } },
 
   // Spendor — spendoraudio.com (additional speaker)
   { key: 'spendor a1',          url: 'https://spendoraudio.com/wp-content/uploads/a1-natural-oak-front.jpg' },
