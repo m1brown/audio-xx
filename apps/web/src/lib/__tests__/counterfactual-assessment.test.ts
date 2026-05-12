@@ -119,7 +119,6 @@ describe('overcorrection risk', () => {
       protection: undefined,
       constraint: undefined,
       stacked: [makeStacked({
-        property: 'high_warmth',
         classification: 'system_imbalance',
       })],
     });
@@ -135,7 +134,6 @@ describe('overcorrection risk', () => {
       protection: undefined,
       constraint: undefined,
       stacked: [makeStacked({
-        property: 'high_warmth',
         classification: 'system_imbalance',
       })],
     });
@@ -149,7 +147,6 @@ describe('overcorrection risk', () => {
       protection: undefined,
       constraint: undefined,
       stacked: [makeStacked({
-        property: 'high_warmth',
         classification: 'system_character',
       })],
     });
@@ -204,7 +201,6 @@ describe('restraint determination', () => {
       protection: undefined,
       constraint: undefined,
       stacked: [makeStacked({
-        property: 'high_warmth',
         classification: 'system_imbalance',
       })],
     });
@@ -305,7 +301,6 @@ describe('integration', () => {
       protection: undefined,
       constraint: makeConstraint(),
       stacked: [makeStacked({
-        property: 'high_warmth',
         classification: 'system_imbalance',
       })],
     });
