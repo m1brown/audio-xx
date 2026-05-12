@@ -1,0 +1,145 @@
+started
+
+[A1] Eversolo->Hugo->JOB->WLM Diva — PASS (smoke). SYSTEM right rail populated. Component-by-component review.
+[A2] Denafrips vs Topping — PASS (smoke). Clean philosophy separation; no cross-attribution.
+[A3] "I want something more musical and engaging" — PASS. Vague-preference intercept fires; asks 4 calibrated trade-off questions; refuses gear suggestion. No images (correct, pure dialog).
+[A4] Upgrade DAC or speakers first? — PASS. Sequencing intercept; asks for system context + what user wants to change; mentions reversibility (speakers hardest, DACs easiest).
+[A5] Naim->Pass Labs sideways vs upgrade — STRONG PASS. "Philosophical shift, not automatically a 'better' move." Naim=PRaT/timing/damped bass. Pass Labs=Class A/low-fb/even-order/Nelson Pass lineage. Trade-off framing.
+[A6] Harsh on female vocals — PASS. Diagnoses bright/treble-forward; points upstream to DAC/source; recommends R2R (Enyo, Bifrost) or tube DAC (Orchid) or tube buffer. NOTE: doesn't ask for current system, infers anyway — acceptable.
+[A7] Small reflective room — STRONG PASS. First-reflection physics + speaker dispersion guidance (controlled vs wide); near-field before treatment; treble-energetic source caveat.
+[A8] Used Pontus II — PASS (smoke). Pontus II 12th-1 @$1,499 + used-market checklist (revision/condition/sold prices).
+
+=== GROUP B (Srajan / 6moons) ===
+[B1] Kinki Studio EX-M1 — STRONG. Detailed catalog: dual-mono, 215W into 8Ω, EX-M1+ context, warm/muscular.
+[B2] Kinki Studio vs Pass Labs — STRONG. Both philosophies; "different priorities, not a quality gap".
+[B3] Qualio IQ amplifier matching — WEAK. Qualio unrecognized; fallback iFi Zen-like budget DAC ($199). Brand not in catalog.
+[B4] Cube Audio Nenuphar amplifier matching — WEAK. Brand tagged in cultural-significance but no catalog products; falls to iFi fallback.
+[B5] Bakoon vs First Watt — MIXED. "Bakoon" name unrecognized (catalog uses "Enleum" only — rename not aliased). First Watt brand correct (low-power, single-ended SS).
+[B6] Enleum AMP-23R — STRONG. Rich detail: "Korean boutique integrated (formerly Bakoon)", 25W zero-fb MOSFET, JET 2 Bias, $6,500, triode-like glow.
+[B7] Yamamoto A-08S — STRONG. 45 triode, 2W Class A, hand-wired, 95dB+ speaker req, $5,000.
+[B8] First Watt SIT amps — MEDIUM. Brand profile good (low-power, single-ended SS, high-efficiency pairing); no specific J2/F7/M2 product cards.
+[B9] systems for long listening sessions — WEAK. Vague-preference intercept; missed cultural shorthand for fatigue-resistance.
+[B10] low-power amp for 100dB speakers — PASS. Leben + Shindo + Yamamoto surface as primary trio.
+[B11] should I move from push-pull to SET — WEAK. Treated as gear comparison; asked "which two components"; missed topology-shift framing.
+[B12] emotionally involving systems — WEAK. Vague intercept.
+[B13] systems that disappear — WEAK. Vague intercept on standard audiophile imaging shorthand.
+[B14] best DACs for tonal density — STRONG. Mirrors preference "density"; MHDT Orchid primary; TotalDAC + Rockna surface.
+[B15] Audio Note UK vs Denafrips — WEAK. Audio Note UK only appears as query echo; Denafrips described well but no Audio Note characterization.
+[B16] Goldmund sound signature — STRONG. Speed/transparency/precision; "JOB is the accessible sister brand"; SRDA DAC named.
+[B17] Harbeth vs Zu — STRONG. BBC RADIAL vs full-range high-efficiency; clean trade-off framing.
+[B18] TotalDAC vs Chord — STRONG. FPGA pulse-array vs discrete R2R ladder; specific products (Hugo TT2, d1-unity).
+[B19] best tube DAC under $5000 — WEAK. "tube" qualifier dropped; returns Auralic / TotalDAC / Chord — none are tube DACs. MHDT/Lampizator/AN absent.
+[B20] systems for intimacy and tone — WEAK. Vague intercept.
+
+GROUP B PATTERN:
+- STRONG: when query names in-catalog brand/product (Kinki, Enleum, Yamamoto, Goldmund) or uses primary axis vocabulary (tonal density, warmth)
+- WEAK: audiophile shorthand ("disappear", "intimacy", "emotionally involving") → vague intercept fires
+- WEAK: brand alias not recognized (Bakoon, Cube Audio, Qualio, Lampizator)
+- WEAK: qualifier dropped from category query ("tube DAC" → just DAC)
+
+=== GROUP C (Lavorgna / Twittering Machines) ===
+[C1] Leben CS600 — STRONG. Push-pull KT77/KT88/EL34, ~32W, $6,200, "celebrated pairing with DeVore O/96" callout.
+[C2] Leben vs Shindo — STRONG. Shindo Cortese + Leben CS600X named. "composure and control vs musical flow and rhythmic engagement". Both philosophies articulated.
+[C3] Mola Mola Tambaqui — STRONG. Bruno Putzeys named; custom discrete dual DAC; 130dB SNR; $13,400; analytical/neutral character.
+[C4] TotalDAC d1-twelve MK2 — STRONG. Vincent Brient named; 12 parallel R2R modules per channel; $4,800; organic/natural.
+[C5] DeVore O/96 amplifier matching — MIXED. STRONG speaker description (high-eff wide-baffle, voiced by ear, $12k) but did NOT recommend specific amps for matching despite "amplifier matching" in query.
+[C6] best DAC under $5000 — STRONG (smoke). Under-$5k framing intact; OUTSIDE THE OBVIOUS surfaces TotalDAC.
+[C7] DACs with realistic texture — WEAK. Vague intercept.
+[C8] smooth but detailed DACs — WEAK. Wrong intercept: hit "detail revealing" complaint diagnostic instead of recommendation flow.
+[C9] systems for vocal intimacy — DECENT. "voice-forward, intimate, natural" mirror; asks delivery format.
+[C10] minimalist high-end systems — WEAK. Vague intercept.
+[C11] systems for jazz and chamber music — DECENT. "relaxed, acoustic, nuanced" mirror; asks format.
+[C12] systems that sound relaxed but resolving — BUG. Wrong intercept (treats "resolving" as complaint); inline duplicate paragraph ("I recognised 'detail revealing'..." repeats verbatim in main + WHAT THIS MEANS).
+[C13] nearfield audiophile systems — DECENT. Room intercept; sensible near-field guidance.
+[C14] apartment listening systems — STRONG. Acknowledges shared-wall bass; sealed designs; near-field; high-eff + low-power amplification.
+[C15] systems for acoustic music — DECENT. "natural, intimate, detailed" mirror.
+[C16] Chord Qutest vs Hugo TT2 — STRONG. Within-brand framing: "scale and refinement within design philosophy, not change in direction"; FPGA continuity acknowledged.
+[C17] quiet emotionally involving systems — WEAK. Vague intercept.
+[C18] what DACs avoid digital glare — BUG. Same duplicate-paragraph "I recognised 'glare'..." pattern as C12. Treats "avoid X" as complaint about presence of X.
+[C19] spatially immersive systems — WEAK. Vague intercept (offers spatial-precision/image-scale options).
+[C20] naturalness over impact — WEAK. Generic vague intercept despite clear bipolar preference.
+
+GROUP C PATTERN:
+- STRONG on named boutique products (Leben CS600, Tambaqui, TotalDAC d1-twelve, Enleum, Yamamoto)
+- STRONG on canonical brand comparisons (Chord Qutest vs TT2, Leben vs Shindo)
+- DECENT on genre/format queries (jazz/chamber, vocal intimacy, acoustic) with mirror+follow-up
+- STRONG on room/format constraints (apartment, nearfield)
+- WEAK on abstract audiophile vocabulary ("naturalness", "minimalist", "immersive", "emotionally involving")
+- BUG: "avoid X" or "but resolving" queries hit diagnostic complaint-intercept with duplicate-paragraph rendering
+
+=== GROUP D (Budget consistency sweep) ===
+DAC budgets:
+  $500    STRONG. "Under ~$500"; Topping, SMSL, Schiit, Musical, iFi.
+  $1000   STRONG. "Under ~$1,000"; Schiit Bifrost, MHDT, Holo, iFi.
+  $1500   STRONG. "Under ~$1,500"; Denafrips Pontus, Gustard, Chord Qutest, Musical, iFi.
+  $3000   PASS. "Under ~$3,000"; Holo May/Spring, Denafrips Pontus/Terminator (Terminator slight upward leak).
+  $5000   STRONG (smoke). Under-$5k framing; OUTSIDE THE OBVIOUS surfaces TotalDAC.
+  $10000  PASS. "Under ~$10,000"; Holo May, Lampizator, Chord. Could be richer (AN/MSB/Tambaqui absent).
+
+Tube amp budgets:
+  $500    not run.
+  $1000   PASS. Bottlehead leads; "amplifiers under ~$1000" framing intact. No delta-sigma leak (Bottlehead bug fix confirmed).
+  $1500   THIN. Bottlehead only.
+  $3000   not run.
+  $5000   STRONG (smoke). Yamamoto in OUTSIDE THE OBVIOUS; Leben, Shindo present.
+  $10000  STRONG. Leben, PrimaLuna, AmpsAndSound, EAR, VAC. Diverse philosophy.
+
+Integrated amp budgets (sampled $1500/$5000):
+  $1500   PASS. NAD; framing intact.
+  $5000   PASS. PrimaLuna + Naim; framing intact. Diversity thin (Kinki/Hegel/Luxman absent).
+
+Speaker budgets (sampled $5000/$10000):
+  $5000   STRONG. Klipsch, Ocellia (cultural-significance brand surfaces).
+  $10000  PASS. KEF + DeVore (cultural-significance brand).
+
+Streamer budgets (sampled $1500/$5000):
+  $1500   WEAK. No products surface; generic preference-elicitation only; template fragment "For streamer: the decision axis for streamer: warmth and musicality vs." truncates mid-sentence — BUG.
+  $5000   WEAK. Same template fragment, no products. Auralic/Lumin/Eversolo absent.
+
+GROUP D PATTERN:
+- Budget framing consistent across all categories ("Under ~$X" string).
+- No budget contamination between tiers (every probe stayed within tier).
+- Cultural-significance brands (Ocellia, DeVore) surface at speaker tiers.
+- Streamer category is essentially unpopulated — generic template only.
+- Template bug: streamer rendering produces incomplete "decision axis: warmth and musicality vs." sentence.
+
+=== GROUP E (UI + image + link + console + network) ===
+
+IMAGE COVERAGE (sampled across category-budget queries):
+  DAC <$1500: 3/3 real (Denafrips Pontus II wixstatic, Gustard X26 shenzhenaudio, Chord Qutest chordelectronics) — 100% real.
+  DAC <$5000: 1/3 real (Chord Hugo TT2 only). Auralic Vega + TotalDAC d1-twelve MK2 → SVG placeholder.
+  Tube amps <$5000: 1/3 real (Yamamoto A-08S from exclusive-audio.jp). PrimaLuna EVO 300 + Rogue Cronus → placeholder.
+  Tube amps <$10000: 1/3 real (ampsandsound Stereo 17). Leben CS600X + PrimaLuna EVO 300 → placeholder. ★ Leben CS600X being a placeholder is the most surprising gap (Lavorgna-canonical product).
+  Speakers <$5000: 1/3 real (Amphion Argon3S). Klipsch Heresy IV + Ocellia Calliope → placeholder. ★ Klipsch Heresy IV (an iconic mainstream product) being a placeholder is a credibility miss.
+
+BROKEN IMAGES: 0. Every image element either loads a real photo or loads a deterministic SVG placeholder. No 404s, no broken-image icons.
+
+IMAGE COVERAGE PATTERN:
+  - Under-$1500 buckets: well covered (mainstream brands have manufacturer/retailer hosted images).
+  - Flagship buckets ($5k+): coverage drops to ~33%. Boutique brands (Yamamoto, TotalDAC, ampsandsound, Ocellia) are tagged but lack hosted images — placeholders.
+  - Notable mainstream products MISSING images: Klipsch Heresy IV, Leben CS600X, PrimaLuna EVO 300, Rogue Cronus Magnum III, Auralic Vega.
+  - Pattern: image-confidence flagging working — placeholders never display as broken; just visually generic.
+
+EXTERNAL LINKS:
+  - 14 external links across 6 domains: auralic.com, hifishark.com, ebay.com, totaldac.com, audiogon.com, chordelectronics.co.uk.
+  - All are product-page or used-market lookup links.
+  - No dead-domain patterns detected. No malformed URLs visible.
+
+CONSOLE ERRORS:
+  - 1 React error #418 (hydration text-content mismatch) observed during product-card rendering. NOT fatal — page recovers — but plausibly related to the inline duplicate-paragraph bug seen in C12/C18 (where SSR/CSR mismatch produces the same paragraph twice during reconciliation).
+
+NETWORK REQUESTS observed:
+  - /api/evaluate POST 200 ✓
+  - /api/orchestrator POST 200 ✓
+  - /api/memo-overlay POST 503 ⚠️ (likely the deprecated StructuredMemoInputs path still being called)
+  - /.well-known/vercel/jwe 503 (expected — SSO probe)
+  - 3 image GETs 200 ✓
+
+UI / LAYOUT:
+  - No horizontal scroll at 2140px viewport.
+  - No overflow elements.
+  - No empty cards (placeholder always rendered).
+  - No card duplication observed.
+  - No malformed formatting except the streamer-template fragment "decision axis: warmth and musicality vs." (mid-sentence truncation).
+
+INFINITE LOADING: not observed at any point during the 60+ queries run.

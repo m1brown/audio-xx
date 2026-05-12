@@ -1541,17 +1541,52 @@ function generateBottomLine(
 ): string | undefined {
   if (!recommendedDirection) return undefined;
 
-  // Trim direction to first sentence for brevity
-  const dirBrief = recommendedDirection.split(/\.\s/)[0];
+  // Trim direction to first sentence for brevity.
+  // Note: split on ". " (period + whitespace) but treat "vs.", "etc.", "e.g.",
+  // "i.e." as in-sentence abbreviations rather than sentence terminators —
+  // otherwise "warmth vs. precision" truncates at "vs." mid-sentence.
+  const ABBREV = /(?:\bvs|\betc|\be\.g|\bi\.e|\bMr|\bDr|\bSt)$/i;
+  const parts = recommendedDirection.split(/\.\s/);
+  let dirBrief = parts[0];
+  for (let i = 1; i < parts.length; i++) {
+    // Merge back if the previous chunk ended with an abbreviation
+    if (ABBREV.test(dirBrief)) {
+      dirBrief = `${dirBrief}. ${parts[i]}`;
+    } else {
+      break;
+    }
+  }
+
+  // Avoid redundant "For ${subject}: ... for ${subject} ..." when the
+  // direction already names the category (e.g. "...for streamer:...").
+  const subjLow = subject.toLowerCase();
+  const dirLow = dirBrief.toLowerCase();
+  const dirAlreadyNamesSubject = subjLow.length > 2 && (
+    new RegExp(`\\bfor\\s+${subjLow}\\b`).test(dirLow) ||
+    dirLow.startsWith(`different ${subjLow}`) ||
+    dirLow.startsWith(`${subjLow} `) ||
+    dirLow.startsWith(`the ${subjLow}`)
+  );
 
   if (kind === 'diagnosis' && tradeOffs && tradeOffs.length > 0) {
+    if (dirAlreadyNamesSubject) {
+      return `${capitalize(dirBrief)} — the trade-off is ${tradeOffs[0].toLowerCase()}.`;
+    }
     return `For ${subject}: ${dirBrief.toLowerCase()} — the trade-off is ${tradeOffs[0].toLowerCase()}.`;
   }
   if (kind === 'shopping') {
+    if (dirAlreadyNamesSubject) {
+      return `${capitalize(dirBrief)}.`;
+    }
     return `For ${subject}: ${dirBrief.toLowerCase()}.`;
   }
   // consultation — keep it light
   return undefined;
+}
+
+function capitalize(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 /**
@@ -3464,6 +3499,15 @@ function buildDiagnosisExplanation(
   const entry = SYMPTOM_EXPLANATIONS[symptomId];
   if (entry) {
     return hasSystem ? entry.withSystem : entry.withoutSystem;
+  }
+
+  // Suppress for partial-recognition: the rule's explanation already
+  // surfaces in the primary complaint summary upstream. Re-rendering it
+  // here causes the duplicate-paragraph bug observed on queries like
+  // "what DACs avoid digital glare" and "systems that sound relaxed but
+  // resolving" where the same "I recognised X..." sentence renders twice.
+  if (symptomId === 'partial-recognition') {
+    return undefined;
   }
 
   // Fallback: build from rule explanation + system context

@@ -13,6 +13,9 @@
  */
 
 import { isIntakeQuery } from './intake';
+import { extractBipolarPreference } from './bipolar-preference';
+import { detectTopologyQuestion } from './topology-philosophy';
+import { detectPairingIntent } from './pairing-resolver';
 
 // ── Intent type ──────────────────────────────────────
 
@@ -49,6 +52,28 @@ export interface IntentResult {
   subjectMatches: SubjectMatch[];
   /** Desired changes the user mentioned, if any. */
   desires: DesireSignal[];
+  /**
+   * Bipolar optimization preference, when the message has the shape
+   * "X without Y" / "X but Y" / "X without losing Y" and both halves
+   * resolve to known quality tokens. The shopping pipeline uses this to
+   * score both halves and frame the response as a balance.
+   * Null when no bipolar shape is present.
+   */
+  bipolar?: import('./bipolar-preference').BipolarPreference | null;
+  /**
+   * Topology / philosophy question, when the message asks "why/how/what
+   * is X" about a known design topology (R2R, FPGA, SET, BBC thin-wall,
+   * etc.). The response builder uses this to surface the authored
+   * topology capsule instead of running the partial-recognition
+   * diagnostic fallback. Null when no topology question is recognized.
+   */
+  topologyQuestion?: import('./topology-philosophy').TopologyQuestion | null;
+  /**
+   * Cross-category pairing intent: "<speaker> amplifier pairing/matching"
+   * surfaces an authored short-list of recommended amplifier partners
+   * for the named speaker. Null when no pairing intent is recognized.
+   */
+  pairingIntent?: import('./pairing-resolver').PairingIntent | null;
 }
 
 // ── Known brands / product names ─────────────────────
@@ -555,6 +580,17 @@ const BRAND_TYPOS: Record<string, string> = {
   'klipsh': 'klipsch',
   'kef': 'kef',
   'macintosh': 'mcintosh',
+  // Brand renames / canonical forms — preserve the legacy or shortened name
+  // in user queries by mapping to the catalog brand. The audiophile
+  // readership often searches by the original or shorter name.
+  'bakoon': 'enleum',
+  'bakoon products': 'enleum',
+  // 'audio note uk' deliberately not mapped — the catalog stores both
+  // Audio Note UK and Audio Note Japan lineages distinctly elsewhere; the
+  // shopping path resolves both via the brand profile.
+  // 'qualio' (alone) → 'qualio audio' (catalog form) — user often types
+  // the shorter form.
+  'qualio iq': 'qualio audio iq',
 };
 
 export function extractSubjectMatches(text: string): SubjectMatch[] {
@@ -758,7 +794,7 @@ const QUALITY_ALIASES: Record<string, string> = {
 };
 
 /** Resolve a word to a canonical quality, checking both KNOWN_QUALITIES and aliases. */
-function resolveQuality(word: string): string | null {
+export function resolveQuality(word: string): string | null {
   const lower = word.toLowerCase();
   if (KNOWN_QUALITIES.includes(lower)) return lower;
   return QUALITY_ALIASES[lower] ?? null;
@@ -1078,6 +1114,32 @@ export function detectIntent(
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
+  // 0g. Bipolar optimization escape — "X without Y" / "X but Y" /
+  //     "X without losing Y" framings express a balance between two
+  //     traits the user wants to coexist. These are shopping intents
+  //     (taste capture), not diagnosis. Routing them to diagnosis caused
+  //     the partial-recognition intercept to fire on the desired trait
+  //     ("I recognised 'musical organic' in what you described...").
+  //
+  //     Guard: still defer to active-system tuning when the user has a
+  //     saved chain — the bipolar preference is then a tuning request,
+  //     not a shopping request.
+  const bipolar = extractBipolarPreference(currentMessage);
+  if (bipolar && !options.hasActiveSavedSystem) {
+    return { intent: 'shopping', subjects, subjectMatches, desires, bipolar };
+  }
+
+  // 0h. Cross-category pairing intent — "DeVore O/96 amplifier pairing"
+  //     / "Cube Audio Nenuphar amp matching" name a speaker AND ask
+  //     about the amplifier category. Today this loses the speaker
+  //     context and falls back to generic amp recommendations. Route to
+  //     shopping with the pairing payload attached so the renderer can
+  //     surface the authored canonical-partner short list.
+  const pairingIntent = detectPairingIntent(currentMessage);
+  if (pairingIntent) {
+    return { intent: 'shopping', subjects, subjectMatches, desires, pairingIntent };
+  }
+
   // 1. Explicit diagnosis — user describes a listening problem
   if (DIAGNOSIS_PATTERNS.some((p) => p.test(currentMessage))) {
     return { intent: 'diagnosis', subjects, subjectMatches, desires };
@@ -1293,6 +1355,19 @@ export function detectIntent(
     return { intent: 'audio_assistant', subjects, subjectMatches, desires };
   }
 
+  // 4a-topo. Topology / philosophy question — "Why do R2R DACs sound
+  //     denser?" / "What is BBC thin-wall cabinet philosophy?" / "Explain
+  //     Class A solid-state". Topology-question detection (a question
+  //     shape ANDed with a recognized topology alias) routes here so the
+  //     authored topology capsule can be surfaced by the response
+  //     builder instead of falling through to the partial-recognition
+  //     diagnostic fallback. Must fire before AUDIO_KNOWLEDGE_PATTERNS
+  //     because that pattern set does not pick up topology-only queries.
+  const topologyQuestion = detectTopologyQuestion(currentMessage);
+  if (topologyQuestion) {
+    return { intent: 'audio_knowledge', subjects, subjectMatches, desires, topologyQuestion };
+  }
+
   // 4b. Audio knowledge — general audio questions not tied to system decisions.
   //     Technology explanations, tube comparisons, design philosophy.
   //     Checked before gear inquiry so "Sovtek vs Mullard EL84" routes here
@@ -1368,6 +1443,25 @@ export function detectIntent(
   ];
   if (NO_PROBLEM_PATTERNS.some((p) => p.test(currentMessage))) {
     return { intent: 'greeting', subjects, subjectMatches, desires };
+  }
+
+  // 6d. Aspiration / avoidance with category — positive preference phrasing.
+  //     Queries like "what DACs avoid digital glare" or "systems that sound
+  //     relaxed but resolving" are shopping intent, not diagnosis. They reach
+  //     this point because they contain category or sonic words but no explicit
+  //     complaint. Guard: only fire when no DIAGNOSIS_PATTERNS match (prevents
+  //     "systems that sound too harsh" from being mis-routed).
+  const ASPIRATION_WITH_CATEGORY_PATTERNS = [
+    /\bwhat\s+(?:dacs?|amps?|amplifiers?|speakers?|streamers?|headphones?)\s+(?:avoid|don'?t|without\s+\w)/i,
+    /\bsystems?\s+that\s+(?:sound|are|feel)\s+\w/i,
+    /\bsystems?\s+that\s+disappear\b/i,
+    /\b(?:looking\s+for|want|need|find)\s+(?:something|a\s+\w+)?\s+that\s+(?:sounds?|feels?|is)\b/i,
+  ];
+  if (
+    ASPIRATION_WITH_CATEGORY_PATTERNS.some((p) => p.test(currentMessage)) &&
+    !DIAGNOSIS_PATTERNS.some((p) => p.test(currentMessage))
+  ) {
+    return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
   // 7. Default — treat as diagnostic / open-ended listening discussion

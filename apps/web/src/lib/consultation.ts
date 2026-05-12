@@ -1104,7 +1104,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     ],
   },
   {
-    names: ['dcs', 'dcs audio'],
+    names: ['dcs', 'dcs audio', 'data conversion systems'],
     country: 'UK (Cambridge)',
     brandScale: 'boutique',
     region: 'uk',
@@ -1450,6 +1450,74 @@ const BRAND_PROFILES: BrandProfile[] = [
     systemContext: 'Bluesound products are streaming sources — they feed amplifiers and active speakers. The BluOS ecosystem competes with Sonos for multi-room control but targets higher output quality. Best suited as convenient streaming transports; dedicated DACs at similar prices provide better conversion quality.',
     links: [
       { label: 'Bluesound', url: 'https://www.bluesound.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['qualio', 'qualio audio'],
+    founder: 'Raul Cuero',
+    country: 'USA',
+    brandScale: 'boutique',
+    region: 'north-america',
+    categories: ['speaker'],
+    philosophy: 'Qualio Audio designs high-sensitivity, wide-bandwidth speakers intended for low-power amplification. The IQ uses a coaxial driver arrangement — a 10-inch woofer with a co-located compression tweeter — to achieve time coherence and stable dispersion across the listening area.',
+    tendencies: 'Qualio speakers are described as coherent, tonally balanced, and dynamically alive. The coaxial design eliminates crossover-related phase anomalies in the critical midrange, producing a clear, focused image with natural timbre. Sensitivity is high enough for flea-watt amplification.',
+    systemContext: 'The IQ is the flagship model at ~$5k and is particularly suited to low-power tube amplification — SET or push-pull designs in the 2–20W range. It offers a coherent alternative to horn-loaded designs at a lower price point. In high-power solid-state systems, the speaker works but the efficiency advantage is lost.',
+    designPhilosophy: 'Coaxial time coherence for phase-correct imaging across the listening area.',
+    sonicTendency: 'Coherent, tonally natural, dynamically alive — particularly effective with low-power tubes.',
+    typicalTradeoff: 'Limited bass extension vs. larger multi-way designs; boutique availability.',
+    links: [
+      { label: 'Qualio Audio', url: 'https://www.qualioaudio.com/', region: 'global' },
+    ],
+  },
+  {
+    names: ['cube audio'],
+    founder: 'Grzegorz Rulka',
+    country: 'Poland',
+    brandScale: 'boutique',
+    region: 'europe',
+    categories: ['speaker'],
+    philosophy: 'Cube Audio designs single full-range driver speakers for use without crossovers. The philosophy follows the SET amplifier ideal: minimal signal path, maximum coherence. Drivers are designed in-house with a focus on pistonic linearity and low distortion at real-world listening levels.',
+    tendencies: 'Cube Audio speakers are described as extraordinarily coherent, midrange-rich, and tonally saturated. The full-range driver eliminates crossover colorations — voices and acoustic instruments are presented with unusual directness. High sensitivity (typically 95–98 dB) enables single-ended triode pairing.',
+    systemContext: 'Cube Audio speakers are designed specifically for low-power tube amplification — particularly SET designs using 300B, 2A3, or similar output tubes. They require careful room placement (near-field or treated rooms work best) and amplifiers with low output impedance to control the wide-range driver. In solid-state systems they function but the design intent is not served.',
+    designPhilosophy: 'No-crossover full-range drivers for phase-perfect, coherent midrange presentation.',
+    sonicTendency: 'Tonally rich, midrange-saturated, holographic — particularly natural on vocals and acoustic music.',
+    typicalTradeoff: 'Reduced bass extension and treble energy vs. multi-way designs; demanding room setup.',
+    links: [
+      { label: 'Cube Audio', url: 'https://cubeaudio.eu/', region: 'global' },
+    ],
+  },
+  {
+    names: ['audio note', 'audio note uk', 'ank', 'audio note kits'],
+    founder: 'Peter Qvortrup',
+    country: 'UK (Brighton)',
+    brandScale: 'boutique',
+    region: 'uk',
+    categories: ['dac', 'amplifier', 'speaker'],
+    philosophy: 'Audio Note UK designs full system chains around the SET triode amplifier ideal. The approach is holistic: each component — DAC, preamplifier, amplifier, speaker — is voiced to work as a coherent whole rather than optimised in isolation. NOS (non-oversampling) DAC topologies and silver wire are distinctive house signatures.',
+    tendencies: 'Audio Note components are described as warm, harmonically dense, tonally saturated, and musically compelling. The NOS DAC conversion topology (no digital filtering, no upsampling) delivers a uniquely direct presentation. The overall system character prioritises musical engagement over measured precision.',
+    systemContext: 'Audio Note components are best evaluated as a system. Individual components may appear to lack measured performance when used with other brands, but within the AN ecosystem they are synergistic. AN-E speakers are designed for corner placement and work specifically with low-power AN amplifiers. The brand offers a tiered "Level" system (Level 0 through Level 5+) with significant differences between tiers.',
+    designPhilosophy: 'Full-system coherence around SET triode amplification and NOS conversion.',
+    sonicTendency: 'Warm, tonally dense, musically saturated — system-dependent coherence.',
+    typicalTradeoff: 'Measured performance vs. musical engagement; strong brand lock-in by design.',
+    links: [
+      { label: 'Audio Note UK', url: 'https://www.audionote.co.uk/', region: 'global' },
+    ],
+  },
+  {
+    names: ['mola mola'],
+    founder: 'Bruno Putzeys',
+    country: 'Netherlands',
+    brandScale: 'boutique',
+    region: 'europe',
+    categories: ['dac', 'amplifier'],
+    philosophy: 'Mola Mola is the high-end brand of Bruno Putzeys — the engineer behind Class D amplification advances at Hypex and Purifi. The Tambaqui DAC and Kaluga amplifier represent his reference-level implementations: measured precision as the starting point, with analogue warmth in the output stage as the goal.',
+    tendencies: 'Mola Mola components are described as transparent, tonally balanced, and dynamically effortless. The Tambaqui DAC achieves extremely low measured distortion while avoiding the clinical character of some precision designs. The Kaluga amplifier delivers very high power with vanishingly low noise.',
+    systemContext: 'Mola Mola suits systems where the listener wants high resolution without analytical character — the opposite of warm/tubey but not cold or clinical. Works well with revealing speakers in treated rooms. The Tambaqui is often compared with CH Precision and dCS at the reference level.',
+    designPhilosophy: 'Engineering-first DAC and amplifier design by Bruno Putzeys (Hypex, Purifi) — measured precision with analogue refinement.',
+    sonicTendency: 'Transparent, dynamically effortless, tonally balanced without clinical edge.',
+    typicalTradeoff: 'Premium pricing for reference-tier engineering; minimal warmth for those who prefer coloured presentation.',
+    links: [
+      { label: 'Mola Mola', url: 'https://www.molamola.com/', region: 'global' },
     ],
   },
 ];
@@ -5008,12 +5076,18 @@ const CATALOG_NAME_ALIASES: Record<string, string> = {
   // Users may enter brand as "Goldmund" but the catalog lists brand as "JOB".
   'goldmund job integrated': 'job integrated',
   'job integrated': 'integrated',
+  // Bakoon → Enleum: the Korean brand rebranded in 2021.
+  // Users familiar with legacy reviews may search "Bakoon AMP-23R".
+  'bakoon amp-23r': 'enleum amp-23r',
+  'bakoon': 'enleum',
 };
 
 // Brand aliases: maps parent-brand names to the catalog brand.
 // Used when the user enters a parent brand but the catalog uses the sub-brand.
 const BRAND_ALIASES: Record<string, string> = {
   goldmund: 'job',
+  // Bakoon → Enleum: the South Korean brand rebranded in 2021.
+  bakoon: 'enleum',
 };
 
 /** Apply CATALOG_NAME_ALIASES to a normalized lookup key. */

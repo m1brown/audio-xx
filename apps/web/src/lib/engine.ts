@@ -98,14 +98,59 @@ export function processText(text: string): ExtractedSignals {
   const archetypeHints = new Set<string>();
   const matchedPhrases: string[] = [];
 
+  // Negation-aware phrase matcher: a quality word inside a desired-constraint
+  // phrase ("avoid glare", "without glare", "no glare", "less glare") is a
+  // shopping preference, not a current-state complaint. The signal dictionary
+  // is symptom-oriented, so without this guard "what DACs avoid digital glare"
+  // routes to diagnosis (partial-recognition) instead of shopping.
+  // Smallest safe fix: detect the negation context around the matched phrase
+  // and skip the symptom assertion when present.
+  const NEGATION_WINDOW = 24; // characters before phrase start
+  const NEGATION_RE = /\b(?:avoid|avoids?|avoiding|without|no|not|less|never|reduce|reduces?|reducing|minim(?:ise|ize|al)|free\s+of|free\s+from|don'?t\s+want|do\s+not\s+want|low\s+on|low-on)\b[^a-z]*$/i;
+  // Also treat positive aspirational openers as non-complaints when the
+  // matched phrase is a positive quality used as a *desire* ("relaxed",
+  // "resolving"). These are shopping signals, not symptoms.
+  const ASPIRATIONAL_RE = /\b(?:want|wanting|looking\s+for|seeking|prefer|prefers?|preferring|like\s+(?:more|the))\b[^.]*$/i;
+  // Whole-message guard: aspirational shapes like "systems that sound X",
+  // "what DACs avoid X", "best X for Y" frame the message as preference
+  // capture, not complaint. When the entire message matches one of these
+  // shapes, we don't extract any symptoms — they would only feed false
+  // partial-recognition diagnostic flows.
+  //
+  // Bipolar optimization shapes ("X without Y", "X but Y", "X without
+  // losing Y") are also aspirational — the user is naming a balance to
+  // strike, not reporting a current complaint. Symptom extraction here
+  // turns "more flow without losing detail" into a 'musical_organic'
+  // partial-recognition firing.
+  const MESSAGE_IS_ASPIRATIONAL = (
+    /\b(?:systems?|setups?|amps?|amplifiers?|dacs?|speakers?|streamers?|headphones?)\s+that\s+(?:sound|are|feel|deliver|do|disappear)\b/i.test(lower) ||
+    /\bwhat\s+(?:dacs?|amps?|amplifiers?|speakers?|streamers?|headphones?)\s+(?:avoid|don'?t|without|never|are\s+free)/i.test(lower) ||
+    /\b(?:best|good|recommend(?:ed)?|favourite|favorite)\s+\w+\s+for\b/i.test(lower) ||
+    /\b(?:want|need|looking\s+for|seeking)\s+\w+\s+with\b/i.test(lower) ||
+    // Bipolar shapes — "X without losing Y", "X without becoming Y",
+    // "X without sounding Y", "X but still Y", "less X without losing Y".
+    /\b\w[\w\s-]{0,40}\s+without\s+(?:losing|sacrificing|trading|giving|killing|becoming|turning|getting|sounding|feeling)\s+\w/i.test(lower) ||
+    /\b\w[\w\s-]{0,40}\s+but\s+(?:still|not)\s+\w/i.test(lower)
+  );
+
    for (const entry of dict.signals) {
     for (const phrase of entry.phrases) {
 const p = phrase.toLowerCase();
    const hit = p.includes(' ')
-     ? lower.includes(p)
-     : new RegExp(`\\b${p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(lower);
+     ? lower.indexOf(p)
+     : (() => { const m = lower.match(new RegExp(`\\b${p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i')); return m && m.index !== undefined ? m.index : -1; })();
 
-   if (hit) {
+   if (hit >= 0) {
+        // Check if the matched phrase is inside a negation/aspiration window.
+        const window = lower.slice(Math.max(0, hit - NEGATION_WINDOW), hit);
+        const isNegated = NEGATION_RE.test(window);
+        const isAspirational = ASPIRATIONAL_RE.test(window);
+        if (isNegated || isAspirational || MESSAGE_IS_ASPIRATIONAL) {
+          // Treated as preference, not symptom — skip symptom assertion and
+          // record the phrase for diagnostics only.
+          matchedPhrases.push(`${phrase} [neg]`);
+          break;
+        }
         matchedPhrases.push(phrase);
         symptoms.add(entry.symptom);
         for (const [trait, direction] of Object.entries(entry.signals)) {

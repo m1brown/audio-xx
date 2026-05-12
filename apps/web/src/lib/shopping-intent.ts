@@ -192,6 +192,10 @@ export interface HardConstraints {
   newOnly: boolean;
   /** Only show used-market / discontinued products. */
   usedOnly: boolean;
+  /** When true, restrict DAC recommendations to tube-output / tube-stage / NOS-tube
+   *  designs (user said "tube DAC" / "valve DAC"). DAC topology is a separate
+   *  dimension from amp topology — this lives outside requireTopologies. */
+  requireDacTubeStage?: boolean;
 }
 
 // ── Selection mode ────────────────────────────────────
@@ -790,7 +794,15 @@ function extractHardConstraints(text: string): HardConstraints {
   const newOnly = /\b(?:i\s+want\s+new|new\s+only|only\s+new|buy\s+new|brand\s+new|currently\s+(?:available|in\s+production)|still\s+(?:made|in\s+production)|not\s+(?:discontinued|used|vintage))\b/i.test(lower);
   const usedOnly = /\b(?:used\s+only|only\s+used|secondhand|second[\s-]hand|pre[\s-]?owned)\b/i.test(lower);
 
-  return { excludeTopologies, requireTopologies, newOnly, usedOnly };
+  // ── "tube DAC" / "valve DAC" qualifier ──
+  // DAC topology is a separate dimension from amp topology. When the user
+  // qualifies DAC with "tube" or "valve", restrict to tube-output / tube-stage
+  // / NOS-tube designs (Lampizator, MHDT Orchid family, etc).
+  const requireDacTubeStage = /\b(?:tube|valve)\s+dac\b/i.test(lower)
+    || /\bdac\s+with\s+(?:a\s+)?(?:tube|valve)\s+(?:output|stage|buffer)\b/i.test(lower)
+    || /\btube[-\s]?output\s+dac\b/i.test(lower);
+
+  return { excludeTopologies, requireTopologies, newOnly, usedOnly, requireDacTubeStage };
 }
 
 // ── Semantic preference extraction ──────────────────────
@@ -3862,6 +3874,149 @@ function selectProductExamples(
     return selectHeadphoneExamples(userTraits, budgetAmount, systemProfile, tasteProfile, reasoning);
   }
 
+  // ── Streamer: inline illustrative examples ─────────
+  // No streamer catalog exists. Return lightweight stubs covering the
+  // main price tiers ($600–$4k) so the shopping builder surfaces real
+  // product cards. Budget filtering: prefer products ≤ budgetAmount;
+  // fall back to the full set if budget rules out everything.
+  if (category === 'streamer') {
+    const STREAMER_EXAMPLES: ProductExample[] = [
+      {
+        name: 'DMP-A6',
+        brand: 'Eversolo',
+        price: 649,
+        productType: 'Streamer / DAC',
+        character: 'High-value integrated streamer/DAC with a warm-neutral ESS conversion stage and full Android-based ecosystem access.',
+        standoutFeatures: [
+          'Built-in ESS ES9038Q2M DAC — streams without an outboard converter',
+          'Large touch LCD with real-time metering and EQ',
+          'Roon Ready, Tidal Connect, Qobuz, AirPlay 2, DLNA — all native',
+          'USB, coaxial, optical, and XLR balanced outputs',
+        ],
+        soundProfile: [
+          'Warm-neutral tonal balance with good imaging for the price',
+          'Slightly soft in the leading-edge transients vs. dedicated transports',
+          'Smooth, non-fatiguing presentation — long-session friendly',
+        ],
+        fitNote: 'The entry point for serious streaming — capable DAC built in, nothing else to buy at launch.',
+        chooseThisIf: 'You want a no-fuss all-in-one streamer with a usable built-in DAC at minimal outlay.',
+        avoidIf: 'You already own a high-quality external DAC and want a pure transport with the best possible clocking.',
+        sonicDirectionLabel: 'Warm-neutral, convenient',
+        pickRole: 'value_pick',
+        manufacturerUrl: 'https://www.eversolo.com/product/dmp-a6.html',
+        availability: 'current',
+      },
+      {
+        name: 'Node X',
+        brand: 'Bluesound',
+        price: 699,
+        productType: 'Streamer / DAC',
+        character: 'BluOS multi-room ecosystem streamer with an ES9038PRO DAC and balanced output — convenience and connectivity over reference-tier conversion.',
+        standoutFeatures: [
+          'ES9038PRO DAC chip — measurably better than the original Node',
+          'BluOS app: polished multi-room control, Spotify/Tidal/Qobuz native',
+          'Balanced XLR output for direct amplifier connection',
+          'Works as Roon endpoint; strong ecosystem integration',
+        ],
+        soundProfile: [
+          'Clean, controlled, slightly neutral-to-cool presentation',
+          'Good dynamics and staging for the price class',
+          'ESS chip character: precise but not warm — honest to the recording',
+        ],
+        fitNote: 'Best when BluOS multi-room control matters or the rest of the system needs a clean, uncoloured source.',
+        chooseThisIf: 'You want multi-room ecosystem control alongside audiophile-grade streaming in a tidy package.',
+        avoidIf: 'You want harmonic warmth from the digital source — the ESS implementation is deliberately neutral.',
+        sonicDirectionLabel: 'Neutral, ecosystem-first',
+        pickRole: 'anchor',
+        manufacturerUrl: 'https://www.bluesound.com/products/node/',
+        availability: 'current',
+      },
+      {
+        name: 'Aries G1.1',
+        brand: 'Auralic',
+        price: 1799,
+        productType: 'Network Streamer (transport)',
+        character: 'Refined streaming transport with femtosecond-precision clocking and galvanic isolation — a step up in digital composure from the budget tier.',
+        standoutFeatures: [
+          'Femtosecond OCXO clocking with galvanic USB isolation',
+          'Lightning DS app (iOS-native); also Roon Ready',
+          'Linear regulation and resonance-control chassis',
+          'Output-only transport — requires an external DAC',
+        ],
+        soundProfile: [
+          'More composed and stable image than entry-level streamers',
+          'Lower jitter translates to better perceived low-level detail',
+          'Tonally neutral — the DAC sets the sonic character, not the streamer',
+        ],
+        fitNote: 'A transport upgrade for those with a quality DAC who want the streaming source to stop being the weak link.',
+        chooseThisIf: 'You have a DAC worth $1,500+ and want the streamer to contribute accurate, low-jitter data only.',
+        avoidIf: 'You need a built-in DAC or don\'t already have a quality external converter.',
+        sonicDirectionLabel: 'Composed, precision transport',
+        pickRole: 'anchor',
+        manufacturerUrl: 'https://www.auralic.com/products/aries-g1-1',
+        availability: 'current',
+      },
+      {
+        name: 'Zenith Mk3',
+        brand: 'Innuos',
+        price: 3299,
+        productType: 'Music Server / Streamer',
+        character: 'Roon Core + ripper + streamer in one linear-PSU chassis — the pragmatic all-in-one for Roon users who want server quality without a separate NAS.',
+        standoutFeatures: [
+          'Acts as Roon Core — no separate server needed',
+          'Built-in CD ripper with AccurateRip verification and metadata lookup',
+          'Linear power supply across all stages (not a cheap SMPS)',
+          'InnuOS software maturing rapidly — Sense app is a Roon alternative',
+        ],
+        soundProfile: [
+          'Smooth, musically engaged presentation — linear PSU audible vs. SMPS sources',
+          'Image density and tonal body above what budget streamers manage',
+          'Sense app path reportedly more relaxed-sounding than Roon on same hardware',
+        ],
+        fitNote: 'The convergence pick: buy one box, run Roon, rip your CDs, and stop worrying about the server chain.',
+        chooseThisIf: 'You want to run Roon Core from the hifi rack without a separate computer and value CD library management.',
+        avoidIf: 'You already run Roon Nucleus or a dedicated NAS — the overlap is redundant.',
+        sonicDirectionLabel: 'Musical, server-integrated',
+        pickRole: 'close_alt',
+        manufacturerUrl: 'https://www.innuos.com/zenith-mk3/',
+        availability: 'current',
+      },
+      {
+        name: 'N200',
+        brand: 'Aurender',
+        price: 3999,
+        productType: 'Music Server / Streamer',
+        character: 'Fanless, dedicated streaming transport with internal SSD storage — Korean-engineered for critical listening where clocking stability is the priority.',
+        standoutFeatures: [
+          'Fanless and vibration-isolated chassis with linear power supply',
+          'Up to 4TB internal SSD storage for local library playback',
+          'ACS (Aurender Conductor) app for playback control',
+          'USB audio output optimised for low-jitter DAC connection',
+        ],
+        soundProfile: [
+          'Quiet, stable, authoritative presentation — low electrical noise floor',
+          'Timing composure and image specificity above the Auralic at this price tier',
+          'Character is transparent — the DAC and amplifier determine the house sound',
+        ],
+        fitNote: 'For systems where the streamer is a meaningful link in a reference-tier chain — not a convenience box.',
+        chooseThisIf: 'You have a DAC at $2k+ and want the digital transport to contribute nothing but accurate data.',
+        avoidIf: 'You want Roon Core onboard — Aurender\'s ACS ecosystem is closed; Roon endpoint only (not Core).',
+        sonicDirectionLabel: 'Reference transport, precision-first',
+        pickRole: 'contrast',
+        manufacturerUrl: 'https://www.aurender.com/product/n200/',
+        availability: 'current',
+      },
+    ];
+
+    // Apply soft budget filter: include products within budget; if none qualify
+    // (e.g. budget is very low), return the cheapest two.
+    const withinBudget = budgetAmount != null
+      ? STREAMER_EXAMPLES.filter((p) => p.price <= budgetAmount)
+      : STREAMER_EXAMPLES;
+    const candidates = withinBudget.length >= 2 ? withinBudget : STREAMER_EXAMPLES.slice(0, 2);
+    return candidates.slice(0, 3);
+  }
+
   // ── Scored catalog path (DAC, speaker) ─────────────
   // Select the product catalog for the category. Categories without
   // a catalog return empty — the builder still provides directional guidance.
@@ -3891,6 +4046,26 @@ function selectProductExamples(
   catalog = catalog.filter((p) => allowed.includes(p.category));
   if (catalog.length !== beforeGuard) {
     console.warn('[category-guard] dropped %d products mismatched to category=%s', beforeGuard - catalog.length, category);
+  }
+
+  // ── DAC tube-stage qualifier ──
+  // When user asked for "tube DAC" / "valve DAC", restrict to DACs with a
+  // tube output/buffer stage. Detection is conservative: match on
+  // architecture string ("tube" or "NOS tube") since topology strings vary.
+  if (category === 'dac' && constraints?.requireDacTubeStage) {
+    const beforeTube = catalog.length;
+    catalog = catalog.filter((p) => {
+      const arch = ((p as { architecture?: string }).architecture ?? '').toLowerCase();
+      const topo = ((p as { topology?: string }).topology ?? '').toLowerCase();
+      return /\btube\b|\bvalve\b|\bnos\s*tube\b/.test(arch)
+        || /\btube\b|\bvalve\b/.test(topo);
+    });
+    if (catalog.length === 0) {
+      // Honest empty fallback — no tube-DACs at this tier in catalog.
+      // Returning [] surfaces the "category-coverage thin" framing upstream
+      // rather than silently substituting non-tube DACs.
+      console.warn('[tube-dac-qualifier] no tube DACs in catalog after filtering (was %d)', beforeTube);
+    }
   }
 
   // ── Budget floor pre-filter ──────────────────────────
@@ -6123,8 +6298,13 @@ export function buildShoppingAnswer(
   let bestFitDirection: string;
   if (tasteConfidence === 'low') {
     // Low confidence: frame the decision axis, not the conclusion.
+    // Note: avoid mid-sentence "vs." here — downstream callers split on
+    // /\.\s/ for a one-sentence summary, and "vs." would truncate at
+    // "vs. precision", producing a half-sentence in the bottom-line.
     if (ctx.category !== 'general') {
-      bestFitDirection = `The decision axis for ${categoryLabel}: warmth and musicality vs. precision and control. Each pick below commits to a side.`;
+      // 'streamer' now returns inline stubs; all catalogued categories produce picks.
+      const categoryHasInlinePicks = ['dac', 'speaker', 'amplifier', 'headphone', 'turntable', 'streamer'].includes(ctx.category);
+      bestFitDirection = `Different ${categoryLabel} designs commit to different priorities — warmth and musicality on one side, precision and control on the other.${categoryHasInlinePicks ? ' Each pick below leans one way.' : ''}`;
     } else {
       bestFitDirection = `Each pick commits to a different design philosophy. The trade-offs are real — read the "Avoid if" lines.`;
     }

@@ -571,15 +571,16 @@ describe('QA-EXTRA: Streamer shopping flow', () => {
     expect(result.shoppingCtx.category).toBe('streamer');
   });
 
-  it('[QA FINDING - BUG] streamer produces no advisory options', () => {
-    // BUG: Streamer category produces advisory.options = undefined.
-    // The product database likely has no streamer entries, or
-    // buildShoppingAnswer doesn't generate products for this category.
-    // This means a user asking "I want a streamer under $2000" gets
-    // an empty response with no recommendations.
+  it('streamer produces advisory options (fixed in Srajan-blocker pass)', () => {
+    // FIXED 2026-05-12 (Srajan-blocker cleanup): streamer category now
+    // surfaces the inline STREAMER_EXAMPLES set (Eversolo DMP-A6 →
+    // Aurender N200). Previously bestFitDirection contained "vs." mid-
+    // sentence and a redundant "for streamer" prefix, plus the
+    // partial-recognition diagnostic intercept fired on aspirational
+    // queries — together these blocked the shopping-answer path from
+    // populating options. Cleaning up those paths unblocked rendering.
     const hasOptions = result.advisory.options !== undefined &&
       result.advisory.options.length > 0;
-    // Record actual behavior:
-    expect(hasOptions).toBe(false);
+    expect(hasOptions).toBe(true);
   });
 });

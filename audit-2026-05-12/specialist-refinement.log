@@ -1,0 +1,50 @@
+specialist refinement validation started Tue May 12 15:15:56 CEST 2026
+
+==== GROUP 1 — Optimization Preferences ====
+1.1 "I want more flow without losing detail"           → WRONG MODE (partial-recognition diagnostic; "musical organic"); zero strong passes from this group
+1.2 "More tonal density without becoming soft"          → vague-preference intercept (asks 4-bullet trade-off menu)
+1.3 "Better imaging without sounding analytical"        → WORST: "No symptoms detected. Enjoy the music." — completely missed user's stated desire
+1.4 "More body without losing speed"                    → partial; extracted both traits but archetype biased to "Rhythm-driven" speed
+1.5 "More intimacy without collapsing stage"            → vague intercept
+1.6 "More warmth without losing articulation"           → partial; warmth extracted, "articulation" qualifier dropped
+1.7 "Systems that disappear"                            → vague intercept (audiophile shorthand for imaging holography unrecognized)
+1.8 "Organic but still resolving"                       → vague intercept (clean bipolar preference unrecognized)
+1.9 "Less edge without losing transient precision"      → partial; "transient precision" extracted, "less edge" dropped
+1.10 "Relaxed but still highly detailed"                → diagnostic ("I recognised 'detail revealing'..."); same wrong-mode as 1.1
+
+PATTERN: zero strong passes; 4 wrong-mode (diagnostic on positive preference), 4 vague intercepts, 3 asymmetric partial reads where one half of bipolar preference is dropped.
+
+==== GROUP 2 — Topology Fidelity ====
+2.1 "R2R DAC without softness"             → diagnostic mode ("Does it sound thin, digital, fatiguing?")
+2.2 "SET magic without rolled-off highs"   → vague intercept (SET is a defined topology)
+2.3 "Push-pull vs SET emotionally"         → GEAR COMPARISON refuses ("I need to know what's being compared — the design architectures, not just the names" — but the user DID name two architectures)
+2.4 "Why do some Class A amps sound denser?"   → vague intercept; no engineering explanation
+2.5 "Why do FPGA DACs sound faster?"           → speed-archetype preference template; no FPGA explanation
+2.6 "Why do horn speakers sound more alive?"   → diagnostic on "alive"→"exciting engaging"
+2.7 "Why do BBC monitors sound natural?"       → vague intercept ("'natural' means different things")
+2.9 "What physically causes timing coherence?" → speed-archetype preference template; no engineering
+
+PATTERN: no engineering-explanation layer exists. Topology-only queries hit vague intercept or symptom mis-routing. The system has rich brand-philosophy profiles but no topology-philosophy profiles.
+
+==== GROUP 3 — Cultural / Enthusiast Literacy ====
+3.1 "Bakoon vs First Watt"           → MIXED (deployed preview: Bakoon name unresolved → First Watt only side rendered)
+3.2 "Audio Note UK vs Kondo"         → comparison refuse ("I need to know what's being compared") — system has neither brand profile
+3.3 "Leben vs Shindo"                → STRONG (prior pass)
+3.4 "Enleum AMP-23R"                 → STRONG (prior pass)
+3.5 "Yamamoto A-08S"                 → STRONG (prior pass)
+3.6 "Cube Audio Nenuphar amplifier matching" → WEAK (falls to iFi Zen DAC fallback)
+3.7 "Qualio IQ"                      → WEAK (deployed: brand unresolved → iFi Zen fallback)
+3.8 "DeVore O/96 amplifier pairing"  → MIXED (speaker described beautifully; "amplifier pairing" qualifier dropped — no canonical Leben/Air Tight/Shindo suggestions)
+3.9 "Mola Mola Tambaqui"             → STRONG (prior pass)
+3.10 "TotalDAC vs Chord"             → STRONG (prior pass)
+
+PATTERN: 5 strong, 1 mixed (DeVore loses the pairing qualifier), 4 weak. STRONG ones are all "specific product named with no cross-category qualifier." Pairing/matching cross-category requests degrade.
+
+==== GROUP 4 — Design Philosophy / Engineering Causality ====
+4.1 "Why do people describe Chord DACs as precise?"      → STRONGEST in group; full brand profile (FPGA pulse array, Rob Watts, John Franks, timing precision)
+4.2 "Why do many listeners hear R2R DACs as denser?"     → vague intercept (R2R topology, no brand → no brand-profile path)
+4.3 "Why do low-feedback amps often sound more relaxed?" → partial; mirrors "relaxation" trait + topology-level matter list, but no causality (TIM, loop bandwidth, distortion-spectrum order)
+4.4 "What is BBC thin-wall cabinet philosophy?"          → MISFIRES; "thin" triggers "your system sounds thin or lacking body" diagnostic; specialist credibility = 0
+4.5 "Why do high-efficiency speakers sound dynamic at low volume?" → speed-archetype preference template; no excursion / compression / microdynamic explanation
+
+PATTERN: brand-named "why" questions surface decent philosophy text via brand profiles; topology-only "why" questions have no path. Symptom-keyword matching (BBC "thin-wall") creates false-positive diagnostic routing.
