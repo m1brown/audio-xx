@@ -219,15 +219,17 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // of scope for the 2026-05-12 narrow pass.
   { key: 'primaluna evo 400',   url: 'https://www.primaluna.nl/wp-content/uploads/2019/01/EVO-400-Integrated-Amplifier-Silver-Front.jpg' },
 
-  // Leben — McLean's Audio (authorized Canadian Leben dealer, Shopify
-  // CDN). Previous leben-hifi.com manufacturer site is unreachable.
-  // Spaceless variants ("cs300", "cs600x") cover catalog names where
-  // normalize strips the slash/hyphen but does not insert a space
-  // between letters and digits.
-  { key: 'leben cs 600',        url: 'https://www.mcleans.info/cdn/shop/products/leben-leben-cs-600x-audiophile-integrated-tube-amplifier-integrated-amplifier-28141914095699_800x.jpg',
-    source: { tier: 'authorized_dealer', site: 'mcleans.info', credit: 'McLean\'s Audio', captured: '2026-05-12' } },
-  { key: 'leben cs600',         url: 'https://www.mcleans.info/cdn/shop/products/leben-leben-cs-600x-audiophile-integrated-tube-amplifier-integrated-amplifier-28141914095699_800x.jpg',
-    source: { tier: 'authorized_dealer', site: 'mcleans.info', credit: 'McLean\'s Audio', captured: '2026-05-12' } },
+  // Leben — front-on hero from hifi.nl (Dutch HiFi review publication).
+  // Updated 2026-05-13: the previous McLean's CDN shot was a top/back
+  // angle that obscured the iconic VU meter and gold faceplate. The
+  // hifi.nl asset is the canonical front view and explicitly tagged
+  // CS600X (not the older CS600). Spaceless variants ("cs600x") cover
+  // catalog names where normalize strips the slash/hyphen but does not
+  // insert a space between letters and digits.
+  { key: 'leben cs 600',        url: 'https://hifi.nl/gfx/20190205175617_2019-02-05_Leben600X_front_(980x457).jpg',
+    source: { tier: 'review_publication', site: 'hifi.nl', credit: 'HiFi.nl', captured: '2026-05-13' } },
+  { key: 'leben cs600',         url: 'https://hifi.nl/gfx/20190205175617_2019-02-05_Leben600X_front_(980x457).jpg',
+    source: { tier: 'review_publication', site: 'hifi.nl', credit: 'HiFi.nl', captured: '2026-05-13' } },
   // Leben CS300 — left at legacy URL pending verification; CS300 not in
   // the narrow-pass scope.
   { key: 'leben cs 300',        url: 'https://www.leben-hifi.com/images/cs300xs-front.jpg' },
