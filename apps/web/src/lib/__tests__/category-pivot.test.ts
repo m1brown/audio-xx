@@ -16,7 +16,7 @@
  * separately by the conversation-state Playwright harness.
  */
 
-import { detectExplicitCategoryPivot } from '../intent';
+import { detectExplicitCategoryPivot, detectIntent } from '../intent';
 
 describe('detectExplicitCategoryPivot — positive cases (pivot detected)', () => {
   // Each case is a real user phrasing observed in production OR a
@@ -149,5 +149,34 @@ describe('detectExplicitCategoryPivot — adjacent at-risk patterns', () => {
   });
   it('phono preamp', () => {
     expect(detectExplicitCategoryPivot('thinking about a phono preamp')).toBe(true);
+  });
+});
+
+describe('detectIntent — pivot phrasings route to shopping', () => {
+  // Block A2: without these, pivot phrasings fell through to the default
+  // diagnosis bucket and saved-system users got a thinness analysis
+  // instead of the requested category exploration.
+  it('"i\'m thinking about a turntable" → shopping', () => {
+    expect(detectIntent("i'm thinking about a turntable").intent).toBe('shopping');
+  });
+  it('"thinking about a turntable" → shopping', () => {
+    expect(detectIntent('thinking about a turntable').intent).toBe('shopping');
+  });
+  it('"considering speakers" → shopping', () => {
+    expect(detectIntent('considering speakers').intent).toBe('shopping');
+  });
+  it('"interested in a phono preamp" → shopping', () => {
+    expect(detectIntent('interested in a phono preamp').intent).toBe('shopping');
+  });
+  it('"looking at DACs" → shopping', () => {
+    expect(detectIntent('looking at DACs').intent).toBe('shopping');
+  });
+  // Control cases: complaints still route to diagnosis (pivot does NOT
+  // hijack legitimate diagnostic requests)
+  it('"my system sounds harsh" → diagnosis (NOT shopping)', () => {
+    expect(detectIntent('my system sounds harsh').intent).toBe('diagnosis');
+  });
+  it('"system is too thin" → diagnosis (NOT shopping)', () => {
+    expect(detectIntent('system is too thin').intent).toBe('diagnosis');
   });
 });

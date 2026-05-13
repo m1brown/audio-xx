@@ -1464,6 +1464,22 @@ export function detectIntent(
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
+  // 6e. Explicit category pivot — "i'm thinking about a turntable",
+  //     "considering speakers", "looking at DACs", "interested in a phono
+  //     preamp". These pivot phrasings name a category AND a desire verb
+  //     and should route to shopping/exploration rather than the diagnosis
+  //     default. Block A2 — without this gate, a user who has a saved
+  //     system and pivots to a new category gets a saved-system thinness
+  //     diagnosis instead of the requested exploration. The same helper
+  //     is consulted by page.tsx to clear comparison/consultation state
+  //     before the standard pipeline runs.
+  if (
+    detectExplicitCategoryPivot(currentMessage) &&
+    !DIAGNOSIS_PATTERNS.some((p) => p.test(currentMessage))
+  ) {
+    return { intent: 'shopping', subjects, subjectMatches, desires };
+  }
+
   // 7. Default — treat as diagnostic / open-ended listening discussion
   return { intent: 'diagnosis', subjects, subjectMatches, desires };
 }
