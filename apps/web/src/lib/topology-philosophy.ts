@@ -262,6 +262,53 @@ export function listTopologyIds(): ReadonlyArray<TopologyId> {
 }
 
 /**
+ * Extract the first clause of a perception string for use as a short lens
+ * inside a comparison sentence. "Tonal density, midrange weight, ..." →
+ * "tonal density and midrange weight". Falls back to the raw first clause
+ * if there's no comma. Always lowercases — the consumer composes a full
+ * sentence with proper capitalization.
+ */
+function perceptionLens(perception: string): string {
+  if (!perception) return '';
+  // First sentence only — drop everything after the first period.
+  const firstSentence = perception.split(/\.\s/)[0] ?? perception;
+  // Take the first two comma-separated phrases, join with "and".
+  const parts = firstSentence.split(/,\s*/).map((p) => p.trim()).filter((p) => p.length > 0);
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0].toLowerCase();
+  return `${parts[0].toLowerCase()} and ${parts[1].toLowerCase()}`;
+}
+
+/**
+ * Build a single-sentence interaction line describing two topologies in
+ * contrast. Used by the comparison renderer when both sides of a
+ * comparison resolve to distinct topology capsules.
+ *
+ * Output shape (deterministic, specialist-register, ONE sentence):
+ *   "The {capsuleA.label} favors {lensA}, while the {capsuleB.label}
+ *    prioritizes {lensB}."
+ *
+ * Returns null when:
+ *   - either capsule is missing
+ *   - both capsules share the same id (no contrast)
+ *   - either perception field fails to yield a usable lens
+ *
+ * The consumer should treat null as "skip the topology interaction line"
+ * — never produce a degraded sentence.
+ */
+export function buildTopologyInteractionSentence(
+  capsuleA: TopologyCapsule | null,
+  capsuleB: TopologyCapsule | null,
+): string | null {
+  if (!capsuleA || !capsuleB) return null;
+  if (capsuleA.id === capsuleB.id) return null;
+  const lensA = perceptionLens(capsuleA.perception);
+  const lensB = perceptionLens(capsuleB.perception);
+  if (!lensA || !lensB) return null;
+  return `The ${capsuleA.label} favors ${lensA}, while the ${capsuleB.label} prioritizes ${lensB}.`;
+}
+
+/**
  * Detect "why" or "what is" / "explain" intent against a topology.
  * Returns the capsule and the question shape when both are present.
  *

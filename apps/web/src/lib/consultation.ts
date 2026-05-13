@@ -56,6 +56,8 @@ import {
   validateComparisonOutput,
   renderComparisonPayload,
 } from './comparison-payload';
+import { findTopologyMention, buildTopologyInteractionSentence, type TopologyCapsule } from './topology-philosophy';
+import { findPairingsForSpeaker } from './pairing-resolver';
 import { getApprovedBrand } from './knowledge';
 import type { BrandKnowledge } from './knowledge/schema';
 import { getPilotCapsule } from './brand-philosophy-pilot';
@@ -2480,6 +2482,14 @@ export function buildInitialComparisonPayload(
     ? `Which models are you comparing? That changes the picture — and if you tell me your speakers, the recommendation gets sharper.`
     : undefined;
 
+  // ── Topology interaction layer (renderer integration, 2026-05-13) ──
+  // Run findTopologyMention on each side's authored prose (philosophy +
+  // tendencies). If both sides resolve to DISTINCT topology capsules, emit
+  // a single specialist-register interaction sentence. Skipped silently
+  // when either side fails to resolve or both share the same topology
+  // (per brief: "skip when confidence is weak").
+  const topologyInteraction = resolveTopologyInteraction(profileA, profileB);
+
   return {
     subject: `${nameA} vs ${nameB}`,
     sideA,
@@ -2497,7 +2507,64 @@ export function buildInitialComparisonPayload(
     shopping,
     sources: sources.length > 0 ? sources : undefined,
     followUp,
+    topologyInteraction: topologyInteraction ?? undefined,
   };
+}
+
+/**
+ * Resolve the topology interaction line for a pair of brand profiles.
+ * Probes both sides via `findTopologyMention` against their authored
+ * philosophy + tendencies text, then composes a single sentence via
+ * `buildTopologyInteractionSentence`. Returns null when detection
+ * confidence is weak (one side missing, or both sides share the same
+ * topology). Deterministic, no side effects.
+ */
+function resolveTopologyInteraction(
+  profileA: { philosophy: string; tendencies: string },
+  profileB: { philosophy: string; tendencies: string },
+): string | null {
+  const textA = `${profileA.philosophy} ${profileA.tendencies}`;
+  const textB = `${profileB.philosophy} ${profileB.tendencies}`;
+  const capsuleA = findTopologyMention(textA);
+  const capsuleB = findTopologyMention(textB);
+  return buildTopologyInteractionSentence(capsuleA, capsuleB);
+}
+
+/**
+ * Resolve the "why this pairing works" rationale for a system-anchored
+ * comparison. Fires only when ALL THREE conditions hold:
+ *   1. The anchor context is a speaker (caller-checked via contextKind).
+ *   2. The speaker text matches an authored anchor capsule in
+ *      pairing-resolver.ts.
+ *   3. At least one of the two compared sides has a topology (resolved
+ *      via findTopologyMention on its philosophy+tendencies) that matches
+ *      a recommended pairing topology in the anchor capsule.
+ *
+ * Returns the verbatim authored rationale string for the matching pairing
+ * (first match wins), or null when no match is found. Sourced text is
+ * already specialist-register prose — the consumer renders as-is.
+ */
+function resolveTopologyPairingNote(
+  speakerText: string,
+  sideA: { name: string; profile: { philosophy: string; tendencies: string } },
+  sideB: { name: string; profile: { philosophy: string; tendencies: string } },
+): string | null {
+  const pairings = findPairingsForSpeaker(speakerText);
+  if (!pairings || pairings.length === 0) return null;
+
+  const detectSide = (profile: { philosophy: string; tendencies: string }): TopologyCapsule | null =>
+    findTopologyMention(`${profile.philosophy} ${profile.tendencies}`);
+
+  const capsuleA = detectSide(sideA.profile);
+  const capsuleB = detectSide(sideB.profile);
+
+  // First match — A wins ties (caller-defined order, deterministic).
+  for (const rec of pairings) {
+    if (!rec.topology) continue;
+    if (capsuleA && rec.topology === capsuleA.id) return rec.rationale;
+    if (capsuleB && rec.topology === capsuleB.id) return rec.rationale;
+  }
+  return null;
 }
 
 /**
@@ -3738,6 +3805,28 @@ export function buildSystemAnchoredPayload(
   // ── Sources ────────────────────────────────────────
   const sources = buildComparisonSourceRefs(nameA, fullProfileA, nameB, fullProfileB, contextName);
 
+  // ── Topology layer (renderer integration, 2026-05-13) ──
+  // Topology interaction sentence (when both sides resolve to distinct
+  // topology capsules). Same helper as the initial-comparison path; the
+  // renderer slot is different (after systemTradeoff, not after design
+  // philosophy).
+  const topologyInteraction = resolveTopologyInteraction(
+    { philosophy: infoA.philosophy, tendencies: infoA.tendencies },
+    { philosophy: infoB.philosophy, tendencies: infoB.tendencies },
+  );
+
+  // Pairing rationale (only fires when context is a speaker AND that
+  // speaker has an authored pairing capsule AND one of the two sides
+  // matches a recommended pairing topology). Verbatim authored rationale
+  // — no template assembly, no speculative claims.
+  const topologyPairingNote = contextKind === 'speaker'
+    ? resolveTopologyPairingNote(
+        contextName,
+        { name: nameA, profile: { philosophy: infoA.philosophy, tendencies: infoA.tendencies } },
+        { name: nameB, profile: { philosophy: infoB.philosophy, tendencies: infoB.tendencies } },
+      )
+    : null;
+
   return {
     subject: `${nameA} vs ${nameB} — with ${contextName}`,
     sideA,
@@ -3760,6 +3849,8 @@ export function buildSystemAnchoredPayload(
     systemTradeoff: systemTradeoffText ?? undefined,
     shopping,
     sources: sources.length > 0 ? sources : undefined,
+    topologyInteraction: topologyInteraction ?? undefined,
+    topologyPairingNote: topologyPairingNote ?? undefined,
   };
 }
 

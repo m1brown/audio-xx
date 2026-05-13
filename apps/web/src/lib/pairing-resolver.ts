@@ -299,3 +299,20 @@ export function topologyFamiliesForSensitivity(sensitivityDb: number): {
 export function listAnchorKeys(): ReadonlyArray<string> {
   return ANCHOR_PAIRINGS.map((c) => c.key);
 }
+
+/**
+ * Direct anchor-capsule lookup for callers that already know they are
+ * working with a speaker context (e.g. the system-anchored comparison
+ * builder). Bypasses the pairing-verb requirement of `detectPairingIntent`
+ * — the verb gate is only needed when classifying user-typed queries.
+ *
+ * Returns the authored pairing recommendations for the speaker, or null
+ * when no authored capsule matches.
+ */
+export function findPairingsForSpeaker(
+  speakerText: string,
+): ReadonlyArray<PairingRecommendation> | null {
+  if (!speakerText) return null;
+  const anchor = findAnchorCapsule(speakerText);
+  return anchor ? anchor.pairings : null;
+}

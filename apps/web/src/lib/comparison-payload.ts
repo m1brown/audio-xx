@@ -86,6 +86,30 @@ export interface ComparisonPayload {
   /** System-level trade-off (only when system context present). */
   systemTradeoff?: string;
 
+  // ── Topology layer (renderer integration, 2026-05-13) ──
+  // Optional single-sentence lines that surface authored topology data
+  // when it clarifies the comparison. Both fields are skipped when
+  // detection confidence is weak (one side missing topology, both sides
+  // share the same topology, or — for pairing — when the system anchor
+  // has no authored pairing capsule). Never speculative.
+
+  /**
+   * One-sentence interaction line, produced when BOTH compared sides
+   * resolve to distinct topology capsules. Renders after the design
+   * philosophy section in initial comparisons; after the system trade-off
+   * in system-anchored comparisons.
+   */
+  topologyInteraction?: string;
+
+  /**
+   * One-sentence "why this pairing works" line, only present in
+   * system-anchored comparisons where the anchor speaker matches an
+   * authored pairing capsule AND one of the two compared sides matches
+   * a recommended pairing topology. Sourced verbatim from
+   * pairing-resolver authored rationales.
+   */
+  topologyPairingNote?: string;
+
   // ── Shopping + Sources (after decision) ─────────────
 
   /** Shopping pointers — optional, comes after decision. */
@@ -268,6 +292,13 @@ export function renderComparisonPayload(payload: ComparisonPayload): {
     parts.push(`**${payload.sideB.name}:** ${payload.sideB.designPhilosophy}`);
   }
 
+  // 2b. Topology interaction (initial comparisons only — fires when both
+  //     sides resolve to distinct authored topology capsules). One
+  //     sentence; skipped silently when detection confidence is weak.
+  if (!payload.systemAnchor && payload.topologyInteraction) {
+    parts.push(payload.topologyInteraction);
+  }
+
   // 3. Sonic translation / System interaction
   if (payload.systemAnchor) {
     // System-anchored: show interaction notes
@@ -291,6 +322,20 @@ export function renderComparisonPayload(payload: ComparisonPayload): {
   // 4. System trade-off (if present)
   if (payload.systemTradeoff) {
     parts.push(payload.systemTradeoff);
+  }
+
+  // 4b. Topology interaction (system-anchored comparisons — renders here
+  //     so it sits between the system framing and the pairing rationale).
+  if (payload.systemAnchor && payload.topologyInteraction) {
+    parts.push(payload.topologyInteraction);
+  }
+
+  // 4c. Topology pairing rationale (system-anchored comparisons only —
+  //     fires when the anchor speaker has authored pairings AND one of
+  //     the two sides matches a recommended pairing topology). Sourced
+  //     verbatim from pairing-resolver authored rationales.
+  if (payload.systemAnchor && payload.topologyPairingNote) {
+    parts.push(payload.topologyPairingNote);
   }
 
   // 5. Main trade-off
