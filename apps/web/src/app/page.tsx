@@ -43,7 +43,7 @@ import {
 } from '@/lib/listener-profile';
 import { checkGlossaryQuestion } from '@/lib/glossary';
 import { fetchWithTimeout, EVALUATE_TIMEOUT_MS } from '@/lib/fetch-with-timeout';
-import { detectIntent, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
+import { detectIntent, detectExplicitCategoryPivot, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
 import { attachQuickRecommendation } from '@/lib/quick-recommendation';
 import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode, interpretSymptom } from '@/lib/conversation-state';
 import { detectHypotheticalChain, chainToComponentNames, type HypotheticalChain } from '@/lib/hypothetical-system';
@@ -591,6 +591,16 @@ export default function Home() {
           console.log('[category-switch-bypass] resetting convState to idle for bare category switch: %s', bareCategorySwitch);
           convStateRef.current = INITIAL_CONV_STATE;
         }
+      }
+      // Block A2 — global continuation-state pivot guard.
+      // Even before a shopping turn lands (e.g. when the state machine is
+      // mid-diagnosis or mid-system-assessment), an explicit category pivot
+      // like "i'm thinking about a turntable" must reset the state machine
+      // so the message reaches the standard pipeline instead of being
+      // absorbed as continuation context.
+      if (detectExplicitCategoryPivot(submittedText)) {
+        console.log('[pivot-reset] resetting convState to idle for explicit category pivot');
+        convStateRef.current = INITIAL_CONV_STATE;
       }
     }
 
@@ -1655,10 +1665,40 @@ export default function Home() {
     // resolve against the stored pair instead of falling through.
     // GUARD: Never intercept when in shopping flow — refinements like
     // "i don't want tubes" must reach the shopping pipeline.
+    // ── Block A2 — global continuation-state pivot guard ─────────────
+    // Before any of the four follow-up gates below (comparison-followup,
+    // comparison-context-enrichment, bare-product-as-context, consultation-
+    // followup), check whether the user's message is an explicit category
+    // pivot. If so, clear ALL stored continuation state and fall through
+    // to the standard pipeline.
+    //
+    // Without this guard, phrases like "i'm thinking about a turntable"
+    // or "considering speakers" — which don't always classify as 'shopping'
+    // intent — slip past the `intent !== 'shopping'` filters on each gate
+    // and get absorbed as refinement context for the active comparison /
+    // consultation. The diagnosis-followup gate (later) already consults
+    // `detectExplicitCategoryPivot` via `isDiagnosisFollowUp`; this block
+    // applies the same rule to the other three continuation modes.
+    //
+    // First fires win — pivot detection runs ONCE per turn and clears
+    // both comparison and consultation contexts in a single dispatch.
+    const explicitPivot = detectExplicitCategoryPivot(submittedText);
+    if (explicitPivot && (state.activeComparison || state.activeConsultation)) {
+      console.log('[pivot-reset] clearing continuation state for explicit category pivot');
+      if (state.activeComparison) {
+        dispatch({ type: 'CLEAR_COMPARISON' });
+      }
+      if (state.activeConsultation) {
+        dispatch({ type: 'CLEAR_CONSULTATION_CONTEXT' });
+      }
+      // Fall through to standard pipeline — do NOT return.
+    }
+
     if (
       state.activeComparison &&
       intent !== 'comparison' &&
       intent !== 'shopping' &&
+      !explicitPivot &&
       isComparisonFollowUp(submittedText, state.activeComparison)
     ) {
       const refinement = buildComparisonRefinement(state.activeComparison, submittedText);
@@ -1675,7 +1715,8 @@ export default function Home() {
     if (
       state.activeComparison &&
       intent !== 'comparison' &&
-      intent !== 'shopping'
+      intent !== 'shopping' &&
+      !explicitPivot
     ) {
       const contextKind = detectContextEnrichment(submittedText);
       if (contextKind) {
@@ -1695,6 +1736,7 @@ export default function Home() {
       intent !== 'comparison' &&
       intent !== 'shopping' &&
       effectiveMode !== 'diagnosis' &&
+      !explicitPivot &&
       turnCtx.subjectMatches.length > 0
     ) {
       const subjectContextKind = classifySubjectAsContext(turnCtx.subjectMatches);
@@ -1719,6 +1761,7 @@ export default function Home() {
       state.activeConsultation &&
       intent !== 'comparison' &&
       intent !== 'shopping' &&
+      !explicitPivot &&
       isConsultationFollowUp(submittedText, state.activeConsultation)
     ) {
       // Blocker fix §2: pass active saved/inline system into the

@@ -1757,30 +1757,48 @@ export function isDiagnosisFollowUp(
 
   if (NEW_SYMPTOM_INDICATORS.some((p) => p.test(lower))) return false;
 
-  // Reject if the message looks like a completely new topic
-  // (explicit shopping or comparison request).
-  //
-  // The verb list captures (a) shopping-comparison phrasings — "best",
-  // "recommend", "which", "compare", "vs"/"versus" — AND (b) explicit
-  // category-pivot phrasings — "thinking about", "considering", "looking
-  // at", "interested in", and bare desire verbs ("want", "need", "want a",
-  // "after", "shopping for"). Combined with any product-category keyword,
-  // this signals the user has moved past the diagnosis and named the next
-  // topic explicitly.
-  //
-  // Bug history: prior to 2026-05-12, "i'm thinking about a turntable"
-  // after a diagnosis follow-up question was incorrectly treated as
-  // continuation because (1) the verb list omitted pivot verbs and
-  // (2) the category list omitted turntable / streamer / phono.
-  const PIVOT_VERB_RE = /\b(?:best|recommend|which|compare|vs\.?|versus|thinking\s+about|consider(?:ing)?|looking\s+(?:at|for|into)|interested\s+in|shopping\s+for|after|want(?:\s+(?:a|an|some|to\s+(?:buy|get|find)))?|need(?:\s+(?:a|an|some))?|tell\s+me\s+about)\b/i;
-  const CATEGORY_WORD_RE = /\b(?:dacs?|amps?|amplifiers?|integrated|preamps?|power\s*amps?|speakers?|monitors?|bookshelf|floorstand(?:er)?s?|headphones?|iems?|earphones?|cans|turntables?|record\s*player|vinyl|streamers?|transport|network\s*player|phono\s*(?:pre)?amps?|cartridges?)\b/i;
-  if (PIVOT_VERB_RE.test(lower) && CATEGORY_WORD_RE.test(lower)) {
-    return false;
-  }
+  // Reject if the message is an explicit category pivot
+  // ("thinking about a turntable", "looking at DACs", etc.).
+  // Delegates to the shared pivot detector — same helper is consulted
+  // by all continuation gates in page.tsx so explicit user intent can
+  // override stale state regardless of which mode is active.
+  if (detectExplicitCategoryPivot(text)) return false;
 
   // Any non-symptom response after a diagnosis follow-up question
   // is treated as answering that question.
   return true;
+}
+
+/**
+ * Detect explicit category-pivot phrases that should override any
+ * active continuation state (diagnosis / system_assessment / comparison
+ * / consultation / state-machine).
+ *
+ * A pivot is recognized when the message contains BOTH:
+ *   (a) a pivot verb — "thinking about", "considering", "looking at /
+ *       for / into", "interested in", "shopping for", "best",
+ *       "recommend", "compare", "vs"/"versus", "want", "need",
+ *       "tell me about", etc.
+ *   (b) a product-category word — dac, amp/amplifier/integrated/preamp,
+ *       speaker/monitor/bookshelf/floorstander, headphone/iem/cans,
+ *       turntable/record player/vinyl, streamer/transport/network player,
+ *       phono preamp, cartridge.
+ *
+ * Requiring BOTH halves prevents two false-positive classes:
+ *   - pivot verb without category ("thinking about it more carefully")
+ *     stays as a follow-up.
+ *   - bare category word without pivot verb ("my DAC is a Schiit Modi")
+ *     stays as system-context, not a topic shift.
+ *
+ * Engineering-vs-domain boundary (CLAUDE.md §8): this is adapter-layer
+ * content. The verb list is portable (pivot/desire vocabulary, no audio
+ * specifics); the category list is the audio domain's category map.
+ */
+export function detectExplicitCategoryPivot(text: string): boolean {
+  const lower = text.toLowerCase();
+  const PIVOT_VERB_RE = /\b(?:best|recommend|which|compare|vs\.?|versus|thinking\s+about|consider(?:ing)?|looking\s+(?:at|for|into)|interested\s+in|shopping\s+for|after|want(?:\s+(?:a|an|some|to\s+(?:buy|get|find)))?|need(?:\s+(?:a|an|some))?|tell\s+me\s+about)\b/i;
+  const CATEGORY_WORD_RE = /\b(?:dacs?|amps?|amplifiers?|integrated|preamps?|power\s*amps?|speakers?|monitors?|bookshelf|floorstand(?:er)?s?|headphones?|iems?|earphones?|cans|turntables?|record\s*player|vinyl|streamers?|transport|network\s*player|phono\s*(?:pre)?amps?|cartridges?)\b/i;
+  return PIVOT_VERB_RE.test(lower) && CATEGORY_WORD_RE.test(lower);
 }
 
 // ── Ranked shortlist helpers ────────────────────────
