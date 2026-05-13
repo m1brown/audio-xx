@@ -6548,6 +6548,54 @@ export function buildSystemAssessment(
     }
   }
 
+  // ── Case-insensitive displayName dedup ───────────────────────
+  // Components are pushed from five distinct extraction paths (saved-
+  // system seed + four user-message branches). The saved-system path
+  // adds `nameLower`, `strippedNameLower`, and `brandLower` to
+  // `processedNames` but NOT the combined `"brand name"` form. When a
+  // user types a case variant of a catalog product that's already in
+  // their saved system — e.g. "Job Integrated" while the catalog has
+  // `{ brand: 'JOB', name: 'Integrated' }` — the subjectMatch for the
+  // full string slips past the per-token dedup and a second component
+  // is pushed.
+  //
+  // Downstream this surfaces as: duplicate System Logic bullets
+  // ("Job Integrated → fast, lean, high flow ... JOB Integrated →
+  // fast, lean, high flow ..."), awkward enumerations ("Job Integrated
+  // and Chord Hugo and JOB Integrated push toward precision"), and
+  // duplicate Component Contributions cards.
+  //
+  // Fix: a single end-of-pipeline normalize-and-dedup pass keyed on
+  // `displayName`. Catches all five push sites and is robust to any
+  // future extraction path that joins this array. First occurrence
+  // wins — saved-system entries seed first, so the catalog-canonical
+  // casing ("JOB Integrated") is preserved over user-typed variants.
+  //
+  // At-risk brands (non-title-case canonical names): JOB, KEF, NAD,
+  // JBL, WLM, MHDT, RME, SMSL, VPI, XSA, ZMF, LAiV.
+  if (components.length > 1) {
+    const seen = new Set<string>();
+    const dedup: typeof components = [];
+    for (const c of components) {
+      const key = c.displayName.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      dedup.push(c);
+    }
+    if (dedup.length !== components.length) {
+      console.log(
+        '[components-dedup] dropped %d case-variant duplicate(s): %s',
+        components.length - dedup.length,
+        components
+          .filter((c, i) => !dedup.includes(c) && i > 0)
+          .map((c) => c.displayName)
+          .join(', '),
+      );
+      components.length = 0;
+      components.push(...dedup);
+    }
+  }
+
   // Need at least 2 identified components to build a system assessment
   if (components.length < 2) return null;
 

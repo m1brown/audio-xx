@@ -566,3 +566,89 @@ describe('Renderer parity: MemoFindings-only rendering', () => {
     });
   }
 });
+
+// ──────────────────────────────────────────────────────
+// Case-variant duplicate dedup (Job/JOB Integrated regression — 2026-05-13)
+//
+// Reproduces the production bug where a user typing "Job Integrated"
+// against a saved-system entry stored as "JOB Integrated" produced two
+// distinct components: duplicate System Logic bullets, duplicate
+// Component Contributions cards, and awkward "X and Y and X push toward
+// precision" enumerations in System Read prose.
+//
+// The fix is a case-insensitive displayName dedup at the end of the
+// component-extraction pipeline (consultation.ts, just before the
+// "components.length < 2" gate).
+// ──────────────────────────────────────────────────────
+
+describe('Case-variant duplicate dedup', () => {
+  it('"Job Integrated" with "JOB Integrated" in saved system → single component', () => {
+    const result = assess(
+      'Assess my system: WLM Diva Monitor → Job Integrated → Eversolo DMP-A6 → Chord Hugo',
+    );
+    const jobMatches = result.findings.componentNames.filter((n) =>
+      /^job\s+integrated$/i.test(n),
+    );
+    expect(jobMatches.length).toBe(1);
+  });
+
+  it('"Job Integrated" mentioned only in message → single component', () => {
+    const result = assess(
+      'My system is Eversolo DMP-A6 → Chord Hugo → Job Integrated → WLM Diva Monitor',
+    );
+    const verdicts = result.findings.componentVerdicts.filter((v) =>
+      /^job\s+integrated$/i.test(v.name),
+    );
+    expect(verdicts.length).toBe(1);
+  });
+
+  it('saved-system seed: case-variant duplicates do not stack', () => {
+    // Saved system stored canonically with JOB uppercase.
+    const result = assess(
+      'Evaluate: WLM Diva Monitor → JOB Integrated → Eversolo DMP-A6 → Chord Hugo',
+    );
+    const verdicts = result.findings.componentVerdicts;
+    const seen = new Set<string>();
+    for (const v of verdicts) {
+      const key = v.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+      expect(seen.has(key)).toBe(false);
+      seen.add(key);
+    }
+  });
+
+  it('System Read prose does not enumerate the same component twice', () => {
+    const result = assess(
+      'Assess my system: WLM Diva Monitor → Job Integrated → Eversolo DMP-A6 → Chord Hugo',
+    );
+    const prose = result.response.systemContext ?? '';
+    // "Job Integrated and Chord Hugo and JOB Integrated" — the bug.
+    expect(/Job Integrated.*?and.*?JOB Integrated/i.test(prose)).toBe(false);
+    expect(/JOB Integrated.*?and.*?Job Integrated/i.test(prose)).toBe(false);
+  });
+
+  it('Component Contributions assessments are unique per product', () => {
+    const result = assess(
+      'Assess my system: WLM Diva Monitor → Job Integrated → Eversolo DMP-A6 → Chord Hugo',
+    );
+    const assessments = result.response.componentAssessments ?? [];
+    const names = assessments.map((a: { name?: string }) =>
+      (a.name ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
+    );
+    const unique = new Set(names);
+    expect(unique.size).toBe(names.length);
+  });
+
+  // Adjacent at-risk brands: same risk class as JOB.
+  // Each is a brand with non-title-case canonical name in the catalog;
+  // a user typing a case variant would historically produce a duplicate.
+  it('KEF case variants do not duplicate', () => {
+    // KEF as catalog brand; user types "Kef" lowercase-second-letter.
+    const result = assess(
+      'Assess my system: Kef LS50 Meta → JOB Integrated → Chord Hugo → Eversolo DMP-A6',
+    );
+    const kefMatches = result.findings.componentNames.filter((n) =>
+      /\bkef\b/i.test(n),
+    );
+    expect(kefMatches.length).toBeLessThanOrEqual(1);
+  });
+});
