@@ -1758,8 +1758,23 @@ export function isDiagnosisFollowUp(
   if (NEW_SYMPTOM_INDICATORS.some((p) => p.test(lower))) return false;
 
   // Reject if the message looks like a completely new topic
-  // (explicit shopping or comparison request)
-  if (/\b(?:best|recommend|which|compare|vs\.?|versus)\b/i.test(lower) && /\b(?:dac|amp|speaker|headphone)\b/i.test(lower)) {
+  // (explicit shopping or comparison request).
+  //
+  // The verb list captures (a) shopping-comparison phrasings — "best",
+  // "recommend", "which", "compare", "vs"/"versus" — AND (b) explicit
+  // category-pivot phrasings — "thinking about", "considering", "looking
+  // at", "interested in", and bare desire verbs ("want", "need", "want a",
+  // "after", "shopping for"). Combined with any product-category keyword,
+  // this signals the user has moved past the diagnosis and named the next
+  // topic explicitly.
+  //
+  // Bug history: prior to 2026-05-12, "i'm thinking about a turntable"
+  // after a diagnosis follow-up question was incorrectly treated as
+  // continuation because (1) the verb list omitted pivot verbs and
+  // (2) the category list omitted turntable / streamer / phono.
+  const PIVOT_VERB_RE = /\b(?:best|recommend|which|compare|vs\.?|versus|thinking\s+about|consider(?:ing)?|looking\s+(?:at|for|into)|interested\s+in|shopping\s+for|after|want(?:\s+(?:a|an|some|to\s+(?:buy|get|find)))?|need(?:\s+(?:a|an|some))?|tell\s+me\s+about)\b/i;
+  const CATEGORY_WORD_RE = /\b(?:dacs?|amps?|amplifiers?|integrated|preamps?|power\s*amps?|speakers?|monitors?|bookshelf|floorstand(?:er)?s?|headphones?|iems?|earphones?|cans|turntables?|record\s*player|vinyl|streamers?|transport|network\s*player|phono\s*(?:pre)?amps?|cartridges?)\b/i;
+  if (PIVOT_VERB_RE.test(lower) && CATEGORY_WORD_RE.test(lower)) {
     return false;
   }
 

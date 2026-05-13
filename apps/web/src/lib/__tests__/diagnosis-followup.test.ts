@@ -61,6 +61,53 @@ describe('isDiagnosisFollowUp', () => {
   it('shopping request → false (topic change)', () => {
     expect(isDiagnosisFollowUp('best dac under 1000', ROOM_FOLLOWUP)).toBe(false);
   });
+
+  // ── Category-pivot escape (2026-05-12) ──────────────────
+  // Bug: explicit category pivots after a diagnosis follow-up question
+  // were being treated as answers to that question instead of as topic
+  // shifts. Confirms the fix to the pivot-verb + category-word
+  // rejection check.
+  describe('explicit category pivot → false (topic shift)', () => {
+    const FOLLOWUP = 'Can you tell me more about which frequencies sound off?';
+    it('"i\'m thinking about a turntable" → false', () => {
+      expect(isDiagnosisFollowUp("i'm thinking about a turntable", FOLLOWUP)).toBe(false);
+    });
+    it('"thinking about a turntable" → false', () => {
+      expect(isDiagnosisFollowUp('thinking about a turntable', FOLLOWUP)).toBe(false);
+    });
+    it('"looking at DACs" → false', () => {
+      expect(isDiagnosisFollowUp('looking at DACs', FOLLOWUP)).toBe(false);
+    });
+    it('"considering speakers" → false', () => {
+      expect(isDiagnosisFollowUp('considering speakers', FOLLOWUP)).toBe(false);
+    });
+    it('"looking for headphones" → false', () => {
+      expect(isDiagnosisFollowUp('looking for headphones', FOLLOWUP)).toBe(false);
+    });
+    it('"interested in a phono preamp" → false', () => {
+      expect(isDiagnosisFollowUp('interested in a phono preamp', FOLLOWUP)).toBe(false);
+    });
+    it('"i want a streamer" → false', () => {
+      expect(isDiagnosisFollowUp('i want a streamer', FOLLOWUP)).toBe(false);
+    });
+    it('"need an integrated amp" → false', () => {
+      expect(isDiagnosisFollowUp('need an integrated amp', FOLLOWUP)).toBe(false);
+    });
+
+    // Regression: pivot verbs without a category word remain follow-ups.
+    it('"thinking about it more carefully" (no category) → true (still followup)', () => {
+      expect(isDiagnosisFollowUp('thinking about it more carefully', FOLLOWUP)).toBe(true);
+    });
+    it('"looking at the room layout" → true (no product category)', () => {
+      expect(isDiagnosisFollowUp('looking at the room layout', FOLLOWUP)).toBe(true);
+    });
+    // Regression: bare category word in a system-description sentence
+    // (a legitimate followup answer) is NOT a pivot because it lacks a
+    // pivot verb.
+    it('"my DAC is a Schiit Modi" → true (system context, no pivot verb)', () => {
+      expect(isDiagnosisFollowUp('my DAC is a Schiit Modi', FOLLOWUP)).toBe(true);
+    });
+  });
 });
 
 // ── refineDiagnosisWithContext ────────────────────────────
