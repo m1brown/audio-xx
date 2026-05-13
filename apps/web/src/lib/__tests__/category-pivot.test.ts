@@ -180,3 +180,56 @@ describe('detectIntent — pivot phrasings route to shopping', () => {
     expect(detectIntent('system is too thin').intent).toBe('diagnosis');
   });
 });
+
+// ── Block A2 Smoke 3 — saved-system pivot exit (deployed preview, 2026-05-13) ──
+// After a saved-system diagnosis, a user typing "looking at speakers" continued
+// to render the prior brightness/fatigue diagnostic. Root cause: the diagnosis
+// continuity override in page.tsx (line 2219) forced intent back to 'diagnosis'
+// when `effectiveMode === 'diagnosis'` persisted from the prior turn, ignoring
+// pivot detection.
+//
+// The page.tsx gate guard depends on these invariants holding:
+//   1. detectExplicitCategoryPivot recognizes the failing phrasings as pivots
+//   2. detectIntent routes those pivot phrasings to 'shopping' (so the gate
+//      condition `intent === 'shopping'` is satisfied)
+//   3. The legitimate follow-up phrasings listed in the brief do NOT match
+//      detectExplicitCategoryPivot — so the override fires normally on them
+//      and the diagnosis flow continues.
+describe('Block A2 Smoke 3 — saved-system pivot vs legitimate follow-up', () => {
+  // Pivot phrasings — must trigger the saved-system exit guard.
+  it('"looking at speakers" — pivot detected AND intent=shopping (saved-sys)', () => {
+    expect(detectExplicitCategoryPivot('looking at speakers')).toBe(true);
+    expect(detectIntent('looking at speakers', { hasActiveSavedSystem: true }).intent).toBe('shopping');
+  });
+  it('"i\'m thinking about a turntable" — pivot detected AND intent=shopping (saved-sys)', () => {
+    expect(detectExplicitCategoryPivot("i'm thinking about a turntable")).toBe(true);
+    expect(detectIntent("i'm thinking about a turntable", { hasActiveSavedSystem: true }).intent).toBe('shopping');
+  });
+  it('"considering speakers" — pivot detected AND intent=shopping (saved-sys)', () => {
+    expect(detectExplicitCategoryPivot('considering speakers')).toBe(true);
+    expect(detectIntent('considering speakers', { hasActiveSavedSystem: true }).intent).toBe('shopping');
+  });
+
+  // Control phrasings — legitimate saved-system diagnosis follow-ups.
+  // These must NOT match the pivot detector so the diagnosis continuity
+  // override continues to fire normally and the diagnosis flow stays alive.
+  it('"why is it harsh?" — pivot NOT detected (legitimate diagnosis follow-up)', () => {
+    expect(detectExplicitCategoryPivot('why is it harsh?')).toBe(false);
+  });
+  it('"what should I change first?" — pivot NOT detected (legitimate upgrade follow-up)', () => {
+    expect(detectExplicitCategoryPivot('what should I change first?')).toBe(false);
+  });
+  it('"is the DAC the issue?" — pivot NOT detected (legitimate diagnosis follow-up)', () => {
+    expect(detectExplicitCategoryPivot('is the DAC the issue?')).toBe(false);
+  });
+
+  // Combined-input edge case — pivot + complaint in the same message.
+  // detectIntent gate 6e gates pivot-routing on `!DIAGNOSIS_PATTERNS.some`,
+  // so a combined message classifies as 'diagnosis'. The page.tsx exit guard
+  // is gated on `intent === 'shopping'`, so it does NOT fire here — combined
+  // inputs continue through the diagnosis continuity override unchanged.
+  it('"looking at speakers, mine sound harsh" — pivot detected, but intent=diagnosis', () => {
+    expect(detectExplicitCategoryPivot('looking at speakers, mine sound harsh')).toBe(true);
+    expect(detectIntent('looking at speakers, mine sound harsh', { hasActiveSavedSystem: true }).intent).toBe('diagnosis');
+  });
+});

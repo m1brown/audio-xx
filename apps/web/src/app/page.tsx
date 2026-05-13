@@ -2207,6 +2207,37 @@ export default function Home() {
       console.log('[mode-exit] shopping→%s: cleared shopping context', effectiveMode);
     }
 
+    // ── Block A2 Smoke 3 follow-up — saved-system pivot exit ─────────
+    // When `effectiveMode === 'diagnosis'` persists from a prior turn
+    // (e.g. the user just received a saved-system harshness diagnosis)
+    // AND the current turn is an explicit category pivot that detectIntent
+    // already routed to 'shopping' ("looking at speakers", "thinking
+    // about a turntable"), exit the diagnosis lane so the standard
+    // pipeline can route the pivot correctly. Without this exit, the
+    // diagnosis continuity override below clobbers the pivot's
+    // 'shopping' intent back to 'diagnosis', re-firing the saved-system
+    // diagnosis short-circuit (and producing the prior brightness/
+    // fatigue diagnostic again on a "looking at speakers" message).
+    //
+    // The guard is intentionally narrow:
+    //   - explicitPivot must be true (PIVOT_VERB + CATEGORY_WORD)
+    //   - intent must already be 'shopping' (i.e. detectIntent gate 6e
+    //     fired — no diagnosis pattern in the current message)
+    //   - effectiveMode must be 'diagnosis' (inherited from prior turn)
+    //
+    // Legitimate diagnosis follow-ups ("why is it harsh?", "what should
+    // I change first?", "is the DAC the issue?") don't match
+    // detectExplicitCategoryPivot and continue through the override
+    // unchanged. Combined inputs ("looking at speakers, mine sound
+    // harsh") classify as 'diagnosis' via the diagnosis-patterns guard
+    // in detectIntent gate 6e and also continue through the override
+    // unchanged.
+    if (explicitPivot && intent === 'shopping' && effectiveMode === 'diagnosis') {
+      console.log('[pivot-reset] effectiveMode diagnosis→shopping on explicit category pivot');
+      effectiveMode = 'shopping';
+      dispatch({ type: 'SET_MODE', mode: 'shopping' });
+    }
+
     // ── Diagnosis continuity override ─────────────────
     // When diagnosis is active, ALL intents fold back into diagnosis
     // except comparison and system_assessment (genuine topic changes).
