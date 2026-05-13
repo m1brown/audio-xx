@@ -27,9 +27,13 @@ describe('findTopologyMention — alias matching', () => {
     ['Pulse-array architecture', 'fpga'],
     ['Why do delta-sigma DACs measure so well?', 'delta-sigma'],
     ['ESS Sabre vs AKM', 'delta-sigma'],
-    ['SET magic without rolled-off highs', 'set'],
+    ['SET amp magic without rolled-off highs', 'set'],
     ['300B amp recommendation', 'set'],
-    ['Push-pull vs SET emotionally', 'set'], // SET wins because shape order
+    // "Push-pull vs SET" — push-pull is the subject (declarative match);
+    // "SET" is a comparative target (preceded by "vs") and is skipped by
+    // the comparative-context filter. The principled outcome is the
+    // declared topology, not the contrast target.
+    ['Push-pull vs SET emotionally', 'push-pull-tube'],
     ['Push-pull tube amp under $5000', 'push-pull-tube'],
     ['Class A solid-state vs tube', 'class-a-solid-state'],
     ['Low-feedback amplifier design', 'low-feedback'],
@@ -54,6 +58,40 @@ describe('findTopologyMention — alias matching', () => {
     // "set" should NOT match inside "settled" or "setup"
     expect(findTopologyMention('I have a settled system')).toBeNull();
     expect(findTopologyMention('setup advice please')).toBeNull();
+  });
+
+  // ── Regression: false positives from over-eager alias matching ──
+  // Both regressions were observed on the deployed preview during the
+  // topology-renderer integration smoke pass (2026-05-13, friends branch,
+  // commit 76d8d81). See `findTopologyMention` for the fix details.
+
+  it('does NOT match bare "set" inside generic compound nouns', () => {
+    // Job's authored philosophy ends "Minimalist feature set; no DAC, ...".
+    // Before the fix, the bare 'set' alias matched here and caused the
+    // brand to resolve to the SET (single-ended triode) capsule.
+    expect(findTopologyMention('Minimalist feature set; no DAC, no streaming, no tone controls.')).toBeNull();
+    expect(findTopologyMention('Limited data set in the review')).toBeNull();
+    expect(findTopologyMention('A complete skill set for the studio')).toBeNull();
+    expect(findTopologyMention('Default preference set saved')).toBeNull();
+  });
+
+  it('does NOT match topology aliases that appear in comparative context', () => {
+    // Hegel's authored tendencies say "Soundstage is structured, precise,
+    // and wide but flatter than tube or low-feedback designs." — the
+    // "low-feedback" reference is a comparison target, not a topology
+    // declaration. Before the fix, this resolved Hegel to low-feedback.
+    expect(findTopologyMention('Soundstage is flatter than tube or low-feedback designs')).toBeNull();
+    expect(findTopologyMention('Tighter bass than typical zero-feedback Pass designs')).toBeNull();
+    expect(findTopologyMention('Slightly warmer than delta-sigma DACs')).toBeNull();
+    expect(findTopologyMention('Unlike R2R designs, this is a chip-based DAC')).toBeNull();
+  });
+
+  it('still resolves topology aliases in declarative context', () => {
+    // Sanity guard — the comparative filter must not over-match.
+    expect(findTopologyMention('Low-feedback amplifier design')?.id).toBe('low-feedback');
+    expect(findTopologyMention('Pass uses zero-feedback topology')?.id).toBe('low-feedback');
+    expect(findTopologyMention('This is a delta-sigma DAC')?.id).toBe('delta-sigma');
+    expect(findTopologyMention('R2R ladder conversion')?.id).toBe('r2r');
   });
 });
 

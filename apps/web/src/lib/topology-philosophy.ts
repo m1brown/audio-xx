@@ -143,7 +143,15 @@ const TOPOLOGY_CAPSULES: ReadonlyArray<TopologyCapsule> = [
   {
     id: 'set',
     label: 'Single-ended triode (SET) amplifier',
-    aliases: ['single-ended triode', 'set amplifier', 'set amp', 'single ended', 'set design', '2a3 amp', '300b amp', '45 amp', '45 triode', 'triode amp', 'set'],
+    // NOTE: the bare 'set' alias was removed 2026-05-13 because it falsely
+    // matched generic compound nouns like "feature set" / "data set" /
+    // "skill set" in brand-profile prose (e.g. JOB's philosophy field reads
+    // "Minimalist feature set; no DAC, ..."). Every legitimate SET reference
+    // in user input or authored brand profiles will hit a longer alias
+    // ('set amp', 'set amplifier', 'set design', '2a3 amp', '300b amp',
+    // '45 amp', '45 triode', 'triode amp', 'single-ended triode',
+    // 'single ended').
+    aliases: ['single-ended triode', 'set amplifier', 'set amp', 'single ended', 'set design', '2a3 amp', '300b amp', '45 amp', '45 triode', 'triode amp'],
     mechanism: 'A single output triode (45, 2A3, 300B, 211, 845) operates in pure Class A. The output stage has no phase inverter and no push-pull symmetry — the tube alone modulates the output transformer.',
     tradeoffs: 'Power output is limited (2–25 W typical) and even-order harmonic distortion is high (1–3 % at full output is normal). The gain is exceptional second-harmonic spectrum, low odd-order distortion, and the most direct signal path possible in a tube design.',
     behavior: 'Output impedance is high (damping factor often below 5), so loudspeaker frequency response interacts with the amplifier output curve. Crossover distortion is absent. Distortion spectrum is dominated by H2 and H3 with negligible higher orders.',
@@ -223,28 +231,60 @@ const BY_ID: ReadonlyMap<TopologyId, TopologyCapsule> =
   new Map(TOPOLOGY_CAPSULES.map((c) => [c.id, c] as const));
 
 /**
+ * Comparative-context cues that indicate the matched topology is being
+ * referenced as a *comparison target*, not as the subject. When one of
+ * these appears in the last ~6 words before an alias match, the match is
+ * skipped — the text is describing some other topology by reference to
+ * this one (e.g. "flatter than tube or low-feedback designs" should not
+ * resolve to low-feedback; the subject is the speaker being described).
+ *
+ * Matched against the last 80 chars (≈6 words) preceding each alias hit.
+ */
+const COMPARATIVE_CUE = /\b(than|unlike|rather\s+than|compared\s+to|compared\s+with|more\s+than|less\s+than|different\s+from|differs?\s+from|in\s+contrast\s+to|versus|vs\.?|not\s+(?:a|the|like))\b/i;
+
+function isFollowingComparative(lower: string, matchStart: number): boolean {
+  if (matchStart <= 0) return false;
+  const window = lower.slice(Math.max(0, matchStart - 80), matchStart);
+  // Only inspect the last 6 whitespace-separated tokens so a comparative
+  // cue early in a sentence doesn't poison a later, unrelated mention.
+  const tail = window.trim().split(/\s+/).slice(-6).join(' ');
+  return COMPARATIVE_CUE.test(tail);
+}
+
+/**
  * Find the topology capsule that the user's message references, if any.
  *
  * Matching strategy:
  *   1. Lowercase the text.
  *   2. For each capsule in registration order, scan its `aliases` array
- *      (already ordered longest-first inside each capsule). The first
- *      capsule with any alias matching as a substring wins.
+ *      (already ordered longest-first inside each capsule). For each
+ *      alias, find every occurrence in the text (word-bounded for short
+ *      aliases ≤4 chars). Skip matches that follow a comparative cue
+ *      ("than", "unlike", "rather than", "compared to", "vs", ...) —
+ *      those reference the topology rather than declaring it.
+ *   3. The first capsule with any *non-comparative* alias match wins.
  *
- * Returns null when no topology is mentioned.
+ * Returns null when no topology is mentioned (or every mention is in a
+ * comparative-target position).
  */
 export function findTopologyMention(text: string): TopologyCapsule | null {
   if (!text) return null;
   const lower = text.toLowerCase();
   for (const capsule of TOPOLOGY_CAPSULES) {
     for (const alias of capsule.aliases) {
-      // Use word boundaries for short aliases (≤4 chars) to avoid "set"
-      // matching inside "settled" or "fpga" matching inside "fpgam".
-      if (alias.length <= 4) {
-        const re = new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-        if (re.test(lower)) return capsule;
-      } else {
-        if (lower.includes(alias)) return capsule;
+      const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Word boundaries for short aliases (≤4 chars) to avoid "fpga"
+      // matching inside "fpgam"; also tightens any future short alias.
+      const re = alias.length <= 4
+        ? new RegExp(`\\b${escaped}\\b`, 'gi')
+        : new RegExp(escaped, 'gi');
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(lower)) !== null) {
+        if (!isFollowingComparative(lower, m.index)) {
+          return capsule;
+        }
+        // else: comparative-target match; keep scanning for a declarative
+        // mention of this alias elsewhere in the text.
       }
     }
   }
