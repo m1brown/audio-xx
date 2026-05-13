@@ -1888,8 +1888,33 @@ export default function Home() {
     // User asks for system assessment or upgrade guidance but hasn't named
     // specific gear. Produces a structured intake response that explains
     // the evaluation approach and asks for system details.
+    //
+    // Saved-system upgrade-followup bridge (Block A2 follow-up, 2026-05-13).
+    // For consultation_entry specifically, pass through the active saved
+    // OR draft system in addition to inline. Without this, an upgrade
+    // follow-up like "what should I change first?" after a saved-system
+    // diagnosis falls through to the no-active-system branch of
+    // buildConsultationEntry (consultation.ts ~line 12093), producing
+    // a generic "what components make up your current system?" intake
+    // even though the saved chain is attached. The buildConsultationEntry
+    // saved-system branch (~line 11995) is already authored to anchor
+    // upgrade-direction guidance on the saved chain — passing
+    // turnCtx.activeSystem reaches it.
+    //
+    // Scope is intentionally narrow: only buildConsultationEntry sees the
+    // saved system here. Other builders that share generalActiveSystem
+    // keep their existing null-on-saved-system behavior — saved/draft
+    // systems still appear only as the secondary savedSystemNote in
+    // shopping/gear/exploration advisories. The intent classifier already
+    // gates consultation_entry on hasActiveSavedSystem in intent.ts, so
+    // the routing decision relied on the saved system being present —
+    // the builder needs that same context to produce the targeted
+    // response the routing implied.
     if (intent === 'consultation_entry') {
-      const entryResult = buildConsultationEntry(submittedText, turnCtx.desires, generalActiveSystem);
+      const entryActiveSystem = (isInlineSystem || isSavedSystem)
+        ? (turnCtx.activeSystem ?? null)
+        : null;
+      const entryResult = buildConsultationEntry(submittedText, turnCtx.desires, entryActiveSystem);
       dispatchAdvisory(consultationToAdvisory(entryResult, undefined, advisoryCtx), advisoryId());
       dispatch({ type: 'SET_LOADING', value: false });
       return;
