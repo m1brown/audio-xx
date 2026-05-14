@@ -362,17 +362,41 @@ export function selectEmergentTags(
 
 const GENERIC_SUFFIX = /\b(?:integrated(?:\s+amplifier)?|monitor(?:s)?|speaker(?:s)?|amp(?:lifier)?|preamp(?:lifier)?|dac|streamer|player|cdp|transport|headphones?|cans|earphones?|iems?|turntable|cartridge)\s*$/i;
 
+// Short all-caps model designators that read poorly as bare labels:
+// Roman numerals ("II", "III", "IV"), caps-only suffixes ("SE", "MK2",
+// "XR"). Length 1–4 chars, [A-Z] start, [A-Z0-9] remainder. Lowercase
+// model words ("Hugo", "Diva") DO NOT match — they keep their bare form.
+const DESIGNATOR_RE = /^[A-Z][A-Z0-9]{0,3}$/;
+
 function shortLabel(name: string): string {
   const stripped = name.replace(GENERIC_SUFFIX, '').trim();
   const words = stripped.length > 0 ? stripped.split(/\s+/) : name.split(/\s+/);
   if (words.length === 0) return name;
   if (words.length === 1) return words[0];
   const last = words[words.length - 1];
-  // Model numbers (alphanumeric with digit and dash, e.g. "DMP-A6") read
-  // poorly as bare labels — prefer the prior word (brand) in that case.
+
+  // Case 1 — last word is a trailing model number with digit+dash
+  // ("DMP-A6", "12th-1"). Fall back to the prior word, paired with a
+  // designator if one sits between (e.g. "Pontus II 12th-1" → "Pontus II").
   if (/[0-9]/.test(last) && /[-]/.test(last) && words.length >= 2) {
-    return words[words.length - 2];
+    const second = words[words.length - 2];
+    if (words.length >= 3 && DESIGNATOR_RE.test(second)) {
+      return `${words[words.length - 3]} ${second}`;
+    }
+    return second;
   }
+
+  // Case 2 — last word is itself a short model designator ("II", "SE",
+  // "MK2"). Pair with the prior word so the label preserves the
+  // human-readable model name (Phase 2.6 polish, 2026-05-14).
+  //   "Denafrips Pontus II" → "Pontus II"  (not bare "II")
+  //   "WLM Diva Monitor"    → strip "Monitor" → "Diva" (regex rejects
+  //                           lowercase, so unchanged)
+  //   "Chord Hugo"          → "Hugo" (regex rejects lowercase)
+  if (words.length >= 2 && DESIGNATOR_RE.test(last)) {
+    return `${words[words.length - 2]} ${last}`;
+  }
+
   return last;
 }
 

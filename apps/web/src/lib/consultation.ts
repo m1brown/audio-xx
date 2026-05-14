@@ -1636,13 +1636,29 @@ export function findProductByComponentName(text: string): Product | undefined {
     (p) => `${p.brand} ${p.name}`.toLowerCase() === lower,
   );
   if (exact) return exact;
-  // 2. Contains both brand and name tokens
+  // 2. Contains both brand and full name tokens
   const byTokens = ALL_PRODUCTS.find(
     (p) =>
       lower.includes(p.brand.toLowerCase()) &&
       lower.includes(p.name.toLowerCase()),
   );
   if (byTokens) return byTokens;
+  // 2b. Brand + distinctive-last-token match (Phase 2.6 polish,
+  //     2026-05-14). The chain rendering sometimes shortens a product
+  //     name by omitting the middle word — e.g. "DeVore Orangutan O/96"
+  //     becomes "DeVore O/96" in the displayed chain. Step 2 fails
+  //     because the input no longer contains the full product name.
+  //     This step rescues that case: when the input contains the brand
+  //     AND the distinctive last token of the product name (≥4 chars
+  //     to avoid noise from short designators like "II" / "SE"), match.
+  const byBrandAndDistinctiveToken = ALL_PRODUCTS.find((p) => {
+    if (!lower.includes(p.brand.toLowerCase())) return false;
+    const tokens = p.name.split(/\s+/);
+    const lastToken = tokens[tokens.length - 1].toLowerCase();
+    if (lastToken.length < 4) return false;
+    return lower.includes(lastToken);
+  });
+  if (byBrandAndDistinctiveToken) return byBrandAndDistinctiveToken;
   // 3. ID slug match (hyphen-separated lowercase)
   const slug = lower.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   return ALL_PRODUCTS.find((p) => p.id === slug);
@@ -8000,13 +8016,29 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     ].join('\n');
   } else if (primary.kind === 'imbalance') {
     const prop = humanizeProperty(primary.property);
-    primaryLeverageSection = [
-      `**Primary leverage**`,
-      ``,
-      `System balance (${prop}).`,
-      ``,
-      `The chain stacks ${prop} in one direction. Rebalance it and the system serves more material.`,
-    ].join('\n');
+    // Phase 2.6 polish (2026-05-14): when intentional synergy is
+    // detected the "rebalance it" framing misreads a deliberately-
+    // voiced chain as a problem to correct. Soften the second sentence
+    // to a preservation note. Same gate as the SYSTEM READ / SYSTEM
+    // LOGIC / Decision / Trade-offs / Do-nothing calibrations from the
+    // 487c55a / db14697 / 670f7b5 stack.
+    if (intentionalSynergy) {
+      primaryLeverageSection = [
+        `**Primary leverage**`,
+        ``,
+        `System balance.`,
+        ``,
+        `The system is already built around ${prop}. The next change should preserve that character rather than adding more density.`,
+      ].join('\n');
+    } else {
+      primaryLeverageSection = [
+        `**Primary leverage**`,
+        ``,
+        `System balance (${prop}).`,
+        ``,
+        `The chain stacks ${prop} in one direction. Rebalance it and the system serves more material.`,
+      ].join('\n');
+    }
   } else {
     // ── KEEP with no bottleneck: identify DAC as voicing leverage ──
     const dacName = findings.activeDACInference.activeDACName;
