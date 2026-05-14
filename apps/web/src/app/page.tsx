@@ -467,18 +467,29 @@ export default function Home() {
   // Updated after each turn when the profile changes.
   const [profileSnapshot, setProfileSnapshot] = useState<ListenerProfileSnapshot | null>(null);
 
-  // Session-stable starter prompts — three picks shuffled once per
-  // pageload. No interval, no continuous rotation. The hero renders
-  // these as chips below the conversational input.
-  const sessionStarterPrompts = useMemo(() => {
+  // Session-stable starter prompts — SSR-safe.
+  //
+  // Hydration-fix 2026-05-14: previously this was a `useMemo([])` that
+  // called `Math.random()` during the first render. That runs once on
+  // the server (one shuffle) and once on the client during hydration
+  // (a different shuffle), so the first chip's text diverged and React
+  // logged a hydration-mismatch error on every page load (see the
+  // reviewer-benchmark transcripts).
+  //
+  // Fix: render the curated order verbatim on the server and on the
+  // client's first paint (identical HTML, no mismatch). After mount,
+  // the effect below shuffles once for session variety. Chips remain
+  // session-stable after that single client-side shuffle — no interval,
+  // no continuous rotation.
+  const [sessionStarterPrompts, setSessionStarterPrompts] =
+    useState<ReadonlyArray<string>>(CURATED_STARTER_PROMPTS);
+  useEffect(() => {
     const pool = [...CURATED_STARTER_PROMPTS];
-    // Fisher-Yates shuffle with Math.random — runs ONCE per mount,
-    // so the chips stay stable for the duration of the session.
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    return pool;
+    setSessionStarterPrompts(pool);
   }, []);
 
   // Taste profile — loaded from API for authenticated users
@@ -4428,16 +4439,18 @@ export default function Home() {
 
           {/* Curated starter prompts.
            *
-           * Three chips below the hero. Selection is session-stable
-           * (computed once via `sessionStarterPrompts` useMemo at
-           * component-mount time); no animation, no continuous
-           * rotation, no time-based shuffle. Calm and intentional.
+           * Three chips below the hero. SSR-safe — initial render uses
+           * the curated declaration order on both server and client
+           * (no hydration mismatch), then a client-only `useEffect`
+           * shuffles once after mount so the picks stay stable for the
+           * session. No animation, no continuous rotation, no
+           * time-based shuffle. Calm and intentional.
            *
            * When a saved/draft system is active, the FIRST chip is
            * always "Assess my system: <chain>" — preserves the
            * personalization affordance the prior path-buttons offered
            * without the four-mode chrome. Other slots come from
-           * CURATED_STARTER_PROMPTS via the memo.
+           * `sessionStarterPrompts` (the post-mount shuffled state).
            */}
           {(() => {
             // Active-system component chain for the optional first chip.
