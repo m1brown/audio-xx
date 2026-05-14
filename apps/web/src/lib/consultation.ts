@@ -88,7 +88,13 @@ import type {
   ActiveDACInference,
   PowerMatchAssessment,
 } from './memo-findings';
-import { composeEmergentBehavior } from './emergent-behavior';
+import {
+  composeEmergentBehavior,
+  getEmergentTags,
+  synergyDescriptor,
+  INTENTIONAL_SYNERGY_TAGS,
+  type EmergentBehavior,
+} from './emergent-behavior';
 import { renderDeterministicMemo } from './memo-deterministic-renderer';
 import { isWhitelistedSource } from './evidence/source-whitelist';
 // StructuredMemoInputs is transitional — the canonical rendering path is
@@ -7142,6 +7148,20 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     downstreamPhrase = `reinforced by the ${downstreamNames.join(' and ')}`;
   }
 
+  // ── Intentional-synergy check (Phase 2.5 SYSTEM READ calibration) ─
+  // When the emergent-behavior layer has identified intentional synergy
+  // (dynamic_elasticity, low_drag, temporal_coherence, harmonic_continuity,
+  // or flow_continuity), the system isn't a contrast that "the speaker
+  // compensates for" — it's a deliberately voiced chain. Override
+  // sentence 2 below so the SYSTEM READ frames the chain as intentional
+  // rather than corrective. system_tension_active is NOT in the synergy
+  // set: when tension fires, the corrective framing is accurate.
+  const emergentTags: EmergentBehavior[] = getEmergentTags(findings);
+  const intentionalSynergy = emergentTags.some((t) =>
+    INTENTIONAL_SYNERGY_TAGS.includes(t),
+  );
+  const synergyPhrase = intentionalSynergy ? synergyDescriptor(emergentTags) : '';
+
   // Compose interaction-aware thesis
   let thesisSentence1: string;
   let thesisSentence2: string;
@@ -7152,6 +7172,12 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     const pw = powerNote.trim();
     if (pw) {
       thesisSentence2 = pw;
+    } else if (intentionalSynergy && hasContrast) {
+      // Phase 2.5 SYSTEM READ calibration — replace "speaker compensates"
+      // / "speaker adds edge" with intentional-voicing framing. Only
+      // fires when emergent-behavior identified synergy AND the existing
+      // contrast model would otherwise produce corrective language.
+      thesisSentence2 = `Speaker, amp, and DAC are deliberately voiced together around ${synergyPhrase}.`;
     } else if (upBright > 0 || upDetailed > 0) {
       thesisSentence2 = hasContrast
         ? 'Clarity, timing, and spatial precision dominate unless the speaker compensates.'
@@ -7295,7 +7321,12 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     const upNames = upstreamNames.join(' and ');
     const downNames = downstreamNames.join(' and ');
     if (hasContrast) {
-      if (upBright > 0 || upDetailed > 0) {
+      if (intentionalSynergy) {
+        // Phase 2.5 calibration — when emergent-behavior recognized
+        // intentional synergy, the speaker isn't "alone restoring weight";
+        // every component carries part of the system's character.
+        logicSummary = `Each component contributes to the system's ${synergyPhrase}.`;
+      } else if (upBright > 0 || upDetailed > 0) {
         logicSummary = `${upNames} push toward precision. The ${downNames} alone restores weight.`;
       } else {
         logicSummary = `${upNames} push toward warmth. The ${downNames} alone adds definition.`;

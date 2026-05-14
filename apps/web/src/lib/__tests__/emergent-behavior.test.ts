@@ -19,6 +19,9 @@
 import {
   composeEmergentBehavior,
   selectEmergentTags,
+  getEmergentTags,
+  synergyDescriptor,
+  INTENTIONAL_SYNERGY_TAGS,
   __TEST__,
   type EmergentBehavior,
 } from '../emergent-behavior';
@@ -594,5 +597,104 @@ describe('Topping → Hegel → Harbeth — tension case', () => {
     const out = composeEmergentBehavior(makeTensionFindings());
     expect(out).not.toMatch(/keep musical energy moving through the chain/i);
     expect(out).not.toMatch(/breathes through musical phrasing/i);
+  });
+});
+
+// ── getEmergentTags + INTENTIONAL_SYNERGY_TAGS ────────────────────
+
+describe('getEmergentTags — public selector used by SYSTEM READ calibration', () => {
+  it('returns [] when skip conditions hold (e.g. < 3 components)', () => {
+    const findings = makeFindings({
+      componentVerdicts: [
+        makeComponent({ name: 'A', role: 'dac' }),
+        makeComponent({ name: 'B', role: 'speaker' }),
+      ],
+    });
+    expect(getEmergentTags(findings)).toEqual([]);
+  });
+
+  it('returns the same tag set composeEmergentBehavior would render', () => {
+    // My-System-like fixture (specialist pairing, isCoherent=false)
+    const findings = makeFindings({
+      isCoherent: false,
+      componentVerdicts: [
+        makeComponent({ name: 'Eversolo DMP-A6', role: 'streamer', confidence: 'medium' }),
+        makeComponent({
+          name: 'Chord Hugo', role: 'dac',
+          architecture: 'FPGA pulse-array DAC', confidence: 'high',
+          axisPosition: { warm_bright: 'bright', smooth_detailed: 'detailed', elastic_controlled: 'elastic', airy_closed: 'airy', scale_intimacy: 'neutral' },
+        }),
+        makeComponent({
+          name: 'JOB Integrated', role: 'integrated',
+          architecture: 'low-feedback class A solid-state', confidence: 'high',
+          axisPosition: { warm_bright: 'neutral', smooth_detailed: 'detailed', elastic_controlled: 'elastic', airy_closed: 'airy', scale_intimacy: 'neutral' },
+        }),
+        makeComponent({
+          name: 'WLM Diva Monitor', role: 'speaker',
+          architecture: 'high-efficiency paper-cone monitor', confidence: 'high',
+          axisPosition: { warm_bright: 'warm', smooth_detailed: 'smooth', elastic_controlled: 'elastic', airy_closed: 'neutral', scale_intimacy: 'neutral' },
+        }),
+      ],
+      activeDACInference: {
+        activeDACName: 'Chord Hugo', activeDACType: 'standalone',
+        multipleDACs: false, needsDACClarification: false, confidence: 'high',
+      },
+      powerMatchAssessment: {
+        ampName: 'JOB Integrated', speakerName: 'WLM Diva Monitor',
+        ampPowerWatts: 25, speakerSensitivityDb: 96,
+        compatibility: 'optimal', estimatedMaxCleanSPL: 110, relevantInteraction: null,
+      },
+    });
+    const tags = getEmergentTags(findings);
+    expect(tags[0]).toBe('dynamic_elasticity');
+    expect(tags).toContain('low_drag');
+    expect(tags).not.toContain('system_tension_active');
+  });
+
+  it('INTENTIONAL_SYNERGY_TAGS excludes system_tension_active', () => {
+    expect(INTENTIONAL_SYNERGY_TAGS).not.toContain('system_tension_active');
+    expect(INTENTIONAL_SYNERGY_TAGS).toContain('dynamic_elasticity');
+    expect(INTENTIONAL_SYNERGY_TAGS).toContain('low_drag');
+    expect(INTENTIONAL_SYNERGY_TAGS).toContain('temporal_coherence');
+    expect(INTENTIONAL_SYNERGY_TAGS).toContain('harmonic_continuity');
+    expect(INTENTIONAL_SYNERGY_TAGS).toContain('flow_continuity');
+  });
+});
+
+// ── synergyDescriptor ─────────────────────────────────────────────
+
+describe('synergyDescriptor — phrase for the SYSTEM READ override', () => {
+  it('dynamic_elasticity + low_drag → "speed, elasticity, and tonal body"', () => {
+    expect(synergyDescriptor(['dynamic_elasticity', 'low_drag'])).toBe(
+      'speed, elasticity, and tonal body',
+    );
+  });
+
+  it('dynamic_elasticity alone → "speed and elasticity"', () => {
+    expect(synergyDescriptor(['dynamic_elasticity'])).toBe('speed and elasticity');
+  });
+
+  it('harmonic_continuity alone → "harmonic continuity"', () => {
+    expect(synergyDescriptor(['harmonic_continuity'])).toBe('harmonic continuity');
+  });
+
+  it('temporal_coherence + dynamic_elasticity → includes both concepts', () => {
+    const phrase = synergyDescriptor(['temporal_coherence', 'dynamic_elasticity']);
+    // dynamic_elasticity contributes "speed" + "elasticity"; temporal_coherence
+    // is skipped when elasticity is present (to avoid redundancy in the phrase).
+    expect(phrase).toMatch(/speed/);
+    expect(phrase).toMatch(/elasticity/);
+  });
+
+  it('low_drag alone → "low-drag energy transfer"', () => {
+    expect(synergyDescriptor(['low_drag'])).toBe('low-drag energy transfer');
+  });
+
+  it('flow_continuity alone → "musical flow"', () => {
+    expect(synergyDescriptor(['flow_continuity'])).toBe('musical flow');
+  });
+
+  it('empty array → defensive default "deliberate synergy"', () => {
+    expect(synergyDescriptor([])).toBe('deliberate synergy');
   });
 });

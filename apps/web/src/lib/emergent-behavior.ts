@@ -443,6 +443,97 @@ function composeChainHeader(
 }
 
 /**
+ * Shared selector — runs skip + fire + suppress + select, returns the
+ * structured tag results. Used by both `composeEmergentBehavior` (for
+ * the rendered paragraph) and `getEmergentTags` (for the SYSTEM READ
+ * calibration override in `composeAssessmentNarrative`).
+ */
+function selectEmergentForFindings(findings: MemoFindings): EmergentTransformResult[] {
+  if (shouldSkip(findings)) return [];
+  const fired: EmergentTransformResult[] = [];
+  for (const t of TRANSFORMS) {
+    const r = t(findings);
+    if (r) fired.push(r);
+  }
+  const hasTension = fired.some((r) => r.tag === 'system_tension_active');
+  const filtered = hasTension ? fired.filter((r) => r.tag !== 'presence_lift') : fired;
+  return selectEmergentTags(filtered);
+}
+
+/**
+ * Tags that indicate intentional synergy — when present, the SYSTEM
+ * READ thesis should NOT use corrective "speaker compensates" framing.
+ *
+ * `system_tension_active` is deliberately EXCLUDED — when tension fires
+ * the system genuinely is in contrast and the corrective framing is
+ * accurate.
+ */
+export const INTENTIONAL_SYNERGY_TAGS: ReadonlyArray<EmergentBehavior> = [
+  'dynamic_elasticity',
+  'low_drag',
+  'temporal_coherence',
+  'harmonic_continuity',
+  'flow_continuity',
+];
+
+/**
+ * Returns the selected emergent tags for a findings object, or [] when
+ * no transform fires or skip conditions hold. Used by the SYSTEM READ
+ * calibration in `composeAssessmentNarrative` to decide whether to swap
+ * corrective phrasing for intentional-synergy phrasing.
+ *
+ * Same selection logic as `composeEmergentBehavior` — both go through
+ * `selectEmergentForFindings`.
+ */
+export function getEmergentTags(findings: MemoFindings): EmergentBehavior[] {
+  return selectEmergentForFindings(findings).map((r) => r.tag);
+}
+
+/**
+ * Convert a set of emergent tags into a short noun phrase describing
+ * the system's intentional voicing. Used by the SYSTEM READ override
+ * (and the SYSTEM LOGIC summary override) in
+ * `composeAssessmentNarrative` so the override reads naturally for the
+ * specific tags that fired.
+ *
+ * Examples:
+ *   ['dynamic_elasticity', 'low_drag']        → "speed, elasticity, and tonal body"
+ *   ['dynamic_elasticity']                    → "speed and elasticity"
+ *   ['harmonic_continuity']                   → "harmonic continuity"
+ *   ['temporal_coherence', 'dynamic_elasticity'] → "speed, elasticity, and temporal coherence"
+ *   []                                        → "deliberate synergy" (defensive default)
+ */
+export function synergyDescriptor(tags: ReadonlyArray<EmergentBehavior>): string {
+  const parts: string[] = [];
+  const has = (t: EmergentBehavior) => tags.includes(t);
+  if (has('dynamic_elasticity')) {
+    parts.push('speed', 'elasticity');
+  }
+  if (has('harmonic_continuity')) {
+    parts.push('harmonic continuity');
+  }
+  if (has('temporal_coherence') && !has('dynamic_elasticity')) {
+    parts.push('temporal coherence');
+  }
+  if (has('low_drag') && parts.length === 0) {
+    parts.push('low-drag energy transfer');
+  }
+  if (has('flow_continuity') && parts.length === 0) {
+    parts.push('musical flow');
+  }
+  // Specialist-pairing cap: when elasticity is the primary tag and the
+  // chain has either a low-drag or harmonic-continuity partner, add
+  // "tonal body" — that's the speaker's contribution to the synergy.
+  if (has('dynamic_elasticity') && (has('low_drag') || has('harmonic_continuity'))) {
+    parts.push('tonal body');
+  }
+  if (parts.length === 0) return 'deliberate synergy';
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
+  return `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`;
+}
+
+/**
  * Compose the emergent-behavior paragraph for a deterministic system
  * assessment. Returns '' when no transform fires or skip conditions
  * hold — the upstream composer's `.filter()` then omits the section.
@@ -459,19 +550,7 @@ function composeChainHeader(
  * filling the per-component contribution phrases.
  */
 export function composeEmergentBehavior(findings: MemoFindings): string {
-  if (shouldSkip(findings)) return '';
-
-  // Fire all transforms
-  const fired: EmergentTransformResult[] = [];
-  for (const t of TRANSFORMS) {
-    const r = t(findings);
-    if (r) fired.push(r);
-  }
-  // Suppress presence_lift if system_tension_active is in the fired set
-  const hasTension = fired.some((r) => r.tag === 'system_tension_active');
-  const filtered = hasTension ? fired.filter((r) => r.tag !== 'presence_lift') : fired;
-
-  const selected = selectEmergentTags(filtered);
+  const selected = selectEmergentForFindings(findings);
   if (selected.length === 0) return '';
 
   const primary = selected[0];
