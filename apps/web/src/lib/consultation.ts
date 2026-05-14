@@ -88,6 +88,7 @@ import type {
   ActiveDACInference,
   PowerMatchAssessment,
 } from './memo-findings';
+import { composeEmergentBehavior } from './emergent-behavior';
 import { renderDeterministicMemo } from './memo-deterministic-renderer';
 import { isWhitelistedSource } from './evidence/source-whitelist';
 // StructuredMemoInputs is transitional — the canonical rendering path is
@@ -8235,8 +8236,20 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   //   6. Next step options (3 directional bullets)
   //   7. Do nothing check (1-2 sentences, restraint)
 
+  // ── Emergent behavior layer (Phase 2.5) ────────────────
+  // Adds one short paragraph between SYSTEM READ and SYSTEM LOGIC that
+  // describes the chain's interaction effects (temporal coherence,
+  // dynamic elasticity, low-drag motion, harmonic continuity, etc.) so
+  // the narrative isn't flattened into per-component aggregation. The
+  // helper is deterministic and reads only existing MemoFindings fields;
+  // it returns '' when skip conditions hold (bottleneck present, power
+  // mismatch, fewer than 3 components, all-low-confidence chain, or no
+  // transform fires) and the `.filter()` below silently omits it.
+  const emergentSection = composeEmergentBehavior(findings);
+
   return [
     overview,
+    emergentSection,
     systemLogicSection,
     primaryLeverageSection,
     decisionSection,
