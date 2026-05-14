@@ -6284,6 +6284,21 @@ export function buildSystemAssessment(
       const mentionedInMessage = fullMentioned || brandMentioned || nameMentioned;
       if (!mentionedInMessage) continue;
 
+      // Cleanup pass 2026-05-14 — opening-anchor cross-path consistency.
+      //
+      // `detectSystemDescription` sometimes returns components with an empty
+      // model name (e.g. "Topping D90SE" parsed as { brand: 'Topping', name: '' }).
+      // When that happens, this seeding block would otherwise push a brand-only
+      // component and mark `processedNames.add(brandLower)`, locking the
+      // downstream brand-kind subject handler out — even though that handler
+      // has stronger product resolution (`brandProducts.find(p => message
+      // .includes(p.name))`) that would have correctly resolved
+      // "topping" → "Topping D90SE" with its actual axes.
+      //
+      // Skipping here delegates to the better resolver. Components with a
+      // valid `ac.name` still seed normally.
+      if (!ac.name || ac.name.trim() === '') continue;
+
       processedNames.add(nameLower);
       processedNames.add(strippedNameLower);
       processedNames.add(brandLower);
