@@ -130,6 +130,9 @@ const MY_SYSTEM: BenchmarkCase = {
       'adds body while preserving speed and flow',
       'deliberate balance of',
       'Current setup excels at speed, flow, and immediacy',
+      // Phase C Calibration Pass 1 — listener identity + system philosophy.
+      'This system reflects a listener who values timing precision and dynamic immediacy over tonal saturation',
+      'This system values immediacy and communication over polish',
     ],
     mustNotContain: [
       'supplying all of the warmth',
@@ -139,6 +142,8 @@ const MY_SYSTEM: BenchmarkCase = {
       'unless corrected',
       'careful compensation',
       'exposes thinness',
+      // Negative-control thesis must NOT fire on the synergy case.
+      'This system prioritizes composure and precision over saturation',
     ],
     minSections: ['System read', 'Emergent behavior', 'System logic', 'Decision', 'Do nothing check'],
   },
@@ -187,6 +192,9 @@ const LEBEN_DEVORE: BenchmarkCase = {
       'Emergent behavior',
       // The high-efficiency speaker is recognised.
       'high-efficiency driver',
+      // Phase C Calibration Pass 1 — listener identity + system philosophy.
+      'This system reflects a listener who values harmonic density and tonal continuity over analytical detail',
+      'This system values harmonic restraint and tonal continuity over forward presence',
     ],
     mustNotContain: [
       // Power-mismatch language MUST NOT fire — 32 W push-pull into a
@@ -199,6 +207,8 @@ const LEBEN_DEVORE: BenchmarkCase = {
       'unless corrected',
       'careful compensation',
       'alone restores weight',
+      // Negative-control thesis must NOT fire on a synergy case.
+      'This system prioritizes composure and precision over saturation',
     ],
     minSections: ['System read', 'Emergent behavior', 'System logic'],
   },
@@ -284,6 +294,10 @@ const MODERN_PRECISION_CONTROL: BenchmarkCase = {
       // The non-synergy corrective wording is preserved (negative-control
       // confirms calibration is gated, not blanket-applied).
       'unless the speaker compensates',
+      // Phase C Calibration Pass 1 — negative-control identity + thesis.
+      // Must produce a DISTINCT identity+thesis pair from the synergy cases.
+      'This system reflects a listener who values composure, articulation, and control',
+      'This system prioritizes composure and precision over saturation',
     ],
     mustNotContain: [
       // The Phase 2.5 intentional-synergy markers MUST NOT fire.
@@ -297,6 +311,11 @@ const MODERN_PRECISION_CONTROL: BenchmarkCase = {
       'low-friction output',
       // No emergent paragraph for this aligned-precision chain.
       'Emergent behavior',
+      // Phase C: synergy-case identities/theses must NOT fire here.
+      'timing precision and dynamic immediacy',
+      'harmonic density and tonal continuity',
+      'harmonic restraint and tonal continuity',
+      'immediacy and communication over polish',
     ],
     minSections: ['System read', 'System logic'],
   },

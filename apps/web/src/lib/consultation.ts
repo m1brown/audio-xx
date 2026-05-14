@@ -95,6 +95,12 @@ import {
   INTENTIONAL_SYNERGY_TAGS,
   type EmergentBehavior,
 } from './emergent-behavior';
+import {
+  selectListenerArchetype,
+  selectSystemPhilosophy,
+  archetypeSentence,
+  philosophySentence,
+} from './listener-archetype';
 import { renderDeterministicMemo } from './memo-deterministic-renderer';
 import { isWhitelistedSource } from './evidence/source-whitelist';
 // StructuredMemoInputs is transitional — the canonical rendering path is
@@ -7228,12 +7234,29 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     thesisSentence2 = '';
   }
 
+  // ── Phase C Calibration Pass 1 — listener identity + system philosophy ──
+  // Two optional pinned sentences appended to the SYSTEM READ paragraph.
+  // Each is selected from a closed-set archetype/thesis enum based on
+  // existing findings + emergent tags. See `listener-archetype.ts` for the
+  // priority-ordered cascade and the no-overfire reasoning. Skip
+  // independently when no rule fires; never compose prose at this layer.
+  const archetypeId = selectListenerArchetype(findings, emergentTags);
+  const philosophyId = selectSystemPhilosophy(findings, emergentTags);
+  const identitySentence = archetypeId ? archetypeSentence(archetypeId) : '';
+  const thesisSentence = philosophyId ? philosophySentence(philosophyId) : '';
+
+  const systemReadParagraph = [
+    thesisSentence2 ? `${thesisSentence1} ${thesisSentence2}` : thesisSentence1,
+    identitySentence,
+    thesisSentence,
+  ]
+    .filter((s) => typeof s === 'string' && s.trim().length > 0)
+    .join(' ');
+
   const overview = [
     `**System read**`,
     ``,
-    thesisSentence2
-      ? `${thesisSentence1} ${thesisSentence2}`
-      : thesisSentence1,
+    systemReadParagraph,
   ].join('\n');
 
   // ── System logic: Component → Behavior → System effect (max 4 rows) ──
