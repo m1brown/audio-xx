@@ -53,7 +53,11 @@ interface TurnEvidence {
   headingsSeen: string[];
   responseText: string;
   consoleErrors: string[];
+  /** Full-page archival screenshot — every turn. */
   screenshot: string;
+  /** Outreach-oriented crop covering top through EMERGENT BEHAVIOR.
+   *  Falls back to viewport-only when the synergy layer doesn't fire. */
+  viewportScreenshot: string;
   expectedTermHits: Record<string, boolean>;
   forbiddenTermHits: Record<string, boolean>;
   pass: boolean;
@@ -203,6 +207,78 @@ async function screenshotTurn(page: Page, caseDir: string, turnNo: number): Prom
   return full;
 }
 
+/**
+ * Outreach-oriented viewport crop (Phase 2.6 polish, 2026-05-14).
+ *
+ * Saves a second PNG per turn at `turn-{n}-viewport.png` capturing the
+ * top of the page through the end of the EMERGENT BEHAVIOR section.
+ *
+ * Implementation:
+ *   1. Find the EMERGENT BEHAVIOR section by walking up from any node
+ *      whose text matches /emergent behavior/i to the nearest <section>.
+ *   2. Take that section's bottom Y coordinate + 32 px padding.
+ *   3. page.screenshot with `clip: { x:0, y:0, width:viewport, height: y }`.
+ *
+ * Fallback — if EMERGENT BEHAVIOR isn't rendered (negative-control
+ * case or any case where the synergy layer doesn't fire), capture the
+ * default viewport rectangle instead. The full-page archival
+ * screenshot remains untouched in either case.
+ */
+async function viewportCropTurn(page: Page, caseDir: string, turnNo: number): Promise<string> {
+  const out = path.join(caseDir, `turn-${turnNo}-viewport.png`);
+  // Scroll to document top first — after a chat response the page is
+  // scrolled to the bottom, and a non-fullPage screenshot would capture
+  // the wrong region. Combined with `fullPage: true` below, this also
+  // makes `clip` coordinates document-relative.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  // Quiet stabilization — let images/fonts finish rendering at the top.
+  await page.waitForTimeout(400);
+
+  const cropY = await page.evaluate(() => {
+    const candidates = Array.from(document.querySelectorAll('section, h2, h3, div'));
+    let target: Element | null = null;
+    for (const el of candidates) {
+      const text = el.textContent ?? '';
+      // Match a section whose own text starts with "Emergent behavior" so
+      // we don't accidentally match a container that wraps the whole page.
+      if (/^\s*Emergent behavior\b/i.test(text) && text.length < 3000) {
+        target = el;
+        break;
+      }
+    }
+    if (!target) return null;
+    // Walk up to the closest <section> wrapper for accurate bottom.
+    let walker: Element | null = target;
+    while (walker && walker.tagName !== 'SECTION' && walker.parentElement) {
+      walker = walker.parentElement;
+    }
+    const rect = (walker ?? target).getBoundingClientRect();
+    // window.scrollY is 0 after scrollTo(0,0); rect.bottom is the
+    // viewport-relative bottom which equals document-Y when scrolled to top.
+    const y = rect.bottom + window.scrollY + 40;
+    return Math.max(0, Math.min(y, 4000));
+  });
+  const viewport = page.viewportSize() ?? { width: 1280, height: 900 };
+  try {
+    if (cropY && cropY > 200) {
+      // fullPage: true makes clip document-relative — captures from y:0
+      // (document top) through the EMERGENT BEHAVIOR bottom + padding.
+      await page.screenshot({
+        path: out,
+        fullPage: true,
+        clip: { x: 0, y: 0, width: viewport.width, height: cropY },
+      });
+    } else {
+      // Fallback — no synergy section present (negative-control case).
+      // Capture the default viewport from the document top.
+      await page.screenshot({ path: out, fullPage: false });
+    }
+  } catch {
+    // ignore
+  }
+  return out;
+}
+
 // ── Setup / teardown ────────────────────────────────────
 
 test.beforeAll(() => {
@@ -271,6 +347,10 @@ async function runCase(page: Page, c: BenchmarkCase): Promise<CaseResult> {
     await waitForResponse(page);
     const dom = await captureTurnDom(page, prompt);
     const screenshot = await screenshotTurn(page, caseDir, turnNo);
+    // Phase 2.6 polish — outreach crop sits alongside the full-page
+    // archival screenshot. Captured BEFORE term scoring so the crop
+    // reflects the same DOM state.
+    const viewportScreenshot = await viewportCropTurn(page, caseDir, turnNo);
     const { expectedTermHits, forbiddenTermHits } = scoreTerms(
       dom.responseText,
       prompt,
@@ -300,6 +380,7 @@ async function runCase(page: Page, c: BenchmarkCase): Promise<CaseResult> {
       responseText: dom.responseText,
       consoleErrors: [...consoleErrors],
       screenshot,
+      viewportScreenshot,
       expectedTermHits,
       forbiddenTermHits,
       pass: turnPass,

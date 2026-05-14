@@ -8252,14 +8252,24 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   }
 
   // Bullet 3: current balance + material affinity.
-  // Phase 2.5 cleanup (2026-05-14): when intentional synergy is detected
-  // on a speed-forward upstream, "exposes thinness on dense tracks"
-  // overstates the failure mode of a deliberately voiced chain. Swap
-  // to a softer trade-off observation under the same
-  // `intentionalSynergy && hasContrast` gate.
+  // Phase 2.5 + 2.6 cleanup: when intentional synergy is detected, the
+  // "exposes thinness" wording overstates the failure mode of a
+  // deliberately voiced chain. Two parallel overrides — one for
+  // speed-forward (lean) upstream coherent chains (Phase 2.5,
+  // 670f7b5), one for tonally-dense (warm) upstream coherent chains
+  // (Phase 2.6, 2026-05-14, fixes the Leben/DeVore/Pontus screenshot).
+  //
+  // Same gating philosophy as the lean side: only fire for systems
+  // where the emergent-behavior layer identified intentional synergy,
+  // and only for the upstream-direction the new wording describes.
+  // Non-synergy systems and the negative-control fixture (Topping →
+  // Hegel → KEF) keep the original "exposes thinness" framing.
   const isLeanUpstreamForTradeoff = upBright > 0 || upDetailed > 0;
+  const isWarmUpstreamForTradeoff = upWarm > 0 || upSmooth > 0;
   if (intentionalSynergy && hasContrast && isLeanUpstreamForTradeoff) {
     tradeOffBullets.push('Current setup excels at speed, flow, and immediacy; denser music may reveal its lighter tonal mass');
+  } else if (intentionalSynergy && isWarmUpstreamForTradeoff) {
+    tradeOffBullets.push('Current setup excels at body, harmonic flow, and ease; brighter or more analytical material may render less air at the top');
   } else {
     const strongMaterial = isLeanUpstreamForTradeoff ? 'sparse' : 'dense';
     const weakMaterial = isLeanUpstreamForTradeoff ? 'dense' : 'sparse';

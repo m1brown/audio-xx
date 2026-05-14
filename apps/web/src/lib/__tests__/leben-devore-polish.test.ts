@@ -151,4 +151,49 @@ describe('Leben CS600X + DeVore O/96 + Pontus II — rendered narrative', () => 
     expect(narrative).toMatch(/The system is already built around/);
     expect(narrative).toMatch(/preserve that character rather than adding more density/);
   });
+
+  // ── TRADE-OFFS — warm-upstream synergy override (Phase 2.6 polish) ──
+
+  it('TRADE-OFFS bullet 3 no longer says "exposes thinness on sparse tracks"', () => {
+    // Pre-polish wording for warm-upstream synergy systems. The fix
+    // mirrors the Phase 2.5 lean-side override (670f7b5).
+    expect(narrative).not.toMatch(/exposes thinness on sparse tracks/);
+    expect(narrative).not.toMatch(/exposes thinness on dense tracks/);
+  });
+
+  it('TRADE-OFFS bullet 3 uses warm-upstream synergy phrasing', () => {
+    expect(narrative).toMatch(
+      /Current setup excels at body, harmonic flow, and ease; brighter or more analytical material may render less air at the top/,
+    );
+  });
+});
+
+// ── Negative control: modern-precision-control retains original wording ──
+
+describe('Trade-offs negative control — modern-precision-control unchanged', () => {
+  const text = 'Assess my system: Topping D90SE, Hegel H190, KEF LS50 Meta';
+  const subjectMatches = extractSubjectMatches(text);
+  const { desires } = detectIntent(text);
+  const result = buildSystemAssessment(text, subjectMatches, null, desires);
+  const narrative = result?.kind === 'assessment'
+    ? (result.response?.systemContext ?? '')
+    : '';
+
+  it('renders a non-empty assessment', () => {
+    expect(result).not.toBeNull();
+    expect(narrative.length).toBeGreaterThan(0);
+  });
+
+  it('does NOT use the new warm-upstream synergy wording', () => {
+    expect(narrative).not.toMatch(/body, harmonic flow, and ease/);
+    expect(narrative).not.toMatch(/may render less air at the top/);
+  });
+
+  it('does NOT use the lean-upstream synergy wording either', () => {
+    expect(narrative).not.toMatch(/Current setup excels at speed, flow, and immediacy/);
+  });
+
+  it('preserves the original "exposes thinness" trade-off bullet for non-synergy systems', () => {
+    expect(narrative).toMatch(/Current setup excels on .+ music, exposes thinness on .+ tracks/);
+  });
 });
