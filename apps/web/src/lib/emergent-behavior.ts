@@ -263,6 +263,25 @@ const transformSystemTensionActive: Transform = (findings) => {
   const upstream = findings.componentVerdicts.filter((c) => isDac(c) || isAmplifier(c));
   const downstream = findings.componentVerdicts.filter(isSpeakerOrHeadphone);
   if (upstream.length === 0 || downstream.length === 0) return null;
+
+  // Specialist-pairing exception. When the chain has a low-feedback or
+  // tube amp paired with a high-efficiency / horn / paper-cone speaker,
+  // the upstream/downstream axis contrast is *intentional voicing* — the
+  // amp deliberately stays lean so the speaker carries body and the
+  // dynamic envelope. This is the SET + horn / Pass + high-efficiency /
+  // JOB + WLM / Audio Note + Snell pattern. The system reads as
+  // dynamic_elasticity (speed converted into elastic motion), not as
+  // random tension between mismatched components. Skip the tension tag
+  // so dynamic_elasticity / low_drag surface as the primary reading.
+  const amp = upstream.find(isAmplifier);
+  const speaker = downstream[0];
+  if (amp && speaker) {
+    const lowFrictionAmp =
+      hasArchitecture(amp, ARCH_LOW_FEEDBACK) || hasArchitecture(amp, ARCH_TUBE);
+    const highEfficiency = isHighEfficiencySpeaker(speaker, findings);
+    if (lowFrictionAmp && highEfficiency) return null;
+  }
+
   const upBright = upstream.some((c) => c.axisPosition.warm_bright === 'bright');
   const upWarm = upstream.some((c) => c.axisPosition.warm_bright === 'warm');
   const downBright = downstream.some((c) => c.axisPosition.warm_bright === 'bright');

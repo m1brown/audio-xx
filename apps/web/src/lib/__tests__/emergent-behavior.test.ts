@@ -316,6 +316,26 @@ describe('transform system_tension_active', () => {
     const tag = TRANSFORMS.map((t) => t(findings)).find((r) => r && r.tag === 'system_tension_active');
     expect(tag).toBeUndefined();
   });
+
+  it('does NOT fire for specialist pairing even when isCoherent=false (low-feedback amp + high-efficiency speaker)', () => {
+    // The upstream coherence classifier sometimes misses the specialist
+    // pairing pattern. When the chain has a low-feedback (or tube) amp
+    // paired with a high-efficiency / horn / paper-cone speaker, the
+    // upstream/downstream axis contrast is *intentional voicing* — the
+    // tension transform must skip so dynamic_elasticity / low_drag can
+    // surface as the primary reading. This is the JOB + WLM, SET + horn,
+    // Pass + high-efficiency pattern.
+    const findings = makeFindings({
+      isCoherent: false,
+      componentVerdicts: [
+        makeComponent({ name: 'Hugo', role: 'dac', architecture: 'FPGA pulse-array', axisPosition: { warm_bright: 'bright', smooth_detailed: 'detailed', elastic_controlled: 'elastic', airy_closed: 'neutral', scale_intimacy: 'neutral' } }),
+        makeComponent({ name: 'JOB', role: 'integrated', architecture: 'low-feedback class A solid-state', axisPosition: { warm_bright: 'bright', smooth_detailed: 'detailed', elastic_controlled: 'elastic', airy_closed: 'neutral', scale_intimacy: 'neutral' } }),
+        makeComponent({ name: 'WLM Diva', role: 'speaker', architecture: 'high-efficiency paper-cone', axisPosition: { warm_bright: 'warm', smooth_detailed: 'smooth', elastic_controlled: 'elastic', airy_closed: 'neutral', scale_intimacy: 'neutral' } }),
+      ],
+    });
+    const tag = TRANSFORMS.map((t) => t(findings)).find((r) => r && r.tag === 'system_tension_active');
+    expect(tag).toBeUndefined();
+  });
 });
 
 // ── 8. Transform: flow_continuity ──────────────────────────────────
@@ -426,8 +446,11 @@ describe('selection and distinctness — second tag must add a distinct concept'
 
 describe('My System calibration — Eversolo → Hugo → JOB → WLM Diva', () => {
   function makeMySystemFindings(): MemoFindings {
+    // Deployed verification (2026-05-14) showed the upstream classifier
+    // marks this chain isCoherent=false. The specialist-pairing
+    // exception in transformSystemTensionActive must catch it.
     return makeFindings({
-      isCoherent: true,
+      isCoherent: false,
       componentVerdicts: [
         makeComponent({
           name: 'Eversolo DMP-A6',
