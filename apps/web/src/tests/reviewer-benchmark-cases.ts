@@ -145,6 +145,7 @@ const MY_SYSTEM: BenchmarkCase = {
   resolutionExpectation: 'assessment',
   tier: 'regression',
   demoSuitability: 'primary',
+  chatgptBaselinePath: 'my-system.md',
   notes:
     'Calibration anchor. The full Phase 2.5 narrative (SYSTEM READ → EMERGENT BEHAVIOR → SYSTEM LOGIC → Decision/Trade-offs/Do nothing) reads in synergy mode end to end.',
 };
@@ -204,6 +205,7 @@ const LEBEN_DEVORE: BenchmarkCase = {
   resolutionExpectation: 'assessment',
   tier: 'regression',
   demoSuitability: 'primary',
+  chatgptBaselinePath: 'leben-devore.md',
   notes:
     'Canonical authored pairing — pairing-resolver capsule for DeVore O/96 lists Leben CS600X as the canonical match. Demonstrates that Audio XX recognises a specialist tube-and-horn chain via topology + architecture data. The pairing-capsule prose ("Canonical pairing. The CS600X push-pull topology preserves DeVore\'s tonal density without overdoing it") fires only in the comparison flow, not the system-assessment flow — both flows reach the same underlying knowledge but render it differently.',
 };
