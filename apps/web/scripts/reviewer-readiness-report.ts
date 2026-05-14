@@ -81,8 +81,18 @@ const EXPECTATIONS: Record<string, CaseExpectation> = {
 
 // ── Types ────────────────────────────────────────────────
 
-type Severity = 'pass' | 'warn' | 'fail';
+// Severity tiers:
+//   fail → blocks readiness (NO-GO)
+//   warn → conditional (CONDITIONAL GO)
+//   pass → check succeeded
+//   info → informational note that does NOT affect status. Used for
+//          per-case findings that are expected configuration choices
+//          rather than defects (e.g. parity baseline absent on a
+//          demoSuitability:'no' regression-only case).
+type Severity = 'pass' | 'info' | 'warn' | 'fail';
 type Status = 'GO' | 'CONDITIONAL GO' | 'NO-GO';
+
+type DemoSuitability = 'primary' | 'secondary' | 'no';
 
 interface Finding {
   severity: Severity;
@@ -116,6 +126,8 @@ function maxSeverity(findings: Finding[]): Severity {
   if (findings.some((f) => f.severity === 'fail')) return 'fail';
   if (findings.some((f) => f.severity === 'warn')) return 'warn';
   return 'pass';
+  // `info` findings are intentionally excluded from status — they
+  // appear in the report for visibility but do not block GO.
 }
 
 function severityToStatus(s: Severity): Status {
@@ -132,6 +144,7 @@ function statusBadge(s: Status): string {
 
 function severityIcon(s: Severity): string {
   if (s === 'pass') return '✓';
+  if (s === 'info') return 'ℹ';
   if (s === 'warn') return '⚠';
   return '✗';
 }
@@ -155,6 +168,15 @@ interface Turn {
 interface Case {
   id: string;
   systemName: string;
+  /**
+   * Mirrors `BenchmarkCase.demoSuitability` in
+   * `apps/web/src/tests/reviewer-benchmark-cases.ts`. Populated by the
+   * Playwright runner into `summary.json`. Used here to scale parity
+   * baseline severity: missing parity is a real warning for
+   * outreach-suitable cases but only informational for regression-only
+   * negative-control cases.
+   */
+  demoSuitability: DemoSuitability;
   turns: Turn[];
 }
 
@@ -265,7 +287,11 @@ function checkDuplicateSections(turn: Turn): Finding[] {
   return [{ severity: 'fail', category: 'duplicates', detail: `duplicated sections: ${dupes.join(', ')}` }];
 }
 
-function checkArtifacts(caseId: string, turn: Turn): { findings: Finding[]; parityArtifact: string | null } {
+function checkArtifacts(
+  caseId: string,
+  demoSuitability: DemoSuitability,
+  turn: Turn,
+): { findings: Finding[]; parityArtifact: string | null } {
   const findings: Finding[] = [];
   const caseDir = path.join(ARTIFACT_DIR, caseId);
   const fullPng = path.join(caseDir, 'turn-1.png');
@@ -284,12 +310,27 @@ function checkArtifacts(caseId: string, turn: Turn): { findings: Finding[]; pari
     findings.push({ severity: 'fail', category: 'screenshot', detail: `missing viewport crop: ${path.relative(ROOT, viewportPng)}` });
   }
 
+  // Parity severity is scaled by demoSuitability:
+  //   - primary / secondary → outreach cases. Missing baseline is a real
+  //     CONDITIONAL signal (we can't compare against ChatGPT).
+  //   - 'no' → regression-only (negative control). Baseline is not
+  //     expected; missing is informational, not a defect.
   let parityArtifact: string | null = null;
   if (fs.existsSync(parityMd)) {
     parityArtifact = path.relative(ROOT, parityMd);
     findings.push({ severity: 'pass', category: 'parity', detail: `parity artifact present (${parityArtifact})` });
+  } else if (demoSuitability === 'no') {
+    findings.push({
+      severity: 'info',
+      category: 'parity',
+      detail: `no parity.md — not required for regression-only cases (demoSuitability='no')`,
+    });
   } else {
-    findings.push({ severity: 'warn', category: 'parity', detail: 'no parity.md — ChatGPT baseline not configured for this case' });
+    findings.push({
+      severity: 'warn',
+      category: 'parity',
+      detail: `no parity.md — ChatGPT baseline not configured for this demoSuitability='${demoSuitability}' case`,
+    });
   }
 
   void turn;
@@ -320,7 +361,7 @@ function buildCaseReport(c: Case): CaseReport {
     ...checkDuplicateSections(turn),
     ...checkConsoleErrors(turn),
   ];
-  const { findings: artifactFindings, parityArtifact } = checkArtifacts(c.id, turn);
+  const { findings: artifactFindings, parityArtifact } = checkArtifacts(c.id, c.demoSuitability, turn);
   allFindings.push(...artifactFindings);
 
   const status = severityToStatus(maxSeverity(allFindings));
