@@ -524,6 +524,10 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { label: 'Leben', url: 'https://www.leben-hifi.com/cs600x.html' },
       { label: 'Tone Imports (US)', url: 'https://toneimports.com/leben/' },
     ],
+    learnMore: {
+      manufacturer: 'https://www.leben-hifi.com/cs600x.html',
+      usedMarket: 'https://www.hifishark.com/search?q=Leben+CS600X',
+    },
     tendencies: {
       confidence: 'high',
       character: [
@@ -1430,6 +1434,10 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'HiFi Shark (used)', url: 'https://www.hifishark.com/search?q=job+integrated' },
     ],
+    learnMore: {
+      manufacturer: 'https://www.goldmund.com/',
+      usedMarket: 'https://www.hifishark.com/search?q=job+integrated',
+    },
     tendencies: {
       confidence: 'high',
       character: [

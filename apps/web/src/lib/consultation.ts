@@ -6251,6 +6251,25 @@ export function buildSystemAssessment(
     }
   }
 
+  /**
+   * Stage 6.1 launch-polish: curated per-product "Learn more" links.
+   * Manufacturer / used-market / reference-review URLs from
+   * `Product.learnMore` are tracked alongside the product's existing
+   * retailer_links and brand_profile.links. trackLink dedupes by URL,
+   * so when a curated manufacturer URL already appears in
+   * retailer_links, the first-registered label wins (typically the
+   * more informative brand-specific label like "Chord Electronics").
+   * The manufacturer slot uses the product brand as its display label;
+   * the other two slots use generic labels ("Used market", "Review").
+   */
+  function trackLearnMore(p: Product | undefined, forComponent: string) {
+    if (!p?.learnMore) return;
+    const lm = p.learnMore;
+    if (lm.manufacturer) trackLink({ label: p.brand, url: lm.manufacturer }, forComponent);
+    if (lm.usedMarket) trackLink({ label: 'Used market', url: lm.usedMarket }, forComponent);
+    if (lm.referenceReview) trackLink({ label: 'Review', url: lm.referenceReview }, forComponent);
+  }
+
   // ── Seed from active system when available ──
   // Only include components that are mentioned (by brand or model name) in the
   // current message. This prevents cross-contamination from saved systems that
@@ -6368,6 +6387,7 @@ export function buildSystemAssessment(
           trackLink({ label: l.label, url: l.url }, fullName);
         }
       }
+      trackLearnMore(product ?? undefined, fullName);
       if (brandProfile?.links) {
         for (const l of brandProfile.links) {
           trackLink({ label: l.label, url: l.url, kind: l.kind, region: l.region }, fullName);
@@ -6442,6 +6462,7 @@ export function buildSystemAssessment(
             trackLink({ label: l.label, url: l.url }, prodDisplayName);
           }
         }
+        trackLearnMore(product, prodDisplayName);
 
         // Collect brand links
         if (brandProfile?.links) {
@@ -6604,6 +6625,7 @@ export function buildSystemAssessment(
             trackLink({ label: l.label, url: l.url }, displayName);
           }
         }
+        trackLearnMore(specificProduct ?? undefined, displayName);
       } else {
         // Brand recognized but no profile — still include as a component
         // so it appears in the chain. Infer role from message context.
@@ -6679,6 +6701,7 @@ export function buildSystemAssessment(
             trackLink({ label: l.label, url: l.url }, displayName);
           }
         }
+        trackLearnMore(specificProduct ?? undefined, displayName);
       }
     }
   }

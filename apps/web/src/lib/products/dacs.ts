@@ -76,6 +76,20 @@ export interface Product {
   /** Fallback summary text. Demoted — tendencies take priority for reasoning. */
   description: string;
   retailer_links: RetailerLink[];
+  /**
+   * Curated "Learn more" links surfaced under the component card.
+   * Stage 6.1 launch-polish (2026-05-14) — additive only; cards without
+   * any of these fields omit the section cleanly. Closed-set shape:
+   * three optional slots, no free-form metadata, no scraping, no
+   * pricing. Currently populated for a small curated set of boutique /
+   * uncommon products where reviewers benefit from a direct path to
+   * the manufacturer or used market.
+   */
+  learnMore?: {
+    manufacturer?: string;
+    usedMarket?: string;
+    referenceReview?: string;
+  };
   notes?: string;
   /**
    * Explicit archetype tags. When present, these override trait-inferred
@@ -1185,6 +1199,10 @@ export const DAC_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'Chord Electronics', url: 'https://chordelectronics.co.uk/product/hugo/' },
     ],
+    learnMore: {
+      manufacturer: 'https://chordelectronics.co.uk/product/hugo/',
+      usedMarket: 'https://www.hifishark.com/search?q=Chord+Hugo',
+    },
     tendencies: {
       confidence: 'high',
       character: [

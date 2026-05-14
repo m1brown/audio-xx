@@ -91,6 +91,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'WLM', url: 'http://www.wiener-lautsprecher-manufaktur.com/en-speaker' },
     ],
+    learnMore: {
+      manufacturer: 'http://www.wiener-lautsprecher-manufaktur.com/en-speaker',
+      usedMarket: 'https://www.hifishark.com/search?q=WLM+Diva+Monitor',
+    },
     notes: 'Benefits from moderate-power amplification with good current delivery. Spatial precision improves significantly with careful placement.',
     placementSensitivity: {
       level: 'moderate',
@@ -438,6 +442,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'DeVore Fidelity', url: 'https://www.dfridelity.com/o96' },
     ],
+    learnMore: {
+      manufacturer: 'https://www.dfridelity.com/o96',
+      usedMarket: 'https://www.hifishark.com/search?q=DeVore+Orangutan+O%2F96',
+    },
     notes: 'Exceptional with low-power tube amplification. Sensitivity allows SET amps to drive them with authority. Room-dependent bass — needs space to breathe.',
     placementSensitivity: {
       level: 'moderate',
