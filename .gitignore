@@ -37,6 +37,14 @@ audio-xx-qa-*.md
 # Local test scripts
 # -------------------------
 apps/web/qa-tests.ts
+
+# -------------------------
+# Test artifact directories — generated, not tracked
+# -------------------------
+apps/web/qa-conversation-state/
+apps/web/reviewer-benchmark/
+apps/web/test-results/
+
 node_modules/
 dist/
 .next/
