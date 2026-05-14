@@ -8171,9 +8171,18 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     const role = (primary as { role: string }).role.toLowerCase();
     changeLine = `CHANGE the ${role} if the system sounds constrained. ${compName} limits what the rest of the chain can deliver.`;
   } else if (dacForDecision) {
-    // KEEP system — offer DAC as directional change
-    const leanDesc = (upBright > 0 || upDetailed > 0)
-      ? 'This system leans lean unless corrected.'
+    // KEEP system — offer DAC as directional change.
+    // Phase 2.5 cleanup (2026-05-14): when intentional synergy is
+    // detected on a speed-forward upstream, the "leans lean unless
+    // corrected" framing misreads the deliberate voicing. Swap to
+    // intentional-voicing phrasing using the same
+    // `intentionalSynergy && hasContrast` gate as the SYSTEM READ
+    // and SYSTEM LOGIC overrides in db14697.
+    const isLeanUpstream = upBright > 0 || upDetailed > 0;
+    const leanDesc = isLeanUpstream
+      ? (intentionalSynergy && hasContrast
+          ? 'This system is intentionally speed-forward; change the DAC only if you want more tonal density.'
+          : 'This system leans lean unless corrected.')
       : (upWarm > 0) ? 'This system leans warm — adding clarity requires upstream change.' : '';
     changeLine = `CHANGE the DAC if vocals feel thin or instruments lack weight. ${leanDesc}`.trim();
   } else {
@@ -8210,10 +8219,20 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     tradeOffBullets.push('Solid-state swap adds grip, reduces harmonic bloom');
   }
 
-  // Bullet 3: current balance + material affinity
-  const strongMaterial = (upBright > 0 || upDetailed > 0) ? 'sparse' : 'dense';
-  const weakMaterial = (upBright > 0 || upDetailed > 0) ? 'dense' : 'sparse';
-  tradeOffBullets.push(`Current setup excels on ${strongMaterial} music, exposes thinness on ${weakMaterial} tracks`);
+  // Bullet 3: current balance + material affinity.
+  // Phase 2.5 cleanup (2026-05-14): when intentional synergy is detected
+  // on a speed-forward upstream, "exposes thinness on dense tracks"
+  // overstates the failure mode of a deliberately voiced chain. Swap
+  // to a softer trade-off observation under the same
+  // `intentionalSynergy && hasContrast` gate.
+  const isLeanUpstreamForTradeoff = upBright > 0 || upDetailed > 0;
+  if (intentionalSynergy && hasContrast && isLeanUpstreamForTradeoff) {
+    tradeOffBullets.push('Current setup excels at speed, flow, and immediacy; denser music may reveal its lighter tonal mass');
+  } else {
+    const strongMaterial = isLeanUpstreamForTradeoff ? 'sparse' : 'dense';
+    const weakMaterial = isLeanUpstreamForTradeoff ? 'dense' : 'sparse';
+    tradeOffBullets.push(`Current setup excels on ${strongMaterial} music, exposes thinness on ${weakMaterial} tracks`);
+  }
 
   const tradeOffsSection = [
     `**Trade-offs**`,

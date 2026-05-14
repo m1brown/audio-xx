@@ -96,6 +96,27 @@ describe('SYSTEM READ calibration — My System (intentional synergy)', () => {
     expect(narrative).toMatch(/deliberate balance of .+\./i);
   });
 
+  // ── Phase 2.5 final cleanup (2026-05-14) — Decision + Trade-offs ──
+
+  it('Decision section no longer says "leans lean unless corrected"', () => {
+    expect(narrative).not.toMatch(/leans lean unless corrected/i);
+    expect(narrative).not.toMatch(/unless corrected/i);
+  });
+
+  it('Decision section uses "intentionally speed-forward" phrasing on synergy + lean upstream', () => {
+    expect(narrative).toMatch(/intentionally speed-forward/i);
+    expect(narrative).toMatch(/change the DAC only if you want more tonal density/i);
+  });
+
+  it('Trade-offs section no longer says "exposes thinness on dense tracks"', () => {
+    expect(narrative).not.toMatch(/exposes thinness/i);
+  });
+
+  it('Trade-offs section uses "speed, flow, and immediacy" phrasing on synergy + lean upstream', () => {
+    expect(narrative).toMatch(/Current setup excels at speed, flow, and immediacy/i);
+    expect(narrative).toMatch(/denser music may reveal its lighter tonal mass/i);
+  });
+
   it('synergy descriptor references at least one of: speed, elasticity, tonal body', () => {
     // Whatever exact tag set fires (deployed catalog may differ slightly),
     // the descriptor must include the speed/elasticity/tonal-body cluster
@@ -154,5 +175,13 @@ describe('SYSTEM READ calibration — negative control (must not affect non-syne
 
   it('does NOT use the new "deliberate balance" Do-nothing phrasing', () => {
     expect(narrative).not.toMatch(/deliberate balance of /i);
+  });
+
+  it('does NOT use the new "intentionally speed-forward" Decision phrasing', () => {
+    expect(narrative).not.toMatch(/intentionally speed-forward/i);
+  });
+
+  it('does NOT use the new "speed, flow, and immediacy" Trade-offs phrasing', () => {
+    expect(narrative).not.toMatch(/Current setup excels at speed, flow, and immediacy/i);
   });
 });
