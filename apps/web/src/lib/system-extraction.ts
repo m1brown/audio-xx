@@ -138,6 +138,7 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   'evo 100': { brand: 'PrimaLuna', category: 'amplifier' },
   // Topping
   'd90': { brand: 'Topping', category: 'dac' },
+  'd90se': { brand: 'Topping', category: 'dac' },
   // SMSL
   'su-9': { brand: 'SMSL', category: 'dac' },
   // Gustard
@@ -247,6 +248,22 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
 // When a key is present here, `displayName()` returns this canonical form
 // instead of running `capitalize()`.
 
+// Canonical brand display casing for brand-pass output.
+//
+// `capitalize()` only uppercases the first character, which breaks
+// acronym-style brand names ("KEF" → "Kef", "WLM" → "Wlm"). Most brand
+// casing is preserved upstream because PRODUCT_HINTS routes products
+// with verbatim brand strings. But the brand-pass (no product hit) goes
+// through `capitalize()` and needs an override map for these edge cases.
+//
+// Keep this list narrow — only brands that (a) reach the brand-pass via
+// `kind='brand'` subjects AND (b) require non-titlecase rendering.
+const CANONICAL_BRANDS: Record<string, string> = {
+  kef: 'KEF',
+  wlm: 'WLM',
+  arc: 'ARC',
+};
+
 const CANONICAL_NAMES: Record<string, string> = {
   // Harbeth
   p3esr: 'P3ESR',
@@ -298,6 +315,13 @@ const CANONICAL_NAMES: Record<string, string> = {
   'su-9': 'SU-9',
   // Topping
   d90: 'D90',
+  d90se: 'D90SE',
+  // Hegel — display-normalization cleanup 2026-05-14
+  h190: 'H190',
+  'hegel h190': 'Hegel H190',
+  // KEF — display-normalization cleanup 2026-05-14
+  'ls50 meta': 'LS50 Meta',
+  'kef ls50 meta': 'KEF LS50 Meta',
   // Holo Audio
   'may kte': 'May KTE',
   // FiiO
@@ -586,9 +610,35 @@ export function detectSystemDescription(
 
     seen.add(key);
     const category = BRAND_CATEGORY_MAP[key] ?? 'other';
+
+    // Display-normalization cleanup 2026-05-14 — trailing model extraction.
+    //
+    // When a brand subject lands in the brand-pass (i.e. the extractor
+    // did NOT recognise a specific product for this brand), try to read
+    // the user's literal model mention from the trailing text. This
+    // preserves "KEF LS50 Meta" instead of the bare "KEF" fallback for
+    // brands whose product isn't in the curated PRODUCT_NAMES list yet.
+    //
+    // Conservative heuristic — only accept the trailing text as a model
+    // when it (a) starts with an uppercase letter and (b) either contains
+    // a digit OR contains an all-caps token of ≥ 2 letters. This rejects
+    // ambient prose like " in my system" or " precision is amazing"
+    // while accepting "LS50 Meta", "Q150", "D90SE", "O/96", etc.
+    let extractedModel = '';
+    if (typeof match.index === 'number') {
+      const tail = currentMessage.slice(match.index + match.name.length);
+      const m = tail.match(/^\s+([A-Z][\w\-./+]+(?:\s+[A-Z\d][\w\-./+]*)*)/);
+      if (m) {
+        const candidate = m[1].trim();
+        const hasDigit = /\d/.test(candidate);
+        const hasAllCapsToken = /\b[A-Z]{2,}\b/.test(candidate);
+        if (hasDigit || hasAllCapsToken) extractedModel = candidate;
+      }
+    }
+
     components.push({
-      brand: capitalize(match.name),
-      name: '',  // Brand-only — user can fill in model in editor
+      brand: CANONICAL_BRANDS[key] ?? capitalize(match.name),
+      name: extractedModel,
       category,
       role: null,
     });

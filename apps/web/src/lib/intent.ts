@@ -155,7 +155,8 @@ const PRODUCT_NAMES = [
   // flagship catalog entries. Listed AFTER compound names so longest match
   // wins (e.g. "terminator ii" claims its span before "terminator" alone).
   'terminator', 'pontus', 'ares', 'enyo', 'venus',
-  'x26 pro', 'su-9', 'd90',
+  // 'd90se' before 'd90' so longest-match-wins selects the correct token.
+  'x26 pro', 'su-9', 'd90se', 'd90',
   'k9 pro', 'ef400',
   'dr70',
   'auralic vega', 'hegel h190', 'hegel h190 integrated', 'hegel h190 integrated amplifier', 'hegel rost', 'marantz 2220b', 'oppo opdv971h',
