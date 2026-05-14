@@ -68,6 +68,34 @@ describe('SYSTEM READ calibration — My System (intentional synergy)', () => {
     );
   });
 
+  // ── Phase 2.5 cleanup (2026-05-14) ──
+  // Three residual corrective phrasings still present after 487c55a +
+  // 1b9caeb. This block locks the new wordings.
+
+  it('SYSTEM READ sentence 1 no longer says "supplying all of the warmth"', () => {
+    expect(narrative).not.toMatch(/supplying all of the warmth/i);
+  });
+
+  it('SYSTEM READ sentence 1 uses additive "adding body, warmth, and dynamic release" phrasing', () => {
+    expect(narrative).toMatch(/adding body, warmth, and dynamic release/i);
+  });
+
+  it('SYSTEM LOGIC speaker row no longer says "prevents thinness"', () => {
+    expect(narrative).not.toMatch(/prevents thinness/i);
+  });
+
+  it('SYSTEM LOGIC speaker row uses "adds body while preserving speed and flow"', () => {
+    expect(narrative).toMatch(/adds body while preserving speed and flow/i);
+  });
+
+  it('Do nothing check no longer says "careful compensation"', () => {
+    expect(narrative).not.toMatch(/careful compensation/i);
+  });
+
+  it('Do nothing check uses "deliberate balance of <synergy>" phrasing', () => {
+    expect(narrative).toMatch(/deliberate balance of .+\./i);
+  });
+
   it('synergy descriptor references at least one of: speed, elasticity, tonal body', () => {
     // Whatever exact tag set fires (deployed catalog may differ slightly),
     // the descriptor must include the speed/elasticity/tonal-body cluster
@@ -111,5 +139,20 @@ describe('SYSTEM READ calibration — negative control (must not affect non-syne
 
   it('does NOT include the "each component contributes" override', () => {
     expect(narrative).not.toMatch(/Each component contributes to the system's/i);
+  });
+
+  it('does NOT use the new "adding body, warmth, and dynamic release" phrasing', () => {
+    expect(narrative).not.toMatch(/adding body, warmth, and dynamic release/i);
+  });
+
+  it('does NOT use "adds body while preserving speed and flow" — non-synergy speakers keep the corrective phrase', () => {
+    // A non-synergy contrast system should still get one of the original
+    // corrective speaker-row phrases ("prevents thinness", "adds body to a
+    // lean upstream", etc.), confirming this cleanup is gated on synergy.
+    expect(narrative).not.toMatch(/adds body while preserving speed and flow/i);
+  });
+
+  it('does NOT use the new "deliberate balance" Do-nothing phrasing', () => {
+    expect(narrative).not.toMatch(/deliberate balance of /i);
   });
 });

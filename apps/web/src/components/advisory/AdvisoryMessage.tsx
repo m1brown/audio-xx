@@ -1828,10 +1828,24 @@ function MemoFormat({ advisory: a, onFollowUpClick }: AdvisoryMessageProps) {
         </p>
       )}
 
-      {/* ── 1. System Character ────────────────────── */}
-      <AdvisorySection number={next()} label="System Character">
+      {/* ── 1. System Character ──────────────────────
+       *  Phase 2.5 cleanup (2026-05-14): the entire AdvisorySection is
+       *  gated on !isRewrittenReview. The rewritten system-review path
+       *  (RewrittenSystemReview component above) already renders the
+       *  parsed sections — System read, Emergent behavior, System logic,
+       *  etc. — AND displays the chain in its own header. Without the
+       *  gate, this legacy block would render the full systemContext
+       *  blob a second time (markdown bold markers stripped, headers
+       *  collapsed to inline text), producing a visible duplicate of
+       *  the structured narrative further down the page.
+       *
+       *  Non-rewritten-review paths (product assessments, gear inquiries,
+       *  brand-level responses) set systemContext directly on the
+       *  response without advisoryMode === 'system_review' and continue
+       *  to render this section as before. */}
+      {!isRewrittenReview && <AdvisorySection number={next()} label="System Character">
         {/* Intro summary — system philosophy framing */}
-        {!isRewrittenReview && a.introSummary && (
+        {a.introSummary && (
           <p style={{ margin: '0 0 0.85rem 0', fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight }}>
             {renderText(a.introSummary)}
           </p>
@@ -1843,13 +1857,13 @@ function MemoFormat({ advisory: a, onFollowUpClick }: AdvisoryMessageProps) {
           </p>
         )}
         {/* System interaction description */}
-        {!isRewrittenReview && a.systemInteraction && (
+        {a.systemInteraction && (
           <p style={{ margin: '0 0 0.4rem 0', fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight }}>
             {renderText(a.systemInteraction)}
           </p>
         )}
         {/* System synergy — folded into System Character instead of separate section */}
-        {!isRewrittenReview && a.systemSynergy && (
+        {a.systemSynergy && (
           <p style={{
             margin: '0.6rem 0 0.4rem 0',
             fontSize: FONTS.bodySize,
@@ -1910,9 +1924,9 @@ function MemoFormat({ advisory: a, onFollowUpClick }: AdvisoryMessageProps) {
             )}
           </div>
         )}
-      </AdvisorySection>
+      </AdvisorySection>}
 
-      <SectionDivider />
+      {!isRewrittenReview && <SectionDivider />}
 
       {/* ── 2. System Signature ─────────────────────── */}
       {!isRewrittenReview && a.systemSignature && (

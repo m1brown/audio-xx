@@ -7162,6 +7162,22 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   );
   const synergyPhrase = intentionalSynergy ? synergyDescriptor(emergentTags) : '';
 
+  // Phase 2.5 cleanup (2026-05-14) — sentence-1 override.
+  // When intentional synergy is detected AND the existing contrast model
+  // would otherwise frame the speaker as "supplying all of the warmth"
+  // (a corrective phrasing), swap to additive language. The speaker is
+  // contributing the chain's body/warmth dimension *intentionally*, not
+  // rescuing a lean upstream. Conditioned on the downstream lean so the
+  // warm-upstream / bright-speaker contrast gets a different phrase.
+  if (intentionalSynergy && hasContrast) {
+    if (downWarm > 0 || downSmooth > 0) {
+      downstreamPhrase = `with the ${downstreamNames.join(' and ')} adding body, warmth, and dynamic release`;
+    } else {
+      // Inverse contrast — warm upstream into a bright/detailed speaker.
+      downstreamPhrase = `with the ${downstreamNames.join(' and ')} adding articulation and air`;
+    }
+  }
+
   // Compose interaction-aware thesis
   let thesisSentence1: string;
   let thesisSentence2: string;
@@ -7292,7 +7308,12 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     if (roleKey === 'speaker' || roleKey === 'speakers' || roleKey === 'headphone' || roleKey === 'headphones') {
       // Counterbalance or reinforce?
       if ((wb === 'warm' && sysAxes.warm_bright === 'bright') || (sd === 'smooth' && sysAxes.smooth_detailed === 'detailed')) {
-        return 'adds body and prevents thinness';
+        // Phase 2.5 cleanup — when intentional synergy is detected the
+        // speaker isn't "preventing thinness"; it's contributing body
+        // while preserving the chain's intentional speed and flow.
+        return intentionalSynergy
+          ? 'adds body while preserving speed and flow'
+          : 'adds body and prevents thinness';
       }
       if (wb === sysAxes.warm_bright) return 'reinforces the system\'s overall lean';
       if (wb === 'warm') return 'adds body at the output stage';
@@ -8237,10 +8258,17 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     const downQuality = (downWarm > 0 || downSmooth > 0) ? 'warmth' : 'definition';
     const downName = downstreamNames.join(' and ');
     const upList = upstreamNames.join(' + ');
+    // Phase 2.5 cleanup — when intentional synergy is detected the
+    // "careful compensation" framing misreads a deliberate voicing as a
+    // rescue. Swap to "the system's deliberate balance of <synergy>"
+    // so the restraint case matches the rest of the SYSTEM READ.
+    const riskSentence = intentionalSynergy
+      ? `The risk of upgrading is losing the system's deliberate balance of ${synergyPhrase}.`
+      : `The risk of upgrading is losing the ${downName}'s careful compensation for ${upList} precision.`;
     doNothingSection = [
       `**Do nothing check**`,
       ``,
-      `If this balance of ${upQuality} and just enough ${downQuality} is what you enjoy, leave the system alone. The risk of upgrading is losing the ${downName}'s careful compensation for ${upList} precision.`,
+      `If this balance of ${upQuality} and just enough ${downQuality} is what you enjoy, leave the system alone. ${riskSentence}`,
     ].join('\n');
   } else if (keeps.length > 0) {
     const keepNames = keeps.slice(0, 2).map(k => k.name).join(' and ');
