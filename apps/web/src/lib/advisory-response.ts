@@ -238,6 +238,14 @@ export interface SourceReference {
   note: string;
   /** Direct URL to the review or source, if available. */
   url?: string;
+  /**
+   * Optional specific review/article title. When present, surfaces in
+   * the rendered link as "Publication — Title" so the destination is
+   * obvious at a glance. Without a title the link falls back to
+   * "Publication review" so the bare publication name doesn't read as
+   * a homepage handle. Stage 6.2 reviewer-trust UX rule.
+   */
+  title?: string;
 }
 
 // ── Editorial closing types ──────────────────────────
@@ -552,7 +560,7 @@ export interface ProductAssessment {
   /** Retailer / manufacturer links from catalog data. */
   retailerLinks?: Array<{ label: string; url: string; region?: string }>;
   /** Review and community source references from catalog data. */
-  sourceReferences?: Array<{ source: string; note: string; url?: string }>;
+  sourceReferences?: Array<{ source: string; note: string; url?: string; title?: string }>;
 }
 
 /**
@@ -2877,7 +2885,14 @@ export function shoppingToAdvisory(
     caution: p.caution,
     links: [
       ...(p.links?.map((l) => ({ label: l.label, url: l.url, kind: l.label.toLowerCase().includes('review') ? 'review' as const : l.label.toLowerCase().includes('buy') || l.label.toLowerCase().includes('dealer') ? 'dealer' as const : 'reference' as const })) ?? []),
-      ...(p.sourceReferences?.filter((r) => r.url).map((r) => ({ label: r.source, url: r.url!, kind: 'review' as const })) ?? []),
+      // Stage 6.2: review-kind links must read as a specific review,
+      // not as a publication handle. Prefer "Publication — Title"
+      // when a title is curated; otherwise "Publication review".
+      ...(p.sourceReferences?.filter((r) => r.url).map((r) => ({
+        label: r.title ? `${r.source} — ${r.title}` : `${r.source} review`,
+        url: r.url!,
+        kind: 'review' as const,
+      })) ?? []),
     ],
     // Enhanced card fields
     sonicDirectionLabel: p.sonicDirectionLabel,
@@ -3942,6 +3957,8 @@ export function assessmentToAdvisory(
       ? assessment.sourceReferences.map((s) => ({
           source: s.source,
           note: s.note,
+          url: s.url,
+          title: s.title,
         }))
       : undefined,
   };

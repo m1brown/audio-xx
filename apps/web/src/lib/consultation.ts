@@ -823,9 +823,13 @@ const BRAND_PROFILES: BrandProfile[] = [
     tendencies: 'JOB amplifiers are described as fast, elastic, and alive. Slightly golden tonality — fluid, almost tube-adjacent harmonic character for solid-state. Strong microdynamic nuance and expressive phrasing. Soundstage is dimensional, airy, holographic. Very low listener fatigue. The emphasis is on rhythmic engagement and transient fidelity over raw grip or bass authority.',
     systemContext: 'JOB integrated amplifiers tend to work well with speakers that provide their own tonal body and warmth, such as high-efficiency or paper-cone designs. Thrives with expressive, organic speakers (DeVore, WLM, horns). In systems already biased toward leanness, the cumulative precision may thin out the presentation.',
     pairingNotes: 'JOB + DeVore is a well-regarded complementary pairing — the JOB\'s speed and precision balances DeVore\'s warmth and tonal density. Also works well with WLM and horn-loaded speakers that supply their own body.',
-    links: [
-      { label: 'Goldmund (parent brand)', url: 'https://www.goldmund.com/', region: 'global' },
-    ],
+    // Stage 6.2: the Goldmund parent-brand homepage previously surfaced
+    // here as a JOB component link. That violated the rule against
+    // homepage-style links — clicking "Goldmund (parent brand)" on a
+    // JOB Integrated card landed on goldmund.com with nothing
+    // JOB-specific. No specific JOB landing page exists upstream, so
+    // the brand-profile link slot is intentionally omitted.
+    links: [],
   },
   {
     names: ['rega'],
@@ -6904,7 +6908,7 @@ export function buildSystemAssessment(
             (l: { label: string; url: string }) =>
               l.label.toLowerCase().includes(ref.source.toLowerCase()) && l.label.toLowerCase().includes('review'),
           );
-          memoSourceRefs.push({ source: ref.source, note: ref.note, url: ref.url ?? matchingLink?.url });
+          memoSourceRefs.push({ source: ref.source, note: ref.note, url: ref.url ?? matchingLink?.url, title: ref.title });
         }
       }
     }

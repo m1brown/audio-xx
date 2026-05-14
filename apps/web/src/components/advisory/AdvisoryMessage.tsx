@@ -4049,6 +4049,64 @@ function DecisiveFormat({ advisory: a }: AdvisoryMessageProps) {
 
 // ── Classic Format (Consultations, Diagnosis, Comparisons) ──
 
+/**
+ * Stage 6.2 — anchor the Learn More section in the consultation /
+ * no-componentReadings branch to the product subject (image + name).
+ *
+ * The branch previously rendered Learn More as a flat link list with
+ * no product context. When `subject` resolves to a curated product,
+ * this block surfaces the product's image and brand+name above the
+ * links so they read as attached to a real component rather than
+ * floating prose. Silently collapses when no product or no image
+ * exists — falls back to the existing flat link list.
+ */
+function ConsultationSubjectContext({ subject }: { subject?: string }) {
+  if (!subject) return null;
+  const product = findProductByComponentName(subject);
+  if (!product) return null;
+  const imageUrl = product.imageUrl ?? getProductImage(product.brand, product.name);
+  const displayName = [product.brand, product.name].filter(Boolean).join(' ');
+  return (
+    <div style={{ marginBottom: '0.85rem' }}>
+      {imageUrl && (
+        <div style={{
+          width: '100%',
+          maxWidth: '320px',
+          height: '160px',
+          background: '#FFFFFF',
+          border: '1px solid #E5E5E5',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '0.75rem',
+          boxSizing: 'border-box',
+          marginBottom: '0.55rem',
+        }}>
+          <img
+            src={imageUrl}
+            alt={displayName}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              display: 'block',
+            }}
+            onError={(e) => {
+              const wrap = (e.currentTarget as HTMLImageElement).parentElement;
+              if (wrap) wrap.style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+      <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#2a2a2a' }}>
+        {displayName}
+      </div>
+    </div>
+  );
+}
+
 function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: AdvisoryMessageProps) {
   // Redirect to editorial format when product options are present
   if (isEditorialFormat(a)) {
@@ -4794,9 +4852,17 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
       )}
 
       {/* ── 14. Learn more (links) ───────────────── */}
-      {/* All outbound links render here — never above the follow-up. */}
+      {/* All outbound links render here — never above the follow-up.
+       *
+       * Stage 6.2: when the consultation flow has a resolvable product
+       * subject, anchor the Learn More section to a small image + name
+       * header. This attaches links to product context rather than
+       * leaving them as a free-floating text list. Silent collapse
+       * when no image or no product match exists — falls back to the
+       * existing flat link list. */}
       {(a.links && a.links.length > 0) || (a.kind === 'consultation' && !a.componentReadings && (a.tendencies || a.philosophy || a.productOrigin || (a.improvements && a.improvements.length > 0))) ? (
         <AdvisorySection label="Learn more">
+          <ConsultationSubjectContext subject={a.subject} />
           {a.links && a.links.length > 0 && (
             <AdvisoryLinks links={a.links} />
           )}

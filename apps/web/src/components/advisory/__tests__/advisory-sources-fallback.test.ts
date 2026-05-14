@@ -1,22 +1,17 @@
 /**
  * AdvisorySources URL-resolution regression test.
  *
- * Locks the renderer-side fallback contract added in AdvisorySources.tsx:
+ * Stage 6.2 contract (locks the renderer behavior in AdvisorySources.tsx):
  *
- *   1. SourceReference.url (per-citation deep link, when curated)
- *   2. SOURCE_WHITELIST entry's homepage url (publication landing page)
- *   3. Plain text — non-link span — when neither is available
- *
- * The previous behavior rendered URL-less sources as plain spans, which
- * made upgrade-comparison source attributions read as prose rather than
- * clickable links. The whitelist already curates a homepage URL for
- * every approved publication, so the second tier nearly always
- * resolves.
+ *   1. SourceReference.url (per-citation deep link, when curated) →
+ *      render as a clickable link.
+ *   2. No per-citation URL → render as plain text (no homepage
+ *      fallback). The bare publication name reading as a clickable
+ *      "6moons ↗" link pointing to https://6moons.com/ was a
+ *      reviewer-trust UX defect (Stage 6.2 fix).
  *
  * Scope: pure unit tests. Replicates the resolution logic from
- * AdvisorySources.tsx to lock its behavior, and verifies the whitelist
- * invariant (every approved source carries a homepage URL) the
- * fallback depends on.
+ * AdvisorySources.tsx to lock its behavior.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -35,14 +30,14 @@ import {
 function resolveSourceHref(
   ref: { source: string; url?: string },
 ): string | undefined {
-  return ref.url ?? getSourceEntry(ref.source)?.url;
+  return ref.url;
 }
 
 // ─────────────────────────────────────────────────────
 // Tier 1 — per-citation URL takes precedence
 // ─────────────────────────────────────────────────────
 
-describe('resolveSourceHref — per-citation URL precedence', () => {
+describe('resolveSourceHref — per-citation URL', () => {
   it('returns the per-citation URL when present', () => {
     const ref = {
       source: 'Darko.Audio',
@@ -54,53 +49,47 @@ describe('resolveSourceHref — per-citation URL precedence', () => {
     );
   });
 
-  it('per-citation URL beats whitelist homepage even when both exist', () => {
-    // The whitelist has https://darko.audio/ as Darko.Audio's homepage.
-    // The per-citation URL must still win.
+  it('per-citation URL is used verbatim — no homepage substitution', () => {
     const ref = {
       source: 'Darko.Audio',
       note: 'Per-citation deep link.',
       url: 'https://darko.audio/per-citation/',
     };
-    const homepage = getSourceEntry('Darko.Audio')?.url;
-    expect(homepage).toBeDefined();
-    expect(homepage).not.toBe(ref.url);
     expect(resolveSourceHref(ref)).toBe(ref.url);
   });
 });
 
 // ─────────────────────────────────────────────────────
-// Tier 2 — whitelist homepage fallback (the regression fix)
+// Tier 2 — no per-citation URL → plain text (Stage 6.2)
 // ─────────────────────────────────────────────────────
 
-describe('resolveSourceHref — whitelist homepage fallback', () => {
-  it('falls back to the whitelist homepage URL when no per-citation URL exists', () => {
-    // The exact regression case: Hugo TT2's Darko.Audio source has no
-    // per-citation URL in dacs.ts, so the renderer used to produce a
-    // plain <span>. With the fallback, it now resolves to the
-    // whitelist homepage.
+describe('resolveSourceHref — no homepage fallback', () => {
+  it('returns undefined for Darko.Audio when no per-citation URL is set', () => {
+    // Pre-Stage-6.2 this used to resolve to https://darko.audio/ (the
+    // whitelist homepage). That made the rendered "Darko.Audio ↗" chip
+    // a homepage link. Stage 6.2 drops the fallback so the renderer
+    // can fall through to plain text.
     const ref = {
       source: 'Darko.Audio',
-      note: 'Comparison with Qutest and Hugo 2 covering upgrade path reasoning.',
-      // url is intentionally absent
+      note: 'Comparison with Qutest and Hugo 2.',
     };
-    expect(resolveSourceHref(ref)).toBe('https://darko.audio/');
+    expect(resolveSourceHref(ref)).toBeUndefined();
   });
 
-  it('falls back for Stereophile (Tier 2 publication)', () => {
+  it('returns undefined for Stereophile when no per-citation URL is set', () => {
     const ref = {
       source: 'Stereophile',
       note: 'Review covering Hugo TT2 tap count.',
     };
-    expect(resolveSourceHref(ref)).toBe('https://www.stereophile.com/');
+    expect(resolveSourceHref(ref)).toBeUndefined();
   });
 
-  it('falls back for 6moons (Tier 1 publication)', () => {
+  it('returns undefined for 6moons when no per-citation URL is set', () => {
     const ref = {
       source: '6moons',
       note: 'Review covering tonal authority.',
     };
-    expect(resolveSourceHref(ref)).toBe('https://6moons.com/');
+    expect(resolveSourceHref(ref)).toBeUndefined();
   });
 });
 
@@ -109,7 +98,7 @@ describe('resolveSourceHref — whitelist homepage fallback', () => {
 // ─────────────────────────────────────────────────────
 
 describe('resolveSourceHref — non-whitelisted sources', () => {
-  it('returns undefined for a source not in the whitelist', () => {
+  it('returns undefined for a source not in the whitelist with no URL', () => {
     const ref = {
       source: 'Some Unknown Blog',
       note: 'Random opinion.',
@@ -132,7 +121,7 @@ describe('resolveSourceHref — non-whitelisted sources', () => {
 });
 
 // ─────────────────────────────────────────────────────
-// Whitelist invariant — the fallback's enabling guarantee
+// Whitelist invariant — still verified for completeness
 // ─────────────────────────────────────────────────────
 
 describe('SOURCE_WHITELIST invariant — every entry has a homepage URL', () => {

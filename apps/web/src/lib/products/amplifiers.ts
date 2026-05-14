@@ -1435,7 +1435,10 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { label: 'HiFi Shark (used)', url: 'https://www.hifishark.com/search?q=job+integrated' },
     ],
     learnMore: {
-      manufacturer: 'https://www.goldmund.com/',
+      // No specific JOB Integrated product page exists on the Goldmund
+      // site, so the manufacturer slot is intentionally empty. Stage 6.2
+      // rule: do not surface publication or manufacturer homepages as
+      // product links.
       usedMarket: 'https://www.hifishark.com/search?q=job+integrated',
     },
     tendencies: {

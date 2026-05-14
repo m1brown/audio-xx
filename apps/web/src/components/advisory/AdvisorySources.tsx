@@ -7,23 +7,27 @@
  *   - If not → fall back to Tier 2 (acceptable) sources
  *   - Non-whitelisted sources are never shown
  *
- * URL resolution (renderer-side, no data changes):
- *   1. SourceReference.url (per-citation deep link, when curated)
- *   2. SOURCE_WHITELIST entry's homepage url (publication landing page)
- *   3. Plain text — when neither is available (rare; non-whitelisted
- *      sources are filtered out above)
+ * URL resolution (Stage 6.2):
+ *   1. SourceReference.url (per-citation deep link, when curated) →
+ *      render as a clickable link.
+ *   2. No per-citation URL → render as plain text (bold, not a link).
  *
- * The whitelist already curates a homepage URL for every approved
- * publication, so the second tier nearly always resolves. This means
- * sources without a per-review URL still render as a clickable link
- * to the publication, instead of as plain prose.
+ * Stage 6.2 rule: do not surface publication homepages as
+ * "Reference review" links. The previous homepage fallback made every
+ * URL-less citation read as a clickable publication link (e.g.
+ * "6moons ↗ → https://6moons.com/"), which violated reviewer-trust
+ * UX. When the curated set lacks a specific URL, the citation is
+ * still useful as text — but it must not pretend to be a deep link.
+ *
+ * Link label: when a citation carries a `title`, the link text reads
+ * "Publication — Title" so the destination is clear at a glance.
+ * Without a title the link reads "Publication review" (e.g.
+ * "6moons review") to avoid the bare publication name reading as a
+ * homepage handle.
  */
 
 import type { SourceReference } from '../../lib/advisory-response';
-import {
-  filterSourcesForDisplay,
-  getSourceEntry,
-} from '../../lib/evidence/source-whitelist';
+import { filterSourcesForDisplay } from '../../lib/evidence/source-whitelist';
 
 interface AdvisorySourcesProps {
   sources: SourceReference[];
@@ -36,10 +40,13 @@ export default function AdvisorySources({ sources }: AdvisorySourcesProps) {
   return (
     <div style={{ fontSize: '0.82rem', color: '#888', lineHeight: 1.7 }}>
       {filtered.map((s, i) => {
-        // Per-citation URL takes precedence over the whitelist homepage
-        // fallback. Both are renderer concerns — the engine never sees
-        // the resolved href.
-        const href = s.url ?? getSourceEntry(s.source)?.url;
+        // Stage 6.2: only render as a link when a specific URL is
+        // curated. No homepage fallback — bare publication links are
+        // misleading as "Reference review."
+        const href = s.url;
+        const linkLabel = s.title
+          ? `${s.source} — ${s.title}`
+          : `${s.source} review`;
         return (
           <div key={i} style={{ marginBottom: '0.25rem' }}>
             {href ? (
@@ -49,7 +56,7 @@ export default function AdvisorySources({ sources }: AdvisorySourcesProps) {
                 rel="noopener noreferrer"
                 style={{ fontWeight: 600, color: '#4a7a8a', textDecoration: 'none' }}
               >
-                {s.source} ↗
+                {linkLabel} ↗
               </a>
             ) : (
               <span style={{ fontWeight: 600, color: '#777' }}>{s.source}</span>

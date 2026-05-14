@@ -179,7 +179,7 @@ export interface ProvisionalProduct {
   description: string;
 
   /** Source references surfaced in advisory responses. */
-  sourceReferences?: Array<{ source: string; note: string; url?: string }>;
+  sourceReferences?: Array<{ source: string; note: string; url?: string; title?: string }>;
 
   // ── Provenance ─────────────────────────────────────
   /** Always present on provisional products. */

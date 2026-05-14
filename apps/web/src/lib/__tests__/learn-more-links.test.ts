@@ -43,9 +43,13 @@ describe('learn-more links — curated products', () => {
     expect(links.some((l) => l.label === 'Used market')).toBe(true);
   });
 
-  it('JOB Integrated has manufacturer + used-market links', () => {
+  it('JOB Integrated has used-market link and no homepage manufacturer link', () => {
     const links = linksFor('JOB Integrated', prompt);
-    expect(links.some((l) => l.url === 'https://www.goldmund.com/')).toBe(true);
+    // Stage 6.2: the JOB Integrated learnMore.manufacturer slot was
+    // previously the Goldmund homepage. That violated the rule against
+    // surfacing publication/manufacturer homepages as product links,
+    // and has been removed.
+    expect(links.some((l) => l.url === 'https://www.goldmund.com/')).toBe(false);
     // JOB's used-market URL matches the existing retailer_link entry
     // (label 'HiFi Shark (used)'). URL-dedup preserves the richer
     // label — so we assert the URL is present rather than the generic

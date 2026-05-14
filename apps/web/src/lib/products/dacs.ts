@@ -132,7 +132,7 @@ export interface Product {
    * or trusted community references that informed the product's tendency data.
    * Surfaced in the "Sources" section of advisory responses.
    */
-  sourceReferences?: Array<{ source: string; note: string; url?: string }>;
+  sourceReferences?: Array<{ source: string; note: string; url?: string; title?: string }>;
 
   // ── Availability metadata ─────────────────────────────
 
