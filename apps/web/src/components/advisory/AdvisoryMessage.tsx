@@ -459,6 +459,11 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
 
   // Parse both old (v1) and new (v2) section headers for backwards compat.
   const overview = findSection('system read') ?? findSection('overview');
+  // Phase 2.5 — emergent-behavior layer. Inserted between SYSTEM READ
+  // and SYSTEM LOGIC by composeAssessmentNarrative. Optional — many
+  // assessments skip it (bottleneck present, < 3 components,
+  // confidence too low, no transform fires).
+  const emergentBehavior = findSection('emergent behavior');
   const systemLogic = findSection('system logic');
   const strengths = findSection('does well') ?? findSection('doing well');
   const constrained = findSection('constrained');
@@ -738,6 +743,18 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
         <section style={{ marginBottom: sectionGap }}>
           {sectionLabel('System read')}
           {bodyPara(overview.body)}
+        </section>
+      )}
+
+      {/* Emergent behavior — Phase 2.5 interaction layer.
+       *  Sits between SYSTEM READ and SYSTEM LOGIC. Optional — only
+       *  renders when the deterministic emergent-behavior layer
+       *  produced a paragraph (composeEmergentBehavior in
+       *  emergent-behavior.ts returned non-empty). */}
+      {emergentBehavior && (
+        <section style={{ marginBottom: sectionGap }}>
+          {sectionLabel('Emergent behavior')}
+          {bodyPara(emergentBehavior.body)}
         </section>
       )}
 
