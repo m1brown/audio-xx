@@ -272,20 +272,20 @@ describe('integration — buildSystemAssessment renders the predicted sentences'
 
   it('my-system → timing-led identity + immediacy-first thesis', () => {
     const narrative = run('Assess my system: Eversolo DMP-A6, Chord Hugo, JOB Integrated, WLM Diva Monitor');
-    expect(narrative).toContain('This system reflects a listener who values timing precision and dynamic immediacy over tonal saturation.');
-    expect(narrative).toContain('This system values immediacy and communication over polish.');
+    expect(narrative).toContain('This system reflects a listener drawn to timing precision, elasticity, and dynamic immediacy.');
+    expect(narrative).toContain('This system is organized around immediacy, elasticity, and musical communication.');
   });
 
   it('leben-devore → harmonic-led identity + restraint-first thesis', () => {
     const narrative = run('Assess my system: Denafrips Pontus II, Leben CS600X, DeVore O/96');
-    expect(narrative).toContain('This system reflects a listener who values harmonic density and tonal continuity over analytical detail.');
-    expect(narrative).toContain('This system values harmonic restraint and tonal continuity over forward presence.');
+    expect(narrative).toContain('This system reflects a listener drawn to harmonic density, tonal continuity, and timbral depth.');
+    expect(narrative).toContain('This system is organized around harmonic restraint, smoothness, and unforced presence.');
   });
 
   it('modern-precision-control → composure-led identity + measurement-first thesis (negative control)', () => {
     const narrative = run('Assess my system: Topping D90SE, Hegel H190, KEF LS50 Meta');
-    expect(narrative).toContain('This system reflects a listener who values composure, articulation, and control over saturation or bloom.');
-    expect(narrative).toContain('This system prioritizes composure and precision over saturation.');
+    expect(narrative).toContain('This system reflects a listener drawn to composure, articulation, and dynamic control.');
+    expect(narrative).toContain('This system is built around composure, precision, and low-noise resolution.');
   });
 });
 
@@ -299,7 +299,9 @@ describe('cross-case distinctness — negative-control proof', () => {
     if (result?.kind !== 'assessment') return { identity: '', thesis: '' };
     const narrative = result.response?.systemContext ?? '';
     const identityMatch = narrative.match(/This system reflects a listener[^.]+\./);
-    const thesisMatch = narrative.match(/This (?:system|is) (?:values|prioritizes|is) [^.]+\.|This is a .+? system[^.]*\./);
+    // Philosophy sentence prefix (Pass 1 wording refinement):
+    // all five forms begin "This system is (built|organized|centered) ..."
+    const thesisMatch = narrative.match(/This system is (?:built|organized|centered)[^.]+\./);
     return {
       identity: identityMatch?.[0] ?? '',
       thesis: thesisMatch?.[0] ?? '',

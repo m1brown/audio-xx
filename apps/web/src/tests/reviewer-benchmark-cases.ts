@@ -131,8 +131,10 @@ const MY_SYSTEM: BenchmarkCase = {
       'deliberate balance of',
       'Current setup excels at speed, flow, and immediacy',
       // Phase C Calibration Pass 1 — listener identity + system philosophy.
-      'This system reflects a listener who values timing precision and dynamic immediacy over tonal saturation',
-      'This system values immediacy and communication over polish',
+      // Pass 1 wording refinement (2026-05-14): descriptive list form,
+      // no oppositional "X over Y" framing.
+      'This system reflects a listener drawn to timing precision, elasticity, and dynamic immediacy',
+      'This system is organized around immediacy, elasticity, and musical communication',
     ],
     mustNotContain: [
       'supplying all of the warmth',
@@ -143,7 +145,7 @@ const MY_SYSTEM: BenchmarkCase = {
       'careful compensation',
       'exposes thinness',
       // Negative-control thesis must NOT fire on the synergy case.
-      'This system prioritizes composure and precision over saturation',
+      'This system is built around composure, precision, and low-noise resolution',
     ],
     minSections: ['System read', 'Emergent behavior', 'System logic', 'Decision', 'Do nothing check'],
   },
@@ -193,8 +195,10 @@ const LEBEN_DEVORE: BenchmarkCase = {
       // The high-efficiency speaker is recognised.
       'high-efficiency driver',
       // Phase C Calibration Pass 1 — listener identity + system philosophy.
-      'This system reflects a listener who values harmonic density and tonal continuity over analytical detail',
-      'This system values harmonic restraint and tonal continuity over forward presence',
+      // Pass 1 wording refinement (2026-05-14): descriptive list form,
+      // no oppositional "X over Y" framing.
+      'This system reflects a listener drawn to harmonic density, tonal continuity, and timbral depth',
+      'This system is organized around harmonic restraint, smoothness, and unforced presence',
     ],
     mustNotContain: [
       // Power-mismatch language MUST NOT fire — 32 W push-pull into a
@@ -208,7 +212,7 @@ const LEBEN_DEVORE: BenchmarkCase = {
       'careful compensation',
       'alone restores weight',
       // Negative-control thesis must NOT fire on a synergy case.
-      'This system prioritizes composure and precision over saturation',
+      'This system is built around composure, precision, and low-noise resolution',
     ],
     minSections: ['System read', 'Emergent behavior', 'System logic'],
   },
@@ -296,8 +300,10 @@ const MODERN_PRECISION_CONTROL: BenchmarkCase = {
       'unless the speaker compensates',
       // Phase C Calibration Pass 1 — negative-control identity + thesis.
       // Must produce a DISTINCT identity+thesis pair from the synergy cases.
-      'This system reflects a listener who values composure, articulation, and control',
-      'This system prioritizes composure and precision over saturation',
+      // Pass 1 wording refinement (2026-05-14): descriptive list form,
+      // no oppositional "X over Y" framing.
+      'This system reflects a listener drawn to composure, articulation, and dynamic control',
+      'This system is built around composure, precision, and low-noise resolution',
     ],
     mustNotContain: [
       // The Phase 2.5 intentional-synergy markers MUST NOT fire.
@@ -312,10 +318,10 @@ const MODERN_PRECISION_CONTROL: BenchmarkCase = {
       // No emergent paragraph for this aligned-precision chain.
       'Emergent behavior',
       // Phase C: synergy-case identities/theses must NOT fire here.
-      'timing precision and dynamic immediacy',
-      'harmonic density and tonal continuity',
-      'harmonic restraint and tonal continuity',
-      'immediacy and communication over polish',
+      'drawn to timing precision, elasticity, and dynamic immediacy',
+      'drawn to harmonic density, tonal continuity, and timbral depth',
+      'organized around harmonic restraint, smoothness, and unforced presence',
+      'organized around immediacy, elasticity, and musical communication',
     ],
     minSections: ['System read', 'System logic'],
   },

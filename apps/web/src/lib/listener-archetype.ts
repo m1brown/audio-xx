@@ -57,32 +57,32 @@ export type SystemPhilosophy =
 
 const ARCHETYPE_SENTENCE: Record<ListenerArchetype, string> = {
   'harmonic-led':
-    'This system reflects a listener who values harmonic density and tonal continuity over analytical detail.',
+    'This system reflects a listener drawn to harmonic density, tonal continuity, and timbral depth.',
   'timing-led':
-    'This system reflects a listener who values timing precision and dynamic immediacy over tonal saturation.',
+    'This system reflects a listener drawn to timing precision, elasticity, and dynamic immediacy.',
   'flow-led':
-    'This system reflects a listener who values musical flow and expressive ease over measured precision.',
+    'This system reflects a listener drawn to musical flow, expressive ease, and rhythmic continuity.',
   'composure-led':
-    'This system reflects a listener who values composure, articulation, and control over saturation or bloom.',
+    'This system reflects a listener drawn to composure, articulation, and dynamic control.',
   'transparency-led':
-    'This system reflects a listener who values transparency, spatial precision, and low-level resolution.',
+    'This system reflects a listener drawn to transparency, spatial precision, and low-level resolution.',
   'engagement-led':
-    'This system reflects a listener who values long-session engagement and microdynamic expression.',
+    'This system reflects a listener drawn to long-session engagement and microdynamic expression.',
   'coherence-led':
-    'This system reflects a listener committed to a single voicing philosophy over component-level optimisation.',
+    'This system reflects a listener committed to a unified voicing philosophy across all components.',
 };
 
 const PHILOSOPHY_SENTENCE: Record<SystemPhilosophy, string> = {
   'measurement-first':
-    'This system prioritizes composure and precision over saturation.',
+    'This system is built around composure, precision, and low-noise resolution.',
   'restraint-first':
-    'This system values harmonic restraint and tonal continuity over forward presence.',
+    'This system is organized around harmonic restraint, smoothness, and unforced presence.',
   'immediacy-first':
-    'This system values immediacy and communication over polish.',
+    'This system is organized around immediacy, elasticity, and musical communication.',
   'music-first':
-    'This is a music-first system rather than a measurement-first system.',
+    'This system is organized around musical communication and long-form engagement.',
   'comfort-tuned':
-    'This is a comfort-tuned system.',
+    'This system is centered on tonal ease and long-session comfort.',
 };
 
 export function archetypeSentence(id: ListenerArchetype): string {
