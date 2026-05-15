@@ -95,30 +95,75 @@ function ensureDir(p: string) {
 
 const RESPONSE_TIMEOUT = 90_000;
 const STABILIZATION_MS = 2_500;
+const SUBMISSION_DETECT_TIMEOUT = 4_000;
+/**
+ * Floor below which `document.body.innerText.length` is treated as
+ * proof that the prompt never submitted (only landing-page chrome was
+ * captured). Real responses observed are >= 1800 chars; the empty
+ * landing page is ~900–935. 1500 is well clear of both.
+ */
+const MIN_VALID_BODY_LEN = 1500;
 
+/**
+ * Submit a prompt and confirm the chat actually accepted it.
+ *
+ * Flake mode this guards against: Playwright's click succeeds (no error)
+ * but the React handler drops the event due to a hydration/timing race.
+ * The page stays on its pre-submit state, the test silently moves on,
+ * and the captured "responseText" is just the landing-page chrome.
+ *
+ * Acceptance signal: within SUBMISSION_DETECT_TIMEOUT after the click,
+ * either the Send button text flips to "Thinking" OR the textarea is
+ * cleared. Either of those is conclusive proof that the form ran.
+ * If neither fires, refill the textarea and click once more. If still
+ * neither, throw — the test fails loudly instead of returning a
+ * misleading landing-page capture.
+ */
 async function submitPrompt(page: Page, text: string) {
-  const textarea = page.locator('#audio-input');
-  await textarea.waitFor({ state: 'visible', timeout: 10_000 });
-  await textarea.click();
-  await textarea.fill(text);
-  const sendButton = page.locator('button').filter({ hasText: /^Send$/ });
-  const enabledByTime = Date.now() + 8_000;
-  let clicked = false;
-  while (Date.now() < enabledByTime) {
-    if ((await sendButton.count()) > 0 && !(await sendButton.first().isDisabled().catch(() => true))) {
-      try {
-        await sendButton.first().click({ timeout: 2_000 });
-        clicked = true;
-        break;
-      } catch {
-        // race — retry
+  const MAX_ATTEMPTS = 2;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const textarea = page.locator('#audio-input');
+    await textarea.waitFor({ state: 'visible', timeout: 10_000 });
+    await textarea.click();
+    await textarea.fill(text);
+    const sendButton = page.locator('button').filter({ hasText: /^Send$/ });
+    const enabledByTime = Date.now() + 8_000;
+    let clicked = false;
+    while (Date.now() < enabledByTime) {
+      if ((await sendButton.count()) > 0 && !(await sendButton.first().isDisabled().catch(() => true))) {
+        try {
+          await sendButton.first().click({ timeout: 2_000 });
+          clicked = true;
+          break;
+        } catch {
+          // race — retry
+        }
       }
+      await page.waitForTimeout(250);
     }
-    await page.waitForTimeout(250);
+    if (!clicked) {
+      await textarea.press('Enter');
+    }
+    const accepted = await Promise.race([
+      page.locator('button').filter({ hasText: /Thinking/ }).waitFor({
+        state: 'visible',
+        timeout: SUBMISSION_DETECT_TIMEOUT,
+      }).then(() => true).catch(() => false),
+      page.waitForFunction(() => {
+        const el = document.querySelector('#audio-input') as HTMLTextAreaElement | null;
+        return !!(el && el.value.trim() === '');
+      }, null, { timeout: SUBMISSION_DETECT_TIMEOUT }).then(() => true).catch(() => false),
+    ]);
+    if (accepted) return;
+    // Attempt failed — the click happened but the chat didn't progress.
+    // Loop will refill + re-click on the next iteration.
   }
-  if (!clicked) {
-    await textarea.press('Enter');
-  }
+  throw new Error(
+    'submitPrompt: prompt submission appears to have silently failed after '
+    + `${MAX_ATTEMPTS} attempts (no "Thinking" indicator visible and textarea `
+    + 'still populated). The page likely lost its event handlers or the chat '
+    + 'is in an unexpected state. Prompt: ' + JSON.stringify(text),
+  );
 }
 
 async function waitForResponse(page: Page) {
@@ -263,6 +308,18 @@ async function runCase(page: Page, c: ConsultationCase): Promise<CaseResult> {
   await submitPrompt(page, c.prompt);
   await waitForResponse(page);
   const sig = await captureSignals(page, c.prompt, c.expectedSubject);
+  // Defensive sanity check: if submitPrompt's acceptance signal was
+  // somehow incorrect (e.g., the textarea cleared but the request was
+  // still dropped server-side), the captured body will be just the
+  // landing-page chrome. Fail loudly with a clear message rather than
+  // pushing a misleading transcript into the summary.
+  if (sig.bodyLen < MIN_VALID_BODY_LEN) {
+    throw new Error(
+      `Prompt appears not to have submitted; captured landing page instead of `
+      + `advisory response (bodyLen=${sig.bodyLen}, expected >= ${MIN_VALID_BODY_LEN}). `
+      + `Case=${c.id}, prompt=${JSON.stringify(c.prompt)}.`,
+    );
+  }
   const screenshot = await screenshotFull(page, caseDir);
   const viewportScreenshot = await screenshotViewport(page, caseDir);
 
