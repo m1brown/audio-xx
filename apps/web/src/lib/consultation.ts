@@ -252,7 +252,7 @@ interface DesignFamily {
   ampPairing?: string;
 }
 
-interface BrandProfile {
+export interface BrandProfile {
   names: string[];
   /** Founder or lead designer, if notable. */
   founder?: string;
@@ -2494,13 +2494,25 @@ export function buildInitialComparisonPayload(
     sonicTraits: sonicTraitsB,
   };
 
-  // ── Trade-off ──────────────────────────────────────
-  const dominantA = detectDominantAxis(charA, profileA.tendencies);
-  const dominantB = detectDominantAxis(charB, profileB.tendencies);
-  const flowScoreA = scoreKeywords(charA + ' ' + profileA.tendencies, ['flow', 'elastic', 'alive', 'rhythmic', 'drive']);
-  const flowScoreB = scoreKeywords(charB + ' ' + profileB.tendencies, ['flow', 'elastic', 'alive', 'rhythmic', 'drive']);
+  // ── Canonical axis classification (Stage 11.1) ─────
+  // Compute each side's dominant axis ONCE here, using negation-stripped
+  // tendency text so phrases like "speed and clarity dominate over warmth
+  // or harmonic density" (Goldmund) don't accumulate phantom warm-axis
+  // hits. These canonical axes are threaded through every downstream
+  // helper that previously re-classified the brand from bag-of-words —
+  // buildProvisionalTasteInference and buildComparisonRecommendation —
+  // so the response cannot self-contradict by reaching opposite
+  // classifications on the same inputs.
+  const strippedTendA = stripNegatedClauses(profileA.tendencies);
+  const strippedTendB = stripNegatedClauses(profileB.tendencies);
+  const axisA = detectDominantAxis(charA, strippedTendA);
+  const axisB = detectDominantAxis(charB, strippedTendB);
 
-  const tradeoffAxis = computeTradeoffAxis(dominantA, dominantB, flowScoreA, flowScoreB);
+  // ── Trade-off ──────────────────────────────────────
+  const flowScoreA = scoreKeywords(charA + ' ' + strippedTendA, ['flow', 'elastic', 'alive', 'rhythmic', 'drive']);
+  const flowScoreB = scoreKeywords(charB + ' ' + strippedTendB, ['flow', 'elastic', 'alive', 'rhythmic', 'drive']);
+
+  const tradeoffAxis = computeTradeoffAxis(axisA, axisB, flowScoreA, flowScoreB);
   const tradeoffStatement = buildTradeoffStatement(nameA, charA, profileA.tendencies, nameB, charB, profileB.tendencies);
   const [labelA, labelB] = TRADEOFF_LABELS[tradeoffAxis];
 
@@ -2508,7 +2520,7 @@ export function buildInitialComparisonPayload(
   const explicitTaste = queryText
     ? buildTasteDecisionFrame(queryText, nameA, charA, profileA.tendencies, nameB, charB, profileB.tendencies)
     : null;
-  const tasteStatement = explicitTaste ?? buildProvisionalTasteInference(nameA, charA, nameB, charB);
+  const tasteStatement = explicitTaste ?? buildProvisionalTasteInference(nameA, charA, axisA, nameB, charB, axisB);
 
   // ── Decision ───────────────────────────────────────
   const guidanceText = buildComparisonGuidance(nameA, charA, profileA, nameB, charB, profileB);
@@ -2525,7 +2537,7 @@ export function buildInitialComparisonPayload(
   }
 
   // ── Recommendation (always present) ────────────────
-  const rec = buildComparisonRecommendation(nameA, charA, profileA, nameB, charB, profileB);
+  const rec = buildComparisonRecommendation(nameA, charA, profileA, nameB, charB, profileB, axisA, axisB);
   if (!decision.recommended) {
     decision.recommended = rec.recommended;
   }
@@ -2806,40 +2818,50 @@ function buildTradeoffStatement(
  * Build a provisional taste inference when no explicit taste signal is present.
  * Never say "no strong signal" — always infer a direction.
  *
- * Uses trait-consistent session-affinity logic:
- *   warm / dense / smooth / relaxed → long-session ease and comfort
- *   fast / precise / analytical / lean → short-session impact and resolution
- * Avoids generic "engagement" or "keeps you listening" heuristics.
+ * Stage 11.1: classification is supplied by the caller as canonical
+ * DominantAxis values (computed once in buildInitialComparisonPayload /
+ * buildSystemAnchoredPayload from negation-stripped tendencies). This
+ * helper no longer re-derives ease/impact posture from bag-of-words on
+ * charA/charB — that path inverted classification when sub-trait
+ * keywords appeared inside contrastive clauses ("warmth or harmonic
+ * density" in a negating context).
+ *
+ * Axis → taste posture mapping:
+ *   warm    → ease   (long-session warmth and density)
+ *   flow    → ease   (rhythmic engagement clusters with musicality)
+ *   control → impact (precision and transient clarity)
+ *   neutral → mixed  (fall through to non-directional language)
  */
 function buildProvisionalTasteInference(
-  nameA: string, charA: string,
-  nameB: string, charB: string,
+  nameA: string, charA: string, axisA: DominantAxis,
+  nameB: string, charB: string, axisB: DominantAxis,
 ): string {
-  // Session-affinity keywords (not "engagement" which conflates rhythm with ease)
-  const easeKw = ['warm', 'rich', 'lush', 'dense', 'relaxed', 'smooth', 'ease', 'body', 'tonal', 'harmonic', 'flowing', 'organic'];
-  const impactKw = ['fast', 'precise', 'analytical', 'detailed', 'clean', 'controlled', 'speed', 'articulate', 'resolving', 'transparent', 'tight'];
+  function posture(axis: DominantAxis): 'ease' | 'impact' | 'mixed' {
+    if (axis === 'warm' || axis === 'flow') return 'ease';
+    if (axis === 'control') return 'impact';
+    return 'mixed';
+  }
+  const aPosture = posture(axisA);
+  const bPosture = posture(axisB);
 
-  const easeA = scoreKeywords(charA, easeKw);
-  const easeB = scoreKeywords(charB, easeKw);
-  const impactA = scoreKeywords(charA, impactKw);
-  const impactB = scoreKeywords(charB, impactKw);
-
-  const aDominant = easeA > impactA ? 'ease' : impactA > easeA ? 'impact' : 'mixed';
-  const bDominant = easeB > impactB ? 'ease' : impactB > easeB ? 'impact' : 'mixed';
-
-  if (aDominant === 'ease' && bDominant === 'impact') {
+  if (aPosture === 'ease' && bPosture === 'impact') {
     return `If long listening sessions and tonal comfort matter to you, **${nameA}** is likely the better fit. If you prioritise clarity and transient precision — the ability to hear everything in a recording — **${nameB}** is where that lives.`;
   }
-  if (bDominant === 'ease' && aDominant === 'impact') {
+  if (bPosture === 'ease' && aPosture === 'impact') {
     return `If long listening sessions and tonal comfort matter to you, **${nameB}** is likely the better fit. If you prioritise clarity and transient precision — the ability to hear everything in a recording — **${nameA}** is where that lives.`;
   }
-  // Both lean the same direction — differentiate on degree and sub-traits
-  if (aDominant === 'ease' && bDominant === 'ease') {
-    // Both warm — distinguish by density vs flow
-    const densityA = scoreKeywords(charA, ['dense', 'density', 'body', 'saturated', 'lush', 'weight', 'harmonic']);
-    const densityB = scoreKeywords(charB, ['dense', 'density', 'body', 'saturated', 'lush', 'weight', 'harmonic']);
-    const flowA = scoreKeywords(charA, ['flow', 'elastic', 'alive', 'rhythmic', 'drive', 'speed', 'articulate']);
-    const flowB = scoreKeywords(charB, ['flow', 'elastic', 'alive', 'rhythmic', 'drive', 'speed', 'articulate']);
+  // Both lean the same direction — differentiate on degree and sub-traits.
+  // Sub-axis tie-breakers continue to use bag-of-words, but inputs are
+  // stripped of negated clauses so phrases like "speed and clarity
+  // dominate over warmth or harmonic density" don't contribute phantom
+  // warm/density hits.
+  if (aPosture === 'ease' && bPosture === 'ease') {
+    const stripA = stripNegatedClauses(charA).toLowerCase();
+    const stripB = stripNegatedClauses(charB).toLowerCase();
+    const densityA = scoreKeywords(stripA, ['dense', 'density', 'body', 'saturated', 'lush', 'weight', 'harmonic']);
+    const densityB = scoreKeywords(stripB, ['dense', 'density', 'body', 'saturated', 'lush', 'weight', 'harmonic']);
+    const flowA = scoreKeywords(stripA, ['flow', 'elastic', 'alive', 'rhythmic', 'drive', 'speed', 'articulate']);
+    const flowB = scoreKeywords(stripB, ['flow', 'elastic', 'alive', 'rhythmic', 'drive', 'speed', 'articulate']);
     if (flowA > densityA && densityB > flowB) {
       return `Both prioritise musical warmth, but **${nameA}** leans toward rhythmic drive and articulation while **${nameB}** leans toward harmonic density and tonal weight. The choice depends on whether you want your music to move or to envelop.`;
     }
@@ -2848,7 +2870,7 @@ function buildProvisionalTasteInference(
     }
     return `Both ${nameA} and ${nameB} prioritise musical warmth. The distinction is in degree and voicing — listen for which tonal character resonates with the music you return to most.`;
   }
-  if (aDominant === 'impact' && bDominant === 'impact') {
+  if (aPosture === 'impact' && bPosture === 'impact') {
     return `Both ${nameA} and ${nameB} prioritise precision and control. The distinction is in how they handle micro-dynamics and tonal weight at the margins — which matters most depends on your source material and listening priorities.`;
   }
   return `This is ultimately a question of what you want more of in your listening — warmth and body, or speed and resolution. That preference, more than any specification, determines which direction is right.`;
@@ -3813,12 +3835,20 @@ export function buildSystemAnchoredPayload(
   // ── System anchor ──────────────────────────────────
   const anchorStatement = buildAnchorStatement(nameA, nameB, contextName, contextChar, contextKind);
 
+  // ── Canonical axis classification (Stage 11.1) ─────
+  // Compute each side's dominant axis ONCE, using negation-stripped
+  // tendency text so contrastive phrases ("dominate over warmth")
+  // can't tip the warm count. Threaded through downstream helpers
+  // for consistent classification.
+  const strippedTendA = stripNegatedClauses(infoA.tendencies);
+  const strippedTendB = stripNegatedClauses(infoB.tendencies);
+  const axisA = detectDominantAxis(charA, strippedTendA);
+  const axisB = detectDominantAxis(charB, strippedTendB);
+
   // ── Trade-off ──────────────────────────────────────
-  const dominantA = detectDominantAxis(charA, infoA.tendencies);
-  const dominantB = detectDominantAxis(charB, infoB.tendencies);
-  const flowScoreA = scoreKeywords(charA + ' ' + infoA.tendencies, ['flow', 'elastic', 'alive', 'rhythmic', 'drive']);
-  const flowScoreB = scoreKeywords(charB + ' ' + infoB.tendencies, ['flow', 'elastic', 'alive', 'rhythmic', 'drive']);
-  const tradeoffAxis = computeTradeoffAxis(dominantA, dominantB, flowScoreA, flowScoreB);
+  const flowScoreA = scoreKeywords(charA + ' ' + strippedTendA, ['flow', 'elastic', 'alive', 'rhythmic', 'drive']);
+  const flowScoreB = scoreKeywords(charB + ' ' + strippedTendB, ['flow', 'elastic', 'alive', 'rhythmic', 'drive']);
+  const tradeoffAxis = computeTradeoffAxis(axisA, axisB, flowScoreA, flowScoreB);
   const [labelA, labelB] = TRADEOFF_LABELS[tradeoffAxis];
 
   // System-specific trade-off statement
@@ -3830,7 +3860,7 @@ export function buildSystemAnchoredPayload(
   const explicitTaste = buildTasteDecisionFrame(
     contextMessage, nameA, charA, infoA.tendencies, nameB, charB, infoB.tendencies,
   );
-  const tasteStatement = explicitTaste ?? buildProvisionalTasteInference(nameA, charA, nameB, charB);
+  const tasteStatement = explicitTaste ?? buildProvisionalTasteInference(nameA, charA, axisA, nameB, charB, axisB);
 
   // ── Decision ───────────────────────────────────────
   const decisionText = buildDecisionGuidance(nameA, charA, infoA, nameB, charB, infoB, contextName, contextInfo, contextKind);
@@ -3855,6 +3885,7 @@ export function buildSystemAnchoredPayload(
 
   const fullRec = buildComparisonRecommendation(
     nameA, charA, fullProfileA, nameB, charB, fullProfileB,
+    axisA, axisB,
     contextName, contextChar,
   );
   if (!decision.recommended) {
@@ -4113,9 +4144,18 @@ function buildComparisonRecommendation(
   profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
   nameB: string, charB: string,
   profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  axisA: DominantAxis,
+  axisB: DominantAxis,
   contextName?: string,
   contextChar?: string | null,
 ): { recommended: string; rationale: string } {
+  // Stage 11.1: top-level classification (warm vs precise) is no longer
+  // re-derived from bag-of-words here. The caller passes the canonical
+  // DominantAxis for each side, computed once from negation-stripped
+  // tendencies. Sub-trait scoring below is used only for tie-breakers
+  // (relative degree of flow / density / warm-vs-precise strength) and
+  // operates on negation-stripped text — so the tie-breaker can't
+  // re-invert a brand that the canonical axis already classified.
   const warmKw = ['warm', 'rich', 'dense', 'harmonic', 'lush', 'musical', 'golden', 'tube-adjacent', 'saturated', 'tonal density', 'tonal body'];
   const preciseKw = ['controlled', 'composed', 'neutral', 'clean', 'precise', 'analytical', 'tight', 'restrained', 'cool', 'dry', 'damping'];
   // Session-affinity keywords — NOT the same as "flow" or "engagement."
@@ -4132,8 +4172,9 @@ function buildComparisonRecommendation(
   const systemFlowKw = ['flow', 'elastic', 'alive', 'rhythmic', 'drive', 'fast', 'speed', 'timing'];
   const densityKw = ['dense', 'density', 'body', 'harmonic', 'saturated', 'lush', 'weight', 'presence', 'tonal'];
 
-  const textA = charA + ' ' + profileA.tendencies;
-  const textB = charB + ' ' + profileB.tendencies;
+  // All sub-trait scoring operates on negation-stripped text (Item C).
+  const textA = stripNegatedClauses(charA + ' ' + profileA.tendencies);
+  const textB = stripNegatedClauses(charB + ' ' + profileB.tendencies);
   const warmA = scoreKeywords(textA, warmKw);
   const warmB = scoreKeywords(textB, warmKw);
   const preciseA = scoreKeywords(textA, preciseKw);
@@ -4224,14 +4265,24 @@ function buildComparisonRecommendation(
   }
 
   // ── Initial comparison (no system context) ────────
-  const aDominant = warmA > preciseA ? 'warm' : preciseA > warmA ? 'precise' : 'mixed';
-  const bDominant = warmB > preciseB ? 'warm' : preciseB > warmB ? 'precise' : 'mixed';
+  // Use canonical axes (passed in by caller) for warm-vs-precise
+  // classification rather than re-deriving from bag-of-words. Bag-of-words
+  // tie-breakers below remain for sub-axis differentiation, but inputs
+  // are negation-stripped (textA/textB above) so contrastive phrases
+  // can't tip the comparison.
+  const aDominant: 'warm' | 'precise' | 'other' =
+    axisA === 'warm' ? 'warm' : axisA === 'control' ? 'precise' : 'other';
+  const bDominant: 'warm' | 'precise' | 'other' =
+    axisB === 'warm' ? 'warm' : axisB === 'control' ? 'precise' : 'other';
 
   // Session-affinity scores — determines whether traits align with ease or impact
   const easeA = scoreKeywords(textA, easeKw);
   const easeB = scoreKeywords(textB, easeKw);
   const impactA = scoreKeywords(textA, impactKw);
   const impactB = scoreKeywords(textB, impactKw);
+  // Reference these so TS doesn't flag them as unused when only one branch
+  // consumes them. They're available for future axis-aware refinement.
+  void impactA; void impactB;
 
   // Confidence gating — when the axis separation is narrow, soften the claim
   const warmPreciseSeparation = Math.abs(
@@ -4276,20 +4327,25 @@ function buildComparisonRecommendation(
     };
   }
 
-  // Both lean the same way — distinguish on flow vs density
-  const flowInitA = scoreKeywords(textA, flowKw);
-  const flowInitB = scoreKeywords(textB, flowKw);
-  if (flowInitA > flowInitB) {
-    return {
-      recommended: `**${nameA}** brings stronger rhythmic drive — the music feels more elastic and alive. **${nameB}** offers more tonal weight and density.`,
-      rationale: `${nameB} suits listeners who prioritise immersive harmonic saturation. ${nameA} suits listeners who value rhythmic articulation and dynamic phrasing.`,
-    };
-  }
-  if (flowInitB > flowInitA) {
-    return {
-      recommended: `**${nameB}** brings stronger rhythmic drive — the music feels more elastic and alive. **${nameA}** offers more tonal weight and density.`,
-      rationale: `${nameA} suits listeners who prioritise immersive harmonic saturation. ${nameB} suits listeners who value rhythmic articulation and dynamic phrasing.`,
-    };
+  // Both lean the same way (or one is neutral) — distinguish on flow vs
+  // density. Guarded: only fire when canonical axes agree, so a control-
+  // dominant brand cannot be re-cast as "more tonal weight and density"
+  // by a stray density-keyword match.
+  if (axisA === axisB && (axisA === 'warm' || axisA === 'flow')) {
+    const flowInitA = scoreKeywords(textA, flowKw);
+    const flowInitB = scoreKeywords(textB, flowKw);
+    if (flowInitA > flowInitB) {
+      return {
+        recommended: `**${nameA}** brings stronger rhythmic drive — the music feels more elastic and alive. **${nameB}** offers more tonal weight and density.`,
+        rationale: `${nameB} suits listeners who prioritise immersive harmonic saturation. ${nameA} suits listeners who value rhythmic articulation and dynamic phrasing.`,
+      };
+    }
+    if (flowInitB > flowInitA) {
+      return {
+        recommended: `**${nameB}** brings stronger rhythmic drive — the music feels more elastic and alive. **${nameA}** offers more tonal weight and density.`,
+        rationale: `${nameA} suits listeners who prioritise immersive harmonic saturation. ${nameB} suits listeners who value rhythmic articulation and dynamic phrasing.`,
+      };
+    }
   }
 
   // True tie — directional only, no strong claim
