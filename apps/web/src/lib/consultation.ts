@@ -1638,6 +1638,26 @@ function findProductsByBrand(text: string): Product[] {
  * Returns `undefined` when no catalog product matches — callers degrade
  * honestly.
  */
+/**
+ * Looser product resolver for prose: returns the first catalog product
+ * whose brand AND any distinctive name token (≥4 chars) appears in
+ * `text`. Used by the consultation renderer to surface a hero image
+ * when the response prose discusses a specific product even though the
+ * dispatched subject is brand-only (e.g. "Chord" → "Chord Hugo" once
+ * the prose mentions Hugo). 4-char floor avoids false positives from
+ * short suffix tokens like "II", "SE", "X".
+ */
+export function findProductInProse(text: string): Product | undefined {
+  if (!text) return undefined;
+  const lower = text.toLowerCase();
+  return ALL_PRODUCTS.find((p) => {
+    if (!lower.includes(p.brand.toLowerCase())) return false;
+    const tokens = p.name.split(/\s+/).filter((tok) => tok.length >= 4);
+    if (tokens.length === 0) return false;
+    return tokens.some((tok) => lower.includes(tok.toLowerCase()));
+  });
+}
+
 export function findProductByComponentName(text: string): Product | undefined {
   if (!text) return undefined;
   const lower = text.toLowerCase().trim();

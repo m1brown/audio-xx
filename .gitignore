@@ -43,6 +43,7 @@ apps/web/qa-tests.ts
 # -------------------------
 apps/web/qa-conversation-state/
 apps/web/reviewer-benchmark/
+apps/web/consultation-validation/
 apps/web/test-results/
 
 node_modules/

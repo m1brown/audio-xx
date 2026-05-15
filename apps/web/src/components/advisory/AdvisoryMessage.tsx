@@ -34,7 +34,7 @@ import AdvisorySection from './AdvisorySection';
 import AdvisoryProse from './AdvisoryProse';
 import AdvisoryProductCards, { ShoppingLinks } from './AdvisoryProductCard';
 import { DIRECTION_CONTENT } from '../../lib/upgrade-path-content';
-import { findProductByComponentName, findBrandProfileByName } from '../../lib/consultation';
+import { findProductByComponentName, findProductInProse, findBrandProfileByName } from '../../lib/consultation';
 import { getProductImage } from '../../lib/product-images';
 import AdvisoryLinks from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
@@ -2759,6 +2759,17 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
       {/* ── Audio Preferences ────────────────────────── */}
       {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} namedProduct={pa.catalogMatch || pa.candidateName.toLowerCase() !== pa.candidateBrand.toLowerCase()} />}
 
+      {/* ── Hero product image ───────────────────────────
+       *  Stage 6.2 consultation-validation pass: AssessmentFormat
+       *  previously rendered with no visual anchor for the product
+       *  being discussed. The hero image (when a catalog entry has
+       *  curated imagery) gives the response visual identity without
+       *  changing any narrative content. The h2 below still carries
+       *  the product name — the image block is image-only so the
+       *  name isn't duplicated. Silent collapse when no image exists
+       *  or the subject doesn't resolve to a catalog product. */}
+      <AssessmentHeroImage brand={pa.candidateBrand} name={pa.candidateName} />
+
       {/* ── Product name heading ─────────────────────── */}
       <h2 style={{
         margin: '0 0 1rem 0',
@@ -4060,11 +4071,82 @@ function DecisiveFormat({ advisory: a }: AdvisoryMessageProps) {
  * floating prose. Silently collapses when no product or no image
  * exists — falls back to the existing flat link list.
  */
-function ConsultationSubjectContext({ subject }: { subject?: string }) {
-  if (!subject) return null;
+/**
+ * AssessmentFormat hero image — renders the curated product image at
+ * the top of an assessment response, BEFORE the product-name h2. Image
+ * only (no name) because the h2 below already carries the product name;
+ * duplicating it would create a redundant identity surface. Silent
+ * collapse when no catalog match or no curated image exists.
+ */
+function AssessmentHeroImage({ brand, name }: { brand?: string; name?: string }) {
+  if (!brand && !name) return null;
+  const subject = [brand, name].filter(Boolean).join(' ');
   const product = findProductByComponentName(subject);
+  // When the assessment subject resolves to a catalog product, prefer
+  // the product's curated image; otherwise fall back to the
+  // brand+name overlay lookup so brand-only assessments can still
+  // render an image when one is curated for that brand/name pair.
+  const imageUrl = product
+    ? (product.imageUrl ?? getProductImage(product.brand, product.name))
+    : getProductImage(brand, name);
+  if (!imageUrl) return null;
+  const displayName = product
+    ? [product.brand, product.name].filter(Boolean).join(' ')
+    : subject;
+  return (
+    <div style={{
+      width: '100%',
+      maxWidth: '420px',
+      height: '200px',
+      background: '#FFFFFF',
+      border: '1px solid #E5E5E5',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '0.85rem',
+      boxSizing: 'border-box',
+      marginBottom: '1rem',
+    }}>
+      <img
+        src={imageUrl}
+        alt={displayName}
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        style={{
+          maxWidth: '100%',
+          maxHeight: '100%',
+          objectFit: 'contain',
+          display: 'block',
+        }}
+        onError={(e) => {
+          const wrap = (e.currentTarget as HTMLImageElement).parentElement;
+          if (wrap) wrap.style.display = 'none';
+        }}
+      />
+    </div>
+  );
+}
+
+function ConsultationSubjectContext({ subject, prose }: { subject?: string; prose?: string }) {
+  if (!subject && !prose) return null;
+  // Try the subject string first (works for product-specific subjects
+  // like "Leben CS600X"). When the subject is brand-only (the common
+  // case for "What kind of listener likes the Chord Hugo?" — which
+  // dispatches with subject="Chord"), fall back to scanning the
+  // response prose for any catalog product whose brand AND a
+  // distinctive name token are both mentioned. This surfaces the
+  // discussed product's image without changing routing or subject
+  // assignment in the consultation builders.
+  let product: ReturnType<typeof findProductByComponentName>;
+  if (subject) {
+    product = findProductByComponentName(subject);
+  }
+  if (!product && prose) {
+    product = findProductInProse(prose);
+  }
   if (!product) return null;
   const imageUrl = product.imageUrl ?? getProductImage(product.brand, product.name);
+  if (!imageUrl) return null;
   const displayName = [product.brand, product.name].filter(Boolean).join(' ');
   return (
     <div style={{ marginBottom: '0.85rem' }}>
@@ -4862,7 +4944,18 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
        * existing flat link list. */}
       {(a.links && a.links.length > 0) || (a.kind === 'consultation' && !a.componentReadings && (a.tendencies || a.philosophy || a.productOrigin || (a.improvements && a.improvements.length > 0))) ? (
         <AdvisorySection label="Learn more">
-          <ConsultationSubjectContext subject={a.subject} />
+          {/* Stage 6.2 consultation-validation pass: pass the whole
+           *  advisory object (serialized) as the prose hint. The
+           *  resolver matches only when BOTH brand AND a 4+ char name
+           *  token are present, which is discriminative enough to
+           *  avoid false positives from URL fragments or metadata.
+           *  Surfaces the discussed product's image even when subject
+           *  dispatches as brand-only (e.g. "Chord" → "Chord Hugo"
+           *  via the prose containing "Hugo"). */}
+          <ConsultationSubjectContext
+            subject={a.subject}
+            prose={JSON.stringify(a)}
+          />
           {a.links && a.links.length > 0 && (
             <AdvisoryLinks links={a.links} />
           )}
