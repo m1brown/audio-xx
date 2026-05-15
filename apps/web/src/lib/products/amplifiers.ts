@@ -1073,7 +1073,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Vintage American tube integrated from the golden era of hi-fi (~1960s). When properly restored, delivers a warm, flowing, musically engaging sound that defines the "classic tube" experience. Used prices vary widely based on condition and restoration quality.',
     retailer_links: [
-      { label: 'HiFi Shark (used)', url: 'https://www.hifishark.com/search?q=scott+222' },
+      { label: 'Used market', url: 'https://www.hifishark.com/search?q=scott+222' },
       { label: 'Audiomart', url: 'https://www.usaudiomart.com/' },
     ],
     tendencies: {
@@ -1244,7 +1244,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       'Nelson Pass\'s single-ended Class A amplifier using rare Static Induction Transistors — 18W into 8Ω. SITs have a triode-like transfer curve whose distortion is dominated by even-order harmonics, which the ear interprets as warmth and richness rather than grain. The single-ended topology preserves this even-harmonic structure without push-pull cancellation, producing spatial depth and textural density from a solid-state device — but SIT transistors are no longer manufactured.',
     retailer_links: [
       { label: 'First Watt', url: 'https://www.firstwatt.com/sit3.html' },
-      { label: 'HiFi Shark (used)', url: 'https://www.hifishark.com/search?q=first+watt+sit-3' },
+      { label: 'Used market', url: 'https://www.hifishark.com/search?q=first+watt+sit-3' },
     ],
     tendencies: {
       confidence: 'high',
@@ -1432,7 +1432,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Goldmund-derived minimalist integrated — the shortest signal path philosophy applied to an affordable chassis. Astonishingly fast, clean, and transparent. Discontinued but available used and a touchstone for the "less is more" amplifier design school.',
     retailer_links: [
-      { label: 'HiFi Shark (used)', url: 'https://www.hifishark.com/search?q=job+integrated' },
+      { label: 'Used market', url: 'https://www.hifishark.com/search?q=job+integrated' },
     ],
     learnMore: {
       // No specific JOB Integrated product page exists on the Goldmund
@@ -1527,7 +1527,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'The original Goldmund-derived minimalist power amp that started the JOB phenomenon. 225W into 8Ω from a tiny chassis. Ultra-fast, ultra-clean, and shockingly dynamic for its size and used price. A legendary overachiever on the used market.',
     retailer_links: [
-      { label: 'HiFi Shark (used)', url: 'https://www.hifishark.com/search?q=job+225' },
+      { label: 'Used market', url: 'https://www.hifishark.com/search?q=job+225' },
       { label: 'US Audio Mart', url: 'https://www.usaudiomart.com/' },
     ],
     tendencies: {
@@ -1620,7 +1620,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       'Austrian current-feedback integrated with zero global feedback — designed for speed, transparency, and rhythmic precision. 50W into 8Ω with a lively, elastic presentation that makes music feel immediate and alive.',
     retailer_links: [
       { label: 'Crayon Audio', url: 'https://www.crayonaudio.com/' },
-      { label: 'HiFi Shark (used)', url: 'https://www.hifishark.com/search?q=crayon+cia' },
+      { label: 'Used market', url: 'https://www.hifishark.com/search?q=crayon+cia' },
       { label: '6moons review', url: 'https://www.6moons.com/audioreviews2/crayon/1.html' },
       { label: 'Mono & Stereo review', url: 'https://www.monoandstereo.com/crayon-audio-cia-1-integrated-amplifier-review/' },
     ],
@@ -1716,7 +1716,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Minimalist Tripath Class-T integrated amplifier built around the TA2024 chip. 15W into 4Ω from a palm-sized chassis. Legendary for its speed, transient precision, and elastic rhythmic quality — a genuine reference for what low stored energy sounds like. The TA-10 strips away everything except the signal and became a cult favourite among listeners who value timing over tonal weight.',
     retailer_links: [
-      { label: 'HiFi Shark (used)', url: 'https://www.hifishark.com/search?q=trends+ta-10' },
+      { label: 'Used market', url: 'https://www.hifishark.com/search?q=trends+ta-10' },
     ],
     tendencies: {
       confidence: 'founder_reference',

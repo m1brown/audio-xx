@@ -50,10 +50,12 @@ describe('learn-more links — curated products', () => {
     // surfacing publication/manufacturer homepages as product links,
     // and has been removed.
     expect(links.some((l) => l.url === 'https://www.goldmund.com/')).toBe(false);
-    // JOB's used-market URL matches the existing retailer_link entry
-    // (label 'HiFi Shark (used)'). URL-dedup preserves the richer
-    // label — so we assert the URL is present rather than the generic
-    // 'Used market' label.
+    // JOB's used-market URL matches the existing retailer_link entry.
+    // Stage 6.4 normalized that retailer_link label from 'HiFi Shark
+    // (used)' to the canonical 'Used market', so trackLink and
+    // trackLearnMore now register the same label for the same URL —
+    // the chip renders consistently with Chord/Leben/DeVore/WLM. We
+    // assert URL presence; the label assertion is covered below.
     expect(links.some((l) => l.url === 'https://www.hifishark.com/search?q=job+integrated')).toBe(true);
   });
 

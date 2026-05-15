@@ -947,7 +947,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Goldmund\'s proprietary DAC module — designed for extreme neutrality and composure. Less sparkle and excitement than the JOB internal DAC section, but exceptionally stable and transparent. A reference point for measured precision over musical engagement.',
     retailer_links: [
-      { label: 'HiFi Shark (used)', url: 'https://www.hifishark.com/search?q=goldmund+dac' },
+      { label: 'Used market', url: 'https://www.hifishark.com/search?q=goldmund+dac' },
     ],
     tendencies: {
       confidence: 'high',
