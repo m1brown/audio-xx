@@ -1593,6 +1593,56 @@ export function findBrandProfileByName(brandName: string): BrandProfile | undefi
 }
 
 /**
+ * Substring-matching profile lookup that also reports the alias the
+ * matcher selected. Used in the comparison entry path so the rendered
+ * output can preserve the user's queried alias instead of falling back
+ * to `profile.names[0]` — e.g. a query for "first watt" returns the
+ * Pass Labs profile with matchedAlias === 'first watt', so the renderer
+ * can display "First Watt" instead of "Pass Labs".
+ *
+ * Matching behavior matches the internal `findBrandProfile` (substring
+ * containment, case-insensitive). Only the return shape differs.
+ *
+ * Returns the first alias hit; alias order in BrandProfile.names
+ * determines priority when a query string contains multiple aliases.
+ */
+function findBrandProfileMatch(text: string):
+  | { profile: BrandProfile; matchedAlias: string }
+  | undefined {
+  const lower = text.toLowerCase();
+  for (const bp of BRAND_PROFILES) {
+    for (const alias of bp.names) {
+      if (lower.includes(alias.toLowerCase())) {
+        return { profile: bp, matchedAlias: alias };
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Exact-match profile lookup that also reports the matched alias.
+ * Exported counterpart of `findBrandProfileByName` for callers (and
+ * tests) that want display-name continuity. When the input matches
+ * any alias exactly (case-insensitive), returns the profile + the
+ * canonical alias key from `BrandProfile.names`.
+ */
+export function findBrandProfileMatchByName(brandName: string):
+  | { profile: BrandProfile; matchedAlias: string }
+  | undefined {
+  const lower = brandName.toLowerCase().trim();
+  if (!lower) return undefined;
+  for (const bp of BRAND_PROFILES) {
+    for (const alias of bp.names) {
+      if (alias.toLowerCase() === lower) {
+        return { profile: bp, matchedAlias: alias };
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
  * Look up a brand profile by URL slug (output of `toSlug`).
  * Used by `/brand/[slug]` to resolve the route segment back to its
  * curated profile. Match is by slug-equivalence on any name in
@@ -2148,8 +2198,14 @@ function buildBrandComparison(
   profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
   profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
   queryText?: string,
+  // Stage 12.2: optional alias overrides — when the caller knows which
+  // alias the user queried (e.g. "first watt"), pass it here so the
+  // rendered display preserves the user's term rather than falling back
+  // to profileX.names[0]. Both null and undefined are treated the same.
+  displayNameA?: string | null,
+  displayNameB?: string | null,
 ): ConsultationResponse {
-  const payload = buildInitialComparisonPayload(profileA, profileB, queryText);
+  const payload = buildInitialComparisonPayload(profileA, profileB, queryText, displayNameA, displayNameB);
 
   // Validate — log warnings, but don't block rendering (graceful degradation).
   const validation = validateComparisonPayload(payload);
@@ -2468,9 +2524,15 @@ export function buildInitialComparisonPayload(
   profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
   profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
   queryText?: string,
+  // Stage 12.2: when the caller knows which alias the user queried,
+  // pass it here. The renderer prefers the queried alias over
+  // profileX.names[0]; the result still flows through toDisplayName()
+  // so canonical capitalization is applied either way.
+  displayNameA?: string | null,
+  displayNameB?: string | null,
 ): ComparisonPayload {
-  const nameA = toDisplayName('names' in profileA ? profileA.names[0] : profileA.name);
-  const nameB = toDisplayName('names' in profileB ? profileB.names[0] : profileB.name);
+  const nameA = toDisplayName(displayNameA ?? ('names' in profileA ? profileA.names[0] : profileA.name));
+  const nameB = toDisplayName(displayNameB ?? ('names' in profileB ? profileB.names[0] : profileB.name));
 
   const charA = extractCoreCharacter(profileA.tendencies);
   const charB = extractCoreCharacter(profileB.tendencies);
@@ -3454,12 +3516,21 @@ export function buildConsultationResponse(
     if (brandMatches.length >= 2) {
       const a = brandMatches[0];
       const b = brandMatches[1];
-      const profileA = findBrandProfile(a.name);
-      const profileB = findBrandProfile(b.name);
+      // Stage 12.2: substring-match lookup that ALSO reports which alias
+      // the matcher selected. The matched alias is threaded into the
+      // rendered display so a query for "first watt" renders as
+      // "First Watt" instead of falling back to Pass Labs's names[0].
+      const matchA = findBrandProfileMatch(a.name);
+      const matchB = findBrandProfileMatch(b.name);
+      const profileA = matchA?.profile;
+      const profileB = matchB?.profile;
 
       // Both have curated profiles — direct comparison
       if (profileA && profileB) {
-        return buildBrandComparison(profileA, profileB, currentMessage);
+        return buildBrandComparison(
+          profileA, profileB, currentMessage,
+          matchA?.matchedAlias, matchB?.matchedAlias,
+        );
       }
 
       // One or both missing curated profiles — try catalog-derived summaries
@@ -3469,7 +3540,15 @@ export function buildConsultationResponse(
       const summaryB = profileB ?? (productsB.length > 0 ? deriveBrandSummaryFromCatalog(b.name, productsB) : null);
 
       if (summaryA && summaryB) {
-        return buildBrandComparison(summaryA, summaryB, currentMessage);
+        // For the catalog-derived branch, the user's queried alias
+        // (a.name / b.name) IS the display we want — the catalog summary
+        // doesn't carry alias arrays.
+        const displayA = matchA?.matchedAlias ?? a.name;
+        const displayB = matchB?.matchedAlias ?? b.name;
+        return buildBrandComparison(
+          summaryA, summaryB, currentMessage,
+          displayA, displayB,
+        );
       }
     }
   }

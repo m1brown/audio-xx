@@ -36,6 +36,7 @@ import {
   buildInitialComparisonPayload,
   buildEducationalRationale,
   findBrandProfileByName,
+  findBrandProfileMatchByName,
 } from '../consultation';
 import { renderComparisonPayload, detectDominantAxis } from '../comparison-payload';
 import { toDisplayName } from '../canonical-names';
@@ -502,7 +503,112 @@ describe('comparison-consistency (Stage 11.1)', () => {
       }
     });
   });
-});
 
-// Local capitalize helper removed in Stage 12.1 — display naming now
-// flows through ../canonical-names::toDisplayName.
+  // Stage 12.2 — Asked-alias display preservation.
+  // When the comparison entry path resolves a BrandProfile via a non-
+  // primary alias (e.g. "first watt" → Pass Labs profile), the rendered
+  // output should preserve the user's queried alias instead of falling
+  // back to profile.names[0]. The match helpers expose the matched
+  // alias; the payload builders thread it through display.
+  describe('asked-alias display preservation (Stage 12.2)', () => {
+    it('findBrandProfileMatchByName("first watt") returns Pass Labs profile with matchedAlias === "first watt"', () => {
+      const match = findBrandProfileMatchByName('first watt');
+      expect(match).toBeDefined();
+      expect(match!.profile.names).toContain('pass labs');
+      expect(match!.profile.names).toContain('first watt');
+      expect(match!.matchedAlias).toBe('first watt');
+    });
+
+    it('findBrandProfileMatchByName("First Watt") (case-insensitive) returns same match with canonical alias key', () => {
+      const match = findBrandProfileMatchByName('First Watt');
+      expect(match).toBeDefined();
+      expect(match!.matchedAlias).toBe('first watt');
+    });
+
+    it('findBrandProfileMatchByName("pass labs") returns Pass Labs profile with matchedAlias === "pass labs"', () => {
+      const match = findBrandProfileMatchByName('pass labs');
+      expect(match).toBeDefined();
+      expect(match!.matchedAlias).toBe('pass labs');
+    });
+
+    it('findBrandProfileMatchByName for unknown brand returns undefined', () => {
+      expect(findBrandProfileMatchByName('not a brand')).toBeUndefined();
+      expect(findBrandProfileMatchByName('')).toBeUndefined();
+    });
+
+    it('buildInitialComparisonPayload with displayNameA = "first watt" renders "First Watt" not "Pass Labs"', () => {
+      const passLabs = findBrandProfileByName('Pass Labs');
+      const chPrecisionSynthetic = {
+        name: 'CH Precision',
+        philosophy: 'CH Precision designs reference-level Swiss electronics — modular construction with discrete current-feedback topologies.',
+        tendencies: 'CH Precision components are described as composed, controlled, neutral, and analytical. Tonal balance is precise and tight with restrained dynamics and clean transient resolution.',
+      };
+      expect(passLabs).toBeTruthy();
+      const payload = buildInitialComparisonPayload(
+        passLabs!,
+        chPrecisionSynthetic,
+        undefined,
+        'first watt',
+        'ch precision',
+      );
+      // Header reflects the queried alias
+      expect(payload.subject).toBe('First Watt vs CH Precision');
+      expect(payload.sideA.name).toBe('First Watt');
+      expect(payload.sideB.name).toBe('CH Precision');
+      // Decision lines mention the queried alias
+      expect(payload.decision.chooseAIf).toContain('First Watt');
+      expect(payload.decision.chooseBIf).toContain('CH Precision');
+      // Recommendation / rationale prose uses the queried alias too
+      expect(payload.decision.recommended).toContain('First Watt');
+      expect(payload.decision.rationale).toContain('First Watt');
+      // The lowercase "Pass labs" capitalize-default from the
+      // pre-Stage-12.1 bug must NOT surface anywhere in the payload.
+      const dump = JSON.stringify(payload);
+      expect(dump).not.toMatch(/Pass labs/);
+      // The label slots (header / sides / decision / recommendation /
+      // rationale) must NOT reference Pass Labs — those are the slots
+      // Stage 12.2 promises to alias-preserve.
+      expect(payload.subject).not.toContain('Pass Labs');
+      expect(payload.sideA.name).not.toContain('Pass Labs');
+      expect(payload.decision.chooseAIf).not.toContain('Pass Labs');
+      expect(payload.decision.chooseBIf).not.toContain('Pass Labs');
+      expect(payload.decision.recommended).not.toContain('Pass Labs');
+      expect(payload.decision.rationale).not.toContain('Pass Labs');
+      // The DESIGN-PHILOSOPHY prose may legitimately mention "Pass
+      // Labs" (it's authored copy that explains First Watt as the
+      // low-power offshoot of Pass Labs). We deliberately don't
+      // forbid that here — the content is authored, not derived,
+      // and Stage 12.2 is label hygiene, not content rewriting.
+    });
+
+    it('buildInitialComparisonPayload without displayName params falls back to profile.names[0] (pre-12.2 behavior preserved)', () => {
+      const passLabs = findBrandProfileByName('Pass Labs');
+      const chPrecisionSynthetic = {
+        name: 'CH Precision',
+        philosophy: 'CH Precision designs reference-level Swiss electronics.',
+        tendencies: 'CH Precision components are described as composed, controlled, neutral, and analytical.',
+      };
+      expect(passLabs).toBeTruthy();
+      const payload = buildInitialComparisonPayload(passLabs!, chPrecisionSynthetic);
+      // names[0] of Pass Labs profile = 'pass labs' → "Pass Labs" via toDisplayName
+      expect(payload.sideA.name).toBe('Pass Labs');
+    });
+
+    it('Raal alias preserved: "raal" → Raal-Requisite display', () => {
+      const match = findBrandProfileMatchByName('raal');
+      expect(match).toBeDefined();
+      // matchedAlias is the alias key from BrandProfile.names — for
+      // Raal-Requisite the names array is ['raal-requisite', 'raal requisite', 'raal']
+      // so a query for 'raal' alone matches the 'raal' alias.
+      expect(match!.matchedAlias).toBe('raal');
+      // The canonical-names map maps 'raal' → 'Raal-Requisite' for display
+      // (see canonical-names.test.ts for the unit assertion).
+    });
+
+    it('Kinki alias preserved: "kinki" → Kinki Studio display', () => {
+      const match = findBrandProfileMatchByName('kinki');
+      expect(match).toBeDefined();
+      expect(match!.matchedAlias).toBe('kinki');
+    });
+  });
+});
