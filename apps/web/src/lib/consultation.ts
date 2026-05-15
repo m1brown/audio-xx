@@ -2658,10 +2658,26 @@ function resolveTopologyPairingNote(
  *   - "without"
  *   - "isn't" / "aren't" / "never"
  *
- * Trade-off framings such as "at the cost of", "rather than", and
- * "softer-focused than" are NOT stripped — they're contrastive but not
- * negations of the keywords inside the clause. Stripping them would
- * lose legitimate positive signal.
+ * Stage 11.2 expansion (contrastive-clause stripping):
+ * trade-off framings carry semantic negation on the RIGHT-HAND side of
+ * the connector — "X dominates over Y", "X at the cost of Y",
+ * "X rather than Y", "X instead of Y" all assert Y as a NON-emphasis.
+ * The Stage 11.1 fix prevented these from producing hard inversions in
+ * later synthesis, but trait words inside Y (e.g. "harmonic density" in
+ * Goldmund's "speed and clarity dominate over warmth or harmonic
+ * density") still leaked into extractCoreCharacter / extractSonicTraits
+ * via positive-match scans, weakening downstream decisiveness.
+ *
+ * The new pre-pass removes the Y span — from the connector up to the
+ * next clause boundary — but preserves X (the asserted trait). This
+ * differs from the original conservative approach (which kept the whole
+ * clause) because earlier output regressions came from removing too
+ * much; the contrastive trim only removes the explicitly negated tail.
+ *
+ * "More X than Y" is NOT stripped — that's a positive comparative
+ * asserting X, not negating Y, and Y often carries legitimate signal
+ * (e.g. "more bass weight than typical mini-monitors" describes the
+ * subject's bass weight).
  *
  * Calibration fix 2026-05-10: introduced to address Topping being
  * mis-classified as warm because its tendency text reads "tonal density
@@ -2672,7 +2688,18 @@ function resolveTopologyPairingNote(
  * measurement-focused identity.
  */
 function stripNegatedClauses(text: string): string {
-  const clauses = text.split(/[.;]+|\bbut\b|\balthough\b|\bhowever\b/i);
+  // Pass 1 (Stage 11.2): remove the negated right-hand side of
+  // contrastive connectors. The match starts at the connector and
+  // extends to the next clause boundary (period, semicolon, dash).
+  // The LHS — the asserted trait — is preserved.
+  const contrastive = text
+    .replace(/\b(?:dominate(?:s)?|prioriti[sz]e(?:s)?)\s+over\b[^.;—–]*/gi, '')
+    .replace(/\bat the cost of\b[^.;—–]*/gi, '')
+    .replace(/\brather than\b[^.;—–]*/gi, '')
+    .replace(/\binstead of\b[^.;—–]*/gi, '');
+
+  // Pass 2: existing per-clause filter for explicit-negation keywords.
+  const clauses = contrastive.split(/[.;]+|\bbut\b|\balthough\b|\bhowever\b/i);
   const NEGATION = /\b(?:not|isn't|aren't|never|without|lacks|lacking)\b/i;
   return clauses
     .filter((c) => !NEGATION.test(c))
@@ -3245,9 +3272,16 @@ function buildDesignFamilyContext(
  * "tonal weight is lighter" should NOT produce a "tonal density" hit.
  * Negation patterns (lighter, less, without, lacks, not) near a trait
  * word suppress the match.
+ *
+ * Stage 11.2: input is preprocessed through stripNegatedClauses so that
+ * contrastive-clause right-hand sides ("dominate over warmth or harmonic
+ * density", "at the cost of transient precision") are removed before
+ * the positive-match scan runs. The 40/30-char negationRe window only
+ * catches explicit negation tokens, so trait words on the wrong side of
+ * a contrastive connector previously leaked into the extracted character.
  */
 function extractCoreCharacter(tendencies: string): string {
-  const lower = tendencies.toLowerCase();
+  const lower = stripNegatedClauses(tendencies).toLowerCase();
 
   /**
    * Match a trait only if it appears in a positive/assertive context.

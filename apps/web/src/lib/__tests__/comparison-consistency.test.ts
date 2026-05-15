@@ -247,8 +247,65 @@ describe('comparison-consistency (Stage 11.1)', () => {
           );
         }
       });
+
+      it('control-side core character carries no contrastive-leaked warm trait words (Stage 11.2)', () => {
+        // The control-side brand's published character is dominant on
+        // control (precision, clarity, neutrality). When extractCoreCharacter
+        // pulls trait words, it must not surface warm/density/harmonic
+        // descriptors that came from a contrastive right-hand side like
+        // "dominate over warmth or harmonic density" (Goldmund).
+        const payload = buildInitialComparisonPayload(warmProfile, controlProfile);
+        const controlChar = payload.sideB.character.toLowerCase();
+        const leakyTraits: Array<{ name: string; re: RegExp }> = [
+          { name: 'warmth', re: /\bwarmth\b/ },
+          { name: 'tonal density', re: /\btonal density\b/ },
+          { name: 'harmonic richness', re: /\bharmonic richness\b/ },
+          { name: 'tonal saturation', re: /\btonal saturation\b/ },
+        ];
+        const leaks = leakyTraits.filter((p) => p.re.test(controlChar));
+        if (leaks.length > 0) {
+          throw new Error(
+            `Control-side (${controlName}) character "${payload.sideB.character}" leaked warm trait words from contrastive context: ${leaks.map((l) => l.name).join(', ')}`,
+          );
+        }
+      });
     });
   }
+
+  // Pair-specific decisiveness test: the reproducer pair must produce a
+  // recommendation that actually points somewhere, not the generic
+  // "Both are strong choices" tie fallback. After Stage 11.2 cleans up
+  // contrastive leakage, Goldmund classifies as control (not neutral)
+  // and the warm-vs-precise high-confidence branch fires.
+  describe('Shindo vs Goldmund — Stage 11.2 decisiveness', () => {
+    const shindo = findBrandProfileByName('Shindo');
+    const goldmund = findBrandProfileByName('Goldmund');
+    if (!shindo || !goldmund) {
+      it.skip('missing brand profile — skipped', () => {});
+      return;
+    }
+    it('rendered output retains a decisive recommendation, not a "Both are strong choices" fallback', () => {
+      const payload = buildInitialComparisonPayload(shindo, goldmund);
+      const rendered = renderComparisonPayload(payload).comparisonSummary;
+      // Forbidden: flattened tie fallback
+      if (/Both are strong choices with different strengths/i.test(rendered)) {
+        throw new Error(
+          `Shindo vs Goldmund flattened to tie fallback. Rendered:\n${rendered}`,
+        );
+      }
+      // Required: a directional recommendation phrase
+      const decisivePatterns: RegExp[] = [
+        /\*\*Shindo\*\* is the more natural match/i,
+        /\*\*Shindo\*\* leans toward tonal density and ease/i,
+        /In most systems, \*\*Shindo\*\*/i,
+      ];
+      if (!decisivePatterns.some((re) => re.test(rendered))) {
+        throw new Error(
+          `Shindo vs Goldmund did not contain any decisive recommendation phrase. Rendered:\n${rendered}`,
+        );
+      }
+    });
+  });
 });
 
 function capitalize(s: string): string {
