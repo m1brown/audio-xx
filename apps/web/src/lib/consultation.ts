@@ -60,7 +60,7 @@ import { findTopologyMention, buildTopologyInteractionSentence, type TopologyCap
 import { findPairingsForSpeaker } from './pairing-resolver';
 import { getApprovedBrand } from './knowledge';
 import type { BrandKnowledge } from './knowledge/schema';
-import { getPilotCapsule } from './brand-philosophy-pilot';
+import { getPilotCapsule, findProtectedMischaracterization } from './brand-philosophy-pilot';
 import { detectUsedFraming, buildUsedMarketNote } from './used-market';
 import type { ActiveSystemContext } from './system-types';
 import { classifySystemArchetype, consumerSystemIntro, buildConsumerWirelessResponse } from './system-class';
@@ -4226,7 +4226,14 @@ function resolveSideEducationalFields(
   const capsule = getPilotCapsule(name);
   if (capsule) {
     const engineering = takeFirstClause(capsule.mechanism);
-    const perception = capsule.perceptionTraits[0]?.trim();
+    // Stage 11.45: prefer adjective-stack perception traits (>= 2 commas)
+    // over noun phrases like "fast transient definition". Falls back to
+    // perceptionTraits[0] when no trait qualifies. Grammatically symmetric
+    // between the warm and precise sides when both yield adjective stacks.
+    const adjectiveStackTrait = capsule.perceptionTraits.find(
+      (t) => (t.match(/,/g)?.length ?? 0) >= 2,
+    );
+    const perception = (adjectiveStackTrait ?? capsule.perceptionTraits[0])?.trim();
     if (engineering && perception) {
       return { engineering, perception, tier: 'pilot' };
     }
@@ -4256,15 +4263,213 @@ function resolveSideEducationalFields(
   return null;
 }
 
+// ── Cadence layer (Stage 11.45) ────────────────────────
+//
+// Polishes the field-concatenation output of Stage 11.4 into
+// verb-anchored advisor prose. Deterministic: only the fixed connective
+// vocabulary listed in CADENCE_VOCABULARY is added to the source text;
+// every other word in the polished output appears verbatim in the
+// source fields. When any rule risks producing unsafe output (too
+// short, protected-mischaracterization hit, biographical tier-c
+// content), the cadence layer returns null and the caller falls back
+// to the Stage 11.4 raw composition.
+
+/**
+ * Fixed vocabulary the cadence layer is permitted to ADD to source text.
+ * Reviewing this list is equivalent to reviewing authored content —
+ * adding a new entry requires the same diligence as a pilot-capsule
+ * change. Do not extend without documenting the use case.
+ */
+const CADENCE_VOCABULARY = [
+  'builds',
+  'builds around',
+  'designs around',
+  'prioritises',
+  'uses',
+  'engineers',
+  'is engineered around',
+  'is',
+  'reads',
+  'The result, in listening:',
+] as const;
+// Reference the table at runtime so unused-variable lint doesn't fire.
+// (The fixed list is consumed via the constants below; this is documentation.)
+void CADENCE_VOCABULARY;
+
+/** Verb-trigger lookup table (R1). Order matters — first match wins. */
+const CADENCE_VERB_TRIGGERS: ReadonlyArray<{ pattern: RegExp; verb: string }> = [
+  { pattern: /\b(?:topology|feedback)\b/i, verb: 'designs around' },
+  { pattern: /\b(?:architecture|chassis)\b/i, verb: 'builds' },
+  { pattern: /\b(?:DAC|driver|cabinet|speaker)\b/i, verb: 'builds around' },
+  { pattern: /\b(?:tube|valve)\b/i, verb: 'builds around' },
+  { pattern: /\b(?:correction|engineering|implementation)\b/i, verb: 'engineers' },
+  { pattern: /\b(?:emphasis|priority|focus|oriented?|orientation)\b/i, verb: 'prioritises' },
+];
+
+/** Default verb when no R1 trigger matches and no participle leads (R1 fallback). */
+const CADENCE_DEFAULT_VERB = 'is engineered around';
+
+/** Passive participles that resolve to "is <participle>…" via R1a. */
+const CADENCE_PASSIVE_PARTICIPLES = new Set([
+  'voiced',
+  'built',
+  'engineered',
+  'tuned',
+  'designed',
+  'optimised',
+  'optimized',
+  'assembled',
+  'crafted',
+]);
+
+/**
+ * Active third-person-singular verbs that, when leading the source,
+ * indicate the source ALREADY provides a verb-anchored predicate.
+ * Skip verb prefixing in that case (R0b).
+ */
+const CADENCE_ACTIVE_VERBS = new Set([
+  'designs',
+  'builds',
+  'engineers',
+  'voices',
+  'tunes',
+  'optimises',
+  'optimizes',
+  'crafts',
+  'assembles',
+  'prioritises',
+  'prioritizes',
+  'uses',
+]);
+
+/** Fixed substring compression substitutions (R2a). */
+const CADENCE_COMPRESSION_RULES: ReadonlyArray<{ pattern: RegExp; replacement: string }> = [
+  { pattern: /\bper-circuit individual\b/gi, replacement: 'per-circuit' },
+  { pattern: /\bindividual per-circuit\b/gi, replacement: 'per-circuit' },
+  {
+    pattern: /\bmechanically grounded chassis architecture with mechanical-energy\b/gi,
+    replacement: 'mechanically grounded chassis with mechanical-energy',
+  },
+];
+
+/** Narrow tail-strip suffix for jargon-heavy "across X" trailing clauses (R2b). */
+const CADENCE_TAIL_STRIP = /\s+across [^.;]{20,}$/;
+
+/** Biographical sentence pattern — tier-c escape hatch. */
+const CADENCE_BIOGRAPHICAL = /^[A-Z][a-z]+ [A-Z][a-z]+ (?:founded|started|built|began)/;
+
+const CADENCE_MIN_ENGINEERING_LEN_BEFORE = 20;
+const CADENCE_MIN_ENGINEERING_LEN_AFTER = 15;
+
+interface CadenceResult {
+  engineering: string;
+  perception: string;
+}
+
+/**
+ * Apply cadence rewrites to one side's engineering + perception phrases.
+ * Returns null when any escape hatch triggers; the caller should fall
+ * back to the raw Stage 11.4 composition.
+ *
+ * Rule order:
+ *   length check  → tier-c biographical  →
+ *   R2a substring compression  → R2b tail strip  →
+ *   length-after check  →
+ *   R0 brand-name strip  → R0b active-verb-present detection  →
+ *   R1a passive participle  → R1 trigger-pattern verb  →
+ *   default verb  →
+ *   lowercase first letter of source  →
+ *   compose engineering predicate  →
+ *   lowercase + trim perception  →
+ *   protected-mischaracterization defensive guard.
+ */
+function applyCadence(
+  engineering: string,
+  perception: string,
+  brandName: string,
+  tier: EducationalTier,
+): CadenceResult | null {
+  // Length floor
+  if (engineering.length < CADENCE_MIN_ENGINEERING_LEN_BEFORE) return null;
+
+  // Tier-c biographical escape
+  if (tier === 'extended-philosophy' && CADENCE_BIOGRAPHICAL.test(engineering)) {
+    return null;
+  }
+
+  // R2a substring compression (run before R2b so tail-strip operates on
+  // the already-compressed leading clause)
+  let eng = engineering;
+  for (const rule of CADENCE_COMPRESSION_RULES) {
+    eng = eng.replace(rule.pattern, rule.replacement);
+  }
+
+  // R2b narrow tail strip
+  eng = eng.replace(CADENCE_TAIL_STRIP, '');
+
+  if (eng.length < CADENCE_MIN_ENGINEERING_LEN_AFTER) return null;
+
+  // R0 — strip leading "{BrandName} " prefix when the source sentence
+  // begins with the brand name. Common in tier-c philosophyExtended.
+  const brandPrefix = new RegExp(`^${brandName.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\s+`, 'i');
+  eng = eng.replace(brandPrefix, '');
+
+  if (eng.length < CADENCE_MIN_ENGINEERING_LEN_AFTER) return null;
+
+  const firstWord = (eng.split(/\s+/)[0] ?? '').toLowerCase();
+  let verbPrefix: string;
+
+  if (CADENCE_ACTIVE_VERBS.has(firstWord)) {
+    // R0b — source already starts with an active verb. Don't prefix.
+    verbPrefix = '';
+  } else if (CADENCE_PASSIVE_PARTICIPLES.has(firstWord)) {
+    // R1a — passive participle → "is <participle>…"
+    verbPrefix = 'is';
+  } else {
+    // R1 — pattern-based verb selection
+    let matched: string | null = null;
+    for (const trig of CADENCE_VERB_TRIGGERS) {
+      if (trig.pattern.test(eng)) {
+        matched = trig.verb;
+        break;
+      }
+    }
+    verbPrefix = matched ?? CADENCE_DEFAULT_VERB;
+  }
+
+  // Lowercase the first letter of the engineering source (the verb prefix
+  // — when present — owns the leading register). Only position 0 is
+  // touched, so hyphenated capitals like "class-A" or proper-noun
+  // parentheticals like "(Nelson Pass design lineage)" are preserved.
+  const engLower = eng.charAt(0).toLowerCase() + eng.slice(1);
+  const polishedEng = verbPrefix ? `${verbPrefix} ${engLower}` : engLower;
+
+  // Perception polish: trim trailing period if any, lowercase first letter
+  // (since the template renders "{name} reads <perception>"). Source words
+  // and punctuation otherwise preserved.
+  const perceptionTrimmed = perception.replace(/\.\s*$/, '').trim();
+  if (!perceptionTrimmed) return null;
+  const polishedPerception = perceptionTrimmed.charAt(0).toLowerCase() + perceptionTrimmed.slice(1);
+
+  // Defensive guard — if the polished output (engineering + perception)
+  // would surface a known-bad framing for this brand, escape.
+  const combined = `${polishedEng} ${polishedPerception}`;
+  if (findProtectedMischaracterization(brandName, combined) !== null) {
+    return null;
+  }
+
+  return { engineering: polishedEng, perception: polishedPerception };
+}
+
 /**
  * Build a 1–2 sentence educational rationale from authored brand fields.
  * Returns null when either side lacks qualifying data — the caller
  * should preserve its existing rationale in that case.
  *
- * Output shape (deterministic):
- *   "{WarmName} — {engineering}; {PreciseName} — {engineering}. The
- *    listener hears {WarmName} as {perception}; {PreciseName} as
- *    {perception}."
+ * Stage 11.45: when both sides resolve qualifying fields, attempts a
+ * cadence rewrite (verb-anchored predicates, redundancy compression,
+ * causal connector). When the cadence layer returns null on either
+ * side, falls back to the Stage 11.4 raw composition.
  *
  * Exposed for tests; not part of the rendering pipeline directly.
  */
@@ -4279,6 +4484,26 @@ export function buildEducationalRationale(
   const preciseFields = resolveSideEducationalFields(preciseName, preciseProfile);
   if (!preciseFields) return null;
 
+  // Stage 11.45 — try cadence rewrite. Both sides must succeed; otherwise
+  // fall back to Stage 11.4 raw composition.
+  const warmCadence = applyCadence(
+    warmFields.engineering, warmFields.perception, warmName, warmFields.tier,
+  );
+  const preciseCadence = applyCadence(
+    preciseFields.engineering, preciseFields.perception, preciseName, preciseFields.tier,
+  );
+
+  if (warmCadence && preciseCadence) {
+    return (
+      `${warmName} ${warmCadence.engineering}. `
+      + `${preciseName} ${preciseCadence.engineering}. `
+      + `The result, in listening: `
+      + `${warmName} reads ${warmCadence.perception}; `
+      + `${preciseName} reads ${preciseCadence.perception}.`
+    );
+  }
+
+  // Stage 11.4 raw composition (cadence escape-hatched)
   const engineeringSentence =
     `${warmName} — ${warmFields.engineering}; ${preciseName} — ${preciseFields.engineering}.`;
   const perceptionSentence =

@@ -279,32 +279,42 @@ describe('comparison-consistency (Stage 11.1)', () => {
   // helper returns null (preserving the existing rationale) when
   // either side lacks qualifying fields.
   describe('educational rationale (Stage 11.4)', () => {
-    it('Shindo + Goldmund both resolve via pilot capsule and produce engineering+perception sentences', () => {
+    it('Shindo + Goldmund both resolve via pilot capsule and produce engineering+perception sentences (Stage 11.45 cadence)', () => {
       const shindo = findBrandProfileByName('Shindo');
       const goldmund = findBrandProfileByName('Goldmund');
       expect(shindo).toBeTruthy();
       expect(goldmund).toBeTruthy();
       const rationale = buildEducationalRationale('Shindo', shindo!, 'Goldmund', goldmund!);
       expect(rationale).not.toBeNull();
-      // Engineering sentence — pilot.mechanism first-clause from each side
-      expect(rationale!).toMatch(/Shindo —.*tube design/i);
-      expect(rationale!).toMatch(/Goldmund —.*mechanically grounded chassis/i);
-      // Perception sentence — perceptionTraits[0] from each side
-      expect(rationale!).toMatch(/The listener hears Shindo as.*harmonically saturated/i);
-      expect(rationale!).toMatch(/Goldmund as.*fast transient definition/i);
+      // Engineering sentence — verb-anchored cadence rewrite (Stage 11.45)
+      expect(rationale!).toMatch(/Shindo builds around per-circuit tube design/i);
+      expect(rationale!).toMatch(/Goldmund builds mechanically grounded chassis/i);
+      // Perception sentence — "X reads Y" template + adjective-stack
+      // trait selection (Stage 11.45 R3: Goldmund traits[2] preferred
+      // over noun-phrase traits[0])
+      expect(rationale!).toMatch(/The result, in listening:/i);
+      expect(rationale!).toMatch(/Shindo reads dense, harmonically saturated, physically present/i);
+      expect(rationale!).toMatch(/Goldmund reads tonally lean, controlled dynamics, low harmonic emphasis/i);
     });
 
-    it('Shindo vs Goldmund rendered comparison surfaces the educational rationale (not the boilerplate)', () => {
+    it('Shindo vs Goldmund rendered comparison surfaces the educational rationale (Stage 11.45 cadence shape)', () => {
       const shindo = findBrandProfileByName('Shindo');
       const goldmund = findBrandProfileByName('Goldmund');
       expect(shindo && goldmund).toBeTruthy();
       const payload = buildInitialComparisonPayload(shindo!, goldmund!);
       const rendered = renderComparisonPayload(payload).comparisonSummary;
-      // The boilerplate rationale must NOT be present
+      // The Stage 11.2 boilerplate rationale must NOT be present
       expect(rendered).not.toMatch(/leans toward warmth, density, and listening ease — traits that tend to sustain comfort over long sessions/);
-      // The educational sentences MUST be present
-      expect(rendered).toMatch(/Shindo —.*tube design/i);
-      expect(rendered).toMatch(/The listener hears Shindo as/i);
+      // The Stage 11.4 raw field-concatenation cadence must NOT be present
+      expect(rendered).not.toMatch(/Shindo — Per-circuit/);
+      expect(rendered).not.toMatch(/; Goldmund — Mechanically/);
+      expect(rendered).not.toMatch(/as fast transient definition/);
+      // The Stage 11.45 verb-anchored cadence MUST be present
+      expect(rendered).toMatch(/Shindo builds around per-circuit tube design/);
+      expect(rendered).toMatch(/Goldmund builds mechanically grounded chassis/);
+      expect(rendered).toMatch(/The result, in listening:/);
+      expect(rendered).toMatch(/Shindo reads dense/);
+      expect(rendered).toMatch(/Goldmund reads tonally lean/);
     });
 
     it('Leben + Hegel return null (both lack pilot capsule, short fields, and philosophyExtended)', () => {
@@ -342,9 +352,14 @@ describe('comparison-consistency (Stage 11.1)', () => {
       expect(rationale).toBeNull();
     });
 
-    it('tier-(b) short-field pair resolves (synthetic warm with designPhilosophy + sonicTendency)', () => {
+    it('tier-(b) short-field pair resolves with cadence default verb (Stage 11.45)', () => {
       // Build a synthetic pair that uses tier (b) on the warm side and
-      // pilot on the precise side — to exercise the short-fields path.
+      // pilot on the precise side — to exercise the short-fields path
+      // under the cadence layer. designPhilosophy "Single-ended class-A
+      // bias for harmonic continuity" has no R1 trigger pattern (no
+      // topology/feedback/architecture/chassis/etc. and no passive
+      // participle leading word), so the cadence falls through to the
+      // default verb "is engineered around".
       const warmShortFields = {
         name: 'WarmShorts',
         philosophy: 'WarmShorts designs around tonal richness.',
@@ -356,11 +371,15 @@ describe('comparison-consistency (Stage 11.1)', () => {
       expect(goldmund).toBeTruthy();
       const rationale = buildEducationalRationale('WarmShorts', warmShortFields, 'Goldmund', goldmund!);
       expect(rationale).not.toBeNull();
-      expect(rationale!).toMatch(/WarmShorts — Single-ended class-A bias/);
-      expect(rationale!).toMatch(/The listener hears WarmShorts as Warm, harmonically dense/);
+      expect(rationale!).toMatch(/WarmShorts is engineered around single-ended class-A bias/);
+      expect(rationale!).toMatch(/WarmShorts reads warm, harmonically dense, gently flowing/);
     });
 
-    it('tier-(c) extended-philosophy pair resolves (synthetic warm with philosophyExtended + tendencies trait clause)', () => {
+    it('tier-(c) extended-philosophy pair resolves with cadence brand-name strip + active-verb detection (Stage 11.45)', () => {
+      // philosophyExtended starts with "{BrandName} designs each circuit…",
+      // so the cadence R0 brand-name strip + R0b active-verb detection
+      // should preserve the existing verb-anchored sentence WITHOUT
+      // prepending another verb.
       const warmExtended = {
         name: 'WarmExt',
         philosophy: 'WarmExt builds tube electronics.',
@@ -371,10 +390,61 @@ describe('comparison-consistency (Stage 11.1)', () => {
       expect(goldmund).toBeTruthy();
       const rationale = buildEducationalRationale('WarmExt', warmExtended, 'Goldmund', goldmund!);
       expect(rationale).not.toBeNull();
-      // tier (c) engineering pulls philosophyExtended first sentence
-      expect(rationale!).toMatch(/WarmExt — WarmExt designs each circuit individually/);
-      // tier (c) perception pulls the "described as ..." clause
-      expect(rationale!).toMatch(/The listener hears WarmExt as warm, dense, harmonically rich, and physically present/);
+      // The brand name appears once (composition prefix), and the source
+      // verb "designs" is preserved — no double-brand-name, no double-verb
+      expect(rationale!).toMatch(/WarmExt designs each circuit individually/);
+      expect(rationale!).not.toMatch(/WarmExt WarmExt/);
+      expect(rationale!).not.toMatch(/builds around WarmExt designs/);
+      // Perception sentence
+      expect(rationale!).toMatch(/WarmExt reads warm, dense, harmonically rich/);
+    });
+
+    it('cadence escape hatch — engineering source too short falls back to Stage 11.4 raw shape', () => {
+      // designPhilosophy under the 20-char floor → applyCadence returns
+      // null on the warm side → buildEducationalRationale composes with
+      // the Stage 11.4 raw template (em-dash + "The listener hears X as Y").
+      const shortDesign = {
+        name: 'ShortDesign',
+        philosophy: 'ShortDesign designs amps.',
+        tendencies: 'ShortDesign reads warm, dense, harmonically rich.',
+        designPhilosophy: 'Class-A bias.',   // 13 chars after period strip — < 20
+        sonicTendency: 'Warm, harmonically dense, gently flowing.',
+      };
+      const goldmund = findBrandProfileByName('Goldmund');
+      expect(goldmund).toBeTruthy();
+      const rationale = buildEducationalRationale('ShortDesign', shortDesign, 'Goldmund', goldmund!);
+      expect(rationale).not.toBeNull();
+      // Stage 11.4 raw shape is restored when cadence escapes
+      expect(rationale!).toMatch(/ShortDesign — Class-A bias/);
+      expect(rationale!).toMatch(/The listener hears ShortDesign as/);
+      // Stage 11.45 cadence shape is NOT used when escape-hatched
+      expect(rationale!).not.toMatch(/The result, in listening:/);
+      expect(rationale!).not.toMatch(/ShortDesign reads warm/);
+    });
+
+    it('cadence escape hatch — biographical tier-c source falls back to Stage 11.4 raw shape', () => {
+      // philosophyExtended starts with biographical "<Firstname> <Lastname>
+      // founded …" pattern → tier-c escape hatch fires → cadence returns
+      // null → Stage 11.4 raw composition is used. Mirrors the residual
+      // documented in the Stage 11.4 commit (Shindo's actual
+      // philosophyExtended is biographical).
+      const biographical = {
+        name: 'BioWarm',
+        philosophy: 'BioWarm builds tube amps.',
+        philosophyExtended: 'Alice Tanaka founded BioWarm in 1985 after a decade as an electrical engineer in Tokyo.',
+        tendencies: 'BioWarm amplifiers are described as warm, dense, harmonically rich, and physically present.',
+      };
+      const goldmund = findBrandProfileByName('Goldmund');
+      expect(goldmund).toBeTruthy();
+      const rationale = buildEducationalRationale('BioWarm', biographical, 'Goldmund', goldmund!);
+      expect(rationale).not.toBeNull();
+      // Cadence escaped on biographical content
+      expect(rationale!).not.toMatch(/The result, in listening:/);
+      expect(rationale!).not.toMatch(/BioWarm reads/);
+      // Stage 11.4 raw shape is preserved verbatim — biographical first
+      // sentence still appears (per Stage 11.4 tier-c contract), but the
+      // cadence rewrite layer didn't make it worse.
+      expect(rationale!).toMatch(/BioWarm — Alice Tanaka founded BioWarm/);
     });
   });
 
