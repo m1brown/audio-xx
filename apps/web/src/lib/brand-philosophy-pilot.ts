@@ -301,6 +301,117 @@ const PILOT_LIST: ReadonlyArray<PilotCapsule> = [
     ],
     confidence: { mechanism: 'high', behavior: 'high', perception: 'high' },
   },
+  {
+    // Source: BrandProfile.philosophy (consultation.ts:1040) — "hand-wired
+    // tube amplifiers in the Japanese tradition… CS600X and CS300X use
+    // push-pull KT77/KT88/EL34 topology with very low negative feedback…
+    // Every unit is hand-assembled in Japan."
+    // BrandProfile.tendencies (1041) — "warm, tonally dense, rhythmically
+    // alive, and harmonically rich… surprising bass grip from the
+    // KT77/KT88 push-pull topology."
+    // BrandProfile.systemContext (1042) + pairing-resolver.ts:80
+    // ("32 W is more than the 96-dB speaker ever needs") +
+    // upgrade-path-content.ts:90 ("Midrange weight and texture over
+    // transient attack; warm without being slow").
+    // Source-discipline note: every field below traces verbatim or by
+    // truncation to the above existing BrandProfile prose.
+    // Confidence: behavior is 'medium-high' rather than 'high' because
+    // the engineering→audible mapping is inferred from the existing
+    // BrandProfile triangulation rather than independent measurement
+    // archives — same pattern as Goldmund.
+    brand: 'Leben',
+    aliases: ['leben'],
+    mechanism:
+      'Hand-wired push-pull KT77 / KT88 / EL34 tube topology with very low negative feedback; small-scale Japanese hand-assembly per unit.',
+    behavior:
+      'Harmonic continuity and midrange presence shaped by push-pull tube topology; bass grip and rhythmic drive retained at low feedback through transformer behaviour and tube selection.',
+    perceptionTraits: [
+      'warm, tonally dense, rhythmically alive',
+      'midrange weight and texture — voices and acoustic instruments with body',
+      'surprising bass grip for a push-pull tube design',
+    ],
+    preferenceFit:
+      'Listeners prioritising tube body and rhythmic drive on high-efficiency speakers (90 dB+); the 32 W CS600X is more than adequate at 96 dB. Less aligned for listeners seeking analytical separation or low-sensitivity speaker drive.',
+    comparisonGuardrails: {
+      prefer: [
+        'Push-pull tube topology with low feedback vs single-ended triode (different harmonic profile, more bass grip)',
+        'Hand-wired Japanese tube integrated vs solid-state precision designs',
+      ],
+      avoid: [
+        'generic warm-tube framing — push-pull is not SET',
+        'slow / dark — Leben retains rhythmic drive and bass grip',
+      ],
+    },
+    protectedMischaracterizations: [
+      'SET',
+      'single-ended triode',
+      'slow',
+      'dark',
+      'measurement-first',
+      'analytical',
+      'lean',
+      'thin',
+      'sluggish',
+    ],
+    confidence: { mechanism: 'high', behavior: 'medium-high', perception: 'high' },
+  },
+  {
+    // Source: BrandProfile.philosophy (consultation.ts:1353) — "amplifiers
+    // around their proprietary 'SoundEngine' technology — a patented
+    // feed-forward error correction system… High damping factor, strong
+    // speaker control, integrated streaming and DAC in many models. The
+    // engineering prioritises measured accuracy and signal purity."
+    // BrandProfile.tendencies (1354) — "controlled, composed, and neutral
+    // to slightly cool… Strong macrodynamic authority with grip and slam.
+    // Soundstage is structured, precise, and wide but flatter than tube
+    // or low-feedback designs… fatigue may creep in with revealing
+    // speakers."
+    // BrandProfile.systemContext (1355) + pairingNotes (1356) — fatigue
+    // is speaker-conditioned, not unconditional. upgrade-path-content.ts:64
+    // — "Quiet, neutral Norwegian integrated. Raises grip and resolution
+    // without altering the tonal balance of the chain."
+    // Source-discipline note: perceptionTraits and behavior are direct
+    // truncations from the above existing BrandProfile prose. The
+    // "fatigue is speaker-dependent, not unconditional" guardrail is
+    // sourced from BrandProfile.systemContext + pairingNotes nuance.
+    // Confidence: same medium-high pattern on behavior as Leben — the
+    // measurable→audible inference is prose-triangulated, not
+    // independently archived.
+    brand: 'Hegel',
+    aliases: ['hegel'],
+    mechanism:
+      'Proprietary "SoundEngine" feed-forward error correction with high damping factor; integrated DAC and streaming on most models; engineering oriented to measured accuracy and signal purity.',
+    behavior:
+      'High damping factor delivers tight bass and strong load control across difficult speaker impedances; feed-forward correction removes audio-band distortion at the cost of a flatter, less time-domain-varied stage geometry than tube or low-feedback designs.',
+    perceptionTraits: [
+      'controlled, composed, neutral to slightly cool',
+      'macrodynamic authority — grip and slam',
+      'structured, precise imaging on a flatter stage than tube designs',
+    ],
+    preferenceFit:
+      'Listeners prioritising bass control, dynamic authority, and integrated convenience (built-in DAC / streaming) on demanding speaker loads. Less aligned for listeners seeking tube body or long-session tonal warmth on already-revealing chains.',
+    comparisonGuardrails: {
+      prefer: [
+        'High damping factor and feed-forward correction vs low-feedback or transformer-coupled topologies',
+        'Integrated streaming / DAC convenience vs separates with discrete DAC',
+      ],
+      avoid: [
+        'cold or sterile as character — fatigue is speaker-dependent, not unconditional',
+        'analytical without specifier — the macrodynamic and bass-grip dimensions matter',
+      ],
+    },
+    protectedMischaracterizations: [
+      'cold',
+      'sterile',
+      'lifeless',
+      'thin',
+      'tube-like',
+      'warm',
+      'lush',
+      'romantic',
+    ],
+    confidence: { mechanism: 'high', behavior: 'medium-high', perception: 'high' },
+  },
 ];
 
 /**

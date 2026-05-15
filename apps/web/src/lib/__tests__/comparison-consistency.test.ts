@@ -317,27 +317,46 @@ describe('comparison-consistency (Stage 11.1)', () => {
       expect(rendered).toMatch(/Goldmund reads tonally lean/);
     });
 
-    it('Leben + Hegel return null (both lack pilot capsule, short fields, and philosophyExtended)', () => {
-      // Neither brand has a pilot capsule, neither has the
-      // designPhilosophy+sonicTendency short-field triplet, and
-      // neither has philosophyExtended. Helper falls through to (d).
+    it('Leben + Hegel now resolve via pilot capsule (Stage 11.6)', () => {
+      // Stage 11.6 added Leben + Hegel pilot capsules to
+      // brand-philosophy-pilot.ts. Both sides now resolve at tier (a),
+      // so buildEducationalRationale returns a non-null cadence-polished
+      // rationale instead of the prior null+boilerplate fallback.
       const leben = findBrandProfileByName('Leben');
       const hegel = findBrandProfileByName('Hegel');
       expect(leben && hegel).toBeTruthy();
       const rationale = buildEducationalRationale('Leben', leben!, 'Hegel', hegel!);
-      expect(rationale).toBeNull();
+      expect(rationale).not.toBeNull();
+      // Engineering sentences — verb-anchored cadence output sourced
+      // from the new pilot.mechanism fields (R1 "topology" / "feedback"
+      // pattern → "designs around" for Leben; R1 "correction" pattern
+      // → "engineers" for Hegel).
+      expect(rationale!).toMatch(/Leben designs around hand-wired push-pull/);
+      expect(rationale!).toMatch(/Hegel engineers proprietary "SoundEngine" feed-forward error correction/);
+      // Causal connector + "reads" perception sentence
+      expect(rationale!).toMatch(/The result, in listening:/);
+      expect(rationale!).toMatch(/Leben reads warm, tonally dense, rhythmically alive/);
+      expect(rationale!).toMatch(/Hegel reads controlled, composed, neutral to slightly cool/);
     });
 
-    it('Leben vs Hegel rendered comparison keeps the existing boilerplate rationale (graceful fallback)', () => {
+    it('Leben vs Hegel rendered comparison now surfaces educational cadence rationale (Stage 11.6)', () => {
       const leben = findBrandProfileByName('Leben');
       const hegel = findBrandProfileByName('Hegel');
       expect(leben && hegel).toBeTruthy();
       const payload = buildInitialComparisonPayload(leben!, hegel!);
       const rendered = renderComparisonPayload(payload).comparisonSummary;
-      // The boilerplate rationale phrase IS the expected fallback here
-      expect(rendered).toMatch(/leans toward warmth, density, and listening ease/);
-      // And the helper-shape sentences must NOT have leaked in
-      expect(rendered).not.toMatch(/The listener hears Leben as/i);
+      // The Stage 11.2 boilerplate rationale must NOT be present anymore
+      expect(rendered).not.toMatch(/leans toward warmth, density, and listening ease — traits that tend to sustain comfort over long sessions/);
+      // Stage 11.4 raw cadence shape must NOT be present (cadence layer
+      // applied)
+      expect(rendered).not.toMatch(/Leben — Hand-wired/);
+      expect(rendered).not.toMatch(/The listener hears Leben as/);
+      // Stage 11.45 cadence shape MUST be present
+      expect(rendered).toMatch(/Leben designs around hand-wired push-pull/);
+      expect(rendered).toMatch(/Hegel engineers proprietary "SoundEngine"/);
+      expect(rendered).toMatch(/The result, in listening:/);
+      expect(rendered).toMatch(/Leben reads warm/);
+      expect(rendered).toMatch(/Hegel reads controlled/);
     });
 
     it('asymmetric coverage returns null (one side has pilot, the other has nothing)', () => {
