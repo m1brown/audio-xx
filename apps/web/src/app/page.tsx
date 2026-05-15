@@ -4296,7 +4296,7 @@ export default function Home() {
           color: EDITORIAL.faint,
         }}
       >
-        System interaction &nbsp;&middot;&nbsp; Listener alignment &nbsp;&middot;&nbsp; Real trade-offs
+        Reviews your system &nbsp;&middot;&nbsp; Matches your listening &nbsp;&middot;&nbsp; Names the trade-offs
       </div>
 
       {/* System badge + panel — marginBottom tightened (0.5rem → 0.4rem)

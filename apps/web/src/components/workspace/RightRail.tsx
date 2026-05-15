@@ -159,8 +159,8 @@ export default function RightRail({
           </div>
         ) : (
           <p style={EMPTY_STATE_STYLE}>
-            No system active. <Link href="/systems" style={{ color: RAIL.link, fontWeight: 500 }}>Add one</Link> for
-            system-relative recommendations.
+            <Link href="/systems" style={{ color: RAIL.link, fontWeight: 500 }}>Add your system</Link> to get
+            system-aware reviews and trade-off-honest upgrade paths. Or just type a question to start.
           </p>
         )}
       </div>
