@@ -61,6 +61,7 @@ import { findPairingsForSpeaker } from './pairing-resolver';
 import { getApprovedBrand } from './knowledge';
 import type { BrandKnowledge } from './knowledge/schema';
 import { getPilotCapsule, findProtectedMischaracterization } from './brand-philosophy-pilot';
+import { toDisplayName } from './canonical-names';
 import { detectUsedFraming, buildUsedMarketNote } from './used-market';
 import type { ActiveSystemContext } from './system-types';
 import { classifySystemArchetype, consumerSystemIntro, buildConsumerWirelessResponse } from './system-class';
@@ -2030,7 +2031,7 @@ function buildArchetypeConsultation(
  * — distinct from the product consultation used for "DeVore O/96 thoughts?"
  */
 function buildBrandConsultation(profile: BrandProfile): ConsultationResponse {
-  const name = capitalize(profile.names[0]);
+  const name = toDisplayName(profile.names[0]);
 
   // Build an enriched philosophy line that includes founder and origin
   let philosophyLine = '';
@@ -2468,8 +2469,8 @@ export function buildInitialComparisonPayload(
   profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
   queryText?: string,
 ): ComparisonPayload {
-  const nameA = capitalize('names' in profileA ? profileA.names[0] : profileA.name);
-  const nameB = capitalize('names' in profileB ? profileB.names[0] : profileB.name);
+  const nameA = toDisplayName('names' in profileA ? profileA.names[0] : profileA.name);
+  const nameB = toDisplayName('names' in profileB ? profileB.names[0] : profileB.name);
 
   const charA = extractCoreCharacter(profileA.tendencies);
   const charB = extractCoreCharacter(profileB.tendencies);
@@ -3404,7 +3405,7 @@ function deriveBrandSummaryFromCatalog(
 
   return {
     name: brandName,
-    philosophy: `${capitalize(brandName)} builds ${archLabel}. ${primary.description.split('.')[0]}.`,
+    philosophy: `${toDisplayName(brandName)} builds ${archLabel}. ${primary.description.split('.')[0]}.`,
     tendencies: tendencyText,
   };
 }
@@ -3418,7 +3419,7 @@ function deriveBrandSummaryFromCatalog(
  * the brand question.
  */
 function buildUnknownBrandResponse(brandName: string): ConsultationResponse {
-  const name = capitalize(brandName);
+  const name = toDisplayName(brandName);
   return {
     subject: name,
     philosophy: `${name} is a recognised brand, but I don't yet have a detailed profile for their design philosophy or sonic tendencies in my knowledge base.`,
@@ -3647,8 +3648,8 @@ export function buildComparisonRefinement(
   },
   followUpMessage: string,
 ): ConsultationResponse {
-  const nameA = capitalize(activeComparison.left.name);
-  const nameB = capitalize(activeComparison.right.name);
+  const nameA = toDisplayName(activeComparison.left.name);
+  const nameB = toDisplayName(activeComparison.right.name);
 
   // Resolve profiles or catalog summaries for both sides
   const infoA = resolveBrandInfo(activeComparison.left.name);
@@ -3727,15 +3728,15 @@ export function buildContextRefinement(
   contextMessage: string,
   contextKind: ContextKind,
 ): ConsultationResponse {
-  const nameA = capitalize(activeComparison.left.name);
-  const nameB = capitalize(activeComparison.right.name);
+  const nameA = toDisplayName(activeComparison.left.name);
+  const nameB = toDisplayName(activeComparison.right.name);
 
   const infoA = resolveBrandInfo(activeComparison.left.name);
   const infoB = resolveBrandInfo(activeComparison.right.name);
 
   // Resolve the context component's brand info (e.g. DeVore for a speaker)
   const contextBrandInfo = resolveBrandInfo(contextMessage);
-  const contextName = contextBrandInfo ? capitalize(contextMessage.trim()) : contextMessage.trim();
+  const contextName = contextBrandInfo ? toDisplayName(contextMessage.trim()) : contextMessage.trim();
 
   // Extract what the user told us for the summary
   const contextLabel = describeContext(contextMessage, contextKind);
@@ -5437,7 +5438,7 @@ export function buildConsultationFollowUp(
   if (activeConsultation.subjects.length === 0) return null;
 
   const primarySubject = activeConsultation.subjects[0];
-  const subjectName = capitalize(primarySubject.name);
+  const subjectName = toDisplayName(primarySubject.name);
   const kind = classifyFollowUp(followUpMessage);
 
   // Blocker fix §2: render saved-system components inline when the user

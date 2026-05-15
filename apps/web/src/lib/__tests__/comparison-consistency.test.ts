@@ -38,6 +38,7 @@ import {
   findBrandProfileByName,
 } from '../consultation';
 import { renderComparisonPayload, detectDominantAxis } from '../comparison-payload';
+import { toDisplayName } from '../canonical-names';
 import type { BrandProfile } from '../consultation';
 
 // ── Synthetic fixtures for brands without in-codebase profiles ─────
@@ -196,8 +197,8 @@ describe('comparison-consistency (Stage 11.1)', () => {
         return;
       }
 
-      const warmName = capitalize('names' in warmProfile ? warmProfile.names[0] : warmProfile.name);
-      const controlName = capitalize('names' in controlProfile ? controlProfile.names[0] : controlProfile.name);
+      const warmName = toDisplayName('names' in warmProfile ? warmProfile.names[0] : warmProfile.name);
+      const controlName = toDisplayName('names' in controlProfile ? controlProfile.names[0] : controlProfile.name);
 
       it('classifies the warm side as warm/flow (not control) and the control side as control (not warm/flow)', () => {
         // Use the same input shape the canonical-axis computation does.
@@ -503,6 +504,5 @@ describe('comparison-consistency (Stage 11.1)', () => {
   });
 });
 
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
+// Local capitalize helper removed in Stage 12.1 — display naming now
+// flows through ../canonical-names::toDisplayName.
