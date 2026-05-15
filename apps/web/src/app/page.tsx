@@ -186,25 +186,55 @@ const EDITORIAL = {
 const HOMEPAGE_HEADLINE = 'Choose components that align with your preferences, system, and long-term happiness.';
 
 /**
- * Curated starter prompts. The hero shows three of these as chips
- * below the input. Selection is session-stable (computed once per
- * pageload via `useMemo([])`); no animation, no continuous rotation,
- * no time-based shuffle — calm and intentional.
- *
- * When a saved/draft system is active, an "Assess my system: <chain>"
- * chip replaces the first selection so the personalization affordance
- * the prior UI offered survives. The other two slots come from this
- * curated set.
+ * Pinned fresh-visitor assessment example. Stage 7.1 onboarding-
+ * clarity fix: the most-differentiated mode (system-level review)
+ * was previously invisible to fresh visitors unless the random
+ * chip shuffle happened to surface it — and there was no
+ * assessment example in the pool to surface. This is the
+ * leben-devore reviewer-benchmark gold case, the same chain the
+ * Playwright benchmark validates every commit, so the rendered
+ * response a click produces is the same one we already test.
  */
-const CURATED_STARTER_PROMPTS: ReadonlyArray<string> = [
+const PINNED_ASSESS_PROMPT = 'Assess my system: Denafrips Pontus II, Leben CS600X, DeVore O/96';
+
+/**
+ * Comparison-mode starter prompts. Slot 2 of the chip row always
+ * draws from this subpool so every fresh visitor sees one comparison
+ * example. Selection is session-stable.
+ */
+const COMPARE_PROMPTS: ReadonlyArray<string> = [
   'compare Bifrost 2/64 vs Qutest',
-  'best DAC under $1500',
-  'my system sounds harsh',
-  'should I upgrade my Hugo to Hugo TT2?',
   'Chord vs Denafrips',
+];
+
+/**
+ * Variety starter prompts covering upgrade, diagnosis, knowledge,
+ * preference, and shopping modes. Slot 3 of the chip row draws from
+ * this subpool so the third chip rotates session-stably across the
+ * remaining modes.
+ *
+ * Note: "best tube amp under $5000" was dropped in Stage 7.1 to keep
+ * the variety set tight; "best DAC under $1500" carries the
+ * shopping/value-search archetype on its own.
+ */
+const VARIETY_PROMPTS: ReadonlyArray<string> = [
+  'should I upgrade my Hugo to Hugo TT2?',
+  'my system sounds harsh',
   'what does tonal density mean?',
   'I want more flow without losing detail',
-  'best tube amp under $5000',
+  'best DAC under $1500',
+];
+
+/**
+ * Combined pool used by the existing post-mount Fisher–Yates shuffle.
+ * The chip renderer partitions the shuffled order by membership in
+ * COMPARE_PROMPTS vs VARIETY_PROMPTS so slot 2 always gets a compare
+ * example and slot 3 always gets a variety example — without forcing
+ * the renderer to keep two separate shuffled lists.
+ */
+const CURATED_STARTER_PROMPTS: ReadonlyArray<string> = [
+  ...COMPARE_PROMPTS,
+  ...VARIETY_PROMPTS,
 ];
 
 // Cycling placeholders removed — static placeholder is now used.
@@ -4273,27 +4303,13 @@ export default function Home() {
        *  in the 2026-05-08 second-pass hero refresh. */}
       <div style={{ position: 'relative', marginBottom: '0.4rem' }}>
         <SystemBadge onClick={() => setSystemPanelOpen((v) => !v)} />
-        {/* Fallback: only shown when no systems exist at all (SystemBadge handles multi-system) */}
-        {!audioState.activeSystemRef && audioState.savedSystems.length === 0 && !audioState.draftSystem && !systemPanelOpen && (
-          <button
-            type="button"
-            onClick={() => setSystemPanelOpen(true)}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '0.8rem',
-              color: COLOR.textSecondary,
-              fontFamily: 'inherit',
-              padding: '0.15rem 0',
-              textDecoration: 'underline',
-              textDecorationColor: COLOR.border,
-              textUnderlineOffset: '2px',
-            }}
-          >
-            Add your system
-          </button>
-        )}
+        {/* Stage 7.1: the fresh-visitor "Add your system" CTA was moved
+         *  out of this inline-link position and re-rendered as a small
+         *  primary CTA directly above the textarea (see further down in
+         *  this component). The CTA target — opening the SystemPanel —
+         *  is unchanged; only the visual treatment and placement moved.
+         *  Multi-system selection and active-system display continue to
+         *  live in SystemBadge above. */}
         {systemPanelOpen && (
           <SystemPanel
             onClose={() => setSystemPanelOpen(false)}
@@ -4446,14 +4462,21 @@ export default function Home() {
            * session. No animation, no continuous rotation, no
            * time-based shuffle. Calm and intentional.
            *
-           * When a saved/draft system is active, the FIRST chip is
-           * always "Assess my system: <chain>" — preserves the
-           * personalization affordance the prior path-buttons offered
-           * without the four-mode chrome. Other slots come from
-           * `sessionStarterPrompts` (the post-mount shuffled state).
+           * Stage 7.1 slot policy:
+           *   Slot 1 — always "Assess my system: <chain>". When a
+           *            saved/draft system is active, the user's own
+           *            chain is used; otherwise the pinned leben-devore
+           *            gold-case chain (PINNED_ASSESS_PROMPT) is used
+           *            so every fresh visitor sees the
+           *            most-differentiated mode as their first option.
+           *   Slot 2 — always a comparison example (first compare
+           *            prompt in the session-shuffled order).
+           *   Slot 3 — a variety example (first variety prompt in the
+           *            session-shuffled order: upgrade, diagnosis,
+           *            knowledge, preference, or shopping).
            */}
           {(() => {
-            // Active-system component chain for the optional first chip.
+            // Active-system component chain for slot 1 (saved-system override).
             const activeComponents = audioState.activeSystemRef
               ? (() => {
                   if (audioState.activeSystemRef.kind === 'draft' && audioState.draftSystem) {
@@ -4478,14 +4501,28 @@ export default function Home() {
                   })
                 : [];
             const hasActiveChain = activeComponents.length > 0;
+            // Slot 1: user's saved/draft system if available, otherwise
+            // the pinned leben-devore gold-case chain. Always present.
+            // Saved-system path uses the existing " → " separator
+            // (unchanged from prior behavior); the pinned default uses
+            // commas to match the leben-devore reviewer-benchmark prompt
+            // verbatim, so a click reproduces the same advisory output.
             const assessPrompt = hasActiveChain
-              ? `Assess my system: ${activeComponents.join(' \u2192 ')}`
-              : null;
-
-            const curatedPicks = sessionStarterPrompts.slice(0, hasActiveChain ? 2 : 3);
-            const prompts: ReadonlyArray<string> = assessPrompt
-              ? [assessPrompt, ...curatedPicks]
-              : curatedPicks;
+              ? `Assess my system: ${activeComponents.join(' → ')}`
+              : PINNED_ASSESS_PROMPT;
+            // Slot 2: first compare prompt in shuffled order.
+            const comparePrompt = sessionStarterPrompts.find((p) =>
+              COMPARE_PROMPTS.includes(p),
+            );
+            // Slot 3: first variety prompt in shuffled order.
+            const varietyPrompt = sessionStarterPrompts.find((p) =>
+              VARIETY_PROMPTS.includes(p),
+            );
+            const prompts: ReadonlyArray<string> = [
+              assessPrompt,
+              ...(comparePrompt ? [comparePrompt] : []),
+              ...(varietyPrompt ? [varietyPrompt] : []),
+            ];
 
             return (
               <div
@@ -4637,6 +4674,64 @@ export default function Home() {
             <ThinkingIndicator />
           )}
           <div ref={messagesEndRef} />
+        </div>
+      )}
+
+      {/* Stage 7.1 "Add your system" primary CTA.
+       *
+       * Promoted from a quiet inline underlined link (formerly inside
+       * the SystemBadge container above the headline) to a small
+       * editorial CTA placed directly above the textarea, where the
+       * empty-state visitor's eye naturally lands before typing. The
+       * onClick behavior is identical to the prior inline link —
+       * opens the same SystemPanel. Visual treatment kept calm and
+       * editorial (hairline border, ink color, no fill); not a
+       * loud SaaS button.
+       *
+       * Only renders on the landing state when no systems exist at
+       * all — same condition the inline link used, plus a !hasMessages
+       * guard so it disappears once a conversation begins. */}
+      {!hasPendingIntake
+        && !hasMessages
+        && !audioState.activeSystemRef
+        && audioState.savedSystems.length === 0
+        && !audioState.draftSystem
+        && !systemPanelOpen && (
+        <div style={{
+          marginBottom: '0.85rem',
+          maxWidth: EDITORIAL.narrow,
+        }}>
+          <button
+            type="button"
+            onClick={() => setSystemPanelOpen(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.5rem 0.9rem',
+              background: 'transparent',
+              border: `1px solid ${EDITORIAL.ink}`,
+              borderRadius: 3,
+              color: EDITORIAL.ink,
+              fontFamily: 'inherit',
+              fontSize: '0.9rem',
+              fontWeight: 500,
+              lineHeight: 1.4,
+              cursor: 'pointer',
+              transition: 'color 0.15s ease, border-color 0.15s ease, background 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = EDITORIAL.ink;
+              e.currentTarget.style.color = '#fff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = EDITORIAL.ink;
+            }}
+          >
+            <span>Add your system</span>
+            <span aria-hidden="true">→</span>
+          </button>
         </div>
       )}
 
