@@ -4153,6 +4153,139 @@ function buildLightRecommendation(
   return null;
 }
 
+// ── Educational rationale (Stage 11.4) ────────────────
+//
+// Composes a 1–2 sentence rationale from authored brand fields rather
+// than the generic "warmth and listening ease" boilerplate. Used in
+// high-confidence warm-vs-precise comparison branches where the
+// canonical axes have already produced a decisive recommendation;
+// adds engineering and perception causality drawn from authored data.
+//
+// Source precedence per side (descending priority):
+//   (a) PilotCapsule: capsule.mechanism + capsule.perceptionTraits[0]
+//   (b) BrandProfile short fields: designPhilosophy + sonicTendency
+//   (c) BrandProfile fallback: philosophyExtended first sentence +
+//       tendencies "described as <traits>" / "tend toward <traits>" clause
+//
+// Both sides must resolve via (a–c). Asymmetric coverage returns null;
+// the caller keeps its existing rationale. No paraphrase — source text
+// is used verbatim apart from clause/sentence truncation and trailing-
+// period removal.
+
+type EducationalTier = 'pilot' | 'short-fields' | 'extended-philosophy';
+
+interface SideEducationalFields {
+  engineering: string;
+  perception: string;
+  tier: EducationalTier;
+}
+
+/** Take everything up to the first period or semicolon. Used for clause-truncating long mechanism prose. */
+function takeFirstClause(text: string): string {
+  if (!text) return '';
+  const parts = text.split(/[.;]\s*/);
+  return (parts[0] ?? '').trim();
+}
+
+/** Take the first sentence (up to first ./!/?). */
+function takeFirstSentence(text: string): string {
+  if (!text) return '';
+  const m = text.match(/^[^.!?]+[.!?]?/);
+  if (!m) return text.trim();
+  return m[0].replace(/[.!?]\s*$/, '').trim();
+}
+
+/** Remove a trailing period (preserving any other content). */
+function stripTrailingPeriod(text: string): string {
+  return text.replace(/\.\s*$/, '').trim();
+}
+
+/**
+ * Extract the trait-list clause from a "X is described as Y" /
+ * "X tends toward Y" tendency sentence. Returns null when the
+ * sentence does not follow this pattern.
+ */
+function extractTendencyTraitClause(tendencies: string): string | null {
+  const m = tendencies.match(/(?:described|known|characteri[sz]ed)\s+as\s+([^.;]+)/i);
+  if (m && m[1]) return m[1].trim();
+  const m2 = tendencies.match(/tend(?:s)?\s+(?:to(?:ward)?(?:s)?)\s+([^.;]+)/i);
+  if (m2 && m2[1]) return m2[1].trim();
+  return null;
+}
+
+/**
+ * Resolve the engineering + perception phrases for one side of a
+ * comparison, walking the source-precedence ladder. Returns null when
+ * no tier produces both fields.
+ */
+function resolveSideEducationalFields(
+  name: string,
+  profile: BrandProfile | { name: string; philosophy: string; tendencies: string; designPhilosophy?: string; sonicTendency?: string; philosophyExtended?: string },
+): SideEducationalFields | null {
+  // Tier (a): pilot capsule
+  const capsule = getPilotCapsule(name);
+  if (capsule) {
+    const engineering = takeFirstClause(capsule.mechanism);
+    const perception = capsule.perceptionTraits[0]?.trim();
+    if (engineering && perception) {
+      return { engineering, perception, tier: 'pilot' };
+    }
+  }
+
+  // Tier (b): BrandProfile short fields
+  const dp = 'designPhilosophy' in profile ? profile.designPhilosophy : undefined;
+  const st = 'sonicTendency' in profile ? profile.sonicTendency : undefined;
+  if (dp && st) {
+    return {
+      engineering: stripTrailingPeriod(dp),
+      perception: stripTrailingPeriod(st),
+      tier: 'short-fields',
+    };
+  }
+
+  // Tier (c): philosophyExtended first sentence + tendencies trait clause
+  const pe = 'philosophyExtended' in profile ? profile.philosophyExtended : undefined;
+  if (pe && profile.tendencies) {
+    const peSentence = takeFirstSentence(pe);
+    const perception = extractTendencyTraitClause(profile.tendencies);
+    if (peSentence && perception) {
+      return { engineering: peSentence, perception, tier: 'extended-philosophy' };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Build a 1–2 sentence educational rationale from authored brand fields.
+ * Returns null when either side lacks qualifying data — the caller
+ * should preserve its existing rationale in that case.
+ *
+ * Output shape (deterministic):
+ *   "{WarmName} — {engineering}; {PreciseName} — {engineering}. The
+ *    listener hears {WarmName} as {perception}; {PreciseName} as
+ *    {perception}."
+ *
+ * Exposed for tests; not part of the rendering pipeline directly.
+ */
+export function buildEducationalRationale(
+  warmName: string,
+  warmProfile: BrandProfile | { name: string; philosophy: string; tendencies: string },
+  preciseName: string,
+  preciseProfile: BrandProfile | { name: string; philosophy: string; tendencies: string },
+): string | null {
+  const warmFields = resolveSideEducationalFields(warmName, warmProfile);
+  if (!warmFields) return null;
+  const preciseFields = resolveSideEducationalFields(preciseName, preciseProfile);
+  if (!preciseFields) return null;
+
+  const engineeringSentence =
+    `${warmName} — ${warmFields.engineering}; ${preciseName} — ${preciseFields.engineering}.`;
+  const perceptionSentence =
+    `The listener hears ${warmName} as ${warmFields.perception}; ${preciseName} as ${preciseFields.perception}.`;
+  return `${engineeringSentence} ${perceptionSentence}`;
+}
+
 // ── Recommendation, Shopping, Sources builders ────────
 //
 // These populate the final three sections of every comparison output.
@@ -4332,9 +4465,14 @@ function buildComparisonRecommendation(
     const isEaseAlignedWithWarm = easeWinner === warmName;
 
     if (highConfidence && isEaseAlignedWithWarm) {
+      // Stage 11.4: attempt structured educational rationale before
+      // falling back to the generic boilerplate. Helper returns null
+      // when either side lacks qualifying authored fields.
+      const educational = buildEducationalRationale(warmName, profileA, preciseName, profileB);
+      const fallbackRationale = `${warmName} leans toward warmth, density, and listening ease — traits that tend to sustain comfort over long sessions. ${preciseName} prioritises speed and analytical resolution, which rewards focused critical listening but can narrow the range of recordings that feel enjoyable.`;
       return {
         recommended: `In most systems, **${warmName}** is the more natural match unless you're explicitly chasing maximum control and neutrality.`,
-        rationale: `${warmName} leans toward warmth, density, and listening ease — traits that tend to sustain comfort over long sessions. ${preciseName} prioritises speed and analytical resolution, which rewards focused critical listening but can narrow the range of recordings that feel enjoyable.`,
+        rationale: educational ?? fallbackRationale,
       };
     }
     // Low confidence or ease doesn't align with warm side → directional, not strong
@@ -4350,9 +4488,12 @@ function buildComparisonRecommendation(
     const isEaseAlignedWithWarm = easeWinner === warmName;
 
     if (highConfidence && isEaseAlignedWithWarm) {
+      // Stage 11.4: same pattern, symmetric side assignment.
+      const educational = buildEducationalRationale(warmName, profileB, preciseName, profileA);
+      const fallbackRationale = `${warmName} leans toward warmth, density, and listening ease — traits that tend to sustain comfort over long sessions. ${preciseName} prioritises speed and analytical resolution, which rewards focused critical listening but can narrow the range of recordings that feel enjoyable.`;
       return {
         recommended: `In most systems, **${warmName}** is the more natural match unless you're explicitly chasing maximum control and neutrality.`,
-        rationale: `${warmName} leans toward warmth, density, and listening ease — traits that tend to sustain comfort over long sessions. ${preciseName} prioritises speed and analytical resolution, which rewards focused critical listening but can narrow the range of recordings that feel enjoyable.`,
+        rationale: educational ?? fallbackRationale,
       };
     }
     return {

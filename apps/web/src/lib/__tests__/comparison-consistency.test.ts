@@ -34,6 +34,7 @@ import { describe, it, expect } from 'vitest';
 
 import {
   buildInitialComparisonPayload,
+  buildEducationalRationale,
   findBrandProfileByName,
 } from '../consultation';
 import { renderComparisonPayload, detectDominantAxis } from '../comparison-payload';
@@ -271,6 +272,111 @@ describe('comparison-consistency (Stage 11.1)', () => {
       });
     });
   }
+
+  // Stage 11.4 — Educational rationale routing tests.
+  // Verify that the helper returns expected output for pairs where
+  // qualifying authored fields exist on both sides, AND that the
+  // helper returns null (preserving the existing rationale) when
+  // either side lacks qualifying fields.
+  describe('educational rationale (Stage 11.4)', () => {
+    it('Shindo + Goldmund both resolve via pilot capsule and produce engineering+perception sentences', () => {
+      const shindo = findBrandProfileByName('Shindo');
+      const goldmund = findBrandProfileByName('Goldmund');
+      expect(shindo).toBeTruthy();
+      expect(goldmund).toBeTruthy();
+      const rationale = buildEducationalRationale('Shindo', shindo!, 'Goldmund', goldmund!);
+      expect(rationale).not.toBeNull();
+      // Engineering sentence — pilot.mechanism first-clause from each side
+      expect(rationale!).toMatch(/Shindo —.*tube design/i);
+      expect(rationale!).toMatch(/Goldmund —.*mechanically grounded chassis/i);
+      // Perception sentence — perceptionTraits[0] from each side
+      expect(rationale!).toMatch(/The listener hears Shindo as.*harmonically saturated/i);
+      expect(rationale!).toMatch(/Goldmund as.*fast transient definition/i);
+    });
+
+    it('Shindo vs Goldmund rendered comparison surfaces the educational rationale (not the boilerplate)', () => {
+      const shindo = findBrandProfileByName('Shindo');
+      const goldmund = findBrandProfileByName('Goldmund');
+      expect(shindo && goldmund).toBeTruthy();
+      const payload = buildInitialComparisonPayload(shindo!, goldmund!);
+      const rendered = renderComparisonPayload(payload).comparisonSummary;
+      // The boilerplate rationale must NOT be present
+      expect(rendered).not.toMatch(/leans toward warmth, density, and listening ease — traits that tend to sustain comfort over long sessions/);
+      // The educational sentences MUST be present
+      expect(rendered).toMatch(/Shindo —.*tube design/i);
+      expect(rendered).toMatch(/The listener hears Shindo as/i);
+    });
+
+    it('Leben + Hegel return null (both lack pilot capsule, short fields, and philosophyExtended)', () => {
+      // Neither brand has a pilot capsule, neither has the
+      // designPhilosophy+sonicTendency short-field triplet, and
+      // neither has philosophyExtended. Helper falls through to (d).
+      const leben = findBrandProfileByName('Leben');
+      const hegel = findBrandProfileByName('Hegel');
+      expect(leben && hegel).toBeTruthy();
+      const rationale = buildEducationalRationale('Leben', leben!, 'Hegel', hegel!);
+      expect(rationale).toBeNull();
+    });
+
+    it('Leben vs Hegel rendered comparison keeps the existing boilerplate rationale (graceful fallback)', () => {
+      const leben = findBrandProfileByName('Leben');
+      const hegel = findBrandProfileByName('Hegel');
+      expect(leben && hegel).toBeTruthy();
+      const payload = buildInitialComparisonPayload(leben!, hegel!);
+      const rendered = renderComparisonPayload(payload).comparisonSummary;
+      // The boilerplate rationale phrase IS the expected fallback here
+      expect(rendered).toMatch(/leans toward warmth, density, and listening ease/);
+      // And the helper-shape sentences must NOT have leaked in
+      expect(rendered).not.toMatch(/The listener hears Leben as/i);
+    });
+
+    it('asymmetric coverage returns null (one side has pilot, the other has nothing)', () => {
+      const shindo = findBrandProfileByName('Shindo');
+      expect(shindo).toBeTruthy();
+      const bareControl = {
+        name: 'BareControl',
+        philosophy: 'BareControl designs neutral electronics.',
+        tendencies: 'BareControl reads as controlled and clean.',
+      };
+      const rationale = buildEducationalRationale('Shindo', shindo!, 'BareControl', bareControl);
+      expect(rationale).toBeNull();
+    });
+
+    it('tier-(b) short-field pair resolves (synthetic warm with designPhilosophy + sonicTendency)', () => {
+      // Build a synthetic pair that uses tier (b) on the warm side and
+      // pilot on the precise side — to exercise the short-fields path.
+      const warmShortFields = {
+        name: 'WarmShorts',
+        philosophy: 'WarmShorts designs around tonal richness.',
+        tendencies: 'WarmShorts amplifiers are described as warm, dense, and harmonically alive.',
+        designPhilosophy: 'Single-ended class-A bias for harmonic continuity.',
+        sonicTendency: 'Warm, harmonically dense, gently flowing.',
+      };
+      const goldmund = findBrandProfileByName('Goldmund');
+      expect(goldmund).toBeTruthy();
+      const rationale = buildEducationalRationale('WarmShorts', warmShortFields, 'Goldmund', goldmund!);
+      expect(rationale).not.toBeNull();
+      expect(rationale!).toMatch(/WarmShorts — Single-ended class-A bias/);
+      expect(rationale!).toMatch(/The listener hears WarmShorts as Warm, harmonically dense/);
+    });
+
+    it('tier-(c) extended-philosophy pair resolves (synthetic warm with philosophyExtended + tendencies trait clause)', () => {
+      const warmExtended = {
+        name: 'WarmExt',
+        philosophy: 'WarmExt builds tube electronics.',
+        philosophyExtended: 'WarmExt designs each circuit individually around its chosen tubes, preserving harmonic continuity across the conversion stage.',
+        tendencies: 'WarmExt amplifiers are described as warm, dense, harmonically rich, and physically present.',
+      };
+      const goldmund = findBrandProfileByName('Goldmund');
+      expect(goldmund).toBeTruthy();
+      const rationale = buildEducationalRationale('WarmExt', warmExtended, 'Goldmund', goldmund!);
+      expect(rationale).not.toBeNull();
+      // tier (c) engineering pulls philosophyExtended first sentence
+      expect(rationale!).toMatch(/WarmExt — WarmExt designs each circuit individually/);
+      // tier (c) perception pulls the "described as ..." clause
+      expect(rationale!).toMatch(/The listener hears WarmExt as warm, dense, harmonically rich, and physically present/);
+    });
+  });
 
   // Pair-specific decisiveness test: the reproducer pair must produce a
   // recommendation that actually points somewhere, not the generic
