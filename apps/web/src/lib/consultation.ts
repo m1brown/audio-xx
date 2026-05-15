@@ -1798,15 +1798,26 @@ function buildProductConsultation(
   const brandProfile = findBrandProfileByName(primary.brand);
   const brandLinks = brandProfile?.links;
 
-  // Collect all available links (product-level first, then brand-level)
-  const links = [
-    ...(primary.retailer_links ?? []).map((rl) => ({
-      label: rl.label,
-      url: rl.url,
-      kind: 'reference' as const,
-    })),
-    ...(brandLinks ?? []),
-  ];
+  // Collect all available links (product-level first, then brand-level).
+  // Stage 6.3 dedupe: product retailer_links and brand_profile.links often
+  // overlap on the manufacturer homepage (e.g. Denafrips Pontus II 12th-1
+  // has retailer_link {label:'Denafrips', url:'https://www.denafrips.com/'}
+  // AND the Denafrips brand profile has the same {label, url}). Without
+  // dedup, both fire and the renderer emits two identical chips plus a
+  // React duplicate-key warning. First-occurrence wins so product-level
+  // labels take precedence over brand-level fallbacks.
+  const seenUrls = new Set<string>();
+  const links: Array<{ label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }> = [];
+  for (const rl of primary.retailer_links ?? []) {
+    if (seenUrls.has(rl.url)) continue;
+    seenUrls.add(rl.url);
+    links.push({ label: rl.label, url: rl.url, kind: 'reference' as const });
+  }
+  for (const bl of brandLinks ?? []) {
+    if (seenUrls.has(bl.url)) continue;
+    seenUrls.add(bl.url);
+    links.push(bl);
+  }
 
   // ── Build rich philosophy section ──
   // Overall assessment: what it is, its design lineage, and description.

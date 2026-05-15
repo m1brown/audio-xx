@@ -4147,7 +4147,16 @@ function ConsultationSubjectContext({ subject, prose }: { subject?: string; pros
   if (!product) return null;
   const imageUrl = product.imageUrl ?? getProductImage(product.brand, product.name);
   if (!imageUrl) return null;
-  const displayName = [product.brand, product.name].filter(Boolean).join(' ');
+  // Stage 6.3 caption polish: strip internal variant-SKU suffixes like
+  // " 12th-1" (Denafrips Pontus II 12th-1 catalog entry, where "12th-1"
+  // is the 12th-anniversary edition disambiguator). The suffix reads as
+  // a typo or internal artifact in the caption; the underlying product
+  // is still the Pontus II that users recognize. Conservative regex —
+  // only strips trailing " <digits><ordinal>(-<digits>)?" patterns at
+  // the end of the name. Leaves real model names alone ("Hugo", "CS600X",
+  // "O/96", "P3ESR" all unaffected).
+  const cleanedName = product.name.replace(/\s+\d+(st|nd|rd|th)(-\d+)?$/i, '');
+  const displayName = [product.brand, cleanedName].filter(Boolean).join(' ');
   return (
     <div style={{ marginBottom: '0.85rem' }}>
       {imageUrl && (
