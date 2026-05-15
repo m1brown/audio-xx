@@ -218,6 +218,11 @@ nav .nav-secondary {
   font-size: 13px;
   font-weight: 500;
   color: #666;
+  /* Stage 8.2 — prevent "Sign in" from wrapping across two lines at
+   * narrow viewport widths (the bare label is short, but it sits in
+   * the same row as the primary nav and was getting word-broken by
+   * flex when total width exceeded the viewport on 375px). */
+  white-space: nowrap;
 }
 nav .nav-secondary a { color: #666; }
 nav .nav-secondary a:hover { color: #333; text-decoration: none; }
@@ -228,8 +233,19 @@ nav .nav-links {
   font-weight: 500;
   align-items: center;
   color: #666;
+  /* Stage 8.2 — keep individual link labels on a single line. The
+   * surrounding .nav-inner is flex with `justify-content:
+   * space-between` so the link cluster can shrink; we want it to
+   * elide horizontally rather than break "How It Works" or
+   * "Resources" mid-word. */
+  white-space: nowrap;
+  min-width: 0;
+  overflow-x: auto;
+  /* Hide scrollbar chrome on mobile (functional scroll preserved). */
+  scrollbar-width: none;
 }
-nav .nav-links a { color: #666; }
+nav .nav-links::-webkit-scrollbar { display: none; }
+nav .nav-links a { color: #666; white-space: nowrap; }
 nav .nav-links a:hover { color: #333; text-decoration: none; }
 nav .brand {
   font-weight: 700;
@@ -237,6 +253,13 @@ nav .brand {
   letter-spacing: 0.06em;
   color: #2a2a2a;
   text-transform: uppercase;
+  /* Stage 8.2 — keep AUDIO XX wordmark on one line at every viewport
+   * width. The nav-links container was made horizontally scrollable
+   * in the same pass, which pushed layout pressure onto sibling
+   * flex children and caused the wordmark to wrap on 375px. Pinning
+   * both axes here keeps the brand identity intact. */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 nav .brand-accent {
   /* Pass 8: subtle accent restoration. The XX picks up a single

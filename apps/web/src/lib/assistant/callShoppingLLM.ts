@@ -1,15 +1,19 @@
 /**
  * LLM call layer for the Audio XX shopping orchestrator.
  *
- * Supports Anthropic (default) and OpenAI providers via raw fetch.
+ * Supports OpenAI (default) and Anthropic providers via raw fetch.
  * Mirrors the provider/model pattern from api/memo-overlay/route.ts.
  *
+ * Stage 8.2: default provider flipped from 'anthropic' to 'openai'
+ * to match the production deploy target. A forgotten
+ * ORCHESTRATOR_LLM_PROVIDER env var no longer 500s on Vercel.
+ *
  * Configuration (environment variables):
- *   ORCHESTRATOR_LLM_PROVIDER — 'anthropic' | 'openai' (default: 'anthropic')
+ *   ORCHESTRATOR_LLM_PROVIDER — 'openai' | 'anthropic' (default: 'openai')
  *   ORCHESTRATOR_LLM_MODEL    — model identifier
- *     Defaults: 'claude-sonnet-4-5-20250929' (Anthropic), 'gpt-4o' (OpenAI)
- *   ANTHROPIC_API_KEY          — required when provider is 'anthropic'
+ *     Defaults: 'gpt-4o' (OpenAI), 'claude-sonnet-4-5-20250929' (Anthropic)
  *   OPENAI_API_KEY             — required when provider is 'openai'
+ *   ANTHROPIC_API_KEY          — required when provider is 'anthropic'
  *
  * Returns: raw LLM response text (expected to be JSON).
  * Caller is responsible for parsing and validating.
@@ -27,7 +31,7 @@ import type {
 // ── Provider Configuration ────────────────────────────────
 
 function getProvider(): string {
-  return process.env.ORCHESTRATOR_LLM_PROVIDER ?? 'anthropic';
+  return process.env.ORCHESTRATOR_LLM_PROVIDER ?? 'openai';
 }
 
 function getModel(): string {

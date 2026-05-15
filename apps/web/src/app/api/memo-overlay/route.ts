@@ -5,12 +5,16 @@
  * Receives pre-built system and user prompts from the client,
  * forwards to the configured LLM, and returns the raw response.
  *
+ * Stage 8.2: default provider flipped from 'anthropic' to 'openai'
+ * to match the production deploy target. A forgotten
+ * MEMO_LLM_PROVIDER env var no longer 500s on Vercel.
+ *
  * Configuration (environment variables):
- *   MEMO_LLM_PROVIDER — 'anthropic' | 'openai' (default: 'anthropic')
- *   MEMO_LLM_MODEL — model identifier (default: 'claude-sonnet-4-5-20250929' for Anthropic,
- *                     'gpt-4o-mini' for OpenAI)
- *   ANTHROPIC_API_KEY — required when provider is 'anthropic'
+ *   MEMO_LLM_PROVIDER — 'openai' | 'anthropic' (default: 'openai')
+ *   MEMO_LLM_MODEL — model identifier (default: 'gpt-4o-mini' for OpenAI,
+ *                     'claude-sonnet-4-5-20250929' for Anthropic)
  *   OPENAI_API_KEY — required when provider is 'openai'
+ *   ANTHROPIC_API_KEY — required when provider is 'anthropic'
  *
  * Returns { content: string } on success, or an error with appropriate status.
  * When no API key is configured, returns 503 (service unavailable) —
@@ -19,7 +23,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const PROVIDER = process.env.MEMO_LLM_PROVIDER ?? 'anthropic';
+const PROVIDER = process.env.MEMO_LLM_PROVIDER ?? 'openai';
 const DEFAULT_MODEL =
   PROVIDER === 'openai' ? 'gpt-4o-mini' : 'claude-sonnet-4-5-20250929';
 const MODEL = process.env.MEMO_LLM_MODEL ?? DEFAULT_MODEL;
