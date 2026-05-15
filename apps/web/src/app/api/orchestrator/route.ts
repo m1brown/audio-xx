@@ -24,8 +24,69 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runAudioXXAssistant } from '@/lib/assistant/runAudioXXAssistant';
 import type { OrchestratorInput, OrchestratorOutput } from '@/lib/assistant/runAudioXXAssistant';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+
+/**
+ * Build the standard `{ error, fallbackOutput }` envelope this route
+ * always returns on non-2xx. Centralised so the rate-limit branch,
+ * the JSON-parse branch, and the assistant-failure branch can all
+ * use the same shape — the client never has to special-case which
+ * thing went wrong, only whether `fallbackOutput` is usable.
+ */
+function buildErrorEnvelope(
+  message: string,
+  mode: OrchestratorInput['mode'] | 'unknown',
+  fallbackReason: string,
+  responseText: string,
+) {
+  return {
+    error: message,
+    fallbackOutput: {
+      responseText,
+      structured: {
+        type: mode === 'shopping' ? 'shopping_recommendation' as const : 'general_response' as const,
+        data: {},
+      },
+      debug: {
+        mode: mode === 'unknown' ? 'shopping' : mode,
+        timestamp: Date.now(),
+        llmCalled: false,
+        version: 'error',
+        fallbackReason,
+      },
+    } satisfies OrchestratorOutput,
+  };
+}
 
 export async function POST(req: NextRequest) {
+  // Stage 8.1 rate limit: per-IP in-memory bucket, default 30/5min,
+  // overridable via RATE_LIMIT_MAX / RATE_LIMIT_WINDOW_MS env vars.
+  // Guard runs BEFORE JSON parsing so a runaway client can't bypass
+  // the limit by sending malformed payloads.
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(ip);
+  if (!rl.allowed) {
+    console.warn('[rate-limit] ip=%s limit=%d windowResetAt=%s denied',
+      ip, rl.limit, new Date(rl.resetAt).toISOString());
+    return NextResponse.json(
+      buildErrorEnvelope(
+        'rate_limited',
+        'unknown',
+        `rate_limited:${ip}`,
+        "You're moving faster than I can think. Try again in a moment.",
+      ),
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000))),
+          'X-RateLimit-Limit': String(rl.limit),
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': String(Math.floor(rl.resetAt / 1000)),
+        },
+      },
+    );
+  }
+
   let input: OrchestratorInput;
 
   try {
@@ -68,25 +129,16 @@ export async function POST(req: NextRequest) {
     console.error('[orchestrator-api] Error:', message);
 
     // Return a structured error with a minimal fallback so the client
-    // always gets something it can log/inspect.
+    // always gets something it can log/inspect. Same envelope shape
+    // as the 429 rate-limit branch — clients only have to handle one
+    // failure shape.
     return NextResponse.json(
-      {
-        error: message,
-        fallbackOutput: {
-          responseText: '[error] Orchestrator failed server-side.',
-          structured: {
-            type: input.mode === 'shopping' ? 'shopping_recommendation' : 'general_response',
-            data: {},
-          },
-          debug: {
-            mode: input.mode,
-            timestamp: Date.now(),
-            llmCalled: false,
-            version: 'error',
-            fallbackReason: message,
-          },
-        } satisfies OrchestratorOutput,
-      },
+      buildErrorEnvelope(
+        message,
+        input.mode,
+        message,
+        '[error] Orchestrator failed server-side.',
+      ),
       { status: 500 },
     );
   }
