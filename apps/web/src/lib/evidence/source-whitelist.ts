@@ -12,9 +12,12 @@
  *
  * Tier 2 (Acceptable):
  *   Credible publications that don't fully match the Audio XX editorial
- *   voice but are useful for coverage. Displayed ONLY when no Tier 1
- *   source exists for a product. Over time, as Tier 1 sources are added
- *   to more products, Tier 2 citations naturally fade out.
+ *   voice but are useful for coverage. Stage 14.2 update: displayed
+ *   alongside Tier 1 entries (Tier 1 sorted first, Tier 2 follows) when
+ *   either tier carries usable citation. Pre-14.2 these were hidden
+ *   whenever any Tier 1 entry existed — the rule was relaxed once
+ *   URL backfill made Tier 2 entries verifiable rather than just plain
+ *   text.
  *
  * Not displayed:
  *   Audio Science Review, forum posts, manufacturer claims, and any
@@ -156,19 +159,30 @@ export function getSourceEntry(sourceName: string): WhitelistedSource | undefine
 /**
  * Filter source references for user-facing display.
  *
- * Logic:
- *   - If ANY Tier 1 source exists → show only Tier 1 sources
- *   - If NO Tier 1 source exists → show Tier 2 sources as fallback
+ * Logic (Stage 14.2 follow-up — universal attribution rule):
+ *   - Return all whitelisted entries (Tier 1 + Tier 2)
+ *   - Tier 1 entries sorted first; Tier 2 entries follow in original
+ *     relative order
  *   - Non-whitelisted sources are always excluded
+ *
+ * Pre-14.2 behaviour was "show only Tier 1 when any Tier 1 exists;
+ * Tier 2 as fallback." That rule was set when Tier 2 entries lacked
+ * curated URLs and adding them as plain text felt visually noisy.
+ * After the Stage 14.2 URL backfill, Tier 2 entries carry verifiable
+ * deep links — hiding them actively suppresses attribution that the
+ * Stage 14.1c product rule says every substantive claim must show.
+ * The new behaviour preserves the editorial preference for Tier 1
+ * (sorted first) without exclusion.
  */
 export function filterSourcesForDisplay<T extends { source: string }>(
   refs: T[],
 ): T[] {
-  const tier1 = refs.filter((r) => isPreferredSource(r.source));
-  if (tier1.length > 0) return tier1;
-
-  // Fallback to Tier 2
-  return refs.filter((r) => isWhitelistedSource(r.source));
+  const whitelisted = refs.filter((r) => isWhitelistedSource(r.source));
+  // Stable partition: Tier 1 entries first, then Tier 2, each retaining
+  // their original relative order.
+  const tier1 = whitelisted.filter((r) => isPreferredSource(r.source));
+  const tier2 = whitelisted.filter((r) => !isPreferredSource(r.source));
+  return [...tier1, ...tier2];
 }
 
 /**

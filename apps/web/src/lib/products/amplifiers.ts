@@ -546,7 +546,17 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
-      { source: '6moons', note: 'Review covering the CS600X\'s musical authority and tube-rolling potential.' },
+      // Stage 14.2 follow-up: prior "6moons CS600X review" entry was
+      // a misattribution — 6moons covers Leben CS-300X, CS660P, CS-1000P,
+      // RS28CX preamp and a Leben/Shindo/Harbeth system feature, but does
+      // NOT have a dedicated CS600X review. Replaced with the verified
+      // Stereophile Brilliant Corners #21 coverage of the CS-600x.
+      {
+        source: 'Stereophile',
+        note: 'Sasha Matson coverage of the CS-600x — 1960s-inspired feature set, tube-rolling versatility, $8995 introductory list.',
+        url: 'https://www.stereophile.com/content/brilliant-corners-21-german-kitchens-japanese-amps-and-afropop-gems',
+        title: 'Brilliant Corners #21: German kitchens, Japanese amps, and Afropop gems',
+      },
       { source: 'Tone Publications', note: 'Detailed coverage of the Leben + DeVore pairing and tube rolling options.' },
     ],
     // Step 10: buying metadata
