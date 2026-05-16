@@ -38,6 +38,7 @@ import { findProductByComponentName, findProductInProse, findBrandProfileByName 
 import { getProductImage } from '../../lib/product-images';
 import AdvisoryLinks from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
+import { hasDisplayableSources } from '../../lib/evidence/source-whitelist';
 import AdvisoryDiagnostics from './AdvisoryDiagnostics';
 import AdvisoryComponentAssessments from './AdvisoryComponentAssessments';
 import AdvisoryUpgradePaths from './AdvisoryUpgradePaths';
@@ -2135,7 +2136,7 @@ function MemoFormat({ advisory: a, onFollowUpClick }: AdvisoryMessageProps) {
       )}
 
       {/* ── Sources ──────────────────────────────── */}
-      {a.sourceReferences && a.sourceReferences.length > 0 && (
+      {hasDisplayableSources(a.sourceReferences) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>
@@ -2967,7 +2968,7 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
       </div>
 
       {/* ── Sources (continued reading) ──────────────── */}
-      {a.sourceReferences && a.sourceReferences.length > 0 && (
+      {hasDisplayableSources(a.sourceReferences) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>
@@ -3770,7 +3771,7 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
          the editorial body. AdvisorySources handles two-tier filtering
          and renders unlinked entries as plain text (Stage 6.2 — no
          publication-homepage fallback). */}
-      {a.sourceReferences && a.sourceReferences.length > 0 && (
+      {hasDisplayableSources(a.sourceReferences) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>
@@ -3867,7 +3868,7 @@ function KnowledgeFormat({ advisory: a }: AdvisoryMessageProps) {
          Knowledge claims need provenance most of all. AdvisorySources
          handles two-tier filtering and renders unlinked entries as
          plain text (Stage 6.2 — no publication-homepage fallback). */}
-      {a.sourceReferences && a.sourceReferences.length > 0 && (
+      {hasDisplayableSources(a.sourceReferences) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>
@@ -4999,7 +5000,7 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
       ) : null}
 
       {/* ── 15. Sources ──────────────────────────── */}
-      {a.sourceReferences && a.sourceReferences.length > 0 && (
+      {hasDisplayableSources(a.sourceReferences) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>

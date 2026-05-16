@@ -170,3 +170,29 @@ export function filterSourcesForDisplay<T extends { source: string }>(
   // Fallback to Tier 2
   return refs.filter((r) => isWhitelistedSource(r.source));
 }
+
+/**
+ * Stage 14.1c — universal empty-Sources gate.
+ *
+ * Returns true when at least one entry will survive the two-tier
+ * display filter. Render-layer gates (AdvisoryMessage.tsx) check this
+ * before showing the "Sources" section heading: if no row will render
+ * beneath the heading, the heading is suppressed entirely.
+ *
+ * Pre-14.1c bug: AdvisoryMessage gated the section on
+ * `sourceReferences.length > 0`, then AdvisorySources internally
+ * returned null when filterSourcesForDisplay emptied the list. Result:
+ * the SOURCES heading rendered with no rows beneath it on any path
+ * that produced only non-whitelisted source labels (manufacturer URLs,
+ * dealer pages, "SoundStage! Hi-Fi" variant matches, etc.).
+ *
+ * Defense in depth: this gate applies regardless of which upstream
+ * code path produced the source list (brand-vs-brand consultation,
+ * product-vs-product gear-response, future paths).
+ */
+export function hasDisplayableSources<T extends { source: string }>(
+  refs: T[] | undefined | null,
+): refs is T[] {
+  if (!refs || refs.length === 0) return false;
+  return filterSourcesForDisplay(refs).length > 0;
+}
