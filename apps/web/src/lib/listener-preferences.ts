@@ -50,10 +50,16 @@ export interface ListenerProfile {
   immediacy_vs_relaxation: number;
 
   // ── Metadata ──
-  /** 0-1, derived from signalCount (saturates around 6+ signals). */
+  /** 0-1, derived from signalCount (saturates around 6+ signals, capped at 0.85). */
   confidence: number;
   /** Number of preference signals that have been folded into this profile. */
   signalCount: number;
+  /**
+   * Per-dimension signal counts. Once a dimension has received 3+ signals,
+   * subsequent signals on that dimension are halved (diminishing returns)
+   * to avoid runaway confidence from repeated similar phrasing.
+   */
+  dimensionCounts: Partial<Record<ListenerProfileDimension, number>>;
   /** ISO date of last update. */
   lastUpdated: string;
 }
@@ -96,9 +102,16 @@ export function createDefaultProfile(): ListenerProfile {
     immediacy_vs_relaxation: 0.5,
     confidence: 0,
     signalCount: 0,
+    dimensionCounts: {},
     lastUpdated: new Date().toISOString(),
   };
 }
+
+/** Maximum confidence achievable from textual signals alone. */
+export const MAX_PROFILE_CONFIDENCE = 0.85;
+
+/** Per-dimension threshold beyond which signals are halved. */
+const DIMINISHING_RETURNS_THRESHOLD = 3;
 
 // ── Phrase rules ─────────────────────────────────────────
 
@@ -351,22 +364,37 @@ function clamp01(n: number): number {
 
 /**
  * Apply preference signals to a profile, returning a new profile.
- * Each dimension is clamped to [0, 1]. Confidence saturates near 1
- * once signalCount reaches ~6.
+ *
+ * Each dimension is clamped to [0, 1]. Confidence saturates with
+ * signalCount and is capped at MAX_PROFILE_CONFIDENCE (0.85) — text
+ * alone never produces full certainty.
+ *
+ * Diminishing returns: once a dimension has already absorbed
+ * DIMINISHING_RETURNS_THRESHOLD (3) signals in this profile, every
+ * additional signal on that same dimension is halved before being
+ * folded in. This prevents one strongly-worded phrase repeated across
+ * several turns from saturating a dimension.
  */
 export function applySignals(
   profile: ListenerProfile,
   signals: PreferenceSignal[],
 ): ListenerProfile {
   if (!signals.length) return profile;
-  const next: ListenerProfile = { ...profile };
+  const next: ListenerProfile = {
+    ...profile,
+    dimensionCounts: { ...(profile.dimensionCounts ?? {}) },
+  };
   for (const sig of signals) {
+    const priorCount = next.dimensionCounts[sig.dimension] ?? 0;
+    const damping = priorCount >= DIMINISHING_RETURNS_THRESHOLD ? 0.5 : 1;
     const current = next[sig.dimension] as number;
-    next[sig.dimension] = clamp01(current + sig.direction) as never;
+    next[sig.dimension] = clamp01(current + sig.direction * damping) as never;
+    next.dimensionCounts[sig.dimension] = priorCount + 1;
   }
   next.signalCount = profile.signalCount + signals.length;
-  // Confidence saturates: 6 signals ≈ 0.86, 10 ≈ 0.95
-  next.confidence = 1 - Math.exp(-next.signalCount / 3);
+  // Confidence saturates: 6 signals ≈ 0.86, then capped at 0.85.
+  const raw = 1 - Math.exp(-next.signalCount / 3);
+  next.confidence = Math.min(raw, MAX_PROFILE_CONFIDENCE);
   next.lastUpdated = new Date().toISOString();
   return next;
 }
@@ -454,6 +482,10 @@ function joinPhrases(parts: string[]): string {
  *  - Returns a low-confidence note when no dimension deviates
  */
 export function renderProfileSummary(profile: ListenerProfile): string {
+  // A fully default profile produces no text — the UI uses this to hide
+  // the visibility panel entirely until at least one signal has landed.
+  if (profile.signalCount === 0) return '';
+
   // "toward" = the pole the listener leans into.
   // "away"   = the opposite pole of the same dimension (used in "over X" clause).
   const toward: string[] = [];
@@ -473,7 +505,7 @@ export function renderProfileSummary(profile: ListenerProfile): string {
   }
 
   if (toward.length === 0) {
-    return 'Preference signal is still weak — no clear sonic lean has emerged yet.';
+    return 'Early signals are still forming — no clear sonic lean has emerged yet.';
   }
 
   // Stem reflects confidence in how much data backs the profile.

@@ -141,6 +141,14 @@ export function buildTurnContext(
   rawMessage: string,
   audioState: AudioSessionState,
   dismissedFingerprints: Set<string>,
+  /**
+   * Stage PB2.3 — optional accumulated listener profile from prior turns.
+   * When omitted, this turn starts from a fresh default profile (legacy
+   * per-turn snapshot behavior). When provided, the turn's signals are
+   * folded on top of the existing profile so confidence and lean
+   * accumulate across the conversation.
+   */
+  existingListenerProfile?: ListenerProfile,
 ): TurnContext {
   // ── Step 1: Subject extraction ──────────────────────
   const subjectMatches = extractSubjectMatches(rawMessage);
@@ -149,10 +157,14 @@ export function buildTurnContext(
   // ── Step 2: Desire extraction ───────────────────────
   const desires = extractDesires(rawMessage);
 
-  // ── Step 2b: Listener-preference extraction (PB2.2) ──
-  // Sits alongside desire extraction. Per-turn snapshot only.
+  // ── Step 2b: Listener-preference extraction (PB2.2 / PB2.3) ──
+  // Sits alongside desire extraction. If an accumulated profile from
+  // earlier turns is passed in, this turn's signals are folded onto it
+  // so the lean strengthens (with diminishing returns) over time.
+  // Otherwise we fall back to the per-turn snapshot behaviour.
   const preferenceSignals = extractPreferenceSignals(rawMessage);
-  const listenerProfile = applySignals(createDefaultProfile(), preferenceSignals);
+  const baseProfile = existingListenerProfile ?? createDefaultProfile();
+  const listenerProfile = applySignals(baseProfile, preferenceSignals);
 
   // ── Step 3: System description detection ────────────
   const proposedSystem = detectSystemDescription(rawMessage, subjectMatches, audioState);

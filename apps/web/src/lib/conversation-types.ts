@@ -7,6 +7,7 @@ import type { ConversationMode } from './conversation-router';
 import type { ReasoningResult } from './reasoning';
 import type { AdvisoryLink, AdvisoryResponse, SourceReference } from './advisory-response';
 import type { Product } from './products/dacs';
+import type { ListenerProfile as ListenerPreferenceProfile } from './listener-preferences';
 
 /**
  * System direction context attached to diagnostic analysis results.
@@ -165,6 +166,15 @@ export interface ConversationState {
     /** The original user message that started the consultation. */
     originalQuery: string;
   };
+  /**
+   * Stage PB2.3 — accumulated listener preference profile across the
+   * conversation. Folded once per turn from the raw message inside
+   * buildTurnContext and surfaced as a visibility panel once enough
+   * signal has landed. Distinct from listener-profile.ts (trait memory
+   * driven by product likes); this one is driven by phrase-level
+   * preference cues.
+   */
+  listenerPreferenceProfile?: ListenerPreferenceProfile;
   // Future hooks for persistence (unused this pass):
   systemId?: string;
   profileId?: string;

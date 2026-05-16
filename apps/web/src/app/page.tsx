@@ -41,6 +41,13 @@ import {
   findCatalogProduct,
   type ListenerProfile,
 } from '@/lib/listener-profile';
+import {
+  createDefaultProfile as createDefaultListenerPreferenceProfile,
+  applySignals as applyListenerPreferenceSignals,
+  extractPreferenceSignals as extractListenerPreferenceSignals,
+  renderProfileSummary as renderListenerPreferenceSummary,
+  type PreferenceSignal as ListenerPreferenceSignal,
+} from '@/lib/listener-preferences';
 import { checkGlossaryQuestion } from '@/lib/glossary';
 import { fetchWithTimeout, EVALUATE_TIMEOUT_MS } from '@/lib/fetch-with-timeout';
 import { detectIntent, detectExplicitCategoryPivot, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
@@ -309,6 +316,7 @@ type Action =
   | { type: 'SET_CONSULTATION_CONTEXT'; subjects: SubjectMatch[]; originalQuery: string }
   | { type: 'CLEAR_CONSULTATION_CONTEXT' }
   | { type: 'SET_LOADING'; value: boolean }
+  | { type: 'UPDATE_LISTENER_PROFILE'; signals: ListenerPreferenceSignal[] }
   | { type: 'RESET' };
 
 const initialState: ConversationState = {
@@ -316,6 +324,7 @@ const initialState: ConversationState = {
   currentInput: '',
   turnCount: 0,
   isLoading: false,
+  listenerPreferenceProfile: createDefaultListenerPreferenceProfile(),
 };
 
 function reducer(state: ConversationState, action: Action): ConversationState {
@@ -410,8 +419,22 @@ function reducer(state: ConversationState, action: Action): ConversationState {
     case 'SET_LOADING':
       return { ...state, isLoading: action.value };
 
+    case 'UPDATE_LISTENER_PROFILE': {
+      if (!action.signals.length) return state;
+      const base = state.listenerPreferenceProfile
+        ?? createDefaultListenerPreferenceProfile();
+      return {
+        ...state,
+        listenerPreferenceProfile: applyListenerPreferenceSignals(base, action.signals),
+      };
+    }
+
     case 'RESET':
-      return initialState;
+      return {
+        ...initialState,
+        // Fresh default profile on RESET — each conversation starts blank.
+        listenerPreferenceProfile: createDefaultListenerPreferenceProfile(),
+      };
 
     default:
       return state;
@@ -594,6 +617,17 @@ export default function Home() {
     dispatch({ type: 'ADD_USER_MESSAGE' });
     dispatch({ type: 'SET_LOADING', value: true });
 
+    // ── Stage PB2.3 — accumulate listener preference profile ──
+    // Extract phrase-level preference signals once per user turn and
+    // fold them onto the profile already held in conversation state.
+    // The same signals are passed to buildTurnContext(...) below via
+    // state.listenerPreferenceProfile, so the per-turn TurnContext sees
+    // the same accumulated lean we surface in the visibility panel.
+    const turnPreferenceSignals = extractListenerPreferenceSignals(submittedText);
+    if (turnPreferenceSignals.length > 0) {
+      dispatch({ type: 'UPDATE_LISTENER_PROFILE', signals: turnPreferenceSignals });
+    }
+
     // Check for glossary questions first — no API call needed.
     // Skip when the submission originated from a clicked follow-up CTA:
     // advisor-emitted follow-ups are conversational, not definitional, so
@@ -681,7 +715,7 @@ export default function Home() {
       awaitingListeningPathRef.current = false;
       onboardingContextRef.current = null;
 
-      const earlyTurnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current);
+      const earlyTurnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current, state.listenerPreferenceProfile);
       // Blocker fix §1: pass active-saved-system flag so bare evaluation
       // phrasings ("assess my system", "evaluate the saved system",
       // "tell me what you think") route to system_assessment instead of
@@ -777,7 +811,7 @@ export default function Home() {
           if (convResult.response.synthesizedQuery) {
             const synthesized = convResult.response.synthesizedQuery;
             const synCategory = convResult.state.facts.listeningPath === 'headphones' ? 'headphones' : 'speakers';
-            const synTurnCtx = buildTurnContext(synthesized, audioState, dismissedFingerprintsRef.current);
+            const synTurnCtx = buildTurnContext(synthesized, audioState, dismissedFingerprintsRef.current, state.listenerPreferenceProfile);
             const synAdvisoryCtx: ShoppingAdvisoryContext = {
               systemComponents: synTurnCtx.activeSystem
                 ? synTurnCtx.activeSystem.components.map((c) => {
@@ -1030,7 +1064,7 @@ export default function Home() {
         // Build context and fire shopping pipeline.
         // Attempt API evaluation for richer signals; on failure, fall back
         // to deterministic shopping with empty signals.
-        const turnCtx = buildTurnContext(shoppingText, audioState, dismissedFingerprintsRef.current);
+        const turnCtx = buildTurnContext(shoppingText, audioState, dismissedFingerprintsRef.current, state.listenerPreferenceProfile);
         let chipSignals: import('@/lib/signal-types').ExtractedSignals = {
           traits: {} as Record<string, import('@/lib/signal-types').SignalDirection>,
           symptoms: [] as string[],
@@ -1106,7 +1140,7 @@ export default function Home() {
       if (chipIntent === 'diagnosis') {
         // User described a problem → route directly to diagnosis
         // Let the normal diagnosis path handle it, but force intent
-        const turnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current);
+        const turnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current, state.listenerPreferenceProfile);
         // If no system is declared, ask for system before diagnosing
         if (!turnCtx.activeSystem && !audioState.activeSystemRef) {
           dispatch({
@@ -1127,7 +1161,7 @@ export default function Home() {
       if (chipIntent === 'improvement') {
         // User provided system details → treat as system_assessment
         // The text likely contains component names now
-        const turnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current);
+        const turnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current, state.listenerPreferenceProfile);
         if (turnCtx.subjectMatches.length > 0) {
           // Has gear names — route to consultation/assessment
           // Fall through to normal routing with a nudge toward consultation
@@ -1150,7 +1184,7 @@ export default function Home() {
 
       if (chipIntent === 'comparison') {
         // User named components to compare
-        const turnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current);
+        const turnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current, state.listenerPreferenceProfile);
         if (turnCtx.subjectMatches.length >= 2) {
           // Two subjects detected — fall through to comparison routing
           // Normal detectIntent will pick up 'comparison' since text has two products
@@ -1225,7 +1259,7 @@ export default function Home() {
       const scratchSuffix = isFromScratch ? ' Starting from scratch.' : '';
       const synthesized = synthesizeOnboardingQuery(ctx.musicDescription, category, submittedText) + scratchSuffix;
       // Replace the submitted text with the synthesized query for downstream routing
-      const syntheticTurnCtx = buildTurnContext(synthesized, audioState, dismissedFingerprintsRef.current);
+      const syntheticTurnCtx = buildTurnContext(synthesized, audioState, dismissedFingerprintsRef.current, state.listenerPreferenceProfile);
       const syntheticAdvisoryCtx: ShoppingAdvisoryContext = {
         systemComponents: syntheticTurnCtx.activeSystem
           ? syntheticTurnCtx.activeSystem.components.map((c) => {
@@ -1304,7 +1338,7 @@ export default function Home() {
     // Single extraction pass: subjects, desires, system detection,
     // active system resolution, profile, confidence — all builders
     // and routing decisions consume this same object.
-    const turnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current);
+    const turnCtx = buildTurnContext(submittedText, audioState, dismissedFingerprintsRef.current, state.listenerPreferenceProfile);
 
     // ── Build AudioProfile context (shared across all advisory paths) ──
     //
@@ -4093,7 +4127,7 @@ export default function Home() {
     const syntheticQuery = `I want ${category} — I prefer ${phrases.join(', ')}`;
 
     try {
-      const turnCtx = buildTurnContext(syntheticQuery, audioState, dismissedFingerprintsRef.current);
+      const turnCtx = buildTurnContext(syntheticQuery, audioState, dismissedFingerprintsRef.current, state.listenerPreferenceProfile);
       const shoppingCtx = detectShoppingIntent(syntheticQuery, capturedSignals, turnCtx.activeSystem);
       const reasoning = reason(syntheticQuery, turnCtx.desires, capturedSignals, tasteProfile ?? null, shoppingCtx, turnCtx.activeProfile);
       dispatch({ type: 'SET_REASONING', reasoning });
@@ -4375,6 +4409,56 @@ export default function Home() {
       {hasMessages && profileSnapshot && (
         <ListenerProfileBadge snapshot={profileSnapshot} />
       )}
+
+      {/* Stage PB2.3 — listener preference panel (phrase-level lean). Shown
+          once we have at least 2-3 signals (confidence > 0.2). One short
+          observational sentence with uncertainty language. Hidden until
+          renderProfileSummary returns text — default profile renders to ''. */}
+      {hasMessages
+        && (state.listenerPreferenceProfile?.confidence ?? 0) > 0.2
+        && (() => {
+          const summary = renderListenerPreferenceSummary(
+            state.listenerPreferenceProfile ?? createDefaultListenerPreferenceProfile(),
+          );
+          if (!summary) return null;
+          return (
+            <div
+              role="note"
+              aria-label="What you seem to value"
+              style={{
+                padding: '0.55rem 0.85rem',
+                border: `1px solid ${COLOR.borderLight}`,
+                borderRadius: 8,
+                background: COLOR.cardBg,
+                marginBottom: '0.75rem',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase' as const,
+                  color: COLOR.textMuted,
+                  marginBottom: '0.3rem',
+                }}
+              >
+                What you seem to value
+              </div>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '0.82rem',
+                  lineHeight: 1.45,
+                  color: COLOR.textSecondary,
+                  fontStyle: 'italic',
+                }}
+              >
+                {summary}
+              </p>
+            </div>
+          );
+        })()}
 
       {/* System editor modal */}
       {systemEditorOpen && (
