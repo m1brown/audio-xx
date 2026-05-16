@@ -452,6 +452,15 @@ export const SPEAKER_PRODUCTS: Product[] = [
       notes: 'Wide-baffle design produces substantial bass energy that can overwhelm rooms smaller than 15 square metres. Needs breathing room — pull away from rear walls to let the presentation open up.',
     },
     sourceReferences: [
+      // Twittering Machines as lead reviewer for DeVore — Lavorgna runs
+      // the O/96 as his daily reference and has covered the lineage
+      // (O/96, O/Bronze) more deeply than anyone.
+      {
+        source: 'Twittering Machines',
+        note: 'Michael Lavorgna review of the O/96 — his daily reference for two-plus years. The canonical TM Leben/DeVore system anchor.',
+        url: 'https://twitteringmachines.com/review-devore-fidelity-o-96-loudspeakers/',
+        title: 'Review: DeVore Fidelity O/96 Loudspeakers',
+      },
       { source: 'Stereophile', note: 'Art Dudley review establishing the O/96 as a modern classic for tube systems.', url: 'https://www.stereophile.com/content/devore-fidelity-orangutan-o96-loudspeaker' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg review praising engagement and musicality.' },
       { source: '6moons', note: 'Srajan Ebaen review covering the high-efficiency design philosophy.' },

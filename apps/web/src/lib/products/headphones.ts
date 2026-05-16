@@ -540,6 +540,14 @@ export const HEADPHONE_PRODUCTS: HeadphoneProduct[] = [
     },
     description: 'Refined iteration of the Grado house sound with over-ear form factor and wood-damped enclosure. Retains the energetic, forward character of SR series but with improved warmth, spatial layering, and treble control. Exceptional texture and tonal grain. Natural fit for rock, jazz, and vocal-focused music. Open-back — no isolation.',
     retailer_links: [],
+    sourceReferences: [
+      {
+        source: 'Darko.Audio',
+        note: 'John Darko on the RS2x / RS1x — Grado\'s X-driver iteration with maple and hemp wood earshells.',
+        url: 'https://darko.audio/2021/11/got-wood-grados-rs2x-rs1x/',
+        title: 'Got wood? Grado\'s RS2x & RS1x',
+      },
+    ],
     headphoneMeta: {
       formFactor: 'over-ear',
       wireless: false,
@@ -585,6 +593,14 @@ export const HEADPHONE_PRODUCTS: HeadphoneProduct[] = [
     },
     description: 'Exceptional soundstage king with analytical character and spacious presentation. Ring radiator design delivers wide, holographic imaging. Treble is smooth compared to original HD800 but still bright-leaning. Bass is present but not dominant. Exceptional clarity and transparency. Requires quality amplification to shine.',
     retailer_links: [],
+    sourceReferences: [
+      {
+        source: 'Darko.Audio',
+        note: 'John Darko on the HD800 S Anniversary Edition — flagship dynamic driver as continuing reference.',
+        url: 'https://darko.audio/2020/09/going-for-gold-sennheisers-hd800-s-anniversary-edition/',
+        title: 'Going for gold: Sennheiser\'s HD800 S Anniversary Edition',
+      },
+    ],
     headphoneMeta: {
       formFactor: 'over-ear',
       wireless: false,

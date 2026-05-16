@@ -4972,6 +4972,15 @@ const EDITORIAL_SOURCES: Array<{
   {
     brandPattern: /\bdevore\b/i,
     sources: [
+      // Twittering Machines listed first — Michael Lavorgna's O/96 is
+      // his daily reference; his coverage is the strongest editorial
+      // attribution for the brand.
+      {
+        outlet: 'Twittering Machines',
+        note: 'Michael Lavorgna review of the O/96 — his daily reference for two-plus years; later O/Bronze coverage builds on it.',
+        url: 'https://twitteringmachines.com/review-devore-fidelity-o-96-loudspeakers/',
+        title: 'Review: DeVore Fidelity O/96 Loudspeakers',
+      },
       { outlet: '6moons', note: 'DeVore Fidelity O/96 coverage — high-efficiency speaker design' },
       {
         outlet: 'Stereophile',
@@ -5015,7 +5024,74 @@ const EDITORIAL_SOURCES: Array<{
   {
     brandPattern: /\btotaldac\b/i,
     sources: [
+      // Twittering Machines as lead reviewer — Lavorgna's d1-unity review
+      // notes totaldac has been his "DAC of choice for 10+ years."
+      {
+        outlet: 'Twittering Machines',
+        note: 'Michael Lavorgna review of the d1-unity — totaldac as his reference DAC over 10+ years and 100+ DACs reviewed.',
+        url: 'https://twitteringmachines.com/review-totaldac-d1-unity-dac/',
+        title: 'Review: totaldac d1-unity DAC',
+      },
       { outlet: '6moons', note: 'TotalDAC reviews — discrete R2R ladder DAC analysis' },
+    ],
+  },
+  // ── Darko-as-lead-reviewer brands ────────────────────
+  // The user designated Darko.Audio as the lead reviewer for WiiM and
+  // for the headphone categories below. Each entry threads in the
+  // Darko piece that best represents the brand's catalog presence.
+  {
+    brandPattern: /\bwiim\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko review of the WiiM AMP — "DAR-KO award winner" and product-of-the-year contender for entry-level value.',
+        url: 'https://darko.audio/2023/11/wiim-amp-review-flying-high-on-value-for-money/',
+        title: 'WiiM AMP review: flying high on value for money',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bsennheiser\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko on the HD800 S Anniversary Edition — flagship dynamic driver as continuing reference.',
+        url: 'https://darko.audio/2020/09/going-for-gold-sennheisers-hd800-s-anniversary-edition/',
+        title: 'Going for gold: Sennheiser\'s HD800 S Anniversary Edition',
+      },
+    ],
+  },
+  {
+    brandPattern: /\baudeze\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko review of the LCD-5 and CRBN — Audeze planar magnetics at the flagship tier.',
+        url: 'https://darko.audio/2023/02/audeze-lcd-5-and-crbn-review/',
+        title: 'Audeze LCD-5 and CRBN review',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bhifiman\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko review of the HE600 — HiFiMAN planar magnetic open-back.',
+        url: 'https://darko.audio/2026/04/hifiman-he600-review-its-whats-on-the-inside-that-counts/',
+        title: 'HiFiMAN HE600 review: it\'s what\'s on the inside that counts',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bgrado\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko on the RS2x / RS1x — Grado\'s X-driver iteration with maple and hemp wood earshells.',
+        url: 'https://darko.audio/2021/11/got-wood-grados-rs2x-rs1x/',
+        title: 'Got wood? Grado\'s RS2x & RS1x',
+      },
     ],
   },
 ];

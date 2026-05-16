@@ -3904,6 +3904,15 @@ export const DAC_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
+      // Twittering Machines as lead reviewer for TotalDAC — Lavorgna
+      // describes totaldac as his "DAC of choice" over 10+ years and
+      // 100+ DACs reviewed.
+      {
+        source: 'Twittering Machines',
+        note: 'Michael Lavorgna review of the d1-unity — clarity over d1-tube, totaldac as reference DAC across 10+ years.',
+        url: 'https://twitteringmachines.com/review-totaldac-d1-unity-dac/',
+        title: 'Review: totaldac d1-unity DAC',
+      },
       { source: 'Darko.Audio', note: 'Review of unified architecture and Vishay resistor implementation.' },
       { source: 'Stereophile', note: 'Listening coverage of TotalDAC\'s organic presentation and timbre accuracy.' },
       { source: 'AudioGon community', note: 'Comparisons with d1-twelve MK2 and other statement-tier R2R DACs.' },
