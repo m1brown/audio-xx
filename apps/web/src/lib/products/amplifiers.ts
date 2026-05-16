@@ -1476,6 +1476,14 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
         { gains: 'speed, transparency, and minimalist purity', cost: 'tonal richness, harmonic density, and the body that some music demands', relative_to: 'tube or thick-sounding solid-state designs', basis: 'listener_consensus' },
       ],
     },
+    sourceReferences: [
+      {
+        source: '6moons',
+        note: 'Srajan Ebaen review of the Job 225 — Goldmund-derived lateral MOSFET DC-coupled wide-bandwidth amplifier; the lineage the Integrated descends from.',
+        url: 'https://6moons.com/audioreviews/job/1.html',
+        title: 'Job Electronics Job 225',
+      },
+    ],
     notes: 'Discontinued. Goldmund-derived circuit at a fraction of the Goldmund price. Used market is the only option.',
     philosophy: 'neutral',
     marketType: 'nonTraditional',

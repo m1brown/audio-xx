@@ -4924,7 +4924,14 @@ const EDITORIAL_SOURCES: Array<{
   {
     brandPattern: /\bjob\b/i,
     sources: [
-      { outlet: '6moons', note: 'JOB INTegrated review — Goldmund-derived circuit analysis' },
+      // 6moons as lead reviewer for Job (Srajan Ebaen's coverage of
+      // Goldmund-derived circuit work).
+      {
+        outlet: '6moons',
+        note: 'Srajan Ebaen review of the Job 225 — Goldmund-derived lateral MOSFET DC-coupled wide-bandwidth amplifier.',
+        url: 'https://6moons.com/audioreviews/job/1.html',
+        title: 'Job Electronics Job 225',
+      },
       { outlet: 'Darko.Audio', note: 'JOB 225 coverage — compact high-current amplification' },
     ],
   },
@@ -5091,6 +5098,98 @@ const EDITORIAL_SOURCES: Array<{
         note: 'John Darko on the RS2x / RS1x — Grado\'s X-driver iteration with maple and hemp wood earshells.',
         url: 'https://darko.audio/2021/11/got-wood-grados-rs2x-rs1x/',
         title: 'Got wood? Grado\'s RS2x & RS1x',
+      },
+    ],
+  },
+  // ── 6moons-as-lead-reviewer brands ───────────────────
+  // The user designated 6moons (Srajan Ebaen and reviewing team) as
+  // the lead reviewer for the brands below. Each entry threads in the
+  // 6moons piece that best represents the brand's catalog presence.
+  {
+    brandPattern: /\bkinki\b/i,
+    sources: [
+      {
+        outlet: '6moons',
+        note: '6moons review of the Kinki Studio EX-M1 — value-tier high-current Class A/B integrated.',
+        url: 'https://www.6moons.com/audioreviews2/kinki2/1.html',
+        title: 'Kinki Studio EX-M1',
+      },
+    ],
+  },
+  {
+    brandPattern: /\blaiv\b/i,
+    sources: [
+      {
+        outlet: '6moons',
+        note: '6moons review of the Laiv Crescendo Verse — discrete R2R DAC built around the same engineering as the Harmony.',
+        url: 'https://6moons.com/audioreview_articles/laiv-audio-crescendo-verse/3/',
+        title: 'Laiv Audio Crescendo Verse',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bdenafrips\b/i,
+    sources: [
+      {
+        outlet: '6moons',
+        note: '6moons review of the Denafrips Terminator — Srajan Ebaen coverage of the flagship discrete R2R DAC.',
+        url: 'https://6moons.com/audioreviews2/denafrips/1.html',
+        title: 'Denafrips Terminator',
+      },
+    ],
+  },
+  {
+    brandPattern: /\btopping\b/i,
+    sources: [
+      {
+        outlet: '6moons',
+        note: '6moons review of the Topping B200 — fully-balanced discrete NFCA stereo amplifier.',
+        url: 'https://6moons.com/audioreview_articles/topping-b200/2/',
+        title: 'Topping B200',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bwlm\b/i,
+    sources: [
+      {
+        outlet: '6moons',
+        note: '6moons review of the WLM Diva Monitor with Diva Control — coaxial wideband design with room-tuning network.',
+        url: 'https://6moons.com/audioreviews/wlm/divamonitor.html',
+        title: 'WLM Diva Monitor with Diva Control',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bboenicke\b/i,
+    sources: [
+      {
+        outlet: '6moons',
+        note: '6moons review of the Boenicke W8 — floorstander delivering mini-monitor staging with full-system scale.',
+        url: 'https://6moons.com/audioreviews2/boenicke3/4.html',
+        title: 'Boenicke Audio W8',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bqualio\b/i,
+    sources: [
+      {
+        outlet: '6moons',
+        note: '6moons review of the Qualio IQ — Mundorf AMT + SB Acoustics 6.5" midrange open-baffle three-way.',
+        url: 'https://6moons.com/audioreview_articles/qualio-iq/',
+        title: 'Qualio Audio IQ',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bcrayon\b/i,
+    sources: [
+      {
+        outlet: '6moons',
+        note: '6moons review of the Crayon Audio CIA-1T — compact Austrian Class A/B integrated.',
+        url: 'https://6moons.com/audioreviews2/crayon/4.html',
+        title: 'Crayon Audio CIA-1T',
       },
     ],
   },

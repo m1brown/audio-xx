@@ -2568,7 +2568,12 @@ export const DAC_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
-      { source: '6moons', note: 'Srajan Ebaen review establishing the Terminator II as a reference R2R.' },
+      {
+        source: '6moons',
+        note: 'Srajan Ebaen review of the Denafrips Terminator — flagship discrete R2R DAC; the Terminator II is its direct descendant.',
+        url: 'https://6moons.com/audioreviews2/denafrips/1.html',
+        title: 'Denafrips Terminator',
+      },
       { source: 'Headphone.Guru', note: 'Review praising tonal density and soundstage scale.' },
       { source: 'Head-Fi community', note: 'Extensive owner consensus on analog-like presentation.' },
     ],

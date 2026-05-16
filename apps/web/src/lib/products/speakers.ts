@@ -1821,7 +1821,12 @@ export const SPEAKER_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
-      { source: '6moons', note: 'Review praising the W8\'s holographic staging and natural warmth.' },
+      {
+        source: '6moons',
+        note: '6moons review praising the W8\'s holographic staging — mini-monitor soundstaging with grown-up scale and conviction.',
+        url: 'https://6moons.com/audioreviews2/boenicke3/4.html',
+        title: 'Boenicke Audio W8',
+      },
       { source: 'HiFi+', note: 'Review noting the disappearing act and musical engagement.' },
     ],
     notes: 'Swiss manufacturing. The swing-base decoupling system is key to the W8\'s imaging precision. Available in multiple wood finishes. Benefits from good amplification — 50–100W recommended.',
