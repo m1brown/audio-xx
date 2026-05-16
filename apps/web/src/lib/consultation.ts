@@ -5193,6 +5193,283 @@ const EDITORIAL_SOURCES: Array<{
       },
     ],
   },
+  // ── PB1.2 follow-up: catalog-wide coverage pass ─────
+  // 24 additional brands added to close the per-component
+  // attribution gaps surfaced by the WLM/JOB/Hugo/Eversolo system
+  // review. All URLs verified via WebSearch — direct reviews or
+  // sibling-product reviews where the brand is covered but the
+  // specific product isn't. Stage 6.2 link discipline preserved.
+
+  // Darko lead — DACs, streamers, amps, and headphone brands
+  {
+    brandPattern: /\bchord\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko review of the original Chord Hugo DAC/headphone amplifier — the start of the Chord FPGA coverage.',
+        url: 'https://darko.audio/2014/11/chord-hugo-dac-headphone-amplifier-review/',
+        title: 'Chord Electronics Hugo DAC & headphone amplifier review',
+      },
+    ],
+  },
+  {
+    brandPattern: /\beversolo\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko video review of the Eversolo DMP-A6 — Future-Fi favourite for streaming integration.',
+        url: 'https://darko.audio/2023/07/this-is-a-big-one-eversolo-dmp-a6-video-review/',
+        title: 'This is a big one: Eversolo DMP-A6 video review',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bbluesound\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko video review of the Bluesound NODE X — 10-year anniversary streaming DAC.',
+        url: 'https://darko.audio/2023/06/bluesound-node-x-video-review/',
+        title: 'Bluesound NODE X video review',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bschiit\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko on the Schiit Aegir — beyond Class A, $799 stereo or monoblock amplifier.',
+        url: 'https://darko.audio/2020/05/a-short-film-about-the-schiit-aegir-vidar/',
+        title: 'A short film about the Schiit Aegir (& Vidar)',
+      },
+    ],
+  },
+  {
+    brandPattern: /\brme\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko long-form review of the RME ADI-2 DAC FS — pro-audio pragmatism with 5-band parametric EQ.',
+        url: 'https://darko.audio/2021/01/a-long-film-about-the-rme-adi-2-dac-fs/',
+        title: 'A long film about the RME ADI-2 DAC FS',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bsmsl\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko on the SMSL M300 DAC — value-tier balanced DAC coverage from a long-running budget brand.',
+        url: 'https://darko.audio/2019/06/red-black-blue-balanced-smsls-m300-dac/',
+        title: 'Red, black, blue & balanced: SMSL\'s M300 DAC',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bgustard\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko review of the Gustard R30 R2R streaming DAC — flagship discrete R2R with Roon Ready streaming.',
+        url: 'https://darko.audio/2026/01/when-r2r-goes-streaming-gustard-r30-dac-review/',
+        title: 'When R2R goes streaming: Gustard R30 DAC review',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bfiio\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko on the FiiO K13 R2R — tubes vs solid-state in FiiO\'s desktop DAC/amp lineage.',
+        url: 'https://darko.audio/2026/03/tubes-vs-solid-state-fiio-k13-r2r-vs-warmer-r2r/',
+        title: 'Tubes vs. solid-state: FiiO K13 R2R review (vs. Warmer R2R)',
+      },
+    ],
+  },
+  {
+    brandPattern: /\binnuos\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko short film on the Innuos ZEN MK3 — custom motherboard, dual linear PSU, anti-microphonic feet.',
+        url: 'https://darko.audio/2019/02/a-short-film-about-the-innuos-zen-mk3/',
+        title: 'A short film about the Innuos ZEN MK3',
+      },
+    ],
+  },
+  // Darko lead — headphone brands (per user direction: all headphones → Darko)
+  {
+    brandPattern: /\bapple\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko video review of the Apple AirPods Pro 2 — the noise-cancelling earbud benchmark.',
+        url: 'https://darko.audio/2022/10/apple-airpods-pro-2-review/',
+        title: 'Apple AirPods Pro 2 video review',
+      },
+    ],
+  },
+  {
+    brandPattern: /campfire/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko short film covering Campfire Audio\'s Solaris (flagship), Polaris II, and Andromeda IEMs.',
+        url: 'https://darko.audio/2020/01/a-short-film-about-campfire-audios-solaris-polaris-ii-andromeda/',
+        title: 'A short film about Campfire Audio\'s Solaris, Polaris II & Andromeda',
+      },
+    ],
+  },
+  {
+    brandPattern: /dan clark/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko short film on the Dan Clark Audio Aeon 2 — planar magnetic closed-back lineage that became the Stealth.',
+        url: 'https://darko.audio/2019/11/a-short-film-about-the-dan-clark-audio-aeon-2/',
+        title: 'A short film about the Dan Clark Audio Aeon 2',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bfocal\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko short film on the Focal Stellia — closed-back beryllium-dome flagship; Focal house sound reference.',
+        url: 'https://darko.audio/2021/08/a-short-film-about-the-focal-stellia/',
+        title: 'A short film about the Focal Stellia',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bmeze\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko short film on the Meze Empyrean — the original isodynamic hybrid array planar that the Empyrean II refines.',
+        url: 'https://darko.audio/2019/02/a-short-film-about-the-meze-empyrean/',
+        title: 'A short film about the Meze Empyrean',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bsony\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko long-form review of the Sony WH-1000XM5 vs Bowers & Wilkins Px7 S2 — wireless ANC headphone reference.',
+        url: 'https://darko.audio/2022/10/a-long-film-about-the-sony-wh-1000xm5-vs-bowers-wilkins-px7-s2/',
+        title: 'A long film about the Sony WH-1000XM5 vs. Bowers & Wilkins Px7 S2',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bmoondrop\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko on Moondrop\'s Old Fashioned $25 headphones — value-tier Moondrop coverage.',
+        url: 'https://darko.audio/2025/12/moondrops-25-old-fashioned-headphones-review-not-necessary/',
+        title: 'Moondrop\'s $25 Old Fashioned headphones: review not necessary',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bzmf\b/i,
+    sources: [
+      {
+        outlet: 'Darko.Audio',
+        note: 'John Darko on the ZMF Pendant — ZMF\'s tube headphone amplifier, established the brand\'s coverage on Darko.',
+        url: 'https://darko.audio/2020/10/moving-upfield-the-zmf-pendant/',
+        title: 'Moving upfield: the ZMF Pendant',
+      },
+    ],
+  },
+
+  // 6moons lead — boutique/specialist brands
+  {
+    brandPattern: /\baurorasound\b/i,
+    sources: [
+      {
+        outlet: '6moons',
+        note: '6moons review of the Aurorasound Heada — headphone amp/preamp from the Japanese boutique that designed the HFSA-01.',
+        url: 'https://6moons.com/audioreviews2/aurorasound3/1.html',
+        title: 'Aurorasound Heada',
+      },
+    ],
+  },
+  {
+    brandPattern: /linear tube|\blta\b/i,
+    sources: [
+      {
+        outlet: '6moons',
+        note: '6moons review of the Linear Tube Audio Z10 ZOTL — proprietary Berning circuit, all-tube architecture without transformers.',
+        url: 'https://6moons.com/audioreview_articles/lineartubeaudio2/',
+        title: 'Linear Tube Audio Z10',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bdecware\b/i,
+    sources: [
+      {
+        outlet: '6moons',
+        note: '6moons review of the Decware SE84CSP — preamp counterpart to the SE84UFO; same SET design philosophy.',
+        url: 'https://6moons.com/audioreviews/decware2/pre.html',
+        title: 'Decware SE84CSP',
+      },
+    ],
+  },
+  {
+    brandPattern: /\baudalytic\b/i,
+    sources: [
+      {
+        outlet: '6moons',
+        note: '6moons follow-up review of the Audalytic DR70 — discrete R2R DAC with 1-bit DSD direct path.',
+        url: 'https://6moons.com/audioreview_articles/audalytic-dr70-2nd-thoughts/',
+        title: 'Audalytic DR70 — 2nd thoughts',
+      },
+    ],
+  },
+  {
+    brandPattern: /\bgoldmund\b/i,
+    sources: [
+      {
+        outlet: '6moons',
+        note: '6moons review of the Goldmund Telos 590 NextGen — flagship integrated; Goldmund\'s reference for the Job-derived lineage.',
+        url: 'https://6moons.com/audioreviews2/goldmund3/1.html',
+        title: 'Goldmund Telos 590 NextGen',
+      },
+    ],
+  },
+
+  // Stereophile lead — brands with strongest Stereophile coverage
+  {
+    brandPattern: /\bmission\b/i,
+    sources: [
+      {
+        outlet: 'Stereophile',
+        note: 'Stereophile review of the Mission 770 — Peter Comeau\'s 2022 reinterpretation of the 1978 BBC-era classic.',
+        url: 'https://www.stereophile.com/content/mission-770-loudspeaker',
+        title: 'Mission 770 loudspeaker',
+      },
+    ],
+  },
+  {
+    brandPattern: /ampsandsound/i,
+    sources: [
+      {
+        outlet: 'Stereophile',
+        note: 'Stereophile review of the Ampsandsound Mogwai — Justin Weber\'s US-made single-ended tube integrated; same design lineage as the Stereo 17.',
+        url: 'https://www.stereophile.com/content/ampsandsound-mogwai',
+        title: 'Ampsandsound Mogwai',
+      },
+    ],
+  },
 ];
 
 /**
