@@ -546,6 +546,16 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       ],
     },
     sourceReferences: [
+      // Twittering Machines (Michael Lavorgna) — strongest editorial
+      // coverage of the CS600 lineage. The article is for the
+      // pre-X CS600 specifically; the CS600X is the direct descendant
+      // (same push-pull topology, refined power/headroom).
+      {
+        source: 'Twittering Machines',
+        note: 'Michael Lavorgna — his 2018 Product of the Year, returned to his reference system in 2022. Covers the CS600 lineage that the CS600X descends from.',
+        url: 'https://twitteringmachines.com/system-building-the-leben-cs600-integrated-amplifier-the-return/',
+        title: 'System Building — The Leben CS600 Integrated Amplifier: The Return',
+      },
       // Stage 14.2 follow-up: prior "6moons CS600X review" entry was
       // a misattribution — 6moons covers Leben CS-300X, CS660P, CS-1000P,
       // RS28CX preamp and a Leben/Shindo/Harbeth system feature, but does

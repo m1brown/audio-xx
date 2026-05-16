@@ -4931,6 +4931,16 @@ const EDITORIAL_SOURCES: Array<{
   {
     brandPattern: /\bleben\b/i,
     sources: [
+      // Twittering Machines listed first per user preference — Michael
+      // Lavorgna ran Leben as his reference integrated for years and
+      // his 2022 "Return" piece is the strongest editorial coverage of
+      // the CS600 lineage.
+      {
+        outlet: 'Twittering Machines',
+        note: 'Michael Lavorgna on the Leben CS600 — his 2018 Product of the Year, returned to his reference system in 2022.',
+        url: 'https://twitteringmachines.com/system-building-the-leben-cs600-integrated-amplifier-the-return/',
+        title: 'System Building — The Leben CS600 Integrated Amplifier: The Return',
+      },
       {
         outlet: '6moons',
         note: 'Leben CS300X review — push-pull EL84 tube integrated',
