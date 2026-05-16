@@ -2204,7 +2204,10 @@ function buildKnowledgeBrandConsultation(entry: BrandKnowledge): ConsultationRes
  *
  * All comparison reasoning is deterministic and validated before rendering.
  */
-function buildBrandComparison(
+// Exported (Stage 14.1b) so the comparison-source propagation
+// regression test can drive the full builder end-to-end without
+// reconstructing the consultation dispatcher.
+export function buildBrandComparison(
   profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
   profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
   queryText?: string,
@@ -5047,50 +5050,138 @@ function buildComparisonSourceRefs(
 
 /**
  * Build structured SourceReference objects from brand profiles for comparisons.
- * Returns references with URLs so AdvisorySources renders them as clickable links.
- * Pulls from brand profile review/manufacturer links and product sourceReferences.
+ *
+ * Stage 14.1b — comparison-source propagation fix.
+ *
+ * Pre-14.1b the function pushed brand-profile `links` entries (manufacturer
+ * websites, dealer URLs) indiscriminately. The renderer's
+ * `filterSourcesForDisplay` (two-tier whitelist) then stripped all of them,
+ * which left the SOURCES section header rendering with no rows beneath
+ * it — the empty-block bug the audit caught on "hegel vs shindo" and other
+ * brand-vs-brand outputs.
+ *
+ * The new aggregation walks four sources in priority order, only pushing
+ * entries whose `source` matches a whitelisted publication, and dedupes
+ * by `source + url`:
+ *
+ *   1. EDITORIAL_SOURCES — per-brand curated publication-aligned
+ *      attributions. Plain text (no URL) — Stage 6.2 forbids homepage
+ *      fallback links, and these are intentionally authored URL-less so
+ *      the renderer surfaces the bolded publication + note in plain
+ *      form. Eligible for either Tier 1 (6moons, Darko.Audio) or Tier 2
+ *      (Stereophile, TAS) per source-whitelist tiers.
+ *   2. reviewerQuotes — extract publication name from the parenthetical
+ *      suffix (`"Herb Reichert (Stereophile)" → "Stereophile"`). Carries
+ *      any per-quote `url` / `title` authored under Stage 14.1's type
+ *      extension; renders as plain text when those fields are absent.
+ *   3. Product-level `sourceReferences` — for catalog products whose
+ *      brand matches either side. Preserves authored `url` / `title`.
+ *   4. Brand-profile `links` of `kind: 'review'` — last resort, only
+ *      when the link label is itself a whitelisted publication. Manufacturer
+ *      and dealer links are excluded by design; they are not source
+ *      attributions and pushing them produced the pre-14.1b empty-section
+ *      regression.
+ *
+ * Stage 6.2 discipline preserved: no homepage fallback URLs, no guessed
+ * links, plain text allowed when URL missing, dedupe by source+url.
  */
 function buildComparisonStructuredSources(
   profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
   profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
 ): import('./advisory-response').SourceReference[] | undefined {
   const refs: import('./advisory-response').SourceReference[] = [];
-  const usedUrls = new Set<string>();
+  // Dedupe by `source + url` pair. URL-less plain-text citations are
+  // deduped by source alone (no URL distinguishes them).
+  const seenKeys = new Set<string>();
+  const keyOf = (source: string, url?: string) =>
+    `${source.toLowerCase()}|${(url ?? '').toLowerCase()}`;
+  const tryPush = (entry: {
+    source: string;
+    note: string;
+    url?: string;
+    title?: string;
+  }): void => {
+    if (refs.length >= 5) return;
+    if (!isWhitelistedSource(entry.source)) return;
+    const k = keyOf(entry.source, entry.url);
+    if (seenKeys.has(k)) return;
+    seenKeys.add(k);
+    refs.push(entry);
+  };
 
-  // Extract links from BrandProfiles
+  const nameA = 'names' in profileA
+    ? (profileA as BrandProfile).names[0]
+    : (profileA as { name: string }).name;
+  const nameB = 'names' in profileB
+    ? (profileB as BrandProfile).names[0]
+    : (profileB as { name: string }).name;
+
+  // 1. Per-brand editorial sources (whitelist-aligned, plain text).
+  for (const sideName of [nameA, nameB]) {
+    for (const entry of EDITORIAL_SOURCES) {
+      if (!entry.brandPattern.test(sideName)) continue;
+      for (const src of entry.sources) {
+        tryPush({ source: src.outlet, note: src.note });
+      }
+    }
+  }
+
+  // 2. reviewerQuotes — extract whitelisted publication from "Reviewer
+  //    (Publication)" suffix.
+  for (const profile of [profileA, profileB]) {
+    if (!('reviewerQuotes' in profile)) continue;
+    const bp = profile as BrandProfile;
+    if (!bp.reviewerQuotes) continue;
+    const brand = bp.names[0];
+    for (const q of bp.reviewerQuotes) {
+      const parenMatch = q.source.match(/\(([^)]+)\)\s*$/);
+      const publication = (parenMatch?.[1] ?? q.source).trim();
+      if (!isWhitelistedSource(publication)) continue;
+      const reviewer = parenMatch
+        ? q.source.slice(0, parenMatch.index).trim()
+        : '';
+      const note = reviewer
+        ? `${reviewer} on ${brand}`
+        : `${brand} — reviewer attribution`;
+      tryPush({ source: publication, note, url: q.url, title: q.title });
+    }
+  }
+
+  // 3. Product-level sourceReferences (preserves authored url/title).
+  for (const product of ALL_PRODUCTS) {
+    const brandLower = product.brand.toLowerCase();
+    if (
+      brandLower !== nameA.toLowerCase() &&
+      brandLower !== nameB.toLowerCase()
+    ) continue;
+    if (!product.sourceReferences) continue;
+    for (const sr of product.sourceReferences) {
+      tryPush({
+        source: sr.source,
+        note: sr.note,
+        url: sr.url,
+        title: sr.title,
+      });
+    }
+  }
+
+  // 4. Brand-profile review-kind links (last resort, whitelist-gated).
+  //    Manufacturer/dealer links intentionally excluded.
   for (const profile of [profileA, profileB]) {
     if (!('links' in profile)) continue;
     const bp = profile as BrandProfile;
-    const brandName = bp.names[0];
+    const brand = bp.names[0];
     for (const link of bp.links ?? []) {
-      if (!link.url || usedUrls.has(link.url)) continue;
-      if (refs.length >= 4) break;
-      usedUrls.add(link.url);
-      refs.push({
+      if (link.kind !== 'review' || !link.url) continue;
+      tryPush({
         source: link.label,
-        note: `${brandName} — ${link.kind === 'review' ? 'review' : link.kind === 'dealer' ? 'dealer' : 'reference'}`,
+        note: `${brand} — review`,
         url: link.url,
       });
     }
   }
 
-  // Extract from product sourceReferences (catalog products matching brand names)
-  const nameA = 'names' in profileA ? (profileA as BrandProfile).names[0] : (profileA as { name: string }).name;
-  const nameB = 'names' in profileB ? (profileB as BrandProfile).names[0] : (profileB as { name: string }).name;
-  for (const product of ALL_PRODUCTS) {
-    if (refs.length >= 5) break;
-    const brandLower = product.brand.toLowerCase();
-    if (brandLower !== nameA.toLowerCase() && brandLower !== nameB.toLowerCase()) continue;
-    if (!product.sourceReferences) continue;
-    for (const sr of product.sourceReferences) {
-      if (!sr.url || usedUrls.has(sr.url)) continue;
-      if (refs.length >= 5) break;
-      usedUrls.add(sr.url);
-      refs.push({ source: sr.source, note: sr.note, url: sr.url });
-    }
-  }
-
-  return refs.length > 0 ? refs.slice(0, 4) : undefined;
+  return refs.length > 0 ? refs.slice(0, 5) : undefined;
 }
 
 /** Produce a short human-readable label for the context the user provided. */
