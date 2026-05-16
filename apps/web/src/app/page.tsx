@@ -159,31 +159,30 @@ const EDITORIAL = {
 } as const;
 
 /**
- * ── Canonical homepage headline (LOCKED 2026-05-08, refreshed twice) ────
+ * ── Canonical homepage headline (LOCKED 2026-05-16, Stage PB1.1) ────
  *
  * Single source of truth for the homepage hero h1 copy.
  *
- * 2026-05-08 (first refresh) shortened the line, dropped the
- * self-referential "Audio XX helps you" preamble, and replaced
- * "satisfaction" with the more emotionally human "happiness". The hero's
- * visual weight was reduced (smaller scale, lighter weight, dark charcoal
- * instead of near-black, narrower measure) so the page reads as an
- * editorial advisory tool rather than a manifesto landing page.
+ * 2026-05-08 (earlier passes) shortened the line, dropped the
+ * self-referential "Audio XX helps you" preamble, replaced
+ * "satisfaction" with the more emotionally human "happiness", and
+ * removed the supporting caption.
  *
- * 2026-05-08 (second refresh) removed the supporting caption entirely.
- * The hero now carries the headline alone — one emotional line, then
- * the interaction surface — so the page feels closer to an editorial
- * tool than to a positioning page. The methodology principle the old
- * support line carried is implicit in the system identity caption above
- * the headline ("System interaction · Listener alignment · Real
- * trade-offs") and explicit in advisory output downstream.
+ * 2026-05-16 (Stage PB1.1 — positioning refresh): the previous
+ * "Choose components that align with..." framing read as a shopping
+ * engine. After listener-preference and system-reasoning emerged as
+ * the strongest differentiators (and reviewer pushback flagged
+ * "AI review summarizer" framing as the wrong identity), the
+ * headline was rewritten to lead with interpretation and the
+ * change-vs-restraint question. The product reads as a listening
+ * and system advisor — not as a recommendation engine.
  *
  * DO NOT modify casually. Changes to this string are equivalent to
  * changing the product's positioning statement. If a copy refresh is
  * required, surface it as an explicit decision (decision-log entry in
  * `docs/strategic-briefing.md`), not an inline edit.
  */
-const HOMEPAGE_HEADLINE = 'Choose components that align with your preferences, system, and long-term happiness.';
+const HOMEPAGE_HEADLINE = 'Helps you understand what you value — and whether change is actually worth making.';
 
 /**
  * Pinned fresh-visitor assessment example. Stage 7.1 onboarding-
@@ -208,21 +207,26 @@ const COMPARE_PROMPTS: ReadonlyArray<string> = [
 ];
 
 /**
- * Variety starter prompts covering upgrade, diagnosis, knowledge,
- * preference, and shopping modes. Slot 3 of the chip row draws from
- * this subpool so the third chip rotates session-stably across the
- * remaining modes.
+ * Variety starter prompts covering upgrade reasoning, diagnostic,
+ * knowledge, trade-off awareness, and change-vs-restraint modes.
+ * Slot 3 of the chip row draws from this subpool so the third chip
+ * rotates session-stably across the remaining modes.
  *
- * Note: "best tube amp under $5000" was dropped in Stage 7.1 to keep
- * the variety set tight; "best DAC under $1500" carries the
- * shopping/value-search archetype on its own.
+ * Stage PB1.1 (positioning refresh): the prompt mix was rebalanced
+ * away from generic shopping framing ("best DAC under $1500", "I want
+ * more flow without losing detail") toward the advisor framing the
+ * product actually serves — diagnostic "why" questions, explicit
+ * trade-off reasoning, and the change-vs-restraint question that the
+ * product is uniquely suited to answer ("is it worth changing my
+ * DAC?"). The upgrade-reasoning prompt and the knowledge prompt are
+ * preserved because they already exercise the advisor stance.
  */
 const VARIETY_PROMPTS: ReadonlyArray<string> = [
   'should I upgrade my Hugo to Hugo TT2?',
-  'my system sounds harsh',
+  'why does my system sound fatiguing?',
   'what does tonal density mean?',
-  'I want more flow without losing detail',
-  'best DAC under $1500',
+  'what trade-offs come with adding a tube preamp?',
+  'is it worth changing my DAC?',
 ];
 
 /**
@@ -1550,13 +1554,13 @@ export default function Home() {
 
           if (intent === 'greeting') {
             acknowledge = 'Hey — welcome to Audio XX.';
-            question = 'Are you looking to buy something new, improve what you already have, or troubleshoot a problem you\'re hearing?';
+            question = 'Want to understand your current system, work through a possible change, or troubleshoot something you\'re hearing?';
           } else if (intent === 'educational') {
-            acknowledge = 'Audio XX is a system-level audio advisor. It helps you understand how your components interact, evaluate trade-offs, and make aligned decisions — whether you\'re shopping, diagnosing, or just exploring.';
-            question = 'Where would you like to start?\n• Help me choose gear\n• Improve my current system\n• Diagnose a sound issue\n• Learn how system matching works';
+            acknowledge = 'Audio XX is a system-level listening advisor. It helps you understand how your components interact, what you actually respond to as a listener, and the trade-offs of any change — including when not to change anything at all.';
+            question = 'Where would you like to start?\n• Understand my current system\n• Work through a possible change\n• Diagnose something I\'m hearing\n• Learn how system matching works';
           } else {
             acknowledge = 'Good place to start.';
-            question = 'Are you looking to buy something new, improve what you already have, or troubleshoot a problem you\'re hearing?';
+            question = 'Want to understand your current system, work through a possible change, or troubleshoot something you\'re hearing?';
           }
 
           dispatch({
@@ -4296,7 +4300,7 @@ export default function Home() {
           color: EDITORIAL.faint,
         }}
       >
-        Reviews your system &nbsp;&middot;&nbsp; Matches your listening &nbsp;&middot;&nbsp; Names the trade-offs
+        Interprets your system &nbsp;&middot;&nbsp; Matches your listening &nbsp;&middot;&nbsp; Names the trade-offs of change
       </div>
 
       {/* System badge + panel — marginBottom tightened (0.5rem → 0.4rem)

@@ -161,7 +161,7 @@ export default function HowItWorks() {
         Audio&thinsp;XX Methodology
       </p>
       <p className="muted small" style={{ marginBottom: '2rem', fontStyle: 'italic' }}>
-        A calm, system-aware advisor — not a scoring engine.
+        A long-term listening advisor — not a scoring engine, not a review summarizer.
       </p>
 
       {/* ── 1. The Problem ──────────────────────────────── */}
@@ -228,11 +228,63 @@ export default function HowItWorks() {
             like.
           </p>
           <p>
-            When you ask for a recommendation, the advisory engine bridges the
-            two — it evaluates how a component or system change would move your
+            When you ask for guidance, the advisory engine bridges the two
+            — it evaluates how a component or system change would move your
             setup relative to what you actually care about, and names the
             trade-offs involved. That bridge is what makes the guidance
             system-level rather than component-level.
+          </p>
+        </div>
+      </section>
+
+      {/* ── Reviewing vs Advisory (Stage PB1.1) ────────── */}
+      <section style={sectionStyle}>
+        <h2 style={headingStyle}>Reviewing vs. Advisory</h2>
+        <div style={bodyStyle}>
+          <p style={{ marginBottom: '0.65rem' }}>
+            Reviewers evaluate components. Audio&thinsp;XX interprets
+            interaction — how a system, a room, your preferences, and the
+            trade-offs of any change actually behave together. The two roles
+            are complementary, not competing.
+          </p>
+          <p style={{ marginBottom: '0.65rem' }}>
+            Reviewers give you the perspectives, the listening, the careful
+            description of what a piece of gear does. Audio&thinsp;XX helps
+            you interpret those perspectives inside <em>your</em> system and
+            against <em>your</em> preferences — so a strong review and a wrong
+            fit are no longer the same outcome.
+          </p>
+          <p style={{ marginBottom: '0.65rem' }}>
+            Three consequences of this framing shape the product:
+          </p>
+          <ul style={{
+            marginTop: 0,
+            marginBottom: '0.65rem',
+            paddingLeft: '1.2rem',
+            lineHeight: 1.65,
+          }}>
+            <li style={{ marginBottom: '0.4rem' }}>
+              <strong>&ldquo;Do nothing&rdquo; is a real outcome.</strong>{' '}
+              When a system is already aligned with what you value, the
+              advice is to keep listening — not to find a reason to spend.
+            </li>
+            <li style={{ marginBottom: '0.4rem' }}>
+              <strong>System coherence is often prioritized over novelty.</strong>{' '}
+              An upgrade that breaks a satisfying system is not an upgrade.
+              Reducing unnecessary churn is part of the goal, not a side
+              effect.
+            </li>
+            <li>
+              <strong>Reviewer and manufacturer material are attributed
+              context, not hidden source material.</strong>{' '}
+              When the advisor leans on a review, the review is named and
+              linked. When it doesn&rsquo;t, the reasoning is presented as
+              Audio&thinsp;XX&rsquo;s own interpretation of your system.
+            </li>
+          </ul>
+          <p>
+            The product is meant to support long-term listening satisfaction
+            — not to win an evaluation cycle.
           </p>
         </div>
       </section>
