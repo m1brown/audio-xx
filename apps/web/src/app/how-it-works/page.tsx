@@ -284,11 +284,10 @@ export default function HowItWorks() {
               effect.
             </li>
             <li>
-              <strong>Reviewer and manufacturer material are attributed
-              context, not hidden source material.</strong>{' '}
-              When the advisor leans on a review, the review is named and
-              linked. When it doesn&rsquo;t, the reasoning is presented as
-              Audio&thinsp;XX&rsquo;s own interpretation of your system.
+              <strong>Knowledge comes from engineering, not borrowed authority.</strong>{' '}
+              Product characterizations are derived from design topology and
+              listening consensus — not copied from reviews. When confidence
+              is limited, the advisor says so.
             </li>
           </ul>
           <p>
@@ -380,9 +379,9 @@ export default function HowItWorks() {
           </p>
           <p style={{ marginBottom: '0.65rem' }}>
             Each product also carries detailed tendency notes across five
-            domains — tonality, timing, spatial, dynamics, and texture — curated
-            from professional reviews and listening reports. These provide the
-            nuance that the four axes frame.
+            domains — tonality, timing, spatial, dynamics, and texture — derived
+            from design topology, manufacturer specifications, and listening
+            consensus. These provide the nuance that the four axes frame.
           </p>
           <p>
             Crucially, components are not evaluated in isolation. A warm amplifier
@@ -494,9 +493,9 @@ export default function HowItWorks() {
           <div style={subheadStyle}>Built without AI</div>
           <p style={{ marginBottom: '0.65rem' }}>
             The product catalog, including every sonic tendency, interaction note,
-            and trade-off description, is researched and curated by hand from
-            professional reviews, listening reports, and established community
-            knowledge. Nothing is scraped or summarized in real time.
+            and trade-off description, is derived from design topology,
+            manufacturer specifications, and established listening consensus.
+            Nothing is scraped or summarized in real time.
           </p>
           <p style={{ marginBottom: '0.65rem' }}>
             The matching engine — how your preferences map to products, how
@@ -526,20 +525,18 @@ export default function HowItWorks() {
             than curated catalog entries.
           </p>
 
-          <div style={subheadStyle}>How sources are attributed</div>
+          <div style={subheadStyle}>Where our knowledge comes from</div>
           <p style={{ marginBottom: '0.65rem' }}>
-            Reviewer, manufacturer, and publication material informs the
-            catalog as attributed source context — not as raw text to be
-            reproduced. When a specific review or article is known, Audio&thinsp;XX
-            shows the link so you can read the original. When a deep link
-            isn&rsquo;t available, the publication is still named plainly rather
-            than hidden — so attribution is never disguised as our own analysis.
+            Product characterizations are derived from design topology and
+            engineering principles (R-2R vs delta-sigma, Class A vs Class D,
+            sealed vs ported), manufacturer specifications, and listening
+            consensus from the broader audio community. We do not copy or
+            aggregate professional reviews.
           </p>
           <p>
-            The intent is to support discovery and system-level reasoning, not
-            to replace the original reviewing. If you find a quote or claim
-            here that draws on a piece you wrote, please get in touch — we&rsquo;d
-            rather link directly to the source than paraphrase around it.
+            When our confidence in a product characterization is limited,
+            we say so. Transparency about what we know and what we&rsquo;re
+            inferring is part of the method.
           </p>
         </div>
       </section>
