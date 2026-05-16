@@ -4905,9 +4905,21 @@ function buildComparisonShopping(
  * Each entry maps a brand name pattern to the outlets that have published
  * notable coverage of that brand. This is curated data — not a web scrape.
  */
+/**
+ * Editorial source table.
+ *
+ * Stage 14.2 — optional `url` and `title` fields. When present, the
+ * source surfaces in comparison outputs as a clickable link with
+ * "Publication — Title" label. When absent, it surfaces as plain
+ * bold publication text per Stage 6.2 (no homepage fallback).
+ *
+ * URL/title backfill rule: only authored from URLs already present
+ * elsewhere in the codebase (product sourceReferences, brand media
+ * sourceUrl). Never web-researched or guessed.
+ */
 const EDITORIAL_SOURCES: Array<{
   brandPattern: RegExp;
-  sources: Array<{ outlet: string; note: string }>;
+  sources: Array<{ outlet: string; note: string; url?: string; title?: string }>;
 }> = [
   {
     brandPattern: /\bjob\b/i,
@@ -4919,30 +4931,56 @@ const EDITORIAL_SOURCES: Array<{
   {
     brandPattern: /\bleben\b/i,
     sources: [
-      { outlet: '6moons', note: 'Leben CS600X review — push-pull KT77/KT88 tube integrated' },
-      { outlet: 'Stereophile', note: 'Leben CS600 coverage — tube amplifier design philosophy' },
+      {
+        outlet: '6moons',
+        note: 'Leben CS300X review — push-pull EL84 tube integrated',
+        url: 'https://6moons.com/audioreviews/leben/cs300x.html',
+        title: 'Leben CS300X review',
+      },
+      {
+        outlet: 'Stereophile',
+        note: 'Leben CS300 coverage — tube amplifier design philosophy',
+        url: 'https://www.stereophile.com/content/leben-cs300-integrated-amplifier',
+        title: 'Leben CS300 integrated amplifier',
+      },
       { outlet: 'Tone Imports', note: 'US distributor — Leben product notes and system pairing guidance' },
     ],
   },
   {
     brandPattern: /\bhegel\b/i,
     sources: [
-      { outlet: 'Stereophile', note: 'Hegel H390/H590 reviews — SoundEngine technology analysis' },
-      { outlet: 'Darko.Audio', note: 'Hegel integrated amplifier coverage — streaming DAC integration' },
+      { outlet: 'Stereophile', note: 'Hegel H190/H390/H590 reviews — SoundEngine technology analysis' },
+      {
+        outlet: 'Darko.Audio',
+        note: 'Hegel H390 — short film with KEF Reference 1 pairing',
+        url: 'https://darko.audio/2019/10/a-short-film-about-the-hegel-h390-kef-reference-1/',
+        title: 'A short film about the Hegel H390 + KEF Reference 1',
+      },
       { outlet: 'The Audiophiliac', note: 'Hegel amplifier impressions — value and performance assessment' },
     ],
   },
   {
     brandPattern: /\bdevore\b/i,
     sources: [
-      { outlet: '6moons', note: 'DeVore Fidelity O/96 review — high-efficiency speaker design' },
-      { outlet: 'Stereophile', note: 'DeVore O/96 measurements and listening impressions' },
+      { outlet: '6moons', note: 'DeVore Fidelity O/96 coverage — high-efficiency speaker design' },
+      {
+        outlet: 'Stereophile',
+        note: 'Art Dudley review — Orangutan O/96 as a modern classic for tube systems',
+        url: 'https://www.stereophile.com/content/devore-fidelity-orangutan-o96-loudspeaker',
+        title: 'DeVore Fidelity Orangutan O/96 loudspeaker',
+      },
     ],
   },
   {
     brandPattern: /\bkef\b/i,
     sources: [
       { outlet: 'Stereophile', note: 'KEF speaker reviews — Uni-Q driver technology' },
+      {
+        outlet: 'Darko.Audio',
+        note: 'KEF LS60 Wireless — two-part video review (Darko\'s personal speakers)',
+        url: 'https://darko.audio/2022/05/kef-ls60-wireless-video-review-part-1/',
+        title: 'KEF LS60 Wireless — video review (Part 1)',
+      },
       { outlet: 'The Audiophiliac', note: 'KEF speaker coverage — value assessment' },
     ],
   },
@@ -4956,7 +4994,12 @@ const EDITORIAL_SOURCES: Array<{
   {
     brandPattern: /\bshindo\b/i,
     sources: [
-      { outlet: '6moons', note: 'Shindo Laboratory reviews — tube amplification heritage' },
+      {
+        outlet: '6moons',
+        note: 'Shindo Laboratory profile — Tokyo workshop and tube amplification heritage',
+        url: 'https://6moons.com/audioreviews/shindo3/shindo.html',
+        title: 'Shindo Laboratory feature',
+      },
     ],
   },
   {
@@ -5116,12 +5159,21 @@ function buildComparisonStructuredSources(
     ? (profileB as BrandProfile).names[0]
     : (profileB as { name: string }).name;
 
-  // 1. Per-brand editorial sources (whitelist-aligned, plain text).
+  // 1. Per-brand editorial sources (whitelist-aligned). Stage 14.2
+  //    extended EDITORIAL_SOURCES entries with optional url + title;
+  //    when present the row renders as a deep link, when absent the
+  //    row renders as plain bold publication text (Stage 6.2 — no
+  //    homepage fallback).
   for (const sideName of [nameA, nameB]) {
     for (const entry of EDITORIAL_SOURCES) {
       if (!entry.brandPattern.test(sideName)) continue;
       for (const src of entry.sources) {
-        tryPush({ source: src.outlet, note: src.note });
+        tryPush({
+          source: src.outlet,
+          note: src.note,
+          url: src.url,
+          title: src.title,
+        });
       }
     }
   }
