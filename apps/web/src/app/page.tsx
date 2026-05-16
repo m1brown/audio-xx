@@ -183,9 +183,12 @@ const EDITORIAL = {
  *   align with..." shopping framing remains rejected; "matched to"
  *   targets listener-side variables (preferences, system, happiness)
  *   rather than a product database. The small tagline above the
- *   headline ("Interprets your system · Matches your listening ·
- *   Names the trade-offs of change") carries the interpretive and
- *   restraint signaling that this shorter headline doesn't.
+ *   headline ("Reads what you value · Interprets your system ·
+ *   Names the trade-offs of change") carries the listener-first and
+ *   restraint signaling that this shorter headline doesn't. The
+ *   tagline was reordered in Stage PB2.1 to lead with listener
+ *   preference ("Reads what you value") rather than the system pillar,
+ *   reinforcing that the advisor reasons from the listener outward.
  *
  * DO NOT modify casually. Changes to this string are equivalent to
  * changing the product's positioning statement. If a copy refresh is
@@ -210,33 +213,45 @@ const PINNED_ASSESS_PROMPT = 'Assess my system: Denafrips Pontus II, Leben CS600
  * Comparison-mode starter prompts. Slot 2 of the chip row always
  * draws from this subpool so every fresh visitor sees one comparison
  * example. Selection is session-stable.
+ *
+ * Stage PB2.1 (preference-first refresh): comparison prompts were
+ * rephrased to lead with trade-off framing ("what's the real
+ * trade-off between …") rather than a bare versus comparison. The
+ * point of comparison in this advisor is not to declare a winner but
+ * to surface what each option costs and what it buys — and the chip
+ * copy should signal that intent before the user submits.
  */
 const COMPARE_PROMPTS: ReadonlyArray<string> = [
-  'compare Bifrost 2/64 vs Qutest',
-  'Chord vs Denafrips',
+  "what's the real trade-off between Bifrost 2/64 and Qutest?",
+  "what's the real trade-off between Chord and Denafrips?",
 ];
 
 /**
- * Variety starter prompts covering upgrade reasoning, diagnostic,
- * knowledge, trade-off awareness, and change-vs-restraint modes.
- * Slot 3 of the chip row draws from this subpool so the third chip
- * rotates session-stably across the remaining modes.
+ * Variety starter prompts. Slot 3 of the chip row draws from this
+ * subpool so the third chip rotates session-stably across the
+ * remaining advisor modes.
  *
- * Stage PB1.1 (positioning refresh): the prompt mix was rebalanced
- * away from generic shopping framing ("best DAC under $1500", "I want
- * more flow without losing detail") toward the advisor framing the
- * product actually serves — diagnostic "why" questions, explicit
- * trade-off reasoning, and the change-vs-restraint question that the
- * product is uniquely suited to answer ("is it worth changing my
- * DAC?"). The upgrade-reasoning prompt and the knowledge prompt are
- * preserved because they already exercise the advisor stance.
+ * Stage PB1.1 (positioning refresh) rebalanced the pool away from
+ * generic shopping framing ("best DAC under $1500", "I want more flow
+ * without losing detail") toward diagnostic "why" questions, explicit
+ * trade-off reasoning, and the change-vs-restraint question.
+ *
+ * Stage PB2.1 (preference-first refresh) takes the same direction
+ * further. The prompts now centre on what the listener values, on
+ * whether a contemplated change would actually improve the system,
+ * and on whether the user is solving the right problem at all.
+ * Restraint ("should I change anything at all?") is given equal
+ * weight with change. The diagnostic "why does my system sound
+ * fatiguing?" prompt is preserved verbatim because it remains the
+ * cleanest entry point into the system-fit framing.
  */
 const VARIETY_PROMPTS: ReadonlyArray<string> = [
-  'should I upgrade my Hugo to Hugo TT2?',
+  'what do I actually value in a system?',
   'why does my system sound fatiguing?',
-  'what does tonal density mean?',
-  'what trade-offs come with adding a tube preamp?',
-  'is it worth changing my DAC?',
+  'would this upgrade actually improve my system?',
+  'am I solving the wrong problem?',
+  'what trade-off am I making?',
+  'should I change anything at all?',
 ];
 
 /**
@@ -4310,7 +4325,7 @@ export default function Home() {
           color: EDITORIAL.faint,
         }}
       >
-        Interprets your system &nbsp;&middot;&nbsp; Matches your listening &nbsp;&middot;&nbsp; Names the trade-offs of change
+        Reads what you value &nbsp;&middot;&nbsp; Interprets your system &nbsp;&middot;&nbsp; Names the trade-offs of change
       </div>
 
       {/* System badge + panel — marginBottom tightened (0.5rem → 0.4rem)
@@ -4772,8 +4787,8 @@ export default function Home() {
             hasPendingQuestion
               ? 'Reply here…'
               : hasMessages
-                ? 'Continue describing what you hear…'
-                : 'Describe your system, a listening problem, or what you\'re considering.'
+                ? 'Continue describing your system, what you value, or what you\'re considering…'
+                : 'Describe your system, what you value, what\'s bothering you, or what you\'re thinking about changing.'
           }
           className={hasMessages ? '' : 'audioxx-editorial-input'}
           style={{
