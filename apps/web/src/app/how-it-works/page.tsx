@@ -209,11 +209,20 @@ export default function HowItWorks() {
             some prioritize raw emotional impact. None of these is more correct than
             the others.
           </p>
+          <p style={{ marginBottom: '0.65rem' }}>
+            What reads as too bright for one listener can be exactly what another
+            listener has been chasing. What sounds slow and thick to one ear sounds
+            relaxed and natural to another. The same component, in the same room,
+            with the same recording, can be the right answer or the wrong one
+            depending on whose preferences are in the chair. That variance isn&rsquo;t
+            noise to be averaged out — it&rsquo;s the signal the advisor reads.
+          </p>
           <p>
             Audio&thinsp;XX doesn&rsquo;t pretend to know what sounds best. It helps
             you understand what you respond to, and matches that to equipment that
             supports it. The goal is a system that keeps you listening — not one that
-            wins a spec sheet competition.
+            wins a spec sheet competition. Sometimes the right answer is to change
+            nothing, and the advisor will say so.
           </p>
         </div>
       </section>
