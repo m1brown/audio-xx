@@ -464,6 +464,22 @@ export default function HowItWorks() {
             These cases are identified as provisional — they carry less certainty
             than curated catalog entries.
           </p>
+
+          <div style={subheadStyle}>How sources are attributed</div>
+          <p style={{ marginBottom: '0.65rem' }}>
+            Reviewer, manufacturer, and publication material informs the
+            catalog as attributed source context — not as raw text to be
+            reproduced. When a specific review or article is known, Audio&thinsp;XX
+            shows the link so you can read the original. When a deep link
+            isn&rsquo;t available, the publication is still named plainly rather
+            than hidden — so attribution is never disguised as our own analysis.
+          </p>
+          <p>
+            The intent is to support discovery and system-level reasoning, not
+            to replace the original reviewing. If you find a quote or claim
+            here that draws on a piece you wrote, please get in touch — we&rsquo;d
+            rather link directly to the source than paraphrase around it.
+          </p>
         </div>
       </section>
 

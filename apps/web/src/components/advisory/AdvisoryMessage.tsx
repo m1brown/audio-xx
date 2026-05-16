@@ -3764,6 +3764,17 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
           <AdvisoryLinks links={a.links} />
         </AdvisorySection>
       )}
+
+      {/* ── 9. Sources (Stage 14.1) ─────────────────────────
+         Attribution for reviewer/publication material referenced in
+         the editorial body. AdvisorySources handles two-tier filtering
+         and renders unlinked entries as plain text (Stage 6.2 — no
+         publication-homepage fallback). */}
+      {a.sourceReferences && a.sourceReferences.length > 0 && (
+        <AdvisorySection label="Sources">
+          <AdvisorySources sources={a.sourceReferences} />
+        </AdvisorySection>
+      )}
     </div>
   );
 }
@@ -3850,6 +3861,16 @@ function KnowledgeFormat({ advisory: a }: AdvisoryMessageProps) {
         }}>
           {a.followUp}
         </p>
+      )}
+
+      {/* ── Sources (Stage 14.1) ────────────────────────────
+         Knowledge claims need provenance most of all. AdvisorySources
+         handles two-tier filtering and renders unlinked entries as
+         plain text (Stage 6.2 — no publication-homepage fallback). */}
+      {a.sourceReferences && a.sourceReferences.length > 0 && (
+        <AdvisorySection label="Sources">
+          <AdvisorySources sources={a.sourceReferences} />
+        </AdvisorySection>
       )}
     </div>
   );

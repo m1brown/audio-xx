@@ -402,7 +402,21 @@ export default async function BrandPage({ params }: PageProps) {
                   color: COLOR.textMuted,
                   fontStyle: 'normal',
                 }}>
-                  — {q.source}
+                  {q.url ? (
+                    <>
+                      {'— '}
+                      <a
+                        href={q.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: COLOR.textMuted, textDecoration: 'underline' }}
+                      >
+                        {q.source}{q.title ? ` — ${q.title}` : ''}
+                      </a>
+                    </>
+                  ) : (
+                    <>— {q.source}</>
+                  )}
                 </cite>
               </blockquote>
             ))}

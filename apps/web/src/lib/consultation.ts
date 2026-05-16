@@ -333,8 +333,18 @@ export interface BrandProfile {
   philosophyExtended?: string;
   /** Leadership / origin paragraph — founder story, design lineage. */
   leadershipOrigin?: string;
-  /** Short reviewer quotes (2–4). Attribution required. */
-  reviewerQuotes?: Array<{ quote: string; source: string }>;
+  /**
+   * Short reviewer quotes (2–4). Attribution required.
+   *
+   * Stage 14.1 — link-readiness:
+   *   - `url`   (optional) deep link to the specific review/article.
+   *   - `title` (optional) review/article title; rendered as
+   *     "Source — Title" when both fields are present.
+   *
+   * Existing entries without `url` keep rendering as plain `<cite>`
+   * attribution — no behaviour change until a URL is authored.
+   */
+  reviewerQuotes?: Array<{ quote: string; source: string; url?: string; title?: string }>;
   /** Bullet-point strengths (3–5). */
   strengths?: string[];
   /** Bullet-point trade-offs (2–4). */
