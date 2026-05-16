@@ -168,21 +168,31 @@ const EDITORIAL = {
  * "satisfaction" with the more emotionally human "happiness", and
  * removed the supporting caption.
  *
- * 2026-05-16 (Stage PB1.1 — positioning refresh): the previous
- * "Choose components that align with..." framing read as a shopping
- * engine. After listener-preference and system-reasoning emerged as
- * the strongest differentiators (and reviewer pushback flagged
- * "AI review summarizer" framing as the wrong identity), the
- * headline was rewritten to lead with interpretation and the
- * change-vs-restraint question. The product reads as a listening
- * and system advisor — not as a recommendation engine.
+ * 2026-05-16 (Stage PB1.1 — positioning refresh, two iterations):
+ *   First pass: rewrote to lead with interpretation and the
+ *   change-vs-restraint question ("Helps you understand what you
+ *   value — and whether change is actually worth making."). This
+ *   directly addressed the "AI review summarizer" framing critique.
+ *
+ *   Second pass: shortened to "Hifi matched to your preferences,
+ *   system, and long-term happiness." Founder preference, made
+ *   explicit after workshopping ~8 alternatives. Trades some of the
+ *   restraint-first signaling for clarity of domain ("Hifi"),
+ *   alignment-language ("matched to"), and emotional anchor
+ *   ("long-term happiness"). The previous "Choose components that
+ *   align with..." shopping framing remains rejected; "matched to"
+ *   targets listener-side variables (preferences, system, happiness)
+ *   rather than a product database. The small tagline above the
+ *   headline ("Interprets your system · Matches your listening ·
+ *   Names the trade-offs of change") carries the interpretive and
+ *   restraint signaling that this shorter headline doesn't.
  *
  * DO NOT modify casually. Changes to this string are equivalent to
  * changing the product's positioning statement. If a copy refresh is
  * required, surface it as an explicit decision (decision-log entry in
  * `docs/strategic-briefing.md`), not an inline edit.
  */
-const HOMEPAGE_HEADLINE = 'Helps you understand what you value — and whether change is actually worth making.';
+const HOMEPAGE_HEADLINE = 'Hifi matched to your preferences, system, and long-term happiness.';
 
 /**
  * Pinned fresh-visitor assessment example. Stage 7.1 onboarding-
