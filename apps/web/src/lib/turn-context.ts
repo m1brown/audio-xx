@@ -23,6 +23,12 @@ import type { ActiveSystemContext, AudioSessionState, ProposedSystem } from './s
 import { resolveActiveSystemContext, activeSystemToProfile } from './system-bridge';
 import type { SystemProfile } from './system-profile';
 import { detectSystemDescription } from './system-extraction';
+import type { ListenerProfile, PreferenceSignal } from './listener-preferences';
+import {
+  extractPreferenceSignals,
+  applySignals,
+  createDefaultProfile,
+} from './listener-preferences';
 
 // ── Types ────────────────────────────────────────────────
 
@@ -39,6 +45,19 @@ export interface TurnContext {
 
   /** Extracted desire signals ("want more warmth", "less brightness"). */
   desires: DesireSignal[];
+
+  /**
+   * Stage PB2.2 — Listener preference signals extracted from rawMessage.
+   * Per-turn snapshot only (no cross-turn accumulation in v1).
+   */
+  preferenceSignals: PreferenceSignal[];
+
+  /**
+   * Stage PB2.2 — Listener profile derived from this turn's signals
+   * applied to a fresh default profile. Cross-turn accumulation will
+   * be added by consumers that maintain their own profile state.
+   */
+  listenerProfile: ListenerProfile;
 
   /** Proposed system from system description detection. Null if not detected. */
   proposedSystem: ProposedSystem | null;
@@ -129,6 +148,11 @@ export function buildTurnContext(
 
   // ── Step 2: Desire extraction ───────────────────────
   const desires = extractDesires(rawMessage);
+
+  // ── Step 2b: Listener-preference extraction (PB2.2) ──
+  // Sits alongside desire extraction. Per-turn snapshot only.
+  const preferenceSignals = extractPreferenceSignals(rawMessage);
+  const listenerProfile = applySignals(createDefaultProfile(), preferenceSignals);
 
   // ── Step 3: System description detection ────────────
   const proposedSystem = detectSystemDescription(rawMessage, subjectMatches, audioState);
@@ -252,6 +276,8 @@ export function buildTurnContext(
     subjectMatches,
     subjects,
     desires,
+    preferenceSignals,
+    listenerProfile,
     proposedSystem,
     activeSystem,
     activeProfile,
