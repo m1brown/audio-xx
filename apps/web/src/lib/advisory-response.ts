@@ -310,8 +310,22 @@ export interface ComponentAssessment {
   verdict: string;
   /** Machine-readable verdict classification for deterministic consumers. */
   verdictKind: VerdictKind;
-  /** Product/brand links associated with this component. */
+  /**
+   * Per-component "Explore" links — manufacturer, dealer, used-market,
+   * retailer. Stage PB1.2: separated from `sources` so commerce/
+   * discovery surfaces are distinct from editorial attribution.
+   */
   links?: Array<{ label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }>;
+  /**
+   * Per-component "Sources" — editorial/reviewer attribution for this
+   * specific component. Stage PB1.2 introduces per-component
+   * attribution so each section communicates where its perspective
+   * came from, rather than relying on a global footer blob. Populated
+   * from product.sourceReferences and brand-level EDITORIAL_SOURCES;
+   * filtered through the two-tier source whitelist; deduped by
+   * source+url; capped at 3 entries.
+   */
+  sources?: SourceReference[];
 }
 
 /**

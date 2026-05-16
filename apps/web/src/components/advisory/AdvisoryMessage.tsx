@@ -2128,15 +2128,23 @@ function MemoFormat({ advisory: a, onFollowUpClick }: AdvisoryMessageProps) {
         )
       )}
 
-      {/* ── Learn more (links) ───────────────────── */}
-      {a.links && a.links.length > 0 && (
+      {/* ── Learn more (links) ─────────────────────
+          Stage PB1.2: suppressed when per-component Explore links
+          have already rendered inside Component Contributions. Kept
+          as a fallback for memo outputs that lack per-component
+          assessments (legacy paths, edge cases). */}
+      {a.links && a.links.length > 0 && (!a.componentAssessments || a.componentAssessments.length === 0) && (
         <AdvisorySection label="Learn more">
           <AdvisoryLinks links={a.links} />
         </AdvisorySection>
       )}
 
-      {/* ── Sources ──────────────────────────────── */}
-      {hasDisplayableSources(a.sourceReferences) && (
+      {/* ── Sources ────────────────────────────────
+          Stage PB1.2: suppressed when per-component Sources have
+          already rendered inside Component Contributions. Kept as a
+          fallback for memo outputs that lack per-component
+          assessments. */}
+      {hasDisplayableSources(a.sourceReferences) && (!a.componentAssessments || a.componentAssessments.length === 0) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>

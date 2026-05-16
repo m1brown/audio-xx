@@ -7775,7 +7775,7 @@ export function buildSystemAssessment(
   const memoConstraint = systemTier === 'reference'
     ? undefined  // Reference-level systems don't have meaningful bottlenecks
     : detectPrimaryConstraint(components, componentAxisProfiles, memoStacked, systemAxes, voicingCoherence);
-  const memoAssessments = buildComponentAssessments(components, componentAxisProfiles, memoConstraint);
+  const memoAssessments = buildComponentAssessments(components, componentAxisProfiles, memoConstraint, componentLinks);
   // Hoist listener priority inference before upgrade paths (Feature 3: preference protection)
   const memoListenerPriorities = inferListenerPriorityTags(systemAxes, desires);
   const memoUpgradePaths = systemTier === 'reference'
@@ -11095,10 +11095,100 @@ function detectPrimaryConstraint(
  * Uses concise technical vocabulary: timing, elasticity, tonal density,
  * stored energy, microdetail, stability, scale.
  */
+/**
+ * Per-component attribution helper (Stage PB1.2).
+ *
+ * For each component, build a deduplicated, whitelist-gated list of
+ * SourceReference entries drawn from:
+ *   1. product.sourceReferences (per-product attribution — most specific)
+ *   2. EDITORIAL_SOURCES for the product brand (brand-level coverage)
+ *   3. reviewerQuotes with a publication name in the parenthetical
+ *      suffix (e.g. "Art Dudley (Stereophile)" → "Stereophile")
+ *
+ * Capped at 3 entries per component to keep the per-section attribution
+ * scannable. Stage 6.2 link discipline preserved: no homepage fallback,
+ * plain text when URL is missing.
+ *
+ * Deduplication key: `source.toLowerCase() + (url ?? '')` — separate
+ * entries for the same publication with different URLs (e.g., two
+ * different reviews on the same outlet) are preserved as distinct
+ * rows, while exact duplicates are coalesced.
+ */
+function buildComponentSourceReferences(
+  c: SystemComponent,
+): import('./advisory-response').SourceReference[] {
+  const refs: import('./advisory-response').SourceReference[] = [];
+  const seen = new Set<string>();
+  const keyOf = (source: string, url?: string) =>
+    `${source.toLowerCase()}|${(url ?? '').toLowerCase()}`;
+  const tryPush = (entry: {
+    source: string;
+    note: string;
+    url?: string;
+    title?: string;
+  }): void => {
+    if (refs.length >= 3) return;
+    if (!isWhitelistedSource(entry.source)) return;
+    const k = keyOf(entry.source, entry.url);
+    if (seen.has(k)) return;
+    seen.add(k);
+    refs.push(entry);
+  };
+
+  // 1. Direct product.sourceReferences (preserve url + title)
+  if (c.product?.sourceReferences) {
+    for (const sr of c.product.sourceReferences) {
+      tryPush({ source: sr.source, note: sr.note, url: sr.url, title: sr.title });
+    }
+  }
+
+  // 2. EDITORIAL_SOURCES for the product brand. Regex match against
+  //    displayName (which always contains the brand string) so this
+  //    works for both product-backed and brand-only components.
+  const brandLabel = c.product?.brand ?? c.displayName;
+  const matchTarget = c.product?.brand ?? c.displayName;
+  for (const entry of EDITORIAL_SOURCES) {
+    if (!entry.brandPattern.test(matchTarget)) continue;
+    for (const src of entry.sources) {
+      tryPush({
+        source: src.outlet,
+        note: src.note,
+        url: src.url,
+        title: src.title,
+      });
+    }
+  }
+
+  // 3. reviewerQuotes — extract whitelisted publication from
+  //    "Reviewer (Publication)" suffix. SystemComponent.brandProfile
+  //    is a narrowed view; look up the full BrandProfile by brand
+  //    name to access reviewerQuotes.
+  const fullBrandProfile = c.product?.brand
+    ? findBrandProfileByName(c.product.brand)
+    : undefined;
+  if (fullBrandProfile?.reviewerQuotes) {
+    for (const q of fullBrandProfile.reviewerQuotes) {
+      const parenMatch = q.source.match(/\(([^)]+)\)\s*$/);
+      const publication = (parenMatch?.[1] ?? q.source).trim();
+      if (!isWhitelistedSource(publication)) continue;
+      const reviewer = parenMatch
+        ? q.source.slice(0, parenMatch.index).trim()
+        : '';
+      const note = reviewer
+        ? `${reviewer} on ${brandLabel}`
+        : `${brandLabel} — reviewer attribution`;
+      tryPush({ source: publication, note, url: q.url, title: q.title });
+    }
+  }
+
+  return refs;
+}
+
 function buildComponentAssessments(
   components: SystemComponent[],
   profiles: ComponentAxisProfile[],
   constraint?: MemoPrimaryConstraint,
+  componentLinks?: Map<string, Array<{ label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }>>,
 ): MemoComponentAssessment[] {
   return components.map((c, i) => {
     const axes = profiles[i].axes;
@@ -11209,6 +11299,10 @@ function buildComponentAssessments(
       ?? c.brandProfile?.tendencies
       ?? c.character;
 
+    // Stage PB1.2 — per-component attribution + exploration links.
+    const componentSources = buildComponentSourceReferences(c);
+    const explore = componentLinks?.get(c.displayName);
+
     return {
       name: c.displayName,
       role: c.role !== 'component' ? c.role : undefined,
@@ -11218,6 +11312,8 @@ function buildComponentAssessments(
       designTradeoffs: designTradeoffs.length > 0 ? designTradeoffs.slice(0, 4) : undefined,
       verdict,
       verdictKind,
+      sources: componentSources.length > 0 ? componentSources : undefined,
+      links: explore && explore.length > 0 ? explore : undefined,
     };
   });
 }

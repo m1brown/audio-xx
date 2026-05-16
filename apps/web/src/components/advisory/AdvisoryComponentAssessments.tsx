@@ -16,6 +16,7 @@
 import type { ComponentAssessment } from '../../lib/advisory-response';
 import { findProductByComponentName } from '../../lib/consultation';
 import { resolveProductImageStrict } from '../../lib/product-images';
+import { filterSourcesForDisplay } from '../../lib/evidence/source-whitelist';
 import { renderText } from './render-text';
 
 interface Props {
@@ -173,23 +174,88 @@ export default function AdvisoryComponentAssessments({ assessments }: Props) {
             {renderText(comp.verdict)}
           </p>
 
-          {/* Component links — learn more */}
+          {/* ── Per-component Sources (Stage PB1.2) ────────────────
+             Editorial attribution for this specific component, drawn
+             from product.sourceReferences + brand EDITORIAL_SOURCES +
+             reviewerQuotes (whitelist-gated, deduped, capped). When
+             the two-tier display filter empties the list the section
+             is suppressed entirely — no empty heading. Stage 6.2
+             preserved: plain text when URL missing, link when URL
+             present, never a homepage fallback. */}
+          {(() => {
+            const displaySources = comp.sources ? filterSourcesForDisplay(comp.sources) : [];
+            if (displaySources.length === 0) return null;
+            return (
+              <div style={{ marginTop: '0.75rem' }}>
+                <div style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 500,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase' as const,
+                  color: '#999',
+                  marginBottom: '0.3rem',
+                }}>
+                  Sources
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#777', lineHeight: 1.7 }}>
+                  {displaySources.map((s, k) => {
+                    const linkLabel = s.title ? `${s.source} — ${s.title}` : `${s.source} review`;
+                    return (
+                      <div key={k} style={{ marginBottom: '0.2rem' }}>
+                        {s.url ? (
+                          <a
+                            href={s.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontWeight: 500, color: '#4a6a7a', textDecoration: 'none' }}
+                          >
+                            {linkLabel} ↗
+                          </a>
+                        ) : (
+                          <span style={{ fontWeight: 500, color: '#666' }}>{s.source}</span>
+                        )}
+                        <span style={{ margin: '0 0.35rem', color: '#ccc' }}>—</span>
+                        <span style={{ color: '#777' }}>{s.note}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* ── Per-component Explore (Stage PB1.2) ────────────────
+             Commerce/discovery surfaces for this component:
+             manufacturer page, dealer, used market, retailer. Kept
+             explicitly separate from Sources so editorial provenance
+             and purchase paths don't visually conflate. */}
           {comp.links && comp.links.length > 0 && (
-            <div style={{ marginTop: '0.5rem' }}>
-              <span style={{ fontSize: '0.85rem', color: '#aaa' }}>Learn more: </span>
-              {comp.links.map((link, k) => (
-                <span key={k}>
-                  {k > 0 && <span style={{ color: '#ddd', margin: '0 0.3rem' }}>&middot;</span>}
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ fontSize: '0.85rem', color: '#4a6a7a', textDecoration: 'none' }}
-                  >
-                    {link.label}
-                  </a>
-                </span>
-              ))}
+            <div style={{ marginTop: '0.55rem' }}>
+              <div style={{
+                fontSize: '0.74rem',
+                fontWeight: 500,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase' as const,
+                color: '#999',
+                marginBottom: '0.3rem',
+              }}>
+                Explore
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#777', lineHeight: 1.7 }}>
+                {comp.links.map((link, k) => (
+                  <span key={k}>
+                    {k > 0 && <span style={{ color: '#ddd', margin: '0 0.3rem' }}>&middot;</span>}
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#4a6a7a', textDecoration: 'none' }}
+                    >
+                      {link.label}
+                    </a>
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
