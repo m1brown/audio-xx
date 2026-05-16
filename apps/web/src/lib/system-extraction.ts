@@ -210,6 +210,15 @@ const PRODUCT_HINTS: Record<string, { brand: string; category: ProductCategory }
   cs600x: { brand: 'Leben', category: 'amplifier' },
   cs600: { brand: 'Leben', category: 'amplifier' },
   cs300x: { brand: 'Leben', category: 'amplifier' },
+  // Kinki Studio — 'dazzle' bare token (registered in intent.ts:173) needs
+  // an authoritative brand hint, otherwise the unhinted-product path in
+  // buildComponents falls to proximity-based brand selection and "Dazzle"
+  // bleeds onto whichever brand appears closest in the input ("Qualio
+  // Dazzle" / "Laiv Dazzle" when the user lists Kinki Studio Dazzle
+  // alongside other brands). Without this hint, multi-brand queries
+  // that include the Dazzle trigger a false "both appear as amplifiers"
+  // clarification instead of running the assessment.
+  dazzle: { brand: 'Kinki Studio', category: 'amplifier' },
   // Turntables
   'gyro se': { brand: 'Michell', category: 'turntable' },
   gyrodec: { brand: 'Michell', category: 'turntable' },
@@ -279,6 +288,8 @@ const CANONICAL_NAMES: Record<string, string> = {
   'leben cs300x': 'Leben CS300X',
   'leben cs600': 'Leben CS600',
   'leben cs600x': 'Leben CS600X',
+  // Kinki Studio — single-word model name; canonical title-case
+  dazzle: 'Dazzle',
   // PrimaLuna EVO line — brand uses uppercase "EVO"
   'evo 100': 'EVO 100',
   'evo 300': 'EVO 300',
