@@ -71,7 +71,7 @@ import { buildConsultationResponse, buildComparisonRefinement, buildContextRefin
 import { classifySystemArchetype, buildConsumerWirelessResponse } from '@/lib/system-class';
 import { findReferenceProduct, buildExplorationResponse, explorationToConsultation } from '@/lib/exploration';
 import { buildIntakeResponse, intakeToAdvisory } from '@/lib/intake';
-import { inferUnknownProduct } from '@/lib/llm-product-inference';
+import { inferUnknownProduct, buildUnknownProductFallback } from '@/lib/llm-product-inference';
 import { inferProvisionalSystemAssessment } from '@/lib/llm-system-inference';
 import type { GlossaryResult } from '@/lib/glossary';
 import type { Message, ConversationState } from '@/lib/conversation-types';
@@ -2276,28 +2276,26 @@ export default function Home() {
           dispatch({ type: 'SET_LOADING', value: false });
           return;
         }
-        // LLM inference also failed — show a transparent fallback message
-        // instead of silently falling through to an empty response.
-        if (subjectName) {
-          const fallbackResponse: import('@/lib/consultation').ConsultationResponse = {
-            subject: subjectName,
-            philosophy: `I don't have calibrated data on ${subjectName} in my product database. This means I can't provide the kind of detailed, review-sourced assessment I'd normally offer.`,
-            tendencies: `If you can tell me more about this product — what type it is, its approximate price range, or what you've heard about it — I can offer general directional guidance based on the design approach. Alternatively, I can suggest products in a similar category that I do have detailed data on.`,
-            followUp: `What category is ${subjectName} — is it a DAC, amplifier, speaker, or something else?`,
-          };
-          // Trust-layer pass: thin/degraded fallback response. Curated
-          // layer didn't produce a complete answer, LLM inference also
-          // failed, so the renderer surfaces the trust signal explicitly
-          // rather than letting the response read as authoritative.
-          const fallbackAdvisory = consultationToAdvisory(fallbackResponse, undefined, advisoryCtx);
-          fallbackAdvisory.reasoningMode = 'expanded';
-          fallbackAdvisory.fallbackReason = 'thin_output';
-          dispatchAdvisory(fallbackAdvisory, advisoryId());
-          dispatch({ type: 'SET_LOADING', value: false });
-          return;
-        }
+        // LLM inference also failed — emit the hedged uncertainty
+        // fallback unconditionally (QA C1). The previous behaviour
+        // gated this on `if (subjectName)`, which left a silent-empty
+        // path whenever subject extraction failed (e.g. "tell me more
+        // about it", misspelled brands). buildUnknownProductFallback
+        // adapts to both the named-subject and missing-subject cases
+        // and never fabricates specifics — see its definition for
+        // the discipline constraints.
+        const fallbackResponse = buildUnknownProductFallback(subjectName);
+        // Trust-layer pass: thin/degraded fallback response. Curated
+        // layer didn't produce a complete answer, LLM inference also
+        // failed, so the renderer surfaces the trust signal explicitly
+        // rather than letting the response read as authoritative.
+        const fallbackAdvisory = consultationToAdvisory(fallbackResponse, undefined, advisoryCtx);
+        fallbackAdvisory.reasoningMode = 'expanded';
+        fallbackAdvisory.fallbackReason = 'thin_output';
+        dispatchAdvisory(fallbackAdvisory, advisoryId());
+        dispatch({ type: 'SET_LOADING', value: false });
+        return;
       }
-      // No subjects identified — fall through to gear inquiry path below
     }
 
     // ── Mode-aware intent override ─────────────────────

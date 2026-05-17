@@ -15,7 +15,10 @@
  *   - Never invent specifications or measurements
  *   - Never claim catalog-verified status
  *
- * Falls back silently to null if the LLM call fails or times out.
+ * Returns null when the inference call fails or returns no usable
+ * content. Consumers MUST emit `buildUnknownProductFallback` in that
+ * case — falling through to downstream handlers produces silent empty
+ * responses (QA C1).
  */
 
 import type { ConsultationResponse } from './consultation';
@@ -155,4 +158,54 @@ function parseInferenceResponse(
 
     return null;
   }
+}
+
+// ── Hedged uncertainty fallback ──────────────────────
+//
+// QA C1 (PB beta-hardening). When `inferUnknownProduct` returns null
+// (no API key, network/timeout failure, degenerate LLM output) the
+// consumer MUST emit this fallback rather than falling through to a
+// downstream handler that wasn't designed for an unknown subject.
+// The previous page.tsx behavior gated a similar inline template
+// behind `if (subjectName)`, which left a silent-empty path whenever
+// subject extraction failed (e.g. "tell me more about it",
+// "what about that one?", misspelled brands).
+//
+// Discipline constraints — the template:
+//   - never fabricates specs, measurements, prices, or pairings
+//   - never invents reviewer-style consensus or "best" claims
+//   - acknowledges the limit and asks for the minimum useful info
+//   - hedges via `source: 'llm_inferred'` so the UI can surface a
+//     provenance/fallback indicator (same path the real inference uses)
+//   - works both when a subject was extracted and when it wasn't
+
+/**
+ * Build the hedged uncertainty response used when LLM inference is
+ * unavailable, times out, or produces no usable content.
+ *
+ * @param subjectName - the extracted subject if any; the template
+ *                      adapts when this is absent.
+ */
+export function buildUnknownProductFallback(
+  subjectName?: string,
+): ConsultationResponse {
+  const trimmed = subjectName?.trim();
+  const named = !!trimmed && trimmed.length > 0;
+  return {
+    // `llm_inferred` is the existing non-catalog provenance bucket — the
+    // UI's trust indicator already hedges these. Reusing it keeps the
+    // fallback's visual treatment consistent with a successful but
+    // uncertain inference call.
+    source: 'llm_inferred',
+    subject: named ? trimmed! : 'that one',
+    philosophy: named
+      ? `I don't have calibrated data on ${trimmed} in my catalog, and I couldn't pull a confident read from live inference just now.`
+      : `I'm not sure which product or brand you're asking about from the message so far, and I don't want to guess a confident read together without it.`,
+    tendencies: named
+      ? `Rather than invent specifics — I won't fabricate measurements, prices, or pairings — I can offer directional guidance if you tell me a bit more about it.`
+      : `Naming the product, brand, or even just the category would let me give you a useful directional read instead of generic territory.`,
+    followUp: named
+      ? `What category is ${trimmed} — DAC, amplifier, speakers, headphones, turntable — and roughly what price tier?`
+      : `Which product or brand are you asking about?`,
+  };
 }
