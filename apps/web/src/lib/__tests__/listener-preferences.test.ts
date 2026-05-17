@@ -16,9 +16,11 @@ import {
   extractPreferenceSignals,
   applySignals,
   renderProfileSummary,
+  buildListenerFraming,
   MAX_PROFILE_CONFIDENCE,
   type PreferenceSignal,
   type ListenerProfileDimension,
+  type FramingContext,
 } from '../listener-preferences';
 
 // ── Helpers ──────────────────────────────────────────────
@@ -228,3 +230,105 @@ describe('renderProfileSummary', () => {
     expect(out).toMatch(/early signals|still forming|no clear/i);
   });
 });
+
+// ── PB2.4 — buildListenerFraming ─────────────────────────
+
+/** Build a profile with a real lean and enough confidence to clear the
+ *  framing floor (0.2). Six signals pushes confidence above 0.85, which
+ *  the cap then trims to 0.85 — comfortably above the floor. */
+function strongFlowAndDensityProfile() {
+  let p = createDefaultProfile();
+  p = applySignals(p, [
+    sig('flow_vs_precision', -0.2),       // lean: flow
+    sig('density_vs_clarity', -0.2),      // lean: density
+    sig('warmth_vs_neutrality', -0.1),
+    sig('warmth_vs_neutrality', -0.1),
+    sig('analytical_vs_emotional', 0.1),
+    sig('analytical_vs_emotional', 0.1),
+  ]);
+  return p;
+}
+
+const ALL_CONTEXTS: FramingContext[] = [
+  'assessment', 'comparison', 'upgrade', 'diagnosis',
+];
+
+describe('buildListenerFraming — silence contract', () => {
+  it('returns empty string for null and undefined profile', () => {
+    for (const ctx of ALL_CONTEXTS) {
+      expect(buildListenerFraming(null, ctx)).toBe('');
+      expect(buildListenerFraming(undefined, ctx)).toBe('');
+    }
+  });
+
+  it('returns empty string for a fully default profile', () => {
+    const def = createDefaultProfile();
+    for (const ctx of ALL_CONTEXTS) {
+      expect(buildListenerFraming(def, ctx)).toBe('');
+    }
+  });
+
+  it('returns empty string below the confidence floor (< 0.2)', () => {
+    // One signal → confidence ~0.28, but the lean is small.
+    // Use a single small signal that keeps confidence under 0.2.
+    // A direction of 0.02 keeps the dimension well below the deviation
+    // threshold, and one signal alone gives 1 - e^(-1/3) ≈ 0.28 — so we
+    // need to construct a profile that has signalCount > 0 but
+    // confidence < 0.2. The simplest way is to manually override the
+    // confidence field.
+    const p = { ...createDefaultProfile(), signalCount: 1, confidence: 0.1 };
+    expect(buildListenerFraming(p, 'assessment')).toBe('');
+  });
+
+  it('returns empty string when no dimension passes the deviation threshold', () => {
+    let p = createDefaultProfile();
+    // Many tiny signals → high confidence but no real lean.
+    for (let i = 0; i < 6; i++) {
+      p = applySignals(p, [sig('warmth_vs_neutrality', 0.01)]);
+    }
+    expect(p.confidence).toBeGreaterThan(0.2);
+    expect(Math.abs(p.warmth_vs_neutrality - 0.5)).toBeLessThan(0.15);
+    expect(buildListenerFraming(p, 'comparison')).toBe('');
+  });
+});
+
+describe('buildListenerFraming — text contract', () => {
+  it('emits non-empty hedged text for a strong profile in every context', () => {
+    const p = strongFlowAndDensityProfile();
+    expect(p.confidence).toBeGreaterThan(0.2);
+    for (const ctx of ALL_CONTEXTS) {
+      const out = buildListenerFraming(p, ctx);
+      expect(out.length).toBeGreaterThan(0);
+      // Uncertainty language is mandatory.
+      expect(out).toMatch(/\b(appears?|seems?|may|based on what you'?ve said)\b/i);
+    }
+  });
+
+  it('mentions the strongest lean label', () => {
+    const p = strongFlowAndDensityProfile();
+    const out = buildListenerFraming(p, 'comparison');
+    // Strongest leans are flow and density (both 0.3-ish from 0.5).
+    expect(out).toMatch(/flow|density/i);
+  });
+
+  it('uses different phrasings for different contexts', () => {
+    const p = strongFlowAndDensityProfile();
+    const a = buildListenerFraming(p, 'assessment');
+    const c = buildListenerFraming(p, 'comparison');
+    const u = buildListenerFraming(p, 'upgrade');
+    const d = buildListenerFraming(p, 'diagnosis');
+    expect(new Set([a, c, u, d]).size).toBe(4);
+  });
+
+  it('avoids rigid archetype labels and absolute certainty', () => {
+    const p = strongFlowAndDensityProfile();
+    for (const ctx of ALL_CONTEXTS) {
+      const out = buildListenerFraming(p, ctx);
+      // No archetype names baked in.
+      expect(out).not.toMatch(/\b(archetype|profile type|personality|category|class) is\b/i);
+      // No absolute claims.
+      expect(out).not.toMatch(/\b(definitely|certainly|always|never|guaranteed)\b/i);
+    }
+  });
+});
+

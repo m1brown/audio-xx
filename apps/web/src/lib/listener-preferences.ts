@@ -523,3 +523,131 @@ export function renderProfileSummary(profile: ListenerProfile): string {
 
   return `${stem} ${joinPhrases(toward)}.`;
 }
+
+// ── Stage PB2.4 — listener-aware advisory framing ────────
+
+/**
+ * Where the framing sentence will be prepended. The tone differs slightly
+ * by context — assessments name what the lens is, comparisons hedge the
+ * trade-off, upgrades surface a possible caution, diagnoses connect the
+ * lean to the symptom — but the sentence is always one short, hedged
+ * paragraph in advisory voice.
+ */
+export type FramingContext = 'assessment' | 'comparison' | 'upgrade' | 'diagnosis';
+
+/** Below this confidence the framing layer stays silent. Matches the UI
+ *  visibility panel threshold so the user only sees framing once the panel
+ *  itself has already surfaced. */
+const FRAMING_CONFIDENCE_FLOOR = 0.2;
+
+/** Maximum number of leans woven into one framing sentence — keeps the
+ *  paragraph short and avoids labelling the listener with five traits. */
+const FRAMING_MAX_LEANS = 2;
+
+/**
+ * Pick the strongest leans (largest |delta|) from a profile, capped at
+ * FRAMING_MAX_LEANS. Pure read — no scoring side effects.
+ */
+function topLeansFor(profile: ListenerProfile): Array<{
+  dimension: ListenerProfileDimension;
+  leftLabel: string;
+  rightLabel: string;
+  leanLabel: string;
+  awayLabel: string;
+  delta: number;
+}> {
+  const out: Array<{
+    dimension: ListenerProfileDimension;
+    leftLabel: string;
+    rightLabel: string;
+    leanLabel: string;
+    awayLabel: string;
+    delta: number;
+  }> = [];
+  for (const lbl of DIMENSION_LABELS) {
+    const value = profile[lbl.dimension] as number;
+    const delta = value - 0.5;
+    if (Math.abs(delta) < DEVIATION_THRESHOLD) continue;
+    out.push({
+      dimension: lbl.dimension,
+      leftLabel: lbl.leftLabel,
+      rightLabel: lbl.rightLabel,
+      leanLabel: delta < 0 ? lbl.leftLabel : lbl.rightLabel,
+      awayLabel: delta < 0 ? lbl.rightLabel : lbl.leftLabel,
+      delta,
+    });
+  }
+  out.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+  return out.slice(0, FRAMING_MAX_LEANS);
+}
+
+/**
+ * Build a single short paragraph that primes the upcoming advisory output
+ * with the listener's accumulated preference profile.
+ *
+ * Returns '' when:
+ *   - the profile is undefined, null, or default (signalCount === 0)
+ *   - confidence is below FRAMING_CONFIDENCE_FLOOR (0.2)
+ *   - no dimension passes the deviation threshold
+ *
+ * Empty return is the contract callers rely on to leave the legacy
+ * output untouched. The sentence ALWAYS uses uncertainty language —
+ * "appears", "seems", "may", "based on what you've said so far" — and
+ * never names a rigid archetype or psychological label. The framing
+ * NEVER changes scoring, ranking, or recommendation selection; it is
+ * a prepend-only prose layer.
+ */
+export function buildListenerFraming(
+  profile: ListenerProfile | null | undefined,
+  context: FramingContext,
+): string {
+  if (!profile) return '';
+  if (profile.signalCount === 0) return '';
+  if (profile.confidence < FRAMING_CONFIDENCE_FLOOR) return '';
+
+  const leans = topLeansFor(profile);
+  if (leans.length === 0) return '';
+
+  const leanPhrase = joinPhrases(leans.map((l) => l.leanLabel));
+  // The "away" label only ever surfaces in comparisons/upgrades where a
+  // trade-off framing is natural. Single-lean profiles still get a
+  // contrast pole for those contexts.
+  const primaryAway = leans[0].awayLabel;
+
+  switch (context) {
+    case 'assessment': {
+      // "Based on what you've said so far, you appear drawn toward X.
+      //  The assessment below reads with that in mind."
+      return (
+        `Based on what you've said so far, you appear drawn toward `
+        + `${leanPhrase}. The assessment below reads with that in mind.`
+      );
+    }
+    case 'comparison': {
+      // Lean-aware trade-off framing. Single sentence, hedged.
+      return (
+        `Given that you appear to value ${leanPhrase}, this comparison `
+        + `may read differently than it would for a listener prioritizing `
+        + `${primaryAway}.`
+      );
+    }
+    case 'upgrade': {
+      // Caution paragraph — flag the trade-off implied by the lean
+      // before the user weighs a change.
+      return (
+        `Your profile suggests you may value ${leanPhrase}; keep that in `
+        + `mind as you weigh this change — gains in ${primaryAway} can `
+        + `move a system away from what you seem to prioritize.`
+      );
+    }
+    case 'diagnosis': {
+      // Diagnostic framing — connect the symptom to the lean.
+      return (
+        `Because ${leanPhrase} seems to matter to you based on what `
+        + `you've said so far, the paths below lean toward remedies that `
+        + `protect it rather than trading it away.`
+      );
+    }
+  }
+}
+

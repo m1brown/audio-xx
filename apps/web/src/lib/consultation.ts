@@ -118,6 +118,10 @@ import { topReviewsForCard, type ReviewerDomain } from './curation';
 import { getLegacyMapping } from './products/legacy-models';
 import { getProductImage, resolveProductImage, resolveProductImageStrict } from './product-images';
 import { findCatalogProduct } from './listener-profile';
+import {
+  buildListenerFraming,
+  type ListenerProfile as ListenerPreferenceProfile,
+} from './listener-preferences';
 import { toSlug as routeToSlug } from './route-slug';
 
 // ── Types ───────────────────────────────────────────
@@ -3739,6 +3743,12 @@ export function buildComparisonRefinement(
     links?: import('./advisory-response').AdvisoryLink[];
   },
   followUpMessage: string,
+  /**
+   * Stage PB2.4 — optional accumulated listener profile. Used only to
+   * prepend a hedged framing paragraph to comparisonSummary. Comparison
+   * scoring/winner selection is unaffected.
+   */
+  listenerProfile?: ListenerPreferenceProfile | null,
 ): ConsultationResponse {
   const nameA = toDisplayName(activeComparison.left.name);
   const nameB = toDisplayName(activeComparison.right.name);
@@ -3779,7 +3789,11 @@ export function buildComparisonRefinement(
     : null;
 
   // Pack into concise side-by-side format — no long review sections.
-  const concise = `${summary}\n\n**${nameA}:** ${contextA}\n\n**${nameB}:** ${contextB}${tasteFrame ? `\n\n${tasteFrame}` : ''}`;
+  const baseConcise = `${summary}\n\n**${nameA}:** ${contextA}\n\n**${nameB}:** ${contextB}${tasteFrame ? `\n\n${tasteFrame}` : ''}`;
+
+  // PB2.4 — prepend listener-aware framing if confidence allows.
+  const framing = buildListenerFraming(listenerProfile, 'comparison');
+  const concise = framing ? `${framing}\n\n${baseConcise}` : baseConcise;
 
   return {
     subject: `${nameA} vs ${nameB} — ${criterion.label}`,
@@ -3819,6 +3833,12 @@ export function buildContextRefinement(
   },
   contextMessage: string,
   contextKind: ContextKind,
+  /**
+   * Stage PB2.4 — optional accumulated listener profile. Prepends a
+   * hedged framing paragraph to comparisonSummary when confidence is
+   * sufficient. Does not change scope, ranking, or follow-up choice.
+   */
+  listenerProfile?: ListenerPreferenceProfile | null,
 ): ConsultationResponse {
   const nameA = toDisplayName(activeComparison.left.name);
   const nameB = toDisplayName(activeComparison.right.name);
@@ -3844,9 +3864,15 @@ export function buildContextRefinement(
       contextMessage,
     );
 
+    // PB2.4 — prepend listener-aware framing to the anchored body.
+    const anchoredFraming = buildListenerFraming(listenerProfile, 'comparison');
+    const anchoredBody = anchoredFraming
+      ? `${anchoredFraming}\n\n${anchored.body}`
+      : anchored.body;
+
     return {
       subject: `${nameA} vs ${nameB} — with ${contextName}`,
-      comparisonSummary: anchored.body,
+      comparisonSummary: anchoredBody,
       comparisonImages: buildComparisonImages(nameA, nameB, contextMessage),
       // Carry forward sources/links from the originating comparison turn
       // so the system-anchored decision retains its parent's richness.
@@ -3871,7 +3897,9 @@ export function buildContextRefinement(
     ? buildTasteDecisionFrame(contextMessage, nameA, '', infoA.tendencies, nameB, '', infoB.tendencies)
     : null;
 
-  const concise = `${summary}\n\n**${nameA}:** ${sideA}\n\n**${nameB}:** ${sideB}${tasteFrame ? `\n\n${tasteFrame}` : ''}`;
+  const baseConcise = `${summary}\n\n**${nameA}:** ${sideA}\n\n**${nameB}:** ${sideB}${tasteFrame ? `\n\n${tasteFrame}` : ''}`;
+  const refinementFraming = buildListenerFraming(listenerProfile, 'comparison');
+  const concise = refinementFraming ? `${refinementFraming}\n\n${baseConcise}` : baseConcise;
 
   return {
     subject: `${nameA} vs ${nameB} — ${contextLabel}`,
@@ -7353,6 +7381,14 @@ export function buildSystemAssessment(
   subjectMatches: SubjectMatch[],
   activeSystem?: ActiveSystemContext | null,
   desires?: DesireSignal[],
+  /**
+   * Stage PB2.4 — accumulated listener preference profile. When provided
+   * and confidence is above the framing floor, a single short paragraph
+   * is prepended to `systemContext` priming the assessment with the
+   * listener's apparent leans. Pure prose layer — no impact on findings,
+   * scoring, or product selection.
+   */
+  listenerProfile?: ListenerPreferenceProfile | null,
 ): SystemAssessmentResult {
   // ── Consumer-wireless short-circuit ──────────────────
   // Audio XX Playbook §3 (preference protection) + §6 (partial-knowledge
@@ -7377,8 +7413,11 @@ export function buildSystemAssessment(
     //   1. one-sentence characterization
     //   2. one "what this means" paragraph
     //   3. soft provenance line
+    // PB2.4 — optionally prepend a listener-aware framing sentence.
+    const consumerFraming = buildListenerFraming(listenerProfile, 'assessment');
     const systemContext =
-      `${firstTurn.systemSignature}\n\n`
+      (consumerFraming ? `${consumerFraming}\n\n` : '')
+      + `${firstTurn.systemSignature}\n\n`
       + `${firstTurn.tendencies}`;
 
     const response: ConsultationResponse = {
@@ -8181,6 +8220,14 @@ export function buildSystemAssessment(
   // (MemoFormat in AdvisoryMessage.tsx) skips the legacy sections
   // whenever advisoryMode === 'system_review' and systemContext is set.
   response.systemContext = composeAssessmentNarrative(findings);
+
+  // ── PB2.4 — listener-aware framing prepend ──────────
+  // Read-only prose addition; does not alter findings or any structured
+  // memo field. Helper returns '' when the profile is absent/weak.
+  const framing = buildListenerFraming(listenerProfile, 'assessment');
+  if (framing) {
+    response.systemContext = `${framing}\n\n${response.systemContext}`;
+  }
 
   return { kind: 'assessment', findings, response };
 }
@@ -14047,6 +14094,13 @@ function extractComplaint(text: string): string | null {
 export function buildSystemDiagnosis(
   currentMessage: string,
   subjectMatches: SubjectMatch[],
+  /**
+   * Stage PB2.4 — optional accumulated listener profile. Prepends a
+   * one-sentence framing paragraph to the diagnosis prose when
+   * confidence is sufficient. Does not change complaint detection,
+   * remedy mapping, or follow-up angle.
+   */
+  listenerProfile?: ListenerPreferenceProfile | null,
 ): ConsultationResponse | null {
   // 1. Extract complaint
   const complaint = extractComplaint(currentMessage);
@@ -14138,9 +14192,15 @@ export function buildSystemDiagnosis(
   }
 
   // Assemble
-  const fullDiagnosis = systemNote
+  const baseDiagnosis = systemNote
     ? `${opening}\n\n${systemNote}\n\n${pathsText}`
     : `${opening}\n\n${pathsText}`;
+
+  // PB2.4 — prepend listener-aware framing to the diagnosis prose.
+  const diagFraming = buildListenerFraming(listenerProfile, 'diagnosis');
+  const fullDiagnosis = diagFraming
+    ? `${diagFraming}\n\n${baseDiagnosis}`
+    : baseDiagnosis;
 
   return {
     subject: `${systemLabel} — ${complaint}`,

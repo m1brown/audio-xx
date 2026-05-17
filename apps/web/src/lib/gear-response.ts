@@ -54,6 +54,11 @@ import {
 } from './design-archetypes';
 import { detectChurnSignal, buildChurnNote, type ChurnSignal } from './churn-avoidance';
 import { buildTasteDecisionFrame } from './consultation';
+import {
+  buildListenerFraming,
+  type FramingContext,
+  type ListenerProfile as ListenerPreferenceProfile,
+} from './listener-preferences';
 
 // ── Product lookup ───────────────────────────────────
 
@@ -1812,7 +1817,7 @@ function buildUpgradeAnalysis(
 
 // ── Public API ───────────────────────────────────────
 
-export function buildGearResponse(
+function buildGearResponseCore(
   intent: UserIntent,
   subjects: string[],
   currentMessage: string,
@@ -2467,4 +2472,40 @@ function buildInquiryDirection(product: Product, userPref?: { primary: SonicArch
   parts.push('How well it works depends on the rest of the chain and what you prioritize in your listening.');
 
   return parts.join(' ');
+}
+
+// ── Stage PB2.4 — public wrapper with listener-aware framing ──────────
+//
+// The internal builder (`buildGearResponseCore`) has nine return paths.
+// Rather than thread the framing through each, we wrap the result on the
+// way out and prepend a single hedged sentence to the `anchor` field.
+// The framing helper returns '' for weak/absent profiles, in which case
+// the wrapper is a pass-through — guaranteeing legacy parity.
+//
+// No scoring, ranking, or product selection runs here. This layer reads
+// the profile once and prepends prose.
+export function buildGearResponse(
+  intent: UserIntent,
+  subjects: string[],
+  currentMessage: string,
+  desires: DesireSignal[] = [],
+  tasteProfile?: TasteProfile,
+  activeSystem?: ActiveSystemContext | null,
+  listenerProfile?: ListenerPreferenceProfile | null,
+): GearResponse | null {
+  const result = buildGearResponseCore(
+    intent, subjects, currentMessage, desires, tasteProfile, activeSystem,
+  );
+  if (!result) return null;
+
+  const framingContext: FramingContext = intent === 'comparison'
+    ? 'comparison'
+    : 'upgrade';
+  const framing = buildListenerFraming(listenerProfile, framingContext);
+  if (!framing) return result;
+
+  return {
+    ...result,
+    anchor: `${framing} ${result.anchor}`.trim(),
+  };
 }

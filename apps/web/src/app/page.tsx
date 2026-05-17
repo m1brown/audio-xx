@@ -1805,7 +1805,7 @@ export default function Home() {
       !explicitPivot &&
       isComparisonFollowUp(submittedText, state.activeComparison)
     ) {
-      const refinement = buildComparisonRefinement(state.activeComparison, submittedText);
+      const refinement = buildComparisonRefinement(state.activeComparison, submittedText, state.listenerPreferenceProfile);
       dispatchAdvisory(consultationToAdvisory(refinement, undefined, advisoryCtx), advisoryId());
       dispatch({ type: 'SET_LOADING', value: false });
       return;
@@ -1824,7 +1824,7 @@ export default function Home() {
     ) {
       const contextKind = detectContextEnrichment(submittedText);
       if (contextKind) {
-        const refinement = buildContextRefinement(state.activeComparison, submittedText, contextKind);
+        const refinement = buildContextRefinement(state.activeComparison, submittedText, contextKind, state.listenerPreferenceProfile);
         dispatchAdvisory(consultationToAdvisory(refinement, undefined, advisoryCtx), advisoryId());
         dispatch({ type: 'SET_LOADING', value: false });
         return;
@@ -1844,7 +1844,7 @@ export default function Home() {
       turnCtx.subjectMatches.length > 0
     ) {
       const subjectContextKind = classifySubjectAsContext(turnCtx.subjectMatches);
-      const refinement = buildContextRefinement(state.activeComparison, submittedText, subjectContextKind);
+      const refinement = buildContextRefinement(state.activeComparison, submittedText, subjectContextKind, state.listenerPreferenceProfile);
       dispatchAdvisory(consultationToAdvisory(refinement, undefined, advisoryCtx), advisoryId());
       dispatch({ type: 'SET_LOADING', value: false });
       return;
@@ -2098,7 +2098,7 @@ export default function Home() {
         ? extractSubjectMatches(accumulatedText)
         : turnCtx.subjectMatches;
 
-      const assessmentResult = buildSystemAssessment(accumulatedText, assessmentSubjects, turnCtx.activeSystem, turnCtx.desires);
+      const assessmentResult = buildSystemAssessment(accumulatedText, assessmentSubjects, turnCtx.activeSystem, turnCtx.desires, state.listenerPreferenceProfile);
       if (assessmentResult) {
         if (assessmentResult.kind === 'clarification') {
           // Validation detected a conflict — ask the user before proceeding
@@ -2482,7 +2482,7 @@ export default function Home() {
 
     // Gear inquiries and comparisons — conversational path, skip diagnostic engine
     if (intent === 'gear_inquiry' || intent === 'comparison') {
-      const gearResponse = buildGearResponse(intent, turnCtx.subjects, submittedText, turnCtx.desires, tasteProfile ?? undefined, generalActiveSystem);
+      const gearResponse = buildGearResponse(intent, turnCtx.subjects, submittedText, turnCtx.desires, tasteProfile ?? undefined, generalActiveSystem, state.listenerPreferenceProfile);
       if (gearResponse) {
         // Build the advisory once so we can dispatch it and (for comparisons)
         // lift its sourceReferences/links into the active-comparison state.
@@ -2661,7 +2661,7 @@ export default function Home() {
             return { name: fullName, kind: 'product' } as import('@/lib/intent').SubjectMatch;
           });
 
-      const sysDiag = buildSystemDiagnosis(diagText, diagSubjects);
+      const sysDiag = buildSystemDiagnosis(diagText, diagSubjects, state.listenerPreferenceProfile);
       if (sysDiag) {
         dispatchAdvisory(consultationToAdvisory(sysDiag, undefined, advisoryCtx), advisoryId());
         // Save system context for continuity (only when the user named
