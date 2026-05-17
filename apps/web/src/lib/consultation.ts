@@ -6325,20 +6325,25 @@ export function buildConsultationFollowUp(
   }
 
   // ── General follow-up ────────────────────────────────
-  // Re-route through the full consultation builder with the original subject
-  // context. This catches anything the specific handlers missed.
-  const result = buildConsultationResponse(
-    `${activeConsultation.originalQuery} ${followUpMessage}`,
-    activeConsultation.subjects,
-  );
-  if (result) return result;
-
-  // Last resort — honest acknowledgement
+  // QA C1 fix (PB beta-hardening): the previous behaviour re-ran the
+  // first-turn builder (`buildConsultationResponse`) on the original
+  // query concatenated with the follow-up. Because the subject and
+  // source data are unchanged on a general follow-up — by
+  // classifyFollowUp's own definition, none of the four specific
+  // dimensions (other_models / sonic_detail / pairing / system_fit)
+  // shifted — re-running the builder produced a near-verbatim repeat
+  // of the prior advisory. Users saw "Audio XX repeating itself."
+  //
+  // Replace the rebuild with a continuity-shaped acknowledgement that
+  // advances the conversation: name the subject (so it doesn't read
+  // as a context drop), offer the next-step dimensions explicitly,
+  // and ask which the user wants to explore. No first-turn template
+  // is re-emitted.
   return {
     subject: subjectName,
-    philosophy: `Still on ${subjectName} — that's a good question.`,
-    tendencies: "I don't have enough specific data to give a detailed answer on that aspect. The brand profile and general tendencies are the most reliable basis I have.",
-    followUp: 'What would be most useful — more about the brand philosophy, or practical pairing guidance?',
+    philosophy: `Still with ${subjectName}. We can go further in a few directions — sonic character, pairing with specific gear, fit in a given system, or how it compares with alternatives.`,
+    tendencies: 'Each angle gives a different basis for the decision; the most useful next step depends on what you want to weigh.',
+    followUp: 'Which would be most useful to explore — character, pairings, system fit, or a comparison?',
   };
 }
 
