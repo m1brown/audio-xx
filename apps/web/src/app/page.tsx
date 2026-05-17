@@ -50,7 +50,7 @@ import {
 } from '@/lib/listener-preferences';
 import { checkGlossaryQuestion } from '@/lib/glossary';
 import { fetchWithTimeout, EVALUATE_TIMEOUT_MS } from '@/lib/fetch-with-timeout';
-import { detectIntent, detectExplicitCategoryPivot, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, type SubjectMatch } from '@/lib/intent';
+import { detectIntent, detectExplicitCategoryPivot, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, isNonAdvisoryIntent, type SubjectMatch } from '@/lib/intent';
 import { attachQuickRecommendation } from '@/lib/quick-recommendation';
 import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode, interpretSymptom } from '@/lib/conversation-state';
 import { detectHypotheticalChain, chainToComponentNames, type HypotheticalChain } from '@/lib/hypothetical-system';
@@ -1697,6 +1697,38 @@ export default function Home() {
       }
     }
 
+    // ── Non-advisory bypass: greeting / educational (QA C2) ───────────
+    // The state-machine orientation handler upstream already responds
+    // when these intents land on the first turn. Once the conversation
+    // has moved past orientation (or never entered it), a mid-session
+    // "hi", "thanks", or "tell me what Audio XX does" must NOT fall
+    // through to the consultation / shopping / diagnosis pipelines —
+    // the shopping-lock and shopping-mode overrides below would
+    // otherwise clobber the intent to 'shopping' and consume the
+    // greeting as a recommendation refinement, producing advisory
+    // framing for a non-advisory turn.
+    //
+    // The audio_knowledge and audio_assistant intents have their own
+    // downstream handlers (Lane 2/3, ~line 2550/2584). For those we
+    // only need to exempt the shopping overrides below — see the
+    // `isNonAdvisoryIntent(intent)` guards there.
+    //
+    // Glossary is already handled at the top of handleSubmit via
+    // `checkGlossaryQuestion` and never reaches this block.
+    if (intent === 'greeting' || intent === 'educational') {
+      const acknowledge = intent === 'greeting'
+        ? 'Hi — happy to keep going whenever you are.'
+        : 'Audio XX is a system-level listening advisor — focused on how your components interact and what you tend to respond to as a listener.';
+      const question =
+        'What would be most useful next — a check on your system, working through a possible change, troubleshooting something you\'re hearing, or something else?';
+      dispatch({
+        type: 'ADD_QUESTION',
+        clarification: { acknowledge, question },
+      });
+      dispatch({ type: 'SET_LOADING', value: false });
+      return;
+    }
+
     // ── Intake → shopping promotion ─────────────────────
     // If we already showed intake questions, the user's reply is their
     // intake answers. Default to shopping — UNLESS the router detected
@@ -1743,7 +1775,7 @@ export default function Home() {
     // Exceptions: product_assessment (standalone assessments) and confirmed
     // diagnosis (the user is reporting a problem, not refining a purchase).
     const isInShoppingFlow = effectiveMode === 'shopping' && shoppingAnswerCount > 0;
-    if (isInShoppingFlow && intent !== 'product_assessment' && !diagnosisBreakout) {
+    if (isInShoppingFlow && intent !== 'product_assessment' && !diagnosisBreakout && !isNonAdvisoryIntent(intent)) {
       console.log('[shopping-lock] Overriding intent=%s → shopping (effectiveMode=%s, shoppingAnswerCount=%d)', intent, effectiveMode, shoppingAnswerCount);
       intent = 'shopping';
     }
@@ -2315,7 +2347,7 @@ export default function Home() {
     // handles the shoppingAnswerCount > 0 case; this block catches
     // the remaining case (effectiveMode=shopping but no prior answers).
     const productAssessmentInShopping = intent === 'product_assessment' && shoppingAnswerCount > 0;
-    if (effectiveMode === 'shopping' && intent !== 'shopping' && intent !== 'system_assessment' && intent !== 'comparison' && !diagnosisBreakout) {
+    if (effectiveMode === 'shopping' && intent !== 'shopping' && intent !== 'system_assessment' && intent !== 'comparison' && !diagnosisBreakout && !isNonAdvisoryIntent(intent)) {
       if (intent !== 'product_assessment' || productAssessmentInShopping) {
         intent = 'shopping';
       }

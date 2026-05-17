@@ -21,6 +21,32 @@ import { detectPairingIntent } from './pairing-resolver';
 
 export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory' | 'product_assessment' | 'audio_knowledge' | 'audio_assistant' | 'exploration' | 'intake' | 'music_input' | 'greeting' | 'educational';
 
+/**
+ * Intents that must NOT be force-routed through advisory builders
+ * (consultation, shopping, diagnosis pipelines). They have their own
+ * direct handlers and need to reach them intact.
+ *
+ * QA C2 (PB beta-hardening): without this guard, intents like
+ * `audio_knowledge` ("what is soundstage?") or `greeting` ("hi")
+ * were clobbered to `intent = 'shopping'` by mid-conversation
+ * shopping-lock overrides and consumed as recommendation refinements,
+ * producing advisory framing for non-advisory questions.
+ *
+ * Glossary is handled separately by `checkGlossaryQuestion` at the
+ * top of handleSubmit — it bypasses the intent system entirely.
+ */
+export const NON_ADVISORY_INTENTS: ReadonlySet<UserIntent> = new Set<UserIntent>([
+  'audio_knowledge',
+  'audio_assistant',
+  'greeting',
+  'educational',
+]);
+
+/** True when the intent has its own direct handler and must bypass advisory overrides. */
+export function isNonAdvisoryIntent(intent: string | undefined): boolean {
+  return !!intent && NON_ADVISORY_INTENTS.has(intent as UserIntent);
+}
+
 /** A desire the user has expressed — "want more speed", "wish it had warmth". */
 export interface DesireSignal {
   /** The quality the user wants to change. */
