@@ -383,6 +383,45 @@ function hasExplicitDiagnosisSignal(text: string): boolean {
   return DIAGNOSIS_SIGNAL_PATTERNS.some((p) => p.test(text));
 }
 
+/**
+ * Conservative purchase-intent check used to gate continuation-state
+ * exits out of diagnosis (and, by future symmetry, other modes) into
+ * shopping. The detector layer (`detectIntent`) treats short refinement
+ * phrases like "warmer" as shopping intent without any awareness of
+ * conversation context — that is correct for stateless detection but
+ * wrong when the user is mid-diagnosis and the message is a remedy
+ * hypothesis ("what about a warmer source?").
+ *
+ * Returning true here requires an explicit purchase, search, budget, or
+ * "best <category>" signal in the text. Quality-only refinement vocabulary
+ * (warmer / brighter / more body / etc.) is deliberately NOT a signal.
+ *
+ * This helper is intentionally narrow: false negatives keep the user in
+ * the current mode (safe — diagnosis follow-up still routes correctly);
+ * false positives would exit diagnosis on a remedy hypothesis (the bug
+ * this guards against).
+ */
+const PURCHASE_INTENT_PATTERNS: RegExp[] = [
+  // Explicit purchase verbs
+  /\b(?:buy|buying|bought|purchase|purchasing)\b/i,
+  // Active search framings
+  /\bshop(?:ping)?\s+for\b/i,
+  /\blooking\s+for\b/i,
+  // Recommendation / suggestion requests
+  /\brecommend(?:ation)?s?\b/i,
+  /\bsuggest(?:ion)?s?\b/i,
+  // Budget signals
+  /\bbudget\b/i,
+  /\bunder\s+\$?\d/i,
+  /\$\s?\d/,
+  // "best <category>" framing
+  /\bbest\s+(?:dac|amp(?:lifier)?|speakers?|headphones?|turntables?|streamers?|integrated|preamp)\b/i,
+];
+
+function hasExplicitPurchaseIntent(text: string): boolean {
+  return PURCHASE_INTENT_PATTERNS.some((p) => p.test(text));
+}
+
 // ── Symptom interpretation ──────────────────────────────
 // Maps common symptom keywords to brief architectural interpretations.
 // Used to acknowledge symptoms intelligently before asking for system details.
@@ -514,6 +553,18 @@ function isIntentMismatch(mode: ConvMode, detectedIntent: string, text?: string)
   if (detectedIntent === 'diagnosis') {
     if (!text || !hasExplicitDiagnosisSignal(text)) return false;
     return !compatible.has('diagnosis');
+  }
+
+  // Continuation-state guard: when the user is mid-diagnosis and
+  // `detectIntent` flags a single refinement token ("warmer", "more body")
+  // as shopping intent, that is NOT a mode pivot — it's a remedy
+  // hypothesis. Require explicit purchase / search / budget evidence in
+  // the text before treating shopping as a real mismatch. Without this
+  // gate, the upstream reset at the top of transition() short-circuits
+  // before the in-case diagnosis→shopping exit branch can apply the
+  // same check.
+  if (mode === 'diagnosis' && detectedIntent === 'shopping') {
+    if (!text || !hasExplicitPurchaseIntent(text)) return false;
   }
 
   if (!STRONG_INTENTS.has(detectedIntent)) return false;
@@ -900,7 +951,14 @@ export function transition(
       // ── Explicit shopping exit (any stage) ──
       // When the user clearly switches to shopping ("best DAC under $1000"),
       // exit diagnosis cleanly rather than staying stuck.
-      if (context.detectedIntent === 'shopping') {
+      //
+      // Continuation-state guard: `detectedIntent === 'shopping'` alone is
+      // not enough. `detectIntent` returns 'shopping' for short refinement
+      // phrases like "warmer" / "more body" — those are remedy hypotheses
+      // when the user is mid-diagnosis, not buying intent. Require an
+      // explicit purchase/search/budget signal in the text before exiting.
+      // See `hasExplicitPurchaseIntent` above for the vocabulary.
+      if (context.detectedIntent === 'shopping' && hasExplicitPurchaseIntent(text)) {
         const shoppingFacts: ConvFacts = { category: newCategory, budget: newBudget, preference: newPreference };
         if (isReadyToRecommend(shoppingFacts)) {
           return { state: { mode: 'shopping', stage: 'ready_to_recommend', facts: shoppingFacts }, response: { kind: 'proceed' } };
