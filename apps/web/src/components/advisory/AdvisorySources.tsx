@@ -33,7 +33,24 @@ interface AdvisorySourcesProps {
   sources: SourceReference[];
 }
 
+/**
+ * F4 gate (private beta, 2026-05-18):
+ *   This component must not render reviewer-derived sources under the
+ *   F4 reviewer-data exclusion rule. The component returns null
+ *   regardless of input; upstream callers may still pass a sources
+ *   array, but it is intentionally never surfaced to users.
+ *
+ *   The original rendering logic is preserved below behind a
+ *   compile-time-dead `if (false)` block so the two-tier filtering
+ *   + Stage 6.2 URL-resolution behavior can be re-evaluated post-beta.
+ */
 export default function AdvisorySources({ sources }: AdvisorySourcesProps) {
+  void sources;
+  void filterSourcesForDisplay;
+  return null;
+
+  // eslint-disable-next-line no-constant-condition
+  if (false) {
   const filtered = filterSourcesForDisplay(sources);
   if (filtered.length === 0) return null;
 
@@ -68,4 +85,5 @@ export default function AdvisorySources({ sources }: AdvisorySourcesProps) {
       })}
     </div>
   );
+  } // end if (false) — F4 gate dormant block
 }

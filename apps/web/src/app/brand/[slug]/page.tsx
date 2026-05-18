@@ -133,14 +133,26 @@ export default async function BrandPage({ params }: PageProps) {
   const hasPhilosophy = !!profile?.philosophy;
   const hasPhilosophy2 = !!profile?.philosophyExtended;
   const hasLeadership = !!profile?.leadershipOrigin;
-  const hasQuotes = profile?.reviewerQuotes && profile.reviewerQuotes.length > 0;
+  // F4 gate (private beta, 2026-05-18):
+  //   Reviewer quotes must not surface on brand pages under the F4
+  //   reviewer-data exclusion rule. `hasQuotes` is pinned false so
+  //   the "What Reviewers Say" section is never rendered, regardless
+  //   of what `profile.reviewerQuotes` contains.
+  const hasQuotes = false as const;
+  void profile?.reviewerQuotes;
   const hasTendencies = !!profile?.tendencies;
   const hasStrengths = profile?.strengths && profile.strengths.length > 0;
   const hasTradeoffs = profile?.tradeoffs && profile.tradeoffs.length > 0;
   const hasSystemContext = !!profile?.systemContext;
   const hasPairingNotes = !!profile?.pairingNotes;
   const hasDesignFamilies = profile?.designFamilies && profile.designFamilies.length > 0;
-  const hasLinks = profile?.links && profile.links.length > 0;
+  // F4 gate (private beta, 2026-05-18):
+  //   Brand-profile links of kind 'review' must not surface under the
+  //   F4 reviewer-data exclusion rule. Filter to manufacturer / dealer /
+  //   reference / undefined-kind only before deriving `hasLinks` and
+  //   passing into render.
+  const safeLinks = (profile?.links ?? []).filter((l) => l.kind !== 'review');
+  const hasLinks = safeLinks.length > 0;
 
   // Media
   const mediaImages = profile?.media?.images ?? [];
@@ -618,7 +630,7 @@ export default async function BrandPage({ params }: PageProps) {
         <section style={{ marginBottom: '1.75rem' }}>
           <h2 style={sectionHeadingStyle}>Links</h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem' }}>
-            {profile!.links!.map((link) => (
+            {safeLinks.map((link) => (
               <a
                 key={link.url}
                 href={link.url}

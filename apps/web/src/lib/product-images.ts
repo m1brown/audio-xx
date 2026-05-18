@@ -705,6 +705,14 @@ export function getProductImage(
   if (!haystack) return undefined;
   for (const entry of PRODUCT_IMAGE_URLS) {
     if (haystack.includes(entry.key)) {
+      // F4 gate (private beta, 2026-05-18):
+      //   Skip entries hosted by reviewer publications. Hotlinked
+      //   images and their credit fields are review-derived material
+      //   and must not appear in user-visible product cards under the
+      //   F4 reviewer-data exclusion rule. Match falls through to the
+      //   next entry (typically a less specific match or none), which
+      //   means callers fall back to the category placeholder.
+      if (entry.source?.tier === 'review_publication') continue;
       // Empty string = intentionally uncurated for this key. Stop and
       // return undefined so the substring match doesn't fall through to
       // a less-specific entry that would ship the wrong product image.
@@ -735,6 +743,8 @@ export function getBrandImage(brand: string | undefined): string | undefined {
   if (_brandCache.has(key)) return _brandCache.get(key);
   for (const entry of PRODUCT_IMAGE_URLS) {
     if (entry.key.startsWith(key)) {
+      // F4 gate: skip review_publication-hosted images (see getProductImage).
+      if (entry.source?.tier === 'review_publication') continue;
       _brandCache.set(key, entry.url);
       return entry.url;
     }

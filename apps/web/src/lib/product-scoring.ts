@@ -251,44 +251,20 @@ function scoreSystemCoherence(
 
 // ── Reviewer acclaim ─────────────────────────────────
 //
-// Products reviewed by trusted, independent audio publications
-// receive a small scoring bonus. This surfaces community-loved
-// gear over spec-sheet winners.
+// F4 gate (private beta, 2026-05-18):
+//   Reviewer-derived data must not inform live product scoring.
+//   The historical TRUSTED_REVIEWERS bonus is disabled. The function
+//   signature is preserved so the call site in scoreProduct() remains
+//   stable; it now always contributes 0.
 //
-// Trusted sources are independent reviewers/publications known
-// for subjective, listening-first evaluation:
+//   The previous implementation awarded up to +0.5 per product based
+//   on matches against a hardcoded list of reviewer publications. This
+//   is reviewer-derived recommendation logic and is excluded from the
+//   runtime path under the F4 reviewer-data exclusion rule.
 
-const TRUSTED_REVIEWERS = new Set([
-  'darko.audio',
-  '6moons',
-  'twittering machines',
-  'the audiophiliac',
-  'stereophile',
-  'british audiophile',
-  'hifi huff',
-  'srajan ebaen',        // 6moons editor
-  'john darko',
-  'steve guttenberg',    // Audiophiliac
-  'herb reichert',       // Stereophile
-]);
-
-/** Small bonus per trusted reviewer, capped at 0.5. */
-function scoreReviewerAcclaim(product: Product): number {
-  if (!product.sourceReferences || product.sourceReferences.length === 0) return 0;
-
-  let count = 0;
-  for (const ref of product.sourceReferences) {
-    const srcLower = ref.source.toLowerCase();
-    for (const reviewer of TRUSTED_REVIEWERS) {
-      if (srcLower.includes(reviewer)) {
-        count++;
-        break;
-      }
-    }
-  }
-
-  // 0.15 per trusted source, capped at 0.5
-  return Math.min(count * 0.15, 0.5);
+/** Disabled under F4 — reviewer acclaim must not influence scoring. */
+function scoreReviewerAcclaim(_product: Product): number {
+  return 0;
 }
 
 // ── Public API ────────────────────────────────────────

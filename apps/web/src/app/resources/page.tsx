@@ -210,35 +210,10 @@ export default function Resources() {
             dynamic behavior, spatial presentation, and how a system sustains
             engagement over hours rather than minutes.
           </p>
-          <p style={{ marginBottom: '1rem' }}>
+          <p style={{ marginBottom: '0.65rem' }}>
             This listening tradition plays a central role in how real-world
-            audio systems are understood, built, and refined. Audio&thinsp;XX
-            draws heavily from it.
+            audio systems are understood, built, and refined.
           </p>
-
-          <Resource name="6moons" url="https://www.6moons.com/">
-            Extremely thorough and detailed reviews, fast gear, high-resolution
-            digital audio. Introduced me to Job Integrated, Crayon CIA, WLM Diva,
-            and more. Emphasizes system synergy, tonal character, and long-term
-            listening impressions. Known for covering lesser-known manufacturers
-            and design philosophies.
-          </Resource>
-          <Resource name="The Absolute Sound" url="https://www.theabsolutesound.com/">
-            Focuses on musical realism and high-end system building. Emphasizes
-            the relationship between equipment and the experience of live music.
-          </Resource>
-          <Resource name="Darko.Audio" url="https://darko.audio/">
-            Bridges traditional listening evaluation with modern digital
-            systems, streaming, and desktop audio.
-          </Resource>
-          <Resource name="Twittering Machines" url="https://twitteringmachines.com/">
-            Thoughtful, literate reviews with an emphasis on musical engagement
-            and how equipment serves the listening experience.
-          </Resource>
-          <Resource name="Mono and Stereo" url="https://www.monoandstereo.com/">
-            Covers high-end and ultra-high-end audio with detailed photography
-            and system context. Strong coverage of European and boutique manufacturers.
-          </Resource>
         </div>
       </section>
 
@@ -271,67 +246,12 @@ export default function Resources() {
         </div>
       </section>
 
-      {/* ── 7. Educational YouTube Channels ────────────── */}
-      <section style={sectionStyle}>
-        <h2 style={headingStyle}>Educational YouTube Channels</h2>
-        <div style={bodyStyle}>
-          <p style={{ marginBottom: '0.85rem' }}>
-            A small set of channels that explain audio concepts clearly, with a
-            focus on teaching rather than hype.
-          </p>
-
-          <Resource name="Steve Guttenberg — Audiophiliac" url="https://www.youtube.com/@Audiophiliac">
-            Decades of experience as an audio journalist. Calm, practical
-            perspectives on equipment and listening.
-          </Resource>
-          <Resource name="A British Audiophile" url="https://www.youtube.com/@ABritishAudiophile">
-            Thoughtful system-level thinking with an emphasis on synergy,
-            room interaction, and realistic expectations.
-          </Resource>
-          <Resource name="Darko.Audio" url="https://www.youtube.com/@DarkoAudio">
-            Well-produced explorations of both analog and digital audio,
-            with clear explanations of how and why equipment choices matter.
-          </Resource>
-        </div>
-      </section>
-
-      {/* ── 8. Featured Video ─────────────────────────── */}
-      <section style={sectionStyle}>
-        <h2 style={headingStyle}>Why Some Upgrades Matter (and Many Don&rsquo;t)</h2>
-        <div style={bodyStyle}>
-          <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, marginBottom: '0.85rem' }}>
-            <iframe
-              src="https://www.youtube.com/embed/ohuahjd-yxM"
-              title="Most DAC Upgrades Do Nothing, UNTIL They Don't!"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none', borderRadius: '6px' }}
-            />
-          </div>
-          <p style={{ marginBottom: '0.65rem' }}>
-            DAC upgrades are often described as universally transformative or
-            universally negligible. Neither is accurate. The impact of a source
-            component depends on what it feeds into — the amplification, the
-            speakers, and how resolved the system is overall.
-          </p>
-          <p style={{ marginBottom: '0.65rem', fontWeight: 500, color: '#2a2a2a' }}>
-            What this means in practice:
-          </p>
-          <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '13.5px', lineHeight: 1.65, color: '#555' }}>
-            <li style={{ marginBottom: '0.3rem' }}>Most DAC changes are subtle in systems that aren&rsquo;t resolving enough to reveal them.</li>
-            <li style={{ marginBottom: '0.3rem' }}>In well-matched, resolving systems, source differences become clearly audible.</li>
-            <li>In mismatched systems, a DAC swap can be corrective — shifting tonal balance or timing in ways that compensate for downstream weaknesses.</li>
-          </ul>
-        </div>
-      </section>
-
       <hr style={{ margin: '2rem 0 1.25rem' }} />
 
       <p style={{ fontSize: '13.5px', color: '#888', lineHeight: 1.65 }}>
         Audio&thinsp;XX does not endorse any single source or methodology.
-        The resources above represent different perspectives within a complex
-        field. Understanding multiple viewpoints helps listeners make more
-        informed and confident decisions.
+        The references above are research and engineering grounding for
+        further reading — not source material the advisor ingests.
       </p>
 
       <div className="mt-2" style={{ marginBottom: '2rem' }}>

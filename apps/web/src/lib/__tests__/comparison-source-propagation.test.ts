@@ -80,7 +80,14 @@ const PAIRS: Pair[] = [
   },
 ];
 
-describe('Stage 14.1b — comparison source propagation', () => {
+// F4 gate (private beta, 2026-05-18):
+//   The Stage 14.1b source-propagation suite below asserts the inverse
+//   of today's contract. Under the F4 reviewer-data exclusion rule,
+//   buildBrandComparison must NOT emit sourceReferences for any pair.
+//   The suite is skipped wholesale; the F4 exclusion is exercised by
+//   `f4-reviewer-data-exclusion.test.ts`. Restore this suite if the
+//   source-attribution surface is re-evaluated post-beta.
+describe.skip('Stage 14.1b — comparison source propagation (F4: suppressed)', () => {
   describe('each repro pair ships non-empty, displayable sourceReferences', () => {
     it.each(PAIRS)('$label produces sourceReferences that survive whitelist filtering', ({ sideA, sideB }) => {
       const a = sideA();

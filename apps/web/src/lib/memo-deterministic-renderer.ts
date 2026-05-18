@@ -771,7 +771,12 @@ export function renderDeterministicMemo(
     systemSynergy: deriveSystemSynergy(findings),
     listenerTasteProfile: deriveListenerTasteProfile(findings, findings.systemAxes),
     spiderChartData: deriveSpiderChartData(findings.systemAxes, findings.listenerPriorities),
-    sourceReferences: sourceReferences.length > 0 ? sourceReferences : undefined,
+    // F4 gate (private beta, 2026-05-18):
+    //   Reviewer-derived sourceReferences must not surface in memo
+    //   output under the F4 reviewer-data exclusion rule. The local
+    //   `sourceReferences` aggregation above is kept stable but its
+    //   value is intentionally discarded here.
+    sourceReferences: undefined,
     advisoryMode: 'system_review' as const,
     systemSignature: deriveSystemSignature(findings),
   };

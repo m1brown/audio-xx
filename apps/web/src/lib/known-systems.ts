@@ -79,7 +79,8 @@ export const KNOWN_SYSTEMS: KnownSystem[] = [
       { brand: 'Sorane', name: 'SA1.2', category: 'cartridge', role: null, core: false },
     ],
     notes: 'Runs Gold Lion KT77s in the Leben. Analog chain includes multiple cartridges (EMT HSD 006, Zu/DL-103 Mk.II, Ortofon SPU Mono CG 65 Di MkII). The totaldac uses the live clocking option.',
-    sourceUrl: 'https://twitteringmachines.com/',
+    // F4 gate: reviewer-publication sourceUrl omitted under the F4
+    // reviewer-data exclusion rule (was: twittering machines).
   },
   {
     id: 'boris-reference',
@@ -110,7 +111,7 @@ export const KNOWN_SYSTEMS: KnownSystem[] = [
       { brand: 'Lifesaver Audio', name: 'Gradient Box 2', category: 'other', role: null, core: false },
     ],
     notes: 'Room is 6×8m with PSI Audio AVAA C214 active bass traps. Source is iMac running Audirvana with Qobuz.',
-    sourceUrl: 'https://6moons.com/',
+    // F4 gate: reviewer-publication sourceUrl omitted (was: 6moons).
   },
   {
     id: 'srajan-secondary',
@@ -126,7 +127,7 @@ export const KNOWN_SYSTEMS: KnownSystem[] = [
       { brand: 'Zu', name: 'Method', category: 'speaker', role: null, core: false },
       { brand: 'Soundaware', name: 'D300Ref', category: 'streamer', role: null, core: false },
     ],
-    sourceUrl: 'https://6moons.com/',
+    // F4 gate: reviewer-publication sourceUrl omitted (was: 6moons).
   },
   {
     id: 'srajan-video',
@@ -140,7 +141,7 @@ export const KNOWN_SYSTEMS: KnownSystem[] = [
       { brand: 'Oppo', name: 'BDP-105', category: 'dac', role: null, core: true },
       { brand: 'Dynaudio', name: '18S', category: 'speaker', role: null, core: false },
     ],
-    sourceUrl: 'https://6moons.com/',
+    // F4 gate: reviewer-publication sourceUrl omitted (was: 6moons).
   },
 ];
 

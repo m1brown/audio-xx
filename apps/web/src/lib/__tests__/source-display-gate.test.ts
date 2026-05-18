@@ -105,10 +105,14 @@ describe('hasDisplayableSources — universal Sources-section gate', () => {
   });
 });
 
-describe('comparison output never renders an empty Sources header', () => {
-  // Stage 14.1c bug: production reported `shindo vs hegel` showing
-  // a Sources heading with no rows beneath. Locks both orderings of
-  // every prior repro pair PLUS the failing new one.
+// F4 gate (private beta, 2026-05-18):
+//   The "displayable rows exist" assertion below was the inverse of
+//   today's contract. Under the F4 reviewer-data exclusion rule,
+//   buildBrandComparison must NOT populate sourceReferences — the
+//   field is now intentionally undefined for every brand-comparison
+//   pair. The block is converted to assert the F4 exclusion explicitly
+//   on the same fixture pairs.
+describe('F4 — comparison output emits no sourceReferences', () => {
   const PAIRS: Array<[string, string, string]> = [
     ['shindo vs hegel',          'Shindo',    'Hegel'],
     ['hegel vs shindo',          'Hegel',     'Shindo'],
@@ -118,18 +122,17 @@ describe('comparison output never renders an empty Sources header', () => {
     ['goldmund vs shindo',       'Goldmund',  'Shindo'],
   ];
 
-  it.each(PAIRS)('%s — render gate would pass (displayable rows exist)', (label, a, b) => {
+  it.each(PAIRS)('%s — comparison output carries no source references', (label, a, b) => {
     const profA = findBrandProfileByName(a);
     const profB = findBrandProfileByName(b);
     expect(profA, `missing fixture: ${a}`).toBeDefined();
     expect(profB, `missing fixture: ${b}`).toBeDefined();
 
     const response = buildBrandComparison(profA!, profB!, label);
-    // The actual rendering contract — pass through the same gate the
-    // AdvisoryMessage call sites use post-14.1c.
-    expect(
-      hasDisplayableSources(response.sourceReferences),
-      `${label} produced no displayable sources — empty Sources header would render.`,
-    ).toBe(true);
+    // F4 hard requirement: reviewer-derived sources must not surface
+    // in comparison output. sourceReferences must be undefined; the
+    // render-side gate then renders no Sources block.
+    expect(response.sourceReferences).toBeUndefined();
+    expect(hasDisplayableSources(response.sourceReferences)).toBe(false);
   });
 });

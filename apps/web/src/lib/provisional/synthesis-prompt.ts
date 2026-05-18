@@ -183,11 +183,12 @@ should be included when evidence supports them.
     ]
   },
 
-  "description": "2-3 sentence synthesis...",   // required: paraphrased, never copied
+  "description": "2-3 sentence synthesis..."    // required: paraphrased, never copied
 
-  "sourceReferences": [                         // required: attribution
-    { "source": "Publication name", "note": "Brief note on what the source contributed." }
-  ]
+  // F4 gate (private beta, 2026-05-18): the LLM is intentionally
+  // NOT instructed to emit a sourceReferences array. Reviewer-derived
+  // attributions are excluded from the runtime path under the F4
+  // reviewer-data exclusion rule.
 }
 `;
 
@@ -413,10 +414,10 @@ export function validateSynthesisOutput(output: unknown): string[] {
     }
   }
 
-  // sourceReferences
-  if (!Array.isArray(o.sourceReferences) || o.sourceReferences.length === 0) {
-    errors.push('Missing or empty sourceReferences');
-  }
+  // sourceReferences — F4 gate: no longer required. The validator
+  // accepts any LLM output regardless of sourceReferences presence,
+  // since the field is suppressed downstream under the F4 reviewer-
+  // data exclusion rule.
 
   return errors;
 }

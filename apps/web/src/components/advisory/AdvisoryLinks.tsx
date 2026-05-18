@@ -39,7 +39,14 @@ interface AdvisoryLinksProps {
 export default function AdvisoryLinks({ links }: AdvisoryLinksProps) {
   const refLinks = links.filter((l) => !l.kind || l.kind === 'reference');
   const dealerLinks = links.filter((l) => l.kind === 'dealer');
-  const reviewLinks = links.filter((l) => l.kind === 'review');
+  // F4 gate (private beta, 2026-05-18):
+  //   Review-kind links (`kind === 'review'`, previously rendered under
+  //   the "Reference:" label) must not surface to users under the F4
+  //   reviewer-data exclusion rule. The filter is kept for shape so
+  //   producers upstream don't need to change; the result is simply
+  //   never rendered.
+  const reviewLinks: AdvisoryLink[] = [];
+  void links.filter((l) => l.kind === 'review');
 
   return (
     <div style={{ fontSize: '0.88rem', color: '#666', lineHeight: 1.8 }}>

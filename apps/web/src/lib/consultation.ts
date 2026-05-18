@@ -612,20 +612,13 @@ const BRAND_PROFILES: BrandProfile[] = [
       },
     ],
     media: {
-      images: [
-        {
-          url: 'https://6moons.com/audioreviews/shindo3/hero_cortese.jpg',
-          caption: 'Shindo Cortese — single-ended stereo amplifier, point-to-point wired.',
-          credit: 'Shindo Laboratory / 6moons',
-          sourceUrl: 'https://6moons.com/audioreviews/shindo3/shindo.html',
-        },
-        {
-          url: 'https://6moons.com/audioreviews/shindo3/hero_monbrison_front.jpg',
-          caption: 'Shindo Monbrison preamplifier — the system anchor.',
-          credit: 'Shindo Laboratory / 6moons',
-          sourceUrl: 'https://6moons.com/audioreviews/shindo3/shindo.html',
-        },
-      ],
+      // F4 gate (private beta, 2026-05-18):
+      //   Shindo brand images previously hotlinked from 6moons.com with
+      //   review-publication credit. Removed under the F4 reviewer-data
+      //   exclusion rule. Shindo has no public manufacturer site, so no
+      //   replacement images are added (per F4: do not fabricate
+      //   alternatives).
+      images: [],
       videos: [
         {
           title: 'Inside Shindo Laboratory in Tokyo, Japan',
@@ -5622,6 +5615,24 @@ function buildComparisonStructuredSources(
   profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
   profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
 ): import('./advisory-response').SourceReference[] | undefined {
+  // F4 gate (private beta, 2026-05-18):
+  //   Comparison output must not surface reviewer-derived source
+  //   attributions. The aggregation logic below (EDITORIAL_SOURCES +
+  //   reviewerQuotes + product.sourceReferences + brand review links)
+  //   draws on review-publication data and is excluded from the runtime
+  //   path under the F4 reviewer-data exclusion rule. The function
+  //   returns undefined so callers (e.g. the comparison advisory
+  //   builder) emit no sourceReferences field.
+  //
+  //   The original aggregation body is preserved below behind a
+  //   compile-time-dead `if (false)` block so it can be re-evaluated
+  //   post-beta alongside any new source/attribution approach.
+  void profileA;
+  void profileB;
+  return undefined;
+
+  // eslint-disable-next-line no-constant-condition
+  if (false) {
   const refs: import('./advisory-response').SourceReference[] = [];
   // Dedupe by `source + url` pair. URL-less plain-text citations are
   // deduped by source alone (no URL distinguishes them).
@@ -5675,12 +5686,12 @@ function buildComparisonStructuredSources(
     const bp = profile as BrandProfile;
     if (!bp.reviewerQuotes) continue;
     const brand = bp.names[0];
-    for (const q of bp.reviewerQuotes) {
+    for (const q of bp.reviewerQuotes!) {
       const parenMatch = q.source.match(/\(([^)]+)\)\s*$/);
       const publication = (parenMatch?.[1] ?? q.source).trim();
       if (!isWhitelistedSource(publication)) continue;
       const reviewer = parenMatch
-        ? q.source.slice(0, parenMatch.index).trim()
+        ? q.source.slice(0, parenMatch!.index).trim()
         : '';
       const note = reviewer
         ? `${reviewer} on ${brand}`
@@ -5697,7 +5708,7 @@ function buildComparisonStructuredSources(
       brandLower !== nameB.toLowerCase()
     ) continue;
     if (!product.sourceReferences) continue;
-    for (const sr of product.sourceReferences) {
+    for (const sr of product.sourceReferences!) {
       tryPush({
         source: sr.source,
         note: sr.note,
@@ -5724,6 +5735,7 @@ function buildComparisonStructuredSources(
   }
 
   return refs.length > 0 ? refs.slice(0, 5) : undefined;
+  } // end if (false) — F4 gate dormant block
 }
 
 /** Produce a short human-readable label for the context the user provided. */

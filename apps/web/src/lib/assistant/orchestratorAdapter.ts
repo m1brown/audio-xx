@@ -236,7 +236,14 @@ export function orchestratorToAdvisory(ctx: AdapterContext): AdvisoryResponse {
   }
 
   // ── Source references from matched products ──
-  const sourceRefs = collectSourceReferences(recommendations, productExamples);
+  // F4 gate (private beta, 2026-05-18):
+  //   Reviewer-derived sourceReferences must not appear in advisory
+  //   output under the F4 reviewer-data exclusion rule. The collector
+  //   is left in place but its output is discarded; the advisory below
+  //   sets `sourceReferences: undefined` regardless.
+  void collectSourceReferences;
+  void productExamples;
+  const sourceRefs: SourceReference[] = [];
 
   // ── Build advisory ──
   const advisory: AdvisoryResponse = {
@@ -264,8 +271,10 @@ export function orchestratorToAdvisory(ctx: AdapterContext): AdvisoryResponse {
       ? overallGuidance.slice(0, 200).replace(/\s+\S*$/, '') + '…'
       : overallGuidance,
 
-    // Source references
-    sourceReferences: sourceRefs.length > 0 ? sourceRefs : undefined,
+    // Source references — F4 gate: always undefined under reviewer-
+    // data exclusion rule. `sourceRefs` retained above only to keep
+    // the function-flow shape stable.
+    sourceReferences: undefined,
 
     // Not provisional — LLM had full context
     provisional: false,
