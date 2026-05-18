@@ -294,8 +294,8 @@ export default function HowItWorks() {
           <p>
             The website is meant to support long-term listening satisfaction
             and reduce churn. Audio&thinsp;XX is intended to sit alongside
-            the work of professional reviewers and audio publications, it is
-            not a substitute for it.
+            the work of professional reviewers and audio publications; it is
+            not a substitute for that work.
           </p>
         </div>
       </section>
