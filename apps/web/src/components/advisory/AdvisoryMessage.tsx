@@ -35,7 +35,7 @@ import AdvisoryProse from './AdvisoryProse';
 import AdvisoryProductCards, { ShoppingLinks } from './AdvisoryProductCard';
 import { DIRECTION_CONTENT } from '../../lib/upgrade-path-content';
 import { findProductByComponentName, findProductInProse, findBrandProfileByName } from '../../lib/consultation';
-import { getProductImage } from '../../lib/product-images';
+import { getProductImage, getGenericPlaceholder } from '../../lib/product-images';
 import AdvisoryLinks from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
 import { hasDisplayableSources } from '../../lib/evidence/source-whitelist';
@@ -4174,7 +4174,59 @@ function ConsultationSubjectContext({ subject, prose }: { subject?: string; pros
   if (!product && prose) {
     product = findProductInProse(prose);
   }
-  if (!product) return null;
+
+  // Unknown-product fallback (P1 follow-on, Option B, 2026-05-18):
+  //   When the user asks about a product we don't have in the catalog,
+  //   the lookups above return undefined. Rather than rendering
+  //   nothing, render a clearly-labelled GENERIC PLACEHOLDER block so
+  //   the unknown-product clarification has visual grounding alongside
+  //   the Explore links. The placeholder uses the same SVG silhouette
+  //   shipped at /images/placeholders/product.svg — no fabricated
+  //   product imagery, no review-derived material. The "Generic
+  //   placeholder" caption below ensures users don't mistake the
+  //   silhouette for the actual product.
+  if (!product) {
+    if (!subject) return null;
+    const placeholderUrl = getGenericPlaceholder();
+    return (
+      <div style={{ marginBottom: '0.85rem' }}>
+        <div style={{
+          width: '100%',
+          maxWidth: '320px',
+          height: '160px',
+          background: '#FFFFFF',
+          border: '1px solid #E5E5E5',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '0.75rem',
+          boxSizing: 'border-box',
+          marginBottom: '0.35rem',
+          opacity: 0.55,
+        }}>
+          <img
+            src={placeholderUrl}
+            alt={`Generic product placeholder — no catalog image available for ${subject}`}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              display: 'block',
+            }}
+          />
+        </div>
+        <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#2a2a2a' }}>
+          {subject}
+        </div>
+        <div style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#999', marginTop: '0.15rem' }}>
+          Generic placeholder — actual product image not in catalog
+        </div>
+      </div>
+    );
+  }
+
   const imageUrl = product.imageUrl ?? getProductImage(product.brand, product.name);
   if (!imageUrl) return null;
   // Stage 6.3 caption polish: strip internal variant-SKU suffixes like

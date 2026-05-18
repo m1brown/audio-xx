@@ -18,6 +18,7 @@ import {
   refineDiagnosisWithContext,
 } from '@/lib/advisory-response';
 import type { AdvisoryResponse, ShoppingAdvisoryContext } from '@/lib/advisory-response';
+import { buildUnknownProductClarification } from '@/lib/unknown-product-clarification';
 import { buildProductAssessment } from '@/lib/product-assessment';
 import type { AssessmentContext } from '@/lib/product-assessment';
 import { buildKnowledgeResponse, buildAssistantResponse, requestKnowledgeLlm, requestAssistantLlm } from '@/lib/audio-lanes';
@@ -2472,18 +2473,16 @@ export default function Home() {
       }
       // ── Safety check (Task 5): product detected but resolution failed ──
       // Do NOT fall through to shopping/exploration/gear_inquiry.
-      // Instead, return a clarification question so we don't hallucinate
-      // substitutes or return unrelated products.
+      // Instead, return a hedged clarification advisory built by
+      // buildUnknownProductClarification — admits limited catalog
+      // knowledge, asks for confirmation, and surfaces Explore links
+      // (manufacturer search, eBay, HiFi Shark). The image surface
+      // is handled by AdvisoryMessage's ConsultationSubjectContext
+      // fallback (generic placeholder when no catalog image resolves).
       const productName = turnCtx.subjectMatches.find((m) => m.kind === 'product')?.name
         ?? turnCtx.subjectMatches.find((m) => m.kind === 'brand')?.name
         ?? 'that product';
-      const clarificationAdvisory: AdvisoryResponse = {
-        kind: 'assessment',
-        subject: productName,
-        advisoryMode: 'product_assessment',
-        bottomLine: `I want to make sure I understand — are you asking about the ${productName}? I don't have full catalog data on that specific model yet. If you can share more details (brand, model number, or category), I can offer a more informed assessment.`,
-        followUp: `Could you confirm the exact product name or share a link? That way I can give you a proper evaluation rather than guessing.`,
-      };
+      const clarificationAdvisory = buildUnknownProductClarification(productName);
       dispatchAdvisory(clarificationAdvisory);
       dispatch({ type: 'SET_LOADING', value: false });
       return;
