@@ -75,15 +75,16 @@ export default function Resources() {
       <section style={sectionStyle}>
         <div style={bodyStyle}>
           <p style={{ marginBottom: '0.65rem' }}>
-            Audio&thinsp;XX draws on a wide range of audio knowledge — scientific
-            research, engineering principles, measurement analysis, and decades of
-            careful listening-based system evaluation.
+            Audio&thinsp;XX draws on the broader field — scientific research,
+            engineering principles, measurement analysis, and decades of careful
+            listening-based system evaluation. The resources below are starting
+            points for further reading, not source material the advisor ingests.
           </p>
           <p>
-            Different perspectives exist within audio, and they do not always
-            agree. Audio&thinsp;XX aims to synthesize these perspectives into a
-            practical advisory framework rather than adopt any single school of
-            thought.
+            Different schools of thought exist within audio, and they do not
+            always agree. Audio&thinsp;XX brings these strands together into a
+            practical advisory framework rather than adopting any single school
+            wholesale.
           </p>
         </div>
       </section>
