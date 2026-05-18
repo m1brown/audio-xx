@@ -11458,6 +11458,24 @@ function detectPrimaryConstraint(
 function buildComponentSourceReferences(
   c: SystemComponent,
 ): import('./advisory-response').SourceReference[] {
+  // F4 hotfix (private beta, 2026-05-18):
+  //   Per-component source aggregation was the escape path that left
+  //   reviewer publications (6moons, Twittering Machines, Darko.Audio,
+  //   etc.) visible on system-assessment Component Contributions in
+  //   production. The aggregation pulled from product.sourceReferences,
+  //   EDITORIAL_SOURCES, and brand-profile reviewerQuotes — all of
+  //   which are now excluded from the runtime path under the F4
+  //   reviewer-data exclusion rule.
+  //
+  //   Returns [] unconditionally; the original aggregation body is
+  //   preserved below behind `if (false)` so the producer can be
+  //   re-evaluated post-beta alongside any new source/attribution
+  //   approach.
+  void c;
+  return [];
+
+  // eslint-disable-next-line no-constant-condition
+  if (false) {
   const refs: import('./advisory-response').SourceReference[] = [];
   const seen = new Set<string>();
   const keyOf = (source: string, url?: string) =>
@@ -11478,7 +11496,7 @@ function buildComponentSourceReferences(
 
   // 1. Direct product.sourceReferences (preserve url + title)
   if (c.product?.sourceReferences) {
-    for (const sr of c.product.sourceReferences) {
+    for (const sr of c.product.sourceReferences!) {
       tryPush({ source: sr.source, note: sr.note, url: sr.url, title: sr.title });
     }
   }
@@ -11508,12 +11526,12 @@ function buildComponentSourceReferences(
     ? findBrandProfileByName(c.product.brand)
     : undefined;
   if (fullBrandProfile?.reviewerQuotes) {
-    for (const q of fullBrandProfile.reviewerQuotes) {
+    for (const q of fullBrandProfile.reviewerQuotes!) {
       const parenMatch = q.source.match(/\(([^)]+)\)\s*$/);
       const publication = (parenMatch?.[1] ?? q.source).trim();
       if (!isWhitelistedSource(publication)) continue;
       const reviewer = parenMatch
-        ? q.source.slice(0, parenMatch.index).trim()
+        ? q.source.slice(0, parenMatch!.index).trim()
         : '';
       const note = reviewer
         ? `${reviewer} on ${brandLabel}`
@@ -11523,6 +11541,8 @@ function buildComponentSourceReferences(
   }
 
   return refs;
+  } // end if (false) — F4 hotfix dormant block
+  return [];
 }
 
 function buildComponentAssessments(

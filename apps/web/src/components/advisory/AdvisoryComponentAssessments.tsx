@@ -175,15 +175,22 @@ export default function AdvisoryComponentAssessments({ assessments }: Props) {
           </p>
 
           {/* ── Per-component Sources (Stage PB1.2) ────────────────
-             Editorial attribution for this specific component, drawn
-             from product.sourceReferences + brand EDITORIAL_SOURCES +
-             reviewerQuotes (whitelist-gated, deduped, capped). When
-             the two-tier display filter empties the list the section
-             is suppressed entirely — no empty heading. Stage 6.2
-             preserved: plain text when URL missing, link when URL
-             present, never a homepage fallback. */}
+             F4 hotfix (private beta, 2026-05-18):
+               This per-component "Sources" block was the production
+               escape path for the F4 reviewer-data exclusion rule —
+               surfacing 6moons, Twittering Machines, Darko.Audio and
+               other reviewer publications under each component
+               assessment. The block now renders nothing; the IIFE
+               returns null unconditionally and the original code is
+               preserved behind `if (false)` so the surface can be
+               re-evaluated post-beta. */}
           {(() => {
-            const displaySources = comp.sources ? filterSourcesForDisplay(comp.sources) : [];
+            void comp.sources;
+            void filterSourcesForDisplay;
+            return null;
+            // eslint-disable-next-line no-constant-condition, no-unreachable
+            if (false) {
+            const displaySources = comp.sources ? filterSourcesForDisplay(comp.sources!) : [];
             if (displaySources.length === 0) return null;
             return (
               <div style={{ marginTop: '0.75rem' }}>
@@ -222,6 +229,8 @@ export default function AdvisoryComponentAssessments({ assessments }: Props) {
                 </div>
               </div>
             );
+            } // end if (false) — F4 hotfix dormant block
+            return null;
           })()}
 
           {/* ── Per-component Explore (Stage PB1.2) ────────────────

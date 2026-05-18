@@ -1198,14 +1198,20 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
              * year + link appear, which is exactly the "supportive, not
              * dominant" role the spec calls for.
              */}
-            {opt.sources && opt.sources.length > 0 && (
+            {/* F4 hotfix (private beta, 2026-05-18):
+                "Further reading" surfaced reviewer publication + short
+                quote + review URL on every product card. Suppressed
+                under the F4 reviewer-data exclusion rule. The block
+                is gated to `false &&` so the render is dead while the
+                shape stays diff-readable for the post-beta data pass. */}
+            {false && opt.sources && opt.sources!.length > 0 && (
               <div style={{ margin: '0 0 0.5rem' }}>
                 <SectionLabel>Further reading</SectionLabel>
                 <ul style={{
                   margin: 0,
                   paddingLeft: '1.1rem',
                 }}>
-                  {opt.sources.slice(0, 2).map((s) => (
+                  {opt.sources!.slice(0, 2).map((s) => (
                     <li key={s.id} style={{
                       fontSize: '0.82rem',
                       lineHeight: 1.55,

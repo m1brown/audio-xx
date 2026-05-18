@@ -636,7 +636,11 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
                 <MakerContextBlock brand={opt.brand} context={opt.makerContext} />
 
                 {/* Further reading ��� curated review links */}
-                {opt.sources && opt.sources.length > 0 && (
+                {/* F4 hotfix (private beta, 2026-05-18): "Further
+                    reading" surfaced reviewer publication, year, and
+                    review URL per upgrade option. Gated to `false &&`
+                    under the F4 reviewer-data exclusion rule. */}
+                {false && opt.sources && opt.sources!.length > 0 && (
                   <div style={{ marginTop: '0.55rem' }}>
                     <div style={{
                       fontSize: '0.72rem', fontWeight: 700, color: '#7A756D',
@@ -645,7 +649,7 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
                       Further reading
                     </div>
                     <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
-                      {opt.sources.slice(0, 2).map((s) => (
+                      {opt.sources!.slice(0, 2).map((s) => (
                         <li key={s.id} style={{
                           fontSize: '0.82rem',
                           lineHeight: 1.55,
