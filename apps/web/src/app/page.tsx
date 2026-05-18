@@ -5026,7 +5026,11 @@ export default function Home() {
         * on `hasMessages` so the fresh-session view (which already shows the
         * "Questions or feedback? hello@audio-xx.com" welcome line above)
         * doesn't render Contact twice. */}
-      <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
+      {/* D1 mobile QA — M4 (2026-05-18).
+        * Add `flexWrap: 'wrap'` to the row + `whiteSpace: 'nowrap'` to each
+        * child so the row breaks between items at narrow widths instead of
+        * splitting individual phrases mid-word ("Start\nover", "Report\nissue"). */}
+      <div style={{ marginBottom: '1.5rem', display: 'flex', flexWrap: 'wrap', gap: '1.25rem', alignItems: 'center' }}>
         <button
           type="button"
           onClick={() => handleReset()}
@@ -5042,6 +5046,7 @@ export default function Home() {
             textDecoration: 'none',
             letterSpacing: '0.01em',
             transition: 'color 0.15s ease',
+            whiteSpace: 'nowrap',
           }}
           onMouseEnter={(e) => { e.currentTarget.style.color = COLOR.accent; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = COLOR.textSecondary; }}
@@ -5058,6 +5063,7 @@ export default function Home() {
               textDecoration: 'none',
               letterSpacing: '0.01em',
               transition: 'color 0.15s ease',
+              whiteSpace: 'nowrap',
             }}
             onMouseEnter={(e) => { e.currentTarget.style.color = COLOR.accent; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = COLOR.textSecondary; }}
@@ -5075,6 +5081,7 @@ export default function Home() {
               textDecoration: 'none',
               letterSpacing: '0.01em',
               transition: 'color 0.15s ease',
+              whiteSpace: 'nowrap',
             }}
             onMouseEnter={(e) => { e.currentTarget.style.color = COLOR.accent; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = COLOR.textSecondary; }}

@@ -50,12 +50,19 @@ export default function Nav() {
   /* Build a NavLink-style anchor with active-state styling and
    * aria-current. Only used for the four routes the user listed:
    * /how-it-works, /glossary, /resources, /systems. The wordmark and
-   * auth controls don't get active styling. */
-  function NavItem({ href, label }: { href: string; label: string }) {
+   * auth controls don't get active styling.
+   *
+   * D1 mobile QA (M1, 2026-05-18): items flagged with `secondary` get
+   * a `nav-link-secondary` class. globals.css hides this class below
+   * 480px to prevent the nav from overflowing into "ResourcesSign in"
+   * at 360–414w. The primary entry ("How It Works") and the auth
+   * affordances stay visible at every viewport. */
+  function NavItem({ href, label, secondary = false }: { href: string; label: string; secondary?: boolean }) {
     const active = isActive(href);
     return (
       <Link
         href={href}
+        className={secondary ? 'nav-link-secondary' : undefined}
         style={active ? NAV_LINK_ACTIVE : NAV_LINK_BASE}
         aria-current={active ? 'page' : undefined}
       >
@@ -76,8 +83,8 @@ export default function Nav() {
           </Link>
           <div className="nav-links">
             <NavItem href="/how-it-works" label="How It Works" />
-            <NavItem href="/glossary" label="Glossary" />
-            <NavItem href="/resources" label="Resources" />
+            <NavItem href="/glossary" label="Glossary" secondary />
+            <NavItem href="/resources" label="Resources" secondary />
             {session && <NavItem href="/systems" label="Systems" />}
           </div>
         </div>

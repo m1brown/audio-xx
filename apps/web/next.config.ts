@@ -30,6 +30,20 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  /* D1 mobile QA — M2 (2026-05-18).
+   *
+   * The Next.js dev-mode build-status indicator renders as a small dark
+   * circle in the bottom-left of every page during `npm run dev`. In
+   * the D1 mobile screenshot pass it overlapped the affiliate-disclosure
+   * line in the page footer at 360–414w widths, where the disclosure
+   * is legal copy that must remain readable.
+   *
+   * The indicator is NOT application chrome — it does not render in
+   * production builds. Disabling it here is a dev-only cleanup that
+   * removes a false-positive from QA screenshots while leaving the
+   * production surface untouched. Production users never saw this
+   * overlap. */
+  devIndicators: false,
   serverExternalPackages: [
     '@prisma/client',
     '@libsql/client',

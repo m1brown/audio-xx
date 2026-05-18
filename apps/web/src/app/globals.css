@@ -397,3 +397,21 @@ nav .nav-radar-link:hover {
   }
 }
 
+/* D1 mobile QA — M1 (2026-05-18).
+ *
+ * Below 480px the top nav can't fit "AUDIO XX · How It Works · Glossary
+ * · Resources · Sign in" on one line; the existing horizontal-scroll
+ * behaviour on .nav-links left "Resources" clipped and ran straight
+ * into "Sign in" with no visible separator (the QA pass captured this
+ * as "ResourcesSign in"). The smallest scope-respecting fix is to
+ * collapse the two least-essential items (Glossary, Resources) on
+ * narrow viewports. Brand, How It Works, Systems (auth-only) and
+ * Sign in stay visible. No hamburger, no new menu — Glossary and
+ * Resources remain reachable via the homepage chips and the
+ * conversational interior. */
+@media (max-width: 479px) {
+  nav .nav-link-secondary {
+    display: none !important;
+  }
+}
+
