@@ -421,6 +421,168 @@ const PRODUCT_ASSESSMENT_PATTERNS = [
   /\bwhat\s+(?:is|are)\s+(?:the\s+)?(?:character|sound|signature|house sound)\b/i,
 ];
 
+// ── Unknown-product candidate detection (P1 fix, 2026-05-18) ─────────
+//
+// Pre-fix: a prompt like "thoughts on the Buchardt A700" where the
+// product is not in the catalog produced subjectMatches = [], failing
+// the PRODUCT_ASSESSMENT gate's `hasProductSubject || hasBrandSubject`
+// guard. With an active saved system attached, the prompt then fell
+// through to system_assessment / diagnosis — diagnosing the saved
+// system instead of addressing the named product.
+//
+// This helper detects when the user has clearly named a SPECIFIC noun
+// (Capitalized brand word, e.g. "Buchardt", or alphanumeric model
+// identifier, e.g. "A700", "CS600X") AFTER a product-assessment
+// trigger phrase. When that's true the prompt should route to
+// product_assessment regardless of whether the subject is catalogued
+// — the downstream handler at page.tsx:2473 already produces a hedged
+// clarification message when buildProductAssessment returns null.
+//
+// Generic pronouns and filler words (this, that, it, anything,
+// something, the system, etc.) are explicitly excluded so phrases
+// like "thoughts on this" do not trigger product_assessment.
+
+const PRODUCT_CANDIDATE_STOPWORDS = new Set([
+  'this', 'that', 'it', 'them', 'these', 'those',
+  'anything', 'something', 'everything', 'nothing',
+  'system', 'systems', 'setup', 'setups', 'rig', 'rigs', 'chain', 'chains',
+  'gear', 'equipment', 'kit', 'stuff',
+  'the', 'a', 'an', 'some', 'any', 'all',
+  'my', 'your', 'our', 'their', 'his', 'her', 'its',
+]);
+
+/**
+ * Returns true when, after a product-assessment trigger phrase, the
+ * message contains either a Capitalized brand-like word or an
+ * alphanumeric model identifier (digit-containing token).
+ *
+ * Used to relax the gate-0 PRODUCT_ASSESSMENT routing condition so
+ * unknown products still route to product_assessment (and surface the
+ * hedged-clarification fallback) rather than collapsing into
+ * system_assessment / diagnosis.
+ */
+function looksLikeProductCandidate(message: string): boolean {
+  return extractProductCandidateName(message) !== null;
+}
+
+/**
+ * Extract the candidate product name from a message that matched a
+ * PRODUCT_ASSESSMENT_PATTERN trigger. Returns the trailing noun phrase
+ * trimmed of stopword leading articles, or null when no candidate is
+ * recognizable.
+ *
+ * Examples:
+ *   "thoughts on the Buchardt A700"          → "Buchardt A700"
+ *   "what do you think of the Cube Audio F8" → "Cube Audio F8"
+ *   "tell me about Sonus Faber"              → "Sonus Faber"
+ *   "thoughts on this"                       → null  (filler-only)
+ *   "thoughts on the system"                 → null  (stopword)
+ */
+// Trigger-phrase words that frequently surround the actual product
+// candidate; stripped before token extraction so they don't end up in
+// the synthesized subject name.
+const TRIGGER_NOISE_WORDS = new Set([
+  'thoughts', 'thought', 'opinion', 'opinions',
+  'think', 'thinking',
+  'tell', 'told',
+  'know', 'known',
+  'considering', 'consider',
+  'looking', 'eyeing', 'interested',
+  'curious',
+  'experience',
+  'heard', 'hear',
+  'getting', 'trying', 'switching',
+  'go', 'going', 'pick', 'picking',
+  'about', 'on', 'of', 'with', 'to', 'from', 'in', 'at', 'for',
+  'is', 'are', 'was', 'were', 'be', 'been', 'being',
+  'i', 'i\'m', 'im', 'you', 'me', 'we',
+  'do', 'does', 'did',
+  'what', 'which', 'who', 'how', 'why', 'when', 'where',
+  'good', 'bad', 'better', 'best', 'great',
+  'fit', 'work', 'works', 'match', 'matches', 'pair', 'pairs', 'sound', 'sounds',
+  'improve', 'improves', 'help', 'helps', 'behave', 'behaves', 'perform', 'performs',
+  'worth', 'worthwhile', 'upgrade', 'improvement', 'step', 'up', 'downgrade',
+  'should', 'would', 'could', 'will', 'shall', 'may', 'might',
+  'have', 'has', 'had',
+  'really', 'actually', 'usually', 'typically',
+  'or', 'and', 'but', 'so', 'than',
+  'any', 'some', 'much', 'many',
+]);
+
+function extractProductCandidateName(message: string): string | null {
+  // Confirm a product-assessment trigger phrase matches (otherwise we
+  // shouldn't try to extract a product candidate at all).
+  const triggered = PRODUCT_ASSESSMENT_PATTERNS.some((p) => p.test(message));
+  if (!triggered) return null;
+
+  // Tokenize the whole message and collect the longest contiguous run
+  // of tokens that contains at least one meaningful product-candidate
+  // token (Capitalized brand word or alphanumeric model identifier),
+  // skipping over trigger noise words and stopwords. This handles
+  // both trigger shapes — leading ("thoughts on X") and wrapping
+  // ("is the X a good fit"). For wrapping shapes the meaningful tokens
+  // are interior to the regex match, so the strip-trigger approach is
+  // insufficient; whole-message scanning is.
+  const cleaned = message.replace(/[?!.,;:()/]+/g, ' ');
+  const tokens = cleaned.split(/\s+/).filter(Boolean);
+
+  let bestRun: string[] = [];
+  let bestRunHasMeaningful = false;
+  let currentRun: string[] = [];
+  let currentHasMeaningful = false;
+
+  const flush = () => {
+    if (currentHasMeaningful && currentRun.length > bestRun.length) {
+      bestRun = currentRun;
+      bestRunHasMeaningful = true;
+    }
+    currentRun = [];
+    currentHasMeaningful = false;
+  };
+
+  for (const raw of tokens) {
+    const token = raw.replace(/^["'`]+|["'`]+$/g, '');
+    if (!token) continue;
+    const lower = token.toLowerCase();
+
+    // Hard breakers: noise/trigger words flush the run.
+    if (TRIGGER_NOISE_WORDS.has(lower)) {
+      flush();
+      continue;
+    }
+
+    // Stopwords (articles, generic pronouns/objects) are kept inside
+    // a run but never start one; they're not meaningful tokens.
+    if (PRODUCT_CANDIDATE_STOPWORDS.has(lower)) {
+      if (currentRun.length > 0) currentRun.push(token);
+      continue;
+    }
+
+    // Meaningful token: alphanumeric model id or proper-noun brand word.
+    // Brand-word shape requires Capital followed by lowercase letter so
+    // category acronyms (DAC, USB, FPGA, AMP) are excluded. All-caps
+    // brand names (KEF, JBL) are caught by the catalogue subject matcher
+    // upstream, not this candidate fallback.
+    const isModelId = /^[A-Za-z]*\d[A-Za-z\d-]*$/.test(token);
+    const isProperNoun = /^[A-Z][a-z][a-zA-Z'-]*$/.test(token) && token.length >= 2;
+    if (isModelId || isProperNoun) {
+      currentRun.push(token);
+      currentHasMeaningful = true;
+    } else {
+      // Lowercase non-stopword non-trigger word (e.g., "great", "new") — flush.
+      flush();
+    }
+  }
+  flush();
+
+  if (!bestRunHasMeaningful) return null;
+  // Trim trailing stopwords from the kept run
+  while (bestRun.length > 0 && PRODUCT_CANDIDATE_STOPWORDS.has(bestRun[bestRun.length - 1].toLowerCase())) {
+    bestRun.pop();
+  }
+  return bestRun.length > 0 ? bestRun.join(' ').trim() : null;
+}
+
 // ── System assessment patterns ────────────────────────
 // These signal a system-level evaluation request, distinct from diagnosis.
 // Requires ownership language + assessment intent; no listening complaint.
@@ -1123,6 +1285,47 @@ export function detectIntent(
   const isLikelyComparison = /\bvs\.?\b/i.test(currentMessage) && subjectMatches.length >= 2;
   if (hasProductAssessmentPattern && (hasProductSubject || hasBrandSubject) && !isLikelySystemEval && !isLikelyShopping && !isLikelyComparison) {
     return { intent: 'product_assessment', subjects, subjectMatches, desires };
+  }
+
+  // 0a. Unknown-product assessment (P1 fix, 2026-05-18):
+  //     When the user uses an assessment trigger phrase ("thoughts on
+  //     X", "what do you think of X", "tell me about X", "is X a good
+  //     fit", etc.) AND a product-candidate noun follows (Capitalized
+  //     brand word or alphanumeric model identifier), route to
+  //     product_assessment EVEN IF the product is not in the catalog.
+  //
+  //     Why this matters: a saved-system context attached to the
+  //     session previously caused these prompts to fall through into
+  //     system_assessment / diagnosis, producing a generic diagnosis
+  //     of the saved system instead of addressing the named product.
+  //
+  //     A synthesized subjectMatch carrying the raw candidate name is
+  //     attached so the downstream safety-check at page.tsx:2473 can
+  //     emit the hedged "I don't have full catalog data on that
+  //     specific model yet" clarification grounded in the actual name
+  //     the user typed.
+  if (
+    hasProductAssessmentPattern
+    && !hasProductSubject
+    && !hasBrandSubject
+    && !isLikelySystemEval
+    && !isLikelyShopping
+    && !isLikelyComparison
+    && looksLikeProductCandidate(currentMessage)
+  ) {
+    const candidate = extractProductCandidateName(currentMessage);
+    if (candidate) {
+      const syntheticMatch: SubjectMatch = {
+        name: candidate,
+        kind: 'product',
+      };
+      return {
+        intent: 'product_assessment',
+        subjects: [candidate],
+        subjectMatches: [syntheticMatch],
+        desires,
+      };
+    }
   }
 
   // 0f. Refinement escape — short preference-shift messages like "make it warmer"
