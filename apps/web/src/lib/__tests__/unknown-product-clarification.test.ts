@@ -16,7 +16,7 @@ import {
   buildUnknownProductExploreLinks,
   resolveUnknownProductName,
 } from '../unknown-product-clarification';
-import { getGenericPlaceholder } from '../product-images';
+import { getGenericPlaceholder, getProductImage, getProductImageEntry } from '../product-images';
 import type { SubjectMatch } from '../intent';
 
 describe('buildUnknownProductClarification — shape + hedging', () => {
@@ -183,6 +183,91 @@ describe('resolveUnknownProductName — turnCtx → intent → fallback preceden
     // turnCtx brand wins over intent product — preserving the cataloged
     // canonical brand string when available.
     expect(resolveUnknownProductName([turnCtxBrand], [intentProduct])).toBe('chord');
+  });
+});
+
+// ── 2026-05-19: per-subject manufacturer image override ────────────
+//
+// When a product isn't in the curated Product catalog but IS in
+// PRODUCT_IMAGE_URLS, the unknown-product fallback renderer should
+// surface the real manufacturer-hosted image instead of the generic
+// placeholder. The "Generic placeholder" caption suppresses in that
+// case (it would be inaccurate — the image IS the actual product).
+
+describe('Subject-keyed manufacturer image override (2026-05-19)', () => {
+  it('Buchardt A700 lookup resolves to the buchardtaudio.com Shopify CDN image', () => {
+    const url = getProductImage(undefined, 'Buchardt A700');
+    expect(url).toBeDefined();
+    expect(url).toContain('buchardtaudio.com');
+    expect(url).toMatch(/\.jpg(?:\?|$)/);
+  });
+
+  it('lookup is case-insensitive (matches normalized lowercase key)', () => {
+    expect(getProductImage(undefined, 'BUCHARDT A700')).toBeDefined();
+    expect(getProductImage(undefined, 'buchardt a700')).toBeDefined();
+  });
+
+  it('the Buchardt URL is hosted on the manufacturer site (F4-clean — not reviewer-hosted)', () => {
+    const url = getProductImage(undefined, 'Buchardt A700')!;
+    // F4 forbids reviewer-publication-hosted images. Manufacturer
+    // CDN is allowed; verify the host directly.
+    expect(url).toMatch(/^https:\/\/(?:[a-z0-9-]+\.)?buchardtaudio\.com/);
+    expect(url).not.toMatch(/6moons|stereophile|darko\.audio|twitteringmachines|positive-feedback|stereotimes|headfonics/i);
+  });
+
+  it('returns undefined for genuinely uncatalogued / unknown products (placeholder path still fires)', () => {
+    const url = getProductImage(undefined, 'Made-Up Brand XYZ-12345');
+    expect(url).toBeUndefined();
+  });
+
+  it('returns undefined for the "that product" fallback string (Explore-link guard reinforced)', () => {
+    const url = getProductImage(undefined, 'that product');
+    expect(url).toBeUndefined();
+  });
+});
+
+// ── 2026-05-19: visible manufacturer attribution policy ────────────
+//
+// Policy: when the unknown-product fallback surfaces a real
+// manufacturer-hosted image, the UI must display an
+// "Image source: <site>" attribution line beneath the image so the
+// origin of the photo is explicit. This is asserted via the new
+// getProductImageEntry helper which returns both the URL AND the
+// provenance metadata the renderer needs to build the attribution.
+
+describe('getProductImageEntry — provenance for visible attribution', () => {
+  it('returns url + source.site for Buchardt A700 (manufacturer attribution path)', () => {
+    const entry = getProductImageEntry(undefined, 'Buchardt A700');
+    expect(entry).toBeDefined();
+    expect(entry!.url).toContain('buchardtaudio.com');
+    expect(entry!.source).toBeDefined();
+    expect(entry!.source!.site).toBe('buchardtaudio.com');
+    expect(entry!.source!.tier).toBe('manufacturer');
+    expect(entry!.source!.credit).toBe('Buchardt Audio');
+  });
+
+  it('returns undefined for genuinely uncatalogued products (placeholder path still fires)', () => {
+    const entry = getProductImageEntry(undefined, 'Made-Up Brand XYZ-12345');
+    expect(entry).toBeUndefined();
+  });
+
+  it('F4 invariant — never returns an entry with tier === "review_publication"', () => {
+    // hifi.nl, classicreceivers.com, positive-feedback.com, 6moons.com,
+    // stereotimes.com, headfonics.com are all review_publication entries
+    // in product-images.ts. Lookup by their associated product names
+    // should NOT return those entries (gate applies in getProductImageEntry
+    // identically to getProductImage).
+    const reviewerHostPattern = /6moons|darko\.audio|twitteringmachines|stereophile|positive-feedback|stereotimes|headfonics|hifi\.nl|classicreceivers/i;
+    // Probe a few known review_publication-keyed products
+    const probes = ['first watt sit 3', 'vinnie rossi l2i', 'linnenberg liszt', 'hornshoppe horn'];
+    for (const name of probes) {
+      const entry = getProductImageEntry(undefined, name);
+      if (entry) {
+        // If something resolved, it must NOT be reviewer-hosted
+        expect(entry.url, `lookup for "${name}" must not return reviewer-hosted URL`).not.toMatch(reviewerHostPattern);
+        expect(entry.source?.tier, `lookup for "${name}" must not return review_publication tier`).not.toBe('review_publication');
+      }
+    }
   });
 });
 

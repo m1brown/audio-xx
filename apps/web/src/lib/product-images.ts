@@ -340,6 +340,14 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // WLM — hifi-guide.com product image
   { key: 'wlm diva',            url: 'https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg' },
 
+  // Buchardt Audio — manufacturer-hosted Shopify CDN. Not in the curated
+  // catalog yet; the entry exists so the unknown-product clarification
+  // can surface the real product photo (via getProductImage name-only
+  // lookup) instead of the generic placeholder when a user asks about
+  // the A700 LE specifically.
+  { key: 'buchardt a700',       url: 'https://buchardtaudio.com/cdn/shop/files/5eacfaf1-bc58-4b67-a747-6869592f8bf3_900x.jpg?v=1773302031',
+    source: { tier: 'manufacturer', site: 'buchardtaudio.com', credit: 'Buchardt Audio', captured: '2026-05-19' } },
+
   // Hornshoppe — 6moons review (manufacturer site only hosts a tiny banner crop)
   { key: 'hornshoppe horn',     url: 'https://6moons.com/audioreviews/hornshoppe2/hero_cameohorns.jpg',
     source: { tier: 'review_publication', site: '6moons.com', credit: '6moons', captured: '2026-05-08' } },
@@ -697,6 +705,40 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
  * shipping the wrong image for TT2). Empty-URL entries are a positive
  * curation statement, not a placeholder waiting to be filled.
  */
+/**
+ * Resolved image entry with provenance — used when callers need to
+ * render an "Image source: <site>" attribution alongside the image.
+ */
+export interface ResolvedProductImage {
+  url: string;
+  source?: ImageSource;
+}
+
+/**
+ * Like `getProductImage` but also returns the entry's `source`
+ * metadata so the renderer can surface attribution
+ * ("Image source: buchardtaudio.com", etc.).
+ *
+ * Same F4 gate applies — entries with `tier === 'review_publication'`
+ * are skipped. Empty-URL entries return undefined identically to the
+ * URL-only function.
+ */
+export function getProductImageEntry(
+  brand: string | undefined,
+  name: string | undefined,
+): ResolvedProductImage | undefined {
+  const haystack = normalize(`${brand ?? ''} ${name ?? ''}`);
+  if (!haystack) return undefined;
+  for (const entry of PRODUCT_IMAGE_URLS) {
+    if (haystack.includes(entry.key)) {
+      if (entry.source?.tier === 'review_publication') continue;
+      if (entry.url === '') return undefined;
+      return { url: entry.url, source: entry.source };
+    }
+  }
+  return undefined;
+}
+
 export function getProductImage(
   brand: string | undefined,
   name: string | undefined,

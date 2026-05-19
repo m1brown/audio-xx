@@ -35,7 +35,7 @@ import AdvisoryProse from './AdvisoryProse';
 import AdvisoryProductCards, { ShoppingLinks } from './AdvisoryProductCard';
 import { DIRECTION_CONTENT } from '../../lib/upgrade-path-content';
 import { findProductByComponentName, findProductInProse, findBrandProfileByName } from '../../lib/consultation';
-import { getProductImage, getGenericPlaceholder } from '../../lib/product-images';
+import { getProductImage, getProductImageEntry, getGenericPlaceholder } from '../../lib/product-images';
 import AdvisoryLinks from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
 import { hasDisplayableSources } from '../../lib/evidence/source-whitelist';
@@ -4175,19 +4175,39 @@ function ConsultationSubjectContext({ subject, prose }: { subject?: string; pros
     product = findProductInProse(prose);
   }
 
-  // Unknown-product fallback (P1 follow-on, Option B, 2026-05-18):
+  // Unknown-product fallback (P1 follow-on, Option B, 2026-05-18,
+  // extended 2026-05-19):
   //   When the user asks about a product we don't have in the catalog,
-  //   the lookups above return undefined. Rather than rendering
-  //   nothing, render a clearly-labelled GENERIC PLACEHOLDER block so
-  //   the unknown-product clarification has visual grounding alongside
-  //   the Explore links. The placeholder uses the same SVG silhouette
-  //   shipped at /images/placeholders/product.svg — no fabricated
-  //   product imagery, no review-derived material. The "Generic
-  //   placeholder" caption below ensures users don't mistake the
-  //   silhouette for the actual product.
+  //   the lookups above return undefined. Render an image block keyed
+  //   to the subject name. Resolution order:
+  //     1. getProductImage(undefined, subject) — substring match
+  //        against the curated PRODUCT_IMAGE_URLS overlay. This
+  //        catches manufacturer-hosted images for products that exist
+  //        as image entries but aren't full catalog Product records
+  //        (e.g. "Buchardt A700" — image entry added 2026-05-19, no
+  //        catalog entry).
+  //     2. getGenericPlaceholder() — generic SVG silhouette fallback.
+  //   Both paths are F4-clean: getProductImage's gate skips entries
+  //   with tier === 'review_publication', so only manufacturer /
+  //   dealer / retailer-hosted images can surface here. No fabricated
+  //   product imagery, no review-derived material.
+  //
+  //   Caption logic: the "Generic placeholder — actual product image
+  //   not in catalog" disclaimer ONLY renders when actually falling
+  //   back to the generic SVG. When a real manufacturer-hosted image
+  //   resolves, the caption is suppressed and the image renders at
+  //   full opacity — that IS the actual product photo.
   if (!product) {
     if (!subject) return null;
-    const placeholderUrl = getGenericPlaceholder();
+    const resolved = getProductImageEntry(undefined, subject);
+    const isGenericPlaceholder = !resolved;
+    const imageUrl = resolved?.url ?? getGenericPlaceholder();
+    // Manufacturer attribution (policy 2026-05-19):
+    //   When a real manufacturer/dealer/retailer image resolves, the
+    //   UI must display "Image source: <site>" as visible attribution
+    //   beneath the image. F4-allowed tiers only — the lookup gate in
+    //   getProductImageEntry already drops review_publication entries.
+    const attributionSite = resolved?.source?.site;
     return (
       <div style={{ marginBottom: '0.85rem' }}>
         <div style={{
@@ -4202,11 +4222,13 @@ function ConsultationSubjectContext({ subject, prose }: { subject?: string; pros
           padding: '0.75rem',
           boxSizing: 'border-box',
           marginBottom: '0.35rem',
-          opacity: 0.55,
+          opacity: isGenericPlaceholder ? 0.55 : 1,
         }}>
           <img
-            src={placeholderUrl}
-            alt={`Generic product placeholder — no catalog image available for ${subject}`}
+            src={imageUrl}
+            alt={isGenericPlaceholder
+              ? `Generic product placeholder — no catalog image available for ${subject}`
+              : subject}
             loading="lazy"
             referrerPolicy="no-referrer"
             style={{
@@ -4220,9 +4242,15 @@ function ConsultationSubjectContext({ subject, prose }: { subject?: string; pros
         <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#2a2a2a' }}>
           {subject}
         </div>
-        <div style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#999', marginTop: '0.15rem' }}>
-          Generic placeholder — actual product image not in catalog
-        </div>
+        {isGenericPlaceholder ? (
+          <div style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#999', marginTop: '0.15rem' }}>
+            Generic placeholder — actual product image not in catalog
+          </div>
+        ) : attributionSite ? (
+          <div style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#999', marginTop: '0.15rem' }}>
+            Image source: {attributionSite}
+          </div>
+        ) : null}
       </div>
     );
   }
