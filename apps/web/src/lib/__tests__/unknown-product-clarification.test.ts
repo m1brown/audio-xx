@@ -14,8 +14,10 @@ import { describe, it, expect } from 'vitest';
 import {
   buildUnknownProductClarification,
   buildUnknownProductExploreLinks,
+  resolveUnknownProductName,
 } from '../unknown-product-clarification';
 import { getGenericPlaceholder } from '../product-images';
+import type { SubjectMatch } from '../intent';
 
 describe('buildUnknownProductClarification — shape + hedging', () => {
   it('returns kind=assessment with the user-typed product name as subject', () => {
@@ -138,5 +140,70 @@ describe('F4 reviewer-data exclusion still holds in the clarification', () => {
   it('full serialized response contains no reviewer publication names', () => {
     const serialized = JSON.stringify(buildUnknownProductClarification('Buchardt A700'));
     expect(serialized).not.toMatch(/6moons|Darko|Stereophile|Twittering|Srajan|Audiophiliac/i);
+  });
+});
+
+// ── P1 follow-on regression: name-resolution fallback ──────────────
+//
+// Reproduces the production regression where unknown-product
+// prompts rendered with "the that product" broken grammar and no
+// Explore section. The synthesized subjectMatch produced by
+// detectIntent's gate 0a (in intent.ts) must reach the safety-check
+// even though buildTurnContext rebuilds subjectMatches independently
+// via extractSubjectMatches (catalog-only).
+
+describe('resolveUnknownProductName — turnCtx → intent → fallback precedence', () => {
+  const catalogued: SubjectMatch = { name: 'leben cs600x', kind: 'product' };
+  const synthesized: SubjectMatch = { name: 'Buchardt A700', kind: 'product' };
+  const synthesizedBrand: SubjectMatch = { name: 'Buchardt', kind: 'brand' };
+
+  it('returns the turnCtx product match when present (catalogued path)', () => {
+    expect(resolveUnknownProductName([catalogued], [synthesized])).toBe('leben cs600x');
+  });
+
+  it('falls back to the intent-synthesized match when turnCtx is empty (unknown product)', () => {
+    expect(resolveUnknownProductName([], [synthesized])).toBe('Buchardt A700');
+  });
+
+  it('falls back to the intent-synthesized brand when neither has a product match', () => {
+    expect(resolveUnknownProductName([], [synthesizedBrand])).toBe('Buchardt');
+  });
+
+  it('returns "that product" when both arrays are empty', () => {
+    expect(resolveUnknownProductName([], [])).toBe('that product');
+  });
+
+  it('returns "that product" when both arrays are undefined', () => {
+    expect(resolveUnknownProductName(undefined, undefined)).toBe('that product');
+  });
+
+  it('precedence: turnCtx beats intent-synthesized even when intent has a product and turnCtx has only a brand', () => {
+    const turnCtxBrand: SubjectMatch = { name: 'chord', kind: 'brand' };
+    const intentProduct: SubjectMatch = { name: 'Buchardt A700', kind: 'product' };
+    // turnCtx brand wins over intent product — preserving the cataloged
+    // canonical brand string when available.
+    expect(resolveUnknownProductName([turnCtxBrand], [intentProduct])).toBe('chord');
+  });
+});
+
+describe('P1 fallback end-to-end: resolveUnknownProductName + buildUnknownProductClarification', () => {
+  it('unknown-product synthesized name produces hedged clarification with Explore links', () => {
+    const synthesized: SubjectMatch = { name: 'Buchardt A700', kind: 'product' };
+    const productName = resolveUnknownProductName([], [synthesized]);
+    expect(productName).toBe('Buchardt A700');
+
+    const clarification = buildUnknownProductClarification(productName);
+    expect(clarification.subject).toBe('Buchardt A700');
+    expect(clarification.bottomLine).toContain('Buchardt A700');
+    // Explore links present (the bug was: empty turnCtx → "that product" → links suppressed)
+    expect(clarification.links).toBeDefined();
+    expect(clarification.links).toHaveLength(3);
+  });
+
+  it('empty arrays produce "that product" → links suppressed (current behavior)', () => {
+    const productName = resolveUnknownProductName([], []);
+    const clarification = buildUnknownProductClarification(productName);
+    expect(clarification.subject).toBe('that product');
+    expect(clarification.links).toBeUndefined();
   });
 });

@@ -18,7 +18,7 @@ import {
   refineDiagnosisWithContext,
 } from '@/lib/advisory-response';
 import type { AdvisoryResponse, ShoppingAdvisoryContext } from '@/lib/advisory-response';
-import { buildUnknownProductClarification } from '@/lib/unknown-product-clarification';
+import { buildUnknownProductClarification, resolveUnknownProductName } from '@/lib/unknown-product-clarification';
 import { buildProductAssessment } from '@/lib/product-assessment';
 import type { AssessmentContext } from '@/lib/product-assessment';
 import { buildKnowledgeResponse, buildAssistantResponse, requestKnowledgeLlm, requestAssistantLlm } from '@/lib/audio-lanes';
@@ -679,6 +679,15 @@ export default function Home() {
     // transition() before the legacy ref-based blocks below.
     let convModeHint: ConversationMode | undefined;
     let intent: string = '';
+    // P1 follow-on (2026-05-18): capture detectIntent's subjectMatches
+    // alongside intent so the synthesized subjectMatch for unknown
+    // products (gate 0a in intent.ts) survives into the safety-check
+    // fallback. turnCtx.subjectMatches is built independently via
+    // extractSubjectMatches and returns [] for non-catalogued products,
+    // so without this fallback the safety-check sees no subject and
+    // defaults productName to "that product" — breaking the hedged
+    // clarification text and disabling Explore links.
+    let intentSyntheticSubjects: SubjectMatch[] = [];
 
     // ── Category switch bypass ──────────────────────────
     // When the user sends a bare category request (e.g. "tube amp", "dac",
@@ -1461,9 +1470,13 @@ export default function Home() {
     // phrasings route to system_assessment rather than consultation_entry.
     const hasActiveSavedSystemMain = turnCtx.systemSource === 'saved'
       || turnCtx.systemSource === 'draft';
-    ({ intent } = detectIntent(submittedText, {
-      hasActiveSavedSystem: hasActiveSavedSystemMain,
-    }));
+    {
+      const _intentResult = detectIntent(submittedText, {
+        hasActiveSavedSystem: hasActiveSavedSystemMain,
+      });
+      intent = _intentResult.intent;
+      intentSyntheticSubjects = _intentResult.subjectMatches;
+    }
 
     // Count prior shopping advisory turns (needed early for category-switch bypass).
     const shoppingAnswerCount = messages.filter(
@@ -2479,9 +2492,12 @@ export default function Home() {
       // (manufacturer search, eBay, HiFi Shark). The image surface
       // is handled by AdvisoryMessage's ConsultationSubjectContext
       // fallback (generic placeholder when no catalog image resolves).
-      const productName = turnCtx.subjectMatches.find((m) => m.kind === 'product')?.name
-        ?? turnCtx.subjectMatches.find((m) => m.kind === 'brand')?.name
-        ?? 'that product';
+      // P1 follow-on fallback (2026-05-18): when the catalog lookup
+      // (turnCtx) has no subject, fall through to the synthesized
+      // match produced by detectIntent's unknown-product gate (gate
+      // 0a in intent.ts). See resolveUnknownProductName for full
+      // precedence + rationale.
+      const productName = resolveUnknownProductName(turnCtx.subjectMatches, intentSyntheticSubjects);
       const clarificationAdvisory = buildUnknownProductClarification(productName);
       dispatchAdvisory(clarificationAdvisory);
       dispatch({ type: 'SET_LOADING', value: false });

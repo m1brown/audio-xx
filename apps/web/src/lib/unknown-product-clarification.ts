@@ -29,6 +29,43 @@
  */
 
 import type { AdvisoryLink, AdvisoryResponse } from './advisory-response';
+import type { SubjectMatch } from './intent';
+
+/**
+ * Resolve the product name for the unknown-product safety-check
+ * fallback.
+ *
+ * Priority order:
+ *   1. turnCtx.subjectMatches — populated by buildTurnContext via
+ *      extractSubjectMatches against the catalog. Returns the
+ *      catalogued canonical name when the product IS in the catalog.
+ *   2. intent.subjectMatches — populated by detectIntent. For unknown
+ *      products this is the SYNTHESIZED match produced by gate 0a in
+ *      intent.ts (carries the user-typed name verbatim). Without this
+ *      fallback the safety-check sees no subject for non-catalogued
+ *      products and degrades to "that product" — breaking the hedged
+ *      clarification text AND disabling Explore links (the link
+ *      builder rejects the fallback string by design).
+ *   3. The string "that product" as a last resort.
+ *
+ * P1 follow-on fix (2026-05-18) — addresses the production regression
+ * where "thoughts on the Buchardt A700" rendered with "the that
+ * product" broken grammar and no Explore section.
+ */
+export function resolveUnknownProductName(
+  turnCtxMatches: SubjectMatch[] | undefined,
+  intentSyntheticMatches: SubjectMatch[] | undefined,
+): string {
+  const ctx = turnCtxMatches ?? [];
+  const syn = intentSyntheticMatches ?? [];
+  return (
+    ctx.find((m) => m.kind === 'product')?.name
+    ?? ctx.find((m) => m.kind === 'brand')?.name
+    ?? syn.find((m) => m.kind === 'product')?.name
+    ?? syn.find((m) => m.kind === 'brand')?.name
+    ?? 'that product'
+  );
+}
 
 /**
  * Build the Explore links for an unknown product clarification.
