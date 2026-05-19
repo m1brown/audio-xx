@@ -26,7 +26,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { shouldShowAmazonLink, getAmazonSearchUrl, getAffiliateTag } from '../amazon-links';
 import { buildProductLinks } from '../product-links';
-import { getAmazonAffiliateTag, getEbayCampaignId } from '../affiliate-config';
+import { getAmazonAffiliateTag, getEbayCampaignId, getEbayCustomId, getEbayHost } from '../affiliate-config';
+import { getEbaySearchUrl } from '../ebay-links';
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -247,15 +248,23 @@ describe('Affiliate env-driven config', () => {
   // pollution. Tests in this describe directly mutate process.env.
   const ORIG_AMAZON = process.env.AMAZON_AFFILIATE_TAG;
   const ORIG_EBAY = process.env.EBAY_CAMPAIGN_ID;
+  const ORIG_EBAY_CUSTOM = process.env.EBAY_CUSTOM_ID;
+  const ORIG_EBAY_HOST = process.env.EBAY_HOST;
   beforeEach(() => {
     delete process.env.AMAZON_AFFILIATE_TAG;
     delete process.env.EBAY_CAMPAIGN_ID;
+    delete process.env.EBAY_CUSTOM_ID;
+    delete process.env.EBAY_HOST;
   });
   afterEach(() => {
     if (ORIG_AMAZON === undefined) delete process.env.AMAZON_AFFILIATE_TAG;
     else process.env.AMAZON_AFFILIATE_TAG = ORIG_AMAZON;
     if (ORIG_EBAY === undefined) delete process.env.EBAY_CAMPAIGN_ID;
     else process.env.EBAY_CAMPAIGN_ID = ORIG_EBAY;
+    if (ORIG_EBAY_CUSTOM === undefined) delete process.env.EBAY_CUSTOM_ID;
+    else process.env.EBAY_CUSTOM_ID = ORIG_EBAY_CUSTOM;
+    if (ORIG_EBAY_HOST === undefined) delete process.env.EBAY_HOST;
+    else process.env.EBAY_HOST = ORIG_EBAY_HOST;
   });
 
   it('getAmazonAffiliateTag returns undefined when env var is unset', () => {
@@ -323,6 +332,167 @@ describe('Affiliate env-driven config', () => {
     const withTag = shouldShowAmazonLink({ brand: 'Schiit', availability: 'current' });
     expect(noTag).toBe(withTag);
     expect(noTag).toBe(true);
+  });
+
+  // ── eBay env-driven config (2026-05-19 follow-on) ──────────
+  // Audio XX is U.S.-centered by default with single-host
+  // override via EBAY_HOST. No region selector, no geo-routing,
+  // no marketplace inference. EPN tagging via EBAY_CAMPAIGN_ID
+  // + optional EBAY_CUSTOM_ID, both gated on presence.
+
+  it('getEbayHost defaults to www.ebay.com when EBAY_HOST is unset', () => {
+    expect(getEbayHost()).toBe('www.ebay.com');
+  });
+
+  it('getEbayHost defaults to www.ebay.com when EBAY_HOST is empty', () => {
+    process.env.EBAY_HOST = '';
+    expect(getEbayHost()).toBe('www.ebay.com');
+  });
+
+  it('getEbayHost defaults to www.ebay.com when EBAY_HOST is whitespace only', () => {
+    process.env.EBAY_HOST = '   ';
+    expect(getEbayHost()).toBe('www.ebay.com');
+  });
+
+  it('getEbayHost returns the trimmed override when EBAY_HOST is set', () => {
+    process.env.EBAY_HOST = '  www.ebay.co.uk  ';
+    expect(getEbayHost()).toBe('www.ebay.co.uk');
+  });
+
+  it('getEbayCustomId returns undefined when env var is unset', () => {
+    expect(getEbayCustomId()).toBeUndefined();
+  });
+
+  it('getEbayCustomId returns the trimmed value when env var is set', () => {
+    process.env.EBAY_CUSTOM_ID = '  Audioxx  ';
+    expect(getEbayCustomId()).toBe('Audioxx');
+  });
+
+  it('getEbaySearchUrl uses default www.ebay.com host when EBAY_HOST unset', () => {
+    const url = getEbaySearchUrl('Naim Nait XS 3');
+    expect(url.startsWith('https://www.ebay.com/sch/i.html?')).toBe(true);
+    expect(url).toContain('_nkw=Naim+Nait+XS+3');
+  });
+
+  it('getEbaySearchUrl uses EBAY_HOST override when set', () => {
+    process.env.EBAY_HOST = 'www.ebay.fr';
+    const url = getEbaySearchUrl('Naim Nait XS 3');
+    expect(url.startsWith('https://www.ebay.fr/sch/i.html?')).toBe(true);
+  });
+
+  it('getEbaySearchUrl supports www.ebay.co.uk override', () => {
+    process.env.EBAY_HOST = 'www.ebay.co.uk';
+    const url = getEbaySearchUrl('Naim Nait XS 3');
+    expect(url.startsWith('https://www.ebay.co.uk/sch/i.html?')).toBe(true);
+  });
+
+  it('getEbaySearchUrl OMITS campid when EBAY_CAMPAIGN_ID is unset (plain fallback)', () => {
+    const url = getEbaySearchUrl('Naim Nait XS 3');
+    expect(url).not.toContain('campid=');
+    expect(url).not.toContain('customid=');
+  });
+
+  it('getEbaySearchUrl OMITS campid when EBAY_CAMPAIGN_ID is empty', () => {
+    process.env.EBAY_CAMPAIGN_ID = '';
+    const url = getEbaySearchUrl('Naim Nait XS 3');
+    expect(url).not.toContain('campid=');
+  });
+
+  it('getEbaySearchUrl INCLUDES campid when EBAY_CAMPAIGN_ID is set', () => {
+    process.env.EBAY_CAMPAIGN_ID = '5339152664';
+    const url = getEbaySearchUrl('Naim Nait XS 3');
+    expect(url).toContain('campid=5339152664');
+  });
+
+  it('getEbaySearchUrl OMITS customid when EBAY_CUSTOM_ID is unset (but campid present)', () => {
+    process.env.EBAY_CAMPAIGN_ID = '5339152664';
+    const url = getEbaySearchUrl('Naim Nait XS 3');
+    expect(url).toContain('campid=5339152664');
+    expect(url).not.toContain('customid=');
+  });
+
+  it('getEbaySearchUrl INCLUDES customid only when BOTH campaign + custom IDs are set', () => {
+    process.env.EBAY_CAMPAIGN_ID = '5339152664';
+    process.env.EBAY_CUSTOM_ID = 'Audioxx';
+    const url = getEbaySearchUrl('Naim Nait XS 3');
+    expect(url).toContain('campid=5339152664');
+    expect(url).toContain('customid=Audioxx');
+  });
+
+  it('getEbaySearchUrl OMITS customid when EBAY_CAMPAIGN_ID is unset even if EBAY_CUSTOM_ID is set', () => {
+    // Custom IDs are meaningless without an EPN campaign to attribute
+    // to — they must be gated on the campaign ID being present.
+    process.env.EBAY_CUSTOM_ID = 'Audioxx';
+    const url = getEbaySearchUrl('Naim Nait XS 3');
+    expect(url).not.toContain('campid=');
+    expect(url).not.toContain('customid=');
+  });
+
+  it('getEbaySearchUrl plain fallback works with NO env vars at all', () => {
+    const url = getEbaySearchUrl('Naim Nait XS 3');
+    expect(url).toBe('https://www.ebay.com/sch/i.html?_nkw=Naim+Nait+XS+3');
+  });
+
+  it('getEbaySearchUrl preserves caller extraParams alongside EPN tagging', () => {
+    process.env.EBAY_CAMPAIGN_ID = '5339152664';
+    const url = getEbaySearchUrl('Naim Nait XS 3', {
+      extraParams: { _sacat: '293', LH_All: '1' },
+    });
+    expect(url).toContain('_nkw=Naim+Nait+XS+3');
+    expect(url).toContain('_sacat=293');
+    expect(url).toContain('LH_All=1');
+    expect(url).toContain('campid=5339152664');
+  });
+
+  it('eBay env config does NOT affect shouldShowAmazonLink (no cross-channel coupling)', () => {
+    // Independence invariant: changing eBay env vars must never
+    // perturb Amazon eligibility (or vice versa). Both channels
+    // are rendering-only — neither feeds back into recommendation.
+    const baseline = shouldShowAmazonLink({ brand: 'Schiit', availability: 'current' });
+    process.env.EBAY_CAMPAIGN_ID = '5339152664';
+    process.env.EBAY_CUSTOM_ID = 'Audioxx';
+    process.env.EBAY_HOST = 'www.ebay.fr';
+    const withEbay = shouldShowAmazonLink({ brand: 'Schiit', availability: 'current' });
+    expect(withEbay).toBe(baseline);
+  });
+});
+
+// ── 4c. eBay link source-text discipline ─────────────────────
+//
+// ebay-links.ts must NOT import any scoring / recommendation /
+// ranking module (matches the amazon-links.ts and
+// affiliate-config.ts coupling rules). The four migrated call
+// sites must NOT hardcode an ebay.com host (all eBay URLs flow
+// through getEbaySearchUrl so EBAY_HOST overrides are honored).
+
+describe('eBay link source-text discipline', () => {
+  it('ebay-links.ts does not import product-scoring or recommendation modules', () => {
+    const src = readRepoFile('apps/web/src/lib/ebay-links.ts');
+    expect(src).not.toMatch(/import[^;]*from\s+['"][./]*product-scoring['"]/);
+    expect(src).not.toMatch(/import[^;]*from\s+['"][./]*product-assessment['"]/);
+    expect(src).not.toMatch(/import[^;]*from\s+['"][./]*advisory-response['"]/);
+    expect(src).not.toMatch(/\bscoreProduct\b|\brankProducts\b|\breRankForRefinement\b|\bbuildProductAssessment\b/);
+  });
+
+  it('migrated callers do not hardcode a www.ebay.com host (use getEbaySearchUrl)', () => {
+    // Each caller previously composed eBay URLs inline with a
+    // hardcoded ebay.com host. Post-migration all four route
+    // through getEbaySearchUrl, which honours EBAY_HOST. This
+    // test fails if a future change reintroduces an inline URL.
+    const filesToScan = [
+      'apps/web/src/lib/shopping-intent.ts',
+      'apps/web/src/lib/unknown-product-clarification.ts',
+      'apps/web/src/lib/product-links.ts',
+      'apps/web/src/lib/consultation.ts',
+    ];
+    for (const f of filesToScan) {
+      const src = readRepoFile(f);
+      // Look for the inline pattern: a template literal or string
+      // that hardcodes an ebay.com URL path. The baseUrl display
+      // string in shopping-intent.ts (USED_MARKET_SITES baseUrl)
+      // is allowed — it's not a clickable link, it's a label.
+      expect(src, `${f} must not hardcode ebay.com/sch/i.html`).not.toMatch(/ebay\.com\/sch\/i\.html/);
+    }
   });
 });
 

@@ -86,7 +86,11 @@ describe('buildUnknownProductExploreLinks — Explore section structure', () => 
     const ebay = links.find((l) => l.label === 'eBay');
     expect(ebay).toBeDefined();
     expect(ebay!.url).toContain('ebay.com/sch/i.html?_nkw=');
-    expect(ebay!.url).toContain('Buchardt%20A700');
+    // URLSearchParams encodes spaces as "+", encodeURIComponent uses
+    // "%20". Both are valid HTTP query-string encodings; the eBay
+    // builder migrated to URLSearchParams (ebay-links.ts) in the
+    // 2026-05-19 EPN-tagging refactor.
+    expect(ebay!.url).toMatch(/Buchardt(?:%20|\+)A700/);
     expect(ebay!.kind).toBe('dealer');
   });
 
@@ -113,8 +117,12 @@ describe('buildUnknownProductExploreLinks — Explore section structure', () => 
 
   it('properly URL-encodes product names with spaces and special characters', () => {
     const links = buildUnknownProductExploreLinks('Cube Audio F8 v2')!;
+    // Google / HiFi Shark builders use encodeURIComponent (%20).
+    // eBay builder uses URLSearchParams ("+"). Both are valid URL
+    // encodings of spaces; the contract is "the name appears encoded
+    // in some valid form" — not a specific format.
     for (const l of links) {
-      expect(l.url).toContain('Cube%20Audio%20F8%20v2');
+      expect(l.url).toMatch(/Cube(?:%20|\+)Audio(?:%20|\+)F8(?:%20|\+)v2/);
     }
   });
 });

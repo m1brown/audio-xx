@@ -30,6 +30,7 @@
 
 import type { AdvisoryLink, AdvisoryResponse } from './advisory-response';
 import type { SubjectMatch } from './intent';
+import { getEbaySearchUrl } from './ebay-links';
 
 /**
  * Resolve the product name for the unknown-product safety-check
@@ -86,7 +87,9 @@ export function buildUnknownProductExploreLinks(
     },
     {
       label: 'eBay',
-      url: `https://www.ebay.com/sch/i.html?_nkw=${q}`,
+      // Host + EPN tagging come from ebay-links → affiliate-config
+      // (env-driven). Plain search fallback when env vars unset.
+      url: getEbaySearchUrl(productName),
       kind: 'dealer',
       region: 'global',
     },

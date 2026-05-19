@@ -2578,6 +2578,7 @@ import type { Product } from './products/dacs';
 import { SPEAKER_PRODUCTS } from './products/speakers';
 import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
 import { HEADPHONE_PRODUCTS, type HeadphoneProduct } from './products/headphones';
+import { getEbaySearchUrl } from './ebay-links';
 import { selectTurntableExamples } from './products/turntables';
 import { rankProducts, type ScoredProduct, AMPLIFIER_ARCHITECTURE_TENDENCIES, type ArchitectureTendency } from './product-scoring';
 import type { ListenerProfile } from './listener-profile';
@@ -2819,7 +2820,10 @@ const USED_MARKET_SITES: Array<{ name: string; baseUrl: string; region: 'global'
   { name: 'HiFi Shark', baseUrl: 'https://www.hifishark.com', region: 'global', buildSearch: (q) => `https://www.hifishark.com/search?q=${encodeURIComponent(q)}` },
   { name: 'Audiogon', baseUrl: 'https://www.audiogon.com', region: 'north-america', buildSearch: (q) => `https://www.audiogon.com/listings?query=${encodeURIComponent(q)}` },
   { name: 'US Audio Mart', baseUrl: 'https://www.usaudiomart.com', region: 'north-america', buildSearch: (q) => `https://www.usaudiomart.com/classifieds?query=${encodeURIComponent(q)}` },
-  { name: 'eBay', baseUrl: 'https://www.ebay.com', region: 'global', buildSearch: (q) => `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(q)}` },
+  // eBay host + EPN tagging come from ebay-links → affiliate-config
+  // (env-driven). baseUrl stays as a display string; the actual link
+  // host is whatever EBAY_HOST resolves to at request time.
+  { name: 'eBay', baseUrl: 'https://www.ebay.com', region: 'global', buildSearch: (q) => getEbaySearchUrl(q) },
 ];
 
 /**

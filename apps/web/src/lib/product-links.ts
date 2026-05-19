@@ -23,6 +23,7 @@
  */
 
 import { shouldShowAmazonLink } from './amazon-links';
+import { getEbaySearchUrl } from './ebay-links';
 
 // ── Types ────────────────────────────────────────────
 
@@ -76,7 +77,11 @@ function hifiSharkUrl(brand: string | undefined, name: string): string {
 
 function ebayUrl(brand: string | undefined, name: string): string {
   const query = [brand, name].filter(Boolean).join(' ');
-  return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}&_sacat=293&LH_All=1`;
+  // Host + EPN tagging come from ebay-links → affiliate-config
+  // (env-driven). _sacat=293 (Consumer Electronics) and LH_All=1
+  // (all listings, including completed) are preserved as caller-
+  // controlled scope filters that this consumer relies on.
+  return getEbaySearchUrl(query, { extraParams: { _sacat: '293', LH_All: '1' } });
 }
 
 // ── Detection helpers ────────────────────────────────

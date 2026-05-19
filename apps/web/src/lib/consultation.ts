@@ -118,6 +118,7 @@ import { topReviewsForCard, type ReviewerDomain } from './curation';
 import { getLegacyMapping } from './products/legacy-models';
 import { getProductImage, resolveProductImage, resolveProductImageStrict } from './product-images';
 import { shouldShowAmazonLink, getAmazonSearchUrl } from './amazon-links';
+import { getEbaySearchUrl } from './ebay-links';
 import { findCatalogProduct } from './listener-profile';
 import {
   buildListenerFraming,
@@ -4894,9 +4895,12 @@ function buildComparisonShopping(
   const primaryProfile = primary === nameA ? profileA : profileB;
   const secondaryProfile = secondary === nameA ? profileA : profileB;
 
-  // Build HiFiShark and eBay search URLs
+  // Build HiFiShark and eBay search URLs. HiFi Shark stays plain
+  // (no affiliate program). eBay host + EPN tagging come from
+  // ebay-links → affiliate-config (env-driven). The " amplifier"
+  // suffix narrows the eBay search for this amp-comparison context.
   const hifisharkUrl = (name: string) => `https://www.hifishark.com/search?q=${encodeURIComponent(name)}`;
-  const ebayUrl = (name: string) => `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(name + ' amplifier')}`;
+  const ebayUrl = (name: string) => getEbaySearchUrl(name + ' amplifier');
 
   // Primary recommendation — HiFiShark first, eBay second
   lines.push(`- **${primary}** — primary recommendation. Search: [HiFiShark](${hifisharkUrl(primary)}), [eBay](${ebayUrl(primary)})`);

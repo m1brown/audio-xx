@@ -31,12 +31,19 @@
  *     appears in every outbound affiliate URL — and is safe to set
  *     directly in Vercel env vars (NOT a credential).
  *   - EBAY_CAMPAIGN_ID — eBay Partner Network campaign ID. When set,
- *     callers MAY populate the `campid=` query parameter on eBay
- *     search URLs. NOTE: the existing 5 eBay URL builders in the
- *     codebase have not yet been migrated to read this value — the
- *     helper is here so adoption is one search/replace away when
- *     opt-in is desired. Until migrated, eBay URLs are plain search
- *     links regardless of env state.
+ *     `getEbaySearchUrl` in ebay-links.ts appends `campid=<value>`
+ *     to outbound eBay search URLs. When unset, links remain plain
+ *     search URLs (no EPN attribution).
+ *   - EBAY_CUSTOM_ID — optional EPN custom tracking ID. When set,
+ *     `getEbaySearchUrl` appends `customid=<value>` (typically used
+ *     to bucket attribution by sub-source). Only meaningful when
+ *     EBAY_CAMPAIGN_ID is also set; ignored otherwise.
+ *   - EBAY_HOST — eBay marketplace host (e.g. "www.ebay.com",
+ *     "www.ebay.co.uk", "www.ebay.fr"). Defaults to "www.ebay.com"
+ *     when unset. Single-marketplace configuration only — Audio XX
+ *     does NOT do geo-routing, region detection, or marketplace
+ *     selection. The default is U.S.-centered; deployments serving
+ *     other regions set this once per environment.
  *
  * Currently NOT supported (no public affiliate / partner program):
  *   - HiFi Shark — pure availability aggregator, no partner program
@@ -68,10 +75,33 @@ export function getAmazonAffiliateTag(): string | undefined {
 
 /**
  * Returns the eBay Partner Network campaign ID configured for this
- * deployment, or undefined when no value is set. Callers that
- * generate eBay URLs MAY append the `campid=` query parameter only
- * when this returns a defined value.
+ * deployment, or undefined when no value is set. `getEbaySearchUrl`
+ * in ebay-links.ts appends `campid=<value>` to outbound eBay search
+ * URLs only when this returns a defined value.
  */
 export function getEbayCampaignId(): string | undefined {
   return readEnvString('EBAY_CAMPAIGN_ID');
+}
+
+/**
+ * Returns the optional EPN custom tracking ID configured for this
+ * deployment, or undefined when no value is set. `getEbaySearchUrl`
+ * appends `customid=<value>` only when this returns a defined value
+ * AND the campaign ID is also defined (custom IDs are meaningless
+ * without an EPN campaign to attribute to).
+ */
+export function getEbayCustomId(): string | undefined {
+  return readEnvString('EBAY_CUSTOM_ID');
+}
+
+/**
+ * Returns the eBay marketplace host configured for this deployment.
+ * Defaults to "www.ebay.com" when unset — Audio XX is U.S.-centered
+ * by default, Europe-aware via single-host override. Set
+ * EBAY_HOST=www.ebay.fr or EBAY_HOST=www.ebay.co.uk per environment
+ * to redirect outbound used-market links to a different marketplace.
+ * No region detection or geo-routing — one host per deployment.
+ */
+export function getEbayHost(): string {
+  return readEnvString('EBAY_HOST') ?? 'www.ebay.com';
 }
