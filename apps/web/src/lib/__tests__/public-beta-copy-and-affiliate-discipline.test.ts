@@ -21,11 +21,12 @@
  * not exercised — only the source text and module interfaces.
  */
 
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { shouldShowAmazonLink, getAmazonSearchUrl } from '../amazon-links';
+import { shouldShowAmazonLink, getAmazonSearchUrl, getAffiliateTag } from '../amazon-links';
 import { buildProductLinks } from '../product-links';
+import { getAmazonAffiliateTag, getEbayCampaignId } from '../affiliate-config';
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -197,10 +198,9 @@ describe('Amazon affiliate link non-influence', () => {
     expect(shouldShowAmazonLink({ brand: 'Schiit', availability: 'current' })).toBe(true);
   });
 
-  it('getAmazonSearchUrl returns a search URL with the affiliate tag (no scoring metadata in the URL)', () => {
+  it('getAmazonSearchUrl always returns a valid Amazon search URL (with or without tag)', () => {
     const url = getAmazonSearchUrl('Bifrost 2/64', 'Schiit');
     expect(url).toContain('amazon.com/s');
-    expect(url).toContain('tag=');
     expect(url).toContain('Bifrost');
     // No score/ranking/preference signals leak into the URL
     expect(url).not.toMatch(/score|rank|preferred|priority|weight/i);
@@ -218,9 +218,111 @@ describe('Amazon affiliate link non-influence', () => {
 
   it('amazon-links.ts does not import or reference product-scoring (no inverse coupling)', () => {
     const amazonSource = readRepoFile('apps/web/src/lib/amazon-links.ts');
-    expect(amazonSource).not.toMatch(/from\s+['"][./]*product-scoring['"]/);
-    expect(amazonSource).not.toMatch(/import.*product-scoring/);
-    expect(amazonSource).not.toMatch(/scoreProduct|rankProducts|reRankForRefinement/);
+    // Narrow: actual ES-module import statement (not English "importing" in a doc comment).
+    expect(amazonSource).not.toMatch(/import[^;]*from\s+['"][./]*product-scoring['"]/);
+    expect(amazonSource).not.toMatch(/require\s*\(\s*['"][./]*product-scoring['"]\s*\)/);
+    expect(amazonSource).not.toMatch(/\bscoreProduct\b|\brankProducts\b|\breRankForRefinement\b/);
+  });
+
+  it('affiliate-config.ts does not import or reference product-scoring / recommendation modules', () => {
+    const configSource = readRepoFile('apps/web/src/lib/affiliate-config.ts');
+    expect(configSource).not.toMatch(/import[^;]*from\s+['"][./]*product-scoring['"]/);
+    expect(configSource).not.toMatch(/import[^;]*from\s+['"][./]*product-assessment['"]/);
+    expect(configSource).not.toMatch(/import[^;]*from\s+['"][./]*advisory-response['"]/);
+    expect(configSource).not.toMatch(/\bscoreProduct\b|\brankProducts\b|\breRankForRefinement\b|\bbuildProductAssessment\b/);
+  });
+});
+
+// ── 4b. Env-driven affiliate config behavior ─────────────────
+//
+// Per the 2026-05-19 affiliate-config centralization:
+//   - getAmazonAffiliateTag() reads AMAZON_AFFILIATE_TAG env var
+//   - getEbayCampaignId() reads EBAY_CAMPAIGN_ID env var
+//   - Both return undefined when env unset / empty / whitespace
+//   - getAmazonSearchUrl conditionally includes the `tag=` param
+//     based on the env value (no tag when unset)
+
+describe('Affiliate env-driven config', () => {
+  // Snapshot + restore env vars for each test to avoid cross-test
+  // pollution. Tests in this describe directly mutate process.env.
+  const ORIG_AMAZON = process.env.AMAZON_AFFILIATE_TAG;
+  const ORIG_EBAY = process.env.EBAY_CAMPAIGN_ID;
+  beforeEach(() => {
+    delete process.env.AMAZON_AFFILIATE_TAG;
+    delete process.env.EBAY_CAMPAIGN_ID;
+  });
+  afterEach(() => {
+    if (ORIG_AMAZON === undefined) delete process.env.AMAZON_AFFILIATE_TAG;
+    else process.env.AMAZON_AFFILIATE_TAG = ORIG_AMAZON;
+    if (ORIG_EBAY === undefined) delete process.env.EBAY_CAMPAIGN_ID;
+    else process.env.EBAY_CAMPAIGN_ID = ORIG_EBAY;
+  });
+
+  it('getAmazonAffiliateTag returns undefined when env var is unset', () => {
+    expect(getAmazonAffiliateTag()).toBeUndefined();
+  });
+
+  it('getAmazonAffiliateTag returns undefined when env var is empty string', () => {
+    process.env.AMAZON_AFFILIATE_TAG = '';
+    expect(getAmazonAffiliateTag()).toBeUndefined();
+  });
+
+  it('getAmazonAffiliateTag returns undefined when env var is whitespace only', () => {
+    process.env.AMAZON_AFFILIATE_TAG = '   ';
+    expect(getAmazonAffiliateTag()).toBeUndefined();
+  });
+
+  it('getAmazonAffiliateTag returns the trimmed value when env var is set', () => {
+    process.env.AMAZON_AFFILIATE_TAG = '  audioxx20-20  ';
+    expect(getAmazonAffiliateTag()).toBe('audioxx20-20');
+  });
+
+  it('getEbayCampaignId returns undefined when env var is unset', () => {
+    expect(getEbayCampaignId()).toBeUndefined();
+  });
+
+  it('getEbayCampaignId returns the trimmed value when env var is set', () => {
+    process.env.EBAY_CAMPAIGN_ID = '  5338000000  ';
+    expect(getEbayCampaignId()).toBe('5338000000');
+  });
+
+  it('getAmazonSearchUrl OMITS the `tag` parameter when AMAZON_AFFILIATE_TAG is unset', () => {
+    const url = getAmazonSearchUrl('Bifrost 2/64', 'Schiit');
+    expect(url).not.toContain('tag=');
+    expect(url).toContain('amazon.com/s');
+    expect(url).toContain('Bifrost');
+  });
+
+  it('getAmazonSearchUrl OMITS the `tag` parameter when AMAZON_AFFILIATE_TAG is empty', () => {
+    process.env.AMAZON_AFFILIATE_TAG = '';
+    const url = getAmazonSearchUrl('Bifrost 2/64', 'Schiit');
+    expect(url).not.toContain('tag=');
+  });
+
+  it('getAmazonSearchUrl INCLUDES the `tag` parameter when AMAZON_AFFILIATE_TAG is set', () => {
+    process.env.AMAZON_AFFILIATE_TAG = 'audioxx20-20';
+    const url = getAmazonSearchUrl('Bifrost 2/64', 'Schiit');
+    expect(url).toContain('tag=audioxx20-20');
+  });
+
+  it('getAffiliateTag back-compat helper returns empty string when env unset', () => {
+    expect(getAffiliateTag()).toBe('');
+  });
+
+  it('getAffiliateTag back-compat helper returns the env value when set', () => {
+    process.env.AMAZON_AFFILIATE_TAG = 'audioxx20-20';
+    expect(getAffiliateTag()).toBe('audioxx20-20');
+  });
+
+  it('changing env var does NOT affect shouldShowAmazonLink decision', () => {
+    // Critical invariant: affiliate config is link-rendering only.
+    // shouldShowAmazonLink must depend only on product attributes,
+    // never on whether an affiliate tag is configured.
+    const noTag = shouldShowAmazonLink({ brand: 'Schiit', availability: 'current' });
+    process.env.AMAZON_AFFILIATE_TAG = 'audioxx20-20';
+    const withTag = shouldShowAmazonLink({ brand: 'Schiit', availability: 'current' });
+    expect(noTag).toBe(withTag);
+    expect(noTag).toBe(true);
   });
 });
 

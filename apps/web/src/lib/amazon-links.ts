@@ -1,26 +1,34 @@
 /**
  * Audio XX — Amazon Affiliate Link Helper
  *
- * Generates Amazon search URLs with an affiliate tag.
- * Used as a supplementary buying source alongside manufacturer
- * and dealer links — never prioritized or ranked above them.
+ * Generates Amazon search URLs, optionally tagged with the
+ * configured Amazon Associates store ID. Used as a supplementary
+ * buying source alongside manufacturer and dealer links — never
+ * prioritized or ranked above them.
  *
  * URL strategy:
  *   - Search-based links (not direct product links) to avoid
  *     stale ASINs and inventory mismatches.
- *   - Affiliate tag appended as query parameter.
+ *   - Affiliate tag is read at request time from the
+ *     AMAZON_AFFILIATE_TAG env var via affiliate-config. When unset,
+ *     the URL is generated WITHOUT the `tag=` parameter — this
+ *     keeps dev / preview / forked deployments from polluting the
+ *     production account's affiliate traffic.
  *   - Category scoped to "Electronics" (node 172282) for relevance.
  *
  * Products that should NOT get Amazon links:
  *   - Discontinued / vintage / used-only products
  *   - Boutique products with no Amazon distribution (e.g. Decware, Leben)
  *   - Products where direct-from-manufacturer is the only channel
+ *
+ * This module is forbidden from importing product-scoring or any
+ * recommendation module — affiliate availability must not influence
+ * ranking. See affiliate-config.ts for the full policy.
  */
 
-// ── Configuration ────────────────────────────────────
+import { getAmazonAffiliateTag } from './affiliate-config';
 
-/** Amazon Associates store ID. Change this to your own tag. */
-const AFFILIATE_TAG = 'audioxx-20';
+// ── Configuration ────────────────────────────────────
 
 /** Amazon search base URL (US store). */
 const AMAZON_SEARCH_BASE = 'https://www.amazon.com/s';
@@ -69,27 +77,36 @@ export function shouldShowAmazonLink(opts: {
 }
 
 /**
- * Build an Amazon search URL with affiliate tag.
+ * Build an Amazon search URL, optionally with affiliate tag.
  * Scoped to the Electronics category for relevance.
+ *
+ * The `tag=` parameter is appended only when AMAZON_AFFILIATE_TAG
+ * is configured via env (see affiliate-config.ts). When unset,
+ * the returned URL is a plain Amazon search — still functional,
+ * just untagged.
  *
  * @param name    - Product name (e.g. "Bifrost 2/64")
  * @param brand   - Brand name (e.g. "Schiit")
- * @returns       - Full Amazon search URL with affiliate tag
+ * @returns       - Full Amazon search URL (tagged or plain)
  */
 export function getAmazonSearchUrl(name: string, brand?: string): string {
   const query = [brand, name].filter(Boolean).join(' ');
-  const params = new URLSearchParams({
+  const tag = getAmazonAffiliateTag();
+  const baseParams: Record<string, string> = {
     k: query,
     i: 'electronics',
     rh: `n:${ELECTRONICS_NODE}`,
-    tag: AFFILIATE_TAG,
-  });
+  };
+  if (tag) baseParams.tag = tag;
+  const params = new URLSearchParams(baseParams);
   return `${AMAZON_SEARCH_BASE}?${params.toString()}`;
 }
 
 /**
- * Get the affiliate tag (for display or debugging).
+ * Get the resolved affiliate tag (or empty string when unset).
+ * Retained for back-compat with callers that previously imported
+ * the hardcoded constant for display or debugging.
  */
 export function getAffiliateTag(): string {
-  return AFFILIATE_TAG;
+  return getAmazonAffiliateTag() ?? '';
 }
