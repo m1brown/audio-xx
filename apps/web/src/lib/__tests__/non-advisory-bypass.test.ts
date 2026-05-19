@@ -39,12 +39,15 @@ import { routeConversation } from '../conversation-router';
 
 // ── isNonAdvisoryIntent contract ─────────────────────────
 
-describe('QA C2 — isNonAdvisoryIntent flags the four direct-handler intents', () => {
-  it('flags the four intents that have their own handlers', () => {
+describe('QA C2 — isNonAdvisoryIntent flags direct-handler intents', () => {
+  it('flags the intents that have their own handlers', () => {
     expect(isNonAdvisoryIntent('audio_knowledge')).toBe(true);
     expect(isNonAdvisoryIntent('audio_assistant')).toBe(true);
     expect(isNonAdvisoryIntent('greeting')).toBe(true);
     expect(isNonAdvisoryIntent('educational')).toBe(true);
+    // preference_reflection (homepage promise lane, 2026-05-19) — has its own
+    // dispatch in page.tsx and must not be force-routed into advisory framing.
+    expect(isNonAdvisoryIntent('preference_reflection')).toBe(true);
   });
 
   it('does NOT flag the advisory intents (shopping/diagnosis/comparison/etc.)', () => {
@@ -72,12 +75,13 @@ describe('QA C2 — isNonAdvisoryIntent flags the four direct-handler intents', 
     expect(isNonAdvisoryIntent('something_made_up')).toBe(false);
   });
 
-  it('exports the set as readonly with exactly the four intents', () => {
-    expect(NON_ADVISORY_INTENTS.size).toBe(4);
+  it('exports the set as readonly with exactly the registered direct-handler intents', () => {
+    expect(NON_ADVISORY_INTENTS.size).toBe(5);
     expect(NON_ADVISORY_INTENTS.has('audio_knowledge' as UserIntent)).toBe(true);
     expect(NON_ADVISORY_INTENTS.has('audio_assistant' as UserIntent)).toBe(true);
     expect(NON_ADVISORY_INTENTS.has('greeting' as UserIntent)).toBe(true);
     expect(NON_ADVISORY_INTENTS.has('educational' as UserIntent)).toBe(true);
+    expect(NON_ADVISORY_INTENTS.has('preference_reflection' as UserIntent)).toBe(true);
   });
 });
 

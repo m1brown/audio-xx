@@ -49,6 +49,7 @@ import {
   renderProfileSummary as renderListenerPreferenceSummary,
   type PreferenceSignal as ListenerPreferenceSignal,
 } from '@/lib/listener-preferences';
+import { buildPreferenceReflection } from '@/lib/preference-reflection';
 import { checkGlossaryQuestion } from '@/lib/glossary';
 import { fetchWithTimeout, EVALUATE_TIMEOUT_MS } from '@/lib/fetch-with-timeout';
 import { detectIntent, detectExplicitCategoryPivot, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, isNonAdvisoryIntent, type SubjectMatch } from '@/lib/intent';
@@ -206,13 +207,13 @@ const EDITORIAL = {
 const HOMEPAGE_HEADLINE = 'Hifi matched to your preferences, system, and long-term happiness.';
 
 /**
- * First-impression boundary + "specifics" hint.
+ * First-impression affirmative invitation.
  *
  * Sits directly under the hero h1 in the pre-conversation state
  * (gated on `!hasMessages` alongside the hero). Single short line
- * that frames the product mode, names two boundaries, and signals
- * the input pattern that works best — without modal, wizard, or
- * profile setup.
+ * that names what Audio XX helps the user do — understand their
+ * listening preferences, find gear that fits, and build systems
+ * that work together — without modal, wizard, or profile setup.
  *
  * Early-public-beta onboarding goal (2026-05-19): help users ask
  * better questions, not create a setup funnel. This line is
@@ -220,10 +221,11 @@ const HOMEPAGE_HEADLINE = 'Hifi matched to your preferences, system, and long-te
  * a paragraph or list. If the message needs to expand, route
  * additional context to How It Works instead.
  *
- * Boundary language is consistent with the F3 positioning copy on
- * /how-it-works and the F4 reviewer-data exclusion rule.
+ * Review-boundary framing lives on /how-it-works and
+ * /affiliate-disclosure (F3 positioning, F4 reviewer-data exclusion),
+ * not on this line.
  */
-const HOMEPAGE_INTRO = 'Conversational system advice — not a review aggregator, not a substitute for auditioning. Works best with specifics.';
+const HOMEPAGE_INTRO = 'Audio XX helps you understand your listening preferences, find gear that fits those tastes, and build systems that work together.';
 
 /**
  * Pinned fresh-visitor assessment example. Stage 7.1 onboarding-
@@ -274,7 +276,7 @@ const COMPARE_PROMPTS: ReadonlyArray<string> = [
  * cleanest entry point into the system-fit framing.
  */
 const VARIETY_PROMPTS: ReadonlyArray<string> = [
-  'what do I actually value in a system?',
+  'Help me understand my listening preferences',
   'why does my system sound fatiguing?',
   'would this upgrade actually improve my system?',
   'am I solving the wrong problem?',
@@ -1508,6 +1510,25 @@ export default function Home() {
       submittedText, intent, routedMode, effectiveMode, state.activeMode, shoppingAnswerCount,
       convStateRef.current.mode, convStateRef.current.stage);
 
+    // ── Lane: Preference reflection ───────────────────────
+    // The homepage intro promises "Audio XX helps you understand your
+    // listening preferences." This lane is the only path that honours
+    // that clause directly. It catches meta-questions ("help me understand
+    // my listening preferences", "what do I actually value", "I don't know
+    // what kind of sound I like") and produces a short reflection with
+    // optional questions — never fabricates a profile, never routes to
+    // diagnosis or shopping. Fires BEFORE the cold-start state machine so
+    // these prompts bypass the orientation handler entirely.
+    if (intent === 'preference_reflection') {
+      const reflection = buildPreferenceReflection(state.listenerPreferenceProfile);
+      dispatch({
+        type: 'ADD_QUESTION',
+        clarification: { acknowledge: reflection.acknowledge, question: reflection.question },
+      });
+      dispatch({ type: 'SET_LOADING', value: false });
+      return;
+    }
+
     // ── First-turn intent authority ──────────────────────
     // When detectIntent returns a high-confidence mode (system_assessment,
     // comparison, product_assessment) with sufficient subject evidence,
@@ -1647,13 +1668,13 @@ export default function Home() {
 
           if (intent === 'greeting') {
             acknowledge = 'Hey — welcome to Audio XX.';
-            question = 'Want to understand your current system, work through a possible change, or troubleshoot something you\'re hearing?';
+            question = 'Want to understand your current system, explore what you value as a listener, work through a possible change, or troubleshoot something you\'re hearing?';
           } else if (intent === 'educational') {
             acknowledge = 'Audio XX is a system-level listening advisor. It helps you understand how your components interact, what you actually respond to as a listener, and the trade-offs of any change — including when not to change anything at all.';
             question = 'Where would you like to start?\n• Understand my current system\n• Work through a possible change\n• Diagnose something I\'m hearing\n• Learn how system matching works';
           } else {
             acknowledge = 'Good place to start.';
-            question = 'Want to understand your current system, work through a possible change, or troubleshoot something you\'re hearing?';
+            question = 'Want to understand your current system, explore what you value as a listener, work through a possible change, or troubleshoot something you\'re hearing?';
           }
 
           dispatch({

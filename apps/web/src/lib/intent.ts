@@ -19,7 +19,7 @@ import { detectPairingIntent } from './pairing-resolver';
 
 // ── Intent type ──────────────────────────────────────
 
-export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory' | 'product_assessment' | 'audio_knowledge' | 'audio_assistant' | 'exploration' | 'intake' | 'music_input' | 'greeting' | 'educational';
+export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory' | 'product_assessment' | 'audio_knowledge' | 'audio_assistant' | 'exploration' | 'intake' | 'music_input' | 'greeting' | 'educational' | 'preference_reflection';
 
 /**
  * Intents that must NOT be force-routed through advisory builders
@@ -40,6 +40,7 @@ export const NON_ADVISORY_INTENTS: ReadonlySet<UserIntent> = new Set<UserIntent>
   'audio_assistant',
   'greeting',
   'educational',
+  'preference_reflection',
 ]);
 
 /** True when the intent has its own direct handler and must bypass advisory overrides. */
@@ -703,6 +704,33 @@ const OWNERSHIP_PATTERNS = [
   /\bcurrent\s+(?:system|setup|rig|chain)\b/i,
   // "here's my/the system:" — presentation phrasing signals ownership
   /\bhere'?s?\s+(?:my|the|a)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+];
+
+/**
+ * Preference-reflection patterns — user is asking what their own
+ * listening preferences are (not asking what to buy, not reporting
+ * a symptom). These prompts must NOT fall to the diagnosis default
+ * or the shopping pipeline; they want self-reflection support.
+ *
+ * Homepage promise (2026-05-19): "Audio XX helps you understand
+ * your listening preferences." The four canonical phrasings —
+ *   • "help me understand my listening preferences"
+ *   • "I don't know what kind of sound I like"
+ *   • "What do I seem to value based on my system?"
+ *   • "what do I actually value in a system?"
+ * — plus close variants must route here. Kept narrow on purpose:
+ * the rule fires on meta-questions about preferences, not on
+ * descriptive sonic phrasing like "I prefer warm" (which the
+ * listener-preferences phrase-rules already handle).
+ */
+const PREFERENCE_REFLECTION_PATTERNS = [
+  /\b(?:help\s+me\s+)?(?:understand|identify|figure\s+out|reflect\s+on|articulate|describe)\s+(?:my|what\s+(?:i|my))\s+(?:listening\s+|sonic\s+|sound\s+)?(?:preferences?|tastes?|profile)\b/i,
+  /\b(?:i\s+)?don'?t\s+know\s+what\s+(?:kind\s+of\s+)?sound\s+i\s+like\b/i,
+  /\b(?:i'?m\s+)?not\s+sure\s+what\s+(?:kind\s+of\s+)?sound\s+i\s+like\b/i,
+  /\bwhat\s+do\s+i\s+(?:seem\s+to|actually|really|tend\s+to)\s+value\b/i,
+  /\bwhat\s+do\s+i\s+value\s+(?:in|about)\s+(?:a|my|this|the)\s+(?:system|setup|sound|rig|chain)\b/i,
+  /\bwhat\s+are\s+my\s+(?:listening\s+)?preferences\b/i,
+  /\bwhat(?:'?s|\s+is)\s+my\s+(?:listening\s+)?(?:profile|taste|preferences?)\b/i,
 ];
 
 // ── Diagnosis patterns ───────────────────────────────
@@ -1373,6 +1401,19 @@ export function detectIntent(
   // 1. Explicit diagnosis — user describes a listening problem
   if (DIAGNOSIS_PATTERNS.some((p) => p.test(currentMessage))) {
     return { intent: 'diagnosis', subjects, subjectMatches, desires };
+  }
+
+  // 1a. Preference reflection — user asks a meta-question about their own
+  //     listening preferences ("help me understand my listening preferences",
+  //     "what do I actually value", "I don't know what kind of sound I like").
+  //     Fires after the explicit-diagnosis check so real symptom language
+  //     still wins, but before system_assessment / consultation_entry /
+  //     the diagnosis fallback default. Without this, the homepage promise
+  //     ("Audio XX helps you understand your listening preferences") had
+  //     no honest path — these phrasings fell to the diagnosis default and
+  //     produced "what's wrong with your sound?" framing.
+  if (PREFERENCE_REFLECTION_PATTERNS.some((p) => p.test(currentMessage))) {
+    return { intent: 'preference_reflection', subjects, subjectMatches, desires };
   }
 
   // 1b. System assessment — user describes their system and asks for evaluation

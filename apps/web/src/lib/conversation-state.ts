@@ -813,6 +813,19 @@ export function transition(
         };
       }
 
+      // Preference discovery — user wants to explore what they value
+      const wantsPreferences = /\b(?:value|prefer|preferences?|taste|what\s+(?:i|do\s+i)\s+(?:like|value|respond|enjoy)|explore\s+what|understand\s+(?:my|what))\b/i.test(text);
+      if (wantsPreferences) {
+        return {
+          state: { mode: 'orientation', stage: 'preference_discovery', facts },
+          response: {
+            kind: 'question',
+            acknowledge: 'Great — let’s explore what you respond to as a listener.',
+            question: 'A few optional starting points: What kind of music do you listen to most? Do you tend to prefer a relaxed, flowing presentation or something more detailed and precise? And how long are your typical listening sessions? Any of these is a fine place to start — or just describe what you enjoy.',
+          },
+        };
+      }
+
       if (wantsImprove) {
         if (facts.hasSystem) {
           return {

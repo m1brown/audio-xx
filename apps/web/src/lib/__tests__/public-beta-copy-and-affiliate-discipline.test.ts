@@ -84,20 +84,11 @@ describe('HOMEPAGE_INTRO (homepage first-impression line)', () => {
     expect(intro!.length).toBeGreaterThan(20);
   });
 
-  it('frames the product mode as conversational (not platform / not aggregator)', () => {
-    expect(intro!.toLowerCase()).toContain('conversational');
-  });
-
-  it('explicitly states the "not a review aggregator" boundary', () => {
-    expect(intro!.toLowerCase()).toContain('not a review aggregator');
-  });
-
-  it('explicitly states the "not a substitute for auditioning" boundary', () => {
-    expect(intro!.toLowerCase()).toContain('not a substitute for auditioning');
-  });
-
-  it('contains the "works best with specifics" guidance', () => {
-    expect(intro!.toLowerCase()).toContain('specifics');
+  it('is affirmative — covers listening preferences, gear fit, and system synergy', () => {
+    const lower = intro!.toLowerCase();
+    expect(lower).toMatch(/listening\s+preferences?|preferences?|taste/);
+    expect(lower).toMatch(/gear|fit|aligned|match/);
+    expect(lower).toMatch(/system|synergy|work\s+together/);
   });
 
   it('stays short — single sentence-ish, under 220 characters', () => {
