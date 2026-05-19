@@ -117,6 +117,7 @@ import { frameStrategy, deduplicateStrategies } from './strategy-framing';
 import { topReviewsForCard, type ReviewerDomain } from './curation';
 import { getLegacyMapping } from './products/legacy-models';
 import { getProductImage, resolveProductImage, resolveProductImageStrict } from './product-images';
+import { shouldShowAmazonLink, getAmazonSearchUrl } from './amazon-links';
 import { findCatalogProduct } from './listener-profile';
 import {
   buildListenerFraming,
@@ -7994,6 +7995,37 @@ export function buildSystemAssessment(
       components.length = 0;
       components.push(...dedup);
     }
+  }
+
+  // ── Amazon link injection for Component Contribution Explore ─
+  // Public-beta affiliate hook (2026-05-19): when a cataloged
+  // component is Amazon-eligible per shouldShowAmazonLink (pure
+  // attribute test — brand exclusion list, availability, typical
+  // market), attach an Amazon search link to its per-component
+  // explore list. The affiliate `tag=` parameter, if any, is
+  // applied at request time via affiliate-config (env-driven).
+  //
+  // This pass NEVER influences ranking, scoring, or any
+  // recommendation logic — it only enriches the link list shown
+  // beside an already-selected component. Skips components that
+  // already carry an Amazon URL (e.g. catalog entries with a
+  // verified ASIN direct link) so we never display two Amazon
+  // entries for the same component.
+  for (const c of components) {
+    if (!c.product) continue;
+    const eligible = shouldShowAmazonLink({
+      brand: c.product.brand,
+      availability: c.product.availability,
+      typicalMarket: c.product.typicalMarket,
+      buyingContext: c.product.buyingContext,
+    });
+    if (!eligible) continue;
+    const existing = componentLinks.get(c.displayName) ?? [];
+    if (existing.some((l) => l.url.includes('amazon.com'))) continue;
+    trackLink(
+      { label: 'Amazon', url: getAmazonSearchUrl(c.product.name, c.product.brand) },
+      c.displayName,
+    );
   }
 
   // Need at least 2 identified components to build a system assessment

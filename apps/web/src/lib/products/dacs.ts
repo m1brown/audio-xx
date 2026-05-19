@@ -1022,10 +1022,14 @@ export const DAC_PRODUCTS: Product[] = [
     },
     description:
       'Feature-rich ESS-based DAC with balanced output, MQA decoding, and built-in headphone amplifier. Versatile and well-rounded.',
+    // Keep only the direct Amazon ASIN link — brand_profile.links
+    // supplies "Official website" and the per-component Amazon
+    // injector skips when an Amazon URL is already present, so
+    // the verified ASIN link wins over a search fallback. Drops
+    // the noisy "Eversolo · Apos Audio" labels from Component
+    // Contribution Explore. (2026-05-19)
     retailer_links: [
-      { label: 'Eversolo', url: 'https://eversolo.com/products/dac-z8' },
       { label: 'Amazon', url: 'https://www.amazon.com/dp/B0DJCCBSMZ' },
-      { label: 'Apos Audio', url: 'https://apos.audio/products/eversolo-dac-z8' },
     ],
     philosophy: 'energy',
     marketType: 'value',
@@ -1672,10 +1676,13 @@ export const DAC_PRODUCTS: Product[] = [
     },
     description:
       'Network streamer with a capable internal DAC stage. Clean, neutral digital front-end designed for streaming service integration and network transport. Most commonly used feeding an external DAC via USB or coaxial output.',
-    retailer_links: [
-      { label: 'Eversolo', url: 'https://eversolo.com/products/dmp-a6' },
-      { label: 'Apos Audio', url: 'https://apos.audio/products/eversolo-dmp-a6' },
-    ],
+    // retailer_links intentionally empty — brand_profile.links
+    // (in consultation.ts) supplies "Official website" and the
+    // post-dedup Amazon injector adds the Amazon search link at
+    // runtime when shouldShowAmazonLink returns true. Avoids the
+    // noisy "Eversolo · Apos Audio" labels that previously
+    // appeared in Component Contribution Explore. (2026-05-19)
+    retailer_links: [],
     imageUrl: 'https://www.eversolo.com/Uploads/product/6cb5caed67cf28b5c195403532c92ec0.jpg',
     philosophy: 'energy',
     marketType: 'value',
