@@ -31,6 +31,24 @@ export default function AffiliateDisclosurePage() {
         recommended just as readily. Amazon links are provided as a convenience
         alongside manufacturer and dealer links.
       </p>
+      <p className="mb-1">
+        Audio&thinsp;XX does not make &ldquo;best deal&rdquo; or
+        &ldquo;recommended seller&rdquo; claims. Affiliate and outbound links
+        — Amazon, eBay, HiFi Shark, manufacturer, dealer — are availability and
+        convenience tools only. They are never used as evidence for a
+        recommendation, never weighted into product scoring, and never used to
+        decide which products are surfaced.
+      </p>
+
+      <h2>Pricing and availability</h2>
+      <p className="mb-1">
+        Prices and availability shown on product cards are catalog values,
+        refreshed manually. They are approximate and may not reflect current
+        market conditions. Audio&thinsp;XX does not synchronize live pricing
+        or inventory and does not make real-time stock claims. Check the
+        linked manufacturer, dealer, or used-market search for current
+        pricing and availability.
+      </p>
 
       <h2>Why we use affiliate links</h2>
       <p className="mb-1">

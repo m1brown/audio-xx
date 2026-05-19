@@ -206,6 +206,26 @@ const EDITORIAL = {
 const HOMEPAGE_HEADLINE = 'Hifi matched to your preferences, system, and long-term happiness.';
 
 /**
+ * First-impression boundary + "specifics" hint.
+ *
+ * Sits directly under the hero h1 in the pre-conversation state
+ * (gated on `!hasMessages` alongside the hero). Single short line
+ * that frames the product mode, names two boundaries, and signals
+ * the input pattern that works best — without modal, wizard, or
+ * profile setup.
+ *
+ * Early-public-beta onboarding goal (2026-05-19): help users ask
+ * better questions, not create a setup funnel. This line is
+ * intentionally short and load-bearing — it should NOT grow into
+ * a paragraph or list. If the message needs to expand, route
+ * additional context to How It Works instead.
+ *
+ * Boundary language is consistent with the F3 positioning copy on
+ * /how-it-works and the F4 reviewer-data exclusion rule.
+ */
+const HOMEPAGE_INTRO = 'Conversational system advice — not a review aggregator, not a substitute for auditioning. Works best with specifics.';
+
+/**
  * Pinned fresh-visitor assessment example. Stage 7.1 onboarding-
  * clarity fix: the most-differentiated mode (system-level review)
  * was previously invisible to fresh visitors unless the random
@@ -4572,6 +4592,21 @@ export default function Home() {
             >
               {HOMEPAGE_HEADLINE}
             </h1>
+            {/* First-impression intro (2026-05-19, early public beta):
+                short boundary + "specifics" hint directly under the
+                hero. See HOMEPAGE_INTRO doc comment for the load-
+                bearing rationale. Static text, no JS, no modal. */}
+            <p
+              style={{
+                margin: '0.6rem 0 0 0',
+                fontSize: 'clamp(0.88rem, 1.4vw, 0.95rem)',
+                lineHeight: 1.5,
+                color: EDITORIAL.inkMuted,
+                fontWeight: 400,
+              }}
+            >
+              {HOMEPAGE_INTRO}
+            </p>
           </div>
 
           {/* Compact taste widget — authenticated users with profile data */}

@@ -1,0 +1,341 @@
+/**
+ * Early-public-beta copy + affiliate-discipline regression suite
+ * (2026-05-19).
+ *
+ * Locks two invariants for the public-beta phase:
+ *
+ *   1. Onboarding copy — the homepage first-impression intro
+ *      (HOMEPAGE_INTRO) and the affiliate-disclosure page copy must
+ *      not slip into review-aggregator framing, "best deal" /
+ *      "recommended seller" / "buy now" claims, or other commercial-
+ *      first language that would conflict with the F3/F4 positioning.
+ *
+ *   2. Affiliate-link non-influence — `shouldShowAmazonLink` /
+ *      `getAmazonSearchUrl` must remain free of any scoring or
+ *      ranking inputs, and the product-scoring module must remain
+ *      free of any Amazon/affiliate/commission/ASIN reference.
+ *
+ * Both invariants are asserted by reading the source files via
+ * fs.readFileSync (the existing pattern used elsewhere in the
+ * codebase for static-text guards). React component rendering is
+ * not exercised — only the source text and module interfaces.
+ */
+
+import { describe, it, expect } from 'vitest';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { shouldShowAmazonLink, getAmazonSearchUrl } from '../amazon-links';
+import { buildProductLinks } from '../product-links';
+
+// ── Helpers ──────────────────────────────────────────────────
+
+function readRepoFile(relPath: string): string {
+  // __dirname is apps/web/src/lib/__tests__ when vitest runs from repo root.
+  // Resolve relative to the repo root via process.cwd().
+  return fs.readFileSync(path.join(process.cwd(), relPath), 'utf8');
+}
+
+/**
+ * Collapse all whitespace runs to single spaces. JSX wraps copy
+ * across lines for readability, so phrases like "never on\n        commission
+ * potential" need to match against "never on commission potential"
+ * for assertion purposes.
+ */
+function normalize(src: string): string {
+  return src.replace(/\s+/g, ' ');
+}
+
+// Risky review-aggregator framing patterns that must not appear in
+// user-visible onboarding copy under the F3 positioning rule.
+const REVIEWER_FRAMING_PATTERNS: RegExp[] = [
+  /reviewer\s+consensus/i,
+  /trained\s+on\s+reviews/i,
+  /review\s+harvest/i,
+  /summarizes\s+reviews/i,
+  /\bAI\s+reviewer\b/i,
+  /review\s+summarizer/i,
+  /aggregat\w*\s+reviews?/i,
+  /(?:powered|built|trained)\s+by\s+(?:expert\s+)?reviewers?/i,
+];
+
+// Commercial-first / "buy now" framing that must not appear in
+// user-visible onboarding or disclosure copy.
+const COMMERCIAL_FIRST_PATTERNS: RegExp[] = [
+  /\bbuy\s+now\b/i,
+  /\bclick\s+here\b/i,
+  /\blimited\s+time\b/i,
+  /\bspecial\s+offer\b/i,
+  /\border\s+now\b/i,
+  /\badd\s+to\s+cart\b/i,
+];
+
+// ── 1. Homepage HOMEPAGE_INTRO copy invariants ────────────────
+
+describe('HOMEPAGE_INTRO (homepage first-impression line)', () => {
+  const pageSource = readRepoFile('apps/web/src/app/page.tsx');
+  const introMatch = pageSource.match(/const\s+HOMEPAGE_INTRO\s*=\s*'([^']+)'/);
+  const intro = introMatch?.[1];
+
+  it('HOMEPAGE_INTRO is exported as a string literal in page.tsx', () => {
+    expect(intro).toBeDefined();
+    expect(typeof intro).toBe('string');
+    expect(intro!.length).toBeGreaterThan(20);
+  });
+
+  it('frames the product mode as conversational (not platform / not aggregator)', () => {
+    expect(intro!.toLowerCase()).toContain('conversational');
+  });
+
+  it('explicitly states the "not a review aggregator" boundary', () => {
+    expect(intro!.toLowerCase()).toContain('not a review aggregator');
+  });
+
+  it('explicitly states the "not a substitute for auditioning" boundary', () => {
+    expect(intro!.toLowerCase()).toContain('not a substitute for auditioning');
+  });
+
+  it('contains the "works best with specifics" guidance', () => {
+    expect(intro!.toLowerCase()).toContain('specifics');
+  });
+
+  it('stays short — single sentence-ish, under 220 characters', () => {
+    expect(intro!.length).toBeLessThan(220);
+  });
+
+  it('does not slip into review-aggregator framing', () => {
+    for (const pattern of REVIEWER_FRAMING_PATTERNS) {
+      expect(intro, `pattern matched: ${pattern}`).not.toMatch(pattern);
+    }
+  });
+
+  it('does not contain commercial-first / "buy now" framing', () => {
+    for (const pattern of COMMERCIAL_FIRST_PATTERNS) {
+      expect(intro, `pattern matched: ${pattern}`).not.toMatch(pattern);
+    }
+  });
+});
+
+// ── 2. Affiliate-disclosure page copy invariants ─────────────
+
+describe('Affiliate Disclosure page copy', () => {
+  // Normalize whitespace so JSX line-wrapped phrases match.
+  const disclosureSource = normalize(readRepoFile('apps/web/src/app/affiliate-disclosure/page.tsx').toLowerCase());
+
+  it('contains the explicit "does not affect our recommendations" line', () => {
+    expect(disclosureSource).toContain('does not affect our recommendations');
+  });
+
+  it('contains the "never on commission potential" disclaimer', () => {
+    expect(disclosureSource).toContain('never on commission potential');
+  });
+
+  it('explicitly disclaims "best deal" claims (2026-05-19 reinforcement)', () => {
+    expect(disclosureSource).toContain('best deal');
+    // Phrased as a disclaimer, not an assertion.
+    expect(disclosureSource).toMatch(/does not make .{0,40}best deal|no .{0,15}best deal/);
+  });
+
+  it('explicitly disclaims "recommended seller" claims (2026-05-19 reinforcement)', () => {
+    expect(disclosureSource).toContain('recommended seller');
+  });
+
+  it('explicitly states affiliate links are not used as evidence for recommendations', () => {
+    expect(disclosureSource).toMatch(/never used as evidence for a recommendation/);
+  });
+
+  it('explicitly states affiliate links do not influence scoring or ranking', () => {
+    expect(disclosureSource).toMatch(/never weighted into product scoring|never used to decide which products are surfaced/);
+  });
+
+  it('does not contain review-aggregator framing', () => {
+    for (const pattern of REVIEWER_FRAMING_PATTERNS) {
+      expect(disclosureSource, `pattern matched: ${pattern}`).not.toMatch(pattern);
+    }
+  });
+
+  // ── Pricing / availability disclosure (2026-05-19 addition) ──
+  //
+  // Catalog prices render as fixed values on product cards. The
+  // disclosure page must clarify these are NOT live and should not
+  // be read as current market data — and must explicitly disclaim
+  // live pricing / inventory / real-time stock claims.
+
+  it('contains a "Pricing and availability" section', () => {
+    expect(disclosureSource).toContain('pricing and availability');
+  });
+
+  it('clarifies catalog prices are approximate (not a live quote)', () => {
+    expect(disclosureSource).toMatch(/approximate|may not reflect current/);
+  });
+
+  it('explicitly disclaims live pricing / inventory / real-time stock claims', () => {
+    expect(disclosureSource).toMatch(/does not synchronize live pricing|does not.{0,30}real-time stock|not.{0,30}live pricing/);
+  });
+
+  it('does not claim live / current / today\'s pricing or inventory anywhere', () => {
+    expect(disclosureSource).not.toMatch(/\blive\s+price[s]?\b(?!\s*or\s+inventory|\s*and\s+inventory)/);
+    expect(disclosureSource).not.toMatch(/\btoday'?s\s+price[s]?\b/);
+    expect(disclosureSource).not.toMatch(/\bcheapest\s+price\b/);
+    expect(disclosureSource).not.toMatch(/\blowest\s+price\b/);
+    expect(disclosureSource).not.toMatch(/\bin\s+stock\s+now\b/);
+  });
+});
+
+// ── 3. Affiliate-link non-influence invariants ───────────────
+
+describe('Amazon affiliate link non-influence', () => {
+  it('shouldShowAmazonLink decision is based only on product attributes (no scoring inputs)', () => {
+    // Pure-function check — exercise the function with attribute-only
+    // inputs and verify the outcome matches the documented policy.
+    expect(shouldShowAmazonLink({ availability: 'discontinued' })).toBe(false);
+    expect(shouldShowAmazonLink({ availability: 'vintage' })).toBe(false);
+    expect(shouldShowAmazonLink({ typicalMarket: 'used' })).toBe(false);
+    expect(shouldShowAmazonLink({ buyingContext: 'used_only' })).toBe(false);
+    expect(shouldShowAmazonLink({ brand: 'Decware' })).toBe(false);
+    expect(shouldShowAmazonLink({ brand: 'Leben' })).toBe(false);
+    // current + no exclusion → true (availability-based, not score-based)
+    expect(shouldShowAmazonLink({ brand: 'Schiit', availability: 'current' })).toBe(true);
+  });
+
+  it('getAmazonSearchUrl returns a search URL with the affiliate tag (no scoring metadata in the URL)', () => {
+    const url = getAmazonSearchUrl('Bifrost 2/64', 'Schiit');
+    expect(url).toContain('amazon.com/s');
+    expect(url).toContain('tag=');
+    expect(url).toContain('Bifrost');
+    // No score/ranking/preference signals leak into the URL
+    expect(url).not.toMatch(/score|rank|preferred|priority|weight/i);
+  });
+
+  it('product-scoring.ts contains no Amazon / affiliate / commission / ASIN reference', () => {
+    const scoringSource = readRepoFile('apps/web/src/lib/product-scoring.ts');
+    // Case-insensitive, but allow comments — the test fails on actual code references too
+    // (any of these tokens in a real source file would indicate ranking influence).
+    expect(scoringSource).not.toMatch(/\bamazon\b/i);
+    expect(scoringSource).not.toMatch(/\baffiliate\b/i);
+    expect(scoringSource).not.toMatch(/\bcommission\b/i);
+    expect(scoringSource).not.toMatch(/\bASIN\b/);
+  });
+
+  it('amazon-links.ts does not import or reference product-scoring (no inverse coupling)', () => {
+    const amazonSource = readRepoFile('apps/web/src/lib/amazon-links.ts');
+    expect(amazonSource).not.toMatch(/from\s+['"][./]*product-scoring['"]/);
+    expect(amazonSource).not.toMatch(/import.*product-scoring/);
+    expect(amazonSource).not.toMatch(/scoreProduct|rankProducts|reRankForRefinement/);
+  });
+});
+
+// ── 4. Product-link surface — graceful missing-link handling ──
+//
+// Product cards must degrade cleanly when any subset of the link
+// arrays (retailer, advisory, manufacturerUrl, usedMarketUrl) is
+// missing. buildProductLinks() is the single canonical resolver,
+// so asserting its behavior with empty/sparse inputs covers the
+// graceful-degradation property for every card site that uses it.
+
+describe('Product-link surface — graceful missing-link handling', () => {
+  it('returns well-formed link arrays (not undefined / not crash) when ALL inputs are absent', () => {
+    const r = buildProductLinks({ name: 'Test', brand: 'TestBrand' });
+    // Each group is an array — never undefined, never throwing.
+    expect(Array.isArray(r.newLinks)).toBe(true);
+    expect(Array.isArray(r.manufacturerLinks)).toBe(true);
+    expect(Array.isArray(r.usedLinks)).toBe(true);
+    expect(Array.isArray(r.readingLinks)).toBe(true);
+    // Deterministic used-market search fallback (HiFi Shark / eBay) IS
+    // intentional — when the catalog has no curated dealer / manufacturer
+    // / Amazon links, give the user somewhere to look. Not an empty card.
+  });
+
+  it('curated retailer-link absence does not produce buy-new or manufacturer links', () => {
+    const r = buildProductLinks({ name: 'Test', brand: 'TestBrand', retailerLinks: [] });
+    expect(r.newLinks).toEqual([]);
+    expect(r.manufacturerLinks).toEqual([]);
+  });
+
+  it('still surfaces manufacturerUrl when the retailer link list is empty', () => {
+    const r = buildProductLinks({ name: 'Test', brand: 'TestBrand', manufacturerUrl: 'https://example-brand.com/product' });
+    // manufacturerUrl fallback should produce at least one manufacturer or new link
+    const anyLinkPresent = r.newLinks.length > 0 || r.manufacturerLinks.length > 0;
+    expect(anyLinkPresent).toBe(true);
+  });
+
+  it('does not throw when both retailerLinks and advisoryLinks are undefined', () => {
+    expect(() => buildProductLinks({ name: 'Test', brand: 'TestBrand', availability: 'current' })).not.toThrow();
+    expect(() => buildProductLinks({ name: 'Test', brand: 'TestBrand', availability: 'discontinued' })).not.toThrow();
+  });
+});
+
+// ── 5. Inactive product safeguards (discontinued/vintage suppression) ──
+//
+// 'availability' === 'current' is the proxy for active/inactive
+// status. Discontinued and vintage products must:
+//   - have Amazon links suppressed (shouldShowAmazonLink → false)
+//   - be flagged via the isUsedOnly flag in the link resolver
+// These are existing invariants — this test locks them.
+
+describe('Inactive (discontinued/vintage) product safeguards', () => {
+  it('shouldShowAmazonLink returns false for discontinued products', () => {
+    expect(shouldShowAmazonLink({ availability: 'discontinued' })).toBe(false);
+  });
+
+  it('shouldShowAmazonLink returns false for vintage products', () => {
+    expect(shouldShowAmazonLink({ availability: 'vintage' })).toBe(false);
+  });
+
+  it('buildProductLinks marks discontinued products as used-only', () => {
+    const r = buildProductLinks({ name: 'Test', brand: 'TestBrand', availability: 'discontinued' });
+    expect(r.isUsedOnly).toBe(true);
+  });
+
+  it('buildProductLinks marks vintage products as used-only', () => {
+    const r = buildProductLinks({ name: 'Test', brand: 'TestBrand', availability: 'vintage' });
+    expect(r.isUsedOnly).toBe(true);
+  });
+
+  it('buildProductLinks marks typicalMarket=used products as used-only', () => {
+    const r = buildProductLinks({ name: 'Test', brand: 'TestBrand', typicalMarket: 'used' });
+    expect(r.isUsedOnly).toBe(true);
+  });
+});
+
+// ── 6. Onboarding scope (no wizard / no quiz / no profile setup) ──
+
+describe('Onboarding scope discipline', () => {
+  const pageSource = readRepoFile('apps/web/src/app/page.tsx');
+
+  it('homepage does not introduce a wizard, quiz, or step-flow component', () => {
+    // Heuristic: the words "wizard" / "preference quiz" / "setup flow"
+    // should not appear as UI labels. A "step N of M" pattern is also a
+    // wizard tell, but only when it appears as a JSX text node (i.e.
+    // wrapped in `>...<`). Internal staging references in code comments
+    // (e.g. "Step 3 of 9 — beta path" describing the beta-intent
+    // intercept ordering) are legitimate and excluded.
+    expect(pageSource).not.toMatch(/onboarding\s*wizard/i);
+    expect(pageSource).not.toMatch(/preference\s*quiz/i);
+    expect(pageSource).not.toMatch(/setup\s*flow/i);
+    expect(pageSource).not.toMatch(/>\s*step\s+\d+\s+of\s+\d+\s*</i);
+  });
+
+  it('homepage does not introduce a forced-profile-setup modal', () => {
+    // No "Complete your profile to continue" or similar forcing language
+    expect(pageSource).not.toMatch(/complete your profile to continue/i);
+    expect(pageSource).not.toMatch(/finish setup to continue/i);
+    expect(pageSource).not.toMatch(/required.{0,30}before you can/i);
+  });
+
+  it('the HOMEPAGE_INTRO line is gated on !hasMessages alongside the hero', () => {
+    // Locate the HOMEPAGE_INTRO usage and confirm it sits inside the
+    // {!hasMessages && (...)} block that wraps the hero. The check is
+    // structural — find the substring "{HOMEPAGE_INTRO}" and confirm
+    // it occurs in the same pre-conversation block as "{HOMEPAGE_HEADLINE}".
+    const headlineIdx = pageSource.indexOf('{HOMEPAGE_HEADLINE}');
+    const introIdx = pageSource.indexOf('{HOMEPAGE_INTRO}');
+    expect(introIdx).toBeGreaterThan(-1);
+    expect(headlineIdx).toBeGreaterThan(-1);
+    // Intro must appear AFTER the headline (renders below it)
+    expect(introIdx).toBeGreaterThan(headlineIdx);
+    // Both must occur after the `{!hasMessages && (` guard
+    const guardIdx = pageSource.lastIndexOf('{!hasMessages && (', headlineIdx);
+    expect(guardIdx).toBeGreaterThan(-1);
+    expect(guardIdx).toBeLessThan(headlineIdx);
+  });
+});
