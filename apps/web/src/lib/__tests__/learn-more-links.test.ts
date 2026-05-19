@@ -68,7 +68,9 @@ describe('learn-more links — curated products', () => {
   it('DeVore Orangutan O/96 has manufacturer + used-market links', () => {
     const lebenPrompt = 'Assess my system: Denafrips Pontus II, Leben CS600X, DeVore O/96';
     const links = linksFor('DeVore', lebenPrompt);
-    expect(links.some((l) => l.url === 'https://www.dfridelity.com/o96')).toBe(true);
+    // URL canonicalized 2026-05-19 — previous "dfridelity.com" path
+    // was a typo; the live DeVore Fidelity site is devorefidelity.com.
+    expect(links.some((l) => l.url === 'https://devorefidelity.com/devore-fidelity-speakers/orangutan-series/devore-fidelity-o-96-speakers/')).toBe(true);
     expect(links.some((l) => l.url.includes('hifishark.com') && l.url.includes('Orangutan'))).toBe(true);
   });
 

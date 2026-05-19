@@ -2140,11 +2140,17 @@ function MemoFormat({ advisory: a, onFollowUpClick }: AdvisoryMessageProps) {
       )}
 
       {/* ── Sources ────────────────────────────────
-          Stage PB1.2: suppressed when per-component Sources have
-          already rendered inside Component Contributions. Kept as a
-          fallback for memo outputs that lack per-component
-          assessments. */}
-      {hasDisplayableSources(a.sourceReferences) && (!a.componentAssessments || a.componentAssessments.length === 0) && (
+          F4 reviewer-data exclusion (2026-05-19): the Sources panel
+          is suppressed at the call-site level because AdvisorySources
+          itself returns null under the F4 gate — without this static
+          `false &&` the wrapping AdvisorySection would still render
+          an empty "Sources" heading whenever sourceReferences was
+          populated. Restore the original guard if/when the F4 dormant
+          block in AdvisorySources is re-enabled post-beta.
+
+          Original guard: hasDisplayableSources(a.sourceReferences)
+            && (!a.componentAssessments || a.componentAssessments.length === 0) */}
+      {false && hasDisplayableSources(a.sourceReferences) && (!a.componentAssessments || a.componentAssessments.length === 0) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>
@@ -2975,8 +2981,9 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
         />
       </div>
 
-      {/* ── Sources (continued reading) ──────────────── */}
-      {hasDisplayableSources(a.sourceReferences) && (
+      {/* ── Sources (continued reading) ────────────────
+          F4 dormant — see AssessmentFormat Sources comment. */}
+      {false && hasDisplayableSources(a.sourceReferences) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>
@@ -3775,11 +3782,8 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
       )}
 
       {/* ── 9. Sources (Stage 14.1) ─────────────────────────
-         Attribution for reviewer/publication material referenced in
-         the editorial body. AdvisorySources handles two-tier filtering
-         and renders unlinked entries as plain text (Stage 6.2 — no
-         publication-homepage fallback). */}
-      {hasDisplayableSources(a.sourceReferences) && (
+         F4 dormant — see AssessmentFormat Sources comment. */}
+      {false && hasDisplayableSources(a.sourceReferences) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>
@@ -3873,10 +3877,8 @@ function KnowledgeFormat({ advisory: a }: AdvisoryMessageProps) {
       )}
 
       {/* ── Sources (Stage 14.1) ────────────────────────────
-         Knowledge claims need provenance most of all. AdvisorySources
-         handles two-tier filtering and renders unlinked entries as
-         plain text (Stage 6.2 — no publication-homepage fallback). */}
-      {hasDisplayableSources(a.sourceReferences) && (
+         F4 dormant — see AssessmentFormat Sources comment. */}
+      {false && hasDisplayableSources(a.sourceReferences) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>
@@ -5087,8 +5089,9 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
         </AdvisorySection>
       ) : null}
 
-      {/* ── 15. Sources ──────────────────────────── */}
-      {hasDisplayableSources(a.sourceReferences) && (
+      {/* ── 15. Sources ────────────────────────────
+         F4 dormant — see AssessmentFormat Sources comment. */}
+      {false && hasDisplayableSources(a.sourceReferences) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>

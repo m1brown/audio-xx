@@ -368,11 +368,18 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // DeVore Fidelity — devorefidelity.com
   // Keys include "fidelity" to match the catalog brand "DeVore Fidelity".
   // Shorter alias without "fidelity" kept as fallback for contexts that
-  // use the abbreviated brand name.
-  { key: 'devore fidelity orangutan o 93', url: 'https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-93-Front.jpg' },
-  { key: 'devore orangutan o 93',          url: 'https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-93-Front.jpg' },
-  { key: 'devore fidelity orangutan o 96', url: 'https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-96-Front.jpg' },
-  { key: 'devore orangutan o 96',          url: 'https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-96-Front.jpg' },
+  // use the abbreviated brand name. URLs verified 2026-05-19 — the
+  // previous 2019/06 Orangutan-O-9x-Front.jpg paths now return 404;
+  // the live product pages link to the 2021/05 crop assets used in
+  // the catalog imageUrl fields below.
+  { key: 'devore fidelity orangutan o 93', url: 'https://devorefidelity.com/wp-content/uploads/2021/05/O93new-682x1024.jpg',
+    source: { tier: 'manufacturer', site: 'devorefidelity.com', credit: 'DeVore Fidelity', captured: '2026-05-19' } },
+  { key: 'devore orangutan o 93',          url: 'https://devorefidelity.com/wp-content/uploads/2021/05/O93new-682x1024.jpg',
+    source: { tier: 'manufacturer', site: 'devorefidelity.com', credit: 'DeVore Fidelity', captured: '2026-05-19' } },
+  { key: 'devore fidelity orangutan o 96', url: 'https://devorefidelity.com/wp-content/uploads/2021/05/O96-new-crop-766x1024.jpg',
+    source: { tier: 'manufacturer', site: 'devorefidelity.com', credit: 'DeVore Fidelity', captured: '2026-05-19' } },
+  { key: 'devore orangutan o 96',          url: 'https://devorefidelity.com/wp-content/uploads/2021/05/O96-new-crop-766x1024.jpg',
+    source: { tier: 'manufacturer', site: 'devorefidelity.com', credit: 'DeVore Fidelity', captured: '2026-05-19' } },
 
   // Magico — Squarespace CDN (manufacturer-hosted)
   { key: 'magico a3',            url: 'https://images.squarespace-cdn.com/content/v1/5d6806d4d4a70b00015c75b4/1567191992078-77SK24QU4NQ1S2MILAHZ/3+%284%29.jpg?format=2500w' },

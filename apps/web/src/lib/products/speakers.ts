@@ -440,10 +440,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'High-efficiency design that combines deep tonal density with remarkable rhythmic drive. Makes music feel physically present in the room. A speaker built for engagement across all genres, voiced by ear rather than measurement.',
     retailer_links: [
-      { label: 'DeVore Fidelity', url: 'https://www.dfridelity.com/o96' },
+      { label: 'DeVore Fidelity', url: 'https://devorefidelity.com/devore-fidelity-speakers/orangutan-series/devore-fidelity-o-96-speakers/' },
     ],
     learnMore: {
-      manufacturer: 'https://www.dfridelity.com/o96',
+      manufacturer: 'https://devorefidelity.com/devore-fidelity-speakers/orangutan-series/devore-fidelity-o-96-speakers/',
       usedMarket: 'https://www.hifishark.com/search?q=DeVore+Orangutan+O%2F96',
     },
     notes: 'Exceptional with low-power tube amplification. Sensitivity allows SET amps to drive them with authority. Room-dependent bass — needs space to breathe.',
@@ -486,7 +486,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     typicalMarket: 'both',
     usedPriceRange: { low: 7500, high: 10000 },
     buyingContext: 'dealer_likely',
-    // imageUrl: undefined, // TODO: add official product image from devorefidelity.com
+    // imageUrl already set above (line 392) from devorefidelity.com — TODO resolved.
     philosophy: 'warm',
     marketType: 'nonTraditional',
   },
@@ -858,7 +858,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Brooklyn-made high-efficiency floorstander designed for tube amplification. 10-inch wideband driver delivers remarkable dynamic scale with rich tonal density and natural musical flow. 93dB sensitivity makes it ideal for low-power SET and push-pull amps.',
     retailer_links: [
-      { label: 'DeVore Fidelity', url: 'https://www.dfredelity.com/orangutan-o93' },
+      { label: 'DeVore Fidelity', url: 'https://devorefidelity.com/devore-fidelity-speakers/orangutan-series/devore-fidelity-o-93-speakers/' },
       { label: 'Tone Imports', url: 'https://toneimports.com/devore/' },
     ],
     tendencies: {

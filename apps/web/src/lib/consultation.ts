@@ -392,11 +392,11 @@ const BRAND_PROFILES: BrandProfile[] = [
     tagline: 'Speakers voiced by ear for musical engagement.',
     philosophy: 'DeVore Fidelity designs speakers around musical engagement and natural tonal character. The philosophy prioritises ease and flow over analytical precision. Speakers are voiced by ear rather than measurement target.',
     philosophyExtended: 'John DeVore builds speakers in Brooklyn, testing them with real music in real rooms rather than optimizing for anechoic measurement. The result is a speaker that sounds alive and rhythmically engaging, even at low volumes. This is a deliberate trade — tonal honesty over flat response.',
-    tendencies: 'Listeners describe DeVore speakers as warm, rhythmically alive, and harmonically rich. They tend to emphasise tonal body and midrange presence at the cost of some measured linearity.',
-    systemContext: 'DeVore speakers span a range of sensitivities and amplifier requirements. The brand-level tendency is warmth and engagement, but the specific design family matters for amplifier pairing.',
+    tendencies: 'DeVore speakers are warm, rhythmically alive, and harmonically rich. They emphasise tonal body, dynamic presence, and room-filling scale at the cost of measured linearity and the pinpoint imaging of narrow-baffle monitors.',
+    systemContext: 'Trade-off framing: vs compact coaxial or narrow-baffle point-source monitors, DeVore O-series adds scale, ease, tonal density, and dynamic presence — but gives up the disappearing-act imaging and small-cabinet immediacy those designs are known for. Driven by fast, transparent solid-state front-ends, DeVore balances the chain\'s clarity with weight and flow — but tonal balance must be watched in already-warm rooms or with already-rich sources. A sensible next step before committing: audition the specific O-series model against the current speakers in your own room, with your own amp.',
     designPhilosophy: 'Voiced by ear for ease and flow, not to a measurement target.',
-    sonicTendency: 'Warm, harmonically dense, rhythmically alive.',
-    typicalTradeoff: 'Tonal body over measured linearity and surgical detail.',
+    sonicTendency: 'Warm, harmonically dense, dynamically alive, scaled for the room.',
+    typicalTradeoff: 'Tonal body, scale, and dynamic ease over measured linearity, surgical detail, and pinpoint imaging.',
     leadershipOrigin: 'John DeVore founded DeVore Fidelity in 2000 in Brooklyn, New York. Before starting the company, he worked in professional audio and developed his ear through years of live music listening. The brand remains a one-person design operation with small-batch manufacturing.',
     reviewerQuotes: [
       { quote: 'The O/96 may be the most musically engaging speaker I have heard at any price.', source: 'Art Dudley (Stereophile)' },
@@ -415,7 +415,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     ],
     pairingNotes: 'The Orangutan series is widely paired with single-ended triode amplifiers (Shindo, Line Magnetic, Audion). The Gibbon series works with a broader range of amplifiers including solid-state.',
     links: [
-      { label: 'Official website', url: 'https://www.dfridelity.com/', region: 'global' },
+      { label: 'Official website', url: 'https://devorefidelity.com/', region: 'global' },
       { label: 'Tone Imports (US distributor)', url: 'https://www.toneimports.com/', kind: 'dealer', region: 'US' },
     ],
     designFamilies: [
