@@ -4352,8 +4352,13 @@ export default function Home() {
        *  behaviour preserved with role="button" semantics.
        *  2026-05-20 hero rhythm pass: marginBottom 0.2rem → 0.5rem
        *  so the wordmark and the h1 read as two stanzas instead of
-       *  one mashed block. */}
+       *  one mashed block.
+       *  2026-05-20 mobile tightening pass: class added so the wordmark
+       *  can be hidden below 480px — the top nav already carries the
+       *  brand and the duplicated stanza wastes vertical space on
+       *  iPhone-class viewports. */}
       <div
+        className="audioxx-hero-wordmark"
         onClick={() => handleReset()}
         role="button"
         tabIndex={0}
@@ -4402,8 +4407,11 @@ export default function Home() {
       {/* System badge + panel — marginBottom tightened (0.5rem → 0.4rem)
        *  in the 2026-05-08 second-pass hero refresh.
        *  2026-05-20 hero rhythm pass: bumped 0.4rem → 0.7rem so the
-       *  chips below the badge sit as their own stanza, not crowded. */}
-      <div style={{ position: 'relative', marginBottom: '0.7rem' }}>
+       *  chips below the badge sit as their own stanza, not crowded.
+       *  2026-05-20 mobile tightening pass: class added so the badge
+       *  stanza compresses on mobile (0.3rem) without affecting the
+       *  desktop rhythm. */}
+      <div className="audioxx-hero-system-badge" style={{ position: 'relative', marginBottom: '0.7rem' }}>
         <SystemBadge onClick={() => setSystemPanelOpen((v) => !v)} />
         {/* Stage 7.1: the fresh-visitor "Add your system" CTA was moved
          *  out of this inline-link position and re-rendered as a small

@@ -447,34 +447,58 @@ nav .nav-radar-link:hover {
  *
  * Inline styles win against bare CSS rules, so each override here uses
  * !important — matching the convention already used by the workspace
- * grid and nav-link-secondary overrides above. */
+ * grid and nav-link-secondary overrides above.
+ *
+ * 2026-05-20 second mobile tightening pass: hero was still too
+ * vertically heavy at 390px after the first pass. This revision is
+ * more assertive — h1 down to 1.38rem with line-height 1.15, inner
+ * wordmark hidden (top nav already carries the brand), chip footprint
+ * reduced further, and every inter-stanza margin compressed. The
+ * goal is for the textarea to land above the fold on iPhone-class
+ * heights without the page reading as cramped. */
 @media (max-width: 479px) {
-  /* h1 tagline: smaller, tighter, max-width controls wrapping so the
-   * line breaks land on natural phrase boundaries rather than orphans. */
+  /* Reduce the workspace grid's top padding — the gap between the
+   * top nav and the hero accent rule was the single biggest source
+   * of wasted vertical space on mobile (the desktop value is 4rem). */
+  .audioxx-workspace-grid {
+    padding-top: 1.5rem !important;
+  }
+  /* Hide the inner "Audio XX" wordmark on mobile. The top nav already
+   * carries the brand at this width, so the duplicated stanza only
+   * pushes the h1 and input further down the viewport. */
+  .audioxx-hero-wordmark {
+    display: none !important;
+  }
+  /* h1 tagline: smaller, tighter line-height, max-width controls
+   * wrapping so line breaks land on natural phrase boundaries. */
   .audioxx-hero-h1 {
-    font-size: 1.55rem !important;
-    line-height: 1.2 !important;
+    font-size: 1.38rem !important;
+    line-height: 1.15 !important;
     letter-spacing: -0.02em !important;
     max-width: 340px !important;
-    margin-bottom: 0.6rem !important;
+    margin-bottom: 0.4rem !important;
   }
-  /* Top accent rule sits above the wordmark; reduce its bottom margin
-   * so the hero pulls up and more of the input is visible above the
-   * fold on 390px viewports. */
+  /* Top accent rule sits above the wordmark; tighter bottom margin
+   * pulls the hero up so more of the input is visible above the fold. */
   .audioxx-hero-accent {
-    margin-bottom: 1.1rem !important;
+    margin-bottom: 0.7rem !important;
   }
-  /* Starter prompt chips: smaller padding, font, and inter-chip gap
-   * so the three-chip stanza takes less vertical space without
-   * sacrificing tap-target comfort. */
+  /* System badge stanza below the h1 — compressed on mobile so the
+   * chip row sits closer to the value-prop tagline. */
+  .audioxx-hero-system-badge {
+    margin-bottom: 0.3rem !important;
+  }
+  /* Starter prompt chips: tighter padding, smaller font, minimal
+   * inter-chip gap. The chip row also sits closer to the badge above
+   * and the textarea below. */
   .audioxx-hero-chips {
-    gap: 0.35rem !important;
-    margin-top: 0.25rem !important;
-    margin-bottom: 0.85rem !important;
+    gap: 0.3rem !important;
+    margin-top: 0.15rem !important;
+    margin-bottom: 0.5rem !important;
   }
   .audioxx-hero-chips > button {
-    padding: 0.35rem 0.7rem !important;
-    font-size: 0.78rem !important;
+    padding: 0.3rem 0.6rem !important;
+    font-size: 0.75rem !important;
   }
   /* Top nav: slightly more vertical breathing room and a touch more
    * gap between the wordmark and the link cluster so the bar reads as
