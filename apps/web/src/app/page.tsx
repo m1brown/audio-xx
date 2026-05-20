@@ -4328,6 +4328,7 @@ export default function Home() {
       <div className="audioxx-workspace-main" style={{ minWidth: 0 }}>
       {/* Header — always visible */}
       <div
+        className="audioxx-hero-accent"
         onClick={() => handleReset()}
         role="button"
         tabIndex={0}
@@ -4385,6 +4386,7 @@ export default function Home() {
        *  so the h1 carries more visual presence and the chip stanza
        *  below has clear breathing room. Weight + colour unchanged. */}
       <h1
+        className="audioxx-hero-h1"
         style={{
           margin: '0 0 0.85rem 0',
           fontSize: 'clamp(1.55rem, 3vw, 1.85rem)',
@@ -4642,6 +4644,7 @@ export default function Home() {
 
             return (
               <div
+                className="audioxx-hero-chips"
                 style={{
                   display: 'flex',
                   flexWrap: 'wrap',

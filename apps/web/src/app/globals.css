@@ -435,3 +435,58 @@ nav .nav-radar-link:hover {
   }
 }
 
+/* Mobile homepage polish (2026-05-20).
+ *
+ * The hero block — accent rule, wordmark, h1 tagline, system badge,
+ * starter chips, then textarea — was tuned for desktop in the
+ * 2026-05-20 hero rhythm pass. On iPhone-class viewports (≈390w) the
+ * same paddings, font sizes, and gaps push the textarea below the fold
+ * and make the h1 wrap to three lines. The rules below tighten only
+ * the mobile presentation; desktop values (set inline on the elements
+ * themselves in page.tsx) are unchanged.
+ *
+ * Inline styles win against bare CSS rules, so each override here uses
+ * !important — matching the convention already used by the workspace
+ * grid and nav-link-secondary overrides above. */
+@media (max-width: 479px) {
+  /* h1 tagline: smaller, tighter, max-width controls wrapping so the
+   * line breaks land on natural phrase boundaries rather than orphans. */
+  .audioxx-hero-h1 {
+    font-size: 1.55rem !important;
+    line-height: 1.2 !important;
+    letter-spacing: -0.02em !important;
+    max-width: 340px !important;
+    margin-bottom: 0.6rem !important;
+  }
+  /* Top accent rule sits above the wordmark; reduce its bottom margin
+   * so the hero pulls up and more of the input is visible above the
+   * fold on 390px viewports. */
+  .audioxx-hero-accent {
+    margin-bottom: 1.1rem !important;
+  }
+  /* Starter prompt chips: smaller padding, font, and inter-chip gap
+   * so the three-chip stanza takes less vertical space without
+   * sacrificing tap-target comfort. */
+  .audioxx-hero-chips {
+    gap: 0.35rem !important;
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.85rem !important;
+  }
+  .audioxx-hero-chips > button {
+    padding: 0.35rem 0.7rem !important;
+    font-size: 0.78rem !important;
+  }
+  /* Top nav: slightly more vertical breathing room and a touch more
+   * gap between the wordmark and the link cluster so the bar reads as
+   * deliberate rather than jammed at narrow widths. */
+  nav {
+    padding: 14px 1rem !important;
+  }
+  nav .nav-inner {
+    padding: 0 0.5rem !important;
+  }
+  nav .nav-primary {
+    gap: 1.4rem !important;
+  }
+}
+
