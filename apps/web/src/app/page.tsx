@@ -168,66 +168,6 @@ const EDITORIAL = {
 } as const;
 
 /**
- * ── Canonical homepage headline (LOCKED 2026-05-16, Stage PB1.1) ────
- *
- * Single source of truth for the homepage hero h1 copy.
- *
- * 2026-05-08 (earlier passes) shortened the line, dropped the
- * self-referential "Audio XX helps you" preamble, replaced
- * "satisfaction" with the more emotionally human "happiness", and
- * removed the supporting caption.
- *
- * 2026-05-16 (Stage PB1.1 — positioning refresh, two iterations):
- *   First pass: rewrote to lead with interpretation and the
- *   change-vs-restraint question ("Helps you understand what you
- *   value — and whether change is actually worth making."). This
- *   directly addressed the "AI review summarizer" framing critique.
- *
- *   Second pass: shortened to "Hifi matched to your preferences,
- *   system, and long-term happiness." Founder preference, made
- *   explicit after workshopping ~8 alternatives. Trades some of the
- *   restraint-first signaling for clarity of domain ("Hifi"),
- *   alignment-language ("matched to"), and emotional anchor
- *   ("long-term happiness"). The previous "Choose components that
- *   align with..." shopping framing remains rejected; "matched to"
- *   targets listener-side variables (preferences, system, happiness)
- *   rather than a product database. The small tagline above the
- *   headline ("Reads what you value · Interprets your system ·
- *   Names the trade-offs of change") carries the listener-first and
- *   restraint signaling that this shorter headline doesn't. The
- *   tagline was reordered in Stage PB2.1 to lead with listener
- *   preference ("Reads what you value") rather than the system pillar,
- *   reinforcing that the advisor reasons from the listener outward.
- *
- * DO NOT modify casually. Changes to this string are equivalent to
- * changing the product's positioning statement. If a copy refresh is
- * required, surface it as an explicit decision (decision-log entry in
- * `docs/strategic-briefing.md`), not an inline edit.
- */
-const HOMEPAGE_HEADLINE = 'Hifi matched to your preferences, system, and long-term happiness.';
-
-/**
- * First-impression affirmative invitation.
- *
- * Sits directly under the hero h1 in the pre-conversation state
- * (gated on `!hasMessages` alongside the hero). Single short line
- * that names what Audio XX helps the user do — understand their
- * listening preferences, find gear that fits, and build systems
- * that work together — without modal, wizard, or profile setup.
- *
- * Early-public-beta onboarding goal (2026-05-19): help users ask
- * better questions, not create a setup funnel. This line is
- * intentionally short and load-bearing — it should NOT grow into
- * a paragraph or list. If the message needs to expand, route
- * additional context to How It Works instead.
- *
- * Review-boundary framing lives on /how-it-works and
- * /affiliate-disclosure (F3 positioning, F4 reviewer-data exclusion),
- * not on this line.
- */
-const HOMEPAGE_INTRO = 'Audio XX helps you understand your listening preferences, find gear that fits those tastes, and build systems that work together.';
-
-/**
  * Pinned fresh-visitor assessment example. Stage 7.1 onboarding-
  * clarity fix: the most-differentiated mode (system-level review)
  * was previously invisible to fresh visitors unless the random
@@ -1511,13 +1451,14 @@ export default function Home() {
       convStateRef.current.mode, convStateRef.current.stage);
 
     // ── Lane: Preference reflection ───────────────────────
-    // The homepage intro promises "Audio XX helps you understand your
-    // listening preferences." This lane is the only path that honours
-    // that clause directly. It catches meta-questions ("help me understand
-    // my listening preferences", "what do I actually value", "I don't know
-    // what kind of sound I like") and produces a short reflection with
-    // optional questions — never fabricates a profile, never routes to
-    // diagnosis or shopping. Fires BEFORE the cold-start state machine so
+    // The homepage h1 promises "Hifi gear recommendations matched to your
+    // taste and system." This lane is the only path that honours the
+    // taste-discovery half of that promise directly. It catches meta-
+    // questions ("help me understand my listening preferences", "what
+    // do I actually value", "I don't know what kind of sound I like")
+    // and produces a short reflection with optional questions — never
+    // fabricates a profile, never routes to diagnosis or shopping.
+    // Fires BEFORE the cold-start state machine so
     // these prompts bypass the orientation handler entirely.
     if (intent === 'preference_reflection') {
       const reflection = buildPreferenceReflection(state.listenerPreferenceProfile);
@@ -4369,7 +4310,11 @@ export default function Home() {
       style={{
         maxWidth: LAYOUT.pageMax,
         margin: '0 auto',
-        padding: '3.25rem 2.5rem 3rem',
+        // 2026-05-20 hero rhythm pass: top padding bumped 3.25rem → 4rem
+        // so the wordmark/h1 stanza sits a touch lower in the viewport
+        // and the page reads less top-heavy at 1080p+ heights. Bottom
+        // padding unchanged.
+        padding: '4rem 2.5rem 3rem',
         color: EDITORIAL.ink,
         lineHeight: 1.6,
         display: 'grid',
@@ -4391,28 +4336,29 @@ export default function Home() {
           // Pass-8: tiny top accent rule picks up the restrained brand
           // red (#C83A3A), matching the XX span just below it. Replaces
           // the prior slate-blue (COLOR.accent #1F3A5F).
+          // 2026-05-20 hero rhythm pass: marginBottom 1.75rem → 2rem
+          // for slightly more headroom above the wordmark.
           borderTop: '2.5px solid #C83A3A',
           width: 40,
-          marginBottom: '1.75rem',
+          marginBottom: '2rem',
           cursor: 'pointer',
         }}
       />
 
-      <h1
+      {/* Brand wordmark — demoted from h1 to div in the 2026-05-20
+       *  copy simplification pass so the page's single h1 can be the
+       *  value-prop tagline below. Visual styling unchanged. Reset
+       *  behaviour preserved with role="button" semantics.
+       *  2026-05-20 hero rhythm pass: marginBottom 0.2rem → 0.5rem
+       *  so the wordmark and the h1 read as two stanzas instead of
+       *  one mashed block. */}
+      <div
         onClick={() => handleReset()}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleReset(); }}
         style={{
-          // Pass-7 typography refinement (2026-05-09):
-          //   Reduced from 2.15rem / 700 / -0.03em / 1.1 / COLOR.textPrimary
-          //   to 1.3rem / 600 / -0.015em / 1.2 / #2A2A2A.
-          // The wordmark now reads as a workspace section heading rather
-          // than a homepage masthead. Top-nav already establishes brand
-          // identity, so the center-column wordmark can step down. Color
-          // moved off the slightly-cool COLOR.textPrimary (#111827) to
-          // neutral charcoal — no blue/warm tint.
-          marginBottom: '0.2rem',
+          marginBottom: '0.5rem',
           fontSize: '1.3rem',
           fontWeight: 600,
           letterSpacing: '-0.015em',
@@ -4426,31 +4372,36 @@ export default function Home() {
          *  used by the radar/profile palette so it reads as identity
          *  rather than competing with the analytical color language. */}
         Audio <span style={{ color: '#C83A3A' }}>XX</span>
-      </h1>
-
-      {/* Brand signal — small pillared line directly under the wordmark.
-       * Present on both landing and conversation views so the identity
-       * carries through the whole session without being loud. Refined to
-       * read as a quiet caption rather than a section label.
-       *
-       * 2026-05-08 second pass: marginBottom tightened (0.65rem → 0.55rem)
-       * to reduce vertical hero footprint without touching layout. */}
-      <div
-        style={{
-          marginBottom: '0.55rem',
-          fontSize: '0.66rem',
-          fontWeight: 500,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase' as const,
-          color: EDITORIAL.faint,
-        }}
-      >
-        Reads what you value &nbsp;&middot;&nbsp; Interprets your system &nbsp;&middot;&nbsp; Names the trade-offs of change
       </div>
 
+      {/* Homepage h1 — value-prop tagline. Single source of the page's
+       *  main heading (2026-05-20 copy simplification pass replaced the
+       *  prior eyebrow div + separate HOMEPAGE_HEADLINE/INTRO block).
+       *  Present on both landing and conversation views; the brand
+       *  wordmark above is intentionally a div so this remains the
+       *  page's only h1.
+       *  2026-05-20 hero rhythm pass: scale bumped from clamp(1.4–1.6rem)
+       *  to clamp(1.55–1.85rem) and bottom margin from 0.55rem → 0.85rem
+       *  so the h1 carries more visual presence and the chip stanza
+       *  below has clear breathing room. Weight + colour unchanged. */}
+      <h1
+        style={{
+          margin: '0 0 0.85rem 0',
+          fontSize: 'clamp(1.55rem, 3vw, 1.85rem)',
+          fontWeight: 500,
+          letterSpacing: '-0.015em',
+          lineHeight: 1.2,
+          color: '#2A2A2A',
+        }}
+      >
+        Hifi gear recommendations matched to your taste and system
+      </h1>
+
       {/* System badge + panel — marginBottom tightened (0.5rem → 0.4rem)
-       *  in the 2026-05-08 second-pass hero refresh. */}
-      <div style={{ position: 'relative', marginBottom: '0.4rem' }}>
+       *  in the 2026-05-08 second-pass hero refresh.
+       *  2026-05-20 hero rhythm pass: bumped 0.4rem → 0.7rem so the
+       *  chips below the badge sit as their own stanza, not crowded. */}
+      <div style={{ position: 'relative', marginBottom: '0.7rem' }}>
         <SystemBadge onClick={() => setSystemPanelOpen((v) => !v)} />
         {/* Stage 7.1: the fresh-visitor "Add your system" CTA was moved
          *  out of this inline-link position and re-rendered as a small
@@ -4581,55 +4532,6 @@ export default function Home() {
            *  36rem, no supporting caption). The headline's internal
            *  marginBottom stays at 0; the container's marginBottom
            *  carries the gap to the next block. */}
-          {/* Pass-7 typography refinement (2026-05-09):
-           *   Reduced scale + tightened rhythm so the hero feels
-           *   editorial / workstation-like rather than a SaaS landing
-           *   hero, while remaining the strongest text block in the
-           *   workspace.
-           *   - fontSize:      clamp(1.55rem, 3vw, 1.85rem) → clamp(1.4rem, 2.6vw, 1.6rem)
-           *   - lineHeight:    1.2   → 1.18  (slightly tighter)
-           *   - letterSpacing: -0.018em → -0.015em (matches wordmark)
-           *   - fontWeight:    500 (unchanged)
-           *   - color:         EDITORIAL.inkMuted #3A3A3A → #2A2A2A
-           *                    (slightly darker / more grounded; same
-           *                    neutral charcoal as the wordmark)
-           *   - maxWidth 36rem unchanged. */}
-          <div
-            style={{
-              marginTop: '0.25rem',
-              marginBottom: '1rem',
-              maxWidth: '36rem',
-            }}
-          >
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 'clamp(1.4rem, 2.6vw, 1.6rem)',
-                lineHeight: 1.18,
-                letterSpacing: '-0.015em',
-                fontWeight: 500,
-                color: '#2A2A2A',
-              }}
-            >
-              {HOMEPAGE_HEADLINE}
-            </h1>
-            {/* First-impression intro (2026-05-19, early public beta):
-                short boundary + "specifics" hint directly under the
-                hero. See HOMEPAGE_INTRO doc comment for the load-
-                bearing rationale. Static text, no JS, no modal. */}
-            <p
-              style={{
-                margin: '0.6rem 0 0 0',
-                fontSize: 'clamp(0.88rem, 1.4vw, 0.95rem)',
-                lineHeight: 1.5,
-                color: EDITORIAL.inkMuted,
-                fontWeight: 400,
-              }}
-            >
-              {HOMEPAGE_INTRO}
-            </p>
-          </div>
-
           {/* Compact taste widget — authenticated users with profile data */}
           {tasteProfile && tasteProfile.confidence > 0 && (
             <div
@@ -4743,9 +4645,12 @@ export default function Home() {
                 style={{
                   display: 'flex',
                   flexWrap: 'wrap',
-                  gap: '0.45rem',
-                  marginTop: '0.1rem',
-                  marginBottom: '1.15rem',
+                  // 2026-05-20 hero rhythm pass: chip gap 0.45rem → 0.55rem
+                  // and top margin 0.1rem → 0.4rem so the chip row reads
+                  // as its own quiet stanza below the system badge.
+                  gap: '0.55rem',
+                  marginTop: '0.4rem',
+                  marginBottom: '1.25rem',
                   maxWidth: EDITORIAL.narrow,
                 }}
               >
@@ -4755,12 +4660,17 @@ export default function Home() {
                     type="button"
                     onClick={() => handleSubmit(prompt)}
                     style={{
-                      padding: '0.4rem 0.8rem',
+                      // 2026-05-20 hero rhythm pass: padding 0.4×0.8rem
+                      // → 0.5×0.9rem and font-size 0.9rem → 0.92rem so
+                      // chips feel comfortably tappable without looking
+                      // like SaaS pills. Border / radius / colour
+                      // tokens unchanged.
+                      padding: '0.5rem 0.9rem',
                       background: 'transparent',
                       border: `1px solid ${EDITORIAL.rule}`,
                       borderRadius: 3,
                       cursor: 'pointer',
-                      fontSize: '0.9rem',
+                      fontSize: '0.92rem',
                       fontWeight: 400,
                       color: EDITORIAL.inkMuted,
                       fontFamily: 'inherit',

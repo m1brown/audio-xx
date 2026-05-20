@@ -1,14 +1,14 @@
 /**
  * Early-public-beta copy + affiliate-discipline regression suite
- * (2026-05-19).
+ * (2026-05-19; copy-simplification refresh 2026-05-20).
  *
  * Locks two invariants for the public-beta phase:
  *
- *   1. Onboarding copy — the homepage first-impression intro
- *      (HOMEPAGE_INTRO) and the affiliate-disclosure page copy must
- *      not slip into review-aggregator framing, "best deal" /
- *      "recommended seller" / "buy now" claims, or other commercial-
- *      first language that would conflict with the F3/F4 positioning.
+ *   1. Onboarding copy — the homepage hero h1 and the affiliate-
+ *      disclosure page copy must not slip into review-aggregator
+ *      framing, "best deal" / "recommended seller" / "buy now"
+ *      claims, or other commercial-first language that would
+ *      conflict with the F3/F4 positioning.
  *
  *   2. Affiliate-link non-influence — `shouldShowAmazonLink` /
  *      `getAmazonSearchUrl` must remain free of any scoring or
@@ -71,40 +71,78 @@ const COMMERCIAL_FIRST_PATTERNS: RegExp[] = [
   /\badd\s+to\s+cart\b/i,
 ];
 
-// ── 1. Homepage HOMEPAGE_INTRO copy invariants ────────────────
+// ── 1. Homepage h1 copy invariants ────────────────────────────
+//
+// 2026-05-20 copy simplification: the hero now consists of a single
+// h1 (the value-prop tagline). The prior HOMEPAGE_HEADLINE const,
+// HOMEPAGE_INTRO const + paragraph, and the small uppercase eyebrow
+// div above the wordmark were all removed. The wordmark "Audio XX"
+// was demoted from h1 to a div with the same styling and reset
+// behaviour so the page retains exactly one h1.
 
-describe('HOMEPAGE_INTRO (homepage first-impression line)', () => {
+const HOMEPAGE_H1_TEXT = 'Hifi gear recommendations matched to your taste and system';
+
+describe('Homepage hero h1 (single source of the page heading)', () => {
   const pageSource = readRepoFile('apps/web/src/app/page.tsx');
-  const introMatch = pageSource.match(/const\s+HOMEPAGE_INTRO\s*=\s*'([^']+)'/);
-  const intro = introMatch?.[1];
 
-  it('HOMEPAGE_INTRO is exported as a string literal in page.tsx', () => {
-    expect(intro).toBeDefined();
-    expect(typeof intro).toBe('string');
-    expect(intro!.length).toBeGreaterThan(20);
+  it('renders the value-prop tagline as the homepage h1', () => {
+    expect(pageSource).toContain(HOMEPAGE_H1_TEXT);
+    // The tagline appears inside an <h1> element (not just a comment).
+    const h1Block = pageSource.match(/<h1[^>]*>[\s\S]*?<\/h1>/);
+    expect(h1Block, 'an <h1>...</h1> block must be present in page.tsx').not.toBeNull();
+    expect(h1Block![0]).toContain(HOMEPAGE_H1_TEXT);
   });
 
-  it('is affirmative — covers listening preferences, gear fit, and system synergy', () => {
-    const lower = intro!.toLowerCase();
-    expect(lower).toMatch(/listening\s+preferences?|preferences?|taste/);
-    expect(lower).toMatch(/gear|fit|aligned|match/);
-    expect(lower).toMatch(/system|synergy|work\s+together/);
+  it('contains exactly one <h1> element so SEO / accessibility outline is preserved', () => {
+    const openCount = (pageSource.match(/<h1[\s>]/g) ?? []).length;
+    const closeCount = (pageSource.match(/<\/h1>/g) ?? []).length;
+    expect(openCount).toBe(1);
+    expect(closeCount).toBe(1);
   });
 
-  it('stays short — single sentence-ish, under 220 characters', () => {
-    expect(intro!.length).toBeLessThan(220);
+  it('h1 text stays short — under 100 characters', () => {
+    expect(HOMEPAGE_H1_TEXT.length).toBeLessThan(100);
   });
 
-  it('does not slip into review-aggregator framing', () => {
+  it('h1 text does not slip into review-aggregator framing', () => {
     for (const pattern of REVIEWER_FRAMING_PATTERNS) {
-      expect(intro, `pattern matched: ${pattern}`).not.toMatch(pattern);
+      expect(HOMEPAGE_H1_TEXT, `pattern matched: ${pattern}`).not.toMatch(pattern);
     }
   });
 
-  it('does not contain commercial-first / "buy now" framing', () => {
+  it('h1 text does not contain commercial-first / "buy now" framing', () => {
     for (const pattern of COMMERCIAL_FIRST_PATTERNS) {
-      expect(intro, `pattern matched: ${pattern}`).not.toMatch(pattern);
+      expect(HOMEPAGE_H1_TEXT, `pattern matched: ${pattern}`).not.toMatch(pattern);
     }
+  });
+});
+
+// ── 1b. Removed hero strings must stay absent ─────────────────
+//
+// The 2026-05-20 simplification removed three pieces of hero copy.
+// These assertions guard against re-introduction (paste-back from
+// older snapshots, partial reverts, etc.).
+
+const REMOVED_HERO_STRINGS = [
+  'Reads what you value',
+  'Interprets your system',
+  'Names the trade-offs of change',
+  'Hifi matched to your preferences, system, and long-term happiness',
+  'Audio XX helps you understand your listening preferences',
+] as const;
+
+describe('Removed hero copy must stay absent (2026-05-20 simplification)', () => {
+  const pageSource = readRepoFile('apps/web/src/app/page.tsx');
+
+  for (const removed of REMOVED_HERO_STRINGS) {
+    it(`page.tsx no longer contains "${removed}"`, () => {
+      expect(pageSource).not.toContain(removed);
+    });
+  }
+
+  it('no HOMEPAGE_INTRO or HOMEPAGE_HEADLINE const remains', () => {
+    expect(pageSource).not.toMatch(/const\s+HOMEPAGE_INTRO\b/);
+    expect(pageSource).not.toMatch(/const\s+HOMEPAGE_HEADLINE\b/);
   });
 });
 
@@ -585,20 +623,22 @@ describe('Onboarding scope discipline', () => {
     expect(pageSource).not.toMatch(/required.{0,30}before you can/i);
   });
 
-  it('the HOMEPAGE_INTRO line is gated on !hasMessages alongside the hero', () => {
-    // Locate the HOMEPAGE_INTRO usage and confirm it sits inside the
-    // {!hasMessages && (...)} block that wraps the hero. The check is
-    // structural — find the substring "{HOMEPAGE_INTRO}" and confirm
-    // it occurs in the same pre-conversation block as "{HOMEPAGE_HEADLINE}".
-    const headlineIdx = pageSource.indexOf('{HOMEPAGE_HEADLINE}');
-    const introIdx = pageSource.indexOf('{HOMEPAGE_INTRO}');
-    expect(introIdx).toBeGreaterThan(-1);
-    expect(headlineIdx).toBeGreaterThan(-1);
-    // Intro must appear AFTER the headline (renders below it)
-    expect(introIdx).toBeGreaterThan(headlineIdx);
-    // Both must occur after the `{!hasMessages && (` guard
-    const guardIdx = pageSource.lastIndexOf('{!hasMessages && (', headlineIdx);
-    expect(guardIdx).toBeGreaterThan(-1);
-    expect(guardIdx).toBeLessThan(headlineIdx);
+  it('review-boundary language is preserved on /how-it-works', () => {
+    // F3 positioning: review boundary lives on the How It Works page,
+    // not on the homepage hero. Confirm the page still distances itself
+    // from professional-reviewer work (the canonical line is "not a
+    // substitute for that work").
+    const howItWorks = readRepoFile('apps/web/src/app/how-it-works/page.tsx');
+    expect(howItWorks).toMatch(/not\s+a\s+substitute\s+for\s+that\s+work/i);
+  });
+
+  it('review-boundary language is preserved on /affiliate-disclosure', () => {
+    // F4 reviewer-data exclusion: the disclosure page must still state
+    // that affiliate links are not used as evidence for recommendations.
+    const disclosure = normalize(
+      readRepoFile('apps/web/src/app/affiliate-disclosure/page.tsx').toLowerCase(),
+    );
+    expect(disclosure).toMatch(/never used as evidence for a recommendation/);
+    expect(disclosure).toContain('does not affect our recommendations');
   });
 });
