@@ -144,6 +144,11 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 1600,
+        // Low temperature: this endpoint is a format-strict task. The
+        // chat renderer segments on Markdown headings + blank lines; if
+        // the model is creative with formatting the output collapses
+        // into one paragraph (observed regression, 2026-05-21).
+        temperature: 0.3,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userContent },

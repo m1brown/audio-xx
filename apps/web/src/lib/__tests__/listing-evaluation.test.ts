@@ -19,39 +19,108 @@ describe('buildListingEvalPrompt', () => {
   it('lists all seven required sections in the system prompt', () => {
     const { systemPrompt } = buildListingEvalPrompt({ images: [SAMPLE_IMAGE] });
 
-    expect(systemPrompt).toMatch(/##\s*1\.\s*Listing read/);
-    expect(systemPrompt).toMatch(/##\s*2\.\s*Translation/);
-    expect(systemPrompt).toMatch(/##\s*3\.\s*Likely gear identified/);
-    expect(systemPrompt).toMatch(/##\s*4\.\s*Fit with your system/);
-    expect(systemPrompt).toMatch(/##\s*5\.\s*Risks \/ missing information/);
-    expect(systemPrompt).toMatch(/##\s*6\.\s*Questions to ask the seller/);
-    expect(systemPrompt).toMatch(/##\s*7\.\s*Bottom-line recommendation/);
+    // Headings are now bare phrases (no numeric prefix) so the model
+    // has fewer moving parts to get wrong. The renderer self-heals if
+    // the model emits numbered variants — but the contract the prompt
+    // asks for is the clean form.
+    expect(systemPrompt).toMatch(/##\s+Listing read\b/);
+    expect(systemPrompt).toMatch(/##\s+Translation\b/);
+    expect(systemPrompt).toMatch(/##\s+Likely gear identified\b/);
+    expect(systemPrompt).toMatch(/##\s+Fit with your system\b/);
+    expect(systemPrompt).toMatch(/##\s+Risks \/ missing information\b/);
+    expect(systemPrompt).toMatch(/##\s+Questions to ask the seller\b/);
+    expect(systemPrompt).toMatch(/##\s+Bottom-line recommendation\b/);
   });
 
   it('requires Markdown ## headings and blank lines between sections', () => {
     const { systemPrompt } = buildListingEvalPrompt({ images: [SAMPLE_IMAGE] });
 
-    // The prompt must instruct the model to use ## headings and to
-    // separate sections with blank lines. Without this contract the
-    // model produces a wall-of-text that the chat composer cannot
-    // visually segment for the user.
+    // The prompt must instruct the model — emphatically — to use ##
+    // headings and to separate sections with blank lines. Without this
+    // contract the model produces a wall-of-text that the chat composer
+    // cannot visually segment for the user. The wording is deliberately
+    // strong ("non-negotiable", "ONE BLANK LINE") because vision turns
+    // appear to be more formatting-loose than text-only turns.
+    expect(systemPrompt).toMatch(/non-negotiable/i);
     expect(systemPrompt).toMatch(/level-2 Markdown heading/i);
-    expect(systemPrompt).toMatch(/blank line between/i);
-    expect(systemPrompt).toMatch(/##\s*1\.\s*Listing read[^\n]*\n\n/);
-    expect(systemPrompt).toMatch(/##\s*7\.\s*Bottom-line recommendation/);
+    expect(systemPrompt).toMatch(/ONE BLANK LINE/);
+    expect(systemPrompt).toMatch(/##\s+Listing read[^\n]*\n\n/);
+    expect(systemPrompt).toMatch(/##\s+Bottom-line recommendation/);
   });
 
-  it('enumerates the four bottom-line verdict options without "buy now"', () => {
+  it('includes a worked example of the exact output shape', () => {
+    // A literal example is the most reliable nudge for vision turns —
+    // the model anchors on the shape of the example rather than parsing
+    // a list of bullets about formatting.
+    const { systemPrompt } = buildListingEvalPrompt({ images: [SAMPLE_IMAGE] });
+    expect(systemPrompt).toMatch(/Worked example/i);
+    expect(systemPrompt).toMatch(/EXACT output shape/);
+    expect(systemPrompt).toMatch(/Example Brand/);
+  });
+
+  it('enumerates the six bottom-line verdict labels without "buy now"', () => {
     const { systemPrompt } = buildListingEvalPrompt({ images: [SAMPLE_IMAGE] });
 
-    expect(systemPrompt).toMatch(/Worth exploring/);
-    expect(systemPrompt).toMatch(/Ask questions first/);
-    expect(systemPrompt).toMatch(/Likely not a fit/);
-    expect(systemPrompt).toMatch(/Hard to judge/);
+    // Verdict list expanded from 4 to 6 labels to give the model a way
+    // to express candid system-fit judgment beyond the old positive /
+    // ask-questions / not-a-fit / hard-to-judge axis. The cheap-vintage
+    // case ("interesting but not your system" or "secondary / experiment
+    // only") needs its own labels — otherwise the model defaults to
+    // the closest-to-positive verdict.
+    expect(systemPrompt).toMatch(/\*\*Strong candidate for your system\*\*/);
+    expect(systemPrompt).toMatch(/\*\*Worth exploring with questions\*\*/);
+    expect(systemPrompt).toMatch(/\*\*Interesting but not a clear system fit\*\*/);
+    expect(systemPrompt).toMatch(/\*\*Secondary-system \/ experiment only\*\*/);
+    expect(systemPrompt).toMatch(/\*\*Not recommended for your system\*\*/);
+    expect(systemPrompt).toMatch(/\*\*Hard to judge from the listing alone\*\*/);
 
     // "buy now" must appear only inside the prohibition, never as a verdict.
     const banLine = systemPrompt.match(/Never say "buy now"[^\n]*/i);
     expect(banLine).not.toBeNull();
+  });
+
+  it('requires candid advisory judgment, not default-positive fit language', () => {
+    const { systemPrompt } = buildListingEvalPrompt({ images: [SAMPLE_IMAGE] });
+
+    // The advisory-judgment block must be present and emphatic. Anchor
+    // phrases the test locks: "Be candid", "Do not default to positive
+    // fit language", and the cheap-vs-fit distinction. These wordings
+    // are what stops the regression observed on the Sony TA-E45 case
+    // where a cheap vintage piece was called a "good fit" for a
+    // higher-tier saved chain.
+    expect(systemPrompt).toMatch(/Be candid/);
+    expect(systemPrompt).toMatch(/Do not default to positive fit language/i);
+    expect(systemPrompt).toMatch(
+      /not (a "?good fit"?|merely a "?good fit"?|"?good fit"?)?\s*merely because (it|the gear) is technically compatible/i,
+    );
+    expect(systemPrompt).toMatch(
+      /good value as a cheap used item.*good match for this system/i,
+    );
+    expect(systemPrompt).toMatch(/low price does not make something a good recommendation/i);
+  });
+
+  it('requires explicit comparison against saved-system context', () => {
+    const { systemPrompt } = buildListingEvalPrompt({ images: [SAMPLE_IMAGE] });
+
+    // "Fit with your system" must drive the model through the candor
+    // checklist (tier match, role duplication, sonic direction, net
+    // effect, age/service risk, price-vs-purpose) — not a one-liner
+    // about character.
+    expect(systemPrompt).toMatch(/Tier match/);
+    expect(systemPrompt).toMatch(/Role duplication/);
+    expect(systemPrompt).toMatch(/Sonic direction/);
+    expect(systemPrompt).toMatch(/Net effect/);
+    expect(systemPrompt).toMatch(/improve the chain, weaken it, or merely change/i);
+  });
+
+  it('includes example phrasings that model candid judgments', () => {
+    // Concrete example phrases anchor the model on the candor tone we
+    // want — abstract directives ("be candid") are weaker than showing
+    // a phrase that exemplifies the stance.
+    const { systemPrompt } = buildListingEvalPrompt({ images: [SAMPLE_IMAGE] });
+    expect(systemPrompt).toMatch(/cheap experiment.*not.*upgrade for your main system/i);
+    expect(systemPrompt).toMatch(/secondary vintage setup/i);
+    expect(systemPrompt).toMatch(/not directionally aligned with the saved system/i);
   });
 
   it('includes the hard safety boundaries in the system prompt', () => {

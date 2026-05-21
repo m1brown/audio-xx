@@ -5647,8 +5647,68 @@ function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture, onFollowU
  * as plain text. Adding a Markdown dependency would be heavier than
  * the one render path warrants.
  */
+/**
+ * Self-healing pre-pass for listing-eval responses. If the model
+ * obeyed the prompt this is a no-op. If the model dropped the `## `
+ * markers or the blank-line breaks (observed in real-world tests
+ * where gpt-4o emits "1. Listing read - Brand: … 2. Translation …"
+ * as one paragraph), we re-introduce them so the existing renderer
+ * can segment the response.
+ *
+ * Scoped: only the seven known listing-eval section phrases trigger
+ * a rewrite, so non-listing notes ("You gain: … You risk: …") are
+ * never touched even if they happen to share punctuation.
+ */
+const LISTING_SECTION_PHRASES = [
+  'Listing read',
+  'Translation',
+  'Likely gear identified',
+  'Fit with your system',
+  'Risks / missing information',
+  'Risks and missing information',
+  'Questions to ask the seller',
+  'Bottom-line recommendation',
+  'Bottom line recommendation',
+];
+
+function normalizeListingNote(raw: string): string {
+  // If we already have at least three `## ` headings, the model gave
+  // us proper Markdown — leave it alone.
+  const hashHeadingCount = (raw.match(/(^|\n)##\s+/g) ?? []).length;
+  if (hashHeadingCount >= 3) return raw;
+
+  // Match each known section phrase, allowing an optional leading
+  // numeric prefix ("1. ", "2) ", "**1.** ") and an optional trailing
+  // colon. The captured phrase is rewritten as a standalone `## ` heading
+  // separated from surrounding text by blank lines.
+  const phraseAlt = LISTING_SECTION_PHRASES.map((p) =>
+    p.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&'),
+  ).join('|');
+  const re = new RegExp(
+    String.raw`(^|\s|[-*])\*{0,2}\s*\d{0,2}[.)]?\s*\*{0,2}\s*(` +
+      phraseAlt +
+      String.raw`)\s*:?\s*`,
+    'g',
+  );
+
+  let hits = 0;
+  const normalized = raw.replace(re, (_match, lead, phrase) => {
+    hits += 1;
+    // Lead may be whitespace or a punctuation char that preceded the
+    // section marker mid-paragraph. We always restart with two newlines
+    // so the renderer's blank-line rule fires.
+    const leadingBreak = lead === '' ? '' : '\n\n';
+    return `${leadingBreak}## ${phrase}\n\n`;
+  });
+
+  // Only rewrite if at least three section phrases were found — that's
+  // strong evidence the content is a listing-eval response. Otherwise
+  // hand back the original string untouched.
+  return hits >= 3 ? normalized : raw;
+}
+
 function renderNoteContent(raw: string): ReactNode {
-  const lines = raw.split('\n');
+  const lines = normalizeListingNote(raw).split('\n');
   const blocks: ReactNode[] = [];
   let paragraphBuffer: string[] = [];
   let bulletBuffer: string[] = [];
