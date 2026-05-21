@@ -19,13 +19,26 @@ describe('buildListingEvalPrompt', () => {
   it('lists all seven required sections in the system prompt', () => {
     const { systemPrompt } = buildListingEvalPrompt({ images: [SAMPLE_IMAGE] });
 
-    expect(systemPrompt).toMatch(/1\.\s*Listing read/);
-    expect(systemPrompt).toMatch(/2\.\s*Translation/);
-    expect(systemPrompt).toMatch(/3\.\s*Likely gear identified/);
-    expect(systemPrompt).toMatch(/4\.\s*Fit with your system/);
-    expect(systemPrompt).toMatch(/5\.\s*Risks \/ missing information/);
-    expect(systemPrompt).toMatch(/6\.\s*Questions to ask the seller/);
-    expect(systemPrompt).toMatch(/7\.\s*Bottom-line recommendation/);
+    expect(systemPrompt).toMatch(/##\s*1\.\s*Listing read/);
+    expect(systemPrompt).toMatch(/##\s*2\.\s*Translation/);
+    expect(systemPrompt).toMatch(/##\s*3\.\s*Likely gear identified/);
+    expect(systemPrompt).toMatch(/##\s*4\.\s*Fit with your system/);
+    expect(systemPrompt).toMatch(/##\s*5\.\s*Risks \/ missing information/);
+    expect(systemPrompt).toMatch(/##\s*6\.\s*Questions to ask the seller/);
+    expect(systemPrompt).toMatch(/##\s*7\.\s*Bottom-line recommendation/);
+  });
+
+  it('requires Markdown ## headings and blank lines between sections', () => {
+    const { systemPrompt } = buildListingEvalPrompt({ images: [SAMPLE_IMAGE] });
+
+    // The prompt must instruct the model to use ## headings and to
+    // separate sections with blank lines. Without this contract the
+    // model produces a wall-of-text that the chat composer cannot
+    // visually segment for the user.
+    expect(systemPrompt).toMatch(/level-2 Markdown heading/i);
+    expect(systemPrompt).toMatch(/blank line between/i);
+    expect(systemPrompt).toMatch(/##\s*1\.\s*Listing read[^\n]*\n\n/);
+    expect(systemPrompt).toMatch(/##\s*7\.\s*Bottom-line recommendation/);
   });
 
   it('enumerates the four bottom-line verdict options without "buy now"', () => {

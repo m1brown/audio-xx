@@ -49,33 +49,48 @@ export interface BuiltListingEvalPrompt {
   userContent: ChatUserContentPart[];
 }
 
-const SECTION_TEMPLATE = `Produce exactly the following seven sections, in this order, each introduced by its heading on its own line:
+const SECTION_TEMPLATE = `Produce exactly the following seven sections, in this order. Format requirements (these are part of the output contract, not a suggestion):
 
-1. Listing read
-   Extract only what is visibly stated in the listing image(s): brand, model, asking price and currency, condition wording, seller location if visible, and any accessories or boxes shown or mentioned. Use bullet form. If a field is not visible, write "not visible" — do not guess.
+- Each section MUST be introduced by a level-2 Markdown heading on its own line, in the form "## 1. Listing read", "## 2. Translation", and so on through "## 7. Bottom-line recommendation".
+- There MUST be one blank line between each section, and a blank line between the heading and the body of that section.
+- Inside a section, use Markdown bullets ("- " at the start of the line) when the section calls for a list. Use short paragraphs otherwise.
+- Do not wrap the entire response in a code fence. Do not add any extra preamble, summary, or sign-off before section 1 or after section 7.
 
-2. Translation
-   If the listing text is not in English, give a concise English summary of what the listing says. If the listing is already in English, write "Listing is in English — no translation needed."
+The seven sections:
 
-3. Likely gear identified
-   For each item you believe you can identify from the photos and text, give: best guess of brand + model, and a confidence tag of high / medium / low. Note any visual cues you used (badging, chassis shape, knob layout). If you cannot identify an item, say so plainly.
+## 1. Listing read
 
-4. Fit with your system
-   Reason about how this piece would interact with the listener's existing system if one was provided. If no system context was provided, give a short generic read of who this gear tends to suit, and invite the user to share their system for a more specific assessment. Stay in character terms (warm/bright, smooth/detailed, etc.) — do not promise outcomes.
+Extract only what is visibly stated in the listing image(s): brand, model, asking price and currency, condition wording, seller location if visible, and any accessories or boxes shown or mentioned. Use a Markdown bullet list. If a field is not visible, write "not visible" — do not guess.
 
-5. Risks / missing information
-   List the practical risks and unknowns a used buyer should flag. Cover where relevant: voltage / region compatibility, service history, tube or capacitor age, visible damage or wear, missing accessories, shipping fragility, return policy. Cautious bullets only.
+## 2. Translation
 
-6. Questions to ask the seller
-   3–5 short, practical questions the buyer should send the seller before committing. Phrase them as the buyer would ask.
+If the listing text is not in English, give a concise English summary of what the listing says. If the listing is already in English, write "Listing is in English — no translation needed."
 
-7. Bottom-line recommendation
-   Pick exactly one of:
-     • Worth exploring
-     • Ask questions first
-     • Likely not a fit
-     • Hard to judge from this listing
-   Follow the label with one or two sentences of reasoning. Never say "buy now". Never promise the listing is authentic, fairly priced, or in good condition.`;
+## 3. Likely gear identified
+
+For each item you believe you can identify from the photos and text, give a bullet with: best guess of brand + model, and a confidence tag of high / medium / low. Note any visual cues you used (badging, chassis shape, knob layout). If you cannot identify an item, say so plainly.
+
+## 4. Fit with your system
+
+Reason about how this piece would interact with the listener's existing system if one was provided. If no system context was provided, give a short generic read of who this gear tends to suit, and invite the user to share their system for a more specific assessment. Stay in character terms (warm/bright, smooth/detailed, etc.) — do not promise outcomes.
+
+## 5. Risks / missing information
+
+List the practical risks and unknowns a used buyer should flag, as Markdown bullets. Cover where relevant: voltage / region compatibility, service history, tube or capacitor age, visible damage or wear, missing accessories, shipping fragility, return policy. Cautious bullets only.
+
+## 6. Questions to ask the seller
+
+3–5 short, practical Markdown-bullet questions the buyer should send the seller before committing. Phrase them as the buyer would ask.
+
+## 7. Bottom-line recommendation
+
+Start this section with one of these exact labels, bolded, on its own line:
+- **Worth exploring**
+- **Ask questions first**
+- **Likely not a fit**
+- **Hard to judge from this listing**
+
+Then follow on the next line with one or two sentences of reasoning. Never say "buy now". Never promise the listing is authentic, fairly priced, or in good condition.`;
 
 const SAFETY_BOUNDARIES = `Hard safety boundaries — these are not preferences, they are requirements:
 - Reason only from the visible listing information and any system context the user shared. Do not invoke outside knowledge of current market prices, seller reputation, or stock.

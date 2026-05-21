@@ -518,26 +518,41 @@ nav .nav-radar-link:hover {
  * Subtle styling for the upload entry point under the composer and
  * the small preview chips that show selected listing photos.
  */
+/* Paperclip upload button — intentionally restrained so it never
+ * competes with the Send CTA. Square, transparent, only a 1px hairline.
+ * The emoji glyph itself carries the visual weight; the chrome around
+ * it should feel like an affordance, not a button. Mobile keeps the
+ * 36px tap target without growing the visual footprint. */
 .audioxx-image-upload-button {
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   background: transparent;
-  border: 1px solid #D4D4D4;
-  color: #444;
-  border-radius: 4px;
-  padding: 0.5rem 0.95rem;
-  font-size: 0.82rem;
-  letter-spacing: 0.01em;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
+  color: #666;
   cursor: pointer;
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 .audioxx-image-upload-button:hover:not(:disabled) {
-  border-color: #1A1A1A;
-  color: #1A1A1A;
-  background: #FAFAFA;
+  border-color: #B0B0B0;
+  background: #F7F7F7;
 }
 .audioxx-image-upload-button:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: default;
+}
+.audioxx-image-upload-icon {
+  font-size: 16px;
+  line-height: 1;
+  /* Some platforms render the emoji slightly off-baseline; this nudges
+   * it back into the center of the 36px button so the affordance reads
+   * as deliberate alignment, not a typo. */
+  transform: translateY(-1px);
 }
 .audioxx-image-previews {
   display: flex;

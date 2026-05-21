@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useEffect, useRef, useCallback, useMemo, useState } from 'react';
+import { useReducer, useEffect, useRef, useCallback, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import TasteRadar from '@/components/TasteRadar';
@@ -5174,9 +5174,12 @@ export default function Home() {
             onClick={() => fileInputRef.current?.click()}
             disabled={isLoading || pendingImages.length >= 3}
             className="audioxx-image-upload-button"
-            aria-label="Attach listing photo"
+            aria-label="Upload listing image"
+            title="Upload listing image"
           >
-            Upload listing image
+            <span aria-hidden="true" className="audioxx-image-upload-icon">
+              {'📎'}
+            </span>
           </button>
         </div>
 
@@ -5624,8 +5627,113 @@ function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture, onFollowU
         lineHeight: 1.6,
       }}
     >
-      {message.content}
+      {renderNoteContent(message.content)}
     </div>
   );
+}
+
+/**
+ * Minimal inline Markdown renderer for assistant 'note' messages.
+ *
+ * Listing-evaluation notes use `## heading`, `- bullet`, and `**bold**`
+ * markers. The rest of the codebase's notes are short plain-text
+ * strings ("You gain: …\nYou risk: …", listening-mode replies, etc.)
+ * that don't use any of these markers — for those, the renderer is a
+ * no-op and the original line breaks render via React's natural
+ * whitespace handling.
+ *
+ * Intentionally NOT a full Markdown parser: we handle only the three
+ * markers the listing-eval prompt emits. Anything else passes through
+ * as plain text. Adding a Markdown dependency would be heavier than
+ * the one render path warrants.
+ */
+function renderNoteContent(raw: string): ReactNode {
+  const lines = raw.split('\n');
+  const blocks: ReactNode[] = [];
+  let paragraphBuffer: string[] = [];
+  let bulletBuffer: string[] = [];
+
+  const flushParagraph = (key: string) => {
+    if (paragraphBuffer.length === 0) return;
+    const text = paragraphBuffer.join('\n');
+    blocks.push(
+      <p key={key} style={{ margin: '0 0 0.6rem 0' }}>
+        {renderInline(text)}
+      </p>,
+    );
+    paragraphBuffer = [];
+  };
+  const flushBullets = (key: string) => {
+    if (bulletBuffer.length === 0) return;
+    const items = bulletBuffer.slice();
+    blocks.push(
+      <ul key={key} style={{ margin: '0 0 0.6rem 1.1rem', padding: 0 }}>
+        {items.map((item, i) => (
+          <li key={i} style={{ marginBottom: '0.2rem' }}>
+            {renderInline(item)}
+          </li>
+        ))}
+      </ul>,
+    );
+    bulletBuffer = [];
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^##\s+/.test(line)) {
+      flushParagraph(`p-${i}`);
+      flushBullets(`u-${i}`);
+      const heading = line.replace(/^##\s+/, '');
+      blocks.push(
+        <h3
+          key={`h-${i}`}
+          style={{
+            margin: '0.9rem 0 0.45rem 0',
+            fontSize: '1rem',
+            fontWeight: 600,
+            color: COLOR.textPrimary,
+          }}
+        >
+          {renderInline(heading)}
+        </h3>,
+      );
+      continue;
+    }
+    if (/^[-•]\s+/.test(line)) {
+      flushParagraph(`p-${i}`);
+      bulletBuffer.push(line.replace(/^[-•]\s+/, ''));
+      continue;
+    }
+    if (line.trim() === '') {
+      flushParagraph(`p-${i}`);
+      flushBullets(`u-${i}`);
+      continue;
+    }
+    flushBullets(`u-${i}`);
+    paragraphBuffer.push(line);
+  }
+  flushParagraph('p-end');
+  flushBullets('u-end');
+
+  return blocks.length === 0 ? raw : blocks;
+}
+
+/** Inline `**bold**` substitution for note Markdown. */
+function renderInline(text: string): ReactNode {
+  if (!text.includes('**')) return text;
+  const parts: ReactNode[] = [];
+  const re = /\*\*([^*]+)\*\*/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    parts.push(<strong key={key++}>{match[1]}</strong>);
+    lastIndex = re.lastIndex;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return parts;
 }
 
