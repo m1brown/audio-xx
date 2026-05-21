@@ -266,7 +266,7 @@ function advisoryId(): string {
 
 type Action =
   | { type: 'SET_INPUT'; value: string }
-  | { type: 'ADD_USER_MESSAGE' }
+  | { type: 'ADD_USER_MESSAGE'; images?: string[] }
   | { type: 'ADD_QUESTION'; clarification: ClarificationResponse }
   | { type: 'ADD_GLOSSARY'; entry: GlossaryResult }
   | { type: 'ADD_ADVISORY'; advisory: AdvisoryResponse; id?: string }
@@ -298,7 +298,16 @@ function reducer(state: ConversationState, action: Action): ConversationState {
     case 'ADD_USER_MESSAGE':
       return {
         ...state,
-        messages: [...state.messages, { role: 'user', content: state.currentInput }],
+        messages: [
+          ...state.messages,
+          {
+            role: 'user',
+            content: state.currentInput,
+            ...(action.images && action.images.length > 0
+              ? { images: action.images }
+              : {}),
+          },
+        ],
         currentInput: '',
         turnCount: state.turnCount + 1,
       };
@@ -507,6 +516,15 @@ export default function Home() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Listing-evaluation MVP — uploaded photo(s) of a used listing that the
+  // user wants Audio XX to read for them. When pendingImages is non-empty,
+  // handleSubmit routes the turn through /api/listing-eval instead of the
+  // normal advisory pipeline. Limits enforced client-side: ≤ 3 images,
+  // ≤ 4 MB each, JPEG/PNG/WebP only.
+  const [pendingImages, setPendingImages] = useState<string[]>([]);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
 
   // Listener profile snapshot — read-only UI display of inferred preferences.
   // Updated after each turn when the profile changes.
@@ -566,9 +584,74 @@ export default function Home() {
     }
   }, [isLoading, messages.length]);
 
+  // ── Listing-evaluation upload helpers ──────────────────
+  // Convert a File to a base64 data URL the listing-eval API can pass
+  // straight to the vision model. Stays client-side; no temporary upload.
+  const fileToDataUrl = useCallback((file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error ?? new Error('read failed'));
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  const handleImageSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files ?? []);
+      e.target.value = ''; // allow re-selecting the same file later
+      if (files.length === 0) return;
+
+      const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+      const maxBytes = 4 * 1024 * 1024;
+      const maxImages = 3;
+
+      const remaining = maxImages - pendingImages.length;
+      if (remaining <= 0) {
+        setImageUploadError(`Up to ${maxImages} images per evaluation.`);
+        return;
+      }
+
+      const accepted: string[] = [];
+      let firstError: string | null = null;
+      for (const file of files.slice(0, remaining)) {
+        if (!allowed.includes(file.type)) {
+          firstError ??= 'Only JPEG, PNG, or WebP images are supported.';
+          continue;
+        }
+        if (file.size > maxBytes) {
+          firstError ??= 'Each image must be 4 MB or smaller.';
+          continue;
+        }
+        try {
+          accepted.push(await fileToDataUrl(file));
+        } catch {
+          firstError ??= 'Could not read one of the selected images.';
+        }
+      }
+
+      if (files.length > remaining) {
+        firstError ??= `Only the first ${remaining} image${remaining === 1 ? '' : 's'} added — limit is ${maxImages}.`;
+      }
+
+      if (accepted.length > 0) {
+        setPendingImages((prev) => [...prev, ...accepted].slice(0, maxImages));
+      }
+      setImageUploadError(firstError);
+    },
+    [pendingImages.length, fileToDataUrl],
+  );
+
+  const removePendingImage = useCallback((index: number) => {
+    setPendingImages((prev) => prev.filter((_, i) => i !== index));
+    setImageUploadError(null);
+  }, []);
+
   const handleSubmit = useCallback(async (overrideText?: string, options?: { source?: 'follow-up' | 'fresh' }) => {
     const inputText = overrideText ?? currentInput;
-    if (!inputText.trim() || isLoading) return;
+    const hasPendingImagesForTurn = !overrideText && pendingImages.length > 0;
+    if (!inputText.trim() && !hasPendingImagesForTurn) return;
+    if (isLoading) return;
 
     // If override was provided, set the input first so ADD_USER_MESSAGE captures it
     if (overrideText) {
@@ -577,6 +660,86 @@ export default function Home() {
 
     const submittedText = inputText;
     const isFollowUp = options?.source === 'follow-up';
+
+    // ── Listing-evaluation branch ─────────────────────────
+    // If the user attached photos, this turn is a used-listing read —
+    // route to the dedicated vision endpoint instead of the normal
+    // advisory pipeline. Saved-system context (if any) is shared so the
+    // "Fit with your system" section has something to reason against.
+    if (hasPendingImagesForTurn) {
+      const imagesForTurn = pendingImages;
+      dispatch({ type: 'ADD_USER_MESSAGE', images: imagesForTurn });
+      dispatch({ type: 'SET_LOADING', value: true });
+      setPendingImages([]);
+      setImageUploadError(null);
+
+      const turnCtxForListing = buildTurnContext(
+        submittedText || 'Evaluate the attached listing.',
+        audioState,
+        dismissedFingerprintsRef.current,
+        state.listenerPreferenceProfile,
+      );
+      const systemContext = turnCtxForListing.activeSystem
+        ? {
+            components: turnCtxForListing.activeSystem.components.map((c) =>
+              c.name.toLowerCase().startsWith(c.brand.toLowerCase())
+                ? c.name
+                : `${c.brand} ${c.name}`,
+            ),
+            character: turnCtxForListing.activeSystem.tendencies ?? undefined,
+          }
+        : undefined;
+      const listenerPreferences = state.listenerPreferenceProfile
+        ? renderListenerPreferenceSummary(state.listenerPreferenceProfile)
+        : undefined;
+
+      try {
+        const res = await fetch('/api/listing-eval', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: submittedText,
+            images: imagesForTurn,
+            systemContext,
+            listenerPreferences,
+          }),
+        });
+        if (res.status === 503) {
+          dispatch({
+            type: 'ADD_NOTE',
+            content:
+              'Listing evaluation is not configured on this build. Please try again from a deployment with an OpenAI key set.',
+          });
+        } else if (!res.ok) {
+          dispatch({
+            type: 'ADD_NOTE',
+            content:
+              'Something went wrong reading that listing. Try again with a clearer photo, or describe the listing in words.',
+          });
+        } else {
+          const data = await res.json();
+          const content = typeof data?.content === 'string' ? data.content : '';
+          dispatch({
+            type: 'ADD_NOTE',
+            content:
+              content.trim().length > 0
+                ? content
+                : 'I could not produce a reading for that listing. Try a clearer photo or include the seller text.',
+          });
+        }
+      } catch (err) {
+        console.error('[listing-eval] client error:', err);
+        dispatch({
+          type: 'ADD_NOTE',
+          content:
+            'The listing read could not be completed (network error). Please try again.',
+        });
+      } finally {
+        dispatch({ type: 'SET_LOADING', value: false });
+      }
+      return;
+    }
+
     dispatch({ type: 'ADD_USER_MESSAGE' });
     dispatch({ type: 'SET_LOADING', value: true });
 
@@ -4936,42 +5099,86 @@ export default function Home() {
           }}
         />
 
-        {/* Send button — Pass 6 (2026-05-09 PM): fully reverted to the
-         *  charcoal CTA. No warm tint anywhere. Active state uses the
-         *  EDITORIAL.button token (#1A1A1A) with white text; hover
-         *  deepens to pure black. Disabled / loading state drops to
-         *  neutral grey (#F2F2F2 + EDITORIAL.faint text) so active and
-         *  disabled stay clearly distinguishable. */}
-        <button
-          type="button"
-          onClick={() => handleSubmit()}
-          disabled={isLoading || !currentInput.trim()}
-          style={{
-            marginTop: '0.85rem',
-            padding: '0.6rem 1.6rem',
-            background: isLoading || !currentInput.trim() ? '#F2F2F2' : EDITORIAL.button,
-            color: isLoading || !currentInput.trim() ? EDITORIAL.faint : '#FFFFFF',
-            border: 'none',
-            borderRadius: 4,
-            fontSize: '0.88rem',
-            fontWeight: 500,
-            letterSpacing: '0.02em',
-            cursor: isLoading || !currentInput.trim() ? 'default' : 'pointer',
-            transition: 'background 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            if (!isLoading && currentInput.trim()) {
-              e.currentTarget.style.background = EDITORIAL.buttonHover;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isLoading && currentInput.trim()) {
-              e.currentTarget.style.background = EDITORIAL.button;
-            }
-          }}
-        >
-          {isLoading ? 'Thinking…' : 'Send'}
-        </button>
+        {/* Listing-evaluation upload — hidden file input + subtle entry
+         *  point under the textarea. When images are pending, the Send
+         *  button switches its disabled-rule so an image-only submission
+         *  (no typed text) is allowed. */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          onChange={handleImageSelect}
+          style={{ display: 'none' }}
+        />
+        {pendingImages.length > 0 && (
+          <div className="audioxx-image-previews">
+            {pendingImages.map((src, i) => (
+              <div key={i} className="audioxx-image-preview">
+                <img src={src} alt={`Listing photo ${i + 1}`} />
+                <button
+                  type="button"
+                  onClick={() => removePendingImage(i)}
+                  aria-label={`Remove image ${i + 1}`}
+                  className="audioxx-image-preview-remove"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {imageUploadError && (
+          <p className="audioxx-image-upload-error" role="alert">
+            {imageUploadError}
+          </p>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginTop: '0.85rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => handleSubmit()}
+            disabled={isLoading || (!currentInput.trim() && pendingImages.length === 0)}
+            style={{
+              padding: '0.6rem 1.6rem',
+              background: isLoading || (!currentInput.trim() && pendingImages.length === 0) ? '#F2F2F2' : EDITORIAL.button,
+              color: isLoading || (!currentInput.trim() && pendingImages.length === 0) ? EDITORIAL.faint : '#FFFFFF',
+              border: 'none',
+              borderRadius: 4,
+              fontSize: '0.88rem',
+              fontWeight: 500,
+              letterSpacing: '0.02em',
+              cursor: isLoading || (!currentInput.trim() && pendingImages.length === 0) ? 'default' : 'pointer',
+              transition: 'background 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading && (currentInput.trim() || pendingImages.length > 0)) {
+                e.currentTarget.style.background = EDITORIAL.buttonHover;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading && (currentInput.trim() || pendingImages.length > 0)) {
+                e.currentTarget.style.background = EDITORIAL.button;
+              }
+            }}
+          >
+            {isLoading
+              ? 'Thinking…'
+              : pendingImages.length > 0
+                ? 'Evaluate listing'
+                : 'Send'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading || pendingImages.length >= 3}
+            className="audioxx-image-upload-button"
+            aria-label="Attach listing photo"
+          >
+            Upload listing image
+          </button>
+        </div>
 
         {/* Starter chips removed in Pass 6 — they duplicated the three
          * hero action buttons (Assess / Improve / Compare) that sit just
@@ -5234,6 +5441,7 @@ function ThinkingIndicator() {
 
 function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture, onFollowUpClick }: { message: Message; onIntakeSubmit?: (overrideText?: string) => void; onPreferenceCapture?: (selections: PreferenceSelection[], category: string) => void; onFollowUpClick?: (text: string) => void }) {
   if (message.role === 'user') {
+    const images = 'images' in message ? message.images : undefined;
     return (
       <div
         style={{
@@ -5260,7 +5468,14 @@ function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture, onFollowU
             lineHeight: 1.65,
           }}
         >
-          {message.content}
+          {images && images.length > 0 && (
+            <div className="audioxx-image-message-thumbs">
+              {images.map((src, i) => (
+                <img key={i} src={src} alt={`Listing photo ${i + 1}`} />
+              ))}
+            </div>
+          )}
+          {message.content || (images && images.length > 0 ? 'Listing photo attached for evaluation.' : '')}
         </div>
       </div>
     );

@@ -113,7 +113,7 @@ export interface ChangeMagnitude {
 }
 
 export type Message =
-  | { role: 'user'; content: string }
+  | { role: 'user'; content: string; images?: string[] }
   | { role: 'assistant'; content: string; kind: 'note' }
   | { role: 'assistant'; kind: 'question'; clarification: ClarificationResponse }
   | { role: 'assistant'; kind: 'glossary'; entry: GlossaryResult }
