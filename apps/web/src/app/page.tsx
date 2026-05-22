@@ -5057,7 +5057,7 @@ export default function Home() {
               ? 'Reply here…'
               : hasMessages
                 ? 'Continue describing your system, what you value, or what you\'re considering…'
-                : 'Describe your system, what you value, what\'s bothering you, or what you\'re thinking about changing.'
+                : 'Considering new or used hi-fi gear? Ask here.'
           }
           className={hasMessages ? '' : 'audioxx-editorial-input'}
           style={{
