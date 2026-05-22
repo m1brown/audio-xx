@@ -1,6 +1,6 @@
 # Audio XX — Practical Roadmap
 
-**Last updated:** 2026-05-09
+**Last updated:** 2026-05-21
 **Audience:** technical contributors deciding what to work on next, and prospective collaborators evaluating the planned trajectory.
 
 This document is the practical near-term roadmap. It complements two other planning documents:
@@ -179,6 +179,16 @@ The current catalog (~127 YAML + the TypeScript catalog under `apps/web/src/lib/
 ### Multi-system advisory
 
 Today a user can save multiple systems. Comparing across systems ("how would my desk system change if I added a tube preamp from the living-room system?") is partially supported but not consistently surfaced. A focused pass could expand cross-system reasoning.
+
+### Listing evaluation — seller communication and negotiation (Phase 2 / 3)
+
+The image-based listing-evaluation MVP shipped on `version-b` (commits `f9cd099` → `6da51fc`). Users can upload a screenshot of a used listing and get a structured, candid read against their saved system. That establishes a new product surface — Audio XX as a second pair of eyes on a specific listing — and there is a natural Phase 2 / 3 follow-on once the MVP has been used on real listings long enough to validate it.
+
+Phase 2 / 3 — **seller communication and negotiation assistance**. After an evaluation, surface optional follow-up actions to help the user actually talk to the seller: draft a polite inquiry in the seller's language, ask for additional information (service history, voltage, accessories, defects), request specific photos (rear panel, serial plate, internals), translate the seller's response, draft follow-up questions, draft a respectful price-negotiation message, or decline politely. Target the European used-market languages — FR / DE / NL / IT / ES / EN.
+
+The same advisor constraints carry over: no legal advice, no seller-trust or authenticity claims, no pressure tactics, no "buy now", preserve uncertainty, and recommend asking questions before negotiating when key risks are unresolved. Not a marketplace; not escrow or payment.
+
+Detailed framing — use cases, hard constraints, UI sketch, dependencies — lives in [`ROADMAP-SPEAKS-FOR-ITSELF.md`](../ROADMAP-SPEAKS-FOR-ITSELF.md) under "Beyond Late-May 2026 — Listing Evaluation Feature Line". *Not currently scheduled.* Treat as deferred until MVP usage signals validate the surface.
 
 ### Internationalisation
 
