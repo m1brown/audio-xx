@@ -1712,7 +1712,15 @@ export function findProductInProse(text: string): Product | undefined {
   return ALL_PRODUCTS.find((p) => {
     if (!lower.includes(p.brand.toLowerCase())) return false;
     const tokens = p.name.split(/\s+/).filter((tok) => tok.length >= 4);
-    if (tokens.length === 0) return false;
+    if (tokens.length === 0) {
+      // Short model names (e.g. "W5", "W8"): the 4-char filter drops
+      // all tokens, so the old logic returned false.  For products
+      // whose name has only short tokens, require the brand to be
+      // present (already checked) AND the full product name to appear
+      // anywhere in the text.  "W5" is short but distinctive enough
+      // when combined with the brand-presence gate.
+      return lower.includes(p.name.toLowerCase());
+    }
     return tokens.some((tok) => lower.includes(tok.toLowerCase()));
   });
 }
