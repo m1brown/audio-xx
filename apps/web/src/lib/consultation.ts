@@ -500,7 +500,6 @@ const BRAND_PROFILES: BrandProfile[] = [
     pairingNotes: 'Best with clean, well-controlled amplification — solid-state integrateds (Hegel, Ayre) or refined tube amps with adequate power (50W+ for W5, 50–100W for W8). Source quality is directly audible. Room gain or a subwoofer helps in larger spaces.',
     links: [
       { label: 'Official website', url: 'https://www.boenicke-audio.ch/', region: 'global' },
-      { label: 'Minnesota Audio (US dealer)', url: 'https://minnesota.audio/collections/boenicke-audio-artisanal-speakers-for-the-discerning-audiophile', kind: 'dealer', region: 'US' },
     ],
     designFamilies: [
       {
