@@ -534,7 +534,7 @@ const BRAND_PROFILES: BrandProfile[] = [
           sourceUrl: 'https://boenicke-audio.ch/',
         },
         {
-          url: 'https://boenicke-audio.ch/wp-content/uploads/2019/05/sven-1.jpg',
+          url: 'https://boenicke-audio.ch/wp-content/uploads/2019/05/sven.jpg',
           caption: 'Sven Boenicke in his Basel workshop.',
           credit: 'Boenicke Audio',
           sourceUrl: 'https://boenicke-audio.ch/',

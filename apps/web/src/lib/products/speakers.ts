@@ -215,7 +215,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     // Step 10: buying metadata
     typicalMarket: 'new',
     buyingContext: 'dealer_likely',
-    // imageUrl: undefined, // TODO: add official product image from boenicke-audio.ch
+    imageUrl: 'https://boenicke-audio.ch/wp-content/uploads/2017/08/W5_halbvorne_web.jpg',
     philosophy: 'warm',
     marketType: 'nonTraditional',
   },
@@ -1829,6 +1829,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       },
       { source: 'HiFi+', note: 'Review noting the disappearing act and musical engagement.' },
     ],
+    imageUrl: 'https://boenicke-audio.ch/wp-content/uploads/2017/08/W8_halbseite_web.jpg',
     notes: 'Swiss manufacturing. The swing-base decoupling system is key to the W8\'s imaging precision. Available in multiple wood finishes. Benefits from good amplification — 50–100W recommended.',
     philosophy: 'warm',
     marketType: 'nonTraditional',
