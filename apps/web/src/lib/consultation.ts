@@ -613,13 +613,24 @@ const BRAND_PROFILES: BrandProfile[] = [
       },
     ],
     media: {
-      // F4 gate (private beta, 2026-05-18):
-      //   Shindo brand images previously hotlinked from 6moons.com with
-      //   review-publication credit. Removed under the F4 reviewer-data
-      //   exclusion rule. Shindo has no public manufacturer site, so no
-      //   replacement images are added (per F4: do not fabricate
-      //   alternatives).
-      images: [],
+      // F4 history (2026-05-18):
+      //   Earlier Shindo entries hotlinked from 6moons.com with
+      //   review-publication credit, which the F4 reviewer-data gate
+      //   correctly removed. The 2026-05-28 prestige-brand pass
+      //   identified a same-brand source on the manufacturer's English
+      //   page (shindo-laboratory.co.jp/English/C_300B_21.jpg); the
+      //   image is downloaded locally to apps/web/public/brand-heroes/
+      //   and served without any runtime hotlink dependency. F4 is
+      //   satisfied: the image is manufacturer-sourced, not
+      //   reviewer-derived.
+      images: [
+        {
+          url: '/brand-heroes/shindo-cortese-300b.jpg',
+          caption: 'Shindo Laboratory Cortese 300B.',
+          credit: 'Shindo Laboratory (curated under fair-use product reference)',
+          sourceUrl: 'http://www.shindo-laboratory.co.jp/English/C_300B_21.jpg',
+        },
+      ],
       videos: [
         {
           title: 'Inside Shindo Laboratory in Tokyo, Japan',
@@ -783,6 +794,21 @@ const BRAND_PROFILES: BrandProfile[] = [
     links: [
       { label: 'Official website', url: 'https://www.accuphase.com/', region: 'global' },
     ],
+    // Prestige-brand hero image — locally hosted curated asset
+    // (Pass 2026-05-28). Sourced from accuphase.com E-3000 product
+    // photo, re-encoded at JPEG quality 88 and served from
+    // apps/web/public/brand-heroes/. Native size preserved (640×300).
+    // No runtime hotlink dependency.
+    media: {
+      images: [
+        {
+          url: '/brand-heroes/accuphase-e3000.jpg',
+          caption: 'Accuphase E-3000 Integrated Amplifier.',
+          credit: 'Accuphase Laboratory (curated under fair-use product reference)',
+          sourceUrl: 'https://www.accuphase.com/model/photo/e-3000.jpg',
+        },
+      ],
+    },
   },
   {
     names: ['lampizator', 'lampi'],
@@ -1048,6 +1074,21 @@ const BRAND_PROFILES: BrandProfile[] = [
     links: [
       { label: 'Official website', url: 'https://www.goldmund.com/', region: 'global' },
     ],
+    // Prestige-brand hero image — locally hosted curated asset
+    // (Pass 2026-05-28). Sourced from goldmund.com Telos 670 product
+    // page (og:image), downsampled from 2000×2000 PNG to 1200×1200
+    // JPEG and served from apps/web/public/brand-heroes/. No runtime
+    // hotlink dependency on the manufacturer CDN.
+    media: {
+      images: [
+        {
+          url: '/brand-heroes/goldmund-telos-670.jpg',
+          caption: 'Goldmund Telos 670 Integrated Amplifier.',
+          credit: 'Goldmund (curated under fair-use product reference)',
+          sourceUrl: 'https://goldmund.com/power-amplifiers/telos-670-integrated-amplifier/',
+        },
+      ],
+    },
   },
   {
     names: ['crayon'],
@@ -1093,6 +1134,21 @@ const BRAND_PROFILES: BrandProfile[] = [
       { label: 'Leben (Japan)', url: 'https://www.leben-hifi.com/', region: 'global' },
       { label: 'Tone Imports (US distributor)', url: 'https://www.toneimports.com/', kind: 'dealer', region: 'US' },
     ],
+    // Prestige-brand hero image — locally hosted curated asset
+    // (Pass 2026-05-28). Sourced from lebenhifi.com CS-600 product
+    // photo, re-encoded at JPEG quality 90 and served from
+    // apps/web/public/brand-heroes/. Native size preserved (400×252)
+    // since the source itself is small. No runtime hotlink dependency.
+    media: {
+      images: [
+        {
+          url: '/brand-heroes/leben-cs600.jpg',
+          caption: 'Leben CS-600 Integrated Amplifier.',
+          credit: 'Leben Hi-Fi Stereo Company (curated under fair-use product reference)',
+          sourceUrl: 'https://lebenhifi.com/products/products-img/cs600_2_m.jpg',
+        },
+      ],
+    },
   },
   {
     names: ['totaldac', 'total dac'],
