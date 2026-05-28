@@ -454,3 +454,228 @@ listener priorities (tonal_warmth, transparency, etc.), bottleneck categories (p
 When implementing new features, isolate domain vocabulary from core reasoning logic.
 Defer full multi-domain abstraction until after Feature 5–6. Use Audio XX as testbed.
 
+-------------------------------------
+
+## Operational Invariants
+
+These are product-level invariants, not preferences. Changes that touch them require explicit human approval in chat.
+
+### Cross-brand leakage invariant
+
+No conversation surface may render an image whose brand differs from the queried brand identity, except as an explicitly labelled pairing or comparison.
+
+Enforced in `apps/web/src/components/advisory/AdvisoryMessage.tsx :: ConsultationSubjectContext` (brand-aware Subject Card resolver). When `subject` resolves to a known BrandProfile, resolution is restricted to same-brand catalog products via `findProductsByBrandSlug`. The cross-brand prose-scan fallback (`findProductInProse`) is gated off for brand-inquiry context.
+
+Lock tests:
+- `apps/web/src/lib/__tests__/subject-context-resolver.test.ts` (8 unit cases)
+- `apps/web/src/tests/cross-brand-leakage-check.spec.ts` (11 live brand queries)
+
+Both must be green before any commit touching the resolver, the catalog, or the product-image overlay.
+
+### F4 reviewer-data exclusion
+
+Overlay entries in `apps/web/src/lib/product-images.ts` carrying `source.tier === 'review_publication'` are intentionally gated out of user-rendered output by `getProductImage` / `getProductImageEntry`.
+
+Do not change a tier value or remove the gate check without explicit human approval. F4 protects institutional discipline independent of what looks like good engineering.
+
+Lock test: `apps/web/src/lib/__tests__/f4-reviewer-data-exclusion.test.ts` (15 cases).
+
+### Editorial restraint
+
+Tone target: informed specialist, historically grounded, restrained. Not reviewer commentary, enthusiast mythology, or luxury marketing.
+
+Forbidden phrasings in BrandProfile prose, advisory copy, prompts, or UI strings:
+- "best ever", "reference", "legendary", "world-class", "iconic"
+- "controversial" or any reputation commentary
+- "widely regarded as one of the best …"
+- emotionally loaded adjectives ("magical", "stunning", "extraordinary")
+- SEO-style feature enumeration
+- "buy now", "you should buy", "great deal" (also a listing-eval hard safety boundary)
+
+Calibrated examples live in the prestige BrandProfile entries (Goldmund, Leben, Shindo, Accuphase, Audio Note, Luxman in `BRAND_PROFILES`). Match that tone for any new entry.
+
+Editorial changes follow the Five-Step Editorial Pattern below.
+
+### Listing-eval safety boundaries
+
+The system prompt in `apps/web/src/lib/listing-evaluation.ts` carries hard safety boundaries:
+- Reason only from visible listing information.
+- Do not verify authenticity or vouch for seller trustworthiness.
+- Do not claim definitive market value.
+- Never say "buy now" or equivalent directive purchase language.
+- Use cautious hedge phrasing ("appears to be", "based on the visible listing").
+
+Plus the candid advisory-judgment block: do not default to positive fit language; separate "good value as a cheap used item" from "good match for this system"; surface tier mismatch and role duplication.
+
+These are requirements, not preferences. Lock tests: `apps/web/src/lib/__tests__/listing-evaluation.test.ts` (13 cases) plus the route validation tests at `apps/web/src/app/api/listing-eval/route.test.ts` (13 cases).
+
+-------------------------------------
+
+## Five-Step Editorial Pattern
+
+For any change touching brand prose, advisory copy, prompt strings, or BrandProfile metadata.
+
+1. **Inspect** — read current state, surface scope constraints.
+2. **Propose** — show full diff with exact prose quoted. Quote both before and after.
+3. **Apply** — only after explicit user confirmation. No "while I'm here" expansions.
+4. **Verify** — focused test bundle + cross-brand leakage check (when relevant) + code-level lookup proofs via `npx tsx -e` when render paths are involved.
+5. **Hold** — pause before commit. Surface remaining unresolved items, ambiguities, or follow-up risks.
+6. **Commit** — only after user says "go" (or equivalent explicit authorization).
+
+Editorial work does not parallelize. Resist that urge.
+
+-------------------------------------
+
+## Smallest Safe Fix Discipline
+
+For any non-trivial change, offer multiple scopes, smallest first:
+
+- **Option A** — minimum touch matching the literal brief.
+- **Option B** — small expansion (1–2 additional files) addressing a closely related issue.
+- **Option C** — larger scope (schema change, new BrandProfile, new feature, new test surface).
+
+Default to A. Escalate only when the user explicitly chooses larger.
+
+If a task in flight discovers a related issue (dead link, missing image, prose drift in a non-target brand), **stop and ask** before fixing. No autonomous catalog edits, even when the fix looks obviously correct.
+
+-------------------------------------
+
+## Code-Level Verification When UI Is Flaky
+
+Chrome MCP and Playwright dev-server submits have a known timing flake on React-controlled inputs. When the browser doesn't behave deterministically:
+
+- Do not fight it through retries.
+- Drop to `npx tsx -e "…"` and exercise the exported functions directly. The pure-function design (`findProductByComponentName`, `findProductsByBrandSlug`, `getProductImage`, `findBrandProfileByName`, etc.) makes this decisive.
+- Test bundles (`npx vitest run …`) and live-API curl probes are also acceptable substitutes when the UI submit path is the only flake.
+
+Verification at the data layer is decisive even when the UI layer is flaky.
+
+-------------------------------------
+
+## Claude Code Feature Guidance for Audio XX
+
+### `/goal`
+
+Use **selectively**. Only when the deliverable is verifiable from outside the session (file outputs, deployed commit hash, test counts, CSV reports). Skip for editorial iterations where the goal evolves turn by turn.
+
+Good: "Run the manufacturer audit Phase 1+2 and produce the 5 CSV reports."
+Bad: "Improve the brand profiles."
+
+### Background agents
+
+**Standard** for read-only work:
+- Manufacturer audit re-runs (`scripts/audit-manufacturers.ts`, `manufacturer-visual-audit.spec.ts`, `summarize-visual-audit.ts`)
+- Focused test bundle re-runs
+- Screenshot capture passes
+- Link / image probe sweeps
+
+**Forbidden** for concurrent writes to dense shared files. See Multi-Agent Guardrails below.
+
+### `/fast`
+
+**Avoid** for any of: editorial copy, BrandProfile metadata, advisory engine logic, prompt strings (`listing-evaluation.ts`), Subject Card resolver, F4 gate, trust-sensitive code paths.
+
+Acceptable for: rerunning a known command, staging files we've already agreed on, mechanical refactors of already-approved patterns. Do not make it a global default.
+
+### security-guidance plugin
+
+**Standard** for any session touching:
+- `apps/web/src/app/api/listing-eval/route.ts` and related listing-eval surfaces
+- NextAuth credentials and the auth route
+- Env-var handling (`affiliate-config.ts`)
+- File-upload paths (composer paperclip, image data URLs)
+- Outbound URL construction (affiliate links, image overlays)
+
+Optional for pure catalog / editorial work.
+
+### Skills
+
+- **`/security-review`** — standard before promoting `version-b` to Production.
+- **`/review`** — standard once a PR-based workflow is in place.
+- **`/simplify`** — selective, as a separate commit after a feature lands.
+- **`/init`** — already done; do not re-run without explicit reason.
+
+### Other capabilities
+
+- **`TaskCreate` / `TaskUpdate` / `TaskList`** — standard for any multi-step technical work.
+- **`mcp__ccd_session__mark_chapter`** — standard for long sessions; segment the transcript by phase.
+- **`ScheduleWakeup` / `CronCreate`** — selective, only for surfacing deltas (link death, hotlink failures) without auto-fixing.
+- **Loop / autonomous modes** — avoid for code-modifying tasks. Acceptable for read-only monitoring with explicit checkpoints.
+
+-------------------------------------
+
+## Multi-Agent Guardrails
+
+### File-ownership matrix
+
+Concurrent writers are **forbidden** on these files. Single-writer always.
+
+- `apps/web/src/lib/consultation.ts` (BRAND_PROFILES + advisory builders)
+- `apps/web/src/lib/product-images.ts` (overlay map + F4 gate)
+- `apps/web/src/lib/products/*.ts` (catalog product files)
+- `apps/web/src/components/advisory/AdvisoryMessage.tsx`
+- `apps/web/src/components/advisory/AdvisoryProductCard.tsx`
+- `apps/web/src/components/advisory/ProductImage.tsx`
+- `apps/web/src/app/brand/[slug]/page.tsx`
+- `apps/web/src/lib/listing-evaluation.ts`
+- `apps/web/src/app/api/listing-eval/route.ts`
+
+Concurrent writers are **allowed** on:
+- Test files in `__tests__/` and `src/tests/` when writing to disjoint files
+- `scripts/audit-*.ts`, `scripts/summarize-*.ts` when writing to disjoint files
+- `audit-YYYY-MM-DD/` outputs (append-only, file-disjoint)
+
+Read operations are unrestricted.
+
+### Scope-creep rule
+
+If a background agent discovers a related issue mid-execution, it must **surface and ask** before fixing. No autonomous catalog edits, even when the fix looks obviously correct. This is the rule that protects the trust surface.
+
+-------------------------------------
+
+## Pre-Commit Gates
+
+Every commit landing on `version-b` must satisfy the gates that apply to its diff.
+
+### Always — the focused 8-file vitest bundle
+
+```
+npx vitest run \
+  apps/web/src/lib/__tests__/subject-context-resolver.test.ts \
+  apps/web/src/lib/__tests__/listing-evaluation.test.ts \
+  apps/web/src/app/api/listing-eval/route.test.ts \
+  apps/web/src/lib/__tests__/public-beta-copy-and-affiliate-discipline.test.ts \
+  apps/web/src/lib/__tests__/preference-reflection-routing.test.ts \
+  apps/web/src/lib/__tests__/f4-reviewer-data-exclusion.test.ts \
+  apps/web/src/lib/__tests__/unknown-product-clarification.test.ts \
+  apps/web/src/lib/__tests__/learn-more-links.test.ts
+```
+
+Current count: 178 / 178 pass. This is the contract.
+
+### When the diff touches the resolver / catalog / product-image overlay
+
+Also run the cross-brand leakage harness:
+
+```
+npx playwright test apps/web/src/tests/cross-brand-leakage-check.spec.ts
+```
+
+Eleven brands must remain at zero leaks.
+
+Files that trigger this gate: `AdvisoryMessage.tsx`, `consultation.ts`, `product-images.ts`, `products/*.ts`, `subject-context-resolver.test.ts`.
+
+### When the diff touches listing-eval
+
+The bundle above already includes `listing-evaluation.test.ts` and the route tests. Confirm both ran.
+
+Files that trigger this gate: `listing-evaluation.ts`, `api/listing-eval/route.ts`, `api/listing-eval/route.test.ts`.
+
+### When the diff touches affiliate code
+
+The bundle above already includes `public-beta-copy-and-affiliate-discipline.test.ts`. Confirm it ran.
+
+Files that trigger this gate: `affiliate-config.ts`, `amazon-links.ts`, `ebay-links.ts`, `product-links.ts`.
+
+These gates are not aspirations; they are the contract.
+
