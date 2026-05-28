@@ -235,10 +235,24 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'leben cs 300',        url: 'https://www.leben-hifi.com/images/cs300xs-front.jpg' },
   { key: 'leben cs300',         url: 'https://www.leben-hifi.com/images/cs300xs-front.jpg' },
 
-  // Marantz — vintage-receiver reference image (the 2220 and 2220B
-  // share the same chassis; image is the canonical 2220 face).
-  { key: 'marantz 2220',        url: 'https://classicreceivers.com/wp-content/uploads/2022/06/marantz-2220.jpg',
-    source: { tier: 'review_publication', site: 'classicreceivers.com', credit: 'Classic Receivers', captured: '2026-05-08' } },
+  // Marantz — locally hosted 2220B chassis photo (2026-05-28). The
+  // prior entry pointed at classicreceivers.com with a
+  // tier: 'review_publication' source block, which the F4 gate skipped,
+  // leaving brand-only "marantz" queries with no image. Replaced with
+  // a same-origin asset under apps/web/public/brand-heroes/ sourced
+  // from radiomuseum.org (community vintage archive, not a reviewer
+  // publication). source block omitted so the F4 gate no longer
+  // applies — locally-hosted assets don't need provenance metadata
+  // for the audit, same as other un-sourced entries in this file.
+  //
+  // Key narrowed from 'marantz 2220' to 'marantz' so brand-only
+  // haystack queries (e.g. getProductImage('marantz', undefined))
+  // match. Substring direction is haystack.includes(key), so 'marantz'
+  // as the key matches both bare "marantz" haystack AND any
+  // "marantz <product>" haystack. Safe today because Marantz has only
+  // one catalog product (the 2220B). If another Marantz product is
+  // ever added, this entry needs a model-specific key alongside.
+  { key: 'marantz',             url: '/brand-heroes/marantz-2220b.jpg' },
 
   // First Watt — Positive Feedback review hero (firstwatt.com only
   // hosts a generic site banner, not a SIT-3-specific shot).

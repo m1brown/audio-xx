@@ -1058,7 +1058,7 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['goldmund'],
-    country: 'Switzerland (Geneva)',
+    country: 'Switzerland',
     brandScale: 'specialist',
     region: 'europe',
     categories: ['dac', 'amplifier', 'speaker'],
