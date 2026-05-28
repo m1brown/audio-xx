@@ -221,6 +221,7 @@ export default async function BrandPage({ params }: PageProps) {
                       src={img.src}
                       alt={img.alt}
                       loading="lazy"
+                      referrerPolicy="no-referrer"
                       style={{ maxWidth: '100%', maxHeight: '320px', objectFit: 'contain', display: 'block' }}
                     />
                   </div>
@@ -342,6 +343,7 @@ export default async function BrandPage({ params }: PageProps) {
               src={postPhiloImage.url}
               alt={postPhiloImage.caption ?? `${displayName} — detail`}
               loading="lazy"
+              referrerPolicy="no-referrer"
               style={{ maxWidth: '100%', maxHeight: '260px', objectFit: 'contain', display: 'block' }}
             />
           </div>
@@ -487,6 +489,7 @@ export default async function BrandPage({ params }: PageProps) {
                       src={vid.thumbnailUrl}
                       alt={vid.title}
                       loading="lazy"
+                      referrerPolicy="no-referrer"
                       style={{ width: '100%', maxHeight: '160px', objectFit: 'cover', display: 'block' }}
                     />
                   </div>

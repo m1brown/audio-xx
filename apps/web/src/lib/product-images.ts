@@ -332,10 +332,13 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'kef ls50',            url: 'https://www.kef.com/cdn/shop/products/LS50-Meta-Carbon-Black-Single-Front_1200x.jpg' },
   { key: 'kef r3',              url: 'https://us.kef.com/cdn/shop/files/r3-meta_sp4053b1_product__front-side.png?v=1773978064&width=1024' },
 
-  // Harbeth — harbeth.co.uk
-  { key: 'harbeth p3esr',       url: 'https://harbeth.co.uk/wp-content/uploads/2024/11/P3ESR-XD2-cherry.png' },
-  { key: 'harbeth super hl5',   url: 'https://www.harbeth.co.uk/images/SHL5plus-XD-Cherry-Front.jpg' },
-  { key: 'harbeth 30',          url: 'https://www.harbeth.co.uk/images/M30.2-XD-Cherry-Front.jpg' },
+  // Harbeth — entries removed 2026-05-21 after audit. The harbeth.co.uk
+  // product image paths were restructured and now 301-redirect to the
+  // homepage; Chrome's ORB blocks the HTML response, so cards rendered
+  // a speaker.svg placeholder anyway. Removing the stale overlay
+  // entries lets cards fall through to the placeholder cleanly without
+  // firing doomed network requests. Re-add once a curated replacement
+  // (manufacturer press kit or permitted alternate host) is sourced.
 
   // WLM — hifi-guide.com product image
   { key: 'wlm diva',            url: 'https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg' },

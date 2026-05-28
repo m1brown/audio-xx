@@ -34,7 +34,7 @@ import AdvisorySection from './AdvisorySection';
 import AdvisoryProse from './AdvisoryProse';
 import AdvisoryProductCards, { ShoppingLinks } from './AdvisoryProductCard';
 import { DIRECTION_CONTENT } from '../../lib/upgrade-path-content';
-import { findProductByComponentName, findProductInProse, findBrandProfileByName } from '../../lib/consultation';
+import { findProductByComponentName, findProductInProse, findBrandProfileByName, findProductsByBrandSlug } from '../../lib/consultation';
 import { getProductImage, getProductImageEntry, getGenericPlaceholder } from '../../lib/product-images';
 import AdvisoryLinks from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
@@ -4169,11 +4169,35 @@ function ConsultationSubjectContext({ subject, prose }: { subject?: string; pros
   // distinctive name token are both mentioned. This surfaces the
   // discussed product's image without changing routing or subject
   // assignment in the consultation builders.
+  //
+  // ── Cross-brand leakage gate (2026-05-21) ─────────────────────────
+  // When the subject is itself a known BrandProfile (an authority /
+  // brand inquiry — "shindo", "leben", "harbeth"), the prose almost
+  // always contains the brand's curated `pairingNotes`, which mention
+  // partner brands by name. The pre-gate prose-scan fallback then
+  // matched the first cross-brand product whose brand + a 4+ char
+  // name token both appeared in the prose — surfacing e.g. a DeVore
+  // Orangutan card under a Shindo inquiry because Shindo's pairing
+  // prose says "Shindo + DeVore Orangutan". That breaks the rule that
+  // the primary Subject Card must represent the queried brand, not
+  // its paired brand.
+  //
+  // Fix: for brand-inquiry context, resolve same-brand-only via
+  // `findProductsByBrandSlug` and DO NOT fall through to the
+  // cross-brand prose scan. When no in-catalog product exists for the
+  // brand (Shindo, Leben, Accuphase, Goldmund — profiles without
+  // matching Product records), `product` stays undefined and the code
+  // falls through to the existing placeholder branch below.
   let product: ReturnType<typeof findProductByComponentName>;
   if (subject) {
     product = findProductByComponentName(subject);
   }
-  if (!product && prose) {
+  const subjectIsBrand = !product && !!subject && !!findBrandProfileByName(subject);
+  if (!product && subjectIsBrand && subject) {
+    const brandProducts = findProductsByBrandSlug(toSlug(subject));
+    product = brandProducts.find((p) => !!p.imageUrl) ?? brandProducts[0];
+  }
+  if (!product && prose && !subjectIsBrand) {
     product = findProductInProse(prose);
   }
 

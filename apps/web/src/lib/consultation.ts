@@ -934,9 +934,10 @@ const BRAND_PROFILES: BrandProfile[] = [
     philosophy: 'Gustard builds DACs across both delta-sigma and R2R architectures, targeting measured performance at competitive prices. The design philosophy balances technical ambition with value positioning.',
     tendencies: 'Gustard DACs vary by architecture — the ESS-based models (X16, X26 Pro) lean toward precision and clarity, while the R2R models (R26) offer more tonal body. Generally described as capable and transparent without strong colouration.',
     systemContext: 'Versatile system partners. The ESS-based models suit systems needing analytical precision; the R2R models offer a warmer alternative without the full density of Denafrips.',
-    links: [
-      { label: 'Apos Audio', url: 'https://apos.audio/collections/gustard', kind: 'dealer', region: 'global' },
-    ],
+    // links: [] — the Apos collection URL (apos.audio/collections/gustard)
+    // returned HTTP 404 in the 2026-05-21 audit. Apos restructured their
+    // site and the collection paths no longer exist. Removed pending a
+    // valid replacement dealer / official-site link.
   },
   {
     names: ['smsl'],
@@ -947,9 +948,10 @@ const BRAND_PROFILES: BrandProfile[] = [
     philosophy: 'SMSL designs compact, measurement-oriented DACs and amplifiers. Similar design philosophy to Topping — ESS and AKM chip implementations optimised for measured performance at accessible prices.',
     tendencies: 'SMSL DACs are described as clean, precise, and detailed. The sonic character is neutral-to-analytical. Tonal weight is lighter than R2R alternatives but separation and transient clarity are strong for the price.',
     systemContext: 'Similar system context to Topping — a precise source that benefits from downstream warmth. The SU-9 and D300 are popular mid-fi choices for measurement-conscious listeners.',
-    links: [
-      { label: 'Apos Audio', url: 'https://apos.audio/collections/smsl', kind: 'dealer', region: 'global' },
-    ],
+    // links: [] — the Apos collection URL (apos.audio/collections/smsl)
+    // returned HTTP 404 in the 2026-05-21 audit. Apos restructured their
+    // site and the collection paths no longer exist. Removed pending a
+    // valid replacement dealer / official-site link.
   },
   {
     names: ['laiv'],

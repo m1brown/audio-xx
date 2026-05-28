@@ -310,7 +310,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
     },
     // Step 10: buying metadata
     buyingContext: 'better_used',
-    imageUrl: 'https://harbeth.co.uk/wp-content/uploads/2024/11/P3ESR-XD2-cherry.png',
+    // imageUrl removed 2026-05-21 — the harbeth.co.uk product URL
+    // was restructured and now 301-redirects to the homepage,
+    // landing in an ORB-blocked HTML response. Card renders the
+    // category placeholder until a curated replacement is sourced.
     philosophy: 'warm',
     marketType: 'traditional',
   },
@@ -377,7 +380,8 @@ export const SPEAKER_PRODUCTS: Product[] = [
       { source: 'The Audiophiliac', note: 'Steve Guttenberg coverage of the SHL5+ as a do-everything monitor.' },
       { source: '6moons', note: 'Review covering the BBC thin-wall design evolution and full-range balance.' },
     ],
-    imageUrl: 'https://www.harbeth.co.uk/images/SHL5plus-XD-Cherry-Front.jpg',
+    // imageUrl removed 2026-05-21 — same harbeth.co.uk restructure
+    // as P3ESR. Falls back to category placeholder.
     philosophy: 'warm',
     marketType: 'traditional',
   },
