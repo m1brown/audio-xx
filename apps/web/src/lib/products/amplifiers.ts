@@ -1961,6 +1961,12 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'Founder system observation', note: 'Oppo → 2220B → Hornshoppe Horn: tabla realism, microdynamic expression, instrument presence.' },
     ],
     notes: 'Vintage receiver (1974–1977). Price reflects typical used market value. May need recapping if original capacitors are still in place — recap can significantly improve clarity without losing the warm character. 20W is sufficient for speakers above 93dB sensitivity.',
+    // Locally hosted product image — 2026-05-28. Sourced from
+    // radiomuseum.org (community vintage archive, not a reviewer
+    // publication), saved as JPEG q88 at native 500x200 and served
+    // from apps/web/public/brand-heroes/. Replaces the dead-state
+    // F4-gated overlay entry as the effective image for this product.
+    imageUrl: '/brand-heroes/marantz-2220b.jpg',
     philosophy: 'warm',
     marketType: 'traditional',
   },
@@ -4378,6 +4384,12 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       { source: 'The Absolute Sound', note: 'Noted as flagship expression of Goldmund precision philosophy.' },
     ],
     notes: 'Goldmund flagship. The Telos 690 represents apex of Swiss precision integrated design — 175W delivered with extraordinary control, transparency, and authority. Reference-grade amplifier combining power with surgical precision. Designed for revealing systems and large rooms.',
+    // Locally hosted hero — 2026-05-28. Sourced from goldmund.com,
+    // downsampled to 1200px JPEG and served from
+    // apps/web/public/brand-heroes/. Makes the conversation Subject
+    // Card surface this product for a Goldmund brand inquiry instead
+    // of falling back to a no-image catalog entry.
+    imageUrl: '/brand-heroes/goldmund-telos-690.jpg',
     philosophy: 'neutral',
     marketType: 'nonTraditional',
   },
