@@ -222,6 +222,49 @@ export interface ConsultationResponse {
   spiderChartData?: Array<{ trait: string; value: number; fullMark: number }>;
   /** Source references from catalogued components. */
   sourceReferences?: import('./advisory-response').SourceReference[];
+
+  // ── Brand Authority Preview (Pass 18 — dark behind feature flag) ──
+  /**
+   * Compact authority tile populated for bare-brand consultations only.
+   *
+   * Surfaces a same-brand local hero image + quick identity lines + a
+   * CTA link to `/brand/[slug]`. Read-only projection of fields that
+   * already appear on the brand authority page — no new claims, no
+   * F4-gated content, no external imagery.
+   *
+   * Populated by `buildBrandConsultation` and `buildKnowledgeBrandConsultation`
+   * when `eligibleForBrandAuthorityPreview` passes. Consumed in the
+   * renderer behind `NEXT_PUBLIC_BRAND_AUTHORITY_PREVIEW` (default off).
+   */
+  brandAuthorityPreview?: BrandAuthorityPreview;
+}
+
+/**
+ * Compact data shape for the Brand Authority Preview tile.
+ *
+ * All fields are projections of BrandProfile fields already rendered
+ * on `/brand/[slug]`. The shape is exported so the renderer + tests
+ * can consume it directly.
+ */
+export interface BrandAuthorityPreview {
+  /** Display name (BrandProfile.names[0]). */
+  brandName: string;
+  /** Route slug for `/brand/${slug}` CTA. */
+  brandSlug: string;
+  /** Optional ≤12-word tagline. */
+  tagline?: string;
+  /** Engineering intent / what the brand designs FOR. */
+  designPhilosophy?: string;
+  /** Consistent sonic / behavioural signature. */
+  sonicTendency?: string;
+  /** Typical trade-off accepted. */
+  typicalTradeoff?: string;
+  /**
+   * Local hero image URL (must begin with `/brand-heroes/`).
+   * External hotlinks are rejected at population time — when no
+   * verified local asset exists the tile renders without an image.
+   */
+  localHeroImageUrl?: string;
 }
 
 // ── All products ────────────────────────────────────
@@ -2194,6 +2237,79 @@ function buildArchetypeConsultation(
  * pairing notes. This is the path for "what do you know about DeVore Fidelity?"
  * — distinct from the product consultation used for "DeVore O/96 thoughts?"
  */
+/**
+ * Eligibility predicate for the Brand Authority Preview tile.
+ *
+ * Returns true only when the profile carries enough authoritative
+ * content for the preview to read as a meaningful pointer to
+ * `/brand/[slug]`. Sparse profiles are intentionally excluded so the
+ * tile never renders as a thin "authority lite" stub.
+ *
+ * Gate:
+ *   - has tagline OR philosophyExtended (anchor prose), AND
+ *   - has at least 2 of: designPhilosophy, sonicTendency,
+ *     typicalTradeoff, strengths, tradeoffs, designFamilies.
+ *
+ * Pure function — no side effects, safe to call repeatedly.
+ */
+export function eligibleForBrandAuthorityPreview(p: BrandProfile): boolean {
+  const hasAnchorProse = !!p.tagline || !!p.philosophyExtended;
+  if (!hasAnchorProse) return false;
+  const richnessSignals =
+    Number(!!p.designPhilosophy) +
+    Number(!!p.sonicTendency) +
+    Number(!!p.typicalTradeoff) +
+    Number(!!(p.strengths && p.strengths.length > 0)) +
+    Number(!!(p.tradeoffs && p.tradeoffs.length > 0)) +
+    Number(!!(p.designFamilies && p.designFamilies.length > 0));
+  return richnessSignals >= 2;
+}
+
+/**
+ * Pick a locally-hosted hero image for the preview tile, or undefined.
+ *
+ * Resolution order:
+ *   1. `profile.media.images[0].url` if it starts with `/brand-heroes/`.
+ *   2. `profile.representativeImageUrl` if it starts with `/brand-heroes/`.
+ *   3. `undefined` — the tile renders without an image (no placeholder).
+ *
+ * External URLs are always rejected. This guarantees the preview never
+ * fires a request to a third-party origin and never participates in the
+ * external-hotlink trust regression surfaced in the visual-trust audit.
+ */
+export function pickLocalHeroImageUrl(p: BrandProfile): string | undefined {
+  const LOCAL_PREFIX = '/brand-heroes/';
+  const m0 = p.media?.images?.[0]?.url;
+  if (m0 && m0.startsWith(LOCAL_PREFIX)) return m0;
+  if (p.representativeImageUrl && p.representativeImageUrl.startsWith(LOCAL_PREFIX)) {
+    return p.representativeImageUrl;
+  }
+  return undefined;
+}
+
+/**
+ * Build a BrandAuthorityPreview from a BrandProfile, or undefined when
+ * the eligibility gate fails. The displayName + slug fall back to
+ * `profile.names[0]` and its slugified form.
+ */
+function buildBrandAuthorityPreview(profile: BrandProfile): BrandAuthorityPreview | undefined {
+  if (!eligibleForBrandAuthorityPreview(profile)) return undefined;
+  const rawName = profile.names[0];
+  // toDisplayName matches the casing used by `buildBrandConsultation`
+  // and `/brand/[slug]` so the preview tile reads with the same brand
+  // capitalization as the conversational answer below it.
+  const brandName = toDisplayName(rawName);
+  return {
+    brandName,
+    brandSlug: routeToSlug(rawName),
+    tagline: profile.tagline,
+    designPhilosophy: profile.designPhilosophy,
+    sonicTendency: profile.sonicTendency,
+    typicalTradeoff: profile.typicalTradeoff,
+    localHeroImageUrl: pickLocalHeroImageUrl(profile),
+  };
+}
+
 function buildBrandConsultation(profile: BrandProfile): ConsultationResponse {
   const name = toDisplayName(profile.names[0]);
 
@@ -2227,6 +2343,10 @@ function buildBrandConsultation(profile: BrandProfile): ConsultationResponse {
     systemContext,
     followUp: 'Are you exploring the brand generally, or considering a specific model?',
     links: profile.links,
+    // Pass 18: optional authority-preview projection. Renderer is
+    // gated behind NEXT_PUBLIC_BRAND_AUTHORITY_PREVIEW so populating
+    // this field is dark by default.
+    brandAuthorityPreview: buildBrandAuthorityPreview(profile),
   };
 }
 
@@ -2291,6 +2411,18 @@ function buildKnowledgeBrandConsultation(entry: BrandKnowledge): ConsultationRes
     }
   }
 
+  // Pass 18: best-effort BrandAuthorityPreview projection.
+  //
+  // BrandKnowledge entries don't carry tagline / designPhilosophy / etc.
+  // directly, so we look up the matching BrandProfile by the entry's
+  // canonical name. When a profile exists AND passes the eligibility
+  // gate, the preview tile populates; otherwise this stays undefined
+  // and the renderer simply omits the tile — no fallback artifact.
+  const matchedProfile = findBrandProfileByName(name);
+  const brandAuthorityPreview = matchedProfile
+    ? buildBrandAuthorityPreview(matchedProfile)
+    : undefined;
+
   return {
     subject: name,
     philosophy: philosophyLine,
@@ -2298,6 +2430,7 @@ function buildKnowledgeBrandConsultation(entry: BrandKnowledge): ConsultationRes
     systemContext: systemContext || undefined,
     followUp: 'Are you exploring the brand generally, or considering a specific model?',
     links: links.length > 0 ? links : undefined,
+    brandAuthorityPreview,
   };
 }
 

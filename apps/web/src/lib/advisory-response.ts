@@ -996,6 +996,16 @@ export interface AdvisoryResponse {
     symptoms: string[];
     traits: Record<string, 'up' | 'down'>;
   };
+
+  // ── 14. Brand Authority Preview (Pass 18 — dark behind feature flag) ──
+  /**
+   * Compact authority tile populated for bare-brand consultations only.
+   * Passed through from ConsultationResponse; the renderer gates display
+   * on NEXT_PUBLIC_BRAND_AUTHORITY_PREVIEW (default off).
+   *
+   * See `BrandAuthorityPreview` in `./consultation` for shape + invariants.
+   */
+  brandAuthorityPreview?: import('./consultation').BrandAuthorityPreview;
 }
 
 // ── Content Enrichment ───────────────────────────────
@@ -2067,6 +2077,13 @@ export function consultationToAdvisory(
     spiderChartData: isComparison ? undefined : c.spiderChartData,
     sourceReferences: c.sourceReferences,
     systemSignature: isComparison ? undefined : c.systemSignature,
+
+    // Pass 18: Brand Authority Preview — pass through unchanged for
+    // non-comparison responses. Comparison flows never populate this
+    // field, but suppress here defensively so a future builder change
+    // can't accidentally surface a brand tile inside a comparison
+    // artifact.
+    brandAuthorityPreview: isComparison ? undefined : c.brandAuthorityPreview,
 
     // Saved-system personalization: secondary note, never main framing.
     // Only for non-assessment, non-comparison responses where savedSystemNote exists.

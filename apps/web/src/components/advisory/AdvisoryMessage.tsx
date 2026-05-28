@@ -38,6 +38,8 @@ import { findProductByComponentName, findProductInProse, findBrandProfileByName,
 import { getProductImage, getProductImageEntry, getGenericPlaceholder } from '../../lib/product-images';
 import AdvisoryLinks from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
+import BrandAuthorityPreview from './BrandAuthorityPreview';
+import { BRAND_AUTHORITY_PREVIEW_ENABLED } from '../../lib/feature-flags';
 import { hasDisplayableSources } from '../../lib/evidence/source-whitelist';
 import AdvisoryDiagnostics from './AdvisoryDiagnostics';
 import AdvisoryComponentAssessments from './AdvisoryComponentAssessments';
@@ -4369,6 +4371,24 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
        *  reasoningMode === 'expanded', a quiet inline indicator and
        *  one-line italic caption replace it. */}
       <ResponseHeader advisory={a} />
+
+      {/* ── 0a-pre. Brand Authority Preview (Pass 18) ────────
+       *
+       * Dark by default — renders only when:
+       *   1. NEXT_PUBLIC_BRAND_AUTHORITY_PREVIEW=on at build/runtime, AND
+       *   2. The consultation builder populated `brandAuthorityPreview`
+       *      (eligibility gate already evaluated in
+       *      `eligibleForBrandAuthorityPreview` upstream).
+       *
+       * Surface guarantees (enforced upstream):
+       *   - same-brand local hero only (`/brand-heroes/`)
+       *   - no reviewer quotes, no F4-gated content
+       *   - additive sibling — the existing prose blocks below render
+       *     unchanged, conversational answer is preserved.
+       */}
+      {BRAND_AUTHORITY_PREVIEW_ENABLED && a.brandAuthorityPreview && (
+        <BrandAuthorityPreview preview={a.brandAuthorityPreview} />
+      )}
 
       {/* ── 0a. Diagnosis: system interpretation ────────── */}
       {a.diagnosisInterpretation && (
