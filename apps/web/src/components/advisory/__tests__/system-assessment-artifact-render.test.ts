@@ -129,6 +129,16 @@ describe('SystemAssessmentArtifact — full data renders all 10 sections', () =>
     expect(html).toContain('What it is:');
   });
 
+  it('§2 Profile row 3 ("What it trades") renders a meaningful trade-off, not a bare component label', () => {
+    // The derivation prefers assessmentLimitations[0] — a sentence-shaped
+    // trade-off — over the raw primaryConstraint.componentName label.
+    expect(html).toContain('What it trades:');
+    expect(html).toContain('Limited headroom for orchestral peaks');
+    // Negative: the row should NOT contain bare-label content sourced
+    // from primaryConstraint.componentName in this fixture.
+    expect(html).not.toMatch(/What it trades:\s*Amplification headroom for large-scale dynamics/);
+  });
+
   it('renders §3 First Impressions', () => {
     expect(html).toContain('First Impressions');
     expect(html).toContain('source quality dominates');
@@ -173,6 +183,18 @@ describe('SystemAssessmentArtifact — full data renders all 10 sections', () =>
   it('renders §9 ranked upgrade path label + rationale (via AdvisoryUpgradePaths)', () => {
     expect(html).toContain('Amplifier Upgrade');
     expect(html).toContain('Address the primary constraint while preserving voicing');
+  });
+
+  it('§9 bridge text is free of template-stitch defects', () => {
+    // No doubled punctuation from trailing-period inputs.
+    expect(html).not.toContain('..');
+    // No mid-sentence proper-noun shape ("leans Warm ..." or
+    // "leans A warm ...") from sentence-case inputs. This matches BOTH
+    // the [A-Z][a-z] sentence-case shape AND the leading-article shape
+    // (single capital followed by space) — the original Issue 2 missed
+    // the second variant.
+    expect(html).not.toMatch(/leans [A-Z][a-z]/);
+    expect(html).not.toMatch(/leans [A-Z] /);
   });
 
   it('renders §10 Sources (heading present)', () => {
@@ -267,6 +289,22 @@ describe('SystemAssessmentArtifact — data gating (sparse responses)', () => {
     expect(html).not.toMatch(/<h2[^>]*>Sources<\/h2>/);
   });
 
+  it('skips §10 Sources when sourceReferences is non-empty but all entries are filtered out by the whitelist', () => {
+    // Issue 3 fix: the §10 gate must check POST-filter visible sources,
+    // not raw input count. Otherwise the heading orphans above empty
+    // content. This input has 2 non-whitelisted sources — both must be
+    // dropped by filterSourcesForDisplay, and the §10 heading must NOT
+    // render.
+    const html = render({
+      ...FULL,
+      sourceReferences: [
+        { source: 'random-blog.example.com', note: 'Some review' },
+        { source: 'unknown-source-label', note: 'Another' },
+      ],
+    });
+    expect(html).not.toMatch(/<h2[^>]*>Sources<\/h2>/);
+  });
+
   it('renders only §1 and §2 with hero + signature only (minimal viable)', () => {
     const minimal: AdvisoryResponse = {
       kind: 'assessment',
@@ -326,5 +364,59 @@ describe('SystemAssessmentArtifact — section heading set is locked', () => {
     expect(html).not.toContain('Synergy');
     expect(html).not.toContain('Signal Chain');
     expect(html).not.toContain('Component Readings');
+  });
+});
+
+describe('SystemAssessmentArtifact — Profile row 3 derivation fallback chain', () => {
+  // Each case constructs an AdvisoryResponse with a subset of fields the
+  // derivation considers, and asserts the rendered "What it trades:" row.
+  // Builds the minimum viable response so other sections don't add noise.
+
+  function base(): AdvisoryResponse {
+    return { kind: 'assessment', subject: 'Test' };
+  }
+
+  it('uses assessmentLimitations[0] when present (top of derivation chain)', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      assessmentLimitations: ['Loses fine detail at low volumes', 'Bass extension is room-dependent'],
+      primaryConstraint: { componentName: 'DAC', role: 'dac', impact: 'Limits resolution.' },
+    };
+    const html = render(a);
+    expect(html).toContain('What it trades:');
+    expect(html).toContain('Loses fine detail at low volumes');
+    // Should NOT have used the lower-priority sources.
+    expect(html).not.toContain('Limits resolution');
+  });
+
+  it('falls back to primaryConstraint.impact when assessmentLimitations is empty', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      primaryConstraint: { componentName: 'DAC', role: 'dac', impact: 'Limits resolution at moderate volumes.' },
+    };
+    const html = render(a);
+    expect(html).toContain('What it trades:');
+    expect(html).toContain('Limits resolution at moderate volumes');
+  });
+
+  it('falls back to a derived sentence when only componentName is present', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      primaryConstraint: { componentName: 'DAC', role: 'dac' },
+    };
+    const html = render(a);
+    expect(html).toContain('What it trades:');
+    // The rendered HTML escapes the apostrophe ('s → &#x27;s); match
+    // the sentence shape via partial substrings.
+    expect(html).toContain('DAC is the system');
+    expect(html).toContain('primary constraint');
+    // Even in the fallback case, the row reads as a sentence, not as
+    // a bare component label — the original Issue 1 defect.
+    expect(html).not.toMatch(/What it trades:\s*DAC\s*<\/li>/);
+  });
+
+  it('omits the "What it trades" row entirely when no derivation source exists', () => {
+    const html = render(base());
+    expect(html).not.toContain('What it trades:');
   });
 });

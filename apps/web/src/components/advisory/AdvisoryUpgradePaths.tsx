@@ -93,6 +93,43 @@ function isDirectionalPath(path: UpgradePath): boolean {
 }
 
 /**
+ * Normalize a character phrase for safe interpolation into the bridge
+ * template. Prevents two visible defects:
+ *
+ *   1. Doubled punctuation — when the upstream input already ends with
+ *      `.` (e.g. "warm tube-led source-first chain with coherent voicing."),
+ *      the template's trailing `.` produces "voicing..". Strip terminal
+ *      sentence punctuation before interpolation.
+ *
+ *   2. Mid-sentence capitalization — when the upstream input starts with
+ *      a sentence-case capital (e.g. "A warm tube-led..."), interpolating
+ *      after "leans " produces "Your system leans A warm tube-led..."
+ *      reading as a proper noun mid-sentence. Lowercase the first letter
+ *      ONLY when it's a single capital followed by a lowercase letter
+ *      (the normal sentence-start shape), preserving acronyms (BBC,
+ *      AVR) and single-letter capitalizations (Class A).
+ *
+ * Returns the empty string when the input collapses under normalization.
+ * Callers should fall back to no-character branch if so.
+ */
+function normalizeCharacterPhrase(input: string): string {
+  let s = input.trim();
+  s = s.replace(/[.!?,;:]+$/, '').trim();
+  // Lowercase the first letter ONLY when the second character is not
+  // another uppercase letter. This catches:
+  //   - sentence-case starts ("Warm and..." → "warm and...")
+  //   - leading articles ("A warm..." → "a warm...")
+  //   - leading single-letter capitals followed by space
+  // …while preserving:
+  //   - acronyms ("BBC thin-wall" → unchanged because B-B is uppercase pair)
+  //   - all-caps phrases
+  if (s.length >= 2 && /^[A-Z]/.test(s) && !/^[A-Z][A-Z]/.test(s)) {
+    s = s[0].toLowerCase() + s.slice(1);
+  }
+  return s;
+}
+
+/**
  * Build system-specific bridge text from stacked traits and character summary.
  * Falls back to generic text when no system data is available.
  */
@@ -103,9 +140,14 @@ function buildBridgeText(
 ): string {
   // Build a readable character descriptor
   const trait = stackedTraits?.[0];
-  const character = trait
+  const rawCharacter = trait
     ? trait.label.replace(/_/g, ' ')
     : systemCharacterSummary ?? null;
+  // Normalize for safe interpolation (strips trailing punctuation,
+  // lowercases sentence-case starts). Empty result → treat as no
+  // character so the no-character branch handles framing.
+  const normalized = rawCharacter ? normalizeCharacterPhrase(rawCharacter) : '';
+  const character = normalized.length > 0 ? normalized : null;
 
   if (hasDirectional && character) {
     return `Your system leans ${character}. Some options below refine that character; others shift it in a new direction\u2009—\u2009trading what you have in surplus for qualities your system currently underserves. Choose based on what you want more of.`;

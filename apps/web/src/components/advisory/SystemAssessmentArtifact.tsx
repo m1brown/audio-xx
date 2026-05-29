@@ -5,12 +5,46 @@ import React from 'react';
 
 import type { AdvisoryResponse } from '@/lib/advisory-response';
 import { COLOR, sectionHeadingStyle, proseStyle } from '@/lib/editorial-tokens';
+import { hasDisplayableSources } from '@/lib/evidence/source-whitelist';
 
 import SystemHero from './SystemHero';
 import SystemProfileCard from './SystemProfileCard';
 import EditorialSubCard from './EditorialSubCard';
 import AdvisoryUpgradePaths from './AdvisoryUpgradePaths';
 import AdvisorySources from './AdvisorySources';
+
+/**
+ * Presentation-layer derivation of the §2 *Profile* "What it trades" row.
+ *
+ * `primaryConstraint.componentName` is structurally a label (e.g. "DAC",
+ * "Amplification", "Amplifier headroom") — useful for chrome but not a
+ * trade-off sentence. The Profile card's third row needs a sentence-shaped
+ * summary of what the system trades to deliver its character.
+ *
+ * Resolution order, by editorial preference:
+ *   1. First assessmentLimitations entry — canonically the most
+ *      representative trade-off the system makes.
+ *   2. primaryConstraint.impact — narrative impact statement when the
+ *      builder populated it.
+ *   3. A small derived sentence from primaryConstraint.componentName
+ *      so the row still says something useful in sparse-data cases.
+ *   4. undefined → the row is gracefully omitted (Profile card handles
+ *      independent row data-gating).
+ *
+ * No engine changes. No builder changes. Pure presentation derivation.
+ */
+function deriveWhatItTrades(a: AdvisoryResponse): string | undefined {
+  if (a.assessmentLimitations && a.assessmentLimitations.length > 0) {
+    return a.assessmentLimitations[0];
+  }
+  if (a.primaryConstraint?.impact) {
+    return a.primaryConstraint.impact;
+  }
+  if (a.primaryConstraint?.componentName) {
+    return `${a.primaryConstraint.componentName} is the system's primary constraint.`;
+  }
+  return undefined;
+}
 
 /**
  * Audio XX — System Assessment Artifact.
@@ -62,7 +96,12 @@ export default function SystemAssessmentArtifact({
   const hasUpgradePaths = !!(a.upgradePaths && a.upgradePaths.length > 0);
   const hasSequence = !!(a.recommendedSequence && a.recommendedSequence.length > 0);
   const hasChangeSection = hasUpgradeDirection || hasUpgradePaths || hasSequence;
-  const hasSources = !!(a.sourceReferences && a.sourceReferences.length > 0);
+  // §10 gate: check POST-filter visible sources, not raw input count.
+  // hasDisplayableSources() applies the same two-tier whitelist filter
+  // that AdvisorySources uses internally — if it returns false, the
+  // §10 heading must not render to avoid the orphaned-eyebrow bug
+  // documented at source-whitelist.ts:188-205.
+  const hasSources = hasDisplayableSources(a.sourceReferences);
 
   return (
     <article
@@ -93,7 +132,7 @@ export default function SystemAssessmentArtifact({
         <SystemProfileCard
           whatItIs={a.systemSignature}
           whatItLeansToward={a.tendencies}
-          whatItTrades={a.primaryConstraint?.componentName}
+          whatItTrades={deriveWhatItTrades(a)}
         />
       </section>
 
