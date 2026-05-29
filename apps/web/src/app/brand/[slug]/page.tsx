@@ -29,34 +29,12 @@ import AdvisoryProductCards from '@/components/advisory/AdvisoryProductCard';
  */
 
 // ── Design tokens ───────────────────────────────────────
+// COLOR, sectionHeadingStyle, and proseStyle are imported from the
+// shared editorial-tokens module (single source of truth for all
+// warm-editorial artifact surfaces). Values are byte-identical to
+// what was previously inlined here.
 
-const COLOR = {
-  textPrimary: '#1F1D1B',
-  textSecondary: '#5C5852',
-  textMuted: '#8C877F',
-  accent: '#B08D57',
-  border: '#D8D2C5',
-  borderLight: '#E8E3D7',
-  cardBg: '#FFFEFA',
-} as const;
-
-// Reusable section heading style
-const sectionHeadingStyle: React.CSSProperties = {
-  fontSize: '0.8rem',
-  fontWeight: 700,
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  color: COLOR.accent,
-  marginBottom: '0.55rem',
-  marginTop: 0,
-};
-
-const proseStyle: React.CSSProperties = {
-  margin: 0,
-  fontSize: '0.96rem',
-  lineHeight: 1.75,
-  color: COLOR.textSecondary,
-};
+import { COLOR, sectionHeadingStyle, proseStyle } from '@/lib/editorial-tokens';
 
 // ── Adapter: catalog Product → AdvisoryOption ───────────
 

@@ -7,6 +7,7 @@
 import React from 'react';
 import Link from 'next/link';
 import type { BrandAuthorityPreview as BrandAuthorityPreviewData } from '@/lib/consultation';
+import { COLOR } from '@/lib/editorial-tokens';
 
 /**
  * Audio XX — Brand Authority Preview tile.
@@ -35,14 +36,11 @@ interface BrandAuthorityPreviewProps {
   preview: BrandAuthorityPreviewData;
 }
 
-const COLOR = {
-  textPrimary: '#1F1D1B',
-  textSecondary: '#5C5852',
-  textMuted: '#8C877F',
-  accent: '#B08D57',
-  borderLight: '#E8E3D7',
-  cardBg: '#FFFEFA',
-} as const;
+// COLOR previously inlined here as a 6-key subset. Now imported from the
+// shared editorial-tokens module (single source of truth across the
+// Brand Authority page and this preview tile). All referenced keys
+// (textPrimary, textSecondary, textMuted, accent, borderLight, cardBg)
+// are byte-identical to the previous inline values.
 
 export default function BrandAuthorityPreview({ preview }: BrandAuthorityPreviewProps) {
   const {
