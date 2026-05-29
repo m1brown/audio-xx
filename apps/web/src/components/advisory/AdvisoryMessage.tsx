@@ -39,7 +39,11 @@ import { getProductImage, getProductImageEntry, getGenericPlaceholder } from '..
 import AdvisoryLinks from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
 import BrandAuthorityPreview from './BrandAuthorityPreview';
-import { BRAND_AUTHORITY_PREVIEW_ENABLED } from '../../lib/feature-flags';
+import SystemAssessmentArtifact from './SystemAssessmentArtifact';
+import {
+  BRAND_AUTHORITY_PREVIEW_ENABLED,
+  SYSTEM_ASSESSMENT_ARTIFACT_ENABLED,
+} from '../../lib/feature-flags';
 import { hasDisplayableSources } from '../../lib/evidence/source-whitelist';
 import AdvisoryDiagnostics from './AdvisoryDiagnostics';
 import AdvisoryComponentAssessments from './AdvisoryComponentAssessments';
@@ -5291,7 +5295,14 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
     // memo-predicate widening cannot silently re-route comparisons.
     content = <StandardFormat advisory={advisory} onPreferenceCapture={onPreferenceCapture} onFollowUpClick={onFollowUpClick} />;
   } else if (isMemoFormat(advisory)) {
-    content = <MemoFormat advisory={advisory} onFollowUpClick={onFollowUpClick} />;
+    // Pass 19 dispatch — when SYSTEM_ASSESSMENT_ARTIFACT_ENABLED is
+    // on, the warm-editorial SystemAssessmentArtifact renders in place
+    // of the legacy MemoFormat. Same advisory shape, same intent
+    // dispatch, same data path; purely a presentation surface swap.
+    // Flag default off → MemoFormat continues to render unchanged.
+    content = SYSTEM_ASSESSMENT_ARTIFACT_ENABLED
+      ? <SystemAssessmentArtifact advisory={advisory} />
+      : <MemoFormat advisory={advisory} onFollowUpClick={onFollowUpClick} />;
   } else if (isAssessmentFormat(advisory)) {
     content = <AssessmentFormat advisory={advisory} />;
   } else if (isKnowledgeFormat(advisory)) {
