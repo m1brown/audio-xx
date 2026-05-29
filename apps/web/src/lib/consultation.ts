@@ -476,6 +476,16 @@ const BRAND_PROFILES: BrandProfile[] = [
     media: {
       images: [
         {
+          // Local hero — replaces externally-hotlinked devore-fidelity-home
+          // as the primary hero. Sourced from devorefidelity.com official
+          // press, optimised to 766×1024 / ~146 KB / JPEG (portrait — the
+          // brand's signature warm-wood cabinet read).
+          url: '/brand-heroes/devore-o96.jpg',
+          caption: 'DeVore O/96 — the flagship Orangutan, voiced for low-power tubes.',
+          credit: 'DeVore Fidelity',
+          sourceUrl: 'https://devorefidelity.com/devore-fidelity-speakers/orangutan-series/devore-fidelity-o-96-speakers/',
+        },
+        {
           url: 'https://devorefidelity.com/wp-content/uploads/2021/11/devore-fidelity-home.jpg',
           caption: 'DeVore Fidelity — handcrafted speakers from Brooklyn, New York.',
           credit: 'DeVore Fidelity',
@@ -563,6 +573,15 @@ const BRAND_PROFILES: BrandProfile[] = [
     ],
     media: {
       images: [
+        {
+          // Local hero — replaces externally-hotlinked W5_raum as the
+          // primary hero. Sourced from boenicke-audio.ch official press,
+          // optimised to 1200×680 / ~38 KB / JPEG.
+          url: '/brand-heroes/boenicke-w11.jpg',
+          caption: 'Boenicke W11 — solid-wood floorstander voiced by ear.',
+          credit: 'Boenicke Audio',
+          sourceUrl: 'https://boenicke-audio.ch/products/loudspeakers/w11/',
+        },
         {
           url: 'https://boenicke-audio.ch/wp-content/uploads/2017/08/W5_raum.jpg',
           caption: 'Boenicke W5 in a listening room — disappearing act in miniature.',
@@ -738,6 +757,16 @@ const BRAND_PROFILES: BrandProfile[] = [
     ],
     media: {
       images: [
+        {
+          // Local hero — replaces externally-hotlinked Class-A banner as
+          // the primary hero. Sourced from passlabs.com official press
+          // (XA25_angle_bw), converted WebP → JPEG, optimised to
+          // 1200×772 / ~89 KB / JPEG.
+          url: '/brand-heroes/pass-labs-xa25.jpg',
+          caption: 'Pass Labs XA25 — 3/4 view, pure Class A in a compact chassis.',
+          credit: 'Pass Labs',
+          sourceUrl: 'https://www.passlabs.com/products/xa25/',
+        },
         {
           url: 'https://www.passlabs.com/wp-content/uploads/2019/12/08-banner-class-A-xa25.webp',
           caption: 'Pass Labs XA25 — pure Class A simplicity in a compact chassis.',
@@ -1364,6 +1393,17 @@ const BRAND_PROFILES: BrandProfile[] = [
     ],
     media: {
       images: [
+        {
+          // Local hero — replaces externally-hotlinked Amazon LS50 Meta
+          // thumbnail (flagged as a low-resolution external hotlink in
+          // the 2026-05-29 visual-trust audit) as the primary hero.
+          // Sourced from us.kef.com Shopify CDN (Blade Two Meta press),
+          // optimised to 900×900 / ~46 KB / JPEG.
+          url: '/brand-heroes/kef-blade-two-meta.jpg',
+          caption: 'KEF Blade Two Meta — flagship Uni-Q force-cancelling design.',
+          credit: 'KEF',
+          sourceUrl: 'https://us.kef.com/products/blade-two',
+        },
         {
           url: 'https://m.media-amazon.com/images/I/51RmYCbQVQL._AC_SX679_.jpg',
           caption: 'KEF LS50 Meta — the benchmark Uni-Q stand-mount.',
