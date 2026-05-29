@@ -26,6 +26,11 @@
  * homepage handle.
  */
 
+// React imported explicitly for vitest node-env JSX classic transform.
+// Inert under Next.js automatic JSX runtime (production / dev); required
+// only when this component is rendered via `react-dom/server` inside a
+// vitest node-environment test. Same pattern as BrandAuthorityPreview.tsx.
+import React from 'react';
 import type { SourceReference } from '../../lib/advisory-response';
 import { filterSourcesForDisplay } from '../../lib/evidence/source-whitelist';
 

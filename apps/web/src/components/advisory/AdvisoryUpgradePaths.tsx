@@ -11,7 +11,11 @@
 
 'use client';
 
-import { useState } from 'react';
+// React imported explicitly for vitest node-env JSX classic transform.
+// Inert under Next.js automatic JSX runtime (production / dev); required
+// only when this component is rendered via `react-dom/server` inside a
+// vitest node-environment test. Same pattern as BrandAuthorityPreview.tsx.
+import React, { useState } from 'react';
 import Link from 'next/link';
 import type { UpgradePath, UpgradePathOption } from '../../lib/advisory-response';
 import { buildProductLinks } from '../../lib/product-links';

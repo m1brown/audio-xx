@@ -14,6 +14,12 @@
  * Colors: #a89870 accent palette — matches Audio XX visual identity.
  */
 
+// React imported explicitly for vitest node-env JSX classic transform.
+// Inert under Next.js automatic JSX runtime (production / dev); required
+// only when this component is rendered via `react-dom/server` inside a
+// vitest node-environment test. Same pattern as BrandAuthorityPreview.tsx.
+import React from 'react';
+
 interface SpiderChartProps {
   data: Array<{ trait: string; value: number; fullMark: number }>;
 }

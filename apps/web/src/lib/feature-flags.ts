@@ -34,3 +34,21 @@
  */
 export const BRAND_AUTHORITY_PREVIEW_ENABLED: boolean =
   process.env.NEXT_PUBLIC_BRAND_AUTHORITY_PREVIEW === 'on';
+
+/**
+ * System Assessment Artifact renderer gate.
+ *
+ * Env var: `NEXT_PUBLIC_SYSTEM_ASSESSMENT_ARTIFACT=on`
+ *
+ * - **On**: system_assessment intent responses render via the new
+ *   `SystemAssessmentArtifact` component (warm-editorial Brand Authority
+ *   sibling) instead of the legacy `MemoFormat`.
+ * - **Off (default)**: existing `MemoFormat` renders unchanged.
+ *
+ * Safe-off invariant: the advisory engine, builders, intent dispatcher,
+ * cross-brand resolver, and all existing tests are identical whether
+ * the flag is on or off. Flipping the flag is a pure presentation
+ * surface change.
+ */
+export const SYSTEM_ASSESSMENT_ARTIFACT_ENABLED: boolean =
+  process.env.NEXT_PUBLIC_SYSTEM_ASSESSMENT_ARTIFACT === 'on';
