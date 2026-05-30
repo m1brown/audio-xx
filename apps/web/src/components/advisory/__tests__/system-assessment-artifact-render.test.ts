@@ -151,11 +151,10 @@ describe('SystemAssessmentArtifact — full data renders all 10 sections', () =>
 
   it('renders §5 The Components in contribution register', () => {
     expect(html).toContain('The Components');
-    // Pass 22 — §5 bodies are composed from extracted facts, not
-    // pass-through of engine reading. Source card opens with the
-    // contribution-first lede; the fixture's reading lacks a topology
-    // anchor so the body relies on the lede alone.
-    expect(html).toContain('Denafrips Pontus II sets the tonal character');
+    // Commit 7 — §5 DAC lede rebalanced: source no longer "sets the
+    // tonal character" the system inherits; it establishes signal
+    // quality and character feeding the rest of the system.
+    expect(html).toContain('Denafrips Pontus II establishes the quality and character');
     // No product-review register survives — the engine's "warm-tube
     // reference R2R DAC" descriptor never reaches the body.
     expect(html).not.toContain('warm-tube reference');
@@ -166,18 +165,25 @@ describe('SystemAssessmentArtifact — full data renders all 10 sections', () =>
     expect(html).toContain('reinforces rather than counterbalances');
   });
 
-  it('renders §7 Strengths and Honest Limits', () => {
-    expect(html).toContain('Strengths and Honest Limits');
+  it('renders §7 Strengths and Limits (Commit 7 rename)', () => {
+    expect(html).toContain('Strengths and Limits');
     expect(html).toContain('Strengths');
-    expect(html).toContain('Honest Limits');
-    expect(html).toContain('tonal coherence');
+    // Commit 7 — right-column eyebrow renamed from "Honest Limits"
+    // to "Limits" for symmetry with the new section heading.
+    expect(html).not.toContain('Strengths and Honest Limits');
     expect(html).toContain('Limited headroom');
   });
 
-  it('renders §8 What\'s Already Working', () => {
-    expect(html).toContain('Already Working');
-    expect(html).toContain('DeVore O/96');
-    expect(html).toContain('voicing-by-ear');
+  it('renders §8 Why This System Works (Commit 7 paragraph mode)', () => {
+    // Commit 7 — §8 converted from a card list to a 2-3 sentence
+    // editorial paragraph. The section title was renamed; the
+    // paragraph asserts coherence as the unit of value.
+    expect(html).toContain('Why This System Works');
+    expect(html).not.toContain('What’s Already Working');
+    // Coherence claim surfaces.
+    expect(html).toMatch(/coherence|reinforce a single voicing/);
+    // The previous keep-recommendation reason text is NOT quoted.
+    expect(html).not.toContain('voicing-by-ear');
   });
 
   it('renders §9 If You Were to Change Something', () => {
@@ -273,12 +279,12 @@ describe('SystemAssessmentArtifact — data gating (sparse responses)', () => {
 
   it('skips §7 grid when both strengths and limits are absent', () => {
     const html = render({ ...FULL, assessmentStrengths: undefined, assessmentLimitations: undefined });
-    expect(html).not.toContain('Strengths and Honest Limits');
+    expect(html).not.toContain('Strengths and Limits');
   });
 
   it('skips §8 when keepRecommendations is empty', () => {
     const html = render({ ...FULL, keepRecommendations: undefined });
-    expect(html).not.toContain('Already Working');
+    expect(html).not.toContain('Why This System Works');
   });
 
   it('skips §9 when upgradeDirection, upgradePaths, and recommendedSequence are all absent', () => {
@@ -352,8 +358,8 @@ describe('SystemAssessmentArtifact — section heading set is locked', () => {
       'Character',
       'The Components',
       'How They Work Together',
-      'Strengths and Honest Limits',
-      'Already Working', // partial match — apostrophe-S renders as &rsquo;s
+      'Strengths and Limits',
+      'Why This System Works',
       'If You Were to Change Something',
       'Sources',
     ];
@@ -888,8 +894,10 @@ describe('SystemAssessmentArtifact — §5 The Components: identity mapping + co
       const html = render(a);
       const compsIndex = html.indexOf('The Components');
       const compsSection = html.slice(compsIndex, compsIndex + 1500);
-      // Solo source falls to the source-establishes lede.
-      expect(compsSection).toContain('Foo establishes this system');
+      // Commit 7 — solo source falls to "establishes the quality and
+      // character of the signal feeding the rest of the system".
+      expect(compsSection).toContain('Foo establishes the quality and character');
+      expect(compsSection).toContain('feeding the rest of the system');
       // The raw engine reading must NOT leak into the card body.
       expect(compsSection).not.toContain('Some prose that does not include');
     });
@@ -1063,10 +1071,15 @@ describe('SystemAssessmentArtifact — §5 contribution body (Commit 5)', () => 
       ],
     } as AdvisoryResponse);
 
-  it('source (DAC) body opens with "sets the tonal character" + names downstream', () => {
+  it('source (DAC) body opens with "establishes the quality and character" + names downstream', () => {
+    // Commit 7 rebalance — source lede no longer claims the DAC "sets
+    // the tonal character" the system inherits; it now establishes
+    // the signal's quality and character feeding the rest of the chain.
     const html = render(baseChain());
-    expect(html).toContain('Denafrips Pontus II sets the tonal character');
-    expect(html).toContain('handing the Leben CS600X');
+    expect(html).toContain('Denafrips Pontus II establishes the quality and character');
+    expect(html).toContain('feeding the Leben CS600X');
+    // Old lede must NOT survive anywhere in the rendered artifact.
+    expect(html).not.toContain('sets the tonal character');
   });
 
   it('source (DAC) body surfaces R2R conversion contribution when facts allow', () => {
@@ -1089,16 +1102,60 @@ describe('SystemAssessmentArtifact — §5 contribution body (Commit 5)', () => 
     expect(html).toContain('adds harmonic weight and rhythmic continuity');
   });
 
-  it('speaker body opens with "where this system becomes sound" + names upstream', () => {
+  it('speaker body opens with the fused concrete-reviewer sentence (Commit 7)', () => {
+    // Commit 7 — speaker body de-AI'd. When efficiency + upstream tech
+    // are known, the lede and fact phrase fuse into one concrete
+    // sentence. The Phase K reading parses high-efficiency + the
+    // upstream Leben as tube → fused tube-pairing sentence.
+    // HTML escapes the apostrophe ('s → &#x27;s); use partial substrings
+    // that span the escape boundary cleanly.
     const html = render(baseChain());
-    expect(html).toContain('DeVore O/96 is where this system becomes sound');
-    expect(html).toContain('translating what the Leben CS600X produces');
+    expect(html).toContain('high-efficiency design works particularly well');
+    expect(html).toContain('lower-power tube amplifiers');
+    expect(html).toContain('emphasizing tonal weight, ease, and musical flow');
+    expect(html).toContain('over razor-sharp precision');
+    // Old AI/poetic phrasing must NOT appear.
+    expect(html).not.toContain('is where this system becomes sound');
+    expect(html).not.toContain('room-filling presentation');
+    expect(html).not.toContain('rewards low-power upstream drive');
   });
 
-  it('speaker body surfaces high-efficiency wide-baffle contribution + low-power tube pairing', () => {
-    const html = render(baseChain());
-    expect(html).toContain('high-efficiency wide-baffle design');
-    expect(html).toContain('rewards low-power upstream drive');
+  it('speaker body uses "solid-state amplifiers" when upstream tech is solid-state (Commit 7)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Solid-state pair',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Class A Solid State Integrated', 'Some HE Speaker'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A delta-sigma DAC.',
+        'A class-A solid-state integrated amplifier.',
+        'A high-efficiency wide-baffle speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('lower-power solid-state amplifiers');
+  });
+
+  it('speaker body falls back to generic "amplifiers" when upstream tech is absent', () => {
+    // Upstream reading has no tube/solid-state anchor → ampKind === 'amplifiers'.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Generic pair',
+      systemSignature: 'sig',
+      systemChain: { names: ['Some DAC', 'Some Amp', 'Some Speaker'], roles: ['DAC', 'Amp', 'Speakers'] },
+      componentReadings: [
+        'A DAC.',
+        'An amplifier.',
+        'A high-efficiency wide-baffle speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('lower-power amplifiers');
+    expect(html).not.toContain('lower-power tube amplifiers');
+    expect(html).not.toContain('lower-power solid-state amplifiers');
   });
 
   it('amplifier bottleneck appends amp-specific limit-framing sentence', () => {
@@ -1165,14 +1222,14 @@ describe('SystemAssessmentArtifact — §5 contribution body (Commit 5)', () => 
     expect(compsSection).not.toContain('reference R2R DAC');
   });
 
-  it('source / amplifier / speaker cards open with distinct contribution shapes', () => {
+  it('source / amplifier / speaker cards open with distinct contribution shapes (Commit 7)', () => {
     const html = render(baseChain());
     const compsSection = html.slice(html.indexOf('The Components'));
     // Each role family produces a different sentence shape; assert
     // the distinct openers appear exactly once.
-    expect((compsSection.match(/sets the tonal character/g) ?? []).length).toBe(1);
+    expect((compsSection.match(/establishes the quality and character/g) ?? []).length).toBe(1);
     expect((compsSection.match(/carries the signal between/g) ?? []).length).toBe(1);
-    expect((compsSection.match(/is where this system becomes sound/g) ?? []).length).toBe(1);
+    expect((compsSection.match(/high-efficiency design works particularly well/g) ?? []).length).toBe(1);
   });
 
   it('handles 2-component chain (head + tail, no middle)', () => {
@@ -1184,15 +1241,18 @@ describe('SystemAssessmentArtifact — §5 contribution body (Commit 5)', () => 
       componentReadings: ['Warm R2R DAC.', 'High-efficiency speaker.'],
     } as AdvisoryResponse;
     const html = render(a);
-    // Source role lede references downstream.
-    expect(html).toContain('Some DAC sets the tonal character');
-    expect(html).toContain('handing the Some Speakers');
-    // Speaker role lede references upstream.
-    expect(html).toContain('Some Speakers is where this system becomes sound');
-    expect(html).toContain('translating what the Some DAC produces');
+    // Commit 7 — Source role lede references downstream via "feeding".
+    expect(html).toContain('Some DAC establishes the quality and character');
+    expect(html).toContain('feeding the Some Speakers');
+    // Speaker has no upstream tech anchor here (only "Warm R2R DAC"
+    // does not register tube/solid-state); falls back to the
+    // ampKind='amplifiers' fused sentence.
+    // HTML escapes the apostrophe so we use partial substrings.
+    expect(html).toContain('high-efficiency design works particularly well');
+    expect(html).toContain('lower-power amplifiers');
   });
 
-  it('single-component chain falls back to role-establishment lede (source)', () => {
+  it('single-component chain falls back to solo-source lede (Commit 7)', () => {
     const a: AdvisoryResponse = {
       kind: 'assessment',
       subject: 'Solo',
@@ -1201,8 +1261,10 @@ describe('SystemAssessmentArtifact — §5 contribution body (Commit 5)', () => 
       componentReadings: ['Some DAC body content.'],
     } as AdvisoryResponse;
     const html = render(a);
-    // No downstream → falls to "establishes this system's source voice".
-    expect(html).toContain('Solo DAC establishes this system');
+    // Commit 7 — no downstream → "establishes the quality and character …
+    // feeding the rest of the system" (the solo-source branch).
+    expect(html).toContain('Solo DAC establishes the quality and character');
+    expect(html).toContain('feeding the rest of the system');
   });
 
   it('role=undefined defaults to the generic "sits inside this system" lede', () => {
@@ -1301,10 +1363,11 @@ describe('SystemAssessmentArtifact — §7 strength/limit dedup', () => {
       ],
     };
     const html = render(a);
-    // Scope to the Honest Limits subsection — §2 Profile also pulls
-    // from assessmentLimitations[0] for the "What it trades" row,
-    // which would otherwise double-count the same phrase.
-    const limitsIdx = html.indexOf('Honest Limits');
+    // Scope to the Limits subsection (renamed from "Honest Limits"
+    // in Commit 7) — §2 Profile also pulls from assessmentLimitations[0]
+    // for the "What it trades" row, which would otherwise double-count
+    // the same phrase. Anchor on the right-column eyebrow "Limits".
+    const limitsIdx = html.indexOf('>Limits<');
     expect(limitsIdx).toBeGreaterThan(0);
     const limitsSection = html.slice(limitsIdx);
     const matches = limitsSection.match(/limited dynamic headroom/g) ?? [];
@@ -1596,24 +1659,29 @@ describe('SystemAssessmentArtifact — §5 system-walkthrough register (Commit 5
       ],
     } as AdvisoryResponse);
 
-  it('source card opens with role-aware contribution lede, not the old "opens the signal path" template', () => {
+  it('source card opens with rebalanced lede (Commit 7), not the prior templates', () => {
     const html = render(GOLD());
     const componentsSlice = html.slice(html.indexOf('The Components'));
     const headBlock = componentsSlice.slice(componentsSlice.indexOf('Denafrips Pontus II'));
-    expect(headBlock.slice(0, 1000)).toContain('Denafrips Pontus II sets the tonal character');
-    // The Pass 21 "opens the signal path" template has been replaced
-    // by the Commit 5 contribution-first composer.
+    expect(headBlock.slice(0, 1000)).toContain(
+      'Denafrips Pontus II establishes the quality and character',
+    );
+    // The Pass 21 and Commit 5 templates are both gone now.
     expect(headBlock.slice(0, 1000)).not.toContain('opens the signal path');
+    expect(headBlock.slice(0, 1000)).not.toContain('sets the tonal character');
   });
 
-  it('speaker card opens with role-aware contribution lede, not the old "closes the path" template', () => {
+  it('speaker card opens with the fused concrete-reviewer sentence (Commit 7), not the prior templates', () => {
     const html = render(GOLD());
     const componentsSlice = html.slice(html.indexOf('The Components'));
     const tailIdx = componentsSlice.indexOf('>DeVore O/96</div>');
     expect(tailIdx).toBeGreaterThan(0);
     const tailBlock = componentsSlice.slice(tailIdx, tailIdx + 1000);
-    expect(tailBlock).toContain('is where this system becomes sound');
+    expect(tailBlock).toContain('high-efficiency design works particularly well');
+    // Old templates must NOT survive.
     expect(tailBlock).not.toContain('closes the path');
+    expect(tailBlock).not.toContain('is where this system becomes sound');
+    expect(tailBlock).not.toContain('room-filling presentation');
   });
 
   it('amplifier card opens with role-aware contribution lede, not the old "Between … and …" template alone', () => {
@@ -1627,12 +1695,12 @@ describe('SystemAssessmentArtifact — §5 system-walkthrough register (Commit 5
     expect(html).toContain('translating source character into drive');
   });
 
-  it('lede shapes differ across source/amp/speaker (role-aware varied prose)', () => {
+  it('lede shapes differ across source/amp/speaker (Commit 7 register)', () => {
     const html = render(GOLD());
     // Each role-family lede shape appears exactly once per chain.
-    const sourceMatches = (html.match(/sets the tonal character/g) ?? []).length;
+    const sourceMatches = (html.match(/establishes the quality and character/g) ?? []).length;
     const ampMatches = (html.match(/carries the signal between/g) ?? []).length;
-    const speakerMatches = (html.match(/is where this system becomes sound/g) ?? []).length;
+    const speakerMatches = (html.match(/high-efficiency design works particularly well/g) ?? []).length;
     expect(sourceMatches).toBe(1);
     expect(ampMatches).toBe(1);
     expect(speakerMatches).toBe(1);
@@ -1811,12 +1879,373 @@ describe('SystemAssessmentArtifact — §5 component images', () => {
     }
   });
 
-  it('§5 card prose is unchanged by the addition of imagery', () => {
+  it('§5 card prose is unchanged by the addition of imagery (Commit 7 register)', () => {
     const html = render(PHASE_K);
-    // Pass-22 contribution composer outputs must still appear after
+    // Commit 7 contribution composer outputs must still appear after
     // images land — image is additive, not a prose mutation.
-    expect(html).toContain('Denafrips Pontus II sets the tonal character');
+    expect(html).toContain('Denafrips Pontus II establishes the quality and character');
     expect(html).toContain('Leben CS600X carries the signal between');
-    expect(html).toContain('DeVore O/96 is where this system becomes sound');
+    expect(html).toContain('high-efficiency design works particularly well');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// Commit 7 — §7 family-bucket dedup + cap, §8 paragraph mode,
+// §9 destination + mature protection
+// ════════════════════════════════════════════════════════════════════════
+
+describe('SystemAssessmentArtifact — §7 family-bucket dedup + cap (Commit 7)', () => {
+  const base = (): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'Family System',
+      systemSignature: 'sig',
+      systemChain: { names: ['DAC', 'Amp', 'Speakers'], roles: ['DAC', 'Amp', 'Speakers'] },
+    } as AdvisoryResponse);
+
+  // Helper: scope to the §7 grid (after the "Strengths and Limits"
+  // heading) so §2 Profile and other sections don't bleed in.
+  function section7(html: string): string {
+    const start = html.indexOf('Strengths and Limits');
+    if (start < 0) return '';
+    return html.slice(start);
+  }
+
+  // Helper: count bullet `<li>` tags inside a slice.
+  function bulletCount(slice: string): number {
+    return (slice.match(/<li[^>]*>/g) ?? []).length;
+  }
+
+  it('collapses the transparency family on the limits side (Commit 7 brief case)', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      assessmentLimitations: [
+        'Trades precision for warmth',
+        'Limited fine detail',
+        'Resolution gives way to body',
+        'Transient sharpness is softened',
+      ],
+    };
+    const html = render(a);
+    const slice = section7(html);
+    // All four are conceptual synonyms in LIMIT_FAMILIES.transparency
+    // → collapse to exactly 1 surviving bullet.
+    expect(bulletCount(slice)).toBe(1);
+  });
+
+  it('caps strengths at 3 even with 5 distinct families', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      assessmentStrengths: [
+        'Exceptional warmth and harmonic richness',  // tonal_density
+        'Rhythmic engagement and musical flow',       // flow
+        'Tonal coherence across the chain',           // coherence
+        'Dynamic ease at listening levels',           // dynamics
+        'Sharp imaging precision',                    // imaging
+      ],
+    };
+    const html = render(a);
+    const slice = section7(html);
+    // Declaration order in STRENGTH_FAMILIES: tonal_density, flow,
+    // coherence (first 3 wins).
+    expect(bulletCount(slice)).toBe(3);
+  });
+
+  it('preserves out-of-vocabulary bullets (each its own bucket)', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      assessmentStrengths: [
+        'A wholly novel concept bullet',
+        'Another novel concept',
+      ],
+    };
+    const html = render(a);
+    const slice = section7(html);
+    // Each unkeyed bullet survives as its own bucket; still capped by 3.
+    expect(bulletCount(slice)).toBe(2);
+  });
+
+  it('renames section heading to "Strengths and Limits" (Honest dropped)', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      assessmentStrengths: ['Strong tonal density'],
+      assessmentLimitations: ['Limited resolution'],
+    };
+    const html = render(a);
+    expect(html).toContain('Strengths and Limits');
+    expect(html).not.toContain('Strengths and Honest Limits');
+    expect(html).not.toContain('Honest Limits');
+  });
+
+  it('right-column eyebrow renders as "Limits" (not "Honest Limits")', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      assessmentLimitations: ['Limited orchestral headroom'],
+    };
+    const html = render(a);
+    // Match the eyebrow on its right-column position (an h3 with text "Limits").
+    expect(html).toMatch(/<h3[^>]*>Limits<\/h3>/);
+  });
+
+  it('symmetric: 4 limits in one family → 1 bullet (cap applies AFTER family collapse)', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      assessmentLimitations: [
+        'Limited orchestral headroom',
+        'Power ceiling under demand',
+        'Scale ceiling at high SPL',
+        'Headroom for peaks is limited',
+      ],
+    };
+    const html = render(a);
+    const slice = section7(html);
+    // All four → headroom family → 1 bullet.
+    expect(bulletCount(slice)).toBe(1);
+  });
+});
+
+describe('SystemAssessmentArtifact — §8 Why This System Works paragraph (Commit 7)', () => {
+  const FULL_K: AdvisoryResponse = {
+    kind: 'assessment',
+    subject: 'Phase K',
+    systemSignature: 'sig',
+    systemChain: {
+      names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+      roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+    },
+    componentReadings: [
+      'R2R DAC.',
+      'Push-pull tube integrated.',
+      'High-efficiency speaker.',
+    ],
+    keepRecommendations: [
+      { name: 'DeVore O/96', reason: 'The cabinet anchors the system.' },
+      { name: 'Leben CS600X', reason: 'Midrange weight defines the chain.' },
+    ],
+    primaryConstraint: {
+      componentName: 'DeVore O/96',
+      category: 'speaker_scale',
+      explanation: '',
+    } as AdvisoryResponse['primaryConstraint'],
+  };
+
+  it('renders the §8 paragraph with the new "Why This System Works" heading', () => {
+    const html = render(FULL_K);
+    expect(html).toContain('Why This System Works');
+    // Section is a paragraph (single <p>), NOT a card list.
+    const start = html.indexOf('Why This System Works');
+    const slice = html.slice(start, start + 1500);
+    expect(slice).toMatch(/<p\b[^>]*>/);
+    // No EditorialSubCard chrome ("Step N", verdict italic, or
+    // keep-recommendation 0.65rem gap div) inside this section.
+    expect(slice).not.toContain('border:1px solid #E8E3D7');
+  });
+
+  it('paragraph asserts coherence as the unit of value', () => {
+    const html = render(FULL_K);
+    expect(html).toMatch(/coherence|reinforce a single voicing/);
+  });
+
+  it('does NOT quote the per-component keepRecommendations.reason text', () => {
+    const html = render(FULL_K);
+    expect(html).not.toContain('The cabinet anchors the system');
+    expect(html).not.toContain('Midrange weight defines the chain');
+  });
+
+  it('uses the destination-loudspeaker caveat when the primaryConstraint is a speaker', () => {
+    const html = render(FULL_K);
+    expect(html).toContain('destination-level loudspeaker');
+  });
+
+  it('uses the amplifier caveat when the primaryConstraint is an amp', () => {
+    const a: AdvisoryResponse = {
+      ...FULL_K,
+      primaryConstraint: {
+        componentName: 'Leben CS600X',
+        category: 'amplifier_control',
+        explanation: '',
+      } as AdvisoryResponse['primaryConstraint'],
+    };
+    const html = render(a);
+    expect(html).toContain('amplifier that carries');
+  });
+
+  it('uses the upstream-source caveat when the primaryConstraint is a source', () => {
+    const a: AdvisoryResponse = {
+      ...FULL_K,
+      primaryConstraint: {
+        componentName: 'Denafrips Pontus II',
+        category: 'dac_limitation',
+        explanation: '',
+      } as AdvisoryResponse['primaryConstraint'],
+    };
+    const html = render(a);
+    expect(html).toContain('Major changes upstream');
+  });
+
+  it('omits §8 when keepRecommendations is empty', () => {
+    const a: AdvisoryResponse = {
+      ...FULL_K,
+      keepRecommendations: undefined,
+    };
+    const html = render(a);
+    expect(html).not.toContain('Why This System Works');
+  });
+
+  it('omits §8 for a single-component chain (no coherence-among-pieces claim)', () => {
+    const a: AdvisoryResponse = {
+      ...FULL_K,
+      systemChain: { names: ['Just One'], roles: ['DAC'] },
+    };
+    const html = render(a);
+    expect(html).not.toContain('Why This System Works');
+  });
+
+  it('omits §8 when the chain spans only one role family (e.g. two amps)', () => {
+    const a: AdvisoryResponse = {
+      ...FULL_K,
+      systemChain: {
+        names: ['Amp One', 'Amp Two'],
+        roles: ['Amplifier', 'Amplifier'],
+      },
+    };
+    const html = render(a);
+    expect(html).not.toContain('Why This System Works');
+  });
+
+  it('paragraph uses "three components" wording when chain has three entries', () => {
+    const html = render(FULL_K);
+    expect(html).toContain('its three components');
+  });
+
+  it('paragraph uses "two components" wording when chain has two entries', () => {
+    const a: AdvisoryResponse = {
+      ...FULL_K,
+      systemChain: {
+        names: ['Some DAC', 'Some Speakers'],
+        roles: ['DAC', 'Speakers'],
+      },
+    };
+    const html = render(a);
+    expect(html).toContain('its two components');
+  });
+});
+
+describe('SystemAssessmentArtifact — §9 protection caveats (Commit 7)', () => {
+  // Phase K chain: Leben CS600X is a mature push-pull tube integrated
+  // by a heritage brand; DeVore O/96 is a destination-level
+  // high-efficiency wide-baffle speaker.
+  const PHASE_K_BASE = (): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'Phase K Change',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'R2R DAC.',
+        'Push-pull tube integrated.',
+        'High-efficiency wide-baffle speaker.',
+      ],
+      upgradeDirection: 'A direction.',
+    } as AdvisoryResponse);
+
+  it('fires the destination-speaker caveat when a step targets the DeVore O/96 by name', () => {
+    const a: AdvisoryResponse = {
+      ...PHASE_K_BASE(),
+      recommendedSequence: [
+        { step: 1, action: 'Replace the DeVore O/96 with a narrower-baffle monitor.' },
+      ],
+    };
+    const html = render(a);
+    expect(html).toContain('destination-level loudspeaker');
+    expect(html).toContain('should be a late move');
+  });
+
+  it('fires the destination-speaker caveat via role token ("the speakers")', () => {
+    const a: AdvisoryResponse = {
+      ...PHASE_K_BASE(),
+      recommendedSequence: [
+        { step: 1, action: 'Audition a different pair of speakers in your room.' },
+      ],
+    };
+    const html = render(a);
+    expect(html).toContain('destination-level loudspeaker');
+  });
+
+  it('fires the mature-amplifier caveat when a step targets the Leben CS600X', () => {
+    const a: AdvisoryResponse = {
+      ...PHASE_K_BASE(),
+      recommendedSequence: [
+        { step: 1, action: 'Swap the Leben CS600X for a class-A solid-state integrated.' },
+      ],
+    };
+    const html = render(a);
+    expect(html).toContain('mature amplifier materially changes system identity');
+  });
+
+  it('does NOT fire a caveat for a low-leverage component (DAC swap)', () => {
+    const a: AdvisoryResponse = {
+      ...PHASE_K_BASE(),
+      recommendedSequence: [
+        { step: 1, action: 'Replace the Denafrips Pontus II with a delta-sigma DAC.' },
+      ],
+    };
+    const html = render(a);
+    expect(html).not.toContain('destination-level loudspeaker');
+    expect(html).not.toContain('mature amplifier materially');
+  });
+
+  it('does NOT fire a caveat for a preservation step ("Preserve the DAC")', () => {
+    const a: AdvisoryResponse = {
+      ...PHASE_K_BASE(),
+      recommendedSequence: [
+        { step: 1, action: 'Preserve the DAC and the DeVore O/96 — both anchor the system.' },
+      ],
+    };
+    const html = render(a);
+    // Preservation steps short-circuit before the protection check.
+    expect(html).not.toContain('destination-level loudspeaker');
+    expect(html).not.toContain('mature amplifier materially');
+  });
+
+  it('does NOT fire a caveat for an oblique step that mentions no replacement verb', () => {
+    const a: AdvisoryResponse = {
+      ...PHASE_K_BASE(),
+      recommendedSequence: [
+        { step: 1, action: 'Move toward a warmer presentation downstream.' },
+      ],
+    };
+    const html = render(a);
+    expect(html).not.toContain('destination-level loudspeaker');
+    expect(html).not.toContain('mature amplifier materially');
+  });
+
+  it('fires caveats per-step when multiple protected components are targeted', () => {
+    const a: AdvisoryResponse = {
+      ...PHASE_K_BASE(),
+      recommendedSequence: [
+        { step: 1, action: 'Audition a different DAC.' },
+        { step: 2, action: 'Swap the Leben CS600X for a solid-state integrated.' },
+        { step: 3, action: 'Replace the DeVore O/96 with a narrow-baffle monitor.' },
+      ],
+    };
+    const html = render(a);
+    // Step 2 → mature amplifier caveat. Step 3 → destination loudspeaker.
+    expect(html).toContain('mature amplifier materially');
+    expect(html).toContain('destination-level loudspeaker');
+  });
+
+  it('does not mutate the engine action text — body still contains the original verb', () => {
+    const a: AdvisoryResponse = {
+      ...PHASE_K_BASE(),
+      recommendedSequence: [
+        { step: 1, action: 'Replace the DeVore O/96 with something narrower.' },
+      ],
+    };
+    const html = render(a);
+    expect(html).toContain('Replace the DeVore O/96 with something narrower.');
   });
 });

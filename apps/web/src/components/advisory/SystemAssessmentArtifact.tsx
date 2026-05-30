@@ -230,6 +230,138 @@ function roleFamily(role: string | undefined): 'source' | 'amplifier' | 'speaker
   return 'unknown';
 }
 
+// ──────────────────────────────────────────────────────────
+// Pass 23 (Commit 7) — §9 destination + mature-component protection.
+// ──────────────────────────────────────────────────────────
+//
+// The recommended-sequence steps in §9 are emitted symmetrically by
+// the engine regardless of whether the change target is a
+// low-leverage component (streamer, DAC, cables) or a destination-
+// class component the engine should not casually recommend replacing.
+// For the Phase K chain (Pontus II → Leben CS600X → DeVore O/96)
+// the realistic leverage ranking is streamer > DAC > infrastructure
+// > amp > speakers. The DeVore O/96 is a destination-level
+// high-efficiency wide-baffle loudspeaker; the Leben CS600X is a
+// mature push-pull tube integrated whose replacement materially
+// changes system identity rather than upgrading it.
+//
+// These helpers detect those classes and surface a one-sentence
+// editorial caveat via the EditorialSubCard.verdict slot when a §9
+// step targets such a component. No engine changes; the engine's
+// action text passes through unmodified.
+
+const HERITAGE_TUBE_BRANDS = new Set([
+  'leben', 'shindo', 'audio note', 'luxman', 'pass labs',
+  'line magnetic', 'air tight', 'cary', 'manley', 'vac',
+]);
+
+const DESTINATION_PRICE_TIERS = new Set(['high-end', 'statement', 'reference']);
+
+const DESTINATION_CABINETS = new Set<NonNullable<CharacterFacts['cabinet']>>([
+  'wide-baffle', 'open-baffle', 'horn-loaded',
+]);
+
+const MATURE_TOPOLOGIES = new Set<NonNullable<CharacterFacts['topology']>>([
+  'push-pull', 'single-ended',
+]);
+
+function isDestinationSpeaker(
+  name: string,
+  role: string | undefined,
+  facts: CharacterFacts,
+): boolean {
+  if (roleFamily(role) !== 'speaker') return false;
+  if (facts.efficiency === 'high') return true;
+  if (facts.cabinet && DESTINATION_CABINETS.has(facts.cabinet)) return true;
+  const product = findProductByComponentName(name);
+  if (product?.priceTier && DESTINATION_PRICE_TIERS.has(product.priceTier)) return true;
+  return false;
+}
+
+function isMatureAmplifier(
+  name: string,
+  role: string | undefined,
+  facts: CharacterFacts,
+): boolean {
+  if (roleFamily(role) !== 'amplifier') return false;
+  if (
+    facts.tech === 'tube' &&
+    facts.topology &&
+    MATURE_TOPOLOGIES.has(facts.topology)
+  ) {
+    return true;
+  }
+  const product = findProductByComponentName(name);
+  if (product?.brand && HERITAGE_TUBE_BRANDS.has(product.brand.toLowerCase())) return true;
+  return false;
+}
+
+/**
+ * Detect whether a §9 step action targets a protected component and
+ * return the editorial caveat sentence. Returns undefined when the
+ * action either does not reference a protected component or does so
+ * only obliquely (no clear replacement verb).
+ *
+ * Match shape:
+ *   1. Action verb gate — only fires for steps that contain at least
+ *      one replacement verb (replace, swap, change, upgrade, audition,
+ *      a different X). "Preserve / keep / hold" steps short-circuit.
+ *   2. Component name match — the action mentions the protected
+ *      component's name (full or distinctive last token).
+ *   3. Role-token fallback — when the action references the role
+ *      family ("the amplifier" / "the speakers") instead of by name,
+ *      we still emit the caveat if the chain holds a protected
+ *      component in that family.
+ *
+ * Returns at most one sentence so multiple matches collapse cleanly.
+ */
+function protectionCaveat(
+  stepAction: string | undefined,
+  chainNames: string[],
+  roles: Array<string | undefined>,
+  allFacts: CharacterFacts[],
+): string | undefined {
+  if (!stepAction) return undefined;
+  const lower = stepAction.toLowerCase();
+
+  // Preservation steps never need a caveat.
+  if (/\b(?:preserve|keep|hold|do not touch|avoid touching)\b/i.test(stepAction)) {
+    return undefined;
+  }
+  const isReplacementStep =
+    /\b(?:replace|swap|change|upgrade|audition|different|substitut)\b/i.test(stepAction);
+  if (!isReplacementStep) return undefined;
+
+  for (let i = 0; i < chainNames.length; i++) {
+    const name = chainNames[i];
+    const role = roles[i];
+    const facts = allFacts[i];
+    if (!facts) continue;
+    const lowerName = name.toLowerCase();
+    const lastToken = name.split(/\s+/).slice(-1)[0]?.toLowerCase() ?? '';
+    const family = roleFamily(role);
+
+    const nameRef =
+      lower.includes(lowerName) ||
+      (lastToken.length >= 3 && lower.includes(lastToken));
+    const roleRef =
+      (family === 'speaker' &&
+        /\b(?:speaker|speakers|loudspeaker|loudspeakers)\b/.test(lower)) ||
+      (family === 'amplifier' &&
+        /\b(?:amplifier|amp|integrated)\b/.test(lower));
+
+    if (!nameRef && !roleRef) continue;
+
+    if (isDestinationSpeaker(name, role, facts)) {
+      return 'Replacing a destination-level loudspeaker should be a late move, not a first.';
+    }
+    if (isMatureAmplifier(name, role, facts)) {
+      return 'Replacing a mature amplifier materially changes system identity — treat it as a different system, not an upgrade.';
+    }
+  }
+  return undefined;
+}
+
 /**
  * Render a CharacterFacts object as a single editorial trait phrase
  * appropriate to the component family.
@@ -279,21 +411,29 @@ function formatFactsPhrase(
     return undefined;
   }
   if (family === 'speaker') {
+    // Pass 23 (Commit 7) — concrete reviewer voice. The previous phrasing
+    // ("rewards low-power upstream drive", "demands current and headroom
+    // upstream, rewarding solid-state authority", "shapes how source
+    // signal reaches the room") read as poetic abstractions. These
+    // fallback fact phrases now use plain audiophile vocabulary. The
+    // primary speaker case (high-efficiency + upstream amp) is handled
+    // upstream in composeContributionBody as a fused single sentence
+    // and bypasses this fact phrase entirely.
     const parts: string[] = [];
     if (facts.efficiency === 'high') parts.push('high-efficiency');
     if (facts.cabinet) parts.push(facts.cabinet);
     const cabinetPhrase = parts.length > 0 ? parts.join(' ') + ' design' : undefined;
     if (cabinetPhrase && facts.efficiency === 'high') {
-      return `Its ${cabinetPhrase} rewards low-power upstream drive with tonal weight and ease rather than pinpoint imaging`;
+      return `Its ${cabinetPhrase} pairs well with lower-power amplification, emphasizing tonal weight and musical flow over pinpoint imaging`;
     }
     if (cabinetPhrase && facts.efficiency === 'low') {
-      return `Its ${cabinetPhrase} demands current and headroom upstream, rewarding solid-state authority`;
+      return `Its ${cabinetPhrase} needs an amplifier with real current and headroom to deliver dynamics and control`;
     }
     if (cabinetPhrase) {
-      return `Its ${cabinetPhrase} shapes how source signal reaches the room`;
+      return `Its ${cabinetPhrase} shapes how the amplifier's drive reaches the room`;
     }
     if (facts.efficiency === 'high') {
-      return 'Its high efficiency rewards low-power upstream drive with tonal ease over precision imaging';
+      return 'Its high efficiency pairs well with lower-power amplification, emphasizing tonal ease over precision imaging';
     }
     return undefined;
   }
@@ -322,6 +462,13 @@ function composeContributionBody(
   chainNames: string[],
   isBottleneck: boolean,
   facts: CharacterFacts,
+  /**
+   * Pass 23 (Commit 7) — optional upstream-component facts so the
+   * speaker lede can name the upstream amplifier's tech family
+   * ("tube amplifiers" vs "solid-state amplifiers") concretely
+   * instead of in poetic abstractions.
+   */
+  upstreamFacts?: CharacterFacts,
 ): string {
   const family = roleFamily(role);
   const upstream = idx > 0 ? chainNames[idx - 1] : undefined;
@@ -330,12 +477,23 @@ function composeContributionBody(
 
   // Sentence 1 — contribution-first lede, role-aware.
   if (family === 'source') {
+    // Pass 23 (Commit 7) — rebalance DAC influence. The previous wording
+    // ("sets the tonal character that the rest of the system inherits…")
+    // overstated the source's role; in a loudspeaker chain the leverage
+    // hierarchy is speaker > amp > DAC. The DAC's actual job is to
+    // deliver clean signal with a specific quality + character profile
+    // into the rest of the chain, not to author the system's tonal
+    // character. The fact phrase that follows (R2R / multibit /
+    // delta-sigma) is left unchanged — it is already correctly scoped
+    // to the topology rather than to system-level authorship.
     if (downstream) {
       sentences.push(
-        `The ${name} sets the tonal character that the rest of the system inherits, handing the ${downstream} the source signal everything downstream will shape.`,
+        `The ${name} establishes the quality and character of the signal feeding the ${downstream} and the rest of the system.`,
       );
     } else {
-      sentences.push(`The ${name} establishes this system's source voice.`);
+      sentences.push(
+        `The ${name} establishes the quality and character of the signal feeding the rest of the system.`,
+      );
     }
   } else if (family === 'amplifier') {
     if (upstream && downstream) {
@@ -354,12 +512,40 @@ function composeContributionBody(
       sentences.push(`The ${name} sits at this system's heart, translating signal into drive.`);
     }
   } else if (family === 'speaker') {
-    if (upstream) {
+    // Pass 23 (Commit 7) — concrete reviewer voice. When the speaker
+    // has an efficiency anchor AND an upstream amplifier whose tech
+    // family we know, fuse the lede and the fact phrase into one
+    // concrete sentence ("works particularly well with lower-power
+    // tube amplifiers, emphasizing tonal weight, ease, and musical
+    // flow over razor-sharp precision"). The factsPhrase is then
+    // suppressed below to avoid double-stating. Without upstream
+    // tech evidence, fall back to a clean concrete lede + the
+    // (rewritten) fact phrase.
+    const ampKind = upstream
+      ? upstreamFacts?.tech === 'tube'
+        ? 'tube amplifiers'
+        : upstreamFacts?.tech === 'solid-state'
+          ? 'solid-state amplifiers'
+          : 'amplifiers'
+      : undefined;
+    if (facts.efficiency === 'high' && ampKind) {
       sentences.push(
-        `The ${name} is where this system becomes sound — translating what the ${upstream} produces into a room-filling presentation.`,
+        `The ${name}'s high-efficiency design works particularly well with lower-power ${ampKind}, emphasizing tonal weight, ease, and musical flow over razor-sharp precision.`,
+      );
+    } else if (facts.efficiency === 'low' && upstream) {
+      const driveQualifier =
+        upstreamFacts?.tech === 'solid-state'
+          ? "the solid-state grip and authority"
+          : 'amplifiers with real drive';
+      sentences.push(
+        `The ${name}'s lower-efficiency design needs current and headroom from the ${upstream}, favoring ${driveQualifier} over delicacy.`,
+      );
+    } else if (upstream) {
+      sentences.push(
+        `The ${name} translates what the ${upstream} delivers into sound in the room.`,
       );
     } else {
-      sentences.push(`The ${name} is where this system becomes sound in the room.`);
+      sentences.push(`The ${name} translates the system's signal into sound in the room.`);
     }
   } else {
     // Unknown / generic role — keep the lede neutral.
@@ -373,7 +559,14 @@ function composeContributionBody(
   }
 
   // Sentence 2 — factual character trait phrase, when facts allow.
-  const factsPhrase = formatFactsPhrase(family, facts);
+  // Pass 23 (Commit 7): suppress for the fused-speaker case so the
+  // body remains one concrete sentence instead of double-stating
+  // the upstream pairing.
+  const speakerFused =
+    family === 'speaker' &&
+    !!upstream &&
+    (facts.efficiency === 'high' || facts.efficiency === 'low');
+  const factsPhrase = speakerFused ? undefined : formatFactsPhrase(family, facts);
   if (factsPhrase) {
     sentences.push(factsPhrase + '.');
   }
@@ -492,7 +685,28 @@ function buildComponentCards(
     // text itself is NOT displayed verbatim — it serves only as a
     // factual anchor for the composer.
     const facts = extractCharacterFacts(matched, roles?.[i]);
-    const body = composeContributionBody(name, roles?.[i], i, names, isBottleneck, facts);
+    // Pass 23 (Commit 7) — also extract the upstream component's
+    // facts so the speaker lede can name the upstream amplifier's
+    // tech family ("tube amplifiers" vs "solid-state amplifiers")
+    // concretely instead of in poetic abstractions. extractCharacterFacts
+    // is regex-light; this doubles per-card extract calls but the
+    // overall §5 cost stays well under a millisecond.
+    const upstreamFacts =
+      i > 0
+        ? extractCharacterFacts(
+            findReadingForName(names[i - 1], readings, i - 1),
+            roles?.[i - 1],
+          )
+        : undefined;
+    const body = composeContributionBody(
+      name,
+      roles?.[i],
+      i,
+      names,
+      isBottleneck,
+      facts,
+      upstreamFacts,
+    );
     const imageUrl = resolveComponentImage(name);
     return {
       name,
@@ -954,6 +1168,135 @@ function dedupeStrengthsByConcept(
   return kept.slice(0, 6).map((k) => k.text);
 }
 
+// ──────────────────────────────────────────────────────────
+// Pass 23 (Commit 7) — §7 concept-family dedup + cap-at-3.
+// ──────────────────────────────────────────────────────────
+//
+// The exact-concept dedup above collapses verbatim duplicates and
+// merges chain-name attribution. It does NOT collapse conceptual
+// synonyms: {precision, transparency, detail, resolution, transient
+// sharpness, attack} all describe one warmth-trades-resolution limit
+// but each carries a distinct token set and survives as its own
+// bullet. The engine routinely emits 4–6 limits that articulate one
+// underlying constraint four ways.
+//
+// `dedupeStrengthsByFamily` runs the existing exact-dedup first, then
+// collapses by family bucket, then caps at 3. Within a bucket, the
+// survivor preference is: (1) a bullet WITHOUT a chain-name prefix
+// (system-level framing reads cleaner than per-component attribution),
+// (2) shortest bullet (most editorial). Bullets whose family is
+// unknown keep their identity so the taxonomy never silently swallows
+// an out-of-vocabulary concept.
+//
+// Strength/limit families are isolated because some tokens carry
+// opposite valence: "headroom" is a limit concept ("limited
+// orchestral headroom") but a strengths-side bullet mentioning
+// "headroom" reads as dynamic capability.
+
+const STRENGTH_FAMILIES: Record<string, ReadonlySet<string>> = {
+  tonal_density: new Set([
+    'tonal-density', 'tonal', 'density', 'warmth', 'warm', 'harmonic',
+    'richness', 'rich', 'body', 'weight',
+  ]),
+  flow: new Set([
+    'flow', 'rhythm', 'rhythmic', 'engagement', 'engaging', 'musical',
+    'musicality', 'pacing', 'drive',
+  ]),
+  coherence: new Set([
+    'coherence', 'coherent', 'integration', 'integrated', 'voicing',
+    'tonal-coherence', 'system-coherence',
+  ]),
+  dynamics: new Set([
+    'dynamic', 'dynamics', 'ease', 'scale', 'headroom',
+  ]),
+  imaging: new Set([
+    'imaging', 'soundstage', 'stage', 'focus', 'precision',
+  ]),
+};
+
+const LIMIT_FAMILIES: Record<string, ReadonlySet<string>> = {
+  transparency: new Set([
+    'precision', 'transparency', 'transparent', 'detail', 'resolution',
+    'resolving', 'transient', 'transients', 'attack', 'sharpness',
+    'analytical',
+  ]),
+  composure: new Set([
+    'composure', 'congestion', 'congested', 'dense', 'complex', 'control',
+  ]),
+  placement: new Set([
+    'placement', 'room', 'bass', 'boundary',
+  ]),
+  headroom: new Set([
+    'headroom', 'orchestral', 'peak', 'peaks', 'ceiling', 'power',
+  ]),
+  voicing_cost: new Set([
+    'smoothing', 'polite', 'soft',
+  ]),
+};
+
+const FAMILY_DEDUP_CAP = 3;
+
+function conceptFamilyKey(
+  bullet: string,
+  chainNames: string[],
+  kind: 'strength' | 'limit',
+): string | undefined {
+  let body = bullet.toLowerCase();
+  for (const tok of chainAttributionTokens(chainNames)) {
+    const re = new RegExp(
+      '^' + escapeForRegex(tok) + '\\s+(?:contributes|provides|adds|has)\\s+',
+      'i',
+    );
+    body = body.replace(re, '');
+  }
+  const tokens = new Set(
+    body.split(/[^a-z-]+/).filter((t) => t.length > 2),
+  );
+  const table = kind === 'strength' ? STRENGTH_FAMILIES : LIMIT_FAMILIES;
+  for (const [familyKey, familyTokens] of Object.entries(table)) {
+    for (const t of familyTokens) {
+      if (tokens.has(t)) return familyKey;
+    }
+  }
+  return undefined;
+}
+
+function dedupeStrengthsByFamily(
+  items: string[] | undefined,
+  chainNames: string[],
+  kind: 'strength' | 'limit',
+): string[] | undefined {
+  if (!items) return items;
+  if (items.length === 0) return items;
+  // Step 1: existing exact-concept dedup (merges chain-name attribution).
+  const exactDeduped = dedupeStrengthsByConcept(items, chainNames);
+  if (!exactDeduped) return exactDeduped;
+  // Step 2: bucket by family.
+  const buckets = new Map<string, string[]>();
+  const order: string[] = [];
+  for (const bullet of exactDeduped) {
+    const family = conceptFamilyKey(bullet, chainNames, kind);
+    const key = family ?? ('__unkeyed__' + bullet);
+    if (!buckets.has(key)) {
+      buckets.set(key, []);
+      order.push(key);
+    }
+    buckets.get(key)!.push(bullet);
+  }
+  // Step 3: pick the most editorial survivor per bucket.
+  const collapsed: string[] = order.map((key) => {
+    const members = buckets.get(key)!;
+    if (members.length === 1) return members[0];
+    const withoutPrefix = members.filter(
+      (m) => findChainNamePrefix(m, chainNames) === undefined,
+    );
+    const pool = withoutPrefix.length > 0 ? withoutPrefix : members;
+    return pool.slice().sort((a, b) => a.length - b.length)[0];
+  });
+  // Step 4: hard cap at 3.
+  return collapsed.slice(0, FAMILY_DEDUP_CAP);
+}
+
 /**
  * Presentation-layer derivation of a meaningful §9 step card title.
  *
@@ -1084,6 +1427,87 @@ function deriveWhatItTrades(a: AdvisoryResponse): string | undefined {
     return `Much of this system's practical character — and where it reaches its limits — is shaped by the ${a.primaryConstraint.componentName}.`;
   }
   return undefined;
+}
+
+/**
+ * Compose the §8 *Why This System Works* editorial paragraph
+ * (Pass 23 — Commit 7).
+ *
+ * Replaces the previous per-component card list with a single
+ * editorial paragraph that bridges §7 (Strengths and Limits) to
+ * §9 (If You Were to Change Something). The paragraph asserts
+ * coherence as the unit of value and pre-cautions destination-level
+ * swaps. It does NOT quote `keepRecommendations[].reason` (that
+ * register lives in §5 component cards already); only the COUNT is
+ * read as a render gate.
+ *
+ * Returns undefined — and the section is gracefully omitted — when:
+ *   - keepRecommendations is empty/missing (no anchored evidence)
+ *   - chain has < 2 components (no coherence-among-pieces story)
+ *   - chain spans < 2 distinct role families
+ *
+ * Composition is template-based and DOES pass through
+ * `preferSystemTerminology` so the same chain→system rewriter that
+ * §3/§4/§6 use applies here too.
+ */
+function composeWhyThisSystemWorks(
+  advisory: AdvisoryResponse,
+  chainNames: string[],
+  roles: string[],
+): string | undefined {
+  // Step 1 — gate on anchored evidence + multi-component chain.
+  if (!advisory.keepRecommendations || advisory.keepRecommendations.length === 0) return undefined;
+  if (chainNames.length < 2) return undefined;
+  // Step 2 — gate on multi-family chain (the coherence-among-pieces
+  // story requires more than one role family in play).
+  const families = roles.map((r) => roleFamily(r)).filter((f) => f !== 'unknown');
+  const familySet = new Set(families);
+  if (familySet.size < 2) return undefined;
+  // Step 3 — sentence 1: chain length.
+  let s1: string;
+  if (chainNames.length === 2) {
+    s1 = 'This system succeeds because its two components reinforce a single voicing rather than pulling in opposite directions.';
+  } else if (chainNames.length === 3) {
+    s1 = 'This system succeeds because its three components reinforce a single voicing rather than each pulling in its own direction.';
+  } else {
+    s1 = 'This system succeeds because its components reinforce a single voicing rather than each pulling in its own direction.';
+  }
+  // Step 4 — sentence 2: coherence framing keyed by role families present.
+  let s2: string;
+  const hasSource = familySet.has('source');
+  const hasAmp = familySet.has('amplifier');
+  const hasSpeaker = familySet.has('speaker');
+  if (hasSource && hasAmp && hasSpeaker) {
+    s2 = "The system's coherence — the way the source character, amplifier weight, and speaker translation compound — is the primary value here.";
+  } else if (hasSource && hasAmp) {
+    s2 = "The system's coherence — the way the source character carries through the amplifier's shaping — is the primary value here.";
+  } else if (hasAmp && hasSpeaker) {
+    s2 = "The system's coherence — the way the amplifier's weight reaches the speaker's translation — is the primary value here.";
+  } else {
+    s2 = "The system's coherence — the way the pieces compound rather than each asserting itself independently — is the primary value here.";
+  }
+  // Step 5 — sentence 3: constraint-aware caveat for would-be changers.
+  let s3: string;
+  const constraintName = advisory.primaryConstraint?.componentName;
+  if (constraintName) {
+    // Find the constraint component's role family in this chain.
+    const idx = chainNames.findIndex((n) => n.toLowerCase() === constraintName.toLowerCase());
+    const constraintFamily = idx >= 0 ? roleFamily(roles[idx]) : undefined;
+    if (constraintFamily === 'speaker') {
+      s3 = 'Major changes, particularly to the destination-level loudspeaker, risk trading away what already works for marginal gains.';
+    } else if (constraintFamily === 'amplifier') {
+      s3 = 'Major changes, particularly to the amplifier that carries the system\'s weight, risk trading away what already works for marginal gains.';
+    } else if (constraintFamily === 'source') {
+      s3 = 'Major changes upstream risk trading away the source character the rest of the system has been built around.';
+    } else {
+      // Constraint named but not matched to a chain component.
+      s3 = 'Major changes, even to a single component, risk trading away the coherence that defines what this system does well.';
+    }
+  } else {
+    s3 = 'Major changes, even to a single component, risk trading away the coherence that defines what this system does well.';
+  }
+  const joined = [s1, s2, s3].join(' ');
+  return preferSystemTerminology(joined);
 }
 
 /**
@@ -1282,28 +1706,30 @@ export default function SystemAssessmentArtifact({
         );
       })()}
 
-      {/* ═══════════ §7 Strengths and Honest Limits ═══════════
-       *  The engine's trait-check loops can fire multiple bullets that
-       *  restate the same concept across chain components (e.g. three
-       *  consecutive "musical flow / continuity / flow" bullets).
-       *  `dedupeStrengthsByConcept` collapses exact concept duplicates
-       *  and merges component-name attribution when applicable. Synonym
-       *  collapse is intentionally out of scope (see helper docblock). */}
+      {/* ═══════════ §7 Strengths and Limits ═══════════
+       *  Pass 23 (Commit 7) — heading renamed from "Strengths and
+       *  Honest Limits" to "Strengths and Limits". `dedupeStrengthsByFamily`
+       *  collapses verbatim duplicates AND conceptual synonyms (e.g.
+       *  precision/transparency/detail/resolution all describe one
+       *  warmth-trades-resolution limit), then caps at 3 strengths and
+       *  3 limits. See the family tables above the helper. */}
       {hasStrengthsAndLimits && (() => {
-        const dedupedStrengths = dedupeStrengthsByConcept(
+        const dedupedStrengths = dedupeStrengthsByFamily(
           a.assessmentStrengths,
           a.systemChain?.names ?? [],
+          'strength',
         );
-        const dedupedLimits = dedupeStrengthsByConcept(
+        const dedupedLimits = dedupeStrengthsByFamily(
           a.assessmentLimitations,
           a.systemChain?.names ?? [],
+          'limit',
         );
         const renderStrengths = !!(dedupedStrengths && dedupedStrengths.length > 0);
         const renderLimits = !!(dedupedLimits && dedupedLimits.length > 0);
         if (!renderStrengths && !renderLimits) return null;
         return (
         <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>Strengths and Honest Limits</h2>
+          <h2 style={sectionHeadingStyle}>Strengths and Limits</h2>
           <div
             style={{
               display: 'grid',
@@ -1355,7 +1781,7 @@ export default function SystemAssessmentArtifact({
                     color: COLOR.textMuted,
                   }}
                 >
-                  Honest Limits
+                  Limits
                 </h3>
                 <ul
                   style={{
@@ -1380,21 +1806,27 @@ export default function SystemAssessmentArtifact({
         );
       })()}
 
-      {/* ═══════════ §8 What's Already Working ═══════════ */}
-      {hasKeeps && (
-        <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>What&rsquo;s Already Working</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            {a.keepRecommendations!.map((keep, i) => (
-              <EditorialSubCard
-                key={i}
-                name={keep.name}
-                body={keep.reason}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* ═══════════ §8 Why This System Works ═══════════
+       *  Pass 23 (Commit 7) — converted from a card list to a single
+       *  2-3 sentence editorial paragraph that bridges §7 (Strengths
+       *  and Limits) to §9 (If You Were to Change Something).
+       *  `composeWhyThisSystemWorks` returns undefined and the section
+       *  is gracefully omitted when the chain is too sparse to support
+       *  the coherence-among-pieces claim. */}
+      {(() => {
+        const why = composeWhyThisSystemWorks(
+          a,
+          a.systemChain?.names ?? [],
+          a.systemChain?.roles ?? [],
+        );
+        if (!why) return null;
+        return (
+          <section style={{ marginBottom: '1.5rem' }}>
+            <h2 style={sectionHeadingStyle}>Why This System Works</h2>
+            <p style={proseStyle}>{why}</p>
+          </section>
+        );
+      })()}
 
       {/* ═══════════ §9 If You Were to Change Something ═══════════ */}
       {hasChangeSection && (
@@ -1410,28 +1842,48 @@ export default function SystemAssessmentArtifact({
               systemCharacterSummary={a.systemSignature}
             />
           )}
-          {hasSequence && (
-            <div
-              style={{
-                marginTop: '0.85rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem',
-              }}
-            >
-              {a.recommendedSequence!.map((step) => {
-                const editorialTitle = deriveStepTitle(step.action, step.step);
-                return (
-                  <EditorialSubCard
-                    key={step.step}
-                    name={editorialTitle}
-                    subtitle={`Step ${step.step}`}
-                    body={step.action}
-                  />
-                );
-              })}
-            </div>
-          )}
+          {hasSequence && (() => {
+            // Pass 23 (Commit 7) — pre-compute facts per chain
+            // component once so each step's protection check is
+            // O(chainLength) without re-extracting facts on every step.
+            const chainNames = a.systemChain?.names ?? [];
+            const chainRoles = a.systemChain?.roles ?? [];
+            const chainFacts = chainNames.map((name, i) =>
+              extractCharacterFacts(
+                findReadingForName(name, a.componentReadings ?? [], i),
+                chainRoles[i],
+              ),
+            );
+            return (
+              <div
+                style={{
+                  marginTop: '0.85rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                }}
+              >
+                {a.recommendedSequence!.map((step) => {
+                  const editorialTitle = deriveStepTitle(step.action, step.step);
+                  const caveat = protectionCaveat(
+                    step.action,
+                    chainNames,
+                    chainRoles,
+                    chainFacts,
+                  );
+                  return (
+                    <EditorialSubCard
+                      key={step.step}
+                      name={editorialTitle}
+                      subtitle={`Step ${step.step}`}
+                      body={step.action}
+                      verdict={caveat}
+                    />
+                  );
+                })}
+              </div>
+            );
+          })()}
         </section>
       )}
 
