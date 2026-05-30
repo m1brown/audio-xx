@@ -486,13 +486,18 @@ function composeContributionBody(
     // character. The fact phrase that follows (R2R / multibit /
     // delta-sigma) is left unchanged — it is already correctly scoped
     // to the topology rather than to system-level authorship.
+    // Pass 24 (Commit 8) — soften further. The Pass 23 lede still
+    // doubled the qualifier ("feeding the downstream AND the rest of
+    // the system"), which implicates the DAC in shaping everything
+    // downstream. Reviewer-experience audit asked for the simpler
+    // "feeding the downstream" framing so the DAC does not over-claim.
     if (downstream) {
       sentences.push(
-        `The ${name} establishes the quality and character of the signal feeding the ${downstream} and the rest of the system.`,
+        `The ${name} establishes the character of the signal feeding the ${downstream}.`,
       );
     } else {
       sentences.push(
-        `The ${name} establishes the quality and character of the signal feeding the rest of the system.`,
+        `The ${name} establishes the character of the signal it feeds into the system.`,
       );
     }
   } else if (family === 'amplifier') {
@@ -512,26 +517,42 @@ function composeContributionBody(
       sentences.push(`The ${name} sits at this system's heart, translating signal into drive.`);
     }
   } else if (family === 'speaker') {
-    // Pass 23 (Commit 7) — concrete reviewer voice. When the speaker
-    // has an efficiency anchor AND an upstream amplifier whose tech
-    // family we know, fuse the lede and the fact phrase into one
-    // concrete sentence ("works particularly well with lower-power
-    // tube amplifiers, emphasizing tonal weight, ease, and musical
-    // flow over razor-sharp precision"). The factsPhrase is then
-    // suppressed below to avoid double-stating. Without upstream
-    // tech evidence, fall back to a clean concrete lede + the
-    // (rewritten) fact phrase.
-    const ampKind = upstream
+    // Pass 24 (Commit 8) — name the upstream amplifier explicitly
+    // instead of by generic tech family, and add a second
+    // cabinet-aware sentence so the speaker card carries the same
+    // editorial weight as the source and amplifier cards (target:
+    // 2-3 sentences each).
+    const drivePhrase = upstream
       ? upstreamFacts?.tech === 'tube'
-        ? 'tube amplifiers'
+        ? `the ${upstream}'s tube drive`
         : upstreamFacts?.tech === 'solid-state'
-          ? 'solid-state amplifiers'
-          : 'amplifiers'
+          ? `the ${upstream}'s solid-state drive`
+          : `the ${upstream}'s amplification`
       : undefined;
-    if (facts.efficiency === 'high' && ampKind) {
+    if (facts.efficiency === 'high' && drivePhrase) {
       sentences.push(
-        `The ${name}'s high-efficiency design works particularly well with lower-power ${ampKind}, emphasizing tonal weight, ease, and musical flow over razor-sharp precision.`,
+        `The ${name}'s high-efficiency design pairs naturally with ${drivePhrase}, emphasizing tonal weight, ease, and musical flow over razor-sharp precision.`,
       );
+      // Second sentence — cabinet/room behavior. Each branch reads
+      // as concrete reviewer voice; falls back to a general
+      // imaging-vs-scale trade observation when cabinet is unknown.
+      if (facts.cabinet === 'wide-baffle') {
+        sentences.push(
+          'Its wide-baffle layout brings scale and ease into the room at the cost of pinpoint imaging.',
+        );
+      } else if (facts.cabinet === 'horn-loaded') {
+        sentences.push(
+          'Horn loading concentrates drive and dynamics at the cost of even off-axis response.',
+        );
+      } else if (facts.cabinet === 'open-baffle') {
+        sentences.push(
+          'Its open-baffle layout opens the stage and depends heavily on room treatment.',
+        );
+      } else {
+        sentences.push(
+          'What you give up in pinpoint imaging, you gain in scale and an ease that lets mediocre recordings still survive.',
+        );
+      }
     } else if (facts.efficiency === 'low' && upstream) {
       const driveQualifier =
         upstreamFacts?.tech === 'solid-state'
@@ -1394,6 +1415,80 @@ function deriveStepTitle(
 }
 
 /**
+ * Pass 24 (Commit 8) — soften §9 step action prose to advisor voice.
+ *
+ * The engine emits a small set of action patterns that the reader
+ * audit flagged as either circular (Step 2 — "If the trade-off feels
+ * worth it, plan the swap." restates the editorial title "Plan the
+ * Swap") or blunt-imperative (Step 3 — "Do not touch the DAC or the
+ * speakers." reads as command-and-control).
+ *
+ * This helper detects the exact known patterns and rewrites them
+ * into reviewer-grade advisor framing that names the chain
+ * components by name. It is intentionally narrow: it fires only on
+ * the audited engine patterns and falls through otherwise so any
+ * action it doesn't recognize passes through unchanged.
+ *
+ * Title derivation runs against the ORIGINAL engine action so the
+ * editorial title ("Preserve the DAC and Speakers" / "Plan the
+ * Swap") still resolves correctly — only the rendered body changes.
+ */
+function softenStepAction(
+  action: string | undefined,
+  chainNames: string[],
+  chainRoles: Array<string | undefined>,
+): string | undefined {
+  if (!action) return action;
+  // Pattern A — "Do not touch the X" / "Do not touch the X or the Y"
+  // (also: "Avoid touching", "Don't touch").
+  const noTouch = action.match(
+    /^(?:do\s+not|don'?t|avoid)\s+touch(?:ing)?\s+(?:the\s+)?(.+?)\.?\s*$/i,
+  );
+  if (noTouch) {
+    const tokens = noTouch[1]
+      .split(/\s+(?:or|and)\s+(?:the\s+)?/i)
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const matched: string[] = [];
+    for (const tok of tokens) {
+      for (let i = 0; i < chainNames.length; i++) {
+        const family = roleFamily(chainRoles[i]);
+        const isMatch =
+          (/^(?:dac|source|streamer|turntable|transport|phono)\b/.test(tok) && family === 'source') ||
+          (/^(?:amplifier|amp|integrated|preamp|monoblock)\b/.test(tok) && family === 'amplifier') ||
+          (/^(?:speakers?|loudspeakers?)\b/.test(tok) && family === 'speaker');
+        if (isMatch && !matched.includes(chainNames[i])) {
+          matched.push(chainNames[i]);
+          break;
+        }
+      }
+    }
+    if (matched.length === 1) {
+      return `${matched[0]} is already doing what this system asks of it — leave it in place.`;
+    }
+    if (matched.length === 2) {
+      return `${matched[0]} and ${matched[1]} are already doing what this system asks of them — leave them in place.`;
+    }
+    if (matched.length >= 3) {
+      const head = matched.slice(0, -1).join(', ');
+      return `${head} and ${matched[matched.length - 1]} are already doing what this system asks of them — leave them in place.`;
+    }
+  }
+  // Pattern B — circular: "If [trade-off / worth it / it works], plan
+  // the swap/change/upgrade." The title derives to "Plan the Swap" and
+  // the action restates it. Rewrite to advisor framing that names what
+  // the reader should actually do with the audition result.
+  if (
+    /^if\b/i.test(action) &&
+    /\b(?:trade[- ]?off|worth)\b/i.test(action) &&
+    /\bplan\s+the\s+(?:swap|change|upgrade)\.?\s*$/i.test(action)
+  ) {
+    return 'If the audition confirms the trade-off is worth it, commit with care for fit and timing — this is a move to a different system, not an upgrade-in-place.';
+  }
+  return action;
+}
+
+/**
  * Presentation-layer derivation of the §2 *Profile* "What it trades" row.
  *
  * `primaryConstraint.componentName` is structurally a label (e.g. "DAC",
@@ -1464,25 +1559,31 @@ function composeWhyThisSystemWorks(
   const familySet = new Set(families);
   if (familySet.size < 2) return undefined;
   // Step 3 — sentence 1: chain length.
+  // Pass 24 (Commit 8) — replace "pulling in its own direction"
+  // (audited as cliché) with "asserting itself independently"
+  // across all chain-length branches.
   let s1: string;
   if (chainNames.length === 2) {
-    s1 = 'This system succeeds because its two components reinforce a single voicing rather than pulling in opposite directions.';
+    s1 = 'This system succeeds because its two components reinforce a single voicing rather than asserting themselves independently.';
   } else if (chainNames.length === 3) {
-    s1 = 'This system succeeds because its three components reinforce a single voicing rather than each pulling in its own direction.';
+    s1 = 'This system succeeds because its three components reinforce a single voicing rather than each asserting itself independently.';
   } else {
-    s1 = 'This system succeeds because its components reinforce a single voicing rather than each pulling in its own direction.';
+    s1 = 'This system succeeds because its components reinforce a single voicing rather than each asserting itself independently.';
   }
   // Step 4 — sentence 2: coherence framing keyed by role families present.
+  // Pass 24 (Commit 8) — "speaker translation" (audited as mechanical
+  // noun choice) softened to "speaker presentation"; "amplifier
+  // weight reaches the speaker's translation" softened in parallel.
   let s2: string;
   const hasSource = familySet.has('source');
   const hasAmp = familySet.has('amplifier');
   const hasSpeaker = familySet.has('speaker');
   if (hasSource && hasAmp && hasSpeaker) {
-    s2 = "The system's coherence — the way the source character, amplifier weight, and speaker translation compound — is the primary value here.";
+    s2 = "The system's coherence — the way the source character, amplifier weight, and speaker presentation compound — is the primary value here.";
   } else if (hasSource && hasAmp) {
     s2 = "The system's coherence — the way the source character carries through the amplifier's shaping — is the primary value here.";
   } else if (hasAmp && hasSpeaker) {
-    s2 = "The system's coherence — the way the amplifier's weight reaches the speaker's translation — is the primary value here.";
+    s2 = "The system's coherence — the way the amplifier's drive reaches the room through the speakers — is the primary value here.";
   } else {
     s2 = "The system's coherence — the way the pieces compound rather than each asserting itself independently — is the primary value here.";
   }
@@ -1714,16 +1815,21 @@ export default function SystemAssessmentArtifact({
        *  warmth-trades-resolution limit), then caps at 3 strengths and
        *  3 limits. See the family tables above the helper. */}
       {hasStrengthsAndLimits && (() => {
+        // Pass 24 (Commit 8) — propagate the chain→system rewriter into
+        // §7 bullets so engine-emitted phrases like "across the chain"
+        // surface as "across the system" here too (Commit 5 / Pass 21
+        // already applied this elsewhere; §7 bullets were the one
+        // remaining surface).
         const dedupedStrengths = dedupeStrengthsByFamily(
           a.assessmentStrengths,
           a.systemChain?.names ?? [],
           'strength',
-        );
+        )?.map((b) => preferSystemTerminology(b) ?? b);
         const dedupedLimits = dedupeStrengthsByFamily(
           a.assessmentLimitations,
           a.systemChain?.names ?? [],
           'limit',
-        );
+        )?.map((b) => preferSystemTerminology(b) ?? b);
         const renderStrengths = !!(dedupedStrengths && dedupedStrengths.length > 0);
         const renderLimits = !!(dedupedLimits && dedupedLimits.length > 0);
         if (!renderStrengths && !renderLimits) return null;
@@ -1864,7 +1970,16 @@ export default function SystemAssessmentArtifact({
                 }}
               >
                 {a.recommendedSequence!.map((step) => {
+                  // Pass 24 (Commit 8) — derive the editorial title from
+                  // the ORIGINAL engine action (so pattern matches like
+                  // "Preserve the DAC and Speakers" still resolve
+                  // correctly), but render the SOFTENED action in the
+                  // body. softenStepAction is narrow: it fires only on
+                  // the audited circular-Step-2 and blunt-Step-3
+                  // patterns and falls through otherwise.
                   const editorialTitle = deriveStepTitle(step.action, step.step);
+                  const softenedAction =
+                    softenStepAction(step.action, chainNames, chainRoles) ?? step.action;
                   const caveat = protectionCaveat(
                     step.action,
                     chainNames,
@@ -1876,7 +1991,7 @@ export default function SystemAssessmentArtifact({
                       key={step.step}
                       name={editorialTitle}
                       subtitle={`Step ${step.step}`}
-                      body={step.action}
+                      body={softenedAction}
                       verdict={caveat}
                     />
                   );
