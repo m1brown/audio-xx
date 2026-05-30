@@ -162,7 +162,8 @@ function normalizeComponentReading(
   // so the card still says something rather than displaying empty.
   const filtered = onChain.length > 0 ? onChain : sentences.slice(0, 1);
   const trimmed = trimSentencesToTarget(filtered, COMPONENT_CARD_WORD_TARGET);
-  return trimmed.join(' ').trim() || undefined;
+  const joined = trimmed.join(' ').trim();
+  return preferSystemTerminology(joined) || undefined;
 }
 
 /**
@@ -282,7 +283,7 @@ function normalizeCharacterProse(systemContext: string | undefined): string | un
     kept.push(s);
     runningChars += s.length + 1; // +1 for the joining space
   }
-  const result = kept.join(' ').trim();
+  const result = preferSystemTerminology(kept.join(' ').trim()) ?? '';
   return result.length > 0 ? result : undefined;
 }
 
@@ -382,8 +383,52 @@ function normalizeInteractionProse(
   // Defensive fallback: if every sentence was filtered, keep the first
   // sentence as-is so the section is not silently emptied.
   const final = kept.length > 0 ? kept : sentences.slice(0, 1);
-  const result = final.join(' ').trim();
+  const result = preferSystemTerminology(final.join(' ').trim()) ?? '';
   return result.length > 0 ? result : undefined;
+}
+
+/**
+ * Presentation-layer terminology normalization.
+ *
+ * The artifact explicitly prefers "system" over "chain" as the
+ * user-facing term for the overall assembly. The engine's writer
+ * builders sometimes emit "the chain", "this chain", "across the
+ * chain" — phrasing the artifact should re-cast in editorial,
+ * system-first language before display.
+ *
+ * The transform deliberately preserves "signal chain" as a topology
+ * term — only references to the chain-as-assembly are rewritten.
+ *
+ * Pure presentation transform. Engine output and engine builders
+ * are unchanged.
+ */
+function preferSystemTerminology(text: string | undefined): string | undefined {
+  if (!text) return text;
+  // Preserve `signal chain` as a signal-path topology term.
+  const SIGCHAIN_SENTINEL = 'SIGCHAIN';
+  const OFFCHAIN_SENTINEL = 'OFFCHAIN';
+  // Case-preserving rewriter — keeps the initial capital of the
+  // determiner so "The chain…" → "The system…" rather than collapsing
+  // to "the system…" mid-sentence.
+  function caseSafeRewrite(m: string, target: string): string {
+    const first = m.charAt(0);
+    return first === first.toUpperCase() && first !== first.toLowerCase()
+      ? target.charAt(0).toUpperCase() + target.slice(1)
+      : target;
+  }
+  return text
+    .replace(/\bsignal\s+chain\b/gi, SIGCHAIN_SENTINEL)
+    .replace(/\boff[- ]chain\b/gi, OFFCHAIN_SENTINEL)
+    // System-as-assembly references.
+    .replace(/\bthe\s+chain\b/gi, (m) => caseSafeRewrite(m, 'the system'))
+    .replace(/\bthis\s+chain\b/gi, (m) => caseSafeRewrite(m, 'this system'))
+    .replace(/\bchain['’]s\b/gi, (m) => caseSafeRewrite(m, "system's"))
+    // Compound-noun guards: only rewrite the bare "chain" noun when it
+    // is preceded by a determiner / possessive / preposition that maps
+    // cleanly to "system" usage.
+    .replace(/\b(across|throughout|along|in|of)\s+chain\b/gi, '$1 system')
+    .replace(new RegExp(SIGCHAIN_SENTINEL, 'g'), 'signal chain')
+    .replace(new RegExp(OFFCHAIN_SENTINEL, 'g'), 'off-chain');
 }
 
 /**
@@ -447,57 +492,54 @@ function normalizeFirstImpressions(
   if (body.length < 40 && signature) {
     body = signature;
   }
-  return body.length > 0 ? body : undefined;
+  const finalized = preferSystemTerminology(body) ?? '';
+  return finalized.length > 0 ? finalized : undefined;
 }
 
 /**
  * Presentation-layer derivation of a §5 *Component* card lede sentence.
  *
- * Produces a single deterministic system-anchor sentence built from the
- * chain position, role label, and immediate neighbors. The lede is
- * prepended to the existing (Commit 4B) `normalizeComponentReading`
- * output to convert the card body from product-review register to
- * contribution-mode register without introducing LLM generation at
+ * Produces a single deterministic editorial sentence that places the
+ * component inside the system — read more like a reviewer's opening
+ * than a templated relationship description. The lede is prepended
+ * to the existing (Commit 4B) `normalizeComponentReading` output to
+ * convert the card body from product-review register into a
+ * contribution narrative, without introducing LLM generation at
  * runtime.
  *
- * Template selection by chain position:
- *   - head  (i = 0)       — name + role-verb + downstream neighbor
- *   - tail  (i = last)    — name + role-verb + reference to upstream
- *   - middle               — sitting between upstream and downstream
- *   - solo (one component) — generic "this system's {role}"
+ * Selection by signal-path position (each branch uses a distinct
+ * opening shape so a stack of cards reads as varied prose, not as a
+ * formulaic listing):
+ *   - head   — "{Name} opens the signal path, sending its character
+ *               into the {downstream}."
+ *   - middle — "Between the {upstream} and the {downstream}, the
+ *               {Name} carries the signal as the system's {role}."
+ *   - tail   — "{Name} closes the path — turning what the {upstream}
+ *               produces into sound in the room."
+ *   - solo   — "{Name} carries this system on its own as the
+ *               {role}."
  *
- * When the component matches `primaryConstraint.componentName`, a
- * second short clause names it as the chain's primary constraint —
- * the per-component view echoes the §7 honest-limits framing
- * intentionally.
+ * When the component matches `primaryConstraint.componentName`, the
+ * lede gains a short editorial clause framing the trade-off without
+ * the engine vocabulary (`primary constraint`, `bottleneck`).
  */
-const ROLE_VERBS: Record<string, string> = {
-  dac: 'feeds',
-  source: 'feeds',
-  streamer: 'feeds',
-  transport: 'feeds',
-  cartridge: 'feeds',
-  turntable: 'feeds',
-  amplifier: 'drives',
-  amp: 'drives',
-  integrated: 'drives',
-  power: 'drives',
-  monoblock: 'drives',
-  preamp: 'sets the tone for',
-  speaker: 'translates',
-  speakers: 'translates',
-  transducer: 'translates',
-  headphone: 'translates',
-  headphones: 'translates',
-};
 
-function pickRoleVerb(role: string | undefined): string {
-  if (!role) return 'sits between';
-  const k = role.toLowerCase();
-  for (const key of Object.keys(ROLE_VERBS)) {
-    if (k.includes(key)) return ROLE_VERBS[key];
-  }
-  return 'sits between';
+/**
+ * Render the engine's role label in editorial natural-case.
+ *
+ * Engine roles arrive title-cased (`"DAC"`, `"Integrated Amplifier"`,
+ * `"Speakers"`). Three-letter acronyms (DAC, USB, RIAA, ADC) stay
+ * uppercase; everything else lower-cases so it reads as a noun in
+ * mid-sentence prose (`"…as the system's integrated amplifier"`,
+ * `"…as the system's DAC"`).
+ */
+function naturalRole(role: string | undefined): string {
+  if (!role) return 'component';
+  const trimmed = role.trim();
+  // Treat the entire role as an acronym only when it is short and
+  // all-uppercase already (covers "DAC", "ADC", "USB").
+  if (/^[A-Z]{2,5}$/.test(trimmed)) return trimmed;
+  return trimmed.toLowerCase();
 }
 
 function buildContributionLede(
@@ -509,22 +551,21 @@ function buildContributionLede(
 ): string {
   const upstream = idx > 0 ? chainNames[idx - 1] : undefined;
   const downstream = idx < chainNames.length - 1 ? chainNames[idx + 1] : undefined;
-  const roleLabel = role ? role.toLowerCase() : 'component';
-  const verb = pickRoleVerb(role);
+  const roleNoun = naturalRole(role);
   let lede: string;
   if (chainNames.length === 1) {
-    lede = `The ${name} is this system's ${roleLabel}.`;
+    lede = `The ${name} carries this system on its own as the ${roleNoun}.`;
   } else if (idx === 0 && downstream) {
-    lede = `As this system's ${roleLabel}, the ${name} ${verb} the ${downstream}.`;
+    lede = `The ${name} opens the signal path, sending its character into the ${downstream}.`;
   } else if (idx === chainNames.length - 1 && upstream) {
-    lede = `As the ${roleLabel}, the ${name} ${verb} what the ${upstream} delivers into the room.`;
+    lede = `The ${name} closes the path — turning what the ${upstream} produces into sound in the room.`;
   } else if (upstream && downstream) {
-    lede = `Sitting between the ${upstream} and the ${downstream}, the ${name} is this system's ${roleLabel}.`;
+    lede = `Between the ${upstream} and the ${downstream}, the ${name} carries the signal as the system's ${roleNoun}.`;
   } else {
-    lede = `The ${name} is this system's ${roleLabel}.`;
+    lede = `The ${name} sits inside this system as the ${roleNoun}.`;
   }
   if (isBottleneck) {
-    lede += " It is the system's primary constraint.";
+    lede += ' Much of what this system can deliver — and where it meets its limits — is shaped here.';
   }
   return lede;
 }
@@ -812,7 +853,10 @@ function deriveWhatItTrades(a: AdvisoryResponse): string | undefined {
     return a.primaryConstraint.impact;
   }
   if (a.primaryConstraint?.componentName) {
-    return `${a.primaryConstraint.componentName} is the system's primary constraint.`;
+    // Editorial framing rather than the engine's diagnostic label —
+    // names the component that ultimately shapes the system's limits
+    // without leaning on "primary constraint" / "bottleneck" vocabulary.
+    return `Much of this system's practical character — and where it reaches its limits — is shaped by the ${a.primaryConstraint.componentName}.`;
   }
   return undefined;
 }

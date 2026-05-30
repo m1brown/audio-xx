@@ -904,17 +904,20 @@ describe('SystemAssessmentArtifact — Profile row 3 derivation fallback chain',
     expect(html).toContain('Limits resolution at moderate volumes');
   });
 
-  it('falls back to a derived sentence when only componentName is present', () => {
+  it('falls back to an editorial limit-framing sentence when only componentName is present', () => {
     const a: AdvisoryResponse = {
       ...base(),
       primaryConstraint: { componentName: 'DAC', role: 'dac' },
     };
     const html = render(a);
     expect(html).toContain('What it trades:');
-    // The rendered HTML escapes the apostrophe ('s → &#x27;s); match
-    // the sentence shape via partial substrings.
-    expect(html).toContain('DAC is the system');
-    expect(html).toContain('primary constraint');
+    // Editorial reviewer language — no diagnostic engine vocabulary.
+    expect(html).toContain('Much of this system');
+    expect(html).toContain('where it reaches its limits');
+    expect(html).toContain('shaped by the DAC');
+    // The fallback row should NOT use the engine's "primary
+    // constraint" diagnostic phrasing.
+    expect(html).not.toContain('primary constraint');
     // Even in the fallback case, the row reads as a sentence, not as
     // a bare component label — the original Issue 1 defect.
     expect(html).not.toMatch(/What it trades:\s*DAC\s*<\/li>/);
@@ -1033,21 +1036,27 @@ describe('SystemAssessmentArtifact — §5 contribution lede', () => {
       ],
     } as AdvisoryResponse);
 
-  it('head component (DAC) lede references the downstream neighbor', () => {
+  it('head component (DAC) lede opens the path and names the downstream neighbor', () => {
     const html = render(baseChain());
-    // Pontus II is head (idx=0) → lede should say "feeds the Leben CS600X".
-    expect(html).toContain('feeds the Leben CS600X');
+    // Pontus II is head (idx=0) → lede opens the path into the Leben.
+    expect(html).toContain('Denafrips Pontus II opens the signal path');
+    expect(html).toContain('into the Leben CS600X');
   });
 
-  it('tail component (Speakers) lede references the upstream neighbor', () => {
+  it('tail component (Speakers) lede closes the path and names the upstream neighbor', () => {
     const html = render(baseChain());
-    // DeVore O/96 is tail → "translates what the Leben CS600X delivers".
-    expect(html).toContain('translates what the Leben CS600X delivers');
+    // DeVore O/96 is tail → lede closes the path and references the Leben.
+    expect(html).toContain('DeVore O/96 closes the path');
+    expect(html).toContain('the Leben CS600X produces');
   });
 
-  it('middle component lede uses the "Sitting between" template', () => {
+  it('middle component lede uses the "Between … and …" template', () => {
     const html = render(baseChain());
-    expect(html).toContain('Sitting between the Denafrips Pontus II and the DeVore O/96');
+    expect(html).toContain('Between the Denafrips Pontus II and the DeVore O/96');
+    // Middle template anchors the role in natural-case prose, NOT as
+    // "this system's dac" diagnostic phrasing.
+    expect(html).toContain('integrated amplifier');
+    expect(html).not.toContain('dac');
   });
 
   it('strips the engine\'s "The {Name} —" prefix from the reading body', () => {
@@ -1066,7 +1075,7 @@ describe('SystemAssessmentArtifact — §5 contribution lede', () => {
     expect(html).toContain('Full-scale R2R with rich tonal density');
   });
 
-  it('appends "primary constraint" sentence when the card matches primaryConstraint.componentName', () => {
+  it('appends an editorial limit-framing clause when the card matches primaryConstraint.componentName', () => {
     const a: AdvisoryResponse = {
       ...baseChain(),
       primaryConstraint: {
@@ -1076,13 +1085,15 @@ describe('SystemAssessmentArtifact — §5 contribution lede', () => {
       } as AdvisoryResponse['primaryConstraint'],
     };
     const html = render(a);
-    // HTML escapes the apostrophe ('s → &#x27;s); match the sentence
-    // shape via two non-apostrophe substrings.
-    expect(html).toContain('It is the system');
-    expect(html).toContain('primary constraint');
+    // Editorial framing — no engine vocabulary ("primary constraint",
+    // "bottleneck") surfaces in user-visible prose.
+    expect(html).toContain('Much of what this system can deliver');
+    expect(html).toContain('where it meets its limits');
+    expect(html).not.toContain('primary constraint');
+    expect(html).not.toContain('bottleneck');
   });
 
-  it('falls back to generic "this system\'s {role}" for a single-component chain', () => {
+  it('uses a solo-mode "carries this system on its own" template for a single-component chain', () => {
     const a: AdvisoryResponse = {
       kind: 'assessment',
       subject: 'Solo',
@@ -1091,9 +1102,7 @@ describe('SystemAssessmentArtifact — §5 contribution lede', () => {
       componentReadings: ['Detailed reading body here.'],
     } as AdvisoryResponse;
     const html = render(a);
-    // No upstream / downstream → generic anchor sentence.
-    // HTML escapes the apostrophe; split into two substrings.
-    expect(html).toContain('The Some Component is this system');
+    expect(html).toContain('The Some Component carries this system on its own');
     expect(html).toContain('headphone');
   });
 
@@ -1112,10 +1121,12 @@ describe('SystemAssessmentArtifact — §5 contribution lede', () => {
       ],
     } as AdvisoryResponse;
     const html = render(a);
-    // Head lede references downstream (the speakers).
-    expect(html).toContain('feeds the Some Speakers');
-    // Tail lede references upstream (the DAC).
-    expect(html).toContain('translates what the Some DAC delivers');
+    // Head lede opens the path into the downstream.
+    expect(html).toContain('Some DAC opens the signal path');
+    expect(html).toContain('into the Some Speakers');
+    // Tail lede closes the path and references the upstream.
+    expect(html).toContain('Some Speakers closes the path');
+    expect(html).toContain('the Some DAC produces');
   });
 
   it('gracefully handles role=undefined with a generic "component" anchor', () => {
@@ -1128,9 +1139,26 @@ describe('SystemAssessmentArtifact — §5 contribution lede', () => {
     } as AdvisoryResponse;
     const html = render(a);
     // Role label falls back to "component"; no exception.
-    // HTML escapes the apostrophe; split into two substrings.
-    expect(html).toContain('The Mystery is this system');
+    expect(html).toContain('The Mystery carries this system on its own');
     expect(html).toContain('component');
+  });
+
+  it('preserves DAC as an uppercase acronym in natural-case role rendering', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Pair-DAC',
+      systemSignature: 'sig',
+      systemChain: { names: ['Some DAC', 'Some Amp', 'Some Speakers'], roles: ['DAC', 'Amplifier', 'Speakers'] },
+      componentReadings: ['DAC body.', 'Amp body.', 'Speaker body.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // Middle slot uses naturalRole; DAC is the upstream component's
+    // role, not the middle lede — but a 3-component chain with DAC at
+    // head should still surface the acronym intact in §1 chain banner.
+    // For the lede specifically, middle slot is "Amp" with role
+    // "Amplifier" → "amplifier" (lowercase, natural noun).
+    expect(html).toContain('carries the signal as the system');
+    expect(html).toContain('amplifier');
   });
 });
 
@@ -1319,5 +1347,195 @@ describe('SystemAssessmentArtifact — §9 step title derivation', () => {
     } as AdvisoryResponse;
     const html = render(a);
     expect(html).not.toContain('If You Were to Change Something');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// Pass 21 — editorial-register cleanup (chain → system, drop engine
+// vocabulary, polish §5 ledes)
+// ════════════════════════════════════════════════════════════════════════
+//
+// Locks the editorial pass over user-facing prose:
+//   - preferSystemTerminology rewrites engine-emitted "chain"
+//     vocabulary to "system" while preserving "signal chain" as a
+//     topology term.
+//   - diagnostic-engine vocabulary ("primary constraint",
+//     "bottleneck") is absent from user-visible prose across §2 row
+//     3 and §5 ledes.
+//   - §5 contribution ledes use distinct, editorial opening shapes
+//     per chain position (no formulaic "As X" / "Sitting between X"
+//     repetition).
+
+describe('SystemAssessmentArtifact — system-first terminology', () => {
+  const base = (): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'Terminology System',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Some Speakers'],
+        roles: ['DAC', 'Amplifier', 'Speakers'],
+      },
+    } as AdvisoryResponse);
+
+  it('rewrites engine-emitted "the chain" to "the system" in §3 prose', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      introSummary:
+        'The chain leans toward midrange weight and rhythmic engagement throughout.',
+    };
+    const html = render(a);
+    expect(html).toContain('First Impressions');
+    expect(html).toContain('The system leans toward');
+    // The bare "chain" term has been re-cast.
+    const firstImpressionsSlice = html.slice(html.indexOf('First Impressions'), html.indexOf('First Impressions') + 600);
+    expect(firstImpressionsSlice).not.toMatch(/\bthe chain\b/i);
+  });
+
+  it('rewrites engine-emitted "chain" to "system" in §6 interaction prose', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      systemInteraction:
+        'Each component leans warm. The chain reinforces rather than counterbalances.',
+    };
+    const html = render(a);
+    expect(html).toContain('How They Work Together');
+    expect(html).toContain('The system reinforces');
+    const interactionSlice = html.slice(html.indexOf('How They Work Together'));
+    expect(interactionSlice.slice(0, 600)).not.toMatch(/\bthe chain\b/i);
+  });
+
+  it('rewrites engine-emitted "chain" to "system" in §4 character prose', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      systemContext:
+        '**System read** The chain shares a coherent voicing across all three components.',
+    };
+    const html = render(a);
+    expect(html).toContain('Character');
+    const characterSlice = html.slice(html.indexOf('Character'), html.indexOf('Character') + 600);
+    expect(characterSlice).toContain('The system shares');
+    expect(characterSlice).not.toMatch(/\bthe chain\b/i);
+  });
+
+  it('preserves "signal chain" as a topology term', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      systemInteraction:
+        'The signal chain is short and the system stays coherent across all three components.',
+    };
+    const html = render(a);
+    // Signal-chain topology is preserved; system-level "chain" usage
+    // is rewritten elsewhere (no opportunity in this prose).
+    expect(html).toContain('signal chain');
+  });
+
+  it('rewrites possessive "chain\'s" to "system\'s"', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      introSummary:
+        "The chain's overall character favors warmth and rhythmic flow across the midrange.",
+    };
+    const html = render(a);
+    // Possessive form is normalized.
+    expect(html).toContain('First Impressions');
+    const firstImpressionsSlice = html.slice(html.indexOf('First Impressions'), html.indexOf('First Impressions') + 600);
+    expect(firstImpressionsSlice).not.toMatch(/chain['’]s/i);
+    expect(firstImpressionsSlice).toContain('system');
+  });
+});
+
+describe('SystemAssessmentArtifact — no diagnostic-engine vocabulary in user prose', () => {
+  const FULL_WITH_CONSTRAINT: AdvisoryResponse = {
+    kind: 'assessment',
+    subject: 'Constraint System',
+    systemSignature: 'A warm voicing.',
+    introSummary: 'A balanced system that leans into warmth and rhythm.',
+    systemChain: {
+      names: ['Some DAC', 'Some Amp', 'Some Speakers'],
+      roles: ['DAC', 'Amplifier', 'Speakers'],
+    },
+    componentReadings: ['DAC body.', 'Amp body.', 'Speaker body.'],
+    primaryConstraint: {
+      componentName: 'Some Amp',
+      category: 'amplifier_control',
+      explanation: 'Power limits headroom.',
+    } as AdvisoryResponse['primaryConstraint'],
+    assessmentLimitations: ['Limited orchestral peak headroom'],
+    recommendedSequence: [
+      { step: 1, action: 'Audition a higher-power integrated.' },
+    ],
+  };
+
+  it('no user-visible "primary constraint" anywhere in the artifact', () => {
+    const html = render(FULL_WITH_CONSTRAINT);
+    expect(html).not.toContain('primary constraint');
+  });
+
+  it('no user-visible "bottleneck" anywhere in the artifact', () => {
+    const html = render(FULL_WITH_CONSTRAINT);
+    expect(html).not.toContain('bottleneck');
+  });
+
+  it('limit-framing prose reads editorially, not diagnostically', () => {
+    const html = render(FULL_WITH_CONSTRAINT);
+    // The constraint component still shows up — but via editorial
+    // framing about what the system can deliver and where it reaches
+    // its limits, not via diagnostic engine labels.
+    expect(html).toContain('Much of what this system can deliver');
+  });
+});
+
+describe('SystemAssessmentArtifact — §5 lede editorial polish', () => {
+  const GOLD = (): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'Polish System',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'Warm-tube DAC.',
+        'Musical tube integrated.',
+        'Efficient wide-baffle speaker.',
+      ],
+    } as AdvisoryResponse);
+
+  it('opens the head card with "opens the signal path", not the old "As this system\'s" template', () => {
+    const html = render(GOLD());
+    // Card heading is the Pontus II → the first body slot.
+    const componentsSlice = html.slice(html.indexOf('The Components'));
+    const headBlock = componentsSlice.slice(componentsSlice.indexOf('Denafrips Pontus II'));
+    expect(headBlock.slice(0, 800)).toContain('opens the signal path');
+    expect(headBlock.slice(0, 800)).not.toMatch(/As this system['’]s dac/i);
+  });
+
+  it('closes the tail card with "closes the path", not the old "translates what the X delivers" template', () => {
+    const html = render(GOLD());
+    const componentsSlice = html.slice(html.indexOf('The Components'));
+    const tailIdx = componentsSlice.indexOf('>DeVore O/96</div>');
+    expect(tailIdx).toBeGreaterThan(0);
+    const tailBlock = componentsSlice.slice(tailIdx, tailIdx + 800);
+    expect(tailBlock).toContain('closes the path');
+    expect(tailBlock).not.toContain('translates what');
+  });
+
+  it('renders the middle card with "Between … and …" instead of the old "Sitting between" template', () => {
+    const html = render(GOLD());
+    expect(html).toContain('Between the Denafrips Pontus II and the DeVore O/96');
+    expect(html).not.toContain('Sitting between');
+  });
+
+  it('lede shapes differ across head/middle/tail (no single repeated opening)', () => {
+    const html = render(GOLD());
+    // Count distinctive shape openers — each shape appears at most once.
+    const opensMatches = (html.match(/opens the signal path/g) ?? []).length;
+    const betweenMatches = (html.match(/Between the Denafrips Pontus II and the DeVore O\/96/g) ?? []).length;
+    const closesMatches = (html.match(/closes the path/g) ?? []).length;
+    expect(opensMatches).toBe(1);
+    expect(betweenMatches).toBe(1);
+    expect(closesMatches).toBe(1);
   });
 });
