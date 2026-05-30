@@ -180,6 +180,7 @@ function buildComponentCards(
   names: string[] | undefined,
   roles: string[] | undefined,
   readings: string[] | undefined,
+  primaryConstraintName?: string,
 ): Array<{ name: string; role?: string; body?: string }> {
   if (!readings || readings.length === 0) return [];
   if (!names || names.length === 0) {
@@ -191,7 +192,17 @@ function buildComponentCards(
   }
   return names.map((name, i) => {
     const matched = findReadingForName(name, readings, i);
-    const body = normalizeComponentReading(matched, names);
+    // Strip the engine's "The {Name} —" prefix BEFORE normalization so
+    // the prepended contribution lede does not double-name the component.
+    const stripped = stripReadingPrefix(matched, name);
+    const normalized = normalizeComponentReading(stripped, names);
+    // Build the per-component contribution lede that anchors the body in
+    // the system, not in product-review register.
+    const isBottleneck =
+      !!primaryConstraintName &&
+      primaryConstraintName.toLowerCase() === name.toLowerCase();
+    const lede = buildContributionLede(name, roles?.[i], i, names, isBottleneck);
+    const body = normalized ? `${lede} ${normalized}` : lede;
     return {
       name,
       role: roles?.[i],
@@ -376,6 +387,404 @@ function normalizeInteractionProse(
 }
 
 /**
+ * Presentation-layer normalization of §3 *First Impressions* prose.
+ *
+ * The engine's `introSummary` field is assembled from fixed template
+ * fragments — marketing-prefix sentences ("A reference-level system…",
+ * "A system that prioritises…"), an "intent note" adjective-stack,
+ * and a stacked-trait identity sentence. Verbatim, it reads as
+ * compressed trait labels rather than a reviewer's opening paragraph.
+ *
+ * This normalizer strips the marketing-prefix sentences, drops any
+ * sentence containing a 3+ comma-separated adjective stack, and
+ * applies two named substitutions to soften the engine's cadence
+ * ("shares a consistent lean toward" → "leans toward"; the
+ * "prioritising X and Y and Z" adjective enumeration is removed
+ * inline). When stripping leaves the prose too thin, falls back to
+ * `systemSignature` so the section still says something.
+ *
+ * The substitution table is intentionally tiny (two entries) — any
+ * new pattern is a STOP-AND-REPORT event per the cadence-helper
+ * precedent (Rule 3 in CLAUDE.md).
+ */
+const FIRST_IMPRESSIONS_MARKETING_OPENERS: RegExp[] = [
+  /^A reference-level system\b/i,
+  /^A system\b/i,
+  /^This is a coherent\b/i,
+  /^The system prioritises\b/i,
+];
+
+const FIRST_IMPRESSIONS_ADJECTIVE_STACK_RE =
+  /\b[A-Za-z]+,\s+[A-Za-z]+,\s+(?:and\s+)?[A-Za-z]+\b/;
+
+const FIRST_IMPRESSIONS_REWRITES: Array<readonly [RegExp, string]> = [
+  [/shares a consistent lean toward/gi, 'leans toward'],
+  [/\bprioritising\s+[A-Za-z]+(?:\s+and\s+[A-Za-z]+){1,}\b/gi, ''],
+];
+
+function normalizeFirstImpressions(
+  intro: string | undefined,
+  signature: string | undefined,
+): string | undefined {
+  // §3 is keyed on `introSummary` presence — when the engine has no
+  // intro to normalize, the section stays hidden (preserves the
+  // pre-helper data-gating contract). `signature` is consulted only
+  // as a fallback when stripping leaves the prose too thin to render.
+  if (!intro) return undefined;
+  const sentences = splitSentences(intro);
+  const kept = sentences.filter((s) => {
+    const t = s.trim();
+    if (FIRST_IMPRESSIONS_MARKETING_OPENERS.some((re) => re.test(t))) return false;
+    if (FIRST_IMPRESSIONS_ADJECTIVE_STACK_RE.test(t)) return false;
+    return true;
+  });
+  let body = kept.slice(0, 2).join(' ').trim();
+  for (const [re, rep] of FIRST_IMPRESSIONS_REWRITES) {
+    body = body.replace(re, rep).replace(/\s+/g, ' ').trim();
+  }
+  // Punctuation cleanup left behind by the rewrites.
+  body = body.replace(/\s+([.,;:])/g, '$1').replace(/[.,;:]{2,}/g, '.').trim();
+  if (body.length < 40 && signature) {
+    body = signature;
+  }
+  return body.length > 0 ? body : undefined;
+}
+
+/**
+ * Presentation-layer derivation of a §5 *Component* card lede sentence.
+ *
+ * Produces a single deterministic system-anchor sentence built from the
+ * chain position, role label, and immediate neighbors. The lede is
+ * prepended to the existing (Commit 4B) `normalizeComponentReading`
+ * output to convert the card body from product-review register to
+ * contribution-mode register without introducing LLM generation at
+ * runtime.
+ *
+ * Template selection by chain position:
+ *   - head  (i = 0)       — name + role-verb + downstream neighbor
+ *   - tail  (i = last)    — name + role-verb + reference to upstream
+ *   - middle               — sitting between upstream and downstream
+ *   - solo (one component) — generic "this system's {role}"
+ *
+ * When the component matches `primaryConstraint.componentName`, a
+ * second short clause names it as the chain's primary constraint —
+ * the per-component view echoes the §7 honest-limits framing
+ * intentionally.
+ */
+const ROLE_VERBS: Record<string, string> = {
+  dac: 'feeds',
+  source: 'feeds',
+  streamer: 'feeds',
+  transport: 'feeds',
+  cartridge: 'feeds',
+  turntable: 'feeds',
+  amplifier: 'drives',
+  amp: 'drives',
+  integrated: 'drives',
+  power: 'drives',
+  monoblock: 'drives',
+  preamp: 'sets the tone for',
+  speaker: 'translates',
+  speakers: 'translates',
+  transducer: 'translates',
+  headphone: 'translates',
+  headphones: 'translates',
+};
+
+function pickRoleVerb(role: string | undefined): string {
+  if (!role) return 'sits between';
+  const k = role.toLowerCase();
+  for (const key of Object.keys(ROLE_VERBS)) {
+    if (k.includes(key)) return ROLE_VERBS[key];
+  }
+  return 'sits between';
+}
+
+function buildContributionLede(
+  name: string,
+  role: string | undefined,
+  idx: number,
+  chainNames: string[],
+  isBottleneck: boolean,
+): string {
+  const upstream = idx > 0 ? chainNames[idx - 1] : undefined;
+  const downstream = idx < chainNames.length - 1 ? chainNames[idx + 1] : undefined;
+  const roleLabel = role ? role.toLowerCase() : 'component';
+  const verb = pickRoleVerb(role);
+  let lede: string;
+  if (chainNames.length === 1) {
+    lede = `The ${name} is this system's ${roleLabel}.`;
+  } else if (idx === 0 && downstream) {
+    lede = `As this system's ${roleLabel}, the ${name} ${verb} the ${downstream}.`;
+  } else if (idx === chainNames.length - 1 && upstream) {
+    lede = `As the ${roleLabel}, the ${name} ${verb} what the ${upstream} delivers into the room.`;
+  } else if (upstream && downstream) {
+    lede = `Sitting between the ${upstream} and the ${downstream}, the ${name} is this system's ${roleLabel}.`;
+  } else {
+    lede = `The ${name} is this system's ${roleLabel}.`;
+  }
+  if (isBottleneck) {
+    lede += " It is the system's primary constraint.";
+  }
+  return lede;
+}
+
+function capitalizeFirst(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function escapeForRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Strip the engine's "The {Name} —" prefix from a component reading so
+ * the prepended contribution lede does not double-name the component.
+ */
+function stripReadingPrefix(reading: string | undefined, name: string): string | undefined {
+  if (!reading) return undefined;
+  const re = new RegExp(`^the\\s+${escapeForRegex(name)}\\s*[—\\-]\\s*`, 'i');
+  return reading.replace(re, '').trim();
+}
+
+/**
+ * Presentation-layer dedup of §7 *Strengths* and *Honest Limits* lists.
+ *
+ * The engine fires per-component trait-check loops that can produce
+ * three consecutive bullets restating the same concept (e.g. "Leben
+ * contributes musical flow and continuity" three times). This helper
+ * collapses exact concept duplicates and merges component-name
+ * prefixes when the duplicate carries a different chain name.
+ *
+ * Synonym collapse (flow↔continuity, etc.) is intentionally OUT of
+ * scope for this pass — the synthesis flagged it as the highest-risk
+ * surface and recommended shipping exact-dedup first. This helper
+ * implements only the conservative pattern: identical concept keys
+ * after stopword + prefix removal collapse to ONE bullet with merged
+ * component-name attribution.
+ */
+const DEDUP_STOPWORDS = new Set([
+  'the', 'a', 'an', 'and', 'or', 'of', 'to', 'in', 'on', 'with', 'for', 'as',
+  'is', 'are', 'may', 'can', 'could', 'should', 'be', 'this', 'that',
+  'contributes', 'provides', 'adds', 'reduce', 'reduces', 'reducing',
+  'feel', 'sound', 'sounds', 'presentation', 'system', 'strong', 'system\'s',
+]);
+
+/**
+ * Build the set of attribution tokens to strip during dedup.
+ *
+ * Bullets may attribute concepts by full chain name (`Leben CS600X
+ * contributes…`) OR by brand short-form (`Leben contributes…`). The
+ * dedup key compares concepts after attribution; we strip both forms.
+ */
+function chainAttributionTokens(chainNames: string[]): string[] {
+  const set = new Set<string>();
+  for (const n of chainNames) {
+    set.add(n.toLowerCase());
+    const first = n.split(/\s+/)[0]?.toLowerCase();
+    if (first && first.length >= 3) set.add(first);
+  }
+  return Array.from(set);
+}
+
+function dedupConceptKey(s: string, chainNames: string[]): string {
+  let body = s.toLowerCase();
+  for (const tok of chainAttributionTokens(chainNames)) {
+    const re = new RegExp(
+      `^${escapeForRegex(tok)}\\s+(?:contributes|provides|adds|has)\\s+`,
+      'i',
+    );
+    body = body.replace(re, '');
+  }
+  body = body.replace(/[^a-z\s—\-]/g, ' ');
+  const toks = body
+    .split(/\s+/)
+    .filter((t) => t.length > 2 && !DEDUP_STOPWORDS.has(t));
+  return Array.from(new Set(toks)).sort().slice(0, 4).join('|');
+}
+
+function findChainNamePrefix(s: string, chainNames: string[]): string | undefined {
+  const lower = s.toLowerCase();
+  for (const n of chainNames) {
+    if (lower.startsWith(n.toLowerCase())) return n;
+    const first = n.split(/\s+/)[0];
+    if (first && lower.startsWith(first.toLowerCase() + ' ')) return n;
+  }
+  return undefined;
+}
+
+/**
+ * Strip the actual attribution token from a bullet's leading edge —
+ * either the full chain name (`Leben CS600X contributes…`) or the
+ * brand short-form (`Leben contributes…`). The raw text and the
+ * canonical chain name may differ in length, so we can't slice by
+ * canonical length blindly; this helper compares both forms.
+ */
+function trimChainAttribution(s: string, canonicalChainName: string): string {
+  const lower = s.toLowerCase();
+  if (lower.startsWith(canonicalChainName.toLowerCase() + ' ')) {
+    return s.slice(canonicalChainName.length).replace(/^\s+/, '');
+  }
+  const first = canonicalChainName.split(/\s+/)[0];
+  if (first && lower.startsWith(first.toLowerCase() + ' ')) {
+    return s.slice(first.length).replace(/^\s+/, '');
+  }
+  return s;
+}
+
+function dedupeStrengthsByConcept(
+  items: string[] | undefined,
+  chainNames: string[],
+): string[] | undefined {
+  if (!items) return items;
+  if (items.length === 0) return items;
+  interface Kept {
+    key: string;
+    text: string;
+    names: string[];
+    suffix: string;
+  }
+  const kept: Kept[] = [];
+  const seen = new Map<string, number>();
+  for (const raw of items) {
+    const key = dedupConceptKey(raw, chainNames);
+    const namePrefix = findChainNamePrefix(raw, chainNames);
+    if (!key) {
+      kept.push({ key: raw, text: raw, names: namePrefix ? [namePrefix] : [], suffix: raw });
+      continue;
+    }
+    const existingIdx = seen.get(key);
+    if (existingIdx === undefined) {
+      const suffix = namePrefix
+        ? trimChainAttribution(raw, namePrefix)
+        : raw;
+      seen.set(key, kept.length);
+      kept.push({
+        key,
+        text: raw,
+        names: namePrefix ? [namePrefix] : [],
+        suffix,
+      });
+    } else if (namePrefix && !kept[existingIdx].names.includes(namePrefix)) {
+      // Merge new component name into the kept bullet's prefix.
+      const entry = kept[existingIdx];
+      entry.names.push(namePrefix);
+      // Only re-stitch when the original bullet had a chain-name prefix
+      // to merge; system-level bullets (no prefix) stay unchanged.
+      if (entry.names.length > 1 && entry.suffix) {
+        // Pluralize the leading verb so subject-verb agreement is preserved
+        // when the merged subject becomes "X and Y …".
+        const pluralized = entry.suffix
+          .replace(/^contributes\b/i, 'contribute')
+          .replace(/^provides\b/i, 'provide')
+          .replace(/^adds\b/i, 'add')
+          .replace(/^has\b/i, 'have');
+        entry.text = entry.names.join(' and ') + ' ' + pluralized.replace(/^\s+/, '');
+      }
+    }
+    // else: identical concept + same component → silent drop
+  }
+  return kept.slice(0, 6).map((k) => k.text);
+}
+
+/**
+ * Presentation-layer derivation of a meaningful §9 step card title.
+ *
+ * The engine populates `recommendedSequence[].action` with a freeform
+ * sentence describing the step's recommendation. This helper produces
+ * an editorial-grade card title from the action's leading verb and
+ * primary noun phrase, so the step cards read as scannable rather
+ * than as workflow numbers.
+ *
+ * Pattern table is ordered — the first matching pattern wins. When
+ * no pattern matches, falls back to "Step N" so a missed pattern
+ * degrades to current behavior rather than producing a broken title.
+ *
+ * The original sequence number is preserved as the card's subtitle
+ * (the EditorialSubCard primitive already exposes that slot).
+ */
+const STEP_TITLE_MAX_LENGTH = 42;
+const STEP_TITLE_MIN_LENGTH = 3;
+
+function deriveStepTitle(
+  action: string | undefined,
+  stepNumber: number,
+): string {
+  const fallback = `Step ${stepNumber}`;
+  if (!action) return fallback;
+
+  // Take just the first sentence for the title source.
+  const first = splitSentences(action)[0] ?? action;
+  const trimmed = first.trim();
+
+  // 1. Engine bold-token shape: "**Title** — body"
+  const boldMatch = trimmed.match(/^\*\*([^*]+)\*\*\s*[—\-]/);
+  if (boldMatch) {
+    const title = boldMatch[1].trim();
+    if (title.length >= STEP_TITLE_MIN_LENGTH && title.length <= STEP_TITLE_MAX_LENGTH) {
+      return title;
+    }
+  }
+
+  // 2. Keep-everything verdict: "Keep **X**, **Y** — ..."
+  if (/^Keep\s+\*\*/i.test(trimmed)) {
+    return 'Keep What Works';
+  }
+
+  // 3. Audition / Compare / Test / Try patterns
+  const auditionMatch = trimmed.match(
+    /^(Audition|Compare|Test|Try)\b\s+(?:a\s+|an\s+|the\s+)?([A-Za-z][A-Za-z\s-]+?)(?:\s+against|\s+before|\s+in\s+your|\s+with|[.,]|$)/i,
+  );
+  if (auditionMatch) {
+    const verb = auditionMatch[1].charAt(0).toUpperCase() + auditionMatch[1].slice(1).toLowerCase();
+    const objectRaw = auditionMatch[2].trim().toLowerCase();
+    // Match against generic role nouns to produce a clean title.
+    const obj = /amplifier|amp|integrated/.test(objectRaw)
+      ? 'the Amplifier'
+      : /dac|source|streamer/.test(objectRaw)
+        ? 'the Source'
+        : /speaker|monitor/.test(objectRaw)
+          ? 'the Speakers'
+          : 'the Pairing';
+    return `${verb} ${obj}`;
+  }
+
+  // 4. Preserve / Hold / Do not touch / Avoid patterns
+  if (/^(?:Do\s+not\s+touch|Avoid\s+touching|Preserve|Hold|Keep)\b/i.test(trimmed)) {
+    // Extract what to preserve from the object of the verb.
+    const objMatch = trimmed.match(
+      /^(?:Do\s+not\s+touch|Avoid\s+touching|Preserve|Hold|Keep)\s+(?:the\s+)?(.+?)(?:[.,]|\s+(?:if|when|unless|or)\b|$)/i,
+    );
+    if (objMatch) {
+      const objLower = objMatch[1].toLowerCase();
+      if (/dac.*speaker|speaker.*dac/.test(objLower)) return 'Preserve the DAC and Speakers';
+      if (/dac/.test(objLower)) return 'Preserve the DAC';
+      if (/speaker|monitor/.test(objLower)) return 'Preserve the Speakers';
+      if (/amp|integrated/.test(objLower)) return 'Preserve the Amplifier';
+      return 'Preserve What Works';
+    }
+    return 'Preserve What Works';
+  }
+
+  // 5. Conditional opener: "If the trade-off feels worth it, plan the swap."
+  if (/^If\b/i.test(trimmed)) {
+    if (/swap|change|upgrade|replace/i.test(trimmed)) return 'Plan the Swap';
+    return 'Decide and Act';
+  }
+
+  // 6. Plan / Schedule
+  const planMatch = trimmed.match(/^(Plan|Schedule)\s+(?:the\s+)?(.+?)(?:[.,]|\s+if|$)/i);
+  if (planMatch) {
+    const verb = planMatch[1].charAt(0).toUpperCase() + planMatch[1].slice(1).toLowerCase();
+    return `${verb} the ${capitalizeFirst(planMatch[2].trim().split(/\s+/)[0])}`;
+  }
+
+  // No pattern matched — graceful fallback.
+  return fallback;
+}
+
+/**
  * Presentation-layer derivation of the §2 *Profile* "What it trades" row.
  *
  * `primaryConstraint.componentName` is structurally a label (e.g. "DAC",
@@ -498,13 +907,23 @@ export default function SystemAssessmentArtifact({
         />
       </section>
 
-      {/* ═══════════ §3 First Impressions ═══════════ */}
-      {a.introSummary && (
-        <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>First Impressions</h2>
-          <p style={proseStyle}>{a.introSummary}</p>
-        </section>
-      )}
+      {/* ═══════════ §3 First Impressions ═══════════
+       *  Source: `introSummary` is assembled from fixed template
+       *  fragments (marketing prefixes, adjective-stack intent notes,
+       *  stacked-trait identity sentences). `normalizeFirstImpressions`
+       *  strips the marketing/adjective-stack content and applies
+       *  small named substitutions to soften the cadence. Falls back
+       *  to `systemSignature` when stripping leaves the prose too thin. */}
+      {(() => {
+        const firstImpressions = normalizeFirstImpressions(a.introSummary, a.systemSignature);
+        if (!firstImpressions) return null;
+        return (
+          <section style={{ marginBottom: '1.5rem' }}>
+            <h2 style={sectionHeadingStyle}>First Impressions</h2>
+            <p style={proseStyle}>{firstImpressions}</p>
+          </section>
+        );
+      })()}
 
       {/* ═══════════ §4 Character ═══════════
        *  Source: `systemContext` carries the entire legacy MemoFormat
@@ -558,6 +977,7 @@ export default function SystemAssessmentArtifact({
               a.systemChain?.names,
               a.systemChain?.roles,
               a.componentReadings,
+              a.primaryConstraint?.componentName,
             ).map((card, i) => (
               <EditorialSubCard
                 key={i}
@@ -592,8 +1012,26 @@ export default function SystemAssessmentArtifact({
         );
       })()}
 
-      {/* ═══════════ §7 Strengths and Honest Limits ═══════════ */}
-      {hasStrengthsAndLimits && (
+      {/* ═══════════ §7 Strengths and Honest Limits ═══════════
+       *  The engine's trait-check loops can fire multiple bullets that
+       *  restate the same concept across chain components (e.g. three
+       *  consecutive "musical flow / continuity / flow" bullets).
+       *  `dedupeStrengthsByConcept` collapses exact concept duplicates
+       *  and merges component-name attribution when applicable. Synonym
+       *  collapse is intentionally out of scope (see helper docblock). */}
+      {hasStrengthsAndLimits && (() => {
+        const dedupedStrengths = dedupeStrengthsByConcept(
+          a.assessmentStrengths,
+          a.systemChain?.names ?? [],
+        );
+        const dedupedLimits = dedupeStrengthsByConcept(
+          a.assessmentLimitations,
+          a.systemChain?.names ?? [],
+        );
+        const renderStrengths = !!(dedupedStrengths && dedupedStrengths.length > 0);
+        const renderLimits = !!(dedupedLimits && dedupedLimits.length > 0);
+        if (!renderStrengths && !renderLimits) return null;
+        return (
         <section style={{ marginBottom: '1.5rem' }}>
           <h2 style={sectionHeadingStyle}>Strengths and Honest Limits</h2>
           <div
@@ -603,7 +1041,7 @@ export default function SystemAssessmentArtifact({
               gap: '1rem',
             }}
           >
-            {hasStrengths && (
+            {renderStrengths && (
               <div>
                 <h3
                   style={{
@@ -627,7 +1065,7 @@ export default function SystemAssessmentArtifact({
                     color: COLOR.textSecondary,
                   }}
                 >
-                  {a.assessmentStrengths!.map((s, i) => (
+                  {dedupedStrengths!.map((s, i) => (
                     <li key={i} style={{ marginBottom: '0.2rem', color: '#5a7050' }}>
                       <span style={{ color: COLOR.textSecondary }}>{s}</span>
                     </li>
@@ -635,7 +1073,7 @@ export default function SystemAssessmentArtifact({
                 </ul>
               </div>
             )}
-            {hasLimits && (
+            {renderLimits && (
               <div>
                 <h3
                   style={{
@@ -659,7 +1097,7 @@ export default function SystemAssessmentArtifact({
                     color: COLOR.textSecondary,
                   }}
                 >
-                  {a.assessmentLimitations!.map((l, i) => (
+                  {dedupedLimits!.map((l, i) => (
                     <li key={i} style={{ marginBottom: '0.2rem', color: '#8a6a50' }}>
                       <span style={{ color: COLOR.textSecondary }}>{l}</span>
                     </li>
@@ -669,7 +1107,8 @@ export default function SystemAssessmentArtifact({
             )}
           </div>
         </section>
-      )}
+        );
+      })()}
 
       {/* ═══════════ §8 What's Already Working ═══════════ */}
       {hasKeeps && (
@@ -710,13 +1149,17 @@ export default function SystemAssessmentArtifact({
                 gap: '0.5rem',
               }}
             >
-              {a.recommendedSequence!.map((step) => (
-                <EditorialSubCard
-                  key={step.step}
-                  name={`Step ${step.step}`}
-                  body={step.action}
-                />
-              ))}
+              {a.recommendedSequence!.map((step) => {
+                const editorialTitle = deriveStepTitle(step.action, step.step);
+                return (
+                  <EditorialSubCard
+                    key={step.step}
+                    name={editorialTitle}
+                    subtitle={`Step ${step.step}`}
+                    body={step.action}
+                  />
+                );
+              })}
             </div>
           )}
         </section>

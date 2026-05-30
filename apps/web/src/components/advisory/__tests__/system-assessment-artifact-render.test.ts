@@ -698,11 +698,23 @@ describe('SystemAssessmentArtifact — §5 The Components: identity mapping + co
 
   function cardWindowForName(html: string, name: string): string {
     const scoped = componentsSection(html);
-    const idx = scoped.indexOf(name);
+    // Anchor on the card-heading marker `>{name}</div>` (the
+    // EditorialSubCard primitive renders the name inside a div with
+    // distinctive font-weight:600). After the contribution-lede
+    // helper landed, the prior card's body can mention the next
+    // chain name (e.g. Pontus II's lede says "feeds the Leben
+    // CS600X"), so a plain `indexOf(name)` would mis-locate. The
+    // heading marker is unambiguous.
+    const headingNeedle = `>${name}</div>`;
+    let idx = scoped.indexOf(headingNeedle);
+    if (idx < 0) {
+      // Fallback for older snapshots / chain-banner usage.
+      idx = scoped.indexOf(name);
+    }
     if (idx < 0) return '';
-    // Each card is a `<div ...>` block of bounded length; 800 chars covers
-    // the name + role + body within §5.
-    return scoped.slice(idx, idx + 800);
+    // Each card is a `<div ...>` block of bounded length; 1200 chars
+    // covers the heading + role + lede + body within §5.
+    return scoped.slice(idx, idx + 1200);
   }
 
   describe('identity mapping — readings match the named card, not the array index', () => {
@@ -911,5 +923,401 @@ describe('SystemAssessmentArtifact — Profile row 3 derivation fallback chain',
   it('omits the "What it trades" row entirely when no derivation source exists', () => {
     const html = render(base());
     expect(html).not.toContain('What it trades:');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// Pass 20 — §3 / §5 / §7 / §9 refinement-helper tests
+// ════════════════════════════════════════════════════════════════════════
+//
+// Locks the four presentation-layer helpers added in the §3/§5/§7/§9
+// refinement pass:
+//   - normalizeFirstImpressions    → strips marketing openers + adjective
+//                                    stacks from §3
+//   - buildContributionLede        → prepends a system-anchored sentence
+//                                    to each §5 card body
+//   - dedupeStrengthsByConcept     → collapses exact concept duplicates
+//                                    in §7 strengths AND limitations
+//   - deriveStepTitle              → produces editorial card titles for §9
+//                                    step cards (with "Step N" as subtitle)
+//
+// Pure presentation transforms — engine output is unchanged.
+
+describe('SystemAssessmentArtifact — §3 First Impressions normalization', () => {
+  const base = (): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'Living Room System',
+      systemSignature: 'A warm tube-led source-first chain with coherent-source voicing.',
+    } as AdvisoryResponse);
+
+  it('strips marketing-opener sentences ("A reference-level system…")', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      introSummary:
+        'A reference-level system in the warm-coherent tradition. The chain leans into rhythm and tonal density.',
+    };
+    const html = render(a);
+    expect(html).toContain('First Impressions');
+    // Marketing-opener sentence is stripped.
+    expect(html).not.toContain('A reference-level system');
+    // Substantive sentence is kept.
+    expect(html).toContain('leans into rhythm');
+  });
+
+  it('strips a 3+ comma-separated adjective stack sentence', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      introSummary:
+        'It is warm, dense, harmonic, engaging. The pairing has a coherent voice that holds together across the spectrum.',
+    };
+    const html = render(a);
+    // Adjective-stack sentence is dropped.
+    expect(html).not.toContain('warm, dense, harmonic');
+    // Non-stack sentence is kept.
+    expect(html).toContain('coherent voice');
+  });
+
+  it('applies the "shares a consistent lean toward" → "leans toward" rewrite', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      introSummary:
+        'The chain shares a consistent lean toward midrange weight and rhythmic engagement throughout.',
+    };
+    const html = render(a);
+    expect(html).toContain('leans toward midrange weight');
+    expect(html).not.toContain('shares a consistent lean toward');
+  });
+
+  it('falls back to systemSignature when stripping leaves the prose too thin', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      introSummary:
+        'A reference-level system. The system prioritises warmth, density and engagement.',
+    };
+    const html = render(a);
+    // Both source sentences match marketing/adjective-stack filters and
+    // are dropped. The signature is used as graceful fallback so the
+    // section still says something.
+    expect(html).toContain('First Impressions');
+    expect(html).toContain('warm tube-led source-first chain');
+  });
+
+  it('skips §3 entirely when introSummary is undefined (signature is NOT a substitute)', () => {
+    // Data-gating contract: §3 keys on `introSummary` presence. If there
+    // is nothing to normalize, the section stays hidden — signature
+    // belongs in §1, not in §3.
+    const a: AdvisoryResponse = {
+      ...base(),
+      introSummary: undefined,
+    };
+    const html = render(a);
+    expect(html).not.toContain('First Impressions');
+  });
+});
+
+describe('SystemAssessmentArtifact — §5 contribution lede', () => {
+  const baseChain = (): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'Test System',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'The Pontus II is a warm-tube R2R DAC.',
+        'The CS600X is a musical tube integrated.',
+        'The O/96 is a high-efficiency speaker.',
+      ],
+    } as AdvisoryResponse);
+
+  it('head component (DAC) lede references the downstream neighbor', () => {
+    const html = render(baseChain());
+    // Pontus II is head (idx=0) → lede should say "feeds the Leben CS600X".
+    expect(html).toContain('feeds the Leben CS600X');
+  });
+
+  it('tail component (Speakers) lede references the upstream neighbor', () => {
+    const html = render(baseChain());
+    // DeVore O/96 is tail → "translates what the Leben CS600X delivers".
+    expect(html).toContain('translates what the Leben CS600X delivers');
+  });
+
+  it('middle component lede uses the "Sitting between" template', () => {
+    const html = render(baseChain());
+    expect(html).toContain('Sitting between the Denafrips Pontus II and the DeVore O/96');
+  });
+
+  it('strips the engine\'s "The {Name} —" prefix from the reading body', () => {
+    const a: AdvisoryResponse = {
+      ...baseChain(),
+      componentReadings: [
+        'The Denafrips Pontus II — Full-scale R2R with rich tonal density.',
+        'The Leben CS600X — Tube integrated.',
+        'The DeVore O/96 — Efficient speaker.',
+      ],
+    };
+    const html = render(a);
+    // The prefix is stripped before the lede is prepended, so the body
+    // does not double-name the component.
+    expect(html).not.toContain('Pontus II — Full-scale R2R');
+    expect(html).toContain('Full-scale R2R with rich tonal density');
+  });
+
+  it('appends "primary constraint" sentence when the card matches primaryConstraint.componentName', () => {
+    const a: AdvisoryResponse = {
+      ...baseChain(),
+      primaryConstraint: {
+        componentName: 'Leben CS600X',
+        category: 'amplifier_control',
+        explanation: 'Power ceiling limits headroom.',
+      } as AdvisoryResponse['primaryConstraint'],
+    };
+    const html = render(a);
+    // HTML escapes the apostrophe ('s → &#x27;s); match the sentence
+    // shape via two non-apostrophe substrings.
+    expect(html).toContain('It is the system');
+    expect(html).toContain('primary constraint');
+  });
+
+  it('falls back to generic "this system\'s {role}" for a single-component chain', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Solo',
+      systemSignature: 'sig',
+      systemChain: { names: ['Some Component'], roles: ['Headphone'] },
+      componentReadings: ['Detailed reading body here.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // No upstream / downstream → generic anchor sentence.
+    // HTML escapes the apostrophe; split into two substrings.
+    expect(html).toContain('The Some Component is this system');
+    expect(html).toContain('headphone');
+  });
+
+  it('handles 2-component chain (head + tail, no middle)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Pair',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Speakers'],
+        roles: ['DAC', 'Speakers'],
+      },
+      componentReadings: [
+        'Warm-leaning DAC.',
+        'High-efficiency speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // Head lede references downstream (the speakers).
+    expect(html).toContain('feeds the Some Speakers');
+    // Tail lede references upstream (the DAC).
+    expect(html).toContain('translates what the Some DAC delivers');
+  });
+
+  it('gracefully handles role=undefined with a generic "component" anchor', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'No-Roles',
+      systemSignature: 'sig',
+      systemChain: { names: ['Mystery'], roles: undefined },
+      componentReadings: ['Body content.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // Role label falls back to "component"; no exception.
+    // HTML escapes the apostrophe; split into two substrings.
+    expect(html).toContain('The Mystery is this system');
+    expect(html).toContain('component');
+  });
+});
+
+describe('SystemAssessmentArtifact — §7 strength/limit dedup', () => {
+  const base = (): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'Dedup System',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Leben CS600X', 'DeVore O/96'],
+        roles: ['Integrated Amplifier', 'Speakers'],
+      },
+    } as AdvisoryResponse);
+
+  it('collapses three concept-duplicate strength bullets to one', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      assessmentStrengths: [
+        'Leben contributes musical flow and continuity',
+        'DeVore contributes musical flow and continuity',
+        'System contributes musical flow and continuity',
+      ],
+    };
+    const html = render(a);
+    // After dedup, the concept "musical flow + continuity" surfaces
+    // once rather than three times.
+    const flowMatches = html.match(/musical flow/g) ?? [];
+    expect(flowMatches.length).toBe(1);
+  });
+
+  it('preserves bullets that name DIFFERENT concepts', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      assessmentStrengths: [
+        'Exceptional tonal coherence across the chain',
+        'Rhythmic engagement and musical flow',
+        'Dynamic ease at moderate listening levels',
+      ],
+    };
+    const html = render(a);
+    expect(html).toContain('tonal coherence');
+    expect(html).toContain('Rhythmic engagement');
+    expect(html).toContain('Dynamic ease');
+  });
+
+  it('symmetrically applies dedup to honest limits', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      assessmentLimitations: [
+        'Leben contributes limited dynamic headroom',
+        'DeVore contributes limited dynamic headroom',
+      ],
+    };
+    const html = render(a);
+    // Scope to the Honest Limits subsection — §2 Profile also pulls
+    // from assessmentLimitations[0] for the "What it trades" row,
+    // which would otherwise double-count the same phrase.
+    const limitsIdx = html.indexOf('Honest Limits');
+    expect(limitsIdx).toBeGreaterThan(0);
+    const limitsSection = html.slice(limitsIdx);
+    const matches = limitsSection.match(/limited dynamic headroom/g) ?? [];
+    expect(matches.length).toBe(1);
+  });
+
+  it('handles a system-level (no chain-name prefix) bullet', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      assessmentStrengths: [
+        'Coherent tonal voice across the chain',
+        'Coherent tonal voice across the chain',
+      ],
+    };
+    const html = render(a);
+    // Both bullets are exact duplicates without a chain-name prefix —
+    // the dedup helper still collapses them to one.
+    const matches = html.match(/Coherent tonal voice/g) ?? [];
+    expect(matches.length).toBe(1);
+  });
+
+  it('renders empty / undefined lists without crashing', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      assessmentStrengths: undefined,
+      assessmentLimitations: undefined,
+    };
+    const html = render(a);
+    // §7 is gated off entirely when both lists are absent.
+    expect(html).not.toContain('Strengths and Honest Limits');
+  });
+});
+
+describe('SystemAssessmentArtifact — §9 step title derivation', () => {
+  const base = (): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'Step System',
+      systemSignature: 'sig',
+      upgradeDirection: 'Direction.',
+    } as AdvisoryResponse);
+
+  it('derives "Audition the Amplifier" from an audition-the-amp action', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      recommendedSequence: [
+        { step: 1, action: 'Audition a higher-power tube integrated against the CS600X in your room.' },
+      ],
+    };
+    const html = render(a);
+    expect(html).toContain('Audition the Amplifier');
+    // "Step 1" survives as the subtitle slot, not as the heading.
+    expect(html).toContain('Step 1');
+  });
+
+  it('derives "Plan the Swap" from a conditional plan-the-swap action', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      recommendedSequence: [
+        { step: 1, action: 'If the trade-off feels worth it, plan the swap.' },
+      ],
+    };
+    const html = render(a);
+    expect(html).toContain('Plan the Swap');
+  });
+
+  it('derives "Preserve the DAC" from a do-not-touch DAC action', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      recommendedSequence: [
+        { step: 1, action: 'Do not touch the DAC or the speakers.' },
+      ],
+    };
+    const html = render(a);
+    // Action mentions both DAC and speakers → composite title.
+    expect(html).toContain('Preserve the DAC');
+  });
+
+  it('falls back to "Step N" when no pattern matches', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      recommendedSequence: [
+        { step: 1, action: 'Some action that does not match any pattern.' },
+      ],
+    };
+    const html = render(a);
+    expect(html).toContain('Step 1');
+  });
+
+  it('produces distinct titles + sequential "Step N" subtitles for multi-step sequences', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      recommendedSequence: [
+        { step: 1, action: 'Audition a higher-power tube integrated against the CS600X.' },
+        { step: 2, action: 'If the trade-off feels worth it, plan the swap.' },
+        { step: 3, action: 'Do not touch the DAC or the speakers.' },
+      ],
+    };
+    const html = render(a);
+    expect(html).toContain('Audition the Amplifier');
+    expect(html).toContain('Plan the Swap');
+    expect(html).toContain('Preserve the DAC');
+    // All three "Step N" subtitles render.
+    expect(html).toContain('Step 1');
+    expect(html).toContain('Step 2');
+    expect(html).toContain('Step 3');
+  });
+
+  it('handles a single-step sequence (no other steps to differentiate)', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      recommendedSequence: [
+        { step: 1, action: 'Audition a higher-power tube integrated against the CS600X.' },
+      ],
+    };
+    const html = render(a);
+    expect(html).toContain('Audition the Amplifier');
+    expect(html).toContain('Step 1');
+  });
+
+  it('§9 stays hidden when recommendedSequence is empty AND no upgrade paths present', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Empty',
+      systemSignature: 'sig',
+      recommendedSequence: [],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).not.toContain('If You Were to Change Something');
   });
 });
