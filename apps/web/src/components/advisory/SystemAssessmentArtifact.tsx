@@ -41,19 +41,11 @@ import AdvisorySources from './AdvisorySources';
  * array; only how the artifact maps readings to the rendered cards.
  */
 
-/** Target word count for each §5 card body after normalization. */
-const COMPONENT_CARD_WORD_TARGET = 55;
-
 /** Sentence-split heuristic: split on `.`, `!`, `?` followed by space. */
 function splitSentences(text: string): string[] {
   return (text.match(/[^.!?]+[.!?]+(?:\s|$)/g) ?? [text])
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
-}
-
-/** Count whitespace-delimited words. */
-function countWords(text: string): number {
-  return text.split(/\s+/).filter((w) => w.length > 0).length;
 }
 
 /**
@@ -122,48 +114,289 @@ function sentenceMentionsOffChainProduct(
 }
 
 /**
- * Trim a sentence list to a target word count at sentence boundaries.
- * Always keeps at least one sentence to avoid empty card bodies.
+ * Presentation-layer fact extraction from a component reading.
+ *
+ * The engine's `componentReadings[i]` arrive as product-review prose
+ * ("flagship push-pull tube integrated", "warm-tube reference R2R DAC",
+ * "canonical low-power-tube speaker"). For §5 to read as a system
+ * walkthrough rather than as catalog blurbs, the artifact extracts
+ * structured *facts* (topology, technology family, tube types,
+ * efficiency, cabinet shape, drivers, tonal lean) and recomposes the
+ * body presentationally — the reading text itself is no longer
+ * displayed verbatim.
+ *
+ * Only conservative, well-anchored regex matches are accepted as
+ * facts. Anything ambiguous is left out so the composed body remains
+ * factually accurate.
  */
-function trimSentencesToTarget(sentences: string[], targetWords: number): string[] {
-  if (sentences.length === 0) return sentences;
-  const kept: string[] = [];
-  let runningWords = 0;
-  for (const s of sentences) {
-    const w = countWords(s);
-    if (kept.length > 0 && runningWords + w > targetWords) break;
-    kept.push(s);
-    runningWords += w;
+interface CharacterFacts {
+  /** Conversion topology (DAC) or amplification topology (amp). */
+  topology?: 'R2R' | 'delta-sigma' | 'multibit' | 'push-pull' | 'single-ended' | 'class-A' | 'class-AB' | 'class-D';
+  /** Active-device family. */
+  tech?: 'tube' | 'solid-state' | 'hybrid';
+  /** Power-tube types found in the reading. */
+  tubeTypes: string[];
+  /** Speaker efficiency category. */
+  efficiency?: 'high' | 'low';
+  /** Cabinet / dispersion shape. */
+  cabinet?: 'wide-baffle' | 'narrow-baffle' | 'open-baffle' | 'sealed' | 'bass-reflex' | 'horn-loaded';
+  /** Notable driver types. */
+  drivers: string[];
+  /** Implied tonal lean from descriptors. */
+  tonalLean?: 'warm' | 'lean' | 'neutral' | 'forward' | 'recessed';
+}
+
+const TUBE_MODEL_RE = /\b(KT[- ]?\d{2,3}|EL[- ]?\d{2,3}|6L6|6V6|300B|2A3|45|211|845|7591|6SN7|6SL7|12AX7|6922|ECC83|ECC88|EF86)\b/gi;
+
+function extractCharacterFacts(
+  reading: string | undefined,
+  role: string | undefined,
+): CharacterFacts {
+  const facts: CharacterFacts = { tubeTypes: [], drivers: [] };
+  if (!reading) return facts;
+  const text = reading.toLowerCase();
+  const family = roleFamily(role);
+
+  // Topology — source families
+  if (family === 'source') {
+    if (/\br2r\b|\bresistor[- ]?ladder\b/.test(text)) facts.topology = 'R2R';
+    else if (/\bdelta[- ]?sigma\b/.test(text)) facts.topology = 'delta-sigma';
+    else if (/\bmulti[- ]?bit\b/.test(text)) facts.topology = 'multibit';
   }
-  // If the very first sentence already exceeded the target, keep it
-  // anyway — a single long sentence beats an empty card.
-  return kept;
+  // Topology — amplifier families (checked even for source so an
+  // integrated amp described in source register doesn't escape).
+  if (/\bpush[- ]pull\b/.test(text)) facts.topology = 'push-pull';
+  else if (/\bsingle[- ]ended\b|\bset\b(?!.*box)/.test(text)) facts.topology = 'single-ended';
+  else if (/\bclass[- ]?a\b(?!b)/.test(text)) facts.topology = facts.topology ?? 'class-A';
+  else if (/\bclass[- ]?ab\b/.test(text)) facts.topology = facts.topology ?? 'class-AB';
+  else if (/\bclass[- ]?d\b/.test(text)) facts.topology = facts.topology ?? 'class-D';
+
+  // Tech family
+  if (/\btube\b|\bvalve\b/.test(text)) facts.tech = 'tube';
+  else if (/\bsolid[- ]state\b|\btransistor\b|\bmosfet\b|\bbipolar\b/.test(text)) facts.tech = 'solid-state';
+  else if (/\bhybrid\b/.test(text)) facts.tech = 'hybrid';
+
+  // Tube types
+  const matches = reading.match(TUBE_MODEL_RE) ?? [];
+  facts.tubeTypes = Array.from(
+    new Set(matches.map((t) => t.toUpperCase().replace(/[- ]/g, ''))),
+  );
+
+  // Efficiency (speaker)
+  if (/\bhigh[- ]efficiency\b|\b(?:9[5-9]|10\d|11\d)\s?db\b/.test(text)) facts.efficiency = 'high';
+  else if (/\blow[- ]efficiency\b|\b(?:8[0-4])\s?db\b/.test(text)) facts.efficiency = 'low';
+
+  // Cabinet
+  if (/\bwide[- ]baffle\b/.test(text)) facts.cabinet = 'wide-baffle';
+  else if (/\bnarrow[- ]baffle\b/.test(text)) facts.cabinet = 'narrow-baffle';
+  else if (/\bopen[- ]baffle\b/.test(text)) facts.cabinet = 'open-baffle';
+  else if (/\bsealed\b/.test(text)) facts.cabinet = 'sealed';
+  else if (/\bbass[- ]reflex\b|\bported\b/.test(text)) facts.cabinet = 'bass-reflex';
+  else if (/\bhorn[- ]loaded\b|\bhorn\b/.test(text)) facts.cabinet = 'horn-loaded';
+
+  // Drivers
+  if (/\bheil\b|\bamt\b/.test(text)) facts.drivers.push('Heil-style AMT tweeter');
+  if (/\bribbon\b/.test(text)) facts.drivers.push('ribbon tweeter');
+  if (/\bberyllium\b/.test(text)) facts.drivers.push('beryllium tweeter');
+  if (/\bsoft[- ]dome\b|\bsilk[- ]dome\b/.test(text)) facts.drivers.push('soft-dome tweeter');
+  if (/\bcompression driver\b/.test(text)) facts.drivers.push('compression driver');
+
+  // Tonal lean
+  if (/\bwarm[- ]tube\b|\bwarm voicing\b|\bwarm\b/.test(text)) facts.tonalLean = 'warm';
+  else if (/\bneutral[- ]?lean\b|\blean voicing\b|\blean\b/.test(text)) facts.tonalLean = 'lean';
+  else if (/\bneutral\b/.test(text)) facts.tonalLean = 'neutral';
+  else if (/\bforward\b/.test(text)) facts.tonalLean = 'forward';
+  else if (/\brecessed\b|\bpolite\b/.test(text)) facts.tonalLean = 'recessed';
+
+  return facts;
 }
 
 /**
- * Normalize a single component card body.
+ * Group component roles into editorial families.
  *
- * Pipeline:
- *   1. Sentence-split the engine reading.
- *   2. Drop sentences that mention products outside the chain.
- *   3. Trim the remaining sentences to the word target.
- *
- * Returns undefined when the input is empty/undefined so the card can
- * gracefully omit a body.
+ * The three families ("source", "amplifier", "speaker") each get a
+ * distinct contribution narrative — source establishes the system's
+ * voice, amplifier carries and shapes it, speaker translates it into
+ * sound. The body composer dispatches on this grouping.
  */
-function normalizeComponentReading(
-  reading: string | undefined,
-  chainNames: string[],
+function roleFamily(role: string | undefined): 'source' | 'amplifier' | 'speaker' | 'unknown' {
+  if (!role) return 'unknown';
+  const r = role.toLowerCase();
+  if (/dac|streamer|transport|turntable|cartridge|cd player|phono|source/.test(r)) return 'source';
+  if (/preamp|integrated|monoblock|power amp|amplifier|amp\b/.test(r)) return 'amplifier';
+  if (/speaker|transducer|headphone|monitor/.test(r)) return 'speaker';
+  return 'unknown';
+}
+
+/**
+ * Render a CharacterFacts object as a single editorial trait phrase
+ * appropriate to the component family.
+ *
+ * Returns undefined when no facts are available — the body composer
+ * then falls back to a more general contribution sentence.
+ */
+function formatFactsPhrase(
+  family: 'source' | 'amplifier' | 'speaker' | 'unknown',
+  facts: CharacterFacts,
 ): string | undefined {
-  if (!reading) return undefined;
-  const sentences = splitSentences(reading);
-  const onChain = sentences.filter((s) => !sentenceMentionsOffChainProduct(s, chainNames));
-  // Defensive: if filtering removes everything, keep the first sentence
-  // so the card still says something rather than displaying empty.
-  const filtered = onChain.length > 0 ? onChain : sentences.slice(0, 1);
-  const trimmed = trimSentencesToTarget(filtered, COMPONENT_CARD_WORD_TARGET);
-  const joined = trimmed.join(' ').trim();
-  return preferSystemTerminology(joined) || undefined;
+  if (family === 'source') {
+    if (facts.topology === 'R2R') {
+      return 'Its R2R conversion favors tonal density and harmonic continuity over digital edge';
+    }
+    if (facts.topology === 'multibit') {
+      return 'Its multibit conversion favors body and weight over high-frequency air';
+    }
+    if (facts.topology === 'delta-sigma') {
+      return 'Its delta-sigma conversion prioritizes resolution and clean extension over analog texture';
+    }
+    if (facts.tonalLean === 'warm') {
+      return 'Its conversion leans warm, carrying source character toward density rather than edge';
+    }
+    return undefined;
+  }
+  if (family === 'amplifier') {
+    const tubes = facts.tubeTypes.length > 0 ? ` (${facts.tubeTypes.join(', ')})` : '';
+    if (facts.tech === 'tube' && facts.topology === 'push-pull') {
+      return `Its push-pull tube architecture${tubes} adds harmonic weight and rhythmic continuity without thinning the source`;
+    }
+    if (facts.tech === 'tube' && facts.topology === 'single-ended') {
+      return `Its single-ended tube architecture${tubes} preserves tonal density at the cost of headroom under demand`;
+    }
+    if (facts.tech === 'tube') {
+      return `Its tube topology${tubes} shapes the signal with harmonic warmth before passing it on`;
+    }
+    if (facts.topology === 'class-A') {
+      return 'Its class-A solid-state design delivers control and resolution without smoothing texture';
+    }
+    if (facts.topology === 'class-D') {
+      return 'Its class-D design favors efficiency and tight grip over harmonic generosity';
+    }
+    if (facts.tech === 'solid-state') {
+      return 'Its solid-state amplification favors neutrality and authority over tonal coloration';
+    }
+    return undefined;
+  }
+  if (family === 'speaker') {
+    const parts: string[] = [];
+    if (facts.efficiency === 'high') parts.push('high-efficiency');
+    if (facts.cabinet) parts.push(facts.cabinet);
+    const cabinetPhrase = parts.length > 0 ? parts.join(' ') + ' design' : undefined;
+    if (cabinetPhrase && facts.efficiency === 'high') {
+      return `Its ${cabinetPhrase} rewards low-power upstream drive with tonal weight and ease rather than pinpoint imaging`;
+    }
+    if (cabinetPhrase && facts.efficiency === 'low') {
+      return `Its ${cabinetPhrase} demands current and headroom upstream, rewarding solid-state authority`;
+    }
+    if (cabinetPhrase) {
+      return `Its ${cabinetPhrase} shapes how source signal reaches the room`;
+    }
+    if (facts.efficiency === 'high') {
+      return 'Its high efficiency rewards low-power upstream drive with tonal ease over precision imaging';
+    }
+    return undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Compose a §5 component card body from chain position, role family,
+ * extracted character facts, and the upstream/downstream context.
+ *
+ * The composed body is contribution-first: each sentence addresses
+ * *what the component contributes to this system*, not *what this
+ * product is*. The engine reading is NOT displayed verbatim — it
+ * is the source of factual anchors only. Product-review register
+ * ("flagship", "celebrated", "canonical", "famous pairing") never
+ * surfaces because it never enters this composer.
+ *
+ * Editorial benchmark: Brand Authority Design Families (short
+ * structured trait statements) + Stereophile sidebar voice (cool,
+ * analytical) + 6moons relational discipline (interaction-aware).
+ */
+function composeContributionBody(
+  name: string,
+  role: string | undefined,
+  idx: number,
+  chainNames: string[],
+  isBottleneck: boolean,
+  facts: CharacterFacts,
+): string {
+  const family = roleFamily(role);
+  const upstream = idx > 0 ? chainNames[idx - 1] : undefined;
+  const downstream = idx < chainNames.length - 1 ? chainNames[idx + 1] : undefined;
+  const sentences: string[] = [];
+
+  // Sentence 1 — contribution-first lede, role-aware.
+  if (family === 'source') {
+    if (downstream) {
+      sentences.push(
+        `The ${name} sets the tonal character that the rest of the system inherits, handing the ${downstream} the source signal everything downstream will shape.`,
+      );
+    } else {
+      sentences.push(`The ${name} establishes this system's source voice.`);
+    }
+  } else if (family === 'amplifier') {
+    if (upstream && downstream) {
+      sentences.push(
+        `The ${name} carries the signal between the ${upstream} and the ${downstream}, translating source character into drive for the speakers.`,
+      );
+    } else if (downstream) {
+      sentences.push(
+        `The ${name} drives the ${downstream}, shaping how source signal becomes motion at the speakers.`,
+      );
+    } else if (upstream) {
+      sentences.push(
+        `The ${name} takes what the ${upstream} delivers and translates it into drive.`,
+      );
+    } else {
+      sentences.push(`The ${name} sits at this system's heart, translating signal into drive.`);
+    }
+  } else if (family === 'speaker') {
+    if (upstream) {
+      sentences.push(
+        `The ${name} is where this system becomes sound — translating what the ${upstream} produces into a room-filling presentation.`,
+      );
+    } else {
+      sentences.push(`The ${name} is where this system becomes sound in the room.`);
+    }
+  } else {
+    // Unknown / generic role — keep the lede neutral.
+    if (upstream && downstream) {
+      sentences.push(
+        `Between the ${upstream} and the ${downstream}, the ${name} carries the system's signal as the ${naturalRole(role)}.`,
+      );
+    } else {
+      sentences.push(`The ${name} sits inside this system as the ${naturalRole(role)}.`);
+    }
+  }
+
+  // Sentence 2 — factual character trait phrase, when facts allow.
+  const factsPhrase = formatFactsPhrase(family, facts);
+  if (factsPhrase) {
+    sentences.push(factsPhrase + '.');
+  }
+
+  // Sentence 3 — editorial limit-framing when this is the system's
+  // primary constraint, calibrated by role family.
+  if (isBottleneck) {
+    if (family === 'amplifier') {
+      sentences.push(
+        'Where this system meets its honest limits — headroom under demand, control at scale — is decided here.',
+      );
+    } else if (family === 'speaker') {
+      sentences.push(
+        'Where this system meets its honest limits — scale, room interaction, imaging precision — is decided here.',
+      );
+    } else if (family === 'source') {
+      sentences.push(
+        'Where this system meets its honest limits — resolution, transient bite, top-end air — is decided here.',
+      );
+    } else {
+      sentences.push('Where this system meets its honest limits is decided here.');
+    }
+  }
+
+  return sentences.join(' ');
 }
 
 /**
@@ -183,27 +416,34 @@ function buildComponentCards(
   readings: string[] | undefined,
   primaryConstraintName?: string,
 ): Array<{ name: string; role?: string; body?: string }> {
-  if (!readings || readings.length === 0) return [];
+  if (!readings || readings.length === 0 && (!names || names.length === 0)) return [];
   if (!names || names.length === 0) {
-    // Fallback: no chain → render readings as anonymous components.
-    return readings.map((r, i) => ({
-      name: `Component ${i + 1}`,
-      body: normalizeComponentReading(r, []),
-    }));
+    // Fallback: no chain → render readings as anonymous components,
+    // still composed presentationally so the body stays in
+    // contribution register.
+    return (readings ?? []).map((r, i) => {
+      const facts = extractCharacterFacts(r, undefined);
+      const composed = composeContributionBody(
+        `Component ${i + 1}`,
+        undefined,
+        i,
+        [],
+        false,
+        facts,
+      );
+      return { name: `Component ${i + 1}`, body: composed };
+    });
   }
   return names.map((name, i) => {
     const matched = findReadingForName(name, readings, i);
-    // Strip the engine's "The {Name} —" prefix BEFORE normalization so
-    // the prepended contribution lede does not double-name the component.
-    const stripped = stripReadingPrefix(matched, name);
-    const normalized = normalizeComponentReading(stripped, names);
-    // Build the per-component contribution lede that anchors the body in
-    // the system, not in product-review register.
     const isBottleneck =
       !!primaryConstraintName &&
       primaryConstraintName.toLowerCase() === name.toLowerCase();
-    const lede = buildContributionLede(name, roles?.[i], i, names, isBottleneck);
-    const body = normalized ? `${lede} ${normalized}` : lede;
+    // Extract structured facts from the engine reading; the reading
+    // text itself is NOT displayed verbatim — it serves only as a
+    // factual anchor for the composer.
+    const facts = extractCharacterFacts(matched, roles?.[i]);
+    const body = composeContributionBody(name, roles?.[i], i, names, isBottleneck, facts);
     return {
       name,
       role: roles?.[i],
@@ -497,34 +737,6 @@ function normalizeFirstImpressions(
 }
 
 /**
- * Presentation-layer derivation of a §5 *Component* card lede sentence.
- *
- * Produces a single deterministic editorial sentence that places the
- * component inside the system — read more like a reviewer's opening
- * than a templated relationship description. The lede is prepended
- * to the existing (Commit 4B) `normalizeComponentReading` output to
- * convert the card body from product-review register into a
- * contribution narrative, without introducing LLM generation at
- * runtime.
- *
- * Selection by signal-path position (each branch uses a distinct
- * opening shape so a stack of cards reads as varied prose, not as a
- * formulaic listing):
- *   - head   — "{Name} opens the signal path, sending its character
- *               into the {downstream}."
- *   - middle — "Between the {upstream} and the {downstream}, the
- *               {Name} carries the signal as the system's {role}."
- *   - tail   — "{Name} closes the path — turning what the {upstream}
- *               produces into sound in the room."
- *   - solo   — "{Name} carries this system on its own as the
- *               {role}."
- *
- * When the component matches `primaryConstraint.componentName`, the
- * lede gains a short editorial clause framing the trade-off without
- * the engine vocabulary (`primary constraint`, `bottleneck`).
- */
-
-/**
  * Render the engine's role label in editorial natural-case.
  *
  * Engine roles arrive title-cased (`"DAC"`, `"Integrated Amplifier"`,
@@ -542,34 +754,6 @@ function naturalRole(role: string | undefined): string {
   return trimmed.toLowerCase();
 }
 
-function buildContributionLede(
-  name: string,
-  role: string | undefined,
-  idx: number,
-  chainNames: string[],
-  isBottleneck: boolean,
-): string {
-  const upstream = idx > 0 ? chainNames[idx - 1] : undefined;
-  const downstream = idx < chainNames.length - 1 ? chainNames[idx + 1] : undefined;
-  const roleNoun = naturalRole(role);
-  let lede: string;
-  if (chainNames.length === 1) {
-    lede = `The ${name} carries this system on its own as the ${roleNoun}.`;
-  } else if (idx === 0 && downstream) {
-    lede = `The ${name} opens the signal path, sending its character into the ${downstream}.`;
-  } else if (idx === chainNames.length - 1 && upstream) {
-    lede = `The ${name} closes the path — turning what the ${upstream} produces into sound in the room.`;
-  } else if (upstream && downstream) {
-    lede = `Between the ${upstream} and the ${downstream}, the ${name} carries the signal as the system's ${roleNoun}.`;
-  } else {
-    lede = `The ${name} sits inside this system as the ${roleNoun}.`;
-  }
-  if (isBottleneck) {
-    lede += ' Much of what this system can deliver — and where it meets its limits — is shaped here.';
-  }
-  return lede;
-}
-
 function capitalizeFirst(s: string): string {
   if (!s) return s;
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -577,16 +761,6 @@ function capitalizeFirst(s: string): string {
 
 function escapeForRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/**
- * Strip the engine's "The {Name} —" prefix from a component reading so
- * the prepended contribution lede does not double-name the component.
- */
-function stripReadingPrefix(reading: string | undefined, name: string): string | undefined {
-  if (!reading) return undefined;
-  const re = new RegExp(`^the\\s+${escapeForRegex(name)}\\s*[—\\-]\\s*`, 'i');
-  return reading.replace(re, '').trim();
 }
 
 /**

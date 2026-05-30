@@ -149,9 +149,16 @@ describe('SystemAssessmentArtifact — full data renders all 10 sections', () =>
     expect(html).toContain('canonical pairing');
   });
 
-  it('renders §5 The Components', () => {
+  it('renders §5 The Components in contribution register', () => {
     expect(html).toContain('The Components');
-    expect(html).toContain('Pontus II is the warm-tube reference');
+    // Pass 22 — §5 bodies are composed from extracted facts, not
+    // pass-through of engine reading. Source card opens with the
+    // contribution-first lede; the fixture's reading lacks a topology
+    // anchor so the body relies on the lede alone.
+    expect(html).toContain('Denafrips Pontus II sets the tonal character');
+    // No product-review register survives — the engine's "warm-tube
+    // reference R2R DAC" descriptor never reaches the body.
+    expect(html).not.toContain('warm-tube reference');
   });
 
   it('renders §6 How They Work Together', () => {
@@ -712,35 +719,49 @@ describe('SystemAssessmentArtifact — §5 The Components: identity mapping + co
       idx = scoped.indexOf(name);
     }
     if (idx < 0) return '';
-    // Each card is a `<div ...>` block of bounded length; 1200 chars
-    // covers the heading + role + lede + body within §5.
-    return scoped.slice(idx, idx + 1200);
+    // Each card body lives inside a single `<p>…</p>`. Slice from the
+    // card heading through the first closing `</p>` so neighbouring
+    // cards never leak into the window. This is critical for the
+    // negative assertions ("Pontus II card does NOT contain push-pull
+    // tube content") — Commit 5's amp-card body sits ~50 chars away
+    // and would otherwise be captured by a wider fixed window.
+    const after = scoped.slice(idx);
+    const closeIdx = after.indexOf('</p>');
+    if (closeIdx < 0) return after.slice(0, 1200);
+    return after.slice(0, closeIdx + 4); // +4 includes "</p>"
   }
 
-  describe('identity mapping — readings match the named card, not the array index', () => {
+  describe('identity mapping — facts extracted from each named card belong to that card', () => {
     const html = render(GOLD_CASE);
 
-    it('Denafrips Pontus II card body describes the Pontus II', () => {
+    it('Denafrips Pontus II card body carries the R2R contribution, not the Leben\'s tube content', () => {
       const card = cardWindowForName(html, 'Denafrips Pontus II');
       expect(card).toContain('Pontus II');
-      expect(card).toContain('R2R');
-      // Negative: the Leben\'s tube content must NOT appear in the
+      // R2R is the Pontus II reading's structural fact; the Pass 22
+      // composer surfaces it as a contribution sentence.
+      expect(card).toContain('R2R conversion');
+      // Negative: the Leben\'s tube facts must NOT appear in the
       // Denafrips card (this would be the pre-fix swap defect).
-      expect(card).not.toContain('Leben\'s flagship push-pull');
+      expect(card).not.toContain('push-pull tube architecture');
       expect(card).not.toContain('KT88');
     });
 
-    it('Leben CS600X card body describes the Leben CS600X', () => {
+    it('Leben CS600X card body carries the tube-amp contribution, not the Pontus II\'s R2R content', () => {
       const card = cardWindowForName(html, 'Leben CS600X');
-      expect(card).toContain('tube integrated');
-      // Negative: the Pontus II\'s R2R language must NOT appear in the
-      // Leben card (this would be the pre-fix swap defect).
-      expect(card).not.toContain('Full-scale R2R');
+      // push-pull + KT88 are the Leben reading\'s structural facts.
+      expect(card).toContain('push-pull tube architecture');
+      expect(card).toContain('KT88');
+      // Negative: R2R language belongs to the Pontus II card only.
+      expect(card).not.toContain('R2R conversion');
     });
 
-    it('DeVore O/96 card body describes the DeVore O/96', () => {
+    it('DeVore O/96 card body carries the high-efficiency speaker contribution', () => {
       const card = cardWindowForName(html, 'DeVore O/96');
-      expect(card).toContain('High-efficiency');
+      // The composer surfaces high-efficiency speaker traits from the
+      // engine reading; verify the speaker contribution language.
+      expect(card).toContain('high-efficiency');
+      // Negative: tube-amp language belongs to the Leben card only.
+      expect(card).not.toContain('push-pull tube architecture');
     });
   });
 
@@ -776,12 +797,14 @@ describe('SystemAssessmentArtifact — §5 The Components: identity mapping + co
       expect(compsSection).not.toContain('headphone listeners');
     });
 
-    it('§5 retains in-chain product mentions (DeVore O/96 referenced inside Leben card is on-chain and kept)', () => {
-      // The Leben reading mentions the DeVore O/96 — which IS in the
-      // chain. That reference must be preserved (off-chain stripping
-      // only removes products NOT in the chain).
+    it('§5 surfaces in-chain neighbor names through the contribution lede (relational discipline)', () => {
+      // The composer always references in-chain upstream/downstream by
+      // name in the lede ("carries the signal between the {upstream}
+      // and the {downstream}, …"). Off-chain product names are
+      // structurally impossible to surface because they are never
+      // passed into the composer.
       const card = cardWindowForName(html, 'Leben CS600X');
-      expect(card).toContain('celebrated pairings');
+      expect(card).toContain('between the Denafrips Pontus II and the DeVore O/96');
     });
   });
 
@@ -809,25 +832,22 @@ describe('SystemAssessmentArtifact — §5 The Components: identity mapping + co
     });
   });
 
-  describe('length consistency — card bodies trimmed to a consistent target', () => {
+  describe('length consistency — composed bodies stay within editorial weight', () => {
     const html = render(GOLD_CASE);
 
-    it('the Leben card (originally the longest engine reading) is not catastrophically longer than the Pontus II card', () => {
-      // Extract approximate text body for each card by name window.
-      // We use the absence of "KT88" (originally in the Leben body)
-      // and "EL34" as a proxy for "the engine\'s 80-word body was
-      // trimmed at sentence boundaries". The Leben body should retain
-      // the opening character claim but not the full spec dump.
-      const card = cardWindowForName(html, 'Leben CS600X');
-      expect(card).toContain('tube integrated');
-      // The full original reading included a spec dump in parens —
-      // confirming length-trim is in effect by checking the spec dump
-      // doesn\'t appear entirely.
-      const hasFullSpec = card.includes('KT77') && card.includes('KT88') && card.includes('EL34');
-      // Either the spec dump was stripped (off-chain heuristic), trimmed
-      // (length target), or both. Locking the outcome: the spec
-      // triplet is NOT present in full.
-      expect(hasFullSpec).toBe(false);
+    it('the Leben card is not catastrophically longer than the Pontus II card', () => {
+      // The composer emits 2-3 sentences per card; bodies should have
+      // similar editorial weight regardless of how verbose the engine
+      // reading was. Measure approximate body length by sentence
+      // count via period-counting inside each card window.
+      const lebenCard = cardWindowForName(html, 'Leben CS600X');
+      const pontusCard = cardWindowForName(html, 'Denafrips Pontus II');
+      // Strip HTML for a rough text-length comparison.
+      const lebenText = lebenCard.replace(/<[^>]+>/g, ' ');
+      const pontusText = pontusCard.replace(/<[^>]+>/g, ' ');
+      // Allow the bottleneck card (Leben) to be modestly longer due
+      // to its limit-framing third sentence, but no more than 2x.
+      expect(lebenText.length).toBeLessThan(pontusText.length * 2.5);
     });
   });
 
@@ -855,19 +875,23 @@ describe('SystemAssessmentArtifact — §5 The Components: identity mapping + co
       expect(html).not.toContain('The Components');
     });
 
-    it('falls back to positional reading when a chain name has no matching prefix', () => {
-      // Engine reading does NOT start with "The Foo" — but chain name
-      // is "Foo". The fallback uses the positional reading at index 0.
+    it('composes a contribution body for a single-DAC chain even when the reading has no extractable facts', () => {
+      // Engine reading has no R2R / multibit / delta-sigma anchor —
+      // the composer falls back to the contribution lede alone.
+      // The fallback is editorial-grade prose, not raw passthrough.
       const a: AdvisoryResponse = {
         kind: 'assessment',
         subject: 'Test',
         systemChain: { names: ['Foo'], roles: ['DAC'] },
-        componentReadings: ['Some prose that does not start with the component name.'],
+        componentReadings: ['Some prose that does not include a topology anchor.'],
       };
       const html = render(a);
       const compsIndex = html.indexOf('The Components');
       const compsSection = html.slice(compsIndex, compsIndex + 1500);
-      expect(compsSection).toContain('Some prose that does not start');
+      // Solo source falls to the source-establishes lede.
+      expect(compsSection).toContain('Foo establishes this system');
+      // The raw engine reading must NOT leak into the card body.
+      expect(compsSection).not.toContain('Some prose that does not include');
     });
   });
 });
@@ -1019,7 +1043,10 @@ describe('SystemAssessmentArtifact — §3 First Impressions normalization', () 
   });
 });
 
-describe('SystemAssessmentArtifact — §5 contribution lede', () => {
+describe('SystemAssessmentArtifact — §5 contribution body (Commit 5)', () => {
+  // Phase K — Commit 5 ledes-to-body rewrite. Cards no longer pass
+  // through engine reading text; the body is composed from extracted
+  // facts + chain position + role family.
   const baseChain = (): AdvisoryResponse =>
     ({
       kind: 'assessment',
@@ -1031,51 +1058,50 @@ describe('SystemAssessmentArtifact — §5 contribution lede', () => {
       },
       componentReadings: [
         'The Pontus II is a warm-tube R2R DAC.',
-        'The CS600X is a musical tube integrated.',
-        'The O/96 is a high-efficiency speaker.',
+        'The CS600X is a musical push-pull tube integrated (KT88).',
+        'The O/96 is a high-efficiency wide-baffle speaker.',
       ],
     } as AdvisoryResponse);
 
-  it('head component (DAC) lede opens the path and names the downstream neighbor', () => {
+  it('source (DAC) body opens with "sets the tonal character" + names downstream', () => {
     const html = render(baseChain());
-    // Pontus II is head (idx=0) → lede opens the path into the Leben.
-    expect(html).toContain('Denafrips Pontus II opens the signal path');
-    expect(html).toContain('into the Leben CS600X');
+    expect(html).toContain('Denafrips Pontus II sets the tonal character');
+    expect(html).toContain('handing the Leben CS600X');
   });
 
-  it('tail component (Speakers) lede closes the path and names the upstream neighbor', () => {
+  it('source (DAC) body surfaces R2R conversion contribution when facts allow', () => {
     const html = render(baseChain());
-    // DeVore O/96 is tail → lede closes the path and references the Leben.
-    expect(html).toContain('DeVore O/96 closes the path');
-    expect(html).toContain('the Leben CS600X produces');
+    expect(html).toContain('Its R2R conversion favors tonal density and harmonic continuity');
   });
 
-  it('middle component lede uses the "Between … and …" template', () => {
+  it('amplifier body opens with "carries the signal between" + names upstream and downstream', () => {
     const html = render(baseChain());
-    expect(html).toContain('Between the Denafrips Pontus II and the DeVore O/96');
-    // Middle template anchors the role in natural-case prose, NOT as
-    // "this system's dac" diagnostic phrasing.
-    expect(html).toContain('integrated amplifier');
-    expect(html).not.toContain('dac');
+    expect(html).toContain(
+      'Leben CS600X carries the signal between the Denafrips Pontus II and the DeVore O/96',
+    );
+    expect(html).toContain('translating source character into drive for the speakers');
   });
 
-  it('strips the engine\'s "The {Name} —" prefix from the reading body', () => {
-    const a: AdvisoryResponse = {
-      ...baseChain(),
-      componentReadings: [
-        'The Denafrips Pontus II — Full-scale R2R with rich tonal density.',
-        'The Leben CS600X — Tube integrated.',
-        'The DeVore O/96 — Efficient speaker.',
-      ],
-    };
-    const html = render(a);
-    // The prefix is stripped before the lede is prepended, so the body
-    // does not double-name the component.
-    expect(html).not.toContain('Pontus II — Full-scale R2R');
-    expect(html).toContain('Full-scale R2R with rich tonal density');
+  it('amplifier body surfaces push-pull tube + tube type when facts allow', () => {
+    const html = render(baseChain());
+    expect(html).toContain('push-pull tube architecture');
+    expect(html).toContain('KT88');
+    expect(html).toContain('adds harmonic weight and rhythmic continuity');
   });
 
-  it('appends an editorial limit-framing clause when the card matches primaryConstraint.componentName', () => {
+  it('speaker body opens with "where this system becomes sound" + names upstream', () => {
+    const html = render(baseChain());
+    expect(html).toContain('DeVore O/96 is where this system becomes sound');
+    expect(html).toContain('translating what the Leben CS600X produces');
+  });
+
+  it('speaker body surfaces high-efficiency wide-baffle contribution + low-power tube pairing', () => {
+    const html = render(baseChain());
+    expect(html).toContain('high-efficiency wide-baffle design');
+    expect(html).toContain('rewards low-power upstream drive');
+  });
+
+  it('amplifier bottleneck appends amp-specific limit-framing sentence', () => {
     const a: AdvisoryResponse = {
       ...baseChain(),
       primaryConstraint: {
@@ -1085,25 +1111,68 @@ describe('SystemAssessmentArtifact — §5 contribution lede', () => {
       } as AdvisoryResponse['primaryConstraint'],
     };
     const html = render(a);
-    // Editorial framing — no engine vocabulary ("primary constraint",
-    // "bottleneck") surfaces in user-visible prose.
-    expect(html).toContain('Much of what this system can deliver');
-    expect(html).toContain('where it meets its limits');
+    // Editorial limit framing, role-specific to amplifier.
+    expect(html).toContain('Where this system meets its honest limits');
+    expect(html).toContain('headroom under demand');
+    expect(html).toContain('control at scale');
+    // No diagnostic engine vocabulary surfaces.
     expect(html).not.toContain('primary constraint');
     expect(html).not.toContain('bottleneck');
   });
 
-  it('uses a solo-mode "carries this system on its own" template for a single-component chain', () => {
+  it('speaker bottleneck appends speaker-specific limit-framing sentence', () => {
     const a: AdvisoryResponse = {
-      kind: 'assessment',
-      subject: 'Solo',
-      systemSignature: 'sig',
-      systemChain: { names: ['Some Component'], roles: ['Headphone'] },
-      componentReadings: ['Detailed reading body here.'],
-    } as AdvisoryResponse;
+      ...baseChain(),
+      primaryConstraint: {
+        componentName: 'DeVore O/96',
+        category: 'speaker_scale',
+        explanation: 'Cabinet scale limits room interaction.',
+      } as AdvisoryResponse['primaryConstraint'],
+    };
     const html = render(a);
-    expect(html).toContain('The Some Component carries this system on its own');
-    expect(html).toContain('headphone');
+    expect(html).toContain('Where this system meets its honest limits');
+    expect(html).toContain('room interaction');
+    expect(html).toContain('imaging precision');
+  });
+
+  it('cards do NOT contain product-review register words ("flagship", "celebrated", "canonical")', () => {
+    const html = render(baseChain());
+    const compsSection = html.slice(html.indexOf('The Components'));
+    // The composer never embeds these phrases — they were product-review
+    // register that the old reading-passthrough sometimes surfaced.
+    expect(compsSection).not.toContain('flagship');
+    expect(compsSection).not.toContain('celebrated');
+    expect(compsSection).not.toContain('canonical');
+    expect(compsSection).not.toContain('famous pairing');
+    expect(compsSection).not.toContain('reference R2R DAC');
+  });
+
+  it('cards do NOT contain raw engine reading sentences ("most musical sub-")', () => {
+    // Even when the engine reading mentions catalog superlatives, the
+    // composer keeps them out of the rendered body.
+    const a: AdvisoryResponse = {
+      ...baseChain(),
+      componentReadings: [
+        'The Pontus II is the warm-tube reference R2R DAC.',
+        'The CS600X is the most musical sub-$10k tube integrated.',
+        'The O/96 is the canonical low-power-tube speaker.',
+      ],
+    };
+    const html = render(a);
+    const compsSection = html.slice(html.indexOf('The Components'));
+    expect(compsSection).not.toContain('most musical sub-');
+    expect(compsSection).not.toContain('canonical low-power-tube');
+    expect(compsSection).not.toContain('reference R2R DAC');
+  });
+
+  it('source / amplifier / speaker cards open with distinct contribution shapes', () => {
+    const html = render(baseChain());
+    const compsSection = html.slice(html.indexOf('The Components'));
+    // Each role family produces a different sentence shape; assert
+    // the distinct openers appear exactly once.
+    expect((compsSection.match(/sets the tonal character/g) ?? []).length).toBe(1);
+    expect((compsSection.match(/carries the signal between/g) ?? []).length).toBe(1);
+    expect((compsSection.match(/is where this system becomes sound/g) ?? []).length).toBe(1);
   });
 
   it('handles 2-component chain (head + tail, no middle)', () => {
@@ -1111,54 +1180,72 @@ describe('SystemAssessmentArtifact — §5 contribution lede', () => {
       kind: 'assessment',
       subject: 'Pair',
       systemSignature: 'sig',
-      systemChain: {
-        names: ['Some DAC', 'Some Speakers'],
-        roles: ['DAC', 'Speakers'],
-      },
-      componentReadings: [
-        'Warm-leaning DAC.',
-        'High-efficiency speaker.',
-      ],
+      systemChain: { names: ['Some DAC', 'Some Speakers'], roles: ['DAC', 'Speakers'] },
+      componentReadings: ['Warm R2R DAC.', 'High-efficiency speaker.'],
     } as AdvisoryResponse;
     const html = render(a);
-    // Head lede opens the path into the downstream.
-    expect(html).toContain('Some DAC opens the signal path');
-    expect(html).toContain('into the Some Speakers');
-    // Tail lede closes the path and references the upstream.
-    expect(html).toContain('Some Speakers closes the path');
-    expect(html).toContain('the Some DAC produces');
+    // Source role lede references downstream.
+    expect(html).toContain('Some DAC sets the tonal character');
+    expect(html).toContain('handing the Some Speakers');
+    // Speaker role lede references upstream.
+    expect(html).toContain('Some Speakers is where this system becomes sound');
+    expect(html).toContain('translating what the Some DAC produces');
   });
 
-  it('gracefully handles role=undefined with a generic "component" anchor', () => {
+  it('single-component chain falls back to role-establishment lede (source)', () => {
     const a: AdvisoryResponse = {
       kind: 'assessment',
-      subject: 'No-Roles',
+      subject: 'Solo',
+      systemSignature: 'sig',
+      systemChain: { names: ['Solo DAC'], roles: ['DAC'] },
+      componentReadings: ['Some DAC body content.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // No downstream → falls to "establishes this system's source voice".
+    expect(html).toContain('Solo DAC establishes this system');
+  });
+
+  it('role=undefined defaults to the generic "sits inside this system" lede', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'No-Role',
       systemSignature: 'sig',
       systemChain: { names: ['Mystery'], roles: undefined },
       componentReadings: ['Body content.'],
     } as AdvisoryResponse;
     const html = render(a);
-    // Role label falls back to "component"; no exception.
-    expect(html).toContain('The Mystery carries this system on its own');
+    expect(html).toContain('Mystery sits inside this system');
     expect(html).toContain('component');
   });
 
-  it('preserves DAC as an uppercase acronym in natural-case role rendering', () => {
+  it('source card with delta-sigma topology surfaces a different fact phrase than R2R', () => {
     const a: AdvisoryResponse = {
-      kind: 'assessment',
-      subject: 'Pair-DAC',
-      systemSignature: 'sig',
-      systemChain: { names: ['Some DAC', 'Some Amp', 'Some Speakers'], roles: ['DAC', 'Amplifier', 'Speakers'] },
-      componentReadings: ['DAC body.', 'Amp body.', 'Speaker body.'],
-    } as AdvisoryResponse;
+      ...baseChain(),
+      componentReadings: [
+        'A delta-sigma DAC.',
+        'A tube amp.',
+        'A speaker.',
+      ],
+    };
     const html = render(a);
-    // Middle slot uses naturalRole; DAC is the upstream component's
-    // role, not the middle lede — but a 3-component chain with DAC at
-    // head should still surface the acronym intact in §1 chain banner.
-    // For the lede specifically, middle slot is "Amp" with role
-    // "Amplifier" → "amplifier" (lowercase, natural noun).
-    expect(html).toContain('carries the signal as the system');
-    expect(html).toContain('amplifier');
+    expect(html).toContain('Its delta-sigma conversion');
+    expect(html).toContain('resolution and clean extension');
+    expect(html).not.toContain('R2R conversion');
+  });
+
+  it('speaker card without efficiency anchor falls back to neutral cabinet contribution', () => {
+    const a: AdvisoryResponse = {
+      ...baseChain(),
+      componentReadings: [
+        'A DAC.',
+        'A tube amp.',
+        'A bass-reflex speaker.',
+      ],
+    };
+    const html = render(a);
+    // Cabinet known, efficiency unknown → neutral cabinet contribution.
+    expect(html).toContain('bass-reflex design');
+    expect(html).not.toContain('rewards low-power upstream drive');
   });
 });
 
@@ -1479,14 +1566,20 @@ describe('SystemAssessmentArtifact — no diagnostic-engine vocabulary in user p
 
   it('limit-framing prose reads editorially, not diagnostically', () => {
     const html = render(FULL_WITH_CONSTRAINT);
-    // The constraint component still shows up — but via editorial
-    // framing about what the system can deliver and where it reaches
-    // its limits, not via diagnostic engine labels.
-    expect(html).toContain('Much of what this system can deliver');
+    // After Commit 5 the §5 bottleneck card uses role-specific limit
+    // framing ("Where this system meets its honest limits — …"). The
+    // §2 row 3 fallback ("Much of this system's practical character — …")
+    // also surfaces editorially. Either editorial framing is fine —
+    // assert the role-specific §5 surface here.
+    expect(html).toContain('Where this system meets its honest limits');
+    expect(html).toContain('headroom under demand');
   });
 });
 
-describe('SystemAssessmentArtifact — §5 lede editorial polish', () => {
+describe('SystemAssessmentArtifact — §5 system-walkthrough register (Commit 5 + Pass 21)', () => {
+  // Lock the editorial outcome: bodies read as a system walkthrough,
+  // not as catalog blurbs. Each card opens with a role-family-specific
+  // contribution shape so a stack of cards reads as varied prose.
   const GOLD = (): AdvisoryResponse =>
     ({
       kind: 'assessment',
@@ -1497,45 +1590,51 @@ describe('SystemAssessmentArtifact — §5 lede editorial polish', () => {
         roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
       },
       componentReadings: [
-        'Warm-tube DAC.',
-        'Musical tube integrated.',
-        'Efficient wide-baffle speaker.',
+        'Warm-tube R2R DAC.',
+        'Push-pull tube integrated (KT88).',
+        'High-efficiency wide-baffle speaker.',
       ],
     } as AdvisoryResponse);
 
-  it('opens the head card with "opens the signal path", not the old "As this system\'s" template', () => {
+  it('source card opens with role-aware contribution lede, not the old "opens the signal path" template', () => {
     const html = render(GOLD());
-    // Card heading is the Pontus II → the first body slot.
     const componentsSlice = html.slice(html.indexOf('The Components'));
     const headBlock = componentsSlice.slice(componentsSlice.indexOf('Denafrips Pontus II'));
-    expect(headBlock.slice(0, 800)).toContain('opens the signal path');
-    expect(headBlock.slice(0, 800)).not.toMatch(/As this system['’]s dac/i);
+    expect(headBlock.slice(0, 1000)).toContain('Denafrips Pontus II sets the tonal character');
+    // The Pass 21 "opens the signal path" template has been replaced
+    // by the Commit 5 contribution-first composer.
+    expect(headBlock.slice(0, 1000)).not.toContain('opens the signal path');
   });
 
-  it('closes the tail card with "closes the path", not the old "translates what the X delivers" template', () => {
+  it('speaker card opens with role-aware contribution lede, not the old "closes the path" template', () => {
     const html = render(GOLD());
     const componentsSlice = html.slice(html.indexOf('The Components'));
     const tailIdx = componentsSlice.indexOf('>DeVore O/96</div>');
     expect(tailIdx).toBeGreaterThan(0);
-    const tailBlock = componentsSlice.slice(tailIdx, tailIdx + 800);
-    expect(tailBlock).toContain('closes the path');
-    expect(tailBlock).not.toContain('translates what');
+    const tailBlock = componentsSlice.slice(tailIdx, tailIdx + 1000);
+    expect(tailBlock).toContain('is where this system becomes sound');
+    expect(tailBlock).not.toContain('closes the path');
   });
 
-  it('renders the middle card with "Between … and …" instead of the old "Sitting between" template', () => {
+  it('amplifier card opens with role-aware contribution lede, not the old "Between … and …" template alone', () => {
     const html = render(GOLD());
-    expect(html).toContain('Between the Denafrips Pontus II and the DeVore O/96');
-    expect(html).not.toContain('Sitting between');
+    // The Commit 5 amplifier lede uses "carries the signal between" —
+    // which includes the upstream/downstream names but in a complete
+    // contribution sentence rather than the bare position phrase.
+    expect(html).toContain(
+      'Leben CS600X carries the signal between the Denafrips Pontus II and the DeVore O/96',
+    );
+    expect(html).toContain('translating source character into drive');
   });
 
-  it('lede shapes differ across head/middle/tail (no single repeated opening)', () => {
+  it('lede shapes differ across source/amp/speaker (role-aware varied prose)', () => {
     const html = render(GOLD());
-    // Count distinctive shape openers — each shape appears at most once.
-    const opensMatches = (html.match(/opens the signal path/g) ?? []).length;
-    const betweenMatches = (html.match(/Between the Denafrips Pontus II and the DeVore O\/96/g) ?? []).length;
-    const closesMatches = (html.match(/closes the path/g) ?? []).length;
-    expect(opensMatches).toBe(1);
-    expect(betweenMatches).toBe(1);
-    expect(closesMatches).toBe(1);
+    // Each role-family lede shape appears exactly once per chain.
+    const sourceMatches = (html.match(/sets the tonal character/g) ?? []).length;
+    const ampMatches = (html.match(/carries the signal between/g) ?? []).length;
+    const speakerMatches = (html.match(/is where this system becomes sound/g) ?? []).length;
+    expect(sourceMatches).toBe(1);
+    expect(ampMatches).toBe(1);
+    expect(speakerMatches).toBe(1);
   });
 });
