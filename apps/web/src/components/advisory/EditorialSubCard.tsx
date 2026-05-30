@@ -41,6 +41,16 @@ interface EditorialSubCardProps {
    * pattern). Use COLOR.accent for primary cards, omit for neutral.
    */
   accentColor?: string;
+  /**
+   * Optional product image URL. When provided, renders a restrained
+   * fixed-height thumbnail at the top of the card so each component
+   * card carries equal visual weight. Sized for editorial recognition,
+   * not for product-catalog browsing. Consumers MUST pass undefined
+   * to keep the card text-only (the Commit 6 scope locks images to
+   * §5 The Components — §8 *What's Already Working* and §9 *If You
+   * Were to Change Something* both omit this prop).
+   */
+  imageUrl?: string;
 }
 
 export default function EditorialSubCard({
@@ -49,6 +59,7 @@ export default function EditorialSubCard({
   body,
   verdict,
   accentColor,
+  imageUrl,
 }: EditorialSubCardProps) {
   return (
     <div
@@ -60,6 +71,37 @@ export default function EditorialSubCard({
         borderRadius: '4px',
       }}
     >
+      {imageUrl && (
+        <div
+          style={{
+            // Equal-weight thumbnail strip. Fixed height keeps card
+            // rhythm consistent whether an image resolves or not; the
+            // graceful no-image case (text-only card) still reads as
+            // intentional. Mobile stays comfortable because the strip
+            // is height-bounded and the prose below is unchanged.
+            marginBottom: '0.6rem',
+            height: '120px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+            background: '#FAF6EC',
+            borderRadius: '3px',
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrl}
+            alt={name}
+            loading="lazy"
+            style={{
+              maxHeight: '100%',
+              maxWidth: '100%',
+              objectFit: 'contain',
+            }}
+          />
+        </div>
+      )}
       <div
         style={{
           fontWeight: 600,

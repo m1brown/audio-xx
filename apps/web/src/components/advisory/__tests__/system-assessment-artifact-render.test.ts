@@ -1638,3 +1638,185 @@ describe('SystemAssessmentArtifact — §5 system-walkthrough register (Commit 5
     expect(speakerMatches).toBe(1);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// Commit 6 — §5 component images (scope-locked to §5)
+// ════════════════════════════════════════════════════════════════════════
+//
+// Lock the editorial outcome: §5 component cards may render a small
+// product image when the curated overlay or catalog supplies one.
+// Resolution is brand-anchored and F4-gated; missing imagery
+// degrades to a text-only card. NO images appear outside §5.
+
+describe('SystemAssessmentArtifact — §5 component images', () => {
+  // Phase K fixture — production chain that exercises three image
+  // outcomes: catalog imageUrl (DeVore), overlay match (Pontus II),
+  // and F4-gated reviewer-publication source (Leben) which must
+  // degrade to text-only rather than fall through to a placeholder.
+  const PHASE_K: AdvisoryResponse = {
+    kind: 'assessment',
+    subject: 'Phase K System',
+    systemSignature: 'sig',
+    systemChain: {
+      names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+      roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+    },
+    componentReadings: [
+      'R2R DAC.',
+      'Push-pull tube integrated.',
+      'High-efficiency speaker.',
+    ],
+    keepRecommendations: [
+      { name: 'DeVore O/96', reason: 'Anchors the system.' },
+    ],
+    recommendedSequence: [
+      { step: 1, action: 'Audition a higher-power tube integrated.' },
+    ],
+    upgradeDirection: 'If the trade-off feels worth it.',
+  };
+
+  // ── Section-scoping helpers ──────────────────────────────
+  // Bounded slices that capture exactly one section's HTML window
+  // so that image-presence assertions don't bleed across sections.
+  const SECTION_ORDER = [
+    'Your System',
+    'Profile',
+    'First Impressions',
+    'Character',
+    'The Components',
+    'How They Work Together',
+    'Strengths and Honest Limits',
+    'Already Working',
+    'If You Were to Change',
+    'Sources',
+  ];
+
+  function sliceForSection(html: string, name: string): string {
+    const start = html.indexOf(name);
+    if (start < 0) return '';
+    const remainingTitles = SECTION_ORDER.filter((s) => s !== name);
+    const ends = remainingTitles
+      .map((s) => html.indexOf(s, start + name.length))
+      .filter((i) => i > 0)
+      .sort((a, b) => a - b);
+    const end = ends.length > 0 ? ends[0] : html.length;
+    return html.slice(start, end);
+  }
+
+  function imgTagsIn(s: string): string[] {
+    return s.match(/<img[^>]+>/g) ?? [];
+  }
+
+  it('renders a product image for Denafrips Pontus II (curated overlay match)', () => {
+    const html = render(PHASE_K);
+    const componentsSlice = sliceForSection(html, 'The Components');
+    const imgs = imgTagsIn(componentsSlice);
+    const pontusImg = imgs.find((t) => t.includes('alt="Denafrips Pontus II"'));
+    expect(pontusImg).toBeDefined();
+    // The Denafrips overlay URL is hosted by the manufacturer site,
+    // not a reviewer publication — F4 does NOT skip it.
+    expect(pontusImg).toContain('static.wixstatic.com');
+  });
+
+  it('renders a product image for DeVore O/96 (catalog imageUrl)', () => {
+    const html = render(PHASE_K);
+    const componentsSlice = sliceForSection(html, 'The Components');
+    const imgs = imgTagsIn(componentsSlice);
+    const devoreImg = imgs.find((t) => t.includes('alt="DeVore O/96"'));
+    expect(devoreImg).toBeDefined();
+    expect(devoreImg).toContain('devorefidelity.com');
+  });
+
+  it('renders Leben CS600X as text-only (F4 reviewer-publication source skipped)', () => {
+    const html = render(PHASE_K);
+    const componentsSlice = sliceForSection(html, 'The Components');
+    const imgs = imgTagsIn(componentsSlice);
+    // F4 reviewer-data exclusion is the safety invariant — when the
+    // only resolvable image is reviewer-hosted, the card must NOT
+    // fall through to a placeholder and must NOT borrow another
+    // component's image.
+    const lebenImg = imgs.find((t) => t.includes('alt="Leben CS600X"'));
+    expect(lebenImg).toBeUndefined();
+  });
+
+  it('does NOT render placeholders for missing component imagery', () => {
+    const html = render(PHASE_K);
+    // Strict resolution chain bypasses category placeholders. The
+    // F4-gated Leben card should produce zero image markup, not a
+    // generic SVG placeholder substitute.
+    const componentsSlice = sliceForSection(html, 'The Components');
+    expect(componentsSlice).not.toContain('/images/placeholders/');
+  });
+
+  it('does NOT cross-map images: Pontus II URL never appears under DeVore alt and vice versa', () => {
+    const html = render(PHASE_K);
+    const componentsSlice = sliceForSection(html, 'The Components');
+    const imgs = imgTagsIn(componentsSlice);
+    for (const tag of imgs) {
+      const alt = tag.match(/alt="([^"]+)"/)?.[1];
+      const src = tag.match(/src="([^"]+)"/)?.[1] ?? '';
+      if (alt === 'Denafrips Pontus II') {
+        // Pontus II image should NOT be from the DeVore manufacturer
+        // host. (Brand-anchored substring match in getProductImage
+        // makes this structurally impossible — assert anyway as a
+        // future-proof guard.)
+        expect(src).not.toContain('devorefidelity.com');
+      }
+      if (alt === 'DeVore O/96') {
+        // DeVore image should NOT be from the Denafrips overlay host.
+        expect(src).not.toContain('static.wixstatic.com');
+      }
+    }
+  });
+
+  it('does NOT render any images outside §5 The Components', () => {
+    const html = render(PHASE_K);
+    // §8 What's Already Working uses EditorialSubCard but must not
+    // pass imageUrl.
+    const keepSlice = sliceForSection(html, 'Already Working');
+    expect(imgTagsIn(keepSlice).length).toBe(0);
+    // §9 If You Were to Change Something uses EditorialSubCard for
+    // step cards. Same constraint.
+    const changeSlice = sliceForSection(html, 'If You Were to Change');
+    expect(imgTagsIn(changeSlice).length).toBe(0);
+    // §1 hero / §2 profile / §3 first impressions / §4 character /
+    // §6 interaction / §7 strengths / §10 sources — none surface
+    // <img> tags in their bodies.
+    for (const name of ['Profile', 'First Impressions', 'How They Work Together', 'Strengths and Honest Limits']) {
+      const slice = sliceForSection(html, name);
+      expect(imgTagsIn(slice).length).toBe(0);
+    }
+  });
+
+  it('renders zero images when no chain names supplied (graceful)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Empty',
+      componentReadings: ['Anonymous reading.'],
+    };
+    const html = render(a);
+    expect(imgTagsIn(html).length).toBe(0);
+  });
+
+  it('image markup uses loading="lazy" + alt with component name', () => {
+    const html = render(PHASE_K);
+    const imgs = imgTagsIn(html);
+    for (const tag of imgs) {
+      expect(tag).toContain('loading="lazy"');
+      const alt = tag.match(/alt="([^"]+)"/)?.[1];
+      expect(alt).toBeDefined();
+      // Alt must be one of the chain names (no synthetic alts).
+      const validAlts = PHASE_K.systemChain!.names!;
+      expect(validAlts).toContain(alt!);
+    }
+  });
+
+  it('§5 card prose is unchanged by the addition of imagery', () => {
+    const html = render(PHASE_K);
+    // Pass-22 contribution composer outputs must still appear after
+    // images land — image is additive, not a prose mutation.
+    expect(html).toContain('Denafrips Pontus II sets the tonal character');
+    expect(html).toContain('Leben CS600X carries the signal between');
+    expect(html).toContain('DeVore O/96 is where this system becomes sound');
+  });
+});

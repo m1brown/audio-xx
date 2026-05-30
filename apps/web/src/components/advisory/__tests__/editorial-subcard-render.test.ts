@@ -84,3 +84,63 @@ describe('EditorialSubCard — without accentColor', () => {
     expect(html).toMatch(/border-left:1px solid #E8E3D7/);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// Commit 6 — optional imageUrl prop (used by §5 The Components only)
+// ════════════════════════════════════════════════════════════════════════
+
+describe('EditorialSubCard — imageUrl prop', () => {
+  it('renders no <img> when imageUrl is undefined', () => {
+    const html = render({ name: 'No image' });
+    expect(html).not.toContain('<img');
+  });
+
+  it('renders an <img> at the top of the card when imageUrl is provided', () => {
+    const html = render({
+      name: 'Some Component',
+      imageUrl: 'https://example.com/some-image.jpg',
+    });
+    expect(html).toContain('<img');
+    expect(html).toContain('src="https://example.com/some-image.jpg"');
+    // Alt is the component name (recognition + accessibility).
+    expect(html).toContain('alt="Some Component"');
+    // Lazy-load for editorial cards.
+    expect(html).toContain('loading="lazy"');
+  });
+
+  it('image markup uses object-fit:contain so the thumbnail does not crop the product', () => {
+    const html = render({
+      name: 'Some Component',
+      imageUrl: 'https://example.com/img.jpg',
+    });
+    expect(html).toContain('object-fit:contain');
+  });
+
+  it('image is bounded by a fixed-height thumbnail strip (mobile-safe, no gallery sprawl)', () => {
+    const html = render({
+      name: 'Some Component',
+      imageUrl: 'https://example.com/img.jpg',
+    });
+    expect(html).toContain('height:120px');
+  });
+
+  it('image strip sits ABOVE the name heading, not below', () => {
+    const html = render({
+      name: 'Sortable Heading',
+      imageUrl: 'https://example.com/img.jpg',
+    });
+    const imgIdx = html.indexOf('<img');
+    const nameIdx = html.indexOf('Sortable Heading');
+    expect(imgIdx).toBeGreaterThan(0);
+    expect(nameIdx).toBeGreaterThan(0);
+    expect(imgIdx).toBeLessThan(nameIdx);
+  });
+
+  it('renders the body prose unchanged whether imageUrl is supplied or not', () => {
+    const a = render({ name: 'X', body: 'A body sentence.' });
+    const b = render({ name: 'X', body: 'A body sentence.', imageUrl: 'https://example.com/img.jpg' });
+    // Body markup stays identical; only the image block is added.
+    expect(a).toContain('A body sentence.');
+    expect(b).toContain('A body sentence.');
+  });
+});

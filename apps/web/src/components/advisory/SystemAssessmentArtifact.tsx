@@ -6,6 +6,8 @@ import React from 'react';
 import type { AdvisoryResponse } from '@/lib/advisory-response';
 import { COLOR, sectionHeadingStyle, proseStyle } from '@/lib/editorial-tokens';
 import { hasDisplayableSources } from '@/lib/evidence/source-whitelist';
+import { findProductByComponentName } from '@/lib/consultation';
+import { resolveProductImageStrict, getProductImage } from '@/lib/product-images';
 
 import SystemHero from './SystemHero';
 import SystemProfileCard from './SystemProfileCard';
@@ -410,17 +412,64 @@ function composeContributionBody(
  * order. Each entry carries the matched reading after normalization;
  * roles are passed through from systemChain.roles.
  */
+/**
+ * Resolve a §5 component card's product image, scoped to the chain
+ * component's identity (Commit 6).
+ *
+ * Resolution chain — STRICT throughout. No placeholder, no brand-only
+ * fallback. Returns undefined when the artifact cannot find a
+ * model-specific image, and the card renders text-only.
+ *
+ *   1. Catalog match via `findProductByComponentName(name)` —
+ *      already handles brand + distinctive-token matching (Commit 4A
+ *      identity-mapping precedent). When a canonical Product
+ *      resolves, prefer its `imageUrl`.
+ *   2. With a canonical brand+name in hand (from step 1) but no
+ *      catalog `imageUrl`, fall through to the curated overlay map
+ *      via `resolveProductImageStrict(brand, name)`.
+ *   3. When no catalog product matches at all (e.g. an in-chain
+ *      product that pre-dates a catalog entry), try the overlay map
+ *      using the raw component name string as the haystack — the
+ *      overlay's `haystack.includes(key)` substring match is brand-
+ *      anchored (every key carries the brand prefix), so cross-brand
+ *      drift is structurally impossible.
+ *
+ * The component name from `systemChain.names` is the authoritative
+ * source of identity — never the engine reading text, never a
+ * neighboring component's prefix. The Commit 4A swap-defect fix is
+ * preserved exactly because resolution starts from the card name.
+ *
+ * F4 / review-publication imagery is already filtered inside the
+ * overlay layer (`getProductImage` skips entries with source.tier ===
+ * 'review_publication'). No additional gating required here.
+ */
+function resolveComponentImage(componentName: string | undefined): string | undefined {
+  if (!componentName) return undefined;
+  // Step 1: catalog match.
+  const product = findProductByComponentName(componentName);
+  if (product?.imageUrl) return product.imageUrl;
+  // Step 2: canonical brand + name → strict overlay.
+  if (product) {
+    const overlay = resolveProductImageStrict(product.brand, product.name);
+    if (overlay) return overlay;
+  }
+  // Step 3: raw name → overlay (substring match against brand-anchored keys).
+  return getProductImage(undefined, componentName);
+}
+
 function buildComponentCards(
   names: string[] | undefined,
   roles: string[] | undefined,
   readings: string[] | undefined,
   primaryConstraintName?: string,
-): Array<{ name: string; role?: string; body?: string }> {
+): Array<{ name: string; role?: string; body?: string; imageUrl?: string }> {
   if (!readings || readings.length === 0 && (!names || names.length === 0)) return [];
   if (!names || names.length === 0) {
     // Fallback: no chain → render readings as anonymous components,
     // still composed presentationally so the body stays in
-    // contribution register.
+    // contribution register. No image resolution in this branch —
+    // anonymous "Component N" labels cannot drive a brand-anchored
+    // overlay lookup safely.
     return (readings ?? []).map((r, i) => {
       const facts = extractCharacterFacts(r, undefined);
       const composed = composeContributionBody(
@@ -444,10 +493,12 @@ function buildComponentCards(
     // factual anchor for the composer.
     const facts = extractCharacterFacts(matched, roles?.[i]);
     const body = composeContributionBody(name, roles?.[i], i, names, isBottleneck, facts);
+    const imageUrl = resolveComponentImage(name);
     return {
       name,
       role: roles?.[i],
       body,
+      imageUrl,
     };
   });
 }
@@ -1202,6 +1253,7 @@ export default function SystemAssessmentArtifact({
                 name={card.name}
                 subtitle={card.role}
                 body={card.body}
+                imageUrl={card.imageUrl}
               />
             ))}
           </div>
