@@ -367,6 +367,499 @@ describe('SystemAssessmentArtifact — section heading set is locked', () => {
   });
 });
 
+describe('SystemAssessmentArtifact — §4 Character: System-read extraction + memo-heading removal', () => {
+  // Locks the Commit 4B fix: §4 must contain ONLY the "System read"
+  // content, with all eight legacy MemoFormat sub-headings stripped:
+  // System read · Emergent behavior · System logic · Primary leverage ·
+  // Decision · Trade-offs · Next step options · Do nothing check.
+  //
+  // The fixture mirrors live engine output from the Phase K gold-case
+  // chain (captured before the fix) so any regression that re-exposes
+  // the memo prose is unambiguous.
+
+  const PHASE_K_LIVE_SYSTEM_CONTEXT =
+    '**System read** This is a warmth-first system anchored by Leben CS600X and Denafrips Pontus II, reinforced by the DeVore O/96. Warmth and body dominate throughout. This system reflects a listener drawn to harmonic density, tonal continuity, and timbral depth. This system is organized around harmonic restraint, smoothness, and unforced presence. **Emergent behavior** The Pontus II/CS600X/O/96 chain works because speed is converted into elastic motion rather than edge. **System logic** Denafrips Pontus II → tone-rich, smooth conversion → anchors the tonal foundation with warmth Leben CS600X → tone-rich, high flow → preserves upstream character. **Primary leverage** System balance. The system is already built around tonal richness. **Decision** KEEP if you value warmth, body, tonal richness. CHANGE the DAC if vocals feel thin or instruments lack weight. **Trade-offs** - Leaner DAC adds speed, reduces harmonic weight - Solid-state swap adds grip, reduces harmonic bloom. **Next step options** - Move toward more resolving DAC options - Compare Denafrips Pontus II vs delta-sigma alternatives. **Do nothing check** If the music sounds engaging, this system is doing its job.';
+
+  function makePhaseK(extra?: Partial<AdvisoryResponse>): AdvisoryResponse {
+    return {
+      kind: 'assessment',
+      subject: 'Living Room System',
+      systemContext: PHASE_K_LIVE_SYSTEM_CONTEXT,
+      systemChain: {
+        names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+        roles: ['DAC', 'Amplifier', 'Speakers'],
+      },
+      ...extra,
+    };
+  }
+
+  function characterSection(html: string): string {
+    const start = html.indexOf('>Character<');
+    if (start < 0) return '';
+    return html.slice(start, start + 3500);
+  }
+
+  describe('memo sub-headings are removed', () => {
+    const html = render(makePhaseK());
+    const ch = characterSection(html);
+
+    it('System read marker is stripped (the content is kept, the marker is not)', () => {
+      // The literal "**System read**" delimiter must not appear in
+      // rendered HTML, but the content beneath it must.
+      expect(ch).not.toContain('**System read**');
+      expect(ch).toContain('warmth-first system');
+    });
+
+    it('Emergent behavior heading is removed', () => {
+      expect(ch).not.toContain('Emergent behavior');
+    });
+
+    it('System logic heading + arrow narration are removed', () => {
+      expect(ch).not.toContain('System logic');
+      expect(ch).not.toContain('→');
+    });
+
+    it('Primary leverage heading is removed', () => {
+      expect(ch).not.toContain('Primary leverage');
+    });
+
+    it('Decision heading + decision content are removed', () => {
+      expect(ch).not.toContain('Decision');
+      expect(ch).not.toContain('KEEP if you value');
+      expect(ch).not.toContain('CHANGE the DAC');
+    });
+
+    it('Trade-offs heading + trade-off list are removed', () => {
+      expect(ch).not.toContain('Trade-offs');
+      expect(ch).not.toContain('Leaner DAC adds speed');
+    });
+
+    it('Next step options heading + recommendations are removed', () => {
+      expect(ch).not.toContain('Next step options');
+      expect(ch).not.toContain('delta-sigma alternatives');
+    });
+
+    it('Do nothing check heading + restraint phrasing are removed', () => {
+      expect(ch).not.toContain('Do nothing check');
+      expect(ch).not.toContain('doing its job');
+    });
+
+    it('no residual bold marker (**...**) anywhere in §4', () => {
+      expect(ch).not.toMatch(/\*\*[^*]+\*\*/);
+    });
+  });
+
+  describe('Character keeps system identity / voicing / coherence', () => {
+    const html = render(makePhaseK());
+    const ch = characterSection(html);
+
+    it('renders the "warmth-first system" identity claim', () => {
+      expect(ch).toContain('warmth-first system');
+    });
+
+    it('renders the listener-philosophy framing', () => {
+      expect(ch).toContain('harmonic density');
+      expect(ch).toContain('tonal continuity');
+    });
+
+    it('renders the coherence/organization framing', () => {
+      expect(ch).toContain('harmonic restraint');
+      expect(ch).toContain('smoothness');
+    });
+  });
+
+  describe('Character length target (~500–800 chars after normalization)', () => {
+    it('Phase K gold-case character prose lands inside the editorial target window', () => {
+      const html = render(makePhaseK());
+      const ch = characterSection(html);
+      // The §4 section heading + chrome adds ~30-50 chars on top of
+      // the prose; check that the prose portion is bounded.
+      // Find the <p>...</p> content and measure.
+      const proseMatch = ch.match(/<p[^>]*>([\s\S]*?)<\/p>/);
+      expect(proseMatch).not.toBeNull();
+      const proseLen = proseMatch![1].length;
+      // After memo-heading removal the System-read content for Phase K
+      // is ~400 chars. Locking >= 200 to catch over-aggressive stripping
+      // and <= 900 to catch regression that re-floods the section.
+      expect(proseLen).toBeGreaterThanOrEqual(200);
+      expect(proseLen).toBeLessThanOrEqual(900);
+    });
+  });
+
+  describe('Character graceful degradation', () => {
+    it('omits §4 when systemContext is empty and systemSynergy is empty', () => {
+      const html = render({ kind: 'assessment', subject: 'Test' });
+      expect(html).not.toContain('>Character<');
+    });
+
+    it('still renders §4 with only systemSynergy when systemContext is empty', () => {
+      const html = render({
+        kind: 'assessment',
+        subject: 'Test',
+        systemSynergy: 'A short synergy claim.',
+      });
+      expect(html).toContain('>Character<');
+      expect(html).toContain('short synergy claim');
+    });
+
+    it('renders systemContext as-is when no memo markers are present', () => {
+      const html = render({
+        kind: 'assessment',
+        subject: 'Test',
+        systemContext: 'A coherent warm-leaning system with deliberate voicing.',
+      });
+      expect(html).toContain('coherent warm-leaning system');
+    });
+  });
+});
+
+describe('SystemAssessmentArtifact — §6 How They Work Together: interaction-only discipline', () => {
+  // Locks the Commit 4B fix: §6 must contain only system-level or
+  // multi-component interaction sentences. Product-review drift,
+  // off-chain product mentions, single-component spec rundowns, and
+  // brand-history asides must be stripped.
+
+  const PHASE_K_LIVE_INTERACTION =
+    'The system leans toward warmth and smoothness and dynamic energy and scale across multiple components — they push in the same direction, creating a strong and coherent character. Leben CS600X: Leben amplifiers are a natural match for high-efficiency loudspeakers — DeVore, Zu, Klipsch Heritage. The CS600X (~32W) drives speakers in the 90–96 dB range with authority. The CS300 / CS300X has a parallel identity as a desktop tube amplifier for headphone listeners.';
+
+  function makePhaseK(extra?: Partial<AdvisoryResponse>): AdvisoryResponse {
+    return {
+      kind: 'assessment',
+      subject: 'Living Room System',
+      systemInteraction: PHASE_K_LIVE_INTERACTION,
+      systemChain: {
+        names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+        roles: ['DAC', 'Amplifier', 'Speakers'],
+      },
+      ...extra,
+    };
+  }
+
+  function interactionSection(html: string): string {
+    const start = html.indexOf('How They Work Together');
+    if (start < 0) return '';
+    return html.slice(start, start + 2000);
+  }
+
+  describe('product-review drift is removed', () => {
+    const html = render(makePhaseK());
+    const sec = interactionSection(html);
+
+    it('removes the "Leben CS600X:" component-header label pattern', () => {
+      expect(sec).not.toContain('Leben CS600X: Leben');
+    });
+
+    it('removes off-chain CS300 / CS300X product reference', () => {
+      expect(sec).not.toContain('CS300');
+      expect(sec).not.toContain('headphone listeners');
+    });
+
+    it('removes spec sentences (~32W / 90–96 dB)', () => {
+      expect(sec).not.toContain('~32W');
+      expect(sec).not.toContain('32W');
+      expect(sec).not.toContain('90–96 dB');
+    });
+
+    it('removes brand-pairing trivia (Zu, Klipsch Heritage)', () => {
+      expect(sec).not.toContain('Zu');
+      expect(sec).not.toContain('Klipsch Heritage');
+    });
+  });
+
+  describe('§6 retains system-level interaction prose', () => {
+    const html = render(makePhaseK());
+    const sec = interactionSection(html);
+
+    it('keeps the system-level "push in the same direction" framing', () => {
+      expect(sec).toContain('push in the same direction');
+    });
+
+    it('keeps the "coherent character" claim', () => {
+      expect(sec).toContain('coherent character');
+    });
+  });
+
+  describe('§6 success test — every retained sentence is interaction-grade', () => {
+    const html = render(makePhaseK());
+    const sec = interactionSection(html);
+    // Extract the <p> content (the prose body)
+    const proseMatch = sec.match(/<p[^>]*>([\s\S]*?)<\/p>/);
+
+    it('renders at least one prose paragraph', () => {
+      expect(proseMatch).not.toBeNull();
+    });
+
+    it('no retained sentence contains a "{Component}:" header label', () => {
+      const prose = proseMatch![1];
+      expect(prose).not.toMatch(/Leben CS600X\s*:/);
+      expect(prose).not.toMatch(/Denafrips Pontus II\s*:/);
+      expect(prose).not.toMatch(/DeVore O\/96\s*:/);
+    });
+
+    it('no retained sentence contains an off-chain product token', () => {
+      const prose = proseMatch![1];
+      // Spec model tokens for off-chain products (e.g. CS300, CS300X)
+      // should not survive filtering.
+      expect(prose).not.toMatch(/\bCS\d+/);
+      expect(prose).not.toMatch(/\bKT\d+/);
+      expect(prose).not.toMatch(/\bEL\d+/);
+    });
+  });
+
+  describe('multi-component interaction sentences ARE retained', () => {
+    it('a sentence that names two chain components is kept', () => {
+      const html = render({
+        ...makePhaseK(),
+        systemInteraction:
+          'The Pontus II warmth is reinforced by the Leben tube saturation. The CS600X (~32W) drives speakers.',
+      });
+      const sec = interactionSection(html);
+      const prose = sec.match(/<p[^>]*>([\s\S]*?)<\/p>/)?.[1] ?? '';
+      // Multi-component sentence retained.
+      expect(prose).toContain('Pontus II warmth is reinforced by the Leben');
+      // Spec sentence dropped.
+      expect(prose).not.toContain('~32W');
+    });
+  });
+
+  describe('§6 graceful degradation', () => {
+    it('omits §6 when systemInteraction is absent', () => {
+      const html = render({
+        kind: 'assessment',
+        subject: 'Test',
+        systemChain: { names: ['Foo'], roles: ['DAC'] },
+      });
+      expect(html).not.toContain('How They Work Together');
+    });
+
+    it('falls back to first sentence when ALL sentences are filtered out', () => {
+      // Adversarial: every sentence is single-component or off-chain.
+      // The defensive fallback keeps the first sentence so the section
+      // is not silently emptied.
+      const html = render({
+        ...makePhaseK(),
+        systemInteraction:
+          'Leben CS600X: standalone product review. The CS300X has no system role.',
+      });
+      const sec = interactionSection(html);
+      const prose = sec.match(/<p[^>]*>([\s\S]*?)<\/p>/)?.[1] ?? '';
+      // Some content survives (defensive fallback). Empty section
+      // would fail to render the heading.
+      expect(prose.length).toBeGreaterThan(0);
+    });
+  });
+});
+
+describe('SystemAssessmentArtifact — §5 The Components: identity mapping + content discipline', () => {
+  // These tests lock the Commit 4A fix: the artifact must map engine
+  // componentReadings to chain names by IDENTITY (prefix match), not by
+  // array index. The engine produces readings in a different order than
+  // systemChain.names produces, and prior index-mapping silently swapped
+  // card descriptions. Tests are written with the gold-case chain so a
+  // regression that re-introduces the swap is unambiguous.
+
+  // Phase K gold-case fixture: chain in signal-path order, readings in
+  // intentionally MISMATCHED order to expose the identity-mapping
+  // requirement. The Leben reading deliberately mentions the off-chain
+  // CS300X to test off-chain stripping; the Pontus II reading is shorter
+  // than the others to test length-target tolerance.
+  const GOLD_CASE: AdvisoryResponse = {
+    kind: 'assessment',
+    subject: 'Living Room System',
+    systemChain: {
+      names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+      roles: ['DAC', 'Amplifier', 'Speakers'],
+    },
+    // Readings INTENTIONALLY out of order vs systemChain.names — the
+    // engine emits them in input order (Leben first), while the chain
+    // is sorted by signal path (Pontus first). Identity mapping must
+    // recover the correct pairing.
+    componentReadings: [
+      'The Leben CS600X — Leben\'s flagship push-pull tube integrated. ~32W with switchable output tube compatibility (KT77, KT88, EL34) that meaningfully changes voicing. Extraordinary rhythmic drive, tonal density, and midrange authority. One of the most celebrated pairings in modern audio with the DeVore O/96. The CS300 / CS300X has a parallel identity as a desktop tube amplifier for headphone listeners.',
+      'The Denafrips Pontus II — Full-scale R2R with rich tonal density, strong harmonic texture, and refined composure. Prioritizes body and musical weight over transient sharpness.',
+      'The DeVore O/96 — High-efficiency design that combines deep tonal density with remarkable rhythmic drive. Makes music feel physically present in the room.',
+    ],
+  };
+
+  // Helper: scope to the §5 section only. "Leben CS600X" and similar
+  // names appear in §1's chain banner first; we must search inside §5
+  // explicitly to evaluate component-card content.
+  function componentsSection(html: string): string {
+    const start = html.indexOf('The Components');
+    const after = html.slice(start);
+    // §5 ends at the next <section> opener.
+    const endRel = after.search(/<section[^>]*>/g.exec(after.slice(50))?.index !== undefined
+      ? new RegExp(`<section[^>]*>`)
+      : /$/);
+    // Robust slice: take a generous window past the start. §5 in our
+    // fixtures is well under 4000 chars.
+    return html.slice(start, start + 4500);
+  }
+
+  function cardWindowForName(html: string, name: string): string {
+    const scoped = componentsSection(html);
+    const idx = scoped.indexOf(name);
+    if (idx < 0) return '';
+    // Each card is a `<div ...>` block of bounded length; 800 chars covers
+    // the name + role + body within §5.
+    return scoped.slice(idx, idx + 800);
+  }
+
+  describe('identity mapping — readings match the named card, not the array index', () => {
+    const html = render(GOLD_CASE);
+
+    it('Denafrips Pontus II card body describes the Pontus II', () => {
+      const card = cardWindowForName(html, 'Denafrips Pontus II');
+      expect(card).toContain('Pontus II');
+      expect(card).toContain('R2R');
+      // Negative: the Leben\'s tube content must NOT appear in the
+      // Denafrips card (this would be the pre-fix swap defect).
+      expect(card).not.toContain('Leben\'s flagship push-pull');
+      expect(card).not.toContain('KT88');
+    });
+
+    it('Leben CS600X card body describes the Leben CS600X', () => {
+      const card = cardWindowForName(html, 'Leben CS600X');
+      expect(card).toContain('tube integrated');
+      // Negative: the Pontus II\'s R2R language must NOT appear in the
+      // Leben card (this would be the pre-fix swap defect).
+      expect(card).not.toContain('Full-scale R2R');
+    });
+
+    it('DeVore O/96 card body describes the DeVore O/96', () => {
+      const card = cardWindowForName(html, 'DeVore O/96');
+      expect(card).toContain('High-efficiency');
+    });
+  });
+
+  describe('Phase K gold case — full chain renders correctly', () => {
+    const html = render(GOLD_CASE);
+
+    it('renders all three chain names as card headings', () => {
+      // §5 must show all three names in the cards (not just the chain banner).
+      // Use a chunk of HTML around "The Components" to scope the assertion.
+      const compsIndex = html.indexOf('The Components');
+      const compsSection = html.slice(compsIndex, compsIndex + 3000);
+      expect(compsSection).toContain('Denafrips Pontus II');
+      expect(compsSection).toContain('Leben CS600X');
+      expect(compsSection).toContain('DeVore O/96');
+    });
+
+    it('renders each card with its role subtitle', () => {
+      const compsIndex = html.indexOf('The Components');
+      const compsSection = html.slice(compsIndex, compsIndex + 3000);
+      expect(compsSection).toContain('DAC');
+      expect(compsSection).toContain('Amplifier');
+      expect(compsSection).toContain('Speakers');
+    });
+  });
+
+  describe('off-chain product references are stripped', () => {
+    const html = render(GOLD_CASE);
+
+    it('§5 does NOT contain the CS300 / CS300X reference from the Leben reading', () => {
+      const compsIndex = html.indexOf('The Components');
+      const compsSection = html.slice(compsIndex, compsIndex + 3000);
+      expect(compsSection).not.toContain('CS300');
+      expect(compsSection).not.toContain('headphone listeners');
+    });
+
+    it('§5 retains in-chain product mentions (DeVore O/96 referenced inside Leben card is on-chain and kept)', () => {
+      // The Leben reading mentions the DeVore O/96 — which IS in the
+      // chain. That reference must be preserved (off-chain stripping
+      // only removes products NOT in the chain).
+      const card = cardWindowForName(html, 'Leben CS600X');
+      expect(card).toContain('celebrated pairings');
+    });
+  });
+
+  describe('contribution-orientation: cards reference system role or chain context', () => {
+    const html = render(GOLD_CASE);
+
+    it('each card carries its role subtitle (system-role anchor)', () => {
+      // The role subtitle (DAC / Amplifier / Speakers) is the artifact's
+      // explicit "what does this component do in this system" signal.
+      // Every card body lives beneath this role anchor.
+      const compsIndex = html.indexOf('The Components');
+      const compsSection = html.slice(compsIndex, compsIndex + 3000);
+      expect(compsSection.match(/DAC/g)?.length ?? 0).toBeGreaterThanOrEqual(1);
+      expect(compsSection.match(/Amplifier/g)?.length ?? 0).toBeGreaterThanOrEqual(1);
+      expect(compsSection.match(/Speakers/g)?.length ?? 0).toBeGreaterThanOrEqual(1);
+    });
+
+    it('at least one card body references another component in the chain (relational language)', () => {
+      // For the gold case, the Leben reading references DeVore O/96 —
+      // an on-chain neighbor. Identity-mapping + on-chain preservation
+      // means the Leben card body now contains a relational sentence
+      // to its chain neighbor.
+      const card = cardWindowForName(html, 'Leben CS600X');
+      expect(card).toContain('DeVore O/96');
+    });
+  });
+
+  describe('length consistency — card bodies trimmed to a consistent target', () => {
+    const html = render(GOLD_CASE);
+
+    it('the Leben card (originally the longest engine reading) is not catastrophically longer than the Pontus II card', () => {
+      // Extract approximate text body for each card by name window.
+      // We use the absence of "KT88" (originally in the Leben body)
+      // and "EL34" as a proxy for "the engine\'s 80-word body was
+      // trimmed at sentence boundaries". The Leben body should retain
+      // the opening character claim but not the full spec dump.
+      const card = cardWindowForName(html, 'Leben CS600X');
+      expect(card).toContain('tube integrated');
+      // The full original reading included a spec dump in parens —
+      // confirming length-trim is in effect by checking the spec dump
+      // doesn\'t appear entirely.
+      const hasFullSpec = card.includes('KT77') && card.includes('KT88') && card.includes('EL34');
+      // Either the spec dump was stripped (off-chain heuristic), trimmed
+      // (length target), or both. Locking the outcome: the spec
+      // triplet is NOT present in full.
+      expect(hasFullSpec).toBe(false);
+    });
+  });
+
+  describe('graceful degradation', () => {
+    it('renders with no chain names, falling back to "Component N" labels', () => {
+      const a: AdvisoryResponse = {
+        kind: 'assessment',
+        subject: 'Test',
+        componentReadings: ['The Foo — does something.', 'The Bar — does something else.'],
+      };
+      const html = render(a);
+      const compsIndex = html.indexOf('The Components');
+      const compsSection = html.slice(compsIndex, compsIndex + 1500);
+      expect(compsSection).toContain('Component 1');
+      expect(compsSection).toContain('Component 2');
+    });
+
+    it('omits §5 entirely when componentReadings is empty', () => {
+      const a: AdvisoryResponse = {
+        kind: 'assessment',
+        subject: 'Test',
+        systemChain: { names: ['Foo'], roles: ['DAC'] },
+      };
+      const html = render(a);
+      expect(html).not.toContain('The Components');
+    });
+
+    it('falls back to positional reading when a chain name has no matching prefix', () => {
+      // Engine reading does NOT start with "The Foo" — but chain name
+      // is "Foo". The fallback uses the positional reading at index 0.
+      const a: AdvisoryResponse = {
+        kind: 'assessment',
+        subject: 'Test',
+        systemChain: { names: ['Foo'], roles: ['DAC'] },
+        componentReadings: ['Some prose that does not start with the component name.'],
+      };
+      const html = render(a);
+      const compsIndex = html.indexOf('The Components');
+      const compsSection = html.slice(compsIndex, compsIndex + 1500);
+      expect(compsSection).toContain('Some prose that does not start');
+    });
+  });
+});
+
 describe('SystemAssessmentArtifact — Profile row 3 derivation fallback chain', () => {
   // Each case constructs an AdvisoryResponse with a subset of fields the
   // derivation considers, and asserts the rendered "What it trades:" row.
