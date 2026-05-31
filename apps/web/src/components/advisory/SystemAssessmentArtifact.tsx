@@ -230,6 +230,39 @@ function roleFamily(role: string | undefined): 'source' | 'amplifier' | 'speaker
   return 'unknown';
 }
 
+/**
+ * Commit 13 — detect line-stage preamplifiers within the `amplifier`
+ * role family.
+ *
+ * `roleFamily` collapses preamps, integrated amplifiers, monoblocks,
+ * and power amplifiers into a single `'amplifier'` bucket because most
+ * leverage / hierarchy / family-dedup logic treats them the same way.
+ * §5 contribution prose is the exception — preamps and power amps
+ * contribute very different things to the system, and writing about a
+ * preamp as "driving the speakers" is inaccurate. This helper identifies
+ * the preamp sub-class so the §5 composer can branch.
+ *
+ * MATCH: bare `preamp`, `pre-amp`, `pre amp`, `linestage`, `line stage`,
+ *        `line-level`, `line stage preamplifier`.
+ * REJECT: `power amp`, `power amplifier`, `integrated`, `monoblock`,
+ *        `headphone amp` (treated as `amplifier` for §5 prose but flows
+ *        into the speaker-family card for the headphone tail; not a
+ *        preamp).
+ *
+ * Keeping the regex narrow and explicit (not a generic `/pre/i`) avoids
+ * matching unrelated role strings ("presentation amplifier" is not real,
+ * but a regex that catches "presence" or "prestige" would be wrong).
+ */
+function isPreampRole(role: string | undefined): boolean {
+  if (!role) return false;
+  const r = role.toLowerCase();
+  if (/power[\s-]?amp/.test(r)) return false;
+  if (/integrated/.test(r)) return false;
+  if (/monoblock/.test(r)) return false;
+  if (/headphone/.test(r)) return false;
+  return /(?:^|\s|-)(?:preamp|pre[\s-]amp|line[\s-]?stage|linestage|line[\s-]?level)/.test(r);
+}
+
 // ──────────────────────────────────────────────────────────
 // Pass 23 (Commit 7) — §9 destination + mature-component protection.
 // ──────────────────────────────────────────────────────────
@@ -555,7 +588,37 @@ function composeContributionBody(
       );
     }
   } else if (family === 'amplifier') {
-    if (upstream && downstream) {
+    // Commit 13 — §5 preamp template parity.
+    //
+    // The `amplifier` role family captures both power amplifiers and
+    // line-stage preamplifiers (see `roleFamily`). Default amplifier
+    // prose ("drives the speakers", "drive for the speakers", "motion
+    // at the speakers") implicates the component in moving cones; that
+    // language is wrong for a preamp, whose contribution is line-stage
+    // gain shaping and signal handing — not speaker drive. We detect
+    // preamps here (preamp / line-stage / line-level, while excluding
+    // "power amp" and similar) and emit a role-correct lede that
+    // references the downstream power amplifier rather than the
+    // speakers.
+    if (isPreampRole(role)) {
+      if (upstream && downstream) {
+        sentences.push(
+          `The ${name} accepts the signal from the ${upstream}, sets its line-stage character and gain, and hands it to the ${downstream}.`,
+        );
+      } else if (downstream) {
+        sentences.push(
+          `The ${name} sets the line-stage character and gain that feed the ${downstream}.`,
+        );
+      } else if (upstream) {
+        sentences.push(
+          `The ${name} shapes the signal arriving from the ${upstream}, setting its line-stage character and gain before the next stage.`,
+        );
+      } else {
+        sentences.push(
+          `The ${name} sits in the system as a line-stage preamplifier, setting character and gain rather than driving the speakers directly.`,
+        );
+      }
+    } else if (upstream && downstream) {
       sentences.push(
         `The ${name} carries the signal between the ${upstream} and the ${downstream}, translating source character into drive for the speakers.`,
       );
@@ -657,7 +720,17 @@ function composeContributionBody(
   // Sentence 3 — editorial limit-framing when this is the system's
   // primary constraint, calibrated by role family.
   if (isBottleneck) {
-    if (family === 'amplifier') {
+    if (family === 'amplifier' && isPreampRole(role)) {
+      // Commit 13 — preamp-specific limits language. The default
+      // amplifier-bottleneck sentence ("headroom under demand, control
+      // at scale") refers to power-amp drive limits and reads wrong
+      // when the preamp itself is named as the constraint. Preamps
+      // limit a system through gain shaping, noise floor, and stage
+      // retrieval — not through speaker control.
+      sentences.push(
+        "Where this system meets its honest limits — gain shaping, noise floor, and stage retrieval — is decided here.",
+      );
+    } else if (family === 'amplifier') {
       sentences.push(
         'Where this system meets its honest limits — headroom under demand, control at scale — is decided here.',
       );
@@ -1010,6 +1083,89 @@ function normalizeInteractionProse(
   const final = kept.length > 0 ? kept : sentences.slice(0, 1);
   const result = preferSystemTerminology(final.join(' ').trim()) ?? '';
   return result.length > 0 ? result : undefined;
+}
+
+/**
+ * Commit 13 — §6 interaction fallback.
+ *
+ * §6 *How They Work Together* renders only when the engine emits
+ * `systemInteraction` prose AND that prose survives the
+ * `normalizeInteractionProse` filter (off-chain mentions, spec
+ * sentences, and single-component review drift are dropped). Several
+ * realistic chains in the 15-chain acceptance pass produced no
+ * surviving interaction prose, which made §6 silently disappear — a
+ * trust regression because users expect the artifact to explain how
+ * the system works together, and silent omission reads as "the
+ * artifact found nothing to say" rather than "the engine had nothing
+ * to say."
+ *
+ * This presentation-layer fallback fires only when ALL of the
+ * following hold:
+ *   - chainNames.length >= 2 (need a system to talk about interaction)
+ *   - >= 2 distinct role families present (the interaction story
+ *     requires more than one stage in play)
+ *   - >= 1 chain component has anchored facts (efficiency, topology,
+ *     cabinet, tech) — without any anchored evidence the section is
+ *     better omitted than filled with a generic statement
+ *
+ * Composition is two sentences:
+ *   1. Where the interaction lives, keyed by the role families
+ *      present (source+amp+speaker / amp+speaker / source+amp /
+ *      generic). The phrasing acknowledges the limit-of-information
+ *      register up front ("With the available information…") so the
+ *      reader understands this is a structural inference rather than
+ *      a confident reading.
+ *   2. An honest caveat naming what would be required to make a more
+ *      precise interaction judgment (room, placement, listening
+ *      conditions) — explicitly distinguishing structural inference
+ *      from listening verdict.
+ *
+ * Composition does NOT name specific components — the fallback is
+ * intentionally structural, not specific, to avoid pretending the
+ * artifact has data it does not have.
+ *
+ * The result passes through `preferSystemTerminology` so "chain" never
+ * leaks here.
+ */
+function composeInteractionFallback(
+  chainNames: string[],
+  roles: Array<string | undefined>,
+  chainFacts: CharacterFacts[],
+): string | undefined {
+  if (chainNames.length < 2) return undefined;
+  const families = roles
+    .map((r) => roleFamily(r))
+    .filter((f) => f !== 'unknown');
+  const familySet = new Set(families);
+  if (familySet.size < 2) return undefined;
+  const anchoredFactsCount = chainFacts.filter(
+    (f) => !!f.efficiency || !!f.topology || !!f.cabinet || !!f.tech || !!f.tonalLean,
+  ).length;
+  if (anchoredFactsCount === 0) return undefined;
+
+  const hasSource = familySet.has('source');
+  const hasAmp = familySet.has('amplifier');
+  const hasSpeaker = familySet.has('speaker');
+
+  let s1: string;
+  if (hasSource && hasAmp && hasSpeaker) {
+    s1 =
+      "With the available information, this system's character takes shape across the source, amplification, and speaker stages together rather than in any single component.";
+  } else if (hasAmp && hasSpeaker) {
+    s1 =
+      'With the available information, the main interaction here appears to be between amplification and loudspeaker behavior rather than in any single component.';
+  } else if (hasSource && hasAmp) {
+    s1 =
+      'With the available information, the main interaction here appears to be between the source character and the amplification rather than in any single component.';
+  } else {
+    s1 =
+      "With the available information, this system's character takes shape across more than one stage rather than in any single component.";
+  }
+
+  const s2 =
+    'A more precise interaction judgment — voicing under demand, room behavior, sustained listening at level — would depend on placement and listening conditions not visible to this assessment.';
+
+  return preferSystemTerminology([s1, s2].join(' '));
 }
 
 /**
@@ -1630,6 +1786,94 @@ function deriveWhatItTrades(a: AdvisoryResponse): string | undefined {
 }
 
 /**
+ * Commit 13 — §8 coherence fallback for chains with no `keepRecommendations`.
+ *
+ * When the engine emits no keep recommendations, the existing §8 path
+ * (`composeWhyThisSystemWorks`) returns undefined and the section
+ * silently disappears. §8 is now the coherence bridge between §7
+ * (Strengths and Limits) and §9 (What This System Seems Built For); an
+ * unannounced gap in that bridge reads as missing analysis rather than
+ * graceful omission.
+ *
+ * This fallback fires only when ALL of the following hold:
+ *   - chainNames.length >= 2
+ *   - >= 2 distinct role families present
+ *   - coherence evidence exists, defined as EITHER:
+ *       (a) `systemSignature` contains a tonal anchor
+ *           (warm / lean / analytical / neutral), OR
+ *       (b) at least two chain components have anchored facts
+ *           (efficiency, topology, cabinet, tech, tonalLean)
+ *
+ * When evidence is absent the section is omitted — same outcome as
+ * before, just intentional rather than accidental.
+ *
+ * Composition is two sentences, parallel in shape to the keep-recs
+ * branch but worded as inference rather than verdict. The result does
+ * NOT quote any component reading verbatim; it does not duplicate the
+ * per-component summaries already living in §5.
+ */
+function composeCoherenceFallback(
+  advisory: AdvisoryResponse,
+  chainNames: string[],
+  roles: string[],
+  chainFacts: CharacterFacts[],
+): string | undefined {
+  if (chainNames.length < 2) return undefined;
+  const families = roles
+    .map((r) => roleFamily(r))
+    .filter((f) => f !== 'unknown');
+  const familySet = new Set(families);
+  if (familySet.size < 2) return undefined;
+
+  const sig = (advisory.systemSignature ?? '').toLowerCase();
+  const sigAnchored = /\bwarm\b|\blean\b|\banalytical\b|\bneutral\b/.test(sig);
+
+  const factsAnchored =
+    chainFacts.filter(
+      (f) => !!f.efficiency || !!f.topology || !!f.cabinet || !!f.tech || !!f.tonalLean,
+    ).length >= 2;
+
+  if (!sigAnchored && !factsAnchored) return undefined;
+
+  // Sentence 1 — chain-length frame, inference register.
+  let s1: string;
+  if (chainNames.length === 2) {
+    s1 =
+      'With the available information, these two components appear to be working toward a single voicing rather than each asserting itself independently.';
+  } else if (chainNames.length === 3) {
+    s1 =
+      'With the available information, these three components appear to be working toward a single voicing rather than each asserting itself independently.';
+  } else {
+    s1 =
+      'With the available information, these components appear to be working toward a single voicing rather than each asserting itself independently.';
+  }
+
+  // Sentence 2 — coherence framing keyed by role families present.
+  // Parallel shape to the keep-recs branch, but ends with an explicit
+  // honesty caveat that confirming this would require listening rather
+  // than assessment.
+  const hasSource = familySet.has('source');
+  const hasAmp = familySet.has('amplifier');
+  const hasSpeaker = familySet.has('speaker');
+  let s2: string;
+  if (hasSource && hasAmp && hasSpeaker) {
+    s2 =
+      "The system's apparent coherence — the way the source character, amplification, and speaker presentation compound — looks like the primary value here, though confirming this would require listening rather than assessment.";
+  } else if (hasAmp && hasSpeaker) {
+    s2 =
+      "The system's apparent coherence — the way the amplifier's drive reaches the room through the speakers — looks like the primary value here, though confirming this would require listening rather than assessment.";
+  } else if (hasSource && hasAmp) {
+    s2 =
+      "The system's apparent coherence — the way the source character carries through the amplifier's shaping — looks like the primary value here, though confirming this would require listening rather than assessment.";
+  } else {
+    s2 =
+      "The system's apparent coherence — the way the pieces compound rather than each asserting itself independently — looks like the primary value here, though confirming this would require listening rather than assessment.";
+  }
+
+  return preferSystemTerminology([s1, s2].join(' '));
+}
+
+/**
  * Compose the §8 *Why This System Works* editorial paragraph
  * (Pass 23 — Commit 7).
  *
@@ -1642,7 +1886,8 @@ function deriveWhatItTrades(a: AdvisoryResponse): string | undefined {
  * read as a render gate.
  *
  * Returns undefined — and the section is gracefully omitted — when:
- *   - keepRecommendations is empty/missing (no anchored evidence)
+ *   - keepRecommendations is empty/missing AND coherence fallback also
+ *     declines (chain too sparse, or no tonal-anchor / facts evidence)
  *   - chain has < 2 components (no coherence-among-pieces story)
  *   - chain spans < 2 distinct role families
  *
@@ -1654,9 +1899,32 @@ function composeWhyThisSystemWorks(
   advisory: AdvisoryResponse,
   chainNames: string[],
   roles: string[],
+  /**
+   * Commit 13 — optional chainFacts so the coherence-fallback branch
+   * (used when the engine emits no `keepRecommendations`) can require
+   * anchored fact evidence on at least two chain components before
+   * rendering. Defaults to an empty array so callers that don't pass
+   * facts still get the existing keep-recs branch — the fallback only
+   * fires when facts are actually provided.
+   */
+  chainFacts: CharacterFacts[] = [],
 ): string | undefined {
-  // Step 1 — gate on anchored evidence + multi-component chain.
-  if (!advisory.keepRecommendations || advisory.keepRecommendations.length === 0) return undefined;
+  // Commit 13 — §8 coherence fallback path. The original §8 gates on
+  // `keepRecommendations` because they are the anchored evidence the
+  // engine produced for "what is already working." When the engine
+  // emits no keep recs but the chain itself shows coherence evidence
+  // (a tonal anchor in `systemSignature`, OR ≥2 chain components with
+  // anchored facts), we render a cautious fallback paragraph rather
+  // than silently dropping the coherence bridge between §7 and §9.
+  //
+  // The fallback is deliberately worded as inference, not verdict
+  // ("appear to be working toward", "looks like the primary value
+  // here, though confirming this would require listening rather than
+  // assessment") so it does not pretend to be the anchored keep-recs
+  // path.
+  if (!advisory.keepRecommendations || advisory.keepRecommendations.length === 0) {
+    return composeCoherenceFallback(advisory, chainNames, roles, chainFacts);
+  }
   if (chainNames.length < 2) return undefined;
   // Step 2 — gate on multi-family chain (the coherence-among-pieces
   // story requires more than one role family in play).
@@ -2247,15 +2515,36 @@ export default function SystemAssessmentArtifact({
        *  only system-level statements and multi-component interaction
        *  sentences. */}
       {(() => {
+        const chainNamesI = a.systemChain?.names ?? [];
+        const chainRolesI = a.systemChain?.roles ?? [];
         const interactionProse = normalizeInteractionProse(
           a.systemInteraction,
-          a.systemChain?.names ?? [],
+          chainNamesI,
         );
-        if (!interactionProse) return null;
+        // Commit 13 — §6 fallback. When the engine emits nothing usable
+        // (or nothing at all), compose a cautious, role-family-keyed
+        // interaction sentence rather than silently omitting §6. The
+        // fallback only fires when sufficient chain structure exists;
+        // sparse chains still omit gracefully.
+        let resolved: string | undefined = interactionProse;
+        if (!resolved) {
+          const chainFactsI = chainNamesI.map((name, i) =>
+            extractCharacterFacts(
+              findReadingForName(name, a.componentReadings ?? [], i),
+              chainRolesI[i],
+            ),
+          );
+          resolved = composeInteractionFallback(
+            chainNamesI,
+            chainRolesI,
+            chainFactsI,
+          );
+        }
+        if (!resolved) return null;
         return (
           <section style={{ marginBottom: '1.5rem' }}>
             <h2 style={sectionHeadingStyle}>How They Work Together</h2>
-            <p style={proseStyle}>{interactionProse}</p>
+            <p style={proseStyle}>{resolved}</p>
           </section>
         );
       })()}
@@ -2373,11 +2662,19 @@ export default function SystemAssessmentArtifact({
        *  is gracefully omitted when the chain is too sparse to support
        *  the coherence-among-pieces claim. */}
       {(() => {
-        const why = composeWhyThisSystemWorks(
-          a,
-          a.systemChain?.names ?? [],
-          a.systemChain?.roles ?? [],
+        const chainNamesW = a.systemChain?.names ?? [];
+        const chainRolesW = a.systemChain?.roles ?? [];
+        // Commit 13 — compute chainFacts here so composeWhyThisSystemWorks
+        // can fall back to the coherence-fallback path when the engine
+        // emits no keepRecommendations but the chain itself shows
+        // enough structural evidence to make a cautious coherence claim.
+        const chainFactsW = chainNamesW.map((name, i) =>
+          extractCharacterFacts(
+            findReadingForName(name, a.componentReadings ?? [], i),
+            chainRolesW[i],
+          ),
         );
+        const why = composeWhyThisSystemWorks(a, chainNamesW, chainRolesW, chainFactsW);
         if (!why) return null;
         return (
           <section style={{ marginBottom: '1.5rem' }}>

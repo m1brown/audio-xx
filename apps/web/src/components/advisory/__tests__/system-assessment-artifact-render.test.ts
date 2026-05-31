@@ -289,8 +289,15 @@ describe('SystemAssessmentArtifact — data gating (sparse responses)', () => {
     expect(html).not.toContain('The Components');
   });
 
-  it('skips §6 How They Work Together when systemInteraction is absent', () => {
-    const html = render({ ...FULL, systemInteraction: undefined });
+  it('skips §6 How They Work Together when systemInteraction absent AND no fallback evidence', () => {
+    // Commit 13 — §6 now renders a cautious fallback paragraph when
+    // engine prose is absent BUT the chain shows ≥2 role families
+    // plus anchored facts. Section omits only when both gates fail.
+    const html = render({
+      ...FULL,
+      systemInteraction: undefined,
+      componentReadings: ['One.', 'Two.', 'Three.'],
+    });
     expect(html).not.toContain('How They Work Together');
   });
 
@@ -299,8 +306,18 @@ describe('SystemAssessmentArtifact — data gating (sparse responses)', () => {
     expect(html).not.toContain('Strengths and Limits');
   });
 
-  it('skips §8 when keepRecommendations is empty', () => {
-    const html = render({ ...FULL, keepRecommendations: undefined });
+  it('skips §8 when keepRecommendations is empty AND no coherence-fallback evidence exists', () => {
+    // Commit 13 — §8 now renders a cautious coherence-fallback
+    // paragraph when chain structure supports it (tonal anchor in
+    // systemSignature OR ≥2 chain components with anchored facts).
+    // Section omits ONLY when both anchored gates fail in addition
+    // to the keepRecs gate.
+    const html = render({
+      ...FULL,
+      keepRecommendations: undefined,
+      systemSignature: 'a system',
+      componentReadings: ['One.', 'Two.', 'Three.'],
+    });
     expect(html).not.toContain('Why This System Works');
   });
 
@@ -2121,10 +2138,16 @@ describe('SystemAssessmentArtifact — §8 Why This System Works paragraph (Comm
     expect(html).toContain('Major changes upstream');
   });
 
-  it('omits §8 when keepRecommendations is empty', () => {
+  it('omits §8 when keepRecommendations is empty AND coherence-fallback evidence is absent', () => {
+    // Commit 13 — the §8 keep-recs branch now delegates to a
+    // coherence-fallback path when keepRecs are absent. To verify the
+    // omission path we strip the signature anchor and replace component
+    // readings with facts-free strings so both fallback gates decline.
     const a: AdvisoryResponse = {
       ...FULL_K,
       keepRecommendations: undefined,
+      systemSignature: 'a system',
+      componentReadings: ['One.', 'Two.', 'Three.'],
     };
     const html = render(a);
     expect(html).not.toContain('Why This System Works');
@@ -3342,5 +3365,302 @@ describe('SystemAssessmentArtifact — Fix G: §5 headphone surface', () => {
     const html = render(a);
     expect(html).toContain('Some Speakers translates what the Some Amp delivers into sound in the room');
     expect(html).not.toContain('sound at the ear');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// Commit 13 — §6 interaction fallback / §8 coherence fallback / §5 preamp parity
+// ════════════════════════════════════════════════════════════════════════
+
+describe('SystemAssessmentArtifact — Commit 13 §6 interaction fallback', () => {
+  it('renders a cautious §6 paragraph when the engine emits no interaction prose but chain structure exists', () => {
+    // No systemInteraction; chain has 3 components across 3 role
+    // families; component readings carry topology / efficiency anchors
+    // so chainFacts qualify. Fallback fires.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Fallback fires',
+      systemSignature: 'A coherent warm system.',
+      systemChain: {
+        names: ['Some DAC', 'Some Tube Amp', 'Some High-Efficiency Speakers'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC favoring tonal density.',
+        'A push-pull tube integrated.',
+        'A high-efficiency wide-baffle speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('How They Work Together');
+    expect(html).toContain('With the available information');
+    expect(html).toContain('source, amplification, and speaker stages');
+    expect(html).toContain('A more precise interaction judgment');
+  });
+
+  it('omits §6 when no interaction prose AND chain is too sparse', () => {
+    // Single-component chain → fallback declines.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Sparse',
+      systemSignature: 'a system',
+      systemChain: { names: ['Just One'], roles: ['DAC'] },
+      componentReadings: ['An R2R DAC.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).not.toContain('How They Work Together');
+  });
+
+  it('omits §6 when chain has 2 components but only one role family', () => {
+    // Two amps → familySet.size === 1 → fallback declines.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Single family',
+      systemSignature: 'a system',
+      systemChain: { names: ['Amp One', 'Amp Two'], roles: ['Amplifier', 'Amplifier'] },
+      componentReadings: ['A tube amp.', 'A solid-state amp.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).not.toContain('How They Work Together');
+  });
+
+  it('omits §6 when no chain facts are anchored (no efficiency/topology/cabinet/tech/tonalLean)', () => {
+    // 3-component, 3-family chain but readings produce no facts.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'No facts',
+      systemSignature: 'a system',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Some Speakers'],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['One.', 'Two.', 'Three.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).not.toContain('How They Work Together');
+  });
+
+  it('engine systemInteraction still wins when present and non-empty', () => {
+    // When the engine emits surviving interaction prose, the fallback
+    // does NOT replace it.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Engine wins',
+      systemSignature: 'A warm tube-led system.',
+      systemChain: {
+        names: ['Some DAC', 'Some Tube Amp', 'Some Speakers'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: ['An R2R DAC.', 'A tube amp.', 'A high-efficiency speaker.'],
+      systemInteraction:
+        'The Some DAC and the Some Tube Amp work together to deliver a coherent voice through the Some Speakers.',
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('How They Work Together');
+    expect(html).toContain('work together to deliver a coherent voice');
+    // Scope the fallback-marker assertion to §6 only — §8 may
+    // independently emit "With the available information" via its
+    // own Commit 13 coherence-fallback path when keepRecs is absent.
+    const s6Start = html.indexOf('How They Work Together');
+    const s6End = html.indexOf('</section>', s6Start);
+    const s6Slice = html.slice(s6Start, s6End);
+    expect(s6Slice).not.toContain('With the available information');
+  });
+
+  it('does not overclaim certainty — caveats are explicit', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'No overclaim',
+      systemSignature: 'A warm system.',
+      systemChain: {
+        names: ['Some DAC', 'Some Tube Amp', 'Some High-Efficiency Speakers'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC.',
+        'A push-pull tube integrated.',
+        'A high-efficiency wide-baffle speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // The fallback names placement/listening as the determinant of a
+    // precise judgment — explicit acknowledgement of evidence limits.
+    expect(html).toContain('would depend on placement and listening conditions');
+  });
+});
+
+describe('SystemAssessmentArtifact — Commit 13 §8 coherence fallback', () => {
+  const baseChain = (): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'Coherence',
+      systemSignature: 'A coherent warm tube-led system.',
+      systemChain: {
+        names: ['Some DAC', 'Some Tube Amp', 'Some High-Efficiency Speakers'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC favoring tonal density.',
+        'A push-pull tube integrated.',
+        'A high-efficiency wide-baffle speaker.',
+      ],
+    } as AdvisoryResponse);
+
+  it('renders coherence-fallback paragraph when keepRecommendations is absent but tonal anchor exists', () => {
+    const html = render({ ...baseChain(), keepRecommendations: undefined });
+    expect(html).toContain('Why This System Works');
+    expect(html).toContain('appear to be working toward a single voicing');
+    expect(html).toContain('confirming this would require listening rather than assessment');
+  });
+
+  it('renders coherence-fallback paragraph when no tonal anchor but ≥2 chain components have anchored facts', () => {
+    // No warm/lean/analytical/neutral in signature, but tube +
+    // high-efficiency facts anchor two components.
+    const a: AdvisoryResponse = {
+      ...baseChain(),
+      systemSignature: 'A system.',
+      keepRecommendations: undefined,
+    };
+    const html = render(a);
+    expect(html).toContain('Why This System Works');
+    expect(html).toContain('appear to be working toward a single voicing');
+  });
+
+  it('omits §8 when keepRecs absent AND no tonal anchor AND <2 anchored-facts components', () => {
+    const a: AdvisoryResponse = {
+      ...baseChain(),
+      systemSignature: 'A system.',
+      keepRecommendations: undefined,
+      componentReadings: ['One.', 'Two.', 'Three.'],
+    };
+    const html = render(a);
+    expect(html).not.toContain('Why This System Works');
+  });
+
+  it('omits §8 when keepRecs absent AND chain is single-component (no coherence story)', () => {
+    const a: AdvisoryResponse = {
+      ...baseChain(),
+      systemChain: { names: ['Just One'], roles: ['DAC'] },
+      componentReadings: ['An R2R DAC.'],
+      keepRecommendations: undefined,
+    };
+    const html = render(a);
+    expect(html).not.toContain('Why This System Works');
+  });
+
+  it('engine keepRecommendations branch still wins when present', () => {
+    const a: AdvisoryResponse = {
+      ...baseChain(),
+      keepRecommendations: [
+        { componentName: 'Some Tube Amp', reason: 'It works.' } as never,
+      ],
+    };
+    const html = render(a);
+    expect(html).toContain('Why This System Works');
+    // Original keep-recs branch uses "succeeds because" wording.
+    expect(html).toContain('succeeds because');
+    // Fallback marker should NOT appear in this path.
+    expect(html).not.toContain('appear to be working toward');
+  });
+
+  it('does not duplicate §5 per-component summaries', () => {
+    const html = render({ ...baseChain(), keepRecommendations: undefined });
+    const s8Start = html.indexOf('Why This System Works');
+    const s8End = html.indexOf('</section>', s8Start);
+    const s8Slice = html.slice(s8Start, s8End);
+    // §8 fallback should NOT name specific chain components.
+    expect(s8Slice).not.toContain('Some DAC');
+    expect(s8Slice).not.toContain('Some Tube Amp');
+    expect(s8Slice).not.toContain('Some High-Efficiency Speakers');
+  });
+});
+
+describe('SystemAssessmentArtifact — Commit 13 §5 preamp template parity', () => {
+  const fourComponentChain = (): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'Preamp parity',
+      systemSignature: 'A reference solid-state line-stage system.',
+      systemChain: {
+        names: ['Holo May DAC', 'Audio Research LS28', 'Audio Research Ref 75', 'Magnepan 3.7i'],
+        roles: ['DAC', 'Preamplifier', 'Power Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A delta-sigma DAC.',
+        'A line-stage preamplifier with tube gain.',
+        'A push-pull tube power amplifier.',
+        'A planar-magnetic destination speaker.',
+      ],
+    } as AdvisoryResponse);
+
+  it('preamp card references the downstream power amplifier rather than the speakers', () => {
+    const html = render(fourComponentChain());
+    // The Audio Research LS28 (preamp) lede must mention the
+    // downstream Audio Research Ref 75 (power amp).
+    expect(html).toContain('Audio Research LS28 accepts the signal from the Holo May DAC');
+    expect(html).toContain('hands it to the Audio Research Ref 75');
+  });
+
+  it('preamp card does NOT say "drives the speakers" or "drive for the speakers"', () => {
+    const html = render(fourComponentChain());
+    // Anchor the slice to the §5 The Components section so the
+    // banner occurrence of "Audio Research LS28" doesn't shadow the
+    // card body we actually want to inspect.
+    const componentsStart = html.indexOf('The Components');
+    const ls28Idx = html.indexOf('Audio Research LS28', componentsStart);
+    const ls28End = html.indexOf('Audio Research Ref 75', ls28Idx + 'Audio Research LS28'.length);
+    const ls28Slice = html.slice(ls28Idx, ls28End);
+    expect(ls28Slice).not.toMatch(/drives the speakers/i);
+    expect(ls28Slice).not.toMatch(/drive for the speakers/i);
+    expect(ls28Slice).not.toMatch(/motion at the speakers/i);
+    expect(ls28Slice).not.toMatch(/sound in the room/i);
+    // Positive: preamp prose uses line-stage language.
+    expect(ls28Slice).toContain('line-stage');
+  });
+
+  it('power-amp card after a preamp still uses speaker-drive prose', () => {
+    const html = render(fourComponentChain());
+    // The Ref 75 (power amp) sits between the preamp (LS28) and the
+    // speakers (Magnepan 3.7i). It's allowed to talk about speaker drive.
+    expect(html).toContain('Audio Research Ref 75');
+    // The current amplifier-family lede with upstream+downstream is
+    // "carries the signal between … translating source character into
+    // drive for the speakers."
+    expect(html).toMatch(
+      /Audio Research Ref 75 carries the signal between the Audio Research LS28 and the Magnepan 3\.7i/,
+    );
+  });
+
+  it('speaker card is unaffected by preamp branch', () => {
+    const html = render(fourComponentChain());
+    // Magnepan 3.7i speaker card should still describe planar /
+    // destination behavior via the speaker branch.
+    expect(html).toContain('Magnepan 3.7i');
+    // Speaker family card uses "translates ... into sound in the room"
+    // when no high/low efficiency is anchored from the reading. Either
+    // way the speaker card must NOT pick up preamp language.
+    const mgIdx = html.indexOf('Magnepan 3.7i', html.indexOf('The Components'));
+    const mgSlice = html.slice(mgIdx, mgIdx + 1500);
+    expect(mgSlice).not.toContain('line-stage');
+    expect(mgSlice).not.toContain('gain shaping');
+  });
+
+  it('isolated preamp (no downstream / upstream) still avoids speaker-drive language', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Isolated preamp',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some Preamp'],
+        roles: ['Preamplifier'],
+      },
+      componentReadings: ['A line-stage preamplifier.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    const preIdx = html.indexOf('Some Preamp', html.indexOf('The Components'));
+    const preSlice = html.slice(preIdx, preIdx + 1000);
+    expect(preSlice).toMatch(/line-stage preamplifier|line-stage character/);
+    expect(preSlice).not.toMatch(/drives the speakers/i);
+    expect(preSlice).not.toMatch(/sound in the room/i);
   });
 });
