@@ -43,11 +43,53 @@ import AdvisorySources from './AdvisorySources';
  * array; only how the artifact maps readings to the rendered cards.
  */
 
-/** Sentence-split heuristic: split on `.`, `!`, `?` followed by space. */
+/**
+ * Sentence-split heuristic: split on `.`, `!`, `?` followed by whitespace
+ * or end-of-text.
+ *
+ * Hardening Phase A — B1 fix. The previous regex-only implementation
+ * (`/[^.!?]+[.!?]+(?:\s|$)/g`) silently discarded any prefix that
+ * failed to match. When a sentence contained a decimal inside a chain
+ * component model number (e.g. "Harbeth 30.2", "Magnepan 3.7i",
+ * "Pioneer 8351") the punctuation was followed by a digit instead of
+ * whitespace, the regex slid forward past the unmatched prefix, and
+ * the `match()` call returned only the second half of the sentence —
+ * producing rendered fragments like "2 XD is voiced warm" or "7i is
+ * a low-efficiency planar magnetic". This walked-character rewrite:
+ *
+ *   1. Treats `.`, `!`, `?` as a sentence boundary ONLY when the next
+ *      character is whitespace or end-of-text. A digit immediately
+ *      after the punctuation marks decimal usage (model number, spec
+ *      value) and the boundary is rejected.
+ *   2. Always preserves any tail content. There is no silent prefix
+ *      drop: every input character ends up in exactly one returned
+ *      sentence.
+ *
+ * This is the smallest correctness fix. Heading-toleration and other
+ * formal sentence-splitter behavior remain out of scope.
+ */
 function splitSentences(text: string): string[] {
-  return (text.match(/[^.!?]+[.!?]+(?:\s|$)/g) ?? [text])
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+  if (!text) return [];
+  const sentences: string[] = [];
+  let buf = '';
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    buf += c;
+    if (c === '.' || c === '!' || c === '?') {
+      const next = text[i + 1];
+      // Decimal-inside-model-number guard: keep building when the
+      // ender is immediately followed by a digit (e.g. "30.2", "3.7i").
+      if (next !== undefined && /\d/.test(next)) continue;
+      const trimmed = buf.trim();
+      if (trimmed.length > 0) sentences.push(trimmed);
+      buf = '';
+    }
+  }
+  // Preserve any trailing fragment (no final ender, or ender-then-digit
+  // that never closed). Never silently drop.
+  const tail = buf.trim();
+  if (tail.length > 0) sentences.push(tail);
+  return sentences;
 }
 
 /**
@@ -1786,6 +1828,91 @@ function deriveWhatItTrades(a: AdvisoryResponse): string | undefined {
 }
 
 /**
+ * Hardening Phase A — explicit conflict / mismatch / bottleneck vocabulary.
+ *
+ * These tokens, when present in any of the engine-emitted fields the
+ * artifact reads (`systemSignature`, `systemInteraction`, `systemContext`,
+ * `systemSynergy`, `assessmentLimitations[]`, `primaryConstraint.impact`),
+ * signal that the engine has actively diagnosed a voicing conflict,
+ * synergy failure, hierarchy mismatch, or hard drive limit. §8
+ * coherence prose and §9 listener-fit prose MUST suppress on such
+ * chains — otherwise the artifact ends up asserting positive coherence
+ * or recommending the system to a listener type while a sibling
+ * section describes the same system as fighting itself or as fundamentally
+ * mismatched. See the 36-fixture Final Product Validation Report,
+ * Cluster G, for the trust-failure evidence.
+ *
+ * The vocabulary is intentionally conservative: only phrases that an
+ * editorial engine would emit when it has decided a system is *not*
+ * working coherently. Generic words like "limit" or "warm" do NOT
+ * appear — those are normal descriptive vocabulary the engine uses
+ * for healthy systems.
+ */
+const CONFLICT_VOCABULARY: readonly string[] = [
+  'conflict',
+  'fighting',
+  'fights itself',
+  'collapses toward',
+  'over-warming',
+  'over-warm ',
+  'mismatch',
+  'mismatched',
+  'bottleneck',
+  'bottlenecked',
+  'cannot translate',
+  'cannot drive',
+  'cannot mask',
+  'hierarchy inverted',
+  'investment inverted',
+  'unresolved',
+  'potential not realized',
+  'design intent unmet',
+  'limits everything downstream',
+  'will not perform',
+  'insufficient',
+  'period-mismatch',
+  // Validation re-run discovered these phrases on Fixture #32
+  // (over-invested speakers): the engine emits "do not approach its
+  // tier" and "reveals every limitation of the front end" instead of
+  // the conflict / bottleneck vocabulary above. Both are unambiguous
+  // mismatch signals that real engine output uses.
+  'do not approach',
+  'do not reflect',
+  'reveals every limitation',
+];
+
+/**
+ * Hardening Phase A — detect engine-emitted conflict signals.
+ *
+ * Returns true when at least one CONFLICT_VOCABULARY token appears in
+ * any of the artifact-relevant engine fields (case-insensitive). When
+ * true, §8 coherence prose and §9 listener-fit prose suppress to
+ * preserve cross-section trust.
+ *
+ * The check is intentionally non-recursive and string-only — no fact
+ * extraction, no signature parsing — because the conflict signals we
+ * are guarding against are always explicit in the engine prose.
+ */
+function hasConflictSignal(advisory: AdvisoryResponse): boolean {
+  const fields: Array<string | undefined> = [
+    advisory.systemSignature,
+    advisory.systemInteraction,
+    advisory.systemContext,
+    advisory.systemSynergy,
+    advisory.primaryConstraint?.impact,
+    ...((advisory.assessmentLimitations ?? []) as string[]),
+  ];
+  const blob = fields
+    .filter((f): f is string => typeof f === 'string')
+    .join(' ')
+    .toLowerCase();
+  for (const token of CONFLICT_VOCABULARY) {
+    if (blob.includes(token)) return true;
+  }
+  return false;
+}
+
+/**
  * Commit 13 — §8 coherence fallback for chains with no `keepRecommendations`.
  *
  * When the engine emits no keep recommendations, the existing §8 path
@@ -1909,6 +2036,17 @@ function composeWhyThisSystemWorks(
    */
   chainFacts: CharacterFacts[] = [],
 ): string | undefined {
+  // Hardening Phase A — §8 conflict-signal suppression (B3).
+  //
+  // When the engine has explicitly diagnosed a voicing conflict,
+  // synergy failure, hierarchy mismatch, or hard drive limit (via
+  // any of the fields hasConflictSignal reads), §8 must NOT render
+  // positive coherence prose — either the keep-recs branch or the
+  // coherence fallback. The artifact's other sections (§4, §6, §7,
+  // §10) carry the conflict message; §8 silently omits rather than
+  // re-asserting coherence that contradicts what the artifact has
+  // just said. See Final Product Validation Report, Cluster G.
+  if (hasConflictSignal(advisory)) return undefined;
   // Commit 13 — §8 coherence fallback path. The original §8 gates on
   // `keepRecommendations` because they are the anchored evidence the
   // engine produced for "what is already working." When the engine
@@ -2037,6 +2175,16 @@ function composeListenerContext(
   chainFacts: CharacterFacts[],
 ): string | undefined {
   if (chainNames.length === 0) return undefined;
+  // Hardening Phase A — §9 conflict-signal suppression (B4).
+  //
+  // When the engine has diagnosed a voicing conflict / synergy
+  // failure / hierarchy mismatch / hard drive limit, §9 must NOT
+  // recommend this system to a listener-fit profile. Per the Final
+  // Product Validation Report Cluster G, the artifact previously
+  // emitted "favors listeners who value ease and accessibility"
+  // on a chain whose §6 said "reveals every limitation of the front
+  // end". §9 silently omits; §6 / §7 carry the actual judgment.
+  if (hasConflictSignal(advisory)) return undefined;
 
   // ── Signal extraction ───────────────────────────────────
   const sigLower = (advisory.systemSignature ?? '').toLowerCase();
@@ -2258,8 +2406,22 @@ function composeUpgradeHierarchy(
   chainNames: string[],
   roles: Array<string | undefined>,
   chainFacts: CharacterFacts[],
+  /**
+   * Hardening Phase A (B5) — when the engine has explicitly named a
+   * component as the primary constraint, that component must NOT be
+   * protected by the hierarchy paragraph. The engine has identified
+   * it as the gating limit; the protective "treat as a fixed point" /
+   * "philosophical change" framing would directly contradict the
+   * engine's upgrade-direction. Names are compared case-insensitively
+   * after whitespace normalization. Defaults to undefined so callers
+   * that don't pass a constraint name preserve legacy behavior.
+   */
+  primaryConstraintName?: string,
 ): string | undefined {
   if (chainNames.length === 0) return undefined;
+
+  const normalize = (s: string) => s.trim().toLowerCase();
+  const constraintLower = primaryConstraintName ? normalize(primaryConstraintName) : undefined;
 
   const destinationSpeakers: string[] = [];
   const matureAmps: string[] = [];
@@ -2267,6 +2429,10 @@ function composeUpgradeHierarchy(
     const family = roleFamily(roles[i]);
     const facts = chainFacts[i];
     if (!facts) continue;
+    // Hardening Phase A B5 — skip components the engine has named as
+    // the primary constraint. Their replacement is the upgrade
+    // recommendation, not the protective fixed-point framing.
+    if (constraintLower && normalize(chainNames[i]) === constraintLower) continue;
     if (family === 'speaker' && isDestinationSpeaker(chainNames[i], roles[i], facts)) {
       destinationSpeakers.push(chainNames[i]);
     } else if (family === 'amplifier' && isMatureAmplifier(chainNames[i], roles[i], facts)) {
@@ -2732,7 +2898,16 @@ export default function SystemAssessmentArtifact({
                 chainRolesUH[i],
               ),
             );
-            const hierarchy = composeUpgradeHierarchy(chainNamesUH, chainRolesUH, chainFactsUH);
+            // Hardening Phase A — pass the engine-named primary
+            // constraint into the hierarchy composer so its protection
+            // sentences cannot fire on a component the engine has
+            // identified as the gating limit (B5).
+            const hierarchy = composeUpgradeHierarchy(
+              chainNamesUH,
+              chainRolesUH,
+              chainFactsUH,
+              a.primaryConstraint?.componentName,
+            );
             if (!hierarchy) return null;
             return <p style={{ ...proseStyle, marginBottom: '0.85rem' }}>{hierarchy}</p>;
           })()}

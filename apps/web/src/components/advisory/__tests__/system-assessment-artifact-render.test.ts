@@ -3664,3 +3664,341 @@ describe('SystemAssessmentArtifact — Commit 13 §5 preamp template parity', ()
     expect(preSlice).not.toMatch(/sound in the room/i);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// Hardening Phase A — trust + render-correctness fixes
+// ════════════════════════════════════════════════════════════════════════
+//
+// Surgical fixes for four cross-fixture failure classes surfaced by the
+// 36-fixture Final Product Validation Report:
+//
+//   B1  splitSentences silently dropped prefix when sentence contained
+//       a decimal in a chain component model number (e.g. "Harbeth 30.2",
+//       "Magnepan 3.7i") — §4 Character rendered as fragmentary text.
+//   B3  §8 coherence prose (keep-recs branch + fallback) asserted
+//       coherence on chains the engine had flagged as fighting / over-
+//       warming / bottlenecked / mismatched.
+//   B4  §9 listener-fit recommended systems to a listener-type profile
+//       while §6 described them as fundamentally broken.
+//   B5  §10 hierarchy paragraph protected a component the engine had
+//       explicitly named as the primary constraint to be replaced.
+
+describe('SystemAssessmentArtifact — Hardening A B1: §4 decimal-model truncation', () => {
+  const baseChain = (systemContext: string): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'B1 test',
+      systemSignature: 'sig',
+      systemContext,
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Some Speakers'],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.'],
+    } as AdvisoryResponse);
+
+  it('preserves prefix before "Brand 30.2 XD" model decimals', () => {
+    const html = render(
+      baseChain(
+        'The Pass Labs XA25 and Harbeth 30.2 XD pairing is a well-known modern Class-A-into-monitor signature.',
+      ),
+    );
+    expect(html).toContain(
+      'The Pass Labs XA25 and Harbeth 30.2 XD pairing is a well-known modern Class-A-into-monitor signature.',
+    );
+    // Negative — the pre-fix bug produced "2 XD pairing is a..."
+    expect(html).not.toMatch(/>2 XD pairing/);
+  });
+
+  it('preserves prefix before "Magnepan 3.7i"-style decimal model', () => {
+    const html = render(
+      baseChain(
+        'The Magnepan 3.7i is a low-efficiency planar magnetic; the Zen Triode produces ~2 watts. This is a mismatch.',
+      ),
+    );
+    expect(html).toContain('The Magnepan 3.7i is a low-efficiency planar magnetic');
+    expect(html).toContain('This is a mismatch');
+    expect(html).not.toMatch(/>7i is a low-efficiency/);
+  });
+
+  it('handles multiple decimal models in one sentence', () => {
+    const html = render(
+      baseChain(
+        'The Cary SLI-80HS is voiced warm; the Harbeth 30.2 XD is voiced warm; together they over-warm an otherwise neutral source.',
+      ),
+    );
+    expect(html).toContain('The Cary SLI-80HS is voiced warm');
+    expect(html).toContain('the Harbeth 30.2 XD is voiced warm');
+    expect(html).not.toMatch(/>2 XD is voiced warm/);
+  });
+
+  it('still splits on real sentence boundaries (period + space)', () => {
+    const html = render(
+      baseChain('First sentence here. Second sentence here. Third sentence here.'),
+    );
+    expect(html).toContain('First sentence here');
+    expect(html).toContain('Second sentence here');
+    expect(html).toContain('Third sentence here');
+  });
+
+  it('preserves text with no terminating punctuation (tail fragment)', () => {
+    const html = render(baseChain('Some prose without a final period'));
+    expect(html).toContain('Some prose without a final period');
+  });
+});
+
+describe('SystemAssessmentArtifact — Hardening A B3: §8 conflict-signal suppression', () => {
+  const base = (overrides: Partial<AdvisoryResponse>): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'B3 test',
+      systemSignature: 'A warm coherent system.',
+      systemChain: {
+        names: ['Some DAC', 'Some Tube Amp', 'Some High-Efficiency Speakers'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC favoring tonal density.',
+        'A push-pull tube integrated.',
+        'A high-efficiency wide-baffle speaker.',
+      ],
+      ...overrides,
+    } as AdvisoryResponse);
+
+  it('suppresses §8 keep-recs branch when systemInteraction mentions fighting', () => {
+    const html = render(
+      base({
+        systemInteraction:
+          'The system is fighting itself — warm components compensating for a forward speaker.',
+        keepRecommendations: [
+          { componentName: 'Some Tube Amp', reason: 'works' } as never,
+        ],
+      }),
+    );
+    expect(html).not.toContain('Why This System Works');
+  });
+
+  it('suppresses §8 coherence fallback when assessmentLimitations contains a conflict token', () => {
+    const html = render(
+      base({
+        assessmentLimitations: ['Voicing conflict.', 'Warmth fighting forward presentation.'],
+      }),
+    );
+    expect(html).not.toContain('Why This System Works');
+  });
+
+  it('suppresses §8 when systemInteraction says "cannot translate"', () => {
+    const html = render(
+      base({
+        systemInteraction:
+          'The amplifier cannot translate the source quality through to the speakers.',
+      }),
+    );
+    expect(html).not.toContain('Why This System Works');
+  });
+
+  it('suppresses §8 when assessmentLimitations names a bottleneck', () => {
+    const html = render(
+      base({
+        assessmentLimitations: ['Amplifier limits everything downstream.'],
+      }),
+    );
+    expect(html).not.toContain('Why This System Works');
+  });
+
+  it('continues to render §8 when no conflict signals are present', () => {
+    const html = render(base({}));
+    expect(html).toContain('Why This System Works');
+    expect(html).toContain('appear to be working toward a single voicing');
+  });
+
+  it('continues to render §8 keep-recs branch when conflict-free', () => {
+    const html = render(
+      base({
+        keepRecommendations: [
+          { componentName: 'Some Tube Amp', reason: 'works' } as never,
+        ],
+      }),
+    );
+    expect(html).toContain('Why This System Works');
+    expect(html).toContain('succeeds because');
+  });
+});
+
+describe('SystemAssessmentArtifact — Hardening A B4: §9 conflict-signal suppression', () => {
+  const baseConflict: AdvisoryResponse = {
+    kind: 'assessment',
+    subject: 'B4 test',
+    systemSignature: 'A warm system.',
+    systemInteraction:
+      'The amplifier cannot drive the speakers to satisfactory levels. The speakers will not perform as designed.',
+    systemChain: {
+      names: ['Some DAC', 'Some Low-Power Amp', 'Some Low-Efficiency Planar'],
+      roles: ['DAC', 'Power Amplifier', 'Speakers'],
+    },
+    componentReadings: [
+      'An R2R DAC.',
+      'A 2-watt single-ended triode tube amplifier.',
+      'A low-efficiency planar magnetic floorstanding speaker.',
+    ],
+  } as AdvisoryResponse;
+
+  it('suppresses §9 listener-fit when systemInteraction declares the speakers will not perform', () => {
+    const html = render(baseConflict);
+    expect(html).not.toContain('What This System Seems Built For');
+  });
+
+  it('suppresses §9 when assessmentLimitations contains "Voicing conflict"', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B4 limits',
+      systemSignature: 'A warm system.',
+      systemChain: {
+        names: ['Some DAC', 'Some Warm Amp', 'Some High-Efficiency Speakers'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A warm DAC.',
+        'A push-pull tube integrated.',
+        'A high-efficiency wide-baffle speaker.',
+      ],
+      assessmentLimitations: ['Voicing conflict.', 'Warmth fighting forward presentation.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).not.toContain('What This System Seems Built For');
+  });
+
+  it('continues to render §9 when no conflict signals are present (warm coherent system)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B4 healthy',
+      systemSignature: 'A warm tube-led coherent system.',
+      systemChain: {
+        names: ['Some DAC', 'Some Tube Amp', 'Some High-Efficiency Speakers'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC.',
+        'A push-pull tube integrated.',
+        'A high-efficiency wide-baffle speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('What This System Seems Built For');
+  });
+});
+
+describe('SystemAssessmentArtifact — Hardening A B5: §10 protection-vs-constraint suppression', () => {
+  it('suppresses mature-amp protection when the engine names that amp as primary constraint', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B5 mature-amp constraint',
+      systemSignature: 'A warm system.',
+      systemChain: {
+        names: ['Some DAC', 'Decware Zen Triode', 'Magnepan 3.7i'],
+        roles: ['DAC', 'Power Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC.',
+        'A 2-watt single-ended triode tube amplifier.',
+        'A 4-panel low-efficiency planar magnetic floorstanding speaker.',
+      ],
+      primaryConstraint: {
+        componentName: 'Decware Zen Triode',
+        category: 'amplifier_drive',
+        explanation: '',
+      } as AdvisoryResponse['primaryConstraint'],
+      upgradeDirection: 'Replace the amplifier.',
+    } as AdvisoryResponse;
+    const html = render(a);
+    const sectionStart = html.indexOf('If You Were to Change Something');
+    const slice = html.slice(sectionStart);
+    // The Zen Triode is the constraint — protection must NOT name it.
+    expect(slice).not.toContain(
+      'Replacing the Decware Zen Triode is a philosophical change',
+    );
+  });
+
+  it('suppresses destination-speaker protection when the engine names that speaker as primary constraint', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B5 destination-speaker constraint',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Wilson Sasha DAW'],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.'],
+      primaryConstraint: {
+        componentName: 'Wilson Sasha DAW',
+        category: 'speaker_scale',
+        explanation: '',
+      } as AdvisoryResponse['primaryConstraint'],
+      upgradeDirection: 'Replace the speaker.',
+    } as AdvisoryResponse;
+    const html = render(a);
+    const sectionStart = html.indexOf('If You Were to Change Something');
+    const slice = html.slice(sectionStart);
+    expect(slice).not.toContain(
+      'The Wilson Sasha DAW is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('continues to protect a destination speaker that is NOT the primary constraint', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B5 healthy destination',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Yamaha A-S301', 'Wilson Sasha DAW'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC.',
+        'A 60-watt budget Class-AB integrated amplifier.',
+        'A 3-way dynamic destination-class floorstander.',
+      ],
+      primaryConstraint: {
+        componentName: 'Yamaha A-S301',
+        category: 'amplifier_drive',
+        explanation: '',
+      } as AdvisoryResponse['primaryConstraint'],
+      upgradeDirection: 'Replace the integrated amplifier.',
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Wilson Sasha DAW is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('omits §10 hierarchy entirely when the only protection candidate is also the constraint', () => {
+    // 2-component chain: SET amp (mature) + planar speakers (not in
+    // destination-brand allowlist; not high-eff in reading) — only
+    // the SET amp would have triggered protection, but it is the
+    // primary constraint. After B5 filtering both lists are empty.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B5 only-candidate-is-constraint',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Decware Zen Triode', 'Some Bookshelf'],
+        roles: ['Power Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A 2-watt single-ended triode tube amplifier.',
+        'A bookshelf speaker.',
+      ],
+      primaryConstraint: {
+        componentName: 'Decware Zen Triode',
+        category: 'amplifier_drive',
+        explanation: '',
+      } as AdvisoryResponse['primaryConstraint'],
+      upgradeDirection: 'Replace the amplifier.',
+    } as AdvisoryResponse;
+    const html = render(a);
+    const sectionStart = html.indexOf('If You Were to Change Something');
+    const slice = html.slice(sectionStart);
+    expect(slice).not.toContain('The lowest-risk path forward is front-end refinement');
+    expect(slice).not.toContain('philosophical change');
+  });
+});
