@@ -321,12 +321,25 @@ describe('SystemAssessmentArtifact — data gating (sparse responses)', () => {
     expect(html).not.toContain('Why This System Works');
   });
 
-  it('skips §9 when upgradeDirection, upgradePaths, and recommendedSequence are all absent', () => {
+  it('skips §10 when engine upgrade fields absent AND no hierarchy candidates present', () => {
+    // Hardening Phase B B2 — the §10 hierarchy paragraph is now an
+    // independent reason to render the section. Use a chain with no
+    // destination speaker and no mature amplifier so the hierarchy
+    // composer also returns undefined; only then does §10 omit.
     const html = render({
       ...FULL,
       upgradeDirection: undefined,
       upgradePaths: undefined,
       recommendedSequence: undefined,
+      systemChain: {
+        names: ['Some DAC', 'Some Solid-State Amp', 'Some Generic Bookshelf'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A delta-sigma DAC.',
+        'A 75-watt Class-AB integrated amplifier.',
+        'A 2-way bookshelf speaker.',
+      ],
     });
     expect(html).not.toContain('If You Were to Change');
   });
@@ -3971,6 +3984,30 @@ describe('SystemAssessmentArtifact — Hardening A B5: §10 protection-vs-constr
     );
   });
 
+  it('continues to render §10 when ONLY the hierarchy paragraph fires (Phase B B2 ungate)', () => {
+    // Hardening Phase B B2 — the hierarchy paragraph alone (no
+    // engine upgrade output) should still produce a §10 render
+    // because the destination-speaker protection is the artifact's
+    // most-valuable advisory message.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B5 B2 cross-check',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Wilson Sasha DAW'],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.'],
+      // No upgradeDirection / paths / sequence — pre-B2 this would
+      // omit §10 entirely.
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('If You Were to Change Something');
+    expect(html).toContain(
+      'The Wilson Sasha DAW is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
   it('omits §10 hierarchy entirely when the only protection candidate is also the constraint', () => {
     // 2-component chain: SET amp (mature) + planar speakers (not in
     // destination-brand allowlist; not high-eff in reading) — only
@@ -4000,5 +4037,331 @@ describe('SystemAssessmentArtifact — Hardening A B5: §10 protection-vs-constr
     const slice = html.slice(sectionStart);
     expect(slice).not.toContain('The lowest-risk path forward is front-end refinement');
     expect(slice).not.toContain('philosophical change');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// Hardening Phase B — system-architecture recognition + advisor judgment
+// ════════════════════════════════════════════════════════════════════════
+//
+//   B2 §10 hierarchy ungated from engine output (with conflict-signal
+//      guard when no engine direction backs the hierarchy framing).
+//   B9 roleFamily reorder so amplifier match precedes source match;
+//      compound all-in-one / streamer-amplifier roles classified as
+//      amplifier and emitted with a role-correct §5 contribution lede.
+
+describe('SystemAssessmentArtifact — Hardening B B2: §10 hierarchy independent gate', () => {
+  it('renders §10 hierarchy paragraph when destination speaker present + no engine upgrade fields', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B2 destination ungate',
+      systemSignature: 'A heritage Class-AB integrated into a Tannoy destination.',
+      systemChain: {
+        names: ['Holo May DAC', 'Luxman L-509X', 'Tannoy Cheviot'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC.',
+        'A 120-watt Class-AB integrated amplifier.',
+        'A 15-inch dual-concentric high-efficiency floorstander.',
+      ],
+      // no upgradeDirection, upgradePaths, or recommendedSequence
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('If You Were to Change Something');
+    expect(html).toContain(
+      'The Tannoy Cheviot is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('renders §10 hierarchy paragraph when mature amplifier present + no engine upgrade fields', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B2 mature ungate',
+      systemSignature: 'A warm SET system.',
+      systemChain: {
+        names: ['Some DAC', 'Shindo Cortese', 'Some Bookshelf'],
+        roles: ['DAC', 'Power Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC.',
+        'A 9-watt single-ended triode tube amplifier.',
+        'A 2-way bookshelf speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('If You Were to Change Something');
+    expect(html).toContain(
+      'Replacing the Shindo Cortese is a philosophical change rather than an obvious upgrade',
+    );
+  });
+
+  it('omits §10 when no destination/mature component AND no engine upgrade fields', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B2 omit',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some SS Amp', 'Some Generic Bookshelf'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A delta-sigma DAC.',
+        'A 75-watt Class-AB integrated amplifier.',
+        'A 2-way bookshelf speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).not.toContain('If You Were to Change Something');
+  });
+
+  it('suppresses solo hierarchy when chain has conflict signal AND no engine upgrade fields', () => {
+    // Conflict-signaled chain with destination-allowlist speaker but
+    // no curated engine direction. The hierarchy paragraph would
+    // assert "front-end refinement first" / "treat as fixed point"
+    // — neither is supported by an engine direction here, so suppress.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B2 conflict suppression',
+      systemSignature: 'A warm-source warm-amp system met by a forward-voiced Harbeth.',
+      systemInteraction:
+        'The amp and speaker both lean warm; the system collapses toward a polite mid-centric voicing.',
+      systemChain: {
+        names: ['Berkeley Alpha', 'Cary SLI-80HS', 'Harbeth 30.2 XD'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A reference solid-state R2R DAC.',
+        'A 40-watt push-pull tube integrated amplifier.',
+        'A BBC-tradition thin-wall monitor with warm midband.',
+      ],
+      assessmentLimitations: ['Top-end air constrained.', 'Tonal warmth compounds.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).not.toContain('If You Were to Change Something');
+  });
+
+  it('renders hierarchy alongside engine upgrade direction even on conflict-signaled chains', () => {
+    // Conflict signal IS present but engine emitted a curated
+    // direction. Hierarchy framing is consistent with the engine
+    // recommendation, so render both.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B2 conflict with direction',
+      systemSignature: 'A warm SET system mismatched with low-efficiency planars.',
+      systemInteraction:
+        'The amplifier cannot drive the speakers to satisfactory levels.',
+      systemChain: {
+        names: ['Some DAC', 'Decware Zen Triode', 'Magnepan 3.7i'],
+        roles: ['DAC', 'Power Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC.',
+        'A 2-watt single-ended triode tube amplifier.',
+        'A 4-panel low-efficiency planar magnetic floorstander.',
+      ],
+      primaryConstraint: {
+        componentName: 'Decware Zen Triode',
+        category: 'amplifier_drive',
+        explanation: '',
+      } as AdvisoryResponse['primaryConstraint'],
+      upgradeDirection: 'Replace the amplifier with one suited to a low-efficiency planar load.',
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('If You Were to Change Something');
+    // Decware suppressed by Phase A B5
+    expect(html).not.toContain(
+      'Replacing the Decware Zen Triode is a philosophical change',
+    );
+    // Magnepan still correctly protected
+    expect(html).toContain(
+      'The Magnepan 3.7i is a destination-class loudspeaker; treat it as a fixed point',
+    );
+    // Engine direction renders
+    expect(html).toContain('Replace the amplifier with one suited to a low-efficiency planar load');
+  });
+
+  it('Phase K hierarchy + engine direction render unchanged from Phase A', () => {
+    // Locked Phase K reference must still render its hierarchy +
+    // engine direction + sequence stack.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Phase K',
+      systemSignature: 'A warm tube-led source-first chain with coherent-source voicing.',
+      systemChain: {
+        names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC.',
+        'A push-pull tube integrated.',
+        'A high-efficiency wide-baffle loudspeaker.',
+      ],
+      primaryConstraint: {
+        componentName: 'DeVore O/96',
+        category: 'speaker_scale',
+        explanation: '',
+      } as AdvisoryResponse['primaryConstraint'],
+      upgradeDirection: 'Refine the front-end before swapping the destination speakers.',
+      recommendedSequence: [{ step: 1, action: 'Refine the source / streamer chain.' }],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('The lowest-risk path forward is front-end refinement');
+    expect(html).toContain(
+      'Replacing the Leben CS600X is a philosophical change rather than an obvious upgrade',
+    );
+    // DeVore is the primary constraint — protection suppressed by Phase A B5
+    expect(html).not.toContain(
+      'The DeVore O/96 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+    expect(html).toContain('Refine the front-end before swapping the destination speakers');
+  });
+});
+
+describe('SystemAssessmentArtifact — Hardening B B9: all-in-one / streamer-amplifier classification', () => {
+  it('NAD M10 → DALI Oberon 5: all-in-one card uses combined source+amplification lede', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B9 NAD M10',
+      systemSignature: 'A Class-D streaming all-in-one driving compact floorstanders.',
+      systemChain: {
+        names: ['NAD M10 V2', 'DALI Oberon 5'],
+        roles: ['All-in-One Streamer Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A 100-watt Class-D streaming all-in-one with onboard Dirac Live correction.',
+        'A 2.5-way compact floorstanding loudspeaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The NAD M10 V2 combines source access and amplification in a single chassis, driving the DALI Oberon 5.',
+    );
+    // Negative: pre-fix prose
+    expect(html).not.toContain(
+      'The NAD M10 V2 establishes the character of the signal feeding the DALI Oberon 5',
+    );
+  });
+
+  it('Naim Uniti Atom → Q Acoustics 3030i: all-in-one classification', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B9 Naim Atom',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Naim Uniti Atom HE', 'Q Acoustics 3030i'],
+        roles: ['All-in-One Streamer Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An all-in-one streamer / DAC / amplifier.',
+        'A 2-way affordable bookshelf speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Naim Uniti Atom HE combines source access and amplification in a single chassis, driving the Q Acoustics 3030i.',
+    );
+    expect(html).not.toContain(
+      'The Naim Uniti Atom HE establishes the character of the signal',
+    );
+  });
+
+  it('Streaming Integrated Amplifier (Lyngdorf-style) classified as amplifier', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B9 streaming integrated',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Lyngdorf TDAI-1120', 'Some Passive Floorstander'],
+        roles: ['Streaming Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A 60-watt Class-D streaming integrated amplifier with RoomPerfect DSP.',
+        'A 2-way passive floorstanding speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Lyngdorf TDAI-1120 combines source access and amplification in a single chassis',
+    );
+  });
+
+  it('Bluesound Node (bare streamer) still classified as source', () => {
+    // Regression guard — B9 reorder must NOT misclassify pure
+    // streamers as amplifiers. The Bluesound Node has no
+    // amp/integrated/receiver token in its role string.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B9 streamer regression',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Bluesound Node', 'Hegel H120', 'Wharfedale Linton Heritage'],
+        roles: ['Streamer', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A network streamer with DAC.',
+        'A 75-watt Class-AB integrated amplifier.',
+        'A 3-way heritage standmount.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Bluesound Node establishes the character of the signal feeding the Hegel H120.',
+    );
+    // The Hegel is a regular integrated, not an all-in-one
+    expect(html).toContain(
+      'The Hegel H120 carries the signal between the Bluesound Node and the Wharfedale Linton Heritage',
+    );
+  });
+
+  it('Phase K Pontus II / Leben / DeVore — DAC and integrated unchanged', () => {
+    // Regression guard — locked reference must render exactly as
+    // before; "DAC" → source, "Integrated Amplifier" → amplifier, no
+    // all-in-one classification.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Phase K regression',
+      systemSignature: 'A warm tube-led source-first chain.',
+      systemChain: {
+        names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC.',
+        'A push-pull tube integrated.',
+        'A high-efficiency wide-baffle loudspeaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Denafrips Pontus II establishes the character of the signal feeding the Leben CS600X',
+    );
+    expect(html).toContain(
+      'The Leben CS600X carries the signal between the Denafrips Pontus II and the DeVore O/96',
+    );
+    expect(html).not.toContain(
+      'The Denafrips Pontus II combines source access and amplification',
+    );
+    expect(html).not.toContain(
+      'The Leben CS600X combines source access and amplification',
+    );
+  });
+
+  it('Plain "Integrated Amplifier" still uses regular amp prose (not all-in-one)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'B9 plain integrated',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Integrated', 'Some Speakers'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An integrated.', 'A speaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Some Integrated carries the signal between the Some DAC and the Some Speakers',
+    );
+    expect(html).not.toContain('combines source access and amplification');
   });
 });

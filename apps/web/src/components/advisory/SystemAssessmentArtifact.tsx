@@ -266,10 +266,62 @@ function extractCharacterFacts(
 function roleFamily(role: string | undefined): 'source' | 'amplifier' | 'speaker' | 'unknown' {
   if (!role) return 'unknown';
   const r = role.toLowerCase();
+  // Hardening Phase B B9 — amplifier match precedes source match.
+  //
+  // Previously `streamer|dac|...` was checked first, so any role
+  // containing "streamer" — including compound roles like "All-in-One
+  // Streamer Amplifier", "Streaming Integrated Amplifier", "Network
+  // Receiver", "Powered Streaming Amplifier" — was classified as
+  // 'source'. That misled §5 prose into emitting source-family
+  // ledes ("establishes the character of the signal feeding...") for
+  // components that are primarily amplifiers with built-in source
+  // access. Now the amplifier-family regex runs first; any role
+  // mentioning preamp / integrated / monoblock / power amp /
+  // amplifier / receiver matches as 'amplifier' regardless of any
+  // "streamer" / "network" / "streaming" qualifier in the same
+  // string. Pure-source roles ("DAC", "Streamer", "Streamer/DAC",
+  // "Turntable") still fall through to the source check unchanged.
+  if (/preamp|integrated|monoblock|power amp|amplifier|amp\b|receiver/.test(r)) return 'amplifier';
   if (/dac|streamer|transport|turntable|cartridge|cd player|phono|source/.test(r)) return 'source';
-  if (/preamp|integrated|monoblock|power amp|amplifier|amp\b/.test(r)) return 'amplifier';
   if (/speaker|transducer|headphone|monitor/.test(r)) return 'speaker';
   return 'unknown';
+}
+
+/**
+ * Hardening Phase B B9 — detect compound all-in-one / streamer-amplifier
+ * roles within the amplifier family.
+ *
+ * After the roleFamily reorder above, roles like "All-in-One Streamer
+ * Amplifier", "Streaming Integrated Amplifier", or "Network Receiver"
+ * are classified as 'amplifier'. But they are NOT power amplifiers —
+ * they bundle source access (streaming, DAC) + amplification in a
+ * single chassis. The §5 contribution prose for power amps ("carries
+ * the signal between the [upstream] and the [downstream]") reads wrong
+ * for an all-in-one when there is no upstream source separate from it.
+ *
+ * This helper identifies the all-in-one subtype so the §5 composer
+ * can branch to a role-correct lede that names the combined source +
+ * amplification function. Pure integrated amplifiers (no streaming
+ * / network / powered qualifier) still flow through the regular
+ * amplifier branch.
+ *
+ * MATCH:
+ *   - "all-in-one" / "all in one" / "allinone"
+ *   - streamer / streaming / network / powered + amp / integrated / receiver
+ *     (compound — both halves required)
+ * REJECT:
+ *   - Plain "Integrated Amplifier" / "Power Amplifier" / "Monoblock"
+ *   - "Headphone Amplifier" (already handled in §5 speaker branch via
+ *     the surface-phrase swap)
+ */
+function isAllInOne(role: string | undefined): boolean {
+  if (!role) return false;
+  const r = role.toLowerCase();
+  if (/headphone/.test(r)) return false;
+  if (/all[\s-]?in[\s-]?one/.test(r)) return true;
+  const sourceTag = /streamer|streaming|network|powered/.test(r);
+  const ampTag = /amp|integrated|receiver/.test(r);
+  return sourceTag && ampTag;
 }
 
 /**
@@ -630,19 +682,41 @@ function composeContributionBody(
       );
     }
   } else if (family === 'amplifier') {
-    // Commit 13 — §5 preamp template parity.
+    // Hardening Phase B B9 — all-in-one streamer-amplifier branch.
     //
-    // The `amplifier` role family captures both power amplifiers and
-    // line-stage preamplifiers (see `roleFamily`). Default amplifier
-    // prose ("drives the speakers", "drive for the speakers", "motion
-    // at the speakers") implicates the component in moving cones; that
-    // language is wrong for a preamp, whose contribution is line-stage
-    // gain shaping and signal handing — not speaker drive. We detect
-    // preamps here (preamp / line-stage / line-level, while excluding
-    // "power amp" and similar) and emit a role-correct lede that
-    // references the downstream power amplifier rather than the
-    // speakers.
-    if (isPreampRole(role)) {
+    // The `amplifier` family now includes hybrid all-in-one /
+    // streamer-amplifier roles (after the roleFamily B9 reorder).
+    // When such a component sits at the head of the chain (no
+    // upstream), the regular "carries the signal between [upstream]
+    // and [downstream]" template reads wrong because there is no
+    // separate upstream source — the all-in-one IS the source.
+    // Emit a role-correct lede that names the combined source +
+    // amplification function. When an explicit upstream IS present
+    // the all-in-one is functionally acting as an integrated amp;
+    // fall through to the regular amplifier prose.
+    if (isAllInOne(role) && !upstream) {
+      if (downstream) {
+        sentences.push(
+          `The ${name} combines source access and amplification in a single chassis, driving the ${downstream}.`,
+        );
+      } else {
+        sentences.push(
+          `The ${name} combines source access and amplification in a single chassis.`,
+        );
+      }
+    } else if (isPreampRole(role)) {
+      // Commit 13 — §5 preamp template parity (continued below).
+      //
+      // The `amplifier` role family captures both power amplifiers and
+      // line-stage preamplifiers (see `roleFamily`). Default amplifier
+      // prose ("drives the speakers", "drive for the speakers", "motion
+      // at the speakers") implicates the component in moving cones; that
+      // language is wrong for a preamp, whose contribution is line-stage
+      // gain shaping and signal handing — not speaker drive. We detect
+      // preamps here (preamp / line-stage / line-level, while excluding
+      // "power amp" and similar) and emit a role-correct lede that
+      // references the downstream power amplifier rather than the
+      // speakers.
       if (upstream && downstream) {
         sentences.push(
           `The ${name} accepts the signal from the ${upstream}, sets its line-stage character and gain, and hands it to the ${downstream}.`,
@@ -2882,38 +2956,51 @@ export default function SystemAssessmentArtifact({
        *  articulates the leverage model — front-end refinement first,
        *  amplifier replacement as philosophical change, destination
        *  speakers as fixed points. The paragraph names the specific
-       *  protected components when they appear in the chain. Renders
-       *  BEFORE the engine's `upgradeDirection` prose; omits silently
-       *  when neither protection (destination speaker nor mature
-       *  amplifier) fires. */}
-      {hasChangeSection && (
-        <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>If You Were to Change Something</h2>
-          {(() => {
-            const chainNamesUH = a.systemChain?.names ?? [];
-            const chainRolesUH = a.systemChain?.roles ?? [];
-            const chainFactsUH = chainNamesUH.map((name, i) =>
-              extractCharacterFacts(
-                findReadingForName(name, a.componentReadings ?? [], i),
-                chainRolesUH[i],
-              ),
-            );
-            // Hardening Phase A — pass the engine-named primary
-            // constraint into the hierarchy composer so its protection
-            // sentences cannot fire on a component the engine has
-            // identified as the gating limit (B5).
-            const hierarchy = composeUpgradeHierarchy(
-              chainNamesUH,
-              chainRolesUH,
-              chainFactsUH,
-              a.primaryConstraint?.componentName,
-            );
-            if (!hierarchy) return null;
-            return <p style={{ ...proseStyle, marginBottom: '0.85rem' }}>{hierarchy}</p>;
-          })()}
-          {a.upgradeDirection && (
-            <p style={{ ...proseStyle, marginBottom: '0.85rem' }}>{a.upgradeDirection}</p>
-          )}
+       *  protected components when they appear in the chain.
+       *
+       *  Hardening Phase B B2 — the hierarchy paragraph is now an
+       *  independent reason to render §10. Previously the entire
+       *  section required engine output (upgradeDirection,
+       *  upgradePaths, or recommendedSequence). High-end systems with
+       *  destination speakers lost the protective advice when the
+       *  engine was sparse. The hierarchy can now render alone, but is
+       *  suppressed on conflict-signaled chains with no engine
+       *  upgrade direction — to avoid asserting positive protection on
+       *  a chain the engine has diagnosed as broken without giving
+       *  the artifact a curated direction to back it. */}
+      {(() => {
+        const chainNamesUH = a.systemChain?.names ?? [];
+        const chainRolesUH = a.systemChain?.roles ?? [];
+        const chainFactsUH = chainNamesUH.map((name, i) =>
+          extractCharacterFacts(
+            findReadingForName(name, a.componentReadings ?? [], i),
+            chainRolesUH[i],
+          ),
+        );
+        // Hardening Phase A B5 — primaryConstraint protection-suppress.
+        const rawHierarchy = composeUpgradeHierarchy(
+          chainNamesUH,
+          chainRolesUH,
+          chainFactsUH,
+          a.primaryConstraint?.componentName,
+        );
+        // Hardening Phase B B2 — conflict-signal gate. When the engine
+        // has flagged a conflict AND emitted no upgrade direction, the
+        // hierarchy paragraph would render in isolation with no
+        // engine context to interpret it; suppress.
+        const conflictGated = !!rawHierarchy && !hasChangeSection && hasConflictSignal(a);
+        const hierarchy = conflictGated ? undefined : rawHierarchy;
+        const shouldRender = hasChangeSection || !!hierarchy;
+        if (!shouldRender) return null;
+        return (
+          <section style={{ marginBottom: '1.5rem' }}>
+            <h2 style={sectionHeadingStyle}>If You Were to Change Something</h2>
+            {hierarchy && (
+              <p style={{ ...proseStyle, marginBottom: '0.85rem' }}>{hierarchy}</p>
+            )}
+            {a.upgradeDirection && (
+              <p style={{ ...proseStyle, marginBottom: '0.85rem' }}>{a.upgradeDirection}</p>
+            )}
           {hasUpgradePaths && (
             <AdvisoryUpgradePaths
               paths={a.upgradePaths!}
@@ -2980,8 +3067,9 @@ export default function SystemAssessmentArtifact({
               </div>
             );
           })()}
-        </section>
-      )}
+          </section>
+        );
+      })()}
 
       {/* ═══════════ §10 Sources ═══════════ */}
       {hasSources && (
