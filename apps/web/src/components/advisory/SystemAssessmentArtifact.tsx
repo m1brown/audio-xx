@@ -544,22 +544,78 @@ const MATURE_TOPOLOGIES = new Set<NonNullable<CharacterFacts['topology']>>([
 ]);
 
 /**
- * 15-chain acceptance fix C — destination-class brand allowlist.
+ * Destination-class brand allowlist.
  *
  * Speaker brands whose entire lineup (or near-entire lineup) reads as
  * destination-class in the audiophile press. These trigger §10's
  * "treat as a fixed point" framing even when the chain reading lacks
  * explicit high-efficiency / wide-baffle / open-baffle / horn-loaded
- * anchors. Match is on the leading word of the chain name (or full
- * brand name) lowercased.
+ * anchors. Match is on the leading word of the chain name (or first-
+ * two words for multi-word brand names) lowercased.
  *
- * Intentionally narrow: only brands where the cheapest model in the
- * lineup is still destination-tier. Brands with a wide spread
- * (e.g. KEF Q-series → Reference, Focal Chora → Utopia) are NOT
- * listed — the existing high-eff / cabinet / priceTier heuristics
- * handle their high-tier models on a per-product basis.
+ * Inclusion rule (strict):
+ *   - cheapest model in the lineup is itself destination-tier (no
+ *     budget / mid-tier entry product that would be over-protected)
+ *   - swapping the speaker substantially changes system identity
+ *   - users commonly keep them as system anchors
+ *   - brand has reference-grade press credibility
+ *
+ * Brands with a wide spread — KEF Q-series → Reference, Focal Chora
+ * → Utopia, ATC SCM7 → SCM150, Vandersteen 1Ci → Model Seven, Klipsch
+ * RP → Heritage — are NOT listed here. The existing high-efficiency /
+ * cabinet / priceTier heuristics still handle their high-tier models
+ * on a per-product basis through catalog lookup.
+ *
+ * ─── Initial set (commits 7 / 12) ──────────────────────────────────
+ *   magnepan, harbeth, devore, tannoy, proac, spendor, sonus (Faber),
+ *   wilson (Audio AND Wilson Benesch — both destination), kii,
+ *   audio note, sound lab, cessaro, avantgarde, living voice.
+ *
+ * ─── Hardening Phase D-1 additions (Commit 17) ─────────────────────
+ *   magico        — A1 entry (~$8k bookshelf) already treated as
+ *                   destination by reviewers. Statement-class US brand.
+ *                   Affects fixture #06 (Magico A5) and #24 (Magico A1).
+ *   yg            — YG Acoustics. Entry Carmel 2 (~$30k) is firmly
+ *                   destination. Statement-class precision US brand.
+ *                   Future fixture readiness.
+ *   yg acoustics  — alternate firstTwo form for the same brand.
+ *   rockport      — Atria II entry (~$30k+) is destination. US sealed-
+ *                   cabinet reference. Future fixture readiness.
+ *   stenheim      — Alumine 2 entry (~$15k+) is destination. Swiss
+ *                   reference. Future fixture readiness.
+ *   raidho        — TD1.2 entry (~$25k+) is destination. Danish high-
+ *                   end with ribbon-tweeter signature. Future
+ *                   fixture readiness.
+ *   borresen      — 01 entry (~$15k+) is destination. Danish (Michael
+ *                   Borresen ex-Raidho). Future fixture readiness.
+ *   marten        — Parker Duo entry (~$10k+) is destination. Swedish
+ *                   ceramic / diamond driver reference. Future
+ *                   fixture readiness.
+ *   verity        — Lakme entry (~$10k+) is destination. Canadian
+ *                   reference brand. Future fixture readiness.
+ *   verity audio  — alternate firstTwo form for the same brand.
+ *   tad           — TAD Reference (Pioneer's reference arm). Every
+ *                   model is statement-class. Future fixture readiness.
+ *
+ * ─── Explicitly deferred (Hardening Phase D-1) ─────────────────────
+ *   atc           — wide spread; SCM7 / SCM11 entry monitors are mid-
+ *                   tier, not destination. Adding "atc" would
+ *                   over-protect the budget passive line. ATC SCM40+
+ *                   is destination but requires model-specific
+ *                   matching. Future model-allowlist work.
+ *   vandersteen   — 1Ci entry-level is ~$1.5k budget; treating all
+ *                   Vandersteens as destination would over-protect.
+ *                   Future model-allowlist work.
+ *   klipsch       — Heritage line (Heresy IV, Cornwall IV, La Scala,
+ *                   Klipschorn) is destination, but the wider lineup
+ *                   (RP-600M, R-51M, Reference Premiere) is mass-
+ *                   market. Brand-level match would over-protect.
+ *                   Future model-allowlist work — Heritage products
+ *                   should be matched via product-name / priceTier
+ *                   catalog data rather than brand string.
  */
 const DESTINATION_SPEAKER_BRANDS = new Set([
+  // Original (commits 7 / 12)
   'magnepan',
   'harbeth',
   'devore',
@@ -576,6 +632,18 @@ const DESTINATION_SPEAKER_BRANDS = new Set([
   'cessaro',
   'avantgarde',
   'living voice',
+  // Hardening Phase D-1 additions (Commit 17)
+  'magico',
+  'yg',
+  'yg acoustics',
+  'rockport',
+  'stenheim',
+  'raidho',
+  'borresen',
+  'marten',
+  'verity',
+  'verity audio',
+  'tad',
 ]);
 
 /**

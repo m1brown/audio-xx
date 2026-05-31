@@ -4793,3 +4793,281 @@ describe('SystemAssessmentArtifact — Hardening C: plural verb agreement', () =
     );
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// Hardening Phase D-1 — destination-brand allowlist additions
+// ════════════════════════════════════════════════════════════════════════
+//
+// Each accepted brand has its own test. Each deferred brand has a
+// regression test confirming it does NOT trigger destination
+// protection. Mass-market regression guards are also included.
+
+describe('SystemAssessmentArtifact — Hardening D-1: accepted destination brands', () => {
+  const destChain = (speakerName: string, role = 'Speakers'): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: `D-1 ${speakerName}`,
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', speakerName],
+        roles: ['DAC', 'Amp', role],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.'],
+    } as AdvisoryResponse);
+
+  it('Magico A5 — protected (statement US brand, A1 entry already destination)', () => {
+    const html = render(destChain('Magico A5'));
+    expect(html).toContain(
+      'The Magico A5 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Magico A1 — protected (entry-level still destination-tier)', () => {
+    const html = render(destChain('Magico A1'));
+    expect(html).toContain(
+      'The Magico A1 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('YG Acoustics Carmel 2 — protected (entry Carmel 2 ~$30k is destination)', () => {
+    const html = render(destChain('YG Acoustics Carmel 2'));
+    expect(html).toContain(
+      'The YG Acoustics Carmel 2 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Rockport Atria II — protected (entry Atria II ~$30k is destination)', () => {
+    const html = render(destChain('Rockport Atria II'));
+    expect(html).toContain(
+      'The Rockport Atria II is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Stenheim Alumine 2 — protected (entry Alumine 2 ~$15k is destination)', () => {
+    const html = render(destChain('Stenheim Alumine 2'));
+    expect(html).toContain(
+      'The Stenheim Alumine 2 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Raidho TD1.2 — protected (entry TD1.2 ~$25k is destination)', () => {
+    const html = render(destChain('Raidho TD1.2'));
+    expect(html).toContain(
+      'The Raidho TD1.2 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Borresen 01 — protected (entry 01 ~$15k is destination)', () => {
+    const html = render(destChain('Borresen 01'));
+    expect(html).toContain(
+      'The Borresen 01 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Marten Parker Duo — protected (entry Parker ~$10k is destination)', () => {
+    const html = render(destChain('Marten Parker Duo'));
+    expect(html).toContain(
+      'The Marten Parker Duo is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Verity Audio Lakme — protected (entry Lakme ~$10k is destination)', () => {
+    const html = render(destChain('Verity Audio Lakme'));
+    expect(html).toContain(
+      'The Verity Audio Lakme is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('TAD Evolution One TX — protected (every TAD Reference model statement-class)', () => {
+    const html = render(destChain('TAD Evolution One TX'));
+    expect(html).toContain(
+      'The TAD Evolution One TX is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+});
+
+describe('SystemAssessmentArtifact — Hardening D-1: explicitly deferred brands', () => {
+  // The matcher SHOULD NOT trigger destination protection for these
+  // brands at the brand level. Model-specific protection (via
+  // catalog priceTier or per-model allowlist) is acceptable future
+  // work but is not introduced here.
+  const destChain = (speakerName: string): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: `D-1 deferred ${speakerName}`,
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', speakerName],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.'],
+    } as AdvisoryResponse);
+
+  it('ATC SCM7 entry monitor — NOT protected (wide spread; SCM7 / SCM11 mid-tier)', () => {
+    const html = render(destChain('ATC SCM7'));
+    expect(html).not.toContain('ATC SCM7 is a destination-class loudspeaker');
+  });
+
+  it('ATC SCM40 — NOT protected at brand level (would need model-allowlist work)', () => {
+    const html = render(destChain('ATC SCM40'));
+    expect(html).not.toContain('ATC SCM40 is a destination-class loudspeaker');
+  });
+
+  it('Vandersteen 1Ci budget entry — NOT protected (1Ci ~$1.5k mass-market)', () => {
+    const html = render(destChain('Vandersteen 1Ci'));
+    expect(html).not.toContain('Vandersteen 1Ci is a destination-class loudspeaker');
+  });
+
+  it('Vandersteen 2Ce Signature II — NOT protected at brand level', () => {
+    const html = render(destChain('Vandersteen 2Ce Signature II'));
+    expect(html).not.toContain(
+      'Vandersteen 2Ce Signature II is a destination-class loudspeaker',
+    );
+  });
+
+  it('Klipsch RP-600M mass-market — NOT protected (would over-protect RP/Reference lineup)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'D-1 Klipsch RP regression',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Klipsch RP-600M'],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A 2-way bookshelf speaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).not.toContain('Klipsch RP-600M is a destination-class loudspeaker');
+  });
+
+  it('Klipsch Heresy IV heritage — NOT brand-level protected (needs model allowlist)', () => {
+    // Heresy IV is destination-class in the audiophile press, but
+    // cannot be brand-level matched without over-protecting RP /
+    // Reference / mass-market Klipsch. Confirmed deferred to model-
+    // specific future work. Reading omits high-eff / horn-loaded
+    // anchors so the fact-based path also cannot fire — verifies
+    // brand-level alone is the only path tested here.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'D-1 Klipsch Heritage',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Klipsch Heresy IV'],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A 3-way bookshelf speaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).not.toContain('Klipsch Heresy IV is a destination-class loudspeaker');
+  });
+});
+
+describe('SystemAssessmentArtifact — Hardening D-1: regression guards', () => {
+  it('subwoofer with destination-tier brand-leading name — still NOT protected', () => {
+    // Even if a subwoofer chain entry starts with a destination
+    // brand token, the isSubwoofer guard in isDestinationSpeaker
+    // bypasses the brand allowlist (Phase C invariant).
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'D-1 sub regression',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Some Speakers', 'Magico SUB-18'],
+        roles: ['DAC', 'Amp', 'Speakers', 'Subwoofer'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.', 'A subwoofer.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).not.toContain('Magico SUB-18 is a destination-class loudspeaker');
+  });
+
+  it('mass-market non-destination speaker — NOT protected', () => {
+    const html = render({
+      kind: 'assessment',
+      subject: 'D-1 mass-market',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Generic Bookshelf'],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A 2-way bookshelf speaker.'],
+    } as AdvisoryResponse);
+    expect(html).not.toContain('destination-class loudspeaker');
+  });
+
+  it('Phase K DeVore O/96 — still protected when not primary constraint', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'D-1 Phase K regression',
+      systemSignature: 'A warm tube-led chain.',
+      systemChain: {
+        names: ['Some DAC', 'Some Tube Amp', 'DeVore O/96'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC.',
+        'A push-pull tube integrated.',
+        'A high-efficiency wide-baffle loudspeaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The DeVore O/96 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Magico as primary constraint — protection suppressed (Phase A B5 still works)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'D-1 Magico constraint',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Magico A1'],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.'],
+      primaryConstraint: {
+        componentName: 'Magico A1',
+        category: 'speaker_scale',
+        explanation: '',
+      } as AdvisoryResponse['primaryConstraint'],
+      upgradeDirection: 'Consider a larger Magico.',
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).not.toContain(
+      'The Magico A1 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('two-word brand "Verity Audio Sarastro" matches via firstTwo token', () => {
+    const html = render({
+      kind: 'assessment',
+      subject: 'D-1 Verity firstTwo',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Verity Audio Sarastro'],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.'],
+    } as AdvisoryResponse);
+    expect(html).toContain(
+      'The Verity Audio Sarastro is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('YG matches via first token alone — "YG Carmel 2" without "Acoustics"', () => {
+    const html = render({
+      kind: 'assessment',
+      subject: 'D-1 YG first',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'YG Carmel 2'],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.'],
+    } as AdvisoryResponse);
+    expect(html).toContain(
+      'The YG Carmel 2 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+});
