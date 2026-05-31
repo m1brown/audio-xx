@@ -3156,3 +3156,191 @@ describe('SystemAssessmentArtifact — §4 Character synergy dedup (Commit 11)',
     expect(slice).not.toMatch(/\bthe chain\b/i);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// Commit 12 — 15-chain acceptance polish
+// ════════════════════════════════════════════════════════════════════════
+//
+// Five small presentational fixes surfaced by the 15-chain acceptance
+// pass:
+//   A. §10 step "Step N / Step N" title-subtitle dedup
+//   C. §10 destination-speaker brand allowlist (Magnepan, Harbeth, …)
+//   D. §9 single-sentence omission gate (require ≥2 sentences)
+//   F. Marantz overlay key narrowed (within-brand wrong-image safety)
+//   G. §5 headphone surface ("sound at the ear" vs "in the room")
+
+describe('SystemAssessmentArtifact — Fix A: §10 step "Step N / Step N" dedup', () => {
+  const base = (): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'Step dup',
+      systemSignature: 'sig',
+      systemChain: { names: ['Some DAC', 'Some Amp', 'Some Speakers'], roles: ['DAC', 'Amp', 'Speakers'] },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.'],
+      upgradeDirection: 'A direction.',
+    } as AdvisoryResponse);
+
+  it('suppresses the duplicate "Step N" subtitle when deriveStepTitle falls back to "Step N"', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      recommendedSequence: [
+        // Action that doesn't match any deriveStepTitle pattern →
+        // title falls back to "Step 1". The subtitle should not also
+        // render as "Step 1".
+        { step: 1, action: 'Some action that matches no pattern.' },
+      ],
+    };
+    const html = render(a);
+    // The string "Step 1" should appear EXACTLY ONCE under §10 — as
+    // the editorial title; not duplicated as a subtitle row.
+    const sectionStart = html.indexOf('If You Were to Change Something');
+    const slice = html.slice(sectionStart);
+    const count = (slice.match(/>Step 1</g) ?? []).length;
+    expect(count).toBe(1);
+  });
+
+  it('keeps the "Step N" subtitle when a meaningful title resolved', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      recommendedSequence: [
+        { step: 1, action: 'Audition a higher-power tube integrated against the amp.' },
+      ],
+    };
+    const html = render(a);
+    const sectionStart = html.indexOf('If You Were to Change Something');
+    const slice = html.slice(sectionStart);
+    // deriveStepTitle returns "Audition the Amplifier"; the "Step 1"
+    // subtitle row still renders for sequence ordering.
+    expect(slice).toContain('Audition the Amplifier');
+    expect(slice).toContain('>Step 1<');
+  });
+});
+
+describe('SystemAssessmentArtifact — Fix C: §10 destination-speaker brand allowlist', () => {
+  const base = (chainNames: string[], roles: string[]): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'Dest brand',
+      systemSignature: 'sig',
+      systemChain: { names: chainNames, roles },
+      componentReadings: chainNames.map(() => 'A component.'),
+      upgradeDirection: 'A direction.',
+      recommendedSequence: [{ step: 1, action: 'Try something.' }],
+    } as AdvisoryResponse);
+
+  it('fires Level 3 destination framing for Magnepan even without efficiency anchor', () => {
+    const a = base(
+      ['Holo May DAC', 'Pass Labs INT-25', 'Magnepan LRS+'],
+      ['DAC', 'Integrated Amplifier', 'Speakers'],
+    );
+    const html = render(a);
+    expect(html).toContain('The Magnepan LRS+ is a destination-class loudspeaker');
+  });
+
+  it('fires Level 3 destination framing for Harbeth even with bass-reflex cabinet', () => {
+    const a = base(
+      ['DAC', 'Amp', 'Harbeth SHL5plus XD'],
+      ['DAC', 'Amplifier', 'Speakers'],
+    );
+    const html = render(a);
+    expect(html).toContain('The Harbeth SHL5plus XD is a destination-class loudspeaker');
+  });
+
+  it('does NOT fire destination framing for non-allowlist brands without other anchors', () => {
+    const a = base(
+      ['Some DAC', 'Some Amp', 'Generic Bookshelf'],
+      ['DAC', 'Amp', 'Speakers'],
+    );
+    const html = render(a);
+    expect(html).not.toContain('destination-class loudspeaker');
+  });
+});
+
+describe('SystemAssessmentArtifact — Fix D: §9 single-sentence omission gate', () => {
+  it('omits §9 when only the bottleneck-mismatch sentence would fire', () => {
+    // Chain has no efficiency anchor + no warm/lean signature → S1 and
+    // S2 are silent. PrimaryConstraint on speaker → S3 fires. With the
+    // gate, the section omits rather than rendering a one-sentence stub.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Single sentence',
+      systemSignature: 'A coherent system.',
+      systemChain: {
+        names: ['Some DAC', 'Some Class-D Amp', 'Some Sealed Monitor'],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: [
+        'A DAC.',
+        'A class-D integrated.',
+        'A sealed monitor.',
+      ],
+      primaryConstraint: {
+        componentName: 'Some Sealed Monitor',
+        category: 'speaker_scale',
+        explanation: '',
+      } as AdvisoryResponse['primaryConstraint'],
+    };
+    const html = render(a);
+    expect(html).not.toContain('What This System Seems Built For');
+  });
+
+  it('still renders §9 when at least two sentences fire', () => {
+    // Warm signature → S1 fires; warm + bottleneck → S3 fires → 2 sentences.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Two sentences',
+      systemSignature: 'A warm system.',
+      systemChain: { names: ['Some DAC', 'Some Amp', 'Some Speakers'], roles: ['DAC', 'Amp', 'Speakers'] },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.'],
+      primaryConstraint: {
+        componentName: 'Some Speakers',
+        category: 'speaker_scale',
+        explanation: '',
+      } as AdvisoryResponse['primaryConstraint'],
+    };
+    const html = render(a);
+    expect(html).toContain('What This System Seems Built For');
+    expect(html).toContain('tonal richness and musical flow');
+    // HTML escapes the apostrophe; assert via partial substring match.
+    expect(html).toContain('practical ceiling');
+  });
+});
+
+describe('SystemAssessmentArtifact — Fix G: §5 headphone surface', () => {
+  const base = (): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'Headphone',
+      systemSignature: 'A warm tube-led headphone system.',
+      systemChain: {
+        names: ['Some DAC', 'Some Tube HP Amp', 'Some Headphones'],
+        roles: ['DAC', 'Headphone Amplifier', 'Headphones'],
+      },
+      componentReadings: [
+        'A DAC.',
+        'A tube headphone amplifier.',
+        'High-impedance dynamic headphones.',
+      ],
+    } as AdvisoryResponse);
+
+  it('renders "sound at the ear" for the headphone-tail lede instead of "sound in the room"', () => {
+    const html = render(base());
+    // The headphone card uses the speaker-family template but with
+    // the surface swapped to "at the ear".
+    expect(html).toContain('Some Headphones translates what the Some Tube HP Amp delivers into sound at the ear');
+    expect(html).not.toMatch(/Some Headphones translates what the Some Tube HP Amp delivers into sound in the room/);
+  });
+
+  it('still renders "in the room" for speakers (no regression)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Speakers',
+      systemSignature: 'sig',
+      systemChain: { names: ['Some DAC', 'Some Amp', 'Some Speakers'], roles: ['DAC', 'Amp', 'Speakers'] },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('Some Speakers translates what the Some Amp delivers into sound in the room');
+    expect(html).not.toContain('sound at the ear');
+  });
+});

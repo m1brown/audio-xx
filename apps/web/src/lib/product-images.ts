@@ -245,14 +245,16 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // applies — locally-hosted assets don't need provenance metadata
   // for the audit, same as other un-sourced entries in this file.
   //
-  // Key narrowed from 'marantz 2220' to 'marantz' so brand-only
-  // haystack queries (e.g. getProductImage('marantz', undefined))
-  // match. Substring direction is haystack.includes(key), so 'marantz'
-  // as the key matches both bare "marantz" haystack AND any
-  // "marantz <product>" haystack. Safe today because Marantz has only
-  // one catalog product (the 2220B). If another Marantz product is
-  // ever added, this entry needs a model-specific key alongside.
-  { key: 'marantz',             url: '/brand-heroes/marantz-2220b.jpg' },
+  // 15-chain acceptance fix F — within-brand wrong-image safety.
+  // The previous bare-brand "marantz" key caused chains containing
+  // other Marantz models (e.g. "Marantz 2270") to receive the 2220B
+  // image — a within-brand cross-model leak. Key tightened to the
+  // model-specific 'marantz 2220b' so non-2220B Marantz components
+  // gracefully omit imagery instead of borrowing the wrong photo.
+  // Brand Authority pages source Marantz imagery from BrandProfile
+  // media.images, not from this overlay, so the change is scoped to
+  // §5 component-card resolution.
+  { key: 'marantz 2220b',       url: '/brand-heroes/marantz-2220b.jpg' },
 
   // First Watt — Positive Feedback review hero (firstwatt.com only
   // hosts a generic site banner, not a SIT-3-specific shot).

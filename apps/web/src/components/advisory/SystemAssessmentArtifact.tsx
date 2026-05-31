@@ -265,6 +265,54 @@ const MATURE_TOPOLOGIES = new Set<NonNullable<CharacterFacts['topology']>>([
   'push-pull', 'single-ended',
 ]);
 
+/**
+ * 15-chain acceptance fix C — destination-class brand allowlist.
+ *
+ * Speaker brands whose entire lineup (or near-entire lineup) reads as
+ * destination-class in the audiophile press. These trigger §10's
+ * "treat as a fixed point" framing even when the chain reading lacks
+ * explicit high-efficiency / wide-baffle / open-baffle / horn-loaded
+ * anchors. Match is on the leading word of the chain name (or full
+ * brand name) lowercased.
+ *
+ * Intentionally narrow: only brands where the cheapest model in the
+ * lineup is still destination-tier. Brands with a wide spread
+ * (e.g. KEF Q-series → Reference, Focal Chora → Utopia) are NOT
+ * listed — the existing high-eff / cabinet / priceTier heuristics
+ * handle their high-tier models on a per-product basis.
+ */
+const DESTINATION_SPEAKER_BRANDS = new Set([
+  'magnepan',
+  'harbeth',
+  'devore',
+  'tannoy',
+  'proac',
+  'spendor',
+  'sonus',
+  'wilson',
+  'kii',
+  'audio note',
+  'audio-note',
+  'sound lab',
+  'soundlab',
+  'cessaro',
+  'avantgarde',
+  'living voice',
+]);
+
+/**
+ * Read the leading brand token from a chain name. Most catalog
+ * entries use "Brand Model" form ("Magnepan LRS+", "Harbeth SHL5plus
+ * XD"). Some use a two-word brand ("Audio Note") — captured as
+ * `firstTwo` for brands that need it.
+ */
+function brandTokensFromChainName(name: string): { first: string; firstTwo: string } {
+  const parts = name.trim().split(/\s+/);
+  const first = (parts[0] ?? '').toLowerCase();
+  const firstTwo = parts.length >= 2 ? `${first} ${(parts[1] ?? '').toLowerCase()}` : first;
+  return { first, firstTwo };
+}
+
 function isDestinationSpeaker(
   name: string,
   role: string | undefined,
@@ -275,6 +323,12 @@ function isDestinationSpeaker(
   if (facts.cabinet && DESTINATION_CABINETS.has(facts.cabinet)) return true;
   const product = findProductByComponentName(name);
   if (product?.priceTier && DESTINATION_PRICE_TIERS.has(product.priceTier)) return true;
+  // 15-chain acceptance fix C — chain-name brand allowlist for
+  // destination-class lineups (Magnepan, Harbeth, etc.).
+  const { first, firstTwo } = brandTokensFromChainName(name);
+  if (DESTINATION_SPEAKER_BRANDS.has(first) || DESTINATION_SPEAKER_BRANDS.has(firstTwo)) {
+    return true;
+  }
   return false;
 }
 
@@ -562,11 +616,19 @@ function composeContributionBody(
         `The ${name}'s lower-efficiency design needs current and headroom from the ${upstream}, favoring ${driveQualifier} over delicacy.`,
       );
     } else if (upstream) {
+      // 15-chain acceptance fix G — headphones use the speaker
+      // family but render into a different physical surface. Swap
+      // "into sound in the room" for "into sound at the ear" when
+      // the role explicitly indicates a headphone.
+      const isHeadphone = !!role && /headphone/i.test(role);
+      const surface = isHeadphone ? 'sound at the ear' : 'sound in the room';
       sentences.push(
-        `The ${name} translates what the ${upstream} delivers into sound in the room.`,
+        `The ${name} translates what the ${upstream} delivers into ${surface}.`,
       );
     } else {
-      sentences.push(`The ${name} translates the system's signal into sound in the room.`);
+      const isHeadphone = !!role && /headphone/i.test(role);
+      const surface = isHeadphone ? 'sound at the ear' : 'sound in the room';
+      sentences.push(`The ${name} translates the system's signal into ${surface}.`);
     }
   } else {
     // Unknown / generic role — keep the lede neutral.
@@ -1813,7 +1875,12 @@ function composeListenerContext(
     );
   }
 
-  if (sentences.length === 0) return undefined;
+  // 15-chain acceptance fix D — when only one sentence fires (most
+  // commonly the bottleneck-aware mismatch sentence alone), the
+  // section reads as a stub. Require at least 2 sentences so the
+  // paragraph carries enough context to feel deliberate; otherwise
+  // omit.
+  if (sentences.length < 2) return undefined;
   // Mark speakerCabinet as intentionally consumed only in the
   // signal-extraction phase (kept for future room-suitability
   // sentence; not currently emitted to preserve confidence
@@ -2412,6 +2479,14 @@ export default function SystemAssessmentArtifact({
                   // the audited circular-Step-2 and blunt-Step-3
                   // patterns and falls through otherwise.
                   const editorialTitle = deriveStepTitle(step.action, step.step);
+                  // 15-chain acceptance fix A — when deriveStepTitle
+                  // returns the "Step N" fallback (no pattern matched),
+                  // suppress the duplicate "Step N" subtitle so the
+                  // card doesn't double-state. When a meaningful title
+                  // resolved, keep the "Step N" subtitle for ordering.
+                  const fallbackTitle = `Step ${step.step}`;
+                  const subtitle =
+                    editorialTitle === fallbackTitle ? undefined : fallbackTitle;
                   const softenedAction =
                     softenStepAction(step.action, chainNames, chainRoles) ?? step.action;
                   const caveat = protectionCaveat(
@@ -2424,7 +2499,7 @@ export default function SystemAssessmentArtifact({
                     <EditorialSubCard
                       key={step.step}
                       name={editorialTitle}
-                      subtitle={`Step ${step.step}`}
+                      subtitle={subtitle}
                       body={softenedAction}
                       verdict={caveat}
                     />
