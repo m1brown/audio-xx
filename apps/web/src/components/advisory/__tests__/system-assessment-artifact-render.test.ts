@@ -349,7 +349,7 @@ describe('SystemAssessmentArtifact — F4 / cross-brand invariants', () => {
 });
 
 describe('SystemAssessmentArtifact — section heading set is locked', () => {
-  it('uses exactly the 10 locked heading labels', () => {
+  it('uses exactly the 11 locked heading labels (Commit 9 added §9 listener-context)', () => {
     const html = render(FULL);
     const expectedHeadings = [
       'Your System',
@@ -360,6 +360,7 @@ describe('SystemAssessmentArtifact — section heading set is locked', () => {
       'How They Work Together',
       'Strengths and Limits',
       'Why This System Works',
+      'What This System Seems Built For',
       'If You Were to Change Something',
       'Sources',
     ];
@@ -2509,5 +2510,176 @@ describe('SystemAssessmentArtifact — §5 editorial-weight balance (Commit 8)',
     const html = render(PHASE_K);
     const body = bodyTextForCard(html, 'Leben CS600X');
     expect((body.match(/[.!?](?:\s|$)/g) ?? []).length).toBe(3);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// Commit 9 — §9 What This System Seems Built For (listener-context layer)
+// ════════════════════════════════════════════════════════════════════════
+//
+// New section: pivots from "what is this system" to "who is this
+// system for" via confidence-gated inference. Each sentence is
+// independently gated; the section as a whole omits gracefully when
+// no sentence fires.
+
+describe('SystemAssessmentArtifact — §9 listener-context (Commit 9)', () => {
+  // ── Fixture: warm tube + high-efficiency + bottleneck on amp.
+  const WARM_TUBE: AdvisoryResponse = {
+    kind: 'assessment',
+    subject: 'Warm tube',
+    systemSignature: 'A warm tube-led source-first chain with coherent-source voicing.',
+    systemChain: {
+      names: ['Some DAC', 'Some Tube Amp', 'Some HE Speakers'],
+      roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+    },
+    componentReadings: [
+      'Warm-leaning R2R DAC.',
+      'Push-pull tube integrated.',
+      'High-efficiency wide-baffle speaker.',
+    ],
+    primaryConstraint: {
+      componentName: 'Some Tube Amp',
+      category: 'amplifier_control',
+      explanation: '',
+    } as AdvisoryResponse['primaryConstraint'],
+  };
+
+  it('renders the new section heading "What This System Seems Built For"', () => {
+    const html = render(WARM_TUBE);
+    expect(html).toContain('What This System Seems Built For');
+  });
+
+  it('warm tube + high-efficiency emits all three sentences (intimate / material / mismatch)', () => {
+    const html = render(WARM_TUBE);
+    const slice = html.slice(html.indexOf('What This System Seems Built For'));
+    expect(slice).toContain('favours intimate, low-to-moderate volume listening');
+    expect(slice).toContain('Jazz, vocals, and well-produced acoustic material');
+    expect(slice).toContain('drive ceiling');
+  });
+
+  // ── Analytical / lean system — should emit lean-style sentence 1 +
+  // lean-style sentence 2, no bottleneck-aware sentence 3.
+  const ANALYTICAL: AdvisoryResponse = {
+    kind: 'assessment',
+    subject: 'Analytical',
+    systemSignature: 'A lean, analytical chain with neutral voicing.',
+    systemChain: {
+      names: ['Some DAC', 'Some SS Amp', 'Some Monitor'],
+      roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+    },
+    componentReadings: [
+      'Delta-sigma DAC.',
+      'Class-A solid-state integrated amplifier.',
+      'Sealed near-field monitor.',
+    ],
+  };
+
+  it('analytical system rewards-listeners frame fires + warm mismatch does not', () => {
+    const html = render(ANALYTICAL);
+    const slice = html.slice(html.indexOf('What This System Seems Built For'));
+    expect(slice).toContain('production detail and transient precision');
+    expect(slice).toContain('Well-recorded studio');
+    // Warm mismatch sentence must NOT fire for an analytical chain.
+    expect(slice).not.toContain('warmth as polite');
+  });
+
+  // ── High-efficiency only (no amp tech) — medium-confidence
+  // sentence 1 ("moderate-volume listening"), no sentence 2/3.
+  const HIGH_EFF_ONLY: AdvisoryResponse = {
+    kind: 'assessment',
+    subject: 'HE only',
+    systemSignature: 'A coherent system.',
+    systemChain: { names: ['Some DAC', 'Some Amp', 'Some HE Speakers'], roles: ['DAC', 'Amp', 'Speakers'] },
+    componentReadings: ['A DAC.', 'An amplifier.', 'A high-efficiency speaker.'],
+  };
+
+  it('high-efficiency without amp-tech signal emits only the medium-confidence volume framing', () => {
+    const html = render(HIGH_EFF_ONLY);
+    const slice = html.slice(html.indexOf('What This System Seems Built For'));
+    expect(slice).toContain('favours moderate-volume listening');
+    // Higher-confidence template (tube/SS) must NOT fire.
+    expect(slice).not.toContain('high-efficiency speakers and tube amplification');
+    // Material affinity requires warm lean — must NOT fire.
+    expect(slice).not.toContain('Jazz, vocals');
+  });
+
+  // ── Small monitor / low-efficiency + solid-state — emits scale +
+  // headroom framing.
+  const SMALL_MONITOR: AdvisoryResponse = {
+    kind: 'assessment',
+    subject: 'Small monitor',
+    systemSignature: 'A controlled system with good imaging.',
+    systemChain: { names: ['Some DAC', 'Some Class-D Amp', 'Some Low-Eff Monitor'], roles: ['DAC', 'Amp', 'Speakers'] },
+    componentReadings: [
+      'A DAC.',
+      'A high-power solid-state class-D integrated.',
+      'A low-efficiency two-way monitor (~83dB).',
+    ],
+  };
+
+  it('low-efficiency + solid-state emits the scale/headroom framing', () => {
+    const html = render(SMALL_MONITOR);
+    const slice = html.slice(html.indexOf('What This System Seems Built For'));
+    expect(slice).toContain('built to play at scale');
+    expect(slice).toContain('lower-efficiency speakers driven by solid-state amplification');
+  });
+
+  // ── Sparse data — chain present but no facts extractable + neutral
+  // signature. Section MUST omit gracefully.
+  const SPARSE: AdvisoryResponse = {
+    kind: 'assessment',
+    subject: 'Sparse',
+    systemSignature: 'A small system.',
+    systemChain: { names: ['Mystery 1', 'Mystery 2'], roles: ['Component', 'Component'] },
+    componentReadings: ['No anchors.', 'No anchors here either.'],
+  };
+
+  it('omits §9 entirely when no inference template fires (graceful degradation)', () => {
+    const html = render(SPARSE);
+    expect(html).not.toContain('What This System Seems Built For');
+  });
+
+  it('omits §9 when chain is empty (defensive)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'No chain',
+      systemSignature: 'A warm tube-led chain.',
+    };
+    const html = render(a);
+    expect(html).not.toContain('What This System Seems Built For');
+  });
+
+  it('passes preferSystemTerminology so "chain" never leaks (rewriter applied)', () => {
+    // Use a fixture whose primaryConstraint resolves to a speaker
+    // family — none of the listener-context sentences mention "chain"
+    // directly, but the rewriter still runs over the joined output
+    // as a safety net.
+    const html = render(WARM_TUBE);
+    const slice = html.slice(
+      html.indexOf('What This System Seems Built For'),
+      html.indexOf('If You Were to Change'),
+    );
+    expect(slice).not.toMatch(/\bthe chain\b/i);
+  });
+
+  it('does NOT use personality-test or AI-therapy register (no "you are", no "your inner")', () => {
+    const html = render(WARM_TUBE);
+    const slice = html.slice(html.indexOf('What This System Seems Built For'));
+    // The section frames the SYSTEM ("this system favours / rewards")
+    // not the listener ("you are / you love / your inner").
+    expect(slice).not.toMatch(/\byou are\b/i);
+    expect(slice).not.toMatch(/\byou love\b/i);
+    expect(slice).not.toMatch(/\byour inner\b/i);
+    expect(slice).not.toMatch(/\byour personality\b/i);
+  });
+
+  it('does NOT psychoanalyze the listener (no certainty claims about preference)', () => {
+    const html = render(WARM_TUBE);
+    const slice = html.slice(html.indexOf('What This System Seems Built For'));
+    // Each sentence describes what the SYSTEM rewards or favours.
+    // Anti-claim guards: no certainty about the listener's identity.
+    expect(slice).not.toMatch(/\bwill love\b/i);
+    expect(slice).not.toMatch(/\bdefinitely prefers?\b/i);
+    expect(slice).not.toMatch(/\byou will\b/i);
   });
 });

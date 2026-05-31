@@ -1612,22 +1612,176 @@ function composeWhyThisSystemWorks(
 }
 
 /**
+ * Compose the §9 *What This System Seems Built For* listener-context
+ * paragraph (Commit 9 — listener-context layer).
+ *
+ * The artifact's first nine sections are all "what is this system" —
+ * components, character, interaction, strengths, why it works. This
+ * helper introduces a single section that pivots toward "who is this
+ * system for" by inferring presentationally from already-available
+ * data:
+ *   - systemSignature (warm / lean / neutral lean explicit)
+ *   - chainFacts per component (efficiency, cabinet, amp tech,
+ *     tonalLean)
+ *   - primaryConstraint role family (bottleneck-aware mismatch)
+ *
+ * Sentence model (three sentences max; each is independently
+ * confidence-gated and OMITTED when evidence is insufficient):
+ *
+ *   1. STYLE / VOLUME — what listening this system favours
+ *        HIGH:   high-efficiency speaker + tube amp     → "intimate, low-to-moderate volume"
+ *        HIGH:   low-efficiency speaker + solid-state   → "scale and headroom at higher volume"
+ *        MEDIUM: high-efficiency speaker (no amp tech)  → "moderate-volume listening"
+ *        MEDIUM: warm lean (system-level signal)        → tonal-density rewards-listeners frame
+ *        MEDIUM: lean / analytical (system-level)       → detail-and-precision rewards-listeners frame
+ *        LOW:    none of the above                      → omit
+ *
+ *   2. MATERIAL AFFINITY — what kind of recordings reward this voice
+ *        HIGH:   warm + high-efficiency                 → "Jazz, vocals, and well-produced acoustic…"
+ *        HIGH:   lean signature                         → "Well-recorded studio material…"
+ *        LOW:    otherwise                              → omit
+ *
+ *   3. HONEST MISMATCH — when this system will not serve well
+ *        HIGH:   amp bottleneck + high-efficiency       → drive ceiling at SPL / large rooms
+ *        HIGH:   speaker bottleneck                     → scale ceiling on orchestral material
+ *        HIGH:   warm lean                              → bright / analytical material hears warmth
+ *                                                         as polite rather than vivid
+ *        LOW:    otherwise                              → omit
+ *
+ * Returns undefined and the section is gracefully omitted when ALL
+ * three sentences are silent. preferSystemTerminology runs on the
+ * joined output so "chain" never leaks.
+ *
+ * Editorial discipline: no personality-test language, no AI-therapy
+ * register, no certainty where confidence is low. The section frames
+ * the SYSTEM's listener fit ("this system favours / rewards") rather
+ * than psychoanalyzing the listener.
+ */
+function composeListenerContext(
+  advisory: AdvisoryResponse,
+  chainNames: string[],
+  roles: Array<string | undefined>,
+  chainFacts: CharacterFacts[],
+): string | undefined {
+  if (chainNames.length === 0) return undefined;
+
+  // ── Signal extraction ───────────────────────────────────
+  const sigLower = (advisory.systemSignature ?? '').toLowerCase();
+  let lean: 'warm' | 'lean' | 'neutral' | undefined;
+  if (/\bwarm\b/.test(sigLower)) lean = 'warm';
+  else if (/\blean\b|\banalytical\b/.test(sigLower)) lean = 'lean';
+  else if (/\bneutral\b/.test(sigLower)) lean = 'neutral';
+  if (!lean) {
+    const warmCount = chainFacts.filter((f) => f.tonalLean === 'warm').length;
+    const leanCount = chainFacts.filter((f) => f.tonalLean === 'lean').length;
+    if (warmCount >= 2) lean = 'warm';
+    else if (leanCount >= 2) lean = 'lean';
+  }
+
+  let speakerEfficiency: 'high' | 'low' | undefined;
+  let speakerCabinet: NonNullable<CharacterFacts['cabinet']> | undefined;
+  let ampTech: 'tube' | 'solid-state' | undefined;
+  for (let i = 0; i < chainNames.length; i++) {
+    const family = roleFamily(roles[i]);
+    if (family === 'speaker') {
+      speakerEfficiency = speakerEfficiency ?? chainFacts[i]?.efficiency;
+      speakerCabinet = speakerCabinet ?? chainFacts[i]?.cabinet;
+    } else if (family === 'amplifier') {
+      // Pick the first chain amplifier whose tech we know; ignore hybrid.
+      if (!ampTech) {
+        const t = chainFacts[i]?.tech;
+        if (t === 'tube' || t === 'solid-state') ampTech = t;
+      }
+    }
+  }
+
+  const bn = advisory.primaryConstraint?.componentName;
+  let bottleneckFamily: ReturnType<typeof roleFamily> | undefined;
+  if (bn) {
+    const idx = chainNames.findIndex((n) => n.toLowerCase() === bn.toLowerCase());
+    if (idx >= 0) bottleneckFamily = roleFamily(roles[idx]);
+  }
+
+  // ── Sentence composition (each independently gated) ─────
+  const sentences: string[] = [];
+
+  // Sentence 1 — style / volume frame.
+  if (speakerEfficiency === 'high' && ampTech === 'tube') {
+    sentences.push(
+      'This system favours intimate, low-to-moderate volume listening — the high-efficiency speakers and tube amplification reward tonal density and ease at modest SPL rather than scale at concert level.',
+    );
+  } else if (speakerEfficiency === 'low' && ampTech === 'solid-state') {
+    sentences.push(
+      'This system is built to play at scale — lower-efficiency speakers driven by solid-state amplification reward listeners who want dynamic ease and headroom at higher volume.',
+    );
+  } else if (speakerEfficiency === 'high') {
+    sentences.push(
+      'This system favours moderate-volume listening; the high-efficiency speakers do not need large amplification to come alive.',
+    );
+  } else if (lean === 'warm') {
+    sentences.push(
+      'This system rewards listeners who care about tonal density and musical flow over analytical detail or razor-sharp imaging.',
+    );
+  } else if (lean === 'lean') {
+    sentences.push(
+      'This system rewards listeners who want production detail and transient precision over warmth or rhythmic flow.',
+    );
+  }
+
+  // Sentence 2 — material affinity (conservative; HIGH confidence only).
+  if (lean === 'warm' && speakerEfficiency === 'high') {
+    sentences.push(
+      'Jazz, vocals, and well-produced acoustic material show this voicing more clearly than compressed popular music or large-scale orchestral played at SPL.',
+    );
+  } else if (lean === 'lean') {
+    sentences.push(
+      'Well-recorded studio and acoustic material rewards this system more than warmly-mixed catalog or compressed popular music.',
+    );
+  }
+
+  // Sentence 3 — honest mismatch (bottleneck-aware OR lean-aware).
+  if (bottleneckFamily === 'amplifier' && speakerEfficiency === 'high') {
+    sentences.push(
+      "The honest mismatch is room and headroom: at concert SPL or in a large room, the amplifier's drive ceiling shows before the speakers run out of voice.",
+    );
+  } else if (bottleneckFamily === 'speaker') {
+    sentences.push(
+      "The honest mismatch is scale: large rooms and demanding orchestral material show the speakers' practical ceiling before the rest of the system.",
+    );
+  } else if (lean === 'warm') {
+    sentences.push(
+      "The honest mismatch is bright or analytical material — recordings produced for top-end clarity will hear the system's warmth as polite rather than vivid.",
+    );
+  }
+
+  if (sentences.length === 0) return undefined;
+  // Mark speakerCabinet as intentionally consumed only in the
+  // signal-extraction phase (kept for future room-suitability
+  // sentence; not currently emitted to preserve confidence
+  // discipline).
+  void speakerCabinet;
+  return preferSystemTerminology(sentences.join(' '));
+}
+
+/**
  * Audio XX — System Assessment Artifact.
  *
  * The warm-editorial sibling of the Brand Authority page. Renders a
- * system-assessment response as a 10-section editorial document.
+ * system-assessment response as an 11-section editorial document
+ * (10-section through Commit 8; gained §9 listener-context in Commit 9).
  *
- * Section structure (locked heading set, 2026-05-29):
- *   1.  Your System                       (SystemHero — chart + chain)
- *   2.  Profile                           (SystemProfileCard — 3 lines)
- *   3.  First Impressions                 (introSummary prose)
- *   4.  Character                         (systemContext + systemSynergy)
- *   5.  The Components                    (EditorialSubCard per component)
- *   6.  How They Work Together            (systemInteraction prose)
- *   7.  Strengths and Honest Limits       (two-column grid)
- *   8.  What's Already Working            (EditorialSubCard per kept item)
- *   9.  If You Were to Change Something   (upgradeDirection + paths + sequence)
- *  10.  Sources                           (AdvisorySources)
+ * Section structure (locked heading set, updated 2026-05-31):
+ *   1.  Your System                          (SystemHero — chart + chain)
+ *   2.  Profile                              (SystemProfileCard — 3 lines)
+ *   3.  First Impressions                    (introSummary prose)
+ *   4.  Character                            (systemContext + systemSynergy)
+ *   5.  The Components                       (EditorialSubCard per component)
+ *   6.  How They Work Together               (systemInteraction prose)
+ *   7.  Strengths and Limits                 (two-column grid)
+ *   8.  Why This System Works                (composed paragraph — Commit 7)
+ *   9.  What This System Seems Built For     (composed paragraph — Commit 9)
+ *  10.  If You Were to Change Something      (upgradeDirection + paths + sequence)
+ *  11.  Sources                              (AdvisorySources)
  *
  * Each section is independently data-gated — renders nothing when its
  * underlying field is absent. The artifact gracefully degrades for
@@ -1934,7 +2088,34 @@ export default function SystemAssessmentArtifact({
         );
       })()}
 
-      {/* ═══════════ §9 If You Were to Change Something ═══════════ */}
+      {/* ═══════════ §9 What This System Seems Built For ═══════════
+       *  Commit 9 — listener-context layer. Pivots the document from
+       *  "what is this system" to "who is this system for" via
+       *  confidence-gated inference over already-available data
+       *  (systemSignature, chainFacts, primaryConstraint role family).
+       *  `composeListenerContext` returns undefined and the section
+       *  is gracefully omitted when none of the three sentence
+       *  templates fires at HIGH or MEDIUM confidence. */}
+      {(() => {
+        const chainNames = a.systemChain?.names ?? [];
+        const chainRoles = a.systemChain?.roles ?? [];
+        const chainFacts = chainNames.map((name, i) =>
+          extractCharacterFacts(
+            findReadingForName(name, a.componentReadings ?? [], i),
+            chainRoles[i],
+          ),
+        );
+        const builtFor = composeListenerContext(a, chainNames, chainRoles, chainFacts);
+        if (!builtFor) return null;
+        return (
+          <section style={{ marginBottom: '1.5rem' }}>
+            <h2 style={sectionHeadingStyle}>What This System Seems Built For</h2>
+            <p style={proseStyle}>{builtFor}</p>
+          </section>
+        );
+      })()}
+
+      {/* ═══════════ §10 If You Were to Change Something ═══════════ */}
       {hasChangeSection && (
         <section style={{ marginBottom: '1.5rem' }}>
           <h2 style={sectionHeadingStyle}>If You Were to Change Something</h2>
