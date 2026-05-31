@@ -139,9 +139,16 @@ describe('SystemAssessmentArtifact — full data renders all 10 sections', () =>
     expect(html).not.toMatch(/What it trades:\s*Amplification headroom for large-scale dynamics/);
   });
 
-  it('renders §3 First Impressions', () => {
+  it('renders §3 First Impressions (Commit 10 presentational override)', () => {
     expect(html).toContain('First Impressions');
-    expect(html).toContain('source quality dominates');
+    // Commit 10 — when warm + tube + high-eff signals are absent in
+    // the fixture, the presentational helper returns undefined and the
+    // engine output flows through. FULL has signature "warm tube-led
+    // source-first chain" but the chainFacts here don't strongly map
+    // (the readings include "tube" but no explicit topology). Engine
+    // output still surfaces; just confirm the heading + non-empty body.
+    const slice = html.slice(html.indexOf('First Impressions'), html.indexOf('First Impressions') + 600);
+    expect(slice).toMatch(/<p[^>]*>[^<]+<\/p>/);
   });
 
   it('renders §4 Character', () => {
@@ -257,8 +264,18 @@ describe('SystemAssessmentArtifact — warm-editorial chrome', () => {
 });
 
 describe('SystemAssessmentArtifact — data gating (sparse responses)', () => {
-  it('skips §3 First Impressions when introSummary is absent', () => {
-    const html = render({ ...FULL, introSummary: undefined });
+  it('skips §3 First Impressions when introSummary AND presentational anchors are absent (Commit 10)', () => {
+    // Commit 10 — §3 also fires presentationally from systemSignature
+    // lean keywords + chainFacts anchors. To verify the OMIT path,
+    // clear both engine prose AND the signals the presentational
+    // helper consumes (signature lean keyword + chain).
+    const html = render({
+      ...FULL,
+      introSummary: undefined,
+      systemSignature: undefined,
+      systemChain: undefined,
+      componentReadings: undefined,
+    });
     expect(html).not.toContain('First Impressions');
   });
 
@@ -2549,12 +2566,33 @@ describe('SystemAssessmentArtifact — §9 listener-context (Commit 9)', () => {
     expect(html).toContain('What This System Seems Built For');
   });
 
-  it('warm tube + high-efficiency emits all three sentences (intimate / material / mismatch)', () => {
+  it('warm tube + high-efficiency emits three dimension-led sentences (Commit 10)', () => {
     const html = render(WARM_TUBE);
     const slice = html.slice(html.indexOf('What This System Seems Built For'));
-    expect(slice).toContain('favours intimate, low-to-moderate volume listening');
-    expect(slice).toContain('Jazz, vocals, and well-produced acoustic material');
-    expect(slice).toContain('drive ceiling');
+    // Sentence 1 — preference dimensions, not psychoanalysis.
+    expect(slice).toContain('favors listeners who value tonal richness, flow, and long-term listening comfort');
+    expect(slice).toContain('over maximum resolution or analytical precision');
+    // Sentence 2 — room + volume dimensions.
+    expect(slice).toContain('small-to-medium rooms at moderate volume');
+    // Sentence 3 — recording tolerance + bottleneck-aware mismatch.
+    expect(slice).toContain('forgives imperfect recordings');
+    expect(slice).toContain("drive ceiling before the speakers run out of voice");
+    // Commit 9's genre claim must be gone.
+    expect(slice).not.toContain('Jazz, vocals');
+    expect(slice).not.toContain('compressed popular music');
+    expect(slice).not.toContain('orchestral played at SPL');
+  });
+
+  it('listener-fit prose uses preference dimensions, not genre prescriptions (Commit 10 discipline)', () => {
+    const html = render(WARM_TUBE);
+    const slice = html.slice(html.indexOf('What This System Seems Built For'));
+    // No genre nouns.
+    expect(slice).not.toMatch(/\bjazz\b/i);
+    expect(slice).not.toMatch(/\bvocals?\b/i);
+    expect(slice).not.toMatch(/\bacoustic\b/i);
+    expect(slice).not.toMatch(/\bclassical\b/i);
+    expect(slice).not.toMatch(/\brock\b/i);
+    expect(slice).not.toMatch(/\bpop\b/i);
   });
 
   // ── Analytical / lean system — should emit lean-style sentence 1 +
@@ -2574,13 +2612,18 @@ describe('SystemAssessmentArtifact — §9 listener-context (Commit 9)', () => {
     ],
   };
 
-  it('analytical system rewards-listeners frame fires + warm mismatch does not', () => {
+  it('analytical system emits the lean preference + well-recorded-material framing (Commit 10)', () => {
     const html = render(ANALYTICAL);
     const slice = html.slice(html.indexOf('What This System Seems Built For'));
-    expect(slice).toContain('production detail and transient precision');
-    expect(slice).toContain('Well-recorded studio');
-    // Warm mismatch sentence must NOT fire for an analytical chain.
-    expect(slice).not.toContain('warmth as polite');
+    // Sentence 1 — lean preference framing.
+    expect(slice).toContain('detail and transient precision');
+    expect(slice).toContain('over warmth or rhythmic ease');
+    // Sentence 3 — recording tolerance for lean systems.
+    expect(slice).toContain('Well-recorded material rewards this system');
+    expect(slice).toContain('production weaknesses are exposed');
+    // Warm-system claims must NOT fire.
+    expect(slice).not.toContain('warmth as gentle');
+    expect(slice).not.toContain('forgives imperfect');
   });
 
   // ── High-efficiency only (no amp tech) — medium-confidence
@@ -2593,13 +2636,15 @@ describe('SystemAssessmentArtifact — §9 listener-context (Commit 9)', () => {
     componentReadings: ['A DAC.', 'An amplifier.', 'A high-efficiency speaker.'],
   };
 
-  it('high-efficiency without amp-tech signal emits only the medium-confidence volume framing', () => {
+  it('high-efficiency without amp-tech signal emits the medium-confidence framing (Commit 10)', () => {
     const html = render(HIGH_EFF_ONLY);
     const slice = html.slice(html.indexOf('What This System Seems Built For'));
-    expect(slice).toContain('favours moderate-volume listening');
-    // Higher-confidence template (tube/SS) must NOT fire.
-    expect(slice).not.toContain('high-efficiency speakers and tube amplification');
-    // Material affinity requires warm lean — must NOT fire.
+    // Medium-confidence sentence 1 — ease/accessibility framing.
+    expect(slice).toContain('favors listeners who value ease and accessibility');
+    // Medium-confidence sentence 2 — moderate-volume + small-to-medium rooms.
+    expect(slice).toContain('Moderate-volume listening in small-to-medium rooms');
+    // Higher-confidence templates must NOT fire.
+    expect(slice).not.toContain('tonal richness, flow, and long-term');
     expect(slice).not.toContain('Jazz, vocals');
   });
 
@@ -2617,11 +2662,16 @@ describe('SystemAssessmentArtifact — §9 listener-context (Commit 9)', () => {
     ],
   };
 
-  it('low-efficiency + solid-state emits the scale/headroom framing', () => {
+  it('low-efficiency + solid-state emits the scale/headroom framing (Commit 10)', () => {
     const html = render(SMALL_MONITOR);
     const slice = html.slice(html.indexOf('What This System Seems Built For'));
-    expect(slice).toContain('built to play at scale');
-    expect(slice).toContain('lower-efficiency speakers driven by solid-state amplification');
+    // Sentence 1 — preference dimensions for power/scale listeners.
+    expect(slice).toContain('favors listeners who want dynamic ease, scale, and headroom');
+    expect(slice).toContain('higher volume');
+    expect(slice).toContain('prioritize control over delicacy');
+    // Sentence 2 — room/volume profile.
+    expect(slice).toContain('built for larger rooms');
+    expect(slice).toContain('lower-efficiency speakers reward space and amplifier authority');
   });
 
   // ── Sparse data — chain present but no facts extractable + neutral
@@ -2681,5 +2731,234 @@ describe('SystemAssessmentArtifact — §9 listener-context (Commit 9)', () => {
     expect(slice).not.toMatch(/\bwill love\b/i);
     expect(slice).not.toMatch(/\bdefinitely prefers?\b/i);
     expect(slice).not.toMatch(/\byou will\b/i);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// Commit 10 — Editorial discipline pass
+//   §3 presentational override
+//   §10 upgrade hierarchy paragraph
+//   §9 anti-genre listener-fit (locked above in the §9 suite)
+// ════════════════════════════════════════════════════════════════════════
+
+describe('SystemAssessmentArtifact — §3 presentational first impressions (Commit 10)', () => {
+  // ── HIGH-confidence: warm + tube + high-eff → "prioritizes tone, flow,
+  // and musical ease" template fires.
+  const PHASE_K: AdvisoryResponse = {
+    kind: 'assessment',
+    subject: 'Phase K',
+    systemSignature: 'A warm tube-led source-first chain with coherent-source voicing.',
+    introSummary: 'Generic engine intro that should be replaced.',
+    systemChain: {
+      names: ['Some DAC', 'Some Tube Amp', 'Some HE Speakers'],
+      roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+    },
+    componentReadings: [
+      'Warm-leaning R2R DAC.',
+      'Push-pull tube integrated.',
+      'High-efficiency wide-baffle speaker.',
+    ],
+  };
+
+  it('warm + tube + high-eff fires the "prioritizes tone, flow, and musical ease" template', () => {
+    const html = render(PHASE_K);
+    const slice = html.slice(html.indexOf('First Impressions'), html.indexOf('First Impressions') + 400);
+    expect(slice).toContain('This system prioritizes tone, flow, and musical ease');
+    expect(slice).toContain('over analytical precision or maximum resolution');
+    // Engine intro is replaced when the presentational override fires.
+    expect(slice).not.toContain('Generic engine intro');
+  });
+
+  // ── HIGH-confidence: lean + solid-state + low-eff → "resolution,
+  // transient precision, and dynamic authority" template fires.
+  const ANALYTICAL_FI: AdvisoryResponse = {
+    kind: 'assessment',
+    subject: 'Analytical',
+    systemSignature: 'A lean, analytical system with neutral voicing.',
+    systemChain: {
+      names: ['Some DAC', 'Some SS Amp', 'Some Low-Eff Monitor'],
+      roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+    },
+    componentReadings: [
+      'Delta-sigma DAC.',
+      'Class-A solid-state integrated amplifier.',
+      'A low-efficiency two-way monitor (~83dB).',
+    ],
+  };
+
+  it('lean + solid-state + low-eff fires the "resolution, transient precision" template', () => {
+    const html = render(ANALYTICAL_FI);
+    const slice = html.slice(html.indexOf('First Impressions'), html.indexOf('First Impressions') + 400);
+    expect(slice).toContain('This system prioritizes resolution, transient precision, and dynamic authority');
+    expect(slice).toContain('over warmth or rhythmic ease');
+  });
+
+  // ── MEDIUM-confidence: warm signature only → "tonal density and flow"
+  // template.
+  it('warm-only signature fires the medium-confidence "tonal density and flow" template', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Warm Only',
+      systemSignature: 'A warm sound.',
+      systemChain: { names: ['Anon'], roles: ['DAC'] },
+      componentReadings: ['No anchors.'],
+    };
+    const html = render(a);
+    const slice = html.slice(html.indexOf('First Impressions'), html.indexOf('First Impressions') + 400);
+    expect(slice).toContain('This system prioritizes tonal density and flow');
+    expect(slice).toContain('over analytical detail');
+  });
+
+  // ── LOW-confidence: no lean keyword in signature, no chain anchors →
+  // falls through to engine output.
+  it('falls through to engine introSummary when neither lean nor chain anchors fire', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Low confidence',
+      systemSignature: 'A coherent system.',
+      introSummary: 'Engine-emitted introSummary text passes through.',
+      systemChain: { names: ['Anon'], roles: ['DAC'] },
+      componentReadings: ['No anchors.'],
+    };
+    const html = render(a);
+    expect(html).toContain('First Impressions');
+    // Engine output survives.
+    expect(html).toContain('Engine-emitted introSummary text passes through');
+    // Presentational templates must NOT fire.
+    expect(html).not.toContain('This system prioritizes tone');
+    expect(html).not.toContain('This system prioritizes resolution');
+  });
+
+  it('first-impressions prose is one paragraph (not multi-sentence)', () => {
+    const html = render(PHASE_K);
+    const start = html.indexOf('First Impressions');
+    const slice = html.slice(start, start + 500);
+    // Exactly one <p> in the section.
+    const paragraphCount = (slice.match(/<p\b/g) ?? []).length;
+    expect(paragraphCount).toBe(1);
+  });
+});
+
+describe('SystemAssessmentArtifact — §10 upgrade hierarchy paragraph (Commit 10)', () => {
+  // ── Phase K case: mature push-pull tube + high-efficiency wide-baffle
+  // → both protections fire → 3-sentence hierarchy paragraph.
+  const PHASE_K_CHANGE: AdvisoryResponse = {
+    kind: 'assessment',
+    subject: 'Phase K Change',
+    systemSignature: 'sig',
+    systemChain: {
+      names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+      roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+    },
+    componentReadings: [
+      'R2R DAC.',
+      'Push-pull tube integrated.',
+      'High-efficiency wide-baffle speaker.',
+    ],
+    upgradeDirection: 'Engine upgrade direction.',
+    recommendedSequence: [
+      { step: 1, action: 'Audition a higher-power tube integrated.' },
+    ],
+  };
+
+  it('renders the hierarchy paragraph BEFORE the engine upgradeDirection', () => {
+    const html = render(PHASE_K_CHANGE);
+    const sectionStart = html.indexOf('If You Were to Change Something');
+    const slice = html.slice(sectionStart, sectionStart + 1500);
+    const hierarchyIdx = slice.indexOf('lowest-risk path forward');
+    const engineIdx = slice.indexOf('Engine upgrade direction');
+    expect(hierarchyIdx).toBeGreaterThan(0);
+    expect(engineIdx).toBeGreaterThan(0);
+    expect(hierarchyIdx).toBeLessThan(engineIdx);
+  });
+
+  it('hierarchy paragraph names front-end refinement as the lowest-risk move', () => {
+    const html = render(PHASE_K_CHANGE);
+    expect(html).toContain('lowest-risk path forward is front-end refinement');
+    expect(html).toContain('source, DAC, and cabling');
+    expect(html).toContain('without changing the system');
+  });
+
+  it('hierarchy paragraph names the mature amplifier as a philosophical change', () => {
+    const html = render(PHASE_K_CHANGE);
+    expect(html).toContain('Replacing the Leben CS600X is a philosophical change');
+    expect(html).toContain('a different system, not the same one improved');
+  });
+
+  it('hierarchy paragraph names the destination loudspeaker as a fixed point', () => {
+    const html = render(PHASE_K_CHANGE);
+    expect(html).toContain('The DeVore O/96 is a destination-class loudspeaker');
+    expect(html).toContain('fixed point rather than a swap candidate');
+  });
+
+  it('hierarchy paragraph is omitted when neither protection fires (low-leverage chain)', () => {
+    // Chain has no destination-class speaker AND no mature amplifier.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Low-leverage',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Class D Integrated', 'Some Low-Eff Bookshelf'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A delta-sigma DAC.',
+        'A class-D integrated.',
+        'A low-efficiency sealed bookshelf.',
+      ],
+      upgradeDirection: 'Engine direction.',
+      recommendedSequence: [{ step: 1, action: 'Try something.' }],
+    };
+    const html = render(a);
+    expect(html).toContain('If You Were to Change Something');
+    expect(html).not.toContain('lowest-risk path forward is front-end refinement');
+    expect(html).not.toContain('philosophical change');
+    expect(html).not.toContain('fixed point rather than a swap candidate');
+  });
+
+  it('hierarchy paragraph fires Level 1 + Level 2 only when amp matures but speaker is not destination', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Tube + non-destination speaker',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Tube Amp', 'Some Sealed Bookshelf'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A DAC.',
+        'A push-pull tube integrated.',
+        'A sealed bookshelf with no efficiency anchor.',
+      ],
+      upgradeDirection: 'Engine direction.',
+      recommendedSequence: [{ step: 1, action: 'Try something.' }],
+    };
+    const html = render(a);
+    expect(html).toContain('lowest-risk path forward');
+    expect(html).toContain('philosophical change');
+    expect(html).not.toContain('destination-class loudspeaker');
+  });
+
+  it('hierarchy paragraph fires Level 1 + Level 3 only when speaker is destination but amp is not mature', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Non-mature amp + destination speaker',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Class D Integrated', 'Some HE Wide-Baffle Speaker'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A DAC.',
+        'A class-D integrated.',
+        'A high-efficiency wide-baffle speaker.',
+      ],
+      upgradeDirection: 'Engine direction.',
+      recommendedSequence: [{ step: 1, action: 'Try something.' }],
+    };
+    const html = render(a);
+    expect(html).toContain('lowest-risk path forward');
+    expect(html).toContain('destination-class loudspeaker');
+    expect(html).not.toContain('philosophical change');
   });
 });

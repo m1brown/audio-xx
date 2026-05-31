@@ -1703,54 +1703,70 @@ function composeListenerContext(
   }
 
   // ── Sentence composition (each independently gated) ─────
+  // Pass 25 (Commit 10) — redesigned to drop genre prescriptions in
+  // favour of dimension-led prose: room, volume, listening style,
+  // presentation preference, tolerance for imperfect recordings.
+  // No genre claims, no psychoanalysis, no "you are" language.
   const sentences: string[] = [];
 
-  // Sentence 1 — style / volume frame.
+  // Sentence 1 — listener-fit summary (preference dimensions, not genres).
   if (speakerEfficiency === 'high' && ampTech === 'tube') {
     sentences.push(
-      'This system favours intimate, low-to-moderate volume listening — the high-efficiency speakers and tube amplification reward tonal density and ease at modest SPL rather than scale at concert level.',
+      'This system favors listeners who value tonal richness, flow, and long-term listening comfort over maximum resolution or analytical precision.',
     );
   } else if (speakerEfficiency === 'low' && ampTech === 'solid-state') {
     sentences.push(
-      'This system is built to play at scale — lower-efficiency speakers driven by solid-state amplification reward listeners who want dynamic ease and headroom at higher volume.',
+      'This system favors listeners who want dynamic ease, scale, and headroom — listeners who play at higher volume and prioritize control over delicacy.',
     );
   } else if (speakerEfficiency === 'high') {
     sentences.push(
-      'This system favours moderate-volume listening; the high-efficiency speakers do not need large amplification to come alive.',
+      "This system favors listeners who value ease and accessibility — the high-efficiency speakers don't need large amplification to come alive.",
     );
   } else if (lean === 'warm') {
     sentences.push(
-      'This system rewards listeners who care about tonal density and musical flow over analytical detail or razor-sharp imaging.',
+      'This system favors listeners who value tonal richness and musical flow over analytical detail.',
     );
   } else if (lean === 'lean') {
     sentences.push(
-      'This system rewards listeners who want production detail and transient precision over warmth or rhythmic flow.',
+      'This system favors listeners who value detail and transient precision over warmth or rhythmic ease.',
     );
   }
 
-  // Sentence 2 — material affinity (conservative; HIGH confidence only).
-  if (lean === 'warm' && speakerEfficiency === 'high') {
+  // Sentence 2 — room and volume profile (dimensions only).
+  if (speakerEfficiency === 'high' && ampTech === 'tube') {
     sentences.push(
-      'Jazz, vocals, and well-produced acoustic material show this voicing more clearly than compressed popular music or large-scale orchestral played at SPL.',
+      'It is most at home in small-to-medium rooms at moderate volume; the high-efficiency speakers do not require large amplification or large spaces to come alive.',
     );
-  } else if (lean === 'lean') {
+  } else if (speakerEfficiency === 'low' && ampTech === 'solid-state') {
     sentences.push(
-      'Well-recorded studio and acoustic material rewards this system more than warmly-mixed catalog or compressed popular music.',
+      'It is built for larger rooms and moderate-to-high listening levels; the lower-efficiency speakers reward space and amplifier authority.',
+    );
+  } else if (speakerEfficiency === 'high') {
+    sentences.push(
+      'Moderate-volume listening in small-to-medium rooms suits this voicing more than large-scale playback.',
     );
   }
 
-  // Sentence 3 — honest mismatch (bottleneck-aware OR lean-aware).
-  if (bottleneckFamily === 'amplifier' && speakerEfficiency === 'high') {
+  // Sentence 3 — recording tolerance + honest mismatch.
+  if (bottleneckFamily === 'amplifier' && speakerEfficiency === 'high' && lean === 'warm') {
     sentences.push(
-      "The honest mismatch is room and headroom: at concert SPL or in a large room, the amplifier's drive ceiling shows before the speakers run out of voice.",
+      "It forgives imperfect recordings more readily than analytical systems, but loud orchestral demands or large rooms will reveal the amplifier's drive ceiling before the speakers run out of voice.",
+    );
+  } else if (bottleneckFamily === 'amplifier' && speakerEfficiency === 'high') {
+    sentences.push(
+      "Loud orchestral demands or large rooms will reveal the amplifier's drive ceiling before the speakers run out of voice.",
     );
   } else if (bottleneckFamily === 'speaker') {
     sentences.push(
-      "The honest mismatch is scale: large rooms and demanding orchestral material show the speakers' practical ceiling before the rest of the system.",
+      "Demanding orchestral material or large rooms will show the speakers' practical ceiling before the rest of the system.",
     );
   } else if (lean === 'warm') {
     sentences.push(
-      "The honest mismatch is bright or analytical material — recordings produced for top-end clarity will hear the system's warmth as polite rather than vivid.",
+      "It forgives imperfect recordings — production weaknesses sound polite rather than emphasized — but bright or analytical material will hear the system's warmth as gentle rather than vivid.",
+    );
+  } else if (lean === 'lean') {
+    sentences.push(
+      'Well-recorded material rewards this system more than warmly-mixed catalog; production weaknesses are exposed rather than smoothed over.',
     );
   }
 
@@ -1760,6 +1776,153 @@ function composeListenerContext(
   // sentence; not currently emitted to preserve confidence
   // discipline).
   void speakerCabinet;
+  return preferSystemTerminology(sentences.join(' '));
+}
+
+/**
+ * Compose a presentational §3 *First Impressions* sentence
+ * (Commit 10).
+ *
+ * The engine's `introSummary` can read as an adjective list
+ * (e.g. "leans toward midrange weight, rhythmic ease, and a
+ * forgiving treble") that describes many systems equally well. When
+ * we have HIGH-confidence character anchors, this helper emits a
+ * single opinionated "prioritizes X over Y" sentence that is
+ * memorable and system-specific. When anchors are absent, returns
+ * undefined and the render falls through to the existing
+ * `normalizeFirstImpressions` engine pass.
+ *
+ * No genre claims, no psychoanalysis — just the system's editorial
+ * priorities.
+ */
+function composeFirstImpressions(
+  advisory: AdvisoryResponse,
+  chainNames: string[],
+  roles: Array<string | undefined>,
+  chainFacts: CharacterFacts[],
+): string | undefined {
+  if (chainNames.length === 0) return undefined;
+
+  // Reuse the same signal extraction as the listener-context helper.
+  const sigLower = (advisory.systemSignature ?? '').toLowerCase();
+  let lean: 'warm' | 'lean' | 'neutral' | undefined;
+  if (/\bwarm\b/.test(sigLower)) lean = 'warm';
+  else if (/\blean\b|\banalytical\b/.test(sigLower)) lean = 'lean';
+  else if (/\bneutral\b/.test(sigLower)) lean = 'neutral';
+  if (!lean) {
+    const warmCount = chainFacts.filter((f) => f.tonalLean === 'warm').length;
+    const leanCount = chainFacts.filter((f) => f.tonalLean === 'lean').length;
+    if (warmCount >= 2) lean = 'warm';
+    else if (leanCount >= 2) lean = 'lean';
+  }
+
+  let speakerEfficiency: 'high' | 'low' | undefined;
+  let ampTech: 'tube' | 'solid-state' | undefined;
+  for (let i = 0; i < chainNames.length; i++) {
+    const family = roleFamily(roles[i]);
+    if (family === 'speaker') {
+      speakerEfficiency = speakerEfficiency ?? chainFacts[i]?.efficiency;
+    } else if (family === 'amplifier') {
+      if (!ampTech) {
+        const t = chainFacts[i]?.tech;
+        if (t === 'tube' || t === 'solid-state') ampTech = t;
+      }
+    }
+  }
+
+  // HIGH confidence — warm + tube + high-efficiency → tone-and-flow framing.
+  if (lean === 'warm' && ampTech === 'tube' && speakerEfficiency === 'high') {
+    return 'This system prioritizes tone, flow, and musical ease over analytical precision or maximum resolution.';
+  }
+  // HIGH confidence — lean + solid-state + lower-efficiency → resolution-and-authority.
+  if (lean === 'lean' && ampTech === 'solid-state' && speakerEfficiency === 'low') {
+    return 'This system prioritizes resolution, transient precision, and dynamic authority over warmth or rhythmic ease.';
+  }
+  // MEDIUM confidence — warm signature only.
+  if (lean === 'warm') {
+    return 'This system prioritizes tonal density and flow over analytical detail.';
+  }
+  // MEDIUM confidence — lean / analytical signature only.
+  if (lean === 'lean') {
+    return 'This system prioritizes detail and transient precision over warmth or rhythmic flow.';
+  }
+  // LOW confidence — fall through to engine output.
+  return undefined;
+}
+
+/**
+ * Compose the §10 *If You Were to Change Something* upgrade-hierarchy
+ * preface paragraph (Commit 10).
+ *
+ * The engine's `upgradeDirection` + `recommendedSequence` already
+ * surface change advice, but they treat all components symmetrically.
+ * For systems that contain destination-class loudspeakers or mature
+ * amplifiers, the reader needs a higher-level framing before the
+ * step list — one that articulates the leverage hierarchy:
+ *
+ *   Level 1   front-end refinement (source / DAC / cabling)
+ *               — small improvements compound
+ *   Level 2   amplifier replacement
+ *               — philosophical change, not an obvious upgrade
+ *   Level 3   destination speakers
+ *               — treat as fixed point, not swap candidate
+ *
+ * Returns undefined when neither protection (destination speaker
+ * NOR mature amplifier) fires; the engine direction renders alone.
+ * When at least one protection fires, the paragraph names the
+ * specific protected components and slots into §10 BEFORE the
+ * engine's `upgradeDirection` prose.
+ *
+ * Heuristics are presentational and reuse the Commit 7 protection
+ * detectors (`isDestinationSpeaker`, `isMatureAmplifier`).
+ */
+function composeUpgradeHierarchy(
+  chainNames: string[],
+  roles: Array<string | undefined>,
+  chainFacts: CharacterFacts[],
+): string | undefined {
+  if (chainNames.length === 0) return undefined;
+
+  const destinationSpeakers: string[] = [];
+  const matureAmps: string[] = [];
+  for (let i = 0; i < chainNames.length; i++) {
+    const family = roleFamily(roles[i]);
+    const facts = chainFacts[i];
+    if (!facts) continue;
+    if (family === 'speaker' && isDestinationSpeaker(chainNames[i], roles[i], facts)) {
+      destinationSpeakers.push(chainNames[i]);
+    } else if (family === 'amplifier' && isMatureAmplifier(chainNames[i], roles[i], facts)) {
+      matureAmps.push(chainNames[i]);
+    }
+  }
+  if (destinationSpeakers.length === 0 && matureAmps.length === 0) return undefined;
+
+  const sentences: string[] = [];
+  // Level 1 — always emit when the section fires; it is the lowest-risk path.
+  sentences.push(
+    "The lowest-risk path forward is front-end refinement — source, DAC, and cabling — where small improvements compound without changing the system's character.",
+  );
+  // Level 2 — name the mature amplifier if there is exactly one; pluralize otherwise.
+  if (matureAmps.length === 1) {
+    sentences.push(
+      `Replacing the ${matureAmps[0]} is a philosophical change rather than an obvious upgrade — a different system, not the same one improved.`,
+    );
+  } else if (matureAmps.length >= 2) {
+    sentences.push(
+      'Replacing the amplification is a philosophical change rather than an obvious upgrade — a different system, not the same one improved.',
+    );
+  }
+  // Level 3 — name the destination loudspeaker if there is exactly one; pluralize otherwise.
+  if (destinationSpeakers.length === 1) {
+    sentences.push(
+      `The ${destinationSpeakers[0]} is a destination-class loudspeaker; treat it as a fixed point rather than a swap candidate.`,
+    );
+  } else if (destinationSpeakers.length >= 2) {
+    sentences.push(
+      'The destination-class loudspeakers should be treated as fixed points rather than swap candidates.',
+    );
+  }
+
   return preferSystemTerminology(sentences.join(' '));
 }
 
@@ -1857,13 +2020,24 @@ export default function SystemAssessmentArtifact({
 
       {/* ═══════════ §3 First Impressions ═══════════
        *  Source: `introSummary` is assembled from fixed template
-       *  fragments (marketing prefixes, adjective-stack intent notes,
-       *  stacked-trait identity sentences). `normalizeFirstImpressions`
-       *  strips the marketing/adjective-stack content and applies
-       *  small named substitutions to soften the cadence. Falls back
-       *  to `systemSignature` when stripping leaves the prose too thin. */}
+       *  fragments. Pass 25 (Commit 10) adds a presentational
+       *  "prioritizes X over Y" override that fires when HIGH or
+       *  MEDIUM-confidence character anchors are available; it makes
+       *  the section memorable and system-specific instead of an
+       *  adjective list. When no anchors fire, the engine path runs
+       *  via `normalizeFirstImpressions` as before. */}
       {(() => {
-        const firstImpressions = normalizeFirstImpressions(a.introSummary, a.systemSignature);
+        const chainNamesFI = a.systemChain?.names ?? [];
+        const chainRolesFI = a.systemChain?.roles ?? [];
+        const chainFactsFI = chainNamesFI.map((name, i) =>
+          extractCharacterFacts(
+            findReadingForName(name, a.componentReadings ?? [], i),
+            chainRolesFI[i],
+          ),
+        );
+        const presentational = composeFirstImpressions(a, chainNamesFI, chainRolesFI, chainFactsFI);
+        const firstImpressions =
+          presentational ?? normalizeFirstImpressions(a.introSummary, a.systemSignature);
         if (!firstImpressions) return null;
         return (
           <section style={{ marginBottom: '1.5rem' }}>
@@ -2115,10 +2289,31 @@ export default function SystemAssessmentArtifact({
         );
       })()}
 
-      {/* ═══════════ §10 If You Were to Change Something ═══════════ */}
+      {/* ═══════════ §10 If You Were to Change Something ═══════════
+       *  Commit 10 adds a presentational hierarchy preface that
+       *  articulates the leverage model — front-end refinement first,
+       *  amplifier replacement as philosophical change, destination
+       *  speakers as fixed points. The paragraph names the specific
+       *  protected components when they appear in the chain. Renders
+       *  BEFORE the engine's `upgradeDirection` prose; omits silently
+       *  when neither protection (destination speaker nor mature
+       *  amplifier) fires. */}
       {hasChangeSection && (
         <section style={{ marginBottom: '1.5rem' }}>
           <h2 style={sectionHeadingStyle}>If You Were to Change Something</h2>
+          {(() => {
+            const chainNamesUH = a.systemChain?.names ?? [];
+            const chainRolesUH = a.systemChain?.roles ?? [];
+            const chainFactsUH = chainNamesUH.map((name, i) =>
+              extractCharacterFacts(
+                findReadingForName(name, a.componentReadings ?? [], i),
+                chainRolesUH[i],
+              ),
+            );
+            const hierarchy = composeUpgradeHierarchy(chainNamesUH, chainRolesUH, chainFactsUH);
+            if (!hierarchy) return null;
+            return <p style={{ ...proseStyle, marginBottom: '0.85rem' }}>{hierarchy}</p>;
+          })()}
           {a.upgradeDirection && (
             <p style={{ ...proseStyle, marginBottom: '0.85rem' }}>{a.upgradeDirection}</p>
           )}
