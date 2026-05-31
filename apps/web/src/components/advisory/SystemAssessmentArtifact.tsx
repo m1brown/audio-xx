@@ -174,8 +174,22 @@ function sentenceMentionsOffChainProduct(
  * factually accurate.
  */
 interface CharacterFacts {
-  /** Conversion topology (DAC) or amplification topology (amp). */
-  topology?: 'R2R' | 'delta-sigma' | 'multibit' | 'push-pull' | 'single-ended' | 'class-A' | 'class-AB' | 'class-D';
+  /**
+   * Conversion topology (DAC) or amplification topology (amp).
+   * Hardening Phase C adds FPGA + Ring DAC as recognized DAC
+   * topologies for the source-card depth pass.
+   */
+  topology?:
+    | 'R2R'
+    | 'delta-sigma'
+    | 'multibit'
+    | 'FPGA'
+    | 'Ring DAC'
+    | 'push-pull'
+    | 'single-ended'
+    | 'class-A'
+    | 'class-AB'
+    | 'class-D';
   /** Active-device family. */
   tech?: 'tube' | 'solid-state' | 'hybrid';
   /** Power-tube types found in the reading. */
@@ -203,7 +217,14 @@ function extractCharacterFacts(
 
   // Topology — source families
   if (family === 'source') {
-    if (/\br2r\b|\bresistor[- ]?ladder\b/.test(text)) facts.topology = 'R2R';
+    // Hardening Phase C — Ring DAC + FPGA detection ranks BEFORE the
+    // generic R2R / delta-sigma fall-throughs because dCS Ring DAC is
+    // a discrete FPGA-driven topology with its own editorial framing,
+    // and a Chord / Hugo / Bricasti FPGA conversion is also worth
+    // surfacing distinctly.
+    if (/\bring\s+dac\b/.test(text)) facts.topology = 'Ring DAC';
+    else if (/\bfpga\b/.test(text)) facts.topology = 'FPGA';
+    else if (/\br2r\b|\bresistor[- ]?ladder\b/.test(text)) facts.topology = 'R2R';
     else if (/\bdelta[- ]?sigma\b/.test(text)) facts.topology = 'delta-sigma';
     else if (/\bmulti[- ]?bit\b/.test(text)) facts.topology = 'multibit';
   }
@@ -281,10 +302,90 @@ function roleFamily(role: string | undefined): 'source' | 'amplifier' | 'speaker
   // "streamer" / "network" / "streaming" qualifier in the same
   // string. Pure-source roles ("DAC", "Streamer", "Streamer/DAC",
   // "Turntable") still fall through to the source check unchanged.
+  // Hardening Phase C — phono preamps live in the source chain (a
+  // phono stage extracts cartridge signal and applies RIAA EQ; it is
+  // analytically a source even when its role string says "preamp").
+  // Detected BEFORE the general preamp / amplifier check so it can
+  // route to the source-family second-sentence template.
+  if (/\bphono\b/.test(r)) return 'source';
   if (/preamp|integrated|monoblock|power amp|amplifier|amp\b|receiver/.test(r)) return 'amplifier';
   if (/dac|streamer|transport|turntable|cartridge|cd player|phono|source/.test(r)) return 'source';
-  if (/speaker|transducer|headphone|monitor/.test(r)) return 'speaker';
+  // Hardening Phase C — extend the speaker family to include
+  // subwoofers (so the §5 composer can branch to a low-frequency-
+  // extension template instead of falling to the unknown-role
+  // generic prose) and n-way speaker descriptors (so fixtures whose
+  // role text says "Active 3-way" or "Passive 2-way" without the
+  // word "speaker" are still recognized as the speaker family).
+  if (/speaker|transducer|headphone|monitor|subwoofer|\d[\s-]?way/.test(r)) return 'speaker';
   return 'unknown';
+}
+
+/**
+ * Hardening Phase C — detect chain names that are syntactically plural
+ * because they refer to a pair of monoblock amplifiers or an explicit
+ * multiplier (×2, x2, (2x)).
+ *
+ * Pre-Phase-C templates hard-coded singular verbs ("carries", "drives",
+ * "delivers") which produced grammatically-wrong output for chain
+ * entries like "Bricasti M28 monoblocks (2x)" or "Audio Research
+ * Ref 160M monoblocks". This helper marks such entries so the
+ * downstream verb selection can pluralize.
+ *
+ * Scope is intentionally narrow per the Phase C spec:
+ *   - "monoblocks" / "monos" / "mono blocks" / "mono amps" trailing
+ *     the chain name (case-insensitive)
+ *   - parenthesized multiplier "(2x)", "(×2)", "(2 x)" anywhere
+ *   - inline multiplier "x2", "× 2" (with or without space)
+ *
+ * A singular "monoblock" (no terminal s) is treated as singular —
+ * one monoblock amp.
+ */
+function chainNameIsPlural(name: string | undefined): boolean {
+  if (!name) return false;
+  const t = name.trim();
+  // Parenthesized multiplier or trailing multiplier
+  if (/\(\s*[2-9]\s*[x×]?\s*\)/i.test(t)) return true;
+  if (/[x×]\s*[2-9]\b/i.test(t)) return true;
+  // Trailing plural amp-pair noun
+  if (/\b(?:monoblocks|monos|mono\s+blocks|mono\s+amps)\b\s*$/i.test(t)) return true;
+  // Same plural noun followed by a parenthesized qualifier
+  if (/\b(?:monoblocks|monos|mono\s+blocks|mono\s+amps)\b\s+\(/i.test(t)) return true;
+  return false;
+}
+
+/**
+ * Hardening Phase C — verb pluralization for plural chain-entry subjects.
+ *
+ * Map of singular → plural English verbs used inside composer
+ * templates. Whitelist-only — verbs not in the map pass through
+ * unchanged, so the helper is safe even when a future template
+ * introduces a new verb.
+ *
+ * Only invoked from inside templates where the subject is known to
+ * be a chain entry that has passed `chainNameIsPlural` (which is the
+ * only signal we trust). Sentence-internal relative clauses ("what
+ * the [upstream] delivers") use the upstream's plurality, not the
+ * sentence subject's.
+ */
+const PLURAL_VERB_MAP: Record<string, string> = {
+  carries: 'carry',
+  drives: 'drive',
+  delivers: 'deliver',
+  translates: 'translate',
+  combines: 'combine',
+  establishes: 'establish',
+  sits: 'sit',
+  sets: 'set',
+  accepts: 'accept',
+  shapes: 'shape',
+  takes: 'take',
+  hands: 'hand',
+  pairs: 'pair',
+};
+
+function verbForSubject(verb: string, isPlural: boolean): string {
+  if (!isPlural) return verb;
+  return PLURAL_VERB_MAP[verb] ?? verb;
 }
 
 /**
@@ -322,6 +423,56 @@ function isAllInOne(role: string | undefined): boolean {
   const sourceTag = /streamer|streaming|network|powered/.test(r);
   const ampTag = /amp|integrated|receiver/.test(r);
   return sourceTag && ampTag;
+}
+
+/**
+ * Hardening Phase C — detect subwoofer role.
+ *
+ * Subwoofers occupy a separate functional position from main
+ * loudspeakers: they extend low-frequency reach rather than
+ * carrying the full musical picture. The §5 composer needs a
+ * subwoofer-specific lede so chains with REL / SVS / KEF Kube
+ * components do not fall to the generic unknown-role fallback
+ * ("sits inside this system as the subwoofer") nor get treated
+ * as full-range speakers.
+ */
+function isSubwoofer(role: string | undefined): boolean {
+  if (!role) return false;
+  return /\bsubwoofers?\b|\bsubs?\b/i.test(role);
+}
+
+/**
+ * Hardening Phase C — detect active / powered loudspeakers.
+ *
+ * Active speakers integrate amplification + driver alignment in
+ * the cabinet; the §5 composer needs to reflect that the upstream
+ * source is feeding a complete playback system rather than a
+ * passive load. Matches "active speaker", "powered speaker",
+ * "powered monitor", "active monitor", and the compound forms with
+ * an explicit n-way descriptor ("active 3-way").
+ */
+function isActiveSpeaker(role: string | undefined): boolean {
+  if (!role) return false;
+  const r = role.toLowerCase();
+  if (isSubwoofer(role)) return false;
+  if (/active\s+(?:studio\s+)?monitor/.test(r)) return true;
+  if (/active\s+(?:speaker|loudspeaker|3[-\s]?way|2[-\s]?way|4[-\s]?way)/.test(r)) return true;
+  if (/powered\s+(?:speaker|loudspeaker|monitor)/.test(r)) return true;
+  return false;
+}
+
+/**
+ * Hardening Phase C — narrower detector for the studio-monitor
+ * sub-variant of an active speaker. Used to choose between the
+ * standard active-speaker prose and the studio-monitor-specific
+ * framing ("functions as an active monitor: amplification, driver
+ * control, and cabinet behavior are handled inside the speaker
+ * rather than delegated to an external amplifier"). Returns false
+ * for general powered home loudspeakers (KEF LS60 Wireless etc.).
+ */
+function isStudioMonitor(role: string | undefined): boolean {
+  if (!role) return false;
+  return /\bactive\s+studio\s+monitor\b|\bstudio\s+monitor\b/i.test(role);
 }
 
 /**
@@ -446,6 +597,12 @@ function isDestinationSpeaker(
   facts: CharacterFacts,
 ): boolean {
   if (roleFamily(role) !== 'speaker') return false;
+  // Hardening Phase C — subwoofers now classify as speaker family but
+  // must NOT trigger destination protection. They are functionally
+  // distinct from main loudspeakers; "treat as a fixed point" advice
+  // is wrong for a subwoofer whose value depends on integration
+  // rather than identity.
+  if (isSubwoofer(role)) return false;
   if (facts.efficiency === 'high') return true;
   if (facts.cabinet && DESTINATION_CABINETS.has(facts.cabinet)) return true;
   const product = findProductByComponentName(name);
@@ -553,8 +710,25 @@ function protectionCaveat(
 function formatFactsPhrase(
   family: 'source' | 'amplifier' | 'speaker' | 'unknown',
   facts: CharacterFacts,
+  /**
+   * Hardening Phase C — optional role string so the source-family
+   * branch can fall back to role-based phrases (streamer, network,
+   * CD/SACD/transport, turntable, cartridge, phono) when no
+   * topology fact is available. Defaults to undefined so legacy
+   * callers retain existing behavior; the only call site
+   * (composeContributionBody) does pass role.
+   */
+  role?: string,
 ): string | undefined {
   if (family === 'source') {
+    // Topology-driven phrases (highest confidence — anchored in
+    // reading vocabulary).
+    if (facts.topology === 'Ring DAC') {
+      return "Its Ring DAC architecture prioritizes timing precision and quietness over conventional ladder or delta-sigma topologies";
+    }
+    if (facts.topology === 'FPGA') {
+      return 'Its FPGA-based conversion prioritizes timing precision, transient clarity, and spatial focus';
+    }
     if (facts.topology === 'R2R') {
       return 'Its R2R conversion favors tonal density and harmonic continuity over digital edge';
     }
@@ -566,6 +740,39 @@ function formatFactsPhrase(
     }
     if (facts.tonalLean === 'warm') {
       return 'Its conversion leans warm, carrying source character toward density rather than edge';
+    }
+    // Hardening Phase C — role-based fallbacks. When the reading
+    // carries no recognizable DAC topology, fall back to role-text
+    // sniffing so streamer / network / transport / vinyl chains get a
+    // second sentence that frames the source contribution honestly
+    // without inventing topology facts.
+    if (role) {
+      const r = role.toLowerCase();
+      // Combined streamer/DAC: the role names both functions.
+      const isStreamerDac = /streamer|network|renderer|server/.test(r) && /dac/.test(r);
+      const isPureStreamer = /streamer|network|renderer|server/.test(r) && !/dac/.test(r);
+      const isCdTransport = /\bcd\s*player\b|\bsacd\b|\btransport\b/.test(r);
+      const isTurntable = /\bturntable\b/.test(r);
+      const isCartridge = /\bcartridge\b/.test(r);
+      const isPhonoStage = /\bphono\b/.test(r);
+      if (isStreamerDac) {
+        return 'Its role is to deliver clean source signal and stable conversion into the rest of the system';
+      }
+      if (isPureStreamer) {
+        return 'Its job is less to impose a voice than to provide stable, low-noise source delivery into the downstream electronics';
+      }
+      if (isCdTransport) {
+        return "Its mechanical and electronic stability set the timing precision the rest of the system inherits";
+      }
+      if (isTurntable) {
+        return "Its analog front end sets the system's rhythmic and tonal foundation before amplification takes over";
+      }
+      if (isCartridge) {
+        return 'Its signal extraction sets the rhythmic and tonal foundation the rest of the system inherits';
+      }
+      if (isPhonoStage) {
+        return 'Its phono-stage gain and equalization shape the analog signal before it enters the main signal path';
+      }
     }
     return undefined;
   }
@@ -735,21 +942,78 @@ function composeContributionBody(
         );
       }
     } else if (upstream && downstream) {
+      // Hardening Phase C — plural subject (monoblock pair, ×2) needs
+      // plural verb. `carries` → `carry`. The relative clause is
+      // not present in this template so only the lede verb agrees
+      // with the chain entry.
+      const nP = chainNameIsPlural(name);
       sentences.push(
-        `The ${name} carries the signal between the ${upstream} and the ${downstream}, translating source character into drive for the speakers.`,
+        `The ${name} ${verbForSubject('carries', nP)} the signal between the ${upstream} and the ${downstream}, translating source character into drive for the speakers.`,
       );
     } else if (downstream) {
+      const nP = chainNameIsPlural(name);
       sentences.push(
-        `The ${name} drives the ${downstream}, shaping how source signal becomes motion at the speakers.`,
+        `The ${name} ${verbForSubject('drives', nP)} the ${downstream}, shaping how source signal becomes motion at the speakers.`,
       );
     } else if (upstream) {
+      // Phase C — both verbs vary: `takes` agrees with ${name},
+      // `delivers` agrees with ${upstream} (relative-clause subject).
+      const nP = chainNameIsPlural(name);
+      const uP = chainNameIsPlural(upstream);
       sentences.push(
-        `The ${name} takes what the ${upstream} delivers and translates it into drive.`,
+        `The ${name} ${verbForSubject('takes', nP)} what the ${upstream} ${verbForSubject('delivers', uP)} and ${verbForSubject('translates', nP)} it into drive.`,
       );
     } else {
-      sentences.push(`The ${name} sits at this system's heart, translating signal into drive.`);
+      const nP = chainNameIsPlural(name);
+      sentences.push(
+        `The ${name} ${verbForSubject('sits', nP)} at this system's heart, translating signal into drive.`,
+      );
     }
   } else if (family === 'speaker') {
+    // Hardening Phase C — subwoofer / active-speaker / studio-monitor
+    // branches must run BEFORE the regular passive-speaker prose.
+    // Each emits a role-correct lede and (when appropriate) a second
+    // integration sentence; the passive-speaker `drivePhrase`
+    // branches below are skipped via early return at the end of the
+    // speaker family.
+    if (isSubwoofer(role)) {
+      // Subwoofer — extends low-frequency reach; value depends on
+      // integration with main speakers and room rather than identity.
+      sentences.push(
+        `The ${name} extends the system's low-frequency foundation rather than carrying the full musical picture.`,
+      );
+      sentences.push(
+        'Its value depends on integration with the main speakers and the room, not simply on output.',
+      );
+      // Skip the bottleneck + facts-phrase fall-through; the
+      // subwoofer card is intentionally short and integration-first.
+      return sentences.join(' ');
+    }
+    if (isActiveSpeaker(role)) {
+      // Active / powered / studio-monitor — amplification, driver
+      // alignment, and cabinet behavior live inside the speaker.
+      if (isStudioMonitor(role)) {
+        sentences.push(
+          `The ${name} functions as an active studio monitor: amplification, driver control, and cabinet behavior are handled inside the speaker rather than delegated to an external amplifier.`,
+        );
+      } else if (upstream) {
+        sentences.push(
+          `The ${name} integrates amplification, driver alignment, and room-facing output in the loudspeaker itself, so the ${upstream} is feeding a complete playback system rather than a passive load.`,
+        );
+      } else {
+        sentences.push(
+          `The ${name} integrates amplification, driver alignment, and room-facing output in the loudspeaker itself.`,
+        );
+      }
+      // Bottleneck framing if applicable — same shape as the passive
+      // speaker bottleneck sentence but scoped to active behavior.
+      if (isBottleneck) {
+        sentences.push(
+          'Where this system meets its honest limits — scale, room interaction, and onboard amplification headroom — is decided here.',
+        );
+      }
+      return sentences.join(' ');
+    }
     // Pass 24 (Commit 8) — name the upstream amplifier explicitly
     // instead of by generic tech family, and add a second
     // cabinet-aware sentence so the speaker card carries the same
@@ -799,10 +1063,13 @@ function composeContributionBody(
       // family but render into a different physical surface. Swap
       // "into sound in the room" for "into sound at the ear" when
       // the role explicitly indicates a headphone.
+      // Hardening Phase C — relative-clause verb `delivers` agrees
+      // with the upstream chain entry, not with the speaker name.
       const isHeadphone = !!role && /headphone/i.test(role);
       const surface = isHeadphone ? 'sound at the ear' : 'sound in the room';
+      const uP = chainNameIsPlural(upstream);
       sentences.push(
-        `The ${name} translates what the ${upstream} delivers into ${surface}.`,
+        `The ${name} translates what the ${upstream} ${verbForSubject('delivers', uP)} into ${surface}.`,
       );
     } else {
       const isHeadphone = !!role && /headphone/i.test(role);
@@ -828,7 +1095,9 @@ function composeContributionBody(
     family === 'speaker' &&
     !!upstream &&
     (facts.efficiency === 'high' || facts.efficiency === 'low');
-  const factsPhrase = speakerFused ? undefined : formatFactsPhrase(family, facts);
+  // Hardening Phase C — pass `role` so the source-family branch can
+  // fall back to role-based phrases when no topology fact anchors.
+  const factsPhrase = speakerFused ? undefined : formatFactsPhrase(family, facts, role);
   if (factsPhrase) {
     sentences.push(factsPhrase + '.');
   }

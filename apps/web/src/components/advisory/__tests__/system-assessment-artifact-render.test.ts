@@ -4365,3 +4365,431 @@ describe('SystemAssessmentArtifact — Hardening B B9: all-in-one / streamer-amp
     expect(html).not.toContain('combines source access and amplification');
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// Hardening Phase C — composer coverage + source depth
+// ════════════════════════════════════════════════════════════════════════
+//
+//   - Source-card depth: role-based 2nd sentence when no DAC topology
+//     fact is present (streamer, network, CD/SACD, turntable, phono).
+//     New topology anchors: FPGA, Ring DAC.
+//   - Active speaker / powered speaker / studio monitor: dedicated
+//     §5 ledes that recognize integrated amplification + driver
+//     control.
+//   - Subwoofer: dedicated §5 lede framing low-frequency extension +
+//     integration. Does NOT use passive-speaker prose. Does NOT
+//     trigger destination protection in §10.
+//   - Plural verb agreement on monoblock pairs and explicit
+//     multiplier suffixes.
+
+describe('SystemAssessmentArtifact — Hardening C: source-card depth', () => {
+  it('streamer-only source (no DAC) gets the pure-streamer second sentence', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C streamer',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Aurender N20', 'Pass Labs XA25', 'Some Speakers'],
+        roles: ['Streamer', 'Power Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A reference network streamer.',
+        'A 25-watt Class-A stereo amplifier.',
+        'A 2-way bookshelf speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'Its job is less to impose a voice than to provide stable, low-noise source delivery into the downstream electronics',
+    );
+  });
+
+  it('Streamer/DAC role gets combined-stage second sentence', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C streamer/dac',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Lumin P1', 'Pass Labs INT-60', 'Some Speakers'],
+        roles: ['Streamer/DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A reference network streamer/DAC.',
+        'A 60-watt Class-AB integrated amplifier.',
+        'A 2-way bookshelf speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'Its role is to deliver clean source signal and stable conversion into the rest of the system',
+    );
+  });
+
+  it('Turntable + Phono Preamp chain gets analog-specific second sentences', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C vinyl',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Rega Planar 6', 'Rega Aria Mk3', 'Rega Brio', 'KEF LS50 Meta'],
+        roles: ['Turntable', 'Phono Preamplifier', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A high-mass plinth turntable.',
+        'A moving-magnet/moving-coil phono stage.',
+        'A 50-watt integrated.',
+        'A 2-way bookshelf.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('Its analog front end sets the system');
+    expect(html).toContain('rhythmic and tonal foundation before amplification takes over');
+    expect(html).toContain(
+      'Its phono-stage gain and equalization shape the analog signal before it enters the main signal path',
+    );
+  });
+
+  it('CD transport role gets timing-stability second sentence', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C cd',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Cambridge CXC', 'Some Amp', 'Some Speakers'],
+        roles: ['CD Transport', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: ['A CD transport.', 'An amp.', 'A speaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'Its mechanical and electronic stability set the timing precision the rest of the system inherits',
+    );
+  });
+
+  it('Ring DAC topology gets dCS-specific second sentence', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C ring dac',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['dCS Bartók', 'Some Amp', 'Some Speakers'],
+        roles: ['DAC', 'Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A discrete DAC with Ring DAC topology.',
+        'An amp.',
+        'A speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'Its Ring DAC architecture prioritizes timing precision and quietness',
+    );
+  });
+
+  it('FPGA topology gets FPGA-specific second sentence', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C fpga',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Chord Hugo TT2', 'Some Amp', 'Some Speakers'],
+        roles: ['DAC', 'Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A reference DAC with FPGA-driven conversion.',
+        'An amp.',
+        'A speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'Its FPGA-based conversion prioritizes timing precision, transient clarity, and spatial focus',
+    );
+  });
+
+  it('Pure streamer regression — Bluesound Node still classified as source (not all-in-one)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C streamer regression',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Bluesound Node', 'Hegel H120', 'Some Speakers'],
+        roles: ['Streamer', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A network streamer with DAC.',
+        'A 75-watt integrated amplifier.',
+        'A speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // Source lede + pure-streamer second sentence
+    expect(html).toContain(
+      'The Bluesound Node establishes the character of the signal feeding the Hegel H120',
+    );
+    expect(html).toContain(
+      'Its job is less to impose a voice than to provide stable, low-noise source delivery',
+    );
+    // Negative — must NOT classify as all-in-one
+    expect(html).not.toContain(
+      'The Bluesound Node combines source access and amplification',
+    );
+  });
+
+  it('Unknown source role with no topology fact stays conservative (no invented facts)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C unknown source',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Unknown Source', 'Some Amp', 'Some Speakers'],
+        roles: ['Source', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['Some prose.', 'An amp.', 'A speaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // No second sentence (no topology fact, no specific role match)
+    expect(html).toContain(
+      'The Unknown Source establishes the character of the signal feeding the Some Amp',
+    );
+    expect(html).not.toContain('FPGA-based conversion');
+    expect(html).not.toContain('analog front end');
+  });
+});
+
+describe('SystemAssessmentArtifact — Hardening C: active / powered / studio monitor branches', () => {
+  it('Powered Speaker (KEF LS60 Wireless) emits active-speaker lede', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C active KEF',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['RME ADI-2', 'KEF LS60 Wireless'],
+        roles: ['DAC', 'Powered Speaker'],
+      },
+      componentReadings: ['A DAC.', 'A 3-way active loudspeaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The KEF LS60 Wireless integrates amplification, driver alignment, and room-facing output in the loudspeaker itself, so the RME ADI-2 is feeding a complete playback system rather than a passive load.',
+    );
+    expect(html).not.toContain(
+      'The KEF LS60 Wireless translates what the RME ADI-2 delivers into sound in the room',
+    );
+  });
+
+  it('Active Studio Monitor (Genelec) emits studio-monitor lede', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C studio monitor',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Auralic Aries G2.1', 'Genelec 8351B'],
+        roles: ['Streamer', 'Active Studio Monitor'],
+      },
+      componentReadings: [
+        'A streamer.',
+        'A 3-way coaxial active studio monitor with built-in 250W amplification.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Genelec 8351B functions as an active studio monitor: amplification, driver control, and cabinet behavior are handled inside the speaker rather than delegated to an external amplifier.',
+    );
+  });
+
+  it('Active 3-way role (no "speaker" word) still routes through active branch', () => {
+    // Role "Active 3-way" matches roleFamily speaker via the new
+    // n-way pattern and matches isActiveSpeaker via "active 3-way".
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C active 3-way',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['miniDSP SHD', 'Hypex NCore', 'Custom 3-way Active'],
+        roles: ['DSP/DAC/Streamer', 'Class-D Amplifier', 'Active 3-way'],
+      },
+      componentReadings: [
+        'A DSP streamer.',
+        'A Class-D amp module.',
+        'A custom-built active 3-way loudspeaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Custom 3-way Active integrates amplification, driver alignment, and room-facing output in the loudspeaker itself',
+    );
+    expect(html).not.toContain('sits inside this system as the active 3-way');
+  });
+
+  it('Passive speaker (Phase K DeVore O/96) unchanged — does NOT use active-speaker prose', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C passive speaker regression',
+      systemSignature: 'A warm tube-led chain.',
+      systemChain: {
+        names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC.',
+        'A push-pull tube integrated.',
+        'A high-efficiency wide-baffle loudspeaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // Existing high-eff passive prose still fires. HTML escapes the
+    // possessive apostrophe; assert via partial substrings.
+    expect(html).toContain('The DeVore O/96');
+    expect(html).toContain('high-efficiency design pairs naturally with the Leben CS600X');
+    expect(html).toContain('tube drive');
+    expect(html).not.toContain('integrates amplification, driver alignment');
+  });
+});
+
+describe('SystemAssessmentArtifact — Hardening C: subwoofer branch', () => {
+  it('REL subwoofer emits low-frequency-extension lede + integration sentence', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C REL sub',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Hegel H120', 'Spendor A4', 'REL T/9x'],
+        roles: ['Integrated Amplifier', 'Speakers', 'Subwoofer'],
+      },
+      componentReadings: [
+        'A 75-watt integrated amplifier.',
+        'A 2.5-way floorstander.',
+        'A 10-inch sealed-cabinet subwoofer.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // Note: HTML escapes apostrophes (`'` → `&#x27;`), so assert via
+    // partial substrings that avoid the apostrophe.
+    expect(html).toContain('The REL T/9x extends the system');
+    expect(html).toContain('low-frequency foundation rather than carrying the full musical picture');
+    expect(html).toContain(
+      'Its value depends on integration with the main speakers and the room, not simply on output.',
+    );
+  });
+
+  it('Subwoofer does NOT use passive-speaker "translates...into sound in the room" prose', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C sub no passive prose',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some Amp', 'Some Speakers', 'REL S/812 (×2)'],
+        roles: ['Amp', 'Speakers', 'Subwoofers'],
+      },
+      componentReadings: ['An amp.', 'A speaker.', 'Twin subs.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).not.toContain(
+      'The REL S/812 (×2) translates what the Some Speakers',
+    );
+    expect(html).not.toContain('REL S/812 (×2) translates what');
+  });
+
+  it('Subwoofer does NOT trigger destination-speaker protection in §10', () => {
+    // Subwoofer with no-engine §10 — destination protection must not
+    // name the subwoofer. The chain's main speakers may still trigger
+    // protection independently if they qualify.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C sub no destination',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Some Bookshelf', 'REL T/9x'],
+        roles: ['DAC', 'Amp', 'Speakers', 'Subwoofer'],
+      },
+      componentReadings: [
+        'A DAC.',
+        'An amp.',
+        'A bookshelf.',
+        'A 10-inch subwoofer.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).not.toContain(
+      'The REL T/9x is a destination-class loudspeaker',
+    );
+  });
+});
+
+describe('SystemAssessmentArtifact — Hardening C: plural verb agreement', () => {
+  it('Audio Research Ref 160M monoblocks — speaker relative clause uses "deliver" (plural)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C plural Ref 160M',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['dCS Vivaldi APEX DAC', 'Audio Research Ref 160M monoblocks', 'Wilson Sasha DAW'],
+        roles: ['DAC', 'Monoblock Power Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A reference DAC.',
+        'A 140-watt KT150 tube monoblock amplifier with auto-bias.',
+        'A 3-way reference floorstander.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // Plural verb in the speaker's relative clause
+    expect(html).toContain(
+      'The Wilson Sasha DAW translates what the Audio Research Ref 160M monoblocks deliver into sound in the room',
+    );
+    // Negative — the pre-fix bug
+    expect(html).not.toContain(
+      'Audio Research Ref 160M monoblocks delivers into sound in the room',
+    );
+  });
+
+  it('Bricasti M28 monoblocks (2x) — amp lede uses "carry" + speaker relative clause uses "deliver"', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C plural Bricasti',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Bricasti M5', 'Bricasti M3', 'Bricasti M28 monoblocks (2x)', 'Wilson Sabrina X'],
+        roles: ['Network Renderer', 'DAC', 'Monoblock Power Amplifiers', 'Speakers'],
+      },
+      componentReadings: [
+        'A renderer.',
+        'A reference DAC.',
+        'A solid-state Class-A monoblock amplifier.',
+        'A floorstander.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Bricasti M28 monoblocks (2x) carry the signal between the Bricasti M3 and the Wilson Sabrina X',
+    );
+    expect(html).toContain(
+      'The Wilson Sabrina X translates what the Bricasti M28 monoblocks (2x) deliver into sound in the room',
+    );
+    // Negative — pre-fix bugs
+    expect(html).not.toContain('monoblocks (2x) carries the signal');
+    expect(html).not.toContain('monoblocks (2x) delivers into sound');
+  });
+
+  it('Singular amplifier unchanged — uses "carries" / "delivers"', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'C singular regression',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Pass Labs INT-60', 'Some Speakers'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'A 60-watt Class-AB integrated.', 'A speaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Pass Labs INT-60 carries the signal between the Some DAC and the Some Speakers',
+    );
+    expect(html).toContain(
+      'The Some Speakers translates what the Pass Labs INT-60 delivers into sound in the room',
+    );
+  });
+});
