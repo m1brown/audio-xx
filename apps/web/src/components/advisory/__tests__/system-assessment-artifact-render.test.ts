@@ -1052,9 +1052,12 @@ describe('SystemAssessmentArtifact — §3 First Impressions normalization', () 
     const html = render(a);
     // Both source sentences match marketing/adjective-stack filters and
     // are dropped. The signature is used as graceful fallback so the
-    // section still says something.
+    // section still says something. Commit 11 — the rewriter applies
+    // before display, so "source-first chain" lands as "source-first
+    // system" in the rendered output.
     expect(html).toContain('First Impressions');
-    expect(html).toContain('warm tube-led source-first chain');
+    expect(html).toContain('warm tube-led source-first system');
+    expect(html).not.toMatch(/source-first chain/i);
   });
 
   it('skips §3 entirely when introSummary is undefined (signature is NOT a substitute)', () => {
@@ -2960,5 +2963,196 @@ describe('SystemAssessmentArtifact — §10 upgrade hierarchy paragraph (Commit 
     expect(html).toContain('lowest-risk path forward');
     expect(html).toContain('destination-class loudspeaker');
     expect(html).not.toContain('philosophical change');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// Commit 11 — pre-acceptance polish: §2 chain-leak fix + §4 synergy dedup
+// ════════════════════════════════════════════════════════════════════════
+//
+// The Commit-10 production-readiness audit identified two
+// non-blocking polish issues:
+//   §2 — `systemSignature` passed through SystemProfileCard
+//        unmodified, so engine-emitted "source-first chain with
+//        coherent-source voicing" surfaced verbatim
+//   §4 — `systemContext` and `systemSynergy` could carry overlapping
+//        text, producing a duplicated insight in the rendered section
+//
+// Both are fixed presentationally with the smallest safe changes.
+
+describe('SystemAssessmentArtifact — §2 Profile chain-leak fix (Commit 11)', () => {
+  const base = (): AdvisoryResponse => ({
+    kind: 'assessment',
+    subject: 'Term Test',
+  } as AdvisoryResponse);
+
+  it('rewrites "chain" → "system" inside the systemSignature passthrough', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      systemSignature: 'A warm tube-led source-first chain with coherent-source voicing.',
+    };
+    const html = render(a);
+    // Scope to §2 so other sections do not bleed into the assertion.
+    const profileIdx = html.indexOf('Profile');
+    const sliceEnd = html.indexOf('First Impressions', profileIdx);
+    const slice = html.slice(profileIdx, sliceEnd > 0 ? sliceEnd : profileIdx + 800);
+    expect(slice).toContain('source-first system');
+    expect(slice).not.toMatch(/\bsource-first chain\b/i);
+  });
+
+  it('rewrites "this chain" / "chain\'s" inside tendencies passthrough', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      systemSignature: 'A coherent voicing.',
+      tendencies: "Flowing midrange that highlights this chain's harmonic continuity.",
+    };
+    const html = render(a);
+    const profileIdx = html.indexOf('Profile');
+    const sliceEnd = html.indexOf('First Impressions', profileIdx);
+    const slice = html.slice(profileIdx, sliceEnd > 0 ? sliceEnd : profileIdx + 800);
+    // Both "this chain's" and the bare possessive must rewrite.
+    expect(slice).toContain('this system');
+    expect(slice).not.toMatch(/\bthis chain\b/i);
+    expect(slice).not.toMatch(/chain['’]s/i);
+  });
+
+  it('preserves "signal chain" as a topology term in §2 (rewriter exception)', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      systemSignature: 'A short signal chain with coherent voicing.',
+    };
+    const html = render(a);
+    const profileIdx = html.indexOf('Profile');
+    const sliceEnd = html.indexOf('First Impressions', profileIdx);
+    const slice = html.slice(profileIdx, sliceEnd > 0 ? sliceEnd : profileIdx + 800);
+    expect(slice).toContain('signal chain');
+  });
+
+  it('also runs the rewriter over the "What it trades" row', () => {
+    const a: AdvisoryResponse = {
+      ...base(),
+      systemSignature: 'A system.',
+      assessmentLimitations: ['Reduced detail across the chain at low SPL'],
+    };
+    const html = render(a);
+    const profileIdx = html.indexOf('Profile');
+    const sliceEnd = html.indexOf('First Impressions', profileIdx);
+    const slice = html.slice(profileIdx, sliceEnd > 0 ? sliceEnd : profileIdx + 800);
+    expect(slice).toContain('across the system');
+    expect(slice).not.toMatch(/across the chain/i);
+  });
+});
+
+describe('SystemAssessmentArtifact — §4 Character synergy dedup (Commit 11)', () => {
+  // Helper: count <p> children inside §4 Character.
+  function characterParagraphCount(html: string): number {
+    const start = html.indexOf('Character');
+    if (start < 0) return 0;
+    // §4 ends at the next section heading; bound by "The Components".
+    const end = html.indexOf('The Components', start);
+    const slice = html.slice(start, end > 0 ? end : start + 2000);
+    return (slice.match(/<p\b/g) ?? []).length;
+  }
+
+  it('suppresses synergy when normalized synergy is a substring of normalized characterProse', () => {
+    // The engine emits the synergy line embedded inside systemContext.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Dup',
+      systemSignature: 'sig',
+      systemContext:
+        '**System read** The Leben CS600X and DeVore O/96 are a canonical pairing. The Pontus II warmth is reinforced by the Leben, then anchored by the O/96 cabinet weight.',
+      systemSynergy:
+        'The Pontus II warmth is reinforced by the Leben, then anchored by the O/96 cabinet weight.',
+    };
+    const html = render(a);
+    expect(characterParagraphCount(html)).toBe(1);
+    // Body still includes the synergy text once (via characterProse).
+    expect(html).toContain('reinforced by the Leben');
+  });
+
+  it('suppresses characterProse when synergy is a superset of normalized characterProse', () => {
+    // Inverse case: systemSynergy carries the full narrative; systemContext
+    // emits a one-sentence fragment of it.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Dup-inv',
+      systemSignature: 'sig',
+      systemContext: '**System read** The Pontus II warmth is reinforced by the Leben.',
+      systemSynergy:
+        'The Pontus II warmth is reinforced by the Leben, then anchored by the O/96 cabinet weight.',
+    };
+    const html = render(a);
+    expect(characterParagraphCount(html)).toBe(1);
+    // The surviving paragraph carries the longer synergy text.
+    expect(html).toContain('anchored by the O/96');
+  });
+
+  it('renders both paragraphs when they carry distinct content (graceful baseline)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Distinct',
+      systemSignature: 'sig',
+      systemContext:
+        '**System read** The Leben CS600X and DeVore O/96 are a canonical pairing in the tube-warm coherent-source tradition.',
+      systemSynergy:
+        'The Pontus II warmth is reinforced by the Leben, then anchored by the O/96 cabinet weight.',
+    };
+    const html = render(a);
+    expect(characterParagraphCount(html)).toBe(2);
+    // Both insights survive.
+    expect(html).toContain('canonical pairing');
+    expect(html).toContain('reinforced by the Leben');
+  });
+
+  it('gracefully renders only systemContext when systemSynergy is absent', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Only context',
+      systemSignature: 'sig',
+      systemContext: '**System read** A canonical pairing.',
+    };
+    const html = render(a);
+    expect(characterParagraphCount(html)).toBe(1);
+    expect(html).toContain('canonical pairing');
+  });
+
+  it('gracefully renders only systemSynergy when systemContext is absent', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Only synergy',
+      systemSignature: 'sig',
+      systemSynergy: 'The Pontus II warmth is reinforced by the Leben.',
+    };
+    const html = render(a);
+    expect(characterParagraphCount(html)).toBe(1);
+    expect(html).toContain('reinforced by the Leben');
+  });
+
+  it('omits §4 entirely when BOTH systemContext and systemSynergy are absent', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'No context',
+      systemSignature: 'sig',
+    };
+    const html = render(a);
+    // Heading "Character" must NOT render with no body.
+    expect(html).not.toMatch(/<h2[^>]*>Character<\/h2>/);
+  });
+
+  it('applies preferSystemTerminology to the synergy line (chain→system rewriter)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Synergy rewriter',
+      systemSignature: 'sig',
+      systemContext: '**System read** A canonical pairing.',
+      systemSynergy: 'The chain reinforces a single voicing across all three components.',
+    };
+    const html = render(a);
+    const start = html.indexOf('Character');
+    const end = html.indexOf('The Components', start);
+    const slice = html.slice(start, end > 0 ? end : start + 2000);
+    expect(slice).toContain('The system reinforces');
+    expect(slice).not.toMatch(/\bthe chain\b/i);
   });
 });

@@ -814,6 +814,43 @@ function normalizeCharacterProse(systemContext: string | undefined): string | un
 }
 
 /**
+ * §4 Character: detect whether the engine's `systemSynergy` line is
+ * already present in (or a substring of, or a superset of) the
+ * normalized `systemContext` paragraph. The two engine fields are
+ * intended to be distinct — the paragraph is the system-read prose
+ * and the synergy line is the italic pull-quote — but the engine
+ * sometimes emits overlapping prose. When the substrings overlap,
+ * we render the longer of the two and suppress the redundant copy.
+ *
+ * Both inputs are normalized for comparison (lowercase, trimmed
+ * punctuation, collapsed whitespace). The original text is unchanged
+ * by this function; the comparison is only used as a render gate.
+ *
+ * Returns:
+ *   'render-both' — the two lines are independently informative
+ *   'suppress-synergy' — characterProse already contains synergy
+ *   'suppress-character' — synergy is a superset of characterProse
+ */
+function dedupCharacterSynergy(
+  characterProse: string | undefined,
+  synergy: string | undefined,
+): 'render-both' | 'suppress-synergy' | 'suppress-character' {
+  if (!characterProse || !synergy) return 'render-both';
+  const norm = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[.,;:!?]+/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  const a = norm(characterProse);
+  const b = norm(synergy);
+  if (a === b) return 'suppress-synergy';
+  if (a.includes(b)) return 'suppress-synergy';
+  if (b.includes(a)) return 'suppress-character';
+  return 'render-both';
+}
+
+/**
  * Presentation-layer normalization of §6 *How They Work Together*.
  *
  * The engine's `systemInteraction` field can mix true interaction
@@ -953,6 +990,12 @@ function preferSystemTerminology(text: string | undefined): string | undefined {
     // is preceded by a determiner / possessive / preposition that maps
     // cleanly to "system" usage.
     .replace(/\b(across|throughout|along|in|of)\s+chain\b/gi, '$1 system')
+    // Commit 11 — `systemSignature` and similar engine prose can
+    // describe the assembly as "{hyphenated-qualifier} chain"
+    // ("source-first chain", "tube-led chain"). Rewrite when "chain"
+    // follows a hyphenated qualifier; signal-chain is already
+    // sentinel-protected above so the topology term survives.
+    .replace(/\b((?:[a-z]+-)+[a-z]+)\s+chain\b/gi, '$1 system')
     .replace(new RegExp(SIGCHAIN_SENTINEL, 'g'), 'signal chain')
     .replace(new RegExp(OFFCHAIN_SENTINEL, 'g'), 'off-chain');
 }
@@ -2008,13 +2051,20 @@ export default function SystemAssessmentArtifact({
         />
       </section>
 
-      {/* ═══════════ §2 Profile ═══════════ */}
+      {/* ═══════════ §2 Profile ═══════════
+       *  Commit 11 — `systemSignature` and `tendencies` pass through
+       *  `preferSystemTerminology` so the chain→system rewriter
+       *  reaches §2 too. Without this, the engine-emitted phrase
+       *  "source-first chain with coherent-source voicing" surfaced
+       *  verbatim in the "What it is" row — the one remaining
+       *  user-visible "chain" leak after Commit 8. "signal chain"
+       *  topology vocabulary is preserved by the rewriter. */}
       <section style={{ marginBottom: '1.5rem' }}>
         <h2 style={sectionHeadingStyle}>Profile</h2>
         <SystemProfileCard
-          whatItIs={a.systemSignature}
-          whatItLeansToward={a.tendencies}
-          whatItTrades={deriveWhatItTrades(a)}
+          whatItIs={preferSystemTerminology(a.systemSignature)}
+          whatItLeansToward={preferSystemTerminology(a.tendencies)}
+          whatItTrades={preferSystemTerminology(deriveWhatItTrades(a))}
         />
       </section>
 
@@ -2049,29 +2099,37 @@ export default function SystemAssessmentArtifact({
 
       {/* ═══════════ §4 Character ═══════════
        *  Source: `systemContext` carries the entire legacy MemoFormat
-       *  narrative with eight bolded inline sub-headings. Only the
-       *  "System read" block belongs here — the rest duplicate other
-       *  sections (§7, §8, §9) or duplicate visual chrome (§1 chain
-       *  banner restated as arrow narration). `normalizeCharacterProse`
-       *  extracts the System-read content and strips the rest. */}
+       *  narrative; `normalizeCharacterProse` extracts the System-read
+       *  block. `systemSynergy` renders as an italic pull-quote below.
+       *  Commit 11 — when the two engine fields overlap (synergy line
+       *  contained in characterProse OR vice versa), suppress the
+       *  redundant copy via `dedupCharacterSynergy` so the section
+       *  doesn't double-state the same insight. Also threads the
+       *  synergy line through `preferSystemTerminology`. */}
       {(() => {
         const characterProse = normalizeCharacterProse(a.systemContext);
-        if (!characterProse && !a.systemSynergy) return null;
+        const synergyRewritten = preferSystemTerminology(a.systemSynergy);
+        if (!characterProse && !synergyRewritten) return null;
+        const verdict = dedupCharacterSynergy(characterProse, synergyRewritten);
+        const showProse =
+          !!characterProse && verdict !== 'suppress-character';
+        const showSynergy =
+          !!synergyRewritten && verdict !== 'suppress-synergy';
         return (
           <section style={{ marginBottom: '1.5rem' }}>
             <h2 style={sectionHeadingStyle}>Character</h2>
-            {characterProse && <p style={proseStyle}>{characterProse}</p>}
-            {a.systemSynergy && (
+            {showProse && <p style={proseStyle}>{characterProse}</p>}
+            {showSynergy && (
               <p
                 style={{
                   ...proseStyle,
-                  marginTop: characterProse ? '0.65rem' : 0,
+                  marginTop: showProse ? '0.65rem' : 0,
                   fontStyle: 'italic',
                   borderLeft: `3px solid ${COLOR.accent}`,
                   paddingLeft: '0.9rem',
                 }}
               >
-                {a.systemSynergy}
+                {synergyRewritten}
               </p>
             )}
           </section>
