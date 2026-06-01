@@ -476,6 +476,66 @@ function isStudioMonitor(role: string | undefined): boolean {
 }
 
 /**
+ * Hardening Phase E-1 — headphone-system grammar detectors.
+ *
+ * Three narrow helpers used by the headphone branches in
+ * composeContributionBody (amp + speaker family), by
+ * composeListenerContext, and by composeUpgradeHierarchy. None of
+ * them rely on product names — only on the role string the engine
+ * emits — so model lookup / catalog data is not required.
+ *
+ * Headphone amps occupy the amplifier family (role contains
+ * "amplifier") and headphones occupy the speaker family (role
+ * contains "headphone"). The default speaker-system prose
+ * ("drive for the speakers", "sound in the room", "larger rooms")
+ * is the wrong register for these chains; the dedicated branches
+ * keep the artifact in headphone-system grammar throughout.
+ */
+function isHeadphoneAmplifier(role: string | undefined): boolean {
+  if (!role) return false;
+  return /\bheadphone\s+(?:amp|amplifier|pre[\s-]?amp|preamplifier)\b/i.test(role);
+}
+
+function isHeadphone(role: string | undefined): boolean {
+  if (!role) return false;
+  // Match "Headphones" / "Headphone" but not "Headphone Amplifier",
+  // which is the amp role above. Plain "Headphone Amplifier" carries
+  // both nouns; we exclude it via the amp-tag rejection.
+  const r = role.toLowerCase();
+  if (/\bamp|amplifier|pre[\s-]?amp|preamplifier\b/.test(r)) return false;
+  return /\bheadphones?\b|\bin[\s-]?ear\b|\bcanal[\s-]?phones?\b|\biems?\b/i.test(role);
+}
+
+/**
+ * Chain-level detector — true when the chain is a headphone system.
+ *
+ * A headphone system has at least one headphone or headphone-amplifier
+ * role AND no non-headphone speaker present. The "no other speaker"
+ * guard prevents mixed systems (a user with both speakers and
+ * headphones connected) from being treated as headphone-only — the
+ * speaker side still needs its prose and §10 hierarchy reasoning.
+ */
+function isHeadphoneSystem(
+  chainNames: string[],
+  roles: Array<string | undefined>,
+): boolean {
+  if (!chainNames || chainNames.length === 0) return false;
+  if (!roles || roles.length === 0) return false;
+  const anyHeadphoneRole = roles.some(
+    (r) => isHeadphone(r) || isHeadphoneAmplifier(r),
+  );
+  if (!anyHeadphoneRole) return false;
+  // Mixed-system guard: any non-headphone speaker → not headphone-only.
+  const hasOtherSpeaker = roles.some((r) => {
+    if (!r) return false;
+    if (isHeadphone(r)) return false;
+    if (isSubwoofer(r)) return false;
+    return roleFamily(r) === 'speaker';
+  });
+  return !hasOtherSpeaker;
+}
+
+/**
  * Commit 13 — detect line-stage preamplifiers within the `amplifier`
  * role family.
  *
@@ -957,6 +1017,41 @@ function composeContributionBody(
       );
     }
   } else if (family === 'amplifier') {
+    // Hardening Phase E-1 — headphone-amplifier branch.
+    //
+    // The `amplifier` family includes headphone amplifiers (any role
+    // containing "Headphone Amplifier" / "Headphone Pre"). The
+    // default amp templates ("translating source character into
+    // drive for the speakers", "motion at the speakers") are
+    // declarative-wrong for headphone systems — there are no
+    // speakers, only a headphone at the ear. This branch runs
+    // BEFORE the all-in-one / preamp / power-amp templates so
+    // headphone amps are intercepted first.
+    if (isHeadphoneAmplifier(role)) {
+      if (upstream && downstream) {
+        sentences.push(
+          `The ${name} accepts the signal from the ${upstream} and provides the current, gain structure, and control required by the ${downstream}.`,
+        );
+      } else if (downstream) {
+        sentences.push(
+          `The ${name} provides the current, gain structure, and control required by the ${downstream}.`,
+        );
+      } else if (upstream) {
+        sentences.push(
+          `The ${name} takes the signal from the ${upstream} and provides current and gain for the connected headphone.`,
+        );
+      } else {
+        sentences.push(
+          `The ${name} sits in the system as a headphone amplifier, providing current and gain for the connected transducer.`,
+        );
+      }
+      // Headphone amps are intentionally short: a single role-correct
+      // lede. We return early to bypass the facts-phrase and
+      // bottleneck-sentence trailers that assume speaker-system
+      // grammar ("headroom under demand, control at scale" reads as
+      // a room/SPL claim).
+      return sentences.join(' ');
+    }
     // Hardening Phase B B9 — all-in-one streamer-amplifier branch.
     //
     // The `amplifier` family now includes hybrid all-in-one /
@@ -1055,6 +1150,28 @@ function composeContributionBody(
       );
       // Skip the bottleneck + facts-phrase fall-through; the
       // subwoofer card is intentionally short and integration-first.
+      return sentences.join(' ');
+    }
+    if (isHeadphone(role)) {
+      // Hardening Phase E-1 — headphone transducer branch.
+      //
+      // Headphones occupy the speaker family (roleFamily matches
+      // /headphone/) but the passive-speaker prose
+      // ("translates...into sound in the room", "high-efficiency
+      // design pairs naturally with...drive") is the wrong register.
+      // Emit a single role-correct sentence that frames the
+      // headphone as the conversion endpoint and acknowledges its
+      // role in determining how the amp's character reaches the
+      // listener.
+      if (upstream) {
+        sentences.push(
+          `The ${name} converts the electrical signal from the ${upstream} into the listening experience at the ear, determining how the amplifier's control, tonal balance, and dynamics reach the listener.`,
+        );
+      } else {
+        sentences.push(
+          `The ${name} converts the system's electrical signal into the listening experience at the ear.`,
+        );
+      }
       return sentences.join(' ');
     }
     if (isActiveSpeaker(role)) {
@@ -2596,6 +2713,19 @@ function composeListenerContext(
   // on a chain whose §6 said "reveals every limitation of the front
   // end". §9 silently omits; §6 / §7 carry the actual judgment.
   if (hasConflictSignal(advisory)) return undefined;
+  // Hardening Phase E-1 — headphone-system listener-fit.
+  //
+  // The default §9 templates emit room-related advice ("larger
+  // rooms", "small-to-medium rooms at moderate volume") which is
+  // declarative-wrong for headphone systems — there is no room
+  // interaction to advise about. Headphone systems get a fixed
+  // headphone-specific paragraph instead, regardless of whether
+  // the chain carries warm/lean/neutral signature anchors.
+  if (isHeadphoneSystem(chainNames, roles)) {
+    return preferSystemTerminology(
+      'This system is built for listeners who prioritize long-form listening, low environmental intrusion, and direct engagement with the recording rather than room interaction.',
+    );
+  }
 
   // ── Signal extraction ───────────────────────────────────
   const sigLower = (advisory.systemSignature ?? '').toLowerCase();
@@ -2854,9 +2984,19 @@ function composeUpgradeHierarchy(
 
   const sentences: string[] = [];
   // Level 1 — always emit when the section fires; it is the lowest-risk path.
-  sentences.push(
-    "The lowest-risk path forward is front-end refinement — source, DAC, and cabling — where small improvements compound without changing the system's character.",
-  );
+  // Hardening Phase E-1 — the default sentence assumes a speaker
+  // chain ("source, DAC, and cabling"); for headphone-only systems
+  // we substitute a headphone-specific sentence so the prose does
+  // not refer to cabling / speaker-pair voicing.
+  if (isHeadphoneSystem(chainNames, roles)) {
+    sentences.push(
+      "The lowest-risk path forward is refinement of the source, DAC, amplification, and headphone pairing rather than wholesale system replacement.",
+    );
+  } else {
+    sentences.push(
+      "The lowest-risk path forward is front-end refinement — source, DAC, and cabling — where small improvements compound without changing the system's character.",
+    );
+  }
   // Level 2 — name the mature amplifier if there is exactly one; pluralize otherwise.
   if (matureAmps.length === 1) {
     sentences.push(

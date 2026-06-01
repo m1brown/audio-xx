@@ -3359,12 +3359,19 @@ describe('SystemAssessmentArtifact — Fix G: §5 headphone surface', () => {
       ],
     } as AdvisoryResponse);
 
-  it('renders "sound at the ear" for the headphone-tail lede instead of "sound in the room"', () => {
+  it('does NOT use speaker-family "sound in the room" prose for a headphone transducer', () => {
+    // Phase 12 Fix G originally swapped the surface phrase to "at
+    // the ear". Phase E-1 supersedes this with a dedicated
+    // headphone transducer branch ("converts the electrical signal
+    // ... into the listening experience at the ear, determining how
+    // the amplifier's control, tonal balance, and dynamics reach the
+    // listener"). The original "sound in the room" regression
+    // assertion is preserved as the lasting invariant.
     const html = render(base());
-    // The headphone card uses the speaker-family template but with
-    // the surface swapped to "at the ear".
-    expect(html).toContain('Some Headphones translates what the Some Tube HP Amp delivers into sound at the ear');
     expect(html).not.toMatch(/Some Headphones translates what the Some Tube HP Amp delivers into sound in the room/);
+    expect(html).toContain(
+      'Some Headphones converts the electrical signal from the Some Tube HP Amp into the listening experience at the ear',
+    );
   });
 
   it('still renders "in the room" for speakers (no regression)', () => {
@@ -5069,5 +5076,277 @@ describe('SystemAssessmentArtifact — Hardening D-1: regression guards', () => 
     expect(html).toContain(
       'The YG Carmel 2 is a destination-class loudspeaker; treat it as a fixed point',
     );
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// Hardening Phase E-1 — headphone-system grammar
+// ════════════════════════════════════════════════════════════════════════
+//
+// Headphone systems should be treated as their own playback category.
+// The artifact must never emit speaker-system language ("drive for the
+// speakers", "sound in the room", "larger rooms", "speaker placement")
+// inside headphone-system sections.
+
+describe('SystemAssessmentArtifact — Phase E-1 headphone amplifier branch', () => {
+  const headphoneChain = (): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'E-1 headphone amp',
+      systemSignature: 'A reference headphone system.',
+      systemChain: {
+        names: ['Holo May KTE', 'HoloAudio Bliss', 'Hifiman Susvara'],
+        roles: ['DAC', 'Headphone Amplifier', 'Headphones'],
+      },
+      componentReadings: [
+        'A reference R2R DAC.',
+        'A 12-watt Class-A solid-state headphone amplifier.',
+        'A planar magnetic flagship headphone.',
+      ],
+    } as AdvisoryResponse);
+
+  it('headphone amp emits the dedicated current/gain/control lede', () => {
+    const html = render(headphoneChain());
+    expect(html).toContain(
+      'The HoloAudio Bliss accepts the signal from the Holo May KTE and provides the current, gain structure, and control required by the Hifiman Susvara.',
+    );
+  });
+
+  it('headphone amp card contains no speaker-system language', () => {
+    const html = render(headphoneChain());
+    // Scope to the §5 component card region for precise checks.
+    const startsAt = html.indexOf('HoloAudio Bliss');
+    const endsAt = html.indexOf('Hifiman Susvara', startsAt + 1);
+    const blissCardSlice = html.slice(startsAt, endsAt);
+    expect(blissCardSlice).not.toMatch(/drive for the speakers/i);
+    expect(blissCardSlice).not.toMatch(/sound in the room/i);
+    expect(blissCardSlice).not.toMatch(/motion at the speakers/i);
+    expect(blissCardSlice).not.toMatch(/carries the signal between/i);
+  });
+
+  it('headphone amp at downstream-only position uses provides-current variant', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-1 downstream-only',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some HP Amp', 'Some Headphones'],
+        roles: ['Headphone Amplifier', 'Headphones'],
+      },
+      componentReadings: ['A headphone amp.', 'A headphone.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Some HP Amp provides the current, gain structure, and control required by the Some Headphones.',
+    );
+    expect(html).not.toMatch(/drive for the speakers/i);
+  });
+});
+
+describe('SystemAssessmentArtifact — Phase E-1 headphone transducer branch', () => {
+  const chain = (): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: 'E-1 transducer',
+      systemSignature: 'A headphone system.',
+      systemChain: {
+        names: ['Some DAC', 'Some HP Amp', 'Audeze LCD-5'],
+        roles: ['DAC', 'Headphone Amplifier', 'Headphones'],
+      },
+      componentReadings: ['A DAC.', 'A headphone amp.', 'A planar magnetic headphone.'],
+    } as AdvisoryResponse);
+
+  it('headphone transducer uses converts-electrical-signal lede', () => {
+    const html = render(chain());
+    expect(html).toContain(
+      'The Audeze LCD-5 converts the electrical signal from the Some HP Amp into the listening experience at the ear, determining how the amplifier',
+    );
+  });
+
+  it('headphone transducer card contains no speaker-family room/sound prose', () => {
+    const html = render(chain());
+    const startsAt = html.indexOf('Audeze LCD-5');
+    const lcd5Slice = html.slice(startsAt, startsAt + 1200);
+    expect(lcd5Slice).not.toMatch(/sound in the room/i);
+    expect(lcd5Slice).not.toMatch(/translates what the/i);
+    expect(lcd5Slice).not.toMatch(/high-efficiency design pairs naturally/i);
+    expect(lcd5Slice).not.toMatch(/wide-baffle/i);
+  });
+});
+
+describe('SystemAssessmentArtifact — Phase E-1 §9 headphone listener-fit', () => {
+  it('renders the dedicated headphone listener-fit paragraph regardless of signature', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-1 listener-fit',
+      // Note: NO warm/lean signature anchor — the default §9 would
+      // omit silently. Phase E-1's headphone path must render anyway.
+      systemSignature: 'A reference headphone system.',
+      systemChain: {
+        names: ['Some DAC', 'Some HP Amp', 'Some Headphones'],
+        roles: ['DAC', 'Headphone Amplifier', 'Headphones'],
+      },
+      componentReadings: ['A DAC.', 'A headphone amp.', 'A headphone.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('What This System Seems Built For');
+    expect(html).toContain(
+      'This system is built for listeners who prioritize long-form listening, low environmental intrusion, and direct engagement with the recording rather than room interaction',
+    );
+  });
+
+  it('§9 headphone paragraph contains no room or speaker-placement language', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-1 no room',
+      systemSignature: 'A warm headphone system.',
+      systemChain: {
+        names: ['Some DAC', 'Some HP Amp', 'Some Headphones'],
+        roles: ['DAC', 'Headphone Amplifier', 'Headphones'],
+      },
+      componentReadings: ['A DAC.', 'A headphone amp.', 'A headphone.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    const start = html.indexOf('What This System Seems Built For');
+    const section = html.slice(start, start + 1200);
+    expect(section).not.toMatch(/larger rooms/i);
+    expect(section).not.toMatch(/small-to-medium rooms/i);
+    expect(section).not.toMatch(/speaker placement/i);
+    expect(section).not.toMatch(/room placement/i);
+    expect(section).not.toMatch(/the speakers do not require/i);
+  });
+
+  it('mixed system with both headphones AND speakers in chain falls back to speaker §9', () => {
+    // Defensive: when the chain has BOTH a headphone AND a non-
+    // headphone speaker, the chain is mixed — the speaker side needs
+    // its own §9 reasoning. isHeadphoneSystem returns false here so
+    // the existing speaker-system §9 path runs (and may omit per its
+    // own gates).
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-1 mixed',
+      systemSignature: 'A warm tube system with headphones too.',
+      systemChain: {
+        names: ['Some DAC', 'Some Tube Amp', 'Some High-Efficiency Speakers', 'Some Headphones'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers', 'Headphones'],
+      },
+      componentReadings: [
+        'A DAC.',
+        'A push-pull tube integrated.',
+        'A high-efficiency wide-baffle speaker.',
+        'A headphone.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // Should NOT emit the headphone-specific listener-fit because the
+    // chain also has main speakers; the speaker §9 path runs.
+    expect(html).not.toContain(
+      'This system is built for listeners who prioritize long-form listening',
+    );
+  });
+});
+
+describe('SystemAssessmentArtifact — Phase E-1 §10 hierarchy wording', () => {
+  it('headphone-only system uses headphone-specific hierarchy lede when hierarchy fires', () => {
+    // Force the hierarchy paragraph to fire by including a mature
+    // tube headphone amp (Feliks Envy 300B → topology=single-ended).
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-1 hierarchy',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Feliks Envy', 'Some Headphones'],
+        roles: ['DAC', 'Headphone Amplifier', 'Headphones'],
+      },
+      componentReadings: [
+        'A DAC.',
+        'A single-ended 300B tube headphone amplifier.',
+        'A headphone.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('If You Were to Change Something');
+    expect(html).toContain(
+      'The lowest-risk path forward is refinement of the source, DAC, amplification, and headphone pairing rather than wholesale system replacement.',
+    );
+    // The default speaker-chain lede must NOT appear
+    expect(html).not.toContain(
+      'The lowest-risk path forward is front-end refinement — source, DAC, and cabling',
+    );
+  });
+});
+
+describe('SystemAssessmentArtifact — Phase E-1 regression guards', () => {
+  it('Phase K (speaker system) unchanged', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Phase K E-1 regression',
+      systemSignature: 'A warm tube-led source-first chain.',
+      systemChain: {
+        names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC favoring tonal density and harmonic continuity over digital edge.',
+        'A push-pull tube integrated; harmonic weight and rhythmic continuity define it.',
+        'A high-efficiency wide-baffle loudspeaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // Speaker prose preserved — the amp lede uses the speaker-family
+    // template; the DeVore card uses the high-eff + wide-baffle
+    // template (no headphone branch leakage).
+    expect(html).toContain(
+      'The Leben CS600X carries the signal between the Denafrips Pontus II and the DeVore O/96',
+    );
+    expect(html).toContain('translating source character into drive for the speakers');
+    expect(html).toContain('into the room');
+    // Phase K hierarchy lede must still use the speaker variant
+    expect(html).toContain(
+      'The lowest-risk path forward is front-end refinement — source, DAC, and cabling',
+    );
+    // Headphone-specific prose must NOT appear
+    expect(html).not.toContain('listening experience at the ear');
+    expect(html).not.toContain('long-form listening, low environmental intrusion');
+    expect(html).not.toContain(
+      'refinement of the source, DAC, amplification, and headphone pairing',
+    );
+  });
+
+  it('active-speaker chain unchanged (KEF LS60 Wireless)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Active speaker regression',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['RME ADI-2', 'KEF LS60 Wireless'],
+        roles: ['DAC', 'Powered Speaker'],
+      },
+      componentReadings: ['A DAC.', 'A 3-way active loudspeaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The KEF LS60 Wireless integrates amplification, driver alignment, and room-facing output',
+    );
+    // No headphone path should leak
+    expect(html).not.toContain('listening experience at the ear');
+    expect(html).not.toContain('long-form listening, low environmental intrusion');
+  });
+
+  it('subwoofer-integrated chain unchanged', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Sub regression',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some Amp', 'Some Speakers', 'REL T/9x'],
+        roles: ['Amp', 'Speakers', 'Subwoofer'],
+      },
+      componentReadings: ['An amp.', 'A speaker.', 'A subwoofer.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('extends the system');
+    expect(html).toContain('low-frequency foundation rather than carrying the full musical picture');
+    expect(html).not.toContain('listening experience at the ear');
   });
 });
