@@ -5659,3 +5659,256 @@ describe('SystemAssessmentArtifact — Phase E-2 regression guards', () => {
     expect(html).not.toContain('does not sit in the audio signal path directly');
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// Hardening Phase E-2B — skip auxiliaries when deriving signal-path
+// neighbours for §5 contribution prose.
+// ════════════════════════════════════════════════════════════════════════
+//
+// Aux cards themselves keep chain-position neighbours (PSU support
+// framing references the chain-adjacent component). Non-aux cards
+// walk over auxiliaries to find their nearest signal-path neighbour.
+
+describe('SystemAssessmentArtifact — Phase E-2B aux-skipping neighbours', () => {
+  it('Naim NDX 2 → XPS DR → Supernait 3 → Falcon LS3/5a: cards reference correct signal-path neighbours', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-2B XPS DR',
+      systemSignature: 'A Naim ecosystem chain.',
+      systemChain: {
+        names: ['Naim NDX 2', 'Naim XPS DR', 'Naim Supernait 3', 'Falcon Acoustics LS3/5a'],
+        roles: ['Streamer', 'External Power Supply', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A Naim reference network streamer.',
+        'A Naim outboard power supply.',
+        'A 80-watt Class-AB Naim integrated amplifier.',
+        'A BBC LS3/5a minimonitor.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+
+    // NDX card references the Supernait 3 (skipping XPS DR), not XPS DR
+    expect(html).toContain(
+      'The Naim NDX 2 establishes the character of the signal feeding the Naim Supernait 3',
+    );
+    // XPS DR card unchanged from E-2 — still uses chain-position support framing
+    expect(html).toContain(
+      'The Naim XPS DR does not sit in the audio signal path directly. Instead it supports the Naim NDX 2',
+    );
+    // Supernait 3 card references NDX 2 and Falcon (skipping XPS DR)
+    expect(html).toContain(
+      'The Naim Supernait 3 carries the signal between the Naim NDX 2 and the Falcon Acoustics LS3/5a',
+    );
+    // Falcon card references the Supernait 3 (unchanged — chain-position
+    // upstream was already Supernait)
+    expect(html).toContain(
+      'The Falcon Acoustics LS3/5a translates what the Naim Supernait 3 delivers',
+    );
+
+    // Negative — no non-auxiliary card may name XPS DR as upstream /
+    // downstream / between
+    const componentsStart = html.indexOf('The Components');
+    const componentsEnd = html.indexOf('How They Work Together', componentsStart);
+    const componentsSlice = html.slice(componentsStart, componentsEnd);
+    // The XPS DR's own card legitimately contains "Naim XPS DR" (its
+    // own name). Other §5 cards must not reference it. Strip the XPS
+    // DR card from the slice before checking.
+    const xpsCardStart = componentsSlice.indexOf('Naim XPS DR');
+    const xpsCardEnd = componentsSlice.indexOf('Naim Supernait 3', xpsCardStart);
+    const nonXpsSlice =
+      componentsSlice.slice(0, xpsCardStart) +
+      componentsSlice.slice(xpsCardEnd);
+    expect(nonXpsSlice).not.toContain('Naim XPS DR');
+  });
+
+  it('Multiple auxiliaries: Innuos Zenith → PhoenixNET → REF10 → Chord DAVE → Pass INT-25 → Harbeth', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-2B multi-aux',
+      systemSignature: 'sig',
+      systemChain: {
+        names: [
+          'Innuos Zenith',
+          'PhoenixNET',
+          'Mutec REF10',
+          'Chord DAVE',
+          'Pass Labs INT-25',
+          'Harbeth 30.2 XD',
+        ],
+        roles: [
+          'Streamer',
+          'Network Switch',
+          'Master Clock',
+          'DAC',
+          'Integrated Amplifier',
+          'Speakers',
+        ],
+      },
+      componentReadings: [
+        'A reference music server.',
+        'A network switch.',
+        'A 10MHz master clock.',
+        'A reference FPGA DAC.',
+        'A 25-watt Class-A integrated amplifier.',
+        'A BBC monitor.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+
+    // Innuos Zenith card references the Chord DAVE (skipping the two
+    // auxiliaries in between)
+    expect(html).toContain(
+      'The Innuos Zenith establishes the character of the signal feeding the Chord DAVE',
+    );
+    // Chord DAVE card references the Innuos Zenith upstream and Pass
+    // Labs INT-25 downstream
+    expect(html).toContain(
+      'The Chord DAVE establishes the character of the signal feeding the Pass Labs INT-25',
+    );
+    // Pass Labs INT-25 card references Chord DAVE upstream and Harbeth
+    // downstream
+    expect(html).toContain(
+      'The Pass Labs INT-25 carries the signal between the Chord DAVE and the Harbeth 30.2 XD',
+    );
+    // PhoenixNET aux card renders its support prose
+    expect(html).toContain('The PhoenixNET sits outside the audio signal path');
+    // Mutec REF10 aux card renders its support prose
+    expect(html).toContain('The Mutec REF10 does not carry the audio signal');
+    // Harbeth card references the Pass Labs INT-25 (not Mutec REF10)
+    expect(html).toContain(
+      'The Harbeth 30.2 XD translates what the Pass Labs INT-25 delivers',
+    );
+  });
+
+  it('Auxiliary at chain head: XPS DR → Naim NDX 2 → Supernait 3 → Falcon', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-2B aux at head',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Naim XPS DR', 'Naim NDX 2', 'Naim Supernait 3', 'Falcon Acoustics LS3/5a'],
+        roles: ['External Power Supply', 'Streamer', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: ['PSU.', 'Streamer.', 'Integrated.', 'Monitor.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // The aux at head has no chain-position upstream, so its support
+    // prose uses the no-upstream variant ("provides cleaner power...
+    // rather than carrying the audio signal directly").
+    expect(html).toContain(
+      'The Naim XPS DR provides cleaner, more stable power to the connected source or amplifier rather than carrying the audio signal directly',
+    );
+    // The NDX 2 — its signal-path upstream is undefined (XPS DR is
+    // skipped) but its downstream is the Supernait 3. Source-family
+    // lede with downstream-only is the existing template.
+    expect(html).toContain(
+      'The Naim NDX 2 establishes the character of the signal feeding the Naim Supernait 3',
+    );
+    // The Supernait 3 — its signal-path upstream is the NDX 2 (XPS DR
+    // skipped), downstream is Falcon.
+    expect(html).toContain(
+      'The Naim Supernait 3 carries the signal between the Naim NDX 2 and the Falcon Acoustics LS3/5a',
+    );
+  });
+
+  it('Aux upstreamFacts also skip auxiliaries (speaker drivePhrase names actual amp tech)', () => {
+    // High-eff speaker + chain has [DAC, PSU, Tube Amp, Speakers].
+    // The speaker's high-efficiency template depends on
+    // upstreamFacts.tech to name the upstream amplifier's tube drive.
+    // Without aux-skip, upstreamFacts would come from the PSU and the
+    // template would fall back to "the {upstream}'s amplification".
+    // With aux-skip, upstreamFacts comes from the tube amp.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-2B upstream facts',
+      systemSignature: 'A warm tube-led chain with PSU.',
+      systemChain: {
+        names: ['Some DAC', 'Some PSU', 'Some Tube Amp', 'Some High-Efficiency Speakers'],
+        roles: ['DAC', 'External Power Supply', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC.',
+        'A power supply.',
+        'A push-pull tube integrated.',
+        'A high-efficiency wide-baffle speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // High-eff speaker template should say "tube drive", not the
+    // fallback "amplification". This proves upstreamFacts came from
+    // the Tube Amp (skipping the PSU). HTML escapes possessive
+    // apostrophes; assert via partial substrings.
+    expect(html).toContain('The Some High-Efficiency Speakers');
+    expect(html).toContain('high-efficiency design pairs naturally with the Some Tube Amp');
+    expect(html).toContain('tube drive');
+  });
+});
+
+describe('SystemAssessmentArtifact — Phase E-2B regression guards', () => {
+  it('Phase K (no auxiliaries) unchanged', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Phase K E-2B regression',
+      systemSignature: 'A warm tube-led source-first chain.',
+      systemChain: {
+        names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC favoring tonal density and harmonic continuity over digital edge.',
+        'A push-pull tube integrated; harmonic weight and rhythmic continuity define it.',
+        'A high-efficiency wide-baffle loudspeaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Denafrips Pontus II establishes the character of the signal feeding the Leben CS600X',
+    );
+    expect(html).toContain(
+      'The Leben CS600X carries the signal between the Denafrips Pontus II and the DeVore O/96',
+    );
+    // HTML escapes possessive apostrophes; assert via partial substrings.
+    expect(html).toContain('The DeVore O/96');
+    expect(html).toContain(
+      'high-efficiency design pairs naturally with the Leben CS600X',
+    );
+    expect(html).toContain('tube drive');
+  });
+
+  it('Headphone chain unchanged', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Headphone E-2B regression',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some HP Amp', 'Some Headphones'],
+        roles: ['DAC', 'Headphone Amplifier', 'Headphones'],
+      },
+      componentReadings: ['DAC.', 'HP amp.', 'Headphones.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Some HP Amp accepts the signal from the Some DAC and provides the current',
+    );
+    expect(html).toContain(
+      'The Some Headphones converts the electrical signal from the Some HP Amp',
+    );
+  });
+
+  it('Subwoofer chain unchanged', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Sub E-2B regression',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some Amp', 'Some Speakers', 'REL T/9x'],
+        roles: ['Amp', 'Speakers', 'Subwoofer'],
+      },
+      componentReadings: ['An amp.', 'A speaker.', 'A sub.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('extends the system');
+    expect(html).toContain('low-frequency foundation rather than carrying the full musical picture');
+  });
+});

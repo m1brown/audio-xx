@@ -572,6 +572,48 @@ function isAuxiliary(role: string | undefined, name?: string): boolean {
 }
 
 /**
+ * Hardening Phase E-2B — derive signal-path neighbours by skipping
+ * auxiliary components.
+ *
+ * Phase E-2 fixed the auxiliary cards themselves (PSU / clock /
+ * network-accessory rendering) but left a residual problem: adjacent
+ * signal-path cards still derived their `upstream` / `downstream` from
+ * raw chain order. In a chain like `[NDX 2, XPS DR, Supernait 3,
+ * LS3/5a]`, the Supernait's chain-position upstream was the XPS DR
+ * (a power supply), so its §5 card read `"carries the signal between
+ * the Naim XPS DR and the Falcon Acoustics LS3/5a"` — also wrong.
+ *
+ * This helper walks backward and forward from `idx`, skipping any
+ * component that `isAuxiliary(role, name)` flags, returning the
+ * nearest signal-path neighbours on each side. Used only inside
+ * `composeContributionBody` and only for non-auxiliary cards.
+ * Auxiliary cards themselves continue to use chain-position
+ * neighbours so the PSU's support framing references the chain-
+ * adjacent component the user chose to position it next to.
+ */
+function getSignalPathNeighbours(
+  idx: number,
+  chainNames: string[],
+  roles: Array<string | undefined>,
+): { upstream?: string; downstream?: string; upstreamIdx?: number } {
+  let upstream: string | undefined;
+  let upstreamIdx: number | undefined;
+  for (let i = idx - 1; i >= 0; i--) {
+    if (isAuxiliary(roles[i], chainNames[i])) continue;
+    upstream = chainNames[i];
+    upstreamIdx = i;
+    break;
+  }
+  let downstream: string | undefined;
+  for (let i = idx + 1; i < chainNames.length; i++) {
+    if (isAuxiliary(roles[i], chainNames[i])) continue;
+    downstream = chainNames[i];
+    break;
+  }
+  return { upstream, downstream, upstreamIdx };
+}
+
+/**
  * Hardening Phase E-1 — headphone-system grammar detectors.
  *
  * Three narrow helpers used by the headphone branches in
@@ -1081,10 +1123,31 @@ function composeContributionBody(
    * instead of in poetic abstractions.
    */
   upstreamFacts?: CharacterFacts,
+  /**
+   * Hardening Phase E-2B — optional chain roles array. When passed,
+   * non-auxiliary cards derive their upstream / downstream by
+   * skipping auxiliaries (PSU / clock / network accessory). When
+   * absent, behavior is unchanged from Phase E-2 (raw chain-position
+   * neighbours).
+   */
+  roles?: Array<string | undefined>,
 ): string {
   const family = roleFamily(role);
-  const upstream = idx > 0 ? chainNames[idx - 1] : undefined;
-  const downstream = idx < chainNames.length - 1 ? chainNames[idx + 1] : undefined;
+  // Phase E-2B — auxiliary cards keep chain-position neighbours so
+  // the PSU's support framing references the chain-adjacent
+  // component the user positioned it next to. Non-auxiliary cards
+  // skip auxiliaries when deriving signal-path neighbours.
+  const isAuxCard = family === 'auxiliary' || isAuxiliary(role, name);
+  let upstream: string | undefined;
+  let downstream: string | undefined;
+  if (isAuxCard || !roles || roles.length === 0) {
+    upstream = idx > 0 ? chainNames[idx - 1] : undefined;
+    downstream = idx < chainNames.length - 1 ? chainNames[idx + 1] : undefined;
+  } else {
+    const neighbours = getSignalPathNeighbours(idx, chainNames, roles);
+    upstream = neighbours.upstream;
+    downstream = neighbours.downstream;
+  }
   const sentences: string[] = [];
 
   // Hardening Phase E-2 — auxiliary components (power supplies,
@@ -1549,13 +1612,20 @@ function buildComponentCards(
     // concretely instead of in poetic abstractions. extractCharacterFacts
     // is regex-light; this doubles per-card extract calls but the
     // overall §5 cost stays well under a millisecond.
-    const upstreamFacts =
-      i > 0
-        ? extractCharacterFacts(
-            findReadingForName(names[i - 1], readings, i - 1),
-            roles?.[i - 1],
-          )
-        : undefined;
+    // Phase E-2B — upstreamFacts must come from the nearest signal-
+    // path upstream (skipping auxiliaries). Otherwise a speaker
+    // card's high-eff drive-phrase template names a PSU as the
+    // "upstream amplifier", which is nonsensical.
+    let upstreamFacts: CharacterFacts | undefined;
+    if (i > 0) {
+      const upIdx = roles
+        ? getSignalPathNeighbours(i, names, roles).upstreamIdx ?? i - 1
+        : i - 1;
+      upstreamFacts = extractCharacterFacts(
+        findReadingForName(names[upIdx], readings, upIdx),
+        roles?.[upIdx],
+      );
+    }
     const body = composeContributionBody(
       name,
       roles?.[i],
@@ -1564,6 +1634,7 @@ function buildComponentCards(
       isBottleneck,
       facts,
       upstreamFacts,
+      roles,
     );
     const imageUrl = resolveComponentImage(name);
     return {
