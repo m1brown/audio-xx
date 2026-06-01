@@ -5912,3 +5912,214 @@ describe('SystemAssessmentArtifact — Phase E-2B regression guards', () => {
     expect(html).toContain('low-frequency foundation rather than carrying the full musical picture');
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// Hardening Phase E-3 — chain banner auxiliary annotation
+// ════════════════════════════════════════════════════════════════════════
+//
+// The §1 banner partitions auxiliaries out of the main arrow chain
+// into a compact "Support" sub-row beneath. The arrow chain shows
+// only signal-path components. Each auxiliary is labeled with which
+// signal-path component it supports.
+
+describe('SystemAssessmentArtifact — Phase E-3 chain banner auxiliary partition', () => {
+  /**
+   * Helper — extract the §1 banner slice (the area between the
+   * "Your System" heading and the "Profile" heading).
+   */
+  const bannerSlice = (html: string): string => {
+    const start = html.indexOf('Your System');
+    const end = html.indexOf('Profile', start);
+    return html.slice(start, end);
+  };
+
+  it('Phase K unchanged — no auxiliaries, no Support sub-row', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Phase K E-3 banner',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    const banner = bannerSlice(html);
+    expect(banner).toContain('Denafrips Pontus II');
+    expect(banner).toContain('Leben CS600X');
+    expect(banner).toContain('DeVore O/96');
+    expect(banner).not.toMatch(/aria-label="System auxiliary components"/);
+    // The Support label / divider must not appear when no aux exists.
+    expect(banner).not.toContain('— supports the ');
+  });
+
+  it('Single auxiliary mid-chain (Naim XPS DR): excluded from arrow chain, present in Support sub-row', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-3 XPS DR banner',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Naim NDX 2', 'Naim XPS DR', 'Naim Supernait 3', 'Falcon Acoustics LS3/5a'],
+        roles: ['Streamer', 'External Power Supply', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: ['Streamer.', 'PSU.', 'Integrated.', 'Monitor.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    const banner = bannerSlice(html);
+
+    // Support sub-row exists
+    expect(banner).toMatch(/aria-label="System auxiliary components"/);
+    // XPS DR is present in the banner overall
+    expect(banner).toContain('Naim XPS DR');
+    // XPS DR is in the Support sub-row, attributed to NDX 2
+    expect(banner).toContain('Naim XPS DR');
+    expect(banner).toContain('— supports the ');
+    expect(banner).toContain('Naim NDX 2');
+
+    // The main arrow chain must NOT include XPS DR. Verify by
+    // checking that XPS DR does NOT appear between an arrow and a
+    // role label / arrow. Conservative invariant: NDX 2 must be
+    // immediately followed in the signal-path row by the Supernait,
+    // not the XPS DR. We assert the signal-path ordering by checking
+    // the index of role labels.
+    const ndxIdx = banner.indexOf('Naim NDX 2');
+    const supernaitIdx = banner.indexOf('Naim Supernait 3');
+    const xpsAtSupportIdx = banner.lastIndexOf('Naim XPS DR');
+    expect(ndxIdx).toBeGreaterThan(-1);
+    expect(supernaitIdx).toBeGreaterThan(ndxIdx);
+    // The XPS DR in the Support sub-row appears AFTER the signal-path
+    // components (last position).
+    expect(xpsAtSupportIdx).toBeGreaterThan(supernaitIdx);
+  });
+
+  it('Multiple auxiliaries: both excluded from arrow chain, both in Support sub-row', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-3 multi-aux banner',
+      systemSignature: 'sig',
+      systemChain: {
+        names: [
+          'Innuos Zenith',
+          'PhoenixNET',
+          'Mutec REF10',
+          'Chord DAVE',
+          'Pass Labs INT-25',
+          'Harbeth 30.2 XD',
+        ],
+        roles: [
+          'Streamer',
+          'Network Switch',
+          'Master Clock',
+          'DAC',
+          'Integrated Amplifier',
+          'Speakers',
+        ],
+      },
+      componentReadings: ['Server.', 'Switch.', 'Clock.', 'DAC.', 'Amp.', 'Speaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    const banner = bannerSlice(html);
+
+    // Support sub-row exists
+    expect(banner).toMatch(/aria-label="System auxiliary components"/);
+    // Both aux names appear
+    expect(banner).toContain('PhoenixNET');
+    expect(banner).toContain('Mutec REF10');
+    // Both attributed via "supports the" — count attribution occurrences
+    const supportsCount = (banner.match(/— supports the /g) ?? []).length;
+    expect(supportsCount).toBe(2);
+    // Both auxiliaries appear AFTER the signal-path Innuos Zenith
+    // in document order (i.e., they're in the Support sub-row, not
+    // the main arrow chain).
+    const zenithIdx = banner.indexOf('Innuos Zenith');
+    const phoenixSupportIdx = banner.lastIndexOf('PhoenixNET');
+    const mutecSupportIdx = banner.lastIndexOf('Mutec REF10');
+    const harbethIdx = banner.indexOf('Harbeth 30.2 XD');
+    expect(zenithIdx).toBeGreaterThan(-1);
+    expect(harbethIdx).toBeGreaterThan(zenithIdx);
+    expect(phoenixSupportIdx).toBeGreaterThan(harbethIdx);
+    expect(mutecSupportIdx).toBeGreaterThan(harbethIdx);
+  });
+
+  it('Auxiliary at chain head: visible in Support sub-row, main path starts at NDX 2', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-3 aux head banner',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Naim XPS DR', 'Naim NDX 2', 'Naim Supernait 3'],
+        roles: ['External Power Supply', 'Streamer', 'Integrated Amplifier'],
+      },
+      componentReadings: ['PSU.', 'Streamer.', 'Integrated.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    const banner = bannerSlice(html);
+    // XPS DR appears in the Support sub-row
+    expect(banner).toMatch(/aria-label="System auxiliary components"/);
+    expect(banner).toContain('Naim XPS DR');
+    // XPS DR (aux at head) walks FORWARD to find the supported
+    // signal-path component, which is the NDX 2.
+    expect(banner).toMatch(/Naim XPS DR.*— supports the.*Naim NDX 2/s);
+    // Main arrow row starts at NDX 2 — verify ordering
+    const ndxIdx = banner.indexOf('Naim NDX 2');
+    const supernaitIdx = banner.indexOf('Naim Supernait 3');
+    expect(ndxIdx).toBeGreaterThan(-1);
+    expect(supernaitIdx).toBeGreaterThan(ndxIdx);
+  });
+
+  it('Headphone chain unchanged — no aux, no Support sub-row', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Headphone E-3 banner',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some HP Amp', 'Some Headphones'],
+        roles: ['DAC', 'Headphone Amplifier', 'Headphones'],
+      },
+      componentReadings: ['DAC.', 'HP amp.', 'Headphones.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    const banner = bannerSlice(html);
+    expect(banner).not.toMatch(/aria-label="System auxiliary components"/);
+    expect(banner).not.toContain('— supports the ');
+  });
+
+  it('Active speaker chain unchanged — no aux, no Support sub-row', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Active E-3 banner',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['RME ADI-2', 'KEF LS60 Wireless'],
+        roles: ['DAC', 'Powered Speaker'],
+      },
+      componentReadings: ['DAC.', 'Active loudspeaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    const banner = bannerSlice(html);
+    expect(banner).not.toMatch(/aria-label="System auxiliary components"/);
+    expect(banner).not.toContain('— supports the ');
+  });
+
+  it('Subwoofer chain unchanged — sub is NOT an auxiliary; main path includes it', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Sub E-3 banner',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some Amp', 'Some Speakers', 'REL T/9x'],
+        roles: ['Amp', 'Speakers', 'Subwoofer'],
+      },
+      componentReadings: ['Amp.', 'Speaker.', 'Sub.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    const banner = bannerSlice(html);
+    // Subwoofer is its own family (Phase C) — not an auxiliary. The
+    // chain banner should still include the sub in the arrow row.
+    expect(banner).not.toMatch(/aria-label="System auxiliary components"/);
+    expect(banner).toContain('REL T/9x');
+    // REL T/9x has no "supports the" attribution
+    expect(banner).not.toContain('— supports the ');
+  });
+});

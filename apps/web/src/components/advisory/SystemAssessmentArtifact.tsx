@@ -3313,7 +3313,20 @@ export default function SystemAssessmentArtifact({
           spiderChartData={a.spiderChartData}
           systemChain={
             a.systemChain
-              ? { names: a.systemChain.names, roles: a.systemChain.roles }
+              ? {
+                  names: a.systemChain.names,
+                  roles: a.systemChain.roles,
+                  // Hardening Phase E-3 — parallel boolean array marking
+                  // auxiliary entries (PSUs / clocks / network
+                  // accessories). The banner uses this to partition
+                  // auxiliaries out of the main arrow chain into a
+                  // compact "Support" sub-row beneath. Computed here
+                  // via the existing isAuxiliary helper so the banner
+                  // component itself stays presentation-only.
+                  auxiliary: a.systemChain.names.map((name, i) =>
+                    isAuxiliary(a.systemChain!.roles?.[i], name),
+                  ),
+                }
               : undefined
           }
         />

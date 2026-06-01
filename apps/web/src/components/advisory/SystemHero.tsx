@@ -30,6 +30,14 @@ interface SystemHeroProps {
   systemChain?: {
     names: string[];
     roles?: string[];
+    /**
+     * Hardening Phase E-3 — optional parallel boolean array marking
+     * auxiliary entries. Forwarded to SystemChainBanner so the banner
+     * can partition auxiliaries out of the main arrow chain into a
+     * compact "Support" sub-row beneath. Optional; absence preserves
+     * pre-E-3 visual behavior.
+     */
+    auxiliary?: boolean[];
   };
 }
 
@@ -64,6 +72,7 @@ export default function SystemHero({
         <SystemChainBanner
           names={systemChain!.names}
           roles={systemChain!.roles}
+          auxiliary={systemChain!.auxiliary}
         />
       )}
     </div>
