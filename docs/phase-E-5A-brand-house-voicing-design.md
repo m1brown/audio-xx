@@ -32,6 +32,49 @@ before any code reads from it.
 
 ---
 
+## Brand Layer Philosophy (Governing Principle)
+
+The purpose of the brand layer is to explain why experienced owners
+repeatedly arrive at certain system-building patterns — not to
+explain sound through brand identity. Brand information may
+enrich an explanation, but it must never replace
+**Design → Behavior → Experience** reasoning.
+
+Every entry in this document, every sentence the composer would
+later surface, and every revision in the editorial review pass is
+evaluated against the rule:
+
+> *Architecture produces behavior. Behavior, in the right context, produces a listening experience. The brand is the name attached to a coherent set of architectural choices — not the cause of the experience.*
+
+Concretely, this principle has three implications that are binding
+on every entry below and on the Phase E-5B implementation:
+
+1. **The data layer is allowed to name editorial vocabulary**
+   (PRaT, low coloration, source-first) **only when it ties the
+   vocabulary back to an identifiable design choice**. A sentence
+   that uses PRaT as the explanation — rather than the editorial
+   label for behavior arising from a discrete signal path and
+   power-supply design — violates the principle.
+
+2. **The data layer must not invert system-building causality.**
+   "Systems are built around McIntosh because it is McIntosh" is
+   the failure mode. "Systems are built around the amplifier
+   because the autoformer-coupled output is load-tolerant" is the
+   correct framing of the same factual observation.
+
+3. **The brand layer is secondary, not primary.** The §5
+   composer's authoritative source for character is the engine's
+   trait inference and the component's facts phrase, not the
+   brand entry. The brand entry adds context to an already-formed
+   explanation; it does not initiate one.
+
+This governing principle SUPERSEDES any individual entry's
+phrasing where they conflict. The §12 editorial review findings
+apply this principle entry-by-entry; §13 makes adherence to it a
+hard precondition for E-5B.
+
+---
+
 ## 2. Proposed Schema
 
 ```ts
@@ -125,7 +168,7 @@ interface BrandHouseVoicing {
 
 ---
 
-## 3. First-Draft Brand Entries (25 audiophile-identity + 6 commercial markers)
+## 3. First-Draft Brand Entries (23 active audiophile-identity + 2 deferred + 6 commercial markers)
 
 The full draft is reproduced verbatim in this document so it can be
 reviewed without consulting source. The layout below mirrors what a
@@ -133,14 +176,28 @@ future `.ts` data file would contain; sentence lengths, claim
 restraint, and `avoidOverclaiming` lists are the editorial substance
 of this design pass.
 
-### High-priority audiophile-identity brands (25)
+**Post-revision implementation set for E-5B is 23 audiophile-identity
+entries**, not 25. Two entries (Audio Note, Shindo) are explicitly
+marked DEFERRED below and must not be wired by the E-5B composer:
+
+- **Audio Note (#18)** — deferred pending future model-level
+  disambiguation between Audio Note UK and Audio Note Japan.
+- **Shindo Laboratory (#20)** — deferred because English-language
+  identity coverage falls below the multi-source confidence threshold
+  applied to other entries.
+
+The deferred entries are retained in §3 as research material; their
+fields are marked "research note, do not surface" and must not be
+read by the composer.
+
+### High-priority audiophile-identity brands (23 active for E-5B; 2 deferred)
 
 #### 1. Naim Audio
 - **matchTokens:** `['naim']`
 - **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** Forward, rhythmically driven presentation often summarized in the editorial vocabulary as PRaT (Pace, Rhythm, and Timing).
-- **designPhilosophy:** All-discrete signal path; power-supply design is treated as a primary determinant of sound, with outboard PSUs offered as a within-brand upgrade path on many models.
-- **systemBuildingLogic:** Within the Naim ecosystem, upgrades tend to run through external power supplies and tier-step electronics rather than cross-brand substitution.
+- **houseVoicing:** The discrete signal path and tight coupling between the input stage and the power supply tend to produce a forward, rhythmically engaged presentation; editorial coverage often labels this behavior PRaT (Pace, Rhythm, and Timing), but the term names the listening result rather than explaining it.
+- **designPhilosophy:** All-discrete signal path; power-supply design treated as a primary determinant of sound, with outboard PSUs offered as a within-brand upgrade path on many models. The PSU hierarchy is an engineering choice, not a marketing label.
+- **systemBuildingLogic:** Within the Naim ecosystem, upgrades tend to run through external power supplies and tier-step electronics because the within-brand architecture is what changes audibly; cross-brand substitution typically dilutes the rhythmic engagement that owners build around.
 - **commonStrengths:** Rhythmic engagement; vocal directness; ecosystem-coherent system building.
 - **commonTradeoffs:** Forward presentation that does not suit every recording; in many systems the PSU hierarchy is part of how the brand is meant to be heard.
 - **upgradeCautions:** Mixing Naim with non-Naim partners often shifts the presentation away from the brand's identity.
@@ -196,26 +253,26 @@ of this design pass.
 - **notes:** Non-ESL Quad products (Quad 99, Vena, S-2, etc.) are not in scope for this entry. `matchTokens` is intentionally narrowed to `quad esl` / `quad ii` to avoid triggering on non-heritage Quad lines. The ESL-57 in particular has a well-documented SPL and amplifier-load profile; any house-voicing sentence must be hedged accordingly.
 
 #### 5. Tannoy
-- **matchTokens:** `['tannoy']`
-- **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** Dual-Concentric coaxial driver presentation, often described in terms of point-source imaging and a broad listening window.
-- **designPhilosophy:** Heritage Dual-Concentric driver design with an HF compression driver loaded behind a low-frequency driver. Prestige line uses 12-inch and 15-inch dual-concentrics.
-- **systemBuildingLogic:** Tannoy Prestige loudspeakers tend to function as system anchors; the Dual-Concentric driver shapes room placement and amplifier choices.
-- **commonStrengths:** Point-source imaging; broad listening window; dynamic ease from large drivers in suitable rooms.
-- **commonTradeoffs:** Cabinet size for full Prestige models; driver-coherence character is preference-dependent.
-- **upgradeCautions:** Within the Prestige line, driver size (10 vs 12 vs 15 inch) shapes scale and room match more than electronics changes.
-- **bestUsedWhen:** A large room benefits from the dynamic ease of 12- or 15-inch dual-concentric drivers.
+- **matchTokens:** `['tannoy prestige', 'tannoy legacy', 'canterbury', 'westminster', 'kensington', 'turnberry', 'cheviot', 'arden', 'eaton', 'glenair', 'stirling']` — *intentionally model-scoped to Prestige and Legacy families; bare "tannoy" excluded to prevent identity transfer to installation / commercial Tannoy lines*
+- **priority:** `audiophile-identity` • **confidence:** `high` *(retained — see notes for the Design→Behavior justification)*
+- **houseVoicing:** Dual-Concentric coaxial driver design, often described in terms of point-source imaging and a broad listening window; the coaxial geometry is what produces the imaging characteristic, not the brand.
+- **designPhilosophy:** Heritage Dual-Concentric driver — an HF compression driver loaded behind a low-frequency driver, sharing a single acoustic axis. The Prestige line uses 12-inch and 15-inch dual-concentrics in classic cabinet alignments inherited from the Tannoy Monitor heritage.
+- **systemBuildingLogic:** Tannoy Prestige loudspeakers tend to function as system anchors because the Dual-Concentric driver's load curve and the cabinet's room-coupling characteristic dictate placement and amplifier choices before any other system decision.
+- **commonStrengths:** Point-source imaging from the Dual-Concentric geometry; broad listening window; dynamic ease from large drivers in suitable rooms.
+- **commonTradeoffs:** Cabinet size for full Prestige models; the coaxial driver's coherence character is preference-dependent.
+- **upgradeCautions:** Within the Prestige and Legacy lines, driver size (10 vs 12 vs 15 inch) shapes scale and room match more than electronics changes.
+- **bestUsedWhen:** A large room benefits from the dynamic ease of 12- or 15-inch Dual-Concentric drivers.
 - **avoidOverclaiming:** "unrivalled coherence"; "the Tannoy sound"; "the only true coaxial"; "endgame"; "world class"; "magic".
 - **appliesToRoles:** `['speaker']`
-- **exampleModels:** Canterbury GR, Westminster Royal GR, Kensington, Turnberry, Cheviot, Arden, Eaton.
-- **notes:** Commercial / installation Tannoy products are not in scope for this entry. Modern Tannoy ownership has shifted; treat the Prestige line as the editorial referent.
+- **exampleModels:** Canterbury GR, Westminster Royal GR, Kensington, Turnberry GR, Cheviot, Arden, Eaton.
+- **notes:** **Confidence rationale.** High confidence is retained because the explanatory mechanism in this entry is the Dual-Concentric architecture itself, not corporate continuity. The driver geometry, the Prestige cabinet alignments, and the Legacy lineage are stable references regardless of ownership; the entry's claims would survive a further ownership change without revision. Commercial / installation Tannoy products and any post-Prestige consumer lines are out of scope — `matchTokens` is narrowed to Prestige / Legacy model names specifically so that identity transfer to non-Prestige Tannoy products is structurally prevented.
 
 #### 6. McIntosh
 - **matchTokens:** `['mcintosh']`
 - **priority:** `audiophile-identity` • **confidence:** `medium`
 - **houseVoicing:** Smooth, full-bodied presentation with broad headroom in many systems.
 - **designPhilosophy:** Autoformer output transformers (in many solid-state designs) and unity-coupled circuit (in tube designs). Visual identity (blue meters) is a recognized part of the brand but is not a sonic claim.
-- **systemBuildingLogic:** McIntosh integrated amplifiers and the MA / MC pairings often act as the system anchor; partner choice tends to follow the McIntosh presentation rather than the reverse.
+- **systemBuildingLogic:** McIntosh integrated amplifiers and MA / MC pairings often act as the system anchor because the autoformer-coupled output offers broad load tolerance across difficult speaker impedance curves; in many systems this lets the speaker be chosen for room and listener taste rather than to match an amplifier's load preferences.
 - **commonStrengths:** Broad headroom; tonal weight; long-term within-brand ownership ecosystem.
 - **commonTradeoffs:** Presentation is preference-dependent; weight and physical scale of larger models.
 - **upgradeCautions:** Hybrid tube/SS designs (e.g. MA12000) are not pure-tube despite the tube indicator stage.
@@ -305,8 +362,8 @@ of this design pass.
 #### 12. Harbeth
 - **matchTokens:** `['harbeth']`
 - **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** BBC-licensee tradition, often described in terms of midrange naturalness and long-listening comfort, with thin-wall cabinet construction characteristic of the line.
-- **designPhilosophy:** Alan Shaw lineage. RADIAL polypropylene cone material. Thin-wall MDF cabinet construction inherited from BBC research.
+- **houseVoicing:** BBC research-derived tradition, often described in terms of midrange naturalness and long-listening comfort, with thin-wall cabinet construction characteristic of the line.
+- **designPhilosophy:** Alan Shaw lineage. RADIAL polypropylene cone material. Thin-wall MDF cabinet construction inherited from BBC research; Harbeth's relationship to that research is genealogical (founder Dudley Harwood was a BBC engineer) rather than a perpetual licensing arrangement.
 - **systemBuildingLogic:** Harbeth standmounts tend to function as long-term system anchors; Class-A or high-bias Class-AB amplification is the common partner.
 - **commonStrengths:** Midrange naturalness; vocal presentation; long-listening comfort; long lifecycle ownership.
 - **commonTradeoffs:** Bass extension limited by the BBC-tradition cabinet alignment; proper stands are part of the design.
@@ -315,7 +372,7 @@ of this design pass.
 - **avoidOverclaiming:** "the most natural"; "BBC monitor truth"; "Harbeth honesty"; "endgame"; "world class"; "the only true BBC speaker"; "magic".
 - **appliesToRoles:** `['speaker']`
 - **exampleModels:** 30.2 XD, SHL5plus XD, Monitor 40.3 XD, P3ESR XD.
-- **notes:** BBC tradition is editorially safe when described as licensee/inheritor language rather than as exclusive BBC ownership. RADIAL is Alan Shaw's polymer cone material and is a brand-specific identity feature.
+- **notes:** BBC tradition is editorially safe when described as research-derived / genealogical, not as licensing or exclusive ownership. RADIAL is Alan Shaw's polymer cone material and is a brand-specific identity feature.
 
 #### 13. Spendor
 - **matchTokens:** `['spendor']`
@@ -350,8 +407,8 @@ of this design pass.
 #### 15. Magico
 - **matchTokens:** `['magico']`
 - **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** Sealed-cabinet aluminum-extrusion construction associated with a low-colouration presentation, where the cabinet's inertness is part of the design intent.
-- **designPhilosophy:** Aluminum-extrusion sealed cabinets, beryllium tweeter in higher tiers, measurement-informed design (without claiming a single objective truth).
+- **houseVoicing:** Sealed-cabinet aluminum-extrusion construction designed to minimize cabinet contribution; the engineering goal is low cabinet colouration, though the resulting presentation is preference-dependent — some listeners hear neutrality, others find it analytical.
+- **designPhilosophy:** Aluminum-extrusion sealed cabinets and beryllium tweeters (in higher tiers) are the durable engineering claims; "low colouration" is the design intent rather than a universally-agreed listening outcome.
 - **systemBuildingLogic:** A-series (entry) → S-series → M-series within-brand ladder; sealed-cabinet design tends to favor solid-state amplification with strong bass control.
 - **commonStrengths:** Cabinet inertness; bass control via sealed alignment; engineering consistency across the line.
 - **commonTradeoffs:** Cabinet weight; sealed-cabinet bass extension favors amplification with grip.
@@ -392,26 +449,52 @@ of this design pass.
 - **exampleModels:** O/93, O/96, O/Reference, Gibbon 88, Gibbon Super 8.
 - **notes:** Small NYC-based brand; service and ownership continuity is an ownership consideration. Phase K reference uses DeVore in a high-efficiency tube context.
 
-#### 18. Audio Note (UK & Japan)
-- **matchTokens:** `['audio note']` — *cannot disambiguate UK vs Japan from chain name alone*
-- **priority:** `audiophile-identity` • **confidence:** `medium` *(downgraded effective ceiling — see notes on UK/Japan disambiguation; the composer should treat this entry as `low` until disambiguation lands)*
-- **houseVoicing:** Tube-led, high-efficiency-speaker tradition often associated with tonal density and single-ended triode partnering, with caveats below about UK vs Japan.
-- **designPhilosophy:** Peter Qvortrup (UK) and the separate Audio Note Japan lineage. SET amplifier focus, high-efficiency speaker partner (AN-E, AN-J, AN-K), silver / copper wire emphasis.
-- **systemBuildingLogic:** Within-brand partnering is the canonical approach; tier ladders span an enormous price range. The UK and Japan lineages should not be collapsed.
-- **commonStrengths:** Tonal density; SET intimacy; within-brand voicing coherence.
-- **commonTradeoffs:** SPL ceiling on lower-tier SET pairings; single-brand voicing is preference-dependent; UK vs Japan disambiguation is non-trivial.
+#### 18. Audio Note (UK & Japan) — **DEFERRED FROM E-5B**
+
+> **Status: DEFERRED.** This entry is excluded from the initial
+> Phase E-5B implementation set. The decision is structural, not
+> editorial: a single brand-level entry for "Audio Note" cannot
+> correctly serve both Audio Note UK and Audio Note Japan, which
+> are separately owned companies with different lineages,
+> different model ranges, and different voicing targets. Surfacing
+> house-voicing prose against the unified `['audio note']` token
+> would risk misattributing UK character to a Japan owner (or
+> vice versa) — exactly the failure mode the §12.6 split-tier
+> rule was written to prevent.
+>
+> **Future treatment requires model-level disambiguation.** A
+> future revision should replace this single entry with two
+> entries keyed to identifiable model families (for example
+> Audio Note UK on `['an-e', 'an-j', 'an-k', 'cd 2.1x',
+> 'meishu', 'soro', 'oto']`, Audio Note Japan on the appropriate
+> Ongaku / Gaku-On / Tomei lineage) rather than the brand name.
+> Composer integration should not attempt to disambiguate UK
+> versus Japan from chain context.
+
+The fields below are retained as research notes for the future
+model-level entries and **must not be surfaced by the E-5B
+composer**. They are kept in this document so that the future
+disambiguation work has a starting point.
+
+- **matchTokens:** `['audio note']` — *cannot disambiguate UK vs Japan from chain name alone; this token set must NOT be used for E-5B identity prose*
+- **priority:** `audiophile-identity` (*deferred — do not implement*) • **confidence:** *N/A while deferred*
+- **houseVoicing (research note, do not surface):** Tube-led, high-efficiency-speaker tradition often associated with tonal density and single-ended triode partnering — with the UK and Japan lineages voiced separately.
+- **designPhilosophy (research note, do not surface):** Peter Qvortrup (UK) and the separate Audio Note Japan lineage. SET amplifier focus, high-efficiency speaker partners (AN-E, AN-J, AN-K on the UK side), silver / copper wire emphasis on the UK side.
+- **systemBuildingLogic (research note, do not surface):** Within-brand partnering is the canonical approach on both sides; tier ladders span an enormous price range. The UK and Japan lineages must not be collapsed.
+- **commonStrengths:** Tonal density; SET intimacy; within-brand voicing coherence — when correctly attributed to UK or Japan.
+- **commonTradeoffs:** SPL ceiling on lower-tier SET pairings; single-brand voicing is preference-dependent; UK vs Japan disambiguation is unsolvable from brand name alone.
 - **upgradeCautions:** Audio Note UK and Audio Note Japan are separate companies despite the shared name; ownership and service paths differ.
-- **bestUsedWhen:** The listener is committed to SET / high-efficiency philosophy and ideally builds within the brand.
+- **bestUsedWhen:** The listener is committed to SET / high-efficiency philosophy and builds within the correctly-identified lineage.
 - **avoidOverclaiming:** "unrivalled tone"; "the only SET that does X"; "the Audio Note sound"; "endgame"; "world class"; "the SET reference"; "magic"; "musicality" as an unexplained noun.
-- **appliesToRoles:** `['source', 'amplifier', 'speaker']`
-- **exampleModels:** CD 2.1x, Meishu, Soro, AN-E SPe HE, AN-J, AN-K.
-- **notes:** **CRITICAL** distinction: Audio Note UK ≠ Audio Note Japan. Both are legitimate, separately owned, and have different lineages. The artifact should NOT collapse them; until the composer can disambiguate by model token, treat this entry as effectively `low` confidence and prefer not to surface house-voicing prose. Editorial review flagged this as the highest-risk entry in the draft.
+- **appliesToRoles:** `['source', 'amplifier', 'speaker']` (*deferred*)
+- **exampleModels (mixed across lineages; for research only):** CD 2.1x, Meishu, Soro, AN-E SPe HE, AN-J, AN-K (UK side); Ongaku, Gaku-On, Tomei (Japan side).
+- **notes:** **DEFERRED.** The composer must treat `['audio note']` as not present in the data layer for E-5B. Re-introduce only after a future revision splits this into two model-level entries. Until then, an Audio Note component receives no house-voicing prose; the §5 composer's existing facts phrase and trait inference remain the only character source.
 
 #### 19. Leben Hi-Fi
 - **matchTokens:** `['leben']`
 - **priority:** `audiophile-identity` • **confidence:** `medium`
-- **houseVoicing:** Push-pull tube integrated amplifiers with characteristic Japanese boutique tonal balance; mature voicing without warmth-bloat.
-- **designPhilosophy:** Taku Hyodo (founder, Tokyo). Push-pull tube designs with EL84 / 6L6GC / 6CA7 output stages.
+- **houseVoicing:** Push-pull tube integrated amplifiers using EL84 / 6L6GC / 6CA7 output stages, often associated with mature voicing that avoids euphonic warmth-bloat in many systems.
+- **designPhilosophy:** Taku Hyodo lineage (founder, Tokyo). Push-pull tube topology with selected output-stage tubes; the design choices (push-pull rather than SET, mid-power output, EL84/6L6GC/6CA7 selection) are the explanatory mechanism, not the brand's regional provenance.
 - **systemBuildingLogic:** CS300 / CS600 / CS600X / CS1000P tier. The CS600 series is the canonical Leben integrated.
 - **commonStrengths:** Mature voicing stability; push-pull tube character without warmth-bloat; pairing well with high-efficiency speakers.
 - **commonTradeoffs:** Lower-power tube limits demanding loads; boutique-brand service consideration.
@@ -422,20 +505,45 @@ of this design pass.
 - **exampleModels:** CS300, CS600X, CS1000P, RS28CX (preamp).
 - **notes:** Phase K reference uses Leben CS600X. Boutique service network is limited outside Japan; ownership consideration on parts availability.
 
-#### 20. Shindo Laboratory
-- **matchTokens:** `['shindo']`
-- **priority:** `audiophile-identity` • **confidence:** `medium`
-- **houseVoicing:** All-tube, vintage-tube-focused designs often associated with tonal density and dynamic restraint at moderate volumes.
-- **designPhilosophy:** Ken Shindo lineage (continued by Takashi Shindo). Vintage-tube focus, often NOS components, low-power SET and push-pull tube designs.
-- **systemBuildingLogic:** Shindo amplifiers tend to partner with high-efficiency loudspeakers (DeVore Orangutan is a frequently-cited NYC pairing). Within-brand source partnership is also common.
+#### 20. Shindo Laboratory — **DEFERRED FROM E-5B**
+
+> **Status: DEFERRED.** This entry is excluded from the initial
+> Phase E-5B implementation set.
+>
+> **Rationale.** Much of Shindo's identity in English-language
+> editorial coverage is disproportionately influenced by a small
+> number of reviewers — notably Art Dudley's long-running
+> Stereophile coverage — rather than the multi-source
+> editorial consensus applied to entries like Naim, Quad, Pass,
+> Wilson, or Klipsch Heritage. The brand's surrounding
+> vocabulary ("tone," "musicality," "magic," "cult,"
+> "endgame") is also more folklore-laden than the editorial
+> discipline of this document can safely surface, even with a
+> strong deny-list.
+>
+> Shindo does not currently meet the multi-source confidence
+> threshold applied elsewhere. Deferring is the safe default;
+> downgrading to `low` confidence and suppressing identity
+> rendering would achieve the same outcome but would leave the
+> entry visible to future maintainers as if it were ready for
+> surfacing.
+
+The fields below are retained as research notes for any future
+revision and **must not be surfaced by the E-5B composer**.
+
+- **matchTokens:** `['shindo']` *(deferred — must NOT be used for E-5B identity prose)*
+- **priority:** `audiophile-identity` (*deferred — do not implement*) • **confidence:** *N/A while deferred*
+- **houseVoicing (research note, do not surface):** All-tube, vintage-tube-focused designs often associated with tonal density and dynamic restraint at moderate volumes — with strong caveats about single-reviewer foundation.
+- **designPhilosophy (research note, do not surface):** Ken Shindo lineage (continued by Takashi Shindo). Vintage-tube focus, often NOS components, low-power SET and push-pull tube designs.
+- **systemBuildingLogic (research note, do not surface):** Shindo amplifiers tend to partner with high-efficiency loudspeakers (the Shindo + DeVore Orangutan pairing is a frequently-cited example). Within-brand source partnership is also common.
 - **commonStrengths:** Tonal density; vintage-tube character; long editorial history of within-brand system building.
-- **commonTradeoffs:** SPL ceiling on SET pairings; limited service network outside specialist dealers; long-term ownership depends on vintage-tube supply.
+- **commonTradeoffs:** SPL ceiling on SET pairings; limited service network outside specialist dealers; long-term ownership depends on vintage-tube supply; single-reviewer-foundation risk in English-language coverage.
 - **upgradeCautions:** Discontinued Shindo models (Aurieges, Monbrison, Cortese, Haut-Brion) have very limited replacement and repair paths.
 - **bestUsedWhen:** A high-efficiency loudspeaker is in place and the listener is comfortable with vintage-tube ownership trade-offs.
 - **avoidOverclaiming:** "unmatched tone"; "unsurpassed musicality"; "Shindo magic"; "cult"; "endgame"; "world class"; "the only SET that does X"; "musicality" as an unexplained noun; "the Shindo sound" as a self-evident referent.
-- **appliesToRoles:** `['amplifier']`
+- **appliesToRoles:** `['amplifier']` (*deferred*)
 - **exampleModels:** Aurieges-L, Cortese, Monbrison, Haut-Brion.
-- **notes:** Shindo has a long editorial following (Art Dudley's Stereophile coverage shaped much of the modern Shindo identity). Restraint is critical to avoid hype framing; do not import "cult," "magic," or "musicality" as an unexplained noun into any output sentence.
+- **notes:** **DEFERRED.** Single-reviewer-foundation in English-language editorial coverage falls below the multi-source confidence threshold applied to other entries. The composer must treat `['shindo']` as not present in the data layer for E-5B. A Shindo component receives no house-voicing prose; the §5 composer's existing facts phrase and trait inference remain the only character source. A future revision could re-introduce the entry after additional independent editorial sources are surveyed.
 
 #### 21. Hegel Music Systems
 - **matchTokens:** `['hegel']`
@@ -455,8 +563,8 @@ of this design pass.
 #### 22. Luxman
 - **matchTokens:** `['luxman']`
 - **priority:** `audiophile-identity` • **confidence:** `medium`
-- **houseVoicing:** Japanese Class-AB integrated heritage with heavy power supplies, often associated with tonal richness and dynamic ease.
-- **designPhilosophy:** Luxman Corporation lineage (Yokohama). High-bias Class-AB designs; tube models (LX series) and solid-state (L-series) coexist.
+- **houseVoicing:** High-bias Class-AB integrated amplifier designs with substantial power supplies and large output stages, often associated with tonal richness and dynamic ease at moderate volumes.
+- **designPhilosophy:** Luxman Corporation lineage (Yokohama, Japan). High-bias Class-AB topology with conservative bias points and oversized power supplies; the tube models (LX series) use push-pull triode designs and the solid-state (L-series) lineage coexists with separate voicing targets.
 - **systemBuildingLogic:** L-505 / L-509X / L-595A SE solid-state integrated ladder; LX-380 / LX-1000 valve integrated tier. The L-509X has historically anchored the flagship reference.
 - **commonStrengths:** Tonal richness; dynamic ease; long-cycle ownership in many systems.
 - **commonTradeoffs:** Weight and chassis scale; heat from high-bias designs.
@@ -470,10 +578,10 @@ of this design pass.
 #### 23. Rega
 - **matchTokens:** `['rega']`
 - **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** Brand-coherent voicing across vinyl + electronics + loudspeaker — characteristic Rega rhythmic engagement and tonal density.
-- **designPhilosophy:** Roy Gandy lineage (Essex, UK). Rega ecosystem is intentionally cross-component voiced for synergy.
-- **systemBuildingLogic:** Planar 1 → 2 → 3 → 6 → 8 → 10 vinyl ladder; Brio / Aethos / Osiris electronics ladder; RX speakers. Brand-coherent partnering is the canonical Rega approach.
-- **commonStrengths:** Brand-coherent voicing; rhythmic engagement; within-ecosystem synergy.
+- **houseVoicing:** A cross-component design — turntables, electronics, and loudspeakers developed by the same engineering team — that tends to produce ecosystem-level compatibility and a rhythmically engaged presentation when systems are built largely within the brand.
+- **designPhilosophy:** Roy Gandy lineage (Essex, UK). The cross-component design philosophy is the engineering choice: turntables, electronics, and loudspeakers share a single team's voicing target and within-brand cartridge / tonearm / speaker pairings are tested as full systems before release.
+- **systemBuildingLogic:** Planar 1 → 2 → 3 → 6 → 8 → 10 vinyl ladder; Brio / Aethos / Osiris electronics ladder; RX speakers. Within-brand partnering tends to surface ecosystem-level compatibility (matched gain stages, recommended cartridges, intentional voicing alignment) that cross-brand substitution typically dilutes.
+- **commonStrengths:** Ecosystem-level compatibility from the cross-component design; rhythmic engagement when systems are built within the brand; long-cycle ownership.
 - **commonTradeoffs:** Single-brand voicing dependence; Rega character is preference-dependent.
 - **upgradeCautions:** Planar tier steps are meaningful; cross-brand cartridge changes the foundation.
 - **bestUsedWhen:** The owner values brand-coherent voicing and is committed to building within the Rega ecosystem.
@@ -485,11 +593,11 @@ of this design pass.
 #### 24. KEF
 - **matchTokens:** `['kef']`
 - **priority:** `mixed` • **confidence:** `medium`
-- **houseVoicing:** Uni-Q point-source coaxial driver across modern KEF speakers; characteristic broad imaging window and modern voicing across tiers.
-- **designPhilosophy:** Uni-Q driver: concentric tweeter-in-midbass for point-source dispersion. Modern KEF Reference / Blade lineage and entry Q-series share Uni-Q.
-- **systemBuildingLogic:** Q-series (entry) → R-series → Reference → Blade and LS-series active wireless ladder.
-- **commonStrengths:** Point-source imaging across the lineup; modern voicing consistency; reference-tier credibility via Reference / Blade.
-- **commonTradeoffs:** Q-series and R-series are mid-tier; not all KEF speakers are destination-class. LS50 series is preference-polarizing for some listeners.
+- **houseVoicing:** Uni-Q point-source coaxial driver — a concentric tweeter-in-midbass topology that tends to widen the off-axis listening window — carried across the modern lineup; the driver geometry produces a consistent imaging behavior, but voicing varies meaningfully by tier and brand-level claims should be scoped to the tier in question.
+- **designPhilosophy:** Uni-Q driver: concentric tweeter-in-midbass for shared acoustic centre and broad dispersion. The same Uni-Q architecture appears across Q-series, R-series, Reference and Blade, but cabinet design, crossover topology, and voicing targets differ enough that the tiers are not interchangeable identities.
+- **systemBuildingLogic:** Q-series (entry, commercial-tier presentation) → R-series (mid) → Reference → Blade and LS-series active wireless ladder; identity prose should be restricted to R-series and above. The Q-series is positioned and voiced for a different listener.
+- **commonStrengths:** Point-source imaging from the Uni-Q geometry; broad off-axis dispersion; engineering consistency at the architecture level.
+- **commonTradeoffs:** Q-series and R-series are mid-tier and not destination-class; LS50 series is preference-polarizing; brand-level claims about voicing flatten meaningful tier differences.
 - **upgradeCautions:** Q-series → R-series → Reference / Blade are meaningfully different tiers.
 - **bestUsedWhen:** A modern listening style favors Uni-Q point-source imaging; system tier matches speaker tier.
 - **avoidOverclaiming:** "the best coaxial"; "flat measurement reference"; "the KEF sound"; "endgame"; "world class"; "the only Uni-Q"; "magic"; "giant killer" (a phrase historically attached to LS50 reviews).
@@ -500,11 +608,11 @@ of this design pass.
 #### 25. Focal
 - **matchTokens:** `['focal']`
 - **priority:** `mixed` • **confidence:** `medium`
-- **houseVoicing:** Beryllium tweeter (high-end) presentation with characteristic top-end extension; inverted dome heritage.
-- **designPhilosophy:** French heritage (Saint-Étienne). Beryllium tweeter in higher tiers; aluminum/magnesium dome in mid-tier; W cone / Flax cone midbass options.
-- **systemBuildingLogic:** Chora / Aria / Sopra / Utopia tier ladder; Maestro Utopia / Stella Utopia / Grande Utopia EM Evo flagships.
-- **commonStrengths:** Top-end extension via beryllium; brand-coherent voicing direction; wide tier range.
-- **commonTradeoffs:** Beryllium top-end is preference-dependent; tier voicings are not identical across Chora → Utopia.
+- **houseVoicing:** Beryllium-tweeter top-end extension in higher tiers (Sopra and above), with the inverted-dome midrange as the brand's distinctive driver lineage; tier voicings differ meaningfully and brand-level claims should be scoped to Sopra and above.
+- **designPhilosophy:** Saint-Étienne lineage. Beryllium tweeter in higher tiers; aluminum/magnesium dome in mid-tier; W-cone and Flax-cone midbass options. The driver architecture is the durable explanatory mechanism; tier voicings differ enough that one description cannot cover the line.
+- **systemBuildingLogic:** Chora / Aria / Sopra / Utopia tier ladder; Maestro Utopia / Stella Utopia / Grande Utopia EM Evo flagships. Identity prose should be scoped to Sopra and above; Chora and entry Aria are positioned for a different listener.
+- **commonStrengths:** Top-end extension from the beryllium tweeter (Sopra and above); distinctive inverted-dome midrange lineage; wide tier coverage from entry to statement.
+- **commonTradeoffs:** Beryllium top-end is preference-dependent; tier voicings vary meaningfully across Chora → Utopia and brand-level claims flatten that variation.
 - **upgradeCautions:** Chora / Aria → Sopra / Utopia is a substantial scale step. Focal headphone (Utopia / Clear / Bathys) is a separate lineage.
 - **bestUsedWhen:** A modern system favors top-end extension and the listener prefers beryllium character.
 - **avoidOverclaiming:** "the most resolving tweeter"; "the French sound"; "beryllium leader"; "endgame"; "world class"; "the only beryllium tweeter"; "magic"; "best in class".
@@ -873,14 +981,27 @@ lists:
 | # | Brand | From | To | Reason |
 |---|---|---|---|---|
 | 7 | Audio Research | high | medium | 2024 ownership change makes forward-looking voicing claims uncertain; ARC entry now notes this explicitly and labels current claims as historical. |
-| 18 | Audio Note (UK & Japan) | medium | medium (effective `low`) | UK vs Japan disambiguation is not solvable from chain name alone; entry instructs the composer to treat the entry as `low` confidence until a model-token disambiguation is added. Highest-risk entry in the draft. |
+
+### 12.3a Confidence levels explicitly retained after independent review
+
+| # | Brand | Confidence | Why retained |
+|---|---|---|---|
+| 5 | Tannoy | high *(retained)* | The Design→Behavior explanatory mechanism in the entry is the Dual-Concentric driver geometry and the Prestige / Legacy cabinet alignments, not corporate continuity. `matchTokens` were narrowed to Prestige / Legacy model names so identity transfer to non-Prestige Tannoy products is structurally prevented. The claims would survive a further ownership change without revision. |
 
 ### 12.4 Deferred (do NOT include in E-5B initial implementation)
 
+The first two rows are the **structural** deferrals from this
+revision pass — they were upgraded to explicit deferrals on the
+basis of the independent editorial review and the §1A Brand Layer
+Philosophy. The remaining rows are coverage-completeness
+deferrals (entries that could later be added without blocking
+E-5B).
+
 | Brand / category | Reason |
 |---|---|
-| Audio Research (forward-looking voicing under new ownership) | New-product voicing claims must wait for editorial validation post-2024 ownership change. |
-| Audio Note UK vs Japan disambiguated entries | Requires `brandFamily` / model-token disambiguation work before identity prose can be safely surfaced. |
+| **Audio Note (#18) — deferred from E-5B (structural)** | A single brand-level entry for "Audio Note" cannot correctly serve both Audio Note UK and Audio Note Japan, which are separately owned companies with different lineages, model ranges, and voicing targets. Future treatment requires model-level disambiguation (entries keyed to identifiable model families rather than brand name alone), not a confidence-level workaround. The §3 entry is marked DEFERRED and its `houseVoicing` / `designPhilosophy` / `systemBuildingLogic` fields are research notes only. |
+| **Shindo Laboratory (#20) — deferred from E-5B (structural)** | Shindo's English-language identity is disproportionately influenced by a small number of reviewers (notably Art Dudley's Stereophile coverage), and the surrounding editorial vocabulary is more folklore-laden than this document's discipline can safely surface. The entry does not currently meet the multi-source confidence threshold applied elsewhere (Naim, Quad, Pass, Wilson, Klipsch Heritage, etc.). Deferring is the safe default; the §3 entry is marked DEFERRED and its `houseVoicing` / `designPhilosophy` / `systemBuildingLogic` fields are research notes only. |
+| Audio Research (forward-looking voicing under new ownership) | New-product voicing claims must wait for editorial validation post-2024 ownership change. The entry itself remains active for E-5B with claims framed as historical. |
 | Vandersteen, ATC | Already covered by Phase E-4 model patterns; voicing-depth entry deferred from this draft as low-priority. |
 | Sonus Faber, Boenicke, Borresen, Raidho, Marten, Verity, Rockport, Stenheim, TAD | Already covered as destination via Phase D-1 brand allowlist; voicing depth desirable but not blocking. |
 | Marantz, Yamaha, NAD, Denon | Mass-market identity fragmented across vintage / modern / multi-channel lines; defer until `mixed` presentation pattern is established. |
@@ -944,6 +1065,32 @@ confidence:
 8. **Do not use affiliate / commerce relevance as advisory
    relevance**. WiiM is in catalog for purchase paths; it is not in
    the identity-prose layer.
+9. **Architecture must produce behavior — not the other way
+   around.** This is the §1A Brand Layer Philosophy applied at
+   the sentence level: any house-voicing sentence that names a
+   trait without naming the design choice that produces it is a
+   restraint failure, even if it passes every other gate.
+
+### 12.7 Final-pass revisions (after independent editorial review)
+
+A second editorial pass was applied following an independent
+review. The revisions below are recorded so future maintainers
+can trace why specific entries read the way they do.
+
+| # | Brand | Final-pass change |
+|---|---|---|
+| 1 | Naim | `houseVoicing` rewritten so the discrete signal path + tightly-coupled PSU **produce** the forward, rhythmically engaged presentation; PRaT moved into editorial-vocabulary framing ("names the listening result rather than explaining it"). `designPhilosophy` clarifies PSU hierarchy is an engineering choice, not a marketing label. `systemBuildingLogic` rewritten to ground within-brand upgrade behavior in the architecture rather than brand loyalty. |
+| 5 | Tannoy | `matchTokens` narrowed from `['tannoy']` to Prestige + Legacy + model names so the entry cannot transfer identity to installation / commercial Tannoy products. Confidence retained at `high` with explicit rationale documenting that the explanatory mechanism is the Dual-Concentric architecture, not corporate continuity. `notes` records the confidence rationale. |
+| 6 | McIntosh | `systemBuildingLogic` rewritten to ground amplifier-as-anchor system-building behavior in the autoformer-coupled output's load tolerance, not in the brand's presentation preference. The Brand → System Choice inversion is removed. |
+| 12 | Harbeth | "BBC-licensee tradition" → "BBC research-derived tradition." `designPhilosophy` and `notes` clarify the relationship is genealogical (founder ex-BBC engineer) rather than a perpetual licensing arrangement. |
+| 15 | Magico | "low colouration presentation" replaced with a balanced formulation: sealed-cabinet aluminum-extrusion design is the durable engineering claim; the listening result is preference-dependent (some hear neutrality, others find it analytical). |
+| 19 | Leben | National-identity framing ("Japanese boutique tonal balance") replaced with topology-grounded language (push-pull tube topology, EL84 / 6L6GC / 6CA7 selection). |
+| 22 | Luxman | "Japanese Class-AB integrated heritage" replaced with topology-grounded "high-bias Class-AB integrated amplifier designs with substantial power supplies and large output stages." |
+| 23 | Rega | Self-referential "characteristic Rega rhythmic engagement and tonal density" removed. `houseVoicing` rewritten around the cross-component design philosophy; `systemBuildingLogic` grounds ecosystem-level compatibility in concrete engineering features (matched gain stages, recommended cartridges, intentional voicing alignment). |
+| 24 | KEF | "modern voicing across tiers" / "modern voicing consistency" empty phrases removed. Tier differentiation strengthened — identity prose explicitly scoped to R-series and above; brand-level claims flagged as flattening meaningful tier differences. |
+| 25 | Focal | "characteristic top-end extension" self-reference removed. Identity prose scoped to Sopra and above. Tier voicings explicitly framed as differing meaningfully across Chora → Utopia. |
+| 18 | Audio Note | **Marked DEFERRED FROM E-5B** with structural rationale. Fields converted to research notes. The composer must not read this entry. |
+| 20 | Shindo | **Marked DEFERRED FROM E-5B** with multi-source-threshold rationale. Fields converted to research notes. The composer must not read this entry. |
 
 ---
 
@@ -971,9 +1118,28 @@ not aspirations.
       `matchTokens` value.
 - [ ] Audio Research is `confidence: 'medium'` (downgraded from
       first-draft `high`).
-- [ ] Audio Note's notes field explicitly states the composer should
-      treat it as `low` confidence until UK/Japan disambiguation
-      lands.
+- [ ] Tannoy is `confidence: 'high'` with `matchTokens` narrowed to
+      Prestige / Legacy + model names (per §12.3a, the high
+      confidence is anchored to the Dual-Concentric architecture
+      and Prestige / Legacy lineage, not to corporate continuity).
+- [ ] **Audio Note (#18) is DEFERRED.** The composer must treat the
+      `['audio note']` token as not present in the data layer.
+      Re-introduction requires model-level disambiguation (a
+      separate `audio-note-uk` entry keyed to UK model tokens and
+      a separate `audio-note-japan` entry keyed to Japan model
+      tokens). Confidence-level workarounds are not acceptable.
+- [ ] **Shindo Laboratory (#20) is DEFERRED.** The composer must
+      treat the `['shindo']` token as not present in the data
+      layer. Re-introduction requires a survey of additional
+      independent editorial sources beyond Stereophile's
+      Art-Dudley-era coverage. Downgrading to `low` confidence is
+      not acceptable as a workaround — the entry must be absent
+      from the implementation set.
+- [ ] The §1A Brand Layer Philosophy has been adopted as a
+      governing principle. Every active entry's `houseVoicing` /
+      `designPhilosophy` / `systemBuildingLogic` is reviewable
+      against the Architecture → Behavior → Experience rule and
+      does not invert that hierarchy.
 
 ### 13.2 Composer-layer preconditions (hard gates)
 
@@ -1090,9 +1256,22 @@ exist and pass:
 
 **If any precondition above is unmet, E-5B should not proceed.**
 
+The §1A Brand Layer Philosophy is the operative governing principle
+for every active entry. The §12 findings record the editorial
+state. The §13 preconditions are the implementation gate. In any
+disagreement between this document and the §11 self-check, §1A,
+§12, and §13 prevail.
+
 ---
 
-*End of Phase E-5A design document, as revised in editorial review.
-No code is wired. This file is documentation-only. The §12 findings
-and §13 implementation gate are the operative conditions for E-5B
-and SUPERSEDE the §11 self-check on any disagreement.*
+*End of Phase E-5A design document, as revised in two editorial
+review passes. No code is wired. This file is documentation-only.
+The §1A Brand Layer Philosophy, §12 findings, and §13 implementation
+gate are the operative conditions for E-5B and SUPERSEDE the §11
+self-check on any disagreement.*
+
+*Post-final-pass implementation set: 23 active audiophile-identity
+entries + 2 explicit deferrals (Audio Note, Shindo) + 6 commercial
+markers. Audio Research is the only confidence downgrade
+(high → medium); Tannoy is the only retained `high` carrying an
+explicit Design→Behavior justification documented at §12.3a.*
