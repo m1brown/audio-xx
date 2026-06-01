@@ -4915,9 +4915,16 @@ describe('SystemAssessmentArtifact — Hardening D-1: explicitly deferred brands
     expect(html).not.toContain('ATC SCM7 is a destination-class loudspeaker');
   });
 
-  it('ATC SCM40 — NOT protected at brand level (would need model-allowlist work)', () => {
+  it('ATC SCM40 — NOW protected via Phase E-4 model allowlist (was deferred in D-1)', () => {
+    // Phase D-1 deferred ATC because brand-level allowlist would
+    // over-protect SCM7 / SCM11 entry monitors. Phase E-4 closes the
+    // gap by matching SCM40+ specifically. SCM7 / SCM11 still NOT
+    // protected; see "ATC SCM7" / negative regression below and in
+    // Phase E-4's own deferred-brands suite.
     const html = render(destChain('ATC SCM40'));
-    expect(html).not.toContain('ATC SCM40 is a destination-class loudspeaker');
+    expect(html).toContain(
+      'The ATC SCM40 is a destination-class loudspeaker; treat it as a fixed point',
+    );
   });
 
   it('Vandersteen 1Ci budget entry — NOT protected (1Ci ~$1.5k mass-market)', () => {
@@ -4947,16 +4954,18 @@ describe('SystemAssessmentArtifact — Hardening D-1: explicitly deferred brands
     expect(html).not.toContain('Klipsch RP-600M is a destination-class loudspeaker');
   });
 
-  it('Klipsch Heresy IV heritage — NOT brand-level protected (needs model allowlist)', () => {
-    // Heresy IV is destination-class in the audiophile press, but
-    // cannot be brand-level matched without over-protecting RP /
-    // Reference / mass-market Klipsch. Confirmed deferred to model-
-    // specific future work. Reading omits high-eff / horn-loaded
-    // anchors so the fact-based path also cannot fire — verifies
-    // brand-level alone is the only path tested here.
+  it('Klipsch Heresy IV heritage — NOW protected via Phase E-4 model allowlist (was deferred in D-1)', () => {
+    // Phase D-1 deferred Klipsch because brand-level allowlist would
+    // over-protect RP-XXX / R-XX / Reference Premiere mass-market.
+    // Phase E-4 closes the gap by matching Heritage models specifically
+    // (Heresy / Forte / Cornwall / La Scala / Klipschorn). Mass-market
+    // Klipsch RP-600M still NOT protected (next test).
+    // Reading omits high-eff / horn-loaded anchors so the fact-based
+    // path cannot fire — this confirms it's the new model-pattern
+    // path firing, not the facts path.
     const a: AdvisoryResponse = {
       kind: 'assessment',
-      subject: 'D-1 Klipsch Heritage',
+      subject: 'Klipsch Heritage Heresy IV',
       systemSignature: 'sig',
       systemChain: {
         names: ['Some DAC', 'Some Amp', 'Klipsch Heresy IV'],
@@ -4965,7 +4974,9 @@ describe('SystemAssessmentArtifact — Hardening D-1: explicitly deferred brands
       componentReadings: ['A DAC.', 'An amp.', 'A 3-way bookshelf speaker.'],
     } as AdvisoryResponse;
     const html = render(a);
-    expect(html).not.toContain('Klipsch Heresy IV is a destination-class loudspeaker');
+    expect(html).toContain(
+      'The Klipsch Heresy IV is a destination-class loudspeaker; treat it as a fixed point',
+    );
   });
 });
 
@@ -6121,5 +6132,386 @@ describe('SystemAssessmentArtifact — Phase E-3 chain banner auxiliary partitio
     expect(banner).toContain('REL T/9x');
     // REL T/9x has no "supports the" attribution
     expect(banner).not.toContain('— supports the ');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// Hardening Phase E-4 — heritage iconic speaker model allowlist
+// ════════════════════════════════════════════════════════════════════════
+//
+// Model-specific destination protection for split-tier brands where
+// brand-level allowlisting would over-protect entry products. Each
+// brand has both positive (heritage / flagship model protected) and
+// negative (entry / mass-market NOT protected) coverage.
+
+describe('SystemAssessmentArtifact — Phase E-4 positive heritage model coverage', () => {
+  const destChain = (speakerName: string): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: `E-4 ${speakerName}`,
+      systemSignature: 'sig',
+      // Reading deliberately omits high-eff / horn-loaded / wide-baffle
+      // anchors so the only path that fires is the model-pattern
+      // allowlist. This validates that the new gate is the one
+      // protecting these speakers, not the existing facts path.
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', speakerName],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.'],
+    } as AdvisoryResponse);
+
+  // ─── Quad ESL line ──────────────────────────────────────────────
+  it('Quad ESL-57 — protected via model allowlist', () => {
+    const html = render(destChain('Quad ESL-57'));
+    expect(html).toContain(
+      'The Quad ESL-57 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Quad ESL-63 — protected via model allowlist', () => {
+    const html = render(destChain('Quad ESL-63'));
+    expect(html).toContain(
+      'The Quad ESL-63 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Quad ESL-2912 (modern flagship ESL) — protected via model allowlist', () => {
+    const html = render(destChain('Quad ESL-2912'));
+    expect(html).toContain(
+      'The Quad ESL-2912 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  // ─── Klipsch Heritage ────────────────────────────────────────────
+  it('Klipsch Heresy IV — protected via model allowlist', () => {
+    const html = render(destChain('Klipsch Heresy IV'));
+    expect(html).toContain(
+      'The Klipsch Heresy IV is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Klipsch Cornwall IV — protected via model allowlist', () => {
+    const html = render(destChain('Klipsch Cornwall IV'));
+    expect(html).toContain(
+      'The Klipsch Cornwall IV is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Klipsch La Scala AL5 — protected via model allowlist', () => {
+    const html = render(destChain('Klipsch La Scala AL5'));
+    expect(html).toContain(
+      'The Klipsch La Scala AL5 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Klipschorn AK6 — protected via model allowlist', () => {
+    const html = render(destChain('Klipschorn AK6'));
+    expect(html).toContain(
+      'The Klipschorn AK6 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Klipsch Forte IV — protected via model allowlist', () => {
+    const html = render(destChain('Klipsch Forte IV'));
+    expect(html).toContain(
+      'The Klipsch Forte IV is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  // ─── ATC SCM40 and up ────────────────────────────────────────────
+  it('ATC SCM40 — protected via model allowlist (entry of high-tier line)', () => {
+    const html = render(destChain('ATC SCM40'));
+    expect(html).toContain(
+      'The ATC SCM40 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('ATC SCM50 — protected via model allowlist', () => {
+    const html = render(destChain('ATC SCM50'));
+    expect(html).toContain(
+      'The ATC SCM50 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('ATC SCM100 — protected via model allowlist', () => {
+    const html = render(destChain('ATC SCM100'));
+    expect(html).toContain(
+      'The ATC SCM100 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  // ─── Vandersteen high-tier ───────────────────────────────────────
+  it('Vandersteen Treo CT — protected via model allowlist', () => {
+    const html = render(destChain('Vandersteen Treo CT'));
+    expect(html).toContain(
+      'The Vandersteen Treo CT is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Vandersteen Quatro Wood CT — protected via model allowlist', () => {
+    const html = render(destChain('Vandersteen Quatro Wood CT'));
+    expect(html).toContain(
+      'The Vandersteen Quatro Wood CT is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Vandersteen Model Seven — protected via model allowlist', () => {
+    const html = render(destChain('Vandersteen Model Seven'));
+    expect(html).toContain(
+      'The Vandersteen Model Seven is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  // ─── JBL Studio Monitor + Synthesis ──────────────────────────────
+  it('JBL 4429 (Studio Monitor heritage) — protected via model allowlist', () => {
+    const html = render(destChain('JBL 4429'));
+    expect(html).toContain(
+      'The JBL 4429 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('JBL 4349 — protected via model allowlist', () => {
+    const html = render(destChain('JBL 4349'));
+    expect(html).toContain(
+      'The JBL 4349 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('JBL K2 — protected via model allowlist', () => {
+    const html = render(destChain('JBL K2 S9900'));
+    expect(html).toContain(
+      'The JBL K2 S9900 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('JBL Project Everest DD67000 — protected via model allowlist', () => {
+    const html = render(destChain('JBL Project Everest DD67000'));
+    expect(html).toContain(
+      'The JBL Project Everest DD67000 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  // ─── BBC heritage LS3/5a builds ──────────────────────────────────
+  it('Falcon Acoustics LS3/5a — protected via model allowlist (Falcon brand not in brand allowlist)', () => {
+    const html = render(destChain('Falcon Acoustics LS3/5a'));
+    expect(html).toContain(
+      'The Falcon Acoustics LS3/5a is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Rogers LS3/5a — protected via model allowlist', () => {
+    const html = render(destChain('Rogers LS3/5a'));
+    expect(html).toContain(
+      'The Rogers LS3/5a is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Graham Audio LS5/9 — protected via model allowlist', () => {
+    const html = render(destChain('Graham Audio LS5/9'));
+    expect(html).toContain(
+      'The Graham Audio LS5/9 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Graham Audio LS5/8 — protected via model allowlist', () => {
+    const html = render(destChain('Graham Audio LS5/8'));
+    expect(html).toContain(
+      'The Graham Audio LS5/8 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+});
+
+describe('SystemAssessmentArtifact — Phase E-4 negative coverage (mass-market entries NOT protected)', () => {
+  const destChain = (speakerName: string): AdvisoryResponse =>
+    ({
+      kind: 'assessment',
+      subject: `E-4 negative ${speakerName}`,
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', speakerName],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A 2-way bookshelf speaker.'],
+    } as AdvisoryResponse);
+
+  it('Klipsch RP-600M — NOT protected (mass-market RP line)', () => {
+    const html = render(destChain('Klipsch RP-600M'));
+    expect(html).not.toContain('Klipsch RP-600M is a destination-class loudspeaker');
+  });
+
+  it('Klipsch R-51M — NOT protected (mass-market R line)', () => {
+    const html = render(destChain('Klipsch R-51M'));
+    expect(html).not.toContain('Klipsch R-51M is a destination-class loudspeaker');
+  });
+
+  it('Klipsch Reference Premiere RP-8000F II — NOT protected', () => {
+    const html = render(destChain('Klipsch Reference Premiere RP-8000F II'));
+    expect(html).not.toContain('Reference Premiere RP-8000F II is a destination-class loudspeaker');
+  });
+
+  it('ATC SCM7 — NOT protected (entry passive monitor)', () => {
+    const html = render(destChain('ATC SCM7'));
+    expect(html).not.toContain('ATC SCM7 is a destination-class loudspeaker');
+  });
+
+  it('ATC SCM11 — NOT protected (entry passive monitor)', () => {
+    const html = render(destChain('ATC SCM11'));
+    expect(html).not.toContain('ATC SCM11 is a destination-class loudspeaker');
+  });
+
+  it('Vandersteen 1Ci — NOT protected (~$1.5k budget entry)', () => {
+    const html = render(destChain('Vandersteen 1Ci'));
+    expect(html).not.toContain('Vandersteen 1Ci is a destination-class loudspeaker');
+  });
+
+  it('Vandersteen 2Ce Signature II — NOT protected (entry-mid)', () => {
+    const html = render(destChain('Vandersteen 2Ce Signature II'));
+    expect(html).not.toContain(
+      'Vandersteen 2Ce Signature II is a destination-class loudspeaker',
+    );
+  });
+
+  it('JBL Stage A130 — NOT protected (budget Stage line)', () => {
+    const html = render(destChain('JBL Stage A130'));
+    expect(html).not.toContain('JBL Stage A130 is a destination-class loudspeaker');
+  });
+
+  it('JBL Studio 590 (mid-tier non-Synthesis) — NOT protected by model allowlist', () => {
+    // JBL Studio 5 / 6 lines are mid-tier home loudspeakers, distinct
+    // from the JBL Studio MONITOR (43xx) heritage line. The E-4
+    // pattern requires a 4xxx series numeric model after JBL —
+    // "Studio 590" must NOT match.
+    const html = render(destChain('JBL Studio 590'));
+    expect(html).not.toContain('JBL Studio 590 is a destination-class loudspeaker');
+  });
+
+  it('Quad bookshelf S-2 — NOT protected (non-ESL Quad)', () => {
+    const html = render(destChain('Quad S-2'));
+    expect(html).not.toContain('Quad S-2 is a destination-class loudspeaker');
+  });
+});
+
+describe('SystemAssessmentArtifact — Phase E-4 invariants and regressions', () => {
+  it('Phase K (DeVore O/96) unchanged — brand-level protection still fires', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Phase K E-4 regression',
+      systemSignature: 'A warm tube-led chain.',
+      systemChain: {
+        names: ['Some DAC', 'Some Tube Amp', 'DeVore O/96'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC.',
+        'A push-pull tube integrated.',
+        'A high-efficiency wide-baffle loudspeaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The DeVore O/96 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Harbeth 30.2 XD unchanged — brand-level protection still fires', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Harbeth E-4 regression',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Harbeth 30.2 XD'],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A monitor.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Harbeth 30.2 XD is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Magico A5 unchanged — brand-level protection still fires (Phase D-1)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Magico E-4 regression',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Magico A5'],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Magico A5 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Subwoofer with a heritage iconic NAME (Klipsch Heresy IV Sub) — STILL not protected', () => {
+    // Hypothetical sub model — proves the subwoofer guard runs before
+    // the model-allowlist gate, so even a name that would otherwise
+    // match a heritage pattern does NOT trigger destination
+    // protection when the role is Subwoofer.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-4 sub regression',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Some Speakers', 'Klipsch Heresy Sub'],
+        roles: ['DAC', 'Amp', 'Speakers', 'Subwoofer'],
+      },
+      componentReadings: ['DAC.', 'Amp.', 'Speakers.', 'A subwoofer.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).not.toContain('Klipsch Heresy Sub is a destination-class loudspeaker');
+  });
+
+  it('Heritage model AS primary constraint — protection suppressed (Phase A B5 still works)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-4 Klipsch as constraint',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some Amp', 'Klipsch Heresy IV'],
+        roles: ['DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A DAC.', 'An amp.', 'A speaker.'],
+      primaryConstraint: {
+        componentName: 'Klipsch Heresy IV',
+        category: 'speaker_scale',
+        explanation: '',
+      } as AdvisoryResponse['primaryConstraint'],
+      upgradeDirection: 'Consider a different speaker.',
+    } as AdvisoryResponse;
+    const html = render(a);
+    // Phase A B5 — the constraint must NOT be named in protection
+    expect(html).not.toContain(
+      'The Klipsch Heresy IV is a destination-class loudspeaker; treat it as a fixed point',
+    );
+  });
+
+  it('Heritage model in conflict-signaled chain with no engine direction — protection suppressed (Phase B B2)', () => {
+    // Conflict signal in interaction + no engine upgrade direction →
+    // Phase B B2 suppresses the §10 hierarchy paragraph entirely on
+    // chains the engine has diagnosed as broken without giving the
+    // artifact a curated direction.
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-4 conflict no direction',
+      systemSignature: 'A mismatched amp/Klipsch pairing.',
+      systemInteraction: 'The amp and Klipsch are fighting each other.',
+      systemChain: {
+        names: ['Some DAC', 'Some Wrong Amp', 'Klipsch Cornwall IV'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: ['DAC.', 'Wrong amp.', 'Cornwall.'],
+      assessmentLimitations: ['Voicing conflict.'],
+      // intentionally no upgradeDirection
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).not.toContain(
+      'The Klipsch Cornwall IV is a destination-class loudspeaker; treat it as a fixed point',
+    );
   });
 });

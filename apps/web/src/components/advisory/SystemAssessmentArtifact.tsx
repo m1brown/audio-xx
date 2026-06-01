@@ -857,6 +857,103 @@ function brandTokensFromChainName(name: string): { first: string; firstTwo: stri
   return { first, firstTwo };
 }
 
+/**
+ * Hardening Phase E-4 — model-specific destination allowlist.
+ *
+ * The brand-level allowlist (DESTINATION_SPEAKER_BRANDS) covers
+ * brands whose entire lineup reads as destination-class. Split-tier
+ * brands — Klipsch (Heritage vs. RP / Reference Premiere), ATC (SCM40+
+ * vs. SCM7 / SCM11 entry), Vandersteen (Treo CT+ vs. 1Ci / 2Ce
+ * entry), JBL (Studio Monitor / Synthesis flagships vs. Stage /
+ * Studio budget), Quad (ESL line vs. non-ESL products) — cannot be
+ * brand-level allowlisted without over-protecting their entry
+ * lineups. The Phase D-1 deferral notes documented this precisely.
+ *
+ * This Phase E-4 model-pattern allowlist closes that gap. Each
+ * pattern matches a SPECIFIC iconic model or model family that:
+ *
+ *   - is widely treated as a destination / heritage anchor in the
+ *     audiophile press,
+ *   - has system-anchor identity (users build around it),
+ *   - materially changes system identity when replaced,
+ *   - is meaningfully different from the brand's mass-market line.
+ *
+ * Pattern discipline:
+ *   - brand+model token sequences (avoid bare model numbers that
+ *     could collide with unrelated products),
+ *   - word boundaries to prevent substring leakage,
+ *   - case-insensitive,
+ *   - hyphen-and-space tolerance in places where users vary
+ *     ("ESL-57" vs "ESL 57", "La Scala" vs "LaScala").
+ *
+ * The patterns are applied to chain NAME strings (the user's
+ * authored component name). Catalog reading text and role labels
+ * are not consulted here — name-only match keeps the gate narrow.
+ */
+const DESTINATION_SPEAKER_MODELS: readonly RegExp[] = [
+  // ─── Quad ESL line — heritage electrostatic ───────────────────────
+  // Covers ESL-57 (1957 original), ESL-63, ESL-988 / 989 / 2805 /
+  // 2905 / 2812 / 2912, and the bare "Quad ESL" reference. NON-ESL
+  // Quad products (Quad 99, Quad Z, Quad Vena, etc.) are
+  // intentionally NOT matched.
+  /\bquad\s+esl\b/i,
+
+  // ─── Klipsch Heritage line ───────────────────────────────────────
+  // Heresy I-IV, Forte I-IV, Cornwall I-IV, La Scala / La Scala AL5,
+  // Klipschorn / AK6. Mass-market Klipsch RP-XXX / R-XX / Reference
+  // Premiere is intentionally NOT matched.
+  /\bklipsch\s+heresy\b/i,
+  /\bklipsch\s+forte\b/i,
+  /\bklipsch\s+cornwall\b/i,
+  /\bklipsch\s+la[\s-]?scala\b/i,
+  /\bklipschorn\b/i,
+  /\bklipsch\s+k(?:-?horn|horn)\b/i,
+
+  // ─── ATC SCM — high-tier passive / active monitors ───────────────
+  // SCM40 and above. SCM7 / SCM11 / SCM12 entry monitors are NOT
+  // matched. Numeric suffix list keeps the pattern from accidentally
+  // catching SCM7 ("7" not in list) or future numeric variants.
+  /\batc\s+scm[-\s]?(?:19|40|50|100|150|300)\b/i,
+
+  // ─── Vandersteen — high-tier ─────────────────────────────────────
+  // Treo CT, Quatro Wood CT, Model Five / 5, Model Seven / 7.
+  // Vandersteen 1Ci and 2Ce / 2Ce Signature II entry-mid speakers
+  // are NOT matched.
+  /\bvandersteen\s+treo\b/i,
+  /\bvandersteen\s+quatro\b/i,
+  /\bvandersteen\s+model\s+(?:five|seven|5|7)\b/i,
+
+  // ─── JBL Studio Monitor + JBL Synthesis flagships ────────────────
+  // 4329P / 4349 / 4367 / 4429 (Studio Monitor heritage line) and
+  // K2 / M2 / Everest / DD67000 / Project Everest (Synthesis
+  // statement line). JBL Stage / JBL Studio budget lines are NOT
+  // matched.
+  /\bjbl\s+(?:studio\s+monitor\s+)?4329p?\b/i,
+  /\bjbl\s+(?:studio\s+monitor\s+)?4349\b/i,
+  /\bjbl\s+(?:studio\s+monitor\s+)?4367\b/i,
+  /\bjbl\s+(?:studio\s+monitor\s+)?4429\b/i,
+  /\bjbl\s+k2\b/i,
+  /\bjbl\s+m2\b/i,
+  /\bjbl\s+(?:project\s+)?everest\b/i,
+  /\bjbl\s+dd[-\s]?67000\b/i,
+
+  // ─── BBC heritage LS3/5a builds + studio monitor heritage ────────
+  // Falcon Acoustics, Rogers, Graham Audio — none of these brands
+  // are in the existing brand-level allowlist. Their LS3/5a /
+  // LS5/9 / LS5/8 builds are unambiguous destination minimonitors.
+  /\bfalcon\s+(?:acoustics\s+)?ls3\/5a\b/i,
+  /\brogers\s+ls3\/5a\b/i,
+  /\bgraham\s+(?:audio\s+)?ls(?:3\/5a|5\/9|5\/8)\b/i,
+];
+
+/**
+ * Hardening Phase E-4 — test a chain name against the heritage
+ * iconic model patterns. Returns true if any pattern matches.
+ */
+function isHeritageIconicModel(name: string): boolean {
+  return DESTINATION_SPEAKER_MODELS.some((pattern) => pattern.test(name));
+}
+
 function isDestinationSpeaker(
   name: string,
   role: string | undefined,
@@ -879,6 +976,13 @@ function isDestinationSpeaker(
   if (DESTINATION_SPEAKER_BRANDS.has(first) || DESTINATION_SPEAKER_BRANDS.has(firstTwo)) {
     return true;
   }
+  // Hardening Phase E-4 — model-specific destination allowlist for
+  // iconic heritage / flagship models whose brands cannot be
+  // brand-level allowlisted because the brand's wider lineup
+  // includes mass-market products (Klipsch Heritage vs. RP, ATC
+  // SCM40+ vs. SCM7/11, Vandersteen Treo+ vs. 1Ci, JBL Synthesis
+  // vs. Stage, Quad ESL vs. non-ESL).
+  if (isHeritageIconicModel(name)) return true;
   return false;
 }
 
