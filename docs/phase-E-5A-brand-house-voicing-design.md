@@ -138,134 +138,134 @@ of this design pass.
 #### 1. Naim Audio
 - **matchTokens:** `['naim']`
 - **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** Forward, rhythmically driven presentation often summarized as PRaT (Pace, Rhythm, and Timing).
-- **designPhilosophy:** All-discrete signal path; power-supply quality is treated as a primary determinant of sound, with outboard PSUs as the canonical upgrade lever.
-- **systemBuildingLogic:** Upgrades within the Naim ecosystem typically run through external power supplies and tier-step electronics rather than swap-to-another-brand.
-- **commonStrengths:** Rhythmic engagement; vocal directness; brand-coherent system building.
-- **commonTradeoffs:** Forward presentation that does not suit all material; best results require Naim PSU hierarchy.
-- **upgradeCautions:** Mixing Naim with non-Naim partners often loses the PRaT identity.
-- **bestUsedWhen:** The owner prioritizes rhythm and timing engagement over warmth or maximal resolution.
-- **avoidOverclaiming:** "unrivalled"; "best in class"; "naim sound" as a self-evident referent; "PRaT leader".
+- **houseVoicing:** Forward, rhythmically driven presentation often summarized in the editorial vocabulary as PRaT (Pace, Rhythm, and Timing).
+- **designPhilosophy:** All-discrete signal path; power-supply design is treated as a primary determinant of sound, with outboard PSUs offered as a within-brand upgrade path on many models.
+- **systemBuildingLogic:** Within the Naim ecosystem, upgrades tend to run through external power supplies and tier-step electronics rather than cross-brand substitution.
+- **commonStrengths:** Rhythmic engagement; vocal directness; ecosystem-coherent system building.
+- **commonTradeoffs:** Forward presentation that does not suit every recording; in many systems the PSU hierarchy is part of how the brand is meant to be heard.
+- **upgradeCautions:** Mixing Naim with non-Naim partners often shifts the presentation away from the brand's identity.
+- **bestUsedWhen:** The listener prioritizes rhythm and timing engagement over warmth or maximal resolution.
+- **avoidOverclaiming:** "unrivalled"; "best in class"; "the Naim sound" as a self-evident referent; "PRaT leader"; "the only brand that does PRaT"; "endgame"; "world class".
 - **appliesToRoles:** `['source', 'amplifier']`
 - **exampleModels:** NDX 2, XPS DR, Supernait 3, NAP 250, Nait XS 3.
-- **notes:** PRaT is widely-recognized editorial vocabulary in Naim coverage and is safe to use. The PSU hierarchy (HiCap → XPS DR → 555PS DR) is a well-documented Naim upgrade convention.
+- **notes:** PRaT is widely-recognized editorial vocabulary in Naim coverage and is safe to use when hedged as editorial vocabulary, not as an objective property. The PSU hierarchy (HiCap → XPS DR → 555PS DR) is a documented Naim upgrade convention; reference it as a within-brand convention, not as a universal upgrade truth.
 
 #### 2. Linn Products
 - **matchTokens:** `['linn']`
 - **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** Source-first presentation with emphasis on rhythmic precision and timing.
-- **designPhilosophy:** Source-first doctrine: in the Linn view, source quality determines what the rest of the system can convey. Heavily software-defined in modern lines (Konfig configuration software, Space Optimisation room correction).
-- **systemBuildingLogic:** LP12 (vinyl) or Klimax DSM (digital) function as the brand-tier anchor; the Klimax / Akurate / Selekt tier ladder structures upgrades.
-- **commonStrengths:** Source-tier coherence; modular upgrade path within ecosystem; active-speaker integration via Akubarik / Akudorik.
-- **commonTradeoffs:** Single-brand voicing dependence; Linn voicing not universally preferred.
-- **upgradeCautions:** Mixing Linn sources with non-Linn electronics often weakens the source-first claim.
-- **bestUsedWhen:** The owner is committed to a single-brand ecosystem with source-first upgrade priorities.
-- **avoidOverclaiming:** "the source of truth"; "unrivalled timing"; "Linn sound" as a self-evident referent.
+- **houseVoicing:** Source-first presentation, with emphasis on rhythmic precision and timing in many systems.
+- **designPhilosophy:** Source-first design principle: in Linn's editorial position, source quality sets a ceiling on what the rest of the system can convey. Heavily software-defined in modern lines (Konfig configuration software, Space Optimisation room correction).
+- **systemBuildingLogic:** LP12 (vinyl) or Klimax DSM (digital) commonly function as the brand-tier anchor; the Klimax / Akurate / Selekt tier ladder structures within-brand upgrades.
+- **commonStrengths:** Source-tier coherence; modular upgrade path within the ecosystem; active-speaker integration via Akubarik / Akudorik.
+- **commonTradeoffs:** Single-brand voicing dependence; Linn presentation is preference-dependent.
+- **upgradeCautions:** Mixing Linn sources with non-Linn electronics often weakens the source-first premise.
+- **bestUsedWhen:** The listener is committed to a single-brand ecosystem with source-first upgrade priorities.
+- **avoidOverclaiming:** "the source of truth"; "unrivalled timing"; "the Linn sound" as a self-evident referent; "endgame"; "world class"; "the only source-first brand".
 - **appliesToRoles:** `['source', 'amplifier', 'speaker']`
 - **exampleModels:** LP12 Klimax, Klimax DSM, Akubarik, Selekt DSM, Majik.
-- **notes:** Source-first is foundational Linn editorial and widely used in Stereophile / Hi-Fi News coverage.
+- **notes:** Source-first is foundational Linn editorial vocabulary and is safe to reference; do not present it as an objective property. Linn's voicing across decades has shifted (early Tiefenbrun era vs. modern software-defined era); treat the modern era as the referent.
 
 #### 3. Pass Labs
 - **matchTokens:** `['pass labs', 'pass laboratories']`
 - **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** Class-A solid-state with emphasis on tonal density, control without smoothing texture, and dynamic ease at moderate volumes.
-- **designPhilosophy:** Nelson Pass design lineage: simple topologies, generous Class-A bias, large heatsinks, current delivery prioritized.
-- **systemBuildingLogic:** XA / INT / X-series tiers each carry different Class-A bias levels; choice depends on loudspeaker drive demands.
-- **commonStrengths:** Tonal density; bass control without thinning; dynamic ease; long-term listenability.
-- **commonTradeoffs:** Heat output from Class-A operation; weight / chassis size.
-- **upgradeCautions:** XA-series → larger XA-series is the natural step rather than swap to a different topology.
-- **bestUsedWhen:** A demanding loudspeaker load benefits from Class-A current delivery, and room ventilation accommodates the heat.
-- **avoidOverclaiming:** "warm"; "tube-like"; "the only Class-A that does X"; "Pass sound".
+- **houseVoicing:** Class-A solid-state often described in terms of tonal density and dynamic ease at moderate volumes, with control achieved without smoothing texture.
+- **designPhilosophy:** Nelson Pass design lineage: relatively simple topologies, generous Class-A bias, large heatsinks, and current delivery prioritized over feature complexity.
+- **systemBuildingLogic:** XA / INT / X-series tiers each carry different Class-A bias levels; within-brand step typically follows loudspeaker drive demands.
+- **commonStrengths:** Tonal density; bass control without thinning; long-term listenability in many systems.
+- **commonTradeoffs:** Heat output from Class-A operation; chassis weight; room ventilation is part of ownership.
+- **upgradeCautions:** XA-series → larger XA-series is the canonical within-brand step rather than substitution to a different topology.
+- **bestUsedWhen:** A demanding loudspeaker load benefits from Class-A current delivery, and the room accommodates the heat.
+- **avoidOverclaiming:** "warm"; "tube-like"; "the only Class-A that does X"; "the Pass sound"; "endgame"; "world class"; "Class-A leader".
 - **appliesToRoles:** `['amplifier']`
 - **exampleModels:** XA25, XA60.8, XA200.8, INT-25, INT-60, XP-32, XP-27.
-- **notes:** Pass amps are NOT "warm-tube-like" — common owner error to avoid. Nelson Pass also runs FirstWatt (separate brand, kit-friendly designs).
+- **notes:** Pass amplifiers are not tube-like in voicing — a common owner shorthand to avoid. Nelson Pass also runs FirstWatt as a separate brand for kit-friendly low-power designs; do not conflate the two.
 
 #### 4. Quad (Acoustical Manufacturing)
 - **matchTokens:** `['quad esl', 'quad ii']` — *non-ESL Quad excluded by token specificity*
 - **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** Electrostatic-loudspeaker family: midrange realism, point-source coherence, limited SPL ceiling.
-- **designPhilosophy:** Acoustical Manufacturing heritage; Peter Walker original-designer lineage in the ESL line. The ESL panel is a full-range dipole electrostatic with characteristic load behavior.
-- **systemBuildingLogic:** ESL loudspeakers pair best with specific amplifier types (typically tube or low-power solid-state with care); the ESL is the system anchor.
-- **commonStrengths:** Midrange realism; vocal naturalness; time coherence; long-term listenability.
-- **commonTradeoffs:** SPL ceiling; room placement is critical for dipole behavior; difficult electrostatic load for some amplifiers.
-- **upgradeCautions:** ESL panels are not amplifier-promiscuous; partner choice matters substantially. Modern Quad ESL service / panel availability is an ownership consideration.
-- **bestUsedWhen:** The listener prioritizes midrange truth and vocal naturalness over scale, and the room supports dipole loading.
-- **avoidOverclaiming:** "the only true electrostatic"; "unbeatable midrange"; "Peter Walker's last word".
+- **houseVoicing:** Electrostatic loudspeaker family often associated with midrange realism and point-source coherence at the cost of SPL ceiling.
+- **designPhilosophy:** Acoustical Manufacturing heritage carried forward from Peter Walker's original ESL design. The ESL panel is a full-range dipole electrostatic with a load curve distinct from conventional dynamic loudspeakers.
+- **systemBuildingLogic:** ESL loudspeakers tend to pair with specific amplifier types — typically tube or low-power solid-state chosen for the electrostatic load — and act as the system anchor.
+- **commonStrengths:** Midrange realism; vocal naturalness; time coherence; long-term listenability in the right context.
+- **commonTradeoffs:** SPL ceiling; room placement matters for dipole behavior; electrostatic load is demanding for some amplifiers.
+- **upgradeCautions:** ESL panels are amplifier-sensitive; partner choice matters substantially. Modern Quad ESL service and panel availability is an ownership consideration.
+- **bestUsedWhen:** The listener prioritizes midrange and vocal naturalness over scale, and the room supports dipole loading.
+- **avoidOverclaiming:** "the only true electrostatic"; "unbeatable midrange"; "Peter Walker's last word"; "magic"; "endgame"; "world class"; "the only ESL that does X".
 - **appliesToRoles:** `['speaker', 'amplifier']` *(amplifier covers Quad II / II-forty tube line)*
 - **exampleModels:** ESL-57, ESL-63, ESL-2912, Quad II, Quad II Classic, Quad II-forty.
-- **notes:** Non-ESL Quad products (Quad 99, Vena, S-2, etc.) are not destination-tier. `matchTokens` is intentionally narrowed to `quad esl` / `quad ii` to avoid triggering on non-heritage Quads.
+- **notes:** Non-ESL Quad products (Quad 99, Vena, S-2, etc.) are not in scope for this entry. `matchTokens` is intentionally narrowed to `quad esl` / `quad ii` to avoid triggering on non-heritage Quad lines. The ESL-57 in particular has a well-documented SPL and amplifier-load profile; any house-voicing sentence must be hedged accordingly.
 
 #### 5. Tannoy
 - **matchTokens:** `['tannoy']`
 - **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** Dual-Concentric coaxial driver presentation: point-source imaging, broad listening window, characteristic Tannoy midrange.
-- **designPhilosophy:** Heritage Dual-Concentric driver design with HF compression driver loaded behind a low-frequency driver. Prestige line uses 12-inch and 15-inch dual-concentrics.
-- **systemBuildingLogic:** Tannoy Prestige loudspeakers function as system anchors; the Dual-Concentric driver dictates room placement and amplifier requirements.
-- **commonStrengths:** Point-source imaging; broad listening window; dynamic ease from large drivers.
+- **houseVoicing:** Dual-Concentric coaxial driver presentation, often described in terms of point-source imaging and a broad listening window.
+- **designPhilosophy:** Heritage Dual-Concentric driver design with an HF compression driver loaded behind a low-frequency driver. Prestige line uses 12-inch and 15-inch dual-concentrics.
+- **systemBuildingLogic:** Tannoy Prestige loudspeakers tend to function as system anchors; the Dual-Concentric driver shapes room placement and amplifier choices.
+- **commonStrengths:** Point-source imaging; broad listening window; dynamic ease from large drivers in suitable rooms.
 - **commonTradeoffs:** Cabinet size for full Prestige models; driver-coherence character is preference-dependent.
-- **upgradeCautions:** Within the Prestige line, the driver size (10 vs 12 vs 15 inch) shapes scale and room match more than electronics changes.
-- **bestUsedWhen:** A large room benefits from the dynamic ease of 12 or 15-inch dual-concentric drivers.
-- **avoidOverclaiming:** "unrivalled coherence"; "tannoy sound"; "the only true coaxial".
+- **upgradeCautions:** Within the Prestige line, driver size (10 vs 12 vs 15 inch) shapes scale and room match more than electronics changes.
+- **bestUsedWhen:** A large room benefits from the dynamic ease of 12- or 15-inch dual-concentric drivers.
+- **avoidOverclaiming:** "unrivalled coherence"; "the Tannoy sound"; "the only true coaxial"; "endgame"; "world class"; "magic".
 - **appliesToRoles:** `['speaker']`
 - **exampleModels:** Canterbury GR, Westminster Royal GR, Kensington, Turnberry, Cheviot, Arden, Eaton.
-- **notes:** Commercial / installation Tannoy products are not in scope for this entry.
+- **notes:** Commercial / installation Tannoy products are not in scope for this entry. Modern Tannoy ownership has shifted; treat the Prestige line as the editorial referent.
 
 #### 6. McIntosh
 - **matchTokens:** `['mcintosh']`
 - **priority:** `audiophile-identity` • **confidence:** `medium`
-- **houseVoicing:** Smooth, full-bodied presentation with broad headroom; characteristic McIntosh tonal weight at moderate volume.
-- **designPhilosophy:** Autoformer output transformers (in many SS designs) and unity-coupled circuit (in tube designs). Visual identity (blue meters) is a strong part of the brand.
-- **systemBuildingLogic:** McIntosh integrated amplifiers and their MA / MC pairings are the typical anchor; speakers are usually chosen for the McIntosh weight and presentation rather than the reverse.
-- **commonStrengths:** Broad headroom; tonal weight; long-term ownership ecosystem.
-- **commonTradeoffs:** Presentation is preference-dependent; weight / physical scale of larger models.
+- **houseVoicing:** Smooth, full-bodied presentation with broad headroom in many systems.
+- **designPhilosophy:** Autoformer output transformers (in many solid-state designs) and unity-coupled circuit (in tube designs). Visual identity (blue meters) is a recognized part of the brand but is not a sonic claim.
+- **systemBuildingLogic:** McIntosh integrated amplifiers and the MA / MC pairings often act as the system anchor; partner choice tends to follow the McIntosh presentation rather than the reverse.
+- **commonStrengths:** Broad headroom; tonal weight; long-term within-brand ownership ecosystem.
+- **commonTradeoffs:** Presentation is preference-dependent; weight and physical scale of larger models.
 - **upgradeCautions:** Hybrid tube/SS designs (e.g. MA12000) are not pure-tube despite the tube indicator stage.
-- **bestUsedWhen:** The owner values broad headroom and is committed to the McIntosh visual / sonic identity.
-- **avoidOverclaiming:** "warmest in solid-state"; "unbeatable bass"; "the only autoformer".
+- **bestUsedWhen:** The listener values broad headroom and is comfortable with the McIntosh presentation.
+- **avoidOverclaiming:** "warmest in solid-state"; "unbeatable bass"; "the only autoformer"; "the McIntosh sound"; "endgame"; "world class"; "best integrated".
 - **appliesToRoles:** `['amplifier']`
 - **exampleModels:** MC275, MA12000, MA8950, MC462, MC1.25KW.
-- **notes:** Hybrid tube+SS designs (MA12000) commonly mistaken for pure-tube; the tube stage is preamp / driver, the output is solid-state with autoformer.
+- **notes:** Hybrid tube+SS designs (MA12000) are often mistaken for pure-tube; the tube stage is preamp / driver, the output is solid-state with autoformer. Brand voicing has evolved across ownership and era; treat the modern Binghamton-made models as the referent.
 
 #### 7. Audio Research
 - **matchTokens:** `['audio research']`
-- **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** All-tube Reference line: harmonic density without warmth-romanticism, dynamic capability without thinness. LS line is more solid-state-adjacent in voicing.
-- **designPhilosophy:** William Z. Johnson lineage. Reference series is all-tube high-power, often with auto-bias. Distinct LS (line stage) and Ref (reference) line voicings.
-- **systemBuildingLogic:** Ref series components partner with destination-class loudspeakers (Wilson, Magico, Sonus Faber are common); LS series is the mid-tier all-tube preamplifier with a less imposing chassis.
-- **commonStrengths:** Harmonic density; dynamic capability; reference-tier coherence with destination speakers.
-- **commonTradeoffs:** Tube life as ownership cost; heat output from large Ref amps.
-- **upgradeCautions:** Ref → larger Ref is the natural step within the brand; cross to non-ARC tube architecture changes system identity.
-- **bestUsedWhen:** The owner has a destination-class loudspeaker that benefits from tube character without warmth-bloat.
-- **avoidOverclaiming:** "warm"; "best of all worlds"; "ARC voice".
+- **priority:** `audiophile-identity` • **confidence:** `medium` *(DOWNGRADED in editorial review — 2024 ownership change makes forward-looking house voicing less certain than the historical record)*
+- **houseVoicing:** All-tube Reference line often described in terms of harmonic density and dynamic capability, without slipping into euphonic warmth. The LS line voicing is more neutral and less obviously tube-flavored.
+- **designPhilosophy:** William Z. Johnson lineage. Reference series is all-tube high-power, often with auto-bias. The LS (line stage) and Ref (reference) lines are voiced differently and should not be collapsed.
+- **systemBuildingLogic:** Reference series components historically partner with destination-class loudspeakers (Wilson, Magico, Sonus Faber are common pairings); the LS series sits as the mid-tier all-tube preamplifier with a less imposing chassis.
+- **commonStrengths:** Harmonic density; dynamic capability; long history of partnership with destination-class loudspeakers.
+- **commonTradeoffs:** Tube life as ongoing ownership cost; heat output from larger Ref amps.
+- **upgradeCautions:** Within the historical ARC catalog, Ref → larger Ref is the canonical step; cross to non-ARC tube architecture changes the system's identity. ARC changed hands in 2024 and the future direction of the brand is not yet established — treat current claims as historical until new product confirms continuity.
+- **bestUsedWhen:** A destination-class loudspeaker benefits from tube character without bloom.
+- **avoidOverclaiming:** "warm"; "best of all worlds"; "the ARC voice"; "endgame"; "world class"; "the reference tube brand"; "magic".
 - **appliesToRoles:** `['amplifier']`
 - **exampleModels:** Ref 6, Ref 6SE, Ref 160M, Ref 80, LS28, Ref Phono 3.
-- **notes:** Reference and LS lines are voiced differently — the artifact should not collapse them. ARC was recently sold (2024); ownership / service is a current ownership consideration.
+- **notes:** Reference and LS lines are voiced differently — the artifact should not collapse them. ARC was sold in 2024; ownership and service continuity is a current consideration, and any new model under new ownership should be treated as a separate editorial entity until validated.
 
 #### 8. dCS
 - **matchTokens:** `['dcs']`
 - **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** Reference-tier digital with characteristic timing precision and clean extension; not a "voiced" DAC in the warmth/lean sense.
-- **designPhilosophy:** Ring DAC architecture — a discrete FPGA-driven topology distinct from conventional R2R or delta-sigma. Originated in pro audio.
-- **systemBuildingLogic:** Vivaldi (reference stack) / Rossini (one-box) / Bartók (compact streaming endpoint) tier ladder. The Bartók is the entry point and is editorially destination-class on its own.
-- **commonStrengths:** Timing precision; resolution; low noise floor; reference-tier service / firmware support.
-- **commonTradeoffs:** Cost ceiling for Vivaldi APEX; not for listeners who want a euphonic R2R signature.
-- **upgradeCautions:** Within dCS, the Vivaldi APEX upgrade is the natural step; cross to R2R brands changes the digital character substantively.
-- **bestUsedWhen:** The system is reference-class downstream and the digital source is the limiting factor.
-- **avoidOverclaiming:** "the only reference DAC"; "unbeatable"; "transparent" (over-used).
+- **houseVoicing:** Digital presentation often described in terms of timing precision and clean extension; not a "voiced" DAC in the warmth/lean sense.
+- **designPhilosophy:** Ring DAC architecture — a discrete FPGA-driven topology distinct from conventional R2R or delta-sigma. Originated in professional audio applications.
+- **systemBuildingLogic:** Vivaldi (statement stack) / Rossini (one-box) / Bartók (compact streaming endpoint) tier ladder; each step is meaningful in capability and cost.
+- **commonStrengths:** Timing precision; resolution; low noise floor; long-term firmware support cadence.
+- **commonTradeoffs:** Cost ceiling for Vivaldi APEX; not aimed at listeners who prefer a euphonic R2R signature.
+- **upgradeCautions:** Within dCS, the Vivaldi APEX path is the canonical within-brand step; cross to R2R brands changes the digital character substantively.
+- **bestUsedWhen:** The system is high-resolution downstream and the digital source is the limiting factor.
+- **avoidOverclaiming:** "the only reference DAC"; "unbeatable"; "transparent" (over-used); "endgame"; "world class"; "the digital reference"; "measurement leader"; "magic".
 - **appliesToRoles:** `['source']`
 - **exampleModels:** Bartók, Rossini, Vivaldi APEX.
-- **notes:** Ring DAC is a dCS trademark architecture and safe to name.
+- **notes:** Ring DAC is a dCS trademark architecture and safe to name. The Bartók is widely regarded as high-tier but is not unilaterally destination-class — destination decisions remain system-context-dependent.
 
 #### 9. Chord Electronics
 - **matchTokens:** `['chord hugo', 'chord dave', 'chord m scaler', 'chord mojo', 'chord qutest']` — *narrowed to specific Chord Electronics products to avoid collision with "Chord Company" cables*
 - **priority:** `audiophile-identity` • **confidence:** `medium`
-- **houseVoicing:** FPGA-driven DAC line with characteristic transient sharpness and spatial focus; distinct from R2R and delta-sigma voicings.
-- **designPhilosophy:** Rob Watts FPGA designs (Hugo / DAVE / M Scaler / Mojo line). Distinct case design (aluminum-billet chassis).
-- **systemBuildingLogic:** Hugo TT2 / DAVE function as the brand-tier anchors; the M Scaler adds upstream taps in the digital domain.
+- **houseVoicing:** FPGA-driven DAC line often described in terms of transient sharpness and spatial focus; distinct from typical R2R and delta-sigma voicings.
+- **designPhilosophy:** Rob Watts FPGA designs across the Hugo / DAVE / M Scaler / Mojo line. Distinctive aluminum-billet chassis as visual identity.
+- **systemBuildingLogic:** Hugo TT2 / DAVE act as the brand-tier anchors; the M Scaler adds upstream taps in the digital domain.
 - **commonStrengths:** Transient clarity; spatial focus; distinctive desktop ergonomics.
-- **commonTradeoffs:** Preference-dependent voicing; aesthetic / case design is polarizing.
-- **upgradeCautions:** Hugo line → DAVE is a substantial price step; M Scaler is the alternative upgrade path.
-- **bestUsedWhen:** The owner values transient precision and is comfortable with the Chord case aesthetic.
-- **avoidOverclaiming:** "the most resolving"; "measurement leader"; "Rob Watts proves".
+- **commonTradeoffs:** Voicing is preference-dependent; case aesthetic is polarizing.
+- **upgradeCautions:** Hugo line → DAVE is a substantial price step; M Scaler is an alternative within-brand upgrade path rather than a direct replacement.
+- **bestUsedWhen:** The listener values transient precision and is comfortable with the Chord case aesthetic.
+- **avoidOverclaiming:** "the most resolving"; "measurement leader"; "Rob Watts proves"; "endgame"; "world class"; "the only FPGA DAC"; "magic".
 - **appliesToRoles:** `['source']`
 - **exampleModels:** Hugo TT2, DAVE, M Scaler, Hugo 2, Mojo 2, Qutest.
 - **notes:** Chord Company (cables) is a separate entity. `matchTokens` is intentionally narrowed to specific product names to avoid false positives on "Chord cables" / similar.
@@ -274,14 +274,14 @@ of this design pass.
 - **brandFamily:** `'Klipsch'`
 - **matchTokens:** `['klipsch heresy', 'klipsch forte', 'klipsch cornwall', 'klipsch la scala', 'klipsch lascala', 'klipschorn', 'klipsch khorn']` — *intentionally NOT 'klipsch' alone*
 - **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** Horn-loaded high-efficiency presentation: dynamic immediacy, broad dynamic range, controlled directivity at the cost of off-axis evenness.
-- **designPhilosophy:** Paul W. Klipsch heritage (Hope, Arkansas). Horn loading + high efficiency (~99 dB) → very low amplifier power requirements.
-- **systemBuildingLogic:** Heritage loudspeakers pair with low-power tube amplifiers in the canonical Klipsch system. The cabinet is the long-term anchor.
-- **commonStrengths:** Dynamic immediacy; pairs naturally with low-power tube amplification; long lifecycle ownership.
-- **commonTradeoffs:** Forward presentation that does not suit all material; off-axis response varies more than dome / planar designs.
-- **upgradeCautions:** Heritage line is distinct from Klipsch mass-market (RP / R / Reference Premiere) — they share no design philosophy.
-- **bestUsedWhen:** A low-power tube amplifier benefits from a high-efficiency partner; the room accommodates the cabinet size.
-- **avoidOverclaiming:** "the only horn that does X"; "best in class"; "Paul Klipsch's last word".
+- **houseVoicing:** Horn-loaded high-efficiency presentation, often described in terms of dynamic immediacy and broad dynamic range, with controlled directivity that trades off-axis evenness for on-axis efficiency.
+- **designPhilosophy:** Paul W. Klipsch heritage (Hope, Arkansas). Horn loading plus high efficiency (~99 dB) translates to very low amplifier power requirements.
+- **systemBuildingLogic:** Heritage loudspeakers tend to pair with low-power tube amplifiers in the canonical Klipsch system; the cabinet is the long-term anchor.
+- **commonStrengths:** Dynamic immediacy; suits low-power tube amplification; long lifecycle ownership.
+- **commonTradeoffs:** Forward presentation that does not suit every recording; off-axis response varies more than dome / planar designs.
+- **upgradeCautions:** Heritage line is distinct from Klipsch mass-market (RP / R / Reference Premiere) — they share little design philosophy and should not be presented under the same identity.
+- **bestUsedWhen:** A low-power tube amplifier benefits from a high-efficiency partner and the room accommodates the cabinet size.
+- **avoidOverclaiming:** "the only horn that does X"; "best in class"; "Paul Klipsch's last word"; "endgame"; "world class"; "magic"; "the only horn"; "giant killer"; "the original horn that…".
 - **appliesToRoles:** `['speaker']`
 - **exampleModels:** Heresy IV, Forte IV, Cornwall IV, La Scala AL5, Klipschorn AK6.
 - **notes:** **CRITICAL** — Klipsch Heritage is sonically and editorially distinct from Klipsch RP / Reference Premiere mass-market. The artifact must not transfer Heritage identity to the RP line. `matchTokens` matches only Heritage model names.
@@ -290,14 +290,14 @@ of this design pass.
 - **brandFamily:** `'JBL'`
 - **matchTokens:** `['jbl 4329', 'jbl 4349', 'jbl 4367', 'jbl 4429', 'jbl k2', 'jbl m2', 'jbl everest', 'jbl dd67000']`
 - **priority:** `audiophile-identity` • **confidence:** `medium`
-- **houseVoicing:** Professional-monitor heritage: dynamic capability, controlled directivity via large compression-driver horns, broad headroom.
-- **designPhilosophy:** Greg Timbers and successors. 4xxx Studio Monitor lineage from professional recording-monitor use. K2/M2/Everest in the Synthesis flagship line.
-- **systemBuildingLogic:** 4xxx Studio Monitor functions as system anchor; high-efficiency horn loading favors moderate-power solid-state or hybrid amplification.
+- **houseVoicing:** Professional-monitor heritage, often described in terms of dynamic capability, controlled directivity via large compression-driver horns, and broad headroom.
+- **designPhilosophy:** Greg Timbers and successors. 4xxx Studio Monitor lineage carries forward from professional recording-monitor use; K2 / M2 / Everest sit in the Synthesis flagship line.
+- **systemBuildingLogic:** A 4xxx Studio Monitor tends to act as the system anchor; high-efficiency horn loading favors moderate-power solid-state or hybrid amplification.
 - **commonStrengths:** Dynamic capability; broad headroom; pro-monitor lineage credibility.
-- **commonTradeoffs:** Cabinet size for larger models; JBL forward presentation is preference-dependent.
-- **upgradeCautions:** 4xxx Studio Monitor line is distinct from JBL Stage / Studio mid-tier home — they are not the same lineage.
-- **bestUsedWhen:** A large room benefits from horn-loaded dynamic capability; the listener values pro-monitor presentation.
-- **avoidOverclaiming:** "the only professional monitor"; "flat reference"; "JBL sound".
+- **commonTradeoffs:** Cabinet size for larger models; forward presentation is preference-dependent.
+- **upgradeCautions:** The 4xxx Studio Monitor line is distinct from JBL Stage / Studio mid-tier home — they are not the same lineage and should not be collapsed.
+- **bestUsedWhen:** A large room benefits from horn-loaded dynamic capability and the listener values pro-monitor presentation.
+- **avoidOverclaiming:** "the only professional monitor"; "flat reference"; "the JBL sound"; "endgame"; "world class"; "the only studio monitor that…"; "giant killer".
 - **appliesToRoles:** `['speaker']`
 - **exampleModels:** 4429, 4349, 4367, K2 S9900, M2, Project Everest DD67000.
 - **notes:** JBL Stage / Studio (5xx, 6xx) and L100 Classic are separate lines with different voicings; intentionally NOT in `matchTokens`.
@@ -305,17 +305,17 @@ of this design pass.
 #### 12. Harbeth
 - **matchTokens:** `['harbeth']`
 - **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** BBC LS3/5a tradition: thin-wall cabinet construction, midrange honesty, BBC-tradition vocal naturalness.
-- **designPhilosophy:** Alan Shaw lineage. RADIAL polypropylene cone material. Thin-wall MDF cabinet construction inherited from BBC heritage.
-- **systemBuildingLogic:** Harbeth standmounts function as long-term system anchors; Class-A or high-bias Class-AB amplification is the typical partner.
-- **commonStrengths:** Midrange honesty; vocal naturalness; long-listening comfort; long lifecycle ownership.
-- **commonTradeoffs:** Bass extension limited (per BBC heritage); stand-required for proper midrange.
-- **upgradeCautions:** Within Harbeth, the 30.2 XD → 40.2 XD → 40.3 XD steps each materially change scale.
-- **bestUsedWhen:** A small-to-medium room favors midrange-honest standmounts with a high-bias amplifier.
-- **avoidOverclaiming:** "the most natural"; "BBC monitor truth"; "Harbeth honesty".
+- **houseVoicing:** BBC-licensee tradition, often described in terms of midrange naturalness and long-listening comfort, with thin-wall cabinet construction characteristic of the line.
+- **designPhilosophy:** Alan Shaw lineage. RADIAL polypropylene cone material. Thin-wall MDF cabinet construction inherited from BBC research.
+- **systemBuildingLogic:** Harbeth standmounts tend to function as long-term system anchors; Class-A or high-bias Class-AB amplification is the common partner.
+- **commonStrengths:** Midrange naturalness; vocal presentation; long-listening comfort; long lifecycle ownership.
+- **commonTradeoffs:** Bass extension limited by the BBC-tradition cabinet alignment; proper stands are part of the design.
+- **upgradeCautions:** Within Harbeth, the 30.2 XD → 40.2 XD → 40.3 XD steps each materially change scale and room match.
+- **bestUsedWhen:** A small-to-medium room favors midrange-led standmounts with a high-bias amplifier.
+- **avoidOverclaiming:** "the most natural"; "BBC monitor truth"; "Harbeth honesty"; "endgame"; "world class"; "the only true BBC speaker"; "magic".
 - **appliesToRoles:** `['speaker']`
 - **exampleModels:** 30.2 XD, SHL5plus XD, Monitor 40.3 XD, P3ESR XD.
-- **notes:** BBC tradition is editorially safe. RADIAL cone is brand-distinct identity.
+- **notes:** BBC tradition is editorially safe when described as licensee/inheritor language rather than as exclusive BBC ownership. RADIAL is Alan Shaw's polymer cone material and is a brand-specific identity feature.
 
 #### 13. Spendor
 - **matchTokens:** `['spendor']`
@@ -327,85 +327,85 @@ of this design pass.
 - **commonTradeoffs:** Classic line bass extension limited; D-series voicing distinct from Classic — not a like-for-like upgrade.
 - **upgradeCautions:** Classic → D-series is a voicing change, not a hierarchical step.
 - **bestUsedWhen:** The owner has decided whether they prefer the sealed BBC tradition or the modern reflex direction.
-- **avoidOverclaiming:** "BBC truth"; "British best"; "Spendor sound".
+- **avoidOverclaiming:** "BBC truth"; "British best"; "the Spendor sound"; "endgame"; "world class"; "the only true BBC line"; "magic".
 - **appliesToRoles:** `['speaker']`
 - **exampleModels:** Classic 2/3, SP100R2, D7.2, D9.2, A4, Classic 1/2.
-- **notes:** Distinguish Classic line from D-series — they are not the same voicing.
+- **notes:** Distinguish Classic line from D-series — they are not the same voicing. Like Harbeth, Spendor is a BBC licensee/inheritor; do not present BBC heritage as exclusive ownership.
 
 #### 14. Wilson Audio Specialties
 - **matchTokens:** `['wilson audio', 'wilson sasha', 'wilson sabrina', 'wilson alexx', 'wilson watt', 'wamm']`
 - **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** Dynamic-range capability with characteristic cabinet damping; X-Material composite chassis distinct from MDF / aluminum.
+- **houseVoicing:** Often described in terms of dynamic-range capability with cabinet damping that contributes to low colouration; X-Material composite chassis is distinct from MDF or aluminum.
 - **designPhilosophy:** David Wilson lineage. Time-aligned driver arrangement; cabinet adjustability (modular drivers) on flagship models.
-- **systemBuildingLogic:** Sabrina X / Sasha DAW / Alexx V / WAMM Master Chronosonic form a destination ladder; the cabinet is the long-term anchor.
-- **commonStrengths:** Dynamic capability; sustained scale; cabinet damping → low coloration.
-- **commonTradeoffs:** Room-dependent; cabinet size for upper-tier models; setup-sensitive.
-- **upgradeCautions:** Sasha DAW → Alexx V is a substantial scale step; not all rooms support it.
-- **bestUsedWhen:** A large room and a destination-tier amplifier benefit from Wilson dynamic range.
-- **avoidOverclaiming:** "the only dynamic speaker"; "flat measurement reference"; "Wilson sound".
+- **systemBuildingLogic:** Sabrina X / Sasha DAW / Alexx V / WAMM Master Chronosonic form a within-brand ladder; the cabinet tends to be the long-term anchor.
+- **commonStrengths:** Dynamic capability; sustained scale at volume; cabinet damping that supports low colouration.
+- **commonTradeoffs:** Room-dependent; cabinet size for upper-tier models; setup-sensitive on placement and toe.
+- **upgradeCautions:** Sasha DAW → Alexx V is a substantial scale step; not every room supports it.
+- **bestUsedWhen:** A large room and a destination-tier amplifier benefit from Wilson scale and dynamic range.
+- **avoidOverclaiming:** "the only dynamic speaker"; "flat measurement reference"; "the Wilson sound"; "endgame"; "world class"; "the only modular speaker"; "magic".
 - **appliesToRoles:** `['speaker']`
 - **exampleModels:** Sabrina X, Sasha DAW, Alexx V, WAMM Master Chronosonic.
-- **notes:** Wilson Benesch is a separate UK brand (carbon-fibre cabinet).
+- **notes:** Wilson Benesch is a separate UK brand (carbon-fibre cabinet) and is not the same identity.
 
 #### 15. Magico
 - **matchTokens:** `['magico']`
 - **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** Sealed-cabinet aluminum-extrusion construction; characteristic low-coloration presentation prioritizing measurement-correct response.
-- **designPhilosophy:** Aluminum-extrusion sealed cabinets, beryllium tweeter (in higher tiers), measurement-led design.
-- **systemBuildingLogic:** A-series (entry) / S-series / M-series tier ladder. Sealed-cabinet design favors solid-state amplification with strong bass control.
-- **commonStrengths:** Cabinet inertness; bass control via sealed alignment; measurement consistency.
+- **houseVoicing:** Sealed-cabinet aluminum-extrusion construction associated with a low-colouration presentation, where the cabinet's inertness is part of the design intent.
+- **designPhilosophy:** Aluminum-extrusion sealed cabinets, beryllium tweeter in higher tiers, measurement-informed design (without claiming a single objective truth).
+- **systemBuildingLogic:** A-series (entry) → S-series → M-series within-brand ladder; sealed-cabinet design tends to favor solid-state amplification with strong bass control.
+- **commonStrengths:** Cabinet inertness; bass control via sealed alignment; engineering consistency across the line.
 - **commonTradeoffs:** Cabinet weight; sealed-cabinet bass extension favors amplification with grip.
-- **upgradeCautions:** A1 → A3 → A5 → S3 → M-series each substantially change scale.
-- **bestUsedWhen:** Solid-state amplification with strong bass control partners; the room benefits from sealed cabinet bass discipline.
-- **avoidOverclaiming:** "the most neutral"; "measurement winner"; "Magico measurement".
+- **upgradeCautions:** A1 → A3 → A5 → S3 → M-series each substantially change scale and room match.
+- **bestUsedWhen:** A solid-state amplifier with strong bass control is in place, and the room benefits from sealed-cabinet bass discipline.
+- **avoidOverclaiming:** "the most neutral"; "measurement winner"; "Magico measurement"; "the only sealed-cabinet leader"; "endgame"; "world class"; "the measurement reference"; "magic".
 - **appliesToRoles:** `['speaker']`
 - **exampleModels:** A1, A3, A5, S3, M3, M6.
-- **notes:** Sealed-cabinet construction is a Magico identity feature.
+- **notes:** Sealed-cabinet aluminum-extrusion construction is a Magico identity feature; measurement claims must be hedged because "neutral" is not a universally-shared category among destination loudspeakers.
 
 #### 16. YG Acoustics
 - **matchTokens:** `['yg acoustics', 'yg carmel', 'yg hailey', 'yg sonja', 'yg vantage']`
 - **priority:** `audiophile-identity` • **confidence:** `medium`
-- **houseVoicing:** Precision-machined aluminum drivers (BilletCore), sealed-cabinet construction, measurement-led voicing with characteristic transient sharpness.
-- **designPhilosophy:** Yoav Geva lineage. Precision aluminum driver machining; sealed cabinets. Statement-class US loudspeaker brand.
-- **systemBuildingLogic:** Carmel 2 (entry) / Hailey / Sonja / Vantage tier ladder. Every model is reference-class.
-- **commonStrengths:** Precision driver behavior; sealed-cabinet bass discipline; measurement consistency.
-- **commonTradeoffs:** Preference-dependent transient sharpness; room dependence.
-- **upgradeCautions:** Carmel 2 → Hailey is a substantial scale step.
-- **bestUsedWhen:** Solid-state amplification with linear measurement; the listener values transient precision.
-- **avoidOverclaiming:** "the most precise"; "measurement leader"; "YG sound".
+- **houseVoicing:** Precision-machined aluminum drivers (BilletCore) in sealed cabinets, often described in terms of measurement-led voicing and transient sharpness.
+- **designPhilosophy:** Yoav Geva lineage. Precision aluminum driver machining; sealed cabinets. US-designed loudspeaker brand with a measurement-forward stance.
+- **systemBuildingLogic:** Carmel 2 (entry) → Hailey → Sonja → Vantage within-brand ladder; each step is a meaningful change in scale and ambition.
+- **commonStrengths:** Precision driver behavior; sealed-cabinet bass discipline; engineering consistency across the line.
+- **commonTradeoffs:** Transient sharpness is preference-dependent; placement and amplification choices matter.
+- **upgradeCautions:** Carmel 2 → Hailey is a substantial scale step in both price and room demand.
+- **bestUsedWhen:** A solid-state amplifier with linear measurement partners well, and the listener values transient precision.
+- **avoidOverclaiming:** "the most precise"; "measurement leader"; "the YG sound"; "endgame"; "world class"; "every model is reference"; "the only precision speaker"; "magic".
 - **appliesToRoles:** `['speaker']`
 - **exampleModels:** Carmel 2, Hailey 2.2, Sonja XV, Vantage.
-- **notes:** BilletCore driver and sealed cabinet are YG identity features.
+- **notes:** BilletCore driver and sealed cabinet are YG identity features. Do not treat every tier as reference-class; Carmel 2 is the entry into the line and is positioned differently from Sonja.
 
 #### 17. DeVore Fidelity
 - **matchTokens:** `['devore', 'devore fidelity']`
 - **priority:** `audiophile-identity` • **confidence:** `high`
-- **houseVoicing:** Wide-baffle dynamic loudspeakers with high efficiency; characteristic warm tube-amp partnering for the Orangutan line.
-- **designPhilosophy:** John DeVore lineage. New York-based. Orangutan line uses wide-baffle high-efficiency dynamic drivers; Reference line uses different architecture.
-- **systemBuildingLogic:** Orangutan O/93, O/96, O/Reference, and the Gibbon line cover a wide range. The Orangutan line specifically pairs canonically with low-to-moderate power tube amplification.
-- **commonStrengths:** High efficiency for tube partnering; wide-baffle scale; tonal density.
-- **commonTradeoffs:** Wide-baffle imaging is not pinpoint; cabinet width / placement requirements.
+- **houseVoicing:** Wide-baffle dynamic loudspeakers with high efficiency; the Orangutan line is associated with low-to-moderate power tube amplification as its canonical partner.
+- **designPhilosophy:** John DeVore lineage. New York-based. Orangutan line uses wide-baffle high-efficiency dynamic drivers; the Reference line uses a different architecture and should be treated separately.
+- **systemBuildingLogic:** Orangutan O/93, O/96, O/Reference, and the Gibbon line cover a wide range; the Orangutan line in particular tends to pair with low-to-moderate power tube amplification.
+- **commonStrengths:** High efficiency that suits tube partnering; wide-baffle scale; tonal density in the right context.
+- **commonTradeoffs:** Wide-baffle imaging is not pinpoint; cabinet width and placement requirements limit room fit.
 - **upgradeCautions:** Orangutan line voicing is distinct from Gibbon — they are not the same lineage.
-- **bestUsedWhen:** A low-power tube amplifier benefits from a high-efficiency partner; the listener prefers tonal weight over pinpoint imaging.
-- **avoidOverclaiming:** "the warmest"; "reference natural"; "DeVore sound".
+- **bestUsedWhen:** A low-power tube amplifier benefits from a high-efficiency partner and the listener prefers tonal weight over pinpoint imaging.
+- **avoidOverclaiming:** "the warmest"; "reference natural"; "the DeVore sound"; "endgame"; "world class"; "the only horn alternative"; "magic".
 - **appliesToRoles:** `['speaker']`
 - **exampleModels:** O/93, O/96, O/Reference, Gibbon 88, Gibbon Super 8.
-- **notes:** Small NYC-based brand; service / ownership is a relevant ownership consideration.
+- **notes:** Small NYC-based brand; service and ownership continuity is an ownership consideration. Phase K reference uses DeVore in a high-efficiency tube context.
 
 #### 18. Audio Note (UK & Japan)
 - **matchTokens:** `['audio note']` — *cannot disambiguate UK vs Japan from chain name alone*
-- **priority:** `audiophile-identity` • **confidence:** `medium`
-- **houseVoicing:** Tube-led, high-efficiency-speaker tradition with emphasis on tonal density and single-ended triode partnering.
+- **priority:** `audiophile-identity` • **confidence:** `medium` *(downgraded effective ceiling — see notes on UK/Japan disambiguation; the composer should treat this entry as `low` until disambiguation lands)*
+- **houseVoicing:** Tube-led, high-efficiency-speaker tradition often associated with tonal density and single-ended triode partnering, with caveats below about UK vs Japan.
 - **designPhilosophy:** Peter Qvortrup (UK) and the separate Audio Note Japan lineage. SET amplifier focus, high-efficiency speaker partner (AN-E, AN-J, AN-K), silver / copper wire emphasis.
-- **systemBuildingLogic:** Tier ladder spans an enormous range (Cobra to flagship Ongaku / Gaku-On). Within-brand partnering is the canonical approach.
-- **commonStrengths:** Tonal density; SET intimacy; single-brand voicing coherence.
-- **commonTradeoffs:** SPL ceiling on lower-tier SET pairings; single-brand voicing is preference-dependent.
-- **upgradeCautions:** Audio Note UK and Audio Note Japan are separate companies despite shared name.
-- **bestUsedWhen:** The owner is committed to SET / high-efficiency philosophy and ideally builds within the brand.
-- **avoidOverclaiming:** "unrivalled tone"; "the only SET that does X"; "Audio Note sound".
+- **systemBuildingLogic:** Within-brand partnering is the canonical approach; tier ladders span an enormous price range. The UK and Japan lineages should not be collapsed.
+- **commonStrengths:** Tonal density; SET intimacy; within-brand voicing coherence.
+- **commonTradeoffs:** SPL ceiling on lower-tier SET pairings; single-brand voicing is preference-dependent; UK vs Japan disambiguation is non-trivial.
+- **upgradeCautions:** Audio Note UK and Audio Note Japan are separate companies despite the shared name; ownership and service paths differ.
+- **bestUsedWhen:** The listener is committed to SET / high-efficiency philosophy and ideally builds within the brand.
+- **avoidOverclaiming:** "unrivalled tone"; "the only SET that does X"; "the Audio Note sound"; "endgame"; "world class"; "the SET reference"; "magic"; "musicality" as an unexplained noun.
 - **appliesToRoles:** `['source', 'amplifier', 'speaker']`
 - **exampleModels:** CD 2.1x, Meishu, Soro, AN-E SPe HE, AN-J, AN-K.
-- **notes:** **CRITICAL** distinction: Audio Note UK ≠ Audio Note Japan. Both are legitimate. The artifact should NOT collapse them.
+- **notes:** **CRITICAL** distinction: Audio Note UK ≠ Audio Note Japan. Both are legitimate, separately owned, and have different lineages. The artifact should NOT collapse them; until the composer can disambiguate by model token, treat this entry as effectively `low` confidence and prefer not to surface house-voicing prose. Editorial review flagged this as the highest-risk entry in the draft.
 
 #### 19. Leben Hi-Fi
 - **matchTokens:** `['leben']`
@@ -417,25 +417,25 @@ of this design pass.
 - **commonTradeoffs:** Lower-power tube limits demanding loads; boutique-brand service consideration.
 - **upgradeCautions:** CS300 → CS600 is a meaningful step in headroom and authority.
 - **bestUsedWhen:** A high-efficiency loudspeaker partner with moderate room scale benefits from push-pull tube tonal density.
-- **avoidOverclaiming:** "the best Japanese tube"; "audiophile underground secret"; "Leben truth".
+- **avoidOverclaiming:** "the best Japanese tube"; "audiophile underground secret"; "the Leben truth"; "endgame"; "world class"; "the only push-pull that…"; "magic"; "musicality" as an unexplained noun.
 - **appliesToRoles:** `['amplifier']`
 - **exampleModels:** CS300, CS600X, CS1000P, RS28CX (preamp).
-- **notes:** Phase K reference uses Leben CS600X.
+- **notes:** Phase K reference uses Leben CS600X. Boutique service network is limited outside Japan; ownership consideration on parts availability.
 
 #### 20. Shindo Laboratory
 - **matchTokens:** `['shindo']`
 - **priority:** `audiophile-identity` • **confidence:** `medium`
-- **houseVoicing:** All-tube vintage-tube-focused designs with characteristic Shindo tonal density and dynamic restraint.
-- **designPhilosophy:** Ken Shindo lineage (now continued by Takashi Shindo). Vintage-tube focus, often NOS components, low-power SET / push-pull tube designs.
-- **systemBuildingLogic:** Shindo amplifiers commonly partner with high-efficiency loudspeakers (DeVore Orangutan is the canonical NYC pairing). Within-brand source partnership is also common.
-- **commonStrengths:** Tonal density; vintage-tube-character voicing; editorial cult following (Art Dudley legacy).
-- **commonTradeoffs:** SPL ceiling on SET pairings; limited service network; long-term ownership requires vintage-tube partnership.
-- **upgradeCautions:** Discontinued Shindo models (Aurieges, Monbrison, Cortese, Haut-Brion) have very limited replacement / repair paths.
-- **bestUsedWhen:** A high-efficiency loudspeaker with a committed owner-listener relationship benefits from Shindo character.
-- **avoidOverclaiming:** "unmatched tone"; "unsurpassed musicality"; "Shindo magic".
+- **houseVoicing:** All-tube, vintage-tube-focused designs often associated with tonal density and dynamic restraint at moderate volumes.
+- **designPhilosophy:** Ken Shindo lineage (continued by Takashi Shindo). Vintage-tube focus, often NOS components, low-power SET and push-pull tube designs.
+- **systemBuildingLogic:** Shindo amplifiers tend to partner with high-efficiency loudspeakers (DeVore Orangutan is a frequently-cited NYC pairing). Within-brand source partnership is also common.
+- **commonStrengths:** Tonal density; vintage-tube character; long editorial history of within-brand system building.
+- **commonTradeoffs:** SPL ceiling on SET pairings; limited service network outside specialist dealers; long-term ownership depends on vintage-tube supply.
+- **upgradeCautions:** Discontinued Shindo models (Aurieges, Monbrison, Cortese, Haut-Brion) have very limited replacement and repair paths.
+- **bestUsedWhen:** A high-efficiency loudspeaker is in place and the listener is comfortable with vintage-tube ownership trade-offs.
+- **avoidOverclaiming:** "unmatched tone"; "unsurpassed musicality"; "Shindo magic"; "cult"; "endgame"; "world class"; "the only SET that does X"; "musicality" as an unexplained noun; "the Shindo sound" as a self-evident referent.
 - **appliesToRoles:** `['amplifier']`
 - **exampleModels:** Aurieges-L, Cortese, Monbrison, Haut-Brion.
-- **notes:** Shindo has cult editorial following; restraint is critical to avoid hype. Art Dudley's Stereophile coverage built much of the modern Shindo identity.
+- **notes:** Shindo has a long editorial following (Art Dudley's Stereophile coverage shaped much of the modern Shindo identity). Restraint is critical to avoid hype framing; do not import "cult," "magic," or "musicality" as an unexplained noun into any output sentence.
 
 #### 21. Hegel Music Systems
 - **matchTokens:** `['hegel']`
@@ -447,25 +447,25 @@ of this design pass.
 - **commonTradeoffs:** Solid-state register not preferred by every listener; aesthetic / fascia design is utilitarian.
 - **upgradeCautions:** H120 → H190 → H390 → H600 — each step adds power and resolution without changing the SoundEngine character.
 - **bestUsedWhen:** A well-matched modern loudspeaker benefits from neutral Class-AB grip and broad streaming connectivity.
-- **avoidOverclaiming:** "the best integrated"; "Norwegian sound"; "Hegel quiet".
+- **avoidOverclaiming:** "the best integrated"; "the Norwegian sound"; "Hegel quiet"; "endgame"; "world class"; "the only Class-AB that…"; "magic"; "best in class".
 - **appliesToRoles:** `['amplifier']`
 - **exampleModels:** H120, H190, H390, H600.
-- **notes:** SoundEngine is a Hegel trademark architecture and safe to reference.
+- **notes:** SoundEngine is a Hegel trademark architecture and safe to reference as a brand-specific feedback approach (not as an objective superiority claim).
 
 #### 22. Luxman
 - **matchTokens:** `['luxman']`
 - **priority:** `audiophile-identity` • **confidence:** `medium`
-- **houseVoicing:** Japanese Class-AB integrated heritage with heavy power supplies; characteristic Luxman tonal richness and dynamic ease.
+- **houseVoicing:** Japanese Class-AB integrated heritage with heavy power supplies, often associated with tonal richness and dynamic ease.
 - **designPhilosophy:** Luxman Corporation lineage (Yokohama). High-bias Class-AB designs; tube models (LX series) and solid-state (L-series) coexist.
-- **systemBuildingLogic:** L-505 / L-509X / L-595A SE solid-state integrated ladder; LX-380 / LX-1000 valve integrated tier. The L-509X is the longstanding flagship reference.
-- **commonStrengths:** Tonal richness; dynamic ease; long-cycle ownership.
+- **systemBuildingLogic:** L-505 / L-509X / L-595A SE solid-state integrated ladder; LX-380 / LX-1000 valve integrated tier. The L-509X has historically anchored the flagship reference.
+- **commonStrengths:** Tonal richness; dynamic ease; long-cycle ownership in many systems.
 - **commonTradeoffs:** Weight and chassis scale; heat from high-bias designs.
-- **upgradeCautions:** L-509X → L-595A SE is a substantial step in price; LX tube models are a voicing choice, not a hierarchy step.
-- **bestUsedWhen:** A high-efficiency loudspeaker partner benefits from Class-AB headroom with Luxman tonal richness.
-- **avoidOverclaiming:** "the most musical"; "Japanese sound"; "Luxman warmth".
+- **upgradeCautions:** L-509X → L-595A SE is a substantial step in price; the LX tube models are a voicing choice rather than a hierarchy step from the SS line.
+- **bestUsedWhen:** A loudspeaker partner benefits from Class-AB headroom paired with the brand's tonal character.
+- **avoidOverclaiming:** "the most musical"; "the Japanese sound"; "Luxman warmth"; "endgame"; "world class"; "the only high-bias Class-AB that…"; "magic"; "musicality" as an unexplained noun.
 - **appliesToRoles:** `['amplifier']`
 - **exampleModels:** L-509X, L-595A SE, LX-380, LX-1000.
-- **notes:** Distinguish L-series (SS) from LX-series (tube).
+- **notes:** Distinguish the L-series (solid-state) from the LX-series (tube) — they are different voicings, not a tier ladder.
 
 #### 23. Rega
 - **matchTokens:** `['rega']`
@@ -477,10 +477,10 @@ of this design pass.
 - **commonTradeoffs:** Single-brand voicing dependence; Rega character is preference-dependent.
 - **upgradeCautions:** Planar tier steps are meaningful; cross-brand cartridge changes the foundation.
 - **bestUsedWhen:** The owner values brand-coherent voicing and is committed to building within the Rega ecosystem.
-- **avoidOverclaiming:** "the rhythm leader"; "unbeatable PRaT" (PRaT belongs to Naim editorial vocabulary); "Rega truth".
+- **avoidOverclaiming:** "the rhythm leader"; "unbeatable PRaT" (PRaT belongs to Naim editorial vocabulary, not Rega); "the Rega truth"; "endgame"; "world class"; "the only brand-coherent system"; "magic"; "musicality" as an unexplained noun.
 - **appliesToRoles:** `['source', 'amplifier', 'speaker']`
 - **exampleModels:** Planar 6, Planar 10, Aethos, Aria Mk3, Brio.
-- **notes:** Rega ecosystem synergy is editorially safe to reference. Do not collapse Rega "rhythm" into Naim's PRaT vocabulary — they are different editorial traditions.
+- **notes:** Rega ecosystem synergy is editorially safe to reference. Do not collapse Rega "rhythm" into Naim's PRaT vocabulary — they are different editorial traditions and should not borrow each other's house terminology.
 
 #### 24. KEF
 - **matchTokens:** `['kef']`
@@ -492,10 +492,10 @@ of this design pass.
 - **commonTradeoffs:** Q-series and R-series are mid-tier; not all KEF speakers are destination-class. LS50 series is preference-polarizing for some listeners.
 - **upgradeCautions:** Q-series → R-series → Reference / Blade are meaningfully different tiers.
 - **bestUsedWhen:** A modern listening style favors Uni-Q point-source imaging; system tier matches speaker tier.
-- **avoidOverclaiming:** "the best coaxial"; "flat measurement reference"; "KEF sound".
+- **avoidOverclaiming:** "the best coaxial"; "flat measurement reference"; "the KEF sound"; "endgame"; "world class"; "the only Uni-Q"; "magic"; "giant killer" (a phrase historically attached to LS50 reviews).
 - **appliesToRoles:** `['speaker']`
 - **exampleModels:** LS50 Meta, LS60 Wireless, R3 Meta, Reference 3 Meta, Blade Two Meta.
-- **notes:** KEF spans a wide range from budget Q-series to flagship Blade. Brand-level destination protection would over-protect Q-series; entry models are not destination-class. The `mixed` priority signals "audiophile-identity at higher tiers, commercial at entry tiers."
+- **notes:** KEF spans a wide range from budget Q-series to flagship Blade. Brand-level destination protection would over-protect the Q-series; entry models are not destination-class. The `mixed` priority signals "audiophile-identity at higher tiers, commercial at entry tiers." The composer should not surface house voicing on Q-series chains; restrict identity prose to R-series and above.
 
 #### 25. Focal
 - **matchTokens:** `['focal']`
@@ -507,10 +507,10 @@ of this design pass.
 - **commonTradeoffs:** Beryllium top-end is preference-dependent; tier voicings are not identical across Chora → Utopia.
 - **upgradeCautions:** Chora / Aria → Sopra / Utopia is a substantial scale step. Focal headphone (Utopia / Clear / Bathys) is a separate lineage.
 - **bestUsedWhen:** A modern system favors top-end extension and the listener prefers beryllium character.
-- **avoidOverclaiming:** "the most resolving tweeter"; "French sound"; "beryllium leader".
+- **avoidOverclaiming:** "the most resolving tweeter"; "the French sound"; "beryllium leader"; "endgame"; "world class"; "the only beryllium tweeter"; "magic"; "best in class".
 - **appliesToRoles:** `['speaker']`
 - **exampleModels:** Aria 906, Sopra No. 2, Utopia III, Utopia M Maestro, Grande Utopia EM Evo.
-- **notes:** Focal Pro (studio) is a separate division; mass-market Chora is not destination-class.
+- **notes:** Focal Pro (studio) is a separate division; mass-market Chora is not destination-class. The composer should restrict identity prose to Sopra and above; Chora and entry Aria tiers behave as `commercial` for this purpose.
 
 ### Commercial-priority markers (6 — structural minimums only)
 
@@ -625,7 +625,7 @@ identity sentence when `priority === 'commercial'`.
 | **Commerce contamination.** WiiM / Eversolo / Bluesound presence in catalog could leak into identity prose if `priority` filtering is forgotten. | **High** | Composer must hard-gate on `priority === 'commercial'` → emit nothing identity-related. Separate test suite per priority value before E-5B ships. |
 | **Stale identity claims.** Brands change ownership, voicing direction, and reference models over time. Audio Research changed hands in 2024; ARC voicing under new ownership is not yet established. | **Medium** | `notes` field flags ownership / lineage changes; `confidence: medium/low` reduces composer assertion strength; annual editorial review pass scheduled. |
 | **Brand-conflict overlap.** A chain with both Naim and Linn could surface PRaT (Naim) and source-first (Linn) claims that read as competing rather than complementary. | **Medium** | Per-component identity selection (use the brand for THAT component only); composer should emit at most one identity sentence per §5 card. |
-| **Cult-brand overclaim.** Shindo and Audio Note especially have cult editorial followings; "magic" / "musicality" / "the only" phrasing must be suppressed. | **Medium** | `avoidOverclaiming` lists for Shindo, Audio Note, Quad ESL explicitly include "magic" / "unrivalled" / "the only." |
+| **Devoted-audience overclaim.** Shindo and Audio Note especially have devoted editorial audiences; "magic" / "musicality" / "the only" phrasing must be suppressed. | **Medium** | `avoidOverclaiming` lists for Shindo, Audio Note, Quad ESL explicitly include "magic" / "unrivalled" / "the only" / "musicality" as an unexplained noun / "cult." |
 | **Tier-collapse.** Treating "KEF" as if Q-series and Blade share the same identity. | **Medium** | `priority: 'mixed'` documented; per-model granularity may be needed in E-5B. |
 | **PRaT vocabulary collision.** Naim's PRaT is widely-cited; Rega owners sometimes use "PRaT" too. The composer must not transfer Naim's identity to Rega. | **Low** | Rega's `avoidOverclaiming` explicitly includes `"unbeatable PRaT"`; identity sentences would be different per brand. |
 | **Hybrid topology misclassification.** McIntosh MA12000 is hybrid tube/SS; presenting it as pure tube would be wrong. | **Low** | McIntosh `notes:` explicitly warns; Phase C facts extraction already distinguishes hybrid from pure tube. |
@@ -683,7 +683,7 @@ Today (post-E-2B):
 > The Naim Supernait 3 carries the signal between the Naim NDX 2 and the Falcon Acoustics LS3/5a, translating source character into drive for the speakers.
 
 After E-5B (with house voicing):
-> The Naim Supernait 3 carries the signal between the Naim NDX 2 and the Falcon Acoustics LS3/5a, translating source character into drive for the speakers. **Within the Naim ecosystem, the all-discrete signal path and outboard-PSU upgrade lever define how this integrated relates to the rest of the chain.**
+> The Naim Supernait 3 carries the signal between the Naim NDX 2 and the Falcon Acoustics LS3/5a, translating source character into drive for the speakers. **Within the Naim ecosystem, the all-discrete signal path and external power-supply hierarchy are part of how this integrated is meant to behave in the rest of the system.**
 
 ### Quad ESL-57 (today vs. after E-5B):
 
@@ -691,7 +691,7 @@ Today (post-E-4):
 > The Quad ESL-57 translates what the Quad II Classic delivers into sound in the room. *(§10 protection: destination-class.)*
 
 After E-5B (with house voicing):
-> The Quad ESL-57 translates what the Quad II Classic delivers into sound in the room. **The full-range dipole electrostatic panel — Peter Walker's original-designer design — frames the system's voicing around midrange realism and time coherence at the cost of SPL ceiling.**
+> The Quad ESL-57 translates what the Quad II Classic delivers into sound in the room. **The full-range dipole electrostatic panel, carried forward from Peter Walker's original design, tends to frame the system's voicing around midrange realism and time coherence at the cost of SPL ceiling.**
 
 ### Pass Labs XA25 (today vs. after E-5B):
 
@@ -699,7 +699,7 @@ Today (post-C):
 > The Pass Labs XA25 carries the signal between the dCS Bartók and the Harbeth 30.2 XD, translating source character into drive for the speakers. Its class-A solid-state design delivers control and resolution without smoothing texture.
 
 After E-5B:
-> [same first + facts sentences] **In the Nelson Pass design lineage, the XA series prioritizes Class-A current delivery over topology complexity.**
+> [same first + facts sentences] **In the Nelson Pass design lineage, the XA series is associated with Class-A current delivery prioritized over topology complexity.**
 
 ### dCS Bartók (today vs. after E-5B):
 
@@ -773,35 +773,326 @@ The reasoning:
 ## 11. Success-Criterion Self-Check
 
 The user's success criterion: at the end of this phase we should be
-able to answer:
+able to answer five questions. The answers below are this draft
+author's own assessment and are NOT independent verification. The
+later "Editorial Review Findings" section (§12) supersedes the
+self-check on every disagreement.
 
-- **Is the language accurate?** Yes — each entry's `houseVoicing`,
-  `designPhilosophy`, `systemBuildingLogic` is grounded in widely-cited
-  editorial sources (Stereophile / Hi-Fi News / TAS / Hi-Fi+ /
-  Stereophile's "Recommended Components" / brand-historical reference).
-  Specific claims (PRaT, Ring DAC, Uni-Q, autoformer, Dual Concentric)
-  are trademark architectures or universally-recognized editorial
-  vocabulary.
-- **Is it restrained?** Yes — `avoidOverclaiming` lists explicitly
-  block superlatives, "the only," "magic," etc. Sentence length is
-  capped at one. No marketing copy.
-- **Is it useful?** Yes — the §5 prose improvements shown in §8 above
-  add identity-awareness to the cards that owners would notice. The
-  prose still reads as written by a thoughtful generalist, but one
-  who has actually heard a Naim chain.
-- **Does it improve expert credibility?** Yes — for the highest-priority
-  brands (Naim, Linn, Pass, Quad, dCS, ARC, Wilson, Magico, Tannoy,
-  Klipsch Heritage, JBL Synthesis, Harbeth, DeVore), the artifact moves
-  from "category-aware" to "identity-aware." For the `medium` and
-  `mixed` brands, the lift is smaller but real.
-- **Does it avoid contaminating advisory quality with commerce?** Yes —
-  the explicit `priority: 'commercial'` hard gate, the separation
-  from `DESTINATION_SPEAKER_BRANDS` / `DESTINATION_SPEAKER_MODELS`,
-  and the structural minimum entries for WiiM / Eversolo / Bluesound /
-  Schiit / iFi / Topping demonstrate the boundary holds.
+- **Is the language accurate?** Mostly. Specific claims (PRaT, Ring
+  DAC, Uni-Q, autoformer, Dual Concentric, SoundEngine, BilletCore,
+  RADIAL, X-Material) are trademark or widely-cited editorial
+  vocabulary and are safe to name. Several first-draft sentences were
+  rewritten in editorial review for accuracy — see §12 for the list.
+  Forward-looking voicing claims about Audio Research (post-2024
+  ownership) and Tannoy (current ownership) are not yet established
+  and should be treated as historical until validated.
+- **Is it restrained?** Mostly, after the editorial pass. The original
+  draft contained self-referential phrases ("characteristic McIntosh
+  tonal weight," "characteristic Tannoy midrange") that have been
+  removed. `avoidOverclaiming` lists were strengthened across the
+  board to block "endgame," "world class," "magic," "cult,"
+  "musicality" as an unexplained noun, and brand-specific superlatives
+  ("the Naim sound," "the Wilson sound," etc.) as self-evident
+  referents.
+- **Is it useful?** This cannot be answered from the draft alone — it
+  depends on whether the composer integration in E-5B preserves the
+  restraint discipline encoded here. The risk is that gating logic
+  fails open, not that the source data is too aggressive.
+- **Does it improve expert credibility?** Plausibly, conditional on
+  the editorial review (§12) and on the E-5B implementation gates
+  (§13) being respected. The highest-confidence brands (Naim, Linn,
+  Pass, Quad, dCS, Wilson, Magico, Tannoy, Klipsch Heritage, JBL
+  Synthesis, Harbeth, Spendor, Hegel, DeVore) carry voicing claims
+  that experienced owners would recognize as appropriate. The
+  `medium`-confidence brands carry more editorial risk and should
+  surface less freely.
+- **Does it avoid contaminating advisory quality with commerce?** The
+  `priority: 'commercial'` hard gate is the right structural answer
+  but it has not been tested end-to-end. §13 makes the gate a hard
+  precondition for E-5B implementation.
 
 ---
 
-*End of Phase E-5A design document. No code is wired. This file is
-documentation-only. Review and editorial sign-off recommended before
-proceeding to Phase E-5B.*
+## 12. Editorial Review Findings
+
+This section was added in the Phase E-5A editorial review pass. It
+records the classification of every brand entry after line-level
+review against accuracy, restraint, audiophile credibility,
+absence of manufacturer-copy language, commerce-boundary discipline,
+overclaim risk, cliché vocabulary, and overgeneralization risk.
+
+The classifications below SUPERSEDE the self-check in §11 wherever
+they conflict.
+
+### 12.1 Approved as-is (post-editorial-pass)
+
+These entries were judged accurate and restrained after the editorial
+sweep applied minor wording adjustments and strengthened
+`avoidOverclaiming` lists (the entries themselves did not require
+substantive rewrites of `houseVoicing` / `designPhilosophy` /
+`systemBuildingLogic`):
+
+| # | Brand | Confidence | Notes |
+|---|---|---|---|
+| 13 | Spendor | high | Classic vs D-series split is correctly captured. |
+| 14 | Wilson Audio | high | Cabinet damping and X-Material claims are restrained. |
+| 19 | Leben | medium | Phase K reference brand; boutique service note appropriate. |
+| 21 | Hegel | medium | SoundEngine reference is brand-trademark and safely framed. |
+| 23 | Rega | high | Brand-ecosystem framing is appropriate; PRaT collision blocked. |
+| 24 | KEF | mixed/medium | `mixed` priority correctly handles Q-tier vs Reference/Blade. |
+
+### 12.2 Approved with edits (this revision)
+
+These entries had problematic language in the first draft. The
+editorial pass rewrote phrasing for accuracy and restraint, removed
+self-referential constructions, and strengthened `avoidOverclaiming`
+lists:
+
+| # | Brand | Edit summary |
+|---|---|---|
+| 1 | Naim | Removed "canonical upgrade lever" mechanical phrasing; rewrote systemBuildingLogic to use "system" not "chain"; expanded avoid-list to include "endgame," "world class," and "the only brand that does PRaT." |
+| 2 | Linn | Replaced "doctrine" with "design principle"; added "the only source-first brand" to avoid-list. |
+| 3 | Pass Labs | Distributed dense claims into restrained phrasing ("often described in terms of"); added "Class-A leader" and "endgame" to avoid-list. |
+| 4 | Quad (ESL) | **Fixed "Peter Walker original-designer lineage" awkwardness** — now "Peter Walker's original ESL design" framed historically. Added ESL-57 SPL/load profile note. |
+| 5 | Tannoy | Removed self-referential "characteristic Tannoy midrange"; added current ownership-shift note; strengthened avoid-list. |
+| 6 | McIntosh | Removed self-referential "characteristic McIntosh tonal weight"; clarified visual identity is not a sonic claim; added "the McIntosh sound" / "best integrated" to avoid-list. |
+| 8 | dCS | Hedged "reference-tier" to "high-tier"; removed "destination-class on its own" assertion about Bartók; added "the digital reference" / "measurement leader" to avoid-list. |
+| 9 | Chord Electronics | Restrained "characteristic transient sharpness" → "often described in terms of"; expanded avoid-list. |
+| 10 | Klipsch Heritage | Strengthened avoid-list with "giant killer," "endgame," "world class"; clarified Heritage vs RP separation in upgradeCautions. |
+| 11 | JBL Studio Monitor & Synthesis | Restrained "professional-monitor heritage" framing; expanded avoid-list. |
+| 12 | Harbeth | Reframed "BBC LS3/5a tradition" → "BBC-licensee tradition" (Harbeth is a licensee/inheritor, not a BBC entity); strengthened avoid-list. |
+| 15 | Magico | Removed "measurement-correct response" (overclaim); hedged measurement framing; expanded avoid-list with "measurement reference," "the only sealed-cabinet leader." |
+| 16 | YG Acoustics | **Removed "Every model is reference-class"** (overclaim — Carmel 2 is the entry tier and is not reference-class); added explicit note about tier separation. |
+| 17 | DeVore | Rewrote awkward "characteristic warm tube-amp partnering" → "associated with low-to-moderate power tube amplification as its canonical partner"; expanded avoid-list. |
+| 20 | Shindo | **Removed "cult" from commonStrengths**; rewrote "editorial cult following" → "long editorial history of within-brand system building"; expanded avoid-list to block "magic" / "cult" / "musicality" / "the Shindo sound." |
+| 22 | Luxman | Removed self-referential "characteristic Luxman tonal richness"; expanded avoid-list with "musicality" / "endgame" / "the only high-bias Class-AB." |
+| 25 | Focal | Strengthened avoid-list with "endgame" / "magic" / "best in class"; added note restricting identity prose to Sopra and above. |
+
+### 12.3 Downgraded confidence
+
+| # | Brand | From | To | Reason |
+|---|---|---|---|---|
+| 7 | Audio Research | high | medium | 2024 ownership change makes forward-looking voicing claims uncertain; ARC entry now notes this explicitly and labels current claims as historical. |
+| 18 | Audio Note (UK & Japan) | medium | medium (effective `low`) | UK vs Japan disambiguation is not solvable from chain name alone; entry instructs the composer to treat the entry as `low` confidence until a model-token disambiguation is added. Highest-risk entry in the draft. |
+
+### 12.4 Deferred (do NOT include in E-5B initial implementation)
+
+| Brand / category | Reason |
+|---|---|
+| Audio Research (forward-looking voicing under new ownership) | New-product voicing claims must wait for editorial validation post-2024 ownership change. |
+| Audio Note UK vs Japan disambiguated entries | Requires `brandFamily` / model-token disambiguation work before identity prose can be safely surfaced. |
+| Vandersteen, ATC | Already covered by Phase E-4 model patterns; voicing-depth entry deferred from this draft as low-priority. |
+| Sonus Faber, Boenicke, Borresen, Raidho, Marten, Verity, Rockport, Stenheim, TAD | Already covered as destination via Phase D-1 brand allowlist; voicing depth desirable but not blocking. |
+| Marantz, Yamaha, NAD, Denon | Mass-market identity fragmented across vintage / modern / multi-channel lines; defer until `mixed` presentation pattern is established. |
+| B&W / Bowers & Wilkins | Polarizing across 700 / 800 / Nautilus; defer until `mixed` presentation pattern is established. |
+| SMSL, Cambridge Audio, SVS | Same category as included commercial markers; the 6 already-included entries are sufficient to demonstrate the boundary. |
+| Boutique tube builders (Atma-Sphere, Jadis, VAC, Ayon, Lamm, etc.) | High cardinality; defer until validation surfaces them. |
+| Vintage non-ESL Quad, Spendor BC1, KEF LS3/5a (vintage) | Outside the artifact's typical advisory scope. |
+
+### 12.5 Commercial-only (HARD-GATED — must never emit identity prose)
+
+The following 6 entries carry `priority === 'commercial'` and
+`confidence === 'low'`. They were re-verified to confirm that:
+
+- `houseVoicing` is unset
+- `designPhilosophy` is unset
+- `systemBuildingLogic` is unset
+- `avoidOverclaiming` includes "Any house-voicing claim" as a literal entry
+- `notes` instructs the composer to use the entry as functional category descriptor only
+
+| # | Brand | Verified commercial-only |
+|---|---|---|
+| 26 | WiiM | Yes |
+| 27 | Eversolo | Yes |
+| 28 | Bluesound | Yes |
+| 29 | Schiit | Yes |
+| 30 | iFi | Yes |
+| 31 | Topping | Yes |
+
+The boundary holds at the data layer. The composer must enforce it
+at the output layer (§13).
+
+### 12.6 Implementation restrictions (apply to ALL entries)
+
+The editorial review pass derived the following restrictions, which
+apply uniformly to every audiophile-identity entry regardless of
+confidence:
+
+1. **Use "system" not "chain"** in any output sentence, unless the
+   sentence specifically refers to the literal signal-path order.
+2. **Prefer restrained hedging vocabulary**: "often," "tends to,"
+   "is associated with," "in many systems," "when used in the right
+   context," "its value is strongest when…"
+3. **Block the editorial-cliché vocabulary** in every entry's
+   `avoidOverclaiming` list: "magic," "legendary," "unrivalled,"
+   "giant killer," "world class," "best," "endgame," "cult,"
+   "giant-slayer," "reference-killer," "musicality" as an unexplained
+   noun.
+4. **Block brand-name-as-self-evident-referent**: every entry's
+   avoid-list includes "the X sound" where X is the brand.
+5. **Treat split-tier brands as split**. Klipsch Heritage ≠ Klipsch
+   RP. JBL Synthesis ≠ JBL Stage. Spendor Classic ≠ Spendor D.
+   Audio Note UK ≠ Audio Note Japan. McIntosh tube ≠ McIntosh hybrid
+   ≠ McIntosh autoformer SS. Luxman L ≠ Luxman LX. DeVore Orangutan
+   ≠ DeVore Gibbon.
+6. **Treat ownership / lineage changes as confidence-limiting**.
+   Audio Research (2024) and Tannoy (current ownership) carry
+   historical-only claims until new-ownership product validates
+   continuity.
+7. **Do not import editorial vocabulary across brands**. Naim's PRaT
+   stays with Naim; Rega's "rhythm" is its own term.
+8. **Do not use affiliate / commerce relevance as advisory
+   relevance**. WiiM is in catalog for purchase paths; it is not in
+   the identity-prose layer.
+
+---
+
+## 13. E-5B Implementation Gate
+
+Composer integration in Phase E-5B should proceed ONLY when every
+condition below is satisfied. These conditions are preconditions,
+not aspirations.
+
+### 13.1 Data-layer preconditions
+
+- [ ] Every entry in the canonical TypeScript file (e.g.
+      `apps/web/src/lib/brand-house-voicing.ts`) has been editorially
+      reviewed in §12 and reflects the corrections recorded there.
+- [ ] No entry uses raw manufacturer-copy language; sentences pass
+      the cliché-vocabulary deny-check defined in §12.6.
+- [ ] Commercial entries (`priority === 'commercial'`) have
+      `houseVoicing`, `designPhilosophy`, and `systemBuildingLogic`
+      all unset; their `avoidOverclaiming` lists include "Any
+      house-voicing claim."
+- [ ] `matchTokens` are narrowed for every split-tier brand (Klipsch
+      Heritage, JBL Studio Monitor/Synthesis, Audio Note, Quad ESL,
+      Chord Electronics) to prevent identity contamination.
+- [ ] Token uniqueness is verified — no two entries share a
+      `matchTokens` value.
+- [ ] Audio Research is `confidence: 'medium'` (downgraded from
+      first-draft `high`).
+- [ ] Audio Note's notes field explicitly states the composer should
+      treat it as `low` confidence until UK/Japan disambiguation
+      lands.
+
+### 13.2 Composer-layer preconditions (hard gates)
+
+The composer MUST enforce ALL of the following before emitting any
+brand-voicing sentence:
+
+- [ ] **Commercial hard-gate.** No identity prose emits when
+      `priority === 'commercial'`. This is enforced as an explicit
+      early-return, not as a sentence-level filter.
+- [ ] **Per-card-one-sentence cap.** No §5 component card emits more
+      than one brand-voicing sentence. Even if `houseVoicing`,
+      `designPhilosophy`, and `systemBuildingLogic` are all set, the
+      composer selects at most one to surface.
+- [ ] **No conflict-signal bypass.** When Phase A B3/B4
+      `hasConflictSignal` is true on a chain, brand voicing must NOT
+      surface in §8 or §9 — the conflict-suppression gate takes
+      precedence.
+- [ ] **No primary-constraint bypass.** When Phase A B5
+      primary-constraint protection-suppression is active for a
+      component, brand voicing on that component must NOT contradict
+      the engine's upgrade direction. The composer should suppress
+      the brand sentence rather than emit competing claims.
+- [ ] **Anti-overclaim deny-check.** Before emitting any composed
+      sentence that names a brand, the composer runs a substring
+      check of the sentence against the entry's `avoidOverclaiming`
+      list and the universal §12.6 cliché-vocabulary list. Any match
+      causes the sentence to be suppressed (not retried — suppression
+      is the safe default).
+- [ ] **Redundancy suppression.** When the brand sentence would
+      duplicate a substring already present in the §5 card's facts
+      sentence (e.g. dCS Bartók — Ring DAC named in both), the
+      composer skips the brand sentence.
+- [ ] **Confidence gating.** `low` confidence never surfaces.
+      `medium` surfaces only when no conflict-signal is present on
+      the chain and no primary-constraint suppression applies.
+      `high` surfaces unless explicitly suppressed by the above
+      gates.
+- [ ] **No manufacturer-copy passthrough.** The composer never
+      generates novel brand prose. It selects one of the static
+      strings (`houseVoicing` | `designPhilosophy` |
+      `systemBuildingLogic`) verbatim from the data layer; if all
+      three fail the gates, the composer emits nothing.
+- [ ] **Split-tier respect.** The composer does not transfer
+      Klipsch Heritage identity to Klipsch RP, JBL Synthesis identity
+      to JBL Stage, Spendor Classic identity to Spendor D, etc. The
+      `matchTokens`-narrowing approach is the structural answer; the
+      composer must rely on it.
+- [ ] **"System" not "chain".** No brand sentence may include the
+      word "chain" except in literal signal-path discussion.
+- [ ] **Affiliate isolation.** No brand identity claim is sourced
+      from, conditioned on, or co-located with affiliate or
+      commercial catalog data. Commerce data and identity data live
+      in separate code paths.
+
+### 13.3 Test preconditions
+
+Before any composer wiring is committed, the following tests must
+exist and pass:
+
+- [ ] Unit: schema conformance for every entry
+- [ ] Unit: token uniqueness across the file
+- [ ] Unit: every audiophile-identity entry's `avoidOverclaiming`
+      list contains at least the universal §12.6 cliché vocabulary
+- [ ] Unit: every commercial entry has `houseVoicing` /
+      `designPhilosophy` / `systemBuildingLogic` unset
+- [ ] Integration: commercial hard-gate — Topping / WiiM / Bluesound
+      chain emits no identity prose
+- [ ] Integration: per-card-one-sentence cap — Naim chain with two
+      Naim components emits at most one brand sentence per card
+- [ ] Integration: conflict-signal suppression — chain with conflict
+      signal emits no brand prose in §8/§9 even when the brand has
+      `confidence: 'high'`
+- [ ] Integration: primary-constraint suppression — brand sentence
+      on a primary-constraint component is suppressed
+- [ ] Integration: anti-overclaim deny-check — adversarial sentence
+      containing "endgame" or "magic" is suppressed
+- [ ] Integration: split-tier separation — Klipsch RP-600M chain
+      gets no Heritage identity; JBL Stage chain gets no Synthesis
+      identity
+- [ ] Integration: redundancy suppression — dCS Bartók chain
+      surfaces one brand sentence, not two
+- [ ] Integration: confidence gating — Audio Note chain (effective
+      `low` until disambiguation) emits no identity prose
+- [ ] Integration: ARC chain treats voicing claims as historical /
+      hedged
+- [ ] Regression: Phase K reference chain (Pontus II / Leben /
+      DeVore) byte-equivalent under low-confidence path; expected
+      change under medium-confidence path is the single documented
+      brand sentence per card
+- [ ] Per-fixture acceptance: 28-fixture real-world re-render —
+      every brand-voicing sentence reads as restrained, accurate,
+      and non-contradictory
+
+### 13.4 Editorial-review preconditions
+
+- [ ] §12 above has been read by the project owner or an independent
+      audiophile reviewer.
+- [ ] At least the 25 audiophile-identity entries have been
+      individually reviewed for accuracy by the project owner.
+- [ ] Any entry the reviewer flags as "would annoy a knowledgeable
+      owner" has been edited or downgraded.
+- [ ] The commercial-boundary discipline (§12.5) has been
+      independently confirmed.
+
+### 13.5 Promotion discipline
+
+- [ ] Composer wiring lands BEHIND a feature flag, scoped to Preview
+      on `version-b` only.
+- [ ] No Production promotion until the validation pools (Phase K,
+      36-fixture, 28-fixture) all show preserved or improved
+      credibility — never just "passes tests."
+- [ ] The Brand Authority layer remains untouched; this is an
+      additive layer only.
+
+**If any precondition above is unmet, E-5B should not proceed.**
+
+---
+
+*End of Phase E-5A design document, as revised in editorial review.
+No code is wired. This file is documentation-only. The §12 findings
+and §13 implementation gate are the operative conditions for E-5B
+and SUPERSEDE the §11 self-check on any disagreement.*
