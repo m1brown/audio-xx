@@ -4,8 +4,10 @@
 import React from 'react';
 
 import type { AdvisoryResponse } from '@/lib/advisory-response';
+import { selectBrandHouseVoicingSentenceForComponent } from '@/lib/brand-house-voicing-gates';
 import { COLOR, sectionHeadingStyle, proseStyle } from '@/lib/editorial-tokens';
 import { hasDisplayableSources } from '@/lib/evidence/source-whitelist';
+import { isBrandHouseVoicingEnabled } from '@/lib/feature-flags';
 import { findProductByComponentName } from '@/lib/consultation';
 import { resolveProductImageStrict, getProductImage } from '@/lib/product-images';
 
@@ -1675,11 +1677,29 @@ function resolveComponentImage(componentName: string | undefined): string | unde
   return getProductImage(undefined, componentName);
 }
 
+/**
+ * Hardening Phase E-5B.2 — §5 brand-house-voicing integration.
+ *
+ * `buildComponentCards` now optionally receives a `hasConflict` boolean
+ * (Phase A B3/B4 chain-level signal) so that the per-card brand selector
+ * can suppress under conflict. The integration is feature-flag gated
+ * via {@link isBrandHouseVoicingEnabled}: when the flag is off the
+ * helper is never invoked and the rendered output is byte-equivalent
+ * to pre-E-5B.2.
+ *
+ * The brand sentence (when one is selected) is appended after the
+ * existing contribution body with a leading space. It never replaces
+ * existing prose; suppression is silent (no fallback sentence emitted).
+ * Auxiliaries and headphone-system cards are skipped at the integration
+ * site so the helper never sees them.
+ */
 function buildComponentCards(
   names: string[] | undefined,
   roles: string[] | undefined,
   readings: string[] | undefined,
   primaryConstraintName?: string,
+  hasConflict?: boolean,
+  isHeadphoneSys?: boolean,
 ): Array<{ name: string; role?: string; body?: string; imageUrl?: string }> {
   if (!readings || readings.length === 0 && (!names || names.length === 0)) return [];
   if (!names || names.length === 0) {
@@ -1740,11 +1760,51 @@ function buildComponentCards(
       upstreamFacts,
       roles,
     );
+
+    // Hardening Phase E-5B.2 — append brand-house-voicing sentence.
+    //
+    // Behind feature flag NEXT_PUBLIC_BRAND_HOUSE_VOICING (default OFF).
+    // When OFF, `bodyWithBrand` is identical to `body` and rendered
+    // output is byte-equivalent to pre-E-5B.2.
+    //
+    // Skipped at the integration site (selector never invoked) for:
+    //   - auxiliary components (PSU / clock / network) — Phase E-2/E-3
+    //     discipline; the auxiliary template is final and should not be
+    //     extended by identity prose
+    //   - headphone-system chains — Phase E-1 grammar discipline; the
+    //     transducer / headphone-amp templates are intentionally short
+    //     and identity prose would conflict; deferred to a later phase
+    //   - components whose `roleFamily` is `'unknown'` — the gate stack
+    //     would reject them on role applicability anyway, but skipping
+    //     at the call site avoids the work
+    //
+    // Conflict-signal and primary-constraint suppression are handled
+    // by the gate stack via the `hasConflictSignal` and
+    // `isPrimaryConstraint` inputs threaded in below.
+    let bodyWithBrand = body;
+    if (isBrandHouseVoicingEnabled() && !isHeadphoneSys) {
+      const role = roles?.[i];
+      const family = roleFamily(role);
+      const isAux = family === 'auxiliary' || isAuxiliary(role, name);
+      if (!isAux && family !== 'unknown') {
+        const brandResult = selectBrandHouseVoicingSentenceForComponent({
+          componentName: name,
+          roleFamily: family,
+          hasConflictSignal: !!hasConflict,
+          isPrimaryConstraint: isBottleneck,
+          existingCardProse: body,
+        });
+        if (brandResult.sentence) {
+          bodyWithBrand = `${body} ${brandResult.sentence}`;
+        }
+      }
+    }
+
     const imageUrl = resolveComponentImage(name);
     return {
       name,
       role: roles?.[i],
-      body,
+      body: bodyWithBrand,
       imageUrl,
     };
   });
@@ -3543,6 +3603,13 @@ export default function SystemAssessmentArtifact({
               a.systemChain?.roles,
               a.componentReadings,
               a.primaryConstraint?.componentName,
+              // Hardening Phase E-5B.2 — thread the Phase A B3/B4
+              // conflict-signal flag and the Phase E-1 headphone-system
+              // detector into buildComponentCards so the per-card brand
+              // selector can suppress under conflict and skip headphone
+              // chains entirely.
+              hasConflictSignal(a),
+              isHeadphoneSystem(a.systemChain?.names ?? [], a.systemChain?.roles ?? []),
             ).map((card, i) => (
               <EditorialSubCard
                 key={i}

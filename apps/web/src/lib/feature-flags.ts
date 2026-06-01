@@ -52,3 +52,46 @@ export const BRAND_AUTHORITY_PREVIEW_ENABLED: boolean =
  */
 export const SYSTEM_ASSESSMENT_ARTIFACT_ENABLED: boolean =
   process.env.NEXT_PUBLIC_SYSTEM_ASSESSMENT_ARTIFACT === 'on';
+
+/**
+ * Brand House Voicing surface gate (Phase E-5B.2).
+ *
+ * Env var: `NEXT_PUBLIC_BRAND_HOUSE_VOICING=on`
+ *
+ * - **On**: §5 component cards in the System Assessment Artifact may
+ *   surface a single brand-house-voicing sentence after the existing
+ *   contribution prose, subject to the gate stack documented in
+ *   `apps/web/src/lib/brand-house-voicing-gates.ts`.
+ * - **Off (default)**: §5 cards render unchanged from Stage E-5B.1.
+ *
+ * Safe-off invariant: the data layer (`brand-house-voicing.ts`) and
+ * the gate stack (`brand-house-voicing-gates.ts`) are pure modules; no
+ * other code path consults them when the flag is off. Phase A B3
+ * (conflict-signal), Phase A B5 (primary-constraint protection),
+ * Phase E-2 (auxiliary handling), Phase E-1 (headphone-system grammar),
+ * Phase E-4 (destination-speaker model allowlist), and every existing
+ * §5 composer template are unaffected. Flipping the flag is a pure
+ * presentation surface change scoped to §5 cards only — §8 and §10
+ * brand integration land in Stages E-5B.3 and E-5B.4.
+ *
+ * The constant captures the env var at module load (matching the
+ * other flags in this module). The companion {@link isBrandHouseVoicingEnabled}
+ * getter re-evaluates per-call so test suites can toggle the flag
+ * between renders by mutating `process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING`
+ * without resetting the module cache.
+ */
+export const BRAND_HOUSE_VOICING_ENABLED: boolean =
+  process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING === 'on';
+
+/**
+ * Runtime-evaluated alternative to {@link BRAND_HOUSE_VOICING_ENABLED}.
+ *
+ * Production code paths can use either form interchangeably; the getter
+ * exists so tests can flip the flag mid-suite by mutating
+ * `process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING` and asserting renderer
+ * behavior on both sides of the toggle. Read once per render; do not
+ * cache.
+ */
+export function isBrandHouseVoicingEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING === 'on';
+}
