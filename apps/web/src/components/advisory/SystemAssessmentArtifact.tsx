@@ -4,7 +4,10 @@
 import React from 'react';
 
 import type { AdvisoryResponse } from '@/lib/advisory-response';
-import { selectBrandHouseVoicingSentenceForComponent } from '@/lib/brand-house-voicing-gates';
+import {
+  findEligibleBrandForComponent,
+  selectBrandHouseVoicingSentenceForComponent,
+} from '@/lib/brand-house-voicing-gates';
 import { COLOR, sectionHeadingStyle, proseStyle } from '@/lib/editorial-tokens';
 import { hasDisplayableSources } from '@/lib/evidence/source-whitelist';
 import { isBrandHouseVoicingEnabled } from '@/lib/feature-flags';
@@ -1721,6 +1724,67 @@ function buildComponentCards(
       return { name: `Component ${i + 1}`, body: composed };
     });
   }
+  // Hardening Phase E-5B.2A — per-section brand-sentence dedup pre-pass.
+  //
+  // Each brand-house-voicing entry may surface at most ONCE in §5,
+  // even when multiple chain components match the same entry (e.g.
+  // Naim NDX 2 + Naim Supernait 3, or Rega Planar 10 + Aethos + RX5).
+  //
+  // Pre-pass: walk all cards, group by entry brand, pick a single
+  // winner card per brand. Priority: speaker > amplifier > source.
+  // Tie-broken by earliest chain index (deterministic).
+  //
+  // Only the winner card invokes the brand selector; losers silently
+  // get no brand sentence. Auxiliaries, headphone-system chains, and
+  // unknown-role components are skipped before grouping (they never
+  // win and never count toward dedup).
+  //
+  // When flag is OFF or the chain is a headphone system, the winner
+  // map stays empty — no card calls the selector. The integration
+  // remains byte-equivalent to pre-E-5B.2A flag-OFF behavior.
+  const brandSentenceWinnerByIdx = new Set<number>();
+  if (isBrandHouseVoicingEnabled() && !isHeadphoneSys) {
+    const candidatesByBrand = new Map<
+      string,
+      Array<{ idx: number; family: string }>
+    >();
+    for (let i = 0; i < names.length; i += 1) {
+      const candName = names[i]!;
+      const candRole = roles?.[i];
+      const candFamily = roleFamily(candRole);
+      if (candFamily === 'auxiliary' || isAuxiliary(candRole, candName)) continue;
+      if (candFamily === 'unknown') continue;
+      const entry = findEligibleBrandForComponent(candName, candFamily);
+      if (!entry) continue;
+      const list = candidatesByBrand.get(entry.brand) ?? [];
+      list.push({ idx: i, family: candFamily });
+      candidatesByBrand.set(entry.brand, list);
+    }
+    const rolePriority = (family: string): number => {
+      if (family === 'speaker') return 3;
+      if (family === 'amplifier') return 2;
+      if (family === 'source') return 1;
+      return 0;
+    };
+    for (const list of candidatesByBrand.values()) {
+      let winnerIdx = -1;
+      let winnerScore = -1;
+      for (const { idx, family } of list) {
+        const score = rolePriority(family);
+        // Highest role priority wins; tie-broken by earliest chain
+        // index so the choice is stable across renders.
+        if (
+          score > winnerScore ||
+          (score === winnerScore && (winnerIdx === -1 || idx < winnerIdx))
+        ) {
+          winnerScore = score;
+          winnerIdx = idx;
+        }
+      }
+      if (winnerIdx >= 0) brandSentenceWinnerByIdx.add(winnerIdx);
+    }
+  }
+
   return names.map((name, i) => {
     const matched = findReadingForName(name, readings, i);
     const isBottleneck =
@@ -1782,7 +1846,17 @@ function buildComponentCards(
     // by the gate stack via the `hasConflictSignal` and
     // `isPrimaryConstraint` inputs threaded in below.
     let bodyWithBrand = body;
-    if (isBrandHouseVoicingEnabled() && !isHeadphoneSys) {
+    // Phase E-5B.2A — only the per-brand winner card invokes the
+    // brand selector. The pre-pass above resolved one winner per
+    // matched brand entry; all other same-brand cards silently fall
+    // through. The integration site still validates auxiliary /
+    // unknown family for safety, even though the dedup pre-pass
+    // already enforced those skips when computing the winner set.
+    if (
+      isBrandHouseVoicingEnabled() &&
+      !isHeadphoneSys &&
+      brandSentenceWinnerByIdx.has(i)
+    ) {
       const role = roles?.[i];
       const family = roleFamily(role);
       const isAux = family === 'auxiliary' || isAuxiliary(role, name);

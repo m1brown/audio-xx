@@ -308,6 +308,41 @@ function evaluateCandidate(
   return { ok: true, sentence: candidate };
 }
 
+// ─── Pre-pass eligibility helper (Phase E-5B.2A dedup) ──────────────
+
+/**
+ * Phase E-5B.2A — return the brand entry that WOULD surface for the
+ * given component if the §5 integration site invoked the full selector,
+ * subject only to the pre-selection gates (lookup + commercial +
+ * confidence-low + role applicability). Conflict-signal, primary-
+ * constraint, redundancy, anti-overclaim, and shape-check gates are
+ * NOT applied — those depend on the existing card prose and chain
+ * context that the dedup pre-pass does not yet have.
+ *
+ * The §5 integration site uses this to group same-brand cards across
+ * the chain and pick a single "winner" card per brand, enforcing
+ * per-section dedup. The winner is then passed through the full gate
+ * stack via {@link selectBrandHouseVoicingSentenceForComponent}; the
+ * losers are silently skipped.
+ *
+ * Returns `null` when the component matches no entry, when the entry
+ * is commercial or low-confidence, or when the role family is outside
+ * the entry's `appliesToRoles`.
+ *
+ * Pure function. No state, no side effects.
+ */
+export function findEligibleBrandForComponent(
+  componentName: string,
+  roleFamily: RoleFamily | 'unknown',
+): BrandHouseVoicing | null {
+  const entry = findBrandHouseVoicing(componentName);
+  if (!entry) return null;
+  if (entry.priority === 'commercial') return null;
+  if (entry.confidence === 'low') return null;
+  if (!rolesInclude(entry.appliesToRoles, roleFamily)) return null;
+  return entry;
+}
+
 // ─── Public selector ─────────────────────────────────────────────────
 
 /**

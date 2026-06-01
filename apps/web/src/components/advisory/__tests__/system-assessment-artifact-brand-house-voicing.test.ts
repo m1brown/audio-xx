@@ -517,21 +517,20 @@ describe('§5 brand-house-voicing feature flag', () => {
     expect(html).toContain('push-pull tube architecture');
   });
 
-  it('flag ON: Phase K DeVore O/96 card surfaces a DeVore systemBuildingLogic sentence (houseVoicing and designPhilosophy suppressed by redundancy)', () => {
-    // The composeContributionBody facts-phrase composer surfaces
-    // "wide-baffle" and "high-efficiency" tokens in the existing prose.
-    // DeVore houseVoicing ("Wide-baffle dynamic loudspeakers with high
-    // efficiency...") and designPhilosophy ("Orangutan line uses
-    // wide-baffle high-efficiency dynamic drivers...") both contain
-    // those tokens — redundancy suppresses both. systemBuildingLogic
-    // ("Orangutan O/93, O/96, ... pair with low-to-moderate power tube
-    // amplification.") has "tube" as anchor and no redundancy hit,
-    // so it surfaces. Verifies fall-through to the third priority
-    // field works correctly.
+  it('flag ON: Phase K DeVore O/96 card surfaces the DeVore systemBuildingLogic sentence (E-5B.2A cleanup wording)', () => {
+    // After E-5B.2A: DeVore houseVoicing ("Wide-baffle... high efficiency")
+    // and designPhilosophy ("Orangutan line uses wide-baffle high-efficiency
+    // dynamic drivers...") are both redundancy-suppressed because the
+    // existing facts-phrase prose mentions wide-baffle / high-efficiency.
+    // The rewritten systemBuildingLogic ("Orangutan models specifically tend
+    // to anchor... the Gibbon line is a different lineage.") avoids the
+    // catalog enumeration the previous draft contained and surfaces here.
     process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING = 'on';
     const html = render(PHASE_K);
-    // Brand sentence anchored to the Orangutan / Gibbon ladder surfaces.
-    expect(html).toContain('Orangutan O/93, O/96, O/Reference, and the Gibbon line');
+    expect(html).toContain('Orangutan models specifically tend to anchor systems built around low-to-moderate power tube amplification');
+    // Negative regression — the previous catalog-enumeration wording
+    // must NOT appear after the E-5B.2A cleanup.
+    expect(html).not.toContain('Orangutan O/93, O/96, O/Reference, and the Gibbon line');
   });
 
   it('flag ON: invalid env value ("true", "1") does NOT enable the flag', () => {
@@ -632,12 +631,12 @@ describe('§5 brand-house-voicing — conflict-signal suppression', () => {
 });
 
 describe('§5 brand-house-voicing — primary-constraint suppression', () => {
-  it('flag ON: marking the Supernait as primary constraint reduces Naim sentence count', () => {
-    // Strategy: count occurrences of the Naim houseVoicing key phrase
-    // across the full rendered HTML. Without primary-constraint, both
-    // Naim cards (NDX 2 + Supernait 3) MAY surface the sentence (2 total).
-    // With Supernait 3 marked as primary constraint, the Supernait card
-    // is suppressed → 1 total.
+  it('flag ON: primary-constraint Supernait suppresses the Naim sentence (post-dedup)', () => {
+    // E-5B.2A — with dedup, the Naim chain emits exactly ONE Naim
+    // sentence on the Supernait 3 amp card (winner of speaker > amp > source).
+    // Marking the Supernait as primary constraint causes Gate #7 to
+    // suppress THAT card; no other Naim card is a winner under dedup,
+    // so the entire Naim sentence disappears from the §5 section.
     process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING = 'on';
 
     const withoutConstraint = render(NAIM_CHAIN);
@@ -651,18 +650,8 @@ describe('§5 brand-house-voicing — primary-constraint suppression', () => {
     const countMatches = (s: string, pattern: RegExp): number =>
       (s.match(pattern) ?? []).length;
 
-    // Discrete-signal-path token appears in Naim houseVoicing AND
-    // designPhilosophy; either field surfacing counts. Without constraint,
-    // both NDX 2 (Naim source) and Supernait 3 (Naim amp) may surface a
-    // brand sentence. With constraint, Supernait 3 is suppressed.
-    const withoutCount = countMatches(withoutConstraint, /discrete signal path/g);
-    const withCount = countMatches(withConstraint, /discrete signal path/g);
-
-    // The exact count depends on what existing-card-prose redundancy
-    // suppression does for each card. The structural assertion is that
-    // adding the constraint REDUCES the count by at least 1 — the
-    // Supernait card stopped emitting its brand sentence.
-    expect(withCount).toBeLessThan(withoutCount);
+    expect(countMatches(withoutConstraint, /discrete signal path/g)).toBe(1);
+    expect(countMatches(withConstraint, /discrete signal path/g)).toBe(0);
   });
 });
 
@@ -688,16 +677,15 @@ describe('§5 brand-house-voicing — redundancy suppression', () => {
 // ── Group 4 — Positive integration examples ────────────────────────
 
 describe('§5 brand-house-voicing — positive example renders', () => {
-  it('flag ON: Naim Supernait 3 card renders ONE Naim brand sentence (per-card cap)', () => {
+  it('flag ON: Naim chain renders exactly ONE Naim brand sentence after per-section dedup', () => {
+    // E-5B.2A — per-section dedup: even when both Naim cards (NDX 2 +
+    // Supernait 3) match the Naim entry, only ONE card surfaces the
+    // sentence. With no Naim speaker in the chain, the winner is the
+    // Naim Supernait 3 amplifier card (priority: speaker > amp > source).
     process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING = 'on';
     const html = render(NAIM_CHAIN);
-    // Count occurrences of the Naim houseVoicing key phrase. Should
-    // appear at most once per card. With three Naim-eligible cards
-    // (NDX 2, Supernait 3) — Falcon is not Naim — we expect 2 occurrences
-    // at most (one per card).
     const matches = html.match(/discrete signal path/g) ?? [];
-    expect(matches.length).toBeGreaterThan(0);
-    expect(matches.length).toBeLessThanOrEqual(3);
+    expect(matches.length).toBe(1);
   });
 
   it('flag ON: Quad ESL-57 card renders ONE Quad brand sentence', () => {
@@ -708,15 +696,17 @@ describe('§5 brand-house-voicing — positive example renders', () => {
     expect(html).toContain('Electrostatic loudspeaker family');
   });
 
-  it('flag ON: Quad II Classic card (amplifier role) also matches Quad entry', () => {
+  it('flag ON: Quad II Classic (amplifier) does NOT receive the Quad ESL speaker sentence', () => {
+    // E-5B.2A — Quad entry's appliesToRoles narrowed to ['speaker'].
+    // The Quad II Classic tube amplifier card therefore does NOT receive
+    // the electrostatic-loudspeaker houseVoicing (which was always about
+    // the ESL speaker family, not the tube amp line). Additionally, the
+    // per-section dedup pre-pass ensures only ONE Quad sentence per
+    // §5 section — surfacing on the Quad ESL-57 speaker card.
     process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING = 'on';
     const html = render(QUAD_CHAIN);
-    // Quad entry has appliesToRoles ['speaker', 'amplifier'] — both Quad
-    // II Classic (amp) and Quad ESL-57 (speaker) qualify. The chain has
-    // both, so the Quad houseVoicing may appear up to 2 times.
     const matches = html.match(/Electrostatic loudspeaker family/g) ?? [];
-    expect(matches.length).toBeGreaterThanOrEqual(1);
-    expect(matches.length).toBeLessThanOrEqual(2);
+    expect(matches.length).toBe(1);
   });
 });
 
@@ -758,6 +748,251 @@ describe('§5 brand-house-voicing — regression guards', () => {
     // Focal Utopia → would normally match Focal. Same: headphone-system
     // skip applies.
     expect(html).not.toContain('Beryllium-tweeter top-end extension');
+  });
+
+  // ── E-5B.2A — per-section dedup + editorial hygiene ─────────────
+
+  it('E-5B.2A — Rega chain emits exactly ONE Rega sentence on the speaker card', () => {
+    process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING = 'on';
+    const advisory: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Rega ecosystem',
+      systemChain: {
+        names: ['Rega Planar 10', 'Rega Aethos', 'Rega RX5'],
+        roles: ['Turntable', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'The Planar 10 is the Rega flagship turntable.',
+        'The Aethos is the Rega integrated amplifier.',
+        'The RX5 is a Rega floor-stander.',
+      ],
+    };
+    const html = render(advisory);
+    const matches = html.match(/cross-component design/g) ?? [];
+    expect(matches.length).toBe(1);
+    // Speaker is the winner under priority (speaker > amp > source).
+    // The RX5 card body must contain it; the Planar 10 / Aethos cards
+    // must not. Verify by locating the §5 "The Components" section and
+    // checking that the Rega sentence appears in the RX5 region.
+    const componentsStart = html.indexOf('The Components');
+    const rx5Start = html.indexOf('Rega RX5', componentsStart);
+    expect(rx5Start).toBeGreaterThan(componentsStart);
+    const rx5Body = html.slice(rx5Start, rx5Start + 1500);
+    expect(rx5Body).toContain('cross-component design');
+  });
+
+  it('E-5B.2A — Naim chain emits exactly ONE Naim sentence on the Supernait amp card (no Naim speaker)', () => {
+    process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING = 'on';
+    const html = render(NAIM_CHAIN);
+    const matches = html.match(/discrete signal path/g) ?? [];
+    expect(matches.length).toBe(1);
+    // No Naim speaker present → amplifier wins. Supernait card must
+    // contain the sentence; NDX 2 card must not.
+    const componentsStart = html.indexOf('The Components');
+    const supernaitStart = html.indexOf('Naim Supernait 3', componentsStart);
+    expect(supernaitStart).toBeGreaterThan(componentsStart);
+    const supernaitBody = html.slice(supernaitStart, supernaitStart + 1500);
+    expect(supernaitBody).toContain('discrete signal path');
+  });
+
+  it('E-5B.2A — Linn active chain emits ONE Linn sentence on the Akubarik active-speaker card', () => {
+    process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING = 'on';
+    const advisory: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Linn active',
+      systemChain: {
+        names: ['Linn Klimax DSM', 'Linn Akubarik'],
+        roles: ['Streaming DAC Preamp', 'Active Speakers'],
+      },
+      componentReadings: [
+        'The Klimax DSM is the source-first reference streamer.',
+        'The Akubarik is an active speaker.',
+      ],
+    };
+    const html = render(advisory);
+    const matches = html.match(/Source-first presentation/g) ?? [];
+    expect(matches.length).toBe(1);
+    const componentsStart = html.indexOf('The Components');
+    const akubarikStart = html.indexOf('Linn Akubarik', componentsStart);
+    expect(akubarikStart).toBeGreaterThan(componentsStart);
+    const akubarikBody = html.slice(akubarikStart, akubarikStart + 1500);
+    expect(akubarikBody).toContain('Source-first presentation');
+  });
+
+  it('E-5B.2A — Quad ESL-57 receives the electrostatic sentence; Quad II Classic does not', () => {
+    process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING = 'on';
+    const html = render(QUAD_CHAIN);
+    const componentsStart = html.indexOf('The Components');
+    const quadIIStart = html.indexOf('Quad II Classic', componentsStart);
+    const quadIIEnd = html.indexOf('Quad ESL-57', quadIIStart);
+    const quadIIBody = html.slice(quadIIStart, quadIIEnd);
+    // Quad II Classic (amp role) — appliesToRoles narrowed to speaker.
+    expect(quadIIBody).not.toContain('Electrostatic loudspeaker family');
+    const quadESLStart = html.indexOf('Quad ESL-57', componentsStart);
+    const quadESLBody = html.slice(quadESLStart, quadESLStart + 1500);
+    expect(quadESLBody).toContain('Electrostatic loudspeaker family');
+  });
+
+  it('E-5B.2A — every surfaced brand sentence is ≤25 words (Magico allowed up to 30)', () => {
+    process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING = 'on';
+    const fixtures: Array<{ adv: AdvisoryResponse; label: string }> = [
+      { adv: PHASE_K, label: 'Phase K' },
+      { adv: NAIM_CHAIN, label: 'Naim' },
+      { adv: QUAD_CHAIN, label: 'Quad' },
+      { adv: DCS_CHAIN, label: 'dCS' },
+      { adv: WIIM_CHAIN, label: 'WiiM/KEF' },
+      {
+        adv: {
+          kind: 'assessment',
+          systemChain: {
+            names: ['dCS Bartók', 'Audio Research Ref 80S', 'Magico A3'],
+            roles: ['DAC', 'Tube Power Amplifier', 'Speakers'],
+          },
+          componentReadings: ['The Bartók.', 'The Ref 80S.', 'The A3.'],
+        },
+        label: 'ARC + Magico',
+      },
+      {
+        adv: {
+          kind: 'assessment',
+          systemChain: {
+            names: ['Bricasti M3', 'McIntosh MA12000', 'JBL 4429'],
+            roles: ['DAC', 'Hybrid Integrated Amplifier', 'Speakers'],
+          },
+          componentReadings: ['M3.', 'MA12000.', '4429.'],
+        },
+        label: 'McIntosh + JBL',
+      },
+      {
+        adv: {
+          kind: 'assessment',
+          systemChain: {
+            names: ['Rega Planar 10', 'Rega Aethos', 'Rega RX5'],
+            roles: ['Turntable', 'Integrated Amplifier', 'Speakers'],
+          },
+          componentReadings: ['P10.', 'Aethos.', 'RX5.'],
+        },
+        label: 'Rega',
+      },
+    ];
+    // Detect any added sentence by extracting card bodies and looking
+    // for sentences containing well-known brand-anchor tokens.
+    // Word-count assertion: each known-brand sentence ≤ 25 words.
+    const KNOWN_SENTENCE_PATTERNS = [
+      // Naim: shortened to 24 words in E-5B.2A
+      /The discrete signal path and tight coupling to the power supply tend to produce a forward, rhythmically engaged presentation — what editorial coverage labels PRaT\./,
+      // KEF: shortened to 17 words
+      /Uni-Q point-source coaxial driver — a concentric tweeter-in-midbass topology that tends to widen the off-axis listening window\./,
+      // Rega: shortened to 22 words
+      /A cross-component design — turntables, electronics, and loudspeakers from the same team — that tends to produce ecosystem-level compatibility and rhythmic engagement\./,
+      // Quad: 17 words (unchanged)
+      /Electrostatic loudspeaker family often associated with midrange realism and point-source coherence at the cost of SPL ceiling\./,
+      // Hegel: cleaned, 16 words
+      /Class-AB integrated amplifiers with SoundEngine feedback architecture, often associated with transient grip and neutral presentation\./,
+      // McIntosh designPhilosophy: 13 words after dropping blue-meters sentence
+      /Autoformer output transformers \(in many solid-state designs\) and unity-coupled circuit \(in tube designs\)\./,
+      // ARC houseVoicing: 19 words after cleanup
+      /All-tube Reference designs often associated with harmonic density and dynamic capability; the LS line voicing is closer to neutral\./,
+      // JBL designPhilosophy: 12 words after cleanup
+      /The 4xxx Studio Monitor lineage extends professional recording-monitor design into home audio\./,
+      // DeVore systemBuildingLogic after cleanup
+      /Orangutan models specifically tend to anchor systems built around low-to-moderate power tube amplification; the Gibbon line is a different lineage\./,
+      // Magico houseVoicing (allowed up to 30 with hedge)
+      /Sealed-cabinet aluminum-extrusion construction designed to minimize cabinet contribution; the engineering goal is low cabinet colouration, though the resulting presentation is preference-dependent — some listeners hear neutrality, others find it analytical\./,
+    ];
+    for (const { adv, label } of fixtures) {
+      const html = render(adv);
+      for (const pattern of KNOWN_SENTENCE_PATTERNS) {
+        const match = html.match(pattern);
+        if (!match) continue;
+        const sentence = match[0];
+        const decoded = sentence
+          .replace(/&#x27;/g, "'")
+          .replace(/&quot;/g, '"')
+          .replace(/&amp;/g, '&');
+        const wordCount = decoded.trim().split(/\s+/).filter(Boolean).length;
+        const isMagico = pattern.source.includes('Sealed-cabinet aluminum');
+        const cap = isMagico ? 30 : 25;
+        expect(
+          wordCount,
+          `${label}: "${decoded.slice(0, 80)}…" has ${wordCount} words (cap=${cap})`,
+        ).toBeLessThanOrEqual(cap);
+      }
+    }
+  });
+
+  it('E-5B.2A — no surfaced sentence contains internal governance language', () => {
+    process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING = 'on';
+    const fixtures = [PHASE_K, NAIM_CHAIN, QUAD_CHAIN, DCS_CHAIN, WIIM_CHAIN];
+    const banned = [
+      'should not be collapsed',
+      'brand-level claims',
+      'scoped to the tier',
+      'varies meaningfully by tier',
+    ];
+    for (const fixture of fixtures) {
+      const html = render(fixture);
+      for (const phrase of banned) {
+        expect(html, `${fixture.subject}: "${phrase}"`).not.toContain(phrase);
+      }
+    }
+  });
+
+  it('E-5B.2A — no surfaced sentence contains name-drop / trivia / catalog phrases', () => {
+    process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING = 'on';
+    const fixtures: AdvisoryResponse[] = [
+      PHASE_K,
+      NAIM_CHAIN,
+      QUAD_CHAIN,
+      DCS_CHAIN,
+      WIIM_CHAIN,
+      // ARC chain
+      {
+        kind: 'assessment',
+        systemChain: {
+          names: ['dCS Bartók', 'Audio Research Ref 80S', 'Magico A3'],
+          roles: ['DAC', 'Tube Power Amplifier', 'Speakers'],
+        },
+        componentReadings: ['B.', 'R.', 'M.'],
+      },
+      // McIntosh + JBL chain
+      {
+        kind: 'assessment',
+        systemChain: {
+          names: ['Bricasti M3', 'McIntosh MA12000', 'JBL 4429'],
+          roles: ['DAC', 'Hybrid Integrated Amplifier', 'Speakers'],
+        },
+        componentReadings: ['M3.', 'MA12000.', '4429.'],
+      },
+    ];
+    const banned = [
+      'William Z. Johnson lineage',
+      'Greg Timbers and successors',
+      'blue meters',
+      'Orangutan O/93, O/96, O/Reference, and the Gibbon line cover a wide range',
+    ];
+    for (const fixture of fixtures) {
+      const html = render(fixture);
+      for (const phrase of banned) {
+        expect(html, `phrase "${phrase}"`).not.toContain(phrase);
+      }
+    }
+  });
+
+  it('E-5B.2A — Hegel sentence drops "Norwegian-designed" and "characteristic"', () => {
+    process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING = 'on';
+    const advisory: AdvisoryResponse = {
+      kind: 'assessment',
+      systemChain: {
+        names: ['dCS Bartók', 'Hegel H190', 'Harbeth 30.2 XD'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: ['B.', 'H.', 'H.'],
+    };
+    const html = render(advisory);
+    expect(html).not.toContain('Norwegian-designed');
+    expect(html).not.toContain('characteristic SoundEngine');
+    expect(html).toContain('SoundEngine feedback architecture');
   });
 
   it('flag OFF: brand-house-voicing-specific phrases are absent from every fixture', () => {

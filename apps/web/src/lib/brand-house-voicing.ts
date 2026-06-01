@@ -230,7 +230,7 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
     designPhilosophy:
       'John DeVore lineage. New York-based. Orangutan line uses wide-baffle high-efficiency dynamic drivers; the Reference line uses a different architecture and should be treated separately.',
     systemBuildingLogic:
-      'Orangutan O/93, O/96, O/Reference, and the Gibbon line cover a wide range; the Orangutan line in particular tends to pair with low-to-moderate power tube amplification.',
+      'Orangutan models specifically tend to anchor systems built around low-to-moderate power tube amplification; the Gibbon line is a different lineage.',
     commonStrengths: [
       'High efficiency that suits tube partnering',
       'wide-baffle scale',
@@ -331,7 +331,7 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
     houseVoicing:
       'Professional-monitor heritage, often described in terms of dynamic capability, controlled directivity via large compression-driver horns, and broad headroom.',
     designPhilosophy:
-      'Greg Timbers and successors. 4xxx Studio Monitor lineage carries forward from professional recording-monitor use; K2 / M2 / Everest sit in the Synthesis flagship line.',
+      'The 4xxx Studio Monitor lineage extends professional recording-monitor design into home audio.',
     systemBuildingLogic:
       'A 4xxx Studio Monitor tends to act as the system anchor; high-efficiency horn loading favors moderate-power solid-state or hybrid amplification.',
     commonStrengths: [
@@ -377,7 +377,7 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
     priority: 'mixed',
     confidence: 'medium',
     houseVoicing:
-      'Uni-Q point-source coaxial driver — a concentric tweeter-in-midbass topology that tends to widen the off-axis listening window — carried across the modern lineup; the driver geometry produces a consistent imaging behavior, but voicing varies meaningfully by tier and brand-level claims should be scoped to the tier in question.',
+      'Uni-Q point-source coaxial driver — a concentric tweeter-in-midbass topology that tends to widen the off-axis listening window.',
     designPhilosophy:
       'Uni-Q driver: concentric tweeter-in-midbass for shared acoustic centre and broad dispersion. The same Uni-Q architecture appears across Q-series, R-series, Reference and Blade, but cabinet design, crossover topology, and voicing targets differ enough that the tiers are not interchangeable identities.',
     systemBuildingLogic:
@@ -506,10 +506,10 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
       'world class',
       'the only ESL that does X',
     ],
-    appliesToRoles: ['speaker', 'amplifier'],
+    appliesToRoles: ['speaker'],
     exampleModels: ['ESL-57', 'ESL-63', 'ESL-2912', 'Quad II', 'Quad II Classic', 'Quad II-forty'],
     notes:
-      'Non-ESL Quad products (Quad 99, Vena, S-2, etc.) are not in scope for this entry. matchTokens is intentionally narrowed to "quad esl" / "quad ii" to avoid triggering on non-heritage Quad lines. The ESL-57 in particular has a well-documented SPL and amplifier-load profile; any house-voicing sentence must be hedged accordingly.',
+      'Phase E-5B.2A — appliesToRoles narrowed to speaker-only. The houseVoicing / designPhilosophy / systemBuildingLogic fields are written about the ESL speaker family, not the Quad II tube-amp line; previously a Quad II Classic amplifier card would receive the electrostatic-speaker sentence, which is editorially wrong. The Quad II tube amps remain matched at the lookup level (matchToken "quad ii"), but the role gate now suppresses surfacing on amplifier cards. A future revision can add a separate amplifier-appropriate entry. Non-ESL Quad products (Quad 99, Vena, S-2, etc.) remain out of scope. matchTokens is narrowed to "quad esl" / "quad ii".',
   },
 
   {
@@ -660,9 +660,9 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
     priority: 'audiophile-identity',
     confidence: 'medium',
     houseVoicing:
-      'All-tube Reference line often described in terms of harmonic density and dynamic capability, without slipping into euphonic warmth. The LS line voicing is more neutral and less obviously tube-flavored.',
+      'All-tube Reference designs often associated with harmonic density and dynamic capability; the LS line voicing is closer to neutral.',
     designPhilosophy:
-      'William Z. Johnson lineage. Reference series is all-tube high-power, often with auto-bias. The LS (line stage) and Ref (reference) lines are voiced differently and should not be collapsed.',
+      'The Reference series is all-tube high-power, often with auto-bias topology.',
     systemBuildingLogic:
       'Reference series components historically partner with destination-class loudspeakers (Wilson, Magico, Sonus Faber are common pairings); the LS series sits as the mid-tier all-tube preamplifier with a less imposing chassis.',
     commonStrengths: [
@@ -784,7 +784,7 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
     priority: 'audiophile-identity',
     confidence: 'medium',
     houseVoicing:
-      'Norwegian-designed Class-AB integrated amplifiers with characteristic SoundEngine feedback architecture; controlled, neutral presentation.',
+      'Class-AB integrated amplifiers with SoundEngine feedback architecture, often associated with transient grip and neutral presentation.',
     designPhilosophy:
       "Bent Holter (founder). SoundEngine is Hegel's proprietary feedback architecture; their Class-AB integrateds emphasize transient grip without warmth coloration.",
     systemBuildingLogic:
@@ -989,7 +989,7 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
     houseVoicing:
       'Smooth, full-bodied presentation with broad headroom in many systems.',
     designPhilosophy:
-      'Autoformer output transformers (in many solid-state designs) and unity-coupled circuit (in tube designs). Visual identity (blue meters) is a recognized part of the brand but is not a sonic claim.',
+      'Autoformer output transformers (in many solid-state designs) and unity-coupled circuit (in tube designs).',
     systemBuildingLogic:
       "McIntosh integrated amplifiers and MA / MC pairings often act as the system anchor because the autoformer-coupled output offers broad load tolerance across difficult speaker impedance curves; in many systems this lets the speaker be chosen for room and listener taste rather than to match an amplifier's load preferences.",
     commonStrengths: [
@@ -1027,7 +1027,7 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
     priority: 'audiophile-identity',
     confidence: 'high',
     houseVoicing:
-      'The discrete signal path and tight coupling between the input stage and the power supply tend to produce a forward, rhythmically engaged presentation; editorial coverage often labels this behavior PRaT (Pace, Rhythm, and Timing), but the term names the listening result rather than explaining it.',
+      'The discrete signal path and tight coupling to the power supply tend to produce a forward, rhythmically engaged presentation — what editorial coverage labels PRaT.',
     designPhilosophy:
       'All-discrete signal path; power-supply design treated as a primary determinant of sound, with outboard PSUs offered as a within-brand upgrade path on many models. The PSU hierarchy is an engineering choice, not a marketing label.',
     systemBuildingLogic:
@@ -1108,7 +1108,7 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
     priority: 'audiophile-identity',
     confidence: 'high',
     houseVoicing:
-      'A cross-component design — turntables, electronics, and loudspeakers developed by the same engineering team — that tends to produce ecosystem-level compatibility and a rhythmically engaged presentation when systems are built largely within the brand.',
+      'A cross-component design — turntables, electronics, and loudspeakers from the same team — that tends to produce ecosystem-level compatibility and rhythmic engagement.',
     designPhilosophy:
       "Roy Gandy lineage (Essex, UK). The cross-component design philosophy is the engineering choice: turntables, electronics, and loudspeakers share a single team's voicing target and within-brand cartridge / tonearm / speaker pairings are tested as full systems before release.",
     systemBuildingLogic:
