@@ -284,9 +284,18 @@ function extractCharacterFacts(
  * voice, amplifier carries and shapes it, speaker translates it into
  * sound. The body composer dispatches on this grouping.
  */
-function roleFamily(role: string | undefined): 'source' | 'amplifier' | 'speaker' | 'unknown' {
+function roleFamily(
+  role: string | undefined,
+): 'source' | 'amplifier' | 'speaker' | 'auxiliary' | 'unknown' {
   if (!role) return 'unknown';
   const r = role.toLowerCase();
+  // Hardening Phase E-2 — auxiliary components are detected BEFORE
+  // any signal-path family check. Power supplies, clocks, and
+  // network accessories do not carry the audio signal; classifying
+  // them as 'source' / 'amplifier' / 'speaker' would route them
+  // into the signal-path templates ("carries the signal between...")
+  // which is factually wrong.
+  if (isPowerSupply(role) || isClock(role) || isNetworkAccessory(role)) return 'auxiliary';
   // Hardening Phase B B9 — amplifier match precedes source match.
   //
   // Previously `streamer|dac|...` was checked first, so any role
@@ -473,6 +482,93 @@ function isActiveSpeaker(role: string | undefined): boolean {
 function isStudioMonitor(role: string | undefined): boolean {
   if (!role) return false;
   return /\bactive\s+studio\s+monitor\b|\bstudio\s+monitor\b/i.test(role);
+}
+
+/**
+ * Hardening Phase E-2 — auxiliary-component detection.
+ *
+ * Auxiliary components (external power supplies, master/word clocks,
+ * network switches / reclockers, signal conditioners) do not sit in
+ * the audio signal path. The artifact previously treated them as
+ * series links — "carries the system's signal as the external power
+ * supply" on the Naim XPS DR card — which is factually wrong. These
+ * helpers identify auxiliaries so composeContributionBody can branch
+ * to a dedicated topology-based template rather than the signal-path
+ * grammar.
+ *
+ * Detection is role-first; well-known model name patterns serve as
+ * a fallback when a user enters a chain without an explicit auxiliary
+ * role string. Conservative by design — false positives would cause a
+ * source/amp/speaker to be silently demoted to "supports the system"
+ * prose, which is worse than the original problem.
+ */
+const POWER_SUPPLY_NAME_PATTERNS: readonly RegExp[] = [
+  /\bxps(?:\s|-)?(?:dr|2|3)?\b/i,
+  /\b555\s?ps\b/i,
+  /\bsupercap(?:\s|-)?dr?\b/i,
+  /\bhicap(?:\s|-)?dr?\b/i,
+  /\bnpx\b/i,
+  /\bflatcap\b/i,
+  /\bteddy\s+pardo\b/i,
+  /\bs-?booster\b/i,
+  /\bplixir\b/i,
+  /\bsean\s+jacobs?\s+dc4\b/i,
+];
+
+const CLOCK_NAME_PATTERNS: readonly RegExp[] = [
+  /\bref10\b/i,
+  /\bmutec\s+mc[-\s]?3/i,
+  /\bsotm\s+sclk/i,
+  /\bcybershaft\b/i,
+  /\bantelope\s+10mx?\b/i,
+];
+
+const NETWORK_ACCESSORY_NAME_PATTERNS: readonly RegExp[] = [
+  /\bphoenixnet\b/i,
+  /\bphoenixusb\b/i,
+  /\bethere?gen\b/i,
+  /\bswitchplus\b/i,
+  /\bsotm\s+s(?:nh|ms)/i,
+  /\bm\s?scaler\b/i,
+];
+
+function isPowerSupply(role: string | undefined, name?: string): boolean {
+  if (role) {
+    const r = role.toLowerCase();
+    if (/\bpower\s+supply\b|\bexternal\s+psu\b|\bpsu\b|\blinear\s+power\s+supply\b|\blps\b/.test(r)) {
+      return true;
+    }
+  }
+  if (name && POWER_SUPPLY_NAME_PATTERNS.some((p) => p.test(name))) return true;
+  return false;
+}
+
+function isClock(role: string | undefined, name?: string): boolean {
+  if (role) {
+    const r = role.toLowerCase();
+    if (/\b(?:master|word|external|reference|10\s?mhz)\s+clock\b|\bclock\b/.test(r)) return true;
+  }
+  if (name && CLOCK_NAME_PATTERNS.some((p) => p.test(name))) return true;
+  return false;
+}
+
+function isNetworkAccessory(role: string | undefined, name?: string): boolean {
+  if (role) {
+    const r = role.toLowerCase();
+    if (
+      /\b(?:network|ethernet)\s+switch\b|\bnetwork\s+(?:accessory|conditioner|reclocker)\b|\breclocker\b|\bupscaler\b/.test(
+        r,
+      )
+    ) {
+      return true;
+    }
+  }
+  if (name && NETWORK_ACCESSORY_NAME_PATTERNS.some((p) => p.test(name))) return true;
+  return false;
+}
+
+function isAuxiliary(role: string | undefined, name?: string): boolean {
+  return isPowerSupply(role, name) || isClock(role, name) || isNetworkAccessory(role, name);
 }
 
 /**
@@ -990,6 +1086,42 @@ function composeContributionBody(
   const upstream = idx > 0 ? chainNames[idx - 1] : undefined;
   const downstream = idx < chainNames.length - 1 ? chainNames[idx + 1] : undefined;
   const sentences: string[] = [];
+
+  // Hardening Phase E-2 — auxiliary components (power supplies,
+  // clocks, network accessories / reclockers). These do NOT sit in
+  // the audio signal path. The default amplifier / speaker / source
+  // templates all assume a signal-flow grammar ("carries the signal
+  // between..."), which is factually wrong for an outboard PSU or
+  // master clock. Intercept here and emit topology-based prose that
+  // describes what the auxiliary supports rather than describing it
+  // as a series link. Returns early so no facts-phrase or bottleneck
+  // sentence trailer fires.
+  if (family === 'auxiliary' || isAuxiliary(role, name)) {
+    if (isPowerSupply(role, name)) {
+      if (upstream) {
+        sentences.push(
+          `The ${name} does not sit in the audio signal path directly. Instead it supports the ${upstream} by providing a cleaner, more stable power environment.`,
+        );
+      } else {
+        sentences.push(
+          `The ${name} provides cleaner, more stable power to the connected source or amplifier rather than carrying the audio signal directly.`,
+        );
+      }
+    } else if (isClock(role, name)) {
+      sentences.push(
+        `The ${name} does not carry the audio signal. It contributes through timing stability — clock-domain precision that propagates through the conversion and source stages upstream of the amplifier.`,
+      );
+    } else if (isNetworkAccessory(role, name)) {
+      sentences.push(
+        `The ${name} sits outside the audio signal path; it supports source delivery upstream of the conversion and amplification stages rather than carrying the audio signal itself.`,
+      );
+    } else {
+      sentences.push(
+        `The ${name} supports the system from outside the audio signal path.`,
+      );
+    }
+    return sentences.join(' ');
+  }
 
   // Sentence 1 — contribution-first lede, role-aware.
   if (family === 'source') {
@@ -1705,7 +1837,11 @@ function composeInteractionFallback(
   if (chainNames.length < 2) return undefined;
   const families = roles
     .map((r) => roleFamily(r))
-    .filter((f) => f !== 'unknown');
+    // Hardening Phase E-2 — also exclude 'auxiliary' from the
+    // family-count gate; PSUs / clocks / network accessories
+    // support the system rather than adding a distinct role family
+    // to the coherence story.
+    .filter((f) => f !== 'unknown' && f !== 'auxiliary');
   const familySet = new Set(families);
   if (familySet.size < 2) return undefined;
   const anchoredFactsCount = chainFacts.filter(
@@ -2476,7 +2612,11 @@ function composeCoherenceFallback(
   if (chainNames.length < 2) return undefined;
   const families = roles
     .map((r) => roleFamily(r))
-    .filter((f) => f !== 'unknown');
+    // Hardening Phase E-2 — also exclude 'auxiliary' from the
+    // family-count gate; PSUs / clocks / network accessories
+    // support the system rather than adding a distinct role family
+    // to the coherence story.
+    .filter((f) => f !== 'unknown' && f !== 'auxiliary');
   const familySet = new Set(families);
   if (familySet.size < 2) return undefined;
 
@@ -2594,7 +2734,12 @@ function composeWhyThisSystemWorks(
   if (chainNames.length < 2) return undefined;
   // Step 2 — gate on multi-family chain (the coherence-among-pieces
   // story requires more than one role family in play).
-  const families = roles.map((r) => roleFamily(r)).filter((f) => f !== 'unknown');
+  // Hardening Phase E-2 — also exclude 'auxiliary' from family
+  // counting (PSUs / clocks / network accessories support the
+  // system rather than contributing a distinct role family).
+  const families = roles
+    .map((r) => roleFamily(r))
+    .filter((f) => f !== 'unknown' && f !== 'auxiliary');
   const familySet = new Set(families);
   if (familySet.size < 2) return undefined;
   // Step 3 — sentence 1: chain length.

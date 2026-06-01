@@ -5350,3 +5350,312 @@ describe('SystemAssessmentArtifact — Phase E-1 regression guards', () => {
     expect(html).not.toContain('listening experience at the ear');
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// Hardening Phase E-2 — auxiliary components
+// ════════════════════════════════════════════════════════════════════════
+//
+// Auxiliary components (external power supplies, master/word clocks,
+// network switches / reclockers) must NEVER be described as carrying
+// the audio signal. Their §5 cards use topology-based prose that
+// names the support role (cleaner power, timing stability, source
+// delivery) rather than a signal-flow position.
+
+describe('SystemAssessmentArtifact — Phase E-2 power-supply branch', () => {
+  it('Naim XPS DR (External Power Supply role) emits support-based prose', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-2 XPS DR',
+      systemSignature: 'A Naim ecosystem chain.',
+      systemChain: {
+        names: ['Naim NDX 2', 'Naim XPS DR', 'Naim Supernait 3', 'Falcon Acoustics LS3/5a'],
+        roles: ['Streamer', 'External Power Supply', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A Naim reference network streamer.',
+        'A Naim outboard power supply.',
+        'A 80-watt Class-AB Naim integrated amplifier.',
+        'A BBC LS3/5a minimonitor.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Naim XPS DR does not sit in the audio signal path directly',
+    );
+    expect(html).toContain(
+      'supports the Naim NDX 2 by providing a cleaner, more stable power environment',
+    );
+  });
+
+  it('Naim 555PS detected by name when role is generic "PSU"', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-2 555PS',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Naim NDS', 'Naim 555PS', 'Naim NAP 250'],
+        roles: ['Streamer', 'PSU', 'Power Amplifier'],
+      },
+      componentReadings: ['A streamer.', 'A power supply.', 'An amp.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('The Naim 555PS does not sit in the audio signal path');
+    expect(html).toContain('supports the Naim NDS');
+  });
+
+  it('power-supply card contains no signal-path language', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-2 PSU no signal',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some Streamer', 'Some PSU', 'Some Amp', 'Some Speakers'],
+        roles: ['Streamer', 'External Power Supply', 'Power Amplifier', 'Speakers'],
+      },
+      componentReadings: ['Streamer.', 'PSU.', 'Amp.', 'Speaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // Anchor the slice to the §5 The Components section so the
+    // banner occurrence of "Some PSU" doesn't shadow the card body.
+    const componentsStart = html.indexOf('The Components');
+    const start = html.indexOf('Some PSU', componentsStart);
+    const end = html.indexOf('Some Amp', start);
+    const psuSlice = html.slice(start, end);
+    expect(psuSlice).not.toMatch(/carries the signal/i);
+    expect(psuSlice).not.toMatch(/translates/i);
+    expect(psuSlice).not.toMatch(/drive for the speakers/i);
+    expect(psuSlice).not.toMatch(/sound in the room/i);
+    expect(psuSlice).toMatch(/supports/i);
+    expect(psuSlice).toMatch(/stable|power/i);
+  });
+});
+
+describe('SystemAssessmentArtifact — Phase E-2 clock branch', () => {
+  it('Mutec REF10 emits clock-stability prose', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-2 REF10',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Mutec REF10', 'dCS Bartók', 'Pass Labs INT-60', 'Harbeth 30.2 XD'],
+        roles: ['Master Clock', 'DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A 10MHz master clock.',
+        'A reference DAC.',
+        'A 60-watt integrated.',
+        'A monitor.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Mutec REF10 does not carry the audio signal',
+    );
+    expect(html).toContain('timing stability');
+  });
+
+  it('External Word Clock role triggers clock prose', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-2 word clock',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some Clock', 'Some DAC', 'Some Amp', 'Some Speakers'],
+        roles: ['External Word Clock', 'DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A clock.', 'A DAC.', 'An amp.', 'A speaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('The Some Clock does not carry the audio signal');
+    expect(html).toContain('timing stability');
+  });
+
+  it('clock card contains no signal-path language', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-2 clock no signal',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some Master Clock', 'Some DAC', 'Some Amp', 'Some Speakers'],
+        roles: ['Master Clock', 'DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['A clock.', 'A DAC.', 'An amp.', 'A speaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    const componentsStart = html.indexOf('The Components');
+    const start = html.indexOf('Some Master Clock', componentsStart);
+    const end = html.indexOf('Some DAC', start);
+    const clockSlice = html.slice(start, end);
+    expect(clockSlice).not.toMatch(/carries the signal/i);
+    expect(clockSlice).not.toMatch(/translates/i);
+    expect(clockSlice).not.toMatch(/drive for the speakers/i);
+  });
+});
+
+describe('SystemAssessmentArtifact — Phase E-2 network-accessory branch', () => {
+  it('PhoenixNET emits network-accessory prose', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-2 PhoenixNET',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Innuos Zenith', 'PhoenixNET', 'dCS Bartók', 'Pass Labs INT-60', 'Harbeth 30.2 XD'],
+        roles: ['Streamer', 'Network Switch', 'DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: [
+        'A music server.',
+        'A network switch.',
+        'A reference DAC.',
+        'An amp.',
+        'A monitor.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('The PhoenixNET sits outside the audio signal path');
+    expect(html).toContain('upstream of the conversion and amplification stages');
+  });
+
+  it('Generic Ethernet Switch role triggers network-accessory prose', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-2 ethernet switch',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some Server', 'Some Switch', 'Some DAC', 'Some Amp', 'Some Speakers'],
+        roles: ['Streamer', 'Ethernet Switch', 'DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['Server.', 'Switch.', 'DAC.', 'Amp.', 'Speaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain('The Some Switch sits outside the audio signal path');
+  });
+
+  it('network-accessory card contains no signal-path language', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-2 network no signal',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some Server', 'Some Switch', 'Some DAC', 'Some Amp', 'Some Speakers'],
+        roles: ['Streamer', 'Network Switch', 'DAC', 'Amp', 'Speakers'],
+      },
+      componentReadings: ['Server.', 'Switch.', 'DAC.', 'Amp.', 'Speaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    const componentsStart = html.indexOf('The Components');
+    const start = html.indexOf('Some Switch', componentsStart);
+    const end = html.indexOf('Some DAC', start);
+    const switchSlice = html.slice(start, end);
+    expect(switchSlice).not.toMatch(/carries the signal/i);
+    expect(switchSlice).not.toMatch(/translates/i);
+    expect(switchSlice).not.toMatch(/drive for the speakers/i);
+  });
+});
+
+describe('SystemAssessmentArtifact — Phase E-2 auxiliary protection and §10 behavior', () => {
+  it('PSU does not trigger destination-speaker or mature-amp protection', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-2 PSU not protected',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some Streamer', 'Some PSU', 'Some Amp', 'Some Speakers'],
+        roles: ['Streamer', 'External Power Supply', 'Power Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'A streamer.',
+        'A single-ended 300B tube power supply.', // Deliberate red herring
+        'A power amp.',
+        'A speaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // PSU must NOT receive destination-class or mature-amp protection
+    expect(html).not.toContain('The Some PSU is a destination-class loudspeaker');
+    expect(html).not.toContain('Replacing the Some PSU is a philosophical change');
+  });
+
+  it('Naim XPS DR chain still renders speaker §10 hierarchy correctly (PSU does not break it)', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'E-2 hierarchy still works',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Naim NDX 2', 'Naim XPS DR', 'Naim Supernait 3', 'Spendor Classic 2/3'],
+        roles: ['Streamer', 'External Power Supply', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: ['Streamer.', 'PSU.', 'Integrated.', 'Monitor.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    // Destination protection for Spendor still fires (allowlist match)
+    expect(html).toContain(
+      'The Spendor Classic 2/3 is a destination-class loudspeaker; treat it as a fixed point',
+    );
+    // Speaker-variant hierarchy lede still fires (chain is not headphone-only)
+    expect(html).toContain(
+      'The lowest-risk path forward is front-end refinement — source, DAC, and cabling',
+    );
+  });
+});
+
+describe('SystemAssessmentArtifact — Phase E-2 regression guards', () => {
+  it('Phase K (no auxiliaries) unchanged', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Phase K E-2 regression',
+      systemSignature: 'A warm tube-led source-first chain.',
+      systemChain: {
+        names: ['Denafrips Pontus II', 'Leben CS600X', 'DeVore O/96'],
+        roles: ['DAC', 'Integrated Amplifier', 'Speakers'],
+      },
+      componentReadings: [
+        'An R2R DAC.',
+        'A push-pull tube integrated.',
+        'A high-efficiency wide-baffle loudspeaker.',
+      ],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Leben CS600X carries the signal between the Denafrips Pontus II and the DeVore O/96',
+    );
+    expect(html).not.toContain('does not sit in the audio signal path directly');
+    expect(html).not.toContain('does not carry the audio signal');
+    expect(html).not.toContain('sits outside the audio signal path');
+  });
+
+  it('Headphone fixture unchanged — no auxiliary path leak', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Headphone E-2 regression',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['Some DAC', 'Some HP Amp', 'Some Headphones'],
+        roles: ['DAC', 'Headphone Amplifier', 'Headphones'],
+      },
+      componentReadings: ['DAC.', 'HP amp.', 'Headphones.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The Some HP Amp accepts the signal from the Some DAC and provides the current',
+    );
+    expect(html).not.toContain('does not sit in the audio signal path directly');
+  });
+
+  it('Active speaker (KEF LS60 Wireless) unchanged', () => {
+    const a: AdvisoryResponse = {
+      kind: 'assessment',
+      subject: 'Active speaker E-2 regression',
+      systemSignature: 'sig',
+      systemChain: {
+        names: ['RME ADI-2', 'KEF LS60 Wireless'],
+        roles: ['DAC', 'Powered Speaker'],
+      },
+      componentReadings: ['DAC.', 'Active loudspeaker.'],
+    } as AdvisoryResponse;
+    const html = render(a);
+    expect(html).toContain(
+      'The KEF LS60 Wireless integrates amplification, driver alignment, and room-facing output',
+    );
+    expect(html).not.toContain('does not sit in the audio signal path directly');
+  });
+});
