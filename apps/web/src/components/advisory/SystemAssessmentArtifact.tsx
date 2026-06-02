@@ -8,6 +8,7 @@ import {
   findEligibleBrandForComponent,
   selectBrandClusterForSection8,
   selectBrandHouseVoicingSentenceForComponent,
+  selectBrandHouseVoicingSentenceForHierarchy,
   selectBrandHouseVoicingSentenceForSystemCoherence,
 } from '@/lib/brand-house-voicing-gates';
 import { COLOR, sectionHeadingStyle, proseStyle } from '@/lib/editorial-tokens';
@@ -4016,11 +4017,68 @@ export default function SystemAssessmentArtifact({
         const hierarchy = conflictGated ? undefined : rawHierarchy;
         const shouldRender = hasChangeSection || !!hierarchy;
         if (!shouldRender) return null;
+
+        // Hardening Phase E-5B.4 — §10 brand upgrade-caution append.
+        //
+        // Behind feature flag NEXT_PUBLIC_BRAND_HOUSE_VOICING (default
+        // OFF). When OFF, hierarchyWithBrand === hierarchy and the
+        // rendered output is byte-equivalent to pre-E-5B.4.
+        //
+        // The §10 brand caution appears only when ALL of the following
+        // hold:
+        //   - the hierarchy paragraph itself rendered;
+        //   - the chain has a destination-class speaker (per the same
+        //     isDestinationSpeaker detector that composeUpgradeHierarchy
+        //     uses);
+        //   - that destination speaker is NOT the engine's primary
+        //     constraint (matches the existing Phase A B5 discipline
+        //     in composeUpgradeHierarchy that skips constraint
+        //     components when finding destination speakers);
+        //   - the destination speaker matches an eligible brand entry
+        //     (auxiliaries / commercial / low-confidence / role-mismatch
+        //     all excluded by findEligibleBrandForComponent);
+        //   - upgradeCautions[0] passes the gate stack (no fallback to
+        //     [1], [2], etc. — per E-5B.4 spec).
+        //
+        // The caution sentence is appended after the existing hierarchy
+        // paragraph with a leading space.
+        let hierarchyWithBrand = hierarchy;
+        if (isBrandHouseVoicingEnabled() && hierarchy) {
+          const constraintLower = a.primaryConstraint?.componentName
+            ?.trim()
+            .toLowerCase();
+          // Find the FIRST destination-class speaker in the chain that
+          // is not the engine's primary constraint. This mirrors the
+          // existing composeUpgradeHierarchy iteration discipline.
+          let destinationName: string | undefined;
+          for (let i = 0; i < chainNamesUH.length; i += 1) {
+            const facts = chainFactsUH[i];
+            if (!facts) continue;
+            const name = chainNamesUH[i]!;
+            const role = chainRolesUH[i];
+            if (!isDestinationSpeaker(name, role, facts)) continue;
+            if (constraintLower && name.trim().toLowerCase() === constraintLower) continue;
+            destinationName = name;
+            break;
+          }
+          if (destinationName) {
+            const brandResult = selectBrandHouseVoicingSentenceForHierarchy({
+              destinationSpeakerName: destinationName,
+              hasConflictSignal: hasConflictSignal(a),
+              // destinationName is already filtered above; this is
+              // belt-and-suspenders for the gate-stack contract.
+              isPrimaryConstraint: false,
+            });
+            if (brandResult.sentence) {
+              hierarchyWithBrand = `${hierarchy} ${brandResult.sentence}`;
+            }
+          }
+        }
         return (
           <section style={{ marginBottom: '1.5rem' }}>
             <h2 style={sectionHeadingStyle}>If You Were to Change Something</h2>
-            {hierarchy && (
-              <p style={{ ...proseStyle, marginBottom: '0.85rem' }}>{hierarchy}</p>
+            {hierarchyWithBrand && (
+              <p style={{ ...proseStyle, marginBottom: '0.85rem' }}>{hierarchyWithBrand}</p>
             )}
             {a.upgradeDirection && (
               <p style={{ ...proseStyle, marginBottom: '0.85rem' }}>{a.upgradeDirection}</p>

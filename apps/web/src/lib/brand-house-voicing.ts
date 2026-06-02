@@ -344,7 +344,7 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
       'forward presentation is preference-dependent',
     ],
     upgradeCautions: [
-      'The 4xxx Studio Monitor line is distinct from JBL Stage / Studio mid-tier home — they are not the same lineage and should not be collapsed.',
+      'The 4xxx Studio Monitor line is distinct from JBL Stage / Studio mid-tier home; they are not the same lineage.',
     ],
     bestUsedWhen:
       'A large room benefits from horn-loaded dynamic capability and the listener values pro-monitor presentation.',
@@ -449,7 +449,7 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
       'off-axis response varies more than dome / planar designs',
     ],
     upgradeCautions: [
-      'Heritage line is distinct from Klipsch mass-market (RP / R / Reference Premiere) — they share little design philosophy and should not be presented under the same identity.',
+      'The Heritage line is distinct from Klipsch mass-market (RP / R / Reference Premiere); they share little design philosophy.',
     ],
     bestUsedWhen:
       'A low-power tube amplifier benefits from a high-efficiency partner and the room accommodates the cabinet size.',

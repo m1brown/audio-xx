@@ -674,6 +674,111 @@ export function selectBrandHouseVoicingSentenceForSystemCoherence(
   return { sentence: null, suppressedBy: lastReason };
 }
 
+// ─── Phase E-5B.4 — §10 hierarchy paragraph selector ────────────────
+
+/**
+ * Phase E-5B.4 §10 *If You Were to Change Something* upgrade-caution
+ * selector input.
+ *
+ * §10 is destination-speaker-centric: the helper expects a single
+ * already-identified destination speaker name (computed by the
+ * integration site using the existing `isDestinationSpeaker` detector
+ * shared with `composeUpgradeHierarchy`). No chain scan, no cluster
+ * logic.
+ */
+export interface BrandGateInputFor10 {
+  /** Display name of the destination-class speaker. */
+  destinationSpeakerName: string;
+  /** Phase A B3/B4 conflict-signal flag (suppresses on true). */
+  hasConflictSignal: boolean;
+  /**
+   * True when the destination speaker IS the engine's primary
+   * constraint. Conservative interpretation: when the destination is
+   * the constraint, the brand caution may not be appropriate
+   * (it could soft-pedal the engine's upgrade direction), so the
+   * helper suppresses unconditionally. This matches the existing
+   * `composeUpgradeHierarchy` Phase A B5 discipline of excluding the
+   * constraint from the "treat as a fixed point" framing.
+   */
+  isPrimaryConstraint: boolean;
+}
+
+/**
+ * Phase E-5B.4 §10 selector result.
+ */
+export interface BrandGateResultFor10 {
+  sentence: string | null;
+  suppressedBy?:
+    | 'no-match'
+    | 'conflict-signal'
+    | 'primary-constraint'
+    | 'no-cautions'
+    | 'avoid-overclaim-match'
+    | 'shape-check-failed';
+}
+
+/**
+ * §10 *If You Were to Change Something* upgrade-caution selector.
+ *
+ * Surfaces `upgradeCautions[0]` for the destination-class speaker's
+ * brand entry, subject to the gate stack.
+ *
+ * Gate order:
+ *
+ *   1. {@link findEligibleBrandForComponent} with role `'speaker'`
+ *      (excludes no-match / commercial / low-confidence / role-mismatch
+ *      in a single shared call) → `'no-match'` on null
+ *   2. `hasConflictSignal === true` → `'conflict-signal'`
+ *   3. `isPrimaryConstraint === true` → `'primary-constraint'`
+ *   4. `entry.upgradeCautions[0]` empty / undefined → `'no-cautions'`
+ *   5. Anti-overclaim deny-check (per-entry + UNIVERSAL_AVOID_OVERCLAIMING)
+ *      → `'avoid-overclaim-match'`
+ *   6. Architecture-anchor shape check → `'shape-check-failed'`
+ *
+ * No fallback hierarchy. If `upgradeCautions[0]` fails any post-eligibility
+ * gate, the result is `null`. Per the E-5B.4 spec: "No fallback hierarchy.
+ * If no valid caution exists: return null."
+ *
+ * Pure function. No state, no side effects.
+ */
+export function selectBrandHouseVoicingSentenceForHierarchy(
+  input: BrandGateInputFor10,
+): BrandGateResultFor10 {
+  // Gate 1 — eligibility (speaker role applicability + commercial +
+  // confidence-low + lookup) in a single shared call.
+  const entry = findEligibleBrandForComponent(
+    input.destinationSpeakerName,
+    'speaker',
+  );
+  if (!entry) return { sentence: null, suppressedBy: 'no-match' };
+
+  // Gate 2 — conflict-signal hard-gate.
+  if (input.hasConflictSignal) {
+    return { sentence: null, suppressedBy: 'conflict-signal' };
+  }
+
+  // Gate 3 — primary-constraint suppression.
+  if (input.isPrimaryConstraint) {
+    return { sentence: null, suppressedBy: 'primary-constraint' };
+  }
+
+  // Gate 4 — must have a non-empty upgradeCautions[0].
+  const candidate = entry.upgradeCautions[0];
+  if (!candidate) return { sentence: null, suppressedBy: 'no-cautions' };
+
+  // Gate 5 — anti-overclaim deny-check.
+  if (containsAnyDeniedPhrase(candidate, entry)) {
+    return { sentence: null, suppressedBy: 'avoid-overclaim-match' };
+  }
+
+  // Gate 6 — architecture-anchor shape check.
+  if (!hasArchitectureAnchor(candidate)) {
+    return { sentence: null, suppressedBy: 'shape-check-failed' };
+  }
+
+  return { sentence: candidate };
+}
+
 // ─── Re-exports for §5 integration ───────────────────────────────────
 
 // Re-export so the §5 integration site has a single import surface
