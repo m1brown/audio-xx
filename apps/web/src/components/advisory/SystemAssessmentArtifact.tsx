@@ -6,7 +6,9 @@ import React from 'react';
 import type { AdvisoryResponse } from '@/lib/advisory-response';
 import {
   findEligibleBrandForComponent,
+  selectBrandClusterForSection8,
   selectBrandHouseVoicingSentenceForComponent,
+  selectBrandHouseVoicingSentenceForSystemCoherence,
 } from '@/lib/brand-house-voicing-gates';
 import { COLOR, sectionHeadingStyle, proseStyle } from '@/lib/editorial-tokens';
 import { hasDisplayableSources } from '@/lib/evidence/source-whitelist';
@@ -3534,6 +3536,24 @@ export default function SystemAssessmentArtifact({
   // documented at source-whitelist.ts:188-205.
   const hasSources = hasDisplayableSources(a.sourceReferences);
 
+  // Phase E-5B.3 — hoist the §5 buildComponentCards result so the §8
+  // brand-house-voicing integration site can consult the composed
+  // §5 prose for verbatim-repetition suppression. Computed once per
+  // render and used by §5 (existing) and §8 (new) below. When
+  // hasComponents is false, the array is empty and §8's brand
+  // integration silently no-ops (a chain with no components cannot
+  // form a brand cluster of size ≥ 2).
+  const componentCards = hasComponents
+    ? buildComponentCards(
+        a.systemChain?.names,
+        a.systemChain?.roles,
+        a.componentReadings,
+        a.primaryConstraint?.componentName,
+        hasConflictSignal(a),
+        isHeadphoneSystem(a.systemChain?.names ?? [], a.systemChain?.roles ?? []),
+      )
+    : [];
+
   return (
     <article
       aria-label="System Assessment"
@@ -3672,19 +3692,9 @@ export default function SystemAssessmentArtifact({
         <section style={{ marginBottom: '1.5rem' }}>
           <h2 style={sectionHeadingStyle}>The Components</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            {buildComponentCards(
-              a.systemChain?.names,
-              a.systemChain?.roles,
-              a.componentReadings,
-              a.primaryConstraint?.componentName,
-              // Hardening Phase E-5B.2 — thread the Phase A B3/B4
-              // conflict-signal flag and the Phase E-1 headphone-system
-              // detector into buildComponentCards so the per-card brand
-              // selector can suppress under conflict and skip headphone
-              // chains entirely.
-              hasConflictSignal(a),
-              isHeadphoneSystem(a.systemChain?.names ?? [], a.systemChain?.roles ?? []),
-            ).map((card, i) => (
+            {/* Phase E-5B.3 — uses the hoisted componentCards so §8 can
+                consult the composed §5 prose for repetition checks. */}
+            {componentCards.map((card, i) => (
               <EditorialSubCard
                 key={i}
                 name={card.name}
@@ -3867,10 +3877,73 @@ export default function SystemAssessmentArtifact({
         );
         const why = composeWhyThisSystemWorks(a, chainNamesW, chainRolesW, chainFactsW);
         if (!why) return null;
+
+        // Hardening Phase E-5B.3 — §8 brand-house-voicing append.
+        //
+        // Behind feature flag NEXT_PUBLIC_BRAND_HOUSE_VOICING (default
+        // OFF). When OFF, `whyWithBrand` is identical to `why` and the
+        // rendered output is byte-equivalent to pre-E-5B.3.
+        //
+        // The §8 brand sentence appears only when ALL of the following
+        // hold:
+        //   - the §8 paragraph itself rendered (i.e. composeWhyThisSystemWorks
+        //     returned a string — that helper already gates on Phase A B3
+        //     conflict-signal and on minimum chain evidence);
+        //   - the chain is not a headphone system (Phase E-1 discipline);
+        //   - at least two signal-path components share the same eligible
+        //     brand entry (selectBrandClusterForSection8);
+        //   - no cluster member is the engine's primary-constraint
+        //     component (defensive: avoids ecosystem-coherence prose
+        //     soft-pedaling an engine-flagged bottleneck);
+        //   - the gate stack returns a non-null sentence
+        //     (systemBuildingLogic → designPhilosophy → houseVoicing
+        //     priority; anti-overclaim + shape check + §5-repetition
+        //     suppression all apply).
+        //
+        // The selected sentence is appended after the §8 paragraph with
+        // a leading space; suppression is silent (no fallback sentence
+        // emitted).
+        let whyWithBrand = why;
+        if (
+          isBrandHouseVoicingEnabled() &&
+          !isHeadphoneSystem(chainNamesW, chainRolesW)
+        ) {
+          const familiesW = chainRolesW.map((r) => roleFamily(r));
+          const cluster = selectBrandClusterForSection8(
+            chainNamesW,
+            chainRolesW,
+            familiesW,
+          );
+          if (cluster) {
+            // Primary-constraint guard: suppress if any cluster member
+            // is the engine's primary-constraint component.
+            const constraintName = a.primaryConstraint?.componentName?.toLowerCase();
+            const clusterContainsConstraint =
+              !!constraintName &&
+              cluster.members.some(
+                (idx) => chainNamesW[idx]?.toLowerCase() === constraintName,
+              );
+            if (!clusterContainsConstraint) {
+              const surfaced = componentCards
+                .map((c) => c.body ?? '')
+                .filter((s) => s.length > 0);
+              const brandResult =
+                selectBrandHouseVoicingSentenceForSystemCoherence({
+                  entry: cluster.entry,
+                  hasConflictSignal: hasConflictSignal(a),
+                  alreadySurfacedTexts: surfaced,
+                });
+              if (brandResult.sentence) {
+                whyWithBrand = `${why} ${brandResult.sentence}`;
+              }
+            }
+          }
+        }
+
         return (
           <section style={{ marginBottom: '1.5rem' }}>
             <h2 style={sectionHeadingStyle}>Why This System Works</h2>
-            <p style={proseStyle}>{why}</p>
+            <p style={proseStyle}>{whyWithBrand}</p>
           </section>
         );
       })()}

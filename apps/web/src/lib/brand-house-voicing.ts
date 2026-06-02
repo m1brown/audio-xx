@@ -664,7 +664,7 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
     designPhilosophy:
       'The Reference series is all-tube high-power, often with auto-bias topology.',
     systemBuildingLogic:
-      'Reference series components historically partner with destination-class loudspeakers (Wilson, Magico, Sonus Faber are common pairings); the LS series sits as the mid-tier all-tube preamplifier with a less imposing chassis.',
+      'Reference series components historically partner with destination-class loudspeakers; the LS series sits as the mid-tier all-tube preamplifier with a less imposing chassis.',
     commonStrengths: [
       'Harmonic density',
       'dynamic capability',
@@ -1031,7 +1031,7 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
     designPhilosophy:
       'All-discrete signal path; power-supply design treated as a primary determinant of sound, with outboard PSUs offered as a within-brand upgrade path on many models. The PSU hierarchy is an engineering choice, not a marketing label.',
     systemBuildingLogic:
-      'Within the Naim ecosystem, upgrades tend to run through external power supplies and tier-step electronics because the within-brand architecture is what changes audibly; cross-brand substitution typically dilutes the rhythmic engagement that owners build around.',
+      'Within the Naim ecosystem, upgrades tend to run through external power supplies and within-brand tier-step electronics rather than cross-brand substitution.',
     commonStrengths: [
       'Rhythmic engagement',
       'vocal directness',
@@ -1112,7 +1112,7 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
     designPhilosophy:
       "Roy Gandy lineage (Essex, UK). The cross-component design philosophy is the engineering choice: turntables, electronics, and loudspeakers share a single team's voicing target and within-brand cartridge / tonearm / speaker pairings are tested as full systems before release.",
     systemBuildingLogic:
-      'Planar 1 → 2 → 3 → 6 → 8 → 10 vinyl ladder; Brio / Aethos / Osiris electronics ladder; RX speakers. Within-brand partnering tends to surface ecosystem-level compatibility (matched gain stages, recommended cartridges, intentional voicing alignment) that cross-brand substitution typically dilutes.',
+      'Within-brand Rega partnering tends to surface ecosystem-level compatibility — matched gain stages, recommended cartridges, intentional voicing alignment — that cross-brand substitution typically dilutes.',
     commonStrengths: [
       'Ecosystem-level compatibility from the cross-component design',
       'rhythmic engagement when systems are built within the brand',

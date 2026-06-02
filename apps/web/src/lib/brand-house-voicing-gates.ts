@@ -211,6 +211,17 @@ const ARCHITECTURE_ANCHORS: readonly string[] = [
   'cross-component',
   'source-first',
   'ecosystem',
+  // Phase E-5B.3 — within-brand engineered hierarchy vocabulary.
+  // "Tier ladder" / "ladder" / "tier" name the brand's engineered
+  // product hierarchy, which is a system-building design choice (each
+  // tier is a different design point). Adding here so §8
+  // systemBuildingLogic candidates that frame the within-brand tier
+  // structure (Klimax / Akurate / Selekt, Vivaldi / Rossini / Bartók,
+  // A-series / S-series / M-series, etc.) pass the shape check.
+  'tier ladder',
+  'tier-step',
+  'tier',
+  'ladder',
   // Material / driver geometry
   'aluminum',
   'aluminium',
@@ -440,6 +451,225 @@ export function selectBrandHouseVoicingSentenceForComponent(
       return { sentence: evaluation.sentence };
     }
     lastReason = evaluation.reason;
+  }
+  return { sentence: null, suppressedBy: lastReason };
+}
+
+// ─── Phase E-5B.3 — §8 same-brand cluster selector ──────────────────
+
+/**
+ * Phase E-5B.3 §8 cluster descriptor. Returned by
+ * {@link selectBrandClusterForSection8} when at least two signal-path
+ * components share the same eligible brand entry. The selected
+ * cluster is the one most relevant to a system-coherence claim; see
+ * the §8 priority order in {@link selectBrandClusterForSection8}.
+ */
+export interface BrandClusterFor8 {
+  /** The brand entry whose voicing will be considered for §8. */
+  entry: BrandHouseVoicing;
+  /** Chain indices belonging to the cluster (always ≥ 2). */
+  members: readonly number[];
+  /** True when any member is a speaker-role component. */
+  hasSpeaker: boolean;
+  /** True when any member is an amplifier-role component. */
+  hasAmplifier: boolean;
+  /** True when any member is a source-role component. */
+  hasSource: boolean;
+}
+
+/**
+ * Detect the §8 brand cluster, if any, for the supplied chain.
+ *
+ * A cluster is two or more signal-path components matching the same
+ * eligible brand entry. Eligibility uses {@link findEligibleBrandForComponent}
+ * (so commercial brands, low-confidence brands, role-mismatched
+ * components, auxiliaries, and unknown-family components are excluded
+ * before the cluster is formed).
+ *
+ * When multiple clusters qualify, the selection priority is:
+ *
+ *   1. Cluster including a speaker-role member
+ *   2. Cluster including an amplifier-role member
+ *   3. Cluster that is source-only (no speaker, no amplifier)
+ *   4. Larger cluster wins
+ *   5. Earliest chain position wins
+ *
+ * Returns `null` when no cluster qualifies (no two components share
+ * the same eligible brand). Pure function; no state, no side effects.
+ *
+ * Notes:
+ *   - This helper does NOT apply the conflict-signal or primary-
+ *     constraint gates — those are the integration site's
+ *     responsibility, run before {@link selectBrandHouseVoicingSentenceForSystemCoherence}.
+ *   - Brand-family-level clustering is not implemented here; cluster
+ *     identity is the entry's `brand` field. With the current
+ *     production data, no two entries share a `brandFamily`, so this
+ *     simplification is observationally correct. A future revision
+ *     that adds a second brand entry under an existing brandFamily
+ *     would need to revisit this.
+ */
+export function selectBrandClusterForSection8(
+  chainNames: readonly string[],
+  chainRoles: readonly (string | undefined)[],
+  componentFamilies: readonly (RoleFamily | 'unknown')[],
+): BrandClusterFor8 | null {
+  if (chainNames.length === 0) return null;
+  const candidatesByBrand = new Map<
+    string,
+    Array<{ idx: number; family: RoleFamily | 'unknown'; entry: BrandHouseVoicing }>
+  >();
+  for (let i = 0; i < chainNames.length; i += 1) {
+    const family = componentFamilies[i] ?? 'unknown';
+    if (family === 'auxiliary' || family === 'unknown') continue;
+    const entry = findEligibleBrandForComponent(chainNames[i]!, family);
+    if (!entry) continue;
+    const list = candidatesByBrand.get(entry.brand) ?? [];
+    list.push({ idx: i, family, entry });
+    candidatesByBrand.set(entry.brand, list);
+  }
+  // Filter to clusters with ≥ 2 members.
+  type RankedCluster = {
+    entry: BrandHouseVoicing;
+    members: number[];
+    hasSpeaker: boolean;
+    hasAmplifier: boolean;
+    hasSource: boolean;
+    firstIdx: number;
+  };
+  const clusters: RankedCluster[] = [];
+  for (const list of candidatesByBrand.values()) {
+    if (list.length < 2) continue;
+    const members = list.map((m) => m.idx).sort((a, b) => a - b);
+    const hasSpeaker = list.some((m) => m.family === 'speaker');
+    const hasAmplifier = list.some((m) => m.family === 'amplifier');
+    const hasSource = list.some((m) => m.family === 'source');
+    clusters.push({
+      entry: list[0]!.entry,
+      members,
+      hasSpeaker,
+      hasAmplifier,
+      hasSource,
+      firstIdx: members[0]!,
+    });
+  }
+  if (clusters.length === 0) return null;
+  // Rank by §8 priority: hasSpeaker > hasAmplifier > hasSource;
+  // then larger size; then earliest position.
+  const rankClass = (c: RankedCluster): number => {
+    if (c.hasSpeaker) return 3;
+    if (c.hasAmplifier) return 2;
+    if (c.hasSource) return 1;
+    return 0;
+  };
+  clusters.sort((a, b) => {
+    const ra = rankClass(a);
+    const rb = rankClass(b);
+    if (rb !== ra) return rb - ra;
+    if (b.members.length !== a.members.length) return b.members.length - a.members.length;
+    return a.firstIdx - b.firstIdx;
+  });
+  const winner = clusters[0]!;
+  return {
+    entry: winner.entry,
+    members: winner.members,
+    hasSpeaker: winner.hasSpeaker,
+    hasAmplifier: winner.hasAmplifier,
+    hasSource: winner.hasSource,
+  };
+}
+
+/**
+ * Phase E-5B.3 §8 gate-stack input.
+ */
+export interface BrandGateInputFor8 {
+  /** The cluster's entry (from {@link selectBrandClusterForSection8}). */
+  entry: BrandHouseVoicing;
+  /** Phase A B3/B4 conflict-signal flag (suppresses on true). */
+  hasConflictSignal: boolean;
+  /**
+   * The composed §5 card bodies. The §8 selector runs a substring-
+   * inclusion check against each body; if the candidate sentence
+   * already appears in any §5 card, the §8 surfacing is suppressed
+   * to prevent verbatim repetition.
+   */
+  alreadySurfacedTexts: readonly string[];
+}
+
+/**
+ * Phase E-5B.3 §8 gate-stack result.
+ */
+export interface BrandGateResultFor8 {
+  sentence: string | null;
+  suppressedBy?:
+    | 'conflict-signal'
+    | 'no-candidate-field'
+    | 'duplicates-section5'
+    | 'avoid-overclaim-match'
+    | 'shape-check-failed';
+}
+
+/**
+ * §8 *Why This System Works* brand-sentence selector.
+ *
+ * Sentence priority for §8 (per E-5B implementation design §4.3):
+ *
+ *   1. `systemBuildingLogic` (preferred for system-level coherence)
+ *   2. `designPhilosophy`
+ *   3. `houseVoicing` (last resort — usually selected by §5 instead)
+ *
+ * Gates applied to the chosen candidate:
+ *
+ *   - `hasConflictSignal === true` → `'conflict-signal'`
+ *   - Candidate already substring of any §5 card body → `'duplicates-section5'`
+ *   - Anti-overclaim deny-check (per-entry + UNIVERSAL_AVOID_OVERCLAIMING) → `'avoid-overclaim-match'`
+ *   - Architecture-anchor shape check → `'shape-check-failed'`
+ *
+ * Field fall-through: if `systemBuildingLogic` fails any post-priority
+ * gate, the next non-empty field is tried. If all three fail, the
+ * result is `null` carrying the last suppression reason. This mirrors
+ * the §5 gate-stack discipline.
+ *
+ * Returns at most ONE sentence. The integration site is responsible
+ * for ensuring the cluster is eligible (≥ 2 members, non-commercial,
+ * etc.) — see {@link selectBrandClusterForSection8}.
+ */
+export function selectBrandHouseVoicingSentenceForSystemCoherence(
+  input: BrandGateInputFor8,
+): BrandGateResultFor8 {
+  if (input.hasConflictSignal) {
+    return { sentence: null, suppressedBy: 'conflict-signal' };
+  }
+  const priority: Array<string | undefined> = [
+    input.entry.systemBuildingLogic,
+    input.entry.designPhilosophy,
+    input.entry.houseVoicing,
+  ];
+  let lastReason: BrandGateResultFor8['suppressedBy'] = 'no-candidate-field';
+  for (const candidate of priority) {
+    if (!candidate) continue;
+    // Repetition check — substring-inclusion against §5 prose.
+    let alreadySurfaced = false;
+    for (const text of input.alreadySurfacedTexts) {
+      if (text.includes(candidate)) {
+        alreadySurfaced = true;
+        break;
+      }
+    }
+    if (alreadySurfaced) {
+      lastReason = 'duplicates-section5';
+      continue;
+    }
+    // Anti-overclaim.
+    if (containsAnyDeniedPhrase(candidate, input.entry)) {
+      lastReason = 'avoid-overclaim-match';
+      continue;
+    }
+    // Architecture-anchor shape check.
+    if (!hasArchitectureAnchor(candidate)) {
+      lastReason = 'shape-check-failed';
+      continue;
+    }
+    return { sentence: candidate };
   }
   return { sentence: null, suppressedBy: lastReason };
 }

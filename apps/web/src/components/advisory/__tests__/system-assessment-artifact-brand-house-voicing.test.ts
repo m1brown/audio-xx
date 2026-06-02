@@ -275,12 +275,16 @@ describe('selectBrandHouseVoicingSentenceForComponent — gate stack', () => {
     expect(result.suppressedBy).toBe('primary-constraint');
   });
 
-  it('returns null when existing prose already names Ring DAC for dCS (redundancy fires on designPhilosophy)', () => {
-    // dCS iterates houseVoicing (fails shape) → designPhilosophy (fails
-    // redundancy on "Ring DAC") → systemBuildingLogic (fails shape).
-    // Final suppression reason is shape-check-failed (last try), but the
-    // important contract is that the candidate sentence with "Ring DAC"
-    // never surfaces.
+  it('the Ring-DAC-bearing dCS sentence is suppressed by redundancy when existing prose has Ring DAC; systemBuildingLogic may surface', () => {
+    // Contract: the candidate sentence containing "Ring DAC" must NOT
+    // surface when the existing prose already names Ring DAC. With
+    // Phase E-5B.3 adding 'tier' / 'ladder' as shape-check anchors,
+    // the systemBuildingLogic ("Vivaldi (statement stack) / Rossini
+    // (one-box) / Bartók (compact streaming endpoint) tier ladder;
+    // each step is meaningful in capability and cost.") passes the
+    // shape check and may surface instead — that is NOT redundant
+    // with "Ring DAC" because systemBuildingLogic does not mention
+    // Ring DAC. The redundancy gate is working as designed.
     const result = selectBrandHouseVoicingSentenceForComponent(
       gateInput({
         componentName: 'dCS Bartók',
@@ -289,17 +293,19 @@ describe('selectBrandHouseVoicingSentenceForComponent — gate stack', () => {
           'The dCS Bartók establishes the character. Its Ring DAC architecture prioritizes timing precision.',
       }),
     );
-    expect(result.sentence).toBeNull();
-    // designPhilosophy ("Ring DAC architecture...") would have been the
-    // first-set field, but redundancy fires on it. systemBuildingLogic
-    // doesn't redundancy but fails shape, so 'shape-check-failed' surfaces
-    // as the last reason. The contract is the suppression, not the
-    // specific diagnostic.
+    // Either a fall-through sentence surfaces (one that does not name
+    // Ring DAC) or the result is null. The strict contract:
+    if (result.sentence !== null) {
+      expect(result.sentence).not.toContain('Ring DAC');
+    }
   });
 
-  it('returns null when existing prose already names FPGA for Chord (redundancy fires on houseVoicing)', () => {
-    // Chord Electronics houseVoicing contains "FPGA-driven DAC line" — if
-    // existing prose has "FPGA", redundancy fires.
+  it('the FPGA-bearing Chord sentence is suppressed by redundancy when existing prose has FPGA; tier ladder may surface', () => {
+    // Same contract for Chord: the FPGA-mentioning candidate must not
+    // surface when existing prose already names FPGA. Chord
+    // systemBuildingLogic ("Hugo TT2 / DAVE act as the brand-tier
+    // anchors...") passes the E-5B.3 shape check via 'tier' and may
+    // surface — without naming FPGA.
     const result = selectBrandHouseVoicingSentenceForComponent(
       gateInput({
         componentName: 'Chord DAVE',
@@ -308,7 +314,9 @@ describe('selectBrandHouseVoicingSentenceForComponent — gate stack', () => {
           'The Chord DAVE is an FPGA-driven DAC originated by Rob Watts.',
       }),
     );
-    expect(result.sentence).toBeNull();
+    if (result.sentence !== null) {
+      expect(result.sentence).not.toContain('FPGA');
+    }
   });
 
   it('reports redundancy explicitly when only the first-priority field would redundantly surface', () => {
