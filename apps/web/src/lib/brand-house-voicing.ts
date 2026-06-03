@@ -272,7 +272,7 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
     priority: 'mixed',
     confidence: 'medium',
     houseVoicing:
-      'Beryllium-tweeter top-end extension in higher tiers (Sopra and above), with the inverted-dome midrange as the brand\'s distinctive driver lineage; tier voicings differ meaningfully and brand-level claims should be scoped to Sopra and above.',
+      "Beryllium-tweeter top-end extension in higher tiers (Sopra and above), with the inverted-dome midrange as the brand's distinctive driver lineage.",
     designPhilosophy:
       'Saint-Étienne lineage. Beryllium tweeter in higher tiers; aluminum/magnesium dome in mid-tier; W-cone and Flax-cone midbass options. The driver architecture is the durable explanatory mechanism; tier voicings differ enough that one description cannot cover the line.',
     systemBuildingLogic:
@@ -829,7 +829,7 @@ export const BRAND_HOUSE_VOICING: readonly BrandHouseVoicing[] = [
     designPhilosophy:
       "Taku Hyodo lineage (founder, Tokyo). Push-pull tube topology with selected output-stage tubes; the design choices (push-pull rather than SET, mid-power output, EL84/6L6GC/6CA7 selection) are the explanatory mechanism, not the brand's regional provenance.",
     systemBuildingLogic:
-      'CS300 / CS600 / CS600X / CS1000P tier. The CS600 series is the canonical Leben integrated.',
+      "Within the Leben line, the CS600 series anchors the brand's voicing target with push-pull output rather than SET.",
     commonStrengths: [
       'Mature voicing stability',
       'push-pull tube character without warmth-bloat',
