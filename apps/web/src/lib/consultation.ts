@@ -491,12 +491,15 @@ const BRAND_PROFILES: BrandProfile[] = [
           credit: 'DeVore Fidelity',
           sourceUrl: 'https://devorefidelity.com/',
         },
-        {
-          url: 'https://devorefidelity.com/wp-content/uploads/2021/05/O96-new-crop-766x1024.jpg',
-          caption: 'DeVore O/96 — the flagship Orangutan, voiced for low-power tubes.',
-          credit: 'DeVore Fidelity',
-          sourceUrl: 'https://devorefidelity.com/',
-        },
+        // Note (2026-06-05 polish): a third image previously sat here —
+        // an external O96-new-crop hotlink whose caption was byte-identical
+        // to the local /brand-heroes/devore-o96.jpg hero above. The brand
+        // page renderer placed it as the post-philosophy image, producing
+        // a visible duplicate (same product, same caption) on a single
+        // page. Removed; no safe distinct local DeVore asset existed to
+        // replace it. The remaining hero pair (local O/96 + Brooklyn-home
+        // secondary) renders side-by-side and there is no post-philosophy
+        // image — both are intentional after this polish.
       ],
       videos: [
         {
