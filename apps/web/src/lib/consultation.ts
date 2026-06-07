@@ -1781,9 +1781,81 @@ const BRAND_PROFILES: BrandProfile[] = [
     sonicTendency: 'Warm, tonally dense, musically saturated — coherence by ecosystem.',
     typicalTradeoff: 'Measured performance versus musical engagement; intentional ecosystem lock-in.',
     leadershipOrigin: 'Peter Qvortrup founded Audio Note UK after a period working with Hiroyasu Kondo of Audio Note Japan (now Kondo Audio Note). The two operations have since been entirely separate. The UK arm is based in Brighton and remains under Qvortrup\'s direction; it offers both finished components and the Audio Note Kits (ANK) line for builders.',
+    strengths: [
+      'Internally coherent full-system design — DAC, preamp, power amp, and speaker voiced as a single chain rather than optimised individually',
+      'SET (single-ended triode) amplification and NOS (non-oversampling, non-filtering) DAC topology as a paired house pattern across the entire range',
+      'Material absolutism at higher tiers — silver-wired transformers, hand-wound chokes, and paper-in-oil capacitors as distinctive house signatures',
+      'Tiered "Level" system (Level 0 through Level 5+) treats the range as a single coherent ladder rather than discrete products',
+      'AN-E speakers designed for corner placement — removes the placement compromise that most stand-mount monitors require',
+      'Strongly opinionated, internally consistent design culture — measurement-skeptical, music-first, and voiced end-to-end',
+    ],
+    tradeoffs: [
+      'Measurement-skeptical engineering posture — individual components may underperform measurement-led benchmarks even when synergistic in-system',
+      'Intentional ecosystem lock-in — components evaluated outside the AN system may appear to lack performance because they were not voiced for foreign partners',
+      'NOS DAC topology (no digital filtering, no upsampling) is polarising — the direct presentation reads as natural to some listeners and as soft to others',
+      'Level-to-Level differences are deliberate character shifts, not just refinement — Level 2 and Level 5+ are voiced differently rather than the same voicing at different price points',
+      'Transient precision and measured linearity are deprioritised — treated as secondary to musical engagement and tonal saturation',
+    ],
+    pairingNotes: 'The canonical Audio Note UK use case is a closed-loop AN-only chain: AN DAC into AN preamp into AN power amp into AN speaker, with the Level rating framing the entire chain rather than individual components. The AN-E loudspeaker is voiced specifically for corner placement and for the brand\'s own low-power SET amplifiers — the OTO SE, P2 SE, and Meishu Phono/Line are canonical partners at the entry and middle of the ladder, with the Jinro, Kegon, Ongaku, and Gaku-On occupying the upper Levels. Listeners sometimes deploy AN DACs as standalone NOS sources into other tube chains (Shindo, Leben, Line Magnetic) where their tonal density is compatible with the receiving stage; outside that specific case, mixing AN with non-AN amplification or with speakers not voiced for corner placement tends to soften the in-house design intent. Partial-AN entries (e.g., AN-E speakers with non-AN amplification, or AN preamps into non-AN power amps) should be expected to read differently from the full-stack voicing — the Level rating only describes the full chain.',
     links: [
       { label: 'Audio Note UK', url: 'https://www.audionote.co.uk/', region: 'global' },
     ],
+    designFamilies: [
+      {
+        name: 'Level 1',
+        character: 'Entry tier — the accessible end of the AN ladder. Carries the SET + NOS house pattern in its most affordable form, with conventional materials (copper wiring, standard capacitor choices) rather than the silver-foil and paper-in-oil signatures that appear higher in the range. Canonical Level 1 systems pair the CD 2.1x/II DAC, the OTO SE integrated, and AN-K speakers.',
+        ampPairing: 'Anchored by the OTO SE integrated (≈9W EL84-based SET) into AN-K corner-placed two-way speakers. Sits below Level 2 in material grade and refinement; the family voicing is recognisable here but compressed compared to higher Levels.',
+      },
+      {
+        name: 'Level 2',
+        character: 'Mid-entry tier — silver-plated copper begins to appear in selected interconnects, and the house material discipline starts asserting itself more clearly. The DAC 2.1x Signature, OTO SE Signature, and AN-J/Spe speakers are typical Level 2 anchors. The voicing relaxes and gains tonal body relative to Level 1 without changing the underlying topology.',
+        ampPairing: 'OTO SE Signature integrated or P1 SE power amp; AN-J/Spe corner-placed speakers. Sits between Level 1 (entry voicing, conventional materials) and Level 3 (silver wiring and tantalum resistors begin appearing throughout the chain).',
+      },
+      {
+        name: 'Level 3',
+        character: 'Mid-range tier — the AN house character is fully present. Silver-wired transformers and tantalum resistors begin appearing across the chain; the DAC 3.1x Signature, M3 line preamp, and either the OTO Phono SE or the P2 SE power amplifier are canonical pairings with AN-E/Spe or AN-E/Lx speakers. The Level system\'s "single coherent ladder" framing becomes audible here in a way it is not at Levels 1–2.',
+        ampPairing: 'M3 preamp + P2 SE (≈18W push-pull triode) or Quest Silver Signature monoblocks; AN-E/Spe or AN-E/Lx speakers. Sits between Level 2 (silver enters selectively) and Level 4 (silver-wired output transformers + reference-grade interconnects throughout).',
+      },
+      {
+        name: 'Level 4',
+        character: 'Upper-mid tier — silver-wired output transformers, hand-wound chokes, paper-in-oil signal capacitors, and reference-grade interconnects appear throughout the chain rather than at points. The DAC 4.1x Signature, M6 line preamp, and Jinro or Kegon (300B-based SET) monoblocks anchor the tier, paired with AN-E/SPe HE or AN-E/SPx HE speakers. Material absolutism becomes the defining house signature here.',
+        ampPairing: 'M6 preamp + Jinro/Kegon SET monoblocks; AN-E/SPe HE or higher Spe-line speakers. Sits between Level 3 (silver and house materials present but not throughout) and Level 5+ (no-compromise reference materials, top-of-range voicing).',
+      },
+      {
+        name: 'Level 5+',
+        character: 'Reference tier — the no-compromise end of the AN ladder. DAC 5 Signature, M9/M10 line preamps, and the Ongaku or Gaku-On power amplifiers represent the brand\'s reference statements, paired with AN-E/SEC Signature or the largest AN speakers. The Level system here is no longer about scaling refinement; it is about expressing the house priorities — SET, NOS, silver, paper-in-oil — without any cost-driven compromise.',
+        ampPairing: 'M9/M10 preamp + Ongaku/Gaku-On power amplifier; AN-E/SEC Signature or top-tier AN speakers. Sits at the top of the ladder above Level 4; comparisons to other reference-tier brands shift from cost-class to voicing-philosophy.',
+      },
+    ],
+    media: {
+      // Hero pair sourced from the official Audio Note UK site
+      // (audionote.co.uk → static.wixstatic.com CDN). Both URLs HEAD-200
+      // verified 2026-06-07 immediately before commit. Manufacturer-
+      // hosted via the brand's own Wix CDN; not reviewer-derived, not
+      // dealer-sourced. F4 gate satisfied.
+      //
+      // Local hosting under /brand-heroes/audio-note-an-elx.jpg and
+      // /brand-heroes/audio-note-veneers.jpg would be the natural
+      // follow-up polish (matching the devore-o96 / leben-cs600 /
+      // shindo-cortese-300b / naim-hero precedent). Wix CDN paths are
+      // less stable than fixed manufacturer URLs, so the local-hosting
+      // follow-up is worth doing soon — but kept out of this commit to
+      // stay strictly data-layer.
+      images: [
+        {
+          url: 'https://static.wixstatic.com/media/3e7c3b_6b0c2da76382488b84cdd74560c2e963~mv2_d_2693_2693_s_4_2.jpg/v1/fill/w_900,h_900,al_c,q_85,enc_avif,quality_auto/2_%20AN-ELX%20HEMP%20Olive%20Angle%20front%20copy_jp.jpg',
+          caption: 'Audio Note AN-ELX HEMP in Olive — the flagship of the AN-E lineage, voiced for corner placement and low-power SET amplification.',
+          credit: 'Audio Note UK',
+          sourceUrl: 'https://www.audionote.co.uk/loudspeakers',
+        },
+        {
+          url: 'https://static.wixstatic.com/media/89c24f_a291f8c588d148afb44a6edf715606a8~mv2_d_6218_4397_s_4_2.jpg/v1/fill/w_1200,h_800,al_c,q_85,enc_avif,quality_auto/Audio%20Note%20speaker%20veneers%20satin%20Large_j.jpg',
+          caption: 'Audio Note speaker veneers — the AN-E family across cabinet finishes, all voiced as parts of the Level ladder.',
+          credit: 'Audio Note UK',
+          sourceUrl: 'https://www.audionote.co.uk/loudspeakers',
+        },
+      ],
+    },
   },
   {
     names: ['mola mola'],
