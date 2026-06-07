@@ -808,15 +808,85 @@ const BRAND_PROFILES: BrandProfile[] = [
     brandScale: 'specialist',
     region: 'uk',
     categories: ['amplifier', 'streamer', 'dac'],
-    philosophy: 'Naim designs prioritise rhythmic drive and musical timing. The engineering philosophy emphasises pace and engagement over tonal density or spatial refinement.',
-    tendencies: 'Listeners describe Naim systems as propulsive and engaging, with strong rhythmic coherence. They tend to de-emphasise warmth and spatial holography.',
-    systemContext: 'Traditionally paired with Naim sources and Naim-friendly speakers. The timing-first approach works well with speakers that have good transient response.',
-    designPhilosophy: 'Engineered around timing and rhythmic drive over tonal density.',
-    sonicTendency: 'Propulsive, rhythmically coherent, forward-leaning.',
-    typicalTradeoff: 'Less warmth and spatial holography than tonally lush designs.',
+    tagline: 'British system electronics built around rhythm, timing, and upgrade coherence.',
+    philosophy: 'Naim designs prioritise rhythmic drive and musical timing. The engineering philosophy treats the system — source, supply, amplification — as a single design rather than discrete components, and emphasises pace and engagement over tonal density or spatial refinement.',
+    philosophyExtended: 'Julian Vereker founded Naim in Salisbury, England in 1969 after a career in sound recording, and the brand has remained in Salisbury through every ownership transition since. The engineering identity centres on a system-building philosophy: amplifiers, sources, and power supplies are designed as parts of a tiered ladder where each upgrade step — a more capable preamp, a separate power supply for the streamer, a Statement-level reference amplifier — is intended to be heard as a deliberate change rather than a marginal refinement. The "pace, rhythm, and timing" framing (often shortened to PRaT) is shorthand for that design priority: timing accuracy and transient coherence are treated as primary, with tonal density and spatial spread as secondary consequences of getting timing right. Outboard power supplies (PowerLine, XPS, Supercap, 555 PS) sit on the upgrade ladder rather than alongside it — they are part of the signal-path design, not aftermarket additions. The ladder runs from the all-in-one Mu-so through the Uniti streaming integrateds, the New Classic and Classic separates, and ultimately the Statement reference stack. Following the 2011 Focal–Naim merger and the formation of the Vervent Audio Group, the brand continues to design, voice, and assemble in Salisbury under that founding system-building logic.',
+    tendencies: 'Listeners describe Naim systems as propulsive, rhythmically coherent, and forward-leaning, with strong transient definition and a sense of musical drive. The presentation prioritises pace and engagement over spatial holography or harmonic warmth. Detail is delivered with grip and clarity rather than as ambient bloom. Bass is fast and articulate rather than expansive.',
+    systemContext: 'Naim electronics work best when treated as a system rather than a single-component substitution. The timing-first character pairs naturally with speakers that have strong transient response and reward a fast front end; it can feel lean against speakers voiced for tonal density or with relaxed top ends. Within the Naim ecosystem the separate-power-supply additions (XPS, Supercap, 555 PS) are not optional accessories — they are part of the upgrade ladder and define the brand\'s long-term ownership pattern.',
+    designPhilosophy: 'Engineered around timing and rhythmic drive, with the system — including power supplies — treated as a single design.',
+    sonicTendency: 'Propulsive, rhythmically coherent, forward-leaning; grip and timing over warmth.',
+    typicalTradeoff: 'System timing and ecosystem coherence over tonal density, spatial holography, and component-level interoperability.',
+    leadershipOrigin: 'Julian Vereker founded Naim Audio in Salisbury, England in 1969, having come to electronics design from a background as a racing driver and as a sound recordist for documentary film. Vereker\'s emphasis on rhythmic coherence as the primary criterion for amplifier voicing shaped the brand for its first three decades and is still cited as the founding design instinct. After Vereker\'s death in 2000, Paul Stephenson continued the design culture; in 2011 Naim merged with French speaker manufacturer Focal to form what is now the Vervent Audio Group. The Naim arm continues to design, voice, and assemble electronics in Salisbury under continuous brand stewardship, and the company maintains its own UK service operation supporting legacy products across decades — long-term ownership and the upgrade ladder are part of the brand identity, not just marketing posture.',
+    strengths: [
+      'Coherent upgrade ladder — components designed to be heard as you move from all-in-one to separates to Statement',
+      'Separate-power-supply architecture treats the supply as part of the signal-path design, not an aftermarket addition',
+      'Long-term UK service and component support across legacy product generations — multi-decade ownership is supported',
+      'Strong rhythmic engagement and transient definition — system timing is the primary design priority',
+      'Streaming and Roon integration across price tiers — Uniti and New Classic include digital sources without external boxes',
+      'Salisbury-based design, voicing, and assembly under continuous brand stewardship since 1969',
+    ],
+    tradeoffs: [
+      'Voicing is polarising — listeners who prioritise tonal density or spatial holography may find the timing-first presentation lean',
+      'The upgrade-ladder architecture rewards full-stack commitment; mixing with non-Naim power supplies or sources can blunt the design intent',
+      'Power-supply boxes scale quickly in cost — the Statement-level ladder runs to multi-shelf, multi-£10k territory',
+      'DIN connections and proprietary cabling are part of the system identity but limit interoperability with non-Naim components',
+      'All-in-one models (Mu-so, Uniti Atom) cap upgradeability — the all-in-one path is a different upgrade road than the separates ladder',
+    ],
+    pairingNotes: 'Within the Vervent Audio Group, Naim and Focal share a deliberate house pairing — the Focal Sopra, Kanta, and Utopia lines are voiced with Naim sources and amplifiers in mind, and dealer rooms commonly demonstrate the pairing as a system. Outside the in-house pairing, Naim electronics are a longstanding match for ProAc Response and Studio speakers, where the ProAc timing-and-flow character complements the Naim front end without compounding leanness. The brand has a strong following among British monitor traditionalists (Harbeth, Spendor, Graham) where Naim grip and timing are used to drive monitors that prefer a fast, controlled front end. With high-efficiency or tube-voiced speakers (Klipsch Heritage, DeVore Orangutan) the pairing is less idiomatic — the timing-forward presentation can become wiry where a tube amp would relax. Streaming buyers should consider the Naim/Focal product lock-in deliberately: the New Classic NSC 222 streaming preamp and NAP 250 power amp are designed to be heard as a coherent pair before being mixed with non-Naim components.',
     links: [
       { label: 'Official website', url: 'https://www.naimaudio.com/', region: 'global' },
+      { label: 'Focal Naim America (US distributor)', url: 'https://www.focalnaimamerica.com/', kind: 'dealer', region: 'US' },
     ],
+    designFamilies: [
+      {
+        name: 'Mu-so (wireless lifestyle systems)',
+        character: 'Single-box wireless music systems (Mu-so, Mu-so Qb) for table-top or kitchen scale. The entry to the brand at lifestyle pricing — engineered with the same DAC and amplifier philosophy as the higher tiers but capped at one-box scale.',
+        ampPairing: 'Self-contained; no separate amplifier required.',
+      },
+      {
+        name: 'Uniti (streaming integrated systems)',
+        character: 'All-in-one streaming integrated amplifiers — Atom, Star, Nova — combining streamer, DAC, and amplifier in a single chassis. Designed for users who want the Naim sound without committing to the separates ladder.',
+        ampPairing: 'Self-contained; pairs with most modern loudspeakers in the small-to-medium room range.',
+      },
+      {
+        name: 'New Classic (modern separates)',
+        character: 'Current-generation separates — NSC 222 streaming preamp, NAP 250 power amp, NPX 300 power supply — expressing the modern Naim system-building approach in a 2- or 3-box system that scales with separate-supply additions.',
+        ampPairing: 'NAP 250 drives most modern speakers with the characteristic Naim grip-and-timing presentation; benefits from the NPX 300 supply on the preamp side.',
+      },
+      {
+        name: 'Classic (legacy separates ladder)',
+        character: 'The long-running Classic line — NAC 282/252/552 preamps, NAP 250/300/500 power amps, Supercap and 555 PS power supplies — defines the multi-box upgrade ladder the brand is identified with. Still in production alongside New Classic.',
+        ampPairing: 'Wide power range across the line; higher-tier supplies (Supercap, 555 PS) are themselves part of the ladder rather than optional accessories.',
+      },
+      {
+        name: 'Statement (reference)',
+        character: 'Two-chassis reference stack — the NAC S1 preamp and NAP S1 power amplifier — sitting above the Classic line as the brand\'s no-compromise expression of the system-building philosophy at full price ladder.',
+        ampPairing: 'Reference-level system anchor; intended for full-stack reference contexts with appropriate room and speaker matching.',
+      },
+    ],
+    media: {
+      // Hero pair sourced from naimaudio.com via the official Focal-Naim
+      // CDN (media.focal-naim.com). Both URLs HEAD-200 verified
+      // 2026-06-07. Manufacturer-hosted, not reviewer-derived; F4 gate
+      // satisfied. Local hosting under /brand-heroes/ would be the
+      // natural follow-up polish (matching the devore-o96 / leben-cs600
+      // / shindo-cortese-300b precedent) but is deferred to keep this
+      // pass strictly data-layer.
+      images: [
+        {
+          url: 'https://media.focal-naim.com/naim/file_manager_files/home-page/about-naim.jpg',
+          caption: 'Naim Audio — Salisbury, England.',
+          credit: 'Naim Audio',
+          sourceUrl: 'https://www.naimaudio.com/',
+        },
+        {
+          url: 'https://media.focal-naim.com/naim/file_manager_files/home-page/separates-65f076d7bc62d.jpg',
+          caption: 'Naim separates — the multi-box upgrade ladder that defines the brand.',
+          credit: 'Naim Audio',
+          sourceUrl: 'https://www.naimaudio.com/',
+        },
+      ],
+    },
   },
   {
     names: ['luxman'],
