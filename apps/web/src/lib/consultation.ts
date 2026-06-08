@@ -872,16 +872,29 @@ const BRAND_PROFILES: BrandProfile[] = [
       // natural follow-up polish (matching the devore-o96 / leben-cs600
       // / shindo-cortese-300b precedent) but is deferred to keep this
       // pass strictly data-layer.
+      // Replacement (2026-06-07 polish): both prior heroes were
+      // visually attractive but too abstract — the Salisbury-identity
+      // and the cropped-separates close-up read as "luxury industrial
+      // design," not as "Naim electronics." A first-time visitor could
+      // not identify what products Naim makes from those shots.
+      //
+      // Swapped for two product-recognisable shots from the same
+      // Focal-Naim CDN: a four-box Naim Classic-tier separates stack
+      // (matches the New Classic stack and Classic separates families
+      // surfaced in designFamilies[2-3]) and a Uniti Nova streaming
+      // integrated (matches the Uniti family in designFamilies[1]).
+      // Both have the Naim arc logo prominently visible. Both URLs
+      // HEAD-200 verified 2026-06-07 immediately before commit.
       images: [
         {
-          url: 'https://media.focal-naim.com/naim/file_manager_files/home-page/about-naim.jpg',
-          caption: 'Naim Audio — Salisbury, England.',
+          url: 'https://media.focal-naim.com/naim/file_manager_files/home-page/integrated-65f076d791556.jpg',
+          caption: 'A Naim separates stack — the multi-box ladder that defines the New Classic and Classic series.',
           credit: 'Naim Audio',
           sourceUrl: 'https://www.naimaudio.com/',
         },
         {
-          url: 'https://media.focal-naim.com/naim/file_manager_files/home-page/separates-65f076d7bc62d.jpg',
-          caption: 'Naim separates — the multi-box upgrade ladder that defines the brand.',
+          url: 'https://media.focal-naim.com/naim/file_manager_files/home-page/streaming-amplifiers-65f076d73dcf7.jpg',
+          caption: 'The Uniti Nova streaming integrated — a single-box streamer-DAC-amplifier from the Uniti family.',
           credit: 'Naim Audio',
           sourceUrl: 'https://www.naimaudio.com/',
         },
@@ -1849,10 +1862,21 @@ const BRAND_PROFILES: BrandProfile[] = [
           sourceUrl: 'https://www.audionote.co.uk/loudspeakers',
         },
         {
-          url: 'https://static.wixstatic.com/media/89c24f_a291f8c588d148afb44a6edf715606a8~mv2_d_6218_4397_s_4_2.jpg/v1/fill/w_1200,h_800,al_c,q_85,enc_avif,quality_auto/Audio%20Note%20speaker%20veneers%20satin%20Large_j.jpg',
-          caption: 'Audio Note speaker veneers — the AN-E family across cabinet finishes, all voiced as parts of the Level ladder.',
+          // Replacement (2026-06-07 polish): the prior right-hand hero was
+          // a satin-veneer chart that read like a dealer brochure rather
+          // than an editorial brand image. Swapped for an Audio Note UK
+          // factory documentary shot — a transformer being hand-wound,
+          // with the labelled box reading "ONGAKU TR 370 GT 300" (an
+          // Ongaku output transformer in production). This directly
+          // visualises the silver-wired-transformers / hand-wound-chokes
+          // material absolutism that is named in strengths[2] and pairs
+          // editorially with the AN-ELX HEMP Olive speaker on the left
+          // (finished product + the craft that made it). URL HEAD-200
+          // verified 2026-06-07 immediately before commit.
+          url: 'https://static.wixstatic.com/media/3e7c3b_7ef34191fa574ddc9eb45e40a152bcc2~mv2_d_2997_2000_s_2.jpg/v1/fill/w_1200,h_800,al_c,q_85,enc_avif,quality_auto/Audio%20Note%20Ongaku%20transformer%20winding.jpg',
+          caption: 'Hand-winding an Ongaku output transformer at the Brighton factory — the silver-wired transformers and hand-wound chokes that define Audio Note at the upper Levels.',
           credit: 'Audio Note UK',
-          sourceUrl: 'https://www.audionote.co.uk/loudspeakers',
+          sourceUrl: 'https://www.audionote.co.uk/',
         },
       ],
     },
