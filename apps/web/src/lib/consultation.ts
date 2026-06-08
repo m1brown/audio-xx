@@ -623,6 +623,14 @@ const BRAND_PROFILES: BrandProfile[] = [
     },
   },
   // ── Shindo Laboratory ──────────────────────────────────
+  // schools: musical-communication, japanese-artisan;
+  // horn-efficiency-affinity via canonical high-sensitivity speaker
+  // pairings (DeVore Orangutan, Altec, Living Voice, Klipsch Heritage).
+  // The Shindo argument: emotional communication matters more than
+  // technical perfection. Each circuit is designed individually around
+  // its chosen NOS tubes — the design serves the parts, not the other
+  // way around. The Western-Electric circuit-individuality tradition
+  // carried forward as new equipment rather than curated as memorabilia.
   {
     names: ['shindo', 'shindo laboratory'],
     founder: 'Ken Shindo',
@@ -631,50 +639,51 @@ const BRAND_PROFILES: BrandProfile[] = [
     region: 'japan',
     categories: ['amplifier'],
     tagline: 'Hand-built tube amplifiers voiced for musical truth.',
-    philosophy: 'Shindo Laboratory designs tube amplifiers around musical naturalness rather than measured specification. Each circuit is designed individually to exploit the sonic character of its chosen tubes — the design serves the parts, not the other way around.',
-    philosophyExtended: 'Ken Shindo started his career as an electrical engineer at Matsushita before founding Shindo Laboratory in Tokyo in 1977. He was a noted collector of new-old-stock vacuum tubes and vintage components, and designed each amplifier as a unique circuit suited to a specific set of parts, a specific kind of system, and a specific musical mood. There are no stock circuits in any Shindo product. The goal was never to build a technically optimal machine — it was to let reproduced music sing with the organic quality of a live performance.',
+    philosophy: 'Shindo Laboratory designs tube amplifiers around musical naturalness rather than measured specification. Each circuit is designed individually to exploit the sonic character of its chosen NOS tubes — the design serves the parts, not the other way around. The Western-Electric tradition of circuit individuality carried forward as new equipment rather than curated as memorabilia.',
+    philosophyExtended: 'Ken Shindo started his career as an electrical engineer at Matsushita before founding Shindo Laboratory in Tokyo in 1977. He was a noted collector of new-old-stock vacuum tubes and vintage components, and designed each amplifier as a unique circuit suited to a specific set of parts, a specific kind of system, and a specific musical mood. There are no stock circuits in any Shindo product. The goal was never to build a technically optimal machine — it was to let reproduced music sing with the organic quality of a live performance, with the chosen tube and the chosen circuit acting as an inseparable pair rather than as interchangeable parts.',
     tendencies: 'Listeners consistently describe Shindo amplifiers as dense, flowing, and harmonically alive — physical instrumental presence and harmonic realism rather than spec-sheet neutrality. The brand is closely associated with vintage-horn, single-driver, and high-efficiency speaker culture, and with the analogue (LP / tape) front end as the natural source.',
-    systemContext: 'Shindo amplifiers are designed for high-efficiency speakers that work with lower power output. The combination of Shindo electronics with high-sensitivity speakers is one of the most celebrated pairings in the tube audio community — deeply identified with vintage horn and single-driver enthusiasts.',
-    designPhilosophy: 'Each circuit designed around its chosen tubes — the design serves the parts.',
+    systemContext: 'Shindo amplifiers are designed for high-efficiency speakers that work with lower power output. The combination of Shindo electronics with high-sensitivity speakers is one of the most celebrated systemic pairings in modern audio — deeply identified with vintage horn, single-driver, and Musical-Communication-school enthusiasts.',
+    designPhilosophy: 'Each circuit designed around its chosen NOS tubes — the design serves the parts, not the other way around.',
     sonicTendency: 'Dense, harmonically alive, flowing — music sounds physically present.',
     typicalTradeoff: 'Tonal saturation and musical naturalness over transient precision and measured linearity.',
-    leadershipOrigin: 'Ken Shindo (1939–2014) founded Shindo Laboratory in Tokyo in 1977 after working as an electrical engineer at Matsushita. He built every amplifier by hand using point-to-point wiring, hand-wound transformers, and carefully selected vintage and NOS components. Production was deliberately limited — roughly 50 units per year globally. After his passing in 2014, production continues under the guidance of his trained associates, maintaining his methods and sonic philosophy.',
+    leadershipOrigin: 'Ken Shindo (1939–2014) founded Shindo Laboratory in Tokyo in 1977 after working as an electrical engineer at Matsushita — at a moment when the Japanese hi-fi industry was standardising around solid-state product and treating the post-Western-Electric tube tradition as territory for vintage gear or expensive imports. Shindo\'s argument was that the WE tradition of circuit individuality — each amplifier designed around a specific set of NOS components, hand-wound transformers, and a specific musical mood — could be carried forward as new equipment, not curated as memorabilia. He built every amplifier by hand using point-to-point wiring; production was deliberately limited to roughly 50 units per year globally. After his passing in 2014, production continues under his trained associates, maintaining his methods and sonic philosophy.',
     reviewerQuotes: [
       { quote: 'The Cortese did precisely what I expect a good single-ended amplifier to do: it put recorded instruments and voices in front of me with a near-psychedelic level of presence.', source: 'Art Dudley (Stereophile)' },
       { quote: 'Shindo has a certain quality that allows you to forget about the system — music sounds more like a live acoustic event.', source: 'Pitch Perfect Audio' },
     ],
     strengths: [
-      'Legendary harmonic richness and tonal density — the reference for tube musicality',
-      'Each circuit individually designed — no stock topologies',
-      'Hand-wound transformers and point-to-point wiring throughout',
-      'Exceptional midrange presence and vocal naturalness',
-      'Deep synergy with high-efficiency speakers — a defining pairing in the community',
+      'The Western-Electric circuit-individuality tradition carried forward as new equipment — each amplifier designed around a specific set of NOS components, hand-wound transformers, and a specific musical mood rather than around a stock topology',
+      'Harmonic richness and tonal density treated as the foundation of the voicing, not as additive flavour — the resulting sound has been the reference point for the broader tube-musicality school for two decades',
+      'Hand-built craft expressed at the brand scale: ~50 units per year globally, every amplifier by hand under continuous design-school stewardship since 1977',
+      'Midrange presence and vocal naturalness so distinctive that "the Shindo sound" has become editorial shorthand — the voicing is recognisable across the line, not just within individual models',
+      'Deep synergy with high-efficiency speakers (DeVore Orangutan, Altec horns, Klipsch Heritage) and analogue front ends — Shindo + high-sensitivity speakers is one of the most-celebrated systemic pairings in modern audio',
     ],
     tradeoffs: [
-      'Very limited production and high pricing — long wait times typical',
-      'Low power output requires high-sensitivity speakers (90 dB+)',
-      'Limited bass authority and dynamic headroom compared to high-power designs',
-      'Vintage NOS tube dependency — replacement tubes can be scarce and expensive',
+      'Production deliberately limited to ~50 units per year globally — the idea does not scale to broad availability; ownership requires patience, and pricing reflects the constraint',
+      'Low output power requires high-sensitivity speakers (90 dB+) — the idea forecloses pairing with the standard mid-power solid-state loudspeaker market',
+      'Bass authority and dynamic headroom are deprioritised relative to high-power solid-state — Shindo gives up slam for tonal density and harmonic presence',
+      'Vintage NOS tube and component dependency is part of the design philosophy but also a real ownership cost — supply matters over the lifecycle of the equipment',
     ],
-    pairingNotes: 'A natural match with high-efficiency speakers (90 dB+) and the vintage-horn / single-driver culture — DeVore Orangutan, Altec-based horns, and similar designs are canonical examples. Shindo preamps are designed as system anchors; the preamp typically defines the system sound more than the power amp.',
+    pairingNotes: 'Shindo pairs naturally with brands and components whose ideas align: musical communication over measured neutrality, circuit individuality over standardised topology, the analogue front end over the digital as the primary source, high-sensitivity speakers over the mid-power solid-state mainstream. The canonical Shindo system is the most-celebrated systemic pairing in modern high-efficiency audio: Shindo electronics into DeVore Orangutan, Altec-based horns, Living Voice, or Klipsch Heritage speakers, with an analogue source (LP via low-output MC cartridge → SUT → Shindo phono stage) feeding the chain. Other natural partners share the orientation: Auditorium 23 cables and SUTs (analog-interface coherence), Leben CS600X (Japanese-artisan tube voicing at lower cost), Aurorasound phono stages (low-noise transparency that does not edit the tonal palette), TotalDAC for the rare cases where a digital source enters the chain. The Shindo preamp — Aurièges, Monbrison, or Masseto — is the system anchor: the preamp typically defines the Shindo system sound more than the power amplifier, which makes preamp selection the most consequential decision in building a Shindo chain. Anti-pairings reveal the trade-off: high-feedback solid state, low-sensitivity speakers (below 88 dB), measurement-led front ends, and FPGA DACs that prioritise transient surgery over tonal weight will fight rather than partner the Shindo voicing.',
     links: [
       { label: 'Official website', url: 'https://www.shindo-laboratory.co.jp/', region: 'global' },
       { label: 'Tone Imports (US importer)', url: 'https://www.toneimports.com/', kind: 'dealer', region: 'US' },
     ],
     designFamilies: [
       {
-        name: 'Cortese',
-        character: 'Single-ended F2a stereo amplifier (~10W). Entry point to the Shindo line. Psychedelic presence and scale.',
-        ampPairing: 'Requires 90 dB+ speakers. Ideal with DeVore O/96, Altec horns.',
+        name: 'Cortese (single-ended power amplifiers)',
+        character: 'Single-ended stereo power amplifier series, voiced for low-power directness and harmonic presence. The Cortese F2a (~10W) re-purposes a Telefunken pentode for single-ended audio amplification; the Cortese 300B uses the canonical single-ended triode tube. Both are the most-cited expressions of the Shindo psychedelic-presence voicing and the entry point to the line.',
+        ampPairing: 'Requires 90 dB+ speakers. Canonical with DeVore O/96, Altec horns, Living Voice. Insufficient power for typical 86–88 dB stand-mount monitors.',
       },
       {
-        name: 'Haut-Brion / Montille',
-        character: 'Push-pull designs with more power (15–25W). Richer tonal palette with greater dynamic headroom.',
-        ampPairing: 'Works with 88 dB+ speakers. Broader pairing flexibility than single-ended models.',
+        name: 'Haut-Brion / Montille (push-pull power amplifiers)',
+        character: 'Push-pull designs with more power (15–25W) and a richer tonal palette than the single-ended Cortese. Greater dynamic headroom and broader speaker-pairing latitude while preserving the Shindo voicing. The model names follow Shindo\'s wine-naming tradition.',
+        ampPairing: 'Works with 88 dB+ speakers. Pairs with high-efficiency speakers that benefit from more grip than single-ended designs deliver, and with vintage horns that want slightly more bass authority than the Cortese provides.',
       },
       {
         name: 'Preamps (Aurièges, Monbrison, Masseto)',
-        character: 'System anchors — each voiced with a distinct character. The preamp often defines the Shindo system sound more than the power amp.',
+        character: 'System anchors — each voiced with a distinct character within the Shindo voicing tradition. The preamp typically defines the Shindo system sound more than the power amplifier, which makes preamp selection the most consequential decision in building a Shindo chain.',
+        ampPairing: 'Aurièges as the entry point; Monbrison in the middle tier; Masseto at the reference. Each pairs naturally with Shindo power amplifiers; mixing Shindo preamps with non-Shindo power amps is possible but typically compromises the chain coherence the brand is designed around.',
       },
     ],
     media: {
@@ -688,11 +697,22 @@ const BRAND_PROFILES: BrandProfile[] = [
       //   and served without any runtime hotlink dependency. F4 is
       //   satisfied: the image is manufacturer-sourced, not
       //   reviewer-derived.
+      //
+      // 2026-06-08 doctrine alignment: caption rewritten from inventory
+      // to characterisation; credit cleaned from the wordy "(curated
+      // under fair-use product reference)" disclaimer pattern (anti-
+      // pattern per the Editorial North Star) to the clean manufacturer-
+      // name credit precedent used by DeVore / Audio Note / Naim. A
+      // larger secondary image (workshop interior / Masseto preamp /
+      // Aurièges preamp) would lift the page to Level-4 visual standard
+      // once a safe manufacturer-sourced asset is available — Shindo's
+      // English directory is access-restricted and only the Cortese 300B
+      // file is currently reachable via direct probe (2026-06-08).
       images: [
         {
           url: '/brand-heroes/shindo-cortese-300b.jpg',
-          caption: 'Shindo Laboratory Cortese 300B.',
-          credit: 'Shindo Laboratory (curated under fair-use product reference)',
+          caption: 'Shindo Laboratory Cortese 300B — single-ended power amplifier in the line\'s most-cited voicing.',
+          credit: 'Shindo Laboratory',
           sourceUrl: 'http://www.shindo-laboratory.co.jp/English/C_300B_21.jpg',
         },
       ],
