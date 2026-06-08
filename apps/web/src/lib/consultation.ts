@@ -1843,20 +1843,21 @@ const BRAND_PROFILES: BrandProfile[] = [
     media: {
       // Hero pair sourced from the official Audio Note UK site
       // (audionote.co.uk → static.wixstatic.com CDN). Both URLs HEAD-200
-      // verified 2026-06-07 immediately before commit. Manufacturer-
-      // hosted via the brand's own Wix CDN; not reviewer-derived, not
-      // dealer-sourced. F4 gate satisfied.
+      // verified 2026-06-07 prior to local hosting. Manufacturer-hosted
+      // via the brand's own Wix CDN; not reviewer-derived, not dealer-
+      // sourced. F4 gate satisfied.
       //
-      // Local hosting under /brand-heroes/audio-note-an-elx.jpg and
-      // /brand-heroes/audio-note-veneers.jpg would be the natural
-      // follow-up polish (matching the devore-o96 / leben-cs600 /
-      // shindo-cortese-300b / naim-hero precedent). Wix CDN paths are
-      // less stable than fixed manufacturer URLs, so the local-hosting
-      // follow-up is worth doing soon — but kept out of this commit to
-      // stay strictly data-layer.
+      // 2026-06-08 local-hosting migration: both heroes downloaded from
+      // the Wix CDN at the same fill-transform dimensions used at the
+      // hotlink stage (w_900,h_900 for AN-ELX HEMP at 74 KB; w_1200,h_800
+      // for the Ongaku transformer at 180 KB), placed under
+      // apps/web/public/brand-heroes/ to match the devore-o96 /
+      // leben-cs600 / shindo-cortese-300b / naim precedent and remove
+      // the runtime Wix-CDN dependency. sourceUrl values retained verbatim
+      // for editorial provenance; caption + credit unchanged.
       images: [
         {
-          url: 'https://static.wixstatic.com/media/3e7c3b_6b0c2da76382488b84cdd74560c2e963~mv2_d_2693_2693_s_4_2.jpg/v1/fill/w_900,h_900,al_c,q_85,enc_avif,quality_auto/2_%20AN-ELX%20HEMP%20Olive%20Angle%20front%20copy_jp.jpg',
+          url: '/brand-heroes/audio-note-an-elx-hemp.jpg',
           caption: 'Audio Note AN-ELX HEMP in Olive — the flagship of the AN-E lineage, voiced for corner placement and low-power SET amplification.',
           credit: 'Audio Note UK',
           sourceUrl: 'https://www.audionote.co.uk/loudspeakers',
@@ -1871,9 +1872,9 @@ const BRAND_PROFILES: BrandProfile[] = [
           // visualises the silver-wired-transformers / hand-wound-chokes
           // material absolutism that is named in strengths[2] and pairs
           // editorially with the AN-ELX HEMP Olive speaker on the left
-          // (finished product + the craft that made it). URL HEAD-200
-          // verified 2026-06-07 immediately before commit.
-          url: 'https://static.wixstatic.com/media/3e7c3b_7ef34191fa574ddc9eb45e40a152bcc2~mv2_d_2997_2000_s_2.jpg/v1/fill/w_1200,h_800,al_c,q_85,enc_avif,quality_auto/Audio%20Note%20Ongaku%20transformer%20winding.jpg',
+          // (finished product + the craft that made it). Local-hosted
+          // 2026-06-08 as part of the brand-heroes/ migration above.
+          url: '/brand-heroes/audio-note-ongaku-transformer.jpg',
           caption: 'Hand-winding an Ongaku output transformer at the Brighton factory — the silver-wired transformers and hand-wound chokes that define Audio Note at the upper Levels.',
           credit: 'Audio Note UK',
           sourceUrl: 'https://www.audionote.co.uk/',
