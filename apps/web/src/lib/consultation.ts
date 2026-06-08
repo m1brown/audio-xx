@@ -727,6 +727,107 @@ const BRAND_PROFILES: BrandProfile[] = [
       ],
     },
   },
+  // ── Auditorium 23 ──────────────────────────────────────
+  // schools: musical-communication, horn-efficiency,
+  // analog-interface-coherence.
+  // The Auditorium 23 argument: system coherence is often decided at
+  // the analog interface — cartridge, step-up transformer, cable,
+  // loudspeaker, and amplifier voiced as a connected musical system
+  // rather than optimised as isolated components. The "invisible parts"
+  // of the chain — cables, transformers, the magnetic load between
+  // cartridge and phono stage — are made audible as part of the
+  // musical chain. The Hommage line is an explicit tribute (hommage)
+  // to Western Electric: the high-efficiency horn-loaded tradition
+  // carried forward as new equipment rather than curated as vintage
+  // memorabilia.
+  {
+    names: ['auditorium 23', 'auditorium-23', 'a23'],
+    founder: 'Keith Aschenbrenner',
+    country: 'Germany (Frankfurt)',
+    brandScale: 'boutique',
+    region: 'europe',
+    categories: ['cable', 'speaker', 'phono'],
+    tagline: 'System coherence at the analog interface — cables, transformers, horn loudspeakers.',
+    philosophy: 'Auditorium 23 is the argument that system coherence is often decided at the analog interface — cables, step-up transformers, the magnetic load between cartridge and phono stage, and the loudspeaker as the terminating expression of the chain. Keith Aschenbrenner has built the brand around the position that these "invisible parts" are not commodities and not optional choices but voiced components in the musical chain. The brand is simultaneously a manufacturer (cables, transformers, the Hommage and Provence/Appassionata loudspeaker lines) and a distributor (J.C. Verdier turntables, Line Magnetic Audio, Euphya, and Shindo Laboratory accessory partner in the German market) — and the manufacturing and distribution choices serve the same editorial position.',
+    philosophyExtended: 'The Hommage line is a tribute (hommage) to Western Electric. The Hommage 22A, Hommage 755, and Hommage Cinema speakers reference WE-era horn-loaded designs reconstructed for contemporary use with sensitive single-ended and small push-pull tube amplifiers, and the driver complement is built around PHY-HP wideband units and Western-Electric-style compression drivers. The Hommage T1 step-up transformer is voiced specifically for low-output moving-coil cartridges and has become the canonical SUT in the Musical Communication School chain — voiced against Shindo electronics, EMT and SPU cartridges, and J.C. Verdier turntables rather than as a measurement-target generic component. The cables are voiced against the system context (low-feedback tube amplifiers driving high-efficiency speakers) rather than against an isolated-component measurement target. Aschenbrenner\'s argument carries through the distribution choices as well — A23 imports the brands whose ideas align (Verdier for turntables, Line Magnetic for tube amplification, Shindo accessories in the German market) and does not carry the brands whose ideas conflict.',
+    tendencies: 'Listeners describe A23 cables and transformers as serving system coherence rather than imposing a tonal signature — the changes are heard as the system "pulling together" or "sounding more connected" rather than as a specific tilt. The Hommage loudspeakers are described as tonally dense, harmonically present, and rhythmically alive in the WE / high-efficiency tradition: dynamic ease at moderate volume, presence-region forwardness, and a soundstage that prioritises image solidity over hyper-resolution. The brand\'s voicing across cables, transformers, and speakers is internally consistent — an A23 chain paired with A23 components produces a recognisably A23 character.',
+    systemContext: 'A23 is designed for systems already committed to the analog front-end + low-power tube + high-efficiency speaker tradition. The Hommage T1 SUT presupposes a low-output moving-coil cartridge and a phono stage voiced for MM input via the SUT (canonically Shindo). The cables presuppose tube amplification rather than high-feedback solid state. The Hommage speakers presuppose 8–15W of well-voiced tube power. Outside that tradition the products will function but the editorial intent is muted.',
+    designPhilosophy: 'System coherence at the analog interface — cables, transformers, and speakers voiced against the system context rather than as isolated commodities.',
+    sonicTendency: 'Serves system coherence rather than imposing a signature; A23-on-A23 chains read as recognisably A23 in character.',
+    typicalTradeoff: 'Voiced specifically for the low-power tube + high-efficiency speaker + analog-front-end tradition; outside that context the editorial intent is muted.',
+    leadershipOrigin: 'Keith Aschenbrenner founded Auditorium 23 in Frankfurt, Germany — at a moment when the audiophile consensus treated cables and transformers as either commodity wires or measurement-target objects, and treated the Western-Electric / Altec / vintage-horn tradition as territory for collectors of obsolete equipment rather than as a living design school. Aschenbrenner\'s argument was that the WE-era understanding of the analog interface — that cables, transformers, and the magnetic interfaces between source and amplifier are voiced components of the musical chain — could be carried forward as new equipment, and that the WE horn-loaded loudspeaker tradition could be reconstructed for contemporary use with sensitive tube amplifiers. The Hommage line is the explicit tribute. The relationship with Shindo Laboratory — A23 has been Shindo\'s German importer and accessory partner since well before Ken Shindo\'s 2014 death, and continues that relationship — reflects the shared editorial position: the system, not the component, is the unit of design.',
+    strengths: [
+      'The Western-Electric analog-interface tradition carried forward as new equipment — cables, transformers, and Hommage speakers voiced together rather than optimised individually, with the chain treated as the unit of design',
+      'The Hommage T1 step-up transformer has become the canonical SUT for low-output moving-coil cartridges in the Musical Communication School chain — voiced specifically for Shindo + EMT / SPU + Verdier rather than as a measurement-target generic component',
+      'Cables voiced against the system context (low-feedback tube amplifiers + high-efficiency speakers) rather than against isolated-component measurements — the voicing presupposes the chain it will serve',
+      'The Hommage loudspeaker line reconstructs the WE 22A / 755 / Cinema tradition for contemporary use with 8–15W tube amplifiers — the high-efficiency horn tradition treated as a living design school rather than vintage memorabilia',
+      'Distribution choices reinforce the editorial position — A23 imports brands whose ideas align (J.C. Verdier turntables, Line Magnetic Audio, Shindo accessories) and not brands whose ideas conflict',
+      'Continuous relationship with Shindo Laboratory since before Ken Shindo\'s 2014 death — A23 is one of the few brands whose authority within the Shindo ecosystem is recognised by the Shindo organisation itself',
+    ],
+    tradeoffs: [
+      'The voicing is specifically tuned to the low-power tube + high-efficiency speaker + analog-front-end tradition — outside that context the editorial intent is muted and the products will read as "just good cables / just a good SUT"',
+      'The Hommage SUT is voiced for low-output MC cartridges; high-output MM and many MI cartridges will not benefit from the SUT and may sound worse through it',
+      'Hommage horn-loaded speakers require ~8–15W of well-voiced tube power and presuppose a room large enough to handle horn-loaded scale — the idea does not transfer to small-room solid-state systems',
+      'Premium artisanal pricing reflects the small-batch German manufacture; A23 cables and transformers sit substantially above commodity equivalents, and the value is only recoverable when the rest of the chain expresses the same editorial position',
+      'Distribution-and-manufacturing dual role means availability is dealer-relationship-dependent — A23 does not have the broad dealer footprint of a measurement-led brand',
+    ],
+    pairingNotes: 'Auditorium 23 pairs naturally with brands whose ideas align: musical communication over measured neutrality, the analog front end over the digital as the primary source, low-power tube amplification over high-feedback solid state, high-efficiency horn-tradition loudspeakers over low-efficiency studio monitors. The canonical Musical Communication School chain places A23 at the analog-interface junctions of a Shindo system — A23 cables, A23 Hommage T1 SUT, and (where the loudspeaker is not itself from the Hommage line) DeVore Orangutan or Altec horn-loaded speakers driven by Shindo single-ended or push-pull tube amplifiers. Other natural partners: J.C. Verdier turntables (A23 distributes), EMT and SPU low-output moving-coil cartridges (the SUT voicing presupposes them), Leben CS600X (the tube-voicing affinity carries cleanly into the Japanese-artisan cluster), Line Magnetic Audio (A23 distributes; the high-efficiency tube tradition aligns), Aurorasound VIDA phono stages (analog-interface coherence carries through the phono stage). The Hommage line is best treated as part of an A23 + Shindo + Verdier system rather than as standalone speakers — the voicing presupposes the chain. Anti-pairings reveal the editorial argument: high-feedback solid-state amplifiers (the cable voicing fights), low-efficiency studio monitors (the horn-tradition speakers will not drive them), measurement-target generic SUTs in chains otherwise built around A23 (chain coherence is lost), and listeners who treat cables and transformers as commodities will not extract the editorial position the products express.',
+    links: [
+      { label: 'Auditorium 23 (Germany)', url: 'http://www.auditorium-23.de/', region: 'global' },
+      { label: 'Tone Imports (US distributor)', url: 'https://www.toneimports.com/auditorium-23', kind: 'dealer', region: 'US' },
+    ],
+    designFamilies: [
+      {
+        name: 'Cables — speaker and interconnect',
+        character: 'Speaker cables and interconnects voiced against the system context — low-feedback tube amplifiers driving high-efficiency speakers — rather than against an isolated-component measurement target. The voicing presupposes the chain the cables will serve.',
+        ampPairing: 'Designed for tube amplification driving sensitive (90 dB+) speakers. Mixing A23 cables into high-feedback solid-state chains or measurement-led systems will function but not deliver the editorial intent.',
+      },
+      {
+        name: 'Hommage step-up transformers (T1, T1 Diapason)',
+        character: 'Step-up transformers voiced specifically for low-output moving-coil cartridges feeding a phono stage\'s MM input via the SUT. The Hommage T1 has become the canonical SUT for the Musical Communication School chain — voiced against Shindo + EMT / SPU + Verdier rather than as a measurement-target generic component.',
+        ampPairing: 'Presupposes a low-output MC cartridge (~0.2–0.5 mV) feeding into an MM phono input. Voiced specifically for use with Shindo phono stages; works with other tube phono stages voiced in the same tradition (Aurorasound VIDA, etc.).',
+      },
+      {
+        name: 'Hommage loudspeakers (22A, 755, Cinema, Ken)',
+        character: 'Horn-loaded loudspeakers reconstructing the WE 22A / 755 / Cinema tradition for contemporary use. High efficiency (typically 95+ dB), driver complement built around PHY-HP wideband units and Western-Electric-style compression drivers. Tonal density, presence-region forwardness, and dynamic ease at moderate volume — the WE horn tradition as a living design school.',
+        ampPairing: 'Designed for 8–15W tube amplification — Shindo single-ended, Leben CS600X, Line Magnetic SET, or comparable. The idea does not transfer to small-room solid-state systems.',
+      },
+      {
+        name: 'Distribution and partnership (Verdier, Line Magnetic, Euphya, Shindo accessory partner)',
+        character: 'The brands A23 imports into the German market — chosen specifically because their ideas align with the analog-interface-coherence argument. J.C. Verdier turntables (the canonical analog front-end partner; Verdier La Platine has been in continuous production for decades). Line Magnetic Audio (high-efficiency tube amplification). Euphya. The relationship with Shindo Laboratory — A23 has been Shindo\'s German importer since well before Ken Shindo\'s 2014 death — reflects the shared editorial position that the system, not the component, is the unit of design.',
+      },
+    ],
+    media: {
+      // A23's official site is HTTP-only. Hero downloaded 2026-06-08
+      // from http://www.auditorium-23.de/Hommage/Cinema.jpg and placed
+      // under apps/web/public/brand-heroes/ to avoid runtime HTTP→HTTPS
+      // mixed-content concerns and to match the established local-
+      // hosting precedent (devore-o96 / leben-cs600 / shindo-cortese-
+      // 300b / audio-note-an-elx-hemp / naim-separates-stack).
+      //
+      // The Hommage Cinema is a horn-loaded loudspeaker in the Western-
+      // Electric tribute line — visually the strongest expression of
+      // the brand's WE-tradition design school available on A23's own
+      // site. Native size 295×352 (small for a hero; A23's site uses
+      // individual model-page images that are uniformly small).
+      // F4-satisfied (manufacturer-sourced, not reviewer-derived).
+      //
+      // Notable hero gap: the iconic Hommage T1 transformer photography
+      // on A23's site is bundled into a magazine-review scan (Le Coin
+      // de l'Audiophile) which is a reviewer source the F4 gate
+      // excludes. A standalone manufacturer-sourced T1 transformer
+      // hero, or a workshop/Aschenbrenner-at-the-bench shot, would
+      // lift the page to Level-4 visual standard once available.
+      images: [
+        {
+          url: '/brand-heroes/a23-hommage-cinema.jpg',
+          caption: 'Auditorium 23 Hommage Cinema — horn-loaded loudspeakers in the Western-Electric tribute line, voiced for 8–15W tube amplification.',
+          credit: 'Auditorium 23',
+          sourceUrl: 'http://www.auditorium-23.de/Hommage/Cinema.html',
+        },
+      ],
+    },
+  },
   {
     names: ['pass labs', 'pass', 'first watt'],
     founder: 'Nelson Pass',
