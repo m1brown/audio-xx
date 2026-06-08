@@ -828,6 +828,106 @@ const BRAND_PROFILES: BrandProfile[] = [
       ],
     },
   },
+  // ── EMT (Elektromesstechnik) ───────────────────────────
+  // schools: studio-accuracy, musical-communication, analog-front-end.
+  // The EMT argument: professional broadcast tools can become enduring
+  // audiophile objects when reliability, immediacy, mechanical solidity,
+  // and musical communication converge. Founded 1940 as a broadcast-
+  // equipment manufacturer; the cartridges and tonearms were designed
+  // for live broadcast use where speed of stylus return to centre,
+  // mechanical robustness, and unsentimental tonal directness mattered
+  // more than spec-sheet refinement. Those engineering priorities
+  // turned out to be what enthusiast listeners value too — but for
+  // reasons EMT did not originally target.
+  {
+    names: ['emt', 'emt tontechnik', 'emt studiotechnik'],
+    founder: 'Wilhelm Franz (Elektromesstechnik Wilhelm Franz KG, 1940)',
+    country: 'Switzerland (current production) / Germany (historical)',
+    brandScale: 'specialist',
+    region: 'europe',
+    categories: ['cartridge', 'phono'],
+    tagline: 'Broadcast-tool immediacy and mechanical authority — professional engineering that became enthusiast canon.',
+    philosophy: 'EMT is the argument that professional broadcast tools can become enduring audiophile objects when reliability, immediacy, mechanical solidity, and musical communication converge. The cartridges and tonearms were originally designed for live broadcast use — where stylus-return speed after a needle drop, mechanical robustness under daily operation, and unsentimental tonal directness mattered more than spec-sheet refinement — and the same engineering priorities turn out to be what enthusiast listeners value too, for reasons EMT did not originally target. The brand carries forward a continuous analog-manufacture lineage of more than eighty years.',
+    philosophyExtended: 'EMT was founded in 1940 in Berlin by Wilhelm Franz as Elektromesstechnik Wilhelm Franz KG, building measurement and broadcast equipment for the German radio industry. The post-war decades established EMT as a European broadcast-engineering standard: the EMT 927 and 930 broadcast turntables, the EMT 139 tube phono stage, and the OFD- and TSD-series broadcast cartridges defined what professional vinyl playback looked like in studios from the BBC to RAI to NHK. The cartridges crossed over into enthusiast use because the design priorities (rigid mechanical coupling between stylus and generator, broadcast-grade reliability, fast transient settling) produced a tonal directness audiophile listeners found unsentimental and revealing in a way consumer-targeted cartridges of the era were not. Modern EMT production continues under EMT Tontechnik in Switzerland — the current JSD and HSD cartridge lines, the 9-series tonearms (909, 912, 928), and the analog electronics carry the same engineering posture into contemporary equipment. The cartridges retain the iconic four-pin broadcast-style connector and the signature housing geometry; the brand has not let consumer aesthetics overwrite the broadcast-tool identity.',
+    tendencies: 'Listeners describe EMT cartridges as immediate, mechanically authoritative, and tonally direct — voices and acoustic instruments arrive with weight and presence rather than as etched silhouettes. The "broadcast directness" is the through-line: an EMT cartridge in a system reveals tonal character of the recording quickly and without the ethereal-cartridge tendency to dissolve transients into ambience. The tonearms (9-series) are mechanically heavy by modern standards and presuppose medium-to-high-mass arm-and-cartridge matching; the engineering priority is rigid coupling, not low effective mass.',
+    systemContext: 'EMT is designed for systems committed to analog playback as the primary source, where the cartridge\'s mechanical character and the broadcast-derived tonal directness are heard as features rather than limitations. The cartridges require a phono stage capable of handling moderate-to-low output (most JSD and HSD models are low-output moving-coil designs at ~0.2–0.5 mV) and benefit from a step-up transformer voiced for the EMT output — canonically the Auditorium 23 Hommage T1, voiced specifically for low-output MC into the MM input of a tube phono stage.',
+    designPhilosophy: 'Broadcast-engineering priorities — reliability, immediacy, mechanical authority — carried into enthusiast equipment without consumer-aesthetic overwrites.',
+    sonicTendency: 'Immediate, mechanically authoritative, tonally direct — broadcast directness as a recognisable signature.',
+    typicalTradeoff: 'Tonal directness and mechanical authority over ethereal transient delicacy and audiophile-sentimental refinement.',
+    leadershipOrigin: 'Wilhelm Franz founded Elektromesstechnik Wilhelm Franz KG (EMT) in Berlin in 1940 — at a moment when the German broadcast industry was being built out under wartime and post-war reconstruction, and broadcast engineering was a serious technical discipline rather than a consumer-electronics market. Franz\'s argument was that broadcast equipment had to be engineered against operational reality — daily live use, rapid cueing, mechanical reliability over decades — and that those constraints were design virtues rather than compromises against an ideal audiophile target. The EMT 927 and 930 broadcast turntables became European studio standards; the cartridge division (later EMT Tontechnik, now in Switzerland) carried the same posture into the cartridge line. The crossover into enthusiast use was not a brand strategy — Art Dudley and other writers in the 2000s repositioned the TSD-15 and OFD-series cartridges as audiophile objects because the broadcast-tool sound turned out to be a sound audiophile listeners valued. The brand never abandoned the broadcast-engineering identity, which is part of why it has endured: the engineering priorities are durable in a way consumer-fashion cartridges are not.',
+    strengths: [
+      'Broadcast-engineering priorities — rigid mechanical coupling, fast transient settling, daily-use reliability — produce a tonal directness enthusiast listeners value, for reasons EMT did not originally target',
+      'More than eighty years of continuous analog manufacture under one brand identity — the engineering posture is durable in a way consumer-fashion cartridges are not',
+      'The iconic four-pin broadcast connector and signature housing geometry preserve the broadcast-tool identity rather than overwriting it with consumer aesthetics — the cartridge looks like what it is',
+      'JSD and HSD lineages cover the modern enthusiast range without abandoning the broadcast-derived voicing — the Novel, Pure, VM, and Gold variants are voicing siblings rather than a different design school',
+      'Canonical pairing with the Auditorium 23 Hommage T1 SUT and Shindo phono stages — the EMT output was voiced before the SUTs that became canonical alongside it, and the chain coherence is recognised within the Musical Communication School',
+      'Bridges the Studio Accuracy School (broadcast heritage, mechanical engineering rigor) and the Musical Communication School (tonal directness valued by tube-and-horn listeners) — one of the few brands in the catalog that sits at the intersection of both',
+    ],
+    tradeoffs: [
+      'The broadcast-tool tonal directness is unsentimental — listeners who want ethereal cartridge presentation, transient delicacy as the dominant impression, or audiophile-romantic warmth will hear the voicing as too direct and too forceful',
+      'Tonearms (9-series) are mechanically heavy by modern standards and presuppose medium-to-high-mass arm-and-cartridge matching — the engineering priority is rigid coupling, not low effective mass; this constrains compatibility with light, compliant non-EMT cartridges',
+      'JSD and HSD cartridges are low-output moving-coil designs (~0.2–0.5 mV) — a step-up transformer or high-gain MC phono stage is presupposed, and the SUT voicing matters; pairing into commodity MM-only phono stages will not work',
+      'Setup discipline matters — VTA, azimuth, loading, and arm-mass matching all interact with the broadcast-derived rigid-coupling design; casual plug-and-play analog setups will not extract the brand\'s editorial position',
+      'Modern EMT cartridges sit in premium territory — JSD Novel Titan and similar reference models reach high four-figure prices, and the value is only recoverable when the rest of the chain (arm, phono, system) is committed to the broadcast-tool / analog-front-end orientation',
+    ],
+    pairingNotes: 'EMT pairs naturally with brands and components whose ideas align: analog as the primary source rather than the digital auxiliary, mechanical authority over ethereal delicacy, broadcast-derived tonal directness over audiophile-sentimental refinement. The canonical EMT chain places the cartridge in an EMT 9-series tonearm (909, 912, or 928) on a serious analog turntable (J.C. Verdier La Platine and similar artisan high-mass designs are the natural partners), feeding through an Auditorium 23 Hommage T1 step-up transformer into a Shindo phono stage and preamplifier, and ultimately into Shindo, Leben, Audio Note, or Line Magnetic tube amplification driving DeVore Orangutan, Audio Note AN-E, or Altec / Klipsch Heritage / Living Voice high-efficiency loudspeakers. The chain is not assembled by accident — every junction has been voiced against the others by listeners and dealers in the Musical Communication School ecosystem, and EMT sits at the cartridge end as the canonical analog source. Other natural partners: Aurorasound phono stages and SUTs for cases where the chain stays closer to the Studio Accuracy School posture, and direct-drive professional turntables (Technics SP-10R, Reed) where the EMT cartridge is paired with a different broadcast-derived turntable tradition. Anti-pairings reveal the trade-off: ultra-light low-mass tonearms designed for compliant cartridges (an EMT in a unipivot ethereal arm fights its own design priorities), highly analytical FPGA-DAC-led digital-first chains (the EMT directness has no role to play if the source is digital), casual plug-and-play analog setups (the SUT and loading discipline are not optional), and listeners who want the cartridge to disappear into ambience (EMT will not).',
+    links: [
+      { label: 'EMT Tontechnik (Switzerland)', url: 'https://emt-tontechnik.ch/', region: 'global' },
+      { label: 'Brinkmann Audio (EMT cartridges under license)', url: 'https://www.brinkmann-audio.de/', region: 'global' },
+    ],
+    designFamilies: [
+      {
+        name: 'JSD cartridge lineage (Novel Titan, Novel Gold, Pure, VM, 5, 6)',
+        character: 'The modern EMT cartridge line — low-output moving-coil designs (~0.2–0.5 mV) carrying the broadcast-derived voicing into contemporary high-end equipment. The JSD Novel Titan and Novel Gold are the reference models; the JSD Pure, VM, 5, and 6 carry the same voicing through the range. All retain the iconic four-pin broadcast connector and the EMT housing geometry — the cartridge identity is preserved rather than redesigned for consumer aesthetics.',
+        ampPairing: 'Presupposes a step-up transformer (canonically the Auditorium 23 Hommage T1) feeding into a tube phono stage (Shindo, Aurorasound VIDA), or a high-gain MC phono stage voiced for low-output coils. Will not deliver the editorial intent through commodity MM-only phono stages.',
+      },
+      {
+        name: 'HSD cartridge lineage (006, SC6)',
+        character: 'HSD models occupy a more accessible price tier within the EMT range while preserving the broadcast-tool design priorities — mechanical authority, tonal directness, four-pin connector identity. The HSD 006 is the entry to the modern EMT line.',
+        ampPairing: 'Same setup discipline as the JSD line — SUT and loading matter; tube phono stage canonical.',
+      },
+      {
+        name: 'EMT tonearms (909, 912, 928 and the 9-series)',
+        character: 'Medium-to-high-mass arms designed for rigid coupling rather than low effective mass. The 9-series carries the broadcast-engineering posture into the tonearm itself — the priority is mechanical authority, not the ultra-light philosophy of unipivot or carbon-fibre designs. The arms are voiced specifically to mate with EMT cartridges and similar broadcast-derived designs; they are not neutral platforms for any cartridge.',
+        ampPairing: 'Pairs naturally with EMT cartridges. Compatible with other medium-output MC designs in the same engineering tradition (some Ortofon SPU, Lyra Atlas). Less ideal for light, highly compliant cartridges designed for ultra-light arms.',
+      },
+      {
+        name: 'Broadcast / historical archive (927, 930, TSD-15, OFD-15)',
+        character: 'The historical EMT lineage that built the brand\'s identity. The EMT 927 and 930 broadcast turntables were European studio standards from the 1950s through the 1970s; the TSD-15 and OFD-15 cartridges defined the broadcast-cartridge sound. These models are no longer in production but remain editorially central: they are the equipment Art Dudley and other enthusiast writers repositioned as audiophile objects, and they remain the reference point against which modern EMT cartridges are heard.',
+      },
+    ],
+    media: {
+      // Hero downloaded 2026-06-08 from
+      // https://emt-tontechnik.ch/uploads/1/4/8/6/148642164/emt-novel-titan-1_1.jpg
+      // and placed locally under apps/web/public/brand-heroes/ to match
+      // the established local-hosting precedent (devore-o96 /
+      // leben-cs600 / shindo-cortese-300b / audio-note-an-elx-hemp /
+      // naim-separates-stack / a23-hommage-cinema). Manufacturer-sourced
+      // from the official EMT Tontechnik site (Switzerland), F4-
+      // satisfied (not reviewer-derived).
+      //
+      // The JSD Novel is visually the strongest current EMT cartridge:
+      // the iconic four-pin broadcast connector and the EMT housing
+      // geometry are immediately recognisable, and the gold "Novel"
+      // script + brass internals carry the brand identity into a
+      // contemporary product. Native size 800×533 (compact but
+      // editorially specific).
+      //
+      // Secondary-image gap: a manufacturer-sourced shot of an EMT 9-
+      // series tonearm in situ on a high-mass turntable (J.C. Verdier
+      // La Platine, etc.) would lift the page to Level-4 visual
+      // standard by visually completing the cartridge → arm →
+      // turntable chain the prose describes. Flagged for future polish.
+      images: [
+        {
+          url: '/brand-heroes/emt-jsd-novel.jpg',
+          caption: 'EMT JSD Novel — modern broadcast-derived moving-coil cartridge, four-pin connector and EMT housing geometry preserved from the broadcast lineage.',
+          credit: 'EMT Tontechnik',
+          sourceUrl: 'https://emt-tontechnik.ch/cartridge.html',
+        },
+      ],
+    },
+  },
   {
     names: ['pass labs', 'pass', 'first watt'],
     founder: 'Nelson Pass',
