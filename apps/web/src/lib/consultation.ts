@@ -1278,6 +1278,13 @@ const BRAND_PROFILES: BrandProfile[] = [
     systemContext: 'Bookshelf speakers in this class benefit from quality amplification with good damping and current delivery. Room placement matters for bass reinforcement.',
   },
   {
+    // schools: musical-communication, japanese-artisan;
+    // horn-efficiency-affinity via canonical DeVore Orangutan pairing.
+    // The Leben argument: the Luxman voicing tradition — refinement,
+    // composure, harmonic presence — can be carried forward in small-
+    // batch hand-built push-pull tube amplifiers, with the listener
+    // gaining agency through tube rolling, rather than ceded to mass-
+    // manufactured solid-state.
     names: ['leben'],
     founder: 'Taku Hyodo',
     country: 'Japan',
@@ -1286,30 +1293,59 @@ const BRAND_PROFILES: BrandProfile[] = [
     categories: ['amplifier'],
     tagline: 'Post-Luxman artisanal Japanese tube amplifiers — hand-built, voiced by ear.',
     philosophy: 'Leben Hi-Fi Stereo Company builds hand-wired tube amplifiers in the Japanese tradition — small-scale, obsessively crafted, voiced by ear. Taku Hyodo founded the firm after his career as a Luxman engineer, carrying the Luxman voicing into an explicitly small-batch tube format. The CS600X and CS300X use push-pull KT77 / KT88 / EL34 topology with very low negative feedback; the design prioritises tonal density, harmonic richness, and rhythmic drive over measured neutrality. Every unit is hand-assembled in Japan.',
-    philosophyExtended: 'The original CS300 used EL84 output tubes in a compact integrated chassis and became unusually popular among headphone listeners as a desktop-scale tube amplifier — a use case the design did not originally target but accommodates well. The current CS300X retains the compact format with a revised tube complement; the larger CS600 / CS600X uses KT77 / KT88 / EL34 in push-pull and drives full-size loudspeakers. Tube rolling is a meaningful part of the listening experience — KT77, KT88, and EL34 produce noticeably different voicings in the same chassis. The post-Luxman lineage shows in the voicing: tonal refinement carried into a tube format at deliberately small production volumes.',
+    philosophyExtended: 'The original CS300 used EL84 output tubes in a compact integrated chassis and became unusually popular among headphone listeners as a desktop-scale tube amplifier — a use case the design did not originally target but accommodates exceptionally well. The current CS300X retains the compact format with a revised tube complement; the larger CS600 / CS600X uses KT77 / KT88 / EL34 in push-pull and drives full-size loudspeakers. Tube rolling is a meaningful part of the listening experience — KT77, KT88, and EL34 produce noticeably different voicings in the same chassis, and the listener gains agency over the voicing without changing chassis. The post-Luxman lineage shows in the voicing: tonal refinement carried into a tube format at deliberately small production volumes, in a domain Luxman itself does not fully occupy in its modern solid-state lineup.',
     tendencies: 'Listeners describe Leben amplifiers as warm, tonally dense, rhythmically alive, and harmonically rich. Strong midrange presence and natural instrument tone — voices and acoustic instruments have unusual body and dimensionality. Excellent dynamics for the power rating, with surprising bass grip from the KT77 / KT88 push-pull topology. The presentation is lush and flowing rather than analytical, with a dimensional soundstage that rewards close listening.',
-    systemContext: 'Leben amplifiers are a natural match for high-efficiency loudspeakers — DeVore, Zu, Klipsch Heritage. The CS600X (~32W) drives speakers in the 90–96 dB range with authority. The CS300 / CS300X has a parallel identity as a desktop tube amplifier for headphone listeners — a use case the design accommodates well despite not being its original target.',
-    designPhilosophy: 'Hand-built artisanal tube amplification in the post-Luxman Japanese tradition.',
-    sonicTendency: 'Warm, dense, rhythmically alive, harmonically rich.',
-    typicalTradeoff: 'Tonal saturation and musical drive over measured precision.',
-    leadershipOrigin: 'Taku Hyodo founded Leben Hi-Fi Stereo Company in Japan after his career as a Luxman engineer. The firm remains small-scale — every amplifier is hand-assembled. The CS300 / EL84 lineage became unusually influential among headphone listeners; the CS600 family carries the same voicing into full-system territory.',
-    pairingNotes: 'The Leben CS600X + DeVore O/96 is one of the most-cited pairings in modern high-efficiency audio — it appears consistently in "best system" discussions. The CS300 family has a parallel identity as a desktop tube amplifier for premium headphones — a use case it serves unusually well despite not being its original target. Tube rolling (KT77, KT88, EL34) is a meaningful part of the Leben experience.',
+    systemContext: 'Leben amplifiers are a natural match for high-efficiency loudspeakers — DeVore, Zu, Klipsch Heritage, Audio Note AN-E. The CS600X (~32W) drives speakers in the 90–96 dB range with authority. The CS300 / CS300X has a parallel identity as a desktop tube amplifier for headphone listeners — a use case the design accommodates well despite not being its original target.',
+    designPhilosophy: 'Hand-built artisanal tube amplification carrying the Luxman voicing tradition into a small-batch tube format.',
+    sonicTendency: 'Warm, dense, rhythmically alive, harmonically rich — refinement and composure in a tube domain.',
+    typicalTradeoff: 'Tonal saturation and musical drive over measured precision; low output power requires sensitive speakers.',
+    leadershipOrigin: 'Taku Hyodo founded Leben Hi-Fi Stereo Company in Japan after a career as a Luxman engineer — at a moment when the Japanese hi-fi industry was consolidating toward mass-manufactured solid-state product and treating tube heritage as territory for vintage gear or expensive imports. Hyodo\'s argument was that the Luxman voicing tradition — refinement, composure, harmonic presence — could be carried forward in small-batch hand-built push-pull tube amplifiers, with the listener gaining agency through tube rolling rather than ceding it to factory voicing. The CS300 / EL84 lineage became unusually influential among headphone listeners; the CS600 family carries the same voicing into full-system territory. The firm remains small-scale — every amplifier is hand-assembled.',
+    strengths: [
+      'Low-feedback push-pull KT77/KT88/EL34 voicing — tonal density and harmonic richness as the foundation across the output stage, not an additive flavour',
+      'The Luxman refinement tradition expressed in a small-batch hand-built tube format — a voicing Luxman itself does not fully occupy in its modern solid-state lineup',
+      'Tube rolling (KT77 for sweetness, KT88 for grip, EL34 for vintage harmonic balance) as intentional listener-agency over the voicing — not an aftermarket modification',
+      'The same Leben voicing reaches across use cases — CS300 as a desktop tube amplifier for premium headphones, CS600X as a full-system amplifier for high-efficiency speakers — without compromising either identity',
+      'The CS600X + DeVore O/96 pairing has become one of the most-cited canonical combinations in modern high-efficiency audio — the idea has been validated by the community where it matters',
+      'Hand-built in Japan under continuous founder stewardship — material discipline expressed at the brand scale, not only at the product scale',
+    ],
+    tradeoffs: [
+      'Low output (CS600X ~32W; CS300 family ~12W) — the idea requires sensitive speakers in the 90 dB+ range for full-system use, foreclosing the standard mid-power solid-state market',
+      'Measured neutrality is deprioritised — listeners who prioritise flat response or surgical transient detail will hear the voicing as warm rather than honest',
+      'Bass extension is bounded by small-tube push-pull topology — Leben gives up deep bass authority for tonal density and harmonic richness',
+      'Small-batch production means waiting lists and limited dealer presence — the idea does not scale to broad availability, and ownership requires patience',
+      'Tube rolling is part of the voicing but also a real ownership cost — KT77 / KT88 / EL34 NOS supply matters over time',
+    ],
+    pairingNotes: 'Leben pairs naturally with brands and components whose ideas align: tonal density over surgical detail, musical communication over measured neutrality, small-scale craft over scaled manufacturing. The canonical CS600X + DeVore O/96 pairing is more than a popular combination — it is the most-cited expression in modern high-efficiency audio of the argument that low-power push-pull tubes and sensitive speakers can together produce a complete system without compromise on either end. Other natural partners share this orientation: Auditorium 23 cables and SUTs (analog-interface coherence), Shindo electronics (emotional communication via single-ended triodes), TotalDAC and similarly tonally-dense R2R sources, Aurorasound phono stages (low-noise transparency that does not edit the tonal palette). The CS300 family enters a different conversation entirely: as a desktop tube amplifier for premium headphones — HiFiMAN planars, Audeze, the Sennheiser HD-series — it occupies a niche where small-tube musicality matters more than power. Anti-pairings reveal the trade-off: high-feedback solid state, low-sensitivity speakers (below 86 dB), and FPGA DACs that prioritise transient surgery over tonal weight will fight rather than partner the Leben voicing. Tube rolling (KT77, KT88, EL34) is part of the ownership experience, not an aftermarket add-on; the listener gains agency over the voicing without changing chassis.',
     links: [
       { label: 'Leben (Japan)', url: 'https://www.leben-hifi.com/', region: 'global' },
       { label: 'Tone Imports (US distributor)', url: 'https://www.toneimports.com/', kind: 'dealer', region: 'US' },
     ],
-    // Prestige-brand hero image — locally hosted curated asset
-    // (Pass 2026-05-28). Sourced from lebenhifi.com CS-600 product
-    // photo, re-encoded at JPEG quality 90 and served from
+    designFamilies: [
+      {
+        name: 'CS300 / CS300X — compact tube integrated',
+        character: 'The compact end of the Leben range. Originally an EL84-based integrated for sensitive small-room speakers, the CS300 became unusually influential as a desktop tube amplifier for premium headphones — a use case the design did not target but accommodates exceptionally well. The CS300X retains the compact format with a revised tube complement. Where the CS600 line scales the Leben voicing to full-system use, the CS300 line concentrates it for desktop listening at smaller scale and lower power.',
+        ampPairing: 'Self-contained integrated. As a speaker amp, pairs with sensitive small-room loudspeakers (typically 90 dB+). As a desktop tube amp, pairs with premium dynamic and planar headphones in the HiFiMAN / Audeze / Sennheiser HD-series range — does not need a separate headphone amplifier.',
+      },
+      {
+        name: 'CS600 / CS600X — full-system push-pull',
+        character: 'The full-system expression of the Leben voicing. Push-pull KT77/KT88/EL34 integrated amplifier at ~32W with very low negative feedback. Tube rolling is a deliberate part of the listening experience — KT77 for additional sweetness and microdynamic colour, KT88 for greater grip and bass authority, EL34 for vintage harmonic balance. The CS600X carries the voicing forward with refinements; both share the same design intent.',
+        ampPairing: 'Pairs with high-efficiency speakers in the 90–96 dB range — DeVore Orangutan, Zu Audio, Klipsch Heritage, Audio Note AN-E. The canonical CS600X + DeVore O/96 combination is one of the most-cited pairings in modern high-efficiency audio.',
+      },
+    ],
+    // Locally hosted hero image. Sourced from lebenhifi.com CS-600
+    // product photo, re-encoded at JPEG quality 90 and served from
     // apps/web/public/brand-heroes/. Native size preserved (400×252)
-    // since the source itself is small. No runtime hotlink dependency.
+    // since the source itself is small. A larger secondary image
+    // (workshop / Hyodo at the bench / CS600 internals) would help
+    // promote the page to Level-4 visual standard once a safe
+    // manufacturer-sourced asset is available.
     media: {
       images: [
         {
           url: '/brand-heroes/leben-cs600.jpg',
-          caption: 'Leben CS-600 Integrated Amplifier.',
-          credit: 'Leben Hi-Fi Stereo Company (curated under fair-use product reference)',
-          sourceUrl: 'https://lebenhifi.com/products/products-img/cs600_2_m.jpg',
+          caption: 'Leben CS-600 Integrated Amplifier — push-pull KT77/KT88/EL34 voicing in a hand-built chassis.',
+          credit: 'Leben Hi-Fi Stereo Company',
+          sourceUrl: 'https://lebenhifi.com/',
         },
       ],
     },
