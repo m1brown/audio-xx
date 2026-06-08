@@ -1033,6 +1033,113 @@ const BRAND_PROFILES: BrandProfile[] = [
       ],
     },
   },
+  // ── Sugden Audio Products ──────────────────────────────
+  // schools: british-class-a, musical-communication,
+  // low-power-amplification.
+  // The Sugden argument: low-power Class A amplification can preserve
+  // musical immediacy, tonal continuity, and human-scale dynamics
+  // without needing the scale, heat, or spectacle of larger high-power
+  // designs. The A21 (1967) is widely credited as the world's first
+  // commercial production Class A integrated amplifier; J.E. Sugden &
+  // Co Ltd has produced the A21 lineage continuously from West
+  // Yorkshire since. Sugden sits alongside Pass / First Watt
+  // (American minimalist Class A) as the British Class A node — same
+  // school argument expressed from a different design tradition.
+  {
+    names: ['sugden', 'sugden audio', 'j.e. sugden', 'je sugden'],
+    founder: 'J. E. Sugden (James Edward Sugden) — J. E. Sugden & Co Ltd, 1967',
+    country: 'UK (West Yorkshire)',
+    brandScale: 'specialist',
+    region: 'europe',
+    categories: ['amplifier', 'dac'],
+    tagline: 'Low-power Class A from Yorkshire — the A21 lineage as a durable path to musical naturalness.',
+    philosophy: 'Sugden is the argument that low-power Class A amplification can preserve musical immediacy, tonal continuity, and human-scale dynamics without needing the scale, heat, or spectacle of larger high-power designs. The A21 (1967) was widely credited as the world\'s first commercial production Class A integrated amplifier, and the lineage has been produced continuously from West Yorkshire by J. E. Sugden & Co Ltd since. The modest power ratings, the conspicuous heat sinks made visible as a design feature, and the deliberate refusal to chase feature counts or measurement spectacle are all part of the brand\'s argument: amplifier quality does not have to scale through power, complexity, or specification.',
+    philosophyExtended: 'J. E. (James Edward) Sugden designed the original A21 in Heckmondwike, West Yorkshire in 1967 — a moment when audiophile amplifier design was rapidly moving toward higher power, more complex circuits, more sophisticated feedback topologies, and higher specifications across the board. Sugden\'s argument was that the additional power and complexity were not free, and that the costs (in tonal continuity, midrange naturalness, and small-signal resolution) were being undercounted relative to the spec-sheet gains. A low-power single-ended-like Class A topology, simply executed, could deliver a musical communication that the high-power high-feedback consensus could not match. The A21 was the proof. Continuous production for nearly six decades has carried the same argument through three product families: the A21 Heritage line (A21, A21SE, ANV-50 Anniversary), the Masterclass series (IA-4 integrated, SPA-4 / FPA-4 power, LA-4 pre, PA-4 phono, HA-4 headphone, DAC-4, PDT-4F CD player), and the FBA-800 / DAP-800 reference Class A pair. The visual signature is constant: brushed silver chassis, exposed black-finned heat sinks as a celebrated design feature (the heat is the topology made visible), and a deliberately restrained feature set on every front panel.',
+    tendencies: 'Listeners describe Sugden amplifiers as having a tonal continuity, midrange naturalness, and small-signal resolution that low-feedback Class A topology delivers as a foundation rather than as a flavour — voices and acoustic instruments have body and tonal correctness without ethereal etching or transient surgery. The presentation is unsentimental but unmistakably musical: the brand\'s argument is that Class A simplicity is a positive choice, not a compromise, and the voicing carries the argument. The dynamic envelope is human-scale rather than spectacular; Sugden does not try to be loud, and the brand\'s editorial position is that being loud is not what amplifiers are for.',
+    systemContext: 'Sugden is designed for systems where the listener wants Class A musical naturalness in a chassis-and-power scale matched to real listening rooms rather than reference-system showpieces. The amplifiers pair naturally with moderate-to-high sensitivity loudspeakers (typically 86–92 dB) — Harbeth, Spendor, Graham, ProAc, and similar British monitor-tradition speakers; DeVore Orangutan or Audio Note AN-E where the Class A flow meets high-efficiency speakers; and any analog-front-end or NOS / R2R digital source that shares the tonal-continuity priority. The brand is not designed for difficult low-sensitivity loads or large rooms requiring high SPL.',
+    designPhilosophy: 'Low-power Class A topology executed simply — the heat sinks are not hidden because the heat is the topology, and the topology is the argument.',
+    sonicTendency: 'Tonal continuity, midrange naturalness, and small-signal resolution as a foundation; unsentimental but unmistakably musical.',
+    typicalTradeoff: 'Class A musical naturalness and continuity over high-power slam, ultra-feature-counts, or measurement spectacle.',
+    leadershipOrigin: 'James Edward (J. E.) Sugden founded J. E. Sugden & Co Ltd in Heckmondwike, West Yorkshire in 1967, where the company has been producing the A21 lineage continuously ever since. Sugden\'s argument at founding was that the audiophile amplifier industry was moving toward higher power, more complex circuits, and higher specifications as if those were free improvements — when in fact the gains were being bought at the cost of tonal continuity, midrange naturalness, and small-signal resolution that lower-power simpler Class A topologies delivered. The A21 was the demonstration: a modestly-powered, simply-executed Class A integrated that became the world\'s first commercial production Class A integrated amplifier and established the brand\'s editorial position. The company has remained family-owned and West Yorkshire-based for nearly six decades, with the founder\'s argument carried through three product families and continuous production into the present.',
+    strengths: [
+      'The argument that low-power Class A topology, simply executed, delivers tonal continuity and midrange naturalness as a foundation — and that the gains are real even when the spec sheet does not capture them',
+      'The A21 (1967) was widely credited as the world\'s first commercial production Class A integrated amplifier — a historical first that is not just a marketing point but the founding gesture of the brand\'s ongoing argument',
+      'Continuous production from West Yorkshire under family ownership for nearly six decades — the editorial position is durable in a way that depends on continuous design-school stewardship rather than corporate ownership cycles',
+      'The brand\'s visual signature (brushed silver chassis, exposed black-finned heat sinks made visible as a design feature) is the topology made visible — the heat is not hidden because the heat IS the Class A argument, and the front panel tells the listener what the amplifier is before it plays a note',
+      'Three product families — A21 Heritage (A21, A21SE, ANV-50), Masterclass (IA-4 / SPA-4 / FPA-4 / LA-4 / PA-4 / HA-4 / DAC-4), FBA-800 / DAP-800 reference Class A pair — all carry the same editorial position; price-tier compromises are taken at the chassis-scale and component layer, not at the voicing-posture layer',
+      'Sits in the British-Class-A node of the school graph alongside Pass / First Watt (American minimalist Class A) and Audio Note UK (British SET tube musical communication) — the same low-power-and-natural argument expressed from a different design tradition',
+    ],
+    tradeoffs: [
+      'Low output power is part of the argument, not a compromise around it — the A21SE (~30W Class A) and Masterclass IA-4 (~30W Class A) presuppose moderate-to-high sensitivity loudspeakers (typically 86 dB+); very low-sensitivity speakers will not be driven well, and the editorial intent is muted',
+      'Class A topology produces real heat — the conspicuous heat sinks are not decoration; the amplifier needs ventilation, room-temperature listening is part of the ownership picture, and listeners who want a cool-running amplifier should look elsewhere',
+      'Tonal continuity and midrange naturalness over high-power slam and brute-force bass grip — listeners who prioritise transient surgery, deep-bass authority, or maximum SPL will hear Sugden as gentle or underpowered for their target use case',
+      'The deliberately restrained feature set (no streaming, no DSP, no room-correction, no app-based control) is part of the brand\'s argument — listeners who want the amplifier to be a feature-rich hub will find Sugden\'s front-panel discipline insistent',
+      'Premium British specialist pricing reflects the continuous West Yorkshire manufacture under family ownership — Sugden sits substantially above commodity integrated amplifiers and the value is recoverable only when the rest of the chain (speakers, source, room) shares the brand\'s editorial position',
+    ],
+    pairingNotes: 'Sugden pairs naturally with brands and components whose ideas align: tonal continuity over transient surgery, musical naturalness over measurement spectacle, moderate-to-high-sensitivity loudspeakers where low-power Class A is sufficient and editorially correct, analog-first or NOS / R2R digital front ends whose tonal density matches the Class A foundation. Canonical British partners: Harbeth (Compact / Super HL5 / M40 — the BBC monitor-tradition coherence is where Sugden\'s tonal continuity reads as obvious correctness), Spendor (Classic and D-series), Graham Audio (LS5/9 and LS5/8 BBC reissues — the historical alignment is exact), ProAc (Tablette through Response). High-efficiency partners: DeVore Orangutan (the Class A flow into high-efficiency speakers is one of the cleanest expressions of the brand\'s argument), Audio Note AN-E (the British-Class-A + British-SET-tube cluster is internally consistent). Source partners: Aurorasound or any low-noise tube phono stage (the analog-front-end discipline carries through), Audio Note DAC One / Three or other NOS R2R DACs (the digital-source tonal density matches the Class A foundation), Naim CD5 / NDX2 (the British system tradition has a long-standing affinity even though Naim and Sugden are not the same school). Sister-brand affinity: Pass / First Watt (American minimalist Class A — the same low-power-as-positive-argument from the American designer side), Leben (Japanese-artisan low-power tube — same posture, different topology), Audio Note UK (British SET tube — same musical-communication priority, different topology). Anti-pairings reveal the trade-off: very low-sensitivity loudspeakers (below 84 dB) where Class A is insufficient, large rooms requiring high SPL, listeners who want maximum bass grip or transient surgery, systems where amplifier choice is judged primarily by measurement power or feature count, and chains built around DSP / streaming / app-based control where Sugden\'s deliberate front-panel restraint reads as missing-feature rather than editorial choice.',
+    links: [
+      { label: 'Sugden Audio (J. E. Sugden & Co Ltd)', url: 'https://www.sugdenaudio.com/', region: 'global' },
+    ],
+    designFamilies: [
+      {
+        name: 'A21 Heritage line (A21, A21SE, ANV-50 Anniversary)',
+        character: 'The lineage that began in 1967. The A21SE is the modern Special Edition continuation of the original A21 Class A integrated amplifier; the ANV-50 Anniversary edition (2017) marked fifty years of continuous A21 production. All carry the heritage chassis and the original editorial argument: low-power Class A as a complete musical statement, not as an entry tier on the way to something larger.',
+        ampPairing: 'A21SE drives moderate-to-high-sensitivity speakers (typically 86 dB+) in small-to-medium rooms — Harbeth Compact and Super HL5, Spendor Classic, Graham LS5/9, ProAc, DeVore O/93. The historical A21 + Linn Sondek + Spendor / BBC LS3/5a chain is the canonical British-system expression.',
+      },
+      {
+        name: 'Masterclass series (IA-4, SPA-4, FPA-4, LA-4, PA-4, HA-4, DAC-4, PDT-4F)',
+        character: 'The modern flagship "-4" line — Masterclass IA-4 integrated amplifier, SPA-4 stereo power amplifier, FPA-4 power amplifier, LA-4 pre-amplifier, PA-4 phono stage, HA-4 headphone pre-amplifier, DAC-4 D/A converter, PDT-4F CD player. The visual signature is the conspicuous heat sinks made visible alongside a brushed silver chassis and large precision knobs. Price-tier compromises against the A21 Heritage are taken at the chassis-scale and component layer, not at the voicing-posture layer.',
+        ampPairing: 'Masterclass IA-4 covers the same sensitivity range as the A21SE with a more contemporary chassis presentation; SPA-4 / FPA-4 partner with LA-4 pre for system-builders who want separate boxes and a more flexible source array.',
+      },
+      {
+        name: 'FBA-800 / DAP-800 reference Class A pair',
+        character: 'The reference-level Class A pair — FBA-800 stereo Class A power amplifier paired with the DAP-800 Digital Analogue Pre-Amplifier. The brand\'s argument carried into its most uncompromised expression: more output power than the A21 lineage and more chassis material, but the same low-feedback Class A topology and the same tonal-continuity priority.',
+        ampPairing: 'FBA-800 drives the same moderate-to-high sensitivity speakers as the A21 / Masterclass lines, with more headroom for larger rooms and slightly less sensitive partners (down to ~84 dB rather than 86 dB+).',
+      },
+      {
+        name: 'Speakers and CD players (LS21, Ergo series, Grande, Fusion 21)',
+        character: 'Sugden also produces loudspeakers (LS21, the Ergo / Ergo1 / Ergo2 and Grande series) and CD playback (Fusion 21 CD Player, PDT-4F CD Player in the Masterclass series). The brand\'s editorial position carries through: the speakers are designed to be musically complete at human-scale SPL with modest amplifier power; the CD players are designed for tonal continuity rather than ultra-high-resolution detail extraction.',
+      },
+    ],
+    media: {
+      // Hero downloaded 2026-06-08 from Sugden Audio's official site
+      // (https://www.sugdenaudio.com/ia-4-integrated-amplifier) — image
+      // sourced from the Sugden Wix media CDN
+      // (static.wixstatic.com/media/1ba66a_98aba0fa..._.jpg) and placed
+      // locally under apps/web/public/brand-heroes/ to avoid Wix CDN
+      // dependency and to match the established local-hosting precedent
+      // (devore-o96 / leben-cs600 / shindo-cortese-300b /
+      // audio-note-an-elx-hemp / naim-separates-stack /
+      // a23-hommage-cinema / emt-jsd-novel / spec-rpa-mg1).
+      // Manufacturer-sourced from Sugden Audio's official product page,
+      // F4-satisfied (not reviewer-derived).
+      //
+      // The Masterclass Integrated (IA-4) is visually the strongest
+      // Sugden expression — the conspicuous black-finned heat sinks
+      // either side of the brushed silver chassis make the Class A
+      // topology visible as a design feature ("the heat IS the
+      // topology, the topology IS the argument"). The front-panel
+      // restraint (POWER, MONITOR, VOLUME, RECORD, INPUTS — and the
+      // "SUGDEN MASTERCLASS INTEGRATED" lettering at the base) embodies
+      // the brand's deliberate refusal of feature-spectacle. Native
+      // size 1771×1181, ~92KB.
+      //
+      // Secondary-image gap: an A21SE Heritage front-panel shot, or a
+      // West-Yorkshire workshop / bench / Sugden-family shot would
+      // visually complete the heritage-lineage + continuous-family-
+      // ownership argument the prose describes. Flagged for future
+      // polish; lifting the page to Level-4 visual standard once a
+      // safe manufacturer-sourced asset is available.
+      images: [
+        {
+          url: '/brand-heroes/sugden-masterclass-ia4.jpg',
+          caption: 'Sugden Masterclass Integrated (IA-4) — conspicuous black-finned heat sinks make the Class A topology visible as a design feature.',
+          credit: 'Sugden Audio',
+          sourceUrl: 'https://www.sugdenaudio.com/ia-4-integrated-amplifier',
+        },
+      ],
+    },
+  },
   {
     names: ['naim'],
     founder: 'Julian Vereker',
