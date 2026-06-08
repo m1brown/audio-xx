@@ -3289,7 +3289,15 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     typicalMarket: 'both',
     usedPriceRange: { low: 1600, high: 2200 },
     buyingContext: 'easy_new',
-    // imageUrl: undefined, // TODO: add official product image from naimaudio.com
+    // 2026-06-08: imageUrl resolved from the canonical Nait XS 3 product
+    // page (naimaudio.com/products/nait-xs3 → media.focal-naim.com CDN,
+    // discovered via the en sitemap). Hotlinked rather than locally
+    // hosted, matching the dominant external-hotlink convention used by
+    // the McIntosh and Hegel entries elsewhere in this file. HEAD-200
+    // verified immediately before commit. Replaces the placeholder
+    // amplifier-silhouette SVG that previously rendered on the §12
+    // Representative Models card at /brand/naim.
+    imageUrl: 'https://media.focal-naim.com/naim/file_manager_convert/1/1/1340/fly/a5b7b8d90488ed685b9b824df4eaac78/nait-xs3.jpg',
     philosophy: 'energy',
     marketType: 'traditional',
   },
@@ -3379,7 +3387,18 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     typicalMarket: 'both',
     usedPriceRange: { low: 2800, high: 3800 },
     buyingContext: 'easy_new',
-    // imageUrl: undefined, // TODO: add official product image from naimaudio.com
+    // 2026-06-08: imageUrl resolved from the canonical SuperNait 3
+    // product page (naimaudio.com/products/supernait-3 →
+    // media.focal-naim.com CDN, discovered via the en sitemap). The
+    // image is a clean 3/4 close-up of the SuperNait 3 chassis showing
+    // both volume and balance knobs and the Naim arc logo — the
+    // strongest product-card candidate among the Naim product-page
+    // images. Hotlinked rather than locally hosted, matching the
+    // dominant external-hotlink convention used elsewhere in this file.
+    // HEAD-200 verified immediately before commit. Replaces the
+    // placeholder amplifier-silhouette SVG that previously rendered on
+    // the §12 Representative Models card at /brand/naim.
+    imageUrl: 'https://media.focal-naim.com/naim/file_manager_convert/1/2/1281/fly/1dd86fac17b79b959d502cfd35335e1a/header-desktop.jpg',
     philosophy: 'energy',
     marketType: 'traditional',
   },
