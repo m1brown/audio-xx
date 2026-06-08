@@ -1582,6 +1582,108 @@ const BRAND_PROFILES: BrandProfile[] = [
       ],
     },
   },
+  // ── SPEC Corporation ───────────────────────────────────
+  // schools: japanese-artisan, modern-switching, musical-communication.
+  // The SPEC argument: modern switching amplification can be voiced for
+  // natural decay, harmonic continuity, and musical communication rather
+  // than sterile efficiency or measurement spectacle. The "Real-Sound"
+  // (リアルサウンド) design language treats switching topology as a
+  // musical instrument: circuit choices, wood-and-material chassis
+  // tuning, and component selection all serve listener experience, not
+  // measurement targets. SPEC is the Japanese-artisan node of the
+  // modern-switching school, sister to Leben (post-Luxman tube) and
+  // Shindo (WE-tradition circuit individuality) in the Japanese-artisan
+  // cluster.
+  {
+    names: ['spec', 'spec corporation', 'spec corp', 'スペック'],
+    displayName: 'SPEC',
+    founder: 'Ryuji Banno',
+    country: 'Japan (Tokyo)',
+    brandScale: 'specialist',
+    region: 'japan',
+    categories: ['amplifier', 'dac'],
+    tagline: 'Real-Sound switching amplification — Class D voiced as a musical instrument.',
+    philosophy: 'SPEC is the argument that modern switching amplification can be voiced for natural decay, harmonic continuity, and musical communication rather than sterile efficiency or measurement spectacle. The brand\'s own design language is "Real Sound" (リアルサウンド): every product carries it in the model name — RPA Real-Sound Power Amplifier, RSA Real-Sound Amplifier, RSP Real-Sound Processor, RMP Real-Sound Music Processor. The claim is not that switching topology is incidentally musical; it is that Class D can be designed as a musical instrument, with circuit choices, chassis material (cherry-veneer wood side panels on every product), and component selection all coordinated toward listener experience rather than measurement targets.',
+    philosophyExtended: 'Founded in 2010 in Tokyo by Ryuji Banno, SPEC entered the market at a moment when Class D switching amplification was widely understood in audiophile circles as an efficiency technology with measurement advantages but a tonal handicap — dry, mechanical, lacking the natural decay and harmonic continuity of tube and high-current solid-state amplifiers. Banno\'s argument was that the handicap was not in the topology itself but in how the topology had been designed; Class D could be voiced for natural decay if the circuit, the power supply, the chassis resonance, and the component choices were all coordinated toward that goal. The "Real-Sound" design language carries through every product, from the RSA-EX1 entry integrated through the RSA-BW7 mid-tier integrated to the RPA-MG1 reference monoblocks. The distinctive material identity (black metal chassis with prominent cherry-veneer wood side panels) is a visible expression of the material-tuning philosophy: the wood is not decoration but a deliberate resonance-management element, and seeing it tells the listener the brand\'s argument before the system plays a note.',
+    tendencies: 'Listeners describe SPEC amplifiers as having a tube-adjacent tonal palette while preserving the dynamic ease and low-noise characteristics of well-designed switching topology — natural decay, harmonic continuity through the midband, and an absence of the dry mechanical signature commonly associated with Class D. The voicing is unmistakably Japanese-artisan in posture: refined, considered, willing to subordinate measurement targets to listener experience, with material discipline (the wood side panels, the chassis weight, the component selection) carried out at brand scale rather than product scale alone.',
+    systemContext: 'SPEC is designed for systems where the listener wants tube-like flow without committing to tube ownership burden (heat, tube rolling, biasing, NOS supply concerns) and wants the dynamic ease and low-noise characteristics of well-designed switching topology without accepting its conventional tonal handicap. The amplifiers pair naturally with high-coherence loudspeakers (Harbeth, Spendor, DeVore) where Class D dryness would normally be a concern, with analog front ends (the natural-decay voicing carries through), and with NOS or R2R DACs whose tonal density matches the SPEC voicing.',
+    designPhilosophy: 'Class D switching amplification voiced as a musical instrument — circuit, chassis resonance, and material selection all coordinated toward listener experience rather than measurement targets.',
+    sonicTendency: 'Tube-adjacent tonal palette with the dynamic ease and low-noise characteristics of well-designed switching topology — natural decay, harmonic continuity, no dry mechanical signature.',
+    typicalTradeoff: 'Natural decay and musical communication over ultra-dry studio control or brute-force high-current slam; modern switching topology over high-current solid state.',
+    leadershipOrigin: 'Ryuji Banno founded SPEC Corporation in Tokyo in 2010 — at a moment when Class D switching amplification was being adopted across the consumer electronics industry for its efficiency and measurement advantages, but was widely understood in audiophile circles as a tonally compromised technology. The mainstream audiophile position was that Class D meant sterile, dry, and mechanical — a trade-off accepted in exchange for efficiency and small chassis size. Banno\'s argument was that the trade-off was a consequence of how Class D had been designed, not of the topology itself; with the circuit, power supply, chassis resonance, and component choices all coordinated toward natural decay and harmonic continuity, the technology could be voiced as a musical instrument rather than as an efficiency technology. The "Real-Sound" (リアルサウンド) design language is the brand\'s name for that coordinated approach, and the distinctive material identity (cherry-veneer wood side panels on every product) is its visible expression. SPEC has remained a specialist Japanese manufacturer under continuous founder-led design school since 2010.',
+    strengths: [
+      'The argument that modern switching amplification can be voiced for natural decay and harmonic continuity rather than treated as an efficiency technology — circuit, chassis, and material choices coordinated toward listener experience rather than measurement targets',
+      'The "Real-Sound" design language carries through every product (RPA Power Amp, RSA Integrated, RSP Processor, RMP Music Processor) — the voicing is internally consistent across the line, not a flagship-only signature',
+      'Material discipline as visible design — the cherry-veneer wood side panels on every product are a deliberate resonance-management element, and seeing them tells the listener the brand\'s argument before the system plays a note',
+      'Tube-adjacent tonal palette without tube ownership burden — listeners get the natural decay and harmonic continuity of tube amplification with the dynamic ease, low-noise, and reliability of well-designed switching topology',
+      'Specialist Japanese manufacture under continuous founder-led design school since 2010 — the design school is durable in a way mainstream Class D product lines (where switching topology is bought in as a module and chassis-engineered to a price point) are not',
+      'Bridges the Japanese-artisan school (Shindo, Leben) with the modern-switching school — SPEC is the Japanese-artisan node of modern Class D, sister to Leben (post-Luxman tube) and Shindo (WE-tradition circuit individuality) in the Japanese-artisan cluster',
+    ],
+    tradeoffs: [
+      'The voicing is specifically tuned for natural decay and musical communication — listeners who want ultra-dry studio control, surgical transient detail as the dominant impression, or brute-force high-current slam will find the voicing too warm or too gentle for the target use case',
+      'Modern switching topology presupposes reasonably sensitive loudspeakers (85–95 dB typical) — SPEC will function with very insensitive speakers but the voicing is not optimised for them; brute-force high-current solid-state remains the better choice for genuinely difficult loads',
+      'Premium specialist Japanese pricing reflects the small-batch design-led manufacture — SPEC sits substantially above commodity Class D and even above many mainstream high-end Class D product lines',
+      'The distinctive wood-side aesthetic is part of the design, not optional — listeners who want chassis neutrality (all-metal, all-black, design-anonymous) will find the SPEC visual identity insistent',
+      'Modern switching topology and "Real Sound" voicing are not separable — SPEC is not a measurement-target neutral amplifier, and chains built around measurement-target neutrality will hear SPEC as a coloured-on-purpose amplifier rather than a transparent one',
+    ],
+    pairingNotes: 'SPEC pairs naturally with brands and components whose ideas align: natural decay and musical communication over sterile studio control, the analog front end or NOS / R2R digital as the primary source, sensitive-to-moderately-sensitive high-coherence loudspeakers where Class D dryness would normally be a concern, and listeners who want tube-like flow without tube ownership burden. Canonical partners: Harbeth and Spendor (the British coherence school — SPEC delivers a tube-tonal palette without forcing the listener to choose between tube ownership and coherent BBC-tradition loudspeakers), DeVore (the high-efficiency Musical-Communication School — SPEC works as the alternative to Leben CS600X for listeners who want the same voicing posture in a switching topology), Audio Note UK NOS DACs (the NOS digital + SPEC switching amp chain produces the tonally dense, dynamically eased presentation idiomatic to the Japanese-artisan listening tradition), Aurorasound phono stages (analog front-end discipline carries through cleanly), Leben (the sister brand in the Japanese-artisan modern cluster — both are voiced from the same posture even though one is tube and one is switching). The SPEC voicing also serves listeners coming from the EMT / Auditorium 23 / Shindo analog-front-end orientation who want a modern-era amplifier that does not fight the source-side voicing. Anti-pairings reveal the trade-off: chains built around measurement-target neutrality (SPEC will read as coloured-on-purpose), ultra-dry studio-monitoring contexts (the natural-decay voicing is not what those systems want), very insensitive speakers requiring brute-force high-current solid-state (SPEC will drive them but the editorial intent is muted), and listeners who want the amplifier to disappear into chassis-neutral anonymity (the wood-side design is not optional).',
+    links: [
+      { label: 'SPEC Corporation (Japan)', url: 'https://www.spec-corp.co.jp/', region: 'global' },
+      { label: 'Tone Imports (US distributor)', url: 'https://www.toneimports.com/spec', kind: 'dealer', region: 'US' },
+    ],
+    designFamilies: [
+      {
+        name: 'RPA-MG1 reference monoblocks',
+        character: 'The flagship Real-Sound Power Amplifier — monoblocks with the full expression of SPEC\'s design language: black-and-cherry chassis, Real-Sound switching topology, coordinated power supply, and the material-tuning philosophy carried out at the reference scale. The MG1 occupies the top of the line where the brand\'s argument is least compromised by price.',
+        ampPairing: 'Stand-alone power amplifier; presupposes a separate preamp (the SPEC RSP-55 processor or a chosen partner). Pairs with sensitive-to-moderately-sensitive high-coherence loudspeakers — Harbeth M40, DeVore O/96, Spendor Classic, Audio Note AN-E.',
+      },
+      {
+        name: 'RSA-BW7 + RSA-EX1 integrated amplifiers',
+        character: 'Real-Sound Amplifier integrated models — the BW7 sits in the middle tier and the EX1 at the entry point. Both carry the same Real-Sound design language as the RPA reference, but with line-stage and switching topology in one chassis. The wood side panels and Real-Sound voicing are preserved across the line; price-tier compromises are taken at the component-selection and chassis-scale layer, not at the voicing-posture layer.',
+        ampPairing: 'Self-contained integrated. Pairs with the same loudspeakers as the MG1 monoblocks scaled to the power tier — BW7 for mid-room moderately-sensitive speakers; EX1 for smaller rooms or more sensitive partners.',
+      },
+      {
+        name: 'RSP-55 Real-Sound Processor',
+        character: 'The Real-Sound Processor — SPEC\'s dedicated preamp / line-stage product. Carries the Real-Sound design language into the front-end of the chain. Designed to feed RPA-MG1 monoblocks or other tube/switching power amplifiers voiced in the same posture.',
+        ampPairing: 'Pairs naturally with RPA-MG1; also works with non-SPEC power amplifiers voiced in the same Japanese-artisan or musical-communication posture (Shindo, Leben, Audio Note tube amps).',
+      },
+      {
+        name: 'RMP-DAC3 Real-Sound Music Processor',
+        character: 'The Real-Sound Music Processor — SPEC\'s digital source product. Designed for analog-adjacent musical communication rather than measurement-target transparent reconstruction; carries the brand\'s voicing posture into the digital source layer so the front-end and amplification share a single Real-Sound design language.',
+      },
+    ],
+    media: {
+      // Hero downloaded 2026-06-08 from
+      // https://www.spec-corp.co.jp/audio/RPA-MG1/img/main.png and
+      // placed locally under apps/web/public/brand-heroes/ to match the
+      // established local-hosting precedent (devore-o96 / leben-cs600 /
+      // shindo-cortese-300b / audio-note-an-elx-hemp /
+      // naim-separates-stack / a23-hommage-cinema / emt-jsd-novel).
+      // Manufacturer-sourced from the official SPEC Corporation site,
+      // F4-satisfied (not reviewer-derived).
+      //
+      // The RPA-MG1 monoblock pair shows SPEC's distinctive material
+      // identity: black-and-cherry-veneer chassis with the small SPEC
+      // arrow/triangle logo. Native size 750×329 PNG (preserving the
+      // source-side transparency around the chassis silhouette) —
+      // visually the strongest expression of the brand's "Real-Sound"
+      // design language available on the manufacturer's own site.
+      //
+      // Secondary-image gap: a manufacturer-sourced shot of the RSA-BW7
+      // integrated front panel or an RPA-MG1 + RSP-55 chain in a
+      // listening room would lift the page to Level-4 visual standard
+      // by visually completing the design-language-across-the-line
+      // argument the prose describes. Flagged for future polish.
+      images: [
+        {
+          url: '/brand-heroes/spec-rpa-mg1.png',
+          caption: 'SPEC RPA-MG1 — Real-Sound monoblock power amplifiers with the brand\'s distinctive black-and-cherry material identity.',
+          credit: 'SPEC Corporation',
+          sourceUrl: 'https://www.spec-corp.co.jp/audio/RPA-MG1/index.html',
+        },
+      ],
+    },
+  },
   {
     names: ['totaldac', 'total dac'],
     founder: 'Vincent Brient',
