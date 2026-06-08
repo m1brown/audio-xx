@@ -865,13 +865,11 @@ const BRAND_PROFILES: BrandProfile[] = [
       },
     ],
     media: {
-      // Hero pair sourced from naimaudio.com via the official Focal-Naim
-      // CDN (media.focal-naim.com). Both URLs HEAD-200 verified
-      // 2026-06-07. Manufacturer-hosted, not reviewer-derived; F4 gate
-      // satisfied. Local hosting under /brand-heroes/ would be the
-      // natural follow-up polish (matching the devore-o96 / leben-cs600
-      // / shindo-cortese-300b precedent) but is deferred to keep this
-      // pass strictly data-layer.
+      // Hero pair originally sourced from naimaudio.com via the official
+      // Focal-Naim CDN (media.focal-naim.com). Both URLs HEAD-200 verified
+      // 2026-06-07 prior to local hosting. Manufacturer-hosted, not
+      // reviewer-derived; F4 gate satisfied.
+      //
       // Replacement (2026-06-07 polish): both prior heroes were
       // visually attractive but too abstract — the Salisbury-identity
       // and the cropped-separates close-up read as "luxury industrial
@@ -883,17 +881,25 @@ const BRAND_PROFILES: BrandProfile[] = [
       // (matches the New Classic stack and Classic separates families
       // surfaced in designFamilies[2-3]) and a Uniti Nova streaming
       // integrated (matches the Uniti family in designFamilies[1]).
-      // Both have the Naim arc logo prominently visible. Both URLs
-      // HEAD-200 verified 2026-06-07 immediately before commit.
+      // Both have the Naim arc logo prominently visible.
+      //
+      // 2026-06-08 local-hosting migration: both heroes downloaded from
+      // media.focal-naim.com at their native dimensions (580x768 for
+      // each, 75 KB and 193 KB respectively), placed under
+      // apps/web/public/brand-heroes/ to match the devore-o96 /
+      // leben-cs600 / shindo-cortese-300b / audio-note precedent and
+      // remove the runtime Focal-Naim-CDN dependency. sourceUrl values
+      // retained verbatim for editorial provenance; caption + credit
+      // unchanged.
       images: [
         {
-          url: 'https://media.focal-naim.com/naim/file_manager_files/home-page/integrated-65f076d791556.jpg',
+          url: '/brand-heroes/naim-separates-stack.jpg',
           caption: 'A Naim separates stack — the multi-box ladder that defines the New Classic and Classic series.',
           credit: 'Naim Audio',
           sourceUrl: 'https://www.naimaudio.com/',
         },
         {
-          url: 'https://media.focal-naim.com/naim/file_manager_files/home-page/streaming-amplifiers-65f076d73dcf7.jpg',
+          url: '/brand-heroes/naim-uniti-nova.jpg',
           caption: 'The Uniti Nova streaming integrated — a single-box streamer-DAC-amplifier from the Uniti family.',
           credit: 'Naim Audio',
           sourceUrl: 'https://www.naimaudio.com/',
