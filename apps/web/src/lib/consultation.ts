@@ -304,6 +304,16 @@ interface DesignFamily {
 
 export interface BrandProfile {
   names: string[];
+  /**
+   * Optional explicit display form (Pass 19 — 2026-06-08). Use ONLY when
+   * the brand's canonical written form is not recoverable from the slug
+   * by simple title-casing — i.e. acronyms (EMT, SPEC, KEF) and mixed-
+   * case brands (DeVore, McIntosh) that have no catalog products to
+   * fall back on. When set, the brand page renderer prefers this value
+   * over `products[0]?.brand` and `humanizeFromSlug(slug)`. Should match
+   * the brand's own written form exactly.
+   */
+  displayName?: string;
   /** Founder or lead designer, if notable. */
   founder?: string;
   /** Country of origin or primary manufacturing. */
@@ -841,6 +851,7 @@ const BRAND_PROFILES: BrandProfile[] = [
   // reasons EMT did not originally target.
   {
     names: ['emt', 'emt tontechnik', 'emt studiotechnik'],
+    displayName: 'EMT',
     founder: 'Wilhelm Franz (Elektromesstechnik Wilhelm Franz KG, 1940)',
     country: 'Switzerland (current production) / Germany (historical)',
     brandScale: 'specialist',

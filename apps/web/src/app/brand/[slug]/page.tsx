@@ -91,7 +91,14 @@ export default async function BrandPage({ params }: PageProps) {
   const profile = findBrandProfileBySlug(slug);
   const products = findProductsByBrandSlug(slug);
 
-  const displayName = products[0]?.brand ?? humanizeFromSlug(slug);
+  // Display-name precedence (Pass 19 — 2026-06-08):
+  //   1. profile.displayName — explicit canonical form (acronyms, mixed-case)
+  //   2. products[0]?.brand — recovered from a catalog product's brand string
+  //   3. humanizeFromSlug(slug) — last-resort title-cased slug
+  // The profile.displayName tier was added to handle acronym brands
+  // (EMT, SPEC) and mixed-case brands without catalog products. Existing
+  // brands that recover correctly through tiers 2 and 3 are unaffected.
+  const displayName = profile?.displayName ?? products[0]?.brand ?? humanizeFromSlug(slug);
 
   // Metadata line
   const metaParts: string[] = [];
