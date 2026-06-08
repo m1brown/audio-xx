@@ -277,7 +277,7 @@ const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIF
 // orientation. These are brief, tendency-based, not encyclopedic.
 
 /** A neutral reference link associated with a brand. */
-interface BrandLink {
+export interface BrandLink {
   /** What the link points to (e.g. "Official website", "US importer"). */
   label: string;
   url: string;
