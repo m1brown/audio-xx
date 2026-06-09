@@ -7,6 +7,8 @@ import {
 } from '@/lib/technology-profiles';
 import { toSlug as routeToSlug } from '@/lib/route-slug';
 import { COLOR, sectionHeadingStyle, proseStyle } from '@/lib/editorial-tokens';
+import { ImageFigure } from '@/components/editorial/figures/ImageFigure';
+import { SignalChainDiagram } from '@/components/editorial/figures/SignalChainDiagram';
 
 /**
  * Audio XX — Technology authority page.
@@ -346,6 +348,27 @@ export default async function TechnologyPage({ params }: PageProps) {
         <section style={{ marginBottom: '1.75rem' }}>
           <h2 style={sectionHeadingStyle}>System Fit</h2>
           <p style={proseStyle}>{tp.systemFit}</p>
+        </section>
+      )}
+
+      {/* ══════════════════════════════════════════════════
+          8.5. EDITORIAL FIGURES — explanatory visuals (image / signal-chain)
+              Renders in authored order. Empty array → no section.
+              No placement logic in v1; all figures live here. Adding
+              new figure kinds (relationship-map, timeline, etc.) is a
+              one-line dispatch addition in this switch.
+         ══════════════════════════════════════════════════ */}
+      {tp.figures && tp.figures.length > 0 && (
+        <section style={{ marginBottom: '1.75rem' }}>
+          <h2 style={sectionHeadingStyle}>Editorial Figures</h2>
+          {tp.figures.map((fig, i) => {
+            switch (fig.kind) {
+              case 'image':
+                return <ImageFigure key={i} figure={fig} />;
+              case 'signal-chain':
+                return <SignalChainDiagram key={i} figure={fig} />;
+            }
+          })}
         </section>
       )}
 
