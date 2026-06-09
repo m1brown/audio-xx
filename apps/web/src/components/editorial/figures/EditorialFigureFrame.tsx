@@ -24,13 +24,21 @@ import { COLOR, proseStyle } from '@/lib/editorial-tokens';
 interface EditorialFigureFrameProps {
   /** Optional figure heading (typically the title of the chain, map, or image's role). */
   title?: string;
+  /**
+   * Optional small italic clarification rendered between the title
+   * and the figure body. Used when the title alone leaves a possible
+   * misreading on the table — e.g. the SET system signal-chain figure
+   * uses the subtitle "The SET system, not the SET topology" to keep
+   * the reader from mistaking the system chain for a topology diagram.
+   */
+  subtitle?: string;
   /** Editorial caption (required). Magazine-style — names the WHY, not just the WHAT. */
   caption: string;
   /** The figure body. */
   children: React.ReactNode;
 }
 
-export function EditorialFigureFrame({ title, caption, children }: EditorialFigureFrameProps) {
+export function EditorialFigureFrame({ title, subtitle, caption, children }: EditorialFigureFrameProps) {
   return (
     <figure
       style={{
@@ -44,7 +52,7 @@ export function EditorialFigureFrame({ title, caption, children }: EditorialFigu
       {title && (
         <h3
           style={{
-            margin: '0 0 0.85rem',
+            margin: '0 0 0.4rem',
             fontSize: '0.78rem',
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
@@ -54,6 +62,19 @@ export function EditorialFigureFrame({ title, caption, children }: EditorialFigu
         >
           {title}
         </h3>
+      )}
+      {subtitle && (
+        <p
+          style={{
+            margin: '0 0 0.85rem',
+            fontSize: '0.82rem',
+            color: COLOR.textSecondary,
+            fontStyle: 'italic',
+            lineHeight: 1.4,
+          }}
+        >
+          {subtitle}
+        </p>
       )}
       <div>{children}</div>
       <figcaption

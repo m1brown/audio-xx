@@ -37,6 +37,7 @@ interface SignalChainDiagramProps {
   figure: {
     kind: 'signal-chain';
     title?: string;
+    subtitle?: string;
     caption: string;
     nodes: Array<{
       label: string;
@@ -46,10 +47,10 @@ interface SignalChainDiagramProps {
 }
 
 export function SignalChainDiagram({ figure }: SignalChainDiagramProps) {
-  const { title, caption, nodes } = figure;
+  const { title, subtitle, caption, nodes } = figure;
 
   return (
-    <EditorialFigureFrame title={title} caption={caption}>
+    <EditorialFigureFrame title={title} subtitle={subtitle} caption={caption}>
       <div
         style={{
           display: 'flex',

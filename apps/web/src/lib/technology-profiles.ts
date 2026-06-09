@@ -76,6 +76,15 @@ export type EditorialFigure =
       /** Optional figure heading. */
       title?: string;
       /**
+       * Optional small italic clarification rendered between the
+       * title and the chain. Used when the title alone leaves a
+       * possible misreading on the table — e.g. the SET system
+       * chain uses "The SET system, not the SET topology" to keep
+       * the reader from mistaking the system chain for a topology
+       * diagram.
+       */
+      subtitle?: string;
+      /**
        * Editorial caption — explains the EDITORIAL CLAIM the chain
        * makes, not just what the chain is. For SET this is "SET is
        * usually part of a broader low-power system philosophy in
@@ -359,12 +368,48 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       },
     ],
     schoolsMemo: 'SET expresses the Musical Communication, Low-Power Amplification, and Horn & Efficiency schools at their intersection. It has a strong Japanese-Artisan affinity (Shindo, Leben adjacent, Sun Audio historically) and an Analog-Purism affinity (the canonical SET chain is LP → low-output MC → step-up transformer → tube phono → SET). It does not belong to any one school exclusively — like the brands that argue for it, it sits at the intersections.',
-    // No hero image on first publish. The page is text-rich enough to
-    // stand without one. A future commit can add a hero from a public-
-    // domain / Wikimedia / museum source — candidates include a
-    // 300B tube glow, a Western Electric 91A archival photograph, or
-    // (with explicit manufacturer permission framing) an Audio Note
-    // Ongaku interior shot. The trace comment names the gap.
+    // ── Editorial Figures ──────────────────────────────────
+    // v1 of the Editorial Figures layer for SET. Ships with one
+    // figure: the SET system signal-chain diagram. The chain is the
+    // primary learning artifact for this page — it lands the editorial
+    // claim that SET is rarely chosen in isolation but rather as part
+    // of a complete low-power system philosophy.
+    //
+    // Context-image gap (DELIBERATELY DEFERRED 2026-06-09):
+    //   A 300B tube close-up was specified as the SET pilot's context
+    //   image. The Wikimedia Commons / Creative Commons / public-
+    //   domain corpus was searched and no candidate met the editorial
+    //   quality gate set by the brief:
+    //     * SE-300B-70W.jpg — Public Domain tag but Credit field
+    //       points at a commercial site (space-tech-lab.com);
+    //       provenance ambiguous.
+    //     * 300B_triode_with_E.A.T._branding_at_HighEnd-2009_(...).jpg
+    //       — commercial brand "E.A.T." visible in the frame.
+    //     * All other 300B Wikimedia files are SVG schematics or
+    //       PNG data charts, not photographs.
+    //   Per the user's directive "do not use an image simply because
+    //   it is legally available," the image was skipped. The
+    //   signal-chain figure carries the page's editorial weight
+    //   alone. When a rights-clean, watermark-free, commercial-
+    //   branding-free, magazine-quality 300B photograph surfaces
+    //   (museum collection / archival photographer / commissioned
+    //   work), an ImageFigure entry can be added here as the FIRST
+    //   element in the figures array.
+    figures: [
+      {
+        kind: 'signal-chain',
+        title: 'The SET System',
+        subtitle: 'The SET system, not the SET topology.',
+        nodes: [
+          { label: 'Low-Output MC Cartridge', sublabel: '~0.2–0.5 mV' },
+          { label: 'Step-Up Transformer', sublabel: 'voiced for the cartridge' },
+          { label: 'Tube Phono Stage', sublabel: 'MM input via SUT' },
+          { label: 'SET Amplifier', sublabel: '1–25 W; 300B / 2A3 / 845' },
+          { label: '95 dB+ Loudspeaker', sublabel: 'horn or high-sensitivity' },
+        ],
+        caption: 'SET amplification is rarely chosen in isolation. It is usually part of a complete low-power system philosophy in which cartridge output, gain structure, amplifier power, and loudspeaker sensitivity are selected together rather than optimized independently.',
+      },
+    ],
   },
 ];
 
