@@ -29,6 +29,74 @@ import { toSlug as routeToSlug } from './route-slug';
 import type { BrandLink } from './consultation';
 
 /**
+ * An Editorial Figure rendered on a Technology Page.
+ *
+ * Discriminated union by `kind`. v1 ships with two kinds — `image` and
+ * `signal-chain`. The `relationship-map` kind is intentionally
+ * DEFERRED until at least three Technology Pages exist (SET + NOS DACs
+ * + R2R DACs), so the map has enough real destinations to read as
+ * orientation rather than as publishing aspiration. The Related Brands
+ * section on the Technology Page already does most of the orientation
+ * work for v1.
+ *
+ * No `position` discriminator in v1 — all figures render in one
+ * dedicated "Editorial Figures" section at a fixed location in the
+ * page, in authored order. Arbitrary placement (interleaving figures
+ * between named text sections) is deferred until several Technology
+ * Pages exist and the editorial team can observe what placement
+ * flexibility is actually needed.
+ *
+ * Doctrine rule: every figure must justify its existence by helping
+ * the reader understand something that would otherwise require
+ * substantial explanation. The caption answers "why does this figure
+ * exist?" — not "what is depicted?" — and that discipline lives in
+ * editorial review, not in the schema.
+ */
+export type EditorialFigure =
+  | {
+      kind: 'image';
+      image: {
+        url: string;
+        /**
+         * Editorial caption — explains what the reader is seeing,
+         * why it mattered historically, and why it remains relevant.
+         * NOT a product-photo caption.
+         */
+        caption: string;
+        /** Photographer / source / institution credit. */
+        credit: string;
+        /** Optional link to the original asset page (e.g. Wikimedia file page). */
+        sourceUrl?: string;
+        /** Optional `alt` text override. Defaults to the caption. */
+        alt?: string;
+      };
+    }
+  | {
+      kind: 'signal-chain';
+      /** Optional figure heading. */
+      title?: string;
+      /**
+       * Editorial caption — explains the EDITORIAL CLAIM the chain
+       * makes, not just what the chain is. For SET this is "SET is
+       * usually part of a broader low-power system philosophy in
+       * which source, amplification, and loudspeaker sensitivity are
+       * selected together rather than independently."
+       */
+      caption: string;
+      /**
+       * Ordered chain nodes. Each renders as a labeled box with an
+       * optional italic sublabel. The renderer lays the chain out
+       * horizontally on desktop and reflows to a vertical stack on
+       * narrow viewports.
+       */
+      nodes: Array<{
+        label: string;
+        /** Italic sublabel printed under the primary label. */
+        sublabel?: string;
+      }>;
+    };
+
+/**
  * A cross-link from a Technology Page to a brand or to another
  * Technology Page. The `relation` sentence is editorially required —
  * without it, the cross-link card would have to invent text or carry
@@ -171,6 +239,25 @@ export interface TechnologyProfile {
       sourceUrl?: string;
     }>;
   };
+
+  /**
+   * Editorial Figures — explanatory visuals authored as data.
+   *
+   * Figures render in a single dedicated "Editorial Figures" section
+   * on the Technology Page, in the order authored here. The renderer
+   * dispatches by `kind` to the corresponding component primitive
+   * (apps/web/src/components/editorial/figures/).
+   *
+   * v1 supports two kinds: `image` and `signal-chain`. Adding new
+   * kinds (relationship-map, timeline, etc.) is a one-line extension
+   * to the EditorialFigure union plus one new component file. See
+   * the EditorialFigure type definition above for the deferral
+   * rationale.
+   *
+   * A Technology Page MAY ship with zero figures (the section heading
+   * is suppressed when the array is empty or absent).
+   */
+  figures?: EditorialFigure[];
 }
 
 /**
