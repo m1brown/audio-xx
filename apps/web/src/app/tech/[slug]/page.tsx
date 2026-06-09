@@ -352,15 +352,19 @@ export default async function TechnologyPage({ params }: PageProps) {
       )}
 
       {/* ══════════════════════════════════════════════════
-          8.5. EDITORIAL FIGURES — explanatory visuals (image / signal-chain)
-              Renders in authored order. Empty array → no section.
-              No placement logic in v1; all figures live here. Adding
-              new figure kinds (relationship-map, timeline, etc.) is a
-              one-line dispatch addition in this switch.
+          8.5. UNDERSTANDING {DISPLAYNAME} — explanatory figures
+              (image / signal-chain). Renders in authored order. Empty
+              array → no section. No placement logic in v1; all figures
+              live here. Adding new figure kinds (relationship-map,
+              timeline, etc.) is a one-line dispatch addition in this
+              switch.
+              Heading templated off displayName so the framing scales
+              to future Technology Pages ("Understanding NOS DACs",
+              "Understanding R2R DACs") without renderer edits.
          ══════════════════════════════════════════════════ */}
       {tp.figures && tp.figures.length > 0 && (
         <section style={{ marginBottom: '1.75rem' }}>
-          <h2 style={sectionHeadingStyle}>Editorial Figures</h2>
+          <h2 style={sectionHeadingStyle}>Understanding {displayName}</h2>
           {tp.figures.map((fig, i) => {
             switch (fig.kind) {
               case 'image':
