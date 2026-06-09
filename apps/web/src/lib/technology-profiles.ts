@@ -411,6 +411,154 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       },
     ],
   },
+  // ── NOS DACs — Non-OverSampling Digital-to-Analog Conversion ──
+  // schools: musical-communication, analog-purism, full-system-coherence
+  // (Audio Note UK anchor); horn-efficiency affinity by canonical
+  // chain pairing. NOS sits at the digital-source side of the same
+  // system philosophy the SET page articulates on the amplification
+  // side. The cross-link to SET is the most editorially-load-bearing
+  // link this page carries.
+  {
+    names: ['nos dacs', 'nos-dacs', 'nos', 'non-oversampling', 'non-oversampling dacs'],
+    displayName: 'NOS DACs',
+    tagline: 'A listening philosophy expressed through a digital topology — non-oversampling D-to-A conversion.',
+    philosophy: 'Non-OverSampling DACs are not a refusal of digital. They are a deliberate, principled trade of measurement-textbook frequency response and aggressive image rejection for transient continuity, tonal density, and freedom from long digital filter pre-ringing. The measurement case for oversampling is not wrong — it is incomplete. Oversampling delivers genuine engineering gains in audible-band frequency flatness and out-of-band image rejection; NOS gives those gains up in exchange for a different set of properties that the measurement framework does not fully capture. Listeners committed to tonal density and musical communication have chosen this trade for forty years, and the choice has been validated by multiple successful brands building entire careers around it — Audio Note UK, TotalDAC, Holo Audio, Denafrips. The page exists to make the trade explicit, not to advocate.',
+    philosophyExtended: 'Oversampling earned its mainstream position honestly. Long FIR digital filters running on oversampled data deliver textbook frequency response, flat to Nyquist, with image content above Nyquist removed to a degree no analog filter can match. For the engineering goals oversampling was designed against, it is genuinely better. The NOS argument is not that those gains are illusory; it is that they come with a time-domain cost — pre-ringing energy preceding transients — that the measurement framework reports but does not weight the way listeners do. A NOS DAC produces no pre-ringing because it has no long FIR filter in the signal path; it accepts a gentle sin(x)/x roll-off in the audible upper octave (real at 44.1 kHz, smaller at 96 kHz and above) and reduced rejection of out-of-band images instead. The trade is structurally different from a tonal preference. Listeners report that NOS DACs sound less "digital" — meaning that transient attacks have continuity rather than mechanical artificiality and that tonal density survives the conversion in a way they do not hear from oversampling at the same price tier. After forty years of consistent niche demand and continuous product development from serious brands, the position is durable enough to deserve editorial attention rather than dismissal. The measurement case is not wrong. It is incomplete.',
+    whatItIs: 'A non-oversampling DAC takes a PCM bitstream at its native sample rate (44.1 / 48 / 88.2 / 96 / 176.4 / 192 kHz) and converts it to analog through a parallel R2R resistor ladder, without first upsampling to a higher internal rate and without a long digital filter to suppress images above Nyquist. The standard oversampling path applies a multi-tap FIR filter on upsampled data (8×, 16×, or higher), then a delta-sigma or hybrid modulator, then a gentle analog reconstruction filter. The NOS path skips the upsampling and the long FIR; the PCM data flows directly into the R2R ladder and out through a minimal first-order analog reconstruction filter. The two consequences of the omission are real: a sin(x)/x amplitude roll-off in the audible upper octave (about 4 dB at 20 kHz at 44.1 kHz redbook, smaller at higher source rates) and out-of-band image content above Nyquist that the gentle analog filter does not fully eliminate. Historical lineage: most early consumer CD players (1982–1990) were NOS by circuit availability. As digital filtering matured, the industry standardised on oversampling; NOS persisted as a niche audiophile choice, formalised by Audio Note UK\'s Andy Grove in the late 1990s and carried into the modern market by TotalDAC, Holo Audio, and Denafrips.',
+    whyItMatters: 'NOS matters because it is one of the clearest cases in audio where a philosophical commitment (tonal density and freedom from long-filter pre-ringing over textbook frequency response) found its expression in a specific topology (R2R conversion with minimal reconstruction filtering). The structural claim is about what D-to-A conversion is for. If conversion is for delivering a measurement-flat reconstruction of the source bitstream, oversampling is better engineering. If conversion is for delivering a signal that preserves tonal density and transient continuity into a system already committed to those properties, NOS makes a defensible case that has been chosen by sophisticated listeners for forty years. Both readings are coherent. The choice between them is editorial, not technical, and the page exists so the editorial choice can be understood rather than assumed. The measurement case is not wrong; it is incomplete in the same way the SET argument is incomplete from the high-power-solid-state perspective.',
+    strengths: [
+      'Freedom from long-FIR pre-ringing as a structural property — the output cannot contain pre-ringing because no long digital filter sits in the signal path; listeners describe this as transient immediacy and a "less digital" character',
+      'Tonal density preserved as a foundation rather than added as a flavour — the R2R ladder plus minimal-filter architecture carries the harmonic content of the source through conversion intact, producing a tonal palette listeners describe as full-bodied without sounding artificially warmed',
+      'A short signal path that is editorially auditable — every component is a real circuit (resistor ladder, output stage, analog filter) rather than a black-box DSP block; the brand can voice each component individually rather than subordinating it to a filter algorithm',
+      'Consistency with the Musical Communication School cluster — a NOS DAC inserted into a chain of tube preamps, SET amplification, and high-efficiency loudspeakers is heard as one more component voiced the way the rest of the chain is voiced, where an oversampling DAC at the same price tier often introduces a tonal disagreement',
+      'A durable editorial position — forty years of continuous niche commercial demand, multiple successful brands building entire product lines around the topology (Audio Note UK, TotalDAC, Holo Audio, Denafrips), and no sign of the niche collapsing; the position is durable in a way that fashion-driven design choices are not',
+    ],
+    tradeoffs: [
+      'Audible-band frequency response is not textbook — at 44.1 kHz redbook the sin(x)/x roll-off is real (about 4 dB at 20 kHz) and listeners who prioritise flat measured response above 10 kHz will hear it; at 96 kHz and 192 kHz source rates the cost shrinks but does not vanish',
+      'Out-of-band image content above Nyquist is not fully filtered — a NOS DAC\'s gentle analog reconstruction filter passes more of this content than an oversampling DAC\'s combined digital plus analog filter; downstream amplifiers and speakers ignore most of it but it is present',
+      'Measurement-anchored evaluation will read NOS as flawed — listeners and reviewers who anchor evaluation on spec-sheet measurement see the roll-off, the residual images, and the higher distortion figures and conclude the DAC is broken; the trade-off is invisible to that evaluation method',
+      'The price floor is higher for a given measured performance — a discrete R2R ladder built to NOS standards uses precision resistors and a discrete analog output stage, which is more expensive per measured-spec point than a delta-sigma chip with integrated oversampling; Audio Note UK, TotalDAC, and the upper Holo / Denafrips tiers reflect this in their pricing',
+      'Source-rate format matters more than in oversampling DACs — the roll-off at 44.1 kHz is much larger than at 96 kHz, so the library and delivery-format decision (redbook CD versus hi-res file versus streaming codec) interacts with the DAC choice in a way the oversampling-DAC owner does not have to think about',
+    ],
+    systemFit: 'NOS DACs pair naturally with brands and components whose ideas align: tonal density over measurement-target neutrality, the analog front end as the primary source (with digital as the secondary), low-power tube or Class A amplification, and high-efficiency loudspeakers. The canonical NOS system places the DAC at the digital-source junction of a Musical Communication School chain: an Audio Note UK DAC One through DAC Five Signature, a TotalDAC d1 or d2, or a Holo Audio May / Spring / Cyan feeding a tube preamp (Shindo Aurièges / Monbrison / Masseto, Audio Note UK M-series, Leben RS-series) into SET amplification (Audio Note Ongaku family, Shindo Cortese 300B, Line Magnetic SET) or push-pull tube and Class A (Leben CS600X, Audio Note UK push-pull, Sugden Class A) driving high-efficiency loudspeakers (DeVore Orangutan O/93 and O/96, Audio Note AN-E, Klipsch Heritage, Living Voice). The analog-front-end side of the chain (LP via low-output MC → Auditorium 23 Hommage T1 SUT → tube phono stage) remains the primary source in many of these systems; the NOS DAC is the digital input that does not fight the rest of the chain. Anti-pairings reveal the trade-off: measurement-led signal chains built around brands optimising for ASR-style spec-sheet leadership (the source-side and downstream voicing fight; NOS reads as broken rather than principled); studio monitoring contexts (NOS is not what monitors are designed for and the audible-band roll-off matters in reference work); DSP-led platform chains where the signal is converted back to digital after the DAC (Trinnov, full Dirac, networked DSP processors); redbook-only systems where the 44.1 kHz roll-off is the worst case the listener will ever face; and listeners who judge amplifier and DAC choice primarily by spec-sheet measurement, who will read the topology as flawed before the system plays a note.',
+    relatedBrandSlugs: [
+      {
+        slug: 'audio-note',
+        relation: 'The anchor brand for NOS. Andy Grove\'s DAC One through DAC Five Signature line defined the modern editorial argument for the topology and remains the reference against which other NOS DACs are heard. Audio Note also argues full-system coherence — DAC, preamp, amp, and speaker voiced as a single chain.',
+      },
+      {
+        slug: 'totaldac',
+        relation: 'The discrete-R2R modern reference. Vincent Brient built the brand around discrete-ladder NOS philosophy at a deliberately premium tier; the d1 and d2 series are the canonical contemporary R2R DACs against which other discrete-ladder designs are compared.',
+      },
+      {
+        slug: 'holo',
+        relation: 'The Chinese R2R specialist that made discrete-ladder NOS available at mid-tier prices. May, Spring, and Cyan models put the topology in reach of listeners who could not afford TotalDAC, expanding the school\'s reach without compromising on the architectural commitment.',
+      },
+      {
+        slug: 'denafrips',
+        relation: 'The wider-distribution R2R specialist offering NOS as a switchable mode across the Ares / Pontus / Venus / Terminator line. Lower price floor than Holo and a longer ladder of tiers; the topology choice is the same, expressed at a more accessible scale.',
+      },
+      {
+        slug: 'shindo',
+        relation: 'Not a DAC maker — the cross-link is on the chain side. A Shindo system\'s canonical digital source is an Audio Note UK or TotalDAC NOS DAC because the rest of the chain (preamp, SET or push-pull amplifier, high-efficiency speaker) presupposes a tonally-dense digital input.',
+      },
+      {
+        slug: 'leben',
+        relation: 'Same reasoning as Shindo. Leben\'s CS300 / CS600 amplification and the brand\'s broader chain posture presuppose a tonally-dense source; when the source is digital, a NOS DAC is the canonical choice. The Leben + NOS pairing is heard most often with DeVore or Harbeth speakers.',
+      },
+      {
+        slug: 'devore',
+        relation: 'Speaker-side partner in the canonical chain. The SET + NOS + DeVore Orangutan O/96 system is the most-cited modern flagship in the Musical Communication School. DeVore\'s editorial position presupposes the kind of source-side coherence NOS provides.',
+      },
+      {
+        slug: 'auditorium-23',
+        relation: 'The analog-interface anchor that argues system coherence at the invisible parts of the chain (cables, transformers). NOS DACs apply the same posture — coherence at the digital-source side — making A23 a natural editorial sibling rather than a direct product partner.',
+      },
+    ],
+    relatedTechnologySlugs: [
+      {
+        slug: 'set',
+        relation: 'The canonical amplifier partner. The SET + NOS + high-efficiency speaker chain is the most editorially-developed system in the Musical Communication School cluster; both technologies argue the same posture (deliberate engineering trades for tonal density and transient continuity) from different ends of the signal path.',
+      },
+      // Future technology pages — added when they ship:
+      //   - r2r-dacs            (sibling page; NOS DACs are typically
+      //                          R2R DACs, but the concepts are not
+      //                          identical and warrant separate pages)
+      //   - step-up-transformers (analog-front-end partner)
+      //   - high-efficiency-loudspeakers (speaker-side partner)
+      //   - class-a-amplification (broader school)
+      // The renderer suppresses unrendered links automatically, so
+      // these additions are one-line append operations when sibling
+      // pages land.
+    ],
+    links: [
+      {
+        label: 'Audio Note UK — DAC family (NOS reference; manufacturer page)',
+        url: 'https://www.audionote.co.uk/',
+      },
+      {
+        label: 'TotalDAC (discrete-R2R NOS; manufacturer page)',
+        url: 'https://www.totaldac.com/',
+      },
+    ],
+    schoolsMemo: 'NOS DACs express the Musical Communication, Analog Purism, and Full-System Coherence schools at their intersection. The topology has a strong Horn & Efficiency affinity (by canonical chain pairing) and an Analog Front-End affinity (NOS DACs are most often run alongside an LP chain rather than as the primary source). It does not belong to any one school exclusively — like the brands that argue for it, it sits at the intersections.',
+    // ── Editorial Figures ──────────────────────────────────
+    // v1 of the NOS DACs Editorial Figures layer. Two figures, in
+    // authored order:
+    //
+    //   1. Image — Philips TDA1541A S1 chips on a vintage DAC PCB
+    //      (context: the chip and the era this argument came from)
+    //   2. Signal-chain — "Inside the NOS DAC" (the path the
+    //      topology takes; the primary learning artifact)
+    //
+    // Image sourcing record (2026-06-09):
+    //   Candidate identified within the time-boxed search window
+    //   on Wikimedia Commons. Editorial quality gate passed:
+    //     * Rights: CC BY-SA 3.0, artist "Cjp24" ("Own work" on
+    //       Wikimedia — no ambiguous commercial-site provenance
+    //       chain like the SET candidates had).
+    //     * Resolution: 2560 × 1920 native (locally hosted under
+    //       apps/web/public/editorial-figures/nos-tda1541a.jpg).
+    //     * Watermarks: none.
+    //     * Commercial branding: none in the editorial sense. The
+    //       chips bear Philips factory markings ("TDA1541A S1") and
+    //       the chip is from the era when Philips was a chip vendor;
+    //       these markings are factual identification of the
+    //       technology, NOT commercial branding overlay (the same
+    //       standard a "300B" tube marking would have met for SET).
+    //     * Editorial loading: the TDA1541A is the iconic R2R chip
+    //       of the early CD-player era and is the chip Audio Note
+    //       UK's Andy Grove reverse-engineered the modern NOS
+    //       argument for. Two of them visible in stereo
+    //       configuration, surrounded by the passive components
+    //       that form the analog output stage.
+    //   The page therefore ships with both figures; the context
+    //   image precedes the signal-chain in the reading flow.
+    figures: [
+      {
+        kind: 'image',
+        image: {
+          url: '/editorial-figures/nos-tda1541a.jpg',
+          caption: 'Two Philips TDA1541A S1 chips on a vintage CD-player DAC board. The TDA1541A was one of the defining 16-bit R2R conversion ICs of the early CD era (introduced 1986) and the chip that vintage NOS-DAC enthusiasm centred on through the 1990s. The "S1" suffix marked Philips\'s grade-selected variant; players using TDA1541A S1 (Marantz CD-94, Philips CD960, Cambridge CD1, among many others) remain editorially central today, and the chip remains the historical reference against which discrete-R2R ladder designs are heard. The visible components around it — through-hole resistors, electrolytic and film capacitors — are the analog output stage the NOS architecture preserves.',
+          credit: 'Cjp24 (Wikimedia Commons, CC BY-SA 3.0)',
+          sourceUrl: 'https://commons.wikimedia.org/wiki/File:DAC_Philips_TDA1541A_S1.jpg',
+          alt: 'Two Philips TDA1541A S1 R2R DAC chips on a vintage CD-player board surrounded by through-hole resistors and capacitors.',
+        },
+      },
+      {
+        kind: 'signal-chain',
+        title: 'Inside the NOS DAC',
+        subtitle: 'The path that does not take.',
+        nodes: [
+          { label: 'PCM Input', sublabel: 'native sample rate; no upsampling' },
+          { label: 'R2R Resistor Ladder', sublabel: 'parallel converters, no delta-sigma' },
+          { label: 'Direct Analog Output', sublabel: 'discrete output stage, no filter chip' },
+          { label: 'Gentle Reconstruction Filter', sublabel: 'first-order analog only' },
+        ],
+        caption: 'A non-oversampling DAC keeps the signal path short. There is no upsampling stage, no long digital filter, and no oversampled output. The trade is explicit: textbook frequency response above 10 kHz and aggressive image rejection are partially given up in exchange for transient continuity, tonal density, and freedom from long-filter pre-ringing. Each choice in the chain is what the DAC is, not an implementation accident.',
+      },
+    ],
+  },
 ];
 
 /**
