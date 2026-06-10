@@ -842,6 +842,173 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       },
     ],
   },
+  // ── High-Efficiency Loudspeakers ────────────────────────
+  // schools: musical-communication, horn-efficiency, full-system-coherence
+  // (DeVore + Audio Note UK + Auditorium 23 anchor); japanese-artisan
+  // affinity (Shindo, Leben as amplifier partners); analog-purism affinity
+  // by canonical chain pairing. The page sits at the acoustic-translation
+  // node of the Musical Communication School chain and completes the
+  // structural coverage of the school's canonical system: analog source
+  // (SUTs), digital source (NOS DACs / R2R DACs), amplification (SET),
+  // and now output (this page). Eight existing brand pages
+  // (DeVore, Audio Note UK, Cube Audio, WLM, Auditorium 23, Shindo,
+  // Leben, Sugden) already author the high-efficiency cross-link FROM
+  // their side; this page lets those references be activated.
+  //
+  // Discipline rule: this is NOT a horn page, NOT a vintage page, NOT
+  // a DeVore page, and NOT a single-driver page. The topic is the
+  // architectural-cascade argument — that designing for sensitivity
+  // (~93-100 dB) rather than maximum neutrality / bandwidth / bass
+  // extension / compact size propagates backward through every other
+  // chain decision. Horn loading, single-driver designs, wide-baffle
+  // geometry, and vintage WE-tradition designs are each sub-traditions
+  // within the wider category and are referenced in prose, but the
+  // page operates above any single sub-tradition.
+  {
+    names: [
+      'high-efficiency loudspeakers',
+      'high-efficiency-loudspeakers',
+      'high efficiency loudspeakers',
+      'high-efficiency speakers',
+      'high-sensitivity loudspeakers',
+      'high-sensitivity speakers',
+    ],
+    displayName: 'High-Efficiency Loudspeakers',
+    tagline: 'Sensitivity as an architectural commitment — the acoustic-translation node of the Musical Communication chain.',
+    philosophy: 'A high-efficiency loudspeaker is a deliberate trade of maximum bandwidth, ruler-flat measured response, deep bass extension, and compact cabinet size for dynamic ease, microdynamic resolution, amplifier freedom, and a relationship to room volume that conventional designs cannot offer. The editorial position is that a loudspeaker designed to produce 93–100 dB at one watt is solving a different problem than a loudspeaker designed to produce 85–88 dB at one watt — not solving the same problem better or worse. Conventional loudspeaker design wins on neutrality, bandwidth, bass extension, cabinet ergonomics, room compatibility across difficult acoustics, and price-per-decibel-of-bandwidth. The high-efficiency argument is not that the conventional approach is wrong; it is that some musical properties — particularly the relationship between a small input signal and audible nuance — are better served by drivers and cabinets engineered to convert electrical input to acoustic output with substantially less loss than the mainstream design has been optimised for.',
+    philosophyExtended: 'The mainstream reading of high-efficiency loudspeakers treats them as a vintage curiosity — horn-loaded relics preserved by hobbyist nostalgia, kept alive by tube-amplifier owners who cannot afford modern high-power solid state. That reading misreads what the architecture is doing. A high-efficiency loudspeaker is the *terminating commitment* of a chain that has been voiced at every junction for low-power amplification, voiced sources, and dynamic ease at quiet listening levels. The sensitivity is not a side-effect of the design tradition; it is the upstream architectural decision that propagates through everything downstream — driver size, cabinet volume, crossover slope, dispersion pattern, room placement requirements, amplifier compatibility — and the editorial reason listeners committed to the Musical Communication School chain continue to choose it.\n\nThe trade is real and bidirectional. Conventional loudspeaker design genuinely won the bandwidth, neutrality, and bass-extension arguments; modern Class D amplification genuinely solved the cost-of-power problem; powerful amplifiers driving low-efficiency speakers genuinely outperform underpowered amplifiers driving high-efficiency speakers in many measurable dimensions. The high-efficiency argument does not contest those facts. It contests the implicit claim that those measurements describe everything that matters in the relationship between an electrical signal and the listener\'s experience of music. Listeners report dynamic ease at low listening volumes, microdynamic resolution that conventional designs compress, amplifier freedom that returns the amplifier-choice decision to voicing rather than power, and an input-to-output ratio that more closely matches the physics of acoustic instruments. After seventy years of continuous active design and continuous active commerce by brands committed to the architectural trade — DeVore, Audio Note UK, Cube Audio, WLM, Klipsch Heritage, Living Voice, Avantgarde, Auditorium 23\'s Hommage line, Line Magnetic, Ocellia, vintage Altec and Western Electric — the position is durable enough to deserve editorial attention rather than dismissal.',
+    whatItIs: 'Sensitivity and efficiency are not the same thing. Efficiency is the percentage of electrical input the speaker converts to acoustic output (typical conventional speakers convert under 1%, high-efficiency designs convert ~2–5%, a difference that translates to roughly 6–12 dB of acoustic output gain at equal electrical input). Sensitivity is the spec-sheet metric: SPL at 1 meter from 1 watt (or 2.83 volts) of input. The audiophile community uses the terms almost interchangeably; this page uses "high-efficiency" consistently and notes the technical distinction once.\n\nTypical sensitivity ranges: conventional (83–88 dB) — most floorstanders, stand-mount monitors, and studio monitors, needing 50–200+ watts for satisfying SPL; moderately efficient (89–92 dB) — the British monitor tradition (Harbeth Super HL5, Graham LS5/9) and some larger floorstanders, working with 20–80 watts; high-efficiency (93–96 dB) — DeVore Orangutan O/93 and O/96, Audio Note AN-E SPe, Klipsch Heritage Cornwall, Living Voice IBX, where 8–25 W tube amplification is realistic and SET becomes compatible at the upper end; very high-efficiency / horn (97 dB+) — Klipsch Klipschorn, Avantgarde, vintage Western Electric / Altec, Cube Audio Nenuphar, where 1–10 W is enough and 300B SET is the canonical pairing. Each +6 dB step corresponds to four times the input power needed to achieve the same SPL — the compounding is what makes the trade architecturally consequential rather than incremental. A 96 dB speaker driven by 10 W produces ~93 dB at a 3-meter listening seat; an 87 dB speaker needs ~125 W for the same level. The dynamic ease listeners report at low volumes is partly explained by the amplifier operating in a more comfortable region of its output curve when the speaker does most of the SPL work.',
+    whyItMatters: 'High-Efficiency Loudspeakers matter because they are the only architectural choice in the audio chain where the decision propagates *backward* through every upstream component. SET argues at the amplification node. NOS argues at the digital-filtering node. R2R argues at the digital-conversion node. SUTs argue at the cartridge-to-phono interface. Each of those is a decision made at a specific junction. The speaker decision retroactively constrains every upstream junction — amplifier choice becomes a voicing decision rather than a power decision, source-side voicing becomes a chain decision rather than an isolated one, and room placement becomes a system parameter rather than an installation detail. The page exists so the editorial choice can be understood at this architectural level rather than as horn-tradition nostalgia or single-driver doctrine. If the loudspeaker is judged primarily by measured bandwidth and bass extension, conventional designs win. If the loudspeaker is judged by what it asks of and gives back to the rest of the chain, high-efficiency designs make a defensible case that has been chosen by sophisticated listeners for seventy years. The choice between them is editorial, not technical, and the page exists so the editorial choice can be understood rather than assumed.',
+    strengths: [
+      'Dynamic ease at low listening volumes — the relationship between input signal and audible output more closely matches what acoustic instruments produce, so quiet listening reveals nuance that conventional designs compress; listeners experience this as "more alive at low volumes" in a way the measurement framework does not weight',
+      'Microdynamic resolution as a structural property — small signal variations reach the room without the dynamic-range compression most low-efficiency designs apply through driver excursion and crossover loading, producing what listeners describe as "more performer in the room" rather than "more detail"',
+      'Amplifier freedom as architectural posture — the speaker stops being the chain\'s hard load constraint; 1–25 W tube amplification, low-power Class A solid-state, and high-power solid-state all become workable choices the listener can select between for tonal contribution rather than by raw output capacity',
+      'Architectural compatibility with the low-power tradition — the Musical Communication School chain (cartridge → SUT → tube phono → SET / push-pull tube → speaker) presupposes a speaker in this sensitivity range, and without it the chain\'s amplification-side argument has no terminating component to express it',
+      'Live-music input-output ratio matching — acoustic instruments produce significant SPL from minimal mechanical input; high-efficiency loudspeakers more closely mirror that ratio than conventional designs, and the perceptual effect is a closer correspondence between recorded sound and the experience of acoustic performance, particularly on small-ensemble and unamplified material',
+    ],
+    tradeoffs: [
+      'Cabinet size and visual presence are real — the physics of high efficiency favours large drivers in substantial cabinets or horn-loaded compact designs with significant front-baffle and depth; a 96 dB floorstander is rarely small, and horn designs are visually unmistakable, which listeners needing furniture-friendly compact speakers will correctly identify as a non-starter at editorial-grade quality',
+      'Placement sensitivity is genuinely demanding — wide-baffle and horn-loaded designs interact strongly with room boundaries, off-axis dispersion patterns are often narrower than conventional designs, and listeners with limited placement flexibility (apartments, multi-purpose rooms, severe partner-acceptance constraints) will struggle to extract what the speaker can do',
+      'Bass extension is bounded by physics — at any given cabinet size and target efficiency there is a fundamental trade; high-efficiency designs almost always give up the bottom octave or two relative to comparable-cost conventional designs, and listeners anchored on deep, taut, extended bass at high SPL (pipe organ, large orchestral, electronica, dub) will hear high-efficiency speakers as polite or rolled-off rather than as voiced',
+      'Tonal-coloration risk is real and brand-dependent — horn loading, wide-baffle dispersion, and wideband single-driver designs each introduce specific tonal signatures conventional designs avoid; brand-to-brand voicing variation is meaningfully larger than within the conventional cluster, so cross-shopping by spec-sheet alone is less reliable than it is for low-efficiency designs',
+      'Universality is forfeit — high-efficiency speakers reward chain-aware system building and punish casual partnering; a 96 dB single-driver mismatched with a high-feedback solid-state amplifier reads as coloured and uncontrolled, not as voiced; the trade is not for listeners who want plug-and-play system flexibility, very large rooms requiring extreme SPL, ruler-flat measured response, nearfield desktop use, DSP-heavy room correction, or frequent amplifier swapping (each of which conventional 86–88 dB designs serve more naturally)',
+    ],
+    systemFit: 'High-Efficiency Loudspeakers pair naturally with brands and components whose ideas align on chain-as-system thinking: low-power tube or Class A amplification, voiced (rather than measurement-target) sources, analog-front-end primacy where present, and listening rooms small-to-medium enough that 1–25 W can produce concert-level peaks. The canonical chain is the Musical Communication School flagship system — a low-output MC cartridge → Auditorium 23 Hommage T1 step-up transformer → tube MM phono stage (Shindo Aurièges / Monbrison, Audio Note M-series, Leben RS-30EQ, Aurorasound VIDA) → tube line stage → SET or push-pull tube amplification (Audio Note Ongaku family, Shindo Cortese 300B, Leben CS600X, Line Magnetic SET) driving high-efficiency speakers (DeVore Orangutan O/93 and O/96, Audio Note AN-E, Cube Audio Nenuphar / Bliss / Magus, WLM coaxial wideband, Auditorium 23 Hommage line, and in the broader heritage cluster Klipsch Heritage, Living Voice, Avantgarde, Altec / Western Electric vintage). The chain is the unit of design — every junction has been voiced against the others by listeners and dealers in the Musical Communication School ecosystem for decades. Adjacent partners on the amplifier side carry related arguments: Sugden British Class A solid-state pairs with DeVore and AN-E where the listener wants the high-efficiency speaker to terminate a non-tube chain; Pass / First Watt American single-ended Class A makes the same argument from a different design tradition. Anti-pairings reveal the trade-off: very large rooms requiring extreme SPL (high-efficiency + low-power has a ceiling; conventional speakers + high-power amplification serves that listener better); listeners anchored on ruler-flat measured response (the trade is invisible to that evaluation framework and the speaker reads as flawed before the system plays a note); nearfield desktop and very small listening distances (the design envelope assumes room-volume interaction); DSP-led room-correction chains (Trinnov, Dirac, full-DSP architectures fight rather than partner the speaker\'s voicing); listeners who frequently swap amplifiers experimentally (the speaker is too transparent to amplifier choice for casual rotation); and listeners who value visual discretion and small footprint over acoustic performance (most high-efficiency floorstanders are visually present, and the page does not hide that fact).',
+    relatedBrandSlugs: [
+      {
+        slug: 'devore',
+        relation: 'The modern audiophile anchor for the high-efficiency argument. The Orangutan O/93 and O/96 are voiced explicitly for low-power tube amplification, and the DeVore + SET / push-pull tube + analog-front-end chain is the most-cited contemporary expression of the cluster\'s editorial argument.',
+      },
+      {
+        slug: 'cube-audio',
+        relation: 'The no-crossover single-driver expression of the high-efficiency argument. Cube\'s Nenuphar / Bliss / Magus lineup uses in-house full-range drivers in cabinets designed against SET, producing a sonic signature distinct from horn-loaded designs while keeping the architectural commitment intact.',
+      },
+      {
+        slug: 'audio-note',
+        relation: 'The British SET-and-speaker integrated argument. The AN-E family is designed against the Audio Note electronics that drive it — the chain is treated as one voiced system rather than as components selected against measurement targets, and the speaker\'s sensitivity is part of the system commitment.',
+      },
+      {
+        slug: 'wlm',
+        relation: 'The Austrian boutique coaxial-wideband expression. WLM speakers carry the European high-efficiency tradition at boutique scale, with dynamic immediacy and rhythmic engagement as the primary editorial signature — a different sonic destination than the DeVore or Cube routes to the same architectural commitment.',
+      },
+      {
+        slug: 'auditorium-23',
+        relation: 'Both system context and direct participant. A23\'s Hommage line (Hommage Cinema, Hommage 22A, Hommage 755) reconstructs the Western Electric horn tradition for use with sensitive tube amplification; A23\'s broader chain-coherence argument finds its terminating expression at the high-efficiency speaker.',
+      },
+      {
+        slug: 'shindo',
+        relation: 'Not a speaker brand — the cross-link is on the amplifier-and-chain side. Shindo electronics presuppose a high-efficiency speaker as the chain\'s terminating component; the brand\'s circuit-individuality argument extends to the speaker partnership being a chain decision rather than a procurement decision.',
+      },
+      {
+        slug: 'leben',
+        relation: 'Same reasoning as Shindo on the amplifier side. The CS600X is voiced specifically for the 90–96 dB partner cluster — DeVore Orangutan, Klipsch Heritage, Audio Note AN-E — and the Leben + DeVore O/96 pairing is one of the most-cited Japanese-artisan + high-efficiency expressions in modern audio.',
+      },
+      {
+        slug: 'sugden',
+        relation: 'Adjacent on the amplifier side. Sugden\'s British Class A pairs with high-efficiency speakers (DeVore, AN-E) as the cluster\'s Class-A-meets-high-efficiency cross-section — a different amplification voicing than the SET / push-pull tube canon, with the same low-power-as-positive-choice posture.',
+      },
+    ],
+    relatedTechnologySlugs: [
+      {
+        slug: 'set',
+        relation: 'The canonical amplifier partner. SET argues at the amplification node what high-efficiency speakers argue at the acoustic-translation node — that the engineering trade is principled, the chain is the unit of design, and the speaker\'s sensitivity is what makes the SET amplifier\'s power envelope editorially correct rather than insufficient. Neither page is complete without the other.',
+      },
+      {
+        slug: 'suts',
+        relation: 'The analog-source-side counterpart in the same canonical chain. SUTs argue that the cartridge-to-phono interface is a voiced component; high-efficiency speakers argue that the acoustic-translation node is a voiced commitment. The Musical Communication chain runs from the SUT junction at the source to the high-efficiency speaker at the terminus, with the same chain-as-system posture at every node.',
+      },
+      {
+        slug: 'nos-dacs',
+        relation: 'The digital-source partner when digital enters the chain. NOS DACs are tonally voiced for the same low-power chain that high-efficiency speakers terminate; the canonical NOS + SET + high-efficiency-speaker system is the most-developed expression of the school\'s editorial argument with a digital front end.',
+      },
+      {
+        slug: 'r2r-dacs',
+        relation: 'Sibling digital-source partner. R2R names conversion architecture as a voiced commitment; high-efficiency speakers name acoustic translation as a voiced commitment. The two pages argue from opposite ends of the chain that design choices should be visible, auditable, and selected together rather than abstracted into measurement-target components.',
+      },
+    ],
+    links: [
+      {
+        label: 'DeVore Fidelity — Orangutan series (manufacturer page)',
+        url: 'https://www.devorefidelity.com/',
+      },
+      {
+        label: 'Audio Note UK — AN-E loudspeaker family (manufacturer page)',
+        url: 'https://www.audionote.co.uk/',
+      },
+    ],
+    schoolsMemo: 'High-Efficiency Loudspeakers express the Musical Communication, Horn & Efficiency, and Full-System Coherence schools at their intersection. The topology has a strong Japanese-Artisan affinity by canonical chain pairing (Shindo, Leben as amplifier partners; Audio Note UK SET as the British expression of the same school) and an Analog-Purism affinity (the canonical chain assumes an analog front end as the primary source). It does not belong to any one school exclusively — like the brands that argue for it, it sits at the intersections.',
+    // ── Editorial Figures ──────────────────────────────────
+    // v1 of the High-Efficiency Loudspeakers Editorial Figures layer.
+    // Ships with one figure: the "Sensitivity as a Chain Decision"
+    // signal-chain diagram. The figure operates at the ARCHITECTURAL
+    // level — naming the speaker, the amplifier upstream, and the room
+    // downstream as a single chained decision rather than three
+    // independent procurement choices. The obvious "Source → Amp →
+    // Speaker → Listener" framing was rejected because it teaches
+    // nothing the reader doesn\'t already know; this figure teaches
+    // the page\'s central architectural claim instead.
+    //
+    // Image sourcing — DEFERRED 2026-06-10:
+    //   Per the brief, image categories searched were:
+    //     * Rights-clean vintage horn-loaded photographs
+    //       (Klipschorn, Western Electric, Altec) — risk: pulls the
+    //       page into horn-history nostalgia rather than the
+    //       architectural-cascade argument
+    //     * Rights-clean wide-baffle modern photographs
+    //       (DeVore, AN-E, Cube) — manufacturer photography is rights-
+    //       encumbered, and the brief explicitly forbids DeVore
+    //       imagery (would make this a DeVore page) and A23 Hommage
+    //       Cinema reuse (rights-clean but wrong editorial signal)
+    //     * Rights-clean driver / horn-throat close-ups — Wikimedia
+    //       has scattered technical photographs but few clear the
+    //       editorial-quality gate
+    //   No candidate clears the editorial gate without carrying one
+    //   of the forbidden secondary signals (horn-history nostalgia,
+    //   DeVore identity, A23 brand identity, single-driver doctrine).
+    //   Per the editorial standard (the absence of a mediocre image
+    //   is a feature, not a defect) the page ships with the signal-
+    //   chain figure alone, matching the SET / R2R / SUTs pattern.
+    //   An ImageFigure can be added as the FIRST entry in the figures
+    //   array when a rights-clean, commercial-branding-free,
+    //   magazine-quality photograph surfaces that names the
+    //   architectural argument rather than any single sub-tradition
+    //   (a museum collection photograph of a high-efficiency speaker
+    //   in domestic context is the most likely future candidate).
+    figures: [
+      {
+        kind: 'signal-chain',
+        title: 'Sensitivity as a Chain Decision',
+        subtitle: 'Where the speaker sits, and what it asks of everything upstream.',
+        nodes: [
+          { label: 'Tube or Low-Power Amplifier', sublabel: '1–25 W; voicing matters more than wattage' },
+          { label: 'High-Efficiency Loudspeaker', sublabel: '93–100 dB; 1 W does real work' },
+          { label: 'Room Acoustic Interface', sublabel: 'placement, boundary, distance' },
+          { label: 'Listening Position', sublabel: 'dynamic ease at low SPL' },
+        ],
+        caption: 'A high-efficiency loudspeaker is not chosen in isolation. Sensitivity is the architectural commitment that propagates backward through the chain: amplifier choice becomes a voicing decision rather than a power decision, and placement becomes a system parameter rather than an installation detail. The trade is real: the speaker gives up bandwidth, ruler-flat response, deep bass extension, compact footprint, and universal placement compatibility in exchange for dynamic ease, microdynamic resolution, and amplifier freedom.',
+      },
+    ],
+  },
 ];
 
 /**
