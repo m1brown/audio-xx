@@ -340,22 +340,18 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       },
     ],
     relatedTechnologySlugs: [
-      // Empty on first publish. These will fill in as sibling Technology
-      // Pages ship per the roadmap:
-      //
-      //   - nos-dacs           — the canonical digital source partner;
-      //                          SET + NOS is a paired aesthetic
-      //   - r2r-dacs           — sister technology to NOS in posture
-      //   - step-up-transformers — the analog-interface partner; SET +
-      //                            SUT + LP is the canonical front-to-back
-      //                            system
-      //   - high-efficiency-loudspeakers — the speaker-side partner
-      //                            technology; SET cannot be reasoned
-      //                            about without this page
-      //   - class-a-amplification — the broader school SET sits inside
-      //
-      // The renderer suppresses this section's heading when the array is
-      // empty, so the gap is invisible until siblings ship.
+      {
+        slug: 'suts',
+        relation: 'The analog-source-side partner. The cartridge → SUT → tube phono → SET → high-efficiency speaker chain is the most editorially-developed system in the Musical Communication School cluster; SUTs argue at the cartridge-to-phono interface what SET argues at the amplification stage — passive interfaces, voiced components, and choices selected together rather than independently.',
+      },
+      // Future technology pages — added when they ship:
+      //   - nos-dacs / r2r-dacs (already shipped; SET appears in their
+      //                          relatedTechnologySlugs but the reverse
+      //                          link is deferred until a deeper editorial
+      //                          revision pass)
+      //   - high-efficiency-loudspeakers (speaker-side partner)
+      //   - class-a-amplification (broader school)
+      // The renderer suppresses unrendered links automatically.
     ],
     links: [
       {
@@ -480,16 +476,17 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'set',
         relation: 'The canonical amplifier partner. The SET + NOS + high-efficiency speaker chain is the most editorially-developed system in the Musical Communication School cluster; both technologies argue the same posture (deliberate engineering trades for tonal density and transient continuity) from different ends of the signal path.',
       },
+      {
+        slug: 'suts',
+        relation: 'Source-side counterpart on the analog axis. NOS argues that the digital path should preserve transient continuity and tonal density through filtering; SUTs argue that the analog interface should preserve the cartridge\'s character through the gain stage. The two pages name complementary parts of the same source-side commitment, and the canonical Musical Communication system runs both.',
+      },
       // Future technology pages — added when they ship:
-      //   - r2r-dacs            (sibling page; NOS DACs are typically
-      //                          R2R DACs, but the concepts are not
-      //                          identical and warrant separate pages)
-      //   - step-up-transformers (analog-front-end partner)
       //   - high-efficiency-loudspeakers (speaker-side partner)
       //   - class-a-amplification (broader school)
-      // The renderer suppresses unrendered links automatically, so
-      // these additions are one-line append operations when sibling
-      // pages land.
+      // The r2r-dacs reverse link is deferred until a deeper editorial
+      // revision pass — NOS DACs already implies the R2R conversation,
+      // and the R2R page links here.
+      // The renderer suppresses unrendered links automatically.
     ],
     links: [
       {
@@ -637,6 +634,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       {
         slug: 'set',
         relation: 'The canonical amplifier partner. The SET + NOS + R2R + high-efficiency-speaker chain is the most editorially-developed system in the Musical Communication School cluster; SET argues from the amplification side what R2R argues from the digital-conversion side — that the design choices should be visible, auditable, and voiced rather than abstracted into chip-vendor IP.',
+      },
+      {
+        slug: 'suts',
+        relation: 'Sibling argument on the analog-source axis. R2R names the conversion architecture as a voiced component built from physical resistors; SUTs name the cartridge-to-phono interface as a voiced component built from a physical transformer. The Audio Note UK chain — transformer-coupled wherever possible, including at the digital-to-analog output stage — is where the two arguments meet end-to-end.',
       },
     ],
     links: [
