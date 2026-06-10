@@ -697,6 +697,150 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       },
     ],
   },
+  // ── SUTs — Step-Up Transformers ────────────────────────
+  // schools: musical-communication, analog-purism, full-system-coherence
+  // (Auditorium 23 anchor); japanese-artisan affinity (Shindo, Leben,
+  // Aurorasound); horn-efficiency affinity by canonical chain pairing.
+  // The page sits at the analog-source side of the Technology Pages
+  // corpus and is the only page in the corpus where the editorially-
+  // load-bearing topic is an INTERFACE BETWEEN two components rather
+  // than the internals of a single device. SET (amplification), NOS
+  // (digital filtering), and R2R (digital conversion) each describe
+  // what a single device does internally; SUTs describes what happens
+  // at the cartridge → phono stage junction. Five existing brand
+  // pages (Auditorium 23, EMT, Shindo, Leben, Audio Note UK) already
+  // author the SUT cross-link FROM their side; this page lets them
+  // be activated.
+  {
+    names: ['suts', 'sut', 'step-up transformer', 'step-up transformers'],
+    displayName: 'SUTs',
+    tagline: 'Passive gain at the cartridge-to-phono-stage interface — voicing through turns ratio.',
+    philosophy: 'A Step-Up Transformer is not an accessory between the cartridge and the phono stage. It is the interface where the cartridge\'s output voltage, the cartridge\'s source impedance, the phono stage\'s input loading, and the listener\'s tonal preference become a single decision. The editorial position is that this interface is a voiced component — that the SUT is chosen for a specific cartridge feeding a specific phono stage, and that the turns ratio and the transformer\'s construction are voicing choices rather than implementation details. Active MC head-amps are coherent engineering — lower cost, broader cartridge compatibility, integrated loading switching, lower hum sensitivity in difficult rooms, and easier setup. The SUT argument is not that active stages are wrong; it is that passive transformer gain, when matched correctly, produces a different result that listeners committed to the analog-source posture have chosen at every price tier for decades.',
+    philosophyExtended: 'The mainstream reading of step-up transformers is that they were the necessary MC-to-MM interface in the era before low-noise transistor head-amps became commercially mature, and that their continued use is conservatism rather than choice. That reading misreads the architectural fact: the SUT and the active head-amp do different things at the cartridge. An active head-amp terminates the cartridge with a resistor whose value is set in the head-amp\'s input network and applies gain through an active device with a power supply. An SUT terminates the cartridge with a reflected impedance set by the turns ratio squared against the MM phono input, and applies gain through transformer action — no active device, no power supply, no biasing decision, no active-device noise contribution. The two routes are not equivalent at the cartridge.\n\nThe trade is real and bidirectional. Active head-amps win on universality (one head-amp handles a wider range of cartridges without a hardware swap), on plug-and-play simplicity, on integrated loading adjustment (loading is set by a front-panel control rather than by transformer choice), on cost (the active route\'s price floor is meaningfully lower), on hum sensitivity in difficult rooms (active stages do not couple magnetically to AC-mains fields the way transformers can), and on setup ease for listeners who do not want to think about turns ratios. The SUT argument is not that active stages are inferior; it is that the SUT trade — passive gain, voiced transformer, cartridge-specific matching — produces a result that listeners committed to the Musical Communication School chain have continued to choose at every price tier from inexpensive Lundahl modules to reference-tier hand-wound SUTs, and that the persistence over multiple commercial generations is durable enough to deserve editorial attention rather than dismissal.',
+    whatItIs: 'A Step-Up Transformer is a passive two-winding transformer placed between a low-output moving-coil (MC) cartridge and the moving-magnet (MM) input of a phono preamplifier. The cartridge produces a small AC voltage (roughly 0.2–0.5 mV at standard groove velocity, depending on the cartridge); MM phono stages are designed for the higher output of a moving-magnet cartridge. The SUT bridges the gap by transformer action — the primary winding sees the cartridge voltage, induces a magnetic field in the core, and the secondary winding produces a stepped-up voltage at the MM phono input. The turns ratio (typical values: 1:10, 1:20, 1:30, 1:40) determines both the voltage step-up and the reflected impedance the cartridge sees through the transformer: the MM input\'s load impedance (commonly 47 kΩ) divided by the square of the turns ratio. A 1:20 SUT into a 47 kΩ MM input presents the cartridge with roughly 118 Ω; a 1:40 SUT presents roughly 29 Ω. The cartridge manufacturer\'s recommended load impedance and the chosen SUT\'s turns ratio together set the loading. Some SUTs (the Auditorium 23 T1 family among others) offer multiple selectable ratios so the listener can audition different loadings on the same physical hardware. Core material, winding wire, winding geometry, shielding strategy, and case construction are voicing decisions the brand has committed to.',
+    whyItMatters: 'SUTs matter because they are one of the clearest cases in audio where the interface between two components — rather than the internals of any one component — is the editorially-load-bearing decision. SET argues about a topology. NOS argues about a filter. R2R argues about a converter. SUTs argue that the way the cartridge is loaded and the way its output is stepped up to MM level is itself a voiced choice — not an accessory after the cartridge is chosen and before the phono stage is chosen. The structural claim is that some dimensions of analog playback are decided at this junction, and that they are decided by transformer choice rather than by cartridge spec-sheet or by phono-stage feature count. Active MC stages handle the gain problem with the engineering discipline a well-designed amplifier brings to any small-signal stage; the SUT argument is not that they do this badly, it is that the passive route produces a different result that the Musical Communication School chain has been built around for decades. The page exists so the editorial choice can be understood at the architectural level rather than as a tonal preference about transformers.',
+    strengths: [
+      'Passive voltage gain without active-device noise contribution — the transformer\'s only intrinsic noise is the Johnson noise of the primary winding resistance plus whatever EMI it picks up from the room; there is no active device noise, no power-supply noise, and no power-supply-related distortion mechanism because there is no power supply at all',
+      'Reflected impedance as a voicing tool — the cartridge sees an impedance set by the SUT\'s turns ratio squared against the MM phono input, and listeners experience this as the cartridge\'s character changing with the SUT choice; the SUT is, in editorial fact, the voicing control the cartridge buyer otherwise does not have',
+      'The transformer as a voiced component — core material, winding wire (copper or silver), winding geometry, shielding strategy, and case construction are choices a brand has thousands of design hours behind; the voicing decision is visible at the level of which transformer the listener bought, not at the level of which chip a vendor specified',
+      'Architectural consistency with the analog-front-end posture — Audio Note UK, Shindo, EMT, Auditorium 23, and Leben all build chains that presuppose passive interfaces wherever possible; SUTs are the passive interface the cartridge-to-phono-stage junction would otherwise force into an active stage, and choosing one is a structural statement about the rest of the chain',
+      'A durable pattern of repeated choice by sophisticated listeners — SUTs were standard in broadcast and audiophile use in the mid-20th century, persisted as the niche audiophile choice through the 1980s and 1990s when active alternatives were cheaper and easier, and have had a continuous renaissance from the late 1990s onward led by Auditorium 23, Audio Note UK, Lundahl-based designers and others; the position is durable in a way that fashion-driven equipment categories are not',
+    ],
+    tradeoffs: [
+      'Matching complexity is intrinsic and required — the SUT turns ratio must be chosen against the cartridge\'s output voltage, the cartridge\'s recommended load impedance, the phono stage\'s input impedance, and the listener\'s loading preference; a wrong-ratio SUT does not sound bad, it sounds like the cartridge unloaded incorrectly, which the listener may not recognise as a matching failure',
+      'Cartridge specificity limits universality — an SUT chosen for one cartridge may be wrong for another with different output voltage or recommended loading; switching cartridges may require switching SUTs or accepting that the chain is now mismatched, which active head-amps with multiple loading options handle more flexibly and without a hardware swap',
+      'Hum and shielding sensitivity is real — transformers couple magnetically to AC-mains fields, motor fields, and other low-frequency magnetic sources; a well-shielded mu-metal-cased SUT placed away from power transformers is robust, but in difficult rooms or near other components an SUT may pick up hum that an active head-amp would not, and physical placement becomes the system builder\'s responsibility',
+      'Cost can be high for editorial-grade options — Auditorium 23 Hommage T1, Audio Note UK silver-wound SUTs at the upper range, and reference-tier hand-wound transformers are not impulse purchases; the price floor for a good SUT is meaningfully higher than the floor for a competent active MC stage at the same overall system tier',
+      'Active MC stages legitimately win on convenience, cartridge flexibility, integrated loading adjustment, lower cost, easier setup, and lower hum sensitivity in challenging rooms — listeners who want plug-and-play simplicity, who run multiple very different cartridges, who have RF or magnetic-field issues in their listening room, or who are at price points where the SUT\'s voicing premium is not the priority, are correctly served by a well-designed active head-amp; the SUT trade is principled, not universally better',
+    ],
+    systemFit: 'SUTs pair naturally with brands and components whose ideas align on analog-source coherence: low-output moving-coil cartridges with characterful house voicings, tube MM phono stages, tube line stages, and amplification chains committed to passive interfaces wherever possible. The canonical SUT chain is the analog-source side of the Musical Communication School flagship system — a low-output MC cartridge (EMT JSD or HSD, Ortofon SPU, Audio Note IO, Denon DL-103R, or similar) feeding a voiced SUT (Auditorium 23 Hommage T1, Audio Note UK silver-wound or copper-wound SUTs, or hand-wound transformers from the Shindo / Leben tradition), then a tube MM phono stage (Shindo Aurièges or Monbrison phono, Leben RS-30EQ, Audio Note M-series, or Aurorasound VIDA used in SUT-fed mode), then a tube line stage, then SET or push-pull tube amplification driving high-efficiency loudspeakers (DeVore Orangutan, Audio Note AN-E, Klipsch Heritage, Living Voice). The SUT sits at one specific junction in this chain, but the choice ripples back to the cartridge and forward to the phono stage; the chain is the unit of design. Anti-pairings reveal the trade-off: high-output cartridges (typically 2.5 mV and above) that already drive MM phono stages directly will over-saturate the phono input through an SUT; phono stages that integrate active MC gain stages ahead of RIAA equalisation are designed to be cartridge-fed, not SUT-fed, and may sound worse with an SUT in front; casual plug-and-play vinyl systems where the listener does not want to think about cartridge loading or impedance reflection are editorially mismatched with SUTs and a well-chosen active head-amp is the right tool; rooms with significant low-frequency magnetic fields (proximity to power transformers, fluorescent ballasts, motorised equipment) raise the difficulty of SUT placement to a degree active head-amps avoid; and streaming-first chains where the analog front-end is secondary may not justify the SUT-tier investment over a competent active MC stage.',
+    relatedBrandSlugs: [
+      {
+        slug: 'auditorium-23',
+        relation: 'The canonical modern SUT brand and the editorial anchor for the technology. The Hommage T1 is voiced specifically for the EMT / SPU / Denon DL-103 cluster of low-output MC cartridges and for the Shindo-tradition tube MM phono input. A23\'s broader argument — that coherence is decided at the invisible interfaces of the chain — finds its most direct expression in the SUT itself.',
+      },
+      {
+        slug: 'emt',
+        relation: 'EMT\'s broadcast-heritage cartridges (modern JSD and HSD; heritage TSD-15 and OFD-15) are designed for SUT-fed input. The broadcast-engineering posture EMT brings to cartridge design is the engineering case for the SUT trade — passive interface, voiced transformer, system-specific matching — as the source-side commitment that matches the brand\'s cartridge identity.',
+      },
+      {
+        slug: 'shindo',
+        relation: 'Shindo phono stages are designed for SUT-fed MM input. The brand\'s circuit-individuality argument extends to the SUT junction: a Shindo phono stage assumes a specific cartridge-into-SUT-into-MM-input chain, and the brand\'s editorial position is that this chain is the unit of voicing rather than each component in isolation.',
+      },
+      {
+        slug: 'leben',
+        relation: 'Leben\'s RS-30EQ tube phono stage is an MM-input design that presupposes SUT-fed input from low-output moving-coil cartridges. The Leben + SUT + EMT / SPU / Ortofon chain is one of the most-cited modern expressions of the analog-source argument, and the Leben house voicing is built around it.',
+      },
+      {
+        slug: 'audio-note',
+        relation: 'Audio Note UK\'s transformer-interface philosophy extends to MC step-up: the brand makes its own SUTs across multiple tiers, with silver-wound transformers at the upper range and copper / bronze constructions at entry points — the chain-as-system argument carried into the cartridge-to-phono-stage interface.',
+      },
+      {
+        slug: 'devore',
+        relation: 'Not an SUT brand — the cross-link is on the system side. DeVore Orangutan O/93 and O/96 are the high-efficiency speakers the canonical analog chain ends at, and that chain begins with the cartridge → SUT → tube phono interface this page describes.',
+      },
+      {
+        slug: 'ortofon',
+        relation: 'The Ortofon SPU and the broader low-output MC line are widely paired with SUTs; the SPU + matched-impedance SUT chain is among the canonical low-output MC references in the Musical Communication School tradition, and Ortofon\'s wider cartridge range gives SUT owners a deep pool of source-side voicing choices.',
+      },
+      {
+        slug: 'aurorasound',
+        relation: 'The Aurorasound VIDA phono stage is widely run in SUT-fed mode by listeners who want a transparent, low-noise MM input behind the SUT rather than an integrated active MC gain stage; the VIDA\'s flexible loading options make it a natural match for SUT-driven cartridge experimentation.',
+      },
+    ],
+    relatedTechnologySlugs: [
+      {
+        slug: 'set',
+        relation: 'The canonical amplifier partner. The cartridge → SUT → tube phono → SET → high-efficiency speaker chain is the most editorially-developed system in the Musical Communication School cluster; SUTs argue from the cartridge-to-phono-stage interface what SET argues from the amplification side — that the choices should be visible, voiced, and selected together rather than independently.',
+      },
+      {
+        slug: 'nos-dacs',
+        relation: 'Source-side counterpart on the digital axis. NOS argues that the digital path should preserve transient continuity and tonal density through filtering; SUTs argue that the analog interface should preserve the cartridge\'s character through the gain stage. The two pages name complementary parts of the same source-side commitment, and the canonical Musical Communication system runs both.',
+      },
+      {
+        slug: 'r2r-dacs',
+        relation: 'Sibling argument on the digital-conversion axis. R2R names the conversion architecture as a voiced component built from physical resistors; SUTs name the cartridge-to-phono interface as a voiced component built from a physical transformer. The Audio Note UK chain — transformer-coupled wherever possible, including at the digital-to-analog output stage — is where the two arguments meet end-to-end.',
+      },
+    ],
+    links: [
+      {
+        label: 'Auditorium 23 — Hommage T1 step-up transformer (manufacturer page)',
+        url: 'http://www.auditorium23.de/',
+      },
+      {
+        label: 'Audio Note UK — transformer-coupled chain (manufacturer page)',
+        url: 'https://www.audionote.co.uk/',
+      },
+    ],
+    schoolsMemo: 'SUTs express the Musical Communication, Analog Purism, and Full-System Coherence schools at their intersection — the same schools NOS DACs and R2R DACs express on the digital-source side, here expressed on the analog-source side. The topology has a strong Horn & Efficiency affinity (by canonical chain pairing — the SUT-fed chain typically ends at a high-sensitivity loudspeaker) and a Japanese-Artisan affinity (Shindo, Leben, Aurorasound) alongside its European centre of gravity (Auditorium 23, EMT, Audio Note UK). It does not belong to any one school exclusively — like the brands that argue for it, it sits at the intersections.',
+    // ── Editorial Figures ──────────────────────────────────
+    // v1 of the SUTs Editorial Figures layer. Ships with one figure:
+    // the "SUT Interface" signal-chain diagram. The figure operates
+    // at the INTERFACE level — the editorial position the page
+    // articulates — rather than at the internals of any single
+    // device. SET (5-node system chain), NOS (4-node DAC chain), and
+    // R2R (4-node ladder chain) each show what is inside a single
+    // device; SUTs shows the four nodes the SUT sits between, and
+    // names the SUT itself as one of them.
+    //
+    // Image sourcing — DEFERRED 2026-06-10:
+    //   Per the brief, image categories searched were:
+    //     * Auditorium 23 Hommage T1 photograph (only if rights-safe)
+    //     * Transformer winding close-up (vintage or modern audio SUT)
+    //     * Vintage broadcast SUT photograph
+    //     * EMT / SPU / SUT-chain image
+    //   Wikimedia Commons search for "step up transformer audio" and
+    //   "Auditorium 23 Hommage" returned no audiophile-SUT-specific
+    //   photographs that clear the editorial quality gate (results
+    //   were technical PDFs, generic radio-era distribution
+    //   transformers, and unrelated auditorium-venue documents).
+    //   Manufacturer photography from Auditorium 23, Audio Note UK,
+    //   and EMT is rights-encumbered. Per the editorial standard
+    //   (the absence of a mediocre image is a feature, not a defect)
+    //   the page ships with the signal-chain figure alone, matching
+    //   the SET and R2R DACs pattern. An ImageFigure can be added
+    //   as the FIRST entry in the figures array when a rights-clean,
+    //   commercial-branding-free, magazine-quality SUT-specific
+    //   photograph surfaces (museum collection, archival
+    //   photographer, or commissioned editorial work). The Hommage
+    //   Cinema loudspeaker image already used on the Auditorium 23
+    //   brand page must NOT be reused here — the Cinema is a
+    //   loudspeaker, editorially wrong for this page.
+    figures: [
+      {
+        kind: 'signal-chain',
+        title: 'The SUT Interface',
+        subtitle: 'Gain without an active circuit.',
+        nodes: [
+          { label: 'Low-Output MC Cartridge', sublabel: '0.2–0.5 mV signal' },
+          { label: 'Step-Up Transformer', sublabel: 'turns ratio sets gain and loading' },
+          { label: 'MM Phono Stage', sublabel: 'sees stepped-up voltage' },
+          { label: 'Tube Line Stage', sublabel: 'low-noise analog gain continues' },
+        ],
+        caption: 'An SUT is not an accessory between the cartridge and the phono stage. It is the interface where the cartridge\'s output voltage, source impedance, phono-stage input loading, and transformer construction become one system. The turns ratio determines both voltage gain and the impedance the cartridge sees through the transformer. The trade is real: SUTs give up universality and plug-and-play simplicity for passive gain and cartridge-specific loading that the system builder can voice.',
+      },
+    ],
+  },
 ];
 
 /**
