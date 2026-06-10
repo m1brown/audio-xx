@@ -559,6 +559,144 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       },
     ],
   },
+  // ── R2R DACs — Resistor-Ladder Digital-to-Analog Conversion ──
+  // schools: musical-communication, analog-purism, full-system-coherence
+  // (Audio Note UK anchor by chip-to-discrete progression); cross-cluster
+  // with NOS DACs (most NOS designs are R2R; some R2R designs run
+  // oversampling). The page sits at the conversion-architecture side of
+  // the digital-source argument: where NOS asks "should anything filter
+  // in front of conversion?", R2R asks "what physically performs the
+  // conversion?". The two pages must be authored as siblings; the
+  // comparison is the editorial bridge.
+  {
+    names: ['r2r dacs', 'r2r-dacs', 'r2r', 'resistor-ladder dacs', 'resistor ladder dacs', 'ladder dac', 'multibit dac', 'multi-bit dac'],
+    displayName: 'R2R DACs',
+    tagline: 'Resistor-ladder digital-to-analog conversion — every bit\'s weight is a physical resistor.',
+    philosophy: 'R2R DACs are not a refusal of modern digital. They are the argument that parallel binary-weighted conversion through a precision resistor network is the most editorially auditable path from a digital sample to an analog voltage. The architectural commitment is a different one than NOS: NOS is a filtering decision (don\'t upsample, don\'t apply a long FIR digital filter), R2R is a conversion architecture (use a resistor ladder rather than a delta-sigma modulator). The two concepts are commonly chosen together — most NOS DACs are R2R, and most R2R DACs run NOS — but they are independent. Oversampling R2R designs exist (Denafrips switchable modes, Audio Note UK Level 2/3 oversampling variants); non-R2R multi-bit DACs exist (Schiit-class designs using non-ladder multi-bit chips). The R2R argument is about what physically converts the bits, not about what happens before the conversion. Delta-sigma — the industry consensus topology that displaced multi-bit R2R commercially in the 1990s — wins decisively on cost, integration density, measured distortion at moderate signal levels, and the smallest measured noise floor. Those gains are real and the R2R argument does not contest them. The R2R argument contests the implicit claim that those measurements describe everything that matters in conversion.',
+    philosophyExtended: 'The architectural fact the editorial position rests on is this: in an R2R ladder, every input bit\'s contribution to the output is a physical voltage produced by a physical resistor network. The designer of a discrete R2R DAC chose every resistor — the type (Vishay foil, Caddock bulk metal, Audio Note tantalum, Holo proprietary discrete), the matching method (selected pairs, factory-trimmed networks, board-level laser trim), and the temperature-coefficient strategy. The voicing decisions are visible at the schematic level. Delta-sigma decisions are baked into a chip vendor\'s IP and the designer chooses among modulator topologies the vendor has already implemented. Both positions are coherent; the R2R argument is that the editorial difference is itself meaningful. The result listeners report most consistently is tonal density preserved through conversion — and the consistency of the report across implementations from different manufacturers (Audio Note UK, TotalDAC, Holo Audio, Denafrips, Rockna, MSB) suggests an architectural cause rather than per-implementation variance.\n\nWhy R2R became rare: in the 1980s, multibit / R2R was mainstream — virtually every consumer CD player used some form of resistor-ladder conversion (TDA1541A, PCM58, PCM63, AD1865). In the 1990s, delta-sigma won the commercial argument on cost, integration density, measured distortion, and mass-market manufacturability; chip vendors stopped developing new R2R parts and the existing chips entered long-tail production decline. In the 2000s, R2R survived as an audiophile niche, kept alive by Audio Note UK\'s argument for chip-based R2R as the editorially-correct conversion choice and by collectors restoring TDA1541A and PCM63 era players. From the 2010s onward, a discrete-ladder renaissance has produced R2R designs at every price tier — TotalDAC at the premium end, Holo Audio and Denafrips at mid-tier, MSB at flagship — and the topology has stabilised as a permanent minority position rather than continuing to decline. The discrete-ladder cluster does not depend on out-of-production chips; the chip-R2R cluster does. Both clusters share the editorial argument that conversion architecture matters.',
+    whatItIs: 'A resistor-ladder DAC converts a digital sample to an analog voltage in one parallel step by summing voltage contributions from a network of precision resistors arranged in a binary-weighted pattern. The two ladder topologies in common use are the R-2R ladder (uses only two resistor values, R and 2R, which simplifies the matching problem — the name "R2R" comes from this topology and is used in audiophile shorthand for the broader resistor-ladder category) and the fully binary-weighted ladder (uses N different resistor values for N-bit conversion; harder to match in practice). For each bit position in the input PCM word, a switch connects the corresponding ladder rung either to the reference voltage (bit = 1) or to ground (bit = 0); the summed currents flow into a summing amplifier and produce the output voltage. Every bit\'s weight is a physical resistor in the network. Implementations split into two families: chip-based R2R, where the ladder is fabricated on a silicon die with wafer-level trim (PCM63, PCM1702 / PCM1704, AD1865, TDA1541A — all now out of production), and discrete R2R, where the ladder is built from individual precision resistors on a PCB with factory trim-calibration (TotalDAC d1/d2, Audio Note UK Level 4+, Holo May / Spring / Cyan, Denafrips Terminator, Rockna Wavedream, MSB Premier+). How R2R differs from adjacent concepts: vs delta-sigma — R2R is parallel multi-bit conversion in one step; delta-sigma uses single-bit or low-bit noise-shaped conversion at high modulation frequency. Vs NOS — R2R is an architecture (resistor ladder), NOS is a filtering decision (whether to upsample); the two are independent. Vs oversampling — R2R can run oversampling (Denafrips switchable modes); oversampling is conceptually upstream of conversion and can feed any conversion topology.',
+    whyItMatters: 'R2R matters because it is one of the clearest cases in audio where two coherent engineering positions produce different listening signatures for structural rather than implementation reasons. Delta-sigma converts by noise-shaping a single-bit or low-bit modulator running at very high frequency; the listening signature is the sum of the modulator\'s decisions and the on-chip output stage\'s behavior, both of which the chip vendor designed. R2R converts by summing contributions from a physical resistor network; the listening signature is the sum of the ladder\'s linearity, the output stage\'s design, and the precision-resistor choices the designer made. Neither approach is correct; both are coherent commitments to a particular relationship between the bits and the analog voltage. The page exists so the editorial choice can be understood at the architectural level rather than as a tonal preference. If conversion is judged primarily by measured distortion and measured noise at moderate signal levels, delta-sigma is better engineering. If conversion is judged by monotonic linearity at the resistor level, freedom from noise-shaper artifacts, and an auditable design where every bit-weight decision is visible in the schematic, R2R makes a defensible case. The audiophile press routinely conflates R2R with NOS because the two concepts are often chosen together; the comparison with NOS DACs at the bottom of this page exists to fix that conflation in the Audio XX editorial map.',
+    strengths: [
+      'Monotonic linearity is a physical property of the network — the output voltage for input N is bounded by the outputs for input N-1 and N+1 by the structure of the ladder itself, not by a noise-shaper algorithm\'s aggregate behavior',
+      'Freedom from noise-shaper artifacts — no high-frequency noise-shaping, no signal-dependent noise modulation, no idle tones; the noise floor is white or near-white, which listeners and some measurement methodologies report as a more natural absence-of-sound between notes',
+      'Auditable design at the resistor level — every bit\'s contribution is a physical resistor whose value, type, temperature coefficient, and matching tolerance the designer chose; the voicing decisions are visible in the schematic, and the brand\'s editorial position lives in the part list',
+      'Tonal density preserved through conversion — the subjective claim most consistently reported across R2R implementations from different manufacturers, suggesting the result is architectural rather than per-implementation',
+      'A durable editorial position with brand-level commitment — brands that go discrete-R2R (TotalDAC, Audio Note UK Level 4+, Holo May, Denafrips Terminator, MSB Premier+, Rockna Wavedream) are making an unmistakable editorial commitment that scales with price tier and is visible to buyers in a way delta-sigma chip choice rarely is',
+    ],
+    tradeoffs: [
+      'Resistor matching is the dominant manufacturing problem — a 24-bit R2R ladder requires resistors matched to ~0.1 ppm to achieve monotonic 24-bit linearity; off-the-shelf 0.01% precision resistors do not get there, and brands must hand-select, trim-calibrate, or accept lower effective resolution than the nominal bit count',
+      'Manufacturing complexity drives cost — discrete-ladder DACs use thousands of resistors per channel, each placed and soldered with factory trim-calibration; the labor cost floor is meaningfully higher than delta-sigma at any given price point, which is why TotalDAC and Audio Note UK Level 4+ pricing reflects the topology directly',
+      'Calibration is required and can drift — discrete R2R designs need initial trim calibration and may require re-calibration as the resistor temperature coefficients age; chip-based R2R handled this at the wafer level, but discrete designs must handle it at the board level',
+      'Measurement honesty — delta-sigma wins on the metrics most reviews report at most price points (THD, SNR, IMD, dynamic range); the R2R argument does not deny the measurement gap, it argues the metrics are incomplete; consumers and reviewers anchoring on these metrics will see R2R as inferior engineering',
+      'Out-of-production chip supply constrains the chip-R2R sub-cluster — the PCM63, PCM1704, AD1865, and TDA1541A are all out of production, and brands using these chips depend on remaining inventory or salvaged stock; the discrete-ladder cluster does not have this constraint, but the chip-cluster does, and it sets a price floor for restoration-class projects',
+    ],
+    systemFit: 'R2R DACs pair naturally with brands and components whose ideas align on conversion-side tonal density: tonal density preserved through the digital-to-analog step, monotonic linearity over noise-shaper measurement optimization, and editorial commitment to architecture at the brand scale. The canonical R2R chain is the same as the canonical NOS chain (most R2R DACs in the cluster also run NOS; cross-reference the NOS DACs page for the chain framing) — an Audio Note UK DAC, TotalDAC d1 / d2, Holo May / Spring / Cyan, or Denafrips Terminator / Venus feeding a tube preamp into SET or push-pull tube amplification driving high-efficiency loudspeakers. The brands that anchor the R2R conversation specifically (rather than the chain context) are Holo Audio (mid-tier discrete-ladder), Denafrips (wider-distribution discrete-ladder with switchable filtering), TotalDAC (premium discrete-ladder), Rockna (flagship discrete-ladder), and MSB Premier+ (uncompromised discrete-ladder at reference tier); Audio Note UK\'s Level system walks the chip-to-discrete progression as a product family and demonstrates the editorial argument across price tiers. Vintage chip-R2R chains (Marantz CD-94, Philips CD960, Cambridge CD1 — all TDA1541A; Audio Note DAC Zero / One restorations — PCM63 / 1704 era) pair naturally with Auditorium 23 cables and tube electronics for a heritage Musical Communication chain. Anti-pairings reveal the trade-off: measurement-anchored evaluation chains (delta-sigma will give higher measured performance per dollar; R2R\'s editorial value is invisible to spec-sheet selection); high-resolution-streaming DSP-led chains where the signal is converted digital-analog-digital-analog through processing (R2R\'s auditable-design claim dilutes into invisibility); studio monitor workflows where delta-sigma\'s measurement profile is what qualifies equipment; cost-floor-constrained builds where measured performance per dollar is the primary criterion (delta-sigma will give more measured performance per dollar at almost every tier under $3K); and listeners who already get their tonal density from elsewhere in the chain and do not depend on the DAC for it.',
+    relatedBrandSlugs: [
+      {
+        slug: 'audio-note',
+        relation: 'The chip-to-discrete R2R reference. Audio Note UK\'s DAC line walks from chip-based AD1865 / 1853 implementations (DAC Zero, DAC One) through fully discrete-resistor ladders at Level 4 and 5 / 5 Signature. The Level progression IS the chip-to-discrete progression in R2R history, made into a product family — and the brand\'s editorial argument extends to preamp, amplifier, and speaker as a single chain.',
+      },
+      {
+        slug: 'totaldac',
+        relation: 'The discrete-R2R modern reference. Vincent Brient builds the entire d1 and d2 series around hand-selected resistor ladders at a premium price tier; the brand exists because the discrete-ladder argument can be made at this scale and cannot be made by chip-based R2R designs at any price after the TDA1541A / PCM1704 era.',
+      },
+      {
+        slug: 'holo',
+        relation: 'Brought discrete-R2R into the mid-tier. May, Spring, and Cyan use proprietary discrete-resistor ladders with switchable NOS and oversampling modes, demonstrating that R2R and the filtering decision are independent concerns and that both can be exposed to the listener.',
+      },
+      {
+        slug: 'denafrips',
+        relation: 'The wider-distribution discrete-R2R specialist. Terminator runs fully discrete ladders; Ares, Pontus, and Venus use IC R2R networks supplemented by discrete output stages. The brand\'s tier ladder maps directly onto the chip-vs-discrete R2R axis and makes the topology accessible at price points below Holo.',
+      },
+      {
+        slug: 'rockna',
+        relation: 'Flagship discrete-R2R from Romania. Rockna Wavedream commits to fully discrete resistor-ladder conversion at the uncompromised price tier without the Audio Note UK chain-ecosystem framing — a single-product argument for what the topology can do when it is the only thing the brand makes.',
+      },
+      {
+        slug: 'shindo',
+        relation: 'Not a DAC maker — same chain-context cross-link as the NOS DACs page. Shindo systems\' canonical digital source is an R2R DAC because the rest of the chain is voiced for the tonal density R2R conversion preserves; the cross-reference is on the system side, not the topology side.',
+      },
+      {
+        slug: 'leben',
+        relation: 'Same chain-context reasoning as Shindo. Leben\'s CS300 / CS600 amplification and the brand\'s broader chain posture presuppose a tonally-dense source; when the source is digital, an R2R DAC is the canonical choice for the same reasons.',
+      },
+      {
+        slug: 'devore',
+        relation: 'Speaker partner in the canonical R2R chain. The system context places R2R DACs at the digital source feeding tube amplification feeding DeVore Orangutan loudspeakers; the relation is on the system side, not the topology side, and is shared with the NOS DACs page by design.',
+      },
+      {
+        slug: 'auditorium-23',
+        relation: 'The analog-interface anchor that argues coherence at the invisible parts of the chain. R2R DACs apply the same posture to the digital-conversion side — every resistor in the ladder is a voiced component, just as every cable and SUT in the analog chain is a voiced component. The editorial parallel between A23\'s argument and the discrete-R2R argument is exact.',
+      },
+    ],
+    relatedTechnologySlugs: [
+      {
+        slug: 'nos-dacs',
+        relation: 'The most editorially load-bearing cross-link this page carries. NOS is a filtering decision (don\'t upsample, don\'t apply a long FIR digital filter); R2R is a conversion architecture (use a resistor ladder, not a delta-sigma modulator). Most NOS DACs are R2R, and most R2R DACs run NOS, but the concepts are independent. Start on the NOS page if the question is "should this DAC filter or not"; come back to this page when the next question is "how is the conversion itself done."',
+      },
+      {
+        slug: 'set',
+        relation: 'The canonical amplifier partner. The SET + NOS + R2R + high-efficiency-speaker chain is the most editorially-developed system in the Musical Communication School cluster; SET argues from the amplification side what R2R argues from the digital-conversion side — that the design choices should be visible, auditable, and voiced rather than abstracted into chip-vendor IP.',
+      },
+    ],
+    links: [
+      {
+        label: 'TotalDAC — discrete-R2R reference (manufacturer page)',
+        url: 'https://www.totaldac.com/',
+      },
+      {
+        label: 'Holo Audio — discrete-R2R May / Spring / Cyan (manufacturer page)',
+        url: 'https://kitsunehifi.com/holo-audio/',
+      },
+    ],
+    schoolsMemo: 'R2R DACs express the Musical Communication, Analog Purism, and Full-System Coherence schools at their intersection — the same schools NOS DACs express but on the conversion-architecture axis rather than the filtering-decision axis. The topology has a strong Horn & Efficiency affinity by canonical chain pairing (R2R DACs typically feed tube amplification driving high-sensitivity loudspeakers). It does not belong to any one school exclusively — like the brands that argue for it, it sits at the intersections.',
+    // ── Editorial Figures ──────────────────────────────────
+    // v1 of the R2R DACs Editorial Figures layer. Ships with one
+    // figure: the "Inside the R2R Ladder" signal-chain diagram. The
+    // figure operates at a different level of abstraction than the
+    // NOS DACs "Inside the NOS DAC" figure — where NOS shows the DAC
+    // as a whole (input, ladder, output stage, filter) and lands the
+    // claim about *what is not in the path*, the R2R figure shows
+    // what is *inside the ladder itself* and lands the claim that
+    // every bit corresponds to a physical resistor.
+    //
+    // Image sourcing — DEFERRED 2026-06-09:
+    //   Per the brief, image categories searched were:
+    //     * Discrete R2R ladder board close-up
+    //     * PCM63 / PCM1702 / PCM1704 photographs
+    //     * Rights-safe vintage R2R DAC internals (distinct from the
+    //       TDA1541A image on the NOS DACs page)
+    //   Wikimedia Commons returned no usable candidates: PCM63 /
+    //   PCM1702 / PCM1704 searches returned empty; "discrete resistor
+    //   ladder DAC" returned an unrelated PDF; AD1865 search returned
+    //   geographic results (an unrelated chapel in Darwen named after
+    //   the year 1865); "Burr Brown DAC" returned unrelated electronics
+    //   product photos. Manufacturer-published photography of discrete
+    //   ladder boards (TotalDAC, Audio Note UK, Holo) is rights-
+    //   encumbered.
+    //   Per the editorial standard (the absence of a mediocre image
+    //   is a feature, not a defect) the page ships with the signal-
+    //   chain figure alone, matching the SET pattern. An ImageFigure
+    //   can be added as the FIRST entry in the figures array when a
+    //   clean asset surfaces — preferred candidates remain a discrete
+    //   ladder card close-up (TotalDAC, AN-UK Level 4+, Holo May) or
+    //   a PCM63 / PCM1704 standalone image, both distinct from the
+    //   TDA1541A photograph already used on the NOS DACs page.
+    figures: [
+      {
+        kind: 'signal-chain',
+        title: 'Inside the R2R Ladder',
+        subtitle: 'Every bit is a resistor.',
+        nodes: [
+          { label: 'PCM Bit Stream', sublabel: 'parallel multi-bit word' },
+          { label: 'Bit-Switched Voltage Divider', sublabel: 'each bit selects Vref or ground' },
+          { label: 'Summed Resistor Ladder', sublabel: 'precision R-2R network' },
+          { label: 'Analog Output Voltage', sublabel: 'one physical voltage per code' },
+        ],
+        caption: 'An R2R DAC converts a digital sample to an analog voltage by summing contributions from a network of precision-matched resistors. Every bit\'s weight is a physical resistor in the ladder. The architecture trades the integration economics of delta-sigma for monotonic linearity and an auditable, voiced conversion stage.',
+      },
+    ],
+  },
 ];
 
 /**
