@@ -364,6 +364,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'belt-drive-turntables',
         relation: 'The analog-source mechanical-drive partner. SET is the amplification node of the canonical Musical Communication chain; belt-drive turntables are the mechanical-drive node at the source end of that chain, setting the noise floor the entire downstream signal path inherits. Both pages argue that a deliberate engineering trade — passive-driver amplification at one end, compliant mechanical isolation at the other — produces a result the measurement framework does not fully weight.',
       },
+      {
+        slug: 'musical-communication-school',
+        relation: 'The school where the SET argument lives. The Musical Communication School page widens beyond the amplification node to the chain-as-system commitment — every junction voiced together, end to end. Step up one editorial level to see how SET fits among the school\'s other voiced commitments.',
+      },
       // The renderer suppresses unrendered links automatically.
     ],
     links: [
@@ -508,6 +512,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       {
         slug: 'belt-drive-turntables',
         relation: 'The analog-source mechanical counterpart in the same chain-coherence argument. NOS argues that the digital path should preserve transient continuity through filtering; belt-drive argues that the analog mechanical path should preserve quietness through isolation. The Musical Communication chain runs both source-side commitments in parallel when digital and analog coexist.',
+      },
+      {
+        slug: 'musical-communication-school',
+        relation: 'The school where the NOS argument lives. The Musical Communication School page widens beyond the digital-filtering node to the chain-as-system commitment — NOS preserves transient continuity through filtering as one expression of the school\'s "every junction is a voicing decision" posture. Step up one editorial level to see the full editorial frame.',
       },
       // The renderer suppresses unrendered links automatically.
     ],
@@ -674,6 +682,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'belt-drive-turntables',
         relation: 'Sibling source-side argument on the analog mechanical axis. R2R names conversion architecture as a voiced commitment; belt-drive names mechanical drive as a voiced commitment. The two pages argue from opposite source-side modalities (digital conversion, analog mechanical) that the chain\'s upstream choices should be auditable and selected together rather than abstracted into measurement-target components.',
       },
+      {
+        slug: 'musical-communication-school',
+        relation: 'The school where the R2R argument lives. The Musical Communication School page widens beyond the conversion-architecture node to the chain-as-system commitment — R2R names the conversion stage as a voiced commitment built from physical resistors, one expression of the school\'s "every junction is a voicing decision" posture. Step up one editorial level to see the full editorial frame.',
+      },
     ],
     links: [
       {
@@ -828,6 +840,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       {
         slug: 'belt-drive-turntables',
         relation: 'The mechanical-drive partner one chain link upstream. Belt-drive sets the noise floor the platter inherits; SUTs sets the electrical impedance and voltage gain at the cartridge interface. Both are voiced commitments at adjacent junctions of the analog-source side, and the canonical chain runs belt-drive → cartridge → SUT → phono → tube line stage → amplifier → high-efficiency speaker by editorial design.',
+      },
+      {
+        slug: 'musical-communication-school',
+        relation: 'The school where the SUT argument lives. The Musical Communication School page widens beyond the cartridge-to-phono interface to the chain-as-system commitment — SUTs name the analog-source interface as a voiced commitment, one expression of the school\'s "every junction is a voicing decision" posture. Step up one editorial level to see how SUTs fit among the school\'s other voiced commitments.',
       },
     ],
     links: [
@@ -1000,6 +1016,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'belt-drive-turntables',
         relation: 'The mechanical-source partner at the opposite end of the chain. Belt-drive sets the source-side noise floor through mechanical isolation; high-efficiency speakers make the source-side quietness audible at the listener through their dynamic-ease and microdynamic-resolution advantages. The chain runs from belt-drive at the source to high-efficiency speaker at the terminus, with the same chain-as-system posture at every node between.',
       },
+      {
+        slug: 'musical-communication-school',
+        relation: 'The school where the high-efficiency loudspeaker argument lives. The Musical Communication School page widens beyond the acoustic-translation node to the chain-as-system commitment — high-efficiency speakers are the terminating commitment that retroactively makes the school\'s upstream voicing choices editorially correct. Step up one editorial level to see how the speaker fits among the school\'s other voiced commitments.',
+      },
     ],
     links: [
       {
@@ -1168,6 +1188,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'belt-drive-turntables',
         relation: 'The analog-source-side partner at the opposite end of the chain. Belt-drive names the mechanical-drive decision as a voiced commitment; Class A names the amplifier bias decision as a voiced commitment. Both pages argue that a deliberate engineering trade — compliant mechanical isolation at the source, full-cycle bias at the amplifier — produces a result the measurement framework does not fully weight.',
       },
+      {
+        slug: 'musical-communication-school',
+        relation: 'The school where the Class A argument lives. The Musical Communication School page widens beyond the bias-posture node to the chain-as-system commitment — Class A names the amplifier bias as a voiced commitment, one expression of the school\'s "every junction is a voicing decision" posture. Step up one editorial level to see how Class A fits among the school\'s other voiced commitments.',
+      },
     ],
     links: [
       {
@@ -1326,6 +1350,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       {
         slug: 'r2r-dacs',
         relation: 'Sibling digital-source partner. R2R names conversion architecture as a voiced commitment; belt-drive names mechanical drive as a voiced commitment. The two pages argue from opposite source-side modalities (digital conversion, analog mechanical) that the chain\'s upstream choices should be auditable and selected together rather than abstracted into measurement-target components.',
+      },
+      {
+        slug: 'musical-communication-school',
+        relation: 'The school where the belt-drive argument lives. The Musical Communication School page widens beyond the mechanical-drive node to the chain-as-system commitment — belt-drive names mechanical isolation between motor and platter as a voiced commitment, one expression of the school\'s "every junction is a voicing decision" posture. Step up one editorial level to see the full editorial frame.',
       },
     ],
     links: [
