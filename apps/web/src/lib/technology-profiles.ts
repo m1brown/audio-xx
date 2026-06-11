@@ -348,11 +348,15 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'high-efficiency-loudspeakers',
         relation: 'The speaker-side partner that retroactively makes SET\'s power envelope editorially correct rather than insufficient. SET argues at the amplification node; high-efficiency loudspeakers argue at the acoustic-translation node. Neither page is complete without the other — sensitivity is what determines whether 1–25 W is concert-level or polite, and the chain has to be voiced together.',
       },
+      {
+        slug: 'nos-dacs',
+        relation: 'The canonical digital-source partner when digital enters the chain. SET listeners committed to tonal density and transient continuity at the amplification side tend to choose NOS DACs at the conversion side; both technologies argue the same posture (deliberate engineering trades for tonal density and transient continuity) from opposite ends of the signal path.',
+      },
+      {
+        slug: 'r2r-dacs',
+        relation: 'Sibling digital-source partner on the conversion-architecture axis. SET argues that the amplification stage should be auditable and voiced rather than abstracted into measurement targets; R2R argues the same for digital-to-analog conversion. The SET + R2R + high-efficiency-speaker chain is one expression of that shared posture end-to-end.',
+      },
       // Future technology pages — added when they ship:
-      //   - nos-dacs / r2r-dacs (already shipped; SET appears in their
-      //                          relatedTechnologySlugs but the reverse
-      //                          link is deferred until a deeper editorial
-      //                          revision pass)
       //   - class-a-amplification (broader school)
       // The renderer suppresses unrendered links automatically.
     ],
@@ -487,11 +491,12 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'high-efficiency-loudspeakers',
         relation: 'The speaker-side partner that terminates the canonical NOS + SET + high-efficiency-speaker chain. NOS preserves transient continuity and tonal density through digital-to-analog conversion; high-efficiency speakers preserve that same posture through the acoustic translation, with sensitivity as the architectural commitment the chain has been voiced for.',
       },
+      {
+        slug: 'r2r-dacs',
+        relation: 'The sibling conversion-architecture page. NOS is a filtering decision (don\'t upsample, don\'t apply a long FIR digital filter); R2R is a conversion architecture (use a resistor ladder, not a delta-sigma modulator). Most NOS DACs are R2R, and most R2R DACs run NOS, but the concepts are independent — start here for the filtering decision; go to R2R for the conversion architecture.',
+      },
       // Future technology pages — added when they ship:
       //   - class-a-amplification (broader school)
-      // The r2r-dacs reverse link is deferred until a deeper editorial
-      // revision pass — NOS DACs already implies the R2R conversation,
-      // and the R2R page links here.
       // The renderer suppresses unrendered links automatically.
     ],
     links: [
