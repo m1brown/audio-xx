@@ -344,12 +344,15 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'suts',
         relation: 'The analog-source-side partner. The cartridge → SUT → tube phono → SET → high-efficiency speaker chain is the most editorially-developed system in the Musical Communication School cluster; SUTs argue at the cartridge-to-phono interface what SET argues at the amplification stage — passive interfaces, voiced components, and choices selected together rather than independently.',
       },
+      {
+        slug: 'high-efficiency-loudspeakers',
+        relation: 'The speaker-side partner that retroactively makes SET\'s power envelope editorially correct rather than insufficient. SET argues at the amplification node; high-efficiency loudspeakers argue at the acoustic-translation node. Neither page is complete without the other — sensitivity is what determines whether 1–25 W is concert-level or polite, and the chain has to be voiced together.',
+      },
       // Future technology pages — added when they ship:
       //   - nos-dacs / r2r-dacs (already shipped; SET appears in their
       //                          relatedTechnologySlugs but the reverse
       //                          link is deferred until a deeper editorial
       //                          revision pass)
-      //   - high-efficiency-loudspeakers (speaker-side partner)
       //   - class-a-amplification (broader school)
       // The renderer suppresses unrendered links automatically.
     ],
@@ -480,8 +483,11 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'suts',
         relation: 'Source-side counterpart on the analog axis. NOS argues that the digital path should preserve transient continuity and tonal density through filtering; SUTs argue that the analog interface should preserve the cartridge\'s character through the gain stage. The two pages name complementary parts of the same source-side commitment, and the canonical Musical Communication system runs both.',
       },
+      {
+        slug: 'high-efficiency-loudspeakers',
+        relation: 'The speaker-side partner that terminates the canonical NOS + SET + high-efficiency-speaker chain. NOS preserves transient continuity and tonal density through digital-to-analog conversion; high-efficiency speakers preserve that same posture through the acoustic translation, with sensitivity as the architectural commitment the chain has been voiced for.',
+      },
       // Future technology pages — added when they ship:
-      //   - high-efficiency-loudspeakers (speaker-side partner)
       //   - class-a-amplification (broader school)
       // The r2r-dacs reverse link is deferred until a deeper editorial
       // revision pass — NOS DACs already implies the R2R conversation,
@@ -639,6 +645,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'suts',
         relation: 'Sibling argument on the analog-source axis. R2R names the conversion architecture as a voiced component built from physical resistors; SUTs name the cartridge-to-phono interface as a voiced component built from a physical transformer. The Audio Note UK chain — transformer-coupled wherever possible, including at the digital-to-analog output stage — is where the two arguments meet end-to-end.',
       },
+      {
+        slug: 'high-efficiency-loudspeakers',
+        relation: 'The acoustic-translation terminus of the canonical R2R + SET + high-efficiency-speaker chain. R2R argues that the conversion stage is a voiced commitment built from auditable physical parts; high-efficiency speakers argue that the speaker-to-room interface is the architectural commitment the upstream chain has been voiced for. Both pages refuse to abstract a major chain decision into a measurement target.',
+      },
     ],
     links: [
       {
@@ -781,6 +791,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       {
         slug: 'r2r-dacs',
         relation: 'Sibling argument on the digital-conversion axis. R2R names the conversion architecture as a voiced component built from physical resistors; SUTs name the cartridge-to-phono interface as a voiced component built from a physical transformer. The Audio Note UK chain — transformer-coupled wherever possible, including at the digital-to-analog output stage — is where the two arguments meet end-to-end.',
+      },
+      {
+        slug: 'high-efficiency-loudspeakers',
+        relation: 'The acoustic-translation terminus of the canonical SUT-fed chain. SUTs argue that the analog-source interface is a voiced commitment; high-efficiency loudspeakers argue that the speaker-to-room interface is the architectural commitment the rest of the chain has been voiced for. The cartridge → SUT → tube phono → SET → high-efficiency speaker system is the school\'s flagship — both pages name a junction in it.',
       },
     ],
     links: [
