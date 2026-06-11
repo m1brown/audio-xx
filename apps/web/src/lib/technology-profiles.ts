@@ -1197,6 +1197,163 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       },
     ],
   },
+  // ── Belt-Drive Turntables ──────────────────────────────
+  // schools: musical-communication (chain-context partner), analog-
+  // purism, mechanical-isolation-tradition. The page sits at the
+  // analog-source mechanical-drive node — upstream of SUTs (which
+  // handles the electrical cartridge interface). Belt-drive is the
+  // mechanical-isolation commitment; direct-drive is the named
+  // contrast posture (instantaneous torque, precise pitch stability,
+  // motor noise managed by spec). Both have legitimate engineering
+  // cases and the page treats them fairly. The brand cluster is
+  // moderate (rega, michell, pro-ject confirmed; verdier mentioned
+  // as context only) but the cross-link payoff is high because
+  // every brand entry that mentions a turntable chain already
+  // implicitly mentions a drive-system decision.
+  //
+  // Discipline rule: this is NOT a Linn LP12 page, NOT a vintage
+  // turntable page, NOT a DIY turntable page, and NOT a turntable
+  // shoot-out. The topic is the mechanical-drive commitment and
+  // its consequences for noise floor, pitch behavior, and
+  // upstream cartridge / phono / amplifier chain decisions.
+  {
+    names: [
+      'belt-drive turntables',
+      'belt drive turntables',
+      'belt-drive',
+      'belt drive',
+    ],
+    displayName: 'Belt-Drive Turntables',
+    tagline: 'Mechanical isolation through compliance — the motor and the platter, deliberately not connected directly.',
+    philosophy: 'A belt-drive turntable couples the motor to the platter through a compliant belt rather than through a direct mechanical connection. The decision is the mechanical equivalent of the SUT or the Class A bias commitment — a deliberate trade of one engineering property (instantaneous torque, ruler-perfect pitch stability) for another (mechanical-noise isolation between motor and platter, freedom from cogging artifacts). Direct-drive turntables — Technics SP-10R, SL-1200G, SL-1500C, and the broader Japanese direct-drive tradition — win on pitch stability, startup speed, sustained-load behavior, and freedom from belt wear; they are coherent engineering with a clear use case (broadcast, DJ, archival, demanding orchestral material). The belt-drive argument is not that direct-drive is wrong; it is that the mechanical-isolation route, when executed against high-mass platters and suspended subchassis traditions, produces a noise-floor inheritance to the cartridge that the listener experiences as quietness between notes, holographic spatial presentation, and freedom from any audible motor-related artifact. Listeners committed to this trade have chosen it for six decades, across British (Linn LP12, Rega Planar, Michell Gyro), continental European (J.C. Verdier La Platine, Pro-Ject), and American traditions.',
+    philosophyExtended: 'The mainstream reading of belt-drive turntables is that they are an early-1970s compromise — necessary when direct-drive motors had not yet become inexpensive and quiet enough to use without isolation, kept alive by audiophile nostalgia after Technics, Denon, and the broader Japanese industry solved the direct-drive engineering problem. That reading misreads what belt-drive turntable designers chose. A belt-drive turntable in the Linn / Rega / Michell / Pro-Ject tradition is a *mechanical-isolation system* in which the belt is one element — typically combined with a suspended subchassis (Linn LP12, Michell Gyro), a high-mass platter acting as a flywheel (Verdier La Platine, Rega RP10 / P10), or a low-mass plinth voiced for resonance management (Rega Planar series). The drive-system designer in this tradition treats the motor as a noise source that must be isolated from the cartridge end, and uses every available mechanical degree of freedom — belt compliance, plinth resonance management, platter mass, subchassis suspension — to achieve that isolation. Direct-drive abandons the isolation framing and treats the motor as something that can be made quiet enough by precision engineering at the motor itself; the two routes solve the same problem (a stable, low-noise platter rotation) with different commitments.\n\nAfter five decades of continuous commercial production by serious brands (Linn since 1973, Rega since 1973, Michell since the 1970s, Pro-Ject since 1991, J.C. Verdier La Platine in continuous production for decades, plus the broader European and American suspended-subchassis cluster), the position is durable. Belt-drive has not been displaced by direct-drive even at price points where both are available. The persistence reflects what listeners report: a specific quietness between notes and a specific holographic presentation that suspended belt-drive systems produce, and that direct-drive systems — however technically excellent — do not produce in the same way.',
+    whatItIs: 'A belt-drive turntable separates the motor from the platter mechanically. The motor (typically an AC synchronous motor or a DC motor with electronic speed regulation) sits in the plinth, either on rubber feet (Rega), on a separate plinth bay (Verdier, Linn LP12 outboard supplies), or on a suspended subchassis isolated from the platter assembly (Linn LP12, Michell Gyro). A drive belt — typically rubber, but sometimes silicone, neoprene, mylar tape, or thread — wraps around the motor pulley and the platter (or sub-platter) and transmits torque through belt friction. The compliance of the belt isolates motor vibration from the platter; the elasticity stores enough kinetic energy that small motor-speed perturbations are smoothed before reaching the cartridge. Platter mass plays a complementary role — heavier platters (Verdier La Platine at ~25 kg, Rega RP10 at lower mass with high-density material) act as flywheels that resist instantaneous speed variation, further smoothing pitch behavior. Direct-drive by contrast couples the motor rotor directly to the platter spindle, with no belt, no isolation element, and motor noise managed by motor engineering (high-precision bearings, low-cogging coreless designs, electronic torque control). The two routes produce different trade-offs at the cartridge: belt-drive trades pitch precision and instantaneous torque for mechanical-noise isolation; direct-drive trades isolation for pitch precision and torque.',
+    whyItMatters: 'Belt-Drive Turntables matter because they are the mechanical-engineering decision upstream of every other analog-source choice. SUTs argue the electrical interface; tube phono stages argue gain and equalisation; cartridges argue the mechanical-to-electrical conversion. The turntable drive system argues the noise floor inherited by everything downstream — the cartridge cannot reject motor noise that has been coupled into the platter; the phono stage cannot reject motor-induced pitch instability; the SUT cannot reject low-frequency hum that the drive system transmitted. The structural claim is that the drive-system decision is the mechanical-isolation commitment upstream of the SUT junction, and that some properties of analog playback (the specific quietness between notes, the holographic spatial presentation) are decided here rather than downstream. The page exists so the editorial choice can be understood at the mechanical-architecture level rather than as Linn LP12 partisanship or vintage-turntable romanticism. If turntable design is judged primarily by measured wow/flutter and instantaneous torque, direct-drive wins. If it is judged by how quiet the noise floor inherited by the cartridge becomes and how musical the resulting silence sounds between notes, belt-drive makes a defensible case validated by five decades of repeated commercial production and committed listener demand.',
+    strengths: [
+      'Mechanical-noise isolation between motor and cartridge as a structural property — the belt absorbs vibration that direct coupling would transmit; listeners experience this as a specific quietness in the space between notes and a freedom from any motor-related artifact in the cartridge output',
+      'Suspended-subchassis and high-mass-platter compatibility — belt-drive accommodates platter masses and subchassis suspension geometries that direct-drive cannot, because the motor does not have to support the platter mass; this opens the design space for Verdier La Platine, Michell Gyro, Linn LP12, and similar approaches that direct-drive would not allow',
+      'Holographic spatial presentation as a reported listener experience — across multiple implementations from different manufacturers (Linn, Rega, Michell, Pro-Ject, Verdier), listeners report a specific spatial quality that belt-drive produces and direct-drive does not, suggesting an architectural cause rather than per-implementation variance',
+      'Mechanical-architecture as visible design philosophy — belt-drive systems publish the isolation strategy in their physical form (suspended subchassis, exposed belt, mass-loaded platter) in a way the listener can see, hold, and reason about; the brand\'s editorial position is visible at the chassis level',
+      'A durable architectural commitment across five decades — Linn LP12 continuous production since 1973; Rega Planar lineage from 1973; Michell Engineering since the 1970s; Verdier La Platine in continuous production for decades; Pro-Ject since 1991; the position is durable in a way that fashion-driven categories are not',
+    ],
+    tradeoffs: [
+      'Pitch stability is bounded by belt compliance — direct-drive achieves wow/flutter figures (typically <0.025% W/F) that even high-end belt-drive struggles to match; demanding orchestral material with sustained tones (oboe, French horn, sustained piano) will reveal the difference to attentive listeners',
+      'Instantaneous torque is limited by what the belt can transmit — direct-drive turntables come up to speed in fractions of a second and resist sudden load (DJ scratching, stylus drag on heavy modulation); belt-drive takes 1–4 seconds to reach speed and may show measurable speed drop on heavy-modulation passages',
+      'Belt wear, tension drift, and slip are real maintenance commitments — belts stretch over months and years, change properties with temperature and humidity, and may slip if motor torque or platter inertia are mismatched; the belt is a serviceable item, not a permanent component',
+      'Startup, off-speed, and 33/45 switching are mechanical compromises — switching speed on a belt-drive table typically requires moving the belt to a different motor-pulley step or changing motor regulation, with corresponding stabilization time; direct-drive offers instant electronic speed switching',
+      'Direct-drive and idler-drive legitimately win on pitch precision, instantaneous torque, and freedom from belt-related variance — listeners running broadcast-derived chains, archival workflows, DJ use cases, demanding orchestral repertoire, or who simply prefer the engineering-precision posture are correctly served by Technics SP-10R / SL-1200G or by heritage idler designs; the belt-drive argument is principled, not universally better',
+    ],
+    systemFit: 'Belt-drive turntables pair naturally with the canonical analog-source chain the Musical Communication School cluster has voiced for decades: low-output moving-coil cartridges (EMT, Ortofon SPU, Audio Note IO, Denon DL-103R) → Auditorium 23 Hommage T1 SUT → tube MM phono stage (Shindo, Leben RS-30EQ, Audio Note M-series, Aurorasound VIDA) → tube line stage → SET or Class A amplification → high-efficiency speakers (DeVore, AN-E, Cube). The drive-system decision sets the noise floor that everything downstream inherits; the chain is the unit of design, and the belt-drive commitment is what makes the SUT-and-tube-phono cluster\'s quietness audible at the cartridge. Canonical pairings: Linn LP12 (suspended subchassis) with Linn / Rega tonearms and Ortofon / Audio Note cartridges, into Naim or Shindo electronics; Rega Planar 3 / RP6 / RP10 / Naia with the Rega RB-arm family and Rega / Ortofon cartridges; Michell Gyro SE with SME / Origin Live tonearms and a range of MC cartridges; Pro-Ject lineup (Debut Carbon through The Signature) at the accessible-to-premium price ladder; J.C. Verdier La Platine with EMT 9-series tonearm and broadcast-tradition MC cartridges. Anti-pairings reveal the trade-off: broadcast and archival workflows where instantaneous speed stability is editorially correct (use direct-drive — Technics SP-10R is the reference); DJ and turntablism (use direct-drive; belt-drive is structurally wrong for the use case); large-room reference setups where the cartridge / phono / amp chain has been chosen for measurement-target precision (the drive-system choice should match the chain\'s posture, not contradict it); demanding orchestral repertoire where the listener anchors on pitch stability over noise floor; and casual plug-and-play setups where the belt-tension and suspended-subchassis maintenance reads as friction rather than as engineering discipline.',
+    relatedBrandSlugs: [
+      {
+        slug: 'rega',
+        relation: 'The British belt-drive reference for accessible-to-flagship turntables. The Planar series (Planar 1, 2, 3, P6, P8, P10, Naia) carries the low-mass plinth + rigid-bearing + RB-tonearm philosophy continuously since 1973 — belt-drive expressed through resonance management rather than suspended subchassis. The brand argues that engineering precision and belt-drive are not incompatible.',
+      },
+      {
+        slug: 'michell',
+        relation: 'The British suspended-subchassis expression. The Gyro SE and the broader Gyro / Orbe lineup carry the Linn LP12-tradition suspended-subchassis argument with Michell\'s mechanical-engineering posture (precision-machined platter, oil-pumped bearing, acrylic-and-metal mass loading); the chassis publishes the isolation strategy in its physical form.',
+      },
+      {
+        slug: 'pro-ject',
+        relation: 'The Austrian accessible-tier belt-drive specialist. The Debut Carbon, X1 / X2, Classic, Xtension, and The Signature lineup carries the belt-drive argument at price points from entry-level to upper specialist, with continuous production from Pro-Ject since 1991 and a wide tonearm / cartridge ecosystem matched to each tier.',
+      },
+      {
+        slug: 'technics',
+        relation: 'Not a belt-drive brand — the named contrast. Technics SP-10R, SL-1200G / GR / Mk7, SL-1500C, and the broader Japanese direct-drive tradition argue from the opposite mechanical-engineering posture: precision motor engineering, electronic speed control, and instantaneous torque achieve the same pitch-stability and noise-floor goals through direct coupling. The cross-link makes the contrast visible.',
+      },
+      {
+        slug: 'ortofon',
+        relation: 'Cartridge partner across the belt-drive cluster. Ortofon SPU and the broader MC line are widely paired with belt-drive turntables (Linn, Rega, Michell, Verdier) because the cartridge\'s mass and compliance characteristics match the medium-mass-tonearm tradition that belt-drive plinths typically support, and the belt-drive noise floor makes the SPU\'s tonal density audible.',
+      },
+      {
+        slug: 'emt',
+        relation: 'Cartridge partner in the J.C. Verdier / high-mass belt-drive tradition. EMT JSD and HSD cartridges paired into EMT 9-series tonearms (909, 912, 928) on Verdier La Platine or comparable high-mass belt-drive platforms produce the canonical broadcast-cartridge-into-mass-loaded-platter chain that the Musical Communication School cluster has voiced for decades.',
+      },
+      {
+        slug: 'aurorasound',
+        relation: 'Phono stage partner. The VIDA MKII\'s low-noise tube MM input and flexible loading options are designed to reveal cartridge character; belt-drive turntables\' isolation strategy is what makes that character audible without motor-noise contamination. The cross-link is on the chain-coherence side.',
+      },
+      {
+        slug: 'auditorium-23',
+        relation: 'System-context cross-link. A23\'s chain-coherence argument extends to the drive-system decision — the canonical chain ends at a high-efficiency loudspeaker only if it begins at a sufficiently-isolated mechanical source, and the Hommage T1 SUT presupposes the kind of noise-floor isolation that belt-drive (or carefully-implemented direct-drive) produces.',
+      },
+    ],
+    relatedTechnologySlugs: [
+      {
+        slug: 'suts',
+        relation: 'The next chain link downstream. Belt-drive establishes the mechanical noise floor at the platter; SUTs handle the electrical interface from cartridge to phono stage. Both pages argue that the chain decision should be visible and voiced rather than abstracted into measurement targets — at the mechanical and electrical junctions of the analog-source side respectively.',
+      },
+      {
+        slug: 'set',
+        relation: 'The canonical amplification partner in the chain belt-drive turntables typically feed. The Musical Communication School chain runs from a belt-drive turntable through a low-output MC cartridge, SUT, tube phono, line stage, and SET amplifier to a high-efficiency speaker; this page names the source end of that chain.',
+      },
+      {
+        slug: 'high-efficiency-loudspeakers',
+        relation: 'The acoustic terminus the belt-drive chain is voiced for. The mechanical-noise isolation belt-drive achieves at the source is what makes the high-efficiency speaker\'s dynamic-ease and microdynamic-resolution arguments audible at the listener — without the source-side quietness, the speaker\'s low-volume sensitivity advantage cannot be expressed.',
+      },
+      {
+        slug: 'class-a-amplification',
+        relation: 'The amplification-side posture that pairs with the belt-drive analog-source-side commitment. Both pages argue that a voiced, visible engineering trade — mechanical isolation at the source, full-cycle bias at the amplifier — produces a result that the measurement framework does not fully weight. The chain runs from belt-drive turntable through Class A amplification to high-efficiency speaker by editorial design.',
+      },
+      {
+        slug: 'nos-dacs',
+        relation: 'The digital-source counterpart in the same chain-coherence argument. NOS argues that the digital path should preserve transient continuity through filtering; belt-drive argues that the analog mechanical path should preserve quietness through isolation. The Musical Communication chain runs both source-side commitments in parallel when digital and analog coexist.',
+      },
+      {
+        slug: 'r2r-dacs',
+        relation: 'Sibling digital-source partner. R2R names conversion architecture as a voiced commitment; belt-drive names mechanical drive as a voiced commitment. The two pages argue from opposite source-side modalities (digital conversion, analog mechanical) that the chain\'s upstream choices should be auditable and selected together rather than abstracted into measurement-target components.',
+      },
+    ],
+    links: [
+      {
+        label: 'Rega Research — Planar series (manufacturer page)',
+        url: 'https://www.rega.co.uk/',
+      },
+      {
+        label: 'Michell Engineering — Gyro / Orbe lineage (manufacturer page)',
+        url: 'https://www.michell-engineering.co.uk/',
+      },
+    ],
+    schoolsMemo: 'Belt-Drive Turntables express the Musical Communication, Analog Purism, and Mechanical-Isolation-Tradition schools at their intersection. The topology has a strong British affinity by historical centre of gravity (Linn, Rega, Michell), a continental-European affinity (Pro-Ject, J.C. Verdier), and a strong chain-coherence affinity with the SUT / tube phono / SET / high-efficiency-speaker cluster. It does not belong to any one school exclusively — like the brands that argue for it, it sits at the intersections.',
+    // ── Editorial Figures ──────────────────────────────────
+    // v1 of the Belt-Drive Turntables Editorial Figures layer.
+    // Ships with one figure: "Motor → Belt → Platter → Cartridge" —
+    // a 4-node chain illustrating the mechanical-isolation
+    // philosophy.
+    //
+    // Image sourcing — DEFERRED 2026-06-11:
+    //   Wikimedia Commons has rights-clean photographs of multiple
+    //   belt-drive turntables (Linn LP12, Rega Planar 3, Michell
+    //   Gyro, Pro-Ject Debut) at domestic-context tier; the editorial
+    //   gate is most likely cleared here of any technology page so
+    //   far. However time-boxed search was not run in this commit
+    //   — adding an ImageFigure entry is straightforward when the
+    //   candidate is selected. Preferred candidate categories:
+    //     * Linn LP12 on shelf (rights-clean Commons images exist)
+    //     * Rega Planar 3 close-up showing belt and platter
+    //     * Michell Gyro SE with visible suspended subchassis
+    //     * Pro-Ject Debut Carbon (most-photographed belt-drive
+    //       in audiophile press)
+    //   Discipline rule: must NOT make this a Linn LP12 page; the
+    //   image should illustrate the architectural commitment, not
+    //   a single brand expression. A photograph showing belt +
+    //   platter + plinth in context (any brand) clears the editorial
+    //   gate; a brand-anchored marketing shot does not.
+    figures: [
+      {
+        kind: 'signal-chain',
+        title: 'The Belt-Drive Mechanical Chain',
+        subtitle: 'Motor isolated from cartridge by deliberate compliance.',
+        nodes: [
+          { label: 'Motor', sublabel: 'AC synchronous or DC; vibration source' },
+          { label: 'Compliant Belt', sublabel: 'rubber, silicone, or thread — the isolation element' },
+          { label: 'Mass-Loaded Platter', sublabel: 'flywheel; smooths instantaneous speed' },
+          { label: 'Cartridge', sublabel: 'inherits the noise floor at the stylus' },
+        ],
+        caption: 'A belt-drive turntable is a mechanical-isolation system in which the belt is one element — combined with platter mass, plinth resonance management, and (in suspended designs) subchassis isolation. The trade is real: belt-drive gives up the instantaneous torque and pitch precision of direct-drive in exchange for mechanical-noise isolation between motor and platter that the cartridge end of the chain inherits as quietness between notes. The drive-system decision sets the noise floor that everything downstream — cartridge, SUT, phono, amplification, speaker — has to work with.',
+      },
+    ],
+  },
 ];
 
 /**
