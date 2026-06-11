@@ -360,6 +360,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'class-a-amplification',
         relation: 'The broader bias-posture page. SET is the most uncompromised expression of Class A — a single triode running through the entire signal cycle with no complementary device. The Class A page widens to push-pull tube (Leben), push-pull solid-state (Sugden, Accuphase), and solid-state single-ended (Pass First Watt SIT) which SET does not cover; go there for the bias decision, come back here for the SET-specific topology argument.',
       },
+      {
+        slug: 'belt-drive-turntables',
+        relation: 'The analog-source mechanical-drive partner. SET is the amplification node of the canonical Musical Communication chain; belt-drive turntables are the mechanical-drive node at the source end of that chain, setting the noise floor the entire downstream signal path inherits. Both pages argue that a deliberate engineering trade — passive-driver amplification at one end, compliant mechanical isolation at the other — produces a result the measurement framework does not fully weight.',
+      },
       // The renderer suppresses unrendered links automatically.
     ],
     links: [
@@ -500,6 +504,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       {
         slug: 'class-a-amplification',
         relation: 'The amplification-side partner sharing the voiced-not-measured posture. NOS argues that the digital path should preserve transient continuity and tonal density through filtering; Class A argues the same for amplification, biasing the active device for full-cycle linear operation rather than letting feedback correct switching artifacts. Both refuse to abstract a major chain decision into a measurement target.',
+      },
+      {
+        slug: 'belt-drive-turntables',
+        relation: 'The analog-source mechanical counterpart in the same chain-coherence argument. NOS argues that the digital path should preserve transient continuity through filtering; belt-drive argues that the analog mechanical path should preserve quietness through isolation. The Musical Communication chain runs both source-side commitments in parallel when digital and analog coexist.',
       },
       // The renderer suppresses unrendered links automatically.
     ],
@@ -662,6 +670,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'class-a-amplification',
         relation: 'The amplification-side partner sharing the voiced-not-measured posture. R2R names the conversion architecture as a voiced commitment built from physical resistors; Class A names the amplifier bias as a voiced commitment built from continuous conduction across the cycle. Both pages refuse to abstract a major chain decision into a measurement target, from opposite ends of the chain.',
       },
+      {
+        slug: 'belt-drive-turntables',
+        relation: 'Sibling source-side argument on the analog mechanical axis. R2R names conversion architecture as a voiced commitment; belt-drive names mechanical drive as a voiced commitment. The two pages argue from opposite source-side modalities (digital conversion, analog mechanical) that the chain\'s upstream choices should be auditable and selected together rather than abstracted into measurement-target components.',
+      },
     ],
     links: [
       {
@@ -812,6 +824,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       {
         slug: 'class-a-amplification',
         relation: 'The amplification-side bias-posture partner. SUTs argue that the cartridge-to-phono interface is a voiced commitment; Class A argues that the amplifier bias decision is a voiced commitment. Both refuse to treat the chain junction they own as a measurement target, and the canonical SUT-fed chain ends at a Class A amplifier — SET tube, push-pull tube, or low-power Class A solid-state — by editorial design.',
+      },
+      {
+        slug: 'belt-drive-turntables',
+        relation: 'The mechanical-drive partner one chain link upstream. Belt-drive sets the noise floor the platter inherits; SUTs sets the electrical impedance and voltage gain at the cartridge interface. Both are voiced commitments at adjacent junctions of the analog-source side, and the canonical chain runs belt-drive → cartridge → SUT → phono → tube line stage → amplifier → high-efficiency speaker by editorial design.',
       },
     ],
     links: [
@@ -980,6 +996,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'class-a-amplification',
         relation: 'The amplification-side partner across device families. Class A operates the active device through the entire signal cycle; high-efficiency loudspeakers make the modest power envelope that Class A typically produces (1–25 W single-ended SET, 25–50 W push-pull tube, 20–40 W solid-state Class A) editorially adequate. The Class A + high-efficiency-speaker chain runs from SET to Sugden to Pass First Watt to Leben — same speaker partner, different bias-and-topology expressions of the same posture.',
       },
+      {
+        slug: 'belt-drive-turntables',
+        relation: 'The mechanical-source partner at the opposite end of the chain. Belt-drive sets the source-side noise floor through mechanical isolation; high-efficiency speakers make the source-side quietness audible at the listener through their dynamic-ease and microdynamic-resolution advantages. The chain runs from belt-drive at the source to high-efficiency speaker at the terminus, with the same chain-as-system posture at every node between.',
+      },
     ],
     links: [
       {
@@ -1143,6 +1163,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       {
         slug: 'r2r-dacs',
         relation: 'Sibling digital-source argument. R2R names the conversion architecture as a voiced commitment built from physical resistors; Class A names the amplifier bias as a voiced commitment built from continuous conduction across the cycle. Both pages refuse to abstract a major chain decision into a measurement target.',
+      },
+      {
+        slug: 'belt-drive-turntables',
+        relation: 'The analog-source-side partner at the opposite end of the chain. Belt-drive names the mechanical-drive decision as a voiced commitment; Class A names the amplifier bias decision as a voiced commitment. Both pages argue that a deliberate engineering trade — compliant mechanical isolation at the source, full-cycle bias at the amplifier — produces a result the measurement framework does not fully weight.',
       },
     ],
     links: [
