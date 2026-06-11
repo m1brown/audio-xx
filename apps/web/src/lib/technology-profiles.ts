@@ -356,8 +356,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'r2r-dacs',
         relation: 'Sibling digital-source partner on the conversion-architecture axis. SET argues that the amplification stage should be auditable and voiced rather than abstracted into measurement targets; R2R argues the same for digital-to-analog conversion. The SET + R2R + high-efficiency-speaker chain is one expression of that shared posture end-to-end.',
       },
-      // Future technology pages — added when they ship:
-      //   - class-a-amplification (broader school)
+      {
+        slug: 'class-a-amplification',
+        relation: 'The broader bias-posture page. SET is the most uncompromised expression of Class A — a single triode running through the entire signal cycle with no complementary device. The Class A page widens to push-pull tube (Leben), push-pull solid-state (Sugden, Accuphase), and solid-state single-ended (Pass First Watt SIT) which SET does not cover; go there for the bias decision, come back here for the SET-specific topology argument.',
+      },
       // The renderer suppresses unrendered links automatically.
     ],
     links: [
@@ -495,8 +497,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'r2r-dacs',
         relation: 'The sibling conversion-architecture page. NOS is a filtering decision (don\'t upsample, don\'t apply a long FIR digital filter); R2R is a conversion architecture (use a resistor ladder, not a delta-sigma modulator). Most NOS DACs are R2R, and most R2R DACs run NOS, but the concepts are independent — start here for the filtering decision; go to R2R for the conversion architecture.',
       },
-      // Future technology pages — added when they ship:
-      //   - class-a-amplification (broader school)
+      {
+        slug: 'class-a-amplification',
+        relation: 'The amplification-side partner sharing the voiced-not-measured posture. NOS argues that the digital path should preserve transient continuity and tonal density through filtering; Class A argues the same for amplification, biasing the active device for full-cycle linear operation rather than letting feedback correct switching artifacts. Both refuse to abstract a major chain decision into a measurement target.',
+      },
       // The renderer suppresses unrendered links automatically.
     ],
     links: [
@@ -654,6 +658,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
         slug: 'high-efficiency-loudspeakers',
         relation: 'The acoustic-translation terminus of the canonical R2R + SET + high-efficiency-speaker chain. R2R argues that the conversion stage is a voiced commitment built from auditable physical parts; high-efficiency speakers argue that the speaker-to-room interface is the architectural commitment the upstream chain has been voiced for. Both pages refuse to abstract a major chain decision into a measurement target.',
       },
+      {
+        slug: 'class-a-amplification',
+        relation: 'The amplification-side partner sharing the voiced-not-measured posture. R2R names the conversion architecture as a voiced commitment built from physical resistors; Class A names the amplifier bias as a voiced commitment built from continuous conduction across the cycle. Both pages refuse to abstract a major chain decision into a measurement target, from opposite ends of the chain.',
+      },
     ],
     links: [
       {
@@ -800,6 +808,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       {
         slug: 'high-efficiency-loudspeakers',
         relation: 'The acoustic-translation terminus of the canonical SUT-fed chain. SUTs argue that the analog-source interface is a voiced commitment; high-efficiency loudspeakers argue that the speaker-to-room interface is the architectural commitment the rest of the chain has been voiced for. The cartridge → SUT → tube phono → SET → high-efficiency speaker system is the school\'s flagship — both pages name a junction in it.',
+      },
+      {
+        slug: 'class-a-amplification',
+        relation: 'The amplification-side bias-posture partner. SUTs argue that the cartridge-to-phono interface is a voiced commitment; Class A argues that the amplifier bias decision is a voiced commitment. Both refuse to treat the chain junction they own as a measurement target, and the canonical SUT-fed chain ends at a Class A amplifier — SET tube, push-pull tube, or low-power Class A solid-state — by editorial design.',
       },
     ],
     links: [
@@ -963,6 +975,10 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       {
         slug: 'r2r-dacs',
         relation: 'Sibling digital-source partner. R2R names conversion architecture as a voiced commitment; high-efficiency speakers name acoustic translation as a voiced commitment. The two pages argue from opposite ends of the chain that design choices should be visible, auditable, and selected together rather than abstracted into measurement-target components.',
+      },
+      {
+        slug: 'class-a-amplification',
+        relation: 'The amplification-side partner across device families. Class A operates the active device through the entire signal cycle; high-efficiency loudspeakers make the modest power envelope that Class A typically produces (1–25 W single-ended SET, 25–50 W push-pull tube, 20–40 W solid-state Class A) editorially adequate. The Class A + high-efficiency-speaker chain runs from SET to Sugden to Pass First Watt to Leben — same speaker partner, different bias-and-topology expressions of the same posture.',
       },
     ],
     links: [
