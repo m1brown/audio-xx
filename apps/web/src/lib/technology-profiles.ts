@@ -1028,6 +1028,159 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       },
     ],
   },
+  // ── Class A Amplification ──────────────────────────────
+  // schools: musical-communication, low-power-amplification (overlapping
+  // with SET), engineering-discipline-as-voicing (the bias-decision
+  // argument). The page sits at the amplification node alongside SET
+  // but operates one abstraction level higher: SET is a topology
+  // (single-ended triode), Class A is a posture (the active device
+  // conducts through the entire signal cycle). Most SET amplifiers
+  // are Class A; not all Class A amplifiers are SET. The page must
+  // not duplicate the SET argument — it widens to push-pull Class A
+  // (Sugden, Pass push-pull X.5/X.8) and solid-state single-ended
+  // Class A (First Watt SIT) which SET does not cover.
+  //
+  // Discipline rule: this is NOT a Pass Labs page, NOT a Sugden page,
+  // NOT a tube-amp page, and NOT a heat-sink-aesthetics page. The
+  // topic is the bias decision and its architectural-cascade
+  // consequences (thermal, supply, voicing). Class AB and Class D
+  // are named as the active alternatives, fairly.
+  {
+    names: [
+      'class a amplification',
+      'class-a amplification',
+      'class a',
+      'class-a',
+    ],
+    displayName: 'Class A Amplification',
+    tagline: 'A posture decision before it is a topology decision — the active device conducts through the entire signal cycle.',
+    philosophy: 'Class A amplification is the architectural commitment that the active device — tube, transistor, or FET — conducts through the entire audio signal cycle rather than switching off and on across portions of the waveform. The decision is upstream of topology (single-ended or push-pull), upstream of device family (tube or solid-state), and upstream of power rating. Class A persists because listeners committed to tonal continuity, harmonic naturalness, and freedom from crossover-region artifacts have chosen the bias decision for seven decades, across SET tubes (Audio Note UK, Shindo), Class A push-pull tubes (Leben CS600X), Class A solid-state push-pull (Sugden A21, Accuphase E-series), and single-ended Class A solid-state (Pass First Watt SIT designs). Class AB and Class D are coherent engineering — they win on efficiency, heat, cost, and dynamic envelope. The Class A argument is not that they are wrong; it is that operating the active device through the full cycle produces a different result than operating it through part of the cycle, and that the difference is what a chain voiced for tonal continuity is built around.',
+    philosophyExtended: 'The mainstream reading of Class A is that it is a vintage engineering position preserved by audiophile nostalgia — kept alive by tube enthusiasts and a small cluster of Class A solid-state holdouts (Sugden, Accuphase, Pass / First Watt) who refuse to move to more modern, more efficient designs. That reading misreads the architectural fact: Class A and Class AB do different things at the device. Class AB biases the active device to switch off across a portion of the signal cycle (typically the small-signal region around zero crossing), with feedback and crossover-region compensation managing the switching artifact. Class A biases the active device to conduct through the entire cycle, with no switching at all — the active device is in its linear operating region the whole time. The two routes are not equivalent at the transistor or tube; they produce different small-signal behavior, different harmonic structure, and different transient characteristics. The result listeners report most consistently is tonal continuity through transients and absence of "switching-character" artifacts in the small-signal region — and the consistency of the report across implementations from very different topologies (Sugden Class A push-pull solid-state, Pass First Watt single-ended SIT, Audio Note UK Class A SET tube, Leben Class A push-pull tube) suggests an architectural cause rather than per-implementation variance.\n\nThe persistence is durable. Sugden\'s A21 (1967) has been in continuous production for ~60 years; Nelson Pass\'s career across Threshold, Pass Labs, and First Watt has been a 50-year argument for low-power Class A solid-state; Accuphase\'s A-series Class A integrateds have been a Japanese reference for ~40 years; the tube tradition (Audio Note UK, Shindo, Leben) carries the same posture from the other end of device physics. After multiple generations of Class AB and Class D commercial success, Class A has not declined — it has stabilised as a permanent minority position by listeners who value the result enough to absorb the heat, the size, and the price floor.',
+    whatItIs: 'In a Class A amplifier, the active device — output tube, output transistor, or output MOSFET / SIT / JFET — is biased so that its quiescent current is at least half the peak signal current the device will deliver. The device therefore conducts current through the entire audio signal cycle (positive and negative excursion) with no portion of the waveform delivered by a switched-off device. Class AB by contrast biases the active devices to switch off across a small region around zero crossing, with a complementary pair handling the positive and negative halves separately and the small switching region managed by feedback. Class D switches the output device at high frequency (hundreds of kilohertz) between fully on and fully off, with the audio signal recovered by a reconstruction filter; the device is never operating in its linear region. The Class A decision is independent of topology (single-ended or push-pull), device family (tube or solid-state), and power rating. A 25 W push-pull Class A solid-state amplifier (Sugden A21, Accuphase E-380) operates in Class A throughout its range. A 200 W push-pull Class AB solid-state amplifier biases Class A through the first ~10 W and transitions to Class AB above that point — listeners call this "Class A up to X watts" and the spec is meaningful because the bias point determines small-signal behavior. The consequence of the Class A decision is high heat dissipation (most input power is converted to heat in the output devices, not to audio), large heatsinks (or in tubes, glowing plates), substantial power supply (the device must be biased to conduct the full envelope), and a chassis-and-thermal scale that the Class AB / Class D market does not have to absorb.',
+    whyItMatters: 'Class A matters because it is one of the clearest cases in audio where the *posture* decision — what the active device does across the signal cycle — produces a different sonic result than a topology decision or a power decision. SET argues at the topology level (single-ended). High-efficiency loudspeakers argue at the sensitivity level. NOS argues at the filtering level. Class A argues at the bias level — the question of whether the active device is on through the entire signal or only through part of it. The structural claim is that some properties listeners value (tonal continuity across transients, absence of crossover-region small-signal artifacts, harmonic structure that reads as natural rather than added) are decided at this junction, and that they are decided by the bias commitment rather than by feedback, topology, or device choice. The page exists so the editorial choice can be understood at the architectural-posture level rather than as Pass Labs nostalgia or "vintage Class A romanticism." If amplification is judged by efficiency, heat envelope, and power-per-dollar, Class AB and Class D are better engineering. If amplification is judged by what the active device does across the cycle and how that propagates to the output, Class A makes a defensible case validated by seven decades of repeated commercial production and continuous listener demand.',
+    strengths: [
+      'No crossover-region small-signal artifacts — the active device conducts through the entire signal cycle, so the small-signal region around zero crossing is not a transition between active and inactive devices; listeners experience this as tonal continuity through quiet passages and absence of switching-character on transients',
+      'Harmonic structure as a structural property of linear-region operation — Class A devices operate in their most linear region throughout the cycle; the harmonic content the listener hears is a property of the device biased into linearity, not a residue of feedback correcting non-linearity',
+      'Posture-independent of topology — the bias decision applies equally to single-ended (SET, First Watt SIT) and push-pull (Sugden, Leben, Accuphase), to tube and solid-state; this lets the Class A cluster span device families and topologies that would otherwise read as unrelated',
+      'Engineering discipline made visible — Class A chassis publish the trade in their physical form: exposed heat sinks (Sugden), large mass-thermal assemblies (Pass, Accuphase), or glowing output tubes (Audio Note, Shindo); the cost of the bias decision is not hidden, and the brand\'s editorial position is visible at the chassis level',
+      'A durable architectural commitment across seven decades — Sugden A21 in continuous production since 1967; Accuphase Class A integrateds since the 1970s; the Pass Labs / Threshold / First Watt continuity from the 1970s; the Audio Note UK / Shindo / Leben tube tradition; the position is durable in a way that fashion-driven topologies are not',
+    ],
+    tradeoffs: [
+      'Heat dissipation is real and continuous — Class A converts most input power to heat at the output device, and the chassis runs hot even at idle; this is a thermal commitment the listener accepts rather than an inefficiency to be engineered away, and rooms without ventilation or with heat-sensitive equipment nearby will feel the cost',
+      'Power efficiency is poor — Class A converts about 25% (push-pull, theoretical max) or ~50% (single-ended, theoretical max) of input power to output audio; the rest is heat; for any given output rating, a Class A amplifier draws meaningfully more wall power than a comparable Class AB or Class D design',
+      'Cabinet size, mass, and power supply requirements drive cost — the active devices must be biased for full-envelope conduction, the supply must deliver that bias current continuously, and the heatsinks must dissipate the heat; the price floor for a Class A amplifier at a given output rating is higher than for Class AB at the same rating',
+      'Power-per-dollar and power-per-pound trail Class AB and Class D — a 200 W Class A amplifier is exotic; a 200 W Class AB or Class D amplifier is mainstream; listeners who anchor on watts-per-dollar will see Class A as inefficient engineering, and the trade is invisible to that framework',
+      'Class AB and Class D legitimately win on efficiency, heat, weight, cost, and power-per-dollar — listeners who want high SPL in difficult rooms, who run multiple low-sensitivity speakers, who want compact integrated amplification, or who are at price tiers where the Class A trade dominates the rest of the chain are correctly served by well-designed Class AB or Class D; the Class A argument is principled, not universally better',
+    ],
+    systemFit: 'Class A amplification pairs naturally with brands and components whose ideas align on tonal continuity through transients and freedom from switching-character artifacts: voiced sources (analog front end with low-output MC + SUT chain, or NOS / R2R digital), moderate-to-high-sensitivity loudspeakers (typically 87 dB+; high-efficiency 93 dB+ for the SET / First Watt low-power expression), and listening rooms small-to-medium enough that the Class A power envelope is adequate. The canonical chains span the full device-family range: Audio Note UK Class A SET (300B Ongaku family) driving Audio Note AN-E speakers; Shindo Cortese 300B SET driving DeVore Orangutan or Altec horns; Leben CS600X Class A push-pull tube driving DeVore O/96 or Harbeth Super HL5; Sugden A21SE Class A push-pull solid-state driving Harbeth, Graham, ProAc, or DeVore O/93; Pass First Watt SIT (J2, F8) single-ended solid-state driving high-sensitivity speakers; Accuphase E-380 / E-650 Class A integrateds driving moderate-sensitivity floorstanders in the 88–92 dB range. The chain decision propagates: the Class A bias commitment presupposes a speaker partner whose sensitivity makes the modest Class A power envelope concert-level rather than insufficient. Anti-pairings reveal the trade-off: large rooms requiring 100+ W average SPL (Class A topology is inefficient at scale; Class AB or Class D delivers the same SPL at substantially lower wall power and chassis size); low-sensitivity loudspeakers (below 84 dB) where the Class A power envelope is insufficient; listeners with ventilation constraints or heat-sensitive equipment co-located; cost-floor-constrained builds where the Class A premium dominates the rest of the chain budget; and listeners who anchor amplifier evaluation on power-per-dollar or efficiency, who will read Class A as inefficient engineering and miss the editorial argument.',
+    relatedBrandSlugs: [
+      {
+        slug: 'sugden',
+        relation: 'The originating commercial Class A brand. The A21 (1967) was widely credited as the world\'s first commercial production Class A integrated amplifier, and the lineage has carried the low-power Class A solid-state argument continuously from West Yorkshire for nearly six decades. Heat sinks visible as a design feature — the chassis publishes the bias decision.',
+      },
+      {
+        slug: 'pass-labs',
+        relation: 'The American Class A architect across multiple eras. Nelson Pass\'s career through Threshold, Pass Labs (X.5 / X.8 / XA series Class A push-pull), and First Watt (SIT-based single-ended Class A) is a 50-year argument that Class A solid-state can carry the argument SET makes from the tube side. The Pass Labs entry serves as the page\'s entry point to both the Pass Labs and First Watt expressions.',
+      },
+      {
+        slug: 'audio-note',
+        relation: 'The British Class A SET expression. Audio Note UK\'s Ongaku family and the broader 300B-based amplification line argue Class A from the single-ended-triode side — the same bias commitment carried into a fundamentally different device family than the Sugden / Pass solid-state cluster.',
+      },
+      {
+        slug: 'leben',
+        relation: 'The Japanese Class A push-pull tube expression. The CS600X operates in Class A push-pull with KT77 / EL34 / 6L6 output tubes, producing ~32 W into 90–96 dB partners; the bias commitment is the same Sugden makes from the solid-state side, expressed through the Japanese-artisan tube tradition.',
+      },
+      {
+        slug: 'accuphase',
+        relation: 'The Japanese Class A solid-state reference. The E-380, E-650, A-48, A-300, and the broader Class A integrated and separate lineup carry the bias commitment at higher chassis-and-supply scale than Sugden, with the same architectural posture: the active devices operate Class A through the rated output, and the chassis publishes the trade in mass and heat dissipation.',
+      },
+      {
+        slug: 'shindo',
+        relation: 'Class A SET in the WE-tradition circuit-individuality form. Cortese 300B (single-ended) and the broader Shindo SET lineup carry Class A from the artisan-circuit side; the brand\'s editorial position presupposes a Class A bias commitment at the output stage even when the topology differs across the line.',
+      },
+      {
+        slug: 'devore',
+        relation: 'Not a Class A amplifier brand — the cross-link is on the speaker side. DeVore Orangutan O/93 and O/96 are the canonical speakers that make Class A\'s modest power envelope concert-level rather than insufficient; the Sugden + DeVore, Pass First Watt + DeVore, and Leben + DeVore chains are the most-cited modern Class A + high-efficiency pairings.',
+      },
+      {
+        slug: 'auditorium-23',
+        relation: 'System-context cross-link. A23\'s chain-coherence argument extends to amplifier-side choices — the canonical Musical Communication chain ends at a Class A amplifier (SET tube or push-pull tube or low-power solid-state) driving a high-efficiency speaker, with A23 cables and SUT at the source-side junctions.',
+      },
+    ],
+    relatedTechnologySlugs: [
+      {
+        slug: 'set',
+        relation: 'The most uncompromised expression of Class A — single-ended triode is a topology within Class A that gives up the push-pull complementary-device option and runs the single device through the entire cycle. Every SET amplifier operates Class A; the Class A page widens to push-pull Class A (Sugden, Leben, Accuphase) and solid-state single-ended Class A (First Watt SIT) that SET does not cover. Start on SET for the uncompromised case; come back here for the broader posture.',
+      },
+      {
+        slug: 'high-efficiency-loudspeakers',
+        relation: 'The speaker-side partner that retroactively makes the Class A power envelope editorially correct rather than insufficient. Class A\'s low efficiency and substantial heat dissipation are accepted in exchange for what the bias decision produces; high-efficiency loudspeakers are what make the modest output power adequate for real listening levels.',
+      },
+      {
+        slug: 'suts',
+        relation: 'The analog-source-side partner in the canonical Class A chain. SUTs are the passive interface at the cartridge; Class A is the bias commitment at the amplifier. Both pages argue that some chain decisions should be visible and voiced rather than abstracted into measurement targets, from opposite ends of the signal path.',
+      },
+      {
+        slug: 'nos-dacs',
+        relation: 'The digital-source partner sharing the voiced-over-measured posture. NOS preserves transient continuity and tonal density through filtering; Class A preserves the same posture through amplification, biasing the active device for full-cycle linear operation rather than letting feedback correct non-linear switching behavior.',
+      },
+      {
+        slug: 'r2r-dacs',
+        relation: 'Sibling digital-source argument. R2R names the conversion architecture as a voiced commitment built from physical resistors; Class A names the amplifier bias as a voiced commitment built from continuous conduction across the cycle. Both pages refuse to abstract a major chain decision into a measurement target.',
+      },
+    ],
+    links: [
+      {
+        label: 'J. E. Sugden — A21 lineage (manufacturer page)',
+        url: 'https://www.jesugden.co.uk/',
+      },
+      {
+        label: 'Pass Labs — Class A amplification (manufacturer page)',
+        url: 'https://www.passlabs.com/',
+      },
+    ],
+    schoolsMemo: 'Class A Amplification expresses the Musical Communication, Low-Power Amplification, and Engineering-Discipline-as-Voicing schools at their intersection. The topology has a strong Japanese-Artisan affinity (Leben, Shindo, Audio Note UK adjacent), an American-Designer affinity (Pass Labs / First Watt / Threshold), and a British affinity (Sugden, Audio Note UK). It does not belong to any one school exclusively — like the brands that argue for it, it sits at the intersections.',
+    // ── Editorial Figures ──────────────────────────────────
+    // v1 of the Class A Amplification Editorial Figures layer.
+    // Ships with one figure: "The Class A Posture" — a 4-node chain
+    // that walks through the bias decision and its consequences.
+    // The figure operates at the ARCHITECTURAL-POSTURE level — naming
+    // the bias decision rather than any specific topology or device
+    // family. The obvious "Source → Amp → Speaker" framing was
+    // rejected because it teaches nothing about the bias decision
+    // that is the page's actual topic.
+    //
+    // Image sourcing — DEFERRED 2026-06-11:
+    //   Per the editorial standard (the absence of a mediocre image
+    //   is a feature, not a defect), the page ships with the signal-
+    //   chain figure alone, matching the SET / R2R / SUTs / HE
+    //   Loudspeakers pattern. Candidate image categories — Sugden
+    //   exposed-heat-sink chassis, Pass Labs XA series, Accuphase
+    //   Class A integrated — are all rights-encumbered manufacturer
+    //   photography. A glowing 300B-tube close-up was previously
+    //   evaluated for SET and rejected for provenance / commercial-
+    //   branding reasons; the same constraint applies here. An
+    //   ImageFigure can be added as the FIRST entry in the figures
+    //   array when a rights-clean, commercial-branding-free,
+    //   magazine-quality photograph surfaces that names the
+    //   bias-posture argument rather than any single brand or
+    //   topology (a museum collection chassis or archival engineering
+    //   photograph is the most likely future candidate).
+    figures: [
+      {
+        kind: 'signal-chain',
+        title: 'The Class A Posture',
+        subtitle: 'The bias decision, not the topology decision.',
+        nodes: [
+          { label: 'Input Signal', sublabel: 'positive + negative excursion' },
+          { label: 'Active Device — Biased for Full Cycle', sublabel: 'tube, transistor, or FET' },
+          { label: 'Heat as Byproduct', sublabel: 'most input power dissipates as heat' },
+          { label: 'Output Without Crossover Region', sublabel: 'no on/off transition in the signal' },
+        ],
+        caption: 'Class A is a posture decision before it is a topology decision. The active device is biased to conduct through the entire audio signal cycle — positive and negative excursion alike — rather than switching off across portions of the waveform. The trade is real: heat, chassis size, and power-per-dollar are forfeit in exchange for tonal continuity through transients and absence of switching-character in the small-signal region. The bias commitment applies equally to single-ended and push-pull, to tube and solid-state, and to power ratings from 1 W (SET) through 200 W (large solid-state Class A) — what unites the cluster is the decision, not the implementation.',
+      },
+    ],
+  },
 ];
 
 /**
