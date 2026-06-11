@@ -1378,6 +1378,196 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
       },
     ],
   },
+  // ── Musical Communication School ───────────────────────
+  // First Schools-of-Thought entry. Lives in TECHNOLOGY_PROFILES
+  // (shares renderer with /tech/[slug]) rather than a separate
+  // /schools/[slug] route, because adding a new renderer would
+  // be an architecture change. The URL slug
+  // `/tech/musical-communication-school` is mildly imperfect (this
+  // is a school, not a technology) but the editorial content
+  // delivered through the existing renderer is correct and the
+  // navigability gain is immediate.
+  //
+  // The page is structurally different from the seven Technology
+  // Pages: it does not own a single architectural junction in the
+  // chain; it owns the editorial argument that the chain is the
+  // unit of design across all seven junctions. The relatedTechnology
+  // and relatedBrand cards together turn this page into the
+  // editorial map of every previously-shipped Tech Page and brand
+  // page that expresses the school.
+  //
+  // Discipline rule: this is NOT a brand championship page (do not
+  // privilege Audio Note UK, Shindo, or DeVore over the cluster),
+  // NOT a vintage page, NOT an "everything tube" page (some Class A
+  // solid-state brands belong; some tube brands do not). The
+  // editorial argument is about chain coherence and voiced choices,
+  // not about device family or commercial era.
+  {
+    names: [
+      'musical communication school',
+      'musical-communication school',
+      'musical communication',
+      'musical-communication',
+    ],
+    displayName: 'Musical Communication School',
+    tagline: 'The chain is the unit of design — voiced choices at every junction, end to end.',
+    philosophy: 'The Musical Communication School is the editorial position that audio system design is most coherent when every chain junction — cartridge, drive system, electrical interface, conversion, amplification, acoustic translation — is a voiced choice made against the chain\'s other voiced choices, rather than against an isolated measurement target. The school argues that the chain is the unit of design. Components selected to maximise individual specifications across uncoordinated bench tests produce systems that measure well and do not communicate music; components selected to express coherent editorial intent across the chain produce systems that listeners describe as alive, present, and emotionally legible. The school is not anti-measurement; measurement-based engineering brings real benefits when its results are weighed against the chain\'s editorial intent rather than chased as an end in themselves. The position has been argued continuously by brands and dealers since the 1970s, expressed through editorial commitments at every chain junction the Technology Pages corpus now documents, and durable enough across multiple generations of measurement-target consensus to deserve its own editorial home in the Audio XX map.',
+    philosophyExtended: 'The mainstream reading of the Musical Communication School is that it is an audiophile aesthetic preference — a taste for "warmth" or "tube colouration" or "vintage character" preserved by listeners who refuse to accept the measurement-target consensus the mainstream audio industry settled on in the 1980s and 1990s. That reading misreads what the school argues. A Musical Communication chain is not a tonal preference; it is an architectural commitment that every chain junction is a voicing decision made together with the other junctions, and that the resulting system has properties — tonal continuity through transients, microdynamic resolution at quiet listening levels, dynamic ease, the relationship between performer and listener that acoustic instruments produce in real rooms — that measurement-target component selection does not capture.\n\nThe school crystallised through the 1970s and 1980s in three editorially-related currents that have continued to converge: the British SET / Audio Note tradition (Peter Qvortrup, Andy Grove); the Japanese-Artisan tradition (Ken Shindo, Audio Note Japan early years, Sun Audio, Leben); and the German / European analog-interface tradition (Auditorium 23 / Keith Aschenbrenner, J.C. Verdier, the broader Western-Electric-tradition cluster). The British-American high-efficiency-speaker tradition (DeVore Fidelity, the Klipsch Heritage cluster, the WE / Altec heritage) provides the speaker-side anchor. The continental belt-drive turntable tradition (Linn, Rega, Michell, Verdier) provides the analog-source-side anchor. The school is durable across these geographically and linguistically distinct centres because the editorial argument is the same: the chain is the unit of design, the components must be voiced against each other, and some musical properties are decided at the chain level rather than at the component level.',
+    whatItIs: 'The Musical Communication School is defined by three editorial commitments that propagate through every chain junction. (1) **Voiced over specified** — every junction is a deliberate engineering trade made for an editorial result, not a maximisation of an isolated measurement. SET gives up power for tonal continuity; NOS DACs give up flat upper-octave response for transient continuity; SUTs give up universality for cartridge-specific voicing; belt-drive turntables give up pitch precision for mechanical isolation; Class A gives up efficiency for full-cycle linearity; high-efficiency speakers give up bandwidth for dynamic ease. (2) **The chain over the component** — selection at each junction presupposes the other junctions\' commitments. A 7 W SET amplifier is editorially correct in a chain ending at a 96 dB high-efficiency speaker; the same amplifier is editorially insufficient in a chain ending at an 86 dB conventional monitor. The chain decisions are not independent. (3) **Listener experience over measurement target** — the school argues that some properties of musical experience (dynamic ease at low SPL, tonal continuity through transients, the input-to-output ratio match with acoustic instruments) are decided at the chain level rather than at the component level, and that these properties are what listeners are choosing the chain for. None of the three commitments is an attack on measurement-based engineering; each is a structural claim that measurement is necessary but not sufficient.',
+    whyItMatters: 'The Musical Communication School matters because it is the only school of thought in modern audio that operates at the chain level rather than at the component level — and because the chain level is where the educational map the Audio XX Technology Pages now provides comes into focus. Every Technology Page in the corpus describes what one chain junction does. The school page is where the reader learns why those seven junction-level arguments share a coherent posture, why the canonical brands cluster the way they do, and how to recognise a chain expressing the school versus a chain that happens to use some of the same components without the editorial commitment. The page exists so a reader who has finished SET, NOS, R2R, SUTs, High-Efficiency Loudspeakers, Class A, or Belt-Drive Turntables can step up one editorial level and see how those arguments fit into a coherent school — and so the brand pages that name the school in their philosophy now point to an editorial home that holds the school\'s argument together. Other schools of audio exist (Studio Accuracy, Engineering-First, Romantic Realist); each has its own coherent posture. The Musical Communication School page is the first to be built because its corpus density has reached the threshold at which an editorial map adds clarity rather than authoring clarity that does not yet exist in the underlying work.',
+    strengths: [
+      'Chain-level coherence — the school\'s primary editorial property: every junction in a Musical Communication chain has been voiced against the others, and the resulting system reads as integrated rather than as a sum of independently-optimised components',
+      'Dynamic ease at low listening volumes — the canonical chain (low-output MC → SUT → tube phono → tube line stage → SET or Class A → high-efficiency speaker) is voiced for quiet listening; microdynamic resolution and tonal continuity become more legible at moderate SPL where the chain operates in its sweet spot',
+      'Brand-cluster density across geographic centres — Audio Note UK (Brighton), Shindo (Tokyo), Auditorium 23 (Frankfurt), DeVore (Brooklyn), Cube Audio (Poland), Leben (Tokyo), WLM (Austria), Rega and Michell (Britain), Pro-Ject (Austria), Verdier (France) — the school is geographically distributed and editorially coherent, which suggests an architectural cause rather than a regional fashion',
+      'Editorial argument that survives generations of measurement-target consensus — through the British solid-state high-power era (1970s–1980s), the Japanese digital-CD measurement consensus (1980s–1990s), the modern delta-sigma + Class D efficiency consensus (2000s–2020s), the Musical Communication School has continued to produce, be reviewed, and be bought; the position is durable in a way that fashion-driven design philosophies are not',
+      'Cross-pollinates with adjacent schools at the edges — Class A solid-state (Sugden, Pass / First Watt) is a Class-A-meets-Musical-Communication adjacency; the British monitor tradition (Harbeth, Graham, Spendor — only partially in catalog) bridges to the school on the chain-coherence side; the J.C. Verdier / EMT analog-front-end tradition bridges to it on the source side; the school does not require purity for membership',
+    ],
+    tradeoffs: [
+      'The chain is the unit of design — listeners who prefer to swap individual components experimentally, who buy a single piece of editorial-grade equipment to drop into a mainstream chain, or who anchor purchasing decisions on component reviews rather than chain context will find the school\'s posture frustrating; the school\'s argument is that swap-component thinking is precisely what the chain-as-system thinking is designed against',
+      'Universality is forfeit — the canonical chain has no universal pairing; the SET amplifier needs the high-efficiency speaker, the SUT needs the matched cartridge, the belt-drive turntable needs the tonally-dense phono stage; chains that mix Musical Communication components with measurement-target components produce a result that listeners often describe as muddled, where the editorial intent of each side fights the other',
+      'The brand cluster\'s price floor is meaningful — Audio Note UK, Shindo, TotalDAC, DeVore Orangutan, Auditorium 23 Hommage T1, J.C. Verdier La Platine, Cube Audio Nenuphar, Leben CS600X are all priced at editorial-grade tiers; entry into the school at flagship density requires significant capital, and the accessible tiers (Rega Planar 3, Pro-Ject, Sugden A21, Audio Note Kits) are real but the canonical chain at full editorial expression is not inexpensive',
+      'Measurement-target framework reads many school components as inferior engineering — SET measures with higher distortion than push-pull; NOS DACs measure with audible-band frequency-response roll-off; high-efficiency speakers measure with less-flat frequency response than conventional designs; belt-drive turntables measure with higher wow/flutter than direct-drive; listeners and reviewers who anchor on those metrics will see the school\'s components as flawed engineering, and the editorial argument is invisible to that framework',
+      'Other schools legitimately serve listeners the Musical Communication School does not — listeners committed to ruler-flat measured response, broadcast-grade pitch stability, high-SPL output in large rooms, DSP-led room correction, broadcast / archival workflows, or studio monitoring are correctly served by other schools (Studio Accuracy, Engineering-First); the school\'s argument is principled and bounded, not universally better',
+    ],
+    systemFit: 'A Musical Communication chain is recognisable at a glance once the visual signature is internalised: a belt-drive turntable on a substantial plinth (Linn LP12, Rega Planar / Naia, Michell Gyro, J.C. Verdier La Platine), a low-output moving-coil cartridge (Ortofon SPU, EMT JSD / HSD, Audio Note IO, Denon DL-103R) into a tonearm voiced for the cartridge\'s compliance (EMT 9-series, SME, Origin Live, Rega RB), a step-up transformer in a substantial case (Auditorium 23 Hommage T1, Audio Note UK silver-wound, the Shindo / EMT tradition), a tube phono stage and tube line stage (Shindo Aurièges / Monbrison / Masseto, Audio Note M-series, Leben RS-30EQ, Aurorasound VIDA in SUT-fed mode), and a Class A amplifier — single-ended triode (Audio Note Ongaku family, Shindo Cortese 300B), push-pull tube (Leben CS600X), Class A push-pull solid-state (Sugden A21, Accuphase A-series), or single-ended Class A solid-state (Pass First Watt SIT) — driving a high-efficiency loudspeaker (DeVore Orangutan, Audio Note AN-E, Cube Audio Nenuphar, Klipsch Heritage, Living Voice, WLM). When a digital source enters the chain, it is a NOS or R2R DAC (Audio Note UK DAC One through DAC Five Signature, TotalDAC d1, Holo May / Spring / Cyan, Denafrips Terminator, Rockna Wavedream). The cabling between components is typically voiced against the chain (Auditorium 23, Audio Note UK, and similar). The room is moderate in size — the chain\'s power envelope and the high-efficiency speaker\'s dispersion together presuppose a small-to-medium listening room.\n\nAnti-pairings reveal the school\'s position: high-power Class AB or Class D amplification into low-sensitivity studio monitors (the chain\'s power-and-sensitivity coupling is the wrong way around); measurement-target source components (delta-sigma DAC, active MC head-amp, direct-drive turntable in non-broadcast use) into a Musical Communication amplification cluster (the source-side voicing fights the amplification voicing); DSP-led room correction across the chain (the school presupposes voiced components rather than measurement-target components the DSP can correct); large rooms requiring high SPL (the high-efficiency speaker\'s dynamic envelope is exceeded; the chain reads as polite); listeners who frequently swap amplifiers experimentally (the chain rewards committed chain decisions, not procurement-decision flexibility); and listeners who judge audio quality primarily by spec-sheet measurement (the school\'s components read as inferior engineering in that framework and the editorial argument is invisible).',
+    relatedBrandSlugs: [
+      {
+        slug: 'audio-note',
+        relation: 'The British SET / NOS DAC anchor and the school\'s most-cited modern reference. Audio Note UK\'s argument — chain-as-system from cartridge to speaker, with transformer-coupled interfaces wherever possible and Class A throughout — is the school\'s most complete contemporary expression. The brand\'s Level system (1–5+) makes the school\'s editorial ladder visible from accessible to flagship.',
+      },
+      {
+        slug: 'shindo',
+        relation: 'The Japanese-Artisan SET / circuit-individuality anchor. Ken Shindo\'s argument — that every circuit is designed around its chosen tubes rather than around a stock topology, and that the chain is voiced as a single coherent system — is the school\'s second flagship reference. The Shindo system context (Aurièges / Monbrison preamps, Cortese 300B power, into DeVore / Altec / Living Voice speakers) is the canonical chain expression.',
+      },
+      {
+        slug: 'devore',
+        relation: 'The canonical modern high-efficiency loudspeaker brand for the school. John DeVore\'s Orangutan O/93 and O/96 are voiced explicitly for low-power tube and Class A solid-state amplification; the DeVore + SET + Shindo / Audio Note / Leben / Sugden chain is the most-cited modern flagship expression of the school in print, in dealer rooms, and in listener-reported systems.',
+      },
+      {
+        slug: 'auditorium-23',
+        relation: 'The German analog-interface anchor and chain-coherence philosopher. Keith Aschenbrenner\'s argument — that the system, not the component, is the unit of design, and that the invisible junctions (cables, SUTs, the WE-tradition speaker line) are voiced components rather than commodities — is the school\'s most concise statement. A23 also distributes brands that share the school\'s posture (J.C. Verdier turntables, Line Magnetic SET amplification, Shindo accessories) in the German market.',
+      },
+      {
+        slug: 'cube-audio',
+        relation: 'The Polish no-crossover single-driver expression. Grzegorz Rulka\'s Nenuphar, Bliss, and Magus carry the Musical Communication chain-coherence argument into the speaker-without-crossover form — the school\'s posture expressed through a different speaker tradition than DeVore / Audio Note AN-E / Klipsch Heritage, with the same architectural commitment to high efficiency and chain integration.',
+      },
+      {
+        slug: 'leben',
+        relation: 'The Japanese-artisan push-pull-tube expression. Leben CS300X and CS600X carry the school\'s posture from the tube push-pull side, voiced for 90–96 dB partners (DeVore O/96, Audio Note AN-E, Klipsch Heritage, Harbeth Super HL5 at the chain-edge). The Leben + DeVore + Aurorasound + Ortofon canonical Japanese-British chain is one of the school\'s most-cited modern systems.',
+      },
+      {
+        slug: 'wlm',
+        relation: 'The Austrian boutique high-efficiency coaxial-wideband expression. WLM carries the school\'s posture into the European boutique speaker tradition, with dynamic immediacy and rhythmic engagement as primary editorial signatures — a different sonic destination than the DeVore / Audio Note / Cube routes to the same chain-coherence commitment.',
+      },
+      {
+        slug: 'emt',
+        relation: 'The broadcast-cartridge tradition that the school\'s analog-source side is built around. EMT JSD and HSD modern cartridges, the heritage TSD-15 and OFD-15, and the EMT 9-series tonearms are designed for SUT-fed input into tube MM phono stages — the broadcast-engineering posture EMT brings to cartridge design is the engineering case for the school\'s analog-source chain.',
+      },
+      {
+        slug: 'ortofon',
+        relation: 'The wider low-output MC cartridge cluster the school\'s analog-source side draws from. Ortofon SPU and the broader MC line — paired with SUTs into tube MM phono stages — are the accessible-to-flagship cartridge ladder for chains expressing the school, with the SPU + matched-impedance SUT chain the canonical low-output MC reference in the school\'s tradition.',
+      },
+      {
+        slug: 'aurorasound',
+        relation: 'The Japanese phono-stage partner. Shinobu Karaki\'s VIDA MKII is widely run in SUT-fed mode by listeners building Musical Communication chains who want a transparent low-noise MM input behind the SUT rather than an integrated active MC head-amp — the cross-link is on the chain-coherence side, where the phono stage\'s posture matches the school\'s voiced-not-measured commitment.',
+      },
+      {
+        slug: 'rega',
+        relation: 'The British belt-drive accessible-to-flagship anchor. Roy Gandy\'s Planar series (1973–present) carries the school\'s mechanical-source argument at the accessible tier (Planar 1, 2, 3) and at the flagship tier (P10, Naia) — with the Rega RB-tonearm tradition and Rega / Ania cartridges providing an integrated drive-arm-cartridge expression of the school\'s analog-source side.',
+      },
+      {
+        slug: 'michell',
+        relation: 'The British suspended-subchassis belt-drive expression. The Michell Gyro SE / Orbe lineup carries the Linn LP12 suspended-subchassis-tradition argument with Michell Engineering\'s mechanical-precision posture — the chassis publishes the school\'s isolation strategy in its physical form, and the brand pairs naturally with SME / Origin Live tonearms and the broader school\'s phono-and-amplifier cluster.',
+      },
+      {
+        slug: 'sugden',
+        relation: 'The British Class A solid-state adjacent. J. E. Sugden\'s A21 (1967) is not tube, but the brand\'s argument — low-power Class A executed simply, with heat sinks visible as a design feature and the topology made visible at the chassis — is the same chain-coherence argument the school makes from the tube side, expressed through a different device family. Sugden + DeVore + Audio Note DAC + Linn LP12 / Rega is a Class-A-meets-Musical-Communication chain.',
+      },
+      {
+        slug: 'pass-labs',
+        relation: 'The American Class A adjacent. Nelson Pass\'s career through Threshold, Pass Labs, and First Watt is the American single-ended-Class-A-solid-state expression of the school\'s editorial argument; the First Watt SIT designs in particular sit at the school\'s edge as the most chain-coherent Pass expression, and the Pass + DeVore + Audio Note R2R DAC chain is a school-expressing American system.',
+      },
+    ],
+    relatedTechnologySlugs: [
+      {
+        slug: 'set',
+        relation: 'The amplification node\'s most uncompromised expression of the school. SET is what the school argues from the amplification side: a single tube device handling the full waveform, voiced for tonal continuity and dynamic ease, presupposing a high-efficiency speaker partner. SET is not the only amplification expression of the school (Class A push-pull tube and solid-state belong too) but it is the canonical case.',
+      },
+      {
+        slug: 'class-a-amplification',
+        relation: 'The amplification node\'s broader bias-posture expression. Class A widens beyond SET to cover push-pull tube (Leben), push-pull solid-state (Sugden, Accuphase), and single-ended-Class-A solid-state (Pass First Watt SIT) — all of which carry the school\'s chain-coherence commitment from the amplification side, expressed through different device families and topologies.',
+      },
+      {
+        slug: 'high-efficiency-loudspeakers',
+        relation: 'The acoustic-translation terminus of the school\'s canonical chain. The speaker\'s sensitivity is the architectural commitment that retroactively makes SET / Class A power envelopes editorially correct, and the school\'s entire upstream chain is voiced against this terminus. Without the high-efficiency speaker the school\'s amplification arguments are incomplete.',
+      },
+      {
+        slug: 'nos-dacs',
+        relation: 'The school\'s canonical digital-source filtering decision. NOS argues that the digital path should preserve transient continuity and tonal density through filtering — the school\'s chain-coherence argument expressed at the digital-source side. When digital enters a Musical Communication chain, it is overwhelmingly through a NOS DAC.',
+      },
+      {
+        slug: 'r2r-dacs',
+        relation: 'The school\'s canonical digital-source conversion architecture. R2R names the conversion stage as a voiced commitment built from physical resistors — the school\'s "every junction is a voicing decision" position carried into the digital-to-analog conversion node. Most NOS DACs in the school\'s cluster are also R2R.',
+      },
+      {
+        slug: 'suts',
+        relation: 'The school\'s electrical interface between cartridge and phono stage. SUTs argue that the analog-source interface is a voiced commitment — the school\'s posture expressed at one specific junction in the analog source chain. The Auditorium 23 Hommage T1 is the school\'s canonical SUT.',
+      },
+      {
+        slug: 'belt-drive-turntables',
+        relation: 'The school\'s analog-source mechanical-drive commitment. Belt-drive names the mechanical isolation between motor and platter as a voiced commitment — the school\'s posture expressed at the source\'s mechanical foundation. The Linn / Rega / Michell / Verdier belt-drive tradition is the canonical mechanical-source side of the school.',
+      },
+    ],
+    links: [
+      {
+        label: 'Audio Note UK — chain-as-system reference (manufacturer page)',
+        url: 'https://www.audionote.co.uk/',
+      },
+      {
+        label: 'Shindo Laboratory — circuit individuality reference (manufacturer page)',
+        url: 'http://www.shindo-laboratory.co.jp/',
+      },
+      {
+        label: 'Auditorium 23 — analog-interface coherence reference (manufacturer page)',
+        url: 'http://www.auditorium23.de/',
+      },
+    ],
+    schoolsMemo: 'The Musical Communication School is the editorial argument that the chain is the unit of design — every junction voiced together, end to end. The school overlaps with Low-Power Amplification (SET / Class A), Horn & High-Efficiency Loudspeakers (DeVore, Klipsch Heritage, Audio Note AN-E, WLM), Analog Purism (the LP-led source side), Full-System Coherence (Audio Note UK / Auditorium 23 / Shindo), and Japanese-Artisan (Shindo, Leben, Audio Note Japan historically). The page is the editorial map of these overlapping currents and the brand cluster that expresses them; it does not own any one chain junction, it owns the argument that the junctions belong together.',
+    // ── Editorial Figures ──────────────────────────────────
+    // v1 of the Musical Communication School Editorial Figures layer.
+    // Ships with one signal-chain figure showing the canonical chain
+    // end to end — the school's central editorial artifact, the
+    // visual map of what the reader has been encountering across
+    // the seven Technology Pages. The figure uses 6 nodes (the
+    // SignalChainDiagram component reflows wide chains on narrow
+    // viewports).
+    //
+    // Image sourcing — DEFERRED 2026-06-11:
+    //   The school's most evocative image would be a domestic-
+    //   context photograph showing a Musical Communication system
+    //   in a real listening room — but rights-clean candidates of
+    //   this kind are vanishingly rare. Manufacturer marketing
+    //   photography from Audio Note UK, Shindo, DeVore, Auditorium
+    //   23, etc. is all rights-encumbered. The signal-chain figure
+    //   carries the editorial weight alone, matching the SET /
+    //   R2R / SUTs / HE / Class A pattern.
+    figures: [
+      {
+        kind: 'signal-chain',
+        title: 'The Canonical Musical Communication Chain',
+        subtitle: 'Voiced together, end to end.',
+        nodes: [
+          { label: 'Belt-Drive Turntable', sublabel: 'mechanical isolation' },
+          { label: 'Low-Output MC → SUT', sublabel: 'cartridge-specific loading' },
+          { label: 'Tube Phono + Line Stage', sublabel: 'voiced gain through the chain' },
+          { label: 'NOS / R2R DAC (when digital)', sublabel: 'voiced conversion' },
+          { label: 'SET or Class A Amplifier', sublabel: 'voiced bias commitment' },
+          { label: 'High-Efficiency Loudspeaker', sublabel: 'acoustic-translation terminus' },
+        ],
+        caption: 'The school\'s editorial position made visible. Each junction in this chain is a voiced choice (described in detail on its own Technology Page), and each junction has been chosen against the others rather than against an isolated measurement target. The chain is durable across geographic centres — British, Japanese, German, American — because the editorial argument is the same everywhere: components belong together, the system is the unit of design, and some properties of musical experience are decided at the chain level rather than at the component level. Listeners who internalise the school recognise its chains at a glance; the school exists so that recognition is made explicit rather than left as tacit dealer-room and reviewer knowledge.',
+      },
+    ],
+  },
 ];
 
 /**
