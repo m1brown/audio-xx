@@ -1845,16 +1845,6 @@ const BRAND_PROFILES: BrandProfile[] = [
     systemContext: 'Ortofon cartridges are compatible with virtually any tonearm and phono stage. The SPU series requires medium-mass arms and MC-capable phono stages. The 2M series works with standard MM inputs. The Ortofon SPU + matched-impedance SUT chain is one of the canonical low-output MC references of the Musical Communication School — the brand sits within the school as the wider cartridge cluster the school\'s analog-source side draws from.',
   },
   {
-    names: ['emt'],
-    country: 'Germany',
-    brandScale: 'specialist',
-    region: 'europe',
-    categories: ['turntable'],
-    philosophy: 'EMT designs broadcast-heritage cartridges known for dynamic power, tracking ability, and tonal authority. Originally built for professional broadcast use, EMT cartridges prioritise reliability and dynamic impact.',
-    tendencies: 'EMT cartridges are described as dynamic, powerful, and authoritative. Strong tracking ability and excellent transient definition. The HSD 006 is a modern design that retains the EMT house sound — bold, direct, and rhythmically commanding.',
-    systemContext: 'EMT cartridges pair well with medium-to-high mass tonearms. They reward phono stages with good dynamic headroom and MC gain.',
-  },
-  {
     names: ['rockna'],
     country: 'Romania',
     brandScale: 'boutique',
