@@ -51,6 +51,16 @@ interface EditorialSubCardProps {
    * Were to Change Something* both omit this prop).
    */
   imageUrl?: string;
+  /**
+   * Optional educational-navigation link rendered as a small muted
+   * line at the card's bottom (Workstream #5 Objective 2 — System
+   * Assessment linking). Used by §5 The Components to link a card to
+   * its brand's editorial page when the brand resolves to a
+   * BrandProfile. Both props must be present for the link to render.
+   * Pure presentation — no effect on card content or engine output.
+   */
+  linkHref?: string;
+  linkLabel?: string;
 }
 
 export default function EditorialSubCard({
@@ -60,6 +70,8 @@ export default function EditorialSubCard({
   verdict,
   accentColor,
   imageUrl,
+  linkHref,
+  linkLabel,
 }: EditorialSubCardProps) {
   return (
     <div
@@ -146,6 +158,20 @@ export default function EditorialSubCard({
           }}
         >
           {verdict}
+        </p>
+      )}
+      {linkHref && linkLabel && (
+        <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem' }}>
+          <a
+            href={linkHref}
+            style={{
+              color: COLOR.textMuted,
+              textDecoration: 'none',
+              borderBottom: `1px solid ${COLOR.borderLight}`,
+            }}
+          >
+            {linkLabel}
+          </a>
         </p>
       )}
     </div>

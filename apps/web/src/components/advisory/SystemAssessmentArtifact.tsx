@@ -14,7 +14,8 @@ import {
 import { COLOR, sectionHeadingStyle, proseStyle } from '@/lib/editorial-tokens';
 import { hasDisplayableSources } from '@/lib/evidence/source-whitelist';
 import { isBrandHouseVoicingEnabled } from '@/lib/feature-flags';
-import { findProductByComponentName } from '@/lib/consultation';
+import { findProductByComponentName, findBrandProfileBySlug } from '@/lib/consultation';
+import { toSlug } from '@/lib/route-slug';
 import { resolveProductImageStrict, getProductImage } from '@/lib/product-images';
 
 import SystemHero from './SystemHero';
@@ -1681,6 +1682,45 @@ function resolveComponentImage(componentName: string | undefined): string | unde
   }
   // Step 3: raw name → overlay (substring match against brand-anchored keys).
   return getProductImage(undefined, componentName);
+}
+
+/**
+ * Workstream #5 Objective 2 — §5 educational-navigation link.
+ *
+ * Resolve a component name to its brand's editorial page, if one
+ * exists. Pure presentation: the link renders only when the brand
+ * resolves to a BrandProfile, so no card ever links to a 404 and no
+ * placeholder text appears for catalog-absent brands.
+ *
+ * Resolution order mirrors resolveComponentImage:
+ *   1. Catalog product match → product.brand (authoritative).
+ *   2. First two words of the raw component name (two-word brands:
+ *      "Audio Note", "Pass Labs", "Cube Audio").
+ *   3. First word alone ("Shindo", "Leben", "Rega").
+ * Each candidate is slugified and checked against BRAND_PROFILES via
+ * findBrandProfileBySlug — the same first-match-wins lookup the
+ * /brand/[slug] route uses, so a resolved link is a resolvable page.
+ */
+function resolveBrandPageLink(
+  componentName: string | undefined,
+): { href: string; label: string } | undefined {
+  if (!componentName) return undefined;
+  const candidates: string[] = [];
+  const product = findProductByComponentName(componentName);
+  if (product?.brand) candidates.push(product.brand);
+  const words = componentName.trim().split(/\s+/);
+  if (words.length >= 2) candidates.push(`${words[0]} ${words[1]}`);
+  if (words.length >= 1) candidates.push(words[0]);
+  for (const candidate of candidates) {
+    const slug = toSlug(candidate);
+    if (!slug) continue;
+    const profile = findBrandProfileBySlug(slug);
+    if (profile) {
+      const display = profile.displayName ?? candidate;
+      return { href: `/brand/${slug}`, label: `About ${display} →` };
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -3694,16 +3734,25 @@ export default function SystemAssessmentArtifact({
           <h2 style={sectionHeadingStyle}>The Components</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
             {/* Phase E-5B.3 — uses the hoisted componentCards so §8 can
-                consult the composed §5 prose for repetition checks. */}
-            {componentCards.map((card, i) => (
-              <EditorialSubCard
-                key={i}
-                name={card.name}
-                subtitle={card.role}
-                body={card.body}
-                imageUrl={card.imageUrl}
-              />
-            ))}
+                consult the composed §5 prose for repetition checks.
+                Workstream #5 Obj 2 — each card additionally links to its
+                brand's editorial page when the brand resolves to a
+                BrandProfile (resolveBrandPageLink); unresolved brands
+                render exactly as before. */}
+            {componentCards.map((card, i) => {
+              const brandLink = resolveBrandPageLink(card.name);
+              return (
+                <EditorialSubCard
+                  key={i}
+                  name={card.name}
+                  subtitle={card.role}
+                  body={card.body}
+                  imageUrl={card.imageUrl}
+                  linkHref={brandLink?.href}
+                  linkLabel={brandLink?.label}
+                />
+              );
+            })}
           </div>
         </section>
       )}
@@ -4159,6 +4208,40 @@ export default function SystemAssessmentArtifact({
           <h2 style={sectionHeadingStyle}>Sources</h2>
           <AdvisorySources sources={a.sourceReferences!} />
         </section>
+      )}
+
+      {/* ═══════════ Editorial footer ═══════════
+       *  Workstream #5 Obj 2 — a single educational-navigation line
+       *  from the assessment into the editorial corpus. The school
+       *  page links onward to every Technology Page and the school's
+       *  brand cluster, so one link here opens the full "why do these
+       *  recommendations fit together" layer.
+       *
+       *  Gated on hasComponents: the line reads "these components", so
+       *  it only renders when §5 actually presented components. This
+       *  also keeps minimal §4-only renders (and their test fixtures)
+       *  byte-identical to the pre-footer artifact. */}
+      {hasComponents && (
+        <p
+          style={{
+            margin: '0.25rem 0 0',
+            fontSize: '0.84rem',
+            lineHeight: 1.6,
+            color: COLOR.textMuted,
+          }}
+        >
+          Curious why these components belong together?{' '}
+          <a
+            href="/tech/musical-communication-school"
+            style={{
+              color: COLOR.textMuted,
+              textDecoration: 'none',
+              borderBottom: `1px solid ${COLOR.borderLight}`,
+            }}
+          >
+            Read about the system-first design tradition →
+          </a>
+        </p>
       )}
     </article>
   );
