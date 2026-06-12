@@ -432,11 +432,25 @@ export interface BrandProfile {
       summary?: string;
     }>;
   };
+
+  // ── Technology Page backlinks (Workstream #5A — Objective 3) ──
+  // Slugs into TECHNOLOGY_PROFILES (the /tech/[slug] editorial corpus).
+  // Lets a brand page link forward into the Technology Pages that
+  // explain the engineering ideas the brand argues for — closing the
+  // one-directional gap where Technology Pages linked to brands but
+  // brands were leaf nodes. Additive and optional; the brand-page
+  // renderer resolves each slug via findTechnologyProfileBySlug and
+  // silently drops any that do not resolve, so an out-of-date slug
+  // can never render a dead card. Keep the list short and
+  // high-confidence (the technologies the brand genuinely expresses),
+  // not an exhaustive tag cloud.
+  relatedTechnologySlugs?: string[];
 }
 
 const BRAND_PROFILES: BrandProfile[] = [
   {
     names: ['devore', 'devore fidelity'],
+    relatedTechnologySlugs: ['high-efficiency-loudspeakers', 'set', 'class-a-amplification'],
     founder: 'John DeVore',
     country: 'USA (Brooklyn, New York)',
     brandScale: 'boutique',
@@ -643,6 +657,7 @@ const BRAND_PROFILES: BrandProfile[] = [
   // carried forward as new equipment rather than curated as memorabilia.
   {
     names: ['shindo', 'shindo laboratory'],
+    relatedTechnologySlugs: ['set', 'class-a-amplification', 'suts', 'high-efficiency-loudspeakers'],
     founder: 'Ken Shindo',
     country: 'Japan (Tokyo)',
     brandScale: 'boutique',
@@ -752,6 +767,7 @@ const BRAND_PROFILES: BrandProfile[] = [
   // memorabilia.
   {
     names: ['auditorium 23', 'auditorium-23', 'a23'],
+    relatedTechnologySlugs: ['suts', 'high-efficiency-loudspeakers', 'set'],
     founder: 'Keith Aschenbrenner',
     country: 'Germany (Frankfurt)',
     brandScale: 'boutique',
@@ -941,6 +957,7 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['pass labs', 'pass', 'first watt'],
+    relatedTechnologySlugs: ['class-a-amplification', 'high-efficiency-loudspeakers'],
     founder: 'Nelson Pass',
     country: 'USA (Auburn, California)',
     brandScale: 'specialist',
@@ -1047,6 +1064,7 @@ const BRAND_PROFILES: BrandProfile[] = [
   // school argument expressed from a different design tradition.
   {
     names: ['sugden', 'sugden audio', 'j.e. sugden', 'je sugden'],
+    relatedTechnologySlugs: ['class-a-amplification', 'high-efficiency-loudspeakers'],
     founder: 'J. E. Sugden (James Edward Sugden) — J. E. Sugden & Co Ltd, 1967',
     country: 'UK (West Yorkshire)',
     brandScale: 'specialist',
@@ -1396,6 +1414,7 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['rega'],
+    relatedTechnologySlugs: ['belt-drive-turntables'],
     founder: 'Roy Gandy',
     country: 'UK (Southend-on-Sea)',
     brandScale: 'specialist',
@@ -1625,6 +1644,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     // gaining agency through tube rolling, rather than ceded to mass-
     // manufactured solid-state.
     names: ['leben'],
+    relatedTechnologySlugs: ['class-a-amplification', 'set', 'high-efficiency-loudspeakers'],
     founder: 'Taku Hyodo',
     country: 'Japan',
     brandScale: 'boutique',
@@ -1822,6 +1842,7 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['michell', 'michell engineering'],
+    relatedTechnologySlugs: ['belt-drive-turntables'],
     founder: 'John Michell',
     country: 'UK',
     brandScale: 'specialist',
@@ -2021,6 +2042,7 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['wlm'],
+    relatedTechnologySlugs: ['high-efficiency-loudspeakers', 'set'],
     country: 'Austria',
     brandScale: 'boutique',
     region: 'europe',
@@ -2236,6 +2258,7 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['cube audio'],
+    relatedTechnologySlugs: ['high-efficiency-loudspeakers', 'set'],
     founder: 'Grzegorz Rulka',
     country: 'Poland',
     brandScale: 'boutique',
@@ -2253,6 +2276,7 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['audio note', 'audio note uk', 'ank', 'audio note kits'],
+    relatedTechnologySlugs: ['set', 'nos-dacs', 'r2r-dacs', 'high-efficiency-loudspeakers', 'class-a-amplification'],
     founder: 'Peter Qvortrup',
     country: 'UK (Brighton)',
     brandScale: 'boutique',

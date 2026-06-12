@@ -3,6 +3,8 @@ import {
   findBrandProfileBySlug,
   findProductsByBrandSlug,
 } from '@/lib/consultation';
+import { findTechnologyProfileBySlug } from '@/lib/technology-profiles';
+import { toSlug } from '@/lib/route-slug';
 import type { Product } from '@/lib/products/dacs';
 import type { AdvisoryOption } from '@/lib/advisory-response';
 import AdvisoryProductCards from '@/components/advisory/AdvisoryProductCard';
@@ -138,6 +140,21 @@ export default async function BrandPage({ params }: PageProps) {
   //   passing into render.
   const safeLinks = (profile?.links ?? []).filter((l) => l.kind !== 'review');
   const hasLinks = safeLinks.length > 0;
+
+  // Related Technologies (Workstream #5A — Obj 3). Resolve each
+  // authored slug to its TechnologyProfile; silently drop any that
+  // do not resolve so an out-of-date slug can never render a dead
+  // card. Each resolved entry carries the page's canonical slug
+  // (names[0]) for the href and displayName/tagline for the card.
+  const relatedTech = (profile?.relatedTechnologySlugs ?? [])
+    .map((s) => findTechnologyProfileBySlug(s))
+    .filter((tp): tp is NonNullable<typeof tp> => Boolean(tp))
+    .map((tp) => ({
+      slug: toSlug(tp.names[0]),
+      displayName: tp.displayName,
+      tagline: tp.tagline,
+    }));
+  const hasRelatedTech = relatedTech.length > 0;
 
   // Media
   const mediaImages = profile?.media?.images ?? [];
@@ -633,6 +650,49 @@ export default async function BrandPage({ params }: PageProps) {
               >
                 {link.label} &rarr;
               </a>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ══════════════════════════════════════════════════
+          11b. RELATED TECHNOLOGIES (Workstream #5A — Obj 3)
+          Brand → Technology Page backlinks. Closes the gap where
+          Technology Pages linked to brands but brands were leaf
+          nodes. Cards link into the editorial corpus.
+         ══════════════════════════════════════════════════ */}
+      {hasRelatedTech && (
+        <section style={{ marginBottom: '1.75rem' }}>
+          <h2 style={sectionHeadingStyle}>The Ideas Behind {displayName}</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            {relatedTech.map((t) => (
+              <Link
+                key={t.slug}
+                href={`/tech/${t.slug}`}
+                style={{
+                  display: 'block',
+                  textDecoration: 'none',
+                  padding: '0.7rem 0.9rem',
+                  background: COLOR.cardBg,
+                  border: `1px solid ${COLOR.borderLight}`,
+                  borderRadius: '6px',
+                }}
+              >
+                <div style={{
+                  fontSize: '0.95rem', fontWeight: 600,
+                  color: COLOR.accent, marginBottom: t.tagline ? '0.15rem' : 0,
+                }}>
+                  {t.displayName} &rarr;
+                </div>
+                {t.tagline && (
+                  <div style={{
+                    fontSize: '0.85rem', lineHeight: 1.5,
+                    color: COLOR.textMuted,
+                  }}>
+                    {t.tagline}
+                  </div>
+                )}
+              </Link>
             ))}
           </div>
         </section>
