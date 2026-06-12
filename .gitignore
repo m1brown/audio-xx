@@ -64,3 +64,4 @@ dist/
 .turbo
 *.tsbuildinfo
 .claude/
+.vercel
