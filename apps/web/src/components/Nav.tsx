@@ -83,6 +83,11 @@ export default function Nav() {
           </Link>
           <div className="nav-links">
             <NavItem href="/how-it-works" label="How It Works" />
+            {/* Editorial corpus entry point. The Musical Communication
+             * School page is the natural front door — it links onward to
+             * all seven Technology Pages and the school's brand cluster,
+             * so one nav item opens the whole editorial layer. */}
+            <NavItem href="/tech/musical-communication-school" label="Understanding" secondary />
             <NavItem href="/glossary" label="Glossary" secondary />
             <NavItem href="/resources" label="Resources" secondary />
             {session && <NavItem href="/systems" label="Systems" />}

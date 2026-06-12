@@ -89,6 +89,101 @@ export default function Resources() {
         </div>
       </section>
 
+      {/* ── 1b. Audio XX Editorial Library ──────────────── */}
+      <section style={sectionStyle}>
+        <h2 style={headingStyle}>The Audio&thinsp;XX Editorial Library</h2>
+        <div style={bodyStyle}>
+          <p style={{ marginBottom: '0.85rem' }}>
+            Audio&thinsp;XX publishes its own long-form explanations of the
+            design ideas behind the equipment it recommends. Each page explains
+            one engineering choice — what it gives, what it costs, and which
+            systems it belongs in.
+          </p>
+
+          <div style={resourceStyle}>
+            <div>
+              <Link href="/tech/musical-communication-school" style={resourceLinkStyle}>
+                The Musical Communication School
+              </Link>
+            </div>
+            <div style={resourceDescStyle}>
+              The editorial map — why a cluster of brands and technologies
+              treat the system, not the component, as the unit of design.
+              Start here.
+            </div>
+          </div>
+
+          <div style={resourceStyle}>
+            <div>
+              <Link href="/tech/set" style={resourceLinkStyle}>SET — Single-Ended Triode Amplification</Link>
+            </div>
+            <div style={resourceDescStyle}>
+              Low power as a positive choice: one triode, the whole waveform.
+            </div>
+          </div>
+
+          <div style={resourceStyle}>
+            <div>
+              <Link href="/tech/class-a-amplification" style={resourceLinkStyle}>Class A Amplification</Link>
+            </div>
+            <div style={resourceDescStyle}>
+              The bias decision before the topology decision — tube and
+              solid-state alike.
+            </div>
+          </div>
+
+          <div style={resourceStyle}>
+            <div>
+              <Link href="/tech/nos-dacs" style={resourceLinkStyle}>NOS DACs</Link>
+            </div>
+            <div style={resourceDescStyle}>
+              Non-oversampling conversion — the digital filter a DAC declines
+              to apply.
+            </div>
+          </div>
+
+          <div style={resourceStyle}>
+            <div>
+              <Link href="/tech/r2r-dacs" style={resourceLinkStyle}>R2R DACs</Link>
+            </div>
+            <div style={resourceDescStyle}>
+              Resistor-ladder conversion — every bit's weight is a physical
+              resistor.
+            </div>
+          </div>
+
+          <div style={resourceStyle}>
+            <div>
+              <Link href="/tech/suts" style={resourceLinkStyle}>Step-Up Transformers</Link>
+            </div>
+            <div style={resourceDescStyle}>
+              The cartridge-to-phono interface as a voiced component — gain
+              without an active circuit.
+            </div>
+          </div>
+
+          <div style={resourceStyle}>
+            <div>
+              <Link href="/tech/belt-drive-turntables" style={resourceLinkStyle}>Belt-Drive Turntables</Link>
+            </div>
+            <div style={resourceDescStyle}>
+              Mechanical isolation through compliance — the motor and platter,
+              deliberately not connected directly.
+            </div>
+          </div>
+
+          <div style={resourceStyle}>
+            <div>
+              <Link href="/tech/high-efficiency-loudspeakers" style={resourceLinkStyle}>High-Efficiency Loudspeakers</Link>
+            </div>
+            <div style={resourceDescStyle}>
+              Sensitivity as a chain decision — what the speaker asks of
+              everything upstream.
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── 2. Sound and Perception ─────────────────────── */}
       <section style={sectionStyle}>
         <h2 style={headingStyle}>Understanding Sound and Perception</h2>
