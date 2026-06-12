@@ -1426,6 +1426,32 @@ const BRAND_PROFILES: BrandProfile[] = [
     designPhilosophy: 'Mechanical-fundamentals-first; rigidity and low resonance over features.',
     sonicTendency: 'Pace-driven, rhythmically alive, midrange-coherent.',
     typicalTradeoff: 'Bass weight and tonal richness secondary to rhythmic drive.',
+    tagline: 'Mass reduction and rigidity over features — the turntable as a low-resonance instrument.',
+    philosophyExtended: 'Rega\'s engineering argument runs counter to the high-mass school of turntable design. Where many designers add mass and damping to fight resonance, Roy Gandy\'s position is that the better answer is a lightweight, rigid structure that does not store energy in the first place — a plinth stiff enough to keep the bearing and tonearm in a fixed relationship, light enough that it has little energy to release back into the record. The glass platter, the low-mass rigid plinths, the minimal damping, and the in-house tonearms are all expressions of this single idea: get the mechanical fundamentals right and the music\'s timing survives. The result is a brand consistently described in terms of pace and rhythmic drive rather than tonal lushness, and a Planar lineage that has carried the same philosophy across every price point from entry-level to flagship for five decades. The trade is deliberate: bass weight and tonal richness are present but secondary to keeping the rhythm intact.',
+    leadershipOrigin: 'Roy Gandy founded Rega Research in 1973 in Essex, England (now Southend-on-Sea), and the company has carried his mechanical-fundamentals-first philosophy continuously since. Gandy\'s argument from the start was that the audiophile industry over-valued mass, damping, and feature count, and under-valued the simple discipline of a rigid, low-resonance structure with the bearing and arm held in a fixed relationship. Rega built its identity around the Planar turntable and its own RB-series tonearms — designing the arm in-house rather than buying it in, because the arm-and-platter relationship is the thing the company believes it is really making. The brand has expanded into amplifiers, cartridges, and digital, but the turntable and the philosophy behind it remain the centre of gravity, and the Planar lineage is one of the longest continuously-produced design arguments in audio.',
+    strengths: [
+      'Rigidity-and-low-mass philosophy executed consistently across five decades — the Planar lineage applies one coherent engineering idea at every price point from accessible to flagship',
+      'In-house RB-series tonearms — Rega designs the arm rather than sourcing it, because the arm-and-platter relationship is the brand\'s core engineering concern, not an afterthought',
+      'Rhythmic drive and pace as a recognisable signature — the design priority shows up as musical timing and midrange coherence that listeners identify as the Rega character',
+      'A genuine benchmark at each price tier — the Planar series is widely treated as the reference for musical engagement at its price, accessible entry into serious analog without the high-mass cost floor',
+    ],
+    tradeoffs: [
+      'Bass weight and tonal richness are secondary to rhythmic drive — listeners who anchor on bottom-end heft or lush tonality may prefer a higher-mass design',
+      'Cartridge matching shifts the balance — Rega\'s own cartridges are voiced for the arm, and third-party cartridges can move the tonal centre away from the intended character',
+      'The low-mass philosophy is a deliberate position, not a universal answer — the high-mass school reaches different (and to some listeners preferable) results, and the two traditions genuinely disagree',
+      'Setup rewards care despite the simplicity — the rigid, lightly-damped design is honest about upstream and downstream choices rather than masking them',
+    ],
+    designFamilies: [
+      {
+        name: 'Planar series (entry to upper)',
+        character: 'The core lineage — Planar 1, 2, 3, 6, 8 — applying the rigidity-and-low-mass philosophy at successively higher resolution. The Planar 3 is the long-standing reference for musical engagement at its price.',
+        ampPairing: 'System-agnostic; pairs naturally with the Rega RB arm family and Rega cartridges for the fully in-house expression.',
+      },
+      {
+        name: 'Flagship (P10 / Naia)',
+        character: 'The philosophy at its most resolved — ultra-low-mass, high-rigidity construction using advanced materials. The Naia is the brand\'s statement of how far the low-mass argument extends when cost is not the constraint.',
+      },
+    ],
     links: [
       { label: 'Official website', url: 'https://www.rega.co.uk/', region: 'global' },
       { label: 'Dealer (The Sound Organisation, US)', url: 'https://www.soundorg.com/', kind: 'dealer', region: 'US' },
@@ -1851,6 +1877,32 @@ const BRAND_PROFILES: BrandProfile[] = [
     philosophy: 'Michell Engineering builds precision turntables using suspended subchassis designs. The Gyro SE is a long-standing reference — excellent speed stability, very low noise floor, and strong rhythmic articulation. British engineering with a focus on mechanical integrity.',
     tendencies: 'Michell turntables are described as detailed, rhythmically articulate, and dynamically open. The suspended design provides excellent isolation. The Gyro SE is one of the most respected mid-price turntables — a genuine reference that competes well above its price class.',
     systemContext: 'The Gyro SE is a strong platform for a range of tonearms and cartridges. It has an excellent upgrade ecosystem (power supply, clamp, armboard options). A serious analogue front end that rewards cartridge investment. Michell sits within the Musical Communication School as the British suspended-subchassis expression of the belt-drive mechanical-isolation argument — the Gyro / Orbe lineup carries the Linn LP12 tradition with the brand\'s mechanical-precision posture and pairs naturally with the school\'s SUT / tube-phono / Class A / high-efficiency-speaker cluster.',
+    tagline: 'Precision-machined suspended subchassis — mechanical isolation built like an instrument.',
+    philosophyExtended: 'Michell\'s answer to the turntable\'s core problem — keep motor noise and external vibration out of the cartridge — is the suspended subchassis, the tradition the Linn LP12 made famous, executed with the brand\'s distinctive mechanical-engineering aesthetic. The suspension isolates the platter-and-arm assembly from the plinth and the outside world; the high-mass, precision-machined platter (with its visible weighted construction) acts as a flywheel smoothing speed; the oil-pumped bearing keeps the rotation quiet. The visual signature — acrylic, polished metal, the exposed mechanism — is not styling for its own sake but the isolation strategy made literal: the design publishes how it solves the problem in its physical form. The trade is the suspended-subchassis trade in general: instantaneous torque and absolute pitch precision are given up relative to direct-drive in exchange for a noise floor and an isolation quality the cartridge inherits as quietness between notes.',
+    leadershipOrigin: 'John Michell founded Michell Engineering in England, and the GyroDec — with its distinctive suspended subchassis and weighted platter — became the design the company is known for and a long-running reference in British turntable engineering. Michell\'s background was in precision engineering and machining, which shows in the brand\'s execution: the turntable is treated as a precision mechanical instrument, built to tolerances and finished to a standard that made the exposed mechanism part of the appeal. After John Michell\'s death in 2003 the company continued under its established engineering team and family stewardship, keeping the Gyro and Orbe lineage and the suspended-subchassis philosophy in continuous production rather than redesigning around it.',
+    strengths: [
+      'Suspended subchassis isolates the platter-and-arm assembly from motor and external vibration — the Linn LP12 tradition executed with Michell\'s precision-machining standard, inherited by the cartridge as a low noise floor',
+      'High-mass precision-machined platter acts as a flywheel — smoothing instantaneous speed variation and contributing to the quiet, stable presentation the brand is known for',
+      'Excellent upgrade ecosystem — outboard power supply, clamp, and armboard options let the Gyro grow with cartridge and tonearm investment rather than capping it',
+      'Mechanical execution as visible design philosophy — the exposed acrylic-and-metal mechanism publishes the isolation strategy in its physical form, and the build quality competes well above the price class',
+    ],
+    tradeoffs: [
+      'Instantaneous torque and absolute pitch precision are given up relative to direct-drive — the suspended belt-drive trade, accepted in exchange for mechanical isolation',
+      'The suspended subchassis rewards careful setup and levelling — the isolation that gives the design its quiet noise floor depends on correct adjustment',
+      'It is a serious front end that presupposes cartridge and tonearm investment — the platform rewards the rest of the analog chain rather than being a casual plug-and-play table',
+      'Like all belt-drive designs, it asks for belt maintenance and is the wrong tool for broadcast, archival, or DJ use where direct-drive pitch stability is the requirement',
+    ],
+    pairingNotes: 'Michell is a serious analog front end built to be grown with tonearm and cartridge investment. It sits in the Musical Communication School as the British suspended-subchassis expression of the belt-drive mechanical-isolation argument, carrying the Linn LP12 tradition with the brand\'s precision-machining posture. The canonical chain places the Gyro / Orbe ahead of a low-output MC cartridge, a step-up transformer, a tube phono and line stage, and Class A or tube amplification into high-efficiency speakers — the school\'s analog-source foundation. Anti-pairings: broadcast / archival / DJ workflows needing direct-drive pitch stability, casual setups unwilling to level and maintain the suspension, and chains built around measurement-target source components that fight the school\'s posture.',
+    designFamilies: [
+      {
+        name: 'Gyro / GyroDec / Gyro SE',
+        character: 'The brand\'s signature line — the suspended-subchassis design with the visible weighted platter and exposed mechanism. The Gyro SE is the long-standing mid-price reference that competes above its class.',
+      },
+      {
+        name: 'Orbe',
+        character: 'The higher expression of the same suspended-subchassis philosophy — more mass, more isolation, and tighter execution for listeners taking the platform toward its ceiling.',
+      },
+    ],
     links: [
       { label: 'Michell Engineering', url: 'https://www.michell-engineering.co.uk/', region: 'global' },
     ],
@@ -2053,6 +2105,22 @@ const BRAND_PROFILES: BrandProfile[] = [
     designPhilosophy: 'High-efficiency coaxial wideband; dynamic expression and rhythmic engagement over analytical precision.',
     sonicTendency: 'Rhythmically insistent, dynamically explosive, warm midrange with natural timbres.',
     typicalTradeoff: 'Less pinpoint imaging and spatial precision than sealed-box or narrow-baffle monitors.',
+    tagline: 'Coaxial wideband efficiency voiced for rhythm and momentum over measurement-flat neutrality.',
+    philosophyExtended: 'WLM\'s argument is that the most musically important quality a loudspeaker delivers is energy — the sense that the system starts and stops with the music and pushes air with conviction at the volumes people actually listen at. The brand pursues this through high-efficiency coaxial wideband drivers, where a single point source carries the bulk of the range and a passive radiator extends the bottom. The coaxial layout keeps the critical band coherent from a single acoustic origin; the high efficiency means a modest tube amplifier can swing the driver through its full dynamic range without strain. The deliberate trade is named in the brand\'s own positioning: spatial pinpoint precision and the last degree of measured neutrality are secondary to rhythmic drive and tonal warmth. WLM is for the listener who would rather a system be alive than be flat.',
+    leadershipOrigin: 'WLM — Wiener Lautsprecher Manufaktur, the Vienna loudspeaker manufactory — is an Austrian boutique speaker maker working in the high-efficiency tradition. The brand\'s identity is built around the coaxial-wideband-plus-passive-radiator approach rather than around a single named designer, and its European boutique scale lets it voice speakers by ear for musical involvement rather than to a mass-market measurement target. WLM occupies the continental-European corner of the high-efficiency speaker world, distinct in execution from the British, American, and Polish brands that reach the same low-power-partner destination by other means.',
+    strengths: [
+      'High efficiency unlocks the full dynamic range of low-power tube amplification — modest wattage drives the speaker to lifelike contrasts without strain, which is the whole point of the design',
+      'Coaxial wideband driver keeps the critical midband coherent from a single acoustic origin — voices and instruments arrive from one point in space rather than being assembled across separate drivers',
+      'Rhythmic drive and tonal warmth as the primary voicing target — the brand optimises for musical momentum and a weighted, natural midrange, which listeners experience as engagement',
+      'Boutique-scale voicing by ear — the speaker is tuned for involvement rather than to a mass-market neutrality benchmark, giving it a distinct European high-efficiency character',
+    ],
+    tradeoffs: [
+      'Spatial precision and pinpoint imaging are secondary — listeners who prize a holographic, tightly-focused soundstage will find sealed-box or narrow-baffle monitors more exact',
+      'The passive-radiator bass can overload a small or untreated room — the design assumes room space and benefits from placement care',
+      'Measurement-led evaluation will read the warm, momentum-first voicing as a deviation from neutral rather than as the intended character',
+      'Like all high-efficiency designs, it presupposes the right amplifier partner — the dynamic-ease advantage is realised with tube or low-power amplification, not with every solid-state pairing',
+    ],
+    pairingNotes: 'WLM is voiced for moderate-power and tube amplification, where the high efficiency turns limited wattage into full dynamic expression. It sits in the Musical Communication School as the Austrian boutique high-efficiency coaxial-wideband expression of the chain-as-system commitment — a European boutique destination distinct from the British (Audio Note AN-E), American (DeVore), and Polish (Cube Audio) speaker traditions. The natural chain places it after a tube line stage and a Class A or push-pull tube amplifier, fed by a tonally dense source. Anti-pairings: small or untreated rooms where the passive-radiator energy overwhelms, measurement-led systems where the warm voicing fights the source, and listeners who anchor on imaging precision over rhythmic drive.',
     links: [
       { label: 'Official website', url: 'http://www.wiener-lautsprecher-manufaktur.com/en-speaker', region: 'global' },
     ],
@@ -2270,6 +2338,32 @@ const BRAND_PROFILES: BrandProfile[] = [
     designPhilosophy: 'No-crossover full-range drivers for phase-perfect, coherent midrange presentation.',
     sonicTendency: 'Tonally rich, midrange-saturated, holographic — particularly natural on vocals and acoustic music.',
     typicalTradeoff: 'Reduced bass extension and treble energy vs. multi-way designs; demanding room setup.',
+    tagline: 'Single full-range driver, no crossover — the most direct path from amplifier to ear.',
+    philosophyExtended: 'The mainstream loudspeaker accepts the crossover as a necessary cost: split the signal across drivers optimised for their bands, and pay for the integration with phase complexity and a network of components between amplifier and cone. Cube Audio argues the cost is not necessary if a single driver can cover the range honestly. The in-house drivers — built around a paper cone with multiple whizzer sections and neodymium motors — are engineered to stay pistonic across the band without breaking into the ragged top-octave behaviour that sank earlier full-range designs. The result is a speaker the amplifier sees as one continuous load with no crossover between it and the cone, which is why the brand is voiced for and sold to single-ended-triode listeners. The trade is deliberate and named: the bottom octave and the very top are given up in exchange for a midrange coherence and a phase integrity that multi-way designs cannot reach because they are not trying to.',
+    leadershipOrigin: 'Grzegorz Rulka builds Cube Audio in Poland, designing the full-range drivers in-house rather than sourcing them — the driver is the company\'s core intellectual property, not the cabinet. The brand emerged from the contemporary single-driver revival, which set out to answer the historical objection to full-range designs (limited bandwidth, cone break-up) with modern materials and motor engineering rather than with apology. Cube\'s position is that the single-driver, no-crossover speaker is not a vintage curiosity but a current design answer for the low-power-amplification listener, and the company has built its identity around the driver as the thing it makes, with the speaker as the thing the driver goes in.',
+    strengths: [
+      'No crossover between amplifier and cone — the single full-range driver removes the phase complexity and component network that a multi-way design places in the signal path, which listeners hear as directness and coherence rather than as a measured spec',
+      'In-house driver design — the multi-whizzer paper-cone driver is the company\'s own engineering, not an off-the-shelf part, so the brand owns the trade-offs it is making rather than inheriting them',
+      'High sensitivity (typically 95–98 dB) by design — the speaker is built to be driven by a few watts of single-ended triode, making it one of the natural speaker partners for the SET amplifier',
+      'Midrange saturation and holographic presentation on voice and acoustic instruments — the band where the single driver is most honest is the band most music lives in',
+    ],
+    tradeoffs: [
+      'Bottom-octave bass extension is given up — a single driver in a modest cabinet cannot move the air a dedicated woofer can, and bass-anchored listeners will hear the limit',
+      'Top-octave air and sparkle are softer than a dedicated tweeter delivers — the full-range driver trades the last octave of treble energy for coherence through the midband',
+      'Room placement is demanding — the design rewards near-field or treated rooms and careful positioning, and punishes casual placement more than a forgiving multi-way',
+      'The intended result requires low-output-impedance, low-power amplification — in a high-feedback solid-state system the speaker works but the design intent is not served',
+    ],
+    pairingNotes: 'Cube Audio is voiced for single-ended-triode and low-power tube amplification (300B, 2A3, 845, and similar), where the high sensitivity turns a few watts into full dynamic range. It sits in the Musical Communication School as the no-crossover single-driver expression of the chain-as-system commitment — a different speaker tradition than DeVore Orangutan (wide-baffle) or Audio Note AN-E (BBC-derived), reaching the same architectural posture by a different route. The canonical chain places it after a tube line stage and a Class A or SET amplifier, fed by a tonally dense source (NOS / R2R DAC or an analog front end). Anti-pairings: high-power solid-state where the design intent is lost, large rooms requiring deep bass at high SPL, and listeners who anchor on bottom-octave slam or top-octave sparkle.',
+    designFamilies: [
+      {
+        name: 'Nenuphar',
+        character: 'The brand\'s flagship-tier statement of the single-driver argument — a larger cabinet built around the full-range driver, voiced for SET amplification and the most complete expression of the no-crossover idea in the range.',
+      },
+      {
+        name: 'Bliss / Magus and the driver line',
+        character: 'More accessible cabinets carrying the same in-house full-range driver philosophy at smaller scale, plus the bare drivers themselves — the company sells the driver as well as the speaker, underscoring that the driver is the product.',
+      },
+    ],
     links: [
       { label: 'Cube Audio', url: 'https://cubeaudio.eu/', region: 'global' },
     ],
