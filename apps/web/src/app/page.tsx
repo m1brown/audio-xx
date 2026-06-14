@@ -4509,25 +4509,22 @@ export default function Home() {
         }}
       />
 
-      {/* Brand wordmark — demoted from h1 to div in the 2026-05-20
-       *  copy simplification pass so the page's single h1 can be the
-       *  value-prop tagline below. Visual styling unchanged. Reset
-       *  behaviour preserved with role="button" semantics.
-       *  2026-05-20 hero rhythm pass: marginBottom 0.2rem → 0.5rem
-       *  so the wordmark and the h1 read as two stanzas instead of
-       *  one mashed block.
-       *  2026-05-20 mobile tightening pass: class added so the wordmark
-       *  can be hidden below 480px — the top nav already carries the
-       *  brand and the duplicated stanza wastes vertical space on
-       *  iPhone-class viewports. */}
-      <div
+      {/* Brand wordmark — the page's single h1 (Phase 2, 2026-06-14).
+       *  The prior value-prop tagline h1 below was removed; the wordmark
+       *  is promoted back from div to h1 so the page retains exactly one
+       *  heading for SEO / accessibility. Reset behaviour preserved with
+       *  role="button" semantics. The two-door block below now carries
+       *  the page's positioning.
+       *  2026-05-20 mobile tightening pass: class hides the wordmark
+       *  below 480px — the top nav already carries the brand. */}
+      <h1
         className="audioxx-hero-wordmark"
         onClick={() => handleReset()}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleReset(); }}
         style={{
-          marginBottom: '0.5rem',
+          margin: '0 0 0.85rem 0',
           fontSize: '1.3rem',
           fontWeight: 600,
           letterSpacing: '-0.015em',
@@ -4541,30 +4538,6 @@ export default function Home() {
          *  used by the radar/profile palette so it reads as identity
          *  rather than competing with the analytical color language. */}
         Audio <span style={{ color: '#C83A3A' }}>XX</span>
-      </div>
-
-      {/* Homepage h1 — value-prop tagline. Single source of the page's
-       *  main heading (2026-05-20 copy simplification pass replaced the
-       *  prior eyebrow div + separate HOMEPAGE_HEADLINE/INTRO block).
-       *  Present on both landing and conversation views; the brand
-       *  wordmark above is intentionally a div so this remains the
-       *  page's only h1.
-       *  2026-05-20 hero rhythm pass: scale bumped from clamp(1.4–1.6rem)
-       *  to clamp(1.55–1.85rem) and bottom margin from 0.55rem → 0.85rem
-       *  so the h1 carries more visual presence and the chip stanza
-       *  below has clear breathing room. Weight + colour unchanged. */}
-      <h1
-        className="audioxx-hero-h1"
-        style={{
-          margin: '0 0 0.85rem 0',
-          fontSize: 'clamp(1.55rem, 3vw, 1.85rem)',
-          fontWeight: 500,
-          letterSpacing: '-0.015em',
-          lineHeight: 1.2,
-          color: '#2A2A2A',
-        }}
-      >
-        Honest guidance on how great audio systems are designed — and what fits yours
       </h1>
 
       {/* System badge + panel — marginBottom tightened (0.5rem → 0.4rem)
@@ -4785,16 +4758,14 @@ export default function Home() {
                 Learn how audio works <span aria-hidden="true">→</span>
               </span>
               <span style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.86rem', lineHeight: 1.45, color: EDITORIAL.inkMuted }}>
-                How systems are actually designed — the ideas, the schools of thought, and the brands that build them.
+                How systems are actually designed — the ideas, the schools of thought, and the companies that build them.
               </span>
             </Link>
           </div>
 
-          {/* ── Trust band (Phase 2) — surfaces the editorial posture
-           * that differentiates Audio XX, at first contact rather than
-           * one click deep. Three short statements + a quiet link into
-           * the editorial library so the ecosystem is discoverable from
-           * the homepage. Landing-only. */}
+          {/* ── Editorial library link (Phase 2) — a quiet entry into
+           * the editorial ecosystem from the homepage, directly beneath
+           * the two doors. Landing-only. */}
           <div
             style={{
               marginBottom: '1.75rem',
@@ -4802,23 +4773,6 @@ export default function Home() {
               paddingTop: '0.1rem',
             }}
           >
-            <ul
-              style={{
-                listStyle: 'none',
-                margin: '0 0 0.55rem 0',
-                padding: 0,
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '0.4rem 1.4rem',
-                fontSize: '0.84rem',
-                color: EDITORIAL.inkMuted,
-                lineHeight: 1.5,
-              }}
-            >
-              <li>An advisor, not a store.</li>
-              <li>We name the trade-offs.</li>
-              <li>Doing nothing is a valid answer.</li>
-            </ul>
             <Link
               href="/resources"
               style={{

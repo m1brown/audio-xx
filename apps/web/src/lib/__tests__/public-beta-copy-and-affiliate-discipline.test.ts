@@ -71,29 +71,30 @@ const COMMERCIAL_FIRST_PATTERNS: RegExp[] = [
   /\badd\s+to\s+cart\b/i,
 ];
 
-// ── 1. Homepage h1 copy invariants ────────────────────────────
+// ── 1. Homepage heading + primary-entry copy invariants ───────
 //
-// 2026-05-20 copy simplification: the hero now consists of a single
-// h1 (the value-prop tagline). The prior HOMEPAGE_HEADLINE const,
-// HOMEPAGE_INTRO const + paragraph, and the small uppercase eyebrow
-// div above the wordmark were all removed. The wordmark "Audio XX"
-// was demoted from h1 to a div with the same styling and reset
-// behaviour so the page retains exactly one h1.
+// 2026-06-14 Phase 2 presentation redesign: the value-prop tagline h1
+// was removed. The "Audio XX" brand wordmark is promoted back to the
+// page's single h1 (SEO / accessibility outline preserved), and the
+// page's positioning now lives in the two-door block + editorial-
+// library link below it. These tests guard the single-h1 invariant
+// and keep the visible primary-entry copy free of reviewer-aggregator
+// and commercial-first framing.
+const HOMEPAGE_ENTRY_COPY = [
+  'Assess my system',
+  'Learn how audio works',
+  'How systems are actually designed — the ideas, the schools of thought, and the companies that build them.',
+  'Browse the editorial library',
+];
 
-// 2026-06-14 Phase 2 presentation redesign: the h1 became a clear
-// positioning statement (advisor stance + system-fit) replacing the
-// prior "Hifi gear recommendations…" value-prop line.
-const HOMEPAGE_H1_TEXT = 'Honest guidance on how great audio systems are designed — and what fits yours';
-
-describe('Homepage hero h1 (single source of the page heading)', () => {
+describe('Homepage heading + primary-entry copy (single source of the page heading)', () => {
   const pageSource = readRepoFile('apps/web/src/app/page.tsx');
 
-  it('renders the value-prop tagline as the homepage h1', () => {
-    expect(pageSource).toContain(HOMEPAGE_H1_TEXT);
-    // The tagline appears inside an <h1> element (not just a comment).
+  it('uses the Audio XX brand wordmark as the homepage h1', () => {
     const h1Block = pageSource.match(/<h1[^>]*>[\s\S]*?<\/h1>/);
     expect(h1Block, 'an <h1>...</h1> block must be present in page.tsx').not.toBeNull();
-    expect(h1Block![0]).toContain(HOMEPAGE_H1_TEXT);
+    expect(h1Block![0]).toContain('audioxx-hero-wordmark');
+    expect(h1Block![0]).toContain('Audio');
   });
 
   it('contains exactly one <h1> element so SEO / accessibility outline is preserved', () => {
@@ -103,19 +104,26 @@ describe('Homepage hero h1 (single source of the page heading)', () => {
     expect(closeCount).toBe(1);
   });
 
-  it('h1 text stays short — under 100 characters', () => {
-    expect(HOMEPAGE_H1_TEXT.length).toBeLessThan(100);
-  });
-
-  it('h1 text does not slip into review-aggregator framing', () => {
-    for (const pattern of REVIEWER_FRAMING_PATTERNS) {
-      expect(HOMEPAGE_H1_TEXT, `pattern matched: ${pattern}`).not.toMatch(pattern);
+  it('renders the two-door primary-entry copy', () => {
+    const normalized = normalize(pageSource);
+    for (const copy of HOMEPAGE_ENTRY_COPY) {
+      expect(normalized, `missing entry copy: ${copy}`).toContain(copy);
     }
   });
 
-  it('h1 text does not contain commercial-first / "buy now" framing', () => {
-    for (const pattern of COMMERCIAL_FIRST_PATTERNS) {
-      expect(HOMEPAGE_H1_TEXT, `pattern matched: ${pattern}`).not.toMatch(pattern);
+  it('primary-entry copy does not slip into review-aggregator framing', () => {
+    for (const copy of HOMEPAGE_ENTRY_COPY) {
+      for (const pattern of REVIEWER_FRAMING_PATTERNS) {
+        expect(copy, `pattern matched: ${pattern}`).not.toMatch(pattern);
+      }
+    }
+  });
+
+  it('primary-entry copy does not contain commercial-first / "buy now" framing', () => {
+    for (const copy of HOMEPAGE_ENTRY_COPY) {
+      for (const pattern of COMMERCIAL_FIRST_PATTERNS) {
+        expect(copy, `pattern matched: ${pattern}`).not.toMatch(pattern);
+      }
     }
   });
 });
@@ -132,6 +140,12 @@ const REMOVED_HERO_STRINGS = [
   'Names the trade-offs of change',
   'Hifi matched to your preferences, system, and long-term happiness',
   'Audio XX helps you understand your listening preferences',
+  // 2026-06-14 Phase 2: the value-prop tagline h1 and the trust-band
+  // statements were removed; the two-door block carries positioning.
+  'Honest guidance on how great audio systems are designed',
+  'An advisor, not a store.',
+  'We name the trade-offs.',
+  'Doing nothing is a valid answer.',
 ] as const;
 
 describe('Removed hero copy must stay absent (2026-05-20 simplification)', () => {
