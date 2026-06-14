@@ -267,6 +267,45 @@ export interface TechnologyProfile {
    * is suppressed when the array is empty or absent).
    */
   figures?: EditorialFigure[];
+
+  /**
+   * ── School-page top section (Phase 2 presentation redesign) ──
+   *
+   * The three fields below drive a re-layered TOP section used only by
+   * the School page (Musical Communication School). They are optional
+   * and absent on the seven Technology Pages, so those pages render
+   * exactly as before. When present, the renderer emits — above the
+   * standard sections — a light manifesto, a one-minute overview, and a
+   * grouped navigation hub, so a first-time reader meets the worldview
+   * and a skimmable map before the long argument below.
+   *
+   * The content is a resurfacing of prose already authored in this
+   * profile (tagline, whatItIs commitments, the related-brand/tech
+   * clusters), compressed for scanning — not a new editorial claim. The
+   * full Related Brands / Related Technologies / Philosophy sections
+   * remain below unchanged, preserving the deep content.
+   */
+  manifesto?: {
+    /** The quotable worldview line — the screenshot sentence. */
+    pullQuote: string;
+    /** One supporting sentence beneath the pull-quote. */
+    supporting: string;
+  };
+
+  /** 3-4 short orientation lines — the one-minute overview. */
+  oneMinuteOverview?: string[];
+
+  /**
+   * Grouped navigation hub — labeled clusters that replace the flat
+   * card wall as the *entry* affordance. Each group resolves its
+   * techSlugs / brandSlugs to compact links at render time (unresolved
+   * slugs are dropped silently, mirroring the deep-section behavior).
+   */
+  navHubGroups?: Array<{
+    label: string;
+    techSlugs?: string[];
+    brandSlugs?: string[];
+  }>;
 }
 
 /**
@@ -1439,6 +1478,53 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
     ],
     displayName: 'Musical Communication School',
     tagline: 'The chain is the unit of design — voiced choices at every junction, end to end.',
+    // ── Phase 2 school-page top section ──
+    // Light manifesto + one-minute overview + grouped nav hub. All three
+    // resurface prose already authored below (tagline, the three
+    // whatItIs commitments, the related-brand/tech clusters), compressed
+    // for a first-time reader who meets the worldview and a skimmable
+    // map before the long argument. The deep sections remain below.
+    manifesto: {
+      pullQuote: 'The chain is the unit of design.',
+      supporting:
+        'Every junction — cartridge, conversion, amplification, loudspeaker — is a voiced choice made against the others, not against an isolated measurement target.',
+    },
+    oneMinuteOverview: [
+      'Voiced over specified — every junction is a deliberate trade for a musical result, not a maximised measurement.',
+      'The chain over the component — a 7-watt SET is right behind a 96 dB speaker and wrong behind an 86 dB monitor; the choices presuppose each other.',
+      'Listener experience over measurement target — some musical properties are decided at the chain level, not the component level.',
+      'Not anti-measurement — measurement is necessary, but on its own it is not sufficient.',
+    ],
+    navHubGroups: [
+      {
+        label: 'The ideas',
+        techSlugs: [
+          'belt-drive-turntables',
+          'suts',
+          'nos-dacs',
+          'r2r-dacs',
+          'set',
+          'class-a-amplification',
+          'high-efficiency-loudspeakers',
+        ],
+      },
+      {
+        label: 'Chain-as-system anchors',
+        brandSlugs: ['audio-note', 'shindo', 'auditorium-23'],
+      },
+      {
+        label: 'Loudspeakers',
+        brandSlugs: ['devore', 'cube-audio', 'wlm'],
+      },
+      {
+        label: 'Amplification',
+        brandSlugs: ['leben', 'sugden', 'pass-labs'],
+      },
+      {
+        label: 'Analog source',
+        brandSlugs: ['rega', 'michell', 'emt', 'ortofon', 'aurorasound'],
+      },
+    ],
     philosophy: 'The Musical Communication School is the editorial position that audio system design is most coherent when every chain junction — cartridge, drive system, electrical interface, conversion, amplification, acoustic translation — is a voiced choice made against the chain\'s other voiced choices, rather than against an isolated measurement target. The school argues that the chain is the unit of design. Components each chosen to maximise its own specification, without regard for how the pieces work together, can produce a system that measures well and still leaves the listener unmoved — not because measurement misleads, but because coherence across the chain was never the design target. Components selected to express coherent editorial intent across the chain produce systems that listeners describe as alive, present, and emotionally legible. The distinction is not measurement-versus-ears: it is component-optimisation versus chain-optimisation, and a measurement-led designer who optimises the whole chain rather than each box in isolation is making the school\'s argument by another name. The school is not anti-measurement; measurement-based engineering brings real benefits when its results are weighed against the chain\'s editorial intent rather than chased as an end in themselves. The position has been argued continuously by brands and dealers since the 1970s, expressed through editorial commitments at every chain junction the Technology Pages corpus now documents, and durable enough across multiple generations of measurement-target consensus to deserve its own editorial home in the Audio XX map.',
     philosophyExtended: 'The dismissive reading of the Musical Communication School is that it is an audiophile aesthetic preference — a taste for "warmth" or "tube colouration" or "vintage character" preserved by listeners who refuse to accept the measurement-target consensus the mainstream audio industry settled on in the 1980s and 1990s. That reading misreads what the school argues. A Musical Communication chain is not a tonal preference; it is an architectural commitment that every chain junction is a voicing decision made together with the other junctions, and that the resulting system has properties — tonal continuity through transients, microdynamic resolution at quiet listening levels, dynamic ease, the relationship between performer and listener that acoustic instruments produce in real rooms — that measurement-target component selection does not capture.\n\nThe school crystallised through the 1970s and 1980s in three editorially-related currents that have continued to converge: the British SET / Audio Note tradition (Peter Qvortrup, Andy Grove); the Japanese-Artisan tradition (Ken Shindo, Audio Note Japan early years, Sun Audio, Leben); and the German / European analog-interface tradition (Auditorium 23 / Keith Aschenbrenner, J.C. Verdier, the broader Western-Electric-tradition cluster). The British-American high-efficiency-speaker tradition (DeVore Fidelity, the Klipsch Heritage cluster, the WE / Altec heritage) provides the speaker-side anchor. The continental belt-drive turntable tradition (Linn, Rega, Michell, Verdier) provides the analog-source-side anchor. The school is durable across these geographically and linguistically distinct centres because the editorial argument is the same: the chain is the unit of design, the components must be voiced against each other, and some musical properties are decided at the chain level rather than at the component level.',
     whatItIs: 'The Musical Communication School is defined by three editorial commitments that propagate through every chain junction. (1) **Voiced over specified** — every junction is a deliberate engineering trade made for an editorial result, not a maximisation of an isolated measurement. SET gives up power for tonal continuity; NOS DACs give up flat upper-octave response for transient continuity; SUTs give up universality for cartridge-specific voicing; belt-drive turntables give up pitch precision for mechanical isolation; Class A gives up efficiency for full-cycle linearity; high-efficiency speakers give up bandwidth for dynamic ease. (2) **The chain over the component** — selection at each junction presupposes the other junctions\' commitments. A 7 W SET amplifier is editorially correct in a chain ending at a 96 dB high-efficiency speaker; the same amplifier is editorially insufficient in a chain ending at an 86 dB conventional monitor. The chain decisions are not independent. (3) **Listener experience over measurement target** — the school argues that some properties of musical experience (dynamic ease at low SPL, tonal continuity through transients, the input-to-output ratio match with acoustic instruments) are decided at the chain level rather than at the component level, and that these properties are what listeners are choosing the chain for. None of the three commitments is an attack on measurement-based engineering; each is a structural claim that measurement is necessary but not sufficient.',

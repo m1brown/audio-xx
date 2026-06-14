@@ -1,9 +1,14 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { findBrandProfileBySlug, type BrandProfile } from '@/lib/consultation';
+import {
+  findBrandProfileBySlug,
+  findProductsByBrandSlug,
+  type BrandProfile,
+} from '@/lib/consultation';
 import {
   findTechnologyProfileBySlug,
   type TechnologyCrossLink,
+  type TechnologyProfile,
 } from '@/lib/technology-profiles';
 import { toSlug as routeToSlug } from '@/lib/route-slug';
 import { COLOR, sectionHeadingStyle, proseStyle } from '@/lib/editorial-tokens';
@@ -64,6 +69,30 @@ function firstSentence(s: string | undefined): string | undefined {
   return m ? m[0] : s;
 }
 
+// ── Brand display name ─────────────────────────────────────
+// Same precedence the Brand Authority page uses (page.tsx, Pass 19):
+//   1. profile.displayName — explicit canonical form (acronyms)
+//   2. products[0].brand   — catalog-cased brand string (DeVore, WLM)
+//   3. humanizeFromSlug    — last-resort title-cased slug
+// BrandProfile.names are lowercase slug-matching aliases, so they are
+// NOT a safe display source; this resolver keeps brand names properly
+// cased everywhere they appear on the Technology / School pages.
+
+function humanizeFromSlug(slug: string): string {
+  return slug
+    .split('-')
+    .map((part) => (part.length ? part[0].toUpperCase() + part.slice(1) : part))
+    .join(' ');
+}
+
+function brandDisplayName(slug: string, profile?: BrandProfile): string {
+  const p = profile ?? findBrandProfileBySlug(slug);
+  if (p?.displayName) return p.displayName;
+  const products = findProductsByBrandSlug(slug);
+  if (products[0]?.brand) return products[0].brand;
+  return humanizeFromSlug(slug);
+}
+
 // ── Cross-link resolution ──────────────────────────────────
 
 interface ResolvedBrandLink {
@@ -88,8 +117,7 @@ function resolveBrandLinks(links: TechnologyCrossLink[]): ResolvedBrandLink[] {
       }
       continue;
     }
-    const displayName =
-      brand.displayName ?? brand.names[0] ?? link.slug;
+    const displayName = brandDisplayName(link.slug, brand);
     resolved.push({ link, brand, brandSlug: link.slug, brandDisplayName: displayName });
   }
   return resolved;
@@ -126,6 +154,43 @@ function resolveTechnologyLinks(
     });
   }
   return resolved;
+}
+
+// ── School-page top section (Phase 2) ─────────────────────
+// Resolves the grouped navigation hub. Tech slugs link to sibling
+// /tech pages; brand slugs link to /brand pages. Unresolved slugs are
+// dropped silently, mirroring the deep-section behavior. Used only by
+// the School page (the seven Technology Pages omit navHubGroups).
+
+interface ResolvedHubLink {
+  href: string;
+  label: string;
+}
+interface ResolvedHubGroup {
+  label: string;
+  links: ResolvedHubLink[];
+}
+
+function resolveNavHubGroups(
+  groups: TechnologyProfile['navHubGroups'],
+): ResolvedHubGroup[] {
+  if (!groups) return [];
+  const out: ResolvedHubGroup[] = [];
+  for (const g of groups) {
+    const links: ResolvedHubLink[] = [];
+    for (const slug of g.techSlugs ?? []) {
+      const t = findTechnologyProfileBySlug(slug);
+      if (!t) continue;
+      links.push({ href: `/tech/${routeToSlug(t.names[0])}`, label: t.displayName });
+    }
+    for (const slug of g.brandSlugs ?? []) {
+      const b = findBrandProfileBySlug(slug);
+      if (!b) continue;
+      links.push({ href: `/brand/${slug}`, label: brandDisplayName(slug, b) });
+    }
+    if (links.length > 0) out.push({ label: g.label, links });
+  }
+  return out;
 }
 
 // ── Page ─────────────────────────────────────────────────
@@ -166,6 +231,13 @@ export default async function TechnologyPage({ params }: PageProps) {
 
   const resolvedTechs = resolveTechnologyLinks(tp.relatedTechnologySlugs);
   const hasRelatedTechs = resolvedTechs.length > 0;
+
+  // School-page top section (Phase 2). Present only on the School page;
+  // the seven Technology Pages omit these fields and render unchanged.
+  const hasManifesto = !!tp.manifesto;
+  const hasOverview = !!(tp.oneMinuteOverview && tp.oneMinuteOverview.length > 0);
+  const hubGroups = resolveNavHubGroups(tp.navHubGroups);
+  const hasSchoolTop = hasManifesto || hasOverview || hubGroups.length > 0;
 
   // Mirror brand page: filter out F4 'review' kind links even though
   // technology pages do not currently carry reviewer-source links.
@@ -263,6 +335,141 @@ export default async function TechnologyPage({ params }: PageProps) {
           </p>
         )}
       </header>
+
+      {/* ══════════════════════════════════════════════════
+          1.5. SCHOOL TOP SECTION (Phase 2) — manifesto +
+               one-minute overview + grouped navigation hub.
+               Renders only when the profile carries these fields
+               (the School page). The seven Technology Pages omit
+               them and skip this block entirely. The deep
+               argument (Quick Identity → Philosophy → Related
+               Brands/Technologies) follows below, unchanged.
+         ══════════════════════════════════════════════════ */}
+      {hasSchoolTop && (
+        <section style={{ marginBottom: '1.75rem' }}>
+          {/* Manifesto — the quotable worldview line + one support
+              sentence. The screenshot moment. */}
+          {tp.manifesto && (
+            <div style={{
+              borderLeft: `3px solid ${COLOR.textPrimary}`,
+              paddingLeft: '1.1rem',
+              margin: '0 0 1.75rem',
+            }}>
+              <p style={{
+                margin: 0,
+                fontSize: '1.5rem',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                lineHeight: 1.25,
+                color: COLOR.textPrimary,
+              }}>
+                {tp.manifesto.pullQuote}
+              </p>
+              <p style={{
+                margin: '0.6rem 0 0',
+                fontSize: '1.02rem',
+                lineHeight: 1.55,
+                color: COLOR.textSecondary,
+              }}>
+                {tp.manifesto.supporting}
+              </p>
+            </div>
+          )}
+
+          {/* One-minute overview — the skimmable orientation. */}
+          {hasOverview && (
+            <div style={{
+              background: COLOR.cardBg,
+              border: `1px solid ${COLOR.border}`,
+              borderRadius: 8,
+              padding: '1.1rem 1.2rem',
+              margin: '0 0 1.75rem',
+            }}>
+              <p style={{
+                margin: '0 0 0.7rem',
+                fontSize: '0.72rem',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: COLOR.textMuted,
+              }}>
+                The school in one minute
+              </p>
+              <ul style={{ ...proseStyle, listStyle: 'none', paddingLeft: 0, margin: 0 }}>
+                {tp.oneMinuteOverview!.map((line, i) => (
+                  <li key={i} style={{
+                    display: 'flex',
+                    gap: '0.6rem',
+                    marginBottom: i === tp.oneMinuteOverview!.length - 1 ? 0 : '0.55rem',
+                  }}>
+                    <span aria-hidden="true" style={{ color: COLOR.textMuted }}>—</span>
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Grouped navigation hub — labeled clusters of compact
+              links. The entry affordance that replaces the flat card
+              wall as the first thing a reader can act on. */}
+          {hubGroups.length > 0 && (
+            <div>
+              <p style={{
+                margin: '0 0 0.85rem',
+                fontSize: '0.72rem',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: COLOR.textMuted,
+              }}>
+                Explore the school
+              </p>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '1.1rem 1.5rem',
+              }}>
+                {hubGroups.map((g) => (
+                  <div key={g.label}>
+                    <p style={{
+                      margin: '0 0 0.5rem',
+                      fontSize: '0.9rem',
+                      fontWeight: 700,
+                      color: COLOR.textPrimary,
+                    }}>
+                      {g.label}
+                    </p>
+                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                      {g.links.map((lnk) => (
+                        <li key={lnk.href} style={{ marginBottom: '0.32rem' }}>
+                          <Link
+                            href={lnk.href}
+                            style={{
+                              fontSize: '0.92rem',
+                              color: COLOR.textPrimary,
+                              textDecoration: 'none',
+                              borderBottom: `1px solid ${COLOR.border}`,
+                              paddingBottom: '1px',
+                            }}
+                          >
+                            {lnk.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Divider into the deep argument below. */}
+          <hr style={{
+            border: 0,
+            borderTop: `1px solid ${COLOR.border}`,
+            margin: '2rem 0 0',
+          }} />
+        </section>
+      )}
 
       {/* ══════════════════════════════════════════════════
           2. QUICK IDENTITY — schoolsMemo orientation
