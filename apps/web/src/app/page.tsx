@@ -4564,7 +4564,7 @@ export default function Home() {
           color: '#2A2A2A',
         }}
       >
-        Hifi gear recommendations matched to your taste and system
+        Honest guidance on how great audio systems are designed — and what fits yours
       </h1>
 
       {/* System badge + panel — marginBottom tightened (0.5rem → 0.4rem)
@@ -4705,6 +4705,137 @@ export default function Home() {
            *  36rem, no supporting caption). The headline's internal
            *  marginBottom stays at 0; the container's marginBottom
            *  carries the gap to the next block. */}
+          {/* ── Two-door entry (Phase 2 presentation redesign) ──
+           *
+           * The landing surface offers two equal-weight primary paths
+           * instead of leading with the bare query box:
+           *   Door A "Assess my system"  → focuses the entry textarea
+           *                                 below (the existing advisory
+           *                                 surface; no routing change).
+           *   Door B "Learn how audio works" → the editorial front door
+           *                                 (/tech/musical-communication-
+           *                                 school), which links onward
+           *                                 to every Technology Page and
+           *                                 the school's brand cluster.
+           *
+           * This raises editorial authority to first contact and gives
+           * the larger pool of curious-but-not-query-ready visitors a
+           * door that isn't an empty text field. Landing-only; the
+           * conversation view is untouched. */}
+          <div
+            className="audioxx-two-door"
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.85rem',
+              marginBottom: '1.5rem',
+              maxWidth: EDITORIAL.narrow,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                const el = textareaRef.current;
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  el.focus({ preventScroll: true });
+                }
+              }}
+              style={{
+                flex: '1 1 240px',
+                textAlign: 'left',
+                padding: '1rem 1.15rem',
+                background: EDITORIAL.ink,
+                color: '#FFFFFF',
+                border: `1px solid ${EDITORIAL.ink}`,
+                borderRadius: 6,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'background 0.15s ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = EDITORIAL.buttonHover; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = EDITORIAL.ink; }}
+            >
+              <span style={{ display: 'block', fontSize: '1.02rem', fontWeight: 600, letterSpacing: '-0.01em' }}>
+                Assess my system <span aria-hidden="true">→</span>
+              </span>
+              <span style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.86rem', lineHeight: 1.45, color: 'rgba(255,255,255,0.78)' }}>
+                Tell us your gear. Get a system-level read — strengths, trade-offs, and whether a change is even worth making.
+              </span>
+            </button>
+
+            <Link
+              href="/tech/musical-communication-school"
+              style={{
+                flex: '1 1 240px',
+                textAlign: 'left',
+                padding: '1rem 1.15rem',
+                background: '#FFFFFF',
+                color: EDITORIAL.ink,
+                border: `1px solid ${EDITORIAL.ink}`,
+                borderRadius: 6,
+                textDecoration: 'none',
+                fontFamily: 'inherit',
+                transition: 'background 0.15s ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F3F1'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#FFFFFF'; }}
+            >
+              <span style={{ display: 'block', fontSize: '1.02rem', fontWeight: 600, letterSpacing: '-0.01em' }}>
+                Learn how audio works <span aria-hidden="true">→</span>
+              </span>
+              <span style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.86rem', lineHeight: 1.45, color: EDITORIAL.inkMuted }}>
+                How systems are actually designed — the ideas, the schools of thought, and the brands that build them.
+              </span>
+            </Link>
+          </div>
+
+          {/* ── Trust band (Phase 2) — surfaces the editorial posture
+           * that differentiates Audio XX, at first contact rather than
+           * one click deep. Three short statements + a quiet link into
+           * the editorial library so the ecosystem is discoverable from
+           * the homepage. Landing-only. */}
+          <div
+            style={{
+              marginBottom: '1.75rem',
+              maxWidth: EDITORIAL.narrow,
+              paddingTop: '0.1rem',
+            }}
+          >
+            <ul
+              style={{
+                listStyle: 'none',
+                margin: '0 0 0.55rem 0',
+                padding: 0,
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '0.4rem 1.4rem',
+                fontSize: '0.84rem',
+                color: EDITORIAL.inkMuted,
+                lineHeight: 1.5,
+              }}
+            >
+              <li>An advisor, not a store.</li>
+              <li>We name the trade-offs.</li>
+              <li>Doing nothing is a valid answer.</li>
+            </ul>
+            <Link
+              href="/resources"
+              style={{
+                fontSize: '0.82rem',
+                color: EDITORIAL.faint,
+                textDecoration: 'none',
+                borderBottom: `1px solid ${EDITORIAL.rule}`,
+                paddingBottom: '1px',
+                transition: 'color 0.15s ease, border-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = EDITORIAL.ink; e.currentTarget.style.borderBottomColor = EDITORIAL.faint; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = EDITORIAL.faint; e.currentTarget.style.borderBottomColor = EDITORIAL.rule; }}
+            >
+              Browse the editorial library →
+            </Link>
+          </div>
+
           {/* Compact taste widget — authenticated users with profile data */}
           {tasteProfile && tasteProfile.confidence > 0 && (
             <div
@@ -4814,6 +4945,20 @@ export default function Home() {
             ];
 
             return (
+              <>
+              {/* Phase 2: a quiet caption subordinates the starter chips
+               * to "examples" so they read as support for the Assess
+               * door above rather than as co-equal headline actions. */}
+              <p style={{
+                margin: '0 0 0.5rem 0',
+                fontSize: '0.74rem',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: EDITORIAL.faint,
+                maxWidth: EDITORIAL.narrow,
+              }}>
+                Or start from an example
+              </p>
               <div
                 className="audioxx-hero-chips"
                 style={{
@@ -4823,7 +4968,7 @@ export default function Home() {
                   // and top margin 0.1rem → 0.4rem so the chip row reads
                   // as its own quiet stanza below the system badge.
                   gap: '0.55rem',
-                  marginTop: '0.4rem',
+                  marginTop: '0',
                   marginBottom: '1.25rem',
                   maxWidth: EDITORIAL.narrow,
                 }}
@@ -4865,6 +5010,7 @@ export default function Home() {
                   </button>
                 ))}
               </div>
+              </>
             );
           })()}
         </>
@@ -4975,63 +5121,12 @@ export default function Home() {
         </div>
       )}
 
-      {/* Stage 7.1 "Add your system" primary CTA.
-       *
-       * Promoted from a quiet inline underlined link (formerly inside
-       * the SystemBadge container above the headline) to a small
-       * editorial CTA placed directly above the textarea, where the
-       * empty-state visitor's eye naturally lands before typing. The
-       * onClick behavior is identical to the prior inline link —
-       * opens the same SystemPanel. Visual treatment kept calm and
-       * editorial (hairline border, ink color, no fill); not a
-       * loud SaaS button.
-       *
-       * Only renders on the landing state when no systems exist at
-       * all — same condition the inline link used, plus a !hasMessages
-       * guard so it disappears once a conversation begins. */}
-      {!hasPendingIntake
-        && !hasMessages
-        && !audioState.activeSystemRef
-        && audioState.savedSystems.length === 0
-        && !audioState.draftSystem
-        && !systemPanelOpen && (
-        <div style={{
-          marginBottom: '0.85rem',
-          maxWidth: EDITORIAL.narrow,
-        }}>
-          <button
-            type="button"
-            onClick={() => setSystemPanelOpen(true)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.5rem 0.9rem',
-              background: 'transparent',
-              border: `1px solid ${EDITORIAL.ink}`,
-              borderRadius: 3,
-              color: EDITORIAL.ink,
-              fontFamily: 'inherit',
-              fontSize: '0.9rem',
-              fontWeight: 500,
-              lineHeight: 1.4,
-              cursor: 'pointer',
-              transition: 'color 0.15s ease, border-color 0.15s ease, background 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = EDITORIAL.ink;
-              e.currentTarget.style.color = '#fff';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = EDITORIAL.ink;
-            }}
-          >
-            <span>Add your system</span>
-            <span aria-hidden="true">→</span>
-          </button>
-        </div>
-      )}
+      {/* Stage 7.1 "Add your system" standalone CTA was removed in the
+       * Phase 2 presentation redesign to reduce competing primary
+       * actions on the landing surface. The two-door block above now
+       * carries the primary call to action ("Assess my system" focuses
+       * the entry field below), and system creation remains reachable
+       * from the SystemBadge / SystemPanel above the hero. */}
 
       {/* Input area — hidden when an intake form is active (it has its own Submit).
        *

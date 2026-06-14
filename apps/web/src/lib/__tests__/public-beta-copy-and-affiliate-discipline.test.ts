@@ -80,7 +80,10 @@ const COMMERCIAL_FIRST_PATTERNS: RegExp[] = [
 // was demoted from h1 to a div with the same styling and reset
 // behaviour so the page retains exactly one h1.
 
-const HOMEPAGE_H1_TEXT = 'Hifi gear recommendations matched to your taste and system';
+// 2026-06-14 Phase 2 presentation redesign: the h1 became a clear
+// positioning statement (advisor stance + system-fit) replacing the
+// prior "Hifi gear recommendations…" value-prop line.
+const HOMEPAGE_H1_TEXT = 'Honest guidance on how great audio systems are designed — and what fits yours';
 
 describe('Homepage hero h1 (single source of the page heading)', () => {
   const pageSource = readRepoFile('apps/web/src/app/page.tsx');

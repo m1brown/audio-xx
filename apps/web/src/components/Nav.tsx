@@ -86,8 +86,11 @@ export default function Nav() {
             {/* Editorial corpus entry point. The Musical Communication
              * School page is the natural front door — it links onward to
              * all seven Technology Pages and the school's brand cluster,
-             * so one nav item opens the whole editorial layer. */}
-            <NavItem href="/tech/musical-communication-school" label="Understanding" secondary />
+             * so one nav item opens the whole editorial layer. Labeled
+             * "Learn" (Phase 2) — the prior "Understanding" read as
+             * ambiguous; "Learn" names the action and matches the
+             * homepage "Learn how audio works" door. */}
+            <NavItem href="/tech/musical-communication-school" label="Learn" secondary />
             <NavItem href="/glossary" label="Glossary" secondary />
             <NavItem href="/resources" label="Resources" secondary />
             {session && <NavItem href="/systems" label="Systems" />}
