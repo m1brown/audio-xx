@@ -83,7 +83,7 @@ const COMMERCIAL_FIRST_PATTERNS: RegExp[] = [
 const HOMEPAGE_ENTRY_COPY = [
   'Assess my system',
   'Learn how audio works',
-  'How systems are actually designed — the ideas, the schools of thought, and the companies that build them.',
+  'Explore the ideas, schools of thought, and companies behind great systems.',
   'Browse the editorial library',
 ];
 

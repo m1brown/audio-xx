@@ -4733,7 +4733,7 @@ export default function Home() {
                 Assess my system <span aria-hidden="true">→</span>
               </span>
               <span style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.86rem', lineHeight: 1.45, color: 'rgba(255,255,255,0.78)' }}>
-                Tell us your gear. Get a system-level read — strengths, trade-offs, and whether a change is even worth making.
+                Get a system-level read on strengths, trade-offs, and whether a change is worth making.
               </span>
             </button>
 
@@ -4758,7 +4758,7 @@ export default function Home() {
                 Learn how audio works <span aria-hidden="true">→</span>
               </span>
               <span style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.86rem', lineHeight: 1.45, color: EDITORIAL.inkMuted }}>
-                How systems are actually designed — the ideas, the schools of thought, and the companies that build them.
+                Explore the ideas, schools of thought, and companies behind great systems.
               </span>
             </Link>
           </div>
