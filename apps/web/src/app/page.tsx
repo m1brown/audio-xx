@@ -74,6 +74,9 @@ import { classifySystemArchetype, buildConsumerWirelessResponse } from '@/lib/sy
 import { findReferenceProduct, buildExplorationResponse, explorationToConsultation } from '@/lib/exploration';
 import { buildIntakeResponse, intakeToAdvisory } from '@/lib/intake';
 import { inferUnknownProduct, buildUnknownProductFallback } from '@/lib/llm-product-inference';
+// Validation telemetry + feedback (Workstream 25B — throwaway cohort scaffolding).
+import { trackEvent, trackDecisionIntent, initSessionTelemetry } from '@/lib/track-event';
+import FeedbackPrompt from '@/components/FeedbackPrompt';
 import { inferProvisionalSystemAssessment } from '@/lib/llm-system-inference';
 import type { GlossaryResult } from '@/lib/glossary';
 import type { Message, ConversationState } from '@/lib/conversation-types';
@@ -215,13 +218,19 @@ const COMPARE_PROMPTS: ReadonlyArray<string> = [
  * fatiguing?" prompt is preserved verbatim because it remains the
  * cleanest entry point into the system-fit framing.
  */
+// Workstream 25B: the variety pool now explicitly covers the six
+// decision types the validation cohort must be able to initiate
+// (buy / upgrade / alternative / compatibility / avoid / keep), so a
+// first-time visitor self-selects into a real decision rather than
+// general browsing. All six render as example chips on the landing
+// surface (the assess anchor + a compare example sit alongside).
 const VARIETY_PROMPTS: ReadonlyArray<string> = [
-  'Help me understand my listening preferences',
-  'why does my system sound fatiguing?',
-  'would this upgrade actually improve my system?',
-  'am I solving the wrong problem?',
-  'what trade-off am I making?',
-  'should I change anything at all?',
+  'Should I buy a used Rega Planar 3?',                          // buy
+  'What should I upgrade first in my system?',                   // upgrade
+  'What is a more affordable alternative to the Chord Qutest?',  // alternative
+  'Is a Leben CS600X a good match for DeVore O/96?',             // compatibility
+  'What should I avoid for a small, untreated room?',            // avoid
+  'Should I change anything at all?',                            // keep
 ];
 
 /**
@@ -647,6 +656,11 @@ export default function Home() {
     setImageUploadError(null);
   }, []);
 
+  // Validation telemetry (Workstream 25B): record return visits once on mount.
+  useEffect(() => {
+    initSessionTelemetry();
+  }, []);
+
   const handleSubmit = useCallback(async (overrideText?: string, options?: { source?: 'follow-up' | 'fresh' }) => {
     const inputText = overrideText ?? currentInput;
     const hasPendingImagesForTurn = !overrideText && pendingImages.length > 0;
@@ -660,6 +674,11 @@ export default function Home() {
 
     const submittedText = inputText;
     const isFollowUp = options?.source === 'follow-up';
+
+    // Validation telemetry (Workstream 25B): a user-submitted query is a
+    // decision-intent entry. trackDecisionIntent also emits
+    // return_visit_new_decision when appropriate.
+    trackDecisionIntent({ source: options?.source ?? 'fresh', followUp: isFollowUp });
 
     // ── Listing-evaluation branch ─────────────────────────
     // If the user attached photos, this turn is a used-listing read —
@@ -2339,6 +2358,11 @@ export default function Home() {
         const assessmentMsgId = advisoryId();
         const deterministicAdvisory = consultationToAdvisory(assessmentResult.response, undefined, advisoryCtx);
         dispatchAdvisory(deterministicAdvisory, assessmentMsgId);
+        // Validation telemetry (Workstream 25B): assessment delivered.
+        trackEvent('assessment_completed', {
+          id: assessmentMsgId,
+          components: assessmentResult.findings.componentNames.length,
+        });
         // Store consultation context so follow-ups stay in the system context
         dispatch({
           type: 'SET_CONSULTATION_CONTEXT',
@@ -2464,6 +2488,8 @@ export default function Home() {
           inferredAdvisory.reasoningMode = 'expanded';
           inferredAdvisory.fallbackReason = 'unknown_subject';
           dispatchAdvisory(inferredAdvisory, advisoryId());
+          // Validation telemetry (Workstream 25B): out-of-catalog, LLM-inferred.
+          trackEvent('unknown_product', { subject: subjectName ?? null, resolved: 'inferred' });
           dispatch({ type: 'SET_LOADING', value: false });
           return;
         }
@@ -2484,6 +2510,8 @@ export default function Home() {
         fallbackAdvisory.reasoningMode = 'expanded';
         fallbackAdvisory.fallbackReason = 'thin_output';
         dispatchAdvisory(fallbackAdvisory, advisoryId());
+        // Validation telemetry (Workstream 25B): out-of-catalog, hedged fallback.
+        trackEvent('unknown_product', { subject: subjectName ?? null, resolved: 'fallback' });
         dispatch({ type: 'SET_LOADING', value: false });
         return;
       }
@@ -4888,14 +4916,16 @@ export default function Home() {
             const comparePrompt = sessionStarterPrompts.find((p) =>
               COMPARE_PROMPTS.includes(p),
             );
-            // Slot 3: first variety prompt in shuffled order.
-            const varietyPrompt = sessionStarterPrompts.find((p) =>
+            // Workstream 25B: surface ALL six decision-type variety
+            // prompts (not just one) so every visitor sees buy / upgrade
+            // / alternative / compatibility / avoid / keep examples.
+            const varietyPromptsToShow = sessionStarterPrompts.filter((p) =>
               VARIETY_PROMPTS.includes(p),
             );
             const prompts: ReadonlyArray<string> = [
               assessPrompt,
               ...(comparePrompt ? [comparePrompt] : []),
-              ...(varietyPrompt ? [varietyPrompt] : []),
+              ...varietyPromptsToShow,
             ];
 
             return (
@@ -5010,6 +5040,14 @@ export default function Home() {
                 />
               </div>
             ))}
+          {/* Validation feedback (Workstream 25B): one prompt beneath the
+           * latest advisory/assessment answer, deduped per advisory id. */}
+          {!isLoading
+            && lastMessage?.role === 'assistant'
+            && lastMessage.kind === 'advisory'
+            && 'id' in lastMessage && (
+            <FeedbackPrompt advisoryId={String((lastMessage as { id?: string }).id ?? 'latest')} />
+          )}
           {/* Skip-to-suggestions button — visible when asking clarifying questions in shopping mode */}
           {!isLoading && lastMessage?.role === 'assistant' && lastMessage.kind === 'question' && state.activeMode === 'shopping' && (
             <button
