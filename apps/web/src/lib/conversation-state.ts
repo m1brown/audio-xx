@@ -1281,14 +1281,21 @@ export function transition(
           };
         }
 
-        // No evaluation intent and no components — ask what they want to do
+        // Advice-first (Product Doctrine v1.0, WS28): rather than asking
+        // the user what they want to improve BEFORE offering any opinion,
+        // attempt a provisional system assessment from what they've given.
+        // buildSystemAssessment forms the observation / interpretation /
+        // trade-off / recommendation and appends its own refining
+        // follow-up; it falls back to a clarification question only when
+        // it genuinely cannot read a system (handled in page.tsx via
+        // assessmentResult.kind === 'clarification' | 'low_confidence').
+        // This makes the upgrade / change / keep decision prompts return
+        // advice on turn one instead of a bare clarifying question.
+        facts.systemComponents = [text];
+        facts.systemAssessmentText = text;
         return {
-          state: { mode: 'system_assessment', stage: 'clarify_preference', facts },
-          response: {
-            kind: 'question',
-            acknowledge: 'Got it — that\'s your system.',
-            question: 'What are you trying to improve or change about it?',
-          },
+          state: { mode: 'system_assessment', stage: 'ready_to_assess', facts },
+          response: { kind: 'proceed' },
         };
       }
 
