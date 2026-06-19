@@ -1834,38 +1834,8 @@ export default function Home() {
           // Let existing music_input handler below run for the first response
         }
 
-        // ── Advice-first: component evaluation within a KNOWN system ──
-        // Product Doctrine v1.0: "Would <component> be a good upgrade/match?"
-        // asked against an already-known system is a SYSTEM-AWARE product
-        // evaluation — not a shopping intake. The product_assessment path
-        // reasons against turnCtx.activeSystem (AssessmentContext.activeSystem),
-        // so reroute there to give a first opinion on how the named component
-        // would change the existing system, instead of asking "What's your
-        // budget?". Guarded on three signals so ordinary shopping is
-        // unaffected: a known system, evaluative/upgrade phrasing, and a
-        // specific named product/brand.
-        const knownSystemForEval =
-          !!turnCtx.activeSystem || !!audioState.activeSystemRef || !!coldInjectedSystemText;
-        const isComponentUpgradeEval =
-          /\b(?:good (?:upgrade|match|fit|addition|pairing|move)|worth (?:it|buying|getting|adding|the\s+upgrade)|be an upgrade|be a good|improve (?:my|the)\s+(?:system|sound|chain|setup)|should i (?:add|get|buy|swap|switch|try|consider)|would (?:the|a|an)\b[^?]*\b(?:be|work|improve|match|pair|help|fit))\b/i.test(submittedText);
-        // A specific component is named either as a recognized product/brand
-        // subject OR via a component-category word (so an unknown brand like
-        // "Laiv µDAC" still counts — the doctrine's own example). A category
-        // word alone (no system, no eval phrasing) does NOT trigger this; all
-        // three guards must hold.
-        const namesComponentForEval =
-          turnCtx.subjectMatches.some((m) => m.kind === 'product' || m.kind === 'brand')
-          || /\b(?:dac|amp(?:lifier)?|pre[- ]?amp|integrated|speakers?|monitors?|cartridge|phono(?:\s*stage)?|streamer|turntable|cables?|interconnects?)\b/i.test(submittedText);
-        if (
-          initialConvMode.mode === 'shopping'
-          && knownSystemForEval
-          && isComponentUpgradeEval
-          && namesComponentForEval
-        ) {
-          intent = 'product_assessment';
-          console.log('[advice-first] component-eval in known system → product_assessment (was shopping)');
-        } else if (initialConvMode.mode === 'shopping') {
-          // ── Shopping — recommend immediately or ask ONE question ──
+        // ── Shopping — recommend immediately or ask ONE question ──
+        if (initialConvMode.mode === 'shopping') {
           // Override intent so we never fall to generic intake
           intent = 'shopping';
           if (initialConvMode.stage === 'ready_to_recommend') {
