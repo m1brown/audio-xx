@@ -44,6 +44,15 @@ export function a3IsAdvisoryQuestion(text: string): boolean {
   return false;
 }
 
+// ── Low-risk intent (WS31 follow-up) ─────────────────────
+// "lowest-risk / least-disruptive / safest / most incremental upgrade" — for
+// these, replacing a core component (speaker/amp/DAC) as the PRIMARY move is
+// off-brief unless smaller steps are explicitly shown to be insufficient.
+const LOW_RISK_RE = /\b(lowest[- ]?risk|low[- ]?risk|least[- ]?disrupt\w*|safe(st|r)?\s+(upgrade|change|move|bet|step)|safest|most\s+incremental|incremental\s+(upgrade|step|change)|smallest\s+(change|step)|cheapest\s+meaningful)\b/i;
+export function a3IsLowRiskQuestion(text: string): boolean {
+  return LOW_RISK_RE.test(text || '');
+}
+
 // ── Context assembly: explicit, role-grounded system prompt ──
 function componentLabel(c: ActiveSystemContext['components'][number]): string {
   const n = c.name?.toLowerCase().startsWith((c.brand || '').toLowerCase())
@@ -52,12 +61,15 @@ function componentLabel(c: ActiveSystemContext['components'][number]): string {
   return n || c.name || c.brand;
 }
 
-function buildSystemPrompt(system: ActiveSystemContext): string {
+function buildSystemPrompt(system: ActiveSystemContext, opts?: { lowRisk?: boolean }): string {
   const roleLines = system.components
     .map((c) => `- ${componentLabel(c)} = ${c.role || c.category} (role is fixed; do not misread it).`)
     .join('\n');
   const character = system.tendencies ? `\nKnown system character: ${system.tendencies}.` : '';
-  return `You are Audio XX, an experienced high-fidelity system advisor with a point of view.
+  const lowRisk = opts?.lowRisk
+    ? `\n\nThis is a LOW-RISK / least-disruptive / incremental request. Do NOT recommend replacing a core component (speakers, amplifier, or DAC) as the PRIMARY move unless you explicitly explain why smaller steps are insufficient. Prefer, in order: speaker placement, room interaction, listening position, setup/grounding, source configuration, or "no change" — and low-disruption source refinement only if clearly justified. A component swap is a major change, not a low-risk one.`
+    : '';
+  return `You are Audio XX, an experienced high-fidelity system advisor with a point of view.${lowRisk}
 
 The user OWNS this system. Component ROLES are fixed — never misread them:
 ${roleLines}${character}
@@ -95,9 +107,26 @@ async function callLLM(systemPrompt: string, userPrompt: string): Promise<string
 }
 
 // ── Lightweight validation (prefer simple, robust checks) ──
-export function validateA3(answer: string, system: ActiveSystemContext): string[] {
+export function validateA3(
+  answer: string,
+  system: ActiveSystemContext,
+  opts?: { lowRisk?: boolean },
+): string[] {
   const t = answer.toLowerCase();
   const fails: string[] = [];
+
+  // Low-risk semantic guardrail (WS31 follow-up): for low-risk/incremental
+  // requests, recommending a core-component swap (speaker/amp/DAC) as the move
+  // is off-brief unless the answer justifies why smaller steps are insufficient.
+  if (opts?.lowRisk) {
+    const recommendsCoreSwap = /\b(replace|replacing|swap|swapping|upgrade|upgrading|change|changing|new)\b[^.]{0,50}\b(speakers?|amplifier|\bamp\b|integrated|dac)\b/i.test(answer)
+      || /\b(speakers?|amplifier|\bamp\b|integrated|dac)\b[^.]{0,50}\b(replace|swap|upgrade)\b/i.test(answer);
+    const lowDisruptionOffered = /(placement|room|position|positioning|setup|set-up|listening (position|seat|chair)|no change|keep what you have|grounding|cabling layout|speaker distance|toe-?in)/i.test(answer);
+    const justifiesSwap = /(smaller steps?|small steps?|won'?t be enough|not be enough|insufficient|limited (gains|benefit)|diminish|only so much|reached (its|their) limit|nothing left to gain)/i.test(answer);
+    if (recommendsCoreSwap && !lowDisruptionOffered && !justifiesSwap) {
+      fails.push('low-risk-recommends-core-swap');
+    }
+  }
 
   const tokens = new Set<string>();
   for (const c of system.components) {
@@ -135,12 +164,13 @@ export async function runA3Advisor(opts: {
   question: string;
   activeSystem: ActiveSystemContext;
 }): Promise<A3Result | null> {
-  const systemPrompt = buildSystemPrompt(opts.activeSystem);
+  const lowRisk = a3IsLowRiskQuestion(opts.question);
+  const systemPrompt = buildSystemPrompt(opts.activeSystem, { lowRisk });
 
   let answer = await callLLM(systemPrompt, opts.question);
   if (!answer) return null; // LLM unavailable → fallback
 
-  let fails = validateA3(answer, opts.activeSystem);
+  let fails = validateA3(answer, opts.activeSystem, { lowRisk });
   if (fails.length === 0) return { answer, status: 'pass' };
 
   // Revise once, naming the failed checks.
@@ -149,7 +179,7 @@ export async function runA3Advisor(opts: {
     `${opts.question}\n\n[Your previous draft failed these checks: ${fails.join(', ')}. Rewrite the answer fixing exactly those issues while keeping the required structure and answering first.]`,
   );
   if (!revised) return null;
-  fails = validateA3(revised, opts.activeSystem);
+  fails = validateA3(revised, opts.activeSystem, { lowRisk });
   if (fails.length === 0) return { answer: revised, status: 'revised' };
 
   return null; // still failing → fallback to current engine
