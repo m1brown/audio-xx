@@ -77,6 +77,8 @@ import { inferUnknownProduct, buildUnknownProductFallback } from '@/lib/llm-prod
 // Validation telemetry + feedback (Workstream 25B — throwaway cohort scaffolding).
 import { trackEvent, trackDecisionIntent, initSessionTelemetry } from '@/lib/track-event';
 import FeedbackPrompt from '@/components/FeedbackPrompt';
+// A3 hybrid advisor (WS31 — flag-gated, known-system advisory only; default OFF).
+import { a3Enabled, a3IsAdvisoryQuestion, runA3Advisor } from '@/lib/a3-advisor';
 import { inferProvisionalSystemAssessment } from '@/lib/llm-system-inference';
 import type { GlossaryResult } from '@/lib/glossary';
 import type { Message, ConversationState } from '@/lib/conversation-types';
@@ -679,6 +681,38 @@ export default function Home() {
     // decision-intent entry. trackDecisionIntent also emits
     // return_visit_new_decision when appropriate.
     trackDecisionIntent({ source: options?.source ?? 'fresh', followUp: isFollowUp });
+
+    // ── A3 hybrid advisor (WS31, flag-gated, known-system advisory only) ──
+    // When enabled AND a system is known AND the message is advisory, try the
+    // guarded LLM-led advisor first. It returns null on any validation failure
+    // or LLM unavailability, in which case we fall through to the existing
+    // engine below (the default + fallback). Scope: known-system advisory
+    // questions only — shopping/discovery/cold-start are untouched.
+    if (a3Enabled() && !hasPendingImagesForTurn && a3IsAdvisoryQuestion(submittedText)) {
+      const a3Ctx = buildTurnContext(
+        submittedText,
+        audioState,
+        dismissedFingerprintsRef.current,
+        state.listenerPreferenceProfile,
+      );
+      if (a3Ctx.activeSystem && a3Ctx.activeSystem.components.length > 0) {
+        dispatch({ type: 'SET_LOADING', value: true });
+        const a3 = await runA3Advisor({ question: submittedText, activeSystem: a3Ctx.activeSystem });
+        if (a3) {
+          dispatch({ type: 'ADD_USER_MESSAGE' });
+          dispatch({ type: 'ADD_NOTE', content: a3.answer });
+          dispatch({ type: 'SET_INPUT', value: '' });
+          dispatch({ type: 'SET_LOADING', value: false });
+          trackEvent('a3_advisory', { status: a3.status });
+          return;
+        }
+        // A3 declined → fall back to the existing engine. Reset loading and do
+        // NOT add the user message here (the engine path adds it) to avoid a
+        // duplicate user turn.
+        dispatch({ type: 'SET_LOADING', value: false });
+        trackEvent('a3_advisory', { status: 'fallback' });
+      }
+    }
 
     // ── Listing-evaluation branch ─────────────────────────
     // If the user attached photos, this turn is a used-listing read —
