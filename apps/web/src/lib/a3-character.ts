@@ -122,6 +122,72 @@ const AXIS_LEXICON = {
   airy: ['diffuse', 'vague', 'unfocused'],
 } as const;
 
+// Negation cue immediately before a flagged term ("not overly analytical",
+// "without leaning towards analytical", "never bright", "avoids").
+const NEGATION_RE =
+  /\b(not|no|never|without|isn'?t|aren'?t|avoids?|avoiding|free\s+of|lacks?|rather\s+than|instead\s+of|less|nothing)\s+(\w+\s+){0,3}$/i;
+
+// Map role nouns in prose to a component role family (for anaphora like
+// "these speakers add a bright edge" where the model named the speaker earlier).
+const ROLE_WORDS: { re: RegExp; family: string }[] = [
+  { re: /\b(speakers?|loudspeakers?|monitors?)\b/i, family: 'speaker' },
+  { re: /\b(amp|amplifiers?|integrated)\b/i, family: 'amplifier' },
+  { re: /\b(dac|converter)\b/i, family: 'dac' },
+  { re: /\b(streamer|transport|source)\b/i, family: 'streamer' },
+];
+
+function splitSentences(t: string): string[] {
+  return t.split(/(?<=[.!?])\s+/);
+}
+
+/**
+ * Genuine system-level contradiction check for one axis pole.
+ * Returns the offending term only when a flagged word appears that is NOT
+ * negated and NOT attributable to a component that legitimately holds that
+ * pole (named in the sentence, or referenced by its role noun).
+ */
+function genuineContradiction(
+  text: string,
+  words: readonly string[],
+  axisKey: 'warm_bright' | 'smooth_detailed' | 'elastic_controlled',
+  pole: string,
+  comps: AdvisorContext['system']['components'],
+): string | null {
+  for (const sent of splitSentences(text)) {
+    const l = sent.toLowerCase();
+    for (const w of words) {
+      const re = new RegExp(`\\b${w.replace(/[-\s]/g, '[-\\s]')}\\b`, 'i');
+      const m = re.exec(l);
+      if (!m) continue;
+      // 1. negation immediately before the term → not a contradiction
+      if (NEGATION_RE.test(l.slice(0, m.index))) continue;
+      // 2. component-scoped: a component named in this sentence holds the pole
+      const named = comps.some(
+        (c) =>
+          (c.axisPosition as unknown as Record<string, string>)[axisKey] === pole &&
+          c.name
+            .toLowerCase()
+            .split(/[^a-z0-9]+/)
+            .some((tok) => tok.length >= 3 && l.includes(tok)),
+      );
+      if (named) continue;
+      // 3. anaphora: a role noun present + a component of that role holds the pole
+      const roleScoped = ROLE_WORDS.some(
+        (rw) =>
+          rw.re.test(l) &&
+          comps.some(
+            (c) =>
+              c.roles.includes(rw.family) &&
+              (c.axisPosition as unknown as Record<string, string>)[axisKey] === pole,
+          ),
+      );
+      if (roleScoped) continue;
+      return w; // genuine, system-level, unscoped use
+    }
+  }
+  return null;
+}
+
 export function validateCharacter(
   text: string,
   ctx: AdvisorContext,
@@ -162,30 +228,30 @@ export function validateCharacter(
     fails.push('fabricated-measurement');
   }
 
-  // C. Axis consistency — prose must not contradict calibrated system axes.
+  // C. Axis consistency — prose must not contradict calibrated SYSTEM axes.
+  // Negation- and component-scope-aware: a flagged term is allowed when it is
+  // negated ("not analytical") or attributable to a component that legitimately
+  // holds that pole (a bright speaker in an otherwise-warm system).
   const ax = ctx.system.axes;
-  const hit = (words: readonly string[]) => words.find((w) => lower.includes(w));
+  const comps = ctx.system.components;
   if (ax.warm_bright !== 'bright') {
-    const w = hit(AXIS_LEXICON.bright);
+    const w = genuineContradiction(text, AXIS_LEXICON.bright, 'warm_bright', 'bright', comps);
     if (w) fails.push(`axis-contradiction:not-bright:${w}`);
   }
   if (ax.warm_bright !== 'warm') {
-    // only flag "warm/lush/rich" used as a SYSTEM descriptor, allow "warmth from the speaker"
-    const w = AXIS_LEXICON.warm.find((x) => new RegExp(`\\b${x}\\b`).test(lower));
-    // permit when a component is itself warm (e.g. a warm speaker in a neutral system)
-    const hasWarmComponent = ctx.system.components.some((c) => c.axisPosition.warm_bright === 'warm');
-    if (w && !hasWarmComponent) fails.push(`axis-contradiction:not-warm:${w}`);
+    const w = genuineContradiction(text, AXIS_LEXICON.warm, 'warm_bright', 'warm', comps);
+    if (w) fails.push(`axis-contradiction:not-warm:${w}`);
   }
   if (ax.smooth_detailed === 'detailed') {
-    const w = hit(AXIS_LEXICON.smooth);
+    const w = genuineContradiction(text, AXIS_LEXICON.smooth, 'smooth_detailed', 'smooth', comps);
     if (w) fails.push(`axis-contradiction:detailed-not-smooth:${w}`);
   }
   if (ax.smooth_detailed === 'smooth') {
-    const w = hit(AXIS_LEXICON.detailed);
+    const w = genuineContradiction(text, AXIS_LEXICON.detailed, 'smooth_detailed', 'detailed', comps);
     if (w) fails.push(`axis-contradiction:smooth-not-analytical:${w}`);
   }
   if (ax.elastic_controlled === 'elastic') {
-    const w = hit(AXIS_LEXICON.controlled);
+    const w = genuineContradiction(text, AXIS_LEXICON.controlled, 'elastic_controlled', 'controlled', comps);
     if (w) fails.push(`axis-contradiction:elastic-not-overdamped:${w}`);
   }
 
