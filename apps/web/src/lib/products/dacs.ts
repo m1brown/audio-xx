@@ -1155,19 +1155,20 @@ export const DAC_PRODUCTS: Product[] = [
     topology: 'fpga',
     archetypes: { primary: 'precision_explicit', secondary: 'flow_organic' },
     // Founder calibration: Hugo v1 is fast, lively, engaging — NOT sterile or purely analytical.
-    // Founder experience: fast, alive, electric, open, engaging, slightly light.
-    // Clarity comes from FPGA timing precision, not treble energy.
-    // Strong air and spatial aliveness. Slightly lean tonal balance.
+    // Founder experience: fast, alive, electric, open, engaging, transparent, slightly light.
+    // Clarity comes from FPGA timing precision, not treble energy — not treble-forward, not
+    // etched, no glare. Tonally neutral (slightly light, never bright). Strong air and
+    // spatial aliveness.
     primaryAxes: {
-      warm_bright: 'bright',          // Slightly bright of neutral — speed and energy over tonal mass
+      warm_bright: 'neutral',         // Tonally neutral — slightly light, not bright; clarity is from timing, not treble
       smooth_detailed: 'detailed',    // Strongly detail-forward — timing precision and transient speed
       elastic_controlled: 'elastic',  // FPGA transient snap, dynamic agility — elastic and alive
       airy_closed: 'airy',           // Very open and spatially alive — air is a defining trait
       // Founder reference calibration
-      warm_bright_n: 1,         // Slightly lean — speed and energy over tonal density
+      warm_bright_n: 0,         // Neutral tonal balance — slightly light but not treble-tilted
       smooth_detailed_n: 2,     // Strongly detailed — timing precision is the primary character
       elastic_controlled_n: -1, // Elastic — lively and dynamically agile
-      airy_closed_n: 2,         // Very airy — spatially alive and open
+      airy_closed_n: -2,        // Very airy — spatially alive and open
     },
     fatigueAssessment: {
       risk: 'low',

@@ -1404,13 +1404,16 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     typicalMarket: 'used',
     usedPriceRange: { low: 800, high: 1500 },
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
+    // Founder calibration: fast, vivid, transparent, articulate, rhythmically alive —
+    // slightly golden tonality, no grain, no edge. Speed and vividness are timing/dynamics
+    // traits, not treble tilt — tonally neutral, not treble-forward.
     primaryAxes: {
-      warm_bright: 'bright',
+      warm_bright: 'neutral',
       smooth_detailed: 'detailed',
       elastic_controlled: 'elastic',
       airy_closed: 'airy',
       // Founder reference calibration
-      warm_bright_n: 1,         // Fast, vivid — bright side of neutral
+      warm_bright_n: 0,         // Tonally neutral — fast and vivid, but not treble-tilted (slightly golden if anything)
       smooth_detailed_n: 2,     // Highly articulate and detailed — defining trait
       elastic_controlled_n: -1, // Elastic, lively — not overdamped
       airy_closed_n: -1,        // Open, spacious presentation
