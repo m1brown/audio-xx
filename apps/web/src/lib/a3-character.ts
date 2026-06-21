@@ -87,6 +87,22 @@ function axisDescription(a: PrimaryAxisLeanings): string {
   ].join(', ');
 }
 
+// Order components by signal flow: source/streamer → DAC → amplifier → speaker.
+const FLOW_RANK: Record<string, number> = {
+  turntable: 0, streamer: 1, transport: 1, source: 1,
+  dac: 2, preamp: 3, amplifier: 4, amp: 4, integrated: 4,
+  speaker: 5, headphone: 5, cable: 6, accessory: 6,
+};
+function flowRank(c: AdvisorContext['system']['components'][number]): number {
+  const ranks = c.roles.map((r) => FLOW_RANK[r.toLowerCase()]).filter((n) => n !== undefined);
+  return ranks.length ? Math.min(...ranks) : 3.5; // unknown roles sit mid-chain
+}
+function orderBySignalFlow(
+  comps: AdvisorContext['system']['components'],
+): AdvisorContext['system']['components'] {
+  return comps.map((c, i) => ({ c, i })).sort((a, b) => flowRank(a.c) - flowRank(b.c) || a.i - b.i).map((x) => x.c);
+}
+
 export function buildCharacterPrompt(ctx: AdvisorContext): {
   systemPrompt: string;
   userPrompt: string;
@@ -101,7 +117,13 @@ behaves as Z — with [trade-off]." Use the exact component names from the conte
 concrete behavioural terms, and no metaphor, atmosphere, or emotional language. State the
 trade-off directly. One or two tight paragraphs (no headers, no lists), 70–120 words, each
 idea once. Do not restate axis labels or numbers literally; interpret them. No
-recommendations or upgrade advice. End with a statement, not a question. Prose only.`;
+recommendations or upgrade advice. End with a statement, not a question. Prose only.
+
+SIGNAL FLOW (critical): follow the supplied signal_chain order strictly — source →
+DAC → amplifier → speaker. Upstream feeds downstream ONLY. Never say a downstream
+component feeds, passes to, hands off to, or influences an upstream one (an amplifier
+never feeds a DAC; a speaker never feeds an amp). Describe each stage acting on what it
+receives from the stage before it.`;
 
   // Compact, grounded payload — facts only.
   const payload = {
@@ -117,7 +139,8 @@ recommendations or upgrade advice. End with a statement, not a question. Prose o
       weaknesses: c.weaknesses,
       confidence: c.confidence,
     })),
-    chain: ctx.system.chain.names,
+    // Explicit upstream→downstream signal order (source → DAC → amp → speaker).
+    signal_chain: orderBySignalFlow(ctx.system.components).map((c) => c.name),
     listener_priorities: ctx.signals.listenerPriorities,
     emergent_behaviors: ctx.signals.emergentBehaviors,
     stacked_traits: ctx.signals.stackedTraits?.map((s) => ({
@@ -254,6 +277,27 @@ export function validateCharacter(
   // B. Measurement validation — reject fabricated specs/numbers.
   if (/\b\d+(\.\d+)?\s?(db|wpc|watts?|w\b|khz|hz|ohms?|bit|µv|uv|dB|%)\b/i.test(text)) {
     fails.push('fabricated-measurement');
+  }
+
+  // B2. Engineering-spec terms not present in the supplied context.
+  const ctxText = JSON.stringify(ctx).toLowerCase();
+  const SPEC_TERMS = [
+    'damping factor', 'sensitivity', 'impedance', 'distortion', 'output power',
+    'wattage', 'signal-to-noise', 'signal to noise', 'frequency response', 'slew rate',
+  ];
+  for (const t of SPEC_TERMS) {
+    if (lower.includes(t) && !ctxText.includes(t)) fails.push(`spec-not-in-context:${t}`);
+  }
+
+  // B3. Music / recording references not present in the supplied context.
+  const MUSIC_TERMS = [
+    'orchestral', 'orchestra', 'jazz', 'rock', 'vocals', 'vocal', 'recording',
+    'recordings', 'genre', 'classical', 'tracks', 'songs',
+  ];
+  for (const t of MUSIC_TERMS) {
+    if (new RegExp(`\\b${t}\\b`).test(lower) && !ctxText.includes(t)) {
+      fails.push(`music-reference:${t}`);
+    }
   }
 
   // C. Axis consistency — prose must not contradict calibrated SYSTEM axes.
