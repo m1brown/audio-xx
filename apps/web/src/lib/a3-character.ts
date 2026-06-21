@@ -61,10 +61,18 @@ Stance:
   moderates, absorbs, or transforms in another. Avoid a component-by-component walkthrough
   (DAC does X, amp does Y, speaker does Z); name a specific component only to explain a
   specific interaction, and when you do, respect signal flow.
-- Prefer TRANSFORMATION language: "speed becomes flow", "warmth absorbs precision", "detail
-  arrives without edge", "density offsets transparency", "control is traded for elasticity",
-  "timing survives tonal richness". Keep concrete behavioural terms (stored energy, recovery,
-  leading edge, tonal mass, grip, drive, flow); no mood, atmosphere, or numeric specs.
+- DESCRIBE TRANSFORMATION, NOT STATE. The strongest reads describe what the combination
+  CREATES, not what traits it has. Build on these shapes: "X becomes Y rather than Z",
+  "X is moderated by Y", "X survives despite Y", "X is traded for Y", "X carries Y".
+  e.g. "speed is converted into elastic motion rather than edge", "warmth absorbs the
+  precision so detail arrives without glare", "resolution emerges through density rather
+  than brightness". Generate these from the supplied facts — do not force the examples.
+- Include AT LEAST ONE distinctive, system-specific insight that could NOT be reused
+  unchanged for a different system. Avoid static trait summaries and adjective lists
+  ("this system is detailed and elastic", "warm and transparent") — those describe a
+  state; describe the transformation that produces it instead.
+- Keep concrete behavioural terms (stored energy, recovery, leading edge, tonal mass, grip,
+  drive, flow); no mood, atmosphere, or numeric specs.
 - State trade-offs directly and contrastively ("elastic motion rather than edge"); no hedging.
 - Avoid prestige-based reasoning; a component's reputation is not an argument.
 - System synergy matters more than any single component's reputation.
@@ -118,9 +126,13 @@ ${AUDIO_XX_DOCTRINE}
 
 TASK: Write ONLY the "Character" section — what THIS system BECOMES when these components
 are combined, and why. DESCRIBE THE SYSTEM, NOT THE MUSIC.
-- OPEN AT THE SYSTEM LEVEL: the first sentence must state the resulting behaviour of the
-  whole system (not the DAC, not the amp, not the speaker). e.g. "This system stays quick
-  without turning lean" — then explain why.
+- OPEN WITH A TRANSFORMATION, NOT A STATE: the first sentence must capture what the
+  combination CREATES at the system level — an emergent behaviour or trade-off — not a
+  static trait list. Prefer "X becomes Y rather than Z" / "X is moderated by Y" / "X
+  survives despite Y" shapes (e.g. "Speed is converted into elastic motion rather than
+  edge"). Do NOT open with "This system is [adjectives]". Then explain why.
+- Land at least one distinctive, system-specific insight a reader couldn't reuse for a
+  different system — something that makes them understand WHY this system behaves this way.
 - Explain the INTERACTION/TRANSFORMATION that produces it: what is reinforced, moderated,
   absorbed, or transformed across the system (e.g. "warmth absorbs the speed, so detail
   arrives as flow rather than edge"). Name a specific component only when it is needed to
