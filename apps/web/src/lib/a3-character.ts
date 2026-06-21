@@ -61,16 +61,21 @@ Stance:
   moderates, absorbs, or transforms in another. Avoid a component-by-component walkthrough
   (DAC does X, amp does Y, speaker does Z); name a specific component only to explain a
   specific interaction, and when you do, respect signal flow.
-- DESCRIBE TRANSFORMATION, NOT STATE. The strongest reads describe what the combination
-  CREATES, not what traits it has. Build on these shapes: "X becomes Y rather than Z",
-  "X is moderated by Y", "X survives despite Y", "X is traded for Y", "X carries Y".
-  e.g. "speed is converted into elastic motion rather than edge", "warmth absorbs the
-  precision so detail arrives without glare", "resolution emerges through density rather
-  than brightness". Generate these from the supplied facts — do not force the examples.
-- Include AT LEAST ONE distinctive, system-specific insight that could NOT be reused
-  unchanged for a different system. Avoid static trait summaries and adjective lists
-  ("this system is detailed and elastic", "warm and transparent") — those describe a
-  state; describe the transformation that produces it instead.
+- EXPLAIN THE INTERACTION, NOT JUST THE RESULT. The strongest reads name the opposing
+  forces two components introduce and what emerges from their tension. Use the shape:
+  (1) one component introduces force X; (2) another introduces force Y; (3) X and Y
+  interact to produce Z. Preferred constructions: "X survives because Y compensates",
+  "X is moderated by Y", "X would normally cause A, but Y redirects it toward B", "X and Y
+  pull in opposite directions, producing Z", "the system preserves X while adding Y",
+  "the chain trades X for Y because …". e.g. "the speaker supplies body, so the amplifier's
+  speed stays intact without turning lean".
+- DO NOT use a transformation verb as a substitute for reasoning. "transforms X into Y" /
+  "converts X into Y" / "turns X into Y" are BANNED unless an actual interaction or
+  mechanism follows in the same sentence (which component does what, and why the result
+  occurs). Restating the same traits with a transformation verb is not an insight.
+- Include AT LEAST ONE distinctive, system-specific insight that depends on the
+  INTERACTION of these particular components — one that could NOT be reused unchanged for
+  a different system. Avoid static trait summaries and adjective lists.
 - Keep concrete behavioural terms (stored energy, recovery, leading edge, tonal mass, grip,
   drive, flow); no mood, atmosphere, or numeric specs.
 - State trade-offs directly and contrastively ("elastic motion rather than edge"); no hedging.
@@ -126,13 +131,16 @@ ${AUDIO_XX_DOCTRINE}
 
 TASK: Write ONLY the "Character" section — what THIS system BECOMES when these components
 are combined, and why. DESCRIBE THE SYSTEM, NOT THE MUSIC.
-- OPEN WITH A TRANSFORMATION, NOT A STATE: the first sentence must capture what the
-  combination CREATES at the system level — an emergent behaviour or trade-off — not a
-  static trait list. Prefer "X becomes Y rather than Z" / "X is moderated by Y" / "X
-  survives despite Y" shapes (e.g. "Speed is converted into elastic motion rather than
-  edge"). Do NOT open with "This system is [adjectives]". Then explain why.
-- Land at least one distinctive, system-specific insight a reader couldn't reuse for a
-  different system — something that makes them understand WHY this system behaves this way.
+- OPEN ON THE INTERACTION OUTCOME, NOT A STATE OR A BARE TRANSFORMATION VERB: the first
+  sentence must name what emerges from how these components act on each other — ideally the
+  tension between two opposing forces and what wins. Shapes: "X survives because Y
+  compensates" / "X is moderated by Y" / "X and Y pull opposite ways, producing Z" (e.g.
+  "The speaker supplies body, so the amplifier's speed stays intact without turning lean").
+  Do NOT open with "This system is [adjectives]" or "This system transforms/converts X into
+  Y" unless a real mechanism follows.
+- Land at least one distinctive, system-specific insight that depends on the INTERACTION of
+  these particular components — a reader couldn't reuse it for a different system, and it
+  makes them understand WHY this system behaves this way.
 - Explain the INTERACTION/TRANSFORMATION that produces it: what is reinforced, moderated,
   absorbed, or transformed across the system (e.g. "warmth absorbs the speed, so detail
   arrives as flow rather than edge"). Name a specific component only when it is needed to
