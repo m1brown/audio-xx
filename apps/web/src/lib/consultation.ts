@@ -14282,7 +14282,15 @@ function inferListenerPriorityTags(
       priorities.push('tonal_density');
     }
   }
-  if (system.warm_bright === 'bright') {
+  // Transient speed is a timing signature (elastic + detailed leading edges),
+  // not a tonal one. Bright remains a sufficient trigger, but a neutral system
+  // that is both elastic and detailed is genuinely fast too — so speed must not
+  // depend on a 'bright' tonal classification (avoids reintroducing a hidden
+  // brightness dependency for the Timing-Led archetype).
+  if (
+    system.warm_bright === 'bright' ||
+    (system.elastic_controlled === 'elastic' && system.smooth_detailed === 'detailed')
+  ) {
     priorities.push('transient_speed');
   }
   if (system.smooth_detailed === 'detailed') {
