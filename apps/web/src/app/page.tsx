@@ -89,6 +89,8 @@ import type { ReasoningResult } from '@/lib/reasoning';
 import { useAudioSession } from '@/lib/audio-session-context';
 import { buildTurnContext, type TurnContext } from '@/lib/turn-context';
 import { requestLlmOverlay } from '@/lib/memo-llm-overlay';
+import { a3CharacterEnabled, generateA3Character, spliceCharacter } from '@/lib/a3-character';
+import { toAdvisorContext } from '@/lib/advisor-context';
 import { requestShoppingEditorial, mergeEditorialIntoOptions, requestEditorialClosing } from '@/lib/shopping-llm-overlay';
 import type { ShoppingEditorialContext } from '@/lib/shopping-llm-overlay';
 import { logOverlayAttempt, logOverlayFailure } from '@/lib/memo-render-log';
@@ -2435,6 +2437,26 @@ export default function Home() {
         }).catch(() => {
           logOverlayFailure(assessmentMsgId, overlayComponentCount, Date.now() - overlayStart);
         });
+
+        // Audio XX vI Phase 1 — A3 Character overlay (flag-gated, default OFF).
+        // Deterministic Character is already on screen (dispatched above); when
+        // the flag is on we ask A3 to regenerate ONLY the Character portion of
+        // systemContext, grounded in AdvisorContext + doctrine, and splice it in
+        // place. On model-unavailable / timeout / validation-failure the
+        // generator returns null and the deterministic Character stands.
+        if (a3CharacterEnabled()) {
+          const a3ctx = toAdvisorContext(assessmentResult.findings);
+          generateA3Character(a3ctx).then((res) => {
+            if (!res || !deterministicAdvisory.systemContext) return;
+            const spliced = spliceCharacter(deterministicAdvisory.systemContext, res.character);
+            if (spliced === deterministicAdvisory.systemContext) return; // nothing replaced
+            const merged = { ...deterministicAdvisory, systemContext: spliced };
+            merged.reasoningMode = 'hybrid';
+            dispatch({ type: 'UPDATE_ADVISORY', id: assessmentMsgId, advisory: merged });
+          }).catch(() => {
+            /* deterministic Character stands — no user-visible failure */
+          });
+        }
 
         return;
       }
