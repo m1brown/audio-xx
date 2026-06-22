@@ -14,10 +14,18 @@
 import type { AdvisorContext } from './advisor-context';
 import type { PrimaryAxisLeanings } from './axis-types';
 
-// ── Feature flag (default OFF) ───────────────────────────
-// NEXT_PUBLIC_A3_CHARACTER=true, or localStorage 'axx_a3char'='1', or ?a3char=1.
+// ── Feature flag ─────────────────────────────────────────
+// Default ON in Preview deployments only; OFF in Production and local dev
+// (opt-in there). Quick disable: set NEXT_PUBLIC_A3_CHARACTER=false (kill switch,
+// highest priority). Force on anywhere: NEXT_PUBLIC_A3_CHARACTER=true, or
+// localStorage 'axx_a3char'='1', or ?a3char=1.
 export function a3CharacterEnabled(): boolean {
+  // Explicit env override wins (kill switch first).
+  if (process.env.NEXT_PUBLIC_A3_CHARACTER === 'false') return false;
   if (process.env.NEXT_PUBLIC_A3_CHARACTER === 'true') return true;
+  // Default ON for Vercel Preview deployments; Production stays OFF.
+  if (process.env.NEXT_PUBLIC_VERCEL_ENV === 'preview') return true;
+  // Local / per-user opt-in.
   if (typeof window !== 'undefined') {
     try {
       if (window.localStorage.getItem('axx_a3char') === '1') return true;
