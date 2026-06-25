@@ -1,7 +1,25 @@
 # Audio XX — Practical Roadmap
 
-**Last updated:** 2026-05-21
+**Last updated:** 2026-06-25
 **Audience:** technical contributors deciding what to work on next, and prospective collaborators evaluating the planned trajectory.
+
+---
+
+## Status — Recommendation-bias remediation (2026-06-25)
+
+Launch-critical removal of the universal-"better" bias from the recommendation
+surfaces. Governing rule: **Recommendation = Judgment × User Intent**, with User
+Intent sourced only from `desires` / `listenerPreferenceProfile` (never
+`listenerPriorities` or system-inferred preferences). Ontology unchanged.
+
+**Completed (shipped to `origin/version-b`, commits `30fa279`, `d2c7a49`):**
+- **P1 — Intent Gate** — `deriveIntentStance()` in `preference-protection.ts`.
+- **P2 — Path 1 Direction** — counter-direction targets fire only when intent opposes the bottleneck's lean (`buildUpgradePaths`).
+- **P3 — Bottleneck Promotion** — preference-relative bottlenecks whose lean the user wants are demoted from imperative "Highest Impact" to same-direction "Optional Direction"; detection stays observer-invariant (`detectPrimaryConstraint` untouched).
+- **P5 — Limitation Framing** — limitations describing the downside of a wanted trait are reframed as accepted trade-offs (`inferAssessmentLimitations`).
+
+**Known non-blocking follow-up:**
+- **P4 — §10 narrative upgrade-direction prose** (`inferUpgradeDirection`) may still contain counter-direction wording. Track as **Nice-to-Have / fast-follow, not launch-blocking** — the decisive recommendation surfaces (P2/P3) and the limitations section (P5) are already intent-correct; this is prose-level reinforcement only.
 
 This document is the practical near-term roadmap. It complements two other planning documents:
 
