@@ -111,7 +111,8 @@ import type { LegacyProseInputs, StructuredMemoInputs } from './memo-determinist
 import { computeSystemConfidence } from './llm-system-inference';
 import { runInference } from './inference-layer';
 import { assessTradeoffs } from './tradeoff-assessment';
-import { assessPreferenceProtection, classifyPriorities } from './preference-protection';
+import { assessPreferenceProtection, classifyPriorities, deriveIntentStance } from './preference-protection';
+import type { IntentStance } from './preference-protection';
 import { assessCounterfactual } from './counterfactual-assessment';
 import { frameStrategy, deduplicateStrategies } from './strategy-framing';
 import { topReviewsForCard, type ReviewerDomain } from './curation';
@@ -9143,11 +9144,17 @@ export function buildSystemAssessment(
   // ── Amplifier-speaker fit note ──────────────────────
   const ampSpeakerFit = inferAmplifierSpeakerFit(components);
 
+  // ── User-intent stance (Recommendation = Judgment × User Intent) ──
+  // Resolved once from the two permitted intent sources (desires + listener
+  // profile). Drives intent-relative limitation framing (P5) and intent-aware
+  // upgrade promotion/direction (P2/P3). Never reads listenerPriorities.
+  const intentStance = deriveIntentStance(desires, listenerProfile);
+
   // ── Build "what's working well" ──────────────────────
   const assessmentStrengths = inferAssessmentStrengths(components);
 
   // ── Build "where limitations may appear" ─────────────
-  const assessmentLimitations = inferAssessmentLimitations(components);
+  const assessmentLimitations = inferAssessmentLimitations(components, intentStance);
 
   // ── Build upgrade direction ──────────────────────────
   const upgradeDirection = inferUpgradeDirection(components);
@@ -9188,7 +9195,7 @@ export function buildSystemAssessment(
   const memoListenerPriorities = inferListenerPriorityTags(systemAxes, desires);
   const memoUpgradePaths = systemTier === 'reference'
     ? []  // Suppress upgrade paths for reference-tier systems
-    : buildUpgradePaths(components, componentAxisProfiles, memoAssessments, memoConstraint, memoStacked, systemAxes, memoListenerPriorities, desires);
+    : buildUpgradePaths(components, componentAxisProfiles, memoAssessments, memoConstraint, memoStacked, systemAxes, memoListenerPriorities, desires, intentStance);
   const memoKeepsRaw = buildKeepRecommendations(memoAssessments, memoUpgradePaths, memoConstraint);
   const memoIntro = buildIntroSummary(components, systemAxes, memoStacked, systemTier);
   const memoKeyObservation = buildKeyObservation(components, componentAxisProfiles, memoStacked, systemAxes, desires);
@@ -11215,41 +11222,93 @@ function inferAssessmentStrengths(components: SystemComponent[]): string[] {
 /**
  * Infer where limitations may appear in the system.
  * Uses compounding detection to flag per-axis risks.
+ *
+ * P5 (FM-3) — intent-relative framing. A "limitation" that describes the
+ * downside of a trait the USER explicitly wants is not a flaw for that user;
+ * it is the accepted cost of the character they're after. When `stance`
+ * carries intent aligned with the trait a limitation is about, the entry is
+ * reframed from "your system is deficient in X" into "this is the trade-off
+ * of the X you want." Limitations unrelated to intent — and genuine capability
+ * limits (placement sensitivity, congestion on dense material) — are unchanged.
+ * Pure framing: no entry is silently dropped; assessment honesty is preserved.
  */
-function inferAssessmentLimitations(components: SystemComponent[]): string[] {
+function inferAssessmentLimitations(
+  components: SystemComponent[],
+  stance?: IntentStance,
+): string[] {
   const limitations: string[] = [];
   const profiles = classifyComponentAxes(components);
   const axes = profiles.map(p => p.axes);
   const compounding = detectCompounding(axes);
 
-  // Compounding warnings map directly to limitations
+  // Compounding warnings map directly to limitations. When the user's intent
+  // aligns with the leaning trait, frame the cost as a deliberate trade-off
+  // rather than a defect.
   for (const warning of compounding) {
     if (warning.includes('warm')) {
-      limitations.push('Stacked warmth may reduce transient precision and spatial clarity');
-      limitations.push('Complex, dense recordings could sound congested');
+      if (stance?.warm_bright === 'warm') {
+        limitations.push('The system\'s warmth is consistent — in line with the warmth you\'re after. The trade-off is some loss of transient precision and spatial clarity, most audible on dense, complex material');
+      } else {
+        limitations.push('Stacked warmth may reduce transient precision and spatial clarity');
+        limitations.push('Complex, dense recordings could sound congested');
+      }
     } else if (warning.includes('bright')) {
-      limitations.push('Stacked brightness may thin out tonal body over long sessions');
-      limitations.push('Extended listening could trend toward fatigue without a warmth counterbalance');
+      if (stance?.warm_bright === 'bright') {
+        limitations.push('The system\'s clarity and energy are consistent — in line with the detail-forward balance you want. The trade-off is less tonal body, and a fatigue risk on long sessions without a warmth counterbalance');
+      } else {
+        limitations.push('Stacked brightness may thin out tonal body over long sessions');
+        limitations.push('Extended listening could trend toward fatigue without a warmth counterbalance');
+      }
     } else if (warning.includes('smooth')) {
-      limitations.push('Stacked smoothness may obscure transient detail and reduce perceived resolution');
+      if (stance?.smooth_detailed === 'smooth') {
+        limitations.push('The system\'s ease and smoothness are consistent — the relaxed presentation you\'re after. The trade-off is some obscured transient detail and lower perceived resolution');
+      } else {
+        limitations.push('Stacked smoothness may obscure transient detail and reduce perceived resolution');
+      }
     } else if (warning.includes('detailed')) {
-      limitations.push('Stacked detail emphasis may feel analytical or fatiguing on lesser recordings');
+      if (stance?.smooth_detailed === 'detailed') {
+        limitations.push('The system\'s resolution is consistent — the detail you want. The trade-off is that it can feel analytical or fatiguing on lesser recordings');
+      } else {
+        limitations.push('Stacked detail emphasis may feel analytical or fatiguing on lesser recordings');
+      }
     } else if (warning.includes('controlled')) {
-      limitations.push('Stacked control may sound overdamped — reducing dynamic expression and musical life');
+      if (stance?.elastic_controlled === 'controlled') {
+        limitations.push('The system\'s grip and control are consistent — the precision you want. The trade-off is a more damped presentation with less dynamic looseness and bloom');
+      } else {
+        limitations.push('Stacked control may sound overdamped — reducing dynamic expression and musical life');
+      }
     } else if (warning.includes('elastic')) {
-      limitations.push('Stacked elasticity may lose composure on complex orchestral or dense electronic material');
+      if (stance?.elastic_controlled === 'elastic') {
+        limitations.push('The system\'s dynamic elasticity is consistent — the bounce and energy you want. The trade-off is some lost composure on complex orchestral or dense electronic material');
+      } else {
+        limitations.push('Stacked elasticity may lose composure on complex orchestral or dense electronic material');
+      }
     }
   }
 
-  // Component-specific limitations from product traits
+  // Component-specific limitations from product traits. A leaner midrange or a
+  // precision-over-flow character is only a "limitation" when it runs counter
+  // to what the user wants; when it matches their intent, name it as the
+  // accepted cost of that preference instead of a deficiency.
   for (const c of components) {
     if (c.product?.traits) {
       const t = c.product.traits;
-      if ((t.tonal_density ?? 0.5) < 0.35) limitations.push(`${c.displayName} may lean thin in the midrange`);
-      if ((t.flow ?? 0.5) < 0.35) limitations.push(`${c.displayName} may prioritize precision over musical flow`);
+      if ((t.tonal_density ?? 0.5) < 0.35) {
+        const wantsLeaner = stance?.warm_bright === 'bright' || stance?.smooth_detailed === 'detailed';
+        limitations.push(wantsLeaner
+          ? `${c.displayName} runs lean in the midrange — consistent with the clarity-forward balance you want, at the cost of tonal body to fall back on`
+          : `${c.displayName} may lean thin in the midrange`);
+      }
+      if ((t.flow ?? 0.5) < 0.35) {
+        const wantsPrecision = stance?.smooth_detailed === 'detailed' || stance?.elastic_controlled === 'controlled';
+        limitations.push(wantsPrecision
+          ? `${c.displayName} favors precision over flow — in line with the detail and control you want, at some cost to ease and continuity`
+          : `${c.displayName} may prioritize precision over musical flow`);
+      }
     }
 
-    // Placement dependency warning for speakers
+    // Placement dependency warning for speakers — a genuine capability/setup
+    // limit, not preference-relative; always surfaced verbatim.
     if (c.product?.placementSensitivity && c.product.placementSensitivity.level !== 'low') {
       const ps = c.product.placementSensitivity;
       if (ps.level === 'high') {
@@ -13538,8 +13597,16 @@ function buildUpgradePaths(
   systemAxes?: import('./axis-types').PrimaryAxisLeanings,
   listenerPriorities?: import('./memo-findings').ListenerPriority[],
   desires?: DesireSignal[],
+  intentStance?: IntentStance,
 ): MemoUpgradePath[] {
   const paths: MemoUpgradePath[] = [];
+  // Recommendation = Judgment × User Intent. Defined here so it is available
+  // to the bottleneck-promotion logic below even when the caller did not
+  // supply one (absent intent → all axes null → hasIntent false).
+  const stance: IntentStance = intentStance ?? {
+    warm_bright: null, smooth_detailed: null,
+    elastic_controlled: null, airy_closed: null, hasIntent: false,
+  };
 
   // ── Path 1: Bottleneck (Highest Impact) ──
   if (constraint) {
@@ -13566,28 +13633,95 @@ function buildUpgradePaths(
       const bottleneckIdx = components.findIndex((c) => c.displayName === constraint.componentName);
       const role = bottleneckIdx >= 0 ? canonicalRole(components[bottleneckIdx].role) : constraint.componentName;
       const axes = bottleneckIdx >= 0 ? profiles[bottleneckIdx].axes : undefined;
+      const roleSingular = role.toLowerCase().endsWith('s') && !role.toLowerCase().endsWith('ss')
+        ? role.toLowerCase().slice(0, -1) : role.toLowerCase();
 
-      // What the upgrade should introduce
+      // ── P2 (FM-2) — intent-aware target direction ──
+      // The legacy heuristic always pushed the trait OPPOSITE the bottleneck's
+      // lean (warm → "transient speed"), asserting a move toward neutral as
+      // universally better. Under Recommendation = Judgment × User Intent, a
+      // counter-direction target is only suggested when the user's intent on
+      // that axis actually opposes the system's lean. With no opposing intent,
+      // no direction is asserted.
       const targets: string[] = [];
+      // Whether the user wants the very character this component creates, and —
+      // when so — which trait that is. leanWord/counterWord are set ONLY by the
+      // axis that actually aligns, so the demotion prose names the right trait.
+      let alignsWithLean = false;
+      let leanWord = '';
+      let counterWord = '';
+      const align = (lean: string, counter: string) => {
+        alignsWithLean = true;
+        if (!leanWord) { leanWord = lean; counterWord = counter; }
+      };
       if (axes) {
-        if (axes.warm_bright === 'bright') targets.push('tonal density');
-        if (axes.warm_bright === 'warm') targets.push('transient speed');
-        if (axes.smooth_detailed === 'smooth') targets.push('microdetail');
-        if (axes.smooth_detailed === 'detailed') targets.push('musical flow');
-        if (axes.elastic_controlled === 'controlled') targets.push('elasticity');
-        if (axes.elastic_controlled === 'elastic') targets.push('stability');
+        if (axes.warm_bright === 'warm') {
+          if (stance.warm_bright === 'bright') targets.push('transient speed');
+          else if (stance.warm_bright === 'warm') align('warmth', 'transient speed');
+        }
+        if (axes.warm_bright === 'bright') {
+          if (stance.warm_bright === 'warm') targets.push('tonal density');
+          else if (stance.warm_bright === 'bright') align('clarity', 'tonal density');
+        }
+        if (axes.smooth_detailed === 'smooth') {
+          if (stance.smooth_detailed === 'detailed') targets.push('microdetail');
+          else if (stance.smooth_detailed === 'smooth') align('ease', 'microdetail');
+        }
+        if (axes.smooth_detailed === 'detailed') {
+          if (stance.smooth_detailed === 'smooth') targets.push('musical flow');
+          else if (stance.smooth_detailed === 'detailed') align('detail', 'musical flow');
+        }
+        if (axes.elastic_controlled === 'controlled') {
+          if (stance.elastic_controlled === 'elastic') targets.push('elasticity');
+          else if (stance.elastic_controlled === 'controlled') align('control', 'elasticity');
+        }
+        if (axes.elastic_controlled === 'elastic') {
+          if (stance.elastic_controlled === 'controlled') targets.push('stability');
+          else if (stance.elastic_controlled === 'elastic') align('dynamic elasticity', 'stability');
+        }
       }
-      const targetPhrase = targets.length > 0
-        ? `A replacement with stronger ${targets.join(' and ')} would shift the system's balance meaningfully.`
-        : 'A change here would shift the system\'s fundamental character.';
 
-      paths.push({
-        rank: 1,
-        label: `${role} Upgrade`,
-        impact: 'Highest Impact',
-        rationale: `${constraint.explanation} ${targetPhrase}`,
-        options: selectUpgradeOptions(`${role} Upgrade`, components, targets),
-      });
+      // ── P3 (FM-6) — intent-aware bottleneck promotion ──
+      // Bottleneck DETECTION is observer-invariant (unchanged). What changes is
+      // PROMOTION into a recommendation. A preference-relative constraint
+      // (an accidental tonal/textural lean) should not be promoted to the
+      // imperative "fix this first" headline when the user actually WANTS that
+      // lean — doing so labels their preference as a defect. Capability
+      // constraints (power, scale, drive, resolution ceilings) are not
+      // preference-relative and stay "Highest Impact" regardless of intent.
+      const prefRelative =
+        constraint.category === 'stacked_bias' || constraint.category === 'tonal_imbalance';
+
+      if (prefRelative && alignsWithLean) {
+        // Intent aligns with the lean → demote from the imperative "fix this
+        // first / change direction" headline. The component is part of what
+        // delivers the trait the user wants, so it is not the liability the
+        // system's structure makes it look like. Any move here should DEEPEN
+        // that trait (a higher-tier component in the same voice), never trade
+        // it away — so this is an optional, same-direction path, not a
+        // recommended change of direction.
+        paths.push({
+          rank: 1,
+          label: `${role} Upgrade`,
+          impact: 'Optional Direction',
+          rationale: `The ${roleSingular} is part of what gives this system its ${leanWord} — the quality you said you're after — so it isn't the liability the system's structure makes it look like. It does cap ${counterWord}, but chasing that would trade away the ${leanWord} you want. If you ever go further here, look for a higher-tier ${roleSingular} that deepens ${leanWord} rather than a change in the system's direction.`,
+          options: selectUpgradeOptions(`${role} Upgrade`, components, targets),
+        });
+      } else {
+        const targetPhrase = targets.length > 0
+          ? `A replacement with stronger ${targets.join(' and ')} would move the system toward what you're after.`
+          : (prefRelative && !stance.hasIntent
+            ? 'Which way to take it depends on what you want more of — name the quality and this path sharpens.'
+            : `A more capable ${roleSingular} would raise the system's ceiling here.`);
+
+        paths.push({
+          rank: 1,
+          label: `${role} Upgrade`,
+          impact: 'Highest Impact',
+          rationale: `${constraint.explanation} ${targetPhrase}`,
+          options: selectUpgradeOptions(`${role} Upgrade`, components, targets),
+        });
+      }
     }
   }
 
@@ -13796,6 +13930,20 @@ function buildUpgradePaths(
     });
     p.strategyLabel = frame.strategyLabel;
     p.strategyIntent = frame.strategyIntent;
+  }
+
+  // ── P3 (FM-6) — keep the strategy frame consistent with demotion ──
+  // frameStrategy() derives a gain-based label from the tradeoff, which on an
+  // intent-aligned demoted path would re-assert the very counter-direction the
+  // user does NOT want (e.g. "Enhance detail and precision · trading some
+  // warmth" on a warm system whose owner asked for warmth). Override it to a
+  // preserve-the-character frame so the path title matches its "Optional
+  // Direction" rationale instead of contradicting it.
+  for (const p of paths) {
+    if (p.impact === 'Optional Direction') {
+      p.strategyLabel = 'Build on the character you want';
+      p.strategyIntent = 'You already have the character you asked for — any change here should deepen it, not redirect the system.';
+    }
   }
 
   // Deduplicate strategy labels across paths
