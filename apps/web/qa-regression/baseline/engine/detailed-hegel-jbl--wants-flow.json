@@ -1,0 +1,78 @@
+{
+  "id": "detailed-hegel-jbl--wants-flow",
+  "label": "Detailed system · wants flow",
+  "category": "intent_opposed",
+  "systemText": "Assess my system: Topping D90SE, Hegel H190, JBL L100 Classic",
+  "desires": [
+    {
+      "quality": "flow",
+      "direction": "more"
+    }
+  ],
+  "resolved": true,
+  "kind": "assessment",
+  "systemAxes": {
+    "warm_bright": "bright",
+    "smooth_detailed": "detailed",
+    "elastic_controlled": "controlled",
+    "airy_closed": "neutral"
+  },
+  "bottleneck": {
+    "category": "stacked_bias",
+    "component": "Hegel H190"
+  },
+  "signature": "Tonally balanced, detail-forward, intimate system emphasizing musical engagement.",
+  "strengths": [
+    "Complementary tonal balance — precision and warmth offset each other across the system",
+    "The system is likely to sustain engagement across long sessions",
+    "Hegel H190 adds composure under complex passages"
+  ],
+  "limitations": [
+    "Stacked detail emphasis may feel analytical or fatiguing on lesser recordings",
+    "JBL L100 Classic has moderate placement sensitivity — Bass-reflex design benefits from corner placement for reinforcement. Responds well to room acoustics treatment."
+  ],
+  "upgradeDirection": "If the system feels analytically intense, consider a warmer or more fluid component — a tube stage, a smoother DAC topology, or speakers with more midrange body could restore balance.",
+  "upgradePaths": [
+    {
+      "rank": 1,
+      "label": "Amplifier Upgrade",
+      "impact": "Highest Impact",
+      "strategyLabel": "Resolve the primary bottleneck",
+      "rationale": "The Hegel H190 is reinforcing the system's lean toward high damping / analytical control — addressing it would open up the most room for improvement. A replacement with stronger musical flow would move the system toward what you're after."
+    },
+    {
+      "rank": 2,
+      "label": "Speakers Upgrade",
+      "impact": "Moderate Impact",
+      "strategyLabel": "Deepen tonal richness",
+      "rationale": "The JBL has some room to grow here — tonal density may lean thin and lesser recordings may sound unforgiving. A stronger speaker would tighten the overall presentation."
+    },
+    {
+      "rank": 3,
+      "label": "DAC Upgrade",
+      "impact": "Refinement",
+      "strategyLabel": "Enhance detail and precision",
+      "rationale": "Room for refinement in the dac — source-level transparency may expose recording flaws and dynamic elasticity may be suppressed. Upgrading here would improve the system without changing its direction."
+    }
+  ],
+  "keepRecommendations": [],
+  "recommendedSequence": [
+    {
+      "step": 1,
+      "action": "**Amplifier Upgrade** — The Hegel H190 is reinforcing the system's lean toward high damping / analytical control — addressing it would open up the most room for improvement."
+    },
+    {
+      "step": 2,
+      "action": "**Speakers Upgrade** — The JBL has some room to grow here — tonal density may lean thin and lesser recordings may sound unforgiving."
+    },
+    {
+      "step": 3,
+      "action": "**DAC Upgrade** — Room for refinement in the dac — source-level transparency may expose recording flaws and dynamic elasticity may be suppressed."
+    },
+    {
+      "step": 4,
+      "action": "Audition before committing. System synergy matters more than component reputation."
+    }
+  ],
+  "keyObservation": "Your taste pattern points toward equipment emphasising **precision and analytical control**. Components in this system (Topping D90SE, Hegel H190, JBL L100 Classic) share this design approach. You also values flow — future upgrades should preserve the underlying philosophy while addressing that specific axis."
+}

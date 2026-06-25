@@ -1,0 +1,6 @@
+# Transient per-run artifacts (timestamped captures, reports, visual diffs).
+# Baselines ARE committed so future runs have something to diff against.
+runs/
+
+# Keep the committed baselines:
+!baseline/

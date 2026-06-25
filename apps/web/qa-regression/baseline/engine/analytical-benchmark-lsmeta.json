@@ -1,0 +1,72 @@
+{
+  "id": "analytical-benchmark-lsmeta",
+  "label": "Benchmark + KEF LS50 Meta — analytical",
+  "category": "general",
+  "systemText": "Assess my system: Topping D70 Pro SABRE, Benchmark AHB2, KEF LS50 Meta",
+  "resolved": true,
+  "kind": "assessment",
+  "systemAxes": {
+    "warm_bright": "bright",
+    "smooth_detailed": "detailed",
+    "elastic_controlled": "controlled",
+    "airy_closed": "neutral"
+  },
+  "bottleneck": {
+    "category": "dac_limitation",
+    "component": "Topping D70 Pro SABRE"
+  },
+  "signature": "Bright, detail-forward, rhythmically articulate system.",
+  "strengths": [
+    "Benchmark AHB2 provides strong spatial definition",
+    "Benchmark AHB2 adds composure under complex passages"
+  ],
+  "limitations": [
+    "Stacked brightness may thin out tonal body over long sessions",
+    "Extended listening could trend toward fatigue without a warmth counterbalance",
+    "Stacked detail emphasis may feel analytical or fatiguing on lesser recordings"
+  ],
+  "upgradeDirection": "If you want to add warmth and flow without sacrificing the clarity this system delivers, a DAC with richer harmonic texture or speakers with more tonal density would be the most aligned direction. Adding tubes upstream is another option — but changes character more broadly. If the system feels analytically intense, consider a warmer or more fluid component — a tube stage, a smoother DAC topology, or speakers with more midrange body could restore balance.",
+  "upgradePaths": [
+    {
+      "rank": 1,
+      "label": "DAC Upgrade",
+      "impact": "Highest Impact",
+      "strategyLabel": "Resolve the primary bottleneck",
+      "rationale": "The DAC is holding back the system — limited tonal density, limited composure and authority, brightness compounding with system lean. Everything downstream inherits its limitations. A more capable dac would raise the system's ceiling here."
+    },
+    {
+      "rank": 2,
+      "label": "Speakers Upgrade",
+      "impact": "Moderate Impact",
+      "strategyLabel": "Deepen tonal richness",
+      "rationale": "The KEF has some room to grow here — tonal density may lean thin and dynamic elasticity may be suppressed. A stronger speaker would tighten the overall presentation."
+    },
+    {
+      "rank": 3,
+      "label": "Amplifier Upgrade",
+      "impact": "Refinement",
+      "strategyLabel": "Refine secondary balance",
+      "rationale": "Room for refinement in the amplifier — resolving power may sound unforgiving and dynamic elasticity may be suppressed. Upgrading here would improve the system without changing its direction."
+    }
+  ],
+  "keepRecommendations": [],
+  "recommendedSequence": [
+    {
+      "step": 1,
+      "action": "**DAC Upgrade** — The DAC is holding back the system — limited tonal density, limited composure and authority, brightness compounding with system lean."
+    },
+    {
+      "step": 2,
+      "action": "**Speakers Upgrade** — The KEF has some room to grow here — tonal density may lean thin and dynamic elasticity may be suppressed."
+    },
+    {
+      "step": 3,
+      "action": "**Amplifier Upgrade** — Room for refinement in the amplifier — resolving power may sound unforgiving and dynamic elasticity may be suppressed."
+    },
+    {
+      "step": 4,
+      "action": "Audition before committing. System synergy matters more than component reputation."
+    }
+  ],
+  "keyObservation": "Your component choices suggest a preference for equipment emphasising **precision and analytical control**. Benchmark AHB2, Topping D70 Pro SABRE, KEF share this design philosophy. The system leans toward high damping / analytical control, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well."
+}

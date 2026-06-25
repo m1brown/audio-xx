@@ -1,0 +1,68 @@
+{
+  "id": "magnepan-lowpower",
+  "label": "Magnepan LRS+ on low power",
+  "category": "capability_constraint",
+  "systemText": "Assess my system: Holo May (KTE), Decware SE84UFO, Magnepan LRS+",
+  "resolved": true,
+  "kind": "assessment",
+  "systemAxes": {
+    "warm_bright": "neutral",
+    "smooth_detailed": "detailed",
+    "elastic_controlled": "controlled",
+    "airy_closed": "airy"
+  },
+  "bottleneck": {
+    "category": "power_match",
+    "component": "Decware SE84UFO"
+  },
+  "signature": "Tonally balanced, intimate system.",
+  "strengths": [
+    "Decware SE84UFO contributes musical flow and continuity",
+    "Magnepan LRS+ provides strong spatial definition"
+  ],
+  "limitations": [
+    "Magnepan LRS+ has high placement sensitivity — Requires 3+ feet from rear wall for proper imaging. Dipole radiation pattern means room treatment matters significantly. Best in medium to large rooms."
+  ],
+  "upgradeDirection": "No single tonal or textural direction dominates here. Any change would shift the character rather than fix a gap. If you want to explore, focus on the quality you most want to intensify — but \"do nothing\" is a strong option.",
+  "upgradePaths": [
+    {
+      "rank": 1,
+      "label": "Amplifier or Speakers Change",
+      "impact": "Highest Impact",
+      "strategyLabel": "Resolve the primary bottleneck",
+      "rationale": "The Decware SE84UFO (2W) cannot adequately drive the Magnepan LRS+ (86 dB sensitivity). Estimated max clean SPL is ~89 dB — well below comfortable listening levels for dynamic music. Dynamics will compress significantly, bass control will suffer, and the system will run out of headroom at moderate listening levels. Either more amplifier power or higher-efficiency speakers would resolve this. This can be resolved from either side: more amplifier power, or higher-efficiency speakers that are easier to drive."
+    },
+    {
+      "rank": 2,
+      "label": "Speakers Upgrade",
+      "impact": "Moderate Impact",
+      "strategyLabel": "Targeted component upgrade",
+      "rationale": "The Magnepan has some room to grow here — lesser recordings may sound unforgiving and dynamic elasticity may be suppressed. A stronger speaker would tighten the overall presentation."
+    }
+  ],
+  "keepRecommendations": [
+    {
+      "name": "Decware Holo may",
+      "reason": "Neutral tonal balance"
+    }
+  ],
+  "recommendedSequence": [
+    {
+      "step": 1,
+      "action": "**Amplifier or Speakers Change** — The Decware SE84UFO (2W) cannot adequately drive the Magnepan LRS+ (86 dB sensitivity)."
+    },
+    {
+      "step": 2,
+      "action": "**Speakers Upgrade** — The Magnepan has some room to grow here — lesser recordings may sound unforgiving and dynamic elasticity may be suppressed."
+    },
+    {
+      "step": 3,
+      "action": "Keep **Decware Holo may** — performing well, no change warranted."
+    },
+    {
+      "step": 4,
+      "action": "Audition before committing. System synergy matters more than component reputation."
+    }
+  ],
+  "keyObservation": "Your component choices suggest a preference for equipment emphasising **precision and analytical control**. Decware Holo may, Decware SE84UFO, Magnepan LRS+ share this design philosophy. The system shares a consistent harmonic density emphasis — this reinforces the system's identity. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well."
+}

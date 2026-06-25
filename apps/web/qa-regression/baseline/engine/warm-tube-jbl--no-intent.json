@@ -1,0 +1,72 @@
+{
+  "id": "warm-tube-jbl--no-intent",
+  "label": "Warm system · no intent",
+  "category": "no_intent",
+  "systemText": "Assess my system: Schiit Bifrost 2/64, Marantz 2220B, JBL L100 Classic",
+  "resolved": true,
+  "kind": "assessment",
+  "systemAxes": {
+    "warm_bright": "warm",
+    "smooth_detailed": "detailed",
+    "elastic_controlled": "elastic",
+    "airy_closed": "airy"
+  },
+  "bottleneck": {
+    "category": "stacked_bias",
+    "component": "Marantz 2220B"
+  },
+  "signature": "Tonally warm, elastically flowing, intimate system emphasizing transient clarity.",
+  "strengths": [
+    "Complementary tonal balance — precision and warmth offset each other across the system",
+    "The system is likely to sustain engagement across long sessions",
+    "Marantz 2220B contributes musical flow and continuity"
+  ],
+  "limitations": [
+    "Stacked elasticity may lose composure on complex orchestral or dense electronic material",
+    "JBL L100 Classic has moderate placement sensitivity — Bass-reflex design benefits from corner placement for reinforcement. Responds well to room acoustics treatment."
+  ],
+  "upgradeDirection": "If the system feels loose or uncontrolled, a more composed amplifier or tighter-grip speaker pairing could add stability without losing all dynamic energy.",
+  "upgradePaths": [
+    {
+      "rank": 1,
+      "label": "Amplifier Upgrade",
+      "impact": "Highest Impact",
+      "strategyLabel": "Resolve the primary bottleneck",
+      "rationale": "The Marantz 2220B is reinforcing the system's lean toward dynamic elasticity — addressing it would open up the most room for improvement. Which way to take it depends on what you want more of — name the quality and this path sharpens."
+    },
+    {
+      "rank": 2,
+      "label": "Speakers Upgrade",
+      "impact": "Moderate Impact",
+      "strategyLabel": "Deepen tonal richness",
+      "rationale": "The JBL has some room to grow here — tonal density may lean thin and lesser recordings may sound unforgiving. A stronger speaker would tighten the overall presentation."
+    },
+    {
+      "rank": 3,
+      "label": "DAC Upgrade",
+      "impact": "Refinement",
+      "strategyLabel": "Enhance detail and precision",
+      "rationale": "Room for refinement in the dac — conversion warmth may mask upstream detail and may lose grip on dense orchestral material. Upgrading here would improve the system without changing its direction."
+    }
+  ],
+  "keepRecommendations": [],
+  "recommendedSequence": [
+    {
+      "step": 1,
+      "action": "**Amplifier Upgrade** — The Marantz 2220B is reinforcing the system's lean toward dynamic elasticity — addressing it would open up the most room for improvement."
+    },
+    {
+      "step": 2,
+      "action": "**Speakers Upgrade** — The JBL has some room to grow here — tonal density may lean thin and lesser recordings may sound unforgiving."
+    },
+    {
+      "step": 3,
+      "action": "**DAC Upgrade** — Room for refinement in the dac — conversion warmth may mask upstream detail and may lose grip on dense orchestral material."
+    },
+    {
+      "step": 4,
+      "action": "Audition before committing. System synergy matters more than component reputation."
+    }
+  ],
+  "keyObservation": "Your component choices suggest a preference for equipment emphasising **timing accuracy and low stored energy and dynamic elasticity**. Marantz 2220B, JBL L100 Classic, Schiit Bifrost 2/64 share this design philosophy. The system leans toward dynamic elasticity, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well."
+}
