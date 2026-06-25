@@ -5,6 +5,29 @@
 
 ---
 
+## Status — Automated QA workflow (2026-06-25)
+
+Eliminates Mike as the manual browser-QA bottleneck after engine changes.
+Two-tier, single-command regression workflow (commit `ea4df19`,
+`apps/web/qa-regression/`).
+
+**Completed:**
+- Automated QA workflow implemented.
+- Tier A engine-snapshot regression working across 10 fixtures (deterministic capture + exact diff + concise report).
+- Tier B visual regression smoke test working (Playwright `toHaveScreenshot`, homepage baseline verified).
+- One-command scripts added:
+  - `npm run qa:regress`
+  - `npm run qa:baseline`
+  - `npm run qa:regress:visual`
+  - `npm run qa:regress:all`
+
+**Known notes:**
+- Tier A is the primary launch QA mechanism.
+- Tier B visual baselines are OS/environment-specific — treat as a layout smoke test, not the main regression source.
+- Visual fixture expansion should wait until after the UI trust pass.
+
+---
+
 ## Status — Recommendation-bias remediation (2026-06-25)
 
 Launch-critical removal of the universal-"better" bias from the recommendation
