@@ -21,6 +21,7 @@ import { LISTENER_PRIORITY_LABELS } from './memo-findings';
 import type { TradeoffAssessment } from './tradeoff-assessment';
 import type { PrimaryConstraint } from './advisory-response';
 import type { DesireSignal } from './intent';
+import type { ListenerProfile } from './listener-preferences';
 import { resolveConstraintClass } from './constraint-adapter';
 
 // ── Types ────────────────────────────────────────────
@@ -180,6 +181,189 @@ export function classifyPriorities(
   }
 
   return { explicit, inferred };
+}
+
+// ── Intent stance (P1 — shared intent gate) ──────────
+//
+// Recommendation = Judgment × User Intent.
+//
+// The system assessment ("Judgment") is observer-invariant. The recommendation
+// surfaces multiply that judgment by what the USER actually wants. Per the
+// frozen ontology, User Intent comes ONLY from explicit DesireSignals and the
+// accumulated ListenerProfile — NEVER from system-inferred listenerPriorities
+// or from the system's own axis positions. deriveIntentStance() is the single
+// place that reads those two intent sources and resolves them to a directional
+// lean (or null) on each of the four canonical axes.
+
+export type IntentAxis =
+  | 'warm_bright'
+  | 'smooth_detailed'
+  | 'elastic_controlled'
+  | 'airy_closed';
+
+export type IntentSide =
+  | 'warm' | 'bright'
+  | 'smooth' | 'detailed'
+  | 'elastic' | 'controlled'
+  | 'airy' | 'closed';
+
+/**
+ * Per-axis directional intent. A side means the user wants the system to lean
+ * that way; null means no resolvable intent on that axis (silent or ambiguous).
+ */
+export interface IntentStance {
+  warm_bright: 'warm' | 'bright' | null;
+  smooth_detailed: 'smooth' | 'detailed' | null;
+  elastic_controlled: 'elastic' | 'controlled' | null;
+  airy_closed: 'airy' | 'closed' | null;
+  /** True when the user has expressed any directional intent at all. */
+  hasIntent: boolean;
+}
+
+const AXIS_OPPOSITE: Record<IntentSide, IntentSide> = {
+  warm: 'bright', bright: 'warm',
+  smooth: 'detailed', detailed: 'smooth',
+  elastic: 'controlled', controlled: 'elastic',
+  airy: 'closed', closed: 'airy',
+};
+
+/**
+ * Canonical quality token (from intent.ts KNOWN_QUALITIES) → axis + the side it
+ * expresses when the user wants MORE of it. A "less" desire flips to the
+ * opposite side. Intentionally conservative — only tokens with an unambiguous
+ * axis-side are mapped; ambiguous ones (speed, attack) are omitted.
+ */
+const DESIRE_TO_AXIS: Record<string, { axis: IntentAxis; side: IntentSide }> = {
+  // warm_bright
+  warmth: { axis: 'warm_bright', side: 'warm' },
+  body: { axis: 'warm_bright', side: 'warm' },
+  richness: { axis: 'warm_bright', side: 'warm' },
+  density: { axis: 'warm_bright', side: 'warm' },
+  weight: { axis: 'warm_bright', side: 'warm' },
+  brightness: { axis: 'warm_bright', side: 'bright' },
+  edge: { axis: 'warm_bright', side: 'bright' },
+  // smooth_detailed
+  detail: { axis: 'smooth_detailed', side: 'detailed' },
+  resolution: { axis: 'smooth_detailed', side: 'detailed' },
+  clarity: { axis: 'smooth_detailed', side: 'detailed' },
+  transparency: { axis: 'smooth_detailed', side: 'detailed' },
+  texture: { axis: 'smooth_detailed', side: 'detailed' },
+  smoothness: { axis: 'smooth_detailed', side: 'smooth' },
+  ease: { axis: 'smooth_detailed', side: 'smooth' },
+  relaxation: { axis: 'smooth_detailed', side: 'smooth' },
+  flow: { axis: 'smooth_detailed', side: 'smooth' },
+  musicality: { axis: 'smooth_detailed', side: 'smooth' },
+  naturalness: { axis: 'smooth_detailed', side: 'smooth' },
+  // elastic_controlled
+  dynamics: { axis: 'elastic_controlled', side: 'elastic' },
+  punch: { axis: 'elastic_controlled', side: 'elastic' },
+  slam: { axis: 'elastic_controlled', side: 'elastic' },
+  energy: { axis: 'elastic_controlled', side: 'elastic' },
+  excitement: { axis: 'elastic_controlled', side: 'elastic' },
+  rhythm: { axis: 'elastic_controlled', side: 'elastic' },
+  pace: { axis: 'elastic_controlled', side: 'elastic' },
+  timing: { axis: 'elastic_controlled', side: 'elastic' },
+  control: { axis: 'elastic_controlled', side: 'controlled' },
+  grip: { axis: 'elastic_controlled', side: 'controlled' },
+  // airy_closed
+  soundstage: { axis: 'airy_closed', side: 'airy' },
+  imaging: { axis: 'airy_closed', side: 'airy' },
+  space: { axis: 'airy_closed', side: 'airy' },
+  width: { axis: 'airy_closed', side: 'airy' },
+  depth: { axis: 'airy_closed', side: 'airy' },
+  air: { axis: 'airy_closed', side: 'airy' },
+  openness: { axis: 'airy_closed', side: 'airy' },
+  extension: { axis: 'airy_closed', side: 'airy' },
+  sparkle: { axis: 'airy_closed', side: 'airy' },
+};
+
+/**
+ * ListenerProfile dimension → axis, with the side each pole implies. One
+ * dimension per axis keeps the mapping unambiguous (the profile carries other
+ * dimensions, but only these four map cleanly onto the canonical sonic axes).
+ */
+const PROFILE_DIM_TO_AXIS: Array<{
+  dim: 'warmth_vs_neutrality' | 'smoothness_vs_attack' | 'flow_vs_precision' | 'intimacy_vs_scale';
+  axis: IntentAxis;
+  low: IntentSide;
+  high: IntentSide;
+}> = [
+  { dim: 'warmth_vs_neutrality', axis: 'warm_bright', low: 'warm', high: 'bright' },
+  { dim: 'smoothness_vs_attack', axis: 'smooth_detailed', low: 'smooth', high: 'detailed' },
+  { dim: 'flow_vs_precision', axis: 'elastic_controlled', low: 'elastic', high: 'controlled' },
+  { dim: 'intimacy_vs_scale', axis: 'airy_closed', low: 'closed', high: 'airy' },
+];
+
+/** Below this profile confidence, accumulated leans don't count as intent.
+ *  Mirrors the framing-layer floor in listener-preferences.ts. */
+const PROFILE_INTENT_FLOOR = 0.2;
+/** Minimum deviation from neutral (0.5) for a profile dimension to count. */
+const PROFILE_INTENT_DEVIATION = 0.15;
+
+/**
+ * Resolve the user's directional intent on each canonical axis from the two
+ * permitted intent sources — explicit DesireSignals (primary) and the
+ * accumulated ListenerProfile (secondary fill). Never reads listenerPriorities
+ * or system axes. Returns a per-axis side or null, plus a hasIntent flag.
+ *
+ * Resolution rules:
+ *   - Explicit desires win. Two explicit desires that disagree on the same
+ *     axis cancel to null (ambiguous — the engine should not guess).
+ *   - The ListenerProfile only fills axes the desires left silent, and only
+ *     when its confidence clears the floor and the dimension deviates from
+ *     neutral.
+ */
+export function deriveIntentStance(
+  desires?: DesireSignal[],
+  profile?: ListenerProfile | null,
+): IntentStance {
+  const stance: IntentStance = {
+    warm_bright: null,
+    smooth_detailed: null,
+    elastic_controlled: null,
+    airy_closed: null,
+    hasIntent: false,
+  };
+  const conflicted = new Set<IntentAxis>();
+
+  // 1. Explicit desires (stated User Intent) take priority.
+  if (desires) {
+    for (const d of desires) {
+      const q = d.quality?.toLowerCase?.();
+      if (!q) continue;
+      const map = DESIRE_TO_AXIS[q];
+      if (!map) continue;
+      const side = d.direction === 'less' ? AXIS_OPPOSITE[map.side] : map.side;
+      const current = stance[map.axis];
+      if (current === null && !conflicted.has(map.axis)) {
+        stance[map.axis] = side as never;
+      } else if (current !== null && current !== side) {
+        // Two explicit desires disagree on this axis → ambiguous; clear it.
+        stance[map.axis] = null;
+        conflicted.add(map.axis);
+      }
+    }
+  }
+
+  // 2. ListenerProfile fills only the axes the user did not state explicitly.
+  if (profile && profile.signalCount > 0 && profile.confidence >= PROFILE_INTENT_FLOOR) {
+    for (const m of PROFILE_DIM_TO_AXIS) {
+      if (stance[m.axis] !== null || conflicted.has(m.axis)) continue;
+      const v = profile[m.dim] as number;
+      if (typeof v !== 'number') continue;
+      const delta = v - 0.5;
+      if (Math.abs(delta) < PROFILE_INTENT_DEVIATION) continue;
+      stance[m.axis] = (delta < 0 ? m.low : m.high) as never;
+    }
+  }
+
+  stance.hasIntent =
+    stance.warm_bright !== null
+    || stance.smooth_detailed !== null
+    || stance.elastic_controlled !== null
+    || stance.airy_closed !== null;
+
+  return stance;
 }
 
 // ── Threat detection ─────────────────────────────────
