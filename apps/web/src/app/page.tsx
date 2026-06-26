@@ -76,7 +76,6 @@ import { buildIntakeResponse, intakeToAdvisory } from '@/lib/intake';
 import { inferUnknownProduct, buildUnknownProductFallback } from '@/lib/llm-product-inference';
 // Validation telemetry + feedback (Workstream 25B — throwaway cohort scaffolding).
 import { trackEvent, trackDecisionIntent, initSessionTelemetry } from '@/lib/track-event';
-import FeedbackPrompt from '@/components/FeedbackPrompt';
 // A3 hybrid advisor (WS31 — flag-gated, known-system advisory only; default OFF).
 import { a3Enabled, a3IsAdvisoryQuestion, runA3Advisor } from '@/lib/a3-advisor';
 import { inferProvisionalSystemAssessment } from '@/lib/llm-system-inference';
@@ -5096,14 +5095,11 @@ export default function Home() {
                 />
               </div>
             ))}
-          {/* Validation feedback (Workstream 25B): one prompt beneath the
-           * latest advisory/assessment answer, deduped per advisory id. */}
-          {!isLoading
-            && lastMessage?.role === 'assistant'
-            && lastMessage.kind === 'advisory'
-            && 'id' in lastMessage && (
-            <FeedbackPrompt advisoryId={String((lastMessage as { id?: string }).id ?? 'latest')} />
-          )}
+          {/* Trust pass (Product Lead, cycle 1): the post-assessment "Did this
+           * help? Yes/No" survey was the single strongest "this is a chatbot,
+           * not an advisor" tell — an admin coda landing exactly where the
+           * consultation should end at maximum confidence. Removed so the
+           * experience closes on the advice, not a satisfaction poll. */}
           {/* Skip-to-suggestions button — visible when asking clarifying questions in shopping mode */}
           {!isLoading && lastMessage?.role === 'assistant' && lastMessage.kind === 'question' && state.activeMode === 'shopping' && (
             <button
