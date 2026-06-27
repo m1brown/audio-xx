@@ -138,11 +138,12 @@ export function synthesizeArtifact(result: any): SynthResult {
       standfirst = signature ? lowerFirst(stripTrailingPeriod(signature)) + '.' : undefined;
     }
   } else {
-    // No bottleneck → restraint.
-    verdict = 'A system that already knows what it is.';
+    // No bottleneck → restraint. Verdict is plain advisor judgment; the
+    // standfirst carries the tonal/descriptive note.
+    verdict = 'Nothing here needs changing.';
     standfirst = signature
-      ? `${stripTrailingPeriod(signature)} — and nothing here needs changing.`
-      : 'Nothing here needs changing.';
+      ? `${stripTrailingPeriod(signature)}.`
+      : undefined;
   }
 
   // ── DERIVED: recognition. The chain names sit in the component credit
