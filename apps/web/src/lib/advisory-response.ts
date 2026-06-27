@@ -671,6 +671,27 @@ export interface AdvisoryResponse {
   unknownComponents?: string[];
 
   /**
+   * **Presentation-only carrier.** Opaque raw engine result that the v2
+   * Assessment Artifact renderer (`apps/web/src/app/artifact`) consumes
+   * via `synthesizeArtifact()`. Attached at the system-assessment seam
+   * in `page.tsx` only when `ASSESSMENT_ARTIFACT_V2_ENABLED` is on.
+   *
+   * - Off path: this field is `undefined`; no consumer reads it; the
+   *   AdvisoryResponse shape is byte-identical to today.
+   * - On path: chat-side dispatch reads it to render the v2 artifact in
+   *   embedded mode. Treated as opaque `unknown`: not serialized in
+   *   save-system payloads, not consulted by intent / clarification /
+   *   comparison / save flows.
+   *
+   * The double-underscore prefix marks this as presentation infrastructure;
+   * do not extend it with display fields, do not read it from non-artifact
+   * surfaces. Engine semantics live in the engine; this is a transport
+   * lane for the v2 dispatch only.
+   */
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  __rawAssessment?: unknown;
+
+  /**
    * Reasoning mode that produced this response. Optional — omitted = 'core'.
    * Only 'expanded' triggers a visible UI indicator + caption; 'hybrid' is
    * internal observability only. See {@link ReasoningMode} for semantics.
