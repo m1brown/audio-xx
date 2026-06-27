@@ -76,19 +76,32 @@ export function synthesizeArtifact(result: any): SynthResult {
   const resp = result?.response ?? {};
 
   const chain = f.systemChain ?? {};
-  // DIRECT: clean component names. fullChain is the un-corrupted source.
-  const credit: string[] = (chain.fullChain && chain.fullChain.length ? chain.fullChain : chain.names) ?? [];
+  const names: string[] = chain.names ?? [];
+  const full: string[] = chain.fullChain ?? [];
 
-  // ── contradiction: corrupted component names (e.g. "Decware Holo may") ──
-  if (chain.fullChain && chain.names && chain.fullChain.length === chain.names.length) {
-    for (let i = 0; i < chain.fullChain.length; i++) {
-      if (chain.fullChain[i] !== chain.names[i]) {
-        contradictions.push(
-          `Component name corrupted in engine output: chain.names[${i}]="${chain.names[i]}" ≠ fullChain[${i}]="${chain.fullChain[i]}". Rendered from fullChain.`,
-        );
-      }
+  // ── component credit (DIRECT: the engine's catalog display names) ──
+  // Prefer the resolved catalog names (the source of truth). Detect GENUINE
+  // corruption — a name carrying a *different* component's brand token that
+  // isn't in this slot's own input text (e.g. the DAC rendered "Decware Holo
+  // may"). Benign normalization differences (e.g. "Holo Audio May (KTE)" vs the
+  // typed "Holo May (KTE)") are NOT flagged. Only on real corruption do we fall
+  // back to the user's text for that slot.
+  const firstToken = (s: string): string => (s || '').toLowerCase().match(/[a-z0-9]+/)?.[0] ?? '';
+  const brandTokens = full.map(firstToken);
+  const credit: string[] = (names.length ? names : full).map((nm, i) => {
+    const lc = (nm || '').toLowerCase();
+    const ownInput = (full[i] ?? '').toLowerCase();
+    const foreign = brandTokens.find(
+      (t, j) => j !== i && t.length >= 3 && lc.includes(t) && !ownInput.includes(t),
+    );
+    if (foreign) {
+      contradictions.push(
+        `Component name corrupted in engine output: names[${i}]="${nm}" carries a foreign brand token ("${foreign}"); rendered from input "${full[i] ?? nm}".`,
+      );
+      return full[i] || nm;
     }
-  }
+    return nm || full[i] || '';
+  });
 
   const bottleneck = f.bottleneck ?? null;
   const path0 = (resp.upgradePaths ?? [])[0] ?? null;

@@ -8780,7 +8780,14 @@ export function buildSystemAssessment(
           })
           .sort((a, b) => a.distance - b.distance);
 
-        const brandMatch = candidateBrands.length > 0 ? candidateBrands[0].match : undefined;
+        // A multi-word free-text model (e.g. "Holo May") already carries its
+        // own brand; borrowing the *nearest* unprocessed brand subject here
+        // mis-attributes a different component's brand — the source of the
+        // "Decware Holo may" corruption. Only borrow a brand for a single-token
+        // model that plainly needs one (e.g. "DMP-A6" → "Eversolo DMP-A6").
+        const modelTokens = match.name.trim().split(/\s+/).filter(Boolean);
+        const modelNeedsBrand = modelTokens.length < 2;
+        const brandMatch = modelNeedsBrand && candidateBrands.length > 0 ? candidateBrands[0].match : undefined;
         let brandName = '';
         if (brandMatch) {
           // Use KNOWN_PRODUCT_ROLES displayBrand for proper casing (e.g. "XSA" not "Xsa")
@@ -8792,10 +8799,11 @@ export function buildSystemAssessment(
           processedNames.add(brandMatch.name.toLowerCase());
         }
 
-        // Preserve original casing for model names with hyphens (DMP-A6, DAC-Z8)
-        let productName = match.name.includes('-')
-          ? match.name.toUpperCase()
-          : match.name.charAt(0).toUpperCase() + match.name.slice(1);
+        // Title-case each model word (so "holo may" → "Holo May", not
+        // "Holo may"); keep hyphenated tokens upper (DMP-A6, DAC-Z8).
+        let productName = modelTokens
+          .map((w) => (w.includes('-') ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+          .join(' ');
         // Strip brand prefix from product name if already present (e.g. "leben cs300" → "CS300")
         if (brandName && productName.toLowerCase().startsWith(brandName.toLowerCase() + ' ')) {
           const modelPart = productName.substring(brandName.length + 1).trim();
