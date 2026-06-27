@@ -157,6 +157,7 @@ body:has(.axx-route) { background: #FBFAF6; }
 /* ── One permitted entrance ───────────────────────────────────────────── */
 @media (prefers-reduced-motion: no-preference) {
   .axx-artifact { animation: axxIn .3s ease-out both; }
+  .axx-artifact.axx-embedded { animation: none; }   /* chat envelope animates */
   @keyframes axxIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 }
 

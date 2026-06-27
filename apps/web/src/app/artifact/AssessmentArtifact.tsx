@@ -7,18 +7,32 @@ import type { ArtifactPayload } from './fixtures';
  * One <article> filled from a payload; two full-width peaks (verdict,
  * recommendation); an evidence rail kept to one side of the judgment column;
  * three silences carried by spacing tokens. Follow-up is a sibling, outside.
+ *
+ * `embedded` is a presentation-only gate used when the artifact renders
+ * inside the chat stream (v2 dispatch). It suppresses the masthead (the chat
+ * shell already carries identity + timestamp), the FollowUp surface (chat
+ * composer handles follow-ups), the contradictions diagnostics block (dev
+ * surface only; not for end users in chat), and the entrance animation (the
+ * message envelope already animates in). The article markup, typography,
+ * spacing, R1–R8 rule output, and overall composition are unchanged.
  */
 export default function AssessmentArtifact(
-  { p, contradictions = [], print = false }:
-  { p: ArtifactPayload; contradictions?: string[]; print?: boolean },
+  { p, contradictions = [], print = false, embedded = false }:
+  { p: ArtifactPayload; contradictions?: string[]; print?: boolean; embedded?: boolean },
 ) {
+  const articleCls =
+    'axx-artifact'
+    + (print ? ' axx-print' : '')
+    + (embedded ? ' axx-embedded' : '');
   return (
     <>
-      <article className={'axx-artifact' + (print ? ' axx-print' : '')}>
-        <header className="axx-masthead">
-          <span><b>Audio XX</b></span>
-          <span>{p.date}</span>
-        </header>
+      <article className={articleCls}>
+        {!embedded && (
+          <header className="axx-masthead">
+            <span><b>Audio XX</b></span>
+            <span>{p.date}</span>
+          </header>
+        )}
 
         {/* Peak 1 — the verdict */}
         <section className="axx-verdict">
@@ -67,14 +81,14 @@ export default function AssessmentArtifact(
         <footer className="axx-colophon">Audio XX · {p.date}</footer>
       </article>
 
-      {!print && contradictions.length > 0 && (
+      {!print && !embedded && contradictions.length > 0 && (
         <aside className="axx-contradiction" aria-label="Engine diagnostics — not part of the assessment">
           <strong>Engine output contradictions (surfaced, not smoothed):</strong>
           <ul>{contradictions.map((c, i) => <li key={i}>{c}</li>)}</ul>
         </aside>
       )}
 
-      {!print && <FollowUp />}
+      {!print && !embedded && <FollowUp />}
     </>
   );
 }
