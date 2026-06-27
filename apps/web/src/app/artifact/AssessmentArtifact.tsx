@@ -16,7 +16,7 @@ export default function AssessmentArtifact(
       <article className="axx-artifact">
         <header className="axx-masthead">
           <span><b>Audio XX</b></span>
-          <span>{p.date} · {p.edition}</span>
+          <span>{p.date}</span>
         </header>
 
         {/* Peak 1 — the verdict */}
@@ -31,9 +31,8 @@ export default function AssessmentArtifact(
         <div className="axx-case">
           <aside className="axx-rail" aria-label="Evidence">
             <h2 className="axx-vh">Evidence</h2>
-            <ul>
-              {p.componentCredit.map((c) => <li key={c}>{c}</li>)}
-            </ul>
+            {/* The component list lives once under the standfirst — the rail
+             *  begins with evidence, not a repeated identifier. */}
             {p.heroDatum && (
               <p className="axx-datum">
                 <span className="v">{p.heroDatum.value}</span>
@@ -64,7 +63,7 @@ export default function AssessmentArtifact(
 
         {p.cost && <p className="axx-cost">{p.cost}</p>}
 
-        <footer className="axx-colophon">Audio XX · {p.date} · {p.edition}</footer>
+        <footer className="axx-colophon">Audio XX · {p.date}</footer>
       </article>
 
       {contradictions.length > 0 && (

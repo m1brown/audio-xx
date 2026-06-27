@@ -22,5 +22,7 @@ export interface ArtifactPayload {
   figure?: { src: string; alt: string; caption: string };
   cost?: string;
   date: string;
-  edition: string;
+  /** Reserved for when assessments become stable, addressable artifacts.
+   *  Held back in beta — a date is sufficient provenance. */
+  edition?: string;
 }

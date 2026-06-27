@@ -145,10 +145,13 @@ export function synthesizeArtifact(result: any): SynthResult {
       : 'Nothing here needs changing.';
   }
 
-  // ── DERIVED: recognition (chain names + engine signature) ──
-  const recognition = credit.length
-    ? `${credit.join(' into ')}${signature ? ` — ${lowerFirst(stripTrailingPeriod(signature))}.` : '.'}`
-    : (signature || 'A system worth assessing.');
+  // ── DERIVED: recognition. The chain names sit in the component credit
+  //    above, so the recognition paragraph carries character, not roll-call. ──
+  const recognition = signature
+    ? stripTrailingPeriod(signature) + '.'
+    : (credit.length
+      ? `${credit.join(', ')}.`
+      : 'A system worth assessing.');
 
   // ── case paragraphs ──
   const caseParagraphs: string[] = [];
@@ -159,8 +162,20 @@ export function synthesizeArtifact(result: any): SynthResult {
     if (sents.length > 2) caseParagraphs.push(sents.slice(2).join(' '));
   } else {
     // Restraint: strengths (DIRECT) + a justified "no weak link" beat + close.
+    // Subject-dedup: if both strengths lead with the same component, surface
+    // the first and re-voice the second so the page doesn't repeat itself.
     const strengths: string[] = resp.assessmentStrengths ?? [];
-    if (strengths.length) caseParagraphs.push(stripTrailingPeriod(strengths.slice(0, 2).join('; ')) + '.');
+    const a = stripTrailingPeriod((strengths[0] ?? '').trim());
+    const b = stripTrailingPeriod((strengths[1] ?? '').trim());
+    const subjOf = (s: string) => s.split(/\s+/).slice(0, 3).join(' ').toLowerCase();
+    const sameSubject = a && b && subjOf(a) === subjOf(b);
+    if (a && b) {
+      caseParagraphs.push(sameSubject
+        ? `${a}, and ${lowerFirst(b.replace(/^[^\s]+\s+[^\s]+\s+[^\s]+\s*/, ''))}.`
+        : `${a}; ${lowerFirst(b)}.`);
+    } else if (a) {
+      caseParagraphs.push(a + '.');
+    }
     if (!bottleneck) caseParagraphs.push('There is no weak link holding the others back.');
     caseParagraphs.push('It is balanced.');
   }
@@ -186,15 +201,9 @@ export function synthesizeArtifact(result: any): SynthResult {
     } else {
       recommendation = `I’d start with the ${role}.`;
     }
-    const opt = (path0.options ?? [])[0];
-    if (opt) {
-      // figure PRESENCE is engine-driven; image SOURCE stays local (no CDN hotlink).
-      figure = {
-        src: PLACEHOLDER_FIGURE,
-        alt: 'The recommended direction',
-        caption: `${[opt.brand, opt.name].filter(Boolean).join(' ')} — image to follow`,
-      };
-    }
+    // Figure intentionally omitted until real editorial imagery exists — a
+    // committed recommendation standing alone reads stronger than a draft
+    // placeholder (the restraint path already proves the page works imageless).
   } else {
     recommendation = 'Leave it alone.';
   }
