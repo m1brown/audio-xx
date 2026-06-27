@@ -18,8 +18,9 @@
  *   R1  Recognition must not duplicate the standfirst.
  *   R2  Recognition must describe the system's apparent INTENT, not restate
  *       its tonal signature.
- *   R3  The case must move from MECHANISM (what is happening) to HEARD
- *       CONSEQUENCE (what the user actually perceives).
+ *   R3  The BOTTLENECK case must move from MECHANISM (what is happening) to
+ *       HEARD CONSEQUENCE (what the user actually perceives). The restraint
+ *       (no-change) path is governed by R8, not R3.
  *   R4  The case must not repeat the hero datum if the datum is already
  *       shown in the evidence rail.
  *   R5  The case must not preview the recommendation before the
@@ -86,23 +87,72 @@ function roleNoun(role: string | undefined): string {
   return role || 'system';
 }
 
-// ── R2: intent read (axis combination → what the builder was after) ─────
-function intentRead(axes: Record<string, string> | undefined): string | null {
-  if (!axes) return null;
-  const w = axes.warm_bright, s = axes.smooth_detailed, e = axes.elastic_controlled;
-  if (w === 'warm' && (s === 'smooth' || s === 'balanced'))
-    return 'built for tone and ease, with detail kept in service of the music';
-  if (w === 'warm' && s === 'detailed')
-    return 'built for tone and presence, with detail and air preserved through careful choices downstream';
-  if (w === 'bright' && s === 'detailed')
-    return 'built for resolution and speed, with the speaker asked to hold it together tonally';
-  if (w === 'neutral' && s === 'detailed' && (e === 'controlled' || e === 'balanced'))
-    return 'built for resolution and composure, with warmth allowed to land where it must';
-  if (w === 'neutral' && s === 'smooth')
-    return 'built for ease and continuity, with detail offered rather than asserted';
-  if (!w || w === 'neutral')
+// ── R2: intent read — general derivation ────────────────────────────────
+// Recognition must always describe apparent intent, not tonal description.
+// We derive intent from each axis independently and compose, instead of a
+// fixed lookup. Every axis the engine emits maps to a "what the builder was
+// after" phrase, so there is no path that falls back to the signature.
+const INTENT_PRIMARY: Record<string, Record<string, string>> = {
+  warm_bright: {
+    warm:    'tone and presence',
+    bright:  'resolution and speed',
+    neutral: 'tonal neutrality',
+    balanced:'tonal balance',
+  },
+  smooth_detailed: {
+    smooth:  'ease and continuity',
+    detailed:'resolution and detail',
+    neutral: 'a clean read of the recording',
+    balanced:'a clean read of the recording',
+  },
+  elastic_controlled: {
+    elastic:  'rhythmic life',
+    controlled:'composure and grip',
+    neutral:  'composure',
+    balanced: 'composure',
+  },
+};
+
+const INTENT_QUALIFIER: Record<string, Record<string, string>> = {
+  warm_bright: {
+    warm:    'detail and air preserved through careful choices downstream',
+    bright:  'tonal weight asked of the speaker',
+    neutral: 'character allowed to come from the recording, not the chain',
+    balanced:'character allowed to come from the recording, not the chain',
+  },
+  smooth_detailed: {
+    smooth:  'detail offered rather than asserted',
+    detailed:'long-session ease asked of the speaker',
+    neutral: 'no single quality asked to dominate',
+    balanced:'no single quality asked to dominate',
+  },
+  elastic_controlled: {
+    elastic:  'composure left to the speaker',
+    controlled:'a little bloom traded for grip',
+    neutral:  'no axis asked to lead',
+    balanced: 'no axis asked to lead',
+  },
+};
+
+function intentRead(axes: Record<string, string> | undefined): string {
+  // Pick the strongest non-neutral axis for the primary clause; the next-
+  // strongest non-neutral axis (if any) supplies the qualifier. If every
+  // axis reads neutral, fall back to the unambiguous balance phrasing — a
+  // valid intent statement, never the tonal signature.
+  const ranked: string[] = ['warm_bright', 'smooth_detailed', 'elastic_controlled'];
+  const present = ranked.filter((k) => axes && axes[k] && axes[k] !== 'neutral' && axes[k] !== 'balanced');
+  if (!axes || present.length === 0) {
     return 'built for balance — no single quality asked to dominate';
-  return null;
+  }
+  const primaryKey = present[0];
+  const primaryVal = axes[primaryKey];
+  const primary = INTENT_PRIMARY[primaryKey]?.[primaryVal] ?? 'a considered balance';
+  const qualKey = present[1] ?? ranked.find((k) => k !== primaryKey);
+  const qualVal = qualKey ? (axes[qualKey] ?? 'neutral') : 'neutral';
+  const qualifier = qualKey ? (INTENT_QUALIFIER[qualKey]?.[qualVal] ?? '') : '';
+  return qualifier
+    ? `built for ${primary}, with ${qualifier}`
+    : `built for ${primary}`;
 }
 
 // ── R8: equilibrium beat (restraint path: who plays which part) ─────────
@@ -170,9 +220,25 @@ function verdictAndStandfirst(
 }
 
 // ── R3 (heard consequence) — engine sentences → user-ear sentence ───────
-// We keep the engine's first sentence (the mechanism) and rewrite the tail as
-// one heard-consequence beat. Same content; the synthesizer voices it.
-const HEARD_CONSEQUENCE_LINE = 'At normal listening levels you hear it as soft dynamics, loose bass and the sense that the system is straining to keep up.';
+// Bottleneck path only. We keep the engine's first sentence (mechanism) and
+// add one heard-consequence beat that names the *category-specific* user
+// perception. This is not stylistic variation; each category has a
+// different audible signature, and using one line for all categories was
+// factually wrong on dac_limitation / stacked_bias.
+const HEARD_CONSEQUENCE_BY_CATEGORY: Record<string, string> = {
+  power_match:
+    'At normal listening levels you hear it as soft dynamics, loose bass and the sense that the system is straining to keep up.',
+  dac_limitation:
+    'You hear it as a thinner midrange, a glassy edge on transients and the body the recording deserves never quite arriving.',
+  stacked_bias:
+    'You hear it as the system leaning hard in one direction — what should be a strength has become an excess the speaker can’t talk out of.',
+  speaker_scale:
+    'You hear it as a system that fills the room but never quite owns it — scale and physical authority capped by what the speaker can move.',
+  amplifier_control:
+    'You hear it as bass that loosens under load, timing that softens on dense passages and a system that loses grip when it needs to bear down.',
+};
+const HEARD_CONSEQUENCE_DEFAULT =
+  'You hear it as the chain pushed past what the weakest link can support.';
 
 // ── R5 (no recommendation preview) — fragments to strip from case prose ─
 const RECOMMENDATION_PREVIEW_PATTERNS: RegExp[] = [
@@ -245,17 +311,11 @@ export function synthesizeArtifact(result: any): SynthResult {
   const { verdict, standfirst } = verdictAndStandfirst(bottleneck, category, role, signature);
 
   // ── R1, R2 — recognition ─────────────────────────────────────────────
-  // Build via intentRead. Fall back to the signature only if intentRead has
-  // no opinion *and* the signature differs from the standfirst (else R1 would
-  // fire). The final post-condition guarantees R1 + R2.
-  const intent = intentRead(f.systemAxes);
-  let recognition = intent
-    ? `This system is ${intent}.`
-    : signature && norm(signature) !== norm(standfirst ?? '')
-      ? stripTrailingPeriod(signature) + '.'
-      : 'A system worth assessing.';
-
-  // R1 enforcement: recognition must not equal the standfirst.
+  // R2: recognition ALWAYS describes apparent intent, never the tonal
+  // signature. intentRead() now derives an intent phrase for every axis
+  // combination the engine emits, so there is no signature fallback path.
+  // R1 is enforced as a final post-condition.
+  let recognition = `This system is ${intentRead(f.systemAxes)}.`;
   if (standfirst && norm(recognition) === norm(standfirst)) {
     recognition = 'A system worth assessing.';
     contradictions.push('R1: recognition would duplicate the standfirst; falling back to neutral lead.');
@@ -266,10 +326,14 @@ export function synthesizeArtifact(result: any): SynthResult {
   const hasDatum = category === 'power_match' && !!extractSplDatum(constraintExpl);
 
   if (bottleneck && constraintExpl) {
-    // R3 (mechanism → heard consequence). R4 (no datum repeat). R5 (no preview).
+    // R3 (mechanism → heard consequence; bottleneck path only).
+    // R4 (no datum repeat). R5 (no preview).
     const mechanism = buildMechanismBeat(constraintExpl, hasDatum);
     if (mechanism) caseParagraphs.push(mechanism);
-    caseParagraphs.push(HEARD_CONSEQUENCE_LINE);
+    const heard = HEARD_CONSEQUENCE_BY_CATEGORY[category] ?? HEARD_CONSEQUENCE_DEFAULT;
+    if (!HEARD_CONSEQUENCE_BY_CATEGORY[category])
+      contradictions.push(`R3: no category-specific heard-consequence line for "${category}"; using default.`);
+    caseParagraphs.push(heard);
   } else {
     // R8 (restraint: demonstrate equilibrium, not announce it).
     const beat = equilibriumBeat(credit, f.systemAxes);
