@@ -1,7 +1,72 @@
 # Audio XX — Practical Roadmap
 
-**Last updated:** 2026-06-25
+**Last updated:** 2026-06-28
 **Audience:** technical contributors deciding what to work on next, and prospective collaborators evaluating the planned trajectory.
+
+---
+
+## Checkpoint — Assessment Artifact track complete (2026-06-28)
+
+The artifact-centric Audio XX track (renderer → synthesizer → editorial rules
+→ PDF) is feature-complete on `version-b` as an isolated `/artifact` route.
+The artifact is not yet wired into the main user flow.
+
+**Completed:**
+- **Artifact renderer** — `apps/web/src/app/artifact/` (commit `8bd0a04`).
+  Canonical assessment as a finished editorial document: masthead, two
+  peaks (verdict, recommendation), one seam (evidence rail | judgment
+  column), three silences, single permitted entrance, follow-up isolated
+  outside the article. Print mode via `?print=1`.
+- **Engine → artifact synthesizer** — `synthesizeArtifact.ts` (commit
+  `fd9d6d9`). Maps `buildSystemAssessment` output to the editorial payload.
+  No engine, ontology, or recommendation logic changed; contradictions in
+  engine output are surfaced rather than smoothed.
+- **PDF export** — `scripts/export-artifact.mts` (commit `391d540`).
+  `npm run artifact:pdf -- --case=… | --system=…`, A4 portrait, deterministic
+  given a `--date` override (matching SHA after stripping CreationDate /
+  ModDate / Producer metadata).
+- **Editorial rule set R1–R8** — frozen, explicit, post-condition-enforced
+  in the synthesizer (commits `7ce0615`, `8c55bec`):
+  - R1 — recognition ≠ standfirst
+  - R2 — recognition describes apparent **intent**, never the tonal
+    signature (general derivation; no fallback path)
+  - R3 — bottleneck case moves mechanism → heard consequence (bottleneck
+    path only; restraint governed by R8)
+  - R4 — no datum repeat when the evidence rail shows it
+  - R5 — no recommendation preview inside the case
+  - R6 — recommendation acts only on the engine's bottleneck role
+  - R7 — cost names the specific trade-off implied by the recommendation
+  - R8 — restraint demonstrates equilibrium; forbidden refrains
+    ("It is balanced", "no weak link", "nothing needs changing/fixing")
+    stripped
+  - Each rule documented at the top of `synthesizeArtifact.ts` and every
+    failed post-condition logged as a contradiction.
+- **Stress-tested across 6 categories / 8 runs.** All reachable
+  categories — `power_match`, restraint/no-change, `dac_limitation`,
+  `stacked_bias` — pass every applicable rule. Per-category heard-
+  consequence lines added for `power_match`, `dac_limitation`,
+  `stacked_bias`, `speaker_scale`, `amplifier_control`.
+
+**Known limits at this checkpoint:**
+- **Untriggered categories:** `speaker_scale` and `amplifier_control`
+  branches exist (cost lines + heard-consequence lines) but the engine did
+  not classify any catalog-resident system into them during stress
+  testing. Coverage will arrive when the engine's classifier reaches them
+  on real systems.
+- **Engine data issue (not synthesizer):** partial model resolution — e.g.
+  `chain.fullChain[0] = "Topping"` with no resolved model — surfaces as
+  bare-brand text in the artifact. Fixed at the engine-resolution layer,
+  not in `synthesizeArtifact.ts`.
+
+**Stylistic variation:** intentionally not added. Each rule emits one
+fixed shape per slot; rotation across multiple phrasings is a deliberate
+future call, not part of this checkpoint.
+
+**Next decision (open):** integrate the artifact into the main user flow
+(preferred — surface it behind a clean route or feature flag so it gets
+real use), or fix engine coverage gaps (`speaker_scale`,
+`amplifier_control`, partial model resolution) first. Integration is
+favored because the artifact now needs use, not more isolated polishing.
 
 ---
 
