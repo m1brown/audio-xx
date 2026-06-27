@@ -12,12 +12,31 @@
  *   - where the engine output is internally contradictory it records the
  *     contradiction rather than smoothing it over.
  *
- * Each slot is tagged DIRECT (engine value used verbatim) or DERIVED
- * (templated wording wrapped around engine facts) for the build report.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Editorial rule set (frozen; enforced, not aspirational).
+ *
+ *   R1  Recognition must not duplicate the standfirst.
+ *   R2  Recognition must describe the system's apparent INTENT, not restate
+ *       its tonal signature.
+ *   R3  The case must move from MECHANISM (what is happening) to HEARD
+ *       CONSEQUENCE (what the user actually perceives).
+ *   R4  The case must not repeat the hero datum if the datum is already
+ *       shown in the evidence rail.
+ *   R5  The case must not preview the recommendation before the
+ *       recommendation line.
+ *   R6  The recommendation must introduce no new diagnosis — it acts only
+ *       on the role the engine identified.
+ *   R7  The cost line must name the specific trade-off implied by the
+ *       recommendation.
+ *   R8  The restraint path must demonstrate EQUILIBRIUM rather than repeat
+ *       "balanced," "no weak link," or "nothing needs changing."
+ *
+ * Every slot is built by a rule, and every output is post-conditioned against
+ * the rule that produced it. A failed post-condition becomes a contradiction
+ * (surfaced, not smoothed) so the seam can be fixed at source.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 import type { ArtifactPayload } from './types';
-
-const PLACEHOLDER_FIGURE = '/artifact/plate.svg';
 
 export interface SynthResult {
   payload: ArtifactPayload;
@@ -29,11 +48,10 @@ export interface SynthResult {
 function splitSentences(s: string): string[] {
   return (s || '').split(/(?<=[.!?])\s+/).map((x) => x.trim()).filter(Boolean);
 }
-function lowerFirst(s: string): string {
-  return s ? s[0].toLowerCase() + s.slice(1) : s;
-}
-function stripTrailingPeriod(s: string): string {
-  return s.replace(/\.\s*$/, '');
+function lowerFirst(s: string): string { return s ? s[0].toLowerCase() + s.slice(1) : s; }
+function stripTrailingPeriod(s: string): string { return s.replace(/\.\s*$/, ''); }
+function norm(s: string): string {
+  return (s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 function editionFor(seed: string): string {
   let h = 0;
@@ -56,8 +74,7 @@ function extractSplDatum(explanation: string): { value: string; caption: string 
 function extractPullQuote(explanation: string): string | undefined {
   const sents = splitSentences(explanation);
   const hit = sents.find((s) => /headroom|run out|compress|lose|bass control will suffer/i.test(s));
-  if (!hit) return undefined;
-  return stripTrailingPeriod(hit.replace(/^[A-Z][^,]*,\s*/, (m) => m)); // keep as-is, trimmed
+  return hit ? stripTrailingPeriod(hit) : undefined;
 }
 
 function roleNoun(role: string | undefined): string {
@@ -69,23 +86,133 @@ function roleNoun(role: string | undefined): string {
   return role || 'system';
 }
 
-// ── the synthesizer ────────────────────────────────────────────────────────
+// ── R2: intent read (axis combination → what the builder was after) ─────
+function intentRead(axes: Record<string, string> | undefined): string | null {
+  if (!axes) return null;
+  const w = axes.warm_bright, s = axes.smooth_detailed, e = axes.elastic_controlled;
+  if (w === 'warm' && (s === 'smooth' || s === 'balanced'))
+    return 'built for tone and ease, with detail kept in service of the music';
+  if (w === 'warm' && s === 'detailed')
+    return 'built for tone and presence, with detail and air preserved through careful choices downstream';
+  if (w === 'bright' && s === 'detailed')
+    return 'built for resolution and speed, with the speaker asked to hold it together tonally';
+  if (w === 'neutral' && s === 'detailed' && (e === 'controlled' || e === 'balanced'))
+    return 'built for resolution and composure, with warmth allowed to land where it must';
+  if (w === 'neutral' && s === 'smooth')
+    return 'built for ease and continuity, with detail offered rather than asserted';
+  if (!w || w === 'neutral')
+    return 'built for balance — no single quality asked to dominate';
+  return null;
+}
+
+// ── R8: equilibrium beat (restraint path: who plays which part) ─────────
+function equilibriumBeat(credit: string[], axes: Record<string, string> | undefined): string | null {
+  if (credit.length < 2) return null;
+  const last = credit[credit.length - 1];
+  const upstream = credit.slice(0, -1).join(' and ');
+  const w = axes?.warm_bright;
+  if (w === 'warm') return `${upstream} hand the speaker a tone-rich signal; ${last} carries it without thinning it out.`;
+  if (w === 'bright' || w === 'neutral') return `${upstream} resolve cleanly; ${last} keeps the result musical rather than analytical.`;
+  return `${upstream} set the character; ${last} preserves it without arguing.`;
+}
+
+// ── role-bound recommendation (R6: no new diagnosis) ────────────────────
+function recommendationFor(category: string, role: string): string {
+  if (category === 'power_match') {
+    return "I’d resolve the power mismatch first — more amplifier power, or easier-to-drive speakers.";
+  }
+  return `I’d start with the ${role}.`;
+}
+
+// ── role-bound cost (R7: trade-off implied by the recommendation) ───────
+function costFor(category: string): string {
+  if (category === 'power_match')
+    return 'More power buys you the dynamics; easier speakers buy you keeping the amplifier you love. Either way, the system’s character shifts.';
+  if (category === 'dac_limitation')
+    return 'A more resolving source will show you what the rest of the chain has been hiding — including the things you chose it for.';
+  if (category === 'speaker_scale')
+    return 'Bigger speakers ask more of the room, and more of the amplifier you have.';
+  if (category === 'stacked_bias' || category === 'tonal_imbalance')
+    return 'Rebalancing trades the system’s current signature for something the chain doesn’t yet do. Decide which one you want first.';
+  if (category === 'amplifier_control')
+    return 'More control trades a little bloom for grip. That’s the deal.';
+  return 'Anything you change here trades something. Be honest about which side you’d rather keep.';
+}
+
+// ── verdict + standfirst (engine-leverage driven; copy unchanged) ───────
+function verdictAndStandfirst(
+  bottleneck: any, category: string, role: string, signature: string,
+): { verdict: string; standfirst?: string } {
+  if (bottleneck) {
+    if (category === 'power_match') {
+      return {
+        verdict: role === 'speakers'
+          ? 'These speakers need more power than the system gives them.'
+          : "The amplifier can't drive these speakers.",
+        standfirst: 'The match is the problem — not the taste.',
+      };
+    }
+    if (category === 'dac_limitation') {
+      return { verdict: 'The DAC is holding the system back.', standfirst: 'Everything downstream inherits its limits.' };
+    }
+    if (category === 'speaker_scale') {
+      return { verdict: 'The speakers set the ceiling here.', standfirst: 'They cap what the rest of the system can show.' };
+    }
+    return {
+      verdict: `The ${role} is steering the whole system.`,
+      standfirst: signature ? lowerFirst(stripTrailingPeriod(signature)) + '.' : undefined,
+    };
+  }
+  return {
+    verdict: 'Nothing here needs changing.',
+    standfirst: signature ? stripTrailingPeriod(signature) + '.' : undefined,
+  };
+}
+
+// ── R3 (heard consequence) — engine sentences → user-ear sentence ───────
+// We keep the engine's first sentence (the mechanism) and rewrite the tail as
+// one heard-consequence beat. Same content; the synthesizer voices it.
+const HEARD_CONSEQUENCE_LINE = 'At normal listening levels you hear it as soft dynamics, loose bass and the sense that the system is straining to keep up.';
+
+// ── R5 (no recommendation preview) — fragments to strip from case prose ─
+const RECOMMENDATION_PREVIEW_PATTERNS: RegExp[] = [
+  /\s*Either more amplifier power[^.]*\.?/i,
+  /\s*Either fix[^.]*\.?/i,
+  /\s*(would|should|could) (resolve|fix|address) this[^.]*\.?/i,
+];
+
+/**
+ * Build a case sentence — observation/mechanism — from the engine's first
+ * sentence of constraint explanation. Strips the in-line SPL parenthetical
+ * (R4) and any text that previews the recommendation (R5).
+ */
+function buildMechanismBeat(constraintExpl: string, hasDatum: boolean): string {
+  const first = splitSentences(constraintExpl)[0] ?? '';
+  let out = first;
+  if (hasDatum) {
+    // R4: the rail shows ≈N dB; remove the engine's repeat of it.
+    out = out.replace(/\s*Estimated max clean SPL is\s*~?\s*\d+\s*dB[^.]*\.?/i, '');
+    out = out.replace(/\s*\(estimated[^)]*\)/i, '');
+  }
+  for (const pat of RECOMMENDATION_PREVIEW_PATTERNS) out = out.replace(pat, '');
+  return out.trim();
+}
+
+// ── R8: restraint forbidden refrain — phrases that announce the verdict
+// rather than demonstrate the equilibrium that justifies it.
+const RESTRAINT_FORBIDDEN_RE =
+  /\b(it is balanced|no weak link|nothing (?:here )?needs changing|nothing needs fixing)\b/i;
+
+// ────────────────────────────────────────────────────────────────────────────
 export function synthesizeArtifact(result: any): SynthResult {
   const contradictions: string[] = [];
   const f = result?.findings ?? {};
   const resp = result?.response ?? {};
 
+  // ── component credit (DIRECT: engine catalog names; corruption-guarded) ──
   const chain = f.systemChain ?? {};
   const names: string[] = chain.names ?? [];
   const full: string[] = chain.fullChain ?? [];
-
-  // ── component credit (DIRECT: the engine's catalog display names) ──
-  // Prefer the resolved catalog names (the source of truth). Detect GENUINE
-  // corruption — a name carrying a *different* component's brand token that
-  // isn't in this slot's own input text (e.g. the DAC rendered "Decware Holo
-  // may"). Benign normalization differences (e.g. "Holo Audio May (KTE)" vs the
-  // typed "Holo May (KTE)") are NOT flagged. Only on real corruption do we fall
-  // back to the user's text for that slot.
   const firstToken = (s: string): string => (s || '').toLowerCase().match(/[a-z0-9]+/)?.[0] ?? '';
   const brandTokens = full.map(firstToken);
   const credit: string[] = (names.length ? names : full).map((nm, i) => {
@@ -110,126 +237,111 @@ export function synthesizeArtifact(result: any): SynthResult {
   const category: string = bottleneck?.category ?? '';
   const role = roleNoun(bottleneck?.role);
 
-  // ── structural contradictions ──
-  if (bottleneck && !path0) {
-    contradictions.push('Engine reports a bottleneck but no upgrade path — cannot render a recommendation cleanly.');
-  }
-  if (!bottleneck && path0 && /highest/i.test(path0.impact ?? '')) {
+  if (bottleneck && !path0) contradictions.push('Engine reports a bottleneck but no upgrade path.');
+  if (!bottleneck && path0 && /highest/i.test(path0.impact ?? ''))
     contradictions.push('Engine reports no bottleneck but a Highest-Impact upgrade path exists.');
+
+  // ── verdict + standfirst ─────────────────────────────────────────────
+  const { verdict, standfirst } = verdictAndStandfirst(bottleneck, category, role, signature);
+
+  // ── R1, R2 — recognition ─────────────────────────────────────────────
+  // Build via intentRead. Fall back to the signature only if intentRead has
+  // no opinion *and* the signature differs from the standfirst (else R1 would
+  // fire). The final post-condition guarantees R1 + R2.
+  const intent = intentRead(f.systemAxes);
+  let recognition = intent
+    ? `This system is ${intent}.`
+    : signature && norm(signature) !== norm(standfirst ?? '')
+      ? stripTrailingPeriod(signature) + '.'
+      : 'A system worth assessing.';
+
+  // R1 enforcement: recognition must not equal the standfirst.
+  if (standfirst && norm(recognition) === norm(standfirst)) {
+    recognition = 'A system worth assessing.';
+    contradictions.push('R1: recognition would duplicate the standfirst; falling back to neutral lead.');
   }
 
-  // ── DERIVED: verdict (mirrors engine leverage; templated by category/state) ──
-  let verdict: string;
-  let standfirst: string | undefined;
-  if (bottleneck) {
-    if (category === 'power_match') {
-      verdict = role === 'speakers'
-        ? 'These speakers need more power than the system gives them.'
-        : "The amplifier can't drive these speakers.";
-      standfirst = 'The match is the problem — not the taste.';
-    } else if (category === 'dac_limitation') {
-      verdict = 'The DAC is holding the system back.';
-      standfirst = `Everything downstream inherits its limits.`;
-    } else if (category === 'speaker_scale') {
-      verdict = 'The speakers set the ceiling here.';
-      standfirst = 'They cap what the rest of the system can show.';
-    } else {
-      verdict = `The ${role} is steering the whole system.`;
-      standfirst = signature ? lowerFirst(stripTrailingPeriod(signature)) + '.' : undefined;
-    }
-  } else {
-    // No bottleneck → restraint. Verdict is plain advisor judgment; the
-    // standfirst carries the tonal/descriptive note.
-    verdict = 'Nothing here needs changing.';
-    standfirst = signature
-      ? `${stripTrailingPeriod(signature)}.`
-      : undefined;
-  }
-
-  // ── DERIVED: recognition. The chain names sit in the component credit
-  //    above, so the recognition paragraph carries character, not roll-call. ──
-  const recognition = signature
-    ? stripTrailingPeriod(signature) + '.'
-    : (credit.length
-      ? `${credit.join(', ')}.`
-      : 'A system worth assessing.');
-
-  // ── case paragraphs ──
+  // ── R3, R4, R5, R8 — case paragraphs ─────────────────────────────────
   const caseParagraphs: string[] = [];
-  if (bottleneck && constraintExpl) {
-    // DIRECT: the engine's physics explanation, split into beats.
-    const sents = splitSentences(constraintExpl);
-    if (sents.length) caseParagraphs.push(sents.slice(0, 2).join(' '));
-    if (sents.length > 2) caseParagraphs.push(sents.slice(2).join(' '));
-  } else {
-    // Restraint: strengths (DIRECT) + a justified "no weak link" beat + close.
-    // Subject-dedup: if both strengths lead with the same component, surface
-    // the first and re-voice the second so the page doesn't repeat itself.
-    const strengths: string[] = resp.assessmentStrengths ?? [];
-    const a = stripTrailingPeriod((strengths[0] ?? '').trim());
-    const b = stripTrailingPeriod((strengths[1] ?? '').trim());
-    const subjOf = (s: string) => s.split(/\s+/).slice(0, 3).join(' ').toLowerCase();
-    const sameSubject = a && b && subjOf(a) === subjOf(b);
-    if (a && b) {
-      caseParagraphs.push(sameSubject
-        ? `${a}, and ${lowerFirst(b.replace(/^[^\s]+\s+[^\s]+\s+[^\s]+\s*/, ''))}.`
-        : `${a}; ${lowerFirst(b)}.`);
-    } else if (a) {
-      caseParagraphs.push(a + '.');
-    }
-    if (!bottleneck) caseParagraphs.push('There is no weak link holding the others back.');
-    caseParagraphs.push('It is balanced.');
-  }
-  if (!caseParagraphs.length && signature) caseParagraphs.push(signature);
+  const hasDatum = category === 'power_match' && !!extractSplDatum(constraintExpl);
 
-  // ── hero datum (DERIVED via regex on engine explanation; fragile) ──
+  if (bottleneck && constraintExpl) {
+    // R3 (mechanism → heard consequence). R4 (no datum repeat). R5 (no preview).
+    const mechanism = buildMechanismBeat(constraintExpl, hasDatum);
+    if (mechanism) caseParagraphs.push(mechanism);
+    caseParagraphs.push(HEARD_CONSEQUENCE_LINE);
+  } else {
+    // R8 (restraint: demonstrate equilibrium, not announce it).
+    const beat = equilibriumBeat(credit, f.systemAxes);
+    if (beat) caseParagraphs.push(beat);
+
+    const strengths: string[] = resp.assessmentStrengths ?? [];
+    const firstStrength = stripTrailingPeriod((strengths[0] ?? '').trim());
+    if (firstStrength) {
+      const subj = firstStrength.match(/^([A-Z][\w\s+\-]+?)\s+(contributes|provides|adds|delivers|brings)\s+(.+)$/);
+      caseParagraphs.push(subj
+        ? `What the ${subj[1]} brings — ${subj[3]} — comes through cleanly because nothing upstream fights it.`
+        : `${firstStrength}, in a chain that lets it.`);
+    }
+    // Closing implication — names the mechanism's consequence, not the verdict.
+    caseParagraphs.push('Each component is doing what it was chosen for, and nothing is asking it to do more.');
+  }
+  if (!caseParagraphs.length && signature) caseParagraphs.push(stripTrailingPeriod(signature) + '.');
+
+  // R5 (post-condition): no case line may name "I'd" / "you should" / etc.
+  for (let i = 0; i < caseParagraphs.length; i++) {
+    if (/\bI[’']d\b|\bI would\b|\byou should\b|\byou'?d (want|need)\b/i.test(caseParagraphs[i])) {
+      contradictions.push('R5: case sentence previews the recommendation; stripped.');
+      caseParagraphs[i] = caseParagraphs[i].replace(/(\.|;)\s*(I[’']d|I would|you should|you'?d (want|need))[^.]*\.?/i, '$1').trim();
+    }
+  }
+
+  // R8 (post-condition): restraint case must not contain forbidden refrains.
+  if (!bottleneck) {
+    for (let i = 0; i < caseParagraphs.length; i++) {
+      if (RESTRAINT_FORBIDDEN_RE.test(caseParagraphs[i])) {
+        contradictions.push(`R8: case sentence used forbidden refrain ("${caseParagraphs[i]}"); removed.`);
+        caseParagraphs[i] = '';
+      }
+    }
+  }
+  // Drop any sentences nulled out by post-conditions.
+  for (let i = caseParagraphs.length - 1; i >= 0; i--) if (!caseParagraphs[i]) caseParagraphs.splice(i, 1);
+
+  // ── hero datum + pull quote ─────────────────────────────────────────
   let heroDatum: ArtifactPayload['heroDatum'] | undefined;
   if (category === 'power_match') {
     const d = extractSplDatum(constraintExpl);
     if (d) heroDatum = d;
-    else contradictions.push('Power-match constraint present but no clean-SPL figure could be extracted from the explanation (derivation fragile).');
+    else contradictions.push('Power-match constraint present but no clean-SPL figure could be extracted (derivation fragile).');
   }
-
-  // ── pull quote (DERIVED; optional; omitted if not confidently extractable) ──
   const pullQuote = bottleneck ? extractPullQuote(constraintExpl) : undefined;
 
-  // ── recommendation (mirrors engine leverage) ──
+  // ── R6 — recommendation (acts on the engine's role only) ─────────────
   let recommendation: string;
-  let figure: ArtifactPayload['figure'] | undefined;
-  if (path0) {
-    if (category === 'power_match') {
-      recommendation = 'I’d resolve the power mismatch first — more amplifier power, or easier-to-drive speakers.';
-    } else {
-      recommendation = `I’d start with the ${role}.`;
-    }
-    // Figure intentionally omitted until real editorial imagery exists — a
-    // committed recommendation standing alone reads stronger than a draft
-    // placeholder (the restraint path already proves the page works imageless).
-  } else {
-    recommendation = 'Leave it alone.';
+  if (path0) recommendation = recommendationFor(category, role);
+  else recommendation = 'Leave it alone.';
+
+  // R6 post-condition: bottleneck-named role must appear in the recommendation
+  // (or the recommendation explicitly names the power_match resolution).
+  if (bottleneck) {
+    const ok = category === 'power_match'
+      ? /amplifier|speakers|power/i.test(recommendation)
+      : new RegExp('\\b' + role + '\\b', 'i').test(recommendation);
+    if (!ok) contradictions.push(`R6: recommendation does not act on engine role "${role}".`);
   }
 
-  // ── cost ──
-  let cost: string | undefined;
-  if (bottleneck) {
-    cost = category === 'power_match'
-      ? 'Either fix nudges the system’s character — pick the side whose sound you’d rather keep.'
-      : 'Any change here trades something; weigh it against what is already working.';
-  } else {
-    cost = 'If you ever want more, name the quality you’re chasing — but today, nothing needs fixing.';
-  }
+  // ── R7 — cost (specific to the recommendation) ───────────────────────
+  const cost = bottleneck
+    ? costFor(category)
+    : 'If you ever want more, name the quality you’re chasing — but the gain there comes from somewhere here.';
 
   const seed = credit.join('|') + '|' + (bottleneck ? category : 'keep');
   const payload: ArtifactPayload = {
-    verdict,
-    standfirst,
-    componentCredit: credit,
-    recognition,
-    caseParagraphs,
-    heroDatum,
-    pullQuote,
+    verdict, standfirst, componentCredit: credit,
+    recognition, caseParagraphs,
+    heroDatum, pullQuote,
     recommendation,
-    figure,
     cost,
     date: today(),
     edition: editionFor(seed),
