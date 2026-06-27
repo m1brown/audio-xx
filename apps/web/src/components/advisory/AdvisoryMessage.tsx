@@ -40,7 +40,11 @@ import AdvisoryLinks from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
 import BrandAuthorityPreview from './BrandAuthorityPreview';
 import SystemAssessmentArtifact from './SystemAssessmentArtifact';
+import AssessmentArtifactV2 from '../../app/artifact/AssessmentArtifact';
+import { synthesizeArtifact } from '../../lib/artifact/synthesizeArtifact';
+import '../../app/artifact/artifact.css';
 import {
+  ASSESSMENT_ARTIFACT_V2_ENABLED,
   BRAND_AUTHORITY_PREVIEW_ENABLED,
   SYSTEM_ASSESSMENT_ARTIFACT_ENABLED,
 } from '../../lib/feature-flags';
@@ -5295,14 +5299,24 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
     // memo-predicate widening cannot silently re-route comparisons.
     content = <StandardFormat advisory={advisory} onPreferenceCapture={onPreferenceCapture} onFollowUpClick={onFollowUpClick} />;
   } else if (isMemoFormat(advisory)) {
-    // Pass 19 dispatch — when SYSTEM_ASSESSMENT_ARTIFACT_ENABLED is
-    // on, the warm-editorial SystemAssessmentArtifact renders in place
-    // of the legacy MemoFormat. Same advisory shape, same intent
-    // dispatch, same data path; purely a presentation surface swap.
-    // Flag default off → MemoFormat continues to render unchanged.
-    content = SYSTEM_ASSESSMENT_ARTIFACT_ENABLED
-      ? <SystemAssessmentArtifact advisory={advisory} />
-      : <MemoFormat advisory={advisory} onFollowUpClick={onFollowUpClick} />;
+    // Dispatch precedence for memo-shaped advisories:
+    //   1. ASSESSMENT_ARTIFACT_V2_ENABLED + raw assessment carrier present
+    //      → render the v2 editorial /artifact in embedded mode.
+    //   2. else if SYSTEM_ASSESSMENT_ARTIFACT_ENABLED → legacy warm-editorial
+    //      SystemAssessmentArtifact (Pass 19).
+    //   3. else → legacy MemoFormat.
+    // Both flags default off; with both off, this site is byte-identical
+    // to the legacy MemoFormat path. v2 falls through to (2) / (3) when
+    // the raw carrier is missing (e.g. server-rendered fixture data, or
+    // tests that build advisories without going through the engine).
+    if (ASSESSMENT_ARTIFACT_V2_ENABLED && advisory.__rawAssessment) {
+      const { payload } = synthesizeArtifact(advisory.__rawAssessment);
+      content = <AssessmentArtifactV2 p={payload} embedded={true} />;
+    } else if (SYSTEM_ASSESSMENT_ARTIFACT_ENABLED) {
+      content = <SystemAssessmentArtifact advisory={advisory} />;
+    } else {
+      content = <MemoFormat advisory={advisory} onFollowUpClick={onFollowUpClick} />;
+    }
   } else if (isAssessmentFormat(advisory)) {
     content = <AssessmentFormat advisory={advisory} />;
   } else if (isKnowledgeFormat(advisory)) {
