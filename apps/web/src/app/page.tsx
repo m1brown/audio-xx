@@ -70,6 +70,7 @@ import {
 } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, classifySubjectAsContext, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory, buildSystemDiagnosis } from '@/lib/consultation';
+import { ASSESSMENT_ARTIFACT_V2_ENABLED } from '@/lib/feature-flags';
 import { classifySystemArchetype, buildConsumerWirelessResponse } from '@/lib/system-class';
 import { findReferenceProduct, buildExplorationResponse, explorationToConsultation } from '@/lib/exploration';
 import { buildIntakeResponse, intakeToAdvisory } from '@/lib/intake';
@@ -2392,6 +2393,13 @@ export default function Home() {
 
         const assessmentMsgId = advisoryId();
         const deterministicAdvisory = consultationToAdvisory(assessmentResult.response, undefined, advisoryCtx);
+        // v2 Assessment Artifact carrier — flag-gated, presentation-only.
+        // Off path: deterministicAdvisory.__rawAssessment stays undefined and
+        // no consumer reads it. On path: the chat-side dispatch consumes it
+        // via synthesizeArtifact() to render the v2 editorial artifact.
+        if (ASSESSMENT_ARTIFACT_V2_ENABLED) {
+          deterministicAdvisory.__rawAssessment = assessmentResult;
+        }
         dispatchAdvisory(deterministicAdvisory, assessmentMsgId);
         // Validation telemetry (Workstream 25B): assessment delivered.
         trackEvent('assessment_completed', {
