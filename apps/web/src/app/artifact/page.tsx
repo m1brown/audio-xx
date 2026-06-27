@@ -1,14 +1,46 @@
 import AssessmentArtifact from './AssessmentArtifact';
-import { FIXTURES } from './fixtures';
+import { buildSystemAssessment } from '@/lib/consultation';
+import { extractSubjectMatches, detectIntent } from '@/lib/intent';
+import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
 
 /**
- * M1 preview route. `?case=flawed` (default) or `?case=balanced`.
- * Renders the canonical artifact from a payload — no app shell, no chat.
+ * Milestone 2 — live end-to-end artifact.
+ *
+ * `?system=<free text>` runs the real engine and synthesizes the artifact.
+ * `?case=flawed|balanced` are convenience presets that hit the SAME engine +
+ * synthesizer path (not static fixtures), so both test paths are genuinely
+ * end-to-end.
  */
+const PRESETS: Record<string, string> = {
+  flawed: 'Assess my system: Holo May (KTE), Decware SE84UFO, Magnepan LRS+',
+  balanced: 'Assess my system: Chord Qutest, Naim SuperNait 3, Harbeth Super HL5 Plus',
+};
+
 export default async function ArtifactPage(
-  { searchParams }: { searchParams: Promise<{ case?: string }> },
+  { searchParams }: { searchParams: Promise<{ system?: string; case?: string }> },
 ) {
   const sp = await searchParams;
-  const key = sp?.case === 'balanced' ? 'balanced' : 'flawed';
-  return <AssessmentArtifact p={FIXTURES[key]} />;
+  const text = (sp?.system && sp.system.trim())
+    || PRESETS[sp?.case ?? '']
+    || PRESETS.flawed;
+
+  const subjects = extractSubjectMatches(text);
+  const { desires } = detectIntent(text);
+  const result = buildSystemAssessment(text, subjects, null, desires);
+
+  if (!result || result.kind !== 'assessment') {
+    return (
+      <section className="axx-followup" aria-label="Notice">
+        <p>That system didn’t resolve to an assessment (engine returned “{result?.kind ?? 'no result'}”).</p>
+      </section>
+    );
+  }
+
+  const { payload, contradictions } = synthesizeArtifact(result);
+  if (contradictions.length) {
+    // eslint-disable-next-line no-console
+    console.warn('[artifact] engine-output contradictions:', contradictions);
+  }
+
+  return <AssessmentArtifact p={payload} contradictions={contradictions} />;
 }

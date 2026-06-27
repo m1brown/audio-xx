@@ -8,7 +8,9 @@ import type { ArtifactPayload } from './fixtures';
  * recommendation); an evidence rail kept to one side of the judgment column;
  * three silences carried by spacing tokens. Follow-up is a sibling, outside.
  */
-export default function AssessmentArtifact({ p }: { p: ArtifactPayload }) {
+export default function AssessmentArtifact(
+  { p, contradictions = [] }: { p: ArtifactPayload; contradictions?: string[] },
+) {
   return (
     <>
       <article className="axx-artifact">
@@ -64,6 +66,13 @@ export default function AssessmentArtifact({ p }: { p: ArtifactPayload }) {
 
         <footer className="axx-colophon">Audio XX · {p.date} · {p.edition}</footer>
       </article>
+
+      {contradictions.length > 0 && (
+        <aside className="axx-contradiction" aria-label="Engine diagnostics — not part of the assessment">
+          <strong>Engine output contradictions (surfaced, not smoothed):</strong>
+          <ul>{contradictions.map((c, i) => <li key={i}>{c}</li>)}</ul>
+        </aside>
+      )}
 
       <FollowUp />
     </>

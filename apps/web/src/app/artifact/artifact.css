@@ -166,6 +166,14 @@ body:has(.axx-route) { background: #FBFAF6; }
   border: 1px solid rgba(27,26,24,.18); background: #fff; border-radius: 2px;
 }
 
+/* ── Engine-diagnostics notice — OUTSIDE the artifact, dev/QA only ────── */
+.axx-contradiction {
+  max-width: 40rem; margin: 0 auto; padding: 1rem clamp(1.25rem, 5vw, 4rem);
+  font-family: system-ui, -apple-system, sans-serif; font-size: .8rem; line-height: 1.5;
+  color: #8a5a00; background: #fdf6e3; border-top: 1px solid rgba(138,90,0,.25);
+}
+.axx-contradiction ul { margin: .4rem 0 0; padding-left: 1.1rem; }
+
 /* ── Responsive: collapse the seam; preserve peaks + silences ─────────── */
 @media (max-width: 1023px) {
   .axx-case { grid-template-columns: 1fr; }
@@ -180,7 +188,7 @@ body:has(.axx-route) { background: #FBFAF6; }
 /* ── Print / PDF: the artifact only, no follow-up ─────────────────────── */
 @media print {
   body:has(.axx-route) { background: #fff; }
-  .axx-followup { display: none !important; }
+  .axx-followup, .axx-contradiction { display: none !important; }
   .axx-artifact { max-width: none; padding: 0; animation: none; }
   .axx-case { grid-template-columns: 1fr; }
   .axx-rail { display: flex; gap: .75rem 2rem; flex-wrap: wrap; margin-bottom: 1rem; }

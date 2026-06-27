@@ -9,27 +9,8 @@
  * recommendation line, the hero datum extraction).
  */
 
-export interface ArtifactPayload {
-  /** Peak 1 — the decisive finding, one sentence. */
-  verdict: string;
-  standfirst?: string;
-  /** The system, named. */
-  componentCredit: string[];
-  /** One short paragraph: what this system is. */
-  recognition: string;
-  /** The case, as shortening beats. */
-  caseParagraphs: string[];
-  /** Present only when an objective limit exists. */
-  heroDatum?: { value: string; caption: string };
-  pullQuote?: string;
-  /** Peak 2 — one owned line (a change, or restraint). */
-  recommendation: string;
-  /** Present only when a product is recommended; absent = dignified blank. */
-  figure?: { src: string; alt: string; caption: string };
-  cost?: string;
-  date: string;
-  edition: string;
-}
+export type { ArtifactPayload } from '@/lib/artifact/types';
+import type { ArtifactPayload } from '@/lib/artifact/types';
 
 const flawed: ArtifactPayload = {
   verdict: "The amplifier can't drive these speakers.",
