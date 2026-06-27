@@ -84,6 +84,33 @@ export const BRAND_HOUSE_VOICING_ENABLED: boolean =
   process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING === 'on';
 
 /**
+ * Assessment Artifact v2 (editorial /artifact renderer) — main-flow gate.
+ *
+ * Env var: `NEXT_PUBLIC_ASSESSMENT_ARTIFACT_V2=on`
+ *
+ * - **On**: when a system-assessment response carries the optional raw
+ *   engine result (`__rawAssessment`), the chat surface renders the v2
+ *   editorial artifact (`apps/web/src/app/artifact/AssessmentArtifact`)
+ *   in embedded mode in place of the legacy `MemoFormat` /
+ *   `SystemAssessmentArtifact` dispatch.
+ * - **Off (default)**: the existing dispatch is unchanged — `MemoFormat`
+ *   renders unless `SYSTEM_ASSESSMENT_ARTIFACT_ENABLED` selects the
+ *   legacy warm-editorial component.
+ *
+ * Safe-off invariant: the new flag is purely a presentation toggle. The
+ * advisory engine, builders, intent dispatcher, AdvisoryResponse shape
+ * (off-path), and all existing tests are identical whether the flag is
+ * on or off. The legacy `SYSTEM_ASSESSMENT_ARTIFACT_ENABLED` flag and
+ * its renderer are preserved as a separate fallback.
+ *
+ * Precedence when both flags are on: v2 wins. Two flags can co-exist
+ * during cohort comparison; once v2 reaches default-on, the legacy flag
+ * will be retired in a separate commit.
+ */
+export const ASSESSMENT_ARTIFACT_V2_ENABLED: boolean =
+  process.env.NEXT_PUBLIC_ASSESSMENT_ARTIFACT_V2 === 'on';
+
+/**
  * Runtime-evaluated alternative to {@link BRAND_HOUSE_VOICING_ENABLED}.
  *
  * Production code paths can use either form interchangeably; the getter
