@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspace=apps/web",
+    "artifact:pdf": "npx tsx apps/web/scripts/export-artifact.mts",
     "qa:regress": "npx tsx apps/web/scripts/qa-regression.mts",
     "qa:baseline": "npx tsx apps/web/scripts/qa-regression.mts --update-baseline",
     "qa:regress:visual": "npm run qa:regress:visual --workspace=apps/web",

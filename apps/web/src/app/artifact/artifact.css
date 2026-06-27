@@ -146,6 +146,14 @@ body:has(.axx-route) { background: #FBFAF6; }
   clip: rect(0 0 0 0); white-space: nowrap;
 }
 
+/* ── Print mode (server-side: ?print=1 + the export script) ───────────── */
+/* Force the print stylesheet path for headless capture (the @media print
+ * block below already excludes follow-up + diagnostics + animation; this
+ * class makes that path active for screen-driven PDF generation too). */
+.axx-print { animation: none !important; }
+.axx-print .axx-followup,
+.axx-print .axx-contradiction { display: none !important; }
+
 /* ── One permitted entrance ───────────────────────────────────────────── */
 @media (prefers-reduced-motion: no-preference) {
   .axx-artifact { animation: axxIn .3s ease-out both; }

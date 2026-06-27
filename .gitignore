@@ -65,3 +65,4 @@ dist/
 *.tsbuildinfo
 .claude/
 .vercel
+/dist/

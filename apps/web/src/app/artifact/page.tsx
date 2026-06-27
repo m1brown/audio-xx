@@ -17,12 +17,13 @@ const PRESETS: Record<string, string> = {
 };
 
 export default async function ArtifactPage(
-  { searchParams }: { searchParams: Promise<{ system?: string; case?: string }> },
+  { searchParams }: { searchParams: Promise<{ system?: string; case?: string; print?: string; date?: string }> },
 ) {
   const sp = await searchParams;
   const text = (sp?.system && sp.system.trim())
     || PRESETS[sp?.case ?? '']
     || PRESETS.flawed;
+  const print = sp?.print === '1';
 
   const subjects = extractSubjectMatches(text);
   const { desires } = detectIntent(text);
@@ -37,10 +38,12 @@ export default async function ArtifactPage(
   }
 
   const { payload, contradictions } = synthesizeArtifact(result);
+  // Override date when requested so PDF export is deterministic across runs.
+  if (sp?.date) payload.date = sp.date;
   if (contradictions.length) {
     // eslint-disable-next-line no-console
     console.warn('[artifact] engine-output contradictions:', contradictions);
   }
 
-  return <AssessmentArtifact p={payload} contradictions={contradictions} />;
+  return <AssessmentArtifact p={payload} contradictions={contradictions} print={print} />;
 }

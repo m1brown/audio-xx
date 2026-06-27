@@ -9,11 +9,12 @@ import type { ArtifactPayload } from './fixtures';
  * three silences carried by spacing tokens. Follow-up is a sibling, outside.
  */
 export default function AssessmentArtifact(
-  { p, contradictions = [] }: { p: ArtifactPayload; contradictions?: string[] },
+  { p, contradictions = [], print = false }:
+  { p: ArtifactPayload; contradictions?: string[]; print?: boolean },
 ) {
   return (
     <>
-      <article className="axx-artifact">
+      <article className={'axx-artifact' + (print ? ' axx-print' : '')}>
         <header className="axx-masthead">
           <span><b>Audio XX</b></span>
           <span>{p.date}</span>
@@ -66,14 +67,14 @@ export default function AssessmentArtifact(
         <footer className="axx-colophon">Audio XX · {p.date}</footer>
       </article>
 
-      {contradictions.length > 0 && (
+      {!print && contradictions.length > 0 && (
         <aside className="axx-contradiction" aria-label="Engine diagnostics — not part of the assessment">
           <strong>Engine output contradictions (surfaced, not smoothed):</strong>
           <ul>{contradictions.map((c, i) => <li key={i}>{c}</li>)}</ul>
         </aside>
       )}
 
-      <FollowUp />
+      {!print && <FollowUp />}
     </>
   );
 }
