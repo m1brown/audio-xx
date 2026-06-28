@@ -4854,33 +4854,6 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* ── Editorial library link (Phase 2) — a quiet entry into
-           * the editorial ecosystem from the homepage, directly beneath
-           * the two doors. Landing-only. */}
-          <div
-            style={{
-              marginBottom: '1.75rem',
-              maxWidth: EDITORIAL.narrow,
-              paddingTop: '0.1rem',
-            }}
-          >
-            <Link
-              href="/resources"
-              style={{
-                fontSize: '0.82rem',
-                color: EDITORIAL.faint,
-                textDecoration: 'none',
-                borderBottom: `1px solid ${EDITORIAL.rule}`,
-                paddingBottom: '1px',
-                transition: 'color 0.15s ease, border-color 0.15s ease',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = EDITORIAL.ink; e.currentTarget.style.borderBottomColor = EDITORIAL.faint; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = EDITORIAL.faint; e.currentTarget.style.borderBottomColor = EDITORIAL.rule; }}
-            >
-              Browse the editorial library →
-            </Link>
-          </div>
-
           {/* Compact taste widget — authenticated users with profile data */}
           {tasteProfile && tasteProfile.confidence > 0 && (
             <div
@@ -4918,148 +4891,14 @@ export default function Home() {
             </div>
           )}
 
-          {/* Curated starter prompts.
-           *
-           * Three chips below the hero. SSR-safe — initial render uses
-           * the curated declaration order on both server and client
-           * (no hydration mismatch), then a client-only `useEffect`
-           * shuffles once after mount so the picks stay stable for the
-           * session. No animation, no continuous rotation, no
-           * time-based shuffle. Calm and intentional.
-           *
-           * Stage 7.1 slot policy:
-           *   Slot 1 — always "Assess my system: <chain>". When a
-           *            saved/draft system is active, the user's own
-           *            chain is used; otherwise the pinned leben-devore
-           *            gold-case chain (PINNED_ASSESS_PROMPT) is used
-           *            so every fresh visitor sees the
-           *            most-differentiated mode as their first option.
-           *   Slot 2 — always a comparison example (first compare
-           *            prompt in the session-shuffled order).
-           *   Slot 3 — a variety example (first variety prompt in the
-           *            session-shuffled order: upgrade, diagnosis,
-           *            knowledge, preference, or shopping).
-           */}
-          {(() => {
-            // Active-system component chain for slot 1 (saved-system override).
-            const activeComponents = audioState.activeSystemRef
-              ? (() => {
-                  if (audioState.activeSystemRef.kind === 'draft' && audioState.draftSystem) {
-                    return audioState.draftSystem.components.map((c) => {
-                      const b = (c.brand || '').trim();
-                      const n = (c.name || '').trim();
-                      return b && !n.toLowerCase().startsWith(b.toLowerCase()) ? `${b} ${n}` : n || b || 'Unknown';
-                    });
-                  }
-                  const saved = audioState.savedSystems.find((s) => audioState.activeSystemRef?.kind === 'saved' && s.id === audioState.activeSystemRef.id);
-                  return saved ? saved.components.map((c) => {
-                    const b = (c.brand || '').trim();
-                    const n = (c.name || '').trim();
-                    return b && !n.toLowerCase().startsWith(b.toLowerCase()) ? `${b} ${n}` : n || b || 'Unknown';
-                  }) : [];
-                })()
-              : audioState.savedSystems.length === 1
-                ? audioState.savedSystems[0].components.map((c) => {
-                    const b = (c.brand || '').trim();
-                    const n = (c.name || '').trim();
-                    return b && !n.toLowerCase().startsWith(b.toLowerCase()) ? `${b} ${n}` : n || b || 'Unknown';
-                  })
-                : [];
-            const hasActiveChain = activeComponents.length > 0;
-            // Slot 1: user's saved/draft system if available, otherwise
-            // the pinned leben-devore gold-case chain. Always present.
-            // Saved-system path uses the existing " → " separator
-            // (unchanged from prior behavior); the pinned default uses
-            // commas to match the leben-devore reviewer-benchmark prompt
-            // verbatim, so a click reproduces the same advisory output.
-            const assessPrompt = hasActiveChain
-              ? `Assess my system: ${activeComponents.join(' → ')}`
-              : PINNED_ASSESS_PROMPT;
-            // Slot 2: first compare prompt in shuffled order.
-            const comparePrompt = sessionStarterPrompts.find((p) =>
-              COMPARE_PROMPTS.includes(p),
-            );
-            // Workstream 25B: surface ALL six decision-type variety
-            // prompts (not just one) so every visitor sees buy / upgrade
-            // / alternative / compatibility / avoid / keep examples.
-            const varietyPromptsToShow = sessionStarterPrompts.filter((p) =>
-              VARIETY_PROMPTS.includes(p),
-            );
-            const prompts: ReadonlyArray<string> = [
-              assessPrompt,
-              ...(comparePrompt ? [comparePrompt] : []),
-              ...varietyPromptsToShow,
-            ];
-
-            return (
-              <>
-              {/* Phase 2: a quiet caption subordinates the starter chips
-               * to "examples" so they read as support for the Assess
-               * door above rather than as co-equal headline actions. */}
-              <p style={{
-                margin: '0 0 0.5rem 0',
-                fontSize: '0.74rem',
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: EDITORIAL.faint,
-                maxWidth: EDITORIAL.narrow,
-              }}>
-                Or start from an example
-              </p>
-              <div
-                className="audioxx-hero-chips"
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  // 2026-05-20 hero rhythm pass: chip gap 0.45rem → 0.55rem
-                  // and top margin 0.1rem → 0.4rem so the chip row reads
-                  // as its own quiet stanza below the system badge.
-                  gap: '0.55rem',
-                  marginTop: '0',
-                  marginBottom: '1.25rem',
-                  maxWidth: EDITORIAL.narrow,
-                }}
-              >
-                {prompts.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => handleSubmit(prompt)}
-                    style={{
-                      // 2026-05-20 hero rhythm pass: padding 0.4×0.8rem
-                      // → 0.5×0.9rem and font-size 0.9rem → 0.92rem so
-                      // chips feel comfortably tappable without looking
-                      // like SaaS pills. Border / radius / colour
-                      // tokens unchanged.
-                      padding: '0.5rem 0.9rem',
-                      background: 'transparent',
-                      border: `1px solid ${EDITORIAL.rule}`,
-                      borderRadius: 3,
-                      cursor: 'pointer',
-                      fontSize: '0.92rem',
-                      fontWeight: 400,
-                      color: EDITORIAL.inkMuted,
-                      fontFamily: 'inherit',
-                      lineHeight: 1.4,
-                      textAlign: 'left',
-                      transition: 'color 0.15s ease, border-color 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = EDITORIAL.ink;
-                      e.currentTarget.style.borderColor = EDITORIAL.faint;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = EDITORIAL.inkMuted;
-                      e.currentTarget.style.borderColor = EDITORIAL.rule;
-                    }}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-              </>
-            );
-          })()}
+          {/* 2026-06-29 minimal-homepage pass: the "Or start from an
+           * example" caption and the curated starter-chip rail were
+           * removed in favour of letting the two doors above carry the
+           * landing surface alone. The PINNED_ASSESS_PROMPT,
+           * COMPARE_PROMPTS, and VARIETY_PROMPTS constants at the top
+           * of this file are now unreferenced from the homepage; they
+           * are intentionally left in place for one commit so this
+           * change reverts cleanly. Remove in a follow-up cleanup pass. */}
         </>
       )}
 

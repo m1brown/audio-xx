@@ -76,15 +76,16 @@ const COMMERCIAL_FIRST_PATTERNS: RegExp[] = [
 // 2026-06-14 Phase 2 presentation redesign: the value-prop tagline h1
 // was removed. The "Audio XX" brand wordmark is promoted back to the
 // page's single h1 (SEO / accessibility outline preserved), and the
-// page's positioning now lives in the two-door block + editorial-
-// library link below it. These tests guard the single-h1 invariant
-// and keep the visible primary-entry copy free of reviewer-aggregator
-// and commercial-first framing.
+// page's positioning now lives in the two-door block below it.
+// 2026-06-29 minimal-homepage pass: the "Browse the editorial library"
+// link and the "Or start from an example" curated-chip rail were
+// removed; positioning now rests solely on the two-door block. These
+// tests guard the single-h1 invariant and keep the visible primary-
+// entry copy free of reviewer-aggregator and commercial-first framing.
 const HOMEPAGE_ENTRY_COPY = [
   'Assess my system',
   'Learn how audio works',
   'Explore the ideas, schools of thought, and companies behind great systems.',
-  'Browse the editorial library',
 ];
 
 describe('Homepage heading + primary-entry copy (single source of the page heading)', () => {
