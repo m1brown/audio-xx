@@ -5,6 +5,66 @@
 
 ---
 
+## Checkpoint — Primary assessment-routing bug fixed (2026-06-29)
+
+`fix(intent): widen system-assessment qualifier window for assess/evaluate`
+([commit `ea74735`](https://github.com/m1brown/audio-xx/commit/ea74735),
+pushed to `origin/version-b`).
+
+With an active saved system selected, natural phrasings that placed
+qualifier words between the determiner (`my` / `the` / `this`) and the
+system noun (`system` / `setup` / `rig` / `chain`) were misrouting to
+the diagnosis clarification flow instead of producing a system
+assessment. The `assess` and `evaluate` entries in
+`SYSTEM_ASSESSMENT_PATTERNS` allowed only a single optional `current`
+between determiner and noun; anything wider fell through to the
+line-1755 default `diagnosis` intent.
+
+**Now classified as `system_assessment` (with an active saved system):**
+
+- `Evaluate the currently selected system.`
+- `Give me a full assessment of my living room system.`
+- `Assess my current living room system.`
+
+**Diagnostic prompts unchanged — still classify as `diagnosis`:**
+
+- `my system sounds bright`
+- `it lacks bass`
+- `the sound is harsh`
+- `vocals sound thin`
+
+**Symptom-leak closed.** The bare word `full` in
+`"Give me a full assessment…"` previously reached the diagnosis engine's
+signal extractor and matched `warmth_richness` in `signals.yaml`, then
+surfaced as `"I recognised 'warmth richness'…"` even though those words
+were never supplied. The routing fix routes the prompt as
+`system_assessment` *before* the diagnosis engine sees it, so the
+signal extraction never runs and `warmth_richness` is no longer
+reachable from that prompt.
+
+**Scope:** intent classification only. No change to the diagnosis
+engine, the conversation state machine, `signals.yaml`, `rules.yaml`,
+the artifact synthesizer, or any UI. Two regexes, one new shared
+fragment (`SYS_NOUN_PHRASE_FRAG`) widening the qualifier window from
+`(?:current\s+)?` to `(?:\w+\s+){0,3}`.
+
+**Verified:** 14/14 new tests; 124/126 broader intent/routing bundle
+(2 failures pre-existing, unrelated, confirmed via git-stash baseline
+rerun); tsc at the 94 baseline.
+
+**Live browser smoke pending.** A real-device chat-surface smoke
+under the active-saved-system condition should be run on the Vercel
+preview rather than locally — the dev server's homepage
+hydration / Start-Over path wiped injected `localStorage`
+saved-system records on every reload, blocking the local
+end-to-end run. The unit test exercises the exact
+`detectIntent(text, { hasActiveSavedSystem: true })` call the
+production submit handler makes at `page.tsx:1654`, so the routing
+fix is mechanically equivalent to the test; the preview smoke
+remains worth doing for full UI confirmation.
+
+---
+
 ## Checkpoint — Catalog boundary introduced (2026-06-29)
 
 First in-process step toward the target layering:
