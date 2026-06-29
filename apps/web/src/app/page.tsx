@@ -4799,10 +4799,25 @@ export default function Home() {
             <button
               type="button"
               onClick={() => {
+                // Pre-populate the composer with a starter assessment prompt so
+                // the click produces an immediately visible response. The
+                // previous behaviour (focus only) was technically wired but
+                // visually inert when the textarea was already in viewport —
+                // a first-time visitor experienced the CTA as broken.
+                // Pre-populating shows what to type, lets the visitor edit the
+                // components to match their own system, and turns the CTA
+                // into a working conversational primer.
+                dispatch({ type: 'SET_INPUT', value: PINNED_ASSESS_PROMPT });
                 const el = textareaRef.current;
                 if (el) {
                   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  el.focus({ preventScroll: true });
+                  // Wait one tick for React to commit the new value before
+                  // focusing and placing the cursor at the end of the prompt.
+                  setTimeout(() => {
+                    el.focus({ preventScroll: true });
+                    const len = PINNED_ASSESS_PROMPT.length;
+                    el.setSelectionRange(len, len);
+                  }, 0);
                 }
               }}
               style={{
