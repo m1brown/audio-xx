@@ -588,9 +588,24 @@ function extractProductCandidateName(message: string): string | null {
 // These signal a system-level evaluation request, distinct from diagnosis.
 // Requires ownership language + assessment intent; no listening complaint.
 
+// Shared phrase for the most common assessment frame:
+//   determiner  : my | the | this
+//   qualifier   : 0–3 intermediate word tokens (e.g. "current", "living
+//                 room", "currently selected", "current living room")
+//   system noun : system | setup | rig | chain
+//
+// The qualifier window was originally a single optional `current` slot,
+// which silently fell through to the line-1755 diagnosis default on
+// natural phrasings like "assess my living room system" or "evaluate the
+// currently selected system". Widening it to a bounded {0,3} window
+// covers natural English without inviting run-on matches across unrelated
+// clauses. Used by the `assess` and `evaluate` patterns below; the
+// remaining patterns keep their original narrower forms intentionally.
+const SYS_NOUN_PHRASE_FRAG = String.raw`(?:my|the|this)\s+(?:\w+\s+){0,3}(?:system|setup|rig|chain)`;
+
 const SYSTEM_ASSESSMENT_PATTERNS = [
-  /\bassess(?:ment)?\s+(?:of\s+)?(?:my|the|this)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
-  /\bevaluat(?:e|ion)\s+(?:of\s+)?(?:my|the|this)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  new RegExp(String.raw`\bassess(?:ment)?\s+(?:of\s+)?` + SYS_NOUN_PHRASE_FRAG + String.raw`\b`, 'i'),
+  new RegExp(String.raw`\bevaluat(?:e|ion)\s+(?:of\s+)?` + SYS_NOUN_PHRASE_FRAG + String.raw`\b`, 'i'),
   /\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
   /\bwhat\s+do\s+you\s+think\b/i,  // Broad — requires ownership + subjects gate in detectIntent
   /\bthoughts\s+on\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
