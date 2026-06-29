@@ -187,14 +187,34 @@ const EDITORIAL = {
 const PINNED_ASSESS_PROMPT = 'Assess my system: Denafrips Pontus II, Leben CS600X, DeVore O/96';
 
 /**
- * Primary-CTA composer template. The verb-prefix is the shape of the
- * task we want the visitor to perform (an assessment of their own
- * system), and the trailing space-after-colon positions the cursor where
- * typing begins. Intentionally generic — using a real demo system here
- * would invite visitors to edit our example rather than enter their own
- * equipment, which is the wrong signal for the primary CTA.
+ * Primary-CTA composer template. A structured prompt scaffold that
+ * shows the visitor exactly what information Audio XX expects — labelled
+ * lines for the four component slots — without locking the chain shape:
+ * the visitor can delete labels they don't have (active speakers → no
+ * amplifier line) or add lines for components they do (preamp, phono,
+ * cables). Cursor is placed after "Speakers: " so the visitor starts
+ * typing immediately, and tabs/arrows down to the other lines naturally.
+ *
+ * Intentionally not a real demo system — using one would invite editing
+ * our example rather than entering their own gear, which is the wrong
+ * signal for the primary CTA.
  */
-const ASSESS_TEMPLATE = 'Assess my system: ';
+const ASSESS_TEMPLATE = [
+  'Assess my system',
+  '',
+  'Speakers: ',
+  'Amplifier:',
+  'DAC / Streamer:',
+  'Source:',
+].join('\n');
+
+/**
+ * Position of the cursor inside ASSESS_TEMPLATE — immediately after
+ * "Speakers: " (including its trailing space), so the visitor begins
+ * typing in the right place. Derived from the template itself so the
+ * two stay in sync.
+ */
+const ASSESS_TEMPLATE_CURSOR = ASSESS_TEMPLATE.indexOf('Speakers: ') + 'Speakers: '.length;
 
 /**
  * Comparison-mode starter prompts. Slot 2 of the chip row always
@@ -4809,15 +4829,15 @@ export default function Home() {
             <button
               type="button"
               onClick={() => {
-                // Primary CTA: pre-populate the composer with a generic
-                // assessment template (verb + colon + cursor position) so the
-                // click produces an immediately visible response AND signals
-                // the prompt shape without putting our example gear in front
-                // of the visitor.
+                // Primary CTA: pre-populate the composer with a structured
+                // template (verb + four labelled component lines) so the
+                // visitor sees exactly what information Audio XX expects.
+                // Cursor lands after "Speakers: " so typing begins in the
+                // right slot.
                 //
                 // Invariant: never overwrite user-entered text. If the
                 // composer already contains content, the click is a focus
-                // operation only.
+                // operation only — cursor moves to the end of existing text.
                 const el = textareaRef.current;
                 const hasUserText = state.currentInput.trim().length > 0;
                 if (!hasUserText) {
@@ -4826,12 +4846,25 @@ export default function Home() {
                 if (el) {
                   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   // Wait one tick so React commits the new value (when set)
-                  // before focusing and placing the cursor at the end.
+                  // before focusing, sizing the textarea to fit content, and
+                  // placing the cursor. The textarea has resize:vertical so
+                  // it does NOT auto-grow on content — we set scrollHeight
+                  // explicitly so the full template is visible without an
+                  // internal scrollbar.
                   setTimeout(() => {
                     el.focus({ preventScroll: true });
                     if (!hasUserText) {
-                      const len = ASSESS_TEMPLATE.length;
-                      el.setSelectionRange(len, len);
+                      // Size the textarea to fit the template without an
+                      // internal scrollbar. boxSizing is border-box, so the
+                      // height we set is total outer height — add the two
+                      // border thicknesses on top of the content scrollHeight.
+                      el.style.height = 'auto';
+                      const cs = window.getComputedStyle(el);
+                      const borderY =
+                        (parseFloat(cs.borderTopWidth) || 0) +
+                        (parseFloat(cs.borderBottomWidth) || 0);
+                      el.style.height = `${el.scrollHeight + borderY}px`;
+                      el.setSelectionRange(ASSESS_TEMPLATE_CURSOR, ASSESS_TEMPLATE_CURSOR);
                     } else {
                       // Preserve existing text; place cursor at its end.
                       const len = el.value.length;
