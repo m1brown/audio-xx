@@ -1,7 +1,72 @@
 # Audio XX — Practical Roadmap
 
-**Last updated:** 2026-06-28
+**Last updated:** 2026-06-29
 **Audience:** technical contributors deciding what to work on next, and prospective collaborators evaluating the planned trajectory.
+
+---
+
+## Checkpoint — Catalog boundary introduced (2026-06-29)
+
+First in-process step toward the target layering:
+
+  **Catalog → Inference → Assessment → Editorial → Presentation**
+
+with Conversation orchestrating across engines and the LLM tier
+cross-cutting (never the source of truth). No network boundary introduced;
+runtime behaviour unchanged.
+
+**Completed (commit `bc58296`, pushed to `origin/version-b`):**
+
+- New module `apps/web/src/lib/catalog/lookups.ts` carries the five
+  read-only catalog-lookup functions previously housed in
+  `consultation.ts`:
+  `findBrandProfileByName`, `findBrandProfileBySlug`,
+  `findProductsByBrandSlug`, `findProductInProse`,
+  `findProductByComponentName`.
+  Bodies copied verbatim; signatures unchanged; behaviour byte-identical.
+- All four runtime imports from `@/lib/consultation` under
+  `apps/web/src/components/advisory/` have been re-pointed to
+  `@/lib/catalog/lookups`. The Presentation → Domain runtime coupling
+  via consultation is broken for the advisory tree.
+  `BrandAuthorityPreview.tsx` retains its type-only consultation
+  import.
+- A new boundary test
+  (`apps/web/src/lib/__tests__/catalog-boundary.test.ts`) walks every
+  `.tsx` file under `components/advisory/` and asserts no runtime
+  imports from `@/lib/consultation`. 24 assertions, all green.
+- Test status: tsc at the 94-error baseline; advisory bundle 580/580
+  pass; comparison-contract + comparison-followup pass via the shim;
+  homepage and `/artifact?case=balanced` serve correctly.
+
+**Transitional state — intentional, named here so the next pass can
+clear it:**
+
+- `consultation.ts` keeps a **compatibility shim** that re-exports the
+  five names. Non-renderer callers (other `lib/` modules and tests)
+  continue to import them from `@/lib/consultation` without changes.
+  The shim is the reason this commit was risk-free; removing it
+  belongs to a later pass once those callers migrate.
+- The new module reads `BRAND_PROFILES` and `ALL_PRODUCTS` (now exported
+  from `consultation.ts`) and the `BrandProfile` interface (already
+  exported). This creates a **module graph cycle**:
+  `consultation` ↔ `catalog/lookups`. It is benign under ESM — the data
+  is read only inside function bodies, never at module-init — but it
+  is debt that the next catalog step is intended to eliminate.
+
+**Next catalog step (defined, not started):**
+
+- Move `BRAND_PROFILES` and `ALL_PRODUCTS` data arrays out of
+  `consultation.ts` and into `lib/catalog/`.
+- Move the `BrandProfile` interface to `lib/catalog/`.
+- Decide where the `Product` interface lives (currently exported from
+  the quirky home `lib/products/dacs.ts`).
+- After the data and types move, **remove the consultation.ts
+  compatibility shim** for the five lookup functions. Other `lib/`
+  callers re-point to `@/lib/catalog/lookups` directly. At that
+  point the cycle is gone and the Catalog layer stands on its own.
+
+This is queued, **not authorised** — the next architectural step is a
+separate decision, not implied by this checkpoint.
 
 ---
 
