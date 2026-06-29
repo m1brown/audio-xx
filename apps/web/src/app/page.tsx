@@ -187,6 +187,16 @@ const EDITORIAL = {
 const PINNED_ASSESS_PROMPT = 'Assess my system: Denafrips Pontus II, Leben CS600X, DeVore O/96';
 
 /**
+ * Primary-CTA composer template. The verb-prefix is the shape of the
+ * task we want the visitor to perform (an assessment of their own
+ * system), and the trailing space-after-colon positions the cursor where
+ * typing begins. Intentionally generic — using a real demo system here
+ * would invite visitors to edit our example rather than enter their own
+ * equipment, which is the wrong signal for the primary CTA.
+ */
+const ASSESS_TEMPLATE = 'Assess my system: ';
+
+/**
  * Comparison-mode starter prompts. Slot 2 of the chip row always
  * draws from this subpool so every fresh visitor sees one comparison
  * example. Selection is session-stable.
@@ -4799,24 +4809,34 @@ export default function Home() {
             <button
               type="button"
               onClick={() => {
-                // Pre-populate the composer with a starter assessment prompt so
-                // the click produces an immediately visible response. The
-                // previous behaviour (focus only) was technically wired but
-                // visually inert when the textarea was already in viewport —
-                // a first-time visitor experienced the CTA as broken.
-                // Pre-populating shows what to type, lets the visitor edit the
-                // components to match their own system, and turns the CTA
-                // into a working conversational primer.
-                dispatch({ type: 'SET_INPUT', value: PINNED_ASSESS_PROMPT });
+                // Primary CTA: pre-populate the composer with a generic
+                // assessment template (verb + colon + cursor position) so the
+                // click produces an immediately visible response AND signals
+                // the prompt shape without putting our example gear in front
+                // of the visitor.
+                //
+                // Invariant: never overwrite user-entered text. If the
+                // composer already contains content, the click is a focus
+                // operation only.
                 const el = textareaRef.current;
+                const hasUserText = state.currentInput.trim().length > 0;
+                if (!hasUserText) {
+                  dispatch({ type: 'SET_INPUT', value: ASSESS_TEMPLATE });
+                }
                 if (el) {
                   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  // Wait one tick for React to commit the new value before
-                  // focusing and placing the cursor at the end of the prompt.
+                  // Wait one tick so React commits the new value (when set)
+                  // before focusing and placing the cursor at the end.
                   setTimeout(() => {
                     el.focus({ preventScroll: true });
-                    const len = PINNED_ASSESS_PROMPT.length;
-                    el.setSelectionRange(len, len);
+                    if (!hasUserText) {
+                      const len = ASSESS_TEMPLATE.length;
+                      el.setSelectionRange(len, len);
+                    } else {
+                      // Preserve existing text; place cursor at its end.
+                      const len = el.value.length;
+                      el.setSelectionRange(len, len);
+                    }
                   }, 0);
                 }
               }}
@@ -4866,6 +4886,35 @@ export default function Home() {
               <span style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.86rem', lineHeight: 1.45, color: EDITORIAL.inkMuted }}>
                 Explore the ideas, schools of thought, and companies behind great systems.
               </span>
+            </Link>
+          </div>
+
+          {/* Secondary entry — see what an Audio XX assessment actually
+            * looks like, without forcing the visitor to type their own
+            * system first. Quiet text link, magazine-style — the standalone
+            * /artifact route is the editorial demonstration of the product
+            * at full strength. */}
+          <div
+            style={{
+              marginBottom: '1.5rem',
+              maxWidth: EDITORIAL.narrow,
+              paddingTop: '0.1rem',
+            }}
+          >
+            <Link
+              href="/artifact?case=flawed"
+              style={{
+                fontSize: '0.82rem',
+                color: EDITORIAL.faint,
+                textDecoration: 'none',
+                borderBottom: `1px solid ${EDITORIAL.rule}`,
+                paddingBottom: '1px',
+                transition: 'color 0.15s ease, border-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = EDITORIAL.ink; e.currentTarget.style.borderBottomColor = EDITORIAL.faint; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = EDITORIAL.faint; e.currentTarget.style.borderBottomColor = EDITORIAL.rule; }}
+            >
+              See an example assessment →
             </Link>
           </div>
 
