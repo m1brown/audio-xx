@@ -108,7 +108,9 @@ import LeftRail from '@/components/workspace/LeftRail';
 import RightRail from '@/components/workspace/RightRail';
 import SystemEditor from '@/components/system/SystemEditor';
 import SystemSavePrompt from '@/components/system/SystemSavePrompt';
-import type { DraftSystem } from '@/lib/system-types';
+import type { DraftSystem, SystemComponentRole } from '@/lib/system-types';
+import type { ProductCategory } from '@/lib/catalog-taxonomy';
+import { populateAssessTemplate } from '@/lib/cta-template';
 import ListenerProfileBadge, { buildProfileSnapshot, type ListenerProfileSnapshot } from '@/components/ListenerProfileBadge';
 
 // ── Constants ─────────────────────────────────────────
@@ -4830,18 +4832,47 @@ export default function Home() {
               type="button"
               onClick={() => {
                 // Primary CTA: pre-populate the composer with a structured
-                // template (verb + four labelled component lines) so the
-                // visitor sees exactly what information Audio XX expects.
-                // Cursor lands after "Speakers: " so typing begins in the
-                // right slot.
+                // template. If the user has a saved active system, the
+                // template is autofilled with its actual components mapped
+                // to the four labelled slots — clicking the CTA becomes a
+                // one-step "assess this system again." Without an active
+                // system, the empty scaffold shows what information Audio
+                // XX expects.
                 //
                 // Invariant: never overwrite user-entered text. If the
                 // composer already contains content, the click is a focus
                 // operation only — cursor moves to the end of existing text.
                 const el = textareaRef.current;
                 const hasUserText = state.currentInput.trim().length > 0;
+                // Resolve active components — mirrors the right-rail
+                // resolution at the activeSystemComponents block. Active =
+                // explicit ref, single-saved-system fallback, or draft.
+                let activeComponents: Array<{
+                  brand?: string | null;
+                  name?: string | null;
+                  category?: ProductCategory | null;
+                  role?: SystemComponentRole;
+                }> = [];
+                {
+                  const ref = audioState.activeSystemRef;
+                  if (!ref) {
+                    if (audioState.savedSystems.length === 1) {
+                      activeComponents = audioState.savedSystems[0].components;
+                    }
+                  } else if (ref.kind === 'draft' && audioState.draftSystem) {
+                    activeComponents = audioState.draftSystem.components;
+                  } else if (ref.kind === 'saved') {
+                    const saved = audioState.savedSystems.find((s) => s.id === ref.id);
+                    if (saved) activeComponents = saved.components;
+                  }
+                }
+                const autofill = activeComponents.length > 0
+                  ? populateAssessTemplate(activeComponents)
+                  : null;
+                const fillText = autofill ? autofill.text : ASSESS_TEMPLATE;
+                const fillCursor = autofill ? autofill.cursor : ASSESS_TEMPLATE_CURSOR;
                 if (!hasUserText) {
-                  dispatch({ type: 'SET_INPUT', value: ASSESS_TEMPLATE });
+                  dispatch({ type: 'SET_INPUT', value: fillText });
                 }
                 if (el) {
                   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -4864,7 +4895,7 @@ export default function Home() {
                         (parseFloat(cs.borderTopWidth) || 0) +
                         (parseFloat(cs.borderBottomWidth) || 0);
                       el.style.height = `${el.scrollHeight + borderY}px`;
-                      el.setSelectionRange(ASSESS_TEMPLATE_CURSOR, ASSESS_TEMPLATE_CURSOR);
+                      el.setSelectionRange(fillCursor, fillCursor);
                     } else {
                       // Preserve existing text; place cursor at its end.
                       const len = el.value.length;
