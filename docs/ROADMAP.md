@@ -5,6 +5,131 @@
 
 ---
 
+## Architecture decision — Conversation intent-resolution doctrine (2026-06-29)
+
+**Status:** future architecture decision. **Not an implementation task.**
+No code changes implied by this entry. Recorded here so the principles
+that survived adversarial investigation are durable and reviewable.
+
+### Governing principle
+
+> The LLM may interpret language. It may never establish facts, resolve
+> application state, select engines, or determine system behavior.
+
+### Doctrine
+
+Audio XX remains deterministic-first. Conversation **must never silently
+convert an unresolved turn into diagnosis, assessment, shopping,
+comparison, or any other engine path.** The default-to-diagnosis
+fall-through is recognized as the root cause of the assessment-routing
+class of bug; it is forbidden by this doctrine.
+
+Conversation produces exactly one of:
+
+1. **`CanonicalIntent`** — a typed, fully-resolved intent ready for
+   Reasoning.
+2. **`needs_semantic_interpretation`** — the explicit state for turns
+   the deterministic router could not resolve. Not "diagnosis." Not
+   "consultation_entry." Not any engine. An explicit non-resolution.
+3. **Clarification** — a user-facing question issued when validation
+   rejects an interpretation or when no plausible interpretation is
+   available.
+
+The deterministic router is the first path. If it resolves a
+high-precision intent, it produces `CanonicalIntent`. If deterministic
+resolution is incomplete, the correct architectural state is **not
+diagnosis** — it is unresolved intent. A semantic interpreter (A3,
+another hosted LLM, a local model, or a deterministic semantic parser)
+may be introduced later, but **only inside the unresolved-intent path.**
+
+### Semantic interpreter contract
+
+The interpreter — whatever its implementation — may produce only a
+minimal **`SemanticHypothesis`**:
+
+  - hypothesized intent kind (validated against the schema enum)
+  - hypothesized subject phrase (raw token, not an identifier)
+  - evidence excerpts (spans of the user text used as justification)
+  - model / prompt metadata, if applicable
+  - schema version
+
+The interpreter **must never** produce:
+
+  - `CanonicalIntent` (Conversation enriches the hypothesis into one)
+  - catalog identifiers (Catalog resolution is deterministic)
+  - saved-system identifiers
+  - active-system references (resolved from session state)
+  - follow-up linkage (resolved deterministically from message ids)
+  - authorization scope (Identity owns this)
+  - trust gates (self-asserted confidence is data, never a gate)
+  - engine selection (downstream of intent, never the interpreter's
+    call)
+  - user-facing final prose
+  - anything derived from session state (the interpreter cannot read
+    or write conversation state)
+
+Conversation deterministically validates and enriches the hypothesis
+into `CanonicalIntent`.
+
+### Invariants before a `CanonicalIntent` reaches Reasoning
+
+  1. **Type validity** — every field has the schema-declared type;
+     enum fields are in their enum.
+  2. **Reference integrity** — every identifier resolves (Catalog,
+     active system, principal).
+  3. **Provenance completeness** — every field has an explicit
+     `parsed_by` provenance (`deterministic` / `interpreter` /
+     `enrichment` / `fallback`); no origin is ambiguous.
+  4. **State consistency** — active-system and follow-up references
+     match Conversation's authoritative state, not what the interpreter
+     thought.
+  5. **Plausibility against deterministic features** — the intent is
+     consistent with deterministic signals from the turn (e.g.,
+     `diagnosis` with zero symptom signals + assessment language is
+     implausible and rejected).
+  6. **No LLM confidence used as a behavior gate** — interpreter-
+     asserted confidence may be carried as data; it never gates
+     downstream behavior.
+  7. **Audit completeness** — raw text, evidence excerpts, model /
+     prompt metadata, and validator decisions are carried in the
+     canonical object.
+  8. **Idempotency** — the same turn input + same session state + same
+     interpreter response produces the same `CanonicalIntent`.
+
+If validation fails, Conversation **asks a clarification question.
+It does not guess.**
+
+### Open question — state name
+
+Two candidate names: `intent_unresolved` and
+`needs_semantic_interpretation`.
+
+**Recommendation: `needs_semantic_interpretation`.** It describes the
+work required without binding the implementation to A3 (or any
+specific interpreter). It frames the state as a *transition to a
+different mode of work* rather than as a *failure to resolve*, which
+shapes engineering culture around the state's growth in the right
+direction.
+
+### What this doctrine does not specify
+
+- It does not specify when (or whether) a semantic interpreter will be
+  built. The `needs_semantic_interpretation` state may, for an
+  arbitrarily long time, route directly to clarification.
+- It does not specify the model, provider, prompt, or schema for the
+  hypothesis. Those are implementation details to be settled when (and
+  if) the interpreter is built.
+- It does not specify rate ceilings or telemetry thresholds for the
+  `needs_semantic_interpretation` state. Those are governance details
+  to be set with the implementation, not in this doctrine.
+
+What it does specify is the *contract* the interpreter must honour
+whenever it is built, the *invariants* the canonical object must
+satisfy before Reasoning sees it, and the *forbidden silent-routing
+behaviour* that the deterministic router has historically allowed.
+
+---
+
 ## Checkpoint — Primary assessment-routing bug fixed (2026-06-29)
 
 `fix(intent): widen system-assessment qualifier window for assess/evaluate`
