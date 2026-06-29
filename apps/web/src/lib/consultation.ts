@@ -270,7 +270,19 @@ export interface BrandAuthorityPreview {
 
 // ── All products ────────────────────────────────────
 
-const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIFIER_PRODUCTS, ...TURNTABLE_PRODUCTS];
+/**
+ * Internal data, surfaced for the Catalog layer.
+ *
+ * `ALL_PRODUCTS` and `BRAND_PROFILES` are intentionally module-local in
+ * intent, but are exported so the new `catalog/lookups.ts` module (the
+ * first Catalog-layer extraction) can read them at call time without a
+ * data duplication. They are NOT part of the consultation public API —
+ * downstream callers should resolve catalog data through `catalog/lookups.ts`,
+ * not by importing these arrays directly. The exports here exist solely
+ * to support the in-process refactor; a later commit will relocate the
+ * data into `catalog/` so this re-export becomes unnecessary.
+ */
+export const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIFIER_PRODUCTS, ...TURNTABLE_PRODUCTS];
 
 // ── Brand knowledge ─────────────────────────────────
 //
@@ -448,7 +460,8 @@ export interface BrandProfile {
   relatedTechnologySlugs?: string[];
 }
 
-const BRAND_PROFILES: BrandProfile[] = [
+/** See ALL_PRODUCTS above for the rationale behind exporting this. */
+export const BRAND_PROFILES: BrandProfile[] = [
   {
     names: ['devore', 'devore fidelity'],
     relatedTechnologySlugs: ['high-efficiency-loudspeakers', 'set', 'class-a-amplification'],
@@ -2535,13 +2548,27 @@ function findBrandProfile(text: string): BrandProfile | undefined {
   );
 }
 
-/** Look up a brand profile by exact brand name (case-insensitive). */
-export function findBrandProfileByName(brandName: string): BrandProfile | undefined {
-  const lower = brandName.toLowerCase();
-  return BRAND_PROFILES.find((bp) =>
-    bp.names.some((name) => name.toLowerCase() === lower),
-  );
-}
+// ── Catalog lookups — function bodies live in `./catalog/lookups`. ──
+// These imports give consultation.ts's own code (other builders in this
+// file) a local binding under the original names, AND re-export them
+// so the public API of consultation.ts is unchanged. Renderers under
+// `components/advisory/` now import directly from `@/lib/catalog/lookups`;
+// a later commit may remove this shim once the remaining lib/ callers
+// have migrated. No behaviour change.
+import {
+  findBrandProfileByName,
+  findBrandProfileBySlug,
+  findProductsByBrandSlug,
+  findProductInProse,
+  findProductByComponentName,
+} from './catalog/lookups';
+export {
+  findBrandProfileByName,
+  findBrandProfileBySlug,
+  findProductsByBrandSlug,
+  findProductInProse,
+  findProductByComponentName,
+};
 
 /**
  * Substring-matching profile lookup that also reports the alias the
@@ -2593,32 +2620,6 @@ export function findBrandProfileMatchByName(brandName: string):
   return undefined;
 }
 
-/**
- * Look up a brand profile by URL slug (output of `toSlug`).
- * Used by `/brand/[slug]` to resolve the route segment back to its
- * curated profile. Match is by slug-equivalence on any name in
- * BrandProfile.names — so '/brand/devore' and '/brand/devore-fidelity'
- * both resolve to the same profile.
- */
-export function findBrandProfileBySlug(slug: string): BrandProfile | undefined {
-  if (!slug) return undefined;
-  return BRAND_PROFILES.find((bp) =>
-    bp.names.some((name) => routeToSlug(name) === slug),
-  );
-}
-
-/**
- * Catalog products whose brand slugifies to `slug`. Filters the unified
- * ALL_PRODUCTS pool by exact slug match on `product.brand`, so a brand
- * with multiple BrandProfile aliases (e.g. ['pass labs', 'first watt'])
- * correctly returns only the products matching the URL the user clicked
- * — not the union of every alias.
- */
-export function findProductsByBrandSlug(slug: string): Product[] {
-  if (!slug) return [];
-  return ALL_PRODUCTS.filter((p) => routeToSlug(p.brand) === slug);
-}
-
 function findProductsByBrand(text: string): Product[] {
   const lower = text.toLowerCase();
   return ALL_PRODUCTS.filter((p) =>
@@ -2626,83 +2627,8 @@ function findProductsByBrand(text: string): Product[] {
   );
 }
 
-/**
- * Look up a single catalog product by a free-form component name such as
- * "WLM Diva Monitor", "JOB Integrated", or "Chord Hugo". The name comes
- * from the parsed "Do not touch:" line in the advisor's optimize body —
- * it is a display string, not a structured key.
- *
- * Strategy:
- *   1. Exact `brand + " " + name` match (case-insensitive).
- *   2. Name-only match when the input contains the brand AND name tokens.
- *   3. ID slug match ("wlm-diva-monitor" ↔ "WLM Diva Monitor").
- *
- * Returns `undefined` when no catalog product matches — callers degrade
- * honestly.
- */
-/**
- * Looser product resolver for prose: returns the first catalog product
- * whose brand AND any distinctive name token (≥4 chars) appears in
- * `text`. Used by the consultation renderer to surface a hero image
- * when the response prose discusses a specific product even though the
- * dispatched subject is brand-only (e.g. "Chord" → "Chord Hugo" once
- * the prose mentions Hugo). 4-char floor avoids false positives from
- * short suffix tokens like "II", "SE", "X".
- */
-export function findProductInProse(text: string): Product | undefined {
-  if (!text) return undefined;
-  const lower = text.toLowerCase();
-  return ALL_PRODUCTS.find((p) => {
-    if (!lower.includes(p.brand.toLowerCase())) return false;
-    const tokens = p.name.split(/\s+/).filter((tok) => tok.length >= 4);
-    if (tokens.length === 0) {
-      // Short model names (e.g. "W5", "W8"): the 4-char filter drops
-      // all tokens, so the old logic returned false.  For products
-      // whose name has only short tokens, require the brand to be
-      // present (already checked) AND the full product name to appear
-      // anywhere in the text.  "W5" is short but distinctive enough
-      // when combined with the brand-presence gate.
-      return lower.includes(p.name.toLowerCase());
-    }
-    return tokens.some((tok) => lower.includes(tok.toLowerCase()));
-  });
-}
-
-export function findProductByComponentName(text: string): Product | undefined {
-  if (!text) return undefined;
-  const lower = text.toLowerCase().trim();
-  // 1. Exact brand+name match
-  const exact = ALL_PRODUCTS.find(
-    (p) => `${p.brand} ${p.name}`.toLowerCase() === lower,
-  );
-  if (exact) return exact;
-  // 2. Contains both brand and full name tokens
-  const byTokens = ALL_PRODUCTS.find(
-    (p) =>
-      lower.includes(p.brand.toLowerCase()) &&
-      lower.includes(p.name.toLowerCase()),
-  );
-  if (byTokens) return byTokens;
-  // 2b. Brand + distinctive-last-token match (Phase 2.6 polish,
-  //     2026-05-14). The chain rendering sometimes shortens a product
-  //     name by omitting the middle word — e.g. "DeVore Orangutan O/96"
-  //     becomes "DeVore O/96" in the displayed chain. Step 2 fails
-  //     because the input no longer contains the full product name.
-  //     This step rescues that case: when the input contains the brand
-  //     AND the distinctive last token of the product name (≥4 chars
-  //     to avoid noise from short designators like "II" / "SE"), match.
-  const byBrandAndDistinctiveToken = ALL_PRODUCTS.find((p) => {
-    if (!lower.includes(p.brand.toLowerCase())) return false;
-    const tokens = p.name.split(/\s+/);
-    const lastToken = tokens[tokens.length - 1].toLowerCase();
-    if (lastToken.length < 4) return false;
-    return lower.includes(lastToken);
-  });
-  if (byBrandAndDistinctiveToken) return byBrandAndDistinctiveToken;
-  // 3. ID slug match (hyphen-separated lowercase)
-  const slug = lower.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  return ALL_PRODUCTS.find((p) => p.id === slug);
-}
+// (findProductInProse and findProductByComponentName moved to ./catalog/lookups;
+// re-exported above for compatibility.)
 
 /**
  * Search the provisional product store for products matching the text.

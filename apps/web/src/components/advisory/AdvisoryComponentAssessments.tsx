@@ -14,7 +14,7 @@
  */
 
 import type { ComponentAssessment } from '../../lib/advisory-response';
-import { findProductByComponentName } from '../../lib/consultation';
+import { findProductByComponentName } from '../../lib/catalog/lookups';
 import { resolveProductImageStrict } from '../../lib/product-images';
 import { filterSourcesForDisplay } from '../../lib/evidence/source-whitelist';
 import { renderText } from './render-text';

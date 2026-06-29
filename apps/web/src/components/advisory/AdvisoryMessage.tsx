@@ -34,7 +34,7 @@ import AdvisorySection from './AdvisorySection';
 import AdvisoryProse from './AdvisoryProse';
 import AdvisoryProductCards, { ShoppingLinks } from './AdvisoryProductCard';
 import { DIRECTION_CONTENT } from '../../lib/upgrade-path-content';
-import { findProductByComponentName, findProductInProse, findBrandProfileByName, findProductsByBrandSlug } from '../../lib/consultation';
+import { findProductByComponentName, findProductInProse, findBrandProfileByName, findProductsByBrandSlug } from '../../lib/catalog/lookups';
 import { getProductImage, getProductImageEntry, getGenericPlaceholder } from '../../lib/product-images';
 import AdvisoryLinks from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';

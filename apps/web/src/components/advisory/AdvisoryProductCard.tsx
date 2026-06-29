@@ -20,7 +20,7 @@ import { renderText } from './render-text';
 import { CardViewTracker, TrackedAnchor } from './CardTelemetry';
 import { shouldShowAmazonLink, getAmazonSearchUrl } from '../../lib/amazon-links';
 import { buildProductLinks } from '../../lib/product-links';
-import { findBrandProfileByName } from '../../lib/consultation';
+import { findBrandProfileByName } from '../../lib/catalog/lookups';
 import { toSlug } from '../../lib/route-slug';
 import { ProductImage } from './ProductImage';
 

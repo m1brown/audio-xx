@@ -14,7 +14,7 @@ import {
 import { COLOR, sectionHeadingStyle, proseStyle } from '@/lib/editorial-tokens';
 import { hasDisplayableSources } from '@/lib/evidence/source-whitelist';
 import { isBrandHouseVoicingEnabled } from '@/lib/feature-flags';
-import { findProductByComponentName, findBrandProfileBySlug } from '@/lib/consultation';
+import { findProductByComponentName, findBrandProfileBySlug } from '@/lib/catalog/lookups';
 import { toSlug } from '@/lib/route-slug';
 import { resolveProductImageStrict, getProductImage } from '@/lib/product-images';
 
