@@ -8010,14 +8010,24 @@ function detectUserAppliedRole(
   if (prodIdx < 0) return undefined;
 
   // Extract the text segment between the previous and next chain separators
-  // (arrows, "into", commas, " - ") around the product name. This prevents
-  // role keywords attached to other products from being picked up.
+  // (arrows, "into", commas, " - ", "/", and an unlabelled-space before a
+  // role colon label) around the product name. This prevents role keywords
+  // attached to other products from being picked up.
   //
-  // " - " (whitespace-hyphen-whitespace) was added as a separator so that
-  // labelled chains like "speakers: X - amp: Y - streamer: Z" segment
-  // correctly and a trailing "streamer:" doesn't collide with an earlier
-  // "amp:" label (QA residual R3).
-  const SEP = /(?:\s*(?:→|—>|-{1,3}>|={1,2}>|>{2,3})\s*|\s+into\s+|\s*,\s*|\s+-\s+)/g;
+  // " - " (whitespace-hyphen-whitespace) was added so that labelled chains
+  // like "speakers: X - amp: Y - streamer: Z" segment correctly and a
+  // trailing "streamer:" doesn't collide with an earlier "amp:" label
+  // (QA residual R3).
+  //
+  // "/" was added so that compound labels like "DAC / Streamer: Eversolo"
+  // separate cleanly from the preceding component segment.
+  //
+  // The lookahead-based separator splits before any whitespace that
+  // precedes a known role colon label (e.g. " Amplifier:"). This bounds
+  // each segment to the chunk that belongs to its own role label, so a
+  // subsequent "Streamer:" later in the message can't bleed back into
+  // the "Amplifier:" segment that named the user's amplifier.
+  const SEP = /(?:\s*(?:→|—>|-{1,3}>|={1,2}>|>{2,3})\s*|\s+into\s+|\s*,\s*|\s+-\s+|\s*\/\s*|\s+(?=(?:speakers?|amp(?:lifier)?|integrated|dac|stream(?:er|ing)?|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?)\s*:))/g;
   const separators: { start: number; end: number }[] = [];
   let m;
   while ((m = SEP.exec(msgLower)) !== null) {
