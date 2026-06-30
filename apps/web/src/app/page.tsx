@@ -702,6 +702,24 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.messages.length > 0, state.currentInput.trim().length === 0]);
 
+  // Hand-off from the artifact follow-up surface. When the user submits
+  // a question on /artifact, FollowUp.tsx writes the question to
+  // sessionStorage under `axx_followup_q` and navigates here. Read it
+  // once on mount, seed the composer, and clear the key so the question
+  // doesn't repopulate on a later visit.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const handoff = window.sessionStorage.getItem('axx_followup_q');
+      if (handoff) {
+        dispatch({ type: 'SET_INPUT', value: handoff });
+        window.sessionStorage.removeItem('axx_followup_q');
+      }
+    } catch {
+      /* private mode / quota — nothing to do */
+    }
+  }, []);
+
   // Taste profile — loaded from API for authenticated users
   const [tasteProfile, setTasteProfile] = useState<TasteProfile | null>(null);
   useEffect(() => {
