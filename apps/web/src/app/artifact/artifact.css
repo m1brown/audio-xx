@@ -31,9 +31,13 @@ body:has(.axx-route) { background: #FBFAF6; }
   --silence-foot: clamp(5rem, 14vh, 10rem);
   --para-gap: 1.25rem;
 
-  --face-display: Georgia, "Times New Roman", serif;
-  --face-text: Georgia, "Times New Roman", serif;
-  --face-grotesque: system-ui, -apple-system, "Segoe UI", sans-serif;
+  /*
+   * --face-display, --face-text, --face-grotesque are set globally by
+   * next/font in apps/web/src/app/layout.tsx (Fraunces / Source Serif 4
+   * / Inter under Design Doctrine v1). Do NOT re-declare them here —
+   * inner declarations would shadow the next/font variables and break
+   * the unified launch typography.
+   */
 
   max-width: var(--artifact-w);
   margin-inline: auto;

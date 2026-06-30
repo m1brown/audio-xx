@@ -43,7 +43,7 @@
 /* ── Base typography ─────────────────────────────── */
 
 body {
-  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   background: #FCFCFB;
   /* 2026-05-20 premium polish: body bumped 15 → 15.5px and ink shifted
    * to warm charcoal #1B1815 so the long-form advisory reads with a
