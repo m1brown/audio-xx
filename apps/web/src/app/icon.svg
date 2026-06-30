@@ -1,13 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <!-- Off-white background with subtle rounded corners -->
-  <rect width="32" height="32" rx="6" fill="#f5f4f2"/>
-  <!-- XX mark: two crossed strokes per X, drawn as thick paths for legibility at 16px -->
-  <!-- First X (left) -->
-  <line x1="5.5" y1="10" x2="13.5" y2="22" stroke="#2a2a2a" stroke-width="2.6" stroke-linecap="round"/>
-  <line x1="13.5" y1="10" x2="5.5" y2="22" stroke="#2a2a2a" stroke-width="2.6" stroke-linecap="round"/>
-  <!-- Second X (right) -->
-  <line x1="18.5" y1="10" x2="26.5" y2="22" stroke="#2a2a2a" stroke-width="2.6" stroke-linecap="round"/>
-  <line x1="26.5" y1="10" x2="18.5" y2="22" stroke="#2a2a2a" stroke-width="2.6" stroke-linecap="round"/>
-  <!-- Subtle muted accent: thin underline -->
-  <line x1="8" y1="25" x2="24" y2="25" stroke="#a0594b" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Audio XX favicon — Editorial Doctrine v1.
+       The kicker bar: the same accent rule that opens every artifact
+       section (.axx-kicker::before). Vector-clean at 16px, reads as
+       the magazine, not as a logo. Paper #FCF8EE matches
+       editorial-tokens.ts EDITORIAL.paper. Accent #A8231B matches
+       editorial-tokens.ts EDITORIAL.accent. -->
+  <rect width="32" height="32" fill="#FCF8EE"/>
+  <rect x="7" y="14.5" width="18" height="3" fill="#A8231B"/>
 </svg>
