@@ -57,6 +57,11 @@ body:has(.axx-route) { background: #FCF8EE; }
   color: var(--ink-muted);
 }
 .axx-masthead b { color: var(--ink); font-weight: 600; letter-spacing: .08em; }
+.axx-masthead-home {
+  color: inherit; text-decoration: none;
+  display: inline-flex; align-items: baseline;
+}
+.axx-masthead-home:hover b { color: var(--accent); }
 
 /* ── Peak 1: the verdict ──────────────────────────────────────────────── */
 .axx-verdict { margin-block-start: var(--silence-top); }

@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import FollowUp from './FollowUp';
 import type { ArtifactPayload } from './fixtures';
 
@@ -29,7 +30,9 @@ export default function AssessmentArtifact(
       <article className={articleCls}>
         {!embedded && (
           <header className="axx-masthead">
-            <span><b>Audio XX</b></span>
+            <Link href="/" className="axx-masthead-home" aria-label="Audio XX — back to home">
+              <b>Audio XX</b>
+            </Link>
             <span>{p.date}</span>
           </header>
         )}
