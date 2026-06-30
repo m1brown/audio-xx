@@ -4602,7 +4602,7 @@ export default function Home() {
         // contradicted the editorial direction. A single calm tone keeps
         // the page integrated and lets the hero typography carry the
         // visual weight, not the surface.
-        background: '#FCFCFB',
+        background: EDITORIAL.paper,
         minHeight: '100vh',
         width: '100%',
       }}
