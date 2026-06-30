@@ -27,7 +27,7 @@ body:has(.axx-route) { background: #FCF8EE; }
 
   --silence-top: clamp(4rem, 12vh, 9rem);
   --silence-verdict: clamp(2.5rem, 7vh, 5rem);
-  --pause: clamp(6rem, 16vh, 12rem);     /* largest gap on the page */
+  --pause: clamp(3rem, 8vh, 5.5rem);     /* breath before the recommendation, not an intermission */
   --silence-foot: clamp(5rem, 14vh, 10rem);
   --para-gap: 1.25rem;
 
@@ -123,8 +123,13 @@ body:has(.axx-route) { background: #FCF8EE; }
   grid-template-columns: var(--rail-w) var(--seam-w) minmax(0, var(--measure));
   align-items: start;
 }
-.axx-rail { grid-column: 1; font-family: var(--face-grotesque); }
-.axx-judgment { grid-column: 3; max-width: var(--measure); }
+/* The rail spans both grid rows so its hero datum + pull quote do not
+ * stretch row 1, which would push the recommendation in row 2 below the
+ * rail's bottom instead of the judgment's bottom. With this span the
+ * judgment defines row 1 and the recommendation lands directly after
+ * it, separated only by --pause. */
+.axx-rail { grid-column: 1; grid-row: 1 / span 2; font-family: var(--face-grotesque); }
+.axx-judgment { grid-column: 3; grid-row: 1; max-width: var(--measure); }
 .axx-judgment p { font-size: 1.1875rem; line-height: 1.62; margin: 0 0 var(--para-gap); }
 .axx-judgment p:last-child { margin-bottom: 0; }
 
@@ -148,7 +153,12 @@ body:has(.axx-route) { background: #FCF8EE; }
 }
 
 /* ── Peak 2: the recommendation (preceded by the largest silence) ─────── */
-.axx-rec { margin-block-start: var(--pause); }
+/* The rec now lives inside .axx-case, placed in column 3 directly under
+ * .axx-judgment. The visible gap to the last case paragraph is exactly
+ * --pause, independent of how tall the left rail (hero datum + pull
+ * quote) happens to be. On the mobile breakpoint the grid collapses to a
+ * single column and grid-column resets — see the responsive block. */
+.axx-rec { grid-column: 3; grid-row: 2; margin-block-start: var(--pause); }
 .axx-rec .line {
   font-family: var(--face-display); font-weight: 600;
   font-size: clamp(1.5rem, 3vw, 1.875rem); line-height: 1.2; margin: 0; max-width: 24ch;
@@ -231,10 +241,11 @@ body:has(.axx-route) { background: #FCF8EE; }
 /* ── Responsive: collapse the seam; preserve peaks + silences ─────────── */
 @media (max-width: 1023px) {
   .axx-case { grid-template-columns: 1fr; }
-  .axx-rail { grid-column: 1; display: flex; flex-wrap: wrap; gap: .75rem 2rem; margin-bottom: 1.75rem; align-items: baseline; }
+  .axx-rail { grid-column: 1; grid-row: auto; display: flex; flex-wrap: wrap; gap: .75rem 2rem; margin-bottom: 1.75rem; align-items: baseline; }
   .axx-rail ul { margin: 0; display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; }
   .axx-datum { margin: 0; }
-  .axx-judgment { grid-column: 1; }
+  .axx-judgment { grid-column: 1; grid-row: auto; }
+  .axx-rec { grid-column: 1; grid-row: auto; }
   .axx-verdict h1 { max-width: none; }
 }
 @media (max-width: 640px) { .axx-standfirst { font-size: 1.15rem; } }

@@ -84,20 +84,24 @@ export default function AssessmentArtifact(
             <p>{p.recognition}</p>
             {p.caseParagraphs.map((para, i) => <p key={i}>{para}</p>)}
           </div>
-        </div>
 
-        {/* Peak 2 — the recommendation (preceded by the largest silence) */}
-        <section className="axx-rec">
-          <h2 className="axx-vh">Recommendation</h2>
-          <p className="line">{p.recommendation}</p>
-          {p.figure && (
-            <figure className="axx-fig">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.figure.src} alt={p.figure.alt} width={640} height={427} />
-              <figcaption>{p.figure.caption}</figcaption>
-            </figure>
-          )}
-        </section>
+          {/* Peak 2 — the recommendation. Lives in column 3 so its gap to the
+            * last judgment paragraph is the --pause silence, not the leftover
+            * height of the evidence rail. (On narrow viewports the grid
+            * collapses to one column and the order falls back to verdict →
+            * rail → judgment → recommendation in the natural reading flow.) */}
+          <section className="axx-rec">
+            <h2 className="axx-vh">Recommendation</h2>
+            <p className="line">{p.recommendation}</p>
+            {p.figure && (
+              <figure className="axx-fig">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.figure.src} alt={p.figure.alt} width={640} height={427} />
+                <figcaption>{p.figure.caption}</figcaption>
+              </figure>
+            )}
+          </section>
+        </div>
 
         {p.cost && <p className="axx-cost">{p.cost}</p>}
 
