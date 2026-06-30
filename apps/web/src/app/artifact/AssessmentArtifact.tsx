@@ -77,7 +77,10 @@ export default function AssessmentArtifact(
                 <span className="c">{p.heroDatum.caption}</span>
               </p>
             )}
-            {p.pullQuote && <p className="axx-pull">“{p.pullQuote}”</p>}
+            {/* The pull quote is Audio XX's own voice, not an attributed
+              * quote — so no quotation marks. The italic face is the
+              * typographic marker that this is a focused observation. */}
+            {p.pullQuote && <p className="axx-pull">{p.pullQuote}</p>}
           </aside>
 
           <div className="axx-judgment">
