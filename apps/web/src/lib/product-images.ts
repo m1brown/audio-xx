@@ -544,6 +544,11 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
 
   // Holo Audio — kitsunehifi.com Shopify CDN (US distributor)
   { key: 'holo audio may',          url: 'https://kitsunehifi.com/cdn/shop/files/may1.jpg' },
+  // Some engine outputs name the DAC as "Holo May" (model alone), without
+  // the "Audio" brand-suffix that the more specific key above requires.
+  // This alias matches both forms so the artifact's component-photo strip
+  // can resolve the image either way.
+  { key: 'holo may',                url: 'https://kitsunehifi.com/cdn/shop/files/may1.jpg' },
   { key: 'holo audio spring 3',     url: 'https://kitsunehifi.com/cdn/shop/files/2-scaled.jpg?v=1743712210&width=2560',
     source: { tier: 'authorized_dealer', site: 'kitsunehifi.com', credit: 'Kitsune HiFi', captured: '2026-05-08' } },
   { key: 'holo audio cyan 2',       url: 'https://kitsunehifi.com/cdn/shop/files/cyan-1_1c3a3843-8b1c-44f8-9c5f-df64340e856c.jpg?v=1712877064&width=1232',

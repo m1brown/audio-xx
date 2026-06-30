@@ -84,6 +84,38 @@ body:has(.axx-route) { background: #FCF8EE; }
   color: var(--ink-muted); margin: 1.1rem 0 0;
 }
 
+/* ── Editorial component photo strip ──────────────────────────────────── */
+/* Three components shown rather than only named. Editorial contact-sheet
+ * treatment: small quiet frames against the page cream, with small-caps
+ * captions matching the credit line above. */
+.axx-component-strip {
+  list-style: none; margin: 1.6rem 0 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 1.4rem;
+  max-width: 38rem;
+}
+.axx-component-cell {
+  flex: 1 1 8rem; min-width: 0;
+  display: flex; flex-direction: column; gap: .55rem;
+}
+.axx-component-frame {
+  aspect-ratio: 1 / 1;
+  background: #F2EDE0;
+  border: 1px solid var(--hairline);
+  display: grid; place-items: center;
+  overflow: hidden;
+}
+.axx-component-frame img {
+  width: 100%; height: 100%; object-fit: contain;
+  padding: .65rem;
+  box-sizing: border-box;
+  background: transparent;
+}
+.axx-component-name {
+  font-family: var(--face-grotesque);
+  font-size: .68rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-muted); line-height: 1.35;
+}
+
 /* ── The seam: evidence (left) | judgment (right) ─────────────────────── */
 .axx-case {
   margin-block-start: var(--silence-verdict);

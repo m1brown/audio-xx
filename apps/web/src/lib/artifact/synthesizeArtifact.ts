@@ -38,6 +38,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 import type { ArtifactPayload } from './types';
+import { getProductImage } from '@/lib/product-images';
 
 export interface SynthResult {
   payload: ArtifactPayload;
@@ -401,8 +402,24 @@ export function synthesizeArtifact(result: any): SynthResult {
     : 'If you ever want more, name the quality you’re chasing — but the gain there comes from somewhere here.';
 
   const seed = credit.join('|') + '|' + (bottleneck ? category : 'keep');
+
+  // Component photos — look each named component up in the product-images
+  // map and surface a small editorial strip in the artifact. The lookup
+  // is substring-based against `normalize("brand name")`, so passing the
+  // full chain entry (which already contains brand + name) is enough to
+  // hit the key. Components without a matched URL render as null and are
+  // omitted from the strip (no broken-image placeholders).
+  const componentPhotos = credit.map((nm, i): { src: string; alt: string } | null => {
+    const haystack = full[i] || nm;
+    const url = getProductImage(undefined, haystack);
+    if (!url) return null;
+    return { src: url, alt: nm };
+  });
+  const hasAnyPhoto = componentPhotos.some((p) => p !== null);
+
   const payload: ArtifactPayload = {
     verdict, standfirst, componentCredit: credit,
+    componentPhotos: hasAnyPhoto ? componentPhotos : undefined,
     recognition, caseParagraphs,
     heroDatum, pullQuote,
     recommendation,

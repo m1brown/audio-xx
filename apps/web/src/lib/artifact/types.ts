@@ -9,6 +9,16 @@ export interface ArtifactPayload {
   standfirst?: string;
   /** The system, named — taken from the engine's clean component list. */
   componentCredit: string[];
+  /**
+   * Optional product imagery for each component in the credit line.
+   * When present, the artifact renders an editorial three-up photo strip
+   * below the standfirst — the system, shown rather than only named.
+   * When absent, the credit line is the only naming.
+   * Order matches `componentCredit`. A null entry indicates an unknown
+   * image for that component; the strip skips it (does not render a
+   * placeholder square that would read as broken).
+   */
+  componentPhotos?: Array<{ src: string; alt: string } | null>;
   /** One short paragraph: what this system is. */
   recognition: string;
   /** The case, as shortening beats. */

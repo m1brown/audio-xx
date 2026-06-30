@@ -16,6 +16,20 @@ const flawed: ArtifactPayload = {
   verdict: "The amplifier can't drive these speakers.",
   standfirst: 'A warmth-first system asked to do something its two-watt amplifier cannot.',
   componentCredit: ['Holo May KTE', 'Decware SE84UFO', 'Magnepan LRS+'],
+  componentPhotos: [
+    {
+      src: 'https://kitsunehifi.com/cdn/shop/files/may1.jpg',
+      alt: 'Holo Audio May KTE DAC',
+    },
+    {
+      src: 'https://static.wixstatic.com/media/f1f204_31700c6023e1475b88ac443535dad8c7~mv2.jpg/v1/fill/w_396,h_336,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/SE84UFO2022.jpg',
+      alt: 'Decware SE84UFO single-ended triode amplifier',
+    },
+    {
+      src: 'https://magnepan.com/cdn/shop/products/Speakers-3_1800x1800.jpg?v=1754334504',
+      alt: 'Magnepan LRS+ planar magnetic speakers',
+    },
+  ],
   recognition:
     'You’ve built a warmth-first system — a tone-rich R2R source into a single-ended triode amplifier into planar speakers, chosen for transparency and low-level resolution.',
   caseParagraphs: [

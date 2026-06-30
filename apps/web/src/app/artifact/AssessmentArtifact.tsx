@@ -40,6 +40,29 @@ export default function AssessmentArtifact(
           <h1>{p.verdict}</h1>
           {p.standfirst && <p className="axx-standfirst">{p.standfirst}</p>}
           <p className="axx-credit">{p.componentCredit.join(' · ')}</p>
+          {/* Editorial photo strip — three components shown, not just
+            * named. Renders only when at least one photo is present;
+            * the credit line above is the fallback naming. Each cell
+            * shows the product against a quiet cream and the component
+            * name beneath in small caps. */}
+          {Array.isArray(p.componentPhotos)
+            && p.componentPhotos.some((ph) => ph !== null && ph !== undefined) && (
+              <ul className="axx-component-strip" aria-label="Components">
+                {p.componentPhotos.map((photo, i) => {
+                  if (!photo) return null;
+                  const name = p.componentCredit[i] ?? '';
+                  return (
+                    <li key={i} className="axx-component-cell">
+                      <div className="axx-component-frame">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={photo.src} alt={photo.alt} loading="lazy" />
+                      </div>
+                      {name && <span className="axx-component-name">{name}</span>}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
         </section>
 
         {/* The seam — evidence (left) | judgment (right) */}
