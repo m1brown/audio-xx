@@ -8,8 +8,8 @@ body:has(.axx-route) nav,
 body:has(.axx-route) footer,
 body:has(.axx-route) .audioxx-global-startover { display: none !important; }
 body:has(.axx-route) main.container { max-width: none; margin: 0; padding: 0; }
-body:has(.axx-route) { background: #FAF5EA; }
-.axx-route { background: #FAF5EA; min-height: 100vh; }
+body:has(.axx-route) { background: #FCF8EE; }
+.axx-route { background: #FCF8EE; min-height: 100vh; }
 
 /* ── Tokens (static) ──────────────────────────────────────────────────── */
 .axx-artifact {
@@ -19,7 +19,7 @@ body:has(.axx-route) { background: #FAF5EA; }
   --artifact-w: calc(var(--rail-w) + var(--seam-w) + var(--measure));
   --page-pad: clamp(1.25rem, 5vw, 4rem);
 
-  --ground: #FAF5EA;
+  --ground: #FCF8EE;
   --ink: #1B1A18;
   --ink-muted: #6B6862;
   --accent: #A8231B;

@@ -66,7 +66,7 @@ describe('editorial-tokens: EDITORIAL palette (canonical artifact palette)', () 
     // under the 2026-06-30 Design Doctrine — every consumer must
     // reference these constants by name, never inline hex.
     expect(EDITORIAL).toEqual({
-      paper: '#FAF5EA',
+      paper: '#FCF8EE',
       ink: '#1B1A18',
       inkMuted: '#6B6862',
       accent: '#A8231B',
@@ -85,12 +85,14 @@ describe('editorial-tokens: EDITORIAL palette (canonical artifact palette)', () 
     // publication surface against browser chrome, not as an
     // application background.
     //
-    // 2026-06-30: deepened from #FBFAF6 → #F5EFE2 (too saturated)
-    // → #FAF5EA per Mike's iteration. Lockstep with --ground in
-    // artifact.css and body bg in globals.css.
+    // 2026-06-30 → 2026-07-01: paper iterated four times — #FBFAF6
+    // (too white) → #F5EFE2 (too saturated) → #FAF5EA (still slightly
+    // dark) → #FCF8EE (lighter cream, close to traditional editorial
+    // paper). Lockstep with --ground in artifact.css and body bg in
+    // globals.css.
     expect(EDITORIAL.paper).not.toBe('#FFFFFF');
     expect(EDITORIAL.paper).not.toBe(COLOR.cardBg);
-    expect(EDITORIAL.paper).toBe('#FAF5EA');
+    expect(EDITORIAL.paper).toBe('#FCF8EE');
   });
 
   it('uses near-black ink (not pure black)', () => {

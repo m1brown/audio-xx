@@ -51,7 +51,7 @@ export default function StartOverBar() {
           fontSize: '0.85rem',
           fontWeight: 500,
           color: '#888',
-          background: '#FAF5EA',
+          background: '#FCF8EE',
           border: '1px solid #e0ddd8',
           borderRadius: '7px',
           cursor: 'pointer',
@@ -63,7 +63,7 @@ export default function StartOverBar() {
           e.currentTarget.style.color = '#666';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = '#FAF5EA';
+          e.currentTarget.style.background = '#FCF8EE';
           e.currentTarget.style.color = '#888';
         }}
       >

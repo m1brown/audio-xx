@@ -7,7 +7,7 @@ export default function Footer() {
         borderTop: '1px solid #eae8e4',
         padding: '1.25rem 1.5rem',
         marginTop: '3rem',
-        background: '#FAF5EA',
+        background: '#FCF8EE',
       }}
     >
       <div
