@@ -3,7 +3,6 @@
 import { useReducer, useEffect, useRef, useCallback, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import TasteRadar from '@/components/TasteRadar';
 import AdvisoryMessage from '@/components/advisory/AdvisoryMessage';
 import type { PreferenceSelection } from '@/components/advisory/AdvisoryMessage';
 import {
@@ -687,6 +686,51 @@ export default function Home() {
   useEffect(() => {
     initSessionTelemetry();
   }, []);
+
+  /**
+   * Editorial cover autofill (Design Doctrine v1, 2026-06-30).
+   *
+   * When the visitor arrives on the homepage with an active saved
+   * system, the composer pre-populates with the labelled assessment
+   * template — the "missing manuscript" framing made literal: the
+   * cover IS an assessment-in-progress with their gear already
+   * partially typed in, ready to send. Without an active system the
+   * composer stays empty; the editorial headline + standfirst above
+   * carry the cover.
+   *
+   * Invariants:
+   *  - Runs only when !hasMessages (homepage, not conversation).
+   *  - Runs only when currentInput is empty (never overwrite typing).
+   *  - Runs only when at least one mappable component exists.
+   *  - Idempotent: the empty-currentInput guard ensures a single
+   *    autofill per visit; subsequent renders no-op.
+   */
+  useEffect(() => {
+    if (messages.length > 0) return;
+    if (state.currentInput.length > 0) return;
+    const ref = audioState.activeSystemRef;
+    let components: Array<{
+      brand?: string | null;
+      name?: string | null;
+      category?: ProductCategory | null;
+      role?: SystemComponentRole;
+    }> = [];
+    if (!ref) {
+      if (audioState.savedSystems.length === 1) {
+        components = audioState.savedSystems[0].components;
+      }
+    } else if (ref.kind === 'draft' && audioState.draftSystem) {
+      components = audioState.draftSystem.components;
+    } else if (ref.kind === 'saved') {
+      const saved = audioState.savedSystems.find((s) => s.id === ref.id);
+      if (saved) components = saved.components;
+    }
+    if (components.length === 0) return;
+    const { text } = populateAssessTemplate(components);
+    dispatch({ type: 'SET_INPUT', value: text });
+    // Intentional: re-run only when active-system identity changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioState.activeSystemRef, audioState.savedSystems, audioState.draftSystem, messages.length]);
 
   const handleSubmit = useCallback(async (overrideText?: string, options?: { source?: 'follow-up' | 'fresh' }) => {
     const inputText = overrideText ?? currentInput;
@@ -4585,53 +4629,63 @@ export default function Home() {
     <div
       className="audioxx-workspace-grid"
       style={{
-        maxWidth: LAYOUT.pageMax,
+        maxWidth: hasMessages ? LAYOUT.pageMax : 880,
         margin: '0 auto',
-        // 2026-05-20 hero rhythm pass: top padding bumped 3.25rem → 4rem
-        // so the wordmark/h1 stanza sits a touch lower in the viewport
-        // and the page reads less top-heavy at 1080p+ heights. Bottom
-        // padding unchanged.
-        padding: '4rem 2.5rem 3rem',
+        // 2026-06-30 editorial recomposition: on the homepage (!hasMessages)
+        // the page is a single editorial column — no workspace rails, no
+        // utility sidebar, no chrome competing with the cover composition.
+        // The rails return during conversation so the workspace surfaces
+        // (Conversation/Systems/Listening profile on the left, SYSTEM
+        // metadata on the right) are present once the visitor is reading
+        // an article-in-progress. Generous top padding on the homepage
+        // so the editorial cover breathes; tighter during conversation.
+        padding: hasMessages ? '4rem 2.5rem 3rem' : '6rem 2.5rem 4rem',
         color: EDITORIAL.ink,
         lineHeight: 1.6,
         display: 'grid',
-        gridTemplateColumns: '184px minmax(0, 820px) 296px',
+        gridTemplateColumns: hasMessages
+          ? '184px minmax(0, 820px) 296px'
+          : 'minmax(0, 1fr)',
         gap: '1.5rem',
         alignItems: 'start',
       }}
     >
-      <LeftRail onReset={handleReset} />
+      {hasMessages && <LeftRail onReset={handleReset} />}
 
       <div className="audioxx-workspace-main" style={{ minWidth: 0 }}>
-      {/* Header — always visible */}
-      <div
+      {/*
+        2026-06-30 editorial recomposition:
+        The hero accent rule, the center "Audio XX" wordmark h1, and the
+        SystemBadge area below are CONVERSATION chrome — they make sense
+        once the visitor is reading their assessment-in-progress, but on
+        the homepage cover they compete with the editorial lede for
+        attention. They render only when hasMessages now. The Nav's
+        wordmark carries identity on the homepage; the active-system
+        chain is absorbed into the editorial credit line below the
+        headline pair.
+      */}
+      {hasMessages && <div
         className="audioxx-hero-accent"
         onClick={() => handleReset()}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleReset(); }}
         style={{
-          // Pass-8: tiny top accent rule picks up the restrained brand
-          // red (#C83A3A), matching the XX span just below it. Replaces
-          // the prior slate-blue (COLOR.accent #1F3A5F).
-          // 2026-05-20 hero rhythm pass: marginBottom 1.75rem → 2rem
-          // for slightly more headroom above the wordmark.
           borderTop: '2.5px solid #C83A3A',
           width: 40,
           marginBottom: '2rem',
           cursor: 'pointer',
         }}
-      />
+      />}
 
-      {/* Brand wordmark — the page's single h1 (Phase 2, 2026-06-14).
-       *  The prior value-prop tagline h1 below was removed; the wordmark
-       *  is promoted back from div to h1 so the page retains exactly one
-       *  heading for SEO / accessibility. Reset behaviour preserved with
-       *  role="button" semantics. The two-door block below now carries
-       *  the page's positioning.
-       *  2026-05-20 mobile tightening pass: class hides the wordmark
-       *  below 480px — the top nav already carries the brand. */}
-      <h1
+      {/*
+        2026-06-30 editorial recomposition: this center wordmark is
+        hasMessages-only. The homepage cover gets its identity from
+        the Nav's masthead wordmark above; rendering AUDIO XX twice
+        on the cover would be chrome-redundant. During conversation
+        the wordmark stays as a reset affordance.
+      */}
+      {hasMessages && <h1
         className="audioxx-hero-wordmark"
         onClick={() => handleReset()}
         role="button"
@@ -4652,16 +4706,15 @@ export default function Home() {
          *  used by the radar/profile palette so it reads as identity
          *  rather than competing with the analytical color language. */}
         Audio <span style={{ color: '#C83A3A' }}>XX</span>
-      </h1>
+      </h1>}
 
-      {/* System badge + panel — marginBottom tightened (0.5rem → 0.4rem)
-       *  in the 2026-05-08 second-pass hero refresh.
-       *  2026-05-20 hero rhythm pass: bumped 0.4rem → 0.7rem so the
-       *  chips below the badge sit as their own stanza, not crowded.
-       *  2026-05-20 mobile tightening pass: class added so the badge
-       *  stanza compresses on mobile (0.3rem) without affecting the
-       *  desktop rhythm. */}
-      <div className="audioxx-hero-system-badge" style={{ position: 'relative', marginBottom: '0.7rem' }}>
+      {/*
+        SystemBadge area is hasMessages-only. On the homepage cover the
+        active system is named in the editorial credit line below the
+        headline; rendering a SystemBadge here would duplicate the same
+        information in two different visual idioms.
+      */}
+      {hasMessages && <div className="audioxx-hero-system-badge" style={{ position: 'relative', marginBottom: '0.7rem' }}>
         <SystemBadge onClick={() => setSystemPanelOpen((v) => !v)} />
         {/* Stage 7.1: the fresh-visitor "Add your system" CTA was moved
          *  out of this inline-link position and re-rendered as a small
@@ -4688,19 +4741,10 @@ export default function Home() {
             onSwitch={(name) => showToast(`Switched to: ${name}`)}
           />
         )}
-      </div>
+      </div>}
 
-      {/* Helper text when no system is active and user has systems available */}
-      {!hasMessages && !audioState.activeSystemRef && audioState.savedSystems.length > 1 && (
-        <p style={{
-          fontSize: '0.78rem',
-          color: COLOR.textMuted,
-          margin: '0 0 0.5rem 0',
-          fontStyle: 'italic',
-        }}>
-          Select a system to get tailored recommendations
-        </p>
-      )}
+      {/* Helper text was homepage-only; replaced by the editorial active-
+       *  system credit line in the new !hasMessages composition below. */}
 
       {/* Listener profile badge — visible during conversation when profile has data */}
       {hasMessages && profileSnapshot && (
@@ -4773,251 +4817,188 @@ export default function Home() {
         />
       )}
 
-      {/* Intro — only before conversation starts.
-       * Pass 11 (editorial refresh): hero now reads as a single
-       * editorial block — large headline + supporting paragraph —
-       * styled with the editorial palette (white/charcoal, sparse
-       * orange accent). Stays inside the EDITORIAL.narrow column for
-       * readability. Path-buttons replaced with curated starter
-       * prompts further down. */}
+      {/*
+        ┌────────────────────────────────────────────────────────────┐
+        │  2026-06-30 EDITORIAL COVER — Design Doctrine v1            │
+        │                                                              │
+        │  The homepage is the cover page of an assessment that has    │
+        │  not yet been written. The visitor is completing the         │
+        │  missing manuscript.                                         │
+        │                                                              │
+        │  Composition (single column, editorial proportions):         │
+        │    ▬ SYSTEM ASSESSMENT  (rubric, small caps + accent rule)   │
+        │    Notes on Your System  (headline, Fraunces display)        │
+        │    standfirst            (Source Serif italic)               │
+        │    ACTIVE SYSTEM credit  (Inter small caps, when applicable) │
+        │    ▬ BEGIN HERE          (rubric, above composer)             │
+        │    composer              (editorial flow, no card)            │
+        │    pull-quote            (Source Serif italic, after Send)   │
+        │                                                              │
+        │  Removed from prior homepage (the SaaS shell):                │
+        │   - center "Audio XX" wordmark   redundant with Nav masthead  │
+        │   - SystemBadge area              absorbed into credit line   │
+        │   - Two-door block                cover promotes one story    │
+        │   - taste-profile widget          chrome competing with cover │
+        │   - left workspace nav            hasMessages-only            │
+        │   - right LISTENER/SYSTEM rail    hasMessages-only            │
+        └────────────────────────────────────────────────────────────┘
+      */}
       {!hasMessages && (
         <>
-          {/* Hero — fourth pass (2026-05-08): headline color softened
-           *  from the second-pass dark charcoal #2A2A2A to charcoal
-           *  (EDITORIAL.inkMuted, #3A3A3A). Same token used for body
-           *  prose elsewhere — keeps the hero on the document's calmest
-           *  tonal level instead of leaning toward near-black. Other
-           *  visual-weight parameters from prior passes preserved
-           *  (scale ~17% smaller than original lock, weight 500, measure
-           *  36rem, no supporting caption). The headline's internal
-           *  marginBottom stays at 0; the container's marginBottom
-           *  carries the gap to the next block. */}
-          {/* ── Two-door entry (Phase 2 presentation redesign) ──
-           *
-           * The landing surface offers two equal-weight primary paths
-           * instead of leading with the bare query box:
-           *   Door A "Assess my system"  → focuses the entry textarea
-           *                                 below (the existing advisory
-           *                                 surface; no routing change).
-           *   Door B "Learn how audio works" → the editorial front door
-           *                                 (/tech/musical-communication-
-           *                                 school), which links onward
-           *                                 to every Technology Page and
-           *                                 the school's brand cluster.
-           *
-           * This raises editorial authority to first contact and gives
-           * the larger pool of curious-but-not-query-ready visitors a
-           * door that isn't an empty text field. Landing-only; the
-           * conversation view is untouched. */}
+          {/* ── ▬ SYSTEM ASSESSMENT (rubric) ── */}
           <div
-            className="audioxx-two-door"
             style={{
               display: 'flex',
-              flexWrap: 'wrap',
+              alignItems: 'center',
               gap: '0.85rem',
+              fontFamily: 'var(--face-grotesque)',
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase' as const,
+              color: EDITORIAL.inkMuted,
               marginBottom: '1.5rem',
-              maxWidth: EDITORIAL.narrow,
             }}
           >
-            <button
-              type="button"
-              onClick={() => {
-                // Primary CTA: pre-populate the composer with a structured
-                // template. If the user has a saved active system, the
-                // template is autofilled with its actual components mapped
-                // to the four labelled slots — clicking the CTA becomes a
-                // one-step "assess this system again." Without an active
-                // system, the empty scaffold shows what information Audio
-                // XX expects.
-                //
-                // Invariant: never overwrite user-entered text. If the
-                // composer already contains content, the click is a focus
-                // operation only — cursor moves to the end of existing text.
-                const el = textareaRef.current;
-                const hasUserText = state.currentInput.trim().length > 0;
-                // Resolve active components — mirrors the right-rail
-                // resolution at the activeSystemComponents block. Active =
-                // explicit ref, single-saved-system fallback, or draft.
-                let activeComponents: Array<{
-                  brand?: string | null;
-                  name?: string | null;
-                  category?: ProductCategory | null;
-                  role?: SystemComponentRole;
-                }> = [];
-                {
-                  const ref = audioState.activeSystemRef;
-                  if (!ref) {
-                    if (audioState.savedSystems.length === 1) {
-                      activeComponents = audioState.savedSystems[0].components;
-                    }
-                  } else if (ref.kind === 'draft' && audioState.draftSystem) {
-                    activeComponents = audioState.draftSystem.components;
-                  } else if (ref.kind === 'saved') {
-                    const saved = audioState.savedSystems.find((s) => s.id === ref.id);
-                    if (saved) activeComponents = saved.components;
-                  }
-                }
-                const autofill = activeComponents.length > 0
-                  ? populateAssessTemplate(activeComponents)
-                  : null;
-                const fillText = autofill ? autofill.text : ASSESS_TEMPLATE;
-                const fillCursor = autofill ? autofill.cursor : ASSESS_TEMPLATE_CURSOR;
-                if (!hasUserText) {
-                  dispatch({ type: 'SET_INPUT', value: fillText });
-                }
-                if (el) {
-                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  // Wait one tick so React commits the new value (when set)
-                  // before focusing, sizing the textarea to fit content, and
-                  // placing the cursor. The textarea has resize:vertical so
-                  // it does NOT auto-grow on content — we set scrollHeight
-                  // explicitly so the full template is visible without an
-                  // internal scrollbar.
-                  setTimeout(() => {
-                    el.focus({ preventScroll: true });
-                    if (!hasUserText) {
-                      // Size the textarea to fit the template without an
-                      // internal scrollbar. boxSizing is border-box, so the
-                      // height we set is total outer height — add the two
-                      // border thicknesses on top of the content scrollHeight.
-                      el.style.height = 'auto';
-                      const cs = window.getComputedStyle(el);
-                      const borderY =
-                        (parseFloat(cs.borderTopWidth) || 0) +
-                        (parseFloat(cs.borderBottomWidth) || 0);
-                      el.style.height = `${el.scrollHeight + borderY}px`;
-                      el.setSelectionRange(fillCursor, fillCursor);
-                    } else {
-                      // Preserve existing text; place cursor at its end.
-                      const len = el.value.length;
-                      el.setSelectionRange(len, len);
-                    }
-                  }, 0);
-                }
-              }}
+            <span
+              aria-hidden="true"
               style={{
-                flex: '1 1 240px',
-                textAlign: 'left',
-                padding: '1rem 1.15rem',
-                background: EDITORIAL.ink,
-                color: '#FFFFFF',
-                border: `1px solid ${EDITORIAL.ink}`,
-                borderRadius: 6,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                transition: 'background 0.15s ease',
+                display: 'inline-block',
+                width: '1.5rem',
+                height: '2px',
+                background: EDITORIAL.accent,
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = EDITORIAL.buttonHover; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = EDITORIAL.ink; }}
-            >
-              <span style={{ display: 'block', fontSize: '1.02rem', fontWeight: 600, letterSpacing: '-0.01em' }}>
-                Assess my system <span aria-hidden="true">→</span>
-              </span>
-              <span style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.86rem', lineHeight: 1.45, color: 'rgba(255,255,255,0.78)' }}>
-                Get a system-level read on strengths, trade-offs, and whether a change is worth making.
-              </span>
-            </button>
-
-            <Link
-              href="/tech/musical-communication-school"
-              style={{
-                flex: '1 1 240px',
-                textAlign: 'left',
-                padding: '1rem 1.15rem',
-                background: '#FFFFFF',
-                color: EDITORIAL.ink,
-                border: `1px solid ${EDITORIAL.ink}`,
-                borderRadius: 6,
-                textDecoration: 'none',
-                fontFamily: 'inherit',
-                transition: 'background 0.15s ease',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F3F1'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#FFFFFF'; }}
-            >
-              <span style={{ display: 'block', fontSize: '1.02rem', fontWeight: 600, letterSpacing: '-0.01em' }}>
-                Learn how audio works <span aria-hidden="true">→</span>
-              </span>
-              <span style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.86rem', lineHeight: 1.45, color: EDITORIAL.inkMuted }}>
-                Explore the ideas, schools of thought, and companies behind great systems.
-              </span>
-            </Link>
+            />
+            System Assessment
           </div>
 
-          {/* Secondary entry — see what an Audio XX assessment actually
-            * looks like, without forcing the visitor to type their own
-            * system first. Quiet text link, magazine-style — the standalone
-            * /artifact route is the editorial demonstration of the product
-            * at full strength. */}
-          <div
+          {/* ── Headline + standfirst (the cover) ── */}
+          <h1
             style={{
-              marginBottom: '1.5rem',
-              maxWidth: EDITORIAL.narrow,
-              paddingTop: '0.1rem',
+              fontFamily: 'var(--face-display)',
+              fontWeight: 600,
+              fontSize: 'clamp(2.5rem, 6vw, 4rem)',
+              lineHeight: 1.04,
+              letterSpacing: '-0.018em',
+              margin: '0 0 1.25rem 0',
+              color: EDITORIAL.ink,
+              maxWidth: '18ch',
             }}
           >
-            <Link
-              href="/artifact?case=flawed"
-              style={{
-                fontSize: '0.82rem',
-                color: EDITORIAL.faint,
-                textDecoration: 'none',
-                borderBottom: `1px solid ${EDITORIAL.hairline}`,
-                paddingBottom: '1px',
-                transition: 'color 0.15s ease, border-color 0.15s ease',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = EDITORIAL.ink; e.currentTarget.style.borderBottomColor = EDITORIAL.faint; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = EDITORIAL.faint; e.currentTarget.style.borderBottomColor = EDITORIAL.hairline; }}
-            >
-              See an example assessment →
-            </Link>
-          </div>
+            Notes on Your System
+          </h1>
+          <p
+            style={{
+              fontFamily: 'var(--face-text)',
+              fontStyle: 'italic',
+              fontSize: '1.25rem',
+              lineHeight: 1.45,
+              color: EDITORIAL.ink,
+              margin: 0,
+              maxWidth: '38ch',
+            }}
+          >
+            An assessment of how your components work together, where the
+            bottlenecks are, and whether anything should change.
+          </p>
 
-          {/* Compact taste widget — authenticated users with profile data */}
-          {tasteProfile && tasteProfile.confidence > 0 && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.85rem',
-                marginBottom: '1.75rem',
-                padding: '0.7rem 0.95rem',
-                border: `1px solid ${COLOR.border}`,
-                borderRadius: 8,
-                background: '#fff',
-                maxWidth: 360,
-              }}
-            >
-              <TasteRadar profile={tasteProfile} compact size={80} />
-              <div style={{ fontSize: '0.88rem', lineHeight: 1.55, color: COLOR.textSecondary }}>
-                <div style={{ fontWeight: 600, color: COLOR.textPrimary, marginBottom: '0.2rem', fontSize: '0.82rem', letterSpacing: '0.03em', textTransform: 'uppercase' as const }}>
-                  Your taste
+          {/* ── Active system credit line ── */}
+          {(() => {
+            const ref = audioState.activeSystemRef;
+            let name: string | undefined;
+            let components: Array<{ brand?: string | null; name?: string | null }> = [];
+            if (!ref) {
+              if (audioState.savedSystems.length === 1) {
+                name = audioState.savedSystems[0].name;
+                components = audioState.savedSystems[0].components;
+              }
+            } else if (ref.kind === 'draft' && audioState.draftSystem) {
+              name = audioState.draftSystem.name;
+              components = audioState.draftSystem.components;
+            } else if (ref.kind === 'saved') {
+              const saved = audioState.savedSystems.find((s) => s.id === ref.id);
+              if (saved) {
+                name = saved.name;
+                components = saved.components;
+              }
+            }
+            if (!name || components.length === 0) return null;
+            const labels = components.map((c) => {
+              const b = (c.brand || '').trim();
+              const n = (c.name || '').trim();
+              return b && !n.toLowerCase().startsWith(b.toLowerCase())
+                ? `${b} ${n}` : n || b || 'Unknown';
+            });
+            return (
+              <div
+                style={{
+                  fontFamily: 'var(--face-grotesque)',
+                  fontSize: '0.75rem',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase' as const,
+                  color: EDITORIAL.inkMuted,
+                  marginTop: '3rem',
+                  lineHeight: 1.7,
+                }}
+              >
+                <div style={{ color: EDITORIAL.ink, fontWeight: 600 }}>
+                  Active system · {name}
                 </div>
-                <div>
-                  {topTraits(tasteProfile, 3).map((t) => t.label).join(' · ')}
+                <div style={{ textTransform: 'none', letterSpacing: 0, fontFamily: 'var(--face-text)', fontSize: '0.95rem', color: EDITORIAL.inkMuted, marginTop: '0.35rem' }}>
+                  {labels.join(' · ')}
                 </div>
                 <Link
-                  href="/profile"
+                  href="/systems"
                   style={{
-                    fontSize: '0.82rem',
-                    color: COLOR.textSecondary,
+                    display: 'inline-block',
+                    marginTop: '0.5rem',
+                    fontSize: '0.7rem',
+                    letterSpacing: '0.08em',
+                    color: EDITORIAL.inkMuted,
                     textDecoration: 'none',
+                    borderBottom: `1px solid ${EDITORIAL.hairline}`,
+                    paddingBottom: '1px',
                   }}
                 >
-                  Edit →
+                  change
                 </Link>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
-          {/* 2026-06-29 minimal-homepage pass: the "Or start from an
-           * example" caption and the curated starter-chip rail were
-           * removed in favour of letting the two doors above carry the
-           * landing surface alone. The PINNED_ASSESS_PROMPT,
-           * COMPARE_PROMPTS, and VARIETY_PROMPTS constants at the top
-           * of this file are now unreferenced from the homepage; they
-           * are intentionally left in place for one commit so this
-           * change reverts cleanly. Remove in a follow-up cleanup pass. */}
+          {/* ── ▬ BEGIN HERE (rubric, above composer) ── */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.85rem',
+              fontFamily: 'var(--face-grotesque)',
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase' as const,
+              color: EDITORIAL.inkMuted,
+              marginTop: '4rem',
+              marginBottom: '1rem',
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                display: 'inline-block',
+                width: '1.5rem',
+                height: '2px',
+                background: EDITORIAL.accent,
+              }}
+            />
+            Begin Here
+          </div>
+
+          {/* Composer follows below (rendered once for both states; styling
+           *  conditions on hasMessages so the editorial flow on the homepage
+           *  has no card border and the conversation surface keeps its
+           *  bordered composer chrome). */}
+
         </>
       )}
 
@@ -5162,26 +5143,33 @@ export default function Home() {
               ? 'Reply here…'
               : hasMessages
                 ? 'Continue describing your system, what you value, or what you\'re considering…'
-                : 'Considering new or used hi-fi gear? Ask here.'
+                : 'Speakers, amplifier, source — add the components you own and Audio XX will write the assessment.'
           }
           className={hasMessages ? '' : 'audioxx-editorial-input'}
           style={{
             width: '100%',
-            minHeight: hasMessages ? 72 : 114,
-            padding: hasMessages ? '1rem 1.1rem' : '1rem 1.15rem',
-            border: hasMessages
+            // Editorial composer (!hasMessages): no card, paper background,
+            // a single bottom hairline as the only frame — the textarea
+            // reads as a manuscript page, not a form field. Source Serif 4
+            // for what the visitor types matches the article they're
+            // beginning. Generous min-height so the labelled autofill
+            // (when an active system exists) breathes without scrolling.
+            minHeight: hasMessages ? 72 : 200,
+            padding: hasMessages ? '1rem 1.1rem' : '1.25rem 0',
+            border: hasMessages ? `1.5px solid ${COLOR.border}` : 'none',
+            borderBottom: hasMessages
               ? `1.5px solid ${COLOR.border}`
               : `1px solid ${EDITORIAL.hairline}`,
-            borderRadius: hasMessages ? 10 : 6,
+            borderRadius: hasMessages ? 10 : 0,
             outline: 'none',
-            fontSize: hasMessages ? '0.98rem' : '1.02rem',
-            lineHeight: 1.55,
+            fontSize: hasMessages ? '0.98rem' : '1.0625rem',
+            lineHeight: hasMessages ? 1.55 : 1.65,
             resize: 'vertical',
-            background: hasMessages ? COLOR.inputBg : EDITORIAL.paper,
+            background: hasMessages ? COLOR.inputBg : 'transparent',
             color: hasMessages ? COLOR.textPrimary : EDITORIAL.ink,
             boxSizing: 'border-box',
             boxShadow: 'none',
-            fontFamily: 'inherit',
+            fontFamily: hasMessages ? 'inherit' : 'var(--face-text)',
             transition: 'border-color 0.2s ease',
           }}
           onFocus={(e) => {
@@ -5190,7 +5178,7 @@ export default function Home() {
               e.currentTarget.style.boxShadow = `0 0 0 3px rgba(31,58,95,0.10)`;
               e.currentTarget.style.background = '#fff';
             } else {
-              e.currentTarget.style.borderColor = EDITORIAL.ink;
+              e.currentTarget.style.borderBottomColor = EDITORIAL.ink;
             }
           }}
           onBlur={(e) => {
@@ -5199,7 +5187,7 @@ export default function Home() {
               e.currentTarget.style.boxShadow = 'none';
               e.currentTarget.style.background = COLOR.inputBg;
             } else {
-              e.currentTarget.style.borderColor = EDITORIAL.hairline;
+              e.currentTarget.style.borderBottomColor = EDITORIAL.hairline;
             }
           }}
         />
@@ -5286,43 +5274,50 @@ export default function Home() {
               {'📎'}
             </span>
           </button>
-        </div>
 
-        {/* Starter chips removed in Pass 6 — they duplicated the three
-         * hero action buttons (Assess / Improve / Compare) that sit just
-         * above the input box. A "Something sounds off" entry point is
-         * still reachable via free text and via the Assess-my-system
-         * flow, which asks for symptoms when routing. */}
-
-        {/* Contact line — subtle, below input */}
-        {!hasMessages && (
-          <p style={{
-            margin: '1.25rem 0 0 0',
-            fontSize: '0.78rem',
-            color: COLOR.textSecondary,
-            letterSpacing: '0.01em',
-            opacity: 0.7,
-          }}>
-            Questions or feedback?{' '}
-            <a
-              href="mailto:hello@audio-xx.com"
+          {/* Editorial secondary entry — see an example assessment.
+           *  Quiet text link sitting beside Send so the visitor with
+           *  no system yet has a path to the publication's voice
+           *  without having to type. Renders on the homepage only. */}
+          {!hasMessages && (
+            <Link
+              href="/artifact?case=flawed"
               style={{
-                color: COLOR.textSecondary,
+                marginLeft: 'auto',
+                fontFamily: 'var(--face-grotesque)',
+                fontSize: '0.8rem',
+                letterSpacing: '0.02em',
+                color: EDITORIAL.inkMuted,
                 textDecoration: 'none',
-                borderBottom: '1px solid transparent',
+                borderBottom: `1px solid ${EDITORIAL.hairline}`,
+                paddingBottom: '1px',
                 transition: 'color 0.15s ease, border-color 0.15s ease',
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = COLOR.accent;
-                e.currentTarget.style.borderBottomColor = COLOR.accent;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = COLOR.textSecondary;
-                e.currentTarget.style.borderBottomColor = 'transparent';
-              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = EDITORIAL.ink; e.currentTarget.style.borderBottomColor = EDITORIAL.ink; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = EDITORIAL.inkMuted; e.currentTarget.style.borderBottomColor = EDITORIAL.hairline; }}
             >
-              hello@audio-xx.com
-            </a>
+              See an example assessment →
+            </Link>
+          )}
+        </div>
+
+        {/* Editorial pull quote — the publication's voice as a closing
+         *  beat on the cover. Promoted from the prior right-rail caption
+         *  into the body flow per Design Doctrine v1. Source Serif 4
+         *  italic mirrors the artifact's pull-quote treatment. */}
+        {!hasMessages && (
+          <p
+            style={{
+              margin: '4.5rem 0 0 0',
+              fontFamily: 'var(--face-text)',
+              fontStyle: 'italic',
+              fontSize: '1.05rem',
+              lineHeight: 1.45,
+              color: EDITORIAL.ink,
+              maxWidth: '28ch',
+            }}
+          >
+            “Doing nothing is also a valid outcome.”
           </p>
         )}
 
@@ -5337,7 +5332,38 @@ export default function Home() {
         * Add `flexWrap: 'wrap'` to the row + `whiteSpace: 'nowrap'` to each
         * child so the row breaks between items at narrow widths instead of
         * splitting individual phrases mid-word ("Start\nover", "Report\nissue"). */}
-      <div style={{ marginBottom: '1.5rem', display: 'flex', flexWrap: 'wrap', gap: '1.25rem', alignItems: 'center' }}>
+      {/* Footer / colophon. On the homepage (!hasMessages) this is a
+       *  quiet hairline-separated colophon — magazine staff-box
+       *  treatment — sitting deep below the pull quote. During
+       *  conversation it keeps its current row-of-utility-links style. */}
+      <div style={{
+        marginTop: hasMessages ? 0 : '4rem',
+        paddingTop: hasMessages ? 0 : '1.5rem',
+        marginBottom: '1.5rem',
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '1.5rem',
+        alignItems: 'center',
+        borderTop: hasMessages ? 'none' : `1px solid ${EDITORIAL.hairline}`,
+      }}>
+        {!hasMessages && (
+          <a
+            href="mailto:hello@audio-xx.com"
+            style={{
+              fontFamily: 'var(--face-grotesque)',
+              fontSize: '0.75rem',
+              letterSpacing: '0.06em',
+              color: EDITORIAL.inkMuted,
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+              transition: 'color 0.15s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = EDITORIAL.ink; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = EDITORIAL.inkMuted; }}
+          >
+            hello@audio-xx.com
+          </a>
+        )}
         <button
           type="button"
           onClick={() => handleReset()}
@@ -5347,16 +5373,16 @@ export default function Home() {
             padding: '2px 0',
             margin: 0,
             cursor: 'pointer',
-            color: COLOR.textSecondary,
-            fontSize: '0.85rem',
-            fontFamily: 'inherit',
+            color: hasMessages ? COLOR.textSecondary : EDITORIAL.inkMuted,
+            fontSize: hasMessages ? '0.85rem' : '0.75rem',
+            fontFamily: hasMessages ? 'inherit' : 'var(--face-grotesque)',
             textDecoration: 'none',
-            letterSpacing: '0.01em',
+            letterSpacing: hasMessages ? '0.01em' : '0.06em',
             transition: 'color 0.15s ease',
             whiteSpace: 'nowrap',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = COLOR.accent; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = COLOR.textSecondary; }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = hasMessages ? COLOR.accent : EDITORIAL.ink; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = hasMessages ? COLOR.textSecondary : EDITORIAL.inkMuted; }}
         >
           Start over
         </button>
@@ -5400,7 +5426,7 @@ export default function Home() {
 
       </div> {/* /audioxx-workspace-main */}
 
-      <RightRail
+      {hasMessages && <RightRail
         topTraitLabels={
           tasteProfile && tasteProfile.confidence > 0
             ? topTraits(tasteProfile, 3).map((t) => t.label)
@@ -5487,7 +5513,7 @@ export default function Home() {
             t.length > 60 ? t.slice(0, 57).trim() + '…' : t,
           );
         })()}
-      />
+      />}
 
     </div>
 
