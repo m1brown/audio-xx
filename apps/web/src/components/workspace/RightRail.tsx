@@ -203,20 +203,12 @@ export default function RightRail({
         )}
       </div>
 
-      {/* Restraint footer — quietly persistent, addressing the
-       *  philosophy-visibility gap from the prior recommendation
-       *  audit. Same softer scale as the section labels. */}
-      <div style={{ borderTop: `1px solid ${RAIL.rule}`, width: '100%' }} />
-      <p
-        style={{
-          margin: 0,
-          fontSize: '0.74rem',
-          color: RAIL.faint,
-          lineHeight: 1.55,
-        }}
-      >
-        Doing nothing is also a valid outcome.
-      </p>
+      {/*
+        Right-rail "Doing nothing is also a valid outcome." pull quote
+        removed 2026-06-30 per Mike — paired with the body-copy removal
+        from the homepage cover so the line is no longer visible
+        anywhere in the product.
+      */}
     </aside>
   );
 }

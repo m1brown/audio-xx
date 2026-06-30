@@ -54,7 +54,7 @@ export default function GlobalError({
       <body
         style={{
           fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
-          background: '#F5EFE2',
+          background: '#FAF5EA',
           color: '#2A2A2A',
           margin: 0,
           padding: '4rem 1.5rem',
