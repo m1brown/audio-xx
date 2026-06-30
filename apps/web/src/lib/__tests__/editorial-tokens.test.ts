@@ -19,7 +19,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { COLOR, sectionHeadingStyle, proseStyle } from '../editorial-tokens';
+import { COLOR, EDITORIAL, sectionHeadingStyle, proseStyle } from '../editorial-tokens';
 
 describe('editorial-tokens: COLOR palette', () => {
   it('locks all 7 color tokens to exact values', () => {
@@ -54,6 +54,46 @@ describe('editorial-tokens: COLOR palette', () => {
     // The warm-editorial cards must lift off the warm page bg.
     expect(COLOR.cardBg).not.toBe('#FFFFFF');
     expect(COLOR.cardBg).toBe('#FFFEFA');
+  });
+});
+
+describe('editorial-tokens: EDITORIAL palette (canonical artifact palette)', () => {
+  it('locks the four canonical artifact tokens to exact values', () => {
+    // Source of truth: apps/web/src/app/artifact/artifact.css#L22-L25.
+    // These four values are the entire editorial palette under the
+    // 2026-06-30 Design Doctrine — every surface migrating onto this
+    // palette must reference these constants by name, never inline hex.
+    expect(EDITORIAL).toEqual({
+      paper: '#FBFAF6',
+      ink: '#1B1A18',
+      inkMuted: '#6B6862',
+      accent: '#A8231B',
+    });
+  });
+
+  it('uses warm paper (not pure white, not cream)', () => {
+    // Pure #FFFFFF reads as a SaaS card. The Brand Authority cardBg
+    // (#FFFEFA) is a cream variant. The canonical paper is warmer
+    // and more saturated — distinct from both.
+    expect(EDITORIAL.paper).not.toBe('#FFFFFF');
+    expect(EDITORIAL.paper).not.toBe(COLOR.cardBg);
+    expect(EDITORIAL.paper).toBe('#FBFAF6');
+  });
+
+  it('uses near-black ink (not pure black)', () => {
+    // Pure #000000 reads as a print-grade cold value. The canonical
+    // ink is warmer and softer — a near-black tuned for warm paper.
+    expect(EDITORIAL.ink).not.toBe('#000000');
+    expect(EDITORIAL.ink).toBe('#1B1A18');
+  });
+
+  it('uses restrained editorial red (not bright red, not warm gold)', () => {
+    // Bright #FF0000 / #E63946 read as alarm. The Brand Authority
+    // accent (#B08D57) is warm gold, not red. The canonical accent
+    // is the artifact's deeper editorial red.
+    expect(EDITORIAL.accent).not.toBe('#FF0000');
+    expect(EDITORIAL.accent).not.toBe(COLOR.accent);
+    expect(EDITORIAL.accent).toBe('#A8231B');
   });
 });
 

@@ -47,6 +47,31 @@ export const COLOR = {
 } as const;
 
 /**
+ * Canonical editorial palette — the v2 Assessment Artifact palette.
+ *
+ * Under the 2026-06-30 Design Doctrine (`docs/design-doctrine-v1.md`),
+ * the Assessment Artifact is the design anchor for the entire product.
+ * Its palette is the canonical one for every editorial surface going
+ * forward. Brand Authority surfaces will migrate from `COLOR` (above)
+ * to `EDITORIAL` (below) incrementally as they're naturally touched —
+ * the homepage redesign is the first consumer.
+ *
+ * Values are byte-identical to the inline CSS variables at
+ * `apps/web/src/app/artifact/artifact.css#L22-L25`:
+ *
+ *   --ground:    #FBFAF6   warm paper
+ *   --ink:       #1B1A18   near-black ink
+ *   --ink-muted: #6B6862   muted grey
+ *   --accent:    #A8231B   restrained editorial red
+ */
+export const EDITORIAL = {
+  paper: '#FBFAF6',
+  ink: '#1B1A18',
+  inkMuted: '#6B6862',
+  accent: '#A8231B',
+} as const;
+
+/**
  * Section heading eyebrow style.
  *
  * Small-cap accent label that opens every editorial section on
