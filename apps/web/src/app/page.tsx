@@ -111,6 +111,7 @@ import SystemSavePrompt from '@/components/system/SystemSavePrompt';
 import type { DraftSystem, SystemComponentRole } from '@/lib/system-types';
 import type { ProductCategory } from '@/lib/catalog-taxonomy';
 import { populateAssessTemplate } from '@/lib/cta-template';
+import { EDITORIAL } from '@/lib/editorial-tokens';
 import ListenerProfileBadge, { buildProfileSnapshot, type ListenerProfileSnapshot } from '@/components/ListenerProfileBadge';
 
 // ── Constants ─────────────────────────────────────────
@@ -155,26 +156,16 @@ const LAYOUT = {
   conversationMax: 1280, // conversation thread — cards expand into this for large product images
 } as const;
 
-/**
- * Editorial palette — used by the homepage hero and the entry-surface
- * conversational input only. Mirrors the CSS variables in globals.css
- * for inline-style consumption. Not used by advisory rendering, cards,
- * comparison block, or assessment renderer — those keep the slate-blue
- * working palette so the rest of the app is untouched.
- */
-const EDITORIAL = {
-  bg: '#FCFCFB',           // matches body bg — hero textarea blends in
-  ink: '#151515',          // deep charcoal, slightly warmer than #111
-  inkMuted: '#3A3A3A',     // body prose — slightly darker for confidence
-  faint: '#8A8A8A',        // eyebrow labels, hints (unchanged)
-  rule: '#E5E5E5',         // hairlines — neutral, slightly lighter
-  // (Dead `accent: '#D85A1F'` token removed pass-6 alongside the
-  //  monochrome direction — there are no consumers of it in the
-  //  codebase. Re-introduce only with explicit design approval.)
-  button: '#1A1A1A',       // charcoal CTA — replaces inherited slate-blue
-  buttonHover: '#000000',  // pure black on hover
-  narrow: '42rem',         // editorial column — slight widening from 38rem
-} as const;
+// Local EDITORIAL constant removed 2026-06-30 — homepage now consumes the
+// canonical EDITORIAL palette from `@/lib/editorial-tokens` (imported above).
+// Token renames applied below:
+//   EDITORIAL.paper     → EDITORIAL.paper      (#FCFCFB → #FBFAF6)
+//   EDITORIAL.hairline   → EDITORIAL.hairline   (#E5E5E5 → rgba(27,26,24,0.14))
+//   EDITORIAL.button → EDITORIAL.ink        (buttons are ink-on-paper)
+// Value shifts (intentional, per Design Doctrine v1):
+//   ink       #151515 → #1B1A18  (warmer near-black, matches artifact)
+//   inkMuted  #3A3A3A → #6B6862  (lighter, more "magazine-airy" body type)
+//   faint     #8A8A8A → #9E9A93  (slightly warmer)
 
 /**
  * Pinned fresh-visitor assessment example. Stage 7.1 onboarding-
@@ -4971,12 +4962,12 @@ export default function Home() {
                 fontSize: '0.82rem',
                 color: EDITORIAL.faint,
                 textDecoration: 'none',
-                borderBottom: `1px solid ${EDITORIAL.rule}`,
+                borderBottom: `1px solid ${EDITORIAL.hairline}`,
                 paddingBottom: '1px',
                 transition: 'color 0.15s ease, border-color 0.15s ease',
               }}
               onMouseEnter={(e) => { e.currentTarget.style.color = EDITORIAL.ink; e.currentTarget.style.borderBottomColor = EDITORIAL.faint; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = EDITORIAL.faint; e.currentTarget.style.borderBottomColor = EDITORIAL.rule; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = EDITORIAL.faint; e.currentTarget.style.borderBottomColor = EDITORIAL.hairline; }}
             >
               See an example assessment →
             </Link>
@@ -5180,13 +5171,13 @@ export default function Home() {
             padding: hasMessages ? '1rem 1.1rem' : '1rem 1.15rem',
             border: hasMessages
               ? `1.5px solid ${COLOR.border}`
-              : `1px solid ${EDITORIAL.rule}`,
+              : `1px solid ${EDITORIAL.hairline}`,
             borderRadius: hasMessages ? 10 : 6,
             outline: 'none',
             fontSize: hasMessages ? '0.98rem' : '1.02rem',
             lineHeight: 1.55,
             resize: 'vertical',
-            background: hasMessages ? COLOR.inputBg : EDITORIAL.bg,
+            background: hasMessages ? COLOR.inputBg : EDITORIAL.paper,
             color: hasMessages ? COLOR.textPrimary : EDITORIAL.ink,
             boxSizing: 'border-box',
             boxShadow: 'none',
@@ -5208,7 +5199,7 @@ export default function Home() {
               e.currentTarget.style.boxShadow = 'none';
               e.currentTarget.style.background = COLOR.inputBg;
             } else {
-              e.currentTarget.style.borderColor = EDITORIAL.rule;
+              e.currentTarget.style.borderColor = EDITORIAL.hairline;
             }
           }}
         />
@@ -5255,7 +5246,7 @@ export default function Home() {
             disabled={isLoading || (!currentInput.trim() && pendingImages.length === 0)}
             style={{
               padding: '0.6rem 1.6rem',
-              background: isLoading || (!currentInput.trim() && pendingImages.length === 0) ? '#F2F2F2' : EDITORIAL.button,
+              background: isLoading || (!currentInput.trim() && pendingImages.length === 0) ? '#F2F2F2' : EDITORIAL.ink,
               color: isLoading || (!currentInput.trim() && pendingImages.length === 0) ? EDITORIAL.faint : '#FFFFFF',
               border: 'none',
               borderRadius: 4,
@@ -5272,7 +5263,7 @@ export default function Home() {
             }}
             onMouseLeave={(e) => {
               if (!isLoading && (currentInput.trim() || pendingImages.length > 0)) {
-                e.currentTarget.style.background = EDITORIAL.button;
+                e.currentTarget.style.background = EDITORIAL.ink;
               }
             }}
           >

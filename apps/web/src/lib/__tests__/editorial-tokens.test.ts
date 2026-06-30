@@ -58,16 +58,23 @@ describe('editorial-tokens: COLOR palette', () => {
 });
 
 describe('editorial-tokens: EDITORIAL palette (canonical artifact palette)', () => {
-  it('locks the four canonical artifact tokens to exact values', () => {
-    // Source of truth: apps/web/src/app/artifact/artifact.css#L22-L25.
-    // These four values are the entire editorial palette under the
-    // 2026-06-30 Design Doctrine — every surface migrating onto this
-    // palette must reference these constants by name, never inline hex.
+  it('locks all canonical editorial tokens to exact values', () => {
+    // Source of truth: apps/web/src/app/artifact/artifact.css.
+    // The first four are the core artifact palette (#L22-L25).
+    // The remainder are derived editorial tokens consumed by the
+    // homepage and (incrementally) every other editorial surface
+    // under the 2026-06-30 Design Doctrine — every consumer must
+    // reference these constants by name, never inline hex.
     expect(EDITORIAL).toEqual({
       paper: '#FBFAF6',
       ink: '#1B1A18',
       inkMuted: '#6B6862',
       accent: '#A8231B',
+      hairline: 'rgba(27, 26, 24, 0.14)',
+      faint: '#9E9A93',
+      buttonHover: '#000000',
+      measure: '40rem',
+      narrow: '42rem',
     });
   });
 

@@ -65,10 +65,35 @@ export const COLOR = {
  *   --accent:    #A8231B   restrained editorial red
  */
 export const EDITORIAL = {
+  // ── Core artifact palette (artifact.css#L22-L25) ───────────────
   paper: '#FBFAF6',
   ink: '#1B1A18',
   inkMuted: '#6B6862',
   accent: '#A8231B',
+
+  // ── Derived editorial tokens ────────────────────────────────────
+  // hairline — artifact.css `--hairline`, used for masthead rules
+  // and section dividers across editorial surfaces.
+  hairline: 'rgba(27, 26, 24, 0.14)',
+
+  // faint — for the quietest editorial type (placeholder hints,
+  // secondary captions). Sits between inkMuted and the hairline.
+  faint: '#9E9A93',
+
+  // buttonHover — buttons inherit ink as their resting fill; on
+  // press / hover the value deepens to true black for tactile
+  // feedback without introducing a new accent.
+  buttonHover: '#000000',
+
+  // ── Editorial layout tokens ─────────────────────────────────────
+  // measure — the artifact's reading measure (artifact.css `--measure`).
+  // Use for body prose and the assessment article column.
+  measure: '40rem',
+
+  // narrow — entry-surface column (homepage composer, lede pair).
+  // Slightly wider than `measure` so the composer textarea breathes
+  // without forcing the article width to match.
+  narrow: '42rem',
 } as const;
 
 /**
