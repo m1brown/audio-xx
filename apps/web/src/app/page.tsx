@@ -5165,7 +5165,7 @@ export default function Home() {
             fontSize: hasMessages ? '0.98rem' : '1.0625rem',
             lineHeight: hasMessages ? 1.55 : 1.65,
             resize: 'vertical',
-            background: hasMessages ? COLOR.inputBg : 'transparent',
+            background: hasMessages ? COLOR.inputBg : '#FBFAF6',
             color: hasMessages ? COLOR.textPrimary : EDITORIAL.ink,
             boxSizing: 'border-box',
             boxShadow: 'none',
