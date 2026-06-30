@@ -78,9 +78,19 @@ export default function Nav() {
          *  left so navigation reads as a coherent header rather than a
          *  brand-on-left / chrome-on-right split. */}
         <div className="nav-primary">
-          <Link href="/" className="brand">
+          {/*
+            Intentionally a plain <a>, not a Next.js <Link>. Clicking the
+            brand mark should always feel like "fresh home" — including
+            from the homepage itself, where Link would no-op (same route)
+            and the in-flight conversation would persist. A full
+            navigation discards in-memory React state while leaving
+            persisted state (saved active system, taste profile, auth)
+            intact, which matches the user's mental model: brand-mark =
+            reset to a clean entry point.
+          */}
+          <a href="/" className="brand">
             Audio<span className="brand-accent">&thinsp;XX</span>
-          </Link>
+          </a>
           <div className="nav-links">
             <NavItem href="/how-it-works" label="How It Works" />
             {/* Editorial corpus entry point. The Musical Communication
