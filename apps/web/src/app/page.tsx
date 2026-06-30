@@ -5143,7 +5143,7 @@ export default function Home() {
               ? 'Reply here…'
               : hasMessages
                 ? 'Continue describing your system, what you value, or what you\'re considering…'
-                : 'Speakers, amplifier, source — add the components you own and Audio XX will write the assessment.'
+                : ''
           }
           className={hasMessages ? '' : 'audioxx-editorial-input'}
           style={{
@@ -5301,25 +5301,10 @@ export default function Home() {
           )}
         </div>
 
-        {/* Editorial pull quote — the publication's voice as a closing
-         *  beat on the cover. Promoted from the prior right-rail caption
-         *  into the body flow per Design Doctrine v1. Source Serif 4
-         *  italic mirrors the artifact's pull-quote treatment. */}
-        {!hasMessages && (
-          <p
-            style={{
-              margin: '4.5rem 0 0 0',
-              fontFamily: 'var(--face-text)',
-              fontStyle: 'italic',
-              fontSize: '1.05rem',
-              lineHeight: 1.45,
-              color: EDITORIAL.ink,
-              maxWidth: '28ch',
-            }}
-          >
-            “Doing nothing is also a valid outcome.”
-          </p>
-        )}
+        {/* Editorial pull quote removed 2026-06-30 — Mike's call: the cover
+         *  is stronger without a closing aphorism beat. The headline +
+         *  standfirst already carry the editorial voice; the pull quote
+         *  was adding length without adding clarity. */}
 
       </div>}
 
