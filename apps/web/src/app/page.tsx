@@ -179,6 +179,25 @@ const LAYOUT = {
 const PINNED_ASSESS_PROMPT = 'Assess my system: Denafrips Pontus II, Leben CS600X, DeVore O/96';
 
 /**
+ * Homepage composer placeholder prompts — cycled with a calm typewriter
+ * effect (see the useEffect in Home that drives `dynamicPlaceholder`).
+ * Order matters: the visitor's first impression is whichever prompt
+ * appears first, so the sequence opens with a curious-shopper question
+ * and lands on the structured "Assess my system" entry.
+ *
+ * Edit guidance: keep each under ~52 characters so it fits inside the
+ * editorial column without wrapping. Title-case product names; restore
+ * brand capitalization (DeVore, Accuphase). No trailing punctuation
+ * except for natural sentence endings.
+ */
+const HOMEPAGE_PLACEHOLDER_PROMPTS: readonly string[] = [
+  'Help me choose a DAC',
+  "I'm interested in DeVore O/96 speakers",
+  "What's the best Accuphase amp for my speakers?",
+  'Assess my system',
+] as const;
+
+/**
  * Primary-CTA composer template. A structured prompt scaffold that
  * shows the visitor exactly what information Audio XX expects — labelled
  * lines for the four component slots — without locking the chain shape:
@@ -553,6 +572,14 @@ export default function Home() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Homepage composer typewriter — cycles through
+  // HOMEPAGE_PLACEHOLDER_PROMPTS, typing each one character at a time,
+  // holding, backspacing, and moving on. Active only on the homepage
+  // (`!hasMessages`) AND only while the composer is empty. Respects
+  // `prefers-reduced-motion: reduce` by showing the first prompt as a
+  // static placeholder instead of animating.
+  const [dynamicPlaceholder, setDynamicPlaceholder] = useState('');
+
   // Listing-evaluation MVP — uploaded photo(s) of a used listing that the
   // user wants Audio XX to read for them. When pendingImages is non-empty,
   // handleSubmit routes the turn through /api/listing-eval instead of the
@@ -589,6 +616,91 @@ export default function Home() {
     }
     setSessionStarterPrompts(pool);
   }, []);
+
+  // Composer placeholder typewriter — types each prompt one character
+  // at a time, holds, backspaces, advances. Only runs on the homepage
+  // and only while the composer is empty (so the visitor's own text
+  // never competes with the animation).
+  //
+  // Implementation note: this uses refs for animation state +
+  // requestAnimationFrame for the driver loop instead of chained
+  // setTimeouts, which proved fragile across React StrictMode's
+  // double-invocation in dev. The rAF loop is naturally single-shot
+  // per effect mount and survives placeholder-state re-renders
+  // without the closure dance that chained setTimeouts require.
+  useEffect(() => {
+    const hasMessages = state.messages.length > 0;
+    const composerEmpty = state.currentInput.trim().length === 0;
+
+    if (hasMessages || !composerEmpty) {
+      setDynamicPlaceholder('');
+      return;
+    }
+    if (
+      typeof window !== 'undefined'
+      && window.matchMedia
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      setDynamicPlaceholder(HOMEPAGE_PLACEHOLDER_PROMPTS[0]);
+      return;
+    }
+
+    let cancelled = false;
+    let promptIdx = 0;
+    let charIdx = 0;
+    type Phase = 'type' | 'hold' | 'delete' | 'gap';
+    let phase: Phase = 'type';
+    let nextActionAt = performance.now() + 1200; // initial read pause
+    let rafId = 0;
+
+    const TYPE_MS = 80;       // calm typing rhythm
+    const HOLD_MS = 1900;     // sit on the full prompt before deleting
+    const DELETE_MS = 32;     // backspace speed
+    const GAP_MS = 480;       // breath between prompts
+
+    const driver = (now: number) => {
+      if (cancelled) return;
+      if (now >= nextActionAt) {
+        const prompt = HOMEPAGE_PLACEHOLDER_PROMPTS[promptIdx];
+        if (phase === 'type') {
+          charIdx += 1;
+          setDynamicPlaceholder(prompt.slice(0, charIdx));
+          if (charIdx >= prompt.length) {
+            phase = 'hold';
+            nextActionAt = now + HOLD_MS;
+          } else {
+            nextActionAt = now + TYPE_MS;
+          }
+        } else if (phase === 'hold') {
+          phase = 'delete';
+          nextActionAt = now;
+        } else if (phase === 'delete') {
+          charIdx -= 1;
+          setDynamicPlaceholder(prompt.slice(0, charIdx));
+          if (charIdx <= 0) {
+            phase = 'gap';
+            nextActionAt = now + GAP_MS;
+          } else {
+            nextActionAt = now + DELETE_MS;
+          }
+        } else {
+          promptIdx = (promptIdx + 1) % HOMEPAGE_PLACEHOLDER_PROMPTS.length;
+          charIdx = 0;
+          phase = 'type';
+          nextActionAt = now;
+        }
+      }
+      rafId = window.requestAnimationFrame(driver);
+    };
+
+    rafId = window.requestAnimationFrame(driver);
+
+    return () => {
+      cancelled = true;
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.messages.length > 0, state.currentInput.trim().length === 0]);
 
   // Taste profile — loaded from API for authenticated users
   const [tasteProfile, setTasteProfile] = useState<TasteProfile | null>(null);
@@ -5143,7 +5255,7 @@ export default function Home() {
               ? 'Reply here…'
               : hasMessages
                 ? 'Continue describing your system, what you value, or what you\'re considering…'
-                : ''
+                : dynamicPlaceholder
           }
           className={hasMessages ? '' : 'audioxx-editorial-input'}
           style={{
