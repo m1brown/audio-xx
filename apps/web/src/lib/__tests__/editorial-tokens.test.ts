@@ -66,7 +66,7 @@ describe('editorial-tokens: EDITORIAL palette (canonical artifact palette)', () 
     // under the 2026-06-30 Design Doctrine — every consumer must
     // reference these constants by name, never inline hex.
     expect(EDITORIAL).toEqual({
-      paper: '#FBFAF6',
+      paper: '#F5EFE2',
       ink: '#1B1A18',
       inkMuted: '#6B6862',
       accent: '#A8231B',
@@ -78,13 +78,20 @@ describe('editorial-tokens: EDITORIAL palette (canonical artifact palette)', () 
     });
   });
 
-  it('uses warm paper (not pure white, not cream)', () => {
+  it('uses deliberate cream paper (clearly off-white, not pure white)', () => {
     // Pure #FFFFFF reads as a SaaS card. The Brand Authority cardBg
-    // (#FFFEFA) is a cream variant. The canonical paper is warmer
-    // and more saturated — distinct from both.
+    // (#FFFEFA) is a near-white variant. The canonical paper is a
+    // deliberate cream — clearly off-white so the page reads as a
+    // publication surface against browser chrome, not as an
+    // application background.
+    //
+    // 2026-06-30: deepened from #FBFAF6 → #F5EFE2 per Mike's note
+    // that the homepage needed more bg contrast against Chrome's
+    // tab chrome. Lockstep with --ground in artifact.css and body
+    // bg in globals.css.
     expect(EDITORIAL.paper).not.toBe('#FFFFFF');
     expect(EDITORIAL.paper).not.toBe(COLOR.cardBg);
-    expect(EDITORIAL.paper).toBe('#FBFAF6');
+    expect(EDITORIAL.paper).toBe('#F5EFE2');
   });
 
   it('uses near-black ink (not pure black)', () => {

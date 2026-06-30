@@ -15,7 +15,7 @@
  * without restyling the rest of the app.
  */
 :root {
-  --editorial-bg: #FCFCFB;
+  --editorial-bg: #F5EFE2;
   /* 2026-05-20 premium polish: ink tokens shifted a few points toward
    * warm charcoal so long advisory prose reads less SaaS-stark and
    * more "listening room". Magnitudes intentionally tiny — the page
@@ -44,7 +44,7 @@
 
 body {
   font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  background: #FCFCFB;
+  background: #F5EFE2;
   /* 2026-05-20 premium polish: body bumped 15 → 15.5px and ink shifted
    * to warm charcoal #1B1815 so the long-form advisory reads with a
    * touch more presence and less SaaS-flat character. Line-height
@@ -212,7 +212,7 @@ ul.bullets li { padding: 2px 0; }
 nav {
   border-bottom: 1px solid #eae8e4;
   padding: 12px 1.5rem;
-  background: #fff;
+  background: #F5EFE2;
 }
 nav .nav-inner {
   max-width: 90rem; /* match .container */

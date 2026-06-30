@@ -59,14 +59,17 @@ export const COLOR = {
  * Values are byte-identical to the inline CSS variables at
  * `apps/web/src/app/artifact/artifact.css#L22-L25`:
  *
- *   --ground:    #FBFAF6   warm paper
+ *   --ground:    #F5EFE2   warm paper (deepened 2026-06-30 from
+ *                          #FBFAF6 for more contrast against browser
+ *                          chrome — the cover reads as a publication
+ *                          page, not as off-white application surface)
  *   --ink:       #1B1A18   near-black ink
  *   --ink-muted: #6B6862   muted grey
  *   --accent:    #A8231B   restrained editorial red
  */
 export const EDITORIAL = {
   // ── Core artifact palette (artifact.css#L22-L25) ───────────────
-  paper: '#FBFAF6',
+  paper: '#F5EFE2',
   ink: '#1B1A18',
   inkMuted: '#6B6862',
   accent: '#A8231B',
