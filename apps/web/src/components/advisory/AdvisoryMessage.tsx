@@ -2279,210 +2279,163 @@ function AudioPreferencesBlock({ profile, advisoryMode, namedProduct }: {
     );
   }
 
+  // Phase 3 — flowing editorial opening.
+  //
+  // Previously this block rendered "Audio Preferences" as a boxed
+  // header + four labeled sub-sections ("Your system", "You prefer",
+  // "You avoid", "Context"). Mike's ChatGPT reference opens with a
+  // single narrative paragraph — "Based on what I know about your
+  // system and preferences, I'd optimize for synergy…" — grounding
+  // the whole response before any picks appear.
+  //
+  // This rewrite keeps the same signals (system chain, priorities,
+  // avoids, listening context, archetype, budget) but composes them
+  // into short editorial lines with a small accent-rule kicker,
+  // matching the artifact route's opening treatment. The signals
+  // themselves are unchanged — only presentation.
+  const systemLine = hasSystem
+    ? `Your system: ${profile.systemChain!.join(' → ')}.`
+    : null;
+  const prioritiesFragment = hasPriorities
+    ? profile.sonicPriorities!.join(', ')
+    : null;
+  const avoidsFragment = hasAvoids
+    ? profile.sonicAvoids!.join(', ')
+    : null;
+  const preferencesLine = prioritiesFragment || avoidsFragment
+    ? [
+        prioritiesFragment
+          ? `You lean toward ${prioritiesFragment}`
+          : null,
+        avoidsFragment
+          ? `${prioritiesFragment ? 'and tend to' : 'You tend to'} avoid ${avoidsFragment}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(', ')
+        .replace(/^./, (c) => c.toUpperCase()) + '.'
+    : null;
+  const contextLine = hasContext
+    ? `Context: ${profile.listeningContext!.join(', ')}.`
+    : null;
+
   return (
-    <div
-      style={{
-        borderLeft: `3px solid ${COLORS.accent}`,
-        paddingLeft: '1rem',
-        marginBottom: '1.25rem',
-        background: COLORS.accentBg,
-        padding: '0.8rem 1rem',
-        borderRadius: '0 6px 6px 0',
-      }}
-    >
-      {/* Section heading */}
+    <div style={{ marginBottom: '1.6rem' }}>
       <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.6rem',
         fontSize: FONTS.labelSize,
         fontWeight: 600,
-        letterSpacing: '0.05em',
+        letterSpacing: '0.06em',
         textTransform: 'uppercase' as const,
-        color: COLORS.accent,
+        color: COLORS.textMuted,
         marginBottom: '0.55rem',
       }}>
-        Audio Preferences
+        <span style={{
+          display: 'inline-block',
+          width: '1.5rem',
+          height: '2px',
+          background: COLORS.accent,
+        }} />
+        What I'm working with
       </div>
 
-      {/* System chain */}
-      {hasSystem && (
-        <div style={{ marginBottom: '0.55rem' }}>
-          <div style={{
-            fontSize: '0.82rem',
-            fontWeight: 600,
-            color: COLORS.textSecondary,
-            marginBottom: '0.2rem',
-          }}>
-            Your system
-          </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            flexWrap: 'wrap',
-            fontSize: '0.91rem',
-            color: COLORS.text,
-          }}>
-            {profile.systemChain!.map((comp, i) => (
-              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                {i > 0 && (
-                  <span style={{ color: COLORS.accentLight, fontSize: '0.82rem' }}>→</span>
-                )}
-                <span>{comp}</span>
-              </span>
-            ))}
-          </div>
-        </div>
+      {systemLine && (
+        <p style={{
+          margin: '0 0 0.5rem 0',
+          fontSize: FONTS.bodySize,
+          lineHeight: 1.65,
+          color: COLORS.text,
+        }}>
+          {systemLine}
+        </p>
       )}
 
-      {/* Sonic priorities — only rendered when populated by explicit user
-          input or saved-profile data. When empty, the surrounding block
-          shows a neutral "No preferences provided" placeholder so users
-          aren't told they prefer something they never stated. */}
-      {hasPriorities ? (
-        <div style={{ marginBottom: hasAvoids || hasContext ? '0.45rem' : 0 }}>
-          <div style={{
-            fontSize: '0.82rem',
-            fontWeight: 600,
-            color: COLORS.textSecondary,
-            marginBottom: '0.2rem',
-          }}>
-            {profile.preferenceSource === 'default'
-              ? 'Starting point (default)'
-              : profile.preferenceSource === 'explicit'
-                ? 'You prefer'
-                : 'Leans toward'}
-          </div>
-          <div style={{
-            fontSize: '0.91rem',
-            color: COLORS.text,
-            lineHeight: 1.65,
-          }}>
-            {profile.sonicPriorities!.join(' · ')}
-          </div>
-          {profile.preferenceSource === 'default' && (
-            <>
-              <div style={{
-                fontSize: '0.86rem',
-                color: COLORS.textSecondary,
-                marginTop: '0.3rem',
-                lineHeight: 1.6,
-              }}>
-                This is a safe starting assumption — slightly warm and easy to listen to.
-              </div>
-              <div style={{
-                fontSize: '0.86rem',
-                color: COLORS.text,
-                marginTop: '0.25rem',
-                fontWeight: 500,
-                lineHeight: 1.6,
-              }}>
-                Do you want to keep that direction, or shift toward clarity and precision?
-              </div>
-            </>
-          )}
-        </div>
-      ) : (
-        <div style={{ marginBottom: hasAvoids || hasContext ? '0.45rem' : 0 }}>
-          <div style={{
-            fontSize: '0.82rem',
-            fontWeight: 600,
-            color: COLORS.textMuted,
-            fontStyle: 'italic',
-          }}>
-            No preferences provided
-          </div>
-        </div>
+      {preferencesLine && (
+        <p style={{
+          margin: '0 0 0.5rem 0',
+          fontSize: FONTS.bodySize,
+          lineHeight: 1.65,
+          color: COLORS.text,
+        }}>
+          {preferencesLine}
+        </p>
       )}
 
-      {/* Sonic avoids */}
-      {hasAvoids && (
-        <div style={{ marginBottom: hasContext ? '0.45rem' : 0 }}>
-          <div style={{
-            fontSize: '0.82rem',
-            fontWeight: 600,
-            color: COLORS.textSecondary,
-            marginBottom: '0.2rem',
-          }}>
-            You avoid
-          </div>
-          <div style={{
-            fontSize: '0.91rem',
-            color: COLORS.textMuted,
-            lineHeight: 1.65,
-          }}>
-            {profile.sonicAvoids!.join(' · ')}
-          </div>
-        </div>
+      {contextLine && (
+        <p style={{
+          margin: '0 0 0.5rem 0',
+          fontSize: FONTS.bodySize,
+          lineHeight: 1.65,
+          color: COLORS.textSecondary,
+        }}>
+          {contextLine}
+        </p>
       )}
 
-      {/* Listening context */}
-      {hasContext && (
-        <div>
-          <div style={{
-            fontSize: '0.82rem',
-            fontWeight: 600,
-            color: COLORS.textSecondary,
-            marginBottom: '0.2rem',
-          }}>
-            Context
-          </div>
-          <div style={{
-            fontSize: '0.91rem',
-            color: COLORS.text,
-            lineHeight: 1.65,
-          }}>
-            {profile.listeningContext!.join(' · ')}
-          </div>
-        </div>
+      {/* Default-preference nudge — retained as a small opt-in line
+       *  because the user has NOT told us their taste yet; the composed
+       *  paragraph above only mentions the priorities we're assuming. */}
+      {hasPriorities && profile.preferenceSource === 'default' && (
+        <p style={{
+          margin: '0 0 0.5rem 0',
+          fontSize: '0.86rem',
+          lineHeight: 1.6,
+          color: COLORS.textSecondary,
+          fontStyle: 'italic',
+        }}>
+          That's a safe starting assumption — slightly warm and easy to listen to.
+          Say the word if you'd rather I lean toward clarity and precision.
+        </p>
       )}
 
-      {/* Archetype badge + budget — inline */}
+      {/* Archetype badge + budget — small inline chips, not a section.
+       *  These sit under the paragraph as quiet metadata. */}
       {(profile.archetype || profile.budget) && (
         <div style={{
-          marginTop: '0.55rem',
+          marginTop: '0.6rem',
           display: 'flex',
-          gap: '0.6rem',
+          gap: '0.5rem',
           flexWrap: 'wrap',
           alignItems: 'center',
         }}>
           {profile.archetype && (
             <span style={{
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              padding: '0.15rem 0.5rem',
-              borderRadius: '4px',
-              color: COLORS.accent,
-              background: '#f0ece3',
-              letterSpacing: '0.02em',
+              fontSize: '0.75rem',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase' as const,
+              color: COLORS.textMuted,
             }}>
               {profile.archetype}
             </span>
           )}
+          {profile.archetype && profile.budget && (
+            <span style={{ color: COLORS.textMuted, fontSize: '0.75rem' }}>·</span>
+          )}
           {profile.budget && (
             <span style={{
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              padding: '0.15rem 0.5rem',
-              borderRadius: '4px',
+              fontSize: '0.75rem',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase' as const,
               color: COLORS.textMuted,
-              background: '#f2f2f0',
-              letterSpacing: '0.02em',
             }}>
-              Budget: {profile.budget}
+              Budget {profile.budget}
             </span>
           )}
         </div>
       )}
 
-      {/* Missing dimensions note */}
+      {/* Missing dimensions note — one italic invitation line. */}
       {!profile.profileComplete && profile.missingDimensions && profile.missingDimensions.length > 0 && (
         <p style={{
-          margin: '0.5rem 0 0 0',
-          fontSize: '0.82rem',
+          margin: '0.75rem 0 0 0',
+          fontSize: '0.86rem',
           color: COLORS.textMuted,
           fontStyle: 'italic',
           lineHeight: 1.6,
         }}>
-          For sharper recommendations, tell me about your {profile.missingDimensions.join(' and ')}.
+          For sharper picks, tell me about your {profile.missingDimensions.join(' and ')}.
         </p>
       )}
     </div>
