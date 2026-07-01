@@ -366,6 +366,12 @@ const SHOPPING_PATTERNS = [
   /\bbest\s+integrated\b/i,
   // Upgrade-desire: "I need a better amp", "want a new DAC", "need a different turntable"
   /\b(?:need|want)\s+(?:a\s+)?(?:better|new|different|another|upgraded?)\s+(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|preamp|power\s*amp)\b/i,
+  // "Help me choose/pick/find/select …" — shopping, not diagnostic.
+  // Prod bug 2026-07-01: "help me choose a dac" was falling through to
+  // the diagnosis default and asked "does it sound thin, digital,
+  // fatiguing…" instead of routing to a purchase recommendation.
+  /\bhelp\s+me\s+(?:choose|pick|find|select|shop\s+for)\b/i,
+  /\bi\s+(?:want|need|would\s+like)\s+help\s+(?:choosing|picking|finding|selecting)\b/i,
 ];
 
 // ── Gear inquiry patterns ────────────────────────────

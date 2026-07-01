@@ -2848,30 +2848,44 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
        *  in page.tsx tags brand-only product assessments with
        *  `reasoningMode: 'expanded'` so the unified caption renders. */}
 
-      {/* ── 1. What actually changes ─────────────────── */}
+      {/* ── Editorial prose block — Phase 1 rewrite (2026-07-01) ──
+       *
+       *  Previously each engine slot (whatChanges, systemBehavior,
+       *  goalAlignment, recommendation) was wrapped in an
+       *  `<AdvisorySection label="What this component brings" | "In
+       *  your system" | "Alignment with your priorities" |
+       *  "Recommendation">` — a form-fill treatment with static
+       *  section chrome on every response. Mike's July-1 QA note
+       *  called out that this reads as boxed scaffolding rather than
+       *  the flowing editorial voice used elsewhere in the product.
+       *
+       *  Phase 1: drop the section labels, let the slots flow as
+       *  paragraphs, and give the recommendation a lightweight
+       *  editorial marker (a small accent kicker + display size) so
+       *  it still reads as the conclusion without form-fill chrome.
+       *  Engine slots are unchanged — this is a template-only edit.
+       */}
+
       {pa.whatChanges.length > 0 && (
-        <AdvisorySection label={pa.currentComponentName ? `What changes vs ${pa.currentComponentName}` : 'What this component brings'}>
+        <div style={{ marginBottom: '1.4rem' }}>
           {pa.whatChanges.map((item, i) => (
             <p key={i} style={{
-              margin: '0 0 0.45rem 0',
+              margin: '0 0 0.75rem 0',
               fontSize: FONTS.bodySize,
               lineHeight: FONTS.lineHeight,
               color: COLORS.text,
-              paddingLeft: '0.8rem',
-              borderLeft: `2px solid ${COLORS.borderLight}`,
             }}>
               {item}
             </p>
           ))}
-        </AdvisorySection>
+        </div>
       )}
 
-      {/* ── 2. How it behaves in this system ──────────── */}
       {pa.systemBehavior.length > 0 && (
-        <AdvisorySection label="In your system">
+        <div style={{ marginBottom: '1.4rem' }}>
           {pa.systemBehavior.map((item, i) => (
             <p key={i} style={{
-              margin: '0 0 0.45rem 0',
+              margin: '0 0 0.75rem 0',
               fontSize: FONTS.bodySize,
               lineHeight: FONTS.lineHeight,
               color: COLORS.text,
@@ -2879,46 +2893,45 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
               {item}
             </p>
           ))}
-        </AdvisorySection>
+        </div>
       )}
 
-      {/* ── 3. Does this solve the real goal? ─────────── */}
-      <AdvisorySection label="Alignment with your priorities">
-        <p style={{
-          margin: 0,
-          fontSize: FONTS.bodySize,
-          lineHeight: FONTS.lineHeight,
-          color: COLORS.text,
-        }}>
-          {pa.goalAlignment}
-        </p>
-      </AdvisorySection>
-
-      {/* ── 4. Honest recommendation ─────────────────── */}
-      <div style={{
-        borderLeft: `3px solid ${COLORS.accent}`,
-        paddingLeft: '1rem',
-        marginTop: '1.25rem',
-        marginBottom: '1rem',
-        padding: '0.75rem 1rem',
-        borderRadius: '0 6px 6px 0',
-        background: COLORS.accentBg,
+      <p style={{
+        margin: '0 0 1.75rem 0',
+        fontSize: FONTS.bodySize,
+        lineHeight: FONTS.lineHeight,
+        color: COLORS.textSecondary,
+        fontStyle: 'italic',
       }}>
+        {pa.goalAlignment}
+      </p>
+
+      <div style={{ margin: '0 0 1rem 0' }}>
         <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
           fontSize: FONTS.labelSize,
           fontWeight: 600,
-          letterSpacing: '0.05em',
+          letterSpacing: '0.06em',
           textTransform: 'uppercase' as const,
-          color: COLORS.accent,
-          marginBottom: '0.35rem',
+          color: COLORS.textMuted,
+          marginBottom: '0.45rem',
         }}>
-          Recommendation
+          <span style={{
+            display: 'inline-block',
+            width: '1.5rem',
+            height: '2px',
+            background: COLORS.accent,
+          }} />
+          The recommendation
         </div>
         <p style={{
           margin: 0,
-          fontSize: FONTS.bodySize,
-          lineHeight: FONTS.lineHeight,
+          fontSize: '1.15rem',
+          lineHeight: 1.55,
           color: COLORS.text,
+          fontWeight: 500,
         }}>
           {pa.recommendation}
         </p>
