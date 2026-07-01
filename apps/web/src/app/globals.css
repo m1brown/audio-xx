@@ -40,16 +40,29 @@
   opacity: 1;
 }
 
-/* ── Base typography ─────────────────────────────── */
-
+/* ── Base typography ───────────────────────────────
+ *
+ * Design Doctrine v1 role discipline (layout.tsx):
+ *   Fraunces       → major headlines
+ *   Source Serif 4 → all reading text (body, standfirst, prose)
+ *   Inter          → navigation, metadata, labels, buttons, UI chrome
+ *
+ * 2026-07-01 (site-wide typography pass): the body default was
+ * `var(--face-grotesque)` (Inter). That put every route except the
+ * artifact — which explicitly opts into Source Serif via `.axx-artifact
+ * { font-family: var(--face-text) }` — into a sans-serif reading face.
+ * The doctrine-sweep PDF captured 10 pages as "doctrinal drift"
+ * (how-it-works, glossary, resources, about, privacy, affiliate-
+ * disclosure, onboarding, tech/*, brand/harbeth) largely because of
+ * this one default. Flipping it here brings the site into the
+ * editorial voice by default. UI chrome — nav, buttons, form
+ * controls, labels, tags — is explicitly kicked back to
+ * `var(--face-grotesque)` in its own rules below so the doctrine
+ * role split holds.
+ */
 body {
-  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--face-text), Georgia, 'Times New Roman', serif;
   background: #FCF8EE;
-  /* 2026-05-20 premium polish: body bumped 15 → 15.5px and ink shifted
-   * to warm charcoal #1B1815 so the long-form advisory reads with a
-   * touch more presence and less SaaS-flat character. Line-height
-   * eased from 1.65 to 1.6 — still generous, slightly less spacy so
-   * paragraphs feel more intentional. */
   color: #1B1815;
   line-height: 1.6;
   font-size: 15.5px;
@@ -73,23 +86,73 @@ a:hover { color: #1B1815; text-decoration: underline; text-underline-offset: 2px
   padding: 2rem 2.5rem;
 }
 
-/* ── Headings ────────────────────────────────────── */
-/* 2026-05-20 premium polish: section heading hierarchy strengthened so
- * h2/h3 are visibly distinct from body in long advisory blocks. h2 size
- * 1.1 → 1.18rem with negative letter-spacing and extra top margin to
- * give sections a proper editorial cadence. h3 1.0 → 1.04rem so the
- * sub-section level still reads as a heading, not bold body text.
- * Heading colour unified on warm charcoal #2A2620 (was #2a2a2a / #333). */
+/* ── Headings ──────────────────────────────────────
+ *
+ * 2026-07-01 doctrine pass: h1 now uses Fraunces (`--face-display`),
+ * bumped in size to work as a real page-titling face. h2 / h3 stay
+ * in the reading face (Source Serif via body inheritance) but at
+ * larger sizes than before so sections have a proper editorial
+ * cadence in long-form prose. Heading colour stays on the warm
+ * charcoal set in the 2026-05-20 polish.
+ */
+h1 {
+  font-family: var(--face-display), Georgia, 'Times New Roman', serif;
+  font-size: 1.9rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  letter-spacing: -0.018em;
+  color: #2A2620;
+  line-height: 1.15;
+}
+h2 { font-size: 1.28rem; font-weight: 600; margin-bottom: 0.9rem; margin-top: 1.75rem; letter-spacing: -0.012em; color: #2A2620; line-height: 1.3; }
+h3 { font-size: 1.08rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: -0.008em; color: #2A2620; }
 
-h1 { font-size: 1.3rem; font-weight: 600; margin-bottom: 1rem; letter-spacing: -0.018em; color: #2A2620; }
-h2 { font-size: 1.18rem; font-weight: 600; margin-bottom: 1rem; margin-top: 1.75rem; letter-spacing: -0.012em; color: #2A2620; }
-h3 { font-size: 1.04rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: -0.008em; color: #2A2620; }
+/* ── Editorial kicker utility ──────────────────────
+ *
+ * The small accent-red rule + small-caps label pattern used by the
+ * artifact route and the shopping recommendations. Exposed as a
+ * utility class here so brand / tech / support pages can adopt it
+ * without importing the artifact stylesheet.
+ *
+ * Usage: <div class="axx-kicker">Philosophy</div>
+ * The label is auto-uppercased at the CSS layer, so authors write
+ * sentence-case content and the class handles small caps.
+ */
+.axx-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6B6862;
+  margin: 1.75rem 0 0.55rem;
+}
+.axx-kicker::before {
+  content: "";
+  display: inline-block;
+  width: 1.5rem;
+  height: 2px;
+  background: #A8231B;
+  flex: 0 0 auto;
+}
+.axx-kicker + p,
+.axx-kicker + ul,
+.axx-kicker + ol { margin-top: 0; }
 
 hr, .divider { border: none; border-top: 1px solid #eae8e4; margin: 1.25rem 0; }
 
 .section { margin-bottom: 1.5rem; }
 
-/* ── Buttons ─────────────────────────────────────── */
+/* ── Buttons ───────────────────────────────────────
+ *
+ * 2026-07-01: `font-family: inherit` used to be fine because body
+ * was Inter. Now that body is Source Serif, buttons must opt out
+ * back to grotesque or every CTA renders as italic-looking body
+ * text. Same applies to inputs / labels / tags / verdicts below.
+ */
 
 .btn {
   display: inline-block;
@@ -100,7 +163,7 @@ hr, .divider { border: none; border-top: 1px solid #eae8e4; margin: 1.25rem 0; }
   color: #333;
   cursor: pointer;
   font-size: 13px;
-  font-family: inherit;
+  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   font-weight: 500;
   transition: all 0.15s ease;
 }
@@ -121,8 +184,15 @@ input, textarea, select {
   background: #fff;
   color: #2a2a2a;
   font-size: 15px;
-  font-family: inherit;
+  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+/* The conversational composer textarea should read as prose
+ * (the reader is typing to Audio XX, not filling a form). Opt it
+ * back to the reading face so the message the user is composing
+ * looks the same as the artifact it will produce. */
+textarea.audioxx-editorial-input {
+  font-family: var(--face-text), Georgia, 'Times New Roman', serif;
 }
 textarea { min-height: 100px; resize: vertical; }
 input:focus, textarea:focus, select:focus {
@@ -137,6 +207,7 @@ label {
   font-size: 13px;
   font-weight: 500;
   color: #666;
+  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
 
 .field { margin-bottom: 0.75rem; }
@@ -153,6 +224,7 @@ label {
   margin-right: 4px;
   margin-bottom: 4px;
   background: #fff;
+  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
 .tag-active { background: #f5f3ef; border-color: #c0bdb5; cursor: pointer; }
 
@@ -164,6 +236,7 @@ label {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
 .verdict-good { color: #1a7f37; }
 .verdict-caution { color: #9a6700; }
@@ -213,6 +286,9 @@ nav {
   border-bottom: 1px solid #eae8e4;
   padding: 12px 1.5rem;
   background: #FCF8EE;
+  /* Nav sits in the grotesque role — must be pinned now that body
+   * inherits the reading face. */
+  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
 nav .nav-inner {
   max-width: 90rem; /* match .container */
