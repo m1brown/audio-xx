@@ -93,22 +93,14 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'schiit modi',         url: 'https://www.schiit.com/img/img_3680.jpg' },
 
   // Denafrips — product hero shots on denafrips.com
-  { key: 'denafrips terminator', url: 'https://www.denafrips.com/_files/ugd/d1b21d_b5deb62d43e84d9f8ea7cbf53bab8fd5~mv2.jpg' },
   { key: 'denafrips pontus',     url: 'https://static.wixstatic.com/media/d94477_67b3d20582784f36ab923d03ffd83ecd~mv2.jpg/v1/crop/x_0,y_93,w_3250,h_1758/fill/w_1960,h_1060,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/%E6%9C%AA%E6%A0%87%E9%A2%98-1.jpg' },
   { key: 'denafrips venus ii',   url: 'https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg',
     source: { tier: 'retailer', site: 'audiophonics.fr', credit: 'Audiophonics', captured: '2026-05-08' } },
-  { key: 'denafrips ares',       url: 'https://www.denafrips.com/_files/ugd/d1b21d_2cb41c4b40ac4987aa8bbb2de1c06a3b~mv2.jpg' },
   { key: 'denafrips enyo',       url: 'https://static.wixstatic.com/media/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg/v1/crop/x_3,y_29,w_1164,h_599/fill/w_1096,h_564,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg' },
 
   // iFi Audio — ifi-audio.com product assets
-  { key: 'ifi zen dac',         url: 'https://ifi-audio.com/wp-content/uploads/2020/02/ZEN-DAC_front_white_2000x1333.jpg' },
-
   // RME Audio — rme-audio.de product images
-  { key: 'rme adi 2 dac',       url: 'https://www.rme-audio.de/images/products/adi-2-dac-fs/adi-2-dac-fs-front.jpg' },
-
   // Bluesound — bluesound.com product catalog
-  { key: 'bluesound node',      url: 'https://www.bluesound.com/media/catalog/product/n/o/node_blk_front-top_1.png' },
-
   // WiiM — Amazon product images (manufacturer Linkplay CDN showed wrong product)
   { key: 'wiim pro plus',       url: 'https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg' },
   { key: 'wiim pro',            url: 'https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg' },
@@ -126,7 +118,6 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
 
   // Gustard — gustard.com /qfy-content/uploads/ CDN
   { key: 'gustard x26 pro',    url: 'https://shenzhenaudio.com/cdn/shop/files/1-1_cec99a1e-1550-459b-b75a-565cbf322481.jpg?v=1730458884' },
-  { key: 'gustard x16',        url: 'https://www.gustard.com/qfy-content/uploads/2021/10/0d3d6e7e4f0a67feaef5e67d8e5b22d4-100.webp' },
   { key: 'gustard r26',        url: 'https://www.gustard.com/qfy-content/uploads/2022/10/ae6b2c24323caabb87bd8814319e8140-100.webp' },
 
   // Topping — upload.toppingaudio.com CDN
@@ -140,7 +131,6 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
     source: { tier: 'retailer', site: 'apos.audio', credit: 'Apos Audio', captured: '2026-05-08' } },
 
   // Eversolo — eversolo.com /Uploads/product/ CDN + bloomaudio.com (DMP-A6)
-  { key: 'eversolo dac z8',     url: 'https://eversolo.com/Uploads/product/cc469ca22b4d35699bde1cdf245ef714.jpg' },
   { key: 'eversolo dmp a6',     url: 'https://bloomaudio.com/cdn/shop/files/eversolo-a6-gen2-thumb.webp?v=1737733070&width=1080',
     source: { tier: 'authorized_dealer', site: 'bloomaudio.com', credit: 'Bloom Audio', captured: '2026-05-08' } },
 
@@ -159,9 +149,6 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // Naim — Focal-Naim DAM CDN + naimaudio.com fallbacks
   { key: 'naim supernait 3',    url: 'https://dam.focal-naim.com/m/41d5e6176c409ae5/original/SUPERNAIT3_faceV2-jpg.jpg' },
   { key: 'naim supernait',      url: 'https://dam.focal-naim.com/m/41d5e6176c409ae5/original/SUPERNAIT3_faceV2-jpg.jpg' },
-  { key: 'naim nait xs',        url: 'https://www.naimaudio.com/sites/default/files/nait-xs3-front.jpg' },
-  { key: 'naim nait',           url: 'https://www.naimaudio.com/sites/default/files/nait-5si-front.jpg' },
-
   // Boulder — boulderamp.com /wp-content/uploads/ CDN
   { key: 'boulder 866',         url: 'https://boulderamp.com/wp-content/uploads/866-Front-on-surface-Roon-1200x800.jpg' },
 
@@ -169,8 +156,6 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'decware se84ufo',     url: 'https://static.wixstatic.com/media/f1f204_31700c6023e1475b88ac443535dad8c7~mv2.jpg/v1/fill/w_396,h_336,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/SE84UFO2022.jpg' },
 
   // Line Magnetic — line-magnetic.eu /fileadmin/ CDN (EU distributor)
-  { key: 'line magnetic lm 211ia', url: 'https://www.line-magnetic.eu/fileadmin/_processed_/b/9/csm_LM-211IA_front_eb5372c116.png' },
-
   // Enleum — enleum.com /wp-content/uploads/ CDN
   { key: 'enleum amp 23r',      url: 'https://enleum.com/wp-content/uploads/2022/08/AMP-23R_1-scaled.jpg.webp' },
 
@@ -200,10 +185,6 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'accuphase e 280',     url: 'https://www.accuphase.com/model/photo/e-280.jpg' },
 
   // Rega — rega.co.uk /wp-content/uploads/ CDN
-  { key: 'rega brio',           url: 'https://www.rega.co.uk/wp-content/uploads/2020/01/Brio-front.jpg' },
-  { key: 'rega elex',           url: 'https://www.rega.co.uk/wp-content/uploads/2020/01/Elex-R-front.jpg' },
-  { key: 'rega aethos',         url: 'https://www.rega.co.uk/wp-content/uploads/2020/01/Aethos-front.jpg' },
-
   // Schiit amps
   { key: 'schiit vidar',        url: 'https://www.schiit.com/img/img_2480.jpg' },
   { key: 'schiit aegir',        url: 'https://www.schiit.com/img/img_4195.jpg' },
@@ -217,8 +198,6 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
     source: { tier: 'manufacturer', site: 'primaluna.nl', credit: 'PrimaLuna', captured: '2026-05-12' } },
   // EVO 400 left at legacy URL (404) — also needs manual curation; out
   // of scope for the 2026-05-12 narrow pass.
-  { key: 'primaluna evo 400',   url: 'https://www.primaluna.nl/wp-content/uploads/2019/01/EVO-400-Integrated-Amplifier-Silver-Front.jpg' },
-
   // Leben — front-on hero from hifi.nl (Dutch HiFi review publication).
   // Updated 2026-05-13: the previous McLean's CDN shot was a top/back
   // angle that obscured the iconic VU meter and gold faceplate. The
@@ -232,9 +211,6 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
     source: { tier: 'review_publication', site: 'hifi.nl', credit: 'HiFi.nl', captured: '2026-05-13' } },
   // Leben CS300 — left at legacy URL pending verification; CS300 not in
   // the narrow-pass scope.
-  { key: 'leben cs 300',        url: 'https://www.leben-hifi.com/images/cs300xs-front.jpg' },
-  { key: 'leben cs300',         url: 'https://www.leben-hifi.com/images/cs300xs-front.jpg' },
-
   // Marantz — locally hosted 2220B chassis photo (2026-05-28). The
   // prior entry pointed at classicreceivers.com with a
   // tier: 'review_publication' source block, which the F4 gate skipped,
@@ -344,8 +320,6 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // ── Speakers ──────────────────────────────────────────
 
   // KEF — kef.com product assets
-  { key: 'kef ls50 meta',       url: 'https://www.kef.com/cdn/shop/products/LS50-Meta-Carbon-Black-Single-Front_1200x.jpg' },
-  { key: 'kef ls50',            url: 'https://www.kef.com/cdn/shop/products/LS50-Meta-Carbon-Black-Single-Front_1200x.jpg' },
   { key: 'kef r3',              url: 'https://us.kef.com/cdn/shop/files/r3-meta_sp4053b1_product__front-side.png?v=1773978064&width=1024' },
 
   // Harbeth — entries removed 2026-05-21 after audit. The harbeth.co.uk
@@ -404,12 +378,8 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'magico a3',            url: 'https://images.squarespace-cdn.com/content/v1/5d6806d4d4a70b00015c75b4/1567191992078-77SK24QU4NQ1S2MILAHZ/3+%284%29.jpg?format=2500w' },
 
   // Klipsch Heritage — klipsch.com /medias/ CDN
-  { key: 'klipsch la scala',    url: 'https://www.klipsch.com/medias/la-scala-al5-natural-cherry-front.jpg' },
   { key: 'klipsch heresy',      url: 'https://klipsch.imgix.net/product-images/Heresy-IV_American-Walnut_Front_2024-07-09-235240_vpra.jpg',
     source: { tier: 'manufacturer', site: 'klipsch.imgix.net', credit: 'Klipsch', captured: '2026-05-12' } },
-  { key: 'klipsch cornwall',    url: 'https://www.klipsch.com/medias/cornwall-iv-natural-cherry-front.jpg' },
-  { key: 'klipsch forte',       url: 'https://www.klipsch.com/medias/forte-iv-natural-cherry-front.jpg' },
-
   // Boenicke — boenicke-audio.ch /wp-content/uploads/ CDN
   { key: 'boenicke w5',          url: 'https://boenicke-audio.ch/wp-content/uploads/2017/08/W5_halbvorne_web.jpg' },
   { key: 'boenicke w8',          url: 'https://boenicke-audio.ch/wp-content/uploads/2017/08/W8_halbseite_web.jpg' },
@@ -423,20 +393,14 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
 
   // Focal — focal.com + Focal-Naim DAM CDN
   { key: 'focal kanta no 2',     url: 'https://dam.focal-naim.com/m/52fdcf02309f4f88/original/KantaN2_walnut-mat_Ivory_mat_34-jpg.jpg' },
-  { key: 'focal aria 906',       url: 'https://www.focal.com/sites/www.focal.com/files/aria-906-walnut-front.jpg' },
-
   // Wharfedale — wharfedaleusa.com Shopify CDN (official US distributor)
   { key: 'wharfedale linton',    url: 'https://www.wharfedaleusa.com/cdn/shop/products/LINTONHeritageWalnut_1_1200x.jpg?v=1630422663' },
 
   // Bowers & Wilkins — bowerswilkins.com
-  { key: 'bowers wilkins 705',  url: 'https://www.bowerswilkins.com/medias/705-s3-gloss-black-front.png' },
-
   // Spendor — spendoraudio.com
   { key: 'spendor d7',          url: 'https://spendoraudio.com/wp-content/uploads/d7.2-natural-oak-front.jpg' },
 
   // Dynaudio — dynaudio.com
-  { key: 'dynaudio heritage',   url: 'https://www.dynaudio.com/media/product/heritage-special-rosewood-front.jpg' },
-
   // Wilson Audio — wilsonaudio.com /media/ CDN
   { key: 'wilson audio sabrina', url: 'https://www.wilsonaudio.com/media/941/sabrinax.jpg' },
 
@@ -486,9 +450,6 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'hifiman ef400',       url: 'https://store.hifiman.com/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/1/2/1200_1200_-3.jpg' },
 
   // Sennheiser — sennheiser.com product assets
-  { key: 'sennheiser hd 800 s', url: 'https://assets.sennheiser.com/img/hd-800-s/gallery/hd-800-s_1.jpg' },
-  { key: 'sennheiser hd 600',   url: 'https://assets.sennheiser.com/img/hd-600/gallery/hd-600_1.jpg' },
-
   // ZMF — shop.zmfheadphones.com Shopify CDN
   { key: 'zmf verite closed',   url: 'https://shop.zmfheadphones.com/cdn/shop/files/DSC0072_1200x1200.jpg' },
 
@@ -506,16 +467,11 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'kef ls60',            url: 'https://us.kef.com/cdn/shop/files/pdt-ls60w-stn-pks-040_1200x1200.png' },
 
   // McIntosh — mcintoshlabs.com /-/media/ CDN (pattern from MA252)
-  { key: 'mcintosh ma12000',    url: 'https://www.mcintoshlabs.com/-/media/images/mcintoshlabs/products/productimages/ma12000/ma12000-front.jpg' },
-
   // Hegel — hegel.com /images/products/ CDN (pattern from H390/H190)
   { key: 'hegel rost',          url: 'https://www.hegel.com/images/products/discontinued/Rost.jpg' },
 
   // Rega — rega.co.uk /wp-content/uploads/ CDN (turntable)
-  { key: 'rega planar 3',       url: 'https://www.rega.co.uk/wp-content/uploads/2020/01/Planar-3-front.jpg' },
   // Pro-Ject — project-audio.com product assets
-  { key: 'pro ject debut pro',  url: 'https://www.project-audio.com/wp-content/uploads/2020/09/Debut-PRO_1_black_o_cartridge-1536x1536.png' },
-
   // WiiM — wiimhome.com / Linkplay CDN (additional models)
   { key: 'wiim ultra',          url: 'https://cdn.shopify.com/s/files/1/0833/6441/3757/files/listing_1_Main_picture_Gray_2056e197-e4f8-4e39-8f41-bd792622f0a8.jpg' },
   { key: 'wiim amp',            url: 'https://cloudadmin-file.linkplay.com/product/image/b4bb2c26859e4f68b32df583307bf82e.png' },
@@ -531,17 +487,11 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
 
   // Sony — sony.com product assets
   { key: 'sony wh 1000xm5',    url: 'https://www.sony.com/image/5d02da5df552836db894cead8a68f5f3' },
-  { key: 'sony ier m7',         url: 'https://www.sony.com/image/a7b7c7f037f84ee1b17df8e57534ed70' },
-
   // Etymotic — etymotic.com product assets
-  { key: 'etymotic er2xr',     url: 'https://www.etymotic.com/wp-content/uploads/2022/03/er2xr-earphone-front.jpg' },
-
   // Shure — shure.com product assets
   { key: 'shure aonic 3',      url: 'https://pubs.shure.com/guide/aonic3/images/aonic3-hero.png' },
 
   // Sennheiser — sennheiser.com (additional models)
-  { key: 'sennheiser momentum 4', url: 'https://assets.sennheiser.com/img/momentum-4-wireless/gallery/momentum-4-wireless_1.jpg' },
-
   // Holo Audio — kitsunehifi.com Shopify CDN (US distributor)
   { key: 'holo audio may',          url: 'https://kitsunehifi.com/cdn/shop/files/may1.jpg' },
   // Some engine outputs name the DAC as "Holo May" (model alone), without
@@ -576,17 +526,12 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // additional option — just not as the visual anchor.
 
   // Holo Audio — kitsunehifi.com Shopify CDN (US distributor)
-  { key: 'holo cyan',           url: 'https://kitsunehifi.com/cdn/shop/files/cyan2.jpg' },
-
   // Sonnet — sonnetaudio.com product assets + eliseaudio.com (Pasithea)
   // Note: catalog uses inconsistent brand strings — "Sonnet" for Pasithea
   // (dacs.ts:3704), "Sonnet Digital Audio" for Morpheus (dacs.ts:2365).
   // Both keys below are needed to match each catalog brand+name pair.
   { key: 'sonnet pasithea',           url: 'https://eliseaudio.com/cdn/shop/files/eliseaudiopasithea.png?v=1693561670&width=1946',
     source: { tier: 'authorized_dealer', site: 'eliseaudio.com', credit: 'Elise Audio', captured: '2026-05-08' } },
-  { key: 'sonnet digital audio morpheus', url: 'https://www.sonnetaudio.com/images/products/morpheus-front.jpg' },
-  { key: 'sonnet morpheus',           url: 'https://www.sonnetaudio.com/images/products/morpheus-front.jpg' },
-
   // Merason — Squarespace CDN (merason.ch swapped hosting; old URL stale)
   // Catalog stores "Frérot" with diacritic. The `normalize()` regex
   // strips non-ASCII letters → "fr rot", not "frerot". Both keys cover
@@ -607,11 +552,7 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'smsl su 9',           url: 'https://www.smsl-audio.com/upload/portal/20210301/SU-9-1.jpg' },
 
   // Weiss — weiss.ch product assets
-  { key: 'weiss dac204',        url: 'https://weiss.ch/wp-content/uploads/2023/11/DAC204-front-silver.jpg' },
-
   // Musical Fidelity — musicalfidelity.com product assets
-  { key: 'musical fidelity v90', url: 'https://musicalfidelity.com/wp-content/uploads/2020/01/V90-DAC-front.jpg' },
-
   // ── Remaining Amplifiers ──────────────────────────────
 
   // Scott — vintage tube amplifier
@@ -657,9 +598,7 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'mola mola tambaqui',  url: 'https://www.mola-mola.nl/img/tambaqui/Mola_Mola_studio-32.jpg',
     source: { tier: 'manufacturer', site: 'mola-mola.nl', credit: 'Mola Mola', captured: '2026-05-08' } },
 
-  // Cen.Grand — manufacturer (cen-grand.com)
-  { key: 'cen grand dsdac',     url: 'https://en.cen-grand.com/repository/image/2c07e7b2-91d2-4ef5-b5e5-a9ba9a642fec.jpg',
-    source: { tier: 'manufacturer', site: 'en.cen-grand.com', credit: 'Cen.Grand', captured: '2026-05-08' } },
+  // Cen.Grand overlay removed 2026-07-01 — HTTP 567 from en.cen-grand.com.
 
   // ── Amplifiers (round-2 retries) ─────────────────────
 
