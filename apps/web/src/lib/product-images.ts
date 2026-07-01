@@ -563,8 +563,17 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // NAD — nadelectronics.com Shopify CDN (additional model)
   { key: 'nad c 316bee',        url: 'https://nadelectronics.com/cdn/shop/files/NAD-C-316BEE-Intagrated-amplifier-Front.jpg' },
 
-  // MHDT — mhdtlab.com product image
-  { key: 'mhdt orchid',         url: 'https://www.mhdtlab.com/images/product/orchid/orchid-front.jpg' },
+  // MHDT Orchid overlay removed 2026-07-01. The mhdtlab.com URL
+  // returned HTTP 404 (site restructured; the /images/product/orchid/
+  // path no longer exists) and Mike observed a placeholder rendering
+  // on the Primary card. Until we source a working photo from a
+  // known-good dealer or manufacturer origin, we leave MHDT Orchid
+  // without an overlay entry — the shopping anchor Rule 4 (prefer
+  // with-image candidates for the Primary card) then pushes it out
+  // of the anchor slot instead of surfacing the placeholder as the
+  // loudest visual element. If MHDT Orchid is still sonically
+  // relevant to a query, it can still appear as an Alternative or
+  // additional option — just not as the visual anchor.
 
   // Holo Audio — kitsunehifi.com Shopify CDN (US distributor)
   { key: 'holo cyan',           url: 'https://kitsunehifi.com/cdn/shop/files/cyan2.jpg' },
