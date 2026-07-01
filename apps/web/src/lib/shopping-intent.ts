@@ -2581,6 +2581,7 @@ import { HEADPHONE_PRODUCTS, type HeadphoneProduct } from './products/headphones
 import { getEbaySearchUrl } from './ebay-links';
 import { selectTurntableExamples } from './products/turntables';
 import { rankProducts, type ScoredProduct, AMPLIFIER_ARCHITECTURE_TENDENCIES, type ArchitectureTendency } from './product-scoring';
+import { getProductImage } from './product-images';
 import type { ListenerProfile } from './listener-profile';
 import { findCatalogProduct, resolveProductAlias } from './listener-profile';
 import { tagProductArchetype } from './archetype';
@@ -4885,6 +4886,47 @@ function selectProductExamples(
       if (anchorEligible.length === 0) {
         console.warn('[anchor-filter] all candidates excluded — falling back to full eligible pool');
         anchorEligible = eligible;
+      }
+
+      // ── Rule 4: Prefer anchors that have a resolvable product image.
+      //
+      // Mike's July-1 QA note: "as a rule better not to pull a product
+      // without a picture if possible." The Primary recommendation card
+      // is the loudest visual element in a shopping response — anchoring
+      // it on a product that only renders a category placeholder icon
+      // (no catalog imageUrl, no curated overlay) weakens the whole
+      // card even when the sonic fit is right.
+      //
+      // Fix: partition the anchor pool by image availability. If the
+      // with-image sub-pool has at least two candidates (so we still
+      // have room for a Primary + a Close alternative), use it as the
+      // anchor pool. If image coverage is thin, fall back to the full
+      // pool rather than force an empty selection.
+      //
+      // Products without images stay in `eligible` so they can still
+      // fill contrast / wildcard / additional-options slots below the
+      // anchor. This only affects who gets the Primary card.
+      {
+        const hasImage = (p: Ranked): boolean =>
+          !!(p.imageUrl && p.imageUrl.trim().length > 0)
+          || !!getProductImage(p.brand, p.name);
+
+        const withImage = anchorEligible.filter(hasImage);
+        const withoutImage = anchorEligible.length - withImage.length;
+
+        if (withImage.length >= 2 && withoutImage > 0) {
+          console.log('[anchor-filter] image-availability preference applied', {
+            before: anchorEligible.length,
+            withImage: withImage.length,
+            withoutImage,
+          });
+          anchorEligible = withImage;
+        } else if (withoutImage > 0) {
+          console.log('[anchor-filter] image-availability rule skipped — thin coverage', {
+            withImage: withImage.length,
+            withoutImage,
+          });
+        }
       }
     }
 
