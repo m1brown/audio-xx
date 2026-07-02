@@ -326,7 +326,20 @@ export function synthesizeArtifact(result: any): SynthResult {
   const caseParagraphs: string[] = [];
   const hasDatum = category === 'power_match' && !!extractSplDatum(constraintExpl);
 
-  if (bottleneck && constraintExpl) {
+  // A3 Phase 2 (vI) — validated A3-composed case paragraphs attached to the
+  // raw assessment carrier by the artifact-case overlay (a3-artifact-case.ts,
+  // wired in page.tsx). When present, they replace the deterministic
+  // composition below wholesale. The R5/R8 post-conditions after this block
+  // still run over them — a second net behind the overlay's own validator.
+  const a3Case: string[] | undefined = Array.isArray(result?.a3CaseParagraphs)
+    && result.a3CaseParagraphs.length >= 2
+    && result.a3CaseParagraphs.every((p: unknown) => typeof p === 'string' && (p as string).trim().length > 0)
+    ? result.a3CaseParagraphs
+    : undefined;
+
+  if (a3Case) {
+    caseParagraphs.push(...a3Case.map((p: string) => p.trim()));
+  } else if (bottleneck && constraintExpl) {
     // R3 (mechanism → heard consequence; bottleneck path only).
     // R4 (no datum repeat). R5 (no preview).
     const mechanism = buildMechanismBeat(constraintExpl, hasDatum);

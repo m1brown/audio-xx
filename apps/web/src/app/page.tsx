@@ -89,6 +89,7 @@ import { useAudioSession } from '@/lib/audio-session-context';
 import { buildTurnContext, type TurnContext } from '@/lib/turn-context';
 import { requestLlmOverlay } from '@/lib/memo-llm-overlay';
 import { a3CharacterEnabled, generateA3Character, spliceCharacter } from '@/lib/a3-character';
+import { a3ArtifactCaseEnabled, generateA3ArtifactCase } from '@/lib/a3-artifact-case';
 import { toAdvisorContext } from '@/lib/advisor-context';
 import { requestShoppingEditorial, mergeEditorialIntoOptions, requestEditorialClosing } from '@/lib/shopping-llm-overlay';
 import type { ShoppingEditorialContext } from '@/lib/shopping-llm-overlay';
@@ -2659,6 +2660,29 @@ export default function Home() {
             dispatch({ type: 'UPDATE_ADVISORY', id: assessmentMsgId, advisory: merged });
           }).catch(() => {
             /* deterministic Character stands — no user-visible failure */
+          });
+        }
+
+        // Audio XX vI Phase 2 — A3 Artifact Case overlay (flag-gated).
+        // Only meaningful when the v2 artifact is the render path (the
+        // __rawAssessment carrier is what AdvisoryMessage synthesizes from).
+        // Deterministic case paragraphs are already on screen; when A3
+        // produces a validated judgment column, we re-attach the carrier
+        // with a3CaseParagraphs and update in place — synthesizeArtifact
+        // prefers the attached paragraphs and still runs its own R5/R8
+        // post-conditions over them. On model-unavailable / validation-
+        // failure the deterministic column stands.
+        if (ASSESSMENT_ARTIFACT_V2_ENABLED && a3ArtifactCaseEnabled()) {
+          generateA3ArtifactCase(assessmentResult).then((res) => {
+            if (!res) return;
+            const merged = {
+              ...deterministicAdvisory,
+              __rawAssessment: { ...assessmentResult, a3CaseParagraphs: res.caseParagraphs },
+            };
+            merged.reasoningMode = 'hybrid';
+            dispatch({ type: 'UPDATE_ADVISORY', id: assessmentMsgId, advisory: merged });
+          }).catch(() => {
+            /* deterministic judgment column stands — no user-visible failure */
           });
         }
 
