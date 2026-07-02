@@ -36,7 +36,7 @@ import AdvisoryProductCards from '@/components/advisory/AdvisoryProductCard';
 // warm-editorial artifact surfaces). Values are byte-identical to
 // what was previously inlined here.
 
-import { COLOR, sectionHeadingStyle, proseStyle } from '@/lib/editorial-tokens';
+import { COLOR, proseStyle } from '@/lib/editorial-tokens';
 
 // ── Adapter: catalog Product → AdvisoryOption ───────────
 
@@ -318,7 +318,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {hasPhilosophy && (
         <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>Philosophy</h2>
+          <h2 className="axx-kicker">Philosophy</h2>
           <p style={proseStyle}>{profile!.philosophy}</p>
           {hasPhilosophy2 && (
             <p style={{ ...proseStyle, marginTop: '0.65rem' }}>
@@ -379,7 +379,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {hasLeadership && (
         <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>Leadership &amp; Origin</h2>
+          <h2 className="axx-kicker">Leadership &amp; Origin</h2>
           <p style={proseStyle}>{profile!.leadershipOrigin}</p>
         </section>
       )}
@@ -389,7 +389,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {hasQuotes && (
         <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>What Reviewers Say</h2>
+          <h2 className="axx-kicker">What Reviewers Say</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {profile!.reviewerQuotes!.map((q, i) => (
               <blockquote
@@ -445,7 +445,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {hasTendencies && (
         <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>Sonic Character</h2>
+          <h2 className="axx-kicker">Sonic Character</h2>
           <p style={proseStyle}>{profile!.tendencies}</p>
         </section>
       )}
@@ -455,7 +455,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {hasVideos && (
         <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>Listen / Watch</h2>
+          <h2 className="axx-kicker">Listen / Watch</h2>
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
@@ -542,7 +542,7 @@ export default async function BrandPage({ params }: PageProps) {
         }}>
           {hasStrengths && (
             <div>
-              <h2 style={sectionHeadingStyle}>Strengths</h2>
+              <h2 className="axx-kicker">Strengths</h2>
               <ul style={{
                 margin: 0, paddingLeft: '1.1rem', listStyle: 'disc',
                 fontSize: '0.94rem', lineHeight: 1.65, color: COLOR.textSecondary,
@@ -557,7 +557,7 @@ export default async function BrandPage({ params }: PageProps) {
           )}
           {hasTradeoffs && (
             <div>
-              <h2 style={sectionHeadingStyle}>Trade-offs</h2>
+              <h2 className="axx-kicker">Trade-offs</h2>
               <ul style={{
                 margin: 0, paddingLeft: '1.1rem', listStyle: 'disc',
                 fontSize: '0.94rem', lineHeight: 1.65, color: COLOR.textSecondary,
@@ -578,7 +578,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {(hasPairingNotes || hasSystemContext) && (
         <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>Pairing Guidance</h2>
+          <h2 className="axx-kicker">Pairing Guidance</h2>
           {hasSystemContext && <p style={proseStyle}>{profile!.systemContext}</p>}
           {hasPairingNotes && (
             <p style={{ ...proseStyle, marginTop: hasSystemContext ? '0.5rem' : 0 }}>
@@ -593,7 +593,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {hasDesignFamilies && (
         <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>Design Families</h2>
+          <h2 className="axx-kicker">Design Families</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
             {profile!.designFamilies!.map((fam) => (
               <div
@@ -633,7 +633,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {hasLinks && (
         <section style={{ marginBottom: '1.75rem' }}>
-          <h2 style={sectionHeadingStyle}>Links</h2>
+          <h2 className="axx-kicker">Links</h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem' }}>
             {safeLinks.map((link) => (
               <a
@@ -663,7 +663,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {hasRelatedTech && (
         <section style={{ marginBottom: '1.75rem' }}>
-          <h2 style={sectionHeadingStyle}>The Ideas Behind {displayName}</h2>
+          <h2 className="axx-kicker">The Ideas Behind {displayName}</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
             {relatedTech.map((t) => (
               <Link
@@ -712,11 +712,7 @@ export default async function BrandPage({ params }: PageProps) {
 
       {options.length > 0 ? (
         <section style={{ marginBottom: '2rem' }}>
-          <h2 style={{
-            ...sectionHeadingStyle,
-            marginBottom: '1rem',
-            color: COLOR.textMuted,
-          }}>
+          <h2 className="axx-kicker" style={{ marginBottom: '1rem' }}>
             Representative models &mdash; {options.length} {options.length === 1 ? 'product' : 'products'}
           </h2>
           <AdvisoryProductCards options={options} hideMakerInsight />
