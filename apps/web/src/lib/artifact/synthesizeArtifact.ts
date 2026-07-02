@@ -370,12 +370,40 @@ export function synthesizeArtifact(result: any): SynthResult {
       return m ? `the ${m[1]} ${m[2]} ${m[3]}` : s.charAt(0).toLowerCase() + s.slice(1);
     }
 
-    // ── Paragraph 1: the thesis — system as portrait. ──
-    // Combines the equilibrium beat (how the components trade roles)
-    // with the first strength as a defining sentence.
+    // Extract the leading subject (component name) from an engine
+    // sentence, so we can detect subject reduplication between the
+    // equilibrium beat and any strength we might weave next to it.
+    function subjectOf(s: string): string {
+      const m = s.match(/^([A-Z][\w+\-]+(?:\s+[A-Z0-9][\w+\-]*)*)/);
+      return (m ? m[1] : '').toLowerCase();
+    }
+    // An upgradeDirection is EDITORIALLY useful when it names a
+    // direction ("look to a larger speaker for more scale"). It's
+    // NOT editorially useful when the engine falls back to a
+    // diagnostic message about missing profile data — those read as
+    // meta-commentary about the analysis, not advice about the
+    // system, and they turn the essay's closing into a run-on.
+    function isFallbackDiagnostic(s: string): boolean {
+      return /\btrait data\b|\bfeel is missing\b|\banalysis can get more\b|\bmore specific\b/i.test(s);
+    }
+
+    // ── Paragraph 1: the thesis — the equilibrium beat.
+    // Names how the components trade roles. Weaves in the first
+    // strength only when it names a DIFFERENT component than the
+    // beat already covered, so we don't say the same thing twice.
+    const beatSubjects = beat ? beat.toLowerCase() : '';
     if (beat && strengths[0]) {
-      const first = asContribution(strengths[0]);
-      caseParagraphs.push(`${beat} This isn't accident — ${first}, and the rest of the chain has been chosen so that it can.`);
+      const s0 = strengths[0];
+      const subj = subjectOf(s0);
+      const alreadyCovered = subj && beatSubjects.includes(subj);
+      if (alreadyCovered) {
+        // Beat + a general "chosen for" close.
+        caseParagraphs.push(`${beat} None of that is an accident — the chain upstream has been chosen so nothing fights what the speaker is trying to do.`);
+      } else {
+        // Beat + a specific "and here's what X brings" close on a
+        // fresh subject.
+        caseParagraphs.push(`${beat} None of that is an accident — ${asContribution(s0)}, and the rest of the chain has been chosen so that it can.`);
+      }
     } else if (beat) {
       caseParagraphs.push(beat);
     } else if (strengths[0]) {
@@ -384,43 +412,43 @@ export function synthesizeArtifact(result: any): SynthResult {
     }
 
     // ── Paragraph 2: the developed case — additional strengths
-    // woven into flowing prose rather than a list. When two or more
-    // additional strengths exist, join them with connective phrases
-    // so the paragraph reads as an argument, not a bullet list.
-    const extras = strengths.slice(1, 3);
-    if (extras.length === 2) {
-      caseParagraphs.push(`What you hear is coherence: ${asContribution(extras[0])}, while ${asContribution(extras[1])}. Nothing upstream fights what's downstream — the character of the front end reads all the way through.`);
-    } else if (extras.length === 1) {
-      caseParagraphs.push(`What you hear is coherence: ${asContribution(extras[0])}, and nothing upstream fights it.`);
+    // (skipping any subject the beat already named) woven together
+    // as flowing prose. Reads as an argument, not a bullet list.
+    const extraStrengths = strengths.slice(1, 4).filter((s) => {
+      const subj = subjectOf(s);
+      return !subj || !beatSubjects.includes(subj);
+    });
+    if (extraStrengths.length >= 2) {
+      caseParagraphs.push(`What you hear is coherence: ${asContribution(extraStrengths[0])}, while ${asContribution(extraStrengths[1])}. Nothing upstream fights what's downstream — the character of the front end reads all the way through.`);
+    } else if (extraStrengths.length === 1) {
+      caseParagraphs.push(`What you hear is coherence: ${asContribution(extraStrengths[0])}, and nothing upstream fights it.`);
     }
 
-    // ── Paragraph 3: the honest trade — reframe the first limitation
-    // as the deal the reader has made, not a hidden warning.
+    // ── Paragraph 3: the honest trade — let the engine's limitation
+    // stand as its own sentence with a brief editorial framing rather
+    // than a heavy "The trade you've made is real. " lead-in that
+    // adds no information.
     if (limitations[0]) {
-      const limit = limitations[0];
-      // If the engine's limitation is already a full explanatory
-      // sentence (dashes, multiple clauses), let it stand. Otherwise
-      // frame it as a "here's the cost" beat.
-      const hasStructure = /—|:/.test(limit);
-      caseParagraphs.push(hasStructure
-        ? `The trade you've made is real. ${limit}.`
-        : `The trade you've made: ${limit.charAt(0).toLowerCase() + limit.slice(1)}. That's the cost of the design choice.`);
+      const limit = limitations[0].replace(/\s+/g, ' ').trim();
+      caseParagraphs.push(`The trade — ${limit.charAt(0).toLowerCase() + limit.slice(1)}.`);
     }
 
-    // ── Paragraph 4: the closing — listener-fit + refrain + the
-    // forward-looking aside. Fits three beats into one paragraph so
-    // the essay closes as a single sustained thought rather than
-    // three short lines.
+    // ── Paragraph 4: the closing — listener-fit + refrain in one
+    // sustained thought. Kept short so it reads as an editorial
+    // sign-off.
     const closing: string[] = [];
     if (prefNote) closing.push(prefNote);
     closing.push('Each component is doing what it was chosen for, and nothing is asking it to do more');
-    if (upgrade) {
-      // upgradeDirection sometimes reads as its own sentence; give it
-      // its own clause with a soft transition rather than mashing it
-      // into the refrain.
-      closing.push(`if you ever want more, ${upgrade.charAt(0).toLowerCase() + upgrade.slice(1)}`);
-    }
     caseParagraphs.push(closing.join('. ') + '.');
+
+    // ── Paragraph 5 (optional): the forward-look. Only surfaces
+    // when the engine actually named a direction — fallback
+    // diagnostic messages ("without stronger trait data …") get
+    // dropped here because they read as meta-commentary about the
+    // analysis rather than advice about the system.
+    if (upgrade && !isFallbackDiagnostic(upgrade)) {
+      caseParagraphs.push(`If you ever want more, ${upgrade.charAt(0).toLowerCase() + upgrade.slice(1)}.`);
+    }
   }
   if (!caseParagraphs.length && signature) caseParagraphs.push(stripTrailingPeriod(signature) + '.');
 
