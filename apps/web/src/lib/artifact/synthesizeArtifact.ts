@@ -337,6 +337,21 @@ export function synthesizeArtifact(result: any): SynthResult {
     caseParagraphs.push(heard);
   } else {
     // R8 (restraint: demonstrate equilibrium, not announce it).
+    //
+    // 2026-07-01 enrichment pass — Mike's note on the France balanced
+    // response: "should be much more informative." The engine emits
+    // several fields the synthesizer was throwing away:
+    //   • resp.assessmentStrengths[]  (was: only [0] surfaced)
+    //   • resp.assessmentLimitations  (was: bottleneck-path only)
+    //   • resp.preferenceNote          (was: unused entirely)
+    //   • resp.upgradeDirection        (was: unused in balanced case)
+    //
+    // Plumb all four through as additional case paragraphs. The
+    // resulting body reads as roughly 2-3× as long as before while
+    // staying editorial — each new paragraph earns its space by
+    // naming something the reader could actually act on (per-
+    // component contribution, honest trade-off, listener fit, where
+    // upgrade energy would go if desires shifted).
     const beat = equilibriumBeat(credit, f.systemAxes);
     if (beat) caseParagraphs.push(beat);
 
@@ -348,8 +363,50 @@ export function synthesizeArtifact(result: any): SynthResult {
         ? `What the ${subj[1]} brings — ${subj[3]} — comes through cleanly because nothing upstream fights it.`
         : `${firstStrength}, in a chain that lets it.`);
     }
+
+    // Additional strengths (2nd and 3rd) — surfaced as their own beats
+    // so the balanced case reads like a system portrait, not a verdict.
+    // Each one either follows the same "What the X brings — Y" shape
+    // that got composed above, or falls through as the raw strength
+    // sentence when the engine text isn't structured for the pattern.
+    for (let i = 1; i < Math.min(strengths.length, 3); i++) {
+      const s = stripTrailingPeriod((strengths[i] ?? '').trim());
+      if (!s) continue;
+      const subj = s.match(/^([A-Z][\w\s+\-]+?)\s+(contributes|provides|adds|delivers|brings)\s+(.+)$/);
+      caseParagraphs.push(subj ? `The ${subj[1]} ${subj[2]} ${subj[3]}.` : `${s}.`);
+    }
+
+    // Honest trade-off — the engine's first assessment limitation
+    // reframed as "the deal you've made" so the balanced case doesn't
+    // read as pure praise. Only surfaced when the engine actually
+    // emitted a limitation — many well-matched systems return an
+    // empty array and the paragraph is skipped.
+    const limitations: string[] = resp.assessmentLimitations ?? [];
+    const firstLimit = stripTrailingPeriod((limitations[0] ?? '').trim());
+    if (firstLimit) {
+      caseParagraphs.push(`The trade — ${firstLimit.charAt(0).toLowerCase() + firstLimit.slice(1)}.`);
+    }
+
+    // Listener-fit alignment — buildAssessmentPreferenceAlignment
+    // (consultation.ts) produces a sentence about how the system fits
+    // the listener's stated priorities. Placed here so the reader
+    // sees the "why this system is right for you" beat before the
+    // closing refrain.
+    const prefNote = stripTrailingPeriod((resp.preferenceNote ?? '').trim());
+    if (prefNote) {
+      caseParagraphs.push(`${prefNote}.`);
+    }
+
     // Closing implication — names the mechanism's consequence, not the verdict.
     caseParagraphs.push('Each component is doing what it was chosen for, and nothing is asking it to do more.');
+
+    // Upgrade direction — "if you wanted more X" beat, placed after
+    // the closing refrain so it reads as a forward-looking aside
+    // rather than an argument against the current system.
+    const dir = stripTrailingPeriod((resp.upgradeDirection ?? '').trim());
+    if (dir) {
+      caseParagraphs.push(`${dir}.`);
+    }
   }
   if (!caseParagraphs.length && signature) caseParagraphs.push(stripTrailingPeriod(signature) + '.');
 
