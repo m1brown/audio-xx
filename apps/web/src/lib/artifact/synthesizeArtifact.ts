@@ -338,75 +338,89 @@ export function synthesizeArtifact(result: any): SynthResult {
   } else {
     // R8 (restraint: demonstrate equilibrium, not announce it).
     //
-    // 2026-07-01 enrichment pass — Mike's note on the France balanced
-    // response: "should be much more informative." The engine emits
-    // several fields the synthesizer was throwing away:
-    //   • resp.assessmentStrengths[]  (was: only [0] surfaced)
-    //   • resp.assessmentLimitations  (was: bottleneck-path only)
-    //   • resp.preferenceNote          (was: unused entirely)
-    //   • resp.upgradeDirection        (was: unused in balanced case)
+    // 2026-07-01 essay-treatment pass. Mike's note on the enriched
+    // balanced response was that even with the extra engine data
+    // plumbed through, the body still read as a sequence of short
+    // standalone sentences rather than editorial prose. This pass
+    // COMPOSES the same signals (equilibriumBeat, strengths,
+    // limitations, preferenceNote, upgradeDirection) into 3–4
+    // fuller paragraphs with narrative connective tissue — thesis
+    // → developed case → honest trade → forward-look — so the
+    // body reads like a short editorial portrait of the system.
     //
-    // Plumb all four through as additional case paragraphs. The
-    // resulting body reads as roughly 2-3× as long as before while
-    // staying editorial — each new paragraph earns its space by
-    // naming something the reader could actually act on (per-
-    // component contribution, honest trade-off, listener fit, where
-    // upgrade energy would go if desires shifted).
+    // Each paragraph is composed conditionally on the data that
+    // reached it, so a system with fewer engine emissions still
+    // produces a coherent (shorter) essay rather than an
+    // over-padded skeleton.
     const beat = equilibriumBeat(credit, f.systemAxes);
-    if (beat) caseParagraphs.push(beat);
 
-    const strengths: string[] = resp.assessmentStrengths ?? [];
-    const firstStrength = stripTrailingPeriod((strengths[0] ?? '').trim());
-    if (firstStrength) {
-      const subj = firstStrength.match(/^([A-Z][\w\s+\-]+?)\s+(contributes|provides|adds|delivers|brings)\s+(.+)$/);
-      caseParagraphs.push(subj
-        ? `What the ${subj[1]} brings — ${subj[3]} — comes through cleanly because nothing upstream fights it.`
-        : `${firstStrength}, in a chain that lets it.`);
-    }
-
-    // Additional strengths (2nd and 3rd) — surfaced as their own beats
-    // so the balanced case reads like a system portrait, not a verdict.
-    // Each one either follows the same "What the X brings — Y" shape
-    // that got composed above, or falls through as the raw strength
-    // sentence when the engine text isn't structured for the pattern.
-    for (let i = 1; i < Math.min(strengths.length, 3); i++) {
-      const s = stripTrailingPeriod((strengths[i] ?? '').trim());
-      if (!s) continue;
-      const subj = s.match(/^([A-Z][\w\s+\-]+?)\s+(contributes|provides|adds|delivers|brings)\s+(.+)$/);
-      caseParagraphs.push(subj ? `The ${subj[1]} ${subj[2]} ${subj[3]}.` : `${s}.`);
-    }
-
-    // Honest trade-off — the engine's first assessment limitation
-    // reframed as "the deal you've made" so the balanced case doesn't
-    // read as pure praise. Only surfaced when the engine actually
-    // emitted a limitation — many well-matched systems return an
-    // empty array and the paragraph is skipped.
-    const limitations: string[] = resp.assessmentLimitations ?? [];
-    const firstLimit = stripTrailingPeriod((limitations[0] ?? '').trim());
-    if (firstLimit) {
-      caseParagraphs.push(`The trade — ${firstLimit.charAt(0).toLowerCase() + firstLimit.slice(1)}.`);
-    }
-
-    // Listener-fit alignment — buildAssessmentPreferenceAlignment
-    // (consultation.ts) produces a sentence about how the system fits
-    // the listener's stated priorities. Placed here so the reader
-    // sees the "why this system is right for you" beat before the
-    // closing refrain.
+    const strengths: string[] = (resp.assessmentStrengths ?? [])
+      .map((s: string) => stripTrailingPeriod((s ?? '').trim()))
+      .filter((s: string) => !!s);
+    const limitations: string[] = (resp.assessmentLimitations ?? [])
+      .map((s: string) => stripTrailingPeriod((s ?? '').trim()))
+      .filter((s: string) => !!s);
     const prefNote = stripTrailingPeriod((resp.preferenceNote ?? '').trim());
-    if (prefNote) {
-      caseParagraphs.push(`${prefNote}.`);
+    const upgrade = stripTrailingPeriod((resp.upgradeDirection ?? '').trim());
+
+    // Rephrase a strength sentence into a "what the X brings" clause
+    // suitable for sub-clause use inside a longer paragraph.
+    function asContribution(s: string): string {
+      const m = s.match(/^([A-Z][\w\s+\-]+?)\s+(contributes|provides|adds|delivers|brings)\s+(.+)$/);
+      return m ? `the ${m[1]} ${m[2]} ${m[3]}` : s.charAt(0).toLowerCase() + s.slice(1);
     }
 
-    // Closing implication — names the mechanism's consequence, not the verdict.
-    caseParagraphs.push('Each component is doing what it was chosen for, and nothing is asking it to do more.');
-
-    // Upgrade direction — "if you wanted more X" beat, placed after
-    // the closing refrain so it reads as a forward-looking aside
-    // rather than an argument against the current system.
-    const dir = stripTrailingPeriod((resp.upgradeDirection ?? '').trim());
-    if (dir) {
-      caseParagraphs.push(`${dir}.`);
+    // ── Paragraph 1: the thesis — system as portrait. ──
+    // Combines the equilibrium beat (how the components trade roles)
+    // with the first strength as a defining sentence.
+    if (beat && strengths[0]) {
+      const first = asContribution(strengths[0]);
+      caseParagraphs.push(`${beat} This isn't accident — ${first}, and the rest of the chain has been chosen so that it can.`);
+    } else if (beat) {
+      caseParagraphs.push(beat);
+    } else if (strengths[0]) {
+      const first = asContribution(strengths[0]);
+      caseParagraphs.push(`${first.charAt(0).toUpperCase() + first.slice(1)}, in a chain that lets it.`);
     }
+
+    // ── Paragraph 2: the developed case — additional strengths
+    // woven into flowing prose rather than a list. When two or more
+    // additional strengths exist, join them with connective phrases
+    // so the paragraph reads as an argument, not a bullet list.
+    const extras = strengths.slice(1, 3);
+    if (extras.length === 2) {
+      caseParagraphs.push(`What you hear is coherence: ${asContribution(extras[0])}, while ${asContribution(extras[1])}. Nothing upstream fights what's downstream — the character of the front end reads all the way through.`);
+    } else if (extras.length === 1) {
+      caseParagraphs.push(`What you hear is coherence: ${asContribution(extras[0])}, and nothing upstream fights it.`);
+    }
+
+    // ── Paragraph 3: the honest trade — reframe the first limitation
+    // as the deal the reader has made, not a hidden warning.
+    if (limitations[0]) {
+      const limit = limitations[0];
+      // If the engine's limitation is already a full explanatory
+      // sentence (dashes, multiple clauses), let it stand. Otherwise
+      // frame it as a "here's the cost" beat.
+      const hasStructure = /—|:/.test(limit);
+      caseParagraphs.push(hasStructure
+        ? `The trade you've made is real. ${limit}.`
+        : `The trade you've made: ${limit.charAt(0).toLowerCase() + limit.slice(1)}. That's the cost of the design choice.`);
+    }
+
+    // ── Paragraph 4: the closing — listener-fit + refrain + the
+    // forward-looking aside. Fits three beats into one paragraph so
+    // the essay closes as a single sustained thought rather than
+    // three short lines.
+    const closing: string[] = [];
+    if (prefNote) closing.push(prefNote);
+    closing.push('Each component is doing what it was chosen for, and nothing is asking it to do more');
+    if (upgrade) {
+      // upgradeDirection sometimes reads as its own sentence; give it
+      // its own clause with a soft transition rather than mashing it
+      // into the refrain.
+      closing.push(`if you ever want more, ${upgrade.charAt(0).toLowerCase() + upgrade.slice(1)}`);
+    }
+    caseParagraphs.push(closing.join('. ') + '.');
   }
   if (!caseParagraphs.length && signature) caseParagraphs.push(stripTrailingPeriod(signature) + '.');
 
