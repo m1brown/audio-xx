@@ -322,13 +322,19 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // KEF — kef.com product assets
   { key: 'kef r3',              url: 'https://us.kef.com/cdn/shop/files/r3-meta_sp4053b1_product__front-side.png?v=1773978064&width=1024' },
 
-  // Harbeth — entries removed 2026-05-21 after audit. The harbeth.co.uk
-  // product image paths were restructured and now 301-redirect to the
-  // homepage; Chrome's ORB blocks the HTML response, so cards rendered
-  // a speaker.svg placeholder anyway. Removing the stale overlay
-  // entries lets cards fall through to the placeholder cleanly without
-  // firing doomed network requests. Re-add once a curated replacement
-  // (manufacturer press kit or permitted alternate host) is sourced.
+  // Harbeth — still no working external URL as of 2026-07-02.
+  //
+  // Cross-checked in the XXI pass while wiring the brand page through
+  // resolveProductImageStrict: harbeth.co.uk 301-redirects EVERY
+  // /wp-content/uploads request to the homepage (content-type
+  // text/html, ORB-blocked in Chrome regardless of HTTP status).
+  // Wayback Machine has zero image snapshots for that path. Dealer
+  // sites (Music Direct, Upscale Audio) load product images from
+  // JS-driven galleries that don't expose stable direct URLs. Until
+  // a licensed image can be sourced (press kit request, a permitted
+  // dealer CDN URL, or a locally-hosted /public/images/products/
+  // asset), Harbeth intentionally falls through to the category
+  // placeholder rather than firing doomed network requests.
 
   // WLM — hifi-guide.com product image
   { key: 'wlm diva',            url: 'https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg' },

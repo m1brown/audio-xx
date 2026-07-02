@@ -8,6 +8,7 @@ import { toSlug } from '@/lib/route-slug';
 import type { Product } from '@/lib/products/dacs';
 import type { AdvisoryOption } from '@/lib/advisory-response';
 import AdvisoryProductCards from '@/components/advisory/AdvisoryProductCard';
+import { resolveProductImageStrict } from '@/lib/product-images';
 
 /**
  * Audio XX — Brand authority page.
@@ -62,7 +63,16 @@ function productToAdvisoryOption(p: Product): AdvisoryOption {
     price: p.price,
     priceCurrency: p.priceCurrency,
     fitNote: '',
-    imageUrl: p.imageUrl,
+    // Image resolution: catalog imageUrl if present, else the curated
+    // overlay in product-images.ts. Prior to 2026-07-02 the brand page
+    // set `imageUrl: p.imageUrl` directly, which meant products with
+    // no catalog imageUrl but a valid overlay entry rendered as a
+    // category placeholder icon (e.g. Shindo, DeVore, Holo) instead of
+    // a real photo. Shopping-response cards were already using
+    // `resolveProductImageStrict` at advisory-response.ts — reusing
+    // the same helper here brings the brand-page render path onto the
+    // same resolver rather than adding a second implementation.
+    imageUrl: resolveProductImageStrict(p.brand, p.name, p.imageUrl),
     productType: CATEGORY_TO_PRODUCT_TYPE[p.category] ?? p.category,
     catalogTopology: p.topology,
     catalogCountry: p.country,

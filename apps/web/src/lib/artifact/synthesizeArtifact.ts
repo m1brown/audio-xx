@@ -424,11 +424,87 @@ export function synthesizeArtifact(result: any): SynthResult {
       caseParagraphs.push(`What you hear is coherence: ${asContribution(extraStrengths[0])}, and nothing upstream fights it.`);
     }
 
+    // ── Paragraph 3a (new 2026-07-02): why the system hangs together.
+    //
+    // For a balanced case the engine emits fewer axis-derived
+    // strengths and often zero limitations, so the previous
+    // composition landed at 2-3 paragraphs. Mike: "excellent systems
+    // should still produce rich editorial analysis explaining … why
+    // the system works / why the synergy exists / what compromises
+    // were intentionally avoided / why the presentation feels
+    // coherent / what design philosophy connects the components."
+    //
+    // findings (`f`) already carries deterministic structured signals
+    // that the synthesizer was throwing away: `isCoherent`,
+    // `coherentSharedTraits`, `coherentTradeoffs`, and
+    // `perComponentAxes`. When the system is coherent, we can name
+    // the shared traits and let the reader understand that this
+    // isn't accident — it's design. When it isn't formally coherent
+    // but has 3+ components with clear axis positions, we can still
+    // describe how the components lean and why that hangs together.
+    //
+    // Nothing here fabricates content — every clause is derived
+    // directly from a findings field.
+    const sharedTraits: string[] = Array.isArray(f.coherentSharedTraits) ? f.coherentSharedTraits : [];
+    const coherentTradeoffs: string[] = Array.isArray(f.coherentTradeoffs) ? f.coherentTradeoffs : [];
+    const perComponentAxes: Array<{ name: string; axes: Record<string, string> }> =
+      Array.isArray(f.perComponentAxes) ? f.perComponentAxes : [];
+
+    if (f.isCoherent === true && sharedTraits.length > 0) {
+      // Format a human trait list ("warmth, tonal density, and flow").
+      const traitList = sharedTraits.length === 1
+        ? sharedTraits[0]
+        : sharedTraits.length === 2
+          ? `${sharedTraits[0]} and ${sharedTraits[1]}`
+          : `${sharedTraits.slice(0, -1).join(', ')}, and ${sharedTraits[sharedTraits.length - 1]}`;
+      caseParagraphs.push(`Why it hangs together: every stage in the chain leans toward ${traitList}. When the source leans that way, the amplifier leans that way, and the speaker leans that way, the character isn't diluted at any handoff — it's amplified by design. This is what happens when components are chosen for shared voicing rather than complementary correction.`);
+    } else if (perComponentAxes.length >= 2) {
+      // Non-coherent balanced systems: describe the axis mix
+      // explicitly so the reader sees the deliberate lean per
+      // component. Pick the axis where the largest number of
+      // components agree and name it.
+      const AXES = ['warm_bright', 'smooth_detailed', 'elastic_controlled'];
+      const AXIS_LABEL: Record<string, string> = {
+        warm_bright: 'warmth vs. clarity',
+        smooth_detailed: 'ease vs. resolution',
+        elastic_controlled: 'elasticity vs. composure',
+      };
+      let bestAxis: string | null = null;
+      let bestCount = 0;
+      let bestSide = '';
+      for (const axis of AXES) {
+        const sides: Record<string, number> = {};
+        for (const c of perComponentAxes) {
+          const v = c.axes?.[axis];
+          if (v && v !== 'neutral') sides[v] = (sides[v] ?? 0) + 1;
+        }
+        const [side, count] = Object.entries(sides).sort((a, b) => b[1] - a[1])[0] ?? ['', 0];
+        if (count > bestCount) { bestAxis = axis; bestCount = count; bestSide = side; }
+      }
+      if (bestAxis && bestCount >= 2) {
+        caseParagraphs.push(`Why it hangs together: on ${AXIS_LABEL[bestAxis]}, ${bestCount} of the ${perComponentAxes.length} components lean the same way (${bestSide}). That agreement is what a coherent system sounds like — each stage carrying the direction forward instead of correcting the one before.`);
+      }
+    }
+
+    // ── Paragraph 3b (new): what the system deliberately gave up.
+    //
+    // The `coherentTradeoffs` finding names what a coherent system
+    // trades away to be what it is. Framing this as an intentional
+    // deal is closer to Mike's "compromises intentionally avoided"
+    // ask than the engine's `assessmentLimitations` array, which for
+    // balanced systems is often empty.
+    if (coherentTradeoffs.length > 0) {
+      const first = String(coherentTradeoffs[0]).trim().replace(/[.]+$/, '');
+      caseParagraphs.push(`What it gives up on purpose: ${first.charAt(0).toLowerCase() + first.slice(1)}. That's the deliberate cost — a coherent system can't pull in both directions at once, and this one has picked its direction.`);
+    }
+
     // ── Paragraph 3: the honest trade — let the engine's limitation
     // stand as its own sentence with a brief editorial framing rather
     // than a heavy "The trade you've made is real. " lead-in that
-    // adds no information.
-    if (limitations[0]) {
+    // adds no information. Only surfaced when the engine actually
+    // emitted a limitation AND we didn't already surface a
+    // coherentTradeoff above (avoids double trade-off paragraphs).
+    if (limitations[0] && coherentTradeoffs.length === 0) {
       const limit = limitations[0].replace(/\s+/g, ' ').trim();
       caseParagraphs.push(`The trade — ${limit.charAt(0).toLowerCase() + limit.slice(1)}.`);
     }
