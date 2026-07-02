@@ -4838,6 +4838,44 @@ function selectProductExamples(
       }
     }
 
+    // ── Image-availability preference (applies to ALL surfaced slots) ──
+    //
+    // 2026-07-01 followup to Mike's rule "as a rule better not to pull a
+    // product without a picture if possible." The July-1 morning pass
+    // (Rule 4 inside anchorEligible below) only protected the Primary
+    // card. Alternative / contrast / wildcard slots still received
+    // whatever came next in the ranked pool, which meant TotalDAC
+    // d1-twelve MK2 and MHDT Orchid — both catalog-image-less — kept
+    // rendering as placeholders in the visible shortlist.
+    //
+    // Fix: apply the same partition to `eligible` itself, before role
+    // assignment. If ≥ 2 with-image candidates exist, restrict the
+    // whole shortlist pool to them. If image coverage is thinner than
+    // that (rare — mostly niche categories with sparse curated
+    // overlays), fall back to the full pool rather than shrink the
+    // shortlist to 0-1 cards. The threshold matches Rule 4's below —
+    // one for Primary, one for Alt.
+    {
+      const hasImage = (p: Ranked): boolean =>
+        !!(p.imageUrl && p.imageUrl.trim().length > 0)
+        || !!getProductImage(p.brand, p.name);
+      const withImage = eligible.filter(hasImage);
+      const withoutImage = eligible.length - withImage.length;
+      if (withImage.length >= 2 && withoutImage > 0) {
+        console.log('[eligible-filter] image-availability preference applied to shortlist pool', {
+          before: eligible.length,
+          withImage: withImage.length,
+          withoutImage,
+        });
+        eligible = withImage;
+      } else if (withoutImage > 0) {
+        console.log('[eligible-filter] image-availability rule skipped — thin coverage', {
+          withImage: withImage.length,
+          withoutImage,
+        });
+      }
+    }
+
     // ──────────────────────────────────────────────────────
     // ANCHOR ELIGIBILITY: filter impractical products from anchor pool.
     // Excluded products remain in `eligible` for contrast/wildcard roles.
