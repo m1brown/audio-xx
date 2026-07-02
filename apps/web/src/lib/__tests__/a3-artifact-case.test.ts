@@ -105,6 +105,17 @@ describe('validateArtifactCase', () => {
     expect(fails).toContain('reviewer-register');
   });
 
+  it('rejects machine register — vote counting and axis labels', () => {
+    const counting = GOOD.replace(
+      'The Harbeth Super HL5 Plus is the counterweight.',
+      'On the ease vs. resolution axis, 2 of the 3 components lean the same way.',
+    );
+    expect(validateArtifactCase(counting, CTX)).toContain('machine-register');
+
+    const axisLabel = GOOD.replace('tonal mass', 'a smooth_detailed lean');
+    expect(validateArtifactCase(axisLabel, CTX)).toContain('machine-register');
+  });
+
   it('rejects fabricated measurements not present in context', () => {
     const bad = GOOD.replace('tonal mass', '87 dB of tonal mass');
     const fails = validateArtifactCase(bad, CTX);

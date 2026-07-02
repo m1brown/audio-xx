@@ -116,6 +116,17 @@ Hard rules for THIS surface:
   recommendation is a separate section that follows this text.
 - NEVER declare the verdict ("it is balanced", "nothing needs changing", "no weak
   link") — the verdict headline already said it; the column DEMONSTRATES it.
+- EXPLAIN, DON'T COUNT. Never surface the analysis machinery ("2 of the 3 components
+  lean the same way", "on the ease-vs-resolution axis", percentages, vote counts,
+  axis labels as labels). Translate the pattern into what it means. The register to
+  hit — an experienced reviewer explaining coherence:
+    "The reason this combination works is that each component reinforces the same
+     priorities rather than correcting the previous one. The source provides
+     precision and timing, the amplifier preserves momentum and drive, and the
+     speaker adds body and natural tone. None of the components fights the others,
+     so the presentation feels coherent rather than assembled."
+  Notice: it names what each component CONTRIBUTES and why the sum coheres — it
+  never reports the analysis that discovered it.
 - 2 to 4 paragraphs, 90–180 words total. Separate paragraphs with a blank line.
 - Prose only. No headers, no lists, no quotes, no questions.`;
 
@@ -155,6 +166,11 @@ const VERDICT_REFRAIN_RE = /\b(it is balanced|no weak link|nothing (?:here )?nee
 /** Reviewer-register vocabulary banned by doctrine (subset used as tripwire). */
 const REVIEWER_REGISTER_RE = /\b(plush|lush|velvety|shimmering|immersive|soundscape|musicality|musical tapestry|sonically rich|jaw-dropping|draws the listener in|veil lifted)\b/i;
 
+/** Machine register — the column must explain the pattern, never report the
+ *  analysis that discovered it ("2 of the 3 components lean the same way",
+ *  "on the ease vs. resolution axis", vote counts, axis labels as labels). */
+const MACHINE_REGISTER_RE = /\b(\d+\s+of\s+(?:the\s+)?\d+\s+components?|lean(?:s|ing)?\s+the\s+same\s+way|on\s+the\s+[\w\s]+\s+axis\b|warm_bright|smooth_detailed|elastic_controlled|airy_closed|axis\s+(?:position|leaning|label))\b/i;
+
 /** Fabricated measurements — reject numbers with engineering units not in context. */
 const MEASUREMENT_RE = /\b\d+(\.\d+)?\s?(db|wpc|watts?|w\b|khz|hz|ohms?|bit|µv|uv)\b/i;
 
@@ -174,6 +190,7 @@ export function validateArtifactCase(text: string, ctx: ArtifactCaseContext): st
   if (RECOMMENDATION_PREVIEW_RE.test(trimmed)) fails.push('previews-recommendation');
   if (VERDICT_REFRAIN_RE.test(trimmed)) fails.push('declares-verdict');
   if (REVIEWER_REGISTER_RE.test(trimmed)) fails.push('reviewer-register');
+  if (MACHINE_REGISTER_RE.test(trimmed)) fails.push('machine-register');
 
   // Measurement fabrication — allowed only when the same figure appears in
   // the supplied constraint explanation (e.g. "86 dB sensitivity" is a real
