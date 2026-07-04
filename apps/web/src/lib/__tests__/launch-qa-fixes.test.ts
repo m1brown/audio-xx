@@ -9,6 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildTurnContext } from '../turn-context';
 import { buildSystemAssessment } from '../consultation';
+import { detectIntent } from '../intent';
 import type { AudioSessionState } from '../system-types';
 
 const GUEST_AUDIO_STATE: AudioSessionState = {
@@ -46,5 +47,34 @@ describe('SA-06 regression: constraint labels are direction-aware', () => {
     const text = assess('Assess my system: Klipsch Cornwall IV, Decware SE84UFO');
     expect(text).not.toMatch(/(SE84UFO|se84ufo|Se84ufo)[^.]{0,40}limits tonal weight/);
     expect(text).not.toMatch(/limits tonal weight and body and rhythmic flow and grip/i);
+  });
+});
+
+describe('diagnosis-default regression: general questions reach the knowledge lane', () => {
+  // Launch QA "diagnosis black hole" — 12 of 39 🔴. Any message matching
+  // no pattern fell through to intent 'diagnosis' and beginner/philosophy
+  // questions were answered with symptom triage ("does it sound thin,
+  // digital, fatiguing?").
+  const BLACK_HOLE_PROMPTS = [
+    'Do cables actually matter?',
+    'Is room treatment more important than electronics?',
+    'What does speaker sensitivity mean?',
+    'Are expensive speakers actually better?',
+    'is class D finally good',
+    'honestly just tell me if the LS50 meta is overhyped',
+  ];
+  for (const p of BLACK_HOLE_PROMPTS) {
+    it(`"${p}" routes to the knowledge lane, not diagnosis`, () => {
+      expect(detectIntent(p).intent).toBe('audio_knowledge');
+    });
+  }
+
+  it('symptom language still routes to diagnosis', () => {
+    expect(detectIntent('My system sounds bad and I do not know why').intent).toBe('diagnosis');
+    expect(detectIntent('there is a hum coming from my speakers').intent).toBe('diagnosis');
+  });
+
+  it('active-system tuning fall-through is preserved', () => {
+    expect(detectIntent('I want more warmth', { hasActiveSavedSystem: true }).intent).toBe('diagnosis');
   });
 });

@@ -1772,8 +1772,25 @@ export function detectIntent(
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
-  // 7. Default — treat as diagnostic / open-ended listening discussion
-  return { intent: 'diagnosis', subjects, subjectMatches, desires };
+  // 7. Default. Diagnosis is only the right default when the message
+  //    actually describes a listening problem, or when the user has an
+  //    active saved system (page.tsx routes the diagnosis default to the
+  //    active-system tuning handler — see the 0f guard above).
+  //
+  //    Everything else reaching this point is an unresolved general
+  //    question — beginner, philosophy, opinion, or vague natural asks.
+  //    Routing those to symptom triage was the benchmark's single
+  //    largest failure class (Launch QA 2026-07-02: 12 of 39 🔴,
+  //    "the diagnosis black hole" — 'Do cables actually matter?' was
+  //    answered with "does it sound thin, digital, fatiguing?").
+  //    Route them to the knowledge lane, which answers first.
+  const hasSymptomLanguage =
+    /\b(?:dry|bright|thin|harsh|lean|cold|sterile|clinical|hard|forward|fatiguing|aggressive|muddy|dull|veiled|grainy|boring|lifeless|congested|sibilant|brittle|strident|hum(?:ming)?|buzz(?:ing)?|hiss(?:ing)?|distort\w*|crackl\w*|rattl\w*|drop\s*outs?|problem|issue|wrong|weird|broken)\b/i.test(currentMessage)
+    || /\bsounds?\s+(?:bad|off|strange|worse)\b/i.test(currentMessage);
+  if (hasSymptomLanguage || options.hasActiveSavedSystem) {
+    return { intent: 'diagnosis', subjects, subjectMatches, desires };
+  }
+  return { intent: 'audio_knowledge', subjects, subjectMatches, desires };
 }
 
 /**
