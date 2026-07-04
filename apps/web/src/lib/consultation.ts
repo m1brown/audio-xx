@@ -2620,10 +2620,36 @@ export function findBrandProfileMatchByName(brandName: string):
   return undefined;
 }
 
+// Word-boundary containment (plural-tolerant). Bare substring matching
+// resolved everyday words to products with generic catalog names —
+// "not sure if it's the amp" returned the WiiM AMP product sheet, and
+// "$330" would match the Soulution 330. Launch QA PH-05/NT-01
+// non-sequitur class.
+function textContainsTerm(lowerText: string, term: string): boolean {
+  const t = term.trim().toLowerCase();
+  if (!t) return false;
+  const esc = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?:^|[^a-z0-9])${esc}s?(?:[^a-z0-9]|$)`).test(lowerText);
+}
+// Product names that are ordinary category vocabulary or bare numerals
+// can never identify a product on their own — the brand must appear in
+// the text ("WiiM Amp" resolves; a stray "amp" does not).
+const GENERIC_PRODUCT_NAMES = new Set([
+  'amp', 'amplifier', 'integrated', 'pro', 'monitor', 'monitors',
+  'speaker', 'speakers', 'streamer', 'dac', 'one', 'plus', 'mini',
+  'classic', 'reference', 'signature',
+]);
+function productNameQualifiesForTextMatch(name: string): boolean {
+  const n = name.trim().toLowerCase();
+  if (GENERIC_PRODUCT_NAMES.has(n)) return false;
+  if (/^[\d.\-+]+$/.test(n)) return false;
+  return true;
+}
 function findProductsByBrand(text: string): Product[] {
   const lower = text.toLowerCase();
   return ALL_PRODUCTS.filter((p) =>
-    lower.includes(p.brand.toLowerCase()) || lower.includes(p.name.toLowerCase()),
+    textContainsTerm(lower, p.brand)
+    || (productNameQualifiesForTextMatch(p.name) && textContainsTerm(lower, p.name)),
   );
 }
 
@@ -2637,7 +2663,8 @@ function findProductsByBrand(text: string): Product[] {
 function findProvisionalProductsByBrand(text: string): ProvisionalProduct[] {
   const lower = text.toLowerCase();
   return getUsableProvisionalProducts().filter((p) =>
-    lower.includes(p.brand.toLowerCase()) || lower.includes(p.name.toLowerCase()),
+    textContainsTerm(lower, p.brand)
+    || (productNameQualifiesForTextMatch(p.name) && textContainsTerm(lower, p.name)),
   );
 }
 

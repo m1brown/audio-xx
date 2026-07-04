@@ -8,7 +8,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { buildTurnContext } from '../turn-context';
-import { buildSystemAssessment } from '../consultation';
+import { buildSystemAssessment, buildConsultationResponse } from '../consultation';
 import { detectIntent } from '../intent';
 import { detectShoppingIntent, buildShoppingAnswer } from '../shopping-intent';
 import { reason } from '../reasoning';
@@ -118,5 +118,34 @@ describe('NT-09 regression: colloquial budget language caps the shopping pool', 
     const ctx = detectShoppingIntent('best dac under $1000', EMPTY_SIGNALS);
     expect(ctx.budgetAmount).toBe(1000);
     expect(ctx.budgetConscious).toBe(false);
+  });
+});
+
+describe('PH-05/NT-01 regression: generic words never resolve to a catalog product', () => {
+  // The WiiM product's catalog name is literally "Amp"; bare substring
+  // matching in findProductsByBrand resolved any sentence containing
+  // "amp" to the WiiM AMP product sheet — a product the user never
+  // mentioned. Generic-vocabulary and bare-numeral names now require the
+  // brand in the text.
+  function consult(prompt: string) {
+    const turnCtx = buildTurnContext(prompt, GUEST_AUDIO_STATE, new Set(), undefined);
+    return buildConsultationResponse(prompt, turnCtx.subjectMatches);
+  }
+
+  it('"not sure if it\'s the amp" does not return a WiiM product sheet', () => {
+    const c: any = consult("ok so I have about $1500 and my system sounds kind of lifeless, not sure if it's the amp or what");
+    expect(JSON.stringify(c ?? {})).not.toMatch(/wiim/i);
+  });
+
+  it('"why do tube amps sound different" does not return a product sheet', () => {
+    const c: any = consult('Why do tube amps sound different from solid state?');
+    expect(JSON.stringify(c ?? {})).not.toMatch(/wiim/i);
+  });
+
+  it('explicit product mentions still resolve', () => {
+    const wiim: any = consult('thoughts on the WiiM Amp');
+    expect(JSON.stringify(wiim ?? {})).toMatch(/wiim/i);
+    const node: any = consult('what do you think of the Bluesound Node');
+    expect(JSON.stringify(node ?? {})).toMatch(/bluesound/i);
   });
 });
