@@ -10,7 +10,19 @@ import { describe, it, expect } from 'vitest';
 import { buildTurnContext } from '../turn-context';
 import { buildSystemAssessment } from '../consultation';
 import { detectIntent } from '../intent';
+import { detectShoppingIntent, buildShoppingAnswer } from '../shopping-intent';
+import { reason } from '../reasoning';
 import type { AudioSessionState } from '../system-types';
+import type { ExtractedSignals } from '../signal-types';
+
+const EMPTY_SIGNALS: ExtractedSignals = {
+  traits: {},
+  symptoms: [],
+  archetype_hints: [],
+  uncertainty_level: 0.5,
+  matched_phrases: [],
+  matched_uncertainty_markers: [],
+};
 
 const GUEST_AUDIO_STATE: AudioSessionState = {
   activeSystemRef: { kind: 'none' } as AudioSessionState['activeSystemRef'],
@@ -76,5 +88,35 @@ describe('diagnosis-default regression: general questions reach the knowledge la
 
   it('active-system tuning fall-through is preserved', () => {
     expect(detectIntent('I want more warmth', { hasActiveSavedSystem: true }).intent).toBe('diagnosis');
+  });
+});
+
+describe('NT-09 regression: colloquial budget language caps the shopping pool', () => {
+  // "whats a good tube amp that wont blow up my budget" anchored on the
+  // $20,000 Shindo Cortese — no numeric budget parsed, so no filtering
+  // and no esoteric penalty fired. budgetConscious now caps the pool at
+  // the affordability ceiling without fabricating a "$X" budget in copy.
+  it('detects budget-consciousness from "wont blow up my budget"', () => {
+    const ctx = detectShoppingIntent('whats a good tube amp that wont blow up my budget', EMPTY_SIGNALS);
+    expect(ctx.budgetConscious).toBe(true);
+    expect(ctx.budgetAmount).toBeNull();
+  });
+
+  it('never recommends a product over the affordability ceiling', () => {
+    const q = 'whats a good tube amp that wont blow up my budget';
+    const ctx = detectShoppingIntent(q, EMPTY_SIGNALS);
+    const reasoning = reason(q, [], EMPTY_SIGNALS, null, ctx, null);
+    const answer: any = buildShoppingAnswer(ctx, EMPTY_SIGNALS, undefined, reasoning);
+    const prices = (answer.productExamples ?? [])
+      .map((p: any) => p.price)
+      .filter((p: any) => typeof p === 'number');
+    expect(prices.length).toBeGreaterThan(0);
+    for (const price of prices) expect(price).toBeLessThanOrEqual(3000);
+  });
+
+  it('numeric budgets still take precedence over the colloquial flag', () => {
+    const ctx = detectShoppingIntent('best dac under $1000', EMPTY_SIGNALS);
+    expect(ctx.budgetAmount).toBe(1000);
+    expect(ctx.budgetConscious).toBe(false);
   });
 });

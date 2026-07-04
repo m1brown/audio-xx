@@ -384,6 +384,14 @@ export interface ShoppingContext {
   budgetAmount: number | null;
   /** Lower bound from "over $X", "above $X", "between $X and $Y" phrasing. */
   budgetFloor?: number | null;
+  /** Colloquial affordability signal with no numeric budget — "won't
+   *  blow up my budget", "affordable", "budget-friendly". Caps the
+   *  candidate pool at the affordability ceiling and activates the
+   *  esoteric-product penalty, WITHOUT fabricating a numeric budget
+   *  (budgetAmount stays null so no "$X" appears in copy, and the
+   *  budget gap-question still gets asked). Launch QA NT-09: this
+   *  phrasing anchored on a $20,000 Shindo Cortese. */
+  budgetConscious?: boolean;
   tasteProvided: boolean;
   systemProvided: boolean;
   systemProfile: SystemProfile;
@@ -1633,6 +1641,8 @@ export function detectShoppingIntent(
   const budgetMentioned = BUDGET_PATTERNS.some((re) => re.test(userText));
   const budgetAmount = parseBudgetAmount(userText);
   const budgetFloor = parseBudgetFloor(userText);
+  const budgetConscious = budgetAmount === null
+    && /\b(?:wo?n'?t\s+(?:blow\s+up|break|bust)\s+(?:the|my)\s+(?:budget|bank)|break(?:ing)?\s+the\s+bank|affordable|budget[-\s]friendly|on\s+a\s+(?:tight\s+)?budget|not\s+(?:too|super|crazy|very)\s+expensive|inexpensive|cheap(?:er|ish)?|reasonably\s+priced|entry[-\s]level|wo?n'?t\s+cost\s+a\s+fortune|without\s+spending\s+a\s+fortune)\b/i.test(userText);
   const tasteProvided = signals.symptoms.length >= 2;
   const hasActiveSystem = Array.isArray(activeSystemComponents) && activeSystemComponents.length > 0;
   const systemProvided = hasActiveSystem || SYSTEM_KEYWORDS.some((kw) => lower.includes(kw));
@@ -1670,6 +1680,7 @@ export function detectShoppingIntent(
     budgetMentioned: budgetMentioned || budgetFloor !== null,
     budgetAmount,
     budgetFloor,
+    budgetConscious,
     tasteProvided,
     systemProvided,
     systemProfile,
@@ -3850,6 +3861,8 @@ function selectProductExamples(
   symptoms?: string[],
   /** Lower price bound from "over $X" / "between $X and $Y" expressions. */
   budgetFloor?: number | null,
+  /** Colloquial affordability signal — see ShoppingContext.budgetConscious. */
+  budgetConscious?: boolean,
 ): ProductExample[] {
   // ── Turntable: illustrative examples with full card data ──
   if (category === 'turntable') {
@@ -4091,6 +4104,21 @@ function selectProductExamples(
   }
 
   const ranked = rankProducts(catalog, userTraits, budgetAmount, systemProfile, constraints, listenerProfile);
+
+  // ── Soft affordability ceiling ─────────────────────────
+  // The user signaled budget-consciousness without a number ("won't blow
+  // up my budget"). Prestige-priced products leave the pool before role
+  // assignment so the anchor cannot be a $20,000 pick (Launch QA NT-09).
+  // Keeps the unfiltered pool if the category has too few products under
+  // the ceiling to form a useful recommendation set.
+  if (budgetConscious && budgetAmount === null) {
+    const AFFORDABLE_CEILING = 3000;
+    const affordable = ranked.filter((e) => typeof e.product.price === 'number' && e.product.price <= AFFORDABLE_CEILING);
+    if (affordable.length >= 3) {
+      ranked.length = 0;
+      ranked.push(...affordable);
+    }
+  }
 
   // Apply taste profile bonus — small boost for products aligned with stored taste
   if (tasteProfile && tasteProfile.confidence > 0.2) {
@@ -4336,7 +4364,7 @@ function selectProductExamples(
   // commercially available, widely reviewed, non-niche designs rank higher.
   // This prevents products like Yamamoto from appearing in "van halen + $5000"
   // flows where the user expects mainstream-accessible recommendations.
-  if (budgetAmount !== null) {
+  if (budgetAmount !== null || budgetConscious) {
     const ESOTERIC_PENALTY = 0.5;
     // Check if user explicitly wants boutique/niche gear
     const userWantsNiche = semanticPreferences
@@ -6408,7 +6436,7 @@ export function buildShoppingAnswer(
 
   // 4. Product examples (only when catalog exists + budget known)
   // Pass reasoning for directional bias — existing scoring is preserved.
-  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents, ctx.roomContext, engagedProductNames, ctx.constraints, ctx.semanticPreferences, listenerProfile, selectionMode, previousAnchor, recentProductNames, brandConstraint, signals.symptoms, ctx.budgetFloor);
+  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents, ctx.roomContext, engagedProductNames, ctx.constraints, ctx.semanticPreferences, listenerProfile, selectionMode, previousAnchor, recentProductNames, brandConstraint, signals.symptoms, ctx.budgetFloor, ctx.budgetConscious);
 
   // ── Budget floor filter ───────────────────────────────
   // When the user specifies "over $X" or "between $X and $Y", remove
