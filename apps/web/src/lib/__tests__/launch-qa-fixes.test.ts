@@ -150,6 +150,33 @@ describe('PH-05/NT-01 regression: generic words never resolve to a catalog produ
   });
 });
 
+describe('UP/SM regression: advice questions are system reasoning, not comparisons', () => {
+  // "Should I upgrade my DAC or my amplifier?" names ≥2 components, so
+  // the comparison gate answered with a brand-vs-brand essay (Launch QA
+  // UP-01–04, SM-01 — the second-largest 🔴 class).
+  const ADVICE_PROMPTS = [
+    'Should I upgrade my DAC or my amplifier first? I have a Bluesound Node into a Marantz PM8006 into KEF R3.',
+    'What is the weakest link in my system: Eversolo DMP-A6, Job Integrated, WLM Diva monitor?',
+    'Where should I spend $2,000 to improve my system? Chord Qutest, Naim SuperNait 3, Harbeth SHL5+.',
+    'Should I just keep what I have? Denafrips Ares II, Rega Brio, Wharfedale Linton.',
+    'Can my Naim Nait 50 drive Falcon LS3/5a speakers?',
+  ];
+  for (const p of ADVICE_PROMPTS) {
+    it(`"${p.slice(0, 50)}…" routes to system_assessment`, () => {
+      expect(detectIntent(p).intent).toBe('system_assessment');
+    });
+  }
+
+  it('genuine comparisons still route to comparison', () => {
+    expect(detectIntent('Chord Qutest vs Schiit Bifrost 2/64 — which should I buy?').intent).toBe('comparison');
+    expect(detectIntent('Holo May vs Schiit Yggdrasil').intent).toBe('comparison');
+  });
+
+  it('"upgrade from X to Y" is not swallowed by the advice guard', () => {
+    expect(detectIntent('Is it worth upgrading from a Bluesound Node to an Eversolo A8?').intent).not.toBe('system_assessment');
+  });
+});
+
 describe('SA-02 regression: no reduplicated trait labels', () => {
   it('never emits "emphasis emphasis"', () => {
     const text = assess('Assess my system: WLM Diva monitor, Job Integrated, Eversolo DMP-A6');

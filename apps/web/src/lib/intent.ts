@@ -1463,6 +1463,32 @@ export function detectIntent(
     return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }
 
+  // 1b-advice. Advice/capability questions that NAME ≥2 components must
+  // never become brand-vs-brand comparisons or bare intake. "Should I
+  // upgrade my DAC or my amplifier? I have X, Y, Z" names components,
+  // so the comparison gate below eats it and answers a question the
+  // user didn't ask (Launch QA UP-01–04, SM-01: the second-largest 🔴
+  // class). Allocation and power-match questions are system reasoning;
+  // route to system_assessment. "X vs Y" and "upgrade from X to Y"
+  // phrasings are genuine comparisons and don't match these patterns.
+  // Must fire before the bare upgrade-followup gate below, which is for
+  // subject-less follow-ups.
+  const ADVICE_QUESTION_PATTERNS = [
+    /\bshould\s+i\s+upgrade\s+(?:my|the)\b(?![^?]*\bfrom\b)/i,
+    /\bweakest\s+link\b/i,
+    /\bwhere\s+should\s+i\s+(?:spend|put|invest)\b/i,
+    /\bshould\s+i\s+(?:just\s+)?keep\s+what\s+i\s+have\b/i,
+    /\bcan\s+my\s+.{2,40}\b(?:drive|power)\b/i,
+    /\benough\s+power\s+(?:for|to\s+drive)\b/i,
+    /\bupgrade\s+(?:my\s+)?\w+\s+or\s+(?:my\s+)?\w+\s+first\b/i,
+  ];
+  if (
+    ADVICE_QUESTION_PATTERNS.some((p) => p.test(currentMessage))
+    && subjectMatches.length >= 2
+  ) {
+    return { intent: 'system_assessment', subjects, subjectMatches, desires };
+  }
+
   // Phase C blocker fix #1: bare upgrade/improvement follow-ups after a
   // system review ("what would you upgrade first?", "where should I
   // start?") route to consultation_entry so the upgrade-guidance handler
