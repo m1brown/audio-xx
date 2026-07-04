@@ -14560,7 +14560,11 @@ function buildKeyObservation(
     if (imbalances.length > 0) {
       stackedNote = ` The system leans toward ${imbalances[0].label}, which deepens this character but narrows the system's range.`;
     } else if (characters.length > 0) {
-      stackedNote = ` The system shares a consistent ${characters[0].label} emphasis — this reinforces the system's identity.`;
+      // Stacked-trait labels can already end in "emphasis" ("detail
+      // emphasis") — strip it so the template doesn't reduplicate
+      // ("detail emphasis emphasis", Launch QA SA-02).
+      const charLabel = characters[0].label.replace(/\s+emphasis\s*$/i, '');
+      stackedNote = ` The system shares a consistent ${charLabel} emphasis — this reinforces the system's identity.`;
     }
 
     return `Your component choices suggest a preference for equipment emphasising **${philo}**. ${brandNames.join(', ')} share this design philosophy.${stackedNote} Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.`;
@@ -14574,7 +14578,8 @@ function buildKeyObservation(
       return `Despite broadly balanced axis positions, the system stacks ${imbalances[0].label} across multiple components. This is worth monitoring — it can be a deliberate strength or an emerging limitation depending on listening priorities. Targeted component changes can adjust this without rebuilding the system.`;
     }
     if (characters.length > 0) {
-      return `The system shares a consistent ${characters[0].label} emphasis across components. This is a defining feature of the system's sonic identity — not a limitation. Future upgrades should preserve this character.`;
+      const charLabel = characters[0].label.replace(/\s+emphasis\s*$/i, '');
+      return `The system shares a consistent ${charLabel} emphasis across components. This is a defining feature of the system's sonic identity — not a limitation. Future upgrades should preserve this character.`;
     }
   }
 

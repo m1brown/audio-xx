@@ -149,3 +149,10 @@ describe('PH-05/NT-01 regression: generic words never resolve to a catalog produ
     expect(JSON.stringify(node ?? {})).toMatch(/bluesound/i);
   });
 });
+
+describe('SA-02 regression: no reduplicated trait labels', () => {
+  it('never emits "emphasis emphasis"', () => {
+    const text = assess('Assess my system: WLM Diva monitor, Job Integrated, Eversolo DMP-A6');
+    expect(text).not.toMatch(/emphasis\s+emphasis/i);
+  });
+});
