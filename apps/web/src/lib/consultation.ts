@@ -10218,19 +10218,10 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   // _DEBUG instrumentation removed — the bottleneck detection logic is
   // stable and the diagnostic output was leaking into user-facing
   // system reviews (QA blocker N1).
-  // Short listener-facing example clauses keyed to axis/property. Exactly
-  // one appears in the primary-constraint sentence — nowhere else in the
-  // response. Each is a brief noun-phrase tied to what the listener hears.
-  const axisExample = (axis: string): string => {
-    switch (axis) {
-      case 'warm_bright': return 'less weight under male vocals';
-      case 'smooth_detailed': return 'shorter cymbal decay';
-      case 'elastic_controlled': return 'bass notes starting a fraction late';
-      case 'airy_closed': return 'less air between instruments';
-      case 'scale_intimacy': return 'a narrower stage between the speakers';
-      default: return 'thinner body on sustained notes';
-    }
-  };
+  // Short listener-facing example clauses keyed to axis/property live in
+  // constrainedAxisExample (module level, direction-aware). Exactly one
+  // appears in the primary-constraint sentence — nowhere else in the
+  // response.
   const propertyExample = (prop: string): string => {
     const key = prop.toLowerCase().replace(/[^a-z0-9]+/g, '_');
     const map: Record<string, string> = {
@@ -10245,9 +10236,14 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   };
 
   if (primary.kind === 'bottleneck') {
-    const axesText = primary.axes.slice(0, 2).map(listenerAxisLabel).join(' and ');
+    const bottleneckLeans = comps.find((c) => c.name === primary.component)?.axisPosition as
+      | Record<string, string>
+      | undefined;
+    const axesText = primary.axes.slice(0, 2)
+      .map((a) => constrainedAxisLabel(a, bottleneckLeans?.[a]))
+      .join(', and ');
     const role = primary.role.toUpperCase().length <= 4 ? primary.role.toUpperCase() : primary.role.toLowerCase();
-    const example = axisExample(primary.axes[0]);
+    const example = constrainedAxisExample(primary.axes[0], bottleneckLeans?.[primary.axes[0]]);
     constraintParts.push(
       `The main limitation is the **${primary.component}**. It reduces ${axesText} — for example, ${example}. Everything downstream can only resolve what the ${role} provides.`,
     );
@@ -10334,7 +10330,12 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   let primaryLeverageSection: string;
   if (primary.kind === 'bottleneck') {
     const role = primary.role.toUpperCase().length <= 4 ? primary.role.toUpperCase() : primary.role.toLowerCase();
-    const axesText = primary.axes.slice(0, 2).map(listenerAxisLabel).join(' and ');
+    const leverageLeans = comps.find((c) => c.name === primary.component)?.axisPosition as
+      | Record<string, string>
+      | undefined;
+    const axesText = primary.axes.slice(0, 2)
+      .map((a) => constrainedAxisLabel(a, leverageLeans?.[a]))
+      .join(', and ');
     primaryLeverageSection = [
       `**Primary leverage**`,
       ``,
@@ -10499,7 +10500,12 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     // Build a listener-terms result phrase from the bottleneck axes when available.
     let resultPhrase = 'Expect more depth, more texture, more space.';
     if (primary.kind === 'bottleneck' && primary.axes.length > 0) {
-      const axesText = primary.axes.slice(0, 2).map(listenerAxisLabel).join(' and ');
+      const stepLeans = comps.find((c) => c.name === primary.component)?.axisPosition as
+        | Record<string, string>
+        | undefined;
+      const axesText = primary.axes.slice(0, 2)
+        .map((a) => constrainedAxisLabel(a, stepLeans?.[a]))
+        .join(', and ');
       if (axesText) resultPhrase = `Expect more ${axesText}.`;
     }
     chosenStepText = `${lead} ${resultPhrase}`;
@@ -10748,6 +10754,54 @@ function listenerAxisLabel(a: string): string {
     case 'airy_closed': return 'air and depth around instruments';
     case 'scale_intimacy': return 'soundstage size';
     default: return a.replace(/_/g, ' ');
+  }
+}
+// Direction-aware constraint label. constrainedAxes stores only axis
+// NAMES; which pole is missing depends on the component's own lean —
+// a 'detailed' component cannot "limit inner detail", it limits tonal
+// ease; a 'controlled' one limits flow, not grip. Launch QA SA-06
+// rendered the Benchmark AHB2 (detailed + controlled) as "limits inner
+// detail and texture and rhythmic flow and grip" — its strengths
+// phrased as deficits. Falls back to the direction-blind label when
+// the lean is unknown or neutral.
+function constrainedAxisLabel(axis: string, lean: string | undefined): string {
+  switch (axis) {
+    case 'warm_bright':
+      if (lean === 'warm') return 'top-end air and transient sparkle';
+      if (lean === 'bright') return 'tonal weight and body';
+      break;
+    case 'smooth_detailed':
+      if (lean === 'smooth') return 'inner detail and texture';
+      if (lean === 'detailed') return 'tonal ease and forgiveness';
+      break;
+    case 'elastic_controlled':
+      if (lean === 'elastic') return 'grip and control';
+      if (lean === 'controlled') return 'rhythmic flow and elasticity';
+      break;
+    case 'airy_closed':
+      if (lean === 'airy') return 'image density and focus';
+      if (lean === 'closed') return 'air and depth around instruments';
+      break;
+  }
+  return listenerAxisLabel(axis);
+}
+// Direction-aware example clause paired with constrainedAxisLabel.
+function constrainedAxisExample(axis: string, lean: string | undefined): string {
+  switch (axis) {
+    case 'warm_bright':
+      if (lean === 'warm') return 'softer leading edges on plucked strings';
+      return 'less weight under male vocals';
+    case 'smooth_detailed':
+      if (lean === 'detailed') return 'a drier, less forgiving midrange';
+      return 'shorter cymbal decay';
+    case 'elastic_controlled':
+      if (lean === 'controlled') return 'crescendos that rise stiffly rather than swelling';
+      return 'bass notes starting a fraction late';
+    case 'airy_closed':
+      if (lean === 'airy') return 'images that float rather than lock in place';
+      return 'less air between instruments';
+    case 'scale_intimacy': return 'a narrower stage between the speakers';
+    default: return 'thinner body on sustained notes';
   }
 }
 function humanizeAxis(a: string): string {
