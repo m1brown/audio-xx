@@ -198,7 +198,11 @@ describe('buildConsultationResponse populates brandAuthorityPreview', () => {
     const res = buildConsultationResponse(
       'I want a warm-sounding amp under five thousand dollars for jazz vocals.',
     );
-    expect(res.brandAuthorityPreview).toBeUndefined();
+    // Since the generic-name lookup gate (Launch QA PH-05/NT-01 fix),
+    // a non-brand input correctly returns null — the bare word "amp"
+    // previously matched the WiiM AMP and produced a consultation.
+    // Either way, no brandAuthorityPreview may be populated.
+    expect(res?.brandAuthorityPreview).toBeUndefined();
   });
 
   it('preview brandSlug never contains spaces or uppercase', () => {

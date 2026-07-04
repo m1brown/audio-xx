@@ -1811,8 +1811,13 @@ export function detectIntent(
   //    answered with "does it sound thin, digital, fatiguing?").
   //    Route them to the knowledge lane, which answers first.
   const hasSymptomLanguage =
-    /\b(?:dry|bright|thin|harsh|lean|cold|sterile|clinical|hard|forward|fatiguing|aggressive|muddy|dull|veiled|grainy|boring|lifeless|congested|sibilant|brittle|strident|hum(?:ming)?|buzz(?:ing)?|hiss(?:ing)?|distort\w*|crackl\w*|rattl\w*|drop\s*outs?|problem|issue|wrong|weird|broken)\b/i.test(currentMessage)
-    || /\bsounds?\s+(?:bad|off|strange|worse)\b/i.test(currentMessage);
+    /\b(?:dry|bright|thin|harsh|lean|cold|sterile|clinical|hard|forward|fatiguing|fatigue|aggressive|muddy|dull|veiled|grainy|boring|lifeless|congested|sibilant|brittle|strident|hum(?:ming)?|buzz(?:ing)?|hiss(?:ing)?|distort\w*|crackl\w*|rattl\w*|drop\s*outs?|problem|issue|wrong|weird|broken|headaches?)\b/i.test(currentMessage)
+    || /\bsounds?\s+(?:bad|off|strange|worse)\b/i.test(currentMessage)
+    // "too <sonic adjective>" complaints — scoped to sonic vocabulary so
+    // "too big" / "too expensive" remain general questions.
+    || /\b(?:too|overly)\s+(?:warm|bright|dark|metallic|sharp|soft|smooth|thick|heavy|light|boomy|bassy|edgy|analytical|loud|quiet|muffled|hot|glassy|splashy|tizzy|honky|nasal|boxy|shouty|syrupy|relaxed|polite)\b/i.test(currentMessage)
+    || /\bnot\s+balanced\b/i.test(currentMessage)
+    || /\b(?:could|should)\s+sound\s+better\b/i.test(currentMessage);
   if (hasSymptomLanguage || options.hasActiveSavedSystem) {
     return { intent: 'diagnosis', subjects, subjectMatches, desires };
   }
