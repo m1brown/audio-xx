@@ -148,6 +148,17 @@ describe('Deterministic trade-off computation', () => {
   it('computeTradeoffAxis: warm vs warm → flow_vs_density', () => {
     expect(computeTradeoffAxis('warm', 'warm', 2, 1)).toBe('flow_vs_density');
   });
+
+  // Launch QA PD-01 regression: Chord's vocabulary ("precision",
+  // "transient clarity") scored zero control hits — only "timing" landed,
+  // on the flow axis — so Chord classified as ease-posture and the taste
+  // guidance inverted (comfort → Chord, clarity → Schiit).
+  it('detectDominantAxis: Chord (precision/transient vocabulary) → control', () => {
+    expect(detectDominantAxis(
+      'articulation, timing precision, and clarity',
+      'Listeners consistently describe Chord DACs as fast, articulate, and detailed. Timing resolution and transient clarity are the signature strengths. Tonal weight is lighter than R2R designs but avoids the clinical edge of typical delta-sigma implementations.',
+    )).toBe('control');
+  });
 });
 
 // ── Scenario 1: job vs leben → devore o/96 ──────────────
