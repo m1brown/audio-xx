@@ -91,6 +91,38 @@ describe('diagnosis-default regression: general questions reach the knowledge la
   });
 });
 
+describe('PD-02/PD-04 regression: one-sided comparisons acknowledge the unknown side', () => {
+  // "Holo May vs Schiit Yggdrasil" silently answered with a Holo brand
+  // card — the Yggdrasil half of the question vanished. The honesty
+  // post-pass names the side we can't evaluate before continuing.
+  function consult(prompt: string): any {
+    const { subjectMatches } = detectIntent(prompt);
+    return buildConsultationResponse(prompt, subjectMatches);
+  }
+
+  it('PD-02: names the unresolved side instead of silently dropping it', () => {
+    const r = consult('Holo May vs Schiit Yggdrasil');
+    expect(r?.philosophy).toMatch(/don't have calibrated data on the Schiit Yggdrasil/);
+    expect(r?.philosophy).toMatch(/can't compare them with the same confidence/);
+  });
+
+  it('PD-04: same-brand tier comparison acknowledges the missing model', () => {
+    const r = consult('Is the Eversolo A8 worth it over the A6?');
+    expect(r?.philosophy).toMatch(/don't have calibrated data on the A6/);
+  });
+
+  it('does not fire when both sides genuinely resolve (real comparison)', () => {
+    const r = consult('Chord Qutest vs Schiit Bifrost 2/64 — which should I buy?');
+    expect(r?.comparisonSummary ?? '').not.toMatch(/calibrated data/);
+    expect(r?.philosophy ?? '').not.toMatch(/don't have calibrated data/);
+  });
+
+  it('does not fire when the other side is a known catalog product (composition failure, not data gap)', () => {
+    const r = consult("I keep switching between my Qutest and my Pontus and I honestly can't decide which I like");
+    expect(r?.philosophy ?? '').not.toMatch(/don't have calibrated data/);
+  });
+});
+
 describe('NT-09 regression: colloquial budget language caps the shopping pool', () => {
   // "whats a good tube amp that wont blow up my budget" anchored on the
   // $20,000 Shindo Cortese — no numeric budget parsed, so no filtering

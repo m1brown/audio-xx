@@ -4515,6 +4515,81 @@ export function buildConsultationResponse(
   currentMessage: string,
   subjectMatches?: SubjectMatch[],
 ): ConsultationResponse | null {
+  const result = buildConsultationResponseCore(currentMessage, subjectMatches);
+  return applyOneSidedComparisonHonesty(result, currentMessage);
+}
+
+/**
+ * One-sided comparison honesty (Launch QA PD-02 / PD-04).
+ *
+ * When the user asks a two-sided comparison ("Holo May vs Schiit
+ * Yggdrasil") and only one side resolves, the core builder silently
+ * answers the known side — the Yggdrasil half of the question vanished
+ * without acknowledgement. This post-pass detects that shape and
+ * prepends an honest note before the single-subject content.
+ *
+ * Fires only when ALL hold, so the honesty claim is true by construction:
+ *   - the message has a comparison shape (vs / versus / "worth it over")
+ *   - the result is a single-subject response (no comparisonSummary)
+ *   - the result's subject matches exactly one side of the comparison
+ *   - the other side does NOT resolve to a catalog product (a genuinely
+ *     known other side is a comparison-composition failure, not a data
+ *     gap — claiming "I don't have data" there would be false)
+ */
+function applyOneSidedComparisonHonesty(
+  result: ConsultationResponse | null,
+  currentMessage: string,
+): ConsultationResponse | null {
+  if (!result || result.comparisonSummary || typeof result.philosophy !== 'string' || !result.philosophy.trim()) {
+    return result;
+  }
+
+  const shape = currentMessage.match(/^(.*?)\s+(?:vs\.?|versus)\s+(.*)$/i)
+    ?? currentMessage.match(/^(.*?)\s+worth\s+it\s+over\s+(.*)$/i);
+  if (!shape) return result;
+
+  const cleanSide = (s: string): string => {
+    let t = s.trim().replace(/[?!.,;:]+$/g, '').trim();
+    // Strip leading filler repeatedly ("Is the Eversolo A8" → "Eversolo A8").
+    for (let i = 0; i < 4; i++) {
+      const stripped = t.replace(/^(?:is|are|was|were|the|a|an|my|which|what|how|about|between|buy|get)\s+/i, '');
+      if (stripped === t) break;
+      t = stripped;
+    }
+    return t;
+  };
+  const sideA = cleanSide(shape[1]);
+  const sideB = cleanSide(shape[2]);
+  if (!sideA || !sideB || sideA.length > 60 || sideB.length > 60) return result;
+  if (sideA.toLowerCase() === sideB.toLowerCase()) return result;
+
+  // Which side does the delivered subject cover? Generic tokens like
+  // "audio" appear in many brand names and must not count as a match.
+  const GENERIC_TOKENS = new Set(['audio', 'labs', 'lab', 'electronics', 'acoustics', 'design', 'designs', 'the']);
+  const subjectTokens = result.subject.toLowerCase().split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 3 && !GENERIC_TOKENS.has(t));
+  if (subjectTokens.length === 0) return result;
+  const covers = (side: string): boolean => {
+    const lower = side.toLowerCase();
+    return subjectTokens.some((t) => lower.includes(t));
+  };
+  const coversA = covers(sideA);
+  const coversB = covers(sideB);
+  if (coversA === coversB) return result; // ambiguous or neither — do nothing
+
+  const unknownSide = coversA ? sideB : sideA;
+  // A resolvable other side means the comparison failed to compose, not
+  // that data is missing — the honesty note would be false. Skip.
+  if (findCatalogProduct(unknownSide)) return result;
+
+  const note = `I know ${result.subject} well. I don't have calibrated data on the ${unknownSide}, so I can't compare them with the same confidence. Here's what I can say about the side I know.`;
+  return { ...result, philosophy: `${note}\n\n${result.philosophy}` };
+}
+
+function buildConsultationResponseCore(
+  currentMessage: string,
+  subjectMatches?: SubjectMatch[],
+): ConsultationResponse | null {
   // 1. Brand-level comparison — "Chord vs Denafrips" (both tagged as brands)
   if (subjectMatches && subjectMatches.length >= 2) {
     const brandMatches = subjectMatches.filter((m) => m.kind === 'brand');
