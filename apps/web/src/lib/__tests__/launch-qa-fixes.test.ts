@@ -102,24 +102,30 @@ describe('PD-02/PD-04 regression: one-sided comparisons acknowledge the unknown 
 
   it('PD-02: names the unresolved side instead of silently dropping it', () => {
     const r = consult('Holo May vs Schiit Yggdrasil');
-    expect(r?.philosophy).toMatch(/don't have calibrated data on the Schiit Yggdrasil/);
-    expect(r?.philosophy).toMatch(/can't compare them with the same confidence/);
+    expect(r?.philosophy).toMatch(/haven't spent enough time with the Schiit Yggdrasil to compare them fairly/);
+    expect(r?.philosophy).toMatch(/what I can say with confidence/);
   });
 
   it('PD-04: same-brand tier comparison acknowledges the missing model', () => {
     const r = consult('Is the Eversolo A8 worth it over the A6?');
-    expect(r?.philosophy).toMatch(/don't have calibrated data on the A6/);
+    expect(r?.philosophy).toMatch(/haven't spent enough time with the A6/);
+  });
+
+  // Reviewer voice only — implementation language must never reach copy.
+  it('the honesty note contains no implementation terminology', () => {
+    const r = consult('Holo May vs Schiit Yggdrasil');
+    expect(r?.philosophy ?? '').not.toMatch(/calibrated|deterministic|catalog(?:ue)?\s+resolution|confidence score|reasoning engine|ontology/i);
   });
 
   it('does not fire when both sides genuinely resolve (real comparison)', () => {
     const r = consult('Chord Qutest vs Schiit Bifrost 2/64 — which should I buy?');
-    expect(r?.comparisonSummary ?? '').not.toMatch(/calibrated data/);
-    expect(r?.philosophy ?? '').not.toMatch(/don't have calibrated data/);
+    expect(r?.comparisonSummary ?? '').not.toMatch(/spent enough time with/);
+    expect(r?.philosophy ?? '').not.toMatch(/spent enough time with/);
   });
 
   it('does not fire when the other side is a known catalog product (composition failure, not data gap)', () => {
     const r = consult("I keep switching between my Qutest and my Pontus and I honestly can't decide which I like");
-    expect(r?.philosophy ?? '').not.toMatch(/don't have calibrated data/);
+    expect(r?.philosophy ?? '').not.toMatch(/spent enough time with/);
   });
 });
 

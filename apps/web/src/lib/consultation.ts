@@ -4582,7 +4582,9 @@ function applyOneSidedComparisonHonesty(
   // that data is missing — the honesty note would be false. Skip.
   if (findCatalogProduct(unknownSide)) return result;
 
-  const note = `I know ${result.subject} well. I don't have calibrated data on the ${unknownSide}, so I can't compare them with the same confidence. Here's what I can say about the side I know.`;
+  // Reviewer voice, not implementation language — no "calibrated data",
+  // "profiles", or engine terminology in customer-facing copy.
+  const note = `I know ${result.subject} well, but I haven't spent enough time with the ${unknownSide} to compare them fairly. Here's what I can say with confidence.`;
   return { ...result, philosophy: `${note}\n\n${result.philosophy}` };
 }
 
