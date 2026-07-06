@@ -5353,7 +5353,9 @@ export default function Home() {
             outline: 'none',
             fontSize: hasMessages ? '0.98rem' : '1.0625rem',
             lineHeight: hasMessages ? 1.55 : 1.65,
-            resize: 'vertical',
+            // Editorial QA: the resize grip is a software tell on the
+            // cover manuscript; conversation keeps it.
+            resize: hasMessages ? 'vertical' : 'none',
             // Phase 2A: transparent on the cover — the old #FBFAF6 fill
             // differed subtly from the paper and read as a form box; the
             // manuscript page should show only its bottom rule.
@@ -5424,18 +5426,25 @@ export default function Home() {
             type="button"
             onClick={() => handleSubmit()}
             disabled={isLoading || (!currentInput.trim() && pendingImages.length === 0)}
-            style={{
-              padding: '0.6rem 1.6rem',
-              background: isLoading || (!currentInput.trim() && pendingImages.length === 0) ? '#F2F2F2' : EDITORIAL.ink,
-              color: isLoading || (!currentInput.trim() && pendingImages.length === 0) ? EDITORIAL.faint : '#FFFFFF',
-              border: 'none',
-              borderRadius: 4,
-              fontSize: '0.88rem',
-              fontWeight: 500,
-              letterSpacing: '0.02em',
-              cursor: isLoading || (!currentInput.trim() && pendingImages.length === 0) ? 'default' : 'pointer',
-              transition: 'background 0.15s ease',
-            }}
+            style={(() => {
+              const inactive = isLoading || (!currentInput.trim() && pendingImages.length === 0);
+              return {
+                padding: '0.6rem 1.6rem',
+                // Editorial QA: on the cover the resting Send is a quiet
+                // hairline-outlined mark, not a grey filled pill (a web-form
+                // tell). It fills to ink the moment there is text to send.
+                // Conversation keeps its existing treatment.
+                background: inactive ? (hasMessages ? '#F2F2F2' : 'transparent') : EDITORIAL.ink,
+                color: inactive ? (hasMessages ? EDITORIAL.faint : EDITORIAL.inkMuted) : '#FFFFFF',
+                border: inactive && !hasMessages ? `1px solid ${EDITORIAL.hairline}` : '1px solid transparent',
+                borderRadius: hasMessages ? 4 : 2,
+                fontSize: '0.88rem',
+                fontWeight: 500,
+                letterSpacing: '0.02em',
+                cursor: inactive ? 'default' : 'pointer',
+                transition: 'background 0.15s ease, border-color 0.15s ease',
+              };
+            })()}
             onMouseEnter={(e) => {
               if (!isLoading && (currentInput.trim() || pendingImages.length > 0)) {
                 e.currentTarget.style.background = EDITORIAL.buttonHover;
@@ -5461,6 +5470,10 @@ export default function Home() {
             className="audioxx-image-upload-button"
             aria-label="Upload listing image"
             title="Upload listing image"
+            // Editorial QA: on the cover the paperclip loses its boxed
+            // button chrome — a quiet inline mark beside Send. The
+            // conversation composer keeps the bordered treatment.
+            style={hasMessages ? undefined : { background: 'transparent', border: 'none', boxShadow: 'none' }}
           >
             <span aria-hidden="true" className="audioxx-image-upload-icon">
               {'📎'}
