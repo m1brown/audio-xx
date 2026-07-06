@@ -104,7 +104,11 @@ body:has(.axx-route) { background: #FCF8EE; }
 }
 .axx-component-frame {
   aspect-ratio: 1 / 1;
-  background: #F2EDE0;
+  /* Editorial QA (2026-07-05): product photography is shot on white;
+   * inside the old cream (#F2EDE0) plates the photos' white backgrounds
+   * read as pasted rectangles. White plates let the photographs sit
+   * seamlessly; the hairline keeps the plate edge on the paper. */
+  background: #FFFFFF;
   border: 1px solid var(--hairline);
   display: grid; place-items: center;
   overflow: hidden;
