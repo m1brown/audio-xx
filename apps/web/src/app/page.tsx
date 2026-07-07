@@ -762,10 +762,11 @@ export default function Home() {
     });
   }, []);
 
-  const handleImageSelect = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files ?? []);
-      e.target.value = ''; // allow re-selecting the same file later
+  // Shared acceptance path for attached AND pasted images (GTM Bug 2,
+  // 2026-07-05). Validation, limits, and preview state are identical
+  // regardless of how the image arrived.
+  const addImageFiles = useCallback(
+    async (files: File[]) => {
       if (files.length === 0) return;
 
       const allowed = ['image/jpeg', 'image/png', 'image/webp'];
@@ -806,6 +807,35 @@ export default function Home() {
       setImageUploadError(firstError);
     },
     [pendingImages.length, fileToDataUrl],
+  );
+
+  const handleImageSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files ?? []);
+      e.target.value = ''; // allow re-selecting the same file later
+      await addImageFiles(files);
+    },
+    [addImageFiles],
+  );
+
+  // Paste-to-attach (GTM Bug 2). Screenshots and copied images pasted
+  // into the composer enter the exact same pipeline as the paperclip.
+  // Text paste is untouched: default insertion is suppressed only when
+  // the clipboard carries no text at all (a pure image paste would
+  // otherwise insert nothing or a filename).
+  const handleComposerPaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const items = Array.from(e.clipboardData?.items ?? []);
+      const files = items
+        .filter((i) => i.kind === 'file' && i.type.startsWith('image/'))
+        .map((i) => i.getAsFile())
+        .filter((f): f is File => f !== null);
+      if (files.length === 0) return; // plain text paste — browser default
+      const pastedText = e.clipboardData.getData('text/plain');
+      if (!pastedText) e.preventDefault();
+      void addImageFiles(files);
+    },
+    [addImageFiles],
   );
 
   const removePendingImage = useCallback((index: number) => {
@@ -4562,7 +4592,11 @@ export default function Home() {
       // if an unexpected exception slips past the inner handlers.
       dispatch({ type: 'SET_LOADING', value: false });
     }
-  }, [currentInput, isLoading, messages, turnCount, tasteProfile, state.activeMode, audioState]);
+  // GTM Bug 2 (2026-07-07): pendingImages was missing from this list, so
+  // an image-only submit read the initial empty array from a stale
+  // closure and silently returned — attached OR pasted images only ever
+  // submitted if the user also typed text afterwards.
+  }, [currentInput, isLoading, messages, turnCount, tasteProfile, state.activeMode, audioState, pendingImages]);
 
   /**
    * Skip clarification questions and go straight to exploratory suggestions.
@@ -5326,6 +5360,7 @@ export default function Home() {
           value={currentInput}
           onChange={(e) => dispatch({ type: 'SET_INPUT', value: e.target.value })}
           onKeyDown={handleKeyDown}
+          onPaste={handleComposerPaste}
           placeholder={
             hasPendingQuestion
               ? 'Reply here…'
