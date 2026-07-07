@@ -16,6 +16,7 @@ import { isIntakeQuery } from './intake';
 import { extractBipolarPreference } from './bipolar-preference';
 import { detectTopologyQuestion } from './topology-philosophy';
 import { detectPairingIntent } from './pairing-resolver';
+import { LIFESTYLE_SPEAKER_PATTERN } from './shopping-intent';
 
 // ── Intent type ──────────────────────────────────────
 
@@ -1306,6 +1307,16 @@ export function detectIntent(
   const subjectMatches = extractSubjectMatches(currentMessage);
   const subjects = subjectMatches.map((m) => m.name);
   const desires = extractDesires(currentMessage);
+
+  // 0-pre. Lifestyle-speaker guard (GTM Bug 1, 2026-07-05). Bluetooth /
+  //   portable / smart speaker questions are consumer-product questions
+  //   the component catalog cannot answer — the shopping lane declines
+  //   them (see LIFESTYLE_SPEAKER_PATTERN in shopping-intent.ts) and the
+  //   knowledge lane answers naturally instead of recommending passive
+  //   hi-fi floorstanders. Must fire before every shopping gate below.
+  if (LIFESTYLE_SPEAKER_PATTERN.test(currentMessage)) {
+    return { intent: 'audio_knowledge', subjects, subjectMatches, desires };
+  }
 
   // 0. Priority gate — when a known product is named and the user uses
   //    assessment language ("thoughts on", "what do you think of", "how is",
