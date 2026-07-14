@@ -648,6 +648,15 @@ const BUILD_KEYWORDS = [
 
 // ── Budget detection ──────────────────────────────────
 
+/**
+ * Lifestyle/consumer speaker phrasings the component-hi-fi catalog does
+ * not cover (GTM Bug 1). Shared with detectIntent so both the shopping
+ * gate and the intent router see the same definition: shopping declines
+ * these, intent routes them to the knowledge lane for a natural answer.
+ */
+export const LIFESTYLE_SPEAKER_PATTERN =
+  /\b(?:bluetooth|portable|smart|party)\s+speakers?\b|\bspeakers?\s+with\s+bluetooth\b|\b(?:sonos|jbl\s+(?:charge|flip|xtreme)|ue\s+boom)\b/i;
+
 const BUDGET_PATTERNS = [
   /\$\s?\d/,
   /\d+\s*dollars/i,
@@ -1485,6 +1494,33 @@ export function detectShoppingIntent(
   fallbackCategory?: ShoppingCategory,
 ): ShoppingContext {
   const lower = userText.toLowerCase();
+
+  // 0. Lifestyle-speaker guard (GTM Bug 1, 2026-07-05). "what's the best
+  //    bluetooth speaker?" matched the generic speaker category and was
+  //    answered with passive hi-fi floorstanders (DeVore O/96) — the
+  //    catalog contains no Bluetooth/portable/smart speakers at all.
+  //    These queries must not enter the shopping lane; detectIntent
+  //    routes the same phrasings to the knowledge lane, which answers
+  //    the consumer question honestly and naturally.
+  if (LIFESTYLE_SPEAKER_PATTERN.test(userText)) {
+    return {
+      detected: false,
+      mode: 'specific-component',
+      category: 'general',
+      budgetMentioned: false,
+      budgetAmount: null,
+      tasteProvided: false,
+      systemProvided: false,
+      systemProfile: DEFAULT_SYSTEM_PROFILE,
+      useCaseProvided: false,
+      preserveProvided: false,
+      limitingProvided: false,
+      dependencies: [],
+      roomContext: null,
+      constraints: { excludeTopologies: [], requireTopologies: [], newOnly: false, usedOnly: false },
+      semanticPreferences: { weights: [], wantsBigScale: false, wantsSmallScale: false, energyLevel: null, musicHints: [], specialistHints: [] },
+    };
+  }
 
   // 1. Intent
   // INTENT_KEYWORDS uses string matching which requires '$' in budget phrases.

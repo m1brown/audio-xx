@@ -762,10 +762,11 @@ export default function Home() {
     });
   }, []);
 
-  const handleImageSelect = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files ?? []);
-      e.target.value = ''; // allow re-selecting the same file later
+  // Shared acceptance path for attached AND pasted images (GTM Bug 2,
+  // 2026-07-05). Validation, limits, and preview state are identical
+  // regardless of how the image arrived.
+  const addImageFiles = useCallback(
+    async (files: File[]) => {
       if (files.length === 0) return;
 
       const allowed = ['image/jpeg', 'image/png', 'image/webp'];
@@ -806,6 +807,35 @@ export default function Home() {
       setImageUploadError(firstError);
     },
     [pendingImages.length, fileToDataUrl],
+  );
+
+  const handleImageSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files ?? []);
+      e.target.value = ''; // allow re-selecting the same file later
+      await addImageFiles(files);
+    },
+    [addImageFiles],
+  );
+
+  // Paste-to-attach (GTM Bug 2). Screenshots and copied images pasted
+  // into the composer enter the exact same pipeline as the paperclip.
+  // Text paste is untouched: default insertion is suppressed only when
+  // the clipboard carries no text at all (a pure image paste would
+  // otherwise insert nothing or a filename).
+  const handleComposerPaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const items = Array.from(e.clipboardData?.items ?? []);
+      const files = items
+        .filter((i) => i.kind === 'file' && i.type.startsWith('image/'))
+        .map((i) => i.getAsFile())
+        .filter((f): f is File => f !== null);
+      if (files.length === 0) return; // plain text paste — browser default
+      const pastedText = e.clipboardData.getData('text/plain');
+      if (!pastedText) e.preventDefault();
+      void addImageFiles(files);
+    },
+    [addImageFiles],
   );
 
   const removePendingImage = useCallback((index: number) => {
@@ -4562,7 +4592,11 @@ export default function Home() {
       // if an unexpected exception slips past the inner handlers.
       dispatch({ type: 'SET_LOADING', value: false });
     }
-  }, [currentInput, isLoading, messages, turnCount, tasteProfile, state.activeMode, audioState]);
+  // GTM Bug 2 (2026-07-07): pendingImages was missing from this list, so
+  // an image-only submit read the initial empty array from a stale
+  // closure and silently returned — attached OR pasted images only ever
+  // submitted if the user also typed text afterwards.
+  }, [currentInput, isLoading, messages, turnCount, tasteProfile, state.activeMode, audioState, pendingImages]);
 
   /**
    * Skip clarification questions and go straight to exploratory suggestions.
@@ -4793,7 +4827,10 @@ export default function Home() {
         // metadata on the right) are present once the visitor is reading
         // an article-in-progress. Generous top padding on the homepage
         // so the editorial cover breathes; tighter during conversation.
-        padding: hasMessages ? '4rem 2.5rem 3rem' : '6rem 2.5rem 4rem',
+        // Phase 2A: cover top padding scales with viewport height so the
+        // full composition (rubric → headline → dek → composer → example
+        // line) sits within one desktop frame.
+        padding: hasMessages ? '4rem 2.5rem 3rem' : 'clamp(3.5rem, 9vh, 5.5rem) 2.5rem 3rem',
         color: EDITORIAL.ink,
         lineHeight: 1.6,
         display: 'grid',
@@ -4999,11 +5036,15 @@ export default function Home() {
       */}
       {!hasMessages && (
         <>
-          {/* ── ▬ SYSTEM ASSESSMENT (rubric) ── */}
+          {/* ── ▬ SYSTEM ASSESSMENT (rubric) ──
+           *  Phase 2A cover recomposition: the cover is a centered
+           *  composition — magazine cover, not article opening. The
+           *  rubric sits centered between two short accent rules. */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '0.85rem',
               fontFamily: 'var(--face-grotesque)',
               fontSize: '0.6875rem',
@@ -5011,7 +5052,7 @@ export default function Home() {
               letterSpacing: '0.14em',
               textTransform: 'uppercase' as const,
               color: EDITORIAL.inkMuted,
-              marginBottom: '1.5rem',
+              marginBottom: '1.75rem',
             }}
           >
             <span
@@ -5023,20 +5064,33 @@ export default function Home() {
                 background: EDITORIAL.accent,
               }}
             />
-            System Assessment
+            <span style={{ whiteSpace: 'nowrap' }}>System Assessment</span>
+            <span
+              aria-hidden="true"
+              style={{
+                display: 'inline-block',
+                width: '1.5rem',
+                height: '2px',
+                background: EDITORIAL.accent,
+              }}
+            />
           </div>
 
-          {/* ── Headline + standfirst (the cover) ── */}
+          {/* ── Headline + standfirst (the cover) ──
+           *  Centered, at true cover scale — the headline commands the
+           *  page rather than opening a column. */}
           <h1
             style={{
               fontFamily: 'var(--face-display)',
               fontWeight: 600,
-              fontSize: 'clamp(2.5rem, 6vw, 4rem)',
-              lineHeight: 1.04,
-              letterSpacing: '-0.018em',
-              margin: '0 0 1.25rem 0',
+              fontSize: 'clamp(2.75rem, 7vw, 5rem)',
+              lineHeight: 1.03,
+              letterSpacing: '-0.02em',
+              margin: '0 auto 1.5rem',
               color: EDITORIAL.ink,
-              maxWidth: '18ch',
+              maxWidth: '16ch',
+              textAlign: 'center' as const,
+              textWrap: 'balance' as React.CSSProperties['textWrap'],
             }}
           >
             Notes on Your System
@@ -5045,11 +5099,13 @@ export default function Home() {
             style={{
               fontFamily: 'var(--face-text)',
               fontStyle: 'italic',
-              fontSize: '1.25rem',
-              lineHeight: 1.45,
+              fontSize: 'clamp(1.15rem, 2vw, 1.3rem)',
+              lineHeight: 1.5,
               color: EDITORIAL.ink,
-              margin: 0,
-              maxWidth: '38ch',
+              margin: '0 auto',
+              maxWidth: '42ch',
+              textAlign: 'center' as const,
+              textWrap: 'balance' as React.CSSProperties['textWrap'],
             }}
           >
             An assessment of how your components work together, where the
@@ -5093,6 +5149,7 @@ export default function Home() {
                   color: EDITORIAL.inkMuted,
                   marginTop: '3rem',
                   lineHeight: 1.7,
+                  textAlign: 'center' as const,
                 }}
               >
                 <div style={{ color: EDITORIAL.ink, fontWeight: 600 }}>
@@ -5120,11 +5177,13 @@ export default function Home() {
             );
           })()}
 
-          {/* ── ▬ BEGIN HERE (rubric, above composer) ── */}
+          {/* ── ▬ BEGIN HERE (rubric, above composer) ──
+           *  Centered with symmetric rules, mirroring the cover rubric. */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '0.85rem',
               fontFamily: 'var(--face-grotesque)',
               fontSize: '0.6875rem',
@@ -5132,7 +5191,7 @@ export default function Home() {
               letterSpacing: '0.14em',
               textTransform: 'uppercase' as const,
               color: EDITORIAL.inkMuted,
-              marginTop: '4rem',
+              marginTop: '4.5rem',
               marginBottom: '1rem',
             }}
           >
@@ -5145,7 +5204,16 @@ export default function Home() {
                 background: EDITORIAL.accent,
               }}
             />
-            Begin Here
+            <span style={{ whiteSpace: 'nowrap' }}>Begin Here</span>
+            <span
+              aria-hidden="true"
+              style={{
+                display: 'inline-block',
+                width: '1.5rem',
+                height: '2px',
+                background: EDITORIAL.accent,
+              }}
+            />
           </div>
 
           {/* Composer follows below (rendered once for both states; styling
@@ -5285,13 +5353,14 @@ export default function Home() {
        * Conversation state retains its existing visual weight (compact,
        * slate-bordered) — the editorial treatment applies to entry only.
        */}
-      {!hasPendingIntake && <div style={{ marginBottom: '1rem', maxWidth: hasMessages ? LAYOUT.textMax : EDITORIAL.narrow }}>
+      {!hasPendingIntake && <div style={{ marginBottom: '1rem', maxWidth: hasMessages ? LAYOUT.textMax : EDITORIAL.narrow, margin: hasMessages ? '0 0 1rem' : '0 auto 1rem' }}>
         <textarea
           ref={textareaRef}
           id="audio-input"
           value={currentInput}
           onChange={(e) => dispatch({ type: 'SET_INPUT', value: e.target.value })}
           onKeyDown={handleKeyDown}
+          onPaste={handleComposerPaste}
           placeholder={
             hasPendingQuestion
               ? 'Reply here…'
@@ -5306,9 +5375,10 @@ export default function Home() {
             // a single bottom hairline as the only frame — the textarea
             // reads as a manuscript page, not a form field. Source Serif 4
             // for what the visitor types matches the article they're
-            // beginning. Generous min-height so the labelled autofill
-            // (when an active system exists) breathes without scrolling.
-            minHeight: hasMessages ? 72 : 200,
+            // beginning. Phase 2A: height reduced from 200 — a tall empty
+            // box read as a form; four comfortable lines read as an
+            // opening manuscript page (autofill still fits, resize stays).
+            minHeight: hasMessages ? 72 : 148,
             padding: hasMessages ? '1rem 1.1rem' : '1.25rem 0',
             border: hasMessages ? `1.5px solid ${COLOR.border}` : 'none',
             borderBottom: hasMessages
@@ -5318,8 +5388,13 @@ export default function Home() {
             outline: 'none',
             fontSize: hasMessages ? '0.98rem' : '1.0625rem',
             lineHeight: hasMessages ? 1.55 : 1.65,
-            resize: 'vertical',
-            background: hasMessages ? COLOR.inputBg : '#FBFAF6',
+            // Editorial QA: the resize grip is a software tell on the
+            // cover manuscript; conversation keeps it.
+            resize: hasMessages ? 'vertical' : 'none',
+            // Phase 2A: transparent on the cover — the old #FBFAF6 fill
+            // differed subtly from the paper and read as a form box; the
+            // manuscript page should show only its bottom rule.
+            background: hasMessages ? COLOR.inputBg : 'transparent',
             color: hasMessages ? COLOR.textPrimary : EDITORIAL.ink,
             boxSizing: 'border-box',
             boxShadow: 'none',
@@ -5381,23 +5456,30 @@ export default function Home() {
           </p>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginTop: '0.85rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: hasMessages ? 'flex-start' : 'center', gap: '0.85rem', marginTop: hasMessages ? '0.85rem' : '1.25rem', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => handleSubmit()}
             disabled={isLoading || (!currentInput.trim() && pendingImages.length === 0)}
-            style={{
-              padding: '0.6rem 1.6rem',
-              background: isLoading || (!currentInput.trim() && pendingImages.length === 0) ? '#F2F2F2' : EDITORIAL.ink,
-              color: isLoading || (!currentInput.trim() && pendingImages.length === 0) ? EDITORIAL.faint : '#FFFFFF',
-              border: 'none',
-              borderRadius: 4,
-              fontSize: '0.88rem',
-              fontWeight: 500,
-              letterSpacing: '0.02em',
-              cursor: isLoading || (!currentInput.trim() && pendingImages.length === 0) ? 'default' : 'pointer',
-              transition: 'background 0.15s ease',
-            }}
+            style={(() => {
+              const inactive = isLoading || (!currentInput.trim() && pendingImages.length === 0);
+              return {
+                padding: '0.6rem 1.6rem',
+                // Editorial QA: on the cover the resting Send is a quiet
+                // hairline-outlined mark, not a grey filled pill (a web-form
+                // tell). It fills to ink the moment there is text to send.
+                // Conversation keeps its existing treatment.
+                background: inactive ? (hasMessages ? '#F2F2F2' : 'transparent') : EDITORIAL.ink,
+                color: inactive ? (hasMessages ? EDITORIAL.faint : EDITORIAL.inkMuted) : '#FFFFFF',
+                border: inactive && !hasMessages ? `1px solid ${EDITORIAL.hairline}` : '1px solid transparent',
+                borderRadius: hasMessages ? 4 : 2,
+                fontSize: '0.88rem',
+                fontWeight: 500,
+                letterSpacing: '0.02em',
+                cursor: inactive ? 'default' : 'pointer',
+                transition: 'background 0.15s ease, border-color 0.15s ease',
+              };
+            })()}
             onMouseEnter={(e) => {
               if (!isLoading && (currentInput.trim() || pendingImages.length > 0)) {
                 e.currentTarget.style.background = EDITORIAL.buttonHover;
@@ -5423,37 +5505,43 @@ export default function Home() {
             className="audioxx-image-upload-button"
             aria-label="Upload listing image"
             title="Upload listing image"
+            // Editorial QA: on the cover the paperclip loses its boxed
+            // button chrome — a quiet inline mark beside Send. The
+            // conversation composer keeps the bordered treatment.
+            style={hasMessages ? undefined : { background: 'transparent', border: 'none', boxShadow: 'none' }}
           >
             <span aria-hidden="true" className="audioxx-image-upload-icon">
               {'📎'}
             </span>
           </button>
 
-          {/* Editorial secondary entry — see an example assessment.
-           *  Quiet text link sitting beside Send so the visitor with
-           *  no system yet has a path to the publication's voice
-           *  without having to type. Renders on the homepage only. */}
-          {!hasMessages && (
+        </div>
+
+        {/* Editorial secondary entry — the example assessment IS the
+         *  publication's strongest proof, so it gets its own centered
+         *  line beneath the composer rather than hiding beside Send.
+         *  Renders on the homepage only. */}
+        {!hasMessages && (
+          <div style={{ textAlign: 'center', marginTop: '2.25rem' }}>
             <Link
               href="/artifact?case=flawed"
               style={{
-                marginLeft: 'auto',
-                fontFamily: 'var(--face-grotesque)',
-                fontSize: '0.8rem',
-                letterSpacing: '0.02em',
+                fontFamily: 'var(--face-text)',
+                fontStyle: 'italic',
+                fontSize: '1rem',
                 color: EDITORIAL.inkMuted,
                 textDecoration: 'none',
                 borderBottom: `1px solid ${EDITORIAL.hairline}`,
-                paddingBottom: '1px',
+                paddingBottom: '2px',
                 transition: 'color 0.15s ease, border-color 0.15s ease',
               }}
               onMouseEnter={(e) => { e.currentTarget.style.color = EDITORIAL.ink; e.currentTarget.style.borderBottomColor = EDITORIAL.ink; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = EDITORIAL.inkMuted; e.currentTarget.style.borderBottomColor = EDITORIAL.hairline; }}
             >
-              See an example assessment →
+              Prefer to read first? See an example assessment&nbsp;→
             </Link>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Editorial pull quote removed 2026-06-30 — Mike's call: the cover
          *  is stronger without a closing aphorism beat. The headline +
@@ -5476,13 +5564,18 @@ export default function Home() {
        *  treatment — sitting deep below the pull quote. During
        *  conversation it keeps its current row-of-utility-links style. */}
       <div style={{
-        marginTop: hasMessages ? 0 : '4rem',
+        marginTop: hasMessages ? 0 : '5rem',
         paddingTop: hasMessages ? 0 : '1.5rem',
         marginBottom: '1.5rem',
         display: 'flex',
         flexWrap: 'wrap',
         gap: '1.5rem',
         alignItems: 'center',
+        // Phase 2A: the cover colophon is centered — a magazine staff
+        // box, not a row of app utilities. "Start over" is conversation
+        // chrome (there is nothing to start over on a fresh cover) and
+        // renders only when hasMessages.
+        justifyContent: hasMessages ? 'flex-start' : 'center',
         borderTop: hasMessages ? 'none' : `1px solid ${EDITORIAL.hairline}`,
       }}>
         {!hasMessages && (
@@ -5503,7 +5596,7 @@ export default function Home() {
             hello@audio-xx.com
           </a>
         )}
-        <button
+        {hasMessages && <button
           type="button"
           onClick={() => handleReset()}
           style={{
@@ -5512,19 +5605,19 @@ export default function Home() {
             padding: '2px 0',
             margin: 0,
             cursor: 'pointer',
-            color: hasMessages ? COLOR.textSecondary : EDITORIAL.inkMuted,
-            fontSize: hasMessages ? '0.85rem' : '0.75rem',
-            fontFamily: hasMessages ? 'inherit' : 'var(--face-grotesque)',
+            color: COLOR.textSecondary,
+            fontSize: '0.85rem',
+            fontFamily: 'inherit',
             textDecoration: 'none',
-            letterSpacing: hasMessages ? '0.01em' : '0.06em',
+            letterSpacing: '0.01em',
             transition: 'color 0.15s ease',
             whiteSpace: 'nowrap',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = hasMessages ? COLOR.accent : EDITORIAL.ink; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = hasMessages ? COLOR.textSecondary : EDITORIAL.inkMuted; }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = COLOR.accent; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = COLOR.textSecondary; }}
         >
           Start over
-        </button>
+        </button>}
         {hasMessages && (
           <a
             href="mailto:hello@audio-xx.com"

@@ -104,7 +104,11 @@ body:has(.axx-route) { background: #FCF8EE; }
 }
 .axx-component-frame {
   aspect-ratio: 1 / 1;
-  background: #F2EDE0;
+  /* Editorial QA (2026-07-05): product photography is shot on white;
+   * inside the old cream (#F2EDE0) plates the photos' white backgrounds
+   * read as pasted rectangles. White plates let the photographs sit
+   * seamlessly; the hairline keeps the plate edge on the paper. */
+  background: #FFFFFF;
   border: 1px solid var(--hairline);
   display: grid; place-items: center;
   overflow: hidden;
@@ -211,6 +215,27 @@ body:has(.axx-route) { background: #FCF8EE; }
   .axx-artifact.axx-embedded { animation: none; }   /* chat envelope animates */
   @keyframes axxIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 }
+
+/* ── Embedded in the conversation column ──────────────────────────────── */
+/* The rail/seam/judgment spread needs ~55.5rem. Embedded, the artifact
+ * lives inside the chat message column (~640–820px) regardless of how
+ * wide the browser window is — the viewport media query below can't see
+ * the container, so on desktop the three-column grid crushed the
+ * judgment paragraphs into the leftover sliver (19px type in a
+ * ~100–450px column: two-to-five-word lines that read as broken line
+ * spacing). Embedded mode always uses the collapsed layout the tablet
+ * breakpoint defines. */
+.axx-embedded .axx-case { grid-template-columns: 1fr; }
+.axx-embedded .axx-rail {
+  grid-column: 1; grid-row: auto;
+  display: flex; flex-wrap: wrap; gap: .75rem 2rem;
+  margin-bottom: 1.75rem; align-items: baseline;
+}
+.axx-embedded .axx-rail ul { margin: 0; display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; }
+.axx-embedded .axx-datum { margin: 0; }
+.axx-embedded .axx-judgment { grid-column: 1; grid-row: auto; }
+.axx-embedded .axx-rec { grid-column: 1; grid-row: auto; }
+.axx-embedded .axx-verdict h1 { max-width: none; }
 
 /* ── Follow-up — OUTSIDE the artifact, past a hard boundary ───────────── */
 .axx-followup {
