@@ -24,7 +24,9 @@ import { reason } from '../../reasoning';
 import type { AudioSessionState } from '../../system-types';
 import type { ExtractedSignals } from '../../signal-types';
 
-const OUT_DIR = path.resolve(__dirname, '../../../../../../audit-2026-07-02/launch-qa');
+// Phase 3 (2026-07-14): expanded run writes to a fresh dated directory
+// so the original 60-prompt artifacts stay intact for diffing.
+const OUT_DIR = path.resolve(__dirname, '../../../../../../audit-2026-07-14/launch-qa-100');
 
 // Guest session — no saved systems, nothing active.
 const GUEST_AUDIO_STATE: AudioSessionState = {

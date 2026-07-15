@@ -20,7 +20,11 @@ export interface BenchmarkPrompt {
     | 'philosophy'
     | 'beginner'
     | 'edge_case'
-    | 'natural';
+    | 'natural'
+    | 'room_setup'
+    | 'lifestyle'
+    | 'chatgpt_style'
+    | 'conceptual';
   prompt: string;
   /** What a first-time visitor would reasonably expect back. */
   expectation: string;
@@ -104,4 +108,64 @@ export const BENCHMARK_PROMPTS: BenchmarkPrompt[] = [
   { id: 'NT-10', category: 'natural', prompt: 'speakers for a desk setup, mostly listening at low volume', expectation: 'Nearfield + low-level-listening guidance (sensitivity, tonal balance at low SPL).' },
   { id: 'NT-11', category: 'natural', prompt: 'I have Maggies and everyone says I need more power but the ones I hear with big amps sound worse to me', expectation: 'Takes the listener\'s observation seriously; explains what they may be hearing.' },
   { id: 'NT-12', category: 'natural', prompt: 'honestly just tell me if the LS50 meta is overhyped', expectation: 'Direct verdict with reasoning — no fence-sitting.' },
+
+  // ── Phase 3 expansion (2026-07-14): +42 prompts to ~100 ─────────────
+
+  // ── 10. Room & setup ──────────────────────────────────────────────
+  { id: 'RS-01', category: 'room_setup', prompt: 'How far from the wall should I place my speakers?', expectation: 'Practical placement guidance (rear-port vs sealed, room modes).' },
+  { id: 'RS-02', category: 'room_setup', prompt: 'Do I need acoustic panels in a 12x14 room?', expectation: 'Honest first-reflections/absorption answer at hobbyist altitude.' },
+  { id: 'RS-03', category: 'room_setup', prompt: 'My speakers sound boomy in the corner of the living room', expectation: 'Boundary-reinforcement diagnosis; placement fixes before gear.' },
+  { id: 'RS-04', category: 'room_setup', prompt: 'whats the ideal toe-in for bookshelf speakers', expectation: 'Toe-in guidance with the imaging/treble trade explained.' },
+  { id: 'RS-05', category: 'room_setup', prompt: 'Does it matter if one speaker cable run is longer than the other?', expectation: 'Honest physics answer — no, at domestic lengths.' },
+  { id: 'RS-06', category: 'room_setup', prompt: 'How high should speaker stands be?', expectation: 'Tweeter-at-ear-height rule with practical nuance.' },
+
+  // ── 11. Lifestyle audio ───────────────────────────────────────────
+  { id: 'LS-01', category: 'lifestyle', prompt: "what's the best bluetooth speaker?", expectation: 'Bluetooth speakers, NOT passive hi-fi (GTM Bug 1 regression).' },
+  { id: 'LS-02', category: 'lifestyle', prompt: 'best soundbar for a small apartment', expectation: 'Consumer soundbar guidance or honest referral — no passive speakers.' },
+  { id: 'LS-03', category: 'lifestyle', prompt: 'are AirPods Max worth it', expectation: 'Honest consumer-headphone verdict.' },
+  { id: 'LS-04', category: 'lifestyle', prompt: 'I want a record player with built in speakers', expectation: 'Meets the ask honestly (all-in-one guidance), maybe a gentle upgrade path.' },
+  { id: 'LS-05', category: 'lifestyle', prompt: 'sonos or bose for whole home audio', expectation: 'Consumer multiroom comparison or honest general answer.' },
+  { id: 'LS-06', category: 'lifestyle', prompt: 'best headphones for the gym', expectation: 'Consumer answer — sweat resistance, fit; not audiophile cans.' },
+
+  // ── 12. ChatGPT-style asks (ranked, budgeted, contextual) ─────────
+  { id: 'CG-01', category: 'chatgpt_style', prompt: 'Help me choose a DAC under $1500 for a warm-sounding system — give me a ranked list with reasons', expectation: 'Ranked shortlist with per-pick rationale, respects budget and warmth context.' },
+  { id: 'CG-02', category: 'chatgpt_style', prompt: 'I have $5000 total for speakers and an amp for a 20 square meter room, mostly jazz and vocals. What would you buy?', expectation: 'Concrete allocation + picks with reasoning.' },
+  { id: 'CG-03', category: 'chatgpt_style', prompt: 'Give me three integrated amplifier options at $1000, $2000, and $3000 and tell me what improves at each step', expectation: 'Tiered picks with an honest diminishing-returns story.' },
+  { id: 'CG-04', category: 'chatgpt_style', prompt: 'What should I upgrade first with $800: Bluesound Node, Cambridge CXA81, or KEF Q350?', expectation: 'Ranked upgrade answer with a mechanism, not a questionnaire.' },
+  { id: 'CG-05', category: 'chatgpt_style', prompt: 'Compare the Denafrips Ares and the SMSL SU-9 and tell me which one to buy', expectation: 'R2R vs delta-sigma character fork; a verdict.' },
+  { id: 'CG-06', category: 'chatgpt_style', prompt: 'What are the best used amplifier bargains right now?', expectation: 'Real used-market picks with honest caveats.' },
+
+  // ── 13. Conceptual ────────────────────────────────────────────────
+  { id: 'CN-01', category: 'conceptual', prompt: 'what is soundstage', expectation: 'Clear, hearable-difference explanation.' },
+  { id: 'CN-02', category: 'conceptual', prompt: 'does burn-in matter or is it a myth', expectation: 'Honest position — drivers settle a little, electronics mostly no.' },
+  { id: 'CN-03', category: 'conceptual', prompt: 'what does an amplifier actually do for sound quality', expectation: 'Beginner-honest answer about amps and audible differences.' },
+  { id: 'CN-04', category: 'conceptual', prompt: 'how many watts do I actually need', expectation: 'Sensitivity + room + listening level arithmetic in plain words.' },
+  { id: 'CN-05', category: 'conceptual', prompt: 'whats a preamp even for', expectation: 'Clear role explanation (gain, source switching, volume).' },
+  { id: 'CN-06', category: 'conceptual', prompt: 'why does vinyl sound better', expectation: 'Presentation-vs-fidelity framing with a stance, no myth.' },
+
+  // ── 14. Additional core coverage ──────────────────────────────────
+  { id: 'SA-13', category: 'system_assessment', prompt: 'Assess my system: Rega Planar 3, Schiit Modi 3, Yamaha A-S701, Q Acoustics 3050i', expectation: 'Fair read of a mainstream starter system without snobbery.' },
+  { id: 'SA-14', category: 'system_assessment', prompt: 'rate my setup: WiiM Ultra, Fosi V3, Polk ES20', expectation: 'Budget system respected on its own terms; honest ceiling.' },
+  { id: 'UP-07', category: 'upgrade', prompt: 'Is a streamer upgrade audible if I already have a good DAC?', expectation: 'Honest bits-are-bits-with-caveats answer.' },
+  { id: 'UP-08', category: 'upgrade', prompt: 'Should I add a subwoofer or upgrade my bookshelf speakers?', expectation: 'A real either/or verdict with a mechanism.' },
+  { id: 'PD-08', category: 'purchase', prompt: 'Cambridge CXA81 vs Rega Elex Mk4', expectation: 'Credible character comparison with a lean.' },
+  { id: 'PD-09', category: 'purchase', prompt: 'Is the KEF LS50 Meta actually better than the original LS50?', expectation: 'Generation-over-generation honesty (MAT absorber, refinement).' },
+  { id: 'BY-01', category: 'purchase', prompt: "best integrated amp around $1500 that isn't bright", expectation: 'Warm/neutral picks under budget with rationale.' },
+  { id: 'BY-02', category: 'purchase', prompt: 'recommend a phono preamp under $300', expectation: 'In-budget phono stage picks.' },
+  { id: 'TS-05', category: 'troubleshooting', prompt: 'I hear a hum only when the turntable is playing', expectation: 'Ground-loop/cartridge triage — the classic answer.' },
+  { id: 'TS-06', category: 'troubleshooting', prompt: 'music sounds great loud but boring at low volume', expectation: 'Equal-loudness/Fletcher-Munson honesty; practical suggestions.' },
+  { id: 'BG-05', category: 'beginner', prompt: 'whats the difference between an integrated amp and a receiver', expectation: 'Clean beginner distinction.' },
+  { id: 'BG-06', category: 'beginner', prompt: 'do I need a DAC if my amp has one built in', expectation: 'Honest answer about built-in vs external DACs.' },
+
+  // ── 15. Vague / misspelled / conversational ───────────────────────
+  { id: 'VG-01', category: 'natural', prompt: 'my setup sounds meh', expectation: 'Graceful, answer-first handling of a vague complaint.' },
+  { id: 'VG-02', category: 'natural', prompt: 'harbeht or proac for classical?', expectation: 'Misspelling resolved; BBC-school comparison.' },
+  { id: 'VG-03', category: 'natural', prompt: 'is it worth upgading my dac', expectation: 'Typo handled; honest DAC-upgrade answer.' },
+  { id: 'VG-04', category: 'natural', prompt: 'amp for kef ls50 meta pls', expectation: 'Real pairing picks for a known low-sensitivity monitor.' },
+  { id: 'VG-05', category: 'natural', prompt: 'sub $500 speakers that slap', expectation: 'Reads the register; energetic budget picks.' },
+  { id: 'VG-06', category: 'natural', prompt: 'do tubes wear out', expectation: 'Yes — tube life honesty with practical replacement guidance.' },
+  { id: 'VG-07', category: 'natural', prompt: 'my left speaker is quieter than the right', expectation: 'Balance/channel triage — cables, balance control, source.' },
+  { id: 'VG-08', category: 'natural', prompt: 'loudness wars?', expectation: 'Knows the term; mastering-compression explanation.' },
+  { id: 'VG-09', category: 'natural', prompt: 'thinking about getting into vinyl, where do i start', expectation: 'Warm on-ramp: table, phono stage, first records.' },
+  { id: 'VG-10', category: 'natural', prompt: 'is McIntosh worth the money or am i paying for the blue meters', expectation: 'Honest brand-value verdict with a stance.' },
 ];
