@@ -51,7 +51,7 @@ import {
 import { buildPreferenceReflection } from '@/lib/preference-reflection';
 import { checkGlossaryQuestion } from '@/lib/glossary';
 import { fetchWithTimeout, EVALUATE_TIMEOUT_MS } from '@/lib/fetch-with-timeout';
-import { detectIntent, detectExplicitCategoryPivot, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, detectContextEnrichment, respondToMusicInput, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, isNonAdvisoryIntent, type SubjectMatch } from '@/lib/intent';
+import { detectIntent, detectExplicitCategoryPivot, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, detectContextEnrichment, respondToMusicInput, MUSIC_INPUT_FALLBACK, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, isNonAdvisoryIntent, type SubjectMatch } from '@/lib/intent';
 import { attachQuickRecommendation } from '@/lib/quick-recommendation';
 import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode, interpretSymptom } from '@/lib/conversation-state';
 import { detectHypotheticalChain, chainToComponentNames, type HypotheticalChain } from '@/lib/hypothetical-system';
@@ -73,7 +73,7 @@ import { ASSESSMENT_ARTIFACT_V2_ENABLED } from '@/lib/feature-flags';
 import { classifySystemArchetype, buildConsumerWirelessResponse } from '@/lib/system-class';
 import { findReferenceProduct, buildExplorationResponse, explorationToConsultation } from '@/lib/exploration';
 import { buildIntakeResponse, intakeToAdvisory } from '@/lib/intake';
-import { inferUnknownProduct, buildUnknownProductFallback } from '@/lib/llm-product-inference';
+import { inferUnknownProduct } from '@/lib/llm-product-inference';
 // Validation telemetry + feedback (Workstream 25B — throwaway cohort scaffolding).
 import { trackEvent, trackDecisionIntent, initSessionTelemetry } from '@/lib/track-event';
 // A3 hybrid advisor (WS31 — flag-gated, known-system advisory only; default OFF).
@@ -2501,8 +2501,58 @@ export default function Home() {
     // ── Music input path ──────────────────────────────────
     // User leads with musical taste ("I listen to jazz", "I like Van Halen").
     // Acknowledge briefly and ask one guiding question. No advisory logic yet.
+    // ── GTM Phase 4 (2026-07-15): "no turn may end empty" ──────────────
+    // The knowledge-lane body, hoisted above the guarded lanes so any
+    // lane that produces no substantive user-visible response can fall
+    // through to a real answer instead of ending the turn in silence.
+    // Fires ONLY where the alternative is nothing (or a canned
+    // non-answer); populated lanes are untouched.
+    const runKnowledgeLane = () => {
+      const knowledgeCtx: KnowledgeContext = {
+        currentMessage: submittedText,
+        subjectMatches: turnCtx.subjectMatches,
+        activeSystem: generalActiveSystem,
+        tasteProfile: tasteProfile ?? undefined,
+        advisoryCtx,
+      };
+      const knowledge = buildKnowledgeResponse(knowledgeCtx);
+      const knowledgeMsgId = advisoryId();
+      dispatchAdvisory(knowledgeToAdvisory(knowledge, advisoryCtx), knowledgeMsgId);
+
+      // Fire LLM call to replace placeholder explanation with real content.
+      // Keep loading indicator until LLM responds or times out.
+      requestKnowledgeLlm(knowledgeCtx).then((result) => {
+        if (result) {
+          const updated = { ...knowledge, explanation: result.explanation };
+          if (result.keyPoints) updated.keyPoints = result.keyPoints;
+          dispatch({ type: 'UPDATE_ADVISORY', id: knowledgeMsgId, advisory: knowledgeToAdvisory(updated, advisoryCtx) });
+        } else {
+          // LLM failed — update with a more helpful fallback
+          const fallback = { ...knowledge, explanation: `I don't have enough structured data to answer this question thoroughly. This topic — ${knowledge.topic} — falls outside my calibrated product database. In a future update, I'll be able to provide deeper coverage here.` };
+          dispatch({ type: 'UPDATE_ADVISORY', id: knowledgeMsgId, advisory: knowledgeToAdvisory(fallback, advisoryCtx) });
+        }
+        dispatch({ type: 'SET_LOADING', value: false });
+      }).catch(() => {
+        dispatch({ type: 'SET_LOADING', value: false });
+      });
+    };
+
     if (intent === 'music_input') {
       const musicResponse = respondToMusicInput(submittedText);
+      // Empty-turn guard (benchmark PH-03, RS-02, CN-06, VG-09): the
+      // music lane exists for descriptions of what the user listens to.
+      // A QUESTION that merely contains a music word ("why does vinyl
+      // sound better", "do I need acoustic panels…") false-positives
+      // the matcher and got a music-taste note — a non-answer. Answer
+      // questions; keep the onboarding flow for actual descriptions.
+      // The generic no-match fallback is likewise a non-answer.
+      const musicIsQuestion = /\?\s*$/.test(submittedText.trim())
+        || /^(?:do|does|is|are|can|could|should|what|whats|what's|why|how|which|when|where)\b/i.test(submittedText.trim())
+        || /\b(?:where do i start|how do i|should i|worth it)\b/i.test(submittedText);
+      if (musicIsQuestion || musicResponse === MUSIC_INPUT_FALLBACK) {
+        runKnowledgeLane();
+        return;
+      }
       dispatch({ type: 'ADD_NOTE', content: musicResponse });
       awaitingListeningPathRef.current = true;
       // Store original music description for the onboarding sequence
@@ -2515,6 +2565,17 @@ export default function Home() {
     // Vague entry queries ("I want a new stereo", "I need speakers")
     // get structured intake questions before routing to shopping.
     if (intent === 'intake') {
+      // Empty-turn guard: the intake questionnaire exists for vague
+      // WANTS ("I need speakers"). A question-shaped message ("do I
+      // need a DAC if my amp has one built in?") deserves an answer,
+      // not a form — the questionnaire is a non-answer to a question
+      // (benchmark BG-06).
+      const isQuestionShaped = /\?\s*$/.test(submittedText.trim())
+        || /^(?:do|does|is|are|can|could|should|what|whats|what's|why|how|which|when|where)\b/i.test(submittedText.trim());
+      if (isQuestionShaped) {
+        runKnowledgeLane();
+        return;
+      }
       const intakeResult = buildIntakeResponse(submittedText);
       dispatchAdvisory(intakeToAdvisory(intakeResult), advisoryId());
       intakeShownRef.current = true;
@@ -2807,26 +2868,15 @@ export default function Home() {
           dispatch({ type: 'SET_LOADING', value: false });
           return;
         }
-        // LLM inference also failed — emit the hedged uncertainty
-        // fallback unconditionally (QA C1). The previous behaviour
-        // gated this on `if (subjectName)`, which left a silent-empty
-        // path whenever subject extraction failed (e.g. "tell me more
-        // about it", misspelled brands). buildUnknownProductFallback
-        // adapts to both the named-subject and missing-subject cases
-        // and never fabricates specifics — see its definition for
-        // the discipline constraints.
-        const fallbackResponse = buildUnknownProductFallback(subjectName);
-        // Trust-layer pass: thin/degraded fallback response. Curated
-        // layer didn't produce a complete answer, LLM inference also
-        // failed, so the renderer surfaces the trust signal explicitly
-        // rather than letting the response read as authoritative.
-        const fallbackAdvisory = consultationToAdvisory(fallbackResponse, undefined, advisoryCtx);
-        fallbackAdvisory.reasoningMode = 'expanded';
-        fallbackAdvisory.fallbackReason = 'thin_output';
-        dispatchAdvisory(fallbackAdvisory, advisoryId());
-        // Validation telemetry (Workstream 25B): out-of-catalog, hedged fallback.
-        trackEvent('unknown_product', { subject: subjectName ?? null, resolved: 'fallback' });
-        dispatch({ type: 'SET_LOADING', value: false });
+        // Curated layer AND LLM product inference both came up empty.
+        // GTM Phase 4 empty-turn guard: the old hedged apology
+        // (buildUnknownProductFallback, "I don't have calibrated
+        // data…") was a canned non-answer — the definition of a
+        // dead-end turn. The knowledge lane answers the actual
+        // question instead (benchmark BG-05, VG-02, EC-01), and its
+        // own LLM-down fallback text remains the floor.
+        trackEvent('unknown_product', { subject: subjectName ?? null, resolved: 'knowledge_fallback' });
+        runKnowledgeLane();
         return;
       }
     }
@@ -3081,34 +3131,10 @@ export default function Home() {
     // ── Lane 2: Audio Knowledge ────────────────────────
     // General audio questions not tied to a system decision.
     // LLM generates prose; structured context is passed as input.
+    // (Lane body lives in runKnowledgeLane, defined above the guarded
+    // lanes so the empty-turn guards can reuse it.)
     if (intent === 'audio_knowledge') {
-      const knowledgeCtx: KnowledgeContext = {
-        currentMessage: submittedText,
-        subjectMatches: turnCtx.subjectMatches,
-        activeSystem: generalActiveSystem,
-        tasteProfile: tasteProfile ?? undefined,
-        advisoryCtx,
-      };
-      const knowledge = buildKnowledgeResponse(knowledgeCtx);
-      const knowledgeMsgId = advisoryId();
-      dispatchAdvisory(knowledgeToAdvisory(knowledge, advisoryCtx), knowledgeMsgId);
-
-      // Fire LLM call to replace placeholder explanation with real content.
-      // Keep loading indicator until LLM responds or times out.
-      requestKnowledgeLlm(knowledgeCtx).then((result) => {
-        if (result) {
-          const updated = { ...knowledge, explanation: result.explanation };
-          if (result.keyPoints) updated.keyPoints = result.keyPoints;
-          dispatch({ type: 'UPDATE_ADVISORY', id: knowledgeMsgId, advisory: knowledgeToAdvisory(updated, advisoryCtx) });
-        } else {
-          // LLM failed — update with a more helpful fallback
-          const fallback = { ...knowledge, explanation: `I don't have enough structured data to answer this question thoroughly. This topic — ${knowledge.topic} — falls outside my calibrated product database. In a future update, I'll be able to provide deeper coverage here.` };
-          dispatch({ type: 'UPDATE_ADVISORY', id: knowledgeMsgId, advisory: knowledgeToAdvisory(fallback, advisoryCtx) });
-        }
-        dispatch({ type: 'SET_LOADING', value: false });
-      }).catch(() => {
-        dispatch({ type: 'SET_LOADING', value: false });
-      });
+      runKnowledgeLane();
       return;
     }
 
@@ -3932,6 +3958,19 @@ export default function Home() {
           }
 
           const answer = buildShoppingAnswer(shoppingCtx, pipelineSignals, tasteProfile ?? undefined, reasoning, advisoryCtx.systemComponents, engagedNames, listenerProfileRef.current, selectionMode, lastAnchorRef.current, recentShoppingProductsRef.current, brandConstraint);
+
+          // ── GTM Phase 4 empty-turn guard ─────────────────
+          // A shopping answer with zero product options is an empty
+          // shell — the render is a canned sentence plus a taste
+          // question and nothing to buy (benchmark PD-04, CG-04,
+          // LS-02, LS-03). Conservative condition: only when there
+          // are NO products at all; any populated answer renders
+          // exactly as before.
+          if (!answer.productExamples || answer.productExamples.length === 0) {
+            console.log('[shopping-empty] no products for %s — knowledge-lane fallback', shoppingCtx.category);
+            runKnowledgeLane();
+            return;
+          }
 
           // ── Debug: final product list ──────────────────
           if (answer.productExamples && answer.productExamples.length > 0) {

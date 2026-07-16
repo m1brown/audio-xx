@@ -16,7 +16,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { BENCHMARK_PROMPTS } from './benchmark-prompts';
 import { buildTurnContext } from '../../turn-context';
-import { detectIntent } from '../../intent';
+import { detectIntent, respondToMusicInput, MUSIC_INPUT_FALLBACK } from '../../intent';
 import { buildSystemAssessment, buildConsultationResponse } from '../../consultation';
 import { detectShoppingIntent, buildShoppingAnswer } from '../../shopping-intent';
 import { shoppingToAdvisory } from '../../advisory-response';
@@ -130,6 +130,12 @@ function runPrompt(id: string, category: string, prompt: string, expectation: st
       return { ...base, routedIntent: intent, routedPath: 'system_assessment', response: flatten(result.response) };
     }
 
+    // GTM Phase 4 empty-turn guard marker — mirrors page.tsx: any lane
+    // that produces no substantive response falls through to the
+    // knowledge lane on prod.
+    const KNOWLEDGE_FALLBACK_RESPONSE =
+      '(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don\'t have enough structured data to answer this question thoroughly.")';
+
     // ── Route 2: shopping ──
     const shoppingCtx = detectShoppingIntent(prompt, EMPTY_SIGNALS);
     if (intent === 'shopping' || (shoppingCtx.detected && intent !== 'diagnosis' && intent !== 'consultation_entry' && turnCtx.subjectMatches.length < 2)) {
@@ -139,8 +145,27 @@ function runPrompt(id: string, category: string, prompt: string, expectation: st
       // preference profile. Guest first-turn has neither — undefined is
       // exactly what page.tsx passes on turn one.
       const answer = buildShoppingAnswer(shoppingCtx, EMPTY_SIGNALS, undefined, reasoning);
+      // Mirrors the page.tsx shopping empty-turn guard: zero product
+      // options → knowledge lane instead of the empty shell.
+      if (!answer.productExamples || answer.productExamples.length === 0) {
+        return { ...base, routedIntent: intent, routedPath: `shopping(${shoppingCtx.category ?? '?'})→empty→llm-lane`, response: KNOWLEDGE_FALLBACK_RESPONSE };
+      }
       const advisory = shoppingToAdvisory(answer, EMPTY_SIGNALS, reasoning);
       return { ...base, routedIntent: intent, routedPath: `shopping(${shoppingCtx.category ?? '?'})`, response: flatten(advisory) };
+    }
+
+    // ── Route 2a-guard: music_input / intake empty-turn guards ──
+    // Mirrors page.tsx: a music_input the matcher can't classify, or an
+    // intake intent carrying a question-shaped message, falls through to
+    // the knowledge lane.
+    const musicIsQuestion = /\?\s*$/.test(prompt.trim())
+      || /^(?:do|does|is|are|can|could|should|what|whats|what's|why|how|which|when|where)\b/i.test(prompt.trim())
+      || /\b(?:where do i start|how do i|should i|worth it)\b/i.test(prompt);
+    if (intent === 'music_input' && (musicIsQuestion || respondToMusicInput(prompt) === MUSIC_INPUT_FALLBACK)) {
+      return { ...base, routedIntent: intent, routedPath: 'music_input→question→llm-lane', response: KNOWLEDGE_FALLBACK_RESPONSE };
+    }
+    if (intent === 'intake' && (/\?\s*$/.test(prompt.trim()) || /^(?:do|does|is|are|can|could|should|what|whats|what's|why|how|which|when|where)\b/i.test(prompt.trim()))) {
+      return { ...base, routedIntent: intent, routedPath: 'intake→question→llm-lane', response: KNOWLEDGE_FALLBACK_RESPONSE };
     }
 
     // ── Route 2b: audio_knowledge (LLM lane) ──
@@ -185,7 +210,10 @@ function runPrompt(id: string, category: string, prompt: string, expectation: st
     if (late?.response) {
       return { ...base, routedIntent: intent, routedPath: 'fallback→assessment', response: flatten(late.response) };
     }
-    return { ...base, routedIntent: intent, routedPath: 'unrouted', response: '(no deterministic response produced for this input)' };
+    // GTM Phase 4: page.tsx's consultation-null terminal now runs the
+    // knowledge lane (after LLM product inference) instead of ending
+    // empty — 'unrouted' no longer exists as a user-visible state.
+    return { ...base, routedIntent: intent, routedPath: 'unrouted→llm-lane', response: KNOWLEDGE_FALLBACK_RESPONSE };
   } catch (e: any) {
     return { ...base, routedIntent: 'error', routedPath: 'threw', response: '', error: `${e?.message ?? e}` };
   }

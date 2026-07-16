@@ -149,8 +149,8 @@
     "prompt": "What would you upgrade first?",
     "expectation": "Graceful handling of a system-less question — asks for the chain without feeling like a form.",
     "routedIntent": "audio_knowledge",
-    "routedPath": "shopping(general)",
-    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?"
+    "routedPath": "shopping(general)→empty→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "UP-06",
@@ -194,8 +194,8 @@
     "prompt": "Is the Eversolo A8 worth it over the A6?",
     "expectation": "Honest same-brand tier comparison.",
     "routedIntent": "product_assessment",
-    "routedPath": "shopping(general)",
-    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?"
+    "routedPath": "shopping(general)→empty→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "PD-05",
@@ -320,8 +320,8 @@
     "prompt": "Is streaming as good as vinyl?",
     "expectation": "Frames it as presentation difference not fidelity war; has a stance.",
     "routedIntent": "music_input",
-    "routedPath": "unrouted",
-    "response": "(no deterministic response produced for this input)"
+    "routedPath": "music_input→question→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "PH-04",
@@ -347,8 +347,8 @@
     "prompt": "Build me a $3,000 system from scratch",
     "expectation": "A concrete starter system with allocation logic — not a questionnaire wall.",
     "routedIntent": "audio_knowledge",
-    "routedPath": "shopping(general)",
-    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?"
+    "routedPath": "shopping(general)→empty→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "BG-02",
@@ -383,8 +383,8 @@
     "prompt": "Assess my system: Fooblaster 9000, Sonic Deathray Mk II",
     "expectation": "Graceful unknown-product handling — no fabricated traits, no crash, useful next step.",
     "routedIntent": "consultation_entry",
-    "routedPath": "unrouted",
-    "response": "(no deterministic response produced for this input)"
+    "routedPath": "unrouted→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "EC-02",
@@ -446,8 +446,8 @@
     "prompt": "everyone on reddit says buy a miniDSP Flex, do I need one?",
     "expectation": "A point of view on DSP-in-the-chain, not a shrug.",
     "routedIntent": "audio_knowledge",
-    "routedPath": "shopping(general)",
-    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?"
+    "routedPath": "shopping(general)→empty→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "NT-03",
@@ -554,8 +554,8 @@
     "prompt": "Do I need acoustic panels in a 12x14 room?",
     "expectation": "Honest first-reflections/absorption answer at hobbyist altitude.",
     "routedIntent": "music_input",
-    "routedPath": "unrouted",
-    "response": "(no deterministic response produced for this input)"
+    "routedPath": "music_input→question→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "RS-03",
@@ -581,8 +581,8 @@
     "prompt": "Does it matter if one speaker cable run is longer than the other?",
     "expectation": "Honest physics answer — no, at domestic lengths.",
     "routedIntent": "cable_advisory",
-    "routedPath": "unrouted",
-    "response": "(no deterministic response produced for this input)"
+    "routedPath": "unrouted→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "RS-06",
@@ -608,8 +608,8 @@
     "prompt": "best soundbar for a small apartment",
     "expectation": "Consumer soundbar guidance or honest referral — no passive speakers.",
     "routedIntent": "shopping",
-    "routedPath": "shopping(general)",
-    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?"
+    "routedPath": "shopping(general)→empty→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "LS-03",
@@ -617,8 +617,8 @@
     "prompt": "are AirPods Max worth it",
     "expectation": "Honest consumer-headphone verdict.",
     "routedIntent": "gear_inquiry",
-    "routedPath": "shopping(general)",
-    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?"
+    "routedPath": "shopping(general)→empty→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "LS-04",
@@ -680,8 +680,8 @@
     "prompt": "What should I upgrade first with $800: Bluesound Node, Cambridge CXA81, or KEF Q350?",
     "expectation": "Ranked upgrade answer with a mechanism, not a questionnaire.",
     "routedIntent": "shopping",
-    "routedPath": "shopping(general)",
-    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?"
+    "routedPath": "shopping(general)→empty→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "CG-05",
@@ -752,8 +752,8 @@
     "prompt": "why does vinyl sound better",
     "expectation": "Presentation-vs-fidelity framing with a stance, no myth.",
     "routedIntent": "music_input",
-    "routedPath": "unrouted",
-    "response": "(no deterministic response produced for this input)"
+    "routedPath": "music_input→question→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "SA-13",
@@ -851,8 +851,8 @@
     "prompt": "whats the difference between an integrated amp and a receiver",
     "expectation": "Clean beginner distinction.",
     "routedIntent": "comparison",
-    "routedPath": "unrouted",
-    "response": "(no deterministic response produced for this input)"
+    "routedPath": "unrouted→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "BG-06",
@@ -860,8 +860,8 @@
     "prompt": "do I need a DAC if my amp has one built in",
     "expectation": "Honest answer about built-in vs external DACs.",
     "routedIntent": "intake",
-    "routedPath": "unrouted",
-    "response": "(no deterministic response produced for this input)"
+    "routedPath": "intake→question→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "VG-01",
@@ -878,8 +878,8 @@
     "prompt": "harbeht or proac for classical?",
     "expectation": "Misspelling resolved; BBC-school comparison.",
     "routedIntent": "comparison",
-    "routedPath": "unrouted",
-    "response": "(no deterministic response produced for this input)"
+    "routedPath": "unrouted→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "VG-03",
@@ -941,8 +941,8 @@
     "prompt": "thinking about getting into vinyl, where do i start",
     "expectation": "Warm on-ramp: table, phono stage, first records.",
     "routedIntent": "music_input",
-    "routedPath": "unrouted",
-    "response": "(no deterministic response produced for this input)"
+    "routedPath": "music_input→question→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
   },
   {
     "id": "VG-10",

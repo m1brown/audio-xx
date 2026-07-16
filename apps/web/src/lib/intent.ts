@@ -2351,6 +2351,14 @@ export function respondToListeningPath(path: ListeningPath, fromScratch?: boolea
   return 'No problem. Are you mostly using headphones, speakers, or a bit of both?';
 }
 
+/**
+ * The generic no-match response from respondToMusicInput. Exported so the
+ * dispatcher can detect that the music matcher recognised nothing — the
+ * signal that the message probably wasn't a music description at all and
+ * should fall through to the knowledge lane (GTM Phase 4 empty-turn guard).
+ */
+export const MUSIC_INPUT_FALLBACK = 'Got it — all kinds of music. Are you listening on headphones, speakers, or something else?';
+
 export function respondToMusicInput(message: string): string {
   const lower = message.toLowerCase();
 
@@ -2386,7 +2394,7 @@ export function respondToMusicInput(message: string): string {
   }
 
   // Fallback — we know it's music-related but can't classify further
-  return 'Got it — all kinds of music. Are you listening on headphones, speakers, or something else?';
+  return MUSIC_INPUT_FALLBACK;
 }
 
 // ── Onboarding query synthesis ─────────────────────────────────────────────────

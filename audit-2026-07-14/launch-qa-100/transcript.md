@@ -923,15 +923,11 @@ What are you exploring — is there something you'd like to change about this ba
 
 **Expectation:** Graceful handling of a system-less question — asks for the chain without feeling like a form.
 
-**Routing:** audio_knowledge → shopping(general)
+**Routing:** audio_knowledge → shopping(general)→empty→llm-lane
 
 **Response:**
 
-[expectedImpact]
-Without more system context, this is a sound direction — but the audible difference may be modest.
-
-[followUp]
-Do you want this to lean more warm and punchy, or clean and controlled?
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
@@ -1060,15 +1056,11 @@ Which models are you comparing? That changes the picture — and if you tell me 
 
 **Expectation:** Honest same-brand tier comparison.
 
-**Routing:** product_assessment → shopping(general)
+**Routing:** product_assessment → shopping(general)→empty→llm-lane
 
 **Response:**
 
-[expectedImpact]
-Without more system context, this is a sound direction — but the audible difference may be modest.
-
-[followUp]
-Do you want this to lean more warm and punchy, or clean and controlled?
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
@@ -1410,11 +1402,11 @@ Are you exploring the brand generally, or considering a specific model?
 
 **Expectation:** Frames it as presentation difference not fidelity war; has a stance.
 
-**Routing:** music_input → unrouted
+**Routing:** music_input → music_input→question→llm-lane
 
 **Response:**
 
-(no deterministic response produced for this input)
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
@@ -1459,15 +1451,11 @@ Are you considering this type of design for your system?
 
 **Expectation:** A concrete starter system with allocation logic — not a questionnaire wall.
 
-**Routing:** audio_knowledge → shopping(general)
+**Routing:** audio_knowledge → shopping(general)→empty→llm-lane
 
 **Response:**
 
-[expectedImpact]
-Without more system context, this is a sound direction — but the audible difference may be modest.
-
-[followUp]
-Do you want this to lean more warm and punchy, or clean and controlled?
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
@@ -1525,11 +1513,11 @@ Without more system context, this is a sound direction — but the audible diffe
 
 **Expectation:** Graceful unknown-product handling — no fabricated traits, no crash, useful next step.
 
-**Routing:** consultation_entry → unrouted
+**Routing:** consultation_entry → unrouted→llm-lane
 
 **Response:**
 
-(no deterministic response produced for this input)
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
@@ -1723,15 +1711,11 @@ Are you exploring the brand generally, or considering a specific model?
 
 **Expectation:** A point of view on DSP-in-the-chain, not a shrug.
 
-**Routing:** audio_knowledge → shopping(general)
+**Routing:** audio_knowledge → shopping(general)→empty→llm-lane
 
 **Response:**
 
-[expectedImpact]
-Without more system context, this is a sound direction — but the audible difference may be modest.
-
-[followUp]
-Do you want this to lean more warm and punchy, or clean and controlled?
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
@@ -1956,11 +1940,11 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 
 **Expectation:** Honest first-reflections/absorption answer at hobbyist altitude.
 
-**Routing:** music_input → unrouted
+**Routing:** music_input → music_input→question→llm-lane
 
 **Response:**
 
-(no deterministic response produced for this input)
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
@@ -1998,11 +1982,11 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 
 **Expectation:** Honest physics answer — no, at domestic lengths.
 
-**Routing:** cable_advisory → unrouted
+**Routing:** cable_advisory → unrouted→llm-lane
 
 **Response:**
 
-(no deterministic response produced for this input)
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
@@ -2040,15 +2024,11 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 
 **Expectation:** Consumer soundbar guidance or honest referral — no passive speakers.
 
-**Routing:** shopping → shopping(general)
+**Routing:** shopping → shopping(general)→empty→llm-lane
 
 **Response:**
 
-[expectedImpact]
-Without more system context, this is a sound direction — but the audible difference may be modest.
-
-[followUp]
-Do you want this to lean more warm and punchy, or clean and controlled?
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
@@ -2058,15 +2038,11 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 
 **Expectation:** Honest consumer-headphone verdict.
 
-**Routing:** gear_inquiry → shopping(general)
+**Routing:** gear_inquiry → shopping(general)→empty→llm-lane
 
 **Response:**
 
-[expectedImpact]
-Without more system context, this is a sound direction — but the audible difference may be modest.
-
-[followUp]
-Do you want this to lean more warm and punchy, or clean and controlled?
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
@@ -2204,15 +2180,11 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 
 **Expectation:** Ranked upgrade answer with a mechanism, not a questionnaire.
 
-**Routing:** shopping → shopping(general)
+**Routing:** shopping → shopping(general)→empty→llm-lane
 
 **Response:**
 
-[expectedImpact]
-Without more system context, this is a sound direction — but the audible difference may be modest.
-
-[followUp]
-Do you want this to lean more warm and punchy, or clean and controlled?
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
@@ -2344,11 +2316,11 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 
 **Expectation:** Presentation-vs-fidelity framing with a stance, no myth.
 
-**Routing:** music_input → unrouted
+**Routing:** music_input → music_input→question→llm-lane
 
 **Response:**
 
-(no deterministic response produced for this input)
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
@@ -2572,11 +2544,11 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 
 **Expectation:** Clean beginner distinction.
 
-**Routing:** comparison → unrouted
+**Routing:** comparison → unrouted→llm-lane
 
 **Response:**
 
-(no deterministic response produced for this input)
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
@@ -2586,11 +2558,11 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 
 **Expectation:** Honest answer about built-in vs external DACs.
 
-**Routing:** intake → unrouted
+**Routing:** intake → intake→question→llm-lane
 
 **Response:**
 
-(no deterministic response produced for this input)
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
@@ -2614,11 +2586,11 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 
 **Expectation:** Misspelling resolved; BBC-school comparison.
 
-**Routing:** comparison → unrouted
+**Routing:** comparison → unrouted→llm-lane
 
 **Response:**
 
-(no deterministic response produced for this input)
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
@@ -2728,11 +2700,11 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 
 **Expectation:** Warm on-ramp: table, phono stage, first records.
 
-**Routing:** music_input → unrouted
+**Routing:** music_input → music_input→question→llm-lane
 
 **Response:**
 
-(no deterministic response produced for this input)
+(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly.")
 
 ---
 
