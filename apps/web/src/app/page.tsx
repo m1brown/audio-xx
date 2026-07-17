@@ -721,6 +721,19 @@ export default function Home() {
     }
   }, []);
 
+  // Cover composer auto-grow (Mike, 2026-07-16 prod review): the
+  // manuscript field sizes itself to its content — the signed-in
+  // system autofill spans several lines and was clipping at the fixed
+  // height once the resize grip was removed. Conversation state keeps
+  // its compact fixed composer.
+  useEffect(() => {
+    if (state.messages.length > 0) return;
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = `${Math.max(148, ta.scrollHeight)}px`;
+  }, [state.currentInput, state.messages.length]);
+
   // Taste profile — loaded from API for authenticated users
   const [tasteProfile, setTasteProfile] = useState<TasteProfile | null>(null);
   useEffect(() => {
@@ -5410,30 +5423,24 @@ export default function Home() {
           className={hasMessages ? '' : 'audioxx-editorial-input'}
           style={{
             width: '100%',
-            // Editorial composer (!hasMessages): no card, paper background,
-            // a single bottom hairline as the only frame — the textarea
-            // reads as a manuscript page, not a form field. Source Serif 4
-            // for what the visitor types matches the article they're
-            // beginning. Phase 2A: height reduced from 200 — a tall empty
-            // box read as a form; four comfortable lines read as an
-            // opening manuscript page (autofill still fits, resize stays).
+            // Editorial composer (!hasMessages). Mike (2026-07-16, prod
+            // review): the field is white so it reads clearly against
+            // the cream paper, and the height auto-grows to fit the
+            // content (see the effect on currentInput below) — the
+            // signed-in system autofill was clipping at a fixed height
+            // with the resize grip hidden.
             minHeight: hasMessages ? 72 : 148,
-            padding: hasMessages ? '1rem 1.1rem' : '1.25rem 0',
-            border: hasMessages ? `1.5px solid ${COLOR.border}` : 'none',
-            borderBottom: hasMessages
-              ? `1.5px solid ${COLOR.border}`
-              : `1px solid ${EDITORIAL.hairline}`,
-            borderRadius: hasMessages ? 10 : 0,
+            padding: hasMessages ? '1rem 1.1rem' : '1.1rem 1.1rem',
+            border: hasMessages ? `1.5px solid ${COLOR.border}` : `1px solid ${EDITORIAL.hairline}`,
+            borderRadius: hasMessages ? 10 : 4,
             outline: 'none',
             fontSize: hasMessages ? '0.98rem' : '1.0625rem',
             lineHeight: hasMessages ? 1.55 : 1.65,
-            // Editorial QA: the resize grip is a software tell on the
-            // cover manuscript; conversation keeps it.
+            // Editorial QA: no resize grip on the cover — the field
+            // grows itself to fit its content instead.
             resize: hasMessages ? 'vertical' : 'none',
-            // Phase 2A: transparent on the cover — the old #FBFAF6 fill
-            // differed subtly from the paper and read as a form box; the
-            // manuscript page should show only its bottom rule.
-            background: hasMessages ? COLOR.inputBg : 'transparent',
+            overflow: hasMessages ? undefined : 'hidden',
+            background: hasMessages ? COLOR.inputBg : '#FFFFFF',
             color: hasMessages ? COLOR.textPrimary : EDITORIAL.ink,
             boxSizing: 'border-box',
             boxShadow: 'none',
@@ -5446,7 +5453,7 @@ export default function Home() {
               e.currentTarget.style.boxShadow = `0 0 0 3px rgba(31,58,95,0.10)`;
               e.currentTarget.style.background = '#fff';
             } else {
-              e.currentTarget.style.borderBottomColor = EDITORIAL.ink;
+              e.currentTarget.style.borderColor = EDITORIAL.ink;
             }
           }}
           onBlur={(e) => {
@@ -5455,7 +5462,7 @@ export default function Home() {
               e.currentTarget.style.boxShadow = 'none';
               e.currentTarget.style.background = COLOR.inputBg;
             } else {
-              e.currentTarget.style.borderBottomColor = EDITORIAL.hairline;
+              e.currentTarget.style.borderColor = EDITORIAL.hairline;
             }
           }}
         />
