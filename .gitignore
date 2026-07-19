@@ -66,3 +66,4 @@ dist/
 .claude/
 .vercel
 /dist/
+.env*
