@@ -57,9 +57,9 @@ export type SystemPhilosophy =
 
 const ARCHETYPE_SENTENCE: Record<ListenerArchetype, string> = {
   'harmonic-led':
-    'This system reflects a listener drawn to harmonic density, tonal continuity, and timbral depth.',
+    'This system reflects a listener drawn to rich tone, continuity, and timbral depth.',
   'timing-led':
-    'This system reflects a listener drawn to timing precision, elasticity, and dynamic immediacy.',
+    'This system reflects a listener drawn to precise timing, agility, and dynamic immediacy.',
   'flow-led':
     'This system reflects a listener drawn to musical flow, expressive ease, and rhythmic continuity.',
   'composure-led':

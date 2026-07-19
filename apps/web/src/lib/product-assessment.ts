@@ -200,7 +200,7 @@ function describeTraitDelta(
   const changes: string[] = [];
   const TRAIT_LABELS: Record<string, string> = {
     flow: 'musical flow',
-    tonal_density: 'tonal density',
+    tonal_density: 'tonal weight and body',
     clarity: 'clarity and resolution',
     dynamics: 'dynamic energy',
     fatigue_risk: 'fatigue risk',
@@ -238,7 +238,7 @@ function describeCharacter(product: Product): string[] {
   const t = product.traits;
 
   if ((t.flow ?? 0) >= 0.7) lines.push('Prioritizes musical flow and engagement');
-  if ((t.tonal_density ?? 0) >= 0.7) lines.push('Strong tonal density and harmonic richness');
+  if ((t.tonal_density ?? 0) >= 0.7) lines.push('Rich, full-bodied tone');
   if ((t.clarity ?? 0) >= 0.7) lines.push('High clarity and resolution');
   if ((t.dynamics ?? 0) >= 0.7) lines.push('Dynamic and energetic presentation');
   if ((t.texture ?? 0) >= 0.7) lines.push('Rich textural detail');
@@ -403,7 +403,7 @@ export function buildProductAssessment(
         // if we know the brand's house sound, we can assert that siblings share it.
         const STRENGTH_LABELS: Record<string, string> = {
           flow: 'musical flow',
-          tonal_density: 'tonal density',
+          tonal_density: 'tonal weight and body',
           clarity: 'clarity',
           dynamics: 'dynamic energy',
           texture: 'textural richness',
@@ -460,11 +460,11 @@ export function buildProductAssessment(
       });
       if (systemHasDensity) {
         systemBehavior.push(
-          'Your system already has components with strong tonal density — adding more may push the balance toward warmth',
+          'Your system already has richly-voiced components — adding more may push the balance toward warmth',
         );
       } else {
         systemBehavior.push(
-          'Would add tonal density and harmonic richness to your chain',
+          'Would add tonal weight and harmonic richness to your chain',
         );
       }
     }

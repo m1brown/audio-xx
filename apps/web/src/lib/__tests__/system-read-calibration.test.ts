@@ -105,7 +105,7 @@ describe('SYSTEM READ calibration — My System (intentional synergy)', () => {
 
   it('Decision section uses "intentionally speed-forward" phrasing on synergy + lean upstream', () => {
     expect(narrative).toMatch(/intentionally speed-forward/i);
-    expect(narrative).toMatch(/change the DAC only if you want more tonal density/i);
+    expect(narrative).toMatch(/change the DAC only if you want more tonal weight/i);
   });
 
   it('Trade-offs section no longer says "exposes thinness on dense tracks"', () => {

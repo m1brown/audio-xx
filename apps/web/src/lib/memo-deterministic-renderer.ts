@@ -567,7 +567,7 @@ function deriveListenerTasteProfile(
   if (wb > 0.65) avoided.push('tonal warmth');
   if (wb < 0.35) avoided.push('analytical brightness');
   if (sd > 0.65) avoided.push('smoothed-over detail');
-  if (sd < 0.35) avoided.push('excessive detail emphasis');
+  if (sd < 0.35) avoided.push('over-etched detail');
   if (ec > 0.65) avoided.push('rigid control');
   if (ec < 0.35) avoided.push('loose dynamics');
 
@@ -701,7 +701,7 @@ function deriveSystemSignature(
   let engagementNote = '';
   if (prioritySet.has('musical_flow')) engagementNote = ' emphasizing musical engagement';
   else if (prioritySet.has('timing_accuracy')) engagementNote = ' emphasizing transient clarity';
-  else if (prioritySet.has('tonal_density')) engagementNote = ' emphasizing tonal density';
+  else if (prioritySet.has('tonal_density')) engagementNote = ' emphasizing tonal richness';
 
   const traitStr = traits.join(', ');
   return traitStr.charAt(0).toUpperCase() + traitStr.slice(1) + ' system' + engagementNote + '.';

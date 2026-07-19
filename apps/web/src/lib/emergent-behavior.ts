@@ -445,7 +445,7 @@ const QUALITY: Record<EmergentBehavior, string> = {
   dynamic_elasticity: 'microdynamics stay lively, quick, and sweet instead of merely lean',
   low_drag: 'note attacks land cleanly and decays release without the chain getting in the way',
   temporal_coherence: 'attack and decay stay coherent across instruments',
-  harmonic_continuity: 'tonal density carries through instead of being filtered',
+  harmonic_continuity: 'tonal richness carries through instead of being filtered',
   compression_resilience: 'dynamic peaks land without compression at typical listening levels',
   presence_lift: 'presence-region detail arrives with expressive contrast, not glare',
   system_tension_active: 'each component\'s voice is audible — the system is two perspectives in one room',

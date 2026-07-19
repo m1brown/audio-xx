@@ -117,7 +117,7 @@ const TASTE_LABEL_RULES: TasteLabelRule[] = [
   },
   {
     check: (t) => t.tonal_density === 'up' && t.flow === 'up',
-    label: 'harmonic richness, flow, and tonal density',
+    label: 'harmonic richness, flow, and tonal weight',
     archetype: 'tonal_saturated',
   },
   {
@@ -166,7 +166,7 @@ function inferPreserve(arrows: DirectionArrow[], tendencies: Tendency[]): string
       if (arrow.quality === 'warmth' || arrow.quality === 'density' || arrow.quality === 'body') {
         preserve.push('transient definition');
       } else if (arrow.quality === 'speed' || arrow.quality === 'dynamics' || arrow.quality === 'punch') {
-        preserve.push('tonal density');
+        preserve.push('tonal weight');
       } else if (arrow.quality === 'clarity' || arrow.quality === 'detail') {
         preserve.push('listening ease');
       } else if (arrow.quality === 'flow' || arrow.quality === 'smoothness' || arrow.quality === 'composure') {

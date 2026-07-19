@@ -6161,7 +6161,7 @@ function buildRefinementPrompts(
 ): string[] {
   const prompts: string[] = [];
   if (gaps.includes('taste')) {
-    prompts.push('Do you prefer more tonal density and warmth, or more precision and transient speed?');
+    prompts.push('Do you prefer more warmth and body, or more precision and transient speed?');
   }
   if (gaps.includes('system')) {
     const catParts = category === 'dac'

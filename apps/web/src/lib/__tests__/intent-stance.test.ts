@@ -104,7 +104,7 @@ describe('P5 — limitation framing is intent-relative', () => {
 
   it('D · detailed system + wants flow → detail limitation stays a genuine limitation', () => {
     const { limitations } = assess(DETAILED, [{ quality: 'flow', direction: 'more' }]);
-    expect(limitations.some((l) => /Stacked detail emphasis may feel analytical/i.test(l))).toBe(true);
+    expect(limitations.some((l) => /Resolution repeats at several stages — lesser recordings may sound analytical/i.test(l))).toBe(true);
     expect(limitations.some((l) => /the detail you want/i.test(l))).toBe(false);
   });
 });

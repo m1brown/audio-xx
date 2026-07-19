@@ -133,7 +133,7 @@ const MY_SYSTEM: BenchmarkCase = {
       // Phase C Calibration Pass 1 — listener identity + system philosophy.
       // Pass 1 wording refinement (2026-05-14): descriptive list form,
       // no oppositional "X over Y" framing.
-      'This system reflects a listener drawn to timing precision, elasticity, and dynamic immediacy',
+      'This system reflects a listener drawn to precise timing, agility, and dynamic immediacy',
       'This system is organized around immediacy, elasticity, and musical communication',
     ],
     mustNotContain: [
@@ -197,7 +197,7 @@ const LEBEN_DEVORE: BenchmarkCase = {
       // Phase C Calibration Pass 1 — listener identity + system philosophy.
       // Pass 1 wording refinement (2026-05-14): descriptive list form,
       // no oppositional "X over Y" framing.
-      'This system reflects a listener drawn to harmonic density, tonal continuity, and timbral depth',
+      'This system reflects a listener drawn to rich tone, continuity, and timbral depth',
       'This system is organized around harmonic restraint, smoothness, and unforced presence',
     ],
     mustNotContain: [
@@ -295,9 +295,11 @@ const MODERN_PRECISION_CONTROL: BenchmarkCase = {
       'Topping',
       'Hegel',
       'KEF',
-      // The non-synergy corrective wording is preserved (negative-control
-      // confirms calibration is gated, not blanket-applied).
-      'unless the speaker compensates',
+      // The non-synergy contrast wording is preserved (negative-control
+      // confirms calibration is gated, not blanket-applied). Editorial
+      // pass 2026-07-19: hedged phrasing replaces "unless the speaker
+      // compensates".
+      'the two tendencies should balance each other',
       // Phase C Calibration Pass 1 — negative-control identity + thesis.
       // Must produce a DISTINCT identity+thesis pair from the synergy cases.
       // Pass 1 wording refinement (2026-05-14): descriptive list form,
@@ -318,8 +320,8 @@ const MODERN_PRECISION_CONTROL: BenchmarkCase = {
       // No emergent paragraph for this aligned-precision chain.
       'Emergent behavior',
       // Phase C: synergy-case identities/theses must NOT fire here.
-      'drawn to timing precision, elasticity, and dynamic immediacy',
-      'drawn to harmonic density, tonal continuity, and timbral depth',
+      'drawn to precise timing, agility, and dynamic immediacy',
+      'drawn to rich tone, continuity, and timbral depth',
       'organized around harmonic restraint, smoothness, and unforced presence',
       'organized around immediacy, elasticity, and musical communication',
     ],

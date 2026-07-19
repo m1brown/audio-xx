@@ -84,6 +84,8 @@ CONSTRAINTS:
 - Keep the total response to 200–400 words. No bullet points unless the question specifically asks to list things.
 - Do not use markdown formatting (no **bold**, no # headers, no bullet lists). Write in natural prose.
 - If you are uncertain about something, say so rather than guessing.
+- Present hypotheses as hypotheses: use "likely", "tends to", "may", "depending on the room and system" for claims that vary with context. State plainly only what is genuinely robust.
+- Leave the reader with one memorable insight — a single observation they could repeat to a friend that reframes how they think about the question. Work it into the prose naturally; never label it.
 
 FORMAT:
 Return a JSON object with two fields:
