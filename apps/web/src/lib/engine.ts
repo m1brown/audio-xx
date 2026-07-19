@@ -2,7 +2,7 @@
  * Server-side evaluation pipeline.
  * Wires the signal processor and rule engine together.
  */
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { parse } from 'yaml';
 import type { ExtractedSignals, SignalDictionary, SignalDirection, SignalEntry } from './signal-types';
@@ -81,8 +81,27 @@ function normalizeText(lower: string): string {
 
 // ── Signal Processing ──────────────────────────────
 
-const SIGNALS_PATH = resolve(process.cwd(), '../../packages/signals/signals.yaml');
-const RULES_PATH = resolve(process.cwd(), '../../packages/rules/rules.yaml');
+// Resolve repo data files regardless of working directory: the Next
+// server runs with cwd=apps/web (../../ reaches the repo root), while
+// vitest runs from the repo root itself. Pick the first candidate that
+// exists; fall back to the historical path so runtime behavior is
+// unchanged when neither can be probed.
+function resolveRepoFile(rel: string): string {
+  const candidates = [
+    resolve(process.cwd(), '../../', rel),
+    resolve(process.cwd(), rel),
+  ];
+  for (const c of candidates) {
+    try {
+      if (existsSync(c)) return c;
+    } catch {
+      /* fall through */
+    }
+  }
+  return candidates[0];
+}
+const SIGNALS_PATH = resolveRepoFile('packages/signals/signals.yaml');
+const RULES_PATH = resolveRepoFile('packages/rules/rules.yaml');
 
 function loadSignalDictionary(): SignalDictionary {
   const raw = readFileSync(SIGNALS_PATH, 'utf-8');
