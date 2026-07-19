@@ -197,13 +197,19 @@ describe('UP/SM regression: advice questions are system reasoning, not compariso
     'What is the weakest link in my system: Eversolo DMP-A6, Job Integrated, WLM Diva monitor?',
     'Where should I spend $2,000 to improve my system? Chord Qutest, Naim SuperNait 3, Harbeth SHL5+.',
     'Should I just keep what I have? Denafrips Ares II, Rega Brio, Wharfedale Linton.',
-    'Can my Naim Nait 50 drive Falcon LS3/5a speakers?',
   ];
   for (const p of ADVICE_PROMPTS) {
     it(`"${p.slice(0, 50)}…" routes to system_assessment`, () => {
       expect(detectIntent(p).intent).toBe('system_assessment');
     });
   }
+
+  // Launch gate 2026-07-19 (MVP review SM-01): power-match questions have
+  // a known conceptual answer; the assessment lane was producing
+  // contradictory reads for them. They now route to the knowledge lane.
+  it('"Can my Naim Nait 50 drive Falcon LS3/5a speakers?" routes to audio_knowledge', () => {
+    expect(detectIntent('Can my Naim Nait 50 drive Falcon LS3/5a speakers?').intent).toBe('audio_knowledge');
+  });
 
   it('genuine comparisons still route to comparison', () => {
     expect(detectIntent('Chord Qutest vs Schiit Bifrost 2/64 — which should I buy?').intent).toBe('comparison');

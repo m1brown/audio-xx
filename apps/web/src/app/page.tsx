@@ -2792,7 +2792,14 @@ export default function Home() {
 
         return;
       }
-      // Falls through to consultation if assessment couldn't identify enough components
+      // Launch gate 2026-07-19 (MVP review SA-08): when the extractor
+      // cannot form a system at all (e.g. active-monitor chains like
+      // Genelec + RME), the null result used to fall through the guarded
+      // consultation path into a partial card or nothing. A real prose
+      // answer about the named gear from the knowledge lane beats a
+      // broken assessment.
+      runKnowledgeLane();
+      return;
     }
 
     // ── Consultation path ───────────────────────────────

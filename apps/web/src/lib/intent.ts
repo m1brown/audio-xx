@@ -1319,6 +1319,24 @@ export function detectIntent(
     return { intent: 'audio_knowledge', subjects, subjectMatches, desires };
   }
 
+  // 0-pre-b. Concept/power/symptom questions (launch gate 2026-07-19).
+  //   These are questions with a KNOWN answer, not shopping or comparison
+  //   requests — and the deterministic lanes were answering them with
+  //   product cards or brand blurbs (MVP review Ds: SM-01/02, TS-01/03,
+  //   UP-07/08). The knowledge lane answers them directly and well:
+  //   - power-match: "can my Nait 50 drive LS3/5a", "is XA25 enough for LRS+"
+  //   - symptom physics: "why is my bass weak", "sounds bright and harsh"
+  //   - upgrade concepts: "is a streamer upgrade audible", "sub or speakers?"
+  //   Scope note: symptom complaints ("my system sounds harsh") stay with
+  //   the diagnosis lane — its complaint map handles bright/harsh with
+  //   named components properly. This gate takes only questions whose
+  //   answer is conceptual, not diagnostic.
+  const CONCEPT_QUESTION_PATTERN =
+    /\bcan\s+(?:my|the|an?)\s+.{0,40}\b(?:drive|power)\b|\benough\s+(?:power\s+)?for\b|\bpower(?:ful)?\s+enough\b|\bwill\s+.{0,30}\bdrive\s+(?:my|the)\b|\bwhy\s+is\s+my\b.{0,40}\b(?:bass|treble)\s+(?:so\s+)?(?:weak|thin|boomy|muddy)\b|\bupgrade\s+(?:be\s+)?(?:audible|noticeable|worth\s+it)\b|\bis\s+an?\s+.{0,30}\bupgrade\s+audible\b|\bshould\s+i\s+(?:add|get)\s+a\s+sub(?:woofer)?\s+or\b/i;
+  if (CONCEPT_QUESTION_PATTERN.test(currentMessage)) {
+    return { intent: 'audio_knowledge', subjects, subjectMatches, desires };
+  }
+
   // 0. Priority gate — when a known product is named and the user uses
   //    assessment language ("thoughts on", "what do you think of", "how is",
   //    etc.), force product_assessment BEFORE any other intent can intercept.

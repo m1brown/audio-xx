@@ -103,6 +103,7 @@ import {
   philosophySentence,
 } from './listener-archetype';
 import { renderDeterministicMemo } from './memo-deterministic-renderer';
+import { listenerPropertyLabel } from './listener-labels';
 import { isWhitelistedSource } from './evidence/source-whitelist';
 // StructuredMemoInputs is transitional — the canonical rendering path is
 // renderDeterministicMemo(findings, prose) without the third argument.
@@ -4615,9 +4616,20 @@ function buildConsultationResponseCore(
         );
       }
 
-      // One or both missing curated profiles — try catalog-derived summaries
-      const productsA = ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === a.name.toLowerCase());
-      const productsB = ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === b.name.toLowerCase());
+      // One or both missing curated profiles — try catalog-derived summaries.
+      // Launch gate 2026-07-19: when the user named a SPECIFIC model, that
+      // product must lead the summary — "Qutest vs Bifrost 2/64" was
+      // describing the multibit Bifrost with another Schiit product's
+      // delta-sigma architecture (MVP review PD-01).
+      const preferNamed = (products: Product[]): Product[] => {
+        const msg = currentMessage.toLowerCase();
+        const named = products.filter((p) => msg.includes(p.name.toLowerCase()));
+        return named.length > 0
+          ? [...named, ...products.filter((p) => !named.includes(p))]
+          : products;
+      };
+      const productsA = preferNamed(ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === a.name.toLowerCase()));
+      const productsB = preferNamed(ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === b.name.toLowerCase()));
       const summaryA = profileA ?? (productsA.length > 0 ? deriveBrandSummaryFromCatalog(a.name, productsA) : null);
       const summaryB = profileB ?? (productsB.length > 0 ? deriveBrandSummaryFromCatalog(b.name, productsB) : null);
 
@@ -10950,8 +10962,20 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   // transform fires) and the `.filter()` below silently omits it.
   const emergentSection = composeEmergentBehavior(findings);
 
+  // ── Consistency gate (launch condition 2026-07-19) ──
+  // "A well-balanced system with no obvious weak point" must never share
+  // a screen with "Primary leverage: change X" (MVP review SA-12/13).
+  // When the narrative carries a change-worthy constraint, the balanced
+  // identity is rephrased to one that admits the improvement.
+  const overviewFinal = dominantInsight === 'bottleneck'
+    ? overview.replace(
+        'a well-balanced system with no obvious weak point',
+        'a coherent system with one clear place to improve',
+      )
+    : overview;
+
   return [
-    overview,
+    overviewFinal,
     emergentSection,
     systemLogicSection,
     primaryLeverageSection,
@@ -11056,28 +11080,9 @@ function humanizeAxis(a: string): string {
 // Listener-facing label for stacked-trait property names. The raw property
 // keys are short engineering tokens (e.g. "low_stored_energy"); these
 // translations describe the audible result, not the mechanism.
-function listenerPropertyLabel(p: string): string {
-  const key = p.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-  const map: Record<string, string> = {
-    low_stored_energy: 'clean note endings',
-    transient_speed: 'attack and snap',
-    tonal_density: 'body and weight',
-    harmonic_density: 'tonal richness',
-    dynamic_elasticity: 'elasticity',
-    microdetail: 'inner detail',
-    musical_flow: 'musical flow',
-    stability: 'rhythmic grip',
-    spatial_scale: 'soundstage size',
-    // Stacked-trait internal labels → ordinary audiophile language
-    // (editorial pass 2026-07-19 — internal taxonomy never prints raw).
-    detail_emphasis: 'resolution and fine detail',
-    control_emphasis: 'grip and control',
-    smoothness_emphasis: 'smoothness and ease',
-    lean_tonal_body: 'a lean tonal balance',
-    high_damping_analytical_control: 'tight damping and control',
-  };
-  return map[key] ?? p.replace(/_/g, ' ');
-}
+// listenerPropertyLabel moved to ./listener-labels (launch gate
+// 2026-07-19) so the deterministic renderer can share the same
+// internal-label → listener-language translation without a cycle.
 function humanizeProperty(p: string): string {
   return listenerPropertyLabel(p);
 }
@@ -12990,7 +12995,7 @@ function buildComponentAssessments(
       strengths.push(isDac ? 'Organic conversion character' : isAmp ? 'Easy, unforced musical delivery' : 'Musical flow and ease');
     }
     if (axes.smooth_detailed === 'detailed') {
-      strengths.push(isDac ? 'Conversion-stage microdetail and transparency' : isAmp ? 'Circuit transparency — reveals source differences' : isSpeaker ? 'Driver resolution and crossover transparency' : 'Microdetail retrieval and transparency');
+      strengths.push(isDac ? 'Conversion-stage fine detail and transparency' : isAmp ? 'Circuit transparency — reveals source differences' : isSpeaker ? 'Driver resolution and crossover transparency' : 'Fine-detail retrieval and transparency');
     }
     if (axes.elastic_controlled === 'elastic') {
       strengths.push(isDac ? 'Dynamic timing agility in the conversion stage' : isAmp ? 'Current delivery responds to musical dynamics' : isSpeaker ? 'Driver excursion and dynamic expression' : 'Elasticity and dynamic expression');
@@ -13433,8 +13438,8 @@ function selectUpgradeOptions(
     if (p.primaryAxes) {
       const axisLabels: Record<string, Record<string, string>> = {
         warm_bright: { warm: 'Warmer tonal balance', bright: 'Faster transients and clarity' },
-        smooth_detailed: { smooth: 'Musical flow and ease', detailed: 'Greater microdetail retrieval' },
-        elastic_controlled: { elastic: 'Dynamic elasticity', controlled: 'Grip and stability' },
+        smooth_detailed: { smooth: 'Musical flow and ease', detailed: 'Greater fine-detail retrieval' },
+  elastic_controlled: { elastic: 'Dynamic elasticity', controlled: 'Grip and stability' },
       };
       for (const [axis, val] of Object.entries(p.primaryAxes)) {
         if (val && val !== 'neutral' && axisLabels[axis]?.[val]) {
@@ -13783,8 +13788,8 @@ function selectDirectionalOptions(
     if (p.primaryAxes) {
       const axisLabels: Record<string, Record<string, string>> = {
         warm_bright: { warm: 'Warmer tonal balance', bright: 'Faster transients and clarity' },
-        smooth_detailed: { smooth: 'Musical flow and ease', detailed: 'Greater microdetail retrieval' },
-        elastic_controlled: { elastic: 'Dynamic elasticity and flow', controlled: 'Grip and stability' },
+        smooth_detailed: { smooth: 'Musical flow and ease', detailed: 'Greater fine-detail retrieval' },
+  elastic_controlled: { elastic: 'Dynamic elasticity and flow', controlled: 'Grip and stability' },
       };
       for (const [axis, val] of Object.entries(p.primaryAxes)) {
         if (val && val !== 'neutral' && axisLabels[axis]?.[val]) {
@@ -15021,10 +15026,16 @@ function buildKeyObservation(
   // Harmonic-density: warm + smooth
   const harmonicDensity = system.warm_bright === 'warm'
     && (system.smooth_detailed === 'smooth' || system.smooth_detailed === 'neutral');
-  // Studio-neutral: all neutral or near-neutral
+  // Studio-neutral: all neutral or near-neutral. Consistency gate
+  // (launch condition 2026-07-19): a "neutrality and transparency" claim
+  // must also hold at the component level — when any component leans
+  // warm, the System read will speak of warmth and this observation
+  // would flatly contradict it on the same screen (MVP review SA-04/05).
+  const anyComponentWarm = profiles.some((p) => p.axes.warm_bright === 'warm');
   const studioNeutral = system.warm_bright === 'neutral'
     && system.smooth_detailed === 'neutral'
-    && system.elastic_controlled === 'neutral';
+    && system.elastic_controlled === 'neutral'
+    && !anyComponentWarm;
   // Control-first: controlled + detailed
   const controlFirst = system.elastic_controlled === 'controlled'
     && system.smooth_detailed === 'detailed';

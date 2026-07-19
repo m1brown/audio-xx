@@ -59,6 +59,7 @@ import type {
   ComponentFindings,
 } from './memo-findings';
 import { LISTENER_PRIORITY_LABELS, type ListenerPriority } from './memo-findings';
+import { listenerPropertyLabel } from './listener-labels';
 import type {
   SystemChain,
   PrimaryConstraint,
@@ -156,7 +157,9 @@ function mapPrimaryConstraint(findings: MemoFindings): PrimaryConstraint | undef
 function mapStackedTraitInsights(findings: MemoFindings): StackedTraitInsight[] {
   return findings.stackedTraits.map((s) => {
     const contribs = s.contributors.join(' and ');
-    const trait = s.property.replace(/_/g, ' ');
+    // Launch gate 2026-07-19: internal labels ("control emphasis") never
+    // print raw — translate to listener language everywhere they render.
+    const trait = listenerPropertyLabel(s.property);
 
     // Confidence-calibrated stacking language (Feature 5)
     // high = assertive, medium = light hedge, low = clearly tentative
@@ -176,7 +179,8 @@ function mapStackedTraitInsights(findings: MemoFindings): StackedTraitInsight[] 
     }
 
     return {
-      label: s.property,
+      // Translated label — the UI renders this string directly.
+      label: trait,
       contributors: s.contributors,
       classification: s.classification,
       explanation,
@@ -477,19 +481,19 @@ function deriveSystemSynergy(findings: MemoFindings): string | undefined {
 
   // Describe the system's shared direction
   if (characterTraits.length > 0) {
-    const traitLabels = characterTraits.map((t) => {
-      const label = t.property
-        .replace(/^high_/, '')
-        .replace(/_/g, ' ');
-      return label;
-    });
+    const traitLabels = characterTraits.map((t) =>
+      // Launch gate 2026-07-19: listener language, never internal labels.
+      listenerPropertyLabel(t.property.replace(/^high_/, '')),
+    );
     const joined = traitLabels.length <= 2
       ? traitLabels.join(' and ')
       : traitLabels.slice(0, -1).join(', ') + ', and ' + traitLabels[traitLabels.length - 1];
 
     // Count how many components contribute to each trait, and report per-trait
     const traitDetails = characterTraits.map((t) => {
-      const label = t.property.replace(/^high_/, '').replace(/_/g, ' ');
+      // Launch gate 2026-07-19: translate the internal label — the raw
+      // form produced "emphasizes detail emphasis".
+      const label = listenerPropertyLabel(t.property.replace(/^high_/, ''));
       return { label, count: t.contributors.length };
     });
 
@@ -736,7 +740,10 @@ export function renderDeterministicMemo(
   // When omitted, derive from MemoFindings (new path).
   const systemChain = structured?.systemChain ?? mapSystemChain(findings);
   const primaryConstraint = structured ? structured.primaryConstraint : mapPrimaryConstraint(findings);
-  const stackedTraitInsights = structured?.stackedTraitInsights ?? mapStackedTraitInsights(findings);
+  // Launch gate 2026-07-19: whichever source supplied the insights, the
+  // rendered label is listener language — internal taxonomy stays internal.
+  const stackedTraitInsights = (structured?.stackedTraitInsights ?? mapStackedTraitInsights(findings))
+    .map((s) => ({ ...s, label: listenerPropertyLabel(s.label) }));
   const componentAssessments = structured?.componentAssessments ?? mapComponentAssessments(findings);
   const upgradePaths = structured?.upgradePaths ?? mapUpgradePaths(findings);
   const keepRecommendations = structured?.keepRecommendations ?? mapKeepRecommendations(findings);

@@ -24,9 +24,9 @@ import { reason } from '../../reasoning';
 import type { AudioSessionState } from '../../system-types';
 import type { ExtractedSignals } from '../../signal-types';
 
-// Phase 2B (2026-07-19): evidence-aware synthesis rerun writes to its own
-// dated directory so the Phase 2A captures stay intact for diffing.
-const OUT_DIR = path.resolve(__dirname, '../../../../../../audit-2026-07-19/launch-qa-phase2b');
+// Launch conditions (2026-07-19): final pre-freeze rerun after the gate
+// blockers; Phase 2B captures stay intact for diffing.
+const OUT_DIR = path.resolve(__dirname, '../../../../../../audit-2026-07-19/launch-qa-final');
 
 // Guest session — no saved systems, nothing active.
 const GUEST_AUDIO_STATE: AudioSessionState = {
@@ -137,8 +137,13 @@ function runPrompt(id: string, category: string, prompt: string, expectation: st
       '(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: "I don\'t have enough structured data to answer this question thoroughly.")';
 
     // ── Route 2: shopping ──
+    // Fidelity note (launch gate 2026-07-19): page.tsx dispatches
+    // audio_knowledge BEFORE shopping (documented in the 2026-07-14
+    // report method notes); the harness now mirrors that order so
+    // concept questions routed to the knowledge lane are captured as
+    // such rather than hijacked by shopping keyword detection.
     const shoppingCtx = detectShoppingIntent(prompt, EMPTY_SIGNALS);
-    if (intent === 'shopping' || (shoppingCtx.detected && intent !== 'diagnosis' && intent !== 'consultation_entry' && turnCtx.subjectMatches.length < 2)) {
+    if (intent === 'shopping' || (shoppingCtx.detected && intent !== 'diagnosis' && intent !== 'consultation_entry' && intent !== 'audio_knowledge' && intent !== 'audio_assistant' && turnCtx.subjectMatches.length < 2)) {
       const reasoning = reason(prompt, turnCtx.desires, EMPTY_SIGNALS, null, shoppingCtx, null);
       // listenerProfile omitted: buildShoppingAnswer expects the shopping
       // ListenerProfile shape (dislikedBrands etc.), not the turn-context

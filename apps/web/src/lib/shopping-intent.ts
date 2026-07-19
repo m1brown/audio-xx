@@ -392,6 +392,12 @@ export interface ShoppingContext {
    *  budget gap-question still gets asked). Launch QA NT-09: this
    *  phrasing anchored on a $20,000 Shindo Cortese. */
   budgetConscious?: boolean;
+  /** User explicitly asked for cost-no-object gear ("high-end", "reference",
+   *  "money no object"). Lifts the cold-query mainstream anchor ceiling. */
+  prestigeIntent?: boolean;
+  /** Query names a low-sensitivity/planar partner (Magnepan, LRS, LS50) —
+   *  low-watt SET amplifiers are physically implausible picks. */
+  lowSensitivityPartner?: boolean;
   tasteProvided: boolean;
   systemProvided: boolean;
   systemProfile: SystemProfile;
@@ -655,7 +661,13 @@ const BUILD_KEYWORDS = [
  * these, intent routes them to the knowledge lane for a natural answer.
  */
 export const LIFESTYLE_SPEAKER_PATTERN =
-  /\b(?:bluetooth|portable|smart|party)\s+speakers?\b|\bspeakers?\s+with\s+bluetooth\b|\b(?:sonos|jbl\s+(?:charge|flip|xtreme)|ue\s+boom)\b/i;
+  // Launch gate 2026-07-19: extended beyond Bluetooth speakers to every
+  // query class the component-hi-fi catalog cannot serve — activity
+  // headphones (gym/running), all-in-one record players, and phono
+  // stages (no phono category exists). Shopping declines these; the
+  // knowledge lane answers them honestly (a $6,000 open-back planar for
+  // the gym is the exact trust-destroyer this pattern prevents).
+  /\b(?:bluetooth|portable|smart|party)\s+speakers?\b|\bspeakers?\s+with\s+bluetooth\b|\b(?:sonos|jbl\s+(?:charge|flip|xtreme)|ue\s+boom)\b|\b(?:headphones?|earbuds?|iems?)\s+for\s+(?:the\s+)?(?:gym|running|jogging|work(?:ing)?[\s-]?outs?|exercise|commut\w+)\b|\b(?:gym|running|workout)\s+(?:headphones?|earbuds?)\b|\b(?:record\s+players?|turntables?)\s+with\s+built[\s-]?in\s+speakers?\b|\ball[\s-]?in[\s-]?one\s+(?:record\s+player|turntable)\b|\bphono\s+(?:pre[\s-]?amp(?:lifier)?|stage|pre)\b/i;
 
 const BUDGET_PATTERNS = [
   /\$\s?\d/,
@@ -1678,7 +1690,15 @@ export function detectShoppingIntent(
   const budgetAmount = parseBudgetAmount(userText);
   const budgetFloor = parseBudgetFloor(userText);
   const budgetConscious = budgetAmount === null
-    && /\b(?:wo?n'?t\s+(?:blow\s+up|break|bust)\s+(?:the|my)\s+(?:budget|bank)|break(?:ing)?\s+the\s+bank|affordable|budget[-\s]friendly|on\s+a\s+(?:tight\s+)?budget|not\s+(?:too|super|crazy|very)\s+expensive|inexpensive|cheap(?:er|ish)?|reasonably\s+priced|entry[-\s]level|wo?n'?t\s+cost\s+a\s+fortune|without\s+spending\s+a\s+fortune)\b/i.test(userText);
+    && /\b(?:wo?n'?t\s+(?:blow\s+up|break|bust)\s+(?:the|my)\s+(?:budget|bank)|break(?:ing)?\s+the\s+bank|affordable|budget[-\s]friendly|on\s+a\s+(?:tight\s+)?budget|not\s+(?:too|super|crazy|very)\s+expensive|inexpensive|cheap(?:er|ish)?|reasonably\s+priced|entry[-\s]level|wo?n'?t\s+cost\s+a\s+fortune|without\s+spending\s+a\s+fortune|bargains?|good\s+deals?|best\s+deals?)\b/i.test(userText);
+  // Prestige cue — the user explicitly asked for cost-no-object gear.
+  // Lifts the cold-query mainstream ceiling in product selection.
+  const prestigeIntent =
+    /\bhigh[\s-]?end\b|\breference\b|\bstatement\b|\bflagship\b|\bendgame\b|\bsummit[\s-]?fi\b|cost\s+(?:is\s+)?no\s+object|money'?s?\s+no\s+object|\bbest\s+regardless\b|\bno\s+budget\s+limit\b/i.test(userText);
+  // Low-sensitivity/planar partner named in an amplifier search — SET and
+  // low-watt amps are physically wrong for these loads (launch gate).
+  const lowSensitivityPartner =
+    /\bmagnepans?\b|\bmaggies\b|\blrs\+?\b|\bplanar\s+speakers?\b|\bls\s?50s?\b/i.test(userText);
   const tasteProvided = signals.symptoms.length >= 2;
   const hasActiveSystem = Array.isArray(activeSystemComponents) && activeSystemComponents.length > 0;
   const systemProvided = hasActiveSystem || SYSTEM_KEYWORDS.some((kw) => lower.includes(kw));
@@ -1717,6 +1737,8 @@ export function detectShoppingIntent(
     budgetAmount,
     budgetFloor,
     budgetConscious,
+    prestigeIntent,
+    lowSensitivityPartner,
     tasteProvided,
     systemProvided,
     systemProfile,
@@ -3899,6 +3921,10 @@ function selectProductExamples(
   budgetFloor?: number | null,
   /** Colloquial affordability signal — see ShoppingContext.budgetConscious. */
   budgetConscious?: boolean,
+  /** Explicit cost-no-object cue — see ShoppingContext.prestigeIntent. */
+  prestigeIntent?: boolean,
+  /** Query names a low-sensitivity/planar partner — see ShoppingContext. */
+  lowSensitivityPartner?: boolean,
 ): ProductExample[] {
   // ── Turntable: illustrative examples with full card data ──
   if (category === 'turntable') {
@@ -4153,6 +4179,39 @@ function selectProductExamples(
     if (affordable.length >= 3) {
       ranked.length = 0;
       ranked.push(...affordable);
+    }
+  } else if (budgetAmount === null && (budgetFloor === null || budgetFloor === undefined) && !prestigeIntent) {
+    // ── Mainstream default ceiling (launch gate 2026-07-19) ──
+    // A cold query with NO budget signal in either direction ("I want a
+    // tube amp", "amp for kef ls50 pls") must not anchor on statement-
+    // priced gear — a stranger's first message answered with a $20,000
+    // Shindo is the calibrated trust-destroyer. Same soft mechanism as
+    // the affordability ceiling, higher limit; an explicit prestige cue
+    // ("high-end", "cost no object") lifts it entirely.
+    const DEFAULT_ANCHOR_CEILING = 6000;
+    const mainstream = ranked.filter((e) => typeof e.product.price === 'number' && e.product.price <= DEFAULT_ANCHOR_CEILING);
+    if (mainstream.length >= 3) {
+      ranked.length = 0;
+      ranked.push(...mainstream);
+    }
+  }
+
+  // ── Pairing power-plausibility filter (launch gate 2026-07-19) ──
+  // When the user names a low-sensitivity / planar partner for an
+  // amplifier search (Magnepan, LRS, planars, LS50), low-watt SET
+  // amplifiers are physically wrong regardless of budget or taste.
+  // Hard filter — two honest picks beat three with an absurd one.
+  if (category === 'amplifier' && lowSensitivityPartner) {
+    const powerPlausible = ranked.filter((e) => {
+      const topo = ((e.product as { topology?: string }).topology ?? '').toLowerCase();
+      const watts = (e.product as { power_watts?: number }).power_watts;
+      if (topo.includes('set') || topo.includes('single-ended')) return false;
+      if (typeof watts === 'number' && watts < 40) return false;
+      return true;
+    });
+    if (powerPlausible.length >= 2) {
+      ranked.length = 0;
+      ranked.push(...powerPlausible);
     }
   }
 
@@ -4707,6 +4766,26 @@ function selectProductExamples(
       : hasSparseSignals
         ? selectDiverseByTopology(ranked, poolSize, budgetAmount)
         : ranked.slice(0, poolSize);
+    // Launch gate 2026-07-19: guarantee traditional-marketType presence
+    // in every default-mode pool. Top-N truncation was starving the
+    // broad-first anchor gate downstream — when the top scorers are all
+    // boutique, the credibility re-sort had nothing to work with and a
+    // cold "I want a tube amp" (or "best DAC under 1000") anchored on
+    // nonTraditional gear. Budget ceiling is respected when set. Skipped
+    // when the listener has expressed brand preferences — a stated liked
+    // brand is a stronger signal than the cold-query credibility default.
+    const hasBrandPreference = (listenerProfile?.likedBrands?.length ?? 0) > 0;
+    const traditionalInPool = top.filter((sp) => sp.product.marketType === 'traditional').length;
+    if (!hasBrandPreference && traditionalInPool < 2) {
+      const missing = ranked
+        .filter((sp) =>
+          sp.product.marketType === 'traditional'
+          && !top.includes(sp)
+          && (budgetAmount === null || typeof sp.product.price !== 'number' || sp.product.price <= budgetAmount),
+        )
+        .slice(0, 2 - traditionalInPool);
+      top = [...top, ...missing];
+    }
   }
 
   // ── Liked-brand over-budget injection (post-pool) ────────
@@ -4923,7 +5002,11 @@ function selectProductExamples(
       const hasImage = (p: Ranked): boolean =>
         !!(p.imageUrl && p.imageUrl.trim().length > 0)
         || !!getProductImage(p.brand, p.name);
-      const withImage = eligible.filter(hasImage);
+      // Launch gate 2026-07-19: credibility outranks thumbnails.
+      // Traditional-marketType candidates stay in the pool even without
+      // a curated image — dropping them was handing the anchor to
+      // boutique gear purely because the boutiques had photos.
+      const withImage = eligible.filter((p) => hasImage(p) || p.marketType === 'traditional');
       const withoutImage = eligible.length - withImage.length;
       if (withImage.length >= 2 && withoutImage > 0) {
         console.log('[eligible-filter] image-availability preference applied to shortlist pool', {
@@ -5013,7 +5096,9 @@ function selectProductExamples(
           !!(p.imageUrl && p.imageUrl.trim().length > 0)
           || !!getProductImage(p.brand, p.name);
 
-        const withImage = anchorEligible.filter(hasImage);
+        // Launch gate 2026-07-19: traditional candidates survive the
+        // image preference — see the eligible-filter note above.
+        const withImage = anchorEligible.filter((p) => hasImage(p) || p.marketType === 'traditional');
         const withoutImage = anchorEligible.length - withImage.length;
 
         if (withImage.length >= 2 && withoutImage > 0) {
@@ -6472,7 +6557,7 @@ export function buildShoppingAnswer(
 
   // 4. Product examples (only when catalog exists + budget known)
   // Pass reasoning for directional bias — existing scoring is preserved.
-  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents, ctx.roomContext, engagedProductNames, ctx.constraints, ctx.semanticPreferences, listenerProfile, selectionMode, previousAnchor, recentProductNames, brandConstraint, signals.symptoms, ctx.budgetFloor, ctx.budgetConscious);
+  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents, ctx.roomContext, engagedProductNames, ctx.constraints, ctx.semanticPreferences, listenerProfile, selectionMode, previousAnchor, recentProductNames, brandConstraint, signals.symptoms, ctx.budgetFloor, ctx.budgetConscious, ctx.prestigeIntent, ctx.lowSensitivityPartner);
 
   // ── Budget floor filter ───────────────────────────────
   // When the user specifies "over $X" or "between $X and $Y", remove
