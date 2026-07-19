@@ -26,7 +26,7 @@
 
 ## Known caveats accepted at freeze (all post-launch roadmap)
 
-- **Multi-turn follow-ups after an assessment re-ask rather than answer from context** ("which upgrade first?" → "What component are you looking to change?"). Not a dead-end; phase-k multi-turn suite is green. Demo mitigation: keep live demos to the scripted flows above. Roadmap P1.
+- ~~Multi-turn follow-ups after an assessment re-ask rather than answer from context~~ **RESOLVED post-freeze (founder-approved, commit c642f22):** the first follow-up direction question ("which upgrade first?", "weakest link?") now answers from the assessment's own findings. Scope is one turn; deeper conversational memory remains roadmap P1.
 - **SA-08 capture still shows `system_assessment→null`** — the harness simulates routing and does not execute the page.tsx fallback; prod now answers via the knowledge lane. The harness's null-path note is stale by one fix.
 - **PD-07** ("help me choose a dac") anchors at $4,200 max under the mainstream ceiling — inside tolerance, no longer the $12,500 anchor; sweet-spot pressure can improve it post-launch.
 - Coverage cliff (LS50 Meta, Cornwall IV entries), sensitivity data, diagnosis classic answers, `componentReadings` rendering, suppressed LLM overlay: **post-launch roadmap P1/P2 as per the MVP readiness report.**
