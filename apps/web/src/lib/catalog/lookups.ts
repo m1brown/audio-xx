@@ -103,6 +103,22 @@ export function findProductInProse(text: string): Product | undefined {
 }
 
 /**
+ * Owner-shorthand model aliases (Phase 2A). Each entry maps a lowercase
+ * brand + alias substring to a canonical catalog id. Only add aliases
+ * that unambiguously identify one product — never bridge across
+ * genuinely different models.
+ */
+const MODEL_ALIASES: ReadonlyArray<{ brand: string; aliases: string[]; id: string }> = [
+  { brand: 'harbeth', aliases: ['shl5+', 'shl5 plus', 'shl5plus', 'super hl5', 'shl5'], id: 'harbeth-shl5-plus' },
+  { brand: 'naim', aliases: ['supernait'], id: 'naim-supernait-3' },
+  { brand: 'wharfedale', aliases: ['linton'], id: 'wharfedale-linton' },
+  { brand: 'klipsch', aliases: ['heresy'], id: 'klipsch-heresy-iv' },
+  { brand: 'primaluna', aliases: ['evo 300'], id: 'primaluna-evo-300' },
+  { brand: 'focal', aliases: ['kanta'], id: 'focal-kanta-no2' },
+  { brand: 'denafrips', aliases: ['pontus'], id: 'denafrips-pontus-ii-12th-1' },
+];
+
+/**
  * Look up a single catalog product by a free-form component name such as
  * "WLM Diva Monitor", "JOB Integrated", or "Chord Hugo".
  *
@@ -147,6 +163,18 @@ export function findProductByComponentName(text: string): Product | undefined {
     return lower.includes(lastToken);
   });
   if (byBrandAndDistinctiveToken) return byBrandAndDistinctiveToken;
+  // 2c. Model-alias rescue (Phase 2A) — common shorthand model names that
+  //     token matching cannot bridge ("SHL5+" for "Super HL5 Plus",
+  //     "SuperNait" without the mark number). Owners use these forms
+  //     constantly; without the alias the product entry silently degrades
+  //     to brand-level knowledge.
+  for (const a of MODEL_ALIASES) {
+    if (!lower.includes(a.brand)) continue;
+    if (a.aliases.some((al) => lower.includes(al))) {
+      const hit = ALL_PRODUCTS.find((p) => p.id === a.id);
+      if (hit) return hit;
+    }
+  }
   // 3. ID slug match (hyphen-separated lowercase)
   const slug = lower.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   return ALL_PRODUCTS.find((p) => p.id === slug);

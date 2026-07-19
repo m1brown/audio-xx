@@ -223,6 +223,7 @@ const PRODUCT_NAMES = [
   'bottlehead crack', 'crack', 'a-08s', 'a08s',
   // New speaker products
   'ls3/5a', 'ls3-5a', 'mission 770', '770', 'ms 50 8vet', 'ms 50',
+  'linton heritage', 'linton',
   'argon3s', 'argon 3s', 'l100 classic', 'l100',
   'altec 19', 'model 19', 'sabrina x', 'sabrina',
   'magico a3', 'a3', '1.7i',
@@ -241,7 +242,7 @@ const PRODUCT_NAMES = [
   // "Super HL5" in renders because only the shorter alias was registered.
   // Listing the longer compound BEFORE the short form ensures the
   // longest-match-wins sort selects the correct canonical name.
-  'super hl5 plus', 'hl5 plus',
+  'super hl5 plus', 'hl5 plus', 'shl5+', 'shl5 plus', 'shl5',
   'diva monitor', 'super hl5', 'dirty weekend', 'hornshoppe horn', 'hornshoppe horns',
   // Turntable / tonearm / cartridge / phono products
   'gyro se', 'gyrodec', 'sa1.2',

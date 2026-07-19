@@ -7506,6 +7506,19 @@ const CATALOG_NAME_ALIASES: Record<string, string> = {
   // Users familiar with legacy reviews may search "Bakoon AMP-23R".
   'bakoon amp-23r': 'enleum amp-23r',
   'bakoon': 'enleum',
+  // Phase 2A alias resolution — owner shorthand that the token matcher
+  // cannot bridge. "SHL5+" is how owners actually write "Super HL5 Plus";
+  // without the alias the richest Harbeth product entry is never attached.
+  'shl5+': 'super hl5 plus',
+  'shl5 plus': 'super hl5 plus',
+  'shl5plus': 'super hl5 plus',
+  'shl5': 'super hl5 plus',
+  'harbeth shl5+': 'harbeth super hl5 plus',
+  'supernait': 'supernait 3',
+  'naim supernait': 'naim supernait 3',
+  'linton': 'linton heritage',
+  'heresy': 'heresy iv',
+  'kanta': 'kanta no. 2',
 };
 
 // Brand aliases: maps parent-brand names to the catalog brand.
@@ -9611,12 +9624,20 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   if (upstreamComps.length > 0 && downstreamComps.length > 0) {
     const upList = upstreamNames.join(' and ');
     const upVerb = upstreamComps.length > 1 ? 'lean' : 'leans';
+    // Phase 2A: when an upstream component's catalog entry declares a
+    // transparency design goal, say so causally — the engineering fact IS
+    // the explanation of why the speakers set the character.
+    const transparentUpstream = upstreamComps.find(c =>
+      findings.transparencyDeclared?.includes(c.name),
+    );
     // Causal explanation, not a second identity claim: the intro already
     // states what the system is; this sentence explains why it behaves
     // that way (electronics character + speaker contribution).
-    thesisSentence1 = upstreamChar
-      ? `The ${upList} ${upVerb} toward ${upstreamChar}, ${downstreamPhrase}.`
-      : `The ${upList} ${upstreamComps.length > 1 ? 'provide' : 'provides'} a neutral, uncoloured foundation, ${downstreamPhrase}.`;
+    thesisSentence1 = transparentUpstream
+      ? `The ${transparentUpstream.name} is engineered to add essentially nothing of its own, so the ${downstreamNames.join(' and ')} ${downstreamComps.length > 1 ? 'set' : 'sets'} the system's tonal character.`
+      : upstreamChar
+        ? `The ${upList} ${upVerb} toward ${upstreamChar}, ${downstreamPhrase}.`
+        : `The ${upList} ${upstreamComps.length > 1 ? 'provide' : 'provides'} a neutral, uncoloured foundation, ${downstreamPhrase}.`;
     // Sentence 2: what that means for the listener (power note overrides)
     const pw = powerNote.trim();
     if (pw) {
@@ -9656,8 +9677,15 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   const identitySentence = archetypeId ? archetypeSentence(archetypeId) : '';
   const thesisSentence = philosophyId ? philosophySentence(philosophyId) : '';
 
+  // Phase 2A: one matched interaction observation, when the chain hits a
+  // documented case — evidence woven into the read, never trivia. The
+  // strongest positive entry only; cautions surface in Trade-offs.
+  const pairingEvidenceSentence =
+    findings.pairingEvidence?.find((e) => e.valence === 'positive')?.sentence ?? '';
+
   const systemReadParagraph = [
     thesisSentence2 ? `${thesisSentence1} ${thesisSentence2}` : thesisSentence1,
+    pairingEvidenceSentence,
     identitySentence,
     thesisSentence,
   ]
@@ -9782,7 +9810,12 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   for (const c of sortedComps) {
     if (systemLogicRows.length >= 4) break;
     const compAxes = findings.perComponentAxes.find(a => a.name === c.name);
-    const behavior = deriveComponentBehavior(c, compAxes);
+    // Phase 2A: prefer the product's actual engineering descriptor over
+    // generic axis vocabulary — "FPGA — exceptional transient resolution"
+    // instead of "resolving, high flow conversion". Axis template remains
+    // the fallback for brand-only components.
+    const eng = findings.componentEngineering?.find(e => e.name === c.name)?.note;
+    const behavior = eng ?? deriveComponentBehavior(c, compAxes);
     const effect = deriveInteractionEffect(c, compAxes, axes);
     systemLogicRows.push(`${c.name} → ${behavior} → ${effect}`);
   }
@@ -10731,6 +10764,15 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     const strongMaterial = isLeanUpstreamForTradeoff ? 'sparse' : 'dense';
     const weakMaterial = isLeanUpstreamForTradeoff ? 'dense' : 'sparse';
     tradeOffBullets.push(`Current setup excels on ${strongMaterial} music, exposes thinness on ${weakMaterial} tracks`);
+  }
+
+  // Phase 2A: a documented caution that matches this exact chain earns a
+  // bullet — it is the most concrete trade-off available.
+  const cautionEvidence = findings.pairingEvidence?.find((e) => e.valence === 'caution');
+  if (cautionEvidence && tradeOffBullets.length < 4) {
+    tradeOffBullets.push(
+      cautionEvidence.sentence.replace(/^One documented caution — /i, 'Documented caution: ').replace(/\.$/, ''),
+    );
   }
 
   const tradeOffsSection = [
@@ -12483,10 +12525,21 @@ function detectPrimaryConstraint(
         .filter((sc) => sc.role.includes('speak') || sc.role.includes('headphone'))
         .map((sc) => sc.displayName),
     );
+    // Phase 2A objective 6 — transparency gate: a component whose catalog
+    // entry declares a zero-contribution design goal cannot be the tonal
+    // cause of a system-level lean. Blaming it here would contradict the
+    // engine's own knowledge (e.g. Benchmark AHB2). Such components are
+    // excluded from stacked-bias attribution; per-component constraints
+    // with real trait evidence below remain unaffected.
+    const transparencyNames = new Set(
+      components
+        .filter((sc) => isTransparencyDeclared(sc.product))
+        .map((sc) => sc.displayName),
+    );
     const frequency = new Map<string, number>();
     for (const s of imbalanceTraits) {
       for (const name of s.contributors) {
-        if (!speakerNames.has(name)) {
+        if (!speakerNames.has(name) && !transparencyNames.has(name)) {
           frequency.set(name, (frequency.get(name) ?? 0) + 1);
         }
       }
@@ -12513,17 +12566,23 @@ function detectPrimaryConstraint(
     const axes = profiles[i].axes;
     const traits = c.product?.traits;
     const role = c.role.toLowerCase();
+    // Phase 2A objective 6 — transparency-declared components carry low
+    // warmth/density/damping numbers BY DESIGN (the entry says the unit
+    // adds nothing). Those definitional values are not tonal deficiencies;
+    // suppress the trait-derived tonal rules for them. Physical rules
+    // (power match, portable-in-speaker-system) still apply.
+    const transparentByDesign = isTransparencyDeclared(c.product);
 
     // DAC limitations — low tonal density, low flow, limited scale/authority,
     // portable-in-desktop context, delta-sigma glare risk
     if (role === 'dac' || role.includes('dac')) {
       let severity = 0;
       const issues: string[] = [];
-      if (traits && (traits.tonal_density ?? 0.5) <= 0.4) {
+      if (!transparentByDesign && traits && (traits.tonal_density ?? 0.5) <= 0.4) {
         severity += 3;
         issues.push('limited tonal density');
       }
-      if (traits && (traits.flow ?? 0.5) < 0.4) {
+      if (!transparentByDesign && traits && (traits.flow ?? 0.5) < 0.4) {
         severity += 2;
         issues.push('limited musical flow');
       }
@@ -12567,7 +12626,7 @@ function detectPrimaryConstraint(
           issues.push('dynamic grip may be insufficient for demanding speakers');
         }
       }
-      if (axes.elastic_controlled === 'controlled' && system.elastic_controlled === 'controlled') {
+      if (!transparentByDesign && axes.elastic_controlled === 'controlled' && system.elastic_controlled === 'controlled') {
         severity += 2;
         issues.push('overdamping risk — may suppress dynamic expression');
       }
@@ -14263,6 +14322,232 @@ function reconcileAssessmentOutputs(
   return { keeps: reconciledKeeps, sequence };
 }
 
+// ── Phase 2A: knowledge-evidence extraction ─────────────────────────
+//
+// Distils catalog product knowledge into compact evidence the narrative
+// composer can use in place of generic axis vocabulary, and matches
+// stored interaction observations against the ACTUAL components in the
+// chain. Extraction only — every output is a presentation input; the
+// reasoning pipeline is unchanged except for the transparency gate.
+
+/** Compact engineering descriptor from a product's architecture + character. */
+function engineeringNoteFor(p: Product | undefined): string | null {
+  if (!p) return null;
+  const arch = (p.architecture ?? '').trim();
+  if (!arch || /^(unknown|n\/a)$/i.test(arch)) return null;
+  // Join comma-clauses until ~60 chars — keeps "Class AB, 80W/ch" while
+  // dropping trailing marketing clauses.
+  const clauses = arch.split(/,\s*/);
+  let note = '';
+  for (const cl of clauses) {
+    const next = note ? `${note}, ${cl}` : cl;
+    if (next.length > 60) break;
+    note = next;
+  }
+  if (!note) note = clauses[0].slice(0, 60);
+  // Append the strongest character tendency when it fits — turns "FPGA"
+  // into "FPGA — exceptional transient resolution".
+  const char = p.tendencies?.character?.[0]?.tendency?.split(/[.;]/)[0]?.trim();
+  if (
+    char && char.length <= 60 && note.length + char.length <= 105 &&
+    !note.toLowerCase().includes(char.toLowerCase().slice(0, 12))
+  ) {
+    return `${note} — ${char.charAt(0).toLowerCase()}${char.slice(1)}`;
+  }
+  return note;
+}
+
+function extractComponentEngineering(
+  components: SystemComponent[],
+): { name: string; note: string }[] {
+  const out: { name: string; note: string }[] = [];
+  for (const c of components) {
+    const note = engineeringNoteFor(c.product);
+    if (note) out.push({ name: c.displayName, note });
+  }
+  return out;
+}
+
+/**
+ * Whether a catalog entry explicitly declares a transparency /
+ * zero-contribution design goal (e.g. Benchmark AHB2). Such components
+ * must not be blamed for a system-level tonal lean without stronger,
+ * component-specific evidence (Phase 2A objective 6).
+ */
+function isTransparencyDeclared(p: Product | undefined): boolean {
+  if (!p) return false;
+  const hay = [
+    p.description,
+    p.notes,
+    p.architecture,
+    ...(p.tendencies?.character?.map((t) => t.tendency) ?? []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return /zero contribution|adds? (essentially |virtually )?no(thing| coloration| distortion)|designed to add nothing|wire with gain|pass(es)? (the )?signal through unchanged|lowest noise and distortion|measures (dead )?flat/.test(hay);
+}
+
+type PairingEvidenceEntry = {
+  components: string[];
+  sentence: string;
+  valence: 'positive' | 'caution';
+};
+
+function pairingRoleFamily(role: string): 'speaker' | 'amp' | 'dac' | 'source' | 'other' {
+  const r = (role || '').toLowerCase();
+  if (/speaker|headphone|monitor/.test(r)) return 'speaker';
+  if (/amp|integrated/.test(r)) return 'amp';
+  if (r === 'dac') return 'dac';
+  if (/streamer|source|turntable|transport/.test(r)) return 'source';
+  return 'other';
+}
+
+const PAIRING_FAMILY_WORDS: Record<string, RegExp> = {
+  speaker: /\bspeakers?\b|\bmonitors?\b|\bheadphones?\b/,
+  amp: /\bamplif|\bamps?\b/,
+  dac: /\bdacs?\b|\bconversion\b/,
+  source: /\bsources?\b|\bstreamers?\b|\bfront.?end/,
+};
+
+/**
+ * Match stored interaction observations against the actual chain.
+ * Named-partner matches are strongest; condition-class matches require
+ * both a role-family word AND an axis/topology agreement with the real
+ * partner. Conservative by design — a wrong pairing claim costs more
+ * trust than a missing one earns.
+ */
+function matchPairingEvidence(
+  components: SystemComponent[],
+  profiles: ComponentAxisProfile[],
+  systemAxes: PrimaryAxisLeanings,
+): PairingEvidenceEntry[] {
+  const scored: (PairingEvidenceEntry & { strength: number })[] = [];
+  const seen = new Set<string>();
+  const axesOf = (name: string) => profiles.find((p) => p.name === name)?.axes;
+
+  for (const a of components) {
+    const interactions = a.product?.tendencies?.interactions ?? [];
+    for (const i of interactions) {
+      const cond = (i.condition ?? '').toLowerCase();
+      const effect = (i.effect ?? '').trim();
+      if (!cond || !effect) continue;
+      const valence: 'positive' | 'caution' = i.valence === 'caution' ? 'caution' : 'positive';
+
+      // 1. Named partner — condition mentions a chain component directly.
+      let matched: SystemComponent | undefined;
+      let strength = 0;
+      for (const b of components) {
+        if (b === a) continue;
+        const brand = (b.product?.brand ?? b.displayName.split(/\s+/)[0] ?? '').toLowerCase();
+        const nameTokens = (b.product?.name ?? b.displayName)
+          .toLowerCase()
+          .split(/\s+/)
+          .filter((t) => t.length >= 4);
+        if ((brand.length >= 3 && cond.includes(brand)) || nameTokens.some((t) => cond.includes(t))) {
+          matched = b;
+          strength = 3;
+          break;
+        }
+      }
+
+      // 2. Condition-class match — role-family word + axis/topology agreement.
+      if (!matched) {
+        for (const b of components) {
+          if (b === a) continue;
+          const fam = pairingRoleFamily(b.role);
+          const famRe = PAIRING_FAMILY_WORDS[fam];
+          if (!famRe || !famRe.test(cond)) continue;
+          const bAxes = axesOf(b.displayName);
+          const bMeta = ((b.product?.architecture ?? '') + ' ' + (b.product?.topology ?? '')).toLowerCase();
+          const dbReq = cond.match(/(\d{2})\s*db\s*\+/);
+          let ok = false;
+          if (dbReq) {
+            const db = b.product?.sensitivity_db;
+            ok = db != null ? db >= parseInt(dbReq[1], 10) : /high-efficiency/.test(bMeta);
+          } else if (/high[- ]efficiency|\befficient\b/.test(cond)) {
+            ok = /high-efficiency/.test(bMeta) || (b.product?.sensitivity_db ?? 0) >= 90;
+          } else if (/\bwarm\b|\bdense\b|\brich\b/.test(cond)) {
+            ok = bAxes?.warm_bright === 'warm';
+          } else if (/revealing|bright|\blean\b|analytical/.test(cond)) {
+            ok = bAxes?.warm_bright === 'bright' || bAxes?.smooth_detailed === 'detailed';
+          } else if (/\btube\b|\bvalve\b/.test(cond)) {
+            ok = /tube|set\b|push-pull|valve/.test(bMeta);
+          }
+          if (ok) {
+            matched = b;
+            strength = 2;
+            break;
+          }
+        }
+      }
+
+      // 3. System-level condition ("in systems already warm/lean").
+      let systemLevel = false;
+      if (!matched && /\bsystems?\b/.test(cond)) {
+        if (/\bwarm\b|\bdense\b/.test(cond)) systemLevel = systemAxes.warm_bright === 'warm';
+        else if (/\blean\b|\bbright\b|\bfast\b/.test(cond)) {
+          systemLevel = systemAxes.warm_bright === 'bright' || systemAxes.smooth_detailed === 'detailed';
+        }
+        if (systemLevel) strength = 1;
+      }
+
+      if (!matched && !systemLevel) continue;
+      const key = `${a.displayName}|${cond}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      const effectLC = effect.charAt(0).toLowerCase() + effect.slice(1);
+      const condDisplay = i.condition.trim();
+      const sentence =
+        valence === 'positive'
+          ? `The ${a.displayName} ${condDisplay} is a documented match: ${effectLC}.`
+          : `One documented caution — the ${a.displayName} ${condDisplay}: ${effectLC}.`;
+      scored.push({
+        components: matched ? [a.displayName, matched.displayName] : [a.displayName],
+        sentence,
+        valence,
+        strength,
+      });
+    }
+  }
+
+  // 4. Named cross-mentions in description/notes/pairingNotes prose —
+  // catches curated pairing lore outside the structured interactions.
+  for (const a of components) {
+    const prose = [a.product?.description, a.product?.notes, a.brandProfile?.pairingNotes]
+      .filter(Boolean)
+      .join(' ');
+    if (!prose) continue;
+    for (const b of components) {
+      if (b === a) continue;
+      const brand = (b.product?.brand ?? '').toLowerCase();
+      if (brand.length < 3) continue;
+      if ((a.product?.brand ?? '').toLowerCase() === brand) continue;
+      const hit = prose.split(/(?<=[.!?])\s+/).find((s) => s.toLowerCase().includes(brand));
+      if (!hit) continue;
+      const key = `${a.displayName}|prose|${brand}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const trimmed = hit.trim().replace(/\s+/g, ' ');
+      if (trimmed.length > 180) continue;
+      scored.push({
+        components: [a.displayName, b.displayName],
+        sentence: trimmed.endsWith('.') ? trimmed : `${trimmed}.`,
+        valence: 'positive',
+        strength: 2.5,
+      });
+    }
+  }
+
+  return scored
+    .sort((x, y) =>
+      x.valence !== y.valence ? (x.valence === 'positive' ? -1 : 1) : y.strength - x.strength,
+    )
+    .slice(0, 3)
+    .map(({ components: cs, sentence, valence }) => ({ components: cs, sentence, valence }));
+}
+
 // ── MemoFindings extraction ─────────────────────────
 //
 // Maps pipeline outputs to the structured MemoFindings contract.
@@ -14498,7 +14783,17 @@ function extractMemoFindings(
   // ── Amp/speaker power-match assessment ──
   const powerMatchAssessment = assessPowerMatch(components);
 
+  // ── Knowledge evidence (Phase 2A) ──
+  const componentEngineering = extractComponentEngineering(components);
+  const pairingEvidence = matchPairingEvidence(components, profiles, systemAxes);
+  const transparencyDeclared = components
+    .filter((c) => isTransparencyDeclared(c.product))
+    .map((c) => c.displayName);
+
   return {
+    componentEngineering,
+    pairingEvidence,
+    transparencyDeclared,
     componentNames: components.map((c) => c.displayName),
     systemChain: {
       roles: chain.roles,

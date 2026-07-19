@@ -425,4 +425,26 @@ export interface MemoFindings {
   // ── Sources ──
   /** References from catalogued products. */
   sourceReferences: SourceReferenceFinding[];
+
+  // ── Knowledge evidence (Phase 2A — knowledge utilisation) ──
+  /**
+   * Product-specific engineering descriptor per component, distilled from
+   * catalog architecture + character prose. Used by the narrative composer
+   * in place of generic axis vocabulary. Only present for components with
+   * catalog entries.
+   */
+  componentEngineering?: { name: string; note: string }[];
+  /**
+   * Documented interaction evidence matched against the ACTUAL components
+   * in this chain — named-partner pairings and condition-matched catalog
+   * interaction notes. Each entry is a display-ready sentence. Ordered by
+   * strength (named > condition), positives before cautions.
+   */
+  pairingEvidence?: { components: string[]; sentence: string; valence: 'positive' | 'caution' }[];
+  /**
+   * Component names whose catalog entry explicitly declares a
+   * transparency/zero-contribution design goal. Downstream reasoning must
+   * not nominate these as tonal constraints without stronger evidence.
+   */
+  transparencyDeclared?: string[];
 }
