@@ -24,9 +24,9 @@ import { reason } from '../../reasoning';
 import type { AudioSessionState } from '../../system-types';
 import type { ExtractedSignals } from '../../signal-types';
 
-// Phase 2A (2026-07-19): knowledge-utilisation rerun writes to its own
-// dated directory so the editorial-pass captures stay intact for diffing.
-const OUT_DIR = path.resolve(__dirname, '../../../../../../audit-2026-07-19/launch-qa-phase2a');
+// Phase 2B (2026-07-19): evidence-aware synthesis rerun writes to its own
+// dated directory so the Phase 2A captures stay intact for diffing.
+const OUT_DIR = path.resolve(__dirname, '../../../../../../audit-2026-07-19/launch-qa-phase2b');
 
 // Guest session — no saved systems, nothing active.
 const GUEST_AUDIO_STATE: AudioSessionState = {

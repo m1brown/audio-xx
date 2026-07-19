@@ -447,4 +447,11 @@ export interface MemoFindings {
    * not nominate these as tonal constraints without stronger evidence.
    */
   transparencyDeclared?: string[];
+  /**
+   * Room/placement sensitivity of the system's speaker, when the catalog
+   * declares it (Phase 2B). Used as the memorable-insight slot when no
+   * pairing evidence carries the insight — "the room matters more than
+   * the electronics" is often the single most useful thing to say.
+   */
+  roomSensitivityNote?: { component: string; note: string; level: string };
 }

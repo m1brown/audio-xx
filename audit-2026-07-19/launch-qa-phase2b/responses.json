@@ -1,0 +1,956 @@
+[
+  {
+    "id": "SA-01",
+    "category": "system_assessment",
+    "prompt": "Assess my system: Harbeth SHL5+, Hegel H190, Bluesound Node",
+    "expectation": "Coherent read of a warm-speaker/neutral-amp/budget-streamer chain; streamer named as the value outlier without snobbery.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA reference-level system voiced toward warmth and body, ease and flow, and grip and composure. This is a coherent, deliberately assembled system that likely punches above its price tier. The system leans toward tight damping and control across multiple stages — this shapes both its strengths and its primary limitation. The system prioritises tonal richness, body, and sustained musical flow. This profile favours long-session engagement and fatigue resistance over analytical separation.\n\n[systemContext]\n**System read**\n\nThe Hegel H190 leans toward resolution and precision, with the Harbeth Shl5+ supplying all of the warmth. In practice the two tendencies should balance each other — clarity from the electronics, body from the speakers. The Hegel H190 paired with warm or tonally dense speakers is a documented match: the slight warmth adds up agreeably — control and grip from the amp, tonal body from the speakers. This system reflects a listener drawn to rich tone, continuity, and timbral depth. This system is centered on tonal ease and long-session comfort.\n\n**System logic**\nHegel H190 → Class AB solid-state with SoundEngine2, 150W into 8Ω → carries the Bluesound's character forward\nHarbeth Shl5+ → BBC-tradition thin-wall ported box → reinforces the direction the Bluesound sets\nBluesound NODE → tone-rich, smooth → adds warmth from the source stage\nHegel H190 pushes toward precision. The Harbeth Shl5+ alone restores weight.\n\n**Primary leverage**\n\nThe streamer.\n\nBluesound NODE likely sets the ceiling on what the rest of the chain can show. Upgrading it is the change most likely to be audible — though nothing here needs fixing.\n\n**Decision**\n\nKEEP if you value speed, separation, spatial clarity.\n\nCHANGE the streamer only when you're ready for an upgrade — nothing is wrong, but the Bluesound NODE is where the next real step lives.\n\n**Trade-offs**\n\n- Warmer DAC adds body, reduces transient sharpness\n- Tube stage adds texture, softens control\n- Current setup excels on sparse music, exposes thinness on dense tracks\n- Documented caution: the Bluesound NODE in systems already warm or rolled-back in treble: additive warmth can accumulate — monitor for mid-bass bloom and rolled-off top-end\n\n**Next step options**\n\n- Move toward warmer DAC options\n- Compare Bluesound NODE vs R2R alternatives\n\n**Do nothing check**\n\nIf this balance of speed and clarity and just enough warmth is what you enjoy, leave the system alone. The risk of upgrading is losing the Harbeth Shl5+'s careful compensation for Hegel H190 precision.\n\n[keyObservation]\nYour component choices suggest a preference for equipment emphasising **harmonic richness and tonal weight**. Bluesound NODE, Hegel H190, Harbeth Shl5+ share this design philosophy. The system leans toward tight damping and control, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.\n\n[assessmentStrengths]\nHegel H190 adds composure under complex passages\n\n[assessmentLimitations]\nStacked warmth may reduce transient precision and spatial clarity\nComplex, dense recordings could sound congested\nStacked control may sound overdamped — reducing dynamic expression and musical life\n\n[upgradeDirection]\nIf you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally. If the system feels overdamped, a more elastic source or amplifier could restore dynamic life. Single-ended or low-feedback topologies tend to introduce more elasticity.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "SA-02",
+    "category": "system_assessment",
+    "prompt": "Assess my system: WLM Diva monitor, Job Integrated, Eversolo DMP-A6",
+    "expectation": "The France system — balanced verdict, coherence explained.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA reference-level system voiced toward warmth and body, ease and flow, and rhythmic life. This is a coherent, deliberately assembled system that likely punches above its price tier. The system shares a consistent lean toward resolution and fine detail — this defines the system's sonic identity rather than limiting it. The system prioritises tonal richness, body, and sustained musical flow. This profile favours long-session engagement and fatigue resistance over analytical separation.\n\n[systemContext]\n**System read**\n\nThe Job integrated leans toward resolution and precision, with the WLM Diva monitor adding body, warmth, and dynamic release. Speaker, amp, and DAC are deliberately voiced together around speed, elasticity, and tonal body. The Job integrated paired with warm or dense sources and speakers is a documented match: the speed and transparency let upstream warmth through without softening it. This system reflects a listener drawn to rich tone, continuity, and timbral depth. This system is organized around harmonic restraint, smoothness, and unforced presence.\n\n**Emergent behavior**\n\nThe Eversolo/Job/Diva chain works because speed is converted into elastic motion rather than edge. Eversolo's conversion stage and the Job's low-friction output feed the Diva's high-efficiency driver, so microdynamics stay lively, quick, and sweet instead of merely lean. Low stored energy and fast recovery keep musical energy moving through the chain.\n\n**System logic**\nJob integrated → Goldmund-derived minimalist Class AB solid-state → low coloration — passes the Eversolo's character through intact\nWLM Diva monitor → high-efficiency coaxial wideband driver → reinforces the system's overall lean\nEversolo DMP-A6 → clean, neutral feed → stays out of the way\nEach component contributes to the system's speed, elasticity, and tonal body.\n\n**Primary leverage**\n\nNone — no obvious bottleneck.\n\nNo single component is holding this system back; from here, changes are a matter of taste rather than correction. If you ever want to shift the tonal balance, the Eversolo DMP-A6 is where that adjustment starts.\n\n**Decision**\n\nKEEP if you value speed, separation, spatial clarity.\n\nCHANGE only as a matter of taste — nothing needs correcting. The DAC is the first place to look if you ever want a different tonal balance. This system is intentionally speed-forward; change the DAC only if you want more tonal weight.\n\n**Trade-offs**\n\n- Warmer DAC adds body, reduces transient sharpness\n- Tube stage adds texture, softens control\n- Current setup excels at speed, flow, and immediacy; denser music may reveal its lighter tonal mass\n\n**Next step options**\n\n- Move toward warmer DAC options\n- Compare Eversolo DMP-A6 vs R2R alternatives\n\n**Do nothing check**\n\nIf this balance of speed and clarity and just enough warmth is what you enjoy, leave the system alone. The risk of upgrading is losing the system's deliberate balance of speed, elasticity, and tonal body.\n\n[keyObservation]\nYour component choices suggest a preference for equipment emphasising **harmonic richness and tonal weight and dynamic elasticity**. Job integrated, WLM Diva monitor, Eversolo DMP-A6 share this design philosophy. The system shares a consistent lean toward resolution and fine detail — this reinforces the system's identity. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.\n\n[assessmentStrengths]\nWLM Diva monitor contributes musical flow and continuity\n\n[assessmentLimitations]\nWLM Diva monitor has moderate placement sensitivity — Spatial precision improves significantly with careful positioning. Bass energy from the passive radiator can overwhelm small or untreated rooms.\n\n[upgradeDirection]\nWithout stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "SA-03",
+    "category": "system_assessment",
+    "prompt": "Assess my system: KEF LS50 Meta, NAD C3050",
+    "expectation": "Honest read of a compact modern pairing; power adequacy addressed.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA system voiced toward speed and clarity, and grip and composure. The overall character emerges from how these components interact rather than any single piece dominating.\n\n[systemContext]\n**System read**\n\nThe Nad C3050 and KEF LS50 Meta form a system that puts grip and composure first. This system reflects a listener drawn to composure, articulation, and dynamic control.\n\n**System logic**\nKEF LS50 Meta → fast, controlled presentation → reinforces the system's overall lean\nNad C3050 → neutral, controlled → contributes to overall character\n\n**Primary leverage**\n\nNone — no obvious bottleneck.\n\nNo single component is holding this system back. Improvements from here are likely to be incremental — setup, positioning, and room treatment will do more than swapping boxes.\n\n**Decision**\n\nKEEP if you value balance, coherence.\n\nNo single component demands change — improvements from here are preference, not correction.\n\n**Trade-offs**\n\n- Solid-state swap adds grip, reduces harmonic bloom\n- Current setup excels on dense music, exposes thinness on sparse tracks\n\n**Next step options**\n\n- Explore directional alternatives\n- Compare topology options\n\n**Do nothing check**\n\nIf the music sounds engaging, this system is doing its job. Nad C3050 define the character — changing either reshapes what you hear.\n\n[keyObservation]\nThis system is architecturally balanced. No single design philosophy dominates. Upgrades from here are about refinement — choosing which quality to intensify. The risk is low; the system tolerates experimentation in any direction.\n\n[assessmentStrengths]\nSystem character depends on how components interact in practice — further listening context would refine this\n\n[upgradeDirection]\nWithout stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "SA-04",
+    "category": "system_assessment",
+    "prompt": "Assess my system: Focal Sopra No.2, Luxman L-509Z",
+    "expectation": "High-end pairing read; refinement vs energy trade named.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA system with no strong lean in any single direction. The overall character emerges from how these components interact rather than any single piece dominating.\n\n[systemContext]\n**System read**\n\nThe Luxman L-509Z leans toward tonal richness, reinforced by the Focal Sopra No.2. In practice, warmth and body set the tone throughout.\n\n**System logic**\nLuxman L-509Z → tone-rich, high control → preserves upstream character\nFocal Sopra No.2 → neutral, controlled → reinforces the system's overall lean\nLuxman L-509Z and Focal Sopra No.2 reinforce the same direction.\n\n**Primary leverage**\n\nNone — no obvious bottleneck.\n\nNo single component is holding this system back. Improvements from here are likely to be incremental — setup, positioning, and room treatment will do more than swapping boxes.\n\n**Decision**\n\nKEEP if you value warmth, body, tonal richness.\n\nNo single component demands change — improvements from here are preference, not correction.\n\n**Trade-offs**\n\n- Solid-state swap adds grip, reduces harmonic bloom\n- Current setup excels on dense music, exposes thinness on sparse tracks\n\n**Next step options**\n\n- Explore directional alternatives\n- Compare topology options\n\n**Do nothing check**\n\nIf the music sounds engaging, this system is doing its job. Focal Sopra No.2 define the character — changing either reshapes what you hear.\n\n[keyObservation]\nYour component choices suggest a preference for equipment emphasising **neutrality and transparency**. Focal Sopra No.2, Luxman L-509Z share this design philosophy. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.\n\n[assessmentStrengths]\nSystem character depends on how components interact in practice — further listening context would refine this\n\n[upgradeDirection]\nWithout stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "SA-05",
+    "category": "system_assessment",
+    "prompt": "Assess my system: Klipsch Cornwall IV, Decware SE84UFO",
+    "expectation": "High-sensitivity + SET synergy recognized as deliberate, not flagged as a power problem.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA system with no strong lean in any single direction. This is a coherent, deliberately assembled system. The system leans toward tonal richness across multiple stages — this shapes both its strengths and its primary limitation.\n\n[systemContext]\n**System read**\n\nThe Decware Se84ufo leans toward warmth and ease, reinforced by the Klipsch Cornwall IV. In practice, warmth and body set the tone throughout.\n\n**System logic**\nDecware Se84ufo → Single-ended triode, SV83 output tubes → preserves upstream character\nKlipsch Cornwall IV → neutral, controlled → reinforces the system's overall lean\nDecware Se84ufo and Klipsch Cornwall IV reinforce the same direction.\n\n**Primary leverage**\n\nThe amplifier.\n\nDecware Se84ufo limits top-end air and transient sparkle, and inner detail and texture. Change it and the rest of the system should open up.\n\n**Decision**\n\nKEEP if you value warmth, body, tonal richness.\n\nCHANGE the amplifier if the system sounds constrained. Decware Se84ufo likely limits what the rest of the chain can deliver.\n\n**Trade-offs**\n\n- Upgrading Decware Se84ufo lifts resolution, changes system balance\n- Solid-state swap adds grip, reduces harmonic bloom\n- Current setup excels on dense music, exposes thinness on sparse tracks\n\n**Next step options**\n\n- Compare amplifier alternatives to Decware Se84ufo\n- Check if amplifier change shifts enough\n\n**Do nothing check**\n\nIf the music sounds engaging, this system is doing its job. Klipsch Cornwall IV define the character — changing either reshapes what you hear.\n\n[keyObservation]\nYour component choices suggest a preference for equipment emphasising **neutrality and transparency**. Decware Se84ufo, Klipsch Cornwall IV share this design philosophy. The system leans toward tonal richness, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.\n\n[assessmentStrengths]\nConsistent warmth and body — midrange should feel present and immersive\nMusical flow and ease — the system prioritises listening pleasure over analytical scrutiny\nDynamic engagement — the system should convey energy and rhythmic involvement\nDecware Se84ufo contributes musical flow and continuity\n\n[upgradeDirection]\nWithout stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "SA-06",
+    "category": "system_assessment",
+    "prompt": "Assess my system: Magnepan 1.7i, Benchmark AHB2",
+    "expectation": "Planar + clean-power read; honest about power headroom limits.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA system voiced toward fine detail. This is a coherent, deliberately assembled system. The system leans toward resolution and fine detail across multiple stages — this shapes both its strengths and its primary limitation.\n\n[systemContext]\n**System read**\n\nThe Benchmark ahb2 is engineered to add essentially nothing of its own, so the Magnepan 1.7i sets the system's tonal character. In practice, expect clarity, timing, and spatial precision to lead the presentation. This system reflects a listener drawn to transparency, spatial precision, and low-level resolution.\n\n**System logic**\nBenchmark ahb2 → THX AAA class AB/H, ultra-low distortion and noise — measures flat — neither warm nor bright → preserves speed and edge\nMagnepan 1.7i → Full-range planar magnetic with quasi-ribbon tweeter, 4Ω → reinforces the direction the Benchmark sets\nBenchmark ahb2 and Magnepan 1.7i reinforce the same direction.\n\n**Primary leverage**\n\nSystem balance (resolution and fine detail).\n\nThe chain stacks resolution and fine detail in one direction. Rebalance it and the system serves more material.\n\n**Decision**\n\nKEEP if you value speed, separation, spatial clarity.\n\nNo single component demands change — improvements from here are preference, not correction.\n\n**Trade-offs**\n\n- Tube stage adds texture, softens control\n- Current setup excels on sparse music, exposes thinness on dense tracks\n- Documented caution: the Benchmark ahb2 in systems with aggressive or bright sources: the amp will not soften or buffer upstream harshness — if the DAC or recording is edgy, you will hear it\n\n**Next step options**\n\n- Explore directional alternatives\n- Compare topology options\n\n**Do nothing check**\n\nIf the system sounds right, it is right. Swapping components without clear cause risks losing coherence without gaining engagement.\n\n[keyObservation]\nYour component choices suggest a preference for equipment emphasising **timing accuracy and speed**. Benchmark ahb2, Magnepan 1.7i share this design philosophy. The system leans toward resolution and fine detail, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.\n\n[assessmentStrengths]\nBenchmark ahb2 provides strong spatial definition\nBenchmark ahb2 adds composure under complex passages\nMagnepan 1.7i provides strong spatial definition\n\n[assessmentLimitations]\nResolution repeats at several stages — lesser recordings may sound analytical or fatiguing\nMagnepan 1.7i has high placement sensitivity — Dipole design — requires distance from rear wall. Needs medium-to-large room for proper bass development and soundstage.\n\n[upgradeDirection]\nIf the system feels analytically intense, consider a warmer or more fluid component — a tube stage, a smoother DAC topology, or speakers with more midrange body could restore balance.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "SA-07",
+    "category": "system_assessment",
+    "prompt": "Assess my system: ATC SCM40A active speakers with a Chord Qutest",
+    "expectation": "Active-speaker chain understood — no amplifier advice.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment→clarification",
+    "response": "[acknowledge]\nQuick clarification before I run the assessment.\n\n[question]\nYou described the Chord Qutest as a speaker, but our data has it as a DAC. What role does it play in your system?"
+  },
+  {
+    "id": "SA-08",
+    "category": "system_assessment",
+    "prompt": "Assess my system: Genelec 8341A monitors, RME ADI-2 DAC",
+    "expectation": "Studio-accuracy chain respected on its own terms.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment→null",
+    "response": "(engine returned null — page.tsx falls through to consultation)"
+  },
+  {
+    "id": "SA-09",
+    "category": "system_assessment",
+    "prompt": "Assess my system: Linn LP12, Naim Nait 50, Falcon LS3/5a",
+    "expectation": "Classic British system — heritage recognized, bass/scale limits stated honestly.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA system voiced toward fine detail, and grip and composure. This is a coherent, deliberately assembled system. The system shares a consistent lean toward tonal richness — this defines the system's sonic identity rather than limiting it. The system prioritises resolution, composure, and analytical transparency. This profile rewards well-recorded material and tends to expose source quality differences clearly.\n\n[systemContext]\n**System read**\n\nThe Naim Nait 50 leans toward tonal richness, reinforced by the Falcon Ls3/5a. In practice, warmth and body set the tone throughout. The Linn LP12 with Naim, Leben, or other timing-oriented amplification is a documented match: the LP12's rhythmic strengths are amplified — a classic pairing for musicality. This system reflects a listener drawn to composure, articulation, and dynamic control. This system is built around composure, precision, and low-noise resolution.\n\n**System logic**\nNaim Nait 50 → tone-rich, high flow → carries the Linn's character forward\nFalcon Ls3/5a → Sealed 2-way monitor, BBC LS3/5a design (Falcon licensed) → reinforces the system's overall lean\nLinn LP12 → belt-drive suspended subchassis → adds warmth from the source stage\nNaim Nait 50 and Falcon Ls3/5a reinforce the same direction.\n\n**Primary leverage**\n\nThe amplifier.\n\nNaim Nait 50 limits top-end air and transient sparkle, and grip and control. Change it and the rest of the system should open up.\n\n**Decision**\n\nKEEP if you value warmth, body, tonal richness.\n\nCHANGE the amplifier if the system sounds constrained. Naim Nait 50 likely limits what the rest of the chain can deliver.\n\n**Trade-offs**\n\n- Upgrading Naim Nait 50 lifts resolution, changes system balance\n- Solid-state swap adds grip, reduces harmonic bloom\n- Current setup excels on dense music, exposes thinness on sparse tracks\n\n**Next step options**\n\n- Compare amplifier alternatives to Naim Nait 50\n- Check if amplifier change shifts enough\n\n**Do nothing check**\n\nIf the system sounds right, it is right. Swapping components without clear cause risks losing coherence without gaining engagement.\n\n[keyObservation]\nYour component choices suggest a preference for equipment emphasising **precision and control**. Falcon Ls3/5a, Naim Nait 50, Linn LP12 share this design philosophy. The system shares a consistent lean toward tonal richness — this reinforces the system's identity. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.\n\n[assessmentStrengths]\nFalcon Ls3/5a contributes musical flow and continuity\nFalcon Ls3/5a provides strong spatial definition\nLinn LP12 contributes musical flow and continuity\n\n[assessmentLimitations]\nStacked warmth may reduce transient precision and spatial clarity\nComplex, dense recordings could sound congested\nFalcon Ls3/5a has high placement sensitivity — Sealed design is less placement-sensitive than reflex, but isolation and proper stands are essential for imaging.\n\n[upgradeDirection]\nIf you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "SA-10",
+    "category": "system_assessment",
+    "prompt": "Assess my system: Denafrips Pontus II, Leben CS600X, DeVore O/96",
+    "expectation": "The pinned demo system — tone-first chain, coherence explained.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA reference-level system voiced toward warmth and body, ease and flow, and rhythmic life. This is a coherent, deliberately assembled system that likely punches above its price tier. The system leans toward tonal richness across multiple stages — this shapes both its strengths and its primary limitation. The system prioritises tonal richness, body, and sustained musical flow. This profile favours long-session engagement and fatigue resistance over analytical separation.\n\n[systemContext]\n**System read**\n\nThe Leben CS600X and Denafrips Pontus II lean toward warmth and ease, reinforced by the DeVore O/96. In practice, warmth and body set the tone throughout. The Leben CS600X paired with DeVore O/96 is a documented match: one of the most celebrated pairings in modern high-efficiency audio — strong musical flow, natural tonality, and non-fatiguing presentation. This system reflects a listener drawn to rich tone, continuity, and timbral depth. This system is organized around harmonic restraint, smoothness, and unforced presence.\n\n**Emergent behavior**\n\nThe Pontus II/CS600X/O/96 chain works because speed is converted into elastic motion rather than edge. Pontus II's harmonic density and the CS600X's harmonic body feed the O/96's high-efficiency driver, so microdynamics stay lively, quick, and sweet instead of merely lean. Low stored energy and fast recovery keep musical energy moving through the chain.\n\n**System logic**\nDenafrips Pontus II → tone-rich, smooth conversion → anchors the tonal foundation with warmth\nLeben CS600X → Push-pull tube, KT77/KT88/EL34 output (user-swappable) → carries the Denafrips's character forward\nDeVore O/96 → high-efficiency wide-baffle two-way → reinforces the direction the Leben sets\nLeben CS600X and Denafrips Pontus II and DeVore O/96 reinforce the same direction.\n\n**Primary leverage**\n\nSystem balance.\n\nThe system is already built around tonal richness. The next change should preserve that character rather than adding more density.\n\n**Decision**\n\nKEEP if you value warmth, body, tonal richness.\n\nCHANGE only as a matter of taste — nothing needs correcting. The DAC is the first place to look if you ever want a different tonal balance. The balance leans warm, so adding clarity would mean an upstream change.\n\n**Trade-offs**\n\n- Leaner DAC adds speed, reduces harmonic weight\n- Solid-state swap adds grip, reduces harmonic bloom\n- Current setup excels at body, harmonic flow, and ease; brighter or more analytical material may render less air at the top\n- Documented caution: the Leben CS600X in systems already warm or dense: can compound warmth and density — may reduce clarity and transient articulation\n\n**Next step options**\n\n- Move toward more resolving DAC options\n- Compare Denafrips Pontus II vs delta-sigma alternatives\n\n**Do nothing check**\n\nIf the music sounds engaging, this system is doing its job. Leben CS600X and Denafrips Pontus II define the character — changing either reshapes what you hear.\n\n[keyObservation]\nYour component choices suggest a preference for equipment emphasising **harmonic richness and tonal weight and dynamic elasticity**. Leben CS600X, Denafrips Pontus II, DeVore O/96 share this design philosophy. The system leans toward tonal richness, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.\n\n[assessmentStrengths]\nLeben CS600X contributes musical flow and continuity\nDenafrips Pontus II contributes musical flow and continuity\nDeVore O/96 contributes musical flow and continuity\n\n[assessmentLimitations]\nStacked warmth may reduce transient precision and spatial clarity\nComplex, dense recordings could sound congested\nStacked smoothness may obscure transient detail and reduce perceived resolution\nStacked elasticity may lose composure on complex orchestral or dense electronic material\nDeVore O/96 has moderate placement sensitivity — Wide-baffle design produces substantial bass energy that can overwhelm rooms smaller than 15 square metres. Needs breathing room — pull away from rear walls to let the presentation open up.\n\n[upgradeDirection]\nIf you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally. If you want to introduce more detail and presence without losing the ease, a more revealing source or cables with better transient definition could add clarity without fundamentally changing the system's character. If the system feels loose or uncontrolled, a more composed amplifier or tighter-grip speaker pairing could add stability without losing all dynamic energy.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "SA-11",
+    "category": "system_assessment",
+    "prompt": "Assess my system: Topping D90SE, Purifi Eigentakt amp, Revel M126Be",
+    "expectation": "Measurement-first chain read fairly — not dismissed as sterile.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA system voiced toward fine detail, and grip and composure. This is a coherent, deliberately assembled system that likely punches above its price tier. The overall character emerges from how these components interact rather than any single piece dominating. The system prioritises resolution, composure, and analytical transparency. This profile rewards well-recorded material and tends to expose source quality differences clearly.\n\n[systemContext]\n**System read**\n\nThe Topping D90SE and Purifi form a system built around precision and control. This system reflects a listener drawn to composure, articulation, and dynamic control. This system is built around composure, precision, and low-noise resolution.\n\n**System logic**\nTopping D90SE → delta-sigma (ESS) → defines the tonal center\nPurifi → neutral, controlled → low coloration — passes the Topping's character through intact\n\n**Primary leverage**\n\nThe DAC.\n\nTopping D90SE limits tonal ease and forgiveness, and rhythmic flow and elasticity. Change it and the rest of the system should open up.\n\n**Decision**\n\nKEEP if you value speed, separation, spatial clarity.\n\nCHANGE the dac if the system sounds constrained. Topping D90SE likely limits what the rest of the chain can deliver.\n\n**Trade-offs**\n\n- Warmer DAC adds body, reduces transient sharpness\n- Tube stage adds texture, softens control\n- Current setup excels on sparse music, exposes thinness on dense tracks\n- Documented caution: the Topping D90SE in systems that are already lean or lacking midrange body: the D90SE won't compensate — it adds no warmth or harmonic padding, so leanness upstream or downstream becomes more audible\n\n**Next step options**\n\n- Move toward warmer DAC options\n- Compare Topping D90SE vs R2R alternatives\n\n**Do nothing check**\n\nIf the music sounds engaging, this system is doing its job. Purifi define the character — changing either reshapes what you hear.\n\n[keyObservation]\nYour component choices suggest a preference for equipment emphasising **precision and control**. Topping D90SE, Purifi share this design philosophy. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.\n\n[assessmentStrengths]\nRevealing presentation — inner detail and textural nuance should be well-resolved\nComposure and grip — the system should handle complex passages with authority\n\n[upgradeDirection]\nWithout stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "SA-12",
+    "category": "system_assessment",
+    "prompt": "What do you think of this system? Rega Planar 6 → Rega Aethos → Harbeth C7ES-3",
+    "expectation": "Analog-first British chain; PRaT + midrange synergy named.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA system voiced toward warmth and body. The system shares a consistent lean toward tonal richness — this defines the system's sonic identity rather than limiting it.\n\n[systemContext]\n**System read**\n\nThe Planar 6, Harbeth, and Rega form a well-balanced system with no obvious weak point.\n\n**System logic**\nHarbeth → tone-rich presentation → reinforces the direction the Rega sets\nRega → tone-rich → adds warmth from the source stage\nPlanar 6 → neutral, controlled → contributes to overall character\n\n**Primary leverage**\n\nThe speaker.\n\nHarbeth limits top-end air and transient sparkle. Change it and the rest of the system should open up.\n\n**Decision**\n\nKEEP if you value balance, coherence.\n\nCHANGE the speaker if the system sounds constrained. Harbeth likely limits what the rest of the chain can deliver.\n\n**Trade-offs**\n\n- Upgrading Harbeth lifts resolution, changes system balance\n- Solid-state swap adds grip, reduces harmonic bloom\n- Current setup excels on dense music, exposes thinness on sparse tracks\n\n**Next step options**\n\n- Compare speaker alternatives to Harbeth\n- Check if speaker change shifts enough\n\n**Do nothing check**\n\nIf the music sounds engaging, this system is doing its job. Planar 6 define the character — changing either reshapes what you hear.\n\n[keyObservation]\nYour component choices suggest a preference for equipment emphasising **harmonic richness and tonal weight**. Planar 6, Harbeth, Rega share this design philosophy. The system shares a consistent lean toward tonal richness — this reinforces the system's identity. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.\n\n[assessmentStrengths]\nSystem character depends on how components interact in practice — further listening context would refine this\n\n[assessmentLimitations]\nStacked warmth may reduce transient precision and spatial clarity\nComplex, dense recordings could sound congested\n\n[upgradeDirection]\nIf you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "UP-01",
+    "category": "upgrade",
+    "prompt": "Should I upgrade my DAC or my amplifier first? I have a Bluesound Node into a Marantz PM8006 into KEF R3.",
+    "expectation": "A ranked answer with reasoning, not a questionnaire.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment→clarification",
+    "response": "[acknowledge]\nQuick clarification before I run the assessment.\n\n[question]\nYou described the Bluesound NODE as a DAC, but our data has it cataloged as a streamer. Are you using its internal DAC as your main conversion stage, or is it feeding an external DAC?"
+  },
+  {
+    "id": "UP-02",
+    "category": "upgrade",
+    "prompt": "What is the weakest link in my system: Eversolo DMP-A6, Job Integrated, WLM Diva monitor?",
+    "expectation": "Names one component with a mechanism, or honestly says the system is balanced.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA reference-level system voiced toward warmth and body, ease and flow, and rhythmic life. This is a coherent, deliberately assembled system that likely punches above its price tier. The system shares a consistent lean toward resolution and fine detail — this defines the system's sonic identity rather than limiting it. The system prioritises tonal richness, body, and sustained musical flow. This profile favours long-session engagement and fatigue resistance over analytical separation.\n\n[systemContext]\n**System read**\n\nThe Job integrated leans toward resolution and precision, with the WLM Diva monitor adding body, warmth, and dynamic release. Speaker, amp, and DAC are deliberately voiced together around speed, elasticity, and tonal body. The Job integrated paired with warm or dense sources and speakers is a documented match: the speed and transparency let upstream warmth through without softening it. This system reflects a listener drawn to rich tone, continuity, and timbral depth. This system is organized around harmonic restraint, smoothness, and unforced presence.\n\n**Emergent behavior**\n\nThe Eversolo/Job/Diva chain works because speed is converted into elastic motion rather than edge. Eversolo's conversion stage and the Job's low-friction output feed the Diva's high-efficiency driver, so microdynamics stay lively, quick, and sweet instead of merely lean. Low stored energy and fast recovery keep musical energy moving through the chain.\n\n**System logic**\nJob integrated → Goldmund-derived minimalist Class AB solid-state → low coloration — passes the Eversolo's character through intact\nWLM Diva monitor → high-efficiency coaxial wideband driver → reinforces the system's overall lean\nEversolo DMP-A6 → clean, neutral feed → stays out of the way\nEach component contributes to the system's speed, elasticity, and tonal body.\n\n**Primary leverage**\n\nNone — no obvious bottleneck.\n\nNo single component is holding this system back; from here, changes are a matter of taste rather than correction. If you ever want to shift the tonal balance, the Eversolo DMP-A6 is where that adjustment starts.\n\n**Decision**\n\nKEEP if you value speed, separation, spatial clarity.\n\nCHANGE only as a matter of taste — nothing needs correcting. The DAC is the first place to look if you ever want a different tonal balance. This system is intentionally speed-forward; change the DAC only if you want more tonal weight.\n\n**Trade-offs**\n\n- Warmer DAC adds body, reduces transient sharpness\n- Tube stage adds texture, softens control\n- Current setup excels at speed, flow, and immediacy; denser music may reveal its lighter tonal mass\n\n**Next step options**\n\n- Move toward warmer DAC options\n- Compare Eversolo DMP-A6 vs R2R alternatives\n\n**Do nothing check**\n\nIf this balance of speed and clarity and just enough warmth is what you enjoy, leave the system alone. The risk of upgrading is losing the system's deliberate balance of speed, elasticity, and tonal body.\n\n[keyObservation]\nYour component choices suggest a preference for equipment emphasising **harmonic richness and tonal weight and dynamic elasticity**. Job integrated, WLM Diva monitor, Eversolo DMP-A6 share this design philosophy. The system shares a consistent lean toward resolution and fine detail — this reinforces the system's identity. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.\n\n[assessmentStrengths]\nWLM Diva monitor contributes musical flow and continuity\n\n[assessmentLimitations]\nWLM Diva monitor has moderate placement sensitivity — Spatial precision improves significantly with careful positioning. Bass energy from the passive radiator can overwhelm small or untreated rooms.\n\n[upgradeDirection]\nWithout stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "UP-03",
+    "category": "upgrade",
+    "prompt": "Where should I spend $2,000 to improve my system? Chord Qutest, Naim SuperNait 3, Harbeth SHL5+.",
+    "expectation": "Direction with trade-offs; \"keep what you have\" allowed if honest.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA reference-level system voiced toward fine detail, and grip and composure. This is a coherent, deliberately assembled system that likely punches above its price tier. The system leans toward grip and control across multiple stages — this shapes both its strengths and its primary limitation. The system prioritises resolution, composure, and analytical transparency. This profile rewards well-recorded material and tends to expose source quality differences clearly.\n\n[systemContext]\n**System read**\n\nThe Naim Supernait 3 and Chord Qutest lean toward resolution and precision, with the Harbeth Shl5+ supplying all of the warmth. In practice the two tendencies should balance each other — clarity from the electronics, body from the speakers. This system reflects a listener drawn to composure, articulation, and dynamic control. This system is built around composure, precision, and low-noise resolution.\n\n**System logic**\nChord Qutest → FPGA → defines the tonal center\nNaim Supernait 3 → Class AB, 80W/ch → preserves speed and edge\nHarbeth Shl5+ → tone-rich, smooth, controlled presentation → adds body and prevents thinness\nNaim Supernait 3 and Chord Qutest push toward precision. The Harbeth Shl5+ alone restores weight.\n\n**Primary leverage**\n\nSystem balance (grip and control).\n\nThe chain stacks grip and control in one direction. Rebalance it and the system serves more material.\n\n**Decision**\n\nKEEP if you value speed, separation, spatial clarity.\n\nCHANGE only as a matter of taste — nothing needs correcting. The DAC is the first place to look if you ever want a different tonal balance. The balance leans toward clarity, so any taste adjustment would start there.\n\n**Trade-offs**\n\n- Warmer DAC adds body, reduces transient sharpness\n- Tube stage adds texture, softens control\n- Current setup excels on sparse music, exposes thinness on dense tracks\n\n**Next step options**\n\n- Move toward warmer DAC options\n- Compare Chord Qutest vs R2R alternatives\n\n**Do nothing check**\n\nIf this balance of speed and clarity and just enough warmth is what you enjoy, leave the system alone. The risk of upgrading is losing the Harbeth Shl5+'s careful compensation for Naim Supernait 3 + Chord Qutest precision.\n\n[keyObservation]\nYour component choices suggest a preference for equipment emphasising **precision and control**. Naim Supernait 3, Chord Qutest, Harbeth Shl5+ share this design philosophy. The system leans toward grip and control, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.\n\n[assessmentStrengths]\nNaim Supernait 3 contributes musical flow and continuity\nNaim Supernait 3 adds composure under complex passages\n\n[upgradeDirection]\nWithout stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "UP-04",
+    "category": "upgrade",
+    "prompt": "Should I just keep what I have? Denafrips Ares II, Rega Brio, Wharfedale Linton.",
+    "expectation": "A real verdict either way — decisive, not hedged.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA system voiced toward warmth and body. The system leans toward tonal richness across multiple stages — this shapes both its strengths and its primary limitation.\n\n[systemContext]\n**System read**\n\nThe Denafrips Ares II leans toward tonal richness, reinforced by the Wharfedale Linton. In practice, warmth and body set the tone throughout.\n\n**System logic**\nDenafrips Ares II → tone-rich conversion → anchors the tonal foundation with warmth\nWharfedale Linton → tone-rich, smooth presentation → reinforces the direction the Denafrips sets\nRega → tone-rich → adds warmth from the source stage\nDenafrips Ares II and Wharfedale Linton reinforce the same direction.\n\n**Primary leverage**\n\nThe DAC.\n\nDenafrips Ares II limits top-end air and transient sparkle, and soundstage size. Change it and the rest of the system should open up.\n\n**Decision**\n\nKEEP if you value warmth, body, tonal richness.\n\nCHANGE the dac if the system sounds constrained. Denafrips Ares II likely limits what the rest of the chain can deliver.\n\n**Trade-offs**\n\n- Leaner DAC adds speed, reduces harmonic weight\n- Solid-state swap adds grip, reduces harmonic bloom\n- Current setup excels on dense music, exposes thinness on sparse tracks\n\n**Next step options**\n\n- Move toward more resolving DAC options\n- Compare Denafrips Ares II vs delta-sigma alternatives\n\n**Do nothing check**\n\nIf the system sounds right, it is right. Swapping components without clear cause risks losing coherence without gaining engagement.\n\n[keyObservation]\nYour component choices suggest a preference for equipment emphasising **harmonic richness and tonal weight**. Denafrips Ares II, Wharfedale Linton, Rega share this design philosophy. The system leans toward tonal richness, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.\n\n[assessmentStrengths]\nSystem character depends on how components interact in practice — further listening context would refine this\n\n[assessmentLimitations]\nStacked warmth may reduce transient precision and spatial clarity\nComplex, dense recordings could sound congested\n\n[upgradeDirection]\nIf you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "UP-05",
+    "category": "upgrade",
+    "prompt": "What would you upgrade first?",
+    "expectation": "Graceful handling of a system-less question — asks for the chain without feeling like a form.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "shopping(general)→empty→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "UP-06",
+    "category": "upgrade",
+    "prompt": "Is it worth upgrading from a Bluesound Node to an Eversolo A8?",
+    "expectation": "Honest incremental-gain read; names what actually changes.",
+    "routedIntent": "gear_inquiry",
+    "routedPath": "consultation",
+    "response": "[systemContext]\nWorks well: used as transport with external DAC — the Node excels as a stable network-to-digital converter; outboard DAC will dominate sonic character.\n\nWorth noting: internal DAC in use — warm, smooth character keeps listening relaxed but does not deliver high-resolution transparency.\n\nWorth noting: in systems already warm or rolled-back in treble — additive warmth can accumulate — monitor for mid-bass bloom and rolled-off top-end.\n\nReference sources: Owner reference: Excellent streaming transport with stable BluOS app. Built-in DAC is competent but external DAC via coax/optical recommended for serious listening.\n\n[philosophy]\nCompetent network streamer with stable BluOS app. Built-in ESS Sabre DAC is functional but the primary value is as a transport. Warm side of neutral, smooth, non-fatiguing. Coax, optical, and HDMI eARC digital outputs. RCA and headphone analogue out.\n\nThe design is built on ARM-based network streamer with integrated ESS Sabre DAC, MQA, Roon Ready, AirPlay 2 architecture.\n\nRetail price: approximately $600.\n\n[followUp]\nAre you considering this for a specific system, or exploring what it would bring?"
+  },
+  {
+    "id": "PD-01",
+    "category": "purchase",
+    "prompt": "Chord Qutest vs Schiit Bifrost 2/64 — which should I buy?",
+    "expectation": "Character contrast (FPGA clarity vs R2R density), pick guidance by taste.",
+    "routedIntent": "comparison",
+    "routedPath": "consultation",
+    "response": "[comparisonSummary]\n**Chord:** Chord Electronics designs around proprietary FPGA-based pulse array DAC technology developed by Rob Watts. The design philosophy prioritises timing precision and transient definition, using custom digital processing rather than off-the-shelf DAC chips.\n\n**Schiit:** Schiit builds delta-sigma (AKM) and related architectures. Clean, balanced entry point with AKM conversion.\n\nThe FPGA-based DAC favors articulate transient onsets and precise stereo image placement, while the Delta-sigma DAC prioritizes clean and neutral.\n\n**Chord:** fast, precise timing.\n\n**Schiit:** neutral, clean tonality.\n\nThe real choice: **articulation, timing precision, and clarity** (Chord) vs **clean** (Schiit). Different priorities, not a quality gap.\n\nBoth Chord and Schiit prioritise precision and control. The distinction is in how they handle micro-dynamics and tonal weight at the margins — which matters most depends on your source material and listening priorities.\n\nBoth lean precise — the difference is in voicing\nChord tends toward articulation, timing precision, and clarity, Schiit toward clean\n\nBoth are strong choices with different strengths — **Chord** leans toward articulation, timing precision, and clarity, **Schiit** toward clean. The right choice depends on whether you prioritise articulation, timing precision, and clarity or clean in your system and with your music."
+  },
+  {
+    "id": "PD-02",
+    "category": "purchase",
+    "prompt": "Holo May vs Schiit Yggdrasil",
+    "expectation": "Two R2R flagships distinguished credibly.",
+    "routedIntent": "comparison",
+    "routedPath": "consultation",
+    "response": "[systemContext]\nHolo DACs add warmth and harmonic texture to the system. They pair naturally with transparent or fast amplification where the R2R density provides a welcome counterbalance. In already warm or dense systems, care is needed to avoid congestion. The May KTE is widely used in high-end headphone and speaker systems.\n\n[philosophy]\nI know Holo Audio well, but I haven't spent enough time with the Schiit Yggdrasil to compare them fairly. Here's what I can say with confidence.\n\nHolo Audio (China). Holo Audio designs discrete R2R DACs with dual-mono architecture and proprietary resistor-ladder networks. Designer Jeff Zhu's approach combines the harmonic richness of R2R conversion with careful attention to power supply isolation and analogue output stage quality. The May is the flagship; the Spring is the accessible entry.\n\n[followUp]\nAre you exploring the brand generally, or considering a specific model?"
+  },
+  {
+    "id": "PD-03",
+    "category": "purchase",
+    "prompt": "KEF R3 vs Harbeth P3ESR for a small room",
+    "expectation": "Modern precision vs BBC midrange framed as a taste fork; room factored in.",
+    "routedIntent": "comparison",
+    "routedPath": "consultation",
+    "response": "[comparisonSummary]\n**Harbeth:** Harbeth continues the BBC monitor tradition with proprietary RADIAL cone technology. The design goal is natural midrange reproduction and accurate voice rendering.\n\n**KEF:** KEF designs speakers around its proprietary Uni-Q coaxial driver, placing the tweeter at the acoustic centre of the midrange cone. The goal is point-source coherence and precise imaging.\n\n**Harbeth:** vocally accurate, tonally honest in the midrange. smooth on transients (absence of edge). scale and dynamic headroom less than larger floorstanders.\n\n**KEF:** controlled, stable presentation. neutral, clean tonality.\n\nThe real choice: **warmth and tonal body** (Harbeth) vs **precision and control** (KEF).\n\nIf long listening sessions and tonal comfort matter to you, **Harbeth** is likely the better fit. If you prioritise clarity and transient precision — the ability to hear everything in a recording — **KEF** is where that lives.\n\nIf you want warmth and body → Harbeth\nIf you want precision and detail → KEF\n\nIn most systems, **Harbeth** is the more natural match unless you're explicitly chasing maximum control and neutrality. Harbeth builds around rADIAL polypropylene midrange driver with BBC-lineage cabinet philosophy (controlled cabinet contribution rather than maximum-rigidity). KEF builds around uni-Q coaxial driver for point-source coherence and precise imaging. The result, in listening: Harbeth reads vocally accurate, tonally honest in the midrange; KEF reads precise, neutral, wide-dispersion — strong imaging and detail.\n\n[followUp]\nWhich models are you comparing? That changes the picture — and if you tell me your speakers, the recommendation gets sharper."
+  },
+  {
+    "id": "PD-04",
+    "category": "purchase",
+    "prompt": "Is the Eversolo A8 worth it over the A6?",
+    "expectation": "Honest same-brand tier comparison.",
+    "routedIntent": "product_assessment",
+    "routedPath": "shopping(general)→empty→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "PD-05",
+    "category": "purchase",
+    "prompt": "What do you know about the LAiV Harmony DAC?",
+    "expectation": "Either real knowledge or an honest \"reasoning from type\" hedge — no fabrication.",
+    "routedIntent": "product_assessment",
+    "routedPath": "consultation",
+    "response": "[systemContext]\nWorks well: paired with neutral or slightly bright amplification — the warmth and density carry through without muddying, adding body to the presentation.\n\nWorth noting: paired with already-warm or very dense tube amplification — tonality may become too thick — loses some clarity and articulation.\n\nReference sources: Head-Fi community: Listening comparisons with Denafrips Pontus II and Holo Spring. Audio Science Review: Discussion thread covering R2R implementation and sound character.\n\n[philosophy]\nSingapore-designed discrete R2R DAC with strong harmonic density and tonal richness. Shares sonic territory with the Denafrips Pontus/Venus tier — warm, textured, and spatially open. Emphasises musical engagement over analytical precision.\n\nThe design is built on Discrete R2R architecture.\n\nRetail price: approximately $2,000.\n\n[followUp]\nAre you considering this for a specific system, or exploring what it would bring?"
+  },
+  {
+    "id": "PD-06",
+    "category": "purchase",
+    "prompt": "best DAC under $1000",
+    "expectation": "Ranked shortlist with real photos and a rationale per pick.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(dac)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• Audalytic DR70 ($800) — Best for detail retrieval\n• Holo Audio Cyan 2 ($799) — Best for natural tonal richness and clean texture retrieval"
+  },
+  {
+    "id": "PD-07",
+    "category": "purchase",
+    "prompt": "help me choose a dac",
+    "expectation": "Shopping mode (regression check on the July-1 intent fix) — not the diagnostic clarification.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(dac)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• Rockna Wavelight ($4200) — Best for best imaging and balanced and refined\n• TotalDAC d1-unity ($12500) — Best for natural and organic and strong dynamic contrast between instruments"
+  },
+  {
+    "id": "SM-01",
+    "category": "speaker_matching",
+    "prompt": "Can my Naim Nait 50 drive Falcon LS3/5a speakers?",
+    "expectation": "Sensible power-match answer (low-sensitivity mini-monitor, modest watts, small-room verdict).",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA system voiced toward fine detail, and grip and composure. This is a coherent, deliberately assembled system. The overall character emerges from how these components interact rather than any single piece dominating. The system prioritises resolution, composure, and analytical transparency. This profile rewards well-recorded material and tends to expose source quality differences clearly.\n\n[systemContext]\n**System read**\n\nThe Naim leans toward tonal richness, reinforced by the Falcon LS3/5a. In practice, warmth and body set the tone throughout. This system reflects a listener drawn to composure, articulation, and dynamic control. This system is built around composure, precision, and low-noise resolution.\n\n**System logic**\nNaim → tone-rich, high flow → preserves upstream character\nFalcon LS3/5a → Sealed 2-way monitor, BBC LS3/5a design (Falcon licensed) → reinforces the system's overall lean\nNaim and Falcon LS3/5a reinforce the same direction.\n\n**Primary leverage**\n\nThe amplifier.\n\nNaim limits top-end air and transient sparkle, and grip and control. Change it and the rest of the system should open up.\n\n**Decision**\n\nKEEP if you value warmth, body, tonal richness.\n\nCHANGE the amplifier if the system sounds constrained. Naim likely limits what the rest of the chain can deliver.\n\n**Trade-offs**\n\n- Upgrading Naim lifts resolution, changes system balance\n- Solid-state swap adds grip, reduces harmonic bloom\n- Current setup excels on dense music, exposes thinness on sparse tracks\n\n**Next step options**\n\n- Compare amplifier alternatives to Naim\n- Check if amplifier change shifts enough\n\n**Do nothing check**\n\nIf the system sounds right, it is right. Swapping components without clear cause risks losing coherence without gaining engagement. One thing likely to matter more than any component swap: with the Falcon LS3/5a, sealed design is less placement-sensitive than reflex, but isolation and proper stands are essential for imaging.\n\n[keyObservation]\nYour component choices suggest a preference for equipment emphasising **precision and control**. Falcon LS3/5a, Naim share this design philosophy. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.\n\n[assessmentStrengths]\nRevealing presentation — inner detail and textural nuance should be well-resolved\nComposure and grip — the system should handle complex passages with authority\nFalcon LS3/5a contributes musical flow and continuity\nFalcon LS3/5a provides strong spatial definition\n\n[assessmentLimitations]\nFalcon LS3/5a has high placement sensitivity — Sealed design is less placement-sensitive than reflex, but isolation and proper stands are essential for imaging.\n\n[upgradeDirection]\nWithout stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "SM-02",
+    "category": "speaker_matching",
+    "prompt": "Is a Pass XA25 enough power for Magnepan LRS+?",
+    "expectation": "Honest \"marginal\" answer — planars want current; Class A helps but SPL ceiling is real.",
+    "routedIntent": "gear_inquiry",
+    "routedPath": "consultation",
+    "response": "[systemContext]\nPass Labs works across a range of speakers. First Watt pairs best with high-efficiency speakers — similar territory to low-power tube amps. The First Watt SIT-based single-ended Class A designs sit within the Musical Communication School as the American single-ended-solid-state expression of the school's chain-coherence commitment — the same chain-as-system argument the school carries through tube SET, expressed through a different device family. The broader Pass Labs Class A push-pull lineage (X.5 / X.8 / XA series) is the school-adjacent American Class A expression.\n\nNotable design families: Pass Labs (main line): Class A and Class AB designs with substantial power. First Watt: Low-power single-ended solid-state.\n\nPass Labs main-line amplifiers work across a wide range of speakers. First Watt designs pair best with high-efficiency speakers (93 dB+), similar to low-power tube territory. Both lines complement neutral-to-bright DACs, adding warmth and body.\n\n[philosophy]\nPass Labs, founded by Nelson Pass (USA (Auburn, California)). Pass Labs designs emphasise simplicity and Class A operation where practical. First Watt is the low-power offshoot, exploring single-ended solid-state and unusual topologies.\n\n[followUp]\nAre you exploring the brand generally, or considering a specific model?"
+  },
+  {
+    "id": "SM-03",
+    "category": "speaker_matching",
+    "prompt": "Would a Luxman integrated pair well with Harbeth speakers?",
+    "expectation": "Classic pairing — warm-refined synergy affirmed with a real mechanism.",
+    "routedIntent": "product_assessment",
+    "routedPath": "consultation",
+    "response": "[comparisonSummary]\n**Harbeth:** Harbeth continues the BBC monitor tradition with proprietary RADIAL cone technology. The design goal is natural midrange reproduction and accurate voice rendering.\n\n**Luxman:** Luxman is among the oldest continuously operating hi-fi manufacturers in Japan, with origins in Kinsuido's radio department in Osaka in 1925. The brand builds across both tube and solid-state lineages with an emphasis on refinement, longevity, and graceful voicing rather than measurement-led extremes.\n\n**Harbeth:** vocally accurate, tonally honest in the midrange. smooth on transients (absence of edge). scale and dynamic headroom less than larger floorstanders.\n\n**Luxman:** controlled, stable presentation. warm, tonally dense, harmonically rich. macrodynamic authority — grip and slam.\n\nThe real choice: **warmth and a natural presentation** (Harbeth) vs **warmth, composure, and harmonic richness** (Luxman). Different priorities, not a quality gap.\n\nBoth Harbeth and Luxman prioritise musical warmth. The distinction is in degree and voicing — listen for which tonal character resonates with the music you return to most.\n\nBoth lean warm — the difference is in texture and presentation\nHarbeth tends toward warmth and a natural presentation, Luxman toward warmth, composure, and harmonic richness\n\nBoth are strong choices with different strengths — **Harbeth** leans toward warmth and a natural presentation, **Luxman** toward warmth, composure, and harmonic richness. The right choice depends on whether you prioritise warmth and a natural presentation or warmth, composure, and harmonic richness in your system and with your music.\n\n[followUp]\nWhich models are you comparing? That changes the picture — and if you tell me your speakers, the recommendation gets sharper."
+  },
+  {
+    "id": "SM-04",
+    "category": "speaker_matching",
+    "prompt": "What amplifier should I buy for Klipsch Forte IV?",
+    "expectation": "High-sensitivity guidance — low-watt tube/Class A options legitimate.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(amplifier)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[options]\n• Shindo Cortese ($20000) — Best for deeply warm, rich, harmonically complete and organic, flowing, elastic\n• ampsandsound Stereo 17 ($6000) — Best for deep harmonic saturation and extraordinary micro-detail"
+  },
+  {
+    "id": "TS-01",
+    "category": "troubleshooting",
+    "prompt": "My system sounds bright and harsh. Topping DX7 Pro, NAD C316BEE, Elac Debut 2.0.",
+    "expectation": "Mechanism-first diagnosis; names the likely contributor; room acknowledged.",
+    "routedIntent": "diagnosis",
+    "routedPath": "diagnosis→consultation",
+    "response": "[comparisonSummary]\n**Topping:** Topping designs measurement-focused DACs and amplifiers using premium chip implementations (ESS Sabre, AKM). The philosophy prioritises measured performance — low distortion, low noise, and wide dynamic range.\n\n**Elac:** ELAC builds speakers across a wide range, from budget Debut series (designed by Andrew Jones) to reference Concentro flagships. The philosophy blends accessibility with genuine engineering ambition.\n\n**Topping:** neutral, clean tonality. high clarity, fast transient definition. light tonal weight; low harmonic emphasis.\n\n**Elac:** warm harmonic character.\n\nThe real choice: **precision and control** (Topping) vs **warmth and tonal body** (Elac).\n\nIf long listening sessions and tonal comfort matter to you, **Elac** is likely the better fit. If you prioritise clarity and transient precision — the ability to hear everything in a recording — **Topping** is where that lives.\n\nIf you want warmth and body → Elac\nIf you want precision and detail → Topping\n\nBoth are strong choices with different strengths — **Topping** leans toward clarity, **Elac** toward body, composure, and musical engagement. The right choice depends on whether you prioritise clarity or body, composure, and musical engagement in your system and with your music."
+  },
+  {
+    "id": "TS-02",
+    "category": "troubleshooting",
+    "prompt": "Voices sound recessed and distant on my system.",
+    "expectation": "Sensible triage questions or mechanism hypotheses — not generic filler.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "TS-03",
+    "category": "troubleshooting",
+    "prompt": "Why is my bass so weak? KEF LS50 on stands in a large living room.",
+    "expectation": "Physics honesty — small sealed monitor in a big room; placement + sub guidance.",
+    "routedIntent": "gear_inquiry",
+    "routedPath": "consultation",
+    "response": "[systemContext]\nKEF speakers reward clean, well-controlled amplification. They pair well with neutral to slightly warm electronics. Less forgiving of harsh or grainy upstream components.\n\nNotable design families: LS50 / LS60: Compact point-source monitors and active towers. R series (R3 Meta, R7 Meta): Larger cabinets with the same Uni-Q driver. Reference / Blade: Flagship designs with advanced cabinet engineering and force-cancelling drivers.\n\nKEF speakers pair well with neutral-to-warm amplification. The LS50 Meta and R series work well with warm solid-state (Hegel, Naim, Pass) or tube-hybrid designs. Avoid pairing with bright or lean DACs — the precision can become fatiguing.\n\n[philosophy]\nKEF, founded by Raymond Cooke (UK (Maidstone, Kent)). KEF designs speakers around its proprietary Uni-Q coaxial driver, placing the tweeter at the acoustic centre of the midrange cone. The goal is point-source coherence and precise imaging. Engineering-led, measurement-informed.\n\n[followUp]\nAre you exploring the brand generally, or considering a specific model?"
+  },
+  {
+    "id": "TS-04",
+    "category": "troubleshooting",
+    "prompt": "I get listening fatigue after 30 minutes. What causes that?",
+    "expectation": "Credible fatigue mechanism list (treble energy, distortion, level); actionable next step.",
+    "routedIntent": "diagnosis",
+    "routedPath": "diagnosis→clarification",
+    "response": "(Diagnosis lane opening move — engine asks a component-aware clarifying question, e.g. \"Got it — let's figure out what's going on. Does it sound thin, digital, fatiguing, or lifeless — or something else?\" then gathers symptoms across turns.)"
+  },
+  {
+    "id": "PH-01",
+    "category": "philosophy",
+    "prompt": "Do cables actually matter?",
+    "expectation": "A grown-up answer with a point of view — neither cable-denial nor snake oil.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "PH-02",
+    "category": "philosophy",
+    "prompt": "Is room treatment more important than electronics?",
+    "expectation": "Clear hierarchy opinion with reasoning.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "PH-03",
+    "category": "philosophy",
+    "prompt": "Is streaming as good as vinyl?",
+    "expectation": "Frames it as presentation difference not fidelity war; has a stance.",
+    "routedIntent": "music_input",
+    "routedPath": "music_input→question→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "PH-04",
+    "category": "philosophy",
+    "prompt": "What is the difference between R2R and delta-sigma DACs?",
+    "expectation": "Accurate, hearable-difference-focused explanation.",
+    "routedIntent": "comparison",
+    "routedPath": "consultation",
+    "response": "[systemContext]\nWorth knowing: Implementation quality varies significantly — not all R2R designs sound the same.\n\n[philosophy]\nResistor-ladder conversion using matched resistor networks for direct voltage output.\n\n[followUp]\nAre you considering this type of design for your system?"
+  },
+  {
+    "id": "PH-05",
+    "category": "philosophy",
+    "prompt": "Why do tube amps sound different from solid state?",
+    "expectation": "Mechanism-grounded (harmonic profile, damping, clipping) without myth.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "BG-01",
+    "category": "beginner",
+    "prompt": "Build me a $3,000 system from scratch",
+    "expectation": "A concrete starter system with allocation logic — not a questionnaire wall.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "shopping(general)→empty→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "BG-02",
+    "category": "beginner",
+    "prompt": "What should I look for in my first turntable?",
+    "expectation": "Practical guidance (cartridge, phono stage, isolation) at beginner altitude.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(turntable)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[options]\n• VPI Cliffwood ($1000) — Best for warm and harmonically rich and good macro dynamics\n• Pro-Ject Debut PRO ($999) — Best for warm and tonally full and relaxed timing\n• Rega Planar 3 ($1095) — Best for rhythmic drive and timing conviction and slightly lean tonal balance"
+  },
+  {
+    "id": "BG-03",
+    "category": "beginner",
+    "prompt": "What does speaker sensitivity mean?",
+    "expectation": "Clear explanation with a practical consequence (amp matching).",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "BG-04",
+    "category": "beginner",
+    "prompt": "Are expensive speakers actually better?",
+    "expectation": "Honest diminishing-returns answer with a point of view.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "EC-01",
+    "category": "edge_case",
+    "prompt": "Assess my system: Fooblaster 9000, Sonic Deathray Mk II",
+    "expectation": "Graceful unknown-product handling — no fabricated traits, no crash, useful next step.",
+    "routedIntent": "consultation_entry",
+    "routedPath": "unrouted→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "EC-02",
+    "category": "edge_case",
+    "prompt": "harbeth shl5 plus hegel h190 bluesound node thoughts",
+    "expectation": "Same as SA-01 despite no punctuation or \"assess\" verb.",
+    "routedIntent": "gear_inquiry",
+    "routedPath": "consultation",
+    "response": "[systemContext]\nWorks well: paired with warm or tonally dense speakers — the slight warmth adds up agreeably — control and grip from the amp, tonal body from the speakers.\n\nWorks well: paired with difficult loads (low impedance, multi-driver) — the high damping factor and current delivery shine — bass control and dynamic authority are exceptional.\n\nWorth noting: in systems already lean or analytical — mild warmth helps but may not fully offset clinical sources or speakers — consider a warmer DAC or warmer speakers upstream.\n\nHegel + KEF, Wilson, or B&W is a common pairing — the grip and control complements modern multi-driver designs. Less common with high-efficiency or tube-friendly speakers where the control can suppress the speaker's natural character.\n\nReference sources: What Hi-Fi?: Five-star review praising composure and dynamic authority. Stereophile: Review noting the H190's transparent, grip-oriented character with mild warmth and high damping.\n\n[philosophy]\nNorwegian integrated with 150W into 8Ω, built-in DAC and network streamer, and Hegel's proprietary SoundEngine2 topology. Neutral-to-warm character: clean, uncolored power delivery with mild tonal body that keeps the presentation from going clinical. High damping factor delivers iron grip and bass control. An all-in-one that handles difficult loads with ease.\n\nThe design is built on Class AB solid-state with SoundEngine2, 150W into 8Ω, integrated DAC and network streamer, high damping factor architecture.\n\nRetail price: approximately $4,000.\n\n[followUp]\nAre you considering this for a specific system, or exploring what it would bring?"
+  },
+  {
+    "id": "EC-03",
+    "category": "edge_case",
+    "prompt": "assess my system: harbeth schl5+, hegal h190",
+    "expectation": "Misspellings (schl5, hegal) resolved or gracefully flagged.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA system voiced toward warmth and body. This is a coherent, deliberately assembled system. The system leans toward grip and control across multiple stages — this shapes both its strengths and its primary limitation.\n\n[systemContext]\n**System read**\n\nThe Hegel H190 leans toward resolution and precision, reinforced by the Harbeth. In practice, expect clarity, timing, and spatial precision to lead the presentation. The Hegel H190 paired with warm or tonally dense speakers is a documented match: the slight warmth adds up agreeably — control and grip from the amp, tonal body from the speakers.\n\n**System logic**\nHegel H190 → Class AB solid-state with SoundEngine2, 150W into 8Ω → preserves upstream character\nHarbeth → tone-rich presentation → reinforces the direction the Hegel sets\nHegel H190 and Harbeth reinforce the same direction.\n\n**Primary leverage**\n\nThe amplifier.\n\nHegel H190 limits top-end air and transient sparkle, and tonal ease and forgiveness. Change it and the rest of the system should open up.\n\n**Decision**\n\nKEEP if you value speed, separation, spatial clarity.\n\nCHANGE the amplifier if the system sounds constrained. Hegel H190 likely limits what the rest of the chain can deliver.\n\n**Trade-offs**\n\n- Upgrading Hegel H190 lifts resolution, changes system balance\n- Tube stage adds texture, softens control\n- Current setup excels on sparse music, exposes thinness on dense tracks\n\n**Next step options**\n\n- Compare amplifier alternatives to Hegel H190\n- Check if amplifier change shifts enough\n\n**Do nothing check**\n\nIf the system sounds right, it is right. Swapping components without clear cause risks losing coherence without gaining engagement.\n\n[keyObservation]\nYour component choices suggest a preference for equipment emphasising **harmonic richness and tonal weight**. Hegel H190, Harbeth share this design philosophy. The system leans toward grip and control, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.\n\n[assessmentStrengths]\nHegel H190 adds composure under complex passages\n\n[assessmentLimitations]\nStacked warmth may reduce transient precision and spatial clarity\nComplex, dense recordings could sound congested\n\n[upgradeDirection]\nIf you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "EC-04",
+    "category": "edge_case",
+    "prompt": "Que penses-tu de mon système? Focal Aria 906 avec un ampli Naim",
+    "expectation": "Mixed-language input — either handles it or degrades gracefully in English.",
+    "routedIntent": "gear_inquiry",
+    "routedPath": "consultation",
+    "response": "[comparisonSummary]\n**Focal:** Focal builds three-way bass-reflex with beryllium tweeter and related architectures. French design combining Focal's beryllium tweeter precision with a warm, full cabinet voice.\n\n**Naim:** Naim designs prioritise rhythmic drive and musical timing. The engineering philosophy treats the system — source, supply, amplification — as a single design rather than discrete components, and emphasises pace and engagement over tonal weight or spatial refinement.\n\nThe real choice: **clarity** (Focal) vs **articulation, rhythmic drive, clarity, and spatial presence** (Naim). Different priorities, not a quality gap.\n\nThis is ultimately a question of what you want more of in your listening — warmth and body, or speed and resolution. That preference, more than any specification, determines which direction is right.\n\nFocal leans toward clarity\nNaim leans toward articulation, rhythmic drive, clarity, and spatial presence\n\nBoth are strong choices with different strengths — **Focal** leans toward clarity, **Naim** toward articulation, rhythmic drive, clarity, and spatial presence. The right choice depends on whether you prioritise clarity or articulation, rhythmic drive, clarity, and spatial presence in your system and with your music.\n\n[followUp]\nWhich models are you comparing? That changes the picture — and if you tell me your speakers, the recommendation gets sharper."
+  },
+  {
+    "id": "EC-05",
+    "category": "edge_case",
+    "prompt": "Assess my system: just a pair of KEF LS50s",
+    "expectation": "Incomplete system — asks the right single question or assesses what exists.",
+    "routedIntent": "consultation_entry",
+    "routedPath": "consultation",
+    "response": "[systemContext]\nKEF speakers reward clean, well-controlled amplification. They pair well with neutral to slightly warm electronics. Less forgiving of harsh or grainy upstream components.\n\nNotable design families: LS50 / LS60: Compact point-source monitors and active towers. R series (R3 Meta, R7 Meta): Larger cabinets with the same Uni-Q driver. Reference / Blade: Flagship designs with advanced cabinet engineering and force-cancelling drivers.\n\nKEF speakers pair well with neutral-to-warm amplification. The LS50 Meta and R series work well with warm solid-state (Hegel, Naim, Pass) or tube-hybrid designs. Avoid pairing with bright or lean DACs — the precision can become fatiguing.\n\n[philosophy]\nKEF, founded by Raymond Cooke (UK (Maidstone, Kent)). KEF designs speakers around its proprietary Uni-Q coaxial driver, placing the tweeter at the acoustic centre of the midrange cone. The goal is point-source coherence and precise imaging. Engineering-led, measurement-informed.\n\n[followUp]\nAre you exploring the brand generally, or considering a specific model?"
+  },
+  {
+    "id": "EC-06",
+    "category": "edge_case",
+    "prompt": "my system is a Sondek and a Nait and some Kans",
+    "expectation": "Colloquial product names (LP12/Nait/Kan) recognized or gracefully queried.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "NT-01",
+    "category": "natural",
+    "prompt": "ok so I have about $1500 and my system sounds kind of lifeless, not sure if it's the amp or what",
+    "expectation": "Reads the mixed diagnose+budget intent; answers before interrogating.",
+    "routedIntent": "diagnosis",
+    "routedPath": "diagnosis→clarification",
+    "response": "(Diagnosis lane opening move — engine asks a component-aware clarifying question, e.g. \"Got it — let's figure out what's going on. Does it sound thin, digital, fatiguing, or lifeless — or something else?\" then gathers symptoms across turns.)"
+  },
+  {
+    "id": "NT-02",
+    "category": "natural",
+    "prompt": "everyone on reddit says buy a miniDSP Flex, do I need one?",
+    "expectation": "A point of view on DSP-in-the-chain, not a shrug.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "shopping(general)→empty→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "NT-03",
+    "category": "natural",
+    "prompt": "wife says the speakers are too big. something small that still sounds good?",
+    "expectation": "Compact-speaker guidance with real picks; warmth about the constraint.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "NT-04",
+    "category": "natural",
+    "prompt": "is class D finally good",
+    "expectation": "Current honest read on Purifi/Hypex-era Class D.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "NT-05",
+    "category": "natural",
+    "prompt": "I keep switching between my Qutest and my Pontus and I honestly can't decide which I like",
+    "expectation": "Names the actual character fork and gives permission to pick one.",
+    "routedIntent": "comparison",
+    "routedPath": "consultation",
+    "response": "[systemContext]\nWorks well: paired with fast or precision-oriented amplifiers — the R2R tonal density and the amplifier's speed tend to complement — body without sluggishness.\n\nWorth noting: in systems that are already tonally dense or warm — the cumulative weight can reduce clarity — bass and lower midrange may feel heavy.\n\nPairs well with fast or transparent amplifiers where the R2R density is balanced by downstream speed. Widely used with solid-state amplification from brands like Benchmark, Topping, and Pass Labs. Can compound warmth with tube amplifiers — works best when the tube stage is on the transparent side.\n\nReference sources: Audiophile Style: Detailed review of R2R architecture and harmonic character. Audio Science Review: Measurement and listening coverage of the 12th anniversary revision. 6moons: Review covering the Pontus II tonal authority and R2R staging. Darko.Audio: Comparison placing Pontus in the Denafrips lineup and R2R landscape. Head-Fi / Audiogon communities: Extensive comparisons with Chord, Schiit, and ESS-based alternatives.\n\n[philosophy]\nFull-scale R2R with rich tonal density, strong harmonic texture, and refined composure. Prioritizes body and musical weight over transient sharpness.\n\nThe design is built on R2R architecture.\n\nRetail price: approximately $1,499.\n\n[followUp]\nAre you considering this for a specific system, or exploring what it would bring?"
+  },
+  {
+    "id": "NT-06",
+    "category": "natural",
+    "prompt": "what would you pair with cornwalls",
+    "expectation": "High-sensitivity amp guidance; lowercase informal input handled.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "NT-07",
+    "category": "natural",
+    "prompt": "thinking about selling my hegel for a leben, am I crazy",
+    "expectation": "The real trade (control vs tone) named; a stance taken.",
+    "routedIntent": "gear_inquiry",
+    "routedPath": "consultation",
+    "response": "[comparisonSummary]\n**Hegel:** Hegel designs amplifiers around their proprietary \"SoundEngine\" technology — a patented feed-forward error correction system that aims to eliminate distortion without the phase issues of conventional negative feedback. High damping factor, strong speaker control, integrated streaming and DAC in many models.\n\n**Leben:** Leben Hi-Fi Stereo Company builds hand-wired tube amplifiers in the Japanese tradition — small-scale, obsessively crafted, voiced by ear. Taku Hyodo founded the firm after his career as a Luxman engineer, carrying the Luxman voicing into an explicitly small-batch tube format.\n\n**Hegel:** controlled, composed, neutral to slightly cool. macrodynamic authority — grip and slam. structured, precise imaging on a flatter stage than tube designs.\n\n**Leben:** warm, tonally dense, rhythmically alive. midrange weight and texture — voices and acoustic instruments with body. surprising bass grip for a push-pull tube design.\n\nThe real choice: **technical accuracy through control and precision** (Hegel) vs **musical realism through flow and harmonic richness** (Leben). These are not small variations of the same idea — they are fundamentally different interpretations of what \"good sound\" means.\n\nIf long listening sessions and tonal comfort matter to you, **Leben** is likely the better fit. If you prioritise clarity and transient precision — the ability to hear everything in a recording — **Hegel** is where that lives.\n\nIf you want warmth and body → Leben\nIf you want precision and detail → Hegel\n\nIn most systems, **Leben** is the more natural match unless you're explicitly chasing maximum control and neutrality. Leben designs around hand-wired push-pull KT77 / KT88 / EL34 tube topology with very low negative feedback. Hegel engineers proprietary \"SoundEngine\" feed-forward error correction with high damping factor. The result, in listening: Leben reads warm, tonally dense, rhythmically alive; Hegel reads controlled, composed, neutral to slightly cool.\n\n[followUp]\nWhich models are you comparing? That changes the picture — and if you tell me your speakers, the recommendation gets sharper."
+  },
+  {
+    "id": "NT-08",
+    "category": "natural",
+    "prompt": "do i need a streamer or can i just use my laptop",
+    "expectation": "Honest answer about when a streamer matters.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(streamer)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• Eversolo DMP-A6 ($649) — The entry point for serious streaming — capable DAC built in, nothing else to buy at launch.\n• Bluesound Node X ($699) — Best when BluOS multi-room control matters or the rest of the system needs a clean, uncoloured source.\n• Auralic Aries G1.1 ($1799) — A transport upgrade for those with a quality DAC who want the streaming source to stop being the weak link."
+  },
+  {
+    "id": "NT-09",
+    "category": "natural",
+    "prompt": "whats a good tube amp that wont blow up my budget",
+    "expectation": "Affordable tube picks with honest expectations.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(amplifier)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• Quad VA-One+ ($1300) — Best for warm, sweet, harmonically rich and organic, flowing, elastic\n• Scott 222B / 222C ($1200) — Best for classic american tube warmth and relaxed, unhurried musical flow"
+  },
+  {
+    "id": "NT-10",
+    "category": "natural",
+    "prompt": "speakers for a desk setup, mostly listening at low volume",
+    "expectation": "Nearfield + low-level-listening guidance (sensitivity, tonal balance at low SPL).",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "NT-11",
+    "category": "natural",
+    "prompt": "I have Maggies and everyone says I need more power but the ones I hear with big amps sound worse to me",
+    "expectation": "Takes the listener's observation seriously; explains what they may be hearing.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(amplifier)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• Shindo Cortese ($20000) — Best for deeply warm, rich, harmonically complete and organic, flowing, elastic\n• ampsandsound Stereo 17 ($6000) — Best for deep harmonic saturation and extraordinary micro-detail"
+  },
+  {
+    "id": "NT-12",
+    "category": "natural",
+    "prompt": "honestly just tell me if the LS50 meta is overhyped",
+    "expectation": "Direct verdict with reasoning — no fence-sitting.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "RS-01",
+    "category": "room_setup",
+    "prompt": "How far from the wall should I place my speakers?",
+    "expectation": "Practical placement guidance (rear-port vs sealed, room modes).",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "RS-02",
+    "category": "room_setup",
+    "prompt": "Do I need acoustic panels in a 12x14 room?",
+    "expectation": "Honest first-reflections/absorption answer at hobbyist altitude.",
+    "routedIntent": "music_input",
+    "routedPath": "music_input→question→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "RS-03",
+    "category": "room_setup",
+    "prompt": "My speakers sound boomy in the corner of the living room",
+    "expectation": "Boundary-reinforcement diagnosis; placement fixes before gear.",
+    "routedIntent": "diagnosis",
+    "routedPath": "diagnosis→clarification",
+    "response": "(Diagnosis lane opening move — engine asks a component-aware clarifying question, e.g. \"Got it — let's figure out what's going on. Does it sound thin, digital, fatiguing, or lifeless — or something else?\" then gathers symptoms across turns.)"
+  },
+  {
+    "id": "RS-04",
+    "category": "room_setup",
+    "prompt": "whats the ideal toe-in for bookshelf speakers",
+    "expectation": "Toe-in guidance with the imaging/treble trade explained.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "RS-05",
+    "category": "room_setup",
+    "prompt": "Does it matter if one speaker cable run is longer than the other?",
+    "expectation": "Honest physics answer — no, at domestic lengths.",
+    "routedIntent": "cable_advisory",
+    "routedPath": "unrouted→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "RS-06",
+    "category": "room_setup",
+    "prompt": "How high should speaker stands be?",
+    "expectation": "Tweeter-at-ear-height rule with practical nuance.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "LS-01",
+    "category": "lifestyle",
+    "prompt": "what's the best bluetooth speaker?",
+    "expectation": "Bluetooth speakers, NOT passive hi-fi (GTM Bug 1 regression).",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "LS-02",
+    "category": "lifestyle",
+    "prompt": "best soundbar for a small apartment",
+    "expectation": "Consumer soundbar guidance or honest referral — no passive speakers.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(general)→empty→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "LS-03",
+    "category": "lifestyle",
+    "prompt": "are AirPods Max worth it",
+    "expectation": "Honest consumer-headphone verdict.",
+    "routedIntent": "gear_inquiry",
+    "routedPath": "shopping(general)→empty→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "LS-04",
+    "category": "lifestyle",
+    "prompt": "I want a record player with built in speakers",
+    "expectation": "Meets the ask honestly (all-in-one guidance), maybe a gentle upgrade path.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(speaker)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• DeVore Orangutan O/96 ($12000) — Best for effortless dynamics and full, weighty tone\n• DeVore Fidelity Orangutan O/93 ($4500) — Best for natural musical flow and effortless dynamic scale"
+  },
+  {
+    "id": "LS-05",
+    "category": "lifestyle",
+    "prompt": "sonos or bose for whole home audio",
+    "expectation": "Consumer multiroom comparison or honest general answer.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "LS-06",
+    "category": "lifestyle",
+    "prompt": "best headphones for the gym",
+    "expectation": "Consumer answer — sweat resistance, fit; not audiophile cans.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(headphone)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• HiFiMAN Susvara [over-ear] ($6000) — Best for clarity and spatial precision\n• Raal-Requisite 1995 Immanis [over-ear] ($6000) — Best for neutral and transparent and open, room-like staging that conventional headphones\n• Meze Empyrean II [over-ear] ($3000) — Best for warmth and tonal richness"
+  },
+  {
+    "id": "CG-01",
+    "category": "chatgpt_style",
+    "prompt": "Help me choose a DAC under $1500 for a warm-sounding system — give me a ranked list with reasons",
+    "expectation": "Ranked shortlist with per-pick rationale, respects budget and warmth context.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(dac)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you prefer more warmth and body, or more precision and transient speed?\n\n[options]\n• Denafrips Pontus II 12th-1 ($1499) — Best for rich harmonic density and layered, dimensional texture\n• Gustard X26 Pro ($1200) — Best for detail retrieval and composure and control\n• Chord Qutest ($1295) — Best for exceptional transient resolution and fine-grained detail without analytical edge"
+  },
+  {
+    "id": "CG-02",
+    "category": "chatgpt_style",
+    "prompt": "I have $5000 total for speakers and an amp for a 20 square meter room, mostly jazz and vocals. What would you buy?",
+    "expectation": "Concrete allocation + picks with reasoning.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(speaker)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• Cube Audio Nenuphar Mini (Nendo) ($3800) — Best for a single driver handling the full and the open-back cabinet sends energy rearward\n• Klipsch Heresy IV ($3198) — Best for punchy and dynamic and blazing speed\n• Ocellia Calliope .21 ($4800) — Best for warm and richly textured midrange and warm, tactile textures"
+  },
+  {
+    "id": "CG-03",
+    "category": "chatgpt_style",
+    "prompt": "Give me three integrated amplifier options at $1000, $2000, and $3000 and tell me what improves at each step",
+    "expectation": "Tiered picks with an honest diminishing-returns story.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "shopping(amplifier)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• Leben CS300 ($2800) — Best for punchy and expressive and insistent rhythmic drive\n• Line Magnetic LM-211IA ($2800) — Best for relaxed, flowing musical phrasing and rich, warm, and harmonically saturated\n• Kinki Studio EX-M1+ ($2898) — Best for neutral and effortless composure"
+  },
+  {
+    "id": "CG-04",
+    "category": "chatgpt_style",
+    "prompt": "What should I upgrade first with $800: Bluesound Node, Cambridge CXA81, or KEF Q350?",
+    "expectation": "Ranked upgrade answer with a mechanism, not a questionnaire.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(general)→empty→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "CG-05",
+    "category": "chatgpt_style",
+    "prompt": "Compare the Denafrips Ares and the SMSL SU-9 and tell me which one to buy",
+    "expectation": "R2R vs delta-sigma character fork; a verdict.",
+    "routedIntent": "comparison",
+    "routedPath": "consultation",
+    "response": "[comparisonSummary]\n**Denafrips:** Denafrips designs around discrete R2R ladder conversion — resistor networks that convert digital audio directly to analog voltage. The philosophy prioritises tonal density, harmonic texture, and musical flow over measured precision.\n\n**SMSL:** SMSL designs compact, measurement-oriented DACs and amplifiers. Similar design philosophy to Topping — ESS and AKM chip implementations optimised for measured performance at accessible prices.\n\n**Denafrips:** warm, dense, harmonically rich. relaxed transient timing — softer leading edges than delta-sigma. spatial presentation dimensional rather than precision-imaged.\n\n**SMSL:** neutral, clean tonality.\n\nThe real choice: **warmth and tonal body** (Denafrips) vs **precision and control** (SMSL).\n\nIf long listening sessions and tonal comfort matter to you, **Denafrips** is likely the better fit. If you prioritise clarity and transient precision — the ability to hear everything in a recording — **SMSL** is where that lives.\n\nIf you want warmth and body → Denafrips\nIf you want precision and detail → SMSL\n\nIn most systems, **Denafrips** is the more natural match unless you're explicitly chasing maximum control and neutrality. Denafrips leans toward warmth, density, and listening ease — traits that tend to sustain comfort over long sessions. SMSL prioritises speed and analytical resolution, which rewards focused critical listening but can narrow the range of recordings that feel enjoyable."
+  },
+  {
+    "id": "CG-06",
+    "category": "chatgpt_style",
+    "prompt": "What are the best used amplifier bargains right now?",
+    "expectation": "Real used-market picks with honest caveats.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(amplifier)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• Shindo Cortese ($20000) — Best for deeply warm, rich, harmonically complete and organic, flowing, elastic\n• ampsandsound Stereo 17 ($6000) — Best for deep harmonic saturation and extraordinary micro-detail"
+  },
+  {
+    "id": "CN-01",
+    "category": "conceptual",
+    "prompt": "what is soundstage",
+    "expectation": "Clear, hearable-difference explanation.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "CN-02",
+    "category": "conceptual",
+    "prompt": "does burn-in matter or is it a myth",
+    "expectation": "Honest position — drivers settle a little, electronics mostly no.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "CN-03",
+    "category": "conceptual",
+    "prompt": "what does an amplifier actually do for sound quality",
+    "expectation": "Beginner-honest answer about amps and audible differences.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "CN-04",
+    "category": "conceptual",
+    "prompt": "how many watts do I actually need",
+    "expectation": "Sensitivity + room + listening level arithmetic in plain words.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "CN-05",
+    "category": "conceptual",
+    "prompt": "whats a preamp even for",
+    "expectation": "Clear role explanation (gain, source switching, volume).",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "CN-06",
+    "category": "conceptual",
+    "prompt": "why does vinyl sound better",
+    "expectation": "Presentation-vs-fidelity framing with a stance, no myth.",
+    "routedIntent": "music_input",
+    "routedPath": "music_input→question→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "SA-13",
+    "category": "system_assessment",
+    "prompt": "Assess my system: Rega Planar 3, Schiit Modi 3, Yamaha A-S701, Q Acoustics 3050i",
+    "expectation": "Fair read of a mainstream starter system without snobbery.",
+    "routedIntent": "system_assessment",
+    "routedPath": "system_assessment",
+    "response": "[introSummary]\nA system with no strong lean in any single direction. This is a coherent, deliberately assembled system that likely punches above its price tier. The overall character emerges from how these components interact rather than any single piece dominating.\n\n[systemContext]\n**System read**\n\nThe Rega Planar 3, Schiit Modi, and Yamaha A-S701 form a well-balanced system with no obvious weak point.\n\n**System logic**\nSchiit Modi → delta-sigma (AKM) → sets the tonal foundation\nRega Planar 3 → clean, neutral feed → stays out of the way\nYamaha A-S701 → neutral, controlled → contributes to overall character\n\n**Primary leverage**\n\nThe DAC.\n\nSchiit Modi limits soundstage size. Change it and the rest of the system should open up.\n\n**Decision**\n\nKEEP if you value balance, coherence.\n\nCHANGE the dac if the system sounds constrained. Schiit Modi likely limits what the rest of the chain can deliver.\n\n**Trade-offs**\n\n- Leaner DAC adds speed, reduces harmonic weight\n- Solid-state swap adds grip, reduces harmonic bloom\n- Current setup excels on dense music, exposes thinness on sparse tracks\n\n**Next step options**\n\n- Move toward more resolving DAC options\n- Compare Schiit Modi vs delta-sigma alternatives\n\n**Do nothing check**\n\nIf the music sounds engaging, this system is doing its job. Yamaha A-S701 define the character — changing either reshapes what you hear.\n\n[keyObservation]\nYour component choices suggest a preference for equipment emphasising **neutrality and transparency**. Rega Planar 3, Schiit Modi, Yamaha A-S701 share this design philosophy. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.\n\n[assessmentStrengths]\nSystem character depends on how components interact in practice — further listening context would refine this\n\n[upgradeDirection]\nNo single tonal or textural direction dominates here. Any change would shift the character rather than fix a gap. If you want to explore, focus on the quality you most want to intensify — but \"do nothing\" is a strong option.\n\n[followUp]\nWhat are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?"
+  },
+  {
+    "id": "SA-14",
+    "category": "system_assessment",
+    "prompt": "rate my setup: WiiM Ultra, Fosi V3, Polk ES20",
+    "expectation": "Budget system respected on its own terms; honest ceiling.",
+    "routedIntent": "consultation_entry",
+    "routedPath": "consultation",
+    "response": "[philosophy]\nMid-tier network streamer with improved DAC stage and analogue output over the WiiM Pro. Supports room correction and multiroom. Still best used as a transport, but the internal DAC is competent for its price.\n\nThe design is built on ESS ES9038Q2M architecture.\n\nRetail price: approximately $330.\n\n[followUp]\nAre you considering this for a specific system, or exploring what it would bring?"
+  },
+  {
+    "id": "UP-07",
+    "category": "upgrade",
+    "prompt": "Is a streamer upgrade audible if I already have a good DAC?",
+    "expectation": "Honest bits-are-bits-with-caveats answer.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(dac)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• Rockna Wavelight ($4200) — Best for best imaging and balanced and refined\n• TotalDAC d1-unity ($12500) — Best for natural and organic and strong dynamic contrast between instruments"
+  },
+  {
+    "id": "UP-08",
+    "category": "upgrade",
+    "prompt": "Should I add a subwoofer or upgrade my bookshelf speakers?",
+    "expectation": "A real either/or verdict with a mechanism.",
+    "routedIntent": "comparison",
+    "routedPath": "shopping(speaker)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• DeVore Orangutan O/96 ($12000) — Best for effortless dynamics and full, weighty tone\n• DeVore Fidelity Orangutan O/93 ($4500) — Best for natural musical flow and effortless dynamic scale"
+  },
+  {
+    "id": "PD-08",
+    "category": "purchase",
+    "prompt": "Cambridge CXA81 vs Rega Elex Mk4",
+    "expectation": "Credible character comparison with a lean.",
+    "routedIntent": "comparison",
+    "routedPath": "consultation",
+    "response": "[systemContext]\nWorks well: with warm or rolled-off speakers — clarity and detail bring system alive — compensatory pairing.\n\nWorth noting: with already analytical systems — may accent system edge — consider tonal balance.\n\nWorks well: in transparent source chains — analytical design reveals source character accurately.\n\nReference sources: Stereophile: Praised for budget analytical performance and British clarity. The Absolute Sound: Noted as excellent budget transparent integrated.\n\n[philosophy]\nI know Cambridge Audio well, but I haven't spent enough time with the Rega Elex Mk4 to compare them fairly. Here's what I can say with confidence.\n\nBritish analytical integrated at budget pricing. 80W Class AB delivers clean, detailed, neutral presentation. Known for clarity and transparency without coldness. Excellent for revealing source material and system architecture. Analytical but musical — avoids artificial coloration while maintaining engagement.\n\nThe design is built on Class AB, 80W/ch, neutral, clean, analytical British design architecture.\n\nRetail price: approximately $1,300.\n\n[followUp]\nAre you considering this for a specific system, or exploring what it would bring?"
+  },
+  {
+    "id": "PD-09",
+    "category": "purchase",
+    "prompt": "Is the KEF LS50 Meta actually better than the original LS50?",
+    "expectation": "Generation-over-generation honesty (MAT absorber, refinement).",
+    "routedIntent": "gear_inquiry",
+    "routedPath": "consultation",
+    "response": "[systemContext]\nKEF speakers reward clean, well-controlled amplification. They pair well with neutral to slightly warm electronics. Less forgiving of harsh or grainy upstream components.\n\nNotable design families: LS50 / LS60: Compact point-source monitors and active towers. R series (R3 Meta, R7 Meta): Larger cabinets with the same Uni-Q driver. Reference / Blade: Flagship designs with advanced cabinet engineering and force-cancelling drivers.\n\nKEF speakers pair well with neutral-to-warm amplification. The LS50 Meta and R series work well with warm solid-state (Hegel, Naim, Pass) or tube-hybrid designs. Avoid pairing with bright or lean DACs — the precision can become fatiguing.\n\n[philosophy]\nKEF, founded by Raymond Cooke (UK (Maidstone, Kent)). KEF designs speakers around its proprietary Uni-Q coaxial driver, placing the tweeter at the acoustic centre of the midrange cone. The goal is point-source coherence and precise imaging. Engineering-led, measurement-informed.\n\n[followUp]\nAre you exploring the brand generally, or considering a specific model?"
+  },
+  {
+    "id": "BY-01",
+    "category": "purchase",
+    "prompt": "best integrated amp around $1500 that isn't bright",
+    "expectation": "Warm/neutral picks under budget with rationale.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(amplifier)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• NAD C 3050 ($1500) — Best for fast and articulate and clean, detailed, transparent\n• Goldmund / JOB 225 ($1500) — Best for explosive dynamic authority and lightning-fast transients"
+  },
+  {
+    "id": "BY-02",
+    "category": "purchase",
+    "prompt": "recommend a phono preamp under $300",
+    "expectation": "In-budget phono stage picks.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(amplifier)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• WiiM AMP ($299) — Best for clean class d output and neutral\n• Trends Audio TA-10 ($99) — Best for extremely fast transient response and lively and elastic"
+  },
+  {
+    "id": "TS-05",
+    "category": "troubleshooting",
+    "prompt": "I hear a hum only when the turntable is playing",
+    "expectation": "Ground-loop/cartridge triage — the classic answer.",
+    "routedIntent": "diagnosis",
+    "routedPath": "diagnosis→clarification",
+    "response": "(Diagnosis lane opening move — engine asks a component-aware clarifying question, e.g. \"Got it — let's figure out what's going on. Does it sound thin, digital, fatiguing, or lifeless — or something else?\" then gathers symptoms across turns.)"
+  },
+  {
+    "id": "TS-06",
+    "category": "troubleshooting",
+    "prompt": "music sounds great loud but boring at low volume",
+    "expectation": "Equal-loudness/Fletcher-Munson honesty; practical suggestions.",
+    "routedIntent": "diagnosis",
+    "routedPath": "diagnosis→clarification",
+    "response": "(Diagnosis lane opening move — engine asks a component-aware clarifying question, e.g. \"Got it — let's figure out what's going on. Does it sound thin, digital, fatiguing, or lifeless — or something else?\" then gathers symptoms across turns.)"
+  },
+  {
+    "id": "BG-05",
+    "category": "beginner",
+    "prompt": "whats the difference between an integrated amp and a receiver",
+    "expectation": "Clean beginner distinction.",
+    "routedIntent": "comparison",
+    "routedPath": "unrouted→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "BG-06",
+    "category": "beginner",
+    "prompt": "do I need a DAC if my amp has one built in",
+    "expectation": "Honest answer about built-in vs external DACs.",
+    "routedIntent": "intake",
+    "routedPath": "intake→question→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "VG-01",
+    "category": "natural",
+    "prompt": "my setup sounds meh",
+    "expectation": "Graceful, answer-first handling of a vague complaint.",
+    "routedIntent": "diagnosis",
+    "routedPath": "diagnosis→clarification",
+    "response": "(Diagnosis lane opening move — engine asks a component-aware clarifying question, e.g. \"Got it — let's figure out what's going on. Does it sound thin, digital, fatiguing, or lifeless — or something else?\" then gathers symptoms across turns.)"
+  },
+  {
+    "id": "VG-02",
+    "category": "natural",
+    "prompt": "harbeht or proac for classical?",
+    "expectation": "Misspelling resolved; BBC-school comparison.",
+    "routedIntent": "comparison",
+    "routedPath": "unrouted→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "VG-03",
+    "category": "natural",
+    "prompt": "is it worth upgading my dac",
+    "expectation": "Typo handled; honest DAC-upgrade answer.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "VG-04",
+    "category": "natural",
+    "prompt": "amp for kef ls50 meta pls",
+    "expectation": "Real pairing picks for a known low-sensitivity monitor.",
+    "routedIntent": "shopping",
+    "routedPath": "shopping(amplifier)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• Shindo Cortese ($20000) — Best for deeply warm, rich, harmonically complete and organic, flowing, elastic\n• ampsandsound Stereo 17 ($6000) — Best for deep harmonic saturation and extraordinary micro-detail"
+  },
+  {
+    "id": "VG-05",
+    "category": "natural",
+    "prompt": "sub $500 speakers that slap",
+    "expectation": "Reads the register; energetic budget picks.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "shopping(speaker)",
+    "response": "[expectedImpact]\nWithout more system context, this is a sound direction — but the audible difference may be modest.\n\n[followUp]\nDo you want this to lean more warm and punchy, or clean and controlled?\n\n[options]\n• Mission MS-50 ($100) — Best for warm, laid-back and modest dynamic range\n• Mission MS 50 8VET ($80) — Best for warm, forgiving, colored and excellent rhythmic coherence and musicality"
+  },
+  {
+    "id": "VG-06",
+    "category": "natural",
+    "prompt": "do tubes wear out",
+    "expectation": "Yes — tube life honesty with practical replacement guidance.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "VG-07",
+    "category": "natural",
+    "prompt": "my left speaker is quieter than the right",
+    "expectation": "Balance/channel triage — cables, balance control, source.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "VG-08",
+    "category": "natural",
+    "prompt": "loudness wars?",
+    "expectation": "Knows the term; mastering-compression explanation.",
+    "routedIntent": "audio_knowledge",
+    "routedPath": "llm-lane(audio_knowledge)",
+    "response": "(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.\")"
+  },
+  {
+    "id": "VG-09",
+    "category": "natural",
+    "prompt": "thinking about getting into vinyl, where do i start",
+    "expectation": "Warm on-ramp: table, phono stage, first records.",
+    "routedIntent": "music_input",
+    "routedPath": "music_input→question→llm-lane",
+    "response": "(Empty-turn guard → knowledge lane — prod answers with model prose. Fallback if LLM unavailable: \"I don't have enough structured data to answer this question thoroughly.\")"
+  },
+  {
+    "id": "VG-10",
+    "category": "natural",
+    "prompt": "is McIntosh worth the money or am i paying for the blue meters",
+    "expectation": "Honest brand-value verdict with a stance.",
+    "routedIntent": "comparison",
+    "routedPath": "consultation",
+    "response": "[systemContext]\nWorks well: with revealing or neutral speakers — Mac warmth brings system into musical balance — complementary pairing.\n\nWorth noting: in already warm or rolled-off systems — may compound warmth — consider system balance.\n\nWorks well: with dynamic or aggressive source material — 100W solid-state output provides adequate authority — versatile pairing.\n\nReference sources: Stereophile: Praised for classic McIntosh house sound and hybrid warmth. The Absolute Sound: Noted as excellent entry to McIntosh philosophy at accessible pricing.\n\n[philosophy]\nAmerican hybrid icon with legendary house sound. 12AX7/12AT7 tube preamp stage married to 100W solid-state output delivers iconic Mac warmth with modern power. Glass-front aesthetic delivers both visual and sonic presence. Rich, full-bodied, warm presentation with surprising dynamic authority. Reference for accessible tube-influenced musicality.\n\nThe design is built on Hybrid, 12AX7/12AT7 tube preamp + solid-state output, 100W/ch, iconic glass-front architecture.\n\nRetail price: approximately $3,500.\n\n[followUp]\nAre you considering this for a specific system, or exploring what it would bring?"
+  }
+]

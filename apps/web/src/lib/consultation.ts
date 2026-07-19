@@ -9773,14 +9773,37 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       if (wb === 'warm') return 'anchors the tonal foundation with warmth';
       return 'sets the tonal foundation';
     }
+    // Phase 2B — interaction before description: name the actual partner
+    // whose behaviour this component changes, when the chain makes it
+    // unambiguous. "Passes the Qutest's character through intact" explains
+    // a relationship; "preserves upstream character" describes a habit.
+    // Partners are referenced by brand (reviewer convention, and it keeps
+    // full names appearing exactly once in the prose) unless two chain
+    // components share the brand.
+    const partnerRef = (fullName: string): string => {
+      const brand = fullName.split(/\s+/)[0];
+      if (!brand || brand.length < 3) return fullName;
+      const shared = comps.filter(x => x.name.split(/\s+/)[0] === brand).length > 1;
+      return shared ? fullName : brand;
+    };
+    const upstreamSourceName =
+      comps.find(x => (x.role || '').toLowerCase() === 'dac')?.name
+      ?? sourceComps[0]?.name;
+
     // Amplifier: preserves or shapes
     if (roleKey === 'amplifier' || roleKey === 'amp' || roleKey === 'integrated') {
       // Does it match upstream (DAC) lean?
       if (wb === sysAxes.warm_bright && sd === sysAxes.smooth_detailed) return 'preserves speed and edge';
       if (wb === 'warm' && sysAxes.warm_bright === 'bright') return 'adds body to a lean upstream';
       if (wb === 'bright' && sysAxes.warm_bright === 'warm') return 'adds speed to a warm upstream';
-      if (wb === 'neutral') return 'low coloration, preserves upstream character';
-      return 'preserves upstream character';
+      if (wb === 'neutral') {
+        return upstreamSourceName && upstreamSourceName !== c.name
+          ? `low coloration — passes the ${partnerRef(upstreamSourceName)}'s character through intact`
+          : 'low coloration, preserves upstream character';
+      }
+      return upstreamSourceName && upstreamSourceName !== c.name
+        ? `carries the ${partnerRef(upstreamSourceName)}'s character forward`
+        : 'preserves upstream character';
     }
     // Speaker/headphone: final voice
     if (roleKey === 'speaker' || roleKey === 'speakers' || roleKey === 'headphone' || roleKey === 'headphones') {
@@ -9793,7 +9816,18 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
           ? 'adds body while preserving speed and flow'
           : 'adds body and prevents thinness';
       }
-      if (wb === sysAxes.warm_bright) return 'reinforces the system\'s overall lean';
+      if (wb === sysAxes.warm_bright) {
+        // Name the component that actually sets the tone — a neutral
+        // source "staying out of the way" cannot also "set the direction".
+        const toneSetter = comps.find(x => {
+          const r2 = (x.role || '').toLowerCase();
+          if (!/dac|amp|integrated|streamer|source|turntable/.test(r2) || x.name === c.name) return false;
+          return findings.perComponentAxes.find(a => a.name === x.name)?.axes.warm_bright === sysAxes.warm_bright;
+        });
+        return toneSetter
+          ? `reinforces the direction the ${partnerRef(toneSetter.name)} sets`
+          : 'reinforces the system\'s overall lean';
+      }
       if (wb === 'warm') return 'adds body at the output stage';
       return 'shapes the final presentation';
     }
@@ -9807,14 +9841,40 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     const bIdx = logicOrder.indexOf((b.role || '').toLowerCase());
     return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
   });
+  // Phase 2B — evidence selection. Every component has an engineering
+  // descriptor available, but showing all of them is decoration, not
+  // explanation. Score each note by how much it explains THIS system —
+  // constraint targets and evidenced pairings first, distinguishing
+  // technology next — and spend the engineering budget on the top two.
+  // The rest keep the terse axis behaviour: a reviewer names the facts
+  // that carry the story and leaves the rest out.
+  const engineeringRelevance = (name: string, note: string): number => {
+    let s = 0;
+    if (findings.bottleneck?.component === name) s += 3;
+    if (findings.pairingEvidence?.some(e => e.components.includes(name))) s += 2;
+    // Distinguishing content — numbers and named technology explain;
+    // bare category labels do not.
+    if (/\d/.test(note) || /FPGA|R2R|SoundEngine|THX|triode|KT\d|EL\d|MOSFET|coaxial|wide-?baffle|thin-wall|single-ended|push-pull|ZOTL|zero-feedback|feed-forward|Goldmund-derived|BBC-tradition/i.test(note)) s += 1;
+    if (/^(bass-reflex|ported|class[- ]?ab( solid[- ]?state)?|solid[- ]?state|standmount|floorstander|integrated)$/i.test(note.trim())) s -= 2;
+    return s;
+  };
+  const engineeringBudget = new Set(
+    (findings.componentEngineering ?? [])
+      .map(e => ({ name: e.name, score: engineeringRelevance(e.name, e.note) }))
+      .filter(e => e.score >= 1)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2)
+      .map(e => e.name),
+  );
+
   for (const c of sortedComps) {
     if (systemLogicRows.length >= 4) break;
     const compAxes = findings.perComponentAxes.find(a => a.name === c.name);
-    // Phase 2A: prefer the product's actual engineering descriptor over
-    // generic axis vocabulary — "FPGA — exceptional transient resolution"
-    // instead of "resolving, high flow conversion". Axis template remains
-    // the fallback for brand-only components.
-    const eng = findings.componentEngineering?.find(e => e.name === c.name)?.note;
+    // Engineering descriptor only when it earned its place; axis template
+    // otherwise (and always for brand-only components).
+    const eng = engineeringBudget.has(c.name)
+      ? findings.componentEngineering?.find(e => e.name === c.name)?.note
+      : undefined;
     const behavior = eng ?? deriveComponentBehavior(c, compAxes);
     const effect = deriveInteractionEffect(c, compAxes, axes);
     systemLogicRows.push(`${c.name} → ${behavior} → ${effect}`);
@@ -9831,9 +9891,9 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
         // every component carries part of the system's character.
         logicSummary = `Each component contributes to the system's ${synergyPhrase}.`;
       } else if (upBright > 0 || upDetailed > 0) {
-        logicSummary = `${upNames} push toward precision. The ${downNames} alone restores weight.`;
+        logicSummary = `${upNames} ${upstreamComps.length > 1 ? 'push' : 'pushes'} toward precision. The ${downNames} alone ${downstreamComps.length > 1 ? 'restore' : 'restores'} weight.`;
       } else {
-        logicSummary = `${upNames} push toward warmth. The ${downNames} alone adds definition.`;
+        logicSummary = `${upNames} ${upstreamComps.length > 1 ? 'push' : 'pushes'} toward warmth. The ${downNames} alone ${downstreamComps.length > 1 ? 'add' : 'adds'} definition.`;
       }
     } else {
       logicSummary = `${upNames} and ${downNames} reinforce the same direction.`;
@@ -10567,6 +10627,21 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     doNothingLine2 = 'If the music sounds engaging, the system is doing its job.';
   }
 
+  // Phase 2B — memorable-insight slot (one only, rule-ordered). When the
+  // read already carries an insight (a documented pairing or a
+  // transparency thesis), add nothing. Otherwise, if the speaker's entry
+  // declares room sensitivity, that is usually the single most useful
+  // thing an owner can be told: the room outweighs the electronics.
+  const readCarriesInsight =
+    Boolean(findings.pairingEvidence?.some((e) => e.valence === 'positive')) ||
+    (findings.transparencyDeclared ?? []).some((n) => upstreamComps.some((u) => u.name === n));
+  let insightLine = '';
+  if (!readCarriesInsight && findings.roomSensitivityNote) {
+    const rn = findings.roomSensitivityNote;
+    const noteLC = rn.note.charAt(0).toLowerCase() + rn.note.slice(1).replace(/\.$/, '');
+    insightLine = `One thing likely to matter more than any component swap: with the ${rn.component}, ${noteLC}.`;
+  }
+
   const doNothingCheck = [
     `**Do nothing check**`,
     ``,
@@ -10800,7 +10875,11 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     nextStepBullets.push('Explore directional alternatives');
     nextStepBullets.push('Compare topology options');
   }
-  nextStepBullets.push('Check system fit for your listening habits');
+  // Phase 2B — no filler: the generic "check system fit" bullet earned
+  // nothing. Only pad to two bullets when the list would otherwise be thin.
+  if (nextStepBullets.length < 2) {
+    nextStepBullets.push('Check system fit for your listening habits');
+  }
 
   const nextStepSection = [
     `**Next step options**`,
@@ -10843,6 +10922,11 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       ``,
       `If the system sounds right, it is right. Swapping components without clear cause risks losing coherence without gaining engagement.`,
     ].join('\n');
+  }
+  // Phase 2B — memorable-insight slot lands on the RENDERED do-nothing
+  // section (one insight per assessment; pairing evidence outranks it).
+  if (insightLine) {
+    doNothingSection = `${doNothingSection} ${insightLine}`;
   }
 
   // ── Final assembly (gold-standard output contract + do nothing check) ──
@@ -14790,10 +14874,26 @@ function extractMemoFindings(
     .filter((c) => isTransparencyDeclared(c.product))
     .map((c) => c.displayName);
 
+  // ── Room-sensitivity insight (Phase 2B) ──
+  // First speaker whose entry declares placement sensitivity. Prefer the
+  // sentence that mentions the room — that is the actionable part.
+  let roomSensitivityNote: MemoFindings['roomSensitivityNote'];
+  for (const c of components) {
+    const ps = c.product?.placementSensitivity;
+    if (!ps || ps.level === 'low' || !ps.notes) continue;
+    const sentences = ps.notes.split(/(?<=[.!?])\s+/);
+    const pick = sentences.find((s) => /room/i.test(s)) ?? sentences[0];
+    if (pick && pick.trim().length <= 160) {
+      roomSensitivityNote = { component: c.displayName, note: pick.trim(), level: ps.level };
+      break;
+    }
+  }
+
   return {
     componentEngineering,
     pairingEvidence,
     transparencyDeclared,
+    roomSensitivityNote,
     componentNames: components.map((c) => c.displayName),
     systemChain: {
       roles: chain.roles,
