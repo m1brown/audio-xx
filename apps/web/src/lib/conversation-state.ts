@@ -77,6 +77,15 @@ export interface ConvFacts {
   /** All user text collected during system_assessment (for re-running assessment). */
   systemAssessmentText?: string;
   /**
+   * Armed for exactly one turn: the first follow-up after an assessment
+   * that asks for upgrade direction ("what would I upgrade first?",
+   * "weakest link?"). The orchestrator consumes it and answers from the
+   * existing assessment instead of re-asking for the system.
+   */
+  assessmentFollowUpTurn?: boolean;
+  /** Set once the single continuity turn has been used. */
+  assessmentContinuityUsed?: boolean;
+  /**
    * Temporary / hypothetical chain named by the user in the current thread.
    * Takes precedence over the saved system for shopping, fit, and
    * compatibility reasoning as long as the thread does not explicitly
@@ -505,6 +514,12 @@ const COMPONENT_DESCRIPTION_PATTERNS = [
 function hasComponentDescription(text: string): boolean {
   return COMPONENT_DESCRIPTION_PATTERNS.some((p) => p.test(text));
 }
+
+// Direction-seeking follow-up after an assessment: asks WHICH move to make
+// without naming a replacement product. Kept narrow — explicit buying
+// intent ("I want to buy a new DAC") must still exit to shopping.
+const ASSESSMENT_DIRECTION_FOLLOWUP =
+  /\b(?:what|which|where)\b[^.?!]{0,60}\b(?:upgrade|improve|change|replace|swap\s+out|spend)\b|\bupgrade\s+(?:just\s+)?(?:one\s+thing|first|next|anything)\b|\b(?:change|improve)\s+(?:just\s+)?one\s+thing\b|\bweak(?:est)?\s+(?:link|point|spot)\b|\bholding\s+(?:it|things|everything|my\s+system)\s+back\b|\bbiggest\s+(?:improvement|impact|difference)\b|\bfirst\s+upgrade\b|\bupgrade\s+path\b|\bshould\s+i\s+(?:upgrade|replace|change)\s+(?:first|next|anything)\b/i;
 
 /**
  * Counts major system roles mentioned in text.
@@ -1340,6 +1355,28 @@ export function transition(
 
       // ── Ready to assess: user adds more components or clarifies ──
       if (current.stage === 'ready_to_assess') {
+        // ── Launch continuity (2026-07-19): first follow-up direction question ──
+        // "What would I upgrade first?" / "weakest link?" right after an
+        // assessment is answered FROM that assessment, not met with
+        // "what component are you looking to change?". Scope is one turn:
+        // the flag arms once, the orchestrator consumes it, and later
+        // direction questions take the normal clarify path. Questions
+        // naming a specific product (subjectCount > 0) keep the existing
+        // accumulate-and-reassess behaviour. Checked before accumulation
+        // so the question text never pollutes the stored system text.
+        if (
+          !facts.assessmentContinuityUsed
+          && context.subjectCount === 0
+          && ASSESSMENT_DIRECTION_FOLLOWUP.test(text)
+        ) {
+          facts.assessmentContinuityUsed = true;
+          facts.assessmentFollowUpTurn = true;
+          return {
+            state: { mode: 'system_assessment', stage: 'ready_to_assess', facts },
+            response: { kind: 'proceed' },
+          };
+        }
+
         // User is adding/clarifying components after assessment already ran.
         // Accumulate and re-assess.
         const priorComponents = facts.systemComponents ?? [];

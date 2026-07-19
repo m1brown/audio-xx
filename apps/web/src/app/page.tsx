@@ -69,6 +69,7 @@ import {
 } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, classifySubjectAsContext, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory, buildSystemDiagnosis } from '@/lib/consultation';
+import { composeAssessmentFollowUp } from '@/lib/assessment-followup';
 import { ASSESSMENT_ARTIFACT_V2_ENABLED } from '@/lib/feature-flags';
 import { classifySystemArchetype, buildConsumerWirelessResponse } from '@/lib/system-class';
 import { findReferenceProduct, buildExplorationResponse, explorationToConsultation } from '@/lib/exploration';
@@ -1100,6 +1101,12 @@ export default function Home() {
     // transition() before the legacy ref-based blocks below.
     let convModeHint: ConversationMode | undefined;
     let intent: string = '';
+    // Assessment follow-up continuity (launch, 2026-07-19): the state
+    // machine's ready_to_assess override runs BEFORE the main detectIntent
+    // call, which would clobber it (a direction question classifies as
+    // audio_knowledge). This flag re-applies the override after detection
+    // for exactly the armed continuity turn.
+    let assessmentFollowUpOverride = false;
     // P1 follow-on (2026-05-18): capture detectIntent's subjectMatches
     // alongside intent so the synthesized subjectMatch for unknown
     // products (gate 0a in intent.ts) survives into the safety-check
@@ -1461,6 +1468,11 @@ export default function Home() {
             // System assessment — override intent and keep convState alive
             // so subsequent turns accumulate components.
             intent = 'system_assessment';
+            // Continuity turn: survive the main detectIntent re-assignment
+            // below (see assessmentFollowUpOverride declaration).
+            if (convResult.state.facts.assessmentFollowUpTurn) {
+              assessmentFollowUpOverride = true;
+            }
             // Do NOT reset convState — keep system_assessment mode active.
           } else {
             convStateRef.current = INITIAL_CONV_STATE;
@@ -1897,6 +1909,12 @@ export default function Home() {
       });
       intent = _intentResult.intent;
       intentSyntheticSubjects = _intentResult.subjectMatches;
+    }
+
+    // Assessment follow-up continuity: the armed turn answers from the
+    // existing assessment regardless of how the question classifies.
+    if (assessmentFollowUpOverride) {
+      intent = 'system_assessment';
     }
 
     // Count prior shopping advisory turns (needed early for category-switch bypass).
@@ -2353,6 +2371,10 @@ export default function Home() {
       intent !== 'comparison' &&
       intent !== 'shopping' &&
       !explicitPivot &&
+      // Assessment follow-up continuity: the armed turn must reach the
+      // assessment lane, not the single-subject consultation follow-up
+      // (which would answer about one component instead of the system).
+      !assessmentFollowUpOverride &&
       isConsultationFollowUp(submittedText, state.activeConsultation)
     ) {
       // Blocker fix §2: pass active saved/inline system into the
@@ -2646,6 +2668,19 @@ export default function Home() {
         ? extractSubjectMatches(accumulatedText)
         : turnCtx.subjectMatches;
 
+      // ── Assessment follow-up continuity (launch, 2026-07-19) ──
+      // The state machine armed assessmentFollowUpTurn for exactly this
+      // turn: the first post-assessment direction question ("what would I
+      // upgrade first?", "weakest link?"). Consume the flag up front —
+      // whatever happens below — so it can never leak into a later turn.
+      const isAssessmentFollowUpTurn = convStateRef.current.facts.assessmentFollowUpTurn === true;
+      if (isAssessmentFollowUpTurn) {
+        convStateRef.current = {
+          ...convStateRef.current,
+          facts: { ...convStateRef.current.facts, assessmentFollowUpTurn: false },
+        };
+      }
+
       const assessmentResult = buildSystemAssessment(accumulatedText, assessmentSubjects, turnCtx.activeSystem, turnCtx.desires, state.listenerPreferenceProfile);
       if (assessmentResult) {
         if (assessmentResult.kind === 'clarification') {
@@ -2691,6 +2726,20 @@ export default function Home() {
           // LLM call failed — fall through to consultation path
           dispatch({ type: 'SET_LOADING', value: false });
           return;
+        }
+
+        // ── First-follow-up continuity answer ──────────────
+        // Answer the direction question from the findings just computed:
+        // a short focused reply, not a second full artifact (which would
+        // duplicate the one already on screen). Composer returns null on
+        // thin findings — then the standard artifact path below stands.
+        if (isAssessmentFollowUpTurn) {
+          const followUpAnswer = composeAssessmentFollowUp(assessmentResult.findings);
+          if (followUpAnswer) {
+            dispatch({ type: 'ADD_NOTE', content: followUpAnswer });
+            dispatch({ type: 'SET_LOADING', value: false });
+            return;
+          }
         }
 
         const assessmentMsgId = advisoryId();
