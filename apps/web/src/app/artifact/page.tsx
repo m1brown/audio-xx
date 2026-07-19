@@ -1,4 +1,5 @@
 import AssessmentArtifact from './AssessmentArtifact';
+import ArtifactActions from './ArtifactActions';
 import { buildSystemAssessment } from '@/lib/consultation';
 import { extractSubjectMatches, detectIntent } from '@/lib/intent';
 import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
@@ -30,9 +31,18 @@ export default async function ArtifactPage(
   const result = buildSystemAssessment(text, subjects, null, desires);
 
   if (!result || result.kind !== 'assessment') {
+    // MVP M1 failure path: never a dead end — send the reader back to the
+    // builder with an editorial notice rather than an error.
     return (
       <section className="axx-followup" aria-label="Notice">
-        <p>That system didn’t resolve to an assessment (engine returned “{result?.kind ?? 'no result'}”).</p>
+        <p>
+          I couldn&rsquo;t read that as a system — an assessment needs at least
+          two named components (a source or amplifier, and speakers or
+          headphones).
+        </p>
+        <p>
+          <a href="/">Build your system →</a>
+        </p>
       </section>
     );
   }
@@ -45,5 +55,10 @@ export default async function ArtifactPage(
     console.warn('[artifact] engine-output contradictions:', contradictions);
   }
 
-  return <AssessmentArtifact p={payload} contradictions={contradictions} print={print} />;
+  return (
+    <>
+      <AssessmentArtifact p={payload} contradictions={contradictions} print={print} />
+      {!print && <ArtifactActions />}
+    </>
+  );
 }

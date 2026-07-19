@@ -299,3 +299,10 @@ body:has(.axx-route) { background: #FCF8EE; }
   .axx-verdict h1, .axx-rec, .axx-fig, .axx-colophon { break-inside: avoid; }
   @page { size: A4 portrait; margin: 18mm 16mm; }
 }
+
+/* MVP M1 — screen-only assessment actions (Print / Copy link / Save / New).
+   Never part of the printed artifact. */
+@media print {
+  .axx-actions { display: none; }
+}
+.axx-print .axx-actions { display: none; }

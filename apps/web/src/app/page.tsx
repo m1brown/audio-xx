@@ -70,6 +70,7 @@ import {
 import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, classifySubjectAsContext, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory, buildSystemDiagnosis } from '@/lib/consultation';
 import { composeAssessmentFollowUp } from '@/lib/assessment-followup';
+import SystemBuilder from '@/product/SystemBuilder';
 import { ASSESSMENT_ARTIFACT_V2_ENABLED } from '@/lib/feature-flags';
 import { classifySystemArchetype, buildConsumerWirelessResponse } from '@/lib/system-class';
 import { findReferenceProduct, buildExplorationResponse, explorationToConsultation } from '@/lib/exploration';
@@ -5322,6 +5323,31 @@ export default function Home() {
                 background: EDITORIAL.accent,
               }}
             />
+          </div>
+
+          {/* ── MVP M1: Build Your System — the primary interaction. ──
+           *  Catalog typeahead over the static index; free text stands as
+           *  typed; CTA navigates to the self-contained assessment URL.
+           *  The conversational composer below remains the secondary path
+           *  and the full advisory surface. */}
+          <div style={{ marginTop: '1.5rem' }}>
+            <SystemBuilder />
+          </div>
+
+          <div
+            style={{
+              fontFamily: 'var(--face-grotesque)',
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase' as const,
+              color: EDITORIAL.faint,
+              textAlign: 'center' as const,
+              marginTop: '3.25rem',
+              marginBottom: '1rem',
+            }}
+          >
+            Or describe it in your own words
           </div>
 
           {/* Composer follows below (rendered once for both states; styling
