@@ -125,8 +125,8 @@ Each milestone leaves `main`-deployable, independently testable, and small enoug
 
 | # | Objective | Scope | Done when |
 |---|---|---|---|
-| **M1** | **Frictionless core loop** — Build Your System → beautiful assessment → print/share | Catalog index + `SystemBuilder` on the landing cover; artifact action bar (Print · Copy link · New assessment · Save-stub); failure path; product test suite bootstrapped | Anonymous user goes from landing to printed/shared assessment with zero accounts; gate green; product tests green |
-| **M2** | **Save System → account → persistence** | Save action → create-account card → persist System + AssessmentSnapshot (schema migration); My Systems list (open saved artifact, rename); auth-flow product tests | Save → account → revisit works end-to-end on a fresh browser |
+| **M1** ✅ | **Frictionless core loop** — Build Your System → beautiful assessment → print/share | Shipped 2026-07-20 (`docs/mvp-milestone-1-report.md`) | Anonymous user goes from landing to printed/shared assessment with zero accounts; gate green; product tests green |
+| **M2** ✅ | **Save System → account → persistence** | Shipped 2026-07-21 (`docs/mvp-milestone-2-report.md`) — save flow, `/save` account card, AssessmentSnapshot model, My Systems collection, saved-assessment view. Deploy prerequisite: one additive `prisma db push` to Turso | Save → account → revisit works end-to-end on a fresh browser ✅ |
 | **M3** | **My Systems as a collection** | Re-assess (new snapshot, history kept), organize/delete, empty states, editorial polish of collection + account screens | A returning user manages ≥2 systems comfortably; every screen reads like the publication |
 | **M4** | **Billing** | Stripe Checkout + webhook + `Subscription`; computed trial; lapse behavior (read forever, build requires subscription); `/account` | Test-mode subscribe/cancel/lapse verified; no data-deletion path exists |
 | **M5** | **Launch hardening** | OG/meta per artifact, mobile pass, perf budget, Sentry, legal pages check, MVP checklist executed | Every checklist item verifiable and green |
