@@ -55,12 +55,36 @@ model System {
   room       String?                                                    // room description or acoustics notes
   primaryUse String?           @map("primary_use")                     // e.g. "critical listening", "background music"
   tendencies String?           @default("{}") @map("tendencies")       // JSON or plain-text system character summary
+  // Canonical engine input this system was saved from (MVP M2). The
+  // assessment URL is the system's canonical identity; this column is
+  // its normalized text form and drives duplicate detection per user.
+  canonicalText String?        @map("canonical_text")
   createdAt  DateTime          @default(now()) @map("created_at")
   updatedAt  DateTime          @updatedAt @map("updated_at")
   components SystemComponent[]
   snapshots  PreferenceSnapshot[]
+  assessments AssessmentSnapshot[]
 
   @@map("systems")
+}
+
+// ── Assessment snapshots (MVP M2 — My Systems) ─────────────────────────
+// Immutable record of the assessment exactly as rendered at save time.
+// Engine evolution never rewrites history: re-assessing appends a new row.
+model AssessmentSnapshot {
+  id            String   @id @default(cuid())
+  systemId      String   @map("system_id")
+  system        System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  userId        String   @map("user_id")
+  /** Canonical engine input (the /artifact?system= payload, decoded). */
+  systemText    String   @map("system_text")
+  /** Synthesized ArtifactPayload as rendered — JSON string. */
+  payloadJson   String   @map("payload_json")
+  engineVersion String   @map("engine_version")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([systemId])
+  @@map("assessment_snapshots")
 }
 
 model Component {

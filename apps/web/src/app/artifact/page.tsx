@@ -1,8 +1,6 @@
 import AssessmentArtifact from './AssessmentArtifact';
 import ArtifactActions from './ArtifactActions';
-import { buildSystemAssessment } from '@/lib/consultation';
-import { extractSubjectMatches, detectIntent } from '@/lib/intent';
-import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
+import { runArtifactPipeline } from '@/product/assessment-pipeline';
 
 /**
  * Milestone 2 — live end-to-end artifact.
@@ -26,11 +24,9 @@ export default async function ArtifactPage(
     || PRESETS.flawed;
   const print = sp?.print === '1';
 
-  const subjects = extractSubjectMatches(text);
-  const { desires } = detectIntent(text);
-  const result = buildSystemAssessment(text, subjects, null, desires);
+  const rendered = runArtifactPipeline(text);
 
-  if (!result || result.kind !== 'assessment') {
+  if (!rendered) {
     // MVP M1 failure path: never a dead end — send the reader back to the
     // builder with an editorial notice rather than an error.
     return (
@@ -47,7 +43,7 @@ export default async function ArtifactPage(
     );
   }
 
-  const { payload, contradictions } = synthesizeArtifact(result);
+  const { payload, contradictions } = rendered;
   // Override date when requested so PDF export is deterministic across runs.
   if (sp?.date) payload.date = sp.date;
   if (contradictions.length) {
@@ -58,7 +54,7 @@ export default async function ArtifactPage(
   return (
     <>
       <AssessmentArtifact p={payload} contradictions={contradictions} print={print} />
-      {!print && <ArtifactActions />}
+      {!print && <ArtifactActions systemText={text} />}
     </>
   );
 }
