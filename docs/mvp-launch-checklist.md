@@ -15,6 +15,8 @@ Every item is independently verifiable. Items are grouped by the milestone that 
 - [ ] Save → create account → system + assessment snapshot persisted (verify in DB)
 - [ ] Fresh-browser sign-in shows the saved collection
 - [ ] Rename, re-assess (new snapshot, old kept), delete all work
+- [ ] Assessment history: newest-first, latest flagged, earlier assessments open exactly as saved
+- [ ] Identical re-assessment declined with the explicit message; changed reading appends exactly one entry
 - [ ] No account is ever required to read, print, or share any assessment
 - [ ] Password hashing verified (bcrypt, no plaintext anywhere in DB)
 
