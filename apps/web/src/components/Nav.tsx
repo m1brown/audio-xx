@@ -103,7 +103,7 @@ export default function Nav() {
             <NavItem href="/tech/musical-communication-school" label="Learn" secondary />
             <NavItem href="/glossary" label="Glossary" secondary />
             <NavItem href="/resources" label="Resources" secondary />
-            {session && <NavItem href="/systems" label="Systems" />}
+            {session && <NavItem href="/systems" label="My Systems" />}
           </div>
         </div>
 

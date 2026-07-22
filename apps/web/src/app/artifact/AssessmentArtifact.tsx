@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import FollowUp from './FollowUp';
+import ComponentCell from './ComponentCell';
 import type { ArtifactPayload } from './fixtures';
 
 /**
@@ -55,13 +56,7 @@ export default function AssessmentArtifact(
                   if (!photo) return null;
                   const name = p.componentCredit[i] ?? '';
                   return (
-                    <li key={i} className="axx-component-cell">
-                      <div className="axx-component-frame">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={photo.src} alt={photo.alt} loading="lazy" />
-                      </div>
-                      {name && <span className="axx-component-name">{name}</span>}
-                    </li>
+                    <ComponentCell key={i} src={photo.src} alt={photo.alt} name={name} />
                   );
                 })}
               </ul>

@@ -162,7 +162,7 @@ export default function LeftRail({ onReset }: LeftRailProps) {
       <nav aria-label="Workspace" style={{ display: 'flex', flexDirection: 'column' }}>
         <div style={SECTION_EYEBROW_STYLE}>Workspace</div>
         <ConversationItem onReset={onReset} />
-        <NavLink href="/systems" label="Systems" />
+        <NavLink href="/systems" label="My Systems" />
         <NavLink href="/profile" label="Listening profile" />
       </nav>
 

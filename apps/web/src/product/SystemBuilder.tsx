@@ -9,7 +9,7 @@
  * No account, no API calls — suggestions come from the bundled
  * static index.
  */
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { EDITORIAL } from '@/lib/editorial-tokens';
 import { searchCatalog, displayName, categoryLabel } from './catalog-search';
@@ -41,7 +41,11 @@ export default function SystemBuilder() {
   const [values, setValues] = useState<string[]>(INITIAL_FIELDS.map(() => ''));
   // Index of the field whose suggestions are open (−1 = none).
   const [openIdx, setOpenIdx] = useState(-1);
+  // Keyboard highlight within the open suggestion list (−1 = none).
+  const [activeSug, setActiveSug] = useState(-1);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The server render takes a moment — the CTA must not feel dead (M4).
+  const [pending, startTransition] = useTransition();
 
   const url = artifactUrlFor(values);
   const suggestions = useMemo(
@@ -57,10 +61,11 @@ export default function SystemBuilder() {
     if (blurTimer.current) clearTimeout(blurTimer.current);
     setValue(i, text);
     setOpenIdx(-1);
+    setActiveSug(-1);
   };
 
   const submit = () => {
-    if (url) router.push(url);
+    if (url && !pending) startTransition(() => router.push(url));
   };
 
   return (
@@ -78,21 +83,36 @@ export default function SystemBuilder() {
             value={values[i]}
             placeholder={f.placeholder}
             aria-label={f.label}
-            onChange={(e) => { setValue(i, e.target.value); setOpenIdx(i); }}
+            onChange={(e) => { setValue(i, e.target.value); setOpenIdx(i); setActiveSug(-1); }}
             onFocus={() => setOpenIdx(i)}
             onBlur={() => {
               // Delay closing so a click on a suggestion lands first.
               blurTimer.current = setTimeout(() => setOpenIdx((cur) => (cur === i ? -1 : cur)), 150);
             }}
+            role="combobox"
+            aria-expanded={openIdx === i && suggestions.length > 0}
+            aria-controls={`builder-listbox-${i}`}
+            aria-activedescendant={
+              openIdx === i && activeSug >= 0 ? `builder-option-${i}-${activeSug}` : undefined
+            }
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                if (suggestions.length > 0 && openIdx === i) {
-                  pick(i, displayName(suggestions[0]));
+              const open = openIdx === i && suggestions.length > 0;
+              if (e.key === 'ArrowDown' && open) {
+                e.preventDefault();
+                setActiveSug((cur) => (cur + 1) % suggestions.length);
+              } else if (e.key === 'ArrowUp' && open) {
+                e.preventDefault();
+                setActiveSug((cur) => (cur <= 0 ? suggestions.length - 1 : cur - 1));
+              } else if (e.key === 'Enter') {
+                if (open) {
+                  pick(i, displayName(suggestions[Math.max(activeSug, 0)]));
                 } else {
                   submit();
                 }
+              } else if (e.key === 'Escape') {
+                setOpenIdx(-1);
+                setActiveSug(-1);
               }
-              if (e.key === 'Escape') setOpenIdx(-1);
             }}
             style={{
               width: '100%',
@@ -102,13 +122,16 @@ export default function SystemBuilder() {
               background: 'transparent',
               border: 'none',
               borderBottom: `1px solid ${EDITORIAL.hairline}`,
-              padding: '0.35rem 0.1rem',
+              // ≥44px touch height (M4 mobile polish).
+              padding: '0.6rem 0.1rem',
+              minHeight: '44px',
               outline: 'none',
             }}
           />
           {openIdx === i && suggestions.length > 0 && (
             <ul
               role="listbox"
+              id={`builder-listbox-${i}`}
               style={{
                 position: 'absolute',
                 zIndex: 30,
@@ -123,13 +146,15 @@ export default function SystemBuilder() {
                 boxShadow: '0 10px 24px rgba(27, 26, 24, 0.08)',
               }}
             >
-              {suggestions.map((s) => (
+              {suggestions.map((s, si) => (
                 <li key={s.id}>
                   <button
                     type="button"
                     role="option"
-                    aria-selected={false}
+                    id={`builder-option-${i}-${si}`}
+                    aria-selected={si === activeSug}
                     onMouseDown={(e) => e.preventDefault()}
+                    onMouseEnter={() => setActiveSug(si)}
                     onClick={() => pick(i, displayName(s))}
                     style={{
                       display: 'flex',
@@ -137,8 +162,9 @@ export default function SystemBuilder() {
                       justifyContent: 'space-between',
                       alignItems: 'baseline',
                       gap: '1rem',
-                      padding: '0.45rem 0.8rem',
-                      background: 'transparent',
+                      padding: '0.6rem 0.8rem',
+                      minHeight: '44px',
+                      background: si === activeSug ? 'rgba(27, 26, 24, 0.05)' : 'transparent',
                       border: 'none',
                       cursor: 'pointer',
                       textAlign: 'left',
@@ -184,8 +210,9 @@ export default function SystemBuilder() {
         <button
           type="button"
           onClick={submit}
-          disabled={!url}
+          disabled={!url || pending}
           data-testid="read-assessment"
+          aria-busy={pending}
           style={{
             fontFamily: 'var(--face-grotesque)',
             fontSize: '0.8rem',
@@ -196,10 +223,12 @@ export default function SystemBuilder() {
             background: url ? EDITORIAL.ink : 'transparent',
             border: url ? `1px solid ${EDITORIAL.ink}` : `1px solid ${EDITORIAL.hairline}`,
             padding: '0.7rem 1.4rem',
-            cursor: url ? 'pointer' : 'default',
+            minHeight: '44px',
+            cursor: url && !pending ? 'pointer' : 'default',
+            opacity: pending ? 0.75 : 1,
           }}
         >
-          Read my assessment
+          {pending ? 'Preparing your assessment…' : 'Read my assessment'}
         </button>
       </div>
     </div>

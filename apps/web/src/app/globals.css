@@ -690,3 +690,13 @@ nav .nav-radar-link:hover {
   border-radius: 6px;
   display: block;
 }
+
+/* M4 launch polish — visible keyboard focus, everywhere, in the house
+   accent. Buttons and links ride browser defaults otherwise; this makes
+   keyboard navigation read as designed rather than accidental. */
+a:focus-visible,
+button:focus-visible,
+[role='option']:focus-visible {
+  outline: 2px solid #A8231B;
+  outline-offset: 2px;
+}

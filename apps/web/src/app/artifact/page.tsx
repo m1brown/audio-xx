@@ -1,3 +1,5 @@
+import { cache } from 'react';
+import type { Metadata } from 'next';
 import AssessmentArtifact from './AssessmentArtifact';
 import ArtifactActions from './ArtifactActions';
 import { runArtifactPipeline } from '@/product/assessment-pipeline';
@@ -15,16 +17,53 @@ const PRESETS: Record<string, string> = {
   balanced: 'Assess my system: Chord Qutest, Naim SuperNait 3, Harbeth Super HL5 Plus',
 };
 
-export default async function ArtifactPage(
-  { searchParams }: { searchParams: Promise<{ system?: string; case?: string; print?: string; date?: string }> },
-) {
-  const sp = await searchParams;
-  const text = (sp?.system && sp.system.trim())
+type ArtifactSearchParams = { system?: string; case?: string; print?: string; date?: string };
+
+function resolveText(sp: ArtifactSearchParams): string {
+  return (sp?.system && sp.system.trim())
     || PRESETS[sp?.case ?? '']
     || PRESETS.flawed;
+}
+
+// Deduped per request: generateMetadata and the page share one engine run.
+const renderCached = cache((text: string) => runArtifactPipeline(text));
+
+/**
+ * Sharing metadata (M4). A pasted assessment link is the product's
+ * acquisition loop — it must unfurl as the assessment itself: the
+ * verdict as the title, the standfirst/recognition as the description.
+ */
+export async function generateMetadata(
+  { searchParams }: { searchParams: Promise<ArtifactSearchParams> },
+): Promise<Metadata> {
+  const sp = await searchParams;
+  const text = resolveText(sp);
+  const rendered = renderCached(text);
+  if (!rendered) return { title: 'System Assessment' };
+  const p = rendered.payload;
+  const title = p.verdict.replace(/\.\s*$/, '');
+  const description = (p.standfirst || p.recognition || '').slice(0, 200)
+    + (p.componentCredit?.length ? ` — ${p.componentCredit.join(' · ')}` : '');
+  return {
+    title,
+    description,
+    openGraph: {
+      title: `${title} — Audio XX System Assessment`,
+      description,
+      type: 'article',
+      url: `/artifact?system=${encodeURIComponent(text)}`,
+    },
+  };
+}
+
+export default async function ArtifactPage(
+  { searchParams }: { searchParams: Promise<ArtifactSearchParams> },
+) {
+  const sp = await searchParams;
+  const text = resolveText(sp);
   const print = sp?.print === '1';
 
-  const rendered = runArtifactPipeline(text);
+  const rendered = renderCached(text);
 
   if (!rendered) {
     // MVP M1 failure path: never a dead end — send the reader back to the

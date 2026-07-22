@@ -51,8 +51,23 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Audio XX',
-  description: 'Listener-driven suggestion engine for thoughtful hi-fi system building',
+  metadataBase: new URL('https://audio-xx.com'),
+  title: {
+    default: 'Audio XX — Notes on Your System',
+    template: '%s — Audio XX',
+  },
+  description:
+    'An assessment of how your hi-fi components work together, where the bottlenecks are, and whether anything should change. Free, no account required.',
+  openGraph: {
+    siteName: 'Audio XX',
+    type: 'website',
+    title: 'Audio XX — Notes on Your System',
+    description:
+      'An assessment of how your hi-fi components work together, where the bottlenecks are, and whether anything should change.',
+  },
+  twitter: {
+    card: 'summary',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

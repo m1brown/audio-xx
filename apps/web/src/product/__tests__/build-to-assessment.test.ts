@@ -38,6 +38,29 @@ describe('composition — fields → engine text', () => {
   });
 });
 
+describe('sharing metadata (M4) — a pasted link unfurls as the assessment', () => {
+  it('artifact metadata carries the verdict as title and the system in the description', async () => {
+    const { generateMetadata } = await import('@/app/artifact/page');
+    const meta = await generateMetadata({
+      searchParams: Promise.resolve({
+        system: 'Assess my system: Denafrips Pontus II, Leben CS600X, DeVore O/96',
+      }),
+    });
+    expect(String(meta.title)).toMatch(/\w/);
+    expect(String(meta.title)).not.toMatch(/Audio XX$/); // template adds the suffix
+    expect(String(meta.description)).toMatch(/Pontus/);
+    expect(meta.openGraph?.title).toMatch(/Audio XX System Assessment$/);
+  });
+
+  it('unresolvable input still yields a sane title', async () => {
+    const { generateMetadata } = await import('@/app/artifact/page');
+    const meta = await generateMetadata({
+      searchParams: Promise.resolve({ system: 'mystery box' }),
+    });
+    expect(meta.title).toBe('System Assessment');
+  });
+});
+
 describe('spine — composed text → engine → artifact payload', () => {
   // Exactly the pipeline /artifact/page.tsx runs, for builder-composed input.
   function renderPipeline(fields: string[]) {
