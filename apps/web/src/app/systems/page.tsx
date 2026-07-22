@@ -158,14 +158,13 @@ function MySystemsList() {
                   }}
                 />
               ) : (
-                <h2 style={{ fontFamily: 'var(--face-display, var(--face-text))', fontSize: '1.45rem', color: EDITORIAL.ink, margin: 0 }}>
-                  {sys.snapshotCount > 0
-                    ? <Link href={`/systems/${sys.id}/assessment`} style={{ color: EDITORIAL.ink, textDecoration: 'none' }}>{sys.name}</Link>
-                    : sys.name}
+                <h2 style={{ fontFamily: 'var(--face-display, var(--face-text))', fontSize: '1.45rem', color: EDITORIAL.ink, margin: 0, overflowWrap: 'anywhere' }}>
+                  <Link href={`/systems/${sys.id}`} style={{ color: EDITORIAL.ink, textDecoration: 'none' }}>{sys.name}</Link>
                 </h2>
               )}
               <span style={{ ...caps, fontSize: '0.62rem', whiteSpace: 'nowrap', color: EDITORIAL.faint }}>
                 {formatDate(sys.assessedAt ?? sys.updatedAt)}
+                {sys.snapshotCount > 1 ? ` · ${sys.snapshotCount} assessments` : ''}
               </span>
             </div>
 
@@ -188,7 +187,12 @@ function MySystemsList() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.4rem', marginTop: '1rem' }}>
               {sys.snapshotCount > 0 && (
                 <Link href={`/systems/${sys.id}/assessment`} style={quietLink}>
-                  Read assessment
+                  Latest assessment
+                </Link>
+              )}
+              {sys.snapshotCount > 1 && (
+                <Link href={`/systems/${sys.id}`} style={quietLink}>
+                  History
                 </Link>
               )}
               <button

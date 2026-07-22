@@ -15,7 +15,7 @@
  * assessment snapshot is stored server-side); everyone else is guided
  * to /save, where creating a free account and saving are one motion.
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -37,8 +37,32 @@ const item: React.CSSProperties = {
 export default function ArtifactActions({ systemText }: { systemText: string }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'already'>('idle');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'appended' | 'identical'>('idle');
   const [saveError, setSaveError] = useState('');
+  // When signed in and this canonical system is already in the collection,
+  // the action reads "Add today's assessment" and the confirmation names
+  // the destination system (M3).
+  const [savedMatch, setSavedMatch] = useState<{ id: string; name: string } | null>(null);
+  const [savedTo, setSavedTo] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const session = await (await fetch('/api/auth/session')).json();
+        if (!session?.user || cancelled) return;
+        const res = await fetch('/api/my-systems');
+        if (!res.ok || cancelled) return;
+        const { systems } = await res.json();
+        const canonical = systemText.trim().replace(/\s+/g, ' ');
+        const match = (systems ?? []).find(
+          (s: { canonicalText: string | null }) => s.canonicalText === canonical,
+        );
+        if (match && !cancelled) setSavedMatch({ id: match.id, name: match.name });
+      } catch { /* anonymous or offline — the default label stands */ }
+    })();
+    return () => { cancelled = true; };
+  }, [systemText]);
 
   const copyLink = async () => {
     try {
@@ -77,7 +101,8 @@ export default function ArtifactActions({ systemText }: { systemText: string }) 
         throw new Error(body.error ?? 'Could not save the system.');
       }
       const body = await res.json();
-      setSaveState(body.duplicate ? 'already' : 'saved');
+      setSavedTo({ id: body.systemId, name: body.name });
+      setSaveState(body.identical ? 'identical' : body.duplicate ? 'appended' : 'saved');
     } catch (err) {
       setSaveState('idle');
       setSaveError(err instanceof Error ? err.message : 'Could not save the system.');
@@ -86,8 +111,8 @@ export default function ArtifactActions({ systemText }: { systemText: string }) 
 
   const saveLabel =
     saveState === 'saving' ? 'Saving…'
-    : saveState === 'saved' ? 'Saved'
-    : saveState === 'already' ? 'Saved'
+    : saveState !== 'idle' ? 'Saved'
+    : savedMatch ? 'Add today’s assessment'
     : 'Save this system';
 
   return (
@@ -114,7 +139,7 @@ export default function ArtifactActions({ systemText }: { systemText: string }) 
           New assessment
         </Link>
       </div>
-      {(saveState === 'saved' || saveState === 'already') && (
+      {saveState !== 'idle' && saveState !== 'saving' && savedTo && (
         <p
           style={{
             textAlign: 'center',
@@ -126,10 +151,14 @@ export default function ArtifactActions({ systemText }: { systemText: string }) 
             maxWidth: '34rem',
           }}
         >
-          {saveState === 'already'
-            ? 'Already in your collection — today’s assessment has been added to its history. '
-            : 'Added to your collection. '}
-          <Link href="/systems" style={{ color: '#1B1A18' }}>View My Systems →</Link>
+          {saveState === 'identical'
+            ? <>“{savedTo.name}” already has this exact assessment saved — nothing has changed, so history was left untouched. </>
+            : saveState === 'appended'
+              ? <>Today’s assessment was added to “{savedTo.name}”’s history. </>
+              : <>Added to your collection as “{savedTo.name}”. </>}
+          <Link href={`/systems/${savedTo.id}`} style={{ color: '#1B1A18' }}>
+            View the system →
+          </Link>
         </p>
       )}
       {saveError && (

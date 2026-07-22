@@ -39,11 +39,37 @@ export class SaveError extends Error {
   }
 }
 
+/**
+ * The identical-reassessment rule (M3, explicit product rule):
+ * a new history entry is added ONLY when the assessment actually changed —
+ * different engine version, or materially different rendered content.
+ * A re-run that differs only by its print date is the same reading and is
+ * never silently appended; the caller is told it already exists. This also
+ * makes saves idempotent against double-submits and refresh-resubmits.
+ */
+export function payloadsMateriallyEqual(aJson: string, bJson: string): boolean {
+  try {
+    const a = JSON.parse(aJson) as Record<string, unknown>;
+    const b = JSON.parse(bJson) as Record<string, unknown>;
+    delete a.date; delete b.date;
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return false; // unreadable payloads are never "the same" — allow a fresh save
+  }
+}
+
 export interface SaveResult {
   systemId: string;
   snapshotId: string;
   /** True when the canonical system already existed for this user. */
   duplicate: boolean;
+  /**
+   * True when nothing was appended because today's assessment is
+   * materially identical to the latest saved one (same engine, same
+   * content — only the date would differ). snapshotId is then the
+   * EXISTING latest snapshot.
+   */
+  identical: boolean;
   name: string;
 }
 
@@ -65,6 +91,29 @@ export async function saveAssessment(
   const existing = await db.system.findFirst({
     where: { userId, canonicalText: canonical },
   });
+
+  const payloadJson = JSON.stringify(rendered.payload);
+  const version = engineVersion();
+
+  // Identical-reassessment rule: appending happens only when the reading
+  // actually changed. Same engine + materially identical content → tell
+  // the caller it's already saved, append nothing.
+  if (existing) {
+    const latest = await db.assessmentSnapshot.findFirst({
+      where: { systemId: existing.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (latest && latest.engineVersion === version
+      && payloadsMateriallyEqual(latest.payloadJson, payloadJson)) {
+      return {
+        systemId: existing.id,
+        snapshotId: latest.id,
+        duplicate: true,
+        identical: true,
+        name: existing.name,
+      };
+    }
+  }
 
   const name = input.name?.trim() || deriveSystemName(rendered.payload);
 
@@ -88,8 +137,8 @@ export async function saveAssessment(
       systemId: system.id,
       userId,
       systemText: canonical,
-      payloadJson: JSON.stringify(rendered.payload),
-      engineVersion: engineVersion(),
+      payloadJson,
+      engineVersion: version,
     },
   });
 
@@ -97,7 +146,88 @@ export async function saveAssessment(
     systemId: system.id,
     snapshotId: snapshot.id,
     duplicate: Boolean(existing),
+    identical: false,
     name: system.name,
+  };
+}
+
+// ── Saved system + assessment history (M3) ───────────────────────────
+
+export interface HistoryEntry {
+  id: string;
+  savedAt: string;
+  engineVersion: string;
+  /** Verdict headline, or null when the stored payload is unreadable. */
+  verdict: string | null;
+  latest: boolean;
+  /** False when the payload cannot be parsed — the entry still lists. */
+  readable: boolean;
+}
+
+export interface SavedSystemDetail {
+  id: string;
+  name: string;
+  notes: string | null;
+  canonicalText: string | null;
+  chain: string[];
+  createdAt: string;
+  updatedAt: string;
+  history: HistoryEntry[];
+}
+
+/**
+ * One saved system with its full assessment history, newest first.
+ * Ownership-scoped: returns null for another user's system or an
+ * unknown id. Corrupted payloads degrade to an unreadable entry
+ * instead of breaking the page.
+ */
+export async function getSavedSystem(
+  db: PrismaClient,
+  userId: string,
+  systemId: string,
+): Promise<SavedSystemDetail | null> {
+  const system = await db.system.findFirst({
+    where: { id: systemId, userId },
+    include: {
+      assessments: { orderBy: { createdAt: 'desc' } },
+      components: { include: { component: { select: { brand: true, name: true } } } },
+    },
+  });
+  if (!system) return null;
+
+  let chain: string[] = [];
+  const history: HistoryEntry[] = system.assessments.map((snap, i) => {
+    let verdict: string | null = null;
+    let readable = false;
+    try {
+      const p = JSON.parse(snap.payloadJson) as ArtifactPayload;
+      verdict = p.verdict ?? null;
+      readable = true;
+      if (chain.length === 0) chain = p.componentCredit ?? [];
+    } catch { /* unreadable — listed but not openable as an artifact */ }
+    return {
+      id: snap.id,
+      savedAt: snap.createdAt.toISOString(),
+      engineVersion: snap.engineVersion,
+      verdict,
+      latest: i === 0,
+      readable,
+    };
+  });
+
+  if (chain.length === 0 && system.components.length > 0) {
+    chain = system.components.map((c) => `${c.component.brand} ${c.component.name}`);
+  }
+
+  return {
+    id: system.id,
+    name: system.name,
+    notes: system.notes,
+    canonicalText: system.canonicalText,
+    chain,
+    createdAt: system.createdAt.toISOString(),
+    updatedAt: system.updatedAt.toISOString(),
+    history,
   };
 }
 

@@ -1,12 +1,16 @@
 /**
- * Saved assessment (MVP M2) — the artifact exactly as it was written.
+ * Saved assessment (M2, extended in M3) — the artifact exactly as it
+ * was written.
  *
- * Renders the stored AssessmentSnapshot payload — NOT a re-run — so
- * engine evolution never rewrites what the collector saved. A quiet
- * provenance line carries the saved date and engine version, and
- * "Run today's assessment" opens the canonical stateless URL against
- * the current engine for comparison.
+ * Renders the stored snapshot payload — NOT a re-run — so engine
+ * evolution never rewrites what the collector saved. The provenance
+ * line states whether this is the LATEST or an EARLIER assessment,
+ * with its saved date and engine version. `?snap=` opens any entry
+ * from the system's history. A corrupted payload degrades to an
+ * editorial notice with the history still reachable — it never blocks
+ * the rest of the system.
  */
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import AssessmentArtifact from '@/app/artifact/AssessmentArtifact';
 import SnapshotActions from './SnapshotActions';
@@ -39,13 +43,7 @@ export default async function SavedAssessmentPage(
   if (!system || system.assessments.length === 0) notFound();
 
   const snapshot = (snap && system.assessments.find((a) => a.id === snap)) || system.assessments[0];
-
-  let payload: ArtifactPayload;
-  try {
-    payload = JSON.parse(snapshot.payloadJson) as ArtifactPayload;
-  } catch {
-    notFound();
-  }
+  const isLatest = snapshot.id === system.assessments[0].id;
 
   const savedDate = snapshot.createdAt.toLocaleDateString('en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
@@ -54,22 +52,71 @@ export default async function SavedAssessmentPage(
     ? `/artifact?system=${encodeURIComponent(system.canonicalText)}`
     : null;
 
+  const provenance = (
+    <div
+      style={{
+        textAlign: 'center',
+        fontFamily: 'var(--face-grotesque, sans-serif)',
+        fontSize: '0.65rem',
+        fontWeight: 600,
+        letterSpacing: '0.14em',
+        textTransform: 'uppercase',
+        color: isLatest ? '#9E9A93' : '#A8231B',
+        padding: '1.4rem 1rem 0',
+      }}
+    >
+      {system.name} · {isLatest ? 'latest assessment' : 'earlier assessment'} · saved {savedDate} · engine {snapshot.engineVersion}
+    </div>
+  );
+
+  let payload: ArtifactPayload | null = null;
+  try {
+    payload = JSON.parse(snapshot.payloadJson) as ArtifactPayload;
+  } catch {
+    payload = null;
+  }
+
+  if (!payload) {
+    // Corrupted history entry — say so plainly, keep the system reachable.
+    return (
+      <>
+        {provenance}
+        <section className="axx-followup" aria-label="Notice">
+          <p>
+            This saved assessment can no longer be displayed. The rest of
+            “{system.name}” — including its other assessments — is unaffected.
+          </p>
+          <p>
+            <Link href={`/systems/${system.id}`}>Back to the system and its history →</Link>
+          </p>
+        </section>
+      </>
+    );
+  }
+
   return (
     <>
-      <div
-        style={{
-          textAlign: 'center',
-          fontFamily: 'var(--face-grotesque, sans-serif)',
-          fontSize: '0.65rem',
-          fontWeight: 600,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: '#9E9A93',
-          padding: '1.4rem 1rem 0',
-        }}
-      >
-        {system.name} · saved {savedDate} · engine {snapshot.engineVersion}
-      </div>
+      {provenance}
+      {!isLatest && (
+        <p
+          style={{
+            textAlign: 'center',
+            fontFamily: 'var(--face-text, serif)',
+            fontStyle: 'italic',
+            fontSize: '0.9rem',
+            color: '#6B6862',
+            margin: '0.5rem auto 0',
+            maxWidth: '34rem',
+            padding: '0 1rem',
+          }}
+        >
+          You are reading an earlier assessment, kept exactly as it was written.
+          A newer assessment of this system exists.{' '}
+          <Link href={`/systems/${system.id}/assessment`} style={{ color: '#1B1A18' }}>
+            Read the latest →
+          </Link>
+        </p>
+      )}
       <AssessmentArtifact p={payload} />
       {system.notes && (
         <p
@@ -87,7 +134,7 @@ export default async function SavedAssessmentPage(
           {system.notes}
         </p>
       )}
-      <SnapshotActions canonicalUrl={canonicalUrl} />
+      <SnapshotActions systemId={system.id} canonicalUrl={isLatest ? canonicalUrl : null} />
     </>
   );
 }

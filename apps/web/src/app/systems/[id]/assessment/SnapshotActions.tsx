@@ -19,7 +19,9 @@ const item: React.CSSProperties = {
 };
 
 /** Screen-only actions under a saved assessment (hidden in print). */
-export default function SnapshotActions({ canonicalUrl }: { canonicalUrl: string | null }) {
+export default function SnapshotActions(
+  { systemId, canonicalUrl }: { systemId: string; canonicalUrl: string | null },
+) {
   return (
     <nav className="axx-actions" aria-label="Saved assessment actions">
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.75rem', justifyContent: 'center', padding: '2.2rem 1rem 0.6rem' }}>
@@ -31,6 +33,9 @@ export default function SnapshotActions({ canonicalUrl }: { canonicalUrl: string
             Run today&rsquo;s assessment
           </Link>
         )}
+        <Link href={`/systems/${systemId}`} style={item}>
+          System &amp; history
+        </Link>
         <Link href="/systems" style={item}>
           My Systems
         </Link>

@@ -81,14 +81,18 @@ describe('saving', () => {
     expect(payload.componentCredit.join(' ')).toMatch(/Pontus/);
   });
 
-  it('duplicate save appends a snapshot — never a second system', async () => {
+  it('identical re-save appends nothing — the explicit identical-reassessment rule (M3)', async () => {
+    // Same engine, same content, only the date would differ → not a new
+    // reading. Also makes double-submit and refresh-resubmit idempotent.
     const again = await saveAssessment(db, userId, { systemText: `  ${CHAIN}  ` });
     expect(again.duplicate).toBe(true);
+    expect(again.identical).toBe(true);
 
     const systems = await db.system.findMany({ where: { userId, canonicalText: CHAIN } });
     expect(systems).toHaveLength(1);
     const snaps = await db.assessmentSnapshot.findMany({ where: { systemId: systems[0].id } });
-    expect(snaps).toHaveLength(2);
+    expect(snaps).toHaveLength(1);
+    expect(again.snapshotId).toBe(snaps[0].id); // points at the existing latest
   });
 
   it('a re-save never overwrites the user’s name or notes', async () => {
@@ -100,17 +104,34 @@ describe('saving', () => {
     expect(after.notes).toBe('Renamed.');
   });
 
-  it('snapshots are history: an earlier snapshot is untouched by later saves', async () => {
+  it('a changed reading appends exactly one snapshot; the earlier one is untouched', async () => {
+    // Simulate an earlier engine's differing output by rewriting the
+    // stored latest snapshot, then re-saving with the current engine.
+    const sys = await db.system.findFirstOrThrow({ where: { userId, canonicalText: CHAIN } });
+    const latest = await db.assessmentSnapshot.findFirstOrThrow({ where: { systemId: sys.id } });
+    const olderPayload = JSON.stringify({
+      ...JSON.parse(latest.payloadJson),
+      verdict: 'An earlier engine said something different.',
+    });
+    await db.assessmentSnapshot.update({
+      where: { id: latest.id },
+      data: { payloadJson: olderPayload, engineVersion: 'v-old' },
+    });
+
+    const result = await saveAssessment(db, userId, { systemText: CHAIN });
+    expect(result.duplicate).toBe(true);
+    expect(result.identical).toBe(false);
+
     const snaps = await db.assessmentSnapshot.findMany({
-      where: { userId },
+      where: { systemId: sys.id },
       orderBy: { createdAt: 'asc' },
     });
-    expect(snaps.length).toBeGreaterThanOrEqual(3);
-    const first = JSON.parse(snaps[0].payloadJson);
-    const last = JSON.parse(snaps[snaps.length - 1].payloadJson);
-    // Same engine, same text → same verdict; the point is each row stands alone.
-    expect(first.verdict).toBe(last.verdict);
-    expect(snaps[0].payloadJson.length).toBeGreaterThan(500);
+    expect(snaps).toHaveLength(2);
+    // The earlier snapshot is immutable history — byte-identical to what we stored.
+    expect(snaps[0].payloadJson).toBe(olderPayload);
+    expect(snaps[0].engineVersion).toBe('v-old');
+    expect(snaps[1].engineVersion).toBe('dev');
+    expect(JSON.parse(snaps[1].payloadJson).verdict).not.toBe('An earlier engine said something different.');
   });
 
   it('rejects text that does not resolve to an assessment', async () => {
@@ -138,7 +159,7 @@ describe('retrieval — the collection', () => {
     expect(item.verdict).toBeTruthy();
     expect(item.assessedAt).toBeTruthy();
     expect(item.engineVersion).toBe('dev');
-    expect(item.snapshotCount).toBeGreaterThanOrEqual(3);
+    expect(item.snapshotCount).toBe(2);
   });
 
   it('never returns another user’s systems', async () => {
@@ -171,6 +192,6 @@ describe('organisation', () => {
     const orphans = await db.assessmentSnapshot.findMany({ where: { systemId: doomed.systemId } });
     expect(orphans).toHaveLength(0);
     const survivors = await db.assessmentSnapshot.findMany({ where: { userId } });
-    expect(survivors.length).toBeGreaterThanOrEqual(3);
+    expect(survivors.length).toBeGreaterThanOrEqual(2);
   });
 });
