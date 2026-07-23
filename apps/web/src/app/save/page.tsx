@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import { EDITORIAL } from '@/lib/editorial-tokens';
+import { track } from '@/product/analytics';
 
 const caps: React.CSSProperties = {
   fontFamily: 'var(--face-grotesque)',
@@ -86,6 +87,7 @@ function SaveFlow() {
       if (res?.error) {
         throw new Error('That email is already registered with a different password.');
       }
+      track('sign_in_completed', { source: 'save' });
       await persist();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong — please try again.');

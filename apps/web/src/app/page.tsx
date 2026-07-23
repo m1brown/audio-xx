@@ -71,6 +71,7 @@ import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, classifySubjectAsContext, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory, buildSystemDiagnosis } from '@/lib/consultation';
 import { composeAssessmentFollowUp } from '@/lib/assessment-followup';
 import SystemBuilder from '@/product/SystemBuilder';
+import { track as trackProduct } from '@/product/analytics';
 import { ASSESSMENT_ARTIFACT_V2_ENABLED } from '@/lib/feature-flags';
 import { classifySystemArchetype, buildConsumerWirelessResponse } from '@/lib/system-class';
 import { findReferenceProduct, buildExplorationResponse, explorationToConsultation } from '@/lib/exploration';
@@ -477,6 +478,9 @@ export default function Home() {
   const { messages, currentInput, turnCount, isLoading } = state;
   const { status } = useSession();
   const { state: audioState, dispatch: audioDispatch } = useAudioSession();
+
+  // Funnel (M5): the landing was seen. Deduped per page load.
+  useEffect(() => { trackProduct('landing_viewed'); }, []);
 
   // ── System panel/editor UI state (local, not in context) ──
   const [systemPanelOpen, setSystemPanelOpen] = useState(false);
@@ -921,6 +925,9 @@ export default function Home() {
 
     const submittedText = inputText;
     const isFollowUp = options?.source === 'follow-up';
+
+    // Funnel (M5): the conversational path was chosen. Deduped per load.
+    if (!isFollowUp) trackProduct('composer_started');
 
     // Validation telemetry (Workstream 25B): a user-submitted query is a
     // decision-intent entry. trackDecisionIntent also emits

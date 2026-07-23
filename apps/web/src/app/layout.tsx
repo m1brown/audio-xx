@@ -5,6 +5,7 @@ import Providers from '@/components/Providers';
 import Nav from '@/components/Nav';
 import Footer from '@/components/Footer';
 import StartOverBar from '@/components/StartOverBar';
+import { Analytics } from '@vercel/analytics/next';
 
 /**
  * Launch typography — Design Doctrine v1 (`docs/design-doctrine-v1.md`).
@@ -85,6 +86,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <StartOverBar />
           <Footer />
         </Providers>
+        <Analytics />
       </body>
     </html>
   );

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserId } from '@/lib/session';
 import { saveAssessment, listMySystems, SaveError } from '@/product/save-system';
+import { requireManage, getEntitlement, SubscriptionRequiredError } from '@/product/entitlement';
 
 /**
  * My Systems (MVP M2).
@@ -19,14 +20,29 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
+    // Saving and adding to history are value-creating collection actions —
+    // active trial or subscription required (M5). Reading never is.
+    await requireManage(prisma, userId);
+
     const body = await req.json().catch(() => ({}));
     const result = await saveAssessment(prisma, userId, {
       systemText: typeof body.systemText === 'string' ? body.systemText : '',
       name: typeof body.name === 'string' ? body.name : undefined,
       notes: typeof body.notes === 'string' ? body.notes : undefined,
     });
-    return NextResponse.json(result, { status: result.duplicate ? 200 : 201 });
+    // First vs repeat save, for the funnel (count includes the new system).
+    const totalSystems = await prisma.system.count({ where: { userId } });
+    return NextResponse.json(
+      { ...result, firstSystem: !result.duplicate && totalSystems === 1 },
+      { status: result.duplicate ? 200 : 201 },
+    );
   } catch (err) {
+    if (err instanceof SubscriptionRequiredError) {
+      return NextResponse.json(
+        { error: 'Your trial has ended. Subscribe to keep adding to your collection.', code: err.code, entitlement: err.entitlement },
+        { status: 403 },
+      );
+    }
     if (err instanceof SaveError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
@@ -41,7 +57,13 @@ export async function GET() {
 
   try {
     const systems = await listMySystems(prisma, userId);
-    return NextResponse.json({ systems });
+    // Entitlement rides along so My Systems can show trial/subscription
+    // status in one request. Reading the collection never requires it.
+    let entitlement = null;
+    try {
+      entitlement = await getEntitlement(prisma, userId);
+    } catch { /* state 10: billing state unavailable — list still returns */ }
+    return NextResponse.json({ systems, entitlement });
   } catch (err) {
     console.error('[my-systems] list failed:', err);
     return NextResponse.json({ error: 'Could not load your systems.' }, { status: 503 });

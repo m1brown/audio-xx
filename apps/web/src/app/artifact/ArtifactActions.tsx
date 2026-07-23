@@ -18,6 +18,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { track } from '@/product/analytics';
+import SubscriptionPrompt from '@/product/SubscriptionPrompt';
 
 const item: React.CSSProperties = {
   fontFamily: 'var(--face-grotesque, sans-serif)',
@@ -44,6 +46,20 @@ export default function ArtifactActions({ systemText }: { systemText: string }) 
   // the destination system (M3).
   const [savedMatch, setSavedMatch] = useState<{ id: string; name: string } | null>(null);
   const [savedTo, setSavedTo] = useState<{ id: string; name: string } | null>(null);
+  const [blocked, setBlocked] = useState(false);
+
+  // Funnel: an assessment reached the reader. Source = builder when the
+  // System Builder set the handoff flag just before navigating.
+  useEffect(() => {
+    let source = 'direct';
+    try {
+      if (sessionStorage.getItem('axx-entry') === 'builder') {
+        source = 'builder';
+        sessionStorage.removeItem('axx-entry');
+      }
+    } catch { /* storage unavailable — count as direct */ }
+    track('assessment_rendered', { source });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,7 +100,9 @@ export default function ArtifactActions({ systemText }: { systemText: string }) 
   const save = async () => {
     if (saveState === 'saving') return;
     setSaveError('');
+    setBlocked(false);
     setSaveState('saving');
+    track('save_started', { signed_in: savedMatch !== null || undefined });
     try {
       const res = await fetch('/api/my-systems', {
         method: 'POST',
@@ -96,6 +114,13 @@ export default function ArtifactActions({ systemText }: { systemText: string }) 
         router.push(`/save?system=${encodeURIComponent(systemText)}`);
         return;
       }
+      if (res.status === 403) {
+        // Trial ended — a calm subscription prompt, never an error.
+        track('trial_action_blocked', { action: savedMatch ? 'add' : 'save' });
+        setSaveState('idle');
+        setBlocked(true);
+        return;
+      }
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? 'Could not save the system.');
@@ -103,6 +128,10 @@ export default function ArtifactActions({ systemText }: { systemText: string }) 
       const body = await res.json();
       setSavedTo({ id: body.systemId, name: body.name });
       setSaveState(body.identical ? 'identical' : body.duplicate ? 'appended' : 'saved');
+      if (body.identical) track('identical_assessment_declined');
+      else if (body.duplicate) track('assessment_added');
+      else if (body.firstSystem) track('first_system_saved');
+      else track('additional_system_saved');
     } catch (err) {
       setSaveState('idle');
       setSaveError(err instanceof Error ? err.message : 'Could not save the system.');
@@ -126,10 +155,10 @@ export default function ArtifactActions({ systemText }: { systemText: string }) 
           padding: '2.2rem 1rem 0.6rem',
         }}
       >
-        <button type="button" style={item} onClick={() => window.print()}>
+        <button type="button" style={item} onClick={() => { track('print_clicked'); window.print(); }}>
           Print
         </button>
-        <button type="button" style={item} onClick={copyLink} data-testid="copy-link">
+        <button type="button" style={item} onClick={() => { track('copy_link_clicked'); copyLink(); }} data-testid="copy-link">
           {copied ? 'Link copied' : 'Copy link'}
         </button>
         <button type="button" style={item} onClick={save} data-testid="save-system">
@@ -175,6 +204,14 @@ export default function ArtifactActions({ systemText }: { systemText: string }) 
         >
           {saveError}
         </p>
+      )}
+      {blocked && (
+        <div style={{ maxWidth: '34rem', margin: '1.2rem auto 0' }}>
+          <SubscriptionPrompt
+            context={savedMatch ? 'add' : 'save'}
+            onDismiss={() => setBlocked(false)}
+          />
+        </div>
       )}
     </nav>
   );

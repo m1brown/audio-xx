@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { EDITORIAL } from '@/lib/editorial-tokens';
 import { searchCatalog, displayName, categoryLabel } from './catalog-search';
 import { artifactUrlFor } from './compose-system-text';
+import { track } from './analytics';
 
 interface FieldSpec { label: string; placeholder: string }
 
@@ -54,6 +55,7 @@ export default function SystemBuilder() {
   );
 
   const setValue = (i: number, v: string) => {
+    track('builder_started'); // once per page load (deduped in analytics)
     setValues((prev) => prev.map((p, j) => (j === i ? v : p)));
   };
 
@@ -65,7 +67,11 @@ export default function SystemBuilder() {
   };
 
   const submit = () => {
-    if (url && !pending) startTransition(() => router.push(url));
+    if (url && !pending) {
+      // Entry-source handoff for the assessment_rendered funnel event.
+      try { sessionStorage.setItem('axx-entry', 'builder'); } catch { /* fine */ }
+      startTransition(() => router.push(url));
+    }
   };
 
   return (

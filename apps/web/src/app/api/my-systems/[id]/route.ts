@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserId } from '@/lib/session';
+import { requireManage, SubscriptionRequiredError } from '@/product/entitlement';
 
 /**
  * My Systems item (MVP M2) — rename, edit notes, remove.
@@ -13,6 +14,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
 
   try {
+    // Rename and notes are collection-management actions (M5); removal
+    // (DELETE below) stays free — nothing is ever held hostage.
+    await requireManage(prisma, userId);
+
     const owned = await prisma.system.findFirst({ where: { id, userId } });
     if (!owned) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
@@ -27,6 +32,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const updated = await prisma.system.update({ where: { id }, data });
     return NextResponse.json({ id: updated.id, name: updated.name, notes: updated.notes });
   } catch (err) {
+    if (err instanceof SubscriptionRequiredError) {
+      return NextResponse.json(
+        { error: err.message, code: err.code, entitlement: err.entitlement },
+        { status: 403 },
+      );
+    }
     console.error('[my-systems] update failed:', err);
     return NextResponse.json({ error: 'Could not update the system.' }, { status: 503 });
   }

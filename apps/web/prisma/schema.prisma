@@ -10,14 +10,48 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  password  String?
-  createdAt DateTime  @default(now()) @map("created_at")
-  profile   Profile?
-  systems   System[]
+  id           String        @id @default(cuid())
+  email        String        @unique
+  password     String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  profile      Profile?
+  systems      System[]
+  subscription Subscription?
 
   @@map("users")
+}
+
+// ── Billing (MVP M5 — My Systems subscription) ──────────────────────────
+// One row per user, created at first checkout. Server-side authority for
+// entitlement; synchronised from verified Stripe webhooks. No card data
+// is ever stored. Absence of a row + expired trial = expired state.
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique @map("user_id")
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String    @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?   @unique @map("stripe_subscription_id")
+  /** Stripe status: active | past_due | canceled | incomplete | … */
+  status               String
+  /** Paid-through instant; access to protected actions runs to here. */
+  currentPeriodEnd     DateTime? @map("current_period_end")
+  cancelAtPeriodEnd    Boolean   @default(false) @map("cancel_at_period_end")
+  /** Stripe event.created of the newest applied event — guards against
+   *  out-of-order webhook delivery. */
+  lastEventAt          DateTime? @map("last_event_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  @@map("subscriptions")
+}
+
+// Webhook idempotency ledger: a Stripe event id is processed at most once.
+model ProcessedStripeEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now()) @map("processed_at")
+
+  @@map("processed_stripe_events")
 }
 
 model Profile {

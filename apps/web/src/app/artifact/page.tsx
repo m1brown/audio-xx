@@ -2,6 +2,7 @@ import { cache } from 'react';
 import type { Metadata } from 'next';
 import AssessmentArtifact from './AssessmentArtifact';
 import ArtifactActions from './ArtifactActions';
+import TrackFailure from './TrackFailure';
 import { runArtifactPipeline } from '@/product/assessment-pipeline';
 
 /**
@@ -70,6 +71,7 @@ export default async function ArtifactPage(
     // builder with an editorial notice rather than an error.
     return (
       <section className="axx-followup" aria-label="Notice">
+        <TrackFailure />
         <p>
           I couldn&rsquo;t read that as a system — an assessment needs at least
           two named components (a source or amplifier, and speakers or

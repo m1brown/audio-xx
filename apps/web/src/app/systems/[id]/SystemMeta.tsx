@@ -6,8 +6,10 @@
  * server-rendered page. Assessment history is never editable here.
  */
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { EDITORIAL } from '@/lib/editorial-tokens';
+import { track } from '@/product/analytics';
 
 const caps: React.CSSProperties = {
   fontFamily: 'var(--face-grotesque)',
@@ -33,13 +35,21 @@ export default function SystemMeta({ id, name, notes }: { id: string; name: stri
   const [nameValue, setNameValue] = useState(name);
   const [notesValue, setNotesValue] = useState(notes ?? '');
 
+  const [blocked, setBlocked] = useState(false);
+
   const patch = async (data: { name?: string; notes?: string }) => {
-    await fetch(`/api/my-systems/${id}`, {
+    const res = await fetch(`/api/my-systems/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
     setEditing('none');
+    if (res.status === 403) {
+      track('trial_action_blocked', { action: data.name !== undefined ? 'rename' : 'notes' });
+      setBlocked(true);
+      return;
+    }
+    setBlocked(false);
     router.refresh();
   };
 
@@ -118,6 +128,13 @@ export default function SystemMeta({ id, name, notes }: { id: string; name: stri
           {notes ? 'Edit notes' : 'Add notes'}
         </button>
       </div>
+      {blocked && (
+        <p style={{ fontFamily: 'var(--face-text)', fontStyle: 'italic', fontSize: '0.92rem', color: EDITORIAL.inkMuted, marginTop: '0.9rem' }}>
+          Your trial has ended — the collection stays readable, and{' '}
+          <Link href="/account" style={{ color: EDITORIAL.ink }}>subscribing</Link>{' '}
+          lets you keep editing it. Nothing has been changed.
+        </p>
+      )}
     </div>
   );
 }

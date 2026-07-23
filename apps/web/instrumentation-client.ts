@@ -35,3 +35,7 @@ Sentry.init({
     return event;
   },
 });
+
+// Required by Sentry 10.x to instrument client-side navigations (M5:
+// completes the wiring the SDK warned about during builds).
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

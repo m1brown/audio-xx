@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { EDITORIAL } from '@/lib/editorial-tokens';
+import { track } from '@/product/analytics';
 
 const caps: React.CSSProperties = {
   fontFamily: 'var(--face-grotesque)',
@@ -51,6 +52,7 @@ export default function SignIn() {
       setBusy(false);
       return;
     }
+    track('sign_in_completed', { source: 'signin' });
     router.push('/systems');
   }
 

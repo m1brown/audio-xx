@@ -17,6 +17,10 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAudioSession } from '@/lib/audio-session-context';
 import { EDITORIAL } from '@/lib/editorial-tokens';
+import type { Entitlement } from '@/product/entitlement';
+import { statusLine } from '@/product/entitlement-copy';
+import SubscriptionPrompt from '@/product/SubscriptionPrompt';
+import { track } from '@/product/analytics';
 
 interface MySystem {
   id: string;
@@ -65,18 +69,23 @@ function MySystemsList() {
   const [systems, setSystems] = useState<MySystem[] | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [entitlement, setEntitlement] = useState<Entitlement | null>(null);
+  const [showPrompt, setShowPrompt] = useState(false);
   const { helpers } = useAudioSession();
 
   const load = useCallback(() => {
     fetch('/api/my-systems')
       .then((r) => (r.ok ? r.json() : { systems: [] }))
-      .then((d) => setSystems(d.systems ?? []))
+      .then((d) => {
+        setSystems(d.systems ?? []);
+        setEntitlement(d.entitlement ?? null);
+      })
       .catch(() => setSystems([]));
   }, []);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin');
-    if (status === 'authenticated') load();
+    if (status === 'authenticated') { load(); track('my_systems_viewed'); }
   }, [status, router, load]);
 
   if (status !== 'authenticated') return null;
@@ -85,11 +94,16 @@ function MySystemsList() {
     const name = renameValue.trim();
     setRenaming(null);
     if (!name) return;
-    await fetch(`/api/my-systems/${id}`, {
+    const res = await fetch(`/api/my-systems/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     });
+    if (res.status === 403) {
+      track('trial_action_blocked', { action: 'rename' });
+      setShowPrompt(true);
+      return;
+    }
     load();
   };
 
@@ -115,11 +129,25 @@ function MySystemsList() {
       >
         My Systems
       </h1>
-      <p style={{ fontFamily: 'var(--face-text)', fontStyle: 'italic', color: EDITORIAL.inkMuted, margin: '0 0 3rem' }}>
+      <p style={{ fontFamily: 'var(--face-text)', fontStyle: 'italic', color: EDITORIAL.inkMuted, margin: '0 0 0.9rem' }}>
         {welcome
           ? 'Your collection has begun. Every assessment here is kept exactly as it was written.'
           : 'Assessments, kept exactly as written, ready to revisit as your systems evolve.'}
       </p>
+      {entitlement && (
+        <p style={{ ...caps, fontSize: '0.62rem', color: EDITORIAL.faint, margin: '0 0 3rem' }}>
+          {statusLine(entitlement)}
+          {' · '}
+          <Link href="/account" style={{ color: EDITORIAL.faint }}>Account</Link>
+        </p>
+      )}
+      {!entitlement && <div style={{ marginBottom: '2.1rem' }} />}
+
+      {entitlement && (!entitlement.canManage || showPrompt) && (
+        <div style={{ marginBottom: '2.5rem' }}>
+          <SubscriptionPrompt context="manage" onDismiss={showPrompt ? () => setShowPrompt(false) : undefined} />
+        </div>
+      )}
 
       {systems === null ? null : systems.length === 0 ? (
         <p style={{ fontFamily: 'var(--face-text)', color: EDITORIAL.inkMuted }}>
