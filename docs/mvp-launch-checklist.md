@@ -32,24 +32,26 @@ Every item is independently verifiable. Items are grouped by the milestone that 
 - ✅ Visible keyboard focus (accent outline) on links/buttons site-wide
 - ✅ Favicon + apple icon present
 
-## Billing (M5 — next milestone)
-- ⬜ Account creation requires no card; trial end date = createdAt + 3 months, shown in My Systems and /account
-- ⬜ Stripe test-mode: subscribe, cancel, lapse each reflected in app state
-- ⬜ Lapsed account: saved systems remain fully readable/printable/sharable; new saves and re-assessments prompt to subscribe
-- ⬜ Grep-verified: no code path deletes user data on any subscription event
-- ⬜ Webhook signature verification on the Stripe endpoint
+## Billing (M5 — built, awaiting production activation gate)
+- ✅ Account creation requires no card; trial = max(createdAt, BILLING_LAUNCHED_AT) + 92 days, shown in My Systems and /account
+- 🟡 Stripe integration complete + webhook-crypto tested; live test-mode subscribe/cancel/lapse needs founder Stripe keys (none exist in any env yet)
+- ✅ Lapsed account: collection fully readable, removable; save/add/rename/notes prompt to subscribe (verified live in dev)
+- ✅ Grep-verified in the test suite: no code path deletes user data on any subscription event
+- ✅ Webhook signature verification (real crypto in tests; invalid signature → 400, never processed)
+- ✅ Idempotent + out-of-order-safe webhook processing (event ledger + last_event_at guard)
+- ✅ Entitlement is one server-side function; no client-supplied price or entitlement anywhere
 
 ## Trust, legal, operations (before public launch)
 - ⬜ Privacy policy + affiliate disclosure reviewed against actual behaviour (accounts, Stripe, analytics)
-- ⬜ Error monitoring capturing production exceptions (Sentry package present; verify wiring + DSN)
-- ⬜ Analytics distinguishing: builder vs composer entry, assessment views, copy-link clicks, saves, account creations
+- 🟡 Error monitoring wired (Sentry hooks complete, no-op without DSN; token-gated test route added) — DSN + controlled test at activation
+- ✅ Analytics: 21 canonical events through one shared layer (builder vs composer, anon vs signed-in, trial vs subscriber, first vs repeat save); spec in docs/analytics-events.md
 - ✅ Engine regression gate + product suite green on the release commit (3,805 · 41 product · 0 new)
 - ⬜ Final benchmark rerun on the public-launch release commit
 - ⬜ Manual pass of the five demo scenarios on production after the launch-release promotion
 - ✅ Backup/restore story exercised once (M2 promotion gate: full dump + verified restore path)
 - ✅ Custom-domain HTTPS, www + apex aliases verified
-- ⬜ Node 24 build engines set before 2026-10-01 (Vercel deprecation)
-- ⬜ 404 page in editorial style
+- ✅ Node 24 build engines set (root + apps/web package.json)
+- ✅ 404 page in editorial style ("This page isn't in the collection.")
 
 ## Intentionally deferred (not launch-blocking; roadmap)
 - ⏸ Generated per-assessment OG images (text unfurl ships first)
