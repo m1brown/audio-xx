@@ -2,7 +2,7 @@
 
 Every item is independently verifiable. Items are grouped by the milestone that produces them; nothing here requires work outside the roadmap in `docs/mvp-product-architecture.md`.
 
-**Status legend (updated M4, 2026-07-22):** ✅ complete (verified) · ⬜ remaining · ⏸ intentionally deferred. Items verified locally but awaiting the M3/M4 production promotion are marked ✅(local).
+**Status legend (updated M4, 2026-07-22):** ✅ complete (verified) · ⬜ remaining · ⏸ intentionally deferred. All M1–M4 items are now verified on production (M3/M4 promoted 23 July).
 
 ## Core experience (M1 — live on production since 22 July)
 - ✅ Landing renders the builder + composer, no account prompt, on production URL
@@ -13,23 +13,23 @@ Every item is independently verifiable. Items are grouped by the milestone that 
 - ✅ Unresolvable input shows the guided failure path, never an error page
 - ✅ Mobile 375 px: no horizontal scroll on landing or artifact
 
-## Accounts & My Systems (M2 live · M3 verified locally, awaiting promotion)
+## Accounts & My Systems (M2–M3 live on production)
 - ✅ Save → create account → system + assessment snapshot persisted (verified in prod DB)
 - ✅ Fresh-browser sign-in shows the saved collection
 - ✅ Rename and notes work; delete cascades only its own history
-- ✅(local) Assessment history: newest-first, latest flagged, earlier assessments open exactly as saved
-- ✅(local) Identical re-assessment declined with the explicit message; changed reading appends exactly one entry
+- ✅ Assessment history: newest-first, latest flagged, earlier assessments open exactly as saved
+- ✅ Identical re-assessment declined with the explicit message; changed reading appends exactly one entry
 - ✅ No account is ever required to read, print, or share any assessment
 - ✅ Password hashing (bcrypt) — verified in code and prod rows
 
-## Launch polish (M4 — verified locally, awaiting promotion)
-- ✅(local) Site + per-page titles; per-assessment title = verdict in the browser tab
-- ✅(local) OG/meta tags: shared artifact links unfurl with verdict + system description
-- ✅(local) Private pages (`/systems`, `/save`, sign-in) noindexed
-- ✅(local) Broken product images remove themselves — no empty frames in the artifact
-- ✅(local) Builder: arrow-key suggestion navigation, 44 px touch targets, "Preparing your assessment…" pending state
-- ✅(local) Sign-in page in the editorial voice; nav says "My Systems"
-- ✅(local) Visible keyboard focus (accent outline) on links/buttons site-wide
+## Launch polish (M4 — live on production since 23 July)
+- ✅ Site + per-page titles; per-assessment title = verdict in the browser tab
+- ✅ OG/meta tags: shared artifact links unfurl with verdict + system description
+- ✅ Private pages (`/systems`, `/save`, sign-in) noindexed
+- ✅ Broken product images remove themselves — no empty frames in the artifact
+- ✅ Builder: arrow-key suggestion navigation, 44 px touch targets, "Preparing your assessment…" pending state
+- ✅ Sign-in page in the editorial voice; nav says "My Systems"
+- ✅ Visible keyboard focus (accent outline) on links/buttons site-wide
 - ✅ Favicon + apple icon present
 
 ## Billing (M5 — next milestone)
@@ -43,9 +43,9 @@ Every item is independently verifiable. Items are grouped by the milestone that 
 - ⬜ Privacy policy + affiliate disclosure reviewed against actual behaviour (accounts, Stripe, analytics)
 - ⬜ Error monitoring capturing production exceptions (Sentry package present; verify wiring + DSN)
 - ⬜ Analytics distinguishing: builder vs composer entry, assessment views, copy-link clicks, saves, account creations
-- ✅ Engine regression gate + product suite green on the release commit (3,805 · 51 product · 0 new)
+- ✅ Engine regression gate + product suite green on the release commit (3,805 · 41 product · 0 new)
 - ⬜ Final benchmark rerun on the public-launch release commit
-- ⬜ Manual pass of the five demo scenarios on production after next promotion
+- ⬜ Manual pass of the five demo scenarios on production after the launch-release promotion
 - ✅ Backup/restore story exercised once (M2 promotion gate: full dump + verified restore path)
 - ✅ Custom-domain HTTPS, www + apex aliases verified
 - ⬜ Node 24 build engines set before 2026-10-01 (Vercel deprecation)

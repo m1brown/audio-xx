@@ -18,7 +18,7 @@ My Systems now records how a system — and Audio XX's reading of it — changes
 
 ## Automated test results
 
-- **Product suite: 49 passing** (10 new in `assessment-history.test.ts` + reworked M2 duplicate tests), covering: exactly-one insertion on a changed reading; byte-immutability of earlier entries through later saves; newest-first ordering with the latest flagged; name/notes preservation (Journey C at persistence level); no duplicate systems; the identical rule (deterministic comparator incl. date-stripping and unreadable-payload behaviour; concurrent double-submit + refresh appending nothing; engine-change-alone appends); per-user isolation; unknown-id and unauthorized access returning null; corrupted-payload degradation; deletion cascading only its own history.
+- **Product suite: 39 passing** (10 new in `assessment-history.test.ts` + reworked M2 duplicate tests), covering: exactly-one insertion on a changed reading; byte-immutability of earlier entries through later saves; newest-first ordering with the latest flagged; name/notes preservation (Journey C at persistence level); no duplicate systems; the identical rule (deterministic comparator incl. date-stripping and unreadable-payload behaviour; concurrent double-submit + refresh appending nothing; engine-change-alone appends); per-user isolation; unknown-id and unauthorized access returning null; corrupted-payload degradation; deletion cascading only its own history.
 - **Engine regression gate: 3,803 passing · 20 pre-existing baselined · 0 new failures.**
 - **Production build:** `prisma generate && next build` succeeds; `/systems/[id]` and `/systems/[id]/assessment` compile as dynamic routes.
 
