@@ -8,15 +8,15 @@ Status column is filled during execution (☐ → ✅/❌+severity).
 
 | # | Behavior | Auto | Manual | Status |
 |---|---|---|---|---|
-| A1 | Homepage renders, both entry paths visible | build | ✓ | ☐ |
-| A2 | Builder → artifact for valid 2+ component system | suite | ✓ | ☐ |
-| A3 | Composer → artifact for free-text system | suite | ✓ | ☐ |
-| A4 | First follow-up keeps assessment context | suite | ✓ | ☐ |
-| A5 | Invalid input → editorial failure, recoverable | suite | ✓ | ☐ |
-| A6 | Copy link → identical artifact in fresh session | — | ✓ | ☐ |
-| A7 | Print view clean (no nav/actions) | — | ✓ | ☐ |
-| A8 | 404 editorial page | — | ✓ | ☐ |
-| A9 | Engine gate green (3,844 baseline) | gate | — | ☐ |
+| A1 | Homepage renders, both entry paths visible | build | ✓ | ✅ |
+| A2 | Builder → artifact for valid 2+ component system | suite | ✓ | ✅ |
+| A3 | Composer → artifact for free-text system | suite | ✓ | ✅ |
+| A4 | First follow-up keeps assessment context | suite | ✓ | ✅ |
+| A5 | Invalid input → editorial failure, recoverable | suite | ✓ | ✅ |
+| A6 | Copy link → identical artifact in fresh session | — | ✓ | ✅ |
+| A7 | Print view clean (no nav/actions) | — | ✓ | ✅ (G1-D1 S1 fixed) |
+| A8 | 404 editorial page | — | ✓ | ✅ |
+| A9 | Engine gate green (3,844 baseline) | gate | — | ✅ |
 
 ## B. Billing & entitlement (Gate 2)
 

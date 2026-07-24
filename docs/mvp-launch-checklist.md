@@ -45,6 +45,10 @@ Every item is independently verifiable. Items are grouped by the milestone that 
 - ✅ Entitlement is one server-side function; no client-supplied price or entitlement anywhere
 - ⬜ **Founder decision (production-activation prerequisite): tax treatment** — selling entity + jurisdiction; whether US$3/month is tax-inclusive; whether Stripe Tax is enabled; live-account identity/banking/business/support/branding. Provisional preference: US$3/month, taxes included where applicable. Not decided autonomously.
 
+## Launch Certification (tracking: launch-status.md · plan: docs/launch-certification-plan.md)
+- ✅ Gate 1 Functional — PASS WITH MINOR ISSUES (1 S1 fixed + pinned; certification/day-01-functional/)
+- ⬜ Gates 2–11
+
 ## Trust, legal, operations (before public launch)
 - ⬜ Privacy policy + affiliate disclosure reviewed against actual behaviour (accounts, Stripe, analytics)
 - 🟡 Error monitoring wired (Sentry hooks complete, no-op without DSN; token-gated test route added) — DSN + controlled test at activation

@@ -700,3 +700,12 @@ button:focus-visible,
   outline: 2px solid #A8231B;
   outline-offset: 2px;
 }
+
+/* Print: the assessment is the only thing on paper — never site chrome.
+   (Certification Gate 1, defect G1-D1.) */
+@media print {
+  nav,
+  .audioxx-global-startover {
+    display: none !important;
+  }
+}
