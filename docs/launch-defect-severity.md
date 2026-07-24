@@ -62,6 +62,38 @@ Beta invitations go out when:
 - the pause-checkout kill switch has been read and understood by the
   founder (not rehearsed against prod).
 
+## Private-beta EXIT criteria (beta → soft launch)
+
+The beta is a bounded phase, not a resting state. Target window:
+**2–3 weeks**. Soft launch proceeds when ALL of the following are met
+(numbers are founder-refinable at beta start; the criteria themselves
+are fixed):
+
+1. **Participation:** ≥ 15 invitees; ≥ 10 distinct people ran at least
+   one assessment.
+2. **Completion:** ≥ 80% of started assessments rendered successfully
+   (measured `assessment_rendered` / entry events; zero
+   `assessment_failed` on inputs a reasonable person would call valid).
+3. **Return:** ≥ 3 users came back on a later day (repeat
+   `my_systems_viewed` or a second assessment session).
+4. **Saves:** ≥ 5 users created an account and saved a system.
+5. **Defects:** zero open S0; every beta-reported issue triaged within
+   48h; no untriaged reports outstanding.
+6. **Billing:** the live billing path verified working (founder's own
+   live-mode subscribe + cancel per the runbook smoke test — beta users
+   are inside the free trial, so real subscriber conversion is NOT an
+   exit criterion).
+7. **Analytics:** the funnel is readable end-to-end in the dashboard
+   for the beta cohort; no missing stages.
+8. **Monitoring:** Sentry captured and surfaced every production error
+   that occurred; none discovered only via user report.
+9. **Founder approval:** explicit written go for soft launch.
+
+If the window closes with criteria unmet, the outcome is a decision,
+not drift: either fix the named blockers and re-run the window, or the
+founder explicitly revises the criteria in writing. Remaining in beta
+by default is not an option.
+
 ## Production activation point (restated)
 
 After certification completion + founder walkthrough + live-account

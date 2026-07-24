@@ -17,6 +17,26 @@ Severity language (S0/S1/S2) is defined in
 `docs/launch-defect-severity.md`. The consolidated test inventory is
 `docs/launch-certification-matrix.md`.
 
+## Launch freeze (in effect from Gate 1)
+
+From the start of Gate 1 until soft launch is complete, unless the
+founder explicitly lifts it:
+
+- **No** new features, architecture changes, redesign, or refactoring.
+- **Only** these changes are permitted: launch-blocking defects (S0),
+  regressions, copy fixes, accessibility fixes, performance fixes,
+  security fixes.
+- Everything else is recorded in `POST_LAUNCH.md` (repo root) with a
+  one-line rationale — including good ideas discovered mid-gate.
+
+## Launch Commander
+
+`launch-status.md` (repo root) is the living operational dashboard —
+overall status, current gate, days remaining, gate table, open S0/S1
+counts, launch risks, today's and tomorrow's objectives. It is updated
+at the end of every gate day and reviewed at the daily 11:00 launch
+check-in. Concise entries only; detail stays in `certification/`.
+
 ## Standing rules for every gate
 
 - **Evidence** goes in `certification/day-NN-<gate>/` — a `report.md`
@@ -58,7 +78,7 @@ Severity language (S0/S1/S2) is defined in
   unrecoverable state) on the free path; artifact fails for a valid
   2-component system; share link renders differently from the original.
 - **Non-blocking:** copy nits, spacing, non-core page issues (S1/S2).
-- **Cleanup:** none expected (anonymous flows).
+- **Cleanup:** none required for anonymous flows; sweep anything created.
 - **Duration:** 1 day. **Sign-off:** three journeys evidenced clean.
 
 ## Gate 2 — Billing & entitlement QA (Day 2)
@@ -235,24 +255,44 @@ Severity language (S0/S1/S2) is defined in
 - **Cleanup:** none. **Duration:** ½–1 day.
 - **Sign-off:** unfurl + noindex matrix complete.
 
-## Gate 10 — Founder embarrassment review (Day 10)
+## Gate 10 — Founder embarrassment & reviewer-lens review (Day 10)
 
-- **Purpose:** the only reviewer who matters pre-launch reads the
-  product cold: "would I send this to an audio journalist today?"
-- **Scope:** founder-led, unscripted: 30–45 minutes using the product as
-  a stranger (Claude observes, logs, does not steer), then 15 minutes as
-  a paying customer; ends with the founder naming anything embarrassing.
+- **Purpose:** the product is read cold by the people who could make or
+  break it — the founder, and a panel of representative reviewer
+  perspectives: "would I send this to an audio journalist today?"
+- **Scope:** two parts.
+  *Part A — founder session:* founder-led, unscripted: 30–45 minutes
+  using the product as a stranger (Claude observes, logs, does not
+  steer), then 15 minutes as a paying customer; ends with the founder
+  naming anything embarrassing.
+  *Part B — reviewer-lens panel:* the product (homepage, three
+  representative assessments, a brand page, the paywall moment) is
+  evaluated through five named perspectives, asking of each **"what
+  would this reviewer criticise?"**:
+  - **John Darko** — presentation, design taste, whether the writing
+    sounds like marketing; how it demos on video.
+  - **Michael Lavorgna** — editorial voice and sincerity; whether the
+    prose earns its opinions or hides behind hedges.
+  - **Herb Reichert** — musical truth; does the assessment describe how
+    systems actually sound, or recite spec-sheet tropes.
+  - **Steve Guttenberg** — accessibility to the ordinary enthusiast;
+    jargon load; whether a newcomer feels welcome or judged.
+  - **An experienced Reddit audiophile (r/audiophile moderator
+    archetype)** — factual nits, price/value skepticism, snake-oil
+    detection, "what is this actually doing that ChatGPT doesn't?"
+  Each lens produces a written findings list; every finding is recorded
+  and triaged S0/S1/S2 with the founder.
 - **Automated:** none — deliberately.
-- **Manual:** the founder's session; Claude records every hesitation,
-  confusion, or wince as a candidate defect.
-- **Evidence:** session log with timestamped observations, each triaged
-  to S0/S1/S2 together.
+- **Manual:** the founder's session plus the five-lens critique.
+- **Evidence:** timestamped founder session log; one findings section
+  per reviewer lens; combined triage table.
 - **Release-blocking:** whatever the founder declares embarrassing —
-  this gate has founder-defined S0.
-- **Non-blocking:** everything else logged.
-- **Cleanup:** any accounts created. **Duration:** ½ day + fixes.
+  this gate has founder-defined S0. A lens finding becomes S0 only by
+  founder adoption.
+- **Non-blocking:** all other lens findings logged with severity.
+- **Cleanup:** any accounts created. **Duration:** ½–1 day + fixes.
 - **Sign-off:** founder states, in writing, "nothing embarrassing
-  remains on the core paths."
+  remains on the core paths," having read all five lens reports.
 
 ## Gate 11 — Private-beta readiness & issue triage (Days 11–12)
 
@@ -294,7 +334,7 @@ Severity language (S0/S1/S2) is defined in
 | 7 | G7 Edge & destructive | Claude, founder signs |
 | 8 | G8 Mobile/browser/a11y/perf | Claude, founder signs |
 | 9 | G9 SEO/meta/share/print | Claude, founder signs |
-| 10 | G10 Founder review + **founder Stripe test-mode walkthrough** (same sitting) | Founder, Claude logs |
+| 10 | G10 Founder + reviewer-lens review + **founder Stripe test-mode walkthrough** (same sitting) | Founder, Claude logs |
 | 11 | G11 triage + Sentry + runbook rehearsal | Both |
 | 12 | G11 close-out + certification sign-off | Founder |
 | 13 | Stripe live-account verification (identity/bank/tax decision) + **production activation gate** | Founder decides, Claude executes runbook |

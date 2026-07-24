@@ -5,27 +5,31 @@
 
 ---
 
-## Current state — Launch Certification phase (2026-07-24)
+## Current state — the launch ladder (2026-07-24)
 
-The launch track (supersedes the time estimates lower in this file):
+This ladder supersedes the milestone-based estimates lower in this
+file. From here, planning is increasingly driven by **observed user
+behaviour and funnel metrics**, not implementation milestones — each
+rung below "Soft Launch" is defined by what users do, measured through
+the canonical analytics funnel.
 
-- ✅ Engine · ✅ Product experience (M1–M4, live at `de13f5a`) ·
-  ✅ Persistence (My Systems + history) · ✅ Billing implementation (M5)
-  · ✅ Stripe account · ✅ **Stripe test-mode integration approved at
-  `4d11948`** (Checkout, portal, cancellation paid-through, failed
-  checkout, signed webhooks — all verified against real Stripe)
-- ⏳ **Launch Certification** — plan awaiting review:
-  `docs/launch-certification-plan.md` (11 daily gates),
-  `docs/launch-certification-matrix.md`,
-  `docs/launch-defect-severity.md`
-- ⏳ Founder Stripe test-mode walkthrough (Gate 10 sitting)
-- ⏳ Stripe live-account verification + **founder tax decision**
-  (production-activation prerequisite; provisional: US$3/month, taxes
-  included where applicable)
-- ⏳ Production activation gate (`docs/launch-runbook.md`)
-- ⏳ Private beta → soft launch
+```
+✅ Engineering Complete        (M1–M5 built; Stripe test mode approved at 4d11948)
+⏳ Launch Certification        (11 daily gates — docs/launch-certification-plan.md; LAUNCH FREEZE in effect)
+⏳ Private Beta                (entry + EXIT criteria: docs/launch-defect-severity.md)
+⏳ Soft Launch
+⏳ First 100 Users             (funnel: landing → assessment → save)
+⏳ First 10 Paying Subscribers (funnel: trial → subscription_activated)
+⏳ Product–Market Fit          (returning users, retention, organic sharing)
+```
 
-Estimated: certification 10–14 working days, then activation and beta.
+Operational documents:
+- `launch-status.md` (repo root) — daily dashboard, 11:00 check-in
+- `POST_LAUNCH.md` (repo root) — freeze intake for all non-launch work
+- `docs/launch-runbook.md` — production activation procedure
+- Activation prerequisites include the **founder tax decision**
+  (provisional: US$3/month, taxes included where applicable) and Stripe
+  live-account verification.
 
 ---
 
