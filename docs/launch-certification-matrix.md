@@ -22,20 +22,20 @@ Status column is filled during execution (☐ → ✅/❌+severity).
 
 | # | Behavior | Auto | Manual | Status |
 |---|---|---|---|---|
-| B1 | Trial = max(createdAt, BILLING_LAUNCHED_AT)+92d, ms-exact boundary | suite | — | ☐ |
-| B2 | All 10 user states resolve correctly | suite | ✓ | ☐ |
-| B3 | Save/add/rename/notes gated; view/print/share/remove never | suite | ✓ | ☐ |
-| B4 | Real Checkout subscribe (4242) → subscriber | — | ✓ | ☐ |
-| B5 | Portal cancel → canceling, paid-through retained | suite | ✓ | ☐ |
-| B6 | cancel_at (timestamp) recognized as scheduled cancel | suite | ✓ | ☐ |
-| B7 | Declined card → no state change, calm return notice | — | ✓ | ☐ |
-| B8 | Bad webhook signature → 400, never processed | suite | ✓ | ☐ |
-| B9 | Duplicate event applied zero times | suite | — | ☐ |
-| B10 | Out-of-order event never overwrites newer state | suite | — | ☐ |
-| B11 | Null period-end never regresses a known one | suite | — | ☐ |
-| B12 | Stripe unreachable → 503 checkout, product unaffected | — | ✓ | ☐ |
-| B13 | No billing code path deletes user content | suite | — | ☐ |
-| B14 | Expired user: full read + remove, calm prompt | suite | ✓ | ☐ |
+| B1 | Trial = max(createdAt, BILLING_LAUNCHED_AT)+92d, ms-exact boundary | suite | — | ✅ |
+| B2 | All 10 user states resolve correctly | suite | ✓ | ✅ |
+| B3 | Save/add/rename/notes gated; view/print/share/remove never | suite | ✓ | ✅ |
+| B4 | Real Checkout subscribe (4242) → subscriber | — | ✓ | ✅ |
+| B5 | Portal cancel → canceling, paid-through retained | suite | ✓ | ✅ |
+| B6 | cancel_at (timestamp) recognized as scheduled cancel | suite | ✓ | ✅ |
+| B7 | Declined card → no state change, calm return notice | — | ✓ | ✅ |
+| B8 | Bad webhook signature → 400, never processed | suite | ✓ | ✅ |
+| B9 | Duplicate event applied zero times | suite | — | ✅ |
+| B10 | Out-of-order event never overwrites newer state | suite | — | ✅ |
+| B11 | Null period-end never regresses a known one | suite | — | ✅ |
+| B12 | Stripe unreachable → 503 checkout, product unaffected | — | ✓ | ✅ |
+| B13 | No billing code path deletes user content | suite | — | ✅ |
+| B14 | Expired user: full read + remove, calm prompt | suite | ✓ | ✅ |
 
 ## C. Analytics (Gate 3)
 

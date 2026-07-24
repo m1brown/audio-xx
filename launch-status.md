@@ -3,18 +3,18 @@
 > Daily operational dashboard. Reviewed at the 11:00 launch check-in.
 > Concise entries only; detail lives in `certification/` reports.
 
-**Overall status:** CERTIFICATION IN PROGRESS — Gate 1 executed, awaiting founder sign-off
+**Overall status:** CERTIFICATION IN PROGRESS — Gates 1–2 executed
 **Launch freeze:** IN EFFECT (from Gate 1 until soft launch complete; founder may lift)
-**Current gate:** 1 (Functional) — executed, report posted
-**Days remaining (plan):** 11 working days to activation gate
-**Baseline commit:** 25e83a3 + Gate 1 fix (version-b) · Production: de13f5a
+**Current gate:** 2 (Billing & entitlement) — executed, report posted
+**Days remaining (plan):** 10 working days to activation gate
+**Baseline commit:** c62dcb1 (version-b) · Production: de13f5a
 
 ## Gates
 
 | Gate | Status | Signed |
 |---|---|---|
-| 1 Functional | **PASS WITH MINOR ISSUES** — 1 S1 found+fixed+pinned; report: certification/day-01-functional/ | awaiting |
-| 2 Billing & entitlement | not started | — |
+| 1 Functional | **PASS WITH MINOR ISSUES** — 1 S1 fixed+pinned | ✅ approved |
+| 2 Billing & entitlement | **PASS** — 10 states verified live, 0 defects; report: certification/day-02-billing/ | awaiting |
 | 3 Analytics & funnel | not started | — |
 | 4 Privacy & security | not started | — |
 | 5 Editorial & visual | not started | — |
@@ -39,5 +39,5 @@
 
 ## Objectives
 
-**Today:** Gate 1 executed (3 journeys + automated baseline); G1-D1 fixed; report posted for review.
-**Tomorrow:** Gate 2 (Billing & entitlement QA), pending Gate 1 sign-off.
+**Today:** Gate 2 executed — 10-state sweep incl. real Checkout/portal, degradation test; 0 defects; report posted.
+**Tomorrow:** Gate 3 (Analytics & funnel verification), pending Gate 2 sign-off.

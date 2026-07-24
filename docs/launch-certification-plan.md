@@ -56,6 +56,12 @@ check-in. Concise entries only; detail stays in `certification/`.
 - **Cleanup**: any test accounts, saved systems, or Stripe test objects
   a gate creates are deleted at the end of the gate unless the report
   says why they were kept. The production database is never touched.
+- **Report template** (every gate report ends with these two sections):
+  *Estimated effort* — hours split across automation, manual QA, fixes,
+  and documentation, with a total. *Launch confidence* — a short
+  engineering judgment of overall launch readiness after this gate
+  (increasing / flat / decreasing, with one sentence of why). Not a
+  formal metric; a trend line across the certification.
 
 ---
 
