@@ -56,6 +56,10 @@ check-in. Concise entries only; detail stays in `certification/`.
 - **Cleanup**: any test accounts, saved systems, or Stripe test objects
   a gate creates are deleted at the end of the gate unless the report
   says why they were kept. The production database is never touched.
+- **Credential scan before every certification commit** (founder
+  directive after Gate 2): run `sh scripts/credential-scan.sh` with the
+  gate's files staged; a non-clean result blocks the commit until
+  resolved. Never echo process lists or env values into evidence files.
 - **Report template** (every gate report ends with these two sections):
   *Estimated effort* — hours split across automation, manual QA, fixes,
   and documentation, with a total. *Launch confidence* — a short

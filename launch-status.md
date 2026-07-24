@@ -32,6 +32,17 @@
 **S2 backlog:** see POST_LAUNCH.md
 **Gate 6 watch-list:** 3 content observations from Gate 1 (verdict/lede tension; brand-only credit "Rega"; recommendation phrasing) — to be judged in the assessment-quality review
 
+## Operational log
+
+- 2026-07-24 · Credential hygiene (post-Gate-2 directive): full scan of
+  tracked files + certification-era git history — **no credentials
+  present** (two doc matches were placeholder prefixes only; the one
+  evidence-file echo was scrubbed before it was ever committed).
+  Standing credential-scan rule added to the plan;
+  `scripts/credential-scan.sh` created and used from Gate 3 onward.
+  Test-key rotation: **pending founder** (dashboard-only operation);
+  old-key invalidation will be confirmed here once rotated.
+
 ## Launch risks
 
 1. Founder tax/entity decision unmade (activation prerequisite).
