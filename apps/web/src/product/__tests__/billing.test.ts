@@ -102,6 +102,35 @@ describe('event application — idempotent, ordered, correct', () => {
     expect(row?.status).toBe('past_due');
   });
 
+  it('a portal cancel expressed as cancel_at (boolean false) is a scheduled cancellation', async () => {
+    // Observed live: current-API portal cancels set cancel_at and leave
+    // cancel_at_period_end false. The row must record the schedule.
+    await applyStripeEvent(db, makeEvent('evt_cancel_at', 'customer.subscription.updated',
+      subObject({ metadata: { userId }, status: 'active', cancel_at_period_end: false, cancel_at: 1_800_050_000 }), 1_800_001_200));
+    const row = await db.subscription.findUnique({ where: { userId } });
+    expect(row?.cancelAtPeriodEnd).toBe(true);
+    // Restore the plain-active state for the tests that follow.
+    await applyStripeEvent(db, makeEvent('evt_cancel_undo', 'customer.subscription.updated',
+      subObject({ metadata: { userId }, status: 'active' }), 1_800_001_300));
+  });
+
+  it('a null period end never regresses one learned from a subscription event', async () => {
+    // Observed live in test mode: checkout.session.completed (which does
+    // not know the period end) can process AFTER customer.subscription.created
+    // (which does). The placeholder must not clobber the real boundary.
+    const before = await db.subscription.findUnique({ where: { userId } });
+    expect(before?.currentPeriodEnd).toBeInstanceOf(Date);
+    const ev = makeEvent('evt_regress', 'checkout.session.completed', {
+      id: 'cs_regress', object: 'checkout.session', mode: 'subscription',
+      client_reference_id: userId, customer: 'cus_abc', subscription: 'sub_abc',
+      metadata: {},
+    }, 1_800_001_500);
+    const out = await applyStripeEvent(db, ev);
+    expect(out).toMatchObject({ handled: true });
+    const after = await db.subscription.findUnique({ where: { userId } });
+    expect(after?.currentPeriodEnd?.getTime()).toBe(before?.currentPeriodEnd?.getTime());
+  });
+
   it('payment failure → past_due; deletion → canceled', async () => {
     await applyStripeEvent(db, makeEvent('evt_4', 'customer.subscription.deleted',
       subObject({ metadata: { userId } }), 1_800_002_000));

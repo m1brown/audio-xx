@@ -98,13 +98,17 @@ function snapshotFromStripeSubscription(
 ): Omit<SubscriptionSnapshot, 'userId'> & { userId: string | null } {
   const item = sub.items?.data?.[0];
   const periodEnd = item?.current_period_end ?? null;
+  // Current Stripe API: a portal "cancel at period end" sets `cancel_at`
+  // (a timestamp) and leaves the legacy `cancel_at_period_end` boolean
+  // false. Either signal means a scheduled cancellation.
+  const cancelScheduled = Boolean(sub.cancel_at_period_end) || sub.cancel_at != null;
   return {
     userId: (sub.metadata?.userId as string) ?? null,
     stripeCustomerId: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
     stripeSubscriptionId: sub.id,
     status: sub.status,
     currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
-    cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
+    cancelAtPeriodEnd: cancelScheduled,
   };
 }
 
@@ -124,7 +128,11 @@ async function upsertSubscription(
       stripeCustomerId: snap.stripeCustomerId,
       stripeSubscriptionId: snap.stripeSubscriptionId,
       status: snap.status,
-      currentPeriodEnd: snap.currentPeriodEnd,
+      // null means "this event doesn't know the period end" (e.g. the
+      // checkout.session.completed placeholder) — it must never regress
+      // a period end learned from a subscription event, or a cancel
+      // could lose its paid-through boundary.
+      currentPeriodEnd: snap.currentPeriodEnd ?? undefined,
       cancelAtPeriodEnd: snap.cancelAtPeriodEnd,
       lastEventAt: eventCreatedAt,
     },
