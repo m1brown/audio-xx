@@ -5,10 +5,19 @@ then smoke. Nothing before step 6 affects live users.
 
 ## 0. Prerequisites (founder, one-time)
 
-- Stripe account with **test mode** verified end-to-end first (journeys
-  D–F below), then **live mode**: create the single product/price —
-  *Audio XX My Systems*, **$3.00/month recurring**, no trial configured
-  in Stripe (the trial is ours, server-side).
+- ✅ Stripe **test mode** verified end-to-end (2026-07-24, commit
+  4d11948): Checkout, portal cancellation with paid-through, declined
+  card, signed webhooks. Product: *My Systems*, $3.00/month recurring,
+  no Stripe-managed trial.
+- ⬜ **Tax decision (founder, blocking):** selling legal entity +
+  jurisdiction; is the advertised US$3/month tax-inclusive; enable
+  Stripe Tax or not. Provisional preference: US$3/month, taxes included
+  where applicable. Must be settled before live keys exist.
+- ⬜ Live-account verification: identity, banking, business, support,
+  and branding details in the Stripe activation wizard; then create the
+  live product/price mirroring test mode.
+- ⬜ Launch Certification complete per docs/launch-certification-plan.md
+  (zero open S0).
 - Sentry project (optional but recommended): copy the DSN.
 
 ## 1. Back up production data

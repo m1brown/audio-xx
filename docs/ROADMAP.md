@@ -1,7 +1,31 @@
 # Audio XX — Practical Roadmap
 
-**Last updated:** 2026-06-29
+**Last updated:** 2026-07-24
 **Audience:** technical contributors deciding what to work on next, and prospective collaborators evaluating the planned trajectory.
+
+---
+
+## Current state — Launch Certification phase (2026-07-24)
+
+The launch track (supersedes the time estimates lower in this file):
+
+- ✅ Engine · ✅ Product experience (M1–M4, live at `de13f5a`) ·
+  ✅ Persistence (My Systems + history) · ✅ Billing implementation (M5)
+  · ✅ Stripe account · ✅ **Stripe test-mode integration approved at
+  `4d11948`** (Checkout, portal, cancellation paid-through, failed
+  checkout, signed webhooks — all verified against real Stripe)
+- ⏳ **Launch Certification** — plan awaiting review:
+  `docs/launch-certification-plan.md` (11 daily gates),
+  `docs/launch-certification-matrix.md`,
+  `docs/launch-defect-severity.md`
+- ⏳ Founder Stripe test-mode walkthrough (Gate 10 sitting)
+- ⏳ Stripe live-account verification + **founder tax decision**
+  (production-activation prerequisite; provisional: US$3/month, taxes
+  included where applicable)
+- ⏳ Production activation gate (`docs/launch-runbook.md`)
+- ⏳ Private beta → soft launch
+
+Estimated: certification 10–14 working days, then activation and beta.
 
 ---
 

@@ -32,14 +32,18 @@ Every item is independently verifiable. Items are grouped by the milestone that 
 - ✅ Visible keyboard focus (accent outline) on links/buttons site-wide
 - ✅ Favicon + apple icon present
 
-## Billing (M5 — built, awaiting production activation gate)
+## Billing (M5 — Stripe test mode APPROVED at 4d11948)
 - ✅ Account creation requires no card; trial = max(createdAt, BILLING_LAUNCHED_AT) + 92 days, shown in My Systems and /account
-- 🟡 Stripe integration complete + webhook-crypto tested; live test-mode subscribe/cancel/lapse needs founder Stripe keys (none exist in any env yet)
-- ✅ Lapsed account: collection fully readable, removable; save/add/rename/notes prompt to subscribe (verified live in dev)
+- ✅ Stripe sandbox account created; product renamed to **My Systems**; one recurring price US$3/month; no Stripe-managed trial
+- ✅ Checkout verified in real Stripe test mode (4242 → subscriber, webhooks 2xx, immediate entitlement)
+- ✅ Customer Portal verified; cancellation retains paid-through access (cancel_at API shape handled)
+- ✅ Failed checkout verified: declined card changes nothing; calm cancelled-return notice
+- ✅ Lapsed account: collection fully readable, removable; save/add/rename/notes prompt to subscribe
 - ✅ Grep-verified in the test suite: no code path deletes user data on any subscription event
-- ✅ Webhook signature verification (real crypto in tests; invalid signature → 400, never processed)
-- ✅ Idempotent + out-of-order-safe webhook processing (event ledger + last_event_at guard)
+- ✅ Webhook signature verification (real crypto in tests + live; invalid signature → 400, never processed)
+- ✅ Idempotent + out-of-order-safe webhook processing; null period-end never regresses a known one
 - ✅ Entitlement is one server-side function; no client-supplied price or entitlement anywhere
+- ⬜ **Founder decision (production-activation prerequisite): tax treatment** — selling entity + jurisdiction; whether US$3/month is tax-inclusive; whether Stripe Tax is enabled; live-account identity/banking/business/support/branding. Provisional preference: US$3/month, taxes included where applicable. Not decided autonomously.
 
 ## Trust, legal, operations (before public launch)
 - ⬜ Privacy policy + affiliate disclosure reviewed against actual behaviour (accounts, Stripe, analytics)
