@@ -78,11 +78,11 @@ Status column is filled during execution (☐ → ✅/❌+severity).
 
 | # | Behavior | Auto | Manual | Status |
 |---|---|---|---|---|
-| F1 | Benchmark rerun: ≥90% good, zero embarrassing | harness | — | ☐ |
-| F2 | ~30 representative systems render defensibly | harness | ✓ | ☐ |
-| F3 | No component mis-identification / cross-brand leakage | tests | ✓ | ☐ |
-| F4 | Verdict never contradicts body | — | ✓ | ☐ |
-| F5 | Identical re-assessment declined; changed reading appends | suite | ✓ | ☐ |
+| F1 | Benchmark rerun: ≥90% good, zero embarrassing | harness | — | ✗ FAIL (≈20% show a wrong component graph) |
+| F2 | ~30 representative systems render defensibly | harness | ✓ | ◑ partial (well-cataloged render defensibly; uncataloged mis-identify) |
+| F3 | No component mis-identification / cross-brand leakage | tests | ✓ | ✗ FAIL (dropped/duplicated components on uncataloged-model systems) |
+| F4 | Verdict never contradicts body | — | ✓ | ✅ (no verdict/body contradiction found) |
+| F5 | Identical re-assessment declined; changed reading appends | suite | ✓ | ✅ (suite-pinned) |
 
 ## G. Edge & destructive (Gate 7)
 

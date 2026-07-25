@@ -1,0 +1,24 @@
+### budget-1 :: INPUT: evaluate my system: WiiM Pro, Fosi Audio V3, Wharfedale Diamond 12.1
+  input components: 3
+  rendered credit : WiiM Pro | Wharfedale
+
+### budget-2 :: INPUT: evaluate my system: Bluesound Node, Cambridge Audio AXA35, Q Acoustics 3030i
+  input components: 3
+  rendered credit : Bluesound Node | Cambridge audio
+
+### vintage-2 :: INPUT: evaluate my system: Rega Planar 3, Sugden A21, Spendor SP3/1R
+  input components: 3
+  rendered credit : Rega Planar 3 | Sugden A21
+  contradictions  : Component name corrupted in engine output: names[1]="Spendor" carries a foreign brand token ("spendor"); rendered from input "Sugden A21".
+
+### mid-3 :: INPUT: evaluate my system: Denafrips Ares II, Rega Elex Mk4, Spendor A7
+  input components: 3
+  rendered credit : Denafrips Ares II | Ares Ii | Spendor
+  contradictions  : Component name corrupted in engine output: names[0]="Rega" carries a foreign brand token ("rega"); rendered from input "Denafrips Ares II". ~ R3: no category-specific heard-consequence line for "tonal_imbalance"; using default.
+
+### prestige-3 :: INPUT: evaluate my system: dCS Vivaldi, Boulder 866, Wilson Audio Sasha DAW
+  input components: 3
+  rendered credit : dCS | Boulder 866 | Wilson | Wilson audio
+  contradictions  : Component name corrupted in engine output: names[3]="Wilson audio" carries a foreign brand token ("wilson"); rendered from input "Wilson audio".
+
+

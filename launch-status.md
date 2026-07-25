@@ -3,9 +3,9 @@
 > Daily operational dashboard. Reviewed at the 11:00 launch check-in.
 > Concise entries only; detail lives in `certification/` reports.
 
-**Overall status:** CERTIFICATION IN PROGRESS — Gates 1–4 approved; Gate 5 executed
+**Overall status:** CERTIFICATION IN PROGRESS — Gates 1–5 approved; Gate 6 FAILED (launch-blocker found)
 **Launch freeze:** IN EFFECT (from Gate 1 until soft launch complete; founder may lift)
-**Current gate:** 5 (Editorial & visual QA) — executed, report posted
+**Current gate:** 6 (Assessment quality) — **FAIL**, report posted; awaiting architectural decision
 **Days remaining (plan):** 6 working days to activation gate
 **Baseline commit:** c62dcb1 (version-b) · Production: de13f5a
 
@@ -17,8 +17,8 @@
 | 2 Billing & entitlement | **PASS** — 10 states live, 0 defects | ✅ approved |
 | 3 Analytics & funnel | **PASS WITH MINOR ISSUES** — 3 S1 fixed+pinned, 1 S2 logged | ✅ approved |
 | 4 Privacy & security | **PASS** — cross-user probe denies; secret scan clean; 0 defects, 2 S2 hardening logged | ✅ approved |
-| 5 Editorial & visual | **PASS WITH MINOR ISSUES** — 1 S1 naming fixed+pinned, 4 S2 → backlog; no fabrication | awaiting |
-| 6 Assessment quality | not started | — |
+| 5 Editorial & visual | **PASS WITH MINOR ISSUES** — 1 S1 naming fixed+pinned, 4 S2 → backlog; no fabrication | ✅ approved |
+| 6 Assessment quality | **FAIL** — component mis-identification on uncataloged-model systems (dropped/duplicated components, ~20%); report: certification/day-06-assessment/ | awaiting |
 | 7 Edge & destructive | not started | — |
 | 8 Mobile/browser/a11y/perf | not started | — |
 | 9 SEO/meta/share/print | not started | — |
@@ -28,6 +28,7 @@
 ## Defects
 
 **Open S0:** 0
+**Open launch-blockers (S1, must-fix-before-launch):** 1 — G6-D1 component mis-identification (Gate 6); remediation options in report, awaiting founder decision
 **Open S1:** 0 (6 found across Gates 1+3+4+5, all fixed same-day with regression tests)
 **S2 backlog:** 7 (see POST_LAUNCH.md)
 **Gate 6 watch-list:** 3 content observations from Gate 1 (verdict/lede tension; brand-only credit "Rega"; recommendation phrasing) — to be judged in the assessment-quality review
@@ -64,5 +65,5 @@
 
 ## Objectives
 
-**Today:** Gate 5 executed — 6 representative assessments through the real pipeline, reviewed across coherence / technical depth / factual restraint / naming / hierarchy. Required naming defect (wLM→WLM) fixed+pinned; no fabricated technical claims; technical-depth direction + catalog-naming + minor editorial → POST_LAUNCH.
-**Tomorrow:** Gate 6 (Assessment quality), pending Gate 5 sign-off + architectural review.
+**Today:** Gate 6 executed — 30-system quality scan. FAIL: component mis-identification (dropped/duplicated components) on systems with uncataloged models, incl. a mainstream budget system. Root cause: low-confidence gate checks coverage not graph integrity. Recommended smallest-safe mitigation: route graph-integrity failures to clarification. No fix applied (architectural decision under freeze).
+**Tomorrow:** hold — awaiting founder decision on G6-D1 remediation path before Gate 7.
