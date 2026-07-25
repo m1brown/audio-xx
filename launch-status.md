@@ -5,8 +5,8 @@
 
 **Overall status:** CERTIFICATION IN PROGRESS — Gates 1–2 executed
 **Launch freeze:** IN EFFECT (from Gate 1 until soft launch complete; founder may lift)
-**Current gate:** 2 (Billing & entitlement) — executed, report posted
-**Days remaining (plan):** 10 working days to activation gate
+**Current gate:** 3 (Analytics & funnel) — executed, report posted
+**Days remaining (plan):** 9 working days to activation gate
 **Baseline commit:** c62dcb1 (version-b) · Production: de13f5a
 
 ## Gates
@@ -14,8 +14,8 @@
 | Gate | Status | Signed |
 |---|---|---|
 | 1 Functional | **PASS WITH MINOR ISSUES** — 1 S1 fixed+pinned | ✅ approved |
-| 2 Billing & entitlement | **PASS** — 10 states verified live, 0 defects; report: certification/day-02-billing/ | awaiting |
-| 3 Analytics & funnel | not started | — |
+| 2 Billing & entitlement | **PASS** — 10 states live, 0 defects | ✅ approved |
+| 3 Analytics & funnel | **PASS WITH MINOR ISSUES** — 3 S1 fixed+pinned, 1 S2 logged; report: certification/day-03-analytics/ | awaiting |
 | 4 Privacy & security | not started | — |
 | 5 Editorial & visual | not started | — |
 | 6 Assessment quality | not started | — |
@@ -28,8 +28,8 @@
 ## Defects
 
 **Open S0:** 0
-**Open S1:** 0 (1 found in Gate 1, fixed same-day with regression test)
-**S2 backlog:** see POST_LAUNCH.md
+**Open S1:** 0 (4 found across Gates 1+3, all fixed same-day with regression tests)
+**S2 backlog:** 1 (see POST_LAUNCH.md)
 **Gate 6 watch-list:** 3 content observations from Gate 1 (verdict/lede tension; brand-only credit "Rega"; recommendation phrasing) — to be judged in the assessment-quality review
 
 ## Operational log
@@ -40,8 +40,10 @@
   evidence-file echo was scrubbed before it was ever committed).
   Standing credential-scan rule added to the plan;
   `scripts/credential-scan.sh` created and used from Gate 3 onward.
-  Test-key rotation: **pending founder** (dashboard-only operation);
-  old-key invalidation will be confirmed here once rotated.
+  Test-key rotation: **complete** (2026-07-25). Old key confirmed dead
+  (Stripe API 401); replacement confirmed live (200) and present in
+  .env.local; webhook forwarder restarted under the new key; listen
+  signing secret unchanged. No key value recorded anywhere.
 
 ## Launch risks
 
@@ -50,5 +52,5 @@
 
 ## Objectives
 
-**Today:** Gate 2 executed — 10-state sweep incl. real Checkout/portal, degradation test; 0 defects; report posted.
-**Tomorrow:** Gate 3 (Analytics & funnel verification), pending Gate 2 sign-off.
+**Today:** key rotation confirmed + hygiene closed; Gate 3 executed — 6 controlled journeys against a pre-declared baseline; 3 S1 instrumentation gaps fixed and re-verified live.
+**Tomorrow:** Gate 4 (Privacy, authentication & security), pending Gate 3 sign-off.

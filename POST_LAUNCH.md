@@ -26,3 +26,4 @@ scannable; expand only when the item is picked up.
 ## Deferred during certification
 
 (Gate reports append here.)
+- [gate-3] save_started can report signed_in:false when clicked within ~1s of page load (before session resolves) — attribution imprecision on one intent event, outcome events unaffected (S2, observed once in J3)

@@ -1,0 +1,441 @@
+{
+ "J1_anonymous_builder": [
+  [
+   "event",
+   {
+    "name": "builder_started",
+    "data": {}
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "landing_viewed",
+    "data": {}
+   }
+  ],
+  [
+   "pageview",
+   {
+    "route": "/",
+    "path": "/"
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "assessment_rendered",
+    "data": {
+     "source": "builder",
+     "signed_in": false
+    }
+   }
+  ],
+  [
+   "pageview",
+   {
+    "route": "/artifact",
+    "path": "/artifact"
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "copy_link_clicked",
+    "data": {}
+   }
+  ],
+  [
+   "__clipboard_write",
+   "http://localhost:3000/artifact?system=Assess%20my%20system%3A%20Chord%20Qutest%2C%20Naim%20SuperNait%203%2C%20Harbeth%20"
+  ],
+  [
+   "event",
+   {
+    "name": "print_clicked",
+    "data": {}
+   }
+  ],
+  [
+   "__window_print_called"
+  ],
+  [
+   "event",
+   {
+    "name": "save_started",
+    "data": {
+     "signed_in": false
+    }
+   }
+  ]
+ ],
+ "J1_finalUrl": "http://localhost:3000/artifact?system=Assess%20my%20system%3A%20Chord%20Qutest%2C%20Naim%20SuperNait%203%2C%20Harbeth%20Super%20HL5%20Plus",
+ "J2_anonymous_composer": [
+  [
+   "event",
+   {
+    "name": "landing_viewed",
+    "data": {}
+   }
+  ],
+  [
+   "pageview",
+   {
+    "route": "/",
+    "path": "/"
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "composer_started",
+    "data": {}
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "assessment_rendered",
+    "data": {
+     "source": "composer"
+    }
+   }
+  ]
+ ],
+ "J3_save_lifecycle": [
+  [
+   "pageview",
+   {
+    "route": "/auth/signin",
+    "path": "/auth/signin"
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "sign_in_completed",
+    "data": {
+     "source": "signin"
+    }
+   }
+  ],
+  [
+   "pageview",
+   {
+    "route": "/artifact",
+    "path": "/artifact"
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "assessment_rendered",
+    "data": {
+     "source": "direct",
+     "signed_in": true
+    }
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "save_started",
+    "data": {
+     "signed_in": true
+    }
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "first_system_saved",
+    "data": {}
+   }
+  ],
+  [
+   "pageview",
+   {
+    "route": "/artifact",
+    "path": "/artifact"
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "assessment_rendered",
+    "data": {
+     "source": "direct",
+     "signed_in": true
+    }
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "save_started",
+    "data": {
+     "signed_in": true
+    }
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "additional_system_saved",
+    "data": {}
+   }
+  ],
+  [
+   "pageview",
+   {
+    "route": "/artifact",
+    "path": "/artifact"
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "save_started",
+    "data": {
+     "signed_in": false
+    }
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "identical_assessment_declined",
+    "data": {}
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "assessment_rendered",
+    "data": {
+     "source": "direct",
+     "signed_in": true
+    }
+   }
+  ],
+  [
+   "pageview",
+   {
+    "route": "/systems",
+    "path": "/systems"
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "my_systems_viewed",
+    "data": {
+     "state": "trial"
+    }
+   }
+  ]
+ ],
+ "J4_boundary": [
+  [
+   "pageview",
+   {
+    "route": "/auth/signin",
+    "path": "/auth/signin"
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "sign_in_completed",
+    "data": {
+     "source": "signin"
+    }
+   }
+  ],
+  [
+   "pageview",
+   {
+    "route": "/systems",
+    "path": "/systems"
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "my_systems_viewed",
+    "data": {
+     "state": "expired"
+    }
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "subscription_prompt_viewed",
+    "data": {
+     "state": "expired",
+     "action": "manage"
+    }
+   }
+  ],
+  [
+   "pageview",
+   {
+    "route": "/systems",
+    "path": "/systems"
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "my_systems_viewed",
+    "data": {
+     "state": "expired"
+    }
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "subscription_prompt_viewed",
+    "data": {
+     "state": "expired",
+     "action": "manage"
+    }
+   }
+  ],
+  [
+   "pageview",
+   {
+    "route": "/artifact",
+    "path": "/artifact"
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "assessment_rendered",
+    "data": {
+     "source": "direct",
+     "signed_in": true
+    }
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "save_started",
+    "data": {
+     "signed_in": true
+    }
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "trial_action_blocked",
+    "data": {
+     "action": "save"
+    }
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "subscription_prompt_viewed",
+    "data": {
+     "state": "expired",
+     "action": "save"
+    }
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "checkout_started",
+    "data": {
+     "action": "save"
+    }
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "checkout_cancelled",
+    "data": {}
+   }
+  ],
+  [
+   "pageview",
+   {
+    "route": "/account",
+    "path": "/account"
+   }
+  ]
+ ],
+ "J5_dedupe_reload": [
+  [
+   "event",
+   {
+    "name": "landing_viewed",
+    "data": {}
+   }
+  ],
+  [
+   "pageview",
+   {
+    "route": "/",
+    "path": "/"
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "landing_viewed",
+    "data": {}
+   }
+  ],
+  [
+   "pageview",
+   {
+    "route": "/",
+    "path": "/"
+   }
+  ]
+ ],
+ "J6_vendor_failure": [
+  [
+   "pageview",
+   {
+    "route": "/artifact",
+    "path": "/artifact"
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "assessment_rendered",
+    "data": {
+     "source": "direct",
+     "signed_in": false
+    }
+   }
+  ],
+  [
+   "event",
+   {
+    "name": "copy_link_clicked",
+    "data": {}
+   }
+  ],
+  [
+   "__clipboard_write",
+   "http://localhost:3000/artifact?system=Assess%20my%20system%3A%20Chord%20Qutest%2C%20Naim%20SuperNait%203%2C%20Harbeth%20"
+  ]
+ ],
+ "J6_assertions": {
+  "verdictRendered": true,
+  "copyFeedback": true,
+  "pageErrors": []
+ }
+}

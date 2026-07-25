@@ -85,3 +85,21 @@ describe('emission', () => {
     expect(vendorTrack).toHaveBeenCalledWith('save_started', { signed_in: true });
   });
 });
+
+describe('composer funnel instrumentation (Gate 3, G3-D1 regression)', () => {
+  it('the conversation-embedded assessment emits assessment_rendered {source: composer}', async () => {
+    // Structural pin: the embed component must call the canonical event
+    // on mount — without it the composer half of the funnel never
+    // registers a completed assessment.
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    // Emitted at the embed site (AdvisoryMessage) so every dispatch
+    // branch — v2 artifact and legacy — counts a completed assessment.
+    const src = readFileSync(
+      resolve(__dirname, '../../components/advisory/AdvisoryMessage.tsx'),
+      'utf8',
+    );
+    expect(src).toMatch(/track\('assessment_rendered',\s*\{\s*source:\s*'composer'\s*\}\)/);
+    expect((src.match(/<TrackAssessmentEmbed \/>/g) ?? []).length).toBeGreaterThanOrEqual(2);
+  });
+});

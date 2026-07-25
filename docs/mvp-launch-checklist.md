@@ -48,7 +48,8 @@ Every item is independently verifiable. Items are grouped by the milestone that 
 ## Launch Certification (tracking: launch-status.md · plan: docs/launch-certification-plan.md)
 - ✅ Gate 1 Functional — PASS WITH MINOR ISSUES (1 S1 fixed + pinned; certification/day-01-functional/)
 - ✅ Gate 2 Billing & entitlement — PASS (10 states live, 0 defects; certification/day-02-billing/)
-- ⬜ Gates 3–11
+- ✅ Gate 3 Analytics & funnel — PASS WITH MINOR ISSUES (3 S1 fixed + pinned; certification/day-03-analytics/)
+- ⬜ Gates 4–11
 
 ## Trust, legal, operations (before public launch)
 - ⬜ Privacy policy + affiliate disclosure reviewed against actual behaviour (accounts, Stripe, analytics)

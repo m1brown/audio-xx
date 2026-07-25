@@ -41,13 +41,13 @@ Status column is filled during execution (☐ → ✅/❌+severity).
 
 | # | Behavior | Auto | Manual | Status |
 |---|---|---|---|---|
-| C1 | Exactly the 21 canonical events; unknown names dropped | suite | — | ☐ |
-| C2 | Every funnel stage emits on the real journey | — | ✓ | ☐ |
-| C3 | Allowlist sanitizer: no private data can transmit | suite | ✓ | ☐ |
-| C4 | View events once per load; action events every time | suite | ✓ | ☐ |
-| C5 | Mount-time events queue before vendor script (regression) | — | ✓ | ☐ |
-| C6 | Segmentation props correct (source/signed_in/state/action) | — | ✓ | ☐ |
-| C7 | Server events (account_created, sub_activated/cancelled) fire | — | ✓ | ☐ |
+| C1 | Exactly the 21 canonical events; unknown names dropped | suite | — | ✅ |
+| C2 | Every funnel stage emits on the real journey | — | ✓ | ✅ |
+| C3 | Allowlist sanitizer: no private data can transmit | suite | ✓ | ✅ |
+| C4 | View events once per load; action events every time | suite | ✓ | ✅ |
+| C5 | Mount-time events queue before vendor script (regression) | — | ✓ | ✅ |
+| C6 | Segmentation props correct (source/signed_in/state/action) | — | ✓ | ✅ |
+| C7 | Server events (account_created, sub_activated/cancelled) fire | — | ✓ | ✅ code-verified; end-to-end at beta entry (env-limited locally) |
 
 ## D. Privacy & security (Gate 4)
 

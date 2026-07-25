@@ -1,0 +1,20 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v2.1.9 /Users/mikebrown/audio-xx/audio-xx
+
+ ✓ apps/web/src/product/__tests__/analytics.test.ts (9 tests) 7ms
+ ✓ apps/web/src/product/__tests__/print-chrome.test.ts (3 tests) 2ms
+ ✓ apps/web/src/product/__tests__/catalog-index.test.ts (9 tests) 38ms
+ ✓ apps/web/src/product/__tests__/build-to-assessment.test.ts (10 tests) 345ms
+ ✓ apps/web/src/product/__tests__/billing.test.ts (11 tests) 2163ms
+ ✓ apps/web/src/product/__tests__/entitlement.test.ts (19 tests) 1711ms
+ ✓ apps/web/src/product/__tests__/assessment-history.test.ts (10 tests) 1770ms
+ ✓ apps/web/src/product/__tests__/save-system.test.ts (12 tests) 1786ms
+
+ Test Files  8 passed (8)
+      Tests  83 passed (83)
+   Start at  00:14:48
+   Duration  3.95s (transform 1.71s, setup 0ms, collect 7.83s, tests 7.82s, environment 1ms, prepare 947ms)
+
+      Tests  84 passed (84)
+      Tests  84 passed (84)

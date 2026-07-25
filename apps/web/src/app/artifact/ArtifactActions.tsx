@@ -18,6 +18,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { track } from '@/product/analytics';
 import SubscriptionPrompt from '@/product/SubscriptionPrompt';
 
@@ -38,6 +39,9 @@ const item: React.CSSProperties = {
 
 export default function ArtifactActions({ systemText }: { systemText: string }) {
   const router = useRouter();
+  const { status: sessionStatus } = useSession();
+  const signedIn = sessionStatus === 'authenticated';
+  const [blockedState, setBlockedState] = useState<string | undefined>(undefined);
   const [copied, setCopied] = useState(false);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'appended' | 'identical'>('idle');
   const [saveError, setSaveError] = useState('');
@@ -51,6 +55,9 @@ export default function ArtifactActions({ systemText }: { systemText: string }) 
   // Funnel: an assessment reached the reader. Source = builder when the
   // System Builder set the handoff flag just before navigating.
   useEffect(() => {
+    // Wait for the session to resolve so signed_in attribution is real;
+    // the per-load dedupe in the analytics layer guarantees one emission.
+    if (sessionStatus === 'loading') return;
     let source = 'direct';
     try {
       if (sessionStorage.getItem('axx-entry') === 'builder') {
@@ -58,8 +65,8 @@ export default function ArtifactActions({ systemText }: { systemText: string }) 
         sessionStorage.removeItem('axx-entry');
       }
     } catch { /* storage unavailable — count as direct */ }
-    track('assessment_rendered', { source });
-  }, []);
+    track('assessment_rendered', { source, signed_in: signedIn });
+  }, [sessionStatus, signedIn]);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,7 +109,7 @@ export default function ArtifactActions({ systemText }: { systemText: string }) 
     setSaveError('');
     setBlocked(false);
     setSaveState('saving');
-    track('save_started', { signed_in: savedMatch !== null || undefined });
+    track('save_started', { signed_in: signedIn });
     try {
       const res = await fetch('/api/my-systems', {
         method: 'POST',
@@ -116,6 +123,8 @@ export default function ArtifactActions({ systemText }: { systemText: string }) 
       }
       if (res.status === 403) {
         // Trial ended — a calm subscription prompt, never an error.
+        const body = await res.json().catch(() => ({}));
+        setBlockedState(body.entitlement?.state);
         track('trial_action_blocked', { action: savedMatch ? 'add' : 'save' });
         setSaveState('idle');
         setBlocked(true);
@@ -209,6 +218,7 @@ export default function ArtifactActions({ systemText }: { systemText: string }) 
         <div style={{ maxWidth: '34rem', margin: '1.2rem auto 0' }}>
           <SubscriptionPrompt
             context={savedMatch ? 'add' : 'save'}
+            state={blockedState}
             onDismiss={() => setBlocked(false)}
           />
         </div>

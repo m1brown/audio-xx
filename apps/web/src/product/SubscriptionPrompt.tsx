@@ -23,14 +23,19 @@ const caps: React.CSSProperties = {
 };
 
 export default function SubscriptionPrompt(
-  { context = 'manage', onDismiss }: { context?: 'save' | 'add' | 'rename' | 'notes' | 'manage'; onDismiss?: () => void },
+  { context = 'manage', state, onDismiss }: {
+    context?: 'save' | 'add' | 'rename' | 'notes' | 'manage';
+    /** Entitlement state at the moment the prompt appears (spec prop). */
+    state?: string;
+    onDismiss?: () => void;
+  },
 ) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    track('subscription_prompt_viewed', { action: context });
-  }, [context]);
+    track('subscription_prompt_viewed', { state, action: context });
+  }, [context, state]);
 
   const subscribe = async () => {
     if (busy) return;

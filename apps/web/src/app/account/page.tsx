@@ -137,7 +137,7 @@ function AccountBody() {
 
       {entitlement && !entitlement.canManage && (
         <div style={{ marginBottom: '2rem' }}>
-          <SubscriptionPrompt context="manage" />
+          <SubscriptionPrompt context="manage" state={entitlement?.state} />
         </div>
       )}
 

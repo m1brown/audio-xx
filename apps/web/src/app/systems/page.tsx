@@ -79,13 +79,16 @@ function MySystemsList() {
       .then((d) => {
         setSystems(d.systems ?? []);
         setEntitlement(d.entitlement ?? null);
+        // Fired here so the view carries the entitlement state
+        // (trial/subscriber/expired…) — per-load dedupe keeps it single.
+        track('my_systems_viewed', { state: d.entitlement?.state });
       })
       .catch(() => setSystems([]));
   }, []);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin');
-    if (status === 'authenticated') { load(); track('my_systems_viewed'); }
+    if (status === 'authenticated') load();
   }, [status, router, load]);
 
   if (status !== 'authenticated') return null;
@@ -145,7 +148,7 @@ function MySystemsList() {
 
       {entitlement && (!entitlement.canManage || showPrompt) && (
         <div style={{ marginBottom: '2.5rem' }}>
-          <SubscriptionPrompt context="manage" onDismiss={showPrompt ? () => setShowPrompt(false) : undefined} />
+          <SubscriptionPrompt context="manage" state={entitlement?.state} onDismiss={showPrompt ? () => setShowPrompt(false) : undefined} />
         </div>
       )}
 

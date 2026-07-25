@@ -57,6 +57,16 @@ import { ProductImageProvider, useProductImageClaim } from './ProductImageContex
 import AdvisoryListenerProfile from './AdvisoryListenerProfile';
 import AdvisoryIntake from './AdvisoryIntake';
 import { renderText, renderTextWithProductLinks, type ProductUrlMap } from './render-text';
+import { track } from '@/product/analytics';
+
+/** Certification Gate 3 (G3-D1): composer-embedded assessments count as
+ * completed assessments. Rendered beside the embed; deduped per load. */
+function TrackAssessmentEmbed() {
+  React.useEffect(() => {
+    track('assessment_rendered', { source: 'composer' });
+  }, []);
+  return null;
+}
 
 /** Preference selections from the "Start here" quick-capture flow. */
 export interface PreferenceSelection {
@@ -5277,9 +5287,22 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
     // tests that build advisories without going through the engine).
     if (ASSESSMENT_ARTIFACT_V2_ENABLED && advisory.__rawAssessment) {
       const { payload } = synthesizeArtifact(advisory.__rawAssessment);
-      content = <AssessmentArtifactV2 p={payload} embedded={true} />;
+      // Funnel (certification Gate 3, G3-D1): the embedded assessment IS
+      // a completed assessment — tracked at the embed site so every
+      // branch of this dispatch counts. Deduped per page load.
+      content = (
+        <>
+          <AssessmentArtifactV2 p={payload} embedded={true} />
+          <TrackAssessmentEmbed />
+        </>
+      );
     } else if (SYSTEM_ASSESSMENT_ARTIFACT_ENABLED) {
-      content = <SystemAssessmentArtifact advisory={advisory} />;
+      content = (
+        <>
+          <SystemAssessmentArtifact advisory={advisory} />
+          <TrackAssessmentEmbed />
+        </>
+      );
     } else {
       content = <MemoFormat advisory={advisory} onFollowUpClick={onFollowUpClick} />;
     }
