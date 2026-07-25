@@ -5,6 +5,16 @@ Date: 2026-07-25 · Release candidate: `620ee7b` (version-b) · Production:
 The question: *is there sufficient evidence that we should stop improving and
 release?*
 
+> **The certified corrections are NOT yet visible on audio-xx.com because the
+> release candidate has not been deployed.** Production is still commit
+> `de13f5a`; the certified RC (`620ee7b`, version-b) is 19 commits ahead and
+> undeployed. The live-site "wLM Diva monitor" and shallow assessment depth are
+> the OLD production build (see production-baseline.md), not the certified
+> behaviour. The certified fix renders "WLM Diva Monitor" through the same
+> renderer; the assessment depth is the intentionally-unchanged editorial
+> baseline (causal explanation remains the first post-launch initiative). This
+> gap closes only when the RC is promoted to production.
+
 ---
 
 ## Release-candidate state (evidence)
@@ -82,6 +92,23 @@ the promotion/verify sequence:
    final benchmark rerun on the release commit; five demo scenarios on
    production.
 7. **Rollback rehearsed** on preview before promotion.
+
+### Mandatory post-deployment production verification (founder-required)
+After the RC is promoted, verification must be a **direct browser check of the
+live `https://audio-xx.com`** (not the preview), confirming ALL of:
+1. **`wLM` no longer appears** in a rendered assessment (e.g. the WLM Diva
+   system trade line reads "WLM Diva Monitor").
+2. **The deployed commit matches the certified RC** (`620ee7b` or its promoted
+   descendant) — verified via the deploy dashboard / build metadata.
+3. **The public assessment is generated through the certified renderer**
+   (`runArtifactPipeline` → `synthesizeArtifact`), i.e. the output matches the
+   certified payload, not a cached/legacy render.
+4. **No stale production build or deployment alias remains** — the primary
+   domain and every alias point at the new deployment; no old build is still
+   serving.
+5. **The live URL is tested after deployment**, not merely the preview
+   environment.
+Activation is not complete until all five pass on the live domain.
 
 ---
 

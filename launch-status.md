@@ -79,6 +79,15 @@
   deployment at the activation gate. No early promotion for the cosmetic wLM
   fix; interrupt only for a genuine trust-damaging production defect.
 
+- 2026-07-25 · **Production-baseline evidence recorded** (founder screenshot,
+  certification/day-11-beta/production-baseline.md): live audio-xx.com still on
+  de13f5a — "wLM Diva monitor" in the trade line + short assessment = the OLD
+  build, not certified behaviour. Confirmed deployment state (mangle only in the
+  mid-sentence decap; caps credit already correct). Activation MUST include a
+  direct LIVE-URL browser check: (1) wLM gone; (2) deployed commit == certified
+  RC; (3) assessment via certified renderer; (4) no stale build/alias serving;
+  (5) test the live domain post-deploy, not the preview.
+
 ## Launch risks
 
 1. Founder tax/entity decision unmade (activation prerequisite).
