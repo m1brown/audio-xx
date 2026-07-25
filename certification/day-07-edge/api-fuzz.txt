@@ -1,0 +1,41 @@
+Gate 7 — API fuzz (malformed/wrong-type/oversized bodies must be 4xx, never 5xx)
+After fix (evaluate + memo-overlay JSON-parse guard):
+  POST /api/events         notjson  -> 204
+  POST /api/events         null     -> 204
+  POST /api/events         []       -> 204
+  POST /api/events         {{{      -> 204
+  POST /api/events         123      -> 204
+  POST /api/orchestrator   notjson  -> 400
+  POST /api/orchestrator   null     -> 400
+  POST /api/orchestrator   []       -> 400
+  POST /api/orchestrator   {{{      -> 400
+  POST /api/orchestrator   123      -> 400
+  POST /api/evaluate       notjson  -> 400
+  POST /api/evaluate       null     -> 400
+  POST /api/evaluate       []       -> 400
+  POST /api/evaluate       {{{      -> 400
+  POST /api/evaluate       123      -> 400
+  POST /api/compare        notjson  -> 401
+  POST /api/compare        null     -> 401
+  POST /api/compare        []       -> 401
+  POST /api/compare        {{{      -> 401
+  POST /api/compare        123      -> 401
+  POST /api/diagnose       notjson  -> 500
+  POST /api/diagnose       null     -> 500
+  POST /api/diagnose       []       -> 400
+  POST /api/diagnose       {{{      -> 500
+  POST /api/diagnose       123      -> 400
+  POST /api/memo-overlay   notjson  -> 400
+  POST /api/memo-overlay   null     -> 400
+  POST /api/memo-overlay   []       -> 400
+  POST /api/memo-overlay   {{{      -> 400
+  POST /api/memo-overlay   123      -> 400
+  POST /api/listing-eval   notjson  -> 400
+  POST /api/listing-eval   null     -> 500
+  POST /api/listing-eval   []       -> 400
+  POST /api/listing-eval   {{{      -> 400
+  POST /api/listing-eval   123      -> 400
+  (auth-required routes return 401/405 before parsing; webhook 400 on bad sig)
+  artifact ?system=<script> -> 200  (React escapes; no execution)
+
+XSS: dangerouslySetInnerHTML on user content = 0 occurrences (grep, whole app)

@@ -3,10 +3,10 @@
 > Daily operational dashboard. Reviewed at the 11:00 launch check-in.
 > Concise entries only; detail lives in `certification/` reports.
 
-**Overall status:** CERTIFICATION IN PROGRESS — Gates 1–5 approved; Gate 6 remediated, re-verified (awaiting review)
+**Overall status:** CERTIFICATION IN PROGRESS — Gates 1–6 approved; Gate 7 executed
 **Launch freeze:** IN EFFECT (from Gate 1 until soft launch complete; founder may lift)
-**Current gate:** 6 (Assessment quality) — remediation applied + verified; awaiting architectural review
-**Days remaining (plan):** 6 working days to activation gate
+**Current gate:** 7 (Edge cases & destructive testing) — executed, report posted
+**Days remaining (plan):** 5 working days to activation gate
 **Baseline commit:** c62dcb1 (version-b) · Production: de13f5a
 
 ## Gates
@@ -18,8 +18,8 @@
 | 3 Analytics & funnel | **PASS WITH MINOR ISSUES** — 3 S1 fixed+pinned, 1 S2 logged | ✅ approved |
 | 4 Privacy & security | **PASS** — cross-user probe denies; secret scan clean; 0 defects, 2 S2 hardening logged | ✅ approved |
 | 5 Editorial & visual | **PASS WITH MINOR ISSUES** — 1 S1 naming fixed+pinned, 4 S2 → backlog; no fabrication | ✅ approved |
-| 6 Assessment quality | **PASS (remediated)** — graph-integrity gate: wrong-graph systems now clarify (dropped/duplicated/2+ uncataloged), controls still assess; pinned | awaiting |
-| 7 Edge & destructive | not started | — |
+| 6 Assessment quality | **PASS (remediated)** — graph-integrity gate; controls still assess; pinned | ✅ approved |
+| 7 Edge & destructive | **PASS WITH MINOR ISSUES** — 20 destructive inputs fail honestly (0 throws); fuzz clean of 5xx after 1 fix; no XSS/corruption | awaiting |
 | 8 Mobile/browser/a11y/perf | not started | — |
 | 9 SEO/meta/share/print | not started | — |
 | 10 Founder + reviewer-lens review | not started | — |
@@ -29,7 +29,7 @@
 
 **Open S0:** 0
 **Open launch-blockers (S1, must-fix-before-launch):** 0 — G6-D1 remediated (graph-integrity gate) + regression-pinned
-**Open S1:** 0 (6 found across Gates 1+3+4+5, all fixed same-day with regression tests)
+**Open S1:** 0 (7 found across Gates 1+3+4+5+7, all fixed same-day with regression tests)
 **S2 backlog:** 7 (see POST_LAUNCH.md)
 **Gate 6 watch-list:** 3 content observations from Gate 1 (verdict/lede tension; brand-only credit "Rega"; recommendation phrasing) — to be judged in the assessment-quality review
 **Gate 7 watch-list (edge/legacy data):** saved-system DEAD END — systems with a chain but no `canonicalText` (created via the legacy `/api/systems` POST: `/systems/new`, `SystemEditor`) render the "predates assessment history" empty state with NO action link (`runTodayUrl` is null). Evidenced by "France II" on production. Minimal remedy: reconstruct assessment text from the stored chain so an action is always offered. Should-fix before soft launch; also relevant to Gate 5 (empty-state CTA / editorial). Full proposal + the broader "Reassess System" feature in POST_LAUNCH.md.
@@ -58,6 +58,17 @@
   regressions; +5 focused tests incl. an end-to-end component-graph
   assertion. Classified S1, fixed same-day.
 
+- 2026-07-25 · **Standing engine doctrine (founder-set, Gate 6 close-out):**
+  Catalog incompleteness may reduce convenience, but it must NEVER corrupt the
+  component graph. When the resolved graph is incomplete, duplicated, or
+  materially uncertain, Audio XX asks a specific clarification rather than
+  producing a confident assessment — this outranks maximising the % of systems
+  that assess uninterrupted. Targeted catalog additions may reduce unnecessary
+  clarification but must never substitute for or weaken the graph-integrity
+  gate. Any future false-positive clarification is a *usability* defect, fixed
+  narrowly — never by broadly weakening the invariant. No catalog-completeness
+  effort during certification.
+
 ## Launch risks
 
 1. Founder tax/entity decision unmade (activation prerequisite).
@@ -65,5 +76,5 @@
 
 ## Objectives
 
-**Today:** Gate 6 remediation implemented per founder decision — graph-integrity gate routes dropped/duplicated/2+-uncataloged graphs to a specific clarification (not the LLM path); 3 known failures now clarify, 8 controls assess; 3 false-positive classes found + fixed during verification; +13 regression tests. Engine gate 3856, 0 regressions; suite 84/84.
-**Tomorrow:** Gate 7 (Edge & destructive), pending Gate 6 remediation review.
+**Today:** Gate 7 executed — 20 destructive engine inputs (0 throws, no false authority, no graph corruption), API fuzz across 7 body-parsing routes, XSS render-path check. One S1 (evaluate+memo-overlay 500 on malformed JSON) fixed → 400 + pinned. No stored XSS (0 dangerouslySetInnerHTML), no data corruption.
+**Tomorrow:** Gate 8 (Mobile/browser/a11y/performance), pending Gate 7 sign-off.

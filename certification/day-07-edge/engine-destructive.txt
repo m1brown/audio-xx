@@ -1,0 +1,21 @@
+   [NULL(no-assessment)]  very short "a"
+   [NULL(no-assessment)]  very short "hi"
+   [NULL(no-assessment)]  single component
+   [NULL(no-assessment)]  empty-ish colon
+   [NULL(no-assessment)]  malformed labels
+   [NULL(no-assessment)]  repeated same component x5
+   [ASSESS(? comp)]  accessories mixed with core
+   [CLARIFY]  conflicting role (speaker labelled DAC)
+   [CLARIFY]  two systems pasted together
+   [CLARIFY]  punctuation-heavy names
+   [CLARIFY]  slash/roman/acronym heavy
+   [NULL(no-assessment)]  all unknown brands
+   [NULL(no-assessment)]  partial description
+   [ASSESS(? comp)]  emoji + text
+   [CLARIFY]  script injection in name
+   [ASSESS(? comp)]  RTL + mixed
+   [NULL(no-assessment)]  1000 comma tokens
+   [NULL(no-assessment)]  very long single token
+   [ASSESS(? comp)]  newlines-as-separators
+   [ASSESS(? comp)]  arrows chain
+THROWS: 0 (must be 0)

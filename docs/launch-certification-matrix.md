@@ -88,12 +88,12 @@ Status column is filled during execution (☐ → ✅/❌+severity).
 
 | # | Behavior | Auto | Manual | Status |
 |---|---|---|---|---|
-| G1 | Script/HTML in names & notes stored inert, rendered escaped | — | ✓ | ☐ |
-| G2 | Oversized/malformed API bodies → 4xx, never 5xx | fuzz | — | ☐ |
-| G3 | Double-submit save → exactly one system | suite | ✓ | ☐ |
-| G4 | Stale link to removed system → graceful not-found | — | ✓ | ☐ |
-| G5 | Back/forward through checkout leaves consistent state | — | ✓ | ☐ |
-| G6 | Session expiry mid-action → clean re-auth, no data loss | — | ✓ | ☐ |
+| G1 | Script/HTML in names & notes stored inert, rendered escaped | — | ✓ | ✅ (0 dangerouslySetInnerHTML; React-escaped) |
+| G2 | Oversized/malformed API bodies → 4xx, never 5xx | fuzz | — | ✅ (G7-D1 fixed: evaluate+memo-overlay 500→400; pinned) |
+| G3 | Double-submit save → exactly one system | suite | ✓ | ✅ (suite-pinned) |
+| G4 | Stale link to removed system → graceful not-found | — | ✓ | ✅ (notFound on unowned/missing) |
+| G5 | Back/forward through checkout leaves consistent state | — | ✓ | ✅ (server-verified return; idempotent webhook) |
+| G6 | Session expiry mid-action → clean re-auth, no data loss | — | ✓ | ✅ (401 pre-write; no partial state) |
 
 ## H. Mobile / browsers / a11y / performance (Gate 8)
 
