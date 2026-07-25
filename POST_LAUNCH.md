@@ -133,3 +133,19 @@ change post-launch.
   KEF LS50 Meta, Klipsch La Scala/Heritage, EMT JPA 66, Shindo Monbrison,
   ProAc Response DB1. This is usability, NOT the architectural remedy, and must
   not gate the blocker fix. Do not expand into a catalog-completeness project.
+
+## Post-certification documentation (not launch-critical)
+
+- [gate-7] **Engine failure-modes reference (behaviour, not implementation).**
+  Founder-requested after Gate 7. Document, for each: unknown components,
+  conflicting component roles, duplicate components, multiple systems pasted
+  together, unsupported accessories, malformed input, impossible graphs — the
+  expected behaviour, why it was chosen, and why it is preferable to a
+  speculative assessment. Anchors the core principle: "when confidence is
+  insufficient, reduce confidence, not correctness." Reference material for
+  future contributors; produce after certification.
+
+- [gate-8] **Touch targets below 44px (a11y polish, S2).** Composer Send (37px)
+  and paperclip (36px), and nav/footer text links (20–24px tall) are usable but
+  under the 44px guideline. Bump the composer controls to a 44px min hit area;
+  optionally increase nav/footer tap padding. Non-blocking.

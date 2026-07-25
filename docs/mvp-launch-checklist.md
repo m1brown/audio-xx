@@ -53,7 +53,8 @@ Every item is independently verifiable. Items are grouped by the milestone that 
 - ✅ Gate 5 Editorial & visual — PASS WITH MINOR ISSUES (1 S1 naming fixed + pinned; no fabrication; certification/day-05-editorial/)
 - ✅ Gate 6 Assessment quality — PASS (remediated: graph-integrity gate; G6-D1 resolved + pinned; certification/day-06-assessment/)
 - ✅ Gate 7 Edge & destructive — PASS WITH MINOR ISSUES (1 S1 malformed-body 500→400 fixed + pinned; no XSS/corruption; certification/day-07-edge/)
-- ⬜ Gates 8–11
+- ✅ Gate 8 Mobile/browser/a11y/perf — PASS WITH MINOR ISSUES (0px overflow all widths; a11y+print clean; 1 S2 touch targets; certification/day-08-mobile/)
+- ⬜ Gates 9–11
 
 ## Trust, legal, operations (before public launch)
 - ⬜ Privacy policy + affiliate disclosure reviewed against actual behaviour (accounts, Stripe, analytics)

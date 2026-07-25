@@ -1,0 +1,34 @@
+Gate 8 — Mobile / browser / a11y / performance · live measurements (in-app Chromium)
+
+H1 — Horizontal overflow (page scrollWidth - clientWidth):
+  Landing   375w -> 0px   (no over-wide elements)
+  Artifact  375w -> 0px
+  Artifact  768w -> 0px
+  Artifact 1280w -> 0px
+  Viewport meta: width=device-width, initial-scale=1 (present on all core pages)
+
+H3 — Keyboard reachability (artifact):
+  Action controls are native <button>/<a>: "Ask a follow-up", "Print",
+  "Copy link", "Save this system", "New assessment". 17 focusable elements.
+
+H4 — Focus / landmarks / alt:
+  :focus rule present in CSS (visible focus). Single <h1>. Landmarks: main=1,
+  nav, header, footer/contentinfo all present. Images: 2/2 have alt (component
+  names); both loaded (naturalWidth 900 / 2000). 0 images without alt.
+
+H5 — Performance proxy:
+  Core page HTML weight: landing 33KB, sign-in 31KB, systems 27KB.
+  No console errors on artifact. Images carry natural dimensions (no CLS from
+  unsized images). Full Lighthouse mobile deferred to the activation/production
+  check (not wired in this environment).
+
+H6 — Print: 3 @media print rules; hide nav + start-over, follow-up +
+  contradiction, and the actions bar -> clean single-artifact print/PDF.
+
+H2 — Cross-browser: Chromium (in-app) confirmed clean; code uses standard
+  React/Next + inline styles + standard CSS (no browser-specific APIs). Safari
+  + Firefox manual parity check at the activation/production step (env-limited
+  here, same class as the Gate 3 server-events caveat).
+
+Touch targets (S2): Send 37px, paperclip 36px, nav/footer text links 20-24px
+  tall — usable but below the 44px guideline.

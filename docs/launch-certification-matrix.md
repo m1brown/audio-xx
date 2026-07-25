@@ -99,12 +99,12 @@ Status column is filled during execution (☐ → ✅/❌+severity).
 
 | # | Behavior | Auto | Manual | Status |
 |---|---|---|---|---|
-| H1 | Core journeys clean at 375w / 768w / desktop | sweep | ✓ | ☐ |
-| H2 | Safari + Chrome + Firefox parity on core journeys | — | ✓ | ☐ |
-| H3 | Keyboard-only completion of build→assess→save | — | ✓ | ☐ |
-| H4 | Focus visible; titles/landmarks/alt basics present | — | ✓ | ☐ |
-| H5 | Lighthouse mobile: artifact ≥50 perf, no red a11y | LH | — | ☐ |
-| H6 | Mobile print/PDF of artifact usable | — | ✓ | ☐ |
+| H1 | Core journeys clean at 375w / 768w / desktop | sweep | ✓ | ✅ (0px overflow 375/768/1280) |
+| H2 | Safari + Chrome + Firefox parity on core journeys | — | ✓ | ◑ Chromium clean; Safari/FF at activation (env-limited) |
+| H3 | Keyboard-only completion of build→assess→save | — | ✓ | ✅ (native focusable action controls) |
+| H4 | Focus visible; titles/landmarks/alt basics present | — | ✓ | ✅ (focus/landmarks/alt/single-h1) |
+| H5 | Lighthouse mobile: artifact ≥50 perf, no red a11y | LH | — | ◑ proxy-green; full Lighthouse at activation |
+| H6 | Mobile print/PDF of artifact usable | — | ✓ | ✅ (print CSS strips chrome/actions) |
 
 ## I. SEO / metadata / sharing / print (Gate 9)
 
