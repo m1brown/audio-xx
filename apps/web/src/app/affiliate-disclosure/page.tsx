@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Affiliate Disclosure — Audio XX',
+  title: 'Affiliate Disclosure',
   description: 'How Audio XX uses affiliate links.',
 };
 

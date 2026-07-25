@@ -110,11 +110,11 @@ Status column is filled during execution (☐ → ✅/❌+severity).
 
 | # | Behavior | Auto | Manual | Status |
 |---|---|---|---|---|
-| I1 | Artifact unfurl: verdict title + standfirst description | tests | ✓ | ☐ |
-| I2 | Private pages (account, systems) noindex | tests | ✓ | ☐ |
-| I3 | Public pages have title+description; no dupes | crawl | — | ☐ |
-| I4 | Print-to-PDF artifact reads as editorial | — | ✓ | ☐ |
-| I5 | Unfurl never leaks private names/notes | tests | ✓ | ☐ |
+| I1 | Artifact unfurl: verdict title + standfirst description | tests | ✓ | ✅ (verdict title + standfirst desc; og+twitter) |
+| I2 | Private pages (account, systems) noindex | tests | ✓ | ✅ (noindex on all private pages) |
+| I3 | Public pages have title+description; no dupes | crawl | — | ✅ (per-page/per-slug titles; robots+sitemap added; G9-D1/2/3 fixed) |
+| I4 | Print-to-PDF artifact reads as editorial | — | ✓ | ✅ (print CSS → clean artifact PDF) |
+| I5 | Unfurl never leaks private names/notes | tests | ✓ | ✅ (metadata from URL text, not saved rows) |
 
 ## J. Founder & beta (Gates 10–11)
 

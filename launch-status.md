@@ -3,10 +3,10 @@
 > Daily operational dashboard. Reviewed at the 11:00 launch check-in.
 > Concise entries only; detail lives in `certification/` reports.
 
-**Overall status:** CERTIFICATION IN PROGRESS — Gates 1–7 approved; Gate 8 executed
+**Overall status:** CERTIFICATION IN PROGRESS — Gates 1–8 approved; Gate 9 executed
 **Launch freeze:** IN EFFECT (from Gate 1 until soft launch complete; founder may lift)
-**Current gate:** 8 (Mobile/browser/a11y/performance) — executed, report posted
-**Days remaining (plan):** 4 working days to activation gate
+**Current gate:** 9 (SEO/metadata/sharing/print) — executed, report posted
+**Days remaining (plan):** 3 working days to activation gate
 **Baseline commit:** c62dcb1 (version-b) · Production: de13f5a
 
 ## Gates
@@ -20,8 +20,8 @@
 | 5 Editorial & visual | **PASS WITH MINOR ISSUES** — 1 S1 naming fixed+pinned, 4 S2 → backlog; no fabrication | ✅ approved |
 | 6 Assessment quality | **PASS (remediated)** — graph-integrity gate; controls still assess; pinned | ✅ approved |
 | 7 Edge & destructive | **PASS WITH MINOR ISSUES** — honest failure; fuzz clean after 1 fix | ✅ approved |
-| 8 Mobile/browser/a11y/perf | **PASS WITH MINOR ISSUES** — 0px overflow 375/768/1280, a11y basics + print clean; 1 S2 (touch targets); Lighthouse+Safari/FF at activation | awaiting |
-| 9 SEO/meta/share/print | not started | — |
+| 8 Mobile/browser/a11y/perf | **PASS WITH MINOR ISSUES** — responsive, a11y+print clean; 1 S2 | ✅ approved |
+| 9 SEO/meta/share/print | **PASS WITH MINOR ISSUES** — robots+sitemap added, per-page titles, unfurl=verdict, private noindex; 3 S1 fixed+pinned; canonical/JSON-LD → backlog | awaiting |
 | 10 Founder + reviewer-lens review | not started | — |
 | 11 Beta readiness & triage | not started | — |
 
@@ -29,8 +29,8 @@
 
 **Open S0:** 0
 **Open launch-blockers (S1, must-fix-before-launch):** 0 — G6-D1 remediated (graph-integrity gate) + regression-pinned
-**Open S1:** 0 (7 found across Gates 1+3+4+5+7, all fixed same-day with regression tests)
-**S2 backlog:** 8 (see POST_LAUNCH.md)
+**Open S1:** 0 (10 found across Gates 1+3+4+5+7+9, all fixed same-day with regression tests)
+**S2 backlog:** 10 (see POST_LAUNCH.md)
 **Gate 6 watch-list:** 3 content observations from Gate 1 (verdict/lede tension; brand-only credit "Rega"; recommendation phrasing) — to be judged in the assessment-quality review
 **Gate 7 watch-list (edge/legacy data):** saved-system DEAD END — systems with a chain but no `canonicalText` (created via the legacy `/api/systems` POST: `/systems/new`, `SystemEditor`) render the "predates assessment history" empty state with NO action link (`runTodayUrl` is null). Evidenced by "France II" on production. Minimal remedy: reconstruct assessment text from the stored chain so an action is always offered. Should-fix before soft launch; also relevant to Gate 5 (empty-state CTA / editorial). Full proposal + the broader "Reassess System" feature in POST_LAUNCH.md.
 
@@ -76,5 +76,5 @@
 
 ## Objectives
 
-**Today:** Gate 8 executed — viewport sweep 375/768/1280 (0px overflow on landing+artifact), a11y basics (focus/landmarks/alt/single-h1), print CSS clean, lightweight HTML. No S0/S1; 1 S2 (touch targets). Full Lighthouse + Safari/Firefox deferred to activation (env-limited).
-**Tomorrow:** Gate 9 (SEO/metadata/sharing/print), pending Gate 8 sign-off.
+**Today:** Gate 9 executed — added robots.txt + sitemap.xml, per-page titles for public pages (incl. per-slug brand/tech), fixed double-suffix legal titles; verified artifact unfurl (verdict title + standfirst), private noindex, no unfurl leak, clean print. 3 S1 fixed+pinned; build EXIT 0.
+**Tomorrow:** Gate 10 (Founder + reviewer-lens review), pending Gate 9 sign-off.

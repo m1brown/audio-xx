@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
@@ -197,6 +198,15 @@ function resolveNavHubGroups(
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const profile = findTechnologyProfileBySlug(slug);
+  const name = profile?.displayName
+    ?? slug.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const description = profile?.tagline || `${name} — the design idea, why it matters, and where it fits, on Audio XX.`;
+  return { title: name, description, openGraph: { title: `${name} — Audio XX`, description, type: 'article' } };
 }
 
 export default async function TechnologyPage({ params }: PageProps) {

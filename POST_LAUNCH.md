@@ -149,3 +149,15 @@ change post-launch.
   and paperclip (36px), and nav/footer text links (20–24px tall) are usable but
   under the 44px guideline. Bump the composer controls to a 44px min hit area;
   optionally increase nav/footer tap padding. Non-blocking.
+
+- [gate-8] **Design Principles document (product philosophy, not implementation).**
+  Founder-requested after Gate 8. Capture what has emerged across certification:
+  editorial-first presentation; calm failure over false confidence; systems are
+  persistent, assessments are snapshots; factual restraint before apparent
+  expertise; responsive without compromise; print is a first-class output; one
+  primary task per screen. Documentation only; produce after certification.
+
+- [gate-9] **Canonical tags + JSON-LD (SEO enrichment, S2).** metadataBase +
+  per-artifact og:url cover sharing; adding explicit alternates.canonical
+  across pages and an Article/Review JSON-LD block on the artifact would
+  enrich search results. Optional, not launch-blocking.

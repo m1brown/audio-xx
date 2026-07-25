@@ -1,5 +1,11 @@
 import Link from 'next/link';
 
+export const metadata = {
+  title: 'How It Works',
+  description:
+    'How Audio XX reads your hi-fi system — the reasoning behind each assessment, from components to system character to what (if anything) to change.',
+};
+
 /* ── Inline SVG diagrams ─────────────────────────────── */
 
 function AxesDiagram() {

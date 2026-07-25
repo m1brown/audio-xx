@@ -1,0 +1,41 @@
+Gate 9 — SEO / metadata / sharing / print · live evidence (localhost, after fixes)
+
+robots.txt (NEW, app/robots.ts):
+  User-Agent: *  Allow: /
+  Disallow: /account /systems /save /auth/ /api/ /profile /onboarding
+  Host + Sitemap: https://audio-xx.com/sitemap.xml
+  (build output: ○ /robots.txt static route)
+
+sitemap.xml (NEW, app/sitemap.ts): lists home + /how-it-works /glossary
+  /resources /about /privacy /affiliate-disclosure. No private surface listed.
+  (build output: ○ /sitemap.xml static route)
+
+Public page titles (all distinct now; template "%s — Audio XX"):
+  /                 Audio XX — Notes on Your System
+  /how-it-works     How It Works — Audio XX      (NEW meta)
+  /glossary         Glossary — Audio XX          (NEW meta)
+  /resources        Resources — Audio XX         (NEW meta)
+  /about            About — Audio XX             (NEW meta)
+  /brand/naim       Naim — Audio XX              (NEW per-slug generateMetadata)
+  /tech/musical-communication-school
+                    Musical Communication School — Audio XX  (NEW per-slug)
+  /privacy          Privacy Policy — Audio XX    (FIXED: was double "— Audio XX")
+  /affiliate-disclosure  Affiliate Disclosure — Audio XX  (FIXED double suffix)
+
+Artifact unfurl (I1/I5) — Chord Qutest / Naim SuperNait 3 / Harbeth Super HL5 Plus:
+  <meta name="description" content="Tonally balanced, spatially open system. — Chord Qutest · Naim SuperNait 3 · Harbeth Super HL5 Plus">
+  og:title    "Nothing here needs changing — Audio XX System Assessment"   (verdict as title)
+  og:description  standfirst + component credit
+  og:type     article
+  og:url      https://audio-xx.com/artifact?system=...   (absolute via metadataBase)
+  twitter:card summary + twitter:title + twitter:description
+  → I5: description carries only the public URL components; no saved private
+    name/note (artifact is generated from URL text, not saved rows).
+
+Private pages noindex (I2): /account /systems /save /auth/signin — all
+  <meta name="robots" content="noindex">.
+
+Print (I4): 3 @media print rules strip nav/start-over/follow-up/actions →
+  clean single-artifact PDF (verified Gates 1 + 8).
+
+Production build: EXIT 0 (robots/sitemap/generateMetadata all typecheck).

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Privacy Policy — Audio XX',
+  title: 'Privacy Policy',
   description: 'How Audio XX handles your data.',
 };
 

@@ -2,6 +2,11 @@ import Link from 'next/link';
 
 /* ── Styles ───────────────────────────────────────────── */
 
+export const metadata = {
+  title: 'Resources',
+  description: 'Further reading and references behind Audio XX system assessments.',
+};
+
 const sectionStyle: React.CSSProperties = {
   marginBottom: '2.25rem',
 };

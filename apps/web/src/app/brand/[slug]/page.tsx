@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
   findBrandProfileBySlug,
@@ -96,6 +97,15 @@ function humanizeFromSlug(slug: string): string {
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const profile = findBrandProfileBySlug(slug);
+  const name = profile?.displayName
+    ?? slug.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const description = profile?.tagline || `${name} — design philosophy, house sound, and system pairing on Audio XX.`;
+  return { title: name, description, openGraph: { title: `${name} — Audio XX`, description, type: 'article' } };
 }
 
 export default async function BrandPage({ params }: PageProps) {
