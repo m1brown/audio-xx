@@ -3,10 +3,10 @@
 > Daily operational dashboard. Reviewed at the 11:00 launch check-in.
 > Concise entries only; detail lives in `certification/` reports.
 
-**Overall status:** CERTIFICATION IN PROGRESS — Gates 1–9 approved; Gate 10 executed
+**Overall status:** CERTIFICATION COMPLETE — Gates 1–10 approved; Gate 11 executed → READY FOR ACTIVATION WITH CONDITIONS
 **Launch freeze:** IN EFFECT (from Gate 1 until soft launch complete; founder may lift)
-**Current gate:** 10 (Founder + reviewer-lens editorial trust review) — executed, report posted
-**Days remaining (plan):** 2 working days to activation gate
+**Current gate:** 11 (Beta readiness & release triage) — executed → Ready for activation with conditions
+**Days remaining (plan):** 0 — certification complete; at the activation gate
 **Baseline commit:** c62dcb1 (version-b) · Production: de13f5a
 
 ## Gates
@@ -22,8 +22,8 @@
 | 7 Edge & destructive | **PASS WITH MINOR ISSUES** — honest failure; fuzz clean after 1 fix | ✅ approved |
 | 8 Mobile/browser/a11y/perf | **PASS WITH MINOR ISSUES** — responsive, a11y+print clean; 1 S2 | ✅ approved |
 | 9 SEO/meta/share/print | **PASS WITH MINOR ISSUES** — robots+sitemap+titles; 3 S1 fixed+pinned | ✅ approved |
-| 10 Founder + reviewer-lens review | **PASS WITH MINOR ISSUES** — 5-lens read; 1 S1 factual over-claim ("glassy" DAC) fixed+pinned; depth/naming = accepted deferrals | awaiting |
-| 11 Beta readiness & triage | not started | — |
+| 10 Founder + reviewer-lens review | **PASS WITH MINOR ISSUES** — 1 S1 factual over-claim fixed+pinned | ✅ approved |
+| 11 Beta readiness & triage | **READY FOR ACTIVATION WITH CONDITIONS** — S0=0, S1=0; conditions = tax/entity, Stripe live, Sentry DSN, promote RC, founder walk-through | awaiting |
 
 ## Defects
 
@@ -86,5 +86,5 @@
 
 ## Objectives
 
-**Today:** Gate 10 executed — 6 assessments read through 5 reviewer lenses (Darko/Lavorgna/Reichert/Guttenberg/Redditor); findings split into rendering/factual/doctrine/knowledge/product-design (not collapsed). One launch-critical factual over-claim fixed: DAC-bottleneck prose no longer asserts a false 'glassy' character on a musical DAC. Depth thinness + uncataloged naming = already-accepted deferrals → causal-explanation initiative.
-**Tomorrow:** Gate 11 (Beta readiness & triage), pending Gate 10 sign-off + architectural review.
+**Today:** Gate 11 executed — release-decision triage (Ready / Deferred / Removed / Blocking). RC 620ee7b: 0 open S0/S1, 138 suite tests + engine gate green, build EXIT 0, test data swept, prod untouched. Recommendation: **Ready for activation with conditions** (founder-owned: tax/entity, Stripe live, Sentry DSN, promote RC, founder walk-through).
+**Tomorrow:** activation prerequisites + single RC production promotion, on founder decision.

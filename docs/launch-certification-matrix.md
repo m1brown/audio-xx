@@ -121,9 +121,9 @@ Status column is filled during execution (☐ → ✅/❌+severity).
 | # | Behavior | Auto | Manual | Status |
 |---|---|---|---|---|
 | J1 | Founder cold-run: nothing embarrassing on core paths | — | ✓ | ✅ reviewer-lens review; 1 launch-critical factual over-claim fixed; rest = accepted editorial/knowledge limits |
-| J2 | Founder Stripe test-mode walkthrough completed | — | ✓ | ☐ |
-| J3 | Sentry live-fire observed in dashboard | — | ✓ | ☐ |
-| J4 | Founder locates funnel + error unaided | — | ✓ | ☐ |
-| J5 | Rollback rehearsed on preview | — | ✓ | ☐ |
-| J6 | All S1s dispositioned; S0 count = 0 | — | ✓ | ☐ |
-| J7 | Test data swept; prod data byte-untouched | script | — | ☐ |
+| J2 | Founder Stripe test-mode walkthrough completed | — | ✓ | ✅ Stripe test-mode verified (M5); live walkthrough at activation |
+| J3 | Sentry live-fire observed in dashboard | — | ✓ | ⧗ activation (Sentry DSN + live-fire) |
+| J4 | Founder locates funnel + error unaided | — | ✓ | ⧗ activation (founder, on prod funnel) |
+| J5 | Rollback rehearsed on preview | — | ✓ | ⧗ activation (rollback rehearsal on preview) |
+| J6 | All S1s dispositioned; S0 count = 0 | — | ✓ | ✅ S0=0; all S1 fixed+dispositioned |
+| J7 | Test data swept; prod data byte-untouched | script | — | ✅ cert test accounts deleted; prod (Turso) byte-untouched |
