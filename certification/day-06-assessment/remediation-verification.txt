@@ -1,0 +1,14 @@
+=== KNOWN GATE-6 FAILURES — now clarify ===
+[CLARIFY] WiiM Pro / Fosi V3 / Wharfedale Diamond
+   → So far I can place these 2: WiiM Pro, Wharfedale. It looks like one more component is in what you wrote that I couldn't pin down. Could you give me the exact make and model — for example "Rega Elex Mk4" or "Wharfedale Diamond 12.1"? Then I'll assess the whole system.
+[CLARIFY] Bluesound / Cambridge AXA35 / Q Acoustics 3030i
+   → So far I can place these 2: Bluesound Node, Cambridge audio. It looks like one more component is in what you wrote that I couldn't pin down. Could you give me the exact make and model — for example "Rega Elex Mk4" or "Wharfedale Diamond 12.1"? Then I'll assess the whole system.
+[CLARIFY] Denafrips Ares II / Rega Elex Mk4 / Spendor A7
+   → I recognised Ares Ii, but I couldn't confidently match Spendor, Rega to specific models. Could you confirm the exact make and model of those? Then I'll assess the whole system.
+=== SIX GATE-5 REPRESENTATIVE SYSTEMS ===
+[ASSESS] 1 reported (Hugo/Job/WLM) :: Your system: Eversolo DMP-A6, JOB Integrated, WLM Diva Monitor, Chord Hugo
+[ASSESS] 2 mainstream :: Your system: Hegel H190, Bluesound Node, KEF
+[ASSESS] 3 mismatch :: Your system: Naim SuperNait 3, Chord Qutest, Klipsch
+[ASSESS] 4 low-power/hard :: Your system: Ares Ii, Leben CS600X, Magnepan LRS+
+[ASSESS] 5 do-nothing :: Your system: Naim SuperNait 3, Harbeth Super HL5 Plus, Chord Qutest
+[NULL] 6 uncertain :: 

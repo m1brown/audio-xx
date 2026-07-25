@@ -8486,6 +8486,148 @@ export type SystemAssessmentResult =
   | { kind: 'low_confidence'; components: SystemComponent[]; unknownComponents: string[]; query: string }
   | null;
 
+// ── Graph-integrity gate (Gate 6 remediation, G6-D1) ─────────────────────
+// When the parsed component graph cannot be trusted — a component the user
+// listed was dropped, one component was bound to another's identity or
+// duplicated into two roles, or two-plus models could not be resolved at all
+// — Audio XX must ask for clarification rather than synthesise an assessment
+// from a graph it does not trust. Brand-level resolution must not conceal
+// model-level uncertainty. This is a counting/consistency check over the
+// ALREADY-resolved components (no re-parse, no re-match), so it can never
+// itself drop, rebind, or duplicate a component.
+
+const GI_ACCESSORY_LABEL =
+  /\b(?:speaker\s*cables?|spk\s*cables?|interconnects?|power\s*(?:cables?|cords?|leads?)|usb\s*cables?|ethernet\s*cables?|lan\s*cables?|hdmi\s*cables?|digital\s*cables?|coax(?:ial)?\s*cables?|rca\s*cables?|xlr\s*cables?|jumpers?|cabling|cables?)\s*:/gi;
+const GI_SEG_BOUNDARY =
+  /(?:→|—>|-{1,3}>|={1,2}>|>{2,3}|\s+into\s+|,|\s+-\s+|\/|\n|\r|\b(?:speakers?|amp(?:lifier)?|integrated|dac|stream(?:er|ing)?|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?)\s*:)/gi;
+const GI_ROLE_LABEL_ONLY =
+  /^(?:speakers?|amp(?:lifier)?|integrated|dac|streamer|streaming|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?|system|setup|rig|chain|gear)$/i;
+
+/**
+ * Count the DISTINCT primary (signal-chain) components the user actually
+ * described, excluding explicitly-labelled accessories and role-only labels,
+ * de-duplicating identical wording. Deterministic segment count — not a
+ * re-resolution.
+ */
+function countMeaningfulInputComponents(rawMessage: string): number {
+  // Drop the assessment lead-in ("evaluate my system:", "assess my system:").
+  let msg = rawMessage.replace(/^[^:]*\b(?:system|setup|rig|chain)\b[^:]*?:/i, '');
+  // Blank out accessory-labelled segments so wires don't inflate the count.
+  const lower = msg.toLowerCase();
+  GI_ACCESSORY_LABEL.lastIndex = 0;
+  let lm: RegExpExecArray | null;
+  const spans: Array<[number, number]> = [];
+  while ((lm = GI_ACCESSORY_LABEL.exec(lower)) !== null) {
+    GI_SEG_BOUNDARY.lastIndex = lm.index + lm[0].length;
+    const nb = GI_SEG_BOUNDARY.exec(lower);
+    spans.push([lm.index, nb ? nb.index : lower.length]);
+  }
+  for (const [s, e] of spans) msg = msg.slice(0, s) + ' '.repeat(e - s) + msg.slice(e);
+  // Split on component separators. NB: a bare "/" is NOT a separator — it
+  // occurs inside model names (DeVore O/96, Spendor SP3/1R, LS3/5A) and
+  // splitting on it would over-count and falsely report a dropped component.
+  const segs = msg.split(/[,\n]|→|—>|-{1,3}>|={1,2}>|>{2,3}|\s+into\s+|\s+-\s+/i);
+  const seen = new Set<string>();
+  for (let seg of segs) {
+    seg = seg.replace(
+      /^\s*(?:speakers?|amp(?:lifier)?|integrated|dac|streamer|streaming|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?)\s*:/i,
+      '',
+    );
+    const norm = seg.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    if (!norm || norm.length < 2) continue;
+    if (GI_ROLE_LABEL_ONLY.test(norm)) continue;
+    seen.add(norm);
+  }
+  return seen.size;
+}
+
+/** Token set of a display name, minus trivial tokens. */
+function giTokens(name: string): Set<string> {
+  return new Set(
+    name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter((t) => t.length >= 2),
+  );
+}
+
+function checkGraphIntegrity(
+  rawMessage: string,
+  allComponents: SystemComponent[],
+): ClarificationResponse | null {
+  // Drop spurious bare-brand echoes of a properly-cataloged component: when a
+  // bare-brand entry (≤1 token, no product) is a token-subset of another
+  // component that DOES carry a cataloged product, it's an extraction echo of
+  // that same physical unit (e.g. "Crayon" beside "Crayon Audio CIA-1T"), not
+  // a second component. Deduping to the cataloged entry preserves the
+  // correctly-identified component rather than clarifying. A duplicate where
+  // neither side is cataloged (e.g. "Wilson" beside "Wilson audio", model
+  // lost) is NOT an echo and still trips the gate below.
+  const components = allComponents.filter((c) => {
+    const t = giTokens(c.displayName);
+    if (c.product || t.size > 1) return true;
+    return !allComponents.some(
+      (o) => o !== c && o.product && [...t].every((tok) => giTokens(o.displayName).has(tok)),
+    );
+  });
+
+  const resolved = components.length;
+  if (resolved < 2) return null; // handled by the caller's own guards
+
+  // (2) Duplication / mis-binding: one component's token set is a subset of
+  // another's (e.g. "Ares Ii" ⊂ "Denafrips Ares II", "Wilson" ⊂ "Wilson
+  // audio") — the same physical component surfaced twice.
+  let hasDuplicate = false;
+  const toks = components.map((c) => giTokens(c.displayName));
+  for (let i = 0; i < toks.length && !hasDuplicate; i++) {
+    for (let j = i + 1; j < toks.length; j++) {
+      const a = toks[i], b = toks[j];
+      if (a.size === 0 || b.size === 0) continue;
+      const [small, big] = a.size <= b.size ? [a, b] : [b, a];
+      if ([...small].every((t) => big.has(t))) { hasDuplicate = true; break; }
+    }
+  }
+
+  // (unresolved) model-level uncertainty that a brand name is concealing: the
+  // component resolved to a BARE BRAND — no cataloged product AND no model
+  // token in the display name (e.g. "Rega", "Spendor", "Emt"). A component
+  // that carries its model ("Leben CS600X", "DeVore Orangutan O/96",
+  // "KEF LS50 Meta") is correctly identified even without a catalog product
+  // row and is NOT counted. A SINGLE bare-brand component in an otherwise
+  // intact graph follows existing behaviour; the gate fires only on 2+, or on
+  // a dropped or duplicated component.
+  const unresolved = components.filter((c) => !c.product && giTokens(c.displayName).size <= 1);
+
+  // (1) Dropped: fewer components resolved than the user meaningfully listed.
+  const expected = countMeaningfulInputComponents(rawMessage);
+  const dropped = expected > resolved;
+
+  if (!dropped && !hasDuplicate && unresolved.length < 2) return null; // graph trusted
+
+  const understood = [...new Set(components.map((c) => c.displayName))].filter(Boolean);
+  const understoodList = understood.length ? understood.join(', ') : 'part of your system';
+
+  let question: string;
+  if (dropped) {
+    const missing = expected - resolved;
+    question =
+      `So far I can place ${resolved === 1 ? 'one component' : `these ${resolved}`}: ${understoodList}. ` +
+      `It looks like ${missing === 1 ? 'one more component is' : `${missing} more components are`} in what you wrote that I couldn't pin down. ` +
+      `Could you give me the exact make and model number of ${missing === 1 ? 'that one' : 'those'}? Then I'll assess the whole system.`;
+  } else if (hasDuplicate) {
+    question =
+      `I want to be sure I have your system right — I read ${understoodList}, but one component may have been counted twice. ` +
+      `Could you confirm each component's exact make and model? Then I'll run the assessment.`;
+  } else {
+    const known = understood.filter((n) => !unresolved.some((u) => u.displayName === n));
+    const uncertainList = unresolved.map((u) => u.displayName).join(', ');
+    question = known.length
+      ? `I recognised ${known.join(', ')}, but I couldn't confidently match ${uncertainList} to ${unresolved.length === 1 ? 'a specific model' : 'specific models'}. ` +
+        `Could you confirm the exact make and model of ${unresolved.length === 1 ? 'that one' : 'those'}? Then I'll assess the whole system.`
+      : `I can see the shape of your system, but I couldn't confidently match ${uncertainList} to specific models in my catalog. ` +
+        `Could you confirm the exact make and model of each? Then I'll assess the whole system.`;
+  }
+
+  return { acknowledge: 'Before I assess this, let me make sure I have your system right.', question };
+}
+
 export function buildSystemAssessment(
   currentMessage: string,
   subjectMatches: SubjectMatch[],
@@ -9137,6 +9279,14 @@ export function buildSystemAssessment(
   const validationClarification = validateSystemComponents(currentMessage, components);
   if (validationClarification) {
     return { kind: 'clarification', clarification: validationClarification };
+  }
+
+  // ── Graph-integrity gate (G6-D1) — trust the parse before assessing ──
+  // Detects a dropped, duplicated, or unresolvable component graph and asks
+  // for a specific clarification instead of synthesising a wrong assessment.
+  const integrityClarification = checkGraphIntegrity(currentMessage, components);
+  if (integrityClarification) {
+    return { kind: 'clarification', clarification: integrityClarification };
   }
 
   // ── Step 0: Confidence check — do we have enough catalog coverage? ──

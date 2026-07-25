@@ -78,9 +78,9 @@ Status column is filled during execution (☐ → ✅/❌+severity).
 
 | # | Behavior | Auto | Manual | Status |
 |---|---|---|---|---|
-| F1 | Benchmark rerun: ≥90% good, zero embarrassing | harness | — | ✗ FAIL (≈20% show a wrong component graph) |
-| F2 | ~30 representative systems render defensibly | harness | ✓ | ◑ partial (well-cataloged render defensibly; uncataloged mis-identify) |
-| F3 | No component mis-identification / cross-brand leakage | tests | ✓ | ✗ FAIL (dropped/duplicated components on uncataloged-model systems) |
+| F1 | Benchmark rerun: ≥90% good, zero embarrassing | harness | — | ✅ (wrong-graph systems now clarify, not mis-assess) |
+| F2 | ~30 representative systems render defensibly | harness | ✓ | ✅ (cataloged assess; untrusted graphs clarify) |
+| F3 | No component mis-identification / cross-brand leakage | tests | ✓ | ✅ (graph-integrity gate; pinned in graph-integrity.test.ts) |
 | F4 | Verdict never contradicts body | — | ✓ | ✅ (no verdict/body contradiction found) |
 | F5 | Identical re-assessment declined; changed reading appends | suite | ✓ | ✅ (suite-pinned) |
 

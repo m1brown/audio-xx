@@ -120,3 +120,16 @@ change post-launch.
 - [gate-5] **Uncataloged models degrade to bare-brand or mis-cased names (S2, knowledge-data).** In the review: "KEF LS50 Meta" → credit "KEF"; "Klipsch La Scala" → "Klipsch"; "Denafrips Ares II" → "Ares Ii" (generic title-case lowercases the Roman numeral). Root cause is missing catalog entries: uncataloged models fall back to input-derived names with imperfect casing. Correct fix is data (add catalog entries with curated display names), not a casing hack — cataloged products already carry correct names (e.g. "Pontus II 12th-1"). Add the common missing models (KEF LS50 Meta, Klipsch La Scala/Heritage, Denafrips Ares II, etc.).
 - [gate-5] **"Nothing needs changing" + soft upgrade path (S2, editorial).** For the low-power/warm system, a "Nothing here needs changing." verdict is followed by an "If you ever want more, … a source upgrade … is the gentlest move" paragraph. Mild tension with the verdict; consider suppressing the optional-upgrade beat when the verdict is full restraint, or reframing it as "should you ever change system character" rather than "want more".
 - [gate-5] **Power-match depth on low-power-amp/hard-speaker pairings (S2, doctrine/knowledge).** Leben CS600X + Magnepan LRS+ returned "Nothing here needs changing." The power/damping demand of a current-hungry planar driven by a low-power tube amp was not surfaced as a causal caution. Not a fabrication and not clearly wrong, but the kind of engineering-informed caution the technical-depth work should add. Tied to the depth item above.
+
+## Gate 6 remediation follow-up (usability, not a blocker)
+
+- [gate-6] **Targeted catalog additions to reduce clarifications.** The
+  graph-integrity gate (G6-D1) now routes under-catalogued systems to
+  clarification instead of assessing a wrong graph. To reduce unnecessary
+  clarification for representative beta systems, add the specific missing
+  models surfaced in Gate 6 — factually-supportable, small, isolated entries
+  only: Fosi Audio V3, Wharfedale Diamond 12.x, Q Acoustics 3030i, Rega Elex
+  Mk4, Sugden A21, Spendor A7/SP3/1R, Wilson Audio Sasha (DAW), Parasound A21,
+  KEF LS50 Meta, Klipsch La Scala/Heritage, EMT JPA 66, Shindo Monbrison,
+  ProAc Response DB1. This is usability, NOT the architectural remedy, and must
+  not gate the blocker fix. Do not expand into a catalog-completeness project.
