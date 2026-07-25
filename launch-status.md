@@ -3,10 +3,10 @@
 > Daily operational dashboard. Reviewed at the 11:00 launch check-in.
 > Concise entries only; detail lives in `certification/` reports.
 
-**Overall status:** CERTIFICATION IN PROGRESS — Gates 1–3 approved; Gate 4 executed
+**Overall status:** CERTIFICATION IN PROGRESS — Gates 1–4 approved; Gate 5 executed
 **Launch freeze:** IN EFFECT (from Gate 1 until soft launch complete; founder may lift)
-**Current gate:** 4 (Privacy, authentication & security) — executed, report posted
-**Days remaining (plan):** 8 working days to activation gate
+**Current gate:** 5 (Editorial & visual QA) — executed, report posted
+**Days remaining (plan):** 6 working days to activation gate
 **Baseline commit:** c62dcb1 (version-b) · Production: de13f5a
 
 ## Gates
@@ -16,8 +16,8 @@
 | 1 Functional | **PASS WITH MINOR ISSUES** — 1 S1 fixed+pinned | ✅ approved |
 | 2 Billing & entitlement | **PASS** — 10 states live, 0 defects | ✅ approved |
 | 3 Analytics & funnel | **PASS WITH MINOR ISSUES** — 3 S1 fixed+pinned, 1 S2 logged | ✅ approved |
-| 4 Privacy & security | **PASS** — full cross-user probe matrix denies; secret scan clean; 0 defects, 2 S2 hardening logged | awaiting |
-| 5 Editorial & visual | not started | — |
+| 4 Privacy & security | **PASS** — cross-user probe denies; secret scan clean; 0 defects, 2 S2 hardening logged | ✅ approved |
+| 5 Editorial & visual | **PASS WITH MINOR ISSUES** — 1 S1 naming fixed+pinned, 4 S2 → backlog; no fabrication | awaiting |
 | 6 Assessment quality | not started | — |
 | 7 Edge & destructive | not started | — |
 | 8 Mobile/browser/a11y/perf | not started | — |
@@ -28,8 +28,8 @@
 ## Defects
 
 **Open S0:** 0
-**Open S1:** 0 (5 found across Gates 1+3+4, all fixed same-day with regression tests)
-**S2 backlog:** 3 (see POST_LAUNCH.md)
+**Open S1:** 0 (6 found across Gates 1+3+4+5, all fixed same-day with regression tests)
+**S2 backlog:** 7 (see POST_LAUNCH.md)
 **Gate 6 watch-list:** 3 content observations from Gate 1 (verdict/lede tension; brand-only credit "Rega"; recommendation phrasing) — to be judged in the assessment-quality review
 **Gate 7 watch-list (edge/legacy data):** saved-system DEAD END — systems with a chain but no `canonicalText` (created via the legacy `/api/systems` POST: `/systems/new`, `SystemEditor`) render the "predates assessment history" empty state with NO action link (`runTodayUrl` is null). Evidenced by "France II" on production. Minimal remedy: reconstruct assessment text from the stored chain so an action is always offered. Should-fix before soft launch; also relevant to Gate 5 (empty-state CTA / editorial). Full proposal + the broader "Reassess System" feature in POST_LAUNCH.md.
 
@@ -64,5 +64,5 @@
 
 ## Objectives
 
-**Today:** Gate 4 executed — cross-user probe matrix (two live accounts), unauth sweep, webhook-signature rejection, production bundle secret scan, redirect/header/noindex audit. All deny; no secret leaks; 0 defects.
-**Tomorrow:** Gate 5 (Editorial & visual QA), pending Gate 4 sign-off.
+**Today:** Gate 5 executed — 6 representative assessments through the real pipeline, reviewed across coherence / technical depth / factual restraint / naming / hierarchy. Required naming defect (wLM→WLM) fixed+pinned; no fabricated technical claims; technical-depth direction + catalog-naming + minor editorial → POST_LAUNCH.
+**Tomorrow:** Gate 6 (Assessment quality), pending Gate 5 sign-off + architectural review.

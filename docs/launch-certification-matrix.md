@@ -67,11 +67,12 @@ Status column is filled during execution (☐ → ✅/❌+severity).
 
 | # | Behavior | Auto | Manual | Status |
 |---|---|---|---|---|
-| E1 | Token-lock test green; screens use editorial tokens | suite | ✓ | ☐ |
-| E2 | No stub/placeholder/dev text on any customer path | — | ✓ | ☐ |
-| E3 | Product naming consistent ("My Systems") everywhere incl. Stripe | — | ✓ | ☐ |
-| E4 | Image failure degrades cleanly (no broken-image icons) | suite | ✓ | ☐ |
-| E5 | Blocked/prompt states read calm, on-voice | — | ✓ | ☐ |
+| E1 | Token-lock test green; screens use editorial tokens | suite | ✓ | ✅ |
+| E2 | No stub/placeholder/dev text on any customer path | — | ✓ | ✅ |
+| E3 | Product naming consistent ("My Systems") everywhere incl. Stripe | — | ✓ | ✅ |
+| E4 | Image failure degrades cleanly (no broken-image icons) | suite | ✓ | ✅ |
+| E5 | Blocked/prompt states read calm, on-voice | — | ✓ | ✅ |
+| E6 | Assessment prose: coherent, factually restrained, correctly-named | pipeline | ✓ | ✅ (G5-D1 naming fixed; no fabrication; depth → POST_LAUNCH) |
 
 ## F. Assessment quality (Gate 6)
 

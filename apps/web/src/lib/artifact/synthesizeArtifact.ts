@@ -50,7 +50,23 @@ export interface SynthResult {
 function splitSentences(s: string): string[] {
   return (s || '').split(/(?<=[.!?])\s+/).map((x) => x.trim()).filter(Boolean);
 }
-function lowerFirst(s: string): string { return s ? s[0].toLowerCase() + s.slice(1) : s; }
+function lowerFirst(s: string): string {
+  if (!s) return s;
+  // Preserve original case when the fragment begins with a manufacturer or
+  // model name — decapitalising "WLM Diva Monitor" to "wLM Diva Monitor",
+  // or "Harbeth Super HL5 Plus" to "harbeth …", corrupts a proper name
+  // mid-sentence and immediately reads as a defect. A fragment leads with a
+  // proper name when its first token carries an internal capital (an
+  // acronym / model token like WLM, KEF, LS50, McIntosh, SuperNait) or when
+  // the first two tokens are both capitalised (a multi-word brand+model).
+  const m = s.match(/^(\S+)(?:\s+(\S+))?/);
+  const first = m?.[1] ?? '';
+  const second = m?.[2] ?? '';
+  const acronymOrCamel = /^[A-Za-z].*[A-Z]/.test(first);
+  const twoCaps = /^[A-Z]/.test(first) && /^[A-Z]/.test(second);
+  if (acronymOrCamel || twoCaps) return s;
+  return s[0].toLowerCase() + s.slice(1);
+}
 function stripTrailingPeriod(s: string): string { return s.replace(/\.\s*$/, ''); }
 function norm(s: string): string {
   return (s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -380,7 +396,7 @@ export function synthesizeArtifact(result: any): SynthResult {
     // suitable for sub-clause use inside a longer paragraph.
     function asContribution(s: string): string {
       const m = s.match(/^([A-Z][\w\s+\-]+?)\s+(contributes|provides|adds|delivers|brings)\s+(.+)$/);
-      return m ? `the ${m[1]} ${m[2]} ${m[3]}` : s.charAt(0).toLowerCase() + s.slice(1);
+      return m ? `the ${m[1]} ${m[2]} ${m[3]}` : lowerFirst(s);
     }
 
     // Extract the leading subject (component name) from an engine
@@ -508,7 +524,7 @@ export function synthesizeArtifact(result: any): SynthResult {
     // balanced systems is often empty.
     if (coherentTradeoffs.length > 0) {
       const first = String(coherentTradeoffs[0]).trim().replace(/[.]+$/, '');
-      caseParagraphs.push(`What it gives up on purpose: ${first.charAt(0).toLowerCase() + first.slice(1)}. That's the deliberate cost — a coherent system can't pull in both directions at once, and this one has picked its direction.`);
+      caseParagraphs.push(`What it gives up on purpose: ${lowerFirst(first)}. That's the deliberate cost — a coherent system can't pull in both directions at once, and this one has picked its direction.`);
     }
 
     // ── Paragraph 3: the honest trade — let the engine's limitation
@@ -519,7 +535,7 @@ export function synthesizeArtifact(result: any): SynthResult {
     // coherentTradeoff above (avoids double trade-off paragraphs).
     if (limitations[0] && coherentTradeoffs.length === 0) {
       const limit = limitations[0].replace(/\s+/g, ' ').trim();
-      caseParagraphs.push(`The trade — ${limit.charAt(0).toLowerCase() + limit.slice(1)}.`);
+      caseParagraphs.push(`The trade — ${lowerFirst(limit)}.`);
     }
 
     // ── Paragraph 4: the closing — listener-fit + refrain in one
@@ -536,7 +552,7 @@ export function synthesizeArtifact(result: any): SynthResult {
     // dropped here because they read as meta-commentary about the
     // analysis rather than advice about the system.
     if (upgrade && !isFallbackDiagnostic(upgrade)) {
-      caseParagraphs.push(`If you ever want more, ${upgrade.charAt(0).toLowerCase() + upgrade.slice(1)}.`);
+      caseParagraphs.push(`If you ever want more, ${lowerFirst(upgrade)}.`);
     }
   }
   if (!caseParagraphs.length && signature) caseParagraphs.push(stripTrailingPeriod(signature) + '.');
