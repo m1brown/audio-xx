@@ -3,7 +3,7 @@
 > Daily operational dashboard. Reviewed at the 11:00 launch check-in.
 > Concise entries only; detail lives in `certification/` reports.
 
-**Overall status:** CERTIFICATION COMPLETE — Gates 1–10 approved; Gate 11 executed → READY FOR ACTIVATION WITH CONDITIONS
+**Overall status:** CERTIFICATION COMPLETE + APPROVED — Gates 1–11 approved; awaiting founder deployment approval (technical promotion prepared, not deployed)
 **Launch freeze:** IN EFFECT (from Gate 1 until soft launch complete; founder may lift)
 **Current gate:** 11 (Beta readiness & release triage) — executed → Ready for activation with conditions
 **Days remaining (plan):** 0 — certification complete; at the activation gate
@@ -22,8 +22,8 @@
 | 7 Edge & destructive | **PASS WITH MINOR ISSUES** — honest failure; fuzz clean after 1 fix | ✅ approved |
 | 8 Mobile/browser/a11y/perf | **PASS WITH MINOR ISSUES** — responsive, a11y+print clean; 1 S2 | ✅ approved |
 | 9 SEO/meta/share/print | **PASS WITH MINOR ISSUES** — robots+sitemap+titles; 3 S1 fixed+pinned | ✅ approved |
-| 10 Founder + reviewer-lens review | **PASS WITH MINOR ISSUES** — 1 S1 factual over-claim fixed+pinned | ✅ approved |
-| 11 Beta readiness & triage | **READY FOR ACTIVATION WITH CONDITIONS** — S0=0, S1=0; conditions = tax/entity, Stripe live, Sentry DSN, promote RC, founder walk-through | awaiting |
+| 10 Founder + reviewer-lens review | **PASS WITH MINOR ISSUES** — 1 S1 fixed+pinned | ✅ approved |
+| 11 Beta readiness & triage | **READY FOR ACTIVATION WITH CONDITIONS** — approved; technical-promotion checklist prepared (certification/day-11-beta/production-promotion-checklist.md) | ✅ approved |
 
 ## Defects
 
@@ -95,5 +95,5 @@
 
 ## Objectives
 
-**Today:** Gate 11 executed — release-decision triage (Ready / Deferred / Removed / Blocking). RC 620ee7b: 0 open S0/S1, 138 suite tests + engine gate green, build EXIT 0, test data swept, prod untouched. Recommendation: **Ready for activation with conditions** (founder-owned: tax/entity, Stripe live, Sentry DSN, promote RC, founder walk-through).
-**Tomorrow:** activation prerequisites + single RC production promotion, on founder decision.
+**Today:** Certification approved (Gates 1-11). Founder decoupled TECHNICAL PROMOTION (deploy certified RC 7e9805b with checkout disabled) from COMMERCIAL ACTIVATION (live subscriptions after tax/Stripe). Prepared the technical-promotion checklist (env vars, checkout-disabled safety, Sentry DSN, one-deploy no-cherry-pick, 7-point live verification, rollback). Verified: no Stripe keys → checkout 503; 92-day trial from BILLING_LAUNCHED_AT → no subscribe boundary in the window.
+**Next (on founder approval only):** promote version-b → production; run the 7-point LIVE verification on audio-xx.com. NOT deployed yet.
