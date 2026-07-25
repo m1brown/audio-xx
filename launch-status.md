@@ -3,11 +3,11 @@
 > Daily operational dashboard. Reviewed at the 11:00 launch check-in.
 > Concise entries only; detail lives in `certification/` reports.
 
-**Overall status:** CERTIFICATION COMPLETE + APPROVED — Gates 1–11 approved; awaiting founder deployment approval (technical promotion prepared, not deployed)
+**Overall status:** PROMOTED — certified RC `7e9805b` LIVE on audio-xx.com (2026-07-25); 7-point verification passed; checkout commercially inactive (Stripe unset). Commercial activation remains a separate later founder switch.
 **Launch freeze:** IN EFFECT (from Gate 1 until soft launch complete; founder may lift)
-**Current gate:** 11 (Beta readiness & release triage) — executed → Ready for activation with conditions
-**Days remaining (plan):** 0 — certification complete; at the activation gate
-**Baseline commit:** c62dcb1 (version-b) · Production: de13f5a
+**Current gate:** 11 (Beta readiness & release triage) — approved → technical promotion COMPLETE & verified
+**Days remaining (plan):** 0 — certification complete; technical promotion done
+**Baseline commit:** c62dcb1 (version-b) · Production: **7e9805b** (deployment dpl_GVM4My5Lhz1qp41WDf9wF8NSWNvV; was de13f5a) · Rollback: dpl_6hYBEXPsakA6VqgyH2D7AWdUDJEs
 
 ## Gates
 

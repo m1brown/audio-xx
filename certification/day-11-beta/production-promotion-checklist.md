@@ -116,8 +116,14 @@ vars and re-verify the billing states live. This is deliberately decoupled from
 the technical promotion above.
 
 ## Status
-Checklist prepared. **Awaiting explicit founder deployment approval. Not
-deployed. No post-launch feature work started.**
+**PROMOTED & VERIFIED — 2026-07-25.** Founder approved the deployment sequence.
+Executed: (1) pulled Production env; (2) additive Turso migration (2 tables +
+3 indexes, zero data touched); (3) deployed certified `7e9805b` to the
+`audio-xx.com` production alias (deployment `dpl_GVM4My5Lhz1qp41WDf9wF8NSWNvV`);
+(4) seven-point live verification — all pass (save round-trip + Sentry live-fire
+are the flagged founder-manual / founder-owned items). Checkout remains
+commercially inactive (Stripe unset). No post-launch feature work started.
+Full evidence: `activation-verification/verification-record.md`.
 
 ---
 
