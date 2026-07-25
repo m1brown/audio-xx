@@ -118,3 +118,41 @@ the technical promotion above.
 ## Status
 Checklist prepared. **Awaiting explicit founder deployment approval. Not
 deployed. No post-launch feature work started.**
+
+---
+
+## Pre-execution confirmations (founder-required, 2026-07-25)
+
+### 1. Migration is purely additive — CONFIRMED
+Authoritative DDL from `prisma migrate diff` (prod `de13f5a` schema → certified
+RC schema, computed offline, no DB connection). The complete migration is:
+- `CREATE TABLE "subscriptions"` (+ FK to `users(id)` `ON DELETE CASCADE` — cascade
+  is defined on the NEW table, it does not alter `users`)
+- `CREATE TABLE "processed_stripe_events"`
+- `CREATE UNIQUE INDEX` ×3 on `subscriptions` (`user_id`, `stripe_customer_id`,
+  `stripe_subscription_id`)
+
+Statement tally: **2 CREATE TABLE + 3 CREATE UNIQUE INDEX. Zero `ALTER TABLE`,
+zero `DROP`, zero standalone `DELETE`/`UPDATE`.** No existing table or column is
+changed; no data is modified or removed. The `User.subscription` relation added
+in the schema is a Prisma virtual relation (the FK column lives on
+`subscriptions.user_id`), so it produces no DDL against `users`.
+
+### 2. Entitlement coupling — DELIBERATE ARCHITECTURE (recorded)
+`getEntitlement()`'s unconditional `include: { subscription: true }` is a
+**deliberate design decision, not incidental implementation.** Entitlement is
+architecturally defined as a pure function `computeEntitlement(user.createdAt,
+subscription | null, now)`: the state machine (trial / subscriber / canceling /
+past_due / expired) branches on the subscription record (or its absence), so
+every entitlement decision must read subscription state. The single joined
+query fetches both authorities at once. The consequence — collection management
+(My Systems) depends on the `subscriptions` table existing — is an intentional
+property (management is gated by entitlement; entitlement = active trial OR
+active subscription).
+
+One honest nuance recorded for the record (NOT tech debt requiring pre-launch
+work): the coupling has no graceful-degradation fallback for a missing table —
+it fails closed (error) rather than silently granting access. For an
+entitlement gate, fail-closed on an infrastructure fault is defensible; it is
+also exactly why the additive migration is a hard prerequisite of this deploy.
+Not a redesign item; recorded per founder request.
