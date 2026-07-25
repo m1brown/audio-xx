@@ -31,6 +31,7 @@
 **Open S1:** 0 (4 found across Gates 1+3, all fixed same-day with regression tests)
 **S2 backlog:** 3 (see POST_LAUNCH.md)
 **Gate 6 watch-list:** 3 content observations from Gate 1 (verdict/lede tension; brand-only credit "Rega"; recommendation phrasing) — to be judged in the assessment-quality review
+**Gate 7 watch-list (edge/legacy data):** saved-system DEAD END — systems with a chain but no `canonicalText` (created via the legacy `/api/systems` POST: `/systems/new`, `SystemEditor`) render the "predates assessment history" empty state with NO action link (`runTodayUrl` is null). Evidenced by "France II" on production. Minimal remedy: reconstruct assessment text from the stored chain so an action is always offered. Should-fix before soft launch; also relevant to Gate 5 (empty-state CTA / editorial). Full proposal + the broader "Reassess System" feature in POST_LAUNCH.md.
 
 ## Operational log
 
