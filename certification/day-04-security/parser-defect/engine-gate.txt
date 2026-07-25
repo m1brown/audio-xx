@@ -1,0 +1,4 @@
+── Test gate ──
+passed: 3853 · failing (in baseline): 20 · baseline entries now passing: 0
+
+Gate PASSED — no regressions vs trusted baseline.

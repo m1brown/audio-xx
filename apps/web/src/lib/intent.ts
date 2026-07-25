@@ -908,7 +908,38 @@ export function extractSubjectMatches(text: string): SubjectMatch[] {
     found.push({ name, kind: 'brand', index: idx });
     claimedRanges.push([idx, end]);
   }
-  return found;
+
+  // ── Accessory field-label suppression (field-aware prior) ──
+  // An explicit accessory label — "speaker cables:", "interconnects:",
+  // "power cord:", "USB cable:", "cables:" — asserts that what follows is a
+  // wire/accessory, not a signal-path component. Product/brand tokens inside
+  // that labelled segment must not be promoted to components. The classic
+  // failure is "speaker cables: Canare 4S11G Star Quad", where the token
+  // "Quad" matches the Quad loudspeaker/electronics brand and fabricates a
+  // phantom component. Field labels carry the highest classification prior,
+  // so we drop any match whose position falls inside an accessory segment.
+  // The segment runs from the label to the next chain separator, the next
+  // signal-path field label, or the end of the message. This is deliberately
+  // scoped to *labelled* accessories — unlabelled accessory detection would
+  // need catalog cable knowledge and is out of scope for this fix.
+  const ACCESSORY_LABEL =
+    /\b(?:speaker\s*cables?|spk\s*cables?|interconnects?|power\s*(?:cables?|cords?|leads?)|usb\s*cables?|ethernet\s*cables?|lan\s*cables?|hdmi\s*cables?|digital\s*cables?|coax(?:ial)?\s*cables?|rca\s*cables?|xlr\s*cables?|jumpers?|cabling|cables?)\s*:/gi;
+  const NEXT_BOUNDARY =
+    /(?:→|—>|-{1,3}>|={1,2}>|>{2,3}|\s+into\s+|,|\s+-\s+|\/|\n|\r|\b(?:speakers?|amp(?:lifier)?|integrated|dac|stream(?:er|ing)?|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?)\s*:)/gi;
+  const accessorySpans: Array<[number, number]> = [];
+  let lm: RegExpExecArray | null;
+  while ((lm = ACCESSORY_LABEL.exec(lower)) !== null) {
+    const spanStart = lm.index + lm[0].length;
+    NEXT_BOUNDARY.lastIndex = spanStart;
+    const nb = NEXT_BOUNDARY.exec(lower);
+    const spanEnd = nb ? nb.index : lower.length;
+    accessorySpans.push([spanStart, spanEnd]);
+  }
+  if (accessorySpans.length === 0) return found;
+  return found.filter((f) => {
+    if (typeof f.index !== 'number') return true;
+    return !accessorySpans.some(([s, e]) => (f.index as number) >= s && (f.index as number) < e);
+  });
 }
 
 function extractSubjects(text: string): string[] {
