@@ -53,15 +53,15 @@ Status column is filled during execution (☐ → ✅/❌+severity).
 
 | # | Behavior | Auto | Manual | Status |
 |---|---|---|---|---|
-| D1 | Cross-user read blocked on every route | tests | ✓ | ☐ |
-| D2 | Cross-user write/delete blocked | tests | ✓ | ☐ |
-| D3 | Cross-user checkout-session sync rejected | suite | ✓ | ☐ |
-| D4 | No secret in client bundle | scan | — | ☐ |
-| D5 | Public artifact links never expose private names/notes | tests | ✓ | ☐ |
-| D6 | Auth: wrong password rejected; session expiry sane | — | ✓ | ☐ |
-| D7 | No open redirect on checkout return URLs | — | ✓ | ☐ |
-| D8 | No user-controllable price ID | code | ✓ | ☐ |
-| D9 | Test/live key confusion impossible (prefix + env scope) | — | ✓ | ☐ |
+| D1 | Cross-user read blocked on every route | tests | ✓ | ✅ |
+| D2 | Cross-user write/delete blocked | tests | ✓ | ✅ |
+| D3 | Cross-user checkout-session sync rejected | suite | ✓ | ✅ |
+| D4 | No secret in client bundle | scan | — | ✅ |
+| D5 | Public artifact links never expose private names/notes | tests | ✓ | ✅ |
+| D6 | Auth: wrong password rejected; session expiry sane | — | ✓ | ✅ |
+| D7 | No open redirect on checkout return URLs | — | ✓ | ✅ |
+| D8 | No user-controllable price ID | code | ✓ | ✅ |
+| D9 | Test/live key confusion impossible (prefix + env scope) | — | ✓ | ✅ |
 
 ## E. Editorial & visual (Gate 5)
 

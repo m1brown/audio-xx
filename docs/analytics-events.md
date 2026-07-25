@@ -81,3 +81,32 @@ View events (`landing_viewed`, `assessment_rendered`, `my_systems_viewed`,
 `subscription_prompt_viewed`, `builder_started`, `composer_started`) emit
 **once per page load** — React strict-mode double-effects and hydration
 re-renders cannot double-count. Action events emit every time.
+
+## Minimum viable launch dashboard (documentation only — Gate 3 follow-up)
+
+The decision framework for reading the data after launch. Nothing here
+is implemented; every row is readable from the Vercel Analytics custom
+events dashboard (server rows appear in production only). Read daily for
+the first two weeks, then weekly.
+
+| Question | Read from | Why it matters |
+|---|---|---|
+| Visitors today | Vercel visitors + `landing_viewed` | Is anyone arriving at all? |
+| Assessment starts | `builder_started` + `composer_started` | Does the landing page convert attention into intent? |
+| Assessment completions | `assessment_rendered` | Does intent survive to a delivered assessment? |
+| Completion rate | `assessment_rendered` ÷ starts | The single core product health number |
+| Builder vs composer usage | start-event split; `assessment_rendered.source` | Which entry deserves investment |
+| Copy rate | `copy_link_clicked` ÷ `assessment_rendered` | Do people share it? (organic growth signal) |
+| Print rate | `print_clicked` ÷ `assessment_rendered` | Is the artifact treated as a document worth keeping? |
+| Save rate | `save_started` ÷ `assessment_rendered`; outcomes (`first_system_saved` etc.) | Does the free artifact pull people toward the paid surface? |
+| Subscription prompts shown | `subscription_prompt_viewed` (by `state`) | How many people reach the boundary |
+| Checkout starts | `checkout_started` | Boundary → intent to pay |
+| Subscription conversions | `subscription_activated` (server) ÷ `checkout_started` | Does checkout close? |
+| First saved systems | `first_system_saved` | New engaged users (the activation event) |
+| Returning users | `sign_in_completed` vs server `account_created`; `my_systems_viewed` | Is there a reason to come back? |
+
+Reading order is the funnel order above: each row only matters if the
+rows above it have volume. The launch question hierarchy: (1) do
+visitors complete assessments? (2) do completions lead to saves? (3) do
+saves lead to subscriptions? A weak number is a *localised* problem —
+fix the stage, not the product.

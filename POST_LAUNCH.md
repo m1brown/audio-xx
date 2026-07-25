@@ -27,3 +27,5 @@ scannable; expand only when the item is picked up.
 
 (Gate reports append here.)
 - [gate-3] save_started can report signed_in:false when clicked within ~1s of page load (before session resolves) — attribution imprecision on one intent event, outcome events unaffected (S2, observed once in J3)
+- [gate-4] No Content-Security-Policy header — strict CSP needs per-bundle nonce infrastructure; other security headers present (Referrer-Policy, X-Frame-Options, X-Content-Type-Options, HSTS in prod) (S2, hardening nicety per plan)
+- [gate-4] `X-Powered-By: Next.js` response header exposed — `poweredByHeader: false` removes it; cosmetic framework-version disclosure (S2, hardening nicety per plan)

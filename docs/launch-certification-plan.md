@@ -136,6 +136,11 @@ check-in. Concise entries only; detail stays in `certification/`.
 - **Cleanup:** none. **Duration:** ½–1 day.
 - **Sign-off:** event-by-event checklist complete; privacy row all-pass.
 
+> **Post-launch reading:** the minimum viable launch dashboard — the
+> exact questions the funnel data must answer after launch, in reading
+> order — is documented in `docs/analytics-events.md` ("Minimum viable
+> launch dashboard"). Documentation only; no implementation.
+
 ## Gate 4 — Privacy, authentication & security (Day 4)
 
 - **Purpose:** no user can see or affect another user's data or billing;

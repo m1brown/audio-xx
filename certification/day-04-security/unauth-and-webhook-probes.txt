@@ -1,0 +1,21 @@
+Gate 4 — unauthenticated route probes + webhook signature rejection (live dev server)
+
+Unauthenticated (no session cookie) — every protected route must 401:
+  /api/systems               → 401
+  /api/my-systems            → 401
+  /api/billing/status        → 401
+  /api/profile               → 401
+  POST /api/billing/portal   → 401
+  POST /api/billing/checkout → 401
+  /api/systems/<foreign-id>  → 401
+  (landing / → 200, public, correct)
+
+Webhook signature rejection:
+  POST /api/billing/webhook  no signature  → 400 (never touches DB)
+  POST /api/billing/webhook  bad signature → 400 (constructEvent throws → 400)
+
+Redirect / header posture:
+  success/cancel/portal return URLs are server-built from NEXTAUTH_URL — no user input → no open redirect
+  sign-in navigates to hardcoded /systems (redirect:false) — no callbackUrl open-redirect
+  headers: X-Content-Type-Options nosniff · Referrer-Policy strict-origin-when-cross-origin · X-Frame-Options SAMEORIGIN · HSTS (prod-only)
+  private pages noindex: /systems /save /auth/signin /account  → all <meta robots noindex>

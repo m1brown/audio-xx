@@ -49,7 +49,8 @@ Every item is independently verifiable. Items are grouped by the milestone that 
 - ✅ Gate 1 Functional — PASS WITH MINOR ISSUES (1 S1 fixed + pinned; certification/day-01-functional/)
 - ✅ Gate 2 Billing & entitlement — PASS (10 states live, 0 defects; certification/day-02-billing/)
 - ✅ Gate 3 Analytics & funnel — PASS WITH MINOR ISSUES (3 S1 fixed + pinned; certification/day-03-analytics/)
-- ⬜ Gates 4–11
+- ✅ Gate 4 Privacy & security — PASS (cross-user probe matrix denies; secret scan clean; 0 defects; certification/day-04-security/)
+- ⬜ Gates 5–11
 
 ## Trust, legal, operations (before public launch)
 - ⬜ Privacy policy + affiliate disclosure reviewed against actual behaviour (accounts, Stripe, analytics)
