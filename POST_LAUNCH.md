@@ -114,6 +114,17 @@ new snapshot. The only genuinely new surface is the three analytics events
 and the one-click-that-records affordance. Estimated a small, single-gate
 change post-launch.
 
+## FLAGSHIP POST-LAUNCH INITIATIVE — Causal explanation (founder-designated 2026-07-25)
+
+The enduring differentiation of Audio XX is NOT parser accuracy or system
+recognition (those are prerequisites) — it is helping listeners understand
+*why* a system behaves the way it does. The goal is not more technical writing;
+it is more *causally explanatory* writing, using verified engineering knowledge
+only where it materially improves understanding. This is the next major product
+evolution after a successful launch, a standing architectural direction — not
+merely a backlog item. Guardrails and shape are in the Gate 5 depth entry
+below. Must never weaken factual restraint or the graph-integrity doctrine.
+
 ## Gate 5 findings (deferred — editorial & technical depth)
 
 - [gate-5] **Technical explanatory depth (founder direction).** Assessment prose is phenomenological ("resolves cleanly", "keeps it musical", "3 of 4 lean detailed") rather than causal — it does not connect audible outcomes to engineering decisions (DAC/filter architecture, amplifier topology, feedback/gain-stage design, output impedance/damping, sensitivity/impedance, crossover order, driver/cabinet/loading). Causal class: **doctrine + knowledge-data limitation**, not a rendering defect. NOT launch-blocking — and importantly the engine currently errs toward *under*-claiming, so factual restraint holds (no fabricated technical claims observed in the 6-system review; the earlier "Classic Quad" fabrication is already fixed by the parser fix). The enhancement must preserve that restraint: causal explanation only where the component knowledge base supports it; keep fact / inference / unsupported strictly separated; never invent detail to sound authoritative. **Founder editorial direction (2026-07-25, sharpened before the work begins):** the objective is causal explanation, not technical density. For every engineering observation the assessment must answer "why does this matter for what the listener hears?" — if it cannot, it should not appear. Do NOT raise technical density uniformly; raise *explanatory* density selectively where it materially improves understanding. The benchmark paragraph is a demonstration of causal reasoning, not a stylistic template to reproduce. Knowledge hierarchy (approved, never inverted): (1) verified component knowledge; (2) justified system-level inference; (3) no unsupported technical claims. Never sacrifice factual restraint for a more impressive style. Recommended shape: a per-component "engineering cause" knowledge field (topology, filter philosophy, sensitivity/impedance, crossover, loading, lineage), surfaced by the synthesizer only when present, composed into at most one causal sentence per system junction. Benchmark endpoint: the Hugo(FPGA/WTA) → Job(current-feedback) → WLM(low-order/high-efficiency) paragraph in the founder's Gate 5 brief. Sizeable, post-launch, knowledge-first.

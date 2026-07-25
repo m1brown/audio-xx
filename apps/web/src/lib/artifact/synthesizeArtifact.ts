@@ -246,7 +246,11 @@ const HEARD_CONSEQUENCE_BY_CATEGORY: Record<string, string> = {
   power_match:
     'At normal listening levels you hear it as soft dynamics, loose bass and the sense that the system is straining to keep up.',
   dac_limitation:
-    'You hear it as a thinner midrange, a glassy edge on transients and the body the recording deserves never quite arriving.',
+    // Factual restraint (Gate 10): the DAC bottleneck is described by its
+    // system-level mechanism — the source sets the ceiling — not by asserting
+    // a specific tonal character (e.g. "glassy") that may be false for a
+    // respected DAC. Honesty over apparent expertise.
+    'You hear it as the source setting the system’s ceiling — less of the tonal body and inner detail the rest of the chain is capable of resolving.',
   stacked_bias:
     'You hear it as the system leaning hard in one direction — what should be a strength has become an excess the speaker can’t talk out of.',
   speaker_scale:

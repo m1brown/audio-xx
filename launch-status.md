@@ -3,10 +3,10 @@
 > Daily operational dashboard. Reviewed at the 11:00 launch check-in.
 > Concise entries only; detail lives in `certification/` reports.
 
-**Overall status:** CERTIFICATION IN PROGRESS — Gates 1–8 approved; Gate 9 executed
+**Overall status:** CERTIFICATION IN PROGRESS — Gates 1–9 approved; Gate 10 executed
 **Launch freeze:** IN EFFECT (from Gate 1 until soft launch complete; founder may lift)
-**Current gate:** 9 (SEO/metadata/sharing/print) — executed, report posted
-**Days remaining (plan):** 3 working days to activation gate
+**Current gate:** 10 (Founder + reviewer-lens editorial trust review) — executed, report posted
+**Days remaining (plan):** 2 working days to activation gate
 **Baseline commit:** c62dcb1 (version-b) · Production: de13f5a
 
 ## Gates
@@ -21,15 +21,15 @@
 | 6 Assessment quality | **PASS (remediated)** — graph-integrity gate; controls still assess; pinned | ✅ approved |
 | 7 Edge & destructive | **PASS WITH MINOR ISSUES** — honest failure; fuzz clean after 1 fix | ✅ approved |
 | 8 Mobile/browser/a11y/perf | **PASS WITH MINOR ISSUES** — responsive, a11y+print clean; 1 S2 | ✅ approved |
-| 9 SEO/meta/share/print | **PASS WITH MINOR ISSUES** — robots+sitemap added, per-page titles, unfurl=verdict, private noindex; 3 S1 fixed+pinned; canonical/JSON-LD → backlog | awaiting |
-| 10 Founder + reviewer-lens review | not started | — |
+| 9 SEO/meta/share/print | **PASS WITH MINOR ISSUES** — robots+sitemap+titles; 3 S1 fixed+pinned | ✅ approved |
+| 10 Founder + reviewer-lens review | **PASS WITH MINOR ISSUES** — 5-lens read; 1 S1 factual over-claim ("glassy" DAC) fixed+pinned; depth/naming = accepted deferrals | awaiting |
 | 11 Beta readiness & triage | not started | — |
 
 ## Defects
 
 **Open S0:** 0
 **Open launch-blockers (S1, must-fix-before-launch):** 0 — G6-D1 remediated (graph-integrity gate) + regression-pinned
-**Open S1:** 0 (10 found across Gates 1+3+4+5+7+9, all fixed same-day with regression tests)
+**Open S1:** 0 (11 found across Gates 1+3+4+5+7+9+10, all fixed same-day with regression tests)
 **S2 backlog:** 10 (see POST_LAUNCH.md)
 **Gate 6 watch-list:** 3 content observations from Gate 1 (verdict/lede tension; brand-only credit "Rega"; recommendation phrasing) — to be judged in the assessment-quality review
 **Gate 7 watch-list (edge/legacy data):** saved-system DEAD END — systems with a chain but no `canonicalText` (created via the legacy `/api/systems` POST: `/systems/new`, `SystemEditor`) render the "predates assessment history" empty state with NO action link (`runTodayUrl` is null). Evidenced by "France II" on production. Minimal remedy: reconstruct assessment text from the stored chain so an action is always offered. Should-fix before soft launch; also relevant to Gate 5 (empty-state CTA / editorial). Full proposal + the broader "Reassess System" feature in POST_LAUNCH.md.
@@ -69,6 +69,16 @@
   narrowly — never by broadly weakening the invariant. No catalog-completeness
   effort during certification.
 
+- 2026-07-25 · **Production/RC deployment state (clarified, founder-accepted):**
+  production = de13f5a (M4, 22 Jul); the certified release candidate = version-b
+  (19 commits ahead, incl. the Gate 5 wLM fix d42c24a and all cert work).
+  The live "wLM Diva Monitor" + phenomenological prose match de13f5a's code
+  exactly — a deployment state, NOT a certification failure or a broken fix
+  (re-verified: current code renders "WLM Diva Monitor" through the same
+  runArtifactPipeline path). By design the RC promotes to production as ONE
+  deployment at the activation gate. No early promotion for the cosmetic wLM
+  fix; interrupt only for a genuine trust-damaging production defect.
+
 ## Launch risks
 
 1. Founder tax/entity decision unmade (activation prerequisite).
@@ -76,5 +86,5 @@
 
 ## Objectives
 
-**Today:** Gate 9 executed — added robots.txt + sitemap.xml, per-page titles for public pages (incl. per-slug brand/tech), fixed double-suffix legal titles; verified artifact unfurl (verdict title + standfirst), private noindex, no unfurl leak, clean print. 3 S1 fixed+pinned; build EXIT 0.
-**Tomorrow:** Gate 10 (Founder + reviewer-lens review), pending Gate 9 sign-off.
+**Today:** Gate 10 executed — 6 assessments read through 5 reviewer lenses (Darko/Lavorgna/Reichert/Guttenberg/Redditor); findings split into rendering/factual/doctrine/knowledge/product-design (not collapsed). One launch-critical factual over-claim fixed: DAC-bottleneck prose no longer asserts a false 'glassy' character on a musical DAC. Depth thinness + uncataloged naming = already-accepted deferrals → causal-explanation initiative.
+**Tomorrow:** Gate 11 (Beta readiness & triage), pending Gate 10 sign-off + architectural review.

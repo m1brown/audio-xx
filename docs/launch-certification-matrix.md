@@ -120,7 +120,7 @@ Status column is filled during execution (☐ → ✅/❌+severity).
 
 | # | Behavior | Auto | Manual | Status |
 |---|---|---|---|---|
-| J1 | Founder cold-run: nothing embarrassing on core paths | — | ✓ | ☐ |
+| J1 | Founder cold-run: nothing embarrassing on core paths | — | ✓ | ✅ reviewer-lens review; 1 launch-critical factual over-claim fixed; rest = accepted editorial/knowledge limits |
 | J2 | Founder Stripe test-mode walkthrough completed | — | ✓ | ☐ |
 | J3 | Sentry live-fire observed in dashboard | — | ✓ | ☐ |
 | J4 | Founder locates funnel + error unaided | — | ✓ | ☐ |
