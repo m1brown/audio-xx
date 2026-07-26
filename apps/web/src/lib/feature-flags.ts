@@ -118,19 +118,30 @@ export const ASSESSMENT_ARTIFACT_V2_ENABLED: boolean =
  *
  * - **On**: when the deterministic causal engine (`@/lib/causal`) produces a
  *   block for the assessed system (an approved InteractionRule fires against
- *   verified CatalogFacts), a labelled evaluation block is appended to the
- *   assessment. Preview-only during evaluation; default off.
- * - **Off (default)**: no causal block; the assessment is byte-identical to
+ *   verified CatalogFacts), the licensed explanation is woven into the
+ *   assessment's coherence/mechanism arc as one integrated paragraph — not an
+ *   appended labelled block. Preview-only during evaluation; default off.
+ * - **Off (default)**: no causal paragraph; the assessment is byte-identical to
  *   its pre-pilot output.
  *
  * Safe-off invariant: the causal engine is a pure, additive module. When the
  * flag is off it is never invoked, so the payload and every existing test are
- * identical. When on, it only ever *appends* a block that the engine itself
- * gates on approved authored knowledge; no rule ⇒ no block. This is a
+ * identical. When on, it only ever *adds* one paragraph the engine itself
+ * gates on approved authored knowledge; no rule ⇒ no paragraph. This is a
  * presentation/evaluation toggle, not an engine change.
  */
 export const CAUSAL_EXPLANATION_ENABLED: boolean =
   process.env.NEXT_PUBLIC_CAUSAL_EXPLANATION === 'on';
+
+/**
+ * Runtime-evaluated alternative to {@link CAUSAL_EXPLANATION_ENABLED}, mirroring
+ * {@link isBrandHouseVoicingEnabled}. Exists so tests can flip the flag mid-suite
+ * by mutating `process.env.NEXT_PUBLIC_CAUSAL_EXPLANATION` and asserting renderer
+ * behavior on both sides of the toggle. Read once per render; do not cache.
+ */
+export function isCausalExplanationEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_CAUSAL_EXPLANATION === 'on';
+}
 
 /**
  * Runtime-evaluated alternative to {@link BRAND_HOUSE_VOICING_ENABLED}.

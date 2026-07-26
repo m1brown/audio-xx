@@ -39,9 +39,8 @@
  */
 import type { ArtifactPayload } from './types';
 import { getProductImage } from '@/lib/product-images';
-import { CAUSAL_EXPLANATION_ENABLED, isBrandHouseVoicingEnabled } from '@/lib/feature-flags';
+import { isCausalExplanationEnabled } from '@/lib/feature-flags';
 import { resolveCausalComponentsFromNames, evaluateCausal } from '@/lib/causal';
-import { selectBrandHouseVoicingSentenceForComponent } from '@/lib/brand-house-voicing-gates';
 
 export interface SynthResult {
   payload: ArtifactPayload;
@@ -632,43 +631,26 @@ export function synthesizeArtifact(result: any): SynthResult {
   const resolvedPhotoCount = componentPhotos.filter((p) => p !== null).length;
   const showPhotoRail = resolvedPhotoCount >= 2;
 
-  // Causal Explanation pilot (Phase 1) — additive, flag-gated, deterministic.
-  // When off (default) causalBlock is undefined and the payload is unchanged.
-  let causalBlock: string | undefined;
-  if (CAUSAL_EXPLANATION_ENABLED) {
-    const components = resolveCausalComponentsFromNames(credit);
-    const result = evaluateCausal(components);
-    causalBlock = result.block ?? undefined;
-  }
-
-  // Brand house-voicing — surface approved knowledge through the existing gate
-  // stack (assessment-depth surfacing; additive, flag-gated). One short sentence
-  // per component whose brand passes every gate; components in conflict / at the
-  // primary constraint / low-confidence / commercial correctly yield none.
-  let brandNotes: Array<{ component: string; sentence: string }> | undefined;
-  if (isBrandHouseVoicingEnabled()) {
-    const roleFam: Record<string, 'source' | 'amplifier' | 'speaker' | 'unknown'> = {
-      source: 'source', amp: 'amplifier', speaker: 'speaker', other: 'unknown',
-    };
-    const resolved = resolveCausalComponentsFromNames(credit);
-    const existingProse = `${recognition} ${caseParagraphs.join(' ')}`;
-    const hasConflict = f.isCoherent === false;
-    const bottleneckName: string = bottleneck?.component ?? '';
-    const notes = credit
-      .map((name, i) => {
-        const family = roleFam[resolved[i]?.role ?? 'other'] ?? 'unknown';
-        if (family === 'unknown') return null;
-        const res = selectBrandHouseVoicingSentenceForComponent({
-          componentName: name,
-          roleFamily: family,
-          hasConflictSignal: hasConflict,
-          isPrimaryConstraint: !!bottleneckName && name === bottleneckName,
-          existingCardProse: existingProse,
-        });
-        return res.sentence ? { component: name, sentence: res.sentence } : null;
-      })
-      .filter((n): n is { component: string; sentence: string } => n !== null);
-    if (notes.length) brandNotes = notes;
+  // Causal Explanation (Phase 1) — a licensed interaction claim, woven INTO the
+  // mechanism arc rather than appended as a labelled block. Deterministic and
+  // flag-gated: when off (default) nothing is added and the payload is
+  // byte-identical; when on, the engine emits a paragraph only if an approved
+  // InteractionRule fires against verified CatalogFacts (no rule ⇒ no
+  // paragraph). We place it immediately after the coherence beat so it reads as
+  // part of "why it hangs together"; failing that, before the forward-look;
+  // otherwise at the end. Inserted after the R5/R8 post-conditions so those
+  // never rewrite the authored, already-safe causal prose.
+  if (isCausalExplanationEnabled()) {
+    const causalBlock = evaluateCausal(resolveCausalComponentsFromNames(credit)).block;
+    if (causalBlock) {
+      const coherenceIdx = caseParagraphs.findIndex((p) =>
+        /hangs together|what you hear is coherence|nothing upstream fights/i.test(p),
+      );
+      const forwardIdx = caseParagraphs.findIndex((p) => /^If you ever want more/i.test(p));
+      const insertAt =
+        coherenceIdx >= 0 ? coherenceIdx + 1 : forwardIdx >= 0 ? forwardIdx : caseParagraphs.length;
+      caseParagraphs.splice(insertAt, 0, causalBlock);
+    }
   }
 
   const payload: ArtifactPayload = {
@@ -680,8 +662,6 @@ export function synthesizeArtifact(result: any): SynthResult {
     cost,
     date: today(),
     edition: editionFor(seed),
-    ...(causalBlock ? { causalBlock } : {}),
-    ...(brandNotes ? { brandNotes } : {}),
   };
 
   return { payload, contradictions };

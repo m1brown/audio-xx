@@ -128,36 +128,30 @@ export function resolveCausalComponentsFromNames(names: ReadonlyArray<string>): 
   });
 }
 
-const BASIS_LABEL: Partial<Record<ProvenanceBasis, string>> = {
-  measured: 'measured',
-  manufacturer_intent: 'manufacturer-basis',
-  founder_reference: 'reference-basis',
-  review_consensus: 'review-basis',
-  listener_consensus: 'listener-basis',
-  owner_reference: 'owner-basis',
-};
-
 /**
  * Compose the deterministic causal paragraph by substitution. No causal
  * content is created here — only the authored rule text, bound to the two
  * components' display names and the matched fact's provenance basis.
  */
 function composeBlock(
-  rule: InteractionRule,
+  _rule: InteractionRule,
   amp: CausalComponent,
   speaker: CausalComponent,
 ): string {
-  const setEffect = speaker.facts.find((f) => f.key === 'set_suitability_effect');
-  const basisLabel = (setEffect && BASIS_LABEL[setEffect.provenance.basis]) || 'authored';
+  // Reader-facing prose only: every clause is bound to the two structured
+  // facts (amp topology:set, speaker topology:high-efficiency +
+  // set_suitability_effect) and the rule's mechanism / consequence / contrast.
+  // It names no rule, fact key, confidence, provenance basis, or "authored
+  // effect" machinery — those stay internal to the engine.
   return (
-    `The ${amp.name} is a single-ended-triode amplifier with limited output power. ` +
-    `The ${speaker.name} is catalogued as a high-efficiency loudspeaker and carries an ` +
-    `authored ${basisLabel} effect specifically connecting it with SET amplification. ` +
-    `Its greater acoustic output per available watt means the ${amp.brand} needs to use ` +
-    `less of its limited power for a given listening level than it would with a ` +
-    `substantially less sensitive loudspeaker. That preserves more headroom and reduces ` +
-    `the likelihood of clipped or compressed peaks. With a less sensitive speaker, the ` +
-    `same amplifier would have to use more of its available output to reach the same level.`
+    `The ${amp.name} is a single-ended-triode amplifier with limited output power, ` +
+    `and the ${speaker.name} is a high-efficiency loudspeaker its designer intends to be ` +
+    `driven by single-ended-triode amplification. Because the speaker produces more ` +
+    `acoustic output from each watt, the ${amp.brand} uses less of its limited power to ` +
+    `reach a given listening level than it would with a substantially less sensitive ` +
+    `speaker — which leaves more headroom and makes clipped or compressed peaks less ` +
+    `likely. A less sensitive speaker would force the same amplifier to use more of its ` +
+    `output to reach the same level.`
   );
 }
 

@@ -16,15 +16,18 @@ import type { CausalComponent } from '../types';
 import { DAC_PRODUCTS } from '../../products/dacs';
 import { SPEAKER_PRODUCTS } from '../../products/speakers';
 
+// Reader-facing prose: no rule name, fact key, confidence, provenance basis,
+// or "authored effect" machinery (see engine.composeBlock). Every clause stays
+// traceable to the two structured facts + the rule's mechanism/consequence/contrast.
 const BENCHMARK_PARAGRAPH =
-  'The Yamamoto A-08S is a single-ended-triode amplifier with limited output power. ' +
-  'The DeVore Orangutan O/96 is catalogued as a high-efficiency loudspeaker and carries an ' +
-  'authored manufacturer-basis effect specifically connecting it with SET amplification. ' +
-  'Its greater acoustic output per available watt means the Yamamoto needs to use ' +
-  'less of its limited power for a given listening level than it would with a ' +
-  'substantially less sensitive loudspeaker. That preserves more headroom and reduces ' +
-  'the likelihood of clipped or compressed peaks. With a less sensitive speaker, the ' +
-  'same amplifier would have to use more of its available output to reach the same level.';
+  'The Yamamoto A-08S is a single-ended-triode amplifier with limited output power, ' +
+  'and the DeVore Orangutan O/96 is a high-efficiency loudspeaker its designer intends to be ' +
+  'driven by single-ended-triode amplification. Because the speaker produces more ' +
+  'acoustic output from each watt, the Yamamoto uses less of its limited power to ' +
+  'reach a given listening level than it would with a substantially less sensitive ' +
+  'speaker — which leaves more headroom and makes clipped or compressed peaks less ' +
+  'likely. A less sensitive speaker would force the same amplifier to use more of its ' +
+  'output to reach the same level.';
 
 function comp(id: string): CausalComponent {
   const c = causalComponentById(id);

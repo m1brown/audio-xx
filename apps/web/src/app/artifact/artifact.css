@@ -201,30 +201,6 @@ body:has(.axx-route) { background: #FCF8EE; }
   clip: rect(0 0 0 0); white-space: nowrap;
 }
 
-/* ── Brand house-voicing — quiet editorial marginalia to the judgment ──── */
-/* Approved authored knowledge, one short observation per qualifying
- * component. Set apart from the case paragraphs by a hairline rule and a
- * small-caps label so it reads as a footnote to the verdict, not a rival
- * to it. Absent entirely when no brand qualifies. */
-.axx-brandnotes {
-  margin-block-start: var(--para-gap);
-  padding-block-start: 1.1rem;
-  border-block-start: 1px solid var(--rule, rgba(0,0,0,.12));
-}
-.axx-brandnotes-h {
-  margin: 0 0 .7rem; font-family: var(--face-text);
-  font-size: .68rem; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--ink-muted); font-weight: 600;
-}
-.axx-brandnotes p {
-  font-size: .98rem; line-height: 1.55; margin: 0 0 .55rem; color: var(--ink);
-}
-.axx-brandnotes p:last-child { margin-bottom: 0; }
-.axx-brandnote-name {
-  font-variant: small-caps; letter-spacing: .02em; color: var(--ink);
-  font-weight: 600;
-}
-
 /* ── Print mode (server-side: ?print=1 + the export script) ───────────── */
 /* Force the print stylesheet path for headless capture (the @media print
  * block below already excludes follow-up + diagnostics + animation; this
