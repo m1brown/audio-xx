@@ -5224,9 +5224,9 @@ export default function Home() {
               textWrap: 'balance' as React.CSSProperties['textWrap'],
             }}
           >
-            A system-level listening advisor: how your components work
-            together, where the bottlenecks are, and whether anything should
-            change — including when the honest answer is nothing.
+            Audio XX is a system-level listening advisor for hi-fi enthusiasts.
+            It explains how your components work together, identifies real
+            bottlenecks, and tells you when nothing needs changing.
           </p>
 
           {/* ── Active system credit line ── */}

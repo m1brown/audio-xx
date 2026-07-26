@@ -191,6 +191,25 @@ export default function SystemBuilder() {
         </div>
       ))}
 
+      {/* First-run onboarding: until the CTA activates (≥2 components), tell a
+        * new visitor exactly what to enter so they can complete unaided. The
+        * hint disappears once the assessment can be read. */}
+      {!url && (
+        <p
+          data-testid="builder-hint"
+          style={{
+            fontFamily: 'var(--face-text)',
+            fontSize: '0.85rem',
+            lineHeight: 1.5,
+            color: EDITORIAL.inkMuted,
+            margin: '0.25rem 0 0',
+          }}
+        >
+          Enter at least two components — names autocomplete as you type, or just
+          type what you own.
+        </p>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.6rem' }}>
         {fields.length < MAX_FIELDS ? (
           <button
