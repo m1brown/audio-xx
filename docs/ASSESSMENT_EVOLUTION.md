@@ -11,8 +11,18 @@ Priority legend: 🟠 High leverage · 🟡 Nice to have · ⚪ Defer. Cx: S/M/L
 
 ---
 
-## Precondition (gate for this entire document)
-Do **not** start this work until the invite-only beta has produced signal that audiophiles value the assessment and want more depth. The **Knowledge Opportunity backlog from real usage** — not assumption — sets the priority within it. If the beta says the concise assessment is enough, this plan waits.
+## Precondition (SUPERSEDED — founder reprioritization 2026-07-26)
+~~Do not start this work until the invite-only beta has produced signal…~~
+
+**REPRIORITIZED (founder, 2026-07-26):** depth is a conviction call, not a
+beta-learning question. As the target audiophile, the founder has decided the
+depth is the differentiator and wants it built and in the product now — the
+launch may wait for it. This work is **no longer gated on beta validation.**
+The Knowledge Opportunity backlog still *prioritizes within* the work; it no
+longer *gates the start of* it. The frozen architecture itself is unchanged —
+only its sequencing is pulled forward. Order of attack: surface already-approved
+but unrendered knowledge first (fastest honest depth), then the Question Engine
+foundation, with founder-led knowledge authoring as the long-pole accelerant.
 
 ---
 
