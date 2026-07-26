@@ -43,4 +43,13 @@ export interface ArtifactPayload {
    * Temporary evaluation scaffold — not the final presentation.
    */
   causalBlock?: string;
+  /**
+   * Brand house-voicing lines (approved knowledge; assessment-depth surfacing).
+   * Present ONLY when `NEXT_PUBLIC_BRAND_HOUSE_VOICING` is on AND a component's
+   * brand passes the full gate stack (match / commercial / confidence / role /
+   * conflict / primary-constraint / shape / redundancy / overclaim). One short
+   * sentence per qualifying component; many components correctly yield none
+   * (restraint). Absent entirely otherwise (payload byte-identical to off).
+   */
+  brandNotes?: Array<{ component: string; sentence: string }>;
 }

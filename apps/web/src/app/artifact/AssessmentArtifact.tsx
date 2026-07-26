@@ -94,6 +94,23 @@ export default function AssessmentArtifact(
                 <p>{p.causalBlock}</p>
               </section>
             )}
+            {/* Brand house-voicing — approved knowledge surfaced through the gate
+              * stack. One short observation per qualifying component; absent when
+              * no brand qualifies (restraint). Rendered as quiet editorial notes
+              * under a small-caps rule, so it reads as marginalia to the judgment
+              * rather than a second verdict. */}
+            {p.brandNotes && p.brandNotes.length > 0 && (
+              <section className="axx-brandnotes" aria-label="On the houses">
+                <h2 className="axx-brandnotes-h">On the houses</h2>
+                {p.brandNotes.map((n, i) => (
+                  <p key={i}>
+                    <span className="axx-brandnote-name">{n.component}</span>
+                    {' — '}
+                    {n.sentence}
+                  </p>
+                ))}
+              </section>
+            )}
           </div>
 
           {/* Peak 2 — the recommendation. Lives in column 3 so its gap to the

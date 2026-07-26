@@ -39,8 +39,9 @@
  */
 import type { ArtifactPayload } from './types';
 import { getProductImage } from '@/lib/product-images';
-import { CAUSAL_EXPLANATION_ENABLED } from '@/lib/feature-flags';
+import { CAUSAL_EXPLANATION_ENABLED, isBrandHouseVoicingEnabled } from '@/lib/feature-flags';
 import { resolveCausalComponentsFromNames, evaluateCausal } from '@/lib/causal';
+import { selectBrandHouseVoicingSentenceForComponent } from '@/lib/brand-house-voicing-gates';
 
 export interface SynthResult {
   payload: ArtifactPayload;
@@ -640,6 +641,36 @@ export function synthesizeArtifact(result: any): SynthResult {
     causalBlock = result.block ?? undefined;
   }
 
+  // Brand house-voicing — surface approved knowledge through the existing gate
+  // stack (assessment-depth surfacing; additive, flag-gated). One short sentence
+  // per component whose brand passes every gate; components in conflict / at the
+  // primary constraint / low-confidence / commercial correctly yield none.
+  let brandNotes: Array<{ component: string; sentence: string }> | undefined;
+  if (isBrandHouseVoicingEnabled()) {
+    const roleFam: Record<string, 'source' | 'amplifier' | 'speaker' | 'unknown'> = {
+      source: 'source', amp: 'amplifier', speaker: 'speaker', other: 'unknown',
+    };
+    const resolved = resolveCausalComponentsFromNames(credit);
+    const existingProse = `${recognition} ${caseParagraphs.join(' ')}`;
+    const hasConflict = f.isCoherent === false;
+    const bottleneckName: string = bottleneck?.component ?? '';
+    const notes = credit
+      .map((name, i) => {
+        const family = roleFam[resolved[i]?.role ?? 'other'] ?? 'unknown';
+        if (family === 'unknown') return null;
+        const res = selectBrandHouseVoicingSentenceForComponent({
+          componentName: name,
+          roleFamily: family,
+          hasConflictSignal: hasConflict,
+          isPrimaryConstraint: !!bottleneckName && name === bottleneckName,
+          existingCardProse: existingProse,
+        });
+        return res.sentence ? { component: name, sentence: res.sentence } : null;
+      })
+      .filter((n): n is { component: string; sentence: string } => n !== null);
+    if (notes.length) brandNotes = notes;
+  }
+
   const payload: ArtifactPayload = {
     verdict, standfirst, componentCredit: credit,
     componentPhotos: showPhotoRail ? componentPhotos : undefined,
@@ -650,6 +681,7 @@ export function synthesizeArtifact(result: any): SynthResult {
     date: today(),
     edition: editionFor(seed),
     ...(causalBlock ? { causalBlock } : {}),
+    ...(brandNotes ? { brandNotes } : {}),
   };
 
   return { payload, contradictions };
