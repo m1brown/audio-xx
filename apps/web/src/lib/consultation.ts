@@ -11711,10 +11711,13 @@ function inferAssessmentLimitations(
     // limit, not preference-relative; always surfaced verbatim.
     if (c.product?.placementSensitivity && c.product.placementSensitivity.level !== 'low') {
       const ps = c.product.placementSensitivity;
+      // Join with a colon, not an em-dash: `ps.notes` begins with a capital,
+      // so a dash produced a broken mid-sentence construction ("… sensitivity —
+      // Compact sealed design …"). Colon keeps the note verbatim and grammatical.
       if (ps.level === 'high') {
-        limitations.push(`${c.displayName} has high placement sensitivity — ${ps.notes}`);
+        limitations.push(`${c.displayName} has high placement sensitivity: ${ps.notes}`);
       } else if (ps.level === 'moderate') {
-        limitations.push(`${c.displayName} has moderate placement sensitivity — ${ps.notes}`);
+        limitations.push(`${c.displayName} has moderate placement sensitivity: ${ps.notes}`);
       }
     }
   }

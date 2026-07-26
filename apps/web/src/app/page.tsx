@@ -4946,7 +4946,7 @@ export default function Home() {
         // Phase 2A: cover top padding scales with viewport height so the
         // full composition (rubric → headline → dek → composer → example
         // line) sits within one desktop frame.
-        padding: hasMessages ? '4rem 2.5rem 3rem' : 'clamp(3.5rem, 9vh, 5.5rem) 2.5rem 3rem',
+        padding: hasMessages ? '4rem 2.5rem 3rem' : 'clamp(2rem, 5vh, 3.25rem) 2.5rem 3rem',
         color: EDITORIAL.ink,
         lineHeight: 1.6,
         display: 'grid',
@@ -5224,7 +5224,8 @@ export default function Home() {
               textWrap: 'balance' as React.CSSProperties['textWrap'],
             }}
           >
-            Audio XX is a system-level listening advisor for hi-fi enthusiasts.
+            Audio XX is a system-level listening advisor for{' '}
+            <span style={{ whiteSpace: 'nowrap' }}>hi-fi</span> enthusiasts.
             It explains how your components work together, identifies real
             bottlenecks, and tells you when nothing needs changing.
           </p>
@@ -5308,7 +5309,7 @@ export default function Home() {
               letterSpacing: '0.14em',
               textTransform: 'uppercase' as const,
               color: EDITORIAL.inkMuted,
-              marginTop: '4.5rem',
+              marginTop: '2.75rem',
               marginBottom: '1rem',
             }}
           >

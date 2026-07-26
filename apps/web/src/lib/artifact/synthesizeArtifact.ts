@@ -625,7 +625,11 @@ export function synthesizeArtifact(result: any): SynthResult {
     if (!url) return null;
     return { src: url, alt: nm };
   });
-  const hasAnyPhoto = componentPhotos.some((p) => p !== null);
+  // A single resolved image renders a lopsided, oversized rail that reads as
+  // broken. Show the strip only when at least two component images resolve;
+  // otherwise omit it (names remain in the credit line). Smallest defensible rule.
+  const resolvedPhotoCount = componentPhotos.filter((p) => p !== null).length;
+  const showPhotoRail = resolvedPhotoCount >= 2;
 
   // Causal Explanation pilot (Phase 1) — additive, flag-gated, deterministic.
   // When off (default) causalBlock is undefined and the payload is unchanged.
@@ -638,7 +642,7 @@ export function synthesizeArtifact(result: any): SynthResult {
 
   const payload: ArtifactPayload = {
     verdict, standfirst, componentCredit: credit,
-    componentPhotos: hasAnyPhoto ? componentPhotos : undefined,
+    componentPhotos: showPhotoRail ? componentPhotos : undefined,
     recognition, caseParagraphs,
     heroDatum, pullQuote,
     recommendation,
