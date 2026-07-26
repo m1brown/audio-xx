@@ -5224,8 +5224,9 @@ export default function Home() {
               textWrap: 'balance' as React.CSSProperties['textWrap'],
             }}
           >
-            An assessment of how your components work together, where the
-            bottlenecks are, and whether anything should change.
+            A system-level listening advisor: how your components work
+            together, where the bottlenecks are, and whether anything should
+            change — including when the honest answer is nothing.
           </p>
 
           {/* ── Active system credit line ── */}
