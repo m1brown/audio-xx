@@ -39,6 +39,8 @@
  */
 import type { ArtifactPayload } from './types';
 import { getProductImage } from '@/lib/product-images';
+import { CAUSAL_EXPLANATION_ENABLED } from '@/lib/feature-flags';
+import { resolveCausalComponentsFromNames, evaluateCausal } from '@/lib/causal';
 
 export interface SynthResult {
   payload: ArtifactPayload;
@@ -625,6 +627,15 @@ export function synthesizeArtifact(result: any): SynthResult {
   });
   const hasAnyPhoto = componentPhotos.some((p) => p !== null);
 
+  // Causal Explanation pilot (Phase 1) — additive, flag-gated, deterministic.
+  // When off (default) causalBlock is undefined and the payload is unchanged.
+  let causalBlock: string | undefined;
+  if (CAUSAL_EXPLANATION_ENABLED) {
+    const components = resolveCausalComponentsFromNames(credit);
+    const result = evaluateCausal(components);
+    causalBlock = result.block ?? undefined;
+  }
+
   const payload: ArtifactPayload = {
     verdict, standfirst, componentCredit: credit,
     componentPhotos: hasAnyPhoto ? componentPhotos : undefined,
@@ -634,6 +645,7 @@ export function synthesizeArtifact(result: any): SynthResult {
     cost,
     date: today(),
     edition: editionFor(seed),
+    ...(causalBlock ? { causalBlock } : {}),
   };
 
   return { payload, contradictions };

@@ -84,6 +84,16 @@ export default function AssessmentArtifact(
           <div className="axx-judgment">
             <p>{p.recognition}</p>
             {p.caseParagraphs.map((para, i) => <p key={i}>{para}</p>)}
+            {/* Causal Explanation pilot (Phase 1) — temporary, clearly-labelled
+              * evaluation block. Present only when the deterministic causal
+              * engine produced a claim from approved authored knowledge.
+              * Not the final presentation. */}
+            {p.causalBlock && (
+              <section className="axx-causal" aria-label="Why it sounds this way">
+                <h2 className="axx-vh">Why it sounds this way</h2>
+                <p>{p.causalBlock}</p>
+              </section>
+            )}
           </div>
 
           {/* Peak 2 — the recommendation. Lives in column 3 so its gap to the

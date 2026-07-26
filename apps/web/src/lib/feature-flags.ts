@@ -111,6 +111,28 @@ export const ASSESSMENT_ARTIFACT_V2_ENABLED: boolean =
   process.env.NEXT_PUBLIC_ASSESSMENT_ARTIFACT_V2 === 'on';
 
 /**
+ * Causal Explanation pilot (Phase 1) — the temporary "Why it sounds this way"
+ * evaluation block.
+ *
+ * Env var: `NEXT_PUBLIC_CAUSAL_EXPLANATION=on`
+ *
+ * - **On**: when the deterministic causal engine (`@/lib/causal`) produces a
+ *   block for the assessed system (an approved InteractionRule fires against
+ *   verified CatalogFacts), a labelled evaluation block is appended to the
+ *   assessment. Preview-only during evaluation; default off.
+ * - **Off (default)**: no causal block; the assessment is byte-identical to
+ *   its pre-pilot output.
+ *
+ * Safe-off invariant: the causal engine is a pure, additive module. When the
+ * flag is off it is never invoked, so the payload and every existing test are
+ * identical. When on, it only ever *appends* a block that the engine itself
+ * gates on approved authored knowledge; no rule ⇒ no block. This is a
+ * presentation/evaluation toggle, not an engine change.
+ */
+export const CAUSAL_EXPLANATION_ENABLED: boolean =
+  process.env.NEXT_PUBLIC_CAUSAL_EXPLANATION === 'on';
+
+/**
  * Runtime-evaluated alternative to {@link BRAND_HOUSE_VOICING_ENABLED}.
  *
  * Production code paths can use either form interchangeably; the getter

@@ -35,4 +35,12 @@ export interface ArtifactPayload {
   /** Reserved for when assessments become stable, addressable artifacts.
    *  Held back in beta — a date is sufficient provenance. */
   edition?: string;
+  /**
+   * Causal Explanation pilot (Phase 1) — the deterministic "Why it sounds this
+   * way" evaluation block. Present ONLY when `NEXT_PUBLIC_CAUSAL_EXPLANATION`
+   * is on AND an approved InteractionRule fires against verified CatalogFacts.
+   * Absent otherwise (the payload is then byte-identical to pre-pilot output).
+   * Temporary evaluation scaffold — not the final presentation.
+   */
+  causalBlock?: string;
 }
