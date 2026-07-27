@@ -81,8 +81,10 @@ export const SET_HIGH_EFFICIENCY_RULE: InteractionRule = {
   downstream: {
     role: 'speaker',
     describe:
-      'high-efficiency loudspeaker with an authored SET-suitability effect, on the Phase 1 ' +
-      'downstream eligibility list',
+      'high-efficiency loudspeaker the manufacturer designed especially for low-powered tube ' +
+      'amplifiers (carries the authored set_suitability_effect fact; SET-specific suitability is ' +
+      'treated as review/inference, not manufacturer intent), on the Phase 1 downstream ' +
+      'eligibility list',
     matches: (c: CausalComponent) =>
       isEligible(c.productId, RULE_ID, 'speaker') &&
       hasFactValue(c.facts, 'topology', 'high-efficiency') &&
@@ -109,18 +111,40 @@ export const SET_HIGH_EFFICIENCY_RULE: InteractionRule = {
   provenance: {
     basis: 'authored_rule',
     sources: [
-      { label: 'topology-philosophy SET capsule (mechanism, pairingImplication)' },
-      { label: 'DeVore O/96 tendencies.interactions — driven by SET (manufacturer_intent)' },
+      { label: 'topology-philosophy capsule — power↔sensitivity mechanism (engineering inference)' },
+      {
+        label:
+          'DeVore Fidelity — O/96 manufacturer page: "designed especially for low-powered tube ' +
+          'amplifiers"; 96 dB/W/M, 10 ohms (manufacturer_intent + specification)',
+        url: 'https://devorefidelity.com/devore-fidelity-speakers/orangutan-series/devore-fidelity-o-96-speakers/',
+      },
+      {
+        label:
+          'John DeVore interview (Positive Feedback) — tube/impedance rationale; "very unfussy" ' +
+          'across amp types (designer quotation)',
+        url: 'https://www.positive-feedback.com/Issue75/devore_orangutan.htm',
+      },
+      {
+        label:
+          'SET-specific suitability: review consensus + engineering inference, NOT manufacturer ' +
+          'intent (medium confidence)',
+      },
     ],
     note:
-      "The SET capsule's ≥93 dB threshold is contextual support only, NOT an active predicate " +
-      'in Phase 1. Generalisation to a numeric sensitivity gate awaits a consistently ' +
-      'structured sensitivity vocabulary.',
+      'Knowledge audit 2026-07-27: the manufacturer-stated intent is "low-powered tube ' +
+      'amplifiers," not SET specifically; John DeVore never says "SET" on record and calls the ' +
+      'O/96 "very unfussy" across amp types. SET-suitability is therefore retained as ' +
+      'review-consensus / engineering-inference, not manufacturer intent. Stereophile\'s Atkinson ' +
+      'measurement text was inaccessible (HTTP 403); the load characterisation rests on the ' +
+      'manufacturer page + specification figures. The topology capsule\'s ≥93 dB threshold is ' +
+      'contextual support only, NOT an active predicate in Phase 1. (Deferred to a later ' +
+      'refactor: renaming the set_suitability_effect fact key and relabelling the shared O/96 ' +
+      'catalog interaction basis.)',
   },
   confidence: 'high',
   authoredBy: 'project draft (Claude)',
   reviewedBy: 'founder (Mike Brown)',
-  approvalDate: '2026-07-26',
+  approvalDate: '2026-07-27',
 };
 
 /** Only approved rules may generate public prose. */

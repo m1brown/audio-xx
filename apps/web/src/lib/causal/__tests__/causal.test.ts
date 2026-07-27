@@ -21,13 +21,13 @@ import { SPEAKER_PRODUCTS } from '../../products/speakers';
 // traceable to the two structured facts + the rule's mechanism/consequence/contrast.
 const BENCHMARK_PARAGRAPH =
   'The Yamamoto A-08S is a single-ended-triode amplifier with limited output power, ' +
-  'and the DeVore Orangutan O/96 is a high-efficiency loudspeaker its designer intends to be ' +
-  'driven by single-ended-triode amplification. Because the speaker produces more ' +
-  'acoustic output from each watt, the Yamamoto uses less of its limited power to ' +
-  'reach a given listening level than it would with a substantially less sensitive ' +
-  'speaker — which leaves more headroom and makes clipped or compressed peaks less ' +
-  'likely. A less sensitive speaker would force the same amplifier to use more of its ' +
-  'output to reach the same level.';
+  'and the DeVore Orangutan O/96 is a high-efficiency loudspeaker its maker built especially ' +
+  'for low-powered tube amplifiers, the Yamamoto among them. Because the speaker ' +
+  'produces more acoustic output from each watt, the Yamamoto uses less of its ' +
+  'limited power to reach a given listening level than it would with a substantially ' +
+  'less sensitive speaker — which leaves more headroom and makes clipped or compressed ' +
+  'peaks less likely. A less sensitive speaker would force the same amplifier to use ' +
+  'more of its output to reach the same level.';
 
 function comp(id: string): CausalComponent {
   const c = causalComponentById(id);
