@@ -319,12 +319,23 @@ export function synthesizeArtifact(result: any): SynthResult {
     return nm || full[i] || '';
   });
 
-  const bottleneck = f.bottleneck ?? null;
+  let bottleneck = f.bottleneck ?? null;
   const path0 = (resp.upgradePaths ?? [])[0] ?? null;
   const constraintExpl: string = resp.primaryConstraint?.explanation ?? '';
   const signature: string = resp.systemSignature ?? '';
-  const category: string = bottleneck?.category ?? '';
-  const role = roleNoun(bottleneck?.role);
+  let category: string = bottleneck?.category ?? '';
+  let role = roleNoun(bottleneck?.role);
+
+  // E4 (Doctrine D-11): a diagnosed target with no classifiable role must never
+  // be surfaced as "the system". Power-match names no generic role (its verdict
+  // and recommendation are role-free), so it is exempt; any other bottleneck
+  // whose role cannot be attributed is treated as NO primary diagnosis — the
+  // verdict falls back to restraint and the recommendation to no-change.
+  if (bottleneck && category !== 'power_match' && role === 'system') {
+    bottleneck = null;
+    category = '';
+    role = '';
+  }
 
   if (bottleneck && !path0) contradictions.push('Engine reports a bottleneck but no upgrade path.');
   if (!bottleneck && path0 && /highest/i.test(path0.impact ?? ''))
@@ -589,7 +600,12 @@ export function synthesizeArtifact(result: any): SynthResult {
   // trade-off-directed action, so those are defined for the doctrine and future
   // envelopes but not yet produced here.
   type RecommendationLicense = 'limitation' | 'tradeoff' | 'priority' | 'none';
-  const recommendationLicense: RecommendationLicense = path0 ? 'limitation' : 'none';
+  // E3 (Doctrine D-11): verdict and recommendation must derive from the same
+  // licensed state — the primary bottleneck. A bare upgrade path (`path0`) may
+  // exist without a licensed bottleneck; when it does, the recommendation must
+  // NOT fire from it. When there is no bottleneck, the coherent verdict forces
+  // the no-change recommendation.
+  const recommendationLicense: RecommendationLicense = bottleneck ? 'limitation' : 'none';
 
   let recommendation: string;
   if (recommendationLicense === 'none') recommendation = 'This system is already well balanced.';

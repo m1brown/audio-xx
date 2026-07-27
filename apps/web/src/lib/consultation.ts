@@ -12730,6 +12730,13 @@ interface ConstraintCandidate {
   category: ConstraintCategory;
   explanation: string;
   severity: number; // higher = more constraining
+  // Doctrine D-11 (Explanatory Licensing): true only when the candidate is
+  // backed by an identified interaction / constraint / mismatch (e.g. a power
+  // mismatch, a capability mismatch) rather than a component's intrinsic
+  // character or a solo trait threshold. Only a licensed candidate may be the
+  // PRIMARY diagnosis; unlicensed candidates may inform the assessment body but
+  // never independently determine the bottleneck. Absent ⇒ unlicensed.
+  licensed?: boolean;
 }
 
 function detectPrimaryConstraint(
@@ -12841,6 +12848,10 @@ function detectPrimaryConstraint(
           category: 'dac_limitation',
           explanation: `The DAC is holding back the system — ${issues.join(', ')}. Everything downstream inherits its limitations.`,
           severity,
+          // D-11: only the portable-DAC-in-a-speaker-system signal is a licensed
+          // capability mismatch; the tonal-density / flow / composure thresholds
+          // are intrinsic character and cannot independently license a diagnosis.
+          licensed: isPortable && hasSpeakers,
         });
       }
     }
@@ -12956,6 +12967,7 @@ function detectPrimaryConstraint(
       category: 'power_match',
       explanation: `The ${powerMatch.ampName} (${powerMatch.ampPowerWatts}W) cannot adequately drive the ${powerMatch.speakerName} (${powerMatch.speakerSensitivityDb} dB sensitivity).${splNote} Dynamics will compress significantly, bass control will suffer, and the system will run out of headroom at moderate listening levels. Either more amplifier power or higher-efficiency speakers would resolve this.`,
       severity: 9,
+      licensed: true, // D-11: power/sensitivity mismatch is an identified interaction
     });
   } else if (powerMatch.compatibility === 'strained' && powerMatch.ampName && powerMatch.speakerName) {
     const splNote = powerMatch.estimatedMaxCleanSPL != null
@@ -12966,19 +12978,26 @@ function detectPrimaryConstraint(
       category: 'power_match',
       explanation: `The ${powerMatch.ampName} (${powerMatch.ampPowerWatts}W) is working hard to drive the ${powerMatch.speakerName} (${powerMatch.speakerSensitivityDb} dB sensitivity).${splNote} Dynamic compression on peaks is likely, and the amp may lose composure on complex passages. More headroom — either through amplifier power or speaker efficiency — would improve dynamic expression.`,
       severity: 6,
+      licensed: true, // D-11: power/sensitivity mismatch is an identified interaction
     });
   }
 
-  // Return highest severity — minimum threshold of 2 prevents
-  // minor design trade-offs from being elevated to "primary constraint"
+  // Doctrine D-11 (Explanatory Licensing): the PRIMARY diagnosis must be licensed
+  // by an identified interaction / constraint / mismatch. A component's intrinsic
+  // character or measured tendency (a solo trait threshold — dac tonal density,
+  // spatial scale, stacked tonal bias) may inform the assessment body but may NOT
+  // independently determine the bottleneck. We therefore select the
+  // highest-severity *licensed* candidate; when none exists there is NO primary
+  // bottleneck — we never fall back to the least-bad component. The minimum
+  // severity floor of 2 is preserved.
   candidates.sort((a, b) => b.severity - a.severity);
-  if (candidates.length === 0 || candidates[0].severity < 2) return undefined;
+  const licensedPrimary = candidates.find((c) => c.licensed && c.severity >= 2);
+  if (!licensedPrimary) return undefined;
 
-  const top = candidates[0];
   return {
-    componentName: top.componentName,
-    category: top.category,
-    explanation: top.explanation,
+    componentName: licensedPrimary.componentName,
+    category: licensedPrimary.category,
+    explanation: licensedPrimary.explanation,
   };
 }
 

@@ -65,3 +65,22 @@ pipeline can operate on.
 ## UI / Product Evolution
 
 <!-- Future entries for interface, interaction patterns, user experience -->
+
+---
+
+## Deferred — Intent-aware recommendation nudge (post D-11)
+
+**Context.** Doctrine D-11 (Explanatory Licensing) retired the former
+*intent-aware bottleneck promotion*: a listener priority (e.g. "I want more
+detail") could elevate a warm system's tonal character to a "Highest Impact"
+primary diagnosis. Under D-11 a listener priority may not create or elevate a
+primary diagnosis, and a component's character is never a licensed bottleneck.
+
+**Deferred capability.** If we still want to let a stated listener priority shape
+the *direction* of a recommendation, it must be reintroduced strictly as a
+**recommendation-layer** capability — never as diagnostic logic, and only when a
+recommendation is already licensed (an identified limitation / trade-off /
+priority per D-8). It must not manufacture a primary diagnosis. This aligns with
+the reserved `priority` state noted in D-8 (see
+`causal-explanation-architecture-v1.md` §0b), which is defined but not yet
+produced. No design work scheduled; gated on need.

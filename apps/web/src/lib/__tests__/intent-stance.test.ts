@@ -68,31 +68,35 @@ function assess(system: string[], desires?: Array<{ quality: string; direction: 
   const r = buildSystemAssessment(text, subj, null, desires as never);
   if (r?.kind !== 'assessment') throw new Error('no assessment');
   const p1 = r.response.upgradePaths?.[0];
-  return { p1, limitations: r.response.assessmentLimitations ?? [] };
+  return { p1, bottleneck: r.response.findings?.bottleneck ?? null, limitations: r.response.assessmentLimitations ?? [] };
 }
 
 const WARM = ['Schiit Bifrost 2/64', 'Marantz 2220B', 'JBL L100 Classic'];
 const DETAILED = ['Topping D90SE', 'Hegel H190', 'JBL L100 Classic'];
 
-describe('P2/P3 — bottleneck promotion is intent-aware', () => {
-  it('A · warm system + wants warmth → bottleneck demoted to Optional Direction, no counter-direction', () => {
-    const { p1 } = assess(WARM, [{ quality: 'warmth', direction: 'more' }]);
-    expect(p1?.impact).toBe('Optional Direction');
-    expect(p1?.rationale).toMatch(/deepens warmth/i);
-    expect(p1?.rationale).not.toMatch(/stronger transient speed/i);
+// Doctrine D-11 (Explanatory Licensing) SUPERSEDES the former intent-aware
+// bottleneck promotion. A warm system's warmth is intrinsic character, not a
+// licensed interaction/constraint/mismatch, so it can never be a primary
+// diagnosis — and listener priorities may not create or elevate one. (The
+// intent-aware nudge may return later purely as a recommendation-layer
+// capability; see POST_LAUNCH.md. It is no longer diagnostic logic.)
+describe('P2/P3 — D-11: intent never creates or elevates a primary diagnosis', () => {
+  it('A · warm system + wants warmth → no primary bottleneck (character is not a defect)', () => {
+    expect(assess(WARM, [{ quality: 'warmth', direction: 'more' }]).bottleneck).toBeNull();
   });
 
-  it('B · warm system + wants detail → stays Highest Impact and targets the wanted trait', () => {
-    const { p1 } = assess(WARM, [{ quality: 'detail', direction: 'more' }]);
-    expect(p1?.impact).toBe('Highest Impact');
-    expect(p1?.rationale).toMatch(/microdetail|toward what you're after/i);
+  it('B · warm system + wants detail → still no primary bottleneck (intent cannot create one)', () => {
+    expect(assess(WARM, [{ quality: 'detail', direction: 'more' }]).bottleneck).toBeNull();
   });
 
-  it('E · no intent → Highest Impact but asserts no tonal direction', () => {
-    const { p1 } = assess(WARM, undefined);
-    expect(p1?.impact).toBe('Highest Impact');
-    expect(p1?.rationale).toMatch(/depends on what you want more of/i);
-    expect(p1?.rationale).not.toMatch(/stronger transient speed/i);
+  it('E · no intent → no primary bottleneck, and intent does not elevate the recommendation impact', () => {
+    const none = assess(WARM, undefined);
+    expect(none.bottleneck).toBeNull();
+    // The former promotion is retired: the upgrade-path impact no longer varies by intent.
+    const wantsWarmth = assess(WARM, [{ quality: 'warmth', direction: 'more' }]).p1?.impact;
+    const wantsDetail = assess(WARM, [{ quality: 'detail', direction: 'more' }]).p1?.impact;
+    expect(wantsWarmth).toBe(none.p1?.impact);
+    expect(wantsDetail).toBe(none.p1?.impact);
   });
 });
 

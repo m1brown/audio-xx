@@ -23,10 +23,16 @@ describe('DAC-bottleneck prose stays factually restrained (G10-D1)', () => {
     });
   }
 
-  it('a DAC-limited system still names the source-as-ceiling mechanism', () => {
+  it('D-11: a reference DAC is not diagnosed as the system ceiling on its intrinsic character', () => {
+    // Doctrine D-11 (Explanatory Licensing) supersedes the former DAC-limitation
+    // diagnosis: a respected, neutral DAC like the Chord Qutest has intrinsic
+    // character (a lean tonal balance), not a licensed limitation. With no power
+    // mismatch or capability mismatch present, it must NOT be diagnosed as
+    // holding the system back / setting the ceiling.
     const r = runArtifactPipeline('Assess my system: Chord Qutest, Naim SuperNait 3, Klipsch La Scala');
-    const body = (r?.payload.caseParagraphs || []).join('\n').toLowerCase();
-    // it should still explain the mechanism, just without the false character claim
-    expect(body).toMatch(/ceiling|holding|inherits|limits/);
+    expect(r).toBeTruthy();
+    expect(r!.payload.verdict).not.toMatch(/DAC is (holding|steering)/i);
+    const body = r!.payload.caseParagraphs.join('\n').toLowerCase();
+    expect(body).not.toMatch(/holding back the system|source setting the system|inherits its limit/);
   });
 });

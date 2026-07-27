@@ -112,6 +112,77 @@ alongside D-7 and the §0 invariant as a standing constraint.
 
 ---
 
+## 0c. Doctrine D-10 — Resolution (governing doctrine)
+
+> **Audio XX always writes at the highest resolution its evidence licenses. When
+> more than one licensed explanation is available, prefer, in order: (1) an
+> interaction-specific fact; (2) a component-specific fact; (3) a
+> topology-specific fact; (4) the system archetype. System archetypes are
+> fallback explanations, not preferred ones.**
+
+Where D-7 governs whether a claim is *true* to its evidence, D-10 governs whether
+the prose is *specific* to its evidence. The engine already computes per-component
+particulars (per-component axes, tendencies, placement sensitivity, topology,
+catalog interactions, causal facts); the failure mode D-10 guards against is
+collapsing those to a system-level archetype *before* generating prose and then
+narrating the average. Particularity is what the reader experiences; resolution
+is what the architecture enforces.
+
+Worked precedent (2026-07-27): the trade-off paragraph was routed to prefer a
+component-specific limitation (e.g. a speaker's sealed-box placement trade) over
+the axis-derived archetype trade-off ("transient edge and analytical detail",
+identical across every warm system). Repeated *structure* is acceptable; repeated
+*insight* is the failure.
+
+---
+
+## 0d. Doctrine D-11 — Explanatory Licensing (governing doctrine)
+
+> **A component may be identified as the primary limitation only when the
+> diagnosis is licensed by an identified interaction, constraint, or mismatch
+> within the assessed system. A component's intrinsic character, tuning, or
+> measured tendency is not sufficient to diagnose it as the bottleneck. Trait
+> thresholds may contribute supporting evidence but may not independently
+> determine the primary diagnosis.**
+>
+> **Listener priorities may influence recommendations, but they may not create
+> or elevate a primary diagnosis unsupported by the assessed system.**
+
+D-11 is the diagnosis-layer sibling of D-8 (which governs recommendations) and of
+the §0 anti-fact-join invariant. Where D-8 stops a *recommendation* exceeding the
+assessment, D-11 stops a *diagnosis* being conjured from a component's character.
+A system characteristic is not a defect, and must not be converted into one
+merely to produce a bottleneck.
+
+**Strict interpretation (adopted).** A solo trait threshold can *never* become
+the primary bottleneck. Primary diagnoses require a licensed interaction /
+mismatch / constraint (e.g. a power/sensitivity mismatch; a portable-DAC-in-a-
+speaker-system capability mismatch). There is no corroborated-heuristic exception
+in the current envelope. When no licensed candidate exists there is **no primary
+bottleneck** — the engine never falls back to the least-bad component. Unlicensed
+trait signals may still inform the assessment body, never the primary diagnosis.
+
+**Worked precedent — the Chord Qutest (2026-07-27).** A reference-class DAC with a
+deliberately neutral voicing (`tonal_density: 0.4`, its character) was being
+emitted as "The DAC is holding the system back" — a defect diagnosed from its
+tuning — and thereby drove the title, verdict, and recommendation of reference
+systems (Pass Labs / Magico, Klipsch / Leben). Under D-11 those systems return a
+coherent verdict; the genuine 2W-SET-into-Magico power mismatch still fires,
+because it is a licensed interaction.
+
+**Superseded feature.** The former *intent-aware bottleneck promotion* (which
+elevated a tonal characteristic to "Highest Impact" when a listener wanted the
+opposite trait) is removed as diagnostic logic — a listener priority may not
+create a primary diagnosis. It may return, if at all, only as a
+**recommendation-layer** capability, never as diagnosis. (Deferred; see
+`AudioXX_Architecture_Backlog.md`.)
+
+D-11 governs the bottleneck-selection layer (`detectPrimaryConstraint`) and the
+artifact's verdict/recommendation derivation; it sits alongside D-7, D-8, D-10,
+and the §0 invariant as a standing constraint.
+
+---
+
 ## 1. Diagnosis (why the current assessment is structurally thin)
 
 `synthesizeArtifact.ts` composes Evidence prose from two inputs:
