@@ -24,14 +24,10 @@ const NEGATIVE = 'Assess my system: Denafrips Ares II, Leben CS600, DeVore Orang
 const POSITIVE = 'Assess my system: Chord Hugo, Yamamoto A-08S, DeVore Orangutan O/96';
 
 const CAUSAL_SENTENCE =
-  'The Yamamoto A-08S is a single-ended-triode amplifier with limited output power, ' +
-  'and the DeVore Orangutan O/96 is a high-efficiency loudspeaker its maker built especially ' +
-  'for low-powered tube amplifiers, the Yamamoto among them. Because the speaker ' +
-  'produces more acoustic output from each watt, the Yamamoto uses less of its ' +
-  'limited power to reach a given listening level than it would with a substantially ' +
-  'less sensitive speaker — which leaves more headroom and makes clipped or compressed ' +
-  'peaks less likely. A less sensitive speaker would force the same amplifier to use ' +
-  'more of its output to reach the same level.';
+  'The DeVore Orangutan O/96 is a high-efficiency loudspeaker built for low-powered tube ' +
+  'amplifiers, and the single-ended-triode Yamamoto A-08S is one. Because the speaker ' +
+  'reaches a given listening level with relatively little power, the Yamamoto ' +
+  'retains more headroom than it would with a less sensitive speaker.';
 
 function setFlags({ causal, brand }: { causal: boolean; brand: boolean }) {
   process.env[CAUSAL] = causal ? 'on' : 'off';

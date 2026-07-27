@@ -144,14 +144,10 @@ function composeBlock(
   // It names no rule, fact key, confidence, provenance basis, or "authored
   // effect" machinery — those stay internal to the engine.
   return (
-    `The ${amp.name} is a single-ended-triode amplifier with limited output power, ` +
-    `and the ${speaker.name} is a high-efficiency loudspeaker its maker built especially ` +
-    `for low-powered tube amplifiers, the ${amp.brand} among them. Because the speaker ` +
-    `produces more acoustic output from each watt, the ${amp.brand} uses less of its ` +
-    `limited power to reach a given listening level than it would with a substantially ` +
-    `less sensitive speaker — which leaves more headroom and makes clipped or compressed ` +
-    `peaks less likely. A less sensitive speaker would force the same amplifier to use ` +
-    `more of its output to reach the same level.`
+    `The ${speaker.name} is a high-efficiency loudspeaker built for low-powered tube ` +
+    `amplifiers, and the single-ended-triode ${amp.name} is one. Because the speaker ` +
+    `reaches a given listening level with relatively little power, the ${amp.brand} ` +
+    `retains more headroom than it would with a less sensitive speaker.`
   );
 }
 
