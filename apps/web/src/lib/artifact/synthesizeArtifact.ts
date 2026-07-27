@@ -298,26 +298,28 @@ export function synthesizeArtifact(result: any): SynthResult {
   const f = result?.findings ?? {};
   const resp = result?.response ?? {};
 
-  // ── component credit (DIRECT: engine catalog names; corruption-guarded) ──
+  // ── component credit (DIRECT from the engine's authoritative component list) ──
+  // `systemChain.names` is the deduped, role-sorted, catalog-resolved component
+  // list — the trusted graph identity, already validated by the graph-integrity
+  // gate before this point. Credit renders from it directly.
+  //
+  // We deliberately do NOT zip `names` against the raw `fullChain`. `fullChain`
+  // preserves the user's typed order and can differ from `names` in both length
+  // and ordering (names is role-sorted; fullChain is user-sequence), and may
+  // carry a leading question preamble ("Should I just keep what I have? …") or
+  // a raw misspelling ("hegal h190"). The former per-index substitution of
+  // `full[i]` for `names[i]` corrupted the credit whenever the two lists
+  // diverged — leaking the preamble/typo, mis-identifying a component, or
+  // reading as a duplicate (baseline S1s UP-04, EC-03). `fullChain` is retained
+  // only as a wholesale fallback for the degenerate case where the engine
+  // produced no names (near-unreachable: assessments require ≥2 resolved
+  // components upstream).
   const chain = f.systemChain ?? {};
   const names: string[] = chain.names ?? [];
   const full: string[] = chain.fullChain ?? [];
-  const firstToken = (s: string): string => (s || '').toLowerCase().match(/[a-z0-9]+/)?.[0] ?? '';
-  const brandTokens = full.map(firstToken);
-  const credit: string[] = (names.length ? names : full).map((nm, i) => {
-    const lc = (nm || '').toLowerCase();
-    const ownInput = (full[i] ?? '').toLowerCase();
-    const foreign = brandTokens.find(
-      (t, j) => j !== i && t.length >= 3 && lc.includes(t) && !ownInput.includes(t),
-    );
-    if (foreign) {
-      contradictions.push(
-        `Component name corrupted in engine output: names[${i}]="${nm}" carries a foreign brand token ("${foreign}"); rendered from input "${full[i] ?? nm}".`,
-      );
-      return full[i] || nm;
-    }
-    return nm || full[i] || '';
-  });
+  const credit: string[] = (names.length ? names : full)
+    .map((nm) => (nm || '').trim())
+    .filter(Boolean);
 
   let bottleneck = f.bottleneck ?? null;
   const path0 = (resp.upgradePaths ?? [])[0] ?? null;
