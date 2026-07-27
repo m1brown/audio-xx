@@ -510,27 +510,21 @@ export function synthesizeArtifact(result: any): SynthResult {
       }
     }
 
-    // ── Paragraph 3b (new): what the system deliberately gave up.
-    //
-    // The `coherentTradeoffs` finding names what a coherent system
-    // trades away to be what it is. Framing this as an intentional
-    // deal is closer to Mike's "compromises intentionally avoided"
-    // ask than the engine's `assessmentLimitations` array, which for
-    // balanced systems is often empty.
-    if (coherentTradeoffs.length > 0) {
-      const first = String(coherentTradeoffs[0]).trim().replace(/[.]+$/, '');
-      caseParagraphs.push(`What it gives up on purpose: ${lowerFirst(first)}. That's the deliberate cost — a coherent system can't pull in both directions at once, and this one has picked its direction.`);
-    }
-
-    // ── Paragraph 3: the honest trade — let the engine's limitation
-    // stand as its own sentence with a brief editorial framing rather
-    // than a heavy "The trade you've made is real. " lead-in that
-    // adds no information. Only surfaced when the engine actually
-    // emitted a limitation AND we didn't already surface a
-    // coherentTradeoff above (avoids double trade-off paragraphs).
-    if (limitations[0] && coherentTradeoffs.length === 0) {
+    // ── The trade-off paragraph — Doctrine D-10 (Resolution): write at the
+    // highest resolution the evidence licenses. A *component-specific*
+    // limitation (per-component: placement, load, extension — from the engine's
+    // `assessmentLimitations`) outranks the *system-archetype* trade-off (the
+    // axis-derived `coherentTradeoffs`, which is identical across systems of the
+    // same tonal character). Precedence is inverted from the original
+    // archetype-first ordering so the particular trade is preferred; the two
+    // frames' wording is unchanged — only which one is chosen flips. Exactly one
+    // paragraph surfaces (mutually exclusive), in the same slot as before.
+    if (limitations[0]) {
       const limit = limitations[0].replace(/\s+/g, ' ').trim();
       caseParagraphs.push(`The trade — ${lowerFirst(limit)}.`);
+    } else if (coherentTradeoffs.length > 0) {
+      const first = String(coherentTradeoffs[0]).trim().replace(/[.]+$/, '');
+      caseParagraphs.push(`What it gives up on purpose: ${lowerFirst(first)}. That's the deliberate cost — a coherent system can't pull in both directions at once, and this one has picked its direction.`);
     }
 
     // ── Paragraph 4: the closing — listener-fit + refrain in one

@@ -51,8 +51,10 @@ describe('D-8 — recommendation is licensed by the assessment', () => {
 
   it('coherent with an explicit trade-off → still no-change (the trade-off is described, no action licensed)', () => {
     const { p } = paras(SYSTEMS.coherentWithTradeoff);
-    // The trade-off lives in the Assessment ("gives up on purpose"), not the Recommendation.
-    expect(p.caseParagraphs.join('\n')).toMatch(/gives up on purpose|deliberate cost|picked its direction/i);
+    // The trade-off lives in the Assessment — either the component-specific
+    // frame ("The trade — …", preferred under D-10 Resolution) or the archetype
+    // frame ("… gives up on purpose …") — never the Recommendation.
+    expect(p.caseParagraphs.join('\n')).toMatch(/^the trade —|gives up on purpose|deliberate cost|picked its direction/im);
     expect(p.recommendation).toBe(NO_CHANGE);
   });
 
