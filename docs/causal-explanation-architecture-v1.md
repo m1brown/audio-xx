@@ -25,6 +25,48 @@ individually true facts into collectively speculative explanations."*
 
 ---
 
+## 0a. Doctrine D-7 — Epistemic Fidelity (governing doctrine)
+
+> **Audio XX expresses only claims supported by its licensed evidence. The
+> confidence, specificity, and wording of every generated statement must not
+> exceed the confidence, specificity, and wording of the evidence that licenses
+> it. Where evidence is interpretive rather than primary, the prose must reflect
+> that distinction. When accuracy and eloquence conflict, accuracy prevails.**
+
+This is not only about avoiding errors — it defines the editorial identity of the
+product. Users may never read the doctrine, but they experience it as a system
+that is unusually careful about what it claims, and that restraint is a
+differentiator.
+
+**Epistemic categories are distinct and must remain distinct** throughout the
+knowledge model *and* the generated prose. A claim may not be promoted across
+these categories without evidence to match:
+
+1. objective specification
+2. manufacturer statement
+3. designer intent
+4. measurement
+5. reviewer / community consensus
+6. editorial inference
+
+Practical consequences:
+- A `manufacturer_intent` basis may license prose that names manufacturer intent;
+  it may **not** license prose that asserts a narrower, reviewer-originated
+  reading as if the manufacturer stated it. (Worked precedent: the DeVore O/96 —
+  the manufacturer states "designed especially for low-powered *tube*
+  amplifiers"; "SET-specific" suitability is review-consensus / engineering
+  inference and is worded as such. See the 2026-07-27 knowledge audit.)
+- Widely-held belief is **not** a licence. Do not upgrade a claim because it is
+  commonly repeated.
+- The system must be willing to **weaken** a claim when the evidence requires it.
+  Weakening a claim to match its evidence is a success state, not a regression.
+
+D-7 governs both this causal architecture and the
+`assessment-expansion-architecture-v1` knowledge model; it sits alongside the
+§0 anti-fact-join invariant as a standing epistemic constraint.
+
+---
+
 ## 1. Diagnosis (why the current assessment is structurally thin)
 
 `synthesizeArtifact.ts` composes Evidence prose from two inputs:
