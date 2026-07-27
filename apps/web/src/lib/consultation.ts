@@ -11750,25 +11750,16 @@ function inferUpgradeDirection(components: SystemComponent[]): string {
     }
   }
 
-  // Compounding — suggest counter-direction
-  const suggestions: string[] = [];
-  for (const warning of compounding) {
-    if (warning.includes('warm')) {
-      suggestions.push('If you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system\'s identity more fundamentally.');
-    } else if (warning.includes('bright')) {
-      suggestions.push('If you want to add warmth and flow without sacrificing the clarity this system delivers, a DAC with richer harmonic texture or speakers with more tonal density would be the most aligned direction. Adding tubes upstream is another option — but changes character more broadly.');
-    } else if (warning.includes('smooth')) {
-      suggestions.push('If you want to introduce more detail and presence without losing the ease, a more revealing source or cables with better transient definition could add clarity without fundamentally changing the system\'s character.');
-    } else if (warning.includes('detailed')) {
-      suggestions.push('If the system feels analytically intense, consider a warmer or more fluid component — a tube stage, a smoother DAC topology, or speakers with more midrange body could restore balance.');
-    } else if (warning.includes('controlled')) {
-      suggestions.push('If the system feels overdamped, a more elastic source or amplifier could restore dynamic life. Single-ended or low-feedback topologies tend to introduce more elasticity.');
-    } else if (warning.includes('elastic')) {
-      suggestions.push('If the system feels loose or uncontrolled, a more composed amplifier or tighter-grip speaker pairing could add stability without losing all dynamic energy.');
-    }
+  // Doctrine D-8 (Recommendation Licensing): a tonal lean is the system's
+  // character, not a hypothetical deficiency. Converting a lean like "elastic"
+  // into a speculative "if it feels loose or uncontrolled…" upgrade is an
+  // inference the assessment never established, so it is not permitted. When the
+  // only signal is a compounding tonal direction — with no identified limitation
+  // — no upgrade is licensed: name the lean as character and invite the listener
+  // to state a priority, rather than fabricating a weakness to act on.
+  if (compounding.length > 0) {
+    return 'This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.';
   }
-
-  if (suggestions.length > 0) return suggestions.join(' ');
 
   return 'Without stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.';
 }

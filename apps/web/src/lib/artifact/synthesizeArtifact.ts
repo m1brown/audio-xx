@@ -396,7 +396,6 @@ export function synthesizeArtifact(result: any): SynthResult {
       .map((s: string) => stripTrailingPeriod((s ?? '').trim()))
       .filter((s: string) => !!s);
     const prefNote = stripTrailingPeriod((resp.preferenceNote ?? '').trim());
-    const upgrade = stripTrailingPeriod((resp.upgradeDirection ?? '').trim());
 
     // Rephrase a strength sentence into a "what the X brings" clause
     // suitable for sub-clause use inside a longer paragraph.
@@ -412,16 +411,6 @@ export function synthesizeArtifact(result: any): SynthResult {
       const m = s.match(/^([A-Z][\w+\-]+(?:\s+[A-Z0-9][\w+\-]*)*)/);
       return (m ? m[1] : '').toLowerCase();
     }
-    // An upgradeDirection is EDITORIALLY useful when it names a
-    // direction ("look to a larger speaker for more scale"). It's
-    // NOT editorially useful when the engine falls back to a
-    // diagnostic message about missing profile data — those read as
-    // meta-commentary about the analysis, not advice about the
-    // system, and they turn the essay's closing into a run-on.
-    function isFallbackDiagnostic(s: string): boolean {
-      return /\btrait data\b|\bfeel is missing\b|\banalysis can get more\b|\bmore specific\b/i.test(s);
-    }
-
     // ── Paragraph 1: the thesis — the equilibrium beat.
     // Names how the components trade roles. Weaves in the first
     // strength only when it names a DIFFERENT component than the
@@ -552,14 +541,13 @@ export function synthesizeArtifact(result: any): SynthResult {
     closing.push('Each component is doing what it was chosen for, and nothing is asking it to do more');
     caseParagraphs.push(closing.join('. ') + '.');
 
-    // ── Paragraph 5 (optional): the forward-look. Only surfaces
-    // when the engine actually named a direction — fallback
-    // diagnostic messages ("without stronger trait data …") get
-    // dropped here because they read as meta-commentary about the
-    // analysis rather than advice about the system.
-    if (upgrade && !isFallbackDiagnostic(upgrade)) {
-      caseParagraphs.push(`If you ever want more, ${lowerFirst(upgrade)}.`);
-    }
+    // Doctrine D-8 (Recommendation Licensing): the Assessment must not carry a
+    // forward-looking upgrade paragraph. The previous "If you ever want more, …"
+    // beat was fabricated from the engine's tonal-lean → hypothetical-deficiency
+    // generator (now retired). A recommendation is licensed only by an identified
+    // limitation, an explicit trade-off, or a stated listener priority, and it
+    // belongs in the Recommendation section — never as speculation inside the
+    // Assessment. When nothing is licensed, the Recommendation says so plainly.
   }
   if (!caseParagraphs.length && signature) caseParagraphs.push(stripTrailingPeriod(signature) + '.');
 
@@ -592,10 +580,26 @@ export function synthesizeArtifact(result: any): SynthResult {
   }
   const pullQuote = bottleneck ? extractPullQuote(constraintExpl) : undefined;
 
-  // ── R6 — recommendation (acts on the engine's role only) ─────────────
+  // ── R6 — recommendation (Doctrine D-8: Recommendation Licensing) ─────
+  //
+  // A recommendation may be generated ONLY from something the assessment
+  // established: an identified limitation, an explicit trade-off, or a stated
+  // listener priority. A tonal characteristic must never be converted into a
+  // hypothetical deficiency to manufacture an upgrade. When no action is
+  // licensed the correct output is an explicit no-change recommendation.
+  //
+  // License classes (per D-8). Today the artifact emits 'limitation' (the
+  // engine surfaced an identified upgrade path) or 'none' (a coherent system
+  // with no identified limitation). 'tradeoff' and 'priority' are reserved:
+  // the pipeline does not yet capture a stated listener priority or a
+  // trade-off-directed action, so those are defined for the doctrine and future
+  // envelopes but not yet produced here.
+  type RecommendationLicense = 'limitation' | 'tradeoff' | 'priority' | 'none';
+  const recommendationLicense: RecommendationLicense = path0 ? 'limitation' : 'none';
+
   let recommendation: string;
-  if (path0) recommendation = recommendationFor(category, role);
-  else recommendation = 'This system is already well balanced.';
+  if (recommendationLicense === 'none') recommendation = 'This system is already well balanced.';
+  else recommendation = recommendationFor(category, role);
 
   // R6 post-condition: bottleneck-named role must appear in the recommendation
   // (or the recommendation explicitly names the power_match resolution).
@@ -606,10 +610,10 @@ export function synthesizeArtifact(result: any): SynthResult {
     if (!ok) contradictions.push(`R6: recommendation does not act on engine role "${role}".`);
   }
 
-  // ── R7 — cost (specific to the recommendation) ───────────────────────
-  const cost = bottleneck
-    ? costFor(category)
-    : 'If you want more of something, name the quality you’re looking for.';
+  // ── R7 — cost follows the same license as the recommendation ─────────
+  const cost = recommendationLicense === 'none'
+    ? 'If you want more of something, name the quality you’re looking for.'
+    : costFor(category);
 
   const seed = credit.join('|') + '|' + (bottleneck ? category : 'keep');
 
@@ -637,18 +641,16 @@ export function synthesizeArtifact(result: any): SynthResult {
   // byte-identical; when on, the engine emits a paragraph only if an approved
   // InteractionRule fires against verified CatalogFacts (no rule ⇒ no
   // paragraph). We place it immediately after the coherence beat so it reads as
-  // part of "why it hangs together"; failing that, before the forward-look;
-  // otherwise at the end. Inserted after the R5/R8 post-conditions so those
-  // never rewrite the authored, already-safe causal prose.
+  // part of "why it hangs together"; otherwise at the end. Inserted after the
+  // R5/R8 post-conditions so those never rewrite the authored, already-safe
+  // causal prose.
   if (isCausalExplanationEnabled()) {
     const causalBlock = evaluateCausal(resolveCausalComponentsFromNames(credit)).block;
     if (causalBlock) {
       const coherenceIdx = caseParagraphs.findIndex((p) =>
         /hangs together|what you hear is coherence|nothing upstream fights/i.test(p),
       );
-      const forwardIdx = caseParagraphs.findIndex((p) => /^If you ever want more/i.test(p));
-      const insertAt =
-        coherenceIdx >= 0 ? coherenceIdx + 1 : forwardIdx >= 0 ? forwardIdx : caseParagraphs.length;
+      const insertAt = coherenceIdx >= 0 ? coherenceIdx + 1 : caseParagraphs.length;
       caseParagraphs.splice(insertAt, 0, causalBlock);
     }
   }
