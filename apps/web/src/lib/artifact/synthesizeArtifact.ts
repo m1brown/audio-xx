@@ -8,7 +8,7 @@
  *   - the recommendation it renders always mirrors the engine's leverage
  *     (bottleneck role / upgrade path) — if the engine says amplifier, the
  *     artifact says amplifier; if the engine recommends no change, it says
- *     "Leave it alone.";
+ *     "This system is already well balanced.";
  *   - where the engine output is internally contradictory it records the
  *     contradiction rather than smoothing it over.
  *
@@ -595,7 +595,7 @@ export function synthesizeArtifact(result: any): SynthResult {
   // ── R6 — recommendation (acts on the engine's role only) ─────────────
   let recommendation: string;
   if (path0) recommendation = recommendationFor(category, role);
-  else recommendation = 'Leave it alone.';
+  else recommendation = 'This system is already well balanced.';
 
   // R6 post-condition: bottleneck-named role must appear in the recommendation
   // (or the recommendation explicitly names the power_match resolution).
@@ -609,7 +609,7 @@ export function synthesizeArtifact(result: any): SynthResult {
   // ── R7 — cost (specific to the recommendation) ───────────────────────
   const cost = bottleneck
     ? costFor(category)
-    : 'If you ever want more, name the quality you’re chasing — but the gain there comes from somewhere here.';
+    : 'If you want more of something, name the quality you’re looking for.';
 
   const seed = credit.join('|') + '|' + (bottleneck ? category : 'keep');
 
