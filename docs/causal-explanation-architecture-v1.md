@@ -67,6 +67,51 @@ D-7 governs both this causal architecture and the
 
 ---
 
+## 0b. Doctrine D-8 — Recommendation Licensing (governing doctrine)
+
+> **A recommendation may be generated only from something the assessment has
+> established:**
+> - **an identified limitation;**
+> - **an explicit trade-off, where a change is relevant;**
+> - **a stated listener priority.**
+>
+> **A tonal characteristic, design choice, or system tendency must not be
+> converted into a hypothetical deficiency merely to create an upgrade path.
+> When no action is licensed, the correct recommendation is no change. The
+> recommendation must never exceed, contradict, or introduce a condition absent
+> from the assessment that licenses it.**
+
+Where D-7 governs whether a *claim* is supported by its evidence, D-8 governs
+whether a *recommendation* is supported by the assessment. It is the
+recommendation-layer analog of the §0 anti-fact-join invariant: no license ⇒ no
+action. A system characteristic is not a defect, and must not be converted into
+one merely to create a recommendation.
+
+**Worked precedent — DeVore O/96 × elastic character (2026-07-27).**
+- The system's *elastic* tonal character was previously converted into the
+  unsupported hypothetical that it might feel **"loose or uncontrolled."**
+- The assessment had established no such weakness — the system was judged
+  coherent.
+- That recommendation was therefore **removed**. The generator that fabricated
+  it (a tonal-lean → hypothetical-deficiency composer) was retired at its
+  source, and forward-looking upgrade prose no longer appears inside the
+  Assessment section.
+
+**License-state note.** The recommendation layer carries a typed license state
+— `identified limitation` / `explicit trade-off` / `stated listener priority` /
+`none` — and renders an explicit no-change recommendation when the license is
+`none`. `explicit trade-off` and `stated listener priority` are **reserved**
+states: as of this writing the pipeline does not yet capture a stated listener
+priority as a directed action, so those states are defined for the doctrine but
+not yet produced. Before `stated listener priority` becomes a real production
+state, its behaviour must be made explicit (a stated priority must license a
+*directed* recommendation, never a fabricated deficiency).
+
+D-8 governs this causal architecture and the assessment renderer; it sits
+alongside D-7 and the §0 invariant as a standing constraint.
+
+---
+
 ## 1. Diagnosis (why the current assessment is structurally thin)
 
 `synthesizeArtifact.ts` composes Evidence prose from two inputs:
