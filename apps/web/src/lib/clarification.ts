@@ -30,6 +30,15 @@ export interface ClarificationResponse {
   context?: string;
   /** The clarifying question to ask. */
   question: string;
+  /**
+   * Components already recognized, for a compact visual confirmation
+   * ("✓ Rega · ✓ Wharfedale") shown before the question. Presentation only —
+   * these are display names the resolver already placed; setting this does not
+   * change graph resolution. Absent for clarifications with nothing to confirm.
+   */
+  recognized?: string[];
+  /** The component(s) still to pin down (already named in `question`). */
+  unresolved?: string[];
 }
 
 // ── Case 1: Interpretation Ambiguity ──────────────────

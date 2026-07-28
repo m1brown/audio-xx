@@ -8604,28 +8604,47 @@ function checkGraphIntegrity(
   const understood = [...new Set(components.map((c) => c.displayName))].filter(Boolean);
   const understoodList = understood.length ? understood.join(', ') : 'part of your system';
 
+  // Expert-verification framing: confirm what's already placed (rendered as a
+  // compact ✓ checklist from `recognized`), then ask ONLY about the unresolved
+  // ambiguity. Copy/structure only — the dropped / duplicate / unresolved
+  // determination above is unchanged.
+  let acknowledge: string;
   let question: string;
+  let recognized: string[] = understood;
+  const unresolvedNames = unresolved.map((u) => u.displayName);
+
   if (dropped) {
     const missing = expected - resolved;
+    acknowledge = "I've placed most of your system.";
     question =
-      `So far I can place ${resolved === 1 ? 'one component' : `these ${resolved}`}: ${understoodList}. ` +
-      `It looks like ${missing === 1 ? 'one more component is' : `${missing} more components are`} in what you wrote that I couldn't pin down. ` +
-      `Could you give me the exact make and model number of ${missing === 1 ? 'that one' : 'those'}? Then I'll assess the whole system.`;
+      `${missing === 1 ? 'One component' : `${missing} components`} in what you wrote I couldn't match to a specific model — ` +
+      `what ${missing === 1 ? 'is it' : 'are they'}, exact make and model? Then I'll read the whole system.`;
   } else if (hasDuplicate) {
-    question =
-      `I want to be sure I have your system right — I read ${understoodList}, but one component may have been counted twice. ` +
-      `Could you confirm each component's exact make and model? Then I'll run the assessment.`;
+    acknowledge = "I've placed your system, though one component may be listed twice.";
+    question = "Could you confirm each one's exact make and model? Then I'll run the assessment.";
   } else {
     const known = understood.filter((n) => !unresolved.some((u) => u.displayName === n));
-    const uncertainList = unresolved.map((u) => u.displayName).join(', ');
-    question = known.length
-      ? `I recognised ${known.join(', ')}, but I couldn't confidently match ${uncertainList} to ${unresolved.length === 1 ? 'a specific model' : 'specific models'}. ` +
-        `Could you confirm the exact make and model of ${unresolved.length === 1 ? 'that one' : 'those'}? Then I'll assess the whole system.`
-      : `I can see the shape of your system, but I couldn't confidently match ${uncertainList} to specific models in my catalog. ` +
-        `Could you confirm the exact make and model of each? Then I'll assess the whole system.`;
+    const uncertainList = unresolvedNames.join(', ');
+    recognized = known;
+    if (known.length) {
+      acknowledge = `I've placed most of your system — ${unresolved.length === 1 ? 'one component' : `${unresolved.length} components`} to confirm.`;
+      question =
+        `I couldn't match ${uncertainList} to ${unresolved.length === 1 ? 'a specific model' : 'specific models'} — ` +
+        `what ${unresolved.length === 1 ? 'is it' : 'are they'}, exact make and model? Then I'll assess the whole system.`;
+    } else {
+      acknowledge = 'I can see the shape of your system — let me lock in the exact models.';
+      question =
+        `I couldn't match ${uncertainList} to specific models in my catalog — ` +
+        `what are the exact makes and models? Then I'll assess the whole system.`;
+    }
   }
 
-  return { acknowledge: 'Before I assess this, let me make sure I have your system right.', question };
+  return {
+    acknowledge,
+    question,
+    recognized: recognized.length ? recognized : undefined,
+    unresolved: unresolvedNames.length ? unresolvedNames : undefined,
+  };
 }
 
 export function buildSystemAssessment(

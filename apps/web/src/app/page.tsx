@@ -6092,6 +6092,44 @@ function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture, onFollowU
           )}
         </div>
 
+        {/* Recognised components — compact visual confirmation ("careful
+            listening") before the question. Presentation only. */}
+        {clarification.recognized && clarification.recognized.length > 0 && (
+          <div style={{ marginBottom: '0.85rem' }}>
+            <div
+              style={{
+                fontSize: '0.7rem',
+                letterSpacing: '0.09em',
+                textTransform: 'uppercase' as const,
+                color: COLOR.textMuted,
+                marginBottom: '0.4rem',
+              }}
+            >
+              Recognised
+            </div>
+            <ul
+              style={{
+                listStyle: 'none',
+                margin: 0,
+                padding: 0,
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '0.3rem 1.25rem',
+              }}
+            >
+              {clarification.recognized.map((name, i) => (
+                <li
+                  key={i}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.95rem' }}
+                >
+                  <span aria-hidden style={{ color: COLOR.accent, fontWeight: 700 }}>✓</span>
+                  <span style={{ color: COLOR.textPrimary }}>{name}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Question — visually distinct */}
         <div
           style={{
