@@ -63,6 +63,30 @@ export default function AssessmentArtifact(
             )}
         </section>
 
+        {/* Peak 2 — the recommendation. Pulled up to sit directly beneath the
+          * system summary so the complete assessment — verdict, system,
+          * character, recommendation — reads as one self-contained answer
+          * above the fold. The evidence / "why it sounds this way" layer
+          * follows below the divider, as an optional deeper read. Order and
+          * placement only; the recommendation's own styling is unchanged. */}
+        <section className="axx-rec">
+          <h2 className="axx-vh">Recommendation</h2>
+          <p className="line">{p.recommendation}</p>
+          {p.figure && (
+            <figure className="axx-fig">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.figure.src} alt={p.figure.alt} width={640} height={427} />
+              <figcaption>{p.figure.caption}</figcaption>
+            </figure>
+          )}
+        </section>
+
+        {p.cost && <p className="axx-cost">{p.cost}</p>}
+
+        {/* Structural divider — separates the assessment (above) from the
+          * optional evidence layer (below). Decorative; hidden from a11y. */}
+        <hr className="axx-divider" aria-hidden="true" />
+
         {/* The seam — evidence (left) | judgment (right) */}
         <div className="axx-case">
           <aside className="axx-rail" aria-label="Evidence">
@@ -89,26 +113,7 @@ export default function AssessmentArtifact(
               * a separate labelled block. */}
             {p.caseParagraphs.map((para, i) => <p key={i}>{para}</p>)}
           </div>
-
-          {/* Peak 2 — the recommendation. Lives in column 3 so its gap to the
-            * last judgment paragraph is the --pause silence, not the leftover
-            * height of the evidence rail. (On narrow viewports the grid
-            * collapses to one column and the order falls back to verdict →
-            * rail → judgment → recommendation in the natural reading flow.) */}
-          <section className="axx-rec">
-            <h2 className="axx-vh">Recommendation</h2>
-            <p className="line">{p.recommendation}</p>
-            {p.figure && (
-              <figure className="axx-fig">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.figure.src} alt={p.figure.alt} width={640} height={427} />
-                <figcaption>{p.figure.caption}</figcaption>
-              </figure>
-            )}
-          </section>
         </div>
-
-        {p.cost && <p className="axx-cost">{p.cost}</p>}
 
         <footer className="axx-colophon">Audio XX · {p.date}</footer>
       </article>
