@@ -667,10 +667,21 @@ export function synthesizeArtifact(result: any): SynthResult {
     }
   }
 
+  // ── Headphone / unresolved-endpoint systems: neutralize the loudspeaker
+  // endpoint noun. The coherent-prose templates assume a loudspeaker endpoint
+  // ("the speaker"); on a headphone rig — or any system with no resolved
+  // speaker — that reads wrong ("hand the speaker a signal" when the endpoint
+  // is a pair of headphones). When the graph carries NO speaker/monitor
+  // component, rewrite the singular "the speaker" to the endpoint-neutral
+  // "the output". Systems with a speaker role are byte-identical. This is a
+  // rendering correction only — no character, coverage, or role change.
+  const hasSpeakerRole = (chain.roles ?? []).some((r: unknown) => /speaker|monitor/i.test(String(r ?? '')));
+  const endpointFix = (s: string): string => (hasSpeakerRole ? s : s.replace(/\bthe speaker\b/gi, 'the output'));
+
   const payload: ArtifactPayload = {
-    verdict, standfirst, componentCredit: credit,
+    verdict, standfirst: standfirst ? endpointFix(standfirst) : standfirst, componentCredit: credit,
     componentPhotos: showPhotoRail ? componentPhotos : undefined,
-    recognition, caseParagraphs,
+    recognition: endpointFix(recognition), caseParagraphs: caseParagraphs.map(endpointFix),
     heroDatum, pullQuote,
     recommendation,
     cost,
