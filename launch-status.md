@@ -3,11 +3,11 @@
 > Daily operational dashboard. Reviewed at the 11:00 launch check-in.
 > Concise entries only; detail lives in `certification/` reports.
 
-**Overall status:** PROMOTED — certified RC `7e9805b` LIVE on audio-xx.com (2026-07-25); 7-point verification passed; checkout commercially inactive (Stripe unset). Commercial activation remains a separate later founder switch.
+**Overall status:** PROMOTED — beta trust build `41be23e` LIVE on audio-xx.com (2026-07-28); founder release GO; live smoke test passed (7/7); checkout commercially inactive (Stripe unset). Prior prod `7e9805b` (2026-07-25). Commercial activation remains a separate later founder switch.
 **Launch freeze:** IN EFFECT (from Gate 1 until soft launch complete; founder may lift)
 **Current gate:** 11 (Beta readiness & release triage) — approved → technical promotion COMPLETE & verified
 **Days remaining (plan):** 0 — certification complete; technical promotion done
-**Baseline commit:** c62dcb1 (version-b) · Production: **7e9805b** (deployment dpl_GVM4My5Lhz1qp41WDf9wF8NSWNvV; was de13f5a) · Rollback: dpl_6hYBEXPsakA6VqgyH2D7AWdUDJEs
+**Baseline commit:** Production: **41be23e** (version-b; deployment `dpl_5EiQfDP3P3PemSCggpJdvKcYDjDC`, aliased to audio-xx.com, 2026-07-28) · Rollback: `dpl_GVM4My5Lhz1qp41WDf9wF8NSWNvV` (prior prod `7e9805b`, 2026-07-25)
 
 ## Gates
 
@@ -35,6 +35,27 @@
 **Gate 7 watch-list (edge/legacy data):** saved-system DEAD END — systems with a chain but no `canonicalText` (created via the legacy `/api/systems` POST: `/systems/new`, `SystemEditor`) render the "predates assessment history" empty state with NO action link (`runTodayUrl` is null). Evidenced by "France II" on production. Minimal remedy: reconstruct assessment text from the stored chain so an action is always offered. Should-fix before soft launch; also relevant to Gate 5 (empty-state CTA / editorial). Full proposal + the broader "Reassess System" feature in POST_LAUNCH.md.
 
 ## Operational log
+
+- 2026-07-28 · **Production promotion — beta trust build (founder release GO).**
+  Promoted the reviewed version-b build `41be23e` to production via
+  `vercel redeploy <version-b-preview> --target production` — rebuilds the exact
+  reviewed source (commit 41be23e) with the **Production** environment (so
+  production config applies: V2 on → D-11 + R1 credit-integrity fixes live;
+  `NEXT_PUBLIC_CAUSAL_EXPLANATION` remains Preview-only, so causal stays OFF in
+  prod, consistent with roadmap item 4). No code change during release; no schema
+  migration (logic-only diff vs `7e9805b`). New production deployment
+  `dpl_5EiQfDP3P3PemSCggpJdvKcYDjDC`
+  (`https://audio-xx-m3tkgssbx-m1browns-projects.vercel.app`), aliased to
+  audio-xx.com, Ready in 2m. Live smoke test on audio-xx.com PASSED 7/7:
+  homepage; assessment flow; coherent reference-system verdict; **component
+  credit clean** (UP-04 "Should I just keep… Denafrips Ares II, Rega Brio,
+  Wharfedale Linton" → credit `REGA · DENAFRIPS ARES II · WHARFEDALE LINTON`, no
+  preamble/duplicate — R1 confirmed live, which `7e9805b` could not render);
+  recommendation ("already well balanced"); clarification (Focal Sopra vs
+  Wharfedale role-conflict question); zero console errors. Deployed-commit
+  correspondence verified functionally (R1 behavior exists only in 41be23e).
+  Rollback: re-promote `dpl_GVM4My5Lhz1qp41WDf9wF8NSWNvV` (`7e9805b`). Checkout
+  remains commercially inactive (Stripe unset).
 
 - 2026-07-24 · Credential hygiene (post-Gate-2 directive): full scan of
   tracked files + certification-era git history — **no credentials
