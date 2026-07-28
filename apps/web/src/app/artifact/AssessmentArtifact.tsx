@@ -1,125 +1,145 @@
 import React from 'react';
-import Link from 'next/link';
 import FollowUp from './FollowUp';
-import ComponentCell from './ComponentCell';
 import type { ArtifactPayload } from './fixtures';
+import { toCanonicalAssessment, type CanonicalAssessment } from '@/lib/artifact/canonical';
 
 /**
- * The canonical Audio XX assessment, rendered as a finished editorial document.
- * One <article> filled from a payload; two full-width peaks (verdict,
- * recommendation); an evidence rail kept to one side of the judgment column;
- * three silences carried by spacing tokens. Follow-up is a sibling, outside.
+ * The Assessment Renderer — the shared semantic component tree.
  *
- * `embedded` is a presentation-only gate used when the artifact renders
- * inside the chat stream (v2 dispatch). It suppresses the masthead (the chat
- * shell already carries identity + timestamp), the FollowUp surface (chat
- * composer handles follow-ups), the contradictions diagnostics block (dev
- * surface only; not for end users in chat), and the entrance animation (the
- * message envelope already animates in). The article markup, typography,
- * spacing, R1–R8 rule output, and overall composition are unchanged.
+ * Consumes the Canonical Assessment Model (CAM). This is the *Web Artifact*
+ * expression: a natural responsive reading of the assessment (not a simulation
+ * of two paper sheets). The verdict is the centre of gravity; every other
+ * block supports it. Print pagination, PDF, and the share projection are later
+ * envelopes derived from the same CAM + this component.
+ *
+ * Back-compatible: existing call sites pass `p: ArtifactPayload` and get a CAM
+ * built by the adapter (richer fields need `raw`; without it they degrade
+ * gracefully). The /artifact route passes the full `canonical` directly.
+ *
+ * Styles travel with the component (scoped `.axa-*`, injected once) so the
+ * design renders identically wherever the assessment appears.
  */
 export default function AssessmentArtifact(
-  { p, contradictions = [], print = false, embedded = false }:
-  { p: ArtifactPayload; contradictions?: string[]; print?: boolean; embedded?: boolean },
+  {
+    p,
+    raw,
+    canonical,
+    contradictions = [],
+    print = false,
+    embedded = false,
+  }: {
+    p?: ArtifactPayload;
+    raw?: unknown;
+    canonical?: CanonicalAssessment;
+    contradictions?: string[];
+    print?: boolean;
+    embedded?: boolean;
+  },
 ) {
-  const articleCls =
-    'axx-artifact'
-    + (print ? ' axx-print' : '')
-    + (embedded ? ' axx-embedded' : '');
+  const a: CanonicalAssessment | null =
+    canonical ?? (p ? toCanonicalAssessment(p, raw) : null);
+  if (!a) return null;
+
+  const rootCls = 'axa-root' + (print ? ' axa-print' : '') + (embedded ? ' axa-embedded' : '');
+  const sig = a.identity.tonalSignature;
+
   return (
     <>
-      <article className={articleCls}>
-        {!embedded && (
-          <header className="axx-masthead">
-            <Link href="/" className="axx-masthead-home" aria-label="Audio XX — back to home">
-              <b>Audio XX</b>
-            </Link>
-            <span>{p.date}</span>
-          </header>
-        )}
-
-        {/* Peak 1 — the verdict */}
-        <section className="axx-verdict">
-          <p className="axx-kicker">System Assessment</p>
-          <h1>{p.verdict}</h1>
-          {p.standfirst && <p className="axx-standfirst">{p.standfirst}</p>}
-          <p className="axx-credit">{p.componentCredit.join(' · ')}</p>
-          {/* Editorial photo strip — three components shown, not just
-            * named. Renders only when at least one photo is present;
-            * the credit line above is the fallback naming. Each cell
-            * shows the product against a quiet cream and the component
-            * name beneath in small caps. */}
-          {Array.isArray(p.componentPhotos)
-            && p.componentPhotos.some((ph) => ph !== null && ph !== undefined) && (
-              <ul className="axx-component-strip" aria-label="Components">
-                {p.componentPhotos.map((photo, i) => {
-                  if (!photo) return null;
-                  const name = p.componentCredit[i] ?? '';
-                  return (
-                    <ComponentCell key={i} src={photo.src} alt={photo.alt} name={name} />
-                  );
-                })}
-              </ul>
-            )}
-        </section>
-
-        {/* Peak 2 — the recommendation. Pulled up to sit directly beneath the
-          * system summary so the complete assessment — verdict, system,
-          * character, recommendation — reads as one self-contained answer
-          * above the fold. The evidence / "why it sounds this way" layer
-          * follows below the divider, as an optional deeper read. Order and
-          * placement only; the recommendation's own styling is unchanged. */}
-        <section className="axx-rec">
-          <h2 className="axx-vh">Recommendation</h2>
-          <p className="line">{p.recommendation}</p>
-          {p.figure && (
-            <figure className="axx-fig">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.figure.src} alt={p.figure.alt} width={640} height={427} />
-              <figcaption>{p.figure.caption}</figcaption>
-            </figure>
-          )}
-        </section>
-
-        {p.cost && <p className="axx-cost">{p.cost}</p>}
-
-        {/* Structural divider — separates the assessment (above) from the
-          * optional evidence layer (below). Decorative; hidden from a11y. */}
-        <hr className="axx-divider" aria-hidden="true" />
-
-        {/* The seam — evidence (left) | judgment (right) */}
-        <div className="axx-case">
-          <aside className="axx-rail" aria-label="Evidence">
-            <h2 className="axx-vh">Evidence</h2>
-            {/* The component list lives once under the standfirst — the rail
-             *  begins with evidence, not a repeated identifier. */}
-            {p.heroDatum && (
-              <p className="axx-datum">
-                <span className="v">{p.heroDatum.value}</span>
-                <span className="c">{p.heroDatum.caption}</span>
-              </p>
-            )}
-            {/* The pull quote is Audio XX's own voice, not an attributed
-              * quote — so no quotation marks. The italic face is the
-              * typographic marker that this is a focused observation. */}
-            {p.pullQuote && <p className="axx-pull">{p.pullQuote}</p>}
-          </aside>
-
-          <div className="axx-judgment">
-            <p>{p.recognition}</p>
-            {/* The case, as shortening beats. When the causal engine licenses an
-              * interaction claim, the synthesizer has already woven that one
-              * paragraph into this sequence within the mechanism arc — it is not
-              * a separate labelled block. */}
-            {p.caseParagraphs.map((para, i) => <p key={i}>{para}</p>)}
-          </div>
+      <style dangerouslySetInnerHTML={{ __html: AXA_CSS }} />
+      <article className={rootCls}>
+        <div className="axa-ident">
+          <span className="who"><b>Audio&nbsp;XX</b> System Assessment</span>
+          <span className="when">{a.meta.date}</span>
         </div>
 
-        <footer className="axx-colophon">Audio XX · {p.date}</footer>
+        {/* Subject — the system this assessment concerns */}
+        <p className="axa-kicker">The system assessed</p>
+        <h1 className="axa-systemline">
+          {a.subject.components.map((c) => c.name).join(' · ')}
+        </h1>
+        {a.subject.components.length > 0 && (
+          <ul className="axa-strip" aria-label="Components">
+            {a.subject.components.map((c, i) => (
+              <li className="axa-plate" key={i}>
+                <div className="img">
+                  {c.photo
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={c.photo.src} alt={c.photo.alt} />
+                    : <span className="ph" aria-hidden="true">◵</span>}
+                </div>
+                <span className="nm">{c.name}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Verdict — the centre of gravity */}
+        <div className="axa-verdictwrap">
+          <span className="axa-rule" aria-hidden="true" />
+          <h2 className="axa-verdict">{a.identity.verdict}</h2>
+          {a.identity.signature && <p className="axa-standfirst">{a.identity.signature}</p>}
+        </div>
+
+        {sig && sig.length > 0 && (
+          <div className="axa-sig">
+            <p className="cap">Tonal signature</p>
+            {sig.map((ax) => (
+              <div className="axa-axis" key={ax.axis}>
+                <span className={'l' + (ax.pole === 'left' ? ' on' : '')}>{ax.left}</span>
+                <span className="axa-track"><i className={ax.pole === 'neutral' ? 'neu' : ''} style={{ left: `${ax.position}%` }} /></span>
+                <span className={'r' + (ax.pole === 'right' ? ' on' : '')}>{ax.right}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <section className="axa-section">
+          <p className="axa-label">Recognition</p>
+          <p className="axa-p">{a.identity.recognition}</p>
+        </section>
+
+        <section className="axa-section">
+          <p className="axa-label">Recommendation</p>
+          <p className="axa-reco">{a.guidance.recommendation}</p>
+          {a.guidance.oneCost && <p className="axa-cost">{a.guidance.oneCost}</p>}
+        </section>
+
+        <hr className="axa-divider" aria-hidden="true" />
+
+        {a.reading.engineering.length > 0 && (
+          <section className="axa-section">
+            <p className="axa-label">Engineering</p>
+            {a.reading.engineering.map((para, i) => <p className="axa-p" key={i}>{para}</p>)}
+          </section>
+        )}
+
+        {a.reading.listeningSession.length > 0 && (
+          <section className="axa-section">
+            <p className="axa-label">Listening session</p>
+            {a.reading.listeningSession.map((para, i) => <p className="axa-p" key={i}>{para}</p>)}
+          </section>
+        )}
+
+        {a.reading.oneTrueThing && (
+          <section className="axa-otts">
+            <p className="k">One true thing</p>
+            <blockquote>{a.reading.oneTrueThing}</blockquote>
+          </section>
+        )}
+
+        {a.reading.operatingCondition && (
+          <section className="axa-section">
+            <p className="axa-label">Operating condition</p>
+            <div className="axa-cond"><p className="axa-p">{a.reading.operatingCondition}</p></div>
+          </section>
+        )}
+
+        <p className="axa-evidence">{a.evidence.statement}</p>
+        <p className="axa-colophon">Audio XX · System Assessment · {a.meta.date}</p>
       </article>
 
       {!print && !embedded && contradictions.length > 0 && (
-        <aside className="axx-contradiction" aria-label="Engine diagnostics — not part of the assessment">
+        <aside className="axa-contradiction" aria-label="Engine diagnostics — not part of the assessment">
           <strong>Engine output contradictions (surfaced, not smoothed):</strong>
           <ul>{contradictions.map((c, i) => <li key={i}>{c}</li>)}</ul>
         </aside>
@@ -129,3 +149,67 @@ export default function AssessmentArtifact(
     </>
   );
 }
+
+/* Scoped design system — cream paper, claret accent, restrained serif.
+   Single-column responsive reading (web-primary). Travels with the component. */
+const AXA_CSS = `
+.axa-root{
+  --ground:#FBF7EE; --panel:#F1EBDC; --ink:#423E37; --ink-muted:#66605C; --ink-faint:#948C86;
+  --accent:#990F3D; --hairline:#CCC1B7;
+  --serif:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,serif;
+  --grot:ui-sans-serif,-apple-system,'Helvetica Neue','Segoe UI',Arial,sans-serif;
+  background:var(--ground); color:var(--ink); font-family:var(--serif);
+  max-width:640px; margin:0 auto; padding:clamp(24px,5vw,56px) clamp(20px,5vw,64px) 44px;
+  -webkit-font-smoothing:antialiased;
+}
+@media (prefers-color-scheme:dark){ .axa-root{ --ground:#221F1A; --panel:#2A2620; --ink:#EDE6D8; --ink-muted:#B4AC9E; --ink-faint:#867E70; --accent:#E8628B; --hairline:#3A362E; } }
+.axa-ident{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--hairline);padding-bottom:8px;margin-bottom:28px}
+.axa-ident .who{font-family:var(--grot);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-muted)}
+.axa-ident .who b{color:var(--ink);font-weight:700;letter-spacing:.2em;margin-right:8px}
+.axa-ident .when{font-family:var(--grot);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+.axa-kicker{font-family:var(--grot);font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 10px}
+.axa-systemline{font-family:var(--serif);font-weight:600;font-size:clamp(19px,2.6vw,23px);line-height:1.3;margin:0 0 20px;letter-spacing:-.01em;text-wrap:balance}
+.axa-strip{list-style:none;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 8px}
+.axa-plate{display:flex;flex-direction:column;gap:6px}
+.axa-plate .img{aspect-ratio:4/3;border:1px solid var(--hairline);background:var(--panel);border-radius:2px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.axa-plate .img img{width:100%;height:100%;object-fit:cover}
+.axa-plate .img .ph{color:var(--ink-faint);font-size:20px;opacity:.5}
+.axa-plate .nm{font-family:var(--serif);font-size:12px;line-height:1.15}
+.axa-verdictwrap{margin:44px 0 10px}
+.axa-rule{display:block;width:40px;height:2.5px;background:var(--accent);margin-bottom:18px}
+.axa-verdict{font-family:var(--serif);font-weight:600;font-size:clamp(32px,5.4vw,46px);line-height:1.02;letter-spacing:-.02em;margin:0 0 16px;text-wrap:balance}
+.axa-standfirst{font-family:var(--serif);font-style:italic;font-size:clamp(16px,2.2vw,18px);line-height:1.45;color:var(--ink-muted);margin:0;text-wrap:pretty}
+.axa-sig{margin:28px 0 6px;border-top:1px solid var(--hairline);padding-top:16px}
+.axa-sig .cap{font-family:var(--grot);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 13px}
+.axa-axis{display:grid;grid-template-columns:64px 1fr 64px;align-items:center;gap:10px;margin:8px 0}
+.axa-axis span{font-family:var(--grot);font-size:10px;color:var(--ink-faint)}
+.axa-axis .r{text-align:right}
+.axa-axis .l.on,.axa-axis .r.on{color:var(--ink);font-weight:600}
+.axa-track{position:relative;height:1.5px;background:var(--hairline)}
+.axa-track i{position:absolute;top:50%;width:8px;height:8px;border-radius:50%;background:var(--accent);transform:translate(-50%,-50%);box-shadow:0 0 0 3px var(--ground)}
+.axa-track i.neu{background:var(--ink-faint)}
+.axa-section{margin-top:26px}
+.axa-label{font-family:var(--grot);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.axa-label::before{content:"";width:14px;height:1.5px;background:var(--accent);display:inline-block}
+.axa-p{font-size:15.5px;line-height:1.7;margin:0 0 13px;color:var(--ink)}
+.axa-p:last-child{margin-bottom:0}
+.axa-reco{font-family:var(--serif);font-size:18px;line-height:1.32;margin:0}
+.axa-cost{font-size:14px;line-height:1.55;color:var(--ink-muted);font-style:italic;margin:8px 0 0}
+.axa-divider{border:0;border-top:1px solid var(--hairline);max-width:100%;margin:30px 0 4px}
+.axa-otts{margin:30px 0;padding:20px 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--hairline)}
+.axa-otts .k{font-family:var(--grot);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin:0 0 11px}
+.axa-otts blockquote{margin:0;font-family:var(--serif);font-size:clamp(21px,3vw,24px);line-height:1.28;letter-spacing:-.01em;text-wrap:balance}
+.axa-cond{background:var(--panel);border:1px solid var(--hairline);border-radius:2px;padding:14px 16px;margin-top:6px}
+.axa-cond .axa-p{font-size:14.5px;margin:0}
+.axa-evidence{margin-top:36px;border-top:1px solid var(--hairline);padding-top:14px;font-family:var(--serif);font-style:italic;font-size:13.5px;line-height:1.55;color:var(--ink-muted);text-wrap:pretty}
+.axa-colophon{margin-top:16px;font-family:var(--grot);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+.axa-embedded{max-width:none;padding-left:0;padding-right:0;background:transparent}
+@media (max-width:520px){
+  .axa-strip{grid-template-columns:repeat(2,1fr)}
+  .axa-axis{grid-template-columns:52px 1fr 52px}
+}
+@media print{
+  .axa-root{background:#fff;color:#000;max-width:100%}
+  .axa-contradiction{display:none}
+}
+`;

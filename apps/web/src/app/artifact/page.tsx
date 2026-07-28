@@ -86,7 +86,7 @@ export default async function ArtifactPage(
 
   const { payload, contradictions } = rendered;
   // Override date when requested so PDF export is deterministic across runs.
-  if (sp?.date) payload.date = sp.date;
+  if (sp?.date) { payload.date = sp.date; rendered.canonical.meta.date = sp.date; }
   if (contradictions.length) {
     // eslint-disable-next-line no-console
     console.warn('[artifact] engine-output contradictions:', contradictions);
@@ -94,7 +94,7 @@ export default async function ArtifactPage(
 
   return (
     <>
-      <AssessmentArtifact p={payload} contradictions={contradictions} print={print} />
+      <AssessmentArtifact canonical={rendered.canonical} contradictions={contradictions} print={print} />
       {!print && <ArtifactActions systemText={text} />}
     </>
   );

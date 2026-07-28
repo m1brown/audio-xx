@@ -9,11 +9,16 @@
 import { buildSystemAssessment } from '@/lib/consultation';
 import { extractSubjectMatches, detectIntent } from '@/lib/intent';
 import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
+import { toCanonicalAssessment, type CanonicalAssessment } from '@/lib/artifact/canonical';
 import type { ArtifactPayload } from '@/lib/artifact/types';
 
 export interface PipelineResult {
   payload: ArtifactPayload;
   contradictions: string[];
+  /** The presentation-neutral Canonical Assessment Model — the boundary the
+   *  shared Assessment Renderer consumes. Built from the same result, so the
+   *  renderer never re-derives identity. */
+  canonical: CanonicalAssessment;
 }
 
 /** Run the full artifact pipeline. Null when the text does not resolve. */
@@ -23,7 +28,8 @@ export function runArtifactPipeline(systemText: string): PipelineResult | null {
   const result = buildSystemAssessment(systemText, subjects, null, desires);
   if (!result || result.kind !== 'assessment') return null;
   const { payload, contradictions } = synthesizeArtifact(result);
-  return { payload, contradictions };
+  const canonical = toCanonicalAssessment(payload, result);
+  return { payload, contradictions, canonical };
 }
 
 /**

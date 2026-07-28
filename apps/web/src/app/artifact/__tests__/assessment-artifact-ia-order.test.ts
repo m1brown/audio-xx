@@ -1,76 +1,90 @@
 /**
- * IA reorder (GTM pre-beta) — the assessment reads as one self-contained
- * answer above the evidence layer.
- *
- * Pins the information-architecture contract for AssessmentArtifact:
- *   verdict → system(credit/photos) → RECOMMENDATION → cost
- *   → structural divider → Evidence (recognition + case paragraphs)
- *
- * i.e. the recommendation + cost are pulled up beneath the system summary,
- * a divider separates them from the "why" layer, and all copy is preserved.
- * Order/placement only — no copy changes, no restyle.
+ * Assessment Renderer — canonical order + identity consistency + evidence
+ * discipline. Renders the France reference CAM through the shared component and
+ * pins:
+ *   subject → verdict → recognition → recommendation → (divider)
+ *   → engineering → listening session → one true thing → operating condition
+ *   → single evidence statement
+ * The verdict leads the reading; identity text matches the CAM (no re-derivation);
+ * the detailed source ledger is never rendered; the One True Thing obeys its rule.
  */
 import { describe, it, expect } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import AssessmentArtifact from '../AssessmentArtifact';
+import { extractSubjectMatches, detectIntent } from '@/lib/intent';
+import { buildSystemAssessment } from '@/lib/consultation';
+import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
+import { toCanonicalAssessment, validateOneTrueThing, EVIDENCE_STATEMENT } from '@/lib/artifact/canonical';
 
-const payload = {
-  verdict: 'Nothing here needs changing.',
-  standfirst: 'Tonally balanced, detail-forward system.',
-  componentCredit: ['Eversolo DMP-A6', 'Chord Hugo', 'Job Integrated', 'WLM Diva Monitor'],
-  recognition: 'RECOGNITION_MARK — this system is built for resolution and detail.',
-  caseParagraphs: ['CASE_ONE — the components reinforce one another.', 'CASE_TWO — the trade it makes.'],
-  recommendation: 'This system is already well balanced.',
-  cost: 'If you want more of something, name the quality you are looking for.',
-  date: '28 July 2026',
-};
+const FRANCE = 'Assess my system: Eversolo DMP-A6, Chord Hugo, JOB Integrated, WLM Diva Monitor';
 
-// `embedded` = the beta chat surface. `print` = the standalone/print path
-// (both skip the FollowUp island, which needs the app-router mounted). The
-// reordered DOM is identical across all three renders.
-function render(opts: { embedded?: boolean; print?: boolean }): string {
-  return renderToStaticMarkup(createElement(AssessmentArtifact, { p: payload as never, ...opts }));
+function franceCam() {
+  const subs = extractSubjectMatches(FRANCE);
+  const { desires } = detectIntent(FRANCE);
+  const raw: any = buildSystemAssessment(FRANCE, subs, null, desires);
+  const { payload } = synthesizeArtifact(raw) as any;
+  return toCanonicalAssessment(payload, raw);
 }
 
-describe('AssessmentArtifact IA order — recommendation sits with the verdict, above the evidence', () => {
-  for (const mode of [{ embedded: true }, { print: true }] as const) {
-    it(`${'embedded' in mode ? 'embedded (chat)' : 'standalone/print'}: verdict → recommendation → cost → divider → evidence`, () => {
-      const html = render(mode);
-      const iVerdict = html.indexOf(payload.verdict);
-      const iRec = html.indexOf(payload.recommendation);
-      const iCost = html.indexOf('name the quality');
-      const iDivider = html.indexOf('axx-divider');
-      const iCase = html.indexOf('axx-case');
-      const iRecognition = html.indexOf('RECOGNITION_MARK');
-      const iCase1 = html.indexOf('CASE_ONE');
+function render(canonical: ReturnType<typeof franceCam>): string {
+  return renderToStaticMarkup(createElement(AssessmentArtifact, { canonical, print: true }));
+}
 
-      // All present (copy preserved).
-      for (const idx of [iVerdict, iRec, iCost, iDivider, iCase, iRecognition, iCase1]) {
-        expect(idx).toBeGreaterThan(-1);
-      }
-      // Verdict still leads.
-      expect(iVerdict).toBeLessThan(iRec);
-      // Recommendation + cost are the answer block, before the evidence layer.
-      expect(iRec).toBeLessThan(iRecognition);
-      expect(iRec).toBeLessThan(iCase1);
-      expect(iCost).toBeLessThan(iRecognition);
-      // Divider separates the answer from the evidence, and precedes the case.
-      expect(iCost).toBeLessThan(iDivider);
-      expect(iDivider).toBeLessThan(iCase);
-      expect(iDivider).toBeLessThan(iRecognition);
-    });
-  }
+/** Match React's HTML text escaping so string lookups find rendered content. */
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+}
 
-  it('preserves every piece of copy verbatim', () => {
-    const html = render({ embedded: true });
-    expect(html).toContain(payload.verdict);
-    expect(html).toContain(payload.standfirst);
-    expect(html).toContain(payload.recommendation);
-    expect(html).toContain(payload.cost);
-    expect(html).toContain('RECOGNITION_MARK');
-    expect(html).toContain('CASE_ONE');
-    expect(html).toContain('CASE_TWO');
-    for (const c of payload.componentCredit) expect(html).toContain(c);
+describe('Assessment Renderer — France web artifact', () => {
+  it('renders every mandatory section in canonical order, verdict leading', () => {
+    const cam = franceCam();
+    const html = render(cam);
+
+    const iSystem = html.indexOf(cam.subject.components[0].name);
+    const iVerdict = html.indexOf(cam.identity.verdict);
+    const iRecognition = html.indexOf(cam.identity.recognition.slice(0, 24));
+    const iRecommend = html.indexOf(cam.guidance.recommendation);
+    const iEng = html.indexOf(cam.reading.engineering[0].slice(0, 24));
+    const iListen = html.indexOf(cam.reading.listeningSession[0].slice(0, 24));
+    const iOtt = html.indexOf(esc(cam.reading.oneTrueThing!));
+    const iCond = html.indexOf(cam.reading.operatingCondition!.slice(0, 24));
+    const iEvidence = html.indexOf(EVIDENCE_STATEMENT);
+
+    for (const idx of [iSystem, iVerdict, iRecognition, iRecommend, iEng, iListen, iOtt, iCond, iEvidence]) {
+      expect(idx).toBeGreaterThan(-1);
+    }
+    // Verdict leads the reading (after the subject it concerns).
+    expect(iSystem).toBeLessThan(iVerdict);
+    // Answer before evidence; canonical order through the case.
+    expect(iVerdict).toBeLessThan(iRecognition);
+    expect(iRecognition).toBeLessThan(iRecommend);
+    expect(iRecommend).toBeLessThan(iEng);
+    expect(iEng).toBeLessThan(iListen);
+    expect(iListen).toBeLessThan(iOtt);
+    expect(iOtt).toBeLessThan(iCond);
+    expect(iCond).toBeLessThan(iEvidence);
+  });
+
+  it('identity text matches the CAM verbatim (no re-derivation in the renderer)', () => {
+    const cam = franceCam();
+    const html = render(cam);
+    expect(html).toContain(cam.identity.verdict);
+    expect(html).toContain(cam.identity.signature!);
+    expect(html).toContain(cam.identity.recognition);
+  });
+
+  it('shows the single evidence statement and never the detailed ledger', () => {
+    const html = render(franceCam());
+    expect(html).toContain(EVIDENCE_STATEMENT);
+    expect(html.toLowerCase()).not.toContain('source ledger');
+    expect(html).not.toContain('axx-cls'); // no evidence-class chips
+  });
+
+  it('the rendered One True Thing obeys the invariant', () => {
+    const cam = franceCam();
+    expect(validateOneTrueThing(cam.reading.oneTrueThing)).toEqual([]);
+    expect(render(cam)).toContain(esc(cam.reading.oneTrueThing!));
   });
 });
