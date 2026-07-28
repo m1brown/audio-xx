@@ -79,6 +79,7 @@ import { buildIntakeResponse, intakeToAdvisory } from '@/lib/intake';
 import { inferUnknownProduct } from '@/lib/llm-product-inference';
 // Validation telemetry + feedback (Workstream 25B — throwaway cohort scaffolding).
 import { trackEvent, trackDecisionIntent, initSessionTelemetry } from '@/lib/track-event';
+import { collectUnmatchedModels } from '@/lib/unmatched-telemetry';
 // A3 hybrid advisor (WS31 — flag-gated, known-system advisory only; default OFF).
 import { a3Enabled, a3IsAdvisoryQuestion, runA3Advisor } from '@/lib/a3-advisor';
 import { inferProvisionalSystemAssessment } from '@/lib/llm-system-inference';
@@ -2691,6 +2692,14 @@ export default function Home() {
 
       const assessmentResult = buildSystemAssessment(accumulatedText, assessmentSubjects, turnCtx.activeSystem, turnCtx.desires, state.listenerPreferenceProfile);
       if (assessmentResult) {
+        // H1 demand telemetry — log each distinct unresolved model token once
+        // (privacy-safe: a token the user typed, never the full string), so the
+        // most-requested unsupported gear can be ranked post-beta. Pure
+        // telemetry: no effect on resolution/routing/confidence/graph/
+        // assessment; returns nothing for a successful assessment.
+        for (const ev of collectUnmatchedModels(assessmentResult)) {
+          trackEvent('unmatched_model', ev);
+        }
         if (assessmentResult.kind === 'clarification') {
           // Validation detected a conflict — ask the user before proceeding
           dispatch({ type: 'ADD_QUESTION', clarification: assessmentResult.clarification });
