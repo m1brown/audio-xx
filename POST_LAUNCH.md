@@ -172,3 +172,15 @@ below. Must never weaken factual restraint or the graph-integrity doctrine.
   per-artifact og:url cover sharing; adding explicit alternates.canonical
   across pages and an Article/Review JSON-LD block on the artifact would
   enrich search results. Optional, not launch-blocking.
+
+## Pre-beta bug list (from GTM trust spot-check, 2026-07-28)
+
+- [spotcheck][should-fix-before-or-early-beta] **Headphone systems render with speaker-system prose + bare headphone-brand names.** A DAC-plus-headphones rig (e.g. "Chord Mojo 2, ZMF Atticus") is assessed with the loudspeaker-chain template — "X resolve cleanly; Y keeps the result musical rather than analytical" — which is wrong register for a headphone system, and headphone brands surfaced bare/mis-cased ("Zmf"). Root: the artifact's case-prose composer and the component-credit path assume a source→amp→speaker chain and do not branch on `isHeadphoneSystem`. Presentation/knowledge issue, not a graph-integrity fault. Scope: a headphone-aware prose branch (+ correct headphone display names), bounded; verify against a small set of common Reddit headphone stacks (Schiit Modi/Magni + HD6XX, Chord Mojo + ZMF, iFi Zen + Sundara).
+
+## Model characterization — demand-driven (founder decision, 2026-07-28)
+
+The recognition-only coverage experiment was **falsified**: adding ~70 recognition entries for common Reddit models did NOT raise the flagship-assessment rate (systems are gated by *character* coverage, not recognition), introduced intent-routing regressions (recognition is coupled to intent detection), and — where systems did render — produced **generic, brand-stereotyped** prose. Broad brand-level character is therefore rejected as a coverage lever.
+
+**Decision:** launch with the current supported coverage. The engine already declines gracefully (clarification / low-confidence) for un-profiled gear — that is acceptable and on-doctrine. Do **not** author broad model/brand character pre-beta. **Let observed demand drive characterization**: after beta, produce a **ranked list of the most-frequently-submitted unsupported models**, and author *model/product-family-specific* character (evidence-based, never brand-stereotyped) for the top of that list — that ranked list becomes the characterization roadmap. Optimize for observed demand, not theoretical coverage.
+
+**Pre-launch requirement (to make the ranked list possible):** confirm analytics captures, on every clarification / low-confidence / null-to-knowledge-lane outcome, the **specific unmatched model tokens** (privacy-safe) so demand can be ranked post-beta. If not currently logged, add that capture before inviting users — without it, the demand signal that drives the whole roadmap is lost.
