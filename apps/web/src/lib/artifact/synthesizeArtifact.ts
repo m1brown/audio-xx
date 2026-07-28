@@ -69,7 +69,7 @@ function lowerFirst(s: string): string {
   if (acronymOrCamel || twoCaps) return s;
   return s[0].toLowerCase() + s.slice(1);
 }
-function stripTrailingPeriod(s: string): string { return s.replace(/\.\s*$/, ''); }
+export function stripTrailingPeriod(s: string): string { return s.replace(/\.\s*$/, ''); }
 function norm(s: string): string {
   return (s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -97,7 +97,7 @@ function extractPullQuote(explanation: string): string | undefined {
   return hit ? stripTrailingPeriod(hit) : undefined;
 }
 
-function roleNoun(role: string | undefined): string {
+export function roleNoun(role: string | undefined): string {
   const r = (role || '').toLowerCase();
   if (r.includes('amp')) return 'amplifier';
   if (r.includes('dac') || r.includes('source')) return 'DAC';
@@ -153,7 +153,7 @@ const INTENT_QUALIFIER: Record<string, Record<string, string>> = {
   },
 };
 
-function intentRead(axes: Record<string, string> | undefined): string {
+export function intentRead(axes: Record<string, string> | undefined): string {
   // Pick the strongest non-neutral axis for the primary clause; the next-
   // strongest non-neutral axis (if any) supplies the qualifier. If every
   // axis reads neutral, fall back to the unambiguous balance phrasing — a
@@ -209,7 +209,7 @@ function costFor(category: string): string {
 }
 
 // ── verdict + standfirst (engine-leverage driven; copy unchanged) ───────
-function verdictAndStandfirst(
+export function verdictAndStandfirst(
   bottleneck: any, category: string, role: string, signature: string,
 ): { verdict: string; standfirst?: string } {
   if (bottleneck) {
