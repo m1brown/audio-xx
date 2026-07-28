@@ -219,3 +219,16 @@ Because the identity is now fixed in code, the spread can treat it as bedrock:
 ---
 
 *Deliverable status: specification complete. No UI implemented. Recommend founder sign-off on §11 before an implementation envelope is scoped.*
+
+---
+
+### 12. Founder resolutions (2026-07-29) — amend the sections above
+
+1. **Format:** two **portrait** leaves forming a landscape spread; each leaf prints independently on A4 **and** US Letter. Screen may show them together; the canonical artifact is not two landscape pages. *(Amends §1.)*
+2. **Photography:** **product images kept**, under strict normalization (consistent crop/scale/frame/caption; no visible retailer branding; provenance in the reference layer; typographic fallback only where no suitable image exists). Comprehensive photo acquisition is **not** a prerequisite. *(Amends §7, §11.2.)*
+3. **References:** margin references (desktop) · tap-to-expand (narrow) · numbered source notes (print). The reference architecture must remain **complete when printed**. *(Confirms §6, §8.)*
+4. **Commerce:** retailer/affiliate links **deferred** from v1; schema still supports manufacturer / manual / interview / technical / measurement / availability / retailer / used-market. Commercial links stay visually + editorially separate. *(Confirms §7, §11.4.)*
+5. **One True Thing:** **A3-authored** from the immutable identity + licensed evidence, with contradiction + evidence validation and deterministic fallback — never a free re-interpretation. *(Resolves §11.5.)*
+6. **Mandatory architecture:** Left leaf — system line + strip · Verdict · standfirst/signature · Recognition · Recommendation · **The One Cost**. Right leaf — Engineering Explanation · **Listening Session (mandatory**, length adapts to evidence) · One True Thing · Trade-off/operating condition · source & evidence layer. *(Amends §7 — Listening Session is mandatory, not progressive.)*
+7. **Evidence boundary (governing):** artifact v1 admits **only** manufacturer fact · designer statement · primary technical source · Audio XX interpretation. **Third-party reviews are out of scope** — never for sonic character, validation, quotation, or gap-filling; a future class requiring separate approval. Primary-source hierarchy: (1) manufacturer/official pages; (2) manuals, specs, white papers, patents, technical notes; (3) attributable designer/principal statements via official channels; (4) Audio XX interpretation. Absent primary evidence → reference left absent, gap recorded; reviewer consensus is never a substitute. *(Amends §6.)*
+8. **Palette:** Financial Times core — FT-pink paper, claret, slate/teal/velvet, warm-cream neutral. Site-wide (palette only; Audio XX keeps its own identity — no FT masthead/branding). Site-wide token application is a separate follow-up envelope. *(Amends §1 visual system.)*
