@@ -8961,23 +8961,36 @@ export function buildSystemAssessment(
         const msgLower = currentMessage.toLowerCase();
         const prodIdx = msgLower.indexOf(lower);
 
-        // Score brand matches by proximity to the product name
-        const candidateBrands = subjectMatches
+        // Borrow a brand for this uncatalogued model ONLY when a brand sits
+        // IMMEDIATELY before it in the text (the "<Brand> <Model>" convention,
+        // e.g. "Eversolo DMP-A6"). Borrowing a merely-nearby brand fabricates a
+        // product that does not exist: in "Technics SL-1200, Marantz 2270, …"
+        // the model's own adjacent brand ("Technics") is consumed by its own
+        // component first, so the next-nearest *unprocessed* brand ("Marantz")
+        // would otherwise be grabbed to invent "Marantz SL-1200". Requiring true
+        // adjacency (the brand ends just before the model starts) admits the
+        // legitimate pairing and rejects the fabrication; a model with no
+        // adjacent brand renders bare rather than wrongly branded.
+        const adjacentBrands = subjectMatches
           .filter((m) => m.kind === 'brand' && !processedNames.has(m.name.toLowerCase()))
           .map((m) => {
             const brandIdx = msgLower.indexOf(m.name.toLowerCase());
-            return { match: m, distance: brandIdx >= 0 ? Math.abs(brandIdx - prodIdx) : Infinity };
+            const brandEnd = brandIdx >= 0 ? brandIdx + m.name.length : -1;
+            // Gap between the brand's end and the model's start; only a small
+            // separator (space, "the", a comma) counts as adjacency.
+            const gap = brandEnd >= 0 && brandEnd <= prodIdx ? prodIdx - brandEnd : Infinity;
+            return { match: m, gap };
           })
-          .sort((a, b) => a.distance - b.distance);
+          .filter((c) => c.gap <= 3)
+          .sort((a, b) => a.gap - b.gap);
 
         // A multi-word free-text model (e.g. "Holo May") already carries its
-        // own brand; borrowing the *nearest* unprocessed brand subject here
-        // mis-attributes a different component's brand — the source of the
-        // "Decware Holo may" corruption. Only borrow a brand for a single-token
-        // model that plainly needs one (e.g. "DMP-A6" → "Eversolo DMP-A6").
+        // own brand; borrowing a brand subject here mis-attributes a different
+        // component's brand. Only borrow for a single-token model that plainly
+        // needs one AND has an adjacent brand (e.g. "DMP-A6" → "Eversolo DMP-A6").
         const modelTokens = match.name.trim().split(/\s+/).filter(Boolean);
         const modelNeedsBrand = modelTokens.length < 2;
-        const brandMatch = modelNeedsBrand && candidateBrands.length > 0 ? candidateBrands[0].match : undefined;
+        const brandMatch = modelNeedsBrand && adjacentBrands.length > 0 ? adjacentBrands[0].match : undefined;
         let brandName = '';
         if (brandMatch) {
           // Use KNOWN_PRODUCT_ROLES displayBrand for proper casing (e.g. "XSA" not "Xsa")
