@@ -3,16 +3,16 @@
    AUDIO XX — THE ASSESSMENT · France reference spread (prototype v1)
    Two portrait leaves forming a landscape spread. Print-canonical:
    each leaf prints independently on A4 and US Letter.
-   Palette + type honor the project's editorial system (warm paper,
-   rationed #B08D57 gold, serif display); differentiation is in the
-   spread structure, the margin apparatus, and the tonal-signature mark.
+   Palette: Financial Times core — FT-pink paper (#FFF1E5), claret accent
+   (#990F3D), slate/teal/velvet as the functional secondary family. Audio XX
+   keeps its own identity (no FT masthead/branding); only the palette is adopted.
    ============================================================ */
 
 :root{
-  --ground:#F4EFE4; --ground-2:#ECE5D5; --panel:#EFE9DC;
-  --ink:#1C1712; --ink-muted:#645B4C; --ink-faint:#928873;
-  --accent:#B08D57; --accent-ink:#8A6A2E;
-  --hairline:#D9D0BD; --seam:rgba(28,23,18,.16);
+  --ground:#FFF1E5; --ground-2:#F7E9DC; --panel:#F5E7D8;
+  --ink:#33302E; --ink-muted:#66605C; --ink-faint:#948C86;
+  --accent:#990F3D; --accent-ink:#990F3D;
+  --hairline:#CCC1B7; --seam:rgba(51,48,46,.18);
   --face-display:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,serif;
   --face-text:'Iowan Old Style',Palatino,Georgia,'Times New Roman',serif;
   --face-grotesque:ui-sans-serif,-apple-system,'Helvetica Neue','Segoe UI',Arial,sans-serif;
@@ -21,21 +21,21 @@
 }
 @media (prefers-color-scheme:dark){
   :root{
-    --ground:#16130E; --ground-2:#1E1A13; --panel:#1C1811;
-    --ink:#ECE4D3; --ink-muted:#A79D88; --ink-faint:#78705E;
-    --accent:#C9A063; --accent-ink:#D8B87E;
-    --hairline:#332C20; --seam:rgba(236,228,211,.16);
+    --ground:#262A33; --ground-2:#2E323C; --panel:#2B2F38;
+    --ink:#F3EADF; --ink-muted:#B9B2A8; --ink-faint:#8A857D;
+    --accent:#E8628B; --accent-ink:#E8628B;
+    --hairline:#3A3D45; --seam:rgba(236,228,211,.16);
   }
 }
 :root[data-theme="light"]{
-  --ground:#F4EFE4; --ground-2:#ECE5D5; --panel:#EFE9DC;
-  --ink:#1C1712; --ink-muted:#645B4C; --ink-faint:#928873;
-  --accent:#B08D57; --accent-ink:#8A6A2E; --hairline:#D9D0BD; --seam:rgba(28,23,18,.16);
+  --ground:#FFF1E5; --ground-2:#F7E9DC; --panel:#F5E7D8;
+  --ink:#33302E; --ink-muted:#66605C; --ink-faint:#948C86;
+  --accent:#990F3D; --accent-ink:#990F3D; --hairline:#CCC1B7; --seam:rgba(51,48,46,.18);
 }
 :root[data-theme="dark"]{
-  --ground:#16130E; --ground-2:#1E1A13; --panel:#1C1811;
-  --ink:#ECE4D3; --ink-muted:#A79D88; --ink-faint:#78705E;
-  --accent:#C9A063; --accent-ink:#D8B87E; --hairline:#332C20; --seam:rgba(236,228,211,.16);
+  --ground:#262A33; --ground-2:#2E323C; --panel:#2B2F38;
+  --ink:#F3EADF; --ink-muted:#B9B2A8; --ink-faint:#8A857D;
+  --accent:#E8628B; --accent-ink:#E8628B; --hairline:#3A3D45; --seam:rgba(236,228,211,.16);
 }
 
 *{box-sizing:border-box}
@@ -92,12 +92,13 @@
 .axx-systemline{font-family:var(--face-display);font-size:19px;line-height:1.28;margin:0 0 16px;
   text-wrap:balance;letter-spacing:-.01em}
 .axx-systemline b{font-weight:600}
-.axx-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:0 0 20px}
-.axx-chip{border:1px solid var(--hairline);background:var(--panel);border-radius:2px;padding:9px 8px 8px;
-  min-height:66px;display:flex;flex-direction:column;justify-content:space-between}
-.axx-chip .cat{font-family:var(--face-grotesque);font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
-.axx-chip .nm{font-family:var(--face-display);font-size:11.5px;line-height:1.12;margin-top:6px}
-.axx-chip .gl{font-family:var(--face-mono);font-size:8px;color:var(--accent-ink);margin-top:5px;letter-spacing:.06em}
+.axx-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 20px}
+.axx-plate{display:flex;flex-direction:column;gap:5px}
+.axx-plate .img{aspect-ratio:4/3;border:1px solid var(--hairline);background:var(--panel);border-radius:2px;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.axx-plate .img img{width:62%;height:62%;object-fit:contain;opacity:.55}
+.axx-plate .cap{font-family:var(--face-grotesque);font-size:7.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint)}
+.axx-plate .nm{font-family:var(--face-display);font-size:11px;line-height:1.1}
 
 /* ---- tonal signature mark ---- */
 .axx-sig{margin:0 0 22px;border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline);padding:13px 0}
@@ -155,8 +156,8 @@
 .axx-cls{font-family:var(--face-grotesque);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;
   padding:2px 6px;border-radius:2px;white-space:nowrap;display:inline-block}
 .cls-mf{background:color-mix(in oklab,var(--accent) 20%,transparent);color:var(--accent-ink)}
-.cls-ds{background:color-mix(in oklab,#7B8B6A 26%,transparent);color:var(--ink)}
-.cls-tp{background:color-mix(in oklab,#6A7C8B 26%,transparent);color:var(--ink)}
+.cls-ds{background:color-mix(in oklab,#0D7680 26%,transparent);color:var(--ink)}
+.cls-ts{background:color-mix(in oklab,#593380 26%,transparent);color:var(--ink)}
 .cls-ax{background:transparent;border:1px solid var(--hairline);color:var(--ink-muted)}
 .axx-src{font-size:11px;color:var(--ink-muted)}
 .axx-src a{color:var(--accent-ink)}
@@ -185,7 +186,7 @@
   .axx-footnotes{display:block;margin-top:18px;border-top:1px solid var(--hairline);padding-top:10px}
   .axx-footnotes .axx-note{margin-bottom:7px}
   .axx-ledger{break-before:page;page-break-before:always;margin-top:0}
-  .axx-verdict{border-left:2px solid #000}
+  .axx-verdict{border-left:2px solid #990F3D}
 }
 </style>
 
@@ -220,10 +221,10 @@
         </h1>
 
         <div class="axx-strip">
-          <div class="axx-chip"><span class="cat">Streamer · DAC · Pre</span><span class="nm">Eversolo<br>DMP-A6</span><span class="gl">digital source</span></div>
-          <div class="axx-chip"><span class="cat">DAC · Headphone amp</span><span class="nm">Chord<br>Hugo</span><span class="gl">conversion</span></div>
-          <div class="axx-chip"><span class="cat">Integrated amp</span><span class="nm">JOB<br>INTegrated</span><span class="gl">amplification</span></div>
-          <div class="axx-chip"><span class="cat">Loudspeaker</span><span class="nm">WLM<br>Diva Monitor</span><span class="gl">the endpoint</span></div>
+          <div class="axx-plate"><div class="img"><img alt="Eversolo DMP-A6" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 32'%3E%3Crect x='2' y='6' width='44' height='20' rx='2' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Ccircle cx='38' cy='16' r='3' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Cline x1='8' y1='16' x2='22' y2='16' stroke='%23948C86' stroke-width='1.5'/%3E%3C/svg%3E"></div><span class="cap">Streamer · DAC · Pre</span><span class="nm">Eversolo DMP-A6</span></div>
+          <div class="axx-plate"><div class="img"><img alt="Chord Hugo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 32'%3E%3Crect x='6' y='8' width='36' height='16' rx='3' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='4' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Ccircle cx='30' cy='16' r='2' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3C/svg%3E"></div><span class="cap">DAC · Headphone amp</span><span class="nm">Chord Hugo</span></div>
+          <div class="axx-plate"><div class="img"><img alt="JOB INTegrated" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 32'%3E%3Crect x='2' y='6' width='44' height='20' rx='2' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='16' r='3.5' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Ccircle cx='36' cy='16' r='3.5' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3C/svg%3E"></div><span class="cap">Integrated amp</span><span class="nm">JOB INTegrated</span></div>
+          <div class="axx-plate"><div class="img"><img alt="WLM Diva Monitor" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 32'%3E%3Crect x='16' y='2' width='16' height='28' rx='2' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Ccircle cx='24' cy='11' r='4.5' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Ccircle cx='24' cy='23' r='2.5' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3C/svg%3E"></div><span class="cap">Loudspeaker</span><span class="nm">WLM Diva Monitor</span></div>
         </div>
 
         <div class="axx-sig">
@@ -294,7 +295,7 @@
         <div class="axx-footnotes">
           <p class="axx-note"><b>5</b><span data-fill="ev-hugo">Chord Hugo &mdash; FPGA-based conversion (not an off-the-shelf DAC chip), a design associated with timing precision and low-level resolution. Exact figures pending citation.</span></p>
           <p class="axx-note"><b>6</b><span data-fill="ev-wlm-voice">&ldquo;Musical flow and continuity&rdquo; attributed to the Diva &mdash; Audio XX&rsquo;s reading of this system, not a manufacturer claim.</span></p>
-          <p class="axx-note"><b>7</b><span data-fill="ev-wlm-place">Placement sensitivity and passive-radiator bass loading in small/untreated rooms. Corroborating measurement or review pending citation.</span></p>
+          <p class="axx-note"><b>7</b><span data-fill="ev-wlm-place">Placement sensitivity and passive-radiator bass loading in small/untreated rooms. Corroborating manufacturer specification or technical note pending citation.</span></p>
         </div>
       </div>
 
@@ -302,8 +303,8 @@
         <div class="axx-railhead">Sources &amp; evidence</div>
         <p class="axx-note"><b>5</b><span data-fill="ev-hugo">Chord Hugo &mdash; FPGA-based conversion (not an off-the-shelf DAC chip), a design associated with timing precision and low-level resolution. Exact figures pending citation.</span><span class="cls" data-fill="ev-hugo-cls">Manufacturer</span></p>
         <p class="axx-note"><b>6</b><span data-fill="ev-wlm-voice">&ldquo;Musical flow and continuity&rdquo; attributed to the Diva &mdash; Audio XX&rsquo;s reading of this system, not a manufacturer claim.</span><span class="cls" data-fill="ev-wlm-voice-cls">Audio XX</span></p>
-        <p class="axx-note"><b>7</b><span data-fill="ev-wlm-place">Placement sensitivity and passive-radiator bass loading in small/untreated rooms. Corroborating measurement or review pending citation.</span><span class="cls" data-fill="ev-wlm-place-cls">Manufacturer</span></p>
-        <p class="axx-note" style="margin-top:10px;color:var(--ink-faint)">Images not shown: typographic component fallback in use for v1. Provenance recorded above.</p>
+        <p class="axx-note"><b>7</b><span data-fill="ev-wlm-place">Placement sensitivity and passive-radiator bass loading in small/untreated rooms. Corroborating manufacturer specification or technical note pending citation.</span><span class="cls" data-fill="ev-wlm-place-cls">Manufacturer</span></p>
+        <p class="axx-note" style="margin-top:10px;color:var(--ink-faint)">Component images: normalized plates shown as placeholders; production fills from catalog imagery &mdash; consistent crop &amp; frame, no retailer branding, provenance recorded.</p>
       </aside>
     </section>
 
@@ -311,7 +312,7 @@
 
   <section class="axx-ledger">
     <h2>Source ledger</h2>
-    <p class="sub">Every claim on the spread, classified by what licenses it. The narrative is Audio XX&rsquo;s reading; the reference layer is where external fact is cited.</p>
+    <p class="sub">Every claim on the spread, classified by what licenses it. Artifact v1 admits four evidence classes only &mdash; <b>manufacturer fact</b>, <b>designer statement</b>, <b>primary technical source</b> (manuals, specifications, white papers, patents), and <b>Audio&nbsp;XX interpretation</b>, clearly labelled. Third-party reviews are out of scope: they are never used to establish sonic character, validate the assessment, supply quotations, or fill gaps. Where primary evidence is unavailable the reference is left absent and the gap recorded &mdash; reviewer consensus is not a substitute.</p>
     <table class="axx-tbl">
       <thead><tr><th>№</th><th>Element</th><th>Class</th><th>Basis</th></tr></thead>
       <tbody>
@@ -321,14 +322,15 @@
         <tr><td>&mdash;</td><td>Listening Session</td><td><span class="axx-cls cls-ax">Audio XX</span></td><td>Experiential elaboration of the fixed identity + the engine&rsquo;s stated strength (flow / continuity).</td></tr>
         <tr><td>&mdash;</td><td>One True Thing</td><td><span class="axx-cls cls-ax">Audio XX</span></td><td>A3-authored from the immutable identity + licensed evidence; not a free re-interpretation.</td></tr>
         <tr><td>4,7</td><td>Operating condition &mdash; placement &amp; passive-radiator bass</td><td><span class="axx-cls cls-mf">Manufacturer</span> <span class="axx-cls cls-ax">Audio XX</span></td><td>Engine limitation record, presented as an operating condition. Corroborating citation <b>pending</b>.</td></tr>
-        <tr><td>5</td><td>Chord Hugo &mdash; FPGA conversion, Rob Watts design</td><td><span class="axx-cls cls-mf">Manufacturer</span> <span class="axx-cls cls-ds">Designer</span></td><td>Widely documented; exact model variant &amp; figures <b>pending citation</b>.</td></tr>
+        <tr><td>5</td><td>Chord Hugo &mdash; FPGA conversion, Rob Watts design</td><td><span class="axx-cls cls-ts">Primary technical</span> <span class="axx-cls cls-ds">Designer</span></td><td>To be licensed from Chord technical material &amp; the designer&rsquo;s own statements; exact model variant &amp; figures <b>pending citation</b>.</td></tr>
         <tr><td>1&ndash;4</td><td>Component provenance (origin, role, topology descriptor)</td><td><span class="axx-cls cls-mf">Manufacturer</span></td><td>Conservative descriptors only. Precise specs, years, availability <b>pending citation</b>.</td></tr>
         <tr><td>&mdash;</td><td>Designer statement / short quotation</td><td><span class="axx-cls cls-ds">Designer</span></td><td><b>None included.</b> No verified attributable quotation on hand; a real quote is a deliberate gap, never invented.</td></tr>
-        <tr><td>&mdash;</td><td>Component photography</td><td><span class="axx-cls cls-tp">Third-party</span></td><td>Typographic fallback in use for v1. Normalized imagery + provenance is a future acquisition, not a prerequisite.</td></tr>
+        <tr><td>&mdash;</td><td>Product images (asset, not evidence)</td><td><span class="axx-cls cls-ax">Kept</span></td><td>Product images retained and normalized (consistent crop, scale, frame; no retailer branding; provenance recorded). Placeholder plates shown here; production fills from catalog imagery.</td></tr>
         <tr><td>&mdash;</td><td>Retailer / used-market links</td><td><span class="axx-cls cls-ax">Deferred</span></td><td>Schema-supported, intentionally unpopulated in v1; would sit visually separate from evidence.</td></tr>
+        <tr><td>&mdash;</td><td>Third-party review evidence</td><td><span class="axx-cls cls-ax">Out of scope</span></td><td>Explicitly excluded from artifact v1 by editorial boundary. A possible future evidence class &mdash; requires separate founder approval before use.</td></tr>
       </tbody>
     </table>
-    <p class="axx-src" style="margin-top:14px"><b>Prototype note.</b> The reference sourcing pass was interrupted before verified citations and a designer quotation were secured. The layout, apparatus, and narrative are complete and honest; the numbered citations are conservative descriptors marked &ldquo;pending.&rdquo; Closing that gap is the chief work between this prototype and a canonical artifact.</p>
+    <p class="axx-src" style="margin-top:14px"><b>Prototype note.</b> Primary-source sourcing is paused pending the approved pipeline. When it resumes, the hierarchy is: (1)&nbsp;manufacturer product &amp; archived official pages; (2)&nbsp;official manuals, specifications, white papers, patents, technical notes; (3)&nbsp;attributable designer / principal statements via official or primary channels; (4)&nbsp;Audio&nbsp;XX interpretation, labelled. The layout, apparatus, and narrative are complete and honest; the numbered citations are conservative descriptors marked &ldquo;pending&rdquo; against classes 1&ndash;3. Filling them from primary sources &mdash; and leaving absent whatever primary sources do not support &mdash; is the chief work between this prototype and a canonical artifact.</p>
   </section>
 
 </div><!-- /wrap -->
