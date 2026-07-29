@@ -112,6 +112,42 @@ describe('Educational layer (France) — primary-sourced, identity-preserving', 
   });
 });
 
+describe('Editorial provenance ledger (internal — not rendered)', () => {
+  const CLASSES = ['manufacturer-fact', 'designer-statement', 'audio-xx-interpretation'];
+
+  it('classifies every educational fragment into one of the three classes', () => {
+    const { cam } = franceCanonical();
+    expect(cam.editorial?.length).toBeGreaterThan(0);
+    for (const f of cam.editorial!) {
+      expect(CLASSES).toContain(f.editorialClass);
+      expect(f.text).toBeTruthy();
+    }
+  });
+
+  it('carries manufacturer fact, designer statement, and Audio XX interpretation', () => {
+    const { cam } = franceCanonical();
+    const byClass = (c: string) => cam.editorial!.filter((f) => f.editorialClass === c);
+    expect(byClass('manufacturer-fact').length).toBeGreaterThan(0);
+    expect(byClass('designer-statement').length).toBeGreaterThan(0); // Rob Watts / Chord
+    expect(byClass('audio-xx-interpretation').length).toBeGreaterThan(0);
+    // The reinforce/oppose synthesis is classed as interpretation.
+    expect(cam.editorial!.some((f) => /read together/i.test(f.text) && f.editorialClass === 'audio-xx-interpretation')).toBe(true);
+  });
+
+  it('JOB carries only manufacturer fact (no interpretation or designer claim)', () => {
+    const { cam } = franceCanonical();
+    const job = cam.editorial!.filter((f) => /job/i.test(f.component ?? ''));
+    expect(job.length).toBeGreaterThan(0);
+    expect(job.every((f) => f.editorialClass === 'manufacturer-fact')).toBe(true);
+  });
+
+  it('interpretation is worded as philosophy/likelihood, not a bare assertion', () => {
+    const { cam } = franceCanonical();
+    const interp = cam.editorial!.filter((f) => f.editorialClass === 'audio-xx-interpretation').map((f) => f.text).join(' ');
+    expect(interp).toMatch(/appears? to|should|philosophy|idea|read together|tradition/i);
+  });
+});
+
 describe('validateDominantCharacter', () => {
   it('accepts a grounded, descriptive characteristic', () => {
     expect(validateDominantCharacter("Warmth enters at the final stage, without obscuring the system's resolution.")).toEqual([]);

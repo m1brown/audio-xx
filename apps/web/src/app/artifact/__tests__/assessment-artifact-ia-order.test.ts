@@ -80,6 +80,10 @@ describe('Assessment Renderer — France web artifact', () => {
     expect(html).toContain(EVIDENCE_STATEMENT);
     expect(html.toLowerCase()).not.toContain('source ledger');
     expect(html).not.toContain('axx-cls'); // no evidence-class chips
+    // The internal editorial provenance ledger must never reach the public artifact.
+    expect(html).not.toContain('audio-xx-interpretation');
+    expect(html).not.toContain('editorialClass');
+    expect(html).not.toContain('manufacturer-fact');
   });
 
   it('renders the Dominant Character section (not "One True Thing"), obeying the invariant', () => {

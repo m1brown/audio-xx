@@ -37,6 +37,18 @@ export interface PrimarySource {
   evidenceClass: 'manufacturer' | 'designer' | 'manual' | 'technical';
 }
 
+/** Editorial provenance of an educational fragment. INTERNAL — for QA and
+ *  governance only; never rendered into the public artifact. Interpretation
+ *  must read as interpretation (philosophy / likely consequence), not as a
+ *  technical assertion. */
+export type EditorialClass = 'manufacturer-fact' | 'designer-statement' | 'audio-xx-interpretation';
+export interface EditorialFragment {
+  text: string;
+  editorialClass: EditorialClass;
+  /** Which component the fragment concerns; absent for system-level synthesis. */
+  component?: string;
+}
+
 export interface CanonicalAssessment {
   meta: { date: string; methodVersion?: string };
   subject: {
@@ -64,6 +76,10 @@ export interface CanonicalAssessment {
     operatingCondition?: string;
   };
   evidence: { statement: string; primarySources?: PrimarySource[] };
+  /** INTERNAL editorial provenance ledger — NOT rendered. Every educational
+   *  fragment classified for QA/governance (manufacturer fact / designer
+   *  statement / Audio XX interpretation). The renderer must never read this. */
+  editorial?: EditorialFragment[];
 }
 
 // ── Dominant Character invariant ─────────────────────────
@@ -172,42 +188,63 @@ function splitEngineeringAndCondition(
 // clause (graceful degradation) — never a reviewer/retailer/forum/consensus fact.
 // Entries exist only for the four France components; any other system degrades to
 // absent until its own primary sources are secured.
-interface EduEntry { match: RegExp; origin: string; source: PrimarySource; }
+// Each origin is authored as classified fragments (manufacturer fact / designer
+// statement / Audio XX interpretation). Interpretation is worded as design
+// philosophy or likely consequence — never a bare technical assertion. The
+// rendered `origin` is the fragments joined; the classification is QA-only.
+interface EduEntry { match: RegExp; fragments: EditorialFragment[]; source: PrimarySource; }
 const FRANCE_EDU: EduEntry[] = [
   {
     match: /eversolo/i,
-    origin: 'An all-in-one streaming DAC and preamplifier — source, conversion and control in one box.',
     source: { label: 'Eversolo — DMP-A6', url: 'https://www.eversolo.com/Product/index/model/DMP-A6/target/7abWHw++oHhKKmVViAFMcQ==.html', evidenceClass: 'manufacturer' },
+    fragments: [
+      { text: 'An all-in-one streaming DAC and preamplifier —', editorialClass: 'manufacturer-fact' },
+      { text: 'the modern convergence idea, bringing source, conversion and control into one box.', editorialClass: 'audio-xx-interpretation' },
+    ],
   },
   {
     match: /hugo/i,
-    origin: 'A DAC and headphone amplifier from Chord Electronics (England); conversion by a custom FPGA with WTA filters, coded by Rob Watts — a design centred on timing and transient reconstruction.',
     source: { label: 'Chord Electronics — Hugo', url: 'https://chordelectronics.co.uk/product/hugo', evidenceClass: 'designer' },
+    fragments: [
+      { text: 'A DAC and headphone amplifier from Chord Electronics (England), converting with a custom FPGA and WTA filters,', editorialClass: 'manufacturer-fact' },
+      { text: 'custom-coded by Rob Watts —', editorialClass: 'designer-statement' },
+      { text: 'a design philosophy that appears to prioritise timing and transient reconstruction.', editorialClass: 'audio-xx-interpretation' },
+    ],
   },
   {
     match: /\bjob\b/i,
-    origin: 'An integrated amplifier from JOB Electronics, built around the JOB 225 power stage.',
     source: { label: 'JOB / JobSys', url: 'https://jobsys.com/', evidenceClass: 'manufacturer' },
+    fragments: [
+      { text: 'An integrated amplifier from JOB Electronics, built around the JOB 225 power stage.', editorialClass: 'manufacturer-fact' },
+    ],
   },
   {
     match: /wlm|diva/i,
-    origin: 'A high-efficiency monitor from Wiener Lautsprecher Manufaktur (Austria) — an easy load in the Austrian tradition, at home with low-power and tube amplification.',
     source: { label: 'Wiener Lautsprecher Manufaktur', url: 'https://www.wiener-lautsprecher-manufaktur.com/en-speaker', evidenceClass: 'manufacturer' },
+    fragments: [
+      { text: 'A high-efficiency monitor from Wiener Lautsprecher Manufaktur (Austria) —', editorialClass: 'manufacturer-fact' },
+      { text: 'in the Austrian tradition of easy-to-drive designs, it should sit comfortably with low-power and tube amplification.', editorialClass: 'audio-xx-interpretation' },
+    ],
   },
 ];
 function franceEduFor(name: string): EduEntry | undefined {
   return FRANCE_EDU.find((e) => e.match.test(name));
 }
+function originText(e: EduEntry): string {
+  return e.fragments.map((f) => f.text).join(' ');
+}
 function dedupeSources(list: PrimarySource[]): PrimarySource[] {
   const seen = new Set<string>();
   return list.filter((s) => (seen.has(s.url) ? false : (seen.add(s.url), true)));
 }
-// Reinforce/oppose — Audio XX interpretation. Names only primary-sourced schools
-// (Chord's FPGA timing design; the Austrian high-efficiency speaker tradition).
-// No Goldmund/Swiss claim (not primary-sourced). Identity-consistent (affirms
-// resolution; does not claim detail is traded away).
-const FRANCE_REINFORCE_OPPOSE =
-  'Two design ideas meet here. The front end is built for timing and resolution — the Chord Hugo converts with a custom FPGA aimed at transient reconstruction — while the speaker follows the musicality-first, high-efficiency Austrian tradition. They pull in different directions, resolution against ease, and the system resolves it by letting the resolving stages govern the signal and giving the one warm voice the final word.';
+// Reinforce/oppose — Audio XX interpretation (synthesis). Framed explicitly as a
+// reading ("Read together…"), naming only primary-sourced schools; no Goldmund/
+// Swiss claim; identity-consistent (affirms resolution; does not claim detail is
+// traded away).
+const FRANCE_REINFORCE_OPPOSE: EditorialFragment = {
+  editorialClass: 'audio-xx-interpretation',
+  text: 'Two design ideas meet here: a front end oriented to timing and resolution — the Chord Hugo’s custom FPGA is aimed at transient reconstruction — and a speaker in the musicality-first, high-efficiency Austrian tradition. Read together, they appear to pull in different directions, resolution against ease, and the system holds the tension by letting the resolving stages lead and giving the one warm voice the final word.',
+};
 
 /**
  * Adapter — ArtifactPayload (+ optional raw result) → Canonical Assessment.
@@ -223,14 +260,23 @@ export function toCanonicalAssessment(payload: ArtifactPayload, raw?: any): Cano
 
   const components = (payload.componentCredit ?? []).map((name, i) => {
     const edu = franceEduFor(name);
-    return { name, photo: payload.componentPhotos?.[i] ?? null, origin: edu?.origin, source: edu?.source };
+    return { name, photo: payload.componentPhotos?.[i] ?? null, origin: edu ? originText(edu) : undefined, source: edu?.source };
   });
   const primarySources = dedupeSources(components.map((c) => c.source).filter(Boolean) as PrimarySource[]);
 
   // Reinforce/oppose only when both primary-sourced schools are present (France pairing).
   const hasChord = components.some((c) => /hugo/i.test(c.name));
   const hasWlm = components.some((c) => /wlm|diva/i.test(c.name));
-  const engineeringOut = hasChord && hasWlm ? [...engineering, FRANCE_REINFORCE_OPPOSE] : engineering;
+  const reinforceOppose = hasChord && hasWlm;
+  const engineeringOut = reinforceOppose ? [...engineering, FRANCE_REINFORCE_OPPOSE.text] : engineering;
+
+  // INTERNAL editorial ledger (never rendered): every educational fragment classified.
+  const editorial: EditorialFragment[] = [];
+  for (const name of payload.componentCredit ?? []) {
+    const edu = franceEduFor(name);
+    if (edu) for (const f of edu.fragments) editorial.push({ ...f, component: name });
+  }
+  if (reinforceOppose) editorial.push(FRANCE_REINFORCE_OPPOSE);
 
   // Correction: the Diva Monitor bookshelf is not a passive-radiator design
   // (founder-confirmed; primary sources indicate bass-reflex). Strip the
@@ -260,6 +306,7 @@ export function toCanonicalAssessment(payload: ArtifactPayload, raw?: any): Cano
       operatingCondition: operatingConditionOut,
     },
     evidence: { statement: EVIDENCE_STATEMENT, primarySources: primarySources.length ? primarySources : undefined },
+    editorial: editorial.length ? editorial : undefined,
   };
 }
 
