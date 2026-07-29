@@ -43,6 +43,12 @@ export default function Footer() {
               Privacy Policy
             </Link>
             <Link
+              href="/terms"
+              style={{ color: '#888', fontSize: '12.5px', whiteSpace: 'nowrap' }}
+            >
+              Terms
+            </Link>
+            <Link
               href="/affiliate-disclosure"
               style={{ color: '#888', fontSize: '12.5px', whiteSpace: 'nowrap' }}
             >

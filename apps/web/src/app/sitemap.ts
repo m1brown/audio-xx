@@ -7,7 +7,7 @@ import type { MetadataRoute } from 'next';
  */
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = 'https://audio-xx.com';
-  const paths = ['', '/how-it-works', '/glossary', '/resources', '/about', '/privacy', '/affiliate-disclosure'];
+  const paths = ['', '/how-it-works', '/glossary', '/resources', '/about', '/privacy', '/terms', '/affiliate-disclosure', '/publishers-reviewers'];
   return paths.map((p) => ({
     url: base + p,
     changeFrequency: 'monthly' as const,
