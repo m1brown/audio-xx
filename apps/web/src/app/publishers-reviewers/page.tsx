@@ -14,7 +14,15 @@ export default function PublishersReviewers() {
       <p className="mb-1">
         If you publish thoughtful work about audio — whether in print, on the
         web, YouTube, podcasts, newsletters, or elsewhere — we&rsquo;d love to
-        support and reference your work.
+        reference your work and help readers discover it.
+      </p>
+
+      <p className="mb-1">
+        We believe the future of audio should have more original voices, not
+        fewer. Audio&thinsp;XX isn&rsquo;t meant to replace thoughtful
+        publishing — we hope it encourages readers to discover the people,
+        publications, videos, podcasts, and conversations that have shaped this
+        hobby for decades.
       </p>
 
       <p className="mb-1">
