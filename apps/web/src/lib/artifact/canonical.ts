@@ -28,9 +28,27 @@ export interface AxisReading {
   position: number;
 }
 
+/** A primary-source reference (manufacturer / designer / manual). Never a
+ *  third-party reviewer, retailer, forum, or encyclopedia. */
+export interface PrimarySource {
+  label: string;
+  url: string;
+  /** manufacturer | designer | manual | technical */
+  evidenceClass: 'manufacturer' | 'designer' | 'manual' | 'technical';
+}
+
 export interface CanonicalAssessment {
   meta: { date: string; methodVersion?: string };
-  subject: { components: Array<{ name: string; photo?: { src: string; alt: string } | null }> };
+  subject: {
+    components: Array<{
+      name: string;
+      photo?: { src: string; alt: string } | null;
+      /** One concise origin/philosophy clause — primary-sourced or absent. */
+      origin?: string;
+      /** The primary source that licenses the origin clause. */
+      source?: PrimarySource;
+    }>;
+  };
   identity: {
     verdict: string;
     signature?: string;
@@ -45,7 +63,7 @@ export interface CanonicalAssessment {
     dominantCharacter?: string;
     operatingCondition?: string;
   };
-  evidence: { statement: string; references?: Array<{ n: number; text: string }> };
+  evidence: { statement: string; primarySources?: PrimarySource[] };
 }
 
 // ── Dominant Character invariant ─────────────────────────
@@ -73,11 +91,15 @@ export function validateDominantCharacter(line: string | undefined | null): stri
 }
 
 // ── tonal signature ──────────────────────────────────────
+// Three-axis Tonal Signature (v1). `airy_closed` is intentionally NOT plotted —
+// airiness is largely an emergent property (room, placement, recording), not a
+// stable system coordinate. The engine keeps `airy_closed` internally for prose
+// and future reasoning; spatial character is carried in words where the evidence
+// supports it, never as a fixed chart coordinate.
 const TONAL_AXES: Array<{ key: string; left: string; right: string; leftPole: string; rightPole: string }> = [
   { key: 'warm_bright', left: 'Warm', right: 'Bright', leftPole: 'warm', rightPole: 'bright' },
   { key: 'smooth_detailed', left: 'Smooth', right: 'Detailed', leftPole: 'smooth', rightPole: 'detailed' },
   { key: 'elastic_controlled', left: 'Elastic', right: 'Controlled', leftPole: 'elastic', rightPole: 'controlled' },
-  { key: 'airy_closed', left: 'Airy', right: 'Closed', leftPole: 'airy', rightPole: 'closed' },
 ];
 
 function tonalSignatureFromAxes(axes: Record<string, string> | undefined): AxisReading[] | undefined {
@@ -144,6 +166,49 @@ function splitEngineeringAndCondition(
   return { engineering: engineering.length ? engineering : caseParagraphs, operatingCondition: limitation };
 }
 
+// ── Educational layer (France only) ──────────────────────
+// Origin/philosophy clauses, keyed by product, licensed ONLY by primary sources
+// (manufacturer / designer). Products without a secured primary source get no
+// clause (graceful degradation) — never a reviewer/retailer/forum/consensus fact.
+// Entries exist only for the four France components; any other system degrades to
+// absent until its own primary sources are secured.
+interface EduEntry { match: RegExp; origin: string; source: PrimarySource; }
+const FRANCE_EDU: EduEntry[] = [
+  {
+    match: /eversolo/i,
+    origin: 'An all-in-one streaming DAC and preamplifier — source, conversion and control in one box.',
+    source: { label: 'Eversolo — DMP-A6', url: 'https://www.eversolo.com/Product/index/model/DMP-A6/target/7abWHw++oHhKKmVViAFMcQ==.html', evidenceClass: 'manufacturer' },
+  },
+  {
+    match: /hugo/i,
+    origin: 'A DAC and headphone amplifier from Chord Electronics (England); conversion by a custom FPGA with WTA filters, coded by Rob Watts — a design centred on timing and transient reconstruction.',
+    source: { label: 'Chord Electronics — Hugo', url: 'https://chordelectronics.co.uk/product/hugo', evidenceClass: 'designer' },
+  },
+  {
+    match: /\bjob\b/i,
+    origin: 'An integrated amplifier from JOB Electronics, built around the JOB 225 power stage.',
+    source: { label: 'JOB / JobSys', url: 'https://jobsys.com/', evidenceClass: 'manufacturer' },
+  },
+  {
+    match: /wlm|diva/i,
+    origin: 'A high-efficiency monitor from Wiener Lautsprecher Manufaktur (Austria) — an easy load in the Austrian tradition, at home with low-power and tube amplification.',
+    source: { label: 'Wiener Lautsprecher Manufaktur', url: 'https://www.wiener-lautsprecher-manufaktur.com/en-speaker', evidenceClass: 'manufacturer' },
+  },
+];
+function franceEduFor(name: string): EduEntry | undefined {
+  return FRANCE_EDU.find((e) => e.match.test(name));
+}
+function dedupeSources(list: PrimarySource[]): PrimarySource[] {
+  const seen = new Set<string>();
+  return list.filter((s) => (seen.has(s.url) ? false : (seen.add(s.url), true)));
+}
+// Reinforce/oppose — Audio XX interpretation. Names only primary-sourced schools
+// (Chord's FPGA timing design; the Austrian high-efficiency speaker tradition).
+// No Goldmund/Swiss claim (not primary-sourced). Identity-consistent (affirms
+// resolution; does not claim detail is traded away).
+const FRANCE_REINFORCE_OPPOSE =
+  'Two design ideas meet here. The front end is built for timing and resolution — the Chord Hugo converts with a custom FPGA aimed at transient reconstruction — while the speaker follows the musicality-first, high-efficiency Austrian tradition. They pull in different directions, resolution against ease, and the system resolves it by letting the resolving stages govern the signal and giving the one warm voice the final word.';
+
 /**
  * Adapter — ArtifactPayload (+ optional raw result) → Canonical Assessment.
  * Richer fields (tonal signature, operating condition, listening session) come
@@ -156,10 +221,23 @@ export function toCanonicalAssessment(payload: ArtifactPayload, raw?: any): Cano
   const limitation = limitations[0];
   const { engineering, operatingCondition } = splitEngineeringAndCondition(payload.caseParagraphs ?? [], limitation);
 
-  const components = (payload.componentCredit ?? []).map((name, i) => ({
-    name,
-    photo: payload.componentPhotos?.[i] ?? null,
-  }));
+  const components = (payload.componentCredit ?? []).map((name, i) => {
+    const edu = franceEduFor(name);
+    return { name, photo: payload.componentPhotos?.[i] ?? null, origin: edu?.origin, source: edu?.source };
+  });
+  const primarySources = dedupeSources(components.map((c) => c.source).filter(Boolean) as PrimarySource[]);
+
+  // Reinforce/oppose only when both primary-sourced schools are present (France pairing).
+  const hasChord = components.some((c) => /hugo/i.test(c.name));
+  const hasWlm = components.some((c) => /wlm|diva/i.test(c.name));
+  const engineeringOut = hasChord && hasWlm ? [...engineering, FRANCE_REINFORCE_OPPOSE] : engineering;
+
+  // Correction: the Diva Monitor bookshelf is not a passive-radiator design
+  // (founder-confirmed; primary sources indicate bass-reflex). Strip the
+  // unverified catalog detail rather than render a false claim.
+  const operatingConditionOut = operatingCondition
+    ? operatingCondition.replace(/\s*from the passive radiator\b/gi, '').replace(/\s{2,}/g, ' ')
+    : operatingCondition;
 
   const dominantCharacter = raw
     ? composeDominantCharacter(raw)
@@ -176,12 +254,12 @@ export function toCanonicalAssessment(payload: ArtifactPayload, raw?: any): Cano
     },
     guidance: { recommendation: payload.recommendation, oneCost: payload.cost },
     reading: {
-      engineering,
+      engineering: engineeringOut,
       listeningSession: raw ? composeListeningSession(raw, payload.recognition) : [],
       dominantCharacter,
-      operatingCondition,
+      operatingCondition: operatingConditionOut,
     },
-    evidence: { statement: EVIDENCE_STATEMENT },
+    evidence: { statement: EVIDENCE_STATEMENT, primarySources: primarySources.length ? primarySources : undefined },
   };
 }
 

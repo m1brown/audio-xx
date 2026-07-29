@@ -73,6 +73,14 @@ export default function AssessmentArtifact(
           </ul>
         )}
 
+        {a.subject.components.some((c) => c.origin) && (
+          <ul className="axa-origins" aria-label="Component origins">
+            {a.subject.components.filter((c) => c.origin).map((c, i) => (
+              <li key={i}><b>{c.name}</b> — {c.origin}</li>
+            ))}
+          </ul>
+        )}
+
         {/* Verdict — the centre of gravity */}
         <div className="axa-verdictwrap">
           <span className="axa-rule" aria-hidden="true" />
@@ -135,6 +143,14 @@ export default function AssessmentArtifact(
         )}
 
         <p className="axa-evidence">{a.evidence.statement}</p>
+        {a.evidence.primarySources && a.evidence.primarySources.length > 0 && (
+          <p className="axa-sources">
+            <span className="k">Primary sources</span>
+            {a.evidence.primarySources.map((s, i) => (
+              <a key={i} href={s.url} target="_blank" rel="noopener noreferrer nofollow">{s.label}</a>
+            ))}
+          </p>
+        )}
         <p className="axa-colophon">Audio XX · System Assessment · {a.meta.date}</p>
       </article>
 
@@ -205,6 +221,12 @@ const AXA_CSS = `
 .axa-cond .axa-p{font-size:14.5px;margin:0}
 .axa-evidence{margin-top:36px;border-top:1px solid var(--hairline);padding-top:14px;font-family:var(--serif);font-style:italic;font-size:13.5px;line-height:1.55;color:var(--ink-muted);text-wrap:pretty}
 .axa-colophon{margin-top:16px;font-family:var(--grot);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+.axa-origins{list-style:none;padding:0;margin:16px 0 0;display:flex;flex-direction:column;gap:8px}
+.axa-origins li{font-size:12.5px;line-height:1.5;color:var(--ink-muted)}
+.axa-origins li b{color:var(--ink);font-weight:600;font-family:var(--serif)}
+.axa-sources{margin-top:12px;font-family:var(--grot);font-size:10px;color:var(--ink-faint);display:flex;flex-wrap:wrap;gap:5px 16px;align-items:baseline}
+.axa-sources .k{text-transform:uppercase;letter-spacing:.16em}
+.axa-sources a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in oklab,var(--accent) 40%,transparent)}
 .axa-embedded{max-width:none;padding-left:0;padding-right:0;background:transparent}
 @media (max-width:560px){
   .axa-strip{grid-template-columns:repeat(2,1fr)}
