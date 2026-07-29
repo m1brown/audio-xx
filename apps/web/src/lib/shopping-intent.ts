@@ -1628,6 +1628,12 @@ export function detectShoppingIntent(
       const utter = latestMessage.toLowerCase();
       const isRequest = /\b(recommend|recommendation|suggest|suggestion|looking for|other|another|more|which|what|any|options?|alternatives?)\b/.test(utter);
       if (isRequest) {
+        // Mirror the base detector's CATEGORY_PATTERNS scan order so an explicit
+        // request resolves to the SAME class the detector would pick — this
+        // order encodes head-final compound knowledge ("headphone amp" is an
+        // amplifier, not headphones). KNOWN LIMITATION (backlog, G3): a category
+        // named in a SEPARATE trailing clause ("...to feed my DAC") is not
+        // distinguished from the request head noun; see routing-doctrine.md.
         for (const pat of CATEGORY_PATTERNS) {
           if (pat._patterns.some((re) => re.test(utter))) { requestedCategory = pat.category; break; }
         }
