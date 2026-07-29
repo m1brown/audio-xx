@@ -26,7 +26,7 @@ import { buildDecisionFrame } from '@/lib/decision-frame';
 import { getClarificationQuestion } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { tryBetaInterceptRouting } from '@/lib/beta-intent-routing';
-import { detectShoppingIntent, buildShoppingAnswer, getShoppingClarification, parseBudgetAmount, detectSelectionMode, detectExplicitCategorySwitch, extractPriorityCategory, type PreviousAnchor, type SelectionMode } from '@/lib/shopping-intent';
+import { detectShoppingIntent, buildShoppingAnswer, validateShoppingAnswer, getShoppingClarification, parseBudgetAmount, detectSelectionMode, detectExplicitCategorySwitch, extractPriorityCategory, type PreviousAnchor, type SelectionMode } from '@/lib/shopping-intent';
 import {
   createEmptyListenerProfile,
   detectPreferenceSignals,
@@ -3905,7 +3905,12 @@ export default function Home() {
           // keywords from overriding the active category on clarification,
           // preference, budget, or follow-up turns.
           const lockedCategory = activeShoppingCategoryRef.current;
-          if (lockedCategory && lockedCategory !== 'general' && !explicitCategorySwitch) {
+          // TYPED CONSTRAINT: an explicit product class named in the current
+          // utterance (shoppingCtx.requestedCategory) is immutable and must win
+          // over the carried-forward lock. Without this guard, "what other
+          // streamers would you recommend?" was force-relabelled to a stale
+          // 'dac' lock and answered with DAC education + DAC picks.
+          if (lockedCategory && lockedCategory !== 'general' && !explicitCategorySwitch && !shoppingCtx.requestedCategory) {
             if (shoppingCtx.category !== lockedCategory) {
               console.log('[category-lock]', {
                 overridden: shoppingCtx.category,
@@ -3914,6 +3919,13 @@ export default function Home() {
               });
               shoppingCtx.category = lockedCategory;
             }
+          } else if (shoppingCtx.requestedCategory && lockedCategory && lockedCategory !== shoppingCtx.requestedCategory) {
+            // Explicit class this turn overrides the stale lock and re-arms it.
+            console.log('[category-lock] explicit requestedCategory overrides lock', {
+              requested: shoppingCtx.requestedCategory, wasLocked: lockedCategory,
+            });
+            shoppingCtx.category = shoppingCtx.requestedCategory;
+            activeShoppingCategoryRef.current = shoppingCtx.requestedCategory;
           } else if (shoppingCtx.category === 'general' && saved.category && saved.category !== 'general') {
             // Legacy fallback for first-time carry-forward before lock is set
             shoppingCtx.category = saved.category;
@@ -4056,6 +4068,46 @@ export default function Home() {
             console.log('[shopping-empty] no products for %s — knowledge-lane fallback', shoppingCtx.category);
             runKnowledgeLane();
             return;
+          }
+
+          // ── FINAL FAIL-CLOSED VALIDATOR ───────────────────
+          // Last line of defense for the licensed-category invariant (the
+          // streamer→DAC production failure). If the composed answer violates
+          // the class the user is entitled to — wrong resolved category, a
+          // preamble for a different class, or a cross-class product — we do
+          // NOT render it. Hard violations withhold and re-route to the
+          // knowledge lane rather than emit a mis-directed recommendation.
+          {
+            const validation = validateShoppingAnswer(
+              shoppingCtx,
+              answer,
+              advisoryCtx.systemComponents ?? [],
+            );
+            if (validation.soft.length > 0) {
+              console.warn('[shopping-validate] soft', validation.soft);
+            }
+            if (!validation.ok) {
+              console.error('[shopping-validate] HARD violation — withholding answer', {
+                category: shoppingCtx.category,
+                requestedCategory: shoppingCtx.requestedCategory,
+                violations: validation.hard,
+              });
+              // Remove any out-of-class products; if a conforming subset
+              // survives AND the only violations were product-level, render the
+              // cleaned set. Otherwise fail closed to the knowledge lane.
+              const onlyProductViolations = validation.hard.every(
+                (v) => v.code === 'product-out-of-class',
+              );
+              if (onlyProductViolations && validation.conformingProducts.length > 0) {
+                console.warn('[shopping-validate] rendering %d conforming products (dropped %d out-of-class)',
+                  validation.conformingProducts.length,
+                  answer.productExamples.length - validation.conformingProducts.length);
+                answer.productExamples = validation.conformingProducts;
+              } else {
+                runKnowledgeLane();
+                return;
+              }
+            }
           }
 
           // ── Debug: final product list ──────────────────

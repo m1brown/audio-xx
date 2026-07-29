@@ -375,6 +375,14 @@ export interface ShoppingContext {
   detected: boolean;
   mode: ShoppingMode;
   category: ShoppingCategory;
+  /**
+   * TYPED IMMUTABLE CONSTRAINT — the product class explicitly named in the
+   * CURRENT utterance ("what other streamers would you recommend?"). When set,
+   * it must win over any carried-forward fallback/lock, and every recommendation
+   * and educational block must conform to it (enforced by validateShoppingCategory).
+   * Undefined when the user named no class this turn.
+   */
+  requestedCategory?: ShoppingCategory;
   /** Finer classification within category. */
   subcategory?: ShoppingSubcategory;
   /** When the user asks for multiple categories ("amp and dac"), the
@@ -1569,6 +1577,7 @@ export function detectShoppingIntent(
   // Cable modifiers must be detected first to prevent "speaker cable"
   // from matching the 'speaker' keyword in CATEGORY_PATTERNS.
   let category: ShoppingCategory = 'general';
+  let requestedCategory: ShoppingCategory | undefined;
   let subcategory: ShoppingSubcategory = undefined;
   const isCableRequest = CABLE_MODIFIER_PATTERNS.some((p) => p.test(userText));
   if (isCableRequest) {
@@ -1606,6 +1615,26 @@ export function detectShoppingIntent(
         }
       }
     }
+    // TYPED IMMUTABLE CONSTRAINT: an explicit product-class REQUEST in the
+    // CURRENT message must win over any carried-forward fallback/lock. Scoped
+    // narrowly to avoid re-introducing the stale-keyword bug the lock prevents:
+    //   - only the current `latestMessage` (never accumulated allUserText);
+    //   - only request-shaped phrasing ("recommend/suggest/looking for/other/
+    //     another/which/what … <category>"), NOT an incidental mention
+    //     ("the turntable sounds bright") — that stays suppressed by the lock.
+    // Fixes: "what other streamers would you recommend?" was force-relabelled to
+    // a stale 'dac' lock because noun-first requests aren't caught as switches.
+    if (latestMessage) {
+      const utter = latestMessage.toLowerCase();
+      const isRequest = /\b(recommend|recommendation|suggest|suggestion|looking for|other|another|more|which|what|any|options?|alternatives?)\b/.test(utter);
+      if (isRequest) {
+        for (const pat of CATEGORY_PATTERNS) {
+          if (pat._patterns.some((re) => re.test(utter))) { requestedCategory = pat.category; break; }
+        }
+      }
+      if (requestedCategory) category = requestedCategory;
+    }
+
     // Fall back: prefer carried-forward category over scanning allUserText.
     // This prevents stale category keywords in historical messages from
     // overriding the user's active category (e.g. user discussed DACs
@@ -1731,6 +1760,7 @@ export function detectShoppingIntent(
     detected,
     mode,
     category,
+    requestedCategory,
     subcategory,
     secondaryCategory,
     budgetMentioned: budgetMentioned || budgetFloor !== null,
@@ -2656,6 +2686,165 @@ import { findCatalogProduct, resolveProductAlias } from './listener-profile';
 import { tagProductArchetype } from './archetype';
 import { topTraits, type TasteProfile as UserTasteProfile, type ProfileTraitKey } from './taste-profile';
 import type { ReasoningResult } from './reasoning';
+
+// ── Final answer validator (fail-closed licensed-category gate) ──────────
+//
+// The routing layer resolves the licensed category BEFORE an answer is built
+// (see `requestedCategory` in detectShoppingIntent + the page category-lock).
+// This validator is the LAST line of defense: a pure, deterministic check that
+// the composed answer actually conforms to the class the user is entitled to.
+// It fails closed — the caller must NOT render an answer with any hard
+// violation; it withholds and re-routes instead of emitting a mis-directed one.
+//
+// Founder invariant (streamer→DAC production failure): "When the user
+// explicitly requests a product class, that class is a typed, immutable
+// constraint. Every educational block and recommendation must conform to it."
+
+/** Map a catalog Product.category to the top-level ShoppingCategory it belongs
+ *  to. Returns null when the mapping is ambiguous/curated (e.g. 'other') so the
+ *  validator SKIPS it rather than raising a false violation. */
+function catalogCategoryToShopping(cat: string | undefined): ShoppingCategory | null {
+  if (!cat) return null;
+  switch (cat) {
+    case 'dac':
+    case 'standalone-dac':
+    case 'portable-dac':
+    case 'dac-amp':
+    case 'dac-preamp':
+      return 'dac';
+    case 'amplifier':
+    case 'integrated-amp':
+    case 'power-amp':
+    case 'preamp':
+      return 'amplifier';
+    case 'speaker':
+    case 'floorstanding':
+    case 'standmount':
+    case 'bookshelf':
+      return 'speaker';
+    case 'headphone':
+    case 'headphone-amp':
+    case 'iem':
+      return 'headphone';
+    case 'streamer':
+    case 'transport':
+    case 'network-player':
+      return 'streamer';
+    case 'turntable':
+    case 'cartridge':
+    case 'phono':
+      return 'turntable';
+    default:
+      return null; // 'other' / unknown — not verifiable, do not flag
+  }
+}
+
+export type ShoppingViolationCode =
+  | 'category-mismatch' // resolved category != explicitly licensed category
+  | 'preamble-mismatch' // educational preamble label != resolved category
+  | 'product-out-of-class' // a recommended product is a different class
+  | 'system-component-dropped'; // active system entirely unacknowledged
+
+export interface ShoppingAnswerValidation {
+  ok: boolean;
+  /** Violations that MUST prevent rendering the answer as-is (fail closed). */
+  hard: Array<{ code: ShoppingViolationCode; detail: string }>;
+  /** Advisory-quality issues — logged, but not a reason to withhold. */
+  soft: Array<{ code: ShoppingViolationCode; detail: string }>;
+  /** Product examples with any out-of-class member removed. When this is empty
+   *  but the input had products, the whole answer must be withheld. */
+  conformingProducts: ProductExample[];
+}
+
+/**
+ * Validate a composed shopping answer against the licensed category.
+ * Pure and deterministic — safe to unit-test and to call on the render path.
+ */
+export function validateShoppingAnswer(
+  ctx: ShoppingContext,
+  answer: ShoppingAnswer,
+  activeSystemComponents: string[] = [],
+): ShoppingAnswerValidation {
+  const hard: ShoppingAnswerValidation['hard'] = [];
+  const soft: ShoppingAnswerValidation['soft'] = [];
+
+  // The licensed class is the explicitly-requested category when the user named
+  // one this turn; otherwise the resolved category carries the constraint.
+  const licensed = ctx.requestedCategory;
+  const enforced: ShoppingCategory = licensed ?? ctx.category;
+
+  // (A) Licensed-class coherence: an explicit request MUST equal the resolved
+  //     category. If they diverge, retrieval + education were built for the
+  //     wrong class — the exact streamer→DAC failure. Fail closed.
+  if (licensed && ctx.category !== licensed) {
+    hard.push({
+      code: 'category-mismatch',
+      detail: `licensed=${licensed} but resolved category=${ctx.category}`,
+    });
+  }
+
+  // (B) Educational preamble label must match the resolved category. The
+  //     preamble is keyed off ctx.category via CATEGORY_LABELS, so a mismatch
+  //     means the composed answer's own category field drifted. Fail closed.
+  const expectedLabel = CATEGORY_LABELS[ctx.category] ?? 'component';
+  if (answer.category !== expectedLabel) {
+    hard.push({
+      code: 'preamble-mismatch',
+      detail: `answer.category="${answer.category}" expected="${expectedLabel}"`,
+    });
+  }
+
+  // (C) Every recommended product must belong to the enforced class. Products
+  //     whose catalog class is unverifiable (curated lists, 'other') are left
+  //     untouched — we only remove genuine cross-class members.
+  const conformingProducts: ProductExample[] = [];
+  if (enforced !== 'general') {
+    for (const p of answer.productExamples ?? []) {
+      const hit =
+        findCatalogProduct(p.id ?? p.name) ??
+        findCatalogProduct(`${p.brand} ${p.name}`) ??
+        findCatalogProduct(p.name);
+      const pClass = catalogCategoryToShopping((hit as { category?: string } | null)?.category);
+      if (pClass && pClass !== enforced) {
+        hard.push({
+          code: 'product-out-of-class',
+          detail: `${p.brand} ${p.name} is ${pClass}, licensed ${enforced}`,
+        });
+        continue; // drop the offender from the conforming set
+      }
+      conformingProducts.push(p);
+    }
+  } else {
+    conformingProducts.push(...(answer.productExamples ?? []));
+  }
+
+  // (D) Active-system component silently dropped. Narrow, log-only (soft): only
+  //     when an explicit multi-component system exists AND not a single one of
+  //     its components is acknowledged anywhere in the answer prose. This is an
+  //     advisory-quality signal, not a class violation — never withhold on it.
+  if (activeSystemComponents.length >= 2) {
+    const haystack = [
+      answer.systemNote ?? '',
+      answer.bestFitDirection ?? '',
+      ...(answer.whyThisFits ?? []),
+      ...(answer.productExamples ?? []).map((p) => `${p.brand} ${p.name} ${p.fitNote ?? ''}`),
+    ]
+      .join(' ')
+      .toLowerCase();
+    const anyAcknowledged = activeSystemComponents.some((c) => {
+      const token = c.trim().toLowerCase();
+      return token.length >= 3 && haystack.includes(token);
+    });
+    if (!anyAcknowledged) {
+      soft.push({
+        code: 'system-component-dropped',
+        detail: `active system [${activeSystemComponents.join(', ')}] unacknowledged in answer`,
+      });
+    }
+  }
+
+  return { ok: hard.length === 0, hard, soft, conformingProducts };
+}
 
 /**
  * Extract the key opening phrase from a tendency description.
