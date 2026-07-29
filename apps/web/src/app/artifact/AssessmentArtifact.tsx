@@ -120,10 +120,10 @@ export default function AssessmentArtifact(
           </section>
         )}
 
-        {a.reading.oneTrueThing && (
-          <section className="axa-otts">
-            <p className="k">One true thing</p>
-            <blockquote>{a.reading.oneTrueThing}</blockquote>
+        {a.reading.dominantCharacter && (
+          <section className="axa-char">
+            <p className="k">Dominant character</p>
+            <blockquote>{a.reading.dominantCharacter}</blockquote>
           </section>
         )}
 
@@ -159,9 +159,11 @@ const AXA_CSS = `
   --serif:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,serif;
   --grot:ui-sans-serif,-apple-system,'Helvetica Neue','Segoe UI',Arial,sans-serif;
   background:var(--ground); color:var(--ink); font-family:var(--serif);
-  max-width:640px; margin:0 auto; padding:clamp(24px,5vw,56px) clamp(20px,5vw,64px) 44px;
-  -webkit-font-smoothing:antialiased;
+  width:100%; max-width:640px; margin:0 auto; padding:clamp(20px,5vw,56px) clamp(16px,5vw,64px) 44px;
+  box-sizing:border-box; overflow-wrap:break-word; -webkit-font-smoothing:antialiased;
 }
+.axa-root *{box-sizing:border-box;min-width:0}
+.axa-root img{max-width:100%;height:auto}
 @media (prefers-color-scheme:dark){ .axa-root{ --ground:#221F1A; --panel:#2A2620; --ink:#EDE6D8; --ink-muted:#B4AC9E; --ink-faint:#867E70; --accent:#E8628B; --hairline:#3A362E; } }
 .axa-ident{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--hairline);padding-bottom:8px;margin-bottom:28px}
 .axa-ident .who{font-family:var(--grot);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-muted)}
@@ -196,17 +198,22 @@ const AXA_CSS = `
 .axa-reco{font-family:var(--serif);font-size:18px;line-height:1.32;margin:0}
 .axa-cost{font-size:14px;line-height:1.55;color:var(--ink-muted);font-style:italic;margin:8px 0 0}
 .axa-divider{border:0;border-top:1px solid var(--hairline);max-width:100%;margin:30px 0 4px}
-.axa-otts{margin:30px 0;padding:20px 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--hairline)}
-.axa-otts .k{font-family:var(--grot);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin:0 0 11px}
-.axa-otts blockquote{margin:0;font-family:var(--serif);font-size:clamp(21px,3vw,24px);line-height:1.28;letter-spacing:-.01em;text-wrap:balance}
+.axa-char{margin:30px 0;padding:20px 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--hairline)}
+.axa-char .k{font-family:var(--grot);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 11px}
+.axa-char blockquote{margin:0;font-family:var(--serif);font-size:clamp(20px,3vw,23px);line-height:1.3;letter-spacing:-.01em;text-wrap:pretty}
 .axa-cond{background:var(--panel);border:1px solid var(--hairline);border-radius:2px;padding:14px 16px;margin-top:6px}
 .axa-cond .axa-p{font-size:14.5px;margin:0}
 .axa-evidence{margin-top:36px;border-top:1px solid var(--hairline);padding-top:14px;font-family:var(--serif);font-style:italic;font-size:13.5px;line-height:1.55;color:var(--ink-muted);text-wrap:pretty}
 .axa-colophon{margin-top:16px;font-family:var(--grot);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
 .axa-embedded{max-width:none;padding-left:0;padding-right:0;background:transparent}
-@media (max-width:520px){
+@media (max-width:560px){
   .axa-strip{grid-template-columns:repeat(2,1fr)}
-  .axa-axis{grid-template-columns:52px 1fr 52px}
+  .axa-axis{grid-template-columns:50px 1fr 50px;gap:8px}
+  .axa-axis span{font-size:9px}
+  .axa-ident{flex-wrap:wrap;gap:4px 12px}
+}
+@media (max-width:360px){
+  .axa-axis{grid-template-columns:46px 1fr 46px}
 }
 @media print{
   .axa-root{background:#fff;color:#000;max-width:100%}

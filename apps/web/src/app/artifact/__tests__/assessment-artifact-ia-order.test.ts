@@ -15,7 +15,7 @@ import AssessmentArtifact from '../AssessmentArtifact';
 import { extractSubjectMatches, detectIntent } from '@/lib/intent';
 import { buildSystemAssessment } from '@/lib/consultation';
 import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
-import { toCanonicalAssessment, validateOneTrueThing, EVIDENCE_STATEMENT } from '@/lib/artifact/canonical';
+import { toCanonicalAssessment, validateDominantCharacter, EVIDENCE_STATEMENT } from '@/lib/artifact/canonical';
 
 const FRANCE = 'Assess my system: Eversolo DMP-A6, Chord Hugo, JOB Integrated, WLM Diva Monitor';
 
@@ -48,7 +48,7 @@ describe('Assessment Renderer — France web artifact', () => {
     const iRecommend = html.indexOf(cam.guidance.recommendation);
     const iEng = html.indexOf(cam.reading.engineering[0].slice(0, 24));
     const iListen = html.indexOf(cam.reading.listeningSession[0].slice(0, 24));
-    const iOtt = html.indexOf(esc(cam.reading.oneTrueThing!));
+    const iOtt = html.indexOf(esc(cam.reading.dominantCharacter!));
     const iCond = html.indexOf(cam.reading.operatingCondition!.slice(0, 24));
     const iEvidence = html.indexOf(EVIDENCE_STATEMENT);
 
@@ -82,9 +82,14 @@ describe('Assessment Renderer — France web artifact', () => {
     expect(html).not.toContain('axx-cls'); // no evidence-class chips
   });
 
-  it('the rendered One True Thing obeys the invariant', () => {
+  it('renders the Dominant Character section (not "One True Thing"), obeying the invariant', () => {
     const cam = franceCam();
-    expect(validateOneTrueThing(cam.reading.oneTrueThing)).toEqual([]);
-    expect(render(cam)).toContain(esc(cam.reading.oneTrueThing!));
+    const html = render(cam);
+    expect(validateDominantCharacter(cam.reading.dominantCharacter)).toEqual([]);
+    expect(html).toContain(esc(cam.reading.dominantCharacter!));
+    expect(html).toContain('Dominant character');
+    expect(html.toLowerCase()).not.toContain('one true thing');
+    // no teleology in the rendered line
+    expect(html.toLowerCase()).not.toMatch(/meant to|intended to/);
   });
 });

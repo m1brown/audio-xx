@@ -41,25 +41,32 @@ export interface CanonicalAssessment {
   reading: {
     engineering: string[];
     listeningSession: string[];
-    oneTrueThing?: string;
+    /** The single dominant characteristic — descriptive, not an argument or slogan. */
+    dominantCharacter?: string;
     operatingCondition?: string;
   };
   evidence: { statement: string; references?: Array<{ n: number; text: string }> };
 }
 
-// ── One True Thing invariant ─────────────────────────────
-// It states one observation and stops. It may not justify, explain, qualify, or
-// argue for itself. Disallow causal continuations; keep it a single sentence.
-const OTT_JUSTIFICATION_RE =
+// ── Dominant Character invariant ─────────────────────────
+// The distilled dominant characteristic someone remembers after reading — a
+// single sentence that ELABORATES the immutable identity. It may not argue,
+// explain itself, or infer unverified designer/listener intent (teleology).
+const DC_JUSTIFICATION_RE =
   /\b(because|therefore|thus|hence|consequently|as a result|which is why|that['’]s why|so that|in order to)\b/i;
+// Teleological claims — intended outcome / designer intent — are not licensed
+// without a cited primary source, which the artifact does not carry inline.
+const DC_TELEOLOGY_RE =
+  /\b(meant to|meant for|intended to|intended for|designed to|built to|made to|aims to|wants to|so you (?:can|hear|get)|for you to|the way it['’]s meant)\b/i;
 
-/** Returns the failed-check names; empty array = a valid One True Thing. */
-export function validateOneTrueThing(line: string | undefined | null): string[] {
+/** Returns the failed-check names; empty array = a valid Dominant Character. */
+export function validateDominantCharacter(line: string | undefined | null): string[] {
   const fails: string[] = [];
   const t = (line ?? '').trim();
   if (!t) { fails.push('empty'); return fails; }
-  if (OTT_JUSTIFICATION_RE.test(t)) fails.push('justifies');
-  // One observation, one sentence: reject a second full sentence.
+  if (DC_JUSTIFICATION_RE.test(t)) fails.push('justifies');
+  if (DC_TELEOLOGY_RE.test(t)) fails.push('teleology');
+  // One characteristic, one sentence: reject a second full sentence.
   const sentences = t.split(/[.!?](?:\s+|$)/).map((s) => s.trim()).filter(Boolean);
   if (sentences.length > 1) fails.push('multi-sentence');
   return fails;
@@ -106,13 +113,24 @@ function composeListeningSession(raw: any, recognition: string): string[] {
   return [first, second];
 }
 
-function composeOneTrueThing(raw: any): string {
+/** The distilled dominant characteristic — descriptive, grounded in the committed
+ *  identity, no teleology. Deterministic fallback (a future A3 pass may propose a
+ *  richer line, validated against the same rules). */
+function composeDominantCharacter(raw: any): string {
+  const axes: Record<string, string> = raw?.findings?.systemAxes ?? {};
   const voiced = findVoicedComponent(raw);
-  const line = voiced
-    ? `The only warm voice in this system is the one you're meant to hear.`
-    : `Every component here is pointed the same way.`;
+  let line: string;
+  if (voiced && axes.smooth_detailed === 'detailed') {
+    line = `Warmth enters at the final stage, without obscuring the system's resolution.`;
+  } else if (axes.smooth_detailed === 'detailed') {
+    line = `Resolution leads, and the rest of the system is arranged to keep it clean.`;
+  } else if (axes.warm_bright === 'warm') {
+    line = `Warmth runs through the whole system, tone placed ahead of edge.`;
+  } else {
+    line = `No single quality dominates; the system holds a considered balance.`;
+  }
   // Guarantee the invariant on the fallback itself.
-  return validateOneTrueThing(line).length === 0 ? line : `A system that speaks with one voice.`;
+  return validateDominantCharacter(line).length === 0 ? line : `A system with one clear character.`;
 }
 
 /** Split the engine's case paragraphs from the operating-condition paragraph. */
@@ -143,9 +161,9 @@ export function toCanonicalAssessment(payload: ArtifactPayload, raw?: any): Cano
     photo: payload.componentPhotos?.[i] ?? null,
   }));
 
-  const oneTrueThing = raw
-    ? composeOneTrueThing(raw)
-    : (payload.pullQuote && validateOneTrueThing(payload.pullQuote).length === 0 ? payload.pullQuote : undefined);
+  const dominantCharacter = raw
+    ? composeDominantCharacter(raw)
+    : (payload.pullQuote && validateDominantCharacter(payload.pullQuote).length === 0 ? payload.pullQuote : undefined);
 
   return {
     meta: { date: payload.date, methodVersion: payload.edition },
@@ -160,7 +178,7 @@ export function toCanonicalAssessment(payload: ArtifactPayload, raw?: any): Cano
     reading: {
       engineering,
       listeningSession: raw ? composeListeningSession(raw, payload.recognition) : [],
-      oneTrueThing,
+      dominantCharacter,
       operatingCondition,
     },
     evidence: { statement: EVIDENCE_STATEMENT },

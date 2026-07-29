@@ -9,7 +9,7 @@ import { buildSystemAssessment } from '@/lib/consultation';
 import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
 import {
   toCanonicalAssessment,
-  validateOneTrueThing,
+  validateDominantCharacter,
   EVIDENCE_STATEMENT,
 } from '@/lib/artifact/canonical';
 
@@ -33,7 +33,7 @@ describe('CAM adapter — France reference', () => {
     expect(cam.guidance.recommendation).toBeTruthy();
     expect(cam.reading.engineering.length).toBeGreaterThan(0);
     expect(cam.reading.listeningSession.length).toBe(2);
-    expect(cam.reading.oneTrueThing).toBeTruthy();
+    expect(cam.reading.dominantCharacter).toBeTruthy();
     expect(cam.reading.operatingCondition).toBeTruthy();
     expect(cam.evidence.statement).toBe(EVIDENCE_STATEMENT);
   });
@@ -54,9 +54,12 @@ describe('CAM adapter — France reference', () => {
     expect(cam.reading.engineering.join(' ').toLowerCase()).not.toMatch(/moderate placement sensitivity/);
   });
 
-  it('One True Thing obeys the invariant (observation, one sentence, no justification)', () => {
+  it('Dominant Character is grounded, descriptive, and obeys the invariant', () => {
     const { cam } = franceCanonical();
-    expect(validateOneTrueThing(cam.reading.oneTrueThing)).toEqual([]);
+    expect(cam.reading.dominantCharacter).toBe(
+      "Warmth enters at the final stage, without obscuring the system's resolution.",
+    );
+    expect(validateDominantCharacter(cam.reading.dominantCharacter)).toEqual([]);
   });
 
   it('degrades gracefully from payload alone (no raw): no tonal signature, still valid', () => {
@@ -68,20 +71,25 @@ describe('CAM adapter — France reference', () => {
   });
 });
 
-describe('validateOneTrueThing', () => {
-  it('accepts a pure observation', () => {
-    expect(validateOneTrueThing("The only warm voice in this system is the one you're meant to hear.")).toEqual([]);
+describe('validateDominantCharacter', () => {
+  it('accepts a grounded, descriptive characteristic', () => {
+    expect(validateDominantCharacter("Warmth enters at the final stage, without obscuring the system's resolution.")).toEqual([]);
+    expect(validateDominantCharacter('Resolution leads, and the rest of the system keeps it clean.')).toEqual([]);
+  });
+  it('rejects teleology — unverified designer/listener intent', () => {
+    expect(validateDominantCharacter("The only warm voice is the one you're meant to hear.")).toContain('teleology');
+    expect(validateDominantCharacter('A tuning intended to flatter vocals.')).toContain('teleology');
+    expect(validateDominantCharacter('Designed to disappear into the room.')).toContain('teleology');
   });
   it('rejects causal justification', () => {
-    expect(validateOneTrueThing('A detail rig, because the warmth is placed at the speaker.')).toContain('justifies');
-    expect(validateOneTrueThing('It resolves, therefore it satisfies.')).toContain('justifies');
-    expect(validateOneTrueThing("That's why it works.")).toContain('justifies');
+    expect(validateDominantCharacter('A detail rig, because the warmth sits at the speaker.')).toContain('justifies');
+    expect(validateDominantCharacter('It resolves, therefore it satisfies.')).toContain('justifies');
   });
-  it('rejects a second sentence (it must state one thing and stop)', () => {
-    expect(validateOneTrueThing('It is detailed. It is also warm.')).toContain('multi-sentence');
+  it('rejects a second sentence (one characteristic, then stop)', () => {
+    expect(validateDominantCharacter('It is detailed. It is also warm.')).toContain('multi-sentence');
   });
   it('rejects empty', () => {
-    expect(validateOneTrueThing('')).toContain('empty');
-    expect(validateOneTrueThing(undefined)).toContain('empty');
+    expect(validateDominantCharacter('')).toContain('empty');
+    expect(validateDominantCharacter(undefined)).toContain('empty');
   });
 });
