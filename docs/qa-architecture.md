@@ -1,6 +1,12 @@
 # QA Architecture — Four Release Gates
 
 Status: **governing** · Established: Stabilization Gate 1 (2026-07-30) · Owner: engine/product
+Extended by: **Engineering Operating Doctrine v1** (2026-07-30) — severity model,
+root-cause report format, release vocabulary, escape analysis (§ below).
+
+Roles: founder = product owner · Claude = implementation engineer, QA lead,
+release manager · ChatGPT = architectural reviewer, final release reviewer.
+The product owner should not have to discover regressions manually.
 
 Audio XX is live. The objective of QA is no longer proving the engine correct —
 it is ensuring **every release preserves the product itself**. A passing
@@ -55,6 +61,28 @@ pixel-diff (1% tolerance). Adopt intended changes with
 `npm run qa:regress:visual -- --update-snapshots` — adoption is a **reviewed
 act**, named in the release report, never a reflex to a red diff.
 
+## Severity model (Operating Doctrine v1)
+
+Every issue is classified before disposition:
+
+| Severity | Meaning | Release consequence |
+|---|---|---|
+| **Blocker** | Incorrect advice · broken assessment · wrong routing · corrupt graph · missing required artifact element · data loss · unsafe production behaviour | Production must not proceed |
+| **Major** | Visible degradation · broken workflow · incorrect layout · missing CTA · important mobile regression | Promotion only with explicit product-owner approval |
+| **Minor** | Cosmetic: spacing, typography, copy | Backlog acceptable |
+| **Backlog** | Enhancement, future improvement, design exploration | Never inflated into a blocker |
+
+## Root-cause report format (every regression)
+
+Problem · Root cause · Affected files · **Why existing tests missed it** ·
+Fix · Tests added · Residual risk · Confidence.
+
+## Escape analysis (when a regression reaches production)
+
+Identify: (1) why it escaped; (2) which release gate should have caught it;
+(3) what new protection prevents recurrence. Improving the release process is
+part of the implementation, not separate work.
+
 ## Release report standard
 
 Every production release report must contain, in order:
@@ -65,7 +93,18 @@ Every production release report must contain, in order:
 4. **UX gate** — per width, with any deferred items named
 5. **Visual evidence** — screenshots or baseline-diff results
 6. **Known limitations** — explicitly listed, each with disposition
-7. **Production recommendation** — promote / hold, with reason
+7. **Production recommendation** — with reason
+
+…closing with the gate table:
+
+```
+| Gate    | Status | Confidence | Notes |
+```
+
+plus the **top three remaining risks**. Recommendations use ONLY:
+**READY** · **READY WITH KNOWN LIMITATIONS** · **NOT READY**.
+Never claim "complete" / "fixed" / "production ready" without evidence;
+confidence must reflect evidence, and remaining uncertainty is stated.
 
 ## Known limitations (as of Stabilization Gate 1)
 
