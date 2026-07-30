@@ -24,6 +24,11 @@ Three distinct authorities:
 1. production observation → 2. visual regression → 3. integration tests →
 4. unit tests → 5. implementation reasoning.
 
+Within "production observation": text/DOM extraction is NOT visual evidence.
+Claims about rendered visuals (graphs, tracks, imagery) require computed
+styles or a screenshot — text extraction cannot see CSS-drawn elements and
+has produced a false "graph missing" report (Gate 1 retrospective).
+
 **Production verification:** after every promotion, run a production
 verification pass and report **Preview status and Production status
 separately**. A successful preview is never proof of successful production.
@@ -103,11 +108,25 @@ Every issue is classified before disposition:
 Problem · Root cause · Affected files · **Why existing tests missed it** ·
 Fix · Tests added · Residual risk · Confidence.
 
+"Why existing tests missed it" must also answer: **did any test pin the
+defective behavior as intended?** (Gate 1 found one — "payload alone → no
+tonal signature" — a green suite actively defending the defect.) When fixing
+a defect, search for and update such tests as part of the fix.
+
 ## Escape analysis (when a regression reaches production)
 
 Identify: (1) why it escaped; (2) which release gate should have caught it;
 (3) what new protection prevents recurrence. Improving the release process is
 part of the implementation, not separate work.
+
+## Engineering retrospective (doctrine, 2026-07-30)
+
+After every completed implementation envelope: a retrospective of **at most
+five bullets** — (1) what permanently became better; (2) what surprised;
+(3) what nearly escaped; (4) what process changed; (5) what would be done
+differently. If it identifies a durable improvement belonging in this
+document or the defect register, update those artifacts **before** declaring
+the envelope complete.
 
 ## Continuous QA improvement (doctrine, 2026-07-30)
 
