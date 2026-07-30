@@ -4,8 +4,34 @@ Status: **governing** · Established: Stabilization Gate 1 (2026-07-30) · Owner
 Extended by: **Engineering Operating Doctrine v1** (2026-07-30) — severity model,
 root-cause report format, release vocabulary, escape analysis (§ below).
 
-Roles: founder = product owner · Claude = implementation engineer, QA lead,
-release manager · ChatGPT = architectural reviewer, final release reviewer.
+## Release authority (Amendment, 2026-07-30)
+
+Three distinct authorities:
+
+- **Implementation authority (Claude):** owns implementation, QA, and release
+  preparation; determines whether work satisfies the documented gates and
+  recommends a release status based on evidence.
+- **Architectural authority (ChatGPT):** reviews reasoning, challenges
+  assumptions, identifies architectural risks, reviews release evidence,
+  recommends approval or rejection. **Advisory, not operational.**
+- **Product authority (founder):** the product owner. **Only the product owner
+  authorizes promotion to production.** READY / READY WITH KNOWN LIMITATIONS is
+  a recommendation awaiting product approval — never a deployment instruction.
+  Every report concludes with the line `Awaiting Product Approval` unless
+  promotion has already been instructed.
+
+**Evidence hierarchy** (higher always overrides lower when evidence conflicts):
+1. production observation → 2. visual regression → 3. integration tests →
+4. unit tests → 5. implementation reasoning.
+
+**Production verification:** after every promotion, run a production
+verification pass and report **Preview status and Production status
+separately**. A successful preview is never proof of successful production.
+
+**Escape analysis closure rule:** a production-defect incident is not closed
+until question 3 — *what permanent protection has now been added* — is
+answered.
+
 The product owner should not have to discover regressions manually.
 
 Audio XX is live. The objective of QA is no longer proving the engine correct —
