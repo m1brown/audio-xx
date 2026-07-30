@@ -220,6 +220,11 @@ function scoreArchitectureAffinity(
 function scoreSystemCoherence(
   product: Product,
   systemProfile: SystemProfile,
+  /** LISTEN FIRST: traits the user explicitly asked for this turn. An
+   *  explicit 'up' suspends the counterbalance penalty/bonus for that axis —
+   *  the adviser may argue with a stated preference (in prose), but the
+   *  scorer must not silently overrule it. */
+  statedTraits?: Record<string, 'up' | 'down'>,
 ): number {
   let score = 0;
   const tp = product.tendencyProfile;
@@ -230,8 +235,11 @@ function scoreSystemCoherence(
     else score += 0.5;
   }
 
-  // Warm system interactions
-  if (systemProfile.systemCharacter === 'warm') {
+  // Warm system interactions. LISTEN FIRST: when the user explicitly asked
+  // for more tonal density this turn, the counterbalance pair is suspended —
+  // this fixed 1.0-point swing was silently overruling the stated request
+  // (production: "warm, full-bodied" asked, neutral pick delivered).
+  if (systemProfile.systemCharacter === 'warm' && statedTraits?.tonal_density !== 'up') {
     if (resolveTraitValue(tp, product.traits, 'tonal_density') >= 0.7) score -= 0.5;
     if (resolveTraitValue(tp, product.traits, 'clarity') >= 0.7) score += 0.5;
   }
@@ -277,6 +285,7 @@ export function scoreProduct(
   userTraits: Record<string, SignalDirection>,
   budgetAmount: number | null,
   systemProfile: SystemProfile,
+  statedTraits?: Record<string, 'up' | 'down'>,
 ): number {
   let score = 0;
 
@@ -287,7 +296,7 @@ export function scoreProduct(
   }
 
   score += scoreArchitectureAffinity(product, userTraits);
-  score += scoreSystemCoherence(product, systemProfile);
+  score += scoreSystemCoherence(product, systemProfile, statedTraits);
   score += scoreReviewerAcclaim(product);
 
   // ── Cultural-significance counter-weight (2026-05-11) ───
@@ -331,6 +340,7 @@ export function rankProducts(
   systemProfile: SystemProfile,
   constraints?: HardConstraints,
   listenerProfile?: ListenerProfile,
+  statedTraits?: Record<string, 'up' | 'down'>,
 ): ScoredProduct[] {
   // Budget filter — hard constraint, no stretch allowance.
   // Used-market pricing qualifies a product only if the new price
@@ -462,7 +472,7 @@ export function rankProducts(
 
   const scored = candidates
     .map((product) => {
-      let score = scoreProduct(product, userTraits, budgetAmount, systemProfile);
+      let score = scoreProduct(product, userTraits, budgetAmount, systemProfile, statedTraits);
 
       // Apply taste penalties (soft scoring, not hard removal)
       if (listenerProfile && listenerProfile.confidence >= 0.1) {

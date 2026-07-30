@@ -1336,7 +1336,15 @@ export function buildSystemPairingIntro(
   const anchorCharacter = topAnchorTraits.map((t) => EXPERT_SHORT_MAP[t.key] ?? t.key).join(' and ');
 
   // Determine pairing direction based on whether the listener wants more of the same or balance
-  const listenerTopTraits = getTopTraits(profile.inferredTraits, 2);
+  // Guard (Product Quality Phase 2): getTopTraits has no minimum threshold,
+  // so an all-zero profile returned its first two declaration-order keys —
+  // rendering a FABRICATED taste claim ("your taste points toward continuity
+  // and phrasing and transient speed") built from no user data at all. Only
+  // real trait mass (mirrors inferDirection's 0.15 floor) may speak for the
+  // listener; with none, this intro must not be written.
+  const listenerTopTraits = getTopTraits(profile.inferredTraits, 2)
+    .filter((t) => t.value > 0.15);
+  if (listenerTopTraits.length === 0) return null;
   const overlapCount = listenerTopTraits.filter((lt) =>
     topAnchorTraits.some((at) => at.key === lt.key),
   ).length;

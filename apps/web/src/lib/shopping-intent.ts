@@ -21,6 +21,7 @@ import type { SonicArchetype } from './archetype';
 import type { PrimaryAxisLeanings } from './axis-types';
 import { hasTendencies, selectDefaultTendencies, hasRisk, getEmphasizedTraits, getLessEmphasizedTraits, hasExplainableProfile, resolveTraitValue } from './sonic-tendencies';
 import { resolveArchetype, archetypeFitNote } from './design-archetypes';
+import { extractDesires, type DesireSignal } from './intent';
 
 /** Short labels for archetype context in shopping summaries. */
 const ARCHETYPE_LABELS: Record<SonicArchetype, string> = {
@@ -383,6 +384,17 @@ export interface ShoppingContext {
    * Undefined when the user named no class this turn.
    */
   requestedCategory?: ShoppingCategory;
+  /**
+   * LISTEN FIRST (Product Quality Phase 2) — sonic preferences the user
+   * explicitly stated in the CURRENT message ("I like a warm, full-bodied
+   * sound"). Extracted client-side by extractDesires, so they survive the
+   * /api/evaluate fallback that empties ExtractedSignals. A stated preference
+   * is the starting point of the recommendation: it sets direction, suppresses
+   * the taste question and the "missing: sonic preferences" gap, and — when it
+   * conflicts with the system's existing lean — licenses an explain-the-tension
+   * sentence instead of a silent override.
+   */
+  statedPreferences?: import('./intent').DesireSignal[];
   /** Finer classification within category. */
   subcategory?: ShoppingSubcategory;
   /** When the user asks for multiple categories ("amp and dac"), the
@@ -1578,6 +1590,7 @@ export function detectShoppingIntent(
   // from matching the 'speaker' keyword in CATEGORY_PATTERNS.
   let category: ShoppingCategory = 'general';
   let requestedCategory: ShoppingCategory | undefined;
+  let statedPreferences: DesireSignal[] | undefined;
   let subcategory: ShoppingSubcategory = undefined;
   const isCableRequest = CABLE_MODIFIER_PATTERNS.some((p) => p.test(userText));
   if (isCableRequest) {
@@ -1639,6 +1652,16 @@ export function detectShoppingIntent(
         }
       }
       if (requestedCategory) category = requestedCategory;
+    }
+
+    // LISTEN FIRST: capture sonic preferences stated in the CURRENT message.
+    // extractDesires is deterministic and in-process, so this survives the
+    // /api/evaluate fallback that empties ExtractedSignals — the production
+    // failure where "I like a warm, full-bodied sound" was simultaneously
+    // acknowledged and reported missing.
+    {
+      const desires = extractDesires(latestMessage ?? userText);
+      if (desires.length > 0) statedPreferences = desires;
     }
 
     // Fall back: prefer carried-forward category over scanning allUserText.
@@ -1767,6 +1790,7 @@ export function detectShoppingIntent(
     mode,
     category,
     requestedCategory,
+    statedPreferences,
     subcategory,
     secondaryCategory,
     budgetMentioned: budgetMentioned || budgetFloor !== null,
@@ -2137,7 +2161,10 @@ export function getStatedGaps(
 ): GapDimension[] {
   const gaps: GapDimension[] = [];
 
-  if (!isTasteSufficient(signals)) gaps.push('taste');
+  // LISTEN FIRST: a preference stated in the current message IS taste —
+  // never report "missing: sonic preferences" (or ask the taste question)
+  // after the user just told us what they like.
+  if (!isTasteSufficient(signals) && !(ctx.statedPreferences?.length)) gaps.push('taste');
   // Build-a-system users have no existing system — asking for one is wrong.
   // Only flag system as a gap when the user actually indicated they have one.
   // Fresh shopping inputs ("I want speakers") should not be asked about their system.
@@ -3257,6 +3284,7 @@ function buildSystemDelta(
   // reviewer-voice form, no hedges ("may", "could"), no filler.
 
   let generalIdx = 0;
+  let deficitIdx = 0;
   for (const trait of productWeaknesses) {
     const label = TRAIT_LABELS[trait];
     if (!label) continue;
@@ -3267,9 +3295,18 @@ function buildSystemDelta(
       continue;
     }
 
-    // Product weakness in an area the system already lacks
+    // Product weakness in an area the system already lacks. Editorial voice,
+    // rotated so stacked cards don't repeat the same construction — the old
+    // single form ("leaves the X deficit in the surrounding setup untouched")
+    // read as engine vocabulary and appeared twice per card in production.
     if (systemChar.deficient.includes(trait)) {
-      tradeoffs.push(`leaves the ${label} deficit in the surrounding setup untouched`);
+      const deficitForms = [
+        `won't add the ${label} the rest of the system is missing`,
+        `the system's shortfall in ${label} stays as it is`,
+        `if you're hoping it fixes the system's ${label}, it won't`,
+      ];
+      tradeoffs.push(deficitForms[deficitIdx % deficitForms.length]);
+      deficitIdx++;
       continue;
     }
 
@@ -3316,15 +3353,34 @@ function buildSystemDelta(
     ? systemProfile.systemCharacter
     : undefined;
 
+  // Product Quality Phase 2: the posture sentence must answer "why THIS
+  // product in this system" — the old forms depended only on sysLabel, so
+  // every card in a shortlist carried the identical sentence (production
+  // observation). Each branch now leads with the product's own character;
+  // same-philosophy collisions are resolved by the shortlist-level de-dup
+  // pass in selectProductExamples. "Chain" → "system" (editorial rule).
+  const PHILOSOPHY_VOICE: Record<string, string> = {
+    warm: 'Its warm voicing',
+    analytical: 'Its precision-first voicing',
+    neutral: 'Its even-handed balance',
+    energy: 'Its energetic presentation',
+  };
+  const voice = PHILOSOPHY_VOICE[product.philosophy ?? ''];
   if (sysLabel && improvements.length > 0 && tradeoffs.length > 0) {
-    // Both sides of the ledger exist → frame as a balanced posture claim.
-    whyFitsSystem = `Pairs with a ${sysLabel}-leaning chain: the gains below land in areas the chain has room for, the trade-offs sit where the chain can absorb them.`;
+    // Both sides of the ledger exist → balanced posture, product-led.
+    whyFitsSystem = voice
+      ? `${voice} meets a ${sysLabel}-leaning system where it has room to move — the gains land in open territory, and the trade-offs fall where the system can carry them.`
+      : `In a ${sysLabel}-leaning system, the gains land in open territory and the trade-offs fall where the system can carry them.`;
   } else if (sysLabel && improvements.length > 0) {
-    // Gains only → frame as additive fit.
-    whyFitsSystem = `Slots into a ${sysLabel}-leaning chain without eroding what the chain already does well.`;
+    // Gains only → additive fit, product-led.
+    whyFitsSystem = voice
+      ? `${voice} adds to a ${sysLabel}-leaning system without unsettling what it already does well.`
+      : `Adds to a ${sysLabel}-leaning system without unsettling what it already does well.`;
   } else if (sysLabel && tradeoffs.length > 0) {
-    // Trade-offs only → frame as tension-aware fit.
-    whyFitsSystem = `Sits in a ${sysLabel}-leaning chain with visible trade-offs — read them before committing.`;
+    // Trade-offs only → tension-aware fit.
+    whyFitsSystem = voice
+      ? `${voice} sits in tension with this ${sysLabel}-leaning system — weigh the trade-offs before committing.`
+      : `Sits in tension with this ${sysLabel}-leaning system — weigh the trade-offs before committing.`;
   }
   // If sysLabel is unknown, leave whyFitsSystem undefined. The card layer
   // skips "What this changes" rather than invent a generic fallback.
@@ -3889,14 +3945,16 @@ function buildSoundProfile(product: Product): string[] {
   // differentiate products in the same set without naming others.
   const archSentence = buildArchitectureSentence(product);
 
-  // Priority 2: curated character tendencies — supplement with detail
+  // Priority 2: curated character tendencies — supplement with detail.
+  // Every bullet (generated or curated) passes the fact-consistency guard:
+  // a claim contradicting the catalog spec is dropped, never rendered.
   if (hasTendencies(product.tendencies)) {
     const selected = selectDefaultTendencies(product.tendencies.character, 3);
     if (selected.length > 0) {
       const curated = selected.map((t) => capitalizeFirst(t.tendency));
       // Lead with architecture sentence, supplement with first curated tendency
-      if (archSentence) return [archSentence, ...curated.slice(0, 2)];
-      return curated;
+      if (archSentence) return dropContradictoryClaims(product, [archSentence, ...curated.slice(0, 2)]);
+      return dropContradictoryClaims(product, curated);
     }
   }
 
@@ -3990,7 +4048,15 @@ function buildArchitectureSentence(product: Product): string | undefined {
   if (topo.includes('set') || arch.includes('single-ended triode')) {
     return 'Single-ended triode — second-harmonic richness and midrange luminosity at low power.';
   }
-  if (topo.includes('class-a') || arch.includes('class a') || arch.includes('class-a')) {
+  // Class AB must be excluded BEFORE the Class A check — 'class-ab' contains
+  // the substring 'class-a', which put the "Pure Class A bias" sentence on
+  // Class AB amplifiers in production (Rotel A11 Tribute card contradiction —
+  // same substring-match family as the 'ess' bug documented above). Class AB
+  // deliberately has no architecture sentence of its own: the spec line
+  // already states the class, and restating it as "how it sounds" says
+  // nothing — the philosophy fallback below gives a licensed sound claim.
+  const isClassAB = topo.includes('class-ab') || arch.includes('class ab') || arch.includes('class-ab');
+  if (!isClassAB && (topo.includes('class-a') || arch.includes('class a') || arch.includes('class-a'))) {
     return 'Pure Class A bias — effortless transients with no crossover artifacts or compression.';
   }
   if (topo.includes('push-pull') || arch.includes('push-pull')) {
@@ -4017,6 +4083,60 @@ function capitalizeFirst(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// ── Card fact consistency (Product Quality Phase 2 — facts are sacred) ──
+//
+// Every factual claim on a recommendation card must agree with the catalog's
+// topology/architecture for that product. When prose (generated OR curated)
+// contradicts the spec, the claim is DROPPED — omission over confident error.
+// A contradiction reaching a rendered card is a release blocker (Gate C tier).
+
+/** Returns the reasons a text's claims contradict the product's catalog facts. */
+export function cardFactViolations(product: Product, text: string): string[] {
+  const t = text.toLowerCase();
+  const topo = product.topology?.toLowerCase() ?? '';
+  const arch = product.architecture?.toLowerCase() ?? '';
+  const spec = `${topo} ${arch}`;
+  const violations: string[] = [];
+
+  const specClassAB = spec.includes('class-ab') || spec.includes('class ab');
+  const specClassA = !specClassAB && (spec.includes('class-a') || spec.includes('class a'));
+  const specClassD = spec.includes('class-d') || spec.includes('class d');
+  const specTube = spec.includes('tube') || spec.includes('valve') || spec.includes('triode');
+  const specSolidState = spec.includes('solid-state') || spec.includes('solid state');
+  const specHybrid = spec.includes('hybrid');
+  const specPushPull = spec.includes('push-pull');
+
+  if (/pure class a\b|class a bias|class-a bias/.test(t) && !specClassA) {
+    violations.push('claims Class A; catalog says otherwise');
+  }
+  if (/class d\b|class-d\b/.test(t) && !specClassD) {
+    violations.push('claims Class D; catalog says otherwise');
+  }
+  if (/single-ended triode|\bSET topology\b/i.test(text) && specPushPull) {
+    violations.push('claims single-ended triode; catalog says push-pull');
+  }
+  if (/\btube\b|\bvalve\b/.test(t) && specSolidState && !specTube && !specHybrid) {
+    violations.push('claims tube; catalog says solid-state');
+  }
+  if (/solid[- ]state/.test(t) && specTube && !specSolidState && !specHybrid) {
+    violations.push('claims solid-state; catalog says tube');
+  }
+  return violations;
+}
+
+/** Drop any card text whose claims contradict the product's catalog facts. */
+function dropContradictoryClaims(product: Product, texts: string[]): string[] {
+  return texts.filter((s) => {
+    const v = cardFactViolations(product, s);
+    if (v.length > 0) {
+      console.warn('[card-facts] dropped contradictory claim for %s %s: %s (%s)',
+        product.brand, product.name, s, v.join('; '));
+      return false;
+    }
+    return true;
+  });
+}
+
 /**
  * Select up to 3 product examples for the given category, scored
  * against user traits and budget. Returns empty array if no
@@ -4038,6 +4158,16 @@ const PROFILE_TO_PRODUCT_TRAIT: Record<ProfileTraitKey, string> = {
  * Maps arrow quality names to product trait keys.
  * Kept intentionally small — the bonus is a nudge, not a replacement.
  */
+/** LISTEN FIRST: map current-turn stated preferences to trait directions. */
+function statedTraitsFromCtx(ctx: ShoppingContext): Record<string, 'up' | 'down'> | undefined {
+  const out: Record<string, 'up' | 'down'> = {};
+  for (const d of ctx.statedPreferences ?? []) {
+    const key = DIRECTION_TRAIT_MAP[d.quality];
+    if (key) out[key] = d.direction === 'less' ? 'down' : 'up';
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 const DIRECTION_TRAIT_MAP: Record<string, string> = {
   warmth: 'tonal_density',
   density: 'tonal_density',
@@ -4120,6 +4250,8 @@ function selectProductExamples(
   prestigeIntent?: boolean,
   /** Query names a low-sensitivity/planar partner — see ShoppingContext. */
   lowSensitivityPartner?: boolean,
+  /** LISTEN FIRST: traits explicitly stated this turn — suspends counterbalance scoring on those axes. */
+  statedTraits?: Record<string, 'up' | 'down'>,
 ): ProductExample[] {
   // ── Turntable: illustrative examples with full card data ──
   if (category === 'turntable') {
@@ -4360,7 +4492,7 @@ function selectProductExamples(
     console.log('[budget-floor] catalog %d → %d (floor=$%d)', beforeCount, catalog.length, budgetFloor);
   }
 
-  const ranked = rankProducts(catalog, userTraits, budgetAmount, systemProfile, constraints, listenerProfile);
+  const ranked = rankProducts(catalog, userTraits, budgetAmount, systemProfile, constraints, listenerProfile, statedTraits);
 
   // ── Soft affordability ceiling ─────────────────────────
   // The user signaled budget-consciousness without a number ("won't blow
@@ -5835,6 +5967,37 @@ function selectProductExamples(
     } as ProductExample;
   });
 
+  // ── No two cards explain themselves the same way ────────
+  // Shortlist-level guard (Product Quality Phase 2): when two products share
+  // a philosophy, buildSystemDelta can emit the same posture sentence. The
+  // duplicate is rewritten with an alternate construction rather than
+  // rendered twice — repeated prose is what makes cards read as generated.
+  {
+    const seenWhy = new Set<string>();
+    const ALT_FORMS = [
+      (name: string, prev: string) => prev.replace(/^Its /, `The ${name}'s `),
+      (_name: string, prev: string) => `Read alongside the pick above: ${prev.charAt(0).toLowerCase()}${prev.slice(1)}`,
+    ];
+    let altIdx = 0;
+    for (const ex of results) {
+      const w = ex.systemDelta?.whyFitsSystem;
+      if (!w) continue;
+      if (seenWhy.has(w)) {
+        const rewritten = ALT_FORMS[altIdx % ALT_FORMS.length](ex.name, w);
+        altIdx++;
+        if (!seenWhy.has(rewritten)) {
+          ex.systemDelta!.whyFitsSystem = rewritten;
+          seenWhy.add(rewritten);
+        } else {
+          // Cannot vary further without inventing content — omit rather than repeat.
+          ex.systemDelta!.whyFitsSystem = undefined;
+        }
+      } else {
+        seenWhy.add(w);
+      }
+    }
+  }
+
   // ── Final budget safety net ────────────────────────────
   // Strip any product that somehow ended up above budget (e.g. via
   // engaged-product boost or diversity selection overriding the filter).
@@ -6599,7 +6762,15 @@ export function buildShoppingAnswer(
   /** Brand constraint from user query (e.g., "denafrips" from "denafrips dacs under 1000"). */
   brandConstraint?: string,
 ): ShoppingAnswer {
-  const traits = signals.traits;
+  // LISTEN FIRST: stated preferences reach ranking even when /api/evaluate
+  // fell back to empty signals (the extractor split behind the production
+  // "acknowledged warmth, ranked without it" failure). Stated values never
+  // overwrite an extracted signal — they fill the gaps.
+  const traits: Record<string, SignalDirection> = { ...signals.traits };
+  for (const d of ctx.statedPreferences ?? []) {
+    const key = DIRECTION_TRAIT_MAP[d.quality];
+    if (key && !(key in traits)) traits[key] = d.direction === 'less' ? 'down' : 'up';
+  }
   const categoryLabel = CATEGORY_LABELS[ctx.category] ?? 'component';
 
   // Find the best-matching taste profile
@@ -6630,6 +6801,7 @@ export function buildShoppingAnswer(
   // a tasteLabel, so we check for a matched profile OR stored profile OR
   // reasoning-level archetype as evidence of *any* signal.
   const hasAnyTaste = hasTasteSignal
+    || !!(ctx.statedPreferences?.length) // LISTEN FIRST: stated this turn
     || (tasteProfile && tasteProfile.confidence > 0.15)
     || !!reasoning?.taste.archetype;
   const directed = hasBudget && hasCategory && hasAnyTaste;
@@ -6639,8 +6811,11 @@ export function buildShoppingAnswer(
   const hasRef = (engagedProductNames ?? []).length > 0;
   const hasDislikesSignal = !!(listenerProfile
     && (listenerProfile.dislikedBrands.length > 0 || listenerProfile.dislikedProducts.length > 0));
-  // Direction signal: any non-neutral trait counts
-  const hasDir = Object.values(signals.traits).some((v) => v === 'up' || v === 'down');
+  // Direction signal: any non-neutral trait counts. LISTEN FIRST: a
+  // preference stated this turn IS a direction signal — without this, the
+  // taste question could still render after the user answered it.
+  const hasDir = Object.values(signals.traits).some((v) => v === 'up' || v === 'down')
+    || !!(ctx.statedPreferences?.length);
   // Specialist signal: user expressed SET/horn/high-efficiency/low-power intent
   const hasSpecialist = ctx.semanticPreferences.specialistHints.length > 0;
 
@@ -6752,7 +6927,7 @@ export function buildShoppingAnswer(
 
   // 4. Product examples (only when catalog exists + budget known)
   // Pass reasoning for directional bias — existing scoring is preserved.
-  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents, ctx.roomContext, engagedProductNames, ctx.constraints, ctx.semanticPreferences, listenerProfile, selectionMode, previousAnchor, recentProductNames, brandConstraint, signals.symptoms, ctx.budgetFloor, ctx.budgetConscious, ctx.prestigeIntent, ctx.lowSensitivityPartner);
+  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents, ctx.roomContext, engagedProductNames, ctx.constraints, ctx.semanticPreferences, listenerProfile, selectionMode, previousAnchor, recentProductNames, brandConstraint, signals.symptoms, ctx.budgetFloor, ctx.budgetConscious, ctx.prestigeIntent, ctx.lowSensitivityPartner, statedTraitsFromCtx(ctx));
 
   // ── Budget floor filter ───────────────────────────────
   // When the user specifies "over $X" or "between $X and $Y", remove
@@ -6832,6 +7007,26 @@ export function buildShoppingAnswer(
       : `Guide the listener through the sonic landscape of ${categoryLabel} design philosophies within their budget.`,
     refinementPrompts,
   };
+
+  // LISTEN FIRST — expert disagreement, never silent override. When the user
+  // explicitly asked for MORE of a quality the system already supplies in
+  // abundance, the adviser says so and explains the direction, instead of
+  // quietly optimizing for the opposite (the production failure: "warm,
+  // full-bodied" requested, neutral pick delivered with no acknowledgment).
+  {
+    const sysChar = SYSTEM_CHARACTER_TRAITS[ctx.systemProfile.systemCharacter];
+    const statedUp = (ctx.statedPreferences ?? []).filter((d) => d.direction !== 'less');
+    const tensionPref = sysChar
+      ? statedUp.find((d) => {
+          const key = DIRECTION_TRAIT_MAP[d.quality];
+          return !!key && sysChar.saturated.includes(key);
+        })
+      : undefined;
+    if (tensionPref) {
+      const q = tensionPref.quality.replace(/_/g, ' ');
+      bestFitDirection = `You asked for more ${q} — and your system already leans that way. Rather than stacking more of the same, I'd preserve the ${q} you enjoy while adding what the system is short on; the picks below follow that logic. If you'd rather lean further into ${q}, take the alternative flagged for it.`;
+    }
+  }
 
   return {
     category: categoryLabel,

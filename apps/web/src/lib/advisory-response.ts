@@ -49,6 +49,21 @@ const COUNTRY_NAMES: Record<string, string> = {
   US: 'United States', VN: 'Vietnam',
 };
 
+
+/**
+ * Name system components without silent omission (Product Quality Phase 2).
+ * Lists up to `max` components; anything beyond is elided TRANSPARENTLY
+ * ("…and one more component"), never dropped as if the system were smaller.
+ */
+function nameSystem(components: string[], max: number): string {
+  if (components.length <= max) {
+    return components.length === 2 ? components.join(' and ') : components.join(', ');
+  }
+  const shown = components.slice(0, max).join(', ');
+  const rest = components.length - max;
+  return `${shown}, and ${rest === 1 ? 'one more component' : `${rest} more components`}`;
+}
+
 function countryName(code?: string): string | undefined {
   if (!code) return undefined;
   return COUNTRY_NAMES[code.toUpperCase()] ?? code;
@@ -1148,7 +1163,7 @@ function buildDirectedEditorialIntro(
   const budgetClause = budget ? ` at ~${budget}` : '';
 
   const systemClause = systemComponents && systemComponents.length > 0
-    ? `, working with your ${systemComponents.slice(0, 2).join(' and ')}`
+    ? `, working with your ${nameSystem(systemComponents, 2)}`
     : '';
 
   // Replacement framing — same logic as buildEditorialIntro. When a component
@@ -1466,7 +1481,7 @@ function buildSystemInterpretation(
   // ── Layer 1: System acknowledgment ──
   // Tendency detail is in systemContextPreamble — keep this brief.
   if (ctx?.systemComponents && ctx.systemComponents.length > 0) {
-    const systemList = ctx.systemComponents.slice(0, 3).join(', ');
+    const systemList = nameSystem(ctx.systemComponents, 3);
     parts.push(`With ${systemList} in your system:`);
   }
 
@@ -3477,7 +3492,7 @@ function buildDiagnosisInterpretation(
 
   // System character from components
   if (ctx?.systemComponents && ctx.systemComponents.length > 0) {
-    const names = ctx.systemComponents.slice(0, 3).join(', ');
+    const names = nameSystem(ctx.systemComponents, 3);
     if (ctx.systemTendencies) {
       parts.push(`Your system (${names}) has a ${ctx.systemTendencies.toLowerCase()} character.`);
     } else {
