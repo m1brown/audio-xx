@@ -98,12 +98,12 @@ const COLORS = {
   textSecondary: '#4A5568',
   textMuted: '#64748B',
   textLight: '#94A3B8',
-  accent: '#1F3A5F',
+  accent: '#1B1A18',
   accentLight: '#2D5C8A',
-  accentBg: '#EEF2F8',
-  border: '#E2E8F0',
+  accentBg: '#F6F1E4',
+  border: '#E2DACB',
   borderLight: '#EDF2F7',
-  sectionLabel: '#1F3A5F',
+  sectionLabel: '#1B1A18',
   green: '#5a7050',
   amber: '#8a6a50',
   white: '#fff',
@@ -3831,7 +3831,7 @@ function KnowledgeFormat({ advisory: a }: AdvisoryMessageProps) {
             paddingLeft: '1rem',
             padding: '0.8rem 1rem',
             marginBottom: '1.5rem',
-            background: '#f6f9fa',
+            background: '#FBF7EC',
             borderRadius: '0 6px 6px 0',
           }}
         >
@@ -4116,8 +4116,8 @@ function AssessmentHeroImage({ brand, name }: { brand?: string; name?: string })
       width: '100%',
       maxWidth: '420px',
       height: '200px',
-      background: '#FFFFFF',
-      border: '1px solid #E5E5E5',
+      background: '#FFFDF7',
+      border: '1px solid #E7E0D2',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -4226,8 +4226,8 @@ function ConsultationSubjectContext({ subject, prose }: { subject?: string; pros
           width: '100%',
           maxWidth: '320px',
           height: '160px',
-          background: '#FFFFFF',
-          border: '1px solid #E5E5E5',
+          background: '#FFFDF7',
+          border: '1px solid #E7E0D2',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -4286,8 +4286,8 @@ function ConsultationSubjectContext({ subject, prose }: { subject?: string; pros
           width: '100%',
           maxWidth: '320px',
           height: '160px',
-          background: '#FFFFFF',
-          border: '1px solid #E5E5E5',
+          background: '#FFFDF7',
+          border: '1px solid #E7E0D2',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -4424,7 +4424,7 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
           ink: '#151515',
           inkMuted: '#3A3A3A',
           faint: '#8A8A8A',
-          rule: '#E5E5E5',
+          rule: '#E7E0D2',
           measure: '52rem',
         } as const;
 
@@ -4503,7 +4503,7 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
                       style={{
                         width: '100%',
                         height: '300px',
-                        background: '#FFFFFF',
+                        background: '#FFFDF7',
                         border: `1px solid ${E.rule}`,
                         display: 'flex',
                         alignItems: 'center',
@@ -4973,7 +4973,7 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
             paddingLeft: '1rem',
             padding: '0.8rem 1rem',
             marginBottom: '1.5rem',
-            background: '#f6f9fa',
+            background: '#FBF7EC',
             borderRadius: '0 6px 6px 0',
           }}
         >
@@ -4998,11 +4998,11 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
       {a.refinementPrompts && a.refinementPrompts.length > 0 && !a.lowPreferenceSignal && (
         <div
           style={{
-            borderLeft: '3px solid #7a9aaa',
+            borderLeft: '3px solid #8C877F',
             paddingLeft: '1rem',
             padding: '0.8rem 1rem',
             marginBottom: '1.5rem',
-            background: '#f6f9fa',
+            background: '#FBF7EC',
             borderRadius: '0 6px 6px 0',
           }}
         >
@@ -5012,7 +5012,7 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
               fontWeight: 600,
               letterSpacing: '0.05em',
               textTransform: 'uppercase' as const,
-              color: '#7a9aaa',
+              color: '#8C877F',
               marginBottom: '0.45rem',
             }}
           >
@@ -5043,9 +5043,9 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
               fontSize: FONTS.bodySize,
               color: COLORS.textSecondary,
               lineHeight: 1.7,
-              background: '#f6f9fa',
+              background: '#FBF7EC',
               border: 'none',
-              borderLeft: '3px solid #7a9aaa',
+              borderLeft: '3px solid #8C877F',
               borderRadius: '0 6px 6px 0',
               cursor: 'pointer',
               fontFamily: 'inherit',
@@ -5058,7 +5058,7 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = COLORS.textSecondary;
-              e.currentTarget.style.borderLeftColor = '#7a9aaa';
+              e.currentTarget.style.borderLeftColor = '#8C877F';
             }}
           >
             {renderText(a.followUp)} →
@@ -5066,11 +5066,11 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
         ) : (
           <div
             style={{
-              borderLeft: '3px solid #7a9aaa',
+              borderLeft: '3px solid #8C877F',
               paddingLeft: '1rem',
               padding: '0.7rem 1rem',
               marginBottom: '1.5rem',
-              background: '#f6f9fa',
+              background: '#FBF7EC',
               borderRadius: '0 6px 6px 0',
               fontSize: FONTS.bodySize,
               color: COLORS.textSecondary,

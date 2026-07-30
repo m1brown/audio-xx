@@ -335,10 +335,10 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
                 className="audioxx-upgrade-card"
                 style={{
                   padding: '0.75rem 0.95rem',
-                  border: isDir ? '1px solid #CBD5E1' : '1px solid #E2E8F0',
-                  borderLeft: isDir ? '3px solid #1F3A5F' : '1px solid #E2E8F0',
+                  border: isDir ? '1px solid #CBD5E1' : '1px solid #E2DACB',
+                  borderLeft: isDir ? '3px solid #1B1A18' : '1px solid #E2DACB',
                   borderRadius: '8px',
-                  background: isDir ? '#EEF2F8' : '#FFFFFF',
+                  background: isDir ? '#F6F1E4' : '#FFFDF7',
                   boxShadow: '0 8px 24px rgba(15,23,42,0.08)',
                   transition: 'transform 0.15s, box-shadow 0.15s',
                 }}

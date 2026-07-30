@@ -36,7 +36,7 @@ export default function AdvisorySection({ number, label, children }: AdvisorySec
             letterSpacing: '-0.015em',
           }}
         >
-          <span style={{ color: '#1F3A5F', marginRight: '0.4rem', fontWeight: 700 }}>{number}.</span>
+          <span style={{ color: '#1B1A18', marginRight: '0.4rem', fontWeight: 700 }}>{number}.</span>
           {label}
         </h3>
         {children}

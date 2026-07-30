@@ -370,14 +370,14 @@ const COLORS = {
   text: '#111827',          // page COLOR.textPrimary
   textSecondary: '#4A5568', // page COLOR.textSecondary
   textMuted: '#64748B',     // page COLOR.textMuted
-  accent: '#1F3A5F',        // page COLOR.accent — single accent across UI
-  accentBg: '#EEF2F8',      // page COLOR.accentBg — verdict block fill
-  border: '#E2E8F0',        // page COLOR.border
+  accent: '#1B1A18',        // page COLOR.accent — single accent across UI
+  accentBg: '#F6F1E4',      // page COLOR.accentBg — verdict block fill
+  border: '#E2DACB',        // page COLOR.border
   borderLight: '#EDF2F7',   // page COLOR.borderLight
   green: '#4F6645',
   white: '#fff',
-  cardBg: '#FFFFFF',        // page COLOR.cardBg — lifts off page bg
-  sectionBg: '#EEF2F8',
+  cardBg: '#FFFDF7',        // page COLOR.cardBg — lifts off page bg
+  sectionBg: '#F6F1E4',
 };
 
 const CURRENCY_SYMBOLS: Record<string, string> = {

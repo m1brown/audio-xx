@@ -80,7 +80,7 @@ export default function BrandAuthorityPreview({ preview }: BrandAuthorityPreview
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: '#FFFFFF',
+            background: '#FFFDF7',
             border: `1px solid ${COLOR.borderLight}`,
             borderRadius: '4px',
             padding: '0.4rem',

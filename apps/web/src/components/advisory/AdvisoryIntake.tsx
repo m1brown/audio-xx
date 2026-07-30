@@ -30,13 +30,13 @@ const COLORS = {
   text: '#111827',
   textSecondary: '#4A5568',
   textMuted: '#64748B',
-  accent: '#1F3A5F',
-  accentBg: '#EEF2F8',
+  accent: '#1B1A18',
+  accentBg: '#F6F1E4',
   accentBgHover: '#E2EAF4',
-  border: '#E2E8F0',
+  border: '#E2DACB',
   borderLight: '#EDF2F7',
-  selectedBorder: '#1F3A5F',
-  selectedBg: '#EEF2F8',
+  selectedBorder: '#1B1A18',
+  selectedBg: '#F6F1E4',
   white: '#fff',
 };
 

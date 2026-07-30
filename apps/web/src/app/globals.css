@@ -15,6 +15,20 @@
  * without restyling the rest of the app.
  */
 :root {
+  /* ── Editorial restraint pass (2026-07-30) ─────────────────────────
+   * ONE muted accent for all application chrome: warm terracotta/rust.
+   * Discipline target: 90–95% neutral ink-on-paper, 5–10% accent.
+   * The accent appears ONLY in: active states, kicker dashes, thin
+   * selected outlines, small labels, focus rings, and recommendation
+   * emphasis. Never as filled blocks or saturated buttons.
+   * (The Assessment artifact keeps its own approved palette — it is
+   * the reference this chrome now defers to, not a target.) */
+  --xx-accent: #A6432C;
+  --xx-accent-soft: rgba(166, 67, 44, 0.08);
+  --xx-paper-raised: #FFFDF7;   /* paper resting on paper */
+  --xx-hairline: #E2DACB;       /* warm hairline, replaces cool #ddd/#eae8e4 */
+  --xx-hairline-soft: #EDE7D9;
+
   --editorial-bg: #FCF8EE;
   /* 2026-05-20 premium polish: ink tokens shifted a few points toward
    * warm charcoal so long advisory prose reads less SaaS-stark and
@@ -135,14 +149,14 @@ h3 { font-size: 1.08rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing
   display: inline-block;
   width: 1.5rem;
   height: 2px;
-  background: #A8231B;
+  background: var(--xx-accent);
   flex: 0 0 auto;
 }
 .axx-kicker + p,
 .axx-kicker + ul,
 .axx-kicker + ol { margin-top: 0; }
 
-hr, .divider { border: none; border-top: 1px solid #eae8e4; margin: 1.25rem 0; }
+hr, .divider { border: none; border-top: 1px solid var(--xx-hairline-soft); margin: 1.25rem 0; }
 
 .section { margin-bottom: 1.5rem; }
 
@@ -157,9 +171,9 @@ hr, .divider { border: none; border-top: 1px solid #eae8e4; margin: 1.25rem 0; }
 .btn {
   display: inline-block;
   padding: 7px 16px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--xx-hairline);
   border-radius: 6px;
-  background: #fff;
+  background: var(--xx-paper-raised);
   color: #333;
   cursor: pointer;
   font-size: 13px;
@@ -167,11 +181,11 @@ hr, .divider { border: none; border-top: 1px solid #eae8e4; margin: 1.25rem 0; }
   font-weight: 500;
   transition: all 0.15s ease;
 }
-.btn:hover { background: #f8f8f6; border-color: #ccc; }
+.btn:hover { background: #FBF7EC; border-color: #CFC5B2; }
 .btn-primary { background: #f5f4f2; border-color: #c0bdb5; }
 .btn-primary:hover { background: #eeedea; }
-.btn-danger { color: #b33; border-color: #dcc; }
-.btn-danger:hover { background: #fef5f5; }
+.btn-danger { color: var(--xx-accent); border-color: #E0CFC7; }
+.btn-danger:hover { background: var(--xx-accent-soft); }
 .btn-sm { padding: 4px 10px; font-size: 12px; }
 
 /* ── Form controls ───────────────────────────────── */
@@ -179,9 +193,9 @@ hr, .divider { border: none; border-top: 1px solid #eae8e4; margin: 1.25rem 0; }
 input, textarea, select {
   width: 100%;
   padding: 9px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--xx-hairline);
   border-radius: 6px;
-  background: #fff;
+  background: var(--xx-paper-raised);
   color: #2a2a2a;
   font-size: 15px;
   font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
@@ -197,8 +211,8 @@ textarea.audioxx-editorial-input {
 textarea { min-height: 100px; resize: vertical; }
 input:focus, textarea:focus, select:focus {
   outline: none;
-  border-color: #a89870;
-  box-shadow: 0 0 0 3px rgba(168, 152, 112, 0.08);
+  border-color: var(--xx-accent);
+  box-shadow: 0 0 0 3px var(--xx-accent-soft);
 }
 
 label {
@@ -217,16 +231,16 @@ label {
 .tag {
   display: inline-block;
   padding: 2px 8px;
-  border: 1px solid #e5e3de;
+  border: 1px solid var(--xx-hairline-soft);
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
   margin-right: 4px;
   margin-bottom: 4px;
-  background: #fff;
+  background: var(--xx-paper-raised);
   font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
-.tag-active { background: #f5f3ef; border-color: #c0bdb5; cursor: pointer; }
+.tag-active { background: transparent; border-color: var(--xx-accent); color: var(--xx-accent); cursor: pointer; }
 
 /* ── Verdicts ────────────────────────────────────── */
 
@@ -238,9 +252,9 @@ label {
   letter-spacing: 0.04em;
   font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
-.verdict-good { color: #1a7f37; }
-.verdict-caution { color: #9a6700; }
-.verdict-bad { color: #b33; }
+.verdict-good { color: #5A7057; }
+.verdict-caution { color: #8A6D3B; }
+.verdict-bad { color: var(--xx-accent); }
 .verdict-muted { color: #999; }
 
 /* ── Details ─────────────────────────────────────── */
@@ -264,9 +278,9 @@ details summary:hover { color: #555; }
 
 .muted { color: #999; }
 .small { font-size: 13px; }
-.warning { color: #9a6700; }
-.danger { color: #b33; }
-.success { color: #1a7f37; }
+.warning { color: #8A6D3B; }
+.danger { color: var(--xx-accent); }
+.success { color: #5A7057; }
 
 .mt-1 { margin-top: 0.5rem; }
 .mt-2 { margin-top: 1rem; }
