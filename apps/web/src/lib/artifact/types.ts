@@ -35,4 +35,13 @@ export interface ArtifactPayload {
   /** Reserved for when assessments become stable, addressable artifacts.
    *  Held back in beta — a date is sufficient provenance. */
   edition?: string;
+  /**
+   * System-level tonal axis readings (e.g. { warm_bright: 'warm', ... }).
+   * Carried in the payload so the three-axis Tonal Signature graph survives
+   * surfaces that render from the payload alone — the chat embed and saved
+   * assessment snapshots — where the raw engine result is not re-threaded.
+   * Stabilization Gate 1: the graph is a structurally required artifact
+   * element; it must not depend on call-site `raw` threading.
+   */
+  systemAxes?: Record<string, string>;
 }

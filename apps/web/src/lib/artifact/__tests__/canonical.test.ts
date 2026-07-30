@@ -4,6 +4,7 @@
  * payload, and the OTT rule (observation only — no justification, one sentence).
  */
 import { describe, it, expect } from 'vitest';
+import type { ArtifactPayload } from '@/lib/artifact/types';
 import { extractSubjectMatches, detectIntent } from '@/lib/intent';
 import { buildSystemAssessment } from '@/lib/consultation';
 import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
@@ -63,12 +64,24 @@ describe('CAM adapter — France reference', () => {
     expect(validateDominantCharacter(cam.reading.dominantCharacter)).toEqual([]);
   });
 
-  it('degrades gracefully from payload alone (no raw): no tonal signature, still valid', () => {
+  it('payload alone KEEPS the tonal signature — axes travel in the payload (Stabilization Gate 1)', () => {
+    // The old behavior (payload alone → no graph) was the production
+    // regression: chat embeds and saved snapshots silently lost the
+    // three-axis Tonal Signature. The payload now carries systemAxes.
     const { payload } = franceCanonical();
     const cam = toCanonicalAssessment(payload);
-    expect(cam.identity.tonalSignature).toBeUndefined();
+    expect(cam.identity.tonalSignature).toBeDefined();
+    expect(cam.identity.tonalSignature).toHaveLength(3);
     expect(cam.identity.verdict).toBe(payload.verdict);
     expect(cam.evidence.statement).toBe(EVIDENCE_STATEMENT);
+  });
+
+  it('degrades gracefully only when axes are genuinely absent (no raw, no payload axes)', () => {
+    const { payload } = franceCanonical();
+    const { systemAxes: _dropped, ...bare } = payload as ArtifactPayload & { systemAxes?: unknown };
+    const cam = toCanonicalAssessment(bare as ArtifactPayload);
+    expect(cam.identity.tonalSignature).toBeUndefined();
+    expect(cam.identity.verdict).toBe(payload.verdict);
   });
 });
 

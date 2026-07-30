@@ -94,11 +94,22 @@ describe('spine — composed text → engine → artifact payload', () => {
     expect(() => renderPipeline(['Frankenamp 9000', 'Garage Speaker Mk1'])).not.toThrow();
   });
 
-  it('artifact payloads never leak internal taxonomy vocabulary', () => {
+  it('artifact payloads never leak internal taxonomy vocabulary into prose', () => {
     const out = renderPipeline(['Bluesound Node', 'Marantz PM8006', 'KEF R3']);
     expect(out).not.toBeNull();
-    const flat = JSON.stringify(out!.payload);
+    // `systemAxes` is the one TYPED data field allowed to carry axis keys —
+    // it feeds the three-axis Tonal Signature graph and the renderer
+    // translates it to display labels (Warm/Bright…). Every prose field
+    // stays free of internal vocabulary.
+    const { systemAxes, ...prose } = out!.payload as typeof out.payload & { systemAxes?: unknown };
+    const flat = JSON.stringify(prose);
     expect(flat).not.toMatch(/warm_bright|smooth_detailed|elastic_controlled|airy_closed/);
     expect(flat).not.toMatch(/undefined|\bNaN\b/);
+    if (systemAxes) {
+      // Axis keys only ever appear as the structured field, never as prose.
+      for (const k of Object.keys(systemAxes as Record<string, string>)) {
+        expect(k).toMatch(/^[a-z_]+$/);
+      }
+    }
   });
 });

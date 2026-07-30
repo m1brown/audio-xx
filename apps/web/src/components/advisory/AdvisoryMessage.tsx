@@ -5292,7 +5292,9 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
       // branch of this dispatch counts. Deduped per page load.
       content = (
         <>
-          <AssessmentArtifactV2 p={payload} embedded={true} />
+          {/* raw carries the tonal axes (findings.systemAxes) — required for
+              the three-axis Tonal Signature graph (Stabilization Gate 1). */}
+          <AssessmentArtifactV2 p={payload} raw={advisory.__rawAssessment} embedded={true} />
           <TrackAssessmentEmbed />
         </>
       );

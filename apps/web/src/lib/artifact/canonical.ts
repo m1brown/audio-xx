@@ -253,7 +253,11 @@ const FRANCE_REINFORCE_OPPOSE: EditorialFragment = {
  * snapshot/chat call sites keep working without a schema migration.
  */
 export function toCanonicalAssessment(payload: ArtifactPayload, raw?: any): CanonicalAssessment {
-  const axes: Record<string, string> | undefined = raw?.findings?.systemAxes;
+  // Tonal axes: prefer the raw engine result, fall back to the copy carried in
+  // the payload (Stabilization Gate 1). The three-axis Tonal Signature graph is
+  // structurally required; it must render on payload-only surfaces (chat embed,
+  // saved snapshots) — not only where a call site happens to thread `raw`.
+  const axes: Record<string, string> | undefined = raw?.findings?.systemAxes ?? payload.systemAxes;
   const limitations: string[] = raw?.response?.assessmentLimitations ?? [];
   const limitation = limitations[0];
   const { engineering, operatingCondition } = splitEngineeringAndCondition(payload.caseParagraphs ?? [], limitation);

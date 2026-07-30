@@ -687,6 +687,9 @@ export function synthesizeArtifact(result: any): SynthResult {
     cost,
     date: today(),
     edition: editionFor(seed),
+    // Tonal axes travel WITH the payload so the three-axis Tonal Signature
+    // graph survives payload-only surfaces (chat embed, saved snapshots).
+    systemAxes: f.systemAxes && Object.keys(f.systemAxes).length > 0 ? f.systemAxes : undefined,
   };
 
   return { payload, contradictions };
