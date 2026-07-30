@@ -51,13 +51,20 @@ run('Gate C — Artifact (structural)', 'npx', ['vitest', 'run',
   'apps/web/src/app/artifact/__tests__/assessment-artifact-ia-order.test.ts',
 ]);
 
-// Gates C-visual + D — Playwright visual/UX tier (needs local server)
+// Gates C-visual + D — Playwright visual/UX tier (needs local server).
+// Defect-register gap watch #3: skipping this tier must be a CONSCIOUS act.
+// Without --visual, the runner FAILS unless --accept-deferred is passed
+// explicitly; the acceptance is then printed so it lands in the release report.
+const acceptDeferred = process.argv.includes('--accept-deferred');
 if (visual) {
   run('Gates C-visual + D — UX (Playwright)', 'npm',
     ['run', 'qa:regress:visual', '--', '--grep', 'Gate C|Gate D'],
     { cwd: 'apps/web' });
+} else if (acceptDeferred) {
+  results.push({ name: 'Gates C-visual + D — UX (Playwright)', status: 'DEFERRED (explicitly accepted — must appear in release report)' });
 } else {
-  results.push({ name: 'Gates C-visual + D — UX (Playwright)', status: 'DEFERRED (run with --visual)' });
+  results.push({ name: 'Gates C-visual + D — UX (Playwright)', status: 'FAIL' });
+  process.stdout.write('\nVisual/UX tier did not run. Run with --visual, or pass --accept-deferred to defer it consciously.\n');
 }
 
 process.stdout.write('\n━━ Release gate summary ━━\n');

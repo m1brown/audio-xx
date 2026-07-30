@@ -109,6 +109,16 @@ Identify: (1) why it escaped; (2) which release gate should have caught it;
 (3) what new protection prevents recurrence. Improving the release process is
 part of the implementation, not separate work.
 
+## Continuous QA improvement (doctrine, 2026-07-30)
+
+Every meaningful defect completes the full cycle — root cause → escape
+analysis → **smallest durable permanent protection** → register entry — and is
+recorded in the living **defect register**: `docs/defect-register.md`. A
+register row closes only when a durable in-repo protection exists; fixing the
+instance alone never closes it. At every release, review the register's
+open rows and its "standing gap watch" (defect classes that could still
+escape) and propose the smallest improvement before the defect occurs.
+
 ## Release report standard
 
 Every production release report must contain, in order:
