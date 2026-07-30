@@ -11,7 +11,11 @@
 import { describe, it, expect } from 'vitest';
 import { runArtifactPipeline } from '../../../product/assessment-pipeline';
 
-const NO_CHANGE = 'This system is already well balanced.';
+// Phase 3 (cohesive voice): the no-change close is keyed to the system's
+// established character — tone-built, resolution-built, or balanced. The
+// invariant this suite protects is the no-change STATE (no fix urged,
+// lateral changes framed as flavour), not one universal sentence.
+const NO_CHANGE = /nothing here to fix — only flavours to trade|already well balanced/;
 const COHERENT_TITLE = 'Nothing here needs changing.';
 
 function payload(sys: string) {
@@ -38,7 +42,7 @@ describe('A · reference-coherent systems are not diagnosed flawed', () => {
       const p = payload(sys);
       expect(p, `${label} produced no artifact`).not.toBeNull();
       expect(p!.verdict).toBe(COHERENT_TITLE);
-      expect(p!.recommendation).toBe(NO_CHANGE);
+      expect(p!.recommendation).toMatch(NO_CHANGE);
     });
   }
 });
@@ -60,7 +64,7 @@ describe('C · normal-character system → no primary diagnosis', () => {
     const p = payload('Assess my system: Chord Qutest, Naim Nait XS 3, Harbeth P3ESR');
     expect(p).not.toBeNull();
     expect(p!.verdict).toBe(COHERENT_TITLE);
-    expect(p!.recommendation).toBe(NO_CHANGE);
+    expect(p!.recommendation).toMatch(NO_CHANGE);
   });
 });
 

@@ -145,7 +145,19 @@ function composeListeningSession(raw: any, recognition: string): string[] {
   const first = voiced
     ? `Put on something with air and inner detail and the system's priorities show at once: leading edges are clean and quick, the stage opens wide and unforced, and nothing is pushed at you. The ${voiced}'s warmth keeps the resolution musical rather than clinical.`
     : `Put on something with air and inner detail and the system's priorities show at once: leading edges are clean and quick, the stage opens wide and unforced, and nothing is pushed at you.`;
-  const second = `Over a long evening the character holds. The detail is offered rather than asserted, so the system stays easy to live with at volume and after hours.`;
+  // Phase 3 (cohesive voice): the closing observation must belong to THIS
+  // system's character — the previous universal "detail offered rather than
+  // asserted" line appeared verbatim on every assessment, including tone-first
+  // systems where it was not the story.
+  const axesForClose: Record<string, string> = raw?.findings?.systemAxes ?? {};
+  let second: string;
+  if (axesForClose.warm_bright === 'warm' || axesForClose.smooth_detailed === 'smooth') {
+    second = `Over a long evening the character holds. The warmth stays present without turning soft, and the system remains easy to live with at volume and after hours.`;
+  } else if (axesForClose.smooth_detailed === 'detailed') {
+    second = `Over a long evening the character holds. The detail is offered rather than asserted, so the system stays easy to live with at volume and after hours.`;
+  } else {
+    second = `Over a long evening the character holds. Nothing pushes forward and nothing falls away, so the system stays easy to live with at volume and after hours.`;
+  }
   // If the engine named a strength, prefer the first line to reflect it, but keep it observational.
   void strengths; void recognition;
   return [first, second];

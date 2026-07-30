@@ -610,7 +610,22 @@ export function synthesizeArtifact(result: any): SynthResult {
   const recommendationLicense: RecommendationLicense = bottleneck ? 'limitation' : 'none';
 
   let recommendation: string;
-  if (recommendationLicense === 'none') recommendation = 'This system is already well balanced.';
+  if (recommendationLicense === 'none') {
+    // Phase 3 (cohesive voice): the no-change close must be the CONSEQUENCE of
+    // the character the assessment just established — not a universal stamp.
+    // Keyed to the same systemAxes that drive recognition, so the reader
+    // finishes the essay where it began. Lateral changes are named explicitly:
+    // with no licensed bottleneck, swapping components trades flavour, not
+    // quality.
+    const ax = f.systemAxes ?? {};
+    if (ax.warm_bright === 'warm' || ax.smooth_detailed === 'smooth') {
+      recommendation = 'There is nothing here to fix — only flavours to trade. This system was assembled for tone, and a different component would change its character rather than improve it. If the warmth still pleases you, stop here.';
+    } else if (ax.smooth_detailed === 'detailed' || ax.warm_bright === 'bright') {
+      recommendation = 'There is nothing here to fix — only flavours to trade. This system was assembled for resolution, and a change would soften that commitment rather than better it. If the detail still rewards you, stop here.';
+    } else {
+      recommendation = 'This system is already well balanced. A component change here would shift the presentation sideways — a different flavour, not an improvement.';
+    }
+  }
   else recommendation = recommendationFor(category, role);
 
   // R6 post-condition: bottleneck-named role must appear in the recommendation

@@ -13,7 +13,8 @@
 import { describe, it, expect } from 'vitest';
 import { runArtifactPipeline } from '../../../product/assessment-pipeline';
 
-const NO_CHANGE = 'This system is already well balanced.';
+// Phase 3: no-change close is character-keyed; this suite protects the no-change STATE.
+const NO_CHANGE = /nothing here to fix — only flavours to trade|already well balanced/;
 const NO_CHANGE_COST = 'If you want more of something, name the quality you’re looking for.';
 
 // Retired hypothetical-deficiency phrases — must never appear anywhere.
@@ -45,7 +46,7 @@ describe('D-8 — no unlicensed speculation anywhere, in any state', () => {
 describe('D-8 — recommendation is licensed by the assessment', () => {
   it('coherent, no identified limitation → explicit no-change recommendation', () => {
     const { p } = paras(SYSTEMS.coherentNoLimitation);
-    expect(p.recommendation).toBe(NO_CHANGE);
+    expect(p.recommendation).toMatch(NO_CHANGE);
     expect(p.cost).toBe(NO_CHANGE_COST);
   });
 
@@ -55,12 +56,12 @@ describe('D-8 — recommendation is licensed by the assessment', () => {
     // frame ("The trade — …", preferred under D-10 Resolution) or the archetype
     // frame ("… gives up on purpose …") — never the Recommendation.
     expect(p.caseParagraphs.join('\n')).toMatch(/^the trade —|gives up on purpose|deliberate cost|picked its direction/im);
-    expect(p.recommendation).toBe(NO_CHANGE);
+    expect(p.recommendation).toMatch(NO_CHANGE);
   });
 
   it('genuine bottleneck → recommendation acts on the identified limitation, not no-change', () => {
     const { p } = paras(SYSTEMS.genuineBottleneck);
-    expect(p.recommendation).not.toBe(NO_CHANGE);
+    expect(p.recommendation).not.toMatch(NO_CHANGE);
     expect(p.recommendation).toMatch(/power mismatch|amplifier|speakers|power/i);
   });
 
@@ -69,6 +70,6 @@ describe('D-8 — recommendation is licensed by the assessment', () => {
     // The priority is not yet wired into a directed action; the correct behaviour
     // is still an honest, licensed recommendation — never a manufactured weakness.
     expect(all).not.toMatch(HYPOTHETICALS);
-    expect(p.recommendation).toBe(NO_CHANGE);
+    expect(p.recommendation).toMatch(NO_CHANGE);
   });
 });

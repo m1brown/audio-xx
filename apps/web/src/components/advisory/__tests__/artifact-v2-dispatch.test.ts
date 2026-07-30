@@ -53,7 +53,7 @@ describe('v2 Assessment Artifact dispatch', () => {
     const raw = runEngine('Assess my system: Chord Qutest, Naim SuperNait 3, Harbeth Super HL5 Plus');
     const { payload } = synthesizeArtifact(raw);
     expect(payload.verdict).toBe('Nothing here needs changing.');
-    expect(payload.recommendation).toBe('This system is already well balanced.');
+    expect(payload.recommendation).toMatch(/nothing here to fix — only flavours to trade|already well balanced/);
     expect(payload.recognition.startsWith('This system is built for')).toBe(true);
     // R8: no forbidden refrain in the restraint case.
     const judgment = [payload.recognition, ...payload.caseParagraphs].join(' ');
