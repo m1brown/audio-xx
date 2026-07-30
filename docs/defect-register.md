@@ -28,6 +28,19 @@ Severity per the Operating Doctrine: Blocker / Major / Minor / Backlog.
   the instance" does not close a row.
 - Review open rows at every release; an open Blocker means NOT READY.
 
+## Carried forward — product-approved deferrals (2026-07-30)
+
+Accepted by the product owner under the Editorial Restraint Pass approval
+(`fd6f2ab`, READY WITH KNOWN LIMITATIONS). **Assigned to a future responsive &
+entry-experience envelope — do not fix piecemeal, do not inflate to blockers:**
+
+1. Awkward mobile wrapping of the action row.
+2. Excessive vertical space in the lower desktop entry page.
+3. Unresolved hierarchy between structured component entry and free-text entry.
+4. Signed-in surfaces not yet visually verified (also gap watch #1).
+
+Palette refinement is explicitly closed for this phase — preserve `fd6f2ab`.
+
 ## Standing gap watch (defect classes that could still escape)
 
 Reviewed at every release — propose the smallest closure before the defect occurs:
