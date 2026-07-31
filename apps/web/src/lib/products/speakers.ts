@@ -89,7 +89,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'High-efficiency coaxial wideband monitor designed for dynamic expression and tonal color. Prioritizes rhythmic engagement, musical flow, and harmonic richness over last-degree analytical precision. The kind of speaker that makes you tap your foot before you start analyzing.',
     retailer_links: [
-      { label: 'WLM', url: 'http://www.wiener-lautsprecher-manufaktur.com/en-speaker' },
+      { label: 'WLM', url: 'https://www.wiener-lautsprecher-manufaktur.com/en-speaker' },
     ],
     learnMore: {
       manufacturer: 'http://www.wiener-lautsprecher-manufaktur.com/en-speaker',
@@ -280,7 +280,6 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'BBC-heritage design with famously rich, warm midrange and exceptional vocal naturalness. Trades outright resolution for tonal beauty and zero fatigue. The reference for "I could listen to this all day."',
     retailer_links: [
-      { label: 'Music Direct', url: 'https://www.musicdirect.com/speakers/harbeth-p3esr/' },
     ],
     notes: 'Limited bass extension and dynamic scale. Best for smaller rooms, vocal and acoustic music. Not the choice for hard-driving rock or large-scale orchestral.',
     placementSensitivity: {
@@ -373,7 +372,6 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Full-range Harbeth with the family warmth and midrange density, but more dynamic headroom and bass weight than the P3ESR. Resolving yet forgiving — a speaker for long sessions across all genres.',
     retailer_links: [
-      { label: 'Music Direct', url: 'https://www.musicdirect.com/speakers/harbeth-super-hl5-plus/' },
     ],
     sourceReferences: [
       { source: 'Stereophile', note: 'Herb Reichert review praising the SHL5+ as the complete Harbeth — midrange beauty with dynamic authority.', url: 'https://www.stereophile.com/content/harbeth-super-hl5plus-loudspeaker' },
@@ -552,7 +550,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Zu\'s entry-level high-efficiency design — raw, fast, dynamically explosive. Prioritizes rhythmic energy and speed over refinement. The audio equivalent of a muscle car: thrilling, rough around the edges, deeply fun.',
     retailer_links: [
-      { label: 'Zu Audio', url: 'https://www.zuaudio.com/dirty-weekend' },
+      { label: 'Zu Audio', url: 'https://www.zuaudio.com/' },
     ],
     notes: 'Can be forward and lively in the upper midrange. Benefits from warmer, smoother amplification. Not the choice for critical classical listening.',
     sourceReferences: [
@@ -716,7 +714,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'French design combining Focal\'s beryllium tweeter precision with a warm, full cabinet voice. Highly resolving but not analytical — detail presented with tonal richness and spatial depth.',
     retailer_links: [
-      { label: 'Focal', url: 'https://www.focal.com/en/home-audio/high-fidelity-speakers/kanta/kanta-n2' },
+      { label: 'Focal', url: 'https://www.focal.com/' },
     ],
     notes: 'Beryllium tweeter can lean bright in untreated rooms or with forward-sounding electronics. Benefits from careful amplifier matching.',
     placementSensitivity: {
@@ -792,7 +790,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Focal\'s flax-cone bookshelf — lively, open, and well-balanced for the price. Resolving without being aggressive. A solid all-rounder that hints at Focal\'s higher-end voicing.',
     retailer_links: [
-      { label: 'Focal', url: 'https://www.focal.com/en/home-audio/high-fidelity-speakers/aria-evo-x/aria-906' },
+      { label: 'Focal', url: 'https://www.focal.com/' },
       { label: 'Crutchfield', url: 'https://www.crutchfield.com/p_091AR906/' },
     ],
     sourceReferences: [
@@ -863,7 +861,6 @@ export const SPEAKER_PRODUCTS: Product[] = [
       'Brooklyn-made high-efficiency floorstander designed for tube amplification. 10-inch wideband driver delivers remarkable dynamic scale with rich tonal density and natural musical flow. 93dB sensitivity makes it ideal for low-power SET and push-pull amps.',
     retailer_links: [
       { label: 'DeVore Fidelity', url: 'https://devorefidelity.com/devore-fidelity-speakers/orangutan-series/devore-fidelity-o-93-speakers/' },
-      { label: 'Tone Imports', url: 'https://toneimports.com/devore/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -943,7 +940,6 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Polish full-range widebander in a compact open-back cabinet — 96dB efficiency requires only 2–5W for full dynamic range, pairing naturally with SET amplifiers. The single driver handles the full frequency range without a crossover, avoiding the phase discontinuities that crossover networks introduce between drivers. The open-back cabinet radiates energy rearward as well as forward, so room reflections contribute to the spatial image — but also make speaker placement and room treatment critical.',
     retailer_links: [
-      { label: 'Cube Audio', url: 'https://www.cubeaudio.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -1555,7 +1551,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Retro-styled three-way with rich, full-bodied sound. Exceptional value — punches well above its price in tonal richness and scale. Includes dedicated stands.',
     retailer_links: [
-      { label: 'Wharfedale', url: 'https://www.wharfedale.co.uk/linton/' },
+      { label: 'Wharfedale', url: 'https://www.wharfedale.co.uk/' },
     ],
     sourceReferences: [
       { source: 'Darko.Audio', note: 'Video review praising the Linton as exceptional value with old-school warmth.', url: 'https://darko.audio/2023/06/wharfedale-linton-heritage-video-review/' },
@@ -1806,7 +1802,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Swiss floorstanding with Boenicke\'s signature slim-cabinet, wide-bandwidth philosophy scaled up from the W5. Warm, spacious, and holographic with exceptional disappearing act for its size. The swing-base decoupling system isolates the cabinet from the floor. More bass extension and scale than the W5 while retaining the family\'s musical flow and spatial magic.',
     retailer_links: [
-      { label: 'Boenicke Audio', url: 'https://www.boenicke-audio.ch/w8' },
+      { label: 'Boenicke Audio', url: 'https://www.boenicke-audio.ch/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -1897,7 +1893,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Entry to the DeVore Orangutan line — the same warm, musical, tube-friendly philosophy in a compact standmount. 92dB sensitivity and 10Ω impedance make it an ideal match for low-power tube amplifiers. Paper cone and silk dome drivers deliver the natural, organic tonality the Orangutan line is known for. Smaller scale than the O/93 and O/96 but the same family voice.',
     retailer_links: [
-      { label: 'DeVore Fidelity', url: 'https://www.dfridelity.com/orangutan-obaby' },
+      { label: 'DeVore Fidelity', url: 'https://www.devorefidelity.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -1982,7 +1978,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Entry-level planar magnetic from Magnepan — an extraordinary value that introduces the planar sound: transparent, detailed, spacious, and utterly open. The quasi-ribbon tweeter delivers textural detail that box speakers at 3x the price struggle to match. Limited bass extension and dynamics, and the 4Ω/86dB load demands a current-capable amplifier. But for midrange purity and spatial presentation, nothing at this price comes close.',
     retailer_links: [
-      { label: 'Magnepan', url: 'https://www.magnepan.com/model_LRS_Plus' },
+      { label: 'Magnepan', url: 'https://www.magnepan.com/' },
     ],
     placementSensitivity: {
       level: 'high',
@@ -2069,7 +2065,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Scaled-up sibling of the LRS+ with a larger panel for more bass extension and dynamic headroom. Same planar magnetic virtues — transparency, spatial openness, textural detail — with better low-end weight. Still demands quality amplification and room to breathe. A natural step up for anyone who loves the planar sound and wants more scale.',
     retailer_links: [
-      { label: 'Magnepan', url: 'https://www.magnepan.com/model_Point_7' },
+      { label: 'Magnepan', url: 'https://www.magnepan.com/' },
     ],
     placementSensitivity: {
       level: 'high',
@@ -2155,7 +2151,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'The legendary BBC LS3/5a in contemporary Falcon Acoustics manufacture. A sealed-box monitor prized for its midrange purity, imaging precision, and vocal clarity. Needs high-quality stands and careful placement, but demands neither powerful amplification nor room treatment to shine. A reference-quality tool for listeners who value transparency and detail over bass extension. Iconic design that has influenced speaker engineering for decades.',
     retailer_links: [
-      { label: 'Falcon Acoustics', url: 'https://www.falcon-acoustics.co.uk/' },
+      { label: 'Falcon Acoustics', url: 'https://www.falconacoustics.co.uk/' },
     ],
     placementSensitivity: {
       level: 'high',
@@ -2244,7 +2240,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'A reissue of a British standmount classic, the 770 brings back the warm, musically engaging character that defined Mission speakers in their heyday. Rich midrange, smooth treble, and surprising bass extension from a compact box. More forgiving and emotionally engaging than strictly neutral designs — a speaker that makes listening a pleasure rather than an audition.',
     retailer_links: [
-      { label: 'Mission', url: 'https://www.missionspk.com/' },
+      { label: 'Mission', url: 'https://www.mission.co.uk/' },
     ],
     placementSensitivity: {
       level: 'moderate',
@@ -2330,7 +2326,6 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'A true bargain-bin gem. The MS 50 8VET exemplifies the warm, BBC-influenced British tuning philosophy that defined Mission\'s early product line. At under $100 used (and typically available), it punches far above its price point. Warm, musical, forgiving presentation with genuine flow and musicality. Not a precision tool, but a speaker that makes listening engaging and pleasurable. Perfect for vinyl, acoustic music, and anyone who values emotional involvement over technical analysis. This speaker is a reminder that the best audio doesn\'t require expensive equipment.',
     retailer_links: [
-      { label: 'Used Market (eBay, Reverb)', url: 'https://www.ebay.com' },
     ],
     placementSensitivity: {
       level: 'moderate',
@@ -2589,7 +2584,6 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'A sonic time capsule. The Altec Model 19 horn-loaded speaker represents mid-century American design philosophy: efficiency, immediacy, and visceral impact. The 15" woofer and horn-loaded tweeter deliver dynamic punch that solid-state boxes cannot match. Warm, colored, undeniably musical. Plays well at low volumes with low-powered tube gear. Typically found used; condition and driver age matter significantly. An immersive experience rather than a reference tool.',
     retailer_links: [
-      { label: 'Used Market (Craigslist, Reverb)', url: 'https://www.reverb.com' },
     ],
     placementSensitivity: {
       level: 'high',
@@ -2936,7 +2930,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'The iconic Magnepan 1.7i is the sweet spot of the planar line — larger than the LRS+ with more presence and staging, smaller and more affordable than the 3.7i. Planar transparency allows you to hear through the speakers into the room; dipole radiation creates a sense of space and openness rarely found in box speakers. Demands quality, current-capable amplification (100W+ into 4Ω) and space to breathe. Not a speaker for bass-heavy rooms or small spaces, but a musical revelation for listeners who prioritize openness and spatial presentation.',
     retailer_links: [
-      { label: 'Magnepan', url: 'https://www.magnepan.com/model_1_7i' },
+      { label: 'Magnepan', url: 'https://www.magnepan.com/' },
     ],
     placementSensitivity: {
       level: 'high',
@@ -3161,7 +3155,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     },
     description: 'Compact active wireless speaker with 11th-gen Uni-Q coaxial and DSP crossovers. Optimized for desktop and nearfield listening. Same Uni-Q point-source principle as LS60 but smaller driver limits bass extension and dynamic scale. Built-in streaming and wireless connectivity make it a complete desktop system.',
     retailer_links: [
-      { label: 'KEF', url: 'https://www.kef.com/products/lsx-ii' },
+      { label: 'KEF', url: 'https://www.kef.com/' },
     ],
     tendencies: {
       confidence: 'high',

@@ -77,7 +77,9 @@ describe('learn-more links — curated products', () => {
   it('Leben CS600X has manufacturer + used-market links', () => {
     const lebenPrompt = 'Assess my system: Denafrips Pontus II, Leben CS600X, DeVore O/96';
     const links = linksFor('Leben', lebenPrompt);
-    expect(links.some((l) => l.url === 'https://www.leben-hifi.com/cs600x.html')).toBe(true);
+    // URL canonicalized 2026-07-31 — leben-hifi.com is NXDOMAIN; the live
+    // manufacturer site is lebenhifi.com (CS-600 family page; no X page).
+    expect(links.some((l) => l.url === 'https://lebenhifi.com/products/cs600.html')).toBe(true);
     expect(links.some((l) => l.url === 'https://www.hifishark.com/search?q=Leben+CS600X')).toBe(true);
   });
 });

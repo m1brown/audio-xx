@@ -324,8 +324,6 @@ export const DAC_PRODUCTS: Product[] = [
       'ESS Sabre-based design with strong measured performance. Prioritizes clarity and dynamic range over tonal warmth.',
     retailer_links: [
       { label: 'SMSL', url: 'https://www.smsl-audio.com/portal/product/detail/id/879.html' },
-      { label: 'Amazon', url: 'https://www.amazon.com/dp/B0BPRL3GYX' },
-      { label: 'Apos Audio', url: 'https://apos.audio/products/smsl-do300' },
     ],
     notes: 'Can lean analytical in bright systems. Pairs well with warmer amplifiers.',
     // Step 10: buying metadata
@@ -392,8 +390,6 @@ export const DAC_PRODUCTS: Product[] = [
       'Dual ES9038Pro implementation emphasizing transient precision and wide dynamic range. A speed-first design.',
     retailer_links: [
       { label: 'Topping', url: 'https://www.toppingaudio.com/product-item/d70-pro-sabre' },
-      { label: 'Amazon', url: 'https://www.amazon.com/dp/B0CL5FCRPQ' },
-      { label: 'Apos Audio', url: 'https://apos.audio/products/topping-d70-pro-sabre' },
     ],
     notes: 'Very explicit presentation. May feel relentless in systems already biased toward speed.',
     // Step 10: buying metadata
@@ -462,8 +458,6 @@ export const DAC_PRODUCTS: Product[] = [
       // entry and the same path pattern is used here. Pointing to gustard.com
       // root — same fix pattern applied across the X16 / R26 / X26 Pro batch.
       { label: 'Gustard', url: 'https://www.gustard.com' },
-      { label: 'Amazon', url: 'https://www.amazon.com/dp/B09RFDMZPJ' },
-      { label: 'Apos Audio', url: 'https://apos.audio/products/gustard-x16' },
     ],
     philosophy: 'neutral',
     marketType: 'value',
@@ -774,8 +768,6 @@ export const DAC_PRODUCTS: Product[] = [
       'ESS Sabre delta-sigma implementation with very low distortion and wide bandwidth. The chip\'s fast transient response and low harmonic distortion mean the D90SE contributes minimal coloration — what goes in comes out with high measured fidelity. The trade-off is that it adds no harmonic body of its own, so systems that rely on the DAC for tonal weight will sound lean.',
     retailer_links: [
       { label: 'Topping', url: 'https://www.toppingaudio.com/product-item/d90se' },
-      { label: 'Amazon', url: 'https://www.amazon.com/dp/B09DVCCQGP' },
-      { label: 'Apos Audio', url: 'https://apos.audio/products/topping-d90se' },
     ],
     notes: 'Strengths are measurable: low distortion, wide bandwidth, high channel separation. The ESS chip\'s fast reconstruction filter produces sharp transients that some listeners read as "lean" compared to the slower rolloff of R2R or NOS designs.',
     tendencies: {
@@ -854,7 +846,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Non-oversampling tube output design prioritizing musical flow and texture. Smooths digital edges without losing rhythmic coherence.',
     retailer_links: [
-      { label: 'MHDT Labs', url: 'https://www.mhdtlab.com/orchid.htm' },
+      { label: 'MHDT Labs', url: 'https://www.mhdtlab.com/' },
     ],
     notes: 'Detail retrieval is softer than delta-sigma designs. Best paired with revealing amplifiers and speakers.',
     tendencies: {
@@ -1029,7 +1021,6 @@ export const DAC_PRODUCTS: Product[] = [
     // the noisy "Eversolo · Apos Audio" labels from Component
     // Contribution Explore. (2026-05-19)
     retailer_links: [
-      { label: 'Amazon', url: 'https://www.amazon.com/dp/B0DJCCBSMZ' },
     ],
     philosophy: 'energy',
     marketType: 'value',
@@ -1114,7 +1105,6 @@ export const DAC_PRODUCTS: Product[] = [
     retailer_links: [
       { label: 'RME', url: 'https://www.rme-audio.de/adi-2-dac.html' },
       { label: 'B&H Photo', url: 'https://www.bhphotovideo.com/c/product/1543585-REG/' },
-      { label: 'Amazon', url: 'https://www.amazon.com/dp/B07Y2GBLQR' },
     ],
     notes: 'The built-in parametric EQ is a significant advantage for system tuning. Not the most emotionally engaging, but extraordinarily capable.',
     tendencies: {
@@ -1295,7 +1285,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Desktop reference FPGA DAC/preamp with significantly more taps than the Hugo or Qutest. The additional processing power delivers greater composure, fuller tonal density, and a more effortless presentation while retaining the Chord timing signature.',
     retailer_links: [
-      { label: 'Chord Electronics', url: 'https://chordelectronics.co.uk/product/hugo-tt2/' },
+      { label: 'Chord Electronics', url: 'https://chordelectronics.co.uk/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -1605,8 +1595,6 @@ export const DAC_PRODUCTS: Product[] = [
       // Manufacturer link updated 2026-05-09 (link-QA pass): same gustard.cn
       // path pattern as X26 Pro / X16 — replaced with gustard.com root.
       { label: 'Gustard', url: 'https://www.gustard.com' },
-      { label: 'Amazon', url: 'https://www.amazon.com/dp/B0BL2F62LJ' },
-      { label: 'Apos Audio', url: 'https://apos.audio/products/gustard-r26' },
     ],
     tendencies: {
       confidence: 'medium',
@@ -1787,8 +1775,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Flagship desktop DAC using the AKM AK4499 chipset. Measurement performance is exceptional. The sonic character is precise and transparent — detail retrieval and separation are the primary strengths.',
     retailer_links: [
-      { label: 'Topping', url: 'https://www.toppingaudio.com/product-item/d90' },
-      { label: 'Apos Audio', url: 'https://apos.audio/products/topping-d90' },
+      { label: 'Topping', url: 'https://www.toppingaudio.com/' },
     ],
     sourceReferences: [
       { source: 'Audio Science Review', note: 'Detailed measurements and listening impressions of the AKM-based D90.' },
@@ -1828,7 +1815,6 @@ export const DAC_PRODUCTS: Product[] = [
       'ESS Sabre-based desktop DAC with strong measured performance. Precise, analytical character with good separation and low-level detail. Tonal weight is lighter than R2R alternatives.',
     retailer_links: [
       { label: 'SMSL', url: 'https://www.smsl-audio.com/portal/product/detail/id/792.html' },
-      { label: 'Apos Audio', url: 'https://apos.audio/products/smsl-su-9' },
     ],
     philosophy: 'analytical',
     marketType: 'value',
@@ -1867,7 +1853,6 @@ export const DAC_PRODUCTS: Product[] = [
       // Manufacturer link updated 2026-05-09: prior gustard.cn product URL
       // (productinfo/3758920.html) was broken. Switched to gustard.com root.
       { label: 'Gustard', url: 'https://www.gustard.com' },
-      { label: 'Apos Audio', url: 'https://apos.audio/products/gustard-x26-pro' },
     ],
     philosophy: 'analytical',
     marketType: 'value',
@@ -1979,7 +1964,6 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Dual-mono AKM-based DAC from Audalytic (a Gustard sub-brand). Aims for transparency and staging precision with more tonal body than typical measurement-focused designs. The emphasis is on resolution without analytical hardness.',
     retailer_links: [
-      { label: 'Audalytic', url: 'https://www.audalytic.com/' },
     ],
     philosophy: 'analytical',
     marketType: 'nonTraditional',
@@ -2224,8 +2208,6 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Entry-level discrete R2R DAC from the makers of the acclaimed Spring and May series. Natural tonal density, clean texture, and balanced resolution without analytical edge. A resolving alternative to both budget delta-sigma and the warmer Denafrips Ares.',
     retailer_links: [
-      { label: 'Holo Audio', url: 'https://www.holoaudio.com/' },
-      { label: 'Kitsune HiFi', url: 'https://kitsunehifi.com/product/holo-audio-cyan-2/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -2309,7 +2291,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Swiss pro-audio pedigree applied to consumer hi-fi. The DAC204 uses ESS conversion with Weiss\'s proprietary DSP processing — achieving studio-grade precision without the clinical edge typical of ESS implementations. Exceptionally composed and spatially precise.',
     retailer_links: [
-      { label: 'Weiss Engineering', url: 'https://weiss.ch/products/dac204/' },
+      { label: 'Weiss Engineering', url: 'https://weiss.ch/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -2391,8 +2373,6 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Holo Audio\'s flagship-class dual-mono R2R DAC — the Spring 3 is the sweet spot of the Holo range. Rich tonal density, natural texture, and musical flow. Upgradeable to the Kitsune-tuned "Level 3" variant for enhanced resolution.',
     retailer_links: [
-      { label: 'Holo Audio', url: 'https://www.holoaudio.com/' },
-      { label: 'Kitsune HiFi', url: 'https://kitsunehifi.com/product/holo-audio-spring-3/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -2474,7 +2454,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Dutch R2R DAC from audio veteran Cees Ruijtenberg (also behind Metrum). Sign-magnitude discrete conversion with a lively, dynamic presentation. More energetic than typical R2R — trades some smoothness for rhythmic drive and authority.',
     retailer_links: [
-      { label: 'Sonnet Digital Audio', url: 'https://www.sonnet-audio.com/morpheus.html' },
+      { label: 'Sonnet Digital Audio', url: 'https://www.sonnet-audio.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -2647,7 +2627,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Romanian FPGA-controlled R2R that bridges the gap between analog warmth and digital precision. Extremely holographic with refined treble and excellent depth layering. Widely regarded as a reference-class DAC that balances R2R tone with digital precision.',
     retailer_links: [
-      { label: 'Rockna', url: 'https://www.rockna.com/wavelight-dac' },
+      { label: 'Rockna', url: 'https://www.rockna-audio.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -2738,7 +2718,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Vincent Brient\'s entry into the TotalDAC range — 12 parallel R2R modules per channel for extraordinary tonal realism. Organic, fluid, and deeply natural. One of the most natural-sounding DACs available, especially strong in emotionally engaging systems.',
     retailer_links: [
-      { label: 'TotalDAC', url: 'https://www.totaldac.com/en/d1-twelve-mk2-eng' },
+      { label: 'TotalDAC', url: 'https://www.totaldac.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -2828,8 +2808,6 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Holo Audio\'s flagship — the May KTE is the Kitsune-tuned edition with premium components throughout. Extremely smooth with a deep soundstage, excellent macro and micro dynamics, and very low digital glare. Often described as "analog without losing resolution."',
     retailer_links: [
-      { label: 'Kitsune HiFi', url: 'https://kitsunehifi.com/product/holo-audio-may-kte/' },
-      { label: 'Holo Audio', url: 'https://www.holoaudio.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -3084,7 +3062,6 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Auralic\'s flagship DAC featuring the ESS Sabre ES9018 implementation with their proprietary Sanctuary audio processor and femto-precision clocking. More grounded and tonally substantial than Hugo-style FPGA DACs, prioritising composure and stability over sparkle. Polished and refined — a DAC that grounds the system rather than energising it.',
     retailer_links: [
-      { label: 'Auralic', url: 'https://auralic.com/' },
     ],
     tendencies: {
       confidence: 'medium',
@@ -3650,7 +3627,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Neutral, analytical, supremely clean discrete design. 130dB SNR. Dense imaging with weight and scale. Lean tonal balance reveals recordings without editorializing. Natural high frequencies avoid digital edge. Bruno Putzeys design excellence.',
     retailer_links: [
-      { label: 'Mola Mola', url: 'https://www.molamola.audio/' },
+      { label: 'Mola Mola', url: 'https://www.mola-mola.nl/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -3733,7 +3710,6 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Pure, spacious, organic presentation. Tube warmth without artificial coloration. Musical flow and naturalness. Smooth harmonic delivery. The entry point to serious Lampizator ownership with full NOS tube magic.',
     retailer_links: [
-      { label: 'Lampizator', url: 'https://www.lampizator.eu/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -3816,7 +3792,7 @@ export const DAC_PRODUCTS: Product[] = [
     description:
       'Eight discrete R2R modules per channel — more resistor elements per conversion step means finer voltage resolution, reducing quantization noise and producing smoother low-level detail than simpler R2R implementations. NOS mode bypasses digital reconstruction filtering, allowing transients to arrive without the pre-ringing that sharp digital filters introduce. The combination delivers dense harmonic midrange and natural phrasing, stepping up from the Morpheus with greater resolution.',
     retailer_links: [
-      { label: 'Sonnet', url: 'https://www.sonnet.nl/' },
+      { label: 'Sonnet', url: 'https://www.sonnet-audio.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -3986,7 +3962,6 @@ export const DAC_PRODUCTS: Product[] = [
       'Warm, musical Burr-Brown implementation with balanced output at a budget price. iFi\'s analog warmth voicing makes this a natural fit for bright or lean systems. Not a resolution champion — prioritises musicality and long-session comfort.',
     retailer_links: [
       { label: 'iFi Audio', url: 'https://ifi-audio.com/products/zen-dac/' },
-      { label: 'Amazon', url: 'https://www.amazon.com/dp/B09J8XGRS4' },
     ],
     sourceReferences: [
       { source: 'Darko.Audio', note: 'Review covering Burr-Brown warmth and value proposition.' },

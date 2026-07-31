@@ -943,7 +943,7 @@ export const HEADPHONE_PRODUCTS: HeadphoneProduct[] = [
     },
     description: 'Warm, bass-rich single-dynamic IEM with Campfire\'s signature build quality — machined aluminium, jewellery-grade finish. Fun, musical presentation that prioritises body and impact over analytical detail. Entry point to the Campfire line.',
     retailer_links: [
-      { label: 'Campfire Audio', url: 'https://www.campfireaudio.com/earphones/honeydew/' },
+      { label: 'Campfire Audio', url: 'https://www.campfireaudio.com/' },
     ],
     headphoneMeta: {
       formFactor: 'iem',
@@ -988,7 +988,7 @@ export const HEADPHONE_PRODUCTS: HeadphoneProduct[] = [
     },
     description: 'Campfire\'s iconic flagship IEM — the green one. Extraordinary staging and imaging for an IEM, with a lush, slightly warm tonal balance and exceptional treble extension via the tubeless T.A.E.C. acoustic chamber. Sensitive to source impedance — sounds different out of every device, which is either a feature or a frustration. Jewellery-grade machined aluminium. One of the most celebrated IEMs ever made.',
     retailer_links: [
-      { label: 'Campfire Audio', url: 'https://www.campfireaudio.com/earphones/andromeda/' },
+      { label: 'Campfire Audio', url: 'https://www.campfireaudio.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -1053,7 +1053,7 @@ export const HEADPHONE_PRODUCTS: HeadphoneProduct[] = [
     },
     description: 'Campfire\'s statement hybrid IEM — combines dynamic driver bass authority with BA precision and planar magnetic treble extension. Rich, full-bodied, and dynamic with excellent staging. The tri-driver topology attempts to get the best of all worlds: DD warmth and slam, BA detail and speed, planar air and extension. Bold sonic ambition in a jewellery-grade package.',
     retailer_links: [
-      { label: 'Campfire Audio', url: 'https://www.campfireaudio.com/earphones/solaris/' },
+      { label: 'Campfire Audio', url: 'https://www.campfireaudio.com/' },
     ],
     headphoneMeta: {
       formFactor: 'iem',
@@ -1099,9 +1099,9 @@ export const HEADPHONE_PRODUCTS: HeadphoneProduct[] = [
       spatial_precision: 1.0, composure: 0.8, texture: 0.9,
       fatigue_risk: 0.1, openness: 1.0,
     },
-    description: 'True ribbon headphone requiring speaker amplification — not a conventional headphone. The ribbon driver has negligible mass, which means transient response is limited only by the amplifier, not the driver. Soundstage is room-like rather than head-locked: instruments separate in three dimensions. Detail retrieval rivals electrostatics but the ribbon\'s attack is smooth, not etched — resolution without grain. Demands careful amplifier pairing: needs current, low noise, and enough power to drive a ribbon load. Srajan Ebaen\'s (6moons) reference headphone.',
+    description: 'True ribbon headphone requiring speaker amplification — not a conventional headphone. The ribbon driver has negligible mass, which means transient response is limited only by the amplifier, not the driver. Soundstage is room-like rather than head-locked: instruments separate in three dimensions. Detail retrieval rivals electrostatics but the ribbon\'s attack is smooth, not etched — resolution without grain. Demands careful amplifier pairing: needs current, low noise, and enough power to drive a ribbon load.',
     retailer_links: [
-      { label: 'Raal-Requisite', url: 'https://rfrequestie.com/' },
+      { label: 'Raal-Requisite', url: 'https://raalrequisite.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -1164,7 +1164,7 @@ export const HEADPHONE_PRODUCTS: HeadphoneProduct[] = [
       spatial_precision: 0.7, composure: 0.8, texture: 0.7,
       fatigue_risk: 0.15, openness: 0.8,
     },
-    description: 'Open-back dynamic headphone that delivers composure and tonal refinement at a price point where most competitors cut corners. The dynamic driver has good extension and a well-controlled midrange — not warm or romantic, but even-handed and easy to listen to for extended sessions. Open-back design provides natural soundstage width. Srajan Ebaen\'s 2024 brand pick on 6moons.',
+    description: 'Open-back dynamic headphone that delivers composure and tonal refinement at a price point where most competitors cut corners. The dynamic driver has good extension and a well-controlled midrange — not warm or romantic, but even-handed and easy to listen to for extended sessions. Open-back design provides natural soundstage width.',
     retailer_links: [],
     tendencies: {
       confidence: 'medium',

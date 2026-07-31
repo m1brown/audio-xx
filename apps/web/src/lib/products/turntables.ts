@@ -106,7 +106,7 @@ export const TURNTABLE_PRODUCTS: TurntableProduct[] = [
     description:
       'The Rega Planar 3 is built around timing and rhythmic coherence. Its lightweight rigid plinth and RB330 tonearm minimise energy storage, letting transients pass through with speed and conviction. The philosophy is "less mass, more music" — the result is a turntable that prioritises pace and engagement over tonal weight or staging grandeur. Ships with the Elys 2 cartridge.',
     retailer_links: [
-      { label: 'Rega Research', url: 'https://www.rega.co.uk/planar-3' },
+      { label: 'Rega Research', url: 'https://www.rega.co.uk/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -258,7 +258,7 @@ export const TURNTABLE_PRODUCTS: TurntableProduct[] = [
     description:
       'Pro-Ject\'s 30th anniversary design with carbon/steel sandwich plinth for resonance control, electronic speed change, and Pick IT PRO cartridge. Warmer and more grounded than the Rega school — less rhythmic drive but more tonal body and texture. A balanced, forgiving platform.',
     retailer_links: [
-      { label: 'Pro-Ject Audio', url: 'https://www.project-audio.com/en/product/debut-pro/' },
+      { label: 'Pro-Ject Audio', url: 'https://www.project-audio.com/' },
     ],
     tendencies: {
       confidence: 'medium',
@@ -332,7 +332,7 @@ export const TURNTABLE_PRODUCTS: TurntableProduct[] = [
     description:
       'VPI\'s entry-level turntable with their signature stainless steel/aluminum unipivot tonearm and MDF plinth. The sound is warm, dense, and organic — the turntable equivalent of an R2R DAC. Prioritises tonal richness and harmonic weight over precision or speed.',
     retailer_links: [
-      { label: 'VPI Industries', url: 'https://vpiindustries.com/turntables/cliffwood/' },
+      { label: 'VPI Industries', url: 'https://vpiindustries.com/' },
     ],
     tendencies: {
       confidence: 'medium',
@@ -482,7 +482,7 @@ export const TURNTABLE_PRODUCTS: TurntableProduct[] = [
     description:
       'The TD 1600 continues Thorens\' suspended subchassis lineage (TD 150, TD 160, TD 166). The spring-suspended chassis isolates the platter assembly from external vibration, producing a warm, spacious, and relaxed presentation. Tonally richer and more laid-back than the Linn LP12 — where Linn prioritises rhythm, Thorens prioritises immersion. The TD 1600 is the modern expression of the classic Thorens sound that defined vinyl for a generation.',
     retailer_links: [
-      { label: 'Thorens', url: 'https://www.thorens.com/en/turntables/td-1600.html' },
+      { label: 'Thorens', url: 'https://www.thorens.com/' },
     ],
     tendencies: {
       confidence: 'medium',

@@ -169,7 +169,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Hand-built single-ended amplifier from Justin Weber in San Diego. ~17W from EL84 pentode/triode mode with remarkable tonal density and warmth. More power than typical SET designs, making it compatible with a wider range of speakers (90dB+). Sonically rich, romantically voiced, and built to last. One of the most respected boutique single-ended designs in the US market.',
     retailer_links: [
-      { label: 'ampsandsound', url: 'https://www.ampsandsound.com/stereo-17' },
+      { label: 'ampsandsound', url: 'https://www.ampsandsound.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -251,7 +251,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'David Berning-derived ZOTL circuit — output transformerless tube design that delivers tube texture and spatial holography without the typical trade-offs. ~1W into 8Ω demands efficient speakers, but the clarity and spatial coherence are exceptional for the topology.',
     retailer_links: [
-      { label: 'Linear Tube Audio', url: 'https://lineartubeaudio.com/products/z10-integrated' },
+      { label: 'Linear Tube Audio', url: 'https://www.lineartubeaudio.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -336,7 +336,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Linear Tube Audio\'s flagship integrated based on the David Berning ZOTL circuit. ~40W with the speed and transparency of the best solid-state, plus the dimensionality and organic quality of tubes. No output transformer — the ZOTL impedance conversion eliminates a primary source of tube amplifier coloration. Drives a wide range of speakers (no efficiency requirement). A fundamentally different approach to tube amplification.',
     retailer_links: [
-      { label: 'Linear Tube Audio', url: 'https://www.lineartubeaudio.com/z40' },
+      { label: 'Linear Tube Audio', url: 'https://www.lineartubeaudio.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -424,7 +424,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Japanese push-pull tube integrated that defined a generation of desktop audiophile systems. ~15W of EL84 power with extraordinary rhythmic drive, tonal richness, and musical involvement. The kind of amp people keep for decades.',
     retailer_links: [
-      { label: 'Leben', url: 'https://www.leben-hifi.com/cs300xs.html' },
+      { label: 'Leben', url: 'https://lebenhifi.com/' },
       { label: 'Tone Imports', url: 'https://toneimports.com/leben/' },
     ],
     tendencies: {
@@ -521,11 +521,14 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Leben\'s flagship push-pull tube integrated. ~32W with switchable output tube compatibility (KT77, KT88, EL34) that meaningfully changes voicing. Extraordinary rhythmic drive, tonal density, and midrange authority. One of the most celebrated pairings in modern audio with the DeVore O/96. Tube rolling is central to the experience.',
     retailer_links: [
-      { label: 'Leben', url: 'https://www.leben-hifi.com/cs600x.html' },
+      { label: 'Leben', url: 'https://lebenhifi.com/' },
       { label: 'Tone Imports (US)', url: 'https://toneimports.com/leben/' },
     ],
     learnMore: {
-      manufacturer: 'https://www.leben-hifi.com/cs600x.html',
+      // 2026-07-31: leben-hifi.com is NXDOMAIN; the live manufacturer site
+      // is lebenhifi.com and its CS-600 family page is the closest
+      // verified product page for the CS600X (no dedicated X page exists).
+      manufacturer: 'https://lebenhifi.com/products/cs600.html',
       usedMarket: 'https://www.hifishark.com/search?q=Leben+CS600X',
     },
     tendencies: {
@@ -721,7 +724,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Rogue Audio\'s flagship tube integrated. 100W from KT120 tubes in ultralinear mode (55W triode) delivers serious power with tube warmth. Switchable triode/ultralinear lets you choose between purity and headroom. Drives virtually any speaker. One of the strongest value propositions in tube amplification — no speaker matching anxiety, no compromises on power. Made in Pennsylvania.',
     retailer_links: [
-      { label: 'Rogue Audio', url: 'https://www.rogueaudio.com/cronus_magnum_iii.html' },
+      { label: 'Rogue Audio', url: 'https://www.rogueaudio.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -809,7 +812,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Dutch-designed, built in China to Dutch specifications. The EVO 300 is the mainstream reference for accessible tube amplification. Adaptive AutoBias eliminates tube matching and manual adjustment — you can swap tubes freely without technical knowledge. EL34/KT88/KT120/KT150 compatible, meaning the amp\'s voicing can be shifted by the owner over time. Warm, musical, and completely hassle-free. The most recommended "first serious tube amp" for people who don\'t want to become tube technicians.',
     retailer_links: [
-      { label: 'PrimaLuna', url: 'https://www.primaluna.nl/evo-300.html' },
+      { label: 'PrimaLuna', url: 'https://www.primaluna.nl/' },
       { label: 'Upscale Audio (US)', url: 'https://www.upscaleaudio.com/collections/primaluna' },
     ],
     tendencies: {
@@ -1094,7 +1097,6 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       'Vintage American tube integrated from the golden era of hi-fi (~1960s). When properly restored, delivers a warm, flowing, musically engaging sound that defines the "classic tube" experience. Used prices vary widely based on condition and restoration quality.',
     retailer_links: [
       { label: 'Used market', url: 'https://www.hifishark.com/search?q=scott+222' },
-      { label: 'Audiomart', url: 'https://www.usaudiomart.com/' },
     ],
     tendencies: {
       confidence: 'medium',
@@ -1263,7 +1265,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Nelson Pass\'s single-ended Class A amplifier using rare Static Induction Transistors — 18W into 8Ω. SITs have a triode-like transfer curve whose distortion is dominated by even-order harmonics, which the ear interprets as warmth and richness rather than grain. The single-ended topology preserves this even-harmonic structure without push-pull cancellation, producing spatial depth and textural density from a solid-state device — but SIT transistors are no longer manufactured.',
     retailer_links: [
-      { label: 'First Watt', url: 'https://www.firstwatt.com/sit3.html' },
+      { label: 'First Watt', url: 'https://www.firstwatt.com/' },
       { label: 'Used market', url: 'https://www.hifishark.com/search?q=first+watt+sit-3' },
     ],
     tendencies: {
@@ -1559,7 +1561,6 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       'The original Goldmund-derived minimalist power amp that started the JOB phenomenon. 225W into 8Ω from a tiny chassis. Ultra-fast, ultra-clean, and shockingly dynamic for its size and used price. A legendary overachiever on the used market.',
     retailer_links: [
       { label: 'Used market', url: 'https://www.hifishark.com/search?q=job+225' },
-      { label: 'US Audio Mart', url: 'https://www.usaudiomart.com/' },
     ],
     tendencies: {
       confidence: 'founder_reference',
@@ -1650,10 +1651,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Austrian current-feedback integrated with zero global feedback — designed for speed, transparency, and rhythmic precision. 50W into 8Ω with a lively, elastic presentation that makes music feel immediate and alive.',
     retailer_links: [
-      { label: 'Crayon Audio', url: 'https://www.crayonaudio.com/' },
       { label: 'Used market', url: 'https://www.hifishark.com/search?q=crayon+cia' },
-      { label: '6moons review', url: 'https://www.6moons.com/audioreviews2/crayon/1.html' },
-      { label: 'Mono & Stereo review', url: 'https://www.monoandstereo.com/crayon-audio-cia-1-integrated-amplifier-review/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -2127,7 +2125,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Chinese boutique dual-mono integrated with 215W into 8Ω. Warm-leaning, muscular character — dense, rich midrange with solid bass weight and high current delivery. More colored than its successor the EX-M1+, trading some precision for tonal engagement and density. Punches well above its price class. A strong choice for listeners who want solid-state authority with warmth rather than analytical neutrality.',
     retailer_links: [
-      { label: 'Kinki Studio', url: 'https://www.kinkistudio.com/' },
+      { label: 'Kinki Studio', url: 'https://www.kinki-studio.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -2489,7 +2487,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Swiss reference integrated from Goldmund\'s high-end Telos line. 225W of clean, precise, highly controlled power. Neutral to slightly dry — prioritises speed, dynamics, and transparency over tonal warmth. Exceptional grip and authority. The Telos line represents Goldmund\'s serious audio engineering, far above the budget JOB sub-brand.',
     retailer_links: [
-      { label: 'Goldmund', url: 'https://www.goldmund.com/products/telos-590-nextgen-ii' },
+      { label: 'Goldmund', url: 'https://www.goldmund.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -2581,7 +2579,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Swiss reference Class A integrated with 120W into 8Ω doubling into 4Ω. Six separate power supplies totaling 1,200 VA. Neutral to slightly dark tonality with stunning bass authority and spatial precision. Combines Class A musicality with exceptional control and technical performance. Optional DAC and phono modules.',
     retailer_links: [
-      { label: 'Soulution', url: 'https://www.soulution-audio.com/en/products/300-series/330-integrated-amplifier' },
+      { label: 'Soulution', url: 'https://www.soulution-audio.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -2759,7 +2757,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Handcrafted US hybrid integrated with legendary midrange liquidity. Direct-heated triode preamplifier stage feeds exceptional MOSFET power amp (100W/ch). Extraordinary timbral beauty, holographic staging, and musical flow. Dual-mono construction minimizes crosstalk. Warm, organic presentation with enough control to drive dynamic music convincingly. Reference-grade musicality at statement pricing.',
     retailer_links: [
-      { label: 'Vinnie Rossi Audio', url: 'https://www.vinnierossiautomotive.com/' },
+      { label: 'Vinnie Rossi Audio', url: 'https://vinnierossi.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -2844,7 +2842,6 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Japanese boutique legend. Push-pull EL34 integrated delivering legendary musicality at modest 10W/ch. Hand-wound transformers and point-to-point wiring throughout. Warm, rich, alive presentation — the Shindo house sound. Not a measure of technical specification but rather a portrait of musical naturalness. Requires high-efficiency speakers (90dB+) and intimate to medium-sized rooms. Reference for tube amplifier musicality.',
     retailer_links: [
-      { label: 'Shindo Labs', url: 'https://www.shindolabs.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -3264,7 +3261,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'British rhythm reference. 70W Class AB optimized for timing, pace, and drive — quintessential Naim PRAT philosophy. Music propels forward with infectious energy. Not analytical or neutral; instead prioritizes musical engagement through rhythmic coherence. Energetic, articulate, engaging presentation that makes even familiar recordings feel fresh.',
     retailer_links: [
-      { label: 'Naim Audio', url: 'https://www.naim-audio.com/' },
+      { label: 'Naim Audio', url: 'https://www.naimaudio.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -3362,7 +3359,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'British high-end integrated combining Naim PRAT timing with refined clarity and 80W authority. More power and detail than XS 3 while retaining quintessential Naim rhythmic drive. Energetic yet refined — engages listeners while revealing system transparency. Excellent balance of pace and precision.',
     retailer_links: [
-      { label: 'Naim Audio', url: 'https://www.naim-audio.com/' },
+      { label: 'Naim Audio', url: 'https://www.naimaudio.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -3545,7 +3542,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'British-Japanese budget collaboration combining Rotel reliability with musical, balanced presentation. 50W Class AB delivers musicality without hype. Solid, dependable integrated punching above its price point. Not a coloration engine — instead provides neutral-to-warm musical foundation. Excellent entry-level component.',
     retailer_links: [
-      { label: 'Rotel', url: 'https://www.rotelusa.com/' },
+      { label: 'Rotel', url: 'https://www.rotel.com/' },
     ],
     tendencies: {
       confidence: 'medium',
@@ -4129,7 +4126,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Legendary DIY tube headphone amplifier famous for pairing with Sennheiser HD6xx. OTL topology delivers warm, smooth, musical character with exceptional timbral beauty. ~1W output drives most high-impedance headphones excellently. DIY kit builds community and customization. Reference for warm, musical, fatigue-free headphone listening.',
     retailer_links: [
-      { label: 'Bottlehead Electronics', url: 'https://www.bottleheadelectronics.com/' },
+      { label: 'Bottlehead Electronics', url: 'https://bottlehead.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -4215,7 +4212,6 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     description:
       'Japanese exotic minimalism. Single-ended 45 triode delivering just 2W/ch pure Class A. Hand-wired, point-to-point construction throughout. Requires speakers 95dB+ and intimate rooms, but rewards with extraordinary organic warmth and musicality. Legendary midrange magic and tone. Reference for single-ended triode character.',
     retailer_links: [
-      { label: 'Yamamoto Sound Craft', url: 'https://www.yamamoto-sound.com/' },
     ],
     tendencies: {
       confidence: 'high',
