@@ -523,6 +523,41 @@ nav .nav-radar-link:hover {
   nav .nav-link-secondary {
     display: none !important;
   }
+  /* Pre-beta item 7 (2026-07-31): the SIGNED-IN nav (brand · How It
+   * Works · My Systems · taste radar · Sign out) overflowed 375px by
+   * ~49px — .nav-secondary rendered past the right edge and forced
+   * horizontal scroll on every signed-in page. Tighten the gap/padding
+   * budget at phone widths and allow the row to wrap as a safety net
+   * instead of overflowing. Desktop values unchanged. */
+  nav {
+    padding: 12px 0.75rem;
+  }
+  nav .nav-inner {
+    padding: 0 0.5rem;
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+  nav .nav-primary {
+    gap: 1rem;
+  }
+  nav .nav-links {
+    gap: 0.8rem;
+  }
+  nav .nav-secondary {
+    gap: 0.7rem;
+  }
+  /* Pre-beta item 7: stack the builder's two actions vertically at
+   * phone widths — side-by-side, "+ Add another component" wrapped to
+   * three cramped lines against the CTA border. Full-width CTA gives
+   * the primary action the visual weight it deserves on mobile. */
+  .builder-action-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem;
+  }
+  .builder-action-row > button[data-testid="read-assessment"] {
+    width: 100%;
+  }
 }
 
 /* Mobile homepage polish (2026-05-20).

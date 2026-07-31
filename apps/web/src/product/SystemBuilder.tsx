@@ -210,7 +210,15 @@ export default function SystemBuilder() {
         </p>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.6rem' }}>
+      {/* Pre-beta item 7 (2026-07-31): at phone widths the side-by-side
+        * row wrapped "+ Add another component" into three cramped lines
+        * colliding with the CTA border. The builder-action-row class
+        * stacks the two actions vertically below 480px (globals.css);
+        * desktop layout is unchanged. */}
+      <div
+        className="builder-action-row"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.6rem' }}
+      >
         {fields.length < MAX_FIELDS ? (
           <button
             type="button"
@@ -226,6 +234,7 @@ export default function SystemBuilder() {
               padding: 0,
               borderBottom: `1px solid ${EDITORIAL.hairline}`,
               paddingBottom: '1px',
+              whiteSpace: 'nowrap',
             }}
           >
             ＋ Add another component
