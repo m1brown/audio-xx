@@ -56,6 +56,9 @@ export default function SystemBuilder() {
 
   const setValue = (i: number, v: string) => {
     track('builder_started'); // once per page load (deduped in analytics)
+    // Funnel (pre-beta item 5): first field that reaches a plausible
+    // component name. Event only — the text itself is never sent.
+    if (v.trim().length >= 3) track('builder_first_component');
     setValues((prev) => prev.map((p, j) => (j === i ? v : p)));
   };
 
@@ -70,6 +73,7 @@ export default function SystemBuilder() {
     if (url && !pending) {
       // Entry-source handoff for the assessment_rendered funnel event.
       try { sessionStorage.setItem('axx-entry', 'builder'); } catch { /* fine */ }
+      track('assessment_submitted', { source: 'builder' });
       startTransition(() => router.push(url));
     }
   };

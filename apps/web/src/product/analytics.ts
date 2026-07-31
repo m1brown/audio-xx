@@ -26,6 +26,12 @@ import { track as vercelTrack } from '@vercel/analytics';
 export const EVENTS = [
   'landing_viewed',
   'builder_started',
+  // Pre-beta item 5 (2026-07-31): the three funnel gaps — first
+  // meaningful component, unified submit, and auth entry. Payload-free
+  // apart from allowlisted enum props; never user text.
+  'builder_first_component',
+  'assessment_submitted',
+  'auth_initiated',
   'composer_started',
   'assessment_rendered',
   'assessment_failed',

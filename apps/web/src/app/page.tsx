@@ -901,6 +901,9 @@ export default function Home() {
 
     // Funnel (M5): the conversational path was chosen. Deduped per load.
     if (!isFollowUp) trackProduct('composer_started');
+    // Funnel (pre-beta item 5): unified submit event across both entry
+    // lanes; the builder lane fires its own in SystemBuilder.submit.
+    if (!isFollowUp) trackProduct('assessment_submitted', { source: 'composer' });
 
     // Validation telemetry (Workstream 25B): a user-submitted query is a
     // decision-intent entry. trackDecisionIntent also emits

@@ -110,3 +110,29 @@ rows above it have volume. The launch question hierarchy: (1) do
 visitors complete assessments? (2) do completions lead to saves? (3) do
 saves lead to subscriptions? A weak number is a *localised* problem —
 fix the stage, not the product.
+
+## First-user funnel (pre-beta item 5, 2026-07-31)
+
+The nine funnel stages and their stable event names. All events are
+payload-free apart from allowlisted enum props; user text, system
+descriptions, emails, and URLs are structurally excluded by
+`sanitizeProps` in `src/product/analytics.ts`.
+
+| Stage | Event | Fires |
+|---|---|---|
+| 1. Homepage viewed | `landing_viewed` | homepage mount (deduped) |
+| 2. Builder started | `builder_started` | first keystroke in a builder field |
+| 3. First meaningful component | `builder_first_component` | first field reaching ≥3 chars (event only — never the text) |
+| 4. Assessment submitted | `assessment_submitted` (`source: builder\|composer`) | builder CTA / composer Send |
+| 5. Assessment rendered | `assessment_rendered` | artifact render success (`assessment_failed` on the sad path) |
+| 6. Auth initiated | `auth_initiated` | /auth/signin mount (completion: `sign_in_completed`, `account_created` server-side) |
+| 7. System saved | `first_system_saved` / `additional_system_saved` | save success |
+| 8. Share initiated | `copy_link_clicked` (plus `print_clicked`) | artifact actions |
+| 9. Outbound commerce click | `outbound_commerce_click` (destination type + monetized flag) | product-card links — telemetry lane (`/api/events`), not Vercel Analytics |
+
+Funnel this measures: arrival → engagement → completion → account →
+retention-primitive (save) → reach (share) → revenue-primitive
+(outbound click). Conversion between any two adjacent stages is
+computable directly in Vercel Analytics (stages 1–8) plus the events
+table (stage 9). No dashboard is built — both stores already render
+event counts natively.

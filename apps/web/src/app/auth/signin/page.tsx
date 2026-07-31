@@ -5,7 +5,7 @@
  * /save. One pair of fields signs an existing collector in or creates
  * a free account; the destination is always My Systems.
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -40,6 +40,12 @@ export default function SignIn() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const router = useRouter();
+
+  // Funnel (pre-beta item 5): sign-in/sign-up entry. View-type event,
+  // deduped per page load in the analytics layer.
+  useEffect(() => {
+    track('auth_initiated');
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
