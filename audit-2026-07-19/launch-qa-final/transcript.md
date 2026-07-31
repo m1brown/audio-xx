@@ -133,7 +133,7 @@ Your component choices suggest a preference for equipment emphasising **harmonic
 WLM Diva monitor contributes musical flow and continuity
 
 [assessmentLimitations]
-WLM Diva monitor has moderate placement sensitivity — Spatial precision improves significantly with careful positioning. Bass energy from the passive radiator can overwhelm small or untreated rooms.
+WLM Diva monitor has moderate placement sensitivity: Spatial precision improves significantly with careful positioning. Bass energy from the passive radiator can overwhelm small or untreated rooms.
 
 [upgradeDirection]
 Without stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.
@@ -395,7 +395,7 @@ Magnepan 1.7i provides strong spatial definition
 
 [assessmentLimitations]
 Resolution repeats at several stages — lesser recordings may sound analytical or fatiguing
-Magnepan 1.7i has high placement sensitivity — Dipole design — requires distance from rear wall. Needs medium-to-large room for proper bass development and soundstage.
+Magnepan 1.7i has high placement sensitivity: Dipole design — requires distance from rear wall. Needs medium-to-large room for proper bass development and soundstage.
 
 [upgradeDirection]
 If the system feels analytically intense, consider a warmer or more fluid component — a tube stage, a smoother DAC topology, or speakers with more midrange body could restore balance.
@@ -499,7 +499,7 @@ Linn LP12 contributes musical flow and continuity
 [assessmentLimitations]
 Stacked warmth may reduce transient precision and spatial clarity
 Complex, dense recordings could sound congested
-Falcon Ls3/5a has high placement sensitivity — Sealed design is less placement-sensitive than reflex, but isolation and proper stands are essential for imaging.
+Falcon Ls3/5a has high placement sensitivity: Sealed design is less placement-sensitive than reflex, but isolation and proper stands are essential for imaging.
 
 [upgradeDirection]
 If you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally.
@@ -578,7 +578,7 @@ Stacked warmth may reduce transient precision and spatial clarity
 Complex, dense recordings could sound congested
 Stacked smoothness may obscure transient detail and reduce perceived resolution
 Stacked elasticity may lose composure on complex orchestral or dense electronic material
-DeVore O/96 has moderate placement sensitivity — Wide-baffle design produces substantial bass energy that can overwhelm rooms smaller than 15 square metres. Needs breathing room — pull away from rear walls to let the presentation open up.
+DeVore O/96 has moderate placement sensitivity: Wide-baffle design produces substantial bass energy that can overwhelm rooms smaller than 15 square metres. Needs breathing room — pull away from rear walls to let the presentation open up.
 
 [upgradeDirection]
 If you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally. If you want to introduce more detail and presence without losing the ease, a more revealing source or cables with better transient definition could add clarity without fundamentally changing the system's character. If the system feels loose or uncontrolled, a more composed amplifier or tighter-grip speaker pairing could add stability without losing all dynamic energy.
@@ -594,62 +594,15 @@ What are you exploring — is there something you'd like to change about this ba
 
 **Expectation:** Measurement-first chain read fairly — not dismissed as sterile.
 
-**Routing:** system_assessment → system_assessment
+**Routing:** system_assessment → system_assessment→clarification
 
 **Response:**
 
-[introSummary]
-A system voiced toward fine detail, and grip and composure. This is a coherent, deliberately assembled system that likely punches above its price tier. The overall character emerges from how these components interact rather than any single piece dominating. The system prioritises resolution, composure, and analytical transparency. This profile rewards well-recorded material and tends to expose source quality differences clearly.
+[acknowledge]
+Before I assess this, let me make sure I have your system right.
 
-[systemContext]
-**System read**
-
-The Topping D90SE and Purifi form a system built around precision and control. This system reflects a listener drawn to composure, articulation, and dynamic control. This system is built around composure, precision, and low-noise resolution.
-
-**System logic**
-Topping D90SE → delta-sigma (ESS) → defines the tonal center
-Purifi → neutral, controlled → low coloration — passes the Topping's character through intact
-
-**Primary leverage**
-
-The DAC.
-
-Topping D90SE limits tonal ease and forgiveness, and rhythmic flow and elasticity. Change it and the rest of the system should open up.
-
-**Decision**
-
-KEEP if you value speed, separation, spatial clarity.
-
-CHANGE the dac if the system sounds constrained. Topping D90SE likely limits what the rest of the chain can deliver.
-
-**Trade-offs**
-
-- Warmer DAC adds body, reduces transient sharpness
-- Tube stage adds texture, softens control
-- Current setup excels on sparse music, exposes thinness on dense tracks
-- Documented caution: the Topping D90SE in systems that are already lean or lacking midrange body: the D90SE won't compensate — it adds no warmth or harmonic padding, so leanness upstream or downstream becomes more audible
-
-**Next step options**
-
-- Move toward warmer DAC options
-- Compare Topping D90SE vs R2R alternatives
-
-**Do nothing check**
-
-If the music sounds engaging, this system is doing its job. Purifi define the character — changing either reshapes what you hear.
-
-[keyObservation]
-Your component choices suggest a preference for equipment emphasising **precision and control**. Topping D90SE, Purifi share this design philosophy. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.
-
-[assessmentStrengths]
-Revealing presentation — inner detail and textural nuance should be well-resolved
-Composure and grip — the system should handle complex passages with authority
-
-[upgradeDirection]
-Without stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.
-
-[followUp]
-What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
+[question]
+So far I can place these 2: Topping D90SE, Purifi. It looks like one more component is in what you wrote that I couldn't pin down. Could you give me the exact make and model number of that one? Then I'll assess the whole system.
 
 ---
 
@@ -659,65 +612,15 @@ What are you exploring — is there something you'd like to change about this ba
 
 **Expectation:** Analog-first British chain; PRaT + midrange synergy named.
 
-**Routing:** system_assessment → system_assessment
+**Routing:** system_assessment → system_assessment→clarification
 
 **Response:**
 
-[introSummary]
-A system voiced toward warmth and body. The system shares a consistent lean toward tonal richness — this defines the system's sonic identity rather than limiting it.
+[acknowledge]
+Before I assess this, let me make sure I have your system right.
 
-[systemContext]
-**System read**
-
-The Planar 6, Harbeth, and Rega form a coherent system with one clear place to improve.
-
-**System logic**
-Harbeth → tone-rich presentation → reinforces the direction the Rega sets
-Rega → tone-rich → adds warmth from the source stage
-Planar 6 → neutral, controlled → contributes to overall character
-
-**Primary leverage**
-
-The speaker.
-
-Harbeth limits top-end air and transient sparkle. Change it and the rest of the system should open up.
-
-**Decision**
-
-KEEP if you value balance, coherence.
-
-CHANGE the speaker if the system sounds constrained. Harbeth likely limits what the rest of the chain can deliver.
-
-**Trade-offs**
-
-- Upgrading Harbeth lifts resolution, changes system balance
-- Solid-state swap adds grip, reduces harmonic bloom
-- Current setup excels on dense music, exposes thinness on sparse tracks
-
-**Next step options**
-
-- Compare speaker alternatives to Harbeth
-- Check if speaker change shifts enough
-
-**Do nothing check**
-
-If the music sounds engaging, this system is doing its job. Planar 6 define the character — changing either reshapes what you hear.
-
-[keyObservation]
-Your component choices suggest a preference for equipment emphasising **harmonic richness and tonal weight**. Planar 6, Harbeth, Rega share this design philosophy. The system shares a consistent lean toward tonal richness — this reinforces the system's identity. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.
-
-[assessmentStrengths]
-System character depends on how components interact in practice — further listening context would refine this
-
-[assessmentLimitations]
-Stacked warmth may reduce transient precision and spatial clarity
-Complex, dense recordings could sound congested
-
-[upgradeDirection]
-If you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally.
-
-[followUp]
-What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
+[question]
+I can see the shape of your system, but I couldn't confidently match Planar 6, Harbeth, Rega to specific models in my catalog. Could you confirm the exact make and model of each? Then I'll assess the whole system.
 
 ---
 
@@ -801,7 +704,7 @@ Your component choices suggest a preference for equipment emphasising **harmonic
 WLM Diva monitor contributes musical flow and continuity
 
 [assessmentLimitations]
-WLM Diva monitor has moderate placement sensitivity — Spatial precision improves significantly with careful positioning. Bass energy from the passive radiator can overwhelm small or untreated rooms.
+WLM Diva monitor has moderate placement sensitivity: Spatial precision improves significantly with careful positioning. Bass energy from the passive radiator can overwhelm small or untreated rooms.
 
 [upgradeDirection]
 Without stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.
@@ -817,63 +720,15 @@ What are you exploring — is there something you'd like to change about this ba
 
 **Expectation:** Direction with trade-offs; "keep what you have" allowed if honest.
 
-**Routing:** system_assessment → system_assessment
+**Routing:** system_assessment → system_assessment→clarification
 
 **Response:**
 
-[introSummary]
-A reference-level system voiced toward fine detail, and grip and composure. This is a coherent, deliberately assembled system that likely punches above its price tier. The system leans toward grip and control across multiple stages — this shapes both its strengths and its primary limitation. The system prioritises resolution, composure, and analytical transparency. This profile rewards well-recorded material and tends to expose source quality differences clearly.
+[acknowledge]
+Before I assess this, let me make sure I have your system right.
 
-[systemContext]
-**System read**
-
-The Naim Supernait 3 and Chord Qutest lean toward resolution and precision, with the Harbeth Shl5+ supplying all of the warmth. In practice the two tendencies should balance each other — clarity from the electronics, body from the speakers. This system reflects a listener drawn to composure, articulation, and dynamic control. This system is built around composure, precision, and low-noise resolution.
-
-**System logic**
-Chord Qutest → FPGA → defines the tonal center
-Naim Supernait 3 → Class AB, 80W/ch → preserves speed and edge
-Harbeth Shl5+ → tone-rich, smooth, controlled presentation → adds body and prevents thinness
-Naim Supernait 3 and Chord Qutest push toward precision. The Harbeth Shl5+ alone restores weight.
-
-**Primary leverage**
-
-System balance (grip and control).
-
-The chain stacks grip and control in one direction. Rebalance it and the system serves more material.
-
-**Decision**
-
-KEEP if you value speed, separation, spatial clarity.
-
-CHANGE only as a matter of taste — nothing needs correcting. The DAC is the first place to look if you ever want a different tonal balance. The balance leans toward clarity, so any taste adjustment would start there.
-
-**Trade-offs**
-
-- Warmer DAC adds body, reduces transient sharpness
-- Tube stage adds texture, softens control
-- Current setup excels on sparse music, exposes thinness on dense tracks
-
-**Next step options**
-
-- Move toward warmer DAC options
-- Compare Chord Qutest vs R2R alternatives
-
-**Do nothing check**
-
-If this balance of speed and clarity and just enough warmth is what you enjoy, leave the system alone. The risk of upgrading is losing the Harbeth Shl5+'s careful compensation for Naim Supernait 3 + Chord Qutest precision.
-
-[keyObservation]
-Your component choices suggest a preference for equipment emphasising **precision and control**. Naim Supernait 3, Chord Qutest, Harbeth Shl5+ share this design philosophy. The system leans toward grip and control, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.
-
-[assessmentStrengths]
-Naim Supernait 3 contributes musical flow and continuity
-Naim Supernait 3 adds composure under complex passages
-
-[upgradeDirection]
-Without stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.
-
-[followUp]
-What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
+[question]
+So far I can place these 3: Naim Supernait 3, Chord Qutest, Harbeth Shl5+. It looks like one more component is in what you wrote that I couldn't pin down. Could you give me the exact make and model number of that one? Then I'll assess the whole system.
 
 ---
 
@@ -2256,61 +2111,15 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 
 **Expectation:** Fair read of a mainstream starter system without snobbery.
 
-**Routing:** system_assessment → system_assessment
+**Routing:** system_assessment → system_assessment→clarification
 
 **Response:**
 
-[introSummary]
-A system with no strong lean in any single direction. This is a coherent, deliberately assembled system that likely punches above its price tier. The overall character emerges from how these components interact rather than any single piece dominating.
+[acknowledge]
+Before I assess this, let me make sure I have your system right.
 
-[systemContext]
-**System read**
-
-The Rega Planar 3, Schiit Modi, and Yamaha A-S701 form a coherent system with one clear place to improve.
-
-**System logic**
-Schiit Modi → delta-sigma (AKM) → sets the tonal foundation
-Rega Planar 3 → clean, neutral feed → stays out of the way
-Yamaha A-S701 → neutral, controlled → contributes to overall character
-
-**Primary leverage**
-
-The DAC.
-
-Schiit Modi limits soundstage size. Change it and the rest of the system should open up.
-
-**Decision**
-
-KEEP if you value balance, coherence.
-
-CHANGE the dac if the system sounds constrained. Schiit Modi likely limits what the rest of the chain can deliver.
-
-**Trade-offs**
-
-- Leaner DAC adds speed, reduces harmonic weight
-- Solid-state swap adds grip, reduces harmonic bloom
-- Current setup excels on dense music, exposes thinness on sparse tracks
-
-**Next step options**
-
-- Move toward more resolving DAC options
-- Compare Schiit Modi vs delta-sigma alternatives
-
-**Do nothing check**
-
-If the music sounds engaging, this system is doing its job. Yamaha A-S701 define the character — changing either reshapes what you hear.
-
-[keyObservation]
-Your component choices suggest a preference for equipment emphasising **neutrality and transparency**. Rega Planar 3, Schiit Modi, Yamaha A-S701 share this design philosophy. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.
-
-[assessmentStrengths]
-System character depends on how components interact in practice — further listening context would refine this
-
-[upgradeDirection]
-No single tonal or textural direction dominates here. Any change would shift the character rather than fix a gap. If you want to explore, focus on the quality you most want to intensify — but "do nothing" is a strong option.
-
-[followUp]
-What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
+[question]
+So far I can place these 3: Rega Planar 3, Schiit Modi, Yamaha A-S701. It looks like one more component is in what you wrote that I couldn't pin down. Could you give me the exact make and model number of that one? Then I'll assess the whole system.
 
 ---
 
