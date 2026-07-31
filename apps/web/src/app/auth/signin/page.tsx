@@ -100,6 +100,18 @@ export default function SignIn() {
             {error}
           </p>
         )}
+        {/* Recovery link is gated on email delivery being configured —
+            never show a "Forgot password?" that cannot send mail. */}
+        {process.env.NEXT_PUBLIC_PASSWORD_RESET === '1' && (
+          <p style={{ margin: '0 0 1.4rem' }}>
+            <Link
+              href="/auth/forgot"
+              style={{ fontFamily: 'var(--face-text)', fontSize: '0.9rem', color: EDITORIAL.inkMuted }}
+            >
+              Forgot your password?
+            </Link>
+          </p>
+        )}
         <button
           type="submit"
           disabled={busy}
