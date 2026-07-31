@@ -11,6 +11,29 @@
 
 import * as Sentry from '@sentry/nextjs';
 
+/**
+ * Server-side scrubbing — parity with instrumentation-client.ts.
+ * Request bodies can carry user conversation text and system
+ * descriptions; those must never reach the error tracker.
+ */
+function scrub(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
+  if (event.request?.data) {
+    event.request.data = '[redacted]';
+  }
+  if (event.request?.cookies) {
+    event.request.cookies = {};
+  }
+  if (event.breadcrumbs) {
+    event.breadcrumbs = event.breadcrumbs.map((bc) => {
+      if (bc.data && typeof bc.data === 'object') {
+        return { ...bc, data: { ...bc.data, message: '[redacted]' } };
+      }
+      return bc;
+    });
+  }
+  return event;
+}
+
 export async function register() {
   const dsn = process.env.SENTRY_DSN;
   if (!dsn) return;
@@ -20,6 +43,8 @@ export async function register() {
       dsn,
       environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV,
       tracesSampleRate: 0,
+      sendDefaultPii: false,
+      beforeSend: scrub,
     });
   }
 
@@ -28,6 +53,8 @@ export async function register() {
       dsn,
       environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV,
       tracesSampleRate: 0,
+      sendDefaultPii: false,
+      beforeSend: scrub,
     });
   }
 }
