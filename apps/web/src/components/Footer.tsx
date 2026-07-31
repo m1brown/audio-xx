@@ -1,6 +1,12 @@
 import Link from 'next/link';
+import { getAmazonAffiliateTag, getEbayCampaignId } from '@/lib/affiliate-config';
 
 export default function Footer() {
+  // B2 (GTM commerce conditions): the disclosure derives from the SAME config
+  // that monetizes links, so footer and reality cannot diverge. With no
+  // affiliate credentials configured, the honest sentence renders; setting
+  // the credentials flips both the links and this sentence together.
+  const affiliateActive = !!(getAmazonAffiliateTag() || getEbayCampaignId());
   return (
     <footer
       style={{
@@ -76,8 +82,19 @@ export default function Footer() {
         </div>
 
         <p style={{ margin: 0, color: '#aaa' }}>
-          Audio&thinsp;XX may earn commissions from qualifying purchases as an
-          Amazon Associate. This does not affect our recommendations.
+          {affiliateActive ? (
+            <>
+              Audio&thinsp;XX may earn commissions from qualifying purchases
+              through affiliate links. This does not affect our
+              recommendations.
+            </>
+          ) : (
+            <>
+              Audio&thinsp;XX currently earns no commission from any link on
+              this site. Recommendations are never influenced by commercial
+              considerations.
+            </>
+          )}
         </p>
       </div>
     </footer>
