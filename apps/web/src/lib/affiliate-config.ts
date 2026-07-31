@@ -56,8 +56,33 @@
  * affiliate-disclosure line in the footer.
  */
 
-function readEnvString(name: string): string | undefined {
-  const raw = process.env[name];
+/**
+ * D-010 resolution (pre-beta item 9, 2026-07-31).
+ *
+ * The original implementation read server-only vars via a DYNAMIC
+ * process.env[name] lookup. Link generation runs in client components,
+ * where (a) server vars are never available and (b) Next.js only
+ * inlines NEXT_PUBLIC_* vars referenced as LITERAL expressions — so
+ * configured identifiers could never reach a generated link in the
+ * deployed app. Two failures, one symptom: setting the vars did
+ * nothing.
+ *
+ * Chosen fix: build-time public configuration (NEXT_PUBLIC_* literal
+ * references, server-var fallback for server contexts). Rationale over
+ * server-side link generation: affiliate tags are public by nature
+ * (they appear in every clicked URL), so there is no secret to
+ * protect; client-side generation keeps caching simple and the
+ * operational surface is two env vars + redeploy. Amazon Associates
+ * and EPN both only require the identifier in the outbound URL.
+ *
+ * Activation (founder action, after program enrollment — never ship
+ * fake IDs): set NEXT_PUBLIC_AMAZON_AFFILIATE_TAG and/or
+ * NEXT_PUBLIC_EBAY_CAMPAIGN_ID in Vercel (Production), redeploy.
+ * Links and the footer disclosure flip together, because the
+ * disclosure derives from these same getters.
+ */
+
+function normalize(raw: string | undefined): string | undefined {
   if (typeof raw !== 'string') return undefined;
   const trimmed = raw.trim();
   return trimmed.length > 0 ? trimmed : undefined;
@@ -70,7 +95,10 @@ function readEnvString(name: string): string | undefined {
  * only when this returns a defined value.
  */
 export function getAmazonAffiliateTag(): string | undefined {
-  return readEnvString('AMAZON_AFFILIATE_TAG');
+  return (
+    normalize(process.env.NEXT_PUBLIC_AMAZON_AFFILIATE_TAG) ??
+    normalize(process.env.AMAZON_AFFILIATE_TAG)
+  );
 }
 
 /**
@@ -80,7 +108,10 @@ export function getAmazonAffiliateTag(): string | undefined {
  * URLs only when this returns a defined value.
  */
 export function getEbayCampaignId(): string | undefined {
-  return readEnvString('EBAY_CAMPAIGN_ID');
+  return (
+    normalize(process.env.NEXT_PUBLIC_EBAY_CAMPAIGN_ID) ??
+    normalize(process.env.EBAY_CAMPAIGN_ID)
+  );
 }
 
 /**
@@ -91,17 +122,24 @@ export function getEbayCampaignId(): string | undefined {
  * without an EPN campaign to attribute to).
  */
 export function getEbayCustomId(): string | undefined {
-  return readEnvString('EBAY_CUSTOM_ID');
+  return (
+    normalize(process.env.NEXT_PUBLIC_EBAY_CUSTOM_ID) ??
+    normalize(process.env.EBAY_CUSTOM_ID)
+  );
 }
 
 /**
  * Returns the eBay marketplace host configured for this deployment.
  * Defaults to "www.ebay.com" when unset — Audio XX is U.S.-centered
  * by default, Europe-aware via single-host override. Set
- * EBAY_HOST=www.ebay.fr or EBAY_HOST=www.ebay.co.uk per environment
+ * NEXT_PUBLIC_EBAY_HOST=www.ebay.fr or =www.ebay.co.uk per environment
  * to redirect outbound used-market links to a different marketplace.
  * No region detection or geo-routing — one host per deployment.
  */
 export function getEbayHost(): string {
-  return readEnvString('EBAY_HOST') ?? 'www.ebay.com';
+  return (
+    normalize(process.env.NEXT_PUBLIC_EBAY_HOST) ??
+    normalize(process.env.EBAY_HOST) ??
+    'www.ebay.com'
+  );
 }
