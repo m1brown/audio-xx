@@ -112,9 +112,7 @@ import LeftRail from '@/components/workspace/LeftRail';
 import RightRail from '@/components/workspace/RightRail';
 import SystemEditor from '@/components/system/SystemEditor';
 import SystemSavePrompt from '@/components/system/SystemSavePrompt';
-import type { DraftSystem, SystemComponentRole } from '@/lib/system-types';
-import type { ProductCategory } from '@/lib/catalog-taxonomy';
-import { populateAssessTemplate } from '@/lib/cta-template';
+import type { DraftSystem } from '@/lib/system-types';
 import { EDITORIAL } from '@/lib/editorial-tokens';
 import ListenerProfileBadge, { buildProfileSnapshot, type ListenerProfileSnapshot } from '@/components/ListenerProfileBadge';
 
@@ -869,49 +867,23 @@ export default function Home() {
   }, []);
 
   /**
-   * Editorial cover autofill (Design Doctrine v1, 2026-06-30).
+   * Editorial cover autofill — REMOVED (founder request, 2026-07-31).
    *
-   * When the visitor arrives on the homepage with an active saved
-   * system, the composer pre-populates with the labelled assessment
-   * template — the "missing manuscript" framing made literal: the
-   * cover IS an assessment-in-progress with their gear already
-   * partially typed in, ready to send. Without an active system the
-   * composer stays empty; the editorial headline + standfirst above
-   * carry the cover.
+   * The composer previously pre-populated with the active saved
+   * system's components mapped into the labelled assessment template.
+   * The founder asked for the box to open intentionally empty (the
+   * cycling placeholder carries the affordance); the panel itself and
+   * its dimensions are unchanged.
    *
-   * Invariants:
-   *  - Runs only when !hasMessages (homepage, not conversation).
-   *  - Runs only when currentInput is empty (never overwrite typing).
-   *  - Runs only when at least one mappable component exists.
-   *  - Idempotent: the empty-currentInput guard ensures a single
-   *    autofill per visit; subsequent renders no-op.
+   * TODO(phase-2): this region is reserved for future contextual
+   * sponsorship, partner messages, underwriting, or other editorial
+   * modules. Any future occupant replaces the removed autofill, not
+   * the composer itself.
+   *
+   * The pure helpers (`populateAssessTemplate` in lib/cta-template.ts)
+   * are kept — they remain unit-tested and available if a deliberate
+   * user-initiated "use my saved system" affordance returns.
    */
-  useEffect(() => {
-    if (messages.length > 0) return;
-    if (state.currentInput.length > 0) return;
-    const ref = audioState.activeSystemRef;
-    let components: Array<{
-      brand?: string | null;
-      name?: string | null;
-      category?: ProductCategory | null;
-      role?: SystemComponentRole;
-    }> = [];
-    if (!ref) {
-      if (audioState.savedSystems.length === 1) {
-        components = audioState.savedSystems[0].components;
-      }
-    } else if (ref.kind === 'draft' && audioState.draftSystem) {
-      components = audioState.draftSystem.components;
-    } else if (ref.kind === 'saved') {
-      const saved = audioState.savedSystems.find((s) => s.id === ref.id);
-      if (saved) components = saved.components;
-    }
-    if (components.length === 0) return;
-    const { text } = populateAssessTemplate(components);
-    dispatch({ type: 'SET_INPUT', value: text });
-    // Intentional: re-run only when active-system identity changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [audioState.activeSystemRef, audioState.savedSystems, audioState.draftSystem, messages.length]);
 
   const handleSubmit = useCallback(async (overrideText?: string, options?: { source?: 'follow-up' | 'fresh' }) => {
     const inputText = overrideText ?? currentInput;
