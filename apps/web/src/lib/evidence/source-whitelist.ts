@@ -42,12 +42,10 @@ export interface WhitelistedSource {
  */
 export const SOURCE_WHITELIST: WhitelistedSource[] = [
   // ── Tier 1 — Preferred ──────────────────────────────
-  {
-    name: '6moons',
-    tier: 'preferred',
-    perspective: 'System-aware, experience-led reviewing. Strong on spatial, timing, and tonal character. Extensive comparison methodology.',
-    url: 'https://6moons.com/',
-  },
+  // NOTE (2026-07-31, founder): 6moons is deliberately absent. It must
+  // never be whitelisted — 6moons content may not be displayed, quoted,
+  // or linked anywhere in the product. Dormant catalog references are
+  // tolerated only because this filter blocks them at render time.
   {
     name: 'Mono and Stereo',
     tier: 'preferred',

@@ -482,7 +482,6 @@ export const BRAND_PROFILES: BrandProfile[] = [
     leadershipOrigin: 'John DeVore founded DeVore Fidelity in 2000 in Brooklyn, New York. Before starting the company, he worked in professional audio and developed his ear through years of live music listening. The brand remains a one-person design operation with small-batch manufacturing.',
     reviewerQuotes: [
       { quote: 'The O/96 may be the most musically engaging speaker I have heard at any price.', source: 'Art Dudley (Stereophile)' },
-      { quote: 'DeVore speakers make you forget about equipment and listen to music.', source: 'Srajan Ebaen (6moons)' },
     ],
     strengths: [
       'Exceptional rhythmic engagement and musical flow',
@@ -576,8 +575,6 @@ export const BRAND_PROFILES: BrandProfile[] = [
     typicalTradeoff: 'Dynamic scale and bass weight traded for spatial truth and refinement.',
     leadershipOrigin: 'Sven Boenicke founded Boenicke Audio in 1998 in Basel, Switzerland. Before loudspeakers, he spent years recording live concerts — an experience that shaped his reference for natural timbre and spatial accuracy. He designs, voices, and signs off on every unit personally. All final assembly, quality control, and tuning happen in Basel.',
     reviewerQuotes: [
-      { quote: 'The W8 supplied the most precise yet expansive imaging and soundstage I have yet to experience in my listening room.', source: 'Srajan Ebaen (6moons)' },
-      { quote: 'They performed that magic trick few speakers can pull off: they disappeared.', source: '6moons (W8 review)' },
     ],
     strengths: [
       'Exceptional spatial precision — holographic imaging far beyond cabinet size',
@@ -990,7 +987,6 @@ export const BRAND_PROFILES: BrandProfile[] = [
     reviewerQuotes: [
       { quote: 'The INT-25 is the finest small amplifier I have ever used — pure Class A magic.', source: 'Herb Reichert (Stereophile)' },
       { quote: 'Pass Labs delivers the warmth and texture of tubes with the reliability of solid-state.', source: 'Robert Harley (The Absolute Sound)' },
-      { quote: 'First Watt amplifiers are for listeners who value intimacy over scale.', source: 'Srajan Ebaen (6moons)' },
     ],
     strengths: [
       'Class A operation delivers exceptional linearity and midrange richness',
@@ -2305,7 +2301,7 @@ export const BRAND_PROFILES: BrandProfile[] = [
     region: 'asia',
     categories: ['headphone', 'amplifier', 'dac'],
     philosophy: 'Aune designs headphones and audio electronics that punch above their price class. Value-oriented but not budget-compromised. Their planar magnetic headphones and tube/solid-state hybrid amplifiers aim for refinement typically found at higher price points.',
-    tendencies: 'Clean, fast, refined. Planar magnetic headphones with good composure and speed. Not warm or romantic — precision-oriented but not clinical. Outstanding value-per-dollar. Srajan Ebaen\'s 2024 brand pick on 6moons.',
+    tendencies: 'Clean, fast, refined. Planar magnetic headphones with good composure and speed. Not warm or romantic — precision-oriented but not clinical. Outstanding value-per-dollar.',
     systemContext: 'Aune products are accessible entry points for listeners exploring higher-end sound. Their headphones work well with modest amplification. Their amplifiers and DACs pair broadly.',
     links: [],
   },
@@ -6032,14 +6028,6 @@ const EDITORIAL_SOURCES: Array<{
   {
     brandPattern: /\bjob\b/i,
     sources: [
-      // 6moons as lead reviewer for Job (Srajan Ebaen's coverage of
-      // Goldmund-derived circuit work).
-      {
-        outlet: '6moons',
-        note: 'Srajan Ebaen review of the Job 225 — Goldmund-derived lateral MOSFET DC-coupled wide-bandwidth amplifier.',
-        url: 'https://6moons.com/audioreviews/job/1.html',
-        title: 'Job Electronics Job 225',
-      },
       { outlet: 'Darko.Audio', note: 'JOB 225 coverage — compact high-current amplification' },
     ],
   },
@@ -6055,12 +6043,6 @@ const EDITORIAL_SOURCES: Array<{
         note: 'Michael Lavorgna on the Leben CS600 — his 2018 Product of the Year, returned to his reference system in 2022.',
         url: 'https://twitteringmachines.com/system-building-the-leben-cs600-integrated-amplifier-the-return/',
         title: 'System Building — The Leben CS600 Integrated Amplifier: The Return',
-      },
-      {
-        outlet: '6moons',
-        note: 'Leben CS300X review — push-pull EL84 tube integrated',
-        url: 'https://6moons.com/audioreviews/leben/cs300x.html',
-        title: 'Leben CS300X review',
       },
       {
         outlet: 'Stereophile',
@@ -6096,7 +6078,6 @@ const EDITORIAL_SOURCES: Array<{
         url: 'https://twitteringmachines.com/review-devore-fidelity-o-96-loudspeakers/',
         title: 'Review: DeVore Fidelity O/96 Loudspeakers',
       },
-      { outlet: '6moons', note: 'DeVore Fidelity O/96 coverage — high-efficiency speaker design' },
       {
         outlet: 'Stereophile',
         note: 'Art Dudley review — Orangutan O/96 as a modern classic for tube systems',
@@ -6128,12 +6109,6 @@ const EDITORIAL_SOURCES: Array<{
   {
     brandPattern: /\bshindo\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: 'Shindo Laboratory profile — Tokyo workshop and tube amplification heritage',
-        url: 'https://6moons.com/audioreviews/shindo3/shindo.html',
-        title: 'Shindo Laboratory feature',
-      },
     ],
   },
   {
@@ -6147,7 +6122,6 @@ const EDITORIAL_SOURCES: Array<{
         url: 'https://twitteringmachines.com/review-totaldac-d1-unity-dac/',
         title: 'Review: totaldac d1-unity DAC',
       },
-      { outlet: '6moons', note: 'TotalDAC reviews — discrete R2R ladder DAC analysis' },
     ],
   },
   // ── Darko-as-lead-reviewer brands ────────────────────
@@ -6216,89 +6190,41 @@ const EDITORIAL_SOURCES: Array<{
   {
     brandPattern: /\bkinki\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Kinki Studio EX-M1 — value-tier high-current Class A/B integrated.',
-        url: 'https://www.6moons.com/audioreviews2/kinki2/1.html',
-        title: 'Kinki Studio EX-M1',
-      },
     ],
   },
   {
     brandPattern: /\blaiv\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Laiv Crescendo Verse — discrete R2R DAC built around the same engineering as the Harmony.',
-        url: 'https://6moons.com/audioreview_articles/laiv-audio-crescendo-verse/3/',
-        title: 'Laiv Audio Crescendo Verse',
-      },
     ],
   },
   {
     brandPattern: /\bdenafrips\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Denafrips Terminator — Srajan Ebaen coverage of the flagship discrete R2R DAC.',
-        url: 'https://6moons.com/audioreviews2/denafrips/1.html',
-        title: 'Denafrips Terminator',
-      },
     ],
   },
   {
     brandPattern: /\btopping\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Topping B200 — fully-balanced discrete NFCA stereo amplifier.',
-        url: 'https://6moons.com/audioreview_articles/topping-b200/2/',
-        title: 'Topping B200',
-      },
     ],
   },
   {
     brandPattern: /\bwlm\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the WLM Diva Monitor with Diva Control — coaxial wideband design with room-tuning network.',
-        url: 'https://6moons.com/audioreviews/wlm/divamonitor.html',
-        title: 'WLM Diva Monitor with Diva Control',
-      },
     ],
   },
   {
     brandPattern: /\bboenicke\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Boenicke W8 — floorstander delivering mini-monitor staging with full-system scale.',
-        url: 'https://6moons.com/audioreviews2/boenicke3/4.html',
-        title: 'Boenicke Audio W8',
-      },
     ],
   },
   {
     brandPattern: /\bqualio\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Qualio IQ — Mundorf AMT + SB Acoustics 6.5" midrange open-baffle three-way.',
-        url: 'https://6moons.com/audioreview_articles/qualio-iq/',
-        title: 'Qualio Audio IQ',
-      },
     ],
   },
   {
     brandPattern: /\bcrayon\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Crayon Audio CIA-1T — compact Austrian Class A/B integrated.',
-        url: 'https://6moons.com/audioreviews2/crayon/4.html',
-        title: 'Crayon Audio CIA-1T',
-      },
     ],
   },
   // ── PB1.2 follow-up: catalog-wide coverage pass ─────
@@ -6502,56 +6428,26 @@ const EDITORIAL_SOURCES: Array<{
   {
     brandPattern: /\baurorasound\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Aurorasound Heada — headphone amp/preamp from the Japanese boutique that designed the HFSA-01.',
-        url: 'https://6moons.com/audioreviews2/aurorasound3/1.html',
-        title: 'Aurorasound Heada',
-      },
     ],
   },
   {
     brandPattern: /linear tube|\blta\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Linear Tube Audio Z10 ZOTL — proprietary Berning circuit, all-tube architecture without transformers.',
-        url: 'https://6moons.com/audioreview_articles/lineartubeaudio2/',
-        title: 'Linear Tube Audio Z10',
-      },
     ],
   },
   {
     brandPattern: /\bdecware\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Decware SE84CSP — preamp counterpart to the SE84UFO; same SET design philosophy.',
-        url: 'https://6moons.com/audioreviews/decware2/pre.html',
-        title: 'Decware SE84CSP',
-      },
     ],
   },
   {
     brandPattern: /\baudalytic\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons follow-up review of the Audalytic DR70 — discrete R2R DAC with 1-bit DSD direct path.',
-        url: 'https://6moons.com/audioreview_articles/audalytic-dr70-2nd-thoughts/',
-        title: 'Audalytic DR70 — 2nd thoughts',
-      },
     ],
   },
   {
     brandPattern: /\bgoldmund\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Goldmund Telos 590 NextGen — flagship integrated; Goldmund\'s reference for the Job-derived lineage.',
-        url: 'https://6moons.com/audioreviews2/goldmund3/1.html',
-        title: 'Goldmund Telos 590 NextGen',
-      },
     ],
   },
 

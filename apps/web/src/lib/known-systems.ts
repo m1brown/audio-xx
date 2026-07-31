@@ -95,54 +95,6 @@ export const KNOWN_SYSTEMS: KnownSystem[] = [
     ],
   },
 
-  // ── Srajan Ebaen (6moons) ────────────────────────────
-
-  {
-    id: 'srajan-main',
-    label: "Srajan Ebaen's main reference system",
-    attribution: 'Srajan Ebaen',
-    bio: 'Publisher and chief reviewer at 6moons. One of the longest-running voices in online audio journalism.',
-    philosophy: 'Built around openness, transient speed, and spatial projection. The Qualio IQ widebanders with Kinki Studio amplification and a Laiv Harmony R2R DAC prioritize microdetail and elasticity — this system reveals rather than flatters.',
-    components: [
-      { brand: 'Laiv', name: 'Harmony', category: 'dac', role: null, core: true },
-      { brand: 'Kinki Studio', name: 'Dazzle', category: 'amplifier', role: null, core: true },
-      { brand: 'Qualio', name: 'IQ', category: 'speaker', role: null, core: true },
-      { brand: 'Singxer', name: 'SU-6', category: 'dac', role: null, core: false },
-      { brand: 'Lifesaver Audio', name: 'Gradient Box 2', category: 'other', role: null, core: false },
-    ],
-    notes: 'Room is 6×8m with PSI Audio AVAA C214 active bass traps. Source is iMac running Audirvana with Qobuz.',
-    // F4 gate: reviewer-publication sourceUrl omitted (was: 6moons).
-  },
-  {
-    id: 'srajan-secondary',
-    label: "Srajan Ebaen's secondary system",
-    attribution: 'Srajan Ebaen',
-    bio: 'Publisher and chief reviewer at 6moons.',
-    philosophy: 'A complementary rig to the main system — trades the widebander directness for fuller-range coverage with a MusikBoxx + Zu subwoofer foundation. Still speed-oriented through Kinki Studio amplification and a Cen.Grand R2R DAC, but with more bass authority.',
-    components: [
-      { brand: 'Cen.Grand', name: 'DSDAC 1.0 Deluxe', category: 'dac', role: null, core: true },
-      { brand: 'Kinki Studio', name: 'EX-B7', category: 'amplifier', role: null, core: true },
-      { brand: 'ModalAkustik', name: 'MusikBoxx', category: 'speaker', role: null, core: true },
-      { brand: 'Hattor', name: 'ARP-S', category: 'amplifier', role: 'preamp', core: false },
-      { brand: 'Zu', name: 'Method', category: 'speaker', role: null, core: false },
-      { brand: 'Soundaware', name: 'D300Ref', category: 'streamer', role: null, core: false },
-    ],
-    // F4 gate: reviewer-publication sourceUrl omitted (was: 6moons).
-  },
-  {
-    id: 'srajan-video',
-    label: "Srajan Ebaen's video system",
-    attribution: 'Srajan Ebaen',
-    bio: 'Publisher and chief reviewer at 6moons.',
-    philosophy: 'A 2-channel video system built for engagement rather than analytical listening. The Gold Note integrated and Zu Soul VI prioritize dynamics and tonal weight — a system designed to be musically satisfying without demanding attention.',
-    components: [
-      { brand: 'Gold Note', name: 'IS-1000 Deluxe', category: 'integrated', role: null, core: true },
-      { brand: 'Zu Audio', name: 'Soul VI', category: 'speaker', role: null, core: true },
-      { brand: 'Oppo', name: 'BDP-105', category: 'dac', role: null, core: true },
-      { brand: 'Dynaudio', name: '18S', category: 'speaker', role: null, core: false },
-    ],
-    // F4 gate: reviewer-publication sourceUrl omitted (was: 6moons).
-  },
 ];
 
 // ── Matching ─────────────────────────────────────────
@@ -286,7 +238,7 @@ export function findKnownSystemMatch(
  * Build a suggested system name from a known system match.
  *
  * Phase C blocker fix #5 — Reviewer-attribution guardrail:
- * Named-reviewer attribution ("Similar to Srajan Ebaen's system") is a
+ * Named-reviewer attribution ("Similar to <named reviewer>'s system") is a
  * specific third-party claim and must be gated on an exact curated
  * match, not inferred from a ≥0.66 brand-chain overlap. Partial overlap
  * is frequently coincidental for well-known chains and produces

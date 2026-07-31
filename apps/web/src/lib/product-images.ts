@@ -306,9 +306,9 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'singxer sa 90',       url: 'https://kitsunehifi.com/cdn/shop/files/sa901.jpg?v=1742920926&width=1232',
     source: { tier: 'authorized_dealer', site: 'kitsunehifi.com', credit: 'Kitsune HiFi', captured: '2026-05-08' } },
 
-  // LinnenberG — 6moons review (linnenberg-audio.de site uses Mobirise template, no per-product image)
-  { key: 'linnenberg liszt',    url: 'https://6moons.com/audioreviews/linnenberg/1.jpg',
-    source: { tier: 'review_publication', site: '6moons.com', credit: '6moons', captured: '2026-05-08' } },
+  // LinnenberG — no image. The prior entry hotlinked a 6moons asset;
+  // removed 2026-07-31 (6moons content must not be used). The
+  // linnenberg-audio.de site has no per-product image to substitute.
 
   // AGD Productions — manufacturer WordPress CDN (image is Gran Vivace MK IV;
   // catalog "Vivace" matches via substring — same product family).
@@ -347,9 +347,9 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'buchardt a700',       url: 'https://buchardtaudio.com/cdn/shop/files/5eacfaf1-bc58-4b67-a747-6869592f8bf3_900x.jpg?v=1773302031',
     source: { tier: 'manufacturer', site: 'buchardtaudio.com', credit: 'Buchardt Audio', captured: '2026-05-19' } },
 
-  // Hornshoppe — 6moons review (manufacturer site only hosts a tiny banner crop)
-  { key: 'hornshoppe horn',     url: 'https://6moons.com/audioreviews/hornshoppe2/hero_cameohorns.jpg',
-    source: { tier: 'review_publication', site: '6moons.com', credit: '6moons', captured: '2026-05-08' } },
+  // Hornshoppe — no image. The prior entry hotlinked a 6moons asset;
+  // removed 2026-07-31 (6moons content must not be used). The
+  // manufacturer site only hosts a tiny banner crop — no substitute.
 
   // XSA Labs — Stereo Times review hero (xsa-labs.com hosts multiple
   // finishes / configs without a designated single hero shot).

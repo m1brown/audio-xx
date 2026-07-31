@@ -62,7 +62,7 @@ describe('hasDisplayableSources — universal Sources-section gate', () => {
 
   describe('accepts (Sources heading should render)', () => {
     it('one Tier 1 publication', () => {
-      expect(hasDisplayableSources([{ source: '6moons' }])).toBe(true);
+      expect(hasDisplayableSources([{ source: 'Twittering Machines' }])).toBe(true);
     });
     it('one Tier 2 publication (fallback path)', () => {
       expect(hasDisplayableSources([{ source: 'Stereophile' }])).toBe(true);
@@ -81,7 +81,7 @@ describe('hasDisplayableSources — universal Sources-section gate', () => {
     const cases: Array<{ name: string; refs: { source: string }[] }> = [
       { name: 'empty', refs: [] },
       { name: 'only manufacturer', refs: [{ source: 'Manufacturer' }] },
-      { name: 'mixed tier 1 + junk', refs: [{ source: '6moons' }, { source: 'Junk' }] },
+      { name: 'mixed tier 1 + junk', refs: [{ source: 'Twittering Machines' }, { source: 'Junk' }] },
       { name: 'tier 2 only', refs: [{ source: 'Stereophile' }, { source: 'Hifi News' }] },
     ];
     it.each(cases)('$name: hasDisplayableSources matches filterSourcesForDisplay.length>0', ({ refs }) => {
@@ -91,7 +91,7 @@ describe('hasDisplayableSources — universal Sources-section gate', () => {
 
   describe('acts as a TypeScript type guard', () => {
     it('narrows undefined → T[] inside the conditional', () => {
-      const maybe: { source: string }[] | undefined = [{ source: '6moons' }];
+      const maybe: { source: string }[] | undefined = [{ source: 'Twittering Machines' }];
       if (hasDisplayableSources(maybe)) {
         // Inside this branch, maybe is narrowed to non-undefined.
         // The line below compiles only because of the type guard.
@@ -134,5 +134,21 @@ describe('F4 — comparison output emits no sourceReferences', () => {
     // render-side gate then renders no Sources block.
     expect(response.sourceReferences).toBeUndefined();
     expect(hasDisplayableSources(response.sourceReferences)).toBe(false);
+  });
+});
+
+describe('6moons exclusion — founder directive 2026-07-31', () => {
+  // 6moons content may never be displayed, quoted, or linked. Dormant
+  // catalog references are tolerated ONLY because this whitelist filter
+  // blocks them at render time — so 6moons must never be whitelisted.
+  it('6moons is not a whitelisted source (any casing)', () => {
+    expect(hasDisplayableSources([{ source: '6moons' }])).toBe(false);
+    expect(hasDisplayableSources([{ source: '6Moons' }])).toBe(false);
+  });
+  it('filterSourcesForDisplay drops 6moons references', () => {
+    expect(
+      filterSourcesForDisplay([{ source: '6moons' }, { source: 'Stereophile' }])
+        .map((r) => r.source),
+    ).toEqual(['Stereophile']);
   });
 });
