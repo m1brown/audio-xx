@@ -20,7 +20,10 @@ describe('canonical event set', () => {
   it('contains exactly the approved funnel events', () => {
     expect([...EVENTS].sort()).toEqual([
       'account_created', 'additional_system_saved', 'assessment_added',
-      'assessment_failed', 'assessment_rendered', 'builder_started',
+      'assessment_failed', 'assessment_rendered',
+      // Pre-beta item 5 (2026-07-31): the three funnel-gap events.
+      'assessment_submitted', 'auth_initiated', 'builder_first_component',
+      'builder_started',
       'checkout_cancelled', 'checkout_started', 'composer_started',
       'copy_link_clicked', 'first_system_saved', 'identical_assessment_declined',
       'landing_viewed', 'my_systems_viewed', 'print_clicked',
