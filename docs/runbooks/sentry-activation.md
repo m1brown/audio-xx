@@ -1,8 +1,9 @@
 # Sentry activation runbook (pre-beta item 2)
 
-Status 2026-07-31: **code layer complete and verified; activation blocked on
-one founder action** (Sentry account/project creation — an account action
-Claude cannot perform).
+Status 2026-07-31 (final): **code layer IN PRODUCTION** (promoted with the
+operational-readiness release, commit b5de86a). Activation awaits one
+founder action (Sentry account/project creation — an account action
+Claude cannot perform). Until the DSN exists, monitoring is a safe no-op.
 
 ## What is already in place (no further code work needed)
 

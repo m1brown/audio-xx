@@ -22,7 +22,8 @@ revisit with real signup UX post-beta.
   ever logged.
 - Storage: additive `password_reset_tokens` table (applied to local dev
   and production Turso 2026-07-31; 1 CREATE TABLE + 2 indexes, nothing
-  altered).
+  altered). The flow itself is IN PRODUCTION as of commit b5de86a —
+  dark (UI link hidden, email no-op) until the founder activation below.
 - Email: `lib/email.ts` (Resend, plain fetch). Fail-dark without
   `RESEND_API_KEY`; dev builds echo the link to the server console for
   local verification (never in production).

@@ -156,3 +156,28 @@ This changes the top of the order from "operational-first" to "comprehension-and
 
 ### Why these deferrals are acceptable for an invite-only beta
 The beta's job is to **learn whether audiophiles value correct, system-level advice plus a causal insight** — not to prove finished depth or to monetize. Invite scale bounds operational and reputational risk. None of the deferrals block the core loop a new visitor needs: **understand → build → read → save → share → recover access.** Monetization deliberately follows value validation, and the depth work is best *aimed by real usage signal* rather than built on assumption. Shipping this cut lets us learn the one thing that should decide everything after it.
+
+---
+
+## Status — 2026-07-31 (post operational-readiness release, production = b5de86a tree)
+
+Engineering work on this checklist is COMPLETE. Remaining items are founder
+activation/validation actions only. (Status annotation — no sequencing change;
+change-control respected.)
+
+```text
+■ 1. Homepage clarity          — built + funnel events live; ☐ founder: 5-second test + positioning sign-off
+■ 2. Builder onboarding        — built (hint, autocomplete, mobile action-row); ☐ founder: unaided-user check
+■ 3. Beta bug sweep            — four-gate architecture + register D-001..D-010; gate green 4,066
+■ 4. Causal voice              — Phase 3 voice live (1c902ef ratified); causal block remains Preview-flagged (unchanged status)
+■ 5. OG share images           — live (homepage + /artifact cards)
+◪ 6. Sentry                    — code in production, safe no-op; ☐ founder: project + env vars (runbooks/sentry-activation.md)
+◪ 7. Production authed QA      — full local-stack pass evidenced; ☐ founder: 10-min walkthrough (runbooks/authenticated-journey-pass.md)
+■ 8. Legal / privacy           — pages live incl. honest affiliate disclosure; ☐ founder: final read
+◪ 9. Password reset            — flow in production (dark); ☐ founder: Resend + 3 env vars (docs/auth-model.md)
+☐ 10. Invite-only beta          — founder decision on invite mechanism vs open beta
+```
+
+Beta readiness: engineering-side conditions PASSED (see release note
+docs/releases/2026-07-31-operational-readiness.md); launch gates on the
+☐ founder actions above.
