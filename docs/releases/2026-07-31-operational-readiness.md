@@ -60,3 +60,21 @@ section.
 3. Affiliate enrollment (Amazon Associates / EPN + 2 env vars).
 4. Final authenticated production walkthrough (10-min checklist).
 5. External comprehension testing (5-second test, ≥5 target users).
+
+## Verdict (as accepted by the founder, 2026-07-31)
+
+**Audio XX is engineering-ready for closed beta, subject to completion of
+the remaining founder activation tasks.**
+
+Audit note — authentication leg: *Account creation / authenticated
+journey: Pending founder verification. Previously verified locally on
+identical code; the production walkthrough is intentionally reserved for
+the founder.* This is a deliberate deferral, not an unknown.
+
+## Release baseline
+
+This release establishes the engineering baseline for the first closed
+beta. Future work should be driven primarily by observed user behavior
+rather than additional architectural redesign unless a material product
+issue is discovered. With this release the project transitions from
+"building the product" to "learning from users."
