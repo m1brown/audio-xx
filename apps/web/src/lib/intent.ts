@@ -627,6 +627,14 @@ const SYSTEM_ASSESSMENT_PATTERNS = [
   // "is X + Y + Z a good setup?" — trailing quality+system word after component list
   /(?:a\s+)?(?:good|solid|decent|balanced|coherent)\s+(?:system|setup|rig|chain|combo|combination)\s*\??\s*$/i,
   /\brate\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  // Beta observation 2026-08-03 (founder, production): "review: Job
+  // integrated · WLM Diva monitor · Eversolo DMP-A6 · Chord Hugo"
+  // routed to gear comparison. A message-leading evaluation verb
+  // followed by a colon and content is the colon-list entry form —
+  // the same shape as the canonical "Assess my system: …". Anchored
+  // to the start so mid-sentence "review:" can't overtrigger; the
+  // multi-subject gates downstream still decide system vs product.
+  /^\s*(?:review|assess(?:ment)?|evaluate|rate)\s*[:\-–—]\s*\S/i,
 ];
 
 // Bare evaluation-intent phrasings that presume an already-known system.
@@ -1561,7 +1569,10 @@ export function detectIntent(
   ) {
     return { intent: 'consultation_entry', subjects, subjectMatches, desires };
   }
-  const hasPlusChain = /\w\s*\+\s*\w/.test(currentMessage) && subjectMatches.length >= 2;
+  // Interpunct (·) and bullet (•) are list separators in pasted system
+  // descriptions (the saved-system chip renders components with " · ",
+  // so users naturally paste that form back — beta observation 2026-08-03).
+  const hasPlusChain = /\w\s*[+·•]\s*\w/.test(currentMessage) && subjectMatches.length >= 2;
   // Labeled-role format: "speaker: X - amp: Y - dac: Z" — 2+ role labels signal a system chain.
   const ROLE_LABEL_RE = /\b(?:speakers?|amp(?:lifier)?|dac|streamer|turntable|preamp|pre-amp|source|headphones?|integrated)\s*:/ig;
   const hasLabeledRoleChain = ((currentMessage.match(ROLE_LABEL_RE) || []).length >= 2);

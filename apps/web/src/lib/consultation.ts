@@ -8406,8 +8406,10 @@ const GI_ROLE_LABEL_ONLY =
  * re-resolution.
  */
 function countMeaningfulInputComponents(rawMessage: string): number {
-  // Drop the assessment lead-in ("evaluate my system:", "assess my system:").
+  // Drop the assessment lead-in ("evaluate my system:", "assess my system:",
+  // or the bare colon-list verb form "review: …" / "rate: …").
   let msg = rawMessage.replace(/^[^:]*\b(?:system|setup|rig|chain)\b[^:]*?:/i, '');
+  msg = msg.replace(/^\s*(?:review|assess(?:ment)?|evaluate|rate)\s*[:\-–—]/i, '');
   // Blank out accessory-labelled segments so wires don't inflate the count.
   const lower = msg.toLowerCase();
   GI_ACCESSORY_LABEL.lastIndex = 0;
