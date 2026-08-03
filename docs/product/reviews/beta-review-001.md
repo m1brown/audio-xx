@@ -45,3 +45,9 @@ behavior → smallest effective change → bounded scope → neighbours
 pinned).
 
 *(Sections 1, 3–6 to be populated at review close.)*
+
+## 7. Strategic Signals (rolling)
+
+| ID | Signal | First seen | Seen in reviews | Count | Status |
+|---|---|---|---|---|---|
+| S-001.1 | Users address the advisor in editorial idiom — evaluation verbs ("review:") and the product's own formatting (· separators) — suggesting they read Audio XX as a publication to converse with, not a form to fill | 2026-08-03 (founder, production) | 001 | 1 | open |

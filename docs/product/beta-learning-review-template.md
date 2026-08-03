@@ -120,3 +120,25 @@ listed, sized, and prioritized, but distinct from experiments:
 One line each, with the reason — so future reviews don't re-litigate:
 
 - …
+
+## 7. Strategic Signals (accumulating ledger)
+
+Observations that don't yet justify action but may indicate a trend.
+Unlike experiments, these are simply **accumulated**: carry every open
+signal forward from the previous review and increment its count when it
+reappears. **Graduation rule:** a signal seen in 3–4 consecutive
+reviews graduates into a candidate hypothesis (section 3). This
+prevents reacting to one-off anecdotes while ensuring slow-building
+patterns aren't forgotten.
+
+Watch especially for:
+
+- repeated interest in a particular manufacturer or product category;
+- users asking for assessments in ways we didn't anticipate;
+- recurring terminology suggesting our mental model differs from theirs;
+- emerging monetization opportunities;
+- requests that consistently fall outside the current product scope.
+
+| ID | Signal | First seen | Seen in reviews | Count | Status |
+|---|---|---|---|---|---|
+| S-NNN.x | | | | | open / graduated → H-NNN.x / retired |
