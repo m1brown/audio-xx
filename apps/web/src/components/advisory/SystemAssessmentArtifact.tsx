@@ -3279,7 +3279,7 @@ function composeListenerContext(
     );
   } else if (speakerEfficiency === 'high') {
     sentences.push(
-      "This system favors listeners who value ease and accessibility — the high-efficiency speakers don't need large amplification to come alive.",
+      'This system favors listeners who value ease and accessibility — the high-efficiency speakers reach satisfying levels on modest amplifier power.',
     );
   } else if (lean === 'warm') {
     sentences.push(
@@ -3294,7 +3294,7 @@ function composeListenerContext(
   // Sentence 2 — room and volume profile (dimensions only).
   if (speakerEfficiency === 'high' && ampTech === 'tube') {
     sentences.push(
-      'It is most at home in small-to-medium rooms at moderate volume; the high-efficiency speakers do not require large amplification or large spaces to come alive.',
+      'It is most at home in small-to-medium rooms at moderate volume; the high-efficiency speakers reach their working range without large amplification or large spaces.',
     );
   } else if (speakerEfficiency === 'low' && ampTech === 'solid-state') {
     sentences.push(
@@ -3309,11 +3309,11 @@ function composeListenerContext(
   // Sentence 3 — recording tolerance + honest mismatch.
   if (bottleneckFamily === 'amplifier' && speakerEfficiency === 'high' && lean === 'warm') {
     sentences.push(
-      "It forgives imperfect recordings more readily than analytical systems, but loud orchestral demands or large rooms will reveal the amplifier's drive ceiling before the speakers run out of voice.",
+      "It forgives imperfect recordings more readily than analytical systems, but loud orchestral demands or large rooms will reveal the amplifier's drive ceiling before the speakers reach a limit of their own.",
     );
   } else if (bottleneckFamily === 'amplifier' && speakerEfficiency === 'high') {
     sentences.push(
-      "Loud orchestral demands or large rooms will reveal the amplifier's drive ceiling before the speakers run out of voice.",
+      "Loud orchestral demands or large rooms will reveal the amplifier's drive ceiling before the speakers reach a limit of their own.",
     );
   } else if (bottleneckFamily === 'speaker') {
     sentences.push(

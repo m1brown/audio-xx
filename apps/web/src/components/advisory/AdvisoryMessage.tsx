@@ -56,6 +56,8 @@ import AdvisorySpiderChart from './AdvisorySpiderChart';
 import { ProductImageProvider, useProductImageClaim } from './ProductImageContext';
 import AdvisoryListenerProfile from './AdvisoryListenerProfile';
 import AdvisoryIntake from './AdvisoryIntake';
+import ResponseFooter from './ResponseFooter';
+import { buildResponseFooterData } from '../../lib/response-footer';
 import { renderText, renderTextWithProductLinks, type ProductUrlMap } from './render-text';
 import { track } from '@/product/analytics';
 
@@ -5323,12 +5325,39 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
     content = <StandardFormat advisory={advisory} onPreferenceCapture={onPreferenceCapture} onFollowUpClick={onFollowUpClick} />;
   }
 
+  // ── Trailing block: Continue Exploring, then Product Resources ──────
+  // Only on the four response types the editorial brief names — assessment,
+  // recommendation, comparison, purchase inquiry. Intake, quick-rec and the
+  // knowledge / assistant lanes are conversational turns rather than
+  // documents, and close without a related-reading section.
+  const isDocumentResponse =
+    !advisory.quickRecommendation &&
+    !isIntakeFormat(advisory) &&
+    (isComparisonFormat(advisory) || isMemoFormat(advisory) || (advisory.options?.length ?? 0) > 0);
+
+  // Product Resources is suppressed wherever per-product purchase links
+  // already render: AdvisoryProductCards on the recommendation and
+  // comparison cards, and the per-component Explore row in MemoFormat.
+  // The two assessment artifacts carry no commerce at all, so they are the
+  // one surface where this block adds links instead of repeating them.
+  // The comparison check mirrors the dispatch above, where a comparison
+  // wins over isMemoFormat even when both predicates match.
+  const rendersAssessmentArtifact =
+    !isComparisonFormat(advisory) &&
+    isMemoFormat(advisory) &&
+    ((ASSESSMENT_ARTIFACT_V2_ENABLED && !!advisory.__rawAssessment) || SYSTEM_ASSESSMENT_ARTIFACT_ENABLED);
+
+  const footer = isDocumentResponse
+    ? buildResponseFooterData(advisory, { includeResources: rendersAssessmentArtifact })
+    : null;
+
   return (
     <ProductImageProvider
       comparisonImages={advisory.comparisonImages}
       options={advisory.options}
     >
       {content}
+      {footer && <ResponseFooter groups={footer.groups} resources={footer.resources} />}
     </ProductImageProvider>
   );
 }

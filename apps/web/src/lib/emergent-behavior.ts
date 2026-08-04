@@ -437,18 +437,18 @@ const OUTCOME: Record<EmergentBehavior, string> = {
   compression_resilience: 'the speaker reaches loud levels well within the amp\'s clean output',
   presence_lift: 'upstream detail surfaces as expressive energy rather than analytical edge',
   system_tension_active: 'two opposing voicings stay in tension without either dominating',
-  flow_continuity: 'the chain breathes through musical phrasing rather than gripping it',
+  flow_continuity: 'phrasing carries across bar lines instead of being resolved into separate events',
 };
 
 const QUALITY: Record<EmergentBehavior, string> = {
   // Sentence 2 "so" clause — what the listener hears as a result.
-  dynamic_elasticity: 'microdynamics stay lively, quick, and sweet instead of merely lean',
+  dynamic_elasticity: 'small dynamic steps stay quick and clearly differentiated rather than flattened toward one level',
   low_drag: 'note attacks land cleanly and decays release without the chain getting in the way',
   temporal_coherence: 'attack and decay stay coherent across instruments',
   harmonic_continuity: 'tonal richness carries through instead of being filtered',
   compression_resilience: 'dynamic peaks land without compression at typical listening levels',
   presence_lift: 'presence-region detail arrives with expressive contrast, not glare',
-  system_tension_active: 'each component\'s voice is audible — the system is two perspectives in one room',
+  system_tension_active: 'each component\'s contribution stays separately audible instead of resolving into a single blended character',
   flow_continuity: 'rhythmic phrasing carries through without stalling on transients',
 };
 
@@ -551,7 +551,9 @@ export function synergyDescriptor(tags: ReadonlyArray<EmergentBehavior>): string
   if (has('dynamic_elasticity') && (has('low_drag') || has('harmonic_continuity'))) {
     parts.push('tonal body');
   }
-  if (parts.length === 0) return 'deliberate synergy';
+  // No tag produced a concrete noun phrase. Say only what is observable —
+  // claiming "deliberate synergy" asserts an intent the engine cannot see.
+  if (parts.length === 0) return 'consistent voicing across the chain';
   if (parts.length === 1) return parts[0];
   if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
   return `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`;

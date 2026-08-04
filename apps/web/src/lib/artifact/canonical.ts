@@ -142,9 +142,10 @@ function findVoicedComponent(raw: any): string | undefined {
 function composeListeningSession(raw: any, recognition: string): string[] {
   const strengths: string[] = raw?.response?.assessmentStrengths ?? [];
   const voiced = findVoicedComponent(raw);
+  const base = `Put on something with air and inner detail and the system's priorities are audible immediately: leading edges are clean and quick, and the image extends wide without being pushed forward.`;
   const first = voiced
-    ? `Put on something with air and inner detail and the system's priorities show at once: leading edges are clean and quick, the stage opens wide and unforced, and nothing is pushed at you. The ${voiced}'s warmth keeps the resolution musical rather than clinical.`
-    : `Put on something with air and inner detail and the system's priorities show at once: leading edges are clean and quick, the stage opens wide and unforced, and nothing is pushed at you.`;
+    ? `${base} The ${voiced}'s warmth keeps that resolution from reading as clinical.`
+    : base;
   // Phase 3 (cohesive voice): the closing observation must belong to THIS
   // system's character — the previous universal "detail offered rather than
   // asserted" line appeared verbatim on every assessment, including tone-first
@@ -177,10 +178,12 @@ function composeDominantCharacter(raw: any): string {
   } else if (axes.warm_bright === 'warm') {
     line = `Warmth runs through the whole system, tone placed ahead of edge.`;
   } else {
-    line = `No single quality dominates; the system holds a considered balance.`;
+    line = `No single axis leads; tone, resolution and control sit at comparable levels.`;
   }
-  // Guarantee the invariant on the fallback itself.
-  return validateDominantCharacter(line).length === 0 ? line : `A system with one clear character.`;
+  // Guarantee the invariant on the fallback itself. Unreachable while the
+  // four lines above stay valid, so it states the least it can rather than
+  // a character claim the engine has not established.
+  return validateDominantCharacter(line).length === 0 ? line : `The system's axes read close to neutral.`;
 }
 
 /** Split the engine's case paragraphs from the operating-condition paragraph. */
@@ -255,7 +258,7 @@ function dedupeSources(list: PrimarySource[]): PrimarySource[] {
 // traded away).
 const FRANCE_REINFORCE_OPPOSE: EditorialFragment = {
   editorialClass: 'audio-xx-interpretation',
-  text: 'Two design ideas meet here: a front end oriented to timing and resolution — the Chord Hugo’s custom FPGA is aimed at transient reconstruction — and a speaker in the musicality-first, high-efficiency Austrian tradition. Read together, they appear to pull in different directions, resolution against ease, and the system holds the tension by letting the resolving stages lead and giving the one warm voice the final word.',
+  text: 'Two design ideas meet here: a front end oriented to timing and resolution — the Chord Hugo’s custom FPGA is aimed at transient reconstruction — and a speaker in the musicality-first, high-efficiency Austrian tradition. Read together, they appear to pull in different directions — resolution against ease — and the system resolves that by letting the front end set detail and timing while the single warm-voiced component sets the final tonal balance.',
 };
 
 /**

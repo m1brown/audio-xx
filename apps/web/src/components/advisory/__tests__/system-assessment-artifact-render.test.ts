@@ -2615,7 +2615,8 @@ describe('SystemAssessmentArtifact — §9 listener-context (Commit 9)', () => {
     expect(slice).toContain('small-to-medium rooms at moderate volume');
     // Sentence 3 — recording tolerance + bottleneck-aware mismatch.
     expect(slice).toContain('forgives imperfect recordings');
-    expect(slice).toContain("drive ceiling before the speakers run out of voice");
+    // "run out of voice" was anthropomorphic; the limit is now named plainly.
+    expect(slice).toContain("drive ceiling before the speakers reach a limit of their own");
     // Commit 9's genre claim must be gone.
     expect(slice).not.toContain('Jazz, vocals');
     expect(slice).not.toContain('compressed popular music');

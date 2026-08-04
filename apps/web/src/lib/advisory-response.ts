@@ -1316,7 +1316,7 @@ const CATEGORY_FRAMING: Record<string, { headline: string; points: string[] }> =
     headline: 'What actually matters when choosing a tube amplifier',
     points: [
       'Output topology is the single biggest variable — SET is dense and intimate, push-pull is more controlled, OTL is fast but speaker-picky.',
-      'Speaker sensitivity and impedance curve decide whether a tube amp sings or wheezes.',
+      'Speaker sensitivity and impedance curve decide whether a tube amp drives the load with headroom to spare or runs out before the music does.',
       'Transformer quality and output tubes together shape tone more than any marketing spec.',
     ],
   },

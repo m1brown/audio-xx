@@ -165,7 +165,7 @@ export function intentRead(axes: Record<string, string> | undefined): string {
   }
   const primaryKey = present[0];
   const primaryVal = axes[primaryKey];
-  const primary = INTENT_PRIMARY[primaryKey]?.[primaryVal] ?? 'a considered balance';
+  const primary = INTENT_PRIMARY[primaryKey]?.[primaryVal] ?? 'balance across the three tonal axes';
   const qualKey = present[1] ?? ranked.find((k) => k !== primaryKey);
   const qualVal = qualKey ? (axes[qualKey] ?? 'neutral') : 'neutral';
   const qualifier = qualKey ? (INTENT_QUALIFIER[qualKey]?.[qualVal] ?? '') : '';
@@ -182,7 +182,7 @@ function equilibriumBeat(credit: string[], axes: Record<string, string> | undefi
   const w = axes?.warm_bright;
   if (w === 'warm') return `${upstream} hand the speaker a tone-rich signal; ${last} carries it without thinning it out.`;
   if (w === 'bright' || w === 'neutral') return `${upstream} resolve cleanly; ${last} keeps the result musical rather than analytical.`;
-  return `${upstream} set the character; ${last} preserves it without arguing.`;
+  return `${upstream} set the character; ${last} carries it through without introducing a competing one.`;
 }
 
 // ── role-bound recommendation (R6: no new diagnosis) ────────────────────
@@ -198,14 +198,14 @@ function costFor(category: string): string {
   if (category === 'power_match')
     return 'More power buys you the dynamics; easier speakers buy you keeping the amplifier you love. Either way, the system’s character shifts.';
   if (category === 'dac_limitation')
-    return 'A more resolving source will show you what the rest of the chain has been hiding — including the things you chose it for.';
+    return 'A more resolving source passes through more of what the recording holds — including the roughness the current one was smoothing over.';
   if (category === 'speaker_scale')
     return 'Bigger speakers ask more of the room, and more of the amplifier you have.';
   if (category === 'stacked_bias' || category === 'tonal_imbalance')
     return 'Rebalancing trades the system’s current signature for something the chain doesn’t yet do. Decide which one you want first.';
   if (category === 'amplifier_control')
-    return 'More control trades a little bloom for grip. That’s the deal.';
-  return 'Anything you change here trades something. Be honest about which side you’d rather keep.';
+    return 'Tighter damping costs some low-frequency bloom; the two move in opposite directions and cannot both be maximised.';
+  return 'Every change here trades one behaviour for another — decide which of the two the system should keep.';
 }
 
 // ── verdict + standfirst (engine-leverage driven; copy unchanged) ───────
@@ -256,9 +256,9 @@ const HEARD_CONSEQUENCE_BY_CATEGORY: Record<string, string> = {
   stacked_bias:
     'You hear it as the system leaning hard in one direction — what should be a strength has become an excess the speaker can’t talk out of.',
   speaker_scale:
-    'You hear it as a system that fills the room but never quite owns it — scale and physical authority capped by what the speaker can move.',
+    'You hear it as a system that fills the room without reaching full scale — output and low-frequency authority capped by how much air the speaker can move.',
   amplifier_control:
-    'You hear it as bass that loosens under load, timing that softens on dense passages and a system that loses grip when it needs to bear down.',
+    'You hear it as bass that loosens under load and timing that softens on dense passages — the amplifier’s damping runs out before the music does.',
 };
 const HEARD_CONSEQUENCE_DEFAULT =
   'You hear it as the chain pushed past what the weakest link can support.';
