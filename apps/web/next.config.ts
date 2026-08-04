@@ -27,6 +27,17 @@ const SECURITY_HEADERS: Array<{ key: string; value: string }> = [
 
 const nextConfig: NextConfig = {
   transpilePackages: ['@audio-xx/rules', '@audio-xx/data', '@audio-xx/signals'],
+  /* Sentry catch #1 (2026-08-04, first hour of production monitoring):
+   * POST /api/evaluate 500'd with ENOENT — engine.ts reads the rules and
+   * signals YAML from the monorepo at runtime via a dynamic path
+   * resolver, which Vercel's static file tracing cannot follow, so the
+   * files were never bundled into the lambdas. Latent since the routes
+   * shipped; invisible until monitoring went live. Explicitly include
+   * the YAML for the two engine-backed routes. */
+  outputFileTracingIncludes: {
+    '/api/evaluate': ['../../packages/rules/**', '../../packages/signals/**'],
+    '/api/diagnose': ['../../packages/rules/**', '../../packages/signals/**'],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
