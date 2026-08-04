@@ -22,7 +22,7 @@
  *   - Search-based Amazon links are never generated — only direct catalog links
  */
 
-import { shouldShowAmazonLink } from './amazon-links';
+import { shouldShowAmazonLink, getAmazonSearchUrl } from './amazon-links';
 import { getEbaySearchUrl } from './ebay-links';
 
 // ── Types ────────────────────────────────────────────
@@ -146,7 +146,13 @@ export function buildProductLinks(input: ProductLinkInput): ProductLinks {
   const hasVerifiedAmazon = !!(amazonEntry && isVerifiedAmazonLink(amazonEntry.url));
 
   // ── Should we show Amazon at all? ──
-  const amazonEligible = hasVerifiedAmazon && shouldShowAmazonLink({
+  // Affiliate activation fix (2026-08-04): eligibility no longer requires
+  // a stored verified ASIN link — the B1 remediation removed every ASIN
+  // (all 8 had rotted), which silently made this gate always-false and
+  // no Amazon link could ever render. Brand/market eligibility alone
+  // decides; the URL below prefers a verified stored entry when one
+  // exists and otherwise uses the documented search-based link.
+  const amazonEligible = shouldShowAmazonLink({
     brand: input.brand,
     availability: input.availability,
     typicalMarket: input.typicalMarket,
@@ -171,9 +177,16 @@ export function buildProductLinks(input: ProductLinkInput): ProductLinks {
       }
     }
 
-    // Priority 2: Amazon direct link (only if verified ASIN exists)
-    if (amazonEligible && amazonEntry) {
-      addIfNew(newLinks, 'Amazon', amazonEntry.url);
+    // Priority 2: Amazon — a verified stored entry wins; otherwise the
+    // search-based link (ASIN-rot-proof, carries the affiliate tag when
+    // configured). Search-based is the documented policy since the
+    // 2026-07-31 ASIN purge.
+    if (amazonEligible) {
+      if (hasVerifiedAmazon && amazonEntry) {
+        addIfNew(newLinks, 'Amazon', amazonEntry.url);
+      } else {
+        addIfNew(newLinks, 'Amazon', getAmazonSearchUrl(input.name, input.brand));
+      }
     }
 
   }

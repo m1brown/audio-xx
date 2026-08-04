@@ -564,9 +564,15 @@ describe('Product-link surface — graceful missing-link handling', () => {
     // / Amazon links, give the user somewhere to look. Not an empty card.
   });
 
-  it('curated retailer-link absence does not produce buy-new or manufacturer links', () => {
+  it('curated retailer-link absence fabricates no dealer/manufacturer links (Amazon search fallback allowed)', () => {
+    // 2026-08-04 affiliate activation: like the used-market fallback
+    // above, a deterministic Amazon SEARCH link for eligible brands is
+    // intentional — it is generated, not curated, and rot-proof. What
+    // must never appear without curation: dealer links and
+    // manufacturer links.
     const r = buildProductLinks({ name: 'Test', brand: 'TestBrand', retailerLinks: [] });
-    expect(r.newLinks).toEqual([]);
+    const nonAmazon = r.newLinks.filter(l => !/amazon\.com\/s\?/.test(l.url));
+    expect(nonAmazon).toEqual([]);
     expect(r.manufacturerLinks).toEqual([]);
   });
 
