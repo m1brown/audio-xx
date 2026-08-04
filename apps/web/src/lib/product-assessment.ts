@@ -700,7 +700,13 @@ export function buildProductAssessment(
   return {
     candidateName,
     candidateBrand: candidate?.brand ?? brandName ?? pilotCap?.brand ?? 'Unknown',
-    candidateArchitecture: candidate?.architecture ?? productNote?.architecture ?? brandProfile?.architecture,
+    /* D-011: this field renders as the subject-card subtitle next to the
+     * product name. Falling back to brandProfile.architecture printed
+     * "Cambridge Audio MXN10 · Class AB, 80W/ch" for a streamer. When the
+     * model is unidentified we have no architecture to state — omit it. */
+    candidateArchitecture: unmatchedModel
+      ? (candidate?.architecture ?? productNote?.architecture)
+      : (candidate?.architecture ?? productNote?.architecture ?? brandProfile?.architecture),
     candidateDescription:
       candidate?.description
         ?? productNote?.notes

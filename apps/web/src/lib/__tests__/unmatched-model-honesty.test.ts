@@ -93,3 +93,23 @@ describe('unrecognized model — response honesty', () => {
     }
   });
 });
+
+describe('D-011 — subject-card subtitle carries no fabricated architecture', () => {
+  it('omits candidateArchitecture for an unidentified model', () => {
+    const r = buildProductAssessment({
+      subjectMatches: [{ kind: 'brand', name: 'Cambridge Audio' } as SubjectMatch],
+      currentMessage: 'Tell me about the Cambridge Audio MXN10',
+    });
+    // The renderer prints this next to the product name. A brand-typical
+    // spec string here reads as the product's own specification.
+    expect(r!.candidateArchitecture ?? '').not.toMatch(/\d+\s?W\/ch|\bclass\s?(A|AB|D)\b/i);
+  });
+
+  it('still carries architecture for a bare-brand query', () => {
+    const r = buildProductAssessment({
+      subjectMatches: [{ kind: 'brand', name: 'Chord' } as SubjectMatch],
+      currentMessage: 'Tell me about the Chord sound',
+    });
+    if (r) expect(r.candidateArchitecture === undefined).toBe(false);
+  });
+});
