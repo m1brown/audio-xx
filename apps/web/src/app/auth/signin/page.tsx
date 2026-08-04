@@ -74,7 +74,7 @@ export default function SignIn() {
           margin: '0 0 0.9rem',
         }}
       >
-        Your collection is waiting.
+        System insights are waiting.
       </h1>
       <p style={{ fontFamily: 'var(--face-text)', fontSize: '1.02rem', lineHeight: 1.6, color: EDITORIAL.inkMuted, margin: '0 0 2rem' }}>
         Sign in to My&nbsp;Systems — or create your free account with the same
