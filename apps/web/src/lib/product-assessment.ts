@@ -282,6 +282,53 @@ function toDisplayName(raw: string): string {
 
 // ── Assessment builder ──────────────────────────────
 
+/** Conversational framing stripped before looking for a model token. */
+const MODEL_QUERY_FILLER = new RegExp(
+  '\\b(tell me about|what do you (think|know) (of|about)|how (is|about)|'
+  + 'is the|are the|whats|what is|what are|thoughts on|opinion on|review of|'
+  + 'assess|review|rate|evaluate|any good|good|the|a|an|your|my|please|'
+  + 'specs? of|specifications? of)\\b',
+  'gi',
+);
+
+/** Residues that mean "the brand in general", not a specific model. */
+const BRAND_GENERAL_RESIDUE = new Set([
+  'sound', 'house sound', 'gear', 'products', 'product', 'brand', 'stuff',
+  'kit', 'range', 'lineup', 'components', 'amps', 'amplifiers', 'speakers',
+  'dacs', 'dac', 'streamers', 'electronics', 'sonics', 'philosophy',
+]);
+
+/**
+ * Recover the model designation a user typed when the catalog matched
+ * only the brand. Returns undefined for bare-brand queries ("tell me
+ * about the Chord sound") so those keep their existing behaviour.
+ */
+export function extractUnmatchedModel(
+  currentMessage: string,
+  brandName: string,
+): string | undefined {
+  if (!currentMessage) return undefined;
+  let rest = currentMessage;
+  // Remove the brand token(s) — longest form first ("Cambridge Audio"
+  // before "Cambridge") so the residue is the model, not a brand word.
+  const brandWords = brandName.trim().split(/\s+/);
+  for (let take = brandWords.length; take >= 1; take--) {
+    const frag = brandWords.slice(0, take).join('\\s+');
+    rest = rest.replace(new RegExp(frag, 'gi'), ' ');
+  }
+  rest = rest
+    .replace(MODEL_QUERY_FILLER, ' ')
+    .replace(/[?!.,;:]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (rest.length < 2) return undefined;
+  if (BRAND_GENERAL_RESIDUE.has(rest.toLowerCase())) return undefined;
+  // Guard against swallowing a whole sentence: a model designation is
+  // short. Anything longer is conversational text, not a model name.
+  if (rest.split(/\s+/).length > 4) return undefined;
+  return rest;
+}
+
 export interface AssessmentContext {
   subjectMatches: SubjectMatch[];
   activeSystem?: ActiveSystemContext | null;
@@ -308,6 +355,17 @@ export function buildProductAssessment(
   // Extract brand name even if no product match
   const brandSubject = subjectMatches.find((m) => m.kind === 'brand');
   const productSubject = subjectMatches.find((m) => m.kind === 'product');
+  /* D-011 (pre-beta audit, 2026-08-04): when a user names a model the
+   * catalog doesn't carry but whose BRAND is recognized, the matcher
+   * yields a brand match only. Without this, the code treated the query
+   * as a bare-brand question: it never echoed the model, never hedged,
+   * and asserted the brand's typical spec string ("Class AB, 80W/ch")
+   * as though it described the named product — which for a streamer
+   * like the MXN10 is a fabricated specification. Recover what the user
+   * actually typed so the response can name it and hedge honestly. */
+  const unmatchedModel = (!candidate && !productSubject && brandSubject)
+    ? extractUnmatchedModel(currentMessage, brandSubject.name)
+    : undefined;
   // When falling through to raw subject text (no catalog match), recover
   // display casing so the rendered output doesn't show lowercase brand
   // names like "chord" instead of "Chord" (QA residual R2).
@@ -315,9 +373,12 @@ export function buildProductAssessment(
     ? `${candidate.brand} ${candidate.name}`
     : productSubject?.name
       ? toDisplayName(productSubject.name)
-      : brandSubject?.name
-        ? toDisplayName(brandSubject.name)
-        : 'Unknown product';
+      // D-011: name what the user actually asked about, not just the brand.
+      : unmatchedModel && brandSubject?.name
+        ? `${toDisplayName(brandSubject.name)} ${unmatchedModel}`
+        : brandSubject?.name
+          ? toDisplayName(brandSubject.name)
+          : 'Unknown product';
 
   if (!candidate && !brandSubject && !productSubject) {
     return null; // Can't identify what they're asking about
@@ -392,7 +453,10 @@ export function buildProductAssessment(
         whatChanges.push(`Architecture: ${productNote.architecture}`);
       }
     } else {
-      if (brandProfile.architecture) {
+      // D-011: brandProfile.architecture carries brand-TYPICAL specs
+      // ("Class AB, 80W/ch"). Never attribute it to a model we could not
+      // identify — it may not even be the same class of component.
+      if (brandProfile.architecture && !unmatchedModel) {
         whatChanges.push(
           `${brandName} designs around ${brandProfile.architecture} topology`,
         );
@@ -574,6 +638,11 @@ export function buildProductAssessment(
     shortAnswer = `${candidateName} is a ${candidate.architecture} design priced at ~$${candidate.price.toLocaleString()}. ${candidate.description.split('.')[0]}.`;
   } else if (productNote && siblingProduct) {
     shortAnswer = `The ${candidateName} is a ${productNote.relationship} of the ${siblingProduct.brand} ${siblingProduct.name} (${productNote.architecture ?? brandProfile?.architecture ?? 'unknown architecture'}). ${productNote.notes.split('.')[0]}.`;
+  } else if (brandProfile && unmatchedModel) {
+    // D-011: user named a model we don't carry. Say so first, describe
+    // only what we legitimately know (brand character — NOT the brand's
+    // typical specs), and ask the one question that unblocks real advice.
+    shortAnswer = `I don't have the ${candidateName} in my catalog, so I can't confirm its specifications or measured behaviour. What I can tell you is that ${brandName} generally designs for ${brandProfile.strengths.slice(0, 2).join(' and ')}. Tell me what it is — amplifier, streamer, DAC, speakers — and what it's paired with, and I can reason about the system properly.`;
   } else if (brandProfile && !productSubject) {
     // Brand-only query (e.g. "Tell me about the Chord sound") — the brand
     // IS in the catalog (we have siblings). Don't say "isn't in my catalog".
