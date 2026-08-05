@@ -7,9 +7,11 @@
  * that is not in the catalog shows none at all.
  *
  * All link construction goes through `buildProductLinks`, which owns the
- * affiliate tagging, the used-only gating and the per-brand Amazon
- * exclusions. This module does not build URLs; it selects and labels the
- * first link of each kind so the block stays compact.
+ * affiliate tagging, the used-only gating, the per-brand Amazon exclusions
+ * and the marketplace/aggregator exclusion that keeps a used-listings search
+ * from being labelled as the maker's own page. This module does not build or
+ * classify URLs; it selects and labels the first link of each kind so the
+ * block stays compact.
  *
  * Commerce is subordinate to editorial by construction: the caller decides
  * whether to render this at all, and the formats that already show purchase
@@ -36,27 +38,6 @@ export interface ProductResourcesInput {
 
 const MAX_PRODUCTS = 6;
 
-/**
- * Marketplaces and used-gear aggregators.
- *
- * `buildProductLinks` derives its manufacturer link as "the first retailer
- * link that is neither Amazon nor a known dealer", which lets an aggregator
- * through — the JOB Integrated entry's first retailer link is a HiFi Shark
- * search, and it rendered here under the label "Manufacturer". Mislabelling
- * a used-listing search as the maker's own page is exactly the kind of
- * small dishonesty this block cannot afford, so a manufacturer link that
- * resolves to one of these is dropped instead.
- */
-const NOT_A_MANUFACTURER = [
-  'hifishark.com', 'ebay.', 'amazon.', 'audiogon.com', 'usaudiomart.com',
-  'canuckaudiomart.com', 'reverb.com', 'etsy.com', 'aliexpress.',
-];
-
-function isManufacturerUrl(url: string): boolean {
-  const u = url.toLowerCase();
-  return !NOT_A_MANUFACTURER.some((host) => u.includes(host));
-}
-
 export function buildProductResources(input: ProductResourcesInput): ProductResource[] {
   const out: ProductResource[] = [];
   const seen = new Set<string>();
@@ -77,19 +58,15 @@ export function buildProductResources(input: ProductResourcesInput): ProductReso
       brand: product.brand,
       retailerLinks: product.retailer_links,
       availability: product.availability,
-      // Same guard on the input side: retailer_links[0] is frequently an
-      // aggregator, and feeding it in as `manufacturerUrl` would reintroduce
-      // the mislabel through buildProductLinks' own fallback.
-      manufacturerUrl:
-        product.learnMore?.manufacturer
-        ?? product.retailer_links?.map((l) => l.url).find(isManufacturerUrl),
+      manufacturerUrl: product.learnMore?.manufacturer ?? product.retailer_links?.[0]?.url,
       usedMarketUrl: product.learnMore?.usedMarket,
     });
 
     const links: ProductResourceLink[] = [];
-    const manufacturer = resolved.manufacturerLinks.find((l) => isManufacturerUrl(l.url));
-    if (manufacturer) {
-      links.push({ label: 'Manufacturer', url: manufacturer.url });
+    // buildProductLinks excludes marketplaces and aggregators from
+    // manufacturerLinks, so anything here is safe to label "Manufacturer".
+    if (resolved.manufacturerLinks[0]) {
+      links.push({ label: 'Manufacturer', url: resolved.manufacturerLinks[0].url });
     }
     // Discontinued and vintage products produce no new-market links at all;
     // buildProductLinks already suppresses them, so this is simply empty.

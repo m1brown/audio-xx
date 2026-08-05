@@ -113,6 +113,32 @@ function isDealerLink(label: string, url: string): boolean {
   return false;
 }
 
+/**
+ * Marketplaces and used-gear aggregators — never a manufacturer's own page.
+ *
+ * The manufacturer link is derived below as "the first retailer link that is
+ * neither Amazon nor a known dealer". That definition is open at the bottom:
+ * anything unrecognised is treated as the brand's own site. For 6 of the 158
+ * catalogued products the first retailer link is a HiFi Shark search, so the
+ * cards rendered "Product page → JOB" pointing at a used-listings query —
+ * asserting both that the page is the maker's and that it belongs to the
+ * named brand. Neither is true.
+ *
+ * Excluding these hosts closes the classification rather than widening the
+ * dealer allowlist, because the failure is "we do not know the manufacturer
+ * page", and the honest result is to show no Product page row at all.
+ */
+const AGGREGATOR_HOSTS = [
+  'hifishark.com', 'ebay.', 'audiogon.com', 'usaudiomart.com',
+  'canuckaudiomart.com', 'reverb.com', 'etsy.com', 'aliexpress.',
+];
+
+/** True if the URL is a marketplace/aggregator rather than a maker's site. */
+export function isAggregatorLink(url: string): boolean {
+  const u = (url ?? '').toLowerCase();
+  return AGGREGATOR_HOSTS.some((host) => u.includes(host));
+}
+
 /** True if the label indicates a review or reference link. */
 function isReadingLink(label: string): boolean {
   const lower = label.toLowerCase();
@@ -197,14 +223,16 @@ export function buildProductLinks(input: ProductLinkInput): ProductLinks {
   const manufacturerLinks: ResolvedLink[] = [];
 
   {
-    // First try: non-Amazon, non-dealer retailer link (typically the brand's own site)
+    // First try: non-Amazon, non-dealer, non-aggregator retailer link
+    // (typically the brand's own site)
     const manufacturerEntry = allRetailer.find(l =>
-      !isAmazonLink(l.label, l.url) && !isDealerLink(l.label, l.url),
+      !isAmazonLink(l.label, l.url) && !isDealerLink(l.label, l.url) && !isAggregatorLink(l.url),
     );
     if (manufacturerEntry) {
       addIfNew(manufacturerLinks, input.brand ?? 'Manufacturer', manufacturerEntry.url);
-    } else if (input.manufacturerUrl) {
-      // Fallback: pre-computed manufacturerUrl (retailer_links[0].url)
+    } else if (input.manufacturerUrl && !isAggregatorLink(input.manufacturerUrl)) {
+      // Fallback: pre-computed manufacturerUrl (retailer_links[0].url), which
+      // is just as likely to be an aggregator — guard it the same way.
       addIfNew(manufacturerLinks, input.brand ?? 'Manufacturer', input.manufacturerUrl);
     }
   }
@@ -243,7 +271,12 @@ export function buildProductLinks(input: ProductLinkInput): ProductLinks {
   // If both "Buy new" and "Product page" are empty and product is current,
   // ensure at least a manufacturer link exists so the card isn't link-less.
   if (!isUsedOnly && newLinks.length === 0 && manufacturerLinks.length === 0) {
-    const fallbackUrl = input.manufacturerUrl ?? allRetailer[0]?.url;
+    // Same guard as above: this net must not re-admit an aggregator under the
+    // "Product page" label. A card with no Product page row is correct when
+    // the manufacturer page is genuinely unknown — the Buy used links, which
+    // are always generated, keep the card from being link-less.
+    const fallbackUrl = [input.manufacturerUrl, allRetailer[0]?.url]
+      .find((u): u is string => !!u && !isAggregatorLink(u));
     if (fallbackUrl) {
       addIfNew(manufacturerLinks, input.brand ?? 'Manufacturer', fallbackUrl);
     }
