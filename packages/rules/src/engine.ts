@@ -73,6 +73,15 @@ function ruleMatches(rule: Rule, ctx: EvaluationContext): boolean {
     }
   }
 
+  // Check min_impression_signals — the listener must have actually described
+  // something before a rule may speak about their impressions.
+  if (cond.min_impression_signals !== undefined) {
+    const supplied = ctx.symptoms.length + Object.keys(ctx.traits).length;
+    if (supplied < cond.min_impression_signals) {
+      return false;
+    }
+  }
+
   // Check archetype_conflict
   if (cond.archetype_conflict !== undefined) {
     if (detectArchetypeConflict(ctx.archetypes) !== cond.archetype_conflict) {

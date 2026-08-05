@@ -178,10 +178,23 @@ export function intentRead(axes: Record<string, string> | undefined): string {
 function equilibriumBeat(credit: string[], axes: Record<string, string> | undefined): string | null {
   if (credit.length < 2) return null;
   const last = credit[credit.length - 1];
-  const upstream = credit.slice(0, -1).join(' and ');
+  const upstreamParts = credit.slice(0, -1);
+  const upstream = upstreamParts.join(' and ');
+  // Subject–verb agreement: a single upstream component takes the singular.
+  // "Schiit Modi resolve cleanly" and "tube amplifier resolve cleanly" both
+  // shipped.
+  const plural = upstreamParts.length > 1;
   const w = axes?.warm_bright;
-  if (w === 'warm') return `${upstream} hand the speaker a tone-rich signal; ${last} carries it without thinning it out.`;
-  if (w === 'bright' || w === 'neutral') return `${upstream} resolve cleanly; ${last} keeps the result musical rather than analytical.`;
+  if (w === 'warm') {
+    return plural
+      ? `${upstream} hand the speaker a tone-rich signal; ${last} carries it without thinning it out.`
+      : `${upstream} hands the speaker a tone-rich signal; ${last} carries it without thinning it out.`;
+  }
+  if (w === 'bright' || w === 'neutral') {
+    return plural
+      ? `${upstream} resolve cleanly; ${last} keeps the result musical rather than analytical.`
+      : `${upstream} resolves cleanly; ${last} keeps the result musical rather than analytical.`;
+  }
   return `${upstream} set the character; ${last} carries it through without introducing a competing one.`;
 }
 
@@ -208,9 +221,42 @@ function costFor(category: string): string {
   return 'Every change here trades one behaviour for another — decide which of the two the system should keep.';
 }
 
-// ── verdict + standfirst (engine-leverage driven; copy unchanged) ───────
+/**
+ * Did the engine actually read every component it is about to pass judgment on?
+ *
+ * The restraint verdict below used to fire on `!bottleneck` alone — the absence
+ * of a detected problem. But absence is uninformative when the engine had no
+ * reading for one of the components: it cannot have checked an interaction it
+ * could not see. That is how "Magnepan LRS+ with a Rega Brio" — the textbook
+ * current-starved pairing — came back as "Nothing here needs changing."
+ *
+ * A component is read when the engine produced axis values for it. Comparison
+ * is on trimmed lowercase names because credit and per-component readings are
+ * built from the same resolved list but not guaranteed to share casing.
+ */
+export function assessedEveryComponent(
+  credit: string[],
+  perComponentAxes: Array<{ name?: string; axes?: Record<string, string> }> | undefined,
+): boolean {
+  if (credit.length === 0) return false;
+  const read = new Set(
+    (perComponentAxes ?? [])
+      .filter((p) => p && p.axes && Object.keys(p.axes).length > 0)
+      .map((p) => (p.name ?? '').trim().toLowerCase())
+      .filter(Boolean),
+  );
+  return credit.every((name) => read.has(name.trim().toLowerCase()));
+}
+
+// ── verdict + standfirst (engine-leverage driven) ───────────────────────
 export function verdictAndStandfirst(
   bottleneck: any, category: string, role: string, signature: string,
+  /**
+   * Whether the engine read every credited component. Omitted = assume it did,
+   * so existing call sites and fixtures keep their behaviour; the assessment
+   * path passes it explicitly.
+   */
+  assessedAll: boolean = true,
 ): { verdict: string; standfirst?: string } {
   if (bottleneck) {
     if (category === 'power_match') {
@@ -230,6 +276,16 @@ export function verdictAndStandfirst(
     return {
       verdict: `The ${role} is steering the whole system.`,
       standfirst: signature ? lowerFirst(stripTrailingPeriod(signature)) + '.' : undefined,
+    };
+  }
+  // No bottleneck found. That is only a verdict if the engine was in a
+  // position to find one — otherwise say what is missing rather than issuing
+  // an unearned all-clear. Restraint is preserved for the case it was built
+  // for: everything read, nothing material found.
+  if (!assessedAll) {
+    return {
+      verdict: "I can't reach a verdict on this system yet.",
+      standfirst: "Not every component here is one I can read, so I have no basis for saying nothing needs changing.",
     };
   }
   return {
@@ -344,7 +400,8 @@ export function synthesizeArtifact(result: any): SynthResult {
     contradictions.push('Engine reports no bottleneck but a Highest-Impact upgrade path exists.');
 
   // ── verdict + standfirst ─────────────────────────────────────────────
-  const { verdict, standfirst } = verdictAndStandfirst(bottleneck, category, role, signature);
+  const assessedAll = assessedEveryComponent(credit, f.perComponentAxes);
+  const { verdict, standfirst } = verdictAndStandfirst(bottleneck, category, role, signature, assessedAll);
 
   // ── R1, R2 — recognition ─────────────────────────────────────────────
   // R2: recognition ALWAYS describes apparent intent, never the tonal
@@ -433,7 +490,17 @@ export function synthesizeArtifact(result: any): SynthResult {
       const s0 = strengths[0];
       const subj = subjectOf(s0);
       const alreadyCovered = subj && beatSubjects.includes(subj);
-      if (alreadyCovered) {
+      /* A strength with no identifiable component subject is a general
+       * statement or a hedge, not a contribution — and weaving one into the
+       * causal close produced a sentence that does not parse:
+       *   "None of that is an accident — system character depends on how
+       *    components interact in practice — further listening context would
+       *    refine this, and the rest of the chain has been chosen so that it
+       *    can."
+       * Shipped in 3 of 26 sampled responses. An em-dash inside the clause
+       * has the same effect, so both fall back to the general close. */
+      const weavable = !!subj && !asContribution(s0).includes('—');
+      if (alreadyCovered || !weavable) {
         // Beat + a general "chosen for" close.
         caseParagraphs.push(`${beat} None of that is an accident — the chain upstream has been chosen so nothing fights what the speaker is trying to do.`);
       } else {

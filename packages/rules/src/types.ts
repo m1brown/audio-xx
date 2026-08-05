@@ -26,6 +26,21 @@ export interface RuleConditions {
   has_improvement_signals?: boolean;
   /** Whether archetype conflict is detected */
   archetype_conflict?: boolean;
+  /**
+   * Minimum number of impression signals (symptoms + trait readings) the
+   * listener must actually have supplied for this rule to fire.
+   *
+   * `symptoms_absent` is satisfied trivially by an empty symptom list, so a
+   * rule conditioned only on absence fires for a listener who has described
+   * nothing. `system-performing-well` did exactly that, and told first-time
+   * visitors "Your listening impressions suggest the system is performing
+   * well. No symptoms of fatigue, regression, or imbalance were detected."
+   * — a clean bill of health for a system it had never been told about.
+   *
+   * Any rule whose output claims to have READ the listener's impressions
+   * must set this. Absence of a symptom is not evidence of its absence.
+   */
+  min_impression_signals?: number;
 }
 
 /** Rule outputs — what the system tells the user */

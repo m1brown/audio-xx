@@ -57,9 +57,21 @@ describe('buildUnknownProductClarification — shape + hedging', () => {
 });
 
 describe('buildUnknownProductExploreLinks — Explore section structure', () => {
-  it('returns 3 links for a real product name', () => {
+  /* Commerce discipline (review 2026-08-05): this response has just told the
+   * reader we cannot identify the product. Dealer links underneath contradict
+   * that — declining to evaluate something and then offering to help buy it.
+   * The reference link stays; the two dealer links were removed. */
+  it('returns only the manufacturer reference link for a real product name', () => {
     const links = buildUnknownProductExploreLinks('Buchardt A700');
-    expect(links).toHaveLength(3);
+    expect(links).toHaveLength(1);
+    expect(links![0].kind).toBe('reference');
+  });
+
+  it('offers no dealer links for a product it could not identify', () => {
+    const links = buildUnknownProductExploreLinks('Buchardt A700')!;
+    expect(links.some((l) => l.kind === 'dealer')).toBe(false);
+    expect(links.map((l) => l.label)).not.toContain('eBay');
+    expect(links.map((l) => l.label)).not.toContain('HiFi Shark');
   });
 
   it('returns undefined for the fallback placeholder name "that product"', () => {
@@ -81,26 +93,12 @@ describe('buildUnknownProductExploreLinks — Explore section structure', () => 
     expect(mfg!.kind).toBe('reference');
   });
 
-  it('eBay link is a real eBay search URL', () => {
+  it('the manufacturer link points at the maker, not a marketplace', () => {
     const links = buildUnknownProductExploreLinks('Buchardt A700')!;
-    const ebay = links.find((l) => l.label === 'eBay');
-    expect(ebay).toBeDefined();
-    expect(ebay!.url).toContain('ebay.com/sch/i.html?_nkw=');
-    // URLSearchParams encodes spaces as "+", encodeURIComponent uses
-    // "%20". Both are valid HTTP query-string encodings; the eBay
-    // builder migrated to URLSearchParams (ebay-links.ts) in the
-    // 2026-05-19 EPN-tagging refactor.
-    expect(ebay!.url).toMatch(/Buchardt(?:%20|\+)A700/);
-    expect(ebay!.kind).toBe('dealer');
-  });
-
-  it('HiFi Shark link is a real HiFi Shark search URL', () => {
-    const links = buildUnknownProductExploreLinks('Buchardt A700')!;
-    const shark = links.find((l) => l.label === 'HiFi Shark');
-    expect(shark).toBeDefined();
-    expect(shark!.url).toContain('hifishark.com/search?q=');
-    expect(shark!.url).toContain('Buchardt%20A700');
-    expect(shark!.kind).toBe('dealer');
+    const ref = links.find((l) => l.kind === 'reference');
+    expect(ref).toBeDefined();
+    expect(ref!.url).toMatch(/Buchardt(?:%20|\+)A700/);
+    expect(ref!.url).not.toMatch(/ebay\.com|hifishark\.com/i);
   });
 
   it('contains NO reviewer publication URLs', () => {
@@ -288,9 +286,11 @@ describe('P1 fallback end-to-end: resolveUnknownProductName + buildUnknownProduc
     const clarification = buildUnknownProductClarification(productName);
     expect(clarification.subject).toBe('Buchardt A700');
     expect(clarification.bottomLine).toContain('Buchardt A700');
-    // Explore links present (the bug was: empty turnCtx → "that product" → links suppressed)
+    // Explore links present (the bug was: empty turnCtx → "that product" → links suppressed).
+    // One link now, not three — dealer links were removed from the disclaimed path.
     expect(clarification.links).toBeDefined();
-    expect(clarification.links).toHaveLength(3);
+    expect(clarification.links).toHaveLength(1);
+    expect(clarification.links![0].kind).toBe('reference');
   });
 
   it('empty arrays produce "that product" → links suppressed (current behavior)', () => {

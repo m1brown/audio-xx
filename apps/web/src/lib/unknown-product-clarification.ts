@@ -73,6 +73,12 @@ export function resolveUnknownProductName(
  * Returns undefined when productName is the fallback placeholder
  * "that product" (i.e., no candidate name was extractable), since
  * search URLs with that string would be useless.
+ *
+ * Commerce discipline (review 2026-08-05): this response has just told the
+ * reader we cannot identify the product. Offering "Dealers: eBay · HiFi Shark"
+ * underneath contradicts that — we decline to evaluate it and then offer to
+ * help buy it. The reference link stays, because pointing someone at the
+ * maker's own site is help rather than commerce.
  */
 export function buildUnknownProductExploreLinks(
   productName: string,
@@ -84,20 +90,6 @@ export function buildUnknownProductExploreLinks(
       label: 'Find manufacturer',
       url: `https://www.google.com/search?q=${q}+official+site`,
       kind: 'reference',
-    },
-    {
-      label: 'eBay',
-      // Host + EPN tagging come from ebay-links → affiliate-config
-      // (env-driven). Plain search fallback when env vars unset.
-      url: getEbaySearchUrl(productName),
-      kind: 'dealer',
-      region: 'global',
-    },
-    {
-      label: 'HiFi Shark',
-      url: `https://www.hifishark.com/search?q=${q}`,
-      kind: 'dealer',
-      region: 'global',
     },
   ];
 }

@@ -484,6 +484,12 @@ export interface SystemChain {
   roles: string[];
   /** Ordered component names matching the role positions. */
   names: string[];
+  /**
+   * Names the post-parse validator withheld because they name only a category
+   * ("integrated amplifier"), not a product. Carried so the response can ask
+   * about them — a withheld component must never disappear silently.
+   */
+  unverifiedComponents?: string[];
 }
 
 /**

@@ -2559,6 +2559,7 @@ import {
   findProductInProse,
   findProductByComponentName,
 } from './catalog/lookups';
+import { validateChainNames } from './chain-validation';
 export {
   findBrandProfileByName,
   findBrandProfileBySlug,
@@ -12155,10 +12156,22 @@ function buildSystemChain(components: SystemComponent[], rawMessage: string): Me
     });
   }
 
+  /* Post-parse validation (review 2026-08-05). Parsed names reached the chain
+   * banner unchecked, so "…a Marantz PM6007. Should I upgrade my DAC?" showed
+   * a component called `Marantz PM6007. Should I`, and "a Rega Brio integrated
+   * amplifier" showed `Rega` plus a phantom `integrated amplifier`. The
+   * assessment was then computed on that chain. Clean interrogative debris and
+   * withhold bare category words; withheld names are returned so the caller
+   * can ask rather than drop them silently. */
+  const validated = validateChainNames(sorted.map((c) => c.displayName));
+
   return {
-    fullChain,
+    fullChain: fullChain ? validateChainNames(fullChain).names : fullChain,
     roles: sorted.map((c) => canonicalRole(c.role)),
-    names: sorted.map((c) => c.displayName),
+    names: validated.names,
+    unverifiedComponents: validated.needsClarification.length
+      ? validated.needsClarification
+      : undefined,
   };
 }
 

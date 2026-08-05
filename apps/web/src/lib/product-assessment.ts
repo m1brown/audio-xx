@@ -299,6 +299,29 @@ const BRAND_GENERAL_RESIDUE = new Set([
 ]);
 
 /**
+ * Does the model the user typed actually name the product we resolved?
+ *
+ * The catalog matcher is deliberately lenient — it was built to rescue
+ * shortened display names ("DeVore Orangutan O/96" arriving as "DeVore O/96").
+ * The cost is that it silently answers about a neighbour: "Denafrips Pontus IV"
+ * (which does not exist) returned a confident assessment of the Pontus II
+ * 12th-1, and "Schiit Modi+" returned the Modius E. The user cannot tell.
+ *
+ * Comparison is token-prefix, not substring: "pontus ii" satisfies
+ * "Pontus II 12th-1" (a fuller name for the same product), while "pontus iv"
+ * does not — and "modi" does not satisfy "Modius E", which substring matching
+ * would wrongly accept.
+ */
+export function requestedModelMatches(requested: string, resolvedName: string): boolean {
+  const tokens = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/i).filter(Boolean);
+  const req = tokens(requested);
+  const res = tokens(resolvedName);
+  if (req.length === 0) return true; // nothing specific was asked for
+  if (req.length > res.length) return false;
+  return req.every((t, i) => t === res[i]);
+}
+
+/**
  * Recover the model designation a user typed when the catalog matched
  * only the brand. Returns undefined for bare-brand queries ("tell me
  * about the Chord sound") so those keep their existing behaviour.
@@ -366,6 +389,18 @@ export function buildProductAssessment(
   const unmatchedModel = (!candidate && !productSubject && brandSubject)
     ? extractUnmatchedModel(currentMessage, brandSubject.name)
     : undefined;
+  /* Silent substitution (review 2026-08-05): the matcher can resolve a model
+   * the user did not name — "Pontus IV" → Pontus II, "Modi+" → Modius E — and
+   * the response then reads as confident, specific and wrong. Recover what was
+   * typed and, when it does not name the product we resolved, disclose the
+   * substitution before any analysis rather than quietly answering about
+   * something else. */
+  const requestedModel = candidate
+    ? extractUnmatchedModel(currentMessage, candidate.brand)
+    : undefined;
+  const substitutedModel = !!(
+    requestedModel && !requestedModelMatches(requestedModel, candidate!.name)
+  );
   // When falling through to raw subject text (no catalog match), recover
   // display casing so the rendered output doesn't show lowercase brand
   // names like "chord" instead of "Chord" (QA residual R2).
@@ -660,6 +695,17 @@ export function buildProductAssessment(
       : `${pilotCap.brand}: ${pilotCap.mechanism} Listeners typically describe the result as ${charSummary}.`;
   } else {
     shortAnswer = `I don't have catalog data on the ${candidateName}. If you can share the brand or model details, I can offer a more specific assessment.`;
+  }
+
+  /* Disclose a substituted model BEFORE any analysis. The assessment below is
+   * of the product we actually hold; without this line the reader has no way
+   * to tell it is not the one they named. */
+  if (substitutedModel && candidate && requestedModel) {
+    shortAnswer =
+      `I don't have a ${candidate.brand} ${requestedModel} in my catalog. `
+      + `The closest I hold is the ${candidate.brand} ${candidate.name}, and what follows describes that — `
+      + `tell me if you meant something else. `
+      + shortAnswer;
   }
 
   // ── Build "recommendation" ─────────────────────────
