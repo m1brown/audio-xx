@@ -4256,11 +4256,11 @@ function ConsultationSubjectContext({ subject, prose }: { subject?: string; pros
         <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#2a2a2a' }}>
           {subject}
         </div>
+        {/* The disclosure is right — a silhouette must not read as the product
+            — but "Generic placeholder — actual product image not in catalog"
+            is internal register and shipped in 6 of 26 sampled responses.
+            Same honesty, written for a reader. */}
         {isGenericPlaceholder ? (
-          {/* The disclosure is right — a silhouette must not read as the
-              product — but "Generic placeholder — actual product image not in
-              catalog" is internal register and shipped in 6 of 26 sampled
-              responses. Same honesty, written for a reader. */}
           <div style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#999', marginTop: '0.15rem' }}>
             No product image available
           </div>
