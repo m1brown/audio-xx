@@ -27,6 +27,35 @@ import {
   trackCardView,
   trackLinkClick,
 } from '../../lib/interaction-tracker';
+import { trackEvent } from '../../lib/track-event';
+
+/**
+ * B2 (GTM commerce conditions): measure every outbound commerce click by
+ * destination type and monetization status. Monetized = URL carries an
+ * affiliate parameter (tag= for Amazon Associates, campid= for eBay EPN);
+ * with no affiliate env configured these are all false — the measurement
+ * proves the commercial reality either way.
+ *
+ * Lives here, not in AdvisoryProductCard, for the reason in the module
+ * docstring above. It was previously a local function there, passed down
+ * as an `onClick` prop to `TrackedAnchor` — which re-introduced exactly the
+ * boundary violation this module exists to prevent, because a function
+ * cannot cross the server→client boundary. Every brand page 500'd as a
+ * result. Keep client-only behaviour inside the client component.
+ */
+function trackOutboundCommerceClick(url: string): void {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, '');
+    const destType = /hifishark|audiogon|reverb/.test(host) ? 'used-marketplace-search'
+      : /ebay\./.test(host) ? 'ebay-search'
+      : /amazon\./.test(host) ? 'amazon'
+      : (u.pathname === '/' || u.pathname === '') ? 'manufacturer-homepage'
+      : 'manufacturer-page';
+    const monetized = /[?&](tag|campid)=/.test(url);
+    trackEvent('outbound_commerce_click', { destType, domain: host, monetized });
+  } catch { /* never break navigation */ }
+}
 
 // ── Card view tracker ─────────────────────────────────
 //
@@ -89,15 +118,16 @@ export function TrackedAnchor({
       target={target}
       rel={rel}
       style={style}
-      onClick={() =>
+      onClick={() => {
         trackLinkClick({
           product,
           pickRole: role,
           linkKind: kind,
           linkLabel: label,
           linkUrl: href,
-        })
-      }
+        });
+        trackOutboundCommerceClick(href);
+      }}
     >
       {children}
     </a>

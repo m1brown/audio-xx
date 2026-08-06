@@ -12,7 +12,6 @@
  */
 
 import Link from 'next/link';
-import { trackEvent } from '@/lib/track-event';
 import type { AdvisoryOption } from '../../lib/advisory-response';
 import { renderText } from './render-text';
 // Card-view and link-click telemetry live in a 'use client' sidecar so
@@ -525,7 +524,7 @@ function TrackedLinkRow({ links, kind, product, role }: {
         return (
           <span key={i}>
             <TrackedAnchor
-              href={link.url} onClick={() => trackOutboundCommerceClick(link.url)}
+              href={link.url}
               target="_blank"
               rel="noopener noreferrer"
               style={LINK_STYLE}
@@ -598,7 +597,7 @@ function ProductLinksSection({ opt, product, role }: {
               return (
                 <span key={i}>
                   <TrackedAnchor
-                    href={link.url} onClick={() => trackOutboundCommerceClick(link.url)}
+                    href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={LINK_STYLE}
@@ -627,7 +626,7 @@ function ProductLinksSection({ opt, product, role }: {
               return (
                 <span key={i}>
                   <TrackedAnchor
-                    href={link.url} onClick={() => trackOutboundCommerceClick(link.url)}
+                    href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={LINK_STYLE}
@@ -656,7 +655,7 @@ function ProductLinksSection({ opt, product, role }: {
             return (
               <span key={i}>
                 <TrackedAnchor
-                  href={link.url} onClick={() => trackOutboundCommerceClick(link.url)}
+                  href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={LINK_STYLE}
@@ -1274,7 +1273,7 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
                       {' '}({s.year}):{' '}
                       <em>&ldquo;{s.shortQuote}&rdquo;</em>{' '}
                       <TrackedAnchor
-                        href={s.url} onClick={() => trackOutboundCommerceClick(s.url)}
+                        href={s.url}
                         target="_blank"
                         rel="noopener noreferrer"
                         product={fullName}
@@ -1335,26 +1334,11 @@ const SURFACED_FLOOR = 2;
 /** Target product count when preferImage is active. */
 const SURFACED_TARGET = 3;
 
-/**
- * B2 (GTM commerce conditions): measure every outbound commerce click by
- * destination type and monetization status. Monetized = URL carries an
- * affiliate parameter (tag= for Amazon Associates, campid= for eBay EPN);
- * with no affiliate env configured these are all false — the measurement
- * proves the commercial reality either way.
- */
-function trackOutboundCommerceClick(url: string): void {
-  try {
-    const u = new URL(url);
-    const host = u.hostname.replace(/^www\./, '');
-    const destType = /hifishark|audiogon|reverb/.test(host) ? 'used-marketplace-search'
-      : /ebay\./.test(host) ? 'ebay-search'
-      : /amazon\./.test(host) ? 'amazon'
-      : (u.pathname === '/' || u.pathname === '') ? 'manufacturer-homepage'
-      : 'manufacturer-page';
-    const monetized = /[?&](tag|campid)=/.test(url);
-    trackEvent('outbound_commerce_click', { destType, domain: host, monetized });
-  } catch { /* never break navigation */ }
-}
+// `trackOutboundCommerceClick` moved to CardTelemetry.tsx ('use client').
+// It was a local function here, passed down as an `onClick` prop to
+// TrackedAnchor — a function crossing the server→client boundary, which
+// threw "Event handlers cannot be passed to Client Component props" and
+// 500'd every /brand/[slug] page. TrackedAnchor now calls it internally.
 
 export default function AdvisoryProductCards({ options, hideMakerInsight, preferImage }: AdvisoryProductCardProps) {
   // ── Soft image-preference selection ──
@@ -1423,9 +1407,18 @@ export function ShoppingLinks({ brand, name, manufacturerUrl, availability }: St
     <div style={{ marginTop: '0.6rem', lineHeight: 1.8 }}>
       {links.map((link, i) => (
         <span key={i}>
-          <a href={link.url} onClick={() => trackOutboundCommerceClick(link.url)} target="_blank" rel="noopener noreferrer" style={LINK_STYLE}>
+          <TrackedAnchor
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={LINK_STYLE}
+            product={[brand, name].filter(Boolean).join(' ')}
+            role={undefined}
+            kind={link.label === 'eBay' ? 'buy_used' : link.label === 'HiFiShark' ? 'buy_used' : 'manufacturer'}
+            label={link.label}
+          >
             {link.label}
-          </a>
+          </TrackedAnchor>
           {i < links.length - 1 && <span style={LINK_SEP_STYLE}>&middot;</span>}
         </span>
       ))}
