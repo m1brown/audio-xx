@@ -4,19 +4,19 @@
 
 | | |
 |---|---|
-| **Production** | `42da903` — ⚠️ **serving 500 on every `/brand/[slug]` page** |
-| **Fix ready** | `75566fb` on `version-b`, verified locally, **awaiting promotion approval** |
-| **Last updated** | 2026-08-06 (Launch Mission 1 — engineering) |
-| **Launch blockers open** | **4 of 4** (+ 1 promotion) |
+| **Production** | `4cb19df` — deployment `audio-xx-2za4u99sn`, **all 28 swept routes 200** |
+| **Certified** | 2026-08-06T19:31:20Z (Launch Mission 2) |
+| **Launch blockers open** | **4 of 4** — all founder-owned |
 | **Readiness** | 🔴 **NOT READY TO INVITE** |
 
-> **Headline changed 2026-08-06.** Engineering previously had no open launch blocker. A live
-> production defect was then found by route-sweeping audio-xx.com: **every brand page returns HTTP
-> 500** — a server/client boundary violation that no test suite and no build could catch. The repair
-> is committed and verified on `version-b` but production still carries the defect, so a promotion is
-> now on the critical path alongside the four founder tasks.
+> **Production is now certified.** `4cb19df` is live. LB-0 is **closed with production evidence**:
+> all eight `/brand/[slug]` routes return 200 with no error marker, correct titles, authored
+> content, commerce links and affiliate parameters. A full 28-route sweep shows **zero failures**,
+> and a pre-deployment baseline confirms **no deployment regression** — every route that worked
+> before still works.
 >
-> The other four blockers remain founder-owned and unchanged.
+> **Password recovery has been withdrawn from the UI**, not fixed and not certified — see LB-5.
+> Engineering again has no open launch blocker; the four remaining gates are founder tasks.
 
 ---
 
@@ -75,22 +75,25 @@
 - **State** — ⬜ Open. Roadmap item 7. Anonymous journeys verified on `42da903`; authenticated ones never.
 - **Residual risk if omitted** — Save/recover is the reason to have an account. If it is broken, the first invited user hits it on their first session, and the failure lands on the exact feature the invite was for.
 
-> **Configuration finding (2026-08-06, engineering).** Password recovery is **live in Production**:
-> `NEXT_PUBLIC_PASSWORD_RESET` and `RESEND_API_KEY` are both set, and "Forgot your password?" renders
-> on `audio-xx.com/auth/signin`. The two flags are therefore currently consistent — the unsafe
-> configuration does not exist today. But nothing in code couples them, and **no email has ever been
-> confirmed delivered to an external inbox**. LB-4's scope should be read to include one real
-> password-reset round trip, since the flow is already exposed to users. A misconfiguration alarm now
-> logs to Sentry (`api/auth/forgot`) if the two ever drift apart.
+> **Password recovery is tracked as LB-5, not here.** It was live in Production during
+> Launch Mission 2 and has since been withdrawn from the UI because it could not be
+> certified. LB-4 covers saved-system persistence only — do not merge the two.
 
-### LB-0 — Promote the brand-page repair *(new, 2026-08-06)*
+### LB-0 — Promote the brand-page repair ✅ **CLOSED 2026-08-06**
 - **Objective** — Production stops returning HTTP 500 on `/brand/[slug]`.
-- **Owner** — Founder (promotion approval); engineering executes.
-- **Verification** — Route-sweep audio-xx.com after promotion.
-- **Evidence of completion** — Recorded HTTP status for **five** brand slugs (klipsch, devore, harbeth, kef, naim) fetched from audio-xx.com, plus the promoted deployment ID.
-- **Pass condition** — All five return **200** and none of the bodies contains `__next_error__`. **Five of five.**
-- **State** — ⬜ Open. Fix committed as `75566fb`; verified locally (all four sampled slugs 200, was 500). Not promoted.
-- **Residual risk if omitted** — Brand pages are a primary content surface and every one of them is broken. An invited audiophile clicking through to a manufacturer page hits an error screen. Cause: a server/client boundary violation that neither the test suite nor `next build` can detect; a source-level guard (`server-boundary-safety.test.ts`) now covers the recurrence.
+- **Owner** — Founder (promotion approval); engineering executed.
+- **Pass condition** — All five return **200** and none of the bodies contains `__next_error__`.
+- **State** — ✅ **Closed.** Met at **six of six** (klipsch, devore, harbeth, kef, naim, rega); all eight brand routes recovered in the full sweep. Evidence: [`launch-evidence/LB-0/certification.md`](launch-evidence/LB-0/certification.md).
+- **Residual risk** — Retired. Recurrence covered by `server-boundary-safety.test.ts` and by Gate E.
+
+### LB-5 — Password recovery ⛔ **DISABLED, NOT CERTIFIED**
+- **Objective** — Either a certified self-service recovery flow, or no visible flow at all.
+- **Owner** — Founder (certification requires an external inbox).
+- **Verification** — Request a reset, confirm the email **arrives**, complete it, sign in with the new password, confirm the old one fails.
+- **Evidence of completion** — The delivered message ID and the external inbox it landed in, recorded in [`launch-evidence/LB-5/password-recovery.md`](launch-evidence/LB-5/password-recovery.md).
+- **State** — ⛔ **Capability withdrawn, not repaired.** `NEXT_PUBLIC_PASSWORD_RESET` set to `0` in Production and rebuilt (`audio-xx-2za4u99sn`); `Forgot your password?` occurrences on `/auth/signin` went **1 → 0**. Certification was impossible for the engineering session: no external inbox, and completing a reset requires creating an account and authenticating, which the operating rules prohibit.
+- **Residual risk if omitted** — *Before disablement:* a user requesting recovery saw `{"ok":true}` regardless of outcome and could be permanently locked out with no signal to anyone. *After:* the misleading flow is gone; recovery is founder-managed, which a bounded invited cohort supports. Re-enabling is a ~5-minute founder task once delivery is confirmed.
+- **Note** — Resend DNS for `audio-xx.com` is correctly configured (DKIM + `send.` SPF/MX), so delivery is *likely* fine. This is disabled on the "cannot certify" rule, **not** because delivery is known broken. Tracked separately from LB-4 by design.
 
 ---
 
@@ -158,7 +161,8 @@ A blocker cannot be marked ✅ while its row here is empty.
 | LB-2 | *(two URLs + presence checklist + sign-off line)* | ⬜ | | |
 | LB-3 | *(positive + negative control screenshots)* | ⬜ | | |
 | LB-4 | *(six screenshots + saved system ID, before/after)* | ⬜ | | |
-| LB-0 | *(five brand-slug HTTP statuses + deployment ID)* | ⬜ | | |
+| LB-0 | [`LB-0/certification.md`](launch-evidence/LB-0/certification.md) — 6 slugs, deployment `audio-xx-2za4u99sn` | ✅ | Claude | 2026-08-06 |
+| LB-5 | [`LB-5/password-recovery.md`](launch-evidence/LB-5/password-recovery.md) — capability disabled, not certified | ⛔ | Claude | 2026-08-06 |
 
 ---
 
