@@ -73,11 +73,12 @@ function ruleMatches(rule: Rule, ctx: EvaluationContext): boolean {
     }
   }
 
-  // Check min_impression_signals — the listener must have actually described
-  // something before a rule may speak about their impressions.
-  if (cond.min_impression_signals !== undefined) {
-    const supplied = ctx.symptoms.length + Object.keys(ctx.traits).length;
-    if (supplied < cond.min_impression_signals) {
+  // Check min_symptom_signals — the listener must have actually described
+  // symptoms before a rule may speak about their impressions. Symptoms only:
+  // traits are inferred from incidental wording and are present even when
+  // nothing about the listening experience was described.
+  if (cond.min_symptom_signals !== undefined) {
+    if (ctx.symptoms.length < cond.min_symptom_signals) {
       return false;
     }
   }

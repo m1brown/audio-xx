@@ -212,6 +212,21 @@ function detectArchetypeConflict(archetypes: string[]): boolean {
   return archetypes.includes('engagement') && archetypes.includes('composure');
 }
 
+/**
+ * Symptoms that are markers of INTENT, not descriptions of what was heard.
+ *
+ * `improvement` is emitted by the "Improvement Markers" block in
+ * signals.yaml, whose phrases include the bare words "better" and "upgrade".
+ * It fires on "How do I make my system sound better?" — a request, containing
+ * no report of the listening experience at all. Counting it as impression
+ * evidence let `system-performing-well` tell a first-time visitor that their
+ * impressions showed no problems.
+ *
+ * Kept deliberately narrow: this is the only entry in signals.yaml filed
+ * under a "Markers" heading rather than a described condition.
+ */
+const NON_IMPRESSION_SYMPTOMS = new Set(['improvement']);
+
 function ruleMatches(rule: Rule, ctx: EvaluationContext): boolean {
   const cond = rule.conditions;
 
@@ -237,6 +252,12 @@ function ruleMatches(rule: Rule, ctx: EvaluationContext): boolean {
   }
   if (cond.archetype_conflict !== undefined) {
     if (detectArchetypeConflict(ctx.archetypes) !== cond.archetype_conflict) return false;
+  }
+  // A rule that speaks about the listener's impressions may only fire when
+  // the listener actually described something they heard. See RuleConditions.
+  if (cond.min_symptom_signals !== undefined) {
+    const described = ctx.symptoms.filter((s) => !NON_IMPRESSION_SYMPTOMS.has(s));
+    if (described.length < cond.min_symptom_signals) return false;
   }
 
   return true;

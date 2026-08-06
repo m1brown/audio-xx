@@ -16,6 +16,21 @@ export interface RuleConditions {
   archetypes_include?: string[];
   has_improvement_signals?: boolean;
   archetype_conflict?: boolean;
+  /**
+   * Minimum number of SYMPTOMS the listener actually described before this
+   * rule may fire.
+   *
+   * `symptoms_absent` is satisfied trivially by an empty symptom list, so a
+   * rule conditioned only on absence fires for someone who has described
+   * nothing. Any rule whose output claims to have READ the listener's
+   * impressions must set this — absence of a symptom is not evidence that
+   * the listener reported its absence.
+   *
+   * Counts symptoms only, not trait readings: traits are inferred from
+   * incidental wording ("better", "warm") and are present for queries that
+   * describe no listening experience at all.
+   */
+  min_symptom_signals?: number;
 }
 
 export interface RuleOutputs {
