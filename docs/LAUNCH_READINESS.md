@@ -18,31 +18,55 @@
 ## 1 · Launch Blockers
 *Must be complete before the first beta invitation.*
 
+> **Closing rule.** A blocker is closed only when its **pass condition** is literally true and its
+> **evidence artifact** is recorded in the Evidence Log. Absence of a problem is never evidence;
+> every blocker below requires a **positive artifact** that could not exist if the thing were broken.
+
 ### LB-1 — Sentry error visibility confirmed
 - **Objective** — Confirm the production issue stream is receiving and surfacing real errors, so the first user failure is visible rather than silent.
 - **Owner** — Founder (encrypted `SENTRY_AUTH_TOKEN` is not available to the engineering session).
-- **Verification** — Open the Sentry dashboard for project `4511852607504384`; confirm zero unexpected issues since the `42da903` promotion, and that the project is receiving events.
+- **Verification** — Emit one deliberate test error from production and confirm it lands as a Sentry issue. A quiet dashboard does not distinguish "no errors" from "pipeline broken" — the test event is the positive control.
+- **Evidence of completion** —
+  1. The **Sentry issue short ID** of a deliberate production test event (e.g. `AUDIO-XX-4`), recorded verbatim.
+  2. A **screenshot** of the Sentry Issues view, filtered `environment:production`, showing that issue and the `firstSeen` timestamp.
+  3. The **count of unresolved production issues** since the `42da903` promotion, as an integer.
+- **Pass condition** — The recorded issue short ID resolves to an issue whose environment is `production` and whose `firstSeen` is later than the promotion timestamp. **True or false; no interpretation.**
 - **State** — ⬜ Open. Client SDK confirmed transmitting (200 to the envelope endpoint, observed twice during post-promotion verification); server-side issue stream never read.
 - **Residual risk if omitted** — The first user-facing crash is invisible. Sentry already caught one real production 500 (`/api/evaluate` ENOENT) that no test found; without dashboard review that class of failure goes unnoticed until a user reports it.
 
 ### LB-2 — Legal / privacy review
-- **Objective** — Confirm privacy policy, terms and data handling are adequate for inviting real users who create accounts and save systems.
+- **Objective** — Confirm privacy policy, terms and data handling are published and disclose actual data practice for users who create accounts and save systems.
 - **Owner** — Founder.
-- **Verification** — Founder sign-off that the published `/privacy` and `/terms` reflect actual data practice (accounts, saved systems, analytics events, affiliate links).
+- **Verification** — Confirm both documents are published and that each required disclosure is literally present. *Adequacy is a legal judgment and cannot be made binary; **presence** can be, and is what this blocker gates on.*
+- **Evidence of completion** —
+  1. Two **published URLs** returning HTTP 200: `https://audio-xx.com/privacy` and `https://audio-xx.com/terms`.
+  2. A **presence checklist**, each item marked found/not-found with the quoted line: ⬜ categories of data collected · ⬜ account and saved-system storage · ⬜ third-party processors **named** (Vercel, Turso, Sentry, Resend, analytics) · ⬜ affiliate-link disclosure · ⬜ contact route for data access/deletion · ⬜ effective date.
+  3. A **dated sign-off line** naming the reviewer and the date the two documents were read.
+- **Pass condition** — Both URLs return 200 **and** all six checklist items are marked found with a quoted line **and** a dated sign-off line exists. **Six of six, or the blocker stays open.**
 - **State** — ⬜ Open. Roadmap item 8, never closed.
 - **Residual risk if omitted** — Collecting real user accounts and behavioural data without accurate disclosure. Legal exposure and a trust breach that no engineering fix repairs.
 
 ### LB-3 — Invite-only access mechanism
 - **Objective** — A working way to admit a bounded set of users and no one else.
 - **Owner** — Founder (mostly ops).
-- **Verification** — One invited account can sign in; one uninvited visitor cannot reach gated surfaces.
+- **Verification** — Run both controls. A positive test alone proves admission works; it does not prove exclusion works, and exclusion is the property the bound depends on.
+- **Evidence of completion** —
+  1. **Positive control** — screenshot of an invited test account in an authenticated production state, with the account identifier visible.
+  2. **Negative control** — screenshot of an **uninvited** identity attempting the same gated surface in a clean browser profile, showing the denial (block page or auth redirect) and the URL attempted.
+  3. The **recorded location of the invite list** (env var, table, or provider setting) and the **integer count** of admitted identities at launch.
+- **Pass condition** — The positive control shows an authenticated session **and** the negative control shows a non-authenticated result on the same URL. **Both, from two distinct identities.**
 - **State** — ⬜ Open. Roadmap item 10.
 - **Residual risk if omitted** — There is no invite-only beta. Either nobody gets in, or scale is unbounded and the risk-limiting premise of the whole launch is void.
 
 ### LB-4 — Authenticated production journey pass
 - **Objective** — Verify the signed-in core loop end to end on production: sign in → build → read assessment → save → return → recover access.
 - **Owner** — Founder (manual — signed-in production journeys cannot be Playwright-verified; do not inject localStorage to fake it).
-- **Verification** — Founder completes the loop once on audio-xx.com against a real account and reports any break.
+- **Verification** — Complete the loop once on audio-xx.com against a real account, capturing the saved system's identifier before and after a full sign-out. Identity of the identifier across the session boundary is the objective test; "it worked" is not.
+- **Evidence of completion** —
+  1. **Six numbered screenshots**, one per step of the loop, each showing the production URL bar.
+  2. The **saved system's URL or ID**, recorded verbatim at save time.
+  3. The **same URL or ID** recorded again after a full sign-out and fresh sign-in, with a screenshot showing the assessment content rendered.
+- **Pass condition** — The identifier recorded at step 2 is **character-identical** to the one recovered at step 3, and the recovered page renders assessment content rather than an empty or error state. **String equality; no judgment.**
 - **State** — ⬜ Open. Roadmap item 7. Anonymous journeys verified on `42da903`; authenticated ones never.
 - **Residual risk if omitted** — Save/recover is the reason to have an account. If it is broken, the first invited user hits it on their first session, and the failure lands on the exact feature the invite was for.
 
@@ -78,12 +102,27 @@ Question Engine / assessment expansion (`ASSESSMENT_EVOLUTION.md`) · paid subsc
 
 ---
 
+## Evidence Log
+
+Artifacts live in `docs/launch-evidence/` as `LB-1/`, `LB-2/`, `LB-3/`, `LB-4/`.
+A blocker cannot be marked ✅ while its row here is empty.
+
+| Blocker | Artifact reference | Pass condition met | Recorded by | Date |
+|---|---|---|---|---|
+| LB-1 | *(Sentry issue short ID + screenshot path)* | ⬜ | | |
+| LB-2 | *(two URLs + presence checklist + sign-off line)* | ⬜ | | |
+| LB-3 | *(positive + negative control screenshots)* | ⬜ | | |
+| LB-4 | *(six screenshots + saved system ID, before/after)* | ⬜ | | |
+
+---
+
 ## How to use this document
 
-1. When a blocker closes, change ⬜ → ✅, update **Launch blockers open**, and update **Readiness**.
-2. Readiness is 🟢 **READY TO INVITE** only when all four blockers are ✅.
-3. Items move between tiers only by founder decision — never by engineering judgment.
-4. Beta Learning items are promoted by *evidence*, not by age or convenience.
+1. To close a blocker: record its artifact in the **Evidence Log**, confirm the **pass condition** is literally true, then change ⬜ → ✅ in both places and update **Launch blockers open** and **Readiness**.
+2. Readiness is 🟢 **READY TO INVITE** only when all four blockers are ✅ **and** all four Evidence Log rows are populated.
+3. A blocker is never closed on the basis of "checked it" or "looks fine." If the pass condition cannot be evaluated as true or false from the recorded artifact, the blocker stays open.
+4. Items move between tiers only by founder decision — never by engineering judgment.
+5. Beta Learning items are promoted by *evidence*, not by age or convenience.
 
 ## Governing doctrine
 
