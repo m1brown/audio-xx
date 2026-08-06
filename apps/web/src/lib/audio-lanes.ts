@@ -96,17 +96,21 @@ Return a JSON object with two fields:
 
   const userPrompt = `Question: ${ctx.currentMessage}${systemNote ? `\n\nUser's system context: ${systemNote}` : ''}`;
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), LANE_LLM_TIMEOUT_MS);
+  /* The abort timer must cover the BODY read, not just the headers. It was
+   * cleared as soon as `fetch` resolved, so a response whose headers arrived
+   * but whose body stalled had no timeout at all and hung forever. Harmless
+   * while the caller tore its loading state down immediately; a genuine hang
+   * once the caller waits on this promise. Cleared in `finally` instead. */
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), LANE_LLM_TIMEOUT_MS);
 
+  try {
     const response = await fetch('/api/memo-overlay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ systemPrompt, userPrompt }),
       signal: controller.signal,
     });
-    clearTimeout(timeout);
 
     if (!response.ok) {
       console.warn('[knowledge-lane] LLM call failed:', response.status);
@@ -134,6 +138,8 @@ Return a JSON object with two fields:
       console.warn('[knowledge-lane] Failed:', err);
     }
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

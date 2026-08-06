@@ -1079,6 +1079,19 @@ export default function Home() {
     // (they keep the existing behaviour for clean exits); this `finally`
     // is the safety net that prevents the UI from ever being stuck at
     // "Thinking…" if an unexpected throw/hang slips past them.
+    /* Some lanes finish asynchronously: they post a placeholder, fire an LLM
+     * call, and clear the loading state when it resolves. The `finally` below
+     * used to clear it the moment those lanes RETURNED — which is immediately,
+     * since the call is not awaited. The result was a turn that announced
+     * itself complete while showing only "Thinking about kef…": measured at
+     * +405 ms the placeholder is on screen and the Send button already reads
+     * "Send"; real prose lands ~5–9 s later. It looked broken for the whole
+     * window, on essentially all non-catalog traffic.
+     *
+     * A lane sets this once its promise chain is attached, taking ownership of
+     * the teardown. It is set AFTER the chain is attached, so a synchronous
+     * throw inside the lane still falls through to the safety net below. */
+    let asyncLaneOwnsLoading = false;
     try {
     // ── Conversation state machine routing ──────────────
     // When the state machine is active (mode !== 'idle'), route through
@@ -2554,6 +2567,8 @@ export default function Home() {
       }).catch(() => {
         dispatch({ type: 'SET_LOADING', value: false });
       });
+      // Chain attached — this lane now owns the teardown.
+      asyncLaneOwnsLoading = true;
     };
 
     if (intent === 'music_input') {
@@ -3226,6 +3241,8 @@ export default function Home() {
       }).catch(() => {
         dispatch({ type: 'SET_LOADING', value: false });
       });
+      // Chain attached — this lane now owns the teardown.
+      asyncLaneOwnsLoading = true;
       return;
     }
 
@@ -4741,8 +4758,13 @@ export default function Home() {
     ));
     } finally {
       // Phase 5 resilience: guarantee the loading state always clears, even
-      // if an unexpected exception slips past the inner handlers.
-      dispatch({ type: 'SET_LOADING', value: false });
+      // if an unexpected exception slips past the inner handlers — unless an
+      // async lane has taken ownership and will clear it when its answer
+      // arrives. Clearing here would tell the user the turn is finished while
+      // only a placeholder is on screen.
+      if (!asyncLaneOwnsLoading) {
+        dispatch({ type: 'SET_LOADING', value: false });
+      }
     }
   // GTM Bug 2 (2026-07-07): pendingImages was missing from this list, so
   // an image-only submit read the initial empty array from a stale
