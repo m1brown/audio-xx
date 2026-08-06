@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createResetToken } from '@/lib/password-reset';
-import { sendEmail } from '@/lib/email';
+import { sendEmail, emailSendingConfigured } from '@/lib/email';
 
 /**
  * Forgot-password entry point (pre-beta item 3).
@@ -28,6 +28,21 @@ export async function POST(req: NextRequest) {
 
   const rawToken = await createResetToken(user.id);
   if (!rawToken) return uniform; // cooldown — no new email
+
+  // Configuration-consistency alarm. The recovery link is shown when
+  // NEXT_PUBLIC_PASSWORD_RESET=1, but delivery depends on RESEND_API_KEY —
+  // two independent variables with nothing coupling them. If they ever
+  // drift apart the user is offered a recovery flow that silently cannot
+  // deliver, and a no-op is not an error, so nothing else would report it.
+  // Log loudly (Sentry captures console.error) without altering the
+  // uniform response shape that enumeration safety depends on.
+  if (!emailSendingConfigured()) {
+    console.error(
+      '[auth/forgot] password-reset requested but RESEND_API_KEY is unset — ' +
+        'no email can be delivered. NEXT_PUBLIC_PASSWORD_RESET must not be ' +
+        'enabled without email delivery configured.',
+    );
+  }
 
   const base = process.env.NEXTAUTH_URL || 'https://audio-xx.com';
   const resetUrl = `${base}/auth/reset?token=${rawToken}`;
