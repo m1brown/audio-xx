@@ -7,8 +7,9 @@
  *   Gate B — Routing  : deterministic routing matrix (licensed-category)
  *   Gate C — Artifact : Assessment structural contract (+ visual tier)
  *   Gate D — UX       : homepage/builder/assessment at required widths (visual tier)
+ *   Gate E — Build    : the deployable artifact compiles (`next build`)
  *
- * Gates A–C are headless and always run. The visual tier (C-visual + D) drives
+ * Gates A–C and E are headless and always run. The visual tier (C-visual + D) drives
  * a local dev server via Playwright; it runs when --visual is passed (or
  * RELEASE_GATE_VISUAL=1) and is otherwise reported as DEFERRED — a release
  * report must then carry visual evidence from a manual `npm run qa:regress:visual`.
@@ -50,6 +51,21 @@ run('Gate C — Artifact (structural)', 'npx', ['vitest', 'run',
   'apps/web/src/app/artifact/__tests__/assessment-artifact-contract.test.ts',
   'apps/web/src/app/artifact/__tests__/assessment-artifact-ia-order.test.ts',
 ]);
+
+// Gate E — Build (the deployable artifact actually compiles)
+//
+// Escape analysis: commit e86b6c7 fixed a JSX syntax error that broke the
+// Vercel production build while the full 4,124-test suite passed. Vitest
+// transforms only the modules a test imports, so a parse error in a route
+// or component no test mounts is invisible to Gates A–C. `next build` is
+// the only check that compiles every route.
+//
+// Deliberately NOT `tsc --noEmit`: the tree carries 107 pre-existing type
+// errors across 15 files that Next.js never typechecks (SWC transpiles
+// without type analysis), so a typecheck gate would fail on the same tree
+// that is serving production today. Compilation is the contract this gate
+// enforces; type cleanliness is separate work.
+run('Gate E — Build', 'npm', ['run', 'build']);
 
 // Gates C-visual + D — Playwright visual/UX tier (needs local server).
 // Defect-register gap watch #3: skipping this tier must be a CONSCIOUS act.

@@ -46,9 +46,9 @@ routing envelope shipped with 4,020 green tests while the Tonal Signature graph
 was missing from two of three assessment surfaces. Engine tests protect engine
 correctness; these gates protect what the customer sees.
 
-## The four gates
+## The five gates
 
-**No production release is complete until all four gates pass.**
+**No production release is complete until all five gates pass.**
 
 Runner: `node scripts/release-gate.mjs` (repo root). Add `--visual` to run the
 Playwright tier against a local server; without it, C-visual/D report DEFERRED
@@ -60,6 +60,17 @@ and the release report must carry visual evidence from a manual run.
 | **B — Routing** | The licensed-category invariant — the system answers the question actually asked | `routing-matrix.test.ts` + `requested-category-constraint.test.ts` + `validate-shopping-answer.test.ts` |
 | **C — Artifact** | The Assessment as a contractual artifact: structure + visual integrity | Structural: `assessment-artifact-contract.test.ts`, `assessment-artifact-ia-order.test.ts`. Visual: Playwright `Gate C` block in `visual-regression.spec.ts` (graph visible desktop + mobile, pixel baseline) |
 | **D — UX** | Homepage, builder, assessment, recommendation, comparison — desktop + mobile | Playwright `Gate D` block (7 widths: 1440/1280/1024/320/360/390/414 — overflow, clipped controls, blank regions, builder discoverability, pixel baselines) + existing per-fixture chat captures |
+| **E — Build** | That the deployable artifact actually compiles — every route, including those no test mounts | `npm run build` (`next build`) |
+
+**Why Gate E exists.** Commit `e86b6c7` fixed a JSX syntax error that broke the Vercel production
+build while the full 4,124-test suite passed. Vitest transforms only the modules a test imports, so a
+parse error in a route or component no test mounts is invisible to Gates A–C. Compilation is a
+separate property from correctness, and it needs its own gate.
+
+Gate E runs `next build`, deliberately **not** `tsc --noEmit`. The tree carries 107 pre-existing type
+errors across 15 files; Next.js never typechecks (SWC transpiles without type analysis), so those
+errors do not affect the deployable artifact, and a typecheck gate would fail on the same tree that
+serves production today. Type cleanliness is separate, unscheduled work.
 
 ## The Assessment contract (Gate C)
 
