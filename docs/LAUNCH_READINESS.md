@@ -4,14 +4,19 @@
 
 | | |
 |---|---|
-| **Production** | `42da903` — Ready, serving 200 at audio-xx.com |
-| **Last updated** | 2026-08-06 |
-| **Launch blockers open** | **4 of 4** |
-| **Readiness** | 🔴 **NOT READY TO INVITE** — all four blockers are founder-owned |
+| **Production** | `42da903` — ⚠️ **serving 500 on every `/brand/[slug]` page** |
+| **Fix ready** | `75566fb` on `version-b`, verified locally, **awaiting promotion approval** |
+| **Last updated** | 2026-08-06 (Launch Mission 1 — engineering) |
+| **Launch blockers open** | **4 of 4** (+ 1 promotion) |
+| **Readiness** | 🔴 **NOT READY TO INVITE** |
 
-> **Headline:** engineering has **no** open launch blockers. Every remaining gate is a founder task.
-> The product is technically ready; the launch is waiting on operational, legal and verification steps
-> that cannot be automated.
+> **Headline changed 2026-08-06.** Engineering previously had no open launch blocker. A live
+> production defect was then found by route-sweeping audio-xx.com: **every brand page returns HTTP
+> 500** — a server/client boundary violation that no test suite and no build could catch. The repair
+> is committed and verified on `version-b` but production still carries the defect, so a promotion is
+> now on the critical path alongside the four founder tasks.
+>
+> The other four blockers remain founder-owned and unchanged.
 
 ---
 
@@ -70,6 +75,23 @@
 - **State** — ⬜ Open. Roadmap item 7. Anonymous journeys verified on `42da903`; authenticated ones never.
 - **Residual risk if omitted** — Save/recover is the reason to have an account. If it is broken, the first invited user hits it on their first session, and the failure lands on the exact feature the invite was for.
 
+> **Configuration finding (2026-08-06, engineering).** Password recovery is **live in Production**:
+> `NEXT_PUBLIC_PASSWORD_RESET` and `RESEND_API_KEY` are both set, and "Forgot your password?" renders
+> on `audio-xx.com/auth/signin`. The two flags are therefore currently consistent — the unsafe
+> configuration does not exist today. But nothing in code couples them, and **no email has ever been
+> confirmed delivered to an external inbox**. LB-4's scope should be read to include one real
+> password-reset round trip, since the flow is already exposed to users. A misconfiguration alarm now
+> logs to Sentry (`api/auth/forgot`) if the two ever drift apart.
+
+### LB-0 — Promote the brand-page repair *(new, 2026-08-06)*
+- **Objective** — Production stops returning HTTP 500 on `/brand/[slug]`.
+- **Owner** — Founder (promotion approval); engineering executes.
+- **Verification** — Route-sweep audio-xx.com after promotion.
+- **Evidence of completion** — Recorded HTTP status for **five** brand slugs (klipsch, devore, harbeth, kef, naim) fetched from audio-xx.com, plus the promoted deployment ID.
+- **Pass condition** — All five return **200** and none of the bodies contains `__next_error__`. **Five of five.**
+- **State** — ⬜ Open. Fix committed as `75566fb`; verified locally (all four sampled slugs 200, was 500). Not promoted.
+- **Residual risk if omitted** — Brand pages are a primary content surface and every one of them is broken. An invited audiophile clicking through to a manufacturer page hits an error screen. Cause: a server/client boundary violation that neither the test suite nor `next build` can detect; a source-level guard (`server-boundary-safety.test.ts`) now covers the recurrence.
+
 ---
 
 ## 2 · Launch Specification
@@ -77,10 +99,33 @@
 
 | # | Item | State | Note |
 |---|---|---|---|
-| LS-1 | **Affiliate activation** — set `NEXT_PUBLIC_*` tag vars in Production | ⬜ | **Highest-cost delay on this page.** Links render today and earn nothing; every beta session before this is permanently lost revenue. Config only, no code, no doctrinal risk. |
-| LS-2 | Build step added to the release gate | ⬜ | 4,124 tests passed a syntax error that broke the production build. Needs architectural approval — changes the gate contract. |
-| LS-3 | Register gate extended to catalog prose | ⬜ | The gate excludes catalog files, so reviewer clichés ship in the most-read layer. Approval needed — will fail existing entries. |
-| LS-4 | Klipsch Heresy IV factual correction | ⬜ | Described as "rich, full-bodied"; its defining trait is limited LF extension. Safe one-record edit. |
+| LS-1 | **Affiliate activation** — `NEXT_PUBLIC_*` tag vars in Production | ✅ | **Complete.** Verified live 2026-08-06: `tag=audioxx20-20` on Amazon links and `campid=5339152664` on eBay links, served from audio-xx.com. Both vars present in the Production environment. |
+| LS-2 | Build step added to the release gate | ✅ | **Complete.** Added as **Gate E — Build** (`next build`) in `scripts/release-gate.mjs`. Deliberately not `tsc --noEmit` — see the note below. |
+| LS-3 | Register gate extended to catalog prose | ⛔ | **Blocked — architectural decision required.** 53 violations across 4 catalog files (29 romance-vocabulary, 20 breathes, 3 comes-alive, 1 sings). `editorial-register.ts` documents the catalog layer as deliberately out of scope; reversing that is a scope decision, and closing it means 53 hand-rewrites of editorial voice. |
+| LS-4 | Klipsch Heresy IV factual correction | ⛔ | **Blocked — misdiagnosed as a one-record edit.** The record is correct; the *threshold* is wrong. See below. |
+
+### LS-4 — corrected diagnosis (2026-08-06)
+
+The Heresy IV record is internally consistent and factually sound. The defect is in
+[`product-assessment.ts:241`](../apps/web/src/lib/product-assessment.ts): `describeCharacter` emits
+superlative prose at `>= 0.7`, and the catalog convention maps **`present` → 0.7**
+(116 of 127 sampled speaker traits; `emphasized` → 1.0, `less_emphasized` → 0.4).
+
+So `0.7` — the single most common value in the catalog, 46 records for `tonal_density` alone — means
+*"a normal amount"* and renders as *"Rich, full-bodied tone."* The Heresy IV therefore claims
+full-bodied tone in the same assessment that flags it bass-shy away from walls.
+
+Correcting the Heresy datum alone would break the level↔number convention and paper over the cause,
+which Doctrine v3 forbids. Raising the threshold changes rendered output for every product sitting at
+0.7 across the catalog — a product-wide editorial change, not an engineering fix. **Founder decision
+required.**
+
+### Note on Gate E scope
+
+Gate E runs `next build`, not `tsc --noEmit`. The tree carries **107 pre-existing type errors across
+15 files**; Next.js never typechecks (SWC transpiles without type analysis), so those errors do not
+affect the deployable artifact and a typecheck gate would fail on the same tree serving production
+today. Compilation is the contract Gate E enforces. Type cleanliness is separate, unscheduled work.
 
 ---
 
@@ -113,6 +158,7 @@ A blocker cannot be marked ✅ while its row here is empty.
 | LB-2 | *(two URLs + presence checklist + sign-off line)* | ⬜ | | |
 | LB-3 | *(positive + negative control screenshots)* | ⬜ | | |
 | LB-4 | *(six screenshots + saved system ID, before/after)* | ⬜ | | |
+| LB-0 | *(five brand-slug HTTP statuses + deployment ID)* | ⬜ | | |
 
 ---
 
