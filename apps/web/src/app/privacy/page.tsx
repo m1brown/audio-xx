@@ -27,12 +27,26 @@ export default function PrivacyPage() {
         any personal information. No tracking cookies are set for anonymous
         users.
       </p>
+      <p className="mb-1">
+        We record a small number of anonymous usage events — for example that an
+        assessment was completed, or that a product link was followed — so we can
+        tell which parts of Audio&thinsp;XX are useful. These events are written
+        to our server logs and are not tied to your name or email address.
+      </p>
+      <p className="mb-1">
+        If you answer one of the short feedback prompts beneath an assessment,
+        your answers and any comment you write are recorded together with an
+        identifier for the assessment they refer to, so we can tell which piece
+        of advice the feedback was about. Feedback is entirely voluntary.
+      </p>
 
       <h2>How we use your data</h2>
       <p className="mb-1">
         Your preferences and system data are used exclusively to generate
-        personalised audio recommendations. We do not sell, rent, or share
-        your personal information with third parties.
+        personalised audio recommendations. We do not sell or rent your personal
+        information, and we do not pass it to anyone for their own advertising or
+        marketing. The service providers listed below handle information only in
+        order to run Audio&thinsp;XX.
       </p>
 
       <h2>Affiliate links</h2>
@@ -47,13 +61,45 @@ export default function PrivacyPage() {
 
       <h2>Third-party services</h2>
       <p className="mb-1">
-        Audio&thinsp;XX uses the following third-party services:
+        Audio&thinsp;XX runs on services operated by other companies. These are
+        the ones that currently handle information, and what each one receives:
       </p>
       <ul className="plain mb-1">
-        <li>Authentication provider (NextAuth.js) for secure sign-in</li>
-        <li>Database hosting for account and preference storage</li>
-        <li>Amazon Associates Program for affiliate links</li>
+        <li>
+          <strong>Vercel</strong> — hosting. Serves every page and request, and
+          stores the server logs, which include the anonymous usage events
+          described above and any comment you type into a feedback prompt.
+        </li>
+        <li>
+          <strong>Turso</strong> — database. Stores accounts, saved systems and
+          listening preferences.
+        </li>
+        <li>
+          <strong>OpenAI</strong> — language model. When you describe a system or
+          ask a question, that text is sent to OpenAI to help generate the
+          response you read.
+        </li>
+        <li>
+          <strong>Sentry</strong> — error monitoring. Receives technical
+          diagnostics when something breaks. It is configured not to collect
+          personal information, and request bodies and cookies are removed
+          before an error report is sent.
+        </li>
+        <li>
+          <strong>Amazon Associates</strong> — affiliate links. Receives a
+          referral tag when you follow a shopping link.
+        </li>
       </ul>
+      <p className="mb-1">
+        Sign-in is handled in Audio&thinsp;XX itself using the NextAuth.js
+        library. It is not a separate company and your credentials are not sent
+        to a third party for authentication.
+      </p>
+      <p className="mb-1">
+        An email service (Resend) is integrated but is not currently in use:
+        password-reset email is switched off, and no other feature sends mail.
+        If that changes, this page will be updated first.
+      </p>
 
       <h2>Data retention and deletion</h2>
       <p className="mb-1">
@@ -65,7 +111,7 @@ export default function PrivacyPage() {
       <h2>Changes to this policy</h2>
       <p className="mb-1">
         We may update this policy occasionally. Material changes will be noted
-        on this page. This policy was last updated on March 26, 2026.
+        on this page. This policy was last updated on August 7, 2026.
       </p>
 
       <h2>Contact</h2>
