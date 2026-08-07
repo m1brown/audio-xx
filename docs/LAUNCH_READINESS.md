@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Production** | `e3b786b` — deployment `audio-xx-24otyn5v9`, **all 28 swept routes 200** |
+| **Production** | `babaf0b` — deployment `audio-xx-ca4hpucfg`, **all 28 swept routes 200** |
 | **Certified** | 2026-08-07T09:58:06Z (Launch Mission 3) · re-swept clean 2026-08-07 (Mission 4) |
 | **Launch blockers open** | **4 of 4** — all founder-owned |
 | **Readiness** | 🔴 **NOT READY TO INVITE** |
@@ -50,7 +50,7 @@
   2. A **presence checklist**, each item marked found/not-found with the quoted line: ⬜ categories of data collected · ⬜ account and saved-system storage · ⬜ third-party processors **named** (Vercel, Turso, Sentry, Resend, analytics) · ⬜ affiliate-link disclosure · ⬜ contact route for data access/deletion · ⬜ effective date.
   3. A **dated sign-off line** naming the reviewer and the date the two documents were read.
 - **Pass condition** — Both URLs return 200 **and** all six checklist items are marked found with a quoted line **and** a dated sign-off line exists. **Six of six, or the blocker stays open.**
-- **State** — 🟡 **OBJECTIVE TEST PASSED 6/6 (2026-08-07, re-run against production `audio-xx-24otyn5v9`); AWAITING FOUNDER SIGN-OFF.** First run failed 5/6 — the policy disclosed no actual data processor. Repaired in `e3b786b`: the published policy now names **Vercel, Turso, OpenAI, Sentry, Amazon Associates**, states that user-typed system descriptions and questions are sent to OpenAI, discloses that voluntary feedback is stored with the identifier of the assessment it concerns, describes **Resend as integrated but not in use**, describes NextAuth.js as an in-product library rather than a processor, and carries an effective date of **August 7, 2026**. Evidence: [`launch-evidence/LB-2/presence-checklist.md`](launch-evidence/LB-2/presence-checklist.md).
+- **State** — 🟡 **OBJECTIVE TEST PASSED 6/6 (2026-08-07, re-run against production `audio-xx-ca4hpucfg`); AWAITING FOUNDER SIGN-OFF.** First run failed 5/6 — the policy disclosed no actual data processor. Repaired in `e3b786b`: the published policy now names **Vercel, Turso, OpenAI, Sentry, Amazon Associates**, states that user-typed system descriptions and questions are sent to OpenAI, discloses that voluntary feedback is stored with the identifier of the assessment it concerns, describes **Resend as integrated but not in use**, describes NextAuth.js as an in-product library rather than a processor, and carries an effective date of **August 7, 2026**. Evidence: [`launch-evidence/LB-2/presence-checklist.md`](launch-evidence/LB-2/presence-checklist.md).
 - **To close** — Founder reads both documents and adds `Reviewed by <name> on <date>.` Legal-adequacy judgment; **not signed by the engineering session**.
 - **Residual risk if omitted** — Collecting real user accounts and behavioural data without accurate disclosure. Users' typed system descriptions reach a third-party model provider with no disclosure that this happens. Legal exposure and a trust breach that no engineering fix repairs.
 

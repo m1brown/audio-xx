@@ -93,3 +93,75 @@ Reviewed by <name> on <date>.
 ```
 
 That is a legal-adequacy judgment and is not Claude's to make.
+
+---
+
+## Truthfulness re-check (Mission 4B, 2026-08-07)
+
+Two absolute claims added in `e3b786b` were read-only verified. **Both were
+overstated and were corrected in `babaf0b`** (production `audio-xx-ca4hpucfg`).
+
+### A. Deletion — SUPPORTED for the database, overstated beyond it
+
+No deletion endpoint exists; the only `delete` calls are per-system
+(`my-systems/[id]`, `systems/[id]`, `systems/[id]/components`). The path is
+**founder-manual** — deleting the `User` row.
+
+That row delete **does** cascade completely:
+
+```
+User ──Cascade──▶ Profile, Subscription, PasswordResetToken, System
+System ──Cascade──▶ AssessmentSnapshot, SystemComponent, PreferenceSnapshot
+```
+
+All child `systemId` / `userId` links are non-nullable, so nothing is orphaned.
+No user-linked model lacks a cascade. The database half of the promise holds.
+
+**Excluded:** `[AXX-EVENT]` server logs (which carry free-text feedback
+comments) and Sentry events. These are outside the database and are not purged
+on request. The policy now says so.
+
+### B. Sentry — "technical diagnostics only" NOT supportable
+
+`instrumentation-client.ts` `beforeSend` redacts only `event.request.data` and
+`bc.data.message`. It does **not** touch:
+
+- `event.request.url` — the page address of the error;
+- navigation breadcrumb `data.from` / `data.to`;
+- fetch/xhr breadcrumb `data.url`;
+- `bc.message` on console breadcrumbs (the redaction targets `bc.data.message`).
+
+No `integrations` / `ignoreErrors` / `denyUrls` override, so `globalHandlers`
+and the full default breadcrumb set are active.
+
+This matters because **user text is carried in URLs**:
+`/artifact?system=<free text>` at `artifact/page.tsx:55`,
+`systems/[id]/page.tsx:64`, `systems/[id]/assessment/page.tsx:52`,
+`compose-system-text.ts:23`. An error on that page sends the system description
+to Sentry inside `request.url`.
+
+Verified as still true and retained: `sendDefaultPii: false` (server),
+`tracesSampleRate: 0`, request bodies and cookies removed, no name or email.
+
+**Published corrections (live, quoted):**
+
+> "Sentry — error monitoring. Receives diagnostics when something breaks: the
+> error, a stack trace, and the address of the page you were on. Request bodies
+> and cookies are removed before a report is sent, and your name and email are
+> not included. Note that an assessment's web address contains the system
+> description you entered, so that text can appear in an error report."
+
+> "You may delete your account and all associated data at any time by contacting
+> us. Your account, saved systems, assessments and stored preferences are
+> permanently removed. Server logs and error reports are held separately by the
+> services above and expire on their own schedule rather than being deleted on
+> request."
+
+The underlying URL exposure was **not** fixed — that is product work and the
+freeze holds. The policy now describes what actually happens.
+
+### Objective result after correction
+
+**Still 6 of 6.** All processors remain named (Vercel 2, Turso 2, OpenAI 4,
+Sentry 2, Amazon Associates 2, Resend 2); effective date August 7, 2026.
+No claim now exceeds what the implementation supports.
