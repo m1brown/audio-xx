@@ -4,19 +4,21 @@
 
 | | |
 |---|---|
-| **Production** | `4cb19df` — deployment `audio-xx-2za4u99sn`, **all 28 swept routes 200** |
-| **Certified** | 2026-08-06T19:31:20Z (Launch Mission 2) |
+| **Production** | `d3092c1` — deployment `audio-xx-pkcq95k3x`, **all 28 swept routes 200** |
+| **Certified** | 2026-08-07T09:58:06Z (Launch Mission 3) |
 | **Launch blockers open** | **4 of 4** — all founder-owned |
 | **Readiness** | 🔴 **NOT READY TO INVITE** |
 
-> **Production is now certified.** `4cb19df` is live. LB-0 is **closed with production evidence**:
-> all eight `/brand/[slug]` routes return 200 with no error marker, correct titles, authored
-> content, commerce links and affiliate parameters. A full 28-route sweep shows **zero failures**,
-> and a pre-deployment baseline confirms **no deployment regression** — every route that worked
-> before still works.
+> **Production certified; engineering complete.** `d3092c1` is live. LB-0 and LB-6 are both
+> **closed with production evidence** — all eight `/brand/[slug]` routes serve 200, and a real
+> `feedback_submitted` event was received carrying the same advisory id as the
+> `assessment_completed` that preceded it. A 28-route sweep shows **zero failures**.
 >
-> **Password recovery has been withdrawn from the UI**, not fixed and not certified — see LB-5.
-> Engineering again has no open launch blocker; the four remaining gates are founder tasks.
+> **Engineering has no open launch blocker and no remaining approved work.** The four gates
+> below are founder certification tasks. Scripts for each:
+> [`launch-evidence/FOUNDER_CERTIFICATION.md`](launch-evidence/FOUNDER_CERTIFICATION.md).
+>
+> Password recovery (LB-5) is a withdrawn capability, not a blocker.
 
 ---
 
@@ -85,6 +87,14 @@
 - **Pass condition** — All five return **200** and none of the bodies contains `__next_error__`.
 - **State** — ✅ **Closed.** Met at **six of six** (klipsch, devore, harbeth, kef, naim, rega); all eight brand routes recovered in the full sweep. Evidence: [`launch-evidence/LB-0/certification.md`](launch-evidence/LB-0/certification.md).
 - **Residual risk** — Retired. Recurrence covered by `server-boundary-safety.test.ts` and by Gate E.
+
+### LB-6 — In-product feedback capture ✅ **CLOSED 2026-08-07**
+- **Objective** — The beta has an operational evidence intake path.
+- **Owner** — Engineering (mount); founder approved the mount 2026-08-07.
+- **Pass condition** — One `[AXX-EVENT]` line with `"event":"feedback_submitted"` appears carrying the answers given.
+- **State** — ✅ **Closed.** `FeedbackPrompt` had zero importers, so the event had never fired once in production. Now mounted beneath completed advisories only (intake excluded; id required). Production event received with `advisoryId` character-identical to the preceding `assessment_completed` id. Evidence: [`launch-evidence/LB-6/certification.md`](launch-evidence/LB-6/certification.md).
+- **Residual risk** — Retired. Recurrence covered by `feedback-prompt-mount.test.ts`.
+- **Readback** — `npx vercel logs <deployment> | grep AXX-EVENT`
 
 ### LB-5 — Password recovery ⛔ **DISABLED, NOT CERTIFIED**
 - **Objective** — Either a certified self-service recovery flow, or no visible flow at all.
@@ -163,6 +173,7 @@ A blocker cannot be marked ✅ while its row here is empty.
 | LB-4 | *(six screenshots + saved system ID, before/after)* | ⬜ | | |
 | LB-0 | [`LB-0/certification.md`](launch-evidence/LB-0/certification.md) — 6 slugs, deployment `audio-xx-2za4u99sn` | ✅ | Claude | 2026-08-06 |
 | LB-5 | [`LB-5/password-recovery.md`](launch-evidence/LB-5/password-recovery.md) — capability disabled, not certified | ⛔ | Claude | 2026-08-06 |
+| LB-6 | [`LB-6/certification.md`](launch-evidence/LB-6/certification.md) — production `feedback_submitted` event, id joins to advisory | ✅ | Claude | 2026-08-07 |
 
 ---
 
