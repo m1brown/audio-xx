@@ -1,75 +1,95 @@
 # LB-2 — Legal / privacy presence checklist
 
 **Blocker:** LB-2 — Legal / privacy review
-**Objective presence check performed:** 2026-08-07 by Claude (both documents are public)
-**Adequacy sign-off:** ⬜ **not yet given** — founder's, and separate from the check below
+**Objective presence check:** ✅ **PASS — 6 of 6**, re-run against production 2026-08-07T11:33Z
+**Adequacy sign-off:** ⬜ **OPEN — founder's. Not signed on his behalf.**
 
-## Pass condition
-
-> Both URLs return 200 **and** all six checklist items are marked found with a quoted line
-> **and** a dated sign-off line exists. **Six of six, or the blocker stays open.**
-
-**Result: FAIL — five of six.** Item 3 is not satisfied.
-
-## URLs
-
-| URL | Status |
+| | |
 |---|---|
-| https://audio-xx.com/privacy | 200 ✅ |
-| https://audio-xx.com/terms | 200 ✅ |
+| Production deployment | `audio-xx-24otyn5v9` |
+| Commit | `e3b786b` |
+| Promotion (UTC) | 2026-08-07T11:29:37Z → 11:32:21Z |
 
-## Checklist
+## History
 
-| # | Required disclosure | Found | Quoted line |
+First run (2026-08-07, deployment `audio-xx-pkcq95k3x`): **FAIL — 5 of 6.** Item 3 failed;
+the policy named NextAuth.js and Amazon Associates but disclosed no actual data processor.
+Repaired in `e3b786b`. This file records the passing re-run.
+
+---
+
+## Verified active processor inventory
+
+Derived from code and production configuration, not assumption.
+
+| Service | Active? | Data it receives | Evidence |
 |---|---|---|---|
-| 1 | Categories of data collected | ✅ | *"What we collect — If you create an account, we store your email address, listening preferences, and any system or component…"* |
-| 2 | Account + saved-system storage | ✅ | *"Database hosting for account and preference storage"* |
-| 3 | Third-party processors **named** | ❌ | **See below** |
-| 4 | Affiliate-link disclosure | ✅ | *"…influence which products are recommended or how they are ranked. For more details, see our Affiliate Disclosure."* |
-| 5 | Contact route for data access / deletion | ✅ | *"You may delete your account and all associated data at any time by contacting us."* + `hello@audio-xx.com` |
-| 6 | Effective date | ✅ | Privacy: *"This policy was last updated on March 26, 2026."* Terms: *"Last updated 29 July 2026 · Beta"* |
+| **Vercel** | ✅ Yes | Every request; server logs holding `[AXX-EVENT]` usage events and free-text feedback comments | Hosting platform; `/api/events` writes via `console.log` |
+| **Turso** | ✅ Yes | Accounts, saved systems, listening preferences | `prisma.ts:40-48` — `PrismaLibSQL` with `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`, both set in Production |
+| **OpenAI** | ✅ Yes | **User-typed system descriptions and questions** | `audio-lanes.ts:108,184` POST `{systemPrompt, userPrompt}` → `/api/memo-overlay`; `memo-overlay/route.ts:26` resolves `MEMO_LLM_PROVIDER ?? 'openai'` (override unset in Production); `listing-eval/route.ts:138` calls `api.openai.com` directly |
+| **Sentry** | ✅ Yes | Technical error diagnostics | `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` set in Production; `instrumentation.ts:42-47` sets `sendDefaultPii: false`, `tracesSampleRate: 0`, `beforeSend: scrub` (redacts request bodies + cookies) |
+| **Amazon Associates** | ✅ Yes | Referral tag on outbound shopping links | `tag=audioxx20-20` verified live |
+| **Resend** | ❌ **Integrated, not in use** | None currently | Sole caller is `/api/auth/forgot`; `NEXT_PUBLIC_PASSWORD_RESET=0` in Production, so no mail flow is reachable |
+| **NextAuth.js** | n/a — **not a processor** | — | A library running inside Audio XX; not a separate company receiving data |
 
-## Item 3 — the failure, precisely
+### Anthropic — explicitly ruled out
 
-The privacy policy's **Third-party services** section reads in full:
+Code contains an Anthropic branch (`memo-overlay/route.ts:76`, `callShoppingLLM.ts:171`), but
+**`ANTHROPIC_API_KEY` is absent from every Vercel environment**, and neither
+`MEMO_LLM_PROVIDER` nor `ORCHESTRATOR_LLM_PROVIDER` is set in Production, so both paths
+resolve to `'openai'`. The Anthropic branch cannot execute in production. The provider was
+identified from configuration, not guessed.
 
-> Audio XX uses the following third-party services:
-> - Authentication provider (NextAuth.js) for secure sign-in
-> - Database hosting for account and preference storage
-> - Amazon Associates Program for affiliate links
+> Noted, not acted on (engineering frozen): `orchestrator/route.ts:15`'s docstring claims the
+> default is `'anthropic'`, contradicting `callShoppingLLM.ts:34`. A stale comment, no runtime
+> effect.
 
-Two services are named (NextAuth.js, Amazon Associates). **The actual data processors are not.**
-A search of both documents returns **zero** occurrences of:
+---
 
-| Processor | Role | What it handles |
-|---|---|---|
-| **Vercel** | Hosting / infrastructure | Every request; also the `[AXX-EVENT]` log stream, which now carries **free-text feedback comments** and user-agent strings |
-| **Turso** | Database | Named only as "Database hosting" — accounts, saved systems, preferences |
-| **Sentry** | Error monitoring | Error context, request metadata, IP addresses |
-| **Resend** | Transactional email | Email addresses (integration present; recovery UI currently disabled) |
-| **LLM provider** (OpenAI / Anthropic) | Advisory generation | **User-typed system descriptions and questions** |
+## The six checks, against production
 
-The last is the most material. Users type descriptions of their systems and their questions, and
-that text is sent to a third-party model provider. Nothing in either document discloses it.
+| # | Item | Result | Published line |
+|---|---|---|---|
+| — | URLs return 200 | ✅ | `/privacy` 200 · `/terms` 200 |
+| 1 | Categories of data collected | ✅ | *"What we collect — If you create an account, we store your email address, listening preferences, and any system or component information you choose to enter."* |
+| 2 | Account + saved-system storage | ✅ | *"Turso — database. Stores accounts, saved systems and listening preferences."* |
+| 3 | Third-party processors **named** | ✅ | Vercel 2 · Turso 2 · OpenAI 4 · Sentry 2 · Amazon Associates 2 · Resend 2 · NextAuth 2 occurrences |
+| 3b | LLM transmission stated | ✅ | *"OpenAI — language model. When you describe a system or ask a question, that text is sent to OpenAI to help generate the response you read."* |
+| 4 | Feedback tied to advisory identifier | ✅ | *"If you answer one of the short feedback prompts beneath an assessment, your answers and any comment you write are recorded together with an identifier for the assessment they refer to…"* |
+| 5 | Contact route for access / deletion | ✅ | *"You may delete your account and all associated data at any time by contacting us."* + `hello@audio-xx.com` |
+| 6 | Effective date | ✅ | Privacy: *"last updated on August 7, 2026"* · Terms: *"Last updated 29 July 2026 · Beta"* |
 
-**The policy is also stale relative to current processing.** It was last updated
-**26 March 2026**. Sentry, Resend, and the feedback-event pipeline were all added after that
-date — Sentry and Resend within the last week.
+Supporting published lines:
 
-## What is required to close
+- **Vercel** — *"hosting. Serves every page and request, and stores the server logs, which include the anonymous usage events described above and any comment you type into a feedback prompt."*
+- **Sentry** — *"error monitoring. Receives technical diagnostics when something breaks. It is configured not to collect personal information, and request bodies and cookies are removed before an error report is sent."*
+- **Resend (inactive)** — *"An email service (Resend) is integrated but is not currently in use: password-reset email is switched off, and no other feature sends mail."*
+- **NextAuth (not a processor)** — *"Sign-in is handled in Audio XX itself using the NextAuth.js library. It is not a separate company and your credentials are not sent to a third party for authentication."*
 
-A founder decision on wording, then a content edit naming the processors actually in use and
-what each handles. This is legal-document content, not engineering: **I have not drafted or
-edited it**, and would only do so on your instruction with wording you approve.
+---
 
-Once the text is published, re-run this checklist and add:
+## Two further corrections the repair exposed
+
+1. **Missing usage-event and feedback disclosure.** The policy never mentioned the analytics
+   events or the feedback prompt at all. Without adding them, the new Vercel entry would have
+   referred to events the document did not describe. Both are now disclosed.
+2. **A contradiction in the existing text.** *"We do not sell, rent, or share your personal
+   information with third parties"* was directly contradicted by the processor list — sending
+   your typed text to OpenAI is sharing under any plain reading. Narrowed to: we do not sell or
+   rent, do not pass data to anyone for their own advertising or marketing, and the listed
+   providers handle data only to run Audio XX.
+
+No retention periods, international-transfer representations, GDPR rights or processor
+obligations were invented. Only what the evidence supports.
+
+---
+
+## Remaining to close LB-2
+
+The objective half passes at 6/6. The blocker stays **open** until the founder adds:
 
 ```
 Reviewed by <name> on <date>.
 ```
 
-Both halves are required — the presence check (objective) and the adequacy sign-off (yours).
-
-## Verdict
-
-**LB-2 REMAINS OPEN.** Five of six. The pass condition was not weakened to obtain a green state.
+That is a legal-adequacy judgment and is not Claude's to make.
