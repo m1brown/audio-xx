@@ -80,10 +80,12 @@ export default function PrivacyPage() {
           response you read.
         </li>
         <li>
-          <strong>Sentry</strong> — error monitoring. Receives technical
-          diagnostics when something breaks. It is configured not to collect
-          personal information, and request bodies and cookies are removed
-          before an error report is sent.
+          <strong>Sentry</strong> — error monitoring. Receives diagnostics when
+          something breaks: the error, a stack trace, and the address of the
+          page you were on. Request bodies and cookies are removed before a
+          report is sent, and your name and email are not included. Note that
+          an assessment&rsquo;s web address contains the system description you
+          entered, so that text can appear in an error report.
         </li>
         <li>
           <strong>Amazon Associates</strong> — affiliate links. Receives a
@@ -104,8 +106,10 @@ export default function PrivacyPage() {
       <h2>Data retention and deletion</h2>
       <p className="mb-1">
         You may delete your account and all associated data at any time by
-        contacting us. Upon deletion, all stored preferences, system data, and
-        personal information are permanently removed.
+        contacting us. Your account, saved systems, assessments and stored
+        preferences are permanently removed. Server logs and error reports are
+        held separately by the services above and expire on their own schedule
+        rather than being deleted on request.
       </p>
 
       <h2>Changes to this policy</h2>
