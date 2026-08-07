@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **Production** | `d3092c1` — deployment `audio-xx-pkcq95k3x`, **all 28 swept routes 200** |
-| **Certified** | 2026-08-07T09:58:06Z (Launch Mission 3) |
+| **Certified** | 2026-08-07T09:58:06Z (Launch Mission 3) · re-swept clean 2026-08-07 (Mission 4) |
 | **Launch blockers open** | **4 of 4** — all founder-owned |
 | **Readiness** | 🔴 **NOT READY TO INVITE** |
 
@@ -50,8 +50,9 @@
   2. A **presence checklist**, each item marked found/not-found with the quoted line: ⬜ categories of data collected · ⬜ account and saved-system storage · ⬜ third-party processors **named** (Vercel, Turso, Sentry, Resend, analytics) · ⬜ affiliate-link disclosure · ⬜ contact route for data access/deletion · ⬜ effective date.
   3. A **dated sign-off line** naming the reviewer and the date the two documents were read.
 - **Pass condition** — Both URLs return 200 **and** all six checklist items are marked found with a quoted line **and** a dated sign-off line exists. **Six of six, or the blocker stays open.**
-- **State** — ⬜ Open. Roadmap item 8, never closed.
-- **Residual risk if omitted** — Collecting real user accounts and behavioural data without accurate disclosure. Legal exposure and a trust breach that no engineering fix repairs.
+- **State** — 🔴 **OPEN — TESTED AND FAILED 2026-08-07.** Objective presence check scored **five of six**; pass condition requires six. Item 3 (third-party processors named) fails: the policy names NextAuth.js and Amazon Associates but **not** Vercel, Turso ("Database hosting"), Sentry, Resend, or the LLM provider that receives user-typed system descriptions. Policy last updated 26 March 2026, predating Sentry, Resend and the feedback-event pipeline. Evidence: [`launch-evidence/LB-2/presence-checklist.md`](launch-evidence/LB-2/presence-checklist.md).
+- **To close** — Founder decision on wording, then publish the named-processor list; re-run the checklist; add the dated adequacy sign-off. Legal content, not engineering — not drafted by the engineering session.
+- **Residual risk if omitted** — Collecting real user accounts and behavioural data without accurate disclosure. Users' typed system descriptions reach a third-party model provider with no disclosure that this happens. Legal exposure and a trust breach that no engineering fix repairs.
 
 ### LB-3 — Invite-only access mechanism
 - **Objective** — A working way to admit a bounded set of users and no one else.
@@ -168,7 +169,7 @@ A blocker cannot be marked ✅ while its row here is empty.
 | Blocker | Artifact reference | Pass condition met | Recorded by | Date |
 |---|---|---|---|---|
 | LB-1 | *(Sentry issue short ID + screenshot path)* | ⬜ | | |
-| LB-2 | *(two URLs + presence checklist + sign-off line)* | ⬜ | | |
+| LB-2 | [`LB-2/presence-checklist.md`](launch-evidence/LB-2/presence-checklist.md) — 5 of 6; item 3 failed | 🔴 FAILED | Claude | 2026-08-07 |
 | LB-3 | *(positive + negative control screenshots)* | ⬜ | | |
 | LB-4 | *(six screenshots + saved system ID, before/after)* | ⬜ | | |
 | LB-0 | [`LB-0/certification.md`](launch-evidence/LB-0/certification.md) — 6 slugs, deployment `audio-xx-2za4u99sn` | ✅ | Claude | 2026-08-06 |
