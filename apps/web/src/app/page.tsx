@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import AdvisoryMessage from '@/components/advisory/AdvisoryMessage';
 import type { PreferenceSelection } from '@/components/advisory/AdvisoryMessage';
+import FeedbackPrompt from '@/components/FeedbackPrompt';
 import {
   consultationToAdvisory,
   gearResponseToAdvisory,
@@ -6076,6 +6077,26 @@ function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture, onFollowU
           onPreferenceCapture={message.advisory.lowPreferenceSignal ? onPreferenceCapture : undefined}
           onFollowUpClick={onFollowUpClick}
         />
+        {/* Validation feedback capture (LB-6). Rendered once beneath a
+         *  COMPLETED advisory.
+         *
+         *  Intake turns are excluded: an intake is a question put to the
+         *  reader, not an answer to react to, so asking "was this helpful?"
+         *  there would be incoherent.
+         *
+         *  `advisoryId` is the same message id `assessment_completed`
+         *  telemetry already carries, so a feedback event can be joined back
+         *  to the advisory that produced it. The id is optional on the
+         *  message union (only set when dispatchAdvisory was given one), and
+         *  where it is absent we render nothing rather than invent an
+         *  identifier that could never be joined — unjoinable feedback is
+         *  not evidence.
+         *
+         *  Uses the existing `feedback_submitted` event and /api/events sink
+         *  unchanged; the component dedups per advisory via localStorage. */}
+        {message.advisory.kind !== 'intake' && 'id' in message && message.id && (
+          <FeedbackPrompt advisoryId={message.id} />
+        )}
       </div>
     );
   }
