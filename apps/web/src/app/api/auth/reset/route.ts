@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { verifyResetToken, consumeResetToken } from '@/lib/password-reset';
+import { passwordResetEnabled } from '@/lib/password-reset-flag';
 
 /**
  * Complete a password reset (pre-beta item 3).
@@ -12,6 +13,17 @@ import { verifyResetToken, consumeResetToken } from '@/lib/password-reset';
  * account. Nothing here logs the token or the password.
  */
 export async function POST(req: NextRequest) {
+  // Recovery disabled: a token must not be redeemable. Gating the pages and
+  // the request endpoint is not enough — a link minted before the flag was
+  // switched off would otherwise still spend here via a direct POST, which
+  // is the completion half of the flow the disabled state is meant to stop.
+  if (!passwordResetEnabled()) {
+    return NextResponse.json(
+      { error: 'Password reset is unavailable. Contact hello@audio-xx.com.' },
+      { status: 404 },
+    );
+  }
+
   let token = '';
   let password = '';
   try {

@@ -5,14 +5,16 @@
  * /auth/signin. Submits to /api/auth/forgot, which is enumeration-safe:
  * the confirmation copy is identical whether or not the account exists.
  *
- * This page is only linked from the sign-in card when
- * NEXT_PUBLIC_PASSWORD_RESET is enabled (i.e. email delivery is
- * configured) — users are never shown a recovery flow that cannot
- * deliver mail.
+ * Gated on NEXT_PUBLIC_PASSWORD_RESET. Being linked only from the
+ * sign-in card is NOT a gate — this page stayed fully usable by direct
+ * URL while recovery was supposedly disabled. It now renders
+ * RecoveryUnavailable whenever the flag is off.
  */
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { EDITORIAL } from '@/lib/editorial-tokens';
+import { passwordResetEnabled } from '@/lib/password-reset-flag';
+import RecoveryUnavailable from '../RecoveryUnavailable';
 
 const caps: React.CSSProperties = {
   fontFamily: 'var(--face-grotesque)',
@@ -40,6 +42,11 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // Recovery disabled: offer nothing. Hiding the sign-in link left this
+  // page fully reachable by URL, so a "disabled" flow still presented a
+  // working form. Point at the route that actually works instead.
+  if (!passwordResetEnabled()) return <RecoveryUnavailable />;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

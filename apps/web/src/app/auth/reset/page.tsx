@@ -9,6 +9,8 @@ import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { EDITORIAL } from '@/lib/editorial-tokens';
+import { passwordResetEnabled } from '@/lib/password-reset-flag';
+import RecoveryUnavailable from '../RecoveryUnavailable';
 
 const caps: React.CSSProperties = {
   fontFamily: 'var(--face-grotesque)',
@@ -140,6 +142,10 @@ function ResetForm() {
 }
 
 export default function ResetPassword() {
+  // Recovery disabled: no token may be redeemed. A reset link minted before
+  // the flag was switched off must not remain spendable through a direct URL.
+  if (!passwordResetEnabled()) return <RecoveryUnavailable />;
+
   return (
     <main style={{ maxWidth: '26rem', margin: '0 auto', padding: '4.5rem 1.25rem 6rem' }}>
       <div style={{ ...caps, marginBottom: '1rem' }}>Password reset</div>

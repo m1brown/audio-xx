@@ -111,12 +111,21 @@ Production `babaf0b` / `audio-xx-pzdwhcn6e`.
 
 | Fact | Evidence |
 |---|---|
-| **API key present** | `/api/auth/forgot` was hit twice (09:32:46, 09:53:10 UTC). The Mission-4A alarm — which fires only when `RESEND_API_KEY` is unset — **did not fire**. Its silence is the proof the key is configured. |
-| **Sends attempted and rejected upstream** | `sendEmail` was therefore called and reached Resend. No email arrived at the founder's inbox on either attempt. The rejection happened at the provider. |
+| **Consistent with a configured key** — *not proof* | `/api/auth/forgot` was hit twice (09:32:46, 09:53:10 UTC). The Mission-4A alarm, which fires only when `RESEND_API_KEY` is unset, was not seen in the log output. **That is an absence of signal, not evidence.** The log view returned routing lines only, so application `console` output may simply not have been in scope. The behaviour is *consistent with* a configured key; it does not establish one. |
+| **No email arrived** | Neither attempt reached the founder's inbox. Where the flow stopped — key unset, provider rejection, or silent drop — **is not yet established by positive evidence.** |
 | **The failure was invisible** | `sendEmail` returned `{ok:false}` and `/api/auth/forgot` discarded it. No log, no Sentry event, no signal. The attempts were only discoverable by hand-trawling the request log. |
 | **Public recovery UI disabled** | `NEXT_PUBLIC_PASSWORD_RESET=0`, rebuilt. `"Forgot your password?"` occurrences on `/auth/signin`: **1 → 0**. Sign-in returns 200 with Email / Password / Sign in intact; no other auth behaviour changed. |
 | **Rejection now observable** | `sendEmail` reports through `console.error` **and** `Sentry.captureMessage` for both a non-ok response and a thrown fetch. |
 | **Root cause UNRESOLVED** | Requires the Resend dashboard, which the engineering session cannot access. |
+
+> **Standing rule, restated because this record briefly broke it:** absence of a
+> signal is not evidence of correctness. An alarm that was not observed does not
+> establish that the condition it watches for was absent — it may equally mean the
+> alarm never ran, never logged, or was not in the window examined.
+>
+> **Positive evidence will exist only when** a controlled send attempt is captured
+> by the new rejection logger / Sentry path. Until such a capture exists, the
+> provider-rejection hypothesis remains a hypothesis.
 
 ### Observability change
 
@@ -148,9 +157,12 @@ Likeliest causes, in order:
 3. `EMAIL_FROM` set to an address on a domain Resend will not send for.
 4. API key restricted or revoked.
 
-**Next attempt will be diagnosable.** Trigger one reset and read the Sentry
-issue or the `[email] send rejected by provider` log line — it will carry the
-provider's own status and reason.
+**Next attempt will produce the first positive evidence.** Re-enable the flag,
+trigger one controlled reset, then read the Sentry issue or the
+`[email] send rejected by provider` log line. Whichever appears — a rejection
+with a provider status, the unset-key alarm, or nothing at all — is the first
+*observed* datum about where this flow stops. Everything recorded above is
+inference from behaviour.
 
 ### Verdict
 

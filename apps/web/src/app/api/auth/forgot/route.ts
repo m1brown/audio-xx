@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createResetToken } from '@/lib/password-reset';
 import { sendEmail, emailSendingConfigured } from '@/lib/email';
+import { passwordResetEnabled } from '@/lib/password-reset-flag';
 
 /**
  * Forgot-password entry point (pre-beta item 3).
@@ -21,6 +22,17 @@ export async function POST(req: NextRequest) {
   }
 
   const uniform = NextResponse.json({ ok: true });
+
+  // Recovery disabled: initiate nothing. No token is minted and no send is
+  // attempted. Hiding the sign-in link left this route fully usable by
+  // anyone typing the URL, which meant a "disabled" recovery flow was still
+  // creating tokens and calling the mail provider.
+  //
+  // Returns the SAME uniform body as every other outcome, so the disabled
+  // state is indistinguishable from "no such account" or "sent" — the
+  // enumeration guarantee this route is built on is unchanged.
+  if (!passwordResetEnabled()) return uniform;
+
   if (!email || !email.includes('@') || email.length > 320) return uniform;
 
   const user = await prisma.user.findFirst({ where: { email } });
