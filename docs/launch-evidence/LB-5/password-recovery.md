@@ -169,3 +169,52 @@ inference from behaviour.
 **LB-5 remains a disabled capability, not a blocker.** No visible flow can now
 mislead a user. Recovery is founder-managed for the invited cohort. Delivery
 must be certified before this is re-enabled.
+
+---
+
+## Disabled-state integrity check (2026-08-08)
+
+The first disablement was **incomplete**. It hid the sign-in CTA and nothing more.
+
+### Invariant
+
+> When recovery is disabled, no user-accessible UI or execution path may offer or
+> initiate password recovery.
+
+### Before — verified against production with the flag off
+
+| Path | Result | |
+|---|---|---|
+| `/auth/forgot` | **200**, working form | ❌ |
+| `/auth/reset` | **200** | ❌ |
+| `/auth/reset?token=…` | **200** | ❌ |
+| `POST /api/auth/forgot` | **200** — minted a token, called the mail provider | ❌ |
+
+Three flag references existed in the code. **All three were comments.** The forgot
+page docstring asserted it "is only linked from the sign-in card when
+NEXT_PUBLIC_PASSWORD_RESET is enabled" — the mistaken assumption itself. Linking
+is not gating.
+
+### After — verified on production `audio-xx-6bg0c43gm`
+
+| Check | Result |
+|---|---|
+| `/auth/signin` | 200; Email / Password / Sign in intact |
+| Recovery CTA | **0 occurrences** |
+| `/auth/forgot` | "Password reset is unavailable"; **no live form** |
+| `/auth/reset?token=…` | "Password reset is unavailable"; **no live form** |
+| `POST /api/auth/forgot` | 200 `{"ok":true}` — **no token minted, no send attempted** |
+| `POST /api/auth/reset` | **404** — a link minted before disablement cannot be spent |
+| Route sweep | **28 / 28 → 200** · feedback sink 204 |
+
+`lib/password-reset-flag.ts` is the single source of truth and **fails closed**:
+absent or any value other than `'1'` means disabled, because the failure mode of
+guessing "enabled" is a user stranded by a flow that cannot deliver.
+
+Enumeration safety is preserved and tested — the disabled response carries the
+same status and body as "no such account", so the disabled state is
+indistinguishable to the requester. Normal sign-in is unaffected.
+
+Regression: `recovery-disabled-invariant.test.ts` (5 tests), covering direct
+access specifically, since the hidden link already "passed" while the invariant
+was broken.
