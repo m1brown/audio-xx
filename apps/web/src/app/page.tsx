@@ -5335,6 +5335,44 @@ export default function Home() {
                 <div style={{ textTransform: 'none', letterSpacing: 0, fontFamily: 'var(--face-text)', fontSize: '0.95rem', color: EDITORIAL.inkMuted, marginTop: '0.35rem' }}>
                   {labels.join(' · ')}
                 </div>
+                {/* Assess the active system — deterministic entry to the
+                 *  assessment pipeline.
+                 *
+                 *  This composes the ONE phrasing the pipeline is proven on
+                 *  ("Assess my system: A, B, C") rather than sending the
+                 *  chain as free text. That distinction is the whole point:
+                 *  the same three components routed to a gear comparison when
+                 *  submitted as "A · B · C", and blocked on a role-clarification
+                 *  when submitted as "DAC A Amplifier B Speakers C", but
+                 *  produced a correct full assessment in this form. The engine
+                 *  was never the problem — reaching it reliably was.
+                 *
+                 *  Uses the existing handleSubmit path; no new API, no new
+                 *  engine route, no change to intent classification. */}
+                <button
+                  type="button"
+                  onClick={() => handleSubmit(
+                    `Assess my system: ${labels.join(', ')}`,
+                    { source: 'fresh' },
+                  )}
+                  disabled={isLoading}
+                  style={{
+                    display: 'inline-block',
+                    marginTop: '0.7rem',
+                    padding: '0.4rem 0.9rem',
+                    fontFamily: 'var(--face-grotesque)',
+                    fontSize: '0.7rem',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase' as const,
+                    color: isLoading ? EDITORIAL.inkMuted : EDITORIAL.ink,
+                    background: 'transparent',
+                    border: `1px solid ${EDITORIAL.hairline}`,
+                    borderRadius: 4,
+                    cursor: isLoading ? 'default' : 'pointer',
+                  }}
+                >
+                  Assess this system
+                </button>
                 <Link
                   href="/systems"
                   style={{
