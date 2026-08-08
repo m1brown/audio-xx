@@ -65,7 +65,13 @@ export async function sendEmail(opts: {
     return { ok: res.ok };
   } catch (err) {
     // Email-provider failure must never crash a request path.
-    reportSendFailure(`threw=${err instanceof Error ? err.name : 'unknown'}`);
+    // The name alone ("TypeError") does not distinguish a network failure
+    // from a malformed request, and that distinction is the whole diagnosis.
+    // The message names it — but a header-construction error quotes the
+    // offending header back, which would put the API key in the log, so the
+    // message is scrubbed of credentials before it is reported.
+    const detail = err instanceof Error ? `${err.name}: ${redactSecrets(err.message)}` : 'unknown';
+    reportSendFailure(`threw=${detail}`);
     return { ok: false };
   }
 }
@@ -73,6 +79,22 @@ export async function sendEmail(opts: {
 /** Replace anything shaped like an email address. Never log a recipient. */
 function redactEmails(s: string): string {
   return s.replace(/[^\s"'<>@]+@[^\s"'<>@]+\.[A-Za-z]{2,}/g, '[email-redacted]');
+}
+
+/**
+ * Scrub credentials from an error message before it is logged.
+ *
+ * A header-construction failure quotes the offending header back verbatim —
+ * `Headers.append: "Bearer re_…" is an invalid header value` — which would
+ * write the API key straight into the log and Sentry. Strip the bearer value
+ * and anything matching a Resend key, then apply the email redaction too.
+ */
+function redactSecrets(s: string): string {
+  return redactEmails(
+    s
+      .replace(/Bearer\s+\S+/gi, 'Bearer [redacted]')
+      .replace(/re_[A-Za-z0-9_-]+/g, '[key-redacted]'),
+  );
 }
 
 /**

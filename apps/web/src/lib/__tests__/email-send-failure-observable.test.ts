@@ -99,3 +99,41 @@ describe('sendEmail — rejected sends are observable', () => {
     expect(captureMessage).not.toHaveBeenCalled();
   });
 });
+
+describe('sendEmail — thrown-error detail is useful but credential-safe', () => {
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    vi.resetModules();
+    captureMessage.mockClear();
+    process.env.RESEND_API_KEY = 're_liveKeyShapedValue123';
+    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    errorSpy.mockRestore();
+    delete process.env.RESEND_API_KEY;
+    vi.unstubAllGlobals();
+  });
+
+  it('reports the message so a network failure is distinguishable from a bad request', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('fetch failed'); }));
+    await callSendEmail();
+
+    const emitted = [...errorSpy.mock.calls.flat(), ...captureMessage.mock.calls.flat()].map(String).join(' | ');
+    // "TypeError" alone cannot tell these apart, and that distinction is the diagnosis.
+    expect(emitted).toContain('fetch failed');
+  });
+
+  it('never logs the API key, even when the error quotes the header back', async () => {
+    // Exactly the shape a header-construction failure produces.
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new TypeError('Headers.append: "Bearer re_liveKeyShapedValue123" is an invalid header value');
+    }));
+    await callSendEmail();
+
+    const emitted = [...errorSpy.mock.calls.flat(), ...captureMessage.mock.calls.flat()].map(String).join(' | ');
+    expect(emitted, 'the API key must never reach a log or Sentry').not.toContain('re_liveKeyShapedValue123');
+    expect(emitted).toContain('invalid header value'); // the actionable part survives
+  });
+});
