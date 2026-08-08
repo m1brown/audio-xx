@@ -12,6 +12,8 @@
  * This never happens in production builds.
  */
 
+import * as Sentry from '@sentry/nextjs';
+
 const FROM = process.env.EMAIL_FROM || 'Audio XX <no-reply@audio-xx.com>';
 
 export function emailSendingConfigured(): boolean {
@@ -45,9 +47,45 @@ export async function sendEmail(opts: {
         text: opts.text,
       }),
     });
+    if (!res.ok) {
+      // A rejected send used to be completely silent: this function
+      // returned { ok: false } and every caller discarded it, so a
+      // password-reset that never arrived produced no log, no Sentry
+      // event, and no signal of any kind. That is how a broken recovery
+      // flow went unnoticed in production.
+      //
+      // The provider's reason is the actionable part — Resend says
+      // outright when an account is in test mode or a domain is
+      // unverified — but that text can quote the recipient address, so
+      // it is redacted before it leaves this process. Status plus a
+      // scrubbed reason is enough to diagnose without carrying PII.
+      const reason = redactEmails((await res.text().catch(() => '')).slice(0, 300));
+      reportSendFailure(`status=${res.status} reason=${reason || '(empty)'}`);
+    }
     return { ok: res.ok };
-  } catch {
+  } catch (err) {
     // Email-provider failure must never crash a request path.
+    reportSendFailure(`threw=${err instanceof Error ? err.name : 'unknown'}`);
     return { ok: false };
+  }
+}
+
+/** Replace anything shaped like an email address. Never log a recipient. */
+function redactEmails(s: string): string {
+  return s.replace(/[^\s"'<>@]+@[^\s"'<>@]+\.[A-Za-z]{2,}/g, '[email-redacted]');
+}
+
+/**
+ * Surface a rejected send to the operator. Never throws, never includes
+ * the recipient, subject, body, reset token or API key — only the
+ * provider status and a redacted reason.
+ */
+function reportSendFailure(detail: string): void {
+  // eslint-disable-next-line no-console
+  console.error(`[email] send rejected by provider — ${detail}`);
+  try {
+    Sentry.captureMessage(`Email send rejected: ${detail}`, 'error');
+  } catch {
+    /* observability must never break the request path */
   }
 }
