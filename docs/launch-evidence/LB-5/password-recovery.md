@@ -218,3 +218,95 @@ indistinguishable to the requester. Normal sign-in is unaffected.
 Regression: `recovery-disabled-invariant.test.ts` (5 tests), covering direct
 access specifically, since the hidden link already "passed" while the invariant
 was broken.
+
+---
+
+## PROMOTED TO LAUNCH BLOCKER (2026-08-08)
+
+### The evidence that changed the classification
+
+The founder was **locked out of his own production account** during LB-4 certification.
+Two sign-in attempts failed; two reset requests were made; **no email arrived**.
+
+Under the evidence ladder this is **L3 — demonstrated product impact**. Not a theoretical
+edge case, not a heuristic that could fail: a real user, a real lockout, no working path out.
+
+### What the lockout actually refuted
+
+Not the severity estimate — that was always understood as terminal for the affected user.
+It refuted the **base rate**.
+
+The original deferral reasoned: *"Expected lockouts across ≤100 users over a few weeks is a
+handful. Manual substitution fully covers the outcome."*
+
+**The first authenticated production session produced a lockout** — from the person who built
+the product and knows the credentials best. An external beta user, signing up once and
+returning a fortnight later, is *more* likely to forget, not less.
+
+Two further problems with the original mitigation:
+
+1. **Founder-managed recovery has no fallback when the founder is the one locked out.** The
+   mitigation assumed the founder is always available as the recovery mechanism. He was the
+   casualty.
+2. **The manual path has never been demonstrated for anyone.** It was asserted, not tested.
+   An untested fallback is not a mitigation; it is an intention.
+
+Cohort size alone is therefore **not** an adequate mitigation, per governance instruction.
+
+### New pass condition
+
+All four of:
+
+1. reset email **arrives** at an external inbox;
+2. the reset link completes;
+3. the new password authenticates;
+4. the old password no longer authenticates.
+
+**Or** an explicitly founder-approved alternative recovery mechanism demonstrated working
+**for an external beta user** — not for the founder, and not as a stated intention.
+
+---
+
+## Controlled diagnostic protocol — no production exposure required
+
+Preview carries its own configuration, verified 2026-08-08:
+
+| Variable | Scope |
+|---|---|
+| `NEXT_PUBLIC_PASSWORD_RESET` | Preview **and** Production (separate values) |
+| `RESEND_API_KEY` | Preview, Production |
+| `EMAIL_FROM` | Preview, Production |
+
+So a Preview deployment exercises **the same Resend credentials** as production while leaving
+the production surface disabled. Production does not need to be re-enabled to diagnose.
+
+The latest `version-b` Preview also carries the rejection logger (`e54dd73`) and the full gate
+(`b545337`), so a failed send there now produces a Sentry issue and an
+`[email] send rejected by provider` line with the provider's status and a redacted reason.
+
+### Steps
+
+1. Founder opens the latest `version-b` Preview deployment (Vercel SSO-authenticated).
+2. Confirm `Forgot your password?` renders — if it does not, Preview's flag is not `'1'`
+   and that is itself the first finding.
+3. Request one reset to a **real external inbox**.
+4. Report: did the email arrive?
+5. Engineering reads `vercel logs <preview-url>` for `[email] send rejected by provider`,
+   plus the Sentry issue.
+
+### What each outcome means
+
+| Observation | Conclusion |
+|---|---|
+| `[email] send rejected by provider — status=…` | Provider rejection. The status and redacted reason name the actual cause — test mode, unverified domain, bad from-address, restricted key. |
+| `[auth/forgot] … RESEND_API_KEY is unset` | The key is not readable in that runtime. Every prior "key is present" inference was wrong. |
+| Neither line, no email | The send path is not being reached at all. Look upstream of `sendEmail`. |
+| Email arrives | Delivery works on Preview; the difference is production-specific configuration. |
+
+**No inference from absence.** Whichever line appears is the first *observed* datum about where
+this flow stops. Everything recorded before this point is inference from behaviour.
+
+### Re-enablement gate
+
+Public recovery is re-enabled **only after** all four verification steps pass, with the message
+ID and receiving inbox recorded here.

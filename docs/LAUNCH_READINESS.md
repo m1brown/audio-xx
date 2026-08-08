@@ -6,7 +6,7 @@
 |---|---|
 | **Production** | `babaf0b` — deployment `audio-xx-ca4hpucfg`, **all 28 swept routes 200** |
 | **Certified** | 2026-08-07T09:58:06Z (Launch Mission 3) · re-swept clean 2026-08-07 (Mission 4) |
-| **Launch blockers open** | **4 of 4** — all founder-owned |
+| **Launch blockers open** | **5** — LB-1 · LB-2 · LB-3 · LB-4 · **LB-5** |
 | **Readiness** | 🔴 **NOT READY TO INVITE** |
 
 > **Production certified; engineering complete.** `d3092c1` is live. LB-0 and LB-6 are both
@@ -18,7 +18,8 @@
 > below are founder certification tasks. Scripts for each:
 > [`launch-evidence/FOUNDER_CERTIFICATION.md`](launch-evidence/FOUNDER_CERTIFICATION.md).
 >
-> Password recovery (LB-5) is a withdrawn capability, not a blocker.
+> **Password recovery (LB-5) is now a Launch Blocker**, promoted 2026-08-08 on demonstrated
+> evidence after a real founder lockout. It is no longer an optional withheld capability.
 
 ---
 
@@ -97,14 +98,16 @@
 - **Residual risk** — Retired. Recurrence covered by `feedback-prompt-mount.test.ts`.
 - **Readback** — `npx vercel logs <deployment> | grep AXX-EVENT`
 
-### LB-5 — Password recovery ⛔ **DISABLED, NOT CERTIFIED**
-- **Objective** — Either a certified self-service recovery flow, or no visible flow at all.
-- **Owner** — Founder (certification requires an external inbox).
-- **Verification** — Request a reset, confirm the email **arrives**, complete it, sign in with the new password, confirm the old one fails.
-- **Evidence of completion** — The delivered message ID and the external inbox it landed in, recorded in [`launch-evidence/LB-5/password-recovery.md`](launch-evidence/LB-5/password-recovery.md).
-- **State** — ⛔ **Capability withdrawn, not repaired.** `NEXT_PUBLIC_PASSWORD_RESET` set to `0` in Production and rebuilt (`audio-xx-2za4u99sn`); `Forgot your password?` occurrences on `/auth/signin` went **1 → 0**. Certification was impossible for the engineering session: no external inbox, and completing a reset requires creating an account and authenticating, which the operating rules prohibit.
-- **Residual risk if omitted** — *Before disablement:* a user requesting recovery saw `{"ok":true}` regardless of outcome and could be permanently locked out with no signal to anyone. *After:* the misleading flow is gone; recovery is founder-managed, which a bounded invited cohort supports. Re-enabling is a ~5-minute founder task once delivery is confirmed.
-- **Note** — Resend DNS for `audio-xx.com` is correctly configured (DKIM + `send.` SPF/MX), so delivery is *likely* fine. This is disabled on the "cannot certify" rule, **not** because delivery is known broken. Tracked separately from LB-4 by design.
+### LB-5 — Password recovery 🔴 **LAUNCH BLOCKER** *(promoted 2026-08-08)*
+- **Objective** — An invited user who forgets their password can regain access.
+- **Owner** — Founder (certification needs an external inbox); engineering for any configuration repair.
+- **Why promoted** — Previously an optional withheld capability, deferred on the argument that a 10–15 cohort makes manual recovery sufficient. **Evidence has falsified that argument.** On 2026-08-08 the founder was locked out of his own production account while attempting LB-4, requested a reset twice, and received nothing. Under the evidence ladder that is **L3 — demonstrated product impact**: a real user, a real lockout, no working recovery path.
+- **What the lockout refuted** — not the severity estimate but the **base rate**. The deferral assumed "a handful of lockouts across 10–15 users over several weeks." The very first authenticated production session produced one, from the person who knows the system best. Cohort size is therefore **not** adequate mitigation on its own — and founder-managed recovery has no fallback when the person locked out *is* the founder.
+- **Verification** — One end-to-end reset to an external inbox: email **arrives** · reset link completes · new password authenticates · old password rejected.
+- **Evidence of completion** — Delivered message ID and receiving inbox, plus the provider status captured by the rejection logger. Recorded in [`launch-evidence/LB-5/password-recovery.md`](launch-evidence/LB-5/password-recovery.md).
+- **Pass condition** — All four steps succeed. **Or** an explicitly founder-approved alternative recovery mechanism is demonstrated working **for an external beta user** — not for the founder, and not as a stated intention.
+- **State** — 🔴 **Open.** Public recovery remains disabled and fully gated (both pages, both API routes). Delivery fails for reasons **not yet established by positive evidence**.
+- **Residual risk if omitted** — An invited user who forgets their password is permanently locked out of their account and saved systems, with no self-service path and no manual path proven to work for anyone but the founder.
 
 ---
 
@@ -173,7 +176,7 @@ A blocker cannot be marked ✅ while its row here is empty.
 | LB-3 | *(positive + negative control screenshots)* | ⬜ | | |
 | LB-4 | *(six screenshots + saved system ID, before/after)* | ⬜ | | |
 | LB-0 | [`LB-0/certification.md`](launch-evidence/LB-0/certification.md) — 6 slugs, deployment `audio-xx-2za4u99sn` | ✅ | Claude | 2026-08-06 |
-| LB-5 | [`LB-5/password-recovery.md`](launch-evidence/LB-5/password-recovery.md) — capability disabled, not certified | ⛔ | Claude | 2026-08-06 |
+| LB-5 | [`LB-5/password-recovery.md`](launch-evidence/LB-5/password-recovery.md) — **promoted to blocker**; delivery uncertified | 🔴 | Claude | 2026-08-08 |
 | LB-6 | [`LB-6/certification.md`](launch-evidence/LB-6/certification.md) — production `feedback_submitted` event, id joins to advisory | ✅ | Claude | 2026-08-07 |
 
 ---
