@@ -99,3 +99,61 @@ as **certified** rather than **disabled**.
 
 **Not a launch blocker in its current state** — no visible flow can now mislead a user.
 It is a **withheld capability** pending a founder-run certification.
+
+---
+
+## Delivery FAILED under test — recovery-safety repair (2026-08-08)
+
+The capability was briefly re-enabled at founder request, tested, and **failed**.
+Production `babaf0b` / `audio-xx-pzdwhcn6e`.
+
+### What was established
+
+| Fact | Evidence |
+|---|---|
+| **API key present** | `/api/auth/forgot` was hit twice (09:32:46, 09:53:10 UTC). The Mission-4A alarm — which fires only when `RESEND_API_KEY` is unset — **did not fire**. Its silence is the proof the key is configured. |
+| **Sends attempted and rejected upstream** | `sendEmail` was therefore called and reached Resend. No email arrived at the founder's inbox on either attempt. The rejection happened at the provider. |
+| **The failure was invisible** | `sendEmail` returned `{ok:false}` and `/api/auth/forgot` discarded it. No log, no Sentry event, no signal. The attempts were only discoverable by hand-trawling the request log. |
+| **Public recovery UI disabled** | `NEXT_PUBLIC_PASSWORD_RESET=0`, rebuilt. `"Forgot your password?"` occurrences on `/auth/signin`: **1 → 0**. Sign-in returns 200 with Email / Password / Sign in intact; no other auth behaviour changed. |
+| **Rejection now observable** | `sendEmail` reports through `console.error` **and** `Sentry.captureMessage` for both a non-ok response and a thrown fetch. |
+| **Root cause UNRESOLVED** | Requires the Resend dashboard, which the engineering session cannot access. |
+
+### Observability change
+
+Reported: provider status plus a truncated, **email-redacted** reason.
+Never reported: recipient, subject, body, reset token, API key.
+
+Resend's real test-mode error quotes the recipient address back, so
+`redactEmails()` scrubs anything address-shaped before it leaves the process.
+`reportSendFailure` cannot throw — observability must not break a request path.
+
+`/api/auth/forgot` public behaviour is **unchanged**: the same uniform 200
+regardless of outcome, so delivery success or failure is still never exposed to
+the requester and enumeration safety is preserved.
+
+Regression test `email-send-failure-observable.test.ts` pins: rejection is
+reported · thrown fetch is reported · recipient/token/URL/key never appear in
+anything emitted · the unset-key case stays quiet so the route's existing alarm
+is not double-counted.
+
+### Still open — founder / provider investigation
+
+The engineering session cannot read the Resend dashboard or the API key.
+Likeliest causes, in order:
+
+1. **Resend account still in test mode** — delivers only to the account owner's
+   own verified address. By far the most common cause of this exact symptom.
+2. Domain not actually verified in the Resend dashboard, despite DNS being
+   correct (DKIM + `send.` SPF/MX were confirmed present).
+3. `EMAIL_FROM` set to an address on a domain Resend will not send for.
+4. API key restricted or revoked.
+
+**Next attempt will be diagnosable.** Trigger one reset and read the Sentry
+issue or the `[email] send rejected by provider` log line — it will carry the
+provider's own status and reason.
+
+### Verdict
+
+**LB-5 remains a disabled capability, not a blocker.** No visible flow can now
+mislead a user. Recovery is founder-managed for the invited cohort. Delivery
+must be certified before this is re-enabled.
