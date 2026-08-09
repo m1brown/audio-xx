@@ -310,3 +310,77 @@ this flow stops. Everything recorded before this point is inference from behavio
 
 Public recovery is re-enabled **only after** all four verification steps pass, with the message
 ID and receiving inbox recorded here.
+
+---
+
+## ROOT CAUSE ESTABLISHED — malformed `RESEND_API_KEY` (2026-08-09)
+
+The first **positive** evidence in this investigation. Every prior entry above this line
+is inference from behaviour; this one is an observed exception message.
+
+### Provenance
+
+| Requirement | Evidence |
+|---|---|
+| Deployment | `dpl_3ciT1oHe5fZzFWyro7pAotZUURL6` (`az2mqwh6c`), built from **`50fa533`** — query was deployment-scoped, not host-filtered |
+| Route | `λ POST /api/auth/forgot`, level `error` |
+| Timestamps | `10:34:30.90` and `10:35:31.36` CEST — two controlled attempts, **identical** message |
+
+Deployment-scoping matters here. An earlier `threw=TypeError` line carried the same
+`audio-xx-web-git-version-b` host header but was served by the *previous* deployment; the
+host header names the alias, not the build. Only the deployment-scoped query ties the
+event to `50fa533`.
+
+### The message
+
+```
+[email] send rejected by provider — threw=TypeError: Headers.append: "Bearer [redacted] [key-redacted]" is an invalid header value.
+```
+
+### Classification: malformed / invalid Authorization header
+
+`Headers.append` throws while **constructing** the request. No socket is opened; the
+request never leaves the Vercel runtime and never reaches Resend. That positively
+excludes the other three classes:
+
+| Class | Excluded because |
+|---|---|
+| network/runtime `fetch failed` | `fetch` never attempted a connection |
+| HTTP provider response | no status code — there was no exchange |
+| send path not reached | `sendEmail` ran; the key was present; the call was attempted |
+
+### What the redaction shape shows
+
+Two separate scrubber rules fired on one header value:
+
+- `Bearer\s+\S+` → `Bearer [redacted]` — consumed "Bearer", whitespace, and one token
+- `re_[A-Za-z0-9_-]+` → `[key-redacted]` — matched a **second, later** token
+
+So the value was not `Bearer <key>` but `Bearer <token> <whitespace> re_<key>`: the
+environment variable holds **more than the bare key**. A plain space would not have
+thrown — spaces are legal in header values; `Headers.append` rejects **control
+characters**. An invalid-value rejection *and* a whitespace split together indicate a
+line break or similar control character plus extra content, the ordinary signature of a
+paste that carried a newline.
+
+**Limit of this claim:** the shape of the value is observable, its characters are not.
+"Contains a control character plus extra content" is what the evidence supports. Which
+character, and how it got there, it does not.
+
+### Repair — configuration only, no code change
+
+The code is behaving correctly. This diagnosis exists *because* the observability repair
+landed; before it, the same failure was completely silent.
+
+1. **Delete** `RESEND_API_KEY` in Preview **and** Production — do not edit in place, since
+   the offending character is invisible in the field.
+2. Re-add the bare key only: `re_…`, nothing before it, no trailing newline.
+3. **Redeploy Preview** — env changes reach new deployments only; a running build holds
+   its captured values.
+4. Repeat the controlled reset; classify the next result as provider response or delivery.
+
+### Status
+
+**LB-5 remains OPEN.** Root cause is established, not repaired. None of the four pass
+conditions — external delivery, reset-link completion, new-password authentication,
+intended old-password rejection — has been demonstrated.
