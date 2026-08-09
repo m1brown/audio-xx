@@ -373,6 +373,7 @@ function reducer(state: ConversationState, action: Action): ConversationState {
     case 'ADD_QUESTION':
       return {
         ...state,
+        isLoading: false, // assistant turn landed — see ADD_ADVISORY note
         messages: [
           ...state.messages,
           { role: 'assistant', kind: 'question', clarification: action.clarification },
@@ -382,6 +383,7 @@ function reducer(state: ConversationState, action: Action): ConversationState {
     case 'ADD_GLOSSARY':
       return {
         ...state,
+        isLoading: false, // assistant turn landed — see ADD_ADVISORY note
         messages: [
           ...state.messages,
           { role: 'assistant', kind: 'glossary', entry: action.entry },
@@ -389,8 +391,21 @@ function reducer(state: ConversationState, action: Action): ConversationState {
       };
 
     case 'ADD_ADVISORY':
+      // Landing an assistant turn ends the loading state, by definition.
+      //
+      // Verified on production (67eb53c, fresh tab, React-level probe): after
+      // a brand or shopping answer, isLoading stayed true indefinitely — the
+      // composer's Send never re-enabled, so every conversation was one turn
+      // long. There are ~65 scattered SET_LOADING dispatches across the
+      // submit paths; one of them misses a clear on some path, and finding
+      // each Nth miss is the losing game. The invariant belongs here: any
+      // reducer action that renders an assistant turn also clears loading.
+      // Paths that keep working after dispatch (knowledge-lane LLM
+      // replacement via UPDATE_ADVISORY) still work — the placeholder shell
+      // communicates progress, and the update lands by id regardless.
       return {
         ...state,
+        isLoading: false,
         messages: [
           ...state.messages,
           { role: 'assistant', kind: 'advisory', advisory: action.advisory, ...(action.id ? { id: action.id } : {}) },
@@ -410,6 +425,7 @@ function reducer(state: ConversationState, action: Action): ConversationState {
     case 'ADD_NOTE':
       return {
         ...state,
+        isLoading: false, // assistant turn landed — see ADD_ADVISORY note
         messages: [
           ...state.messages,
           { role: 'assistant', content: action.content, kind: 'note' },
