@@ -2538,10 +2538,25 @@ function joinWithCommas(items: string[]): string {
 
 // ── Subject extraction ──────────────────────────────
 
+/**
+ * A brand name inside another word is not a brand mention.
+ *
+ * These matchers used raw `includes()`, so the brand Spec matched the
+ * substring "spec" inside "special" — and array order let it beat the brand
+ * the user actually named. Verified on production: "what's special about
+ * harbeth" returned the Spec profile. Word-boundary matching fixes the class
+ * ("specs", "special", "a23" inside a model number, …) without touching
+ * profile order or reachability of genuinely named brands.
+ */
+function aliasInText(alias: string, lowerText: string): boolean {
+  const escaped = alias.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:[^a-z0-9]|$)`).test(lowerText);
+}
+
 function findBrandProfile(text: string): BrandProfile | undefined {
   const lower = text.toLowerCase();
   return BRAND_PROFILES.find((bp) =>
-    bp.names.some((name) => lower.includes(name)),
+    bp.names.some((name) => aliasInText(name, lower)),
   );
 }
 
@@ -2588,7 +2603,9 @@ function findBrandProfileMatch(text: string):
   const lower = text.toLowerCase();
   for (const bp of BRAND_PROFILES) {
     for (const alias of bp.names) {
-      if (lower.includes(alias.toLowerCase())) {
+      // Boundary-aware for the same reason as findBrandProfile above —
+      // "special" must not match the brand Spec.
+      if (aliasInText(alias, lower)) {
         return { profile: bp, matchedAlias: alias };
       }
     }
