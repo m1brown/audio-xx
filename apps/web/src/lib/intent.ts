@@ -334,7 +334,17 @@ const COMPARISON_PATTERNS = [
   /\bhow\s+(?:does|do)\b.*\bcompare\b/i,
   // ── Upgrade / replacement patterns ─────────────────
   // "upgrade from X to Y", "replace X with Y", "swap X for Y"
-  /\bupgrade\s+(?:from|my)\b/i,
+  //
+  // Every pattern in this block requires an explicit TARGET, because a
+  // comparison needs something to compare against. `upgrade` previously did
+  // not: `/\bupgrade\s+(?:from|my)\b/` matched "upgrade from a chord hugo —
+  // more resolution", a one-sided request naming a single product. The
+  // comparison branch then had no second subject and printed prose about
+  // "the other product", asking the user what drew them to a thing they had
+  // never mentioned. One-sided upgrade requests belong to the recommendation
+  // frame; only "from X **to** Y" is a comparison.
+  /\bupgrade\s+from\b.*\bto\b/i,
+  /\bupgrade\s+my\b.*\bto\b/i,
   /\breplace\s+(?:my|the|a)\b.*\bwith\b/i,
   /\bswap\s+(?:my|the|a)\b.*\b(?:for|with|to)\b/i,
   /\bchange\s+(?:from|my)\b.*\bto\b/i,
@@ -434,8 +444,9 @@ const PRODUCT_ASSESSMENT_PATTERNS = [
 //
 // Pre-fix: a prompt like "thoughts on the Buchardt A700" where the
 // product is not in the catalog produced subjectMatches = [], failing
-// the PRODUCT_ASSESSMENT gate's `hasProductSubject || hasBrandSubject`
-// guard. With an active saved system attached, the prompt then fell
+// the PRODUCT_ASSESSMENT gate's subject guard (then
+// `hasProductSubject || hasBrandSubject`, now `hasProductSubject`).
+// With an active saved system attached, the prompt then fell
 // through to system_assessment / diagnosis — diagnosing the saved
 // system instead of addressing the named product.
 //
@@ -1401,7 +1412,28 @@ export function detectIntent(
   const isLikelyShopping = earlyBudgetSignal && earlyCategorySignal;
   // Comparison escape hatch: "what about X vs Y" is a comparison, not an assessment.
   const isLikelyComparison = /\bvs\.?\b/i.test(currentMessage) && subjectMatches.length >= 2;
-  if (hasProductAssessmentPattern && (hasProductSubject || hasBrandSubject) && !isLikelySystemEval && !isLikelyShopping && !isLikelyComparison) {
+  // A product assessment requires a PRODUCT. `hasBrandSubject` used to satisfy
+  // this gate on its own, so "tell me about shindo" — a brand, with no model
+  // named — was assessed as though "the Shindo" were a device: a spec subtitle,
+  // and prose placing it "in that family". Worse, page.tsx blocks
+  // product_assessment from the consultation path, so claiming the turn here
+  // made the curated brand profile in `buildBrandConsultation` unreachable by
+  // construction. Bare brands fall through to the brand lane, which already
+  // handles them correctly.
+  //
+  // A brand match still counts when the message ALSO names a model — "thoughts
+  // on the pass labs int-25" is a product assessment even though the catalog
+  // carries Pass Labs but not the INT-25. Model designations mix letters and
+  // digits (INT-25, SIT-3, A700, H390); brand names do not. Model names that
+  // are words or roman numerals (Sabrina, Heresy IV) are already caught by the
+  // catalog product match above, so this only has to separate "brand + model"
+  // from "brand alone".
+  const namesSpecificModel = currentMessage
+    .replace(/\$\s?\d[\d,.]*k?/gi, '') // prices are not model designations
+    .split(/[\s,;()]+/)
+    .some((token) => /\d/.test(token) && /[a-z]/i.test(token));
+  const hasAssessableProduct = hasProductSubject || (hasBrandSubject && namesSpecificModel);
+  if (hasProductAssessmentPattern && hasAssessableProduct && !isLikelySystemEval && !isLikelyShopping && !isLikelyComparison) {
     return { intent: 'product_assessment', subjects, subjectMatches, desires };
   }
 
