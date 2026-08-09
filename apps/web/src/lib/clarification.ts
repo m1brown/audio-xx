@@ -224,7 +224,10 @@ function generateAcknowledge(
     if (phrases.length >= 2) return 'That paints a clearer picture.';
     if (phrases.length === 1) return 'Got it, that helps.';
     if (lower.includes('budget') || lower.includes('$')) return 'Good to know the budget range.';
-    if (lower.includes('my system') || lower.includes('my setup')) return 'Helpful to know the system context.';
+    // The follow-up twin of the first-turn rule removed below: returning
+    // "Helpful to know the system context." because the message contained the
+    // words "my system". Same unsupported claim, same reason for removal —
+    // these fall through to the neutral line.
     return 'Noted — thanks for that.';
   }
 
@@ -293,10 +296,20 @@ function generateAcknowledge(
     return `That\'s a good observation about ${term} — it helps clarify what you\'re hearing.`;
   }
 
-  // System description without clear problem
-  if (lower.includes('my system') || lower.includes('my setup') || lower.includes('i have')) {
-    return 'Good to know the system context — that shapes what would make sense.';
-  }
+  // NOTE: there was a rule here returning "Good to know the system context —
+  // that shapes what would make sense." whenever the message contained the
+  // phrase "my system", "my setup" or "i have".
+  //
+  // Mentioning "my system" is not evidence that the system has been described.
+  // "is my system balanced", "weakest link in my setup?" and "does anything
+  // need changing in my setup" all matched, so all three received the identical
+  // line thanking the user for context they had never supplied.
+  //
+  // It is not gated on a signal instead, because there is no honest signal to
+  // gate on: `ExtractedSignals` carries traits, symptoms and phrases, but no
+  // component or system field. A claim that cannot be verified here must not be
+  // made here. These messages fall through to the neutral acknowledgement below,
+  // and the follow-up question asks for the components (see buildClarification).
 
   // True fallback — still warm, not robotic
   return 'That\'s a good starting point.';
