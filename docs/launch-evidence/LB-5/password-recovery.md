@@ -443,3 +443,71 @@ in order:
 
 Until then the disabled-state invariant continues to hold: no user-accessible path can
 offer or initiate recovery.
+
+---
+
+## PRODUCTION ENABLED — 3 of 4 conditions certified (2026-08-09)
+
+Production deployment `audio-xx-99ct3fcio` (`dpl_EFmrerhk8bRvtwoLX72NTZjvk4DY`), commit
+`05976b0`, built 11:46 — **after** the corrected key was entered at 11:14, so the live
+runtime holds the repaired value. `NEXT_PUBLIC_PASSWORD_RESET=1` for Production; the
+value verified itself by behaviour rather than by trusting the write, since the CTA
+cannot render unless the flag was inlined as `'1'`.
+
+Visible state on `audio-xx.com`: `/auth/signin` 200 with the CTA present once and
+Email/Password/Sign in intact · `/auth/forgot` live form · `/auth/reset?token=…` live
+form. No "unavailable" copy on either.
+
+### The production chain
+
+```
+12:12:26  POST /api/auth/forgot     audio-xx.com     ← reset #1 requested
+12:13:01  POST /api/auth/reset      audio-xx.com     ← PA set (2xx)
+12:24:00  POST /api/auth/forgot     audio-xx.com     ← reset #2 requested
+12:24:54  POST /api/auth/reset      audio-xx.com     ← PB set (2xx)
+12:25:12  [auth] Invalid password for: brownmike@gmail.com
+12:25:26  [auth] Login successful: cmmw9qoe80000wvaqu7gn7rv8 brownmike@gmail.com
+12:25:27  GET /api/my-systems                        ← saved systems load
+```
+
+| # | Condition | Production evidence | |
+|---|---|---|---|
+| 1 | Email arrives, sent from production | both `/api/auth/forgot` POSTs on `audio-xx.com`; no `[email]` rejection; links received | ✅ |
+| 2 | Reset link completes on production | both `/api/auth/reset` POSTs **2xx** — neither appears in the 4xx set | ✅ |
+| 3 | New password authenticates | `12:25:26`, same pre-existing user id, `/api/my-systems` immediately after | ✅ |
+| 4 | Old password rejected | PA refused at `12:25:12` — **but PA was never observed working on production** | ⚠️ |
+
+### Why condition 4 is not marked passed
+
+The self-evidencing form requires the same credential observed working *and then*
+refused after a reset. On Preview that exists in full (`11:31:14` success → `11:37:08`
+reset → `11:37:21` refusal). On production, PA's every sign-in attempt failed, so its
+prior validity was never recorded; the `12:25:12` rejection therefore shows only that
+*a* password was refused.
+
+**Residual risk: low.** `reset/route.ts` overwrites a single `password` column, so a
+superseded value has nowhere to survive; Preview proved the behaviour on the same code
+and the same Turso database. But "low" is not "demonstrated", and the criterion is not
+being weakened to fit.
+
+### Not a defect: the earlier run of failed sign-ins
+
+Seven `Invalid password` events between 12:11 and 12:25 preceded the success. Each
+logged `[auth] Attempting login` then `[auth] Invalid password` — account found, no
+auto-registration, `bcrypt.compare` false. Both `/api/auth/reset` calls returned 2xx, so
+the writes succeeded. Neither the reset route nor the credentials provider trims or
+normalises the password, so no path asymmetry exists. The most probable cause is the
+browser submitting a stored credential rather than the typed one; **this is not
+established** and was not pursued once a clean attempt succeeded.
+
+### To close
+
+One sequence, ~30 seconds: sign in with the current password · request a reset and set a
+new one · attempt the previous password — it must be refused. Record the three
+timestamps here and condition 4 closes on production evidence.
+
+### Invalidated evidence
+
+An earlier attempt (11:56–11:57) is **void**: the reset was requested from the Preview
+alias while redemption happened on production, because Preview's email links to
+`audio-xx.com`. Mixed-environment; not counted.
