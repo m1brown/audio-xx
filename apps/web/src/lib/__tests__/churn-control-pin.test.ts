@@ -62,16 +62,18 @@ describe('the A2 prompts are outside the churn path', () => {
 /**
  * "should i upgrade my dac" does not belong with the other three.
  *
- * It satisfies churn avoidance identically to the control — detected, with the
- * same reflective question — so it should take the early return at page.tsx
- * (~4657) and answer as the control does. Production shows otherwise: it
- * returns the diagnosis output, inventing "the issue" and "the experience"
- * the user never reported.
+ * It satisfies churn avoidance identically to the control — detected, with
+ * the same reflective question — but it routes differently: the control's
+ * "my system …" phrasing makes routeConversation return 'diagnosis', which
+ * folds its intent into the diagnosis path and reaches the churn early-return
+ * there. "should i upgrade my dac" routes as 'inquiry', stays
+ * audio_knowledge, and enters the knowledge lane (page.tsx Lane 2) — which
+ * historically consumed the turn before any churn check ran, letting the
+ * knowledge LLM invent "the issue" the user never reported.
  *
- * So the churn early-return is not being reached for it, even though the
- * signal is available. That is a gating/ordering question in page.tsx, not a
- * clarification.ts one, and it is NOT fixed by the checkDiagnosticUncertainty
- * repair the other three need. Pinned here so the distinction is not lost.
+ * Repaired 2026-08-10: the knowledge-lane entry now runs the same first-turn
+ * churn gate as the diagnosis path, so this prompt gets the reflective
+ * question. This block pins that the signal itself stays available to it.
  */
 describe('should i upgrade my dac — churn signal available but not applied', () => {
   it('has a churn signal identical in kind to the control', () => {

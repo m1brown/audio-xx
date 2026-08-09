@@ -3211,6 +3211,27 @@ export default function Home() {
     // (Lane body lives in runKnowledgeLane, defined above the guarded
     // lanes so the empty-turn guards can reuse it.)
     if (intent === 'audio_knowledge') {
+      // Churn avoidance parity with the diagnosis path (~line 4665):
+      // a first-turn vague-upgrade ask with no symptom ("should i
+      // upgrade my dac") routes here rather than to diagnosis, so the
+      // reflective-question gate must fire here too — otherwise the
+      // knowledge LLM answers a question about a problem the user
+      // never reported. Turn 1 only, same condition as the diagnosis
+      // gate; churn-control-pin.test.ts pins which prompts may fire.
+      if (turnCount === 0) {
+        const churn = detectChurnSignal(submittedText);
+        if (churn.detected && churn.reflectiveQuestion) {
+          dispatch({
+            type: 'ADD_QUESTION',
+            clarification: {
+              acknowledge: 'That\'s worth thinking through.',
+              question: churn.reflectiveQuestion,
+            },
+          });
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+      }
       runKnowledgeLane();
       return;
     }
