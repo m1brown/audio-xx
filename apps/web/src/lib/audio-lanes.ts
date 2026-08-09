@@ -221,9 +221,17 @@ Return a JSON object:
  * Prefers recognized product/brand names; falls back to the full question.
  */
 function extractTopic(message: string, subjectMatches: SubjectMatch[]): string {
-  // If we have recognized subjects, use them as the topic
+  // If we have recognized subjects, use them as the topic.
+  //
+  // "vs" is only true when the user is actually comparing. The old
+  // unconditional join rendered "is my amplifier powerful enough? i have a
+  // leben cs300 and harbeth p3esr" under the heading
+  // "LEBEN CS300 VS P3ESR VS HARBETH" — the user's own system presented as a
+  // three-way shoot-out. Ownership and system questions join with "+", the
+  // same chain framing used elsewhere.
   if (subjectMatches.length > 0) {
-    return subjectMatches.map((m) => m.name).join(' vs ');
+    const comparing = /\bvs\.?\b|\bversus\b|\bcompare|\bor\b.*\bbetter\b|\bdifference\s+between\b/i.test(message);
+    return subjectMatches.map((m) => m.name).join(comparing ? ' vs ' : ' + ');
   }
 
   // Try to extract a clean topic from common question patterns
