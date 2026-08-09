@@ -1512,6 +1512,24 @@ function detectTurntableDependencies(text: string): CategoryDependency[] {
 
 // ── Detection ─────────────────────────────────────────
 
+/**
+ * Does `longer` carry a model designation that `shorter` does not?
+ *
+ * Variant names differ from their base by a designator with a recognisable
+ * shape: roman numerals (II, III), mk-suffixes (MkII, mk3), bare numbers (2),
+ * or short alphanumerics (TT2, D90). Ordinary words — "dac", "chord",
+ * "amplifier" — are not designators, so phrasing noise still matches.
+ */
+const MODEL_DESIGNATOR = /^(?:[ivx]+|mk\s*[\divx]*|\d+[a-z]*|[a-z]{1,3}\d+[a-z]*)$/i;
+
+export function hasExtraModelToken(longer: string, shorter: string): boolean {
+  const shorterTokens = new Set(shorter.split(/\s+/).filter(Boolean));
+  return longer
+    .split(/\s+/)
+    .filter(Boolean)
+    .some((token) => !shorterTokens.has(token) && MODEL_DESIGNATOR.test(token));
+}
+
 export function detectShoppingIntent(
   userText: string,
   signals: ExtractedSignals,
@@ -5145,6 +5163,31 @@ function selectProductExamples(
     (currentComponentNames ?? []).map((n) => n.toLowerCase()),
   );
 
+  /**
+   * Does a product name match one the user gave as their current component?
+   *
+   * Exact matches are unambiguous. The containment check exists because
+   * `currentNames` holds raw user text, which carries phrasing noise — someone
+   * who owns a Chord Hugo may type "chord hugo dac".
+   *
+   * Containment alone was wrong: "chord hugo tt2".includes("chord hugo") is
+   * true, so recommending the Hugo TT2 to a Hugo owner stamped the
+   * recommendation as their CURRENT component. The same held for Ares vs
+   * Ares II, or Bifrost vs Bifrost 2 — a variant is a different product.
+   *
+   * So containment is accepted only when the extra words are not a model
+   * designation. Those are recognisable in shape: roman numerals, mk-suffixes,
+   * bare numbers, and short alphanumerics like "tt2".
+   */
+  function matchesCurrentComponent(productName: string, fullProductName: string): boolean {
+    if (currentNames.has(fullProductName) || currentNames.has(productName)) return true;
+    return [...currentNames].some((cn) => {
+      if (cn.includes(productName)) return !hasExtraModelToken(cn, productName);
+      if (fullProductName.includes(cn)) return !hasExtraModelToken(fullProductName, cn);
+      return false;
+    });
+  }
+
   // ── Budget realism computation ──────────────────────
   // Classify each product's price realism relative to stated budget.
   function computeBudgetRealism(product: Product): ProductExample['budgetRealism'] {
@@ -5917,9 +5960,7 @@ function selectProductExamples(
   const results = top.map(({ product }) => {
     // Check if this product matches a current system component
     const fullName = `${product.brand} ${product.name}`.toLowerCase();
-    const isCurrent = currentNames.has(fullName)
-      || currentNames.has(product.name.toLowerCase())
-      || [...currentNames].some((cn) => cn.includes(product.name.toLowerCase()) || fullName.includes(cn));
+    const isCurrent = matchesCurrentComponent(product.name.toLowerCase(), fullName);
 
     return {
       id: product.id,
