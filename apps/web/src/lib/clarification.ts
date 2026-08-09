@@ -119,9 +119,31 @@ function checkInterpretationAmbiguity(
 
 // ── Case 2: Diagnostic Uncertainty ────────────────────
 
+/**
+ * Asks the user to describe what they are hearing, when there is too little
+ * information to reason from.
+ *
+ * The symptom question below presumes a symptom. That is right for "something
+ * sounds off" and wrong for "is my system balanced" — a request for a judgment,
+ * not a report of a problem. Verified on production, all three of
+ * "is my system balanced", "weakest link in my setup?" and "does anything need
+ * changing in my setup" were asked what "bothers or pleases" them about a
+ * problem they had never mentioned.
+ *
+ * What those turns are missing is not a symptom, it is the system. So they are
+ * asked for it directly.
+ *
+ * Note "should i upgrade my dac" is deliberately NOT handled here: it produces
+ * a valid churn signal and should take the early return in page.tsx. That it
+ * does not is a separate gating defect — see churn-control-pin.test.ts.
+ */
+const SYSTEM_JUDGMENT_REQUEST =
+  /\b(?:my|the)\s+(?:system|setup|chain|rig)\b|\bweakest\s+link\b/i;
+
 function checkDiagnosticUncertainty(
   signals: ExtractedSignals,
   result: EvaluationResult,
+  currentMessage: string,
 ): string | null {
   const isFallbackOnly =
     result.fired_rules.length === 1 &&
@@ -131,6 +153,12 @@ function checkDiagnosticUncertainty(
   const isHighUncertainty = signals.uncertainty_level >= 2;
 
   if (isFallbackOnly || isLowInformation || isHighUncertainty) {
+    // A judgment about the system cannot be made, or usefully asked about,
+    // until the system is known. Asking about symptoms here invents a
+    // complaint the user did not make.
+    if (SYSTEM_JUDGMENT_REQUEST.test(currentMessage) && signals.symptoms.length === 0) {
+      return 'What components are in your system? The source, amplifier and speakers would be enough for me to answer this properly.';
+    }
     return 'Could you describe what specifically bothers or pleases you — is it about how things sound (tone, brightness, warmth), where instruments seem to be (space, width), or how the music moves (timing, rhythm, energy)?';
   }
 
@@ -416,7 +444,7 @@ export function getClarificationQuestion(
     };
   }
 
-  const uncertaintyQ = checkDiagnosticUncertainty(signals, result);
+  const uncertaintyQ = checkDiagnosticUncertainty(signals, result, currentMessage);
   if (uncertaintyQ) {
     return {
       acknowledge: generateAcknowledge(signals, currentMessage, turnCount, category),
