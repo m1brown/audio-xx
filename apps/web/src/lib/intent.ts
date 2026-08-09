@@ -373,7 +373,11 @@ const SHOPPING_PATTERNS = [
   /\bany\s+suggestions\b/i,
   /\bwhat\s+should\s+i\b/i,
   /\bgood\s+(?:dac|amp|amplifier|speaker|headphone|streamer)\b/i,
-  /\b(?:dac|amp|amplifier|integrated|speaker|headphone|streamer)\s+(?:for|that)\b/i,
+  // Plural forms included — "speakers for 2000 dollars" must route to
+  // shopping exactly like "speaker for 2000 dollars" (launch hardening
+  // 2026-08-10: the singular-only alternation sent plural phrasings to
+  // the knowledge lane, which answered with an essay instead of picks).
+  /\b(?:dacs?|amps?|amplifiers?|integrated|speakers?|headphones?|streamers?)\s+(?:for|that)\b/i,
   /\bgood\s+integrated\b/i,
   /\bbest\s+integrated\b/i,
   // Upgrade-desire: "I need a better amp", "want a new DAC", "need a different turntable"
