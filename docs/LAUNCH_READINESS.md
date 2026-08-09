@@ -6,7 +6,7 @@
 |---|---|
 | **Production** | `babaf0b` — deployment `audio-xx-ca4hpucfg`, **all 28 swept routes 200** |
 | **Certified** | 2026-08-07T09:58:06Z (Launch Mission 3) · re-swept clean 2026-08-07 (Mission 4) |
-| **Launch blockers open** | **5** — LB-1 · LB-2 · LB-3 · LB-4 · **LB-5** |
+| **Launch blockers open** | **4** — LB-1 · LB-2 · LB-3 · LB-4  ·  LB-5 certified on Preview; Production enablement pending |
 | **Readiness** | 🔴 **NOT READY TO INVITE** |
 
 > **Production certified; engineering complete.** `d3092c1` is live. LB-0 and LB-6 are both
@@ -106,7 +106,8 @@
 - **Verification** — One end-to-end reset to an external inbox: email **arrives** · reset link completes · new password authenticates · old password rejected.
 - **Evidence of completion** — Delivered message ID and receiving inbox, plus the provider status captured by the rejection logger. Recorded in [`launch-evidence/LB-5/password-recovery.md`](launch-evidence/LB-5/password-recovery.md).
 - **Pass condition** — All four steps succeed. **Or** an explicitly founder-approved alternative recovery mechanism is demonstrated working **for an external beta user** — not for the founder, and not as a stated intention.
-- **State** — 🔴 **Open.** Public recovery remains disabled and fully gated (both pages, both API routes). Delivery fails for reasons **not yet established by positive evidence**.
+- **State** — 🟢 **All four conditions demonstrated on Preview `7q3wmggyg` (`73f72c8`), 2026-08-09.** Root cause was a malformed `RESEND_API_KEY` — the value carried a control character plus extra content, so `Headers.append` threw during request construction and the send never reached Resend. Repair was configuration only; no code changed. Full chain in [`launch-evidence/LB-5/password-recovery.md`](launch-evidence/LB-5/password-recovery.md).
+- **Remaining before public recovery is re-enabled** — **Production is still disabled and still running the old key.** Two steps, both founder-gated: (1) redeploy Production so it captures the corrected `RESEND_API_KEY`; (2) set `NEXT_PUBLIC_PASSWORD_RESET=1` for Production and **rebuild** — that variable is inlined at build time, so a redeploy alone will not surface the CTA. Then repeat the four-step verification against Production.
 - **Residual risk if omitted** — An invited user who forgets their password is permanently locked out of their account and saved systems, with no self-service path and no manual path proven to work for anyone but the founder.
 
 ---
@@ -176,7 +177,7 @@ A blocker cannot be marked ✅ while its row here is empty.
 | LB-3 | *(positive + negative control screenshots)* | ⬜ | | |
 | LB-4 | *(six screenshots + saved system ID, before/after)* | ⬜ | | |
 | LB-0 | [`LB-0/certification.md`](launch-evidence/LB-0/certification.md) — 6 slugs, deployment `audio-xx-2za4u99sn` | ✅ | Claude | 2026-08-06 |
-| LB-5 | [`LB-5/password-recovery.md`](launch-evidence/LB-5/password-recovery.md) — **promoted to blocker**; delivery uncertified | 🔴 | Claude | 2026-08-08 |
+| LB-5 | [`LB-5/password-recovery.md`](launch-evidence/LB-5/password-recovery.md) — root cause malformed `RESEND_API_KEY`; **all four conditions certified on Preview `7q3wmggyg`**; Production enablement pending | 🟢 | Claude | 2026-08-09 |
 | LB-6 | [`LB-6/certification.md`](launch-evidence/LB-6/certification.md) — production `feedback_submitted` event, id joins to advisory | ✅ | Claude | 2026-08-07 |
 
 ---

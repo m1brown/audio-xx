@@ -381,6 +381,65 @@ landed; before it, the same failure was completely silent.
 
 ### Status
 
-**LB-5 remains OPEN.** Root cause is established, not repaired. None of the four pass
-conditions — external delivery, reset-link completion, new-password authentication,
-intended old-password rejection — has been demonstrated.
+Root cause established. See the certification section below for the repair and result.
+
+---
+
+## CERTIFIED ON PREVIEW — all four conditions (2026-08-09)
+
+Configuration repaired: `RESEND_API_KEY` deleted and re-entered as a bare single-line
+value for Preview and Production at ~`11:14:34`. **No code changed.** New Preview
+`7q3wmggyg` (`dpl_5uCZ3cuRyJVd5Vg9aNygC96QpSSZ`) built from `73f72c8` at `11:16:30`,
+after the env change. `git diff 50fa533..73f72c8 -- ':!docs'` is empty — code-identical
+to the build that produced the diagnosis.
+
+### The four conditions
+
+| # | Condition | Evidence | |
+|---|---|---|---|
+| 1 | Email arrives at an external inbox | `POST /api/auth/forgot` `11:25:21`, **no rejection logged**; message received `11:25` from `no-reply@audio-xx.com` in the Gmail **inbox**, not spam | ✅ |
+| 2 | Reset link completes | `POST /api/auth/reset` at `11:28:13`, `11:31:04`, `11:37:08` | ✅ |
+| 3 | New password authenticates | `11:31:14` and `11:39:59` — `[auth] Login successful: cmmw9qoe80000wvaqu7gn7rv8 brownmike@gmail.com` | ✅ |
+| 4 | Old password rejected | `11:37:21` — `[auth] Invalid password for: brownmike@gmail.com` | ✅ |
+
+### Why condition 4 is proven rather than asserted
+
+The log establishes the before *and* the after for the **same** credential:
+
+```
+11:31:04  POST /api/auth/reset            → P1 set
+11:31:14  [auth] Login successful         → P1 is a working password (on the record)
+11:37:08  POST /api/auth/reset            → P2 set, retiring P1
+11:37:21  [auth] Invalid password         → P1 refused
+11:39:59  [auth] Login successful         → P2 works, same user id
+```
+
+No assumption about what was typed is required, because P1's validity is itself a
+logged fact. An earlier rejection at `11:32:33` was **not** counted: the password
+retired at `11:28:13` had never been observed working, so that pairing showed only
+"a password failed", not "the old password was invalidated."
+
+### Two properties confirmed incidentally
+
+- **No auto-registration.** Every successful sign-in resolved to the pre-existing
+  `cmmw9qoe80000wvaqu7gn7rv8` with four saved systems loading immediately — not a
+  freshly-created empty account. That was the specific way this test could have looked
+  green while being meaningless. See [`../findings/auto-registration-on-signin.md`](../findings/auto-registration-on-signin.md).
+- **Reset email always links to production.** `NEXTAUTH_URL` is unset on Preview, so
+  [`forgot/route.ts`](../../../apps/web/src/app/api/auth/forgot/route.ts) falls back to
+  `https://audio-xx.com`. Correct for real users; on Preview the host must be swapped by
+  hand. Not a defect.
+
+### Production is NOT yet enabled
+
+Certification covers **Preview only**. Production still runs the build that captured the
+old malformed key, and `NEXT_PUBLIC_PASSWORD_RESET` is off there. Re-enabling requires,
+in order:
+
+1. Redeploy Production so it captures the corrected `RESEND_API_KEY`.
+2. Set `NEXT_PUBLIC_PASSWORD_RESET=1` for Production and **rebuild** — inlined at build
+   time, so a redeploy alone will not surface the CTA.
+3. Repeat all four verification steps against Production and record them here.
+
+Until then the disabled-state invariant continues to hold: no user-accessible path can
+offer or initiate recovery.
