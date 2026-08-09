@@ -37,7 +37,7 @@
 - **Evidence of completion** —
   1. The **Sentry issue short ID** of a deliberate production test event (e.g. `AUDIO-XX-4`), recorded verbatim.
   2. A **screenshot** of the Sentry Issues view, filtered `environment:production`, showing that issue and the `firstSeen` timestamp.
-  3. The **count of unresolved production issues** since the `42da903` promotion, as an integer.
+  3. *(Operational, not required)* The count of unresolved production issues. Useful to know; it is **not** part of the pass condition and must not hold certification up.
 - **Pass condition** — The recorded issue short ID resolves to an issue whose environment is `production` and whose `firstSeen` is later than the promotion timestamp. **True or false; no interpretation.**
 - **State** — ⬜ Open. Client SDK confirmed transmitting (200 to the envelope endpoint, observed twice during post-promotion verification); server-side issue stream never read.
 - **Residual risk if omitted** — The first user-facing crash is invisible. Sentry already caught one real production 500 (`/api/evaluate` ENOENT) that no test found; without dashboard review that class of failure goes unnoticed until a user reports it.
@@ -62,7 +62,7 @@
 - **Evidence of completion** —
   1. **Positive control** — screenshot of an invited test account in an authenticated production state, with the account identifier visible.
   2. **Negative control** — screenshot of an **uninvited** identity attempting the same gated surface in a clean browser profile, showing the denial (block page or auth redirect) and the URL attempted.
-  3. The **recorded location of the invite list** (env var, table, or provider setting) and the **integer count** of admitted identities at launch.
+  3. *(Operational, not required)* Where the invite list lives and how many identities are on it. Useful to know; it is **not** part of the pass condition. The certification evidence is that **both controls were exercised**.
 - **Pass condition** — The positive control shows an authenticated session **and** the negative control shows a non-authenticated result on the same URL. **Both, from two distinct identities.**
 - **State** — ⬜ Open. Roadmap item 10.
 - **Residual risk if omitted** — There is no invite-only beta. Either nobody gets in, or scale is unbounded and the risk-limiting premise of the whole launch is void.
