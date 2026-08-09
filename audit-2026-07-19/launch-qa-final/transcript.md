@@ -64,7 +64,7 @@ Complex, dense recordings could sound congested
 Stacked control may sound overdamped — reducing dynamic expression and musical life
 
 [upgradeDirection]
-If you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally. If the system feels overdamped, a more elastic source or amplifier could restore dynamic life. Single-ended or low-feedback topologies tend to introduce more elasticity.
+This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -91,7 +91,7 @@ The Job integrated leans toward resolution and precision, with the WLM Diva moni
 
 **Emergent behavior**
 
-The Eversolo/Job/Diva chain works because speed is converted into elastic motion rather than edge. Eversolo's conversion stage and the Job's low-friction output feed the Diva's high-efficiency driver, so microdynamics stay lively, quick, and sweet instead of merely lean. Low stored energy and fast recovery keep musical energy moving through the chain.
+The Eversolo/Job/Diva chain works because speed is converted into elastic motion rather than edge. Eversolo's conversion stage and the Job's low-friction output feed the Diva's high-efficiency driver, so small dynamic steps stay quick and clearly differentiated rather than flattened toward one level. Low stored energy and fast recovery keep musical energy moving through the chain.
 
 **System logic**
 Job integrated → Goldmund-derived minimalist Class AB solid-state → low coloration — passes the Eversolo's character through intact
@@ -136,7 +136,7 @@ WLM Diva monitor contributes musical flow and continuity
 WLM Diva monitor has moderate placement sensitivity: Spatial precision improves significantly with careful positioning. Bass energy from the passive radiator can overwhelm small or untreated rooms.
 
 [upgradeDirection]
-Without stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.
+This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -198,7 +198,7 @@ This system is architecturally balanced. No single design philosophy dominates. 
 System character depends on how components interact in practice — further listening context would refine this
 
 [upgradeDirection]
-Without stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.
+This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -261,7 +261,7 @@ This system is architecturally balanced. No single design philosophy dominates. 
 System character depends on how components interact in practice — further listening context would refine this
 
 [upgradeDirection]
-Without stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.
+This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -293,26 +293,25 @@ Decware Se84ufo and Klipsch Cornwall IV reinforce the same direction.
 
 **Primary leverage**
 
-The amplifier.
+System balance (tonal richness).
 
-Decware Se84ufo limits top-end air and transient sparkle, and inner detail and texture. Change it and the rest of the system should open up.
+The chain stacks tonal richness in one direction. Rebalance it and the system serves more material.
 
 **Decision**
 
 KEEP if you value warmth, body, tonal richness.
 
-CHANGE the amplifier if the system sounds constrained. Decware Se84ufo likely limits what the rest of the chain can deliver.
+No single component demands change — improvements from here are preference, not correction.
 
 **Trade-offs**
 
-- Upgrading Decware Se84ufo lifts resolution, changes system balance
 - Solid-state swap adds grip, reduces harmonic bloom
 - Current setup excels on dense music, exposes thinness on sparse tracks
 
 **Next step options**
 
-- Compare amplifier alternatives to Decware Se84ufo
-- Check if amplifier change shifts enough
+- Explore directional alternatives
+- Compare topology options
 
 **Do nothing check**
 
@@ -398,7 +397,7 @@ Resolution repeats at several stages — lesser recordings may sound analytical 
 Magnepan 1.7i has high placement sensitivity: Dipole design — requires distance from rear wall. Needs medium-to-large room for proper bass development and soundstage.
 
 [upgradeDirection]
-If the system feels analytically intense, consider a warmer or more fluid component — a tube stage, a smoother DAC topology, or speakers with more midrange body could restore balance.
+This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -463,30 +462,29 @@ Naim Nait 50 and Falcon Ls3/5a reinforce the same direction.
 
 **Primary leverage**
 
-The amplifier.
+None — no obvious bottleneck.
 
-Naim Nait 50 limits top-end air and transient sparkle, and grip and control. Change it and the rest of the system should open up.
+No single component is holding this system back. Improvements from here are likely to be incremental — setup, positioning, and room treatment will do more than swapping boxes.
 
 **Decision**
 
 KEEP if you value warmth, body, tonal richness.
 
-CHANGE the amplifier if the system sounds constrained. Naim Nait 50 likely limits what the rest of the chain can deliver.
+No single component demands change — improvements from here are preference, not correction.
 
 **Trade-offs**
 
-- Upgrading Naim Nait 50 lifts resolution, changes system balance
 - Solid-state swap adds grip, reduces harmonic bloom
 - Current setup excels on dense music, exposes thinness on sparse tracks
 
 **Next step options**
 
-- Compare amplifier alternatives to Naim Nait 50
-- Check if amplifier change shifts enough
+- Explore directional alternatives
+- Compare topology options
 
 **Do nothing check**
 
-If the system sounds right, it is right. Swapping components without clear cause risks losing coherence without gaining engagement.
+If the music sounds engaging, this system is doing its job. Linn LP12 define the character — changing either reshapes what you hear.
 
 [keyObservation]
 Your component choices suggest a preference for equipment emphasising **precision and control**. Falcon Ls3/5a, Naim Nait 50, Linn LP12 share this design philosophy. The system shares a consistent lean toward tonal richness — this reinforces the system's identity. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.
@@ -502,7 +500,7 @@ Complex, dense recordings could sound congested
 Falcon Ls3/5a has high placement sensitivity: Sealed design is less placement-sensitive than reflex, but isolation and proper stands are essential for imaging.
 
 [upgradeDirection]
-If you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally.
+This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -529,7 +527,7 @@ The Leben CS600X and Denafrips Pontus II lean toward warmth and ease, reinforced
 
 **Emergent behavior**
 
-The Pontus II/CS600X/O/96 chain works because speed is converted into elastic motion rather than edge. Pontus II's harmonic density and the CS600X's harmonic body feed the O/96's high-efficiency driver, so microdynamics stay lively, quick, and sweet instead of merely lean. Low stored energy and fast recovery keep musical energy moving through the chain.
+The Pontus II/CS600X/O/96 chain works because speed is converted into elastic motion rather than edge. Pontus II's harmonic density and the CS600X's harmonic body feed the O/96's high-efficiency driver, so small dynamic steps stay quick and clearly differentiated rather than flattened toward one level. Low stored energy and fast recovery keep musical energy moving through the chain.
 
 **System logic**
 Denafrips Pontus II → tone-rich, smooth conversion → anchors the tonal foundation with warmth
@@ -581,7 +579,7 @@ Stacked elasticity may lose composure on complex orchestral or dense electronic 
 DeVore O/96 has moderate placement sensitivity: Wide-baffle design produces substantial bass energy that can overwhelm rooms smaller than 15 square metres. Needs breathing room — pull away from rear walls to let the presentation open up.
 
 [upgradeDirection]
-If you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally. If you want to introduce more detail and presence without losing the ease, a more revealing source or cables with better transient definition could add clarity without fundamentally changing the system's character. If the system feels loose or uncontrolled, a more composed amplifier or tighter-grip speaker pairing could add stability without losing all dynamic energy.
+This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -599,10 +597,10 @@ What are you exploring — is there something you'd like to change about this ba
 **Response:**
 
 [acknowledge]
-Before I assess this, let me make sure I have your system right.
+I've placed most of your system.
 
 [question]
-So far I can place these 2: Topping D90SE, Purifi. It looks like one more component is in what you wrote that I couldn't pin down. Could you give me the exact make and model number of that one? Then I'll assess the whole system.
+One component in what you wrote I couldn't match to a specific model — what is it, exact make and model? Then I'll read the whole system.
 
 ---
 
@@ -617,10 +615,10 @@ So far I can place these 2: Topping D90SE, Purifi. It looks like one more compon
 **Response:**
 
 [acknowledge]
-Before I assess this, let me make sure I have your system right.
+I can see the shape of your system — let me lock in the exact models.
 
 [question]
-I can see the shape of your system, but I couldn't confidently match Planar 6, Harbeth, Rega to specific models in my catalog. Could you confirm the exact make and model of each? Then I'll assess the whole system.
+I couldn't match Planar 6, Harbeth, Rega to specific models in my catalog — what are the exact makes and models? Then I'll assess the whole system.
 
 ---
 
@@ -662,7 +660,7 @@ The Job integrated leans toward resolution and precision, with the WLM Diva moni
 
 **Emergent behavior**
 
-The Eversolo/Job/Diva chain works because speed is converted into elastic motion rather than edge. Eversolo's conversion stage and the Job's low-friction output feed the Diva's high-efficiency driver, so microdynamics stay lively, quick, and sweet instead of merely lean. Low stored energy and fast recovery keep musical energy moving through the chain.
+The Eversolo/Job/Diva chain works because speed is converted into elastic motion rather than edge. Eversolo's conversion stage and the Job's low-friction output feed the Diva's high-efficiency driver, so small dynamic steps stay quick and clearly differentiated rather than flattened toward one level. Low stored energy and fast recovery keep musical energy moving through the chain.
 
 **System logic**
 Job integrated → Goldmund-derived minimalist Class AB solid-state → low coloration — passes the Eversolo's character through intact
@@ -707,7 +705,7 @@ WLM Diva monitor contributes musical flow and continuity
 WLM Diva monitor has moderate placement sensitivity: Spatial precision improves significantly with careful positioning. Bass energy from the passive radiator can overwhelm small or untreated rooms.
 
 [upgradeDirection]
-Without stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.
+This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -725,10 +723,10 @@ What are you exploring — is there something you'd like to change about this ba
 **Response:**
 
 [acknowledge]
-Before I assess this, let me make sure I have your system right.
+I've placed most of your system.
 
 [question]
-So far I can place these 3: Naim Supernait 3, Chord Qutest, Harbeth Shl5+. It looks like one more component is in what you wrote that I couldn't pin down. Could you give me the exact make and model number of that one? Then I'll assess the whole system.
+One component in what you wrote I couldn't match to a specific model — what is it, exact make and model? Then I'll read the whole system.
 
 ---
 
@@ -760,7 +758,7 @@ Denafrips Ares II and Wharfedale Linton reinforce the same direction.
 
 The DAC.
 
-Denafrips Ares II limits top-end air and transient sparkle, and soundstage size. Change it and the rest of the system should open up.
+Denafrips Ares II likely sets the system's ceiling. Change it and the rest of the chain should deliver more.
 
 **Decision**
 
@@ -794,7 +792,7 @@ Stacked warmth may reduce transient precision and spatial clarity
 Complex, dense recordings could sound congested
 
 [upgradeDirection]
-If you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally.
+This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -1055,7 +1053,7 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 
 **Expectation:** Classic pairing — warm-refined synergy affirmed with a real mechanism.
 
-**Routing:** product_assessment → consultation
+**Routing:** gear_inquiry → consultation
 
 **Response:**
 
@@ -1385,26 +1383,25 @@ Hegel H190 and Harbeth reinforce the same direction.
 
 **Primary leverage**
 
-The amplifier.
+System balance (grip and control).
 
-Hegel H190 limits top-end air and transient sparkle, and tonal ease and forgiveness. Change it and the rest of the system should open up.
+The chain stacks grip and control in one direction. Rebalance it and the system serves more material.
 
 **Decision**
 
 KEEP if you value speed, separation, spatial clarity.
 
-CHANGE the amplifier if the system sounds constrained. Hegel H190 likely limits what the rest of the chain can deliver.
+No single component demands change — improvements from here are preference, not correction.
 
 **Trade-offs**
 
-- Upgrading Hegel H190 lifts resolution, changes system balance
 - Tube stage adds texture, softens control
 - Current setup excels on sparse music, exposes thinness on dense tracks
 
 **Next step options**
 
-- Compare amplifier alternatives to Hegel H190
-- Check if amplifier change shifts enough
+- Explore directional alternatives
+- Compare topology options
 
 **Do nothing check**
 
@@ -1421,7 +1418,7 @@ Stacked warmth may reduce transient precision and spatial clarity
 Complex, dense recordings could sound congested
 
 [upgradeDirection]
-If you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally.
+This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -1682,11 +1679,20 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 
 **Expectation:** Nearfield + low-level-listening guidance (sensitivity, tonal balance at low SPL).
 
-**Routing:** audio_knowledge → llm-lane(audio_knowledge)
+**Routing:** shopping → shopping(speaker)
 
 **Response:**
 
-(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.")
+[expectedImpact]
+Without more system context, this is a sound direction — but the audible difference may be modest.
+
+[followUp]
+Do you want this to lean more warm and punchy, or clean and controlled?
+
+[options]
+• Spendor A1 ($1900) — Best for smooth and balanced and coherent and natural
+• DeVore Fidelity Orangutan O/93 ($4500) — Best for natural musical flow and effortless dynamic scale
+• DeVore Fidelity Orangutan O/Baby ($5600) — Best for warm, organic, and natural and musically flowing and elastic
 
 ---
 
@@ -2116,10 +2122,10 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 **Response:**
 
 [acknowledge]
-Before I assess this, let me make sure I have your system right.
+I've placed most of your system.
 
 [question]
-So far I can place these 3: Rega Planar 3, Schiit Modi, Yamaha A-S701. It looks like one more component is in what you wrote that I couldn't pin down. Could you give me the exact make and model number of that one? Then I'll assess the whole system.
+One component in what you wrote I couldn't match to a specific model — what is it, exact make and model? Then I'll read the whole system.
 
 ---
 
@@ -2394,11 +2400,19 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 
 **Expectation:** Reads the register; energetic budget picks.
 
-**Routing:** audio_knowledge → llm-lane(audio_knowledge)
+**Routing:** shopping → shopping(speaker)
 
 **Response:**
 
-(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.")
+[expectedImpact]
+Without more system context, this is a sound direction — but the audible difference may be modest.
+
+[followUp]
+Do you want this to lean more warm and punchy, or clean and controlled?
+
+[options]
+• Mission MS-50 ($100) — Best for warm, laid-back and modest dynamic range
+• Mission MS 50 8VET ($80) — Best for warm, forgiving, colored and excellent rhythmic coherence and musicality
 
 ---
 
