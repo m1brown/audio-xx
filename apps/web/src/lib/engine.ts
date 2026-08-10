@@ -55,6 +55,34 @@ const CORRECTIONS: Record<string, string> = {
   'reavealing': 'revealing',
   'reveling': 'revealing',
 
+  // Comparative forms → base quality (Mission 4, 2026-08-10). Refinement
+  // turns use comparatives — "warmer sounding please", "smoother please" —
+  // and the signal dictionary carries only base forms, so these turns
+  // extracted ZERO desire signal: the ranking had no direction to move and
+  // a warmth request was answered with precision-focused picks. Explicit
+  // map, not stemming — "speaker" must never become "speak".
+  'warmer': 'warm',
+  'brighter': 'bright',
+  'smoother': 'smooth',
+  'darker': 'dark',
+  'richer': 'rich',
+  'cleaner': 'clean',
+  'faster': 'fast',
+  'softer': 'soft',
+  'harsher': 'harsh',
+  'leaner': 'lean',
+  'fuller': 'full',
+  'thinner': 'thin',
+  'sweeter': 'sweet',
+  'drier': 'dry',
+  'denser': 'dense',
+  'punchier': 'punchy',
+  'livelier': 'lively',
+  'airier': 'airy',
+  'thicker': 'thick',
+  'quicker': 'quick',
+  'tighter': 'tight',
+
   // Shorthand / product variants
   'ares 2': 'ares 15th',
   'ares2': 'ares 15th',
