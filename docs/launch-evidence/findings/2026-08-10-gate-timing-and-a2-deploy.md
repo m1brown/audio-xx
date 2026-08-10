@@ -98,3 +98,28 @@ cover the plural forms the shopping vocabulary already recognizes.
   ("should i upgrade my dac" → reflective question; "speakers for 2000
   dollars" → shopping recommendations with budget 2000, no budget ask)
   is pending the next deploy.
+
+## 7. Closure (Mission 3 reconciliation, 2026-08-10)
+
+The pending state in §6 was closed by the Mission 2 session that
+continued after this record was written: version-b advanced to
+`010f5c3` (six commits past `839f3c5`, all containing `0cce503` and
+`a3c0498` as ancestors), and production was redeployed —
+**`audio-xx-k17mineyo`** now serves audio-xx.com.
+
+No doc ties that deployment to a commit hash, so closure was verified
+by behavior, not inference. Release gate re-run ONCE on the clean
+`010f5c3` tree: **PASS, wall-clock 91 s, exit 0**. Live probes on
+audio-xx.com after hard reload, each on a fresh conversation:
+
+| Probe | Result |
+|---|---|
+| "should i upgrade my dac" | ✅ reflective churn question (§3 fix live) |
+| "speakers for 2000 dollars" | ✅ shopping shortlist honoring ~$2000 (Linton Heritage primary), no budget ask, no essay (§4 fix live) |
+| "my system is fine but i have upgrade itch" (control) | ✅ unchanged churn question |
+| "my speakers for some reason sound harsh" (control) | ✅ full diagnosis, not shopping |
+
+**Production behavior matches `010f5c3` on every probed dimension; no
+redeploy performed** — deploying an identical tree would churn
+production for no evidentiary gain. The blocked-deploy question from §6
+is moot.
