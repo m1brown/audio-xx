@@ -148,3 +148,17 @@ describe('verdict challenges are assessment follow-ups', () => {
     expect((r.state.facts as { assessmentFollowUpTurn?: boolean }).assessmentFollowUpTurn).not.toBe(true);
   });
 });
+
+describe('synergy judgments with named components reach assessment', () => {
+  // Mission 4B: the reunited "corrected spellings + how does it hang
+  // together?" turn dead-ended in symptom hunting because the synergy
+  // phrasing was not judgment language.
+  it('"hang together" + components → system_assessment', () => {
+    expect(detectIntent(
+      'schiit modius dac, luxman l-505z amp, wharfedale linton heritage speakers. my system: shiit modius dac, luxmann l-505z, wharfdale linton — how does it hang together?',
+    ).intent).toBe('system_assessment');
+  });
+  it('bare "how does it hang together" (no components) is not an assessment', () => {
+    expect(detectIntent('how does it hang together?').intent).not.toBe('system_assessment');
+  });
+});

@@ -1612,6 +1612,11 @@ export function detectIntent(
   const SYSTEM_JUDGMENT_PATTERNS = [
     /\bis\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\s+(?:balanced|coherent|well[\s-]?matched|well[\s-]?balanced)\b/i,
     /\bdoes\s+anything\s+need\s+(?:changing|upgrading|improving|fixing|replacing)\b/i,
+    // Synergy judgments (Mission 4B): "how does it hang together?",
+    // "do they work well together?", "are these a good match?"
+    /\bhow\s+(?:does|do)\s+(?:it|this|that|they|these|everything)\s+(?:all\s+)?(?:hang|work|fit|go|play)\s+together\b/i,
+    /\bdo\s+(?:they|these)\s+(?:all\s+)?(?:work|play|go|fit)\s+(?:well\s+|nicely\s+)?together\b/i,
+    /\bare\s+(?:they|these)\s+a\s+good\s+match\b/i,
   ];
   if (
     SYSTEM_JUDGMENT_PATTERNS.some((p) => p.test(currentMessage))
