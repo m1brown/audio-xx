@@ -2256,8 +2256,17 @@ export default function Home() {
     // Exceptions: product_assessment (standalone assessments) and confirmed
     // diagnosis (the user is reporting a problem, not refining a purchase).
     const isInShoppingFlow = effectiveMode === 'shopping' && shoppingAnswerCount > 0;
-    if (isInShoppingFlow && intent !== 'product_assessment' && !diagnosisBreakout && !isNonAdvisoryIntent(intent)) {
-      console.log('[shopping-lock] Overriding intent=%s → shopping (effectiveMode=%s, shoppingAnswerCount=%d)', intent, effectiveMode, shoppingAnswerCount);
+    // Mission 3 F4 (2026-08-10): the isNonAdvisoryIntent exemption exists so
+    // "what is soundstage?" mid-session gets a real answer — but category
+    // pivots phrased as questions ("ok, now what about speakers?", "now how
+    // about an amp") also classify audio_knowledge, and the exemption sent
+    // them to a generic essay, dropping budget and preference context the
+    // carry-forward machinery holds. An explicit category switch is
+    // unambiguous shopping — it wins over the exemption.
+    const lockCategorySwitch = isInShoppingFlow ? detectExplicitCategorySwitch(submittedText) : null;
+    if (isInShoppingFlow && intent !== 'product_assessment' && !diagnosisBreakout
+      && (!isNonAdvisoryIntent(intent) || lockCategorySwitch !== null)) {
+      console.log('[shopping-lock] Overriding intent=%s → shopping (effectiveMode=%s, shoppingAnswerCount=%d, catSwitch=%s)', intent, effectiveMode, shoppingAnswerCount, lockCategorySwitch ?? 'none');
       intent = 'shopping';
     }
     // When diagnosis breaks out, flip effectiveMode so the diagnosis
