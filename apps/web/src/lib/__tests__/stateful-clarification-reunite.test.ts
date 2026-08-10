@@ -79,3 +79,30 @@ describe('the armed question is the exported constant', () => {
     expect(SYSTEM_COMPONENTS_QUESTION).toMatch(/^What components are in your system\?/);
   });
 });
+
+describe('chain-segment counting — partially resolvable chains reach assessment', () => {
+  // Mission 4 re-probe 1: "feliks audio envy + klipsch cornwall iv — what
+  // do you think of this system?" resolved only ONE subject (the brand
+  // "klipsch"), so the assessment gate (which counted resolved subjects)
+  // never fired and the brand-consultation path answered with Klipsch's
+  // representative product — a confident Heresy IV essay, prices, reviews
+  // and buy links, for a user who asked about the Cornwall IV. Counting
+  // chain SEGMENTS routes the message into buildSystemAssessment, whose
+  // validation machinery handles unresolved components honestly.
+  it('the Cornwall probe routes to system_assessment', () => {
+    expect(detectIntent(
+      'feliks audio envy + klipsch cornwall iv — what do you think of this system?',
+    ).intent).toBe('system_assessment');
+  });
+
+  it('control: fully-resolvable chains keep routing to assessment', () => {
+    expect(detectIntent(
+      'denafrips pontus ii + leben cs600 + harbeth 30.2 — what do you think of this system?',
+    ).intent).toBe('system_assessment');
+  });
+
+  it('control: a single product with assessment language is not a system', () => {
+    expect(detectIntent('what do you think of the pontus ii?').intent)
+      .not.toBe('system_assessment');
+  });
+});

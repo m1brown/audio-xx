@@ -1645,7 +1645,24 @@ export function detectIntent(
   }
   // Assessment language + chain notation (+ or →) with 2+ components implies system
   // evaluation even without explicit ownership ("how's this system?" is sufficient).
-  if (hasAssessmentLanguage && hasChainSeparator && subjectMatches.length >= 2) {
+  //
+  // Component count uses chain SEGMENTS, not resolved subjects (Mission 4,
+  // 2026-08-10): "feliks audio envy + klipsch cornwall iv — what do you
+  // think of this system?" resolves only the brand "klipsch" (both models
+  // uncatalogued), so a resolved-subject count let the brand-consultation
+  // path claim the turn and answer with Klipsch's representative product —
+  // a confident Heresy IV essay for a user who asked about the Cornwall IV.
+  // The chain notation itself asserts how many components the user listed;
+  // buildSystemAssessment's validation handles the unresolved ones honestly
+  // (components ask → reunited answer → provisional assessment).
+  // (hasPlusChain itself requires ≥2 resolved subjects, so the segment
+  // count is computed from the raw chain punctuation instead.)
+  const hasChainPunct = /\w\s*[+·•]\s*\w/.test(currentMessage) || hasArrowChain;
+  const chainSegmentCount = hasChainPunct
+    ? currentMessage.split(/[+·•→]|-{1,3}>|={1,2}>|>{2,3}/).map((s) => s.trim()).filter((s) => /[a-z]/i.test(s)).length
+    : 0;
+  if (hasAssessmentLanguage && (hasChainSeparator || chainSegmentCount >= 2)
+    && (subjectMatches.length >= 2 || chainSegmentCount >= 2)) {
     return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }
   // Ownership + chain separator + 2+ subjects implies system presentation.
