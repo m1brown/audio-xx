@@ -128,6 +128,9 @@ const BRAND_NAMES = [
   'pass labs', 'first watt', 'naim', 'luxman', 'accuphase',
   'parasound', 'hegel', 'mcintosh', 'marantz', 'yamaha',
   'shindo', 'leben', 'audio note',
+  // Vintage. 'h.h. scott' / 'hh scott' listed before bare 'scott' so the
+  // longest-match sort claims the full brand form first.
+  'h.h. scott', 'hh scott', 'scott',
   'line magnetic', 'primaluna', 'cary', 'arc', 'audio research',
   'job', 'goldmund', 'crayon', 'xsa', 'trends', 'trends audio',
   'kinki studio', 'kinki', 'enleum', 'bakoon', 'grandinote', 'singxer',
@@ -190,6 +193,7 @@ const PRODUCT_NAMES = [
   'auralic vega', 'hegel h190', 'hegel h190 integrated', 'hegel h190 integrated amplifier', 'hegel rost', 'marantz 2220b', 'oppo opdv971h',
   'job integrated', 'job int',
   'leben cs600x', 'leben cs600', 'leben cs300x', 'leben cs300', 'leben cs-300',
+  'scott 222b', 'scott 222c', '222b', '222c',
   'may kte', 'holo may',
   'srda', 'cia-1', 'cia-1t', 'ta-10', 'trends ta-10',
   'ex-m1+', 'ex-m1 plus', 'kinki studio ex-m1', 'kinki studio ex m1', 'kinki ex-m1', 'kinki ex m1', 'ex-m1', 'ex m1',
@@ -406,6 +410,10 @@ const GEAR_INQUIRY_PATTERNS = [
   /\btell\s+me\s+about\b/i,
   /\bwhat\s+(?:is|are)\s+(?:the\s+)?(?:character|sound|signature|house sound)\b/i,
   /\bhow\s+(?:does|do)\s+(?:the\s+)?(?:\w+\s+)?sound\b/i,
+  // Plural opinion form — "are Shindo amps any good?". The singular
+  // "is the X good" pattern above requires an article, which plural
+  // brand-noun phrasings never carry (routing battery, 2026-08-10).
+  /\bare\s+.+\s+any\s+good\b/i,
 ];
 
 // ── Product assessment patterns ──────────────────────
@@ -442,6 +450,9 @@ const PRODUCT_ASSESSMENT_PATTERNS = [
   /\bhave\s+you\s+heard\b/i,
   /\bany\s+experience\s+with\b/i,
   /\bwhat\s+(?:is|are)\s+(?:the\s+)?(?:character|sound|signature|house sound)\b/i,
+  // "are the Ossuary Audio speakers any good?" — plural opinion form,
+  // mirrored in GEAR_INQUIRY_PATTERNS (routing battery, 2026-08-10).
+  /\bare\s+.+\s+any\s+good\b/i,
 ];
 
 // ── Unknown-product candidate detection (P1 fix, 2026-05-18) ─────────
@@ -599,13 +610,69 @@ function extractProductCandidateName(message: string): string | null {
   }
   flush();
 
-  if (!bestRunHasMeaningful) return null;
+  // Second chance — lowercase brand before a category noun (routing
+  // battery, 2026-08-10). "what do you think of blorptronix amps?" names
+  // a brand the capitalization heuristic above cannot see (users often
+  // type brand names lowercase). An unrecognized word immediately before
+  // a category noun is a brand candidate — PROVIDED it isn't a known
+  // descriptor: sonic qualities ("warm amps" → resolveQuality),
+  // topology/build words ("tube amps"), or price/vintage adjectives
+  // ("cheap dacs"). Those describe a CLASS of gear, and class questions
+  // belong to the knowledge/shopping lanes, not the unknown-product
+  // clarification.
+  if (!bestRunHasMeaningful) {
+    for (let i = 1; i < tokens.length; i++) {
+      const noun = tokens[i].toLowerCase();
+      if (!CATEGORY_NOUN_RE.test(noun)) continue;
+      const prev = tokens[i - 1].replace(/^["'`]+|["'`]+$/g, '');
+      const prevLower = prev.toLowerCase();
+      if (
+        /^[a-z][a-z'-]{2,}$/.test(prevLower)
+        && !TRIGGER_NOISE_WORDS.has(prevLower)
+        && !PRODUCT_CANDIDATE_STOPWORDS.has(prevLower)
+        && !GEAR_CLASS_DESCRIPTORS.has(prevLower)
+        && resolveQuality(prevLower) === null
+      ) {
+        return `${prev} ${tokens[i]}`;
+      }
+    }
+    return null;
+  }
+
   // Trim trailing stopwords from the kept run
   while (bestRun.length > 0 && PRODUCT_CANDIDATE_STOPWORDS.has(bestRun[bestRun.length - 1].toLowerCase())) {
     bestRun.pop();
   }
   return bestRun.length > 0 ? bestRun.join(' ').trim() : null;
 }
+
+/** Category nouns a brand candidate can precede — "blorptronix amps". */
+const CATEGORY_NOUN_RE = /^(?:dacs?|amps?|amplifiers?|integrateds?|speakers?|monitors?|headphones?|iems?|streamers?|turntables?|preamps?|receivers?|subwoofers?|cartridges?|tonearms?)$/;
+
+/**
+ * Adjectives that describe a class of gear rather than name a brand.
+ * "tube amps", "cheap dacs", "vintage receivers" are class questions —
+ * they must not synthesize an unknown-product candidate. Sonic-quality
+ * adjectives ("warm", "bright") are excluded via resolveQuality instead.
+ */
+const GEAR_CLASS_DESCRIPTORS = new Set([
+  // topology / build
+  'tube', 'valve', 'solid', 'hybrid', 'class', 'digital', 'analog', 'analogue',
+  'active', 'passive', 'powered', 'integrated', 'balanced', 'discrete',
+  'r2r', 'ladder', 'delta-sigma', 'transistor', 'mosfet', 'fet',
+  // form factor / placement
+  'bookshelf', 'floorstanding', 'standmount', 'desktop', 'portable',
+  'wireless', 'bluetooth', 'open-back', 'closed-back', 'in-ear', 'over-ear',
+  'small', 'big', 'large', 'compact', 'mini', 'little',
+  // price / age / provenance
+  'cheap', 'expensive', 'budget', 'affordable', 'entry-level', 'high-end',
+  'flagship', 'premium', 'used', 'vintage', 'old', 'older', 'modern', 'new',
+  'newer', 'chinese', 'japanese', 'british', 'american', 'german', 'chifi',
+  'chi-fi',
+  // evaluative
+  'decent', 'nice', 'solid', 'reliable', 'popular', 'recommended', 'quality',
+  'powerful', 'quiet', 'fast', 'musical', 'accurate', 'neutral',
+]);
 
 // ── System assessment patterns ────────────────────────
 // These signal a system-level evaluation request, distinct from diagnosis.
@@ -757,6 +824,105 @@ const OWNERSHIP_PATTERNS = [
   // "here's my/the system:" — presentation phrasing signals ownership
   /\bhere'?s?\s+(?:my|the|a)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
 ];
+
+// ── System-directed evaluation ───────────────────────
+//
+// Beta observation 2026-08-10 (founder, production): "What do you think
+// of Goldmund amps?" returned a full assessment of the saved FRANCE
+// system instead of an opinion on Goldmund.
+//
+// Cause: the saved-system evaluation shortcut in detectIntent (§1b)
+// treats ANY evaluation phrasing as a request to assess the active
+// system. Several of the phrasings it reads carry no system referent of
+// their own — the broad `what do you think` / `what do you make of`
+// entries in SYSTEM_ASSESSMENT_PATTERNS (whose own comment promises an
+// "ownership + subjects gate in detectIntent" that the shortcut never
+// applied) and the bare `assess` / `evaluate` stems in
+// BARE_EVALUATION_PATTERNS. With a saved system attached, every message
+// containing one of them was claimed by system_assessment — including
+// every brand and product question phrased as "what do you think of X".
+//
+// The missing rule: a judgment phrase whose object is a NAMED brand or
+// product is a question about that brand or product. Owning a system
+// does not convert it into a question about the system.
+
+/**
+ * An evaluation phrase together with the head noun of its object, if any:
+ * "what do you think of |the Goldmund|", "assess |the Job integrated|",
+ * "thoughts on |it|". Determiners are consumed so the capture is the noun.
+ * No match at all means the judgment is objectless — "what do you think?",
+ * "tell me what you think", "evaluate".
+ */
+const JUDGMENT_OBJECT_RE = new RegExp(
+  String.raw`\b(?:what\s+do\s+you\s+(?:think|make)\s+(?:of|about)`
+  + String.raw`|thoughts\s+on|opinions?\s+on|tell\s+me\s+about`
+  + String.raw`|how\s+(?:good|is|are)|assess(?:ment\s+of)?|evaluat(?:e|ion\s+of)|review|rate)\s+`
+  + String.raw`(?:(?:the|a|an|my|your|our|their|this|these|those|some|any)\s+)*([\w][\w.&'’/-]*)`,
+  'i',
+);
+
+/**
+ * Object nouns that refer back to the user's system rather than naming
+ * gear — "what do you make of it", "how is everything sounding".
+ */
+const GENERIC_JUDGMENT_OBJECTS = new Set([
+  'it', 'this', 'that', 'these', 'those', 'them', 'they',
+  'everything', 'anything', 'something', 'all', 'both',
+  'system', 'systems', 'setup', 'setups', 'rig', 'rigs', 'chain', 'chains',
+  'gear', 'equipment', 'kit', 'stuff', 'thing', 'things', 'current', 'above',
+]);
+
+/**
+ * Does the evaluation phrase name an object of its own — a brand, a model,
+ * a category — rather than pointing back at the user's system?
+ *
+ * Unresolvable nouns count. "what do you think of blorptronix amps?" is a
+ * question about blorptronix whether or not the catalog knows the name;
+ * the unknown-gear clarification is the honest answer, and an assessment
+ * of the saved system is not.
+ */
+function hasConcreteJudgmentObject(message: string): boolean {
+  const m = JUDGMENT_OBJECT_RE.exec(message);
+  if (!m) return false;
+  return !GENERIC_JUDGMENT_OBJECTS.has(m[1].toLowerCase());
+}
+
+/** Explicit system nouns — "assess my system", "how's this rig". */
+const SYSTEM_REFERENT_RE = /\b(?:system|setup|rig|chain)\b/i;
+
+/** Chain notation — an arrow / plus / interpunct list IS a system. */
+const CHAIN_NOTATION_RE = /(?:→|-{1,3}>|={1,2}>|>{2,3})|\w\s*[+·•]\s*\w/;
+
+/** "speaker: X - amp: Y - dac: Z" — 2+ role labels signal a system chain. */
+const ROLE_LABEL_RE = /\b(?:speakers?|amp(?:lifier)?|dac|streamer|turntable|preamp|pre-amp|source|headphones?|integrated)\s*:/ig;
+
+/**
+ * Is an evaluation-style request directed at the user's own system, or at
+ * gear the message names?
+ *
+ * True — the request refers to a system:
+ *   • an explicit system noun ("assess my system", "how's this rig")
+ *   • ownership language ("I have X, Y and Z — what do you think?")
+ *   • chain notation ("review: Job integrated · WLM Diva · Eversolo")
+ *   • the judgment has no object, or a generic one ("what do you think?",
+ *     "what do you make of it?") — nothing else it could be about
+ *
+ * False — the judgment names an object of its own and nothing systemic
+ * ("What do you think of Goldmund amps?", "assess the Job integrated").
+ * Those belong to the brand / product lanes, which reach the curated
+ * brand profile and the catalog entry respectively — or, for gear the
+ * catalog does not carry, the unknown-gear clarification.
+ *
+ * Subject resolution is deliberately NOT consulted: whether the catalog
+ * recognises the name must not change what the question is about.
+ */
+function isSystemDirectedEvaluation(message: string): boolean {
+  if (SYSTEM_REFERENT_RE.test(message)) return true;
+  if (OWNERSHIP_PATTERNS.some((p) => p.test(message))) return true;
+  if (CHAIN_NOTATION_RE.test(message)) return true;
+  if ((message.match(ROLE_LABEL_RE) || []).length >= 2) return true;
+  return !hasConcreteJudgmentObject(message);
+}
 
 /**
  * Preference-reflection patterns — user is asking what their own
@@ -1567,9 +1733,17 @@ export function detectIntent(
   // Without this, "assess my system" / "evaluate the saved system" /
   // "tell me what you think" fall through to consultation_entry and the
   // user gets asked to re-describe components they've already saved.
+  //
+  // Guarded by isSystemDirectedEvaluation (2026-08-10): owning a system
+  // must not convert a question about named gear into a question about
+  // the system. "What do you think of Goldmund amps?" carries evaluation
+  // phrasing but names a brand and nothing systemic — it falls through to
+  // the brand lane at §5 instead of being answered with an assessment of
+  // the saved system.
   if (
     options.hasActiveSavedSystem
     && (hasAssessmentLanguage || hasBareEvaluation)
+    && isSystemDirectedEvaluation(currentMessage)
   ) {
     return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }
@@ -1641,8 +1815,9 @@ export function detectIntent(
   // descriptions (the saved-system chip renders components with " · ",
   // so users naturally paste that form back — beta observation 2026-08-03).
   const hasPlusChain = /\w\s*[+·•]\s*\w/.test(currentMessage) && subjectMatches.length >= 2;
-  // Labeled-role format: "speaker: X - amp: Y - dac: Z" — 2+ role labels signal a system chain.
-  const ROLE_LABEL_RE = /\b(?:speakers?|amp(?:lifier)?|dac|streamer|turntable|preamp|pre-amp|source|headphones?|integrated)\s*:/ig;
+  // Labeled-role format: "speaker: X - amp: Y - dac: Z" — 2+ role labels
+  // signal a system chain. ROLE_LABEL_RE is module-level so this and
+  // isSystemDirectedEvaluation cannot drift apart.
   const hasLabeledRoleChain = ((currentMessage.match(ROLE_LABEL_RE) || []).length >= 2);
   const hasChainSeparator = hasArrowChain || hasPlusChain || hasLabeledRoleChain;
   if (hasAssessmentLanguage && hasOwnership && subjectMatches.length >= 2) {

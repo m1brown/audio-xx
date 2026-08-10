@@ -526,6 +526,29 @@ function hasComponentDescription(text: string): boolean {
 const ASSESSMENT_VERDICT_CHALLENGE =
   /\bare\s+you\s+sure\b|\bhow\s+do\s+you\s+know\b|\bwhat\s+makes\s+you\s+say\b|\bwhy\s+do\s+you\s+say\b|\bconvince\s+me\b|\bjustify\b|\bprove\s+it\b|^\s*(?:why|really)\s*\??\s*$/i;
 
+/**
+ * Opinion questions about NAMED gear — "what do you think of Goldmund
+ * amps?", "thoughts on the Boenicke W8", "tell me about Shindo".
+ *
+ * Beta observation 2026-08-10 (founder, production): asked mid-assessment,
+ * these were absorbed by the `ready_to_assess` accumulate-and-re-assess
+ * branch below — the question text was appended to the stored system
+ * description and the turn was answered with another assessment of the
+ * saved system. A question about a brand the user does not own is a topic
+ * change, not a component clarification.
+ *
+ * Deliberately narrower than intent.ts's PRODUCT_ASSESSMENT_PATTERNS:
+ * only unambiguous opinion phrasings break the assessment out. Shapes
+ * like "what about the …" stay with accumulation, where they usually are
+ * a clarification of the system under review. Kept local so this module
+ * stays free of imports — see intent.ts `isSystemDirectedEvaluation` for
+ * the same rule applied at the intent layer.
+ */
+const GEAR_OPINION_QUESTION = /\bwhat\s+do\s+you\s+think\s+(?:of|about)\b|\bthoughts\s+on\b|\bopinions?\s+on\b|\btell\s+me\s+about\b|\bknow\s+anything\s+about\b|\bany\s+experience\s+with\b|\bhave\s+you\s+heard\s+(?:of|about)\b|\bwhat\s+do\s+you\s+(?:know|have)\s+(?:about|on)\b/i;
+
+/** System referents — when present the question is about the system. */
+const SYSTEM_REFERENT = /\b(?:system|setup|rig|chain)\b|\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+(?:it|this|that|these|them)\b/i;
+
 const ASSESSMENT_DIRECTION_FOLLOWUP = new RegExp(
   /\b(?:what|which|where)\b[^.?!]{0,60}\b(?:upgrade|improve|change|replace|swap\s+out|spend)\b|\bupgrade\s+(?:just\s+)?(?:one\s+thing|first|next|anything)\b|\b(?:change|improve)\s+(?:just\s+)?one\s+thing\b|\bweak(?:est)?\s+(?:link|point|spot)\b|\bholding\s+(?:it|things|everything|my\s+system)\s+back\b|\bbiggest\s+(?:improvement|impact|difference)\b|\bfirst\s+upgrade\b|\bupgrade\s+path\b|\bshould\s+i\s+(?:upgrade|replace|change)\s+(?:first|next|anything)\b/.source
   + '|' + ASSESSMENT_VERDICT_CHALLENGE.source,
@@ -1412,6 +1435,22 @@ export function transition(
             state: { mode: 'system_assessment', stage: 'ready_to_assess', facts },
             response: { kind: 'proceed' },
           };
+        }
+
+        // ── Named-gear opinion question → leave assessment mode ──
+        // "What do you think of Goldmund amps?" after an assessment is a
+        // new topic, not a component clarification. Without this the
+        // question text was accumulated into `systemAssessmentText` and
+        // answered with a re-assessment of the same system. Reset to idle
+        // and let the normal pipeline route it (intent.ts §5 brand lane) —
+        // the same shape the intent-mismatch escape at the top of
+        // transition() uses.
+        if (
+          context.subjectCount > 0
+          && GEAR_OPINION_QUESTION.test(text)
+          && !SYSTEM_REFERENT.test(text)
+        ) {
+          return { state: INITIAL_CONV_STATE, response: null };
         }
 
         // User is adding/clarifying components after assessment already ran.
