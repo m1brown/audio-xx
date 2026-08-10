@@ -1152,7 +1152,7 @@ const LIMITING_KEYWORDS = [
 
 const BUDGET_AMOUNT_PATTERNS = [
   /\$\s?(\d{1,6}(?:,\d{3})*)/,                      // $1000 or $1,500
-  /(\d{1,6}(?:,\d{3})*)\s*dollars/i,                 // 1000 dollars
+  /(\d{1,6}(?:,\d{3})*)\s*(?:dollars|bucks)\b/i,     // 1000 dollars, 800 bucks
   /budget\s*(?:of|around|is|=|:)?\s*\$?(\d{1,6}(?:,\d{3})*)/i,  // budget is 2000, budget: 2000, budget of 1500
   /under\s+\$?(\d{1,6}(?:,\d{3})*)/i,
   /up\s+to\s+\$?(\d{1,6}(?:,\d{3})*)/i,
@@ -1161,12 +1161,42 @@ const BUDGET_AMOUNT_PATTERNS = [
   /i\s+have\s+\$?(\d{1,6}(?:,\d{3})*)/i,
   /(\d{1,6}(?:,\d{3})*)\s+total\b/i,                // 2000 total
   /limit\s+(?:of\s+)?\$?(\d{1,6}(?:,\d{3})*)/i,    // limit of 2000
+  // Colloquial ceilings (Mission 3, 2026-08-10) — measured misses:
+  /\babout\s+\$?(\d{1,6}(?:,\d{3})*)\b/i,           // about 2500
+  /\bno\s+more\s+than\s+\$?(\d{1,6}(?:,\d{3})*)\b/i, // no more than 1200
+  /\b(\d{1,6}(?:,\d{3})*)\s*(?:max|tops)\b/i,        // 2000 max
+  // Bare number after "for" — 3+ digits (or comma form) so "for 2"
+  // channel/room talk is never read as money.
+  /\bfor\s+\$?(\d{1,3}(?:,\d{3})+|\d{3,6})\b/i,      // for 2000, for 2,000
 ];
+
+// Spelled-out amounts — "two grand", "a grand", "2 grand", "two thousand".
+// Normalized to "$N" BEFORE pattern scanning so every downstream pattern
+// (under/around/for/max…) composes with them. "grand piano" is an
+// instrument, not a budget.
+const SPELLED_SMALL_NUMBERS: Record<string, number> = {
+  a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5,
+  six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+};
+function normalizeSpelledAmounts(text: string): string {
+  return text
+    .replace(
+      /\b(a|an|one|two|three|four|five|six|seven|eight|nine|ten|\d{1,2}(?:\.\d{1,2})?)\s+grand\b(?!\s+piano)/gi,
+      (_m, n: string) => {
+        const base = SPELLED_SMALL_NUMBERS[n.toLowerCase()] ?? parseFloat(n);
+        return isNaN(base) ? _m : `$${Math.round(base * 1000)}`;
+      },
+    )
+    .replace(
+      /\b(one|two|three|four|five|six|seven|eight|nine|ten)\s+thousand\b/gi,
+      (_m, n: string) => `$${SPELLED_SMALL_NUMBERS[n.toLowerCase()]! * 1000}`,
+    );
+}
 
 // "k" suffix patterns — "$5k", "5k", "$2.5k", "2.5k dollars" etc.
 // Handled separately because the multiplier needs special treatment in parseBudgetAmount.
 const K_SUFFIX_PATTERN = /\$\s?(\d{1,4}(?:\.\d{1,2})?)\s*k\b/gi;
-const K_SUFFIX_PATTERN_NO_DOLLAR = /(?:under|around|about|up\s+to|budget\s+(?:of\s+|around\s+|is\s+|=\s*|:\s*)?|spend|limit\s+(?:of\s+)?)\s*(\d{1,4}(?:\.\d{1,2})?)\s*k\b/gi;
+const K_SUFFIX_PATTERN_NO_DOLLAR = /(?:under|around|about|for|up\s+to|budget\s+(?:of\s+|around\s+|is\s+|=\s*|:\s*)?|spend|limit\s+(?:of\s+)?)\s*(\d{1,4}(?:\.\d{1,2})?)\s*k\b/gi;
 
 /**
  * Extract the most recent numeric budget amount from user text.
@@ -1205,11 +1235,13 @@ export function parseBudgetFloor(text: string): number | null {
   }
 
   // "over $X" / "above $X" / "more than $X" / "north of $X" / "starting at $X"
+  // "NO more than $X" is a ceiling, not a floor — strip it before scanning.
+  const floorText = text.replace(/\bno\s+more\s+than\s+\$?\s?\d[\d,]*(?:\.\d{1,2})?\s*k?\b/gi, '');
   const overPatterns: RegExp[] = [
     /(?:over|above|more\s+than|greater\s+than|north\s+of|starting\s+at|at\s+least|minimum\s+(?:of\s+)?)\s*\$?\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)/i,
   ];
   for (const re of overPatterns) {
-    const m = text.match(re);
+    const m = floorText.match(re);
     if (m) {
       const v = toAmount(m[1]);
       if (v !== null) return v;
@@ -1234,6 +1266,10 @@ function parseRangeUpper(text: string): number | null {
   const rangePatterns: RegExp[] = [
     /between\s+\$?\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)\s+(?:and|to|-|–|—)\s+\$?\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)/i,
     /\$\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)\s*(?:to|-|–|—)\s*\$?\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)/i,
+    // Dollar-less range — "1500 to 2000 range" (Mission 3, 2026-08-10).
+    // Each side must be a k-suffixed number or 3+ digits, and the range
+    // must not be a spec ("100 to 200 watts" is power, not money).
+    /\b(\d{1,2}(?:\.\d{1,2})?\s*k|\d{1,3}(?:,\d{3})+|\d{3,6})\s*(?:to|-|–|—)\s*(\d{1,2}(?:\.\d{1,2})?\s*k|\d{1,3}(?:,\d{3})+|\d{3,6})(?!\s*(?:watts?|wpc|hz|khz|ohms?|hours?|days?|years?|%))/i,
   ];
   for (const re of rangePatterns) {
     const m = text.match(re);
@@ -1247,10 +1283,15 @@ function parseRangeUpper(text: string): number | null {
 }
 
 export function parseBudgetAmount(text: string): number | null {
+  // Spelled amounts first, so "two grand" composes with every pattern below.
+  text = normalizeSpelledAmounts(text);
+
   // "over $X" / "above $X" / "more than $X" → no upper cap.
   // We must check this BEFORE the generic numeric scan, otherwise the dollar
   // amount in "over $10000" gets picked up as a ceiling.
-  if (/\b(?:over|above|more\s+than|greater\s+than|north\s+of|starting\s+at|at\s+least|minimum\s+(?:of\s+)?)\s*\$?\s?\d/i.test(text)) {
+  // "NO more than $X" is the opposite — a ceiling — and must not trip this.
+  if (/\b(?:over|above|more\s+than|greater\s+than|north\s+of|starting\s+at|at\s+least|minimum\s+(?:of\s+)?)\s*\$?\s?\d/i.test(text)
+    && !/\bno\s+more\s+than\b/i.test(text)) {
     // If it's *also* a range ("between $X and over $Y"), fall through to range handling.
     // Otherwise return null — the floor lives in parseBudgetFloor.
     if (!/between\s+\$?\d/i.test(text) && !/\$\s?\d[\d,]*(?:\.\d{1,2})?\s*k?\s*(?:to|-|–|—)\s*\$?\s?\d/i.test(text)) {

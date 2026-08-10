@@ -16,7 +16,7 @@ import { isIntakeQuery } from './intake';
 import { extractBipolarPreference } from './bipolar-preference';
 import { detectTopologyQuestion } from './topology-philosophy';
 import { detectPairingIntent } from './pairing-resolver';
-import { LIFESTYLE_SPEAKER_PATTERN } from './shopping-intent';
+import { LIFESTYLE_SPEAKER_PATTERN, parseBudgetAmount } from './shopping-intent';
 
 // ── Intent type ──────────────────────────────────────
 
@@ -1902,6 +1902,23 @@ export function detectIntent(
   if (
     detectExplicitCategoryPivot(currentMessage) &&
     !DIAGNOSIS_PATTERNS.some((p) => p.test(currentMessage))
+  ) {
+    return { intent: 'shopping', subjects, subjectMatches, desires };
+  }
+
+  // 6f. Category + parseable budget → shopping (Mission 3, 2026-08-10).
+  //     Colloquial price language ("speakers around 1.5k", "i can spend
+  //     2000 on speakers", "about 2500 for an integrated amp") carries
+  //     an unambiguous purchase frame even when no shopping keyword
+  //     matched above. Delegate money-recognition to parseBudgetAmount —
+  //     the single authority the shopping pipeline itself uses — instead
+  //     of duplicating its phrasing table here. Placed after every
+  //     diagnosis gate so complaints keep diagnosis priority.
+  const lateCategoryTarget = /\b(?:dacs?|d\/a|amps?|amplifiers?|integrated|speakers?|headphones?|turntables?|streamers?|receivers?|bookshelfs?|floorstanders?|subwoofers?|preamps?|power\s*amps?|iems?|stereo|hi-?fi|hifi|audio\s+system)\b/i.test(currentMessage);
+  if (
+    lateCategoryTarget
+    && !DIAGNOSIS_PATTERNS.some((p) => p.test(currentMessage))
+    && parseBudgetAmount(currentMessage) !== null
   ) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
