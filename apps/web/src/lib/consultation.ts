@@ -16044,10 +16044,31 @@ export function buildSystemDiagnosis(
   // 3. Look up system components
   const componentNames: string[] = [];
   const componentCharacters: string[] = [];
+  const resolvedProducts: (typeof ALL_PRODUCTS)[number][] = [];
 
-  for (const match of subjectMatches) {
+  // Product-kind matches resolve first so their brands are known before
+  // brand-kind matches are considered (Mission 4, 2026-08-10: "chord
+  // qutest into a naim nait 50 with kef ls50 meta" rendered as "Qutest +
+  // Chord + KEF + Naim" — the Qutest's own brand counted again as a
+  // separate component).
+  const orderedMatches = [
+    ...subjectMatches.filter((m) => m.kind !== 'brand'),
+    ...subjectMatches.filter((m) => m.kind === 'brand'),
+  ];
+
+  for (const match of orderedMatches) {
     if (match.parenthetical) continue;
     const matchLower = match.name.toLowerCase();
+
+    // A brand mention that is already represented by a resolved product is
+    // the same physical component, not an additional one.
+    if (match.kind === 'brand' && resolvedProducts.some(
+      (p) => p.brand.toLowerCase() === matchLower
+        || p.brand.toLowerCase().startsWith(matchLower)
+        || matchLower.startsWith(p.brand.toLowerCase()),
+    )) {
+      continue;
+    }
 
     // Try product-level match first, then brand-level (allow partial brand match)
     const product = ALL_PRODUCTS.find(
@@ -16061,6 +16082,7 @@ export function buildSystemDiagnosis(
       const displayName = match.kind === 'brand' ? product.brand : product.name;
       if (!componentNames.includes(displayName)) {
         componentNames.push(displayName);
+        resolvedProducts.push(product);
         // Extract a brief character note
         if (hasTendencies(product.tendencies)) {
           const chars = product.tendencies.character.slice(0, 2);
@@ -16107,8 +16129,18 @@ export function buildSystemDiagnosis(
   // Follow-up question — stays diagnostic, with optional shopping transition
   const shoppingOffer = ' I can suggest specific components to try.';
   let followUp: string;
-  if (mapping.followUpAngle === 'source') {
+  // Do not ask for the source when the user already named one (Mission 4,
+  // 2026-08-10: a Chord Qutest owner was asked "What source are you
+  // using?" in the same breath as their Qutest was diagnosed). Fall back
+  // to the listening-habits question — existing approved copy — instead.
+  const sourceKnown = resolvedProducts.some((p) => {
+    const cat = (p.category ?? '').toLowerCase();
+    return cat.includes('dac') || cat.includes('streamer') || cat.includes('turntable') || cat.includes('source');
+  });
+  if (mapping.followUpAngle === 'source' && !sourceKnown) {
     followUp = 'What source are you using (DAC, streamer, turntable)? That\'s the first place I\'d look.' + shoppingOffer;
+  } else if (mapping.followUpAngle === 'source' && sourceKnown) {
+    followUp = 'What are your listening habits — typical volume, session length, music types? That helps me calibrate.' + shoppingOffer;
   } else if (mapping.followUpAngle === 'room') {
     followUp = 'Can you describe your room — size, surfaces, treatment? That\'s the biggest variable here.' + shoppingOffer;
   } else {
