@@ -1600,6 +1600,27 @@ export function detectIntent(
     return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }
 
+  // 1b-judgment. System-judgment phrasings WITH components present
+  // (Mission 4, 2026-08-10). "is my system balanced" / "does anything need
+  // changing" alongside ≥2 named components — typically a reunited
+  // pending-clarification answer ("amp is X, speakers are Y, source is Z.
+  // is my system balanced") — is an assessment request. Deliberately a
+  // standalone gate rather than SYSTEM_ASSESSMENT_PATTERNS: the shared
+  // hasAssessmentLanguage flag also feeds the consultation-entry gate (1c),
+  // and bare judgment prompts (no components) must keep falling through to
+  // the diagnosis path's "what components are in your system?" ask.
+  const SYSTEM_JUDGMENT_PATTERNS = [
+    /\bis\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\s+(?:balanced|coherent|well[\s-]?matched|well[\s-]?balanced)\b/i,
+    /\bdoes\s+anything\s+need\s+(?:changing|upgrading|improving|fixing|replacing)\b/i,
+  ];
+  if (
+    SYSTEM_JUDGMENT_PATTERNS.some((p) => p.test(currentMessage))
+    && subjectMatches.length >= 2
+    && !DIAGNOSIS_PATTERNS.some((p) => p.test(currentMessage))
+  ) {
+    return { intent: 'system_assessment', subjects, subjectMatches, desires };
+  }
+
   // Phase C blocker fix #1: bare upgrade/improvement follow-ups after a
   // system review ("what would you upgrade first?", "where should I
   // start?") route to consultation_entry so the upgrade-guidance handler

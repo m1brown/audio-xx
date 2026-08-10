@@ -140,6 +140,17 @@ function checkInterpretationAmbiguity(
 const SYSTEM_JUDGMENT_REQUEST =
   /\b(?:my|the)\s+(?:system|setup|chain|rig)\b|\bweakest\s+link\b/i;
 
+/**
+ * The system-components ask, exported so page.tsx can recognise it at the
+ * dispatch site and arm the pending-clarification state (Mission 4,
+ * 2026-08-10). When this question is asked, the NEXT user turn is an
+ * answer to it — it must be reunited with the original request instead of
+ * re-entering the pipeline cold (which produced troubleshooting interviews
+ * about problems the user never reported).
+ */
+export const SYSTEM_COMPONENTS_QUESTION =
+  'What components are in your system? The source, amplifier and speakers would be enough for me to answer this properly.';
+
 function checkDiagnosticUncertainty(
   signals: ExtractedSignals,
   result: EvaluationResult,
@@ -157,7 +168,7 @@ function checkDiagnosticUncertainty(
     // until the system is known. Asking about symptoms here invents a
     // complaint the user did not make.
     if (SYSTEM_JUDGMENT_REQUEST.test(currentMessage) && signals.symptoms.length === 0) {
-      return 'What components are in your system? The source, amplifier and speakers would be enough for me to answer this properly.';
+      return SYSTEM_COMPONENTS_QUESTION;
     }
     return 'Could you describe what specifically bothers or pleases you — is it about how things sound (tone, brightness, warmth), where instruments seem to be (space, width), or how the music moves (timing, rhythm, energy)?';
   }

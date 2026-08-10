@@ -24,7 +24,7 @@ import type { AssessmentContext } from '@/lib/product-assessment';
 import { buildKnowledgeResponse, buildAssistantResponse, requestKnowledgeLlm, requestAssistantLlm } from '@/lib/audio-lanes';
 import type { KnowledgeContext, AssistantContext as AudioAssistantContext } from '@/lib/audio-lanes';
 import { buildDecisionFrame } from '@/lib/decision-frame';
-import { getClarificationQuestion } from '@/lib/clarification';
+import { getClarificationQuestion, SYSTEM_COMPONENTS_QUESTION } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { tryBetaInterceptRouting } from '@/lib/beta-intent-routing';
 import { detectShoppingIntent, buildShoppingAnswer, validateShoppingAnswer, getShoppingClarification, parseBudgetAmount, detectSelectionMode, detectExplicitCategorySwitch, extractPriorityCategory, type PreviousAnchor, type SelectionMode } from '@/lib/shopping-intent';
@@ -575,6 +575,22 @@ export default function Home() {
   const lastAnchorRef = useRef<PreviousAnchor | null>(null);
   const recentShoppingProductsRef = useRef<string[]>([]);
 
+  // ── Pending clarification (Mission 4, 2026-08-10) ──────────────
+  // When the advisor asks a question that requests specific information
+  // (the system-components ask, the churn reflective question), the next
+  // user turn is an ANSWER to it. Without this state, the answer re-entered
+  // the pipeline cold: "amp is a feliks audio envy, …" after "What
+  // components are in your system?" was classified as a fresh diagnosis
+  // entry and produced "let's figure out what's going on with your
+  // amplifier" — an invented problem. The consuming side reunites the
+  // answer with the original request so extraction and routing see the
+  // whole exchange (verified: the reunited text routes to
+  // system_assessment where the answer alone routes to gear_inquiry).
+  const pendingClarificationRef = useRef<{
+    kind: 'system_components' | 'churn_reflection';
+    originalRequest: string;
+  } | null>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -897,8 +913,34 @@ export default function Home() {
       dispatch({ type: 'SET_INPUT', value: overrideText });
     }
 
-    const submittedText = inputText;
+    let submittedText = inputText;
     const isFollowUp = options?.source === 'follow-up';
+
+    // ── Consume pending clarification ─────────────────────────────
+    // If the previous assistant turn asked for specific information, this
+    // turn answers it. Reunite the answer with the original request so the
+    // pipeline reasons over the whole exchange instead of re-entering cold.
+    // Guard: if the user ignored the question and pivoted to a standalone
+    // request (shopping, comparison, an assessment of something else…),
+    // honour the pivot — reuniting would contaminate it with the stale ask.
+    if (pendingClarificationRef.current && !hasPendingImagesForTurn) {
+      const pending = pendingClarificationRef.current;
+      pendingClarificationRef.current = null;
+      const STANDALONE_PIVOT_INTENTS = new Set([
+        'shopping', 'comparison', 'product_assessment', 'system_assessment',
+        'intake', 'music_input', 'greeting', 'educational',
+        'preference_reflection', 'audio_assistant',
+      ]);
+      const rawIntent = detectIntent(inputText).intent;
+      if (!STANDALONE_PIVOT_INTENTS.has(rawIntent)) {
+        submittedText = `${inputText}. ${pending.originalRequest}`;
+        console.log('[pending-clarification] reunited answer with original request (kind=%s): "%s"',
+          pending.kind, submittedText.slice(0, 100));
+      } else {
+        console.log('[pending-clarification] user pivoted (intent=%s) — pending %s cleared without reunite',
+          rawIntent, pending.kind);
+      }
+    }
 
     // Funnel (M5): the conversational path was chosen. Deduped per load.
     if (!isFollowUp) trackProduct('composer_started');
@@ -2121,6 +2163,7 @@ export default function Home() {
 
         // Legacy: if detectInitialMode ever returns clarify_system, ask for system
         if (initialConvMode.mode === 'diagnosis' && initialConvMode.stage === 'clarify_system') {
+          pendingClarificationRef.current = { kind: 'system_components', originalRequest: submittedText };
           dispatch({
             type: 'ADD_QUESTION',
             clarification: {
@@ -3240,6 +3283,7 @@ export default function Home() {
       if (turnCount === 0) {
         const churn = detectChurnSignal(submittedText);
         if (churn.detected && churn.reflectiveQuestion) {
+          pendingClarificationRef.current = { kind: 'churn_reflection', originalRequest: submittedText };
           dispatch({
             type: 'ADD_QUESTION',
             clarification: {
@@ -4697,6 +4741,7 @@ export default function Home() {
       if (newTurnCount === 1) {
         const churn = detectChurnSignal(submittedText);
         if (churn.detected && churn.reflectiveQuestion) {
+          pendingClarificationRef.current = { kind: 'churn_reflection', originalRequest: submittedText };
           dispatch({
             type: 'ADD_QUESTION',
             clarification: {
@@ -4769,6 +4814,12 @@ export default function Home() {
 
         if (clarification) {
           console.log('[diag-cold] clarification fired (skipDiag=%s, componentAware=%s)', skipDiagClarification, !!componentClarification);
+          // Arm the pending-clarification state when the ask is for the
+          // system itself, so the next turn's answer is reunited with this
+          // request instead of re-entering the pipeline cold.
+          if (clarification.question === SYSTEM_COMPONENTS_QUESTION) {
+            pendingClarificationRef.current = { kind: 'system_components', originalRequest: submittedText };
+          }
           dispatch({ type: 'ADD_QUESTION', clarification });
         } else {
           console.log('[diag-cold] dispatching advisory (rules=%d)', evalData.result?.fired_rules?.length ?? 0);
@@ -4928,6 +4979,7 @@ export default function Home() {
     lastAnchorRef.current = null;
     recentShoppingProductsRef.current = [];
     skipToSuggestionsRef.current = false;
+    pendingClarificationRef.current = null;
     dispatch({ type: 'RESET' });
   }
 
