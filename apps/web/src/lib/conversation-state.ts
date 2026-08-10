@@ -888,6 +888,24 @@ export function transition(
             response: { kind: 'proceed', synthesizedQuery: synthesized },
           };
         }
+        // Facts gathered through the machine's own questions must reach the
+        // shopping pipeline. A bare proceed hands the pipeline the user's raw
+        // final reply — verified on production: after "which component?" →
+        // "the dac" → "what's your budget?" → "1500", the pipeline re-routed
+        // the literal text "1500" to the knowledge lane and answered "without
+        // a specific question or component type mentioned…", dropping the
+        // category and budget the intake had just collected. Synthesize the
+        // query from facts, exactly as the music path above already does.
+        if (facts.category && facts.budget) {
+          const budgetPart = facts.budget.replace(/^under\s*/i, '');
+          return {
+            state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
+            response: {
+              kind: 'proceed',
+              synthesizedQuery: `Looking for a ${facts.category} under ${budgetPart}.`,
+            },
+          };
+        }
         return {
           state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
           response: { kind: 'proceed' },

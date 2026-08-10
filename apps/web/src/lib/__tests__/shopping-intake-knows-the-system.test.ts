@@ -41,3 +41,20 @@ describe('shopping intake and the known system', () => {
     expect(q).toMatch(/existing system/i);
   });
 });
+
+describe('intake answers reach the shopping pipeline', () => {
+  it('synthesizes category + budget into the query on ready_to_recommend', () => {
+    // Production sequence: "the dac" consumed → budget asked → "1500".
+    // The raw reply "1500" must not be what the pipeline sees.
+    const awaitingBudget: ConvState = {
+      mode: 'shopping',
+      stage: 'clarify_budget',
+      facts: { category: 'dac' },
+    };
+    const r = transition(awaitingBudget, '1500', { hasSystem: true, subjectCount: 0 });
+    expect(r.response?.kind).toBe('proceed');
+    const q = (r.response as { synthesizedQuery?: string }).synthesizedQuery ?? '';
+    expect(q).toMatch(/dac/i);
+    expect(q).toMatch(/1500/);
+  });
+});
