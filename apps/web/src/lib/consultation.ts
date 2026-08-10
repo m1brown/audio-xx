@@ -1673,6 +1673,28 @@ export const BRAND_PROFILES: BrandProfile[] = [
     systemContext: 'Bookshelf speakers in this class benefit from quality amplification with good damping and current delivery. Room placement matters for bass reinforcement.',
   },
   {
+    // Vintage brand. The catalog carries the Scott 222B / 222C
+    // (scott-222b, founder_reference calibration) but had no brand-level
+    // entry, so brand-only questions ("tell me about H.H. Scott") could
+    // not reach curated content. Prose is deliberately restrained about
+    // period claims and explicit that condition, not model, dominates
+    // how any surviving unit actually sounds (Doctrine D-7).
+    names: ['scott', 'h.h. scott', 'hh scott', 'hermon hosmer scott'],
+    displayName: 'H.H. Scott',
+    founder: 'Hermon Hosmer Scott',
+    country: 'United States',
+    brandScale: 'mainstream',
+    region: 'north-america',
+    categories: ['amplifier'],
+    tagline: 'American mid-century tube electronics — domestic-scale hi-fi, built in volume.',
+    philosophy: 'H.H. Scott, Inc. built tube integrated amplifiers, receivers, and FM tuners in Maynard, Massachusetts from the late 1940s through the 1960s. The company was a volume manufacturer of consumer hi-fi rather than a boutique — many models were sold both factory-wired and as kits, and the circuits were designed for stable, repeatable performance in mass production rather than for exotic parts. The 222 series integrated amplifiers use push-pull EL84 / 7189 output stages at modest power: the domestic format of the period. The firm did not survive the transition to solid-state in commercially meaningful form.',
+    tendencies: 'The 222-series voicing is warm and tonally dense, with harmonic body foregrounded and a relaxed rhythmic character — the American push-pull EL84 idiom of its era. Detail retrieval, bandwidth, and noise floor sit well behind what modern electronics achieve, and that gap is part of the proposition rather than a defect to be corrected. One caution matters more than any model-level description: condition dominates character. A unit that has been recapped, with its output tubes matched and its bias set correctly, behaves quite differently from one that has not. An assessment of a specific Scott is largely an assessment of that unit\'s restoration history.',
+    systemContext: 'Modest output power asks for sensitive speakers — vintage American and British designs, horns, and modern high-efficiency two-ways. The amplifier supplies tonal density, so it balances a clean, resolving source and compounds an already-warm chain rather than correcting it. Ownership decisions here depend as much on the individual unit and on access to a competent technician as on the model.',
+    designPhilosophy: 'Mass-produced American tube electronics designed for stable performance in the home, sold wired or as kits.',
+    sonicTendency: 'Warm, tonally dense, relaxed — period voicing rather than modern resolution.',
+    typicalTradeoff: 'Harmonic body and ease over transparency, bandwidth, and noise performance; character is condition-dependent.',
+  },
+  {
     // schools: musical-communication, japanese-artisan;
     // horn-efficiency-affinity via canonical DeVore Orangutan pairing.
     // The Leben argument: the Luxman voicing tradition — refinement,
