@@ -4912,6 +4912,22 @@ export default function Home() {
     awaitingListeningPathRef.current = false;
     intakeShownRef.current = false;
     setProfileSnapshot(null);
+    // Mission 3 F4 (2026-08-10): "Start over" reset the transcript but not
+    // the conversation-scoped context, so the previous thread's
+    // inline-stated system leaked into the next one ("WHAT I'M WORKING
+    // WITH: Denafrips Pontus II → Leben CS600X" on a fresh 'recommend an
+    // integrated amp' conversation) and shopping facts/category/chain
+    // carried across resets. Saved systems are durable user data and are
+    // deliberately NOT cleared here.
+    audioDispatch({ type: 'SET_PROPOSED_SYSTEM', proposed: null });
+    dismissedFingerprintsRef.current = new Set();
+    lastShoppingFactsRef.current = null;
+    activeShoppingCategoryRef.current = null;
+    hypotheticalChainRef.current = null;
+    engagedProductsRef.current = new Map();
+    lastAnchorRef.current = null;
+    recentShoppingProductsRef.current = [];
+    skipToSuggestionsRef.current = false;
     dispatch({ type: 'RESET' });
   }
 
