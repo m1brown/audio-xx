@@ -631,6 +631,12 @@ const SYSTEM_ASSESSMENT_PATTERNS = [
   new RegExp(String.raw`\bevaluat(?:e|ion)\s+(?:of\s+)?` + SYS_NOUN_PHRASE_FRAG + String.raw`\b`, 'i'),
   /\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
   /\bwhat\s+do\s+you\s+think\b/i,  // Broad — requires ownership + subjects gate in detectIntent
+  // "what do you make of it/this/my system" — same judgment request in
+  // different words, same ownership+subjects gating (Mission 3, 2026-08-10:
+  // the prose form "my system is X into Y driving Z — what do you make of
+  // it?" fell to diagnosis triage and asked for the components it was
+  // already given).
+  /\bwhat\s+do\s+you\s+make\s+of\b/i,
   /\bthoughts\s+on\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
   /\bhow\s+(?:does|is)\s+(?:my|this|the)\s+(?:system|setup|rig|chain)\s*(?:look|seem|stack\s+up|sound)?\b/i,
   /\breview\s+(?:of\s+)?(?:my|this)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
