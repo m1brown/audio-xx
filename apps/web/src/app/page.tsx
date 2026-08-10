@@ -590,6 +590,15 @@ export default function Home() {
     kind: 'system_components' | 'churn_reflection';
     originalRequest: string;
   } | null>(null);
+  // What THIS turn consumed (kind + the state turnCount at consume time).
+  // Read by the assessment-clarification dispatch to cap re-asks: if the
+  // user already answered a components ask this cycle and a component is
+  // STILL unresolved, asking the same question again loops — proceed
+  // provisionally instead.
+  const consumedClarificationRef = useRef<{
+    kind: 'system_components' | 'churn_reflection';
+    atTurn: number;
+  } | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -934,6 +943,7 @@ export default function Home() {
       const rawIntent = detectIntent(inputText).intent;
       if (!STANDALONE_PIVOT_INTENTS.has(rawIntent)) {
         submittedText = `${inputText}. ${pending.originalRequest}`;
+        consumedClarificationRef.current = { kind: pending.kind, atTurn: turnCount };
         console.log('[pending-clarification] reunited answer with original request (kind=%s): "%s"',
           pending.kind, submittedText.slice(0, 100));
       } else {
@@ -2754,7 +2764,39 @@ export default function Home() {
           trackEvent('unmatched_model', ev);
         }
         if (assessmentResult.kind === 'clarification') {
-          // Validation detected a conflict — ask the user before proceeding
+          // Re-ask cap (Mission 4, 2026-08-10): if THIS turn already
+          // consumed a components-ask answer and a component is STILL
+          // unresolved (typically uncatalogued gear — the user cannot
+          // answer any better than they already have), asking the same
+          // question again loops forever. Proceed provisionally instead —
+          // the same LLM-assisted whole-system reading the low_confidence
+          // branch below uses, with unknown components labelled.
+          const consumed = consumedClarificationRef.current;
+          const isRepeatSystemAsk = consumed?.kind === 'system_components' && consumed.atTurn === turnCount;
+          if (isRepeatSystemAsk) {
+            const clarNames = [
+              ...(assessmentResult.clarification.recognized ?? []),
+              ...(assessmentResult.clarification.unresolved ?? []),
+            ];
+            const provisional = await inferProvisionalSystemAssessment(submittedText, clarNames, []);
+            if (provisional) {
+              provisional.source = 'provisional_system';
+              const provisionalAdvisory = consultationToAdvisory(provisional, undefined, advisoryCtx);
+              provisionalAdvisory.unknownComponents = assessmentResult.clarification.unresolved;
+              provisionalAdvisory.reasoningMode = 'expanded';
+              provisionalAdvisory.fallbackReason = 'low_confidence_system';
+              console.log('[pending-clarification] repeat components ask capped — provisional assessment dispatched');
+              dispatchAdvisory(provisionalAdvisory, advisoryId());
+              dispatch({ type: 'SET_LOADING', value: false });
+              return;
+            }
+            // LLM unavailable — fall through to asking once more rather
+            // than answering with nothing.
+          }
+          // Validation detected a conflict — ask the user before proceeding,
+          // and arm the pending state so the answer is reunited with this
+          // turn's full context instead of re-entering the pipeline cold.
+          pendingClarificationRef.current = { kind: 'system_components', originalRequest: submittedText };
           dispatch({ type: 'ADD_QUESTION', clarification: assessmentResult.clarification });
           dispatch({ type: 'SET_LOADING', value: false });
           return;
@@ -4980,6 +5022,7 @@ export default function Home() {
     recentShoppingProductsRef.current = [];
     skipToSuggestionsRef.current = false;
     pendingClarificationRef.current = null;
+    consumedClarificationRef.current = null;
     dispatch({ type: 'RESET' });
   }
 
