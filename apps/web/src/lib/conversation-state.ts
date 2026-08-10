@@ -906,8 +906,16 @@ export function transition(
             },
           };
         }
-        // Have category — now need budget
-        const budgetQuestion = facts.fromScratch
+        // Have category — now need budget.
+        //
+        // Never ask about an existing system the advisor already knows.
+        // Verified on production: a user whose three-component system had
+        // been assessed, echoed and check-marked earlier in the same
+        // conversation was asked "do you have an existing system these need
+        // to work with?" — the canonical not-listening failure. The caller
+        // already passes context.hasSystem (active/saved/injected system);
+        // it simply was not consulted here.
+        const budgetQuestion = facts.fromScratch || context.hasSystem
           ? "What's your budget?"
           : "What's your budget? And do you have an existing system these need to work with?";
         return {
