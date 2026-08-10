@@ -79,6 +79,62 @@ churn-answer symptom carry, pivot-guard inputs, chain-segment routing.
 - Full-suite runs mutate `audit-2026-07-19/launch-qa-final/*` artifacts;
   restored via git checkout each time.
 
+## Mission 4B — independent production stress sweep (while task_dc41e463 runs)
+
+Constraint honored: no disclosure/trust/privacy surfaces touched.
+Production at sweep end: **`audio-xx-80fkjpwvn`**.
+
+**Repairs (3, each gated + deployed + live-replayed):**
+1. **Judgment requests are not hijacked into component troubleshooting** —
+   "my system: shiit modius dac, luxmann l-505z, wharfdale linton — how
+   does it hang together?" (3 misspellings) was answered with "let's
+   figure out what's going on with your DAC". `SYSTEM_JUDGMENT_REQUEST`
+   now gates the troubleshooting map; genuine complaints keep it (pinned).
+2. **Verdict challenges are assessment follow-ups** — "are you sure? it
+   feels like you say that to everyone" after "Nothing here needs
+   changing" got a generic knowledge-lane meta-essay. Challenge phrasings
+   now take the assessment-continuity path; live replay answers from the
+   assessment ("Honestly — nothing… No single component is holding the
+   others back"). Component additions still accumulate (pinned).
+3. **Synergy judgments are assessment language with components** — "how
+   does it hang together?" wasn't judgment language, so the reunited turn
+   dead-ended in symptom hunting. Added to the subjects-gated judgment
+   gate. Live full loop: misspelled chain → partial-recognition ask
+   ("✓ Linton Heritage ✓ Schiit Modius E … one component I couldn't
+   match") → answer → provisional review under EXPANDED REASONING.
+
+**Verified clean:** commerce link↔pick integrity (Amazon/eBay/HiFiShark
+search terms exactly match all picks; no wrong-brand substitution; no
+phantom cards) · "no tubes" + budget honored on the shortlist ·
+terse-answer clarification flows (state repair) · Start-over isolation.
+
+**New parked items:**
+- **P-4B1 (invariant violation, architectural)** — mid-session constraint
+  retraction ("actually forget the no-tubes rule — what would you pick
+  then?") was answered with "What's your budget?" — the $2000 stated two
+  turns earlier forgotten. Data-layer replay proves the conversation
+  state machine handles the same sequence CORRECTLY; the live failure is
+  the page-level split: the pipeline's shopping memory
+  (`lastShoppingFactsRef`) and the state machine's facts are parallel
+  stores that never share. This is the known "two parallel flows /
+  budget handling" Beta Learning item, upgraded with an
+  invariant-violation reproduction ("budget persists unless explicitly
+  changed"). Unifying fact ownership is a design decision — founder call.
+- **P-4B2** — form-factor facet: "bookshelf speakers around $1500"
+  returned a floorstanding panel (Magnepan .7); selection has no
+  form-factor filter. Catalog/engine facet work.
+- **P-4B3** — dealer-only brands render "Buy new → Amazon" search links
+  (Magnepan entries carry no `buyingContext`); catalog data fix requires
+  founder approval per the no-autonomous-catalog-edits rule.
+
+**Coverage note:** long multi-turn threads (8–15 turns) were only
+partially exercised — the browser pane's synthetic-input limitation
+constrains deep threads (native form_input + JS-click hybrid works but
+the pane's accessibility tree intermittently returns empty). The covered
+legs (assessment→challenge→follow-up, shopping→refine→pivot,
+ask→answer→ask→answer chains of 3–4 turns) behaved consistently post-fix.
+Deeper thread soak belongs to real-user beta traffic.
+
 ## Saturation assessment — deferred to the final report
 
 Pending the disclosure session's landing (task_dc41e463): disclosure
