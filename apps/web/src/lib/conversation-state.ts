@@ -518,8 +518,19 @@ function hasComponentDescription(text: string): boolean {
 // Direction-seeking follow-up after an assessment: asks WHICH move to make
 // without naming a replacement product. Kept narrow — explicit buying
 // intent ("I want to buy a new DAC") must still exit to shopping.
-const ASSESSMENT_DIRECTION_FOLLOWUP =
-  /\b(?:what|which|where)\b[^.?!]{0,60}\b(?:upgrade|improve|change|replace|swap\s+out|spend)\b|\bupgrade\s+(?:just\s+)?(?:one\s+thing|first|next|anything)\b|\b(?:change|improve)\s+(?:just\s+)?one\s+thing\b|\bweak(?:est)?\s+(?:link|point|spot)\b|\bholding\s+(?:it|things|everything|my\s+system)\s+back\b|\bbiggest\s+(?:improvement|impact|difference)\b|\bfirst\s+upgrade\b|\bupgrade\s+path\b|\bshould\s+i\s+(?:upgrade|replace|change)\s+(?:first|next|anything)\b/i;
+// Verdict challenges (Mission 4B, 2026-08-10): "are you sure?" after a
+// no-change assessment routed to the knowledge lane and answered with a
+// generic meta-essay about how the advisor works, never re-engaging the
+// verdict or the system's evidence. A challenge to the verdict is an
+// assessment follow-up — it must be answered FROM the assessment.
+const ASSESSMENT_VERDICT_CHALLENGE =
+  /\bare\s+you\s+sure\b|\bhow\s+do\s+you\s+know\b|\bwhat\s+makes\s+you\s+say\b|\bwhy\s+do\s+you\s+say\b|\bconvince\s+me\b|\bjustify\b|\bprove\s+it\b|^\s*(?:why|really)\s*\??\s*$/i;
+
+const ASSESSMENT_DIRECTION_FOLLOWUP = new RegExp(
+  /\b(?:what|which|where)\b[^.?!]{0,60}\b(?:upgrade|improve|change|replace|swap\s+out|spend)\b|\bupgrade\s+(?:just\s+)?(?:one\s+thing|first|next|anything)\b|\b(?:change|improve)\s+(?:just\s+)?one\s+thing\b|\bweak(?:est)?\s+(?:link|point|spot)\b|\bholding\s+(?:it|things|everything|my\s+system)\s+back\b|\bbiggest\s+(?:improvement|impact|difference)\b|\bfirst\s+upgrade\b|\bupgrade\s+path\b|\bshould\s+i\s+(?:upgrade|replace|change)\s+(?:first|next|anything)\b/.source
+  + '|' + ASSESSMENT_VERDICT_CHALLENGE.source,
+  'i',
+);
 
 /**
  * Counts major system roles mentioned in text.

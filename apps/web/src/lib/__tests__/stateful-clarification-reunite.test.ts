@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { detectIntent } from '../intent';
 import { detectChurnSignal } from '../churn-avoidance';
 import { SYSTEM_COMPONENTS_QUESTION, SYSTEM_JUDGMENT_REQUEST } from '../clarification';
+import { transition } from '../conversation-state';
 
 /**
  * Mission 4 — stateful clarification (2026-08-10).
@@ -123,5 +124,27 @@ describe('judgment requests are not hijacked by component troubleshooting', () =
   it('genuine component complaints do not match (troubleshooting keeps them)', () => {
     expect(SYSTEM_JUDGMENT_REQUEST.test('I want to fix my amp')).toBe(false);
     expect(SYSTEM_JUDGMENT_REQUEST.test('my dac is acting up')).toBe(false);
+  });
+});
+
+describe('verdict challenges are assessment follow-ups', () => {
+  // Mission 4B: "are you sure?" after "Nothing here needs changing" was
+  // answered by the knowledge lane with a generic essay about how the
+  // advisor works. Challenges must take the assessment-continuity path
+  // and be answered FROM the assessment.
+  const readyState = { mode: 'system_assessment', stage: 'ready_to_assess', facts: {} } as const;
+  const ctx = { hasSystem: true, subjectCount: 0, detectedIntent: 'audio_knowledge' } as const;
+
+  for (const challenge of ['are you sure?', 'how do you know that?', 'really?', 'why?', 'convince me']) {
+    it(`"${challenge}" proceeds as an assessment follow-up`, () => {
+      const r = transition({ ...readyState, facts: {} } as never, challenge, ctx as never);
+      expect(r.response?.kind).toBe('proceed');
+      expect((r.state.facts as { assessmentFollowUpTurn?: boolean }).assessmentFollowUpTurn).toBe(true);
+    });
+  }
+
+  it('component additions still accumulate instead of proceeding', () => {
+    const r = transition({ ...readyState, facts: {} } as never, 'also i have a rel t5x sub', { ...ctx, subjectCount: 1 } as never);
+    expect((r.state.facts as { assessmentFollowUpTurn?: boolean }).assessmentFollowUpTurn).not.toBe(true);
   });
 });
