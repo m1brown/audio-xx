@@ -121,6 +121,30 @@ engaged.
 | F6 price language | Repaired + locked (29 cases). |
 | F7 constraints + manufacturer knowledge | Broken (P7/P8). |
 
+## Deployment & live verification (2026-08-10, end of mission)
+
+Release gate on the Mission 3 tree: **PASS, wall-clock 97 s, exit 0**.
+Deployed: **`audio-xx-hpo505vce`** (`dpl_AH2AMsZW82Nhhw4QBer8kgdD7QbL`),
+aliased to audio-xx.com. Live after hard reload:
+
+| Fix | Live result |
+|---|---|
+| Colloquial budget (F6) | ✅ "speakers around 1.5k" → shopping shortlist "under ~$1500" (Linton Heritage primary), no essay, no budget ask — verified twice |
+| Judgment phrasing (F1) | ✅ the prose-chain "what do you make of it?" renders a full SYSTEM ASSESSMENT (was: "What components are in your system?"). Component names render as stated (no "12th-1" specificity upgrade on this entry path; "Harbeth" still brand-level → P2 stands) |
+| Start-over clearing (F4) | ✅ assessment → Start over → "speakers around 1.5k" shows **no phantom system** (the exact pre-fix leak sequence) |
+| Category-pivot lock (F4) | ⚠️ not live-verified — requires a turn-2 submit, and the browser pane could not deliver multi-turn input this session (see below). Unit evidence + same-bundle deployment + gate PASS. |
+| Inline tuning context (F1) | ⚠️ same limitation (turn-2 probe). Unit evidence + same-bundle deployment + gate PASS. |
+
+**Measurement-artifact note (explicitly not a product defect):** after the
+deploy, synthetic browser-pane input stopped reaching React's onChange on
+turn-2+ submits. A React-fiber probe of the live page showed healthy app
+state (`isLoading: false`, messages intact, `currentInput` empty — the
+input events simply never committed). First-submit-per-conversation-state
+probes work reliably and were used for the verifications above. Real users
+type real keystrokes and are unaffected; this session's earlier multi-turn
+probes on `audio-xx-k17mineyo` worked with the same app code paths. Do not
+convert this harness limitation into a defect report.
+
 ## Mission-continuation answer
 
 Synthetic pre-beta hardening is **still producing new defect classes at a
