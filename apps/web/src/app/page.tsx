@@ -1156,8 +1156,14 @@ export default function Home() {
       // phrasings ("assess my system", "evaluate the saved system",
       // "tell me what you think") route to system_assessment instead of
       // consultation_entry intake.
+      // Mission 3 F1 (2026-08-10): an inline-stated system persisted by
+      // Phase K is just as much "the system" as a saved one — excluding
+      // it sent post-assessment tuning requests ("more air and openness")
+      // to the knowledge lane's generic essay instead of the
+      // active-system tuning handler.
       const hasActiveSavedSystemEarly = earlyTurnCtx.systemSource === 'saved'
-        || earlyTurnCtx.systemSource === 'draft';
+        || earlyTurnCtx.systemSource === 'draft'
+        || earlyTurnCtx.systemSource === 'inline';
       const { intent: earlyIntent } = detectIntent(submittedText, {
         hasActiveSavedSystem: hasActiveSavedSystemEarly,
       });
@@ -1899,8 +1905,12 @@ export default function Home() {
     // already canonical in turnCtx.
     // Blocker fix §1: pass active-saved-system flag so bare evaluation
     // phrasings route to system_assessment rather than consultation_entry.
+    // 'inline' included since Mission 3 F1 (2026-08-10) — see the early
+    // variant above. The Phase K persisted inline system must give
+    // follow-up desire statements the tuning path, not a knowledge essay.
     const hasActiveSavedSystemMain = turnCtx.systemSource === 'saved'
-      || turnCtx.systemSource === 'draft';
+      || turnCtx.systemSource === 'draft'
+      || turnCtx.systemSource === 'inline';
     {
       const _intentResult = detectIntent(submittedText, {
         hasActiveSavedSystem: hasActiveSavedSystemMain,
