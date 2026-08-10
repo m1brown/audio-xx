@@ -137,7 +137,16 @@ function checkInterpretationAmbiguity(
  * a valid churn signal and should take the early return in page.tsx. That it
  * does not is a separate gating defect — see churn-control-pin.test.ts.
  */
-const SYSTEM_JUDGMENT_REQUEST =
+/**
+ * Exported for page.tsx (Mission 4B, 2026-08-10): the component-aware
+ * troubleshooting clarification is consulted BEFORE this module's system
+ * ask, so a judgment request that happens to name component categories
+ * ("my system: <dac>, <amp>, <speakers> — how does it hang together?")
+ * was hijacked into "let's figure out what's going on with your DAC" —
+ * an invented problem. Judgment requests must skip the troubleshooting
+ * map and fall through to the system ask.
+ */
+export const SYSTEM_JUDGMENT_REQUEST =
   /\b(?:my|the)\s+(?:system|setup|chain|rig)\b|\bweakest\s+link\b/i;
 
 /**

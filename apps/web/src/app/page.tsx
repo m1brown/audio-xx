@@ -24,7 +24,7 @@ import type { AssessmentContext } from '@/lib/product-assessment';
 import { buildKnowledgeResponse, buildAssistantResponse, requestKnowledgeLlm, requestAssistantLlm } from '@/lib/audio-lanes';
 import type { KnowledgeContext, AssistantContext as AudioAssistantContext } from '@/lib/audio-lanes';
 import { buildDecisionFrame } from '@/lib/decision-frame';
-import { getClarificationQuestion, SYSTEM_COMPONENTS_QUESTION } from '@/lib/clarification';
+import { getClarificationQuestion, SYSTEM_COMPONENTS_QUESTION, SYSTEM_JUDGMENT_REQUEST } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { tryBetaInterceptRouting } from '@/lib/beta-intent-routing';
 import { detectShoppingIntent, buildShoppingAnswer, validateShoppingAnswer, getShoppingClarification, parseBudgetAmount, detectSelectionMode, detectExplicitCategorySwitch, extractPriorityCategory, type PreviousAnchor, type SelectionMode } from '@/lib/shopping-intent';
@@ -4815,7 +4815,15 @@ export default function Home() {
         [/\b(?:cables?|interconnects?|power\s*cords?)\b/i, 'cables', 'What changed when you added or swapped them? More brightness, less bass, different staging?'],
       ];
       let componentClarification: { acknowledge: string; question: string } | null = null;
-      if (!hasSymptomSignals && intent === 'diagnosis') {
+      // A judgment request about the whole system must not be hijacked into
+      // component troubleshooting just because it names component categories
+      // (Mission 4B, 2026-08-10: "my system: <dac>, <amp>, <speakers> — how
+      // does it hang together?" was answered with "let's figure out what's
+      // going on with your DAC. Does it sound thin, digital…"). Skipping the
+      // map lets getClarificationQuestion's system ask fire, which arms the
+      // pending-clarification state and leads to a real assessment.
+      const isSystemJudgment = SYSTEM_JUDGMENT_REQUEST.test(submittedText) && !hasSymptomSignals;
+      if (!hasSymptomSignals && intent === 'diagnosis' && !isSystemJudgment) {
         for (const [pattern, label, followUp] of componentCategoryMap) {
           if (pattern.test(submittedText)) {
             componentClarification = {

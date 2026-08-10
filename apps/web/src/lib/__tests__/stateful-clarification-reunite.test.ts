@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { detectIntent } from '../intent';
 import { detectChurnSignal } from '../churn-avoidance';
-import { SYSTEM_COMPONENTS_QUESTION } from '../clarification';
+import { SYSTEM_COMPONENTS_QUESTION, SYSTEM_JUDGMENT_REQUEST } from '../clarification';
 
 /**
  * Mission 4 — stateful clarification (2026-08-10).
@@ -104,5 +104,24 @@ describe('chain-segment counting — partially resolvable chains reach assessmen
   it('control: a single product with assessment language is not a system', () => {
     expect(detectIntent('what do you think of the pontus ii?').intent)
       .not.toBe('system_assessment');
+  });
+});
+
+describe('judgment requests are not hijacked by component troubleshooting', () => {
+  // Mission 4B: "my system: shiit modius dac, luxmann l-505z, wharfdale
+  // linton — how does it hang together?" (three brand misspellings, zero
+  // resolvable subjects) was answered with "let's figure out what's going
+  // on with your DAC" — the component-troubleshooting map fires before the
+  // system ask for any diagnosis-routed message naming a category word.
+  // page.tsx skips the map when SYSTEM_JUDGMENT_REQUEST matches with no
+  // symptoms; these pin the discriminator inputs.
+  it('the misspelled judgment request matches the judgment pattern', () => {
+    expect(SYSTEM_JUDGMENT_REQUEST.test(
+      'my system: shiit modius dac, luxmann l-505z, wharfdale linton — how does it hang together?',
+    )).toBe(true);
+  });
+  it('genuine component complaints do not match (troubleshooting keeps them)', () => {
+    expect(SYSTEM_JUDGMENT_REQUEST.test('I want to fix my amp')).toBe(false);
+    expect(SYSTEM_JUDGMENT_REQUEST.test('my dac is acting up')).toBe(false);
   });
 });
