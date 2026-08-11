@@ -90,3 +90,31 @@ describe('shopping ENTRY consumes revision-phrased budgets (D2 residual)', () =>
     expect(r.state.facts.budget).toBe('$3000');
   });
 });
+
+describe('clarify_budget: the stage licenses loose amounts (M5-F2)', () => {
+  // Mission 5: "maybe 2k? honestly not sure I even want to spend it"
+  // re-asked the budget. Inside clarify_budget the question was JUST
+  // asked — the stage context is the anchor, so any k-token or bare
+  // 3-6 digit number in the reply is the budget, hedges and all.
+  const asking: ConvState = {
+    mode: 'shopping',
+    stage: 'clarify_budget',
+    facts: { category: 'speakers' },
+  };
+  const HEDGED: Array<[string, string]> = [
+    ['maybe 2k? honestly not sure I even want to spend it', '$2000'],
+    ['i guess 1500 or so', '$1500'],
+    ['probably 2.5k max', '$2500'],
+  ];
+  for (const [answer, want] of HEDGED) {
+    it(`"${answer}" → ${want}`, () => {
+      const r = transition(asking, answer, { hasSystem: false, subjectCount: 0 });
+      expect(r.state.facts.budget).toBe(want);
+      expect(r.state.stage).toBe('ready_to_recommend');
+    });
+  }
+  it('control: an amount-free reply still re-asks', () => {
+    const r = transition(asking, 'whatever it takes I suppose', { hasSystem: false, subjectCount: 0 });
+    expect(r.state.stage).toBe('clarify_budget');
+  });
+});

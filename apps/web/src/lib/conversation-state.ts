@@ -938,8 +938,16 @@ export function transition(
         if (parsed !== null) {
           facts.budget = `$${parsed}`;
         } else {
+          // Stage-licensed loose scan (M5-F2, 2026-08-11): the budget
+          // question was JUST asked, so the stage context is the anchor —
+          // "maybe 2k? honestly not sure I even want to spend it" is a
+          // budget answer, hedges and all. Any k-token or bare 3-6 digit
+          // number in the reply counts here and ONLY here.
+          const looseK = text.match(/\b(\d{1,4}(?:\.\d{1,2})?)\s*k\b/i);
           const plainMatch = text.match(PLAIN_BUDGET_PATTERN);
-          if (plainMatch) {
+          if (looseK) {
+            facts.budget = `$${Math.round(parseFloat(looseK[1]) * 1000)}`;
+          } else if (plainMatch) {
             facts.budget = `$${plainMatch[1]}`;
           }
         }
