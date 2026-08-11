@@ -1095,15 +1095,28 @@ export function extractSubjectMatches(text: string): SubjectMatch[] {
   // Then check brand names, skip if already matched as product.
   // Also detect parenthetical clarifications like "Job (Goldmund)" —
   // the parenthesized brand is a manufacturer note, not a separate component.
+  //
+  // Plural tolerance (M5-F3b, 2026-08-11): hobbyists pluralize brands —
+  // "the wharfedales", "my dynaudios", "the kefs". A trailing 's' after
+  // the brand counts as a boundary UNLESS the pluralized form is a common
+  // English word (missions, arcs, quads, echoes) — those never match.
+  const AMBIGUOUS_PLURAL_BRANDS = new Set(['mission', 'quad', 'echo', 'arc', 'spring', 'focal']);
   for (const name of BRAND_NAMES) {
     const idx = lower.indexOf(name);
     if (idx === -1) continue;
     if (found.some((f) => f.name === name)) continue;
 
     // Skip brands whose span is already claimed by a product match
-    const end = idx + name.length;
+    let end = idx + name.length;
     if (isSpanClaimed(idx, end)) continue;
-    if (!isWordBoundary(idx, end)) continue;
+    if (!isWordBoundary(idx, end)) {
+      const pluralOk = !AMBIGUOUS_PLURAL_BRANDS.has(name)
+        && lower[end] === 's'
+        && isWordBoundary(idx, end + 1)
+        && !isSpanClaimed(idx, end + 1);
+      if (!pluralOk) continue;
+      end = end + 1;
+    }
 
     // Detect parenthetical context: "(goldmund)" after another brand/product
     const beforeParen = lower.lastIndexOf('(', idx);

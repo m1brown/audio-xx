@@ -61,3 +61,25 @@ describe('exclusion turns route to shopping refinement', () => {
   });
 });
 
+
+describe('pluralized brand names extract as subjects (M5-F3b)', () => {
+  // "the wharfedales" / "my dynaudios" / "the kefs" are everyday hobbyist
+  // plurals; exact-name matching missed them, which is why the rejection
+  // turn lost its subject and fell to the knowledge lane.
+  const CASES: Array<[string, string]> = [
+    ['not the wharfedales, my brother has those', 'wharfedale'],
+    ['what would I lose going from my dynaudios to the spendor?', 'dynaudio'],
+    ['i run the kefs nearfield', 'kef'],
+  ];
+  for (const [text, brand] of CASES) {
+    it(`"${text}" extracts ${brand}`, () => {
+      const names = detectIntent(text).subjectMatches.map((m) => m.name);
+      expect(names).toContain(brand);
+    });
+  }
+  it('control: English words that pluralize ambiguous brands never match', () => {
+    for (const text of ['their missions overseas', 'the arcs of the story', 'quads burn on hill climbs', 'echoes in the hall']) {
+      expect(detectIntent(text).subjectMatches).toHaveLength(0);
+    }
+  });
+});
