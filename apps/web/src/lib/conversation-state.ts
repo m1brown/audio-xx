@@ -388,6 +388,12 @@ const DIAGNOSIS_SIGNAL_PATTERNS = [
   /\bnot\s+(?:enough|happy|satisfied)\b/i,
   /\bsomething\s+(?:(?:is|sounds?|feels?)\s+)?(?:off|wrong|missing)\b/i,
   /\b(?:problem|issue)\s+with\b/i,
+  // Causal-hypothesis pivot (M5-F8, 2026-08-11): "could my amp be
+  // causing the brightness?" mid-shopping must release the shopping
+  // state — without this signal, isIntentMismatch never fired and the
+  // done-stage refinement classifier consumed the pivot as a
+  // preference delta, re-rendering shopping cards.
+  /\b(?:could|might|can)\s+(?:my|the)\s+[\w\s-]{2,24}?\bbe\s+(?:causing|behind|responsible\s+for)\b/i,
 ];
 
 /**

@@ -351,3 +351,23 @@ describe('upgrade questions with an inline system reach assessment (M5-F7)', () 
     expect(detectIntent('what would you upgrade first?', SAVED).intent).toBe('consultation_entry');
   });
 });
+
+describe('causal-hypothesis questions about symptoms are diagnosis (M5-F8)', () => {
+  // Mission 5 interaction combo: shopping → "actually wait — could my
+  // current amp be causing the brightness?" stayed in shopping and
+  // re-rendered speaker cards. A causal question about an owned
+  // component and a named symptom is diagnosis, mid-shopping or not.
+  const CASES = [
+    'actually wait — could my current amp be causing the brightness?',
+    'could my amp be causing the brightness?',
+    'could the dac be behind the harshness?',
+  ];
+  for (const q of CASES) {
+    it(`"${q}" → diagnosis`, () => {
+      expect(detectIntent(q).intent).toBe('diagnosis');
+    });
+  }
+  it('control: "could my amp drive the lrs+?" stays a capability question', () => {
+    expect(detectIntent('could my amp drive the lrs+?').intent).toBe('audio_knowledge');
+  });
+});

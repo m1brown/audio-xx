@@ -970,6 +970,11 @@ const PREFERENCE_REFLECTION_PATTERNS = [
 // These signal a listening problem or system symptom.
 
 const DIAGNOSIS_PATTERNS = [
+  // Causal-hypothesis form (M5-F8, 2026-08-11): "could my amp be causing
+  // the brightness?" — the user proposes a component as the cause of a
+  // named symptom. Mid-shopping this must pivot to diagnosis; it was
+  // read as a concept question and re-rendered shopping cards.
+  /\b(?:could|might|can)\s+(?:my|the)\s+[\w\s-]{2,24}?\bbe\s+(?:causing|behind|responsible\s+for)\s+(?:the\s+|my\s+|this\s+)?(?:bright|harsh|boom|sibilan|glare|fatigue|mudd|thin|edge|grain|dull|hard)/i,
   /\bmy\s+system\s+sounds?\b/i,
   /\bmy\s+setup\s+(?:sounds?|is|feels?)\b/i,
   /\bsounds?\s+(?:too\s+)?(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|boring|lifeless|congested|sibilant|dry|sterile|clinical|analytical|cold|hard|brittle|forward|strident|sharp|lean|aggressive)\b/i,

@@ -2344,6 +2344,9 @@ export default function Home() {
       || /\bsounds?\s+(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|dry|sterile|clinical|analytical|cold|hard|forward|strident|sharp|lean|aggressive|tiny|small|dark|empty|hollow|boomy|noisy|nasal|distant|lifeless|congested)\b/i.test(submittedText)
       || /\b(?:lacks?|lacking|no)\s+(?:bass|treble|body|warmth|dynamics|punch|impact|life|presence|weight|detail|air|clarity|low\s+end)\b/i.test(submittedText)
       || /\b(?:problem|issue)\s+with\b/i.test(submittedText)
+      // Causal-hypothesis pivot (M5-F8): "could my amp be causing the
+      // brightness?" mid-shopping is a diagnosis breakout.
+      || /\b(?:could|might|can)\s+(?:my|the)\s+[\w\s-]{2,24}?\bbe\s+(?:causing|behind|responsible\s+for)\b/i.test(submittedText)
       || /\blistening\s+fatigue\b/i.test(submittedText)
       || /\b(?:noisy|hum(?:ming)?|buzz(?:ing)?|ground(?:ing)?\s+(?:loop|hum|noise))\b/i.test(submittedText)
     );
