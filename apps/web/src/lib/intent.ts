@@ -626,12 +626,17 @@ function extractProductCandidateName(message: string): string | null {
       if (!CATEGORY_NOUN_RE.test(noun)) continue;
       const prev = tokens[i - 1].replace(/^["'`]+|["'`]+$/g, '');
       const prevLower = prev.toLowerCase();
+      // Sonic-quality adjectives block the candidate in comparative form
+      // too — "a smoother amp" is a remedy hypothesis, not a brand (Gate A,
+      // 2026-08-11). Same explicit-suffix normalization as the engine's
+      // CORRECTIONS comparative map (8e741ca): -ier → -y, -er → base.
+      const qualityForms = [prevLower, prevLower.replace(/ier$/, 'y'), prevLower.replace(/er$/, '')];
       if (
         /^[a-z][a-z'-]{2,}$/.test(prevLower)
         && !TRIGGER_NOISE_WORDS.has(prevLower)
         && !PRODUCT_CANDIDATE_STOPWORDS.has(prevLower)
         && !GEAR_CLASS_DESCRIPTORS.has(prevLower)
-        && resolveQuality(prevLower) === null
+        && qualityForms.every((f) => resolveQuality(f) === null)
       ) {
         return `${prev} ${tokens[i]}`;
       }
@@ -856,7 +861,10 @@ const OWNERSHIP_PATTERNS = [
 const JUDGMENT_OBJECT_RE = new RegExp(
   String.raw`\b(?:what\s+do\s+you\s+(?:think|make)\s+(?:of|about)`
   + String.raw`|thoughts\s+on|opinions?\s+on|tell\s+me\s+about`
-  + String.raw`|how\s+(?:good|is|are)|assess(?:ment\s+of)?|evaluat(?:e|ion\s+of)|review|rate)\s+`
+  // "how good is X" must consume the verb, or "is" itself is captured as
+  // the object and "how good is this" reads as concrete (Gate A, 2026-08-11).
+  + String.raw`|how\s+good\s+(?:is|are)|how\s+(?:is|are)`
+  + String.raw`|assess(?:ment\s+of)?|evaluat(?:e|ion\s+of)|review|rate)\s+`
   + String.raw`(?:(?:the|a|an|my|your|our|their|this|these|those|some|any)\s+)*([\w][\w.&'’/-]*)`,
   'i',
 );
