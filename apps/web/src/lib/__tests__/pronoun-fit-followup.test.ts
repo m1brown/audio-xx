@@ -65,4 +65,7 @@ describe('pronoun capability questions stay with the active subject (cohort)', (
   it('"does it come with a cartridge?" is a follow-up', () => {
     expect(isConsultationFollowUp('does it come with a cartridge?', TT)).toBe(true);
   });
+  it('"would that be overkill with my kef r3?" is a follow-up (ownership context)', () => {
+    expect(isConsultationFollowUp('would that be overkill with my kef r3?', TT)).toBe(true);
+  });
 });

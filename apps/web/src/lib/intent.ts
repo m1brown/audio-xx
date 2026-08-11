@@ -2437,7 +2437,7 @@ export function isConsultationFollowUp(
   // need/require/come-with added 2026-08-11 (saturation cohort): "does it
   // need a separate phono stage?" after a Planar 3 card fell to the
   // generic knowledge lane instead of answering for the Planar 3.
-  const PRONOUN_FIT_RE = /\b(?:would|will|does|do|can|could|how\s+(?:would|does|will))\s+(?:it|this|that|they|these)\s+(?:work|pair|fit|sound|match|play|drive|behave|perform|need|require|come\s+with)\b/i;
+  const PRONOUN_FIT_RE = /\b(?:would|will|does|do|can|could|how\s+(?:would|does|will))\s+(?:it|this|that|they|these)\s+(?:work|pair|fit|sound|match|play|drive|behave|perform|need|require|come\s+with|be\s+(?:overkill|too\s+much|enough|wasted|a\s+good\s+match))\b/i;
   const isPronounFit = PRONOUN_FIT_RE.test(text);
 
   // Check if message introduces new, unrelated subjects
