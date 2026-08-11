@@ -315,3 +315,25 @@ describe('colloquial judgment closers reach assessment (cohort coverage batch)',
     expect(detectIntent('all good?').intent).not.toBe('system_assessment');
   });
 });
+
+describe('gear affection is not music taste (M5-F1)', () => {
+  // Mission 5, 2026-08-11: "I like my system but I keep wondering if I
+  // could do better" classified as music_input, arming the listening-path
+  // flow — the next turn ("it's a naim uniti atom with some old dynaudio
+  // bookshelves") was consumed by "headphones, speakers, or both?" while
+  // the stated system was ignored.
+  const GEAR_AFFECTION = [
+    'I like my system but I keep wondering if I could do better',
+    'i love my setup, just curious what else is out there',
+    'I enjoy my speakers a lot',
+  ];
+  for (const q of GEAR_AFFECTION) {
+    it(`"${q}" is not music_input`, () => {
+      expect(detectIntent(q).intent).not.toBe('music_input');
+    });
+  }
+  it('control: genuine taste statements stay music_input', () => {
+    expect(detectIntent('I like jazz').intent).toBe('music_input');
+    expect(detectIntent('I listen to mostly electronic music').intent).toBe('music_input');
+  });
+});

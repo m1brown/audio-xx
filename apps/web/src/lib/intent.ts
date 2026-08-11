@@ -2686,7 +2686,12 @@ export function extractShortlistBudget(text: string): number | null {
 // These are preference signals, not gear questions.
 
 const MUSIC_INPUT_PATTERNS: RegExp[] = [
-  /\bi\s+(?:listen\s+to|like|love|enjoy|play)\s+/i,
+  // Negative lookahead (M5-F1, 2026-08-11): the liked OBJECT must not be
+  // the user's gear — "I like my system but I wonder if I could do
+  // better" was read as music taste, arming the listening-path flow that
+  // then consumed the next turn's stated components with "headphones,
+  // speakers, or both?". Gear affection is not a genre.
+  /\bi\s+(?:listen\s+to|like|love|enjoy|play)\s+(?!(?:my|this|the)\s+(?:system|setup|rig|gear|sound|amp(?:lifier)?|dac|speakers?|headphones?|streamer|turntable)\b|it\b)/i,
   /\b(?:mostly|mainly|primarily)\s+(?:listen|into)\b/i,
   /\bmy\s+(?:music|listening)\s+is\s+(?:mostly|mainly|primarily)\b/i,
   /\bi(?:'m| am)\s+(?:into|a fan of|really into)\s+/i,
