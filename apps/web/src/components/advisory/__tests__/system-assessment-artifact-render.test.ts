@@ -822,19 +822,26 @@ describe('SystemAssessmentArtifact — §5 The Components: identity mapping + co
   describe('Phase K gold case — full chain renders correctly', () => {
     const html = render(GOLD_CASE);
 
+    // Scope assertions to §5 by slicing to the NEXT section heading, not a
+    // fixed character count. The old `compsIndex + 3000` window silently
+    // truncated once the Leben card gained image markup (2026-08-11 local
+    // asset repair) and dropped the third card's subtitle from the window.
+    function compsSectionOf(h: string): string {
+      const start = h.indexOf('The Components');
+      const end = h.indexOf('How They Work Together', start);
+      return h.slice(start, end > start ? end : start + 8000);
+    }
+
     it('renders all three chain names as card headings', () => {
       // §5 must show all three names in the cards (not just the chain banner).
-      // Use a chunk of HTML around "The Components" to scope the assertion.
-      const compsIndex = html.indexOf('The Components');
-      const compsSection = html.slice(compsIndex, compsIndex + 3000);
+      const compsSection = compsSectionOf(html);
       expect(compsSection).toContain('Denafrips Pontus II');
       expect(compsSection).toContain('Leben CS600X');
       expect(compsSection).toContain('DeVore O/96');
     });
 
     it('renders each card with its role subtitle', () => {
-      const compsIndex = html.indexOf('The Components');
-      const compsSection = html.slice(compsIndex, compsIndex + 3000);
+      const compsSection = compsSectionOf(html);
       expect(compsSection).toContain('DAC');
       expect(compsSection).toContain('Amplifier');
       expect(compsSection).toContain('Speakers');
@@ -868,9 +875,13 @@ describe('SystemAssessmentArtifact — §5 The Components: identity mapping + co
     it('each card carries its role subtitle (system-role anchor)', () => {
       // The role subtitle (DAC / Amplifier / Speakers) is the artifact's
       // explicit "what does this component do in this system" signal.
-      // Every card body lives beneath this role anchor.
+      // Every card body lives beneath this role anchor. Sliced to the next
+      // section heading, not a fixed length — the fixed 3000-char window
+      // truncated the third card once Leben gained image markup
+      // (2026-08-11 local asset repair).
       const compsIndex = html.indexOf('The Components');
-      const compsSection = html.slice(compsIndex, compsIndex + 3000);
+      const compsEnd = html.indexOf('How They Work Together', compsIndex);
+      const compsSection = html.slice(compsIndex, compsEnd > compsIndex ? compsEnd : compsIndex + 8000);
       expect(compsSection.match(/DAC/g)?.length ?? 0).toBeGreaterThanOrEqual(1);
       expect(compsSection.match(/Amplifier/g)?.length ?? 0).toBeGreaterThanOrEqual(1);
       expect(compsSection.match(/Speakers/g)?.length ?? 0).toBeGreaterThanOrEqual(1);
@@ -1863,16 +1874,42 @@ describe('SystemAssessmentArtifact — §5 component images', () => {
     expect(devoreImg).toContain('devorefidelity.com');
   });
 
-  it('renders Leben CS600X as text-only (F4 reviewer-publication source skipped)', () => {
+  it('renders Leben CS600X with the locally hosted asset (never a reviewer host)', () => {
+    // Data-state update 2026-08-11 (founder-approved): the Leben overlay
+    // entries were re-pointed from the F4-excluded hifi.nl photo to the
+    // local /brand-heroes/ asset (Marantz 2220B pattern), so the CS600X
+    // card now legally carries an image. The invariant this test used to
+    // pin — reviewer-tier sources degrade to text-only — is preserved
+    // below against First Watt SIT-3, whose overlay entry still carries
+    // tier 'review_publication'.
     const html = render(PHASE_K);
     const componentsSlice = sliceForSection(html, 'The Components');
     const imgs = imgTagsIn(componentsSlice);
-    // F4 reviewer-data exclusion is the safety invariant — when the
-    // only resolvable image is reviewer-hosted, the card must NOT
-    // fall through to a placeholder and must NOT borrow another
-    // component's image.
     const lebenImg = imgs.find((t) => t.includes('alt="Leben CS600X"'));
-    expect(lebenImg).toBeUndefined();
+    expect(lebenImg).toBeDefined();
+    expect(lebenImg).toContain('/brand-heroes/leben-cs600.jpg');
+    expect(lebenImg).not.toContain('hifi.nl');
+  });
+
+  it('renders a reviewer-tier-only component as text-only (F4 render degrade)', () => {
+    // F4 reviewer-data exclusion is the safety invariant — when the only
+    // resolvable image is reviewer-hosted, the card must NOT fall through
+    // to a placeholder and must NOT borrow another component's image.
+    // Pinned against First Watt SIT-3 ('review_publication' overlay entry).
+    const SIT3_CHAIN: AdvisoryResponse = {
+      ...PHASE_K,
+      systemChain: {
+        names: ['Denafrips Pontus II', 'First Watt SIT-3', 'DeVore O/96'],
+        roles: ['DAC', 'Amplifier', 'Speakers'],
+      },
+    };
+    const html = render(SIT3_CHAIN);
+    const componentsSlice = sliceForSection(html, 'The Components');
+    const imgs = imgTagsIn(componentsSlice);
+    const sitImg = imgs.find((t) => t.includes('alt="First Watt SIT-3"'));
+    expect(sitImg).toBeUndefined();
+    expect(componentsSlice).not.toContain('/images/placeholders/');
+    expect(componentsSlice).not.toContain('positive-feedback.com');
   });
 
   it('does NOT render placeholders for missing component imagery', () => {
