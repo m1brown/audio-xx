@@ -1348,7 +1348,14 @@ export default function Home() {
           // ── Synthesized query (onboarding music → path → budget completion) ──
           if (settledResponse.synthesizedQuery) {
             const synthesized = settledResponse.synthesizedQuery;
-            const synCategory = convResult.state.facts.listeningPath === 'headphones' ? 'headphones' : 'speakers';
+            // Category from established facts first (M5-F6 follow-through,
+            // 2026-08-11): this handler predates non-onboarding synthesized
+            // queries and defaulted to 'speakers' — a backfilled amplifier
+            // refinement rendered "You're looking for speakers." over amp
+            // cards. The listening-path default remains for the music
+            // onboarding flow that has no category fact.
+            const synCategory = (convResult.state.facts.category as string | undefined)
+              ?? (convResult.state.facts.listeningPath === 'headphones' ? 'headphones' : 'speakers');
             const synTurnCtx = buildTurnContext(synthesized, audioState, dismissedFingerprintsRef.current, state.listenerPreferenceProfile);
             const synAdvisoryCtx: ShoppingAdvisoryContext = {
               systemComponents: synTurnCtx.activeSystem
