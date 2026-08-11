@@ -728,6 +728,9 @@ const SYSTEM_ASSESSMENT_PATTERNS = [
   // to the start so mid-sentence "review:" can't overtrigger; the
   // multi-subject gates downstream still decide system vs product.
   /^\s*(?:review|assess(?:ment)?|evaluate|rate)\s*[:\-–—]\s*\S/i,
+  // "system check please: X, Y, Z. all good?" (saturation cohort,
+  // 2026-08-11) — the check-request entry form, same colon-list shape.
+  /^\s*(?:system\s+)?check(?:up)?(?:\s+please)?\s*[:\-–—]\s*\S/i,
 ];
 
 // Bare evaluation-intent phrasings that presume an already-known system.
@@ -1807,6 +1810,12 @@ export function detectIntent(
     /\bhow\s+(?:does|do)\s+(?:it|this|that|they|these|everything)\s+(?:all\s+)?(?:hang|work|fit|go|play)\s+together\b/i,
     /\bdo\s+(?:they|these)\s+(?:all\s+)?(?:work|play|go|fit)\s+(?:well\s+|nicely\s+)?together\b/i,
     /\bare\s+(?:they|these)\s+a\s+good\s+match\b/i,
+    // "…, all good?" / "is that a decent little system" (saturation
+    // cohort, 2026-08-11) — colloquial judgment closers after a
+    // component list; the subjects>=2 gate below keeps bare "all good?"
+    // out of assessment.
+    /\ball\s+good\s*\?/i,
+    /\bis\s+(?:that|this)\s+a\s+(?:good|solid|decent|sensible)\s+(?:\w+\s+){0,2}(?:system|setup|rig|chain|combo|pairing)\b/i,
   ];
   if (
     SYSTEM_JUDGMENT_PATTERNS.some((p) => p.test(currentMessage))

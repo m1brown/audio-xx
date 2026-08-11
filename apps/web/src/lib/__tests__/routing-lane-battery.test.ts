@@ -296,3 +296,22 @@ describe('gear questions escape the diagnosis lock; triage answers stay (D12)', 
     expect(isGearQuestionEscape('topping', r.intent, r.subjectMatches.length)).toBe(false);
   });
 });
+
+describe('colloquial judgment closers reach assessment (cohort coverage batch)', () => {
+  it('"system check please: wiim ultra, cambridge cxa81, wharfedale linton. all good?" → system_assessment', () => {
+    expect(detectIntent('system check please: wiim ultra, cambridge cxa81, wharfedale linton. all good?').intent)
+      .toBe('system_assessment');
+  });
+  it('"running a wiim amp with kef r3 — is that a decent little system?" → system_assessment', () => {
+    // The original cohort phrasing used Q Acoustics 3020i, which the
+    // catalog cannot resolve — with one resolvable subject the judgment
+    // gate correctly declines (a single component is not a system).
+    // Pinned with a resolvable pair; the uncatalogued variant is a
+    // catalog-coverage gap, not a routing defect.
+    expect(detectIntent('running a wiim amp with kef r3 — is that a decent little system?').intent)
+      .toBe('system_assessment');
+  });
+  it('control: bare "all good?" is not an assessment', () => {
+    expect(detectIntent('all good?').intent).not.toBe('system_assessment');
+  });
+});
