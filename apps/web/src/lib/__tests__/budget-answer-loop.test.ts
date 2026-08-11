@@ -118,3 +118,15 @@ describe('clarify_budget: the stage licenses loose amounts (M5-F2)', () => {
     expect(r.state.stage).toBe('clarify_budget');
   });
 });
+
+describe('junk amounts never become budgets (M5 failure injection)', () => {
+  it('"0k" and exponent junk parse to null, not $0 / $1', () => {
+    expect(parseBudgetAmount('0k')).toBeNull();
+    expect(parseBudgetAmount('$1e9')).toBeNull();
+    expect(parseBudgetAmount('$-500')).toBeNull();
+  });
+  it('control: genuine small budgets from $50 up still parse', () => {
+    expect(parseBudgetAmount('under $80')).toBe(80);
+    expect(parseBudgetAmount('$100')).toBe(100);
+  });
+});

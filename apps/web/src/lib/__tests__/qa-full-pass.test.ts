@@ -348,13 +348,12 @@ describe('QA-7: Budget parsing edge cases', () => {
     expect(parseBudgetAmount('5000')).toBe(5000);
   });
 
-  it('[QA FINDING - BUG] parseBudgetAmount matches "I have 2 speakers" → returns 2', () => {
-    // BUG: parseBudgetAmount("I have 2 speakers") returns 2.
-    // The budget regex is too greedy — it matches any number followed by
-    // a word, not just currency-related patterns. "2 speakers" is not a budget.
+  it('parseBudgetAmount ignores "I have 2 speakers" (bug repaired, M5 2026-08-11)', () => {
+    // Formerly pinned as a documented bug (returned 2). The
+    // minimum-plausibility guard (< $50 → null) repairs it: channel
+    // counts and other small numbers are never budgets.
     const result = parseBudgetAmount('I have 2 speakers');
-    // Document the actual behavior (bug):
-    expect(result).toBe(2); // BUG: should be null
+    expect(result).toBeNull();
   });
 
   it('[QA FINDING - BUG] parseBudgetAmount matches "I listen on 3 systems" → returns 3', () => {

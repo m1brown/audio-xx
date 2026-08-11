@@ -1377,10 +1377,11 @@ export function parseBudgetAmount(text: string): number | null {
   // the canonical reply to "what's your budget?" and previously parsed
   // null, looping the question. Requires the full trimmed message to be
   // only the amount, so model numbers inside prose never trip it.
+  const minPlausible = (n: number): number | null => (n < 50 ? null : n);
   const whole = text.trim().match(/^\$?\s?(\d{1,4}(?:\.\d{1,2})?)\s*k[\s?.!]*$/i);
-  if (whole) return Math.round(parseFloat(whole[1]) * 1000);
+  if (whole) return minPlausible(Math.round(parseFloat(whole[1]) * 1000));
   const wholeNum = text.trim().match(/^\$?\s?(\d{1,3}(?:,\d{3})+|\d{3,6})[\s?.!]*$/);
-  if (wholeNum) return parseInt(wholeNum[1].replace(/,/g, ''), 10);
+  if (wholeNum) return minPlausible(parseInt(wholeNum[1].replace(/,/g, ''), 10));
 
   // "over $X" / "above $X" / "more than $X" → no upper cap.
   // We must check this BEFORE the generic numeric scan, otherwise the dollar
@@ -1446,6 +1447,13 @@ export function parseBudgetAmount(text: string): number | null {
       if (kAmount >= 100) lastAmount = kAmount;
     }
   }
+
+  // Minimum-plausibility guard (M5 failure injection, 2026-08-11):
+  // malformed inputs parsed to nonsense budgets — "0k" → $0, "$1e9" →
+  // $1 (the exponent read as prose). No hi-fi budget is under $50;
+  // below that the "amount" is junk, and a junk budget silently filters
+  // every recommendation away downstream.
+  if (lastAmount !== null && lastAmount < 50) return null;
 
   return lastAmount;
 }
