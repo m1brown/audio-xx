@@ -53,3 +53,16 @@ describe('genuine topic changes still break out', () => {
     expect(isConsultationFollowUp('thoughts on the chord qutest?', ACTIVE)).toBe(false);
   });
 });
+
+describe('pronoun capability questions stay with the active subject (cohort)', () => {
+  const TT = {
+    subjects: [{ name: 'rega planar 3', kind: 'product' } as SubjectMatch],
+    originalQuery: 'hows the rega planar 3?',
+  };
+  it('"does it need a separate phono stage?" is a follow-up', () => {
+    expect(isConsultationFollowUp('does it need a separate phono stage?', TT)).toBe(true);
+  });
+  it('"does it come with a cartridge?" is a follow-up', () => {
+    expect(isConsultationFollowUp('does it come with a cartridge?', TT)).toBe(true);
+  });
+});

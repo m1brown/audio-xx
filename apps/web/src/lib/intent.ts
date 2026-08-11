@@ -776,6 +776,10 @@ const SYSTEM_GUIDANCE_PATTERNS = [
  *  self-referential: "should I change anything" implies it's their system. */
 const RESTRAINT_PATTERNS = [
   /\bcase\s+for\s+(?:doing\s+)?nothing\b/i,
+  // "give me the do-nothing case" (saturation cohort, 2026-08-11) — the
+  // hyphenated noun form fell to the knowledge lane, which answered with
+  // a literal essay about "the do-nothing case in audio".
+  /\bdo[- ]nothing\s+case\b/i,
   /\bshould\s+i\s+(?:just\s+)?(?:wait|hold|stay|keep)\b/i,
   /\bmaybe\s+i\s+should(?:n'?t)?\s+change\b/i,
   /\breason\s+not\s+to\s+(?:change|upgrade)\b/i,
@@ -2430,7 +2434,10 @@ export function isConsultationFollowUp(
   // "would it work with my harbeth p3esr?" after a Leben CS600 card was
   // read as a topic change to the P3ESR: the pronoun's referent was
   // dropped and the OWNED speaker was assessed as the candidate product.
-  const PRONOUN_FIT_RE = /\b(?:would|will|does|do|can|could|how\s+(?:would|does|will))\s+(?:it|this|that|they|these)\s+(?:work|pair|fit|sound|match|play|drive|behave|perform)\b/i;
+  // need/require/come-with added 2026-08-11 (saturation cohort): "does it
+  // need a separate phono stage?" after a Planar 3 card fell to the
+  // generic knowledge lane instead of answering for the Planar 3.
+  const PRONOUN_FIT_RE = /\b(?:would|will|does|do|can|could|how\s+(?:would|does|will))\s+(?:it|this|that|they|these)\s+(?:work|pair|fit|sound|match|play|drive|behave|perform|need|require|come\s+with)\b/i;
   const isPronounFit = PRONOUN_FIT_RE.test(text);
 
   // Check if message introduces new, unrelated subjects
