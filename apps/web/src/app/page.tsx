@@ -1267,7 +1267,7 @@ export default function Home() {
         }
       }
 
-      const convResult = convTransition(convStateRef.current, submittedText, {
+      let convResult = convTransition(convStateRef.current, submittedText, {
         hasSystem: !!earlyTurnCtx.activeSystem || !!audioState.activeSystemRef || !!injectedSystemText,
         subjectCount: earlyTurnCtx.subjectMatches.length,
         detectedIntent: earlyIntent,
@@ -1285,25 +1285,69 @@ export default function Home() {
 
       if (convResult.response) {
         if (convResult.response.kind === 'question') {
+          // ── Known-fact backfill (M5-F6, 2026-08-11) ──────────────
+          // Post-answer turns that re-enter shopping intake must never
+          // ask for facts the conversation already holds. Live: after a
+          // recommendation, "why that one?" and "maybe 2k? honestly not
+          // sure…" both restarted intake and re-asked the budget — the
+          // machine's fresh facts could not see lastShoppingFactsRef
+          // (the parallel-store seam). When the machine asks for
+          // category or budget that the previous shopping turns already
+          // established, backfill the fact and re-run the transition;
+          // the machine then proceeds with a synthesized query instead
+          // of asking. Core invariant: budget persists unless
+          // explicitly changed.
+          const askState = convResult.state;
+          const saved = lastShoppingFactsRef.current;
+          const priorAnswers = messages.some(
+            (m) => m.role === 'assistant' && m.kind === 'advisory' && m.advisory.kind === 'shopping',
+          );
+          if (
+            priorAnswers && saved
+            && askState.mode === 'shopping'
+            && ((askState.stage === 'clarify_budget' && saved.budget)
+              || (askState.stage === 'clarify_category' && saved.category))
+          ) {
+            const backfilled = {
+              ...askState,
+              facts: {
+                ...askState.facts,
+                budget: askState.facts.budget ?? saved.budget,
+                category: askState.facts.category ?? saved.category,
+              },
+            };
+            console.log('[fact-backfill] suppressed %s re-ask — backfilled from saved facts', askState.stage);
+            const rerun = convTransition(backfilled, submittedText, {
+              hasSystem: !!earlyTurnCtx.activeSystem || !!audioState.activeSystemRef || !!injectedSystemText,
+              subjectCount: earlyTurnCtx.subjectMatches.length,
+              detectedIntent: earlyIntent,
+              injectedSystemText,
+            });
+            convStateRef.current = rerun.state;
+            convResult = rerun;
+          }
+        }
+        const settledResponse = convResult.response;
+        if (settledResponse && settledResponse.kind === 'question') {
           dispatch({
             type: 'ADD_QUESTION',
             clarification: {
-              acknowledge: convResult.response.acknowledge,
-              question: convResult.response.question,
+              acknowledge: settledResponse.acknowledge,
+              question: settledResponse.question,
             },
           });
           dispatch({ type: 'SET_LOADING', value: false });
           return;
         }
-        if (convResult.response.kind === 'note') {
-          dispatch({ type: 'ADD_NOTE', content: convResult.response.content });
+        if (settledResponse && settledResponse.kind === 'note') {
+          dispatch({ type: 'ADD_NOTE', content: settledResponse.content });
           dispatch({ type: 'SET_LOADING', value: false });
           return;
         }
-        if (convResult.response.kind === 'proceed') {
+        if (settledResponse && settledResponse.kind === 'proceed') {
           // ── Synthesized query (onboarding music → path → budget completion) ──
-          if (convResult.response.synthesizedQuery) {
-            const synthesized = convResult.response.synthesizedQuery;
+          if (settledResponse.synthesizedQuery) {
+            const synthesized = settledResponse.synthesizedQuery;
             const synCategory = convResult.state.facts.listeningPath === 'headphones' ? 'headphones' : 'speakers';
             const synTurnCtx = buildTurnContext(synthesized, audioState, dismissedFingerprintsRef.current, state.listenerPreferenceProfile);
             const synAdvisoryCtx: ShoppingAdvisoryContext = {
