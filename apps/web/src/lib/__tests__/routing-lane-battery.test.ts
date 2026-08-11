@@ -337,3 +337,17 @@ describe('gear affection is not music taste (M5-F1)', () => {
     expect(detectIntent('I listen to mostly electronic music').intent).toBe('music_input');
   });
 });
+
+describe('upgrade questions with an inline system reach assessment (M5-F7)', () => {
+  // Mission 5: "my system: pontus ii, cs600x, o/96. what should I replace
+  // first?" was answered with "What components are in your system?" — the
+  // upgrade-followup gate claimed the turn for consultation_entry before
+  // the assessment gates could see the inline components.
+  it('inline system + "what should I replace first?" → system_assessment', () => {
+    expect(detectIntent('my system: denafrips pontus ii, leben cs600x, devore o/96. what should I replace first?').intent)
+      .toBe('system_assessment');
+  });
+  it('control: bare direction follow-up stays consultation_entry', () => {
+    expect(detectIntent('what would you upgrade first?', SAVED).intent).toBe('consultation_entry');
+  });
+});

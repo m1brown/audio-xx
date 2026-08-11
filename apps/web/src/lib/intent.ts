@@ -1846,8 +1846,17 @@ export function detectIntent(
   if (
     hasUpgradeFollowUp
     && (options.hasActiveSavedSystem || hasOwnership)
+    // M5-F7 (2026-08-11): a message that CARRIES the system alongside the
+    // upgrade question ("my system: X, Y, Z. what should I replace
+    // first?") must reach the assessment lane — consultation_entry's
+    // handler asked for the components the message just listed. Bare
+    // direction follow-ups (no inline components) keep this gate.
+    && subjectMatches.length < 2
   ) {
     return { intent: 'consultation_entry', subjects, subjectMatches, desires };
+  }
+  if (hasUpgradeFollowUp && subjectMatches.length >= 2 && hasOwnership) {
+    return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }
   // Interpunct (·) and bullet (•) are list separators in pasted system
   // descriptions (the saved-system chip renders components with " · ",
