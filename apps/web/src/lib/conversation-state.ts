@@ -12,6 +12,12 @@
  *   3. Shopping recommends immediately when intent is complete.
  */
 
+// Single money authority (D2, 2026-08-11): the clarify_budget answer path
+// must accept everything the shopping pipeline itself accepts ("3k",
+// "make it 3k", "two grand"), or the budget question loops. First module
+// import here by design — money recognition must not be duplicated.
+import { parseBudgetAmount } from './shopping-intent';
+
 // ── Types ──────────────────────────────────────────────
 
 export type ConvMode =
@@ -899,10 +905,20 @@ export function transition(
       // Relaxed budget extraction: when we've already asked for budget,
       // accept plain numbers like "5000", "around 2000" as budget figures.
       // Must run BEFORE isReadyToRecommend so synthesizedQuery generation fires.
+      // Delegates to parseBudgetAmount (D2, 2026-08-11) — the local
+      // PLAIN_BUDGET_PATTERN required 3+ digits, so "3k" (the canonical
+      // budget answer) parsed null and the question looped. The single
+      // money authority accepts every phrasing the pipeline accepts;
+      // the plain pattern remains as fallback for shapes it rejects.
       if (current.stage === 'clarify_budget' && !facts.budget) {
-        const plainMatch = text.match(PLAIN_BUDGET_PATTERN);
-        if (plainMatch) {
-          facts.budget = `$${plainMatch[1]}`;
+        const parsed = parseBudgetAmount(text);
+        if (parsed !== null) {
+          facts.budget = `$${parsed}`;
+        } else {
+          const plainMatch = text.match(PLAIN_BUDGET_PATTERN);
+          if (plainMatch) {
+            facts.budget = `$${plainMatch[1]}`;
+          }
         }
       }
 

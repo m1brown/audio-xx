@@ -342,8 +342,10 @@ describe('QA-7: Budget parsing edge cases', () => {
     expect(parseBudgetAmount('about 2000 dollars')).toBe(2000);
   });
 
-  it('does NOT parse plain "5000" (known limitation)', () => {
-    expect(parseBudgetAmount('5000')).toBeNull();
+  it('parses a whole-message plain "5000" (limitation repaired, D2 2026-08-11)', () => {
+    // Formerly pinned as a known limitation; the whole-message bare-amount
+    // rule (budget-answer-loop.test.ts) now accepts it as a budget answer.
+    expect(parseBudgetAmount('5000')).toBe(5000);
   });
 
   it('[QA FINDING - BUG] parseBudgetAmount matches "I have 2 speakers" → returns 2', () => {

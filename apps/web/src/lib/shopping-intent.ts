@@ -1168,6 +1168,9 @@ const BUDGET_AMOUNT_PATTERNS = [
   // Bare number after "for" — 3+ digits (or comma form) so "for 2"
   // channel/room talk is never read as money.
   /\bfor\s+\$?(\d{1,3}(?:,\d{3})+|\d{3,6})\b/i,      // for 2000, for 2,000
+  // Budget-revision verbs (D2, 2026-08-11) — "make it 2500",
+  // "change it to 3000". 3+ digits so "make it 2" is never money.
+  /\b(?:make\s+it|change\s+(?:it\s+)?to|bump\s+(?:it\s+)?(?:up\s+)?to|raise\s+(?:it\s+)?to|drop\s+(?:it\s+)?to|let'?s\s+say)\s+\$?(\d{1,3}(?:,\d{3})+|\d{3,6})\b/i,
 ];
 
 // Spelled-out amounts — "two grand", "a grand", "2 grand", "two thousand".
@@ -1177,6 +1180,9 @@ const BUDGET_AMOUNT_PATTERNS = [
 const SPELLED_SMALL_NUMBERS: Record<string, number> = {
   a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5,
   six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  // Teens carry "N hundred" phrasings — "fifteen hundred" (D2, 2026-08-11).
+  eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15,
+  sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
 };
 function normalizeSpelledAmounts(text: string): string {
   return text
@@ -1190,13 +1196,22 @@ function normalizeSpelledAmounts(text: string): string {
     .replace(
       /\b(one|two|three|four|five|six|seven|eight|nine|ten)\s+thousand\b/gi,
       (_m, n: string) => `$${SPELLED_SMALL_NUMBERS[n.toLowerCase()]! * 1000}`,
+    )
+    // "fifteen hundred" / "twelve hundred" → $1500 / $1200 (D2).
+    .replace(
+      /\b(eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|two|three|four|five|six|seven|eight|nine)\s+hundred\b/gi,
+      (_m, n: string) => `$${SPELLED_SMALL_NUMBERS[n.toLowerCase()]! * 100}`,
     );
 }
 
 // "k" suffix patterns — "$5k", "5k", "$2.5k", "2.5k dollars" etc.
 // Handled separately because the multiplier needs special treatment in parseBudgetAmount.
 const K_SUFFIX_PATTERN = /\$\s?(\d{1,4}(?:\.\d{1,2})?)\s*k\b/gi;
-const K_SUFFIX_PATTERN_NO_DOLLAR = /(?:under|around|about|for|up\s+to|budget\s+(?:of\s+|around\s+|is\s+|=\s*|:\s*)?|spend|limit\s+(?:of\s+)?)\s*(\d{1,4}(?:\.\d{1,2})?)\s*k\b/gi;
+// Anchors include budget-REVISION verbs ("make it 3k", "change it to 2k",
+// "let's say 3k") — D2 2026-08-11: the retraction turn "actually make it 3k"
+// parsed no amount, so the shopping machine re-asked the budget the user
+// had just stated.
+const K_SUFFIX_PATTERN_NO_DOLLAR = /(?:under|around|about|for|up\s+to|budget\s+(?:of\s+|around\s+|is\s+|=\s*|:\s*)?|spend|limit\s+(?:of\s+)?|make\s+it|change\s+(?:it\s+)?to|bump\s+(?:it\s+)?(?:up\s+)?to|raise\s+(?:it\s+)?to|drop\s+(?:it\s+)?to|let'?s\s+say|say)\s*(\d{1,4}(?:\.\d{1,2})?)\s*k\b/gi;
 
 /**
  * Extract the most recent numeric budget amount from user text.
@@ -1286,6 +1301,16 @@ export function parseBudgetAmount(text: string): number | null {
   // Spelled amounts first, so "two grand" composes with every pattern below.
   text = normalizeSpelledAmounts(text);
 
+  // Whole-message bare amount (D2, 2026-08-11): a message that IS an
+  // amount — "3k", "$3k", "2.5k", "3000" — is a budget answer. This is
+  // the canonical reply to "what's your budget?" and previously parsed
+  // null, looping the question. Requires the full trimmed message to be
+  // only the amount, so model numbers inside prose never trip it.
+  const whole = text.trim().match(/^\$?\s?(\d{1,4}(?:\.\d{1,2})?)\s*k[\s?.!]*$/i);
+  if (whole) return Math.round(parseFloat(whole[1]) * 1000);
+  const wholeNum = text.trim().match(/^\$?\s?(\d{1,3}(?:,\d{3})+|\d{3,6})[\s?.!]*$/);
+  if (wholeNum) return parseInt(wholeNum[1].replace(/,/g, ''), 10);
+
   // "over $X" / "above $X" / "more than $X" → no upper cap.
   // We must check this BEFORE the generic numeric scan, otherwise the dollar
   // amount in "over $10000" gets picked up as a ceiling.
@@ -1303,7 +1328,14 @@ export function parseBudgetAmount(text: string): number | null {
   const rangeUpper = parseRangeUpper(text);
   if (rangeUpper !== null) return rangeUpper;
 
+  // "Last mention wins" is POSITION-based (D2, 2026-08-11): the amount
+  // appearing latest in the text is the user's most recent statement.
+  // The previous implementation kept the last match of the last PATTERN,
+  // so "under $1000, actually make it $500" resolved to 1000 — the
+  // pattern iteration order overrode the revision. Track the match
+  // position and keep the amount from the greatest one.
   let lastAmount: number | null = null;
+  let lastPos = -1;
 
   // 1. Check "k" suffix patterns first — "$5k" → 5000, "$2.5k" → 2500
   for (const kPattern of [K_SUFFIX_PATTERN, K_SUFFIX_PATTERN_NO_DOLLAR]) {
@@ -1311,8 +1343,9 @@ export function parseBudgetAmount(text: string): number | null {
     let match: RegExpExecArray | null;
     while ((match = kPattern.exec(text)) !== null) {
       const parsed = parseFloat(match[1]);
-      if (!isNaN(parsed)) {
+      if (!isNaN(parsed) && match.index >= lastPos) {
         lastAmount = Math.round(parsed * 1000);
+        lastPos = match.index;
       }
     }
   }
@@ -1323,8 +1356,9 @@ export function parseBudgetAmount(text: string): number | null {
     let match: RegExpExecArray | null;
     while ((match = globalPattern.exec(text)) !== null) {
       const parsed = parseInt(match[1].replace(/,/g, ''), 10);
-      if (!isNaN(parsed)) {
+      if (!isNaN(parsed) && match.index > lastPos) {
         lastAmount = parsed;
+        lastPos = match.index;
       }
     }
   }

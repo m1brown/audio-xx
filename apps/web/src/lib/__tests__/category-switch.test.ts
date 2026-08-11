@@ -92,10 +92,12 @@ describe('Category switch: DAC → headphone', () => {
 });
 
 describe('Budget preservation on category switch', () => {
-  it('parseBudgetAmount does NOT match plain "5000"', () => {
-    // Confirms the problem: a standalone "5000" reply to "what is your budget?"
-    // is not matched by BUDGET_AMOUNT_PATTERNS
-    expect(parseBudgetAmount('5000')).toBeNull();
+  it('parseBudgetAmount matches a whole-message plain "5000" (D2 repair)', () => {
+    // Was pinned as "confirms the problem" — a standalone "5000" reply to
+    // "what is your budget?" parsed null and looped the question. Fixed
+    // 2026-08-11 (budget-answer-loop.test.ts): a message that IS an amount
+    // is a budget answer. Amounts inside prose still require an anchor.
+    expect(parseBudgetAmount('5000')).toBe(5000);
   });
 
   it('parseBudgetAmount matches "$5000"', () => {
