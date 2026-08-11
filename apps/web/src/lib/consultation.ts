@@ -8201,6 +8201,30 @@ export function validateSystemComponents(
       const expectedDisplay = ROLE_DISPLAY[expectedCategory] ?? expectedCategory;
       const brand = displayBrand ?? c.displayName;
 
+      // ── Sufficiency check (D1, 2026-08-11): never ask what the text
+      // already answers. Each conflict question below has a small set of
+      // answer phrasings; when one is present in the raw message the
+      // conflict is RESOLVED — either inline ("Eversolo DMP-A6 (internal
+      // DAC)") or because this is a reunited/accumulated exchange whose
+      // earlier turn answered the ask ("internal DAC. assess my
+      // system: …"). Re-raising it re-asks the user for a fact they
+      // already supplied — the production D1 defect: "What would you
+      // upgrade first?" after an answered clarification got the same
+      // clarification again instead of an answer.
+      const CONFLICT_ANSWER_PHRASES: Record<string, RegExp> = {
+        'streamer-as-dac': /\b(?:internal|built[- ]?in|its\s+own|onboard)\s+dac\b|\bmain\s+conversion\b|\b(?:feeds?|feeding|into)\s+(?:an?\s+)?external\s+dac\b/i,
+        'dac-as-streamer': /\bseparate\s+transport\b|\bbuilt[- ]?in\s+stream(?:er|ing)?\b|\bstreaming\s+function\b/i,
+        'integrated-role': /\bfull\s+integrated\b|\bpower\s+section\b|\bexternal\s+pre(?:amp)?\b|\bas\s+an?\s+integrated\b/i,
+      };
+      const conflictKey =
+        expectedCategory === 'streamer' && userAppliedRole === 'dac' ? 'streamer-as-dac'
+          : expectedCategory === 'dac' && userAppliedRole === 'streamer' ? 'dac-as-streamer'
+            : expectedCategory === 'integrated' && (userAppliedRole === 'amplifier' || userAppliedRole === 'preamplifier') ? 'integrated-role'
+              : null;
+      if (conflictKey && CONFLICT_ANSWER_PHRASES[conflictKey].test(rawMessage)) {
+        continue; // answered in the text — clarification not licensed
+      }
+
       // Generate a specific, direct clarification based on the conflict type
       if (expectedCategory === 'streamer' && userAppliedRole === 'dac') {
         issues.push({
