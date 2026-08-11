@@ -245,3 +245,22 @@ describe('mid-assessment gear questions break out of the state machine', () => {
     expect(t.state.facts.systemAssessmentText ?? '').not.toContain('Goldmund');
   });
 });
+
+describe('capability questions about owned gear reach the knowledge lane (D10)', () => {
+  // Saturation cohort, 2026-08-11: "is my wiim amp actually limiting the
+  // 3020i?" mid-shopping was absorbed into a speaker shopping list. The
+  // concept gate covered "can my X drive Y" but not limiting/holding-back
+  // phrasings. audio_knowledge is non-advisory, so it is exempt from the
+  // shopping-mode lock by construction.
+  const CASES = [
+    'is my wiim amp actually limiting the 3020i?',
+    'is the amp holding back my speakers?',
+    'is my receiver bottlenecking the towers?',
+  ];
+  for (const q of CASES) {
+    it(`"${q}" → audio_knowledge`, () => {
+      expect(detectIntent(q, SAVED).intent).toBe('audio_knowledge');
+      expect(detectIntent(q).intent).toBe('audio_knowledge');
+    });
+  }
+});

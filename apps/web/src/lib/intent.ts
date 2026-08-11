@@ -1566,7 +1566,7 @@ export function detectIntent(
   //   named components properly. This gate takes only questions whose
   //   answer is conceptual, not diagnostic.
   const CONCEPT_QUESTION_PATTERN =
-    /\bcan\s+(?:my|the|an?)\s+.{0,40}\b(?:drive|power)\b|\benough\s+(?:power\s+)?for\b|\bpower(?:ful)?\s+enough\b|\bwill\s+.{0,30}\bdrive\s+(?:my|the)\b|\bwhy\s+is\s+my\b.{0,40}\b(?:bass|treble)\s+(?:so\s+)?(?:weak|thin|boomy|muddy)\b|\bupgrade\s+(?:be\s+)?(?:audible|noticeable|worth\s+it)\b|\bis\s+an?\s+.{0,30}\bupgrade\s+audible\b|\bshould\s+i\s+(?:add|get)\s+a\s+sub(?:woofer)?\s+or\b/i;
+    /\bcan\s+(?:my|the|an?)\s+.{0,40}\b(?:drive|power)\b|\benough\s+(?:power\s+)?for\b|\bpower(?:ful)?\s+enough\b|\bwill\s+.{0,30}\bdrive\s+(?:my|the)\b|\bwhy\s+is\s+my\b.{0,40}\b(?:bass|treble)\s+(?:so\s+)?(?:weak|thin|boomy|muddy)\b|\bupgrade\s+(?:be\s+)?(?:audible|noticeable|worth\s+it)\b|\bis\s+an?\s+.{0,30}\bupgrade\s+audible\b|\bshould\s+i\s+(?:add|get)\s+a\s+sub(?:woofer)?\s+or\b|\bis\s+(?:my|the)\s+.{0,40}\b(?:limiting|holding\s+back|bottleneck(?:ing)?)\b/i;
   if (CONCEPT_QUESTION_PATTERN.test(currentMessage)) {
     return { intent: 'audio_knowledge', subjects, subjectMatches, desires };
   }
