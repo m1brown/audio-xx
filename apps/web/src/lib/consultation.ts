@@ -15963,7 +15963,12 @@ const COMPLAINT_MAP: Record<string, {
 /** Extract the primary complaint word from user text. */
 function extractComplaint(text: string): string | null {
   const lower = text.toLowerCase();
-  // Check for explicit complaint words, ordered by specificity
+  // Check for explicit complaint words, ordered by specificity.
+  // WORD-BOUNDARY matching (D7, 2026-08-11): substring includes()
+  // invented complaints from innocent words — 'thin' inside "anything",
+  // 'lean' inside "cleaner", 'hard' inside "hardware" — and the
+  // fabricated symptom then drove a full diagnosis of a system whose
+  // owner reported no problem at all.
   const complaintWords = [
     'fatiguing', 'clinical', 'analytical', 'sterile',
     'forward', 'strident', 'brittle',
@@ -15971,7 +15976,7 @@ function extractComplaint(text: string): string | null {
     'lean', 'hard', 'aggressive',
   ];
   for (const word of complaintWords) {
-    if (lower.includes(word)) return word;
+    if (new RegExp(`\\b${word}\\b`).test(lower)) return word;
   }
   // "lacks X" / "lacking X" → map quality deficit to a complaint adjective
   const lacksMatch = lower.match(/\black(?:s|ing)\s+(?:in\s+)?(\w+)/);
@@ -16116,8 +16121,17 @@ export function buildSystemDiagnosis(
       continue;
     }
 
+    // Model-aware resolution first (D7, 2026-08-11): the brand-prefix
+    // shortcut below resolved "leben cs600x" to the FIRST Leben product
+    // in catalog order — the CS300 — substituting a sibling model into
+    // the diagnosis echo, while "pontus ii" failed exact-name matching
+    // entirely (catalog name "Pontus II 12th-1") and fell to a
+    // title-cased fallback with its brand re-added as a phantom extra
+    // component. findCatalogProduct is the alias-aware, score-based
+    // resolver the rest of the module already uses.
+    const modelResolved = match.kind !== 'brand' ? findCatalogProduct(match.name) : null;
     // Try product-level match first, then brand-level (allow partial brand match)
-    const product = ALL_PRODUCTS.find(
+    const product = modelResolved ?? ALL_PRODUCTS.find(
       (p) => p.name.toLowerCase() === matchLower
         || p.brand.toLowerCase() === matchLower
         || p.brand.toLowerCase().startsWith(matchLower)

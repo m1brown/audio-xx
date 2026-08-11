@@ -1793,7 +1793,11 @@ export function detectIntent(
   // the diagnosis path's "what components are in your system?" ask.
   const SYSTEM_JUDGMENT_PATTERNS = [
     /\bis\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\s+(?:balanced|coherent|well[\s-]?matched|well[\s-]?balanced)\b/i,
-    /\bdoes\s+anything\s+need\s+(?:changing|upgrading|improving|fixing|replacing)\b/i,
+    // "does" optional (D7, 2026-08-11): the elliptical "anything need
+    // changing?" after a component list missed this gate, fell to
+    // gear_inquiry, and was answered by a symptom-assuming builder —
+    // on exactly the shape where restraint should have spoken.
+    /\b(?:does\s+)?anything\s+need\s+(?:changing|upgrading|improving|fixing|replacing)\b/i,
     // Synergy judgments (Mission 4B): "how does it hang together?",
     // "do they work well together?", "are these a good match?"
     /\bhow\s+(?:does|do)\s+(?:it|this|that|they|these|everything)\s+(?:all\s+)?(?:hang|work|fit|go|play)\s+together\b/i,
