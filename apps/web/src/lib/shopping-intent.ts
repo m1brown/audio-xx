@@ -4700,7 +4700,16 @@ function selectProductExamples(
       if (typeof watts === 'number' && watts < 40) return false;
       return true;
     });
-    if (powerPlausible.length >= 2) {
+    // M5-F4 (2026-08-11): the old `>= 2` guard silently DROPPED this
+    // physics filter exactly when constraint conflicts thinned the
+    // plausible set — a 15W push-pull tube was recommended as the
+    // primary pick for a Magnepan LRS+ ("tube, no heat, $1500") with no
+    // conflict flagged. A physics constraint never yields to a ranking
+    // convenience guard: apply the filter whenever ANY plausible
+    // candidate exists; when none exists the conflict is certain and
+    // the caller surfaces it (see powerMismatchNote in
+    // buildShoppingAnswer).
+    if (powerPlausible.length >= 1) {
       ranked.length = 0;
       ranked.push(...powerPlausible);
     }
@@ -7152,7 +7161,26 @@ export function buildShoppingAnswer(
 
   // 6. System note — references user context when available
   const userContextNote = buildUserContextNote(ctx, signals, matchedProfile, reasoning);
-  const systemNote = userContextNote
+  // Power-mismatch honesty (M5-F4, 2026-08-11): a low-sensitivity /
+  // planar partner was named for an amplifier search, and the surviving
+  // picks either shrank to near-nothing or still include low-watt
+  // designs (possible when the whole plausible set was empty). Name the
+  // conflict instead of presenting the picks as a clean fit.
+  let powerMismatchNote: string | undefined;
+  if (ctx.category === 'amplifier' && ctx.lowSensitivityPartner) {
+    const anyImplausible = productExamples.some((ex) => {
+      const p = AMPLIFIER_PRODUCTS.find((x) => x.name === ex.name) as { topology?: string; power_watts?: number } | undefined;
+      if (!p) return false;
+      const topo = (p.topology ?? '').toLowerCase();
+      return topo.includes('set') || topo.includes('single-ended')
+        || (typeof p.power_watts === 'number' && p.power_watts < 40);
+    });
+    if (anyImplausible || productExamples.length <= 1) {
+      powerMismatchNote = 'The speaker you named is a low-sensitivity planar load — it needs substantial power and current to produce real dynamics. Within your stated constraints, no amplifier here satisfies both the load and every other requirement at once; low-power tube designs in particular cannot drive it with authority. Treat these options as a reason to relax one constraint — the load, the topology, or the budget — rather than as a settled fit.';
+    }
+  }
+  const systemNote = powerMismatchNote
+    ?? userContextNote
     ?? (ctx.systemProvided
       ? `This direction makes more sense if the rest of the chain is not already biased in the same way. A ${categoryLabel} change will shift the overall balance — listen for whether the qualities you value are preserved.`
       : undefined);
