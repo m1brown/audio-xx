@@ -2201,6 +2201,27 @@ export function detectIntent(
  * Returns true if all subject matches are brand-level (no specific products).
  * Used to distinguish brand comparisons from product comparisons.
  */
+/**
+ * D12 (2026-08-11): should a gear-directed turn escape an active
+ * diagnosis lock? A QUESTION about named gear ("someone offered me a
+ * pass labs xa25, tempting?") is a topic change the lock must release;
+ * context-enrichment statements ("my dac is a topping") and bare
+ * component names answering the triage stay locked. Third application
+ * of explicit-subject-wins: saved-system §1b, the shopping lock (D9),
+ * the diagnosis lock (here).
+ */
+export function isGearQuestionEscape(
+  text: string,
+  intent: UserIntent,
+  subjectCount: number,
+): boolean {
+  return (intent === 'product_assessment' || intent === 'gear_inquiry')
+    && subjectCount > 0
+    && /\?/.test(text)
+    && text.trim().split(/\s+/).length > 2
+    && detectContextEnrichment(text) === null;
+}
+
 export function isBrandOnlyComparison(matches: SubjectMatch[]): boolean {
   return matches.length >= 2 && matches.every((m) => m.kind === 'brand');
 }

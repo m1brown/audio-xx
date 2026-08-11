@@ -52,7 +52,7 @@ import {
 import { buildPreferenceReflection } from '@/lib/preference-reflection';
 import { checkGlossaryQuestion } from '@/lib/glossary';
 import { fetchWithTimeout, EVALUATE_TIMEOUT_MS } from '@/lib/fetch-with-timeout';
-import { detectIntent, detectExplicitCategoryPivot, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, detectContextEnrichment, respondToMusicInput, MUSIC_INPUT_FALLBACK, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, isNonAdvisoryIntent, type SubjectMatch } from '@/lib/intent';
+import { detectIntent, detectExplicitCategoryPivot, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, isGearQuestionEscape, detectContextEnrichment, respondToMusicInput, MUSIC_INPUT_FALLBACK, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, isNonAdvisoryIntent, type SubjectMatch } from '@/lib/intent';
 import { attachQuickRecommendation } from '@/lib/quick-recommendation';
 import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode, interpretSymptom } from '@/lib/conversation-state';
 import { detectHypotheticalChain, chainToComponentNames, type HypotheticalChain } from '@/lib/hypothetical-system';
@@ -3151,7 +3151,15 @@ export default function Home() {
     // consultation path guard above (consultationGuarded) blocks the
     // early-return path; this override catches anything that slips
     // through to the gear_inquiry handler downstream.
-    if (effectiveMode === 'diagnosis' && intent !== 'comparison' && intent !== 'system_assessment') {
+    // D12 (2026-08-11): a QUESTION about named gear escapes the lock —
+    // "someone offered me a pass labs xa25, tempting?" mid-triage was
+    // re-rendered as symptom triage with the named product ignored.
+    // Context-enrichment statements ("my dac is a topping") and bare
+    // component names answering the triage stay locked, which is the
+    // lock's purpose. Third application of explicit-subject-wins:
+    // saved-system §1b, shopping lock (D9), diagnosis lock (here).
+    const gearQuestionEscapesDiagnosis = isGearQuestionEscape(submittedText, intent, turnCtx.subjectMatches.length);
+    if (effectiveMode === 'diagnosis' && intent !== 'comparison' && intent !== 'system_assessment' && !gearQuestionEscapesDiagnosis) {
       intent = 'diagnosis';
       // Ensure the diagnosis clarification skip is active even when the state
       // machine wasn't engaged (e.g., follow-up after shopping reset to idle).

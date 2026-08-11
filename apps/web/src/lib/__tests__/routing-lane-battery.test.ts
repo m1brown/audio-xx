@@ -30,7 +30,7 @@
  *   npx vitest run apps/web/src/lib/__tests__/routing-lane-battery.test.ts
  */
 import { describe, it, expect } from 'vitest';
-import { detectIntent, type UserIntent } from '../intent';
+import { detectIntent, isGearQuestionEscape, type UserIntent } from '../intent';
 import { transition, INITIAL_CONV_STATE, type ConvState } from '../conversation-state';
 
 /**
@@ -278,5 +278,21 @@ describe('prose signal-path chains are system presentations (cohort)', () => {
   it('control: a single incidental "into" is not a chain', () => {
     expect(detectIntent("i'm into jazz and looking for a hegel amp").intent)
       .not.toBe('system_assessment');
+  });
+});
+
+describe('gear questions escape the diagnosis lock; triage answers stay (D12)', () => {
+  it('"someone offered me a pass labs xa25, tempting?" escapes', () => {
+    const r = detectIntent('someone offered me a pass labs xa25, tempting?', SAVED);
+    expect(isGearQuestionEscape('someone offered me a pass labs xa25, tempting?', r.intent, r.subjectMatches.length)).toBe(true);
+  });
+  it('context enrichment "my dac is a topping" stays locked', () => {
+    const text = 'my dac is a topping d90, does that matter?';
+    const r = detectIntent(text, SAVED);
+    expect(isGearQuestionEscape(text, r.intent, r.subjectMatches.length)).toBe(false);
+  });
+  it('a bare component name answering triage stays locked', () => {
+    const r = detectIntent('topping', SAVED);
+    expect(isGearQuestionEscape('topping', r.intent, r.subjectMatches.length)).toBe(false);
   });
 });
