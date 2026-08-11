@@ -1368,8 +1368,10 @@ export default function Home() {
               const answer = buildShoppingAnswer(shoppingCtx, signals, tasteProfile ?? undefined, reasoning, synAdvisoryCtx.systemComponents);
               const decisionFrame = buildDecisionFrame(shoppingCtx.category, synAdvisoryCtx, tasteProfile);
               const shoppingAdvisory = shoppingToAdvisory(answer, signals, reasoning, synAdvisoryCtx, decisionFrame);
-              const budgetMatch = submittedText.match(/\$?\d[\d,]*/);
-              const budgetStr = budgetMatch ? `under ${budgetMatch[0].startsWith('$') ? budgetMatch[0] : '$' + budgetMatch[0]}` : '';
+              // D2 residual (2026-08-11): single money authority — the ad-hoc
+              // regex read "3k" as "$3" in the intent summary.
+              const parsedBudget = parseBudgetAmount(submittedText);
+              const budgetStr = parsedBudget !== null ? `under $${parsedBudget}` : '';
               const quickSummary = `You're looking for ${categoryLabel(synCategory)}${budgetStr ? ' ' + budgetStr : ''}.`;
               const quickAdvisory = attachQuickRecommendation(shoppingAdvisory, synCategory, quickSummary);
               dispatch({ type: 'ADD_ADVISORY', advisory: quickAdvisory, id: advisoryId() });
@@ -1814,8 +1816,10 @@ export default function Home() {
         const answer = buildShoppingAnswer(shoppingCtx, legacySignals, tasteProfile ?? undefined, reasoning, syntheticAdvisoryCtx.systemComponents);
         const decisionFrame = buildDecisionFrame(shoppingCtx.category, syntheticAdvisoryCtx, tasteProfile);
         const shoppingAdvisory = shoppingToAdvisory(answer, legacySignals, reasoning, syntheticAdvisoryCtx, decisionFrame);
-        const budgetMatch = submittedText.match(/\$?\d[\d,]*/);
-        const budgetStr = budgetMatch ? `under ${budgetMatch[0].startsWith('$') ? budgetMatch[0] : '$' + budgetMatch[0]}` : '';
+        // D2 residual (2026-08-11): single money authority — see the
+        // synthesized-onboarding site above.
+        const parsedBudget = parseBudgetAmount(submittedText);
+        const budgetStr = parsedBudget !== null ? `under $${parsedBudget}` : '';
         const quickSummary = `You're looking for ${categoryLabel(category)}${budgetStr ? ' ' + budgetStr : ''}.`;
         const quickAdvisory = attachQuickRecommendation(shoppingAdvisory, category, quickSummary);
         dispatch({ type: 'ADD_ADVISORY', advisory: quickAdvisory, id: advisoryId() });

@@ -184,6 +184,14 @@ const BUDGET_PATTERN = /(?:under\s+)?\$\s?\d[\d,]*(?:\.\d{1,2})?\s*k?\b|\bunder\
 const PLAIN_BUDGET_PATTERN = /(?:around|about|roughly|maybe|approximately)?\s*\$?\s?(\d[\d,]{2,})/i;
 
 function extractBudget(text: string): string | undefined {
+  // Single money authority first (D2 residual, 2026-08-11): the entry
+  // pattern below misses revision phrasings ("actually make it 3k"), so
+  // a budget change on a shopping re-entry turn re-asked the budget the
+  // user had just stated. The anchored pattern remains as fallback for
+  // range shapes parseBudgetAmount rejects.
+  const parsed = parseBudgetAmount(text);
+  if (parsed !== null) return `$${parsed}`;
+
   const match = text.match(BUDGET_PATTERN);
   if (!match) return undefined;
   // Normalize: strip "budget of/around/is" prefix, keep just the amount
@@ -771,6 +779,21 @@ export function transition(
       return {
         state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
         response: { kind: 'proceed', synthesizedQuery: synthesized },
+      };
+    }
+
+    // Synthesize from category + budget (D2 residual, 2026-08-11) — a
+    // bare proceed hands the pipeline the user's raw final reply (e.g.
+    // "1500"), dropping the facts the intake just collected. Mirrors the
+    // clarify_budget synthesis in the shopping case.
+    if (facts.category && facts.budget) {
+      const budgetPart = facts.budget.replace(/^under\s*/i, '');
+      return {
+        state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
+        response: {
+          kind: 'proceed',
+          synthesizedQuery: `Looking for a ${facts.category} under ${budgetPart}.`,
+        },
       };
     }
 

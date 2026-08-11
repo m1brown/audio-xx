@@ -74,3 +74,19 @@ describe('clarify_budget consumes k-suffix answers (no loop)', () => {
     expect(r.response?.kind).toBe('question');
   });
 });
+
+describe('shopping ENTRY consumes revision-phrased budgets (D2 residual)', () => {
+  // Live production replay after the first D2 fix: the revision turn
+  // "actually make it 3k, and I mostly listen to jazz at low volume"
+  // re-entered shopping through detectInitialMode, whose extractBudget
+  // used its own anchored pattern and missed the amount — re-asking the
+  // budget again. extractBudget now delegates to parseBudgetAmount.
+  it('"i want speakers, actually make it 3k" carries the budget at entry', () => {
+    const r = transition(
+      { mode: 'idle', stage: 'entry', facts: {} },
+      'i want speakers, actually make it 3k',
+      { hasSystem: false, subjectCount: 0, detectedIntent: 'shopping' },
+    );
+    expect(r.state.facts.budget).toBe('$3000');
+  });
+});
