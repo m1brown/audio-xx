@@ -2419,15 +2419,39 @@ export function isConsultationFollowUp(
     return true;
   }
 
+  // Pronoun fit question (D5, 2026-08-11): "would IT work with MY x?"
+  // names the active subject via the pronoun; gear after an ownership
+  // marker is the user's system context — exactly what
+  // buildConsultationFollowUp grounds fit answers in. Without this,
+  // "would it work with my harbeth p3esr?" after a Leben CS600 card was
+  // read as a topic change to the P3ESR: the pronoun's referent was
+  // dropped and the OWNED speaker was assessed as the candidate product.
+  const PRONOUN_FIT_RE = /\b(?:would|will|does|do|can|could|how\s+(?:would|does|will))\s+(?:it|this|that|they|these)\s+(?:work|pair|fit|sound|match|play|drive|behave|perform)\b/i;
+  const isPronounFit = PRONOUN_FIT_RE.test(text);
+
   // Check if message introduces new, unrelated subjects
   const newMatches = extractSubjectMatches(text);
   if (newMatches.length > 0) {
     const activeNames = new Set(
       activeConsultation.subjects.map((s) => s.name.toLowerCase()),
     );
-    const hasNewSubject = newMatches.some((m) => !activeNames.has(m.name.toLowerCase()));
+    // A subject preceded by an ownership marker ("my …", "with my … ")
+    // is context the user supplied, not a new topic. Only meaningful in
+    // the pronoun-fit shape — a bare "my hegel h390?" question elsewhere
+    // still changes topic through the normal gate below.
+    const lower = text.toLowerCase();
+    const isOwnershipContext = (m: SubjectMatch): boolean => {
+      const idx = m.index ?? lower.indexOf(m.name.toLowerCase());
+      if (idx < 0) return false;
+      return /\bmy\s+[\w/-]*\s*$/.test(lower.slice(Math.max(0, idx - 24), idx));
+    };
+    const hasNewSubject = newMatches.some(
+      (m) => !activeNames.has(m.name.toLowerCase()) && !(isPronounFit && isOwnershipContext(m)),
+    );
     if (hasNewSubject) return false; // Topic changed
   }
+
+  if (isPronounFit) return true;
 
   // Check follow-up patterns
   if (CONSULTATION_FOLLOWUP_PATTERNS.some((p) => p.test(text))) {
