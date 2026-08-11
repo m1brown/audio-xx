@@ -74,35 +74,75 @@ const COMMERCIAL_FIRST_PATTERNS: RegExp[] = [
 // ── 1. Homepage heading + primary-entry copy invariants ───────
 //
 // 2026-06-14 Phase 2 presentation redesign: the value-prop tagline h1
-// was removed. The "Audio XX" brand wordmark is promoted back to the
-// page's single h1 (SEO / accessibility outline preserved), and the
-// page's positioning now lives in the two-door block below it.
-// 2026-06-29 minimal-homepage pass: the "Browse the editorial library"
-// link and the "Or start from an example" curated-chip rail were
-// removed; positioning now rests solely on the two-door block. These
-// tests guard the single-h1 invariant and keep the visible primary-
-// entry copy free of reviewer-aggregator and commercial-first framing.
+// was removed and the wordmark promoted to the single h1.
+// 2026-06-30 EDITORIAL COVER recomposition (Design Doctrine v1): the
+// homepage became the cover of an unwritten assessment. The cover h1 is
+// now the "Notes on Your System" headline, rendered only when
+// !hasMessages; the "Audio XX" wordmark h1 survives as the conversation
+// -state reset affordance, rendered only when hasMessages. The two-door
+// block was removed ("cover promotes one story" — see the cover design
+// comment in page.tsx), so the primary-entry copy is now the cover
+// rubric/standfirst, the composer alternative, the SystemBuilder CTA,
+// and the example-assessment secondary entry.
+//
+// These tests preserve the ORIGINAL invariants against the new layout
+// (QA-validity repair, 2026-08-11):
+//   - exactly one h1 in any rendered state (SEO / accessibility outline)
+//   - the visible primary-entry copy stays free of reviewer-aggregator
+//     and commercial-first framing.
 const HOMEPAGE_ENTRY_COPY = [
-  'Assess my system',
-  'Learn how audio works',
-  'Explore the ideas, schools of thought, and companies behind great systems.',
+  'Notes on Your System',
+  'Audio XX is a system-level listening advisor for',
+  'It explains how your components work together, identifies real bottlenecks, and tells you when nothing needs changing.',
+  'Or describe it in your own words',
+  'Prefer to read first? See an example assessment',
 ];
+
+// The intake form's primary CTA lives in SystemBuilder, not page.tsx.
+const SYSTEM_BUILDER_ENTRY_COPY = ['Read my assessment'];
 
 describe('Homepage heading + primary-entry copy (single source of the page heading)', () => {
   const pageSource = readRepoFile('apps/web/src/app/page.tsx');
+  const builderSource = readRepoFile('apps/web/src/product/SystemBuilder.tsx');
 
-  it('uses the Audio XX brand wordmark as the homepage h1', () => {
-    const h1Block = pageSource.match(/<h1[^>]*>[\s\S]*?<\/h1>/);
-    expect(h1Block, 'an <h1>...</h1> block must be present in page.tsx').not.toBeNull();
-    expect(h1Block![0]).toContain('audioxx-hero-wordmark');
-    expect(h1Block![0]).toContain('Audio');
+  it('cover headline is the homepage h1; wordmark h1 is conversation-state only', () => {
+    const h1Blocks = pageSource.match(/<h1[^>]*>[\s\S]*?<\/h1>/g) ?? [];
+    expect(h1Blocks, 'both h1 blocks must be present in page.tsx').toHaveLength(2);
+    // Conversation-state wordmark (reset affordance).
+    const wordmark = h1Blocks.find((b) => b.includes('audioxx-hero-wordmark'));
+    expect(wordmark, 'the wordmark h1 must be present').toBeDefined();
+    expect(wordmark).toContain('Audio');
+    // Cover headline.
+    const cover = h1Blocks.find((b) => !b.includes('audioxx-hero-wordmark'));
+    expect(cover, 'the cover h1 must be present').toBeDefined();
+    expect(cover).toContain('Notes on Your System');
   });
 
-  it('contains exactly one <h1> element so SEO / accessibility outline is preserved', () => {
+  it('renders exactly one <h1> per state so SEO / accessibility outline is preserved', () => {
+    // Two h1 literals exist in source, on mutually exclusive render
+    // branches: the wordmark is hasMessages-gated inline, the cover
+    // headline sits inside the `{!hasMessages && (` cover block. At
+    // runtime exactly one h1 renders — the original invariant.
     const openCount = (pageSource.match(/<h1[\s>]/g) ?? []).length;
     const closeCount = (pageSource.match(/<\/h1>/g) ?? []).length;
-    expect(openCount).toBe(1);
-    expect(closeCount).toBe(1);
+    expect(openCount).toBe(2);
+    expect(closeCount).toBe(2);
+    // The wordmark h1 must remain gated on hasMessages…
+    expect(pageSource).toMatch(/\{hasMessages && <h1/);
+    // …and the cover block (which contains the other h1) on !hasMessages.
+    const coverGateIdx = pageSource.indexOf('{!hasMessages && (');
+    expect(coverGateIdx, 'cover block gate must exist').toBeGreaterThan(-1);
+    // The headline also appears in the cover design comment; search from
+    // the gate so the assertion targets the rendered JSX occurrence.
+    const coverH1Idx = pageSource.indexOf('Notes on Your System', coverGateIdx);
+    expect(coverH1Idx, 'cover headline must follow the !hasMessages gate').toBeGreaterThan(coverGateIdx);
+  });
+
+  it('SystemBuilder carries the intake primary CTA', () => {
+    const normalized = normalize(builderSource);
+    for (const copy of SYSTEM_BUILDER_ENTRY_COPY) {
+      expect(normalized, `missing entry copy: ${copy}`).toContain(copy);
+    }
   });
 
   it('renders the two-door primary-entry copy', () => {
@@ -113,7 +153,7 @@ describe('Homepage heading + primary-entry copy (single source of the page headi
   });
 
   it('primary-entry copy does not slip into review-aggregator framing', () => {
-    for (const copy of HOMEPAGE_ENTRY_COPY) {
+    for (const copy of [...HOMEPAGE_ENTRY_COPY, ...SYSTEM_BUILDER_ENTRY_COPY]) {
       for (const pattern of REVIEWER_FRAMING_PATTERNS) {
         expect(copy, `pattern matched: ${pattern}`).not.toMatch(pattern);
       }
@@ -121,7 +161,7 @@ describe('Homepage heading + primary-entry copy (single source of the page headi
   });
 
   it('primary-entry copy does not contain commercial-first / "buy now" framing', () => {
-    for (const copy of HOMEPAGE_ENTRY_COPY) {
+    for (const copy of [...HOMEPAGE_ENTRY_COPY, ...SYSTEM_BUILDER_ENTRY_COPY]) {
       for (const pattern of COMMERCIAL_FIRST_PATTERNS) {
         expect(copy, `pattern matched: ${pattern}`).not.toMatch(pattern);
       }
