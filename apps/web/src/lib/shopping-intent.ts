@@ -1204,6 +1204,32 @@ function normalizeSpelledAmounts(text: string): string {
     );
 }
 
+/**
+ * Does any subject name reference a product from the given recommendation
+ * list? (D9, 2026-08-11.) Used by the page's shopping-refinement lock: a
+ * product question mid-shopping stays a refinement only when it names a
+ * product the shopping answer actually showed ("thoughts on the chord
+ * qutest" after the Qutest card). A novel external product ("have you
+ * heard anything about the aiyima a07?") is a genuine product question
+ * and must break out — the explicit-subject-wins principle.
+ *
+ * Matching is case-insensitive containment in either direction, so
+ * "qutest" matches "Chord Qutest" and "denafrips" matches
+ * "Denafrips Ares 15th".
+ */
+export function mentionsRecommendedProduct(
+  subjectNames: string[],
+  recentProductNames: string[],
+): boolean {
+  if (subjectNames.length === 0 || recentProductNames.length === 0) return false;
+  const recent = recentProductNames.map((n) => n.toLowerCase());
+  return subjectNames.some((raw) => {
+    const s = raw.toLowerCase().trim();
+    if (s.length < 3) return false;
+    return recent.some((r) => r.includes(s) || s.includes(r));
+  });
+}
+
 // "k" suffix patterns — "$5k", "5k", "$2.5k", "2.5k dollars" etc.
 // Handled separately because the multiplier needs special treatment in parseBudgetAmount.
 const K_SUFFIX_PATTERN = /\$\s?(\d{1,4}(?:\.\d{1,2})?)\s*k\b/gi;

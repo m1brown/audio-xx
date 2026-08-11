@@ -27,7 +27,7 @@ import { buildDecisionFrame } from '@/lib/decision-frame';
 import { getClarificationQuestion, SYSTEM_COMPONENTS_QUESTION, SYSTEM_JUDGMENT_REQUEST } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { tryBetaInterceptRouting } from '@/lib/beta-intent-routing';
-import { detectShoppingIntent, buildShoppingAnswer, validateShoppingAnswer, getShoppingClarification, parseBudgetAmount, detectSelectionMode, detectExplicitCategorySwitch, extractPriorityCategory, type PreviousAnchor, type SelectionMode } from '@/lib/shopping-intent';
+import { detectShoppingIntent, buildShoppingAnswer, validateShoppingAnswer, getShoppingClarification, parseBudgetAmount, mentionsRecommendedProduct, detectSelectionMode, detectExplicitCategorySwitch, extractPriorityCategory, type PreviousAnchor, type SelectionMode } from '@/lib/shopping-intent';
 import {
   createEmptyListenerProfile,
   detectPreferenceSignals,
@@ -3082,7 +3082,16 @@ export default function Home() {
     // exempt — the SHOPPING MODE LOCK + diagnosis breakout above
     // handles the shoppingAnswerCount > 0 case; this block catches
     // the remaining case (effectiveMode=shopping but no prior answers).
-    const productAssessmentInShopping = intent === 'product_assessment' && shoppingAnswerCount > 0;
+    // D9 (2026-08-11): fold a mid-shopping product question back into
+    // refinement ONLY when it names a product the recommendations
+    // actually showed. "have you heard anything about the aiyima a07?"
+    // named novel external gear and was absorbed by the re-rendered
+    // shopping answer — the explicit-subject-wins principle applies at
+    // this gate too.
+    const assessmentSubjectNames = (intentSyntheticSubjects.length > 0 ? intentSyntheticSubjects : turnCtx.subjectMatches).map((m) => m.name);
+    const productAssessmentInShopping = intent === 'product_assessment'
+      && shoppingAnswerCount > 0
+      && mentionsRecommendedProduct(assessmentSubjectNames, recentShoppingProductsRef.current);
     if (effectiveMode === 'shopping' && intent !== 'shopping' && intent !== 'system_assessment' && intent !== 'comparison' && !diagnosisBreakout && !isNonAdvisoryIntent(intent)) {
       if (intent !== 'product_assessment' || productAssessmentInShopping) {
         intent = 'shopping';
