@@ -2205,6 +2205,19 @@ const COMPARISON_FOLLOWUP_PATTERNS = [
   /\bwith\s+(?:tubes?|solid[- ]state|low[- ]power|high[- ]power|a\s+\w+\s+amp)\b/i,
   /\bwhich\s+(?:one|is|has|would|should|do)\b/i,
   /\band\s+(?:what|how)\s+about\b/i,
+  // Trade-off / consequence / challenge follow-ups (D3, 2026-08-11):
+  // "what am I giving up with the harbeth?" during an active comparison
+  // was consumed as comparison INTAKE ("Got it — one down"). These
+  // phrasings question the established pair; they never name a new one.
+  // Safe breadth: this list is only consulted when an active comparison
+  // exists and the message introduces no new subjects.
+  /\bgiving\s+up\b/i,
+  /\bwhat\s+do\s+i\s+lose\b/i,
+  /\btrade[- ]?offs?\b/i,
+  /\bdownsides?\b/i,
+  /\bwhy\s+(?:that|this)\s+one\b/i,
+  /^\s*why\s*\??\s*$/i,
+  /\bare\s+you\s+sure\b/i,
 ];
 
 /**

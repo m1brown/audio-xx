@@ -1196,6 +1196,23 @@ export function transition(
 
     // ── COMPARISON ─────────────────────────────────────
     case 'comparison': {
+      // Questions ABOUT the comparison are follow-ups, never comparands
+      // (D3, 2026-08-11): "what am I giving up with the harbeth?" during
+      // an active pair was consumed as intake ("Got it — one down") —
+      // forgetting the established comparison and misreading a
+      // consequence question as a component name. Proceed so the
+      // pipeline's comparison-continuation answers from the active pair.
+      const COMPARISON_QUESTION_NOT_COMPARAND = /\bgiving\s+up\b|\bwhat\s+do\s+i\s+lose\b|\btrade[- ]?offs?\b|\bdownsides?\b|\bwhy\b|\bare\s+you\s+sure\b|\bwhich\s+(?:one|would|should)\b/i;
+      if (
+        current.stage === 'ready_to_compare'
+        && COMPARISON_QUESTION_NOT_COMPARAND.test(text)
+      ) {
+        return {
+          state: { mode: 'comparison', stage: 'ready_to_compare', facts },
+          response: { kind: 'proceed' },
+        };
+      }
+
       // Track detected subjects as comparison targets
       if (context.subjectCount >= 2) {
         facts.comparisonTargets = ['detected', 'detected']; // Placeholder — actual names come from turnCtx
