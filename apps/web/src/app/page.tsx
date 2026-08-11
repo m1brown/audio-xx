@@ -4334,7 +4334,11 @@ export default function Home() {
           // ── Taste reflection: override editorial intro with profile-derived framing ──
           // Only on first shopping answer (deep conversation guard strips it later).
           if (listenerProfileRef.current.confidence >= 0.15) {
-            const tasteReflectionText = buildTasteReflection(listenerProfileRef.current);
+            // D6 (2026-08-11): pass the current turn's desires so the
+            // reflection never names an explicitly requested quality as
+            // a depriority (persisted profile must not contradict the
+            // present request).
+            const tasteReflectionText = buildTasteReflection(listenerProfileRef.current, turnCtx.desires);
             if (tasteReflectionText) {
               deterministicShoppingAdvisory.editorialIntro = tasteReflectionText;
               console.log('[taste-reflection] attached to editorialIntro');
