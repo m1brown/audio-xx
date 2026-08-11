@@ -16,7 +16,7 @@ import { isIntakeQuery } from './intake';
 import { extractBipolarPreference } from './bipolar-preference';
 import { detectTopologyQuestion } from './topology-philosophy';
 import { detectPairingIntent } from './pairing-resolver';
-import { LIFESTYLE_SPEAKER_PATTERN, parseBudgetAmount } from './shopping-intent';
+import { LIFESTYLE_SPEAKER_PATTERN, parseBudgetAmount, extractBrandExclusions } from './shopping-intent';
 
 // ── Intent type ──────────────────────────────────────
 
@@ -2070,6 +2070,26 @@ export function detectIntent(
     if (hasComplaintAdjective && hasSoftComplaint) {
       return { intent: 'diagnosis', subjects, subjectMatches, desires };
     }
+  }
+
+  // 4d. Brand-exclusion turns are shopping refinements (M5-F3,
+  //   2026-08-11): "not the wharfedales, my brother has those" fell to
+  //   the knowledge lane (the pluralized brand missed subject
+  //   extraction) and "no klipsch please" reached the refinement path
+  //   as a positive brand subject — the rejection BOOSTED the rejected
+  //   brand. Rejecting a recommendation is a hard constraint on the
+  //   active shopping frame; extractBrandExclusions is the same
+  //   brand-aware detector the pipeline consumes, so routing and
+  //   filtering agree. Interrogative guard: "should I avoid harbeth?"
+  //   is a question about avoidance, not a directive — it stays with
+  //   the gear lanes. Fires before the gear-inquiry catch-all so
+  //   subject-bearing exclusions are not claimed as brand inquiries.
+  if (
+    extractBrandExclusions(currentMessage).length > 0
+    && !/\bshould\s+i\b|\bwhy\b|\bdo\s+i\s+(?:need|have)\b|\bworth\s+avoid/i.test(currentMessage)
+    && !DIAGNOSIS_PATTERNS.some((p) => p.test(currentMessage))
+  ) {
+    return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
   // 5. Gear inquiry — "what do you think of X?" or brand mention

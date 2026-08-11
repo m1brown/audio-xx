@@ -390,6 +390,13 @@ export function rankProducts(
       );
     }
 
+    // Brand exclusion (M5-F3, 2026-08-11): "not the wharfedales" →
+    // rejected brands are gates with the same standing as "no tubes".
+    if (constraints.excludeBrands && constraints.excludeBrands.length > 0) {
+      const excluded = new Set(constraints.excludeBrands.map((b) => b.toLowerCase()));
+      candidates = candidates.filter((p) => !excluded.has(p.brand.toLowerCase()));
+    }
+
     // Topology requirement: "class AB only" → only class-ab-solid-state
     if (constraints.requireTopologies.length > 0) {
       candidates = candidates.filter((p) =>

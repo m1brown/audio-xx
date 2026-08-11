@@ -197,6 +197,10 @@ export interface HardConstraints {
    *  designs (user said "tube DAC" / "valve DAC"). DAC topology is a separate
    *  dimension from amp topology — this lives outside requireTopologies. */
   requireDacTubeStage?: boolean;
+  /** Brands to exclude (M5-F3, 2026-08-11): "not the wharfedales",
+   *  "no klipsch". A rejected recommendation is a hard filter with the
+   *  same standing as "no tubes". Lowercased brand names. */
+  excludeBrands?: string[];
 }
 
 // ── Selection mode ────────────────────────────────────
@@ -770,6 +774,43 @@ const TOPOLOGY_ALIASES: Record<string, string[]> = {
 };
 
 /** Extract hard constraints from accumulated user text. */
+/** Lazily built lowercase brand vocabulary from the product catalogs
+ *  (M5-F3). Multi-word brands contribute their full name; matching is
+ *  word-bounded and plural-tolerant at the call site. */
+let KNOWN_BRAND_WORDS: string[] | null = null;
+function getKnownBrandWords(): string[] {
+  if (KNOWN_BRAND_WORDS === null) {
+    const set = new Set<string>();
+    for (const p of [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIFIER_PRODUCTS]) {
+      set.add(p.brand.toLowerCase());
+    }
+    KNOWN_BRAND_WORDS = [...set];
+  }
+  return KNOWN_BRAND_WORDS;
+}
+
+/**
+ * Detect brand exclusions in user text (M5-F3, 2026-08-11): "not the
+ * wharfedales", "no klipsch please", "anything but focal", "avoid
+ * harbeth". Matched against catalog brand names, word-bounded and
+ * plural-tolerant ("the wharfedales" excludes Wharfedale). A brand
+ * named WITHOUT an exclusion verb is never excluded (control-pinned).
+ * Shared by extractHardConstraints (filtering) and detectIntent
+ * (routing) so the two layers always agree.
+ */
+export function extractBrandExclusions(text: string): string[] {
+  const lower = text.toLowerCase();
+  const excluded: string[] = [];
+  for (const brand of getKnownBrandWords()) {
+    const re = new RegExp(
+      String.raw`\b(?:no|not|don'?t\s+want|without|exclude|avoid|skip|anything\s+but|besides|other\s+than)\s+(?:the\s+)?${brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:e?s)?\b`,
+      'i',
+    );
+    if (re.test(lower) && !excluded.includes(brand)) excluded.push(brand);
+  }
+  return excluded;
+}
+
 function extractHardConstraints(text: string): HardConstraints {
   const lower = text.toLowerCase();
   const excludeTopologies: string[] = [];
@@ -787,6 +828,10 @@ function extractHardConstraints(text: string): HardConstraints {
       }
     }
   }
+
+  // ── Brand exclusions (M5-F3, 2026-08-11): "not the wharfedales",
+  // "no klipsch please", "anything but focal", "avoid harbeth".
+  const excludeBrands = extractBrandExclusions(lower);
 
   // ── Requirement patterns: "class ab amps", "in class ab", "only class ab"
   const requireRe = /\b(?:in|only|just|strictly|specifically)\s+(?:class[\s-]?(?:a\b(?![\s/]*b)|ab|a\s*\/\s*b|d)|tube[s]?|solid[\s-]?state|hybrid)/gi;
@@ -851,7 +896,7 @@ function extractHardConstraints(text: string): HardConstraints {
     || /\bdac\s+with\s+(?:a\s+)?(?:tube|valve)\s+(?:output|stage|buffer)\b/i.test(lower)
     || /\btube[-\s]?output\s+dac\b/i.test(lower);
 
-  return { excludeTopologies, requireTopologies, newOnly, usedOnly, requireDacTubeStage };
+  return { excludeTopologies, requireTopologies, newOnly, usedOnly, requireDacTubeStage, excludeBrands };
 }
 
 // ── Semantic preference extraction ──────────────────────

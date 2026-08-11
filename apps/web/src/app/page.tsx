@@ -27,7 +27,7 @@ import { buildDecisionFrame } from '@/lib/decision-frame';
 import { getClarificationQuestion, SYSTEM_COMPONENTS_QUESTION, SYSTEM_JUDGMENT_REQUEST } from '@/lib/clarification';
 import type { ClarificationResponse } from '@/lib/clarification';
 import { tryBetaInterceptRouting } from '@/lib/beta-intent-routing';
-import { detectShoppingIntent, buildShoppingAnswer, validateShoppingAnswer, getShoppingClarification, parseBudgetAmount, mentionsRecommendedProduct, detectSelectionMode, detectExplicitCategorySwitch, extractPriorityCategory, type PreviousAnchor, type SelectionMode } from '@/lib/shopping-intent';
+import { detectShoppingIntent, buildShoppingAnswer, validateShoppingAnswer, getShoppingClarification, parseBudgetAmount, mentionsRecommendedProduct, extractBrandExclusions, detectSelectionMode, detectExplicitCategorySwitch, extractPriorityCategory, type PreviousAnchor, type SelectionMode } from '@/lib/shopping-intent';
 import {
   createEmptyListenerProfile,
   detectPreferenceSignals,
@@ -4038,6 +4038,12 @@ export default function Home() {
               for (const t of saved.constraints.requireTopologies) {
                 if (!cur.requireTopologies.includes(t)) cur.requireTopologies.push(t);
               }
+              // Brand rejections persist across refinement turns (M5-F3) —
+              // "not the wharfedales" still holds two turns later.
+              for (const b of saved.constraints.excludeBrands ?? []) {
+                cur.excludeBrands = cur.excludeBrands ?? [];
+                if (!cur.excludeBrands.includes(b)) cur.excludeBrands.push(b);
+              }
             } else {
               console.log('[category-switch] skipping topology constraint carry-forward (switch to %s)', explicitCategorySwitch);
             }
@@ -4188,7 +4194,14 @@ export default function Home() {
           // Extract brand constraint from current-turn subject matches.
           // If no explicit brand subject, infer from a product subject via catalog lookup
           // (e.g., "and the ares?" → catalog finds Denafrips Ares 15th → brand = "denafrips").
-          const brandSubject = turnCtx.subjectMatches.find((m) => m.kind === 'brand' && !m.parenthetical);
+          // Boost guard (M5-F3, 2026-08-11): a brand the user is
+          // EXCLUDING this turn ("no klipsch please") must never become
+          // a positive brand constraint — the subject match alone made
+          // the rejection boost the rejected brand.
+          const excludedThisTurn = new Set(extractBrandExclusions(submittedText));
+          const brandSubject = turnCtx.subjectMatches.find(
+            (m) => m.kind === 'brand' && !m.parenthetical && !excludedThisTurn.has(m.name.toLowerCase()),
+          );
           let brandConstraint = brandSubject?.name;
           if (!brandConstraint) {
             const productSubject = turnCtx.subjectMatches.find((m) => m.kind === 'product');
@@ -4760,6 +4773,13 @@ export default function Home() {
             ],
             newOnly: shoppingCtx.constraints.newOnly || (lastShoppingFactsRef.current?.constraints?.newOnly ?? false),
             usedOnly: shoppingCtx.constraints.usedOnly || (lastShoppingFactsRef.current?.constraints?.usedOnly ?? false),
+            // Brand rejections accumulate like topology exclusions (M5-F3).
+            excludeBrands: [
+              ...new Set([
+                ...(lastShoppingFactsRef.current?.constraints?.excludeBrands ?? []),
+                ...(shoppingCtx.constraints.excludeBrands ?? []),
+              ]),
+            ],
           };
 
           lastShoppingFactsRef.current = {
