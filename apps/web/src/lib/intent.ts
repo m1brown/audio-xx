@@ -1831,11 +1831,19 @@ export function detectIntent(
   // descriptions (the saved-system chip renders components with " · ",
   // so users naturally paste that form back — beta observation 2026-08-03).
   const hasPlusChain = /\w\s*[+·•]\s*\w/.test(currentMessage) && subjectMatches.length >= 2;
+  // Prose chains (saturation cohort, 2026-08-11): "my rig is a bluesound
+  // node into a hegel h390 into kef r3" extracted all three components
+  // yet was answered with "What components are in your system?" — the
+  // signal-path connectors (into/driving/feeding/through) were not chain
+  // notation. Two connectors (a 3-stage chain) are required so a single
+  // incidental "into" ("I'm into jazz") never counts.
+  const hasProseChain = subjectMatches.length >= 2
+    && /\b(?:into|driving|feeding|through)\b[\s\S]{0,60}\b(?:into|driving|feeding|through)\b/i.test(currentMessage);
   // Labeled-role format: "speaker: X - amp: Y - dac: Z" — 2+ role labels
   // signal a system chain. ROLE_LABEL_RE is module-level so this and
   // isSystemDirectedEvaluation cannot drift apart.
   const hasLabeledRoleChain = ((currentMessage.match(ROLE_LABEL_RE) || []).length >= 2);
-  const hasChainSeparator = hasArrowChain || hasPlusChain || hasLabeledRoleChain;
+  const hasChainSeparator = hasArrowChain || hasPlusChain || hasLabeledRoleChain || hasProseChain;
   if (hasAssessmentLanguage && hasOwnership && subjectMatches.length >= 2) {
     return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }

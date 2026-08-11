@@ -264,3 +264,19 @@ describe('capability questions about owned gear reach the knowledge lane (D10)',
     });
   }
 });
+
+describe('prose signal-path chains are system presentations (cohort)', () => {
+  // "my rig is a bluesound node into a hegel h390 into kef r3" extracted
+  // all three components yet asked "What components are in your system?".
+  // Two prose connectors = a stated chain; ownership + chain + subjects
+  // routes to assessment, where restraint can answer.
+  it('"my rig is a bluesound node into a hegel h390 into kef r3" → system_assessment', () => {
+    expect(detectIntent('my rig is a bluesound node into a hegel h390 into kef r3').intent)
+      .toBe('system_assessment');
+  });
+
+  it('control: a single incidental "into" is not a chain', () => {
+    expect(detectIntent("i'm into jazz and looking for a hegel amp").intent)
+      .not.toBe('system_assessment');
+  });
+});
