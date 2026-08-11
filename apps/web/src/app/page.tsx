@@ -58,7 +58,7 @@ import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detec
 import { detectHypotheticalChain, chainToComponentNames, type HypotheticalChain } from '@/lib/hypothetical-system';
 // P0 fix: resolveSavedSystemForAdvisory no longer called from page.tsx.
 // System resolution now uses turnCtx.activeSystem exclusively (single source of truth).
-import { buildGearResponse } from '@/lib/gear-response';
+import { buildGearResponse, dedupeComparisonSubjects } from '@/lib/gear-response';
 import { inferSystemDirection } from '@/lib/system-direction';
 import {
   routeConversation,
@@ -3281,9 +3281,15 @@ export default function Home() {
             right = { name: to.name, kind: 'product' };
             scope = 'product';
           } else {
-            left = turnCtx.subjectMatches[0];
-            right = turnCtx.subjectMatches[1];
-            scope = turnCtx.subjectMatches.every((m) => m.kind === 'product') ? 'product' : 'brand';
+            // D4 (2026-08-11): drop brand subjects owned by a listed
+            // product before pairing — "harbeth p3esr vs kef ls50 meta"
+            // extracts [p3esr, harbeth, kef] and positional pairing armed
+            // P3ESR-vs-Harbeth (a product against its own brand), which
+            // follow-up turns then rendered as the active comparison.
+            const paired = dedupeComparisonSubjects(turnCtx.subjectMatches);
+            left = paired[0] ?? turnCtx.subjectMatches[0];
+            right = paired[1] ?? turnCtx.subjectMatches[1];
+            scope = paired.length >= 2 && paired.every((m) => m.kind === 'product') ? 'product' : 'brand';
           }
 
           dispatch({

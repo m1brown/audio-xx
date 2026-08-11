@@ -79,6 +79,25 @@ const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIF
 /** Normalize for matching: treat hyphens and spaces as equivalent, strip trailing "+". */
 const normMatch = (s: string): string => s.replace(/[-\s]/g, ' ').replace(/\+$/, '').trim();
 
+/**
+ * Drop brand subjects that are the manufacturer of a product subject in
+ * the same list (D4, 2026-08-11). "harbeth p3esr vs kef ls50 meta"
+ * extracts [p3esr(product), harbeth(brand), kef(brand)]; positional
+ * pairing then compared the P3ESR against its own brand. A brand that
+ * owns a listed product adds no comparison target — it is part of that
+ * product's identity.
+ */
+export function dedupeComparisonSubjects(matches: import('./intent').SubjectMatch[]): import('./intent').SubjectMatch[] {
+  const productBrands = new Set<string>();
+  for (const match of matches) {
+    if (match.kind !== 'product') continue;
+    const resolved = findProducts([match.name]);
+    if (resolved.length > 0) productBrands.add(resolved[0].brand.toLowerCase());
+  }
+  if (productBrands.size === 0) return matches;
+  return matches.filter((match) => !(match.kind === 'brand' && productBrands.has(match.name.toLowerCase())));
+}
+
 function findProducts(subjects: string[]): Product[] {
   if (subjects.length === 0) return [];
   const found: Product[] = [];
