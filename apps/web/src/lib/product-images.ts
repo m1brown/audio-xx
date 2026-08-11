@@ -198,17 +198,18 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
     source: { tier: 'manufacturer', site: 'primaluna.nl', credit: 'PrimaLuna', captured: '2026-05-12' } },
   // EVO 400 left at legacy URL (404) — also needs manual curation; out
   // of scope for the 2026-05-12 narrow pass.
-  // Leben — front-on hero from hifi.nl (Dutch HiFi review publication).
-  // Updated 2026-05-13: the previous McLean's CDN shot was a top/back
-  // angle that obscured the iconic VU meter and gold faceplate. The
-  // hifi.nl asset is the canonical front view and explicitly tagged
-  // CS600X (not the older CS600). Spaceless variants ("cs600x") cover
-  // catalog names where normalize strips the slash/hyphen but does not
-  // insert a space between letters and digits.
-  { key: 'leben cs 600',        url: 'https://hifi.nl/gfx/20190205175617_2019-02-05_Leben600X_front_(980x457).jpg',
-    source: { tier: 'review_publication', site: 'hifi.nl', credit: 'HiFi.nl', captured: '2026-05-13' } },
-  { key: 'leben cs600',         url: 'https://hifi.nl/gfx/20190205175617_2019-02-05_Leben600X_front_(980x457).jpg',
-    source: { tier: 'review_publication', site: 'hifi.nl', credit: 'HiFi.nl', captured: '2026-05-13' } },
+  // Leben — locally hosted CS600 front hero (2026-08-11, founder-approved
+  // repair). The previous hifi.nl entry carried tier 'review_publication',
+  // which the F4 gate correctly excludes from user-rendered output — so
+  // the CS600X tile rendered EMPTY in system assessments (observed on
+  // production 2026-08-10). Re-pointed to the pre-existing verified asset
+  // under apps/web/public/brand-heroes/ following the Marantz 2220B
+  // local-asset pattern: same-origin, source block omitted (locally
+  // hosted assets carry no provenance metadata in this file), F4 gate
+  // untouched. Front view, gold faceplate, wooden side panels — verified
+  // against the asset before wiring.
+  { key: 'leben cs 600',        url: '/brand-heroes/leben-cs600.jpg' },
+  { key: 'leben cs600',         url: '/brand-heroes/leben-cs600.jpg' },
   // Leben CS300 — left at legacy URL pending verification; CS300 not in
   // the narrow-pass scope.
   // Marantz — locally hosted 2220B chassis photo (2026-05-28). The
