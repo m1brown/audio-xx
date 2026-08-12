@@ -230,7 +230,7 @@ const AXA_CSS = `
 /* Embedded assessments keep the 640px reading measure — the conversation
  * column is wider (~748px) and letting the artifact fill it pushed prose
  * to ~97 characters/line (readability pass, founder-approved 2026-08-13). */
-.axa-embedded{max-width:640px;padding-left:0;padding-right:0;background:transparent}
+.axa-embedded{max-width:640px;margin:0;padding-left:0;padding-right:0;background:transparent}
 @media (max-width:560px){
   .axa-strip{grid-template-columns:repeat(2,1fr)}
   .axa-axis{grid-template-columns:50px 1fr 50px;gap:8px}
