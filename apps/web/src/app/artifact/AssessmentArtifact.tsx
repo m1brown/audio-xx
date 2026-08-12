@@ -209,9 +209,9 @@ const AXA_CSS = `
 .axa-section{margin-top:26px}
 .axa-label{font-family:var(--grot);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 8px;display:flex;align-items:center;gap:8px}
 .axa-label::before{content:"";width:14px;height:1.5px;background:var(--accent);display:inline-block}
-.axa-p{font-size:15.5px;line-height:1.7;margin:0 0 13px;color:var(--ink)}
+.axa-p{font-size:17px;line-height:1.65;margin:0 0 13px;color:var(--ink)}
 .axa-p:last-child{margin-bottom:0}
-.axa-reco{font-family:var(--serif);font-size:18px;line-height:1.32;margin:0}
+.axa-reco{font-family:var(--serif);font-size:19px;line-height:1.55;margin:0}
 .axa-cost{font-size:14px;line-height:1.55;color:var(--ink-muted);font-style:italic;margin:8px 0 0}
 .axa-divider{border:0;border-top:1px solid var(--hairline);max-width:100%;margin:30px 0 4px}
 .axa-char{margin:30px 0;padding:20px 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--hairline)}
@@ -227,7 +227,10 @@ const AXA_CSS = `
 .axa-sources{margin-top:12px;font-family:var(--grot);font-size:10px;color:var(--ink-faint);display:flex;flex-wrap:wrap;gap:5px 16px;align-items:baseline}
 .axa-sources .k{text-transform:uppercase;letter-spacing:.16em}
 .axa-sources a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in oklab,var(--accent) 40%,transparent)}
-.axa-embedded{max-width:none;padding-left:0;padding-right:0;background:transparent}
+/* Embedded assessments keep the 640px reading measure — the conversation
+ * column is wider (~748px) and letting the artifact fill it pushed prose
+ * to ~97 characters/line (readability pass, founder-approved 2026-08-13). */
+.axa-embedded{max-width:640px;padding-left:0;padding-right:0;background:transparent}
 @media (max-width:560px){
   .axa-strip{grid-template-columns:repeat(2,1fr)}
   .axa-axis{grid-template-columns:50px 1fr 50px;gap:8px}
