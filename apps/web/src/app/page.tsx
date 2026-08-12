@@ -187,7 +187,8 @@ const PINNED_ASSESS_PROMPT = 'Assess my system: Denafrips Pontus II, Leben CS600
  * effect (see the useEffect in Home that drives `dynamicPlaceholder`).
  * Order matters: the visitor's first impression is whichever prompt
  * appears first, so the sequence opens with a curious-shopper question
- * and lands on the structured "Assess my system" entry.
+ * and then walks the capability range — brand knowledge, assessment,
+ * upgrade direction, budgeted shopping, taste, troubleshooting.
  *
  * Edit guidance: keep each under ~52 characters so it fits inside the
  * editorial column without wrapping. Title-case product names; restore
@@ -195,10 +196,20 @@ const PINNED_ASSESS_PROMPT = 'Assess my system: Denafrips Pontus II, Leben CS600
  * except for natural sentence endings.
  */
 const HOMEPAGE_PLACEHOLDER_PROMPTS: readonly string[] = [
+  // UX-2 (2026-08-12, founder-approved range): the rotation communicates
+  // Audio XX's principal capabilities — recommendations, brand knowledge,
+  // assessment, upgrades, preferences, troubleshooting. "Why did you
+  // recommend that one?" is deliberately withheld pending founder
+  // decision: recommendation challenges currently preserve state but do
+  // not yet explain the ranking, and the placeholder must not promise a
+  // capability the product does not provide.
   'Help me choose a DAC',
-  "I'm interested in DeVore O/96 speakers",
-  "What's the best Accuphase amp for my speakers?",
-  'Assess my system',
+  'What do you think of Shindo?',
+  'Is my system well balanced?',
+  'What would you upgrade first?',
+  'I want speakers for around $2,000',
+  'I listen mostly to jazz',
+  'My system sounds a little bright',
 ] as const;
 
 /**
