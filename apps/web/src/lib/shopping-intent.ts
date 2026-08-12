@@ -422,6 +422,9 @@ export interface ShoppingContext {
   /** Query names a low-sensitivity/planar partner (Magnepan, LRS, LS50) —
    *  low-watt SET amplifiers are physically implausible picks. */
   lowSensitivityPartner?: boolean;
+  /** Explicit IEM / in-ear request (REC-1, 2026-08-12) — constrains
+   *  headphone selection to subcategory 'iem'. */
+  iemRequested?: boolean;
   tasteProvided: boolean;
   systemProvided: boolean;
   systemProfile: SystemProfile;
@@ -528,6 +531,12 @@ function buildCategoryPatterns(
  * any product taxonomy.
  */
 const CATEGORY_PRIORITY_PATTERNS: Array<[RegExp, ShoppingCategory]> = [
+  // ── IEM / in-ear vocabulary is headphone territory (REC-1, 2026-08-12).
+  // Listed FIRST: "in-ear monitors" contains "monitors", which four
+  // speaker-keyword sites treat as loudspeakers — the founder-observed
+  // failure returned Harbeth/DeVore loudspeaker cards for an explicit
+  // in-ear monitor request. The qualified form always wins.
+  [/\biems?\b(?!\s*(?:amp|amplifier|dac))|\bin[- ]?ear\s+monitors?\b|\bin[- ]?ears\b|\bearbuds?\b|\bearphones?\b(?!\s*(?:amp|amplifier))/i, 'headphone'],
   // ── Leading-negation: "not speakers, amps" — the POST-negation word wins.
   // Listed first so it outranks a bare "speakers" that appears before "amps".
   [/\bnot\s+(?:an?\s+)?speakers?\b.{0,30}\b(?:amps?|amplifiers?|integrated)\b/i, 'amplifier'],
@@ -1813,6 +1822,17 @@ export function detectShoppingIntent(
       const utter = latestMessage.toLowerCase();
       const isRequest = /\b(recommend|recommendation|suggest|suggestion|looking for|other|another|more|which|what|any|options?|alternatives?)\b/.test(utter);
       if (isRequest) {
+        // Qualified-compound disambiguation FIRST (REC-1, 2026-08-12):
+        // "in-ear monitors" contains 'monitors', which the plain keyword
+        // scan below reads as loudspeakers — the founder-observed failure.
+        // ONLY the IEM compound is consulted here; broader priority
+        // patterns ("for my headphones") must NOT outrank the request
+        // head noun (golden gate X1: "recommend a DAC for my headphones"
+        // is a DAC request).
+        const iemCompound = /\biems?\b(?!\s*(?:amp|amplifier|dac))|\bin[- ]?ear\s+monitors?\b|\bin[- ]?ears\b|\bearbuds?\b|\bearphones?\b(?!\s*(?:amp|amplifier))/i.test(utter);
+        if (iemCompound) {
+          requestedCategory = 'headphone';
+        } else {
         // Mirror the base detector's CATEGORY_PATTERNS scan order so an explicit
         // request resolves to the SAME class the detector would pick — this
         // order encodes head-final compound knowledge ("headphone amp" is an
@@ -1821,6 +1841,7 @@ export function detectShoppingIntent(
         // distinguished from the request head noun; see routing-doctrine.md.
         for (const pat of CATEGORY_PATTERNS) {
           if (pat._patterns.some((re) => re.test(utter))) { requestedCategory = pat.category; break; }
+        }
         }
       }
       if (requestedCategory) category = requestedCategory;
@@ -1929,6 +1950,10 @@ export function detectShoppingIntent(
   // low-watt amps are physically wrong for these loads (launch gate).
   const lowSensitivityPartner =
     /\bmagnepans?\b|\bmaggies\b|\blrs\+?\b|\bplanar\s+speakers?\b|\bls\s?50s?\b/i.test(userText);
+  // Explicit IEM / in-ear request (REC-1, 2026-08-12): constrains
+  // headphone selection to the IEM form factor.
+  const iemRequested =
+    /\biems?\b|\bin[- ]?ear\s+monitors?\b|\bin[- ]?ears\b|\bearbuds?\b|\bearphones?\b/i.test(userText);
   const tasteProvided = signals.symptoms.length >= 2;
   const hasActiveSystem = Array.isArray(activeSystemComponents) && activeSystemComponents.length > 0;
   const systemProvided = hasActiveSystem || SYSTEM_KEYWORDS.some((kw) => lower.includes(kw));
@@ -1971,6 +1996,7 @@ export function detectShoppingIntent(
     budgetConscious,
     prestigeIntent,
     lowSensitivityPartner,
+    iemRequested,
     tasteProvided,
     systemProvided,
     systemProfile,
@@ -4422,6 +4448,7 @@ function selectProductExamples(
   prestigeIntent?: boolean,
   /** Query names a low-sensitivity/planar partner — see ShoppingContext. */
   lowSensitivityPartner?: boolean,
+  iemRequested?: boolean,
   /** LISTEN FIRST: traits explicitly stated this turn — suspends counterbalance scoring on those axes. */
   statedTraits?: Record<string, 'up' | 'down'>,
 ): ProductExample[] {
@@ -4450,7 +4477,7 @@ function selectProductExamples(
   // Headphones use a dedicated selection path because the catalog
   // includes portable-use metadata that supplements trait scoring.
   if (category === 'headphone') {
-    return selectHeadphoneExamples(userTraits, budgetAmount, systemProfile, tasteProfile, reasoning);
+    return selectHeadphoneExamples(userTraits, budgetAmount, systemProfile, tasteProfile, reasoning, iemRequested);
   }
 
   // ── Streamer: inline illustrative examples ─────────
@@ -6579,10 +6606,20 @@ function selectHeadphoneExamples(
   systemProfile: SystemProfile,
   tasteProfile?: UserTasteProfile,
   reasoning?: ReasoningResult,
+  iemRequested?: boolean,
 ): ProductExample[] {
   // Get the full user text from the reasoning context or use empty
   // For now we read portable intent from the products themselves
-  const allProducts = HEADPHONE_PRODUCTS as HeadphoneProduct[];
+  //
+  // IEM form-factor constraint (REC-1, 2026-08-12): an explicit IEM /
+  // in-ear request constrains the pool to subcategory 'iem' BEFORE any
+  // budget or ranking step. Explicit category wins over catalog
+  // availability — if no tagged IEM existed the pool would go empty and
+  // the honest degraded path answers; over-ears are never silently
+  // substituted for an in-ear request.
+  const allProducts = (iemRequested
+    ? (HEADPHONE_PRODUCTS as HeadphoneProduct[]).filter((p) => (p as { subcategory?: string }).subcategory === 'iem')
+    : (HEADPHONE_PRODUCTS as HeadphoneProduct[]));
 
   // Budget filter — use generous range for headphones
   let budgetFiltered: HeadphoneProduct[];
@@ -7131,7 +7168,7 @@ export function buildShoppingAnswer(
 
   // 4. Product examples (only when catalog exists + budget known)
   // Pass reasoning for directional bias — existing scoring is preserved.
-  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents, ctx.roomContext, engagedProductNames, ctx.constraints, ctx.semanticPreferences, listenerProfile, selectionMode, previousAnchor, recentProductNames, brandConstraint, signals.symptoms, ctx.budgetFloor, ctx.budgetConscious, ctx.prestigeIntent, ctx.lowSensitivityPartner, statedTraitsFromCtx(ctx));
+  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents, ctx.roomContext, engagedProductNames, ctx.constraints, ctx.semanticPreferences, listenerProfile, selectionMode, previousAnchor, recentProductNames, brandConstraint, signals.symptoms, ctx.budgetFloor, ctx.budgetConscious, ctx.prestigeIntent, ctx.lowSensitivityPartner, ctx.iemRequested, statedTraitsFromCtx(ctx));
 
   // ── Budget floor filter ───────────────────────────────
   // When the user specifies "over $X" or "between $X and $Y", remove

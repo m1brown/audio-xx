@@ -66,6 +66,11 @@ export type ProductSubcategory =
   | 'power-cable'
   | 'digital-cable'
   | 'phono-cable'
+  // Headphones (REC-1, 2026-08-12): form factor must be modeled so an
+  // explicit IEM request can constrain selection — nine genuine in-ears
+  // sat untagged as 'other' and IEM requests received over-ears.
+  | 'iem'
+  | 'over-ear'
   // General
   | 'other';
 
