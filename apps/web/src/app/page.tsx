@@ -782,15 +782,40 @@ export default function Home() {
 
 
 
-  // Scroll to bottom when messages change
+  // UX-1 (2026-08-12): position the viewport at the BEGINNING of the
+  // newest message when messages change. The previous chat-style
+  // scroll-to-bottom put the END of a long assessment in view — the
+  // founder-observed failure: a ~2,900px result rendered with its
+  // heading 2,600px above the viewport, forcing an upward scroll to
+  // find where the answer starts. Scrolling the newest message's top
+  // into view handles both cases with one rule: short conversational
+  // turns remain fully visible; long results open at their heading.
+  // The effect fires once per messages transition and never re-runs on
+  // loading/typing state, so it cannot fight manual scrolling.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const position = () => {
+      const anchors = document.querySelectorAll('[data-msg-anchor]');
+      const newest = anchors[anchors.length - 1];
+      if (newest) newest.scrollIntoView({ behavior: 'auto', block: 'start' });
+    };
+    // Instant positioning: smooth animations raced progressive layout
+    // (consecutive user+assistant message transitions) and landed short.
+    position();
+    // One settle re-assert absorbs late layout from the same transition
+    // (fonts/images inside the new message). This is part of the single
+    // transition, not continuous viewport control — nothing re-runs
+    // until the NEXT messages change.
+    const settle = setTimeout(position, 250);
+    return () => clearTimeout(settle);
   }, [messages]);
 
   // Focus textarea after assistant message
   useEffect(() => {
     if (!isLoading && messages.length > 0) {
-      textareaRef.current?.focus();
+      // preventScroll (UX-1): plain focus() scrolls the composer into
+      // view, yanking the viewport away from the reading position the
+      // messages effect just established.
+      textareaRef.current?.focus({ preventScroll: true });
     }
   }, [isLoading, messages.length]);
 
@@ -5755,9 +5780,12 @@ export default function Home() {
             .map((msg, i) => (
               <div
                 key={i}
+                data-msg-anchor
                 style={{
                   animation: 'fadeInUp 0.3s ease-out both',
                   animationDelay: `${Math.min(i * 0.05, 0.3)}s`,
+                  // Breathing room under the nav when scrolled to start (UX-1).
+                  scrollMarginTop: '84px',
                 }}
               >
                 <MessageBubble
