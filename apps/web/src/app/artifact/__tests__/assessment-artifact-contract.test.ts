@@ -163,7 +163,7 @@ describe('GATE C — full artifact contract (every element structurally required
         expect(firstBlock.length).toBeGreaterThan(10);
       }
       // Section labels appear at most once each.
-      for (const label of ['>Recognition<', '>Recommendation<', '>Engineering<', '>Dominant character<']) {
+      for (const label of ['>Recognition<', '>Recommendation<', '>Engineering<']) {
         expect(countMatches(html, new RegExp(label, 'g'))).toBeLessThanOrEqual(1);
       }
       // The tonal signature block itself is never duplicated.

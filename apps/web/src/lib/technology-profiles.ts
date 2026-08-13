@@ -1479,16 +1479,15 @@ export const TECHNOLOGY_PROFILES: TechnologyProfile[] = [
     displayName: 'Musical Communication School',
     tagline: 'The chain is the unit of design — voiced choices at every junction, end to end.',
     // ── Phase 2 school-page top section ──
-    // Light manifesto + one-minute overview + grouped nav hub. All three
-    // resurface prose already authored below (tagline, the three
-    // whatItIs commitments, the related-brand/tech clusters), compressed
-    // for a first-time reader who meets the worldview and a skimmable
-    // map before the long argument. The deep sections remain below.
-    manifesto: {
-      pullQuote: 'The chain is the unit of design.',
-      supporting:
-        'Every junction — cartridge, conversion, amplification, loudspeaker — is a voiced choice made against the others, not against an isolated measurement target.',
-    },
+    // One-minute overview + grouped nav hub: a skimmable map before the long
+    // argument. The `manifesto` block was removed 2026-08-13 (founder: "this
+    // page seems very much written by AI. not natural... let's remove all of
+    // this"). Its pull-quote — "The chain is the unit of design." — was a
+    // verbatim truncation of the tagline set inches above it, and its
+    // supporting line restated overview bullets 1 and 3, which in turn
+    // compress the authored commitments in `whatItIs`. The thesis was stated
+    // three times before the reader reached the argument. The tagline carries
+    // it once; the argument develops it.
     oneMinuteOverview: [
       'Voiced over specified — every junction is a deliberate trade for a musical result, not a maximised measurement.',
       'The chain over the component — a 7-watt SET is right behind a 96 dB speaker and wrong behind an 86 dB monitor; the choices presuppose each other.',

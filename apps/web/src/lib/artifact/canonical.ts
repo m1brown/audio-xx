@@ -187,27 +187,20 @@ function composeListeningSession(raw: any, recognition: string): string[] {
   return [first, second];
 }
 
-/** The distilled dominant characteristic — descriptive, grounded in the committed
- *  identity, no teleology. Deterministic fallback (a future A3 pass may propose a
- *  richer line, validated against the same rules). */
-function composeDominantCharacter(raw: any): string {
-  const axes: Record<string, string> = raw?.findings?.systemAxes ?? {};
-  const voiced = findVoicedComponent(raw);
-  let line: string;
-  if (voiced && axes.smooth_detailed === 'detailed') {
-    line = `Warmth enters at the final stage, without obscuring the system's resolution.`;
-  } else if (axes.smooth_detailed === 'detailed') {
-    line = `Resolution leads, and the rest of the system is arranged to keep it clean.`;
-  } else if (axes.warm_bright === 'warm') {
-    line = `Warmth runs through the whole system, tone placed ahead of edge.`;
-  } else {
-    line = `No single axis leads; tone, resolution and control sit at comparable levels.`;
-  }
-  // Guarantee the invariant on the fallback itself. Unreachable while the
-  // four lines above stay valid, so it states the least it can rather than
-  // a character claim the engine has not established.
-  return validateDominantCharacter(line).length === 0 ? line : `The system's axes read close to neutral.`;
-}
+/* composeDominantCharacter() removed 2026-08-13.
+ *
+ * It selected between four hard-coded sentences keyed to the CATEGORICAL
+ * systemAxes, which made it the last consumer of the pre-unification
+ * aggregation: whenever a categorical pole sat inside the numeric balanced
+ * band, the rendered line contradicted the Tonal Signature graph and the
+ * standfirst on the same page (observed live on production, FRANCE system).
+ *
+ * The replacement is specified in docs/backlog/machine-voice-editorial.md:
+ * name the component responsible for the character, computed from
+ * per-component intensity x role weight against findings.systemAxisNumeric,
+ * emitted only when one component clearly dominates a committed axis.
+ * validateDominantCharacter() above is retained for that rebuild.
+ */
 
 /** Split the engine's case paragraphs from the operating-condition paragraph. */
 function splitEngineeringAndCondition(
@@ -329,9 +322,8 @@ export function toCanonicalAssessment(payload: ArtifactPayload, raw?: any): Cano
     ? operatingCondition.replace(/\s*from the passive radiator\b/gi, '').replace(/\s{2,}/g, ' ')
     : operatingCondition;
 
-  const dominantCharacter = raw
-    ? composeDominantCharacter(raw)
-    : (payload.pullQuote && validateDominantCharacter(payload.pullQuote).length === 0 ? payload.pullQuote : undefined);
+  // No dominant-character line until the rebuild lands (see note above).
+  const dominantCharacter: string | undefined = undefined;
 
   return {
     meta: { date: payload.date, methodVersion: payload.edition },

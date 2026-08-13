@@ -140,17 +140,15 @@ export default function AssessmentArtifact(
           </section>
         )}
 
-        {/* Dominant character renders as ordinary labeled prose, not a
-          * pull-quote: the line is a distilled observation, and display-type
-          * staging promoted it to a slogan the evidence doesn't earn
-          * (founder, 2026-08-13 — "trying too hard"). Copy generation
-          * itself is deferred engine work (post-beta, option C). */}
-        {a.reading.dominantCharacter && (
-          <section className="axa-section">
-            <p className="axa-label">Dominant character</p>
-            <p className="axa-p">{a.reading.dominantCharacter}</p>
-          </section>
-        )}
+        {/* Dominant character is intentionally NOT rendered (founder,
+          * 2026-08-13). The line restated a character the standfirst and the
+          * Tonal Signature already state, and it was generated from four
+          * fixed templates keyed to the pre-unification categorical axes —
+          * so it could contradict both. It returns post-beta in a different
+          * job: naming the COMPONENT responsible for the character.
+          * Spec: docs/backlog/machine-voice-editorial.md.
+          * The CAM field and validateDominantCharacter are retained for that
+          * rebuild; nothing consumes them today. */}
 
         {a.reading.operatingCondition && (
           <section className="axa-section">

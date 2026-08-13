@@ -48,11 +48,10 @@ describe('Assessment Renderer — France web artifact', () => {
     const iRecommend = html.indexOf(cam.guidance.recommendation);
     const iEng = html.indexOf(cam.reading.engineering[0].slice(0, 24));
     const iListen = html.indexOf(cam.reading.listeningSession[0].slice(0, 24));
-    const iOtt = html.indexOf(esc(cam.reading.dominantCharacter!));
     const iCond = html.indexOf(cam.reading.operatingCondition!.slice(0, 24));
     const iEvidence = html.indexOf(EVIDENCE_STATEMENT);
 
-    for (const idx of [iSystem, iVerdict, iRecognition, iRecommend, iEng, iListen, iOtt, iCond, iEvidence]) {
+    for (const idx of [iSystem, iVerdict, iRecognition, iRecommend, iEng, iListen, iCond, iEvidence]) {
       expect(idx).toBeGreaterThan(-1);
     }
     // Verdict leads the reading (after the subject it concerns).
@@ -62,8 +61,6 @@ describe('Assessment Renderer — France web artifact', () => {
     expect(iRecognition).toBeLessThan(iRecommend);
     expect(iRecommend).toBeLessThan(iEng);
     expect(iEng).toBeLessThan(iListen);
-    expect(iListen).toBeLessThan(iOtt);
-    expect(iOtt).toBeLessThan(iCond);
     expect(iCond).toBeLessThan(iEvidence);
   });
 
@@ -86,14 +83,16 @@ describe('Assessment Renderer — France web artifact', () => {
     expect(html).not.toContain('manufacturer-fact');
   });
 
-  it('renders the Dominant Character section (not "One True Thing"), obeying the invariant', () => {
+  it('does NOT render a Dominant Character section (removed 2026-08-13)', () => {
+    // The templated line restated what the standfirst and Tonal Signature
+    // already say, and was keyed to the categorical axes, so it could
+    // contradict both. It returns post-beta naming the COMPONENT responsible
+    // for the character — spec in docs/backlog/machine-voice-editorial.md.
     const cam = franceCam();
     const html = render(cam);
-    expect(validateDominantCharacter(cam.reading.dominantCharacter)).toEqual([]);
-    expect(html).toContain(esc(cam.reading.dominantCharacter!));
-    expect(html).toContain('Dominant character');
-    expect(html.toLowerCase()).not.toContain('one true thing');
-    // no teleology in the rendered line
-    expect(html.toLowerCase()).not.toMatch(/meant to|intended to/);
+    expect(cam.reading.dominantCharacter).toBeUndefined();
+    expect(html).not.toContain('Dominant character');
+    // The validator survives for the rebuild.
+    expect(validateDominantCharacter('Warmth runs through the whole system.')).toEqual([]);
   });
 });

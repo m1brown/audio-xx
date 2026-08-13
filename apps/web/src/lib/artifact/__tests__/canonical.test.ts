@@ -35,7 +35,9 @@ describe('CAM adapter — France reference', () => {
     expect(cam.guidance.recommendation).toBeTruthy();
     expect(cam.reading.engineering.length).toBeGreaterThan(0);
     expect(cam.reading.listeningSession.length).toBe(2);
-    expect(cam.reading.dominantCharacter).toBeTruthy();
+    // dominantCharacter is intentionally absent (removed 2026-08-13; returns
+    // post-beta naming the responsible component).
+    expect(cam.reading.dominantCharacter).toBeUndefined();
     expect(cam.reading.operatingCondition).toBeTruthy();
     expect(cam.evidence.statement).toBe(EVIDENCE_STATEMENT);
   });
@@ -56,12 +58,15 @@ describe('CAM adapter — France reference', () => {
     expect(cam.reading.engineering.join(' ').toLowerCase()).not.toMatch(/moderate placement sensitivity/);
   });
 
-  it('Dominant Character is grounded, descriptive, and obeys the invariant', () => {
+  it('Dominant Character is not composed (removed 2026-08-13; rebuild specced)', () => {
+    // The four-template composer read the categorical systemAxes and could
+    // contradict the Tonal Signature and standfirst on the same page. The
+    // validator is retained for the rebuild that names the component
+    // responsible for the character — docs/backlog/machine-voice-editorial.md.
     const { cam } = franceCanonical();
-    expect(cam.reading.dominantCharacter).toBe(
-      "Warmth enters at the final stage, without obscuring the system's resolution.",
-    );
-    expect(validateDominantCharacter(cam.reading.dominantCharacter)).toEqual([]);
+    expect(cam.reading.dominantCharacter).toBeUndefined();
+    expect(validateDominantCharacter('The WLM Diva monitor sets the system\'s warmth.')).toEqual([]);
+    expect(validateDominantCharacter('It is designed to sound warm.')).toContain('teleology');
   });
 
   it('payload alone KEEPS the tonal signature — axes travel in the payload (Stabilization Gate 1)', () => {
@@ -128,9 +133,6 @@ describe('Educational layer (France) — primary-sourced, identity-preserving', 
     expect(cam.identity.verdict).toBe(payload.verdict);
     expect(cam.identity.signature).toBe(payload.standfirst);
     expect(cam.identity.recognition).toBe(payload.recognition);
-    expect(cam.reading.dominantCharacter).toBe(
-      "Warmth enters at the final stage, without obscuring the system's resolution.",
-    );
     // smooth_detailed still commits to Detailed (identity classification unchanged).
     expect(cam.identity.tonalSignature!.find((a) => a.axis === 'smooth_detailed')!.pole).toBe('right');
   });
