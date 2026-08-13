@@ -88,3 +88,58 @@ Nothing has been changed. Next step when the founder picks this up: audit how
 widely the two patterns appear (school-page manifestos across profiles; the
 four dominant-character templates across catalogue systems), then propose exact
 copy diffs for approval.
+
+---
+
+## DECIDED 2026-08-13 — Dominant Character: name the responsible component
+
+Founder decision: resolution #2 (compose from evidence), scoped **post-beta**.
+The line should name **the component responsible for the character**, not
+restate the character.
+
+Why this is the right target: the standfirst already names the character
+("Tonally balanced, detail-forward…") and the Tonal Signature graph plots it.
+A third restatement is the repetition defect this document is about. Naming the
+*cause* is the one thing on that page which is not already said, and it is the
+causal-explanation north star in miniature — facts → cause → conclusion.
+
+### What it must be built from
+
+The engine already carries the input: `findings.perComponentAxes` (per-component
+axis values + catalog source) alongside `findings.systemChain.roles`, and since
+2026-08-13 the role-weighted numeric aggregation
+`findings.systemAxisNumeric` (`synthesiseSystemAxisNumeric` in axis-types.ts).
+
+The responsible component for an axis = the component whose weighted
+contribution moves the system value furthest from neutral on that axis. That is
+computable from data already present — `resolveAxisIntensity(component) × roleWeight(role)`
+per component, ranked. No new catalog data required.
+
+Shape (illustrative, not authored copy):
+> "The WLM Diva monitor sets the system's warmth; the Job integrated follows it
+>  rather than correcting it."
+
+### Admission rules (D-7 / D-8)
+
+- Only emit when ONE component clearly dominates the axis — if two components
+  contribute comparably, there is no single responsible party and the honest
+  output is no line at all.
+- Only emit for an axis the system actually commits to (outside the ±0.35
+  balanced band). A balanced system has no dominant character; say nothing.
+- Never infer designer intent ("meant to", "designed to") — the existing
+  `validateDominantCharacter` teleology/justification checks still apply.
+- The named component must be one the assessment already lists, so the claim is
+  traceable to the same evidence the rest of the page rests on.
+
+### Blocking defect to resolve first (or as part of this work)
+
+`composeDominantCharacter()` currently reads the **categorical** `systemAxes`,
+making it the last consumer of the pre-unification aggregation. When categorical
+and numeric disagree — i.e. whenever a categorical pole sits inside the numeric
+balanced band — the line contradicts the graph and standfirst on the same page.
+Observed live on production 2026-08-13 with the founder's FRANCE system:
+graph BALANCED (numeric −0.29) + standfirst "Tonally balanced" +
+dominant character "Warmth runs through the whole system."
+
+Whatever happens in the interim, the rebuilt version must read
+`systemAxisNumeric`, not `systemAxes`.
