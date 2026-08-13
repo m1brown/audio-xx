@@ -128,10 +128,15 @@ export default function AssessmentArtifact(
           </section>
         )}
 
+        {/* Dominant character renders as ordinary labeled prose, not a
+          * pull-quote: the line is a distilled observation, and display-type
+          * staging promoted it to a slogan the evidence doesn't earn
+          * (founder, 2026-08-13 — "trying too hard"). Copy generation
+          * itself is deferred engine work (post-beta, option C). */}
         {a.reading.dominantCharacter && (
-          <section className="axa-char">
-            <p className="k">Dominant character</p>
-            <blockquote>{a.reading.dominantCharacter}</blockquote>
+          <section className="axa-section">
+            <p className="axa-label">Dominant character</p>
+            <p className="axa-p">{a.reading.dominantCharacter}</p>
           </section>
         )}
 
@@ -214,9 +219,6 @@ const AXA_CSS = `
 .axa-reco{font-family:var(--serif);font-size:19px;line-height:1.55;margin:0}
 .axa-cost{font-size:14px;line-height:1.55;color:var(--ink-muted);font-style:italic;margin:8px 0 0}
 .axa-divider{border:0;border-top:1px solid var(--hairline);max-width:100%;margin:30px 0 4px}
-.axa-char{margin:30px 0;padding:20px 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--hairline)}
-.axa-char .k{font-family:var(--grot);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 11px}
-.axa-char blockquote{margin:0;font-family:var(--serif);font-size:clamp(20px,3vw,23px);line-height:1.3;letter-spacing:-.01em;text-wrap:pretty}
 .axa-cond{background:var(--panel);border:1px solid var(--hairline);border-radius:2px;padding:14px 16px;margin-top:6px}
 .axa-cond .axa-p{font-size:14.5px;margin:0}
 .axa-evidence{margin-top:36px;border-top:1px solid var(--hairline);padding-top:14px;font-family:var(--serif);font-style:italic;font-size:13.5px;line-height:1.55;color:var(--ink-muted);text-wrap:pretty}
