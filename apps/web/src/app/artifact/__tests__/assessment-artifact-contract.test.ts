@@ -80,6 +80,16 @@ describe('GATE C — three-axis Tonal Signature graph', () => {
     expect(Object.keys(payload.systemAxes as object).length).toBeGreaterThan(0);
   });
 
+  it('payload carries the numeric axis averages (tonal-signature unification)', () => {
+    // The graph plots the same role-weighted numeric averages the signature
+    // prose reads. They must survive payload-only surfaces exactly like the
+    // categorical axes (same regression class as above).
+    expect(payload.systemAxisNumeric).toBeDefined();
+    for (const key of ['warm_bright', 'smooth_detailed', 'elastic_controlled']) {
+      expect(typeof (payload.systemAxisNumeric as Record<string, number>)[key]).toBe('number');
+    }
+  });
+
   for (const mode of ENTRY_MODES) {
     it(`graph exists with exactly three axes — ${mode.name}`, () => {
       expect(mode.html).toContain('axa-sig');
@@ -94,20 +104,30 @@ describe('GATE C — three-axis Tonal Signature graph', () => {
     });
 
     it(`graph values correspond to assessment data — ${mode.name}`, () => {
+      // Tonal-signature unification: the graph plots the role-weighted
+      // numeric averages (continuous position 50 + clamp(n, ±1.5) × 24),
+      // the SAME values the signature prose reads. Legacy payloads without
+      // numeric fall back to the original categorical 24/50/78 mapping.
+      const numeric: Record<string, number> | undefined =
+        raw?.findings?.systemAxisNumeric ?? payload.systemAxisNumeric;
       const axes: Record<string, string> = raw?.findings?.systemAxes ?? {};
       const AXIS_SPEC = [
         { key: 'warm_bright', leftPole: 'warm' },
         { key: 'smooth_detailed', leftPole: 'smooth' },
         { key: 'elastic_controlled', leftPole: 'elastic' },
       ];
-      // The renderer encodes each reading as an inline left:<pos>% dot.
-      // left pole → 24, right pole → 78, neutral → 50 (canonical mapping).
       for (const spec of AXIS_SPEC) {
-        const v = axes[spec.key];
-        const expected =
-          v === spec.leftPole ? 24
-          : v === undefined || v === 'neutral' || v === 'mixed' ? 50
-          : 78;
+        let expected: number;
+        if (numeric && typeof numeric[spec.key] === 'number') {
+          const clamped = Math.max(-1.5, Math.min(1.5, numeric[spec.key]));
+          expected = Math.round(50 + clamped * 24);
+        } else {
+          const v = axes[spec.key];
+          expected =
+            v === spec.leftPole ? 24
+            : v === undefined || v === 'neutral' || v === 'mixed' ? 50
+            : 78;
+        }
         expect(mode.html).toContain(`left:${expected}%`);
       }
     });

@@ -44,4 +44,7 @@ export interface ArtifactPayload {
    * element; it must not depend on call-site `raw` threading.
    */
   systemAxes?: Record<string, string>;
+  /** Role-weighted numeric axis averages — same aggregation as the
+   *  signature prose (tonal-signature unification, 2026-08-13). */
+  systemAxisNumeric?: Record<string, number>;
 }

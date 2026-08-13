@@ -91,13 +91,25 @@ export default function AssessmentArtifact(
         {sig && sig.length > 0 && (
           <div className="axa-sig">
             <p className="cap">Tonal signature</p>
-            {sig.map((ax) => (
-              <div className="axa-axis" key={ax.axis}>
-                <span className={'l' + (ax.pole === 'left' ? ' on' : '')}>{ax.left}</span>
-                <span className="axa-track"><i className={ax.pole === 'neutral' ? 'neu' : ''} style={{ left: `${ax.position}%` }} /></span>
-                <span className={'r' + (ax.pole === 'right' ? ' on' : '')}>{ax.right}</span>
-              </div>
-            ))}
+            {/* Ruled reading table (2026-08-13): the scale sits left and right,
+              * the marker plots the role-weighted numeric average, and the
+              * reading names the result in the accent. The reading is derived
+              * from the same value and band as the marker, so the table cannot
+              * disagree with itself or with the signature prose above it. */}
+            <div className="axa-sigtable">
+              {sig.map((ax) => (
+                <div className="axa-axis" key={ax.axis}>
+                  <span className={'l' + (ax.pole === 'left' ? ' on' : '')}>{ax.left}</span>
+                  <span className="axa-track">
+                    <i className={ax.pole === 'neutral' ? 'neu' : ''} style={{ left: `${ax.position}%` }} />
+                  </span>
+                  <span className={'r' + (ax.pole === 'right' ? ' on' : '')}>{ax.right}</span>
+                  <span className={'rd' + (ax.pole === 'neutral' ? ' bal' : '')}>
+                    {ax.pole === 'left' ? ax.left : ax.pole === 'right' ? ax.right : 'Balanced'}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -202,15 +214,29 @@ const AXA_CSS = `
 .axa-rule{display:block;width:40px;height:2.5px;background:var(--accent);margin-bottom:18px}
 .axa-verdict{font-family:var(--serif);font-weight:600;font-size:clamp(32px,5.4vw,46px);line-height:1.02;letter-spacing:-.02em;margin:0 0 16px;text-wrap:balance}
 .axa-standfirst{font-family:var(--serif);font-style:italic;font-size:clamp(16px,2.2vw,18px);line-height:1.45;color:var(--ink-muted);margin:0;text-wrap:pretty}
-.axa-sig{margin:28px 0 6px;border-top:1px solid var(--hairline);padding-top:16px}
-.axa-sig .cap{font-family:var(--grot);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 13px}
-.axa-axis{display:grid;grid-template-columns:64px 1fr 64px;align-items:center;gap:10px;margin:8px 0}
-.axa-axis span{font-family:var(--grot);font-size:10px;color:var(--ink-faint)}
+.axa-sig{margin:28px 0 6px}
+.axa-sig .cap{font-family:var(--grot);font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.axa-sig .cap::before{content:"";width:14px;height:1.5px;background:var(--accent);display:inline-block}
+/* Ruled reading table — the proposal-document idiom the founder asked the
+ * product to lean into (2026-08-13): bordered block, hairline row rules,
+ * sans data face, the reading carried in the accent. */
+.axa-sigtable{border:1px solid var(--hairline);border-radius:2px}
+.axa-axis{display:grid;grid-template-columns:74px 1fr 74px 84px;align-items:center;gap:14px;padding:11px 14px;border-top:1px solid var(--hairline)}
+.axa-axis:first-child{border-top:0}
+.axa-axis span{font-family:var(--grot);font-size:11.5px;color:var(--ink-faint)}
 .axa-axis .r{text-align:right}
-.axa-axis .l.on,.axa-axis .r.on{color:var(--ink);font-weight:600}
+/* The scale reads as a scale — both poles equal. The committed pole is
+ * named once, in the reading column, rather than twice in two visual
+ * languages. */
+/* The reading — the one value in the row, in the accent. */
+.axa-axis .rd{font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);text-align:right}
+.axa-axis .rd.bal{color:var(--ink-faint);font-weight:600}
 .axa-track{position:relative;height:1.5px;background:var(--hairline)}
-.axa-track i{position:absolute;top:50%;width:8px;height:8px;border-radius:50%;background:var(--accent);transform:translate(-50%,-50%);box-shadow:0 0 0 3px var(--ground)}
-.axa-track i.neu{background:var(--ink-faint)}
+/* Centre tick — the neutral point, so distance from it reads as degree. */
+.axa-track::before{content:"";position:absolute;left:50%;top:-4px;width:1px;height:9px;background:var(--hairline)}
+.axa-track i{position:absolute;top:50%;width:9px;height:9px;border-radius:50%;background:var(--accent);transform:translate(-50%,-50%);box-shadow:0 0 0 3px var(--ground)}
+/* A balanced axis reads as an open marker; a committed one is solid. */
+.axa-track i.neu{background:var(--ground);border:1.5px solid var(--ink-faint)}
 .axa-section{margin-top:26px}
 .axa-label{font-family:var(--grot);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 8px;display:flex;align-items:center;gap:8px}
 .axa-label::before{content:"";width:14px;height:1.5px;background:var(--accent);display:inline-block}
@@ -235,12 +261,15 @@ const AXA_CSS = `
 .axa-embedded{max-width:640px;margin:0;padding-left:0;padding-right:0;background:transparent}
 @media (max-width:560px){
   .axa-strip{grid-template-columns:repeat(2,1fr)}
-  .axa-axis{grid-template-columns:50px 1fr 50px;gap:8px}
-  .axa-axis span{font-size:9px}
+  /* Narrow: the reading moves under the track, scale labels stay flanking. */
+  .axa-axis{grid-template-columns:56px 1fr 56px;gap:6px 10px;padding:10px 12px}
+  .axa-axis span{font-size:10px}
+  .axa-axis .rd{grid-column:1 / -1;text-align:left;font-size:10.5px}
   .axa-ident{flex-wrap:wrap;gap:4px 12px}
 }
 @media (max-width:360px){
   .axa-axis{grid-template-columns:46px 1fr 46px}
+  .axa-axis .rd{grid-column:1 / -1}
 }
 @media print{
   .axa-root{background:#fff;color:#000;max-width:100%}

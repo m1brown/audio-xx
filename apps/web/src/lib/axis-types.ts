@@ -313,6 +313,58 @@ export function synthesiseSystemAxes(
   };
 }
 
+// ── Numeric system-axis synthesis (tonal-signature unification) ──────
+// One aggregation for one concept: the signature prose and the Tonal
+// Signature graph previously computed "system character" independently
+// (numeric weighted average vs categorical winner-takes-all) and could
+// contradict each other on the same artifact (founder-reported, 2026-08-13).
+// Both surfaces now consume this weighted numeric average.
+
+/** Numeric system-level axis positions. Scale follows resolveAxisIntensity:
+ *  ±1 from categorical leanings, wider (up to ±2) where explicit `_n`
+ *  intensities exist. 0 is neutral. */
+export interface SystemAxisNumeric {
+  warm_bright: number;
+  smooth_detailed: number;
+  elastic_controlled: number;
+  airy_closed: number;
+}
+
+/** |value| at or below this band reads as "balanced" — the same threshold
+ *  the signature prose has always used (memo-deterministic-renderer). */
+export const AXIS_BALANCED_BAND = 0.35;
+
+/**
+ * Role-weighted numeric average of component axis intensities.
+ * Weights match synthesiseSystemAxes (speaker 3 · dac 2 · amp 1.5 ·
+ * source 0.5 · cable 0.25); per-component values come from
+ * resolveAxisIntensity (`_n` preferred, categorical ±1 fallback).
+ * Without roles, components weigh equally.
+ */
+export function synthesiseSystemAxisNumeric(
+  componentAxes: PrimaryAxisLeanings[],
+  roles?: string[],
+): SystemAxisNumeric {
+  const weights = roles && roles.length === componentAxes.length
+    ? roles.map(roleWeight)
+    : componentAxes.map(() => 1);
+  function avg(axis: CategoricalAxis): number {
+    let sumWV = 0;
+    let sumW = 0;
+    for (let i = 0; i < componentAxes.length; i++) {
+      sumWV += resolveAxisIntensity(componentAxes[i], axis) * weights[i];
+      sumW += weights[i];
+    }
+    return sumW > 0 ? sumWV / sumW : 0;
+  }
+  return {
+    warm_bright: avg('warm_bright'),
+    smooth_detailed: avg('smooth_detailed'),
+    elastic_controlled: avg('elastic_controlled'),
+    airy_closed: avg('airy_closed'),
+  };
+}
+
 /** Simple majority-vote synthesis (original algorithm, used as fallback). */
 function synthesiseMajorityVote(
   componentAxes: PrimaryAxisLeanings[],

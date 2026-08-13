@@ -772,6 +772,9 @@ export function synthesizeArtifact(result: any): SynthResult {
     // Tonal axes travel WITH the payload so the three-axis Tonal Signature
     // graph survives payload-only surfaces (chat embed, saved snapshots).
     systemAxes: f.systemAxes && Object.keys(f.systemAxes).length > 0 ? f.systemAxes : undefined,
+    // Numeric averages travel too (tonal-signature unification, 2026-08-13):
+    // the graph plots these; the signature prose reads the same values.
+    systemAxisNumeric: f.systemAxisNumeric,
   };
 
   return { payload, contradictions };

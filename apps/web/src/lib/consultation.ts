@@ -71,6 +71,7 @@ import {
   resolveProductAxes,
   detectCompounding,
   synthesiseSystemAxes,
+  synthesiseSystemAxisNumeric,
   AXIS_LABELS,
 } from './axis-types';
 import type {
@@ -15075,6 +15076,12 @@ function extractMemoFindings(
       fullChain: chain.fullChain,
     },
     systemAxes,
+    // Tonal-signature unification (2026-08-13): the single numeric
+    // aggregation both the signature prose and the artifact graph consume.
+    systemAxisNumeric: synthesiseSystemAxisNumeric(
+      profiles.map((p) => p.axes),
+      chain.roles,
+    ),
     perComponentAxes: profiles.map((p) => ({
       name: p.name,
       axes: p.axes,

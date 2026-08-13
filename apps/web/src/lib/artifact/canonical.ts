@@ -118,7 +118,30 @@ const TONAL_AXES: Array<{ key: string; left: string; right: string; leftPole: st
   { key: 'elastic_controlled', left: 'Elastic', right: 'Controlled', leftPole: 'elastic', rightPole: 'controlled' },
 ];
 
-function tonalSignatureFromAxes(axes: Record<string, string> | undefined): AxisReading[] | undefined {
+/** Numeric → marker position. resolveAxisIntensity values are ±1 from
+ *  categorical leanings (±2 where explicit intensities exist); the plot
+ *  clamps at ±1.5 so a strong lean sits near — never on — the pole.
+ *  Within the ±0.35 balanced band (the same band the signature prose
+ *  uses) the marker reads as neutral. */
+function numericToReading(a: (typeof TONAL_AXES)[number], n: number): AxisReading {
+  const clamped = Math.max(-1.5, Math.min(1.5, n));
+  const position = Math.round(50 + clamped * 24);
+  const pole = n < -0.35 ? ('left' as const) : n > 0.35 ? ('right' as const) : ('neutral' as const);
+  return { axis: a.key, left: a.left, right: a.right, pole, position };
+}
+
+function tonalSignatureFromAxes(
+  axes: Record<string, string> | undefined,
+  numeric?: Record<string, number>,
+): AxisReading[] | undefined {
+  // Unified path (2026-08-13): plot the same role-weighted numeric averages
+  // the signature prose reads — one aggregation, so graph and prose cannot
+  // contradict each other, and the marker carries degree, not just direction.
+  if (numeric && TONAL_AXES.every((a) => typeof numeric[a.key] === 'number')) {
+    return TONAL_AXES.map((a) => numericToReading(a, numeric[a.key]));
+  }
+  // Legacy payloads (saved snapshots predating systemAxisNumeric): the
+  // original categorical three-position mapping.
   if (!axes) return undefined;
   return TONAL_AXES.map((a) => {
     const v = axes[a.key];
@@ -273,6 +296,8 @@ export function toCanonicalAssessment(payload: ArtifactPayload, raw?: any): Cano
   // structurally required; it must render on payload-only surfaces (chat embed,
   // saved snapshots) — not only where a call site happens to thread `raw`.
   const axes: Record<string, string> | undefined = raw?.findings?.systemAxes ?? payload.systemAxes;
+  const axesNumeric: Record<string, number> | undefined =
+    raw?.findings?.systemAxisNumeric ?? payload.systemAxisNumeric;
   const limitations: string[] = raw?.response?.assessmentLimitations ?? [];
   const limitation = limitations[0];
   const { engineering, operatingCondition } = splitEngineeringAndCondition(payload.caseParagraphs ?? [], limitation);
@@ -315,7 +340,7 @@ export function toCanonicalAssessment(payload: ArtifactPayload, raw?: any): Cano
       verdict: payload.verdict,
       signature: payload.standfirst,
       recognition: payload.recognition,
-      tonalSignature: tonalSignatureFromAxes(axes),
+      tonalSignature: tonalSignatureFromAxes(axes, axesNumeric),
     },
     guidance: { recommendation: payload.recommendation, oneCost: payload.cost },
     reading: {

@@ -676,10 +676,16 @@ function deriveSystemSignature(
 
   const CONTESTED = 0.35; // Numeric average within ±CONTESTED is "balanced"
 
-  const wbAvg = weightedAvg('warm_bright');
-  const sdAvg = weightedAvg('smooth_detailed');
-  const ecAvg = weightedAvg('elastic_controlled');
-  const acAvg = weightedAvg('airy_closed');
+  // Tonal-signature unification (2026-08-13): prefer the shared numeric
+  // aggregation carried on findings — the same values drive the artifact's
+  // Tonal Signature graph, so prose and graph cannot disagree. The local
+  // weightedAvg (identical math) remains as fallback for findings built
+  // before the field existed.
+  const shared = findings.systemAxisNumeric;
+  const wbAvg = shared ? shared.warm_bright : weightedAvg('warm_bright');
+  const sdAvg = shared ? shared.smooth_detailed : weightedAvg('smooth_detailed');
+  const ecAvg = shared ? shared.elastic_controlled : weightedAvg('elastic_controlled');
+  const acAvg = shared ? shared.airy_closed : weightedAvg('airy_closed');
 
   // Tonal character
   if (wbAvg < -CONTESTED) traits.push('tonally warm');

@@ -97,11 +97,13 @@ describe('spine — composed text → engine → artifact payload', () => {
   it('artifact payloads never leak internal taxonomy vocabulary into prose', () => {
     const out = renderPipeline(['Bluesound Node', 'Marantz PM8006', 'KEF R3']);
     expect(out).not.toBeNull();
-    // `systemAxes` is the one TYPED data field allowed to carry axis keys —
-    // it feeds the three-axis Tonal Signature graph and the renderer
-    // translates it to display labels (Warm/Bright…). Every prose field
-    // stays free of internal vocabulary.
-    const { systemAxes, ...prose } = out!.payload as typeof out.payload & { systemAxes?: unknown };
+    // `systemAxes` and `systemAxisNumeric` are the TYPED data fields allowed
+    // to carry axis keys — they feed the three-axis Tonal Signature graph
+    // (categorical + the shared numeric averages the prose also reads) and
+    // the renderer translates them to display labels (Warm/Bright…). Every
+    // prose field stays free of internal vocabulary.
+    const { systemAxes, systemAxisNumeric, ...prose } = out!.payload as typeof out.payload & { systemAxes?: unknown; systemAxisNumeric?: unknown };
+    void systemAxisNumeric;
     const flat = JSON.stringify(prose);
     expect(flat).not.toMatch(/warm_bright|smooth_detailed|elastic_controlled|airy_closed/);
     expect(flat).not.toMatch(/undefined|\bNaN\b/);

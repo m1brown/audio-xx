@@ -78,10 +78,26 @@ describe('CAM adapter — France reference', () => {
 
   it('degrades gracefully only when axes are genuinely absent (no raw, no payload axes)', () => {
     const { payload } = franceCanonical();
-    const { systemAxes: _dropped, ...bare } = payload as ArtifactPayload & { systemAxes?: unknown };
+    // "Genuinely absent" means BOTH the categorical axes and the shared
+    // numeric averages (tonal-signature unification) are missing.
+    const { systemAxes: _dropped, systemAxisNumeric: _droppedN, ...bare } =
+      payload as ArtifactPayload & { systemAxes?: unknown; systemAxisNumeric?: unknown };
     const cam = toCanonicalAssessment(bare as ArtifactPayload);
     expect(cam.identity.tonalSignature).toBeUndefined();
     expect(cam.identity.verdict).toBe(payload.verdict);
+  });
+
+  it('legacy payloads (categorical axes, no numeric) still render the graph', () => {
+    const { payload } = franceCanonical();
+    const { systemAxisNumeric: _droppedN, ...legacy } =
+      payload as ArtifactPayload & { systemAxisNumeric?: unknown };
+    const cam = toCanonicalAssessment(legacy as ArtifactPayload);
+    expect(cam.identity.tonalSignature).toBeDefined();
+    expect(cam.identity.tonalSignature!.length).toBe(3);
+    // Legacy mapping: fixed three-position slots.
+    for (const r of cam.identity.tonalSignature!) {
+      expect([24, 50, 78]).toContain(r.position);
+    }
   });
 });
 

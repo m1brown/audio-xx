@@ -355,6 +355,10 @@ export interface MemoFindings {
   // ── Axes ──
   /** System-level synthesised axis positions. */
   systemAxes: PrimaryAxisLeanings;
+  /** Role-weighted numeric axis averages — the single aggregation the
+   *  signature prose and the Tonal Signature graph both consume
+   *  (unification, 2026-08-13). Optional for findings created before it. */
+  systemAxisNumeric?: import('./axis-types').SystemAxisNumeric;
   /** Per-component axis classifications. */
   perComponentAxes: {
     name: string;
