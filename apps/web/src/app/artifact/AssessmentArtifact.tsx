@@ -271,8 +271,11 @@ const AXA_CSS = `
 /* Evidence-class chip — names what licenses the source, in the chip idiom. */
 .axa-chip{font-family:var(--grot);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-muted);background:var(--ground);border:1px solid var(--hairline);border-radius:2px;padding:3px 8px;white-space:nowrap}
 .axa-colophon{margin-top:18px;font-family:var(--grot);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
-.axa-origins{list-style:none;padding:0;margin:16px 0 0;display:flex;flex-direction:column;gap:8px}
-.axa-origins li{font-size:16px;line-height:1.55;color:var(--ink-muted)}
+/* Ruled rows, deliberately NOT a boxed panel: this sits directly above the
+ * verdict, which is the page's centre of gravity — a tinted block here would
+ * compete with it. Structure without weight. */
+.axa-origins{list-style:none;padding:0;margin:20px 0 0;border-top:1px solid var(--hairline)}
+.axa-origins li{font-size:16px;line-height:1.55;color:var(--ink-muted);padding:11px 0;border-bottom:1px solid var(--hairline)}
 .axa-origins li b{color:var(--ink);font-weight:600;font-family:var(--serif)}
 /* Embedded assessments keep the 640px reading measure — the conversation
  * column is wider (~748px) and letting the artifact fill it pushed prose

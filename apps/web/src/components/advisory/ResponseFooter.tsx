@@ -51,11 +51,40 @@ const linkStyle: React.CSSProperties = {
   lineHeight: 1.7,
 };
 
+/* Commerce links render as chips (2026-08-13, founder direction to lean into
+ * the proposal-document devices): a bordered chip reads as an action and
+ * separates cleanly from the editorial links above, which stay underlined
+ * text. Deliberately quiet — commerce must never out-shout the assessment. */
 const commerceLinkStyle: React.CSSProperties = {
+  display: 'inline-block',
   color: EDITORIAL.inkMuted,
   textDecoration: 'none',
-  borderBottom: `1px solid ${EDITORIAL.hairline}`,
-  fontSize: '0.9375rem',
+  fontFamily: 'var(--face-grotesque, inherit)',
+  fontSize: '0.75rem',
+  fontWeight: 600,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+  border: `1px solid ${EDITORIAL.hairline}`,
+  borderRadius: 2,
+  padding: '0.22rem 0.55rem',
+};
+
+/** Bordered card for a Continue Exploring group. */
+const cardStyle: React.CSSProperties = {
+  border: `1px solid ${EDITORIAL.hairline}`,
+  borderRadius: 2,
+  padding: '0.9rem 1rem 1rem',
+};
+
+/** One product's resource row — ruled, name left, chips right. */
+const resourceRowStyle: React.CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: '0.5rem 1rem',
+  padding: '0.6rem 0',
+  borderTop: `1px solid ${EDITORIAL.hairline}`,
 };
 
 export default function ResponseFooter({ groups, resources }: ResponseFooterProps) {
@@ -81,7 +110,7 @@ export default function ResponseFooter({ groups, resources }: ResponseFooterProp
             }}
           >
             {groups.map((g) => (
-              <div key={g.title}>
+              <div key={g.title} style={cardStyle}>
                 <p style={groupLabelStyle}>{g.title}</p>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                   {g.links.map((l) => (
@@ -114,19 +143,18 @@ export default function ResponseFooter({ groups, resources }: ResponseFooterProp
             Product Resources
           </h3>
           {resources!.map((r) => (
-            <div key={r.title} style={{ marginBottom: '0.55rem' }}>
+            <div key={r.title} style={resourceRowStyle}>
               <span
                 style={{
-                  fontSize: '0.9375rem',
-                  color: EDITORIAL.inkMuted,
-                  marginRight: '0.6rem',
+                  fontSize: '1.0625rem',
+                  color: EDITORIAL.ink,
                 }}
               >
                 {r.title}
               </span>
-              {r.links.map((l, i) => (
+              <span style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+              {r.links.map((l) => (
                 <React.Fragment key={l.label}>
-                  {i > 0 && <span style={{ color: COLOR.textMuted, margin: '0 0.4rem' }}>·</span>}
                   <TrackedAnchor
                     href={l.url}
                     target="_blank"
@@ -141,6 +169,7 @@ export default function ResponseFooter({ groups, resources }: ResponseFooterProp
                   </TrackedAnchor>
                 </React.Fragment>
               ))}
+              </span>
             </div>
           ))}
         </section>
