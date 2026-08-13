@@ -159,15 +159,28 @@ export default function AssessmentArtifact(
           </section>
         )}
 
-        <p className="axa-evidence">{a.evidence.statement}</p>
-        {a.evidence.primarySources && a.evidence.primarySources.length > 0 && (
-          <p className="axa-sources">
-            <span className="k">Primary sources</span>
-            {a.evidence.primarySources.map((s, i) => (
-              <a key={i} href={s.url} target="_blank" rel="noopener noreferrer nofollow">{s.label}</a>
-            ))}
-          </p>
-        )}
+        {/* Provenance as a ruled block (2026-08-13): what licenses the
+          * assessment was set as a footnote — 13.5px italic and a row of
+          * 10px links. It is doctrine-central (D-7), so it now reads as a
+          * panel with a source table and an evidence-class chip per source,
+          * using the same devices as the rest of the document. */}
+        <section className="axa-section axa-evsection">
+          <p className="axa-label">Evidence</p>
+          <div className="axa-evblock">
+            <p className="axa-evidence">{a.evidence.statement}</p>
+            {a.evidence.primarySources && a.evidence.primarySources.length > 0 && (
+              <div className="axa-srctable">
+                <p className="axa-srchead">Primary sources</p>
+                {a.evidence.primarySources.map((s, i) => (
+                  <div className="axa-srcrow" key={i}>
+                    <a href={s.url} target="_blank" rel="noopener noreferrer nofollow">{s.label}</a>
+                    <span className="axa-chip">{s.evidenceClass}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
         <p className="axa-colophon">Audio XX · System Assessment · {a.meta.date}</p>
       </article>
 
@@ -247,14 +260,20 @@ const AXA_CSS = `
 .axa-divider{border:0;border-top:1px solid var(--hairline);max-width:100%;margin:30px 0 4px}
 .axa-cond{background:var(--panel);border:1px solid var(--hairline);border-radius:2px;padding:14px 16px;margin-top:6px}
 .axa-cond .axa-p{font-size:17px;margin:0}
-.axa-evidence{margin-top:36px;border-top:1px solid var(--hairline);padding-top:14px;font-family:var(--serif);font-style:italic;font-size:15px;line-height:1.55;color:var(--ink-muted);text-wrap:pretty}
-.axa-colophon{margin-top:16px;font-family:var(--grot);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+.axa-evsection{margin-top:34px}
+.axa-evblock{border:1px solid var(--hairline);border-radius:2px;background:var(--panel);padding:16px 18px}
+.axa-evidence{font-family:var(--serif);font-style:italic;font-size:16.5px;line-height:1.55;color:var(--ink-muted);margin:0;text-wrap:pretty}
+.axa-srctable{margin-top:14px;border-top:1px solid var(--hairline);padding-top:12px}
+.axa-srchead{font-family:var(--grot);font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 4px}
+.axa-srcrow{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:8px 0;border-top:1px solid var(--hairline)}
+.axa-srcrow:nth-of-type(2){border-top:0}
+.axa-srcrow a{font-size:15.5px;color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in oklab,var(--accent) 40%,transparent)}
+/* Evidence-class chip — names what licenses the source, in the chip idiom. */
+.axa-chip{font-family:var(--grot);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-muted);background:var(--ground);border:1px solid var(--hairline);border-radius:2px;padding:3px 8px;white-space:nowrap}
+.axa-colophon{margin-top:18px;font-family:var(--grot);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
 .axa-origins{list-style:none;padding:0;margin:16px 0 0;display:flex;flex-direction:column;gap:8px}
 .axa-origins li{font-size:16px;line-height:1.55;color:var(--ink-muted)}
 .axa-origins li b{color:var(--ink);font-weight:600;font-family:var(--serif)}
-.axa-sources{margin-top:12px;font-family:var(--grot);font-size:11.5px;color:var(--ink-faint);display:flex;flex-wrap:wrap;gap:5px 16px;align-items:baseline}
-.axa-sources .k{text-transform:uppercase;letter-spacing:.16em}
-.axa-sources a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in oklab,var(--accent) 40%,transparent)}
 /* Embedded assessments keep the 640px reading measure — the conversation
  * column is wider (~748px) and letting the artifact fill it pushed prose
  * to ~97 characters/line (readability pass, founder-approved 2026-08-13). */
