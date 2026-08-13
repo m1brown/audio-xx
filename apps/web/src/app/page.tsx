@@ -5512,17 +5512,18 @@ export default function Home() {
       {!hasMessages && (
         <>
           {/* ── ▬ SYSTEM ASSESSMENT (rubric) ──
-           *  Phase 2A cover recomposition: the cover is a centered
-           *  composition — magazine cover, not article opening. The
-           *  rubric sits centered between two short accent rules. */}
+           *  Left-aligned article opening (founder, 2026-08-13 — the
+           *  centered cover read as small and floating; the entry
+           *  surface now opens like the proposal documents: rule +
+           *  eyebrow flush left). */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
+              justifyContent: 'flex-start',
               gap: '0.85rem',
               fontFamily: 'var(--face-grotesque)',
-              fontSize: '0.6875rem',
+              fontSize: '0.75rem',
               fontWeight: 600,
               letterSpacing: '0.14em',
               textTransform: 'uppercase' as const,
@@ -5540,20 +5541,11 @@ export default function Home() {
               }}
             />
             <span style={{ whiteSpace: 'nowrap' }}>System Assessment</span>
-            <span
-              aria-hidden="true"
-              style={{
-                display: 'inline-block',
-                width: '1.5rem',
-                height: '2px',
-                background: EDITORIAL.accent,
-              }}
-            />
           </div>
 
-          {/* ── Headline + standfirst (the cover) ──
-           *  Centered, at true cover scale — the headline commands the
-           *  page rather than opening a column. */}
+          {/* ── Headline + standfirst (article opening) ──
+           *  Left-aligned at cover scale — the headline opens the
+           *  column like a feature spread, not a floating cover. */}
           <h1
             style={{
               fontFamily: 'var(--face-display)',
@@ -5561,10 +5553,10 @@ export default function Home() {
               fontSize: 'clamp(2.75rem, 7vw, 5rem)',
               lineHeight: 1.03,
               letterSpacing: '-0.02em',
-              margin: '0 auto 1.5rem',
+              margin: '0 0 1.5rem',
               color: EDITORIAL.ink,
               maxWidth: '16ch',
-              textAlign: 'center' as const,
+              textAlign: 'left' as const,
               textWrap: 'balance' as React.CSSProperties['textWrap'],
             }}
           >
@@ -5574,13 +5566,13 @@ export default function Home() {
             style={{
               fontFamily: 'var(--face-text)',
               fontStyle: 'italic',
-              fontSize: 'clamp(1.15rem, 2vw, 1.3rem)',
-              lineHeight: 1.5,
+              fontSize: 'clamp(1.2rem, 2vw, 1.35rem)',
+              lineHeight: 1.55,
               color: EDITORIAL.ink,
-              margin: '0 auto',
-              maxWidth: '42ch',
-              textAlign: 'center' as const,
-              textWrap: 'balance' as React.CSSProperties['textWrap'],
+              margin: 0,
+              maxWidth: '46ch',
+              textAlign: 'left' as const,
+              textWrap: 'pretty' as React.CSSProperties['textWrap'],
             }}
           >
             Audio XX is a system-level listening advisor for{' '}
@@ -5626,13 +5618,13 @@ export default function Home() {
                   color: EDITORIAL.inkMuted,
                   marginTop: '3rem',
                   lineHeight: 1.7,
-                  textAlign: 'center' as const,
+                  textAlign: 'left' as const,
                 }}
               >
                 <div style={{ color: EDITORIAL.ink, fontWeight: 600 }}>
                   Active system · {name}
                 </div>
-                <div style={{ textTransform: 'none', letterSpacing: 0, fontFamily: 'var(--face-text)', fontSize: '0.95rem', color: EDITORIAL.inkMuted, marginTop: '0.35rem' }}>
+                <div style={{ textTransform: 'none', letterSpacing: 0, fontFamily: 'var(--face-text)', fontSize: '1.0625rem', color: EDITORIAL.inkMuted, marginTop: '0.35rem' }}>
                   {labels.join(' · ')}
                 </div>
                 {/* Assess the active system — deterministic entry to the
@@ -5661,7 +5653,7 @@ export default function Home() {
                     marginTop: '0.7rem',
                     padding: '0.4rem 0.9rem',
                     fontFamily: 'var(--face-grotesque)',
-                    fontSize: '0.7rem',
+                    fontSize: '0.75rem',
                     letterSpacing: '0.08em',
                     textTransform: 'uppercase' as const,
                     color: isLoading ? EDITORIAL.inkMuted : EDITORIAL.ink,
@@ -5678,7 +5670,7 @@ export default function Home() {
                   style={{
                     display: 'inline-block',
                     marginTop: '0.5rem',
-                    fontSize: '0.7rem',
+                    fontSize: '0.75rem',
                     letterSpacing: '0.08em',
                     color: EDITORIAL.inkMuted,
                     textDecoration: 'none',
@@ -5693,15 +5685,16 @@ export default function Home() {
           })()}
 
           {/* ── ▬ BEGIN HERE (rubric, above composer) ──
-           *  Centered with symmetric rules, mirroring the cover rubric. */}
+           *  Flush left with a single leading rule, mirroring the
+           *  opening rubric. */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
+              justifyContent: 'flex-start',
               gap: '0.85rem',
               fontFamily: 'var(--face-grotesque)',
-              fontSize: '0.6875rem',
+              fontSize: '0.75rem',
               fontWeight: 600,
               letterSpacing: '0.14em',
               textTransform: 'uppercase' as const,
@@ -5720,15 +5713,6 @@ export default function Home() {
               }}
             />
             <span style={{ whiteSpace: 'nowrap' }}>Begin Here</span>
-            <span
-              aria-hidden="true"
-              style={{
-                display: 'inline-block',
-                width: '1.5rem',
-                height: '2px',
-                background: EDITORIAL.accent,
-              }}
-            />
           </div>
 
           {/* ── MVP M1: Build Your System — the primary interaction. ──
@@ -5743,12 +5727,12 @@ export default function Home() {
           <div
             style={{
               fontFamily: 'var(--face-grotesque)',
-              fontSize: '0.6875rem',
+              fontSize: '0.75rem',
               fontWeight: 600,
               letterSpacing: '0.14em',
               textTransform: 'uppercase' as const,
               color: EDITORIAL.faint,
-              textAlign: 'center' as const,
+              textAlign: 'left' as const,
               marginTop: '3.25rem',
               marginBottom: '1rem',
             }}
@@ -5896,7 +5880,7 @@ export default function Home() {
        * Conversation state retains its existing visual weight (compact,
        * slate-bordered) — the editorial treatment applies to entry only.
        */}
-      {!hasPendingIntake && <div style={{ marginBottom: '1rem', maxWidth: hasMessages ? LAYOUT.textMax : EDITORIAL.narrow, margin: hasMessages ? '0 0 1rem' : '0 auto 1rem' }}>
+      {!hasPendingIntake && <div style={{ marginBottom: '1rem', maxWidth: hasMessages ? LAYOUT.textMax : EDITORIAL.narrow, margin: '0 0 1rem' }}>
         <textarea
           ref={textareaRef}
           id="audio-input"

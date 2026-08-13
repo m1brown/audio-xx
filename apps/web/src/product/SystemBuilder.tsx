@@ -29,7 +29,7 @@ const MAX_FIELDS = 6;
 
 const grotesqueCaps: React.CSSProperties = {
   fontFamily: 'var(--face-grotesque)',
-  fontSize: '0.6875rem',
+  fontSize: '0.75rem',
   fontWeight: 600,
   letterSpacing: '0.14em',
   textTransform: 'uppercase',
@@ -81,7 +81,7 @@ export default function SystemBuilder() {
   return (
     <div
       data-testid="system-builder"
-      style={{ maxWidth: '30rem', margin: '0 auto', textAlign: 'left' }}
+      style={{ maxWidth: '40rem', margin: 0, textAlign: 'left' }}
     >
       {fields.map((f, i) => (
         <div key={i} style={{ position: 'relative', marginBottom: '1.4rem' }}>
@@ -127,7 +127,7 @@ export default function SystemBuilder() {
             style={{
               width: '100%',
               fontFamily: 'var(--face-text)',
-              fontSize: '1.05rem',
+              fontSize: '1.0625rem',
               color: EDITORIAL.ink,
               background: 'transparent',
               border: 'none',
@@ -203,7 +203,7 @@ export default function SystemBuilder() {
           data-testid="builder-hint"
           style={{
             fontFamily: 'var(--face-text)',
-            fontSize: '0.85rem',
+            fontSize: '0.9375rem',
             lineHeight: 1.5,
             color: EDITORIAL.inkMuted,
             margin: '0.25rem 0 0',
@@ -253,7 +253,7 @@ export default function SystemBuilder() {
           aria-busy={pending}
           style={{
             fontFamily: 'var(--face-grotesque)',
-            fontSize: '0.8rem',
+            fontSize: '0.875rem',
             fontWeight: 600,
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
