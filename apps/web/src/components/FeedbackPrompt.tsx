@@ -41,7 +41,7 @@ function markSubmitted(id: string): void {
 }
 
 const QUESTION_LABEL: React.CSSProperties = {
-  fontSize: '0.86rem',
+  fontSize: '0.9375rem',
   color: COLOR.textSecondary,
   margin: 0,
 };
@@ -60,8 +60,8 @@ function Choice({
       type="button"
       onClick={onClick}
       style={{
-        padding: '0.3rem 0.7rem',
-        fontSize: '0.82rem',
+        padding: '0.34rem 0.75rem',
+        fontSize: '0.875rem',
         fontFamily: 'inherit',
         cursor: 'pointer',
         borderRadius: 4,
@@ -85,7 +85,7 @@ export default function FeedbackPrompt({ advisoryId }: { advisoryId: string }) {
 
   if (done) {
     return (
-      <p style={{ fontSize: '0.82rem', color: COLOR.textMuted, marginTop: '1rem' }}>
+      <p style={{ fontSize: '0.9375rem', color: COLOR.textMuted, marginTop: '1rem' }}>
         Thanks — your feedback helps us improve.
       </p>
     );
@@ -119,7 +119,7 @@ export default function FeedbackPrompt({ advisoryId }: { advisoryId: string }) {
       }}
       aria-label="Feedback"
     >
-      <p style={{ fontSize: '0.72rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: COLOR.textMuted, margin: 0 }}>
+      <p style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: COLOR.textMuted, margin: 0 }}>
         Help us improve
       </p>
 
@@ -148,7 +148,7 @@ export default function FeedbackPrompt({ advisoryId }: { advisoryId: string }) {
         rows={2}
         style={{
           fontFamily: 'inherit',
-          fontSize: '0.86rem',
+          fontSize: '0.9375rem',
           padding: '0.5rem 0.65rem',
           border: `1px solid ${COLOR.border}`,
           borderRadius: 6,
@@ -164,8 +164,8 @@ export default function FeedbackPrompt({ advisoryId }: { advisoryId: string }) {
           onClick={submit}
           disabled={!canSubmit}
           style={{
-            padding: '0.45rem 1.1rem',
-            fontSize: '0.84rem',
+            padding: '0.5rem 1.15rem',
+            fontSize: '0.9rem',
             fontWeight: 500,
             fontFamily: 'inherit',
             borderRadius: 4,

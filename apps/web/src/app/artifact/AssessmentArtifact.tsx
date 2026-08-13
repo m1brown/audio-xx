@@ -199,23 +199,23 @@ const AXA_CSS = `
 .axa-root img{max-width:100%;height:auto}
 @media (prefers-color-scheme:dark){ .axa-root{ --ground:#221F1A; --panel:#2A2620; --ink:#EDE6D8; --ink-muted:#B4AC9E; --ink-faint:#867E70; --accent:#E8628B; --hairline:#3A362E; } }
 .axa-ident{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--hairline);padding-bottom:8px;margin-bottom:28px}
-.axa-ident .who{font-family:var(--grot);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-muted)}
+.axa-ident .who{font-family:var(--grot);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-muted)}
 .axa-ident .who b{color:var(--ink);font-weight:700;letter-spacing:.2em;margin-right:8px}
-.axa-ident .when{font-family:var(--grot);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);font-variant-numeric:tabular-nums}
-.axa-kicker{font-family:var(--grot);font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 10px}
-.axa-systemline{font-family:var(--serif);font-weight:600;font-size:clamp(19px,2.6vw,23px);line-height:1.3;margin:0 0 20px;letter-spacing:-.01em;text-wrap:balance}
+.axa-ident .when{font-family:var(--grot);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+.axa-kicker{font-family:var(--grot);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 10px}
+.axa-systemline{font-family:var(--serif);font-weight:600;font-size:clamp(21px,2.8vw,26px);line-height:1.3;margin:0 0 20px;letter-spacing:-.01em;text-wrap:balance}
 .axa-strip{list-style:none;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 8px}
 .axa-plate{display:flex;flex-direction:column;gap:6px}
 .axa-plate .img{aspect-ratio:4/3;border:1px solid var(--hairline);background:var(--panel);border-radius:2px;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .axa-plate .img img{width:100%;height:100%;object-fit:cover}
 .axa-plate .img .ph{color:var(--ink-faint);font-size:20px;opacity:.5}
-.axa-plate .nm{font-family:var(--serif);font-size:12px;line-height:1.15}
+.axa-plate .nm{font-family:var(--serif);font-size:13.5px;line-height:1.25}
 .axa-verdictwrap{margin:44px 0 10px}
 .axa-rule{display:block;width:40px;height:2.5px;background:var(--accent);margin-bottom:18px}
 .axa-verdict{font-family:var(--serif);font-weight:600;font-size:clamp(32px,5.4vw,46px);line-height:1.02;letter-spacing:-.02em;margin:0 0 16px;text-wrap:balance}
-.axa-standfirst{font-family:var(--serif);font-style:italic;font-size:clamp(16px,2.2vw,18px);line-height:1.45;color:var(--ink-muted);margin:0;text-wrap:pretty}
+.axa-standfirst{font-family:var(--serif);font-style:italic;font-size:clamp(17px,2.3vw,19.5px);line-height:1.5;color:var(--ink-muted);margin:0;text-wrap:pretty}
 .axa-sig{margin:28px 0 6px}
-.axa-sig .cap{font-family:var(--grot);font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.axa-sig .cap{font-family:var(--grot);font-size:11.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 10px;display:flex;align-items:center;gap:8px}
 .axa-sig .cap::before{content:"";width:14px;height:1.5px;background:var(--accent);display:inline-block}
 /* Ruled reading table — the proposal-document idiom the founder asked the
  * product to lean into (2026-08-13): bordered block, hairline row rules,
@@ -238,21 +238,21 @@ const AXA_CSS = `
 /* A balanced axis reads as an open marker; a committed one is solid. */
 .axa-track i.neu{background:var(--ground);border:1.5px solid var(--ink-faint)}
 .axa-section{margin-top:26px}
-.axa-label{font-family:var(--grot);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.axa-label{font-family:var(--grot);font-size:11.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 8px;display:flex;align-items:center;gap:8px}
 .axa-label::before{content:"";width:14px;height:1.5px;background:var(--accent);display:inline-block}
-.axa-p{font-size:17px;line-height:1.65;margin:0 0 13px;color:var(--ink)}
+.axa-p{font-size:18px;line-height:1.62;margin:0 0 13px;color:var(--ink)}
 .axa-p:last-child{margin-bottom:0}
-.axa-reco{font-family:var(--serif);font-size:19px;line-height:1.55;margin:0}
-.axa-cost{font-size:14px;line-height:1.55;color:var(--ink-muted);font-style:italic;margin:8px 0 0}
+.axa-reco{font-family:var(--serif);font-size:20.5px;line-height:1.5;margin:0}
+.axa-cost{font-size:15.5px;line-height:1.55;color:var(--ink-muted);font-style:italic;margin:8px 0 0}
 .axa-divider{border:0;border-top:1px solid var(--hairline);max-width:100%;margin:30px 0 4px}
 .axa-cond{background:var(--panel);border:1px solid var(--hairline);border-radius:2px;padding:14px 16px;margin-top:6px}
-.axa-cond .axa-p{font-size:14.5px;margin:0}
-.axa-evidence{margin-top:36px;border-top:1px solid var(--hairline);padding-top:14px;font-family:var(--serif);font-style:italic;font-size:13.5px;line-height:1.55;color:var(--ink-muted);text-wrap:pretty}
-.axa-colophon{margin-top:16px;font-family:var(--grot);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+.axa-cond .axa-p{font-size:17px;margin:0}
+.axa-evidence{margin-top:36px;border-top:1px solid var(--hairline);padding-top:14px;font-family:var(--serif);font-style:italic;font-size:15px;line-height:1.55;color:var(--ink-muted);text-wrap:pretty}
+.axa-colophon{margin-top:16px;font-family:var(--grot);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
 .axa-origins{list-style:none;padding:0;margin:16px 0 0;display:flex;flex-direction:column;gap:8px}
-.axa-origins li{font-size:12.5px;line-height:1.5;color:var(--ink-muted)}
+.axa-origins li{font-size:16px;line-height:1.55;color:var(--ink-muted)}
 .axa-origins li b{color:var(--ink);font-weight:600;font-family:var(--serif)}
-.axa-sources{margin-top:12px;font-family:var(--grot);font-size:10px;color:var(--ink-faint);display:flex;flex-wrap:wrap;gap:5px 16px;align-items:baseline}
+.axa-sources{margin-top:12px;font-family:var(--grot);font-size:11.5px;color:var(--ink-faint);display:flex;flex-wrap:wrap;gap:5px 16px;align-items:baseline}
 .axa-sources .k{text-transform:uppercase;letter-spacing:.16em}
 .axa-sources a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in oklab,var(--accent) 40%,transparent)}
 /* Embedded assessments keep the 640px reading measure — the conversation

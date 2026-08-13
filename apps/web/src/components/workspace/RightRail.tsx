@@ -46,7 +46,7 @@ const RAIL = {
 /** Section label — uppercase muted-gray eyebrow. Structural marker
  *  for LISTENER / SYSTEM / RECENT without using accent color. */
 const SECTION_LABEL_STYLE = {
-  fontSize: '0.66rem',
+  fontSize: '0.75rem',
   fontWeight: 600,
   color: RAIL.faint,
   marginBottom: '0.6rem',
@@ -55,7 +55,7 @@ const SECTION_LABEL_STYLE = {
 } as const;
 
 const EMPTY_STATE_STYLE = {
-  fontSize: '0.78rem',
+  fontSize: '0.9375rem',
   color: RAIL.faint,
   lineHeight: 1.55,
   margin: 0,
@@ -68,7 +68,7 @@ const EMPTY_STATE_STYLE = {
 const TINY_LINK_STYLE = {
   display: 'inline-block',
   marginTop: '0.5rem',
-  fontSize: '0.74rem',
+  fontSize: '0.875rem',
   fontWeight: 500,
   color: RAIL.link,
   textDecoration: 'none',
@@ -104,7 +104,7 @@ export default function RightRail({
         {hasListener ? (
           <div
             style={{
-              fontSize: '0.84rem',
+              fontSize: '0.9375rem',
               lineHeight: 1.55,
               color: RAIL.inkMuted,
             }}
@@ -133,7 +133,7 @@ export default function RightRail({
         {hasSystem ? (
           <div
             style={{
-              fontSize: '0.84rem',
+              fontSize: '0.9375rem',
               lineHeight: 1.55,
               color: RAIL.inkMuted,
             }}
@@ -176,7 +176,7 @@ export default function RightRail({
               margin: 0,
               padding: 0,
               listStyle: 'none',
-              fontSize: '0.81rem',
+              fontSize: '0.9375rem',
               lineHeight: 1.55,
               color: RAIL.inkMuted,
             }}

@@ -35,7 +35,7 @@ export interface ResponseFooterProps {
 
 const groupLabelStyle: React.CSSProperties = {
   fontFamily: 'var(--face-grotesque, inherit)',
-  fontSize: '0.6875rem',
+  fontSize: '0.75rem',
   fontWeight: 600,
   letterSpacing: '0.12em',
   textTransform: 'uppercase',
@@ -47,7 +47,7 @@ const linkStyle: React.CSSProperties = {
   color: EDITORIAL.ink,
   textDecoration: 'none',
   borderBottom: `1px solid ${EDITORIAL.hairline}`,
-  fontSize: '0.95rem',
+  fontSize: '1.0625rem',
   lineHeight: 1.7,
 };
 
@@ -55,7 +55,7 @@ const commerceLinkStyle: React.CSSProperties = {
   color: EDITORIAL.inkMuted,
   textDecoration: 'none',
   borderBottom: `1px solid ${EDITORIAL.hairline}`,
-  fontSize: '0.82rem',
+  fontSize: '0.9375rem',
 };
 
 export default function ResponseFooter({ groups, resources }: ResponseFooterProps) {
@@ -117,7 +117,7 @@ export default function ResponseFooter({ groups, resources }: ResponseFooterProp
             <div key={r.title} style={{ marginBottom: '0.55rem' }}>
               <span
                 style={{
-                  fontSize: '0.85rem',
+                  fontSize: '0.9375rem',
                   color: EDITORIAL.inkMuted,
                   marginRight: '0.6rem',
                 }}

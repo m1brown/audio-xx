@@ -51,7 +51,7 @@ const RAIL = {
  *  group ("Workspace" / "Reference") without competing with the nav
  *  items below it. */
 const SECTION_EYEBROW_STYLE = {
-  fontSize: '0.66rem',
+  fontSize: '0.75rem',
   fontWeight: 500,
   letterSpacing: '0.12em',
   textTransform: 'uppercase' as const,
@@ -70,7 +70,7 @@ const NAV_ITEM_BASE: React.CSSProperties = {
   borderRight: 'none',
   borderBottom: 'none',
   borderLeft: '2px solid transparent',
-  fontSize: '0.82rem',
+  fontSize: '0.9375rem',
   letterSpacing: 0,
   lineHeight: 1.5,
   textDecoration: 'none',
