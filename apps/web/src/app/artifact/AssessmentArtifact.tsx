@@ -273,7 +273,10 @@ const AXA_CSS = `
 .axa-cond .axa-p{font-size:17px;margin:0}
 .axa-evsection{margin-top:34px}
 .axa-evblock{border:1px solid var(--hairline);border-radius:2px;background:var(--panel);padding:16px 18px}
-.axa-evidence{font-family:var(--serif);font-style:italic;font-size:16.5px;line-height:1.55;color:var(--ink-muted);margin:0;text-wrap:pretty}
+/* Full ink, not muted (founder, 2026-08-13): inside a tinted panel the
+ * muted grey read as de-emphasised, and what licenses the assessment is not
+ * a footnote. Italic still distinguishes it as a provenance statement. */
+.axa-evidence{font-family:var(--serif);font-style:italic;font-size:16.5px;line-height:1.55;color:var(--ink);margin:0;text-wrap:pretty}
 .axa-srctable{margin-top:14px;border-top:1px solid var(--hairline);padding-top:12px}
 .axa-srchead{font-family:var(--grot);font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 4px}
 .axa-srcrow{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:8px 0;border-top:1px solid var(--hairline)}
