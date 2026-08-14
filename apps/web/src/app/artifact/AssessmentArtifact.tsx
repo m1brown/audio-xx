@@ -52,36 +52,19 @@ export default function AssessmentArtifact(
           <span className="when">{a.meta.date}</span>
         </div>
 
-        {/* Subject — the system this assessment concerns */}
+        {/* Subject line — WHAT was assessed, in one line. The verdict is
+          * meaningless without it, so it stays above; the heavy evidence of
+          * the subject (photo strip, origin prose) moves below the verdict. */}
         <p className="axa-kicker">The system assessed</p>
         <h1 className="axa-systemline">
           {a.subject.components.map((c) => c.name).join(' · ')}
         </h1>
-        {a.subject.components.length > 0 && (
-          <ul className="axa-strip" aria-label="Components">
-            {a.subject.components.map((c, i) => (
-              <li className="axa-plate" key={i}>
-                <div className="img">
-                  {c.photo
-                    // eslint-disable-next-line @next/next/no-img-element
-                    ? <img src={c.photo.src} alt={c.photo.alt} />
-                    : <span className="ph" aria-hidden="true">◵</span>}
-                </div>
-                <span className="nm">{c.name}</span>
-              </li>
-            ))}
-          </ul>
-        )}
 
-        {a.subject.components.some((c) => c.origin) && (
-          <ul className="axa-origins" aria-label="Component origins">
-            {a.subject.components.filter((c) => c.origin).map((c, i) => (
-              <li key={i}><b>{c.name}</b> — {c.origin}</li>
-            ))}
-          </ul>
-        )}
-
-        {/* Verdict — the centre of gravity */}
+        {/* Verdict — the centre of gravity, and now the first thing a reader
+          * meets (founder, 2026-08-13). It previously sat below the photo
+          * strip and the origin rows, which put the single most valuable
+          * sentence on the page at ~805px — the bottom of a 900px viewport.
+          * Publications lead with the conclusion. */}
         <div className="axa-verdictwrap">
           <span className="axa-rule" aria-hidden="true" />
           <h2 className="axa-verdict">{a.identity.verdict}</h2>
@@ -111,6 +94,32 @@ export default function AssessmentArtifact(
               ))}
             </div>
           </div>
+        )}
+
+        {/* Subject evidence — the components themselves, after the verdict
+          * and the signature that summarise them. */}
+        {a.subject.components.length > 0 && (
+          <ul className="axa-strip" aria-label="Components">
+            {a.subject.components.map((c, i) => (
+              <li className="axa-plate" key={i}>
+                <div className="img">
+                  {c.photo
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={c.photo.src} alt={c.photo.alt} />
+                    : <span className="ph" aria-hidden="true">◵</span>}
+                </div>
+                <span className="nm">{c.name}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {a.subject.components.some((c) => c.origin) && (
+          <ul className="axa-origins" aria-label="Component origins">
+            {a.subject.components.filter((c) => c.origin).map((c, i) => (
+              <li key={i}><b>{c.name}</b> — {c.origin}</li>
+            ))}
+          </ul>
         )}
 
         <section className="axa-section">
@@ -214,14 +223,14 @@ const AXA_CSS = `
 .axa-ident .who b{color:var(--ink);font-weight:700;letter-spacing:.2em;margin-right:8px}
 .axa-ident .when{font-family:var(--grot);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);font-variant-numeric:tabular-nums}
 .axa-kicker{font-family:var(--grot);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 10px}
-.axa-systemline{font-family:var(--serif);font-weight:600;font-size:clamp(21px,2.8vw,26px);line-height:1.3;margin:0 0 20px;letter-spacing:-.01em;text-wrap:balance}
-.axa-strip{list-style:none;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 8px}
+.axa-systemline{font-family:var(--serif);font-weight:600;font-size:clamp(21px,2.8vw,26px);line-height:1.3;margin:0 0 6px;letter-spacing:-.01em;text-wrap:balance}
+.axa-strip{list-style:none;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:28px 0 8px}
 .axa-plate{display:flex;flex-direction:column;gap:6px}
 .axa-plate .img{aspect-ratio:4/3;border:1px solid var(--hairline);background:var(--panel);border-radius:2px;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .axa-plate .img img{width:100%;height:100%;object-fit:cover}
 .axa-plate .img .ph{color:var(--ink-faint);font-size:20px;opacity:.5}
 .axa-plate .nm{font-family:var(--serif);font-size:13.5px;line-height:1.25}
-.axa-verdictwrap{margin:44px 0 10px}
+.axa-verdictwrap{margin:26px 0 10px}
 .axa-rule{display:block;width:40px;height:2.5px;background:var(--accent);margin-bottom:18px}
 .axa-verdict{font-family:var(--serif);font-weight:600;font-size:clamp(32px,5.4vw,46px);line-height:1.02;letter-spacing:-.02em;margin:0 0 16px;text-wrap:balance}
 .axa-standfirst{font-family:var(--serif);font-style:italic;font-size:clamp(17px,2.3vw,19.5px);line-height:1.5;color:var(--ink-muted);margin:0;text-wrap:pretty}

@@ -56,6 +56,13 @@ describe('Assessment Renderer — France web artifact', () => {
     }
     // Verdict leads the reading (after the subject it concerns).
     expect(iSystem).toBeLessThan(iVerdict);
+    // The system is NAMED before the verdict, but its heavy evidence — the
+    // component photo strip and the origin rows — now follows it (2026-08-13).
+    // Leading with the conclusion put the verdict at ~250px instead of ~805px
+    // in a 900px viewport; this pins that arrangement.
+    // Match the MARKUP, not the CSS rule of the same name in the injected
+    // <style> block at the top of the component.
+    expect(iVerdict).toBeLessThan(html.indexOf('class="axa-strip"'));
     // Answer before evidence; canonical order through the case.
     expect(iVerdict).toBeLessThan(iRecognition);
     expect(iRecognition).toBeLessThan(iRecommend);
