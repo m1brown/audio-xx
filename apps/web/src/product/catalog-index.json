@@ -744,6 +744,12 @@
   "category": "iem"
  },
  {
+  "id": "moondrop-quarks",
+  "brand": "Moondrop",
+  "name": "Quarks",
+  "category": "iem"
+ },
+ {
   "id": "musical-fidelity-v90-dac",
   "brand": "Musical Fidelity",
   "name": "V90-DAC",
@@ -1036,6 +1042,12 @@
   "brand": "Trends Audio",
   "name": "TA-10",
   "category": "amplifier"
+ },
+ {
+  "id": "truthear-gate",
+  "brand": "Truthear",
+  "name": "GATE",
+  "category": "iem"
  },
  {
   "id": "truthear-hola",

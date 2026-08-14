@@ -25,31 +25,33 @@ function answerFor(q: string) {
 }
 
 describe('coverage gaps are explained, never silently empty', () => {
-  // The entry-tier band was added 2026-08-13, so $75 and $50 are now served.
-  // $15 sits below the catalogue floor ($19) and is the genuine gap.
+  // The entry-tier band was added 2026-08-13 (extended with Quarks $13 and
+  // GATE $20), so $75 / $50 / $25 / $15 are all served. $12 sits below the
+  // catalogue floor ($13) and is the genuine gap.
   it('an IEM budget below catalogue coverage explains the limit', () => {
-    const { answer } = answerFor('IEM recommendations under $15');
+    const { answer } = answerFor('IEM recommendations under $12');
     expect(answer.productExamples.length).toBe(0);
     expect(answer.systemNote).toBeDefined();
     expect(answer.systemNote).toMatch(/catalogue|carry/i);
     // States the actual floor rather than a vague apology.
-    expect(answer.systemNote).toMatch(/\$19/);
+    expect(answer.systemNote).toMatch(/\$13/);
   });
 
   it('names the budget the reader actually asked for', () => {
-    const { answer } = answerFor('IEM recommendations under $15');
-    expect(answer.systemNote).toMatch(/\$15/);
+    const { answer } = answerFor('IEM recommendations under $12');
+    expect(answer.systemNote).toMatch(/\$12/);
   });
 
   it('never substitutes another category to fill the gap (REC-1 invariant holds)', () => {
-    const { ctx, answer } = answerFor('IEM recommendations under $15');
+    const { ctx, answer } = answerFor('IEM recommendations under $12');
     expect(ctx.category).toBe('headphone');
     expect(answer.productExamples).toEqual([]);
   });
 
   it('the budget band added 2026-08-13 is genuinely served', () => {
     for (const q of ['IEM recommendations under $100', 'IEM recommendations under $75',
-                     'IEM recommendations under $50', 'IEM recommendations under $25']) {
+                     'IEM recommendations under $50', 'IEM recommendations under $25',
+                     'IEM recommendations under $15']) {
       const { answer } = answerFor(q);
       expect(answer.productExamples.length, q).toBeGreaterThan(0);
       expect(answer.coverageGap, q).toBeUndefined();
@@ -88,8 +90,8 @@ describe('a coverage gap is a catalogue limit, not any empty shortlist', () => {
   });
 
   it('reports the gap only when the cheapest catalogued item exceeds the budget', () => {
-    const { answer } = answerFor('IEM recommendations under $15');
-    expect(answer.coverageGap?.catalogueFloor).toBe(19);
+    const { answer } = answerFor('IEM recommendations under $12');
+    expect(answer.coverageGap?.catalogueFloor).toBe(13);
     expect(answer.coverageGap!.catalogueFloor!).toBeGreaterThan(answer.coverageGap!.budget);
   });
 });
