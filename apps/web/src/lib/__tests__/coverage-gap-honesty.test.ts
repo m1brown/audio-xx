@@ -57,3 +57,30 @@ describe('coverage gaps are explained, never silently empty', () => {
     expect(answer.productExamples.length).toBeGreaterThan(0);
   });
 });
+
+describe('a coverage gap is a catalogue limit, not any empty shortlist', () => {
+  it('does NOT claim a gap when the catalogue has products in band', () => {
+    // Regression (caught by the QA-8 gate before shipping): the first
+    // implementation fired on "empty results + a budget", which also covers
+    // shortlists emptied by trait fit or hard constraints. Reporting "no
+    // speaker under $4,000" when the catalogue is full of them is a false
+    // claim about coverage.
+    const signals: ExtractedSignals = {
+      ...EMPTY,
+      traits: { tonal_density: 'up', flow: 'up' } as ExtractedSignals['traits'],
+      archetype_hints: ['tonal_saturated'],
+    };
+    const q = ['I love the warmth and body of tube amps, thick rich sound', 'I want speakers', 'starting from scratch', '$4000'].join('\n');
+    const ctx = detectShoppingIntent(q, signals, [], '$4000');
+    const r = reason(q, extractDesires(q), signals, null, ctx, undefined);
+    const answer = buildShoppingAnswer(ctx, signals, undefined, r, []);
+    expect(answer.coverageGap).toBeUndefined();
+    expect(answer.systemNote ?? '').not.toMatch(/coverage starts at/i);
+  });
+
+  it('reports the gap only when the cheapest catalogued item exceeds the budget', () => {
+    const { answer } = answerFor('IEM recommendations under $75');
+    expect(answer.coverageGap?.catalogueFloor).toBe(80);
+    expect(answer.coverageGap!.catalogueFloor!).toBeGreaterThan(answer.coverageGap!.budget);
+  });
+});

@@ -2621,6 +2621,11 @@ export interface ShoppingAnswer {
   productExamples: ProductExample[];
   watchFor: string[];
   systemNote?: string;
+  /** Set when the category is servable but the catalogue has nothing inside
+   *  the stated budget. The answer carries an explicit explanation in
+   *  `systemNote`, so callers must NOT treat the empty product list as an
+   *  empty shell to be replaced by a generative fallback. */
+  coverageGap?: { category: string; budget: number; catalogueFloor?: number };
   /** True when the recommendation is based on incomplete context — refinable. */
   provisional?: boolean;
   /** Which context dimensions are missing — shown as caveats on provisional answers. */
@@ -7242,6 +7247,7 @@ export function buildShoppingAnswer(
   // Same shape as powerMismatchNote above: name the constraint that cannot
   // be met instead of presenting an empty answer as an answer.
   let coverageGapNote: string | undefined;
+  let coverageGap: ShoppingAnswer['coverageGap'];
   if (productExamples.length === 0 && typeof ctx.budgetAmount === 'number' && ctx.budgetAmount > 0) {
     const pool: Array<{ price?: number }> =
       ctx.category === 'headphone'
@@ -7251,10 +7257,22 @@ export function buildShoppingAnswer(
         : (fullCatalogFor(ctx.category) as Array<{ price?: number }>);
     const prices = pool.map((p) => p.price).filter((n): n is number => typeof n === 'number' && n > 0);
     const cheapest = prices.length > 0 ? Math.min(...prices) : undefined;
+    // A coverage gap is specifically "the catalogue has nothing at this
+    // price" — cheapest > budget. An empty shortlist for any other reason
+    // (trait fit, hard constraints, diversity rules) is a selection outcome,
+    // not a coverage limit, and must NOT be reported as one: saying "no
+    // speaker under $4,000" when the catalogue is full of them would be a
+    // false claim. Caught by the QA-8 gate before shipping.
+    if (cheapest !== undefined && cheapest <= ctx.budgetAmount) {
+      coverageGapNote = undefined;
+      coverageGap = undefined;
+    } else {
     const what = ctx.iemRequested ? 'in-ear monitor' : categoryLabel.toLowerCase();
+    coverageGap = { category: ctx.category, budget: ctx.budgetAmount, catalogueFloor: cheapest };
     coverageGapNote = cheapest
       ? `No ${what} in this catalogue falls under $${ctx.budgetAmount.toLocaleString()} — coverage starts at $${cheapest.toLocaleString()}. That is a limit of what I carry, not a judgement that nothing worthwhile exists at that price. Raise the ceiling, or name a model you are considering, and I can say something useful about it.`
       : `I do not carry any ${what} at that price. That is a limit of what I cover, not a judgement about the products themselves — name a model you are considering and I can look at it directly.`;
+    }
   }
 
   const systemNote = coverageGapNote
@@ -7322,6 +7340,28 @@ export function buildShoppingAnswer(
     }
   }
 
+  // A coverage gap answers with one true sentence and nothing else. The
+  // recommendation scaffolding ("These suggestions represent different design
+  // philosophies", "Why this fits you", trade-offs) describes a shortlist that
+  // does not exist — the "empty shell" the earlier knowledge-lane fallback was
+  // written to avoid. Restraint doctrine: say the true thing, then stop.
+  if (coverageGap) {
+    return {
+      category: categoryLabel,
+      budget: ctx.budgetAmount ?? null,
+      preferenceSummary: '',
+      bestFitDirection: '',
+      whyThisFits: [],
+      productExamples: [],
+      watchFor: [],
+      systemNote: coverageGapNote,
+      coverageGap,
+      // No refinement question: the note already names the two useful moves
+      // (raise the ceiling, or name a model), so a generic prompt would be
+      // one more sentence that isn't doing work.
+    };
+  }
+
   return {
     category: categoryLabel,
     budget: ctx.budgetAmount,
@@ -7331,6 +7371,7 @@ export function buildShoppingAnswer(
     productExamples,
     watchFor,
     systemNote,
+    coverageGap,
     provisional,
     statedGaps: provisional ? gaps : undefined,
     synthesisBrief,

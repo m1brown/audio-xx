@@ -740,6 +740,11 @@ export interface AdvisoryResponse {
   // ── 2. System / Use-Case Context ────────────────────
   /** Current system and listening context (prose). */
   systemContext?: string;
+  /** Set when the catalogue has nothing inside the stated budget for a
+   *  servable category. The response is one honest sentence; renderers
+   *  must suppress shortlist scaffolding rather than frame an absent
+   *  shortlist as if it existed. */
+  coverageGap?: { category: string; budget: number; catalogueFloor?: number };
   /** Inferred system tendencies (prose summary). */
   systemTendencies?: string;
 
@@ -3185,6 +3190,7 @@ export function shoppingToAdvisory(
     listenerPriorities,
     whyFitsYou: a.whyFitsYou,
     systemContext: a.systemNote,
+    coverageGap: a.coverageGap,
 
     recommendedDirection: a.bestFitDirection,
     // Suppress passive content when preference is weak — StartHereBlock is the primary CTA

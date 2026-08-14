@@ -4313,10 +4313,23 @@ export default function Home() {
           // LS-02, LS-03). Conservative condition: only when there
           // are NO products at all; any populated answer renders
           // exactly as before.
+          // Exception (2026-08-13): a coverage gap is NOT an empty shell.
+          // When the category is servable but the catalogue holds nothing
+          // inside the stated budget, the answer carries an explicit
+          // explanation ("No in-ear monitor in this catalogue falls under
+          // $75 — coverage starts at $80"). Falling back to the knowledge
+          // lane here replaced that honest, catalogue-grounded limit with
+          // generative prose about products we do not carry — which is both
+          // less useful and a D-7 violation (claims beyond our evidence).
           if (!answer.productExamples || answer.productExamples.length === 0) {
-            console.log('[shopping-empty] no products for %s — knowledge-lane fallback', shoppingCtx.category);
-            runKnowledgeLane();
-            return;
+            if (answer.coverageGap) {
+              console.log('[shopping-empty] coverage gap for %s under $%d — rendering the honest limit',
+                shoppingCtx.category, answer.coverageGap.budget);
+            } else {
+              console.log('[shopping-empty] no products for %s — knowledge-lane fallback', shoppingCtx.category);
+              runKnowledgeLane();
+              return;
+            }
           }
 
           // ── FINAL FAIL-CLOSED VALIDATOR ───────────────────

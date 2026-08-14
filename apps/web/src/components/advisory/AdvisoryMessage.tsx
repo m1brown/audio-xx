@@ -2211,18 +2211,24 @@ function isEditorialFormat(a: AdvisoryResponse): boolean {
 // context, and archetype. When profile is incomplete, shows a
 // transparent note about what's missing.
 
-function AudioPreferencesBlock({ profile, advisoryMode, namedProduct }: {
+function AudioPreferencesBlock({ profile, advisoryMode, namedProduct, coverageGap }: {
   profile: AudioProfile;
   advisoryMode?: string;
   /** True when the query targets a specific named product (even if not in catalog).
    *  False/undefined when only a brand name was mentioned. */
   namedProduct?: boolean;
+  /** Suppresses the shortlist preamble: a coverage-gap answer has no
+   *  suggestions to characterise, so "These suggestions represent different
+   *  design philosophies" would describe something that isn't there. */
+  coverageGap?: unknown;
 }) {
   const hasSystem = profile.systemChain && profile.systemChain.length > 0;
   const hasPriorities = profile.sonicPriorities && profile.sonicPriorities.length > 0;
   const hasAvoids = profile.sonicAvoids && profile.sonicAvoids.length > 0;
   const hasContext = profile.listeningContext && profile.listeningContext.length > 0;
   const hasAnything = hasSystem || hasPriorities || hasContext;
+
+  if (coverageGap) return null;
 
   if (!hasAnything) {
     // Determine the correct label based on advisory mode
@@ -2747,7 +2753,7 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
       <ResponseHeader advisory={a} />
 
       {/* ── Audio Preferences ────────────────────────── */}
-      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} namedProduct={pa.catalogMatch || pa.candidateName.toLowerCase() !== pa.candidateBrand.toLowerCase()} />}
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} namedProduct={pa.catalogMatch || pa.candidateName.toLowerCase() !== pa.candidateBrand.toLowerCase()} coverageGap={a.coverageGap} />}
 
       {/* ── Hero product image ───────────────────────────
        *  Stage 6.2 consultation-validation pass: AssessmentFormat
@@ -3333,7 +3339,7 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
     <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
 
       {/* ── 0. Audio Preferences ────────────────────────── */}
-      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} />}
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} coverageGap={a.coverageGap} />}
 
       {/* ── 0b. Start Here — preference capture CTA ────── */}
       {a.lowPreferenceSignal && a.shoppingCategory && onPreferenceCapture && (
@@ -3812,7 +3818,7 @@ function KnowledgeFormat({ advisory: a }: AdvisoryMessageProps) {
     <div style={{ fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight, color: COLORS.text }}>
       <ResponseHeader advisory={a} />
 
-      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} />}
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} coverageGap={a.coverageGap} />}
 
       <AdvisorySection label={kr.topic}>
         <p style={{ margin: '0 0 0.95rem 0', color: COLORS.text, lineHeight: FONTS.lineHeight }}>
@@ -4594,7 +4600,7 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
       })()}
 
       {/* ── 2. Audio Preferences ────────────────────── */}
-      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} />}
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} coverageGap={a.coverageGap} />}
 
       {/* ── System Assessment Block ── */}
       {a.componentReadings && a.componentReadings.length > 0 && a.systemContext && (
@@ -4644,8 +4650,10 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
       )}
 
       {/* ── 3. System context (non-assessment) ── */}
+      {/* A coverage-gap answer is a statement about the catalogue, not about
+        * the reader's system — labelling it "Your system" misattributes it. */}
       {a.systemContext && !a.componentReadings && (
-        <AdvisorySection label="Your system">
+        <AdvisorySection label={a.coverageGap ? 'Coverage' : 'Your system'}>
           <p style={{ margin: 0, fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight }}>
             {a.systemContext}
           </p>
