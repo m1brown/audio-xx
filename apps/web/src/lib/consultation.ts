@@ -15090,9 +15090,18 @@ function extractMemoFindings(
     systemAxes,
     // Tonal-signature unification (2026-08-13): the single numeric
     // aggregation both the signature prose and the artifact graph consume.
+    // Roles MUST come from `components`, which is index-parallel to
+    // `profiles`. `chain.roles` is the same roles re-ordered into
+    // signal-chain order (source → amp → speakers), so zipping the two
+    // silently applies each component's weight to a different component.
+    // That inverted the FRANCE assessment: the speaker's 3.0 weight landed
+    // on the streamer and elastic_controlled read +0.2 (BALANCED) where the
+    // components actually give -0.8 (ELASTIC). Founder-caught by ear,
+    // 2026-08-13. The categorical aggregation above already does this
+    // correctly — this call was the odd one out.
     systemAxisNumeric: synthesiseSystemAxisNumeric(
       profiles.map((p) => p.axes),
-      chain.roles,
+      components.map((c) => c.role),
     ),
     perComponentAxes: profiles.map((p) => ({
       name: p.name,
