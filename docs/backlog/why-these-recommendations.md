@@ -93,3 +93,69 @@ cannot, the feature has not worked.
   Dominant Character rebuild (same discipline: name causes, not restatements).
 - Routing doctrine (`docs/routing-doctrine.md`) — the category constraint is
   the first thing any explanation must report.
+
+---
+
+## Extension 2026-08-13 — "are my preferences actually being used?"
+
+Founder, viewing https://audio-xx.com/profile:
+
+> "is this profile used in the recommendations? perhaps we need a toggle -
+> on / off so people know if their preferences are being used"
+
+### What the code actually does (verified, not assumed)
+
+`tasteProfile` **is** passed into every `buildShoppingAnswer` call in page.tsx
+and does influence ranking — but conditionally:
+
+```
+shopping-intent.ts (two ranking sites)
+  if (tasteProfile && tasteProfile.confidence > 0.2) {
+    profileWeight = tasteProfile.confidence * 0.15
+    // bonus applied to the top TWO profile traits, then re-sort
+  }
+```
+
+`taste-profile.ts` states the design intent in its header: *"The profile acts
+as a soft prior… Conversation signals always take precedence… Profile influence
+is gated by confidence (max 30% at full confidence). Empty profiles have zero
+influence."* `buildWhyThisFitsYou` applies the same `confidence < 0.2` gate.
+
+So there are three distinct states, and today the user can distinguish none of
+them:
+
+| State | What happens | What the user sees |
+|---|---|---|
+| No profile / empty | zero influence | nothing |
+| Profile, confidence ≤ 0.2 | **silently ignored** | nothing |
+| Profile, confidence > 0.2 | ranking bonus, top 2 traits, ≤30% at full confidence | nothing |
+
+### Why a plain on/off toggle is the wrong fix
+
+A toggle would report the user's *intent*, not the system's *behaviour*. Set to
+"on" with a low-confidence profile, it would say preferences are being used
+while ranking ignored them — a UI element that lies, which is worse than the
+current silence and squarely against D-7.
+
+### What to build instead
+
+Fold this into the selection trace above. The trace already has to report which
+stages bound; profile influence is simply one more stage, with three honest
+outputs:
+
+- **"Your listening profile did not affect this list"** — no profile, or below
+  the confidence threshold. Say which, and what would raise it.
+- **"Your listening profile shifted the order"** — name the traits that carried
+  weight (the top two the code actually used) and that it re-ranked rather than
+  filtered. It never adds or removes candidates.
+- **"Conversation signals took precedence"** — when stated preferences in the
+  turn overrode the stored prior, which is the documented design.
+
+A control may still be worth offering, but it should be *"ignore my saved
+profile for this question"* — an override the engine genuinely honours — rather
+than a status light claiming an influence that may not exist.
+
+### Success measure
+
+A user who has filled in a profile can tell, without asking, whether it did
+anything to the list in front of them — and if it did not, why not.
