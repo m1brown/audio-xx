@@ -900,6 +900,26 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
           >
             {opt.name}
           </span>
+          {/* Form factor as a chip. It used to be appended to the product
+            * name ("Aria 2 [IEM]"), which read as machine output and broke
+            * catalog lookups that matched on the name. */}
+          {opt.formFactorLabel && (
+            <span style={{
+              marginLeft: '0.55rem',
+              fontSize: '0.68rem',
+              fontWeight: 700,
+              letterSpacing: '0.09em',
+              textTransform: 'uppercase',
+              padding: '0.16rem 0.5rem',
+              borderRadius: 2,
+              border: `1px solid ${COLORS.border}`,
+              color: COLORS.textMuted,
+              whiteSpace: 'nowrap',
+              verticalAlign: 'middle',
+            }}>
+              {opt.formFactorLabel}
+            </span>
+          )}
           {opt.isCurrentComponent && (
             <span style={{
               marginLeft: '0.6rem',

@@ -149,6 +149,9 @@ export interface QuickRecommendation {
 export interface AdvisoryOption {
   name: string;
   brand?: string;
+  /** Form-factor / feature tag ("IEM", "over-ear, wireless"), rendered as a
+   *  chip beside the name rather than concatenated into it. */
+  formFactorLabel?: string;
   price?: number;
   priceCurrency?: string;
   /** Brief sonic character description — what this component sounds like. */
@@ -2987,6 +2990,7 @@ export function shoppingToAdvisory(
     catalogCountry: p.catalogCountry,
     catalogBrandScale: p.catalogBrandScale,
     isCurrentComponent: p.isCurrentComponent,
+    formFactorLabel: (p as { formFactorLabel?: string }).formFactorLabel,
     // Buying and role metadata (from deterministic pipeline)
     pickRole: p.pickRole,
     roleLabel: p.roleLabel,

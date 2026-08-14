@@ -2438,6 +2438,11 @@ export interface ProductExample {
   id?: string;
   name: string;
   brand: string;
+  /** Form factor / feature tag ("IEM", "over-ear, wireless"). Rendered as a
+   *  chip beside the name — never concatenated INTO the name, which made the
+   *  product read as machine output ("Aria 2 [IEM]") and broke catalog
+   *  lookups downstream (founder-reported, 2026-08-13). */
+  formFactorLabel?: string;
   price: number;
   /** ISO 4217 currency code. Defaults to 'USD' when omitted. */
   priceCurrency?: string;
@@ -6737,11 +6742,12 @@ function selectHeadphoneExamples(
     else if (hp?.headphoneMeta.formFactor === 'over-ear') metaParts.push('over-ear');
     if (hp?.headphoneMeta.wireless) metaParts.push('wireless');
     if (hp?.headphoneMeta.anc) metaParts.push('ANC');
-    const metaLabel = metaParts.length > 0 ? ` [${metaParts.join(', ')}]` : '';
+    const metaLabel = metaParts.length > 0 ? metaParts.join(', ') : undefined;
 
     return {
       id: product.id,
-      name: `${product.name}${metaLabel}`,
+      name: product.name,
+      formFactorLabel: metaLabel,
       brand: product.brand,
       price: product.price,
       priceCurrency: product.priceCurrency,
