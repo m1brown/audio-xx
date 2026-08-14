@@ -1,5 +1,11 @@
 [
  {
+  "id": "7hz-salnotes-zero",
+  "brand": "7Hz",
+  "name": "Salnotes Zero",
+  "category": "iem"
+ },
+ {
   "id": "accuphase-e-280",
   "brand": "Accuphase",
   "name": "E-280",
@@ -564,6 +570,12 @@
   "category": "amplifier"
  },
  {
+  "id": "kiwi-ears-cadenza",
+  "brand": "Kiwi Ears",
+  "name": "Cadenza",
+  "category": "iem"
+ },
+ {
   "id": "klipsch-heresy-iv",
   "brand": "Klipsch",
   "name": "Heresy IV",
@@ -723,6 +735,12 @@
   "id": "moondrop-blessing-3",
   "brand": "Moondrop",
   "name": "Blessing 3",
+  "category": "iem"
+ },
+ {
+  "id": "moondrop-chu-ii",
+  "brand": "Moondrop",
+  "name": "Chu II",
   "category": "iem"
  },
  {
@@ -894,6 +912,12 @@
   "category": "iem"
  },
  {
+  "id": "simgot-ea500lm",
+  "brand": "Simgot",
+  "name": "EA500LM",
+  "category": "iem"
+ },
+ {
   "id": "singxer-sa-90",
   "brand": "Singxer",
   "name": "SA-90",
@@ -954,6 +978,12 @@
   "category": "speaker"
  },
  {
+  "id": "tangzu-waner-sg",
+  "brand": "Tangzu",
+  "name": "Wan'er S.G.",
+  "category": "iem"
+ },
+ {
   "id": "technics-sl-1500c",
   "brand": "Technics",
   "name": "SL-1500C",
@@ -1006,6 +1036,18 @@
   "brand": "Trends Audio",
   "name": "TA-10",
   "category": "amplifier"
+ },
+ {
+  "id": "truthear-hola",
+  "brand": "Truthear",
+  "name": "Hola",
+  "category": "iem"
+ },
+ {
+  "id": "truthear-zero-red",
+  "brand": "Truthear",
+  "name": "Zero: Red",
+  "category": "iem"
  },
  {
   "id": "vinnie-rossi-l2i-se",

@@ -1377,6 +1377,18 @@ function parseRangeUpper(text: string): number | null {
   return null;
 }
 
+/**
+ * Floor below which a parsed "budget" is treated as a malformed parse rather
+ * than a real constraint. Lowered from $50 to $10 on 2026-08-13: the original
+ * comment read "No hi-fi budget is under $50", which was true when the
+ * catalogue started at $80 — but entry-tier IEMs now start at $19, and a $25
+ * IEM budget is an ordinary request. It was silently dropped, so "IEMs under
+ * $25" returned the $1,799 flagship. $10 still rejects the junk the guard was
+ * written for ($0 from "0k", $1 from "$1e9"); anything real below catalogue
+ * coverage is answered by the coverage-gap note instead of being ignored.
+ */
+const MIN_PLAUSIBLE_BUDGET = 10;
+
 export function parseBudgetAmount(text: string): number | null {
   // Spelled amounts first, so "two grand" composes with every pattern below.
   text = normalizeSpelledAmounts(text);
@@ -1386,7 +1398,7 @@ export function parseBudgetAmount(text: string): number | null {
   // the canonical reply to "what's your budget?" and previously parsed
   // null, looping the question. Requires the full trimmed message to be
   // only the amount, so model numbers inside prose never trip it.
-  const minPlausible = (n: number): number | null => (n < 50 ? null : n);
+  const minPlausible = (n: number): number | null => (n < MIN_PLAUSIBLE_BUDGET ? null : n);
   const whole = text.trim().match(/^\$?\s?(\d{1,4}(?:\.\d{1,2})?)\s*k[\s?.!]*$/i);
   if (whole) return minPlausible(Math.round(parseFloat(whole[1]) * 1000));
   const wholeNum = text.trim().match(/^\$?\s?(\d{1,3}(?:,\d{3})+|\d{3,6})[\s?.!]*$/);
@@ -1458,11 +1470,10 @@ export function parseBudgetAmount(text: string): number | null {
   }
 
   // Minimum-plausibility guard (M5 failure injection, 2026-08-11):
-  // malformed inputs parsed to nonsense budgets — "0k" → $0, "$1e9" →
-  // $1 (the exponent read as prose). No hi-fi budget is under $50;
-  // below that the "amount" is junk, and a junk budget silently filters
-  // every recommendation away downstream.
-  if (lastAmount !== null && lastAmount < 50) return null;
+  // malformed inputs parsed to nonsense budgets — "0k" → $0, "$1e9" → $1
+  // (the exponent read as prose). The guard exists to reject junk, not
+  // small budgets.
+  if (lastAmount !== null && lastAmount < MIN_PLAUSIBLE_BUDGET) return null;
 
   return lastAmount;
 }

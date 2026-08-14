@@ -48,6 +48,278 @@ export interface HeadphoneProduct extends Product {
 }
 
 export const HEADPHONE_PRODUCTS: HeadphoneProduct[] = [
+  // ── Entry tier (under $50) ──────────────────────────
+  // Added 2026-08-13 (founder decision, docs/backlog/budget-iem-coverage.md).
+  // The catalogue previously started at $80, so every request below that
+  // returned an honest coverage note and nothing else — while this band is
+  // where most IEM conversation actually happens. Coverage here is a
+  // deliberate exception to demand-driven policy, taken because the
+  // recruitment plan targets this audience directly.
+  //
+  // Evidence class: `listener_consensus`. These are mass-market sets with
+  // large, stable published measurement and listening consensus, but Audio XX
+  // holds no manufacturer tuning documentation for them — so confidence is
+  // capped at 'medium' and the descriptions stay behavioural rather than
+  // asserting design intent.
+  {
+    id: '7hz-salnotes-zero',
+    brand: '7Hz',
+    name: 'Salnotes Zero',
+    price: 20,
+    category: 'iem',
+    architecture: 'single dynamic driver',
+    subcategory: 'iem',
+    priceTier: 'budget',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    archetypes: { primary: 'precision_explicit' },
+    tendencyProfile: {
+      basis: 'listener_consensus',
+      confidence: 'medium',
+      tendencies: [
+        { trait: 'clarity', level: 'present' },
+        { trait: 'speed', level: 'present' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 0.65, warmth: 0.4, tonal_density: 0.4,
+      speed: 0.6, dynamics: 0.5, flow: 0.5,
+      spatial_precision: 0.5, composure: 0.55, texture: 0.5,
+      fatigue_risk: 0.25, openness: 0.45,
+    },
+    description: 'Even-handed budget IEM with a restrained bass shelf and clean midrange. Note weight is light rather than full, which reads as clarity on most material and as thinness on bass-led recordings.',
+    retailer_links: [],
+    headphoneMeta: {
+      formFactor: 'iem', wireless: false, anc: false,
+      isolation: 'high', portableUse: true,
+      useCases: ['commute', 'flight', 'office'],
+    },
+  },
+  {
+    id: 'truthear-hola',
+    brand: 'Truthear',
+    name: 'Hola',
+    price: 20,
+    category: 'iem',
+    architecture: 'single dynamic driver',
+    subcategory: 'iem',
+    priceTier: 'budget',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    archetypes: { primary: 'flow_organic' },
+    tendencyProfile: {
+      basis: 'listener_consensus',
+      confidence: 'medium',
+      tendencies: [
+        { trait: 'flow', level: 'present' },
+        { trait: 'tonal_density', level: 'present' },
+        { trait: 'clarity', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 0.45, warmth: 0.65, tonal_density: 0.6,
+      speed: 0.45, dynamics: 0.5, flow: 0.65,
+      spatial_precision: 0.4, composure: 0.5, texture: 0.45,
+      fatigue_risk: 0.1, openness: 0.4,
+    },
+    description: 'Smooth, bass-forward budget IEM with a relaxed upper midrange. Undemanding over long sessions; resolution is modest and it does not attempt to sound analytical.',
+    retailer_links: [],
+    headphoneMeta: {
+      formFactor: 'iem', wireless: false, anc: false,
+      isolation: 'high', portableUse: true,
+      useCases: ['commute', 'flight', 'office'],
+    },
+  },
+  {
+    id: 'moondrop-chu-ii',
+    brand: 'Moondrop',
+    name: 'Chu II',
+    price: 19,
+    category: 'iem',
+    architecture: 'single dynamic driver',
+    subcategory: 'iem',
+    priceTier: 'budget',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    archetypes: { primary: 'precision_explicit' },
+    tendencyProfile: {
+      basis: 'listener_consensus',
+      confidence: 'medium',
+      tendencies: [
+        { trait: 'clarity', level: 'present' },
+        { trait: 'tonal_density', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 0.6, warmth: 0.45, tonal_density: 0.45,
+      speed: 0.55, dynamics: 0.45, flow: 0.5,
+      spatial_precision: 0.45, composure: 0.5, texture: 0.45,
+      fatigue_risk: 0.2, openness: 0.4,
+    },
+    description: 'Moondrop house tuning at the lowest tier: mild bass lift, forward midrange, controlled treble. A fixed cable and simple shell are the compromises.',
+    retailer_links: [],
+    headphoneMeta: {
+      formFactor: 'iem', wireless: false, anc: false,
+      isolation: 'high', portableUse: true,
+      useCases: ['commute', 'office'],
+    },
+  },
+  {
+    id: 'tangzu-waner-sg',
+    brand: 'Tangzu',
+    name: "Wan'er S.G.",
+    price: 20,
+    category: 'iem',
+    architecture: 'single dynamic driver',
+    subcategory: 'iem',
+    priceTier: 'budget',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    archetypes: { primary: 'tonal_saturated' },
+    tendencyProfile: {
+      basis: 'listener_consensus',
+      confidence: 'medium',
+      tendencies: [
+        { trait: 'tonal_density', level: 'present' },
+        { trait: 'flow', level: 'present' },
+        { trait: 'clarity', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 0.45, warmth: 0.7, tonal_density: 0.65,
+      speed: 0.45, dynamics: 0.45, flow: 0.65,
+      spatial_precision: 0.4, composure: 0.5, texture: 0.45,
+      fatigue_risk: 0.1, openness: 0.35,
+    },
+    description: 'Warm, thick-noted budget IEM that trades upper-treble air for ease. Suits bright sources and long listening; not the choice for someone chasing detail.',
+    retailer_links: [],
+    headphoneMeta: {
+      formFactor: 'iem', wireless: false, anc: false,
+      isolation: 'high', portableUse: true,
+      useCases: ['commute', 'flight', 'office'],
+    },
+  },
+  {
+    id: 'kiwi-ears-cadenza',
+    brand: 'Kiwi Ears',
+    name: 'Cadenza',
+    price: 35,
+    category: 'iem',
+    architecture: 'single dynamic driver',
+    subcategory: 'iem',
+    priceTier: 'budget',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    archetypes: { primary: 'flow_organic' },
+    tendencyProfile: {
+      basis: 'listener_consensus',
+      confidence: 'medium',
+      tendencies: [
+        { trait: 'flow', level: 'present' },
+        { trait: 'tonal_density', level: 'present' },
+        { trait: 'speed', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 0.5, warmth: 0.68, tonal_density: 0.62,
+      speed: 0.45, dynamics: 0.5, flow: 0.68,
+      spatial_precision: 0.45, composure: 0.55, texture: 0.5,
+      fatigue_risk: 0.1, openness: 0.4,
+    },
+    description: 'Relaxed, warm-leaning IEM in a resin shell with a detachable cable. Treble is deliberately soft, which keeps poor recordings listenable and blunts the leading edge on good ones.',
+    retailer_links: [],
+    headphoneMeta: {
+      formFactor: 'iem', wireless: false, anc: false,
+      isolation: 'high', portableUse: true,
+      useCases: ['commute', 'flight', 'office'],
+    },
+  },
+  {
+    id: 'truthear-zero-red',
+    brand: 'Truthear',
+    name: 'Zero: Red',
+    price: 55,
+    category: 'iem',
+    architecture: 'dual dynamic driver',
+    subcategory: 'iem',
+    priceTier: 'budget',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    archetypes: { primary: 'rhythmic_propulsive' },
+    tendencyProfile: {
+      basis: 'listener_consensus',
+      confidence: 'medium',
+      tendencies: [
+        { trait: 'dynamics', level: 'present' },
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'spatial_precision', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      clarity: 0.5, warmth: 0.6, tonal_density: 0.72,
+      speed: 0.5, dynamics: 0.65, flow: 0.6,
+      spatial_precision: 0.42, composure: 0.55, texture: 0.5,
+      fatigue_risk: 0.12, openness: 0.4,
+    },
+    description: 'Dual-dynamic design with a substantial low end and full note weight. Bass quantity is the point; listeners who want a neutral bass shelf should look elsewhere in this tier.',
+    retailer_links: [],
+    headphoneMeta: {
+      formFactor: 'iem', wireless: false, anc: false,
+      isolation: 'high', portableUse: true,
+      useCases: ['commute', 'flight'],
+    },
+  },
+  {
+    id: 'simgot-ea500lm',
+    brand: 'Simgot',
+    name: 'EA500LM',
+    price: 79,
+    category: 'iem',
+    architecture: 'single dynamic driver',
+    subcategory: 'iem',
+    priceTier: 'budget',
+    brandScale: 'specialist',
+    region: 'east-asia',
+    country: 'CN',
+    archetypes: { primary: 'precision_explicit' },
+    tendencyProfile: {
+      basis: 'listener_consensus',
+      confidence: 'medium',
+      tendencies: [
+        { trait: 'clarity', level: 'emphasized' },
+        { trait: 'speed', level: 'present' },
+        { trait: 'spatial_precision', level: 'present' },
+      ],
+      riskFlags: ['treble_energy'],
+    },
+    traits: {
+      clarity: 0.75, warmth: 0.42, tonal_density: 0.45,
+      speed: 0.68, dynamics: 0.6, flow: 0.48,
+      spatial_precision: 0.6, composure: 0.6, texture: 0.6,
+      fatigue_risk: 0.4, openness: 0.5,
+    },
+    description: 'Resolution-first single dynamic with swappable tuning nozzles. Upper-treble energy is real and is the trade being made; pairs badly with an already-bright source.',
+    retailer_links: [],
+    headphoneMeta: {
+      formFactor: 'iem', wireless: false, anc: false,
+      isolation: 'high', portableUse: true,
+      useCases: ['commute', 'office'],
+    },
+  },
+
   // ── Budget tier ($50–$150) ──────────────────────────
 
   {

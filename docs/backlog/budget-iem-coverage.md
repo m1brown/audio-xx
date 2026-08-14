@@ -1,7 +1,7 @@
 # Budget IEM coverage — a founder decision, not an engineering task
 
 **Opened:** 2026-08-13
-**Status:** OPEN — awaiting founder decision. Nothing added.
+**Status:** RESOLVED 2026-08-13 — Option A taken. Seven entry-tier IEMs added.
 **Class:** catalog coverage
 
 ## The observation
@@ -60,3 +60,50 @@ No recommendation is implemented either way until the founder chooses.
 
 - `project-coverage-demand-driven` (memory) — the falsified experiment.
 - `project-reddit-beta-recruitment` (memory) — the r/iems targeting.
+
+
+---
+
+## RESOLVED 2026-08-13 — Option A: carry the band
+
+Founder chose to carry it, so r/iems becomes a fair recruitment target.
+
+Added (entry tier, `products/headphones.ts`): Moondrop Chu II $19, 7Hz Salnotes
+Zero $20, Truthear Hola $20, Tangzu Wan'er S.G. $20, Kiwi Ears Cadenza $35,
+Truthear Zero: Red $55, Simgot EA500LM $79. Catalogue floor moves $80 → $19.
+
+Evidence class is `listener_consensus` at `confidence: 'medium'` for all seven —
+these are mass-market sets with large stable consensus but no manufacturer
+tuning documentation held by Audio XX. Descriptions stay behavioural and name
+the trade each set makes rather than asserting design intent.
+
+### Two couplings this exposed, both caught by gates
+
+1. **A stale assumption in budget parsing.** `parseBudgetAmount` carried a
+   $50 minimum-plausibility floor, commented "No hi-fi budget is under $50" —
+   true when the catalogue started at $80. With the band added, "IEMs under
+   $25" parsed to *no budget at all* and returned the $1,799 Solaris. Floor
+   lowered to $10 (`MIN_PLAUSIBLE_BUDGET`), which still rejects the junk the
+   guard was written for ($0 from "0k", $1 from "$1e9"). Anything real below
+   coverage is now answered by the coverage-gap note rather than ignored.
+
+2. **Catalog index drift.** `catalog-index.json` (the intake typeahead source)
+   is generated, and the drift test failed until regenerated with
+   `npx tsx scripts/generate-catalog-index.ts` — now 189 entries.
+
+### Coverage now
+
+| Budget | Result |
+|---|---|
+| under $100 | EA500LM $79 · Aria 2 $80 · ER2XR $100 |
+| under $75 | Zero: Red $55 · Cadenza $35 · Salnotes Zero $20 |
+| under $50 | Cadenza $35 · Salnotes Zero $20 · Hola $20 |
+| under $25 | Salnotes Zero $20 · Hola $20 · Chu II $19 |
+| under $15 | coverage note — genuinely below the floor |
+
+### What this does NOT change
+
+Standing policy remains demand-driven coverage. This was a deliberate,
+reasoned exception for a named audience we are choosing to recruit — not a
+precedent for bulk expansion. Post-beta, coverage should still follow observed
+requests.
