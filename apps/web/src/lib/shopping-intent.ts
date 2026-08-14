@@ -6984,6 +6984,16 @@ function buildUserContextNote(
  *   4. What to watch for
  *   5. System note (if system context was provided)
  */
+/** Catalogue pool for a shopping category — used for coverage-gap reporting
+ *  and the sonic-landscape guide. Empty for categories with no product file. */
+function fullCatalogFor(category: string): Array<{ price?: number }> {
+  return category === 'dac' ? (DAC_PRODUCTS as Array<{ price?: number }>)
+    : category === 'speaker' ? (SPEAKER_PRODUCTS as Array<{ price?: number }>)
+    : category === 'amplifier' ? (AMPLIFIER_PRODUCTS as Array<{ price?: number }>)
+    : category === 'headphone' ? (HEADPHONE_PRODUCTS as Array<{ price?: number }>)
+    : [];
+}
+
 export function buildShoppingAnswer(
   ctx: ShoppingContext,
   signals: ExtractedSignals,
@@ -7224,7 +7234,31 @@ export function buildShoppingAnswer(
       powerMismatchNote = 'The speaker you named is a low-sensitivity planar load — it needs substantial power and current to produce real dynamics. Within your stated constraints, no amplifier here satisfies both the load and every other requirement at once; low-power tube designs in particular cannot drive it with authority. Treat these options as a reason to relax one constraint — the load, the topology, or the budget — rather than as a settled fit.';
     }
   }
-  const systemNote = powerMismatchNote
+  // Coverage-gap honesty (founder-reported, 2026-08-13): an explicit
+  // category plus a budget the catalogue cannot serve produced a framing
+  // sentence and then nothing at all — which reads as broken rather than
+  // as the honest limit it is. REC-1's invariant says never substitute a
+  // neighbouring category to fill the gap; this says explain the silence.
+  // Same shape as powerMismatchNote above: name the constraint that cannot
+  // be met instead of presenting an empty answer as an answer.
+  let coverageGapNote: string | undefined;
+  if (productExamples.length === 0 && typeof ctx.budgetAmount === 'number' && ctx.budgetAmount > 0) {
+    const pool: Array<{ price?: number }> =
+      ctx.category === 'headphone'
+        ? (HEADPHONE_PRODUCTS as Array<{ price?: number; subcategory?: string }>).filter(
+            (p) => !ctx.iemRequested || p.subcategory === 'iem',
+          )
+        : (fullCatalogFor(ctx.category) as Array<{ price?: number }>);
+    const prices = pool.map((p) => p.price).filter((n): n is number => typeof n === 'number' && n > 0);
+    const cheapest = prices.length > 0 ? Math.min(...prices) : undefined;
+    const what = ctx.iemRequested ? 'in-ear monitor' : categoryLabel.toLowerCase();
+    coverageGapNote = cheapest
+      ? `No ${what} in this catalogue falls under $${ctx.budgetAmount.toLocaleString()} — coverage starts at $${cheapest.toLocaleString()}. That is a limit of what I carry, not a judgement that nothing worthwhile exists at that price. Raise the ceiling, or name a model you are considering, and I can say something useful about it.`
+      : `I do not carry any ${what} at that price. That is a limit of what I cover, not a judgement about the products themselves — name a model you are considering and I can look at it directly.`;
+  }
+
+  const systemNote = coverageGapNote
+    ?? powerMismatchNote
     ?? userContextNote
     ?? (ctx.systemProvided
       ? `This direction makes more sense if the rest of the chain is not already biased in the same way. A ${categoryLabel} change will shift the overall balance — listen for whether the qualities you value are preserved.`
