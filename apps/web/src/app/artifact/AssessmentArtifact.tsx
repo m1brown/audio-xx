@@ -235,7 +235,7 @@ const AXA_CSS = `
 .axa-verdict{font-family:var(--serif);font-weight:600;font-size:clamp(32px,5.4vw,46px);line-height:1.02;letter-spacing:-.02em;margin:0 0 16px;text-wrap:balance}
 .axa-standfirst{font-family:var(--serif);font-style:italic;font-size:clamp(17px,2.3vw,19.5px);line-height:1.5;color:var(--ink-muted);margin:0;text-wrap:pretty}
 .axa-sig{margin:28px 0 6px}
-.axa-sig .cap{font-family:var(--grot);font-size:11.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.axa-sig .cap{font-family:var(--grot);font-size:11.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 10px;display:flex;align-items:center;gap:8px}
 .axa-sig .cap::before{content:"";width:14px;height:1.5px;background:var(--accent);display:inline-block}
 /* Ruled reading table — the proposal-document idiom the founder asked the
  * product to lean into (2026-08-13): bordered block, hairline row rules,
@@ -258,7 +258,11 @@ const AXA_CSS = `
 /* A balanced axis reads as an open marker; a committed one is solid. */
 .axa-track i.neu{background:var(--ground);border:1.5px solid var(--ink-faint)}
 .axa-section{margin-top:26px}
-.axa-label{font-family:var(--grot);font-size:11.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 8px;display:flex;align-items:center;gap:8px}
+/* Section eyebrows carry the accent (founder, 2026-08-13): they join the
+ * accent system without becoming furniture — bolder colour without raising
+ * the volume. The red block treatment was tried and rejected: stacked six
+ * times down the page it reads as UI badges rather than editorial rubrics. */
+.axa-label{font-family:var(--grot);font-size:11.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 8px;display:flex;align-items:center;gap:8px}
 .axa-label::before{content:"";width:14px;height:1.5px;background:var(--accent);display:inline-block}
 .axa-p{font-size:18px;line-height:1.62;margin:0 0 13px;color:var(--ink)}
 .axa-p:last-child{margin-bottom:0}
