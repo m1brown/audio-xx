@@ -159,3 +159,28 @@ than a status light claiming an influence that may not exist.
 
 A user who has filled in a profile can tell, without asking, whether it did
 anything to the list in front of them — and if it did not, why not.
+
+### Founder disposition 2026-08-13 (approved, and the model to build to)
+
+The user-facing model must distinguish **four** states, not three:
+
+1. **Profile influenced the ranking** — name the relevant traits, and make clear
+   it *re-ranked* rather than filtered the candidates.
+2. **Profile existed but did not influence this ranking** — explain why.
+3. **Current conversation overrode the profile** — the user's explicit
+   present-turn preference takes precedence over accumulated inference.
+4. **No relevant profile existed** — say nothing; do not manufacture a profile
+   explanation where there is none.
+
+State 4 is the addition, and it matters: the absence of a profile is not a
+finding to report. Manufacturing an explanation for it would be the same defect
+as the removed Dominant Character line.
+
+**Explicitly out of scope for this item:** the `confidence > 0.2` threshold and
+the `confidence × 0.15` weighting are NOT to be changed on the basis of this
+discussion. They are separate empirical questions that beta behaviour may help
+evaluate. Nothing here licenses tuning them.
+
+**Status: unbuilt, and to stay unbuilt** until real-user evidence, a genuine
+recruitment blocker, or explicit authorization. This backlog is a record of
+decisions already reasoned through — not a queue to work down.
