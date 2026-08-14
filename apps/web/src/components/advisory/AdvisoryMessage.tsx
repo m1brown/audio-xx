@@ -5342,8 +5342,17 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
   // recommendation, comparison, purchase inquiry. Intake, quick-rec and the
   // knowledge / assistant lanes are conversational turns rather than
   // documents, and close without a related-reading section.
+  // Quick-rec turns carrying options are the exception (founder-reported,
+  // 2026-08-13): the compact card renders no per-product purchase links, and
+  // excluding it here suppressed the Product Resources block too — so a turn
+  // listing three products with prices offered no way to buy any of them.
+  // Affiliate fees are the income model, so that seam is a revenue defect.
+  // A quick-rec WITHOUT options stays conversational and is still excluded.
+  const isQuickRecWithOptions =
+    !!advisory.quickRecommendation && (advisory.options?.length ?? 0) > 0;
+
   const isDocumentResponse =
-    !advisory.quickRecommendation &&
+    (!advisory.quickRecommendation || isQuickRecWithOptions) &&
     !isIntakeFormat(advisory) &&
     (isComparisonFormat(advisory) || isMemoFormat(advisory) || (advisory.options?.length ?? 0) > 0);
 
@@ -5359,8 +5368,12 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
     isMemoFormat(advisory) &&
     ((ASSESSMENT_ARTIFACT_V2_ENABLED && !!advisory.__rawAssessment) || SYSTEM_ASSESSMENT_ARTIFACT_ENABLED);
 
+  // Resources render where per-product links do NOT already exist: the
+  // assessment artifacts, and now the compact quick-rec card.
   const footer = isDocumentResponse
-    ? buildResponseFooterData(advisory, { includeResources: rendersAssessmentArtifact })
+    ? buildResponseFooterData(advisory, {
+        includeResources: rendersAssessmentArtifact || isQuickRecWithOptions,
+      })
     : null;
 
   return (
