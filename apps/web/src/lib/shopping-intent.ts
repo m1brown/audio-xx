@@ -1952,7 +1952,7 @@ export function detectShoppingIntent(
   const budgetAmount = parseBudgetAmount(userText);
   const budgetFloor = parseBudgetFloor(userText);
   const budgetConscious = budgetAmount === null
-    && /\b(?:wo?n'?t\s+(?:blow\s+up|break|bust)\s+(?:the|my)\s+(?:budget|bank)|break(?:ing)?\s+the\s+bank|affordable|budget[-\s]friendly|on\s+a\s+(?:tight\s+)?budget|not\s+(?:too|super|crazy|very)\s+expensive|inexpensive|cheap(?:er|ish)?|reasonably\s+priced|entry[-\s]level|wo?n'?t\s+cost\s+a\s+fortune|without\s+spending\s+a\s+fortune|bargains?|good\s+deals?|best\s+deals?)\b/i.test(userText);
+    && /\b(?:wo?n'?t\s+(?:blow\s+up|break|bust)\s+(?:the|my)\s+(?:budget|bank)|break(?:ing)?\s+the\s+bank|affordable|budget[-\s]friendly|on\s+a\s+(?:tight\s+)?budget|budget\s+(?:\w+\s+){0,2}?(?:dacs?|amps?|amplifiers?|speakers?|headphones?|iems?|earphones?|earbuds?|turntables?|streamers?|cans)\b|not\s+(?:too|super|crazy|very)\s+expensive|inexpensive|cheap(?:er|ish)?|reasonably\s+priced|entry[-\s]level|wo?n'?t\s+cost\s+a\s+fortune|without\s+spending\s+a\s+fortune|bargains?|good\s+deals?|best\s+deals?)\b/i.test(userText);
   // Prestige cue — the user explicitly asked for cost-no-object gear.
   // Lifts the cold-query mainstream ceiling in product selection.
   const prestigeIntent =
@@ -4498,7 +4498,7 @@ function selectProductExamples(
   // Headphones use a dedicated selection path because the catalog
   // includes portable-use metadata that supplements trait scoring.
   if (category === 'headphone') {
-    return selectHeadphoneExamples(userTraits, budgetAmount, systemProfile, tasteProfile, reasoning, iemRequested);
+    return selectHeadphoneExamples(userTraits, budgetAmount, systemProfile, tasteProfile, reasoning, iemRequested, budgetConscious);
   }
 
   // ── Streamer: inline illustrative examples ─────────
@@ -6628,6 +6628,12 @@ function selectHeadphoneExamples(
   tasteProfile?: UserTasteProfile,
   reasoning?: ReasoningResult,
   iemRequested?: boolean,
+  /** Colloquial affordability signal ("cheap", "budget", "affordable") with
+   *  no number attached. The generic ranked path applies an affordability
+   *  ceiling for this; headphones early-return before reaching it, so the
+   *  ceiling was never applied here — "cheap iems" answered with the $1,799
+   *  Solaris (founder-reported, 2026-08-13). */
+  budgetConscious?: boolean,
 ): ProductExample[] {
   // Get the full user text from the reasoning context or use empty
   // For now we read portable intent from the products themselves
@@ -6647,6 +6653,16 @@ function selectHeadphoneExamples(
   if (budgetAmount !== null) {
     const ceiling = budgetAmount * 1.15; // 15% grace
     budgetFiltered = allProducts.filter((p) => p.price <= ceiling);
+  } else if (budgetConscious) {
+    // Affordability ceiling for personal audio. The generic path uses $3,000,
+    // which is meaningless here — it would still anchor "cheap IEMs" on a
+    // $1,799 pick. $250 was the first attempt and still answered "cheap" with
+    // $250 AirPods: the top of the band rather than what the word means.
+    // $150 covers the entry IEM band and entry over-ears. Same soft guard as
+    // the generic path: keep the unfiltered pool if too few survive.
+    const PERSONAL_AUDIO_AFFORDABLE_CEILING = 150;
+    const affordable = allProducts.filter((p) => p.price <= PERSONAL_AUDIO_AFFORDABLE_CEILING);
+    budgetFiltered = affordable.length >= 3 ? affordable : allProducts;
   } else {
     budgetFiltered = allProducts;
   }

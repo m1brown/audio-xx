@@ -2020,7 +2020,10 @@ export function detectIntent(
   //     This prevents vague-looking but actually decisive queries from being
   //     caught by the broader intake patterns below.
   const hasPurchaseVerb = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|pick\s+out|recommend|suggest|interested\s+in|need\s+(?:a\s+)?(?:new|better|different|another|upgraded?))\b/i.test(currentMessage);
-  const hasCategoryTarget = /\b(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp|stereo|hi-?fi|hifi|audio\s+system)\b/i.test(currentMessage);
+  // IEMs / earphones / earbuds were missing here while "headphones" was
+  // present — the same product class, so a purchase verb aimed at them fell
+  // through to the knowledge lane (founder-reported, 2026-08-13).
+  const hasCategoryTarget = /\b(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|iems?|earphones?|earbuds?|in[- ]?ears?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp|stereo|hi-?fi|hifi|audio\s+system)\b/i.test(currentMessage);
   if (hasPurchaseVerb && hasCategoryTarget) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
@@ -2053,6 +2056,25 @@ export function detectIntent(
   //     pipeline can ask for budget/preferences rather than diagnosing.
   const bareCategory = /^\s*(?:a\s+|an?\s+|the\s+|some\s+|new\s+)?(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp|iems?|earphones?|earbuds?|cans|stereo|hi-?fi|hifi)\s*[?.!]?\s*$/i;
   if (bareCategory.test(currentMessage)) {
+    return { intent: 'shopping', subjects, subjectMatches, desires };
+  }
+
+  // 3c. Qualified category request — "cheap iems", "what about budget
+  //     headphones?", "any good speakers?". A price or quality adjective in
+  //     front of a category is still a category request, and CLAUDE.md's
+  //     invariant is explicit: a stated category overrides the previous
+  //     subject. Without this, "what about cheap iems?" after an assessment
+  //     was classified audio_knowledge and the knowledge lane simply carried
+  //     the previous subject forward — the user asked about IEMs and was
+  //     told "Still with DMP-A6" (founder-reported, 2026-08-13).
+  //
+  //     Deliberately narrow: the category must be a BARE class noun. A named
+  //     product ("what about the Chord Hugo?") or a possessive ("what about
+  //     my amp?") is a question about that thing, not a shopping request,
+  //     and must keep routing as before.
+  const qualifiedCategory =
+    /^\s*(?:(?:so\s+)?(?:what|how)\s+about\s+|any\s+|got\s+any\s+)?(?:some\s+|a\s+|an\s+)?(?:cheap|budget|affordable|inexpensive|entry[- ]?level|good|best|decent|nice|better|cheaper)\s+(?:\w+\s+){0,2}?(?:dacs?|amps?|amplifiers?|integrateds?|speakers?|headphones?|iems?|earphones?|earbuds?|in[- ]?ears?|turntables?|streamers?|receivers?|subwoofers?|preamps?|cans)\s*[?.!]?\s*$/i;
+  if (qualifiedCategory.test(currentMessage)) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
