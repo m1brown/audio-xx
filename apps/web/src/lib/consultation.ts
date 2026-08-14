@@ -22,6 +22,7 @@ import { DAC_PRODUCTS, type Product } from './products/dacs';
 import { SPEAKER_PRODUCTS } from './products/speakers';
 import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
 import { TURNTABLE_PRODUCTS } from './products/turntables';
+import { HEADPHONE_PRODUCTS } from './products/headphones';
 import { getUsableProvisionalProducts } from './provisional/store';
 import type { ProvisionalProduct } from './provisional/types';
 import { getProvenanceLabel } from './provisional/resolve';
@@ -284,7 +285,18 @@ export interface BrandAuthorityPreview {
  * to support the in-process refactor; a later commit will relocate the
  * data into `catalog/` so this re-export becomes unnecessary.
  */
-export const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIFIER_PRODUCTS, ...TURNTABLE_PRODUCTS];
+// HEADPHONE_PRODUCTS joined this pool on 2026-08-13. Their absence caused two
+// production defects from one cause: headphone recommendations rendered with no
+// purchase links (findProductByComponentName could not resolve them), and brand
+// queries for a catalogued maker — "moondrop?" — reported the brand as being
+// "outside the current curated catalog" and answered with generative prose,
+// while four Moondrop products sat in the catalogue. Patching the first
+// symptom narrowly (product-resources.ts) was the right altitude for one
+// defect; two from the same gap is the causing class, so the pool is corrected.
+// The cross-brand leakage invariant is the risk this touches: it is enforced by
+// subject-context-resolver.test.ts (8 cases) and the 11-brand live harness,
+// both of which gate every commit to this file.
+export const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIFIER_PRODUCTS, ...TURNTABLE_PRODUCTS, ...HEADPHONE_PRODUCTS];
 
 // ── Brand knowledge ─────────────────────────────────
 //
