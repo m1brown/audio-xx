@@ -69,6 +69,9 @@ Format your response as JSON with exactly these fields:
   "philosophy": "DESCRIBE then EXPLAIN. 2-4 paragraphs. First the net character of the system as a whole; then the division of labour — which components establish that character, which counterweight which, and why the chain behaves this way. Component detail appears only in service of that argument. Separate paragraphs with \\n\\n.",
   "tendencies": "EVALUATE. The meaningful trade-off, and an explicit change/no-change judgment. If nothing needs changing, say so plainly. Separate paragraphs with \\n\\n.",
   "systemContext": "1-2 paragraphs on what this system is good for, what music it suits, and what room/use context matters. Separate paragraphs with \\n\\n.",
+  "componentKnowledge": [
+    { "name": "exact component name", "specific": true }
+  ],
   "characterized": ["exact names of components you actually characterised"],
   "followUp": "ONE question, asked only if its answer could materially change the judgment — an actual dissatisfaction, desired direction, room problem or listening preference. If nothing would change the judgment, ask what they are hearing.",
   "directionalPaths": [
@@ -114,6 +117,16 @@ For ANY component you MUST NOT:
     "forgiving" are conclusions; a conclusion needs a stated basis. Hedging
     does not rescue an unsupported characterisation — "likely warm" with no
     reason is the same empty claim as "warm".
+
+For EVERY component, report in "componentKnowledge" whether you hold
+PRODUCT-SPECIFIC knowledge of that exact model — not knowledge of its
+category. "It is a DAC, so it converts digital to analogue" is category
+knowledge and counts as specific:false. If you do not recognise the model,
+say specific:false. Inventing plausible character for an unrecognised product
+is the single worst thing you can do here, and it is immediately detectable.
+
+Where specific is false, keep the component in the chain, keep its role, and
+say nothing about how it sounds.
 
 Report which components you actually characterised in "characterized". Any
 component you cannot meaningfully speak to must be omitted from that list —
@@ -247,11 +260,24 @@ const HARD_PROHIBITIONS: Array<{ label: string; re: RegExp }> = [
 export function findLicensingViolations(
   prose: string,
   _unresolvedNames: string[] = [],
+  curatedNames: string[] = [],
 ): { component: string; sentence: string }[] {
   if (!prose) return [];
   const violations: { component: string; sentence: string }[] = [];
+  // A specification is licensed when it comes from the catalog. The Magnepan
+  // LRS entry legitimately carries "4Ω/86dB"; scanning finished prose
+  // indiscriminately made Audio XX's own curated evidence trip Audio XX's own
+  // prohibition, collapsing good assessments into the fallback. D-7 again:
+  // permitted strength depends on SOURCE, so a sentence about a curated
+  // component is judged by curated rules — i.e. not by these.
+  const curatedTokens = curatedNames.flatMap((n) =>
+    n.split(/\s+/).map((t) => t.replace(/[^\w-]/g, '')).filter((t) => t.length >= 3));
+  const mentionsCurated = (sentence: string) =>
+    curatedTokens.some((t) => new RegExp(`\\b${t}\\b`, 'i').test(sentence));
+
   for (const sentence of prose.split(/(?<=[.!?])\s+/)) {
     if (DISCLAIMER_MARKERS.test(sentence)) continue;
+    if (mentionsCurated(sentence)) continue;
     for (const { label, re } of HARD_PROHIBITIONS) {
       if (re.test(sentence)) {
         violations.push({ component: label, sentence: sentence.trim() });
@@ -446,7 +472,11 @@ Produce an Audio XX provisional system assessment. Assess the components you hav
         parsedResponse.tendencies,
         parsedResponse.systemContext,
       ].filter(Boolean).join('\n\n');
-      const violations = findLicensingViolations(prose, unresolvedRoster.map((u) => u.name));
+      const violations = findLicensingViolations(
+        prose,
+        unresolvedRoster.map((u) => u.name),
+        knownDescriptions.map((k) => k.name),
+      );
       if (violations.length > 0) {
         console.warn(
           '[llm-system-inference] licensing violation — falling back to the licensed answer:',
@@ -469,7 +499,18 @@ Produce an Audio XX provisional system assessment. Assess the components you hav
       parsedResponse.systemContext,
     ].filter(Boolean).join('\n\n');
     const reported = (parsedResponse as { characterized?: string[] }).characterized ?? [];
+    const declared = ((parsedResponse as { componentKnowledge?: Array<{ name: string; specific?: boolean }> })
+      .componentKnowledge ?? []);
+    // Structural, not lexical. A component the model admits it does not know
+    // is demoted to user-supplied identity no matter how confidently the prose
+    // reads. This fails closed on invented products WITHOUT disabling genuine
+    // model knowledge of real ones — which is the entire point of Expanded
+    // Reasoning.
+    const noProductKnowledge = new Set(
+      declared.filter((d) => d.specific === false).map((d) => d.name.toLowerCase().trim()),
+    );
     const spokenTo = componentNames.filter((name) => {
+      if (noProductKnowledge.has(name.toLowerCase().trim())) return false;
       if (reported.some((r) => r.toLowerCase().trim() === name.toLowerCase().trim())) return true;
       // A distinctive token of the name appearing in the prose is sufficient.
       const tokens = name.split(/\s+/).filter((t) => t.length >= 3);
@@ -496,6 +537,7 @@ Produce an Audio XX provisional system assessment. Assess the components you hav
 
 interface SystemInferenceJSON {
   characterized?: string[];
+  componentKnowledge?: Array<{ name: string; specific?: boolean }>;
   subject?: string;
   systemSignature?: string;
   philosophy?: string;
@@ -531,6 +573,7 @@ function parseSystemInferenceResponse(
       advisoryMode: 'system_review',
       systemSignature: parsed.systemSignature || undefined,
       characterized: Array.isArray(parsed.characterized) ? parsed.characterized : [],
+      componentKnowledge: Array.isArray(parsed.componentKnowledge) ? parsed.componentKnowledge : [],
       philosophy: parsed.philosophy || undefined,
       tendencies: parsed.tendencies || undefined,
       systemContext: parsed.systemContext || undefined,

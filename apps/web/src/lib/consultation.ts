@@ -249,6 +249,8 @@ export interface ConsultationResponse {
   componentProvenance?: ComponentProvenanceEntry[];
   /** Component names the model reported it could actually speak to. */
   characterized?: string[];
+  /** Per-component declaration of product-specific (not category) knowledge. */
+  componentKnowledge?: Array<{ name: string; specific?: boolean }>;
 }
 
 /**
