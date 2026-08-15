@@ -128,6 +128,14 @@ const BRAND_NAMES = [
   'pass labs', 'first watt', 'naim', 'luxman', 'accuphase',
   'parasound', 'hegel', 'mcintosh', 'marantz', 'yamaha',
   'shindo', 'leben', 'audio note',
+  // Brands carrying an authored BrandProfile that recognition had drifted
+  // from (2026-08-15). Bare 'spec' is deliberately NOT listed: it is a
+  // common English word ('spec sheet', 'what are the specs'), and the
+  // matcher's plural tolerance would claim 'specs' too. The qualified
+  // forms carry the brand unambiguously.
+  'sugden', 'sugden audio', 'j.e. sugden', 'je sugden',
+  'auditorium 23', 'auditorium-23', 'a23',
+  'spec corporation', 'spec corp',
   // Vintage. 'h.h. scott' / 'hh scott' listed before bare 'scott' so the
   // longest-match sort claims the full brand form first.
   'h.h. scott', 'hh scott', 'scott',
