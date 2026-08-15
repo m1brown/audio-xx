@@ -19,6 +19,7 @@
  */
 
 import { DAC_PRODUCTS, type Product } from './products/dacs';
+import { parseLabelledComponents, labelContradictsCategory } from './labelled-components';
 import { SPEAKER_PRODUCTS } from './products/speakers';
 import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
 import { TURNTABLE_PRODUCTS } from './products/turntables';
@@ -7430,6 +7431,14 @@ export interface SystemComponent {
   };
   /** Product data if available. */
   product?: Product;
+  /**
+   * True when the component exists in the graph on the user's authority alone
+   * — an explicit label established its role, but the catalog could not
+   * identify it. Downstream reasoning must not assert characteristics for
+   * these nodes (D-7): their identity is a user-supplied fact, their
+   * behaviour is unknown.
+   */
+  unresolved?: boolean;
 }
 
 // ── Multi-role resolution ────────────────────────────
@@ -8206,6 +8215,20 @@ export function validateSystemComponents(
 
     // Detect what role the user applied in their text
     const otherNames = components.filter((o) => o !== c).map((o) => o.displayName);
+    // An explicit label is the user stating a fact about their own system, and
+    // it outranks proximity inference. A compound label ("DAC/Streamer") names
+    // several roles for ONE component; our category being among them is
+    // agreement, not conflict. Asking the user to resolve our narrower taxonomy
+    // is exactly what D-8 forbids. Order-independent: "Streamer/DAC" and
+    // "DAC/Streamer" behave identically.
+    const labelled = parseLabelledComponents(rawMessage);
+    const ownLabel = labelled.find((l) =>
+      c.displayName.toLowerCase().includes(l.rawName.toLowerCase())
+      || l.rawName.toLowerCase().includes(c.displayName.toLowerCase()));
+    if (ownLabel) {
+      if (!labelContradictsCategory(ownLabel.roles, expectedCategory)) continue;
+    }
+
     const userAppliedRole = detectUserAppliedRole(rawMessage, c.displayName, otherNames);
     if (!userAppliedRole) continue;
 
@@ -9275,6 +9298,77 @@ export function buildSystemAssessment(
       { label: 'Amazon', url: getAmazonSearchUrl(c.product.name, c.product.brand) },
       c.displayName,
     );
+  }
+
+  // ── Explicit labels: trusted structure, honest coverage ──────────────
+  //
+  // Real-user beta defect (2026-08-15). When the user writes
+  // "Speakers: Acora QRC-2" they have stated a fact about their system. Two
+  // things followed from ignoring that:
+  //
+  //   - Role was inferred from a fixed +/-40-character window that could reach
+  //     into the NEXT component's label, so a component's role depended on the
+  //     character length of the preceding label.
+  //   - A component the catalog could not resolve was dropped SILENTLY, and
+  //     the assessment then described "your system" minus a node the user named.
+  //
+  // Catalog coverage governs what we may SAY about a node. It does not govern
+  // whether the node EXISTS. An unresolved component becomes an opaque node:
+  // name verbatim, role from the label, characteristics unknown and never
+  // invented. The graph-integrity gate below is unchanged and still runs — a
+  // labelled graph simply stops being incomplete.
+  const labelledComponents = parseLabelledComponents(currentMessage);
+  if (labelledComponents.length > 0) {
+    for (const lc of labelledComponents) {
+      const lcLower = lc.rawName.toLowerCase();
+      const existing = components.find((c) => {
+        const dn = c.displayName.toLowerCase();
+        return dn === lcLower || dn.includes(lcLower) || lcLower.includes(dn);
+      });
+
+      if (existing) {
+        // Label-scoped role assignment. The user's own label outranks
+        // proximity inference; the catalog still wins when it actually
+        // resolved the product, because that is stronger identity evidence.
+        if (!existing.product) {
+          // REPLACE, never union. The role this component arrived with came
+          // from the proximity window that this repair exists to remove;
+          // merging it back in would preserve the defect ("ARC ref 5" kept a
+          // spurious 'streamer' role picked up from a neighbouring label).
+          existing.role = lc.roles[0];
+          existing.roles = [...lc.roles];
+          // D-7: an unresolved node may not wear its manufacturer's clothes.
+          // Brand tendencies describe the maker, not this product, and
+          // presenting them here would be exactly the silent substitution the
+          // opaque-node rule forbids. Identity is a user-supplied fact;
+          // behaviour is unknown and stays unknown.
+          existing.brandProfile = undefined;
+          existing.character = `${lc.rawName} — described by you as ${lc.labelText.toLowerCase()}; not identified in our catalog, so no sonic characteristics are claimed for it.`;
+          // Keep the identity the user gave. Brand recognition alone reduces
+          // "ARC ref 5" to "Arc", which then reads as a bare brand concealing
+          // a model and trips the graph gate — asking the user for a model
+          // they already typed. Their words are the better record.
+          if (lc.rawName.trim().split(/\s+/).length
+              > existing.displayName.trim().split(/\s+/).length) {
+            existing.displayName = lc.rawName;
+          }
+          existing.unresolved = true;
+        } else if (!labelContradictsCategory(lc.roles, existing.product.category)) {
+          existing.roles = [...new Set([...(existing.roles ?? []), ...lc.roles])];
+        }
+        continue;
+      }
+
+      // Opaque node — identity retained as a user-supplied fact, nothing
+      // asserted about how it sounds.
+      components.push({
+        displayName: lc.rawName,
+        role: lc.roles[0],
+        roles: lc.roles,
+        character: `${lc.rawName} — described by you as ${lc.labelText.toLowerCase()}; not in our catalog, so no sonic characteristics are claimed for it.`,
+        unresolved: true,
+      });
+    }
   }
 
   // Need at least 2 identified components to build a system assessment
