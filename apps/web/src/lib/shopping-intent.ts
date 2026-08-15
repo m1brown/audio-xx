@@ -1404,6 +1404,17 @@ export function parseBudgetAmount(text: string): number | null {
   const wholeNum = text.trim().match(/^\$?\s?(\d{1,3}(?:,\d{3})+|\d{3,6})[\s?.!]*$/);
   if (wholeNum) return minPlausible(parseInt(wholeNum[1].replace(/,/g, ''), 10));
 
+  // "<amount> budget" — "a 5000 budget", "5k budget", "2000 budget".
+  // Founder-reported 2026-08-13: "help me find a system with a 5000 budget"
+  // parsed to NO budget at all, so nothing constrained the answer. The
+  // dollar-prefixed form ("$5000 budget") already worked; the bare number
+  // before the word "budget" did not.
+  const budgetSuffix = text.match(/(?:^|\s)\$?\s?(\d{1,3}(?:,\d{3})+|\d{1,6})(?:\.\d{1,2})?\s*(k)?\s*(?:dollar|usd|euro|eur|pound|gbp)?\s*budget\b/i);
+  if (budgetSuffix) {
+    const n = parseFloat(budgetSuffix[1].replace(/,/g, ''));
+    return minPlausible(budgetSuffix[2] ? Math.round(n * 1000) : Math.round(n));
+  }
+
   // "over $X" / "above $X" / "more than $X" → no upper cap.
   // We must check this BEFORE the generic numeric scan, otherwise the dollar
   // amount in "over $10000" gets picked up as a ceiling.

@@ -2073,7 +2073,7 @@ export function detectIntent(
   //     my amp?") is a question about that thing, not a shopping request,
   //     and must keep routing as before.
   const qualifiedCategory =
-    /^\s*(?:(?:so\s+)?(?:what|how)\s+about\s+|any\s+|got\s+any\s+)?(?:some\s+|a\s+|an\s+)?(?:cheap|budget|affordable|inexpensive|entry[- ]?level|good|best|decent|nice|better|cheaper)\s+(?:\w+\s+){0,2}?(?:dacs?|amps?|amplifiers?|integrateds?|speakers?|headphones?|iems?|earphones?|earbuds?|in[- ]?ears?|turntables?|streamers?|receivers?|subwoofers?|preamps?|cans)\s*[?.!]?\s*$/i;
+    /^\s*(?:(?:so\s+)?(?:what|how)\s+about\s+|any\s+|got\s+any\s+)?(?:some\s+|a\s+|an\s+)?(?:cheap|budget|affordable|inexpensive|entry[- ]?level|good|best|decent|nice|better|cheaper)\s+(?:\w+\s+){0,2}?(?:dacs?|amps?|amplifiers?|integrateds?|speakers?|headphones?|iems?|earphones?|earbuds?|in[- ]?ears?|turntables?|streamers?|receivers?|subwoofers?|preamps?|cans)(?:\s+(?:please|pls|plz|thanks|thanx|thx))?\s*[?.!]*\s*$/i;
   if (qualifiedCategory.test(currentMessage)) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }

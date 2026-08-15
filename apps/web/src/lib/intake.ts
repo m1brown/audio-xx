@@ -28,6 +28,17 @@ const INTAKE_PATTERNS = [
   /\b(?:i\s+)?need\s+(?:a\s+)?(?:new\s+)?(?:stereo|system|setup|hifi|hi-fi|audio\s+system)\b/i,
   /\b(?:i\s+)?(?:want|need)\s+(?:to\s+)?(?:get|buy)\s+(?:a\s+)?(?:new\s+)?(?:stereo|system|setup|hifi|hi-fi)\b/i,
 
+  // "help me find/build a system" — the request states the goal without
+  // "want" or "need", so the patterns above missed it entirely and the query
+  // fell through to shopping with category 'general', which serves nothing:
+  // zero picks, and the empty answer then fell through to unrelated content.
+  // Founder-reported twice, 2026-08-13.
+  /\b(?:help\s+me\s+)?(?:find|build|choose|pick|put\s+together|assemble|spec|design)\s+(?:me\s+)?(?:a|an|my)?\s*(?:new\s+|first\s+|complete\s+|whole\s+|entire\s+)?(?:stereo|system|setup|rig|hifi|hi-fi)\b/i,
+  // "2 channel stereo", "two-channel system" — a whole-system scope, not a
+  // single category. Without this, "a 2 channel stereo - speakers, amplifier,
+  // etc" resolved to 'amplifier' and answered with amplifiers alone.
+  /\b(?:2|two)[\s-]?channel\b/i,
+
   // Getting started / new to audio
   /\b(?:getting|get)\s+(?:started|into)\s+(?:with\s+)?(?:audio|hifi|hi-fi|vinyl|streaming)\b/i,
   /\b(?:new\s+to|just\s+starting)\s+(?:audio|hifi|hi-fi|the\s+hobby|this)\b/i,
@@ -170,12 +181,33 @@ const SCOPE_LABELS: Record<IntakeScope, string> = {
  * Returns true if the message looks like an underspecified entry query
  * that should trigger the guided intake flow.
  */
+/**
+ * Whole-system scope — the request is for a complete stereo, not one
+ * component. Recorded separately because the specificity guard below must
+ * NOT apply to it: that guard exists to skip intake when the user has told
+ * us enough to go straight to shopping, but no shopping path can serve a
+ * whole system (it resolves to category 'general' and returns zero picks).
+ * More detail does not make an unservable request servable.
+ *
+ * Founder-reported 2026-08-13: "help me build a system for $5000" was
+ * skipped past intake by the single "$5000" guard hit, then answered with
+ * nothing.
+ */
+const SYSTEM_SCOPE_PATTERNS = [
+  /\b(?:help\s+me\s+)?(?:find|build|choose|pick|put\s+together|assemble|spec|design)\s+(?:me\s+)?(?:a|an|my)?\s*(?:new\s+|first\s+|complete\s+|whole\s+|entire\s+)?(?:stereo|system|setup|rig|hifi|hi-fi)\b/i,
+  /\b(?:2|two)[\s-]?channel\b/i,
+  /\b(?:i\s+)?(?:want|need)\s+(?:a\s+)?(?:new\s+)?(?:stereo|system|setup|hifi|hi-fi|audio\s+system)\b/i,
+];
+
 export function isIntakeQuery(text: string, subjectCount: number): boolean {
   // Must match an intake pattern
   if (!INTAKE_PATTERNS.some((p) => p.test(text))) return false;
 
   // If the user named specific products/brands, they're past intake
   if (subjectCount >= 2) return false;
+
+  // Whole-system scope bypasses the specificity guard — see above.
+  if (SYSTEM_SCOPE_PATTERNS.some((p) => p.test(text))) return true;
 
   // Check guard signals — if enough specificity is present, skip intake
   const guardCount = INTAKE_GUARD_PATTERNS.filter((p) => p.test(text)).length;
