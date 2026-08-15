@@ -251,6 +251,35 @@ const HARD_PROHIBITIONS: Array<{ label: string; re: RegExp }> = [
 ];
 
 /**
+ * Specification tokens Audio XX independently holds.
+ *
+ * Curated descriptions carry real figures — the Magnepan LRS entry states
+ * "4Ω/86dB" because that is catalog evidence. When the provisional model uses
+ * those figures as PREMISES ("a 5-watt SET will struggle into an 86dB, 4Ω
+ * load") it is reasoning with supported facts, not inventing specifications —
+ * and that sentence is often the most valuable in the whole assessment,
+ * because it is where a real mismatch gets named.
+ *
+ * Rather than infer legitimacy from wording, we collect the figures our own
+ * evidence contains and treat exactly those as licensed premises. Anything
+ * numeric left over after they are accounted for is an invention.
+ */
+const SPEC_TOKEN_RE = /\d+(?:\.\d+)?\s?(?:watts?|w\b|db\b|hz\b|khz\b|ohms?|Ω|volts?|v\b|kg\b|lbs?\b)/gi;
+
+export function collectLicensedFacts(
+  curatedText: string[],
+): string[] {
+  const facts = new Set<string>();
+  for (const text of curatedText) {
+    if (!text) continue;
+    for (const m of text.matchAll(SPEC_TOKEN_RE)) {
+      facts.add(m[0].toLowerCase().replace(/\s+/g, ''));
+    }
+  }
+  return [...facts];
+}
+
+/**
  * Find claims that exceed what any evidence tier licenses.
  *
  * Scope changed 2026-08-15 (restoration): this no longer asks "is this a
@@ -261,6 +290,7 @@ export function findLicensingViolations(
   prose: string,
   _unresolvedNames: string[] = [],
   curatedNames: string[] = [],
+  licensedFacts: string[] = [],
 ): { component: string; sentence: string }[] {
   if (!prose) return [];
   const violations: { component: string; sentence: string }[] = [];
@@ -290,7 +320,14 @@ export function findLicensingViolations(
   for (const raw of prose.split(/(?<=[.!?])\s+/)) {
     if (DISCLAIMER_MARKERS.test(raw)) continue;
     if (mentionsCurated(raw)) continue;
-    const sentence = maskNames(raw);
+    // Mask the listener's own component names AND the specifications our own
+    // evidence licenses. What remains is what the ANSWER asserts on its own
+    // authority — which is the only thing these prohibitions should judge.
+    let sentence = maskNames(raw);
+    for (const fact of licensedFacts) {
+      const loose = fact.replace(/(\d)([a-zΩ])/i, '$1\\s?$2');
+      sentence = sentence.replace(new RegExp(loose, 'gi'), ' ');
+    }
     for (const { label, re } of HARD_PROHIBITIONS) {
       if (re.test(sentence)) {
         violations.push({ component: label, sentence: raw.trim() });
@@ -489,6 +526,7 @@ Produce an Audio XX provisional system assessment. Assess the components you hav
         prose,
         unresolvedRoster.map((u) => u.name),
         knownDescriptions.map((k) => k.name),
+        collectLicensedFacts(knownDescriptions.map((k) => k.character)),
       );
       if (violations.length > 0) {
         console.warn(

@@ -95,3 +95,58 @@ describe('provenance is computed by Audio XX, never claimed by the model', () =>
     }
   });
 });
+
+/**
+ * Licensed specifications are PREMISES, not inventions (2026-08-16).
+ *
+ * The Magnepan LRS catalog entry states "4Ω/86dB". When the provisional model
+ * uses those figures to explain why a 5-watt SET is a poor match, it is
+ * reasoning with evidence Audio XX independently holds — and that sentence is
+ * the most valuable one in the assessment, because it is where the real
+ * mismatch gets named.
+ *
+ * The validator previously rejected it: the numbers appeared in generated
+ * prose, the sentence didn't happen to name "Magnepan", so it read as a
+ * fabricated specification and collapsed the whole answer into the fallback.
+ *
+ * The distinction is asserting an unsupported spec vs. reasoning with a
+ * supported one — established by an explicit licensed-fact set, never by a
+ * regex exception for particular figures.
+ */
+import { collectLicensedFacts } from '../llm-system-inference';
+
+describe('licensed specifications may be used as premises', () => {
+  const CURATED = [
+    'Entry-level planar magnetic from Magnepan. Limited bass extension, and the '
+    + '4Ω/86dB load demands a current-capable amplifier.',
+  ];
+  const facts = collectLicensedFacts(CURATED);
+  const NAMES = ['Magnepan LRS'];
+  const UNRESOLVED = ['Zorblax ZX1 5 watt SET'];
+
+  it('collects the figures our own evidence contains', () => {
+    expect(facts).toEqual(expect.arrayContaining(['4ω', '86db']));
+  });
+
+  it('permits the mismatch argument that cites them', () => {
+    const prose =
+      'A 5-watt SET will struggle into an 86dB, 4Ω load, so the amplifier is the '
+      + 'limiting component here.';
+    expect(findLicensingViolations(prose, UNRESOLVED, NAMES, facts)).toEqual([]);
+  });
+
+  it('still refuses a specification we do not hold', () => {
+    const prose = 'The amplifier delivers 250 watts into 8 ohms.';
+    expect(findLicensingViolations(prose, UNRESOLVED, NAMES, facts).length).toBeGreaterThan(0);
+  });
+
+  it('a figure inside the listener’s own component name is not a claim', () => {
+    const prose = 'The Zorblax ZX1 5 watt SET sits in the amplification position.';
+    expect(findLicensingViolations(prose, UNRESOLVED, NAMES, facts)).toEqual([]);
+  });
+
+  it('no curated evidence means no licensed premises', () => {
+    const prose = 'A 5-watt SET will struggle into an 86dB, 4Ω load.';
+    expect(findLicensingViolations(prose, UNRESOLVED, [], []).length).toBeGreaterThan(0);
+  });
+});
