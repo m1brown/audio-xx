@@ -275,12 +275,25 @@ export function findLicensingViolations(
   const mentionsCurated = (sentence: string) =>
     curatedTokens.some((t) => new RegExp(`\\b${t}\\b`, 'i').test(sentence));
 
-  for (const sentence of prose.split(/(?<=[.!?])\s+/)) {
-    if (DISCLAIMER_MARKERS.test(sentence)) continue;
-    if (mentionsCurated(sentence)) continue;
+  // A component NAME is a user-supplied fact, not a claim. "Zorblax ZX1 5 watt
+  // SET" contains "5 watt", and matching it made Audio XX trip over the
+  // listener's own words and refuse to answer. Mask every known name before
+  // testing, so prohibitions apply to what the answer ASSERTS, never to what
+  // the listener called their gear.
+  const allNames = [...curatedNames, ..._unresolvedNames].filter(Boolean);
+  const maskNames = (sentence: string) =>
+    allNames.reduce(
+      (acc, n) => acc.replace(new RegExp(n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), ' '),
+      sentence,
+    );
+
+  for (const raw of prose.split(/(?<=[.!?])\s+/)) {
+    if (DISCLAIMER_MARKERS.test(raw)) continue;
+    if (mentionsCurated(raw)) continue;
+    const sentence = maskNames(raw);
     for (const { label, re } of HARD_PROHIBITIONS) {
       if (re.test(sentence)) {
-        violations.push({ component: label, sentence: sentence.trim() });
+        violations.push({ component: label, sentence: raw.trim() });
         break;
       }
     }
