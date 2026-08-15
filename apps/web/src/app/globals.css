@@ -137,7 +137,7 @@ h3 { font-size: 1.08rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing
   align-items: center;
   gap: 0.6rem;
   font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   /* 2026-08-15: section eyebrows carry the accent at full weight, matching
    * the Assessment artifact. Sections were reading as faint gray captions
    * rather than as structure. */

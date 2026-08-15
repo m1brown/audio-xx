@@ -67,7 +67,7 @@ body:has(.axx-route) { background: #FCF8EE; }
 .axx-verdict { margin-block-start: var(--silence-top); }
 .axx-kicker {
   font-family: var(--face-grotesque);
-  font-size: .78rem; letter-spacing: .13em; text-transform: uppercase;
+  font-size: .75rem; letter-spacing: .13em; text-transform: uppercase;
   /* 2026-08-15: was --ink-muted. The rule beside this label was already
    * accent red while the text sat muted grey, so the section read as a
    * caption rather than as structure. Weight and colour now match the
