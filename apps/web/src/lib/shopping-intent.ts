@@ -530,6 +530,34 @@ function buildCategoryPatterns(
  * "for <category>" and "<category> recommendations" work equally well for
  * any product taxonomy.
  */
+/**
+ * HEAD NOUN BEFORE "for" WINS over the partner named after it.
+ *
+ * "best speakers for a job amplifier" asks for SPEAKERS; the amplifier is
+ * context. The "for <category>" patterns read the noun AFTER "for" as the
+ * request — right for "recommendations for speakers" (no category precedes
+ * it), inverted for a partner phrase. Founder-reported 2026-08-13: a speaker
+ * request returned three amplifiers, and symmetrically "best amp for my
+ * speakers" resolved to speaker.
+ *
+ * This is the rule the routing doctrine's X1 case already states — the
+ * request head noun outranks trailing context — applied generally rather
+ * than only where a specific pattern happened to cover it. Consulted BOTH in
+ * the priority scan and in the requestedCategory resolution, which carried
+ * this as documented limitation G3.
+ *
+ * Bounded to 40 chars so a match cannot leap across sentences.
+ */
+const HEAD_NOUN_BEFORE_FOR: Array<[RegExp, ShoppingCategory]> = [
+  [/\b(?:iems?|in[- ]?ear\s+monitors?|earphones?|earbuds?)\b[^.?!]{0,40}?\bfor\s+/i, 'headphone'],
+  [/\bheadphones?\b[^.?!]{0,40}?\bfor\s+/i, 'headphone'],
+  [/\bspeakers?\b[^.?!]{0,40}?\bfor\s+/i, 'speaker'],
+  [/\bdacs?\b[^.?!]{0,40}?\bfor\s+/i, 'dac'],
+  [/\b(?:amps?|amplifiers?|integrated(?:\s+amp(?:lifier)?)?|power\s*amps?|preamps?)\b[^.?!]{0,40}?\bfor\s+/i, 'amplifier'],
+  [/\b(?:turntables?|record\s+players?)\b[^.?!]{0,40}?\bfor\s+/i, 'turntable'],
+  [/\b(?:streamers?|transports?)\b[^.?!]{0,40}?\bfor\s+/i, 'streamer'],
+];
+
 const CATEGORY_PRIORITY_PATTERNS: Array<[RegExp, ShoppingCategory]> = [
   // ── IEM / in-ear vocabulary is headphone territory (REC-1, 2026-08-12).
   // Listed FIRST: "in-ear monitors" contains "monitors", which four
@@ -552,6 +580,8 @@ const CATEGORY_PRIORITY_PATTERNS: Array<[RegExp, ShoppingCategory]> = [
   [/\b(?:amps?|amplifiers?)\s+not\s+(?:an?\s+)?(?:speaker|dac|headphone|streamer|turntable)/i, 'amplifier'],
   [/\bdacs?\s+not\s+(?:an?\s+)?(?:amp|amplifier|speaker|headphone|streamer|turntable)/i, 'dac'],
   [/\bheadphones?\s+not\s+(?:an?\s+)?(?:amp|amplifier|speaker|dac|streamer|turntable)/i, 'headphone'],
+
+  ...HEAD_NOUN_BEFORE_FOR,
 
   // ── "for <category>": "for speakers" / "for the amp" / "for a new dac"
   [/\bfor\s+(?:an?\s+|the\s+|some\s+|my\s+|a\s+new\s+)?speakers?\b/i, 'speaker'],
@@ -1854,6 +1884,10 @@ export function detectShoppingIntent(
         const iemCompound = /\biems?\b(?!\s*(?:amp|amplifier|dac))|\bin[- ]?ear\s+monitors?\b|\bin[- ]?ears\b|\bearbuds?\b|\bearphones?\b(?!\s*(?:amp|amplifier))/i.test(utter);
         if (iemCompound) {
           requestedCategory = 'headphone';
+        } else if (HEAD_NOUN_BEFORE_FOR.some(([re]) => re.test(utter))) {
+          // Resolves documented limitation G3: the request head noun before
+          // "for" outranks a partner category named after it.
+          requestedCategory = HEAD_NOUN_BEFORE_FOR.find(([re]) => re.test(utter))![1];
         } else {
         // Mirror the base detector's CATEGORY_PATTERNS scan order so an explicit
         // request resolves to the SAME class the detector would pick — this
