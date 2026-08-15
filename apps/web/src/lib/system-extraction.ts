@@ -12,6 +12,7 @@
  */
 
 import type { SubjectMatch } from './intent';
+import { reconcileWithLabels, splitUserSuppliedName, preferUserSuppliedName } from './labelled-components';
 import type { ProductCategory } from './catalog-taxonomy';
 import type { ProposedSystem, DraftSystemComponent, AudioSessionState } from './system-types';
 import { findKnownSystemMatch, suggestKnownSystemName } from './known-systems';
@@ -466,7 +467,12 @@ export function detectSystemDescription(
   }
 
   // ── Gate 3: need at least 2 recognized subjects ──
-  if (subjectMatches.length < 2) return null;
+  // Explicit "<role>: <name>" labels are structure evidence in their own right
+  // (beta 2026-08-15), so a system whose brands we do not recognise still
+  // counts — otherwise the save prompt disappears for exactly the listeners
+  // whose gear we cover least.
+  const labelledForGate = reconcileWithLabels(currentMessage, []);
+  if (subjectMatches.length < 2 && labelledForGate.matches.length < 2) return null;
 
   // ── Build components from subject matches ──
   // Process products first, then brands. This allows us to suppress
@@ -698,6 +704,39 @@ export function detectSystemDescription(
       break; // one descriptor per pattern, matching the prior behavior
     }
     void promoted;
+  }
+
+  // ── Explicit labels complete the list ──────────────────────────────
+  //
+  // Beta defect (2026-08-15): the save banner read "You described a system:
+  // Dcs, ARC" for a listener who had named four components, because this list
+  // was built only from brands we happen to recognise. The assessment graph
+  // and the recognition line were repaired to honour explicit labels; this is
+  // the third surface, and it uses the SAME matching rule (reconcileWithLabels)
+  // rather than a fourth reconstruction, so the three cannot drift apart again.
+  //
+  // A labelled component we cannot identify is still a component the listener
+  // owns. Recording it is not a coverage claim — `category: null` says plainly
+  // that we did not classify it.
+  const reconciliation = reconcileWithLabels(
+    currentMessage,
+    components.map((c) => `${c.brand} ${c.name}`.trim()),
+  );
+  if (reconciliation.hasLabels) {
+    for (const { label, existingIndex } of reconciliation.matches) {
+      if (existingIndex >= 0) {
+        // Keep the listener's fuller designation over a bare brand match.
+        const current = components[existingIndex];
+        const currentFull = `${current.brand} ${current.name}`.trim();
+        if (preferUserSuppliedName(currentFull, label.rawName) === label.rawName) {
+          const { brand, name } = splitUserSuppliedName(label.rawName);
+          components[existingIndex] = { ...current, brand, name };
+        }
+        continue;
+      }
+      const { brand, name } = splitUserSuppliedName(label.rawName);
+      components.push({ brand, name, category: null, role: null });
+    }
   }
 
   // ── Gate 4: need at least 2 real components ──

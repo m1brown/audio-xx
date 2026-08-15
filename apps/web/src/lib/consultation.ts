@@ -19,7 +19,7 @@
  */
 
 import { DAC_PRODUCTS, type Product } from './products/dacs';
-import { parseLabelledComponents, labelContradictsCategory } from './labelled-components';
+import { parseLabelledComponents, labelContradictsCategory, preferUserSuppliedName } from './labelled-components';
 import { SPEAKER_PRODUCTS } from './products/speakers';
 import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
 import { TURNTABLE_PRODUCTS } from './products/turntables';
@@ -9348,10 +9348,7 @@ export function buildSystemAssessment(
           // "ARC ref 5" to "Arc", which then reads as a bare brand concealing
           // a model and trips the graph gate — asking the user for a model
           // they already typed. Their words are the better record.
-          if (lc.rawName.trim().split(/\s+/).length
-              > existing.displayName.trim().split(/\s+/).length) {
-            existing.displayName = lc.rawName;
-          }
+          existing.displayName = preferUserSuppliedName(existing.displayName, lc.rawName);
           existing.unresolved = true;
         } else if (!labelContradictsCategory(lc.roles, existing.product.category)) {
           existing.roles = [...new Set([...(existing.roles ?? []), ...lc.roles])];

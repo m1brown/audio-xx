@@ -205,3 +205,70 @@ export function labelContradictsCategory(roles: string[], catalogCategory: strin
   const catNorm = norm(catalogCategory.toLowerCase());
   return !roles.some((r) => norm(r) === catNorm);
 }
+
+/**
+ * Reconcile an already-resolved node list against the explicit labels.
+ *
+ * THIS IS THE SINGLE MATCHING RULE. Three surfaces need to agree on what
+ * components a message describes — the assessment graph, the recognition line,
+ * and the save-system banner — and the beta defect was precisely that they did
+ * not: the graph held four components while two other surfaces still showed
+ * "Dcs, ARC" because each reconstructed the list its own way. Any surface that
+ * needs the answer calls this; none of them re-derives it.
+ *
+ * Returns, for every label, the index of the node that already represents it
+ * (or -1 when nothing does), so each caller can apply the result in its own
+ * shape without duplicating the decision.
+ */
+export interface LabelReconciliation {
+  hasLabels: boolean;
+  matches: Array<{ label: LabelledComponent; existingIndex: number }>;
+}
+
+export function reconcileWithLabels(
+  message: string,
+  existingNames: string[],
+): LabelReconciliation {
+  const labels = parseLabelledComponents(message);
+  if (labels.length === 0) return { hasLabels: false, matches: [] };
+
+  const lower = existingNames.map((n) => n.toLowerCase().trim());
+  const matches = labels.map((label) => {
+    const target = label.rawName.toLowerCase().trim();
+    const existingIndex = lower.findIndex(
+      (n) => n === target || n.includes(target) || target.includes(n),
+    );
+    return { label, existingIndex };
+  });
+  return { hasLabels: true, matches };
+}
+
+/**
+ * Split a user-typed component name into brand and model for surfaces that
+ * store the two separately. The first token is the brand — "Butler Monads"
+ * becomes Butler / Monads. This is a display convenience, never a claim that
+ * the brand was recognised.
+ */
+export function splitUserSuppliedName(rawName: string): { brand: string; name: string } {
+  const parts = rawName.trim().split(/\s+/);
+  if (parts.length === 1) return { brand: parts[0], name: '' };
+  return { brand: parts[0], name: parts.slice(1).join(' ') };
+}
+
+/**
+ * Which name should a node carry — the one we resolved, or the one the
+ * listener typed?
+ *
+ * Brand recognition alone reduces "ARC ref 5" to "Arc" and "dCS Rossini Apex"
+ * to "Dcs". That impoverished form then reads as a bare brand concealing a
+ * model, which trips the graph gate into asking for a model the listener
+ * already supplied. Their words carry strictly more information, so when the
+ * label is richer it wins.
+ *
+ * Shared so the assessment graph and the save prompt cannot disagree about
+ * what a component is called.
+ */
+export function preferUserSuppliedName(existing: string, rawName: string): string {
+  const tokens = (v: string) => v.trim().split(/\s+/).filter(Boolean).length;
+  return tokens(rawName) > tokens(existing) ? rawName : existing;
+}
