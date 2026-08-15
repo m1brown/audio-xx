@@ -460,7 +460,15 @@ const PRODUCT_ASSESSMENT_PATTERNS = [
   /\bwhat\s+(?:is|are)\s+(?:the\s+)?(?:character|sound|signature|house sound)\b/i,
   // "are the Ossuary Audio speakers any good?" — plural opinion form,
   // mirrored in GEAR_INQUIRY_PATTERNS (routing battery, 2026-08-10).
-  /\bare\s+.+\s+any\s+good\b/i,
+  //
+  // 2026-08-15: the singular was missing. "is the Well Tempered Lab
+  // turntable any good" matched no trigger, so extractProductCandidateName
+  // returned null, gate 0a never synthesized a subject, and the turn fell
+  // into gear_inquiry with nothing to ground — emitting generic
+  // component-character filler under the subject "your question". The
+  // plural form of the same question degraded honestly. Number is not a
+  // meaningful distinction here; one pattern now covers both.
+  /\b(?:is|are)\s+.+\s+any\s+good\b/i,
 ];
 
 // ── Unknown-product candidate detection (P1 fix, 2026-05-18) ─────────
