@@ -136,6 +136,9 @@ import { toSlug as routeToSlug } from './route-slug';
 /** Where the response data originated — used for provenance labeling in the UI. */
 export type ConsultationSource = 'catalog' | 'brand_profile' | 'llm_inferred' | 'provisional_system';
 
+/** Per-component evidence tier, computed by Audio XX — never claimed by a model. */
+export interface ComponentProvenanceEntry { name: string; basis: 'catalog' | 'brand' | 'model' | 'user' }
+
 export interface ConsultationResponse {
   /** Display title for the assessment (e.g. "Living Room System"). */
   title?: string;
@@ -242,6 +245,10 @@ export interface ConsultationResponse {
    * renderer behind `NEXT_PUBLIC_BRAND_AUTHORITY_PREVIEW` (default off).
    */
   brandAuthorityPreview?: BrandAuthorityPreview;
+  /** Per-component evidence tier (provisional/expanded paths). */
+  componentProvenance?: ComponentProvenanceEntry[];
+  /** Component names the model reported it could actually speak to. */
+  characterized?: string[];
 }
 
 /**

@@ -4947,6 +4947,57 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
         </AdvisorySection>
       )}
 
+      {/* ── Evidence basis per component ─────────────────────
+        * The Expanded Reasoning caption says SOME of this answer is
+        * model-derived; this says WHICH. Without it a mixed-evidence system
+        * presents curated and model knowledge in one undifferentiated voice,
+        * which is the D-7 failure the beta system exposed. The tiers are
+        * computed by Audio XX from what it actually holds — a model cannot
+        * promote itself to "catalog" here.
+        */}
+      {a.componentProvenance && a.componentProvenance.length > 0 && (
+        <div style={{ margin: '0 0 1.15rem' }}>
+          <div style={{
+            fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
+            fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.13em',
+            textTransform: 'uppercase', color: 'var(--xx-accent, #A6432C)',
+            marginBottom: '0.5rem',
+          }}>
+            What this is based on
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            {a.componentProvenance.map((c) => {
+              const LABEL: Record<string, string> = {
+                catalog: 'Audio XX catalog',
+                brand: 'Audio XX brand evidence',
+                model: 'Expanded reasoning',
+                user: 'Your description only',
+              };
+              const TONE: Record<string, string> = {
+                catalog: '#4F6B4A', brand: '#4F6B4A', model: '#8A6D3B', user: '#6B6862',
+              };
+              return (
+                <div key={c.name} style={{
+                  display: 'flex', alignItems: 'baseline', gap: '0.55rem',
+                  fontSize: '0.86rem', lineHeight: 1.45,
+                }}>
+                  <span style={{
+                    fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
+                    fontSize: '0.64rem', fontWeight: 700, letterSpacing: '0.08em',
+                    textTransform: 'uppercase', color: TONE[c.basis],
+                    border: `1px solid ${TONE[c.basis]}`, borderRadius: 2,
+                    padding: '0.1rem 0.38rem', whiteSpace: 'nowrap', flex: '0 0 auto',
+                  }}>
+                    {LABEL[c.basis]}
+                  </span>
+                  <span style={{ color: '#333' }}>{c.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {hasProvisionalCaveats && (
         <div
           style={{

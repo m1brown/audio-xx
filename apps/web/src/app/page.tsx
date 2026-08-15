@@ -2940,6 +2940,11 @@ export default function Home() {
             const graphCtx = { ...advisoryCtx, systemComponents: componentNames };
             const provisionalAdvisory = consultationToAdvisory(provisional, undefined, graphCtx);
             provisionalAdvisory.unknownComponents = assessmentResult.unknownComponents;
+            // Per-component provenance — computed by Audio XX from what it
+            // actually holds, so the model cannot promote its own knowledge to
+            // curated authority. This is the rendering layer the original
+            // Expanded Reasoning design specified and never built.
+            provisionalAdvisory.componentProvenance = provisional.componentProvenance;
             // Trust-layer pass: tag the provisional system assessment
             // with expanded-reasoning metadata so the unified
             // ResponseHeader renders the calm indicator + caption

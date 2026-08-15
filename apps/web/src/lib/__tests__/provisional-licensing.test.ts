@@ -1,130 +1,97 @@
 import { describe, it, expect } from 'vitest';
 import {
   findLicensingViolations,
-  buildLicensedProvisionalResponse,
+  computeComponentProvenance,
 } from '../llm-system-inference';
 
 /**
- * D-7 in the provisional layer — real beta defect, second order (2026-08-15).
+ * Evidence tiers in the provisional layer — RESTORED (2026-08-15).
  *
- * After the labelled-graph repair, the engine correctly marked Butler Monads
- * and Acora QRC-2 as opaque nodes: named, role-placed, no brandProfile, no
- * invented character. Production then printed this anyway:
+ * Audio XX has always had four provenance sources and three reasoning modes
+ * (`AdvisorySource`, `ReasoningMode` in advisory-response.ts). Expanded
+ * Reasoning exists precisely so model knowledge can be used at lower
+ * authority. D-7 says no claim may be stronger than its source — it does NOT
+ * say a component must be in the catalog before Audio XX may speak.
  *
- *   "The Butler Monad amplifiers are known for their hybrid design, blending
- *    tube and solid-state technologies... community consensus suggests..."
+ * Earlier the same day, an over-correction banned characteristics outright for
+ * uncatalogued components. That collapsed "model knowledge" into "unknown" and
+ * made the advisor mute on most real systems — including the first real beta
+ * system, where the listener got a page of "I cannot assess this" for four
+ * components a knowledgeable person could discuss usefully.
  *
- * for two components Audio XX has never heard of. The graph was honest and the
- * prose written from it was not.
- *
- * The cause was instructed, not accidental. The provisional prompt said
- * "Never fabricate specifications. Use known design heritage and community
- * consensus", and the user prompt told the model that uncatalogued components
- * meant "use general knowledge". The prompt predated the opaque-node rule.
- *
- * The prompt now states the licensing rule — but a prompt is a preference. The
- * check below is what makes it a guarantee, and it is the reason the model may
- * be trusted to write this prose at all: licensing is enforced downstream,
- * deterministically, on the model's output.
+ * These tests pin the restored boundary: characterisation is permitted at any
+ * tier; what is never permitted is a claim BORROWING AUTHORITY IT DOES NOT
+ * HAVE — a measurement, a price, a compatibility guarantee, or a cited source.
  */
-const UNRESOLVED = ['Butler Monads', 'Acora QRC-2'];
+describe('model knowledge is a legitimate source, not a prohibited one', () => {
+  const ALLOWED = [
+    'The Butler Monads use a hybrid tube and MOSFET output stage.',
+    'The Acora QRC-2 uses a rigid stone enclosure, which points toward low cabinet contribution.',
+    'The ARC Reference 5 is a tube line stage and should add dimensionality without softening the chain.',
+    'This system should lean toward resolution and dynamic authority rather than warmth.',
+  ];
+  for (const prose of ALLOWED) {
+    it(`permits: "${prose.slice(0, 52)}…"`, () => {
+      expect(findLicensingViolations(prose)).toEqual([]);
+    });
+  }
+});
 
-describe('unlicensed claims about unresolved components are caught', () => {
-  // The exact prose production emitted.
-  const PRODUCTION_VIOLATION =
-    'The Butler Monad amplifiers are known for their hybrid design, blending tube and '
-    + 'solid-state technologies to offer a controlled yet organic sound. Acora QRC-2 '
-    + 'speakers are typically noted for their use of substantial cabinet materials, '
-    + 'providing an accurate and coherent sound that is both detailed and airy.';
-
-  it('catches the exact production violation', () => {
-    const v = findLicensingViolations(PRODUCTION_VIOLATION, UNRESOLVED);
-    expect(v.map((x) => x.component).sort()).toEqual(['Acora QRC-2', 'Butler Monads']);
-  });
-
+describe('claims that borrow authority they do not have are still refused', () => {
   const CASES: Array<[string, string]> = [
-    ['reputation', 'The Butler Monads are widely regarded as excellent.'],
-    ['community consensus', 'Community consensus suggests the Butler Monads are strong performers.'],
-    ['sonic character', 'The Acora QRC-2 delivers a warm, detailed presentation.'],
-    ['axis placement', 'The Butler Monads sit toward the controlled end of the dynamic axis.'],
-    ['topology', 'The Butler Monads use a hybrid tube and solid-state circuit.'],
-    ['cabinet/driver', 'The Acora QRC-2 uses a granite cabinet with a soft-dome driver.'],
-    ['known for', 'Acora QRC-2 is known for its spatial precision.'],
+    ['fabricated attribution', 'Community consensus suggests the Butler Monads are strong performers.'],
+    ['reviewer attribution', 'Reviewers report that the Acora QRC-2 is exceptionally resolving.'],
+    ['publication attribution', 'Stereophile measured the Rossini as class-leading.'],
+    ['specification', 'The Butler Monads deliver 250 watts into 8 ohms.'],
+    ['measurement', 'It reaches 20 Hz with only 0.5 db of rolloff.'],
+    ['price', 'The Acora QRC-2 retails for $38,000.'],
+    ['compatibility guarantee', 'The Butler Monads will drive the Acora QRC-2 without difficulty.'],
+    ['perfect-match claim', 'The ARC Ref 5 is an ideal match for the Rossini.'],
   ];
   for (const [label, prose] of CASES) {
-    it(`catches ${label}`, () => {
-      expect(findLicensingViolations(prose, UNRESOLVED).length).toBeGreaterThan(0);
+    it(`refuses ${label}`, () => {
+      expect(findLicensingViolations(prose).length).toBeGreaterThan(0);
     });
   }
 
-  it('hedging does not launder the claim', () => {
-    // "likely warm" and "reportedly warm" are the same violation as "warm".
-    expect(findLicensingViolations('The Acora QRC-2 is likely quite warm.', UNRESOLVED).length)
-      .toBeGreaterThan(0);
-    expect(findLicensingViolations('The Acora QRC-2 is reportedly detailed.', UNRESOLVED).length)
-      .toBeGreaterThan(0);
+  it('a disclaimer is not a violation', () => {
+    expect(findLicensingViolations(
+      'I have no measurements for the Butler Monads and cannot confirm its power output.',
+    )).toEqual([]);
   });
 });
 
-describe('the rule does not suppress licensed or honest prose', () => {
-  it('a disclaimer naming the component is not a violation', () => {
-    const prose =
-      'Butler Monads sits in the amplification position, but it is not in our catalog, '
-      + 'so I have no verified data on how it behaves. Acora QRC-2 is likewise unresolved '
-      + 'and I cannot assess it.';
-    expect(findLicensingViolations(prose, UNRESOLVED)).toEqual([]);
+describe('provenance is computed by Audio XX, never claimed by the model', () => {
+  const NAMES = ['dCS Bartok', 'ARC ref 5', 'Butler Monads', 'Acora QRC-2'];
+  const KNOWN = [{ name: 'dCS Bartok', source: 'product' as const }];
+
+  it('curated components are marked from what we hold, not what the model says', () => {
+    // The model claims it characterised everything, including the catalogued
+    // part. It still cannot promote ITSELF to catalog authority.
+    const p = computeComponentProvenance(NAMES, KNOWN, NAMES);
+    expect(p.find((x) => x.name === 'dCS Bartok')?.basis).toBe('catalog');
+    expect(p.find((x) => x.name === 'Butler Monads')?.basis).toBe('model');
   });
 
-  it('structural reasoning about an unresolved position is allowed', () => {
-    const prose =
-      'Your chain runs from a preamplifier through Butler Monads into Acora QRC-2. '
-      + 'I can place both, but not evaluate them.';
-    expect(findLicensingViolations(prose, UNRESOLVED)).toEqual([]);
+  it('a component the model could not speak to stays user-supplied only', () => {
+    const p = computeComponentProvenance(NAMES, KNOWN, ['ARC ref 5', 'Acora QRC-2']);
+    expect(p.find((x) => x.name === 'Butler Monads')?.basis).toBe('user');
   });
 
-  it('a RESOLVED component may be characterised in full', () => {
-    // The dCS Bartok is catalogued; richer analysis must survive untouched.
-    const prose = 'The dCS Bartok is transparent, controlled and spatially precise, with a '
-      + 'neutral-to-cool balance from its Ring DAC topology.';
-    expect(findLicensingViolations(prose, UNRESOLVED)).toEqual([]);
+  it('brand-level curated evidence is distinguishable from product-level', () => {
+    const p = computeComponentProvenance(
+      ['dCS Rossini Apex'],
+      [{ name: 'dCS Rossini Apex', source: 'brand' }],
+      [],
+    );
+    expect(p[0].basis).toBe('brand');
   });
 
-  it('no unresolved components means nothing to enforce', () => {
-    expect(findLicensingViolations('Anything at all, warm and tube-based.', [])).toEqual([]);
-  });
-});
-
-describe('the licensed answer is honest, useful and never empty', () => {
-  const BETA_NAMES = ['ARC ref 5', 'Butler Monads', 'dCS Rossini Apex', 'Acora QRC-2'];
-  const BETA_UNRESOLVED = [
-    { name: 'ARC ref 5', role: 'preamplifier' },
-    { name: 'Butler Monads', role: 'amplifier' },
-    { name: 'dCS Rossini Apex', role: 'dac' },
-    { name: 'Acora QRC-2', role: 'speaker' },
-  ];
-  const r = buildLicensedProvisionalResponse(BETA_NAMES, [], BETA_UNRESOLVED);
-  const prose = r.philosophy ?? '';
-
-  it('names every component the listener supplied', () => {
-    for (const n of BETA_NAMES) expect(prose).toContain(n);
-  });
-
-  it('states the role structure', () => {
-    expect(prose).toMatch(/preamplification/);
-    expect(prose).toMatch(/amplification/);
-    expect(prose).toMatch(/loudspeaker position/);
-  });
-
-  it('states the coverage limit at the point where it matters', () => {
-    expect(prose).toMatch(/no verified data/i);
-  });
-
-  it('is itself free of unlicensed claims', () => {
-    expect(findLicensingViolations(prose, BETA_UNRESOLVED.map((u) => u.name))).toEqual([]);
-  });
-
-  it('is never an empty turn', () => {
-    expect(prose.length).toBeGreaterThan(200);
-    expect(r.followUp).toBeTruthy();
+  it('every component receives exactly one basis', () => {
+    const p = computeComponentProvenance(NAMES, KNOWN, ['ARC ref 5']);
+    expect(p).toHaveLength(NAMES.length);
+    for (const entry of p) {
+      expect(['catalog', 'brand', 'model', 'user']).toContain(entry.basis);
+    }
   });
 });

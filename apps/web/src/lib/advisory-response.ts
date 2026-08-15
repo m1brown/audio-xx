@@ -722,6 +722,13 @@ export interface AdvisoryResponse {
    */
   reasoningMode?: ReasoningMode;
   /**
+   * Per-component evidence tier. The Expanded Reasoning caption states that
+   * SOME of the answer is model-derived; this states WHICH parts, so a
+   * mixed-evidence system does not present curated and model knowledge as
+   * one undifferentiated voice.
+   */
+  componentProvenance?: Array<{ name: string; basis: 'catalog' | 'brand' | 'model' | 'user' }>;
+  /**
    * Reason the response landed in 'expanded' reasoning mode. Mapped to a
    * one-line caption by the renderer. Only consulted when
    * reasoningMode === 'expanded'.

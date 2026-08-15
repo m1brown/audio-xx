@@ -32,7 +32,14 @@ You are being asked to assess a hi-fi system where some or all components are NO
 1. Assess EACH component individually first — describe its likely sonic character, design philosophy, and role in the chain.
 2. Then assess the CHAIN INTERACTION — how the components work together, what complements, what compounds, what the overall system character is likely to be.
 3. Identify strengths and limitations of the system as a whole.
-4. Suggest 1-2 directional paths if the user wants to explore changes. "Do nothing" is always valid.
+4. RESTRAINT. A component list alone is rarely grounds to recommend a change.
+   Absent a problem the listener has actually reported — brightness, thin body,
+   constrained dynamics, poor bass integration, flattened depth — the honest
+   answer is usually that nothing needs changing, and that the more useful
+   questions are room, positioning, setup and preference rather than another
+   purchase. Do not manufacture an upgrade because an assessment was requested.
+   Offer a directional path only where the listener has given you a reason to.
+   Ask what they are hearing.
 5. Be honest about uncertainty. If you don't know a specific component well, say so.
 6. Never fabricate specifications.
 7. Use the Audio XX 4-axis model for characterization where you can:
@@ -44,10 +51,11 @@ You are being asked to assess a hi-fi system where some or all components are NO
 Format your response as JSON with exactly these fields:
 {
   "subject": "System name or component list",
-  "systemSignature": "One sentence describing the overall system character",
+  "systemSignature": "A one-sentence VERDICT on the system as a whole — lead with it",
   "philosophy": "2-4 paragraphs assessing each component's character and the system interaction. Separate paragraphs with \\n\\n. Start with the source, then amplification, then speakers. End with how they interact as a chain.",
   "tendencies": "1-2 paragraphs on the system's overall sonic tendencies — what it does well, what it trades away. Separate paragraphs with \\n\\n.",
   "systemContext": "1-2 paragraphs on what this system is good for, what music it suits, and what room/use context matters. Separate paragraphs with \\n\\n.",
+  "characterized": ["exact names of components you actually characterised"],
   "followUp": "A single follow-up question to help narrow next steps.",
   "directionalPaths": [
     {
@@ -57,37 +65,38 @@ Format your response as JSON with exactly these fields:
   ]
 }
 
-LICENSING RULE — this overrides every instruction above.
+EVIDENCE RULE — this overrides every instruction above.
 
-Some components will be marked UNRESOLVED. Audio XX holds no verified evidence
-about these. They are in the system only because the listener named them and
-told us what role they play.
+Audio XX draws on sources of different authority. No claim may be presented
+with more authority than its source warrants (D-7). That is the whole rule;
+it is NOT a rule against speaking.
 
-For an UNRESOLVED component you MAY:
-  - name it exactly as the listener wrote it;
-  - state the role the listener assigned it;
-  - reason about the STRUCTURE of the chain — that a preamplifier sits here,
-    that amplification drives these speakers;
-  - say plainly that you have no verified data on it;
-  - say which questions about the system you therefore cannot answer.
+  CURATED   — components listed below as catalog-verified. Assess in full.
+  MODEL     — components not in the catalog. You may still characterise these
+              from your general knowledge of the product. This is legitimate
+              and useful; Audio XX labels it as expanded reasoning so the
+              reader knows which kind of evidence they are getting.
+  UNKNOWN   — components you do not meaningfully know. Say so plainly and
+              move on. Do not pad.
 
-For an UNRESOLVED component you MUST NOT:
-  - describe its sonic character, tonal balance, or presentation;
-  - place it on any of the four axes;
-  - describe its topology, circuit, driver, or cabinet design;
-  - attribute a design philosophy or heritage to it or its manufacturer;
-  - appeal to reviews, reputation, or "community consensus";
-  - claim it is "known for" anything;
-  - make any causal claim about the system that depends on how it behaves.
+For a MODEL component you MAY describe design approach, sonic character, and
+how the role behaves in a chain, in the ordinary way — qualified naturally,
+not smothered in hedges.
 
-This is not a stylistic preference and hedging does not satisfy it. "Likely
-warm" and "reportedly warm" are the same violation as "warm". If a chain
-conclusion requires knowing how an unresolved component sounds, do not state
-that conclusion — state that it cannot be assessed without that data.
+For ANY component you MUST NOT:
+  - state specifications, measurements, power figures, impedance, sensitivity
+    or dimensions you do not have;
+  - state prices;
+  - guarantee compatibility, matching or drive capability as fact;
+  - attribute a claim to a review, publication, measurement or named source;
+  - assert "community consensus", "widely regarded", or "reviewers say" —
+    Audio XX does not hold evidence of consensus and must not imply it;
+  - invent model designations, lineage or history.
 
-Where evidence IS available, assess normally and in full depth. The rule
-narrows what you say about specific unresolved parts; it does not make the
-whole assessment vague.
+Report which components you actually characterised in "characterized". Any
+component you cannot meaningfully speak to must be omitted from that list —
+this is how Audio XX tells the reader what it does and does not know, so an
+honest omission is more valuable than a vague paragraph.
 
 Return ONLY valid JSON, no markdown fences, no commentary.`;
 
@@ -161,58 +170,99 @@ export function computeSystemConfidence(
 // deterministic check is what turns the rule into a guarantee, and it is the
 // reason the model may be trusted to write this prose at all.
 
-/** Claim markers that require licensed evidence about a specific product. */
-const UNLICENSED_CLAIM_MARKERS: RegExp[] = [
-  // Appeals to reputation or third-party opinion
-  /\b(?:community\s+consensus|widely\s+(?:regarded|considered|known)|reviewers?|reputation|renowned|acclaimed|well[-\s]regarded|noted\s+for|known\s+for|celebrated\s+for)\b/i,
-  // Sonic character — the four axes and their common synonyms
-  /\b(?:warm|bright|smooth|detailed|elastic|controlled|airy|closed|lush|analytical|neutral|transparent|punchy|forward|laid[-\s]back|musical|organic|resolving)\b/i,
-  // Construction and topology
-  /\b(?:tube|valve|solid[-\s]state|hybrid|class\s+[abdgh]\b|topology|circuit|driver|cabinet|crossover|ring\s+dac|r2r|delta[-\s]sigma|feedback|damping)\b/i,
+/**
+ * Sentences that DISCLAIM knowledge are never violations — they are the rule
+ * being obeyed. "I have no measurements for this" must not trip the
+ * measurement check merely for containing the word.
+ */
+const DISCLAIMER_MARKERS =
+  /\b(?:no\s+verified|not\s+in\s+(?:our|the)\s+catalog|cannot\s+(?:be\s+)?(?:assess|evaluat|confirm|verif)|don'?t\s+have|do\s+not\s+have|unable\s+to|without\s+(?:verified|identifying)|not\s+identified|no\s+measurements?|not\s+something\s+I)\b/i;
+
+/**
+ * HARD PROHIBITIONS — claims no evidence tier licenses.
+ *
+ * These are not "characteristics". A characterisation drawn from model
+ * knowledge is legitimate under Expanded Reasoning and is labelled as such.
+ * What is never licensed is a claim that BORROWS AUTHORITY IT DOES NOT HAVE:
+ * a measurement we did not measure, a price we do not track, a compatibility
+ * guarantee we cannot make, or a source we cannot cite.
+ *
+ * The over-correction this replaces (2026-08-15) banned characteristics
+ * outright for uncatalogued components, which turned "uncatalogued" into
+ * "unknowable" and made the advisor mute on most real systems. D-7 says no
+ * claim stronger than its source — not no claim without a curated source.
+ */
+const HARD_PROHIBITIONS: Array<{ label: string; re: RegExp }> = [
+  {
+    label: 'fabricated source attribution',
+    re: /\b(?:community\s+consensus|widely\s+(?:regarded|considered|held)|reviewers?\s+(?:say|report|note|agree)|according\s+to\s+(?:reviews?|measurements?)|stereophile|absolute\s+sound|asr\b|measurements?\s+show)\b/i,
+  },
+  {
+    label: 'unsupported specification or measurement',
+    re: /\b\d+(?:\.\d+)?\s?(?:watts?|w\b|db\b|hz\b|khz\b|ohms?|Ω|volts?|v\b|kg\b|lbs?\b)/i,
+  },
+  {
+    label: 'price claim',
+    re: /(?:\$|£|€)\s?\d|\b\d+\s?(?:usd|gbp|eur)\b|\bretails?\s+(?:for|at)\b|\bcosts?\s+(?:around|about)?\s?(?:\$|£|€)/i,
+  },
+  {
+    label: 'compatibility guarantee',
+    re: /\b(?:will\s+(?:drive|match|pair)|is\s+(?:fully\s+)?compatible|guaranteed\s+to|perfect(?:ly)?\s+match(?:ed)?|ideal\s+match)\b/i,
+  },
 ];
 
 /**
- * Sentences that DISCLAIM knowledge are not violations — they are the rule
- * being obeyed. "I have no verified data on the Butler Monads' design" must
- * not be flagged merely because it contains the word "design".
- */
-const DISCLAIMER_MARKERS =
-  /\b(?:no\s+verified|not\s+in\s+(?:our|the)\s+catalog|unresolved|cannot\s+(?:be\s+)?(?:assess|evaluat|judg)|can't\s+(?:assess|evaluate)|don'?t\s+have|do\s+not\s+have|unable\s+to|without\s+(?:verified|identifying)|once\s+(?:you\s+)?identif|not\s+identified)\b/i;
-
-/** Distinctive tokens for a component name, used to find sentences about it. */
-function nameTokens(name: string): string[] {
-  return name
-    .split(/\s+/)
-    .map((t) => t.replace(/[^\w-]/g, ''))
-    .filter((t) => t.length >= 3);
-}
-
-/**
- * Find sentences that assert a product-specific characteristic about a
- * component Audio XX cannot identify. Exported for the regression suite.
+ * Find claims that exceed what any evidence tier licenses.
+ *
+ * Scope changed 2026-08-15 (restoration): this no longer asks "is this a
+ * characteristic?" — model knowledge may characterise. It asks "does this
+ * claim borrow authority it does not have?" Exported for the regression suite.
  */
 export function findLicensingViolations(
   prose: string,
-  unresolvedNames: string[],
+  _unresolvedNames: string[] = [],
 ): { component: string; sentence: string }[] {
-  if (!prose || unresolvedNames.length === 0) return [];
-  const sentences = prose.split(/(?<=[.!?])\s+/);
+  if (!prose) return [];
   const violations: { component: string; sentence: string }[] = [];
-
-  for (const sentence of sentences) {
+  for (const sentence of prose.split(/(?<=[.!?])\s+/)) {
     if (DISCLAIMER_MARKERS.test(sentence)) continue;
-    for (const name of unresolvedNames) {
-      const tokens = nameTokens(name);
-      if (tokens.length === 0) continue;
-      const mentions = tokens.some((t) => new RegExp(`\\b${t}\\b`, 'i').test(sentence));
-      if (!mentions) continue;
-      if (UNLICENSED_CLAIM_MARKERS.some((re) => re.test(sentence))) {
-        violations.push({ component: name, sentence: sentence.trim() });
+    for (const { label, re } of HARD_PROHIBITIONS) {
+      if (re.test(sentence)) {
+        violations.push({ component: label, sentence: sentence.trim() });
         break;
       }
     }
   }
   return violations;
+}
+
+/**
+ * Provenance for every node, computed by Audio XX rather than claimed by the
+ * model. This is what makes the distinction trustworthy: the model cannot
+ * promote itself to curated authority, because we decide the tier from what
+ * we actually hold, and the renderer displays that.
+ */
+export type EvidenceBasis = 'catalog' | 'brand' | 'model' | 'user';
+
+export interface ComponentProvenance {
+  name: string;
+  basis: EvidenceBasis;
+}
+
+export function computeComponentProvenance(
+  componentNames: string[],
+  knownDescriptions: { name: string; source: 'product' | 'brand' }[],
+  characterized: string[],
+): ComponentProvenance[] {
+  const curated = new Map(knownDescriptions.map((k) => [k.name, k.source]));
+  const spoken = new Set(characterized.map((c) => c.toLowerCase().trim()));
+  return componentNames.map((name) => {
+    const c = curated.get(name);
+    if (c === 'product') return { name, basis: 'catalog' as const };
+    if (c === 'brand') return { name, basis: 'brand' as const };
+    if (spoken.has(name.toLowerCase().trim())) return { name, basis: 'model' as const };
+    return { name, basis: 'user' as const };
+  });
 }
 
 /**
@@ -313,10 +363,10 @@ export async function inferProvisionalSystemAssessment(
   const unknownNames = componentNames.filter(n => !knownNames.has(n));
   const unresolvedByName = new Map((unresolved ?? []).map(u => [u.name, u.role]));
   const unknownContext = unknownNames.length > 0
-    ? `\n\nThe following components are UNRESOLVED — Audio XX holds no verified `
-      + `evidence about them. Name and role only; assert nothing about how they `
-      + `sound, how they are built, or what their makers are known for:\n`
-      + `${unknownNames.map(n => `- ${n} [UNRESOLVED${unresolvedByName.has(n) ? `, listener says: ${unresolvedByName.get(n)}` : ''}]`).join('\n')}`
+    ? `\n\nThese components are NOT in the Audio XX catalog. Characterise them `
+      + `from your general knowledge where you meaningfully know them, and omit `
+      + `them from \`characterized\` where you do not:\n`
+      + `${unknownNames.map(n => `- ${n} [model-knowledge${unresolvedByName.has(n) ? `, listener says: ${unresolvedByName.get(n)}` : ''}]`).join('\n')}`
     : '';
 
   const userPrompt = `The user asked: "${query}"
@@ -324,9 +374,11 @@ export async function inferProvisionalSystemAssessment(
 The system chain includes: ${componentNames.join(' → ')}
 ${knownContext}${unknownContext}
 
-When describing each component in the philosophy section, note its evidence basis:
-- For catalog-verified components, you may reference the verified data above and assess in full.
-- For UNRESOLVED components, state the role the listener gave and say plainly that you have no verified data on that component. Do not substitute general knowledge, reputation, or manufacturer heritage for the missing evidence.
+When describing each component in the philosophy section:
+- Catalog-verified components: reference the verified data above and assess in full.
+- Model-knowledge components: characterise them normally where you know them. Do
+  not apologise for the source — Audio XX labels provenance itself.
+- Components you do not know: say so once, briefly, and omit them from "characterized".
 
 Produce an Audio XX provisional system assessment. Assess the components you have evidence for, describe the chain STRUCTURE including the unresolved positions, and state explicitly which system-level questions cannot be answered until the unresolved components are identified.`;
 
@@ -377,6 +429,11 @@ Produce an Audio XX provisional system assessment. Assess the components you hav
         return buildLicensedProvisionalResponse(componentNames, knownDescriptions, unresolvedRoster);
       }
     }
+    parsedResponse.componentProvenance = computeComponentProvenance(
+      componentNames,
+      knownDescriptions,
+      (parsedResponse as { characterized?: string[] }).characterized ?? [],
+    );
     return parsedResponse;
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
@@ -391,6 +448,7 @@ Produce an Audio XX provisional system assessment. Assess the components you hav
 // ── Response parsing ─────────────────────────────────
 
 interface SystemInferenceJSON {
+  characterized?: string[];
   subject?: string;
   systemSignature?: string;
   philosophy?: string;
@@ -425,6 +483,7 @@ function parseSystemInferenceResponse(
       title: 'Provisional System Assessment',
       advisoryMode: 'system_review',
       systemSignature: parsed.systemSignature || undefined,
+      characterized: Array.isArray(parsed.characterized) ? parsed.characterized : [],
       philosophy: parsed.philosophy || undefined,
       tendencies: parsed.tendencies || undefined,
       systemContext: parsed.systemContext || undefined,
