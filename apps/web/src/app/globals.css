@@ -144,7 +144,10 @@ h3 { font-size: 1.08rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing
   font-weight: 700;
   letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: var(--xx-accent);
+  /* Literal fallback: this class also renders on pages whose stylesheet
+   * defines --accent but not --xx-accent, where a bare var() would resolve
+   * to nothing and drop the colour entirely. */
+  color: var(--xx-accent, #A6432C);
   margin: 1.75rem 0 0.55rem;
 }
 .axx-kicker::before {
