@@ -137,11 +137,14 @@ h3 { font-size: 1.08rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing
   align-items: center;
   gap: 0.6rem;
   font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+  /* 2026-08-15: section eyebrows carry the accent at full weight, matching
+   * the Assessment artifact. Sections were reading as faint gray captions
+   * rather than as structure. */
+  font-weight: 700;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: #6B6862;
+  color: var(--xx-accent);
   margin: 1.75rem 0 0.55rem;
 }
 .axx-kicker::before {
