@@ -2908,16 +2908,37 @@ export default function Home() {
               character: c.character,
               source: (c.product ? 'product' : 'brand') as 'product' | 'brand',
             }));
-          const componentNames = assessmentResult.components.map(c => c.displayName);
+          // Order the chain by signal position rather than resolution order, so
+          // the rendered line reads as a chain and not as a lookup log.
+          const CHAIN_ORDER = ['turntable', 'cartridge', 'tonearm', 'phono', 'transport',
+            'source', 'streamer', 'dac', 'preamplifier', 'integrated', 'amplifier',
+            'speaker', 'headphone'];
+          const orderedComponents = [...assessmentResult.components].sort((a, b) => {
+            const ai = CHAIN_ORDER.indexOf(a.role); const bi = CHAIN_ORDER.indexOf(b.role);
+            return (ai < 0 ? CHAIN_ORDER.length : ai) - (bi < 0 ? CHAIN_ORDER.length : bi);
+          });
+          const componentNames = orderedComponents.map(c => c.displayName);
+          const unresolvedRoster = orderedComponents
+            .filter(c => c.unresolved || (!c.product && !c.brandProfile))
+            .map(c => ({ name: c.displayName, role: c.role }));
           const provisional = await inferProvisionalSystemAssessment(
             assessmentResult.query,
             componentNames,
             knownDescriptions,
+            unresolvedRoster,
           );
           if (provisional) {
             // Override source to provisional_system for distinct UI labeling
             provisional.source = 'provisional_system';
-            const provisionalAdvisory = consultationToAdvisory(provisional, undefined, advisoryCtx);
+            // The recognition line must reflect the AUTHORITATIVE component
+            // graph, not subjectMatches. Beta defect (2026-08-15): the graph
+            // held all four components the listener named while the line
+            // above the prose still read "Your system: Dcs → ARC", because it
+            // was composed from brand recognition that is knowingly
+            // incomplete. This is a record of what the listener supplied — it
+            // asserts nothing about catalog coverage.
+            const graphCtx = { ...advisoryCtx, systemComponents: componentNames };
+            const provisionalAdvisory = consultationToAdvisory(provisional, undefined, graphCtx);
             provisionalAdvisory.unknownComponents = assessmentResult.unknownComponents;
             // Trust-layer pass: tag the provisional system assessment
             // with expanded-reasoning metadata so the unified

@@ -34,7 +34,7 @@ You are being asked to assess a hi-fi system where some or all components are NO
 3. Identify strengths and limitations of the system as a whole.
 4. Suggest 1-2 directional paths if the user wants to explore changes. "Do nothing" is always valid.
 5. Be honest about uncertainty. If you don't know a specific component well, say so.
-6. Never fabricate specifications. Use known design heritage and community consensus.
+6. Never fabricate specifications.
 7. Use the Audio XX 4-axis model for characterization where you can:
    - warm ↔ bright (tonal balance)
    - smooth ↔ detailed (resolution character)
@@ -56,6 +56,38 @@ Format your response as JSON with exactly these fields:
     }
   ]
 }
+
+LICENSING RULE — this overrides every instruction above.
+
+Some components will be marked UNRESOLVED. Audio XX holds no verified evidence
+about these. They are in the system only because the listener named them and
+told us what role they play.
+
+For an UNRESOLVED component you MAY:
+  - name it exactly as the listener wrote it;
+  - state the role the listener assigned it;
+  - reason about the STRUCTURE of the chain — that a preamplifier sits here,
+    that amplification drives these speakers;
+  - say plainly that you have no verified data on it;
+  - say which questions about the system you therefore cannot answer.
+
+For an UNRESOLVED component you MUST NOT:
+  - describe its sonic character, tonal balance, or presentation;
+  - place it on any of the four axes;
+  - describe its topology, circuit, driver, or cabinet design;
+  - attribute a design philosophy or heritage to it or its manufacturer;
+  - appeal to reviews, reputation, or "community consensus";
+  - claim it is "known for" anything;
+  - make any causal claim about the system that depends on how it behaves.
+
+This is not a stylistic preference and hedging does not satisfy it. "Likely
+warm" and "reportedly warm" are the same violation as "warm". If a chain
+conclusion requires knowing how an unresolved component sounds, do not state
+that conclusion — state that it cannot be assessed without that data.
+
+Where evidence IS available, assess normally and in full depth. The rule
+narrows what you say about specific unresolved parts; it does not make the
+whole assessment vague.
 
 Return ONLY valid JSON, no markdown fences, no commentary.`;
 
@@ -119,6 +151,145 @@ export function computeSystemConfidence(
   return { level: 'sufficient', knownCount, unknownCount, totalCount: total, unknownComponents };
 }
 
+
+// ── Licensing enforcement (D-7) ──────────────────────
+//
+// The prompt above states the rule; this enforces it. A prompt is a
+// preference — the model can drift, and on the first real beta system it did
+// exactly that, producing "known for their hybrid design" and "community
+// consensus suggests" for two components Audio XX had never heard of. The
+// deterministic check is what turns the rule into a guarantee, and it is the
+// reason the model may be trusted to write this prose at all.
+
+/** Claim markers that require licensed evidence about a specific product. */
+const UNLICENSED_CLAIM_MARKERS: RegExp[] = [
+  // Appeals to reputation or third-party opinion
+  /\b(?:community\s+consensus|widely\s+(?:regarded|considered|known)|reviewers?|reputation|renowned|acclaimed|well[-\s]regarded|noted\s+for|known\s+for|celebrated\s+for)\b/i,
+  // Sonic character — the four axes and their common synonyms
+  /\b(?:warm|bright|smooth|detailed|elastic|controlled|airy|closed|lush|analytical|neutral|transparent|punchy|forward|laid[-\s]back|musical|organic|resolving)\b/i,
+  // Construction and topology
+  /\b(?:tube|valve|solid[-\s]state|hybrid|class\s+[abdgh]\b|topology|circuit|driver|cabinet|crossover|ring\s+dac|r2r|delta[-\s]sigma|feedback|damping)\b/i,
+];
+
+/**
+ * Sentences that DISCLAIM knowledge are not violations — they are the rule
+ * being obeyed. "I have no verified data on the Butler Monads' design" must
+ * not be flagged merely because it contains the word "design".
+ */
+const DISCLAIMER_MARKERS =
+  /\b(?:no\s+verified|not\s+in\s+(?:our|the)\s+catalog|unresolved|cannot\s+(?:be\s+)?(?:assess|evaluat|judg)|can't\s+(?:assess|evaluate)|don'?t\s+have|do\s+not\s+have|unable\s+to|without\s+(?:verified|identifying)|once\s+(?:you\s+)?identif|not\s+identified)\b/i;
+
+/** Distinctive tokens for a component name, used to find sentences about it. */
+function nameTokens(name: string): string[] {
+  return name
+    .split(/\s+/)
+    .map((t) => t.replace(/[^\w-]/g, ''))
+    .filter((t) => t.length >= 3);
+}
+
+/**
+ * Find sentences that assert a product-specific characteristic about a
+ * component Audio XX cannot identify. Exported for the regression suite.
+ */
+export function findLicensingViolations(
+  prose: string,
+  unresolvedNames: string[],
+): { component: string; sentence: string }[] {
+  if (!prose || unresolvedNames.length === 0) return [];
+  const sentences = prose.split(/(?<=[.!?])\s+/);
+  const violations: { component: string; sentence: string }[] = [];
+
+  for (const sentence of sentences) {
+    if (DISCLAIMER_MARKERS.test(sentence)) continue;
+    for (const name of unresolvedNames) {
+      const tokens = nameTokens(name);
+      if (tokens.length === 0) continue;
+      const mentions = tokens.some((t) => new RegExp(`\\b${t}\\b`, 'i').test(sentence));
+      if (!mentions) continue;
+      if (UNLICENSED_CLAIM_MARKERS.some((re) => re.test(sentence))) {
+        violations.push({ component: name, sentence: sentence.trim() });
+        break;
+      }
+    }
+  }
+  return violations;
+}
+
+/**
+ * The licensed answer, composed deterministically from the graph alone.
+ *
+ * Used when the model breaks the licensing rule. It must never be an empty
+ * turn: the listener asked a real question and the structure of their system
+ * is genuinely known, even where the parts are not.
+ */
+export function buildLicensedProvisionalResponse(
+  componentNames: string[],
+  knownDescriptions: { name: string; character: string; source: 'product' | 'brand' }[],
+  unresolved: { name: string; role: string }[],
+): ConsultationResponse {
+  const ROLE_WORD: Record<string, string> = {
+    dac: 'digital-to-analogue conversion',
+    streamer: 'streaming',
+    source: 'the source position',
+    preamplifier: 'preamplification',
+    amplifier: 'amplification',
+    integrated: 'amplification',
+    speaker: 'the loudspeaker position',
+    headphone: 'headphone listening',
+    turntable: 'analogue playback',
+  };
+
+  const structure = componentNames.join(' → ');
+  const unresolvedList = unresolved.map((u) => u.name);
+  const knownList = knownDescriptions.map((k) => k.name);
+
+  const paragraphs: string[] = [
+    `Your chain, as you described it: ${structure}.`,
+  ];
+
+  if (knownList.length > 0) {
+    paragraphs.push(
+      knownDescriptions
+        .map((k) => `${k.name} — ${k.character}`)
+        .join('\n\n'),
+    );
+  }
+
+  if (unresolvedList.length > 0) {
+    const roleClauses = unresolved
+      .map((u) => `${u.name} handles ${ROLE_WORD[u.role] ?? u.role}`)
+      .join('; ');
+    paragraphs.push(
+      `I can place ${unresolvedList.length === 1 ? 'one component' : `${unresolvedList.length} components`} `
+      + `in the chain but cannot assess ${unresolvedList.length === 1 ? 'it' : 'them'}: ${roleClauses}. `
+      + `${unresolvedList.join(', ')} ${unresolvedList.length === 1 ? 'is' : 'are'} not in our catalog, `
+      + `so I have no verified data on how ${unresolvedList.length === 1 ? 'it behaves' : 'they behave'} — `
+      + `and I would rather say that than guess.`,
+    );
+    paragraphs.push(
+      `What this means in practice: I can reason about the shape of the system — `
+      + `what each position contributes and where the chain's weight sits — but not about `
+      + `its tonal balance or how these particular parts interact, because that depends on `
+      + `behaviour I cannot verify. If you tell me more about `
+      + `${unresolvedList.length > 1
+        ? `${unresolvedList.slice(0, -1).join(', ')} or ${unresolvedList[unresolvedList.length - 1]}`
+        : unresolvedList[0]}, or what you're hearing that prompted the question, `
+      + `I can take it further.`,
+    );
+  }
+
+  return {
+    source: 'llm_inferred',
+    subject: componentNames.join(', '),
+    title: 'Provisional System Assessment',
+    advisoryMode: 'system_review',
+    philosophy: paragraphs.join('\n\n'),
+    followUp:
+      'What prompted the question — is there something you want to change about how it sounds, '
+      + 'or are you weighing a specific move?',
+  };
+}
+
 // ── Public API ───────────────────────────────────────
 
 /**
@@ -133,14 +304,19 @@ export async function inferProvisionalSystemAssessment(
   query: string,
   componentNames: string[],
   knownDescriptions: { name: string; character: string; source: 'product' | 'brand' }[],
+  unresolved?: { name: string; role: string }[],
 ): Promise<ConsultationResponse | null> {
   const knownNames = new Set(knownDescriptions.map(d => d.name));
   const knownContext = knownDescriptions.length > 0
     ? `\n\nThe following components ARE in the Audio XX catalog with verified data:\n${knownDescriptions.map(d => `- ${d.name} [catalog-verified]: ${d.character}`).join('\n')}`
     : '';
   const unknownNames = componentNames.filter(n => !knownNames.has(n));
+  const unresolvedByName = new Map((unresolved ?? []).map(u => [u.name, u.role]));
   const unknownContext = unknownNames.length > 0
-    ? `\n\nThe following components are NOT in the catalog — use general knowledge:\n${unknownNames.map(n => `- ${n} [general-knowledge]`).join('\n')}`
+    ? `\n\nThe following components are UNRESOLVED — Audio XX holds no verified `
+      + `evidence about them. Name and role only; assert nothing about how they `
+      + `sound, how they are built, or what their makers are known for:\n`
+      + `${unknownNames.map(n => `- ${n} [UNRESOLVED${unresolvedByName.has(n) ? `, listener says: ${unresolvedByName.get(n)}` : ''}]`).join('\n')}`
     : '';
 
   const userPrompt = `The user asked: "${query}"
@@ -149,10 +325,10 @@ The system chain includes: ${componentNames.join(' → ')}
 ${knownContext}${unknownContext}
 
 When describing each component in the philosophy section, note its evidence basis:
-- For catalog-verified components, you may reference the verified data above.
-- For general-knowledge components, briefly note that the characterization is based on general knowledge of that product's design heritage and community consensus.
+- For catalog-verified components, you may reference the verified data above and assess in full.
+- For UNRESOLVED components, state the role the listener gave and say plainly that you have no verified data on that component. Do not substitute general knowledge, reputation, or manufacturer heritage for the missing evidence.
 
-Produce a full Audio XX provisional system assessment. Assess each component's likely character, then the chain interaction, strengths, limitations, and directional paths.`;
+Produce an Audio XX provisional system assessment. Assess the components you have evidence for, describe the chain STRUCTURE including the unresolved positions, and state explicitly which system-level questions cannot be answered until the unresolved components are identified.`;
 
   try {
     const controller = new AbortController();
@@ -180,7 +356,28 @@ Produce a full Audio XX provisional system assessment. Assess each component's l
     const content = data.content;
     if (!content || typeof content !== 'string') return null;
 
-    return parseSystemInferenceResponse(content, componentNames);
+    const parsedResponse = parseSystemInferenceResponse(content, componentNames);
+    if (!parsedResponse) return null;
+
+    // D-7 gate. The model was told the rule; this is where the rule holds.
+    const unresolvedRoster = unresolved ?? [];
+    if (unresolvedRoster.length > 0) {
+      const prose = [
+        parsedResponse.systemSignature,
+        parsedResponse.philosophy,
+        parsedResponse.tendencies,
+        parsedResponse.systemContext,
+      ].filter(Boolean).join('\n\n');
+      const violations = findLicensingViolations(prose, unresolvedRoster.map((u) => u.name));
+      if (violations.length > 0) {
+        console.warn(
+          '[llm-system-inference] licensing violation — falling back to the licensed answer:',
+          violations.map((v) => `${v.component}: ${v.sentence.slice(0, 80)}`).join(' | '),
+        );
+        return buildLicensedProvisionalResponse(componentNames, knownDescriptions, unresolvedRoster);
+      }
+    }
+    return parsedResponse;
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
       console.warn('[llm-system-inference] Timed out after', INFERENCE_TIMEOUT_MS, 'ms');
