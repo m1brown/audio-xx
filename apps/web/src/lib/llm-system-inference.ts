@@ -429,10 +429,31 @@ Produce an Audio XX provisional system assessment. Assess the components you hav
         return buildLicensedProvisionalResponse(componentNames, knownDescriptions, unresolvedRoster);
       }
     }
+    // Which components were actually characterised is determined from the
+    // PROSE, not from the model's self-report. Relying on the report labelled
+    // a fully characterised system "your description only" the moment the
+    // model omitted the field — a false label in the opposite direction, and
+    // just as damaging to trust as overstating. If the answer discusses a
+    // component, that component was characterised; the self-report is only a
+    // hint that can add, never subtract.
+    const proseForBasis = [
+      parsedResponse.systemSignature,
+      parsedResponse.philosophy,
+      parsedResponse.tendencies,
+      parsedResponse.systemContext,
+    ].filter(Boolean).join('\n\n');
+    const reported = (parsedResponse as { characterized?: string[] }).characterized ?? [];
+    const spokenTo = componentNames.filter((name) => {
+      if (reported.some((r) => r.toLowerCase().trim() === name.toLowerCase().trim())) return true;
+      // A distinctive token of the name appearing in the prose is sufficient.
+      const tokens = name.split(/\s+/).filter((t) => t.length >= 3);
+      return tokens.length > 0
+        && tokens.some((t) => new RegExp(`\\b${t.replace(/[^\w-]/g, '')}\\b`, 'i').test(proseForBasis));
+    });
     parsedResponse.componentProvenance = computeComponentProvenance(
       componentNames,
       knownDescriptions,
-      (parsedResponse as { characterized?: string[] }).characterized ?? [],
+      spokenTo,
     );
     return parsedResponse;
   } catch (err) {
