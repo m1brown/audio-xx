@@ -129,3 +129,45 @@ describe('a partial match is not a match (live stress-test findings)', () => {
     }
   });
 });
+
+describe('the source must be first-party, verified by us not claimed by the model', () => {
+  it('rejects a publication even when the model calls it "manufacturer"', () => {
+    // Production: "Acora QRC-9" corroborated via ecoustics.com, canonical
+    // "QRC-1". The model mislabelled sourceKind AND the digit distinguishing
+    // the invented model had been filtered out of the token set.
+    expect(isCorroborationAcceptable('Acora QRC-9', {
+      exists: true, sourceKind: 'manufacturer', matchQuality: 0.8,
+      canonicalName: 'QRC-1',
+      sourceUrl: 'https://www.ecoustics.com/news/acora-acoustics-vrc-the-show-2023/',
+    })).toBe(false);
+  });
+
+  it('rejects an aggregator domain for a real product', () => {
+    // Production: a real Acora QRC-2 corroborated via hifiverse.io. The
+    // product exists, but that is not first-party evidence of it.
+    expect(isCorroborationAcceptable('Acora QRC-2', {
+      exists: true, sourceKind: 'manufacturer', matchQuality: 0.9,
+      canonicalName: 'Acora Acoustics QRC-2',
+      sourceUrl: 'https://www.hifiverse.io/components/loudspeakers/floorstanding/acora-qrc-2',
+    })).toBe(false);
+  });
+
+  it('the digit in a model designation is identifying', () => {
+    expect(identifyingTokens('Acora QRC-9')).toContain('9');
+    expect(identifyingTokens('Acora QRC-2')).toContain('2');
+  });
+
+  it('first-party manufacturer domains still pass', () => {
+    const OK: Array<[string, string, string]> = [
+      ['Acora QRC-2', 'Acora Acoustics QRC-2', 'https://www.acoraacoustics.com/qrc-2'],
+      ['Butler MONAD', 'Butler MONAD A100', 'https://butleraudio.com/pdf/a100manual.pdf'],
+      ['dCS Rossini Apex', 'Rossini APEX', 'https://dcsaudio.com/product/rossiniapex'],
+    ];
+    for (const [name, canonical, url] of OK) {
+      expect(isCorroborationAcceptable(name, {
+        exists: true, sourceKind: 'manufacturer', matchQuality: 0.9,
+        canonicalName: canonical, sourceUrl: url, sourceTitle: canonical,
+      })).toBe(true);
+    }
+  });
+});

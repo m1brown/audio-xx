@@ -79,7 +79,10 @@ const CATEGORY_WORDS = new Set([
 export function identifyingTokens(name: string): string[] {
   return normalizeProductName(name)
     .split(/[\s/-]+/)
-    .filter((t) => t.length >= 2 && !CATEGORY_WORDS.has(t));
+    // A short token containing a digit is kept: "QRC-9" vs "QRC-1" turns
+// entirely on the digit, and dropping it let an invented model match a real
+// neighbouring one in production.
+    .filter((t) => (t.length >= 2 || /\d/.test(t)) && !CATEGORY_WORDS.has(t));
 }
 
 /**
@@ -122,6 +125,17 @@ export function isCorroborationAcceptable(
     return false;
   }
   if (!host) return false;
+
+  // FIRST-PARTY DOMAIN CHECK. `sourceKind` is the model's own claim, and the
+  // live stress test showed it labelling ecoustics.com and hifiverse.io as
+  // "manufacturer". Publications and aggregators are not first-party evidence
+  // of existence, so the host must itself carry an identifying token from the
+  // requested product — acoraacoustics.com, butleraudio.com, dcsaudio.com,
+  // audioresearch.com all do; ecoustics.com does not. This is decided here,
+  // never by the model.
+  const hostKey = host.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const brandTokens = identifyingTokens(requestedName).filter((t) => !/^\d+$/.test(t));
+  if (!brandTokens.some((t) => hostKey.includes(t))) return false;
 
   // The source must name the product, not merely its category.
   const tokens = identifyingTokens(requestedName);
