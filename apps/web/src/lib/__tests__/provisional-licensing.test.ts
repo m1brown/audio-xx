@@ -68,9 +68,26 @@ describe('provenance is computed by Audio XX, never claimed by the model', () =>
   it('curated components are marked from what we hold, not what the model says', () => {
     // The model claims it characterised everything, including the catalogued
     // part. It still cannot promote ITSELF to catalog authority.
-    const p = computeComponentProvenance(NAMES, KNOWN, NAMES);
+    const p = computeComponentProvenance(NAMES, KNOWN, NAMES, ['Butler Monads']);
     expect(p.find((x) => x.name === 'dCS Bartok')?.basis).toBe('catalog');
     expect(p.find((x) => x.name === 'Butler Monads')?.basis).toBe('model');
+  });
+
+  it('characterisation alone cannot reach Expanded Reasoning — corroboration gates it', () => {
+    // The model saying it knows a product is not evidence the product exists;
+    // a fictional component alternated between unknown and confidently
+    // described on identical input. Without independent corroboration the
+    // component stays at the listener's own authority no matter how
+    // confidently the prose reads.
+    const p = computeComponentProvenance(NAMES, KNOWN, NAMES /* no corroboration */);
+    expect(p.find((x) => x.name === 'Butler Monads')?.basis).toBe('user');
+  });
+
+  it('corroboration without characterisation does not promote either', () => {
+    // Existence is not knowledge. A product may be real and still be one the
+    // model has nothing useful to say about.
+    const p = computeComponentProvenance(NAMES, KNOWN, [], ['Butler Monads']);
+    expect(p.find((x) => x.name === 'Butler Monads')?.basis).toBe('user');
   });
 
   it('a component the model could not speak to stays user-supplied only', () => {

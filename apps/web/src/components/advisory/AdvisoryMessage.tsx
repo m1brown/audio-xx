@@ -4947,50 +4947,103 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
         </AdvisorySection>
       )}
 
-      {/* ── Evidence basis per component ─────────────────────
-        * The Expanded Reasoning caption says SOME of this answer is
-        * model-derived; this says WHICH. Without it a mixed-evidence system
-        * presents curated and model knowledge in one undifferentiated voice,
-        * which is the D-7 failure the beta system exposed. The tiers are
-        * computed by Audio XX from what it actually holds — a model cannot
-        * promote itself to "catalog" here.
+      {/* ── System components ────────────────────────────────
+        * GOVERNING INVARIANT: a system is a collection of component
+        * identities. No surface may collapse them into a synthetic product.
+        *
+        * Before this, `subject` was the joined string "dCS Rossini Apex + ARC
+        * ref 5 + Butler Monads + Acora QRC-2", and the Subject Card consumed
+        * it as ONE product — so no image could match, the whole system fell
+        * back to a generic placeholder, and HiFiShark/eBay searched for a
+        * four-headed product. Each component now carries its own identity,
+        * role, evidence basis, image and marketplace links, and each resolves
+        * independently: a missing Acora image cannot suppress the dCS image.
+        *
+        * This replaces the detached "What this is based on" list — provenance
+        * belongs beside the component it qualifies, not in a separate block
+        * the reader has to correlate by hand.
         */}
-      {a.componentProvenance && a.componentProvenance.length > 0 && (
-        <div style={{ margin: '0 0 1.15rem' }}>
+      {a.systemComponentViews && a.systemComponentViews.length > 0 && (
+        <div style={{ margin: '0 0 1.4rem' }}>
           <div style={{
             fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
             fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.13em',
             textTransform: 'uppercase', color: 'var(--xx-accent, #A6432C)',
-            marginBottom: '0.5rem',
+            marginBottom: '0.7rem',
           }}>
-            What this is based on
+            Your system
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-            {a.componentProvenance.map((c) => {
-              const LABEL: Record<string, string> = {
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+            {a.systemComponentViews.map((c) => {
+              const BASIS_LABEL: Record<string, string> = {
                 catalog: 'Audio XX catalog',
                 brand: 'Audio XX brand evidence',
                 model: 'Expanded reasoning',
                 user: 'Your description only',
               };
-              const TONE: Record<string, string> = {
+              const BASIS_TONE: Record<string, string> = {
                 catalog: '#4F6B4A', brand: '#4F6B4A', model: '#8A6D3B', user: '#6B6862',
               };
               return (
-                <div key={c.name} style={{
-                  display: 'flex', alignItems: 'baseline', gap: '0.55rem',
-                  fontSize: '0.86rem', lineHeight: 1.45,
-                }}>
-                  <span style={{
-                    fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
-                    fontSize: '0.64rem', fontWeight: 700, letterSpacing: '0.08em',
-                    textTransform: 'uppercase', color: TONE[c.basis],
-                    border: `1px solid ${TONE[c.basis]}`, borderRadius: 2,
-                    padding: '0.1rem 0.38rem', whiteSpace: 'nowrap', flex: '0 0 auto',
-                  }}>
-                    {LABEL[c.basis]}
-                  </span>
-                  <span style={{ color: '#333' }}>{c.name}</span>
+                <div
+                  key={c.listenerName}
+                  style={{
+                    display: 'flex', gap: '0.85rem', alignItems: 'flex-start',
+                    border: '1px solid #E3DDD1', borderRadius: 2, padding: '0.7rem 0.85rem',
+                  }}
+                >
+                  {/* Image slot — independent per component. F4-gated upstream;
+                    * absent is a legitimate outcome and never a placeholder. */}
+                  {c.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={c.imageUrl}
+                      alt={c.displayName}
+                      style={{
+                        width: 64, height: 64, objectFit: 'contain',
+                        flex: '0 0 auto', borderRadius: 2,
+                      }}
+                    />
+                  )}
+                  <div style={{ minWidth: 0, flex: '1 1 auto' }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.98rem', color: '#2a2a2a' }}>
+                      {c.displayName}
+                    </div>
+                    <div style={{
+                      fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
+                      fontSize: '0.75rem', color: '#6B6862', marginTop: '0.1rem',
+                    }}>
+                      {c.roleDisplay}
+                    </div>
+                    <div style={{
+                      display: 'flex', flexWrap: 'wrap', alignItems: 'center',
+                      gap: '0.5rem', marginTop: '0.4rem',
+                    }}>
+                      <span style={{
+                        fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
+                        fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.08em',
+                        textTransform: 'uppercase', color: BASIS_TONE[c.basis],
+                        border: `1px solid ${BASIS_TONE[c.basis]}`, borderRadius: 2,
+                        padding: '0.08rem 0.34rem', whiteSpace: 'nowrap',
+                      }}>
+                        {BASIS_LABEL[c.basis]}
+                      </span>
+                      {/* Discovery links. Zero evidentiary authority, and no
+                        * claim that a listing currently exists. */}
+                      {c.hifiSharkUrl && (
+                        <a href={c.hifiSharkUrl} target="_blank" rel="noopener noreferrer nofollow"
+                          style={{ fontSize: '0.78rem', color: '#6B6862' }}>
+                          HiFiShark
+                        </a>
+                      )}
+                      {c.ebayUrl && (
+                        <a href={c.ebayUrl} target="_blank" rel="noopener noreferrer nofollow"
+                          style={{ fontSize: '0.78rem', color: '#6B6862' }}>
+                          eBay
+                        </a>
+                      )}
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -5166,10 +5219,15 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
            *  Surfaces the discussed product's image even when subject
            *  dispatches as brand-only (e.g. "Chord" → "Chord Hugo"
            *  via the prose containing "Hugo"). */}
-          <ConsultationSubjectContext
-            subject={a.subject}
-            prose={JSON.stringify(a)}
-          />
+          {/* A system renders its components individually above; the single
+            * Subject Card would otherwise consume the joined subject string as
+            * one product, which is the synthetic-product defect itself. */}
+          {!(a.systemComponentViews && a.systemComponentViews.length > 0) && (
+            <ConsultationSubjectContext
+              subject={a.subject}
+              prose={JSON.stringify(a)}
+            />
+          )}
           {a.links && a.links.length > 0 && (
             <AdvisoryLinks links={a.links} />
           )}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useReducer, useEffect, useRef, useCallback, useMemo, useState, type ReactNode } from 'react';
+import { buildComponentViews } from '@/lib/system-component-view';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import AdvisoryMessage from '@/components/advisory/AdvisoryMessage';
@@ -2921,11 +2922,44 @@ export default function Home() {
           const unresolvedRoster = orderedComponents
             .filter(c => c.unresolved || (!c.product && !c.brandProfile))
             .map(c => ({ name: c.displayName, role: c.role }));
+          // ── Entity corroboration ─────────────────────────────────
+          // Independently establish that each uncatalogued component is a real
+          // product before model knowledge may describe it. Curated components
+          // are never looked up — we already hold better evidence than a search
+          // could provide. All lookups run in PARALLEL under one shared
+          // deadline, and every failure path (timeout, unavailable, ambiguous,
+          // malformed) simply omits the component, leaving it at the
+          // user-supplied tier. Corroboration can slow a turn slightly; it can
+          // never block or fail one.
+          const CORROBORATION_BUDGET_MS = 10000;
+          let corroborated: string[] = [];
+          if (unresolvedRoster.length > 0) {
+            const deadline = new Promise<'deadline'>((r) =>
+              setTimeout(() => r('deadline'), CORROBORATION_BUDGET_MS));
+            const lookups = Promise.all(unresolvedRoster.map(async (u) => {
+              try {
+                const r = await fetch('/api/corroborate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name: u.name }),
+                });
+                if (!r.ok) return null;
+                const rec = await r.json();
+                return rec?.status === 'corroborated' ? u.name : null;
+              } catch { return null; }
+            }));
+            const settled = await Promise.race([lookups, deadline]);
+            corroborated = settled === 'deadline'
+              ? []
+              : (settled as Array<string | null>).filter((n): n is string => !!n);
+          }
+
           const provisional = await inferProvisionalSystemAssessment(
             assessmentResult.query,
             componentNames,
             knownDescriptions,
             unresolvedRoster,
+            corroborated,
           );
           if (provisional) {
             // Override source to provisional_system for distinct UI labeling
@@ -2945,6 +2979,20 @@ export default function Home() {
             // curated authority. This is the rendering layer the original
             // Expanded Reasoning design specified and never built.
             provisionalAdvisory.componentProvenance = provisional.componentProvenance;
+            // One presentation per graph node. The joined `subject` string may
+            // remain as display copy, but it must never be the identity a
+            // product, image, provenance or commerce surface consumes.
+            provisionalAdvisory.systemComponentViews = buildComponentViews(
+              orderedComponents.map((c) => ({
+                displayName: c.displayName,
+                role: c.role,
+                roles: c.roles,
+                product: c.product
+                  ? { brand: c.product.brand, name: c.product.name, imageUrl: c.product.imageUrl }
+                  : undefined,
+              })),
+              provisional.componentProvenance,
+            );
             // Trust-layer pass: tag the provisional system assessment
             // with expanded-reasoning metadata so the unified
             // ResponseHeader renders the calm indicator + caption

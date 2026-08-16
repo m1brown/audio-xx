@@ -355,14 +355,22 @@ export function computeComponentProvenance(
   componentNames: string[],
   knownDescriptions: { name: string; source: 'product' | 'brand' }[],
   characterized: string[],
+  corroborated?: string[],
 ): ComponentProvenance[] {
   const curated = new Map(knownDescriptions.map((k) => [k.name, k.source]));
   const spoken = new Set(characterized.map((c) => c.toLowerCase().trim()));
+  // Independent corroboration — the ONLY thing that may raise an uncatalogued
+  // component to Expanded Reasoning. The model's own account of what it knows
+  // was falsified in testing (a fictional product alternated between unknown
+  // and confidently described), so it can no longer promote anything by
+  // itself: it may only speak about what corroboration has already admitted.
+  const real = new Set((corroborated ?? []).map((c) => c.toLowerCase().trim()));
   return componentNames.map((name) => {
+    const key = name.toLowerCase().trim();
     const c = curated.get(name);
     if (c === 'product') return { name, basis: 'catalog' as const };
     if (c === 'brand') return { name, basis: 'brand' as const };
-    if (spoken.has(name.toLowerCase().trim())) return { name, basis: 'model' as const };
+    if (real.has(key) && spoken.has(key)) return { name, basis: 'model' as const };
     return { name, basis: 'user' as const };
   });
 }
@@ -457,6 +465,7 @@ export async function inferProvisionalSystemAssessment(
   componentNames: string[],
   knownDescriptions: { name: string; character: string; source: 'product' | 'brand' }[],
   unresolved?: { name: string; role: string }[],
+  corroborated?: string[],
 ): Promise<ConsultationResponse | null> {
   const knownNames = new Set(knownDescriptions.map(d => d.name));
   const knownContext = knownDescriptions.length > 0
@@ -582,6 +591,7 @@ Produce an Audio XX provisional system assessment. Assess the components you hav
       componentNames,
       knownDescriptions,
       spokenTo,
+      corroborated,
     );
     return parsedResponse;
   } catch (err) {

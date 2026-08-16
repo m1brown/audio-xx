@@ -27,10 +27,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   isCorroborationAcceptable,
   normalizeProductName,
+  isCacheFresh,
   type CorroborationRecord,
 } from '@/lib/entity-corroboration';
 
 const TIMEOUT_MS = 9000;
+
+/**
+ * Warm-instance cache. Corroboration is near-static — a product either exists
+ * or it does not — so repeating the lookup for the same name is pure waste.
+ * TTLs come from the frozen policy: positives long-lived but revalidatable,
+ * negatives short because new gear appears, and 'unavailable' NEVER cached as
+ * an answer. Durable Turso persistence is the next step; this already removes
+ * the repeat cost within an instance.
+ */
+const cache = new Map<string, CorroborationRecord>();
 const MODEL = process.env.OPENAI_SEARCH_MODEL ?? 'gpt-4o';
 
 const INSTRUCTIONS = `You verify whether a named audio product exists. You are NOT reviewing it.
@@ -68,6 +79,11 @@ export async function POST(req: NextRequest) {
     NextResponse.json({ normalizedName, status, checkedAt: Date.now() });
 
   if (!normalizedName) return fail('unavailable');
+
+  const cached = cache.get(normalizedName);
+  if (cached && isCacheFresh(cached, Date.now())) {
+    return NextResponse.json({ ...cached, cached: true });
+  }
   const key = process.env.OPENAI_API_KEY;
   if (!key) return fail('unavailable');
 
@@ -132,6 +148,7 @@ export async function POST(req: NextRequest) {
       normalizedName, record.status, Date.now() - started,
       accepted ? record.sourceUrl : `claimed:${String(parsed.sourceKind)}/${String(parsed.sourceUrl).slice(0, 60)}`);
 
+    cache.set(normalizedName, record);
     return NextResponse.json(record);
   } catch (err) {
     console.warn('[corroborate] failed for %s: %s', normalizedName, String(err).slice(0, 200));

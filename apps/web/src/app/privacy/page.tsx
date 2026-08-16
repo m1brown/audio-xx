@@ -77,7 +77,11 @@ export default function PrivacyPage() {
         <li>
           <strong>OpenAI</strong> — language model. When you describe a system or
           ask a question, that text is sent to OpenAI to help generate the
-          response you read.
+          response you read. When you name a product that is not in our
+          catalog, Audio&thinsp;XX also sends that product name to OpenAI to
+          check whether the product actually exists. Only the name is sent for
+          that check, and it is used only to confirm identity against the
+          manufacturer&rsquo;s own page — never to gather opinions or reviews.
         </li>
         <li>
           <strong>Sentry</strong> — error monitoring. Receives diagnostics when
@@ -115,7 +119,7 @@ export default function PrivacyPage() {
       <h2>Changes to this policy</h2>
       <p className="mb-1">
         We may update this policy occasionally. Material changes will be noted
-        on this page. This policy was last updated on August 7, 2026.
+        on this page. This policy was last updated on August 16, 2026.
       </p>
 
       <h2>Contact</h2>

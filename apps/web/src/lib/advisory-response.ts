@@ -729,6 +729,13 @@ export interface AdvisoryResponse {
    */
   componentProvenance?: Array<{ name: string; basis: 'catalog' | 'brand' | 'model' | 'user' }>;
   /**
+   * The system's components as they reach the screen — one identity per graph
+   * node. This exists so no surface can consume a joined subject string as if
+   * it were a product: image, provenance, HiFiShark and eBay all resolve per
+   * component, and each degrades alone.
+   */
+  systemComponentViews?: import('./system-component-view').SystemComponentView[];
+  /**
    * Reason the response landed in 'expanded' reasoning mode. Mapped to a
    * one-line caption by the renderer. Only consulted when
    * reasoningMode === 'expanded'.
