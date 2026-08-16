@@ -2931,7 +2931,11 @@ export default function Home() {
           // malformed) simply omits the component, leaving it at the
           // user-supplied tier. Corroboration can slow a turn slightly; it can
           // never block or fail one.
-          const CORROBORATION_BUDGET_MS = 10000;
+          // Cold lookups measured ~4-5s each in production. Parallel they fit
+          // easily; the budget is generous because exceeding it costs the
+          // listener real evidence — every component silently drops to
+          // user-supplied — while waiting costs seconds on first sight only.
+          const CORROBORATION_BUDGET_MS = 25000;
           let corroborated: string[] = [];
           if (unresolvedRoster.length > 0) {
             const deadline = new Promise<'deadline'>((r) =>
@@ -2949,6 +2953,12 @@ export default function Home() {
               } catch { return null; }
             }));
             const settled = await Promise.race([lookups, deadline]);
+            if (settled === 'deadline') {
+              console.warn('[corroboration] deadline hit for %d components', unresolvedRoster.length);
+            } else {
+              console.log('[corroboration] %d of %d corroborated',
+                (settled as Array<string | null>).filter(Boolean).length, unresolvedRoster.length);
+            }
             corroborated = settled === 'deadline'
               ? []
               : (settled as Array<string | null>).filter((n): n is string => !!n);

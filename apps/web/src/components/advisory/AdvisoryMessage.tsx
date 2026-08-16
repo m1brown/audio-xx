@@ -5231,7 +5231,13 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
           {a.links && a.links.length > 0 && (
             <AdvisoryLinks links={a.links} />
           )}
-          {a.kind === 'consultation' && !a.componentReadings && (a.tendencies || a.philosophy || a.productOrigin || (a.improvements && a.improvements.length > 0)) && (
+          {/* A system already carries per-component marketplace links above.
+            * Emitting these too searched for the joined subject —
+            * "dCS Rossini Apex, ARC ref 5, Butler Monads, Acora QRC-2" — which
+            * is the synthetic-product defect on a second surface. */}
+          {a.kind === 'consultation' && !a.componentReadings
+            && !(a.systemComponentViews && a.systemComponentViews.length > 0)
+            && (a.tendencies || a.philosophy || a.productOrigin || (a.improvements && a.improvements.length > 0)) && (
             <ShoppingLinks
               name={a.subject}
               manufacturerUrl={a.links?.find((l) => l.kind === 'reference')?.url}
