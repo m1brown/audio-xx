@@ -473,17 +473,35 @@ export async function inferProvisionalSystemAssessment(
     : '';
   const unknownNames = componentNames.filter(n => !knownNames.has(n));
   const unresolvedByName = new Map((unresolved ?? []).map(u => [u.name, u.role]));
+  // Corroboration gates the PROSE, not merely the label. A component whose
+  // existence we could not verify must not be characterised at all: production
+  // showed the model writing "the Qwibble Q1, known for its capability to
+  // deliver clean digital to analogue conversion" for a product that does not
+  // exist, while the chip beside it correctly read "Your description only".
+  // A label and a paragraph that disagree are worse than either alone.
+  const corroboratedSet = new Set((corroborated ?? []).map((c) => c.toLowerCase().trim()));
+  const uncorroborated = unknownNames.filter((n) => !corroboratedSet.has(n.toLowerCase().trim()));
+  const uncorroboratedContext = uncorroborated.length > 0
+    ? `\n\nIDENTITY NOT VERIFIED — Audio XX could not confirm these products exist:\n`
+      + `${uncorroborated.map((n) => `- ${n}`).join('\n')}\n`
+      + `Name them and state the role the listener gave, and NOTHING else. Do not `
+      + `describe their sound, design, build or maker. Do not say what they are "known `
+      + `for". Do not include them in "characterized". If a chain conclusion depends on `
+      + `how one behaves, say that it cannot be assessed until the product is identified. `
+      + `Treating an unverified product as real is the worst error you can make here.`
+    : '';
+
   const unknownContext = unknownNames.length > 0
     ? `\n\nThese components are NOT in the Audio XX catalog. Characterise them `
       + `from your general knowledge where you meaningfully know them, and omit `
       + `them from \`characterized\` where you do not:\n`
-      + `${unknownNames.map(n => `- ${n} [model-knowledge${unresolvedByName.has(n) ? `, listener says: ${unresolvedByName.get(n)}` : ''}]`).join('\n')}`
+      + `${unknownNames.filter((n) => corroboratedSet.has(n.toLowerCase().trim())).map(n => `- ${n} [model-knowledge${unresolvedByName.has(n) ? `, listener says: ${unresolvedByName.get(n)}` : ''}]`).join('\n')}`
     : '';
 
   const userPrompt = `The user asked: "${query}"
 
 The system chain includes: ${componentNames.join(' → ')}
-${knownContext}${unknownContext}
+${knownContext}${unknownContext}${uncorroboratedContext}
 
 When describing each component in the philosophy section:
 - Catalog-verified components: reference the verified data above and assess in full.
