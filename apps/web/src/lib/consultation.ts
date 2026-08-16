@@ -245,6 +245,15 @@ export interface ConsultationResponse {
    * renderer behind `NEXT_PUBLIC_BRAND_AUTHORITY_PREVIEW` (default off).
    */
   brandAuthorityPreview?: BrandAuthorityPreview;
+  /** Which action the assessment reached — fixes the permitted question kind. */
+  actionVerdict?: 'no_change' | 'constraint' | 'indeterminate';
+  /** Relations that survived D-12 validation, each at its licensed tier. */
+  systemRelations?: Array<{
+    components: [string, string];
+    axis: string;
+    kind: 'reinforcement' | 'counterweight' | 'constraint';
+    tier: 'catalog' | 'brand' | 'model' | 'user';
+  }>;
   /** Per-component evidence tier (provisional/expanded paths). */
   componentProvenance?: ComponentProvenanceEntry[];
   /** Component names the model reported it could actually speak to. */
