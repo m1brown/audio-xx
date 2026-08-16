@@ -5667,7 +5667,7 @@ export default function Home() {
             style={{
               fontFamily: 'var(--face-display)',
               fontWeight: 600,
-              fontSize: 'clamp(2.75rem, 7vw, 5rem)',
+              fontSize: 'clamp(2.4rem, 6vw, 4.35rem)',
               lineHeight: 1.03,
               letterSpacing: '-0.02em',
               margin: '0 0 1.5rem',
@@ -5683,7 +5683,7 @@ export default function Home() {
             style={{
               fontFamily: 'var(--face-text)',
               fontStyle: 'italic',
-              fontSize: 'clamp(1.2rem, 2vw, 1.35rem)',
+              fontSize: 'clamp(1.1rem, 1.75vw, 1.2rem)',
               lineHeight: 1.55,
               color: EDITORIAL.ink,
               margin: 0,
