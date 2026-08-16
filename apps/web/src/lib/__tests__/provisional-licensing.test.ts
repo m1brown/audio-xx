@@ -150,3 +150,27 @@ describe('licensed specifications may be used as premises', () => {
     expect(findLicensingViolations(prose, UNRESOLVED, [], []).length).toBeGreaterThan(0);
   });
 });
+
+describe('figures the listener supplied are premises too', () => {
+  // Production diagnostic (2026-08-16): the model paraphrased the component
+  // name — "the Zorblax ZX1 ... providing 5 watts" — so masking the literal
+  // string missed it and the listener's own figure read as an invented spec.
+  const NAMES = ['Magnepan LRS'];
+  const UNRESOLVED = ['Zorblax ZX1 5 watt SET'];
+  const facts = collectLicensedFacts([
+    'the 4Ω/86dB load demands a current-capable amplifier',
+    'Zorblax ZX1 5 watt SET',
+  ]);
+
+  it('permits the paraphrased form that production actually produced', () => {
+    const prose =
+      'The amplifier, Zorblax ZX1, as a single-ended triode design providing 5 watts, '
+      + 'is unlikely to control an 86dB, 4Ω planar load.';
+    expect(findLicensingViolations(prose, UNRESOLVED, NAMES, facts)).toEqual([]);
+  });
+
+  it('a figure the listener never supplied is still refused', () => {
+    const prose = 'The Zorblax ZX1 offers 0.02% distortion at 120 watts.';
+    expect(findLicensingViolations(prose, UNRESOLVED, NAMES, facts).length).toBeGreaterThan(0);
+  });
+});

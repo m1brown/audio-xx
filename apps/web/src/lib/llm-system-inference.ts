@@ -526,7 +526,17 @@ Produce an Audio XX provisional system assessment. Assess the components you hav
         prose,
         unresolvedRoster.map((u) => u.name),
         knownDescriptions.map((k) => k.name),
-        collectLicensedFacts(knownDescriptions.map((k) => k.character)),
+        collectLicensedFacts([
+          ...knownDescriptions.map((k) => k.character),
+          // The listener's own component names are facts THEY asserted. Someone
+          // who writes "Zorblax ZX1 5 watt SET" has told us the power rating,
+          // and reasoning from it is legitimate even though the product is
+          // uncatalogued. Masking the literal name was not enough: the model
+          // paraphrases ("the Zorblax ZX1 ... providing 5 watts"), and the
+          // figure then read as an invention. Tier 3 licenses identity, and a
+          // number inside the identity is part of it.
+          ...componentNames,
+        ]),
       );
       if (violations.length > 0) {
         console.warn(
