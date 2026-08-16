@@ -187,7 +187,7 @@ const EXPANDED_REASONING_CAPTIONS: Record<FallbackReason, string> = {
   unknown_subject:
     'Using expanded reasoning for products outside the current curated catalog.',
   low_confidence_system:
-    'Using expanded reasoning because parts of this system are not fully recognized.',
+    'Using expanded reasoning because parts of this system sit outside Audio XX’s curated catalog.',
   brand_only:
     'Using expanded reasoning for a product not yet covered directly in the curated catalog.',
   open_ended_query:
