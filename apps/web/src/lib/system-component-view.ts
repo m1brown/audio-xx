@@ -50,6 +50,13 @@ export interface SystemComponentView {
   imageUrl?: string;
   hifiSharkUrl?: string;
   ebayUrl?: string;
+  /**
+   * The identity used for marketplace queries. Canonical whenever corroboration
+   * established one, because "Reference 5" finds listings that "ARC ref 5"
+   * does not. Kept separate from `displayName` so searching better never
+   * requires rewriting what the listener sees.
+   */
+  searchIdentity?: string;
 }
 
 /** Source shape — the authoritative graph node, plus what provenance computed. */
@@ -122,10 +129,30 @@ export function buildComponentViews(
     // Canonical identity wins for DISPLAY and for marketplace queries, because
     // it is the manufacturer's own designation and searches better. The
     // listener's words are kept so nothing they typed is lost.
-    const displayName = c.canonicalName?.trim() || listenerName;
+    // THREE identities, deliberately distinct:
+    //   listenerName   — verbatim, never overwritten
+    //   displayName    — what the card shows
+    //   searchIdentity — what HiFiShark and eBay receive
+    //
+    // Display upgrades to the canonical form ONLY when that form carries
+    // strictly more identifying information — resolving an abbreviation or
+    // adding a model designation ("ARC ref 5" -> "Audio Research Reference 5").
+    // A mere case or spacing variant ("dCS Rossini Apex" -> "dCS Rossini APEX")
+    // is not an improvement, and silently restyling what someone typed reads as
+    // the product correcting them.
+    const canonical = c.canonicalName?.trim();
+    const informative = (v?: string) =>
+      (v ?? '').trim().split(/\s+/).filter(Boolean).length;
+    const displayName = canonical && informative(canonical) > informative(listenerName)
+      ? canonical
+      : listenerName;
+    const searchIdentity = canonical || listenerName;
 
     const brand = c.product?.brand ?? c.canonicalBrand ?? splitName(displayName).brand;
     const modelName = c.product?.name ?? splitName(displayName).name;
+    // Marketplace queries use the canonical identity; display does not have to.
+    const searchBrand = c.product?.brand ?? c.canonicalBrand ?? splitName(searchIdentity).brand;
+    const searchModel = c.product?.name ?? splitName(searchIdentity).name;
 
     // F4 gate lives inside getProductImage. A catalogued product may carry its
     // own imageUrl; anything else must come through the curated overlay or not
@@ -135,7 +162,7 @@ export function buildComponentViews(
     let hifiSharkUrl: string | undefined;
     let ebayUrl: string | undefined;
     try {
-      const links = buildProductLinks({ brand, name: modelName });
+      const links = buildProductLinks({ brand: searchBrand, name: searchModel });
       hifiSharkUrl = links.usedLinks.find((l) => /hifishark/i.test(l.url))?.url;
       ebayUrl = links.usedLinks.find((l) => /ebay\./i.test(l.url))?.url;
     } catch {
@@ -150,6 +177,7 @@ export function buildComponentViews(
       roleDisplay: roleLabel(c.role, c.roles),
       basis: basisByName.get(listenerName.toLowerCase().trim()) ?? 'user',
       brand,
+      searchIdentity,
       imageUrl,
       hifiSharkUrl,
       ebayUrl,
