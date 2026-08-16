@@ -7916,7 +7916,16 @@ export function assessPowerMatch(components: SystemComponent[]): PowerMatchAsses
     };
   }
 
-  const powerWatts = amp.product?.power_watts ?? null;
+  // The listener's own words are licensed evidence. Someone who writes
+  // "Zorblax ZX1 5 watt SET" has told us the output power; refusing to use it
+  // because the amplifier has no catalog row discards a fact they supplied and
+  // leaves a material interaction unassessable for no reason.
+  const statedWatts = (() => {
+    const m = /(\d+(?:\.\d+)?)\s*(?:w\b|watts?\b)/i.exec(amp.displayName);
+    const v = m ? Number(m[1]) : NaN;
+    return Number.isFinite(v) && v > 0 && v <= 2000 ? v : null;
+  })();
+  const powerWatts = amp.product?.power_watts ?? statedWatts;
   const sensitivityDb = speaker.product?.sensitivity_db ?? null;
   const { compatibility, estimatedMaxCleanSPL } = classifyPowerMatch(powerWatts, sensitivityDb);
   const relevantInteraction = surfaceAmpSpeakerInteraction(amp.product, sensitivityDb);
