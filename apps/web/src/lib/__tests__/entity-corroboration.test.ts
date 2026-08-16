@@ -93,3 +93,39 @@ describe('cache lifetimes', () => {
     expect(isCacheFresh({ normalizedName: 'x', status: 'unavailable', checkedAt: now }, now)).toBe(false);
   });
 });
+
+describe('a partial match is not a match (live stress-test findings)', () => {
+  it('an invented product may not borrow a real product\'s model number', () => {
+    // Production, run 4 of 4: "Qwibble Q1" matched a real "Activo x DITA Q1"
+    // page. "q1" carried the match while "qwibble" never appeared.
+    expect(isCorroborationAcceptable('Qwibble Q1', {
+      exists: true, sourceKind: 'manufacturer', matchQuality: 0.8,
+      canonicalName: 'Activo x DITA Q1', sourceUrl: 'https://www.activostyle.com/q1',
+      sourceTitle: 'Activo x DITA Q1',
+    })).toBe(false);
+  });
+
+  it('a neighbouring model may not corroborate an invented variant', () => {
+    // Production: "dCS Rossini Zenith" matched the real Rossini APEX page.
+    // "dcs" and "rossini" matched; "zenith" did not.
+    expect(isCorroborationAcceptable('dCS Rossini Zenith', {
+      exists: true, sourceKind: 'manufacturer', matchQuality: 0.9,
+      canonicalName: 'Rossini APEX', sourceUrl: 'https://dcsaudio.com/product/rossiniapex',
+      sourceTitle: 'Rossini APEX',
+    })).toBe(false);
+  });
+
+  it('the four real controls still corroborate', () => {
+    const REAL: Array<[string, Record<string, unknown>]> = [
+      ['Acora QRC-2', { canonicalName: 'Acora Acoustics QRC-2', sourceUrl: 'https://www.acoraacoustics.com/qrc-2' }],
+      ['Butler MONAD', { canonicalName: 'MONAD A100', brand: 'Butler Audio', sourceUrl: 'https://butleraudio.com/esoteric.php', sourceTitle: 'Butler Audio MONAD' }],
+      ['Audio Research Reference 5', { canonicalName: 'Reference 5', sourceUrl: 'https://audioresearch.com/new_website/REF5_Manual.pdf' }],
+      ['dCS Rossini Apex', { canonicalName: 'Rossini APEX', sourceUrl: 'https://dcsaudio.com/product/rossiniapex' }],
+    ];
+    for (const [name, over] of REAL) {
+      expect(isCorroborationAcceptable(name, {
+        exists: true, sourceKind: 'manufacturer', matchQuality: 0.9, ...over,
+      })).toBe(true);
+    }
+  });
+});

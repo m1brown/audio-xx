@@ -132,16 +132,22 @@ export function isCorroborationAcceptable(
     candidate.sourceUrl,
   ].join(' ').toLowerCase();
 
-  const matched = tokens.filter((t) => haystack.includes(t));
-  if (matched.length < Math.ceil(tokens.length / 2) || matched.length < 1) return false;
-
-  // The MODEL DESIGNATION must appear, not merely the brand. A manufacturer's
-  // home page proves the company exists; it is not evidence that this
-  // particular product does — and a brand landing page is exactly what a
-  // search returns when the product is invented. Tokens after the first are
-  // treated as the designation.
-  const designation = tokens.slice(1);
-  if (designation.length > 0 && !designation.some((t) => haystack.includes(t))) return false;
+  // EVERY identifying token must appear. A majority rule is not enough, and
+  // the live stress test proved it twice:
+  //
+  //   "Qwibble Q1"        -> matched a real "Activo x DITA Q1" page. The token
+  //                          "qwibble" never appeared, yet "q1" carried the
+  //                          match. An invented product borrowed a real one's
+  //                          model number.
+  //   "dCS Rossini Zenith"-> matched the real "Rossini APEX" page. "dcs" and
+  //                          "rossini" matched; "zenith" — the only token that
+  //                          distinguishes the invented model — did not.
+  //
+  // In both cases the DISTINGUISHING token was the one missing, which is the
+  // only token that matters. Brand existence, or a neighbouring model, must
+  // never corroborate a model that does not exist.
+  const unmatched = tokens.filter((t) => !haystack.includes(t));
+  if (unmatched.length > 0) return false;
 
   return true;
 }
