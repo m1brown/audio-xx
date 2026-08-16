@@ -60,6 +60,11 @@ Return ONLY this JSON, no prose, no markdown fences:
 }
 
 Rules:
+- Listeners abbreviate. "ARC" is Audio Research, "PS Audio" is not "PS", and a
+  model may be written loosely ("ref 5" for "Reference 5"). Resolve the
+  abbreviation and search for the full manufacturer and model before deciding
+  the product does not exist. Report the manufacturer's own designation in
+  canonicalName.
 - "official"/"manufacturer" mean the maker's own site. A dealer, forum, review
   site or marketplace is "retailer" or "other".
 - If you cannot find a page that names this specific product, return

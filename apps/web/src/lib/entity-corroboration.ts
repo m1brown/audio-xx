@@ -160,7 +160,18 @@ export function isCorroborationAcceptable(
   // In both cases the DISTINGUISHING token was the one missing, which is the
   // only token that matters. Brand existence, or a neighbouring model, must
   // never corroborate a model that does not exist.
-  const unmatched = tokens.filter((t) => !haystack.includes(t));
+  // A plural is the same identifier, not a different one. The listener wrote
+  // "Butler Monads"; the manufacturer's product is the MONAD. Requiring the
+  // literal string rejected a real product over an "s" — a morphology gap, not
+  // a genuine mismatch. This does NOT loosen the rule: an invented token still
+  // has to appear in some form, so "qwibble" is no closer to matching an
+  // Activo page than it was before.
+  const present = (t: string) =>
+    haystack.includes(t)
+    || (t.endsWith('s') && t.length > 3 && haystack.includes(t.slice(0, -1)))
+    || haystack.includes(`${t}s`);
+
+  const unmatched = tokens.filter((t) => !present(t));
   if (unmatched.length > 0) return false;
 
   return true;

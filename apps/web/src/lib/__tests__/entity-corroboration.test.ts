@@ -171,3 +171,29 @@ describe('the source must be first-party, verified by us not claimed by the mode
     }
   });
 });
+
+describe('a plural is the same identifier, not a different product', () => {
+  it("corroborates the listener's plural against the maker's singular", () => {
+    // Production: the listener wrote "Butler Monads"; Butler Audio's product
+    // is the MONAD. The all-tokens rule rejected a real product over an "s".
+    expect(isCorroborationAcceptable('Butler Monads', {
+      exists: true, sourceKind: 'manufacturer', matchQuality: 0.9,
+      canonicalName: 'MONAD A100', brand: 'Butler Audio',
+      sourceUrl: 'https://butleraudio.com/esoteric.php', sourceTitle: 'Butler Audio MONAD',
+    })).toBe(true);
+  });
+
+  it('does not let morphology rescue an invented product', () => {
+    // The frozen negative controls must be unaffected: "qwibble" is no closer
+    // to an Activo page with stem tolerance than it was without.
+    expect(isCorroborationAcceptable('Qwibble Q1', {
+      exists: true, sourceKind: 'manufacturer', matchQuality: 0.9,
+      canonicalName: 'Activo x DITA Q1', sourceUrl: 'https://www.activostyle.com/q1',
+      sourceTitle: 'Activo x DITA Q1',
+    })).toBe(false);
+    expect(isCorroborationAcceptable('dCS Rossini Zenith', {
+      exists: true, sourceKind: 'manufacturer', matchQuality: 0.9,
+      canonicalName: 'Rossini APEX', sourceUrl: 'https://dcsaudio.com/product/rossiniapex',
+    })).toBe(false);
+  });
+});
