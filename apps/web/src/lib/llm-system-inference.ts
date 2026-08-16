@@ -81,74 +81,29 @@ licensed things to say is stronger than one that fills the space.
 
 Format your response as JSON with exactly these fields:
 {
-  "subject": "System name or component list",
-  "systemSignature": "The VERDICT — one sentence: coherent / deliberately voiced / constrained / mismatched / indeterminate, and why",
-  "philosophy": "DESCRIBE then EXPLAIN. 2-4 paragraphs. First the net character of the system as a whole; then the division of labour — which components establish that character, which counterweight which, and why the chain behaves this way. Component detail appears only in service of that argument. Separate paragraphs with \\n\\n.",
-  "tendencies": "EVALUATE. The meaningful trade-off, and an explicit change/no-change judgment. If nothing needs changing, say so plainly. Separate paragraphs with \\n\\n.",
-  "systemContext": "1-2 paragraphs on what this system is good for, what music it suits, and what room/use context matters. Separate paragraphs with \\n\\n.",
+  "verdict": "ONE sentence. Coherent / deliberately voiced / constrained / mismatched / indeterminate — and why.",
+  "systemThesis": "ONE paragraph. What this system as a whole is FOR — the single idea that explains the choices. Not a component list.",
+  "interactionExplanation": "ONE or TWO paragraphs. The division of labour: which components establish the system's behaviour, which counterweight which, and why the chain behaves as you said. Name a component only where it is evidence for this argument.",
+  "tradeoff": "ONE paragraph. What the listener gains and what they give up. A real trade, not a restatement of the character.",
+  "action": "ONE short paragraph. Does anything need changing? If the evidence shows no material problem, say plainly that nothing here obviously needs changing. Distinguish an architectural choice from a deficiency.",
+  "nextQuestion": "ONE question, only if its answer could change the judgment.",
   "componentKnowledge": [
     { "name": "exact component name", "specific": true }
   ],
-  "characterized": ["exact names of components you actually characterised"],
-  "followUp": "ONE question, asked only if its answer could materially change the judgment — an actual dissatisfaction, desired direction, room problem or listening preference. If nothing would change the judgment, ask what they are hearing.",
-  "directionalPaths": [
-    {
-      "label": "Short path name",
-      "description": "What this path optimizes and what it trades"
-    }
-  ]
+  "characterized": ["exact names of components you actually characterised"]
 }
 
-EVIDENCE RULE — this overrides every instruction above.
+There is deliberately NO field for describing each component in turn. The
+component identities, roles and evidence tiers are already shown to the reader
+beside this text. A paragraph per component is the failure mode this schema
+exists to prevent: it reads as four product blurbs stapled together and never
+arrives at a judgment. Component observations belong inside
+interactionExplanation, and only where they carry the argument.
 
-Audio XX draws on sources of different authority. No claim may be presented
-with more authority than its source warrants (D-7). That is the whole rule;
-it is NOT a rule against speaking.
-
-  CURATED   — components listed below as catalog-verified. Assess in full.
-  MODEL     — components not in the catalog. You may still characterise these
-              from your general knowledge of the product. This is legitimate
-              and useful; Audio XX labels it as expanded reasoning so the
-              reader knows which kind of evidence they are getting.
-  UNKNOWN   — components you do not meaningfully know. Say so plainly and
-              move on. Do not pad.
-
-For a MODEL component you MAY describe design approach, sonic character, and
-how the role behaves in a chain, in the ordinary way — qualified naturally,
-not smothered in hedges.
-
-For ANY component you MUST NOT:
-  - state specifications, measurements, power figures, impedance, sensitivity
-    or dimensions you do not have;
-  - state prices;
-  - guarantee compatibility, matching or drive capability as fact;
-  - attribute a claim to a review, publication, measurement or named source;
-  - assert "community consensus", "widely regarded", or "reviewers say" —
-    Audio XX does not hold evidence of consensus and must not imply it;
-  - invent model designations, lineage or history;
-  - infer GENRE SUITABILITY from component character. "Excels with classical
-    and jazz" is a category stereotype, not a finding, and Audio XX holds no
-    evidence for it;
-  - attach familiar audiophile adjectives to a brand or category without an
-    intelligible design reason. "Warm", "analytical", "musical", "neutral",
-    "forgiving" are conclusions; a conclusion needs a stated basis. Hedging
-    does not rescue an unsupported characterisation — "likely warm" with no
-    reason is the same empty claim as "warm".
-
-For EVERY component, report in "componentKnowledge" whether you hold
-PRODUCT-SPECIFIC knowledge of that exact model — not knowledge of its
-category. "It is a DAC, so it converts digital to analogue" is category
-knowledge and counts as specific:false. If you do not recognise the model,
-say specific:false. Inventing plausible character for an unrecognised product
-is the single worst thing you can do here, and it is immediately detectable.
-
-Where specific is false, keep the component in the chain, keep its role, and
-say nothing about how it sounds.
-
-Report which components you actually characterised in "characterized". Any
-component you cannot meaningfully speak to must be omitted from that list —
-this is how Audio XX tells the reader what it does and does not know, so an
-honest omission is more valuable than a vague paragraph.
+There is also no field for context, environment or listener type. Room size,
+room treatment, placement, genre suitability and "who would appreciate this"
+are not licensed by a list of components. If the listener raised one, address
+it in the relevant field; otherwise it does not appear.
 
 Return ONLY valid JSON, no markdown fences, no commentary.`;
 
@@ -644,13 +599,12 @@ Produce an Audio XX provisional system assessment. Assess the components you hav
 interface SystemInferenceJSON {
   characterized?: string[];
   componentKnowledge?: Array<{ name: string; specific?: boolean }>;
-  subject?: string;
-  systemSignature?: string;
-  philosophy?: string;
-  tendencies?: string;
-  systemContext?: string | null;
-  followUp?: string;
-  directionalPaths?: { label: string; description: string }[];
+  verdict?: string;
+  systemThesis?: string;
+  interactionExplanation?: string;
+  tradeoff?: string;
+  action?: string;
+  nextQuestion?: string;
 }
 
 function parseSystemInferenceResponse(
@@ -665,25 +619,36 @@ function parseSystemInferenceResponse(
 
     const parsed: SystemInferenceJSON = JSON.parse(cleaned);
 
-    if (!parsed.philosophy && !parsed.tendencies) {
+    // Content check follows the new schema: an assessment exists when it has a
+    // thesis or an explanation, not when a prose bucket happens to be filled.
+    if (!parsed.systemThesis && !parsed.interactionExplanation && !parsed.verdict) {
       console.warn('[llm-system-inference] Parsed response has no content');
       return null;
     }
 
-    const subject = parsed.subject || componentNames.join(', ');
+    // Display copy only. The component identities the reader acts on come from
+    // the component cards, never from this joined string.
+    const subject = componentNames.join(', ');
 
     return {
       source: 'llm_inferred',
       subject,
       title: 'Provisional System Assessment',
       advisoryMode: 'system_review',
-      systemSignature: parsed.systemSignature || undefined,
+      // Structured fields map onto the renderer's existing slots. The old
+      // `philosophy` / `tendencies` / `systemContext` buckets are gone: the
+      // first invited a paragraph per component and the last invited room and
+      // genre advice, so both defects were shapes in the schema rather than
+      // habits in the prose.
+      systemSignature: parsed.verdict || undefined,
       characterized: Array.isArray(parsed.characterized) ? parsed.characterized : [],
       componentKnowledge: Array.isArray(parsed.componentKnowledge) ? parsed.componentKnowledge : [],
-      philosophy: parsed.philosophy || undefined,
-      tendencies: parsed.tendencies || undefined,
-      systemContext: parsed.systemContext || undefined,
-      followUp: parsed.followUp || 'What are you exploring — is there something you\'d like to change about this balance, or are you looking to understand what a specific upgrade path might shift?',
+      philosophy: [parsed.systemThesis, parsed.interactionExplanation]
+        .filter(Boolean).join('\n\n') || undefined,
+      tendencies: [parsed.tradeoff, parsed.action]
+        .filter(Boolean).join('\n\n') || undefined,
+      systemContext: undefined,
+      followUp: parsed.nextQuestion || 'What are you exploring — is there something you\'d like to change about this balance, or are you looking to understand what a specific upgrade path might shift?',
     };
   } catch (err) {
     console.warn('[llm-system-inference] Failed to parse JSON:', err);
