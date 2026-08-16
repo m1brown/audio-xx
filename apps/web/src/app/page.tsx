@@ -2,6 +2,7 @@
 
 import { useReducer, useEffect, useRef, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { buildComponentViews } from '@/lib/system-component-view';
+import { tierFor } from '@/lib/entity-corroboration';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import AdvisoryMessage from '@/components/advisory/AdvisoryMessage';
@@ -2988,7 +2989,26 @@ export default function Home() {
             // actually holds, so the model cannot promote its own knowledge to
             // curated authority. This is the rendering layer the original
             // Expanded Reasoning design specified and never built.
-            provisionalAdvisory.componentProvenance = provisional.componentProvenance;
+            // Provenance is computed HERE, where the evidence actually lives:
+            // the catalog/brand facts come from the graph node and the
+            // corroboration result is in hand. Passing corroboration down into
+            // the inference module and recomputing there added a layer of
+            // indirection in which the result was being lost — the label read
+            // "your description only" while the prose, built from the same
+            // call, characterised the component confidently. A label and a
+            // paragraph that disagree are worse than either alone, so both now
+            // derive from one place.
+            const corroboratedSet = new Set(corroborated.map((c) => c.toLowerCase().trim()));
+            provisionalAdvisory.componentProvenance = orderedComponents.map((c) => ({
+              name: c.displayName,
+              basis: tierFor(
+                !!c.product,
+                !!c.brandProfile,
+                corroboratedSet.has(c.displayName.toLowerCase().trim())
+                  ? 'corroborated'
+                  : 'uncorroborated',
+              ),
+            }));
             // One presentation per graph node. The joined `subject` string may
             // remain as display copy, but it must never be the identity a
             // product, image, provenance or commerce surface consumes.
@@ -3001,7 +3021,7 @@ export default function Home() {
                   ? { brand: c.product.brand, name: c.product.name, imageUrl: c.product.imageUrl }
                   : undefined,
               })),
-              provisional.componentProvenance,
+              provisionalAdvisory.componentProvenance,
             );
             // Trust-layer pass: tag the provisional system assessment
             // with expanded-reasoning metadata so the unified
