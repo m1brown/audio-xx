@@ -9346,19 +9346,27 @@ export function buildSystemAssessment(
           // spurious 'streamer' role picked up from a neighbouring label).
           existing.role = lc.roles[0];
           existing.roles = [...lc.roles];
-          // D-7: an unresolved node may not wear its manufacturer's clothes.
-          // Brand tendencies describe the maker, not this product, and
-          // presenting them here would be exactly the silent substitution the
-          // opaque-node rule forbids. Identity is a user-supplied fact;
-          // behaviour is unknown and stays unknown.
-          existing.brandProfile = undefined;
-          existing.character = `${lc.rawName} — described by you as ${lc.labelText.toLowerCase()}; not identified in our catalog, so no sonic characteristics are claimed for it.`;
+          // Curated BRAND evidence is a legitimate tier, not an absence.
+          // Stripping brandProfile here conflated "no product entry" with "no
+          // evidence at all", demoting tier 2 (brand_profile) to tier 4
+          // (user-supplied). That is the same over-correction as before, and it
+          // had two costs: an ordinary catalogued system read as mostly unknown
+          // and fell into Expanded Reasoning, and the dCS Rossini Apex lost the
+          // dCS brand evidence Audio XX actually holds.
+          //
+          // A component is only unresolved when there is NEITHER product NOR
+          // brand evidence. Where a brand profile exists it is retained and the
+          // node carries brand-scoped authority — which the provenance layer
+          // renders as "Audio XX brand evidence", distinct from the catalog.
+          if (!existing.brandProfile) {
+            existing.unresolved = true;
+            existing.character = `${lc.rawName} — described by you as ${lc.labelText.toLowerCase()}; not identified in our catalog, so no sonic characteristics are claimed for it.`;
+          }
           // Keep the identity the user gave. Brand recognition alone reduces
           // "ARC ref 5" to "Arc", which then reads as a bare brand concealing
           // a model and trips the graph gate — asking the user for a model
           // they already typed. Their words are the better record.
           existing.displayName = preferUserSuppliedName(existing.displayName, lc.rawName);
-          existing.unresolved = true;
         } else if (!labelContradictsCategory(lc.roles, existing.product.category)) {
           existing.roles = [...new Set([...(existing.roles ?? []), ...lc.roles])];
         }

@@ -132,9 +132,19 @@ describe('the repair does not blunt genuine conflicts or invent structure', () =
   });
 
   it('a labelled system with one invented component keeps that component', () => {
+    // The invariant is REPRESENTATION: an opaque node must never silently
+    // disappear. Which field carries it depends on the path — a system with
+    // enough curated evidence reaches the core assessment (chain in
+    // `findings`), a thinner one returns the provisional shape (`components`).
+    // Once brand-tier evidence stopped being discarded, this case correctly
+    // moved from provisional to core, so the assertion must read both.
     const r = assess('Assess my system: DAC: dCS Bartok Amp: Leben CS300 Speakers: Zorblax QRC-2');
-    const names = (r?.components ?? []).map((c: { displayName: string }) => c.displayName);
-    expect(names).toContain('Zorblax QRC-2');
+    const represented: string[] = [
+      ...(r?.components ?? []).map((c: { displayName: string }) => c.displayName),
+      ...(r?.findings?.componentNames ?? []),
+      ...(r?.findings?.systemChain?.names ?? []),
+    ];
+    expect(represented).toContain('Zorblax QRC-2');
   });
 
   it('a fully catalogued labelled system still assesses normally', () => {
