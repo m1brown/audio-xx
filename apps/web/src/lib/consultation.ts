@@ -9444,11 +9444,21 @@ export function buildSystemAssessment(
   // ── Step 1: Resolve axis positions for each component ──
   // This happens BEFORE prose generation so that system-level reasoning
   // (compounding, compensation, balance) is available to all downstream steps.
+  //
+  // Only LICENSED profiles aggregate. An unresolved component's synthetic
+  // neutrals used to vote here, which both diluted a genuinely voiced system
+  // toward the middle and let an unidentified box read as evidence of balance.
+  // Axes and roles are filtered together — they are zipped downstream, and
+  // filtering one without the other applies each component's weight to a
+  // different component.
+  const licensedProfiles = componentAxisProfiles
+    .map((p, i) => ({ p, role: components[i].role }))
+    .filter(({ p }) => carriesAxisEvidence(p));
   const systemAxes = synthesiseSystemAxes(
-    componentAxisProfiles.map(p => p.axes),
-    components.map(c => c.role),
+    licensedProfiles.map(({ p }) => p.axes),
+    licensedProfiles.map(({ role }) => role),
   );
-  const axisCompounding = detectCompounding(componentAxisProfiles.map(p => p.axes));
+  const axisCompounding = detectCompounding(licensedProfiles.map(({ p }) => p.axes));
 
   // ── Build per-component character paragraphs ──────
   const componentParagraphs = components.map((c) => {
@@ -9834,12 +9844,30 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     return r === 'streamer' || r === 'source' || r === 'turntable' || r === 'transport';
   });
 
-  // Derive upstream and downstream character from per-component axes
+  // Components carrying no axis evidence. "No single component is holding this
+  // system back" quantifies over EVERY component, so it cannot be asserted
+  // while one of them was never assessed — that is a claim about a set we only
+  // partly know. Restraint is still available; unqualified restraint is not.
+  const unassessedNames = findings.perComponentAxes
+    .filter((a) => !carriesAxisEvidence(a))
+    .map((a) => a.name);
+  const unassessedClause = unassessedNames.length === 0
+    ? ''
+    : unassessedNames.length === 1
+      ? ` This reading excludes the ${unassessedNames[0]}, which I could not identify.`
+      : ` This reading excludes ${unassessedNames.slice(0, -1).join(', ')} and `
+        + `${unassessedNames[unassessedNames.length - 1]}, which I could not identify.`;
+
+  // Derive upstream and downstream character from per-component axes.
+  // Only profiles carrying evidence vote: these counts drive the "pushes
+  // toward warmth" / "reinforce the same direction" sentences, which are
+  // relational claims, and a component we could not identify has no side to
+  // be on.
   const upstreamAxes = findings.perComponentAxes.filter(a =>
-    upstreamComps.some(c => c.name === a.name),
+    carriesAxisEvidence(a) && upstreamComps.some(c => c.name === a.name),
   );
   const downstreamAxes = findings.perComponentAxes.filter(a =>
-    downstreamComps.some(c => c.name === a.name),
+    carriesAxisEvidence(a) && downstreamComps.some(c => c.name === a.name),
   );
 
   // Upstream lean: are the upstream components bright/detailed or warm/smooth?
@@ -9852,10 +9880,17 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   const downBright = downstreamAxes.filter(a => a.axes.warm_bright === 'bright').length;
   const downSmooth = downstreamAxes.filter(a => a.axes.smooth_detailed === 'smooth').length;
 
-  // Build upstream character phrase
-  const upstreamNames = upstreamComps.map(c => c.name);
-  const downstreamNames = downstreamComps.map(c => c.name);
-  const sourceNames = sourceComps.map(c => c.name);
+  // Build upstream character phrase.
+  // These names are the SUBJECTS of the interaction sentence ("X and Y
+  // reinforce the same direction"), so they are filtered by the same rule as
+  // the counts above. Filtering one and not the other is how a fabricated
+  // amplifier ended up named in a reinforcement claim whose arithmetic had
+  // already excluded it.
+  const licensedName = (n: string) =>
+    findings.perComponentAxes.some((a) => a.name === n && carriesAxisEvidence(a));
+  const upstreamNames = upstreamComps.map(c => c.name).filter(licensedName);
+  const downstreamNames = downstreamComps.map(c => c.name).filter(licensedName);
+  const sourceNames = sourceComps.map(c => c.name).filter(licensedName);
 
   // Upstream character as an ordinary-language phrase — this feeds the
   // "why it behaves that way" sentence, never a system-identity label.
@@ -10001,6 +10036,12 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
 
   // Helper: derive a short behavior phrase from axes and strengths
   function deriveComponentBehavior(c: typeof comps[0], compAxes: typeof findings.perComponentAxes[0] | undefined): string {
+    // No evidence, no sonic phrase. Every branch below reads axes that, for an
+    // unresolved component, are placeholders — which is how a product that does
+    // not exist came to be described as "neutral, controlled". The row still
+    // appears, because the listener owns the thing and its position in the
+    // chain is real; what it says is what we actually know.
+    if (compAxes && !carriesAxisEvidence(compAxes)) return 'not identified — no sonic character claimed';
     const wb = compAxes?.axes.warm_bright;
     const sd = compAxes?.axes.smooth_detailed;
     const ec = compAxes?.axes.elastic_controlled;
@@ -10052,6 +10093,11 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     compAxes: typeof findings.perComponentAxes[0] | undefined,
     sysAxes: typeof axes,
   ): string {
+    // An interaction effect is a claim that this component changes what the
+    // others do. That is a relation, and it needs evidence on both sides.
+    if (compAxes && !carriesAxisEvidence(compAxes)) {
+      return `occupies the ${(c.role || 'component').toLowerCase()} position`;
+    }
     const roleKey = (c.role || '').toLowerCase();
     const wb = compAxes?.axes.warm_bright;
     const sd = compAxes?.axes.smooth_detailed;
@@ -10174,9 +10220,12 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     const effect = deriveInteractionEffect(c, compAxes, axes);
     systemLogicRows.push(`${c.name} → ${behavior} → ${effect}`);
   }
-  // System logic summary — 2 sentences max, names interaction direction
+  // System logic summary — 2 sentences max, names interaction direction.
+  // Gated on the LICENSED name lists: with nothing licensed on one side there
+  // is no interaction to state, and the sentence would otherwise be built with
+  // an empty subject.
   let logicSummary = '';
-  if (upstreamComps.length > 0 && downstreamComps.length > 0) {
+  if (upstreamNames.length > 0 && downstreamNames.length > 0) {
     const upNames = upstreamNames.join(' and ');
     const downNames = downstreamNames.join(' and ');
     if (hasContrast) {
@@ -10881,7 +10930,10 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
         ``,
         `None — no obvious bottleneck.`,
         ``,
-        `No single component is holding this system back; from here, changes are a matter of taste rather than correction. If you ever want to shift the tonal balance, the ${dacComp.name} is where that adjustment starts.`,
+        `${unassessedNames.length > 0
+          ? `Nothing in what I could assess is holding this system back.${unassessedClause}`
+          : 'No single component is holding this system back;'} `
+        + `${unassessedNames.length > 0 ? 'From here' : 'from here'}, changes are a matter of taste rather than correction. If you ever want to shift the tonal balance, the ${dacComp.name} is where that adjustment starts.`,
       ].join('\n');
     } else {
       primaryLeverageSection = [
@@ -10889,7 +10941,9 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
         ``,
         `None — no obvious bottleneck.`,
         ``,
-        `No single component is holding this system back. Improvements from here are likely to be incremental — setup, positioning, and room treatment will do more than swapping boxes.`,
+        `${unassessedNames.length > 0
+          ? `Nothing in what I could assess is holding this system back.${unassessedClause}`
+          : 'No single component is holding this system back.'} Improvements from here are likely to be incremental — setup, positioning, and room treatment will do more than swapping boxes.`,
       ].join('\n');
     }
   }
@@ -11076,9 +11130,15 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
           ? 'This system is intentionally speed-forward; change the DAC only if you want more tonal weight.'
           : 'The balance leans toward clarity, so any taste adjustment would start there.')
       : (upWarm > 0) ? 'The balance leans warm, so adding clarity would mean an upstream change.' : '';
-    changeLine = `CHANGE only as a matter of taste — nothing needs correcting. The DAC is the first place to look if you ever want a different tonal balance. ${leanDesc}`.trim();
+    changeLine = unassessedNames.length > 0
+      ? `CHANGE — I cannot say. Nothing I could assess needs correcting, but `
+        + `${unassessedNames.length === 1 ? 'one component in this chain is' : 'several components in this chain are'} `
+        + `unidentified, so I cannot tell you the system as a whole is where you want it. ${leanDesc}`.trim()
+      : `CHANGE only as a matter of taste — nothing needs correcting. The DAC is the first place to look if you ever want a different tonal balance. ${leanDesc}`.trim();
   } else {
-    changeLine = 'No single component demands change — improvements from here are preference, not correction.';
+    changeLine = unassessedNames.length > 0
+      ? `No component I could assess demands change.${unassessedClause}`
+      : 'No single component demands change — improvements from here are preference, not correction.';
   }
 
   const decisionSection = [
@@ -11913,6 +11973,28 @@ interface ComponentAxisProfile {
  * Resolve axis leanings for each component in the system.
  * Prefers explicit primaryAxes → numeric trait inference → brand text inference.
  */
+/**
+ * Does this profile carry axis EVIDENCE, or only the shape of it?
+ *
+ * `classifyComponentAxes` gives an unresolved component four `neutral` axes so
+ * that downstream code has something to read. But `neutral` is a sonic claim —
+ * "this component sits at the middle of the axis" — and it is indistinguishable
+ * from a measured neutral once it leaves that function. A fabricated
+ * "Zorblax ZX1 5 watt SET" therefore acquired the behaviour string
+ * "neutral, controlled", an interaction effect, and a place in
+ * "…reinforce the same direction", all from a product that does not exist.
+ *
+ * `source: 'inferred'` already marked exactly this state and was never
+ * consulted. Nothing new is recorded here; the marker is simply believed.
+ *
+ * The identity stays in the graph — the listener owns the thing and named it,
+ * and its ROLE is real evidence about the chain's shape. What it may not do is
+ * contribute sonic character, because none was ever established.
+ */
+export function carriesAxisEvidence(profile: { source: string }): boolean {
+  return profile.source !== 'inferred';
+}
+
 function classifyComponentAxes(components: SystemComponent[]): ComponentAxisProfile[] {
   return components.map((c) => {
     // 1. Product with primaryAxes or numeric traits — use resolveProductAxes
@@ -12731,6 +12813,10 @@ function detectStackedTraits(
   // Collect sonic properties per component
   const propMap = new Map<SonicProperty, string[]>();
   for (let i = 0; i < components.length; i++) {
+    // Stacking IS reinforcement reasoning — two components said to share a
+    // property. A component whose properties are synthetic defaults cannot be
+    // one of the two, or the system reads its own placeholder back as agreement.
+    if (!carriesAxisEvidence(profiles[i])) continue;
     const props = deriveSonicProperties(profiles[i].axes, components[i].product?.traits);
     for (const p of props) {
       if (!propMap.has(p)) propMap.set(p, []);
@@ -12787,11 +12873,16 @@ function assessVoicingCoherence(
 ): VoicingCoherenceResult {
   const none: VoicingCoherenceResult = { isCoherent: false, sharedTraits: [], tradeoffs: [], alignedAxisCount: 0 };
 
-  // Need at least 2 components with known axis profiles
+  // Need at least 2 components with known axis profiles.
+  // The evidence check is explicit rather than implied by the non-neutral test
+  // below: an inferred profile happens to be all-neutral today, so it fails
+  // that test by coincidence, and coherence is too load-bearing a conclusion
+  // to rest on a coincidence.
   const withAxes = profiles.filter(p =>
-    p.axes.warm_bright !== 'neutral' ||
-    p.axes.smooth_detailed !== 'neutral' ||
-    p.axes.elastic_controlled !== 'neutral',
+    carriesAxisEvidence(p) && (
+      p.axes.warm_bright !== 'neutral' ||
+      p.axes.smooth_detailed !== 'neutral' ||
+      p.axes.elastic_controlled !== 'neutral'),
   );
   if (withAxes.length < 2) return none;
 
@@ -13274,6 +13365,26 @@ function buildComponentAssessments(
     const strengths: string[] = [];
     const weaknesses: string[] = [];
     const designTradeoffs: string[] = [];
+
+    // A component we could not identify gets a reading that says exactly that.
+    // Falling through would mine its placeholder axes for strengths and
+    // weaknesses — the shape of a verdict with nothing underneath it.
+    if (!carriesAxisEvidence(profiles[i])) {
+      return {
+        name: c.displayName,
+        role: c.role,
+        summary: `${c.displayName} — not identified in our catalog, so no sonic `
+          + `characteristics are claimed for it.`,
+        strengths: [],
+        weaknesses: [],
+        // 'balanced' is the only VerdictKind that asserts nothing. 'keeper'
+        // would be a recommendation and 'upgrade_candidate' a criticism; both
+        // are judgments, and no evidence here supports either.
+        verdict: 'Its position in the chain is recorded as you described it.',
+        verdictKind: 'balanced' as const,
+        links: componentLinks?.get(c.displayName) ?? [],
+      };
+    }
 
     // ── Elite product detection ──
     // Products at this tier represent intentional design philosophy — their
@@ -15225,10 +15336,19 @@ function extractMemoFindings(
     // components actually give -0.8 (ELASTIC). Founder-caught by ear,
     // 2026-08-13. The categorical aggregation above already does this
     // correctly — this call was the odd one out.
-    systemAxisNumeric: synthesiseSystemAxisNumeric(
-      profiles.map((p) => p.axes),
-      components.map((c) => c.role),
-    ),
+    // Licensed profiles only — this feeds both the tonal-signature prose and
+    // the artifact graph, so a synthetic neutral here draws a system a degree
+    // more balanced than the evidence supports. Axes and roles are filtered as
+    // one, since the aggregation zips them.
+    systemAxisNumeric: (() => {
+      const licensed = profiles
+        .map((p, i) => ({ p, role: components[i].role }))
+        .filter(({ p }) => carriesAxisEvidence(p));
+      return synthesiseSystemAxisNumeric(
+        licensed.map(({ p }) => p.axes),
+        licensed.map(({ role }) => role),
+      );
+    })(),
     perComponentAxes: profiles.map((p) => ({
       name: p.name,
       axes: p.axes,
