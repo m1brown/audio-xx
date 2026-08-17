@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   validateRelations, licensedRelations, relationTier, permittedQuestionType,
-  questionViolations, overclaimViolations,
+  questionViolations, overclaimViolations, stripOverclaims,
   type AttributeRecord, type RelationSet,
 } from '../relational-explain';
 
@@ -158,5 +158,89 @@ describe('structural and evaluative claims may not outrun their evidence', () =>
     expect(overclaimViolations(
       'The system leans toward resolution, and nothing here obviously needs changing.',
     )).toEqual([]);
+  });
+});
+
+/**
+ * Production regressions, pinned verbatim.
+ *
+ * Both sentences below were emitted by the promoted D-12 build against real
+ * input while `overclaimViolations` sat in this module, fully tested and never
+ * called. They are kept as literal strings rather than paraphrases because the
+ * defect was never that the rule was wrong — it was that the rule was not
+ * reachable from the pipeline, and a paraphrase would not have caught the verb
+ * the model actually chose.
+ */
+describe('D-12 §6 — the production sentences that got through', () => {
+  const BETA_VERDICT =
+    'The system appears deliberately voiced, with components chosen to maximize '
+    + 'resolution and balance tonal characteristics despite some inherent mismatches '
+    + 'in system goals.';
+
+  const ZORBLAX_VERDICT =
+    'Indeterminate — The unverified Zorblax ZX1 5 watt SET amplifier is pivotal in '
+    + 'defining system character and needs more information.';
+
+  it('refuses the beta verdict as an intent claim', () => {
+    expect(overclaimViolations(BETA_VERDICT)[0].kind).toBe('intent');
+  });
+
+  it('refuses an importance claim about an unverified component', () => {
+    // No relation can name Zorblax — it does not exist — so nothing licenses
+    // calling it pivotal, however hedged the surrounding sentence.
+    expect(overclaimViolations(ZORBLAX_VERDICT)[0].kind).toBe('importance');
+  });
+
+  it('still refuses it when other components hold relations', () => {
+    expect(overclaimViolations(ZORBLAX_VERDICT, {
+      componentsInRelations: ['dCS Rossini Apex', 'ARC ref 5'],
+    })[0].kind).toBe('importance');
+  });
+
+  it('catches the intent claim across a changed verb', () => {
+    // "voiced" and "matched" were not in the original verb list; the claim is
+    // the adverb of intention, not the participle it lands on.
+    for (const v of ['voiced', 'matched', 'paired', 'assembled', 'curated']) {
+      expect(overclaimViolations(`The system was deliberately ${v} for this room.`)[0]?.kind)
+        .toBe('intent');
+    }
+  });
+
+  it('catches a purpose clause attached to the components', () => {
+    expect(overclaimViolations('The components were chosen to maximize resolution.')[0].kind)
+      .toBe('intent');
+  });
+});
+
+describe('stripOverclaims removes the sentence, not the assessment', () => {
+  const PROSE =
+    'The system appears deliberately voiced, with components chosen to maximize resolution. '
+    + 'The dCS sets a high-resolution tone, counterbalanced by the ARC preamplifier.\n\n'
+    + 'This system trades some warmth for detail and dynamic control.';
+
+  it('drops only the offending sentence', () => {
+    const { prose, removed } = stripOverclaims(PROSE);
+    expect(removed).toHaveLength(1);
+    expect(prose).not.toContain('deliberately voiced');
+    expect(prose).toContain('counterbalanced by the ARC preamplifier');
+    expect(prose).toContain('trades some warmth');
+  });
+
+  it('preserves paragraph structure', () => {
+    expect(stripOverclaims(PROSE).prose?.split('\n\n')).toHaveLength(2);
+  });
+
+  it('leaves fully licensed prose byte-identical', () => {
+    const clean = 'The chain counterweights itself on tonal balance.\n\nNothing here obviously needs changing.';
+    expect(stripOverclaims(clean).prose).toBe(clean);
+  });
+
+  it('returns undefined rather than an empty string when everything goes', () => {
+    expect(stripOverclaims('The system was deliberately voiced.').prose).toBeUndefined();
+  });
+
+  it('keeps an importance claim a relation licenses', () => {
+    const s = 'The Acora QRC-2 is central to the result.';
+    expect(stripOverclaims(s, { componentsInRelations: ['Acora QRC-2'] }).prose).toBe(s);
   });
 });

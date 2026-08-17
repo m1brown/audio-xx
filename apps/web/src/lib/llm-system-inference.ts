@@ -19,7 +19,7 @@
 
 import type { ConsultationResponse } from './consultation';
 import {
-  licensedRelations, permittedQuestionType, questionViolations,
+  licensedRelations, permittedQuestionType, questionViolations, stripOverclaims,
   type ActionVerdict, type AttributeRecord, type RelationKind, type RelationSet,
   type EvidenceTier,
 } from './relational-explain';
@@ -35,7 +35,7 @@ const SYSTEM_PROMPT = `You are Audio XX, a private audio advisory system. You pr
 You are being asked to assess a hi-fi system where some or all components are NOT in your verified catalog. You must produce a useful provisional assessment based on your general knowledge of these components, but you MUST:
 
 1. VERDICT FIRST. Reach a system-level judgment before describing anything.
-   Is the system coherent, deliberately voiced, constrained, materially
+   Is the system coherent, tonally consistent, constrained, materially
    mismatched, or genuinely indeterminate on the evidence you have? Say which,
    in one sentence, at the top. Do not manufacture a defect because an
    assessment was requested, and do not withhold one that the evidence
@@ -472,6 +472,30 @@ export function buildLicensedProvisionalResponse(
   };
 }
 
+/**
+ * The verdict line, composed from the structured judgment alone.
+ *
+ * Used when the model's own verdict sentence was dropped for overclaiming. It
+ * states only what Audio XX actually decided — the action verdict and the
+ * shape of the surviving relations — and never why the listener chose
+ * anything, which is the claim that got the original sentence removed.
+ */
+export function verdictForVerdictLine(
+  verdict: ActionVerdict | undefined,
+  relationShape: string | undefined,
+): string {
+  const tail = relationShape ? `, and on the evidence available ${relationShape}` : '';
+  switch (verdict) {
+    case 'constraint':
+      return `One licensed constraint stands out in this chain${tail}.`;
+    case 'indeterminate':
+      return `The evidence does not yet support a system-level judgment${tail}.`;
+    case 'no_change':
+    default:
+      return `Nothing here obviously needs changing${tail}.`;
+  }
+}
+
 // ── Public API ───────────────────────────────────────
 
 /**
@@ -756,6 +780,48 @@ function parseSystemInferenceResponse(
       console.warn('[llm-system-inference] no licensed relation — trade-off withheld');
     }
 
+    // ── D-12 §6 — structural and evaluative overclaiming ──────────
+    // The rule existed as a tested library and was never called, so every
+    // production verdict opened "the system appears deliberately voiced, with
+    // components chosen to maximize resolution" — a claim about why the
+    // listener bought what they bought, which no evidence in this pipeline can
+    // license. Enforcement runs HERE, after relations are known, because an
+    // importance claim is licensed exactly when a surviving relation names the
+    // component it is about.
+    const componentsInRelations = surviving.flatMap((r) => r.components);
+    const overclaims: Array<{ kind: string; sentence: string }> = [];
+    const clean = (prose: string | undefined) => {
+      const { prose: out, removed } = stripOverclaims(prose, { componentsInRelations });
+      overclaims.push(...removed);
+      return out;
+    };
+
+    let verdictOut = clean(parsed.verdict || undefined);
+    const philosophyOut = clean(
+      [parsed.systemThesis, parsed.interactionExplanation].filter(Boolean).join('\n\n') || undefined,
+    );
+    tendenciesOut = clean(tendenciesOut);
+
+    // The verdict is the one field that may not simply vanish: it is the
+    // judgment the whole assessment hangs from, and a blank first line reads as
+    // a failure rather than as restraint. It is also the one field that can be
+    // rebuilt without inventing anything, because the judgment itself is
+    // already structured — `actionVerdict` plus the relations that survived.
+    if (!verdictOut) {
+      const kinds = new Set(surviving.map((r) => r.kind));
+      const shape = kinds.has('constraint') ? 'one component bounds what the others can do'
+        : kinds.has('counterweight') && kinds.has('reinforcement')
+          ? 'the chain both reinforces and counterweights itself'
+          : kinds.has('counterweight') ? 'the chain counterweights itself'
+            : kinds.has('reinforcement') ? 'the chain reinforces its own direction'
+              : undefined;
+      verdictOut = verdictForVerdictLine(parsed.actionVerdict, shape);
+    }
+    if (overclaims.length > 0) {
+      console.warn('[llm-system-inference] D-12 §6 — dropped %d overclaiming sentence(s): %s',
+        overclaims.length, overclaims.map((o) => `${o.kind}: ${o.sentence.slice(0, 70)}`).join(' | '));
+    }
+
     // The action verdict fixes the permitted question kind. A directional
     // question under a no-change verdict retracts the verdict it follows.
     const verdictForQuestion: ActionVerdict = parsed.actionVerdict ?? 'no_change';
@@ -778,11 +844,10 @@ function parseSystemInferenceResponse(
       // first invited a paragraph per component and the last invited room and
       // genre advice, so both defects were shapes in the schema rather than
       // habits in the prose.
-      systemSignature: parsed.verdict || undefined,
+      systemSignature: verdictOut,
       characterized: Array.isArray(parsed.characterized) ? parsed.characterized : [],
       componentKnowledge: Array.isArray(parsed.componentKnowledge) ? parsed.componentKnowledge : [],
-      philosophy: [parsed.systemThesis, parsed.interactionExplanation]
-        .filter(Boolean).join('\n\n') || undefined,
+      philosophy: philosophyOut,
       tendencies: tendenciesOut,
       actionVerdict: parsed.actionVerdict,
       systemRelations,

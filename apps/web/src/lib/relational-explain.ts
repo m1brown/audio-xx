@@ -267,18 +267,79 @@ export const OVERCLAIM_MARKERS: Array<{ kind: 'intent' | 'importance' | 'rank'; 
   {
     kind: 'intent',
     // Audio XX never knows why someone bought something.
-    re: /\b(?:purposefully|deliberately|intentionally|carefully)\s+(?:constructed|assembled|chosen|selected|built|curated)\b|\bby design\b|\bthe (?:owner|listener) (?:clearly|evidently) (?:wanted|intended)\b/i,
+    //
+    // The verb list is open on purpose. Production emitted "deliberately
+    // VOICED" and "components CHOSEN TO maximize resolution" against a marker
+    // set that only knew "deliberately constructed" — the claim survived by
+    // changing verb, which is what happens whenever a rule enumerates surface
+    // forms. The three shapes below are the claim itself: an adverb of
+    // intention attached to any act of system-building; a purpose clause
+    // attached to the components; and a direct assertion about what the owner
+    // wanted.
+    re: new RegExp(
+      '\\b(?:purposefully|deliberately|intentionally|carefully|thoughtfully|consciously|'
+      + 'meticulously|purposely)\\s+(?:\\w+\\s+)?'
+      + '(?:constructed|assembled|chosen|selected|picked|built|curated|voiced|matched|paired|'
+      + 'designed|configured|specified|put together)\\b'
+      + '|\\b(?:components?|parts|pieces|system|chain)\\b[^.]{0,40}?'
+      + '\\b(?:chosen|selected|picked|assembled|matched|voiced)\\s+to\\b'
+      + '|\\bchosen (?:to|for)\\b'
+      + '|\\bby design\\b'
+      + '|\\bthe (?:owner|listener)(?:\\s+\\w+){0,2}\\s+(?:wanted|intended|meant|sought)\\b',
+      'i',
+    ),
   },
   {
     kind: 'importance',
     // Licensed only when a relation actually names the component.
-    re: /\b(?:crucial|pivotal|essential|vital|central)\b/i,
+    re: /\b(?:crucial|pivotal|essential|vital|central|decisive|indispensable)\b/i,
   },
   {
     kind: 'rank',
-    re: /\b(?:impeccable|benchmark|reference[- ](?:grade|standard)|world[- ]class|flawless|unrivalled|unrivaled|peerless)\b/i,
+    re: /\b(?:impeccable|benchmark|reference[- ](?:grade|standard)|world[- ]class|flawless|unrivalled|unrivaled|peerless|exceptional|outstanding|superb|state[- ]of[- ]the[- ]art)\b/i,
   },
 ];
+
+/**
+ * Remove the sentences that overclaim, keep the ones that do not.
+ *
+ * Proportionality is the whole design here. Falling back to the deterministic
+ * licensed answer over a single unearned adverb would throw away an assessment
+ * that is otherwise fully licensed — the over-correction that made Audio XX
+ * mute once already. Rewriting the sentence in place would mean inventing
+ * prose to replace prose, which is how a guard becomes an author.
+ *
+ * Dropping the offending sentence is the smallest honest operation: what
+ * remains was written by the model and is licensed, and what left was never
+ * supported. The caller is responsible for what happens when a field empties
+ * — see `systemSignature`, which is recomposed from the structured verdict
+ * rather than left blank.
+ */
+export function stripOverclaims(
+  prose: string | undefined,
+  opts: { componentsInRelations?: string[] } = {},
+): { prose: string | undefined; removed: Array<{ kind: string; sentence: string }> } {
+  if (!prose?.trim()) return { prose, removed: [] };
+  const removed = overclaimViolations(prose, opts);
+  if (removed.length === 0) return { prose, removed };
+
+  const dropped = new Set(removed.map((r) => r.sentence.trim()));
+  // Paragraph structure is preserved: an assessment whose paragraphs collapse
+  // into one block reads as a different document even when every surviving
+  // sentence is identical.
+  const kept = prose
+    .split(/\n\n+/)
+    .map((para) => para
+      .split(/(?<=[.!?])\s+/)
+      .filter((sentence) => !dropped.has(sentence.trim()))
+      .join(' ')
+      .trim())
+    .filter(Boolean)
+    .join('\n\n')
+    .trim();
+
+  return { prose: kept || undefined, removed };
+}
 
 export function overclaimViolations(
   prose: string,
