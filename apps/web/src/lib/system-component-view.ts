@@ -111,6 +111,78 @@ function splitName(displayName: string): { brand?: string; name: string } {
 }
 
 /**
+ * Marketplace queries reach a search box, not a resolver.
+ *
+ * Corroboration returns manufacturer strings, and manufacturers use typographic
+ * characters that no listing title contains: `Acora Acoustics QRC\u20112` carries a
+ * non-breaking hyphen, `Audio Research Reference\u00a05` a non-breaking space. Sent
+ * verbatim they match nothing.
+ */
+function normalizeForSearch(value: string): string {
+  return value
+    // Parenthetical asides — the corroborator returned
+    // "Butler Audio (BK Butler)", which is useful provenance and useless as a
+    // query.
+    .replace(/\s*\([^)]*\)/g, '')
+    // Non-breaking, figure, en and em dashes and minus sign → plain hyphen.
+    .replace(/[\u2010\u2011\u2012\u2013\u2014\u2212]/g, '-')
+    // Non-breaking, narrow and thin spaces → plain space.
+    .replace(/[\u00a0\u202f\u2007\u2009]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Corporate suffixes are how a company signs a contract, not how a listing is
+ * titled. Nobody sells an "Audio Research Corporation Reference 5".
+ */
+function searchableBrand(brand: string): string {
+  return normalizeForSearch(brand)
+    .replace(/\s*\b(?:corporation|corp|incorporated|inc|company|co|limited|ltd|llc|gmbh|s\.?a\.?s?|b\.?v\.?|kk|k\.k\.)\b\.?$/i, '')
+    .trim();
+}
+
+/**
+ * Separate a canonical identity into brand and model.
+ *
+ * `splitName` assumes the brand is exactly one word. That held while identities
+ * were the listener's shorthand and broke the moment corroboration supplied
+ * real manufacturer names: with brand `Audio Research Corporation` and identity
+ * `Audio Research Reference 5`, taking the first token left `Research Reference
+ * 5` as the model, and the query became
+ *
+ *   Audio Research Corporation Research Reference 5
+ *
+ * Three of the four beta components searched a duplicated brand this way. The
+ * fix is to remove the brand PREFIX rather than a fixed number of words, and
+ * only when it is genuinely a prefix — `MONAD A100` under brand `Butler Audio`
+ * shares no leading token, so nothing is stripped and the brand is prepended
+ * once by the link builder.
+ */
+function splitCanonical(identity: string, brand?: string): { brand?: string; name: string } {
+  const id = normalizeForSearch(identity);
+  const b = brand ? normalizeForSearch(brand) : undefined;
+  if (!b) return splitName(id);
+
+  // Longest matching prefix of the brand's tokens, so `Audio Research
+  // Corporation` still strips `Audio Research` from the identity.
+  const brandTokens = b.split(' ');
+  const idTokens = id.split(' ');
+  let matched = 0;
+  while (
+    matched < brandTokens.length
+    && matched < idTokens.length
+    && brandTokens[matched].toLowerCase().replace(/[^a-z0-9]/g, '')
+      === idTokens[matched].toLowerCase().replace(/[^a-z0-9]/g, '')
+  ) matched++;
+
+  const remainder = idTokens.slice(matched).join(' ').trim();
+  // Everything matched — the identity is the brand and nothing else. Keep the
+  // identity as the model so the query is not empty.
+  return { brand: b, name: remainder || id };
+}
+
+/**
  * Build one presentation per component.
  *
  * Every resolution is per component and independent. An empty image, a missing
@@ -146,13 +218,19 @@ export function buildComponentViews(
     const displayName = canonical && informative(canonical) > informative(listenerName)
       ? canonical
       : listenerName;
-    const searchIdentity = canonical || listenerName;
+    const searchIdentity = normalizeForSearch(canonical || listenerName);
 
     const brand = c.product?.brand ?? c.canonicalBrand ?? splitName(displayName).brand;
     const modelName = c.product?.name ?? splitName(displayName).name;
     // Marketplace queries use the canonical identity; display does not have to.
-    const searchBrand = c.product?.brand ?? c.canonicalBrand ?? splitName(searchIdentity).brand;
-    const searchModel = c.product?.name ?? splitName(searchIdentity).name;
+    // A catalogued product already carries a clean brand/model pair, so it is
+    // used as-is; everything else is split against the canonical brand rather
+    // than by counting words.
+    const canonicalSplit = splitCanonical(searchIdentity, c.canonicalBrand);
+    const searchBrand = c.product?.brand
+      ?? (c.canonicalBrand ? searchableBrand(c.canonicalBrand) : undefined)
+      ?? canonicalSplit.brand;
+    const searchModel = c.product?.name ?? canonicalSplit.name;
 
     // F4 gate lives inside getProductImage. A catalogued product may carry its
     // own imageUrl; anything else must come through the curated overlay or not
