@@ -104,6 +104,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           ...prior, cached: true, cacheTier: 'stale_positive',
           store: getStoreDiagnostics().state,
+          storeDetail: getStoreDiagnostics().detail,
         });
       }
     }
@@ -112,6 +113,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       normalizedName, status: 'lookup_unknown' as const, checkedAt: Date.now(), detail,
       store: getStoreDiagnostics().state,
+      storeDetail: getStoreDiagnostics().detail,
     });
   };
 
@@ -122,6 +124,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ...cached.record, cached: true, cacheTier: cached.tier,
       store: getStoreDiagnostics().state,
+      storeDetail: getStoreDiagnostics().detail,
     });
   }
 
@@ -203,6 +206,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         ...record, attempts: attempt, cacheTier: 'live',
         store: getStoreDiagnostics().state,
+      storeDetail: getStoreDiagnostics().detail,
       });
     } catch (err) {
       lastDetail = String(err).slice(0, 120);

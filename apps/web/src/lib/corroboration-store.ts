@@ -61,8 +61,27 @@ export type StoreState =
   | 'write_failed';
 
 let storeState: StoreState = 'unqueried';
-/** Error constructor name only — no message, which could carry a DSN. */
 let storeDetail: string | undefined;
+
+/**
+ * Error text with anything credential-shaped removed.
+ *
+ * `read_failed` alone was not enough to act on: it told us the SELECT was the
+ * failing step and nothing about why. Prisma messages name the failing
+ * operation, which is what is needed here — but they can also echo a
+ * connection string, so every URL, token and long opaque string is stripped
+ * before the text goes anywhere.
+ */
+function sanitize(err: unknown): string {
+  const name = (err as Error)?.constructor?.name ?? 'Error';
+  const msg = String((err as Error)?.message ?? err ?? '')
+    .replace(/(libsql|https?|wss?):\/\/[^\s'"]+/gi, '<url>')
+    .replace(/\b(?:authToken|token|password|secret|key)\s*[=:]\s*\S+/gi, '<redacted>')
+    .replace(/\bey[A-Za-z0-9_-]{20,}\b/g, '<jwt>')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return `${name}: ${msg}`.slice(0, 300);
+}
 
 export function getStoreDiagnostics(): { state: StoreState; detail?: string } {
   return { state: storeState, detail: storeDetail };
@@ -89,7 +108,7 @@ async function ensureTable(): Promise<boolean> {
         return true;
       } catch (err) {
         storeState = 'ddl_failed';
-        storeDetail = (err as Error)?.constructor?.name ?? 'Error';
+        storeDetail = sanitize(err);
         console.warn('[corroboration-store] table unavailable, memory only: %s',
           String(err).slice(0, 160));
         return false;
@@ -135,7 +154,7 @@ export async function readCached(
     return { record, tier: 'durable' };
   } catch (err) {
     storeState = 'read_failed';
-    storeDetail = (err as Error)?.constructor?.name ?? 'Error';
+    storeDetail = sanitize(err);
     console.warn('[corroboration-store] read failed: %s', String(err).slice(0, 160));
     return null;
   }
@@ -181,7 +200,7 @@ export async function readAnyPositive(
     };
   } catch (err) {
     storeState = 'read_failed';
-    storeDetail = (err as Error)?.constructor?.name ?? 'Error';
+    storeDetail = sanitize(err);
     return null;
   }
 }
@@ -218,7 +237,7 @@ export async function writeCached(record: CorroborationRecord): Promise<void> {
     );
   } catch (err) {
     storeState = 'write_failed';
-    storeDetail = (err as Error)?.constructor?.name ?? 'Error';
+    storeDetail = sanitize(err);
     console.warn('[corroboration-store] write failed: %s', String(err).slice(0, 160));
   }
 }
