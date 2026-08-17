@@ -281,11 +281,16 @@ export function filterUnlicensedRelationalProse(
   prose: string | undefined,
   surviving: LicensedRelation[],
   componentNames: string[],
-): { prose: string | undefined; dropped: Array<{ sentence: string; reason: string }> } {
-  if (!prose?.trim()) return { prose, dropped: [] };
+): {
+  prose: string | undefined;
+  dropped: Array<{ sentence: string; reason: string }>;
+  normalized: Array<{ from: string; to: string }>;
+} {
+  if (!prose?.trim()) return { prose, dropped: [], normalized: [] };
 
   const licensed = new Map(surviving.map((r) => [pairKey(r.components[0], r.components[1]), r]));
   const dropped: Array<{ sentence: string; reason: string }> = [];
+  const normalized: Array<{ from: string; to: string }> = [];
 
   const keptParagraphs = prose.split(/\n\n+/).map((para) => {
     // The antecedent for anaphora: the subject of the most recent sentence
@@ -299,7 +304,8 @@ export function filterUnlicensedRelationalProse(
     // across a sentence boundary.
     let antecedentSentence = '';
 
-    const kept = para.split(/(?<=[.!?])\s+/).filter((sentence) => {
+    const kept = para.split(/(?<=[.!?])\s+/).map((original) => {
+      let sentence = original;
       const named = namesIn(sentence, componentNames);
       const referred = ANAPHORA.test(sentence) && antecedent && !named.includes(antecedent)
         ? [antecedent] : [];
@@ -313,7 +319,7 @@ export function filterUnlicensedRelationalProse(
       // One component, or none: Describe. Always publishable — the repair
       // restricts Explain, and silencing description would be the
       // over-correction, not the fix.
-      if (touched.length < 2) return true;
+      if (touched.length < 2) return sentence;
 
       // Two or more: every pair must be licensed. No connective test, no
       // vocabulary. Naming a second component IS the thing that requires a
@@ -326,7 +332,7 @@ export function filterUnlicensedRelationalProse(
             dropped.push({ sentence: sentence.trim(),
               reason: `no licensed relation between ${touched[i]} and ${touched[j]}`
                 + (referred.length ? ` (via anaphora to ${antecedent})` : '') });
-            return false;
+            return null;
           }
           // Scope survives anaphora, and EVERY brand-scoped component must be
           // attributed on its own account. Two brand-scoped components need two
@@ -337,19 +343,85 @@ export function filterUnlicensedRelationalProse(
               return !hasBrandAttributionFor(source, c);
             });
             if (unattributed.length > 0) {
-              dropped.push({ sentence: sentence.trim(),
-                reason: `brand-scoped relation asserted of the product (${unattributed.join(', ')})` });
-              return false;
+              // Try to preserve the statement by restating the premise at the
+              // scope actually held, before giving up on it.
+              let repaired: string | null = sentence;
+              for (const c of unattributed) {
+                if (!named.includes(c)) { repaired = null; break; }   // arrived by pronoun
+                repaired = repaired === null ? null : normalizeToBrandScope(repaired, c);
+              }
+              if (repaired && unattributed.every((c) => hasBrandAttributionFor(repaired!, c))) {
+                normalized.push({ from: original.trim(), to: repaired.trim() });
+                sentence = repaired;
+              } else {
+                dropped.push({ sentence: original.trim(),
+                  reason: `brand-scoped relation asserted of the product (${unattributed.join(', ')})` });
+                return null;
+              }
             }
           }
         }
       }
-      return true;
-    }).join(' ').trim();
+      return sentence;
+    }).filter((x): x is string => x !== null).join(' ').trim();
     return kept;
   }).filter(Boolean);
 
-  return { prose: keptParagraphs.join('\n\n').trim() || undefined, dropped };
+  return { prose: keptParagraphs.join('\n\n').trim() || undefined, dropped, normalized };
+}
+
+/**
+ * Restate a premise at the scope Audio XX actually holds.
+ *
+ * The situation this exists for: Audio XX holds real brand evidence about dCS,
+ * the model phrases it as a product claim, the validator correctly refuses the
+ * scope escalation — and an otherwise licensed relation disappears. The
+ * evidence supported a useful statement and the listener got silence.
+ *
+ * This is SCOPE NORMALISATION, not prose rewriting. It changes who the claim
+ * is about and nothing else: the sonic content, direction, strength, axis,
+ * tier, relation kind and conclusion all pass through untouched. The only
+ * edit is the grammatical subject and the verb agreement that follows from it.
+ *
+ *   "The dCS Rossini Apex is transparent and precise"
+ *   -> "dCS designs are typically transparent and precise"
+ *
+ * Deliberately narrow. It fires only where the component is the SUBJECT of a
+ * characterising predicate, because that is the one position where swapping
+ * the subject is meaning-preserving. "the cool, transparent output of the dCS"
+ * is not repairable this way — the claim is embedded in a noun phrase — and
+ * per the governing rule such a sentence is dropped rather than guessed at.
+ *
+ * It cannot manufacture a licence: the caller only reaches it for relations
+ * that already survived D-12.
+ */
+export function normalizeToBrandScope(
+  sentence: string,
+  componentName: string,
+): string | null {
+  const brand = componentName.split(/\s+/)[0];
+  if (!brand || brand.length < 2) return null;
+  const esc = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const subject = `(^|(?<=[.!?]\\s))(?:The\\s+|the\\s+)?${esc(componentName)}\\s+`;
+
+  // Copular: the verb becomes plural and gains the hedge the brand scope
+  // implies. "is" -> "are typically" is the whole edit.
+  const copular = new RegExp(`${subject}(?:is|was)\\s+`);
+  if (copular.test(sentence)) {
+    return sentence.replace(copular, (_m, lead) => `${lead ?? ''}${brand} designs are typically `);
+  }
+
+  // Third-person singular predicate: "offers" -> "typically offer". The -s is
+  // stripped because the subject became plural, which is agreement, not
+  // paraphrase.
+  const verbal = new RegExp(`${subject}(\\w+?)s\\s+`);
+  const m = sentence.match(verbal);
+  if (m && m[2] && !/^(?:i|wa|ha|doe|ga)$/i.test(m[2])) {
+    return sentence.replace(verbal, (_m, lead, stem) =>
+      `${lead ?? ''}${brand} designs typically ${stem} `);
+  }
+
+  return null;
 }
 
 /**
@@ -477,10 +549,36 @@ const PERCEPTUAL_QUALITY =
  */
 export function questionIntroducesConcern(question: string): boolean {
   if (!question?.trim()) return false;
+  // The lookbehind matters: "Do you notice harshness?" presupposes harshness,
+  // while "WHAT do you notice first?" presupposes nothing. An open
+  // interrogative head turns the same clause into a genuine question, and
+  // without this the rule rejected exactly the questions it wants.
   const deficiencyFrame =
-    /\b(?:are you (?:experiencing|noticing|finding|hearing)|do you (?:experience|notice|find|hear)|any (?:lack|absence|shortage) of|too (?:much|little|bright|warm|thin|forward)|is (?:it|the \w+) (?:ever )?(?:too|overly))\b/i;
-  return deficiencyFrame.test(question) || PERCEPTUAL_QUALITY.test(question);
+    /(?<!\b(?:what|which|how|where|when)\s)\b(?:are you (?:experiencing|noticing|finding|hearing)|do you (?:experience|notice|find|hear)|any (?:lack|absence|shortage) of|too (?:much|little|bright|warm|thin|forward)|is (?:it|the \w+) (?:ever )?(?:too|overly))\b/i;
+  return deficiencyFrame.test(question)
+    || PERCEPTUAL_QUALITY.test(question)
+    || CHANGE_SEEKING.test(question);
 }
+
+/**
+ * Predicates of alteration — incompatible with a no-change verdict.
+ *
+ * Production kept following "nothing needs changing" with "anything you are
+ * seeking to adjust or improve upon?", which quietly converts restraint into
+ * an upgrade prompt. Earlier guards missed it: "improve" names no perceptual
+ * quality and "seeking to" is not a deficiency frame.
+ *
+ * This is not an open vocabulary being extended. It is the closed semantic
+ * class MAKE DIFFERENT / MAKE BETTER — every English predicate for wanting a
+ * change, matched by stem so inflections are covered. A no-change verdict is
+ * the statement that no change is indicated; a question presupposing one
+ * contradicts the sentence above it.
+ *
+ * Comparatives are included for the same reason: "more warmth" presupposes
+ * that more would be desirable, which is the finding the verdict declined.
+ */
+const CHANGE_SEEKING =
+  /\b(?:chang\w*|improv\w*|adjust\w*|enhanc\w*|upgrad\w*|alter\w*|modif\w*|swap\w*|replac\w*|tweak\w*|refin\w*|optimi[sz]\w*|better|fix|remedy|address|increas\w*|reduc\w*|boost\w*|dial (?:in|back)|more (?:of|warmth|detail|body|clarity|space)|less (?:of|warmth|detail|body|clarity)|seeking to|looking to|hoping to|want(?:ing)? to|wish(?:ing)? to|like to (?:see|have|get))\b/i;
 
 /**
  * Regression guard, not the mechanism.
@@ -591,7 +689,7 @@ export const OVERCLAIM_MARKERS: Array<{ kind: 'intent' | 'importance' | 'rank'; 
  */
 export function stripOverclaims(
   prose: string | undefined,
-  opts: { componentsInRelations?: string[] } = {},
+  opts: { componentsInRelations?: string[]; basisByComponent?: Record<string, string> } = {},
 ): { prose: string | undefined; removed: Array<{ kind: string; sentence: string }> } {
   if (!prose?.trim()) return { prose, removed: [] };
   const removed = overclaimViolations(prose, opts);
@@ -615,15 +713,67 @@ export function stripOverclaims(
   return { prose: kept || undefined, removed };
 }
 
+/**
+ * Degree of assertion, as a closed grammatical class.
+ *
+ * D-7 extended from WHAT may be claimed to HOW STRONGLY: claim intensity may
+ * not exceed evidence authority. A model-tier premise supports a characterised
+ * tendency — "detailed", "leans cool" — and cannot support "brilliantly
+ * detailed", because nothing in unverifiable model memory establishes a
+ * degree, only a direction.
+ *
+ * Two forms, both grammatical rather than semantic, so this does not become an
+ * adjective dictionary:
+ *
+ *   - adverbs of extreme degree modifying an adjective
+ *   - superlative morphology (-est, "most X", "the best")
+ *
+ * Curated evidence may still speak strongly. Audio XX holding measured data
+ * about a product is exactly the condition under which a superlative could be
+ * earned, and flattening every judgment to the same middle register would make
+ * the advisor uniformly bland — a different failure, not a fix.
+ */
+const EXTREME_DEGREE =
+  /\b(?:brilliantly|exceptionally|extraordinarily|remarkably|stunningly|superbly|magnificently|incredibly|astonishingly|supremely|utterly|profoundly|immensely|breathtakingly|spectacularly|phenomenally|unusually|strikingly)\s+\w+/i;
+const SUPERLATIVE =
+  /\b(?:the (?:best|finest|greatest|most \w+)|most \w+ (?:available|on the market|at any price)|\w{4,}est\b(?! ?\w*(?:western|honest|modest|earnest|interest)))\b/i;
+
+/** Which components in a sentence rest on evidence weaker than the catalog. */
+function weaklyEvidencedIn(
+  sentence: string,
+  basisByComponent: Record<string, string>,
+): string[] {
+  return Object.entries(basisByComponent)
+    .filter(([name, basis]) => basis !== 'catalog'
+      && name.split(/\s+/).some((t) => t.length >= 3
+        && new RegExp(`\\b${t.replace(/[^\w-]/g, '')}\\b`, 'i').test(sentence)))
+    .map(([name]) => name);
+}
+
 export function overclaimViolations(
   prose: string,
-  opts: { componentsInRelations?: string[] } = {},
+  opts: {
+    componentsInRelations?: string[];
+    /** Evidence basis per component. Absent means no tier check is applied. */
+    basisByComponent?: Record<string, string>;
+  } = {},
 ): Array<{ kind: string; sentence: string }> {
   if (!prose) return [];
   const related = new Set((opts.componentsInRelations ?? []).map((c) => c.toLowerCase()));
+  const basis = opts.basisByComponent;
   const out: Array<{ kind: string; sentence: string }> = [];
 
   for (const sentence of prose.split(/(?<=[.!?])\s+/)) {
+    // Tier-bounded intensity. Only applied where we know the basis, and only
+    // against components the sentence actually names — a superlative about a
+    // catalogued product remains available.
+    if (basis && (EXTREME_DEGREE.test(sentence) || SUPERLATIVE.test(sentence))) {
+      const weak = weaklyEvidencedIn(sentence, basis);
+      if (weak.length > 0) {
+        out.push({ kind: 'intensity', sentence: sentence.trim() });
+        continue;
+      }
+    }
     for (const { kind, re } of OVERCLAIM_MARKERS) {
       if (!re.test(sentence)) continue;
       // An importance claim is licensed when the sentence concerns a component

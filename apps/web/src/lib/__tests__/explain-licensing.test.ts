@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   licensedRelations, filterUnlicensedRelationalProse, relationScope, hasBrandAttributionFor,
+  normalizeToBrandScope,
   type AttributeRecord, type RelationSet,
 } from '../relational-explain';
 
@@ -137,11 +138,16 @@ describe('SCOPE — brand evidence may not silently become a product claim', () 
     expect(surviving[0].brandScoped).toEqual(['dCS Rossini Apex']);
   });
 
-  it('drops a product-specific assertion built on brand evidence', () => {
+  it('normalizes a product-specific assertion to the scope actually held', () => {
+    // Changed 2026-08-18 (Phase 1). Dropping this discarded a relation the
+    // evidence supported; the defect was the scope of the wording, not the
+    // claim. Only the subject and its verb agreement change.
     const productClaim = 'The dCS Rossini Apex is bright, which the ARC ref 5 counterbalances.';
-    const { prose, dropped } = filterUnlicensedRelationalProse(productClaim, surviving, NAMES);
-    expect(prose).toBeUndefined();
-    expect(dropped[0].reason).toMatch(/brand-scoped relation asserted of the product/);
+    const { prose, dropped, normalized } = filterUnlicensedRelationalProse(
+      productClaim, surviving, NAMES);
+    expect(dropped).toHaveLength(0);
+    expect(normalized).toHaveLength(1);
+    expect(prose).toBe('dCS designs are typically bright, which the ARC ref 5 counterbalances.');
   });
 
   it('keeps the same claim when it is attributed to the maker', () => {
@@ -401,8 +407,11 @@ describe('SCOPE PRECISION — attribution cannot reach across a sentence', () =>
   });
 
   it('is not satisfied by attribution belonging to the other component', () => {
+    // The ARC's "tendencies" must not license the dCS claim. It does not — the
+    // dCS premise is restated at brand scope on its own account.
     const wrong = "The dCS Rossini Apex is cool, offsetting the ARC ref 5's warm tendencies.";
-    expect(filterUnlicensedRelationalProse(wrong, surviving, NAMES).prose).toBeUndefined();
+    const { prose } = filterUnlicensedRelationalProse(wrong, surviving, NAMES);
+    expect(prose).toBe("dCS designs are typically cool, offsetting the ARC ref 5's warm tendencies.");
   });
 });
 
@@ -476,5 +485,90 @@ describe('CONTROL — product-scoped relations are unaffected', () => {
     expect(surviving[0].licensedScope).toBe('product');
     const plain = 'The ARC ref 5 adds warmth, which the Butler Monads keep in check.';
     expect(filterUnlicensedRelationalProse(plain, surviving, NAMES).prose).toBe(plain);
+  });
+});
+
+/**
+ * PHASE 1 — scope normalization.
+ *
+ * Audio XX holds real brand evidence about dCS; the model phrases it as a
+ * product claim; the validator correctly refuses the escalation — and an
+ * otherwise licensed relation vanishes. The evidence supported a useful
+ * statement and the listener got silence.
+ *
+ * The repair restates the premise at the scope actually held. It changes who
+ * the claim is about and nothing else.
+ */
+describe('PHASE 1 — normalization preserves the claim, not just the silence', () => {
+  const A: AttributeRecord[] = [
+    attr('dCS Rossini Apex', 'warm_bright', 'cool', 'brand', 'brand'),
+    attr('ARC ref 5', 'warm_bright', 'warm', 'model'),
+  ];
+  const SET: RelationSet = { status: 'established', relations: [
+    { components: ['dCS Rossini Apex', 'ARC ref 5'], axis: 'warm_bright',
+      kind: 'counterweight', premises: [0, 1] },
+  ] };
+  const surviving = licensedRelations(SET, A);
+
+  it('changes only the subject and its agreement', () => {
+    expect(normalizeToBrandScope(
+      'The dCS Rossini Apex is transparent and precise.', 'dCS Rossini Apex',
+    )).toBe('dCS designs are typically transparent and precise.');
+  });
+
+  it('handles a third-person verb by agreement, not paraphrase', () => {
+    expect(normalizeToBrandScope(
+      'The dCS Rossini Apex delivers high resolution.', 'dCS Rossini Apex',
+    )).toBe('dCS designs typically deliver high resolution.');
+  });
+
+  it('preserves sonic content, direction and strength exactly', () => {
+    const before = 'The dCS Rossini Apex is markedly cool and analytical in balance.';
+    const after = normalizeToBrandScope(before, 'dCS Rossini Apex')!;
+    expect(after).toContain('markedly cool and analytical in balance');
+  });
+
+  it('refuses to repair an embedded claim, and the caller drops it', () => {
+    // "the cool, transparent output of the dCS" — the claim lives inside a
+    // noun phrase, where swapping the subject would change the meaning.
+    const embedded = 'The dCS Rossini Apex and ARC ref 5 pair well, where the cool, '
+      + 'transparent output of the dCS meets the ARC.';
+    expect(normalizeToBrandScope(embedded, 'dCS Rossini Apex')).toBeNull();
+    expect(filterUnlicensedRelationalProse(embedded, surviving, NAMES).prose).toBeUndefined();
+  });
+
+  it('cannot manufacture a licence for a rejected relation', () => {
+    const rejected = licensedRelations({ status: 'established', relations: [
+      { components: ['dCS Rossini Apex', 'ARC ref 5'], axis: 'warm_bright',
+        kind: 'counterweight', premises: [0, 0] },
+    ] }, A);
+    expect(rejected).toHaveLength(0);
+    const s = 'The dCS Rossini Apex is cool, which the ARC ref 5 counterbalances.';
+    // No surviving relation, so normalization is never reached.
+    const { prose, normalized } = filterUnlicensedRelationalProse(s, rejected, NAMES);
+    expect(prose).toBeUndefined();
+    expect(normalized).toHaveLength(0);
+  });
+
+  it('does not fire on a product-scoped relation that needs no repair', () => {
+    const P: AttributeRecord[] = [
+      attr('ARC ref 5', 'warm_bright', 'warm', 'model'),
+      attr('Butler Monads', 'warm_bright', 'neutral', 'model'),
+    ];
+    const survivingP = licensedRelations({ status: 'established', relations: [
+      { components: ['ARC ref 5', 'Butler Monads'], axis: 'warm_bright',
+        kind: 'counterweight', premises: [0, 1] },
+    ] }, P);
+    const plain = 'The ARC ref 5 is warm, which the Butler Monads keep in check.';
+    const { prose, normalized } = filterUnlicensedRelationalProse(plain, survivingP, NAMES);
+    expect(prose).toBe(plain);
+    expect(normalized).toHaveLength(0);
+  });
+
+  it('drops rather than repairs when the component arrived by pronoun', () => {
+    // There is no subject to swap, so a repair would be a guess.
+    const anaphoric = 'The dCS Rossini Apex sounds cool. This is counterbalanced by the ARC ref 5.';
+    const { prose } = filterUnlicensedRelationalProse(anaphoric, surviving, NAMES);
+    expect(prose).toBe('The dCS Rossini Apex sounds cool.');
   });
 });

@@ -925,8 +925,9 @@ function parseSystemInferenceResponse(
     // component it is about.
     const componentsInRelations = surviving.flatMap((r) => r.components);
     const overclaims: Array<{ kind: string; sentence: string }> = [];
+    const basisByComponent = Object.fromEntries(provenance.map((p) => [p.name, p.basis]));
     const clean = (prose: string | undefined) => {
-      const { prose: out, removed } = stripOverclaims(prose, { componentsInRelations });
+      const { prose: out, removed } = stripOverclaims(prose, { componentsInRelations, basisByComponent });
       overclaims.push(...removed);
       return out;
     };
@@ -946,10 +947,12 @@ function parseSystemInferenceResponse(
     // filter, so Describe cannot smuggle one in and Evaluate cannot rebuild a
     // rejected relation out of the attribute bag.
     const relationalDrops: Array<{ sentence: string; reason: string }> = [];
+    const scopeRepairs: Array<{ from: string; to: string }> = [];
     const licenseRelational = (prose: string | undefined) => {
-      const { prose: out, dropped } = filterUnlicensedRelationalProse(
+      const { prose: out, dropped, normalized } = filterUnlicensedRelationalProse(
         prose, surviving, componentNames);
       relationalDrops.push(...dropped);
+      scopeRepairs.push(...normalized);
       return out;
     };
 
@@ -959,6 +962,10 @@ function parseSystemInferenceResponse(
     ));
     tendenciesOut = clean(licenseRelational(tendenciesOut));
 
+    if (scopeRepairs.length > 0) {
+      console.log('[llm-system-inference] D-12 — restated %d premise(s) at brand scope',
+        scopeRepairs.length);
+    }
     if (relationalDrops.length > 0) {
       console.warn('[llm-system-inference] D-12 — dropped %d unlicensed relational sentence(s): %s',
         relationalDrops.length,

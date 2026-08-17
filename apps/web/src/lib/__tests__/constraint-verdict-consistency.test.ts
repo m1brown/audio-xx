@@ -94,3 +94,53 @@ describe('CONTROL — the constraint is not manufactured from missing data', () 
     expect(out).not.toMatch(/headroom limit|significantly underpowered/i);
   });
 });
+
+/**
+ * PHASE 4 — `unknown` is not `fine`.
+ *
+ * `classifyPowerMatch` returns 'unknown' whenever either watts or sensitivity
+ * is missing, and 'unknown' behaved downstream exactly like 'fine'. So
+ * "no mismatch found" covered both "we checked and it is fine" and "we could
+ * not check", and only the first is evidence of compatibility.
+ *
+ * Scoped to MATERIALITY. Amplifier against loudspeaker is the pairing where
+ * missing data changes the conclusion; an uncatalogued streamer does not make
+ * a system unassessable, and treating every gap as blocking would be exactly
+ * the blanket hedging this must avoid.
+ */
+const UNCHECKED = /could not (?:check|verify) whether the amplifier and loudspeakers|could not verify that the amplifier and loudspeakers/i;
+
+describe('PHASE 4 — an unassessable amp/speaker pairing is not silent compatibility', () => {
+  it('CONTROL 1 — licensed mismatch still names the constraint, with no no-change', () => {
+    const out = context('Assess my system: Amp: Zorblax ZX1 5 watt SET '
+      + 'Speakers: Magnepan LRS+ Dac: Denafrips Pontus II');
+    expect(out).toMatch(/limited headroom|underpowered/i);
+    expect(out).not.toMatch(NO_CHANGE);
+  });
+
+  it('CONTROL 2 — adequate power keeps a confident coherent verdict', () => {
+    // Leben CS600X into Klipsch Cornwall IV: both figures held, genuinely fine.
+    const out = context('Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV '
+      + 'Dac: Denafrips Pontus II');
+    expect(out).toMatch(NO_CHANGE);
+    expect(out).not.toMatch(UNCHECKED);
+  });
+
+  it('CONTROL 3 — an uncatalogued SOURCE does not block no-change', () => {
+    // Power compatibility is immaterial to a streamer. The amp/speaker pairing
+    // is held, so the verdict stands.
+    const out = context('Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV '
+      + 'Streamer: Wattson Audio Emerson Digital');
+    expect(out).not.toMatch(UNCHECKED);
+  });
+
+  it('qualifies no-change when the pairing itself could not be checked', () => {
+    // Neither side supplies a figure, so compatibility is unknown rather than
+    // established — and the assessment must say which.
+    const out = context('Assess my system: Amp: Leben CS600 Speakers: Harbeth Compact 7ES-3 '
+      + 'Dac: Audio Note DAC 2.1x');
+    if (NO_CHANGE.test(out)) {
+      expect(out).toMatch(/Nothing in what I could assess|could not/i);
+    }
+  });
+});

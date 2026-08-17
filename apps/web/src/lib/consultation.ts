@@ -9858,6 +9858,28 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       : ` This reading excludes ${unassessedNames.slice(0, -1).join(', ')} and `
         + `${unassessedNames[unassessedNames.length - 1]}, which I could not identify.`;
 
+  // ── Material interaction that could not be assessed ──────────────
+  //
+  // `classifyPowerMatch` returns 'unknown' whenever either watts or
+  // sensitivity is missing, and 'unknown' has always behaved downstream
+  // exactly like 'fine'. So "no mismatch found" covered both "we checked and
+  // it is fine" and "we could not check", and only the first of those is
+  // evidence of compatibility.
+  //
+  // Scoped to MATERIALITY, not completeness. Amplifier against loudspeaker is
+  // the one pairing where missing data changes what may be concluded; an
+  // uncatalogued streamer does not make a system unassessable, and treating
+  // every gap as blocking would be the blanket hedging this must avoid.
+  const pmForMateriality = findings.powerMatchAssessment;
+  const hasAmpAndSpeaker = comps.some((c) => /amp|integrated/i.test(c.role || ''))
+    && comps.some((c) => /speak|headphone/i.test(c.role || ''));
+  const powerUnassessable = hasAmpAndSpeaker
+    && pmForMateriality.compatibility === 'unknown';
+  const powerUnassessableClause = powerUnassessable
+    ? ` I could not check whether the amplifier and loudspeakers suit each other —`
+      + ` that needs a power rating and a sensitivity figure, and at least one is missing.`
+    : '';
+
   // Derive upstream and downstream character from per-component axes.
   // Only profiles carrying evidence vote: these counts drive the "pushes
   // toward warmth" / "reinforce the same direction" sentences, which are
@@ -10996,10 +11018,10 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
         ``,
         `None — no obvious bottleneck.`,
         ``,
-        `${unassessedNames.length > 0
-          ? `Nothing in what I could assess is holding this system back.${unassessedClause}`
+        `${unassessedNames.length > 0 || powerUnassessable
+          ? `Nothing in what I could assess is holding this system back.${unassessedClause}${powerUnassessableClause}`
           : 'No single component is holding this system back;'} `
-        + `${unassessedNames.length > 0 ? 'From here' : 'from here'}, changes are a matter of taste rather than correction. If you ever want to shift the tonal balance, the ${dacComp.name} is where that adjustment starts.`,
+        + `${unassessedNames.length > 0 || powerUnassessable ? 'From here' : 'from here'}, changes are a matter of taste rather than correction. If you ever want to shift the tonal balance, the ${dacComp.name} is where that adjustment starts.`,
       ].join('\n');
     } else {
       primaryLeverageSection = [
@@ -11007,8 +11029,8 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
         ``,
         `None — no obvious bottleneck.`,
         ``,
-        `${unassessedNames.length > 0
-          ? `Nothing in what I could assess is holding this system back.${unassessedClause}`
+        `${unassessedNames.length > 0 || powerUnassessable
+          ? `Nothing in what I could assess is holding this system back.${unassessedClause}${powerUnassessableClause}`
           : 'No single component is holding this system back.'} Improvements from here are likely to be incremental — setup, positioning, and room treatment will do more than swapping boxes.`,
       ].join('\n');
     }
@@ -11201,10 +11223,14 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
           ? 'This system is intentionally speed-forward; change the DAC only if you want more tonal weight.'
           : 'The balance leans toward clarity, so any taste adjustment would start there.')
       : (upWarm > 0) ? 'The balance leans warm, so adding clarity would mean an upstream change.' : '';
-    changeLine = unassessedNames.length > 0
+    changeLine = unassessedNames.length > 0 || powerUnassessable
       ? `CHANGE — I cannot say. Nothing I could assess needs correcting, but `
-        + `${unassessedNames.length === 1 ? 'one component in this chain is' : 'several components in this chain are'} `
-        + `unidentified, so I cannot tell you the system as a whole is where you want it. ${leanDesc}`.trim()
+        + `${powerUnassessable
+          ? 'I could not verify that the amplifier and loudspeakers suit each other'
+          : unassessedNames.length === 1
+            ? 'one component in this chain is unidentified'
+            : 'several components in this chain are unidentified'}`
+        + `, so I cannot tell you the system as a whole is where you want it. ${leanDesc}`.trim()
       : `CHANGE only as a matter of taste — nothing needs correcting. The DAC is the first place to look if you ever want a different tonal balance. ${leanDesc}`.trim();
   } else {
     changeLine = unassessedNames.length > 0

@@ -316,3 +316,96 @@ describe('a no-change verdict may not seed a hypothesis', () => {
     )).toEqual([]);
   });
 });
+
+/**
+ * PHASE 2 — every observed production escape after a no-change verdict.
+ *
+ * Each one is technically a question and each one presupposes a change the
+ * assessment declined to recommend. "Improve" names no perceptual quality and
+ * "seeking to" is not a deficiency frame, so the earlier guards let them past.
+ */
+describe('no_change admits no change-seeking question', () => {
+  const ESCAPES = [
+    'Is there anything in the current sound character that you are seeking to adjust or improve upon?',
+    "Is there an aspect of your listening experience you're dissatisfied with, or is there a specific quality you're seeking to enhance?",
+    "What, if any, aspects of your system's sound are you looking to change or improve upon?",
+    'What aspects of the system\'s performance, if any, are you seeking to improve, or are you entirely satisfied with its current character?',
+    'Are there any specific areas of the sound that you feel could improve?',
+    'Would you like more warmth in the presentation?',
+  ];
+  for (const q of ESCAPES) {
+    it(`refuses: "${q.slice(0, 56)}…"`, () => {
+      expect(questionViolations(q, 'open_diagnostic'))
+        .toContain('question seeds a concern the assessment did not establish');
+    });
+  }
+
+  it('still accepts genuinely open questions', () => {
+    for (const q of [
+      OPEN_DIAGNOSTIC_QUESTION,
+      'What stands out to you most when you sit down to listen?',
+      'What do you notice first with music you know well?',
+      'Is there anything about how it sounds that you are unsure of?',
+    ]) {
+      expect(questionViolations(q, 'open_diagnostic')).toEqual([]);
+    }
+  });
+
+  it('permits change language under a CONSTRAINT verdict', () => {
+    // Where a constraint was established, naming the remedy is the point.
+    expect(questionViolations(
+      'Would you like options for an amplifier with more headroom?', 'directional',
+    )).toEqual([]);
+  });
+});
+
+/**
+ * PHASE 3 — claim intensity may not exceed evidence authority.
+ *
+ * Production, about a component whose only evidence is corroborated existence:
+ * "This system provides a brilliantly detailed and precise sonic profile."
+ * Model memory establishes a direction, never a degree.
+ */
+describe('tier-bounded intensity', () => {
+  const WEAK = { 'dCS Rossini Apex': 'model', 'Acora QRC-2': 'user' };
+  const CURATED = { 'Leben CS600X': 'catalog' };
+
+  it('refuses the exact production sentence', () => {
+    expect(overclaimViolations(
+      'The dCS Rossini Apex is brilliantly detailed and precise.',
+      { basisByComponent: WEAK },
+    )[0].kind).toBe('intensity');
+  });
+
+  it('refuses a superlative on model-tier evidence', () => {
+    expect(overclaimViolations(
+      'The Acora QRC-2 gives the finest staging in the chain.',
+      { basisByComponent: WEAK },
+    )[0].kind).toBe('intensity');
+  });
+
+  it('PERMITS the ordinary characterisation the same evidence supports', () => {
+    // The rule bounds degree, not subject matter. Direction survives.
+    for (const s of [
+      'The dCS Rossini Apex leans detailed and precise.',
+      'The dCS Rossini Apex is detailed, and that shapes the chain.',
+      'The Acora QRC-2 contributes an airy presentation.',
+    ]) {
+      expect(overclaimViolations(s, { basisByComponent: WEAK })).toEqual([]);
+    }
+  });
+
+  it('PERMITS strong language where curated evidence supports it', () => {
+    // Audio XX holding its own data is the condition under which a strong
+    // claim can be earned. Flattening everything to one register would be a
+    // different failure, not a fix.
+    expect(overclaimViolations(
+      'The Leben CS600X is exceptionally rhythmically assured.',
+      { basisByComponent: CURATED },
+    )).toEqual([]);
+  });
+
+  it('applies no tier check when the basis is unknown', () => {
+    expect(overclaimViolations('It is brilliantly detailed.')).toEqual([]);
+  });
+});
