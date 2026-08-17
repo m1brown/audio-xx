@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  licensedRelations, filterUnlicensedRelationalProse, relationScope,
+  licensedRelations, filterUnlicensedRelationalProse, relationScope, hasBrandAttributionFor,
   type AttributeRecord, type RelationSet,
 } from '../relational-explain';
 
@@ -343,5 +343,138 @@ describe('POSITIVE CONTROLS — the rule must not silence Describe', () => {
   it('publishes an anaphoric sentence that stays on one component', () => {
     const a = 'The Acora QRC-2 uses a stone enclosure. This points toward low cabinet contribution.';
     expect(filterUnlicensedRelationalProse(a, surviving, NAMES).prose).toBe(a);
+  });
+});
+
+/**
+ * Brand attribution is COMPONENT-LOCAL.
+ *
+ * The sentence-level check let attribution for one component license an
+ * unattributed product claim about another. Live escape, 2026-08-18:
+ *
+ *   "...the cool, transparent output of the dCS pairs with the ARC's warmer
+ *    tonal tendencies, providing a balanced sound signature."
+ *
+ * The dCS premise is brand-scoped and the sentence asserts a product fact
+ * about it. It published because "tendencies" appeared later, attached to the
+ * ARC.
+ */
+describe('SCOPE PRECISION — attribution cannot reach across a sentence', () => {
+  const A: AttributeRecord[] = [
+    attr('dCS Rossini Apex', 'warm_bright', 'cool', 'brand', 'brand'),
+    attr('ARC ref 5', 'warm_bright', 'warm', 'model'),
+  ];
+  const SET: RelationSet = { status: 'established', relations: [
+    { components: ['dCS Rossini Apex', 'ARC ref 5'], axis: 'warm_bright',
+      kind: 'counterweight', premises: [0, 1] },
+  ] };
+  const surviving = licensedRelations(SET, A);
+
+  it('licenses the relation as brand-scoped on dCS alone', () => {
+    expect(surviving[0].licensedScope).toBe('brand');
+    expect(surviving[0].brandScoped).toEqual(['dCS Rossini Apex']);
+  });
+
+  it('drops the exact live escape', () => {
+    const escaped = 'The dCS Rossini Apex and ARC ref 5 form a complementary pairing, '
+      + "where the cool, transparent output of the dCS pairs with the ARC's warmer "
+      + 'tonal tendencies, providing a balanced sound signature.';
+    const { prose, dropped } = filterUnlicensedRelationalProse(escaped, surviving, NAMES);
+    expect(prose).toBeUndefined();
+    expect(dropped[0].reason).toContain('dCS Rossini Apex');
+  });
+
+  it('publishes the same claim when attribution is attached to dCS', () => {
+    const fixed = 'dCS designs tend toward a cool, transparent presentation, which the '
+      + "ARC ref 5's warmer character counterbalances.";
+    expect(filterUnlicensedRelationalProse(fixed, surviving, NAMES).prose).toBe(fixed);
+  });
+
+  it('accepts the other attribution forms', () => {
+    for (const framing of [
+      'dCS components are described as cool, which the ARC ref 5 counterbalances.',
+      'Designs from dCS lean toward coolness, which the ARC ref 5 counterbalances.',
+      'dCS typically leans cool, which the ARC ref 5 counterbalances.',
+    ]) {
+      expect(filterUnlicensedRelationalProse(framing, surviving, NAMES).prose).toBe(framing);
+    }
+  });
+
+  it('is not satisfied by attribution belonging to the other component', () => {
+    const wrong = "The dCS Rossini Apex is cool, offsetting the ARC ref 5's warm tendencies.";
+    expect(filterUnlicensedRelationalProse(wrong, surviving, NAMES).prose).toBeUndefined();
+  });
+});
+
+describe('two brand-scoped components need two attributions', () => {
+  const A: AttributeRecord[] = [
+    attr('dCS Rossini Apex', 'warm_bright', 'cool', 'brand', 'brand'),
+    attr('Acora QRC-2', 'warm_bright', 'neutral', 'brand', 'brand'),
+  ];
+  const SET: RelationSet = { status: 'established', relations: [
+    { components: ['dCS Rossini Apex', 'Acora QRC-2'], axis: 'warm_bright',
+      kind: 'reinforcement', premises: [0, 1] },
+  ] };
+  const surviving = licensedRelations(SET, A);
+
+  it('marks both components brand-scoped', () => {
+    expect(surviving[0].brandScoped).toEqual(['dCS Rossini Apex', 'Acora QRC-2']);
+  });
+
+  it('drops when only one is attributed', () => {
+    const half = 'dCS designs lean cool, reinforced by the Acora QRC-2 which is also neutral.';
+    const { prose, dropped } = filterUnlicensedRelationalProse(half, surviving, NAMES);
+    expect(prose).toBeUndefined();
+    expect(dropped[0].reason).toContain('Acora QRC-2');
+    expect(dropped[0].reason).not.toContain('dCS');
+  });
+
+  it('publishes when both are attributed', () => {
+    const both = 'dCS designs lean cool, reinforced by Acora components which typically '
+      + 'sit neutral.';
+    expect(filterUnlicensedRelationalProse(both, surviving, NAMES).prose).toBe(both);
+  });
+});
+
+describe('anaphora carries attribution from where the claim was made', () => {
+  const A: AttributeRecord[] = [
+    attr('dCS Rossini Apex', 'warm_bright', 'cool', 'brand', 'brand'),
+    attr('ARC ref 5', 'warm_bright', 'warm', 'model'),
+  ];
+  const SET: RelationSet = { status: 'established', relations: [
+    { components: ['dCS Rossini Apex', 'ARC ref 5'], axis: 'warm_bright',
+      kind: 'counterweight', premises: [0, 1] },
+  ] };
+  const surviving = licensedRelations(SET, A);
+
+  it('publishes when the antecedent sentence attributed the brand claim', () => {
+    const ok = 'dCS designs tend toward a cool balance. This is counterbalanced by the '
+      + 'ARC ref 5.';
+    expect(filterUnlicensedRelationalProse(ok, surviving, NAMES).prose).toBe(ok);
+  });
+
+  it('drops when the antecedent asserted it of the product', () => {
+    const bad = 'The dCS Rossini Apex is cool and transparent. This is counterbalanced '
+      + 'by the ARC ref 5.';
+    const { prose } = filterUnlicensedRelationalProse(bad, surviving, NAMES);
+    expect(prose).toBe('The dCS Rossini Apex is cool and transparent.');
+  });
+});
+
+describe('CONTROL — product-scoped relations are unaffected', () => {
+  const A: AttributeRecord[] = [
+    attr('ARC ref 5', 'warm_bright', 'warm', 'model'),
+    attr('Butler Monads', 'warm_bright', 'neutral', 'model'),
+  ];
+  const SET: RelationSet = { status: 'established', relations: [
+    { components: ['ARC ref 5', 'Butler Monads'], axis: 'warm_bright',
+      kind: 'counterweight', premises: [0, 1] },
+  ] };
+  const surviving = licensedRelations(SET, A);
+
+  it('needs no attribution at all', () => {
+    expect(surviving[0].licensedScope).toBe('product');
+    const plain = 'The ARC ref 5 adds warmth, which the Butler Monads keep in check.';
+    expect(filterUnlicensedRelationalProse(plain, surviving, NAMES).prose).toBe(plain);
   });
 });

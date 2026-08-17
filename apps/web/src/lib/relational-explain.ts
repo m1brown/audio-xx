@@ -293,6 +293,11 @@ export function filterUnlicensedRelationalProse(
     // FIRST name is the right guess, and guessing wrong only ever costs a
     // sentence — the failure direction we want.
     let antecedent: string | undefined;
+    // The text the antecedent came from. A component that enters by pronoun
+    // is standing in for a claim made elsewhere, so its attribution lives
+    // there — which is what keeps a properly attributed brand claim usable
+    // across a sentence boundary.
+    let antecedentSentence = '';
 
     const kept = para.split(/(?<=[.!?])\s+/).filter((sentence) => {
       const named = namesIn(sentence, componentNames);
@@ -300,7 +305,10 @@ export function filterUnlicensedRelationalProse(
         ? [antecedent] : [];
       const touched = [...new Set([...named, ...referred])];
 
-      if (named.length > 0) antecedent = named[0];
+      // Capture the antecedent BEFORE advancing it: this sentence's own names
+      // must not become the source we check its own anaphora against.
+      const priorSentence = antecedentSentence;
+      if (named.length > 0) { antecedent = named[0]; antecedentSentence = sentence; }
 
       // One component, or none: Describe. Always publishable — the repair
       // restricts Explain, and silencing description would be the
@@ -320,12 +328,19 @@ export function filterUnlicensedRelationalProse(
                 + (referred.length ? ` (via anaphora to ${antecedent})` : '') });
             return false;
           }
-          // Scope survives anaphora: a pronoun standing in for a brand-scoped
-          // claim carries that claim's scope with it.
-          if (rel.licensedScope === 'brand' && !BRAND_ATTRIBUTION.test(sentence)) {
-            dropped.push({ sentence: sentence.trim(),
-              reason: `brand-scoped relation asserted of the product (${rel.brandScoped.join(', ')})` });
-            return false;
+          // Scope survives anaphora, and EVERY brand-scoped component must be
+          // attributed on its own account. Two brand-scoped components need two
+          // attributions; one does not cover the other.
+          if (rel.licensedScope === 'brand') {
+            const unattributed = rel.brandScoped.filter((c) => {
+              const source = named.includes(c) ? sentence : priorSentence;
+              return !hasBrandAttributionFor(source, c);
+            });
+            if (unattributed.length > 0) {
+              dropped.push({ sentence: sentence.trim(),
+                reason: `brand-scoped relation asserted of the product (${unattributed.join(', ')})` });
+              return false;
+            }
           }
         }
       }
@@ -351,15 +366,43 @@ const ANAPHORA =
   /(?:^|[\s,;(])(?:this|that|these|those|it|its|which|the former|the latter|the same|doing so)\b/i;
 
 /**
- * Marks that a claim is about the MAKER rather than this unit.
+ * Is THIS component's contribution framed as brand-derived, in this text?
  *
- * A requirement rather than a prohibition: the sentence must EARN the
- * brand-scoped relation by attributing it. Requirement checks fail closed,
- * which is the right direction when the alternative is asserting a product
- * fact we do not hold.
+ * The check was sentence-level and a live run walked straight through it:
+ *
+ *   "...the cool, transparent output of the dCS pairs with the ARC's warmer
+ *    tonal tendencies, providing a balanced sound signature."
+ *
+ * The dCS premise is brand-scoped, and the sentence asserts a product fact
+ * about it — "the cool, transparent output of the dCS". It passed because the
+ * word "tendencies" appeared later, attached to the ARC. Attribution for one
+ * component was licensing an unattributed claim about another.
+ *
+ * The marker must now be anchored to the component itself: its brand token
+ * carrying a generalising noun ("dCS designs", "Harbeth components"), or a
+ * tendency verb governed by that brand within a few words. Attribution
+ * attached to a different component cannot reach across the sentence.
  */
-const BRAND_ATTRIBUTION =
-  /\b(?:designs?|components?|house (?:sound|style)|family|typically|tend(?:s|ency|encies)?|generally|as a maker|line of|range of|are (?:described|associated)|is (?:described|associated))\b/i;
+export function hasBrandAttributionFor(text: string, componentName: string): boolean {
+  if (!text) return false;
+  const brand = componentName.split(/\s+/)[0]?.replace(/[^\w-]/g, '');
+  if (!brand || brand.length < 2) return false;
+  const B = brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const GENERALISING = '(?:designs?|components?|products?|range|line|family|house\\s+(?:sound|style)|catalogue|catalog)';
+  const TENDENCY = '(?:tend(?:s|ed|ency|encies)?|typically|generally|usually|often|'
+    + 'are\\s+(?:described|associated|known)|is\\s+(?:described|associated|known)|'
+    + 'lean(?:s|ing)?\\s+toward)';
+
+  return [
+    // "dCS designs", "dCS's components"
+    new RegExp(`\\b${B}(?:'s)?\\s+(?:\\w+\\s+){0,2}${GENERALISING}\\b`, 'i'),
+    // "designs from dCS", "components by dCS"
+    new RegExp(`\\b${GENERALISING}\\s+(?:from|by)\\s+${B}\\b`, 'i'),
+    // "dCS tends toward", "dCS is described as"
+    new RegExp(`\\b${B}(?:'s)?\\s+(?:\\w+\\s+){0,3}${TENDENCY}`, 'i'),
+  ].some((re) => re.test(text));
+}
 
 // ── Question typing ─────────────────────────────────────────────────
 

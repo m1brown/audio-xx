@@ -120,7 +120,18 @@ async function callOpenAI(
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 1024,
+      // The schema now carries attributes[], relations[], two prose
+      // paragraphs, a trade-off and a question. Observed responses run to
+      // ~790 tokens, which left roughly 23% headroom against the old 1024
+      // ceiling — close enough that a slightly longer generation truncates
+      // mid-object and the whole assessment is lost to a parse error. The
+      // ceiling should reflect what the contract actually asks for.
+      max_tokens: 2048,
+      // Binding, not requested. The contract was previously stated only in
+      // the prompt, which makes valid JSON a hope rather than a guarantee.
+      // (Requires the word "json" to appear in the messages, which the
+      // schema instructions satisfy.)
+      response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -135,7 +146,20 @@ async function callOpenAI(
   }
 
   const data = await response.json();
-  const content = data.choices?.[0]?.message?.content ?? '';
+  const choice = data.choices?.[0];
+  const content = choice?.message?.content ?? '';
+  // `finish_reason` distinguishes the two candidate causes of the observed
+  // parse failures — 'length' is truncation, 'stop' with unparseable content
+  // is the model declining the format. Guessing between them is what this
+  // field exists to stop.
+  const finishReason = choice?.finish_reason ?? null;
+  if (finishReason && finishReason !== 'stop') {
+    console.warn('[memo-overlay] finish_reason=%s len=%d', finishReason, content.length);
+  }
 
-  return NextResponse.json({ content });
+  return NextResponse.json({
+    content,
+    finishReason,
+    completionTokens: data.usage?.completion_tokens ?? null,
+  });
 }

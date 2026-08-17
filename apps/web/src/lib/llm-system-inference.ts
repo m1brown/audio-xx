@@ -731,6 +731,15 @@ export async function inferProvisionalSystemAssessment(
 
     const data = await response.json();
     const content = data.content;
+    // Truncation is not a parse problem and must not be treated as one. A
+    // partial object is a partial ASSESSMENT — half a licensing chain, some
+    // relations missing, a verdict that never arrived. Recovering what
+    // survived would publish reasoning whose premises were cut off.
+    if (data.finishReason && data.finishReason !== 'stop') {
+      console.warn('[llm-system-inference] generation did not complete (%s, %s tokens) — declining',
+        data.finishReason, data.completionTokens ?? '?');
+      return null;
+    }
     if (!content || typeof content !== 'string') return null;
 
     const parsedResponse = parseSystemInferenceResponse(
