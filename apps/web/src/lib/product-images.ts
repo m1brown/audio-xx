@@ -64,6 +64,21 @@ export type ImageSourceTier =
 export interface ImageSource {
   /** Provenance tier — used for trust/auditing, not surfaced to users. */
   tier: ImageSourceTier;
+  /**
+   * WHY Audio XX may use this image. The tier says where an asset came from;
+   * it has never said whether we are permitted to display it. Corroborating
+   * that a product exists proves a page exists — it grants nothing about the
+   * photograph on that page, and an existing manufacturer-hosted entry is a
+   * precedent for one maker, not permission for the next.
+   *
+   * Absent = rights were never established. That is an evidence state to be
+   * resolved, not a default to render around.
+   */
+  rightsBasis?: 'press_kit' | 'terms_permitted' | 'granted';
+  /** The terms or permission page that establishes rightsBasis. */
+  termsUrl?: string;
+  /** ISO date the rights were last confirmed — terms change. */
+  rightsCheckedAt?: string;
   /** Bare host where the image lives (e.g. 'bloomaudio.com'). */
   site: string;
   /** Human-readable credit line (e.g. 'Bloom Audio', 'Falcon Acoustics'). */

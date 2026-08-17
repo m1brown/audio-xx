@@ -2938,6 +2938,7 @@ export default function Home() {
           // user-supplied — while waiting costs seconds on first sight only.
           const CORROBORATION_BUDGET_MS = 25000;
           let corroborated: string[] = [];
+          const canonicalByName = new Map<string, { canonicalName?: string; brand?: string }>();
           if (unresolvedRoster.length > 0) {
             const deadline = new Promise<'deadline'>((r) =>
               setTimeout(() => r('deadline'), CORROBORATION_BUDGET_MS));
@@ -2950,7 +2951,14 @@ export default function Home() {
                 });
                 if (!r.ok) return null;
                 const rec = await r.json();
-                return rec?.status === 'corroborated' ? u.name : null;
+                // Keep the whole record. The canonical name was being computed
+                // and then discarded here, so HiFiShark and eBay searched the
+                // listener's shorthand ("ARC ref 5") when corroboration had
+                // already resolved "Audio Research Reference 5".
+                return rec?.status === 'corroborated'
+                  ? { name: u.name, canonicalName: rec.canonicalName as string | undefined,
+                      brand: rec.brand as string | undefined }
+                  : null;
               } catch { return null; }
             }));
             const settled = await Promise.race([lookups, deadline]);
@@ -2960,9 +2968,12 @@ export default function Home() {
               console.log('[corroboration] %d of %d corroborated',
                 (settled as Array<string | null>).filter(Boolean).length, unresolvedRoster.length);
             }
-            corroborated = settled === 'deadline'
+            const records = settled === 'deadline'
               ? []
-              : (settled as Array<string | null>).filter((n): n is string => !!n);
+              : (settled as Array<{ name: string; canonicalName?: string; brand?: string } | null>)
+                .filter((r): r is { name: string; canonicalName?: string; brand?: string } => !!r);
+            corroborated = records.map((r) => r.name);
+            for (const r of records) canonicalByName.set(r.name.toLowerCase().trim(), r);
           }
 
           const provisional = await inferProvisionalSystemAssessment(
@@ -3017,6 +3028,8 @@ export default function Home() {
                 displayName: c.displayName,
                 role: c.role,
                 roles: c.roles,
+                canonicalName: canonicalByName.get(c.displayName.toLowerCase().trim())?.canonicalName,
+                canonicalBrand: canonicalByName.get(c.displayName.toLowerCase().trim())?.brand,
                 product: c.product
                   ? { brand: c.product.brand, name: c.product.name, imageUrl: c.product.imageUrl }
                   : undefined,

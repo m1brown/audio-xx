@@ -18,6 +18,11 @@
  */
 
 import type { ConsultationResponse } from './consultation';
+import {
+  licensedRelations, permittedQuestionType, questionViolations,
+  type ActionVerdict, type AttributeRecord, type RelationKind, type RelationSet,
+  type EvidenceTier,
+} from './relational-explain';
 
 // ── Configuration ────────────────────────────────────
 
@@ -83,15 +88,60 @@ Format your response as JSON with exactly these fields:
 {
   "verdict": "ONE sentence. Coherent / deliberately voiced / constrained / mismatched / indeterminate — and why.",
   "systemThesis": "ONE paragraph. What this system as a whole is FOR — the single idea that explains the choices. Not a component list.",
-  "interactionExplanation": "ONE or TWO paragraphs. The division of labour: which components establish the system's behaviour, which counterweight which, and why the chain behaves as you said. Name a component only where it is evidence for this argument.",
-  "tradeoff": "ONE paragraph. What the listener gains and what they give up. A real trade, not a restatement of the character.",
-  "action": "ONE short paragraph. Does anything need changing? If the evidence shows no material problem, say plainly that nothing here obviously needs changing. Distinguish an architectural choice from a deficiency.",
-  "nextQuestion": "ONE question, only if its answer could change the judgment.",
+
+  "attributes": [
+    { "component": "exact component name", "axis": "warm_bright|smooth_detailed|elastic_controlled|power_load", "value": "the position on that axis" }
+  ],
+  "relationStatus": "established" | "none_establishable",
+  "relations": [
+    { "components": ["A", "B"], "axis": "the SHARED axis", "kind": "reinforcement|counterweight|constraint", "premises": [0, 1] }
+  ],
+
+  "interactionExplanation": "ONE or TWO paragraphs expressing the relations above in natural prose. Do not restate them mechanically and do not spell out the counterfactual — just say what the arrangement does.",
+  "tradeoff": "ONE paragraph. What the listener gains and gives up BECAUSE OF the relations above. Omit entirely if relationStatus is none_establishable.",
+  "actionVerdict": "no_change" | "constraint" | "indeterminate",
+  "action": "ONE short paragraph. Does anything need changing? Distinguish an architectural choice from a deficiency.",
+  "nextQuestion": "ONE question. See the QUESTION RULE below — its permitted kind is fixed by actionVerdict.",
+
   "componentKnowledge": [
     { "name": "exact component name", "specific": true }
   ],
   "characterized": ["exact names of components you actually characterised"]
 }
+
+RELATIONS ARE THE POINT OF THE EXPLANATION.
+
+An interaction is a claim that two components stand in a relationship on ONE
+SHARED axis. It is not two descriptions with a connective between them.
+"A is precise, B is warm, and B complements A" is three assertions, not a
+relation — the word "complements" is doing work the evidence has not done.
+
+Each relation must:
+  - name TWO different components;
+  - cite ONE axis both of them sit on (warm vs powerful is not a relation);
+  - reference in "premises" the two "attributes" indices it is built from, one
+    per component;
+  - be of a kind that is actually true of them:
+      reinforcement — both push the system the same way
+      counterweight — they pull in opposite directions on that axis
+      constraint    — one physically bounds what the other can do
+
+If you cannot establish any such relationship from what you actually know, set
+"relationStatus": "none_establishable" and return an empty relations array.
+That is a legitimate, unpenalised answer. Do NOT invent a counterweight because
+a system "ought" to have one — a chain whose components all push the same
+direction is a real and common finding, and saying so is more useful than
+manufacturing a tension that is not there.
+
+QUESTION RULE. The permitted kind of question is fixed by actionVerdict:
+  no_change     -> DIAGNOSTIC. Ask what they are actually hearing. You may NOT
+                   suggest a change, upgrade, cable, tube rolling, or ask
+                   whether they would "like more" of anything — the evaluation
+                   just found no deficiency, and proposing a remedy silently
+                   retracts it.
+  constraint    -> DIRECTIONAL, and only about the constraint you established.
+  indeterminate -> ask for the specific evidence that would settle it.
+Address the listener directly, in the second person. Never "the listener".
 
 There is deliberately NO field for describing each component in turn. The
 component identities, roles and evidence tiers are already shown to the reader
@@ -509,7 +559,9 @@ Produce an Audio XX provisional system assessment. Assess the components you hav
     const content = data.content;
     if (!content || typeof content !== 'string') return null;
 
-    const parsedResponse = parseSystemInferenceResponse(content, componentNames);
+    const parsedResponse = parseSystemInferenceResponse(
+      content, componentNames, knownDescriptions, corroborated ?? [],
+    );
     if (!parsedResponse) return null;
 
     // D-7 gate. The model was told the rule; this is where the rule holds.
@@ -604,12 +656,23 @@ interface SystemInferenceJSON {
   interactionExplanation?: string;
   tradeoff?: string;
   action?: string;
+  actionVerdict?: ActionVerdict;
   nextQuestion?: string;
+  attributes?: Array<{ component?: string; axis?: string; value?: string }>;
+  relationStatus?: 'established' | 'none_establishable';
+  relations?: Array<{
+    components?: [string, string];
+    axis?: string;
+    kind?: RelationKind;
+    premises?: [number, number];
+  }>;
 }
 
 function parseSystemInferenceResponse(
   raw: string,
   componentNames: string[],
+  knownDescriptions: { name: string; source: 'product' | 'brand' }[] = [],
+  corroborated: string[] = [],
 ): ConsultationResponse | null {
   try {
     let cleaned = raw.trim();
@@ -630,6 +693,81 @@ function parseSystemInferenceResponse(
     // the component cards, never from this joined string.
     const subject = componentNames.join(', ');
 
+    let tendenciesOut = [parsed.tradeoff, parsed.action].filter(Boolean).join('\n\n') || undefined;
+    let questionOut = parsed.nextQuestion
+      || 'What are you actually hearing? Anything feeling lean, thick, forward, or dynamically held back?';
+
+    // ── D-12 enforcement ──────────────────────────────────────────
+    // The model proposes attributes and relations; Audio XX assigns the TIERS
+    // and decides which relations survive. A model-declared tier is a claim,
+    // and claims get checked — the corroboration work established that its
+    // account of its own knowledge cannot be the gate.
+    const provenanceTier = new Map<string, EvidenceTier>();
+    for (const k of knownDescriptions) {
+      provenanceTier.set(k.name.toLowerCase().trim(), k.source === 'product' ? 'catalog' : 'brand');
+    }
+    const corroboratedSetForTier = new Set((corroborated ?? []).map((c) => c.toLowerCase().trim()));
+
+    const attributes: AttributeRecord[] = (parsed.attributes ?? [])
+      .filter((a) => a?.component && a?.axis && a?.value)
+      .map((a) => {
+        const key = (a.component as string).toLowerCase().trim();
+        const curated = provenanceTier.get(key);
+        // Tier comes from what WE hold, never from the model. A component we
+        // could not corroborate contributes user-tier attributes, which bound
+        // every relation they enter.
+        const tier: EvidenceTier = curated
+          ?? (corroboratedSetForTier.has(key) ? 'model' : 'user');
+        return {
+          component: a.component as string,
+          axis: a.axis as string,
+          value: a.value as string,
+          tier,
+          scope: curated === 'brand' ? 'brand' as const : 'product' as const,
+        };
+      });
+
+    const declaredSet: RelationSet = parsed.relationStatus === 'none_establishable'
+      ? { status: 'none_establishable', relations: [] }
+      : {
+        status: 'established',
+        relations: (parsed.relations ?? [])
+          .filter((r) => r?.components?.length === 2 && r.axis && r.kind && r.premises?.length === 2)
+          .map((r) => ({
+            components: r.components as [string, string],
+            axis: r.axis as string,
+            kind: r.kind as RelationKind,
+            premises: r.premises as [number, number],
+          })),
+      };
+
+    const surviving = licensedRelations(declaredSet, attributes);
+    const systemRelations = surviving.map((r) => ({
+      components: r.components, axis: r.axis, kind: r.kind, tier: r.licensedTier,
+    }));
+
+    // Evaluate consumes Explain. With no licensed relation there is nothing to
+    // trade off, and a trade-off generated anyway would be adjective
+    // arithmetic — "clarity at the cost of warmth" is true of hundreds of
+    // unrelated systems precisely because it was never derived from this one.
+    if (surviving.length === 0 && tendenciesOut) {
+      const actionOnly = parsed.action?.trim();
+      tendenciesOut = actionOnly || undefined;
+      console.warn('[llm-system-inference] no licensed relation — trade-off withheld');
+    }
+
+    // The action verdict fixes the permitted question kind. A directional
+    // question under a no-change verdict retracts the verdict it follows.
+    const verdictForQuestion: ActionVerdict = parsed.actionVerdict ?? 'no_change';
+    const required = permittedQuestionType(verdictForQuestion);
+    const qIssues = questionViolations(questionOut, required);
+    if (qIssues.length > 0) {
+      console.warn('[llm-system-inference] question violated %s: %s', required, qIssues.join('; '));
+      questionOut = required === 'missing_evidence'
+        ? 'What would help most is knowing more about the components I could not identify — do you have the exact models to hand?'
+        : 'What are you actually hearing? Anything feeling lean, thick, forward, or dynamically held back?';
+    }
+
     return {
       source: 'llm_inferred',
       subject,
@@ -645,10 +783,11 @@ function parseSystemInferenceResponse(
       componentKnowledge: Array.isArray(parsed.componentKnowledge) ? parsed.componentKnowledge : [],
       philosophy: [parsed.systemThesis, parsed.interactionExplanation]
         .filter(Boolean).join('\n\n') || undefined,
-      tendencies: [parsed.tradeoff, parsed.action]
-        .filter(Boolean).join('\n\n') || undefined,
+      tendencies: tendenciesOut,
+      actionVerdict: parsed.actionVerdict,
+      systemRelations,
       systemContext: undefined,
-      followUp: parsed.nextQuestion || 'What are you exploring — is there something you\'d like to change about this balance, or are you looking to understand what a specific upgrade path might shift?',
+      followUp: questionOut || (undefined) ||  'What are you exploring — is there something you\'d like to change about this balance, or are you looking to understand what a specific upgrade path might shift?',
     };
   } catch (err) {
     console.warn('[llm-system-inference] Failed to parse JSON:', err);
