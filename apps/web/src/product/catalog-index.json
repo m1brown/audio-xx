@@ -576,6 +576,12 @@
   "category": "iem"
  },
  {
+  "id": "klipsch-cornwall-iv",
+  "brand": "Klipsch",
+  "name": "Cornwall IV",
+  "category": "speaker"
+ },
+ {
   "id": "klipsch-heresy-iv",
   "brand": "Klipsch",
   "name": "Heresy IV",

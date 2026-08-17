@@ -323,13 +323,19 @@ export const SPEAKER_PRODUCTS: Product[] = [
     name: 'Super HL5 Plus',
     price: 5795,
     category: 'speaker',
-    architecture: 'BBC-tradition thin-wall ported box',
+    architecture: 'BBC-tradition thin-wall ported box, 6Ω nominal, 86dB/2.83V/1m',
     subcategory: 'standmount',
     priceTier: 'upper-mid',
     brandScale: 'specialist',
     region: 'uk',
     country: 'GB',
     topology: 'bass-reflex',
+    // Manufacturer-published: Harbeth Audio Ltd. SHL5plus XD2 Technical
+    // Information sheet — "Sensitivity: 86dB/2.83V/1m axial", "Impedance:
+    // 6 ohms, easy to drive", "Amplifier suggestion: suggested from
+    // 25W/channel". Harbeth publishes one sheet for the SHL5plus family;
+    // the XD/XD2 revisions changed the crossover, not the loading.
+    sensitivity_db: 86,
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'warm',             // Harbeth family warmth with midrange density
@@ -393,13 +399,18 @@ export const SPEAKER_PRODUCTS: Product[] = [
     price: 12000,
     imageUrl: 'https://devorefidelity.com/wp-content/uploads/2021/05/O96-new-crop-766x1024.jpg',
     category: 'speaker',
-    architecture: 'high-efficiency wide-baffle two-way',
+    architecture: 'high-efficiency wide-baffle two-way, 10Ω nominal, 96dB/W/M',
     subcategory: 'floorstanding',
     priceTier: 'high-end',
     brandScale: 'boutique',
     region: 'north-america',
     country: 'US',
     topology: 'high-efficiency',
+    // Manufacturer-published: DeVore Fidelity O/96 product page —
+    // "Sensitivity: 96 dB/W/M", "Impedance: 10 ohms". The figure is the
+    // design premise, not a byproduct: DeVore states the O/96 is built
+    // for low-powered tube amplification.
+    sensitivity_db: 96,
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',             // Deep tonal density, zero fatigue — rich and warm
@@ -653,6 +664,119 @@ export const SPEAKER_PRODUCTS: Product[] = [
     // Step 10: buying metadata
     buyingContext: 'easy_new',
     imageUrl: 'https://assets.klipsch.com/product-images/Heresy-IV-Walnut-pair.png',
+    philosophy: 'energy',
+    marketType: 'traditional',
+  },
+
+  {
+    // Added 2026-08-16 as a regression control, not as coverage expansion.
+    // The Cornwall IV is a named fixture in the reference-system sanity
+    // suite (COHERENT list) and in the launch-QA benchmark set, but had no
+    // catalog row — so amp/speaker power matching resolved to 'unknown'
+    // for the one pairing the suite uses to prove a coherent system is NOT
+    // diagnosed flawed. The entry exists to make that interaction seeable.
+    id: 'klipsch-cornwall-iv',
+    brand: 'Klipsch',
+    name: 'Cornwall IV',
+    // Approximate US pair price. Klipsch publishes no MSRP on its own
+    // product page (dealer-referral only), so this is a street figure and
+    // not a manufacturer-published number — budget filtering only, per the
+    // Product.price contract.
+    price: 7998,
+    usedPriceRange: { low: 4500, high: 6000 },
+    availability: 'current',
+    typicalMarket: 'both',
+    category: 'speaker',
+    architecture: 'three-way horn-loaded with 15in direct-radiating woofer, 8Ω compatible, 102dB @ 2.83V/1m',
+    subcategory: 'floorstanding',
+    priceTier: 'high-end',
+    brandScale: 'mainstream',
+    region: 'north-america',
+    country: 'US',
+    topology: 'horn-loaded',
+    // Manufacturer-published: Klipsch "CORNWALL IV SPEC SHEET | V03 |
+    // 01.27.20" — "SENSITIVITY 102dB @ 2.83V / 1m", "NOMINAL IMPEDANCE
+    // 8 ohms Compatible", "FREQUENCY RESPONSE (+/- 4 dB) 34Hz - 20kHz",
+    // "POWER HANDLING (CONT/PEAK) 100W/400W".
+    //
+    // Epistemic note (D-7): the sheet footnotes this figure as
+    // "Sensitivity in average listening room" — it includes room gain and
+    // is therefore not an anechoic 1W/1m number. It is recorded as the
+    // manufacturer publishes it. Third-party anechoic measurement lands a
+    // few dB lower; at every amplifier power the catalog pairs this
+    // speaker with, both figures classify identically, so the difference
+    // does not currently move a verdict.
+    sensitivity_db: 102,
+    archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
+    primaryAxes: {
+      warm_bright: 'neutral',            // Revoiced network sits between the Heresy's directness and warmth
+      smooth_detailed: 'detailed',       // Compression-driver speed on leading edges
+      elastic_controlled: 'elastic',     // Horn dynamics at low input power
+      airy_closed: 'airy',              // 15in woofer and larger cabinet give scale the Heresy has not
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'dynamics', level: 'emphasized' },
+        { trait: 'speed', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'rhythm', level: 'present' },
+        { trait: 'openness', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'flow', level: 'present' },
+        { trait: 'clarity', level: 'present' },
+        { trait: 'warmth', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'spatial_precision', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      rhythm: 0.7,
+      dynamics: 1.0,
+      tonal_density: 1.0,
+      spatial_precision: 0.4,
+      speed: 1.0,
+      warmth: 0.7,
+      texture: 0.7,
+      composure: 0.7,
+      flow: 0.7,
+      clarity: 0.7,
+      fatigue_risk: 0.4,
+      openness: 1.0,
+    },
+    description:
+      'Three-way horn-loaded Heritage design with a 15in woofer, rated by Klipsch at 102dB. The sensitivity is the architectural fact that governs the rest: a few watts reach listening levels, so low-power tube amplification is a design partner rather than a compromise. Larger in scale and fuller in the low end than the Heresy IV, with the same compression-driver speed.',
+    retailer_links: [
+      { label: 'Klipsch', url: 'https://www.klipsch.com/products/cornwall-iv-floorstanding-speaker' },
+    ],
+    notes: 'Sensitivity this high makes amplifier noise floor audible — hiss that is inaudible on an 87dB speaker is not inaudible here. Horn coloration remains present on sustained tones, though the IV network revoicing reduced it relative to the III.',
+    placementSensitivity: {
+      level: 'high',
+      notes: 'Large cabinet with rear Tractrix ports. Bass loading depends on distance to the wall behind; the design assumes reinforcement rather than free space. Needs room volume to work — this is not a small-room speaker.',
+    },
+    sourceReferences: [
+      { source: 'Klipsch', note: 'Manufacturer specification sheet (Cornwall IV, V03, 01.27.20) — sensitivity, impedance, power handling, crossover points, drivers.', url: 'https://assets.klipsch.com/product-specsheets/Cornwall-2019-Spec-Sheet-v03.pdf' },
+      { source: 'Klipsch', note: 'Manufacturer product page — Tractrix port geometry, K-702 midrange compression driver, revoiced network.', url: 'https://www.klipsch.com/products/cornwall-iv-floorstanding-speaker' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'dynamics', tendency: 'dynamic swings arrive at their full size without the amplifier working for them — a consequence of the 102dB rating, not of voicing', basis: 'editorial_inference' },
+        { domain: 'timing', tendency: 'compression-driver leading edges are fast; transients start and stop cleanly', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'fuller and weightier through the lower midrange and bass than the Heresy IV, from the 15in woofer and the larger enclosure', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with low-power tube amplification (2-30W SET, push-pull triode)', effect: 'the pairing is the design premise — at 102dB a handful of watts reaches realistic levels with headroom in reserve', valence: 'positive', basis: 'manufacturer_intent' },
+        { condition: 'paired with amplifiers carrying an audible noise floor', effect: 'residual hiss and hum are amplified along with the music — high sensitivity raises the noise floor as readily as the signal', valence: 'caution', basis: 'listener_consensus' },
+        { condition: 'placed well out from the wall behind', effect: 'the rear ports lose boundary reinforcement and the bass thins', valence: 'caution', basis: 'manufacturer_intent' },
+      ],
+      tradeoffs: [
+        { gains: 'dynamic ease at low power, scale, and bass weight', cost: 'image precision and the tonal purity of a well-damped box on sustained tones', relative_to: 'conventional cone-and-dome floorstanders at the price', basis: 'review_consensus' },
+      ],
+    },
+    buyingContext: 'easy_new',
     philosophy: 'energy',
     marketType: 'traditional',
   },
