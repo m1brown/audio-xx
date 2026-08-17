@@ -20,7 +20,7 @@
 import type { ConsultationResponse } from './consultation';
 import {
   licensedRelations, permittedQuestionType, questionViolations, stripOverclaims,
-  OPEN_DIAGNOSTIC_QUESTION,
+  filterUnlicensedRelationalProse, OPEN_DIAGNOSTIC_QUESTION,
   type ActionVerdict, type AttributeRecord, type RelationKind, type RelationSet,
   type EvidenceTier,
 } from './relational-explain';
@@ -53,6 +53,18 @@ You are being asked to assess a hi-fi system where some or all components are NO
    harshness, thinness, or a lack of warmth. Naming a problem you did not find
    is a recommendation wearing a question mark. Where you DID establish a
    specific concern, the question may address that concern and nothing else.
+
+2c. EXPLAIN ONLY WHAT YOU DECLARED. Every sentence asserting that two
+   components act on one another must correspond to an entry in "relations".
+   If you cannot declare a relation between two components on ONE shared axis,
+   do not write a sentence claiming they interact — describe each on its own
+   instead. Relations you declare are checked; sentences that assert an
+   interaction you did not declare, or that we reject, are removed.
+
+2d. BRAND EVIDENCE STAYS BRAND-SCOPED. Where an attribute comes from what is
+   known of the MAKER rather than of this specific unit, say so — "dCS designs
+   are associated with…", "Harbeth's house sound tends toward…". Do not convert
+   it into a claim about the individual product.
 
 3. EXPLAIN the division of labour. Why is the chain likely to behave the way
    you just described? Which components materially establish that behaviour
@@ -910,11 +922,39 @@ function parseSystemInferenceResponse(
       return out;
     };
 
-    let verdictOut = clean(parsed.verdict || undefined);
-    const philosophyOut = clean(
+    // ── Explain is DOWNSTREAM of licensing, not parallel to it ────
+    //
+    // GOVERNING INVARIANT (founder, 2026-08-17): no Explain prose may survive
+    // unless the relation it expresses survived deterministic licensing.
+    //
+    // The production failure: the model proposed dCS x Acora and Butler x ARC,
+    // validation rejected BOTH for commensurability, and both were published
+    // anyway — because this field was assembled from `interactionExplanation`
+    // regardless of what survived. Validation decided what Audio XX may
+    // believe; the prose decided what it would say.
+    //
+    // Every layer that can express an interaction goes through the same
+    // filter, so Describe cannot smuggle one in and Evaluate cannot rebuild a
+    // rejected relation out of the attribute bag.
+    const relationalDrops: Array<{ sentence: string; reason: string }> = [];
+    const licenseRelational = (prose: string | undefined) => {
+      const { prose: out, dropped } = filterUnlicensedRelationalProse(
+        prose, surviving, componentNames);
+      relationalDrops.push(...dropped);
+      return out;
+    };
+
+    let verdictOut = clean(licenseRelational(parsed.verdict || undefined));
+    const philosophyOut = clean(licenseRelational(
       [parsed.systemThesis, parsed.interactionExplanation].filter(Boolean).join('\n\n') || undefined,
-    );
-    tendenciesOut = clean(tendenciesOut);
+    ));
+    tendenciesOut = clean(licenseRelational(tendenciesOut));
+
+    if (relationalDrops.length > 0) {
+      console.warn('[llm-system-inference] D-12 — dropped %d unlicensed relational sentence(s): %s',
+        relationalDrops.length,
+        relationalDrops.map((d) => `${d.reason}`).join(' | '));
+    }
 
     // The verdict is the one field that may not simply vanish: it is the
     // judgment the whole assessment hangs from, and a blank first line reads as

@@ -186,17 +186,146 @@ export function validateRelations(
 export function licensedRelations(
   set: RelationSet,
   attributes: AttributeRecord[],
-): Array<Relation & { licensedTier: EvidenceTier }> {
+): LicensedRelation[] {
   if (set.status === 'none_establishable') return [];
   const bad = new Set(validateRelations(set, attributes).map((v) => v.index));
   return set.relations
     .map((r, index) => ({ r, index }))
     .filter(({ index }) => !bad.has(index))
-    .map(({ r }) => ({
-      ...r,
-      licensedTier: relationTier(attributes[r.premises[0]], attributes[r.premises[1]]),
-    }));
+    .map(({ r }) => {
+      const a = attributes[r.premises[0]];
+      const b = attributes[r.premises[1]];
+      return {
+        ...r,
+        licensedTier: relationTier(a, b),
+        licensedScope: relationScope(a, b),
+        brandScoped: [a, b].filter((x) => x.scope === 'brand').map((x) => x.component),
+      };
+    });
 }
+
+// ── Expression licensing ────────────────────────────────────────────
+
+/**
+ * A relation's scope is the WEAKER of its premises' scopes.
+ *
+ * The dCS BrandProfile supports "dCS designs are associated with a
+ * neutral-to-cool balance". It does not support "the Rossini APEX IS
+ * neutral-to-cool". `AttributeRecord.scope` was written to carry exactly that
+ * distinction and was never read by anything — so a brand-scoped premise
+ * silently produced product-specific prose, which is D-7 leaking through the
+ * one field built to stop it.
+ */
+export function relationScope(a: AttributeRecord, b: AttributeRecord): 'product' | 'brand' {
+  return a.scope === 'brand' || b.scope === 'brand' ? 'brand' : 'product';
+}
+
+export interface LicensedRelation extends Relation {
+  licensedTier: EvidenceTier;
+  licensedScope: 'product' | 'brand';
+  /** Components whose contribution rests on brand-scoped evidence. */
+  brandScoped: string[];
+}
+
+/**
+ * Does this sentence assert an interaction, and between whom?
+ *
+ * Structural rather than lexical: a sentence expresses a relation when it names
+ * two or more components AND carries a connective that asserts they act on one
+ * another. Naming two components in a list is not a relation; saying one
+ * counterbalances the other is.
+ */
+const RELATIONAL_CONNECTIVE =
+  /\b(?:counterbalanc\w*|counterweigh\w*|balanc\w*|offset\w*|temper\w*|complement\w*|reinforc\w*|compound\w*|amplif\w*|magnif\w*|pair\w+ with|combin\w*|together|interact\w*|feed\w*|drive[sn]?|allow\w*|ensur\w*|prevent\w*|soften\w*|whilst|while|meanwhile|in turn|which the|works? with)\b/i;
+
+/** Tokens that identify a component in prose. */
+function componentTokens(name: string): string[] {
+  return name.split(/\s+/).map((t) => t.replace(/[^\w-]/g, '')).filter((t) => t.length >= 3);
+}
+
+function namesIn(sentence: string, componentNames: string[]): string[] {
+  return componentNames.filter((n) =>
+    componentTokens(n).some((t) => new RegExp(`\\b${t}\\b`, 'i').test(sentence)));
+}
+
+const pairKey = (a: string, b: string) =>
+  [a.toLowerCase().trim(), b.toLowerCase().trim()].sort().join('||');
+
+/**
+ * Remove Explain prose that no surviving relation licenses.
+ *
+ * GOVERNING INVARIANT (founder, 2026-08-17):
+ *
+ *   No Explain prose may survive unless the relation it expresses survived
+ *   deterministic licensing.
+ *
+ * The production failure this exists to end: the model proposed
+ *
+ *   dCS(smooth_detailed) x Acora(airy_closed)      -> reinforcement
+ *   Butler(elastic_controlled) x ARC(warm_bright)  -> reinforcement
+ *
+ * Both were rejected for commensurability — the premises sit on different axes
+ * — and both were then stated in the published assessment anyway, because
+ * `interactionExplanation` ran parallel to validation instead of downstream of
+ * it. Validation was deciding what Audio XX may BELIEVE while the prose
+ * decided what it would SAY.
+ *
+ * Brand scope is enforced in the same pass. A sentence expressing a relation
+ * that rests on brand evidence must attribute it to the maker; one that
+ * asserts it of the specific product is dropped, because that is the claim the
+ * evidence does not support.
+ */
+export function filterUnlicensedRelationalProse(
+  prose: string | undefined,
+  surviving: LicensedRelation[],
+  componentNames: string[],
+): { prose: string | undefined; dropped: Array<{ sentence: string; reason: string }> } {
+  if (!prose?.trim()) return { prose, dropped: [] };
+
+  const licensed = new Map(surviving.map((r) => [pairKey(r.components[0], r.components[1]), r]));
+  const dropped: Array<{ sentence: string; reason: string }> = [];
+
+  const keptParagraphs = prose.split(/\n\n+/).map((para) => {
+    const kept = para.split(/(?<=[.!?])\s+/).filter((sentence) => {
+      if (!RELATIONAL_CONNECTIVE.test(sentence)) return true;      // not an interaction claim
+      const named = namesIn(sentence, componentNames);
+      if (named.length < 2) return true;                           // about one component
+
+      // Every named pair in the sentence must be licensed. A sentence joining
+      // three components asserts more than one interaction.
+      for (let i = 0; i < named.length; i++) {
+        for (let j = i + 1; j < named.length; j++) {
+          const rel = licensed.get(pairKey(named[i], named[j]));
+          if (!rel) {
+            dropped.push({ sentence: sentence.trim(),
+              reason: `no licensed relation between ${named[i]} and ${named[j]}` });
+            return false;
+          }
+          if (rel.licensedScope === 'brand' && !BRAND_ATTRIBUTION.test(sentence)) {
+            dropped.push({ sentence: sentence.trim(),
+              reason: `brand-scoped relation asserted of the product (${rel.brandScoped.join(', ')})` });
+            return false;
+          }
+        }
+      }
+      return true;
+    }).join(' ').trim();
+    return kept;
+  }).filter(Boolean);
+
+  return { prose: keptParagraphs.join('\n\n').trim() || undefined, dropped };
+}
+
+/**
+ * Marks that a claim is about the MAKER rather than this unit.
+ *
+ * A requirement rather than a prohibition: the sentence must EARN the
+ * brand-scoped relation by attributing it. Requirement checks fail closed,
+ * which is the right direction when the alternative is asserting a product
+ * fact we do not hold.
+ */
+const BRAND_ATTRIBUTION =
+  /\b(?:designs?|components?|house (?:sound|style)|family|typically|tend(?:s|ency|encies)?|generally|as a maker|line of|range of|are (?:described|associated)|is (?:described|associated))\b/i;
 
 // ── Question typing ─────────────────────────────────────────────────
 
