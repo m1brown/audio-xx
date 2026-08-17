@@ -20,6 +20,36 @@ of fact that turns enumeration into explanation. Audio XX currently discards it.
 This class does not loosen D-7. It *raises* provenance: a quoted, cited,
 checkable manufacturer statement is strictly stronger evidence than model recall.
 
+## Architectural placement — site-level, not assessment-level
+
+**Added 2026-08-17 (founder).** These evidence classes are **site-level product
+knowledge**, not System Assessment inputs. Acquisition and storage must not be
+coupled to the assessment renderer or the provisional reasoning path.
+
+The same licensed evidence must later be consumable by:
+
+- System Assessment
+- product and brand pages
+- comparisons
+- purchase inquiries
+- recommendations
+- review aggregation
+
+Consequences for the design:
+
+1. **Storage is keyed by product identity, not by turn or assessment.** A fact
+   about the Acora QRC-2 belongs to the QRC-2, not to one listener's session.
+2. **Acquisition is a background/standalone concern**, reachable from anywhere
+   a product identity is resolved — not a step inside provisional reasoning.
+   The corroboration hop is a convenient first trigger, not the owner.
+3. **The reasoning path is a CONSUMER.** `AttributeRecord` construction reads
+   from the store; it does not populate it.
+4. **No assessment-shaped fields.** Nothing in the record may presuppose a
+   chain, a role, or a listener. Role is a property of a component in a system;
+   sensitivity is a property of a loudspeaker.
+
+The same applies to `independent_review` when it arrives.
+
 ## Shape
 
 ```ts
