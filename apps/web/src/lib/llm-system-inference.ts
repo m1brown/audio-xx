@@ -540,6 +540,141 @@ export function verdictForVerdictLine(
  * @param knownDescriptions - descriptions of known components (from catalog/brand profiles)
  * @returns ConsultationResponse with source: 'llm_inferred', or null on failure
  */
+/**
+ * Build the provisional prompt from the authoritative evidence state.
+ *
+ * Exported so the contract can be asserted directly rather than inferred from
+ * finished prose. Returns the provenance alongside the prompt because they are
+ * the same fact: the caller must not recompute it.
+ */
+export function buildProvisionalPrompt(
+  query: string,
+  componentNames: string[],
+  knownDescriptions: { name: string; character: string; source: 'product' | 'brand' }[],
+  unresolved?: { name: string; role: string }[],
+  corroborated?: string[],
+  lookupUnknown?: string[],
+): { userPrompt: string; provenance: ComponentProvenance[] } {
+  // ── THE AUTHORITATIVE EVIDENCE STATE ────────────────────────────
+  //
+  // GOVERNING INVARIANT (founder, 2026-08-17):
+  //
+  //   The prose may not reason from an evidence state different from the one
+  //   used to compute component provenance.
+  //
+  // This array is computed FIRST and is the only thing the prompt is built
+  // from. Previously the prompt was assembled from "is it in the catalog?",
+  // which is a different question, and the two answers diverged in public:
+  // with all four beta components corroborated and labelled Expanded
+  // Reasoning, the assessment still opened
+  //
+  //   "the ultimate coherence is indeterminate due to unknown components"
+  //
+  // because the closing instruction said, unconditionally, to "state
+  // explicitly which system-level questions cannot be answered until the
+  // unresolved components are identified" — and `unresolved` meant "no catalog
+  // row", which was true of three components we had just verified against
+  // their manufacturers.
+  const provenance = computeComponentProvenance(componentNames, knownDescriptions, corroborated);
+  const basisOf = new Map(provenance.map((p) => [p.name, p.basis]));
+  const unknownLookupSet = new Set((lookupUnknown ?? []).map((c) => c.toLowerCase().trim()));
+  const unresolvedByName = new Map((unresolved ?? []).map(u => [u.name, u.role]));
+  const roleSuffix = (n: string) =>
+    unresolvedByName.has(n) ? `, listener says: ${unresolvedByName.get(n)}` : '';
+
+  const catalogued = componentNames.filter((n) => basisOf.get(n) === 'catalog');
+  const brandOnly = componentNames.filter((n) => basisOf.get(n) === 'brand');
+  const corroboratedNames = componentNames.filter((n) => basisOf.get(n) === 'model');
+  // `user` splits by WHY. Both get identity only; only one may be described to
+  // the listener as unverified.
+  const userBasis = componentNames.filter((n) => basisOf.get(n) === 'user');
+  const incomplete = userBasis.filter((n) => unknownLookupSet.has(n.toLowerCase().trim()));
+  const uncorroborated = userBasis.filter((n) => !unknownLookupSet.has(n.toLowerCase().trim()));
+
+  const characterFor = (n: string) =>
+    knownDescriptions.find((d) => d.name === n)?.character ?? '';
+
+  const catalogContext = catalogued.length > 0
+    ? `\n\nCATALOG-VERIFIED — Audio XX holds its own data on these:\n`
+      + catalogued.map((n) => `- ${n}: ${characterFor(n)}`).join('\n')
+    : '';
+
+  // Brand evidence licenses a brand-scoped claim, never a product-scoped one.
+  const brandContext = brandOnly.length > 0
+    ? `\n\nBRAND EVIDENCE — Audio XX holds evidence about the MAKER, not this model:\n`
+      + brandOnly.map((n) => `- ${n}: ${characterFor(n)}`).join('\n')
+      + `\nAttribute these tendencies to the brand's designs, not to this specific `
+      + `product as measured fact.`
+    : '';
+
+  // Corroborated: identity independently established, Expanded Reasoning
+  // permitted. The old wording invited the model to opt out — "omit them where
+  // you do not know them" — and it took the invitation.
+  const modelContext = corroboratedNames.length > 0
+    ? `\n\nIDENTITY VERIFIED — Audio XX independently confirmed these products exist `
+      + `against the manufacturer's own page. They are OUTSIDE the curated catalog, so `
+      + `use your general knowledge and Audio XX will label the provenance itself:\n`
+      + corroboratedNames.map((n) => `- ${n} [expanded reasoning${roleSuffix(n)}]`).join('\n')
+      + `\nThese are IDENTIFIED components. Do not describe them as unknown, `
+      + `unidentified or unverified, do not say the system cannot be assessed until `
+      + `they are identified, and do not ask the listener to identify them.`
+    : '';
+
+  const uncorroboratedContext = uncorroborated.length > 0
+    ? `\n\nIDENTITY NOT VERIFIED — Audio XX could not confirm these products exist:\n`
+      + `${uncorroborated.map((n) => `- ${n}${roleSuffix(n)}`).join('\n')}\n`
+      + `Name them and state the role the listener gave, and NOTHING else. Do not `
+      + `describe their sound, design, build or maker. Do not say what they are "known `
+      + `for". Do not include them in "characterized". If a chain conclusion depends on `
+      + `how one behaves, say that it cannot be assessed until the product is identified. `
+      + `Treating an unverified product as real is the worst error you can make here.`
+    : '';
+
+  const incompleteContext = incomplete.length > 0
+    ? `\n\nIDENTITY CHECK DID NOT COMPLETE for these products:\n`
+      + `${incomplete.map((n) => `- ${n}${roleSuffix(n)}`).join('\n')}\n`
+      + `This is a failure on our side, NOT a finding about the product. Name them `
+      + `and state the role the listener gave, and do not describe their sound, `
+      + `design or maker. Do NOT say the product is unidentified, unknown or `
+      + `unverified, do NOT ask the listener to identify or describe it, and do `
+      + `NOT ask them to confirm it exists. If a chain conclusion depends on one `
+      + `of them, say that this part of the reading is incomplete on our side.`
+    : '';
+
+  // The closing instruction is now CONDITIONAL on the authoritative state
+  // actually containing something unresolved. When every component carries
+  // evidence there is nothing to defer, and inviting the model to find
+  // something is how "indeterminate due to unknown components" appeared over a
+  // fully corroborated chain.
+  const anyUnresolved = uncorroborated.length + incomplete.length > 0;
+  const closing = anyUnresolved
+    ? `Produce an Audio XX provisional system assessment. Assess the components you `
+      + `have evidence for, describe the chain structure including the unresolved `
+      + `positions, and state which system-level questions cannot be answered until `
+      + `those specific components are resolved.`
+    : `Produce an Audio XX provisional system assessment. Every component in this `
+      + `chain carries evidence, so assess the system as a whole and reach a verdict. `
+      + `Do not describe the assessment as provisional, partial or indeterminate for `
+      + `want of component identification — nothing here is unidentified.`;
+
+  const userPrompt = `The user asked: "${query}"
+
+The system chain includes: ${componentNames.join(' → ')}
+${catalogContext}${brandContext}${modelContext}${uncorroboratedContext}${incompleteContext}
+
+When describing each component in the philosophy section:
+- Catalog-verified: reference the verified data above and assess in full.
+- Brand evidence: reason from the maker's design tendencies, attributed as such.
+- Identity verified: characterise normally from your own knowledge. Do not
+  apologise for the source — Audio XX labels provenance itself.
+- Identity not verified, or check incomplete: name the component and its role,
+  and claim nothing about how it sounds.
+
+${closing}`;
+
+  return { userPrompt, provenance };
+}
+
 export async function inferProvisionalSystemAssessment(
   query: string,
   componentNames: string[],
@@ -556,68 +691,9 @@ export async function inferProvisionalSystemAssessment(
    */
   lookupUnknown?: string[],
 ): Promise<ConsultationResponse | null> {
-  const knownNames = new Set(knownDescriptions.map(d => d.name));
-  const knownContext = knownDescriptions.length > 0
-    ? `\n\nThe following components ARE in the Audio XX catalog with verified data:\n${knownDescriptions.map(d => `- ${d.name} [catalog-verified]: ${d.character}`).join('\n')}`
-    : '';
-  const unknownNames = componentNames.filter(n => !knownNames.has(n));
-  const unresolvedByName = new Map((unresolved ?? []).map(u => [u.name, u.role]));
-  // Corroboration gates the PROSE, not merely the label. A component whose
-  // existence we could not verify must not be characterised at all: production
-  // showed the model writing "the Qwibble Q1, known for its capability to
-  // deliver clean digital to analogue conversion" for a product that does not
-  // exist, while the chip beside it correctly read "Your description only".
-  // A label and a paragraph that disagree are worse than either alone.
-  const corroboratedSet = new Set((corroborated ?? []).map((c) => c.toLowerCase().trim()));
-  const unknownLookupSet = new Set((lookupUnknown ?? []).map((c) => c.toLowerCase().trim()));
-  const uncorroborated = unknownNames.filter((n) =>
-    !corroboratedSet.has(n.toLowerCase().trim()) && !unknownLookupSet.has(n.toLowerCase().trim()));
-  const incomplete = unknownNames.filter((n) => unknownLookupSet.has(n.toLowerCase().trim()));
-
-  // Same restraint, different reason — and the difference is the whole point.
-  // Nothing may be claimed about how these components sound, but the listener
-  // must NOT be told the product could not be identified, and must not be
-  // asked to supply an identity they already gave correctly.
-  const incompleteContext = incomplete.length > 0
-    ? `\n\nIDENTITY CHECK DID NOT COMPLETE for these products:\n`
-      + `${incomplete.map((n) => `- ${n}`).join('\n')}\n`
-      + `This is a failure on our side, NOT a finding about the product. Name them `
-      + `and state the role the listener gave, and do not describe their sound, `
-      + `design or maker. Do NOT say the product is unidentified, unknown or `
-      + `unverified, do NOT ask the listener to identify or describe it, and do `
-      + `NOT ask them to confirm it exists. If a chain conclusion depends on one `
-      + `of them, say that this part of the reading is incomplete on our side.`
-    : '';
-
-  const uncorroboratedContext = uncorroborated.length > 0
-    ? `\n\nIDENTITY NOT VERIFIED — Audio XX could not confirm these products exist:\n`
-      + `${uncorroborated.map((n) => `- ${n}`).join('\n')}\n`
-      + `Name them and state the role the listener gave, and NOTHING else. Do not `
-      + `describe their sound, design, build or maker. Do not say what they are "known `
-      + `for". Do not include them in "characterized". If a chain conclusion depends on `
-      + `how one behaves, say that it cannot be assessed until the product is identified. `
-      + `Treating an unverified product as real is the worst error you can make here.`
-    : '';
-
-  const unknownContext = unknownNames.length > 0
-    ? `\n\nThese components are NOT in the Audio XX catalog. Characterise them `
-      + `from your general knowledge where you meaningfully know them, and omit `
-      + `them from \`characterized\` where you do not:\n`
-      + `${unknownNames.filter((n) => corroboratedSet.has(n.toLowerCase().trim())).map(n => `- ${n} [model-knowledge${unresolvedByName.has(n) ? `, listener says: ${unresolvedByName.get(n)}` : ''}]`).join('\n')}`
-    : '';
-
-  const userPrompt = `The user asked: "${query}"
-
-The system chain includes: ${componentNames.join(' → ')}
-${knownContext}${unknownContext}${uncorroboratedContext}${incompleteContext}
-
-When describing each component in the philosophy section:
-- Catalog-verified components: reference the verified data above and assess in full.
-- Model-knowledge components: characterise them normally where you know them. Do
-  not apologise for the source — Audio XX labels provenance itself.
-- Components you do not know: say so once, briefly, and omit them from "characterized".
-
-Produce an Audio XX provisional system assessment. Assess the components you have evidence for, describe the chain STRUCTURE including the unresolved positions, and state explicitly which system-level questions cannot be answered until the unresolved components are identified.`;
+  const { userPrompt, provenance } = buildProvisionalPrompt(
+    query, componentNames, knownDescriptions, unresolved, corroborated, lookupUnknown,
+  );
 
   try {
     const controller = new AbortController();
@@ -694,11 +770,9 @@ Produce an Audio XX provisional system assessment. Assess the components you hav
     // `characterized` and `componentKnowledge` still travel on the response.
     // They describe COVERAGE — what this assessment discussed — which is worth
     // knowing and is not the same question as what evidence exists.
-    parsedResponse.componentProvenance = computeComponentProvenance(
-      componentNames,
-      knownDescriptions,
-      corroborated,
-    );
+    // Literally the same array the prompt was built from, not a recomputation.
+    // Two derivations of one fact are two chances to disagree.
+    parsedResponse.componentProvenance = provenance;
     return parsedResponse;
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
