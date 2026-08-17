@@ -10163,7 +10163,12 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
         const toneSetter = comps.find(x => {
           const r2 = (x.role || '').toLowerCase();
           if (!/dac|amp|integrated|streamer|source|turntable/.test(r2) || x.name === c.name) return false;
-          return findings.perComponentAxes.find(a => a.name === x.name)?.axes.warm_bright === sysAxes.warm_bright;
+          const xa = findings.perComponentAxes.find(a => a.name === x.name);
+          // The named partner is the SUBJECT of a relational claim, so it needs
+          // evidence of its own. Without this the speaker was reported as
+          // reinforcing "the direction the Zorblax sets" — a direction set by a
+          // component we had just declined to characterise.
+          return !!xa && carriesAxisEvidence(xa) && xa.axes.warm_bright === sysAxes.warm_bright;
         });
         return toneSetter
           ? `reinforces the direction the ${partnerRef(toneSetter.name)} sets`
@@ -10405,6 +10410,32 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   //   3. The first stacked imbalance.
   // If none of the above, we surface the "no material constraint" line.
   type PrimaryConstraint =
+    /**
+     * A licensed physical constraint — power against sensitivity today.
+     *
+     * This kind exists because `primary` was computed entirely from axis
+     * scoring and per-component weaknesses, and so could not see the
+     * power-match assessment at all. The result was an assessment that
+     * contradicted itself within one screen: the System read stated
+     *
+     *   "The Zorblax ZX1 5 watt SET at 5W has limited headroom for the
+     *    Magnepan LRS+ at 86 dB sensitivity (estimated ~93 dB maximum clean
+     *    output)."
+     *
+     * and Primary leverage then reported "None — no obvious bottleneck …
+     * nothing needs correcting."
+     *
+     * The evidence was never missing. `assessPowerMatch` had produced it, the
+     * prose had printed it, and `detectPrimaryConstraint` had even built a
+     * licensed candidate from it — but that fed the memo-format field, while
+     * the prose renderer read a different model. Two constraint models, one
+     * of them blind.
+     *
+     * The invariant this restores: an Evaluate verdict may not contradict a
+     * licensed Explain constraint. Physical constraints outrank axis
+     * refinements (Playbook §4), so this kind is selected before scoring runs.
+     */
+    | { kind: 'physical'; component: string; role: string; statement: string; remedy: string }
     | { kind: 'bottleneck'; component: string; role: string; axes: string[] }
     | { kind: 'component'; name: string; role: string; weakness: string }
     | { kind: 'imbalance'; property: string; contributors: string[] }
@@ -10530,7 +10561,33 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   );
 
   let primary: PrimaryConstraint = { kind: 'none' };
-  if (
+
+  // Licensed physical constraint first. Everything below weighs tonal
+  // preference; this is a question of whether the amplifier can drive the
+  // speakers, and no amount of axis agreement answers it.
+  const pmForPrimary = findings.powerMatchAssessment;
+  const pmConstrained = (pmForPrimary.compatibility === 'mismatched'
+    || pmForPrimary.compatibility === 'strained')
+    && !!pmForPrimary.ampName && !!pmForPrimary.speakerName;
+
+  if (pmConstrained) {
+    const splStr = pmForPrimary.estimatedMaxCleanSPL != null
+      ? ` — an estimated ~${Math.round(pmForPrimary.estimatedMaxCleanSPL)} dB maximum clean output`
+      : '';
+    primary = {
+      kind: 'physical',
+      component: pmForPrimary.ampName!,
+      role: comps.find((c) => c.name === pmForPrimary.ampName)?.role ?? 'amplifier',
+      statement: pmForPrimary.compatibility === 'mismatched'
+        ? `${pmForPrimary.ampName} at ${pmForPrimary.ampPowerWatts}W is significantly underpowered for `
+          + `${pmForPrimary.speakerName} at ${pmForPrimary.speakerSensitivityDb} dB sensitivity${splStr}.`
+        : `${pmForPrimary.ampName} at ${pmForPrimary.ampPowerWatts}W has limited headroom for `
+          + `${pmForPrimary.speakerName} at ${pmForPrimary.speakerSensitivityDb} dB sensitivity${splStr}.`,
+      remedy: pmForPrimary.compatibility === 'mismatched'
+        ? 'Dynamics will compress and bass control will suffer at moderate levels. Either more amplifier power or higher-efficiency speakers resolves this.'
+        : 'Expect compression on dynamic peaks and some loss of composure on dense passages. More amplifier power, or more efficient speakers, buys back the headroom.',
+    };
+  } else if (
     winner &&
     bottleneck &&
     winner.comp.name === bottleneck.component &&
@@ -10864,7 +10921,16 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   // ── Primary leverage section (output contract: mandatory) ──
   // Gold format: "The [role].\n\n[Name] sets the system's [quality]. Change it and [consequence]."
   let primaryLeverageSection: string;
-  if (primary.kind === 'bottleneck') {
+  if (primary.kind === 'physical') {
+    const role = primary.role.toUpperCase().length <= 4 ? primary.role.toUpperCase() : primary.role.toLowerCase();
+    primaryLeverageSection = [
+      `**Primary leverage**`,
+      ``,
+      `The ${role}.`,
+      ``,
+      `${primary.statement} ${primary.remedy}`,
+    ].join('\n');
+  } else if (primary.kind === 'bottleneck') {
     const role = primary.role.toUpperCase().length <= 4 ? primary.role.toUpperCase() : primary.role.toLowerCase();
     const leverageLeans = comps.find((c) => c.name === primary.component)?.axisPosition as
       | Record<string, string>
@@ -11109,7 +11175,12 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     ?? comps.find(c => (c.role || '').toLowerCase() === 'dac')?.name;
 
   let changeLine: string;
-  if (primary.kind === 'bottleneck' || primary.kind === 'component') {
+  if (primary.kind === 'physical') {
+    // The one branch that must never reach the taste-only phrasing below.
+    changeLine = `CHANGE the ${primary.role.toLowerCase()} if you listen at any volume — this is a `
+      + `headroom limit rather than a matter of taste, and it is the one thing here that `
+      + `constrains what the rest of the system can do.`;
+  } else if (primary.kind === 'bottleneck' || primary.kind === 'component') {
     const compName = primary.kind === 'bottleneck' ? primary.component : primary.name;
     const role = (primary as { role: string }).role.toLowerCase();
     const isTierOnly = primary.kind === 'component' && primary.weakness.includes('most modest component');
@@ -11245,7 +11316,21 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   // ── Do nothing check (1–2 sentences, system-specific restraint) ──
   // References this system's specific balance and the risk of changing it.
   // Must not repeat the Decision section verbatim.
+  // A licensed physical constraint forecloses "leave it alone". This section
+  // exists to protect restraint, and restraint is the right default — but it is
+  // a conclusion, not a reflex, and it cannot be reached over the top of a
+  // constraint the assessment has already established two sections earlier.
   let doNothingSection: string;
+  if (primary.kind === 'physical') {
+    doNothingSection = [
+      `**Do nothing check**`,
+      ``,
+      `Doing nothing is reasonable if you listen at modest levels and the system `
+      + `never sounds strained — the limit is headroom, not character, and it only `
+      + `shows itself when the music asks for it. What you would be accepting is a `
+      + `ceiling on dynamics, not a flaw in the sound at volumes below it.`,
+    ].join('\n');
+  } else {
   if (hasContrast && downstreamComps.length > 0 && upstreamComps.length > 0) {
     // System has upstream/downstream contrast — name the balance and the risk
     const upQuality = (upBright > 0 || upDetailed > 0) ? 'speed and clarity' : 'warmth and body';
@@ -11277,6 +11362,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       ``,
       `If the system sounds right, it is right. Swapping components without clear cause risks losing coherence without gaining engagement.`,
     ].join('\n');
+  }
   }
   // Phase 2B — memorable-insight slot lands on the RENDERED do-nothing
   // section (one insight per assessment; pairing evidence outranks it).
