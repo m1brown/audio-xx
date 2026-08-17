@@ -227,17 +227,6 @@ export interface LicensedRelation extends Relation {
   brandScoped: string[];
 }
 
-/**
- * Does this sentence assert an interaction, and between whom?
- *
- * Structural rather than lexical: a sentence expresses a relation when it names
- * two or more components AND carries a connective that asserts they act on one
- * another. Naming two components in a list is not a relation; saying one
- * counterbalances the other is.
- */
-const RELATIONAL_CONNECTIVE =
-  /\b(?:counterbalanc\w*|counterweigh\w*|balanc\w*|offset\w*|temper\w*|complement\w*|reinforc\w*|compound\w*|amplif\w*|magnif\w*|pair\w+ with|combin\w*|together|interact\w*|feed\w*|drive[sn]?|allow\w*|ensur\w*|prevent\w*|soften\w*|whilst|while|meanwhile|in turn|which the|works? with)\b/i;
-
 /** Tokens that identify a component in prose. */
 function componentTokens(name: string): string[] {
   return name.split(/\s+/).map((t) => t.replace(/[^\w-]/g, '')).filter((t) => t.length >= 3);
@@ -274,6 +263,19 @@ const pairKey = (a: string, b: string) =>
  * that rests on brand evidence must attribute it to the maker; one that
  * asserts it of the specific product is dropped, because that is the claim the
  * evidence does not support.
+ *
+ * DEFAULT DENY. The first implementation asked "does this sentence look
+ * relational?" against a list of connectives, and two live escapes followed
+ * immediately: "further supported by" was not in the list, and
+ * "This is counterweighted by…" named only one component because the other
+ * arrived as a pronoun. Both are the same mistake — detecting interactions
+ * with a vocabulary, which can always be walked around by a synonym.
+ *
+ * The rule is now positional, not lexical: naming or referring to a SECOND
+ * component is what requires a licence. There is no connective test, so there
+ * is no synonym to find. A sentence about one component publishes freely,
+ * because this restricts Explain and silencing Describe would be the
+ * over-correction rather than the fix.
  */
 export function filterUnlicensedRelationalProse(
   prose: string | undefined,
@@ -286,21 +288,40 @@ export function filterUnlicensedRelationalProse(
   const dropped: Array<{ sentence: string; reason: string }> = [];
 
   const keptParagraphs = prose.split(/\n\n+/).map((para) => {
-    const kept = para.split(/(?<=[.!?])\s+/).filter((sentence) => {
-      if (!RELATIONAL_CONNECTIVE.test(sentence)) return true;      // not an interaction claim
-      const named = namesIn(sentence, componentNames);
-      if (named.length < 2) return true;                           // about one component
+    // The antecedent for anaphora: the subject of the most recent sentence
+    // that named a component. English is subject-first often enough that the
+    // FIRST name is the right guess, and guessing wrong only ever costs a
+    // sentence — the failure direction we want.
+    let antecedent: string | undefined;
 
-      // Every named pair in the sentence must be licensed. A sentence joining
-      // three components asserts more than one interaction.
-      for (let i = 0; i < named.length; i++) {
-        for (let j = i + 1; j < named.length; j++) {
-          const rel = licensed.get(pairKey(named[i], named[j]));
+    const kept = para.split(/(?<=[.!?])\s+/).filter((sentence) => {
+      const named = namesIn(sentence, componentNames);
+      const referred = ANAPHORA.test(sentence) && antecedent && !named.includes(antecedent)
+        ? [antecedent] : [];
+      const touched = [...new Set([...named, ...referred])];
+
+      if (named.length > 0) antecedent = named[0];
+
+      // One component, or none: Describe. Always publishable — the repair
+      // restricts Explain, and silencing description would be the
+      // over-correction, not the fix.
+      if (touched.length < 2) return true;
+
+      // Two or more: every pair must be licensed. No connective test, no
+      // vocabulary. Naming a second component IS the thing that requires a
+      // licence, because "supported by" and "pairs with" and every future
+      // synonym all name one.
+      for (let i = 0; i < touched.length; i++) {
+        for (let j = i + 1; j < touched.length; j++) {
+          const rel = licensed.get(pairKey(touched[i], touched[j]));
           if (!rel) {
             dropped.push({ sentence: sentence.trim(),
-              reason: `no licensed relation between ${named[i]} and ${named[j]}` });
+              reason: `no licensed relation between ${touched[i]} and ${touched[j]}`
+                + (referred.length ? ` (via anaphora to ${antecedent})` : '') });
             return false;
           }
+          // Scope survives anaphora: a pronoun standing in for a brand-scoped
+          // claim carries that claim's scope with it.
           if (rel.licensedScope === 'brand' && !BRAND_ATTRIBUTION.test(sentence)) {
             dropped.push({ sentence: sentence.trim(),
               reason: `brand-scoped relation asserted of the product (${rel.brandScoped.join(', ')})` });
@@ -315,6 +336,19 @@ export function filterUnlicensedRelationalProse(
 
   return { prose: keptParagraphs.join('\n\n').trim() || undefined, dropped };
 }
+
+/**
+ * Back-references that can carry a component into a sentence without naming it.
+ *
+ * Production published "This is counterweighted by the ARC ref 5" where `This`
+ * was a brand-scoped dCS claim from the previous sentence — one name in the
+ * sentence, so the pair check never ran and the scope requirement was bypassed
+ * by a pronoun. The list is closed and grammatical rather than semantic: these
+ * are the words English uses to point backwards, not a vocabulary of ways to
+ * describe audio.
+ */
+const ANAPHORA =
+  /(?:^|[\s,;(])(?:this|that|these|those|it|its|which|the former|the latter|the same|doing so)\b/i;
 
 /**
  * Marks that a claim is about the MAKER rather than this unit.

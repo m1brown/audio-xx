@@ -201,3 +201,147 @@ describe('LAYER BOUNDARY — no layer consumes evidence it bypassed', () => {
     expect(filterUnlicensedRelationalProse(single, surviving, NAMES).prose).toBe(single);
   });
 });
+
+/**
+ * The two live escapes from the first implementation, pinned verbatim.
+ *
+ * Both walked past a connective vocabulary. The rule is now positional:
+ * naming or referring to a second component is what requires a licence.
+ */
+describe('LIVE ESCAPE 1 — a connective the list did not contain', () => {
+  const A: AttributeRecord[] = [
+    attr('dCS Rossini Apex', 'smooth_detailed', 'detailed', 'brand', 'brand'),
+    attr('Acora QRC-2', 'airy_closed', 'airy', 'model'),
+  ];
+  const SET: RelationSet = { status: 'established', relations: [
+    { components: ['dCS Rossini Apex', 'Acora QRC-2'], axis: 'smooth_detailed',
+      kind: 'reinforcement', premises: [0, 1] },
+  ] };
+  const surviving = licensedRelations(SET, A);
+
+  it('rejects the relation for commensurability', () => {
+    expect(surviving).toHaveLength(0);
+  });
+
+  it('drops the exact published sentence', () => {
+    // Shipped on 2026-08-17 after both relations were rejected. "further
+    // supported by" was simply absent from RELATIONAL_CONNECTIVE.
+    const escaped = 'The dCS Rossini Apex acts as a precise and transparent source, '
+      + 'establishing a detailed baseline that is further supported by the airy '
+      + 'resolution of the Acora QRC-2 speakers, leading to a refined and open soundstage.';
+    const { prose, dropped } = filterUnlicensedRelationalProse(escaped, surviving, NAMES);
+    expect(prose).toBeUndefined();
+    expect(dropped[0].reason).toMatch(/no licensed relation between/);
+  });
+
+  it('drops it however the interaction is worded', () => {
+    // The point of the positional rule: no synonym helps.
+    for (const verb of ['further supported by', 'works alongside', 'is echoed by',
+      'finds an ally in', 'is picked up by', 'sits comfortably with']) {
+      const s = `The dCS Rossini Apex is detailed and ${verb} the Acora QRC-2.`;
+      expect(filterUnlicensedRelationalProse(s, surviving, NAMES).prose).toBeUndefined();
+    }
+  });
+});
+
+describe('LIVE ESCAPE 2 — the second component arrived as a pronoun', () => {
+  const A: AttributeRecord[] = [
+    attr('dCS Rossini Apex', 'smooth_detailed', 'detailed', 'brand', 'brand'),
+    attr('ARC ref 5', 'smooth_detailed', 'smooth', 'model'),
+  ];
+  const SET: RelationSet = { status: 'established', relations: [
+    { components: ['dCS Rossini Apex', 'ARC ref 5'], axis: 'smooth_detailed',
+      kind: 'counterweight', premises: [0, 1] },
+  ] };
+  const surviving = licensedRelations(SET, A);
+
+  it('licenses the relation, brand-scoped', () => {
+    expect(surviving).toHaveLength(1);
+    expect(surviving[0].licensedScope).toBe('brand');
+  });
+
+  it('drops the exact published pair — scope survives the pronoun', () => {
+    // Shipped 2026-08-17. `This` carried the dCS across the sentence boundary,
+    // so only ARC was named, the pair check never ran, and a brand-scoped
+    // claim was asserted of the product.
+    const escaped = 'The dCS Rossini Apex offers a detailed and slightly cool presentation. '
+      + 'This is counterweighted by the ARC ref 5, which delivers smoother sound.';
+    const { prose, dropped } = filterUnlicensedRelationalProse(escaped, surviving, NAMES);
+    expect(prose).toBe('The dCS Rossini Apex offers a detailed and slightly cool presentation.');
+    expect(dropped[0].reason).toMatch(/brand-scoped relation asserted of the product/);
+  });
+
+  it('publishes the same anaphoric sentence once the maker is attributed', () => {
+    const attributed = 'dCS designs tend toward a detailed presentation. '
+      + 'This is counterweighted by the ARC ref 5, whose smoother character '
+      + 'is described as balancing it.';
+    expect(filterUnlicensedRelationalProse(attributed, surviving, NAMES).prose)
+      .toBe(attributed);
+  });
+
+  it('resolves anaphora to an UNLICENSED antecedent and drops it', () => {
+    const other: AttributeRecord[] = [
+      attr('Butler Monads', 'elastic_controlled', 'controlled', 'model'),
+      attr('Acora QRC-2', 'airy_closed', 'airy', 'model'),
+    ];
+    const none = licensedRelations({ status: 'none_establishable', relations: [] }, other);
+    const s = 'The Butler Monads deliver controlled dynamics. '
+      + 'It is complemented by the Acora QRC-2.';
+    const { prose } = filterUnlicensedRelationalProse(s, none, NAMES);
+    expect(prose).toBe('The Butler Monads deliver controlled dynamics.');
+  });
+});
+
+describe('MIXED PARAGRAPH — only the licensed relational content survives', () => {
+  const A: AttributeRecord[] = [
+    attr('dCS Rossini Apex', 'warm_bright', 'bright', 'model'),
+    attr('ARC ref 5', 'warm_bright', 'warm', 'model'),
+    attr('Butler Monads', 'elastic_controlled', 'controlled', 'model'),
+    attr('Acora QRC-2', 'airy_closed', 'airy', 'model'),
+  ];
+  const SET: RelationSet = { status: 'established', relations: [
+    { components: ['dCS Rossini Apex', 'ARC ref 5'], axis: 'warm_bright',
+      kind: 'counterweight', premises: [0, 1] },
+    { components: ['Butler Monads', 'Acora QRC-2'], axis: 'elastic_controlled',
+      kind: 'reinforcement', premises: [2, 3] },   // non-commensurable → rejected
+  ] };
+  const surviving = licensedRelations(SET, A);
+
+  it('licenses exactly one of the two', () => {
+    expect(surviving).toHaveLength(1);
+    expect(surviving[0].components).toEqual(['dCS Rossini Apex', 'ARC ref 5']);
+  });
+
+  it('keeps the licensed relation, the single-component sentence, and nothing else', () => {
+    const para = 'The dCS Rossini Apex leans bright, which the ARC ref 5 counterbalances. '
+      + 'The Butler Monads bring control that the Acora QRC-2 turns into an airy stage. '
+      + 'The Acora QRC-2 is a floorstanding design.';
+    const { prose, dropped } = filterUnlicensedRelationalProse(para, surviving, NAMES);
+    expect(prose).toContain('counterbalances');
+    expect(prose).toContain('floorstanding design');
+    expect(prose).not.toContain('airy stage');
+    expect(dropped).toHaveLength(1);
+  });
+});
+
+describe('POSITIVE CONTROLS — the rule must not silence Describe', () => {
+  const surviving = licensedRelations({ status: 'none_establishable', relations: [] }, []);
+
+  it('publishes per-component description with no relations at all', () => {
+    const d = 'The dCS Rossini Apex is a Ring DAC design. '
+      + 'The ARC ref 5 is a tube line stage. '
+      + 'The Butler Monads are hybrid monoblocks. '
+      + 'The Acora QRC-2 is a floorstanding loudspeaker.';
+    expect(filterUnlicensedRelationalProse(d, surviving, NAMES).prose).toBe(d);
+  });
+
+  it('publishes a system-level statement naming no component', () => {
+    const v = 'Nothing here obviously needs changing.';
+    expect(filterUnlicensedRelationalProse(v, surviving, NAMES).prose).toBe(v);
+  });
+
+  it('publishes an anaphoric sentence that stays on one component', () => {
+    const a = 'The Acora QRC-2 uses a stone enclosure. This points toward low cabinet contribution.';
+    expect(filterUnlicensedRelationalProse(a, surviving, NAMES).prose).toBe(a);
+  });
+});
