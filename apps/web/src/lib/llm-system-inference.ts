@@ -744,6 +744,7 @@ export async function inferProvisionalSystemAssessment(
 
     const parsedResponse = parseSystemInferenceResponse(
       content, componentNames, knownDescriptions, corroborated ?? [],
+      provenance,
     );
     if (!parsedResponse) return null;
 
@@ -832,6 +833,12 @@ function parseSystemInferenceResponse(
   componentNames: string[],
   knownDescriptions: { name: string; source: 'product' | 'brand' }[] = [],
   corroborated: string[] = [],
+  /**
+   * The authoritative basis per component, passed in rather than recomputed.
+   * Tier-bounded intensity needs it, and deriving it here would be a second
+   * derivation of a fact the caller already holds.
+   */
+  provenance: ComponentProvenance[] = [],
 ): ConsultationResponse | null {
   try {
     let cleaned = raw.trim();
