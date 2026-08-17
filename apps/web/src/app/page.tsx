@@ -2938,6 +2938,7 @@ export default function Home() {
           // user-supplied — while waiting costs seconds on first sight only.
           const CORROBORATION_BUDGET_MS = 25000;
           let corroborated: string[] = [];
+          let lookupUnknown: string[] = [];
           const canonicalByName = new Map<string, { canonicalName?: string; brand?: string }>();
           if (unresolvedRoster.length > 0) {
             const deadline = new Promise<'deadline'>((r) =>
@@ -2955,11 +2956,20 @@ export default function Home() {
                 // and then discarded here, so HiFiShark and eBay searched the
                 // listener's shorthand ("ARC ref 5") when corroboration had
                 // already resolved "Audio Research Reference 5".
-                return rec?.status === 'corroborated'
-                  ? { name: u.name, canonicalName: rec.canonicalName as string | undefined,
-                      brand: rec.brand as string | undefined }
-                  : null;
-              } catch { return null; }
+                if (rec?.status === 'corroborated') {
+                  return { name: u.name, corroborated: true,
+                    canonicalName: rec.canonicalName as string | undefined,
+                    brand: rec.brand as string | undefined };
+                }
+                // A lookup that did not COMPLETE is not a finding about the
+                // product. Kept distinct so the assessment never tells a
+                // listener their loudspeaker could not be identified because a
+                // request timed out.
+                return { name: u.name, corroborated: false,
+                  lookupUnknown: rec?.status !== 'uncorroborated' };
+              } catch {
+                return { name: u.name, corroborated: false, lookupUnknown: true };
+              }
             }));
             const settled = await Promise.race([lookups, deadline]);
             if (settled === 'deadline') {
@@ -2968,12 +2978,18 @@ export default function Home() {
               console.log('[corroboration] %d of %d corroborated',
                 (settled as Array<string | null>).filter(Boolean).length, unresolvedRoster.length);
             }
-            const records = settled === 'deadline'
-              ? []
-              : (settled as Array<{ name: string; canonicalName?: string; brand?: string } | null>)
-                .filter((r): r is { name: string; canonicalName?: string; brand?: string } => !!r);
-            corroborated = records.map((r) => r.name);
-            for (const r of records) canonicalByName.set(r.name.toLowerCase().trim(), r);
+            type Outcome = { name: string; corroborated: boolean; lookupUnknown?: boolean;
+              canonicalName?: string; brand?: string };
+            // Hitting the shared deadline is itself an infrastructure failure,
+            // so every component becomes lookup-unknown rather than silently
+            // unverified.
+            const outcomes: Outcome[] = settled === 'deadline'
+              ? unresolvedRoster.map((u) => ({ name: u.name, corroborated: false, lookupUnknown: true }))
+              : (settled as Array<Outcome | null>).filter((r): r is Outcome => !!r);
+            const verified = outcomes.filter((r) => r.corroborated);
+            corroborated = verified.map((r) => r.name);
+            lookupUnknown = outcomes.filter((r) => !r.corroborated && r.lookupUnknown).map((r) => r.name);
+            for (const r of verified) canonicalByName.set(r.name.toLowerCase().trim(), r);
           }
 
           const provisional = await inferProvisionalSystemAssessment(
@@ -2982,6 +2998,7 @@ export default function Home() {
             knownDescriptions,
             unresolvedRoster,
             corroborated,
+            lookupUnknown,
           );
           if (provisional) {
             // Override source to provisional_system for distinct UI labeling

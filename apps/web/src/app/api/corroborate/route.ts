@@ -25,23 +25,29 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  isCorroborationAcceptable,
+  evaluateCorroboration,
+  isMalformedRejection,
   normalizeProductName,
-  isCacheFresh,
   type CorroborationRecord,
 } from '@/lib/entity-corroboration';
-
-const TIMEOUT_MS = 9000;
+import { readCached, writeCached } from '@/lib/corroboration-store';
 
 /**
- * Warm-instance cache. Corroboration is near-static — a product either exists
- * or it does not — so repeating the lookup for the same name is pure waste.
- * TTLs come from the frozen policy: positives long-lived but revalidatable,
- * negatives short because new gear appears, and 'unavailable' NEVER cached as
- * an answer. Durable Turso persistence is the next step; this already removes
- * the repeat cost within an instance.
+ * The retry exists for ONE failure class: a lookup that did not complete
+ * usefully. Production returned a `sourceUrl` of
+ * "https://www.acoraacoustics.com/ (via indication of QRC-2 on their site)" —
+ * a real address with commentary glued on — and the strict URL parse correctly
+ * rejected it. Rejecting it was right; recording it as "this loudspeaker could
+ * not be identified" was not.
+ *
+ * A genuine `uncorroborated` is NEVER retried. Retrying a completed finding
+ * until it changes its mind is how a verification gate turns into a slot
+ * machine, and the acceptance policy is deliberately frozen.
  */
-const cache = new Map<string, CorroborationRecord>();
+const TIMEOUT_MS = 9000;
+const RETRY_TIMEOUT_MS = 7000;   // 16s worst case, inside the caller's 25s budget
+const MAX_ATTEMPTS = 2;
+
 const MODEL = process.env.OPENAI_SEARCH_MODEL ?? 'gpt-4o';
 
 const INSTRUCTIONS = `You verify whether a named audio product exists. You are NOT reviewing it.
@@ -80,83 +86,104 @@ export async function POST(req: NextRequest) {
   } catch { /* fall through */ }
 
   const normalizedName = normalizeProductName(name);
-  const fail = (status: CorroborationRecord['status']): NextResponse =>
-    NextResponse.json({ normalizedName, status, checkedAt: Date.now() });
 
-  if (!normalizedName) return fail('unavailable');
-
-  const cached = cache.get(normalizedName);
-  if (cached && isCacheFresh(cached, Date.now())) {
-    return NextResponse.json({ ...cached, cached: true });
-  }
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return fail('unavailable');
-
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    const res = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model: MODEL,
-        tools: [{ type: 'web_search' }],
-        instructions: INSTRUCTIONS,
-        input: `Audio product: "${name}"`,
-      }),
-      signal: controller.signal,
+  /** Infrastructure outcome. Never written to the cache, never evidence. */
+  const lookupUnknown = (detail: string): NextResponse => {
+    console.warn('[corroborate] %s -> lookup_unknown (%dms) %s',
+      normalizedName || '(empty)', Date.now() - started, detail);
+    return NextResponse.json({
+      normalizedName, status: 'lookup_unknown' as const, checkedAt: Date.now(), detail,
     });
-    clearTimeout(timer);
+  };
 
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '');
-      console.warn('[corroborate] upstream %s: %s', res.status, detail.slice(0, 300));
-      return fail('unavailable');
-    }
+  if (!normalizedName) return lookupUnknown('empty name');
 
-    const data = await res.json();
-    // The Responses API returns content across output items; take the text.
-    const text: string =
-      data.output_text
-      ?? (Array.isArray(data.output)
-        ? data.output
-          .flatMap((o: { content?: Array<{ text?: string }> }) => o.content ?? [])
-          .map((c: { text?: string }) => c.text ?? '')
-          .join('')
-        : '');
-
-    let parsed: Record<string, unknown>;
-    try {
-      parsed = JSON.parse(text.trim().replace(/^```(?:json)?\s*/, '').replace(/```$/, ''));
-    } catch {
-      console.warn('[corroborate] unparseable reply for %s: %s', normalizedName, text.slice(0, 200));
-      return fail('unavailable');
-    }
-
-    const accepted = isCorroborationAcceptable(name, parsed as never);
-    const record: CorroborationRecord & { rejectedReason?: string } = {
-      normalizedName,
-      status: accepted ? 'corroborated' : 'uncorroborated',
-      checkedAt: Date.now(),
-      ...(accepted
-        ? {
-          canonicalName: typeof parsed.canonicalName === 'string' ? parsed.canonicalName : undefined,
-          brand: typeof parsed.brand === 'string' ? parsed.brand : undefined,
-          sourceUrl: typeof parsed.sourceUrl === 'string' ? parsed.sourceUrl : undefined,
-          sourceKind: parsed.sourceKind as CorroborationRecord['sourceKind'],
-          matchQuality: typeof parsed.matchQuality === 'number' ? parsed.matchQuality : undefined,
-        }
-        : {}),
-    };
-
-    console.log('[corroborate] %s -> %s (%dms) %s',
-      normalizedName, record.status, Date.now() - started,
-      accepted ? record.sourceUrl : `claimed:${String(parsed.sourceKind)}/${String(parsed.sourceUrl).slice(0, 60)}`);
-
-    cache.set(normalizedName, record);
-    return NextResponse.json(record);
-  } catch (err) {
-    console.warn('[corroborate] failed for %s: %s', normalizedName, String(err).slice(0, 200));
-    return fail('unavailable');
+  const cached = await readCached(normalizedName, Date.now());
+  if (cached) {
+    return NextResponse.json({ ...cached.record, cached: true, cacheTier: cached.tier });
   }
+
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return lookupUnknown('no api key');
+
+  let lastDetail = 'unknown';
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const budget = attempt === 1 ? TIMEOUT_MS : RETRY_TIMEOUT_MS;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), budget);
+      const res = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+        body: JSON.stringify({
+          model: MODEL,
+          tools: [{ type: 'web_search' }],
+          instructions: INSTRUCTIONS,
+          input: `Audio product: "${name}"`,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+
+      if (!res.ok) {
+        lastDetail = `upstream ${res.status}`;
+        continue;   // transport failure — retryable
+      }
+
+      const data = await res.json();
+      const text: string =
+        data.output_text
+        ?? (Array.isArray(data.output)
+          ? data.output
+            .flatMap((o: { content?: Array<{ text?: string }> }) => o.content ?? [])
+            .map((c: { text?: string }) => c.text ?? '')
+            .join('')
+          : '');
+
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(text.trim().replace(/^```(?:json)?\s*/, '').replace(/```$/, ''));
+      } catch {
+        lastDetail = 'unparseable reply';
+        continue;   // defective response — retryable
+      }
+
+      const verdict = evaluateCorroboration(name, parsed as never);
+
+      // A malformed source is a defect in the REPLY. On the first attempt it
+      // earns a retry; on the last it is still not evidence about the product.
+      if (!verdict.accepted && isMalformedRejection(verdict.reason)) {
+        lastDetail = `malformed source (${verdict.reason})`;
+        continue;
+      }
+
+      const record: CorroborationRecord = {
+        normalizedName,
+        status: verdict.accepted ? 'corroborated' : 'uncorroborated',
+        checkedAt: Date.now(),
+        ...(verdict.accepted
+          ? {
+            canonicalName: typeof parsed.canonicalName === 'string' ? parsed.canonicalName : undefined,
+            brand: typeof parsed.brand === 'string' ? parsed.brand : undefined,
+            sourceUrl: typeof parsed.sourceUrl === 'string' ? parsed.sourceUrl : undefined,
+            sourceKind: parsed.sourceKind as CorroborationRecord['sourceKind'],
+            matchQuality: typeof parsed.matchQuality === 'number' ? parsed.matchQuality : undefined,
+          }
+          : {}),
+      };
+
+      console.log('[corroborate] %s -> %s (%dms, attempt %d) %s',
+        normalizedName, record.status, Date.now() - started, attempt,
+        verdict.accepted ? record.sourceUrl : `rejected:${verdict.reason}`);
+
+      await writeCached(record);
+      return NextResponse.json({ ...record, attempts: attempt });
+    } catch (err) {
+      lastDetail = String(err).slice(0, 120);
+      // Abort/network — retryable.
+    }
+  }
+
+  return lookupUnknown(`${lastDetail} after ${MAX_ATTEMPTS} attempts`);
 }

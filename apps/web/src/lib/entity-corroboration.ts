@@ -27,7 +27,39 @@
  * never do anything except fail closed.
  */
 
-export type CorroborationStatus = 'corroborated' | 'uncorroborated' | 'unavailable';
+/**
+ * THREE STATES, NOT TWO.
+ *
+ * A real listener's loudspeaker was labelled "your description only" and the
+ * assessment asked them to identify a product Audio XX identifies correctly on
+ * demand. The lookup had simply failed on that turn — and a failed lookup was
+ * indistinguishable from a completed one that found nothing.
+ *
+ *   corroborated    the lookup completed and the evidence was accepted
+ *   uncorroborated  the lookup COMPLETED and genuinely failed to verify —
+ *                   the product was not found, the only source was
+ *                   third-party, or the page does not name this product
+ *   lookup_unknown  the lookup did not complete usefully — timeout, upstream
+ *                   error, missing key, unparseable reply, malformed source
+ *
+ * The distinction is epistemic, not cosmetic. `uncorroborated` is a claim
+ * about the PRODUCT; `lookup_unknown` is a fact about OUR REQUEST. Only the
+ * first is evidence, and only the first may be cached as an answer.
+ *
+ * `unavailable` is retained as a deprecated alias so stored records and older
+ * clients keep parsing; it means exactly `lookup_unknown`.
+ */
+export type CorroborationStatus =
+  | 'corroborated'
+  | 'uncorroborated'
+  | 'lookup_unknown'
+  /** @deprecated Same meaning as `lookup_unknown`. Retained for stored records. */
+  | 'unavailable';
+
+/** Does this status describe the product, or only our attempt to look it up? */
+export function isEvidentialStatus(status: CorroborationStatus | undefined): boolean {
+  return status === 'corroborated' || status === 'uncorroborated';
+}
 
 export type SourceKind = 'official' | 'manufacturer' | 'retailer' | 'other';
 
@@ -99,7 +131,42 @@ export function identifyingTokens(name: string): string[] {
  * "your description only" than by a confident paragraph resting on a retailer
  * listing for something adjacent.
  */
-export function isCorroborationAcceptable(
+/**
+ * Why a candidate was rejected.
+ *
+ * The POLICY is unchanged and deliberately frozen — every decision below is
+ * byte-for-byte the one it was before. What is new is that the caller can now
+ * see WHY, because two different kinds of failure were being recorded as the
+ * same epistemic claim:
+ *
+ *   genuine      the lookup completed and the evidence genuinely does not
+ *                establish this product
+ *   malformed    the reply was not usable — chiefly a `sourceUrl` that is not
+ *                a URL. Production returned
+ *                "https://www.acoraacoustics.com/ (via indication of QRC-2 on
+ *                their site)" — a real address with commentary glued on. That
+ *                is a defective response, not evidence about a loudspeaker,
+ *                and it must be retried rather than believed.
+ */
+export type RejectionReason =
+  | 'not_found'
+  | 'source_missing'
+  | 'source_kind'
+  | 'match_quality'
+  | 'malformed_url'
+  | 'not_first_party'
+  | 'token_mismatch';
+
+/** Which rejections are defects in the REPLY rather than facts about the product. */
+export function isMalformedRejection(reason: RejectionReason): boolean {
+  return reason === 'malformed_url' || reason === 'source_missing';
+}
+
+export type CorroborationVerdict =
+  | { accepted: true }
+  | { accepted: false; reason: RejectionReason };
+
+export function evaluateCorroboration(
   requestedName: string,
   candidate: {
     exists?: boolean;
@@ -109,22 +176,39 @@ export function isCorroborationAcceptable(
     matchQuality?: number;
     sourceTitle?: string;
   },
-): boolean {
-  if (!candidate?.exists) return false;
-  if (!candidate.sourceUrl) return false;
-  if (candidate.sourceKind !== 'official' && candidate.sourceKind !== 'manufacturer') return false;
-  if ((candidate.matchQuality ?? 0) < MIN_MATCH_QUALITY) return false;
+): CorroborationVerdict {
+  const no = (reason: RejectionReason): CorroborationVerdict => ({ accepted: false, reason });
+
+  if (!candidate?.exists) return no('not_found');
+  // `exists: true` with no source is an internally inconsistent reply: the
+  // model asserted the product is real and then cited nothing. Treated as a
+  // defective response, not as a finding.
+  if (!candidate.sourceUrl) return no('source_missing');
+  if (candidate.sourceKind !== 'official' && candidate.sourceKind !== 'manufacturer') return no('source_kind');
+  if ((candidate.matchQuality ?? 0) < MIN_MATCH_QUALITY) return no('match_quality');
 
   // The URL must be a real absolute http(s) address, not a bare string.
+  //
+  // The whitespace check is not pedantry. Production returned
+  //
+  //   "https://www.acoraacoustics.com/ (via indication of QRC-2 on their site)"
+  //
+  // and `new URL()` accepted it — the constructor percent-encodes spaces
+  // rather than throwing, so the commentary became part of the path and the
+  // candidate was ACCEPTED. The stored source URL was then a 404, surfaced to
+  // the listener as the page proving their loudspeaker exists. A URL
+  // containing whitespace is a URL with prose attached: a defective reply, to
+  // be retried rather than believed.
+  if (/\s/.test(candidate.sourceUrl)) return no('malformed_url');
   let host: string;
   try {
     const u = new URL(candidate.sourceUrl);
-    if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return no('malformed_url');
     host = u.host;
   } catch {
-    return false;
+    return no('malformed_url');
   }
-  if (!host) return false;
+  if (!host) return no('malformed_url');
 
   // FIRST-PARTY DOMAIN CHECK. `sourceKind` is the model's own claim, and the
   // live stress test showed it labelling ecoustics.com and hifiverse.io as
@@ -135,11 +219,11 @@ export function isCorroborationAcceptable(
   // never by the model.
   const hostKey = host.toLowerCase().replace(/[^a-z0-9]/g, '');
   const brandTokens = identifyingTokens(requestedName).filter((t) => !/^\d+$/.test(t));
-  if (!brandTokens.some((t) => hostKey.includes(t))) return false;
+  if (!brandTokens.some((t) => hostKey.includes(t))) return no('not_first_party');
 
   // The source must name the product, not merely its category.
   const tokens = identifyingTokens(requestedName);
-  if (tokens.length === 0) return false;
+  if (tokens.length === 0) return no('token_mismatch');
   const haystack = [
     candidate.canonicalName ?? '',
     candidate.sourceTitle ?? '',
@@ -172,17 +256,42 @@ export function isCorroborationAcceptable(
     || haystack.includes(`${t}s`);
 
   const unmatched = tokens.filter((t) => !present(t));
-  if (unmatched.length > 0) return false;
+  if (unmatched.length > 0) return no('token_mismatch');
 
-  return true;
+  return { accepted: true };
 }
 
-/** Is a cached record still usable? */
+/**
+ * Boolean form of `evaluateCorroboration`.
+ *
+ * Kept because the frozen acceptance suite is written against it, and that
+ * suite is the record that this policy did not move while the surrounding
+ * failure handling was rebuilt.
+ */
+export function isCorroborationAcceptable(
+  requestedName: string,
+  candidate: Parameters<typeof evaluateCorroboration>[1],
+): boolean {
+  return evaluateCorroboration(requestedName, candidate).accepted;
+}
+
+/**
+ * Is a cached record still usable?
+ *
+ * Only evidential states are cacheable at all — see `isEvidentialStatus`.
+ * Caching a timeout would turn one bad minute into two weeks of a listener
+ * being told their loudspeaker cannot be identified.
+ */
 export function isCacheFresh(record: CorroborationRecord, now: number): boolean {
   const age = now - record.checkedAt;
   if (record.status === 'corroborated') return age < POSITIVE_TTL_MS;
   if (record.status === 'uncorroborated') return age < NEGATIVE_TTL_MS;
-  return false; // 'unavailable' is never cached as an answer
+  return false;
+}
+
+/** Records that may be written to the durable store. Never infrastructure failure. */
+export function isCacheable(record: CorroborationRecord): boolean {
+  return isEvidentialStatus(record.status);
 }
 
 /**
@@ -201,5 +310,10 @@ export function tierFor(
   if (hasProduct) return 'catalog';
   if (hasBrandProfile) return 'brand';
   if (corroboration === 'corroborated') return 'model';
+  // `lookup_unknown` lands here too, and correctly: without corroboration
+  // there is no licence to describe the product. What changes is what may be
+  // SAID about the silence — see the prompt contract in llm-system-inference.
+  // A failed lookup is not permission to tell a listener their product could
+  // not be identified.
   return 'user';
 }

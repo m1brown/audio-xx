@@ -512,6 +512,15 @@ export async function inferProvisionalSystemAssessment(
   knownDescriptions: { name: string; character: string; source: 'product' | 'brand' }[],
   unresolved?: { name: string; role: string }[],
   corroborated?: string[],
+  /**
+   * Components whose identity check did not COMPLETE — timeout, upstream
+   * error, malformed reply. Distinct from uncorroborated, which is a finding
+   * about the product. Conflating the two told a real listener that their
+   * Acora QRC-2 could not be identified, and asked them to describe it, on a
+   * turn where the lookup had simply failed. Audio XX identifies that product
+   * correctly on demand.
+   */
+  lookupUnknown?: string[],
 ): Promise<ConsultationResponse | null> {
   const knownNames = new Set(knownDescriptions.map(d => d.name));
   const knownContext = knownDescriptions.length > 0
@@ -526,7 +535,26 @@ export async function inferProvisionalSystemAssessment(
   // exist, while the chip beside it correctly read "Your description only".
   // A label and a paragraph that disagree are worse than either alone.
   const corroboratedSet = new Set((corroborated ?? []).map((c) => c.toLowerCase().trim()));
-  const uncorroborated = unknownNames.filter((n) => !corroboratedSet.has(n.toLowerCase().trim()));
+  const unknownLookupSet = new Set((lookupUnknown ?? []).map((c) => c.toLowerCase().trim()));
+  const uncorroborated = unknownNames.filter((n) =>
+    !corroboratedSet.has(n.toLowerCase().trim()) && !unknownLookupSet.has(n.toLowerCase().trim()));
+  const incomplete = unknownNames.filter((n) => unknownLookupSet.has(n.toLowerCase().trim()));
+
+  // Same restraint, different reason — and the difference is the whole point.
+  // Nothing may be claimed about how these components sound, but the listener
+  // must NOT be told the product could not be identified, and must not be
+  // asked to supply an identity they already gave correctly.
+  const incompleteContext = incomplete.length > 0
+    ? `\n\nIDENTITY CHECK DID NOT COMPLETE for these products:\n`
+      + `${incomplete.map((n) => `- ${n}`).join('\n')}\n`
+      + `This is a failure on our side, NOT a finding about the product. Name them `
+      + `and state the role the listener gave, and do not describe their sound, `
+      + `design or maker. Do NOT say the product is unidentified, unknown or `
+      + `unverified, do NOT ask the listener to identify or describe it, and do `
+      + `NOT ask them to confirm it exists. If a chain conclusion depends on one `
+      + `of them, say that this part of the reading is incomplete on our side.`
+    : '';
+
   const uncorroboratedContext = uncorroborated.length > 0
     ? `\n\nIDENTITY NOT VERIFIED — Audio XX could not confirm these products exist:\n`
       + `${uncorroborated.map((n) => `- ${n}`).join('\n')}\n`
@@ -547,7 +575,7 @@ export async function inferProvisionalSystemAssessment(
   const userPrompt = `The user asked: "${query}"
 
 The system chain includes: ${componentNames.join(' → ')}
-${knownContext}${unknownContext}${uncorroboratedContext}
+${knownContext}${unknownContext}${uncorroboratedContext}${incompleteContext}
 
 When describing each component in the philosophy section:
 - Catalog-verified components: reference the verified data above and assess in full.
