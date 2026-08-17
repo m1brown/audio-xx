@@ -201,7 +201,16 @@ export function licensedRelations(
 // ── Question typing ─────────────────────────────────────────────────
 
 export type ActionVerdict = 'no_change' | 'constraint' | 'indeterminate';
-export type QuestionType = 'diagnostic' | 'directional' | 'missing_evidence';
+export type QuestionType =
+  /**
+   * OPEN diagnostic — asks what the listener notices without naming any
+   * candidate fault. The only type permitted after a no-change verdict.
+   */
+  | 'open_diagnostic'
+  /** Diagnostic scoped to a concern Evaluate actually established. */
+  | 'diagnostic'
+  | 'directional'
+  | 'missing_evidence';
 
 /**
  * The action verdict determines the ONLY permitted question type, decided
@@ -216,10 +225,55 @@ export type QuestionType = 'diagnostic' | 'directional' | 'missing_evidence';
  */
 export function permittedQuestionType(verdict: ActionVerdict): QuestionType {
   switch (verdict) {
-    case 'no_change': return 'diagnostic';
+    // Nothing was found wrong, so nothing may be suggested as wrong. A
+    // scoped diagnostic needs a concern to scope it to, and a no-change
+    // verdict is the statement that there isn't one.
+    case 'no_change': return 'open_diagnostic';
     case 'constraint': return 'directional';
     case 'indeterminate': return 'missing_evidence';
   }
+}
+
+/**
+ * The question Audio XX asks when it found nothing wrong.
+ *
+ * Deliberately contains no candidate fault. Production, after a no-change
+ * verdict, asked "Are you experiencing any listening fatigue or a lack of
+ * sonic warmth?" — technically a diagnostic, and still an invitation to find
+ * two problems the assessment had just declined to find. A question that
+ * supplies its own hypotheses is a recommendation wearing a question mark.
+ */
+export const OPEN_DIAGNOSTIC_QUESTION =
+  'What, if anything, are you dissatisfied with in the system as it stands?';
+
+/**
+ * Perceptual qualities a question may not introduce under a no-change verdict.
+ *
+ * This list is a REGRESSION GUARD, not the mechanism. The mechanism is that
+ * `open_diagnostic` permits no named quality at all — see
+ * `questionIntroducesConcern`, which works from sentence shape rather than
+ * from this vocabulary, so a quality it has never seen is caught anyway.
+ */
+const PERCEPTUAL_QUALITY =
+  /\b(?:fatigue|fatiguing|harsh|harshness|bright(?:ness)?|thin(?:ness)?|lean|warmth|warm|dull|muddy|congest\w*|sibilan\w*|glare|edgy|boomy|bloated|veiled|closed[- ]in|forward|recessed|sluggish|slow|loose|shrill)\b/i;
+
+/**
+ * Does this question hand the listener a hypothesis?
+ *
+ * Two shapes, both structural:
+ *
+ *   1. A DEFICIENCY FRAME — "are you experiencing X", "any lack of Y",
+ *      "do you find it too Z". These presuppose a fault and ask only whether
+ *      the listener agrees.
+ *   2. A NAMED QUALITY under a verdict that established none. Naming a
+ *      quality is legitimate when Evaluate found a concern about it; after
+ *      no-change there is nothing for it to be scoped to.
+ */
+export function questionIntroducesConcern(question: string): boolean {
+  if (!question?.trim()) return false;
+  const deficiencyFrame =
+    /\b(?:are you (?:experiencing|noticing|finding|hearing)|do you (?:experience|notice|find|hear)|any (?:lack|absence|shortage) of|too (?:much|little|bright|warm|thin|forward)|is (?:it|the \w+) (?:ever )?(?:too|overly))\b/i;
+  return deficiencyFrame.test(question) || PERCEPTUAL_QUALITY.test(question);
 }
 
 /**
@@ -239,8 +293,12 @@ const THIRD_PERSON_MARKERS = /\bthe listener\b/i;
 export function questionViolations(question: string, required: QuestionType): string[] {
   const out: string[] = [];
   if (!question?.trim()) return out;
-  if (required === 'diagnostic' && DIRECTIONAL_MARKERS.test(question)) {
+  if ((required === 'open_diagnostic' || required === 'diagnostic')
+    && DIRECTIONAL_MARKERS.test(question)) {
     out.push('directional question emitted under a no-change verdict');
+  }
+  if (required === 'open_diagnostic' && questionIntroducesConcern(question)) {
+    out.push('question seeds a concern the assessment did not establish');
   }
   if (THIRD_PERSON_MARKERS.test(question)) {
     out.push('addresses the listener in the third person');

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   validateRelations, licensedRelations, relationTier, permittedQuestionType,
   questionViolations, overclaimViolations, stripOverclaims,
+  questionIntroducesConcern, OPEN_DIAGNOSTIC_QUESTION,
   type AttributeRecord, type RelationSet,
 } from '../relational-explain';
 
@@ -104,19 +105,19 @@ describe('none establishable is a state, not a relation kind', () => {
 
 describe('the action verdict fixes the question type before any prose exists', () => {
   it('maps each verdict to exactly one permitted type', () => {
-    expect(permittedQuestionType('no_change')).toBe('diagnostic');
+    expect(permittedQuestionType('no_change')).toBe('open_diagnostic');
     expect(permittedQuestionType('constraint')).toBe('directional');
     expect(permittedQuestionType('indeterminate')).toBe('missing_evidence');
   });
 
   it('CASE G: catches the exact production violation', () => {
     const q = 'Would the listener prefer a greater emphasis on warmth, and have they considered tube rolling or different cables?';
-    const v = questionViolations(q, 'diagnostic');
+    const v = questionViolations(q, 'open_diagnostic');
     expect(v).toContain('directional question emitted under a no-change verdict');
     expect(v).toContain('addresses the listener in the third person');
   });
 
-  it('permits a diagnostic question in second person', () => {
+  it('permits a scoped diagnostic where a concern was established', () => {
     expect(questionViolations(
       'Is anything about the sound currently feeling lean, forward or dynamically held back?', 'diagnostic',
     )).toEqual([]);
@@ -268,5 +269,50 @@ describe('D-12 §6 — intent claims that changed grammar', () => {
     // engineered. Blocking this would remove Describe evidence Audio XX holds.
     expect(overclaimViolations('The Rossini Apex DAC is designed to minimise jitter.')).toEqual([]);
     expect(overclaimViolations('The Butler MONAD is built to drive difficult loads.')).toEqual([]);
+  });
+});
+
+/**
+ * Production, immediately after a no-change verdict:
+ *
+ *   "Are you experiencing any listening fatigue or a lack of sonic warmth in
+ *    your sessions?"
+ *
+ * Structurally a diagnostic, and still an invitation to find two problems the
+ * assessment had just declined to find.
+ */
+describe('a no-change verdict may not seed a hypothesis', () => {
+  it('rejects the exact production question', () => {
+    expect(questionViolations(
+      'Are you experiencing any listening fatigue or a lack of sonic warmth in your sessions?',
+      'open_diagnostic',
+    )).toContain('question seeds a concern the assessment did not establish');
+  });
+
+  it('rejects a deficiency frame even with no named quality', () => {
+    expect(questionIntroducesConcern('Do you find it too much at higher volumes?')).toBe(true);
+  });
+
+  it('rejects a named quality even in an open frame', () => {
+    expect(questionIntroducesConcern('What do you make of the brightness?')).toBe(true);
+  });
+
+  it('accepts the open question', () => {
+    expect(questionViolations(OPEN_DIAGNOSTIC_QUESTION, 'open_diagnostic')).toEqual([]);
+    expect(questionIntroducesConcern(OPEN_DIAGNOSTIC_QUESTION)).toBe(false);
+  });
+
+  it('accepts an open question about what the listener notices', () => {
+    expect(questionViolations(
+      'What stands out to you most when you sit down to listen?', 'open_diagnostic',
+    )).toEqual([]);
+  });
+
+  it('still permits a named quality under a CONSTRAINT verdict', () => {
+    // The rule bounds questions to established findings; where a concern was
+    // established, naming it is the point.
+    expect(questionViolations(
+      'Would you like options for an amplifier with more headroom?', 'directional',
+    )).toEqual([]);
   });
 });

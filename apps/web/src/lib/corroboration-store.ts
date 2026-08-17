@@ -44,8 +44,32 @@ const memory = new Map<string, CorroborationRecord>();
 /** One attempt to create the table per process. */
 let ensured: Promise<boolean> | null = null;
 
+/**
+ * Why the durable tier is or is not working, as a non-secret category.
+ *
+ * The store degrades silently by design, which is right for safety and useless
+ * for diagnosis: production reported `memory` on every request and there was no
+ * way to tell a missing client from a rejected DDL statement without guessing.
+ * This records the category only — never a URL, credential, or row.
+ */
+export type StoreState =
+  | 'unqueried'
+  | 'durable_ok'
+  | 'no_client'
+  | 'ddl_failed'
+  | 'read_failed'
+  | 'write_failed';
+
+let storeState: StoreState = 'unqueried';
+/** Error constructor name only — no message, which could carry a DSN. */
+let storeDetail: string | undefined;
+
+export function getStoreDiagnostics(): { state: StoreState; detail?: string } {
+  return { state: storeState, detail: storeDetail };
+}
+
 async function ensureTable(): Promise<boolean> {
-  if (!prisma) return false;
+  if (!prisma) { storeState = 'no_client'; return false; }
   if (!ensured) {
     ensured = (async () => {
       try {
@@ -61,8 +85,11 @@ async function ensureTable(): Promise<boolean> {
             "checkedAt"      BIGINT NOT NULL
           )
         `);
+        storeState = 'durable_ok';
         return true;
       } catch (err) {
+        storeState = 'ddl_failed';
+        storeDetail = (err as Error)?.constructor?.name ?? 'Error';
         console.warn('[corroboration-store] table unavailable, memory only: %s',
           String(err).slice(0, 160));
         return false;
@@ -107,7 +134,54 @@ export async function readCached(
     memory.set(normalizedName, record);
     return { record, tier: 'durable' };
   } catch (err) {
+    storeState = 'read_failed';
+    storeDetail = (err as Error)?.constructor?.name ?? 'Error';
     console.warn('[corroboration-store] read failed: %s', String(err).slice(0, 160));
+    return null;
+  }
+}
+
+/**
+ * A previously corroborated record, freshness ignored.
+ *
+ * Used ONLY when a live lookup fails. Existence does not expire: a product
+ * verified against its manufacturer six months ago has not become
+ * unidentifiable because a request timed out today. Without this, one bad
+ * lookup silently demotes a component that Audio XX has already verified —
+ * which is the failure this whole layer exists to end, merely deferred by the
+ * length of the TTL.
+ *
+ * Deliberately positive-only. A stale `uncorroborated` is not re-asserted:
+ * new gear appears, and the short negative TTL exists precisely so absence is
+ * rechecked.
+ */
+export async function readAnyPositive(
+  normalizedName: string,
+): Promise<CorroborationRecord | null> {
+  const local = memory.get(normalizedName);
+  if (local?.status === 'corroborated') return local;
+
+  if (!(await ensureTable())) return null;
+  try {
+    const rows = await prisma!.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT * FROM "CorroborationCache" WHERE "normalizedName" = ? AND "status" = 'corroborated' LIMIT 1`,
+      normalizedName,
+    );
+    const row = rows?.[0];
+    if (!row) return null;
+    return {
+      normalizedName,
+      status: 'corroborated',
+      canonicalName: (row.canonicalName as string) ?? undefined,
+      brand: (row.brand as string) ?? undefined,
+      sourceUrl: (row.sourceUrl as string) ?? undefined,
+      sourceKind: (row.sourceKind as SourceKind) ?? undefined,
+      matchQuality: row.matchQuality == null ? undefined : Number(row.matchQuality),
+      checkedAt: Number(row.checkedAt),
+    };
+  } catch (err) {
+    storeState = 'read_failed';
+    storeDetail = (err as Error)?.constructor?.name ?? 'Error';
     return null;
   }
 }
@@ -143,6 +217,8 @@ export async function writeCached(record: CorroborationRecord): Promise<void> {
       record.checkedAt,
     );
   } catch (err) {
+    storeState = 'write_failed';
+    storeDetail = (err as Error)?.constructor?.name ?? 'Error';
     console.warn('[corroboration-store] write failed: %s', String(err).slice(0, 160));
   }
 }
@@ -151,4 +227,6 @@ export async function writeCached(record: CorroborationRecord): Promise<void> {
 export function __clearMemoryCache(): void {
   memory.clear();
   ensured = null;
+  storeState = 'unqueried';
+  storeDetail = undefined;
 }

@@ -30,7 +30,8 @@ import {
   normalizeProductName,
   type CorroborationRecord,
 } from '@/lib/entity-corroboration';
-import { readCached, writeCached } from '@/lib/corroboration-store';
+import { readCached, writeCached, readAnyPositive, getStoreDiagnostics }
+  from '@/lib/corroboration-store';
 
 /**
  * The retry exists for ONE failure class: a lookup that did not complete
@@ -87,12 +88,30 @@ export async function POST(req: NextRequest) {
 
   const normalizedName = normalizeProductName(name);
 
-  /** Infrastructure outcome. Never written to the cache, never evidence. */
-  const lookupUnknown = (detail: string): NextResponse => {
+  /**
+   * Infrastructure outcome. Never written to the cache, never evidence.
+   *
+   * Before reporting it, an earlier positive is honoured regardless of age:
+   * a product verified against its manufacturer does not become
+   * unidentifiable because today's request timed out.
+   */
+  const lookupUnknown = async (detail: string): Promise<NextResponse> => {
+    if (normalizedName) {
+      const prior = await readAnyPositive(normalizedName);
+      if (prior) {
+        console.warn('[corroborate] %s -> lookup failed (%s), serving prior corroboration',
+          normalizedName, detail);
+        return NextResponse.json({
+          ...prior, cached: true, cacheTier: 'stale_positive',
+          store: getStoreDiagnostics().state,
+        });
+      }
+    }
     console.warn('[corroborate] %s -> lookup_unknown (%dms) %s',
       normalizedName || '(empty)', Date.now() - started, detail);
     return NextResponse.json({
       normalizedName, status: 'lookup_unknown' as const, checkedAt: Date.now(), detail,
+      store: getStoreDiagnostics().state,
     });
   };
 
@@ -100,7 +119,10 @@ export async function POST(req: NextRequest) {
 
   const cached = await readCached(normalizedName, Date.now());
   if (cached) {
-    return NextResponse.json({ ...cached.record, cached: true, cacheTier: cached.tier });
+    return NextResponse.json({
+      ...cached.record, cached: true, cacheTier: cached.tier,
+      store: getStoreDiagnostics().state,
+    });
   }
 
   const key = process.env.OPENAI_API_KEY;
@@ -178,7 +200,10 @@ export async function POST(req: NextRequest) {
         verdict.accepted ? record.sourceUrl : `rejected:${verdict.reason}`);
 
       await writeCached(record);
-      return NextResponse.json({ ...record, attempts: attempt });
+      return NextResponse.json({
+        ...record, attempts: attempt, cacheTier: 'live',
+        store: getStoreDiagnostics().state,
+      });
     } catch (err) {
       lastDetail = String(err).slice(0, 120);
       // Abort/network — retryable.

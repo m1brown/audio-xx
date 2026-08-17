@@ -20,6 +20,7 @@
 import type { ConsultationResponse } from './consultation';
 import {
   licensedRelations, permittedQuestionType, questionViolations, stripOverclaims,
+  OPEN_DIAGNOSTIC_QUESTION,
   type ActionVerdict, type AttributeRecord, type RelationKind, type RelationSet,
   type EvidenceTier,
 } from './relational-explain';
@@ -45,6 +46,13 @@ You are being asked to assess a hi-fi system where some or all components are NO
    a whole. Component observations are SUPPORTING EVIDENCE for that character
    — never four independent mini-reviews. If a paragraph could be lifted out
    and published as a standalone product blurb, it is in the wrong shape.
+
+2b. THE QUESTION. If your verdict is that nothing needs changing, your
+   question must be OPEN: ask what, if anything, the listener is dissatisfied
+   with, and name no candidate fault. Do not ask whether they hear fatigue,
+   harshness, thinness, or a lack of warmth. Naming a problem you did not find
+   is a recommendation wearing a question mark. Where you DID establish a
+   specific concern, the question may address that concern and nothing else.
 
 3. EXPLAIN the division of labour. Why is the chain likely to behave the way
    you just described? Which components materially establish that behaviour
@@ -373,26 +381,52 @@ export interface ComponentProvenance {
   basis: EvidenceBasis;
 }
 
+/**
+ * A component's evidence basis, computed from EVIDENCE ALONE.
+ *
+ * GOVERNING INVARIANT (founder, 2026-08-17):
+ *
+ *   Evidence determines prose authority; prose never determines evidence.
+ *
+ * This function used to take `characterized` and require BOTH corroboration
+ * AND a mention in the generated prose before granting `model`. Production
+ * proved that architecturally wrong: across three consecutive runs of the same
+ * beta system, with all four products corroborating every time, the basis came
+ * out
+ *
+ *   run 1  ARC=model  Butler=model  Acora=model
+ *   run 2  ARC=user   Butler=user   Acora=user
+ *   run 3  ARC=model  Butler=model  Acora=user
+ *
+ * The evidence never moved. What moved was whether the model happened to write
+ * a sentence about each component — so the label reported what was SAID rather
+ * than what was HELD, and a listener's corroborated loudspeaker was reported as
+ * "your description only".
+ *
+ * The self-report is gone too, for the same reason. `componentKnowledge.specific
+ * === false` is generation output: letting it demote a corroborated product
+ * makes prose determine evidence, which is exactly the invariant above.
+ * Corroboration is the independent signal that replaced the self-report, and it
+ * is sufficient on its own.
+ *
+ * Note what this does NOT claim. `model` basis means Audio XX holds independent
+ * evidence that the product is real and Expanded Reasoning is therefore
+ * permitted. It does not claim the assessment discussed the component. Whether
+ * a component was covered is a separate question and deserves its own state
+ * rather than being smuggled into this one.
+ */
 export function computeComponentProvenance(
   componentNames: string[],
   knownDescriptions: { name: string; source: 'product' | 'brand' }[],
-  characterized: string[],
   corroborated?: string[],
 ): ComponentProvenance[] {
   const curated = new Map(knownDescriptions.map((k) => [k.name, k.source]));
-  const spoken = new Set(characterized.map((c) => c.toLowerCase().trim()));
-  // Independent corroboration — the ONLY thing that may raise an uncatalogued
-  // component to Expanded Reasoning. The model's own account of what it knows
-  // was falsified in testing (a fictional product alternated between unknown
-  // and confidently described), so it can no longer promote anything by
-  // itself: it may only speak about what corroboration has already admitted.
   const real = new Set((corroborated ?? []).map((c) => c.toLowerCase().trim()));
   return componentNames.map((name) => {
-    const key = name.toLowerCase().trim();
     const c = curated.get(name);
     if (c === 'product') return { name, basis: 'catalog' as const };
     if (c === 'brand') return { name, basis: 'brand' as const };
-    if (real.has(key) && spoken.has(key)) return { name, basis: 'model' as const };
+    if (real.has(name.toLowerCase().trim())) return { name, basis: 'model' as const };
     return { name, basis: 'user' as const };
   });
 }
@@ -649,42 +683,20 @@ Produce an Audio XX provisional system assessment. Assess the components you hav
         return buildLicensedProvisionalResponse(componentNames, knownDescriptions, unresolvedRoster);
       }
     }
-    // Which components were actually characterised is determined from the
-    // PROSE, not from the model's self-report. Relying on the report labelled
-    // a fully characterised system "your description only" the moment the
-    // model omitted the field — a false label in the opposite direction, and
-    // just as damaging to trust as overstating. If the answer discusses a
-    // component, that component was characterised; the self-report is only a
-    // hint that can add, never subtract.
-    const proseForBasis = [
-      parsedResponse.systemSignature,
-      parsedResponse.philosophy,
-      parsedResponse.tendencies,
-      parsedResponse.systemContext,
-    ].filter(Boolean).join('\n\n');
-    const reported = (parsedResponse as { characterized?: string[] }).characterized ?? [];
-    const declared = ((parsedResponse as { componentKnowledge?: Array<{ name: string; specific?: boolean }> })
-      .componentKnowledge ?? []);
-    // Structural, not lexical. A component the model admits it does not know
-    // is demoted to user-supplied identity no matter how confidently the prose
-    // reads. This fails closed on invented products WITHOUT disabling genuine
-    // model knowledge of real ones — which is the entire point of Expanded
-    // Reasoning.
-    const noProductKnowledge = new Set(
-      declared.filter((d) => d.specific === false).map((d) => d.name.toLowerCase().trim()),
-    );
-    const spokenTo = componentNames.filter((name) => {
-      if (noProductKnowledge.has(name.toLowerCase().trim())) return false;
-      if (reported.some((r) => r.toLowerCase().trim() === name.toLowerCase().trim())) return true;
-      // A distinctive token of the name appearing in the prose is sufficient.
-      const tokens = name.split(/\s+/).filter((t) => t.length >= 3);
-      return tokens.length > 0
-        && tokens.some((t) => new RegExp(`\\b${t.replace(/[^\w-]/g, '')}\\b`, 'i').test(proseForBasis));
-    });
+    // Provenance is computed from EVIDENCE, before and independently of the
+    // prose. Everything that used to stand here — scanning the generated text
+    // for each component's name, and honouring the model's own
+    // `componentKnowledge` self-report — let generation decide what evidence
+    // Audio XX holds. That inverted the licensing chain, and production showed
+    // the same corroborated components landing on three different bases across
+    // three identical runs.
+    //
+    // `characterized` and `componentKnowledge` still travel on the response.
+    // They describe COVERAGE — what this assessment discussed — which is worth
+    // knowing and is not the same question as what evidence exists.
     parsedResponse.componentProvenance = computeComponentProvenance(
       componentNames,
       knownDescriptions,
-      spokenTo,
       corroborated,
     );
     return parsedResponse;
@@ -747,7 +759,7 @@ function parseSystemInferenceResponse(
 
     let tendenciesOut = [parsed.tradeoff, parsed.action].filter(Boolean).join('\n\n') || undefined;
     let questionOut = parsed.nextQuestion
-      || 'What are you actually hearing? Anything feeling lean, thick, forward, or dynamically held back?';
+      || OPEN_DIAGNOSTIC_QUESTION;
 
     // ── D-12 enforcement ──────────────────────────────────────────
     // The model proposes attributes and relations; Audio XX assigns the TIERS
@@ -859,7 +871,9 @@ function parseSystemInferenceResponse(
       console.warn('[llm-system-inference] question violated %s: %s', required, qIssues.join('; '));
       questionOut = required === 'missing_evidence'
         ? 'What would help most is knowing more about the components I could not identify — do you have the exact models to hand?'
-        : 'What are you actually hearing? Anything feeling lean, thick, forward, or dynamically held back?';
+        // The old fallback named four candidate faults and was itself
+        // hypothesis-seeding under a no-change verdict.
+        : OPEN_DIAGNOSTIC_QUESTION;
     }
 
     return {

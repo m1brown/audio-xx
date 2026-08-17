@@ -66,50 +66,40 @@ describe('provenance is computed by Audio XX, never claimed by the model', () =>
   const KNOWN = [{ name: 'dCS Bartok', source: 'product' as const }];
 
   it('curated components are marked from what we hold, not what the model says', () => {
-    // The model claims it characterised everything, including the catalogued
-    // part. It still cannot promote ITSELF to catalog authority.
-    const p = computeComponentProvenance(NAMES, KNOWN, NAMES, ['Butler Monads']);
+    // The model cannot promote ITSELF to catalog authority.
+    const p = computeComponentProvenance(NAMES, KNOWN, ['Butler Monads']);
     expect(p.find((x) => x.name === 'dCS Bartok')?.basis).toBe('catalog');
     expect(p.find((x) => x.name === 'Butler Monads')?.basis).toBe('model');
   });
 
-  it('characterisation alone cannot reach Expanded Reasoning — corroboration gates it', () => {
+  it('corroboration is required to reach Expanded Reasoning', () => {
     // The model saying it knows a product is not evidence the product exists;
     // a fictional component alternated between unknown and confidently
-    // described on identical input. Without independent corroboration the
-    // component stays at the listener's own authority no matter how
-    // confidently the prose reads.
-    const p = computeComponentProvenance(NAMES, KNOWN, NAMES /* no corroboration */);
+    // described on identical input. Corroboration is the independent signal,
+    // and without it the component stays at the listener's own authority
+    // however confidently the prose reads.
+    const p = computeComponentProvenance(NAMES, KNOWN, []);
     expect(p.find((x) => x.name === 'Butler Monads')?.basis).toBe('user');
+    expect(p.find((x) => x.name === 'Acora QRC-2')?.basis).toBe('user');
   });
 
-  it('corroboration without characterisation does not promote either', () => {
-    // Existence is not knowledge. A product may be real and still be one the
-    // model has nothing useful to say about.
-    const p = computeComponentProvenance(NAMES, KNOWN, [], ['Butler Monads']);
-    expect(p.find((x) => x.name === 'Butler Monads')?.basis).toBe('user');
+  it('corroboration ALONE is sufficient — characterisation is not required', () => {
+    // Changed 2026-08-17 with the provenance/prose decoupling. Requiring the
+    // model to have written about a component before granting its evidence
+    // tier made prose determine evidence: identical evidence produced
+    // different labels across identical runs, and a corroborated loudspeaker
+    // was reported as "your description only". Whether the assessment
+    // discussed a component is COVERAGE, a different question from what
+    // evidence exists.
+    const p = computeComponentProvenance(NAMES, KNOWN, ['Butler Monads']);
+    expect(p.find((x) => x.name === 'Butler Monads')?.basis).toBe('model');
   });
 
-  it('a component the model could not speak to stays user-supplied only', () => {
+  it('a corroborated component keeps its basis whatever the prose omits', () => {
     const p = computeComponentProvenance(NAMES, KNOWN, ['ARC ref 5', 'Acora QRC-2']);
+    expect(p.find((x) => x.name === 'ARC ref 5')?.basis).toBe('model');
+    expect(p.find((x) => x.name === 'Acora QRC-2')?.basis).toBe('model');
     expect(p.find((x) => x.name === 'Butler Monads')?.basis).toBe('user');
-  });
-
-  it('brand-level curated evidence is distinguishable from product-level', () => {
-    const p = computeComponentProvenance(
-      ['dCS Rossini Apex'],
-      [{ name: 'dCS Rossini Apex', source: 'brand' }],
-      [],
-    );
-    expect(p[0].basis).toBe('brand');
-  });
-
-  it('every component receives exactly one basis', () => {
-    const p = computeComponentProvenance(NAMES, KNOWN, ['ARC ref 5']);
-    expect(p).toHaveLength(NAMES.length);
-    for (const entry of p) {
-      expect(['catalog', 'brand', 'model', 'user']).toContain(entry.basis);
-    }
   });
 });
 
