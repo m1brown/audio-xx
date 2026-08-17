@@ -244,3 +244,29 @@ describe('stripOverclaims removes the sentence, not the assessment', () => {
     expect(stripOverclaims(s, { componentsInRelations: ['Acora QRC-2'] }).prose).toBe(s);
   });
 });
+
+/**
+ * Second round of production sentences, from the re-run after §6 was wired.
+ * The adverb+participle rule caught "deliberately voiced" and missed the same
+ * claim in adjectival form.
+ */
+describe('D-12 §6 — intent claims that changed grammar', () => {
+  it('refuses an adjectival intent claim', () => {
+    expect(overclaimViolations(
+      'The overall performance suggests a deliberate architectural choice rather than a deficiency.',
+    )[0].kind).toBe('intent');
+  });
+
+  it('refuses "this system is designed to…"', () => {
+    expect(overclaimViolations(
+      'This system is designed to deliver high-resolution sound with a focus on spatial accuracy.',
+    )[0].kind).toBe('intent');
+  });
+
+  it('PERMITS a manufacturer design fact about a component', () => {
+    // The rule is about who assembled the system, not about how a box was
+    // engineered. Blocking this would remove Describe evidence Audio XX holds.
+    expect(overclaimViolations('The Rossini Apex DAC is designed to minimise jitter.')).toEqual([]);
+    expect(overclaimViolations('The Butler MONAD is built to drive difficult loads.')).toEqual([]);
+  });
+});

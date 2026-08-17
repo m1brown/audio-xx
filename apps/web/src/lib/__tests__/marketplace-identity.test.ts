@@ -102,3 +102,49 @@ describe('an uncorroborated component still gets a search', () => {
     expect(query(v)).toContain('Amadeus');
   });
 });
+
+/**
+ * Display stability under corroboration variance.
+ *
+ * Corroboration is a live web-search call and its canonical string is not
+ * stable: across three consecutive production runs the same amplifier returned
+ * "MONAD A100", "MONAD (The One) amplifier" and "MONAD (The One)". The middle
+ * one has more words than "Butler Monads", so the word-count informativeness
+ * test promoted it onto the card — a noisier string that had also dropped the
+ * brand the listener typed.
+ */
+describe('display names survive an unstable corroborator', () => {
+  const build = (canonicalName: string, canonicalBrand: string) =>
+    buildComponentViews(
+      [{ displayName: 'Butler Monads', role: 'amplifier', canonicalName, canonicalBrand }],
+      undefined,
+    )[0].displayName;
+
+  it('drops a marketing parenthetical rather than displaying it', () => {
+    expect(build('MONAD (The One) amplifier', 'Butler Audio')).toBe('Butler Audio MONAD');
+  });
+
+  it('restores the brand when the manufacturer title omits it', () => {
+    expect(build('MONAD A100', 'Butler Audio (BK Butler)')).toBe('Butler Audio MONAD A100');
+  });
+
+  it('strips a compound category suffix as one unit, not the model', () => {
+    // "Line-Stage Preamplifier" is matched whole, so the result is the model
+    // designation and nothing else. Eroding one word at a time would keep
+    // going and take "Reference 5" with it.
+    const v = buildComponentViews(
+      [{ displayName: 'ARC ref 5', role: 'preamplifier',
+        canonicalName: 'Reference 5 Line‑Stage Preamplifier',
+        canonicalBrand: 'Audio Research Corporation' }], undefined,
+    )[0];
+    expect(v.displayName).toBe('Audio Research Reference 5');
+  });
+
+  it('never duplicates the brand it restores', () => {
+    expect(build('Butler MONAD A100', 'Butler Audio')).toBe('Butler MONAD A100');
+  });
+
+  it('falls back to the listener’s words when nothing usable survives', () => {
+    expect(build('amplifier', 'Butler Audio')).toBe('Butler Monads');
+  });
+});

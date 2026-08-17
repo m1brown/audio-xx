@@ -284,6 +284,16 @@ export const OVERCLAIM_MARKERS: Array<{ kind: 'intent' | 'importance' | 'rank'; 
       + '|\\b(?:components?|parts|pieces|system|chain)\\b[^.]{0,40}?'
       + '\\b(?:chosen|selected|picked|assembled|matched|voiced)\\s+to\\b'
       + '|\\bchosen (?:to|for)\\b'
+      // Adjectival forms. The re-run caught "the overall performance suggests
+      // a deliberate architectural choice" — same claim, no participle for the
+      // adverb rule to attach to.
+      + '|\\b(?:deliberate|intentional|purposeful|conscious|considered)\\s+(?:\\w+\\s+)?'
+      + '(?:choice|choices|decision|decisions|design|voicing|assembly|selection|pairing|build)\\b'
+      // "This system is designed to deliver…" asserts that someone designed the
+      // SYSTEM. Scoped to the system on purpose: "the DAC is designed to…" is a
+      // manufacturer design fact and stays licensed.
+      + '|\\b(?:this |the )?(?:system|chain|setup)\\s+(?:is|was|appears to be|seems to be)\\s+'
+      + '(?:\\w+\\s+)?(?:designed|engineered|built|configured|voiced|assembled|constructed)\\s+to\\b'
       + '|\\bby design\\b'
       + '|\\bthe (?:owner|listener)(?:\\s+\\w+){0,2}\\s+(?:wanted|intended|meant|sought)\\b',
       'i',

@@ -132,6 +132,38 @@ function normalizeForSearch(value: string): string {
     .trim();
 }
 
+/** Category nouns a manufacturer's page title carries and a component card does not. */
+const CATEGORY_NOUN =
+  /(?:^|\s+)(?:amplifier|amp|preamplifier|preamp|power amplifier|integrated amplifier|loudspeaker|loudspeakers|speaker|speakers|dac|d\/a converter|digital to analogue converter|streamer|network player|turntable|cartridge|tonearm|phono stage|line[- ]?stage(?: preamplifier)?|monoblock|monoblocks|stereo preamplifier|floorstanding speaker)$/i;
+
+/**
+ * The canonical name as a component card should show it.
+ *
+ * Returns undefined when nothing usable survives, which the caller reads as
+ * "keep the listener's words" — the safe default, since their words are always
+ * a true record of what they own.
+ */
+function cleanCanonicalForDisplay(canonicalName?: string, canonicalBrand?: string): string | undefined {
+  let v = normalizeForSearch(canonicalName ?? '');
+  if (!v) return undefined;
+  // One pass only, with compound suffixes ("Line-Stage Preamplifier") matched
+  // whole. Eroding a word at a time would keep going and take the model
+  // designation with it.
+  v = v.replace(CATEGORY_NOUN, '').trim();
+  if (!v) return undefined;
+
+  // Restore the brand when the manufacturer's own title omits it — their page
+  // does not need to say "Butler", a card next to three other brands does.
+  const brand = canonicalBrand ? searchableBrand(canonicalBrand) : '';
+  if (brand) {
+    const first = brand.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+    const already = v.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(' ')
+      .some((t) => t === first);
+    if (!already) v = `${brand} ${v}`;
+  }
+  return v.trim() || undefined;
+}
+
 /**
  * Corporate suffixes are how a company signs a contract, not how a listing is
  * titled. Nobody sells an "Audio Research Corporation Reference 5".
@@ -212,7 +244,18 @@ export function buildComponentViews(
     // A mere case or spacing variant ("dCS Rossini Apex" -> "dCS Rossini APEX")
     // is not an improvement, and silently restyling what someone typed reads as
     // the product correcting them.
-    const canonical = c.canonicalName?.trim();
+    //
+    // Word count alone is not informativeness. Corroboration returns whatever
+    // the manufacturer's page is titled, and across three consecutive
+    // production runs the same amplifier came back as "MONAD A100", "MONAD
+    // (The One) amplifier" and "MONAD (The One)". The middle one has more
+    // words than "Butler Monads" and so replaced it on the card — a noisier
+    // string that had also lost the brand.
+    //
+    // So the candidate is cleaned first (marketing parentheticals and a
+    // trailing category noun removed), the brand is restored when the
+    // manufacturer's title omits it, and only then is it compared.
+    const canonical = cleanCanonicalForDisplay(c.canonicalName, c.canonicalBrand);
     const informative = (v?: string) =>
       (v ?? '').trim().split(/\s+/).filter(Boolean).length;
     const displayName = canonical && informative(canonical) > informative(listenerName)
