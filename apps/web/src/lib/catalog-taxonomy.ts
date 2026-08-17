@@ -123,6 +123,48 @@ export type BrandScale =
   | 'luxury'
   | 'heritage';
 
+// ── Market position — RECORDED, NOT YET BUILT ────────
+//
+// `brandScale` answers "how big is this company". System stature asks "where
+// does this product sit in the market". They are different axes and they cross:
+// dCS and Shindo are both `boutique`; Yamaha and KEF are both `mainstream`.
+// dCS is tagged `boutique` correctly under the definition above — small-scale,
+// founder-led — and that says nothing about where a Rossini APEX sits.
+//
+// So `brandScale` cannot carry a stature claim, and neither can anything else
+// we currently hold for uncatalogued gear. Established 2026-08-17 while asking
+// whether Audio XX could recognise
+// `dCS Rossini APEX -> ARC Reference 5 -> Butler MONAD -> Acora QRC-2`
+// as a reference-level system:
+//
+//   - 0 of 4 catalogued, so no `price` and no `priceTier`
+//   - 1 of 4 has a BrandProfile (dCS, `boutique`)
+//   - corroboration returns identity only, by frozen contract:
+//     "no specifications, no prices"
+//
+// The licensing rules agreed before any of this is built:
+//
+//   catalog `price` / `priceTier`   -> may support an ECONOMIC TIER claim
+//   explicit product-position data  -> may support PRODUCT stature
+//   explicit brand-position data    -> may support BRAND-LEVEL stature
+//   `brandScale` alone              -> does NOT
+//   corroboration alone             -> does NOT
+//   model memory alone              -> does NOT earn a visible
+//                                      "reference-level" claim, and must NOT
+//                                      silently alter recommendation burden
+//                                      either — a hidden model-tier stature
+//                                      that quietly suppresses upgrade advice
+//                                      is the same unlicensed claim with its
+//                                      evidence hidden from the reader.
+//
+// Where it belongs: stature is a DESCRIBE claim about products, aggregated to
+// the system. It is not Explain — it asserts no interaction. Its consumer is
+// Evaluate, as evidentiary burden for recommending replacement.
+//
+// The field, when it is built, is `marketPosition` on BrandProfile and Product,
+// separate from `brandScale`. No scoring system, no new reasoning engine.
+export type MarketPositionPlaceholder = never;
+
 // ── Region ───────────────────────────────────────────
 
 /**

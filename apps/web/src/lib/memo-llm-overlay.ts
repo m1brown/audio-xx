@@ -137,10 +137,14 @@ function buildUserPrompt(findings: MemoFindings): string {
     sections.push(`LISTENER PRIORITIES: ${labels.join(', ')}`);
   }
 
-  // Deliberateness
-  sections.push(`DELIBERATE BUILD: ${findings.isDeliberate ? 'yes' : 'no'}`);
+  // Voicing coherence.
+  // This block used to read "DELIBERATE BUILD: yes", which handed the model
+  // the intent framing and then asked it not to overclaim. A prompt that
+  // states a conclusion about the listener will get sentences about the
+  // listener back.
+  sections.push(`VOICING COHERENCE: ${findings.isDeliberate ? 'components share a direction' : 'no shared direction established'}`);
   if (findings.deliberatenessSignals.length > 0) {
-    sections.push(`DELIBERATENESS SIGNALS: ${findings.deliberatenessSignals.join(', ')}`);
+    sections.push(`COHERENCE SIGNALS: ${findings.deliberatenessSignals.join(', ')}`);
   }
 
   return sections.join('\n\n');

@@ -509,7 +509,10 @@ function deriveSystemSynergy(findings: MemoFindings): string | undefined {
   }
 
   if (findings.isDeliberate) {
-    parts.push('The component choices suggest an intentional, coherent build.');
+    // Was "The component choices suggest an intentional, coherent build."
+    // "Choices" and "intentional" are claims about the listener; what the
+    // evidence supports is a statement about the components.
+    parts.push('The components are voiced in a consistent direction.');
   }
 
   return parts.join(' ');

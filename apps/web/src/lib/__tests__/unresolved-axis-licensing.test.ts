@@ -124,3 +124,29 @@ describe('CONTROL — mixed chain: strong claims only from licensed components',
     }
   });
 });
+
+/**
+ * Separate concern, pinned in the same place because it shares the evidence:
+ * `assessSystemDeliberateness` reads `brandScale` and `priceTier` — the right
+ * inputs for a claim about products — and used to convert them into a claim
+ * about the listener, plus a rank claim about the market.
+ */
+describe('the core path does not infer why the listener bought anything', () => {
+  const CATALOGUED = 'Assess my system: Amp: Leben CS600 Speakers: Harbeth Compact 7ES-3 Dac: Audio Note DAC 2.1x';
+
+  it('never claims the system was deliberately or intentionally assembled', () => {
+    const out = prose(assess(CATALOGUED));
+    expect(out).not.toMatch(/deliberately assembled|intentional(?:ly)?,? coherent build|component choices suggest/i);
+    expect(out).not.toMatch(/\b(?:deliberately|purposefully|intentionally|carefully|thoughtfully)\s+(?:\w+\s+)?(?:chosen|selected|assembled|built|curated|voiced|matched)\b/i);
+  });
+
+  it('never claims a system punches above its price tier', () => {
+    expect(prose(assess(CATALOGUED))).not.toMatch(/punches above/i);
+  });
+
+  it('still states voicing coherence, which the axis evidence licenses', () => {
+    // Removing the intent claim must not remove the observation underneath it.
+    const out = prose(assess(CATALOGUED));
+    expect(out).toMatch(/consistent (?:voicing )?direction|reinforce|shares a consistent lean/i);
+  });
+});

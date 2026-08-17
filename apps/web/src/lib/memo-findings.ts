@@ -62,9 +62,11 @@ export const LISTENER_PRIORITY_LABELS: Record<ListenerPriority, string> = {
 };
 
 /**
- * Deliberateness signal tags — closed set.
- * Detected by assessSystemDeliberateness() when the component
- * choices suggest an intentional, coherent build.
+ * Voicing-coherence signal tags — closed set.
+ * Detected by assessSystemDeliberateness() when the components are voiced in
+ * a consistent direction. The name is historical; what these record is an
+ * observation about the components, never an inference about why the listener
+ * chose them.
  */
 export type DeliberatenessSignal =
   | 'consistent_axis_alignment'
@@ -73,6 +75,11 @@ export type DeliberatenessSignal =
   | 'price_tier_consistency'
   | 'design_philosophy_match'
   | 'specialist_brands_present'
+  /**
+   * @deprecated No longer emitted. This asserted market position from a
+   * price-tier count — a rank claim resting on evidence collected for a
+   * different purpose. Retained so stored findings still type-check.
+   */
   | 'punches_above_tier';
 
 /**
@@ -391,7 +398,7 @@ export interface MemoFindings {
   recommendedSequence: RecommendedStepFinding[];
 
   // ── System-level signals (controlled tags only) ──
-  /** Whether the system appears deliberately assembled. */
+  /** Whether the components are voiced in a consistent direction. */
   isDeliberate: boolean;
   /**
    * Whether components share aligned voicing from specialist/boutique brands.

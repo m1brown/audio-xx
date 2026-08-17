@@ -11951,7 +11951,10 @@ function inferUpgradeDirection(components: SystemComponent[]): string {
   // — no upgrade is licensed: name the lean as character and invite the listener
   // to state a priority, rather than fabricating a weakness to act on.
   if (compounding.length > 0) {
-    return 'This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.';
+    // "by design" asserts an intention behind the lean. The point of this
+    // sentence is that the lean is character rather than fault, and that
+    // survives without claiming anyone designed it.
+    return 'This system leans clearly in one direction — that lean is its character, not a gap to fix. If you want to move it, name the quality you want more of.';
   }
 
   return 'Without stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.';
@@ -12526,11 +12529,28 @@ function buildIntroSummary(
 }
 
 /**
- * Assess whether a system shows signs of deliberate, coherent assembly.
+ * Assess whether a system's components are voiced in a consistent direction.
  *
- * Signals: components from different brands sharing axis alignment,
- * mix of specialist/boutique brands (not all one brand), presence of
- * uncommon or second-hand-market components, and philosophical consistency.
+ * This used to be `deliberateness`, and it emitted:
+ *
+ *   "This is a coherent, deliberately assembled system that likely punches
+ *    above its price tier."
+ *
+ * One sentence carrying three different claims. The first — that the
+ * components share a direction — is licensed by the axis evidence this
+ * function reads. The second asserts why the listener bought them, which
+ * nothing here can know: multi-brand ownership plus axis alignment is equally
+ * consistent with taste, advice, budget, or what happened to be available
+ * used. The third is a rank claim about market position, computed from a
+ * price-tier count, and market position is not what `brandScale` and
+ * `priceTier` were built to establish.
+ *
+ * Only the first survives. Coherence is an observation about the components
+ * and stays; intent and rank are removed and are NOT replaced with a
+ * differently-worded compliment — the sentence gets shorter, not softer.
+ *
+ * The name is retained so the `DeliberatenessSignal` consumers keep compiling;
+ * what it reports is now coherence, and the flag reads as such.
  */
 function assessSystemDeliberateness(
   components: SystemComponent[],
@@ -12568,20 +12588,11 @@ function assessSystemDeliberateness(
     return { isDeliberate: false, note: '' };
   }
 
-  // Assess whether the system likely punches above its weight
-  // (specialist/boutique components at mid-fi price points)
-  const midFiCount = components.filter(
-    (c) => c.product?.priceTier === 'mid-fi' || c.product?.priceTier === 'budget',
-  ).length;
-  const punchesAbove = midFiCount >= 1 && hasSpecialistBrands;
-
-  const parts: string[] = ['This is a coherent, deliberately assembled system'];
-  if (punchesAbove) {
-    parts[0] += ' that likely punches above its price tier';
-  }
-  parts[0] += '.';
-
-  return { isDeliberate: true, note: parts.join(' ') };
+  // The observation, and only the observation: these components lean the same
+  // way. Whether that was intended, and where the system sits in the market,
+  // are separate claims requiring separate evidence — see the marketPosition
+  // note on `PriceTier` in catalog-taxonomy.ts.
+  return { isDeliberate: true, note: 'The components share a consistent voicing direction.' };
 }
 
 /**
@@ -15250,7 +15261,9 @@ function extractMemoFindings(
       systemAxes.scale_intimacy !== 'neutral',
     ].filter(Boolean).length;
     if (nonNeutralAxes >= 1) deliberatenessSignals.push('consistent_axis_alignment');
-    if (deliberateness.note.includes('punches above')) deliberatenessSignals.push('punches_above_tier');
+    // 'punches_above_tier' is no longer emitted. It was a rank claim derived
+    // from a price-tier count, and market position needs evidence built for
+    // that purpose — see the marketPosition note in catalog-taxonomy.ts.
   }
 
   // ── Listener priorities (controlled tags) ──
@@ -15514,7 +15527,12 @@ function buildKeyObservation(
       stackedNote = ` The system shares a consistent lean toward ${listenerPropertyLabel(characters[0].label)} — this reinforces the system's identity.`;
     }
 
-    return `Your component choices suggest a preference for equipment emphasising **${philo}**. ${brandNames.join(', ')} share this design philosophy.${stackedNote} Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.`;
+    // Was "Your component choices suggest a preference for equipment
+    // emphasising X" — an inference about the listener from what they own.
+    // The licensed fact is about the components: these makers share a design
+    // philosophy. Whether the listener sought that out is unknown, and the
+    // upgrade guidance that follows does not depend on knowing it.
+    return `${brandNames.join(', ')} share a design philosophy emphasising **${philo}**.${stackedNote} Future upgrades that preserve this approach preserve what the system does well — swapping in components with a fundamentally different design priority would destabilise it.`;
   }
 
   // ── Balanced fallback ──
