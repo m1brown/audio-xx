@@ -34,6 +34,13 @@ import {
   type SourceKind,
 } from './entity-corroboration';
 
+/** Column values arrive as text; anything unparseable is absent, never NaN. */
+function numOrUndefined(v: unknown): number | undefined {
+  if (v == null) return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 /**
  * In-process cache. Retained as the first tier even with the durable store in
  * place: it costs nothing, and it absorbs the repeated lookups inside a single
@@ -92,16 +99,34 @@ async function ensureTable(): Promise<boolean> {
   if (!ensured) {
     ensured = (async () => {
       try {
+        // `checkedAt` is TEXT, deliberately.
+        //
+        // v1 declared it BIGINT. Writes succeeded and every read of a written
+        // row failed with
+        //
+        //   Conversion failed: number must be an integer in column
+        //   'checkedAt', got '1786995866677.0'
+        //
+        // A JS number is a double, and the libSQL driver adapter binds it as
+        // REAL; SQLite's INTEGER affinity did not narrow it, so the stored
+        // value carried a fractional part that the BIGINT reader then refused.
+        // Native SQLite converts leniently, which is why this passed locally
+        // and failed only in production.
+        //
+        // Storing the epoch as text removes numeric conversion from the path
+        // entirely — no affinity, no BigInt, no double. The table is V2
+        // because `CREATE TABLE IF NOT EXISTS` cannot change a column type and
+        // the v1 rows are unreadable by construction.
         await prisma!.$executeRawUnsafe(`
-          CREATE TABLE IF NOT EXISTS "CorroborationCache" (
+          CREATE TABLE IF NOT EXISTS "CorroborationCacheV2" (
             "normalizedName" TEXT PRIMARY KEY,
             "status"         TEXT NOT NULL,
             "canonicalName"  TEXT,
             "brand"          TEXT,
             "sourceUrl"      TEXT,
             "sourceKind"     TEXT,
-            "matchQuality"   REAL,
-            "checkedAt"      BIGINT NOT NULL
+            "matchQuality"   TEXT,
+            "checkedAt"      TEXT NOT NULL
           )
         `);
         storeState = 'durable_ok';
@@ -129,7 +154,7 @@ export async function readCached(
   if (!(await ensureTable())) return null;
   try {
     const rows = await prisma!.$queryRawUnsafe<Array<Record<string, unknown>>>(
-      `SELECT * FROM "CorroborationCache" WHERE "normalizedName" = ? LIMIT 1`,
+      `SELECT * FROM "CorroborationCacheV2" WHERE "normalizedName" = ? LIMIT 1`,
       normalizedName,
     );
     const row = rows?.[0];
@@ -142,9 +167,12 @@ export async function readCached(
       brand: (row.brand as string) ?? undefined,
       sourceUrl: (row.sourceUrl as string) ?? undefined,
       sourceKind: (row.sourceKind as SourceKind) ?? undefined,
-      matchQuality: row.matchQuality == null ? undefined : Number(row.matchQuality),
+      matchQuality: numOrUndefined(row.matchQuality),
       checkedAt: Number(row.checkedAt),
     };
+    // A row whose timestamp will not parse is not evidence — treat it as a
+    // miss rather than reasoning from NaN.
+    if (!Number.isFinite(record.checkedAt)) return null;
     // A stored row that has aged out is not an answer. Returning null sends the
     // caller to a live lookup, which is the revalidation step the long positive
     // TTL assumes.
@@ -183,7 +211,7 @@ export async function readAnyPositive(
   if (!(await ensureTable())) return null;
   try {
     const rows = await prisma!.$queryRawUnsafe<Array<Record<string, unknown>>>(
-      `SELECT * FROM "CorroborationCache" WHERE "normalizedName" = ? AND "status" = 'corroborated' LIMIT 1`,
+      `SELECT * FROM "CorroborationCacheV2" WHERE "normalizedName" = ? AND "status" = 'corroborated' LIMIT 1`,
       normalizedName,
     );
     const row = rows?.[0];
@@ -195,7 +223,7 @@ export async function readAnyPositive(
       brand: (row.brand as string) ?? undefined,
       sourceUrl: (row.sourceUrl as string) ?? undefined,
       sourceKind: (row.sourceKind as SourceKind) ?? undefined,
-      matchQuality: row.matchQuality == null ? undefined : Number(row.matchQuality),
+      matchQuality: numOrUndefined(row.matchQuality),
       checkedAt: Number(row.checkedAt),
     };
   } catch (err) {
@@ -215,7 +243,7 @@ export async function writeCached(record: CorroborationRecord): Promise<void> {
   if (!(await ensureTable())) return;
   try {
     await prisma!.$executeRawUnsafe(
-      `INSERT INTO "CorroborationCache"
+      `INSERT INTO "CorroborationCacheV2"
          ("normalizedName","status","canonicalName","brand","sourceUrl","sourceKind","matchQuality","checkedAt")
        VALUES (?,?,?,?,?,?,?,?)
        ON CONFLICT("normalizedName") DO UPDATE SET
@@ -232,8 +260,8 @@ export async function writeCached(record: CorroborationRecord): Promise<void> {
       record.brand ?? null,
       record.sourceUrl ?? null,
       record.sourceKind ?? null,
-      record.matchQuality ?? null,
-      record.checkedAt,
+      record.matchQuality == null ? null : String(record.matchQuality),
+      String(record.checkedAt),
     );
   } catch (err) {
     storeState = 'write_failed';
