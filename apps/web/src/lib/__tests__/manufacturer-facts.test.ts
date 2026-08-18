@@ -5,7 +5,7 @@ import {
 } from '../evidence/evidence-types';
 import {
   isManufacturerFactAcceptable, toEvidenceItem, physicalFactsFor,
-  numericFigure, productKeyFor, isManufacturerFactField,
+  numericFigure, productKeyFor, isManufacturerFactField, isFirstPartySource,
 } from '../evidence/manufacturer-facts';
 
 /**
@@ -207,5 +207,28 @@ describe('the source must be the maker’s own site', () => {
       expect(isManufacturerFactAcceptable({ ...spec, sourceUrl: host }, 'Klipsch Cornwall IV'))
         .toBe(false);
     }
+  });
+});
+
+describe('the first-party rule applies on READ, not only on write', () => {
+  it('retires a row admitted before the rule existed', () => {
+    // Production kept serving manualzz.com Klipsch specs from cache after the
+    // write-side fix landed, because the store had already accepted them.
+    expect(isFirstPartySource(
+      'https://manualzz.com/doc/html/53390121/klipsch-cornwall-iv', 'klipsch cornwall iv',
+    )).toBe(false);
+  });
+
+  it('works from the storage key, which is all the store holds', () => {
+    expect(isFirstPartySource('https://butleraudio.com/pdf/a100manual.pdf', 'butler monads'))
+      .toBe(true);
+    expect(isFirstPartySource('https://www.klipsch.com/products/cornwall-iv', 'klipsch cornwall iv'))
+      .toBe(true);
+  });
+
+  it('refuses a malformed or non-http source outright', () => {
+    expect(isFirstPartySource('https://klipsch.com/ (spec tab)', 'klipsch cornwall iv')).toBe(false);
+    expect(isFirstPartySource('ftp://klipsch.com/spec', 'klipsch cornwall iv')).toBe(false);
+    expect(isFirstPartySource('', 'klipsch cornwall iv')).toBe(false);
   });
 });

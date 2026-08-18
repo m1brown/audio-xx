@@ -17,6 +17,7 @@
 
 import { prisma } from '../prisma';
 import { isAdmissible, type EvidenceItem, type EvidenceTier } from './evidence-types';
+import { isFirstPartySource } from './manufacturer-facts';
 
 /** Facts age slowly; a published specification does not change quietly. */
 export const FACT_TTL_MS = 180 * 24 * 60 * 60 * 1000;
@@ -84,7 +85,10 @@ function rowToItem(productKey: string, row: Record<string, unknown>): EvidenceIt
 /** Every fact held for a product. Never throws; absence is a valid answer. */
 export async function readFacts(productKey: string, now: number): Promise<EvidenceItem[]> {
   const local = memory.get(productKey);
-  if (local) return local.filter((f) => now - f.retrievedAt < FACT_TTL_MS);
+  if (local) {
+    return local.filter((f) => now - f.retrievedAt < FACT_TTL_MS
+      && isFirstPartySource(f.attribution?.sourceUrl ?? '', productKey));
+  }
 
   if (!(await ensureTable())) return [];
   try {
@@ -94,7 +98,12 @@ export async function readFacts(productKey: string, now: number): Promise<Eviden
     const items = (rows ?? [])
       .map((r) => rowToItem(productKey, r))
       .filter((i) => Number.isFinite(i.retrievedAt) && now - i.retrievedAt < FACT_TTL_MS)
-      .filter(isAdmissible);
+      .filter(isAdmissible)
+      // Re-checked on read, not only on write. Rows admitted before the
+      // first-party rule existed are still here, and production served
+      // manualzz.com specs from cache after the write-side fix landed. This
+      // retires them as they are read rather than by deleting anything.
+      .filter((i) => isFirstPartySource(i.attribution?.sourceUrl ?? '', productKey));
     if (items.length > 0) memory.set(productKey, items);
     return items;
   } catch (err) {

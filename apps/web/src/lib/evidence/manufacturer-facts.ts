@@ -75,11 +75,9 @@ export function isManufacturerFactAcceptable(
   // a defective reply, not a source.
   const url = candidate.sourceUrl ?? '';
   if (!url || /\s/.test(url)) return false;
-  let host = '';
   try {
     const u = new URL(url);
     if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
-    host = u.host;
   } catch { return false; }
 
   // FIRST-PARTY DOMAIN. The instruction to use the maker's own site is not
@@ -88,16 +86,7 @@ export function isManufacturerFactAcceptable(
   // probably right, and that is beside the point — the whole licence of this
   // regime is that the maker published it, so a mirror is a different
   // provenance regime wearing this one's badge.
-  //
-  // Same test corroboration uses: the host must carry an identifying token of
-  // the product. butleraudio.com does; manualzz.com does not.
-  if (productName) {
-    const hostKey = host.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const tokens = productKeyFor(productName)
-      .split(/[\s/-]+/)
-      .filter((t) => t.length >= 3 && !/^\d+$/.test(t));
-    if (!tokens.some((t) => hostKey.includes(t))) return false;
-  }
+  if (productName && !isFirstPartySource(url, productName)) return false;
 
   if (SONIC_OR_EVALUATIVE.test(candidate.value)) return false;
   // The quote must actually contain the value, or it is not its source.
@@ -105,6 +94,32 @@ export function isManufacturerFactAcceptable(
   if (!norm(candidate.quotedText).includes(norm(candidate.value))) return false;
 
   return true;
+}
+
+/**
+ * Is this source the maker's own?
+ *
+ * Exported because it must run on READ as well as on write. Rows admitted
+ * before this rule existed are still in the store — live production served
+ * manualzz.com Klipsch specs from cache after the write-side fix landed —
+ * and re-checking on read retires them without a destructive cleanup. The
+ * storage key carries the product identity, so the check needs nothing the
+ * store does not already hold.
+ */
+export function isFirstPartySource(sourceUrl: string, productNameOrKey: string): boolean {
+  if (!sourceUrl || /\s/.test(sourceUrl)) return false;
+  let host: string;
+  try {
+    const u = new URL(sourceUrl);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+    host = u.host;
+  } catch { return false; }
+
+  const hostKey = host.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const tokens = productKeyFor(productNameOrKey)
+    .split(/[\s/-]+/)
+    .filter((t) => t.length >= 3 && !/^\d+$/.test(t));
+  return tokens.some((t) => hostKey.includes(t));
 }
 
 /** Normalise a product identity into the storage key. */
