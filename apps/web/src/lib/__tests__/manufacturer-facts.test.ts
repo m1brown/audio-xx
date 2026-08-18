@@ -157,3 +157,55 @@ describe('the physical projection is parsed, never interpreted', () => {
     expect(physicalFactsFor([review]).sensitivityDb).toBeUndefined();
   });
 });
+
+/**
+ * FIRST-PARTY DOMAIN — found in live acquisition, 2026-08-18.
+ *
+ * The instruction to read the manufacturer's own site is not enforcement. The
+ * first live run returned Klipsch Cornwall IV specifications read off
+ * manualzz.com, a third-party document mirror. The figures were probably
+ * correct, and that is beside the point: the entire licence of this regime is
+ * that the MAKER published it, so a mirror is a different provenance regime
+ * wearing this one's badge.
+ */
+describe('the source must be the maker’s own site', () => {
+  const spec = {
+    field: 'sensitivity' as const,
+    value: '102dB @ 2.83V / 1m',
+    quotedText: 'SENSITIVITY 102dB @ 2.83V / 1m',
+  };
+
+  it('accepts the manufacturer’s own domain', () => {
+    expect(isManufacturerFactAcceptable(
+      { ...spec, sourceUrl: 'https://www.klipsch.com/products/cornwall-iv' }, 'Klipsch Cornwall IV',
+    )).toBe(true);
+  });
+
+  it('accepts a document hosted by the manufacturer', () => {
+    // butleraudio.com/pdf/a100manual.pdf — a PDF on their own host is still
+    // their publication.
+    expect(isManufacturerFactAcceptable({
+      field: 'power_output', value: '100 Watts RMS @ 8 Ohms',
+      quotedText: 'Minimum 100 Watts RMS @ 8 Ohms',
+      sourceUrl: 'https://butleraudio.com/pdf/a100manual.pdf',
+    }, 'Butler Monads')).toBe(true);
+  });
+
+  it('REFUSES the exact live escape', () => {
+    expect(isManufacturerFactAcceptable(
+      { ...spec, sourceUrl: 'https://manualzz.com/doc/html/53390121/klipsch-cornwall-iv' },
+      'Klipsch Cornwall IV',
+    )).toBe(false);
+  });
+
+  it('refuses dealers, reviews and marketplaces alike', () => {
+    for (const host of [
+      'https://www.crutchfield.com/p_klipsch/cornwall-iv.html',
+      'https://www.stereophile.com/content/klipsch-cornwall-iv-loudspeaker',
+      'https://www.ebay.com/itm/klipsch-cornwall-iv',
+    ]) {
+      expect(isManufacturerFactAcceptable({ ...spec, sourceUrl: host }, 'Klipsch Cornwall IV'))
+        .toBe(false);
+    }
+  });
+});

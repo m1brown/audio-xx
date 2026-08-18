@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
       const now = Date.now();
       const accepted = (parsed.facts ?? [])
         .map((f) => ({ field: f.field, value: f.value, quotedText: f.quotedText, sourceUrl }))
-        .filter((f) => isManufacturerFactAcceptable(f))
+        .filter((f) => isManufacturerFactAcceptable(f, name))
         .filter((f) => isManufacturerFactField(f.field!))
         .map((f) => toEvidenceItem(name, {
           field: f.field as never, value: f.value!, sourceUrl, quotedText: f.quotedText!,

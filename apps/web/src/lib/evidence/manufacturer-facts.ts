@@ -53,12 +53,20 @@ const SONIC_OR_EVALUATIVE =
  * product is not a question this layer can settle, and the requirement to
  * quote is what lets a human settle it later.
  */
-export function isManufacturerFactAcceptable(candidate: {
-  field?: string;
-  value?: string;
-  sourceUrl?: string;
-  quotedText?: string;
-}): boolean {
+export function isManufacturerFactAcceptable(
+  candidate: {
+    field?: string;
+    value?: string;
+    sourceUrl?: string;
+    quotedText?: string;
+  },
+  /**
+   * The product this fact is claimed about. Required to check that the source
+   * is first-party — without it there is no way to tell a maker's own page
+   * from a mirror of it.
+   */
+  productName?: string,
+): boolean {
   if (!candidate?.field || !isManufacturerFactField(candidate.field)) return false;
   if (!candidate.value?.trim()) return false;
   if (!candidate.quotedText?.trim()) return false;
@@ -67,10 +75,29 @@ export function isManufacturerFactAcceptable(candidate: {
   // a defective reply, not a source.
   const url = candidate.sourceUrl ?? '';
   if (!url || /\s/.test(url)) return false;
+  let host = '';
   try {
     const u = new URL(url);
     if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+    host = u.host;
   } catch { return false; }
+
+  // FIRST-PARTY DOMAIN. The instruction to use the maker's own site is not
+  // enforcement: live acquisition returned Klipsch Cornwall IV specifications
+  // read off manualzz.com, a third-party document mirror. The figures were
+  // probably right, and that is beside the point — the whole licence of this
+  // regime is that the maker published it, so a mirror is a different
+  // provenance regime wearing this one's badge.
+  //
+  // Same test corroboration uses: the host must carry an identifying token of
+  // the product. butleraudio.com does; manualzz.com does not.
+  if (productName) {
+    const hostKey = host.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const tokens = productKeyFor(productName)
+      .split(/[\s/-]+/)
+      .filter((t) => t.length >= 3 && !/^\d+$/.test(t));
+    if (!tokens.some((t) => hostKey.includes(t))) return false;
+  }
 
   if (SONIC_OR_EVALUATIVE.test(candidate.value)) return false;
   // The quote must actually contain the value, or it is not its source.
