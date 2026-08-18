@@ -18,6 +18,7 @@
  */
 
 import type { ConsultationResponse } from './consultation';
+import type { EvidenceItem } from './evidence/evidence-types';
 import {
   licensedRelations, permittedQuestionType, questionViolations, stripOverclaims,
   filterUnlicensedRelationalProse, OPEN_DIAGNOSTIC_QUESTION,
@@ -542,6 +543,11 @@ export function verdictForVerdictLine(
   }
 }
 
+/** Mirrors `productKeyFor` in the evidence layer, without importing the store. */
+function productKeyish(name: string): string {
+  return name.toLowerCase().replace(/[^\w\s/-]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 // ── Public API ───────────────────────────────────────
 
 /**
@@ -566,6 +572,7 @@ export function buildProvisionalPrompt(
   unresolved?: { name: string; role: string }[],
   corroborated?: string[],
   lookupUnknown?: string[],
+  manufacturerEvidence?: EvidenceItem[],
 ): { userPrompt: string; provenance: ComponentProvenance[] } {
   // ── THE AUTHORITATIVE EVIDENCE STATE ────────────────────────────
   //
@@ -632,6 +639,25 @@ export function buildProvisionalPrompt(
       + `they are identified, and do not ask the listener to identify them.`
     : '';
 
+  // Manufacturer evidence, quoted. This is the strongest evidence Audio XX
+  // holds for an uncatalogued product: attributable, checkable, and published
+  // by the people who built the thing. It outranks the model's own memory,
+  // which is why it is presented as fact rather than as a hint.
+  const factsByComponent = new Map<string, EvidenceItem[]>();
+  for (const item of manufacturerEvidence ?? []) {
+    const owner = componentNames.find((n) => productKeyish(n) === item.productKey);
+    if (!owner) continue;
+    factsByComponent.set(owner, [...(factsByComponent.get(owner) ?? []), item]);
+  }
+  const manufacturerContext = factsByComponent.size > 0
+    ? `\n\nMANUFACTURER-PUBLISHED FACTS — Audio XX read these from the maker's own `
+      + `page. They are established, not inferred. You may reason from them and state `
+      + `them plainly. Do NOT restate them as your own estimate, and do not contradict `
+      + `them from memory:\n`
+      + [...factsByComponent.entries()].map(([name, items]) =>
+        `- ${name}:\n` + items.map((i) => `    ${i.field}: ${i.value}`).join('\n')).join('\n')
+    : '';
+
   const uncorroboratedContext = uncorroborated.length > 0
     ? `\n\nIDENTITY NOT VERIFIED — Audio XX could not confirm these products exist:\n`
       + `${uncorroborated.map((n) => `- ${n}${roleSuffix(n)}`).join('\n')}\n`
@@ -672,7 +698,7 @@ export function buildProvisionalPrompt(
   const userPrompt = `The user asked: "${query}"
 
 The system chain includes: ${componentNames.join(' → ')}
-${catalogContext}${brandContext}${modelContext}${uncorroboratedContext}${incompleteContext}
+${catalogContext}${brandContext}${modelContext}${manufacturerContext}${uncorroboratedContext}${incompleteContext}
 
 When describing each component in the philosophy section:
 - Catalog-verified: reference the verified data above and assess in full.
@@ -702,9 +728,17 @@ export async function inferProvisionalSystemAssessment(
    * correctly on demand.
    */
   lookupUnknown?: string[],
+  /**
+   * Manufacturer evidence held for these components, read from the
+   * site-level store. The assessment CONSUMES this; it never acquires or
+   * populates it — a fact about the Acora QRC-2 belongs to the QRC-2, not to
+   * one listener's turn.
+   */
+  manufacturerEvidence?: EvidenceItem[],
 ): Promise<ConsultationResponse | null> {
   const { userPrompt, provenance } = buildProvisionalPrompt(
     query, componentNames, knownDescriptions, unresolved, corroborated, lookupUnknown,
+    manufacturerEvidence,
   );
 
   try {
@@ -744,7 +778,7 @@ export async function inferProvisionalSystemAssessment(
 
     const parsedResponse = parseSystemInferenceResponse(
       content, componentNames, knownDescriptions, corroborated ?? [],
-      provenance,
+      manufacturerEvidence ?? [], provenance,
     );
     if (!parsedResponse) return null;
 
@@ -763,6 +797,11 @@ export async function inferProvisionalSystemAssessment(
         knownDescriptions.map((k) => k.name),
         collectLicensedFacts([
           ...knownDescriptions.map((k) => k.character),
+          // A published specification we hold is evidence, not an invention.
+          // Without this the D-7 gate reads "100 Watts RMS" as a fabricated
+          // figure and collapses the whole answer into the fallback — the
+          // exact defect the Magnepan sensitivity case established.
+          ...(manufacturerEvidence ?? []).map((m) => m.value),
           // The listener's own component names are facts THEY asserted. Someone
           // who writes "Zorblax ZX1 5 watt SET" has told us the power rating,
           // and reasoning from it is legitimate even though the product is
@@ -833,6 +872,7 @@ function parseSystemInferenceResponse(
   componentNames: string[],
   knownDescriptions: { name: string; source: 'product' | 'brand' }[] = [],
   corroborated: string[] = [],
+  manufacturerEvidence: EvidenceItem[] = [],
   /**
    * The authoritative basis per component, passed in rather than recomputed.
    * Tier-bounded intensity needs it, and deriving it here would be a second
@@ -892,6 +932,38 @@ function parseSystemInferenceResponse(
           scope: curated === 'brand' ? 'brand' as const : 'product' as const,
         };
       });
+
+    // Manufacturer facts enter D-12 as PREMISES, on the physical domain.
+    //
+    // This is what the class is for. "Watts against sensitivity" is exactly
+    // the commensurable pairing D-12 contemplates, and until now it was
+    // unreachable for any uncatalogued component: `classifyPowerMatch`
+    // returned 'unknown' and no relation could be built. A published power
+    // rating and a published sensitivity are now two attributes on one domain,
+    // at manufacturer tier — stronger than model memory and weaker than our
+    // own catalog, which is exactly where they belong.
+    //
+    // Only the physical subset is lifted. A cabinet material is a real fact
+    // and not a position on any axis; forcing one would invent a sonic reading
+    // from a construction detail.
+    const PHYSICAL_FIELD_AXIS: Record<string, string> = {
+      power_output: 'power_load',
+      sensitivity: 'power_load',
+      impedance: 'power_load',
+    };
+    for (const item of manufacturerEvidence ?? []) {
+      const axis = PHYSICAL_FIELD_AXIS[item.field];
+      if (!axis) continue;
+      const owner = componentNames.find((n) => productKeyish(n) === item.productKey);
+      if (!owner) continue;
+      attributes.push({
+        component: owner,
+        axis,
+        value: `${item.field}: ${item.value}`,
+        tier: 'manufacturer',
+        scope: 'product',
+      });
+    }
 
     const declaredSet: RelationSet = parsed.relationStatus === 'none_establishable'
       ? { status: 'none_establishable', relations: [] }

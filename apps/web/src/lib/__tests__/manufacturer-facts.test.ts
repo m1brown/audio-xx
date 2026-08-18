@@ -232,3 +232,58 @@ describe('the first-party rule applies on READ, not only on write', () => {
     expect(isFirstPartySource('', 'klipsch cornwall iv')).toBe(false);
   });
 });
+
+/**
+ * Consumption — what becomes licensed that was not licensed before.
+ *
+ * "Watts against sensitivity" is exactly the commensurable pairing D-12
+ * contemplates, and it was unreachable for any uncatalogued component:
+ * `classifyPowerMatch` returned 'unknown' and no relation could be built from
+ * nothing. Two published figures are two attributes on one physical domain.
+ */
+describe('manufacturer facts become D-12 premises on the physical domain', () => {
+  const amp = toEvidenceItem('Butler Monads', {
+    field: 'power_output', value: '100 Watts RMS @ 8 Ohms',
+    sourceUrl: 'https://butleraudio.com/pdf/a100manual.pdf',
+    quotedText: 'Minimum 100 Watts RMS @ 8 Ohms',
+  }, Date.now());
+  const speaker = toEvidenceItem('Klipsch Cornwall IV', {
+    field: 'sensitivity', value: '102dB @ 2.83V / 1m',
+    sourceUrl: 'https://www.klipsch.com/products/cornwall-iv',
+    quotedText: 'SENSITIVITY 102dB @ 2.83V / 1m',
+  }, Date.now());
+
+  it('both are admissible at manufacturer tier, product scope', () => {
+    for (const item of [amp, speaker]) {
+      expect(isAdmissible(item)).toBe(true);
+      expect(item.tier).toBe('manufacturer');
+      expect(item.scope).toBe('product');
+    }
+  });
+
+  it('a relation built from them is stronger than one built from model memory', () => {
+    // The whole point of the class. `weakerTier` is what D-12 uses to bound a
+    // relation, so this is the licensing consequence directly.
+    expect(weakerTier('manufacturer', 'manufacturer')).toBe('manufacturer');
+    expect(weakerTier('manufacturer', 'model')).toBe('model');
+  });
+
+  it('projects the figures a constraint layer can compare', () => {
+    expect(physicalFactsFor([amp]).powerWatts).toBe(100);
+    expect(physicalFactsFor([speaker]).sensitivityDb).toBe(102);
+  });
+
+  it('lifts ONLY the physical subset', () => {
+    // A cabinet material is a real fact and not a position on any axis;
+    // forcing one would invent a sonic reading from a construction detail.
+    const cabinet = toEvidenceItem('Acora QRC-2', {
+      field: 'cabinet_material', value: 'granite',
+      sourceUrl: 'https://www.acoraacoustics.com/qrc-2',
+      quotedText: 'Cabinet: granite',
+    }, Date.now());
+    expect(isAdmissible(cabinet)).toBe(true);              // still evidence
+    const p = physicalFactsFor([cabinet]);
+    expect(p.sensitivityDb).toBeUndefined();               // not an axis premise
+    expect(p.powerWatts).toBeUndefined();
+  });
+});

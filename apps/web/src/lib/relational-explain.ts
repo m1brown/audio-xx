@@ -47,10 +47,24 @@
  * said at all.
  */
 
-export type EvidenceTier = 'catalog' | 'brand' | 'model' | 'user';
+/**
+ * Ordered weakest to strongest.
+ *
+ * `manufacturer` slots between model and brand per the founder's ordering
+ * (2026-08-18): curated evidence > manufacturer facts > independent review >
+ * model reasoning > listener evidence. `user` is retained as the local name
+ * for the listener tier, since it is what every existing premise uses.
+ *
+ * That brand outranks a manufacturer fact is not a claim that our prose beats
+ * their spec sheet — SCOPE settles that, because brand evidence may only make
+ * brand-scoped claims and so never competes for a product-level statement.
+ */
+export type EvidenceTier =
+  | 'catalog' | 'brand' | 'manufacturer' | 'independent_review' | 'model' | 'user';
 
-/** Ordered weakest→strongest. Used only to take a minimum. */
-const TIER_RANK: Record<EvidenceTier, number> = { user: 0, model: 1, brand: 2, catalog: 3 };
+const TIER_RANK: Record<EvidenceTier, number> = {
+  user: 0, model: 1, independent_review: 2, manufacturer: 3, brand: 4, catalog: 5,
+};
 
 export type RelationKind = 'reinforcement' | 'counterweight' | 'constraint';
 

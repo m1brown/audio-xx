@@ -252,7 +252,11 @@ export interface ConsultationResponse {
     components: [string, string];
     axis: string;
     kind: 'reinforcement' | 'counterweight' | 'constraint';
-    tier: 'catalog' | 'brand' | 'model' | 'user';
+    // Widened 2026-08-18 with the manufacturer evidence class. `basis` on the
+    // provenance entry is deliberately NOT widened: that is the component's
+    // evidence basis, and a manufacturer fact does not change what a component
+    // IS — it adds a licensed premise about it.
+    tier: 'catalog' | 'brand' | 'manufacturer' | 'independent_review' | 'model' | 'user';
   }>;
   /** Per-component evidence tier (provisional/expanded paths). */
   componentProvenance?: ComponentProvenanceEntry[];

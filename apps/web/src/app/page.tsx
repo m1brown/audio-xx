@@ -2992,6 +2992,40 @@ export default function Home() {
             for (const r of verified) canonicalByName.set(r.name.toLowerCase().trim(), r);
           }
 
+          // ── Manufacturer evidence ────────────────────────────────
+          // Read from the site-level store; this path never populates it.
+          // Fetched only for components whose identity is established, since a
+          // fact needs a product to belong to. All lookups run in parallel
+          // under one deadline, and every failure simply yields no facts —
+          // absence is a state the licensing layer already handles.
+          const FACTS_BUDGET_MS = 20000;
+          let manufacturerEvidence: Array<Record<string, unknown>> = [];
+          const factCandidates = orderedComponents
+            .filter((c) => corroborated.includes(c.displayName) || c.product || c.brandProfile)
+            .map((c) => c.displayName);
+          if (factCandidates.length > 0) {
+            const factsDeadline = new Promise<'deadline'>((r) =>
+              setTimeout(() => r('deadline'), FACTS_BUDGET_MS));
+            const factLookups = Promise.all(factCandidates.map(async (name) => {
+              try {
+                const r = await fetch('/api/manufacturer-facts', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name }),
+                });
+                if (!r.ok) return [];
+                const j = await r.json();
+                return Array.isArray(j?.facts) ? j.facts : [];
+              } catch { return []; }
+            }));
+            const factsSettled = await Promise.race([factLookups, factsDeadline]);
+            manufacturerEvidence = factsSettled === 'deadline'
+              ? []
+              : (factsSettled as Array<Array<Record<string, unknown>>>).flat();
+            console.log('[manufacturer-facts] %d fact(s) for %d component(s)',
+              manufacturerEvidence.length, factCandidates.length);
+          }
+
           const provisional = await inferProvisionalSystemAssessment(
             assessmentResult.query,
             componentNames,
@@ -2999,6 +3033,7 @@ export default function Home() {
             unresolvedRoster,
             corroborated,
             lookupUnknown,
+            manufacturerEvidence as never,
           );
           if (provisional) {
             // Override source to provisional_system for distinct UI labeling
