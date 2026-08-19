@@ -382,6 +382,25 @@ export interface MemoFindings {
     source: CatalogSource;
   }[];
 
+  /**
+   * Manufacturer-published physical figures, per component, for the components
+   * we hold any for.
+   *
+   * On the findings contract rather than read separately by each renderer, so
+   * the deterministic narrative, the artifact synthesizer and a saved snapshot
+   * all describe a component from the same evidence. A published specification
+   * is a FACT about the product, not a reading of it: stating "84 dB
+   * sensitivity, 8 Ω" claims nothing about how the thing sounds, which is why
+   * it is admissible for a component whose sonic character we decline to
+   * characterise at all.
+   */
+  publishedSpecs: {
+    name: string;
+    sensitivityDb?: number;
+    impedanceOhms?: number;
+    powerWatts?: number;
+  }[];
+
   // ── Stacked traits ──
   /** Traits shared by 2+ components. */
   stackedTraits: StackedTraitFinding[];

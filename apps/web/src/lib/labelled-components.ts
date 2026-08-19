@@ -61,7 +61,14 @@
  * before "amp" can, and "tone arm" before "arm".
  */
 const LABEL_ROLE_WORDS: Array<{ word: RegExp; role: string }> = [
+  // "Pre" alone is how most people label a preamplifier, and it did not match:
+  // "amp" was required after "pre". An ARC Reference 5 behind a `Pre:` label
+  // resolved as an AMPLIFIER, collided with the power amp, and a textbook
+  // pre/power separates system was stopped to ask which of the two had
+  // replaced the other instead of being assessed. Kept first in the family so
+  // "pre-amp" still claims its own text before the bare form or "amp" can.
   { word: /pre[-\s]?amp(?:lifier)?s?/, role: 'preamplifier' },
+  { word: /pre/, role: 'preamplifier' },
   { word: /power[-\s]?amp(?:lifier)?s?/, role: 'amplifier' },
   { word: /integrated(?:\s+amp(?:lifier)?)?s?/, role: 'integrated' },
   { word: /amp(?:lifier)?s?/, role: 'amplifier' },

@@ -19,6 +19,7 @@
 
 import type { ConsultationResponse } from './consultation';
 import type { EvidenceItem } from './evidence/evidence-types';
+import { powerMatchStatement } from './power-match';
 import {
   licensedRelations, permittedQuestionType, questionViolations, stripOverclaims,
   filterUnlicensedRelationalProse, OPEN_DIAGNOSTIC_QUESTION,
@@ -543,6 +544,14 @@ export function verdictForVerdictLine(
   }
 }
 
+/** The numeric projection of a published figure. Mirrors `numericFigure`. */
+function numericFrom(value: string): number | undefined {
+  const m = value.match(/-?\d+(?:\.\d+)?/);
+  if (!m) return undefined;
+  const n = Number(m[0]);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 /** Mirrors `productKeyFor` in the evidence layer, without importing the store. */
 function productKeyish(name: string): string {
   return name.toLowerCase().replace(/[^\w\s/-]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -658,6 +667,39 @@ export function buildProvisionalPrompt(
         `- ${name}:\n` + items.map((i) => `    ${i.field}: ${i.value}`).join('\n')).join('\n')
     : '';
 
+  // The physical relation, COMPUTED — not left to the model.
+  //
+  // Watts against sensitivity is arithmetic, and handing a model two published
+  // numbers and hoping is the one thing this pairing does not need. The
+  // deterministic path has always computed the headroom ceiling and stated it;
+  // the provisional path is the one that RUNS when both the amplifier and the
+  // loudspeaker are uncatalogued, which is precisely when the published figures
+  // are all we have. Same classifier as the deterministic path (./power-match),
+  // so a listener cannot get a different answer depending on which of their
+  // components we happened to curate.
+  //
+  // The owning component is identified by which field it published — a
+  // power_output belongs to something amplifying, a sensitivity to something
+  // radiating — so no role resolution is needed and none is assumed.
+  const powerMatchContext = (() => {
+    let ampName: string | undefined; let watts: number | undefined;
+    let spkName: string | undefined; let sens: number | undefined;
+    for (const [name, items] of factsByComponent) {
+      for (const i of items) {
+        const n = numericFrom(i.value);
+        if (n === undefined) continue;
+        if (i.field === 'power_output' && watts === undefined) { watts = n; ampName = name; }
+        if (i.field === 'sensitivity' && sens === undefined) { sens = n; spkName = name; }
+      }
+    }
+    if (!ampName || !spkName || ampName === spkName) return '';
+    const stated = powerMatchStatement(ampName, spkName, watts ?? null, sens ?? null);
+    if (!stated) return '';
+    return `\n\nPOWER MATCH — Audio XX computed this from the published figures above. `
+      + `It is established, not an estimate. State it if the pairing is relevant to the `
+      + `listener's question, and do NOT recompute it or offer a different number:\n- ${stated}`;
+  })();
+
   const uncorroboratedContext = uncorroborated.length > 0
     ? `\n\nIDENTITY NOT VERIFIED — Audio XX could not confirm these products exist:\n`
       + `${uncorroborated.map((n) => `- ${n}${roleSuffix(n)}`).join('\n')}\n`
@@ -698,7 +740,7 @@ export function buildProvisionalPrompt(
   const userPrompt = `The user asked: "${query}"
 
 The system chain includes: ${componentNames.join(' → ')}
-${catalogContext}${brandContext}${modelContext}${manufacturerContext}${uncorroboratedContext}${incompleteContext}
+${catalogContext}${brandContext}${modelContext}${manufacturerContext}${powerMatchContext}${uncorroboratedContext}${incompleteContext}
 
 When describing each component in the philosophy section:
 - Catalog-verified: reference the verified data above and assess in full.

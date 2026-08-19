@@ -108,6 +108,7 @@ import {
 import { renderDeterministicMemo } from './memo-deterministic-renderer';
 import { listenerPropertyLabel } from './listener-labels';
 import { isWhitelistedSource } from './evidence/source-whitelist';
+import { classifyPowerMatch } from './power-match';
 import { physicalFactsFor, productKeyFor } from './evidence/manufacturer-facts';
 import type { EvidenceItem } from './evidence/evidence-types';
 // StructuredMemoInputs is transitional — the canonical rendering path is
@@ -7821,30 +7822,9 @@ export function inferActiveDAC(components: SystemComponent[]): ActiveDACInferenc
 //     with severity 6 (strained) or 9 (mismatched), outranking most
 //     axis-based constraints because power mismatch is more fundamental.
 
-type PowerMatchCompatibility = PowerMatchAssessment['compatibility'];
+// classifyPowerMatch now lives in ./power-match, shared with the provisional
+// path so one physical relation has one derivation.
 
-/**
- * Classify the power match between an amp and a speaker.
- *
- * @param powerWatts   Amp power output in watts (null if unknown)
- * @param sensitivityDb Speaker sensitivity in dB (null if unknown)
- * @returns Compatibility tier and estimated max clean SPL
- */
-function classifyPowerMatch(
-  powerWatts: number | null,
-  sensitivityDb: number | null,
-): { compatibility: PowerMatchCompatibility; estimatedMaxCleanSPL: number | null } {
-  if (powerWatts == null || sensitivityDb == null || powerWatts <= 0) {
-    return { compatibility: 'unknown', estimatedMaxCleanSPL: null };
-  }
-
-  const estimatedSPL = sensitivityDb + 10 * Math.log10(powerWatts);
-
-  if (estimatedSPL >= 100) return { compatibility: 'optimal', estimatedMaxCleanSPL: estimatedSPL };
-  if (estimatedSPL >= 95)  return { compatibility: 'adequate', estimatedMaxCleanSPL: estimatedSPL };
-  if (estimatedSPL >= 90)  return { compatibility: 'strained', estimatedMaxCleanSPL: estimatedSPL };
-  return { compatibility: 'mismatched', estimatedMaxCleanSPL: estimatedSPL };
-}
 
 /**
  * Search the amp's interactions for a note matching the speaker's
@@ -8183,7 +8163,13 @@ const USER_ROLE_COLON_PATTERNS: { pattern: RegExp; role: string }[] = [
   { pattern: /\bstream(?:er|ing)?\s*:/i, role: 'streamer' },
   { pattern: /\bdac\s*:/i, role: 'dac' },
   { pattern: /\bintegrated\s*:/i, role: 'integrated' },
-  { pattern: /\bpre[- ]?amp(?:lifier)?\s*:/i, role: 'preamplifier' },
+  // `Pre:` is how most people label a preamplifier, and it did not match:
+  // "amp" was required after "pre", so ARC Reference 5 behind a `Pre:` label
+  // resolved as an AMPLIFIER, collided with the power amp, and a textbook
+  // pre/power separates system was stopped to ask which of the two had
+  // replaced the other. Ordered before the generic amplifier pattern so
+  // `Preamp:` cannot fall through to it.
+  { pattern: /\bpre(?:[- ]?amp(?:lifier)?)?\s*:/i, role: 'preamplifier' },
   { pattern: /\bamp(?:lifier)?\s*:/i, role: 'amplifier' },
   { pattern: /\bspeak(?:er)?s?\s*:/i, role: 'speaker' },
   { pattern: /\bheadphones?\s*:/i, role: 'headphone' },
@@ -10164,6 +10150,27 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   // from how the component interacts with the system axes.
   const systemLogicRows: string[] = [];
 
+  /**
+   * The maker's published figures for one component, as a reader-facing clause.
+   *
+   * Physical figures only. A published sensitivity is a measurement the
+   * manufacturer stands behind; their prose about how the thing sounds is
+   * marketing, and the evidence layer already refuses to store it. Nothing is
+   * inferred from these numbers here — they are stated, not reasoned from.
+   */
+  function publishedSpecPhrase(name: string): string | null {
+    const spec = (findings.publishedSpecs ?? [])
+      .find((s) => s.name.trim().toLowerCase() === name.trim().toLowerCase());
+    if (!spec) return null;
+    const parts: string[] = [];
+    if (spec.sensitivityDb !== undefined) parts.push(`${spec.sensitivityDb} dB sensitivity`);
+    if (spec.impedanceOhms !== undefined) parts.push(`${spec.impedanceOhms} Ω nominal`);
+    if (spec.powerWatts !== undefined) parts.push(`${spec.powerWatts} W output`);
+    if (parts.length === 0) return null;
+    return parts.length === 1 ? parts[0]
+      : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+  }
+
   // Helper: derive a short behavior phrase from axes and strengths
   function deriveComponentBehavior(c: typeof comps[0], compAxes: typeof findings.perComponentAxes[0] | undefined): string {
     // No evidence, no sonic phrase. Every branch below reads axes that, for an
@@ -10171,7 +10178,18 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     // not exist came to be described as "neutral, controlled". The row still
     // appears, because the listener owns the thing and its position in the
     // chain is real; what it says is what we actually know.
-    if (compAxes && !carriesAxisEvidence(compAxes)) return 'not identified — no sonic character claimed';
+    if (compAxes && !carriesAxisEvidence(compAxes)) {
+      // We decline to characterise how it SOUNDS. That is not a reason to
+      // withhold what its maker published about what it IS. A specification we
+      // hold, quoted from the manufacturer's own page, is the strongest thing
+      // Audio XX can say about an uncatalogued component — and saying "not
+      // identified" while holding "84 dB sensitivity, 8 Ω" discards the most
+      // useful fact in the assessment.
+      const spec = publishedSpecPhrase(c.name);
+      return spec
+        ? `not in the catalogue — the maker publishes ${spec}`
+        : 'not identified — no sonic character claimed';
+    }
     const wb = compAxes?.axes.warm_bright;
     const sd = compAxes?.axes.smooth_detailed;
     const ec = compAxes?.axes.elastic_controlled;
@@ -15589,6 +15607,21 @@ function extractMemoFindings(
       axes: p.axes,
       source: p.source as CatalogSource,
     })),
+    // Published figures, per component. Emitted only where we actually hold
+    // one, so an empty entry never implies a specification we do not have.
+    publishedSpecs: components
+      .map((c) => {
+        const f = manufacturerPhysicalFacts(c, manufacturerEvidence);
+        const entry = {
+          name: c.displayName,
+          sensitivityDb: f.sensitivityDb,
+          impedanceOhms: f.impedanceOhms,
+          powerWatts: f.powerWatts,
+        };
+        return entry.sensitivityDb === undefined && entry.impedanceOhms === undefined
+          && entry.powerWatts === undefined ? null : entry;
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null),
     stackedTraits,
     bottleneck,
     componentVerdicts,
