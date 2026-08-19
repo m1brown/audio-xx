@@ -919,10 +919,20 @@ ${closing}`;
       }
       : undefined;
 
+  const driveConclusion = (ampSubject && spkImpedance)
+    ? driveSentence(drive, ampSubject, spkImpedance.subject) : undefined;
+
+  // Production visibility for the derived conclusion. `console.log` is stripped
+  // from the production bundle and `console.warn` is not, which is why this is
+  // a warn: a path that reports nothing in the only environment that matters is
+  // how a ReferenceError once shipped raw JSON through four replays.
+  console.warn('[drive] quantities=%d amp=%s load=%s status=%s conclusion=%s',
+    quantities.length, ampSubject ?? 'none', spkImpedance?.value ?? 'none',
+    drive.status, driveConclusion ? 'yes' : 'no');
+
   return {
     userPrompt, provenance,
-    driveConclusion: (ampSubject && spkImpedance)
-      ? driveSentence(drive, ampSubject, spkImpedance.subject) : undefined,
+    driveConclusion,
     suppliedPremises: selection.premises,
     supersededCandidates: selection.candidates.filter((c) => c.selected === false),
     unresolvedAxes: selection.unresolved,
