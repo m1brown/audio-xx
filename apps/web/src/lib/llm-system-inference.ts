@@ -957,9 +957,10 @@ function leadWithDriveConclusion(
 ): ConsultationResponse {
   if (!driveConclusion) return response;
   const existing = response.systemSignature?.trim();
-  const systemSignature = existing ? `${driveConclusion} ${existing}` : driveConclusion;
-  console.warn('[drive] signature out: %s', systemSignature.slice(0, 60));
-  return { ...response, systemSignature };
+  return {
+    ...response,
+    systemSignature: existing ? `${driveConclusion} ${existing}` : driveConclusion,
+  };
 }
 
 export async function inferProvisionalSystemAssessment(

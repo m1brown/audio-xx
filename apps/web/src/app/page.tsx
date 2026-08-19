@@ -3125,9 +3125,6 @@ export default function Home() {
             // asserts nothing about catalog coverage.
             const graphCtx = { ...advisoryCtx, systemComponents: componentNames };
             const provisionalAdvisory = consultationToAdvisory(provisional, undefined, graphCtx);
-            console.warn('[drive] engine=%s advisory=%s',
-              (provisional.systemSignature ?? 'EMPTY').slice(0, 40),
-              (provisionalAdvisory.systemSignature ?? 'EMPTY').slice(0, 40));
             provisionalAdvisory.unknownComponents = assessmentResult.unknownComponents;
             // Per-component provenance — computed by Audio XX from what it
             // actually holds, so the model cannot promote its own knowledge to

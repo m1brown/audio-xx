@@ -4605,6 +4605,31 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
       {/* ── 2. Audio Preferences ────────────────────── */}
       {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} coverageGap={a.coverageGap} />}
 
+      {/* ── Engine verdict ──────────────────────────
+       *  `systemSignature` is the engine's own leading line — the verdict the
+       *  assessment hangs from, and now the home of any conclusion Audio XX
+       *  derived itself rather than asked the model for (a published power
+       *  figure at the listener's own load, for instance).
+       *
+       *  This format never read the field. MemoFormat did, StandardFormat did
+       *  not, and StandardFormat is what the live assessment path renders — so
+       *  a field the engine goes to the trouble of rebuilding when it comes
+       *  back empty ("the one field that may not simply vanish") was reaching
+       *  the renderer intact and being dropped on the floor. Verified in
+       *  production: the advisory object carried the sentence, the page did
+       *  not show it. */}
+      {a.systemSignature && (
+        <p style={{
+          margin: '0 0 1.5rem 0',
+          fontSize: FONTS.bodySize,
+          lineHeight: FONTS.lineHeight,
+          color: COLORS.text,
+          fontWeight: 500,
+        }}>
+          {a.systemSignature}
+        </p>
+      )}
+
       {/* ── System Assessment Block ── */}
       {a.componentReadings && a.componentReadings.length > 0 && a.systemContext && (
         <AdvisorySection label="System character">
