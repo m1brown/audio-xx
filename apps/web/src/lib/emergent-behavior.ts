@@ -368,6 +368,11 @@ const GENERIC_SUFFIX = /\b(?:integrated(?:\s+amplifier)?|monitor(?:s)?|speaker(?
 // model words ("Hugo", "Diva") DO NOT match — they keep their bare form.
 const DESIGNATOR_RE = /^[A-Z][A-Z0-9]{0,3}$/;
 
+// Trailing tokens that are not names: a bare model number, or a qualifier
+// that only means something attached to the word before it.
+const CANNOT_STAND_ALONE =
+  /^(?:\d+|plus|pro|max|mini|se|sig|signature|anniversary|edition|series|ref|reference)$/i;
+
 function shortLabel(name: string): string {
   const stripped = name.replace(GENERIC_SUFFIX, '').trim();
   const words = stripped.length > 0 ? stripped.split(/\s+/) : name.split(/\s+/);
@@ -394,6 +399,16 @@ function shortLabel(name: string): string {
   //                           lowercase, so unchanged)
   //   "Chord Hugo"          → "Hugo" (regex rejects lowercase)
   if (words.length >= 2 && DESIGNATOR_RE.test(last)) {
+    return `${words[words.length - 2]} ${last}`;
+  }
+
+  // Case 3 — the last word cannot carry the identity on its own. A bare
+  // number or a generic qualifier is not a name, and the fallback published
+  // sentences about components nobody owns: "the Qutest/3/Plus chain works
+  // because…", "the 3's amplification", "the Plus's final voicing" for a
+  // Naim SuperNait 3 and a Harbeth Super HL5 Plus. Take the preceding word
+  // with it — "SuperNait 3", "HL5 Plus" — which is what the owner calls it.
+  if (words.length >= 2 && CANNOT_STAND_ALONE.test(last)) {
     return `${words[words.length - 2]} ${last}`;
   }
 

@@ -9895,12 +9895,17 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   // Uses trust-calibrated language: factual observation, not alarm.
   let powerNote = '';
   const pm = findings.powerMatchAssessment;
+  // Catalog interaction text is authored as a fragment and does not reliably
+  // end in a stop, so interpolating it ran the next sentence straight on:
+  // "...the amp is out of its comfort zone This system reflects a listener…".
+  const asSentence = (t: string) =>
+    /[.!?]["')\]]?\s*$/.test(t.trim()) ? t.trim() : `${t.trim()}.`;
   if (pm.compatibility === 'mismatched' && pm.ampName && pm.speakerName) {
     const splStr = pm.estimatedMaxCleanSPL != null
       ? ` (estimated ~${Math.round(pm.estimatedMaxCleanSPL)} dB maximum clean output)`
       : '';
     const interactionNote = pm.relevantInteraction
-      ? ` Catalog notes suggest: ${pm.relevantInteraction}`
+      ? ` Catalog notes suggest: ${asSentence(pm.relevantInteraction)}`
       : '';
     powerNote = `\n\nThe ${pm.ampName} at ${pm.ampPowerWatts}W is significantly underpowered for the ${pm.speakerName} at ${pm.speakerSensitivityDb} dB sensitivity${splStr}. Dynamic compression and loss of bass control are expected at moderate listening levels.${interactionNote}`;
   } else if (pm.compatibility === 'strained' && pm.ampName && pm.speakerName) {
@@ -9908,12 +9913,12 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       ? ` (estimated ~${Math.round(pm.estimatedMaxCleanSPL)} dB maximum clean output)`
       : '';
     const interactionNote = pm.relevantInteraction
-      ? ` Catalog notes suggest: ${pm.relevantInteraction}`
+      ? ` Catalog notes suggest: ${asSentence(pm.relevantInteraction)}`
       : '';
     powerNote = `\n\nThe ${pm.ampName} at ${pm.ampPowerWatts}W has limited headroom for the ${pm.speakerName} at ${pm.speakerSensitivityDb} dB sensitivity${splStr}. Dynamic peaks may compress on demanding material.${interactionNote}`;
   } else if (pm.compatibility === 'optimal' && pm.relevantInteraction && pm.ampName && pm.speakerName) {
     // Positive pairing note — only when there's a relevant interaction to surface
-    powerNote = `\n\nThe ${pm.ampName} and ${pm.speakerName} are well-matched on power and efficiency. ${pm.relevantInteraction}`;
+    powerNote = `\n\nThe ${pm.ampName} and ${pm.speakerName} are well-matched on power and efficiency. ${asSentence(pm.relevantInteraction)}`;
   }
 
   // ── System thesis: max 2 sentences. ──
@@ -10064,10 +10069,20 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     }
   }
 
+  // The licensing filter above can empty a name list, and every phrase built
+  // from one has to survive that. `downstreamPhrase` was composed from
+  // `downstreamNames` unconditionally, so a system whose only loudspeaker was
+  // uncatalogued published "lean toward warmth and ease, reinforced by the ."
+  // — a dangling article where the component we declined to name should have
+  // been. Withhold the clause rather than the name inside it.
+  if (downstreamNames.length === 0) downstreamPhrase = '';
+  const withDownstream = (lead: string) =>
+    downstreamPhrase ? `${lead}, ${downstreamPhrase}.` : `${lead}.`;
+
   // Compose interaction-aware thesis
   let thesisSentence1: string;
   let thesisSentence2: string;
-  if (upstreamComps.length > 0 && downstreamComps.length > 0) {
+  if (upstreamNames.length > 0 && downstreamComps.length > 0) {
     const upList = upstreamNames.join(' and ');
     const upVerb = upstreamComps.length > 1 ? 'lean' : 'leans';
     // Phase 2A: when an upstream component's catalog entry declares a
@@ -10079,11 +10094,11 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     // Causal explanation, not a second identity claim: the intro already
     // states what the system is; this sentence explains why it behaves
     // that way (electronics character + speaker contribution).
-    thesisSentence1 = transparentUpstream
-      ? `The ${transparentUpstream.name} is engineered to add essentially nothing of its own, so the ${downstreamNames.join(' and ')} ${downstreamComps.length > 1 ? 'set' : 'sets'} the system's tonal character.`
+    thesisSentence1 = transparentUpstream && downstreamNames.length > 0
+      ? `The ${transparentUpstream.name} is engineered to add essentially nothing of its own, so the ${downstreamNames.join(' and ')} ${downstreamNames.length > 1 ? 'set' : 'sets'} the system's tonal character.`
       : upstreamChar
-        ? `The ${upList} ${upVerb} toward ${upstreamChar}, ${downstreamPhrase}.`
-        : `The ${upList} ${upstreamComps.length > 1 ? 'provide' : 'provides'} a neutral, uncoloured foundation, ${downstreamPhrase}.`;
+        ? withDownstream(`The ${upList} ${upVerb} toward ${upstreamChar}`)
+        : withDownstream(`The ${upList} ${upstreamNames.length > 1 ? 'provide' : 'provides'} a neutral, uncoloured foundation`);
     // Sentence 2: what that means for the listener (power note overrides)
     const pw = powerNote.trim();
     if (pw) {
