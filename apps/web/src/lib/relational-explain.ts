@@ -134,8 +134,42 @@ export type RelationSet =
 
 export interface RelationViolation {
   index: number;
-  rule: 'commensurability' | 'premises' | 'counterfactual' | 'tier';
+  rule: 'commensurability' | 'premises' | 'counterfactual' | 'tier' | 'transfer';
   detail: string;
+}
+
+/**
+ * Does this premise's finding transfer to the listener's own system?
+ *
+ * GOVERNING RULE (founder, 2026-08-19):
+ *
+ *   A `transfer_limited` premise may support a Describe claim with its source
+ *   and condition preserved, but may not enter an Explain or Evaluate relation.
+ *
+ * An observation made through OTHER electronics cannot separate what belongs to
+ * the product from what belongs to the chain that produced it. Stereophile
+ * heard the Acora QRC-2 "as smooth as silk" driven by Ideon sources and JMF
+ * electronics; a counterweight claim against this listener's dCS needs the
+ * smoothness to be a property of the QRC-2, and that observation cannot
+ * establish it.
+ *
+ * The rule closes a real escape rather than a theoretical one. Before it, a
+ * sentence that named the publication, stated the foreign equipment AND
+ * restated the partner at brand scope was PUBLISHED — a system-level
+ * counterweight resting entirely on a finding made in someone else's system.
+ * Disclosure was being taken for licence: naming the Ideon and JMF gear tells
+ * the reader the finding does not transfer, and the sentence then asserted
+ * that it does.
+ *
+ * A condition about the PRODUCT ITSELF — break-in, an input, a mode, a
+ * listening level — is `conditioned`, not transfer-limited. It still tells the
+ * listener about their own unit, under a stated condition, and continues to
+ * license relations.
+ */
+export function premiseTransfer(a: AttributeRecord): 'direct' | 'conditioned' | 'transfer_limited' {
+  const kind = a.attribution?.condition?.split(':')[0]?.trim();
+  if (!kind) return 'direct';
+  return kind === 'associated_equipment' ? 'transfer_limited' : 'conditioned';
 }
 
 /** The tier a relation may be asserted at: the weaker of its two premises. */
@@ -183,6 +217,22 @@ export function validateRelations(
     if (a.component.toLowerCase().trim() === b.component.toLowerCase().trim()) {
       violations.push({ index, rule: 'counterfactual', detail: 'both premises describe the same component — no interaction exists' });
       return;
+    }
+
+    // (transfer) — a finding made through other electronics may be reported,
+    // with its source and condition, and may not be reasoned FROM. Checked
+    // before commensurability so the rejection reason names the real defect:
+    // an axis mismatch would otherwise mask it, as it did on first inspection.
+    for (const premise of [a, b]) {
+      if (premiseTransfer(premise) === 'transfer_limited') {
+        violations.push({
+          index,
+          rule: 'transfer',
+          detail: `${premise.component} premise was observed through other equipment `
+            + `(${premise.attribution?.condition}) — it may be described, not reasoned from`,
+        });
+        return;
+      }
     }
 
     // (a) commensurability
@@ -272,6 +322,39 @@ function componentTokens(name: string): string[] {
   return name.split(/\s+/).map((t) => t.replace(/[^\w-]/g, '')).filter((t) => t.length >= 3);
 }
 
+/**
+ * A DEFINITE reference to this system's component set, as a plural collective.
+ *
+ * THE ESCAPE THIS CLOSES. The positional rule requires a licence whenever a
+ * sentence names or refers to a second component — but it resolved references
+ * one at a time, so a claim about ALL of them at once named none of them and
+ * walked straight through:
+ *
+ *   "The components synergize well to produce a consistent and coherent
+ *    audio experience."
+ *
+ * That is an aggregate interaction claim. It asserts more than any two-component
+ * sentence would, and it was the one shape that needed no licence at all.
+ *
+ * The fix is not a synonym list — "synergize" would simply become "work
+ * together", then "complement one another", forever. A collective noun phrase
+ * REFERS TO every component in the system, so it is resolved to every
+ * component, and the existing default-deny rule then does the work unchanged:
+ * touching N components requires all N(N-1)/2 pairs to be licensed. No new
+ * policy, no predicate vocabulary, nothing about what the sentence claims.
+ *
+ * DEFINITE is the load-bearing word. "the components", "its components", "all
+ * four components", "each component" refer to THIS system's set. A bare plural
+ * — "systems leaning toward purely tube-driven components" — is a generic use
+ * of the word about other systems entirely, and is left alone.
+ */
+const COLLECTIVE_REFERENCE =
+  /\b(?:the|these|those|its|their|your|our|all|each|every|both|either)\s+(?:\w+['\u2019]?s?[- ]){0,2}(?:components?|parts|pieces|elements|boxes|units)\b/i;
+
+export function referencesComponentSet(sentence: string): boolean {
+  return COLLECTIVE_REFERENCE.test(sentence);
+}
+
 function namesIn(sentence: string, componentNames: string[]): string[] {
   return componentNames.filter((n) =>
     componentTokens(n).some((t) => new RegExp(`\\b${t}\\b`, 'i').test(sentence)));
@@ -349,7 +432,11 @@ export function filterUnlicensedRelationalProse(
       const named = namesIn(sentence, componentNames);
       const referred = ANAPHORA.test(sentence) && antecedent && !named.includes(antecedent)
         ? [antecedent] : [];
-      const touched = [...new Set([...named, ...referred])];
+      // A collective reference reaches every component at once. Resolving it to
+      // the whole set is what puts an aggregate claim under the same rule as a
+      // two-component one, instead of under no rule at all.
+      const collective = referencesComponentSet(sentence) ? componentNames : [];
+      const touched = [...new Set([...named, ...referred, ...collective])];
 
       // Capture the antecedent BEFORE advancing it: this sentence's own names
       // must not become the source we check its own anaphora against.
@@ -371,7 +458,8 @@ export function filterUnlicensedRelationalProse(
           if (!rel) {
             dropped.push({ sentence: sentence.trim(),
               reason: `no licensed relation between ${touched[i]} and ${touched[j]}`
-                + (referred.length ? ` (via anaphora to ${antecedent})` : '') });
+                + (collective.length ? ' (via collective reference to the components)'
+                  : referred.length ? ` (via anaphora to ${antecedent})` : '') });
             return null;
           }
           // Scope survives anaphora, and EVERY brand-scoped component must be
