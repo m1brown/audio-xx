@@ -25,11 +25,13 @@ import {
 } from './evidence/independent-review-consumption';
 import { selectPremises, type PremiseCandidate } from './evidence/premise-selection';
 import {
-  parseQuantity, assessDriveCapability, transferFor, type QuantityPremise,
+  parseQuantities, assessDriveCapability, driveSentence, transferFor,
+  type QuantityPremise,
 } from './evidence/physical-quantities';
 import {
   licensedRelations, permittedQuestionType, questionViolations, stripOverclaims,
   filterUnlicensedRelationalProse, OPEN_DIAGNOSTIC_QUESTION,
+  type LicensedRelation,
   type ActionVerdict, type AttributeRecord, type RelationKind, type RelationSet,
   type EvidenceTier,
 } from './relational-explain';
@@ -589,6 +591,10 @@ export function buildProvisionalPrompt(
   suppliedPremises: AttributeRecord[];
   supersededCandidates: PremiseCandidate[];
   unresolvedAxes: Array<{ component: string; axis: string; positions: PremiseCandidate[] }>;
+  /** Audio XX's own drive conclusion, already licensed. See below. */
+  driveRelation?: LicensedRelation;
+  /** That conclusion as prose, written by Audio XX rather than the model. */
+  driveConclusion?: string;
 } {
   // ── THE AUTHORITATIVE EVIDENCE STATE ────────────────────────────
   //
@@ -728,9 +734,10 @@ export function buildProvisionalPrompt(
   for (const item of manufacturerEvidence ?? []) {
     const owner = componentNames.find((n) => productKeyish(n) === item.productKey);
     if (!owner) continue;
-    const q = parseQuantity(owner, item.field, item.value,
-      { sourceUrl: item.attribution?.sourceUrl });
-    if (q) quantities.push(q);
+    // Plural: one published field routinely states a whole power table, and
+    // the figure at the listener's own load is usually not the first one.
+    quantities.push(...parseQuantities(owner, item.field, item.value,
+      { sourceUrl: item.attribution?.sourceUrl }));
   }
 
   const reviewCandidates: PremiseCandidate[] = [];
@@ -748,18 +755,16 @@ export function buildProvisionalPrompt(
   const selection = selectPremises(reviewCandidates);
 
   // The one combining rule, run by Audio XX rather than proposed by the model.
-  const findQ = (role: RegExp, quantity: QuantityPremise['quantity']) => {
-    const owner = componentNames.find((n) => role.test(
-      (unresolved ?? []).find((u) => u.name === n)?.role ?? ''));
-    return quantities.find((q) => q.quantity === quantity
-      && (!owner || q.subject === owner));
-  };
-  const ampPower = quantities.find((q) => q.quantity === 'power_output');
+  // Every power figure the amplifier publishes is offered, so the rule can pick
+  // the one specified into THIS loudspeaker's load rather than the first listed.
+  const ampSubject = quantities.find((q) => q.quantity === 'power_output')?.subject;
+  const ampPowers = quantities.filter((q) => q.quantity === 'power_output'
+    && q.subject === ampSubject);
   const spkImpedance = quantities.find((q) => q.quantity === 'nominal_impedance'
-    && q.subject !== ampPower?.subject);
-  const spkSensitivity = quantities.find((q) => q.quantity === 'sensitivity');
-  const drive = assessDriveCapability(ampPower, spkImpedance, spkSensitivity);
-  void findQ;
+    && q.subject !== ampSubject);
+  const spkSensitivity = quantities.find((q) => q.quantity === 'sensitivity'
+    && q.subject !== ampSubject);
+  const drive = assessDriveCapability(ampPowers, spkImpedance, spkSensitivity);
 
   const quantityLines = quantities.map((q) =>
     `  - ${q.subject}: ${q.quantity} = ${q.value} ${q.unit}`
@@ -775,10 +780,29 @@ export function buildProvisionalPrompt(
       + `what would close it (${drive.missing}). Do NOT estimate it, do NOT call the `
       + `pairing synergistic, effective, authoritative or well matched, and do NOT `
       + `describe drive as adequate or inadequate.`
-    : drive.status === 'incomplete'
-      ? `\n\nAMPLIFIER / LOUDSPEAKER DRIVE — NOT ESTABLISHED. Missing: ${drive.missing}. `
-        + `Do not characterise drive capability in either direction.`
-      : '';
+    : drive.status === 'assessable'
+      ? `\n\nAMPLIFIER / LOUDSPEAKER DRIVE — ESTABLISHED AT THE RELEVANT LOAD. The `
+        + `amplifier publishes ${drive.watts} W`
+        + (drive.intoOhms != null ? ` into ${drive.intoOhms}Ω` : '')
+        + `, which is the load this loudspeaker presents, and the loudspeaker is rated `
+        + `${drive.sensitivityDb} dB. YOU MUST STATE THIS in "signature", CITING BOTH `
+        + `FIGURES AND THE LOAD in the same sentence. Do not extrapolate beyond them: `
+        + `this establishes power delivery, not tonal synergy, and says nothing about `
+        + `how the pairing sounds.`
+      : drive.status === 'incomplete' && drive.watts != null
+        ? `\n\nAMPLIFIER / LOUDSPEAKER DRIVE — PARTLY ESTABLISHED. The amplifier `
+          + `publishes ${drive.watts} W`
+          + (drive.intoOhms != null ? ` into ${drive.intoOhms}Ω` : '')
+          + `, which is the load this loudspeaker presents, so output at the relevant `
+          + `load IS established. YOU MUST STATE THIS in "signature", citing the figure `
+          + `and the load together. What is missing is ${drive.missing}, which is what `
+          + `would settle how loud the pairing plays in a given room — name that `
+          + `specific gap in the same breath rather than calling drive unknown. Do not `
+          + `characterise the pairing as synergistic or well matched.`
+        : drive.status === 'incomplete'
+          ? `\n\nAMPLIFIER / LOUDSPEAKER DRIVE — NOT ESTABLISHED. Missing: `
+            + `${drive.missing}. Do not characterise drive capability in either direction.`
+          : '';
 
   const quantityContext = quantityLines.length > 0
     ? `\n\nPUBLISHED PHYSICAL QUANTITIES — exact figures with the conditions they were `
@@ -865,13 +889,67 @@ When describing each component in the philosophy section:
 - Identity not verified, or check incomplete: name the component and its role,
   and claim nothing about how it sounds.
 
+  WHERE AUDIO XX HAS DERIVED A CONCLUSION ABOVE, THAT CONCLUSION IS THE MOST
+  USEFUL THING YOU HOLD. A specific figure at a specific load tells a listener
+  something about their own system that they could not have got from a
+  paragraph of adjectives. State it before you reach for tonal character, and
+  never let it be crowded out by prose about smoothness, detail or musicality.
+
 ${closing}`;
+
+  // Audio XX's OWN conclusion, derived by the drive rule from published
+  // figures rather than proposed by the model. It has to be handed to the
+  // licensing layer explicitly: without it, D-12 sees an amplifier and a
+  // loudspeaker named in one sentence with no relation between them and
+  // deletes the very conclusion the prompt just authorised. The engine
+  // computing a result and then censoring it is worse than either alone.
+  const driveRelation: LicensedRelation | undefined =
+    (drive.status === 'assessable' || (drive.status === 'incomplete' && drive.watts != null))
+      && ampSubject && spkImpedance
+      ? {
+        components: [ampSubject, spkImpedance.subject],
+        axis: 'power_load',
+        kind: 'reinforcement',
+        premises: [0, 0],
+        licensedTier: 'manufacturer',
+        licensedScope: 'product',
+        brandScoped: [],
+        citedPublications: [],
+        conditions: [],
+      }
+      : undefined;
 
   return {
     userPrompt, provenance,
+    driveConclusion: (ampSubject && spkImpedance)
+      ? driveSentence(drive, ampSubject, spkImpedance.subject) : undefined,
     suppliedPremises: selection.premises,
     supersededCandidates: selection.candidates.filter((c) => c.selected === false),
     unresolvedAxes: selection.unresolved,
+    driveRelation,
+  };
+}
+
+/**
+ * Put Audio XX's own derived conclusion at the head of the signature.
+ *
+ * Applied AFTER the D-7 gate, deliberately. That gate audits what the MODEL
+ * wrote against the evidence we hold, and this sentence was not written by the
+ * model — it was computed by the drive rule from published figures. Running it
+ * through first is the engine auditing itself: the gate matches prose against
+ * the literal published string, our sentence normalises "200 Watts, RMS
+ * typical @ 4 Ohms" to "200 watts into 4 ohms", and the whole assessment
+ * collapses into the fallback over a restatement of its own evidence.
+ */
+function leadWithDriveConclusion(
+  response: ConsultationResponse,
+  driveConclusion?: string,
+): ConsultationResponse {
+  if (!driveConclusion) return response;
+  const existing = response.systemSignature?.trim();
+  return {
+    ...response,
+    systemSignature: existing ? `${driveConclusion} ${existing}` : driveConclusion,
   };
 }
 
@@ -905,7 +983,9 @@ export async function inferProvisionalSystemAssessment(
    */
   reviewObservations?: Record<string, ReviewObservation[]>,
 ): Promise<ConsultationResponse | null> {
-  const { userPrompt, provenance, suppliedPremises } = buildProvisionalPrompt(
+  const {
+    userPrompt, provenance, suppliedPremises, driveRelation, driveConclusion,
+  } = buildProvisionalPrompt(
     query, componentNames, knownDescriptions, unresolved, corroborated, lookupUnknown,
     manufacturerEvidence, reviewObservations,
   );
@@ -947,7 +1027,7 @@ export async function inferProvisionalSystemAssessment(
 
     const parsedResponse = parseSystemInferenceResponse(
       content, componentNames, knownDescriptions, corroborated ?? [],
-      manufacturerEvidence ?? [], suppliedPremises, provenance,
+      manufacturerEvidence ?? [], suppliedPremises, provenance, driveRelation,
     );
     if (!parsedResponse) return null;
 
@@ -988,7 +1068,12 @@ export async function inferProvisionalSystemAssessment(
           '[llm-system-inference] licensing violation — falling back to the licensed answer:',
           violations.map((v) => `${v.component}: ${v.sentence.slice(0, 80)}`).join(' | '),
         );
-        return buildLicensedProvisionalResponse(componentNames, knownDescriptions, unresolvedRoster);
+        // The derived conclusion survives the fallback. A listener whose gear
+        // we cannot characterise is exactly the one for whom a published
+        // figure at their own load is the most useful thing we have.
+        return leadWithDriveConclusion(
+          buildLicensedProvisionalResponse(componentNames, knownDescriptions, unresolvedRoster),
+          driveConclusion);
       }
     }
     // Provenance is computed from EVIDENCE, before and independently of the
@@ -1005,7 +1090,7 @@ export async function inferProvisionalSystemAssessment(
     // Literally the same array the prompt was built from, not a recomputation.
     // Two derivations of one fact are two chances to disagree.
     parsedResponse.componentProvenance = provenance;
-    return parsedResponse;
+    return leadWithDriveConclusion(parsedResponse, driveConclusion);
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
       console.warn('[llm-system-inference] Timed out after', INFERENCE_TIMEOUT_MS, 'ms');
@@ -1057,6 +1142,14 @@ function parseSystemInferenceResponse(
    * derivation of a fact the caller already holds.
    */
   provenance: ComponentProvenance[] = [],
+  /**
+   * Audio XX's own drive conclusion, derived by the combining rule rather than
+   * proposed by the model. Passed EXPLICITLY: reaching for the builder's local
+   * through a closure is how `provenance` once became a ReferenceError that the
+   * parser's own catch swallowed, publishing raw JSON to production for four
+   * replays. A value this function needs is a value it takes.
+   */
+  driveRelation?: LicensedRelation,
 ): ConsultationResponse | null {
   try {
     let cleaned = raw.trim();
@@ -1158,7 +1251,14 @@ function parseSystemInferenceResponse(
         }),
       };
 
-    const surviving = licensedRelations(usable, attributes);
+    // Audio XX's derived drive conclusion joins the model's surviving
+    // relations. It bypasses `licensedRelations` deliberately: that function
+    // validates premises the MODEL proposed, and this one was computed by our
+    // own rule from manufacturer figures. It is not a claim awaiting a check.
+    const surviving = [
+      ...licensedRelations(usable, attributes),
+      ...(driveRelation ? [driveRelation] : []),
+    ];
     const systemRelations = surviving.map((r) => ({
       components: r.components, axis: r.axis, kind: r.kind, tier: r.licensedTier,
     }));

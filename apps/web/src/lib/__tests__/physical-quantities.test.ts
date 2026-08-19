@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  parseQuantity, assessDriveCapability, quantitiesCombine, transferFor,
+  parseQuantity, parseQuantities, powerForLoad,
+  assessDriveCapability, driveSentence, quantitiesCombine, transferFor,
 } from '../evidence/physical-quantities';
 
 /**
@@ -48,7 +49,75 @@ describe('a quantity keeps its unit and the condition it was measured under', ()
   });
 });
 
-describe('THE BUTLER / ACORA CASE — drive cannot be established', () => {
+/** What Butler actually publishes, in one field, exactly as stored. */
+const BUTLER_PUBLISHED =
+  'Minimum 100 Watts RMS @ 8 Ohms; 128 Watts, RMS typical @ 8 Ohms; '
+  + '200 Watts, RMS typical @ 4 Ohms';
+
+describe('a published field states a TABLE, not a figure', () => {
+  const powers = parseQuantities('Butler Monads', 'power_output', BUTLER_PUBLISHED);
+
+  it('keeps every stated power/load pair', () => {
+    expect(powers.map((p) => [p.value, p.specifiedIntoOhms]))
+      .toEqual([[100, 8], [128, 8], [200, 4]]);
+  });
+
+  it('keeps minimum and typical apart, because one is a guarantee', () => {
+    expect(powers[0].qualifier).toMatch(/100 W Minimum|Minimum/i);
+    expect(powers[1].qualifier).toMatch(/typical/i);
+  });
+
+  it('selects the figure specified into the load actually presented', () => {
+    // The whole point. Taking the first match reports 100 W into 8Ω and
+    // discards the one figure that answers the question being asked.
+    expect(powerForLoad(powers, 4)).toMatchObject({ value: 200, specifiedIntoOhms: 4 });
+  });
+
+  it('prefers the guaranteed minimum where several figures share a load', () => {
+    expect(powerForLoad(powers, 8)).toMatchObject({ value: 100 });
+  });
+
+  it('offers nothing for a load no figure was specified into', () => {
+    expect(powerForLoad(powers, 2)).toBeUndefined();
+  });
+});
+
+describe('THE ACORA CASE — the evidence was in hand all along', () => {
+  it('is assessable once the 4-ohm figure is not thrown away', () => {
+    const d = assessDriveCapability(
+      parseQuantities('Butler Monads', 'power_output', BUTLER_PUBLISHED),
+      q('Acora QRC-2', 'impedance', '4 ohm'),
+      q('Acora QRC-2', 'sensitivity', '86 dB'));
+    expect(d.status).toBe('assessable');
+    if (d.status !== 'assessable') return;
+    expect(d.watts).toBe(200);
+    expect(d.intoOhms).toBe(4);
+  });
+
+  it('still establishes output at the load when sensitivity is missing', () => {
+    // "We know the output at your speaker's load but not its sensitivity" is a
+    // far more useful thing to tell a listener than "not established".
+    const d = assessDriveCapability(
+      parseQuantities('Butler Monads', 'power_output', BUTLER_PUBLISHED),
+      q('Acora QRC-2', 'impedance', '4 ohm'), undefined);
+    expect(d.status).toBe('incomplete');
+    if (d.status !== 'incomplete') return;
+    expect(d.watts).toBe(200);
+    expect(d.intoOhms).toBe(4);
+    expect(d.missing).toContain('sensitivity');
+  });
+
+  it('does not mistake the loudspeaker power HANDLING for amplifier output', () => {
+    const handling = parseQuantities('Acora QRC-2', 'power_handling', '10 W - 250 W');
+    expect(handling[0]).toMatchObject({ quantity: 'power_handling', value: 10 });
+    expect(assessDriveCapability(handling, q('Acora QRC-2', 'impedance', '4 ohm'),
+      q('Acora QRC-2', 'sensitivity', '86 dB')).status).toBe('incomplete');
+  });
+});
+
+describe('WHERE THE 4-OHM FIGURE IS NOT PUBLISHED — drive cannot be established', () => {
+  // Butler as it would be if only the 8-ohm figure were published — the state
+  // the assessment was actually reasoning from before the parser was fixed.
   const power = q('Butler Monads', 'power_output', 'Minimum 100 Watts RMS @ 8 Ohms');
   const load = q('Acora QRC-2', 'impedance', '4 ohm');
   const sens = q('Acora QRC-2', 'sensitivity', '86 dB');
@@ -135,5 +204,50 @@ describe('transfer is a property of the premise', () => {
 
   it('treats an unconditioned observation as direct', () => {
     expect(transferFor(undefined)).toBe('direct');
+  });
+});
+
+describe('Audio XX writes the drive conclusion itself', () => {
+  // Three attempts at instructing the model to state this — permitted, then
+  // required, then required in capitals — produced three assessments that said
+  // nothing about power at all. Generic tonal prose is the cheaper output.
+  const butler = parseQuantities('Butler Monads', 'power_output', BUTLER_PUBLISHED);
+  const load = q('Acora QRC-2', 'impedance', '4 ohm');
+
+  it('states the figure AT THE LOAD and names the remaining gap', () => {
+    const s = driveSentence(
+      assessDriveCapability(butler, load, undefined), 'Butler Monads', 'Acora QRC-2')!;
+    expect(s).toContain('200 watts into 4 ohms');
+    expect(s).toContain("Acora QRC-2's sensitivity is not published");
+    // Not "drive is unknown" — that would be false, and is the failure the
+    // typed-quantity repair exists to prevent in the other direction.
+    expect(s).not.toMatch(/drive.{0,20}(?:unknown|not established)/i);
+  });
+
+  it('says drive cannot be established where no figure covers the load', () => {
+    const s = driveSentence(
+      assessDriveCapability(
+        [q('Butler Monads', 'power_output', 'Minimum 100 Watts RMS @ 8 Ohms')],
+        load, q('Acora QRC-2', 'sensitivity', '86 dB')),
+      'Butler Monads', 'Acora QRC-2')!;
+    expect(s).toContain('100 watts into 8 ohms');
+    expect(s).toContain('presents 4 ohms');
+    expect(s).toMatch(/cannot be established/);
+    expect(s).not.toMatch(/synerg|effective|authorit|well matched/i);
+  });
+
+  it('sidesteps subject-verb agreement, which product names cannot supply', () => {
+    // "Monads" is plural and "Rossini Apex" is not, so no template that agrees
+    // with its subject can be written without knowing which.
+    for (const name of ['Butler Monads', 'dCS Rossini Apex']) {
+      const s = driveSentence(assessDriveCapability(butler, load,
+        q('Acora QRC-2', 'sensitivity', '86 dB')), name, 'Acora QRC-2')!;
+      expect(s).toContain(`Published figures put the ${name} at`);
+    }
+  });
+
+  it('offers nothing when nothing was established', () => {
+    expect(driveSentence({ status: 'incomplete', missing: 'amplifier power output' },
+      'Butler Monads', 'Acora QRC-2')).toBeUndefined();
   });
 });

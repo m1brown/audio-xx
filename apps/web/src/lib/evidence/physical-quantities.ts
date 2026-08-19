@@ -49,55 +49,83 @@ export interface QuantityPremise {
   publication?: string;
 }
 
-/** Parse a manufacturer or review value string into a typed quantity. */
+/**
+ * Parse a published value string into EVERY typed quantity it states.
+ *
+ * Plural on purpose. A manufacturer routinely publishes a whole power table in
+ * one field:
+ *
+ *   "Minimum 100 Watts RMS @ 8 Ohms; 128 Watts, RMS typical @ 8 Ohms;
+ *    200 Watts, RMS typical @ 4 Ohms"
+ *
+ * A parser that returns the first match reports 100W into 8Ω and silently
+ * discards the 4Ω figure — the one figure that answers the question actually
+ * being asked about a 4-ohm loudspeaker. That is not caution. The evidence was
+ * in hand and got thrown away, and the assessment then reports a gap that does
+ * not exist.
+ */
+export function parseQuantities(
+  subject: string,
+  field: string,
+  raw: string,
+  meta: { sourceUrl?: string; publication?: string } = {},
+): QuantityPremise[] {
+  const text = String(raw ?? '').replace(/[\u2010-\u2015\u2212]/g, '-');
+  const base = { subject, ...meta };
+
+  if (field === 'power_output' || field === 'power_handling') {
+    const out: QuantityPremise[] = [];
+
+    // Every "<n> watts ... @ <m> ohms" pair the string states. The clause
+    // between the two numbers is kept as the qualifier, because "minimum" and
+    // "typical" are the difference between a guarantee and an average.
+    // "minimum" and "typical" sit on either side of the number depending on the
+    // manufacturer, and the difference between a guarantee and an average is
+    // exactly what a listener needs, so both sides are captured.
+    const paired = /(?:(minimum|maximum|typical|continuous|peak|nominal)\s+)?(\d+(?:\.\d+)?)\s*(?:W\b|watts?)([^;.]{0,40}?)(?:@|at|into)\s*(\d+(?:\.\d+)?)\s*(?:ohms?|\u03a9)/gi;
+    for (const m of text.matchAll(paired)) {
+      out.push({
+        ...base, quantity: field, value: Number(m[2]), unit: 'W',
+        qualifier: [m[1], `${m[2]} W`, m[3]].filter(Boolean)
+          .join(' ').replace(/[\s,]+/g, ' ').trim(),
+        specifiedIntoOhms: Number(m[4]),
+      });
+    }
+    if (out.length > 0) return out;
+
+    // No load stated anywhere. A bare "5 watt SET" is a nominal rating, and
+    // refusing it would discard a fact the listener supplied.
+    const bare = /(\d+(?:\.\d+)?)\s*(?:W\b|watts?)/i.exec(text);
+    if (!bare) return [];
+    return [{ ...base, quantity: field, value: Number(bare[1]), unit: 'W',
+      qualifier: text.trim() || undefined }];
+  }
+
+  if (field === 'impedance' || field === 'nominal_impedance') {
+    const m = /(\d+(?:\.\d+)?)\s*(?:ohms?|\u03a9)/i.exec(text);
+    if (!m) return [];
+    return [{ ...base, quantity: 'nominal_impedance', value: Number(m[1]), unit: '\u03a9',
+      qualifier: text.trim() || undefined }];
+  }
+
+  if (field === 'sensitivity') {
+    const m = /(\d+(?:\.\d+)?)\s*db/i.exec(text);
+    if (!m) return [];
+    return [{ ...base, quantity: 'sensitivity', value: Number(m[1]), unit: 'dB',
+      qualifier: text.trim() || undefined }];
+  }
+
+  return [];
+}
+
+/** The first quantity a string states, where callers want just one. */
 export function parseQuantity(
   subject: string,
   field: string,
   raw: string,
   meta: { sourceUrl?: string; publication?: string } = {},
 ): QuantityPremise | null {
-  const text = String(raw ?? '').replace(/[‐-―−]/g, '-');
-
-  const numberBefore = (unitRe: RegExp): number | undefined => {
-    const m = new RegExp(`(\\d+(?:\\.\\d+)?)\\s*${unitRe.source}`, 'i').exec(text);
-    return m ? Number(m[1]) : undefined;
-  };
-  // "@ 8 ohms", "into 8 ohms", "8Ω load"
-  const intoOhms = (() => {
-    const m = /(?:@|at|into)\s*(\d+(?:\.\d+)?)\s*(?:ohms?|Ω)/i.exec(text);
-    return m ? Number(m[1]) : undefined;
-  })();
-
-  if (field === 'power_output' || field === 'power_handling') {
-    const watts = numberBefore(/(?:w\b|watts?)/);
-    if (watts == null) return null;
-    return {
-      subject, quantity: field, value: watts, unit: 'W',
-      qualifier: text.trim() || undefined,
-      specifiedIntoOhms: intoOhms,
-      ...meta,
-    };
-  }
-
-  if (field === 'impedance' || field === 'nominal_impedance') {
-    const ohms = numberBefore(/(?:ohms?|Ω)/);
-    if (ohms == null) return null;
-    return {
-      subject, quantity: 'nominal_impedance', value: ohms, unit: 'Ω',
-      qualifier: text.trim() || undefined, ...meta,
-    };
-  }
-
-  if (field === 'sensitivity') {
-    const db = numberBefore(/db/);
-    if (db == null) return null;
-    return {
-      subject, quantity: 'sensitivity', value: db, unit: 'dB',
-      qualifier: text.trim() || undefined, ...meta,
-    };
-  }
-
-  return null;
+  return parseQuantities(subject, field, raw, meta)[0] ?? null;
 }
 
 /**
@@ -123,47 +151,92 @@ export function parseQuantity(
  * question worth asking their dealer.
  */
 export type DriveAssessment =
-  | { status: 'assessable'; watts: number; sensitivityDb: number; intoOhms?: number }
+  /** A power figure applies to this load, and sensitivity is known. */
+  | { status: 'assessable'; watts: number; sensitivityDb: number; intoOhms?: number;
+    qualifier?: string }
+  /** Power is published, but only into loads this loudspeaker does not present. */
   | {
     status: 'load_mismatch';
     watts: number; specifiedIntoOhms: number; loadOhms: number;
     /** What Audio XX would need in order to close the arithmetic. */
     missing: string;
   }
-  | { status: 'incomplete'; missing: string };
+  /**
+   * A required input is missing. Carries whatever WAS established, because
+   * "we know the output at your speaker's load but not its sensitivity" is a
+   * different and far more useful thing to say than "not established".
+   */
+  | { status: 'incomplete'; missing: string; watts?: number; intoOhms?: number;
+    qualifier?: string };
+
+/**
+ * Choose the power figure that applies to a given load.
+ *
+ * Where a manufacturer publishes several figures for the same load — a
+ * "minimum" and a "typical" — the LOWEST is selected. A minimum is a guarantee
+ * and a typical is an average, and a claim about a listener's own unit should
+ * rest on the guarantee.
+ */
+export function powerForLoad(
+  powers: QuantityPremise[],
+  loadOhms: number | undefined,
+): QuantityPremise | undefined {
+  const lowest = (xs: QuantityPremise[]) =>
+    xs.slice().sort((x, y) => x.value - y.value)[0];
+
+  if (loadOhms != null) {
+    const exact = powers.filter((p) => p.specifiedIntoOhms === loadOhms);
+    if (exact.length > 0) return lowest(exact);
+  }
+  const unqualified = powers.filter((p) => p.specifiedIntoOhms == null);
+  if (unqualified.length > 0) return lowest(unqualified);
+  return undefined;
+}
 
 export function assessDriveCapability(
-  ampPower: QuantityPremise | undefined,
+  ampPower: QuantityPremise | QuantityPremise[] | undefined,
   speakerImpedance: QuantityPremise | undefined,
   speakerSensitivity: QuantityPremise | undefined,
 ): DriveAssessment {
-  if (!ampPower) return { status: 'incomplete', missing: 'amplifier power output' };
-  if (!speakerSensitivity) {
-    return { status: 'incomplete', missing: 'loudspeaker sensitivity' };
-  }
+  const powers = (Array.isArray(ampPower) ? ampPower : ampPower ? [ampPower] : [])
+    .filter((p) => p.quantity === 'power_output');
+  if (powers.length === 0) return { status: 'incomplete', missing: 'amplifier power output' };
 
-  // An explicitly stated load that differs from the loudspeaker's is the case
-  // the whole rule exists for. Absence of a stated load is NOT the same thing:
-  // a bare "5 watt SET" is a nominal rating, and refusing to reason from it
-  // would discard a fact the listener supplied and leave a real mismatch
-  // undiagnosed.
-  if (ampPower.specifiedIntoOhms != null
-    && speakerImpedance
-    && ampPower.specifiedIntoOhms !== speakerImpedance.value) {
+  const load = speakerImpedance?.value;
+  const applicable = powerForLoad(powers, load);
+
+  // Every published figure is specified into some OTHER load. This is the
+  // Butler/Acora case as it was originally reported, and the reason the rule
+  // exists: what the amplifier delivers into this load is simply unstated.
+  //
+  // NEVER INFER ACROSS LOADS. A 100W-into-8Ω amplifier may deliver anywhere
+  // between 100W and 200W into 4Ω depending on its supply and output stage,
+  // and a hybrid design is where that guess is least safe.
+  if (!applicable) {
+    const nearest = powers[0];
     return {
       status: 'load_mismatch',
-      watts: ampPower.value,
-      specifiedIntoOhms: ampPower.specifiedIntoOhms,
-      loadOhms: speakerImpedance.value,
-      missing: `${ampPower.subject} output specified into ${speakerImpedance.value}Ω`,
+      watts: nearest.value,
+      specifiedIntoOhms: nearest.specifiedIntoOhms as number,
+      loadOhms: load as number,
+      missing: `${nearest.subject} output specified into ${load}\u03a9`,
+    };
+  }
+
+  if (!speakerSensitivity) {
+    return {
+      status: 'incomplete', missing: 'loudspeaker sensitivity',
+      watts: applicable.value, intoOhms: applicable.specifiedIntoOhms,
+      qualifier: applicable.qualifier,
     };
   }
 
   return {
     status: 'assessable',
-    watts: ampPower.value,
+    watts: applicable.value,
     sensitivityDb: speakerSensitivity.value,
-    intoOhms: ampPower.specifiedIntoOhms ?? speakerImpedance?.value,
+    intoOhms: applicable.specifiedIntoOhms ?? load,
+    qualifier: applicable.qualifier,
   };
 }
 
@@ -213,4 +286,60 @@ export function transferFor(conditionKind?: string): EvidenceTransfer {
   if (!conditionKind) return 'direct';
   if (conditionKind === 'associated_equipment') return 'transfer_limited';
   return 'conditioned';
+}
+
+/**
+ * Audio XX's own sentence for a drive conclusion.
+ *
+ * Written here, by the rule that owns the figures, rather than requested from
+ * the model. Three attempts at instructing the model to state this — permitted,
+ * then required, then required in capitals — produced three assessments that
+ * said nothing about power at all, because generic tonal prose is the cheaper
+ * output and the model will always reach for it.
+ *
+ * Prompting was the wrong instrument. This conclusion was DERIVED, not
+ * inferred: the figures are published, the load is published, and the rule
+ * combining them is ours. Nothing about it needs a language model, and asking
+ * one to repeat a fact we already hold only introduces a way to lose it.
+ */
+export function driveSentence(
+  drive: DriveAssessment,
+  ampName: string,
+  speakerName: string,
+): string | undefined {
+  const ohms = (n: number) => `${n} ohms`;
+  // "Published figures put the X at…" rather than "The X publishes…". Product
+  // names carry no reliable number — "Monads" is plural, "Rossini Apex" is not
+  // — and a template that agrees with its subject cannot be written without
+  // knowing which. Sidestepping agreement is not a style choice here.
+  const put = (name: string, figure: string) => `Published figures put the ${name} at ${figure}`;
+
+  if (drive.status === 'assessable') {
+    return `${put(ampName, `${drive.watts} watts`
+      + (drive.intoOhms != null ? ` into ${ohms(drive.intoOhms)}` : ''))}, `
+      + `the load the ${speakerName} presents, and the ${speakerName} at `
+      + `${drive.sensitivityDb} dB — the pairing is amply powered.`;
+  }
+
+  if (drive.status === 'incomplete' && drive.watts != null) {
+    // The useful half is stated and the missing half is named precisely.
+    // "Drive is unknown" would be false here, and is the failure the whole
+    // typed-quantity repair exists to prevent in the other direction.
+    return `${put(ampName, `${drive.watts} watts`
+      + (drive.intoOhms != null ? ` into ${ohms(drive.intoOhms)}` : ''))}, `
+      + `which is the load the ${speakerName} presents, so output at the `
+      + `relevant load is established. The ${speakerName}'s sensitivity is not `
+      + `published, and that is what would settle how loud the pairing plays `
+      + `in your room.`;
+  }
+
+  if (drive.status === 'load_mismatch') {
+    return `${put(ampName, `${drive.watts} watts into ${ohms(drive.specifiedIntoOhms)}`)}, `
+      + `while the ${speakerName} presents ${ohms(drive.loadOhms)}. What the `
+      + `amplifier delivers into ${ohms(drive.loadOhms)} is not published, so `
+      + `drive cannot be established from the figures — worth putting to the `
+      + `manufacturer directly.`;
+  }
+
+  return undefined;
 }
