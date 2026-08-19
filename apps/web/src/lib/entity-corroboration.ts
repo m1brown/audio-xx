@@ -87,6 +87,13 @@ export const MIN_MATCH_QUALITY = 0.7;
 
 export function normalizeProductName(raw: string): string {
   return raw
+    // Representation, not identity. Manufacturers and publications set model
+    // names with typographic characters — QRC‑2 with a non-breaking hyphen,
+    // Reference 5 with a non-breaking space — and those must compare
+    // identically to their plain forms. This normalises how a name is WRITTEN
+    // and changes nothing about which product it names.
+    .replace(/[\u2010-\u2015\u2212\u2043]/g, '-')
+    .replace(/[\u00a0\u202f\u2007\u2009\u200a]/g, ' ')
     .toLowerCase()
     .replace(/[^\w\s/-]/g, ' ')
     .replace(/\s+/g, ' ')

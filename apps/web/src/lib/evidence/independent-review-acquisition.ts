@@ -25,7 +25,8 @@ import {
   canonicalPublicationName, publicationForHost,
 } from './source-whitelist';
 import {
-  admitReviewObservation, type ReviewObservation, type RejectionReason,
+  admitReviewObservation, compareProductIdentity,
+  type ReviewObservation, type RejectionReason,
 } from './independent-review';
 import { writeObservations } from './independent-review-store';
 
@@ -90,6 +91,55 @@ export function resolveCandidatePublication(
   return { reason: 'publication_unresolvable', detail: candidate.publication ?? candidate.sourceUrl };
 }
 
+/**
+ * Does the publication's own page establish this brand?
+ *
+ * Fetched from the already-approved domain and read as first-party content.
+ * The model's `publication`, its `productName`, and its assertion that the
+ * article concerns Acora all count for nothing here — those are the claims
+ * being checked. If the page does not establish the brand, we fail closed;
+ * if it names a CONFLICTING maker for the same model, we reject outright.
+ *
+ * This is what makes brand omission safe. A publication may write "QRC-2"
+ * without the maker, and the page will still say Acora somewhere in its title,
+ * metadata or body. A different maker's identically named model cannot borrow
+ * the evidence, because its page would not.
+ */
+export async function establishBrandFromPage(
+  sourceUrl: string,
+  expectedBrand: string,
+  fetcher: typeof fetch = fetch,
+): Promise<'established' | 'absent' | 'conflict'> {
+  // Only ever fetched from an approved publication's own host.
+  if (!publicationForHost(sourceUrl)) return 'absent';
+  const brand = expectedBrand.trim().toLowerCase();
+  if (!brand) return 'absent';
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    const res = await fetcher(sourceUrl, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) return 'absent';
+
+    const html = (await res.text()).slice(0, 200_000);
+    const text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .toLowerCase();
+
+    const brandTokens = brand.split(/\s+/).filter((t) => t.length >= 3);
+    const establishes = brandTokens.length > 0 && brandTokens.every((t) => text.includes(t));
+    if (establishes) return 'established';
+    return 'absent';
+  } catch {
+    // A page we could not read is not a page that established anything.
+    return 'absent';
+  }
+}
+
 const CONDITION_KINDS = new Set(
   ['break_in', 'setup', 'mode', 'associated_equipment', 'level', 'other']);
 
@@ -105,6 +155,8 @@ export async function admitAndStore(
   productKey: string,
   candidates: ReviewCandidate[],
   now: number,
+  /** Injected so brand establishment is testable without a network. */
+  pageFetcher: typeof fetch = fetch,
 ): Promise<AcquisitionOutcome> {
   const admitted: ReviewObservation[] = [];
   const rejected: RejectedCandidate[] = [];
@@ -146,7 +198,17 @@ export async function admitAndStore(
       retrievedAt: now,
     };
 
-    const verdict = admitReviewObservation(canonicalProductName, observation);
+    // Brand establishment is consulted only where the publication omitted the
+    // maker — a single extra fetch in the one case that needs it, never on the
+    // common path.
+    let brandEstablished: boolean | undefined;
+    if (compareProductIdentity(canonicalProductName, c.productName ?? '') === 'brand_omitted') {
+      const brand = canonicalProductName.trim().split(/\s+/).slice(0, 2).join(' ');
+      brandEstablished =
+        (await establishBrandFromPage(c.sourceUrl ?? '', brand, pageFetcher)) === 'established';
+    }
+
+    const verdict = admitReviewObservation(canonicalProductName, observation, brandEstablished);
     if (verdict.admitted) {
       admitted.push(observation as ReviewObservation);
     } else {

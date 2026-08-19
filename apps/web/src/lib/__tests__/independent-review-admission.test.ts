@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   admitReviewObservation, isSameProduct, isPublicationDomain, claimStatesCondition,
-  toEvidenceItem, MAX_QUOTE_CHARS, type ReviewObservation,
+  toEvidenceItem, MAX_QUOTE_CHARS, compareProductIdentity, type ReviewObservation,
 } from '../evidence/independent-review';
 import { isAdmissible, REQUIRES_QUOTATION, REQUIRES_PUBLICATION } from '../evidence/evidence-types';
 
@@ -276,5 +276,97 @@ describe('exact-product matching', () => {
   it('distinguishes models that differ by one character', () => {
     expect(isSameProduct('Acora Acoustics QRC-2', 'Acora Acoustics MRC-2')).toBe(false);
     expect(isSameProduct('Acora Acoustics QRC-2', 'Acora Acoustics QRC-1')).toBe(false);
+  });
+});
+
+/**
+ * Identity normalisation — three approved changes, 2026-08-19.
+ *
+ * The rule being preserved:
+ *
+ *   Brand may be omitted in how a publication writes the product name.
+ *   Model/variant identity may not be approximate.
+ *
+ * Live seeding rejected genuine exact-product coverage three ways: Stereophile
+ * titles its review "dCS Rossini Apex D/A processor", SoundStage! writes
+ * "QRC‑2" with a non-breaking hyphen and no maker, and both were read as
+ * different products.
+ */
+describe('representation is normalised; identity is not relaxed', () => {
+  it('compares typographic and plain hyphens identically', () => {
+    expect(compareProductIdentity('Acora Acoustics QRC-2', 'Acora Acoustics QRC‑2'))
+      .toBe('same');
+    expect(compareProductIdentity('Audio Research Reference 5', 'Audio Research Reference 5'))
+      .toBe('same');
+  });
+
+  it('strips publication category prose around a matched model', () => {
+    expect(compareProductIdentity('dCS Rossini APEX', 'dCS Rossini Apex D/A processor'))
+      .toBe('same');
+    expect(compareProductIdentity(
+      'Audio Research Reference 5', 'Audio Research Reference 5 line-stage preamplifier'))
+      .toBe('same');
+  });
+
+  it('NEGATIVE CONTROL — an identity-bearing suffix stays fatal', () => {
+    // No amount of normalisation rescues a designation.
+    for (const variant of [
+      'Audio Research Reference 5 SE',
+      'Audio Research Reference 5 Mk II',
+      'dCS Rossini APEX XD',
+      'Acora Acoustics QRC-2 Signature',
+    ]) {
+      expect(compareProductIdentity(
+        variant.replace(/ (SE|Mk II|XD|Signature)$/, ''), variant)).toBe('different');
+    }
+  });
+
+  it('NEGATIVE CONTROL — a category-looking word that distinguishes a real product', () => {
+    // dCS makes both a Rossini Player and a Rossini DAC. "Player" is not a
+    // stopword, and stripping it casually would merge two real products.
+    expect(compareProductIdentity('dCS Rossini APEX', 'dCS Rossini Player APEX'))
+      .toBe('different');
+    expect(compareProductIdentity('Leben CS600', 'Leben CS600 integrated'))
+      .toBe('different');
+  });
+
+  it('reports brand omission as its own state, not as a match', () => {
+    // Admissible only with independent brand establishment — never on the
+    // strength of the model's own say-so.
+    expect(compareProductIdentity('Acora Acoustics QRC-2', 'QRC-2')).toBe('brand_omitted');
+    expect(isSameProduct('Acora Acoustics QRC-2', 'QRC-2')).toBe(false);
+  });
+
+  it('rejects a brand-omitted candidate when the page did not establish the brand', () => {
+    const v = admitReviewObservation('Acora Acoustics QRC-2', base({
+      productKey: 'acora acoustics qrc-2', productName: 'QRC-2',
+      publication: 'SoundStage!',
+      sourceUrl: 'https://www.soundstageultra.com/index.php/equipment-menu/1284',
+    }), /* brandEstablished */ false);
+    expect(v).toMatchObject({ admitted: false, reason: 'brand_not_established' });
+  });
+
+  it('fails closed when brand establishment was never attempted', () => {
+    expect(admitReviewObservation('Acora Acoustics QRC-2', base({
+      productKey: 'acora acoustics qrc-2', productName: 'QRC-2',
+      publication: 'SoundStage!',
+      sourceUrl: 'https://www.soundstageultra.com/index.php/equipment-menu/1284',
+    }))).toMatchObject({ admitted: false, reason: 'brand_not_established' });
+  });
+
+  it('admits it once the publication page establishes the brand', () => {
+    expect(admitReviewObservation('Acora Acoustics QRC-2', base({
+      productKey: 'acora acoustics qrc-2', productName: 'QRC-2',
+      publication: 'SoundStage!',
+      sourceUrl: 'https://www.soundstageultra.com/index.php/equipment-menu/1284',
+    }), /* brandEstablished */ true)).toEqual({ admitted: true });
+  });
+
+  it('brand establishment cannot rescue a WRONG MODEL', () => {
+    // The escape hatch is for a missing maker, never for an approximate model.
+    expect(admitReviewObservation('Audio Research Reference 5', base({
+      productKey: 'audio research reference 5', productName: 'Reference 5 SE',
+      sourceUrl: 'https://www.stereophile.com/content/audio-research-reference-5-se-line-preamplifier',
+    }), true)).toMatchObject({ admitted: false, reason: 'different_product' });
   });
 });

@@ -90,7 +90,9 @@ export type RejectionReason =
   | 'different_product'
   | 'condition_dropped'
   | 'empty_condition'
-  | 'quote_too_long';
+  | 'quote_too_long'
+  /** Model matched, maker unstated, and the publication page did not confirm it. */
+  | 'brand_not_established';
 
 export type AdmissionVerdict =
   | { admitted: true }
@@ -171,17 +173,121 @@ export function isPublicationDomain(sourceUrl: string, publication: string): boo
  * and would be rejected against its own review. Callers resolve identity
  * through corroboration before reaching here.
  */
-export function isSameProduct(requestedName: string, reviewedName: string): boolean {
-  const a = new Set(identifyingTokens(requestedName));
-  const b = new Set(identifyingTokens(reviewedName));
-  if (a.size === 0 || b.size === 0) return false;
+/**
+ * Category prose a publication wraps around a model name.
+ *
+ * PHRASES, not words, and deliberately narrow. "Player", "integrated" and
+ * "monoblock" can each distinguish a real product — dCS makes both a Rossini
+ * Player and a Rossini DAC — so none of them is a stopword. What is stripped
+ * here is multi-word category prose that no manufacturer uses as a model
+ * designation.
+ *
+ * Nothing containing a digit, a generation marker or a variant letter is
+ * eligible, which is what keeps "SE", "Mk II" and "XD" fatal.
+ */
+const PUBLICATION_DESCRIPTORS: readonly string[] = [
+  'd/a processor', 'd a processor', 'da processor',
+  'd/a converter', 'd a converter', 'da converter',
+  'digital to analogue converter', 'digital to analog converter',
+  'digital processor',
+  'line-stage preamplifier', 'line stage preamplifier', 'linestage preamplifier',
+  'line-stage preamp', 'line stage preamp',
+  'power amplifier', 'monoblock power amplifier', 'monoblock amplifier',
+  'integrated amplifier',
+  'loudspeaker system', 'floorstanding loudspeaker', 'standmount loudspeaker',
+  'streaming dac', 'network player', 'cd player',
+];
+
+/** Does removing this descriptor risk collapsing two distinct designations? */
+function descriptorIsSafe(descriptor: string): boolean {
+  // A digit or a lone letter inside the phrase means it may be carrying a
+  // model designation rather than a category.
+  return !/\d/.test(descriptor) && !/\b[a-z]\b/.test(descriptor.replace(/d\/a|d a|da/g, ''));
+}
+
+/** Strip trailing/leading category prose, once, and only when it is safe. */
+function stripPublicationDescriptor(name: string): string {
+  const lower = name.toLowerCase();
+  for (const d of PUBLICATION_DESCRIPTORS) {
+    if (!descriptorIsSafe(d)) continue;
+    const at = lower.indexOf(d);
+    if (at < 0) continue;
+    // Only strip when the descriptor sits at an edge; a phrase in the middle
+    // is more likely part of the designation than wrapping around it.
+    const before = name.slice(0, at).trim();
+    const after = name.slice(at + d.length).trim();
+    if (before && after) continue;
+    return (before || after).trim();
+  }
+  return name;
+}
+
+export type IdentityComparison =
+  /** Same product, once representation and category prose are normalised. */
+  | 'same'
+  /**
+   * The model designation matches exactly, and the publication wrote it
+   * without the manufacturer. Admissible ONLY with independent brand
+   * establishment from the publication's own page — see the acquisition layer.
+   */
+  | 'brand_omitted'
+  | 'different';
+
+/**
+ * Compare a reviewed product against the canonical identity.
+ *
+ * The rule this preserves:
+ *
+ *   Brand may be omitted in how a publication writes the product name.
+ *   Model/variant identity may not be approximate.
+ *
+ * So "dCS Rossini Apex D/A processor" is the same product as "dCS Rossini
+ * APEX" — the extra words are category prose. "QRC-2" MAY be the same product
+ * as "Acora Acoustics QRC-2", but only once something other than the model's
+ * own say-so establishes the brand. "Reference 5 SE" is never "Reference 5",
+ * because SE is a designation and designations are identity.
+ */
+export function compareProductIdentity(
+  requestedName: string,
+  reviewedName: string,
+): IdentityComparison {
+  const requested = identifyingTokens(requestedName);
+  const reviewedRaw = identifyingTokens(reviewedName);
+  if (requested.length === 0 || reviewedRaw.length === 0) return 'different';
+
   const present = (t: string, set: Set<string>) =>
     set.has(t)
     || (t.endsWith('s') && t.length > 3 && set.has(t.slice(0, -1)))
     || set.has(`${t}s`);
-  for (const t of a) if (!present(t, b)) return false;
-  for (const t of b) if (!present(t, a)) return false;
-  return true;
+
+  const compare = (reviewedTokens: string[]): IdentityComparison => {
+    const a = new Set(requested);
+    const b = new Set(reviewedTokens);
+    // Extra tokens on the reviewed side are always disqualifying: that is the
+    // SE case, and no amount of brand context rescues it.
+    for (const t of b) if (!present(t, a)) return 'different';
+    const missing = requested.filter((t) => !present(t, b));
+    if (missing.length === 0) return 'same';
+    // Everything the publication DID write matches. What it left out is a
+    // prefix of the canonical name — i.e. the manufacturer.
+    const isPrefix = missing.every((t) => requested.indexOf(t) < requested.length - missing.length);
+    return isPrefix ? 'brand_omitted' : 'different';
+  };
+
+  const direct = compare(reviewedRaw);
+  if (direct !== 'different') return direct;
+
+  // Second pass, with the publication's category prose removed. Attempted only
+  // after a direct comparison failed, so stripping can never turn one product
+  // into another that already matched.
+  const stripped = identifyingTokens(stripPublicationDescriptor(reviewedName));
+  if (stripped.length === 0 || stripped.length === reviewedRaw.length) return 'different';
+  return compare(stripped);
+}
+
+/** Boolean form. `brand_omitted` is NOT the same product without brand evidence. */
+export function isSameProduct(requestedName: string, reviewedName: string): boolean {
+  return compareProductIdentity(requestedName, reviewedName) === 'same';
 }
 
 /**
@@ -194,6 +300,15 @@ export function isSameProduct(requestedName: string, reviewedName: string): bool
 export function admitReviewObservation(
   requestedProductName: string,
   observation: Partial<ReviewObservation>,
+  /**
+   * Whether the publication's OWN page establishes the canonical brand.
+   *
+   * Consulted only where the publication wrote the model without the maker.
+   * Supplied by the acquisition layer from first-party page content on the
+   * already-approved domain — never from the model's say-so, which is the
+   * assertion this exists to check. Absent means fail closed.
+   */
+  brandEstablished?: boolean,
 ): AdmissionVerdict {
   const no = (reason: RejectionReason, detail?: string): AdmissionVerdict =>
     ({ admitted: false, reason, detail });
@@ -224,9 +339,15 @@ export function admitReviewObservation(
 
   // Exact product. A variant or sibling is a different product, not weaker
   // evidence — unless the publication itself said otherwise.
-  if (!observation.appliesAcrossVariants
-    && !isSameProduct(requestedProductName, observation.productName)) {
-    return no('different_product', observation.productName);
+  if (!observation.appliesAcrossVariants) {
+    const identity = compareProductIdentity(requestedProductName, observation.productName);
+    if (identity === 'different') return no('different_product', observation.productName);
+    if (identity === 'brand_omitted' && brandEstablished !== true) {
+      // The model designation matches and the maker is unstated. Without
+      // independent confirmation from the publication's own page, a different
+      // maker's identically named model could borrow this evidence.
+      return no('brand_not_established', observation.productName);
+    }
   }
 
   if (observation.condition) {
