@@ -211,16 +211,33 @@ export function physicalFactsFor(items: EvidenceItem[]): PhysicalFacts {
  */
 export function factCandidateNames(
   subjects: ReadonlyArray<{ name: string; kind: string; parenthetical?: boolean }>,
+  /**
+   * Names the LISTENER labelled, from the labelled-component parse.
+   *
+   * Subject matching resolves against the catalogue, so it names only
+   * products we already know — which is exactly the set that needs
+   * manufacturer evidence least. On "Speakers: Acora QRC-2" it yields
+   * nothing for the Acora, so the deterministic path asked for facts about
+   * a Pontus II and an SE84UFO and never about the one component whose
+   * published sensitivity decides whether the pairing is assessable at all.
+   * The feature was inert in production for its primary case.
+   */
+  labelled: ReadonlyArray<{ rawName?: string }> = [],
 ): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
+  const take = (name?: string) => {
+    if (!name) return;
+    const key = productKeyFor(name);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    out.push(name);
+  };
   for (const s of subjects) {
     if (s.kind !== 'product' || s.parenthetical) continue;
-    const key = productKeyFor(s.name);
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    out.push(s.name);
+    take(s.name);
   }
+  for (const l of labelled) take(l.rawName);
   return out;
 }
 

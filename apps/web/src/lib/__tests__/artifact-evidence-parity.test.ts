@@ -4,6 +4,8 @@ import {
   assessedEveryComponent, readComponentNames,
 } from '../artifact/synthesizeArtifact';
 import { toEvidenceItem, factCandidateNames } from '../evidence/manufacturer-facts';
+import { extractSubjectMatches } from '../intent';
+import { parseLabelledComponents } from '../labelled-components';
 import type { EvidenceItem } from '../evidence/evidence-types';
 
 /**
@@ -66,6 +68,24 @@ describe('1. manufacturer evidence reaches the artifact', () => {
       { name: 'Job', kind: 'product', parenthetical: true },
       { name: 'acora qrc-2', kind: 'product' },
     ])).toEqual(['Acora QRC-2']);
+  });
+
+  it('asks for facts about the components that NEED them', () => {
+    // Subject matching resolves against the catalogue, so it names only
+    // products we already know — the set that needs manufacturer evidence
+    // least. On this system it yielded the two catalogued components and
+    // never the Acora, whose published sensitivity is the only thing that
+    // makes the pairing assessable. The feature was inert in production for
+    // exactly its primary case.
+    const text = 'Assess my system: Amp: Decware SE84UFO Speakers: Acora QRC-2 '
+      + 'Dac: Denafrips Pontus II';
+    const subjectsOnly = factCandidateNames(extractSubjectMatches(text));
+    expect(subjectsOnly.some((n) => /acora/i.test(n))).toBe(false);
+
+    const asProductionAsks = factCandidateNames(
+      extractSubjectMatches(text), parseLabelledComponents(text),
+    );
+    expect(asProductionAsks.some((n) => /acora qrc-2/i.test(n))).toBe(true);
   });
 });
 

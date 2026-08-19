@@ -6,6 +6,7 @@ import TrackFailure from './TrackFailure';
 import { runArtifactPipeline } from '@/product/assessment-pipeline';
 import { extractSubjectMatches } from '@/lib/intent';
 import { factCandidateNames } from '@/lib/evidence/manufacturer-facts';
+import { parseLabelledComponents } from '@/lib/labelled-components';
 import { readFactsForNames } from '@/lib/evidence/manufacturer-fact-store';
 
 /**
@@ -38,7 +39,9 @@ function resolveText(sp: ArtifactSearchParams): string {
  * the web assessment of the same system.
  */
 const renderCached = cache(async (text: string) => {
-  const facts = await readFactsForNames(factCandidateNames(extractSubjectMatches(text)));
+  const facts = await readFactsForNames(
+    factCandidateNames(extractSubjectMatches(text), parseLabelledComponents(text)),
+  );
   return runArtifactPipeline(text, facts);
 });
 
