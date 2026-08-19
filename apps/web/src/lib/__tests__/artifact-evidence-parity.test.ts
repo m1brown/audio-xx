@@ -140,6 +140,26 @@ describe('3. the recommendation follows the same licensed state as the verdict',
   });
 });
 
+describe('the listening prose does not contradict the verdict', () => {
+  it('does not promise comfort at volume on a headroom-limited pairing', () => {
+    const c = runArtifactPipeline(CONSTRAINED, ACORA_SENSITIVITY)!.canonical as never as
+      { reading: { listeningSession: string[] } };
+    const prose = c.reading.listeningSession.join(' ');
+    // The artifact says "the amplifier can't drive these speakers" — it may
+    // not also say the system stays easy to live with at volume.
+    expect(prose).not.toMatch(/easy to live with at volume/i);
+    expect(prose).toMatch(/up to the level where the amplifier runs out/i);
+    // The character claim survives; it is true below the ceiling.
+    expect(prose).toMatch(/dynamics,? not tone/i);
+  });
+
+  it('keeps the unqualified close on a well-matched system', () => {
+    const c = runArtifactPipeline(COHERENT)!.canonical as never as
+      { reading: { listeningSession: string[] } };
+    expect(c.reading.listeningSession.join(' ')).toMatch(/easy to live with at volume/i);
+  });
+});
+
 describe('the coherent control is not penalised by any of this', () => {
   const bare = runArtifactPipeline(COHERENT)!.payload as never as
     { verdict: string; recommendation: string; caseParagraphs: string[] };

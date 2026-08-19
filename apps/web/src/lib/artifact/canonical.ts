@@ -243,8 +243,28 @@ function composeListeningSession(raw: any, recognition: string): string[] {
   // asserted" line appeared verbatim on every assessment, including tone-first
   // systems where it was not the story.
   const axesForClose: Record<string, string> = raw?.findings?.systemAxes ?? {};
+
+  // Every branch below closes on "easy to live with AT VOLUME". On a pairing
+  // the same assessment has just called underpowered, that sentence is false
+  // in the one condition the constraint is about — the artifact said "the
+  // amplifier can't drive these speakers" and, four paragraphs later, that
+  // the system stays easy to live with at volume. The character claim is
+  // still true; it is true BELOW the ceiling, which is what the Do-nothing
+  // check already says in the conversational assessment.
+  const pm = raw?.findings?.powerMatchAssessment;
+  const headroomLimited = pm?.compatibility === 'mismatched' || pm?.compatibility === 'strained';
+
   let second: string;
-  if (axesForClose.warm_bright === 'warm' || axesForClose.smooth_detailed === 'smooth') {
+  if (headroomLimited) {
+    const trait = axesForClose.warm_bright === 'warm' || axesForClose.smooth_detailed === 'smooth'
+      ? 'The warmth stays present without turning soft'
+      : axesForClose.smooth_detailed === 'detailed'
+        ? 'The detail stays offered rather than asserted'
+        : 'Nothing pushes forward and nothing falls away';
+    second = `Over a long evening the character holds, up to the level where the `
+      + `amplifier runs out. ${trait} — what changes as you turn it up is dynamics, `
+      + `not tone.`;
+  } else if (axesForClose.warm_bright === 'warm' || axesForClose.smooth_detailed === 'smooth') {
     second = `Over a long evening the character holds. The warmth stays present without turning soft, and the system remains easy to live with at volume and after hours.`;
   } else if (axesForClose.smooth_detailed === 'detailed') {
     second = `Over a long evening the character holds. The detail is offered rather than asserted, so the system stays easy to live with at volume and after hours.`;
