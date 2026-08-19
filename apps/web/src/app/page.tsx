@@ -512,6 +512,8 @@ export default function Home() {
   const intakeShownRef = useRef(false);
   /** Tracks which consumer-wireless system fingerprints we've already greeted with the short intro. */
   const consumerWirelessIntroShownRef = useRef<Set<string>>(new Set());
+  /** Counts submit-handler entries, so a duplicate run is visible as #1 and #2. */
+  const submitSeqRef = useRef(0);
   /** Conversation state machine — tracks the first 2–4 turns with explicit transitions. */
   const convStateRef = useRef<ConvState>(INITIAL_CONV_STATE);
   /** Set after the music-input first question is asked — next message is interpreted as the listening-path answer. */
@@ -950,6 +952,13 @@ export default function Home() {
    */
 
   const handleSubmit = useCallback(async (overrideText?: string, options?: { source?: 'follow-up' | 'fresh' }) => {
+    // Latency waterfall + duplicate-work detection. `console.warn` survives the
+    // production bundle where `console.log` does not, and these numbers are
+    // only meaningful measured in the browser the listener actually uses.
+    const T0 = performance.now();
+    const mark = (label: string) =>
+      console.warn('[assess] %s +%dms', label, Math.round(performance.now() - T0));
+    mark(`submit#${++submitSeqRef.current} source=${options?.source ?? 'fresh'}`);
     const inputText = overrideText ?? currentInput;
     const hasPendingImagesForTurn = !overrideText && pendingImages.length > 0;
     if (!inputText.trim() && !hasPendingImagesForTurn) return;
@@ -2967,6 +2976,7 @@ export default function Home() {
           const unresolvedRoster = orderedComponents
             .filter(c => c.unresolved || (!c.product && !c.brandProfile))
             .map(c => ({ name: c.displayName, role: c.role }));
+          mark('graph built');
           // ── Entity corroboration ─────────────────────────────────
           // Independently establish that each uncatalogued component is a real
           // product before model knowledge may describe it. Curated components
@@ -3042,6 +3052,7 @@ export default function Home() {
           // fact needs a product to belong to. All lookups run in parallel
           // under one deadline, and every failure simply yields no facts —
           // absence is a state the licensing layer already handles.
+          mark('corroboration done');
           const FACTS_BUDGET_MS = 20000;
           let manufacturerEvidence: Array<Record<string, unknown>> = [];
           const factCandidates = orderedComponents
@@ -3103,6 +3114,7 @@ export default function Home() {
               totalObs, factCandidates.length);
           }
 
+          mark('evidence read');
           const provisional = await inferProvisionalSystemAssessment(
             assessmentResult.query,
             componentNames,
@@ -3124,6 +3136,7 @@ export default function Home() {
             // incomplete. This is a record of what the listener supplied — it
             // asserts nothing about catalog coverage.
             const graphCtx = { ...advisoryCtx, systemComponents: componentNames };
+            mark('inference done');
             const provisionalAdvisory = consultationToAdvisory(provisional, undefined, graphCtx);
             provisionalAdvisory.unknownComponents = assessmentResult.unknownComponents;
             // Per-component provenance — computed by Audio XX from what it
@@ -3173,6 +3186,7 @@ export default function Home() {
             provisionalAdvisory.reasoningMode = 'expanded';
             provisionalAdvisory.fallbackReason = 'low_confidence_system';
             dispatchAdvisory(provisionalAdvisory, advisoryId());
+            mark('assessment rendered');
             dispatch({ type: 'SET_LOADING', value: false });
             return;
           }

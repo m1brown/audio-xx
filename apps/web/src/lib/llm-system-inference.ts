@@ -575,6 +575,13 @@ function productKeyish(name: string): string {
  * finished prose. Returns the provenance alongside the prompt because they are
  * the same fact: the caller must not recompute it.
  */
+/**
+ * Counts prompt builds. One assessment should build exactly one prompt; a
+ * second build means either a duplicate inference call or a duplicate submit,
+ * and the two have very different costs.
+ */
+let promptBuildCount = 0;
+
 export function buildProvisionalPrompt(
   query: string,
   componentNames: string[],
@@ -926,7 +933,8 @@ ${closing}`;
   // from the production bundle and `console.warn` is not, which is why this is
   // a warn: a path that reports nothing in the only environment that matters is
   // how a ReferenceError once shipped raw JSON through four replays.
-  console.warn('[drive] quantities=%d amp=%s load=%s status=%s conclusion=%s',
+  console.warn('[drive] build#%d quantities=%d amp=%s load=%s status=%s conclusion=%s',
+    ++promptBuildCount,
     quantities.length, ampSubject ?? 'none', spkImpedance?.value ?? 'none',
     drive.status, driveConclusion ? 'yes' : 'no');
 
