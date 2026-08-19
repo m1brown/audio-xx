@@ -29,6 +29,7 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { toSlug } from '../../lib/route-slug';
 import type { AdvisoryResponse, AdvisoryMode, AudioProfile, ProductAssessment, KnowledgeResponse, AssistantResponse, EditorialClosing, EditorialPick, QuickRecommendation, FallbackReason } from '../../lib/advisory-response';
+import { describeProvenance } from '@/lib/provenance-disclosure';
 import type { DecisionFrame, DecisionDirection, SystemInteraction } from '../../lib/decision-frame';
 import AdvisorySection from './AdvisorySection';
 import AdvisoryProse from './AdvisoryProse';
@@ -185,19 +186,9 @@ const MODE_LABELS: Record<AdvisoryMode, string> = {
 // Both are gated on reasoningMode at the call site. 'core' and 'hybrid'
 // render nothing — hybrid is internal observability only.
 
-/** Copy mapping for fallbackReason → user-facing one-liner. */
-const EXPANDED_REASONING_CAPTIONS: Record<FallbackReason, string> = {
-  unknown_subject:
-    'Using expanded reasoning for products outside the current curated catalog.',
-  low_confidence_system:
-    'Using expanded reasoning because parts of this system sit outside Audio XX’s curated catalog.',
-  brand_only:
-    'Using expanded reasoning for a product not yet covered directly in the curated catalog.',
-  open_ended_query:
-    'Using expanded reasoning for a broader advisory question.',
-  thin_output:
-    'Using expanded reasoning because the curated layer did not produce a complete answer.',
-};
+// Caption AND disclosure both come from `describeProvenance` — one
+// derivation from one provenance state, so the badge and the explanation
+// behind it can never describe different assessments.
 
 /** Calm warm-neutral color for the indicator. Not amber, not red, not
  *  accent — sits next to ModeIndicator's accentLight color without
@@ -233,20 +224,66 @@ function ExpandedReasoningIndicator() {
   );
 }
 
-function ExpandedReasoningCaption({ reason }: { reason?: FallbackReason }) {
-  if (!reason) return null;
-  const copy = EXPANDED_REASONING_CAPTIONS[reason];
-  if (!copy) return null;
+/**
+ * The caption, plus the disclosure behind it.
+ *
+ * A badge reading EXPANDED REASONING and nothing else asks the listener for
+ * suspicion and gives them no basis for it. The panel names which of their
+ * components Audio XX could verify, which it reasoned about from broader
+ * knowledge, and what each of those licenses.
+ *
+ * `<details>`/`<summary>` rather than a button and state: keyboard operation,
+ * focus handling and a real touch target come from the element itself, and a
+ * printed page renders the summary rather than a dead control.
+ */
+function ExpandedReasoningCaption({ advisory }: { advisory: AdvisoryResponse }) {
+  const p = describeProvenance(advisory as never);
+  if (!p.show) return null;
   return (
-    <p style={{
-      margin: '0 0 0.85rem 0',
-      fontSize: '0.78rem',
-      lineHeight: 1.55,
-      color: COLORS.textMuted,
-      fontStyle: 'italic',
-    }}>
-      {copy}
-    </p>
+    <div style={{ margin: '0 0 0.85rem 0' }}>
+      <p style={{
+        margin: 0,
+        fontSize: '0.78rem',
+        lineHeight: 1.55,
+        color: COLORS.textMuted,
+        fontStyle: 'italic',
+      }}>
+        {p.caption}
+      </p>
+      <details style={{ marginTop: '0.3rem' }}>
+        <summary style={{
+          cursor: 'pointer',
+          listStyle: 'none',
+          display: 'inline-block',
+          padding: '0.25rem 0',
+          minHeight: '1.6rem',
+          fontSize: '0.75rem',
+          lineHeight: 1.5,
+          color: EXPANDED_REASONING_COLOR,
+          textDecoration: 'underline',
+          textUnderlineOffset: '0.18em',
+        }}>
+          {p.heading}
+        </summary>
+        <div style={{
+          marginTop: '0.4rem',
+          paddingLeft: '0.7rem',
+          borderLeft: `1px solid ${EXPANDED_REASONING_COLOR}44`,
+          maxWidth: '46em',
+        }}>
+          {p.paragraphs.map((text, i) => (
+            <p key={i} style={{
+              margin: i === 0 ? '0 0 0.5rem 0' : '0.5rem 0',
+              fontSize: '0.78rem',
+              lineHeight: 1.6,
+              color: COLORS.textMuted,
+            }}>
+              {text}
+            </p>
+          ))}
+        </div>
+      </details>
+    </div>
   );
 }
 
@@ -264,7 +301,10 @@ function ResponseHeader({ advisory: a }: { advisory: AdvisoryResponse }) {
     ? MODE_LABELS[a.advisoryMode]
     : null;
   const showReasoning = a.reasoningMode === 'expanded';
-  const showCaption = showReasoning && !!a.fallbackReason;
+  // The disclosure stands on provenance, not on a fallback reason being set:
+  // an expanded answer with no reason recorded still owes the listener an
+  // explanation, and that was exactly the case that rendered a bare badge.
+  const showCaption = showReasoning;
 
   if (!modeLabel && !showReasoning) return null;
 
@@ -290,7 +330,7 @@ function ResponseHeader({ advisory: a }: { advisory: AdvisoryResponse }) {
         )}
         {showReasoning && <ExpandedReasoningIndicator />}
       </div>
-      {showCaption && <ExpandedReasoningCaption reason={a.fallbackReason} />}
+      {showCaption && <ExpandedReasoningCaption advisory={a} />}
     </>
   );
 }
