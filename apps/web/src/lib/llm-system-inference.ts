@@ -23,6 +23,7 @@ import type { ReviewObservation } from './evidence/independent-review';
 import {
   toAttributeRecords, findDisagreements, contextObservations,
 } from './evidence/independent-review-consumption';
+import { selectPremises, type PremiseCandidate } from './evidence/premise-selection';
 import {
   licensedRelations, permittedQuestionType, questionViolations, stripOverclaims,
   filterUnlicensedRelationalProse, OPEN_DIAGNOSTIC_QUESTION,
@@ -578,7 +579,14 @@ export function buildProvisionalPrompt(
   lookupUnknown?: string[],
   manufacturerEvidence?: EvidenceItem[],
   reviewObservations?: Record<string, ReviewObservation[]>,
-): { userPrompt: string; provenance: ComponentProvenance[] } {
+): {
+  userPrompt: string;
+  provenance: ComponentProvenance[];
+  /** The premises the model was told to index. Leading positions, stable order. */
+  suppliedPremises: AttributeRecord[];
+  supersededCandidates: PremiseCandidate[];
+  unresolvedAxes: Array<{ component: string; axis: string; positions: PremiseCandidate[] }>;
+} {
   // ── THE AUTHORITATIVE EVIDENCE STATE ────────────────────────────
   //
   // GOVERNING INVARIANT (founder, 2026-08-17):
@@ -700,6 +708,67 @@ export function buildProvisionalPrompt(
       + `the axis as indeterminate:\n${disagreementLines.join('\n')}`
     : '';
 
+  // ── THE PREMISE SET AUDIO XX SUPPLIES ────────────────────────────
+  //
+  // The model may reason over evidence Audio XX holds. It may not manufacture
+  // the evidentiary premises that then license its own reasoning — which is
+  // what happened until now: relation premises indexed an attribute list the
+  // model invented, and review-derived records appended afterwards occupied
+  // indices nothing could reference.
+  //
+  // These premises therefore occupy the LEADING indices, stated explicitly, so
+  // the model can point at them. Anything it adds continues the numbering.
+  const PHYSICAL_FIELD_AXIS: Record<string, string> = {
+    power_output: 'power_load', sensitivity: 'power_load', impedance: 'power_load',
+  };
+  const reviewCandidates: PremiseCandidate[] = [];
+  for (const item of manufacturerEvidence ?? []) {
+    const axis = PHYSICAL_FIELD_AXIS[item.field];
+    if (!axis) continue;
+    const owner = componentNames.find((n) => productKeyish(n) === item.productKey);
+    if (!owner) continue;
+    reviewCandidates.push({
+      component: owner, axis, value: `${item.field}: ${item.value}`,
+      source: 'manufacturer', tier: 'manufacturer', scope: 'product',
+      sourceUrl: item.attribution?.sourceUrl,
+    });
+  }
+  for (const name of componentNames) {
+    for (const rec of toAttributeRecords(name, reviewObservations?.[name] ?? [])) {
+      reviewCandidates.push({
+        component: rec.component, axis: rec.axis, value: rec.value,
+        source: 'independent_review', tier: rec.tier, scope: rec.scope,
+        publication: rec.attribution?.publication,
+        sourceUrl: rec.attribution?.sourceUrl,
+        condition: rec.attribution?.condition,
+      });
+    }
+  }
+  const selection = selectPremises(reviewCandidates);
+
+  const premiseLines = selection.premises.map((p, i) =>
+    `  P${i}. ${p.component} — ${p.axis} = ${p.value}`
+    + (p.attribution?.publication ? ` [${p.attribution.publication}]` : '')
+    + (p.attribution?.condition ? ` [ONLY ${p.attribution.condition}]` : ''));
+
+  const premiseContext = premiseLines.length > 0
+    ? `\n\nPREMISES AUDIO XX SUPPLIES — these are established evidence, already `
+      + `selected as the best applicable for their component and axis. Reference them `
+      + `BY INDEX in "relations".premises:\n${premiseLines.join('\n')}\n`
+      + `Do NOT restate these as your own attributes. Any attribute you add continues `
+      + `the numbering from P${selection.premises.length}. Where a premise names a `
+      + `publication, NAME THAT PUBLICATION in any sentence that uses it; where it `
+      + `carries a condition, state that condition in the same sentence.`
+    : '';
+
+  const unresolvedContext = selection.unresolved.length > 0
+    ? `\n\nAXES WHERE APPROVED SOURCES DISAGREE with no condition separating them. `
+      + `Treat these as INDETERMINATE. Do not pick a side, average them, or resolve by `
+      + `majority:\n`
+      + selection.unresolved.map((u) => `  - ${u.component} on ${u.axis}: `
+        + u.positions.map((p) => `${p.publication ?? 'a source'} reports ${p.value}`).join('; ')).join('\n')
+    : '';
+
   const uncorroboratedContext = uncorroborated.length > 0
     ? `\n\nIDENTITY NOT VERIFIED — Audio XX could not confirm these products exist:\n`
       + `${uncorroborated.map((n) => `- ${n}${roleSuffix(n)}`).join('\n')}\n`
@@ -740,7 +809,7 @@ export function buildProvisionalPrompt(
   const userPrompt = `The user asked: "${query}"
 
 The system chain includes: ${componentNames.join(' → ')}
-${catalogContext}${brandContext}${modelContext}${manufacturerContext}${reviewContext}${disagreementContext}${uncorroboratedContext}${incompleteContext}
+${catalogContext}${brandContext}${modelContext}${manufacturerContext}${reviewContext}${premiseContext}${unresolvedContext}${disagreementContext}${uncorroboratedContext}${incompleteContext}
 
 When describing each component in the philosophy section:
 - Catalog-verified: reference the verified data above and assess in full.
@@ -752,7 +821,12 @@ When describing each component in the philosophy section:
 
 ${closing}`;
 
-  return { userPrompt, provenance };
+  return {
+    userPrompt, provenance,
+    suppliedPremises: selection.premises,
+    supersededCandidates: selection.candidates.filter((c) => c.selected === false),
+    unresolvedAxes: selection.unresolved,
+  };
 }
 
 export async function inferProvisionalSystemAssessment(
@@ -785,7 +859,7 @@ export async function inferProvisionalSystemAssessment(
    */
   reviewObservations?: Record<string, ReviewObservation[]>,
 ): Promise<ConsultationResponse | null> {
-  const { userPrompt, provenance } = buildProvisionalPrompt(
+  const { userPrompt, provenance, suppliedPremises } = buildProvisionalPrompt(
     query, componentNames, knownDescriptions, unresolved, corroborated, lookupUnknown,
     manufacturerEvidence, reviewObservations,
   );
@@ -827,7 +901,7 @@ export async function inferProvisionalSystemAssessment(
 
     const parsedResponse = parseSystemInferenceResponse(
       content, componentNames, knownDescriptions, corroborated ?? [],
-      manufacturerEvidence ?? [], reviewObservations ?? {}, provenance,
+      manufacturerEvidence ?? [], suppliedPremises, provenance,
     );
     if (!parsedResponse) return null;
 
@@ -924,7 +998,13 @@ function parseSystemInferenceResponse(
   knownDescriptions: { name: string; source: 'product' | 'brand' }[] = [],
   corroborated: string[] = [],
   manufacturerEvidence: EvidenceItem[] = [],
-  reviewObservations: Record<string, ReviewObservation[]> = {},
+  /**
+   * The premises Audio XX supplied, in the order the model was told to index.
+   * They occupy the LEADING positions of the combined attribute array, so a
+   * relation can reference them — which is precisely what the old contract
+   * made impossible.
+   */
+  suppliedPremises: AttributeRecord[] = [],
   /**
    * The authoritative basis per component, passed in rather than recomputed.
    * Tier-bounded intensity needs it, and deriving it here would be a second
@@ -966,7 +1046,7 @@ function parseSystemInferenceResponse(
     }
     const corroboratedSetForTier = new Set((corroborated ?? []).map((c) => c.toLowerCase().trim()));
 
-    const attributes: AttributeRecord[] = (parsed.attributes ?? [])
+    const modelAttributes: AttributeRecord[] = (parsed.attributes ?? [])
       .filter((a) => a?.component && a?.axis && a?.value)
       .map((a) => {
         const key = (a.component as string).toLowerCase().trim();
@@ -985,43 +1065,23 @@ function parseSystemInferenceResponse(
         };
       });
 
-    // Manufacturer facts enter D-12 as PREMISES, on the physical domain.
-    //
-    // This is what the class is for. "Watts against sensitivity" is exactly
-    // the commensurable pairing D-12 contemplates, and until now it was
-    // unreachable for any uncatalogued component: `classifyPowerMatch`
-    // returned 'unknown' and no relation could be built. A published power
-    // rating and a published sensitivity are now two attributes on one domain,
-    // at manufacturer tier — stronger than model memory and weaker than our
-    // own catalog, which is exactly where they belong.
-    //
-    // Only the physical subset is lifted. A cabinet material is a real fact
-    // and not a position on any axis; forcing one would invent a sonic reading
-    // from a construction detail.
-    const PHYSICAL_FIELD_AXIS: Record<string, string> = {
-      power_output: 'power_load',
-      sensitivity: 'power_load',
-      impedance: 'power_load',
-    };
-    for (const item of manufacturerEvidence ?? []) {
-      const axis = PHYSICAL_FIELD_AXIS[item.field];
-      if (!axis) continue;
-      const owner = componentNames.find((n) => productKeyish(n) === item.productKey);
-      if (!owner) continue;
-      attributes.push({
-        component: owner,
-        axis,
-        value: `${item.field}: ${item.value}`,
-        tier: 'manufacturer',
-        scope: 'product',
-      });
-    }
+    // OURS FIRST. Index stability is the whole contract: the prompt numbered
+    // these P0..Pn-1, so a relation pointing at P0 resolves to the same premise
+    // here. Model-supplied attributes continue the numbering.
+    const attributes: AttributeRecord[] = [...suppliedPremises, ...modelAttributes];
 
-    // Review observations enter D-12 as premises, carrying their publication
-    // and condition so the expression layer can require both.
-    for (const name of componentNames) {
-      attributes.push(...toAttributeRecords(name, reviewObservations?.[name] ?? []));
-    }
+    // A model attribute on an axis Audio XX already selected evidence for is
+    // SUPERSEDED — the weaker of two answers to one question — and relations
+    // built on it are rejected rather than quietly preferred. This is the
+    // fail-closed half of applicability: better evidence does not merely rank
+    // higher, it displaces.
+    const supersededIndices = new Set<number>();
+    modelAttributes.forEach((m, i) => {
+      const displaced = suppliedPremises.some((p) =>
+        p.component.toLowerCase().trim() === m.component.toLowerCase().trim()
+        && p.axis === m.axis);
+      if (displaced) supersededIndices.add(suppliedPremises.length + i);
+    });
 
     const declaredSet: RelationSet = parsed.relationStatus === 'none_establishable'
       ? { status: 'none_establishable', relations: [] }
@@ -1037,7 +1097,22 @@ function parseSystemInferenceResponse(
           })),
       };
 
-    const surviving = licensedRelations(declaredSet, attributes);
+    // Drop relations resting on displaced evidence before licensing runs.
+    const usable: RelationSet = declaredSet.status === 'none_establishable'
+      ? declaredSet
+      : {
+        status: 'established',
+        relations: declaredSet.relations.filter((r) => {
+          const leans = r.premises.some((i) => supersededIndices.has(i));
+          if (leans) {
+            console.warn('[llm-system-inference] relation dropped — premise superseded by '
+              + 'stronger applicable evidence: %s', r.components.join(' x '));
+          }
+          return !leans;
+        }),
+      };
+
+    const surviving = licensedRelations(usable, attributes);
     const systemRelations = surviving.map((r) => ({
       components: r.components, axis: r.axis, kind: r.kind, tier: r.licensedTier,
     }));

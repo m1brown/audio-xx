@@ -744,6 +744,26 @@ export const OVERCLAIM_MARKERS: Array<{ kind: 'intent' | 'importance' | 'rank'; 
       // manufacturer design fact and stays licensed.
       + '|\\b(?:this |the )?(?:system|chain|setup)\\s+(?:is|was|appears to be|seems to be)\\s+'
       + '(?:\\w+\\s+)?(?:designed|engineered|built|configured|voiced|assembled|constructed)\\s+to\\b'
+      // ONTOLOGY, not vocabulary. A system is a collection of components;
+      // purposes belong to people. Any construction making the system, chain
+      // or its components the HOLDER of an intention, aim, preference or
+      // choice is unlicensed unless attributable design evidence establishes
+      // it — and none of that evidence exists in an ordinary assessment.
+      //
+      // Behavioural predicates stay available: a system may produce, exhibit,
+      // reinforce, counterbalance or constrain. What it may not do is want
+      // something. That distinction is why this is one rule rather than a
+      // growing list of adjectives — "intended", "aims", "seeks", "pursues"
+      // and every future synonym are the same claim.
+      + `|\\b(?:the\\s+|this\\s+|its\\s+)?(?:system|chain|setup|configuration|components?|`
+      + `design)(?:'s|s')?\\s+(?:\\w+\\s+){0,2}`
+      + `(?:intend\\w*|aim\\w*|seek\\w*|desire\\w*|want\\w*|wish\\w*|choos\\w*|chose|`
+      + `pursu\\w*|strive\\w*|prefer\\w*|purpose\\w*|goal\\w*|ambition\\w*|choice\\w*|`
+      + `aspir\\w*|mean(?:s|t)?\\b)`
+      // "its intended sound", "the intended balance" — the ascription moved
+      // into an adjective, and it is the same claim.
+      + `|\\b(?:its|the|this)\\s+(?:\\w+\\s+){0,2}`
+      + `(?:intended|desired|sought|aspired|targeted|wanted)\\s+\\w+`
       + '|\\bby design\\b'
       + '|\\bthe (?:owner|listener)(?:\\s+\\w+){0,2}\\s+(?:wanted|intended|meant|sought)\\b',
       'i',

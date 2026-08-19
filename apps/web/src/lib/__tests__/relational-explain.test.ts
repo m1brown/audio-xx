@@ -409,3 +409,38 @@ describe('tier-bounded intensity', () => {
     expect(overclaimViolations('It is brilliantly detailed.')).toEqual([]);
   });
 });
+
+/**
+ * System intent — an ontology rule, not a longer word list.
+ *
+ * A system is a collection of components; purposes belong to people. The
+ * escapes below all survived three earlier rounds of adjective-matching
+ * because each used a different word for the same claim.
+ */
+describe('a system cannot hold an intention', () => {
+  it.each([
+    'The chain is intended to deliver high resolution.',
+    'The system delivers its intended sound signature.',
+    "The system's choices work harmoniously to deliver its signature.",
+    'The system aims for spatial precision above warmth.',
+    'This setup seeks a warmer balance than most.',
+    'The components pursue clarity above all.',
+    'The configuration prefers detail to body.',
+    'The chain wants for nothing in the treble.',
+  ])('refuses: %s', (prose) => {
+    expect(overclaimViolations(prose)[0]?.kind).toBe('intent');
+  });
+
+  it.each([
+    'The system produces an expansive soundstage.',
+    'The chain reinforces its own direction.',
+    'The ARC ref 5 counterbalances the dCS Rossini Apex.',
+    'The system exhibits tonal consistency across the range.',
+    'This chain constrains dynamic range at higher levels.',
+    'Nothing here obviously needs changing.',
+  ])('PERMITS legitimate system-level analysis: %s', (prose) => {
+    // Behavioural predicates stay available. The rule removes wanting, not
+    // describing — otherwise it would silence the analysis itself.
+    expect(overclaimViolations(prose)).toEqual([]);
+  });
+});
